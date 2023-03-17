@@ -25,6 +25,7 @@ extern const char* const kEnvPjrtAsyncGpuClient;
 extern const char* const kEnvTpuLibraryPath;
 extern const char* const kEnvPjrtDistServiceAddr;
 extern const char* const kEnvPjRtLocalRank;
+extern const char* const kEnvHloRoundTripType;
 
 }  // namespace env
 }  // namespace xla

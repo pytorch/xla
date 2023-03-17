@@ -585,10 +585,14 @@ std::vector<ComputationClient::ComputationPtr> XrtComputationClient::Compile(
   std::map<XrtSession*, SessionWork> session_work_map;
   for (size_t i = 0; i < instances.size(); ++i) {
     auto builder = [&, this, i]() {
-      const CompileInstance& instance = instances[i];
+      CompileInstance& instance = instances[i];
       XLA_CHECK(!instance.is_sharded)
           << "XrtComputationClient doesn't support SPMD.";
-
+    // HLO<->MHLO roundtrip
+    // ComputationClient::hlo_mhlo_hlo_roundtrip_helper(instance.computation.mutable_proto());
+    // HLO<->StableHLO roundtrip
+    // ComputationClient::hlo_stablehlo_hlo_roundtrip_helper(instance.computation.mutable_proto());
+      ComputationClient::roundtrip_helper(instance.computation.mutable_proto());
       std::unique_ptr<xrt::XLAComputation> xrt_computation =
           CreateXrtComputation(instance.computation, instance.devices,
                                instance.output_shape);

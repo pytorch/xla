@@ -13,30 +13,41 @@ namespace xla {
 void hlo_mhlo_hlo_roundtrip_helper(HloModuleProto* proto) {
   mlir::MLIRContext context;
   mlir::ModuleOp mlir_module = mlir::ModuleOp::create(mlir::UnknownLoc::get(&context));
-  auto status = ConvertHloToMlirHlo(mlir_module, proto, /*import_all_computations=*/false);
+  if (!hlo_mhlo_helper(proto, &mlir_module)) {
+    return;
+  }
+  xla::HloProto hlo_proto;
+  if (!mhlo_hlo_helper(&mlir_module, &hlo_proto)) {
+    return;
+  }
+  proto->Swap(hlo_proto.mutable_hlo_module());
+}
+
+bool hlo_mhlo_helper(const HloModuleProto* proto, mlir::ModuleOp* mlir_module) {
+  auto status = ConvertHloToMlirHlo(*mlir_module, proto, /*import_all_computations=*/false);
   if (!status.ok()) {
     std::cout << "hlo2mhlo not ok" << std::endl;
-    return;
+    return false;
   }
-  if (!mlir::verify(mlir_module).succeeded()) {
-    std::cout << "verify not ok" << std::endl;
+  if (!mlir::verify(*mlir_module).succeeded()) {
+    std::cout << "mhlo from hlo2mhlo verify not ok" << std::endl;
     printHloModuleProto(proto);
-    return;
+    return false;
   }
-  std::cout << "mhlo dump: " << std::endl;
-  mlir_module.dump();
-  xla::HloProto hlo_proto;
+  return true;
+}
+
+bool mhlo_hlo_helper(const mlir::ModuleOp* mlir_module, HloProto* hlo_proto) {
   mlir::MlirToHloConversionOptions options;
   options.propagate_layouts = true;
   auto status1 = mlir::ConvertMlirHloToHlo(
-    mlir_module, &hlo_proto, /*use_tuple_args=*/false, /*return_tuple=*/false,
+    *mlir_module, hlo_proto, /*use_tuple_args=*/false, /*return_tuple=*/false,
     options);
   if (!status1.ok()) {
     std::cout << "mhlo2hlo not ok" << std::endl;
-    return;
+    return false;
   }
-
-  proto->Swap(hlo_proto.mutable_hlo_module());
+  return true;
 }
 
 void hlo_stablehlo_hlo_roundtrip_helper(HloModuleProto* proto) {
@@ -90,6 +101,30 @@ void hlo_stablehlo_hlo_roundtrip_helper(HloModuleProto* proto) {
   }
 
   proto->Swap(hlo_proto.mutable_hlo_module());
+}
+
+bool mhlo_stablehlo_helper(mlir::ModuleOp* mlir_module, mlir::MLIRContext* context) {
+  mlir::PassManager pm(context);
+  pm.addPass(mlir::mhlo::createHloLegalizeToStablehloPass());
+  if (!mlir::succeeded(pm.run(*mlir_module))) {
+    std::cout << "mhlo to stablehlo not ok" << std::endl;
+    std::cout << "stablehlo dump: " << std::endl;
+    mlir_module->dump();
+    return false;
+  }
+  return true;
+}
+
+bool stablehlo_mhlo_helper(mlir::ModuleOp* mlir_module, mlir::MLIRContext* context) {
+  mlir::PassManager pm(context);
+  pm.addPass(mlir::mhlo::createStablehloLegalizeToHloPass());
+  if (!mlir::succeeded(pm.run(*mlir_module))) {
+    std::cout << "mhlo to stablehlo not ok" << std::endl;
+    std::cout << "mhlo dump: " << std::endl;
+    mlir_module->dump();
+    return false;
+  }
+  return true;
 }
 
 void printHloModuleProto(const HloModuleProto* proto) {

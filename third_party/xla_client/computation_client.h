@@ -366,8 +366,20 @@ class ComputationClient {
 
   static ComputationClient* GetIfInitialized();
 
+  void hlo_mhlo_hlo_roundtrip_helper(HloModuleProto* proto);
+
+  void hlo_stablehlo_hlo_roundtrip_helper(HloModuleProto* proto);
+  
+  void roundtrip_helper(HloModuleProto* proto);
+
  protected:
   // Metrics common to all client interfaces.
+  static metrics::Metric* HloMhloRoundTripMetric();
+  static metrics::Metric* HloStableHloRoundTripMetric();
+  static metrics::Metric* MHloToStableHloMetric();
+  static metrics::Metric* StableHloToMHloMetric();
+  static metrics::Metric* HloToMhloMetric();
+  static metrics::Metric* MhloToHloMetric();
   static metrics::Metric* TransferToServerMetric();
   static metrics::Metric* TransferToServerTransformMetric();
   static metrics::Metric* TransferFromServerMetric();

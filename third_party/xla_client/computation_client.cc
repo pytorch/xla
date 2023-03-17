@@ -20,6 +20,7 @@
 #include "third_party/xla_client/pjrt_computation_client.h"
 #include "third_party/xla_client/sys_util.h"
 #include "third_party/xla_client/xrt_computation_client.h"
+#include "third_party/xla_client/mhlo_helper.h"
 
 namespace xla {
 namespace {
@@ -346,6 +347,110 @@ ComputationClient* ComputationClient::Get() {
 
 ComputationClient* ComputationClient::GetIfInitialized() {
   return g_computation_client.load();
+}
+
+void ComputationClient::hlo_mhlo_hlo_roundtrip_helper(HloModuleProto* proto) {
+  metrics::TimedSection timed(HloMhloRoundTripMetric());
+  // ::xla::hlo_mhlo_hlo_roundtrip_helper(proto);
+  mlir::MLIRContext context;
+  mlir::ModuleOp mlir_module = mlir::ModuleOp::create(mlir::UnknownLoc::get(&context));
+  {
+    metrics::TimedSection timed(HloToMhloMetric());
+    if (!hlo_mhlo_helper(proto, &mlir_module)) {
+      return;
+    }
+  }
+  xla::HloProto hlo_proto;
+  {
+    metrics::TimedSection timed(MhloToHloMetric());
+    if (!mhlo_hlo_helper(&mlir_module, &hlo_proto)) {
+      return;
+    }
+  }
+  proto->Swap(hlo_proto.mutable_hlo_module());
+}
+
+void ComputationClient::hlo_stablehlo_hlo_roundtrip_helper(HloModuleProto* proto) {
+  metrics::TimedSection timed(HloStableHloRoundTripMetric());
+  // ::xla::hlo_mhlo_hlo_roundtrip_helper(proto);
+  mlir::MLIRContext context;
+  mlir::ModuleOp mlir_module = mlir::ModuleOp::create(mlir::UnknownLoc::get(&context));
+  {
+    metrics::TimedSection timed(HloToMhloMetric());
+    if (!hlo_mhlo_helper(proto, &mlir_module)) {
+      return;
+    }
+  }
+  // Legalize MHLO -> StableHLO
+  {
+    metrics::TimedSection timed(MHloToStableHloMetric());
+    if (!mhlo_stablehlo_helper(&mlir_module, &context)) {
+      return;
+    }
+  }
+  // Legalize StableHLO -> MHLO
+  {
+    metrics::TimedSection timed(StableHloToMHloMetric());
+    if(!stablehlo_mhlo_helper(&mlir_module, &context)) {
+      return;
+    }
+  }
+  xla::HloProto hlo_proto;
+  {
+    metrics::TimedSection timed(MhloToHloMetric());
+    if (!mhlo_hlo_helper(&mlir_module, &hlo_proto)) {
+      return;
+    }
+  }
+  proto->Swap(hlo_proto.mutable_hlo_module());
+}
+
+void ComputationClient::roundtrip_helper(HloModuleProto* proto) {
+  std::string roundtripType =
+      sys_util::GetEnvString(env::kEnvHloRoundTripType, "STABLEHLO");
+  if (roundtripType == "MHLO") {
+    std::cout << "mhlo roundtrip" << std::endl;
+    hlo_mhlo_hlo_roundtrip_helper(proto);
+  } else {
+    std::cout << "stablehlo roundtrip" << std::endl;
+    hlo_stablehlo_hlo_roundtrip_helper(proto);
+  }
+}
+
+metrics::Metric* ComputationClient::HloMhloRoundTripMetric() {
+  static metrics::Metric* metric =
+      new metrics::Metric("HloMhloRoundTripTime", metrics::MetricFnTime);
+  return metric;
+}
+
+metrics::Metric* ComputationClient::HloStableHloRoundTripMetric() {
+  static metrics::Metric* metric =
+      new metrics::Metric("HloStableHloRoundTripTime", metrics::MetricFnTime);
+  return metric;
+}
+
+metrics::Metric* ComputationClient::MHloToStableHloMetric() {
+  static metrics::Metric* metric =
+      new metrics::Metric("MHloToStableHloTime", metrics::MetricFnTime);
+  return metric;
+}
+
+metrics::Metric* ComputationClient::StableHloToMHloMetric() {
+  static metrics::Metric* metric =
+      new metrics::Metric("StableHloToMHloTime", metrics::MetricFnTime);
+  return metric;
+}
+
+metrics::Metric* ComputationClient::HloToMhloMetric() {
+  static metrics::Metric* metric =
+      new metrics::Metric("HloToMhloTime", metrics::MetricFnTime);
+  return metric;
+}
+
+metrics::Metric* ComputationClient::MhloToHloMetric() {
+  static metrics::Metric* metric =
+      new metrics::Metric("MhloToHloTime", metrics::MetricFnTime);
+  return metric;
 }
 
 metrics::Metric* ComputationClient::TransferToServerMetric() {

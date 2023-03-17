@@ -25,6 +25,7 @@ const char* const kEnvPjrtAsyncGpuClient = "PJRT_GPU_ASYNC_CLIENT";
 const char* const kEnvTpuLibraryPath = "TPU_LIBRARY_PATH";
 const char* const kEnvPjrtDistServiceAddr = "PJRT_DIST_SERVICE_ADDR";
 const char* const kEnvPjRtLocalRank = "PJRT_LOCAL_PROCESS_RANK";
+const char* const kEnvHloRoundTripType = "HLO_ROUNDTRIP_TYPE";
 
 }  // namespace env
 }  // namespace xla

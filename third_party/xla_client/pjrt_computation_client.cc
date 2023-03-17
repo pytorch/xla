@@ -386,6 +386,11 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
     }
 
     PjRtDevice* pjrt_device = StringToPjRtDevice(instance.compilation_device);
+    // HLO<->MHLO roundtrip
+    // ComputationClient::hlo_mhlo_hlo_roundtrip_helper(instance.computation.mutable_proto());
+    // HLO<->StableHLO roundtrip
+    // ComputationClient::hlo_stablehlo_hlo_roundtrip_helper(instance.computation.mutable_proto());
+    ComputationClient::roundtrip_helper(instance.computation.mutable_proto());
     std::unique_ptr<xla::PjRtLoadedExecutable> executable =
         ConsumeValue(client_->Compile(instance.computation, compile_options));
 
