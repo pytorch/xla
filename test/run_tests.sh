@@ -146,7 +146,7 @@ function run_xrt_tests {
   run_torchrun  "$CDIR/test_allreduce_torchrun.py"
 }
 
-function run_op_tests {
+function run_torch_op_tests {
   run_dynamic "$CDIR/../../test/test_view_ops.py" "$@" -v TestViewOpsXLA
   run_test "$CDIR/../../test/test_torch.py" "$@" -v TestTorchDeviceTypeXLA
   run_dynamic "$CDIR/../../test/test_torch.py" "$@" -v TestDevicePrecisionXLA
@@ -160,6 +160,9 @@ function run_op_tests {
   run_dynamic "$CDIR/../../test/nn/test_convolution.py" "$@" -v TestConvolutionNNDeviceTypeXLA
   run_dynamic "$CDIR/../../test/nn/test_multihead_attention.py" "$@" -v TestMultiheadAttentionNNDeviceTypeXLA
   run_dynamic "$CDIR/../../test/test_type_promotion.py" "$@" -v TestTypePromotionXLA
+}
+
+function run_xla_op_tests {
   run_dynamic "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_dynamic "$CDIR/test_dynamic_shapes.py"
   run_dynamic "$CDIR/test_dynamic_shape_models.py" "$@" --verbosity=$VERBOSITY
@@ -193,6 +196,11 @@ function run_op_tests {
   run_test "$CDIR/test_torch_distributed_xla_backend.py"
 }
 
+function run_op_tests {
+  run_torch_op_tests
+  run_xla_op_tests
+}
+
 function run_mp_op_tests {
   run_test "$CDIR/test_mp_replication.py"
   run_test "$CDIR/test_mp_all_to_all.py"
@@ -213,7 +221,11 @@ function run_mp_op_tests {
 }
 
 function run_tests {
-  run_op_tests
+  if [[ "$XLA_SKIP_TORCH_OP_TESTS" == "1"]]; then
+    run_xla_op_tests
+  else
+    run_op_tests
+  fi
   if [[ "$XLA_SKIP_MP_OP_TESTS" != "1" ]]; then
     run_mp_op_tests
   fi
