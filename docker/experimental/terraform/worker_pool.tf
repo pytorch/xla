@@ -1,6 +1,6 @@
 resource "google_cloudbuild_worker_pool" "worker-pool" {
-  name        = var.worker_pool.name
-  location    = var.worker_pool.location
+  name     = var.worker_pool.name
+  location = var.worker_pool.location
 
   worker_config {
     disk_size_gb   = var.worker_pool.disk_size_gb
