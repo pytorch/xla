@@ -2703,9 +2703,17 @@ at::Tensor XLANativeFunctions::select_scatter(const at::Tensor& base,
           torch::lazy::ToVector<int64_t>(base_tensor_shape.get().dimensions()));
   auto mutated_view_tensor_reshaped = torch_xla::XLATensor::Create(
       std::move(mutated_view_tensor_reshaped_node), *common_device);
+
+  dim = torch::lazy::GetCanonicalDimensionIndex(dim,
+                                                base_tensor_shape.get().rank());
+  std::vector<int64_t> indices(base_tensor_shape.get().rank(), 0);
+  indices[dim] = torch::lazy::GetCanonicalPosition(
+      xla::util::ToVector<int64_t>(base_tensor_shape.get().dimensions()), dim,
+      index);
+
   torch::lazy::NodePtr result_node = torch::lazy::MakeNode<UpdateSlice>(
       base_tensor->GetIrValue(), mutated_view_tensor_reshaped->GetIrValue(),
-      absl::Span<const int64_t>({dim, index}));
+      absl::Span<const int64_t>(indices));
   return torch_xla::bridge::AtenFromXlaTensor(
       torch_xla::XLATensor::Create(std::move(result_node), *common_device));
 }
