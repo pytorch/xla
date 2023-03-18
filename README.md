@@ -147,6 +147,7 @@ To run on [compute instances with GPUs](https://cloud.google.com/compute/docs/gp
 
 | Version | Colab TPU Wheel |
 | --- | ----------- |
+| 2.0 | `https://storage.googleapis.com/tpu-pytorch/wheels/colab/torch-2.0-cp39-cp39-linux_x86_64.whl` |
 | 1.13 | `https://storage.googleapis.com/tpu-pytorch/wheels/colab/torch_xla-1.13-cp37-cp37m-linux_x86_64.whl` |
 | 1.12 | `https://storage.googleapis.com/tpu-pytorch/wheels/colab/torch_xla-1.12-cp37-cp37m-linux_x86_64.whl` |
 | 1.11 | `https://storage.googleapis.com/tpu-pytorch/wheels/colab/torch_xla-1.11-cp37-cp37m-linux_x86_64.whl` |
