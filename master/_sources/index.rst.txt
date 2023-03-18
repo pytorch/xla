@@ -98,6 +98,7 @@ test
 
 .. mdinclude:: ../../TROUBLESHOOTING.md
 .. mdinclude:: ../pjrt.md
-.. mdinclude:: ../ddp.md
+.. mdinclude:: ../dynamo.md
 .. mdinclude:: ../fsdp.md
-.. mdinclude:: ../../OP_LOWERING_GUIDE.md
+.. mdinclude:: ../ddp.md
+.. mdinclude:: ../gpu.md

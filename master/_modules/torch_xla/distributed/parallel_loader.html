@@ -209,7 +209,7 @@
               
               
                 <div class="version">
-                  master (1.14 )
+                  master (2.1.0 )
                 </div>
               
             
@@ -308,11 +308,7 @@
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
   <h1>Source code for torch_xla.distributed.parallel_loader</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span>
-<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">print_function</span>
-
-<span class="kn">from</span> <span class="nn">six</span> <span class="kn">import</span> <span class="n">iteritems</span><span class="p">,</span> <span class="n">itervalues</span>
-<span class="kn">import</span> <span class="nn">threading</span>
+<span></span><span class="kn">import</span> <span class="nn">threading</span>
 <span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">import</span> <span class="nn">torch_xla</span>
 <span class="kn">import</span> <span class="nn">torch_xla.debug.profiler</span> <span class="k">as</span> <span class="nn">xp</span>
@@ -365,7 +361,7 @@
 
 
 <div class="viewcode-block" id="ParallelLoader"><a class="viewcode-back" href="../../../index.html#torch_xla.distributed.parallel_loader.ParallelLoader">[docs]</a><span class="k">class</span> <span class="nc">ParallelLoader</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Wraps an existing PyTorch DataLoader with background data upload.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Wraps an existing PyTorch DataLoader with background data upload.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    loader (:class:`torch.utils.data.DataLoader`): The PyTorch DataLoader to be</span>
@@ -383,6 +379,9 @@
 <span class="sd">      where the worker threads deposit tensors which have already been sent to</span>
 <span class="sd">      devices.</span>
 <span class="sd">      Default: 4</span>
+<span class="sd">    host_to_device_transfer_threads (int, optional): The number of threads that</span>
+<span class="sd">      work in parallel to transfer data from loader queue to device queue.</span>
+<span class="sd">      Default: 1</span>
 <span class="sd">  &quot;&quot;&quot;</span>
 
   <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
@@ -391,7 +390,8 @@
                <span class="n">batchdim</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
                <span class="n">batches_per_execution</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
                <span class="n">loader_prefetch_size</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
-               <span class="n">device_prefetch_size</span><span class="o">=</span><span class="mi">4</span><span class="p">):</span>
+               <span class="n">device_prefetch_size</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+               <span class="n">host_to_device_transfer_threads</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_loader</span> <span class="o">=</span> <span class="n">loader</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_devices</span> <span class="o">=</span> <span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">devices</span><span class="p">]</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_batchdim</span> <span class="o">=</span> <span class="n">batchdim</span>
@@ -404,13 +404,14 @@
     <span class="n">thread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_loader_worker</span><span class="p">)</span>
     <span class="n">thread</span><span class="o">.</span><span class="n">daemon</span> <span class="o">=</span> <span class="kc">True</span>
     <span class="n">thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
-    <span class="k">for</span> <span class="n">dqueue</span> <span class="ow">in</span> <span class="n">itervalues</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_queues</span><span class="p">):</span>
-      <span class="n">thread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_worker</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">dqueue</span><span class="p">,))</span>
-      <span class="n">thread</span><span class="o">.</span><span class="n">daemon</span> <span class="o">=</span> <span class="kc">True</span>
-      <span class="n">thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">dqueue</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_queues</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+      <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">host_to_device_transfer_threads</span><span class="p">):</span>
+        <span class="n">thread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_worker</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">dqueue</span><span class="p">,))</span>
+        <span class="n">thread</span><span class="o">.</span><span class="n">daemon</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
 
 <div class="viewcode-block" id="ParallelLoader.per_device_loader"><a class="viewcode-back" href="../../../index.html#torch_xla.distributed.parallel_loader.ParallelLoader.per_device_loader">[docs]</a>  <span class="k">def</span> <span class="nf">per_device_loader</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Retrieves the loader iterator object for the given device.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Retrieves the loader iterator object for the given device.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">      device (`torch.device`): The device whole loader is being requested.</span>
@@ -432,7 +433,7 @@
 
   <span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_done</span> <span class="o">=</span> <span class="kc">True</span>
-    <span class="k">for</span> <span class="n">dqueue</span> <span class="ow">in</span> <span class="n">itervalues</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_queues</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">dqueue</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_queues</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
       <span class="n">dqueue</span><span class="o">.</span><span class="n">queue</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
       <span class="n">dqueue</span><span class="o">.</span><span class="n">loader_queue</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
 
@@ -479,7 +480,7 @@
 
 
 <span class="k">class</span> <span class="nc">MpDeviceLoader</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Wraps an existing PyTorch DataLoader with background data upload.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Wraps an existing PyTorch DataLoader with background data upload.</span>
 
 <span class="sd">  This class should only be using with multi-processing data parallelism.</span>
 

@@ -209,7 +209,7 @@
               
               
                 <div class="version">
-                  master (1.14 )
+                  master (2.1.0 )
                 </div>
               
             
@@ -308,10 +308,7 @@
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
   <h1>Source code for torch_xla.utils.gcsfs</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span>
-<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">print_function</span>
-
-<span class="kn">import</span> <span class="nn">builtins</span>
+<span></span><span class="kn">import</span> <span class="nn">builtins</span>
 <span class="kn">import</span> <span class="nn">collections</span>
 <span class="kn">import</span> <span class="nn">glob</span>
 <span class="kn">import</span> <span class="nn">io</span>
@@ -428,7 +425,7 @@
 
 
 <div class="viewcode-block" id="open"><a class="viewcode-back" href="../../../index.html#torch_xla.utils.gcsfs.open">[docs]</a><span class="k">def</span> <span class="nf">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Opens a Google Cloud Storage (GCS) file for reading or writing.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Opens a Google Cloud Storage (GCS) file for reading or writing.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    path (string): The GCS path of the file. Must be &quot;gs://BUCKET_NAME/PATH&quot;</span>
@@ -462,7 +459,7 @@
 
 
 <div class="viewcode-block" id="list"><a class="viewcode-back" href="../../../index.html#torch_xla.utils.gcsfs.list">[docs]</a><span class="k">def</span> <span class="nf">list</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Lists the content of a GCS bucket.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Lists the content of a GCS bucket.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    path (string): The GCS path of the file. Must be &quot;gs://BUCKET_NAME/PATH&quot;</span>
@@ -483,7 +480,7 @@
 
 
 <div class="viewcode-block" id="stat"><a class="viewcode-back" href="../../../index.html#torch_xla.utils.gcsfs.stat">[docs]</a><span class="k">def</span> <span class="nf">stat</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Fetches the information of a GCS file.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Fetches the information of a GCS file.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    path (string): The GCS path of the file. Must be &quot;gs://BUCKET_NAME/PATH&quot;</span>
@@ -498,7 +495,7 @@
 
 
 <div class="viewcode-block" id="remove"><a class="viewcode-back" href="../../../index.html#torch_xla.utils.gcsfs.remove">[docs]</a><span class="k">def</span> <span class="nf">remove</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Removes a GCS blob.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Removes a GCS blob.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    path (string): The GCS path of the file. Must be &quot;gs://BUCKET_NAME/PATH&quot;</span>
@@ -509,7 +506,7 @@
 
 
 <div class="viewcode-block" id="rmtree"><a class="viewcode-back" href="../../../index.html#torch_xla.utils.gcsfs.rmtree">[docs]</a><span class="k">def</span> <span class="nf">rmtree</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Removes all the GCS blobs within a given path.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Removes all the GCS blobs within a given path.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    path (string): The GCS path of the file pattern or folder. Must be</span>
@@ -532,7 +529,7 @@
 
 
 <div class="viewcode-block" id="read"><a class="viewcode-back" href="../../../index.html#torch_xla.utils.gcsfs.read">[docs]</a><span class="k">def</span> <span class="nf">read</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Reads the whole content of a GCS blob.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Reads the whole content of a GCS blob.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    path (string): The GCS path of the file. Must be &quot;gs://BUCKET_NAME/PATH&quot;</span>
@@ -546,7 +543,7 @@
 
 
 <div class="viewcode-block" id="write"><a class="viewcode-back" href="../../../index.html#torch_xla.utils.gcsfs.write">[docs]</a><span class="k">def</span> <span class="nf">write</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">content</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Write a string/bytes or file into a GCS blob.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Write a string/bytes or file into a GCS blob.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    path (string): The GCS path of the file. Must be &quot;gs://BUCKET_NAME/PATH&quot;</span>
@@ -563,7 +560,7 @@
 
 
 <div class="viewcode-block" id="is_gcs_path"><a class="viewcode-back" href="../../../index.html#torch_xla.utils.gcsfs.is_gcs_path">[docs]</a><span class="k">def</span> <span class="nf">is_gcs_path</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Checks whether a path is a GCS path.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Checks whether a path is a GCS path.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    path (string): The path to be checked.</span>
@@ -575,7 +572,7 @@
 
 
 <div class="viewcode-block" id="generic_open"><a class="viewcode-back" href="../../../index.html#torch_xla.utils.gcsfs.generic_open">[docs]</a><span class="k">def</span> <span class="nf">generic_open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Opens a file (GCS or not) for reding or writing.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Opens a file (GCS or not) for reding or writing.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    path (string): The path of the file to be opened. If a GCS path, it must be</span>
@@ -597,7 +594,7 @@
 
 
 <div class="viewcode-block" id="generic_write"><a class="viewcode-back" href="../../../index.html#torch_xla.utils.gcsfs.generic_write">[docs]</a><span class="k">def</span> <span class="nf">generic_write</span><span class="p">(</span><span class="n">output_string</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">makedirs</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Write a string/bytes or file into a GCS blob or local disk.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Write a string/bytes or file into a GCS blob or local disk.</span>
 
 <span class="sd">  Depending on the path passed in, this API can write to local or GCS file.</span>
 <span class="sd">  Checks if the `path` starts with the &#39;gs://&#39; prefix, and uses `open` otherwise.</span>
@@ -622,7 +619,7 @@
 
 
 <div class="viewcode-block" id="generic_read"><a class="viewcode-back" href="../../../index.html#torch_xla.utils.gcsfs.generic_read">[docs]</a><span class="k">def</span> <span class="nf">generic_read</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Reads the whole content of the provided location.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Reads the whole content of the provided location.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    path (string): The GCS path or local path to be read.</span>
@@ -638,7 +635,7 @@
 
 
 <span class="k">def</span> <span class="nf">generic_glob</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">recursive</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Lists all the names within a specified path.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Lists all the names within a specified path.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    path (string): The path to be listed (can have wildcards), either local</span>

@@ -209,7 +209,7 @@
               
               
                 <div class="version">
-                  master (1.14 )
+                  master (2.1.0 )
                 </div>
               
             
@@ -308,14 +308,11 @@
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
   <h1>Source code for torch_xla.utils.tf_record_reader</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span>
-<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">print_function</span>
-
-<span class="kn">import</span> <span class="nn">torch_xla</span>
+<span></span><span class="kn">import</span> <span class="nn">torch_xla</span>
 
 
 <div class="viewcode-block" id="TfRecordReader"><a class="viewcode-back" href="../../../index.html#torch_xla.utils.tf_record_reader.TfRecordReader">[docs]</a><span class="k">class</span> <span class="nc">TfRecordReader</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Reads TfRecords or TfExamples.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Reads TfRecords or TfExamples.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    path (string): The path to the file containing TfRecords.</span>
@@ -341,7 +338,7 @@
     <span class="bp">self</span><span class="o">.</span><span class="n">_transforms</span> <span class="o">=</span> <span class="n">transforms</span>
 
   <span class="k">def</span> <span class="nf">read_record</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Reads a TfRecord and returns the raw bytes.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Reads a TfRecord and returns the raw bytes.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">      The raw bytes of the record, or ``None`` in case of EOF.</span>
@@ -349,7 +346,7 @@
     <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_tfrecord_read</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_reader</span><span class="p">)</span>
 
   <span class="k">def</span> <span class="nf">read_example</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Reads a TfExample.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Reads a TfExample.</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">      In case of EOD returns ``None``, otherwise a dictionary whose keys</span>

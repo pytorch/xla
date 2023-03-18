@@ -209,7 +209,7 @@
               
               
                 <div class="version">
-                  master (1.14 )
+                  master (2.1.0 )
                 </div>
               
             
@@ -341,7 +341,7 @@
 
 
 <div class="viewcode-block" id="all_reduce"><a class="viewcode-back" href="../../../index.html#torch_xla.core.functions.all_reduce">[docs]</a><span class="k">def</span> <span class="nf">all_reduce</span><span class="p">(</span><span class="n">reduce_type</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Performs an inplace reduce operation on the input tensor.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Performs an inplace reduce operation on the input tensor.</span>
 
 <span class="sd">  This is the same as `xm.all_reduce()` but supports autograd differentiation.</span>
 
@@ -379,7 +379,7 @@
 
 
 <div class="viewcode-block" id="all_gather"><a class="viewcode-back" href="../../../index.html#torch_xla.core.functions.all_gather">[docs]</a><span class="k">def</span> <span class="nf">all_gather</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Performs an all-gather operation along a given dimension.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Performs an all-gather operation along a given dimension.</span>
 
 <span class="sd">  This is the same as `xm.all_gather()` but supports autograd differentiation.</span>
 
@@ -395,7 +395,7 @@
 
 
 <div class="viewcode-block" id="nms"><a class="viewcode-back" href="../../../index.html#torch_xla.core.functions.nms">[docs]</a><span class="k">def</span> <span class="nf">nms</span><span class="p">(</span><span class="n">boxes</span><span class="p">,</span> <span class="n">scores</span><span class="p">,</span> <span class="n">score_threshold</span><span class="p">,</span> <span class="n">iou_threshold</span><span class="p">,</span> <span class="n">output_size</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Performs a Non Maximal Suppression operation.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Performs a Non Maximal Suppression operation.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    boxes (torch.Tensor): A `torch.Tensor` of shape `[N, 4]` listing the boxes</span>
@@ -418,7 +418,7 @@
 
 
 <span class="k">def</span> <span class="nf">distributed_mm</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">split</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Performs a matrix multiplication with sharded weight.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Performs a matrix multiplication with sharded weight.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    w (torch.Tensor): The sharded weight, RHS of the matrix multiplication</span>

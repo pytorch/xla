@@ -209,7 +209,7 @@
               
               
                 <div class="version">
-                  master (1.14 )
+                  master (2.1.0 )
                 </div>
               
             
@@ -308,10 +308,7 @@
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
   <h1>Source code for torch_xla.utils.utils</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span>
-<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">print_function</span>
-
-<span class="kn">from</span> <span class="nn">concurrent</span> <span class="kn">import</span> <span class="n">futures</span>
+<span></span><span class="kn">from</span> <span class="nn">concurrent</span> <span class="kn">import</span> <span class="n">futures</span>
 <span class="kn">import</span> <span class="nn">contextlib</span>
 <span class="kn">import</span> <span class="nn">copy</span>
 <span class="kn">import</span> <span class="nn">os</span>
@@ -352,7 +349,7 @@
 
 
 <div class="viewcode-block" id="SampleGenerator"><a class="viewcode-back" href="../../../index.html#torch_xla.utils.utils.SampleGenerator">[docs]</a><span class="k">class</span> <span class="nc">SampleGenerator</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Iterator which returns multiple samples of a given input data.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Iterator which returns multiple samples of a given input data.</span>
 
 <span class="sd">  Can be used in place of a PyTorch `DataLoader` to generate synthetic data.</span>
 
@@ -416,17 +413,17 @@
 
 
 <div class="viewcode-block" id="DataWrapper"><a class="viewcode-back" href="../../../index.html#torch_xla.utils.utils.DataWrapper">[docs]</a><span class="k">class</span> <span class="nc">DataWrapper</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Utility class to wrap data structures to be sent to device.&quot;&quot;&quot;</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Utility class to wrap data structures to be sent to device.&quot;&quot;&quot;</span>
 
   <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
     <span class="k">pass</span>
 
   <span class="k">def</span> <span class="nf">get_tensors</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Returns the list of CPU tensors which must be sent to device.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns the list of CPU tensors which must be sent to device.&quot;&quot;&quot;</span>
     <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;The method is missing an implementation&#39;</span><span class="p">)</span>
 
   <span class="k">def</span> <span class="nf">from_tensors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tensors</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Build an instance of the wrapped object given the input tensors.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Build an instance of the wrapped object given the input tensors.</span>
 
 <span class="sd">    The number of tensors is the same as the ones returned by the</span>
 <span class="sd">    `get_tensors()` API, and `tensors[i]` is the device copy of</span>
@@ -588,7 +585,7 @@
 
 
 <span class="k">def</span> <span class="nf">parallel_work</span><span class="p">(</span><span class="n">num_workers</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Executes fn in parallel threads with args and returns result list.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Executes fn in parallel threads with args and returns result list.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    num_workers: number of workers in thread pool to execute work.</span>

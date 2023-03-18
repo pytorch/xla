@@ -209,7 +209,7 @@
               
               
                 <div class="version">
-                  master (1.14 )
+                  master (2.1.0 )
                 </div>
               
             
@@ -245,9 +245,10 @@
 <li><a class="reference internal" href="#running-models-on-xla-devices">Running Models on XLA Devices</a><ul>
 <li><a class="reference internal" href="#running-on-a-single-xla-device">Running on a Single XLA Device</a></li>
 <li><a class="reference internal" href="#running-on-multiple-xla-devices-with-multi-processing">Running on Multiple XLA Devices with Multi-processing</a></li>
+<li><a class="reference internal" href="#running-on-tpu-pods">Running on TPU Pods</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#id1">XLA Tensor Deep Dive</a><ul>
+<li><a class="reference internal" href="#id3">XLA Tensor Deep Dive</a><ul>
 <li><a class="reference internal" href="#xla-tensors-are-lazy">XLA Tensors are Lazy</a></li>
 <li><a class="reference internal" href="#xla-tensors-and-bfloat16">XLA Tensors and bFloat16</a></li>
 <li><a class="reference internal" href="#memory-layout">Memory Layout</a></li>
@@ -269,6 +270,7 @@
 <li><a class="reference internal" href="#perform-a-auto-metrics-analysis">Perform A Auto-Metrics Analysis</a></li>
 <li><a class="reference internal" href="#get-a-metrics-report">Get A Metrics Report</a></li>
 <li><a class="reference internal" href="#understand-the-metrics-report">Understand The Metrics Report</a></li>
+<li><a class="reference internal" href="#clar-the-metrics-report">Clar The Metrics Report</a></li>
 <li><a class="reference internal" href="#performance-profiling">Performance Profiling</a></li>
 <li><a class="reference internal" href="#known-performance-caveats">Known Performance Caveats</a></li>
 <li><a class="reference internal" href="#xla-tensor-quirks">XLA Tensor Quirks</a></li>
@@ -281,34 +283,35 @@
 <li><a class="reference internal" href="#common-issues">Common Issues</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#experimental-pjrt-runtime-support">Experimental PjRt Runtime Support</a><ul>
+<li><a class="reference internal" href="#pjrt-runtime-beta">PJRT Runtime (Beta)</a><ul>
+<li><a class="reference internal" href="#tl-dr">TL;DR</a></li>
+<li><a class="reference internal" href="#benefits">Benefits</a></li>
 <li><a class="reference internal" href="#quickstart">Quickstart</a><ul>
 <li><a class="reference internal" href="#cpu">CPU</a></li>
-<li><a class="reference internal" href="#v4-tpu">v4 TPU</a><ul>
+<li><a class="reference internal" href="#tpu">TPU</a><ul>
 <li><a class="reference internal" href="#pods">Pods</a></li>
+<li><a class="reference internal" href="#docker">Docker</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#gpu">GPU</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#key-differences-from-xrt">Key differences from XRT</a></li>
-<li><a class="reference internal" href="#tpus-v2-v3-vs-v4">TPUs v2/v3 vs v4</a><ul>
-<li><a class="reference internal" href="#compatible-examples">Compatible examples</a></li>
+<li><a class="reference internal" href="#differences-from-xrt">Differences from XRT</a><ul>
+<li><a class="reference internal" href="#id6">Multithreading on TPU v2/v3</a></li>
+<li><a class="reference internal" href="#changes-to-xm-rendezvous">Changes to xm.rendezvous</a></li>
+<li><a class="reference internal" href="#pjrt-and-torch-distributed">PJRT and torch.distributed</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#pjrt-and-ddp">PjRt and DDP</a></li>
+<li><a class="reference internal" href="#performance">Performance</a><ul>
+<li><a class="reference internal" href="#new-tpu-runtime">New TPU runtime</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#how-to-do-distributeddataparallel">How to do <code class="docutils literal notranslate"><span class="pre">DistributedDataParallel</span></code></a><ul>
-<li><a class="reference internal" href="#background-motivation">Background / Motivation</a></li>
-<li><a class="reference internal" href="#how-to-use-distributeddataparallel">How to use DistributedDataParallel</a></li>
-<li><a class="reference internal" href="#benchmarking">Benchmarking</a><ul>
-<li><a class="reference internal" href="#resnet50-with-fake-data">Resnet50 with fake data</a></li>
-<li><a class="reference internal" href="#mnist-with-fake-data">MNIST with fake data</a></li>
-<li><a class="reference internal" href="#mnist-with-real-data">MNIST with real data</a></li>
+<li><a class="reference internal" href="#torchdynamo-torch-compile-integration-in-pytorch-xla">TorchDynamo(torch.compile) integration in PyTorch XLA</a><ul>
+<li><a class="reference internal" href="#inference">Inference</a></li>
+<li><a class="reference internal" href="#training">Training</a></li>
+<li><a class="reference internal" href="#take-away">Take away</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#disclaimer">Disclaimer</a></li>
 <li><a class="reference internal" href="#fully-sharded-data-parallel-fsdp-in-pytorch-xla">Fully Sharded Data Parallel (FSDP) in PyTorch XLA</a><ul>
 <li><a class="reference internal" href="#example-training-scripts-on-mnist-and-imagenet">Example training scripts on MNIST and ImageNet</a><ul>
 <li><a class="reference internal" href="#installation">Installation</a></li>
@@ -322,13 +325,27 @@
 </li>
 </ul>
 </li>
-<li><a class="reference internal" href="#op-lowering-guide">OP Lowering Guide</a><ul>
-<li><a class="reference internal" href="#background">Background</a></li>
-<li><a class="reference internal" href="#before-you-start">Before you start</a></li>
-<li><a class="reference internal" href="#understanding-the-operation">Understanding the operation</a></li>
-<li><a class="reference internal" href="#file-structure">File structure</a></li>
-<li><a class="reference internal" href="#unit-test">Unit Test</a></li>
-<li><a class="reference internal" href="#tips">Tips</a></li>
+<li><a class="reference internal" href="#how-to-do-distributeddataparallel">How to do <code class="docutils literal notranslate"><span class="pre">DistributedDataParallel</span></code></a><ul>
+<li><a class="reference internal" href="#background-motivation">Background / Motivation</a></li>
+<li><a class="reference internal" href="#how-to-use-distributeddataparallel">How to use DistributedDataParallel</a></li>
+<li><a class="reference internal" href="#benchmarking">Benchmarking</a><ul>
+<li><a class="reference internal" href="#resnet50-with-fake-data">Resnet50 with fake data</a></li>
+<li><a class="reference internal" href="#mnist-with-fake-data">MNIST with fake data</a></li>
+<li><a class="reference internal" href="#mnist-with-real-data">MNIST with real data</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#disclaimer">Disclaimer</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#how-to-run-with-pytorch-xla-gpu">How to run with PyTorch/XLA:GPU</a><ul>
+<li><a class="reference internal" href="#create-a-gpu-instance">Create a GPU instance</a></li>
+<li><a class="reference internal" href="#environment-setup">Environment Setup</a><ul>
+<li><a class="reference internal" href="#id8">Docker</a></li>
+<li><a class="reference internal" href="#wheel">Wheel</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#run-a-simple-model">Run a simple model</a></li>
+<li><a class="reference internal" href="#amp-automatic-mixed-precision">AMP (AUTOMATIC MIXED PRECISION)</a></li>
 </ul>
 </li>
 </ul>
@@ -523,11 +540,28 @@ devices. The following snippet shows how:</p>
 </pre></div>
 </div>
 <p>There are three differences between this multi-device snippet and the previous
-single device snippet:</p>
+single device snippet. Let’s go over then one by one.</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">xmp.spawn()</span></code> creates the processes that each run an XLA device.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">MpDeviceLoader</span></code> loads the training data onto each device.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">xm.optimizer_step(optimizer)</span></code> consolidates the gradients between cores and issues the XLA device step computation.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">xmp.spawn()</span></code></p>
+<ul>
+<li><p>Creates the processes that each run an XLA device.</p></li>
+<li><p>Each process will only be able to access the device assigned to the current process. For example on a TPU v4-8, there will be 4 processes being spawn up and each process will own a TPU device.</p></li>
+<li><p>Note that if you print the <code class="docutils literal notranslate"><span class="pre">xm.xla_device()</span></code> on each process you will see <code class="docutils literal notranslate"><span class="pre">xla:0</span></code> on all devices. This is because each process can only see one device. This does not mean multi-process is not functioning. The only execution is with PJRT runtime on TPU v2 and TPU v3 since there will be <code class="docutils literal notranslate"><span class="pre">#devices/2</span></code> processes and each process will have 2 threads(check this <a class="reference external" href="https://github.com/pytorch/xla/blob/master/docs/pjrt.md#tpus-v2v3-vs-v4">doc</a> for more details).</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">MpDeviceLoader</span></code></p>
+<ul>
+<li><p>Loads the training data onto each device.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">MpDeviceLoader</span></code> can wrap on a torch dataloader. It can preload the data to the device and overlap the dataloading with device execution to improve the performance.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">MpDeviceLoader</span></code> also call <code class="docutils literal notranslate"><span class="pre">xm.mark_step</span></code> for you every <code class="docutils literal notranslate"><span class="pre">batches_per_execution</span></code>(default to 1) batch being yield.</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">xm.optimizer_step(optimizer)</span></code></p>
+<ul>
+<li><p>Consolidates the gradients between devices and issues the XLA device step computation.</p></li>
+<li><p>It is pretty much a <code class="docutils literal notranslate"><span class="pre">all_reduce_gradients</span></code> + <code class="docutils literal notranslate"><span class="pre">optimizer.step()</span></code> + <code class="docutils literal notranslate"><span class="pre">mark_step</span></code> and returns the loss being reduced.</p></li>
+</ul>
+</li>
 </ul>
 <p>The model definition, optimizer definition and training loop remain the same.</p>
 <blockquote>
@@ -540,9 +574,32 @@ stack).</p>
 <a class="reference external" href="https://github.com/pytorch/xla/blob/master/test/test_train_mp_mnist.py">full multiprocessing example</a>
 for more on training a network on multiple XLA devices with multi-processing.</p>
 </div>
+<div class="section" id="running-on-tpu-pods">
+<h3>Running on TPU Pods<a class="headerlink" href="#running-on-tpu-pods" title="Permalink to this headline">¶</a></h3>
+<p>Multi-host setup for different accelerators can be very different. This doc will talk about the device independent bits of multi-host training and will use the TPU + PJRT runtime(currently available on 1.13 and 2.x releases) as an example.</p>
+<p>Before you being, please take a look at our user guide at <a class="reference external" href="https://cloud.google.com/tpu/docs/run-calculation-pytorch">here</a> which will explain some Google Cloud basis like how to use <code class="docutils literal notranslate"><span class="pre">gcloud</span></code> command and how to setup your project. You can also check <a class="reference external" href="https://cloud.google.com/tpu/docs/how-to">here</a> for all Cloud TPU Howto. This doc will focus on the PyTorch/XLA perspective of the Setup.</p>
+<p>Let’s assume you have the above mnist example from above section in a <code class="docutils literal notranslate"><span class="pre">train_mnist_xla.py</span></code>. If it is a single host multi device training, you would ssh to the TPUVM and run command like</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">PJRT_DEVICE</span><span class="o">=</span><span class="n">TPU</span> <span class="n">python3</span> <span class="n">train_mnist_xla</span><span class="o">.</span><span class="n">py</span>
+</pre></div>
 </div>
-<div class="section" id="id1">
-<h2>XLA Tensor Deep Dive<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<p>Now in order to run the same models on a TPU v4-16 (which has 2 host, each with 4 TPU devices), you will need to</p>
+<ul class="simple">
+<li><p>Make sure each host can access the training script and training data. This is usually done by using the <code class="docutils literal notranslate"><span class="pre">gcloud</span> <span class="pre">scp</span></code> command or <code class="docutils literal notranslate"><span class="pre">gcloud</span> <span class="pre">ssh</span></code> command to copy the training scripts to all hosts.</p></li>
+<li><p>Run the same training command on all hosts at the same time.</p></li>
+</ul>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>gcloud alpha compute tpus tpu-vm ssh $USER-pjrt --zone=$ZONE --project=$PROJECT --worker=all --command=&quot;PJRT_DEVICE=TPU python3 train_mnist_xla.py&quot;
+</pre></div>
+</div>
+<p>Above <code class="docutils literal notranslate"><span class="pre">gcloud</span> <span class="pre">ssh</span></code> command will ssh to all hosts in TPUVM Pod and run the same command at the same time..</p>
+<blockquote>
+<div><p><strong>NOTE:</strong> You need to run run above <code class="docutils literal notranslate"><span class="pre">gcloud</span></code> command outside of the TPUVM vm.</p>
+</div></blockquote>
+<p>The model code and training scirpt is the same for the multi-process training and the multi-host training. PyTorch/XLA and the underlying infrastructure will make sure each device is aware of the global topology and each device’s local and global ordinal. Cross-device communication will happen across all devices instead of local devices.</p>
+<p>For more details regarding PJRT runtime and how to run it on pod, please refer to this <a class="reference external" href="https://github.com/pytorch/xla/blob/master/docs/pjrt.md#tpu">doc</a>. For more information about PyTorch/XLA and TPU pod and a complete guide to run a resnet50 with fakedata on TPU pod, please refer to this <a class="reference external" href="https://cloud.google.com/tpu/docs/pytorch-pods">guide</a>.</p>
+</div>
+</div>
+<div class="section" id="id3">
+<h2>XLA Tensor Deep Dive<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h2>
 <p>Using XLA tensors and devices requires changing only a few lines of code. But
 even though XLA tensors act a lot like CPU and CUDA tensors, their internals are
 different. This section describes what makes XLA tensors unique.</p>
@@ -1193,7 +1250,7 @@ indices, and the second element being the number of valid boxes.</p>
 <span id="distributed"></span><h2>distributed<a class="headerlink" href="#module-torch_xla.distributed.parallel_loader" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
 <dt id="torch_xla.distributed.parallel_loader.ParallelLoader">
-<em class="property">class </em><code class="sig-prename descclassname">torch_xla.distributed.parallel_loader.</code><code class="sig-name descname">ParallelLoader</code><span class="sig-paren">(</span><em class="sig-param">loader</em>, <em class="sig-param">devices</em>, <em class="sig-param">batchdim=0</em>, <em class="sig-param">batches_per_execution=1</em>, <em class="sig-param">loader_prefetch_size=8</em>, <em class="sig-param">device_prefetch_size=4</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/distributed/parallel_loader.html#ParallelLoader"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.distributed.parallel_loader.ParallelLoader" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">torch_xla.distributed.parallel_loader.</code><code class="sig-name descname">ParallelLoader</code><span class="sig-paren">(</span><em class="sig-param">loader</em>, <em class="sig-param">devices</em>, <em class="sig-param">batchdim=0</em>, <em class="sig-param">batches_per_execution=1</em>, <em class="sig-param">loader_prefetch_size=8</em>, <em class="sig-param">device_prefetch_size=4</em>, <em class="sig-param">host_to_device_transfer_threads=1</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/distributed/parallel_loader.html#ParallelLoader"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.distributed.parallel_loader.ParallelLoader" title="Permalink to this definition">¶</a></dt>
 <dd><p>Wraps an existing PyTorch DataLoader with background data upload.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1213,6 +1270,9 @@ Default: 8</p></li>
 where the worker threads deposit tensors which have already been sent to
 devices.
 Default: 4</p></li>
+<li><p><strong>host_to_device_transfer_threads</strong> (<em>python:int</em><em>, </em><em>optional</em>) – The number of threads that
+work in parallel to transfer data from loader queue to device queue.
+Default: 1</p></li>
 </ul>
 </dd>
 </dl>
@@ -1708,7 +1768,10 @@ report sent to us if you have it.</p>
 <p>Put the following line in your program to generate a report:</p>
 <div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.debug.metrics</span> <span class="k">as</span> <span class="nn">met</span>
 
-<span class="nb">print</span><span class="p">(</span><span class="n">met</span><span class="o">.</span><span class="n">metrics_report</span><span class="p">())</span>
+<span class="c1"># For short report that only contains a few key metrics.</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">met</span><span class="o">.</span><span class="n">short_metrics_report</span><span class="p">())</span>
+<span class="c1"># For full report that includes all metrics.</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">met</span><span class="o">.</span><span class="n">short_metrics_report</span><span class="p">())</span>
 </pre></div>
 </div>
 </div>
@@ -1723,10 +1786,10 @@ report sent to us if you have it.</p>
 <p>This information is reported in terms of percentiles of the samples. An example is:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Metric</span><span class="p">:</span> <span class="n">CompileTime</span>
   <span class="n">TotalSamples</span><span class="p">:</span> <span class="mi">202</span>
-  <span class="n">Counter</span><span class="p">:</span> <span class="mi">06</span><span class="n">m09s401ms746</span><span class="o">.</span><span class="mi">001</span><span class="n">us</span>
-  <span class="n">ValueRate</span><span class="p">:</span> <span class="mi">778</span><span class="n">ms572</span><span class="o">.</span><span class="mi">062</span><span class="n">us</span> <span class="o">/</span> <span class="n">second</span>
+  <span class="n">Counter</span><span class="p">:</span> <span class="mi">06</span><span class="n">m09s401ms746</span><span class="mf">.001</span><span class="n">us</span>
+  <span class="n">ValueRate</span><span class="p">:</span> <span class="mi">778</span><span class="n">ms572</span><span class="mf">.062</span><span class="n">us</span> <span class="o">/</span> <span class="n">second</span>
   <span class="n">Rate</span><span class="p">:</span> <span class="mf">0.425201</span> <span class="o">/</span> <span class="n">second</span>
-  <span class="n">Percentiles</span><span class="p">:</span> <span class="mi">1</span><span class="o">%=</span><span class="mi">001</span><span class="n">ms32</span><span class="o">.</span><span class="mi">778</span><span class="n">us</span><span class="p">;</span> <span class="mi">5</span><span class="o">%=</span><span class="mi">001</span><span class="n">ms61</span><span class="o">.</span><span class="mi">283</span><span class="n">us</span><span class="p">;</span> <span class="mi">10</span><span class="o">%=</span><span class="mi">001</span><span class="n">ms79</span><span class="o">.</span><span class="mi">236</span><span class="n">us</span><span class="p">;</span> <span class="mi">20</span><span class="o">%=</span><span class="mi">001</span><span class="n">ms110</span><span class="o">.</span><span class="mi">973</span><span class="n">us</span><span class="p">;</span> <span class="mi">50</span><span class="o">%=</span><span class="mi">001</span><span class="n">ms228</span><span class="o">.</span><span class="mi">773</span><span class="n">us</span><span class="p">;</span> <span class="mi">80</span><span class="o">%=</span><span class="mi">001</span><span class="n">ms339</span><span class="o">.</span><span class="mi">183</span><span class="n">us</span><span class="p">;</span> <span class="mi">90</span><span class="o">%=</span><span class="mi">001</span><span class="n">ms434</span><span class="o">.</span><span class="mi">305</span><span class="n">us</span><span class="p">;</span> <span class="mi">95</span><span class="o">%=</span><span class="mi">002</span><span class="n">ms921</span><span class="o">.</span><span class="mi">063</span><span class="n">us</span><span class="p">;</span> <span class="mi">99</span><span class="o">%=</span><span class="mi">21</span><span class="n">s102ms853</span><span class="o">.</span><span class="mi">173</span><span class="n">us</span>
+  <span class="n">Percentiles</span><span class="p">:</span> <span class="mi">1</span><span class="o">%=</span><span class="mi">001</span><span class="n">ms32</span><span class="mf">.778</span><span class="n">us</span><span class="p">;</span> <span class="mi">5</span><span class="o">%=</span><span class="mi">001</span><span class="n">ms61</span><span class="mf">.283</span><span class="n">us</span><span class="p">;</span> <span class="mi">10</span><span class="o">%=</span><span class="mi">001</span><span class="n">ms79</span><span class="mf">.236</span><span class="n">us</span><span class="p">;</span> <span class="mi">20</span><span class="o">%=</span><span class="mi">001</span><span class="n">ms110</span><span class="mf">.973</span><span class="n">us</span><span class="p">;</span> <span class="mi">50</span><span class="o">%=</span><span class="mi">001</span><span class="n">ms228</span><span class="mf">.773</span><span class="n">us</span><span class="p">;</span> <span class="mi">80</span><span class="o">%=</span><span class="mi">001</span><span class="n">ms339</span><span class="mf">.183</span><span class="n">us</span><span class="p">;</span> <span class="mi">90</span><span class="o">%=</span><span class="mi">001</span><span class="n">ms434</span><span class="mf">.305</span><span class="n">us</span><span class="p">;</span> <span class="mi">95</span><span class="o">%=</span><span class="mi">002</span><span class="n">ms921</span><span class="mf">.063</span><span class="n">us</span><span class="p">;</span> <span class="mi">99</span><span class="o">%=</span><span class="mi">21</span><span class="n">s102ms853</span><span class="mf">.173</span><span class="n">us</span>
 </pre></div>
 </div>
 <p>We also provide counters, which are named integer variables which track internal software status. For example:</p>
@@ -1745,6 +1808,15 @@ They are fully qualified with their C++ namespace:</p>
 </div>
 <p>If you see <code class="docutils literal notranslate"><span class="pre">aten::</span></code> ops other than <code class="docutils literal notranslate"><span class="pre">nonzero</span></code> and <code class="docutils literal notranslate"><span class="pre">_local_scalar_dense</span></code>, that usually means a missing
 lowering in PyTorch/XLA. Feel free to open a feature request for it on <a class="reference external" href="https://github.com/pytorch/xla/issues">GitHub issues</a>.</p>
+</div>
+<div class="section" id="clar-the-metrics-report">
+<h2>Clar The Metrics Report<a class="headerlink" href="#clar-the-metrics-report" title="Permalink to this headline">¶</a></h2>
+<p>If you want to clear the metrics between steps/epoches, you can use</p>
+<div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.debug.metrics</span> <span class="k">as</span> <span class="nn">met</span>
+
+<span class="n">met</span><span class="o">.</span><span class="n">clear_all</span><span class="p">()</span>
+</pre></div>
+</div>
 </div>
 <div class="section" id="performance-profiling">
 <h2>Performance Profiling<a class="headerlink" href="#performance-profiling" title="Permalink to this headline">¶</a></h2>
@@ -1936,12 +2008,12 @@ traces together with the GitHub issue.</p>
 command it is possible to find that information. It will be a <em>python</em> process running your
 main <em>python</em> file.</p>
 <p>In order to allow <em>GDB</em> to attach a user process the following command should be run as root:</p>
-<div class="highlight-Shell notranslate"><div class="highlight"><pre><span></span><span class="nb">echo</span> <span class="m">0</span> &gt; /proc/sys/kernel/yama/ptrace_scope
+<div class="highlight-Shell notranslate"><div class="highlight"><pre><span></span><span class="nb">echo</span><span class="w"> </span><span class="m">0</span><span class="w"> </span>&gt;<span class="w"> </span>/proc/sys/kernel/yama/ptrace_scope
 </pre></div>
 </div>
 <p>The above command remains active until the machine is rebooted.</p>
 <p>The, given the PID, it is possible to grab the stack traces with the following command:</p>
-<div class="highlight-Shell notranslate"><div class="highlight"><pre><span></span>./scripts/dump_stacks.py PID &gt; /tmp/stack-traces.log
+<div class="highlight-Shell notranslate"><div class="highlight"><pre><span></span>./scripts/dump_stacks.py<span class="w"> </span>PID<span class="w"> </span>&gt;<span class="w"> </span>/tmp/stack-traces.log
 </pre></div>
 </div>
 </div>
@@ -1951,14 +2023,14 @@ main <em>python</em> file.</p>
 <p>A utility is provided in <code class="docutils literal notranslate"><span class="pre">scripts/debug_run.py</span></code> which can be used to create a <code class="docutils literal notranslate"><span class="pre">tar.gz</span></code>
 archive with the information required to debug <em>PyTorch/XLA</em> executions.</p>
 <p>Example:</p>
-<div class="highlight-Shell notranslate"><div class="highlight"><pre><span></span>./scripts/debug_run.py --outfile /tmp/debug_run.tar.gz -- python -u SCRIPT <span class="o">[</span>ARGS...<span class="o">]</span>
+<div class="highlight-Shell notranslate"><div class="highlight"><pre><span></span>./scripts/debug_run.py<span class="w"> </span>--outfile<span class="w"> </span>/tmp/debug_run.tar.gz<span class="w"> </span>--<span class="w"> </span>python<span class="w"> </span>-u<span class="w"> </span>SCRIPT<span class="w"> </span><span class="o">[</span>ARGS...<span class="o">]</span>
 </pre></div>
 </div>
 <p>The <em>python</em> <code class="docutils literal notranslate"><span class="pre">-u</span></code> flag is suggested to disable buffering so that captured logs are correctly
 interleaved (otherwise STDOUT will be rendered after all STDERR).</p>
 <p>The above command line example will leave the temporary folder containing the archived
 information on the filesystem. Use the <code class="docutils literal notranslate"><span class="pre">--tidy</span></code> flag to have that removed on exit:</p>
-<div class="highlight-Shell notranslate"><div class="highlight"><pre><span></span>./scripts/debug_run.py --tidy --outfile /tmp/debug_run.tar.gz -- python -u SCRIPT <span class="o">[</span>ARGS...<span class="o">]</span>
+<div class="highlight-Shell notranslate"><div class="highlight"><pre><span></span>./scripts/debug_run.py<span class="w"> </span>--tidy<span class="w"> </span>--outfile<span class="w"> </span>/tmp/debug_run.tar.gz<span class="w"> </span>--<span class="w"> </span>python<span class="w"> </span>-u<span class="w"> </span>SCRIPT<span class="w"> </span><span class="o">[</span>ARGS...<span class="o">]</span>
 </pre></div>
 </div>
 <p>The <code class="docutils literal notranslate"><span class="pre">debug_run.tar.gz</span></code> file should then be attached to bug reports when necessary.</p>
@@ -1976,24 +2048,133 @@ Running in single-core mode is also strongly suggested when debugging execution 
 </ul>
 </div>
 </div>
-<div class="section" id="experimental-pjrt-runtime-support">
-<h1>Experimental PjRt Runtime Support<a class="headerlink" href="#experimental-pjrt-runtime-support" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="pjrt-runtime-beta">
+<h1>PJRT Runtime (Beta)<a class="headerlink" href="#pjrt-runtime-beta" title="Permalink to this headline">¶</a></h1>
+<p><em>This document reflects the current state of PJRT support in current nightly
+builds</em>. See the <a class="reference external" href="https://github.com/pytorch/xla/blob/r2.0/docs/pjrt.md">same document on the r2.0 branch</a>
+for the status in the latest stable release.</p>
 <p>The PyTorch/XLA team is currently migrating from the currently-supported XRT
-runtime to the <a class="reference external" href="https://github.com/tensorflow/tensorflow/tree/master/tensorflow/compiler/xla/pjrt">PjRt
+runtime to the <a class="reference external" href="https://github.com/tensorflow/tensorflow/tree/master/tensorflow/compiler/xla/pjrt">PJRT
 runtime</a>
-used by <a class="reference external" href="https://github.com/google/jax">JAX</a>. Although PjRt may work on TPU v2
-and v3, we plan on making PjRt the officially supported runtime for PyTorch/XLA
-on TPU v4 and future generations of TPU.</p>
-<p>PjRt is available as an <em>experimental preview</em> in PyTorch/XLA r1.13. The
-PyTorch/XLA team will provide limited support on a best-effort basis during this
-preview. If you encounter a bug with PjRt, please file an issue on GitHub with
-the <code class="docutils literal notranslate"><span class="pre">runtime</span></code> tag.</p>
-<p><strong>This preview is mainly targeted at TPU v4</strong>. In most cases, we expect that you can
-re-use your existing PyTorch/XLA code for TPU v4 with no changes. You may be able to
-adapt your v2 or v3 workload to PjRt with some caveats (see below).</p>
+used by <a class="reference external" href="https://github.com/google/jax">JAX</a>.</p>
+<p>PJRT is available for preview in PyTorch/XLA 2.0. <strong>We are planning to make
+PJRT our officially supported runtime</strong>, so we encourage all users to experiment
+with it. We aim to make PJRT stable in release 2.1, so if you encounter a bug
+with PJRT, please file an issue on GitHub with the <code class="docutils literal notranslate"><span class="pre">runtime</span></code> tag.</p>
+<p><em>New features in PyTorch/XLA r2.0</em>:</p>
+<ul class="simple">
+<li><p>PJRT will be configured by default if you don’t pass in any other runtime
+configuration. If you continue to set XRT configuration (<code class="docutils literal notranslate"><span class="pre">XRT_TPU_CONFIG</span></code>),
+this change has no impact</p></li>
+<li><p>New TPU runtime implementation in <code class="docutils literal notranslate"><span class="pre">libtpu</span></code> improves performance by up to 30%.</p></li>
+<li><p>New <code class="docutils literal notranslate"><span class="pre">xm.rendezvous</span></code> implementation that scales to thousands of TPU cores</p></li>
+<li><p>[experimental] <code class="docutils literal notranslate"><span class="pre">torch.distributed</span></code> support for TPU v2 and v3, including
+<code class="docutils literal notranslate"><span class="pre">pjrt://</span></code> <code class="docutils literal notranslate"><span class="pre">init_method</span></code></p></li>
+<li><p>[experimental] Single-host GPU support in PJRT. Multi-host support coming
+soon!</p></li>
+</ul>
+<div class="section" id="tl-dr">
+<h2>TL;DR<a class="headerlink" href="#tl-dr" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>To use the PJRT preview runtime, set the <code class="docutils literal notranslate"><span class="pre">PJRT_DEVICE</span></code> environment variable to
+<code class="docutils literal notranslate"><span class="pre">CPU</span></code>, <code class="docutils literal notranslate"><span class="pre">TPU,</span> <span class="pre">or</span></code>GPU`</p></li>
+<li><p>In XRT, all distributed workloads are multiprocess, with one process per
+device. On TPU v2 and v3 in PJRT, workloads are multiprocess and multithreaded
+(4 processes with 2 threads each), so your workload should be thread-safe. See
+<a class="reference external" href="#multithreading-on-tpu-v2v3">Multithreading on TPU v2/v3</a> and the
+<a class="reference external" href="https://github.com/pytorch/xla/blob/master/API_GUIDE.md#running-on-multiple-xla-devices-with-multi-processing">Multiprocessing section of the API
+guide</a>
+for more information. Key differences to keep in mind:</p>
+<ul>
+<li><p>To initialize a model in a thread-safe way, either broadcast the parameters
+across replicas after initialization
+(<code class="docutils literal notranslate"><span class="pre">torch_xla.experimental.pjrt.broadcast_master_param</span></code>) or load each
+replica’s parameters from a common checkpoint.</p></li>
+<li><p>For other random number generation, use <code class="docutils literal notranslate"><span class="pre">torch.Generator</span></code> where possible.
+The global <code class="docutils literal notranslate"><span class="pre">torch</span></code> RNG is <em>not</em> thread-safe, even if you set the same
+<code class="docutils literal notranslate"><span class="pre">torch.manual_seed</span></code> across replicas.</p></li>
+<li><p>To use <code class="docutils literal notranslate"><span class="pre">torch.distributed</span></code>, import <code class="docutils literal notranslate"><span class="pre">torch_xla.experimental.pjrt_backend</span></code> and
+use the <code class="docutils literal notranslate"><span class="pre">pjrt://</span></code> <code class="docutils literal notranslate"><span class="pre">init_method</span></code>.</p></li>
+<li><p>These steps are optional for GPU and TPU v4.</p></li>
+</ul>
+</li>
+</ul>
+<p>Sample diff from XRT to PJRT:</p>
+<div class="highlight-diff notranslate"><div class="highlight"><pre><span></span><span class="w"> </span>import os
+
+<span class="w"> </span>import torch
+<span class="w"> </span>import torch.nn as nn
+<span class="w"> </span>from torch.nn.parallel import DistributedDataParallel as DDP
+<span class="w"> </span>import torch.optim as optim
+<span class="w"> </span>import torch.distributed as dist
+<span class="w"> </span>import torch_xla.core.xla_model as xm
+<span class="w"> </span>import torch_xla.distributed.parallel_loader as pl
+<span class="w"> </span>import torch_xla.distributed.xla_backend
+<span class="w"> </span>import torch_xla.distributed.xla_multiprocessing as xmp
+<span class="gi">+import torch_xla.experimental.pjrt_backend</span>
+<span class="gi">+import torch_xla.experimental.pjrt as pjrt</span>
+
+
+<span class="w"> </span>def _mp_fn(index):
+<span class="w"> </span>  device = xm.xla_device()
+<span class="gd">-  dist.init_process_group(&#39;xla&#39;, rank=xm.get_ordinal(), world_size=xm.xrt_world_size())</span>
+<span class="gi">+  dist.init_process_group(&#39;xla&#39;, init_method=&#39;pjrt://&#39;)</span>
+
+<span class="w"> </span>  torch.manual_seed(42)
+<span class="w"> </span>  model = nn.Linear(128, 10).to(device)
+
+<span class="gi">+  # Optional for TPU v4 and GPU</span>
+<span class="gi">+  pjrt.broadcast_master_param(model)</span>
+<span class="w"> </span>  model = DDP(model, gradient_as_bucket_view=True)
+
+<span class="w"> </span>  loss_fn = nn.MSELoss()
+<span class="w"> </span>  optimizer = optim.SGD(model.parameters(), lr=.001)
+
+<span class="w"> </span>  for i in range(10):
+<span class="w"> </span>    data, target = torch.randn((128, 128), device=device), torch.randn((128, 10), device=device)
+
+<span class="w"> </span>    optimizer.zero_grad()
+<span class="w"> </span>    output = model(data)
+<span class="w"> </span>    loss = loss_fn(output, target)
+<span class="w"> </span>    loss.backward()
+
+<span class="w"> </span>    optimizer.step()
+<span class="w"> </span>    xm.mark_step()
+
+<span class="w"> </span>  # Print mean parameters so we can confirm they&#39;re the same across replicas
+<span class="w"> </span>  print([p.mean() for p in model.parameters()])
+
+<span class="w"> </span>if __name__ == &#39;__main__&#39;:
+<span class="gd">-  os.environ[&#39;XRT_TPU_CONFIG&#39;] = &#39;localservice;0;localhost:51011&#39;</span>
+<span class="gd">-  os.environ[&#39;MASTER_ADDR&#39;] = &#39;localhost&#39;</span>
+<span class="gd">-  os.environ[&#39;MASTER_PORT&#39;] = &#39;12355&#39;</span>
+
+<span class="gi">+  # Recommended: set PJRT_DEVICE to your local device type</span>
+<span class="gi">+  os.environ[&#39;PJRT_DEVICE&#39;] = &#39;TPU&#39;</span>
+
+<span class="w"> </span>  xmp.spawn(_mp_fn)
+</pre></div>
+</div>
+</div>
+<div class="section" id="benefits">
+<h2>Benefits<a class="headerlink" href="#benefits" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>Simple runtime configuration: just set <code class="docutils literal notranslate"><span class="pre">PJRT_DEVICE</span></code> to <code class="docutils literal notranslate"><span class="pre">TPU</span></code>, <code class="docutils literal notranslate"><span class="pre">CPU</span></code>, or <code class="docutils literal notranslate"><span class="pre">GPU</span></code>
+and start using XLA! Or, let PJRT select a device automatically based on your
+environment.</p></li>
+<li><p>Improved performance: reduced overhead from gRPC means faster end-to-end
+execution. On TorchBench 2.0, we observed a &gt;35% improvement in training time
+on TPU v4.</p></li>
+<li><p>Easy pod execution: just copy your code to each TPU worker, and execute them
+all at the same time with <code class="docutils literal notranslate"><span class="pre">gcloud</span> <span class="pre">compute</span> <span class="pre">tpus</span> <span class="pre">tpuvm</span> <span class="pre">ssh</span> <span class="pre">--worker=all</span></code>.</p></li>
+<li><p>Better scaling: removes <a class="reference external" href="https://github.com/pytorch/xla/pull/3920">XRT’s limitation on parameter
+sizes</a> and supports up to 2048 TPU
+chips.</p></li>
+</ul>
+</div>
 <div class="section" id="quickstart">
 <h2>Quickstart<a class="headerlink" href="#quickstart" title="Permalink to this headline">¶</a></h2>
-<p>To start using PjRt with PyTorch/XLA, all you need to do is set the
+<p>To start using PJRT with PyTorch/XLA, all you need to do is set the
 <code class="docutils literal notranslate"><span class="pre">PJRT_DEVICE</span></code> environment variable. If you’re working on a TPU v2 or v3, keep
 reading to learn about the differences between TPU v2 and v3 and v4.</p>
 <div class="section" id="cpu">
@@ -2004,23 +2185,22 @@ like this:</p>
 </pre></div>
 </div>
 </div>
-<div class="section" id="v4-tpu">
-<h3>v4 TPU<a class="headerlink" href="#v4-tpu" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="tpu">
+<h3>TPU<a class="headerlink" href="#tpu" title="Permalink to this headline">¶</a></h3>
 <p>To create a new TPU with PyTorch/XLA r1.13 installed:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>gcloud alpha compute tpus tpu-vm create $USER-pjrt --accelerator-type=v4-8 --version=tpu-vm-v4-pt-1.13 --zone=us-central2-b --project=$PROJECT
 </pre></div>
 </div>
 <p>On a v4-8, you can run our ResNet50 example like this:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">clone</span> <span class="o">--</span><span class="n">depth</span><span class="o">=</span><span class="mi">1</span> <span class="o">--</span><span class="n">branch</span> <span class="n">r1</span><span class="o">.</span><span class="mi">13</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">pytorch</span><span class="o">/</span><span class="n">xla</span><span class="o">.</span><span class="n">git</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">clone</span> <span class="o">--</span><span class="n">depth</span><span class="o">=</span><span class="mi">1</span> <span class="o">--</span><span class="n">branch</span> <span class="n">r1</span><span class="mf">.13</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">pytorch</span><span class="o">/</span><span class="n">xla</span><span class="o">.</span><span class="n">git</span>
 <span class="n">PJRT_DEVICE</span><span class="o">=</span><span class="n">TPU</span> <span class="n">python3</span> <span class="n">xla</span><span class="o">/</span><span class="n">test</span><span class="o">/</span><span class="n">test_train_mp_imagenet</span><span class="o">.</span><span class="n">py</span> <span class="o">--</span><span class="n">fake_data</span> <span class="o">--</span><span class="n">batch_size</span><span class="o">=</span><span class="mi">256</span> <span class="o">--</span><span class="n">num_epochs</span><span class="o">=</span><span class="mi">1</span>
 </pre></div>
 </div>
-<p>By default, PjRt will use all TPU chips. To use only one TPU chip, configure
+<p>By default, PJRT will use all TPU chips. To use only one TPU chip, configure
 <code class="docutils literal notranslate"><span class="pre">TPU_PROCESS_BOUNDS</span></code> and <code class="docutils literal notranslate"><span class="pre">TPU_VISIBLE_CHIPS</span></code>:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">TPU_PROCESS_BOUNDS</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span> <span class="n">TPU_VISIBLE_CHIPS</span><span class="o">=</span><span class="mi">0</span> <span class="n">PJRT_DEVICE</span><span class="o">=</span><span class="n">TPU</span> <span class="n">python3</span> <span class="n">xla</span><span class="o">/</span><span class="n">test</span><span class="o">/</span><span class="n">test_train_mp_imagenet</span><span class="o">.</span><span class="n">py</span> <span class="o">--</span><span class="n">fake_data</span> <span class="o">--</span><span class="n">batch_size</span><span class="o">=</span><span class="mi">256</span> <span class="o">--</span><span class="n">num_epochs</span><span class="o">=</span><span class="mi">1</span>
 </pre></div>
 </div>
-<p>Note: <code class="docutils literal notranslate"><span class="pre">xmp.spawn</span></code>’s <code class="docutils literal notranslate"><span class="pre">nprocs</span></code> argument is not implemented for PjRt.</p>
 <div class="section" id="pods">
 <h4>Pods<a class="headerlink" href="#pods" title="Permalink to this headline">¶</a></h4>
 <p>On TPU Pods, use <code class="docutils literal notranslate"><span class="pre">gcloud</span></code> to run your command on each TPU in parallel:</p>
@@ -2029,91 +2209,409 @@ gcloud alpha compute tpus tpu-vm ssh $USER-pjrt --zone=us-central2-b --project=$
 </pre></div>
 </div>
 </div>
+<div class="section" id="docker">
+<h4>Docker<a class="headerlink" href="#docker" title="Permalink to this headline">¶</a></h4>
+<p>You can also use Docker to run your workload in a container with PyTorch/XLA
+preinstalled:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>export DOCKER_IMAGE=gcr.io/...
+
+# Optional: authenticate docker if your image is in a private GCP repository
+gcloud compute tpus tpu-vm ssh $USER-pjrt --zone=us-central2-b --project=$PROJECT --worker=all --command &quot;sudo gcloud auth configure-docker&quot;
+
+# Run your workload
+gcloud compute tpus tpu-vm ssh $USER-pjrt --zone=us-central2-b --project=$PROJECT --worker=all --command &quot;sudo docker run --rm --privileged --net=host -e PJRT_DEVICE=TPU $DOCKER_IMAGE python pytorch/xla/test/test_train_mp_imagenet.py --fake_data&quot;
+</pre></div>
+</div>
+<p>Note that <code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">run</span></code> requires privileged access to the host (<code class="docutils literal notranslate"><span class="pre">--privileged</span></code>)
+to expose the TPU device to the container. Docker on TPU pods is only supported
+with host networking <code class="docutils literal notranslate"><span class="pre">--net=host</span></code> at this time. See the <a class="reference external" href="https://cloud.google.com/tpu/docs/run-in-container">Cloud TPU documentation</a>
+for more information.</p>
+</div>
 </div>
 <div class="section" id="gpu">
 <h3>GPU<a class="headerlink" href="#gpu" title="Permalink to this headline">¶</a></h3>
-<p>Coming soon in a future release!</p>
+<p><em>Warning: GPU support is still highly experimental!</em></p>
+<p>To use GPUs with PJRT, simply set <code class="docutils literal notranslate"><span class="pre">PJRT_DEVICE=GPU</span></code> and configure
+<code class="docutils literal notranslate"><span class="pre">GPU_NUM_DEVICES</span></code> to the number of devices on the host. For example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">PJRT_DEVICE</span><span class="o">=</span><span class="n">GPU</span> <span class="n">GPU_NUM_DEVICES</span><span class="o">=</span><span class="mi">4</span> <span class="n">python3</span> <span class="n">xla</span><span class="o">/</span><span class="n">test</span><span class="o">/</span><span class="n">test_train_mp_imagenet</span><span class="o">.</span><span class="n">py</span> <span class="o">--</span><span class="n">fake_data</span> <span class="o">--</span><span class="n">batch_size</span><span class="o">=</span><span class="mi">128</span> <span class="o">--</span><span class="n">num_epochs</span><span class="o">=</span><span class="mi">1</span>
+</pre></div>
+</div>
+<p>Currently, only a single host is supported, and multi-host GPU cluster support
+will be added in an future release.</p>
 </div>
 </div>
-<div class="section" id="key-differences-from-xrt">
-<h2>Key differences from XRT<a class="headerlink" href="#key-differences-from-xrt" title="Permalink to this headline">¶</a></h2>
-<p>Although in most cases we expect PjRt and XRT to work mostly interchangeably
+<div class="section" id="differences-from-xrt">
+<h2>Differences from XRT<a class="headerlink" href="#differences-from-xrt" title="Permalink to this headline">¶</a></h2>
+<p>Although in most cases we expect PJRT and XRT to work mostly interchangeably
 from the end-user’s perspective (especially on TPU v4), there are some subtle
 differences that are important to keep in mind. Importantly, XRT was designed
 around the TPU Node architecture, so it will always spawn a client and a server
 process, even on TPU VMs. Thus, every batch of inputs has additional latency
-from serializing and deserializing data.</p>
-<p>PjRt uses the local device directly with no intermediate server process. In the
-default configuration, PjRt will create one process per TPU chip, or 4 processes
-per TPU host. See the <a class="reference external" href="https://cloud.google.com/tpu/docs/system-architecture-tpu-vm">Cloud TPU documentation</a>
-for more information about TPU architecture.</p>
+from serializing and deserializing data to send it over the network.</p>
+<p>PJRT uses the local device directly with no intermediate server process. In the
+default configuration, PJRT will create one process per TPU chip, or 4 processes
+per TPU host. See the <a class="reference external" href="https://cloud.google.com/tpu/docs/system-architecture-tpu-vm">Cloud TPU
+documentation</a> for
+more information about TPU architecture.</p>
 <ul class="simple">
-<li><p>Performance gains are possible for workloads constrained by data transfer
-speeds.</p></li>
+<li><p>Performance gains are possible for workloads constrained overhead from .</p></li>
 <li><p>Under XRT, the server process is the only process that interacts with the TPU
 devices, and client processes don’t have direct access to the TPU devices.
 When profiling a single-host TPU (e.g. v3-8 or v4-8), you would normally see 8
-device traces (one for each TPU core). With PjRt, each process has one chip,
-and a profile from that process will show only 2 TPU cores.</p></li>
-<li><p>For the same reason, profiling does not work on TPU Pods with XRT, because the
-server process runs independently from the user’s model code. PjRt does not
-have that constraint, so it is possible to profile 2 TPU cores per process in
-a TPU Pod.</p></li>
-<li><p>PjRt only supports the TPU VM architecture and we have no plans to support the
-TPU Node architecture with PjRt.</p></li>
-<li><p>Runtime configuration is significantly simpler with PjRt. <code class="docutils literal notranslate"><span class="pre">xla_dist</span></code> is not
+device traces (one for each TPU core). With PJRT, each process has one chip,
+and a profile from that process will show only 2 TPU cores.</p>
+<ul>
+<li><p>For the same reason, profiling does not work on TPU Pods with XRT, because
+the server process runs independently from the user’s model code. PJRT does
+not have that constraint, so it is possible to profile 2 TPU cores per
+process in a TPU Pod.</p></li>
+</ul>
+</li>
+<li><p>PJRT only supports the TPU VM architecture and we have no plans to support the
+TPU Node architecture with PJRT.</p></li>
+<li><p>Runtime configuration is significantly simpler with PJRT. <code class="docutils literal notranslate"><span class="pre">xla_dist</span></code> is not
 required to run TPU Pod workloads. Instead, copy your code to each TPU host
-(<cite>``gcloud compute tpus tpu-vm scp`</cite> &lt;<a class="reference external" href="https://cloud.google.com/sdk/gcloud/reference/alpha/compute/tpus/tpu-vm/scp">https://cloud.google.com/sdk/gcloud/reference/alpha/compute/tpus/tpu-vm/scp</a>&gt;`_) and run the code on each host in
-parallel (e.g. <cite>``gcloud compute tpus tpu-vm ssh –workers=all
-–command=”PJRT_DEVICE=TPU python run.py”`</cite> &lt;<a class="reference external" href="https://cloud.google.com/sdk/gcloud/reference/alpha/compute/tpus/tpu-vm/ssh">https://cloud.google.com/sdk/gcloud/reference/alpha/compute/tpus/tpu-vm/ssh</a>&gt;`_)</p></li>
+(<code class="docutils literal notranslate"><span class="pre">[gcloud</span> <span class="pre">compute</span> <span class="pre">tpus</span> <span class="pre">tpu-vm</span>
+<span class="pre">scp](https://cloud.google.com/sdk/gcloud/reference/alpha/compute/tpus/tpu-vm/scp)</span></code>)
+and run the code on each host in parallel (e.g. <code class="docutils literal notranslate"><span class="pre">[gcloud</span> <span class="pre">compute</span> <span class="pre">tpus</span> <span class="pre">tpu-vm</span>
+<span class="pre">ssh</span> <span class="pre">--workers=all</span> <span class="pre">--command=&quot;PJRT_DEVICE=TPU</span> <span class="pre">python</span>
+<span class="pre">run.py&quot;](https://cloud.google.com/sdk/gcloud/reference/alpha/compute/tpus/tpu-vm/ssh)</span></code>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">xm.rendezvous</span></code> has been reimplemented using XLA-native collective
+communication to enhance stability on large TPU pods. See below for more
+details.</p></li>
 </ul>
+<div class="section" id="id6">
+<h3>Multithreading on TPU v2/v3<a class="headerlink" href="#id6" title="Permalink to this headline">¶</a></h3>
+<p>On TPU v2 and v3, <strong>distributed workloads always run multithreaded</strong>, since each
+TPU core exposes two TPU cores as devices and only one process may open a TPU
+chip at a time. In its default configuration, <code class="docutils literal notranslate"><span class="pre">xmp.spawn</span></code> automatically spawns
+as many processes as possible (4 per TPU host) and creates two threads per
+process (one per TPU core).</p>
+<p>Note: on TPU v4, each TPU chip is represented as one PyTorch device, so
+distributed workloads will run across 4 processes, each with only one thread.
+This is identical to XRT’s behavior.</p>
+<p>In most cases, this will not require substantial changes to your existing code.
+The main change you will have to make in most cases is to model initialization.
+Because <code class="docutils literal notranslate"><span class="pre">torch</span></code>’s global RNG is shared between threads, results will vary
+between threads and runs even if you set <code class="docutils literal notranslate"><span class="pre">torch.manual_seed</span></code> to the same value
+in every replica. To get consistent parameters between replicas, either use
+<code class="docutils literal notranslate"><span class="pre">torch_xla.experimental.pjrt.broadcast_master_param</span></code> to broadcast one replica’s
+parameters to all other replicas, or load each replica’s parameters from a
+common checkpoint.</p>
 </div>
-<div class="section" id="tpus-v2-v3-vs-v4">
-<h2>TPUs v2/v3 vs v4<a class="headerlink" href="#tpus-v2-v3-vs-v4" title="Permalink to this headline">¶</a></h2>
-<p>On TPU v4, one TPU chip is represented to PyTorch as one device, while on TPUs
-v2/v3, one TPU chip is represented to PyTorch as <em>two</em> devices. It is not
-possible to access the same TPU chip from multiple processes, so workloads must
-be able to handle two devices per process. The easiest way to handle this is to
-spawn two threads per process on TPU v2/v3, which is done automatically by
-<code class="docutils literal notranslate"><span class="pre">xmp.spawn</span></code> when using PjRt. With multiple threads per process, multiple replicas
-will share global state, causing the following known issues:</p>
+<div class="section" id="changes-to-xm-rendezvous">
+<h3>Changes to xm.rendezvous<a class="headerlink" href="#changes-to-xm-rendezvous" title="Permalink to this headline">¶</a></h3>
+<p><em>New in PyTorch/XLA r2.0</em></p>
+<p>With XRT, worker 0 runs a mesh master service, and all processes on all workers
+connect to that service over gRPC. In practice, we found that running a single
+mesh master process was unreliable on TPU pods with thousands of chips due to
+the number of inbound connections to worker 0. A single client process timing
+out could cause a failure and force the entire workload to restart.</p>
+<p>Thus, we have reimplemented <code class="docutils literal notranslate"><span class="pre">xm.rendezvous</span></code> with native XLA collective
+communication, which is much more stable and well-tested on large TPU pods. This
+imposes two new constraints compared to the XRT implementation:</p>
 <ul class="simple">
-<li><p>Threads will share the same <code class="docutils literal notranslate"><span class="pre">torch</span></code> random seed used for parameter
-initialization. If you relied on each process having the same random seed for
-deterministic parameter initialization, you will have to synchronize module
-parameters via collective broadcasting instead (e.g.
-<code class="docutils literal notranslate"><span class="pre">pjrt.broadcast_master_param(model)</span></code>).</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">torch.distributed</span></code> uses a global process group and does not support
-multi-threading, so the <code class="docutils literal notranslate"><span class="pre">xla</span></code> <code class="docutils literal notranslate"><span class="pre">torch.distributed</span></code> backend will not work with
-PjRt and TPU v2 and v3 at this time.</p></li>
-<li><p>Because the current implementation of <code class="docutils literal notranslate"><span class="pre">xm.rendezvous</span></code> for PjRt relies on
-<code class="docutils literal notranslate"><span class="pre">torch.distributed</span></code>, <code class="docutils literal notranslate"><span class="pre">xm.rendezvous</span></code> is not supported with PjRt on TPU v2 and
-v3.</p></li>
+<li><p>Because the payload has to become part of the XLA graph, <code class="docutils literal notranslate"><span class="pre">xm.mark_step</span></code> is
+called both before and after the data is transferred. Calling <code class="docutils literal notranslate"><span class="pre">xm.rendezvous</span></code>
+in the middle of model code may force an unwanted compilation.</p></li>
+<li><p>Because XLA does not permit collective operations to run on a subset of
+workers, all workers must participate in the <code class="docutils literal notranslate"><span class="pre">rendezvous</span></code>.</p></li>
 </ul>
-<div class="section" id="compatible-examples">
-<h3>Compatible examples<a class="headerlink" href="#compatible-examples" title="Permalink to this headline">¶</a></h3>
-<p>For an overview of the changes required to migrate from TPU v2/v3 to v4, compare
-our MNIST (<a class="reference external" href="../test/test_train_mp_mnist.py">XRT</a>,
-<a class="reference external" href="../test/pjrt/test_train_pjrt_mnist.py">PjRt</a>) and ImageNet
-(<a class="reference external" href="../test/test_train_mp_imagenet.py">XRT</a>,
-<a class="reference external" href="../test/pjrt/test_train_pjrt_imagenet.py">PjRt</a>) examples.</p>
-<p>The PjRt MNIST and ImageNet examples are compatible with all versions of TPU.
-Use the following commands to run them on a single-host TPU (e.g. v3-8 or v4-8).</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">PJRT_DEVICE</span><span class="o">=</span><span class="n">TPU</span> <span class="n">python3</span> <span class="n">xla</span><span class="o">/</span><span class="n">test</span><span class="o">/</span><span class="n">pjrt</span><span class="o">/</span><span class="n">test_train_pjrt_mnist</span><span class="o">.</span><span class="n">py</span> <span class="o">--</span><span class="n">fake_data</span>
-<span class="n">PJRT_DEVICE</span><span class="o">=</span><span class="n">TPU</span> <span class="n">python3</span> <span class="n">xla</span><span class="o">/</span><span class="n">test</span><span class="o">/</span><span class="n">pjrt</span><span class="o">/</span><span class="n">test_train_pjrt_imagenet</span><span class="o">.</span><span class="n">py</span> <span class="o">--</span><span class="n">fake_data</span>
+<p>If you require the old behavior of <code class="docutils literal notranslate"><span class="pre">xm.rendezvous</span></code> (i.e. communicating data
+without altering the XLA graph and/or synchronizing a subset of workers),
+consider using
+<cite>``torch.distributed.barrier`</cite> &lt;<a class="reference external" href="https://pytorch.org/docs/stable/distributed.html#torch.distributed.barrier">https://pytorch.org/docs/stable/distributed.html#torch.distributed.barrier</a>&gt;`_
+or
+<code class="docutils literal notranslate"><span class="pre">[torch.distributed.all_gather_object](https://pytorch.org/docs/stable/distributed.html#torch.distributed.all_gather_object)</span></code>
+with a <code class="docutils literal notranslate"><span class="pre">gloo</span></code> process group. If you are also using the <code class="docutils literal notranslate"><span class="pre">xla</span></code> <code class="docutils literal notranslate"><span class="pre">torch.distributed</span></code>
+backend, you can use <code class="docutils literal notranslate"><span class="pre">torch.new_group</span></code> to create a <code class="docutils literal notranslate"><span class="pre">gloo</span></code> subgroup. See <a class="reference external" href="https://pytorch.org/docs/stable/distributed.html#monitored-barrier">this
+example</a>
+from the PyTorch documentation. Keep in mind these constraints:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">torch.distributed</span></code> is not fully supported on TPU v2/v3. Only a subset of
+operations with the <code class="docutils literal notranslate"><span class="pre">xla</span></code> backend are implemented, and <code class="docutils literal notranslate"><span class="pre">gloo</span></code> will likely not
+work as expected in a multiprocessing context.</p></li>
+<li><p>In our experiments, <code class="docutils literal notranslate"><span class="pre">gloo</span></code> does not scale well to thousands of TPU chips, so
+expect this alternative to be less reliable than using <code class="docutils literal notranslate"><span class="pre">xm.rendezvous</span></code> with
+PJRT at large scales.</p></li>
+</ul>
+</div>
+<div class="section" id="pjrt-and-torch-distributed">
+<h3>PJRT and torch.distributed<a class="headerlink" href="#pjrt-and-torch-distributed" title="Permalink to this headline">¶</a></h3>
+<p><em>New in PyTorch/XLA r2.0</em></p>
+<p>When using PJRT with <code class="docutils literal notranslate"><span class="pre">torch.distributed</span></code> and
+<code class="docutils literal notranslate"><span class="pre">[torch.nn.parallel.DistributedDataParallel](https://github.com/pytorch/xla/blob/master/docs/ddp.md)</span></code>
+we strongly recommend using the new <code class="docutils literal notranslate"><span class="pre">pjrt://</span></code> <code class="docutils literal notranslate"><span class="pre">init_method</span></code>, which automatically
+finds the replica IDs, world size, and master IP by querying the runtime. For
+example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch.distributed</span> <span class="k">as</span> <span class="nn">dist</span>
+<span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
+<span class="kn">import</span> <span class="nn">torch_xla.distributed.xla_multiprocessing</span> <span class="k">as</span> <span class="nn">xmp</span>
+<span class="kn">from</span> <span class="nn">torch_xla.experimental</span> <span class="kn">import</span> <span class="n">pjrt</span>
+
+<span class="c1"># Required for `pjrt://` init_method</span>
+<span class="kn">import</span> <span class="nn">torch_xla.experimental.pjrt_backend</span>
+
+<span class="k">def</span> <span class="nf">_all_gather</span><span class="p">(</span><span class="n">index</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+  <span class="c1"># No need to pass in `rank` or `world_size`</span>
+  <span class="n">dist</span><span class="o">.</span><span class="n">init_process_group</span><span class="p">(</span><span class="s1">&#39;xla&#39;</span><span class="p">,</span> <span class="n">init_method</span><span class="o">=</span><span class="s1">&#39;pjrt://&#39;</span><span class="p">)</span>
+
+  <span class="n">t</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="n">index</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">())</span>
+  <span class="n">output</span> <span class="o">=</span> <span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">dist</span><span class="o">.</span><span class="n">get_world_size</span><span class="p">())]</span>
+  <span class="n">dist</span><span class="o">.</span><span class="n">all_gather</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
+
+  <span class="n">xm</span><span class="o">.</span><span class="n">mark_step</span><span class="p">()</span>
+  <span class="nb">print</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+  <span class="n">xmp</span><span class="o">.</span><span class="n">spawn</span><span class="p">(</span><span class="n">_all_gather</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Note: Although the <code class="docutils literal notranslate"><span class="pre">pjrt://</span></code> init_method is not required on TPU v4, it is still
+recommended. If you use <code class="docutils literal notranslate"><span class="pre">env://</span></code>, <code class="docutils literal notranslate"><span class="pre">MASTER_ADDR</span></code> must be set to IP host that has
+device 0, which is <em>not</em> always worker 0. The <code class="docutils literal notranslate"><span class="pre">pjrt://</span></code> init_method finds this
+IP automatically and supports TPU v2/v3.</p>
+<p>For more information about using <code class="docutils literal notranslate"><span class="pre">DistributedDataParallel</span></code> on PyTorch/XLA, see
+<cite>``ddp.md`</cite> &lt;./ddp.md&gt;`_ on TPU V4. For an example that uses DDP and PJRT together,
+run the following <a class="reference external" href="../test/test_train_mp_imagenet.py">example script</a> on a TPU:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">PJRT_DEVICE</span><span class="o">=</span><span class="n">TPU</span> <span class="n">python</span> <span class="n">xla</span><span class="o">/</span><span class="n">test</span><span class="o">/</span><span class="n">test_train_mp_mnist</span><span class="o">.</span><span class="n">py</span> <span class="o">--</span><span class="n">ddp</span> <span class="o">--</span><span class="n">pjrt_distributed</span> <span class="o">--</span><span class="n">fake_data</span> <span class="o">--</span><span class="n">num_epochs</span> <span class="mi">1</span>
 </pre></div>
 </div>
 </div>
 </div>
-<div class="section" id="pjrt-and-ddp">
-<h2>PjRt and DDP<a class="headerlink" href="#pjrt-and-ddp" title="Permalink to this headline">¶</a></h2>
-<p>PjRt composes really well with [the new experimental
-torch.nn.parallel.DistributedDataParallel feature] (./ddp.md) on TPU V4. Just
-run the DDP script as usual but with <code class="docutils literal notranslate"><span class="pre">PJRT_DEVICE=TPU</span></code>. Here is a full example:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">PJRT_DEVICE</span><span class="o">=</span><span class="n">TPU</span> <span class="n">MASTER_ADDR</span><span class="o">=</span><span class="n">localhost</span> <span class="n">MASTER_PORT</span><span class="o">=</span><span class="mi">6000</span> <span class="n">python</span> <span class="n">xla</span><span class="o">/</span><span class="n">test</span><span class="o">/</span><span class="n">test_train_mp_mnist</span><span class="o">.</span><span class="n">py</span> <span class="o">--</span><span class="n">ddp</span> <span class="o">--</span><span class="n">fake_data</span> <span class="o">--</span><span class="n">num_epochs</span> <span class="mi">1</span>
+<div class="section" id="performance">
+<h2>Performance<a class="headerlink" href="#performance" title="Permalink to this headline">¶</a></h2>
+<p>TorchBench shows improvements in average training time across tasks with PJRT
+compared to XRT, with an average improvement of over 35% on TPU v4-8. The
+benefits vary significantly by task and model type, ranging from 0% to 175%.
+The following chart shows the breakdown by task:</p>
+<a class="reference external image-reference" href="assets/torchbench_pjrt_vs_xrt.svg"><img alt="PJRT vs XRT" src="assets/torchbench_pjrt_vs_xrt.svg" /></a>
+<div class="section" id="new-tpu-runtime">
+<h3>New TPU runtime<a class="headerlink" href="#new-tpu-runtime" title="Permalink to this headline">¶</a></h3>
+<p><em>New in PyTorch/XLA r2.0</em></p>
+<p>The PyTorch/XLA r2.0 release introduces support for the <a class="reference external" href="https://github.com/openxla/community/blob/main/rfcs/20230123-pjrt-plugin.md#rfc-openxla-pjrt-plugin">PJRT Plugin
+API</a>,
+used to access the new TFRT-based TPU runtime in <code class="docutils literal notranslate"><span class="pre">libtpu</span></code>. This is now the
+default runtime when <code class="docutils literal notranslate"><span class="pre">PJRT_DEVICE=TPU</span></code> is set. The legacy StreamExecutor-based
+TPU runtime used in 1.13 will still be available with <code class="docutils literal notranslate"><span class="pre">PJRT_DEVICE=TPU_LEGACY</span></code>
+in the 2.0 release, but it will be removed in a future version. If you encounter
+an issue that only happens on <code class="docutils literal notranslate"><span class="pre">TPU</span></code> and not <code class="docutils literal notranslate"><span class="pre">TPU_LEGACY</span></code>, please file an issue
+on GitHub.</p>
+<p>In most cases, we expect performance to be similar between the two runtimes, but
+in some cases, the new runtime may be up to 30% faster. The following chart
+shows the breakdown by task:</p>
+<a class="reference external image-reference" href="assets/torchbench_tfrt_vs_se.svg"><img alt="TFRT vs StreamExecutor" src="assets/torchbench_tfrt_vs_se.svg" /></a>
+<p>Note: the improvements shown in this chart are also included in the PJRT vs XRT
+comparison.</p>
+</div>
+</div>
+<div class="section" id="torchdynamo-torch-compile-integration-in-pytorch-xla">
+<h2>TorchDynamo(torch.compile) integration in PyTorch XLA<a class="headerlink" href="#torchdynamo-torch-compile-integration-in-pytorch-xla" title="Permalink to this headline">¶</a></h2>
+<p>Torchdynamo is a Python-level JIT compiler designed to make unmodified PyTorch programs faster. It provides a clean API for compiler backends to hook in and its biggest feature is to dynamically modify Python bytecode right before it is executed. In the pytorch/xla 2.0 release, PyTorch/XLA provided an experimental backend for the TorchDynamo for both inference and training.</p>
+<p>The way that XLA bridge works is that Dynamo will provide a TorchFX graph when it recognizes a model pattern and PyTorch/XLA will use existing Lazy Tensor technology to compile the FX graph and return the compiled function.</p>
+<div class="section" id="inference">
+<h3>Inference<a class="headerlink" href="#inference" title="Permalink to this headline">¶</a></h3>
+<p>Here is a small code example of running resnet18 with <code class="docutils literal notranslate"><span class="pre">torch.compile</span></code></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
+<span class="n">imprt</span> <span class="n">torchvision</span>
+<span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
+
+<span class="k">def</span> <span class="nf">eval_model</span><span class="p">(</span><span class="n">loader</span><span class="p">):</span>
+  <span class="n">device</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">()</span>
+  <span class="n">xla_resnet18</span> <span class="o">=</span> <span class="n">torchvision</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">resnet18</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+  <span class="n">xla_resnet18</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
+  <span class="n">dynamo_resnet18</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span>
+      <span class="n">xla_resnet18</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s1">&#39;torchxla_trace_once&#39;</span><span class="p">)</span>
+  <span class="k">for</span> <span class="n">data</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">loader</span><span class="p">:</span>
+    <span class="n">output</span> <span class="o">=</span> <span class="n">dynamo_resnet18</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Caveat: for TPU V2 and V3, however, XRT will still be needed to run DDP.</p>
+<blockquote>
+<div><p><strong>NOTE:</strong> inference backend name <code class="docutils literal notranslate"><span class="pre">torchxla_trace_once</span></code> is subject to change.</p>
+</div></blockquote>
+<p>With the <code class="docutils literal notranslate"><span class="pre">torch.compile</span></code> you will see that PyTorch/XLA only traces the resent18 model once during the init time and executes the compiled binary everytime <code class="docutils literal notranslate"><span class="pre">dynamo_resnet18</span></code> is invoked, instead of tracing the model every time. Note that currently Dynamo does not support fallback so if there is an op that can not be traced by XLA, it will error out. We will fix this issue in the upcoming 2.1 release. Here is a inference speed analysis to compare Dynamo and Lazy using torch bench on Cloud TPU v4-8</p>
+<p>resnet18 | 1.768
+resnet50 | 1.61
+resnext50_32x4d | 1.328
+alexnet | 1.261
+mobilenet_v2 | 2.017
+mnasnet1_0 | 1.686
+vgg16 | 1.155
+BERT_pytorch | 3.502
+squeezenet1_1 | 1.674
+timm_vision_transformer | 3.138
+average | 1.9139</p>
+</div>
+<div class="section" id="training">
+<h3>Training<a class="headerlink" href="#training" title="Permalink to this headline">¶</a></h3>
+<p>PyTorch/XLA also supports Dynamo for training, but it is very experimental and we are working with the PyTorch Compiler team to iterate on the implementation. On the 2.0 release it only supports forward and backward pass but not the optimizer. Here is an example of training a resnet18 with <code class="docutils literal notranslate"><span class="pre">torch.compile</span></code></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
+<span class="n">imprt</span> <span class="n">torchvision</span>
+<span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
+
+<span class="k">def</span> <span class="nf">train_model</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">target</span><span class="p">):</span>
+  <span class="n">loss_fn</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">CrossEntropyLoss</span><span class="p">()</span>
+  <span class="n">pred</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+  <span class="n">loss</span> <span class="o">=</span> <span class="n">loss_fn</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
+  <span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+  <span class="k">return</span> <span class="n">pred</span>
+
+<span class="k">def</span> <span class="nf">train_model_main</span><span class="p">(</span><span class="n">loader</span><span class="p">):</span>
+  <span class="n">device</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">()</span>
+  <span class="n">xla_resnet18</span> <span class="o">=</span> <span class="n">torchvision</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">resnet18</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+  <span class="n">xla_resnet18</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
+  <span class="n">dynamo_train_model</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span>
+        <span class="n">train_model</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s1">&#39;aot_torchxla_trace_once&#39;</span><span class="p">)</span>
+  <span class="k">for</span> <span class="n">data</span><span class="p">,</span> <span class="n">target</span> <span class="ow">in</span> <span class="n">loader</span><span class="p">:</span>
+    <span class="n">output</span> <span class="o">=</span> <span class="n">dynamo_train_model</span><span class="p">(</span><span class="n">xla_resnet18</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
+</pre></div>
+</div>
+<blockquote>
+<div><p><strong>NOTE:</strong> Backend we used here is <code class="docutils literal notranslate"><span class="pre">aot_torchxla_trace_once</span></code>(subject to change) instead of <code class="docutils literal notranslate"><span class="pre">torchxla_trace_once</span></code></p>
+</div></blockquote>
+<p>We expect to extract and execute 3 graphs per training step instead of one training step if you use the Lazy tensor. Here is a training speed analysis to compare Dynamo and Lazy using a torch bench on Cloud TPU v4-8.</p>
+<p>resnet50 | 0.937
+resnet18 | 1.003
+BERT_pytorch | 1.869
+resnext50_32x4d | 1.139
+alexnet | 0.802
+mobilenet_v2 | 0.672
+mnasnet1_0 | 0.967
+vgg16 | 0.742
+timm_vision_transformer | 1.69
+squeezenet1_1 | 0.958
+average | 1.0779</p>
+<blockquote>
+<div><p><strong>NOTE:</strong> We run each model’s fwd and bwd for a single step and then collect the e2e time. In the real world we will run multiple steps at each training job which can easily hide the tracing cost from execution(since it is async). Lazy Tensor will have much better performance in that scenario.</p>
+</div></blockquote>
+<p>We are currently working on the optimizer support and that will be availiable on nightly soon but won’t be in the 2.0 release.</p>
+</div>
+<div class="section" id="take-away">
+<h3>Take away<a class="headerlink" href="#take-away" title="Permalink to this headline">¶</a></h3>
+<p>TorchDynamo provides a really promising way for the compiler backend to hide the complexity from the user and easily retrieve the modeling code in a graph format. Compared with PyTorch/XLA’s traditional Lazy Tensor way of extracting the graph, TorchDynamo can skip the graph tracing for every iteration hence provide a much better inference response time. However TorchDynamo does not trace the communication ops(like <code class="docutils literal notranslate"><span class="pre">all_reduce</span></code> and <code class="docutils literal notranslate"><span class="pre">all_gather</span></code>) yet and it provides separate graphs for the forward and the backward which hurts xla performance. These feature gaps compared to Lazy Tensor makes it less efficient in real world training use cases, especially the tracing cost can be overlapped with the execution in training. The PyTorch/XLA team will keep investing in TorchDynamo and work with upstream to mature the training story.</p>
+</div>
+</div>
+<div class="section" id="fully-sharded-data-parallel-fsdp-in-pytorch-xla">
+<h2>Fully Sharded Data Parallel (FSDP) in PyTorch XLA<a class="headerlink" href="#fully-sharded-data-parallel-fsdp-in-pytorch-xla" title="Permalink to this headline">¶</a></h2>
+<p>Fully Sharded Data Parallel (FSDP) in PyTorch XLA is a utility for sharding Module parameters across data-parallel workers.</p>
+<p>Example usage:</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
+<span class="kn">from</span> <span class="nn">torch_xla.distributed.fsdp</span> <span class="kn">import</span> <span class="n">XlaFullyShardedDataParallel</span> <span class="k">as</span> <span class="n">FSDP</span>
+
+<span class="n">model</span> <span class="o">=</span> <span class="n">FSDP</span><span class="p">(</span><span class="n">my_module</span><span class="p">)</span>
+<span class="n">optim</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">lr</span><span class="o">=</span><span class="mf">0.0001</span><span class="p">)</span>
+<span class="n">output</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+<span class="n">loss</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+<span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+<span class="n">optim</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>It is also possible to shard individual layers separately and have an outer wrapper handle any leftover parameters.</p>
+<p>Notes:</p>
+<ul class="simple">
+<li><p>The <code class="docutils literal notranslate"><span class="pre">XlaFullyShardedDataParallel</span></code> class supports both the ZeRO-2 optimizer (sharding gradients and optimizer states) and the ZeRO-3 optimizer (sharding parameters, gradients, and optimizer states) in <a class="reference external" href="https://arxiv.org/abs/1910.02054">https://arxiv.org/abs/1910.02054</a>.</p>
+<ul>
+<li><p>The ZeRO-3 optimizer should be implemented via nested FSDP with <code class="docutils literal notranslate"><span class="pre">reshard_after_forward=True</span></code>. See <code class="docutils literal notranslate"><span class="pre">test/test_train_mp_mnist_fsdp_with_ckpt.py</span></code> and <code class="docutils literal notranslate"><span class="pre">test/test_train_mp_imagenet_fsdp.py</span></code> for an example.</p></li>
+<li><p>For large models that cannot fit into a single TPU memory or the host CPU memory, one should interleave submodule construction with inner FSDP wrapping. See <cite>``FSDPViTModel`</cite> &lt;<a class="reference external" href="https://github.com/ronghanghu/vit_10b_fsdp_example/blob/master/run_vit_training.py">https://github.com/ronghanghu/vit_10b_fsdp_example/blob/master/run_vit_training.py</a>&gt;`_ for an example.</p></li>
+</ul>
+</li>
+<li><p>a simple wrapper <code class="docutils literal notranslate"><span class="pre">checkpoint_module</span></code> is provided (based on <code class="docutils literal notranslate"><span class="pre">torch_xla.utils.checkpoint.checkpoint</span></code> from <a class="reference external" href="https://github.com/pytorch/xla/pull/3524">https://github.com/pytorch/xla/pull/3524</a>) to perform <a class="reference external" href="https://spell.ml/blog/gradient-checkpointing-pytorch-YGypLBAAACEAefHs">gradient checkpointing</a> over a given <code class="docutils literal notranslate"><span class="pre">nn.Module</span></code> instance. See <code class="docutils literal notranslate"><span class="pre">test/test_train_mp_mnist_fsdp_with_ckpt.py</span></code> and <code class="docutils literal notranslate"><span class="pre">test/test_train_mp_imagenet_fsdp.py</span></code> for an example.</p></li>
+<li><p>Auto-wrapping submodules: instead of manually nested FSDP wrapping, one can also specify an <code class="docutils literal notranslate"><span class="pre">auto_wrap_policy</span></code> argument to automatically wrap the submodules with inner FSDP. <code class="docutils literal notranslate"><span class="pre">size_based_auto_wrap_policy</span></code> in <code class="docutils literal notranslate"><span class="pre">torch_xla.distributed.fsdp.wrap</span></code> is an example of <code class="docutils literal notranslate"><span class="pre">auto_wrap_policy</span></code> callable, this policy wraps layers with the number of parameters larger than 100M. <code class="docutils literal notranslate"><span class="pre">transformer_auto_wrap_policy</span></code> in <code class="docutils literal notranslate"><span class="pre">torch_xla.distributed.fsdp.wrap</span></code> is an example of <code class="docutils literal notranslate"><span class="pre">auto_wrap_policy</span></code> callable for transformer-like model architectures.</p></li>
+</ul>
+<p>For example, to automatically wrap all <code class="docutils literal notranslate"><span class="pre">torch.nn.Conv2d</span></code> submodules with inner FSDP, one can use:</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torch_xla.distributed.fsdp.wrap</span> <span class="kn">import</span> <span class="n">transformer_auto_wrap_policy</span>
+<span class="n">auto_wrap_policy</span> <span class="o">=</span> <span class="n">partial</span><span class="p">(</span><span class="n">transformer_auto_wrap_policy</span><span class="p">,</span> <span class="n">transformer_layer_cls</span><span class="o">=</span><span class="p">{</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Conv2d</span><span class="p">})</span>
+</pre></div>
+</div>
+<p>Additionally, one can also specify an <code class="docutils literal notranslate"><span class="pre">auto_wrapper_callable</span></code> argument to use a custom callable wrapper for the submodules (the default wrapper is just the <code class="docutils literal notranslate"><span class="pre">XlaFullyShardedDataParallel</span></code> class itself). For example, one can use the following to apply gradient checkpointing (i.e. activation checkpointing/rematerialization) to each auto-wrapped submodule.</p>
+<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torch_xla.distributed.fsdp</span> <span class="kn">import</span> <span class="n">checkpoint_module</span>
+<span class="n">auto_wrapper_callable</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">m</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">XlaFullyShardedDataParallel</span><span class="p">(</span>
+    <span class="n">checkpoint_module</span><span class="p">(</span><span class="n">m</span><span class="p">),</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</pre></div>
+</div>
+<ul>
+<li><p>When stepping the optimizer, directly call <code class="docutils literal notranslate"><span class="pre">optimizer.step</span></code> and do not call <code class="docutils literal notranslate"><span class="pre">xm.optimizer_step</span></code>. The latter reduces the gradient across ranks, which is not needed for FSDP (where the parameters are already sharded).</p></li>
+<li><p>When saving model and optimizer checkpoints during training, each training process needs to save its own checkpoint of the (sharded) model and optimizer state dicts (use <code class="docutils literal notranslate"><span class="pre">master_only=False</span></code> and set different paths for each rank in <code class="docutils literal notranslate"><span class="pre">xm.save</span></code>). When resuming, it needs to load the checkpoint for the corresponding rank.</p></li>
+<li><p>Please also save <code class="docutils literal notranslate"><span class="pre">model.get_shard_metadata()</span></code> along with <code class="docutils literal notranslate"><span class="pre">model.state_dict()</span></code> as follows and use <code class="docutils literal notranslate"><span class="pre">consolidate_sharded_model_checkpoints</span></code> to stitch the sharded model checkpoints together into a full model state dict. See <code class="docutils literal notranslate"><span class="pre">test/test_train_mp_mnist_fsdp_with_ckpt.py</span></code> for an example.
+.. code-block:: python3</p>
+<blockquote>
+<div><dl class="simple">
+<dt>ckpt = {</dt><dd><p>‘model’: model.state_dict(),
+‘shard_metadata’: model.get_shard_metadata(),
+‘optimizer’: optimizer.state_dict(),</p>
+</dd>
+</dl>
+<p>}
+ckpt_path = f’/tmp/rank-{xm.get_ordinal()}-of-{xm.xrt_world_size()}.pth’
+xm.save(ckpt, ckpt_path, master_only=False)</p>
+</div></blockquote>
+</li>
+<li><p>The checkpoint consolidation script can also be launched from the command line as follows.
+.. code-block:: bash</p>
+<blockquote>
+<div><p># consolidate the saved checkpoints via command line tool
+python3 -m torch_xla.distributed.fsdp.consolidate_sharded_ckpts –ckpt_prefix /path/to/your_sharded_checkpoint_files –ckpt_suffix “_rank-<em>-of-</em>.pth”</p>
+</div></blockquote>
+</li>
+</ul>
+<p>The implementation of this class is largely inspired by and mostly follows the structure of <code class="docutils literal notranslate"><span class="pre">fairscale.nn.FullyShardedDataParallel</span></code> in <a class="reference external" href="https://fairscale.readthedocs.io/en/stable/api/nn/fsdp.html">https://fairscale.readthedocs.io/en/stable/api/nn/fsdp.html</a>. One of the biggest differences from <code class="docutils literal notranslate"><span class="pre">fairscale.nn.FullyShardedDataParallel</span></code> is that in XLA we don’t have explicit parameter storage, so here we resort to a different approach to free full parameters for ZeRO-3.</p>
+<hr class="docutils" />
+<div class="section" id="example-training-scripts-on-mnist-and-imagenet">
+<h3>Example training scripts on MNIST and ImageNet<a class="headerlink" href="#example-training-scripts-on-mnist-and-imagenet" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li><p>MNIST: <cite>``test/test_train_mp_mnist_fsdp_with_ckpt.py`</cite> &lt;<a class="reference external" href="https://github.com/pytorch/xla/blob/master/test/test_train_mp_mnist_fsdp_with_ckpt.py">https://github.com/pytorch/xla/blob/master/test/test_train_mp_mnist_fsdp_with_ckpt.py</a>&gt;`_ (it also tests checkpoint consolidation)</p></li>
+<li><p>ImageNet: <cite>``test/test_train_mp_imagenet_fsdp.py`</cite> &lt;<a class="reference external" href="https://github.com/pytorch/xla/blob/master/test/test_train_mp_imagenet_fsdp.py">https://github.com/pytorch/xla/blob/master/test/test_train_mp_imagenet_fsdp.py</a>&gt;`_</p></li>
+</ul>
+<div class="section" id="installation">
+<h4>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h4>
+<p>FSDP is available on PyTorch/XLA 1.12 release and newer nightly. Please refer to <a class="reference external" href="https://github.com/pytorch/xla#-available-images-and-wheels">https://github.com/pytorch/xla#-available-images-and-wheels</a> for installation guide.</p>
+</div>
+<div class="section" id="clone-pytorch-xla-repo">
+<h4>Clone PyTorch/XLA repo<a class="headerlink" href="#clone-pytorch-xla-repo" title="Permalink to this headline">¶</a></h4>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>--recursive<span class="w"> </span>https://github.com/pytorch/pytorch
+<span class="nb">cd</span><span class="w"> </span>pytorch/
+git<span class="w"> </span>clone<span class="w"> </span>--recursive<span class="w"> </span>https://github.com/pytorch/xla.git
+<span class="nb">cd</span><span class="w"> </span>~/
+</pre></div>
+</div>
+</div>
+<div class="section" id="train-mnist-on-v3-8-tpu">
+<h4>Train MNIST on v3-8 TPU<a class="headerlink" href="#train-mnist-on-v3-8-tpu" title="Permalink to this headline">¶</a></h4>
+<p>It gets around 98.9 accuracy for 2 epochs:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python3<span class="w"> </span>~/pytorch/xla/test/test_train_mp_mnist_fsdp_with_ckpt.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--batch_size<span class="w"> </span><span class="m">16</span><span class="w"> </span>--drop_last<span class="w"> </span>--num_epochs<span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--use_nested_fsdp<span class="w"> </span>--use_gradient_checkpointing
+</pre></div>
+</div>
+<p>This script automatically tests checkpoint consolidation at the end. You can also manually consolidate the sharded checkpoints via</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># consolidate the saved checkpoints via command line tool</span>
+python3<span class="w"> </span>-m<span class="w"> </span>torch_xla.distributed.fsdp.consolidate_sharded_ckpts<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--ckpt_prefix<span class="w"> </span>/tmp/mnist-fsdp/final_ckpt<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--ckpt_suffix<span class="w"> </span><span class="s2">&quot;_rank-*-of-*.pth&quot;</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="train-imagenet-with-resnet-50-on-v3-8-tpu">
+<h4>Train ImageNet with ResNet-50 on v3-8 TPU<a class="headerlink" href="#train-imagenet-with-resnet-50-on-v3-8-tpu" title="Permalink to this headline">¶</a></h4>
+<p>It gets around 75.9 accuracy for 100 epochs; download <a class="reference external" href="https://github.com/pytorch/examples/tree/master/imagenet#requirements">ImageNet-1k</a> to <code class="docutils literal notranslate"><span class="pre">/datasets/imagenet-1k</span></code>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python3<span class="w"> </span>~/pytorch/xla/test/test_train_mp_imagenet_fsdp.py<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--datadir<span class="w"> </span>/datasets/imagenet-1k<span class="w"> </span>--drop_last<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--model<span class="w"> </span>resnet50<span class="w"> </span>--test_set_batch_size<span class="w"> </span><span class="m">64</span><span class="w"> </span>--eval_interval<span class="w"> </span><span class="m">10</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--lr<span class="w"> </span><span class="m">0</span>.4<span class="w"> </span>--batch_size<span class="w"> </span><span class="m">128</span><span class="w"> </span>--num_warmup_epochs<span class="w"> </span><span class="m">5</span><span class="w"> </span>--lr_scheduler_divide_every_n_epochs<span class="w"> </span><span class="m">30</span><span class="w"> </span>--lr_scheduler_divisor<span class="w"> </span><span class="m">10</span><span class="w"> </span>--num_epochs<span class="w"> </span><span class="m">100</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--use_nested_fsdp
+</pre></div>
+</div>
+<p>You can also add <code class="docutils literal notranslate"><span class="pre">--use_gradient_checkpointing</span></code> (which needs to be used along with <code class="docutils literal notranslate"><span class="pre">--use_nested_fsdp</span></code> or <code class="docutils literal notranslate"><span class="pre">--auto_wrap_policy</span></code>) to apply gradient checkpointing on the residual blocks.</p>
+</div>
+</div>
+<hr class="docutils" />
+<div class="section" id="example-training-scripts-on-tpu-pod-with-10-billion-parameters">
+<h3>Example training scripts on TPU pod (with 10 billion parameters)<a class="headerlink" href="#example-training-scripts-on-tpu-pod-with-10-billion-parameters" title="Permalink to this headline">¶</a></h3>
+<p>To train large models that cannot fit into a single TPU, one should apply auto-wrap or manually wrap the submodules with inner FSDP when building the entire model to implement the ZeRO-3 algorithm.</p>
+<p>Please see <a class="reference external" href="https://github.com/ronghanghu/vit_10b_fsdp_example">https://github.com/ronghanghu/vit_10b_fsdp_example</a> for an example of sharded training of a Vision Transformer (ViT) model using this XLA FSDP PR.</p>
+</div>
 </div>
 </div>
 <div class="section" id="how-to-do-distributeddataparallel">
@@ -2381,193 +2879,84 @@ native xla data parallel approach, here is the
 <li><p>There are some issues while being used with <code class="docutils literal notranslate"><span class="pre">torch.utils.data.DataLoader</span></code>. <code class="docutils literal notranslate"><span class="pre">​​test_train_mp_mnist.py</span></code> with real data crashes before exiting.</p></li>
 </ul>
 </div>
-<div class="section" id="fully-sharded-data-parallel-fsdp-in-pytorch-xla">
-<h2>Fully Sharded Data Parallel (FSDP) in PyTorch XLA<a class="headerlink" href="#fully-sharded-data-parallel-fsdp-in-pytorch-xla" title="Permalink to this headline">¶</a></h2>
-<p>Fully Sharded Data Parallel (FSDP) in PyTorch XLA is a utility for sharding Module parameters across data-parallel workers.</p>
-<p>Example usage:</p>
-<div class="highlight-python3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
-<span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
-<span class="kn">from</span> <span class="nn">torch_xla.distributed.fsdp</span> <span class="kn">import</span> <span class="n">XlaFullyShardedDataParallel</span> <span class="k">as</span> <span class="n">FSDP</span>
+</div>
+<div class="section" id="how-to-run-with-pytorch-xla-gpu">
+<h1>How to run with PyTorch/XLA:GPU<a class="headerlink" href="#how-to-run-with-pytorch-xla-gpu" title="Permalink to this headline">¶</a></h1>
+<p>PyTorch/XLA enables PyTorch users to utilize the XLA compiler which supports accelerators including TPU, GPU, CPU and … This doc will go over the basic steps to run PyTorch/XLA on a nvidia gpu instance</p>
+<div class="section" id="create-a-gpu-instance">
+<h2>Create a GPU instance<a class="headerlink" href="#create-a-gpu-instance" title="Permalink to this headline">¶</a></h2>
+<p>Pytorch/XLA currently publish prebuilt docker images and wheels with cuda11.2 and python 3.7/3.8. We recommend users to create a GPU instance with corresponding config. For a full list of docker images and wheels, please refer to <a class="reference external" href="https://github.com/pytorch/xla/tree/jackcao/gpu_doc#-available-images-and-wheels">this doc</a>.</p>
+</div>
+<div class="section" id="environment-setup">
+<h2>Environment Setup<a class="headerlink" href="#environment-setup" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="id8">
+<h3>Docker<a class="headerlink" href="#id8" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>sudo docker pull gcr.io/tpu-pytorch/xla:nightly_3.8_cuda_11.2
+sudo apt-get install -y apt-transport-https ca-certificates curl gnupg-agent    software-properties-common
+distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
+curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -
+curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | sudo tee /etc/apt/sources.list.d/nvidia-docker.list
+sudo apt-get update &amp;&amp; sudo apt-get install -y nvidia-container-toolkit
+sudo systemctl restart docker
+sudo docker run --gpus all -it -d gcr.io/tpu-pytorch/xla:nightly_3.7\8_cuda_11.2 bin/bash
+sudo docker exec -it $(sudo docker ps | awk &#39;NR==2 { print $1 }&#39;) /bin/bash
+</pre></div>
+</div>
+<p>Note that you need to restart the docker to make gpu devices visible in the docker container. After logging into the docker, you can use <code class="docutils literal notranslate"><span class="pre">nvidia-smi</span></code> to verify the device is setup correctly.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">(</span><span class="n">pytorch</span><span class="p">)</span> <span class="n">root</span><span class="o">@</span><span class="mi">20</span><span class="n">ab2c7a2d06</span><span class="p">:</span><span class="o">/</span><span class="c1"># nvidia-smi</span>
+<span class="n">Thu</span> <span class="n">Dec</span>  <span class="mi">8</span> <span class="mi">06</span><span class="p">:</span><span class="mi">24</span><span class="p">:</span><span class="mi">29</span> <span class="mi">2022</span>
+<span class="o">+-----------------------------------------------------------------------------+</span>
+<span class="o">|</span> <span class="n">NVIDIA</span><span class="o">-</span><span class="n">SMI</span> <span class="mf">510.47.03</span>    <span class="n">Driver</span> <span class="n">Version</span><span class="p">:</span> <span class="mf">510.47.03</span>    <span class="n">CUDA</span> <span class="n">Version</span><span class="p">:</span> <span class="mf">11.6</span>     <span class="o">|</span>
+<span class="o">|-------------------------------+----------------------+----------------------+</span>
+<span class="o">|</span> <span class="n">GPU</span>  <span class="n">Name</span>        <span class="n">Persistence</span><span class="o">-</span><span class="n">M</span><span class="o">|</span> <span class="n">Bus</span><span class="o">-</span><span class="n">Id</span>        <span class="n">Disp</span><span class="o">.</span><span class="n">A</span> <span class="o">|</span> <span class="n">Volatile</span> <span class="n">Uncorr</span><span class="o">.</span> <span class="n">ECC</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">Fan</span>  <span class="n">Temp</span>  <span class="n">Perf</span>  <span class="n">Pwr</span><span class="p">:</span><span class="n">Usage</span><span class="o">/</span><span class="n">Cap</span><span class="o">|</span>         <span class="n">Memory</span><span class="o">-</span><span class="n">Usage</span> <span class="o">|</span> <span class="n">GPU</span><span class="o">-</span><span class="n">Util</span>  <span class="n">Compute</span> <span class="n">M</span><span class="o">.</span> <span class="o">|</span>
+<span class="o">|</span>                               <span class="o">|</span>                      <span class="o">|</span>               <span class="n">MIG</span> <span class="n">M</span><span class="o">.</span> <span class="o">|</span>
+<span class="o">|===============================+======================+======================|</span>
+<span class="o">|</span>   <span class="mi">0</span>  <span class="n">Tesla</span> <span class="n">V100</span><span class="o">-</span><span class="n">SXM2</span><span class="o">...</span>  <span class="n">Off</span>  <span class="o">|</span> <span class="mi">00000000</span><span class="p">:</span><span class="mi">00</span><span class="p">:</span><span class="mf">04.0</span> <span class="n">Off</span> <span class="o">|</span>                    <span class="mi">0</span> <span class="o">|</span>
+<span class="o">|</span> <span class="n">N</span><span class="o">/</span><span class="n">A</span>   <span class="mi">36</span><span class="n">C</span>    <span class="n">P0</span>    <span class="mi">38</span><span class="n">W</span> <span class="o">/</span> <span class="mi">300</span><span class="n">W</span> <span class="o">|</span>      <span class="mi">0</span><span class="n">MiB</span> <span class="o">/</span> <span class="mi">16384</span><span class="n">MiB</span> <span class="o">|</span>      <span class="mi">1</span><span class="o">%</span>      <span class="n">Default</span> <span class="o">|</span>
+<span class="o">|</span>                               <span class="o">|</span>                      <span class="o">|</span>                  <span class="n">N</span><span class="o">/</span><span class="n">A</span> <span class="o">|</span>
+<span class="o">+-------------------------------+----------------------+----------------------+</span>
 
-<span class="n">model</span> <span class="o">=</span> <span class="n">FSDP</span><span class="p">(</span><span class="n">my_module</span><span class="p">)</span>
-<span class="n">optim</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">lr</span><span class="o">=</span><span class="mf">0.0001</span><span class="p">)</span>
-<span class="n">output</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
-<span class="n">loss</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
-<span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
-<span class="n">optim</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
-</pre></div>
-</div>
-<p>It is also possible to shard individual layers separately and have an outer wrapper handle any leftover parameters.</p>
-<p>Notes:</p>
-<ul>
-<li><p>The <code class="docutils literal notranslate"><span class="pre">XlaFullyShardedDataParallel</span></code> class supports both the ZeRO-2 optimizer (sharding gradients and optimizer states) and the ZeRO-3 optimizer (sharding parameters, gradients, and optimizer states) in <a class="reference external" href="https://arxiv.org/abs/1910.02054">https://arxiv.org/abs/1910.02054</a>.</p>
-<ul class="simple">
-<li><p>The ZeRO-3 optimizer should be implemented via nested FSDP with <code class="docutils literal notranslate"><span class="pre">reshard_after_forward=True</span></code>. See <code class="docutils literal notranslate"><span class="pre">test/test_train_mp_mnist_fsdp_with_ckpt.py</span></code> and <code class="docutils literal notranslate"><span class="pre">test/test_train_mp_imagenet_fsdp.py</span></code> for an example.</p></li>
-<li><p>For large models that cannot fit into a single TPU memory or the host CPU memory, one should interleave submodule construction with inner FSDP wrapping. See <cite>``FSDPViTModel`</cite> &lt;<a class="reference external" href="https://github.com/ronghanghu/vit_10b_fsdp_example/blob/master/run_vit_training.py">https://github.com/ronghanghu/vit_10b_fsdp_example/blob/master/run_vit_training.py</a>&gt;`_ for an example.</p></li>
-</ul>
-</li>
-<li><p>a simple wrapper <code class="docutils literal notranslate"><span class="pre">checkpoint_module</span></code> is provided (based on <code class="docutils literal notranslate"><span class="pre">torch_xla.utils.checkpoint.checkpoint</span></code> from <a class="reference external" href="https://github.com/pytorch/xla/pull/3524">https://github.com/pytorch/xla/pull/3524</a>) to perform <a class="reference external" href="https://spell.ml/blog/gradient-checkpointing-pytorch-YGypLBAAACEAefHs">gradient checkpointing</a> over a given <code class="docutils literal notranslate"><span class="pre">nn.Module</span></code> instance. See <code class="docutils literal notranslate"><span class="pre">test/test_train_mp_mnist_fsdp_with_ckpt.py</span></code> and <code class="docutils literal notranslate"><span class="pre">test/test_train_mp_imagenet_fsdp.py</span></code> for an example.</p></li>
-<li><p>When stepping the optimizer, directly call <code class="docutils literal notranslate"><span class="pre">optimizer.step</span></code> and do not call <code class="docutils literal notranslate"><span class="pre">xm.optimizer_step</span></code>. The latter reduces the gradient across ranks, which is not needed for FSDP (where the parameters are already sharded).</p></li>
-<li><p>When saving model and optimizer checkpoints during training, each training process needs to save its own checkpoint of the (sharded) model and optimizer state dicts (use <code class="docutils literal notranslate"><span class="pre">master_only=False</span></code> and set different paths for each rank in <code class="docutils literal notranslate"><span class="pre">xm.save</span></code>). When resuming, it needs to load the checkpoint for the corresponding rank.</p></li>
-<li><p>Please also save <code class="docutils literal notranslate"><span class="pre">model.get_shard_metadata()</span></code> along with <code class="docutils literal notranslate"><span class="pre">model.state_dict()</span></code> as follows and use <code class="docutils literal notranslate"><span class="pre">consolidate_sharded_model_checkpoints</span></code> to stitch the sharded model checkpoints together into a full model state dict. See <code class="docutils literal notranslate"><span class="pre">test/test_train_mp_mnist_fsdp_with_ckpt.py</span></code> for an example.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ckpt</span> <span class="o">=</span> <span class="p">{</span>
-  <span class="s1">&#39;model&#39;</span><span class="p">:</span> <span class="n">model</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span>
-  <span class="s1">&#39;shard_metadata&#39;</span><span class="p">:</span> <span class="n">model</span><span class="o">.</span><span class="n">get_shard_metadata</span><span class="p">(),</span>
-  <span class="s1">&#39;optimizer&#39;</span><span class="p">:</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span>
-<span class="p">}</span>
-<span class="n">ckpt_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;/tmp/rank-</span><span class="si">{</span><span class="n">xm</span><span class="o">.</span><span class="n">get_ordinal</span><span class="p">()</span><span class="si">}</span><span class="s1">-of-</span><span class="si">{</span><span class="n">xm</span><span class="o">.</span><span class="n">xrt_world_size</span><span class="p">()</span><span class="si">}</span><span class="s1">.pth&#39;</span>
-<span class="n">xm</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">ckpt</span><span class="p">,</span> <span class="n">ckpt_path</span><span class="p">,</span> <span class="n">master_only</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-</pre></div>
-</div>
-</li>
-<li><p>The checkpoint consolidation script can also be launched from the command line as follows.
-.. code-block:: bash</p>
-<blockquote>
-<div><p># consolidate the saved checkpoints via command line tool
-python3 -m torch_xla.distributed.fsdp.consolidate_sharded_ckpts –ckpt_prefix /path/to/your_sharded_checkpoint_files –ckpt_suffix “_rank-<em>-of-</em>.pth”</p>
-</div></blockquote>
-</li>
-</ul>
-<p>The implementation of this class is largely inspired by and mostly follows the structure of <code class="docutils literal notranslate"><span class="pre">fairscale.nn.FullyShardedDataParallel</span></code> in <a class="reference external" href="https://fairscale.readthedocs.io/en/stable/api/nn/fsdp.html">https://fairscale.readthedocs.io/en/stable/api/nn/fsdp.html</a>. One of the biggest differences from <code class="docutils literal notranslate"><span class="pre">fairscale.nn.FullyShardedDataParallel</span></code> is that in XLA we don’t have explicit parameter storage, so here we resort to a different approach to free full parameters for ZeRO-3.</p>
-<hr class="docutils" />
-<div class="section" id="example-training-scripts-on-mnist-and-imagenet">
-<h3>Example training scripts on MNIST and ImageNet<a class="headerlink" href="#example-training-scripts-on-mnist-and-imagenet" title="Permalink to this headline">¶</a></h3>
-<ul class="simple">
-<li><p>MNIST: <cite>``test/test_train_mp_mnist_fsdp_with_ckpt.py`</cite> &lt;<a class="reference external" href="https://github.com/pytorch/xla/blob/master/test/test_train_mp_mnist_fsdp_with_ckpt.py">https://github.com/pytorch/xla/blob/master/test/test_train_mp_mnist_fsdp_with_ckpt.py</a>&gt;`_ (it also tests checkpoint consolidation)</p></li>
-<li><p>ImageNet: <cite>``test/test_train_mp_imagenet_fsdp.py`</cite> &lt;<a class="reference external" href="https://github.com/pytorch/xla/blob/master/test/test_train_mp_imagenet_fsdp.py">https://github.com/pytorch/xla/blob/master/test/test_train_mp_imagenet_fsdp.py</a>&gt;`_</p></li>
-</ul>
-<div class="section" id="installation">
-<h4>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h4>
-<p>FSDP is available on PyTorch/XLA 1.12 release and newer nightly. Please refer to <a class="reference external" href="https://github.com/pytorch/xla#-available-images-and-wheels">https://github.com/pytorch/xla#-available-images-and-wheels</a> for installation guide.</p>
-</div>
-<div class="section" id="clone-pytorch-xla-repo">
-<h4>Clone PyTorch/XLA repo<a class="headerlink" href="#clone-pytorch-xla-repo" title="Permalink to this headline">¶</a></h4>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git clone --recursive https://github.com/pytorch/pytorch
-<span class="nb">cd</span> pytorch/
-git clone --recursive https://github.com/pytorch/xla.git
-<span class="nb">cd</span> ~/
+<span class="o">+-----------------------------------------------------------------------------+</span>
+<span class="o">|</span> <span class="n">Processes</span><span class="p">:</span>                                                                  <span class="o">|</span>
+<span class="o">|</span>  <span class="n">GPU</span>   <span class="n">GI</span>   <span class="n">CI</span>        <span class="n">PID</span>   <span class="n">Type</span>   <span class="n">Process</span> <span class="n">name</span>                  <span class="n">GPU</span> <span class="n">Memory</span> <span class="o">|</span>
+<span class="o">|</span>        <span class="n">ID</span>   <span class="n">ID</span>                                                   <span class="n">Usage</span>      <span class="o">|</span>
+<span class="o">|=============================================================================|</span>
+<span class="o">|</span>  <span class="n">No</span> <span class="n">running</span> <span class="n">processes</span> <span class="n">found</span>                                                 <span class="o">|</span>
+<span class="o">+-----------------------------------------------------------------------------+</span>
 </pre></div>
 </div>
 </div>
-<div class="section" id="train-mnist-on-v3-8-tpu">
-<h4>Train MNIST on v3-8 TPU<a class="headerlink" href="#train-mnist-on-v3-8-tpu" title="Permalink to this headline">¶</a></h4>
-<p>It gets around 98.9 accuracy for 2 epochs:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python3 ~/pytorch/xla/test/test_train_mp_mnist_fsdp_with_ckpt.py <span class="se">\</span>
-  --batch_size <span class="m">16</span> --drop_last --num_epochs <span class="m">2</span> <span class="se">\</span>
-  --use_nested_fsdp --use_gradient_checkpointing
-</pre></div>
-</div>
-<p>This script automatically tests checkpoint consolidation at the end. You can also manually consolidate the sharded checkpoints via</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># consolidate the saved checkpoints via command line tool</span>
-python3 -m torch_xla.distributed.fsdp.consolidate_sharded_ckpts <span class="se">\</span>
-  --ckpt_prefix /tmp/mnist-fsdp/final_ckpt <span class="se">\</span>
-  --ckpt_suffix <span class="s2">&quot;_rank-*-of-*.pth&quot;</span>
+<div class="section" id="wheel">
+<h3>Wheel<a class="headerlink" href="#wheel" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip3</span> <span class="n">install</span> <span class="n">torch</span><span class="o">=</span><span class="mf">1.13</span>
+<span class="n">pip3</span> <span class="n">install</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">storage</span><span class="o">.</span><span class="n">googleapis</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">tpu</span><span class="o">-</span><span class="n">pytorch</span><span class="o">/</span><span class="n">wheels</span><span class="o">/</span><span class="n">cuda</span><span class="o">/</span><span class="mi">112</span><span class="o">/</span><span class="n">torch_xla</span><span class="o">-</span><span class="mf">1.13</span><span class="o">-</span><span class="n">cp37</span><span class="o">-</span><span class="n">cp37m</span><span class="o">-</span><span class="n">linux_x86_64</span><span class="o">.</span><span class="n">whl</span>
 </pre></div>
 </div>
 </div>
-<div class="section" id="train-imagenet-with-resnet-50-on-v3-8-tpu">
-<h4>Train ImageNet with ResNet-50 on v3-8 TPU<a class="headerlink" href="#train-imagenet-with-resnet-50-on-v3-8-tpu" title="Permalink to this headline">¶</a></h4>
-<p>It gets around 75.9 accuracy for 100 epochs; download <a class="reference external" href="https://github.com/pytorch/examples/tree/master/imagenet#requirements">ImageNet-1k</a> to <code class="docutils literal notranslate"><span class="pre">/datasets/imagenet-1k</span></code>:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python3 ~/pytorch/xla/test/test_train_mp_imagenet_fsdp.py <span class="se">\</span>
-  --datadir /datasets/imagenet-1k --drop_last <span class="se">\</span>
-  --model resnet50 --test_set_batch_size <span class="m">64</span> --eval_interval <span class="m">10</span> <span class="se">\</span>
-  --lr <span class="m">0</span>.4 --batch_size <span class="m">128</span> --num_warmup_epochs <span class="m">5</span> --lr_scheduler_divide_every_n_epochs <span class="m">30</span> --lr_scheduler_divisor <span class="m">10</span> --num_epochs <span class="m">100</span> <span class="se">\</span>
-  --use_nested_fsdp
-</pre></div>
 </div>
-<p>You can also add <code class="docutils literal notranslate"><span class="pre">--use_gradient_checkpointing</span></code> (which needs to be used along with <code class="docutils literal notranslate"><span class="pre">--use_nested_fsdp</span></code>) to apply gradient checkpointing on the residual blocks.</p>
-</div>
-</div>
-<hr class="docutils" />
-<div class="section" id="example-training-scripts-on-tpu-pod-with-10-billion-parameters">
-<h3>Example training scripts on TPU pod (with 10 billion parameters)<a class="headerlink" href="#example-training-scripts-on-tpu-pod-with-10-billion-parameters" title="Permalink to this headline">¶</a></h3>
-<p>To train large models that cannot fit into a single TPU, one should use nested FSDP (wrapping sub-modules with inner FSDP when building the entire model) to implement the ZeRO-3 algorithm.</p>
-<p>Please see <a class="reference external" href="https://github.com/ronghanghu/vit_10b_fsdp_example">https://github.com/ronghanghu/vit_10b_fsdp_example</a> for an example of sharded training of a Vision Transformer (ViT) model using this XLA FSDP PR.</p>
-</div>
-</div>
-</div>
-<div class="section" id="op-lowering-guide">
-<h1>OP Lowering Guide<a class="headerlink" href="#op-lowering-guide" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="background">
-<h2>Background<a class="headerlink" href="#background" title="Permalink to this headline">¶</a></h2>
-<p>PyTorch wraps the C++ ATen tensor library that offers a wide range of operations implemented on GPU and CPU. Pytorch/XLA is a PyTorch extension; one of its purposes is to convert PyTorch operations to XLA operations. Lowering defines a process of converting a higher-level representation to a lower-level representation. In this document, I will refer to the process of converting PyTorch operation to XLA operation as the lowering. XLA Compiler will also lower XlaOp to HLO, but that’s beyond the scope of this documentation. We will forward operations that we haven’t provided an XLA lowering yet to CPU and call ATen implementations. Operations that are forwarded to the CPU will cause a significant slowdown. We must lower all operations used in the model to achieve the best performance.</p>
-</div>
-<div class="section" id="before-you-start">
-<h2>Before you start<a class="headerlink" href="#before-you-start" title="Permalink to this headline">¶</a></h2>
-<p>You should follow the instructions in <a class="reference external" href="https://github.com/pytorch/xla/blob/master/CONTRIBUTING.md">here</a> to install required dependencies and build pytorch and pytorch/XLA from the source. You do not need access to TPU to implement the lowering. It is recommended to experiment on a workstation and configure it to use XLA:CPU. You can configure Pytorch/XLA to use XLA:CPU by running</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">export</span> <span class="n">XRT_DEVICE_MAP</span><span class="o">=</span><span class="s2">&quot;CPU:0;/job:localservice/replica:0/task:0/device:XLA_CPU:0&quot;</span> <span class="n">XRT_WORKERS</span><span class="o">=</span><span class="s2">&quot;localservice:0;grpc://localhost:51011&quot;</span>
+<div class="section" id="run-a-simple-model">
+<h2>Run a simple model<a class="headerlink" href="#run-a-simple-model" title="Permalink to this headline">¶</a></h2>
+<p>In order to run below examples, you need to clone the pytorch/xla repo to access the imagenet example(We already clone it in our docker).</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">(</span><span class="n">pytorch</span><span class="p">)</span> <span class="n">root</span><span class="o">@</span><span class="mi">20</span><span class="n">ab2c7a2d06</span><span class="p">:</span><span class="o">/</span><span class="c1"># export GPU_NUM_DEVICES=1</span>
+<span class="p">(</span><span class="n">pytorch</span><span class="p">)</span> <span class="n">root</span><span class="o">@</span><span class="mi">20</span><span class="n">ab2c7a2d06</span><span class="p">:</span><span class="o">/</span><span class="c1"># python pytorch/xla/test/test_train_mp_imagenet.py --fake_data</span>
+<span class="o">==&gt;</span> <span class="n">Preparing</span> <span class="n">data</span><span class="o">..</span>
+<span class="n">Epoch</span> <span class="mi">1</span> <span class="n">train</span> <span class="n">begin</span> <span class="mi">06</span><span class="p">:</span><span class="mi">12</span><span class="p">:</span><span class="mi">38</span>
+<span class="mi">2022</span><span class="o">-</span><span class="mi">12</span><span class="o">-</span><span class="mi">08</span> <span class="mi">06</span><span class="p">:</span><span class="mi">13</span><span class="p">:</span><span class="mf">12.452874</span><span class="p">:</span> <span class="n">W</span>      <span class="mi">79</span> <span class="n">tensorflow</span><span class="o">/</span><span class="n">compiler</span><span class="o">/</span><span class="n">xla</span><span class="o">/</span><span class="n">service</span><span class="o">/</span><span class="n">gpu</span><span class="o">/</span><span class="n">gpu_conv_algorithm_picker</span><span class="o">.</span><span class="n">cc</span><span class="p">:</span><span class="mi">729</span><span class="p">]</span> <span class="kc">None</span> <span class="n">of</span> <span class="n">the</span> <span class="n">algorithms</span> <span class="n">provided</span> <span class="n">by</span> <span class="n">cuDNN</span> <span class="n">heuristics</span> <span class="n">worked</span><span class="p">;</span> <span class="n">trying</span> <span class="n">fallback</span> <span class="n">algorithms</span><span class="o">.</span>  <span class="n">Conv</span><span class="p">:</span> <span class="p">(</span><span class="n">f32</span><span class="p">[</span><span class="mi">128</span><span class="p">,</span><span class="mi">256</span><span class="p">,</span><span class="mi">28</span><span class="p">,</span><span class="mi">28</span><span class="p">]{</span><span class="mi">3</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">},</span> <span class="n">u8</span><span class="p">[</span><span class="mi">0</span><span class="p">]{</span><span class="mi">0</span><span class="p">})</span> <span class="n">custom</span><span class="o">-</span><span class="n">call</span><span class="p">(</span><span class="n">f32</span><span class="p">[</span><span class="mi">128</span><span class="p">,</span><span class="mi">256</span><span class="p">,</span><span class="mi">14</span><span class="p">,</span><span class="mi">14</span><span class="p">]{</span><span class="mi">3</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">},</span> <span class="n">f32</span><span class="p">[</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">256</span><span class="p">,</span><span class="mi">256</span><span class="p">]{</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">}),</span> <span class="n">window</span><span class="o">=</span><span class="p">{</span><span class="n">size</span><span class="o">=</span><span class="mi">3</span><span class="n">x3</span> <span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="n">x2</span> <span class="n">pad</span><span class="o">=</span><span class="mi">1_1</span><span class="n">x1_1</span><span class="p">},</span> <span class="n">dim_labels</span><span class="o">=</span><span class="n">bf01_01io</span><span class="o">-&gt;</span><span class="n">bf01</span><span class="p">,</span> <span class="n">custom_call_target</span><span class="o">=</span><span class="s2">&quot;__cudnn$convBackwardInput&quot;</span><span class="p">,</span> <span class="n">backend_config</span><span class="o">=</span><span class="s2">&quot;{</span><span class="se">\&quot;</span><span class="s2">conv_result_scale</span><span class="se">\&quot;</span><span class="s2">:1,</span><span class="se">\&quot;</span><span class="s2">activation_mode</span><span class="se">\&quot;</span><span class="s2">:</span><span class="se">\&quot;</span><span class="s2">0</span><span class="se">\&quot;</span><span class="s2">,</span><span class="se">\&quot;</span><span class="s2">side_input_scale</span><span class="se">\&quot;</span><span class="s2">:0}&quot;</span>
+<span class="mi">2022</span><span class="o">-</span><span class="mi">12</span><span class="o">-</span><span class="mi">08</span> <span class="mi">06</span><span class="p">:</span><span class="mi">13</span><span class="p">:</span><span class="mf">13.780992</span><span class="p">:</span> <span class="n">W</span>      <span class="mi">79</span> <span class="n">tensorflow</span><span class="o">/</span><span class="n">compiler</span><span class="o">/</span><span class="n">xla</span><span class="o">/</span><span class="n">service</span><span class="o">/</span><span class="n">gpu</span><span class="o">/</span><span class="n">gpu_conv_algorithm_picker</span><span class="o">.</span><span class="n">cc</span><span class="p">:</span><span class="mi">729</span><span class="p">]</span> <span class="kc">None</span> <span class="n">of</span> <span class="n">the</span> <span class="n">algorithms</span> <span class="n">provided</span> <span class="n">by</span> <span class="n">cuDNN</span> <span class="n">heuristics</span> <span class="n">worked</span><span class="p">;</span> <span class="n">trying</span> <span class="n">fallback</span> <span class="n">algorithms</span><span class="o">.</span>  <span class="n">Conv</span><span class="p">:</span> <span class="p">(</span><span class="n">f32</span><span class="p">[</span><span class="mi">128</span><span class="p">,</span><span class="mi">128</span><span class="p">,</span><span class="mi">56</span><span class="p">,</span><span class="mi">56</span><span class="p">]{</span><span class="mi">3</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">},</span> <span class="n">u8</span><span class="p">[</span><span class="mi">0</span><span class="p">]{</span><span class="mi">0</span><span class="p">})</span> <span class="n">custom</span><span class="o">-</span><span class="n">call</span><span class="p">(</span><span class="n">f32</span><span class="p">[</span><span class="mi">128</span><span class="p">,</span><span class="mi">128</span><span class="p">,</span><span class="mi">28</span><span class="p">,</span><span class="mi">28</span><span class="p">]{</span><span class="mi">3</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">},</span> <span class="n">f32</span><span class="p">[</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">128</span><span class="p">,</span><span class="mi">128</span><span class="p">]{</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">}),</span> <span class="n">window</span><span class="o">=</span><span class="p">{</span><span class="n">size</span><span class="o">=</span><span class="mi">3</span><span class="n">x3</span> <span class="n">stride</span><span class="o">=</span><span class="mi">2</span><span class="n">x2</span> <span class="n">pad</span><span class="o">=</span><span class="mi">1_1</span><span class="n">x1_1</span><span class="p">},</span> <span class="n">dim_labels</span><span class="o">=</span><span class="n">bf01_01io</span><span class="o">-&gt;</span><span class="n">bf01</span><span class="p">,</span> <span class="n">custom_call_target</span><span class="o">=</span><span class="s2">&quot;__cudnn$convBackwardInput&quot;</span><span class="p">,</span> <span class="n">backend_config</span><span class="o">=</span><span class="s2">&quot;{</span><span class="se">\&quot;</span><span class="s2">conv_result_scale</span><span class="se">\&quot;</span><span class="s2">:1,</span><span class="se">\&quot;</span><span class="s2">activation_mode</span><span class="se">\&quot;</span><span class="s2">:</span><span class="se">\&quot;</span><span class="s2">0</span><span class="se">\&quot;</span><span class="s2">,</span><span class="se">\&quot;</span><span class="s2">side_input_scale</span><span class="se">\&quot;</span><span class="s2">:0}&quot;</span>
+<span class="o">|</span> <span class="n">Training</span> <span class="n">Device</span><span class="o">=</span><span class="n">xla</span><span class="p">:</span><span class="mi">0</span><span class="o">/</span><span class="mi">0</span> <span class="n">Epoch</span><span class="o">=</span><span class="mi">1</span> <span class="n">Step</span><span class="o">=</span><span class="mi">0</span> <span class="n">Loss</span><span class="o">=</span><span class="mf">6.89059</span> <span class="n">Rate</span><span class="o">=</span><span class="mf">2.82</span> <span class="n">GlobalRate</span><span class="o">=</span><span class="mf">2.82</span> <span class="n">Time</span><span class="o">=</span><span class="mi">06</span><span class="p">:</span><span class="mi">13</span><span class="p">:</span><span class="mi">23</span>
+<span class="o">|</span> <span class="n">Training</span> <span class="n">Device</span><span class="o">=</span><span class="n">xla</span><span class="p">:</span><span class="mi">0</span><span class="o">/</span><span class="mi">0</span> <span class="n">Epoch</span><span class="o">=</span><span class="mi">1</span> <span class="n">Step</span><span class="o">=</span><span class="mi">20</span> <span class="n">Loss</span><span class="o">=</span><span class="mf">6.79297</span> <span class="n">Rate</span><span class="o">=</span><span class="mf">117.16</span> <span class="n">GlobalRate</span><span class="o">=</span><span class="mf">45.84</span> <span class="n">Time</span><span class="o">=</span><span class="mi">06</span><span class="p">:</span><span class="mi">13</span><span class="p">:</span><span class="mi">36</span>
+<span class="o">|</span> <span class="n">Training</span> <span class="n">Device</span><span class="o">=</span><span class="n">xla</span><span class="p">:</span><span class="mi">0</span><span class="o">/</span><span class="mi">0</span> <span class="n">Epoch</span><span class="o">=</span><span class="mi">1</span> <span class="n">Step</span><span class="o">=</span><span class="mi">40</span> <span class="n">Loss</span><span class="o">=</span><span class="mf">6.43628</span> <span class="n">Rate</span><span class="o">=</span><span class="mf">281.16</span> <span class="n">GlobalRate</span><span class="o">=</span><span class="mf">80.49</span> <span class="n">Time</span><span class="o">=</span><span class="mi">06</span><span class="p">:</span><span class="mi">13</span><span class="p">:</span><span class="mi">43</span>
+<span class="o">|</span> <span class="n">Training</span> <span class="n">Device</span><span class="o">=</span><span class="n">xla</span><span class="p">:</span><span class="mi">0</span><span class="o">/</span><span class="mi">0</span> <span class="n">Epoch</span><span class="o">=</span><span class="mi">1</span> <span class="n">Step</span><span class="o">=</span><span class="mi">60</span> <span class="n">Loss</span><span class="o">=</span><span class="mf">5.83108</span> <span class="n">Rate</span><span class="o">=</span><span class="mf">346.88</span> <span class="n">GlobalRate</span><span class="o">=</span><span class="mf">108.82</span> <span class="n">Time</span><span class="o">=</span><span class="mi">06</span><span class="p">:</span><span class="mi">13</span><span class="p">:</span><span class="mi">49</span>
+<span class="o">|</span> <span class="n">Training</span> <span class="n">Device</span><span class="o">=</span><span class="n">xla</span><span class="p">:</span><span class="mi">0</span><span class="o">/</span><span class="mi">0</span> <span class="n">Epoch</span><span class="o">=</span><span class="mi">1</span> <span class="n">Step</span><span class="o">=</span><span class="mi">80</span> <span class="n">Loss</span><span class="o">=</span><span class="mf">4.99023</span> <span class="n">Rate</span><span class="o">=</span><span class="mf">373.62</span> <span class="n">GlobalRate</span><span class="o">=</span><span class="mf">132.43</span> <span class="n">Time</span><span class="o">=</span><span class="mi">06</span><span class="p">:</span><span class="mi">13</span><span class="p">:</span><span class="mi">56</span>
+<span class="o">|</span> <span class="n">Training</span> <span class="n">Device</span><span class="o">=</span><span class="n">xla</span><span class="p">:</span><span class="mi">0</span><span class="o">/</span><span class="mi">0</span> <span class="n">Epoch</span><span class="o">=</span><span class="mi">1</span> <span class="n">Step</span><span class="o">=</span><span class="mi">100</span> <span class="n">Loss</span><span class="o">=</span><span class="mf">3.92699</span> <span class="n">Rate</span><span class="o">=</span><span class="mf">384.33</span> <span class="n">GlobalRate</span><span class="o">=</span><span class="mf">152.40</span> <span class="n">Time</span><span class="o">=</span><span class="mi">06</span><span class="p">:</span><span class="mi">14</span><span class="p">:</span><span class="mi">02</span>
+<span class="o">|</span> <span class="n">Training</span> <span class="n">Device</span><span class="o">=</span><span class="n">xla</span><span class="p">:</span><span class="mi">0</span><span class="o">/</span><span class="mi">0</span> <span class="n">Epoch</span><span class="o">=</span><span class="mi">1</span> <span class="n">Step</span><span class="o">=</span><span class="mi">120</span> <span class="n">Loss</span><span class="o">=</span><span class="mf">2.68816</span> <span class="n">Rate</span><span class="o">=</span><span class="mf">388.35</span> <span class="n">GlobalRate</span><span class="o">=</span><span class="mf">169.49</span> <span class="n">Time</span><span class="o">=</span><span class="mi">06</span><span class="p">:</span><span class="mi">14</span><span class="p">:</span><span class="mi">09</span>
 </pre></div>
 </div>
 </div>
-<div class="section" id="understanding-the-operation">
-<h2>Understanding the operation<a class="headerlink" href="#understanding-the-operation" title="Permalink to this headline">¶</a></h2>
-<p>You can find the definition of the C++ ATen operations in <a class="reference external" href="https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/native_functions.yaml">native_functions.yaml</a>. After you build Pytorch/XLA from source, you will also find our default implementation (a boxed kernel which forwards calls to PyTorch native CPU) in <code class="docutils literal notranslate"><span class="pre">xla/torch_xla/csrc/aten_cpu_fallback.h/cpp</span></code>. Pytorch operations can usually be mapped to <a class="reference external" href="https://pytorch.org/docs/stable/index.html">PyTorch tensor api</a> easily. If that is not the case searching the PyTorch native implementation under <a class="reference external" href="https://github.com/pytorch/pytorch">PyTorch repo</a> is recommended. The goal is to lower the PyTorch operations into a sequence of XLA operations defined in <a class="reference external" href="https://www.tensorflow.org/xla/operation_semantics">here</a>.</p>
-</div>
-<div class="section" id="file-structure">
-<h2>File structure<a class="headerlink" href="#file-structure" title="Permalink to this headline">¶</a></h2>
-<p>All file mentioned below lives under the <code class="docutils literal notranslate"><span class="pre">xla/torch_xla/csrc</span></code> folder, with the exception of <code class="docutils literal notranslate"><span class="pre">xla_native_functions.yaml</span></code></p>
-<ol class="arabic simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">xla_native_functions.yaml</span></code> contains the list of all operators that are lowered. Each operator name must directly match a pytorch operator listed in <a class="reference external" href="https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/native_functions.yaml">native_functions.yaml</a>. This file serves as the interface to adding new xla operators, and is an input to PyTorch’s <a class="reference external" href="https://github.com/pytorch/pytorch/blob/master/torchgen/gen_backend_stubs.py">codegen machinery</a>. It generates the below 3 files: <code class="docutils literal notranslate"><span class="pre">XLANativeFunctions.h</span></code>, <code class="docutils literal notranslate"><span class="pre">RegisterXLA.cpp</span></code>, and <code class="docutils literal notranslate"><span class="pre">RegisterAutogradXLA.cpp</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">XLANativeFunctions.h</span></code> and <code class="docutils literal notranslate"><span class="pre">aten_xla_type.cpp</span></code> are entry points of PyTorch to the pytorch_xla world, and contain the manually written lowerings to XLA for each operator. <code class="docutils literal notranslate"><span class="pre">XLANativeFunctions.h</span></code> is auto-generated through a combination of <code class="docutils literal notranslate"><span class="pre">xla_native_functions.yaml</span></code> and the PyTorch core <code class="docutils literal notranslate"><span class="pre">native_functions.yaml</span></code> file, and contains declarations for kernels that need to be defined in <code class="docutils literal notranslate"><span class="pre">aten_xla_type.cpp</span></code>. The kernels written here need to construct ‘XLATensor’ using the input <code class="docutils literal notranslate"><span class="pre">at::Tensor</span></code> and other parameters. The resulting <code class="docutils literal notranslate"><span class="pre">XLATensor</span></code> needs to be converted back to the <code class="docutils literal notranslate"><span class="pre">at::Tensor</span></code> before returning to the PyTorch world.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">RegisterXLA.cpp</span></code> and <code class="docutils literal notranslate"><span class="pre">RegisterAutogradXLA.cpp</span></code> are auto-generated files that register all lowerings to the PyTorch Dispatcher. They also include auto-generated wrapper implementations of <code class="docutils literal notranslate"><span class="pre">out=</span></code> and <code class="docutils literal notranslate"><span class="pre">inplace</span></code> operators.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">aten_cpu_fallback.h/.cpp</span></code> contain our boxed fallback implementation to CPU. The boxed fallback kernel will be used if a lowering is not explicitly defined in <code class="docutils literal notranslate"><span class="pre">xla_native_functions.yaml</span></code> + <code class="docutils literal notranslate"><span class="pre">aten_xla_type.cpp</span></code>, and the operator is not composite.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">tensor.h</span></code> contains the <code class="docutils literal notranslate"><span class="pre">XLATensor</span></code> declarations. These declarations are usually a one to one mapping of the <code class="docutils literal notranslate"><span class="pre">at::Tensor</span></code> nodes we declared in <code class="docutils literal notranslate"><span class="pre">XLANativeFunctions.h</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">tensor_methods.cpp</span></code> contains the implementation of <code class="docutils literal notranslate"><span class="pre">XLATensor</span> <span class="pre">node</span></code> defined in <code class="docutils literal notranslate"><span class="pre">tensor.h</span></code>. We constructed the corresponding <code class="docutils literal notranslate"><span class="pre">ir::op</span></code> from the parameter’s <code class="docutils literal notranslate"><span class="pre">ir::Value</span></code> and wrapped it inside a <code class="docutils literal notranslate"><span class="pre">XLATensor</span></code>. Ir stands for intermediate representation.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">ops/</span></code> directory contains all <code class="docutils literal notranslate"><span class="pre">ir::ops</span></code> declaration and definition. Smaller nodes can be put in <code class="docutils literal notranslate"><span class="pre">ops/ops.h/.cpp</span></code>. More complicated nodes can be put into a separate file. All ops inherit from <code class="docutils literal notranslate"><span class="pre">ir::ops::Node</span></code> and provide a way to lower input <code class="docutils literal notranslate"><span class="pre">ir::Value</span></code> to a sequence of <code class="docutils literal notranslate"><span class="pre">XlaOp</span></code>.</p></li>
-</ol>
-</div>
-<div class="section" id="unit-test">
-<h2>Unit Test<a class="headerlink" href="#unit-test" title="Permalink to this headline">¶</a></h2>
-<p>Our CircleCI runs PyTorch native python tests for every change and every day. Those tests will use XLA implementation if we provide a lowering. We usually don’t need to add additional python tests for PyTorch/XLA unless we want to verify some xla behaviors(like dynamic shape) or we skipped the pytorch native test for some reason. The python test should be added to <code class="docutils literal notranslate"><span class="pre">xla/test/test_operations.py</span></code> if it is required. We also need to add CPP tests in <code class="docutils literal notranslate"><span class="pre">xla/test/cpp/test_aten_xla_tensor.cpp</span></code>. This test should call PyTorch c++ API and verify our implementation yields the same result as PyTorch native implementation. We also need to verify if the xla implementation is called when the tensor is a XLA tensor by checking the <code class="docutils literal notranslate"><span class="pre">aten::op</span></code> and <code class="docutils literal notranslate"><span class="pre">xla::op</span></code> counters.</p>
-</div>
-<div class="section" id="tips">
-<h2>Tips<a class="headerlink" href="#tips" title="Permalink to this headline">¶</a></h2>
-<p>The process of lowering is breaking down the PyTorch operations into a sequence of XlaOp. To provide a good lowering of the PyTorch operation, one needs to have a good grasp of what XLA is capable of. Reading the XlaOp document and looking into how similar ops is lowered is the best way to achieve that. You can find a minimal Op lowering example in <a class="reference external" href="https://github.com/pytorch/xla/pull/2969">this pr</a>. You can also find a slightly more complicated example with backward lowering in <a class="reference external" href="https://github.com/pytorch/xla/pull/2972">this pr</a>.</p>
-<p>We have auto-generated wrapper implementations of <code class="docutils literal notranslate"><span class="pre">out=</span></code> and <code class="docutils literal notranslate"><span class="pre">inplace</span></code> operators for some operators in <code class="docutils literal notranslate"><span class="pre">RegisterXLA.cpp</span></code>. We only need to lower the vanilla op in this case. An example would be <code class="docutils literal notranslate"><span class="pre">lerp</span></code> operator which has 6 variants in <code class="docutils literal notranslate"><span class="pre">native_functions.yaml</span></code>, they are</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">-</span> <span class="n">lerp_</span><span class="o">.</span><span class="n">Scalar</span>
-<span class="o">-</span> <span class="n">lerp_</span><span class="o">.</span><span class="n">Tensor</span>
-<span class="o">-</span> <span class="n">lerp</span><span class="o">.</span><span class="n">Scalar_out</span>
-<span class="o">-</span> <span class="n">lerp</span><span class="o">.</span><span class="n">Tensor_out</span>
-<span class="o">-</span> <span class="n">lerp</span><span class="o">.</span><span class="n">Scalar</span>
-<span class="o">-</span> <span class="n">lerp</span><span class="o">.</span><span class="n">Tensor</span>
-</pre></div>
-</div>
-<p>and will generate function prototypes</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">at</span><span class="p">::</span><span class="n">Tensor</span> <span class="n">lerp</span><span class="p">(</span><span class="n">const</span> <span class="n">at</span><span class="p">::</span><span class="n">Tensor</span> <span class="o">&amp;</span> <span class="bp">self</span><span class="p">,</span> <span class="n">const</span> <span class="n">at</span><span class="p">::</span><span class="n">Tensor</span> <span class="o">&amp;</span> <span class="n">end</span><span class="p">,</span> <span class="n">const</span> <span class="n">at</span><span class="p">::</span><span class="n">Scalar</span> <span class="o">&amp;</span> <span class="n">weight</span><span class="p">);</span>
-<span class="n">at</span><span class="p">::</span><span class="n">Tensor</span> <span class="o">&amp;</span> <span class="n">lerp_</span><span class="p">(</span><span class="n">at</span><span class="p">::</span><span class="n">Tensor</span> <span class="o">&amp;</span> <span class="bp">self</span><span class="p">,</span> <span class="n">const</span> <span class="n">at</span><span class="p">::</span><span class="n">Tensor</span> <span class="o">&amp;</span> <span class="n">end</span><span class="p">,</span> <span class="n">const</span> <span class="n">at</span><span class="p">::</span><span class="n">Scalar</span> <span class="o">&amp;</span> <span class="n">weight</span><span class="p">);</span>
-<span class="n">at</span><span class="p">::</span><span class="n">Tensor</span> <span class="n">lerp</span><span class="p">(</span><span class="n">const</span> <span class="n">at</span><span class="p">::</span><span class="n">Tensor</span> <span class="o">&amp;</span> <span class="bp">self</span><span class="p">,</span> <span class="n">const</span> <span class="n">at</span><span class="p">::</span><span class="n">Tensor</span> <span class="o">&amp;</span> <span class="n">end</span><span class="p">,</span> <span class="n">const</span> <span class="n">at</span><span class="p">::</span><span class="n">Tensor</span> <span class="o">&amp;</span> <span class="n">weight</span><span class="p">);</span>
-<span class="n">at</span><span class="p">::</span><span class="n">Tensor</span> <span class="o">&amp;</span> <span class="n">lerp_out</span><span class="p">(</span><span class="n">const</span> <span class="n">at</span><span class="p">::</span><span class="n">Tensor</span> <span class="o">&amp;</span> <span class="bp">self</span><span class="p">,</span> <span class="n">const</span> <span class="n">at</span><span class="p">::</span><span class="n">Tensor</span> <span class="o">&amp;</span> <span class="n">end</span><span class="p">,</span> <span class="n">const</span> <span class="n">at</span><span class="p">::</span><span class="n">Tensor</span> <span class="o">&amp;</span> <span class="n">weight</span><span class="p">,</span> <span class="n">at</span><span class="p">::</span><span class="n">Tensor</span> <span class="o">&amp;</span> <span class="n">out</span><span class="p">);</span>
-<span class="n">at</span><span class="p">::</span><span class="n">Tensor</span> <span class="o">&amp;</span> <span class="n">lerp_</span><span class="p">(</span><span class="n">at</span><span class="p">::</span><span class="n">Tensor</span> <span class="o">&amp;</span> <span class="bp">self</span><span class="p">,</span> <span class="n">const</span> <span class="n">at</span><span class="p">::</span><span class="n">Tensor</span> <span class="o">&amp;</span> <span class="n">end</span><span class="p">,</span> <span class="n">const</span> <span class="n">at</span><span class="p">::</span><span class="n">Tensor</span> <span class="o">&amp;</span> <span class="n">weight</span><span class="p">);</span>
-<span class="n">at</span><span class="p">::</span><span class="n">Tensor</span> <span class="o">&amp;</span> <span class="n">lerp_out</span><span class="p">(</span><span class="n">const</span> <span class="n">at</span><span class="p">::</span><span class="n">Tensor</span> <span class="o">&amp;</span> <span class="bp">self</span><span class="p">,</span> <span class="n">const</span> <span class="n">at</span><span class="p">::</span><span class="n">Tensor</span> <span class="o">&amp;</span> <span class="n">end</span><span class="p">,</span> <span class="n">const</span> <span class="n">at</span><span class="p">::</span><span class="n">Scalar</span> <span class="o">&amp;</span> <span class="n">weight</span><span class="p">,</span> <span class="n">at</span><span class="p">::</span><span class="n">Tensor</span> <span class="o">&amp;</span> <span class="n">out</span><span class="p">);</span>
-</pre></div>
-</div>
-<p>in <code class="docutils literal notranslate"><span class="pre">XLANativeFunctions.h</span></code> if we add all of them to the <code class="docutils literal notranslate"><span class="pre">xla_native_functions.yaml</span></code>. However if we only lower <code class="docutils literal notranslate"><span class="pre">lerp.Scalar</span></code> and <code class="docutils literal notranslate"><span class="pre">lerp.Tensor</span></code> and check <code class="docutils literal notranslate"><span class="pre">RegisterXLA.cpp</span></code>, we will see</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">namespace</span> <span class="p">{</span>
-
-<span class="n">at</span><span class="p">::</span><span class="n">Tensor</span> <span class="n">wrapper_Scalar_lerp</span><span class="p">(</span><span class="n">const</span> <span class="n">at</span><span class="p">::</span><span class="n">Tensor</span> <span class="o">&amp;</span> <span class="bp">self</span><span class="p">,</span> <span class="n">const</span> <span class="n">at</span><span class="p">::</span><span class="n">Tensor</span> <span class="o">&amp;</span> <span class="n">end</span><span class="p">,</span> <span class="n">const</span> <span class="n">at</span><span class="p">::</span><span class="n">Scalar</span> <span class="o">&amp;</span> <span class="n">weight</span><span class="p">)</span> <span class="p">{</span>
-    <span class="o">//</span> <span class="n">No</span> <span class="n">device</span> <span class="n">check</span>
-
-
-  <span class="o">//</span> <span class="n">DeviceGuard</span> <span class="n">omitted</span>
-  <span class="k">return</span> <span class="n">torch_xla</span><span class="p">::</span><span class="n">lerp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">weight</span><span class="p">);</span>
-<span class="p">}</span>
-
-<span class="p">}</span> <span class="o">//</span> <span class="n">anonymous</span> <span class="n">namespace</span>
-
-<span class="n">at</span><span class="p">::</span><span class="n">Tensor</span> <span class="o">&amp;</span> <span class="n">wrapper_Scalar_lerp_</span><span class="p">(</span><span class="n">at</span><span class="p">::</span><span class="n">Tensor</span> <span class="o">&amp;</span> <span class="bp">self</span><span class="p">,</span> <span class="n">const</span> <span class="n">at</span><span class="p">::</span><span class="n">Tensor</span> <span class="o">&amp;</span> <span class="n">end</span><span class="p">,</span> <span class="n">const</span> <span class="n">at</span><span class="p">::</span><span class="n">Scalar</span> <span class="o">&amp;</span> <span class="n">weight</span><span class="p">)</span> <span class="p">{</span>
-  <span class="n">auto</span> <span class="n">wrapper_Scalar_lerp__tmp</span> <span class="o">=</span> <span class="n">wrapper_Scalar_lerp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">weight</span><span class="p">);</span>
-  <span class="n">at</span><span class="p">::</span><span class="n">_copy_from</span><span class="p">(</span><span class="n">wrapper_Scalar_lerp__tmp</span><span class="p">,</span> <span class="bp">self</span><span class="p">);</span>
-  <span class="k">return</span> <span class="bp">self</span><span class="p">;</span>
-<span class="p">}</span>
-
-<span class="o">...</span>
-  <span class="n">m</span><span class="o">.</span><span class="n">impl</span><span class="p">(</span><span class="s2">&quot;lerp_.Scalar&quot;</span><span class="p">,</span>
-  <span class="n">TORCH_FN</span><span class="p">(</span><span class="n">wrapper_Scalar_lerp_</span><span class="p">));</span>
-</pre></div>
-</div>
-<p>The codegen will automatically generate lowerings for <code class="docutils literal notranslate"><span class="pre">lerp_.Scalar</span></code> and <code class="docutils literal notranslate"><span class="pre">lerp.Scalar_out</span></code> that use our <code class="docutils literal notranslate"><span class="pre">lerp.Scalar</span></code> implementation, without us having to provide an explicit lowering.</p>
-<p>In general, if there is an operator in pytorch core that has both an out-of-place and an out= variant, it’s better to write a lowering for the out-of-place variant, since you’ll get a code-generated out= lowering for free.</p>
-<p>For each node we need to pass an <code class="docutils literal notranslate"><span class="pre">ir::OpKind</span></code>. Here is an (<a class="reference external" href="https://github.com/pytorch/xla/blob/5ce99bff336325feb41a982dc80299fb53166b29/torch_xla/csrc/ops/var_mean.cpp#L36">example</a>). You can find the <code class="docutils literal notranslate"><span class="pre">OpKind</span></code> definition in <a class="reference external" href="https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/core/aten_interned_strings.h">aten_interned_strings.h</a> or <a class="reference external" href="https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/core/interned_strings.h">interned_strings.h</a>. If the aten symbol is missing, you can submit a PR like <a class="reference external" href="https://github.com/pytorch/pytorch/pull/36851">this</a>.</p>
+<div class="section" id="amp-automatic-mixed-precision">
+<h2>AMP (AUTOMATIC MIXED PRECISION)<a class="headerlink" href="#amp-automatic-mixed-precision" title="Permalink to this headline">¶</a></h2>
+<p>AMP is very useful on GPU training and PyTorch/XLA reuse Cuda’s AMP rule. You can checkout our <a class="reference external" href="https://github.com/pytorch/xla/blob/master/test/test_train_mp_mnist_amp.py">mnist example</a> and <a class="reference external" href="https://github.com/pytorch/xla/blob/master/test/test_train_mp_imagenet_amp.py">imagenet example</a>. Note that we also used a modified version of <a class="reference external" href="https://github.com/pytorch/xla/tree/master/torch_xla/amp/syncfree">optimizers</a> to avoid the additional sync between device and host.</p>
 </div>
 </div>
 
@@ -2611,9 +3000,10 @@ python3 -m torch_xla.distributed.fsdp.consolidate_sharded_ckpts <span class="se"
 <li><a class="reference internal" href="#running-models-on-xla-devices">Running Models on XLA Devices</a><ul>
 <li><a class="reference internal" href="#running-on-a-single-xla-device">Running on a Single XLA Device</a></li>
 <li><a class="reference internal" href="#running-on-multiple-xla-devices-with-multi-processing">Running on Multiple XLA Devices with Multi-processing</a></li>
+<li><a class="reference internal" href="#running-on-tpu-pods">Running on TPU Pods</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#id1">XLA Tensor Deep Dive</a><ul>
+<li><a class="reference internal" href="#id3">XLA Tensor Deep Dive</a><ul>
 <li><a class="reference internal" href="#xla-tensors-are-lazy">XLA Tensors are Lazy</a></li>
 <li><a class="reference internal" href="#xla-tensors-and-bfloat16">XLA Tensors and bFloat16</a></li>
 <li><a class="reference internal" href="#memory-layout">Memory Layout</a></li>
@@ -2635,6 +3025,7 @@ python3 -m torch_xla.distributed.fsdp.consolidate_sharded_ckpts <span class="se"
 <li><a class="reference internal" href="#perform-a-auto-metrics-analysis">Perform A Auto-Metrics Analysis</a></li>
 <li><a class="reference internal" href="#get-a-metrics-report">Get A Metrics Report</a></li>
 <li><a class="reference internal" href="#understand-the-metrics-report">Understand The Metrics Report</a></li>
+<li><a class="reference internal" href="#clar-the-metrics-report">Clar The Metrics Report</a></li>
 <li><a class="reference internal" href="#performance-profiling">Performance Profiling</a></li>
 <li><a class="reference internal" href="#known-performance-caveats">Known Performance Caveats</a></li>
 <li><a class="reference internal" href="#xla-tensor-quirks">XLA Tensor Quirks</a></li>
@@ -2647,34 +3038,35 @@ python3 -m torch_xla.distributed.fsdp.consolidate_sharded_ckpts <span class="se"
 <li><a class="reference internal" href="#common-issues">Common Issues</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#experimental-pjrt-runtime-support">Experimental PjRt Runtime Support</a><ul>
+<li><a class="reference internal" href="#pjrt-runtime-beta">PJRT Runtime (Beta)</a><ul>
+<li><a class="reference internal" href="#tl-dr">TL;DR</a></li>
+<li><a class="reference internal" href="#benefits">Benefits</a></li>
 <li><a class="reference internal" href="#quickstart">Quickstart</a><ul>
 <li><a class="reference internal" href="#cpu">CPU</a></li>
-<li><a class="reference internal" href="#v4-tpu">v4 TPU</a><ul>
+<li><a class="reference internal" href="#tpu">TPU</a><ul>
 <li><a class="reference internal" href="#pods">Pods</a></li>
+<li><a class="reference internal" href="#docker">Docker</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#gpu">GPU</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#key-differences-from-xrt">Key differences from XRT</a></li>
-<li><a class="reference internal" href="#tpus-v2-v3-vs-v4">TPUs v2/v3 vs v4</a><ul>
-<li><a class="reference internal" href="#compatible-examples">Compatible examples</a></li>
+<li><a class="reference internal" href="#differences-from-xrt">Differences from XRT</a><ul>
+<li><a class="reference internal" href="#id6">Multithreading on TPU v2/v3</a></li>
+<li><a class="reference internal" href="#changes-to-xm-rendezvous">Changes to xm.rendezvous</a></li>
+<li><a class="reference internal" href="#pjrt-and-torch-distributed">PJRT and torch.distributed</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#pjrt-and-ddp">PjRt and DDP</a></li>
+<li><a class="reference internal" href="#performance">Performance</a><ul>
+<li><a class="reference internal" href="#new-tpu-runtime">New TPU runtime</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#how-to-do-distributeddataparallel">How to do <code class="docutils literal notranslate"><span class="pre">DistributedDataParallel</span></code></a><ul>
-<li><a class="reference internal" href="#background-motivation">Background / Motivation</a></li>
-<li><a class="reference internal" href="#how-to-use-distributeddataparallel">How to use DistributedDataParallel</a></li>
-<li><a class="reference internal" href="#benchmarking">Benchmarking</a><ul>
-<li><a class="reference internal" href="#resnet50-with-fake-data">Resnet50 with fake data</a></li>
-<li><a class="reference internal" href="#mnist-with-fake-data">MNIST with fake data</a></li>
-<li><a class="reference internal" href="#mnist-with-real-data">MNIST with real data</a></li>
+<li><a class="reference internal" href="#torchdynamo-torch-compile-integration-in-pytorch-xla">TorchDynamo(torch.compile) integration in PyTorch XLA</a><ul>
+<li><a class="reference internal" href="#inference">Inference</a></li>
+<li><a class="reference internal" href="#training">Training</a></li>
+<li><a class="reference internal" href="#take-away">Take away</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#disclaimer">Disclaimer</a></li>
 <li><a class="reference internal" href="#fully-sharded-data-parallel-fsdp-in-pytorch-xla">Fully Sharded Data Parallel (FSDP) in PyTorch XLA</a><ul>
 <li><a class="reference internal" href="#example-training-scripts-on-mnist-and-imagenet">Example training scripts on MNIST and ImageNet</a><ul>
 <li><a class="reference internal" href="#installation">Installation</a></li>
@@ -2688,13 +3080,27 @@ python3 -m torch_xla.distributed.fsdp.consolidate_sharded_ckpts <span class="se"
 </li>
 </ul>
 </li>
-<li><a class="reference internal" href="#op-lowering-guide">OP Lowering Guide</a><ul>
-<li><a class="reference internal" href="#background">Background</a></li>
-<li><a class="reference internal" href="#before-you-start">Before you start</a></li>
-<li><a class="reference internal" href="#understanding-the-operation">Understanding the operation</a></li>
-<li><a class="reference internal" href="#file-structure">File structure</a></li>
-<li><a class="reference internal" href="#unit-test">Unit Test</a></li>
-<li><a class="reference internal" href="#tips">Tips</a></li>
+<li><a class="reference internal" href="#how-to-do-distributeddataparallel">How to do <code class="docutils literal notranslate"><span class="pre">DistributedDataParallel</span></code></a><ul>
+<li><a class="reference internal" href="#background-motivation">Background / Motivation</a></li>
+<li><a class="reference internal" href="#how-to-use-distributeddataparallel">How to use DistributedDataParallel</a></li>
+<li><a class="reference internal" href="#benchmarking">Benchmarking</a><ul>
+<li><a class="reference internal" href="#resnet50-with-fake-data">Resnet50 with fake data</a></li>
+<li><a class="reference internal" href="#mnist-with-fake-data">MNIST with fake data</a></li>
+<li><a class="reference internal" href="#mnist-with-real-data">MNIST with real data</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#disclaimer">Disclaimer</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#how-to-run-with-pytorch-xla-gpu">How to run with PyTorch/XLA:GPU</a><ul>
+<li><a class="reference internal" href="#create-a-gpu-instance">Create a GPU instance</a></li>
+<li><a class="reference internal" href="#environment-setup">Environment Setup</a><ul>
+<li><a class="reference internal" href="#id8">Docker</a></li>
+<li><a class="reference internal" href="#wheel">Wheel</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#run-a-simple-model">Run a simple model</a></li>
+<li><a class="reference internal" href="#amp-automatic-mixed-precision">AMP (AUTOMATIC MIXED PRECISION)</a></li>
 </ul>
 </li>
 </ul>

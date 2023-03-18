@@ -209,7 +209,7 @@
               
               
                 <div class="version">
-                  master (1.14 )
+                  master (2.1.0 )
                 </div>
               
             
@@ -308,9 +308,7 @@
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
   <h1>Source code for torch_xla.core.xla_model</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">print_function</span>
-
-<span class="kn">import</span> <span class="nn">collections</span>
+<span></span><span class="kn">import</span> <span class="nn">collections</span>
 <span class="kn">import</span> <span class="nn">io</span>
 <span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">import</span> <span class="nn">os</span>
@@ -435,7 +433,7 @@
 
 
 <div class="viewcode-block" id="get_xla_supported_devices"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.get_xla_supported_devices">[docs]</a><span class="k">def</span> <span class="nf">get_xla_supported_devices</span><span class="p">(</span><span class="n">devkind</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">max_devices</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Returns a list of supported devices of a given kind.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns a list of supported devices of a given kind.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    devkind (string..., optional): If specified, one of `TPU`, `GPU` or `CPU`</span>
@@ -458,7 +456,7 @@
 
 
 <div class="viewcode-block" id="xrt_world_size"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.xrt_world_size">[docs]</a><span class="k">def</span> <span class="nf">xrt_world_size</span><span class="p">(</span><span class="n">defval</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Retrieves the number of devices which is taking part of the replication.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Retrieves the number of devices which is taking part of the replication.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    defval (int, optional): The default value to be returned in case there is no</span>
@@ -469,13 +467,13 @@
 <span class="sd">    The number of devices which is taking part of the replication.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="k">if</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">using_pjrt</span><span class="p">():</span>
-    <span class="k">return</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">global_device_count</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">world_size</span><span class="p">()</span>
 
   <span class="k">return</span> <span class="n">xu</span><span class="o">.</span><span class="n">getenv_as</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">WORLD_SIZE</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="n">defval</span><span class="o">=</span><span class="n">defval</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="get_ordinal"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.get_ordinal">[docs]</a><span class="k">def</span> <span class="nf">get_ordinal</span><span class="p">(</span><span class="n">defval</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Retrieves the replication ordinal of the current thread.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Retrieves the replication ordinal of the current thread.</span>
 
 <span class="sd">  The ordinals range from 0 to `xrt_world_size()` minus 1.</span>
 
@@ -494,7 +492,7 @@
 
 
 <div class="viewcode-block" id="get_local_ordinal"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.get_local_ordinal">[docs]</a><span class="k">def</span> <span class="nf">get_local_ordinal</span><span class="p">(</span><span class="n">defval</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Retrieves the replication local ordinal of the current thread.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Retrieves the replication local ordinal of the current thread.</span>
 
 <span class="sd">  The local ordinals range from 0 to the number of local devices minus 1.</span>
 
@@ -516,7 +514,7 @@
 
 
 <div class="viewcode-block" id="is_master_ordinal"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.is_master_ordinal">[docs]</a><span class="k">def</span> <span class="nf">is_master_ordinal</span><span class="p">(</span><span class="n">local</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Checks whether the current process is the master ordinal (0).</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Checks whether the current process is the master ordinal (0).</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    local (bool): Whether the local or global master ordinal should be checked.</span>
@@ -537,7 +535,7 @@
 
 
 <div class="viewcode-block" id="xla_device"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.xla_device">[docs]</a><span class="k">def</span> <span class="nf">xla_device</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">devkind</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Returns a given instance of an XLA device.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns a given instance of an XLA device.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    n (int, optional): The specific instance (ordinal) to be returned. If</span>
@@ -584,7 +582,7 @@
 
 
 <div class="viewcode-block" id="xla_device_hw"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.xla_device_hw">[docs]</a><span class="k">def</span> <span class="nf">xla_device_hw</span><span class="p">(</span><span class="n">device</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Returns the hardware type of the given device.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns the hardware type of the given device.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    device (string or torch.device): The xla device that will be mapped to the</span>
@@ -629,7 +627,7 @@
 
 
 <span class="k">def</span> <span class="nf">unlazy</span><span class="p">(</span><span class="n">tensors</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Blocks the program until `tensors` are materialized.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Blocks the program until `tensors` are materialized.</span>
 
 <span class="sd">  This API is for benchmarking, don&#39;t use it in real models.</span>
 
@@ -862,7 +860,7 @@
                <span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                <span class="n">cctx</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                <span class="n">pin_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Performs an inplace reduce operation on the input tensor(s).</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Performs an inplace reduce operation on the input tensor(s).</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    reduce_type (string): One of ``xm.REDUCE_SUM``, ``xm.REDUCE_MUL``,</span>
@@ -924,7 +922,7 @@
 
 
 <span class="k">def</span> <span class="nf">_all_gather_using_all_reduce</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">pin_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Performs an all-gather operation using all-reduce along a given dimension.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Performs an all-gather operation using all-reduce along a given dimension.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    value (torch.Tensor): The input tensor.</span>
@@ -966,7 +964,7 @@
 
 
 <div class="viewcode-block" id="all_gather"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.all_gather">[docs]</a><span class="k">def</span> <span class="nf">all_gather</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">pin_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Performs an all-gather operation along a given dimension.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Performs an all-gather operation along a given dimension.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    value (torch.Tensor): The input tensor.</span>
@@ -1024,7 +1022,7 @@
                <span class="n">split_count</span><span class="p">,</span>
                <span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                <span class="n">pin_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Performs an XLA `AllToAll()` operation on the input tensor.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Performs an XLA `AllToAll()` operation on the input tensor.</span>
 
 <span class="sd">  See: https://www.tensorflow.org/xla/operation_semantics#alltoall</span>
 
@@ -1056,7 +1054,7 @@
 
 
 <span class="k">def</span> <span class="nf">collective_permute</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">pairs</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Performs a XLA `CollectivePermute()` operation on the input tensor.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Performs a XLA `CollectivePermute()` operation on the input tensor.</span>
 
 <span class="sd">  WARNING: This function is not very reliable, may produce wrong results under</span>
 <span class="sd">           certain inputs. Use it at your own risk.</span>
@@ -1084,7 +1082,7 @@
                          <span class="n">root_ordinal</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
                          <span class="n">groups</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                          <span class="n">pin_layout</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-  <span class="sd">&quot;&quot;&quot;Broadcast values of `tensors` from root replica to other replicas in-place.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Broadcast values of `tensors` from root replica to other replicas in-place.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    tensors (list): List of `torch.Tensor`s to broadcast.</span>
@@ -1114,7 +1112,7 @@
 
 
 <span class="k">def</span> <span class="nf">send</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">channel_id</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Performs a XLA `Send()` operation on the input tensor.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Performs a XLA `Send()` operation on the input tensor.</span>
 
 <span class="sd">  See: https://www.tensorflow.org/xla/operation_semantics#send</span>
 
@@ -1131,7 +1129,7 @@
 
 
 <span class="k">def</span> <span class="nf">recv</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">channel_id</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Performs a XLA `Send()` operation on the input tensor.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Performs a XLA `Send()` operation on the input tensor.</span>
 
 <span class="sd">  See: https://www.tensorflow.org/xla/operation_semantics#recv</span>
 
@@ -1153,7 +1151,7 @@
                    <span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                    <span class="n">output</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                    <span class="n">pin_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Performs a XLA `ReduceScatter()` operation on the input tensor.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Performs a XLA `ReduceScatter()` operation on the input tensor.</span>
 
 <span class="sd">  See: https://www.tensorflow.org/xla/operation_semantics#reducescatter</span>
 
@@ -1201,7 +1199,7 @@
 
 
 <div class="viewcode-block" id="add_step_closure"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.add_step_closure">[docs]</a><span class="k">def</span> <span class="nf">add_step_closure</span><span class="p">(</span><span class="n">closure</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(),</span> <span class="n">run_async</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Adds a closure to the list of the ones to be run at the end of the step.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Adds a closure to the list of the ones to be run at the end of the step.</span>
 
 <span class="sd">  Many times during model training there is the need to print/report (print to</span>
 <span class="sd">  console, post to tensorboard, etc...) information which require the content of</span>
@@ -1251,7 +1249,7 @@
   <span class="k">return</span> <span class="n">devctx</span>
 
 
-<span class="k">def</span> <span class="nf">mark_step</span><span class="p">():</span>
+<span class="k">def</span> <span class="nf">mark_step</span><span class="p">(</span><span class="n">wait</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
   <span class="k">if</span> <span class="n">xu</span><span class="o">.</span><span class="n">getenv_as</span><span class="p">(</span><span class="s1">&#39;XLA_EMIT_STEPLOG&#39;</span><span class="p">,</span> <span class="nb">bool</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
     <span class="nb">print</span><span class="p">(</span>
         <span class="s1">&#39;torch_xla.core.xla_model::mark_step</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span>
@@ -1260,7 +1258,7 @@
         <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
   <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_step_marker</span><span class="p">(</span>
       <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_default_device</span><span class="p">(),</span> <span class="p">[],</span>
-      <span class="n">wait</span><span class="o">=</span><span class="n">xu</span><span class="o">.</span><span class="n">getenv_as</span><span class="p">(</span><span class="s1">&#39;XLA_SYNC_WAIT&#39;</span><span class="p">,</span> <span class="nb">bool</span><span class="p">,</span> <span class="kc">False</span><span class="p">))</span>
+      <span class="n">wait</span><span class="o">=</span><span class="n">xu</span><span class="o">.</span><span class="n">getenv_as</span><span class="p">(</span><span class="s1">&#39;XLA_SYNC_WAIT&#39;</span><span class="p">,</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">wait</span><span class="p">))</span>
   <span class="c1"># Only emit metrics from the first local device index, to avoid emitting the</span>
   <span class="c1"># same values from different threads.</span>
   <span class="k">if</span> <span class="n">is_master_ordinal</span><span class="p">():</span>
@@ -1270,7 +1268,7 @@
 
 
 <div class="viewcode-block" id="wait_device_ops"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.wait_device_ops">[docs]</a><span class="k">def</span> <span class="nf">wait_device_ops</span><span class="p">(</span><span class="n">devices</span><span class="o">=</span><span class="p">[]):</span>
-  <span class="sd">&quot;&quot;&quot;Waits for all the async operations on the given devices to complete.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Waits for all the async operations on the given devices to complete.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    devices (string..., optional): The devices whose async ops need to be waited</span>
@@ -1280,7 +1278,7 @@
 
 
 <span class="k">def</span> <span class="nf">reduce_gradients</span><span class="p">(</span><span class="n">optimizer</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">pin_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Reduces all the gradients handled by an optimizer.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Reduces all the gradients handled by an optimizer.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    optimizer (:class:`torch.Optimizer`): The `torch.Optimizer` instance</span>
@@ -1311,7 +1309,7 @@
                    <span class="n">optimizer_args</span><span class="o">=</span><span class="p">{},</span>
                    <span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                    <span class="n">pin_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Run the provided optimizer step and issue the XLA device step computation.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Run the provided optimizer step and issue the XLA device step computation.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    optimizer (:class:`torch.Optimizer`): The `torch.Optimizer` instance whose</span>
@@ -1343,7 +1341,7 @@
 
 
 <div class="viewcode-block" id="save"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.save">[docs]</a><span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">file_or_path</span><span class="p">,</span> <span class="n">master_only</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">global_master</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Saves the input data into a file.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Saves the input data into a file.</span>
 
 <span class="sd">  The saved data is transferred to PyTorch CPU device before being saved, so a</span>
 <span class="sd">  following `torch.load()` will load CPU data.</span>
@@ -1405,7 +1403,7 @@
 
 
 <div class="viewcode-block" id="rendezvous"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.rendezvous">[docs]</a><span class="k">def</span> <span class="nf">rendezvous</span><span class="p">(</span><span class="n">tag</span><span class="p">,</span> <span class="n">payload</span><span class="o">=</span><span class="sa">b</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">replicas</span><span class="o">=</span><span class="p">[]):</span>
-  <span class="sd">&quot;&quot;&quot;Waits for all the mesh clients to reach the named rendezvous.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Waits for all the mesh clients to reach the named rendezvous.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    tag (string): The name of the rendezvous to join.</span>
@@ -1425,7 +1423,7 @@
 
 
 <div class="viewcode-block" id="do_on_ordinals"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.do_on_ordinals">[docs]</a><span class="k">def</span> <span class="nf">do_on_ordinals</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="p">(),</span> <span class="n">ordinals</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,)):</span>
-  <span class="sd">&quot;&quot;&quot;Runs a function only on a given set of ordinals.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Runs a function only on a given set of ordinals.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    target (callable): The function to be run on `ordinals`.</span>
@@ -1453,7 +1451,7 @@
 
 
 <div class="viewcode-block" id="mesh_reduce"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.mesh_reduce">[docs]</a><span class="k">def</span> <span class="nf">mesh_reduce</span><span class="p">(</span><span class="n">tag</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">reduce_fn</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Performs an out-of-graph client mesh reduction.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Performs an out-of-graph client mesh reduction.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    tag (string): The name of the rendezvous to join.</span>
@@ -1478,7 +1476,7 @@
 
 
 <div class="viewcode-block" id="set_rng_state"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.set_rng_state">[docs]</a><span class="k">def</span> <span class="nf">set_rng_state</span><span class="p">(</span><span class="n">seed</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Sets the random number generator state.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Sets the random number generator state.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    seed (integer): The state to be set.</span>
@@ -1491,7 +1489,7 @@
 
 
 <div class="viewcode-block" id="get_rng_state"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.get_rng_state">[docs]</a><span class="k">def</span> <span class="nf">get_rng_state</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Gets the current running random number generator state.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Gets the current running random number generator state.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    device (string, optional): The device whose RNG state needs to be retrieved.</span>
@@ -1506,7 +1504,7 @@
 
 
 <div class="viewcode-block" id="get_memory_info"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.get_memory_info">[docs]</a><span class="k">def</span> <span class="nf">get_memory_info</span><span class="p">(</span><span class="n">device</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Retrieves the device memory information.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Retrieves the device memory information.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    device (string): The device whose memory information are requested.</span>
@@ -1519,7 +1517,7 @@
 
 
 <span class="k">def</span> <span class="nf">optimization_barrier_</span><span class="p">(</span><span class="n">tensors</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Blocks xla compiler from moving computations across this barrier. The common</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Blocks xla compiler from moving computations across this barrier. The common</span>
 <span class="sd">  use case would be blocking xla common-subexpression elimination pass from undoing</span>
 <span class="sd">  the gradient checkpointing.</span>
 

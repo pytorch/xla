@@ -209,7 +209,7 @@
               
               
                 <div class="version">
-                  master (1.14 )
+                  master (2.1.0 )
                 </div>
               
             
@@ -308,10 +308,7 @@
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
   <h1>Source code for torch_xla.utils.serialization</h1><div class="highlight"><pre>
-<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span>
-<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">print_function</span>
-
-<span class="kn">import</span> <span class="nn">os</span>
+<span></span><span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">shutil</span>
 
 <span class="kn">import</span> <span class="nn">torch</span>
@@ -357,7 +354,7 @@
 
 
 <div class="viewcode-block" id="save"><a class="viewcode-back" href="../../../index.html#torch_xla.utils.serialization.save">[docs]</a><span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">master_only</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">global_master</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Saves the input data into a file.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Saves the input data into a file.</span>
 
 <span class="sd">  The saved data is transferred to PyTorch CPU device before being saved, so a</span>
 <span class="sd">  following `torch.load()` will load CPU data.</span>
@@ -391,7 +388,7 @@
 
 
 <div class="viewcode-block" id="load"><a class="viewcode-back" href="../../../index.html#torch_xla.utils.serialization.load">[docs]</a><span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
-  <span class="sd">&quot;&quot;&quot;Loads data previously saved with the `save()` API.</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Loads data previously saved with the `save()` API.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    path (str): The path passed to the `save()` API.</span>
