@@ -4,8 +4,12 @@ def ptxla_cc_shared_object(
         srcs = [],
         deps = [],
         data = [],
-        linkopts = lrt_if_needed(),
-        framework_so = tf_binary_additional_srcs(),
+        linkopts = select({
+            "@tsl//tsl:linux_aarch64": ["-lrt"],
+            "@tsl//tsl:linux_x86_64": ["-lrt"],
+            "@tsl//tsl:linux_ppc64le": ["-lrt"],
+            "//conditions:default": [],
+            }),
         soversion = None,
         kernels = [],
         per_os_targets = False,  # Generate targets with SHARED_LIBRARY_NAME_PATTERNS
@@ -19,21 +23,11 @@ def ptxla_cc_shared_object(
         suffix = ""
         longsuffix = ""
 
-    if per_os_targets:
-        names = [
-            (
-                pattern % (name, ""),
-                pattern % (name, suffix),
-                pattern % (name, longsuffix),
-            )
-            for pattern in SHARED_LIBRARY_NAME_PATTERNS
-        ]
-    else:
-        names = [(
-            name,
-            name + suffix,
-            name + longsuffix,
-        )]
+    names = [(
+        name,
+        name + suffix,
+        name + longsuffix,
+    )]
 
     testonly = kwargs.pop("testonly", False)
 
@@ -62,24 +56,23 @@ def ptxla_cc_shared_object(
         soname = name_os_major.split("/")[-1]
 
         data_extra = []
-        if framework_so != []:
-            data_extra = tf_binary_additional_data_deps()
 
+        # from tsl
         cc_binary(
             exec_properties = if_google({"cpp_link.mem": "16g"}, {}),
             name = name_os_full,
-            srcs = srcs + framework_so,
+            srcs = srcs,
             deps = deps,
             linkshared = 1,
             data = data + data_extra,
             linkopts = linkopts + _rpath_linkopts(name_os_full) + select({
-                clean_dep("//tensorflow:ios"): [
+                clean_dep("//tsl:ios"): [ # @tsl//tsl:ios
                     "-Wl,-install_name,@rpath/" + soname,
                 ],
-                clean_dep("//tensorflow:macos"): [
+                clean_dep("//tsl:macos"): [ # @tsl//tsl:macos
                     "-Wl,-install_name,@rpath/" + soname,
                 ],
-                clean_dep("//tensorflow:windows"): [],
+                clean_dep("//tsl:windows"): [], # @tsl//tsl:windows
                 "//conditions:default": [
                     "-Wl,-soname," + soname,
                 ],
@@ -94,8 +87,8 @@ def ptxla_cc_shared_object(
         native.filegroup(
             name = name,
             srcs = select({
-                clean_dep("//tensorflow:windows"): [":%s.dll" % (name)],
-                clean_dep("//tensorflow:macos"): [":lib%s%s.dylib" % (name, longsuffix)],
+                clean_dep("//tsl:windows"): [":%s.dll" % (name)], # @tsl//tsl:windows
+                clean_dep("//tsl:macos"): [":lib%s%s.dylib" % (name, longsuffix)], # @tsl//tsl:macos
                 "//conditions:default": [":lib%s.so%s" % (name, longsuffix)],
             }),
             visibility = visibility,
