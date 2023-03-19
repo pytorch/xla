@@ -4,14 +4,6 @@ load(
     "@org_tensorflow//tensorflow:tensorflow.bzl",
     "tf_cc_test",
 )
-load(
-    "@org_tensorflow//tensorflow/tsl/platform/default:cuda_build_defs.bzl",
-    "if_cuda_is_configured",
-)
-load(
-    "//bazel:tensorflow.bzl",
-    "if_with_tpu_support",
-)
 
 def ptxla_cc_library(
         deps = [],
@@ -42,12 +34,6 @@ def ptxla_cc_test(
             "@torch//:libtorch",
             "@torch//:libtorch_cpu",
             "@torch//:libtorch_python",
-        ] + if_cuda_is_configured([
-            "@org_tensorflow//tensorflow/compiler/jit:xla_gpu_device",
-            "@org_tensorflow//tensorflow/compiler/xla/stream_executor:cuda_platform",
-        ]) + if_with_tpu_support([
-            "@org_tensorflow//tensorflow/compiler/jit:xla_tpu_device",
-            "@org_tensorflow//tensorflow/compiler/jit:xla_tpu_jit",
-        ]),
+        ],
         **kwargs
     )
