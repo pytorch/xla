@@ -3338,10 +3338,10 @@ at::Tensor XLANativeFunctions::_convolution(
     bool deterministic, bool cudnn_enabled, bool allow_tf32) {
   // See Note: [Disabling functionalization]
   if (xla::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
-    return at::native::_convolution(
-      input, weight, bias, stride, padding, dilation,
-                           transposed, output_padding, groups, benchmark,
-                           deterministic, cudnn_enabled, allow_tf32);
+    return at::native::_convolution(input, weight, bias, stride, padding,
+                                    dilation, transposed, output_padding,
+                                    groups, benchmark, deterministic,
+                                    cudnn_enabled, allow_tf32);
   }
   return at::functionalization::functionalize_aten_op<ATEN_OP(
       _convolution)>::call(input, weight, bias, stride, padding, dilation,
@@ -3359,8 +3359,8 @@ XLANativeFunctions::convolution_backward(
   // See Note: [Disabling functionalization]
   if (xla::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
     return at::native::convolution_backward(
-      grad_output, input, weight, bias_sizes, stride, padding,
-      dilation, transposed, output_padding, groups, output_mask);
+        grad_output, input, weight, bias_sizes, stride, padding, dilation,
+        transposed, output_padding, groups, output_mask);
   }
   // TODO (alanwaketan): Let's resuse
   // `at::functionalization::functionalize_aten_op` after upstream has solved
@@ -3403,9 +3403,8 @@ at::Tensor XLANativeFunctions::embedding_symint(const at::Tensor& weight,
                                                 bool sparse) {
   // See Note: [Disabling functionalization]
   if (xla::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
-    return at::native::embedding_symint(
-      weight, indices, padding_idx, scale_grad_by_freq,
-                        sparse);
+    return at::native::embedding_symint(weight, indices, padding_idx,
+                                        scale_grad_by_freq, sparse);
   }
   // TODO: for now route to native, which dispatches supported XLA operations.
   // We need to make use of the TPU embedding core here eventually.
@@ -3473,7 +3472,8 @@ at::Tensor XLANativeFunctions::select_backward_symint(
     c10::SymInt index) {
   // See Note: [Disabling functionalization]
   if (xla::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
-    return at::native::select_backward_symint(grad_output, input_sizes, dim, index);
+    return at::native::select_backward_symint(grad_output, input_sizes, dim,
+                                              index);
   }
   return at::functionalization::functionalize_aten_op_symint<ATEN_OP(
       select_backward)>::call(grad_output, input_sizes, dim, index);
@@ -3546,8 +3546,8 @@ at::Tensor XLANativeFunctions::slice_backward(const at::Tensor& grad_output,
                                               int64_t end, int64_t step) {
   // See Note: [Disabling functionalization]
   if (xla::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
-    return at::native::slice_backward(
-      grad_output, input_sizes, dim, start, end, step);
+    return at::native::slice_backward(grad_output, input_sizes, dim, start, end,
+                                      step);
   }
   return at::functionalization::functionalize_aten_op<ATEN_OP(
       slice_backward)>::call(grad_output, input_sizes, dim, start, end, step);
