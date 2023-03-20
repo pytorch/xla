@@ -3,7 +3,7 @@ ARG debian_version=buster
 
 FROM python:${python_version}-${debian_version} AS build
 
-WORKDIR /wheels
+WORKDIR /
 
 RUN touch test.whl
 
