@@ -10,7 +10,7 @@ load(
     "if_cuda_is_configured",
 )
 load(
-    "@tsl/tsl/platform/default:rules_cc.bzl",
+    "@tsl//tsl/platform/default:rules_cc.bzl",
     "cc_binary",
 )
 

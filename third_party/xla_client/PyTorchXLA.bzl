@@ -1,5 +1,10 @@
 # copy from "@xla//tensorflow:tensorflow.bzl",
-def ptxla_cc_shared_object(
+load(
+    "@tsl/tsl/platform/default:rules_cc.bzl",
+    "cc_binary",
+}
+
+def _ptxla_cc_shared_object(
         name,
         srcs = [],
         deps = [],
@@ -10,10 +15,11 @@ def ptxla_cc_shared_object(
             "@tsl//tsl:linux_ppc64le": ["-lrt"],
             "//conditions:default": [],
             }),
+        framework_so = [], #tf_binary_additional_srcs(),
         soversion = None,
         kernels = [],
         per_os_targets = False,  # Generate targets with SHARED_LIBRARY_NAME_PATTERNS
-        visibility = None,
+        visibility = "//visibility:public",
         **kwargs):
     """Configure the shared object (.so) file for PyTorch/XLA."""
     if soversion != None:
@@ -23,11 +29,22 @@ def ptxla_cc_shared_object(
         suffix = ""
         longsuffix = ""
 
-    names = [(
-        name,
-        name + suffix,
-        name + longsuffix,
-    )]
+    if per_os_targets:
+        names = [
+            (
+                pattern % (name, ""),
+                pattern % (name, suffix),
+                pattern % (name, longsuffix),
+            )
+            for pattern in SHARED_LIBRARY_NAME_PATTERNS
+        ]
+    else:
+        names = [(
+            name,
+            name + suffix,
+            name + longsuffix,
+        )]
+    # names = [(name, name, name)]
 
     testonly = kwargs.pop("testonly", False)
 
@@ -56,12 +73,14 @@ def ptxla_cc_shared_object(
         soname = name_os_major.split("/")[-1]
 
         data_extra = []
+        if framework_so != []:
+            data_extra = tf_binary_additional_data_deps()
 
         # from tsl
         cc_binary(
             exec_properties = if_google({"cpp_link.mem": "16g"}, {}),
             name = name_os_full,
-            srcs = srcs,
+            srcs = srcs + framework_so,
             deps = deps,
             linkshared = 1,
             data = data + data_extra,
@@ -94,4 +113,8 @@ def ptxla_cc_shared_object(
             visibility = visibility,
             testonly = testonly,
         )
+
+ptxla_cc_shared_object = rule(
+    implementation = _ptxla_cc_shared_objectl,
+)
 #####
