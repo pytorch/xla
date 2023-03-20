@@ -39,6 +39,9 @@ from .utils import dummy_all_gather, dummy_all_reduce, dummy_reduce_scatter, app
 from .wrap import recursive_wrap
 from ._init_utils import _materialize_module
 
+import os
+XLA_DISABLE_FUNCTIONALIZATION = bool(os.environ['XLA_DISABLE_FUNCTIONALIZATION'])
+
 FLOAT_DTYPES = [torch.float32, torch.float16, torch.bfloat16]
 
 
@@ -704,7 +707,10 @@ class XlaFullyShardedDataParallel(nn.Module):
         self.full_params[idx] = p
       # Free the full parameter storage (here we free its internal XLATensor) but keep the tensor itself
       # for auto-grad tracing (like `torch.autograd.Variable` before the tensor-variable merge).
-      torch_xla._XLAC._replace_xla_tensor(p, p.new_zeros(1))
+      if XLA_DISABLE_FUNCTIONALIZATION:
+        p.data = p.new_zeros(1)  # Old behavior before Functionalization.
+      else:
+        torch_xla._XLAC._replace_xla_tensor(p, p.new_zeros(1))
       p._sharded_param = p_shard  # add a handle to the sharded parameter
       p._has_full_param = False
       # deregister the full parameter tensors from their modules (so that they won't
@@ -1409,10 +1415,16 @@ class XlaFullyShardedDataParallel(nn.Module):
           self.optimization_barrier_op([p_padded])
         with torch.autograd._unsafe_preserve_version_counter(p):
           if self._shard_param_on_dim_0:
-            torch_xla._XLAC._replace_xla_tensor(
+            if XLA_DISABLE_FUNCTIONALIZATION:
+              p.data = p_padded[:p_shard._orig_size[0]]  # Old behavior before Functionalization.
+            else:
+              torch_xla._XLAC._replace_xla_tensor(
                 p, p_padded[:p_shard._orig_size[0]])
           else:
-            torch_xla._XLAC._replace_xla_tensor(
+            if XLA_DISABLE_FUNCTIONALIZATION:
+              p.data = p_padded[:p_shard._orig_size.numel()].view(p_shard._orig_size)  # Old behavior before Functionalization.
+            else:
+              torch_xla._XLAC._replace_xla_tensor(
                 p,
                 p_padded[:p_shard._orig_size.numel()].view(p_shard._orig_size))
         p._has_full_param = True
@@ -1445,7 +1457,10 @@ class XlaFullyShardedDataParallel(nn.Module):
       if p._has_full_param:
         # free the original full parameter
         with torch.autograd._unsafe_preserve_version_counter(p):
-          torch_xla._XLAC._replace_xla_tensor(p, self._dummy_data_placeholder)
+          if XLA_DISABLE_FUNCTIONALIZATION:
+            p.data = self._dummy_data_placeholder  # Old behavior before Functionalization.
+          else:
+            torch_xla._XLAC._replace_xla_tensor(p, self._dummy_data_placeholder)
         p._has_full_param = False
 
     if apply_opt_barrier:

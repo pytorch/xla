@@ -147,6 +147,7 @@ function run_torch_xla_tests() {
       if [ -x "$(command -v nvidia-smi)" ]; then
         PJRT_DEVICE=GPU python test/test_train_mp_imagenet_fsdp.py --fake_data --use_nested_fsdp --use_small_fake_sample --num_epochs=1
         PJRT_DEVICE=GPU python test/test_train_mp_imagenet_fsdp.py --fake_data --auto_wrap_policy type_based --use_small_fake_sample --num_epochs=1
+        XLA_DISABLE_FUNCTIONALIZATION=1 PJRT_DEVICE=GPU python test/test_train_mp_mnist_fsdp_with_ckpt.py --batch_size 16 --drop_last --num_epochs 2 --use_nested_fsdp
         # Syncfree SGD optimizer tests
         if [ -d ./torch_xla/amp/syncfree ]; then
           echo "Running Syncfree Optimizer Test"
