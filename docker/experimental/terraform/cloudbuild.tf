@@ -53,15 +53,11 @@ resource "google_cloudbuild_trigger" "docker_images" {
             ["docker", "build", "--progress=plain"],
             [for arg_key, arg_val in each.value.build_args : "--build-arg=${arg_key}=${arg_val}"],
             [for tag in each.value.image_tags : "-t=\"${local.public_docker_repo_url}/${each.value.image}:$(echo ${tag})\""],
+            ["-t=local_image"],
             ["-f=${each.value.dockerfile}", "."]
           )
         )
       ]
-
-      volumes {
-        name = "wheels"
-        path = "/wheels"
-      }
     }
 
     # step {
@@ -77,11 +73,29 @@ resource "google_cloudbuild_trigger" "docker_images" {
       for_each = each.value.wheels ? [1] : []
 
       content {
-        id         = "copy_wheels"
+        id         = "copy_wheels_to_volume"
+        name       = "local_image"
+        entrypoint = "bash"
+        args = [
+          "-c", "cp /wheels/*.whl /wheels",
+        ]
+
+        volumes {
+          name = "wheels"
+          path = "/wheels"
+        }
+      }
+    }
+
+    dynamic "step" {
+      for_each = each.value.wheels ? [1] : []
+
+      content {
+        id         = "copy_wheels_to_storage_bucket"
         entrypoint = "bash"
         name       = "gcr.io/cloud-builders/gsutil"
         args = [
-          "-c", "echo ${google_storage_bucket.public_wheels.url} && ls /wheels",
+          "-c", "gsutil cp /wheels/*.whl ${google_storage_bucket.public_wheels.url}",
         ]
 
         volumes {
