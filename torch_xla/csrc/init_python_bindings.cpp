@@ -1471,9 +1471,6 @@ void InitXlaModuleBindings(py::module m) {
            const std::vector<op_builder::OpPtr>& operands, py::dict args) {
           return op_builder::CreateOp(builder, opname, operands, args);
         });
-  m.def("_run_xrt_local_service", [](uint64_t service_port) {
-    xla::ComputationClient::RunLocalService(service_port);
-  });
   m.def("_xla_sgd_optimizer_step_",
         [](const at::Tensor& found_inf, at::Tensor& step, at::Tensor& param,
            at::Tensor& buf, const at::Tensor& d_p, double weight_decay,
