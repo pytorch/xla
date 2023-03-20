@@ -51,33 +51,46 @@ resource "google_cloudbuild_trigger" "docker_images" {
         join(" ",
           concat(
             ["docker", "build", "--progress=plain"],
+            # Pass build args to the docker image.
             [for arg_key, arg_val in each.value.build_args : "--build-arg=${arg_key}=${arg_val}"],
-            [for tag in each.value.image_tags : "-t=\"${local.public_docker_repo_url}/${each.value.image}:$(echo ${tag})\""],
+            # Pass all specified tags as $(echo <tag's bash expression>).
+            # This allows to compute dynamic tags, e.g. date.
+            [for tag in each.value.image_tags :
+              "-t=\"${local.public_docker_repo_url}/${each.value.image}:$(echo ${tag})\""
+            ],
+            # Image used for the `copy_wheels_to_volume` step.
             ["-t=local_image"],
+            # Specify input docker file and context (current directory - each.value.dir)
             ["-f=${each.value.dockerfile}", "."]
           )
         )
       ]
     }
 
-    # step {
-    #   id         = "push_${each.value.image}"
-    #   entrypoint = "bash"
-    #   name       = "gcr.io/cloud-builders/docker"
-    #   args = [
-    #     "-c", "docker push --all-tags ${local.public_docker_repo_url}/${each.value.image}"
-    #   ]
-    # }
+    step {
+      id         = "push_${each.value.image}"
+      entrypoint = "bash"
+      name       = "gcr.io/cloud-builders/docker"
+      args = [
+        "-c", "docker push --all-tags ${local.public_docker_repo_url}/${each.value.image}"
+      ]
+    }
 
     dynamic "step" {
       for_each = each.value.wheels ? [1] : []
 
       content {
+        # Copy wheels from the last built image to the shared volume.
         id         = "copy_wheels_to_volume"
         name       = "local_image"
         entrypoint = "bash"
         args = [
-          "-c", "cp /wheels/*.whl /wheels",
+          "-c", join(" ",
+            ["echo The following wheels will be published &&",
+              "ls /dist/*.whl &&",
+              "cp /dist/*.whl /wheels",
+            ]
+          )
         ]
 
         volumes {
@@ -91,7 +104,8 @@ resource "google_cloudbuild_trigger" "docker_images" {
       for_each = each.value.wheels ? [1] : []
 
       content {
-        id         = "copy_wheels_to_storage_bucket"
+        # Upload copied images from the shared volume to the public storage bucket.
+        id         = "upload_wheels_to_storage_bucket"
         entrypoint = "bash"
         name       = "gcr.io/cloud-builders/gsutil"
         args = [
