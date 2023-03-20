@@ -359,6 +359,8 @@ cc_library(
         "@com_google_absl//absl/types:span",
         "@xla//xla:statusor",
         "@xla//xla:types",
+        "@tsl//tsl/platform:errors",
+        "@tsl//tsl/platform:hash",
         # "@org_tensorflow//tensorflow/core:lib",
     ],
     alwayslink = True,
