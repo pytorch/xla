@@ -167,10 +167,11 @@ function install_and_setup_conda() {
   # Install conda if dne already.
   if [[ $(uname -m) == "x86_64" ]]; then
     if ! test -d "$HOME/anaconda3"; then
-       CONDA_VERSION="5.3.1"
+       CONDA_VERSION="23.1.0"
        curl -O "https://repo.anaconda.com/archive/Anaconda3-${CONDA_VERSION}-Linux-x86_64.sh"
        sh "Anaconda3-${CONDA_VERSION}-Linux-x86_64.sh" -b
        rm -f "Anaconda3-${CONDA_VERSION}-Linux-x86_64.sh"
+       conda update -n base -c defaults conda
     fi
     maybe_append ". $HOME/anaconda3/etc/profile.d/conda.sh" ~/.bashrc
     source "$HOME/anaconda3/etc/profile.d/conda.sh"
