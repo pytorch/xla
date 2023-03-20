@@ -58,6 +58,7 @@ class TestExperimentalPjrt(parameterized.TestCase):
       'PJRT_DEVICE': 'GPU',
       'GPU_NUM_DEVICES': '4'
   }, True), ('xla_dist_worker', {
+      'PJRT_DEVICE': 'TPU',
   }, False))
   def test_pjrt_default_device(self, env_vars, expect_using_pjrt):
     with mock.patch.dict(os.environ, env_vars, clear=True):
