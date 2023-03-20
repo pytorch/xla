@@ -8,8 +8,8 @@
 
 #include "xla/shape_util.h"
 #include "xla/util.h"
-#include "xla/third_party/tsl/platform/errors.h"
-#include "xla/third_party/tsl/platform/stacktrace.h"
+#include "tsl/platform/errors.h"
+#include "tsl/platform/stacktrace.h"
 #include "third_party/xla_client/sys_util.h"
 #include "third_party/xla_client/tf_logging.h"
 #include "third_party/xla_client/util.h"

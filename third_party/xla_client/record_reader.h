@@ -6,7 +6,7 @@
 #include <string>
 
 #include "xla/types.h"
-#include "xla/third_party/tsl/lib/io/record_reader.h"
+#include "tsl/lib/io/record_reader.h"
 
 namespace xla {
 namespace util {

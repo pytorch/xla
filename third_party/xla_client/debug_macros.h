@@ -2,7 +2,7 @@
 #define XLA_CLIENT_DEBUG_MACROS_H_
 
 #include "xla/statusor.h"
-#include "xla/third_party/tsl/platform/stacktrace.h"
+#include "tsl/platform/stacktrace.h"
 #include "third_party/xla_client/tf_logging.h"
 
 #define XLA_ERROR() TF_ERROR_STREAM()

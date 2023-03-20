@@ -19,7 +19,7 @@
 #include "xla/pjrt/tfrt_cpu_pjrt_client.h"
 #include "xla/pjrt/tpu_client.h"
 #include "xla/shape.h"
-#include "xla/third_party/tsl/profiler/lib/traceme.h"
+#include "tsl/profiler/lib/traceme.h"
 #include "third_party/xla_client/computation_client.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "third_party/xla_client/env_vars.h"

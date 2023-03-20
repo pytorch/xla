@@ -12,7 +12,7 @@
 
 #include "xla/literal_util.h"
 #include "xla/shape_util.h"
-#include "xla/third_party/tsl/platform/bfloat16.h"
+#include "tsl/platform/bfloat16.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "third_party/xla_client/multi_wait.h"
 #include "third_party/xla_client/sys_util.h"

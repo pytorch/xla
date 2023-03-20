@@ -4,8 +4,8 @@
 #include <sstream>
 
 #include "xla/status.h"
-#include "xla/third_party/tsl/platform/logging.h"
-#include "xla/third_party/tsl/platform/status.h"
+#include "tsl/platform/logging.h"
+#include "tsl/platform/status.h"
 
 namespace xla {
 namespace internal {

@@ -16,8 +16,8 @@
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "xla/status.h"
-#include "xla/third_party/tsl/platform/errors.h"
-#include "xla/third_party/tsl/platform/hash.h"
+#include "tsl/platform/errors.h"
+#include "tsl/platform/hash.h"
 #include "third_party/xla_client/types.h"
 
 namespace xla {

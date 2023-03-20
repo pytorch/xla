@@ -1,8 +1,8 @@
 #include "third_party/xla_client/record_reader.h"
 
-#include "xla/third_party/tsl/platform/errors.h"
-#include "xla/third_party/tsl/platform/strcat.h"
-#include "xla/third_party/tsl/platform/env.h"
+#include "tsl/platform/errors.h"
+#include "tsl/platform/strcat.h"
+#include "tsl/platform/env.h"
 #include "third_party/xla_client/debug_macros.h"
 
 namespace xla {

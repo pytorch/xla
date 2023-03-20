@@ -13,10 +13,10 @@
 #include "xla/status.h"
 #include "xla/statusor.h"
 #include "xla/tests/literal_test_util.h"
-#include "xla/third_party/tsl/platform/logging.h"
-#include "xla/third_party/tsl/lib/core/status_test_util.h"
-#include "xla/third_party/tsl/platform/env.h"
-#include "xla/third_party/tsl/platform/test.h"
+#include "tsl/platform/logging.h"
+#include "tsl/lib/core/status_test_util.h"
+#include "tsl/platform/env.h"
+#include "tsl/platform/test.h"
 #include "third_party/xla_client/computation_client.h"
 
 namespace xla {
