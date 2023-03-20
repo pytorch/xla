@@ -6,6 +6,7 @@
 
 #include "third_party/xla_client/computation_client.h"
 #include "third_party/xla_client/debug_macros.h"
+#include "torch/csrc/lazy/python/python_util.h"
 #include "torch/csrc/lazy/backend/backend_interface.h"
 #include "torch/csrc/lazy/core/tensor.h"
 #include "torch/csrc/lazy/core/tensor_util.h"
@@ -114,6 +115,15 @@ void XLATensorImpl::shallow_copy_from(
 }
 
 at::IntArrayRef XLATensorImpl::sizes_custom() const {
+  std::stringstream ss;
+  std::vector<torch::lazy::SourceLocation> frames =
+      torch::lazy::GetPythonFrames();
+  ss << "python callstack:\n";
+  for (auto& location : frames) {
+    ss << "  " << location.function << " (" << location.file << ":"
+       << location.line << ")\n";
+  }
+  // std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << ss.str() << std::endl;
   XLA_CHECK(!has_symbolic_sizes_strides_)
       << "Cannot call sizes_custom() on an XLA tensor with symbolic "
          "sizes/strides";
@@ -122,12 +132,22 @@ at::IntArrayRef XLATensorImpl::sizes_custom() const {
 }
 
 c10::SymIntArrayRef XLATensorImpl::sym_sizes_custom() const {
+  std::stringstream ss;
+  std::vector<torch::lazy::SourceLocation> frames =
+      torch::lazy::GetPythonFrames();
+  ss << "python callstack:\n";
+  for (auto& location : frames) {
+    ss << "  " << location.function << " (" << location.file << ":"
+       << location.line << ")\n";
+  }
+  // std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << ss.str() << std::endl;
   // N.B. SetupSizeProperties also updates sym_sizes_
   const_cast<XLATensorImpl*>(this)->SetupSizeProperties();
   return c10::SymIntArrayRef(sym_sizes_.data(), sym_sizes_.size());
 }
 
 c10::SymInt XLATensorImpl::sym_numel_custom() const {
+  //std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   auto sym_sizes = sym_sizes_custom();
   c10::SymInt prod{1};
   for (auto s : sym_sizes) {
@@ -137,16 +157,19 @@ c10::SymInt XLATensorImpl::sym_numel_custom() const {
 }
 
 at::IntArrayRef XLATensorImpl::strides_custom() const {
+  //std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   const_cast<XLATensorImpl*>(this)->SetupSizeProperties();
   return strides_default();
 }
 
 int64_t XLATensorImpl::dim_custom() const {
+  //std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   const_cast<XLATensorImpl*>(this)->SetupSizeProperties();
   return dim_default();
 }
 
 int64_t XLATensorImpl::numel_custom() const {
+  //std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   const_cast<XLATensorImpl*>(this)->SetupSizeProperties();
   return numel_default();
 }
@@ -158,6 +181,7 @@ bool XLATensorImpl::is_contiguous_custom(at::MemoryFormat memory_format) const {
 }
 
 void XLATensorImpl::SetupSizeProperties() {
+  //std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   size_t generation = tensor_->generation();
   if (generation != generation_) {
     // Fill up the basic dimension data members which the base class
@@ -181,6 +205,7 @@ void XLATensorImpl::SetupSizeProperties() {
 }
 
 void XLATensorImpl::SetupSymSizeProperties() {
+  //std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   auto shape = tensor_->shape();
   auto rank = shape.get().rank();
   std::vector<c10::SymInt> sym_sizes;
