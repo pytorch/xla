@@ -57,24 +57,36 @@ resource "google_cloudbuild_trigger" "docker_images" {
           )
         )
       ]
+
+      volumes {
+        name = "wheels"
+        path = "/wheels"
+      }
     }
 
-    step {
-      id         = "push_${each.value.image}"
-      entrypoint = "bash"
-      name       = "gcr.io/cloud-builders/docker"
-      args = [
-        "-c", "docker push --all-tags ${local.public_docker_repo_url}/${each.value.image}"
-      ]
-    }
+    # step {
+    #   id         = "push_${each.value.image}"
+    #   entrypoint = "bash"
+    #   name       = "gcr.io/cloud-builders/docker"
+    #   args = [
+    #     "-c", "docker push --all-tags ${local.public_docker_repo_url}/${each.value.image}"
+    #   ]
+    # }
 
-    dynamic "artifacts" {
-      for_each = length(each.value.wheels) > 0 ? [1] : []
+    dynamic "step" {
+      for_each = each.value.wheels ? [1] : []
 
       content {
-        objects {
-          location = google_storage_bucket.public_wheels.url
-          paths    = each.value.wheels
+        id         = "copy_wheels"
+        entrypoint = "bash"
+        name       = "gcr.io/cloud-builders/gsutil"
+        args = [
+          "-c", "echo ${google_storage_bucket.public_wheels.url} && ls /wheels",
+        ]
+
+        volumes {
+          name = "wheels"
+          path = "/wheels"
         }
       }
     }

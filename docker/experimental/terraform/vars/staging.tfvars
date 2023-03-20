@@ -34,7 +34,7 @@ docker_images = [
       "nightly_3.8_cuda11.8",
       "nightly_3.8_cuda11.8_$(date +%Y%m%d)",
     ]
-    wheels    = ["/**/*.whl"]
+    wheels    = true
     timeout_m = 60 * 6
   },
   {
@@ -52,7 +52,7 @@ docker_images = [
       "nightly_3.8_tpuvm",
       "nightly_3.8_$(date +%Y%m%d)",
     ]
-    wheels    = ["/**/*.whl"]
+    wheels    = true
     timeout_m = 60 * 6
   },
   {
@@ -76,7 +76,7 @@ docker_images = [
     image_tags = [
       "r2.0_3.8_tpuvm",
     ]
-    wheels    = ["/**/*.whl"]
+    wheels    = true
     timeout_m = 60 * 6
   },
   {
@@ -100,7 +100,7 @@ docker_images = [
     image_tags = [
       "r1.13_3.8_tpuvm",
     ]
-    wheels    = ["/**/*.whl"]
+    wheels    = true
     timeout_m = 60 * 6
   },
   {
@@ -120,7 +120,7 @@ docker_images = [
     image_tags = [
       "r1.12_3.8_tpuvm",
     ]
-    wheels    = ["/**/*.whl"]
+    wheels    = true
     timeout_m = 60 * 6
   },
 ]

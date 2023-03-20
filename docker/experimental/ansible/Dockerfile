@@ -3,9 +3,11 @@ ARG debian_version=buster
 
 FROM python:${python_version}-${debian_version} AS build
 
-WORKDIR /
+WORKDIR /wheels
 
 RUN touch test.whl
+RUN ls /
+RUN ls /wheels
 
 # RUN pip install ansible
 

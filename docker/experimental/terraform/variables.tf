@@ -56,7 +56,7 @@ variable "docker_images" {
       dir        = optional(string, "docker/experimental/ansible")
       build_args = optional(map(any), {})
       image_tags = optional(list(string), [])
-      wheels     = optional(list(string), [])
+      wheels     = optional(bool, false)
       timeout_m  = optional(number, 30)
     })
   )
