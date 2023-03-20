@@ -76,7 +76,7 @@ COPY bazel/ bazel/
 
 COPY torch_xla/ torch_xla/
 COPY setup.py .
-COPY xla_native_functions.yaml .
+COPY codegen/ codegen/
 
 COPY scripts/ scripts/
 

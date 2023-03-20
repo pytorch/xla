@@ -31,13 +31,13 @@ All file mentioned below lives under the `xla/torch_xla/csrc` folder, with the e
 - xla/scripts/gen_lazy_tensor.py
   - Provides necessary XLA versions of the codegen Codegen class and calls the upstream codegen API.
 - xla/torch_xla/csrc/XLANativeFunctions.cpp
-  - Result of the full_codegen column of the xla/xla_native_functions.yaml. The op function defined here will implement the op declared in the XLANativeFunctions.h. Each op will take at::tensor and return another at::tensor wrapped around a XLATensor.
+  - Result of the full_codegen column of the xla/codegen/xla_native_functions.yaml. The op function defined here will implement the op declared in the XLANativeFunctions.h. Each op will take at::tensor and return another at::tensor wrapped around a XLATensor.
 - xla/torch_xla/csrc/LazyIr.h
-  - Result of the full_codegen column of the xla/xla_native_functions.yaml.  Defines the IR that is used to construct the full_codegen ops.
+  - Result of the full_codegen column of the xla/codegen/xla_native_functions.yaml.  Defines the IR that is used to construct the full_codegen ops.
 
 ### PyTorch/XLA Old Op Lowering files
 - xla/torch_xla/csrc/generated/aten_xla_type.cpp
-  - Manually implements ops defined in xla/xla_native_functions.yaml. Will be replaced by XLANativeFunctions.cpp
+  - Manually implements ops defined in xla/codegen/xla_native_functions.yaml. Will be replaced by XLANativeFunctions.cpp
 - xla/torch_xla/csrc/generated/tensor.h
   - Defines XLATensor class and XLATensor method declarations. These declarations are usually a one to one mapping of the at::Tensor nodes we declared in XLANativeFunctions.h. XLATensor method will be removed for full_codegen ops
 - xla/torch_xla/csrc/generated/tensor_method.cpp
@@ -76,7 +76,7 @@ at::Tensor XLANativeFunctions::abs(const at::Tensor& self) {
 ```
 
 ### 2. Codegen the op and inspect the generated file
-Find the op in  `xla/xla_native_functions.yaml` and move it to the full_codegen column and run `python setup.py install` under xla directory again. The build will fail (reason explained later in this guide) but you can still see the generated file. The code snippets below uses `abs` as an example.
+Find the op in  `xla/codegen/xla_native_functions.yaml` and move it to the full_codegen column and run `python setup.py install` under xla directory again. The build will fail (reason explained later in this guide) but you can still see the generated file. The code snippets below uses `abs` as an example.
 #### XLANativeFunctions.cpp
 ```
 at::Tensor XLANativeFunctions::abs(const at::Tensor & self) {
