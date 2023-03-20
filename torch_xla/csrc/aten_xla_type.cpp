@@ -3555,7 +3555,10 @@ at::Tensor XLANativeFunctions::slice_backward(const at::Tensor& grad_output,
 
 at::Tensor XLANativeFunctions::permute(const at::Tensor& self,
                                        at::IntArrayRef dims) {
-  XLA_CHECK(!xla::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false));
+  // See Note: [Disabling functionalization]
+  if (xla::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
+    return permute_copy(self, dims);
+  }
   return at::functionalization::functionalize_aten_op<ATEN_OP(permute)>::call(
       self, dims);
 }
