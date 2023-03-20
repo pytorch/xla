@@ -40,7 +40,9 @@ from .wrap import recursive_wrap
 from ._init_utils import _materialize_module
 
 import os
-XLA_DISABLE_FUNCTIONALIZATION = bool(os.environ['XLA_DISABLE_FUNCTIONALIZATION'])
+
+XLA_DISABLE_FUNCTIONALIZATION = bool(
+    os.environ['XLA_DISABLE_FUNCTIONALIZATION'])
 
 FLOAT_DTYPES = [torch.float32, torch.float16, torch.bfloat16]
 
@@ -1416,17 +1418,19 @@ class XlaFullyShardedDataParallel(nn.Module):
         with torch.autograd._unsafe_preserve_version_counter(p):
           if self._shard_param_on_dim_0:
             if XLA_DISABLE_FUNCTIONALIZATION:
-              p.data = p_padded[:p_shard._orig_size[0]]  # Old behavior before Functionalization.
+              p.data = p_padded[:p_shard._orig_size[
+                  0]]  # Old behavior before Functionalization.
             else:
               torch_xla._XLAC._replace_xla_tensor(
-                p, p_padded[:p_shard._orig_size[0]])
+                  p, p_padded[:p_shard._orig_size[0]])
           else:
             if XLA_DISABLE_FUNCTIONALIZATION:
-              p.data = p_padded[:p_shard._orig_size.numel()].view(p_shard._orig_size)  # Old behavior before Functionalization.
+              p.data = p_padded[:p_shard._orig_size.numel()].view(
+                  p_shard._orig_size)  # Old behavior before Functionalization.
             else:
               torch_xla._XLAC._replace_xla_tensor(
-                p,
-                p_padded[:p_shard._orig_size.numel()].view(p_shard._orig_size))
+                  p, p_padded[:p_shard._orig_size.numel()].view(
+                      p_shard._orig_size))
         p._has_full_param = True
 
     self.has_full_params = True
