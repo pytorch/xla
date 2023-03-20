@@ -1,26 +1,17 @@
-# Terraform configuration for build/test resources
+# Terraform for CloudBuild triggers
 
-Download the latest Terraform binary for your system and add it to your `$PATH`:
-https://developer.hashicorp.com/terraform/downloads
+This Terraform setup provisions:
+- public storage bucket for PyTorch and PyTorch/XLA wheels.
+- private storage bucket for Terraform state.
+- public artifact repository for docker images.
+- cloud builds for nightly and release docker images and wheels.
+- schedule jobs and a service account for triggering cloud build.
 
-Terraform state is stored in a shared GCS bucket. To initialize Terraform, run
-the following:
+# Running
 
-```
-# Authenticate with GCP
-gcloud auth login --update-adc
+1. Run `gcloud auth application-default login` on your local workstation.
+2. Make sure that a recent Terraform binary is installed (>= 1.3.8).
+   If not, install Terraform from the [official source](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli).
+3. Run `terraform apply -var-file=vars/staging.tfvars`.
 
-# Initialize Terraform
-terraform init
-```
 
-To preview your changes run `terraform plan`.
-
-If the changes look correct, you can update the project with `terraform apply`.
-
-Resources:
-
-- Official Terraform documentation: https://developer.hashicorp.com/terraform/docs
-- GCP Terraform documentation: https://cloud.google.com/docs/terraform/get-started-with-terraform
-- Storing Terraform state in GCS: https://cloud.google.com/docs/terraform/resource-management/store-state
-- Cloud Build Trigger documentation: https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/cloudbuild_trigger
