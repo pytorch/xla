@@ -88,7 +88,7 @@ test --test_env=LD_LIBRARY_PATH
 
 # This fixes an issue where targets are configured differently because of `test_filter`.
 # https://github.com/bazelbuild/bazel/issues/6842
-test --trim_test_configuration
+test --notrim_test_configuration
 
 # Stabilize the environmental variables used to minimize cache misses (src and env affects cache keys).
 build --incompatible_strict_action_env
