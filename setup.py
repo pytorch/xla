@@ -41,7 +41,6 @@
 from __future__ import print_function
 
 from setuptools import setup, find_packages, distutils, Extension, command
-from torch.utils.cpp_extension import BuildExtension
 import posixpath
 import contextlib
 import distutils.ccompiler
@@ -144,6 +143,7 @@ def maybe_bundle_libtpu(base_dir):
       whl.write(resp.content)
       whl.flush()
 
+      os.makedirs(os.path.join(base_dir, 'torch_xla', 'lib'), exist_ok=True)
       with open(libtpu_path, 'wb') as libtpu_so:
         z = zipfile.ZipFile(whl.name)
         libtpu_so.write(z.read('libtpu/libtpu.so'))

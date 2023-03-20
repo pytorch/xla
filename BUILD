@@ -15,6 +15,7 @@ tf_cc_shared_object(
     linkopts = [
         "-Wl,-rpath,$$EXEC_ORIGIN",
         "-Wl,-rpath,$$ORIGIN",
+        "-Wl,-rpath,$$ORIGIN/torch_xla/lib",  # for libtpu
     ],
     visibility = ["//visibility:public"],
     deps = [
