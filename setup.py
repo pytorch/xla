@@ -41,6 +41,7 @@
 from __future__ import print_function
 
 from setuptools import setup, find_packages, distutils, Extension, command
+from torch.utils.cpp_extension import BuildExtension
 import posixpath
 import contextlib
 import distutils.ccompiler
