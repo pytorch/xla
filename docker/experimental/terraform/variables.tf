@@ -49,7 +49,7 @@ variable "docker_images" {
       image = string
 
       # Branch to fetch the Ansible setup at (not the XLA source code!)
-      branch = optional(string, "mlewko/cloudbuild")
+      branch = optional(string, "master")
 
       # Dockerfile path withing docker context (`dir` parameter).
       dockerfile = optional(string, "Dockerfile")
