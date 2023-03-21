@@ -31,9 +31,9 @@
 #include "torch_xla/csrc/ops/diagonal_view_update.h"
 #include "torch_xla/csrc/ops/einsum_utilities.h"
 #include "torch_xla/csrc/ops/index_ops.h"
-#include "torch_xla/csrc/ops/resize.h"
 #include "torch_xla/csrc/ops/unselect.h"
 #include "torch_xla/csrc/ops/update_slice.h"
+#include "torch_xla/csrc/ops/view.h"
 #include "torch_xla/csrc/pooling.h"
 #include "torch_xla/csrc/tensor_impl.h"
 #include "torch_xla/csrc/tensor_methods.h"
@@ -2697,24 +2697,23 @@ at::Tensor XLANativeFunctions::select_scatter(const at::Tensor& base,
   auto mutated_view_tensor_shape = mutated_view_tensor->shape();
   auto common_device = torch_xla::bridge::GetXlaDevice(base);
 
-  torch::lazy::NodePtr mutated_view_tensor_reshaped_node =
-      torch::lazy::MakeNode<Resize>(
-          mutated_view_tensor->GetIrValue(),
-          torch::lazy::ToVector<int64_t>(base_tensor_shape.get().dimensions()));
-
   dim = torch::lazy::GetCanonicalDimensionIndex(dim,
                                                 base_tensor_shape.get().rank());
+  xla::Shape narrow_shape = base_tensor_shape;
+  narrow_shape.set_dimensions(dim, 1);
+  torch::lazy::NodePtr mutated_view_tensor_reshaped_node =
+      torch::lazy::MakeNode<ViewOp>(
+          mutated_view_tensor->GetIrValue(),
+          torch::lazy::ToVector<int64_t>(narrow_shape.dimensions()));
+
   std::vector<int64_t> indices(base_tensor_shape.get().rank(), 0);
   indices[dim] = torch::lazy::GetCanonicalPosition(
       xla::util::ToVector<int64_t>(base_tensor_shape.get().dimensions()), dim,
       index);
-
-  torch::lazy::NodePtr result_node = torch::lazy::MakeNode<UpdateSlice>(
-      // base_tensor->GetIrValue(), mutated_view_tensor_reshaped_node,
-      base_tensor->GetIrValue(), mutated_view_tensor->GetIrValue(),
-      absl::Span<const int64_t>(indices));
-  return torch_xla::bridge::AtenFromXlaTensor(
-      torch_xla::XLATensor::Create(std::move(result_node), *common_device));
+  return bridge::AtenFromXlaTensor(
+      base_tensor->CreateFrom(torch::lazy::MakeNode<UpdateSlice>(
+          base_tensor->GetIrValue(), mutated_view_tensor_reshaped_node,
+          indices)));
 }
 
 // TODO(JackCaoG): Remove after elu being codegened
