@@ -444,7 +444,6 @@ cc_binary(
     linkopts = linkopts, # + _rpath_linkopts(name_os_full) + ["-Wl,-soname," + soname,],
     testonly = testonly,
     visibility = visibility,
-    **kwargs
 )
 
 # cc_shared_library(
