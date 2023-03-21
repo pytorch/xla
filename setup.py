@@ -196,6 +196,7 @@ IS_WINDOWS = sys.platform.startswith('win')
 IS_LINUX = (platform.system() == 'Linux')
 GCLOUD_KEY_FILE = os.getenv('GCLOUD_SERVICE_KEY_FILE', default='')
 CACHE_SILO_NAME = os.getenv('SILO_NAME', default='dev')
+BAZEL_JOBS = os.getenv('BAZEL_JOBS', default='')
 
 extra_compile_args = []
 cxx_abi = getattr(torch._C, '_GLIBCXX_USE_CXX11_ABI', None)
@@ -248,9 +249,11 @@ class BuildBazelExtension(command.build_ext.build_ext):
       bazel_argv.append('--google_credentials=%s' % GCLOUD_KEY_FILE)
       if not _check_env_flag('BAZEL_REMOTE_CACHE'):
         bazel_argv.append('--config=remote_cache')
-      if CACHE_SILO_NAME:
-        bazel_argv.append('--remote_default_exec_properties=cache-silo-key=%s' %
-                          CACHE_SILO_NAME)
+    if CACHE_SILO_NAME:
+      bazel_argv.append('--remote_default_exec_properties=cache-silo-key=%s' %
+                        CACHE_SILO_NAME)
+    if BAZEL_JOBS:
+      bazel_argv.append('--jobs=%s' % BAZEL_JOBS)
 
     # Build configuration.
     if _check_env_flag('BAZEL_VERBOSE'):
