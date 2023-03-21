@@ -72,6 +72,7 @@ COPY tf_patches/ tf_patches/
 COPY .bazelrc .
 COPY .bazelversion .
 COPY WORKSPACE .
+COPY BUILD .
 COPY bazel/ bazel/
 
 COPY torch_xla/ torch_xla/
@@ -85,7 +86,7 @@ ARG cuda
 ARG tf_cuda_compute_capabilities
 ARG bazel_jobs
 ARG package_version
-RUN BAZEL_REMOTE_CACHE=1 TORCH_XLA_VERSION=${package_version} BAZEL_JOBS=${bazel_jobs} TPUVM_MODE=${tpuvm} BUNDLE_LIBTPU=${tpuvm} XLA_CUDA=${cuda} TF_CUDA_COMPUTE_CAPABILITIES=${tf_cuda_compute_capabilities} python setup.py bdist_wheel
+RUN SILO_NAME='cache-silo-cb' BAZEL_REMOTE_CACHE=1 TORCH_XLA_VERSION=${package_version} BAZEL_JOBS=${bazel_jobs} TPUVM_MODE=${tpuvm} BUNDLE_LIBTPU=${tpuvm} XLA_CUDA=${cuda} TF_CUDA_COMPUTE_CAPABILITIES=${tf_cuda_compute_capabilities} python setup.py bdist_wheel
 
 # Expunge cache to keep image size under control
 RUN bazel clean --expunge

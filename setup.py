@@ -37,7 +37,7 @@
 #   TPUVM_MODE=0
 #     whether to build for TPU
 #
-#   CACHE_SILO_NAME=""
+#   SILO_NAME=""
 #     name of the remote build cache silo
 #
 
