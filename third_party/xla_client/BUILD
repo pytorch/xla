@@ -1,7 +1,6 @@
 load("@tsl//tsl:tsl.bzl", "if_with_tpu_support")
-# load("@xla//xla:xla.bzl", "xla_cc_binary")
 load("@tsl//tsl/platform:rules_cc.bzl", "cc_library")
-
+load(":PyTorchXLA.bzl","ptxla_cc_shared_object")
 load(
     "@tsl//tsl/platform/default:build_config.bzl",
     "tf_proto_library",
@@ -420,17 +419,10 @@ cc_test(
     ],
 )
 
-cc_shared_library(
+cc_binary(
+    exec_properties = {},
     name = "libxla_computation_client.so",
-    linkopts = select({
-        # "@org_tensorflow//tensorflow:windows": [],
-        "//conditions:default": [
-            "-z defs",
-            "-Wl,--version-script",  #  This line must be directly followed by the version_script.lds file
-            "$(location :openxla_version_script.lds)",
-        ],
-    }),
-    visibility = ["//visibility:public"],
+    srcs = srcs, # + framework_so,
     deps = [
         ":computation_client",
         ":openxla_exported_symbols.lds",
@@ -447,7 +439,42 @@ cc_shared_library(
         "@tsl//tsl/platform/cloud:gcs_file_system",
         "@tsl//tsl/profiler/convert:xplane_to_trace_events",
     ],
+    linkshared = 1,
+    data = data, # + data_extra,
+    linkopts = linkopts, # + _rpath_linkopts(name_os_full) + ["-Wl,-soname," + soname,],
+    testonly = testonly,
+    visibility = visibility,
+    **kwargs
 )
+
+# cc_shared_library(
+#     name = "libxla_computation_client.so",
+#     linkopts = select({
+#         # "@org_tensorflow//tensorflow:windows": [],
+#         "//conditions:default": [
+#             "-z defs",
+#             "-Wl,--version-script",  #  This line must be directly followed by the version_script.lds file
+#             "$(location :openxla_version_script.lds)",
+#         ],
+#     }),
+#     visibility = ["//visibility:public"],
+#     deps = [
+#         ":computation_client",
+#         ":openxla_exported_symbols.lds",
+#         ":openxla_version_script.lds",
+#         "@com_google_absl//absl/strings",
+#         "@xla//xla:literal_util",
+#         "@xla//xla/client",
+#         "@xla//xla/client:global_data",
+#         "@xla//xla/client:xla_builder",
+#         "@xla//xla/client:xla_computation",
+#         "@xla//xla/client/lib:svd",
+#         "@xla//xla/rpc:grpc_stub",
+#         # "@org_tensorflow//tensorflow/core:lib",
+#         "@tsl//tsl/platform/cloud:gcs_file_system",
+#         "@tsl//tsl/profiler/convert:xplane_to_trace_events",
+#     ],
+# )
 
 # TODO(goranpetrovic): reenable when `xla_cc_test` is fixed upstream.
 # xla_cc_test(
