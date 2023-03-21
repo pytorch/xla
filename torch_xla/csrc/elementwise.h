@@ -3,7 +3,7 @@
 #include <ATen/core/interned_strings.h>
 #include <c10/core/Scalar.h>
 
-#include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "xla/client/xla_builder.h"
 
 namespace torch_xla {
 

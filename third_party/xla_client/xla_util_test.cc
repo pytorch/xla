@@ -8,13 +8,13 @@
 #include <vector>
 
 #include "absl/types/span.h"
-#include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "tensorflow/compiler/xla/client/xla_computation.h"
-#include "tensorflow/tsl/lib/core/status_test_util.h"
-#include "tensorflow/tsl/platform/protobuf.h"
-#include "tensorflow/tsl/platform/errors.h"
-#include "tensorflow/tsl/platform/status_matchers.h"
-#include "tensorflow/tsl/protobuf/error_codes.pb.h"
+#include "xla/client/xla_builder.h"
+#include "xla/client/xla_computation.h"
+#include "tsl/lib/core/status_test_util.h"
+#include "tsl/platform/protobuf.h"
+#include "tsl/platform/errors.h"
+#include "tsl/platform/status_matchers.h"
+#include "tsl/protobuf/error_codes.pb.h"
 #include "xla_util.h"
 
 namespace xla {

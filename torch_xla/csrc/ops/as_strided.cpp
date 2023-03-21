@@ -2,8 +2,8 @@
 
 #include <algorithm>
 
-#include "tensorflow/compiler/xla/shape_util.h"
-#include "tensorflow/compiler/xla/util.h"
+#include "xla/shape_util.h"
+#include "xla/util.h"
 #include "third_party/xla_client/util.h"
 #include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/data_ops.h"

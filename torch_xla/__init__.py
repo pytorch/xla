@@ -7,17 +7,6 @@ import subprocess
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 
-XRT_RUN_SERVER_PROCESS = 'torch_xla.core._xrt_run_server'
-XRT_SERVER_REGEX = '^python3 -m {} [0-9]+$'.format(XRT_RUN_SERVER_PROCESS)
-
-
-def server_is_alive():
-  # pgrep returns 0 when at least one running process matches the requested name.
-  # Otherwise, the exit code is 1. If pgrep is not availiable in the system, it
-  # will return an exit code 127.
-  return subprocess.getstatusoutput(
-      'pgrep -f "{}"'.format(XRT_SERVER_REGEX))[0] == 0
-
 
 def _setup_grpc():
   # Setup GRPC options to correctly talk to TPU backends.
@@ -63,8 +52,6 @@ def _setup_default_env():
   _set_missing_env('GRPC_VERBOSITY', 'ERROR')
   _set_missing_env('ALLOW_MULTIPLE_LIBTPU_LOAD', '1')
   _set_missing_env('TPU_ML_PLATFORM', 'PyTorch/XLA')
-  if server_is_alive():
-    _set_missing_env('XRT_START_LOCAL_SERVER', '0')
 
 
 _fd, _tmp_fname = -1, ''

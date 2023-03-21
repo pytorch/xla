@@ -1,6 +1,6 @@
 #include "torch_xla/csrc/ops/as_strided_view_update.h"
 
-#include "tensorflow/compiler/xla/shape_util.h"
+#include "xla/shape_util.h"
 #include "third_party/xla_client/util.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"

@@ -1,6 +1,6 @@
 #include "third_party/xla_client/profiler.h"
 
-#include "tensorflow/tsl/profiler/rpc/profiler_server.h"
+#include "tsl/profiler/rpc/profiler_server.h"
 
 namespace xla {
 namespace profiler {
