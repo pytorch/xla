@@ -421,32 +421,9 @@ cc_test(
     ],
 )
 
-# cc_shared_library(
-#     name = "bfloat16.so",
-#     roots = [":bfloat16_lib"],
-#     # TODO(tlongeri): If this is not explicitly specified, dependent DLLs will expect "bfloat16.so"
-#     # and we will generate "bfloat16.so.dll", for some reason
-#     shared_lib_name = if_windows("bfloat16.so", None),
-#     static_deps = [
-#         # TODO(ddunleavy): If cc_shared_library is ever not a noop in g3, change
-#         # this to be more specific.
-#         "//:__subpackages__",
-#         "@//:__subpackages__",
-#         "@com_google_absl//:__subpackages__",
-#         # TODO(tlongeri): Ugly work-around to avoid reverse copybara check breaking. Change to
-#         # just "//third_party/eigen3" after OSS TF removes //third_party/eigen3 in favor of
-#         # @eigen_archive
-#         "@" + "eigen_archive//:__subpackages__",
-#         "//third_party/" + "eigen3:__subpackages__",
-#         "@local_config_python//:__subpackages__",
-#         "//third_party/nsync:__subpackages__",
-#     ],
-# )
-
 cc_shared_library(
-    # exec_properties = {},
-    name = "libxla_computation_client.so",
-    roots = [], # + framework_so,
+    name = "xla_computation_client",
+    roots = [],
     shared_lib_name = None,
     static_deps = [
         ":computation_client",
@@ -460,81 +437,10 @@ cc_shared_library(
         "@xla//xla/client:xla_computation",
         "@xla//xla/client/lib:svd",
         "@xla//xla/rpc:grpc_stub",
-        # "@org_tensorflow//tensorflow/core:lib",
         "@tsl//tsl/platform/cloud:gcs_file_system",
         "@tsl//tsl/profiler/convert:xplane_to_trace_events",
     ],
-    # linkshared = 1,
-    # data = [], # + data_extra,
-    # linkopts = [
-    #                 "-z defs",
-    #                 "-Wl,--version-script",  #  This line must be directly followed by the version_script.lds file
-    #                 "$(location :openxla_version_script.lds)",
-    #             ],
-    # + _rpath_linkopts(name_os_full) + ["-Wl,-soname," + soname,],
-    # testonly = False,
 )
-
-# cc_shared_library(
-#     exec_properties = {},
-#     name = "libxla_computation_client.so",
-#     srcs = [], # + framework_so,
-#     deps = [
-#         ":computation_client",
-#         ":openxla_exported_symbols.lds",
-#         ":openxla_version_script.lds",
-#         "@com_google_absl//absl/strings",
-#         "@xla//xla:literal_util",
-#         "@xla//xla/client",
-#         "@xla//xla/client:global_data",
-#         "@xla//xla/client:xla_builder",
-#         "@xla//xla/client:xla_computation",
-#         "@xla//xla/client/lib:svd",
-#         "@xla//xla/rpc:grpc_stub",
-#         # "@org_tensorflow//tensorflow/core:lib",
-#         "@tsl//tsl/platform/cloud:gcs_file_system",
-#         "@tsl//tsl/profiler/convert:xplane_to_trace_events",
-#     ],
-#     linkshared = 1,
-#     data = [], # + data_extra,
-#     linkopts = [
-#                     "-z defs",
-#                     "-Wl,--version-script",  #  This line must be directly followed by the version_script.lds file
-#                     "$(location :openxla_version_script.lds)",
-#                 ],
-#     # + _rpath_linkopts(name_os_full) + ["-Wl,-soname," + soname,],
-#     testonly = False,
-#     visibility = ["//visibility:public"],
-# )
-
-# cc_shared_library(
-#     name = "libxla_computation_client.so",
-#     linkopts = select({
-#         # "@org_tensorflow//tensorflow:windows": [],
-#         "//conditions:default": [
-#             "-z defs",
-#             "-Wl,--version-script",  #  This line must be directly followed by the version_script.lds file
-#             "$(location :openxla_version_script.lds)",
-#         ],
-#     }),
-#     visibility = ["//visibility:public"],
-#     deps = [
-#         ":computation_client",
-#         ":openxla_exported_symbols.lds",
-#         ":openxla_version_script.lds",
-#         "@com_google_absl//absl/strings",
-#         "@xla//xla:literal_util",
-#         "@xla//xla/client",
-#         "@xla//xla/client:global_data",
-#         "@xla//xla/client:xla_builder",
-#         "@xla//xla/client:xla_computation",
-#         "@xla//xla/client/lib:svd",
-#         "@xla//xla/rpc:grpc_stub",
-#         # "@org_tensorflow//tensorflow/core:lib",
-#         "@tsl//tsl/platform/cloud:gcs_file_system",
-#         "@tsl//tsl/profiler/convert:xplane_to_trace_events",
-#     ],
-# )
 
 # TODO(goranpetrovic): reenable when `xla_cc_test` is fixed upstream.
 # xla_cc_test(
