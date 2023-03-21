@@ -371,6 +371,8 @@ void ComputationClient::hlo_mhlo_hlo_roundtrip_helper(HloModuleProto* proto) {
 }
 
 void ComputationClient::hlo_stablehlo_hlo_roundtrip_helper(HloModuleProto* proto) {
+  // std::cout << "before conversion" << std::endl;
+  // printHloModuleProto(proto);
   metrics::TimedSection timed(HloStableHloRoundTripMetric());
   // ::xla::hlo_mhlo_hlo_roundtrip_helper(proto);
   mlir::MLIRContext context;
@@ -402,6 +404,8 @@ void ComputationClient::hlo_stablehlo_hlo_roundtrip_helper(HloModuleProto* proto
       return;
     }
   }
+  // std::cout << "after conversion" << std::endl;
+  // printHloModuleProto(&hlo_proto.hlo_module());
   proto->Swap(hlo_proto.mutable_hlo_module());
 }
 
@@ -409,10 +413,8 @@ void ComputationClient::roundtrip_helper(HloModuleProto* proto) {
   std::string roundtripType =
       sys_util::GetEnvString(env::kEnvHloRoundTripType, "STABLEHLO");
   if (roundtripType == "MHLO") {
-    std::cout << "mhlo roundtrip" << std::endl;
     hlo_mhlo_hlo_roundtrip_helper(proto);
   } else {
-    std::cout << "stablehlo roundtrip" << std::endl;
     hlo_stablehlo_hlo_roundtrip_helper(proto);
   }
 }
