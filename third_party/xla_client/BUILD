@@ -473,7 +473,6 @@ cc_shared_library(
     #             ],
     # + _rpath_linkopts(name_os_full) + ["-Wl,-soname," + soname,],
     # testonly = False,
-    visibility = ["//visibility:public"],
 )
 
 # cc_shared_library(
