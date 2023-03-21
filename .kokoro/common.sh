@@ -2,6 +2,8 @@
 
 set -ex
 
+DEBIAN_FRONTEND=noninteractive
+
 function apply_patches() {
   # assumes inside pytorch dir
   ./xla/scripts/apply_patches.sh
@@ -35,31 +37,24 @@ function install_deps_pytorch_xla() {
   pip install "cmake>=3.13" --upgrade
 
   sudo apt-get -qq update
-
-  sudo apt-get -qq install npm nodejs
-
-  # XLA build requires Bazel
-  # We use bazelisk to avoid updating Bazel version manually.
-  sudo npm install -g @bazel/bazelisk
-  # Only unlink if file exists
-  if [[ -e /usr/bin/bazel ]]; then
-    sudo unlink /usr/bin/bazel
-  fi
-
-  sudo ln -s "$(command -v bazelisk)" /usr/bin/bazel
-
-  # Symnlink the missing cuda headers if exists
-  CUBLAS_PATTERN="/usr/include/cublas*"
-  if ls $CUBLAS_PATTERN 1> /dev/null 2>&1; then
-    sudo ln -s $CUBLAS_PATTERN /usr/local/cuda/include
-  fi
 }
 
 function build_torch_xla() {
   XLA_DIR=$1
   pushd "$XLA_DIR"
-  python setup.py install
+  XLA_CUDA=0 python setup.py install
   popd
+}
+
+function pip_install() {
+  # retry 3 times
+  # old versions of pip don't have the "--progress-bar" flag
+  pip install --progress-bar off "$@" || pip install --progress-bar off "$@" || pip install --progress-bar off "$@" ||\
+  pip install "$@" || pip install "$@" || pip install "$@"
+}
+
+function install_torchvision() {
+  pip_install --user --no-use-pep517 "git+https://github.com/pytorch/vision.git@$TORCHVISION_COMMIT"
 }
 
 function run_torch_xla_tests() {
