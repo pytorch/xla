@@ -2692,8 +2692,8 @@ at::Tensor XLANativeFunctions::select_scatter(const at::Tensor& base,
                                               int64_t dim, int64_t index) {
   TORCH_LAZY_FN_COUNTER("xla::");
   auto base_tensor = bridge::GetXlaTensor(base);
-  auto mutated_view_tensor = bridge::GetXlaTensor(mutated_view);
   auto base_tensor_shape = base_tensor->shape();
+  auto mutated_view_tensor = bridge::GetXlaTensor(mutated_view);
   auto mutated_view_tensor_shape = mutated_view_tensor->shape();
   auto common_device = torch_xla::bridge::GetXlaDevice(base);
 
@@ -2710,7 +2710,8 @@ at::Tensor XLANativeFunctions::select_scatter(const at::Tensor& base,
       index);
 
   torch::lazy::NodePtr result_node = torch::lazy::MakeNode<UpdateSlice>(
-      base_tensor->GetIrValue(), mutated_view_tensor_reshaped_node,
+      // base_tensor->GetIrValue(), mutated_view_tensor_reshaped_node,
+      base_tensor->GetIrValue(), mutated_view_tensor->GetIrValue(),
       absl::Span<const int64_t>(indices));
   return torch_xla::bridge::AtenFromXlaTensor(
       torch_xla::XLATensor::Create(std::move(result_node), *common_device));
