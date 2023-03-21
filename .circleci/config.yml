@@ -152,11 +152,11 @@ run_test_and_push_doc: &run_test_and_push_doc
       <<: *calculate_docker_image
   - run:
       <<: *download_docker
-  # - run:
-  #     name: Test
-  #     no_output_timeout: "1h"
-  #     command: |
-  #       docker exec -u jenkins $(cat .docker_pid) bash -c '. ~/.bashrc && .circleci/test.sh'
+  - run:
+      name: Test
+      no_output_timeout: "1h"
+      command: |
+        docker exec -u jenkins $(cat .docker_pid) bash -c '. ~/.bashrc && .circleci/test.sh'
   - run:
       name: Push doc to public
       no_output_timeout: "1h"
@@ -385,7 +385,6 @@ workflows:
             branches:
               only:
                 - master
-                - doc_push_fix  # remove after testing
                 - ^r\d*\.?\d*$
       - pytorch_xla_run_test_coverage:
           name: pytorch_xla_CPU_test_coverage
