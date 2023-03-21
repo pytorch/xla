@@ -420,7 +420,7 @@ cc_test(
     ],
 )
 
-cc_binary(
+cc_shared_library(
     name = "libxla_computation_client.so",
     linkopts = select({
         # "@org_tensorflow//tensorflow:windows": [],
