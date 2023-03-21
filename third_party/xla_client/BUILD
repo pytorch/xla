@@ -132,7 +132,7 @@ cc_library(
         # "@org_tensorflow//tensorflow/core/kernels:data_flow",
         # "@org_tensorflow//tensorflow/core/protobuf/tpu:topology_proto_cc",
         "@tsl//tsl/protobuf:histogram_proto_cc_impl",
-        "@xla//xla/service/gpu/backend_configs_cc_impl",
+        "@xla//xla/service/gpu:backend_configs_cc_impl",
         "@tsl//tsl/platform:net",
         "@tsl//tsl/platform:stacktrace_handler",
         "@tsl//tsl/util:device_name_utils",
