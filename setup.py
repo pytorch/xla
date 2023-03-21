@@ -29,7 +29,10 @@
 #     include libtpu in final wheel
 #
 #   GCLOUD_SERVICE_KEY_FILE=''
-#     file containing the auth tokens for remote cache/build
+#     file containing the auth tokens for remote cache/build. implies remote cache.
+#
+#   BAZEL_REMOTE_CACHE=""
+#     whether to use remote cache for builds
 #
 #   TPUVM_MODE=0
 #     whether to build for TPU
@@ -237,9 +240,14 @@ class BuildBazelExtension(command.build_ext.build_ext):
       bazel_argv.append('--compilation_mode=dbg')
 
     # Remote cache authentication.
-    if GCLOUD_KEY_FILE:
+
+    if _check_env_flag('BAZEL_REMOTE_CACHE'):
       bazel_argv.append('--config=remote_cache')
+
+    if GCLOUD_KEY_FILE:
       bazel_argv.append('--google_credentials=%s' % GCLOUD_KEY_FILE)
+      if not _check_env_flag('BAZEL_REMOTE_CACHE'):
+        bazel_argv.append('--config=remote_cache')
       if CACHE_SILO_NAME:
         bazel_argv.append('--remote_default_exec_properties=cache-silo-key=%s' %
                           CACHE_SILO_NAME)

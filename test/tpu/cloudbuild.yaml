@@ -6,7 +6,7 @@ substitutions:
   # Location of GKE cluster.
   _CLUSTER_ZONE: 'europe-west4-a'
 steps:
-- name: 'docker'
+- name: 'gcr.io/cloud-builders/docker'
   id: build-image
   args: [
     'build',
@@ -21,7 +21,7 @@ steps:
     '--build-arg',
     'bazel_jobs=8'
   ]
-- name: 'docker'
+- name: 'gcr.io/cloud-builders/docker'
   id: push-image
   waitFor:
   - build-image
