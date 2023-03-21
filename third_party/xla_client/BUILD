@@ -422,7 +422,7 @@ cc_test(
 cc_binary(
     exec_properties = {},
     name = "libxla_computation_client.so",
-    srcs = srcs, # + framework_so,
+    srcs = [], # + framework_so,
     deps = [
         ":computation_client",
         ":openxla_exported_symbols.lds",
@@ -440,10 +440,15 @@ cc_binary(
         "@tsl//tsl/profiler/convert:xplane_to_trace_events",
     ],
     linkshared = 1,
-    data = data, # + data_extra,
-    linkopts = linkopts, # + _rpath_linkopts(name_os_full) + ["-Wl,-soname," + soname,],
-    testonly = testonly,
-    visibility = visibility,
+    data = [], # + data_extra,
+    linkopts = [
+                    "-z defs",
+                    "-Wl,--version-script",  #  This line must be directly followed by the version_script.lds file
+                    "$(location :openxla_version_script.lds)",
+                ],
+    # + _rpath_linkopts(name_os_full) + ["-Wl,-soname," + soname,],
+    testonly = False,
+    visibility = ["//visibility:public"],
 )
 
 # cc_shared_library(
