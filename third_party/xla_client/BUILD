@@ -119,7 +119,7 @@ cc_library(
         "@xla//xla/service:platform_util",
         "@xla//xla:statusor",
         "@xla//xla:xla_data_proto_cc_impl",
-        "@xla//xla/service:hlo_proto_cc",
+        "@xla//xla/service:hlo_proto_cc_impl",
         "@xla//xla/hlo/ir:hlo",
         "@xla//xla/service/spmd:spmd_partitioner",
         # "@org_tensorflow//tensorflow/core:core_cpu",
