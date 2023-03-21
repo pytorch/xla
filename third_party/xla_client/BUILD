@@ -1,6 +1,6 @@
 load("@tsl//tsl:tsl.bzl", "if_with_tpu_support")
 load("@tsl//tsl/platform:rules_cc.bzl", "cc_library")
-load(":PyTorchXLA.bzl","ptxla_cc_shared_object")
+
 load(
     "@tsl//tsl/platform/default:build_config.bzl",
     "tf_proto_library",
