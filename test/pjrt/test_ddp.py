@@ -31,6 +31,8 @@ class TestPjRtDistributedDataParallel(parameterized.TestCase):
   def test_ddp_init(self):
     pjrt._run_multiprocess(self._ddp_init)
 
+  @absltest.skipIf(pjrt.device_type() == 'GPU',
+                   "GPU device is not supported by pjrt.spawn_threads")
   def test_ddp_init_threaded(self):
     pjrt.spawn_threads(self._ddp_init)
 

@@ -14,6 +14,7 @@
 #include "tensorflow/compiler/xla/service/sharding_propagation.h"
 #include "tensorflow/compiler/xla/service/spmd/spmd_partitioner.h"
 #include "tensorflow/compiler/xla/xla.pb.h"
+#include "torch/csrc/lazy/core/ir_util.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/tensor_util.h"
@@ -225,6 +226,48 @@ ShardingUtil::InputHandler(
   }
 
   return arguments_by_device;
+}
+
+std::vector<xla::ComputationClient::DataPtr> ShardingUtil::OutputHandler(
+    std::vector<std::vector<xla::ComputationClient::DataPtr>> sharded_results,
+    std::vector<XLATensor::ShardingSpecPtr> sharding_specs,
+    bool replicated_output) {
+  std::vector<xla::ComputationClient::DataPtr> outputs;
+  outputs.reserve(sharding_specs.size());
+  for (int i = 0; i < sharding_specs.size(); ++i) {
+    XLATensor::ShardingSpecPtr sharding = sharding_specs[i];
+    if (sharding &&
+        (sharding->sharding.type() != xla::OpSharding::REPLICATED)) {
+      XLA_CHECK(sharding->shape.has_value())
+          << "Sharding or Wrapping data shards in OutputHandler requires "
+             "unpartitioned tensor shape.";
+      if (replicated_output) {
+        // Reshards replicated output if `sharding` is present.
+        std::vector<at::Tensor> tensors = XlaDataToTensors(
+            {WrapXlaData(sharded_results[0][i])},
+            TensorTypeFromXlaType(sharding->shape.value().element_type()));
+        outputs.push_back(UnwrapXlaData(CreateTensorsData(
+            tensors, {sharding},
+            std::vector<std::string>{GetVirtualDevice().toString()})[0]));
+      } else {
+        // Creates a PjRtShardedData from output shards.
+        // TODO(yeounoh) consider propagating input sharding to output.
+        std::vector<xla::ComputationClient::DataPtr> shards;
+        shards.reserve(sharded_results.size());
+        for (int j = 0; j < sharded_results.size(); ++j) {
+          XLA_CHECK(sharded_results[j][i]->HasValue());
+          shards.push_back(sharded_results[j][i]);
+        }
+        outputs.push_back(xla::ComputationClient::Get()->WrapDataShards(
+            shards, GetVirtualDevice().toString(), sharding->shape.value(),
+            sharding->sharding));
+      }
+    } else {
+      // Replicated results
+      outputs.push_back(sharded_results[0][i]);
+    }
+  }
+  return outputs;
 }
 
 std::vector<at::Tensor> ShardingUtil::ShardTensor(

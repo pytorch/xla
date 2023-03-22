@@ -107,4 +107,59 @@ bool RequiresRawTypeCasting(at::ScalarType scalar_type,
 xla::PrimitiveType GetShapeDimensionType(
     const torch::lazy::BackendDevice* device);
 
+// The following functions are copied from aten/src/ATen/ExpandUtils.h just to
+// replace the expand with expand_copy.
+// TODO(alanwaketan): Fix the upstream.
+inline std::tuple<c10::MaybeOwned<at::Tensor>, c10::MaybeOwned<at::Tensor>,
+                  c10::MaybeOwned<at::Tensor>>
+xla_expand_outplace(const at::Tensor& to_expand1, const at::Tensor& to_expand2,
+                    const at::Tensor& to_expand3, const char* api_name) {
+  at::check_defined({to_expand1, to_expand2, to_expand3}, api_name);
+  if (to_expand1.sizes().equals(to_expand2.sizes()) &&
+      to_expand1.sizes().equals(to_expand3.sizes())) {
+    return std::make_tuple(c10::MaybeOwned<at::Tensor>::borrowed(to_expand1),
+                           c10::MaybeOwned<at::Tensor>::borrowed(to_expand2),
+                           c10::MaybeOwned<at::Tensor>::borrowed(to_expand3));
+  }
+
+  auto expanded_size12 =
+      at::infer_size_dimvector(to_expand1.sizes(), to_expand2.sizes());
+  auto expanded_size =
+      at::infer_size_dimvector(expanded_size12, to_expand3.sizes());
+  return std::make_tuple(c10::MaybeOwned<at::Tensor>::owned(
+                             at::expand_copy(to_expand1, expanded_size)),
+                         c10::MaybeOwned<at::Tensor>::owned(
+                             at::expand_copy(to_expand2, expanded_size)),
+                         c10::MaybeOwned<at::Tensor>::owned(
+                             at::expand_copy(to_expand3, expanded_size)));
+}
+
+inline std::vector<at::Tensor> xla_expand_outplace(at::TensorList to_expand) {
+  // expands a list of Tensors; ignores undefined (null) tensors
+  bool first = true;
+  at::DimVector sizes;
+  for (const auto i : c10::irange(to_expand.size())) {
+    if (!to_expand[i].defined()) {
+      continue;
+    } else if (first) {
+      sizes = to_expand[i].sizes();
+      first = false;
+    } else {
+      sizes = at::infer_size_dimvector(sizes, to_expand[i].sizes());
+    }
+  }
+
+  std::vector<at::Tensor> result(to_expand.size());
+  for (const auto i : c10::irange(to_expand.size())) {
+    if (!to_expand[i].defined()) {
+      continue;
+    } else if (to_expand[i].sizes().equals(sizes)) {
+      result[i] = to_expand[i];
+    } else {
+      result[i] = at::expand_copy(to_expand[i], sizes);
+    }
+  }
+  return result;
+}
+
 }  // namespace torch_xla

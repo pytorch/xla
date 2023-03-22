@@ -12,7 +12,7 @@
       ansible.builtin.assert:
         that: "{{ lookup('ansible.builtin.vars', item.name) is regex(item.pattern) }}"
         fail_msg: |
-          "Variable '{{ item.name }}' doesn't match pattern '{{ item.pattern }}'"
+          "Variable '{{ item.name }} = '{{ lookup('ansible.builtin.vars', item.name) }}' doesn't match pattern '{{ item.pattern }}'"
           "Pass the required variable with: --e \"{{ item.name }}=<value>\""
       loop:
         - name: stage
@@ -28,12 +28,16 @@
       loop:
         # vars.yaml should be the first as other config files depend on it.
         - vars.yaml
+        # cuda_deps should be loaded before apt, since apt depends on it.
+        - cuda_deps.yaml
         - apt.yaml
         - pip.yaml
         - env.yaml
+      tags: always # Execute this task even with `--skip-tags` is used.
 
   roles:
-    - bazel
+    - role: bazel
+      tags: bazel
 
     - role: install_deps
       vars:
@@ -62,12 +66,12 @@
             pip.pkgs_nodeps[stage + '_' + arch] | default([], true) +
             pip.pkgs_nodeps[stage + '_' + accelerator] | default([], true)
           }}"
+      tags: install_deps
 
     - role: fetch_srcs
       vars:
         src_root: "/src"
-        pytorch_git_rev: HEAD
-        xla_git_rev: HEAD
+      tags: fetch_srcs
 
     - role: build_srcs
       vars:
@@ -77,6 +81,7 @@
             combine(build_env[arch] | default({}, true)) |
             combine(build_env[accelerator] | default({}, true))
           }}"
+      tags: build_srcs
 
     - role: configure_env
       vars:
@@ -86,3 +91,4 @@
             combine(release_env[accelerator] | default({}, true))
           }}"
       when: stage == "release"
+      tags: configure_env

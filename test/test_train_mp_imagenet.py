@@ -38,7 +38,25 @@ MODEL_OPTS = {
     },
     '--profile': {
         'action': 'store_true',
-    }
+    },
+    '--persistent_workers': {
+        'action': 'store_true',
+    },
+    '--prefetch_factor': {
+        'type': int,
+    },
+    '--loader_prefetch_size': {
+        'type': int,
+    },
+    '--device_prefetch_size': {
+        'type': int,
+    },
+    '--host_to_device_transfer_threads': {
+        'type': int,
+    },
+    '--use_optimized_kwargs': {
+        'type': str,
+    },
 }
 
 FLAGS = args_parse.parse_common_options(
@@ -81,13 +99,45 @@ DEFAULT_KWARGS = dict(
     momentum=0.9,
     lr=0.1,
     target_accuracy=0.0,
+    persistent_workers=False,
+    prefetch_factor=16,
+    loader_prefetch_size=8,
+    device_prefetch_size=4,
+    num_workers=8,
+    host_to_device_transfer_threads=1,
 )
+
+#  Best config to achieve peak performance based on TPU version
+#    1. It is recommended to use this config in conjuntion with XLA_USE_BF16=1 Flag.
+#    2. Hyperparameters can be tuned to further improve the accuracy.
+#  usage: python3 /usr/share/pytorch/xla/test/test_train_mp_imagenet.py --model=resnet50 \
+#         --fake_data --num_epochs=10 --log_steps=300 \
+#         --profile   --use_optimized_kwargs=tpuv4  --drop_last
+OPTIMIZED_KWARGS = {
+    'tpuv4':
+        dict(
+            batch_size=128,
+            test_set_batch_size=128,
+            num_epochs=18,
+            momentum=0.9,
+            lr=0.1,
+            target_accuracy=0.0,
+            persistent_workers=True,
+            prefetch_factor=32,
+            loader_prefetch_size=128,
+            device_prefetch_size=1,
+            num_workers=16,
+            host_to_device_transfer_threads=4,
+        )
+}
+
 MODEL_SPECIFIC_DEFAULTS = {
-    # Override some of the args in DEFAULT_KWARGS, or add them to the dict
+    # Override some of the args in DEFAULT_KWARGS/OPTIMIZED_KWARGS, or add them to the dict
     # if they don't exist.
     'resnet50':
         dict(
-            DEFAULT_KWARGS, **{
+            OPTIMIZED_KWARGS.get(FLAGS.use_optimized_kwargs, DEFAULT_KWARGS),
+            **{
                 'lr': 0.5,
                 'lr_scheduler_divide_every_n_epochs': 20,
                 'lr_scheduler_divisor': 5,
@@ -192,14 +242,18 @@ def train_imagenet():
         sampler=train_sampler,
         drop_last=FLAGS.drop_last,
         shuffle=False if train_sampler else True,
-        num_workers=FLAGS.num_workers)
+        num_workers=FLAGS.num_workers,
+        persistent_workers=FLAGS.persistent_workers,
+        prefetch_factor=FLAGS.prefetch_factor)
     test_loader = torch.utils.data.DataLoader(
         test_dataset,
         batch_size=FLAGS.test_set_batch_size,
         sampler=test_sampler,
         drop_last=FLAGS.drop_last,
         shuffle=False,
-        num_workers=FLAGS.num_workers)
+        num_workers=FLAGS.num_workers,
+        persistent_workers=FLAGS.persistent_workers,
+        prefetch_factor=FLAGS.prefetch_factor)
 
   torch.manual_seed(42)
 
@@ -247,16 +301,16 @@ def train_imagenet():
           output = model(data)
           loss = loss_fn(output, target)
           loss.backward()
-      if FLAGS.ddp:
-        optimizer.step()
-      else:
-        xm.optimizer_step(optimizer)
-      tracker.add(FLAGS.batch_size)
-      if lr_scheduler:
-        lr_scheduler.step()
-      if step % FLAGS.log_steps == 0:
-        xm.add_step_closure(
-            _train_update, args=(device, step, loss, tracker, epoch, writer))
+          if FLAGS.ddp:
+            optimizer.step()
+          else:
+            xm.optimizer_step(optimizer)
+            tracker.add(FLAGS.batch_size)
+          if lr_scheduler:
+            lr_scheduler.step()
+        if step % FLAGS.log_steps == 0:
+          xm.add_step_closure(
+              _train_update, args=(device, step, loss, tracker, epoch, writer))
 
   def test_loop_fn(loader, epoch):
     total_samples, correct = 0, 0
@@ -273,8 +327,19 @@ def train_imagenet():
     accuracy = xm.mesh_reduce('test_accuracy', accuracy, np.mean)
     return accuracy
 
-  train_device_loader = pl.MpDeviceLoader(train_loader, device)
-  test_device_loader = pl.MpDeviceLoader(test_loader, device)
+  train_device_loader = pl.MpDeviceLoader(
+      train_loader,
+      device,
+      loader_prefetch_size=FLAGS.loader_prefetch_size,
+      device_prefetch_size=FLAGS.device_prefetch_size,
+      host_to_device_transfer_threads=FLAGS.host_to_device_transfer_threads)
+  test_device_loader = pl.MpDeviceLoader(
+      test_loader,
+      device,
+      loader_prefetch_size=FLAGS.loader_prefetch_size,
+      device_prefetch_size=FLAGS.device_prefetch_size,
+      host_to_device_transfer_threads=FLAGS.host_to_device_transfer_threads)
+
   accuracy, max_accuracy = 0.0, 0.0
   for epoch in range(1, FLAGS.num_epochs + 1):
     xm.master_print('Epoch {} train begin {}'.format(epoch, test_utils.now()))

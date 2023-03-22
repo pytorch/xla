@@ -27,9 +27,17 @@
 
 namespace torch_xla {
 
-class TORCH_API XLASymNodeImpl : public c10::SymNodeImpl {
+enum class PyType {
+  INT,    // int64; technically arbitrary precision
+  FLOAT,  // double
+  BOOL,   // bool
+};
+
+class TORCH_API XLASymNodeImpl final : public c10::SymNodeImpl {
  public:
-  XLASymNodeImpl(torch::lazy::NodePtr ptr) : node_(std::move(ptr)) {}
+  XLASymNodeImpl(torch::lazy::NodePtr ptr, PyType pytype)
+      : node_(std::move(ptr)), pytype_(pytype) {}
+  bool is_bool() override;
   bool is_int() override;
   bool is_float() override;
   c10::SymNode add(const c10::SymNode& other) override;
@@ -50,20 +58,44 @@ class TORCH_API XLASymNodeImpl : public c10::SymNodeImpl {
   c10::SymNode neg() override;
   c10::SymNode sym_min(const c10::SymNode& other) override;
   c10::SymNode sym_max(const c10::SymNode& other) override;
+  c10::SymNode sym_or(const c10::SymNode& other) override;
+  c10::SymNode sym_and(const c10::SymNode& other) override;
+  c10::SymNode sym_not() override;
+  // NB: self is ignored here, only the arguments are used
+  c10::SymNode is_contiguous(at::ArrayRef<c10::SymNode> sizes,
+                             at::ArrayRef<c10::SymNode> strides) override;
+  c10::SymNode is_channels_last_contiguous_2d(
+      at::ArrayRef<c10::SymNode> sizes,
+      at::ArrayRef<c10::SymNode> strides) override;
+  c10::SymNode is_channels_last_contiguous_3d(
+      at::ArrayRef<c10::SymNode> sizes,
+      at::ArrayRef<c10::SymNode> strides) override;
+  c10::SymNode is_channels_last_strides_2d(
+      at::ArrayRef<c10::SymNode> sizes,
+      at::ArrayRef<c10::SymNode> strides) override;
+  c10::SymNode is_channels_last_strides_3d(
+      at::ArrayRef<c10::SymNode> sizes,
+      at::ArrayRef<c10::SymNode> strides) override;
+  c10::SymNode is_non_overlapping_and_dense(
+      at::ArrayRef<c10::SymNode> sizes,
+      at::ArrayRef<c10::SymNode> strides) override;
   c10::SymNode clone() override;
   c10::SymNode sym_float() override;
   c10::SymNode wrap_int(int64_t num) override;
   c10::SymNode wrap_float(double num) override;
   int64_t guard_int(const char* file, int64_t line) override;
   double guard_float(const char* file, int64_t line) override;
+  bool guard_bool(const char* file, int64_t line) override;
   int64_t int_() override;
   bool bool_() override;
+  bool has_hint() override;
   std::string str() override;
 
   torch::lazy::NodePtr node() { return node_; }
 
  private:
   torch::lazy::NodePtr node_;
+  PyType pytype_;
 };
 
 class XLATensor;
@@ -84,25 +116,33 @@ class XLATensor : public torch::lazy::LazyTensor {
          ShardingSpecPtr sharding = nullptr)
         : torch::lazy::LazyTensor::Data(handle, device),
           logical_element_type(logical_element_type),
-          sharding(sharding) {}
+          sharding(sharding) {
+      alias_id = unique_id;
+    }
     Data(torch::lazy::Value ir_value, const torch::lazy::BackendDevice& device,
          c10::optional<at::ScalarType> logical_element_type,
          ShardingSpecPtr sharding = nullptr)
         : torch::lazy::LazyTensor::Data(ir_value, device),
           logical_element_type(logical_element_type),
-          sharding(sharding) {}
+          sharding(sharding) {
+      alias_id = unique_id;
+    }
     Data(at::Tensor tensor_data, const torch::lazy::BackendDevice& device,
          ShardingSpecPtr sharding = nullptr)
         : torch::lazy::LazyTensor::Data(tensor_data, device),
           logical_element_type(tensor_data.scalar_type()),
-          sharding(sharding) {}
+          sharding(sharding) {
+      alias_id = unique_id;
+    }
     Data(std::shared_ptr<View> view, const torch::lazy::BackendDevice& device,
          c10::optional<at::ScalarType> logical_element_type,
          ShardingSpecPtr sharding = nullptr)
         : torch::lazy::LazyTensor::Data(device),
           view(std::move(view)),
           logical_element_type(logical_element_type),
-          sharding(sharding) {}
+          sharding(sharding) {
+      alias_id = unique_id;
+    }
 
     ~Data();
 
@@ -114,6 +154,10 @@ class XLATensor : public torch::lazy::LazyTensor {
     // A copy of the sharding spec is attached to the IR node via
     // `SetShardingSpec` and also during the sync tensor collection.
     ShardingSpecPtr sharding;
+    // This is used to enable XLA's InputOutputAlias. It's inited
+    // with unique_id, and then only get updated during the in-place
+    // op funtionalize pass to point to the input.
+    int64_t alias_id{0};
   };
 
   static XLATensorPtr Create(const at::Tensor& tensor,
@@ -223,8 +267,12 @@ class XLATensor : public torch::lazy::LazyTensor {
   // HloSharding for replication, manual and tile shardings.
   struct ShardingSpec {
     ShardingSpec(const xla::OpSharding& sharding) : sharding(sharding) {}
+    ShardingSpec(const xla::OpSharding& sharding, const xla::Shape& shape)
+        : sharding(sharding), shape(shape) {}
 
     xla::OpSharding sharding;
+    // Optional source tensor shape unpartitioned.
+    std::optional<xla::Shape> shape;
   };
 
   // Annotate the IR value with ShardingSpec.

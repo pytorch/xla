@@ -24,9 +24,9 @@
 #include "tensorflow/compiler/xla/service/hlo_parser.h"
 #include "tensorflow/core/example/example.pb.h"
 #include "tensorflow/core/example/feature.pb.h"
-#include "tensorflow/core/platform/env.h"
-#include "tensorflow/core/profiler/lib/traceme.h"
 #include "tensorflow/python/profiler/internal/profiler_pywrap_impl.h"
+#include "tensorflow/tsl/platform/env.h"
+#include "tensorflow/tsl/profiler/lib/traceme.h"
 #include "third_party/xla_client/computation_client.h"
 #include "third_party/xla_client/mesh_service.h"
 #include "third_party/xla_client/metrics.h"
@@ -345,8 +345,8 @@ void SyncLiveTensors(const std::string& device_str,
 
 void StepMarker(const std::string& device_str,
                 const std::vector<std::string>& devices, bool wait) {
-  tensorflow::profiler::TraceMe activity(
-      "StepMarker", tensorflow::profiler::TraceMeLevel::kInfo);
+  tsl::profiler::TraceMe activity("StepMarker",
+                                  tsl::profiler::TraceMeLevel::kInfo);
   torch::lazy::BackendDevice device = GetDeviceOrCurrent(device_str);
   XLAGraphExecutor::Get()->SyncLiveTensorsGraph(&device, devices, wait);
   XLAGraphExecutor::Get()->MarkStep(device);
@@ -591,17 +591,16 @@ py::object RecordReadExample(
   return example;
 }
 
-std::unique_ptr<tensorflow::RandomAccessFile> OpenTfFile(
-    const std::string& path) {
-  tensorflow::Env* env = tensorflow::Env::Default();
-  std::unique_ptr<tensorflow::RandomAccessFile> file;
+std::unique_ptr<tsl::RandomAccessFile> OpenTfFile(const std::string& path) {
+  tsl::Env* env = tsl::Env::Default();
+  std::unique_ptr<tsl::RandomAccessFile> file;
   XLA_CHECK_OK(env->NewRandomAccessFile(path, &file));
   return file;
 }
 
 py::object StatTfFile(const std::string& path) {
-  tensorflow::Env* env = tensorflow::Env::Default();
-  tensorflow::FileStatistics stat;
+  tsl::Env* env = tsl::Env::Default();
+  tsl::FileStatistics stat;
   {
     NoGilSection nogil;
     XLA_CHECK_OK(env->Stat(path, &stat));
@@ -613,7 +612,7 @@ py::object StatTfFile(const std::string& path) {
   return py_stat;
 }
 
-py::bytes ReadTfFile(tensorflow::RandomAccessFile* file, uint64_t offset,
+py::bytes ReadTfFile(tsl::RandomAccessFile* file, uint64_t offset,
                      size_t size) {
   static const size_t kMinReadSize = 1024 * 1024;
   std::unique_ptr<char[]> buffer;
@@ -633,7 +632,7 @@ py::bytes ReadTfFile(tensorflow::RandomAccessFile* file, uint64_t offset,
         size_t tsize =
             (i + 1 < num_threads) ? block_size : (size - i * block_size);
 
-        tensorflow::StringPiece result;
+        tsl::StringPiece result;
         XLA_CHECK_OK(
             file->Read(offset + base, tsize, &result, buffer.get() + base));
       };
@@ -645,19 +644,18 @@ py::bytes ReadTfFile(tensorflow::RandomAccessFile* file, uint64_t offset,
   return py::bytes(buffer.get(), size);
 }
 
-std::unique_ptr<tensorflow::WritableFile> CreateTfFile(
-    const std::string& path) {
-  tensorflow::Env* env = tensorflow::Env::Default();
-  std::unique_ptr<tensorflow::WritableFile> file;
+std::unique_ptr<tsl::WritableFile> CreateTfFile(const std::string& path) {
+  tsl::Env* env = tsl::Env::Default();
+  std::unique_ptr<tsl::WritableFile> file;
   XLA_CHECK_OK(env->NewWritableFile(path, &file));
   return file;
 }
 
-void WriteTfFile(tensorflow::WritableFile* file, const std::string& data) {
-  XLA_CHECK_OK(file->Append(tensorflow::StringPiece(data.data(), data.size())));
+void WriteTfFile(tsl::WritableFile* file, const std::string& data) {
+  XLA_CHECK_OK(file->Append(tsl::StringPiece(data.data(), data.size())));
 }
 
-void FlushTfFile(tensorflow::WritableFile* file) {
+void FlushTfFile(tsl::WritableFile* file) {
   XLA_CHECK_OK(file->Flush());
   XLA_CHECK_OK(file->Sync());
 }
@@ -666,7 +664,7 @@ py::object ListTfFs(const std::string& pattern) {
   std::vector<std::string> files;
   {
     NoGilSection nogil;
-    tensorflow::Env* env = tensorflow::Env::Default();
+    tsl::Env* env = tsl::Env::Default();
     XLA_CHECK_OK(env->GetMatchingPaths(pattern, &files));
   }
 
@@ -678,7 +676,7 @@ py::object ListTfFs(const std::string& pattern) {
 }
 
 void RemoveTfFile(const std::string& path) {
-  tensorflow::Env* env = tensorflow::Env::Default();
+  tsl::Env* env = tsl::Env::Default();
   XLA_CHECK_OK(env->DeleteFile(path));
 }
 
@@ -853,7 +851,7 @@ void BuildProfilerSubmodule(py::module* m) {
         absl::flat_hash_map<std::string, std::variant<int, std::string>> opts =
             ConvertDictToMap(options);
         std::chrono::seconds sleep_s(interval_s);
-        tensorflow::Status status;
+        tsl::Status status;
         {
           NoGilSection nogil;
           for (int i = 0; i <= timeout_s / interval_s; i++) {
@@ -1374,9 +1372,9 @@ void InitXlaModuleBindings(py::module m) {
           return RecordReadExample(reader);
         });
 
-  py::class_<tensorflow::RandomAccessFile>(m, "TfRdFile");
+  py::class_<tsl::RandomAccessFile>(m, "TfRdFile");
   m.def("_xla_tffile_open", [](const std::string& path) {
-    std::unique_ptr<tensorflow::RandomAccessFile> file;
+    std::unique_ptr<tsl::RandomAccessFile> file;
     {
       NoGilSection nogil;
       file = OpenTfFile(path);
@@ -1387,13 +1385,13 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_xla_tffile_stat",
         [](const std::string& path) { return StatTfFile(path); });
   m.def("_xla_tffile_read",
-        [](tensorflow::RandomAccessFile* file, uint64_t offset, size_t size) {
+        [](tsl::RandomAccessFile* file, uint64_t offset, size_t size) {
           return ReadTfFile(file, offset, size);
         });
 
-  py::class_<tensorflow::WritableFile>(m, "TfWrFile");
+  py::class_<tsl::WritableFile>(m, "TfWrFile");
   m.def("_xla_tffile_create", [](const std::string& path) {
-    std::unique_ptr<tensorflow::WritableFile> file;
+    std::unique_ptr<tsl::WritableFile> file;
     {
       NoGilSection nogil;
       file = CreateTfFile(path);
@@ -1402,11 +1400,11 @@ void InitXlaModuleBindings(py::module m) {
                     pybind11::return_value_policy::take_ownership);
   });
   m.def("_xla_tffile_write",
-        [](tensorflow::WritableFile* file, const std::string& data) {
+        [](tsl::WritableFile* file, const std::string& data) {
           NoGilSection nogil;
           WriteTfFile(file, data);
         });
-  m.def("_xla_tffile_flush", [](tensorflow::WritableFile* file) {
+  m.def("_xla_tffile_flush", [](tsl::WritableFile* file) {
     NoGilSection nogil;
     FlushTfFile(file);
   });
@@ -1519,11 +1517,13 @@ void InitXlaModuleBindings(py::module m) {
                                  const py::list& tile_assignment,
                                  bool replicated = false, bool manual = false) {
     TORCH_LAZY_COUNTER("XlaMarkSharding", 1);
+    XLATensorPtr xtensor = bridge::GetXlaTensor(input);
     xla::OpSharding sharding =
         ShardingUtil::CreateOpSharding(tile_assignment, replicated, manual);
-    auto new_sharding_spec =
-        std::make_shared<XLATensor::ShardingSpec>(sharding);
-    XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+    auto new_sharding_spec = std::make_shared<XLATensor::ShardingSpec>(
+        sharding, MakeShapeWithDeviceLayout(
+                      xtensor->shape(),
+                      static_cast<XlaDeviceType>(xtensor->GetDevice().type())));
 
     at::Tensor cpu_tensor;
     if (xla::sys_util::GetEnvBool("XLA_USE_SPMD", false) &&
@@ -1562,6 +1562,9 @@ void InitXlaModuleBindings(py::module m) {
         std::vector<std::string>{GetVirtualDevice().toString()})[0];
     xtensor->SetXlaData(xla_data);
     xtensor->SetShardingSpec(*new_sharding_spec);
+
+    // Register sharded tensor data.
+    XLAGraphExecutor::Get()->RegisterTensor(xtensor->data());
   });
   m.def("_xla_clear_sharding", [](const at::Tensor& input) {
     XLATensorPtr xtensor = bridge::GetXlaTensor(input);
@@ -1609,6 +1612,10 @@ void InitXlaModuleBindings(py::module m) {
     MapXlaEnvVarsToLazy();
     InitXlaBackend();
   });
+  m.def("_replace_xla_tensor",
+        [](at::Tensor& self, const at::Tensor& source) -> at::Tensor& {
+          return XLANativeFunctions::set_(self, source);
+        });
 
   /* The distributed runtime service is used by the PjRt GPU client. */
   py::class_<xla::DistributedRuntimeService,

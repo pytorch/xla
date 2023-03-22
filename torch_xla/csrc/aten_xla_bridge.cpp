@@ -1,5 +1,8 @@
 #include "torch_xla/csrc/aten_xla_bridge.h"
 
+#include <ATen/FunctionalTensorWrapper.h>
+#include <torch/csrc/lazy/core/tensor_util.h>
+
 #include <map>
 #include <string>
 #include <vector>
@@ -52,7 +55,8 @@ AtenXlaDeviceMapper* AtenXlaDeviceMapper::Get() {
 }
 
 XLATensorImpl* GetXlaTensorImpl(const at::Tensor& tensor) {
-  return dynamic_cast<XLATensorImpl*>(tensor.unsafeGetTensorImpl());
+  auto inner_tensor = torch::lazy::maybe_unwrap_functional(tensor);
+  return dynamic_cast<XLATensorImpl*>(inner_tensor.unsafeGetTensorImpl());
 }
 
 }  // namespace
@@ -77,10 +81,11 @@ XLATensorPtr GetXlaTensor(const at::Tensor& tensor) {
 }
 
 void ReplaceXlaTensor(const at::Tensor& tensor, XLATensorPtr new_xla_tensor) {
+  auto inner_tensor = torch::lazy::maybe_unwrap_functional(tensor);
   XLATensorImpl* impl =
-      dynamic_cast<XLATensorImpl*>(tensor.unsafeGetTensorImpl());
+      dynamic_cast<XLATensorImpl*>(inner_tensor.unsafeGetTensorImpl());
   XLA_CHECK(impl != nullptr)
-      << "Input tensor is not an XLA tensor: " << tensor.toString();
+      << "Input tensor is not an XLA tensor: " << inner_tensor.toString();
   impl->set_tensor(std::move(new_xla_tensor));
 }
 
@@ -108,8 +113,12 @@ XLATensorPtr GetOrCreateXlaTensor(const at::Tensor& tensor,
   if (!tensor.defined()) {
     return XLATensorPtr();
   }
+  auto inner_tensor = torch::lazy::maybe_unwrap_functional(tensor);
+  if (!inner_tensor.defined()) {
+    return XLATensorPtr();
+  }
   auto xtensor = TryGetXlaTensor(tensor);
-  return xtensor ? xtensor : XLATensor::Create(tensor, device);
+  return xtensor ? xtensor : XLATensor::Create(inner_tensor, device);
 }
 
 XLATensorPtr GetOrCreateXlaTensor(const c10::optional<at::Tensor>& tensor,
@@ -118,7 +127,8 @@ XLATensorPtr GetOrCreateXlaTensor(const c10::optional<at::Tensor>& tensor,
     return XLATensorPtr();
   }
   auto xtensor = TryGetXlaTensor(*tensor);
-  return xtensor ? xtensor : XLATensor::Create(*tensor, device);
+  auto inner_tensor = torch::lazy::maybe_unwrap_functional(*tensor);
+  return xtensor ? xtensor : XLATensor::Create(inner_tensor, device);
 }
 
 std::vector<XLATensorPtr> GetOrCreateXlaTensors(
@@ -139,14 +149,16 @@ std::vector<at::Tensor> XlaCreateTensorList(const at::ITensorListRef& tensors) {
   std::vector<bool> to_translate(tensors.size());
   size_t ix = 0;
   for (const auto& tensor : tensors) {
-    if (tensor.defined()) {
-      auto xtensor = TryGetXlaTensor(tensor);
-      if (xtensor) {
-        to_translate[ix] = true;
-        xla_tensors.push_back(xtensor);
-      } else {
-        aten_xla_tensors[ix] = tensor;
-      }
+    if (!tensor.defined()) continue;
+    auto inner_tensor = torch::lazy::maybe_unwrap_functional(tensor);
+    if (!inner_tensor.defined()) continue;
+
+    auto xtensor = TryGetXlaTensor(tensor);
+    if (xtensor) {
+      to_translate[ix] = true;
+      xla_tensors.push_back(xtensor);
+    } else {
+      aten_xla_tensors[ix] = tensor;
     }
     ++ix;
   }
@@ -156,7 +168,12 @@ std::vector<at::Tensor> XlaCreateTensorList(const at::ITensorListRef& tensors) {
   // positions.
   for (size_t i = 0, defined_pos = 0; i < tensors.size(); ++i) {
     if (to_translate[i]) {
-      aten_xla_tensors[i] = std::move(defined_aten_xla_tensors[defined_pos++]);
+      auto tensor = defined_aten_xla_tensors[defined_pos++];
+      XLA_CHECK(!at::functionalization::impl::isFunctionalTensor(tensor))
+          << "Expected non-functional tensor!";
+      // This function is responsible for returning CPU tensors.
+      // So we do not want to wrap the outputs into FunctionalTensorWrappers.
+      aten_xla_tensors[i] = tensor;
     }
   }
   return aten_xla_tensors;
@@ -328,9 +345,23 @@ at::Tensor XlaToAtenTensor(XLATensorPtr xla_tensor,
 }
 
 at::Tensor AtenFromXlaTensor(XLATensorPtr xla_tensor) {
-  return xla_tensor ? at::Tensor(c10::make_intrusive<XLATensorImpl>(
-                          std::move(xla_tensor)))
-                    : at::Tensor();
+  if (xla_tensor) {
+    auto out =
+        at::Tensor(c10::make_intrusive<XLATensorImpl>(std::move(xla_tensor)));
+    // See Note [Lazy Tensor Functionalization]
+    if (c10::impl::tls_local_dispatch_key_set().excluded_.has(
+            c10::DispatchKey::Functionalize)) {
+      // Invariant: if the functionalization key is in the exclude set, then
+      // we're expected to return an ordinary tensor, which will be "lifted"
+      // into a functional wrapper later.
+      return out;
+    } else {
+      auto wrapped = MaybeWrapTensorToFunctional(out);
+      return wrapped;
+    }
+  } else {
+    return at::Tensor();
+  }
 }
 
 std::vector<at::Tensor> AtenFromXlaTensors(

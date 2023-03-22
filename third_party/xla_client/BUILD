@@ -129,10 +129,10 @@ cc_library(
         "@org_tensorflow//tensorflow/core/distributed_runtime:server_lib",
         "@org_tensorflow//tensorflow/core/distributed_runtime/rpc:grpc_runtime",
         "@org_tensorflow//tensorflow/core/kernels:data_flow",
-        "@org_tensorflow//tensorflow/core/profiler/rpc:profiler_server_impl",
-        "@org_tensorflow//tensorflow/core/profiler/rpc/client:profiler_client",
         "@org_tensorflow//tensorflow/core/protobuf/tpu:topology_proto_cc",
         "@org_tensorflow//tensorflow/compiler/xla/stream_executor:stream_executor_impl",
+        "@org_tensorflow//tensorflow/tsl/profiler/rpc:profiler_server_impl",
+        "@org_tensorflow//tensorflow/tsl/profiler/rpc/client:profiler_client",
         "@com_google_absl//absl/numeric:int128",
         "@com_google_absl//absl/strings",
     ] + if_cuda_is_configured([
@@ -157,7 +157,7 @@ cc_library(
     deps = [
         ":tf_logging",
         "@org_tensorflow//tensorflow/compiler/xla:statusor",
-        "@org_tensorflow//tensorflow/core/platform:stacktrace",
+        "@org_tensorflow//tensorflow/tsl/platform:stacktrace",
     ],
     alwayslink = True,
 )
@@ -258,7 +258,7 @@ cc_library(
     srcs = ["profiler.cc"],
     hdrs = ["profiler.h"],
     deps = [
-        "@org_tensorflow//tensorflow/core/profiler/rpc:profiler_server_impl",
+        "@org_tensorflow//tensorflow/tsl/profiler/rpc:profiler_server_impl",
     ],
     alwayslink = True,
 )
@@ -270,9 +270,9 @@ cc_library(
     deps = [
         ":debug_macros",
         "@org_tensorflow//tensorflow/compiler/xla:types",
-        "@org_tensorflow//tensorflow/core/lib/core:errors",
-        "@org_tensorflow//tensorflow/core/lib/io:record_reader",
-        "@org_tensorflow//tensorflow/core/lib/strings:strcat",
+        "@org_tensorflow//tensorflow/tsl/lib/io:record_reader",
+        "@org_tensorflow//tensorflow/tsl/platform:errors",
+        "@org_tensorflow//tensorflow/tsl/platform:strcat",
     ],
     alwayslink = True,
 )
@@ -392,7 +392,7 @@ cc_library(
         "@org_tensorflow//tensorflow/compiler/xla/service:hlo_proto_cc",
         "@org_tensorflow//tensorflow/compiler/xla/service:platform_util",
         "@org_tensorflow//tensorflow/compiler/xla/service/spmd:spmd_partitioner",
-        "@org_tensorflow//tensorflow/core/lib/core:errors",
+        "@org_tensorflow//tensorflow/tsl/platform:errors",
     ],
     alwayslink = True,
 )
@@ -426,8 +426,8 @@ cc_library(
         "@org_tensorflow//tensorflow/compiler/xla/stream_executor/tpu:tpu_initializer_helper",
         "@org_tensorflow//tensorflow/core:lib",
         "@org_tensorflow//tensorflow/core/distributed_runtime:server_lib",
-        "@org_tensorflow//tensorflow/core/lib/core:errors",
-        "@org_tensorflow//tensorflow/core/lib/core:status",
+        "@org_tensorflow//tensorflow/tsl/platform:errors",
+        "@org_tensorflow//tensorflow/tsl/platform:status",
     ],
     alwayslink = True,
 )
@@ -485,7 +485,7 @@ tf_cc_shared_object(
         "@org_tensorflow//tensorflow/compiler/xla/client/lib:svd",
         "@org_tensorflow//tensorflow/compiler/xla/rpc:grpc_stub",
         "@org_tensorflow//tensorflow/core:lib",
-        "@org_tensorflow//tensorflow/core/platform/cloud:gcs_file_system",
+        "@org_tensorflow//tensorflow/tsl/platform/cloud:gcs_file_system",
         "@org_tensorflow//tensorflow/python/profiler/internal:profiler_pywrap_impl",
     ],
 )

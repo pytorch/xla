@@ -25,6 +25,11 @@ class PjRtComputationClient : public ComputationClient {
 
   std::vector<DataPtr> GetDataShards(DataPtr data) override;
 
+  DataPtr WrapDataShards(const std::vector<DataPtr>& shards, std::string device,
+                         xla::Shape shape, xla::OpSharding sharding) override;
+
+  std::optional<xla::OpSharding> GetDataSharding(DataPtr handle) override;
+
   std::vector<DataPtr> TransferToServer(
       absl::Span<const TensorSource> tensors) override;
 
@@ -131,6 +136,9 @@ class PjRtComputationClient : public ComputationClient {
 
  private:
   std::shared_ptr<PjRtClient> client_;
+  // global_ordinals_ tracks a map from PjRtDeviceId to the device's
+  // dense global ordinal.
+  std::unordered_map<int, int> global_ordinals_;
   std::unordered_map<std::string, xla::PjRtDevice* const> string_to_device_;
   std::shared_ptr<std::vector<std::string>> replication_devices_;
   std::unordered_map<std::string, std::unique_ptr<std::shared_mutex>>
@@ -142,6 +150,10 @@ class PjRtComputationClient : public ComputationClient {
   std::shared_lock<std::shared_mutex> lock_device_shared(
       const std::string& device);
   std::unique_lock<std::shared_mutex> lock_device(const std::string& device);
+
+  std::string PjRtDeviceToString(PjRtDevice* const device) const;
+  std::vector<std::string> PjRtDevicesToString(
+      absl::Span<PjRtDevice* const> devices) const;
 
   struct PjRtData : public Data {
     PjRtData(std::string device, Shape device_shape)
@@ -179,7 +191,11 @@ class PjRtComputationClient : public ComputationClient {
     }
 
     void Assign(const Data& data) override {
-      XLA_ERROR() << __FUNCTION__ << " not supported.";
+      const PjRtShardedData& pjrt_sharded_data =
+          dynamic_cast<const PjRtShardedData&>(data);
+      if (&pjrt_sharded_data != this) {
+        shards = std::move(pjrt_sharded_data.shards);
+      }
     }
 
     bool HasValue() const override {
