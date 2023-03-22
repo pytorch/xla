@@ -70,6 +70,7 @@ class Mesh:
   def get_logical_mesh(self):
     return self.device_ids.reshape(self.mesh_shape)
 
+
 @requires_pjrt
 def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
                   partition_spec: Tuple[Union[int, None]]) -> XLAShardedTensor:
@@ -141,6 +142,7 @@ def clear_sharding(t: Union[torch.Tensor, XLAShardedTensor]) -> torch.Tensor:
     return t.global_tensor
   return t
 
+
 @dataclass
 class ShardingSpec:
   mesh: Mesh
@@ -148,6 +150,6 @@ class ShardingSpec:
 
   def apply(self, t: torch.Tensor):
     # TODO(yeounoh) use virtual device interface when available.
-    assert(t.device == xm.xla_device())
-    assert(xu.check_env_flag('XLA_USE_SPMD'))
+    assert (t.device == xm.xla_device())
+    assert (xu.check_env_flag('XLA_USE_SPMD'))
     mark_sharding(t, self.mesh, self.partition_spec)

@@ -231,7 +231,10 @@ def train_imagenet():
         print(
             f'Sharding input images on spatial dimensions with mesh {input_mesh.get_logical_mesh()}'
         )
-      train_loader = pl.MpDeviceLoader(train_loader, device, input_sharding=xs.ShardingSpec(input_mesh, (0, 1, 2, 3)))
+      train_loader = pl.MpDeviceLoader(
+          train_loader,
+          device,
+          input_sharding=xs.ShardingSpec(input_mesh, (0, 1, 2, 3)))
 
   writer = None
   if xm.is_master_ordinal():

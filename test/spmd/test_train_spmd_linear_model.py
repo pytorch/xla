@@ -71,8 +71,8 @@ def train():
   mesh = Mesh(device_ids, mesh_shape, ('x', 'y'))
 
   if 'batch' in FLAGS.sharding:
-    train_loader = pl.MpDeviceLoader(train_loader, device,
-                                     input_sharding=xs.ShardingSpec(mesh, (0, 1)))
+    train_loader = pl.MpDeviceLoader(
+        train_loader, device, input_sharding=xs.ShardingSpec(mesh, (0, 1)))
 
   if 'megatron-lm' in FLAGS.sharding:
     print('Sharding model weights')
