@@ -1004,6 +1004,18 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     # shouldn't crash
     self.assertTrue(torch.allclose(t2.cpu(), torch.zeros(10)))
 
+    print(met.counter_value('CreateXlaTensor'))
+    print(met.counter_value('DestroyXlaTensor'))
+    t3 = torch.zeros(10, device=xm.xla_device())
+    t4 = t3.view((2, 5))
+    t3.add_(1)
+    print(met.counter_value('CreateXlaTensor'))
+    print(met.counter_value('DestroyXlaTensor'))
+    torch_xla._XLAC._replace_xla_tensor(t3, t2)
+    print(met.counter_value('CreateXlaTensor'))
+    print(met.counter_value('DestroyXlaTensor'))
+
+
   def test_pred_type(self):
     xla_device = xm.xla_device()
     a = torch.rand(4)
