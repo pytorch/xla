@@ -130,6 +130,7 @@ def version() -> int:
   match = re.match(r'^v(\d)([A-Za-z]?){7}-(\d+)$', env[xenv.ACCELERATOR_TYPE])
   return int(match.groups()[0])
 
+
 def get_worker_ips() -> List[str]:
   """Returns ordered list of TPU worker IPs from TPU metadata."""
   if _using_env_vars():
