@@ -705,7 +705,6 @@ class XlaFullyShardedDataParallel(nn.Module):
       # Free the full parameter storage (here we free its internal XLATensor) but keep the tensor itself
       # for auto-grad tracing (like `torch.autograd.Variable` before the tensor-variable merge).
       torch_xla._XLAC.unregister_xla_tensor(p)
-      torch_xla._XLAC._replace_xla_tensor(p, p.new_zeros(1))
       p._sharded_param = p_shard  # add a handle to the sharded parameter
       p._has_full_param = False
       # deregister the full parameter tensors from their modules (so that they won't
@@ -1447,7 +1446,6 @@ class XlaFullyShardedDataParallel(nn.Module):
         # free the original full parameter
         with torch.autograd._unsafe_preserve_version_counter(p):
           torch_xla._XLAC.unregister_xla_tensor(p)
-          torch_xla._XLAC._replace_xla_tensor(p, self._dummy_data_placeholder)
         p._has_full_param = False
 
     if apply_opt_barrier:
