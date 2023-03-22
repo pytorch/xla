@@ -20,11 +20,11 @@
       dest: "{{ (src_root, 'pytorch/xla') | path_join }}"
       version: "{{ xla_git_rev }}"
 
-- name: Find *.diff files in pytorch/xla/tf_patches
+- name: Find *.diff files in pytorch/xla/openxla_patches
   ansible.builtin.find:
-    path: "{{ (src_root, 'pytorch/xla/tf_patches') | path_join }}"
+    path: "{{ (src_root, 'pytorch/xla/openxla_patches') | path_join }}"
     pattern: "*.diff"
-  register: tf_patches
+  register: openxla_patches
 
 - name: Apply patches to Tensorflow
   ansible.posix.patch:
@@ -36,7 +36,7 @@
     strip: 1
     ignore_whitespace: true
     basedir: "{{ (src_root, 'pytorch/xla/third_party/tensorflow') | path_join }}"
-  loop: "{{ tf_patches.files | map(attribute='path') }}"
+  loop: "{{ openxla_patches.files | map(attribute='path') }}"
   ignore_errors: true
 
 - name: "Tests"

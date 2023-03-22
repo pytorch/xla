@@ -243,7 +243,9 @@ function build_and_install_torch() {
   # Only checkout dependencies once PT commit/branch checked out.
   git submodule update --init --recursive
   # Apply patches to PT which are required by the XLA support.
+  print("before apply the patches**************************************************")
   xla/scripts/apply_patches.sh
+  print("after applied the patches**************************************************")
 
   if [[ $(uname -m) == "aarch64" ]]; then
     # use mkldnn and acl backend for aarch64

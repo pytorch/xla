@@ -256,16 +256,25 @@ version = get_build_version(xla_git_sha)
 build_mode = _get_build_mode()
 if build_mode not in ['clean']:
   # Generate version info (torch_xla.__version__).
+  print("Generate version info ***********************************************")
   create_version_files(base_dir, version, xla_git_sha, torch_git_sha)
+  print("Generated version info ***********************************************")
 
   # Generate Lazy related files
+  print("Generate Lazy related files ***********************************************")
   generate_xla_lazy_code(base_dir)
+  print("Generated Lazy related files ***********************************************")
 
-  # Build the support libraries (ie, TF).
+  # Build the support libraries (ie, OpenXLA).
+  print("Build the support libraries (ie, OpenXLA). ***********************************************")
   build_extra_libraries(base_dir, build_mode=build_mode)
+  print("Built the support libraries (ie, OpenXLA). ***********************************************")
+ 
 
   # Copy libtpu.so into torch_xla/lib
+  print("Copy libtpu.so into torch_xla/lib. ***********************************************")
   maybe_bundle_libtpu(base_dir)
+  print("Copied libtpu.so into torch_xla/lib. ***********************************************")
 
 # Fetch the sources to be built.
 torch_xla_sources = (
@@ -277,6 +286,8 @@ torch_xla_sources = (
 lib_path = os.path.join(base_dir, 'torch_xla/lib')
 pytorch_source_path = os.getenv('PYTORCH_SOURCE_PATH',
                                 os.path.dirname(base_dir))
+
+print("Include dirs ***********************************************")
 
 # Setup include directories folders.
 include_dirs = [
@@ -300,6 +311,8 @@ include_dirs += [
     os.path.join(pytorch_source_path, 'torch/csrc'),
     os.path.join(pytorch_source_path, 'torch/lib/tmp_install/include'),
 ]
+
+print("Included dirs ***********************************************")
 
 library_dirs = []
 library_dirs.append(lib_path)
@@ -338,6 +351,8 @@ else:
   extra_compile_args += ['-DNDEBUG']
 
 extra_link_args += ['-lxla_computation_client']
+
+print("before setup ***********************************************")
 
 setup(
     name=os.environ.get('TORCH_XLA_PACKAGE_NAME', 'torch_xla'),
@@ -382,3 +397,5 @@ setup(
         'build_ext': Build,
         'clean': Clean,
     })
+
+print("finish setup ***********************************************")
