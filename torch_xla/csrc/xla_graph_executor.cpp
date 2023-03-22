@@ -1080,7 +1080,7 @@ XLAGraphExecutor::BuildInputOutputAliases(
         static_cast<torch::lazy::LazyGraphExecutor::DeviceDataInfo*>(
             parameters_data[i]->info());
     if (data_info != nullptr && !data_info->read_only) {
-      auto it = output_tensor_id_map.find(data_info->tensor_id);
+      auto it = output_tensor_id_map.find(data_info->alias_id);
       // Parameter buffer's TensorId in output_tensor_id_map means
       // this buffer is not needed after execution since XLATensor will get a
       // new buffer.

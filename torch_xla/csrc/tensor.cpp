@@ -337,7 +337,7 @@ torch::lazy::Value XLATensor::GetIrValue() const {
     // will still collapse them all into a single XLA parameter op). So call
     // which wants the XLA data will still find it, w/out having to fetch it
     // via a computation client from-server call.
-    AssignIrValue(CreateTensorNode(handle, /*read_only=*/false));
+    AssignIrValue(CreateTensorNode(handle, /*read_only=*/false, data()->alias_id));
     return data()->ir_value;
   }
   c10::optional<at::Tensor> tensor_data = CurrentTensorData();
@@ -376,7 +376,7 @@ torch::lazy::Value XLATensor::GetIrValueForTensor(
     TORCH_LAZY_TIMED("IrValueTensorToXlaData");
     data = TensorToXlaData(tensor, device);
   }
-  return CreateTensorNode(std::move(data), read_only);
+  return CreateTensorNode(std::move(data), read_only, this->data()->alias_id);
 }
 
 View::IrNode XLATensor::GetViewUpdate(const std::shared_ptr<View>& view) const {
