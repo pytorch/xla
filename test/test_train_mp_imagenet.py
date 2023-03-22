@@ -60,7 +60,7 @@ MODEL_OPTS = {
     '--amp': {
         'action': 'store_true',
     },
-    # Using zero gradients optimization for AMP
+    # Using zero gradients optimization for AMP GPU GradScaler
     '--use_zero_grad': {
         'action': 'store_true',
     },
@@ -307,12 +307,12 @@ def train_imagenet():
       summary_writer=writer)
   loss_fn = nn.CrossEntropyLoss()
   if FLAGS.amp:
-    if device_hw == 'GPU':
+    if device_hw == 'TPU':
         autocast = torch.xla.amp.autocast
         scaler = None
-    elif device_hw == 'TPU':
+    elif device_hw == 'GPU':
         autocast = torch.cuda.amp.autocast
-        # GradScaler only used for GPU
+        # GradScaler only used for float16 (GPU)
         scaler = GradScaler(use_zero_grad=FLAGS.use_zero_grad)
 
   if FLAGS.profile:
@@ -325,14 +325,14 @@ def train_imagenet():
       with xp.StepTrace('train_imagenet'):
         with xp.Trace('build_graph'):
           optimizer.zero_grad()
-          if FLAGS.AMP:
+          if FLAGS.amp:
             with autocast():
               output = model(data)
               loss = loss_fn(output, target)
           else:
             output = model(data)
             loss = loss_fn(output, target)
-          if FLAGS.AMP and scaler:
+          if FLAGS.amp and scaler:
             scaler.scale(loss).backward()
             gradients = xm._fetch_gradients(optimizer)
             xm.all_reduce('sum', gradients, scale=1.0/xm.xrt_world_size())
