@@ -158,6 +158,8 @@ class XLATensor : public torch::lazy::LazyTensor {
     // with unique_id, and then only get updated during the in-place
     // op funtionalize pass to point to the input.
     int64_t alias_id{0};
+
+    std::vector<Data*> predecessors;
   };
 
   static XLATensorPtr Create(const at::Tensor& tensor,

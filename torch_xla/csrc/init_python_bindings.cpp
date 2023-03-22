@@ -1620,6 +1620,9 @@ void InitXlaModuleBindings(py::module m) {
       [](const at::Tensor& self) -> void {
         XLATensorPtr source_tensor = bridge::GetXlaTensor(self);
         XLAGraphExecutor::Get()->UnregisterTensor(source_tensor->data().get());
+        for (auto* data : source_tensor->data()->predecessors) {
+          XLAGraphExecutor::Get()->UnregisterTensor(data);
+        }
       });
 
   /* The distributed runtime service is used by the PjRt GPU client. */

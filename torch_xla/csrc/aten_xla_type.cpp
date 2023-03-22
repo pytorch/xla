@@ -2373,6 +2373,9 @@ void XLANativeFunctions::_propagate_xla_data(const at::Tensor& input,
   if (input_tensor->sharding_spec()) {
     output_tensor->SetShardingSpec(*(input_tensor->sharding_spec()));
   }
+
+  output_tensor->data()->predecessors = input_tensor->data()->predecessors;
+  output_tensor->data()->predecessors.push_back(input_tensor->data().get());
 }
 
 at::Tensor& XLANativeFunctions::put_(at::Tensor& self, const at::Tensor& index,
