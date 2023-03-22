@@ -127,7 +127,7 @@ def version() -> int:
   except requests.HTTPError as e:
     raise EnvironmentError('Failed to get TPU metadata') from e
 
-  match = re.match(r'^v(\d).*', env[xenv.ACCELERATOR_TYPE])
+  match = re.match(r'^v(\d)([A-Za-z]?){7}-(\d+)$', env[xenv.ACCELERATOR_TYPE])
   return int(match.group()[1])
 
 
