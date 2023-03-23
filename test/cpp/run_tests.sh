@@ -6,6 +6,7 @@ BUILDTYPE="Release"
 VERB=
 FILTER=
 BUILD_ONLY=0
+USE_COVERAGE=1
 RMBUILD=1
 LOGFILE=/tmp/pytorch_cpp_test.log
 XLA_EXPERIMENTAL="nonzero:masked_select"
@@ -67,6 +68,11 @@ if [ $BUILD_ONLY -eq 0 ]; then
     ./test_ptxla ${FILTER:+"$FILTER"}
   fi
 fi
+
+if [ $USE_COVERAGE -eq 1 ]; then
+  make -j coverage
+fi
+
 popd
 if [ $RMBUILD -eq 1 -a $BUILD_ONLY -eq 0 ]; then
   rm -rf "$BUILDDIR"

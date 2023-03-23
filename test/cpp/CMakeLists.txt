@@ -44,6 +44,9 @@ ExternalProject_Add(
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
 
+# Build with coverage symbols
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-arcs -ftest-coverage")
+
 ExternalProject_Get_Property(googletest SOURCE_DIR)
 
 set(TORCH_XLA_TEST_SOURCES
@@ -139,3 +142,7 @@ target_link_libraries(
   -pthread
   -lstdc++
   -ldl)
+
+add_custom_target(coverage
+    COMMAND lcov --directory . --base-directory . --gcov-tool get_coverage.sh --capture -o cov.info
+    DEPENDS test_ptxla

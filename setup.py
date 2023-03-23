@@ -330,6 +330,12 @@ if re.match(r'clang', os.getenv('CC', '')):
       '-Wno-macro-redefined',
       '-Wno-return-std-move',
   ]
+  if DEBUG:
+    extra_compile_args += [
+      '-fprofile-arcs',
+      '-ftest-coverage',
+    ]
+    extra_link_args += ['--coverage']
 
 if DEBUG:
   extra_compile_args += ['-O0', '-g']
