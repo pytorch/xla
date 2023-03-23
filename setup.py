@@ -4,7 +4,7 @@
 # Environment variables you are probably interested in:
 #
 #   DEBUG
-#     build with -O0 and -g (debug symbols)
+#     build with debug symbols
 #
 #   TORCH_XLA_VERSION
 #     specify the version of PyTorch/XLA, rather than the hard-coded version
