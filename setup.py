@@ -40,6 +40,9 @@
 #   SILO_NAME=""
 #     name of the remote build cache silo
 #
+#   CXX_ABI=""
+#     value for cxx_abi flag; if empty, it is infered from `torch._C`.
+#
 
 from __future__ import print_function
 
@@ -199,7 +202,7 @@ CACHE_SILO_NAME = os.getenv('SILO_NAME', default='dev')
 BAZEL_JOBS = os.getenv('BAZEL_JOBS', default='')
 
 extra_compile_args = []
-cxx_abi = getattr(torch._C, '_GLIBCXX_USE_CXX11_ABI', None)
+cxx_abi = os.getenv('CXX_ABI', default='') or getattr(torch._C, '_GLIBCXX_USE_CXX11_ABI', None)
 if cxx_abi is not None:
   extra_compile_args += ['-D_GLIBCXX_USE_CXX11_ABI={}'.format(int(cxx_abi))]
 
