@@ -18,7 +18,7 @@ bool hlo_mhlo_helper(const HloModuleProto* proto, mlir::ModuleOp* mlir_module) {
   }
   if (!mlir::verify(*mlir_module).succeeded()) {
     std::cout << "mhlo from hlo2mhlo verify not ok" << std::endl;
-    printHloModuleProto(proto);
+    // printHloModuleProto(proto);
     return false;
   }
   return true;
@@ -42,8 +42,8 @@ bool mhlo_stablehlo_helper(mlir::ModuleOp* mlir_module, mlir::MLIRContext* conte
   pm.addPass(mlir::mhlo::createHloLegalizeToStablehloPass());
   if (!mlir::succeeded(pm.run(*mlir_module))) {
     std::cout << "mhlo to stablehlo not ok" << std::endl;
-    std::cout << "stablehlo dump: " << std::endl;
-    mlir_module->dump();
+    // std::cout << "stablehlo dump: " << std::endl;
+    // mlir_module->dump();
     return false;
   }
   return true;
@@ -54,8 +54,8 @@ bool stablehlo_mhlo_helper(mlir::ModuleOp* mlir_module, mlir::MLIRContext* conte
   pm.addPass(mlir::mhlo::createStablehloLegalizeToHloPass());
   if (!mlir::succeeded(pm.run(*mlir_module))) {
     std::cout << "mhlo to stablehlo not ok" << std::endl;
-    std::cout << "mhlo dump: " << std::endl;
-    mlir_module->dump();
+    // std::cout << "mhlo dump: " << std::endl;
+    // mlir_module->dump();
     return false;
   }
   return true;
