@@ -119,7 +119,7 @@ build --java_runtime_version=remotejdk_11
 # Coverage requires Java and GCC.
 coverage --config=coverage
 coverage --build_tests_only
-coverage --instrumentation_filter=".*"
+coverage --instrumentation_filter="//torch_xla/,//third_party/"
 build:coverage --copt=-DNDEBUG
 build:coverage --combined_report=lcov
 build:coverage --strategy=CoverageReport=sandboxed,local
