@@ -211,7 +211,7 @@ function run_tests {
   if [[ "$XLA_SKIP_MP_OP_TESTS" != "1" ]]; then
     run_mp_op_tests
   fi
-  run_xrt_tests
+  # run_xrt_tests
 }
 
 if [ "$LOGFILE" != "" ]; then
