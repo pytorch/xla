@@ -1390,9 +1390,21 @@
   <span class="k">return</span> <span class="n">ToXlaTensorArena</span><span class="p">(</span><span class="n">convert_fn</span><span class="p">,</span> <span class="n">select_fn</span><span class="p">)</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 
 
-<span class="k">def</span> <span class="nf">send_cpu_data_to_device</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">send_cpu_data_to_device</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="n">input_sharding</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+  <span class="k">if</span> <span class="n">input_sharding</span><span class="p">:</span>
+
+    <span class="k">def</span> <span class="nf">apply_input_sharding</span><span class="p">(</span><span class="n">instance</span><span class="p">):</span>
+      <span class="k">assert</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">instance</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">),</span> \
+        <span class="sa">f</span><span class="s2">&quot;Expected input data and label pair, but got </span><span class="si">{</span><span class="n">instance</span><span class="si">}</span><span class="s2">.&quot;</span>
+      <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">instance</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">),</span> <span class="n">instance</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+      <span class="n">input_sharding</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+      <span class="k">return</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span>
+
+    <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">apply_input_sharding</span><span class="p">,</span> <span class="n">data</span><span class="p">))</span>
 
   <span class="k">def</span> <span class="nf">convert_fn</span><span class="p">(</span><span class="n">tensors</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">input_sharding</span><span class="p">:</span>
+      <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">input_sharding</span><span class="o">.</span><span class="n">apply</span><span class="p">,</span> <span class="n">tensors</span><span class="p">))</span>
     <span class="n">devices</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">device</span><span class="p">)]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">tensors</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_tensors_from_aten</span><span class="p">(</span><span class="n">tensors</span><span class="p">,</span> <span class="n">devices</span><span class="p">)</span>
 
