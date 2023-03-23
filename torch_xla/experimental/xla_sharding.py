@@ -1,7 +1,10 @@
+import os
 from collections import OrderedDict
+from dataclasses import dataclass
 import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
+import torch_xla.utils.utils as xu
 import torch_xla.experimental.pjrt as pjrt
 from torch_xla.experimental.xla_sharded_tensor import XLAShardedTensor
 from torch_xla.experimental.pjrt import requires_pjrt
@@ -138,3 +141,15 @@ def clear_sharding(t: Union[torch.Tensor, XLAShardedTensor]) -> torch.Tensor:
   if isinstance(t, XLAShardedTensor):
     return t.global_tensor
   return t
+
+
+@dataclass
+class ShardingSpec:
+  mesh: Mesh
+  partition_spec: Tuple[Union[int, None]]
+
+  def apply(self, t: torch.Tensor):
+    # TODO(yeounoh) use virtual device interface when available.
+    assert (t.device == xm.xla_device())
+    assert (xu.check_env_flag('XLA_USE_SPMD'))
+    mark_sharding(t, self.mesh, self.partition_spec)
