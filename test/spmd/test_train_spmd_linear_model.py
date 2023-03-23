@@ -5,6 +5,7 @@ from torch import nn
 import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.profiler as xp
+import torch_xla.distributed.parallel_loader as pl
 import torch_xla.experimental.xla_sharding as xs
 import torch_xla.utils.utils as xu
 from torch_xla.experimental.xla_sharding import Mesh
@@ -69,6 +70,10 @@ def train():
   device_ids = np.arange(num_devices)
   mesh = Mesh(device_ids, mesh_shape, ('x', 'y'))
 
+  if 'batch' in FLAGS.sharding:
+    train_loader = pl.MpDeviceLoader(
+        train_loader, device, input_sharding=xs.ShardingSpec(mesh, (0, 1)))
+
   if 'megatron-lm' in FLAGS.sharding:
     print('Sharding model weights')
     # Shard the first layer's weights row-wise
@@ -87,10 +92,6 @@ def train():
         with xp.Trace('build_graph'):
           data = data.to(device)
           target = target.to(device)
-          if 'batch' in FLAGS.sharding:
-            # All devices are along axis 0, which corresponds to the
-            # batch axis for the input
-            xs.mark_sharding(data, mesh, (0, 1))
           optimizer.zero_grad()
           output = model(data)
           loss = loss_fn(output, target)

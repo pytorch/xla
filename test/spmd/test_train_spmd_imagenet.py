@@ -207,29 +207,34 @@ def train_imagenet():
           xs.mark_sharding(layer.weight, mesh, partition_spec)
 
     # Input sharding
-    if 'batch' in FLAGS.sharding and 'spatial' in FLAGS.sharding:
-      # Shard along both the batch dimension and spatial dimension
-      # If there are more than 4 devices, shard along the height axis as well
-      width_axis, height_axis = 2, num_devices // 4
-      mesh_shape = (2, 1, width_axis, height_axis)
-      input_mesh = xs.Mesh(device_ids, mesh_shape, ('B', 'C', 'W', 'H'))
-      print(
-          f'Sharding input along batch and spatial dimensions with mesh {input_mesh.get_logical_mesh()}'
-      )
-    elif 'batch' in FLAGS.sharding:
-      # Shard along batch dimension only
-      mesh_shape = (num_devices, 1, 1, 1)
-      input_mesh = xs.Mesh(device_ids, mesh_shape, ('B', 'C', 'W', 'H'))
-      print(
-          f'Sharding input along batch dimension with mesh {input_mesh.get_logical_mesh()}'
-      )
-    elif 'spatial' in FLAGS.sharding:
-      # Shard two-way along input spatial dimensions
-      mesh_shape = (1, 1, num_devices // 2, 2)
-      input_mesh = xs.Mesh(device_ids, mesh_shape, ('B', 'C', 'W', 'H'))
-      print(
-          f'Sharding input images on spatial dimensions with mesh {input_mesh.get_logical_mesh()}'
-      )
+    if 'batch' in FLAGS.sharding or 'spatial' in FLAGS.sharding:
+      if 'batch' in FLAGS.sharding and 'spatial' in FLAGS.sharding:
+        # Shard along both the batch dimension and spatial dimension
+        # If there are more than 4 devices, shard along the height axis as well
+        width_axis, height_axis = 2, num_devices // 4
+        mesh_shape = (2, 1, width_axis, height_axis)
+        input_mesh = xs.Mesh(device_ids, mesh_shape, ('B', 'C', 'W', 'H'))
+        print(
+            f'Sharding input along batch and spatial dimensions with mesh {input_mesh.get_logical_mesh()}'
+        )
+      elif 'batch' in FLAGS.sharding:
+        # Shard along batch dimension only
+        mesh_shape = (num_devices, 1, 1, 1)
+        input_mesh = xs.Mesh(device_ids, mesh_shape, ('B', 'C', 'W', 'H'))
+        print(
+            f'Sharding input along batch dimension with mesh {input_mesh.get_logical_mesh()}'
+        )
+      elif 'spatial' in FLAGS.sharding:
+        # Shard two-way along input spatial dimensions
+        mesh_shape = (1, 1, num_devices // 2, 2)
+        input_mesh = xs.Mesh(device_ids, mesh_shape, ('B', 'C', 'W', 'H'))
+        print(
+            f'Sharding input images on spatial dimensions with mesh {input_mesh.get_logical_mesh()}'
+        )
+      train_loader = pl.MpDeviceLoader(
+          train_loader,
+          device,
+          input_sharding=xs.ShardingSpec(input_mesh, (0, 1, 2, 3)))
 
   writer = None
   if xm.is_master_ordinal():
@@ -256,9 +261,6 @@ def train_imagenet():
     for step, (data, target) in enumerate(loader):
       data = data.to(xm.xla_device())
       target = target.to(xm.xla_device())
-      if input_mesh:
-        partition_spec = (0, 1, 2, 3)
-        xs.mark_sharding(data, input_mesh, partition_spec)
       with xp.StepTrace('train_imagenet'):
         with xp.Trace('build_graph'):
           optimizer.zero_grad()
