@@ -15,8 +15,6 @@ ARG tpuvm=""
 ARG bazel_jobs=""
 ARG git_clone="true"
 
-ENV BUILD_CPP_TESTS "${build_cpp_tests}"
-
 RUN apt-get update
 RUN apt-get install -y git sudo python3-pip
 # To enable `base_image=ubuntu:focal`

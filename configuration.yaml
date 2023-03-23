@@ -181,11 +181,6 @@ variables:
           Tensorflow, or JAX.
       type: string
       default_value: "PyTorch/XLA"
-    XLA_DEBUG:
-      description:
-        - Whether or not to build xla and the xrt client in debug mode.
-      type: bool
-      default_value: false
     XLA_BAZEL_VERBOSE:
       description:
         - Turn on verbose messages during the bazel build of the xla/xrt client.
