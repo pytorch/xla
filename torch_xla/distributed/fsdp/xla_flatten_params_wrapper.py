@@ -27,6 +27,8 @@ import torch
 from torch import Tensor
 import torch.nn as nn
 
+import torch_xla.debug.profiler as xp
+
 # Static type.
 State = namedtuple(
     'State',
@@ -520,6 +522,7 @@ class XlaFlattenParamsWrapper(nn.Module):
         del state_dict["flat_param"]
       return super().load_state_dict(state_dict, strict)
 
+  @xp.trace_me("flatten forward")
   def forward(self, *inputs: Any, **kwinputs: Any) -> Any:
     self._unflatten_params_as_views()
     return self.module(*inputs, **kwinputs)

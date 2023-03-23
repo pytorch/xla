@@ -39,6 +39,8 @@ from .utils import dummy_all_gather, dummy_all_reduce, dummy_reduce_scatter, app
 from .wrap import recursive_wrap
 from ._init_utils import _materialize_module
 
+import torch_xla.debug.profiler as xp
+
 FLOAT_DTYPES = [torch.float32, torch.float16, torch.bfloat16]
 
 
@@ -900,6 +902,7 @@ class XlaFullyShardedDataParallel(nn.Module):
         m._backward_opt_barrier_tensors = self._backward_opt_barrier_tensors
         m._backward_opt_barrier_tensor_ids = self._backward_opt_barrier_tensor_ids
 
+  @xp.trace_me("fsdp forward")
   def forward(self, *args: Any, **kwargs: Any) -> torch.Tensor:
     self._lazy_init()
 
@@ -1366,6 +1369,7 @@ class XlaFullyShardedDataParallel(nn.Module):
       xm.mark_step()
 
   @torch.no_grad()
+  @xp.trace_me("fsdp _rebuild_full_params")
   def _rebuild_full_params(self,
                            dependency_tensors: Optional[List[
                                torch.Tensor]] = None,
@@ -1390,36 +1394,42 @@ class XlaFullyShardedDataParallel(nn.Module):
 
     for p, p_shard in zip(self.full_params, self.sharded_params):
       if not p._has_full_param:
-        p_shard_data = p_shard.detach()
+        with xp.Trace("detach"):
+          p_shard_data = p_shard.detach()
         if apply_opt_barrier:
           self.optimization_barrier_op([p_shard_data])
         if p_shard_data.dtype != self.compute_dtype:
-          p_shard_data = p_shard_data.to(self.compute_dtype)
-        if self._shard_param_on_dim_0 or self._shard_size_multiple == 1:
-          p_padded = self.all_gather_op(
-              p_shard_data, groups=self.sharding_groups)
-        else:
-          # gather full parameter from shards
-          # reshape sharded parameters to 2d tensors for efficient gathering on
-          # TPUs (see https://github.com/pytorch/xla/issues/3510 for details).
-          p_shard_2d = p_shard_data.view(-1, self._shard_size_multiple)
-          p_padded = self.all_gather_op(
-              p_shard_2d, groups=self.sharding_groups).flatten()
-        if apply_opt_barrier:
-          self.optimization_barrier_op([p_padded])
-        with torch.autograd._unsafe_preserve_version_counter(p):
-          if self._shard_param_on_dim_0:
-            torch_xla._XLAC._replace_xla_tensor(
-                p, p_padded[:p_shard._orig_size[0]])
+          with xp.Trace("to"):
+            p_shard_data = p_shard_data.to(self.compute_dtype)
+        with xp.Trace("all_gather"):
+          if self._shard_param_on_dim_0 or self._shard_size_multiple == 1:
+            p_padded = self.all_gather_op(
+                p_shard_data, groups=self.sharding_groups)
           else:
-            torch_xla._XLAC._replace_xla_tensor(
-                p,
-                p_padded[:p_shard._orig_size.numel()].view(p_shard._orig_size))
+            # gather full parameter from shards
+            # reshape sharded parameters to 2d tensors for efficient gathering on
+            # TPUs (see https://github.com/pytorch/xla/issues/3510 for details).
+            p_shard_2d = p_shard_data.view(-1, self._shard_size_multiple)
+            p_padded = self.all_gather_op(
+                p_shard_2d, groups=self.sharding_groups).flatten()
+
+        with xp.Trace("index"):
+          if apply_opt_barrier:
+            self.optimization_barrier_op([p_padded])
+          with torch.autograd._unsafe_preserve_version_counter(p):
+            if self._shard_param_on_dim_0:
+              torch_xla._XLAC._replace_xla_tensor(
+                  p, p_padded[:p_shard._orig_size[0]])
+            else:
+              torch_xla._XLAC._replace_xla_tensor(
+                  p,
+                  p_padded[:p_shard._orig_size.numel()].view(p_shard._orig_size))
         p._has_full_param = True
 
     self.has_full_params = True
 
   @torch.no_grad()
+  @xp.trace_me("fsdp _free_full_params")
   def _free_full_params(self,
                         params: Optional[List[Parameter]] = None,
                         dependency_tensors: Optional[List[torch.Tensor]] = None,
@@ -1685,7 +1695,7 @@ def _calc_grad_norm(parameters: List[torch.nn.Parameter],
         p)
   return local_norm
 
-
+@xp.trace_me("fsdp _cast_floats_tensors")
 def _cast_floats_tensors(dtype: torch.dtype, *args: Any,
                          **kwargs: Any) -> Tuple[Any, Any]:
   """
