@@ -366,9 +366,9 @@ class ComputationClient {
 
   static ComputationClient* GetIfInitialized();
 
-  void hlo_mhlo_hlo_roundtrip_helper(HloModuleProto* proto);
+  void hlo_mhlo_hlo_roundtrip_helper(HloModuleProto* proto, bool dump=false);
 
-  void hlo_stablehlo_hlo_roundtrip_helper(HloModuleProto* proto);
+  void hlo_stablehlo_hlo_roundtrip_helper(HloModuleProto* proto, bool dump=false);
   
   void roundtrip_helper(HloModuleProto* proto);
 

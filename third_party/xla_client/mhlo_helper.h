@@ -10,10 +10,6 @@ class MLIRContext;
 
 namespace xla {
 
-// void hlo_mhlo_hlo_roundtrip_helper(HloModuleProto* proto);
-
-// void hlo_stablehlo_hlo_roundtrip_helper(HloModuleProto* proto);
-
 void printHloModuleProto(const HloModuleProto* proto);
 
 bool hlo_mhlo_helper(const HloModuleProto* proto, mlir::ModuleOp* mlir_module);

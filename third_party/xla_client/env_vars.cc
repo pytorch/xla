@@ -26,6 +26,7 @@ const char* const kEnvTpuLibraryPath = "TPU_LIBRARY_PATH";
 const char* const kEnvPjrtDistServiceAddr = "PJRT_DIST_SERVICE_ADDR";
 const char* const kEnvPjRtLocalRank = "PJRT_LOCAL_PROCESS_RANK";
 const char* const kEnvHloRoundTripType = "HLO_ROUNDTRIP_TYPE";
+const char* const kEnvHloRoundTripDump = "HLO_ROUNDTRIP_DUMP";
 
 }  // namespace env
 }  // namespace xla

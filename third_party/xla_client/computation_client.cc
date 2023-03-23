@@ -349,9 +349,12 @@ ComputationClient* ComputationClient::GetIfInitialized() {
   return g_computation_client.load();
 }
 
-void ComputationClient::hlo_mhlo_hlo_roundtrip_helper(HloModuleProto* proto) {
+void ComputationClient::hlo_mhlo_hlo_roundtrip_helper(HloModuleProto* proto, bool dump) {
+  if (dump) {
+    std::cout << "before conversion" << std::endl;
+    printHloModuleProto(proto);
+  }
   metrics::TimedSection timed(HloMhloRoundTripMetric());
-  // ::xla::hlo_mhlo_hlo_roundtrip_helper(proto);
   mlir::MLIRContext context;
   mlir::ModuleOp mlir_module = mlir::ModuleOp::create(mlir::UnknownLoc::get(&context));
   {
@@ -367,14 +370,19 @@ void ComputationClient::hlo_mhlo_hlo_roundtrip_helper(HloModuleProto* proto) {
       return;
     }
   }
+  if (dump) {
+    std::cout << "after conversion" << std::endl;
+    printHloModuleProto(&hlo_proto.hlo_module());
+  }
   proto->Swap(hlo_proto.mutable_hlo_module());
 }
 
-void ComputationClient::hlo_stablehlo_hlo_roundtrip_helper(HloModuleProto* proto) {
-  // std::cout << "before conversion" << std::endl;
-  // printHloModuleProto(proto);
+void ComputationClient::hlo_stablehlo_hlo_roundtrip_helper(HloModuleProto* proto, bool dump) {
+  if (dump) {
+    std::cout << "before conversion" << std::endl;
+    printHloModuleProto(proto);
+  }
   metrics::TimedSection timed(HloStableHloRoundTripMetric());
-  // ::xla::hlo_mhlo_hlo_roundtrip_helper(proto);
   mlir::MLIRContext context;
   mlir::ModuleOp mlir_module = mlir::ModuleOp::create(mlir::UnknownLoc::get(&context));
   {
@@ -404,18 +412,21 @@ void ComputationClient::hlo_stablehlo_hlo_roundtrip_helper(HloModuleProto* proto
       return;
     }
   }
-  // std::cout << "after conversion" << std::endl;
-  // printHloModuleProto(&hlo_proto.hlo_module());
+  if (dump) {
+    std::cout << "after conversion" << std::endl;
+    printHloModuleProto(&hlo_proto.hlo_module());
+  }
   proto->Swap(hlo_proto.mutable_hlo_module());
 }
 
 void ComputationClient::roundtrip_helper(HloModuleProto* proto) {
   std::string roundtripType =
       sys_util::GetEnvString(env::kEnvHloRoundTripType, "STABLEHLO");
+  int dump = sys_util::GetEnvInt(env::kEnvHloRoundTripDump, 0);
   if (roundtripType == "MHLO") {
-    hlo_mhlo_hlo_roundtrip_helper(proto);
+    hlo_mhlo_hlo_roundtrip_helper(proto, dump);
   } else {
-    hlo_stablehlo_hlo_roundtrip_helper(proto);
+    hlo_stablehlo_hlo_roundtrip_helper(proto, dump);
   }
 }
 

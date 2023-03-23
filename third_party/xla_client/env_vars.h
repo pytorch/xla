@@ -26,6 +26,7 @@ extern const char* const kEnvTpuLibraryPath;
 extern const char* const kEnvPjrtDistServiceAddr;
 extern const char* const kEnvPjRtLocalRank;
 extern const char* const kEnvHloRoundTripType;
+extern const char* const kEnvHloRoundTripDump;
 
 }  // namespace env
 }  // namespace xla
