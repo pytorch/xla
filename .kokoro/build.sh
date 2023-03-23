@@ -21,19 +21,26 @@ curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.11.0/bazeli
 mv bazelisk-linux-amd64 /usr/local/bin/bazel
 chmod +x /usr/local/bin/bazel
 
-pushd $PYTORCH_DIR
-checkout_torch_pin_if_available
-install_deps_pytorch_xla $XLA_DIR
-apply_patches
+pip install mkl mkl-include setuptools typing_extensions cmake requests
 
-python -c "import fcntl; fcntl.fcntl(1, fcntl.F_SETFL, 0)"
-USE_CUDA=0 python setup.py install
+pip install --user https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch-nightly-cp38-cp38-linux_x86_64.whl \
+  https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torchvision-nightly-cp38-cp38-linux_x86_64.whl \
+  https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-nightly-cp38-cp38-linux_x86_64.whl
+pip install torch_xla[tpuvm] --user
 
-build_torch_xla $XLA_DIR
+# pushd $PYTORCH_DIR
+# checkout_torch_pin_if_available
+# install_deps_pytorch_xla $XLA_DIR
+# apply_patches
 
-popd
+# python -c "import fcntl; fcntl.fcntl(1, fcntl.F_SETFL, 0)"
+# USE_CUDA=0 python setup.py install
 
-install_torchvision
+# build_torch_xla $XLA_DIR
+
+# popd
+
+# install_torchvision
 run_torch_xla_tests $PYTORCH_DIR $XLA_DIR
 
 
