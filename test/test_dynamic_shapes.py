@@ -420,8 +420,8 @@ class TestDynamicShapes(test_utils.XlaTestCase):
         print('dyn_size == 0')
     elif dyn_size == 1:
         print('dyn_size == 1')
-    self.assertEqual(met.metric_data('CompileTime')[0], 0)
-    self.assertEqual(met.metric_data('ExecuteTime')[0], 0)
+    self.assertIsNone(met.metric_data('CompileTime'))
+    self.assertIsNone(met.metric_data('ExecuteTime'))
     
     # Comparing unbacked SymInts with number other than 0/1 should trigger
     # compilation and execution.

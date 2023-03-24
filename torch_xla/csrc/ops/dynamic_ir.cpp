@@ -144,8 +144,6 @@ int64_t SizeEq::getDynamicValue() const {
   const torch::lazy::DimensionNode* dim_node_1 = DimCast(operand(1));
   XLA_CHECK(dim_node_0);
   XLA_CHECK(dim_node_1);
-  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": dim_node_0->isSymbolic()=" << dim_node_0->isSymbolic() << ", dim_node_0->getStaticValue()=" << dim_node_0->getStaticValue() << std::endl;
-  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": dim_node_1->isSymbolic()=" << dim_node_1->isSymbolic() << ", dim_node_1->getStaticValue()=" << dim_node_1->getStaticValue() << std::endl;
   if (isUnbackedSymint(dim_node_0) &&
       !isUnbackedSymint(dim_node_1) &&
       (dim_node_1->getStaticValue() == 0 || dim_node_1->getStaticValue() == 1)) {
@@ -159,7 +157,7 @@ int64_t SizeEq::getDynamicValue() const {
   return dim_node_0->getDynamicValue() == dim_node_1->getDynamicValue() ? 1 : 0;
 }
 
-bool isUnbackedSymint(torch::lazy::DimensionNode* dimNode) {
+bool isUnbackedSymint(const torch::lazy::DimensionNode* dimNode) {
   return dimNode->isSymbolic();
 }
 
