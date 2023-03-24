@@ -21,6 +21,7 @@ http_archive(
         "//tf_patches:stream_executor.diff",
         "//tf_patches:thread_local_random.diff",
         "//tf_patches:xplane.diff",
+        "//tf_patches:mhlo_all_reduce.diff",
     ],
     strip_prefix = "tensorflow-f7759359f8420d3ca7b9fd19493f2a01bd47b4ef",
     urls = [
@@ -38,7 +39,7 @@ http_archive(
 # b) by commenting out the http_archive above and uncommenting the following:
 # local_repository(
 #    name = "org_tensorflow",
-#    path = "/path/to/tensorflow",
+#    path = "/workspaces/work/tensorflow",
 # )
 
 # Initialize TensorFlow's external dependencies.

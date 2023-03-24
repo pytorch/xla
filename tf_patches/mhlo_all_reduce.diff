@@ -1,0 +1,222 @@
+diff --git a/tensorflow/compiler/mlir/xla/transforms/legalize_tf_collective.cc b/tensorflow/compiler/mlir/xla/transforms/legalize_tf_collective.cc
+index 2115fd69d0a..de2676e6b3e 100644
+--- a/tensorflow/compiler/mlir/xla/transforms/legalize_tf_collective.cc
++++ b/tensorflow/compiler/mlir/xla/transforms/legalize_tf_collective.cc
+@@ -173,7 +173,10 @@ LogicalResult ConvertAllReduce(OpBuilder& builder, int64_t channel_id,
+         GetScalarConstOfType(element_type, loc, replica_group_size, &builder);
+     auto broadcast_dims = GetI64ElementsAttr({}, &builder);
+     result = builder.create<chlo::BroadcastDivOp>(
+-        loc, all_reduce.getResult(), divisor.getResult(), broadcast_dims);
++        loc, all_reduce.getResult(0),
++        /* put a 0 here to workaround a compilation error,
++         this is tf2xla bridge, so ptxla won't go through this path*/
++        divisor.getResult(), broadcast_dims);
+   } else if (final_op != "Id") {
+     return op->emitOpError()
+            << "invalid final_op " << final_op << ", want one of [Id, Div]";
+diff --git a/tensorflow/compiler/xla/client/xla_builder.cc b/tensorflow/compiler/xla/client/xla_builder.cc
+index 576c3ce68f4..253ac87db8b 100644
+--- a/tensorflow/compiler/xla/client/xla_builder.cc
++++ b/tensorflow/compiler/xla/client/xla_builder.cc
+@@ -4993,6 +4993,17 @@ XlaOp AllReduce(const XlaOp operand, const XlaComputation& computation,
+                                       use_global_device_ids);
+ }
+ 
++XlaOp AllReduceTuple(const absl::Span<const XlaOp> operands,
++                     const XlaComputation& computation,
++                     absl::Span<const ReplicaGroup> replica_groups,
++                     const std::optional<ChannelHandle>& channel_id,
++                     const std::optional<Shape>& shape_with_layout,
++                     const std::optional<bool> use_global_device_ids) {
++  return operands[0].builder()->AllReduce(
++      operands[0].builder()->Tuple(operands), computation, replica_groups,
++      channel_id, shape_with_layout, use_global_device_ids);
++}
++
+ XlaOp ReduceScatter(const XlaOp operand, const XlaComputation& computation,
+                     int64_t scatter_dimension, int64_t shard_count,
+                     absl::Span<const ReplicaGroup> replica_groups,
+diff --git a/tensorflow/compiler/xla/client/xla_builder.h b/tensorflow/compiler/xla/client/xla_builder.h
+index 6a8654ec61d..d4560c482d6 100644
+--- a/tensorflow/compiler/xla/client/xla_builder.h
++++ b/tensorflow/compiler/xla/client/xla_builder.h
+@@ -1445,6 +1445,12 @@ class XlaBuilder {
+                          const std::optional<ChannelHandle>& channel_id,
+                          const std::optional<Shape>& shape_with_layout,
+                          const std::optional<bool> use_global_device_ids);
++  friend XlaOp AllReduceTuple(absl::Span<const XlaOp> operand,
++                              const XlaComputation& computation,
++                              absl::Span<const ReplicaGroup> replica_groups,
++                              const std::optional<ChannelHandle>& channel_id,
++                              const std::optional<Shape>& shape_with_layout,
++                              const std::optional<bool> use_global_device_ids);
+   friend XlaOp ReduceScatter(XlaOp operand, const XlaComputation& computation,
+                              int64_t scatter_dimension, int64_t shard_count,
+                              absl::Span<const ReplicaGroup> replica_groups,
+@@ -2455,6 +2461,13 @@ XlaOp AllReduce(XlaOp operand, const XlaComputation& computation,
+                 const std::optional<Shape>& shape_with_layout = std::nullopt,
+                 const std::optional<bool> use_global_device_ids = std::nullopt);
+ 
++XlaOp AllReduceTuple(
++    absl::Span<const XlaOp> operand, const XlaComputation& computation,
++    absl::Span<const ReplicaGroup> replica_groups = {},
++    const std::optional<ChannelHandle>& channel_id = std::nullopt,
++    const std::optional<Shape>& shape_with_layout = std::nullopt,
++    const std::optional<bool> use_global_device_ids = std::nullopt);
++
+ XlaOp ReduceScatter(
+     XlaOp operand, const XlaComputation& computation, int64_t scatter_dimension,
+     int64_t shard_count, absl::Span<const ReplicaGroup> replica_groups = {},
+diff --git a/tensorflow/compiler/xla/mlir_hlo/mhlo/IR/hlo_ops.cc b/tensorflow/compiler/xla/mlir_hlo/mhlo/IR/hlo_ops.cc
+index 1944a109ac1..b538512785e 100644
+--- a/tensorflow/compiler/xla/mlir_hlo/mhlo/IR/hlo_ops.cc
++++ b/tensorflow/compiler/xla/mlir_hlo/mhlo/IR/hlo_ops.cc
+@@ -361,7 +361,7 @@ void ReduceScatterOp::build(OpBuilder& odsBuilder, OperationState& odsState,
+   }
+ 
+ INFER_RETURN_TYPE_COMPONENTS_FROM_OPERANDS(AddOp)
+-INFER_RETURN_TYPE_COMPONENTS_FROM_OPERANDS(AllReduceOp)
++// INFER_RETURN_TYPE_COMPONENTS_FROM_OPERANDS(AllReduceOp)
+ INFER_RETURN_TYPE_COMPONENTS_FROM_OPERANDS(AndOp)
+ INFER_RETURN_TYPE_COMPONENTS_FROM_OPERANDS(Atan2Op)
+ INFER_RETURN_TYPE_COMPONENTS_FROM_OPERANDS(CbrtOp)
+@@ -2090,8 +2090,22 @@ void AllGatherOp::build(OpBuilder& odsBuilder, OperationState& odsState,
+ //===----------------------------------------------------------------------===//
+ 
+ LogicalResult AllReduceOp::verify() {
+-  return hlo::verifyAllReduceOp(getLoc(), getOperand(), getReplicaGroups(),
+-                                getUseGlobalDeviceIds(), getComputation());
++  for (auto operand : getOperands()) {
++    if (failed(hlo::verifyAllReduceOp(getLoc(), operand, getReplicaGroups(),
++                                      getUseGlobalDeviceIds(),
++                                      getComputation())))
++      return failure();
++  }
++  return success();
++}
++
++LogicalResult AllReduceOp::inferReturnTypes(
++    MLIRContext*, std::optional<Location> location, ValueRange operands,
++    DictionaryAttr attributes, RegionRange,
++    SmallVectorImpl<Type>& inferredReturnTypes) {
++  AllReduceOp::Adaptor adaptor(operands, attributes);
++  return hlo::inferOptimizationBarrierOp(location, adaptor.getOperand(),
++                                         inferredReturnTypes);
+ }
+ 
+ //===----------------------------------------------------------------------===//
+diff --git a/tensorflow/compiler/xla/mlir_hlo/mhlo/IR/hlo_ops.td b/tensorflow/compiler/xla/mlir_hlo/mhlo/IR/hlo_ops.td
+index 112b193af51..97ca6f02b21 100644
+--- a/tensorflow/compiler/xla/mlir_hlo/mhlo/IR/hlo_ops.td
++++ b/tensorflow/compiler/xla/mlir_hlo/mhlo/IR/hlo_ops.td
+@@ -1430,7 +1430,8 @@ def MHLO_AllGatherOp : MHLO_Op<"all_gather", [SameOperandsAndResultElementType]>
+ }
+ 
+ def MHLO_AllReduceOp : MHLO_Op<"all_reduce",
+-    [HLO_CompatibleOperandsAndResultType]> {
++    [SameOperandsElementType, HLO_PairwiseSameOperandAndResultType, DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
++      // FIXME: Can we do something like this but compatible instead of samwe
+   let summary = "AllReduce operator";
+   let description = [{
+     Performs a custom reduction across replicas.
+@@ -1439,13 +1440,13 @@ def MHLO_AllReduceOp : MHLO_Op<"all_reduce",
+   }];
+ 
+   let arguments = (ins
+-    MHLO_Tensor:$operand,
++    Variadic<MHLO_Tensor>:$operand,
+     I64ElementsAttr:$replica_groups,
+     OptionalAttr<MHLO_ChannelHandle>:$channel_handle,
+     UnitAttr:$use_global_device_ids
+   );
+   let regions = (region SizedRegion<1>:$computation);
+-  let results = (outs MHLO_Tensor);
++  let results = (outs Variadic<MHLO_Tensor>);
+   let hasVerifier = 1;
+ 
+   let hasCustomHLOConverter = 1;
+diff --git a/tensorflow/compiler/xla/translate/hlo_to_mhlo/hlo_function_importer.cc b/tensorflow/compiler/xla/translate/hlo_to_mhlo/hlo_function_importer.cc
+index b7f3af6ceb8..ed4257f57e9 100644
+--- a/tensorflow/compiler/xla/translate/hlo_to_mhlo/hlo_function_importer.cc
++++ b/tensorflow/compiler/xla/translate/hlo_to_mhlo/hlo_function_importer.cc
+@@ -1360,6 +1360,13 @@ StatusOr<mlir::Operation*> HloFunctionImporter::ImportInstructionImpl(
+     }
+     case HloOpcode::kAllReduce: {
+       auto all_reduce = Cast<HloAllReduceInstruction>(instruction);
++      auto result_tuple_ty = result_type.dyn_cast<mlir::TupleType>();
++
++      llvm::SmallVector<Type, 4> return_types = {result_type};
++      if (result_tuple_ty) {
++        return_types = llvm::to_vector<4>(result_tuple_ty.getTypes());
++      }
++
+       attributes.push_back(
+           ConvertReplicaGroups(all_reduce->replica_groups(), builder_));
+       if (all_reduce->channel_id().has_value())
+@@ -1368,10 +1375,16 @@ StatusOr<mlir::Operation*> HloFunctionImporter::ImportInstructionImpl(
+       if (all_reduce->use_global_device_ids())
+         attributes.push_back(ConvertUseGlobalDeviceIds());
+       auto all_reduce_op = func_builder->create<mlir::mhlo::AllReduceOp>(
+-          loc, result_type, operands, attributes);
++          loc, return_types, operands, attributes);
+       TF_RETURN_IF_ERROR(ImportAsRegion(*all_reduce->to_apply(),
+                                         &all_reduce_op.getComputation(),
+                                         /*flatten_region_arg_tuple=*/true));
++      if (result_tuple_ty) {
++        return func_builder
++            ->create<mlir::mhlo::TupleOp>(loc, result_type,
++                                          all_reduce_op.getResults())
++            .getOperation();
++      }
+       return all_reduce_op.getOperation();
+     }
+     case HloOpcode::kAllReduceStart: {
+diff --git a/tensorflow/compiler/xla/translate/mhlo_to_hlo/mlir_hlo_to_hlo.cc b/tensorflow/compiler/xla/translate/mhlo_to_hlo/mlir_hlo_to_hlo.cc
+index fcf09024669..f504d749dd7 100644
+--- a/tensorflow/compiler/xla/translate/mhlo_to_hlo/mlir_hlo_to_hlo.cc
++++ b/tensorflow/compiler/xla/translate/mhlo_to_hlo/mlir_hlo_to_hlo.cc
+@@ -879,14 +879,31 @@ LogicalResult ExportXlaOp(AllReduceOp op, OpLoweringContext ctx) {
+     return failure();
+   }
+ 
+-  xla::XlaOp operand;
+-  if (failed(GetXlaOp(op.getOperand(), value_map, &operand, op)))
++  SmallVector<xla::XlaOp> operands;
++  if (failed(GetTuple(op.getOperation(), op.getOperands(), ctx, operands)))
+     return failure();
+ 
+-  value_map[op] = xla::AllReduce(
+-      operand, computation, Convert_replica_groups(op.getReplicaGroups()),
++  mlir::FailureOr<xla::Shape> shape_or = ExtractXlaShape(op.getOperation());
++  if (failed(shape_or)) return failure();
++  if (shape_or->IsTuple()) {
++    std::optional<xla::Shape> shape_with_layout = std::nullopt;
++    if (shape_or->has_layout()) shape_with_layout = shape_or.value();
++
++    // FIXME: Losing layout... s64[6]{0} --> s64[6]
++    auto tuple = xla::AllReduceTuple(
++      operands, computation, Convert_replica_groups(op.getReplicaGroups()),
++      Convert_channel_handle(op.getChannelHandle()), shape_with_layout,
++      Convert_use_global_device_ids(op.getUseGlobalDeviceIds()));
++    for (auto [index, result] : llvm::enumerate(op.getResults())) {
++      value_map[result] = xla::GetTupleElement(tuple, index);
++    }
++  } else {
++     value_map[op->getResults()[0]] = xla::AllReduce(
++      operands[0], computation, Convert_replica_groups(op.getReplicaGroups()),
+       Convert_channel_handle(op.getChannelHandle()), std::nullopt,
+       Convert_use_global_device_ids(op.getUseGlobalDeviceIds()));
++  }
++
+   return success();
+ }
+ 
+@@ -1187,7 +1204,7 @@ LogicalResult ExportXlaOp(AsyncDoneOp op, OpLoweringContext ctx) {
+   if (all_reduce_op && SimplyReturnedOp(all_reduce_op)) {
+     value_map[op.getResult(0)] =
+         xla::internal::XlaBuilderFriend::BuildAllReduceDone(
+-            ctx.builder, operand, xla::TypeToShape(all_reduce_op.getType()));
++            ctx.builder, operand, xla::TypeToShape(all_reduce_op.getType(0)));
+     return success();
+   }
+   auto collective_permute_op =
