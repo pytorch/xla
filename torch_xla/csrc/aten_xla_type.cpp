@@ -1092,10 +1092,11 @@ at::Tensor XLANativeFunctions::cumsum(const at::Tensor& self, int64_t dim,
 // TODO(alanwaketan): Let's rewrite a without reusing other native functions.
 at::Tensor XLANativeFunctions::detach_copy(const at::Tensor& self) {
   TORCH_LAZY_FN_COUNTER("xla::");
-  auto new_tensor =
-      empty_symint(self.sym_sizes(), at::typeMetaToScalarType(self.dtype()),
-                   c10::nullopt, self.device(), c10::nullopt, c10::nullopt);
-  return set_(new_tensor, self);
+  // auto new_tensor =
+  //     empty_symint(self.sym_sizes(), at::typeMetaToScalarType(self.dtype()),
+  //                  c10::nullopt, self.device(), c10::nullopt, c10::nullopt);
+  // return set_(new_tensor, self);
+  return bridge::AtenFromXlaTensor(bridge::GetXlaTensor(self));
 }
 
 at::Tensor XLANativeFunctions::diag(const at::Tensor& self, int64_t diagonal) {
