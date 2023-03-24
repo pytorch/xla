@@ -408,6 +408,36 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     # Exercises SizeNe::getDynamicValue.
     dynamic_size = int(dyn_size)
     self.assertEqual(dynamic_size, 1)
+  
+  def test_SymInt_not_equal_to_0_1(self):
+    a1 = torch.tensor([[1, 0, 0, 5, 0, 6]], device=dev)
+    a2 = torch.nonzero(a1)
+    # Since we assume unbacked SymInts don't equal to 0/1, then
+    # we don't need to get the SymInt's dynamic value (by triggering
+    # graph compilation and execution.)
+    dyn_size = a2.size()[0]
+    if dyn_size == 0:
+        print('dyn_size == 0')
+    elif dyn_size == 1:
+        print('dyn_size == 1')
+    self.assertEqual(met.metric_data('CompileTime')[0], 0)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 0)
+    
+    # Comparing unbacked SymInts with number other than 0/1 should trigger
+    # compilation and execution.
+    if dyn_size == 2:
+        print('dyn_size == 1 is not 0/1')
+    self.assertEqual(met.metric_data('CompileTime')[0], 1)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
+
+    # Comparing normal size (not Symint) should behave as before (not trigger
+    # compilation and execution.)
+    if a2.size()[1] == 0:
+      print('a2.size()[1] == 0')
+    elif a2.size()[1] == 2:
+      print('a2.size()[1] == 2')
+    self.assertEqual(met.metric_data('CompileTime')[0], 1)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
 
 
 if __name__ == '__main__':

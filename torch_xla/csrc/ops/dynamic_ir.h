@@ -182,6 +182,7 @@ const torch::lazy::DimensionNode* DimCast(torch::lazy::Output output);
 const torch::lazy::DimensionNode* DimCast(const torch::lazy::Node* node);
 const std::shared_ptr<torch::lazy::DimensionNode> DimCast(
     const torch::lazy::NodePtr& node);
+bool isUnbackedSymint(const torch::lazy::DimensionNode* dimNode);
 
 class SizeConstant : public torch_xla::Scalar,
                      public torch::lazy::DimensionNode {
