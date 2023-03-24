@@ -187,9 +187,6 @@ run_test_coverage: &run_test_coverage
       name: Test
       no_output_timeout: "1h"
       command: |
-
-        sudo apt-get update
-        sudo apt install -y lcov
         docker exec -u jenkins $(cat .docker_pid) bash -c \
         '. ~/.bashrc && USE_COVERAGE=1 .circleci/test.sh'
         docker cp $(cat .docker_pid):/home/jenkins/htmlcov /home/circleci/project
