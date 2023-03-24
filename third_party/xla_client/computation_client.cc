@@ -421,7 +421,7 @@ void ComputationClient::hlo_stablehlo_hlo_roundtrip_helper(HloModuleProto* proto
 
 void ComputationClient::roundtrip_helper(HloModuleProto* proto) {
   std::string roundtripType =
-      sys_util::GetEnvString(env::kEnvHloRoundTripType, "STABLEHLO");
+      sys_util::GetEnvString(env::kEnvHloRoundTripType, "MHLO");
   int dump = sys_util::GetEnvInt(env::kEnvHloRoundTripDump, 0);
   if (roundtripType == "MHLO") {
     hlo_mhlo_hlo_roundtrip_helper(proto, dump);
