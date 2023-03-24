@@ -1398,7 +1398,7 @@ class XlaFullyShardedDataParallel(nn.Module):
 
     for p, p_shard in zip(self.full_params, self.sharded_params):
       if not p._has_full_param:
-        p_shard_data = p_shard.detach()
+        p_shard_data = p_shard
         if apply_opt_barrier:
           self.optimization_barrier_op([p_shard_data])
         if p_shard_data.dtype != self.compute_dtype:
