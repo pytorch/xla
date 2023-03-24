@@ -13,7 +13,7 @@ terraform {
   }
 
   backend "gcs" {
-    # TODO: This has to be changed to match current project or passed as cli
+    # Note: This has to be changed to match current project or passed as cli
     # argument: "-backend-config="bucket=bucket_id"
     bucket = "tpu-pytorch-tfstate-staging"
     prefix = "terraform/state"
