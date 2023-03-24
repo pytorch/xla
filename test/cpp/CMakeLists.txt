@@ -142,7 +142,4 @@ target_link_libraries(
   -pthread
   -lstdc++
   -ldl)
-
-add_custom_target(coverage
-    COMMAND lcov --directory . --base-directory . --gcov-tool get_coverage.sh --capture -o cov.info
-    DEPENDS test_ptxla)
+  
