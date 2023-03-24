@@ -7,6 +7,7 @@ import torch_xla.core.xla_model as xm
 import torch_xla.debug.profiler as xp
 import torch_xla.distributed.parallel_loader as pl
 import torch_xla.experimental.xla_sharding as xs
+import torch_xla.utils.checkpoint as checkpoint
 import torch_xla.utils.utils as xu
 from torch_xla.experimental.xla_sharding import Mesh
 import torch.optim as optim
@@ -26,6 +27,9 @@ MODEL_OPTS = {
         'type': int,
         'default': 1024 * 1024,
     },
+    '--use_gradient_checkpointing': {
+        'action': 'store_true',
+    }
 }
 
 FLAGS = args_parse.parse_common_options(
@@ -90,11 +94,18 @@ def train():
     for step, (data, target) in enumerate(loader):
       with xp.StepTrace('train_linear_model'):
         with xp.Trace('build_graph'):
-          data = data.to(device)
-          target = target.to(device)
+          x = data.to(device)
+          y = target.to(device)
           optimizer.zero_grad()
-          output = model(data)
-          loss = loss_fn(output, target)
+          if FLAGS.use_gradient_checkpointing:
+            for n_l, layer in enumerate(model):
+              # Apply gradient checkpointing for reduced memory footprint.
+              # This would result in increased computation cost.
+              if n_l > 0: x = torch_xla.utils.checkpoint.checkpoint(layer, x)
+            output = x
+          else:
+            output = model(x)
+          loss = loss_fn(output, y)
           loss.backward()
         optimizer.step()
       xm.mark_step()

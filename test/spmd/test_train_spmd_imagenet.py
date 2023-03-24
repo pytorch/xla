@@ -35,6 +35,9 @@ MODEL_OPTS = {
     '--use_virtual_device': {
         'action': 'store_true',
     },
+    '--use_gradient_checkpointing': {
+        'action': 'store_true',
+    }
 }
 
 FLAGS = args_parse.parse_common_options(
@@ -61,6 +64,7 @@ import torch_xla
 import torch_xla.debug.metrics as met
 import torch_xla.distributed.parallel_loader as pl
 import torch_xla.utils.utils as xu
+import torch_xla.utils.checkpoint as checkpoint
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.profiler as xp
 import torch_xla.test.test_utils as test_utils
@@ -259,13 +263,20 @@ def train_imagenet():
     tracker = xm.RateTracker()
     model.train()
     for step, (data, target) in enumerate(loader):
-      data = data.to(xm.xla_device())
-      target = target.to(xm.xla_device())
+      x = data.to(xm.xla_device())
+      y = target.to(xm.xla_device())
       with xp.StepTrace('train_imagenet'):
         with xp.Trace('build_graph'):
           optimizer.zero_grad()
-          output = model(data)
-          loss = loss_fn(output, target)
+          if FLAGS.use_gradient_checkpointing:
+            for n_l, layer in enumerate(model):
+              # Apply gradient checkpointing for reduced memory footprint.
+              # This would result in increased computation cost.
+              if n_l > 0: x = torch_xla.utils.checkpoint.checkpoint(layer, x)
+            output = x
+          else:
+            output = model(x)
+          loss = loss_fn(output, y)
           loss.backward()
         optimizer.step()
       xm.mark_step()
