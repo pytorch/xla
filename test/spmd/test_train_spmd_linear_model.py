@@ -101,7 +101,8 @@ def train():
             for n_l, layer in enumerate(model):
               # Apply gradient checkpointing for reduced memory footprint.
               # This would result in increased computation cost.
-              if n_l > 0: x = torch_xla.utils.checkpoint.checkpoint(layer, x)
+              if n_l > 0:
+                x = torch_xla.utils.checkpoint.checkpoint(layer, x)
             output = x
           else:
             output = model(x)
