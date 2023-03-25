@@ -54,6 +54,7 @@ FLAGS = args_parse.parse_common_options(
 import os
 import schedulers
 import numpy as np
+from functools import partial
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -63,6 +64,8 @@ import torchvision.transforms as transforms
 import torch_xla
 import torch_xla.debug.metrics as met
 import torch_xla.distributed.parallel_loader as pl
+from torch_xla.distributed.fsdp.wrap import (recursive_wrap, transformer_auto_wrap_policy)
+from torch_xla.distributed.fsdp.utils import checkpoint_module
 import torch_xla.utils.utils as xu
 import torch_xla.utils.checkpoint as checkpoint
 import torch_xla.core.xla_model as xm
@@ -181,6 +184,18 @@ def train_imagenet():
 
   device = xm.xla_device()
   model = get_model_property('model_fn')().to(device)
+
+  if FLAGS.use_gradient_checkpointing:
+    auto_wrap_policy = partial(
+          transformer_auto_wrap_policy,
+          transformer_layer_cls={
+              torchvision.models.resnet.BasicBlock,
+              torchvision.models.resnet.Bottleneck,
+              torchvision.models.vision_transformer.EncoderBlock,
+          })
+    auto_wrapper_callable = lambda m, *args, **kwargs: checkpoint_module(m)
+    model, n_params = recursive_wrap(model, auto_wrap_policy, auto_wrapper_callable)
+    print(f'Wrapped {n_params} parameters for gradient checkpointing.')
 
   input_mesh = None
   if FLAGS.sharding:
