@@ -58,7 +58,7 @@ function run_coverage {
 
 function run_test {
   echo "Running in PjRt runtime: $@"
-  if [ -x "$(command -v nvidia-smi)" ]; then
+  if [ -x "$(command -v nvidia-smi)" ] && [ "$XLA_CUDA" != "0" ]; then
     PJRT_DEVICE=GPU run_coverage "$@"
   else
     # TODO(darisoy): run these tests with multiple CPU devices, this fails due to TF issue.
@@ -221,7 +221,7 @@ function run_mp_op_tests {
 }
 
 function run_tests {
-  if [[ "$XLA_SKIP_TORCH_OP_TESTS" == "1"]]; then
+  if [[ "$XLA_SKIP_TORCH_OP_TESTS" == "1" ]]; then
     run_xla_op_tests
   else
     run_op_tests

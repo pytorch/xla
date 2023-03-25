@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -ex
 
 DEBIAN_FRONTEND=noninteractive
 
@@ -22,25 +22,25 @@ mv bazelisk-linux-amd64 /usr/local/bin/bazel
 chmod +x /usr/local/bin/bazel
 
 pip install mkl mkl-include setuptools typing_extensions cmake requests
+sudo ln -s /usr/local/lib/libmkl_intel_lp64.so.2 /usr/local/lib/libmkl_intel_lp64.so.1
+sudo ln -s /usr/local/lib/libmkl_intel_thread.so.2 /usr/local/lib/libmkl_intel_thread.so.1
+sudo ln -s /usr/local/lib/libmkl_core.so.2 /usr/local/lib/libmkl_core.so.1
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/
+
+echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" >> /etc/apt/sources.list.d/google-cloud-sdk.list
+curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
+
+apt-get update
+apt-get -y install google-cloud-cli
+pip install --upgrade oauth2client
 
 pip install --user https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch-nightly-cp38-cp38-linux_x86_64.whl \
   https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torchvision-nightly-cp38-cp38-linux_x86_64.whl \
   https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-nightly-cp38-cp38-linux_x86_64.whl
 pip install torch_xla[tpuvm] --user
 
-# pushd $PYTORCH_DIR
-# checkout_torch_pin_if_available
-# install_deps_pytorch_xla $XLA_DIR
-# apply_patches
+pip install --upgrade --force-reinstall google-api-python-client
 
-# python -c "import fcntl; fcntl.fcntl(1, fcntl.F_SETFL, 0)"
-# USE_CUDA=0 python setup.py install
-
-# build_torch_xla $XLA_DIR
-
-# popd
-
-# install_torchvision
 run_torch_xla_tests $PYTORCH_DIR $XLA_DIR
 
 
