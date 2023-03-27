@@ -93,7 +93,7 @@ The normal build can be achieved by the invoking the standard `python setup.py b
 bazel build //:_XLAC.so
 ```
 
-This will build the XLA client and the PyTorch plugin and link it all together. This can be useful when testing changes, to be able to compile the C++ code without building the python plugi; faster iteration cycles.
+This will build the XLA client and the PyTorch plugin and link it all together. This can be useful when testing changes, to be able to compile the C++ code without building the python plugin faster iteration cycles.
 
 ## Remote caching
 
@@ -116,14 +116,18 @@ Running the build with remote cache:
 BAZEL_REMOTE_CACHE=1 SILO_NAME="cache-silo-YOUR-USER" TPUVM_MODE=1 python setup.py bdist_wheel
 ```
 
+`YOUR-USER` here can the author's username or machine name, a unique name that ensures good cache behavior. Other `setup.py` functionality works as intended too (e.g. `develop`).
+
 The first time the code is compiled using a new cached key will be slow because it will compile everything from scratch, but incremental compilations will be very fast. On updating the TensorFlow pin, it will once again be a bit slower the first time per key, and then until the next update quite fast again.
 
 ## Running tests
 
+Currently C++ code is built and tested by bazel. Python code will be migrated in the future.
+
 Bazel is a test plafrom too, making it easy to run tests:
 
 ```bash
-bazel test //...
+bazel test //test/cpp:main
 ```
 
 Ofcourse the XLA and PJRT configuration have to be present in the environment to run the tests. Not all environmental variables are passed into the bazel test environment to make sure that the remote cache misses are not too common (environment
@@ -159,8 +163,8 @@ one can use [Bazel Stack](https://github.com/stackb/bazel-stack-vscode-cc) that 
 
 ## Building PyTorch/XLA
 
-As always, PyTorch/XLA is built using Python `distutils`:
+As always, PyTorch/XLA can be built using Python `distutils`:
 
 ```bash
-BAZEL_REMOTE_CACHE=1 TPUVM_MODE=1 python setup.py bdist_wheel
+BAZEL_REMOTE_CACHE=1 SILO_NAME="cache-silo-YOUR-USER" TPUVM_MODE=1 python setup.py bdist_wheel
 ```

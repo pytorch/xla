@@ -1,6 +1,6 @@
 exports_files(["xla_native_functions.yaml"])
 
-# Requires `torchgen` locally, via pip `torch` package.
+# Requires `torchgen` locally, via pip `torch` package or local builds.
 py_binary(
     name = "lazy_tensor_generator",
     srcs = ["lazy_tensor_generator.py"],
