@@ -102,7 +102,7 @@ function install_deps_pytorch_xla() {
     BAZELS3CACHE="$(which /usr/local/bin/bazels3cache)"
     if [ -z "${BAZELS3CACHE}" ]; then
       echo "Unable to find bazels3cache..."
-      exit 1
+      return 1
     fi
     /usr/local/bin/bazels3cache --bucket=${XLA_CLANG_CACHE_S3_BUCKET_NAME} --maxEntrySizeBytes=0 --logging.level=verbose
     sed -i '/bazel build/ a --remote_http_cache=http://localhost:7777 \\' $XLA_DIR/build_torch_xla_libs.sh
