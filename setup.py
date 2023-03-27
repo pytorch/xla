@@ -332,8 +332,8 @@ if re.match(r'clang', os.getenv('CC', '')):
   ]
   if DEBUG:
     extra_compile_args += [
-       '-fprofile-arcs',
-       '-ftest-coverage',
+        '-fprofile-arcs',
+        '-ftest-coverage',
     ]
     extra_link_args += ['--coverage']
 
