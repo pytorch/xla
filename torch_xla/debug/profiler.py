@@ -1,3 +1,4 @@
+import functools
 import torch_xla
 import torch_xla.core.xla_model as xm
 
@@ -158,3 +159,17 @@ class StepTrace(Trace):
       del self.scope
     xm.mark_step()
     super().__exit__(type, value, traceback)
+
+
+def trace_me(scope: str):
+
+  def decorator_trace_me(func):
+
+    @functools.wraps(func)
+    def wrapper_trace_me(*args, **kwargs):
+      with Trace(scope):
+        return func(*args, **kwargs)
+
+    return wrapper_trace_me
+
+  return decorator_trace_me

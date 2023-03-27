@@ -965,6 +965,9 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     b = torch.ones([2, 2])
     self.runAtenTest((a, b), func)
 
+  @unittest.skipIf(
+      os.environ.get('XLA_DISABLE_FUNCTIONALIZATION'),
+      'Metrics differ when functionalization is disabled.')
   def test_set(self):
     met.clear_all()
 
@@ -982,6 +985,9 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     # shouldn't crash
     self.assertTrue(torch.allclose(t2.cpu(), torch.zeros(10)))
 
+  @unittest.skipIf(
+      os.environ.get('XLA_DISABLE_FUNCTIONALIZATION'),
+      'Metrics differ when functionalization is disabled.')
   def test_replace_xla_tensor(self):
     met.clear_all()
 
@@ -1892,6 +1898,16 @@ class XpTraceTest(test_utils.XlaTestCase):
         RuntimeError, r'Expecting scope to be empty but it is conv1.1'):
       with xp.Trace('conv1'):
         xm.mark_step()
+
+  def test_non_empty_scope_decorator(self):
+
+    @xp.trace_me("conv2")
+    def func():
+      xm.mark_step()
+
+    with self.assertRaisesRegex(RuntimeError,
+                                r'Expecting scope to be empty but it is conv2'):
+      func()
 
 
 class RegisterXLAKeyTest(test_utils.XlaTestCase):
