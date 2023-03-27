@@ -113,7 +113,7 @@ Remote cache uses cache silos. Each unique machine and build should specify a un
 Running the build with remote cache:
 
 ```bash
-BAZEL_REMOTE_CACHE=1 SILO_NAME="cache-silo-$USER" TPUVM_MODE=1 python setup.py bdist_wheel
+BAZEL_REMOTE_CACHE=1 SILO_NAME="cache-silo-YOUR-USER" TPUVM_MODE=1 python setup.py bdist_wheel
 ```
 
 The first time the code is compiled using a new cached key will be slow because it will compile everything from scratch, but incremental compilations will be very fast. On updating the TensorFlow pin, it will once again be a bit slower the first time per key, and then until the next update quite fast again.
@@ -132,7 +132,7 @@ is part of the cache key), see `.bazelrc` test configuration to see which ones a
 You can run the tests using the helper script too:
 
 ```bash
-BAZEL_REMOTE_CACHE=1 SILO_NAME="cache-silo-$USER" ./test/cpp/run_tests.sh -R
+BAZEL_REMOTE_CACHE=1 SILO_NAME="cache-silo-YOUR-USER" ./test/cpp/run_tests.sh -R
 ```
 
 The `xla_client` tests are pure hermetic tests that can be easily executed. The `torch_xla` plugin tests are more complex:
