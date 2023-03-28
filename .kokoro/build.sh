@@ -30,16 +30,19 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/
 echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" >> /etc/apt/sources.list.d/google-cloud-sdk.list
 curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
 
+# TODO(yeounoh) fix `GoogleCredentials` import error
 apt-get update
 apt-get -y install google-cloud-cli
+pip install --upgrade google-api-python-client
 pip install --upgrade oauth2client
+pip install --upgrade google-cloud-storage
+pip install lark-parser
+pip install cloud-tpu-client
 
 pip install --user https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch-nightly-cp38-cp38-linux_x86_64.whl \
   https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torchvision-nightly-cp38-cp38-linux_x86_64.whl \
   https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-nightly-cp38-cp38-linux_x86_64.whl
 pip install torch_xla[tpuvm] --user
-
-pip install --upgrade --force-reinstall google-api-python-client
 
 run_torch_xla_tests $PYTORCH_DIR $XLA_DIR
 
