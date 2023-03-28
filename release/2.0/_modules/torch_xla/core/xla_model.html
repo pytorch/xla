@@ -1,0 +1,1848 @@
+
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>torch_xla.core.xla_model &mdash; PyTorch/XLA master documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!-- <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" /> -->
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <!-- Google Analytics -->
+  
+  <!-- End Google Analytics -->
+  
+
+  
+  <script src="../../../_static/js/modernizr.min.js"></script>
+
+  <!-- Preload the theme fonts -->
+
+<link rel="preload" href="../../../_static/fonts/FreightSans/freight-sans-book.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../../../_static/fonts/FreightSans/freight-sans-medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../../../_static/fonts/IBMPlexMono/IBMPlexMono-Medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../../../_static/fonts/FreightSans/freight-sans-bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../../../_static/fonts/FreightSans/freight-sans-medium-italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../../../_static/fonts/IBMPlexMono/IBMPlexMono-SemiBold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+
+<!-- Preload the katex fonts -->
+
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Math-Italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Main-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Main-Bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size1-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size4-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size2-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size3-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Caligraphic-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.2/css/all.css" integrity="sha384-vSIIfh2YWi9wW0r9iZe7RJPrKwp6bG+s9QZMoITbCckVJqGCCRhc+ccxNcdpHuYu" crossorigin="anonymous">
+</head>
+
+<div class="container-fluid header-holder tutorials-header" id="header-holder">
+  <div class="container">
+    <div class="header-container">
+      <a class="header-logo" href="https://pytorch.org/" aria-label="PyTorch"></a>
+
+      <div class="main-menu">
+        <ul>
+          <li>
+            <a href="https://pytorch.org/get-started">Get Started</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/ecosystem">Ecosystem</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/mobile">Mobile</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/blog/">Blog</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/tutorials">Tutorials</a>
+          </li>
+
+          <li class="active docs-active">
+            <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="resource-option with-down-orange-arrow">
+                Docs
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/docs/stable/index.html">
+                  <span class="dropdown-title">PyTorch</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/audio/stable/index.html">
+                  <span class="dropdown-title">torchaudio</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/text/stable/index.html">
+                  <span class="dropdown-title">torchtext</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/vision/stable/index.html">
+                  <span class="dropdown-title">torchvision</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/torcharrow">
+                  <span class="dropdown-title">torcharrow</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/data">
+                  <span class="dropdown-title">TorchData</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/torchrec">
+                  <span class="dropdown-title">TorchRec</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/serve/">
+                  <span class="dropdown-title">TorchServe</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/torchx/">
+                  <span class="dropdown-title">TorchX</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/xla">
+                  <span class="dropdown-title">PyTorch on XLA Devices</span>
+                  <p></p>
+                </a>
+            </div>
+          </li>
+
+          <li>
+            <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="resource-option with-down-arrow">
+                Resources
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/features">
+                  <span class="dropdown-title">About</span>
+                  <p>Learn about PyTorch’s features and capabilities</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/foundation">
+                  <span class="dropdown-title">PyTorch Foundation</span>
+                  <p>Learn about the PyTorch foundation</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/#community-module">
+                  <span class="dropdown-title">Community</span>
+                  <p>Join the PyTorch developer community to contribute, learn, and get your questions answered.</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/community-stories">
+                  <span class="dropdown-title">Community Stories</span>
+                  <p>Learn how our community solves real, everyday machine learning problems with PyTorch.</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/resources">
+                  <span class="dropdown-title">Developer Resources</span>
+                  <p>Find resources and get questions answered</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/events">
+                  <span class="dropdown-title">Events</span>
+                  <p>Find events, webinars, and podcasts</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://discuss.pytorch.org/" target="_blank">
+                  <span class="dropdown-title">Forums</span>
+                  <p>A place to discuss PyTorch code, issues, install, research</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/hub">
+                  <span class="dropdown-title">Models (Beta)</span>
+                  <p>Discover, publish, and reuse pre-trained models</p>
+                </a>
+              </div>
+            </div>
+          </li>
+
+          <li>
+            <a href="https://github.com/pytorch/pytorch">GitHub</a>
+          </li>
+        </ul>
+      </div>
+
+      <a class="main-menu-open-button" href="#" data-behavior="open-mobile-menu"></a>
+    </div>
+  </div>
+</div>
+
+<body class="pytorch-body">
+
+   
+
+    
+
+    <div class="table-of-contents-link-wrapper">
+      <span>Table of Contents</span>
+      <a href="#" class="toggle-table-of-contents" data-behavior="toggle-table-of-contents"></a>
+    </div>
+
+    <nav data-toggle="wy-nav-shift" class="pytorch-left-menu" id="pytorch-left-menu">
+      <div class="pytorch-side-scroll">
+        <div class="pytorch-menu pytorch-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          <div class="pytorch-left-menu-search">
+            
+
+            
+              
+              
+                <div class="version">
+                  master (2.0 )
+                </div>
+              
+            
+
+            
+
+
+  
+
+
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search Docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+            
+          </div>
+
+          
+            
+            
+              
+            
+            
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <div class="pytorch-container">
+      <div class="pytorch-page-level-bar" id="pytorch-page-level-bar">
+        <div class="pytorch-breadcrumbs-wrapper">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="pytorch-breadcrumbs">
+    
+      <li>
+        <a href="../../../index.html">
+          
+            Docs
+          
+        </a> &gt;
+      </li>
+
+        
+          <li><a href="../../index.html">Module code</a> &gt;</li>
+        
+      <li>torch_xla.core.xla_model</li>
+    
+    
+      <li class="pytorch-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+</div>
+        </div>
+
+        <div class="pytorch-shortcuts-wrapper" id="pytorch-shortcuts-wrapper">
+          Shortcuts
+        </div>
+      </div>
+
+      <section data-toggle="wy-nav-shift" id="pytorch-content-wrap" class="pytorch-content-wrap">
+        <div class="pytorch-content-left">
+
+        
+          
+          <div class="rst-content">
+          
+            <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
+             <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
+              
+  <h1>Source code for torch_xla.core.xla_model</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">collections</span>
+<span class="kn">import</span> <span class="nn">io</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">threading</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch.nn.functional</span> <span class="k">as</span> <span class="nn">F</span>
+<span class="kn">import</span> <span class="nn">torch_xla</span>
+<span class="kn">from</span> <span class="nn">torch_xla.experimental</span> <span class="kn">import</span> <span class="n">pjrt</span>
+<span class="kn">import</span> <span class="nn">torch_xla.core.xla_env_vars</span> <span class="k">as</span> <span class="nn">xenv</span>
+<span class="kn">import</span> <span class="nn">torch_xla.debug.metrics_saver</span> <span class="k">as</span> <span class="nn">ms</span>
+<span class="kn">import</span> <span class="nn">torch_xla.utils.utils</span> <span class="k">as</span> <span class="nn">xu</span>
+<span class="kn">import</span> <span class="nn">torch_xla.utils.closures</span> <span class="k">as</span> <span class="nn">xc</span>
+<span class="kn">import</span> <span class="nn">torch_xla.utils.keyd_queue</span> <span class="k">as</span> <span class="nn">kq</span>
+
+<span class="n">_DEVICES</span> <span class="o">=</span> <span class="n">xu</span><span class="o">.</span><span class="n">LazyProperty</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_devices</span><span class="p">())</span>
+
+<span class="n">REDUCE_SUM</span> <span class="o">=</span> <span class="s1">&#39;sum&#39;</span>
+<span class="n">REDUCE_MUL</span> <span class="o">=</span> <span class="s1">&#39;mul&#39;</span>
+<span class="n">REDUCE_AND</span> <span class="o">=</span> <span class="s1">&#39;and&#39;</span>
+<span class="n">REDUCE_OR</span> <span class="o">=</span> <span class="s1">&#39;or&#39;</span>
+<span class="n">REDUCE_MIN</span> <span class="o">=</span> <span class="s1">&#39;min&#39;</span>
+<span class="n">REDUCE_MAX</span> <span class="o">=</span> <span class="s1">&#39;max&#39;</span>
+
+<span class="n">_TORCH_DIST_GROUPS</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+<span class="n">_TORCH_DIST_LOCK</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
+
+<span class="n">_DEVICE_CONTEXTS</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+<span class="n">_DEVICE_CONTEXTS_LOCK</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
+
+
+<span class="k">class</span> <span class="nc">DeviceContext</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+  <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">device</span>
+
+
+<span class="k">def</span> <span class="nf">_get_device_context</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+  <span class="k">if</span> <span class="n">device</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">device</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_default_device</span><span class="p">()</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="n">device</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+  <span class="k">with</span> <span class="n">_DEVICE_CONTEXTS_LOCK</span><span class="p">:</span>
+    <span class="n">devctx</span> <span class="o">=</span> <span class="n">_DEVICE_CONTEXTS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">device</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">devctx</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+      <span class="n">devctx</span> <span class="o">=</span> <span class="n">DeviceContext</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+      <span class="n">_DEVICE_CONTEXTS</span><span class="p">[</span><span class="n">device</span><span class="p">]</span> <span class="o">=</span> <span class="n">devctx</span>
+    <span class="k">return</span> <span class="n">devctx</span>
+
+
+<span class="k">class</span> <span class="nc">CollectiveContext</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+  <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">replica_devcount</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_replication_devices_count</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">world_size</span> <span class="o">=</span> <span class="n">xrt_world_size</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">ordinal</span> <span class="o">=</span> <span class="n">get_ordinal</span><span class="p">()</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">world_size</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">replica_devcount</span><span class="p">:</span>
+      <span class="c1"># This is the sea-of-devices path.</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">requires_interhost_reduce</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">world_size</span> <span class="o">&gt;</span> <span class="mi">1</span>
+      <span class="c1"># If groups are enabled we avoid using the two level reduce (first among the</span>
+      <span class="c1"># fast interconnected cores, then using the torch.distributed support).</span>
+      <span class="c1"># The intercore_group is always empty, which means all cores, but in the not</span>
+      <span class="c1"># empty groups case, it won&#39;t be used as requires_intercore_reduce is False.</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">intercore_group</span> <span class="o">=</span> <span class="p">[]</span>
+      <span class="k">if</span> <span class="n">groups</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">requires_intercore_reduce</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">requires_interhost_reduce</span><span class="p">:</span>
+          <span class="bp">self</span><span class="o">.</span><span class="n">interhost_group</span> <span class="o">=</span> <span class="n">_make_group_for_ordinal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ordinal</span><span class="p">,</span> <span class="n">groups</span><span class="p">)</span>
+          <span class="bp">self</span><span class="o">.</span><span class="n">is_reduce_host</span> <span class="o">=</span> <span class="kc">True</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">requires_intercore_reduce</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">replica_devcount</span> <span class="o">&gt;</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">requires_interhost_reduce</span><span class="p">:</span>
+          <span class="bp">self</span><span class="o">.</span><span class="n">interhost_group</span><span class="p">,</span> <span class="n">ranks</span> <span class="o">=</span> <span class="n">_make_interhost_group</span><span class="p">(</span>
+              <span class="bp">self</span><span class="o">.</span><span class="n">replica_devcount</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">world_size</span><span class="p">)</span>
+          <span class="bp">self</span><span class="o">.</span><span class="n">is_reduce_host</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ordinal</span> <span class="ow">in</span> <span class="n">ranks</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="c1"># Standard replication path.</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">requires_intercore_reduce</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">replica_devcount</span> <span class="o">&gt;</span> <span class="mi">1</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">requires_interhost_reduce</span> <span class="o">=</span> <span class="kc">False</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">intercore_group</span> <span class="o">=</span> <span class="n">groups</span> <span class="ow">or</span> <span class="p">[]</span>
+
+
+<span class="k">def</span> <span class="nf">_get_torch_dist_group</span><span class="p">(</span><span class="n">ranks</span><span class="p">):</span>
+  <span class="kn">import</span> <span class="nn">torch.distributed</span> <span class="k">as</span> <span class="nn">dist</span>
+
+  <span class="k">with</span> <span class="n">_TORCH_DIST_LOCK</span><span class="p">:</span>
+    <span class="n">pg</span> <span class="o">=</span> <span class="n">_TORCH_DIST_GROUPS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">ranks</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">pg</span><span class="p">:</span>
+      <span class="n">pg</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">new_group</span><span class="p">(</span><span class="n">ranks</span><span class="o">=</span><span class="n">ranks</span><span class="p">)</span>
+      <span class="n">_TORCH_DIST_GROUPS</span><span class="p">[</span><span class="n">ranks</span><span class="p">]</span> <span class="o">=</span> <span class="n">pg</span>
+    <span class="k">return</span> <span class="n">pg</span>
+
+
+<span class="k">def</span> <span class="nf">_make_group_for_ordinal</span><span class="p">(</span><span class="n">ordinal</span><span class="p">,</span> <span class="n">groups</span><span class="p">):</span>
+  <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">groups</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">ordinal</span> <span class="ow">in</span> <span class="n">g</span><span class="p">:</span>
+      <span class="k">return</span> <span class="n">_get_torch_dist_group</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">g</span><span class="p">))</span>
+  <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">&#39;Ordinal </span><span class="si">{}</span><span class="s1"> not found in groups </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+      <span class="n">ordinal</span><span class="p">,</span> <span class="n">groups</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">_make_interhost_group</span><span class="p">(</span><span class="n">replica_devcount</span><span class="p">,</span> <span class="n">world_size</span><span class="p">):</span>
+  <span class="c1"># Every host in a sea-of-devices case handles replica_devcount devices.</span>
+  <span class="c1"># The replica device index 0 of each host does the inter-host replication</span>
+  <span class="c1"># using torch.distributed.</span>
+  <span class="c1"># The XLA CPU is a special case where there is one process per XLA CPU device,</span>
+  <span class="c1"># which is also a virtual host within a physical host.</span>
+  <span class="n">ranks</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">world_size</span><span class="p">,</span> <span class="n">replica_devcount</span><span class="p">))</span>
+  <span class="k">return</span> <span class="n">_get_torch_dist_group</span><span class="p">(</span><span class="n">ranks</span><span class="p">),</span> <span class="n">ranks</span>
+
+
+<span class="k">def</span> <span class="nf">is_xla_tensor</span><span class="p">(</span><span class="n">tensor</span><span class="p">):</span>
+  <span class="k">return</span> <span class="n">tensor</span><span class="o">.</span><span class="n">device</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;xla&#39;</span>
+
+
+<span class="k">def</span> <span class="nf">parse_xla_device</span><span class="p">(</span><span class="n">device</span><span class="p">):</span>
+  <span class="n">m</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;(CPU|TPU|GPU):(\d+)$&#39;</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">m</span><span class="p">:</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">)))</span>
+
+
+<div class="viewcode-block" id="get_xla_supported_devices"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.get_xla_supported_devices">[docs]</a><span class="k">def</span> <span class="nf">get_xla_supported_devices</span><span class="p">(</span><span class="n">devkind</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">max_devices</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Returns a list of supported devices of a given kind.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    devkind (string..., optional): If specified, one of `TPU`, `GPU` or `CPU`</span>
+<span class="sd">      (the &#39;GPU&#39; XLA device is currently not implemented).</span>
+<span class="sd">    max_devices (int, optional): The maximum number of devices to be returned of</span>
+<span class="sd">      that kind.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    The list of device strings.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">xla_devices</span> <span class="o">=</span> <span class="n">_DEVICES</span><span class="o">.</span><span class="n">value</span>
+  <span class="n">devkind</span> <span class="o">=</span> <span class="p">[</span><span class="n">devkind</span><span class="p">]</span> <span class="k">if</span> <span class="n">devkind</span> <span class="k">else</span> <span class="p">[</span><span class="s1">&#39;TPU&#39;</span><span class="p">,</span> <span class="s1">&#39;GPU&#39;</span><span class="p">,</span> <span class="s1">&#39;CPU&#39;</span><span class="p">]</span>
+  <span class="k">for</span> <span class="n">kind</span> <span class="ow">in</span> <span class="n">devkind</span><span class="p">:</span>
+    <span class="n">kind_devices</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">device</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">xla_devices</span><span class="p">):</span>
+      <span class="k">if</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">kind</span> <span class="o">+</span> <span class="sa">r</span><span class="s1">&#39;:\d+$&#39;</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
+        <span class="n">kind_devices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;xla:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">kind_devices</span><span class="p">:</span>
+      <span class="k">return</span> <span class="n">kind_devices</span><span class="p">[:</span><span class="n">max_devices</span><span class="p">]</span> <span class="k">if</span> <span class="n">max_devices</span> <span class="k">else</span> <span class="n">kind_devices</span></div>
+
+
+<div class="viewcode-block" id="xrt_world_size"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.xrt_world_size">[docs]</a><span class="k">def</span> <span class="nf">xrt_world_size</span><span class="p">(</span><span class="n">defval</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Retrieves the number of devices which is taking part of the replication.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    defval (int, optional): The default value to be returned in case there is no</span>
+<span class="sd">      replication information available.</span>
+<span class="sd">      Default: 1</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    The number of devices which is taking part of the replication.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">if</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">using_pjrt</span><span class="p">():</span>
+    <span class="k">return</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">world_size</span><span class="p">()</span>
+
+  <span class="k">return</span> <span class="n">xu</span><span class="o">.</span><span class="n">getenv_as</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">WORLD_SIZE</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="n">defval</span><span class="o">=</span><span class="n">defval</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="get_ordinal"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.get_ordinal">[docs]</a><span class="k">def</span> <span class="nf">get_ordinal</span><span class="p">(</span><span class="n">defval</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Retrieves the replication ordinal of the current thread.</span>
+
+<span class="sd">  The ordinals range from 0 to `xrt_world_size()` minus 1.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    defval (int, optional): The default value to be returned in case there is no</span>
+<span class="sd">      replication information available. Ignored for PjRt.</span>
+<span class="sd">      Default: 0</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    The replication ordinal of the current thread.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">if</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">using_pjrt</span><span class="p">():</span>
+    <span class="k">return</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">global_ordinal</span><span class="p">()</span>
+
+  <span class="k">return</span> <span class="n">xu</span><span class="o">.</span><span class="n">getenv_as</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">ORDINAL</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="n">defval</span><span class="o">=</span><span class="n">defval</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="get_local_ordinal"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.get_local_ordinal">[docs]</a><span class="k">def</span> <span class="nf">get_local_ordinal</span><span class="p">(</span><span class="n">defval</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Retrieves the replication local ordinal of the current thread.</span>
+
+<span class="sd">  The local ordinals range from 0 to the number of local devices minus 1.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    defval (int, optional): The default value to be returned in case there is no</span>
+<span class="sd">      replication information available. Ignored for PjRt.</span>
+<span class="sd">      Default: 0</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    The replication local ordinal of the current thread.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">if</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">using_pjrt</span><span class="p">():</span>
+    <span class="k">return</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">local_ordinal</span><span class="p">()</span>
+
+  <span class="n">ordinal</span> <span class="o">=</span> <span class="n">xu</span><span class="o">.</span><span class="n">getenv_as</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">LOCAL_ORDINAL</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="n">defval</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">ordinal</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">ordinal</span>
+  <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">_get_device_context</span><span class="p">(),</span> <span class="s1">&#39;device_index&#39;</span><span class="p">,</span> <span class="n">defval</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="is_master_ordinal"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.is_master_ordinal">[docs]</a><span class="k">def</span> <span class="nf">is_master_ordinal</span><span class="p">(</span><span class="n">local</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Checks whether the current process is the master ordinal (0).</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    local (bool): Whether the local or global master ordinal should be checked.</span>
+<span class="sd">      In case of multi-host replication, there is only one global master ordinal</span>
+<span class="sd">      (host 0, device 0), while there are NUM_HOSTS local master ordinals.</span>
+<span class="sd">      Default: True</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    A boolean indicating whether the current process is the master ordinal.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">ordinal</span> <span class="o">=</span> <span class="n">get_local_ordinal</span><span class="p">()</span> <span class="k">if</span> <span class="n">local</span> <span class="k">else</span> <span class="n">get_ordinal</span><span class="p">()</span>
+  <span class="k">return</span> <span class="n">ordinal</span> <span class="o">==</span> <span class="mi">0</span></div>
+
+
+<span class="k">def</span> <span class="nf">master_print</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">fd</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="p">,</span> <span class="n">local</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+  <span class="k">if</span> <span class="n">is_master_ordinal</span><span class="p">(</span><span class="n">local</span><span class="o">=</span><span class="n">local</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">fd</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="n">flush</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="xla_device"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.xla_device">[docs]</a><span class="k">def</span> <span class="nf">xla_device</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">devkind</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Returns a given instance of an XLA device.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    n (int, optional): The specific instance (ordinal) to be returned. If</span>
+<span class="sd">      specified, the specific XLA device instance will be returned. Otherwise</span>
+<span class="sd">      the first device of `devkind` will be returned.</span>
+<span class="sd">    devkind (string..., optional): If specified, one of `TPU`, `GPU` or `CPU`.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    A `torch.device` with the requested instance.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="c1"># When SPMD is enabled, we always return `xla:0` to the user, and</span>
+  <span class="c1"># under the hood we use virtual device logic for every xla tensor</span>
+  <span class="k">if</span> <span class="n">xu</span><span class="o">.</span><span class="n">check_env_flag</span><span class="p">(</span><span class="s1">&#39;XLA_USE_SPMD&#39;</span><span class="p">):</span>
+    <span class="n">device</span> <span class="o">=</span> <span class="s1">&#39;xla:0&#39;</span>
+    <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_set_default_device</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+  <span class="k">if</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">using_pjrt</span><span class="p">():</span>
+    <span class="k">return</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">xla_device</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">devkind</span><span class="p">)</span>
+
+  <span class="k">if</span> <span class="n">n</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">devices</span> <span class="o">=</span> <span class="n">get_xla_supported_devices</span><span class="p">(</span><span class="n">devkind</span><span class="o">=</span><span class="n">devkind</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">devices</span><span class="p">,</span> <span class="s1">&#39;No devices of </span><span class="si">{}</span><span class="s1"> kind&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">devkind</span> <span class="ow">or</span> <span class="s1">&#39;ANY&#39;</span><span class="p">)</span>
+    <span class="c1"># This is a utility API mainly called from tests or simple code which wants</span>
+    <span class="c1"># to just have a single device to run on. Set the default device so that</span>
+    <span class="c1"># the tensor barrier can work correctly and avoid growing graphs surprises.</span>
+    <span class="n">device</span> <span class="o">=</span> <span class="n">devices</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="n">device</span> <span class="o">=</span> <span class="s1">&#39;xla:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+  <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_set_default_device</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="n">device</span><span class="p">)</span></div>
+
+
+<span class="k">def</span> <span class="nf">_xla_real_device</span><span class="p">(</span><span class="n">device</span><span class="p">):</span>
+  <span class="n">device_str</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+  <span class="n">m</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;xla:(\d+)$&#39;</span><span class="p">,</span> <span class="n">device_str</span><span class="p">)</span>
+  <span class="k">if</span> <span class="ow">not</span> <span class="n">m</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">&#39;Invalid device format: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">device_str</span><span class="p">))</span>
+  <span class="k">return</span> <span class="n">_DEVICES</span><span class="o">.</span><span class="n">value</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))]</span>
+
+
+<span class="k">def</span> <span class="nf">xla_real_devices</span><span class="p">(</span><span class="n">devices</span><span class="p">):</span>
+  <span class="k">return</span> <span class="p">[</span><span class="n">_xla_real_device</span><span class="p">(</span><span class="n">device</span><span class="p">)</span> <span class="k">for</span> <span class="n">device</span> <span class="ow">in</span> <span class="n">devices</span><span class="p">]</span>
+
+
+<div class="viewcode-block" id="xla_device_hw"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.xla_device_hw">[docs]</a><span class="k">def</span> <span class="nf">xla_device_hw</span><span class="p">(</span><span class="n">device</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Returns the hardware type of the given device.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    device (string or torch.device): The xla device that will be mapped to the</span>
+<span class="sd">      real device.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    A string representation of the hardware type (`CPU`, `TPU`, `GPU`) of the</span>
+<span class="sd">    given device.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">real_device</span> <span class="o">=</span> <span class="n">_xla_real_device</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">real_device</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;:&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span></div>
+
+
+<span class="k">def</span> <span class="nf">xla_replication_devices</span><span class="p">(</span><span class="n">local_devices</span><span class="p">):</span>
+  <span class="n">real_devices</span> <span class="o">=</span> <span class="n">xla_real_devices</span><span class="p">(</span><span class="n">local_devices</span><span class="p">)</span>
+  <span class="n">device_types</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+  <span class="k">for</span> <span class="n">device</span> <span class="ow">in</span> <span class="n">real_devices</span><span class="p">:</span>
+    <span class="n">xdev</span> <span class="o">=</span> <span class="n">parse_xla_device</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+    <span class="n">device_types</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">xdev</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+  <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">device_types</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+    <span class="c1"># No replication if the device set spawns multiple device types.</span>
+    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+        <span class="s1">&#39;Cannot replicate across different device types: devices=</span><span class="si">{}</span><span class="s1">/</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">local_devices</span><span class="p">,</span> <span class="n">real_devices</span><span class="p">))</span>
+  <span class="n">device_type</span> <span class="o">=</span> <span class="n">device_types</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+  <span class="n">kind_devices</span> <span class="o">=</span> <span class="n">get_xla_supported_devices</span><span class="p">(</span><span class="n">devkind</span><span class="o">=</span><span class="n">device_type</span><span class="p">)</span>
+  <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">kind_devices</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">local_devices</span><span class="p">):</span>
+    <span class="c1"># Replication can only happen among all devices of one kind.</span>
+    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+        <span class="s1">&#39;Cannot replicate if number of devices (</span><span class="si">{}</span><span class="s1">) is different from </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span>
+        <span class="nb">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">local_devices</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">kind_devices</span><span class="p">)))</span>
+  <span class="n">replication_devices</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="k">for</span> <span class="n">device</span> <span class="ow">in</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_all_devices</span><span class="p">():</span>
+    <span class="n">xdev</span> <span class="o">=</span> <span class="n">parse_xla_device</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">xdev</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">&#39;Invalid device format: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">device</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">xdev</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">device_type</span><span class="p">:</span>
+      <span class="n">replication_devices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+  <span class="n">sorted_by_ordinal</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
+      <span class="n">replication_devices</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">device</span><span class="p">:</span> <span class="n">parse_xla_device</span><span class="p">(</span><span class="n">device</span><span class="p">)[</span><span class="mi">1</span><span class="p">])</span>
+  <span class="k">return</span> <span class="n">sorted_by_ordinal</span>
+
+
+<span class="k">def</span> <span class="nf">unlazy</span><span class="p">(</span><span class="n">tensors</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Blocks the program until `tensors` are materialized.</span>
+
+<span class="sd">  This API is for benchmarking, don&#39;t use it in real models.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    tensors (List[torch.Tensor]): List of `torch.Tensor`s to materialize. For</span>
+<span class="sd">      each Tensor `t` in the list, `t.device` must be an `xla` device.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_sync_multi</span><span class="p">(</span><span class="n">tensors</span><span class="p">,</span> <span class="n">devices</span><span class="o">=</span><span class="p">[],</span> <span class="n">wait</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">set_replication</span><span class="p">(</span><span class="n">device</span><span class="p">,</span> <span class="n">devices</span><span class="p">):</span>
+  <span class="n">device</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+  <span class="n">devctx</span> <span class="o">=</span> <span class="n">_get_device_context</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+  <span class="n">devices</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">devices</span><span class="p">]</span>
+  <span class="k">if</span> <span class="n">devices</span><span class="p">:</span>
+    <span class="n">replication_devices</span> <span class="o">=</span> <span class="n">xla_replication_devices</span><span class="p">(</span><span class="n">devices</span><span class="p">)</span>
+    <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_set_replication_devices</span><span class="p">(</span><span class="n">replication_devices</span><span class="p">)</span>
+    <span class="n">devctx</span><span class="o">.</span><span class="n">device_index</span> <span class="o">=</span> <span class="n">devices</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_set_replication_devices</span><span class="p">([])</span>
+    <span class="n">devctx</span><span class="o">.</span><span class="n">device_index</span> <span class="o">=</span> <span class="mi">0</span>
+  <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="kc">None</span>
+  <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_set_default_device</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">RateTracker</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+  <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">smooth_factor</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_smooth_factor</span> <span class="o">=</span> <span class="n">xu</span><span class="o">.</span><span class="n">getenv_as</span><span class="p">(</span>
+        <span class="s1">&#39;RATE_TRACKER_SMOOTHING&#39;</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span>
+        <span class="mf">0.4</span><span class="p">)</span> <span class="k">if</span> <span class="n">smooth_factor</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">smooth_factor</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_partial_time</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_start_time</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_partial_count</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_partial_rate</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_count</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+  <span class="k">def</span> <span class="nf">_update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">now</span><span class="p">,</span> <span class="n">rate</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_partial_count</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_count</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_count</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_partial_time</span> <span class="o">=</span> <span class="n">now</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_partial_rate</span> <span class="o">=</span> <span class="n">rate</span>
+
+  <span class="k">def</span> <span class="nf">add</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">count</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_count</span> <span class="o">+=</span> <span class="n">count</span>
+
+  <span class="k">def</span> <span class="nf">_smooth</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">current_rate</span><span class="p">):</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_partial_rate</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+      <span class="n">smoothed_rate</span> <span class="o">=</span> <span class="n">current_rate</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">smoothed_rate</span> <span class="o">=</span> <span class="p">((</span><span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_smooth_factor</span><span class="p">)</span> <span class="o">*</span> <span class="n">current_rate</span> <span class="o">+</span>
+                       <span class="bp">self</span><span class="o">.</span><span class="n">_smooth_factor</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_partial_rate</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">smoothed_rate</span>
+
+  <span class="k">def</span> <span class="nf">rate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">now</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="n">delta</span> <span class="o">=</span> <span class="n">now</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_partial_time</span>
+    <span class="n">report_rate</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="k">if</span> <span class="n">delta</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+      <span class="n">report_rate</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_smooth</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_count</span> <span class="o">/</span> <span class="n">delta</span><span class="p">)</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_update</span><span class="p">(</span><span class="n">now</span><span class="p">,</span> <span class="n">report_rate</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">report_rate</span>
+
+  <span class="k">def</span> <span class="nf">global_rate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">delta</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_start_time</span>
+    <span class="n">count</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_partial_count</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_count</span>
+    <span class="k">return</span> <span class="n">count</span> <span class="o">/</span> <span class="n">delta</span> <span class="k">if</span> <span class="n">delta</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="mf">0.0</span>
+
+
+<span class="k">class</span> <span class="nc">ToXlaTensorArena</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+  <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">convert_fn</span><span class="p">,</span> <span class="n">select_fn</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_convert_fn</span> <span class="o">=</span> <span class="n">convert_fn</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_select_fn</span> <span class="o">=</span> <span class="n">select_fn</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_tensors</span> <span class="o">=</span> <span class="p">[]</span>
+
+  <span class="k">def</span> <span class="nf">_add</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tensor</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_tensors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tensor</span><span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">_convert</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_index</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tensors</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_converted_tensors</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_convert_fn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_tensors</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_converted_tensors</span> <span class="o">=</span> <span class="p">[]</span>
+
+  <span class="k">def</span> <span class="nf">_get_converted_tensor</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">_index</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_converted_tensors</span><span class="p">)</span>
+    <span class="n">new_tensor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_converted_tensors</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_index</span><span class="p">]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_index</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">return</span> <span class="n">new_tensor</span>
+
+  <span class="k">def</span> <span class="nf">_collect_tensors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">collect_fn</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_add</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+    <span class="n">xu</span><span class="o">.</span><span class="n">for_each_instance</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_select_fn</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">collect_fn</span><span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">_replace_tensors</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="nf">convert_fn</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+      <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_converted_tensor</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">xu</span><span class="o">.</span><span class="n">for_each_instance_rewrite</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_select_fn</span><span class="p">(</span><span class="n">x</span><span class="p">),</span>
+                                        <span class="n">convert_fn</span><span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inputs</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_tensors</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_collect_tensors</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_convert</span><span class="p">()</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_replace_tensors</span><span class="p">(</span><span class="n">inputs</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">check_view_sharing</span><span class="p">(</span><span class="n">obj</span><span class="p">):</span>
+  <span class="n">tensors</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+  <span class="n">aliases</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+
+  <span class="k">def</span> <span class="nf">tensor_info</span><span class="p">(</span><span class="n">t</span><span class="p">):</span>
+    <span class="k">return</span> <span class="s1">&#39;</span><span class="si">{}{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+
+  <span class="k">def</span> <span class="nf">tensor_id</span><span class="p">(</span><span class="n">t</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">is_xla_tensor</span><span class="p">(</span><span class="n">t</span><span class="p">):</span>
+      <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_tensor_id</span><span class="p">(</span><span class="n">t</span><span class="p">),</span> <span class="s1">&#39;xla&#39;</span>
+    <span class="k">return</span> <span class="nb">id</span><span class="p">(</span><span class="n">t</span><span class="p">),</span> <span class="s1">&#39;torch&#39;</span>
+
+  <span class="k">def</span> <span class="nf">alias_id</span><span class="p">(</span><span class="n">t</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">is_xla_tensor</span><span class="p">(</span><span class="n">t</span><span class="p">):</span>
+      <span class="n">aid</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_tensor_view_alias_id</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+      <span class="k">return</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">aid</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">aid</span><span class="p">,</span> <span class="s1">&#39;xla&#39;</span>
+    <span class="k">return</span> <span class="n">t</span><span class="o">.</span><span class="n">storage</span><span class="p">()</span><span class="o">.</span><span class="n">data_ptr</span><span class="p">(),</span> <span class="s1">&#39;torch&#39;</span>
+
+  <span class="k">def</span> <span class="nf">check_object</span><span class="p">(</span><span class="n">obj</span><span class="p">):</span>
+    <span class="n">tid</span> <span class="o">=</span> <span class="n">tensor_id</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">tid</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">tensors</span><span class="p">:</span>
+      <span class="n">tensors</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">tid</span><span class="p">)</span>
+      <span class="n">aid</span> <span class="o">=</span> <span class="n">alias_id</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+      <span class="k">if</span> <span class="n">aid</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">aid</span> <span class="ow">in</span> <span class="n">aliases</span><span class="p">:</span>
+          <span class="n">oobj</span> <span class="o">=</span> <span class="n">aliases</span><span class="p">[</span><span class="n">aid</span><span class="p">]</span>
+          <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+              <span class="s1">&#39;Tensor ID </span><span class="si">{}</span><span class="s1"> (</span><span class="si">{}</span><span class="s1">) is sharing a view with tensor ID </span><span class="si">{}</span><span class="s1"> (</span><span class="si">{}</span><span class="s1">)&#39;</span><span class="o">.</span>
+              <span class="nb">format</span><span class="p">(</span><span class="n">tid</span><span class="p">,</span> <span class="n">tensor_info</span><span class="p">(</span><span class="n">obj</span><span class="p">),</span> <span class="n">tensor_id</span><span class="p">(</span><span class="n">oobj</span><span class="p">),</span> <span class="n">tensor_info</span><span class="p">(</span><span class="n">oobj</span><span class="p">)))</span>
+        <span class="n">aliases</span><span class="p">[</span><span class="n">aid</span><span class="p">]</span> <span class="o">=</span> <span class="n">obj</span>
+
+  <span class="n">xu</span><span class="o">.</span><span class="n">for_each_instance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="nb">type</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="o">==</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">check_object</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_fetch_gradients</span><span class="p">(</span><span class="n">optimizer</span><span class="p">):</span>
+  <span class="n">gradients</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="k">for</span> <span class="n">param_group</span> <span class="ow">in</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">__getstate__</span><span class="p">()[</span><span class="s1">&#39;param_groups&#39;</span><span class="p">]:</span>
+    <span class="k">for</span> <span class="n">group</span><span class="p">,</span> <span class="n">params</span> <span class="ow">in</span> <span class="n">param_group</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+      <span class="k">if</span> <span class="n">group</span> <span class="o">==</span> <span class="s1">&#39;params&#39;</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">params</span><span class="p">:</span>
+          <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="ow">and</span> <span class="n">p</span><span class="o">.</span><span class="n">grad</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">gradients</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">grad</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">gradients</span>
+
+
+<span class="k">def</span> <span class="nf">_get_all_reduce_token</span><span class="p">():</span>
+  <span class="n">devctx</span> <span class="o">=</span> <span class="n">_get_device_context</span><span class="p">()</span>
+  <span class="n">token</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">devctx</span><span class="p">,</span> <span class="s1">&#39;all_reduce_token&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">token</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">token</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_create_token</span><span class="p">(</span><span class="n">devctx</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+    <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">token</span>
+  <span class="k">return</span> <span class="n">token</span><span class="p">,</span> <span class="n">devctx</span>
+
+
+<span class="k">def</span> <span class="nf">_torch_all_reduce</span><span class="p">(</span><span class="n">reduce_type</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">group</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+  <span class="kn">import</span> <span class="nn">torch.distributed</span> <span class="k">as</span> <span class="nn">dist</span>
+
+  <span class="k">if</span> <span class="n">reduce_type</span> <span class="o">==</span> <span class="n">REDUCE_SUM</span><span class="p">:</span>
+    <span class="n">reduce_op</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">ReduceOp</span><span class="o">.</span><span class="n">SUM</span>
+  <span class="k">elif</span> <span class="n">reduce_type</span> <span class="o">==</span> <span class="n">REDUCE_MUL</span><span class="p">:</span>
+    <span class="n">reduce_op</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">ReduceOp</span><span class="o">.</span><span class="n">PRODUCT</span>
+  <span class="k">elif</span> <span class="n">reduce_type</span> <span class="o">==</span> <span class="n">REDUCE_MIN</span><span class="p">:</span>
+    <span class="n">reduce_op</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">ReduceOp</span><span class="o">.</span><span class="n">MIN</span>
+  <span class="k">elif</span> <span class="n">reduce_type</span> <span class="o">==</span> <span class="n">REDUCE_MAX</span><span class="p">:</span>
+    <span class="n">reduce_op</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">ReduceOp</span><span class="o">.</span><span class="n">MAX</span>
+  <span class="k">elif</span> <span class="n">reduce_type</span> <span class="o">==</span> <span class="n">REDUCE_OR</span><span class="p">:</span>
+    <span class="n">reduce_op</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">ReduceOp</span><span class="o">.</span><span class="n">BOR</span>
+  <span class="k">elif</span> <span class="n">reduce_type</span> <span class="o">==</span> <span class="n">REDUCE_AND</span><span class="p">:</span>
+    <span class="n">reduce_op</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">ReduceOp</span><span class="o">.</span><span class="n">BAND</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">&#39;Invalid reduce type: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">reduce_type</span><span class="p">))</span>
+
+  <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="n">async_op</span> <span class="o">=</span> <span class="kc">None</span>
+  <span class="k">for</span> <span class="n">tensor</span> <span class="ow">in</span> <span class="n">inputs</span><span class="p">:</span>
+    <span class="c1"># Use async flag to overlap pytorch reduce ops with XLA tensor fetches.</span>
+    <span class="n">cpu_tensor</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_cpu_tensors</span><span class="p">([</span><span class="n">tensor</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cpu_tensor</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">async_op</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+      <span class="n">async_op</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
+    <span class="n">async_op</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">all_reduce</span><span class="p">(</span>
+        <span class="n">cpu_tensor</span><span class="p">,</span> <span class="n">reduce_op</span><span class="p">,</span> <span class="n">async_op</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">group</span><span class="o">=</span><span class="n">group</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">async_op</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">async_op</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
+  <span class="k">return</span> <span class="n">results</span>
+
+
+<span class="k">def</span> <span class="nf">_host_all_reduce</span><span class="p">(</span><span class="n">reduce_type</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">cctx</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+  <span class="c1"># Barrier must happen on all devices.</span>
+  <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_sync_multi</span><span class="p">(</span>
+      <span class="n">inputs</span><span class="p">,</span> <span class="n">devices</span><span class="o">=</span><span class="p">[],</span> <span class="n">wait</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">sync_xla_data</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+  <span class="c1"># Here we use the torch.distributed reductions only on one device in the</span>
+  <span class="c1"># replication set, and then use in graph fast interconnect reduction to</span>
+  <span class="c1"># transfer the result to all replication devices.</span>
+  <span class="c1"># One core per fast interconnect replica group does the torch.distributed</span>
+  <span class="c1"># reduction and post the result, while the others post zeros.</span>
+  <span class="k">if</span> <span class="n">cctx</span><span class="o">.</span><span class="n">is_reduce_host</span><span class="p">:</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="n">_torch_all_reduce</span><span class="p">(</span><span class="n">reduce_type</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">group</span><span class="o">=</span><span class="n">cctx</span><span class="o">.</span><span class="n">interhost_group</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">inputs</span><span class="p">)):</span>
+      <span class="n">inputs</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">copy_</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+      <span class="k">if</span> <span class="n">scale</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">inputs</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">mul_</span><span class="p">(</span><span class="n">scale</span><span class="p">)</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="k">for</span> <span class="n">tensor</span> <span class="ow">in</span> <span class="n">inputs</span><span class="p">:</span>
+      <span class="n">tensor</span><span class="o">.</span><span class="n">zero_</span><span class="p">()</span>
+  <span class="k">if</span> <span class="n">cctx</span><span class="o">.</span><span class="n">requires_intercore_reduce</span><span class="p">:</span>
+    <span class="n">token</span><span class="p">,</span> <span class="n">devctx</span> <span class="o">=</span> <span class="n">_get_all_reduce_token</span><span class="p">()</span>
+    <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_all_reduce_inplace</span><span class="p">(</span>
+        <span class="n">REDUCE_SUM</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="p">[])</span>
+
+
+<div class="viewcode-block" id="all_reduce"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.all_reduce">[docs]</a><span class="k">def</span> <span class="nf">all_reduce</span><span class="p">(</span><span class="n">reduce_type</span><span class="p">,</span>
+               <span class="n">inputs</span><span class="p">,</span>
+               <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+               <span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+               <span class="n">cctx</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+               <span class="n">pin_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Performs an inplace reduce operation on the input tensor(s).</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    reduce_type (string): One of ``xm.REDUCE_SUM``, ``xm.REDUCE_MUL``,</span>
+<span class="sd">      ``xm.REDUCE_AND``, ``xm.REDUCE_OR``, ``xm.REDUCE_MIN`` and</span>
+<span class="sd">      ``xm.REDUCE_MAX``.</span>
+<span class="sd">    inputs: Either a single `torch.Tensor` or a list of `torch.Tensor` to</span>
+<span class="sd">      perform the all reduce op to.</span>
+<span class="sd">    scale (float): A default scaling value to be applied after the reduce.</span>
+<span class="sd">      Default: 1.0</span>
+<span class="sd">    groups (list, optional): A list of list, representing the replica groups for</span>
+<span class="sd">      the `all_reduce()` operation. Example: `[[0, 1, 2, 3], [4, 5, 6, 7]]`</span>
+<span class="sd">        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with</span>
+<span class="sd">        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with</span>
+<span class="sd">        all the replicas in it.</span>
+<span class="sd">    pin_layout (bool, optional): whether to pin the layout for this communication op.</span>
+<span class="sd">      Layout pining can prevent potential data corruption when each process that</span>
+<span class="sd">      participate in the communication has slightly different program, but it might</span>
+<span class="sd">      cause some xla compiation to fail. Unpin the layout when you see error message</span>
+<span class="sd">      like &quot;HloModule has a mix of layout constrained&quot;.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    If a single `torch.Tensor` is passed, the return value is a `torch.Tensor`</span>
+<span class="sd">    holding the reduced value (across the replicas). If a list/tuple is passed,</span>
+<span class="sd">    this function performs an inplace all-reduce op on the input tensors, and</span>
+<span class="sd">    returns the list/tuple itself.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="c1"># In a sea-of-devices case we use two level of reductions. One using the fast</span>
+  <span class="c1"># device interconnect, and then using the torch.distributed reduction API to</span>
+  <span class="c1"># reduce across the detached hosts.</span>
+  <span class="c1"># One special case is XLA CPU devices, which do not support in graph reductions,</span>
+  <span class="c1"># so in that case we create differente processes having a single replication</span>
+  <span class="c1"># device. That will skip the in graph reductions and use the torch.distributed</span>
+  <span class="c1"># support across all XLA CPU devices.</span>
+  <span class="k">if</span> <span class="n">cctx</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">cctx</span> <span class="o">=</span> <span class="n">CollectiveContext</span><span class="p">(</span><span class="n">groups</span><span class="o">=</span><span class="n">groups</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">cctx</span><span class="o">.</span><span class="n">requires_intercore_reduce</span><span class="p">:</span>
+    <span class="n">token</span><span class="p">,</span> <span class="n">devctx</span> <span class="o">=</span> <span class="n">_get_all_reduce_token</span><span class="p">()</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+      <span class="n">result</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_all_reduce</span><span class="p">(</span><span class="n">reduce_type</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span>
+                                               <span class="n">scale</span><span class="p">,</span> <span class="n">cctx</span><span class="o">.</span><span class="n">intercore_group</span><span class="p">,</span>
+                                               <span class="n">pin_layout</span><span class="p">)</span>
+      <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+      <span class="n">results</span> <span class="o">=</span> <span class="p">[</span><span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_all_reduce_inplace</span><span class="p">(</span>
+          <span class="n">reduce_type</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span> <span class="n">cctx</span><span class="o">.</span><span class="n">intercore_group</span><span class="p">,</span> <span class="n">pin_layout</span><span class="p">)</span>
+      <span class="n">results</span> <span class="o">=</span> <span class="n">inputs</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+      <span class="n">results</span> <span class="o">=</span> <span class="p">[</span><span class="n">inputs</span><span class="o">.</span><span class="n">clone</span><span class="p">()]</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">results</span> <span class="o">=</span> <span class="n">inputs</span>
+
+  <span class="k">if</span> <span class="n">cctx</span><span class="o">.</span><span class="n">requires_interhost_reduce</span><span class="p">:</span>
+    <span class="k">assert</span> <span class="n">groups</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;Groups are not supported in sea-of-devices mode&#39;</span>
+    <span class="n">hscale</span> <span class="o">=</span> <span class="n">scale</span> <span class="k">if</span> <span class="n">cctx</span><span class="o">.</span><span class="n">replica_devcount</span> <span class="o">&lt;=</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">scale</span> <span class="o">!=</span> <span class="mf">1.0</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="n">_host_all_reduce</span><span class="p">(</span><span class="n">reduce_type</span><span class="p">,</span> <span class="n">results</span><span class="p">,</span> <span class="n">cctx</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="n">hscale</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">results</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="k">else</span> <span class="n">results</span></div>
+
+
+<span class="k">def</span> <span class="nf">_all_gather_using_all_reduce</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">pin_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Performs an all-gather operation using all-reduce along a given dimension.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    value (torch.Tensor): The input tensor.</span>
+<span class="sd">    dim (int): The gather dimension.</span>
+<span class="sd">      Default: 0</span>
+<span class="sd">    groups (list, optional): A list of list, representing the replica groups for</span>
+<span class="sd">      the `all_gather()` operation. Example: `[[0, 1, 2, 3], [4, 5, 6, 7]]`</span>
+<span class="sd">        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with</span>
+<span class="sd">        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with</span>
+<span class="sd">        all the replicas in it.</span>
+<span class="sd">    output (torch.Tensor): Optional output tensor.</span>
+<span class="sd">    pin_layout (bool, optional): whether to pin the layout for this communication op.</span>
+<span class="sd">      Layout pining can prevent potential data corruption when each process that</span>
+<span class="sd">      participate in the communication has slightly different program, but it might</span>
+<span class="sd">      cause some xla compiation to fail. Unpin the layout when you see error message</span>
+<span class="sd">      like &quot;HloModule has a mix of layout constrained&quot;.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    A tensor which has, in the ``dim`` dimension, all the values from the</span>
+<span class="sd">    participating replicas.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">if</span> <span class="n">dim</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="n">dim</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="o">+</span> <span class="n">dim</span>
+  <span class="n">size</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="n">dim</span><span class="p">)</span>
+  <span class="n">padding</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">value</span><span class="o">.</span><span class="n">dim</span><span class="p">())</span>
+  <span class="n">ordinal</span> <span class="o">=</span> <span class="n">get_ordinal</span><span class="p">()</span>
+  <span class="k">if</span> <span class="n">groups</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">left</span><span class="p">,</span> <span class="n">right</span> <span class="o">=</span> <span class="n">ordinal</span><span class="p">,</span> <span class="n">xrt_world_size</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">ordinal</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="n">ordinals</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">groups</span><span class="p">:</span>
+      <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">g</span><span class="p">):</span>
+        <span class="n">ordinals</span><span class="p">[</span><span class="n">x</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">g</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">i</span><span class="p">)</span>
+    <span class="n">left</span><span class="p">,</span> <span class="n">right</span> <span class="o">=</span> <span class="n">ordinals</span><span class="p">[</span><span class="n">ordinal</span><span class="p">]</span>
+  <span class="n">idx</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="o">-</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">dim</span>
+  <span class="n">padding</span><span class="p">[</span><span class="mi">2</span> <span class="o">*</span> <span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">left</span> <span class="o">*</span> <span class="n">size</span>
+  <span class="n">padding</span><span class="p">[</span><span class="mi">2</span> <span class="o">*</span> <span class="n">idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">right</span> <span class="o">*</span> <span class="n">size</span>
+  <span class="k">return</span> <span class="n">all_reduce</span><span class="p">(</span><span class="n">REDUCE_SUM</span><span class="p">,</span> <span class="n">F</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">padding</span><span class="p">),</span> <span class="n">groups</span><span class="o">=</span><span class="n">groups</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="all_gather"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.all_gather">[docs]</a><span class="k">def</span> <span class="nf">all_gather</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">pin_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Performs an all-gather operation along a given dimension.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    value (torch.Tensor): The input tensor.</span>
+<span class="sd">    dim (int): The gather dimension.</span>
+<span class="sd">      Default: 0</span>
+<span class="sd">    groups (list, optional): A list of list, representing the replica groups for</span>
+<span class="sd">      the `all_gather()` operation. Example: `[[0, 1, 2, 3], [4, 5, 6, 7]]`</span>
+<span class="sd">        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with</span>
+<span class="sd">        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with</span>
+<span class="sd">        all the replicas in it.</span>
+<span class="sd">    output (torch.Tensor): Optional output tensor.</span>
+<span class="sd">    pin_layout (bool, optional): whether to pin the layout for this communication op.</span>
+<span class="sd">      Layout pining can prevent potential data corruption when each process that</span>
+<span class="sd">      participate in the communication has slightly different program, but it might</span>
+<span class="sd">      cause some xla compiation to fail. Unpin the layout when you see error message</span>
+<span class="sd">      like &quot;HloModule has a mix of layout constrained&quot;.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    A tensor which has, in the ``dim`` dimension, all the values from the</span>
+<span class="sd">    participating replicas.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">if</span> <span class="n">pin_layout</span> <span class="ow">and</span> <span class="n">xla_device_hw</span><span class="p">(</span>
+      <span class="n">value</span><span class="o">.</span><span class="n">device</span><span class="p">)</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;TPU&#39;</span><span class="p">,</span> <span class="s1">&#39;GPU&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">output</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="c1"># There is not an easy way to pin the all_gather layout on TPU and GPU, use</span>
+    <span class="c1"># all_reduce based all_gather for this purpose.</span>
+    <span class="k">return</span> <span class="n">_all_gather_using_all_reduce</span><span class="p">(</span>
+        <span class="n">value</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="n">dim</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="n">groups</span><span class="p">,</span> <span class="n">pin_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">dim</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="n">dim</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="o">+</span> <span class="n">dim</span>
+  <span class="n">token</span><span class="p">,</span> <span class="n">devctx</span> <span class="o">=</span> <span class="n">_get_all_reduce_token</span><span class="p">()</span>
+  <span class="k">if</span> <span class="n">groups</span><span class="p">:</span>
+    <span class="n">shard_count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">groups</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">assert</span> <span class="nb">all</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">group</span><span class="p">)</span> <span class="o">==</span> <span class="n">shard_count</span> <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="n">groups</span><span class="p">),</span> \
+      <span class="s2">&quot;Replica groups must have the same number of replicas/shards.&quot;</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="c1"># All replicas belong to a single group</span>
+    <span class="n">shard_count</span> <span class="o">=</span> <span class="n">xrt_world_size</span><span class="p">()</span>
+  <span class="k">if</span> <span class="n">output</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="c1"># Call the out of place version of the all_gather</span>
+    <span class="n">new_token</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_all_gather_out</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">dim</span><span class="p">,</span>
+                                                    <span class="n">shard_count</span><span class="p">,</span> <span class="n">groups</span> <span class="ow">or</span> <span class="p">[],</span>
+                                                    <span class="n">pin_layout</span><span class="p">)</span>
+    <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">new_token</span>
+    <span class="k">return</span> <span class="n">output</span>
+
+  <span class="n">result</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_all_gather</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">dim</span><span class="p">,</span> <span class="n">shard_count</span><span class="p">,</span>
+                                           <span class="n">groups</span> <span class="ow">or</span> <span class="p">[],</span> <span class="n">pin_layout</span><span class="p">)</span>
+  <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+  <span class="k">return</span> <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="all_to_all"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.all_to_all">[docs]</a><span class="k">def</span> <span class="nf">all_to_all</span><span class="p">(</span><span class="n">value</span><span class="p">,</span>
+               <span class="n">split_dimension</span><span class="p">,</span>
+               <span class="n">concat_dimension</span><span class="p">,</span>
+               <span class="n">split_count</span><span class="p">,</span>
+               <span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+               <span class="n">pin_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Performs an XLA `AllToAll()` operation on the input tensor.</span>
+
+<span class="sd">  See: https://www.tensorflow.org/xla/operation_semantics#alltoall</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    value (torch.Tensor): The input tensor.</span>
+<span class="sd">    split_dimension (int): The dimension upon which the split should happen.</span>
+<span class="sd">    concat_dimension (int): The dimension upon which the concat should happen.</span>
+<span class="sd">    split_count (int): The split count.</span>
+<span class="sd">    groups (list, optional): A list of list, representing the replica groups for</span>
+<span class="sd">      the `all_reduce()` operation. Example: `[[0, 1, 2, 3], [4, 5, 6, 7]]`</span>
+<span class="sd">        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with</span>
+<span class="sd">        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with</span>
+<span class="sd">        all the replicas in it.</span>
+<span class="sd">    pin_layout (bool, optional): whether to pin the layout for this communication op.</span>
+<span class="sd">      Layout pining can prevent potential data corruption when each process that</span>
+<span class="sd">      participate in the communication has slightly different program, but it might</span>
+<span class="sd">      cause some xla compiation to fail. Unpin the layout when you see error message</span>
+<span class="sd">      like &quot;HloModule has a mix of layout constrained&quot;.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    The result `torch.Tensor` of the `all_to_all()` operation.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">token</span><span class="p">,</span> <span class="n">devctx</span> <span class="o">=</span> <span class="n">_get_all_reduce_token</span><span class="p">()</span>
+  <span class="n">result</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_all_to_all</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">split_dimension</span><span class="p">,</span>
+                                           <span class="n">concat_dimension</span><span class="p">,</span> <span class="n">split_count</span><span class="p">,</span>
+                                           <span class="n">groups</span> <span class="ow">or</span> <span class="p">[],</span> <span class="n">pin_layout</span><span class="p">)</span>
+  <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+  <span class="k">return</span> <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
+
+
+<span class="k">def</span> <span class="nf">collective_permute</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">pairs</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Performs a XLA `CollectivePermute()` operation on the input tensor.</span>
+
+<span class="sd">  WARNING: This function is not very reliable, may produce wrong results under</span>
+<span class="sd">           certain inputs. Use it at your own risk.</span>
+
+<span class="sd">  See: https://www.tensorflow.org/xla/operation_semantics#collectivepermute</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    value (torch.Tensor): The input tensor.</span>
+<span class="sd">    pairs (list): A list of (source_replica_id, target_replica_id) pairs,</span>
+<span class="sd">      representing the sender and receiver for the `collective_permute()`</span>
+<span class="sd">      operation. Example: `[[0, 1], [1, 2], [2, 0]]` defines three pairs. The</span>
+<span class="sd">        tensor will be sent from replica 0 to replica 1, replica 1 to replica 2,</span>
+<span class="sd">        and replica 2 to replica 0.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    The result `torch.Tensor` of the `collective_permute()` operation.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">token</span><span class="p">,</span> <span class="n">devctx</span> <span class="o">=</span> <span class="n">_get_all_reduce_token</span><span class="p">()</span>
+  <span class="n">result</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_collective_permute</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">pairs</span><span class="p">)</span>
+  <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+  <span class="k">return</span> <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+
+<span class="k">def</span> <span class="nf">collective_broadcast</span><span class="p">(</span><span class="n">tensors</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span>
+                         <span class="n">root_ordinal</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+                         <span class="n">groups</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                         <span class="n">pin_layout</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="sd">&quot;&quot;&quot;Broadcast values of `tensors` from root replica to other replicas in-place.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    tensors (list): List of `torch.Tensor`s to broadcast.</span>
+<span class="sd">    root_ordinal (int): Ordinal of replica with values to broadcast.</span>
+<span class="sd">    groups (list, optional): A list of list, representing the replica groups for</span>
+<span class="sd">      the `all_reduce()` operation. Example: `[[0, 1, 2, 3], [4, 5, 6, 7]]`</span>
+<span class="sd">        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with</span>
+<span class="sd">        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with</span>
+<span class="sd">        all the replicas in it.</span>
+<span class="sd">    pin_layout (bool, optional): whether to pin the layout for this communication op.</span>
+<span class="sd">      Layout pining can prevent potential data corruption when each process that</span>
+<span class="sd">      participate in the communication has slightly different program, but it might</span>
+<span class="sd">      cause some xla compiation to fail. Unpin the layout when you see error message</span>
+<span class="sd">      like &quot;HloModule has a mix of layout constrained&quot;.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
+    <span class="c1"># We must produce the exact same graph in each replica to prevent hanging,</span>
+    <span class="c1"># so each replica must have the same multiply op with the same parameters.</span>
+    <span class="k">for</span> <span class="n">tensor</span> <span class="ow">in</span> <span class="n">tensors</span><span class="p">:</span>
+      <span class="n">scale</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span>
+          <span class="mi">1</span> <span class="k">if</span> <span class="n">get_ordinal</span><span class="p">()</span> <span class="o">==</span> <span class="n">root_ordinal</span> <span class="k">else</span> <span class="mi">0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">tensor</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+      <span class="c1"># Transfer scale tensor as device data instead of constant 1 or 0.</span>
+      <span class="n">xscale</span> <span class="o">=</span> <span class="n">send_cpu_data_to_device</span><span class="p">(</span><span class="n">scale</span><span class="p">,</span> <span class="n">tensor</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+      <span class="n">tensor</span><span class="o">.</span><span class="n">mul_</span><span class="p">(</span><span class="n">xscale</span><span class="p">)</span>
+
+  <span class="n">all_reduce</span><span class="p">(</span><span class="n">REDUCE_SUM</span><span class="p">,</span> <span class="n">tensors</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="n">groups</span><span class="p">,</span> <span class="n">pin_layout</span><span class="o">=</span><span class="n">pin_layout</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">send</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">channel_id</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Performs a XLA `Send()` operation on the input tensor.</span>
+
+<span class="sd">  See: https://www.tensorflow.org/xla/operation_semantics#send</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    value (torch.Tensor): The input tensor.</span>
+<span class="sd">    channel_id (int64): opaque id identifying the destination of the send op.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">token</span><span class="p">,</span> <span class="n">devctx</span> <span class="o">=</span> <span class="n">_get_all_reduce_token</span><span class="p">()</span>
+  <span class="c1"># The input will be returned as result.</span>
+  <span class="n">input_as_result</span><span class="p">,</span> <span class="n">new_token</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_send</span><span class="p">(</span>
+      <span class="n">value</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">channel_id</span><span class="p">)</span>
+  <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">new_token</span>
+  <span class="k">return</span> <span class="n">input_as_result</span>
+
+
+<span class="k">def</span> <span class="nf">recv</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">channel_id</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Performs a XLA `Send()` operation on the input tensor.</span>
+
+<span class="sd">  See: https://www.tensorflow.org/xla/operation_semantics#recv</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    output (torch.Tensor): The output tensor.</span>
+<span class="sd">    channel_id (int64): opaque id identifying the source of the recv op.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">token</span><span class="p">,</span> <span class="n">devctx</span> <span class="o">=</span> <span class="n">_get_all_reduce_token</span><span class="p">()</span>
+  <span class="n">result</span><span class="p">,</span> <span class="n">new_token</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_recv</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">channel_id</span><span class="p">)</span>
+  <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">new_token</span>
+  <span class="k">return</span> <span class="n">result</span>
+
+
+<span class="k">def</span> <span class="nf">reduce_scatter</span><span class="p">(</span><span class="n">reduce_type</span><span class="p">,</span>
+                   <span class="nb">input</span><span class="p">,</span>
+                   <span class="n">scale</span><span class="p">,</span>
+                   <span class="n">scatter_dim</span><span class="p">,</span>
+                   <span class="n">shard_count</span><span class="p">,</span>
+                   <span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                   <span class="n">output</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                   <span class="n">pin_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Performs a XLA `ReduceScatter()` operation on the input tensor.</span>
+
+<span class="sd">  See: https://www.tensorflow.org/xla/operation_semantics#reducescatter</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    reduce_type (string): One of ``xm.REDUCE_SUM``, ``xm.REDUCE_MUL``,</span>
+<span class="sd">      ``xm.REDUCE_AND``, ``xm.REDUCE_OR``, ``xm.REDUCE_MIN`` and</span>
+<span class="sd">      ``xm.REDUCE_MAX``.</span>
+<span class="sd">    input: A single `torch.Tensor` all reduce + scatter op to.</span>
+<span class="sd">    scale (float): A default scaling value to be applied after the reduce.</span>
+<span class="sd">    scatter_dim (int): Dimension number to which apply scatter operation.</span>
+<span class="sd">    shard_count (int): The number of ways to split up the scatter_dim in.</span>
+<span class="sd">    groups (list): A list of list, representing the replica groups for</span>
+<span class="sd">      the `all_reduce()` operation. Example: `[[0, 1, 2, 3], [4, 5, 6, 7]]`</span>
+<span class="sd">        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with</span>
+<span class="sd">        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with</span>
+<span class="sd">        all the replicas in it.</span>
+<span class="sd">    output: Optional output tensor</span>
+<span class="sd">    pin_layout (bool, optional): whether to pin the layout for this communication op.</span>
+<span class="sd">      Layout pining can prevent potential data corruption when each process that</span>
+<span class="sd">      participate in the communication has slightly different program, but it might</span>
+<span class="sd">      cause some xla compiation to fail. Unpin the layout when you see error message</span>
+<span class="sd">      like &quot;HloModule has a mix of layout constrained&quot;.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    A `torch.Tensor` with all the values reduced accross replicas. Each process</span>
+<span class="sd">    gets a shard split along the `scatter_dim`. All other dimensions are</span>
+<span class="sd">    the same as the input.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">token</span><span class="p">,</span> <span class="n">devctx</span> <span class="o">=</span> <span class="n">_get_all_reduce_token</span><span class="p">()</span>
+  <span class="k">if</span> <span class="n">output</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="c1"># Call the out of place version of the reduce_scatter</span>
+    <span class="n">new_token</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_reduce_scatter_out</span><span class="p">(</span><span class="n">reduce_type</span><span class="p">,</span> <span class="n">output</span><span class="p">,</span>
+                                                        <span class="nb">input</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span>
+                                                        <span class="n">scatter_dim</span><span class="p">,</span>
+                                                        <span class="n">shard_count</span><span class="p">,</span> <span class="n">groups</span> <span class="ow">or</span>
+                                                        <span class="p">[],</span> <span class="n">pin_layout</span><span class="p">)</span>
+    <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">new_token</span>
+    <span class="k">return</span> <span class="n">output</span>
+
+  <span class="n">result</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_reduce_scatter</span><span class="p">(</span><span class="n">reduce_type</span><span class="p">,</span> <span class="nb">input</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span>
+                                               <span class="n">scatter_dim</span><span class="p">,</span> <span class="n">shard_count</span><span class="p">,</span>
+                                               <span class="n">groups</span> <span class="ow">or</span> <span class="p">[],</span> <span class="n">pin_layout</span><span class="p">)</span>
+  <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+  <span class="k">return</span> <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+
+<div class="viewcode-block" id="add_step_closure"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.add_step_closure">[docs]</a><span class="k">def</span> <span class="nf">add_step_closure</span><span class="p">(</span><span class="n">closure</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(),</span> <span class="n">run_async</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Adds a closure to the list of the ones to be run at the end of the step.</span>
+
+<span class="sd">  Many times during model training there is the need to print/report (print to</span>
+<span class="sd">  console, post to tensorboard, etc...) information which require the content of</span>
+<span class="sd">  intermediary tensors to be inspected.</span>
+<span class="sd">  Inspecting different tensors content in different points of the model code</span>
+<span class="sd">  requires many executions and typically causes performance issues.</span>
+<span class="sd">  Adding a step closure will ensure that it will be run after the barrier, when</span>
+<span class="sd">  all the live tensors will be already materialized to device data.</span>
+<span class="sd">  Live tensors which will include the ones captured by the closure arguments.</span>
+<span class="sd">  So using `add_step_closure()` will ensure a single execution will be</span>
+<span class="sd">  performed, even when multiple closures are queued, requiring multiple tensors</span>
+<span class="sd">  to be inspected.</span>
+<span class="sd">  Step closures will be run sequentially in the order they have been queued.</span>
+<span class="sd">  Note that even though using this API the execution will be optimized, it is</span>
+<span class="sd">  advised to throttle the printing/reporting events once every N steps.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    closure (callable): The function to be called.</span>
+<span class="sd">    args (tuple): The arguments to be passed to the closure.</span>
+<span class="sd">    run_async: If True, run the closure asynchronously.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">devctx</span> <span class="o">=</span> <span class="n">_get_device_context</span><span class="p">()</span>
+  <span class="n">closures_type</span> <span class="o">=</span> <span class="s1">&#39;async_step_closures&#39;</span> <span class="k">if</span> <span class="n">run_async</span> <span class="k">else</span> <span class="s1">&#39;step_closures&#39;</span>
+  <span class="n">step_closures</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">devctx</span><span class="p">,</span> <span class="n">closures_type</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">step_closures</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">step_closures</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="nb">setattr</span><span class="p">(</span><span class="n">devctx</span><span class="p">,</span> <span class="n">closures_type</span><span class="p">,</span> <span class="n">step_closures</span><span class="p">)</span>
+  <span class="n">step_closures</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="k">lambda</span> <span class="n">a</span><span class="o">=</span><span class="n">args</span><span class="p">:</span> <span class="n">closure</span><span class="p">(</span><span class="o">*</span><span class="n">a</span><span class="p">))</span></div>
+
+
+<span class="k">def</span> <span class="nf">_run_step_closures</span><span class="p">():</span>
+  <span class="n">devctx</span> <span class="o">=</span> <span class="n">_get_device_context</span><span class="p">()</span>
+  <span class="n">async_step_closures</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">devctx</span><span class="p">,</span> <span class="s1">&#39;async_step_closures&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">async_step_closures</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">devctx</span><span class="o">.</span><span class="n">async_step_closures</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">async_closure_handler</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">devctx</span><span class="p">,</span> <span class="s1">&#39;async_closure_handler&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">async_closure_handler</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+      <span class="n">async_closure_handler</span> <span class="o">=</span> <span class="n">xc</span><span class="o">.</span><span class="n">AsyncClosureHandler</span><span class="p">()</span>
+      <span class="n">devctx</span><span class="o">.</span><span class="n">async_closure_handler</span> <span class="o">=</span> <span class="n">async_closure_handler</span>
+    <span class="n">async_closure_handler</span><span class="o">.</span><span class="n">run_all</span><span class="p">(</span><span class="n">async_step_closures</span><span class="p">)</span>
+
+  <span class="n">step_closures</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">devctx</span><span class="p">,</span> <span class="s1">&#39;step_closures&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">step_closures</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">devctx</span><span class="o">.</span><span class="n">step_closures</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">closure</span> <span class="ow">in</span> <span class="n">step_closures</span><span class="p">:</span>
+      <span class="n">closure</span><span class="p">()</span>
+  <span class="k">return</span> <span class="n">devctx</span>
+
+
+<span class="k">def</span> <span class="nf">mark_step</span><span class="p">(</span><span class="n">wait</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+  <span class="k">if</span> <span class="n">xu</span><span class="o">.</span><span class="n">getenv_as</span><span class="p">(</span><span class="s1">&#39;XLA_EMIT_STEPLOG&#39;</span><span class="p">,</span> <span class="nb">bool</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span>
+        <span class="s1">&#39;torch_xla.core.xla_model::mark_step</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span>
+        <span class="n">end</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span>
+        <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">,</span>
+        <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+  <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_step_marker</span><span class="p">(</span>
+      <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_default_device</span><span class="p">(),</span> <span class="p">[],</span>
+      <span class="n">wait</span><span class="o">=</span><span class="n">xu</span><span class="o">.</span><span class="n">getenv_as</span><span class="p">(</span><span class="s1">&#39;XLA_SYNC_WAIT&#39;</span><span class="p">,</span> <span class="nb">bool</span><span class="p">,</span> <span class="n">wait</span><span class="p">))</span>
+  <span class="c1"># Only emit metrics from the first local device index, to avoid emitting the</span>
+  <span class="c1"># same values from different threads.</span>
+  <span class="k">if</span> <span class="n">is_master_ordinal</span><span class="p">():</span>
+    <span class="n">ms</span><span class="o">.</span><span class="n">save_metrics</span><span class="p">()</span>
+  <span class="n">devctx</span> <span class="o">=</span> <span class="n">_run_step_closures</span><span class="p">()</span>
+  <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="kc">None</span>
+
+
+<div class="viewcode-block" id="wait_device_ops"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.wait_device_ops">[docs]</a><span class="k">def</span> <span class="nf">wait_device_ops</span><span class="p">(</span><span class="n">devices</span><span class="o">=</span><span class="p">[]):</span>
+  <span class="sd">&quot;&quot;&quot;Waits for all the async operations on the given devices to complete.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    devices (string..., optional): The devices whose async ops need to be waited</span>
+<span class="sd">      for. If empty, all the local devices will be waited for.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_wait_device_ops</span><span class="p">(</span><span class="n">devices</span><span class="o">=</span><span class="n">devices</span><span class="p">)</span></div>
+
+
+<span class="k">def</span> <span class="nf">reduce_gradients</span><span class="p">(</span><span class="n">optimizer</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">pin_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Reduces all the gradients handled by an optimizer.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    optimizer (:class:`torch.Optimizer`): The `torch.Optimizer` instance</span>
+<span class="sd">      containing the gradients to be reduced.</span>
+<span class="sd">    groups (list, optional): A list of list, representing the replica groups for</span>
+<span class="sd">      the `all_reduce()` operation. Example: `[[0, 1, 2, 3], [4, 5, 6, 7]]`</span>
+<span class="sd">        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with</span>
+<span class="sd">        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with</span>
+<span class="sd">        all the replicas in it.</span>
+<span class="sd">    pin_layout (bool, optional): whether to pin the layout when reducing gradients.</span>
+<span class="sd">      See `xm.all_reduce` for details.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">cctx</span> <span class="o">=</span> <span class="n">CollectiveContext</span><span class="p">()</span>
+  <span class="n">count</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">cctx</span><span class="o">.</span><span class="n">replica_devcount</span><span class="p">,</span> <span class="n">cctx</span><span class="o">.</span><span class="n">world_size</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">count</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+    <span class="n">gradients</span> <span class="o">=</span> <span class="n">_fetch_gradients</span><span class="p">(</span><span class="n">optimizer</span><span class="p">)</span>
+    <span class="n">all_reduce</span><span class="p">(</span>
+        <span class="n">REDUCE_SUM</span><span class="p">,</span>
+        <span class="n">gradients</span><span class="p">,</span>
+        <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">count</span><span class="p">,</span>
+        <span class="n">groups</span><span class="o">=</span><span class="n">groups</span><span class="p">,</span>
+        <span class="n">cctx</span><span class="o">=</span><span class="n">cctx</span><span class="p">,</span>
+        <span class="n">pin_layout</span><span class="o">=</span><span class="n">pin_layout</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="optimizer_step"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.optimizer_step">[docs]</a><span class="k">def</span> <span class="nf">optimizer_step</span><span class="p">(</span><span class="n">optimizer</span><span class="p">,</span>
+                   <span class="n">barrier</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                   <span class="n">optimizer_args</span><span class="o">=</span><span class="p">{},</span>
+                   <span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                   <span class="n">pin_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Run the provided optimizer step and issue the XLA device step computation.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    optimizer (:class:`torch.Optimizer`): The `torch.Optimizer` instance whose</span>
+<span class="sd">      `step()` function needs to be called. The `step()` function will be called</span>
+<span class="sd">      with the `optimizer_args` named arguments.</span>
+<span class="sd">    barrier (bool, optional): Whether the XLA tensor barrier should be issued in</span>
+<span class="sd">      this API. If using the PyTorch XLA `ParallelLoader` or `DataParallel`</span>
+<span class="sd">      support, this is not necessary as the barrier will be issued by the XLA</span>
+<span class="sd">      data loader iterator `next()` call.</span>
+<span class="sd">      Default: False</span>
+<span class="sd">    optimizer_args (dict, optional): Named arguments dictionary for the</span>
+<span class="sd">      `optimizer.step()` call.</span>
+<span class="sd">    groups (list, optional): A list of list, representing the replica groups for</span>
+<span class="sd">      the `all_reduce()` operation. Example: `[[0, 1, 2, 3], [4, 5, 6, 7]]`</span>
+<span class="sd">        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with</span>
+<span class="sd">        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with</span>
+<span class="sd">        all the replicas in it.</span>
+<span class="sd">    pin_layout (bool, optional): whether to pin the layout when reducing gradients.</span>
+<span class="sd">      See `xm.all_reduce` for details.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    The same value returned by the `optimizer.step()` call.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">reduce_gradients</span><span class="p">(</span><span class="n">optimizer</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="n">groups</span><span class="p">,</span> <span class="n">pin_layout</span><span class="o">=</span><span class="n">pin_layout</span><span class="p">)</span>
+  <span class="n">loss</span> <span class="o">=</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="o">**</span><span class="n">optimizer_args</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">barrier</span><span class="p">:</span>
+    <span class="n">mark_step</span><span class="p">()</span>
+  <span class="k">return</span> <span class="n">loss</span></div>
+
+
+<div class="viewcode-block" id="save"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.save">[docs]</a><span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">file_or_path</span><span class="p">,</span> <span class="n">master_only</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">global_master</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Saves the input data into a file.</span>
+
+<span class="sd">  The saved data is transferred to PyTorch CPU device before being saved, so a</span>
+<span class="sd">  following `torch.load()` will load CPU data.</span>
+<span class="sd">  Care must be taken when working with views. Instead of saving views it&#39;s</span>
+<span class="sd">  recommended that you recreate them after the tensors have been loaded and</span>
+<span class="sd">  moved to their destination device(s).</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    data: The input data to be saved. Any nested combination of Python objects</span>
+<span class="sd">      (list, tuples, sets, dicts, ...).</span>
+<span class="sd">    file_or_path: The destination for the data saving operation. Either a file</span>
+<span class="sd">      path or a Python file object. If `master_only` is ``False`` the path or</span>
+<span class="sd">      file objects must point to different destinations as otherwise all the</span>
+<span class="sd">      writes from the same host will override each other.</span>
+<span class="sd">    master_only (bool, optional): Whether only the master device should save the</span>
+<span class="sd">      data. If False, the `file_or_path` argument should be a different file or</span>
+<span class="sd">      path for each of the ordinals taking part to the replication, otherwise</span>
+<span class="sd">      all the replicas on the same host will be writing to the same location.</span>
+<span class="sd">      Default: True</span>
+<span class="sd">    global_master (bool, optional): When ``master_only`` is ``True`` this flag</span>
+<span class="sd">      controls whether every host&#39;s master (if ``global_master`` is ``False``)</span>
+<span class="sd">      saves the content, or only the global master (ordinal 0).</span>
+<span class="sd">      Default: False</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">should_write_data</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">master_only</span> <span class="ow">or</span> <span class="n">is_master_ordinal</span><span class="p">(</span>
+      <span class="n">local</span><span class="o">=</span><span class="ow">not</span> <span class="n">global_master</span><span class="p">)</span>
+
+  <span class="n">cpu_data</span> <span class="o">=</span> <span class="n">_maybe_convert_to_cpu</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">convert</span><span class="o">=</span><span class="n">should_write_data</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">should_write_data</span><span class="p">:</span>
+    <span class="n">torch</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">cpu_data</span><span class="p">,</span> <span class="n">file_or_path</span><span class="p">)</span>
+  <span class="n">rendezvous</span><span class="p">(</span><span class="s1">&#39;torch_xla.core.xla_model.save&#39;</span><span class="p">)</span></div>
+
+
+<span class="k">def</span> <span class="nf">_maybe_convert_to_cpu</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">convert</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+
+  <span class="k">def</span> <span class="nf">convert_fn</span><span class="p">(</span><span class="n">tensors</span><span class="p">):</span>
+    <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_sync_multi</span><span class="p">(</span>
+        <span class="n">tensors</span><span class="p">,</span> <span class="n">devices</span><span class="o">=</span><span class="p">[],</span> <span class="n">wait</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">sync_xla_data</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">convert</span><span class="p">:</span>
+      <span class="k">return</span> <span class="n">tensors</span>
+    <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_cpu_tensors</span><span class="p">(</span><span class="n">tensors</span><span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">select_fn</span><span class="p">(</span><span class="n">v</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">type</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">==</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="ow">and</span> <span class="n">is_xla_tensor</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+
+  <span class="k">return</span> <span class="n">ToXlaTensorArena</span><span class="p">(</span><span class="n">convert_fn</span><span class="p">,</span> <span class="n">select_fn</span><span class="p">)</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">send_cpu_data_to_device</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
+
+  <span class="k">def</span> <span class="nf">convert_fn</span><span class="p">(</span><span class="n">tensors</span><span class="p">):</span>
+    <span class="n">devices</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">device</span><span class="p">)]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">tensors</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_tensors_from_aten</span><span class="p">(</span><span class="n">tensors</span><span class="p">,</span> <span class="n">devices</span><span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">select_fn</span><span class="p">(</span><span class="n">v</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">type</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">==</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="ow">and</span> <span class="n">v</span><span class="o">.</span><span class="n">device</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;cpu&#39;</span>
+
+  <span class="k">return</span> <span class="n">ToXlaTensorArena</span><span class="p">(</span><span class="n">convert_fn</span><span class="p">,</span> <span class="n">select_fn</span><span class="p">)</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="rendezvous"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.rendezvous">[docs]</a><span class="k">def</span> <span class="nf">rendezvous</span><span class="p">(</span><span class="n">tag</span><span class="p">,</span> <span class="n">payload</span><span class="o">=</span><span class="sa">b</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">replicas</span><span class="o">=</span><span class="p">[]):</span>
+  <span class="sd">&quot;&quot;&quot;Waits for all the mesh clients to reach the named rendezvous.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    tag (string): The name of the rendezvous to join.</span>
+<span class="sd">    payload (bytes, optional): The payload to be sent to the rendezvous.</span>
+<span class="sd">    replicas (list, int): The replica ordinals taking part of the rendezvous.</span>
+<span class="sd">      Empty means all replicas in the mesh.</span>
+<span class="sd">      Default: []</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    The payloads exchanged by all the other cores, with the payload of core</span>
+<span class="sd">    ordinal `i` at position `i` in the returned tuple.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">if</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">using_pjrt</span><span class="p">():</span>
+    <span class="k">return</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">rendezvous</span><span class="p">(</span><span class="n">tag</span><span class="p">,</span> <span class="n">payload</span><span class="p">,</span> <span class="n">replicas</span> <span class="ow">or</span> <span class="kc">None</span><span class="p">)</span>
+
+  <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_rendezvous</span><span class="p">(</span><span class="n">get_ordinal</span><span class="p">(),</span> <span class="n">tag</span><span class="p">,</span> <span class="n">payload</span><span class="p">,</span> <span class="n">replicas</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="do_on_ordinals"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.do_on_ordinals">[docs]</a><span class="k">def</span> <span class="nf">do_on_ordinals</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="p">(),</span> <span class="n">ordinals</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,)):</span>
+  <span class="sd">&quot;&quot;&quot;Runs a function only on a given set of ordinals.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    target (callable): The function to be run on `ordinals`.</span>
+<span class="sd">    data: Any input data for the `target` function which contains tensors. All</span>
+<span class="sd">      the XLA tensors used by the `target` function must be passed in this</span>
+<span class="sd">      argument. Every other data used by the function can be captured by the</span>
+<span class="sd">      Python interpreter as usual.</span>
+<span class="sd">      Default: ()</span>
+<span class="sd">    ordinals (list, int): The list/set of ordinals where the `target` function</span>
+<span class="sd">      should run.</span>
+<span class="sd">      Default: (0,)</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    In the ordinals that ran the `target` function, the function return value,</span>
+<span class="sd">    otherwise `None`.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">running</span> <span class="o">=</span> <span class="n">get_ordinal</span><span class="p">()</span> <span class="ow">in</span> <span class="n">ordinals</span>
+  <span class="n">cpu_data</span> <span class="o">=</span> <span class="n">_maybe_convert_to_cpu</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">convert</span><span class="o">=</span><span class="n">running</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">running</span><span class="p">:</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">target</span><span class="p">(</span><span class="o">*</span><span class="n">cpu_data</span><span class="p">)</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="kc">None</span>
+  <span class="n">rendezvous</span><span class="p">(</span><span class="s1">&#39;torch_xla.core.xla_model.do_on_ordinals&#39;</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="mesh_reduce"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.mesh_reduce">[docs]</a><span class="k">def</span> <span class="nf">mesh_reduce</span><span class="p">(</span><span class="n">tag</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">reduce_fn</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Performs an out-of-graph client mesh reduction.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    tag (string): The name of the rendezvous to join.</span>
+<span class="sd">    data: The data to be reduced. The `reduce_fn` callable will receive a list</span>
+<span class="sd">      with the copies of the same data coming from all the mesh client processes</span>
+<span class="sd">      (one per core).</span>
+<span class="sd">    reduce_fn (callable): A function which receives a list of `data`-like</span>
+<span class="sd">      objects and returns the reduced result.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    The reduced value.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">cpu_data</span> <span class="o">=</span> <span class="n">_maybe_convert_to_cpu</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+  <span class="n">bio</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">()</span>
+  <span class="n">torch</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">cpu_data</span><span class="p">,</span> <span class="n">bio</span><span class="p">)</span>
+  <span class="n">xdata</span> <span class="o">=</span> <span class="n">rendezvous</span><span class="p">(</span><span class="n">tag</span><span class="p">,</span> <span class="n">bio</span><span class="o">.</span><span class="n">getvalue</span><span class="p">())</span>
+  <span class="n">xldata</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="k">for</span> <span class="n">xd</span> <span class="ow">in</span> <span class="n">xdata</span><span class="p">:</span>
+    <span class="n">xbio</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">xd</span><span class="p">)</span>
+    <span class="n">xldata</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">xbio</span><span class="p">))</span>
+  <span class="k">return</span> <span class="n">reduce_fn</span><span class="p">(</span><span class="n">xldata</span><span class="p">)</span> <span class="k">if</span> <span class="n">xldata</span> <span class="k">else</span> <span class="n">cpu_data</span></div>
+
+
+<div class="viewcode-block" id="set_rng_state"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.set_rng_state">[docs]</a><span class="k">def</span> <span class="nf">set_rng_state</span><span class="p">(</span><span class="n">seed</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Sets the random number generator state.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    seed (integer): The state to be set.</span>
+<span class="sd">    device (string, optional): The device where the RNG state needs to be set.</span>
+<span class="sd">      If missing the default device seed will be set.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">if</span> <span class="n">device</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">device</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_default_device</span><span class="p">()</span>
+  <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_set_rng_seed</span><span class="p">(</span><span class="n">seed</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">device</span><span class="p">)</span> <span class="k">if</span> <span class="n">device</span> <span class="k">else</span> <span class="s1">&#39;&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="get_rng_state"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.get_rng_state">[docs]</a><span class="k">def</span> <span class="nf">get_rng_state</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Gets the current running random number generator state.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    device (string, optional): The device whose RNG state needs to be retrieved.</span>
+<span class="sd">      If missing the default device seed will be set.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    The RNG state, as integer.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">if</span> <span class="n">device</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">device</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_default_device</span><span class="p">()</span>
+  <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_rng_seed</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">device</span><span class="p">)</span> <span class="k">if</span> <span class="n">device</span> <span class="k">else</span> <span class="s1">&#39;&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="get_memory_info"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.get_memory_info">[docs]</a><span class="k">def</span> <span class="nf">get_memory_info</span><span class="p">(</span><span class="n">device</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Retrieves the device memory information.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    device (string): The device whose memory information are requested.</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    A dictionary with `kb_free` (free memory in KB) and `kb_total` (total</span>
+<span class="sd">    memory in KB) keys.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_memory_info</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">device</span><span class="p">))</span></div>
+
+
+<span class="k">def</span> <span class="nf">optimization_barrier_</span><span class="p">(</span><span class="n">tensors</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Blocks xla compiler from moving computations across this barrier. The common</span>
+<span class="sd">  use case would be blocking xla common-subexpression elimination pass from undoing</span>
+<span class="sd">  the gradient checkpointing.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    tensors (List[torch.Tensor]): List of `torch.Tensor` to add barrier to.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_optimization_barrier_</span><span class="p">(</span><span class="n">tensors</span><span class="p">)</span>
+</pre></div>
+
+             </article>
+             
+            </div>
+            <footer>
+  
+
+  
+
+    <hr>
+
+  
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright .
+
+    </p>
+  </div>
+    
+      <div>
+        Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+      </div>
+     
+
+</footer>
+
+          </div>
+        </div>
+
+        <div class="pytorch-content-right" id="pytorch-content-right">
+          <div class="pytorch-right-menu" id="pytorch-right-menu">
+            <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
+              
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+  
+
+
+  
+
+     
+       <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+         <script src="../../../_static/jquery.js"></script>
+         <script src="../../../_static/underscore.js"></script>
+         <script src="../../../_static/doctools.js"></script>
+         <script src="../../../_static/language_data.js"></script>
+     
+
+  
+
+  <script type="text/javascript" src="../../../_static/js/vendor/popper.min.js"></script>
+  <script type="text/javascript" src="../../../_static/js/vendor/bootstrap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/list.js/1.5.0/list.min.js"></script>
+  <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+  <!-- Begin Footer -->
+
+  <div class="container-fluid docs-tutorials-resources" id="docs-tutorials-resources">
+    <div class="container">
+      <div class="row">
+        <div class="col-md-4 text-center">
+          <h2>Docs</h2>
+          <p>Access comprehensive developer documentation for PyTorch</p>
+          <a class="with-right-arrow" href="https://pytorch.org/docs/stable/index.html">View Docs</a>
+        </div>
+
+        <div class="col-md-4 text-center">
+          <h2>Tutorials</h2>
+          <p>Get in-depth tutorials for beginners and advanced developers</p>
+          <a class="with-right-arrow" href="https://pytorch.org/tutorials">View Tutorials</a>
+        </div>
+
+        <div class="col-md-4 text-center">
+          <h2>Resources</h2>
+          <p>Find development resources and get your questions answered</p>
+          <a class="with-right-arrow" href="https://pytorch.org/resources">View Resources</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="container footer-container">
+      <div class="footer-logo-wrapper">
+        <a href="https://pytorch.org/" class="footer-logo"></a>
+      </div>
+
+      <div class="footer-links-wrapper">
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title"><a href="https://pytorch.org/">PyTorch</a></li>
+            <li><a href="https://pytorch.org/get-started">Get Started</a></li>
+            <li><a href="https://pytorch.org/features">Features</a></li>
+            <li><a href="https://pytorch.org/ecosystem">Ecosystem</a></li>
+            <li><a href="https://pytorch.org/blog/">Blog</a></li>
+            <li><a href="https://github.com/pytorch/pytorch/blob/master/CONTRIBUTING.md">Contributing</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title"><a href="https://pytorch.org/resources">Resources</a></li>
+            <li><a href="https://pytorch.org/tutorials">Tutorials</a></li>
+            <li><a href="https://pytorch.org/docs/stable/index.html">Docs</a></li>
+            <li><a href="https://discuss.pytorch.org" target="_blank">Discuss</a></li>
+            <li><a href="https://github.com/pytorch/pytorch/issues" target="_blank">Github Issues</a></li>
+            <li><a href="https://pytorch.org/assets/brand-guidelines/PyTorch-Brand-Guidelines.pdf" target="_blank">Brand Guidelines</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title">Stay up to date</li>
+            <li><a href="https://www.facebook.com/pytorch" target="_blank">Facebook</a></li>
+            <li><a href="https://twitter.com/pytorch" target="_blank">Twitter</a></li>
+            <li><a href="https://www.youtube.com/pytorch" target="_blank">YouTube</a></li>
+            <li><a href="https://www.linkedin.com/company/pytorch" target="_blank">LinkedIn</a></li>
+          </ul>  
+          </div>
+
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title">PyTorch Podcasts</li>
+            <li><a href="https://open.spotify.com/show/6UzHKeiy368jKfQMKKvJY5" target="_blank">Spotify</a></li>
+            <li><a href="https://podcasts.apple.com/us/podcast/pytorch-developer-podcast/id1566080008" target="_blank">Apple</a></li>
+            <li><a href="https://www.google.com/podcasts?feed=aHR0cHM6Ly9mZWVkcy5zaW1wbGVjYXN0LmNvbS9PQjVGa0lsOA%3D%3D" target="_blank">Google</a></li>
+            <li><a href="https://music.amazon.com/podcasts/7a4e6f0e-26c2-49e9-a478-41bd244197d0/PyTorch-Developer-Podcast?" target="_blank">Amazon</a></li>
+          </ul>
+         </div>
+        </div>
+        
+        <div class="privacy-policy">
+          <ul>
+            <li class="privacy-policy-links"><a href="https://www.linuxfoundation.org/terms/" target="_blank">Terms</a></li>
+            <li class="privacy-policy-links">|</li>
+            <li class="privacy-policy-links"><a href="https://www.linuxfoundation.org/privacy-policy/" target="_blank">Privacy</a></li>
+          </ul>
+        </div>
+        <div class="copyright">
+        <p>© Copyright The Linux Foundation. The PyTorch Foundation is a project of The Linux Foundation.
+          For web site terms of use, trademark policy and other policies applicable to The PyTorch Foundation please see
+          <a href="www.linuxfoundation.org/policies/">www.linuxfoundation.org/policies/</a>. The PyTorch Foundation supports the PyTorch open source
+          project, which has been established as PyTorch Project a Series of LF Projects, LLC. For policies applicable to the PyTorch Project a Series of LF Projects, LLC,
+          please see <a href="www.lfprojects.org/policies/">www.lfprojects.org/policies/</a>.</p>
+      </div>
+     </div>
+
+  </footer>
+
+  <div class="cookie-banner-wrapper">
+  <div class="container">
+    <p class="gdpr-notice">To analyze traffic and optimize your experience, we serve cookies on this site. By clicking or navigating, you agree to allow our usage of cookies. As the current maintainers of this site, Facebook’s Cookies Policy applies. Learn more, including about available controls: <a href="https://www.facebook.com/policies/cookies/">Cookies Policy</a>.</p>
+    <img class="close-button" src="../../../_static/images/pytorch-x.svg">
+  </div>
+</div>
+
+  <!-- End Footer -->
+
+  <!-- Begin Mobile Menu -->
+
+  <div class="mobile-main-menu">
+    <div class="container-fluid">
+      <div class="container">
+        <div class="mobile-main-menu-header-container">
+          <a class="header-logo" href="https://pytorch.org/" aria-label="PyTorch"></a>
+          <a class="main-menu-close-button" href="#" data-behavior="close-mobile-menu"></a>
+        </div>
+      </div>
+    </div>
+
+    <div class="mobile-main-menu-links-container">
+      <div class="main-menu">
+        <ul>
+          <li>
+            <a href="https://pytorch.org/get-started">Get Started</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/ecosystem">Ecosystem</a>
+          </li>
+            
+          <li>
+            <a href="https://pytorch.org/mobile">Mobile</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/blog/">Blog</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/tutorials">Tutorials</a>
+          </li>
+
+          <li class="resources-mobile-menu-title" class="active">
+            Docs
+          </li>
+
+          <ul class="resources-mobile-menu-items">
+            <li>
+              <a href="https://pytorch.org/docs/stable/index.html">PyTorch</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/audio/stable/index.html">torchaudio</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/text/stable/index.html">torchtext</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/vision/stable/index.html">torchvision</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/torcharrow">torcharrow</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/data">TorchData</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/torchrec">TorchRec</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/serve/">TorchServe</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/torchx/">TorchX</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/xla">PyTorch on XLA Devices</a>
+            </li>
+          </ul>
+
+          <li class="resources-mobile-menu-title">
+            Resources
+          </li>
+            
+           <ul class="resources-mobile-menu-items">
+
+            <li>
+              <a href="https://pytorch.org/features">About</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/foundation">PyTorch Foundation</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/#community-module">Community</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/community-stories">Community Stories</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/resources">Developer Resources</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/events">Events</a>
+            </li>
+
+            <li>
+              <a href="https://discuss.pytorch.org/">Forums</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/hub">Models (Beta)</a>
+            </li>
+          </ul>
+
+          <li>
+            <a href="https://github.com/pytorch/pytorch">Github</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- End Mobile Menu -->
+
+  <script type="text/javascript" src="../../../_static/js/vendor/anchor.min.js"></script>
+
+  <script type="text/javascript">
+    $(document).ready(function() {
+      mobileMenu.bind();
+      mobileTOC.bind();
+      pytorchAnchors.bind();
+      sideMenus.bind();
+      scrollToAnchor.bind();
+      highlightNavigation.bind();
+      mainMenuDropdown.bind();
+      filterTags.bind();
+
+      // Add class to links that have code blocks, since we cannot create links in code blocks
+      $("article.pytorch-article a span.pre").each(function(e) {
+        $(this).closest("a").addClass("has-code");
+      });
+    })
+  </script>
+</body>
+</html>

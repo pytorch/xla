@@ -1,0 +1,1125 @@
+
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>torch_xla.distributed.xla_multiprocessing &mdash; PyTorch/XLA master documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!-- <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" /> -->
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+  <!-- Google Analytics -->
+  
+  <!-- End Google Analytics -->
+  
+
+  
+  <script src="../../../_static/js/modernizr.min.js"></script>
+
+  <!-- Preload the theme fonts -->
+
+<link rel="preload" href="../../../_static/fonts/FreightSans/freight-sans-book.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../../../_static/fonts/FreightSans/freight-sans-medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../../../_static/fonts/IBMPlexMono/IBMPlexMono-Medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../../../_static/fonts/FreightSans/freight-sans-bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../../../_static/fonts/FreightSans/freight-sans-medium-italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../../../_static/fonts/IBMPlexMono/IBMPlexMono-SemiBold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+
+<!-- Preload the katex fonts -->
+
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Math-Italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Main-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Main-Bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size1-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size4-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size2-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size3-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Caligraphic-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.2/css/all.css" integrity="sha384-vSIIfh2YWi9wW0r9iZe7RJPrKwp6bG+s9QZMoITbCckVJqGCCRhc+ccxNcdpHuYu" crossorigin="anonymous">
+</head>
+
+<div class="container-fluid header-holder tutorials-header" id="header-holder">
+  <div class="container">
+    <div class="header-container">
+      <a class="header-logo" href="https://pytorch.org/" aria-label="PyTorch"></a>
+
+      <div class="main-menu">
+        <ul>
+          <li>
+            <a href="https://pytorch.org/get-started">Get Started</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/ecosystem">Ecosystem</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/mobile">Mobile</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/blog/">Blog</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/tutorials">Tutorials</a>
+          </li>
+
+          <li class="active docs-active">
+            <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="resource-option with-down-orange-arrow">
+                Docs
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/docs/stable/index.html">
+                  <span class="dropdown-title">PyTorch</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/audio/stable/index.html">
+                  <span class="dropdown-title">torchaudio</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/text/stable/index.html">
+                  <span class="dropdown-title">torchtext</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/vision/stable/index.html">
+                  <span class="dropdown-title">torchvision</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/torcharrow">
+                  <span class="dropdown-title">torcharrow</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/data">
+                  <span class="dropdown-title">TorchData</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/torchrec">
+                  <span class="dropdown-title">TorchRec</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/serve/">
+                  <span class="dropdown-title">TorchServe</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/torchx/">
+                  <span class="dropdown-title">TorchX</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/xla">
+                  <span class="dropdown-title">PyTorch on XLA Devices</span>
+                  <p></p>
+                </a>
+            </div>
+          </li>
+
+          <li>
+            <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="resource-option with-down-arrow">
+                Resources
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/features">
+                  <span class="dropdown-title">About</span>
+                  <p>Learn about PyTorch’s features and capabilities</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/foundation">
+                  <span class="dropdown-title">PyTorch Foundation</span>
+                  <p>Learn about the PyTorch foundation</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/#community-module">
+                  <span class="dropdown-title">Community</span>
+                  <p>Join the PyTorch developer community to contribute, learn, and get your questions answered.</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/community-stories">
+                  <span class="dropdown-title">Community Stories</span>
+                  <p>Learn how our community solves real, everyday machine learning problems with PyTorch.</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/resources">
+                  <span class="dropdown-title">Developer Resources</span>
+                  <p>Find resources and get questions answered</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/events">
+                  <span class="dropdown-title">Events</span>
+                  <p>Find events, webinars, and podcasts</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://discuss.pytorch.org/" target="_blank">
+                  <span class="dropdown-title">Forums</span>
+                  <p>A place to discuss PyTorch code, issues, install, research</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/hub">
+                  <span class="dropdown-title">Models (Beta)</span>
+                  <p>Discover, publish, and reuse pre-trained models</p>
+                </a>
+              </div>
+            </div>
+          </li>
+
+          <li>
+            <a href="https://github.com/pytorch/pytorch">GitHub</a>
+          </li>
+        </ul>
+      </div>
+
+      <a class="main-menu-open-button" href="#" data-behavior="open-mobile-menu"></a>
+    </div>
+  </div>
+</div>
+
+<body class="pytorch-body">
+
+   
+
+    
+
+    <div class="table-of-contents-link-wrapper">
+      <span>Table of Contents</span>
+      <a href="#" class="toggle-table-of-contents" data-behavior="toggle-table-of-contents"></a>
+    </div>
+
+    <nav data-toggle="wy-nav-shift" class="pytorch-left-menu" id="pytorch-left-menu">
+      <div class="pytorch-side-scroll">
+        <div class="pytorch-menu pytorch-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          <div class="pytorch-left-menu-search">
+            
+
+            
+              
+              
+                <div class="version">
+                  master (2.0 )
+                </div>
+              
+            
+
+            
+
+
+  
+
+
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search Docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+            
+          </div>
+
+          
+            
+            
+              
+            
+            
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <div class="pytorch-container">
+      <div class="pytorch-page-level-bar" id="pytorch-page-level-bar">
+        <div class="pytorch-breadcrumbs-wrapper">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="pytorch-breadcrumbs">
+    
+      <li>
+        <a href="../../../index.html">
+          
+            Docs
+          
+        </a> &gt;
+      </li>
+
+        
+          <li><a href="../../index.html">Module code</a> &gt;</li>
+        
+      <li>torch_xla.distributed.xla_multiprocessing</li>
+    
+    
+      <li class="pytorch-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+</div>
+        </div>
+
+        <div class="pytorch-shortcuts-wrapper" id="pytorch-shortcuts-wrapper">
+          Shortcuts
+        </div>
+      </div>
+
+      <section data-toggle="wy-nav-shift" id="pytorch-content-wrap" class="pytorch-content-wrap">
+        <div class="pytorch-content-left">
+
+        
+          
+          <div class="rst-content">
+          
+            <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
+             <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
+              
+  <h1>Source code for torch_xla.distributed.xla_multiprocessing</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">collections</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">socket</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">torch.multiprocessing</span>
+<span class="kn">import</span> <span class="nn">torch_xla</span>
+<span class="kn">import</span> <span class="nn">torch_xla.core.xla_env_vars</span> <span class="k">as</span> <span class="nn">xenv</span>
+<span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
+<span class="kn">from</span> <span class="nn">torch_xla.experimental</span> <span class="kn">import</span> <span class="n">pjrt</span>
+<span class="kn">import</span> <span class="nn">torch_xla.utils.utils</span> <span class="k">as</span> <span class="nn">xu</span>
+<span class="kn">import</span> <span class="nn">traceback</span>
+
+<span class="n">PreForkConfig</span> <span class="o">=</span> <span class="n">collections</span><span class="o">.</span><span class="n">namedtuple</span><span class="p">(</span><span class="s1">&#39;PreForkConfig&#39;</span><span class="p">,</span> <span class="s1">&#39;dev_kind num_devices&#39;</span><span class="p">)</span>
+<span class="n">WorkerConfigEntry</span> <span class="o">=</span> <span class="n">collections</span><span class="o">.</span><span class="n">namedtuple</span><span class="p">(</span><span class="s1">&#39;WorkerConfigEntry&#39;</span><span class="p">,</span>
+                                           <span class="s1">&#39;worker_name ordinal host_port&#39;</span><span class="p">)</span>
+
+<span class="n">_LOCAL_WORKER</span> <span class="o">=</span> <span class="s1">&#39;localservice&#39;</span>
+<span class="n">_CUDA_VISIBLE_DEVICES</span> <span class="o">=</span> <span class="s1">&#39;CUDA_VISIBLE_DEVICES&#39;</span>
+
+
+<span class="k">def</span> <span class="nf">_is_xla_config</span><span class="p">():</span>
+  <span class="k">for</span> <span class="n">env</span> <span class="ow">in</span> <span class="p">[</span>
+      <span class="n">xenv</span><span class="o">.</span><span class="n">TPU_CONFIG</span><span class="p">,</span> <span class="n">xenv</span><span class="o">.</span><span class="n">LOCAL_WORKER</span><span class="p">,</span> <span class="n">xenv</span><span class="o">.</span><span class="n">GPU_NUM_DEVICES</span><span class="p">,</span>
+      <span class="n">xenv</span><span class="o">.</span><span class="n">CPU_NUM_DEVICES</span>
+  <span class="p">]:</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+      <span class="k">return</span> <span class="kc">True</span>
+  <span class="k">return</span> <span class="kc">False</span>
+
+
+<span class="c1"># TODO: Some usages of this function are to caculate the number of hosts (a TPU concept),</span>
+<span class="c1"># and some are to caculate the number of processes within a world (which can span multiple hosts).</span>
+<span class="c1"># The latter should really be what this function is supposed to do. It&#39;s so confusing. We</span>
+<span class="c1"># should improve it.</span>
+<span class="k">def</span> <span class="nf">_get_world_size</span><span class="p">():</span>
+  <span class="c1"># We cannot use the xla_model.py API here, as the features used in that module</span>
+  <span class="c1"># needs the setup provided by this one.</span>
+  <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">WORLD_SIZE</span><span class="p">,</span> <span class="s1">&#39;1&#39;</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">_create_gpu_devices</span><span class="p">(</span><span class="n">num_gpus</span><span class="p">):</span>
+  <span class="n">devices</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">_get_world_size</span><span class="p">()):</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">num_gpus</span><span class="p">):</span>
+      <span class="n">gindex</span> <span class="o">=</span> <span class="n">h</span> <span class="o">*</span> <span class="n">num_gpus</span> <span class="o">+</span> <span class="n">i</span>
+      <span class="c1"># We use CUDA_VISIBLE_DEVICES to limit the set of CUDA devices per process</span>
+      <span class="c1"># to 1, and its device index is always 0. We use the task to disambiguate</span>
+      <span class="c1"># TF devices.</span>
+      <span class="n">tfdevice</span> <span class="o">=</span> <span class="s1">&#39;/job:</span><span class="si">{}</span><span class="s1">/replica:0/task:</span><span class="si">{}</span><span class="s1">/device:XLA_GPU:0&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+          <span class="n">_LOCAL_WORKER</span><span class="p">,</span> <span class="n">gindex</span><span class="p">)</span>
+      <span class="n">devices</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;GPU:</span><span class="si">{}</span><span class="s1">;</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">gindex</span><span class="p">,</span> <span class="n">tfdevice</span><span class="p">))</span>
+  <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">DEVICE_MAP</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;|&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">devices</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_parse_workers_config</span><span class="p">(</span><span class="n">config</span><span class="p">):</span>
+  <span class="c1"># XRT_WORKERS=&#39;worker:0;ismz9:25822&#39;</span>
+  <span class="n">workers</span> <span class="o">=</span> <span class="n">collections</span><span class="o">.</span><span class="n">OrderedDict</span><span class="p">()</span>
+  <span class="k">for</span> <span class="n">worker</span> <span class="ow">in</span> <span class="n">config</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;|&#39;</span><span class="p">):</span>
+    <span class="n">m</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;(\w+):(\d+);((grpc://)?[a-zA-Z0-9_\-\.]+:\d+)&#39;</span><span class="p">,</span> <span class="n">worker</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">m</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Bad worker syntax: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">worker</span><span class="p">))</span>
+    <span class="n">workers</span><span class="p">[</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">))]</span> <span class="o">=</span> <span class="n">WorkerConfigEntry</span><span class="p">(</span>
+        <span class="n">worker_name</span><span class="o">=</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">ordinal</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">)),</span> <span class="n">host_port</span><span class="o">=</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span>
+  <span class="k">return</span> <span class="n">workers</span>
+
+
+<span class="k">def</span> <span class="nf">_parse_tpu_config</span><span class="p">(</span><span class="n">config</span><span class="p">):</span>
+  <span class="c1"># XRT_TPU_CONFIG=&#39;tpu_worker;0;ismz9:25822&#39;</span>
+  <span class="n">workers</span> <span class="o">=</span> <span class="n">collections</span><span class="o">.</span><span class="n">OrderedDict</span><span class="p">()</span>
+  <span class="k">for</span> <span class="n">worker</span> <span class="ow">in</span> <span class="n">config</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;|&#39;</span><span class="p">):</span>
+    <span class="n">m</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;(\w+);(\d+);([a-zA-Z0-9_\-\.]+:\d+)&#39;</span><span class="p">,</span> <span class="n">worker</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">m</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Bad worker syntax: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">worker</span><span class="p">))</span>
+    <span class="n">workers</span><span class="p">[</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">))]</span> <span class="o">=</span> <span class="n">WorkerConfigEntry</span><span class="p">(</span>
+        <span class="n">worker_name</span><span class="o">=</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">ordinal</span><span class="o">=</span><span class="nb">int</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">)),</span> <span class="n">host_port</span><span class="o">=</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span>
+  <span class="k">return</span> <span class="n">workers</span>
+
+
+<span class="k">def</span> <span class="nf">_get_devices_per_worker</span><span class="p">():</span>
+  <span class="n">num_tpus</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">TPU_NUM_DEVICES</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">TPU_CONFIG</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">num_tpus</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">num_tpus</span> <span class="ow">or</span> <span class="s1">&#39;8&#39;</span><span class="p">),</span> <span class="s1">&#39;TPU&#39;</span>
+  <span class="n">num_gpus</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">GPU_NUM_DEVICES</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">num_gpus</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">num_gpus</span><span class="p">),</span> <span class="s1">&#39;GPU&#39;</span>
+  <span class="n">num_cpus</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">CPU_NUM_DEVICES</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">num_cpus</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">num_cpus</span><span class="p">),</span> <span class="s1">&#39;CPU&#39;</span>
+  <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">&#39;Missing TPU or GPU configuration&#39;</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_get_multiprocessing_device</span><span class="p">():</span>
+  <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">MP_DEVICE</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_get_local_worker_index</span><span class="p">():</span>
+  <span class="n">host_ordinal</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">HOST_ORDINAL</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">host_ordinal</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">host_ordinal</span><span class="p">)</span>
+  <span class="n">worker</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">LOCAL_WORKER</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">worker</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">return</span> <span class="mi">0</span>
+  <span class="n">m</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;(\w+):(\d+)&#39;</span><span class="p">,</span> <span class="n">worker</span><span class="p">)</span>
+  <span class="k">if</span> <span class="ow">not</span> <span class="n">m</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Bad worker syntax: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">worker</span><span class="p">))</span>
+  <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">_local_index_to_global</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">num_devices</span><span class="p">):</span>
+  <span class="k">return</span> <span class="n">_get_local_worker_index</span><span class="p">()</span> <span class="o">*</span> <span class="n">num_devices</span> <span class="o">+</span> <span class="n">index</span>
+
+
+<span class="k">def</span> <span class="nf">_setup_torch_distributed</span><span class="p">():</span>
+  <span class="kn">import</span> <span class="nn">torch.distributed</span> <span class="k">as</span> <span class="nn">dist</span>
+
+  <span class="n">ordinal</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">HOST_ORDINAL</span><span class="p">])</span>
+  <span class="n">world_size</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">HOST_WORLD_SIZE</span><span class="p">])</span>
+  <span class="n">method</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">TORCH_DIST_METHOD</span><span class="p">,</span> <span class="s1">&#39;gloo&#39;</span><span class="p">)</span>
+  <span class="n">init_method</span> <span class="o">=</span> <span class="s1">&#39;tcp://</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">TORCH_DIST_ROOT</span><span class="p">])</span>
+  <span class="n">dist</span><span class="o">.</span><span class="n">init_process_group</span><span class="p">(</span>
+      <span class="n">method</span><span class="p">,</span> <span class="n">init_method</span><span class="o">=</span><span class="n">init_method</span><span class="p">,</span> <span class="n">rank</span><span class="o">=</span><span class="n">ordinal</span><span class="p">,</span> <span class="n">world_size</span><span class="o">=</span><span class="n">world_size</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_setup_world_size</span><span class="p">(</span><span class="n">pf_cfg</span><span class="p">):</span>
+  <span class="c1"># We cannot call into xla_model code at this point, as we do not know whether</span>
+  <span class="c1"># the called code would trigger XLA library initializations (which we must</span>
+  <span class="c1"># not do at this point). So we avoid calling into xm.xrt_world_size().</span>
+  <span class="n">host_world_size</span> <span class="o">=</span> <span class="n">_get_world_size</span><span class="p">()</span>
+  <span class="n">world_size</span> <span class="o">=</span> <span class="n">host_world_size</span> <span class="o">*</span> <span class="n">pf_cfg</span><span class="o">.</span><span class="n">num_devices</span>
+  <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">WORLD_SIZE</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">world_size</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">pf_cfg</span><span class="o">.</span><span class="n">dev_kind</span> <span class="o">==</span> <span class="s1">&#39;CPU&#39;</span><span class="p">:</span>
+    <span class="c1"># Since XLA CPU does not support across device reduces, and suport only one</span>
+    <span class="c1"># device per process, we make each CPU device look like if it was a single</span>
+    <span class="c1"># process host, and use torch.distributed for inter-host reductions (like in</span>
+    <span class="c1"># the sea-of-devices case).</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">HOST_WORLD_SIZE</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">world_size</span><span class="p">)</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">HOST_WORLD_SIZE</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">host_world_size</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_get_mp_device_ordinal</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">gindex</span><span class="p">):</span>
+  <span class="c1"># If xenv.HOST_ORDINAL is set, we are in a sea-of-devices setup, where devices</span>
+  <span class="c1"># are numbered locally within the single host (but the ordinal/rank is still</span>
+  <span class="c1"># global).</span>
+  <span class="k">return</span> <span class="n">index</span> <span class="k">if</span> <span class="n">xenv</span><span class="o">.</span><span class="n">HOST_ORDINAL</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span> <span class="k">else</span> <span class="n">gindex</span>
+
+
+<span class="c1"># TODO: Consolidate this with _setup_gpu_worker.</span>
+<span class="k">def</span> <span class="nf">_setup_gpu_workers</span><span class="p">(</span><span class="n">num_devices</span><span class="p">):</span>
+  <span class="n">world_size</span> <span class="o">=</span> <span class="n">_get_world_size</span><span class="p">()</span>
+  <span class="n">workers_env</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">WORKERS</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+  <span class="n">workers</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="c1"># TODO: Is this path actually being used? This seems to support multi-host GPUs (is this a thing at all?).</span>
+  <span class="k">if</span> <span class="n">workers_env</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">wcfg</span> <span class="o">=</span> <span class="n">_parse_workers_config</span><span class="p">(</span><span class="n">workers_env</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">world_size</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span>
+        <span class="n">wcfg</span><span class="p">),</span> <span class="s1">&#39;World size (</span><span class="si">{}</span><span class="s1">) must match the configured workers (</span><span class="si">{}</span><span class="s1">)&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">world_size</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">wcfg</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">worker</span> <span class="ow">in</span> <span class="n">wcfg</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+      <span class="n">_</span><span class="p">,</span> <span class="n">ordinal</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">)</span>
+      <span class="n">m</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;(.*):(\d+)$&#39;</span><span class="p">,</span> <span class="n">worker</span><span class="o">.</span><span class="n">host_port</span><span class="p">)</span>
+      <span class="k">if</span> <span class="ow">not</span> <span class="n">m</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">&#39;Bad worker HOST:PORT format: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">worker</span><span class="o">.</span><span class="n">host_port</span><span class="p">))</span>
+      <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">num_devices</span><span class="p">):</span>
+        <span class="n">gindex</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">ordinal</span><span class="p">)</span> <span class="o">*</span> <span class="n">num_devices</span> <span class="o">+</span> <span class="n">i</span>
+        <span class="n">workers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}</span><span class="s1">;grpc://</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">worker</span><span class="o">.</span><span class="n">worker_name</span><span class="p">,</span> <span class="n">gindex</span><span class="p">,</span>
+                                                   <span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span>
+                                                   <span class="nb">int</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span> <span class="o">+</span> <span class="n">i</span><span class="p">))</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="k">assert</span> <span class="n">world_size</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;Cannot use more than one host without </span><span class="si">{}</span><span class="s1"> &#39;</span>
+                             <span class="s1">&#39;configuration: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                                 <span class="n">xenv</span><span class="o">.</span><span class="n">WORKERS</span><span class="p">,</span> <span class="n">world_size</span><span class="p">)</span>
+    <span class="n">ports</span> <span class="o">=</span> <span class="n">xu</span><span class="o">.</span><span class="n">get_free_tcp_ports</span><span class="p">(</span><span class="n">num_devices</span><span class="p">)</span>
+    <span class="n">host</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">getfqdn</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">wid</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">num_devices</span><span class="p">):</span>
+      <span class="n">workers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}</span><span class="s1">;grpc://</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">_LOCAL_WORKER</span><span class="p">,</span> <span class="n">wid</span><span class="p">,</span> <span class="n">host</span><span class="p">,</span>
+                                                 <span class="n">ports</span><span class="p">[</span><span class="n">wid</span><span class="p">]))</span>
+  <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">WORKERS</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;|&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">workers</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_pre_fork_setup_torch_distributed</span><span class="p">():</span>
+  <span class="k">if</span> <span class="ow">not</span> <span class="n">xenv</span><span class="o">.</span><span class="n">TORCH_DIST_ROOT</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">TORCH_DIST_ROOT</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+        <span class="n">socket</span><span class="o">.</span><span class="n">getfqdn</span><span class="p">(),</span>
+        <span class="n">xu</span><span class="o">.</span><span class="n">get_free_tcp_ports</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
+
+
+<span class="k">def</span> <span class="nf">_pre_fork_cpu_setup</span><span class="p">(</span><span class="n">num_devices</span><span class="p">):</span>
+  <span class="k">if</span> <span class="n">xenv</span><span class="o">.</span><span class="n">HOST_ORDINAL</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
+    <span class="c1"># CPU multi-processing must use the host ordinal path, which enables the</span>
+    <span class="c1"># torch.distributed reductions across single CPU cores. Since XLA CPU does</span>
+    <span class="c1"># not support multiple devices within the same process, each XLA CPU device</span>
+    <span class="c1"># is isolated within a single process, which is seen as &quot;host&quot; as well.</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">HOST_ORDINAL</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;0&#39;</span>
+
+
+<span class="k">def</span> <span class="nf">_pre_fork_setup</span><span class="p">(</span><span class="n">num_devices</span><span class="p">):</span>
+  <span class="n">dev_count</span><span class="p">,</span> <span class="n">dev_kind</span> <span class="o">=</span> <span class="n">_get_devices_per_worker</span><span class="p">()</span>
+  <span class="k">if</span> <span class="n">num_devices</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">num_devices</span> <span class="o">=</span> <span class="n">dev_count</span>
+  <span class="k">elif</span> <span class="n">num_devices</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="n">dev_count</span><span class="p">]:</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+        <span class="s1">&#39;The number of devices must be either 1 or </span><span class="si">{}</span><span class="s1">, got </span><span class="si">{}</span><span class="s1"> instead&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">dev_count</span><span class="p">,</span> <span class="n">num_devices</span><span class="p">))</span>
+  <span class="n">total_devices</span> <span class="o">=</span> <span class="n">_get_world_size</span><span class="p">()</span> <span class="o">*</span> <span class="n">num_devices</span>
+  <span class="k">if</span> <span class="n">total_devices</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">SERVICE_ADDRESS</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
+    <span class="c1"># In multi-processing mode, even if there is only one XLA host, we still</span>
+    <span class="c1"># bring up the mesh service.</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">SERVICE_ADDRESS</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+        <span class="n">socket</span><span class="o">.</span><span class="n">getfqdn</span><span class="p">(),</span>
+        <span class="n">xu</span><span class="o">.</span><span class="n">get_free_tcp_ports</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
+  <span class="k">if</span> <span class="n">dev_kind</span> <span class="o">==</span> <span class="s1">&#39;GPU&#39;</span><span class="p">:</span>
+    <span class="n">_setup_gpu_workers</span><span class="p">(</span><span class="n">num_devices</span><span class="p">)</span>
+    <span class="n">_create_gpu_devices</span><span class="p">(</span><span class="n">num_devices</span><span class="p">)</span>
+  <span class="k">elif</span> <span class="n">dev_kind</span> <span class="o">==</span> <span class="s1">&#39;CPU&#39;</span><span class="p">:</span>
+    <span class="n">_pre_fork_cpu_setup</span><span class="p">(</span><span class="n">num_devices</span><span class="p">)</span>
+  <span class="n">_pre_fork_setup_torch_distributed</span><span class="p">()</span>
+  <span class="k">return</span> <span class="n">PreForkConfig</span><span class="p">(</span><span class="n">dev_kind</span><span class="o">=</span><span class="n">dev_kind</span><span class="p">,</span> <span class="n">num_devices</span><span class="o">=</span><span class="n">num_devices</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_setup_gpu_worker</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">gindex</span><span class="p">):</span>
+  <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">MP_DEVICE</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;GPU:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+      <span class="n">_get_mp_device_ordinal</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">gindex</span><span class="p">))</span>
+  <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">LOCAL_WORKER</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">_LOCAL_WORKER</span><span class="p">,</span> <span class="n">gindex</span><span class="p">)</span>
+  <span class="c1"># Every process is restricted to 1 GPU device, which in such process will be</span>
+  <span class="c1"># named XLA_GPU:0.</span>
+  <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">_CUDA_VISIBLE_DEVICES</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+  <span class="c1"># We have expanded the GPU devices in the device map already, in</span>
+  <span class="c1"># _create_gpu_devices(), so delete the key from the environment as it</span>
+  <span class="c1"># otherwise triggers device generation again in computation_client.cc.</span>
+  <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">GPU_NUM_DEVICES</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_setup_cpu_worker</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">gindex</span><span class="p">):</span>
+  <span class="n">task_no</span> <span class="o">=</span> <span class="mi">0</span>
+  <span class="n">dev_index</span> <span class="o">=</span> <span class="n">_get_mp_device_ordinal</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">gindex</span><span class="p">)</span>
+  <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">MP_DEVICE</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;CPU:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">dev_index</span><span class="p">)</span>
+  <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">LOCAL_WORKER</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">_LOCAL_WORKER</span><span class="p">,</span> <span class="n">task_no</span><span class="p">)</span>
+  <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">WORKERS</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}</span><span class="s1">;grpc://localhost:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+      <span class="n">_LOCAL_WORKER</span><span class="p">,</span> <span class="n">task_no</span><span class="p">,</span>
+      <span class="n">xu</span><span class="o">.</span><span class="n">get_free_tcp_ports</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span>
+  <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span>
+      <span class="n">xenv</span><span class="o">.</span>
+      <span class="n">DEVICE_MAP</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;CPU:</span><span class="si">{}</span><span class="s1">;/job:</span><span class="si">{}</span><span class="s1">/replica:0/task:</span><span class="si">{}</span><span class="s1">/device:XLA_CPU:0&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+          <span class="n">dev_index</span><span class="p">,</span> <span class="n">_LOCAL_WORKER</span><span class="p">,</span> <span class="n">task_no</span><span class="p">)</span>
+  <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">CPU_NUM_DEVICES</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+  <span class="c1"># XLA CPU has no support for cross-replica reduces, so we have to reduce using</span>
+  <span class="c1"># torch.distributed capabilities. Since the logic is to use torch.distributed</span>
+  <span class="c1"># across hosts (with XLA device reduces across devices within the same host),</span>
+  <span class="c1"># we make the single host processes behave like if they were different hosts.</span>
+  <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">HOST_ORDINAL</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">gindex</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_wants_tpu_env_config</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">gindex</span><span class="p">):</span>
+  <span class="k">if</span> <span class="n">xenv</span><span class="o">.</span><span class="n">HOST_ORDINAL</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">index</span> <span class="o">==</span> <span class="mi">0</span>
+  <span class="k">return</span> <span class="n">gindex</span> <span class="o">==</span> <span class="mi">0</span>
+
+
+<span class="k">def</span> <span class="nf">_setup_tpu_worker</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">gindex</span><span class="p">,</span> <span class="n">tpu_env_config</span><span class="p">):</span>
+  <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">MP_DEVICE</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;TPU:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+      <span class="n">_get_mp_device_ordinal</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">gindex</span><span class="p">))</span>
+  <span class="k">if</span> <span class="n">xenv</span><span class="o">.</span><span class="n">LOCAL_WORKER</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
+    <span class="c1"># The local worker can be missing for a 1 TPU host setup. Make sure we</span>
+    <span class="c1"># always have one.</span>
+    <span class="k">assert</span> <span class="n">tpu_env_config</span><span class="p">,</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1"> environment must be populated&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+        <span class="n">xenv</span><span class="o">.</span><span class="n">TPU_CONFIG</span><span class="p">)</span>
+    <span class="n">tpu_config</span> <span class="o">=</span> <span class="n">_parse_tpu_config</span><span class="p">(</span><span class="n">tpu_env_config</span><span class="p">)</span>
+    <span class="n">worker</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">tpu_config</span><span class="o">.</span><span class="n">values</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">LOCAL_WORKER</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">worker</span><span class="o">.</span><span class="n">worker_name</span><span class="p">,</span>
+                                                   <span class="n">worker</span><span class="o">.</span><span class="n">ordinal</span><span class="p">)</span>
+  <span class="k">if</span> <span class="ow">not</span> <span class="n">_wants_tpu_env_config</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">gindex</span><span class="p">):</span>
+    <span class="c1"># In multi-processing mode, only the process handling the first device of</span>
+    <span class="c1"># the master worker, will do TPU mesh initialization, so we need to remove</span>
+    <span class="c1"># the environment configs which would prevent the client to be falling in</span>
+    <span class="c1"># the mesh client config path.</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">TPU_CONFIG</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">TPU_NUM_DEVICES</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_prepare_env_for_index</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">pf_cfg</span><span class="p">):</span>
+  <span class="n">_setup_world_size</span><span class="p">(</span><span class="n">pf_cfg</span><span class="p">)</span>
+  <span class="n">gindex</span> <span class="o">=</span> <span class="n">_local_index_to_global</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">pf_cfg</span><span class="o">.</span><span class="n">num_devices</span><span class="p">)</span>
+  <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">ORDINAL</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">gindex</span><span class="p">)</span>
+  <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">LOCAL_ORDINAL</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+
+  <span class="k">if</span> <span class="n">pf_cfg</span><span class="o">.</span><span class="n">dev_kind</span> <span class="o">==</span> <span class="s1">&#39;TPU&#39;</span><span class="p">:</span>
+    <span class="n">_setup_tpu_worker</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">gindex</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">TPU_CONFIG</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">xenv</span><span class="o">.</span><span class="n">HOST_ORDINAL</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
+      <span class="c1"># If xenv.HOST_ORDINAL is set, we are in a sea-of-devices TPU setup, where</span>
+      <span class="c1"># each host has local TPU devices, but not interconnected with the fast TPU</span>
+      <span class="c1"># link. In this case each TPU host sees only local TPU devices, as far as</span>
+      <span class="c1"># fast TPU reduction goes, and global redcutions are performed with normal</span>
+      <span class="c1"># torch.distributed facilities. The ordinal 0 of each TPU host will be the</span>
+      <span class="c1"># one performing the global reductions, if no groups are defined in the</span>
+      <span class="c1"># reduce operation.</span>
+      <span class="c1"># Sea of devices configuration:</span>
+      <span class="c1">#  - xenv.HOST_ORDINAL must be set to the host ordinal.</span>
+      <span class="c1">#  - xenv.TORCH_DIST_ROOT must be set to the HOST:PORT, where HOST can be</span>
+      <span class="c1">#    the same host of the mesh master, but different port.</span>
+      <span class="c1">#  - xenv.TPU_CONFIG must be set on all host, with task number equal 0.</span>
+      <span class="c1">#  - The worker ordinal (task number) in the xenv.LOCAL_WORKER must be set</span>
+      <span class="c1">#    to 0 in all hosts.</span>
+      <span class="n">_setup_torch_distributed</span><span class="p">()</span>
+  <span class="k">elif</span> <span class="n">pf_cfg</span><span class="o">.</span><span class="n">dev_kind</span> <span class="o">==</span> <span class="s1">&#39;GPU&#39;</span><span class="p">:</span>
+    <span class="n">_setup_gpu_worker</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">gindex</span><span class="p">)</span>
+  <span class="k">elif</span> <span class="n">pf_cfg</span><span class="o">.</span><span class="n">dev_kind</span> <span class="o">==</span> <span class="s1">&#39;CPU&#39;</span><span class="p">:</span>
+    <span class="n">_setup_cpu_worker</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">gindex</span><span class="p">)</span>
+    <span class="n">_setup_torch_distributed</span><span class="p">()</span>
+  <span class="k">return</span> <span class="n">gindex</span>
+
+
+<span class="k">def</span> <span class="nf">_setup_replication</span><span class="p">():</span>
+  <span class="c1"># At this point xla_model.py APIs are allowed as the setup is already</span>
+  <span class="c1"># completed.</span>
+  <span class="k">if</span> <span class="n">xm</span><span class="o">.</span><span class="n">xrt_world_size</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+    <span class="n">device</span> <span class="o">=</span> <span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">()</span>
+    <span class="n">xm</span><span class="o">.</span><span class="n">set_replication</span><span class="p">(</span><span class="n">device</span><span class="p">,</span> <span class="p">[</span><span class="n">device</span><span class="p">])</span>
+
+
+<span class="k">def</span> <span class="nf">_start_fn</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">pf_cfg</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+  <span class="n">gindex</span> <span class="o">=</span> <span class="n">_prepare_env_for_index</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">pf_cfg</span><span class="p">)</span>
+  <span class="c1"># Calling _setup_replication() will trigger XLA library initialization, so the</span>
+  <span class="c1"># environment must be fully setup before doing so.</span>
+  <span class="n">_setup_replication</span><span class="p">()</span>
+  <span class="n">fn</span><span class="p">(</span><span class="n">gindex</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_mp_start_fn</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">pf_cfg</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+  <span class="n">exit_code</span> <span class="o">=</span> <span class="mi">0</span>
+  <span class="k">try</span><span class="p">:</span>
+    <span class="n">_start_fn</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">pf_cfg</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span>
+  <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span>
+        <span class="s1">&#39;Exception in device=</span><span class="si">{}</span><span class="s1">: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">_get_multiprocessing_device</span><span class="p">(),</span>
+                                            <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)),</span>
+        <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+    <span class="n">traceback</span><span class="o">.</span><span class="n">print_exc</span><span class="p">(</span><span class="n">limit</span><span class="o">=</span><span class="mi">16</span><span class="p">,</span> <span class="n">file</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">)</span>
+    <span class="n">exit_code</span> <span class="o">=</span> <span class="mi">17</span>
+  <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="n">exit_code</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_run_direct</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">nprocs</span><span class="p">,</span> <span class="n">join</span><span class="p">,</span> <span class="n">daemon</span><span class="p">,</span> <span class="n">start_method</span><span class="p">):</span>
+  <span class="n">nprocs</span> <span class="o">=</span> <span class="n">nprocs</span> <span class="ow">or</span> <span class="mi">1</span>
+  <span class="k">if</span> <span class="n">nprocs</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">join</span><span class="p">:</span>
+    <span class="n">fn</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">multiprocessing</span><span class="o">.</span><span class="n">spawn</span><span class="p">(</span>
+        <span class="n">fn</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="n">args</span><span class="p">,</span> <span class="n">nprocs</span><span class="o">=</span><span class="n">nprocs</span><span class="p">,</span> <span class="n">join</span><span class="o">=</span><span class="n">join</span><span class="p">,</span> <span class="n">daemon</span><span class="o">=</span><span class="n">daemon</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="spawn"><a class="viewcode-back" href="../../../index.html#torch_xla.distributed.xla_multiprocessing.spawn">[docs]</a><span class="k">def</span> <span class="nf">spawn</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span>
+          <span class="n">args</span><span class="o">=</span><span class="p">(),</span>
+          <span class="n">nprocs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+          <span class="n">join</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+          <span class="n">daemon</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+          <span class="n">start_method</span><span class="o">=</span><span class="s1">&#39;spawn&#39;</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Enables multi processing based replication.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    fn (callable): The function to be called for each device which takes part of</span>
+<span class="sd">      the replication. The function will be called with a first argument being</span>
+<span class="sd">      the global index of the process within the replication, followed by the</span>
+<span class="sd">      arguments passed in `args`.</span>
+<span class="sd">    args (tuple): The arguments for `fn`.</span>
+<span class="sd">      Default: Empty tuple</span>
+<span class="sd">    nprocs (int): The number of processes/devices for the replication. At the</span>
+<span class="sd">      moment, if specified, can be either 1 or the maximum number of devices.</span>
+<span class="sd">    join (bool): Whether the call should block waiting for the completion of the</span>
+<span class="sd">      processes which have being spawned.</span>
+<span class="sd">      Default: True</span>
+<span class="sd">    daemon (bool): Whether the processes being spawned should have the `daemon`</span>
+<span class="sd">      flag set (see Python multi-processing API).</span>
+<span class="sd">      Default: False</span>
+<span class="sd">    start_method (string): The Python `multiprocessing` process creation method.</span>
+<span class="sd">      Default: `spawn`</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    The same object returned by the `torch.multiprocessing.spawn` API. If</span>
+<span class="sd">    `nprocs` is 1 the `fn` function will be called directly, and the API will</span>
+<span class="sd">    return None.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">if</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">using_pjrt</span><span class="p">():</span>
+    <span class="k">return</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">spawn</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="n">nprocs</span><span class="p">,</span> <span class="n">start_method</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span>
+
+  <span class="k">if</span> <span class="ow">not</span> <span class="n">_is_xla_config</span><span class="p">():</span>
+    <span class="c1"># If this is not an XLA setup, jump to normal multi-processing.</span>
+    <span class="k">return</span> <span class="n">_run_direct</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">nprocs</span><span class="p">,</span> <span class="n">join</span><span class="p">,</span> <span class="n">daemon</span><span class="p">,</span> <span class="n">start_method</span><span class="p">)</span>
+
+  <span class="n">pf_cfg</span> <span class="o">=</span> <span class="n">_pre_fork_setup</span><span class="p">(</span><span class="n">nprocs</span><span class="p">)</span>
+  <span class="n">result</span> <span class="o">=</span> <span class="kc">None</span>
+  <span class="k">if</span> <span class="n">pf_cfg</span><span class="o">.</span><span class="n">num_devices</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+    <span class="n">_start_fn</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">pf_cfg</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">multiprocessing</span><span class="o">.</span><span class="n">start_processes</span><span class="p">(</span>
+        <span class="n">_mp_start_fn</span><span class="p">,</span>
+        <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">pf_cfg</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">args</span><span class="p">),</span>
+        <span class="n">nprocs</span><span class="o">=</span><span class="n">pf_cfg</span><span class="o">.</span><span class="n">num_devices</span><span class="p">,</span>
+        <span class="n">join</span><span class="o">=</span><span class="n">join</span><span class="p">,</span>
+        <span class="n">daemon</span><span class="o">=</span><span class="n">daemon</span><span class="p">,</span>
+        <span class="n">start_method</span><span class="o">=</span><span class="n">start_method</span><span class="p">)</span>
+
+  <span class="c1"># For GPU, xenv.WORKERS are set in the launcher and then get carried to the children.</span>
+  <span class="c1"># However, if the launcher is reused to do another multi-process experiment, _setup_gpu_workers</span>
+  <span class="c1"># would mistake the xenv.WORKERS as configured to enable multi-host experiments. Each worker then</span>
+  <span class="c1"># represents a host. Therefore, reset it after launching all children.</span>
+  <span class="k">if</span> <span class="n">pf_cfg</span><span class="o">.</span><span class="n">dev_kind</span> <span class="o">==</span> <span class="s1">&#39;GPU&#39;</span><span class="p">:</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">WORKERS</span><span class="p">)</span>
+
+  <span class="k">return</span> <span class="n">result</span></div>
+
+
+<div class="viewcode-block" id="MpModelWrapper"><a class="viewcode-back" href="../../../index.html#torch_xla.distributed.xla_multiprocessing.MpModelWrapper">[docs]</a><span class="k">class</span> <span class="nc">MpModelWrapper</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Wraps a model to minimize host memory usage when `fork` method is used.</span>
+
+<span class="sd">  This class should be used together with the `spawn(..., start_method=&#39;fork&#39;)`</span>
+<span class="sd">  API to minimize the use of host memory.</span>
+<span class="sd">  Instead of creating models on each multiprocessing process, hence replicating</span>
+<span class="sd">  the model&#39;s initial host memory, the model is created once at global scope,</span>
+<span class="sd">  and then moved into each device inside the `spawn()` target function.</span>
+<span class="sd">  Example::</span>
+
+<span class="sd">    WRAPPED_MODEL = xmp.MpModelWrapper(MyNetwork())</span>
+
+<span class="sd">    def _mp_fn(index, ...):</span>
+<span class="sd">      device = xm.xla_device()</span>
+<span class="sd">      model = WRAPPED_MODEL.to(device)</span>
+<span class="sd">      ...</span>
+
+<span class="sd">    xmp.spawn(_mp_fn, ..., start_method=&#39;fork&#39;)</span>
+
+<span class="sd">  This method has two advantages. First it uses only one copy of the memory</span>
+<span class="sd">  pages to host the original model weights, and second it serializes the move</span>
+<span class="sd">  of the wrapped model into each device, by lowering the load onto the system</span>
+<span class="sd">  memory during the process.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Creates a new `MpModelWrapper` object.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">      model (torch.nn.Module): The model to be wrapped. Should be on PyTorch CPU</span>
+<span class="sd">        device (which is the default when creating new models).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_model</span> <span class="o">=</span> <span class="n">model</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">multiprocessing</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
+
+<div class="viewcode-block" id="MpModelWrapper.to"><a class="viewcode-back" href="../../../index.html#torch_xla.distributed.xla_multiprocessing.MpModelWrapper.to">[docs]</a>  <span class="k">def</span> <span class="nf">to</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">device</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Retrieves the model moved onto the specified device.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">      device (torch.device): The device where the model should be moved onto.</span>
+<span class="sd">    Returns:</span>
+<span class="sd">      The model on the specified device.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_model</span></div></div>
+
+
+<div class="viewcode-block" id="MpSerialExecutor"><a class="viewcode-back" href="../../../index.html#torch_xla.distributed.xla_multiprocessing.MpSerialExecutor">[docs]</a><span class="k">class</span> <span class="nc">MpSerialExecutor</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;Utility to run a function in a serialized fashion among multi-core processes.</span>
+
+<span class="sd">  Example::</span>
+
+<span class="sd">    # At global scope.</span>
+<span class="sd">    SERIAL_EXEC = xmp.MpSerialExecutor()</span>
+
+<span class="sd">    def load_dataset(path):</span>
+<span class="sd">      return maybe_download_and_load(path)</span>
+
+<span class="sd">    def _mp_fn(index, ...):</span>
+<span class="sd">      # Avoid all cores downloading the same data with the serial executor.</span>
+<span class="sd">      dataset = SERIAL_EXEC.run(lambda: load_dataset(&#39;/tmp/mnist-data&#39;))</span>
+<span class="sd">      ...</span>
+
+<span class="sd">    xmp.spawn(_mp_fn, ...)</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+
+  <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">multiprocessing</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
+
+<div class="viewcode-block" id="MpSerialExecutor.run"><a class="viewcode-back" href="../../../index.html#torch_xla.distributed.xla_multiprocessing.MpSerialExecutor.run">[docs]</a>  <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fn</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Runs the provided function serialized WRT each per-core process.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">      fn (callable): The function to run in a serialized fashion.</span>
+<span class="sd">    Returns:</span>
+<span class="sd">      The `fn` return value.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lock</span><span class="p">:</span>
+      <span class="k">return</span> <span class="n">fn</span><span class="p">()</span></div></div>
+</pre></div>
+
+             </article>
+             
+            </div>
+            <footer>
+  
+
+  
+
+    <hr>
+
+  
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright .
+
+    </p>
+  </div>
+    
+      <div>
+        Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+      </div>
+     
+
+</footer>
+
+          </div>
+        </div>
+
+        <div class="pytorch-content-right" id="pytorch-content-right">
+          <div class="pytorch-right-menu" id="pytorch-right-menu">
+            <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
+              
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+  
+
+
+  
+
+     
+       <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+         <script src="../../../_static/jquery.js"></script>
+         <script src="../../../_static/underscore.js"></script>
+         <script src="../../../_static/doctools.js"></script>
+         <script src="../../../_static/language_data.js"></script>
+     
+
+  
+
+  <script type="text/javascript" src="../../../_static/js/vendor/popper.min.js"></script>
+  <script type="text/javascript" src="../../../_static/js/vendor/bootstrap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/list.js/1.5.0/list.min.js"></script>
+  <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+  <!-- Begin Footer -->
+
+  <div class="container-fluid docs-tutorials-resources" id="docs-tutorials-resources">
+    <div class="container">
+      <div class="row">
+        <div class="col-md-4 text-center">
+          <h2>Docs</h2>
+          <p>Access comprehensive developer documentation for PyTorch</p>
+          <a class="with-right-arrow" href="https://pytorch.org/docs/stable/index.html">View Docs</a>
+        </div>
+
+        <div class="col-md-4 text-center">
+          <h2>Tutorials</h2>
+          <p>Get in-depth tutorials for beginners and advanced developers</p>
+          <a class="with-right-arrow" href="https://pytorch.org/tutorials">View Tutorials</a>
+        </div>
+
+        <div class="col-md-4 text-center">
+          <h2>Resources</h2>
+          <p>Find development resources and get your questions answered</p>
+          <a class="with-right-arrow" href="https://pytorch.org/resources">View Resources</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="container footer-container">
+      <div class="footer-logo-wrapper">
+        <a href="https://pytorch.org/" class="footer-logo"></a>
+      </div>
+
+      <div class="footer-links-wrapper">
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title"><a href="https://pytorch.org/">PyTorch</a></li>
+            <li><a href="https://pytorch.org/get-started">Get Started</a></li>
+            <li><a href="https://pytorch.org/features">Features</a></li>
+            <li><a href="https://pytorch.org/ecosystem">Ecosystem</a></li>
+            <li><a href="https://pytorch.org/blog/">Blog</a></li>
+            <li><a href="https://github.com/pytorch/pytorch/blob/master/CONTRIBUTING.md">Contributing</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title"><a href="https://pytorch.org/resources">Resources</a></li>
+            <li><a href="https://pytorch.org/tutorials">Tutorials</a></li>
+            <li><a href="https://pytorch.org/docs/stable/index.html">Docs</a></li>
+            <li><a href="https://discuss.pytorch.org" target="_blank">Discuss</a></li>
+            <li><a href="https://github.com/pytorch/pytorch/issues" target="_blank">Github Issues</a></li>
+            <li><a href="https://pytorch.org/assets/brand-guidelines/PyTorch-Brand-Guidelines.pdf" target="_blank">Brand Guidelines</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title">Stay up to date</li>
+            <li><a href="https://www.facebook.com/pytorch" target="_blank">Facebook</a></li>
+            <li><a href="https://twitter.com/pytorch" target="_blank">Twitter</a></li>
+            <li><a href="https://www.youtube.com/pytorch" target="_blank">YouTube</a></li>
+            <li><a href="https://www.linkedin.com/company/pytorch" target="_blank">LinkedIn</a></li>
+          </ul>  
+          </div>
+
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title">PyTorch Podcasts</li>
+            <li><a href="https://open.spotify.com/show/6UzHKeiy368jKfQMKKvJY5" target="_blank">Spotify</a></li>
+            <li><a href="https://podcasts.apple.com/us/podcast/pytorch-developer-podcast/id1566080008" target="_blank">Apple</a></li>
+            <li><a href="https://www.google.com/podcasts?feed=aHR0cHM6Ly9mZWVkcy5zaW1wbGVjYXN0LmNvbS9PQjVGa0lsOA%3D%3D" target="_blank">Google</a></li>
+            <li><a href="https://music.amazon.com/podcasts/7a4e6f0e-26c2-49e9-a478-41bd244197d0/PyTorch-Developer-Podcast?" target="_blank">Amazon</a></li>
+          </ul>
+         </div>
+        </div>
+        
+        <div class="privacy-policy">
+          <ul>
+            <li class="privacy-policy-links"><a href="https://www.linuxfoundation.org/terms/" target="_blank">Terms</a></li>
+            <li class="privacy-policy-links">|</li>
+            <li class="privacy-policy-links"><a href="https://www.linuxfoundation.org/privacy-policy/" target="_blank">Privacy</a></li>
+          </ul>
+        </div>
+        <div class="copyright">
+        <p>© Copyright The Linux Foundation. The PyTorch Foundation is a project of The Linux Foundation.
+          For web site terms of use, trademark policy and other policies applicable to The PyTorch Foundation please see
+          <a href="www.linuxfoundation.org/policies/">www.linuxfoundation.org/policies/</a>. The PyTorch Foundation supports the PyTorch open source
+          project, which has been established as PyTorch Project a Series of LF Projects, LLC. For policies applicable to the PyTorch Project a Series of LF Projects, LLC,
+          please see <a href="www.lfprojects.org/policies/">www.lfprojects.org/policies/</a>.</p>
+      </div>
+     </div>
+
+  </footer>
+
+  <div class="cookie-banner-wrapper">
+  <div class="container">
+    <p class="gdpr-notice">To analyze traffic and optimize your experience, we serve cookies on this site. By clicking or navigating, you agree to allow our usage of cookies. As the current maintainers of this site, Facebook’s Cookies Policy applies. Learn more, including about available controls: <a href="https://www.facebook.com/policies/cookies/">Cookies Policy</a>.</p>
+    <img class="close-button" src="../../../_static/images/pytorch-x.svg">
+  </div>
+</div>
+
+  <!-- End Footer -->
+
+  <!-- Begin Mobile Menu -->
+
+  <div class="mobile-main-menu">
+    <div class="container-fluid">
+      <div class="container">
+        <div class="mobile-main-menu-header-container">
+          <a class="header-logo" href="https://pytorch.org/" aria-label="PyTorch"></a>
+          <a class="main-menu-close-button" href="#" data-behavior="close-mobile-menu"></a>
+        </div>
+      </div>
+    </div>
+
+    <div class="mobile-main-menu-links-container">
+      <div class="main-menu">
+        <ul>
+          <li>
+            <a href="https://pytorch.org/get-started">Get Started</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/ecosystem">Ecosystem</a>
+          </li>
+            
+          <li>
+            <a href="https://pytorch.org/mobile">Mobile</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/blog/">Blog</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/tutorials">Tutorials</a>
+          </li>
+
+          <li class="resources-mobile-menu-title" class="active">
+            Docs
+          </li>
+
+          <ul class="resources-mobile-menu-items">
+            <li>
+              <a href="https://pytorch.org/docs/stable/index.html">PyTorch</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/audio/stable/index.html">torchaudio</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/text/stable/index.html">torchtext</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/vision/stable/index.html">torchvision</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/torcharrow">torcharrow</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/data">TorchData</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/torchrec">TorchRec</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/serve/">TorchServe</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/torchx/">TorchX</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/xla">PyTorch on XLA Devices</a>
+            </li>
+          </ul>
+
+          <li class="resources-mobile-menu-title">
+            Resources
+          </li>
+            
+           <ul class="resources-mobile-menu-items">
+
+            <li>
+              <a href="https://pytorch.org/features">About</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/foundation">PyTorch Foundation</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/#community-module">Community</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/community-stories">Community Stories</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/resources">Developer Resources</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/events">Events</a>
+            </li>
+
+            <li>
+              <a href="https://discuss.pytorch.org/">Forums</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/hub">Models (Beta)</a>
+            </li>
+          </ul>
+
+          <li>
+            <a href="https://github.com/pytorch/pytorch">Github</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- End Mobile Menu -->
+
+  <script type="text/javascript" src="../../../_static/js/vendor/anchor.min.js"></script>
+
+  <script type="text/javascript">
+    $(document).ready(function() {
+      mobileMenu.bind();
+      mobileTOC.bind();
+      pytorchAnchors.bind();
+      sideMenus.bind();
+      scrollToAnchor.bind();
+      highlightNavigation.bind();
+      mainMenuDropdown.bind();
+      filterTags.bind();
+
+      // Add class to links that have code blocks, since we cannot create links in code blocks
+      $("article.pytorch-article a span.pre").each(function(e) {
+        $(this).closest("a").addClass("has-code");
+      });
+    })
+  </script>
+</body>
+</html>

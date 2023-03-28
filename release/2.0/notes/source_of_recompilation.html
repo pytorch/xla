@@ -1,0 +1,808 @@
+
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Source of recompilations in torch_xla &mdash; PyTorch/XLA master documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+  <!-- Google Analytics -->
+  
+  <!-- End Google Analytics -->
+  
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+  <!-- Preload the theme fonts -->
+
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-book.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/IBMPlexMono/IBMPlexMono-Medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-medium-italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/IBMPlexMono/IBMPlexMono-SemiBold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+
+<!-- Preload the katex fonts -->
+
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Math-Italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Main-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Main-Bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size1-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size4-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size2-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size3-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Caligraphic-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.2/css/all.css" integrity="sha384-vSIIfh2YWi9wW0r9iZe7RJPrKwp6bG+s9QZMoITbCckVJqGCCRhc+ccxNcdpHuYu" crossorigin="anonymous">
+</head>
+
+<div class="container-fluid header-holder tutorials-header" id="header-holder">
+  <div class="container">
+    <div class="header-container">
+      <a class="header-logo" href="https://pytorch.org/" aria-label="PyTorch"></a>
+
+      <div class="main-menu">
+        <ul>
+          <li>
+            <a href="https://pytorch.org/get-started">Get Started</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/ecosystem">Ecosystem</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/mobile">Mobile</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/blog/">Blog</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/tutorials">Tutorials</a>
+          </li>
+
+          <li class="active docs-active">
+            <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="resource-option with-down-orange-arrow">
+                Docs
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/docs/stable/index.html">
+                  <span class="dropdown-title">PyTorch</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/audio/stable/index.html">
+                  <span class="dropdown-title">torchaudio</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/text/stable/index.html">
+                  <span class="dropdown-title">torchtext</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/vision/stable/index.html">
+                  <span class="dropdown-title">torchvision</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/torcharrow">
+                  <span class="dropdown-title">torcharrow</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/data">
+                  <span class="dropdown-title">TorchData</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/torchrec">
+                  <span class="dropdown-title">TorchRec</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/serve/">
+                  <span class="dropdown-title">TorchServe</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/torchx/">
+                  <span class="dropdown-title">TorchX</span>
+                  <p></p>
+                </a>
+                <a class="doc-dropdown-option nav-dropdown-item" href="https://pytorch.org/xla">
+                  <span class="dropdown-title">PyTorch on XLA Devices</span>
+                  <p></p>
+                </a>
+            </div>
+          </li>
+
+          <li>
+            <div id="resourcesDropdownButton" data-toggle="resources-dropdown" class="resources-dropdown">
+              <a class="resource-option with-down-arrow">
+                Resources
+              </a>
+              <div class="resources-dropdown-menu">
+                <a class="nav-dropdown-item" href="https://pytorch.org/features">
+                  <span class="dropdown-title">About</span>
+                  <p>Learn about PyTorch’s features and capabilities</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/foundation">
+                  <span class="dropdown-title">PyTorch Foundation</span>
+                  <p>Learn about the PyTorch foundation</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/#community-module">
+                  <span class="dropdown-title">Community</span>
+                  <p>Join the PyTorch developer community to contribute, learn, and get your questions answered.</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/community-stories">
+                  <span class="dropdown-title">Community Stories</span>
+                  <p>Learn how our community solves real, everyday machine learning problems with PyTorch.</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/resources">
+                  <span class="dropdown-title">Developer Resources</span>
+                  <p>Find resources and get questions answered</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/events">
+                  <span class="dropdown-title">Events</span>
+                  <p>Find events, webinars, and podcasts</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://discuss.pytorch.org/" target="_blank">
+                  <span class="dropdown-title">Forums</span>
+                  <p>A place to discuss PyTorch code, issues, install, research</p>
+                </a>
+                <a class="nav-dropdown-item" href="https://pytorch.org/hub">
+                  <span class="dropdown-title">Models (Beta)</span>
+                  <p>Discover, publish, and reuse pre-trained models</p>
+                </a>
+              </div>
+            </div>
+          </li>
+
+          <li>
+            <a href="https://github.com/pytorch/pytorch">GitHub</a>
+          </li>
+        </ul>
+      </div>
+
+      <a class="main-menu-open-button" href="#" data-behavior="open-mobile-menu"></a>
+    </div>
+  </div>
+</div>
+
+<body class="pytorch-body">
+
+   
+
+    
+
+    <div class="table-of-contents-link-wrapper">
+      <span>Table of Contents</span>
+      <a href="#" class="toggle-table-of-contents" data-behavior="toggle-table-of-contents"></a>
+    </div>
+
+    <nav data-toggle="wy-nav-shift" class="pytorch-left-menu" id="pytorch-left-menu">
+      <div class="pytorch-side-scroll">
+        <div class="pytorch-menu pytorch-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          <div class="pytorch-left-menu-search">
+            
+
+            
+              
+              
+                <div class="version">
+                  master (2.0 )
+                </div>
+              
+            
+
+            
+
+
+  
+
+
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search Docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+            
+          </div>
+
+          
+            
+            
+              
+            
+            
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">Source of recompilations in torch_xla</a><ul>
+<li><a class="reference internal" href="#lets-first-start-with-some-facts-constraints">Let’s first start with some facts/constraints:</a></li>
+<li><a class="reference internal" href="#from-input-dataset">#1. From input dataset.</a></li>
+<li><a class="reference internal" href="#from-operator-output">#2. From operator output</a><ul>
+<li><a class="reference internal" href="#bounded-dynamic-shape-can-fix-the-case-when-you-use-the-tensor-with-dynamic-shape-as-a-tensor-without-querying-its-real-dimension">2.1 Bounded dynamic shape can fix the case when you use the tensor with dynamic shape as a Tensor, without querying its real dimension.</a></li>
+<li><a class="reference internal" href="#what-if-real-dimension-is-queried-on-a-tensor-with-dynamic-shape">2.2 what if real dimension is queried on a tensor with dynamic shape?</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#from-control-flow">#3. From control flow</a></li>
+<li><a class="reference internal" href="#conclusion">Conclusion:</a></li>
+<li><a class="reference internal" href="#appendix">Appendix:</a></li>
+</ul>
+</li>
+</ul>
+</div>
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <div class="pytorch-container">
+      <div class="pytorch-page-level-bar" id="pytorch-page-level-bar">
+        <div class="pytorch-breadcrumbs-wrapper">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="pytorch-breadcrumbs">
+    
+      <li>
+        <a href="../index.html">
+          
+            Docs
+          
+        </a> &gt;
+      </li>
+
+        
+      <li>Source of recompilations in torch_xla</li>
+    
+    
+      <li class="pytorch-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/notes/source_of_recompilation.md.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+</div>
+        </div>
+
+        <div class="pytorch-shortcuts-wrapper" id="pytorch-shortcuts-wrapper">
+          Shortcuts
+        </div>
+      </div>
+
+      <section data-toggle="wy-nav-shift" id="pytorch-content-wrap" class="pytorch-content-wrap">
+        <div class="pytorch-content-left">
+
+        
+          
+          <div class="rst-content">
+          
+            <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
+             <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
+              
+  <div class="section" id="source-of-recompilations-in-torch-xla">
+<h1>Source of recompilations in torch_xla<a class="headerlink" href="#source-of-recompilations-in-torch-xla" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="lets-first-start-with-some-facts-constraints">
+<h2>Let’s first start with some facts/constraints:<a class="headerlink" href="#lets-first-start-with-some-facts-constraints" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic simple">
+<li><p>Graph compilations in XLA are pretty expensive.</p></li>
+<li><p>XLA handles static shape only. In other words, even for the same IR graph, XLA recompiles when input shape changes.</p></li>
+<li><p>Recompilations hurts torch_xla perf a lot when it happens, and it’s hard to understand and debug from a normal python user POV.</p></li>
+</ol>
+<p>Often when recompilation happens we say we just need dynamic shape support and then rest assured that when dynamic shape is supported in the future, all the recompilations will be magically gone. But this is not true, XLA now has pretty good bounded dynamic shapes coverage already, but we still see recompilations and they are expected.</p>
+<p><a href="#id1"><span class="problematic" id="id2">**</span></a><em>This doc aims to provide a detailed explanation of a few common sources of recompilations, and what do we need to get rid of them.  It will mainly focus on explaining the problem to beginners without any context. To make it easy to understand, the “solutions” proposed here may rely on impractical assumptions.</em> **</p>
+</div>
+<div class="section" id="from-input-dataset">
+<h2>#1. From input dataset.<a class="headerlink" href="#from-input-dataset" title="Permalink to this headline">¶</a></h2>
+<p>Yes it’s pretty common that input dataset contains examples with different shapes, e.g. sentences with varying length or images with different sizes. Without normalization, it’ll cause recompilation for every new input shape.</p>
+<p>Tensorflow graph mode users are more used to do padding/bucketization (<code class="docutils literal notranslate"><span class="pre">tf.pad</span></code>) to normalize input shapes to one or a few buckets. But this is kinda anti-pattern for PyTorch eager frontend users (which is the same user lazy tensor frontend is trying to target) since different input shapes just doesn’t matter for eager CPU/CUDA backend.</p>
+<p><strong>Proposed workaround:</strong> okay now let’s say we can work around this problem by teaching our users to do padding/bucketization (it’s hard in practice :P). What’s next?</p>
+</div>
+<div class="section" id="from-operator-output">
+<h2>#2. From operator output<a class="headerlink" href="#from-operator-output" title="Permalink to this headline">¶</a></h2>
+<p>There are certain operators semantically are data-dependent and produce dynamic shape outputs: e.g. <code class="docutils literal notranslate"><span class="pre">torch.nonzero</span></code> returns indices of nonzero elements in its input tensor. So even your input tensors to this operator always have the same shape, it might produce different shape outputs and cause recompilations.</p>
+<div class="section" id="bounded-dynamic-shape-can-fix-the-case-when-you-use-the-tensor-with-dynamic-shape-as-a-tensor-without-querying-its-real-dimension">
+<h3>2.1 Bounded dynamic shape can fix the case when you use the tensor with dynamic shape as a Tensor, without querying its real dimension.<a class="headerlink" href="#bounded-dynamic-shape-can-fix-the-case-when-you-use-the-tensor-with-dynamic-shape-as-a-tensor-without-querying-its-real-dimension" title="Permalink to this headline">¶</a></h3>
+<p><strong>Proposed workaround:</strong> let’s say now XLA supports bounded dynamic shape for all operators, is it good enough?</p>
+<ul class="simple">
+<li><p>by bounded dynamic shape it means we can pad the tensor to a theoretical max, trading more memory usage for less recompilation/faster speed.</p></li>
+</ul>
+<p>Well, sort of. Let’s see the following example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">a</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla&#39;</span><span class="p">)</span>
+<span class="n">b</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+<span class="n">c</span> <span class="o">=</span> <span class="n">b</span> <span class="o">*</span> <span class="mi">2</span>
+<span class="n">d</span> <span class="o">=</span> <span class="n">c</span> <span class="o">+</span> <span class="mi">1</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_get_xla_tensors_text</span><span class="p">([</span><span class="n">d</span><span class="p">]))</span>
+</pre></div>
+</div>
+<p>In the example above every node below <code class="docutils literal notranslate"><span class="pre">b</span></code> in the graph (namely <code class="docutils literal notranslate"><span class="pre">c,</span> <span class="pre">d</span></code> and everything depend on them) will have dynamic shape, it’s pretty obvious that <code class="docutils literal notranslate"><span class="pre">b</span></code> has dynamic shape in dimension 0 as shown below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">%</span><span class="mi">9</span> <span class="o">=</span> <span class="p">(</span><span class="n">s64</span><span class="p">[</span><span class="o">&lt;=</span><span class="mi">5</span><span class="p">,</span><span class="mi">1</span><span class="p">]{</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">},</span> <span class="n">s64</span><span class="p">[])</span> <span class="n">aten</span><span class="p">::</span><span class="n">nonzero</span><span class="p">(</span><span class="o">%</span><span class="mi">8</span><span class="p">),</span> <span class="n">num_outputs</span><span class="o">=</span><span class="mi">2</span> <span class="c1"># b</span>
+<span class="o">%</span><span class="mi">10</span> <span class="o">=</span> <span class="n">s64</span><span class="p">[</span><span class="mi">5</span><span class="p">,</span><span class="mi">1</span><span class="p">]{</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">}</span> <span class="n">aten</span><span class="p">::</span><span class="n">mul</span><span class="p">(</span><span class="o">%</span><span class="mf">9.0</span><span class="p">,</span> <span class="o">%</span><span class="mi">3</span><span class="p">)</span> <span class="c1"># c</span>
+<span class="o">%</span><span class="mi">11</span> <span class="o">=</span> <span class="n">s64</span><span class="p">[</span><span class="mi">5</span><span class="p">,</span><span class="mi">1</span><span class="p">]{</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">}</span> <span class="n">aten</span><span class="p">::</span><span class="n">add</span><span class="p">(</span><span class="o">%</span><span class="mi">10</span><span class="p">,</span> <span class="o">%</span><span class="mi">2</span><span class="p">),</span> <span class="n">ROOT</span><span class="o">=</span><span class="mi">0</span> <span class="c1"># d</span>
+</pre></div>
+</div>
+<p>Although it’s not shown directly in the graph, <code class="docutils literal notranslate"><span class="pre">c</span> <span class="pre">&amp;</span> <span class="pre">d</span></code> indeed also have dynamic shape (in other words, [5, 1] is just padded shape and it’s masked).</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_get_xla_tensor_dimension_size</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span> <span class="c1"># prints 4 instead of 5</span>
+</pre></div>
+</div>
+<p>You can see that in this case as long as the input tensor <code class="docutils literal notranslate"><span class="pre">a</span></code> has shape <code class="docutils literal notranslate"><span class="pre">[5]</span></code> we only compile the graph once. Bounded dynamic shape support helped!</p>
+</div>
+<div class="section" id="what-if-real-dimension-is-queried-on-a-tensor-with-dynamic-shape">
+<h3>2.2 what if real dimension is queried on a tensor with dynamic shape?<a class="headerlink" href="#what-if-real-dimension-is-queried-on-a-tensor-with-dynamic-shape" title="Permalink to this headline">¶</a></h3>
+<p>This is actually pretty commonly used since not all PyTorch computation are done in the form of Tensors.</p>
+<p>For example, <code class="docutils literal notranslate"><span class="pre">tensor.size()</span></code> in PyTorch returns a tuple of ints instead of a Tensor of dtype=int. When <code class="docutils literal notranslate"><span class="pre">tensor</span></code> is a dynamic shape tensor, this op basically forces XLA to cut the graph and evaluate so that we can return the correct scalar (otherwise it’ll just return the padded shape which is wrong).</p>
+<p>What’s made it worse is that many PyTorch takes scalar inputs as well. After you do <code class="docutils literal notranslate"><span class="pre">s</span> <span class="pre">=</span> <span class="pre">tensor.size(0)</span></code> and use <code class="docutils literal notranslate"><span class="pre">s</span></code> in other operators it also becomes a dynamic source. In this case we probably know how to pad it and its upper bound, but we cannot do it since it’s not even a Tensor!</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">a</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla&#39;</span><span class="p">)</span>
+<span class="n">b</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nonzero</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+<span class="n">s</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="c1"># evaluation happens! nit: we use size() for simplicity, the actual API is _get_xla_tensor_dimension_size.</span>
+<span class="n">c</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla&#39;</span><span class="p">)</span> <span class="c1"># c can be of any shape between [0, 5] which causes more recompilations!</span>
+<span class="n">d</span> <span class="o">=</span> <span class="n">c</span> <span class="o">+</span> <span class="mi">1</span>
+</pre></div>
+</div>
+<p>So this one is actually hard to solve without PyTorch frontend’s help. What do we need?</p>
+<p>In short, we need a Tensor world!</p>
+<p>For example,</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">tensor.size()</span></code> should return a Tensor so that it can be a Tensor with dynamic shape and kept in the graph without early evaluation.</p></li>
+<li><p>Tensor accessor, e.g. for 2D tensor, <code class="docutils literal notranslate"><span class="pre">tensor[0][0]</span></code> now returns a value but this need to return a tensor as well.</p></li>
+<li><p>Implicitly this means all operators currently taking int/float/double as input need a Tensor overload as well. THIS IS A BIG ASK as it can easily explode our operator set.</p>
+<ul>
+<li><p>It’s easier if we can make scalar to Tensor conversion really cheap so that we can only care about the Tensor overload.</p></li>
+<li><p>In practice not all ops takes scalars from previous computation, so we’ve been adding Tensor variants by ad-hoc requests.</p></li>
+<li><p>This is also a common ask from tracing base approaches I think.</p></li>
+</ul>
+</li>
+</ul>
+<p>Okay now that we assume every op in PyTorch has a Tensor verison we need, are we done?</p>
+</div>
+</div>
+<div class="section" id="from-control-flow">
+<h2>#3. From control flow<a class="headerlink" href="#from-control-flow" title="Permalink to this headline">¶</a></h2>
+<p>No! We actually only solved the problem without data dependent control flow…</p>
+<p>See the example below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+  <span class="n">bla</span>
+<span class="k">else</span><span class="p">:</span>
+  <span class="n">blabla</span>
+</pre></div>
+</div>
+<p>Even if <code class="docutils literal notranslate"><span class="pre">x[0][0]</span></code> was a Tensor, we need to execute/materialize its value for python interpreter to proceed. And different branch choices in multiple control flows combined means we have a lot of graph to compile as well!</p>
+<p>For now we just have no way to fix this. To fix it we need to lower the control flow from python to graph! Without too much thinking in implementation we can do this in two ways:</p>
+<ul class="simple">
+<li><p>ask users to explicitly use a control flow op instead of python if/else/while/for. This is currently supported as <a class="reference external" href="https://github.com/pytorch/xla/blob/master/torch_xla/core/xla_builder.py#L563-L574">customized API in torch_xla</a> but not widely adopted in users’ code. (python users are used to if/else/for and it’s hard to switch them to a uglier API unless there’s a huge perf win).</p></li>
+<li><p>parse python source. code to get the control flow statement automatically. This is like Torchscript and somehow merge the torchscripted graph into the lazily trace graph properly (including shape info etc). I haven’t thought through the steps of how to implement this indeed :P</p></li>
+</ul>
+<p>But either solution above requires non-trivial amount of effort, either on user side or on the framework side. That’s why we currently just take the hit of early evaluation &amp; multiple compilations as a short term solution given the bandwidth we have.</p>
+<p>Okay so now we assume that also have control flow lowered in the graph automagically, are we gold?</p>
+<p>YES! Now you have your whole computation represented in a graph of Tensor operations, including control flow so that compilers can now consume and do their smart tricks! But tbh at this point your program is no longer very PyTorch-y.</p>
+</div>
+<div class="section" id="conclusion">
+<h2>Conclusion:<a class="headerlink" href="#conclusion" title="Permalink to this headline">¶</a></h2>
+<p>There’re actually multiple sources of recompilation and bounded dynamic shape support cannot solve all of them. The proposed workarounds in this doc are definitely sometimes impractical, and there might be better ways to fix each source properly that I’m totally unaware of. But I hope as we keep smashing our way to an ideal lazy tensor stack in this doc, it’s now easier for you understand what’re the remaining blockers ahead of us.</p>
+</div>
+<div class="section" id="appendix">
+<h2>Appendix:<a class="headerlink" href="#appendix" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic simple">
+<li><p>NNC uses symbolic shapes, does that help?</p></li>
+</ol>
+<p>Yes but partially. By having symbolic shape, your compilation optimization no longer requires concrete shape values. In other words your generated kernel are more general than XLA’s static shape ones.</p>
+<p>And which exactly problem does it help?</p>
+<p>It helps with cases like #1 and #2.1.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">shape</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">]</span> <span class="o">-&gt;</span> <span class="n">add</span> <span class="o">-&gt;</span> <span class="n">transpose</span> <span class="o">-&gt;</span> <span class="o">...</span> <span class="o">-&gt;</span> <span class="n">mul</span>
+<span class="n">shape</span> <span class="p">[</span><span class="mi">6</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">-&gt;</span> <span class="n">add</span> <span class="o">-&gt;</span> <span class="n">transpose</span> <span class="o">-&gt;</span> <span class="o">...</span> <span class="o">-&gt;</span> <span class="n">mul</span>
+
+<span class="c1"># with symbolic shape</span>
+<span class="n">shape</span> <span class="p">[</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">]</span> <span class="o">-&gt;</span> <span class="n">add</span> <span class="o">-&gt;</span> <span class="n">transpose</span> <span class="o">-&gt;</span> <span class="o">...</span> <span class="o">-&gt;</span> <span class="n">mul</span>
+</pre></div>
+</div>
+<p>With symbolic shape your generated kernel doesn’t recompile as XLA does with static shapes.</p>
+<p>XLA solves this problem in the other way, by using padding/bucketization (for #1) and bounded dynamic shape (for #2.1).</p>
+<p>Brian Hirsh(&#64;bdhirsh) asked some really good questions in the comment, moving here to make them more visible:</p>
+<ol class="arabic simple">
+<li><p>Is it worth sticking a TORCH_WARN in the XLA kernels of ops that produce data-dependent output shapes?</p></li>
+</ol>
+<p>Yea torch_warn is useful in telling users “hey your program won’t run blazing fast”. But for these data dependent ops, there isn’t an easy rewrite for them unless users change the logic in their model. (another example is torch.unique())</p>
+<ol class="arabic simple">
+<li><p>How ops like nonzero impact our ability to devirtualize sizes()? If we want to devirtualize sizes(), we’ll need to be able to eagerly compute sizes for each op - won’t that mean we’re forced to evaluate the graph every time we hit an op like nonzero? Vs. right now, it sounds like we don’t actually force an evaluation when a user calls nonzero()?</p></li>
+</ol>
+<p>Yea great question! So in the current form it’s not a hard blocker since size() on XLA Tensors doesn’t carry source of truth size information. As shown in the example, the source of truth lives in IRValue and can be retrieved by <code class="docutils literal notranslate"><span class="pre">_get_xla_tensor_dimension_size</span></code> only. So if we decide to devirtualize size it’ll just enforce this discrepancy.</p>
+<p>As a followup if we have <code class="docutils literal notranslate"><span class="pre">size()</span></code> return Tensor instead of values as mentioned in the proposed workarounds above. In that case size() won’t be able to devirtualize since it becomes an operator (taking in Tensor and produce Tensor, have different implementations for different backends.)</p>
+<ol class="arabic simple">
+<li><p>If I, e.g. call <code class="docutils literal notranslate"><span class="pre">torch.add(input,</span> <span class="pre">1)</span></code> in a loop, where input varies in size from 1-1000, normally we would have to compile 1000 different graphs - but with dynamic shapes, it sounds like XLA will internally be able to generate a single graph where it says “use this graph if the input size is &lt;=1000”. My question is: is “dynamic shape” a property of just the graph? Or of both the graph and the input. I.e. if my code were instead calling <code class="docutils literal notranslate"><span class="pre">x</span> <span class="pre">=</span> <span class="pre">torch.add(input,</span> <span class="pre">1);</span> <span class="pre">x.sizes()</span></code> in a loop, does x have a dynamic shape at this point, meaning we’d need to run the graph to get the sizes? Or are we able to make it an eagerly computed property even in the presence of graphs with dynamic shapes.</p></li>
+</ol>
+<p>Yea in this case you’ll compile 1000 different graphs. Dynamic shapes means its input has dynamic dimension in it. So when you query <code class="docutils literal notranslate"><span class="pre">x.sizes()</span></code> (currently need use get_dimention_size to get the correct size) it’ll trigger <em>execution</em> (since the size didn’t change it doesn’t trigger recompilation). Without the line accessing size, it won’t trigger any recompilation/execution when input has dynamic dimension.</p>
+<ol class="arabic simple">
+<li><p>Would an alternative of making control flow available in the graph be just to come up with a way to ensure that XLA graphs don’t include control flow? i.e. if we have a model with a single conditional in the middle, then get XLA to produce 3 graphs: 1 for everything before the conditional, 1 for the if branch, and 1 for the else branch. That would mean you don’t get the exponential blowup of new graphs for every combination of paths taken, but (a) the graphs are smaller and provide fewer optimization opportunities, and (b) it would probably be pretty non-trivial to get XLA to recognize where a conditional path is taken.</p></li>
+</ol>
+<p>Great point! So if we could break them up into smaller graphs it’s indeed feasible. But in practice this pattern is annoying:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">y</span> <span class="o">=</span> <span class="o">&lt;</span><span class="n">some</span> <span class="n">computation</span><span class="o">&gt;</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">y</span> <span class="o">+</span> <span class="mi">2</span>
+<span class="k">if</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">2</span> <span class="p">:</span>
+  <span class="n">z</span> <span class="o">=</span> <span class="n">y</span> <span class="o">+</span><span class="mi">1</span>
+<span class="k">else</span><span class="p">:</span>
+  <span class="n">z</span> <span class="o">=</span> <span class="n">y</span> <span class="o">-</span> <span class="mi">1</span>
+</pre></div>
+</div>
+<p>Note you’ll evaluate x using a subgraph when you hit control flow, but there might be previous variable included in the branch computation as well (like<code class="docutils literal notranslate"><span class="pre">y</span></code> is just one node smaller than x, but it wasn’t materizalized when you evaluate <code class="docutils literal notranslate"><span class="pre">x</span></code>). So you’re actually evaluating 1 small graph and two big graphs for this example. And with more control flow involved, y could get updated in multiple branches which still produces different combo of large graphs.</p>
+</div>
+</div>
+
+
+             </article>
+             
+            </div>
+            <footer>
+  
+
+  
+
+    <hr>
+
+  
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright .
+
+    </p>
+  </div>
+    
+      <div>
+        Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+      </div>
+     
+
+</footer>
+
+          </div>
+        </div>
+
+        <div class="pytorch-content-right" id="pytorch-content-right">
+          <div class="pytorch-right-menu" id="pytorch-right-menu">
+            <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
+              <ul>
+<li><a class="reference internal" href="#">Source of recompilations in torch_xla</a><ul>
+<li><a class="reference internal" href="#lets-first-start-with-some-facts-constraints">Let’s first start with some facts/constraints:</a></li>
+<li><a class="reference internal" href="#from-input-dataset">#1. From input dataset.</a></li>
+<li><a class="reference internal" href="#from-operator-output">#2. From operator output</a><ul>
+<li><a class="reference internal" href="#bounded-dynamic-shape-can-fix-the-case-when-you-use-the-tensor-with-dynamic-shape-as-a-tensor-without-querying-its-real-dimension">2.1 Bounded dynamic shape can fix the case when you use the tensor with dynamic shape as a Tensor, without querying its real dimension.</a></li>
+<li><a class="reference internal" href="#what-if-real-dimension-is-queried-on-a-tensor-with-dynamic-shape">2.2 what if real dimension is queried on a tensor with dynamic shape?</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#from-control-flow">#3. From control flow</a></li>
+<li><a class="reference internal" href="#conclusion">Conclusion:</a></li>
+<li><a class="reference internal" href="#appendix">Appendix:</a></li>
+</ul>
+</li>
+</ul>
+
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+  
+
+
+  
+
+     
+       <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+         <script src="../_static/jquery.js"></script>
+         <script src="../_static/underscore.js"></script>
+         <script src="../_static/doctools.js"></script>
+         <script src="../_static/language_data.js"></script>
+     
+
+  
+
+  <script type="text/javascript" src="../_static/js/vendor/popper.min.js"></script>
+  <script type="text/javascript" src="../_static/js/vendor/bootstrap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/list.js/1.5.0/list.min.js"></script>
+  <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+  <!-- Begin Footer -->
+
+  <div class="container-fluid docs-tutorials-resources" id="docs-tutorials-resources">
+    <div class="container">
+      <div class="row">
+        <div class="col-md-4 text-center">
+          <h2>Docs</h2>
+          <p>Access comprehensive developer documentation for PyTorch</p>
+          <a class="with-right-arrow" href="https://pytorch.org/docs/stable/index.html">View Docs</a>
+        </div>
+
+        <div class="col-md-4 text-center">
+          <h2>Tutorials</h2>
+          <p>Get in-depth tutorials for beginners and advanced developers</p>
+          <a class="with-right-arrow" href="https://pytorch.org/tutorials">View Tutorials</a>
+        </div>
+
+        <div class="col-md-4 text-center">
+          <h2>Resources</h2>
+          <p>Find development resources and get your questions answered</p>
+          <a class="with-right-arrow" href="https://pytorch.org/resources">View Resources</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="container footer-container">
+      <div class="footer-logo-wrapper">
+        <a href="https://pytorch.org/" class="footer-logo"></a>
+      </div>
+
+      <div class="footer-links-wrapper">
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title"><a href="https://pytorch.org/">PyTorch</a></li>
+            <li><a href="https://pytorch.org/get-started">Get Started</a></li>
+            <li><a href="https://pytorch.org/features">Features</a></li>
+            <li><a href="https://pytorch.org/ecosystem">Ecosystem</a></li>
+            <li><a href="https://pytorch.org/blog/">Blog</a></li>
+            <li><a href="https://github.com/pytorch/pytorch/blob/master/CONTRIBUTING.md">Contributing</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title"><a href="https://pytorch.org/resources">Resources</a></li>
+            <li><a href="https://pytorch.org/tutorials">Tutorials</a></li>
+            <li><a href="https://pytorch.org/docs/stable/index.html">Docs</a></li>
+            <li><a href="https://discuss.pytorch.org" target="_blank">Discuss</a></li>
+            <li><a href="https://github.com/pytorch/pytorch/issues" target="_blank">Github Issues</a></li>
+            <li><a href="https://pytorch.org/assets/brand-guidelines/PyTorch-Brand-Guidelines.pdf" target="_blank">Brand Guidelines</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title">Stay up to date</li>
+            <li><a href="https://www.facebook.com/pytorch" target="_blank">Facebook</a></li>
+            <li><a href="https://twitter.com/pytorch" target="_blank">Twitter</a></li>
+            <li><a href="https://www.youtube.com/pytorch" target="_blank">YouTube</a></li>
+            <li><a href="https://www.linkedin.com/company/pytorch" target="_blank">LinkedIn</a></li>
+          </ul>  
+          </div>
+
+        <div class="footer-links-col">
+          <ul>
+            <li class="list-title">PyTorch Podcasts</li>
+            <li><a href="https://open.spotify.com/show/6UzHKeiy368jKfQMKKvJY5" target="_blank">Spotify</a></li>
+            <li><a href="https://podcasts.apple.com/us/podcast/pytorch-developer-podcast/id1566080008" target="_blank">Apple</a></li>
+            <li><a href="https://www.google.com/podcasts?feed=aHR0cHM6Ly9mZWVkcy5zaW1wbGVjYXN0LmNvbS9PQjVGa0lsOA%3D%3D" target="_blank">Google</a></li>
+            <li><a href="https://music.amazon.com/podcasts/7a4e6f0e-26c2-49e9-a478-41bd244197d0/PyTorch-Developer-Podcast?" target="_blank">Amazon</a></li>
+          </ul>
+         </div>
+        </div>
+        
+        <div class="privacy-policy">
+          <ul>
+            <li class="privacy-policy-links"><a href="https://www.linuxfoundation.org/terms/" target="_blank">Terms</a></li>
+            <li class="privacy-policy-links">|</li>
+            <li class="privacy-policy-links"><a href="https://www.linuxfoundation.org/privacy-policy/" target="_blank">Privacy</a></li>
+          </ul>
+        </div>
+        <div class="copyright">
+        <p>© Copyright The Linux Foundation. The PyTorch Foundation is a project of The Linux Foundation.
+          For web site terms of use, trademark policy and other policies applicable to The PyTorch Foundation please see
+          <a href="www.linuxfoundation.org/policies/">www.linuxfoundation.org/policies/</a>. The PyTorch Foundation supports the PyTorch open source
+          project, which has been established as PyTorch Project a Series of LF Projects, LLC. For policies applicable to the PyTorch Project a Series of LF Projects, LLC,
+          please see <a href="www.lfprojects.org/policies/">www.lfprojects.org/policies/</a>.</p>
+      </div>
+     </div>
+
+  </footer>
+
+  <div class="cookie-banner-wrapper">
+  <div class="container">
+    <p class="gdpr-notice">To analyze traffic and optimize your experience, we serve cookies on this site. By clicking or navigating, you agree to allow our usage of cookies. As the current maintainers of this site, Facebook’s Cookies Policy applies. Learn more, including about available controls: <a href="https://www.facebook.com/policies/cookies/">Cookies Policy</a>.</p>
+    <img class="close-button" src="../_static/images/pytorch-x.svg">
+  </div>
+</div>
+
+  <!-- End Footer -->
+
+  <!-- Begin Mobile Menu -->
+
+  <div class="mobile-main-menu">
+    <div class="container-fluid">
+      <div class="container">
+        <div class="mobile-main-menu-header-container">
+          <a class="header-logo" href="https://pytorch.org/" aria-label="PyTorch"></a>
+          <a class="main-menu-close-button" href="#" data-behavior="close-mobile-menu"></a>
+        </div>
+      </div>
+    </div>
+
+    <div class="mobile-main-menu-links-container">
+      <div class="main-menu">
+        <ul>
+          <li>
+            <a href="https://pytorch.org/get-started">Get Started</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/ecosystem">Ecosystem</a>
+          </li>
+            
+          <li>
+            <a href="https://pytorch.org/mobile">Mobile</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/blog/">Blog</a>
+          </li>
+
+          <li>
+            <a href="https://pytorch.org/tutorials">Tutorials</a>
+          </li>
+
+          <li class="resources-mobile-menu-title" class="active">
+            Docs
+          </li>
+
+          <ul class="resources-mobile-menu-items">
+            <li>
+              <a href="https://pytorch.org/docs/stable/index.html">PyTorch</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/audio/stable/index.html">torchaudio</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/text/stable/index.html">torchtext</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/vision/stable/index.html">torchvision</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/torcharrow">torcharrow</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/data">TorchData</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/torchrec">TorchRec</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/serve/">TorchServe</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/torchx/">TorchX</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/xla">PyTorch on XLA Devices</a>
+            </li>
+          </ul>
+
+          <li class="resources-mobile-menu-title">
+            Resources
+          </li>
+            
+           <ul class="resources-mobile-menu-items">
+
+            <li>
+              <a href="https://pytorch.org/features">About</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/foundation">PyTorch Foundation</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/#community-module">Community</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/community-stories">Community Stories</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/resources">Developer Resources</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/events">Events</a>
+            </li>
+
+            <li>
+              <a href="https://discuss.pytorch.org/">Forums</a>
+            </li>
+
+            <li>
+              <a href="https://pytorch.org/hub">Models (Beta)</a>
+            </li>
+          </ul>
+
+          <li>
+            <a href="https://github.com/pytorch/pytorch">Github</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- End Mobile Menu -->
+
+  <script type="text/javascript" src="../_static/js/vendor/anchor.min.js"></script>
+
+  <script type="text/javascript">
+    $(document).ready(function() {
+      mobileMenu.bind();
+      mobileTOC.bind();
+      pytorchAnchors.bind();
+      sideMenus.bind();
+      scrollToAnchor.bind();
+      highlightNavigation.bind();
+      mainMenuDropdown.bind();
+      filterTags.bind();
+
+      // Add class to links that have code blocks, since we cannot create links in code blocks
+      $("article.pytorch-article a span.pre").each(function(e) {
+        $(this).closest("a").addClass("has-code");
+      });
+    })
+  </script>
+</body>
+</html>
