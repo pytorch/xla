@@ -68,6 +68,7 @@ import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.test.test_utils as test_utils
 import torch_xla.debug.profiler as xp
+import torch_xla.debug.metrics as met
 
 from torch_xla.distributed.fsdp import (
     XlaFullyShardedDataParallel as FSDP,
@@ -152,8 +153,8 @@ def inference_mnist(flags, **kwargs):
   # Scale learning rate to num cores
   lr = flags.lr * xm.xrt_world_size()
 
-  server = xp.start_server(9229)
-  print('Profiling server started.')
+  # server = xp.start_server(9229)
+  # print('Profiling server started.')
 
   device = xm.xla_device()
   model = MNIST()
@@ -200,13 +201,14 @@ def inference_mnist(flags, **kwargs):
   # @xp.trace_me("inference_loop_fn")
   def inference_loop_fn(model, loader):
     for data, target in loader:
-      with xp.StepTrace('train_loop'): 
-        output = model(data)
+      output = model(data)
   
   test_device_loader = pl.MpDeviceLoader(test_loader, device)
   with torch.no_grad():
     inference_loop_fn(model, test_device_loader)
   print('Done.')
+  xm.master_print(met.metrics_report(), flush=True)
+
   return 100
 
 def _mp_fn(index, flags):
