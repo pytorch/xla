@@ -447,6 +447,18 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     xm.mark_step(wait=True)
     self.assertEqual(met.metric_data('CompileTime')[0], 1, 'Compiled {} times, expected value: 1'.format(met.metric_data('CompileTime')[0]))
 
+  def test_BCELoss_should_not_trigger_compilation(self):
+    met.clear_all()
+    t1 = torch.tensor([1, 0, 3], device=dev)
+    t2 = torch.nonzero(t1)
+    t3 = torch.tensor([0, 1, 3], device=dev)
+    t4 = torch.nonzero(t3)
+    print('t2squeezeshape=', t2.squeeze().size())
+    print('t4squeezeshape=', t4.squeeze().size())
+    torch.nn.BCELoss(t2.squeeze(), t4.squeeze())
+    xm.mark_step(wait=True)
+    self.assertEqual(met.metric_data('CompileTime')[0], 1, 'Compiled {} times, expected value: 1'.format(met.metric_data('CompileTime')[0]))
+
 
 if __name__ == '__main__':
   assert os.environ['XLA_EXPERIMENTAL'] != ''
