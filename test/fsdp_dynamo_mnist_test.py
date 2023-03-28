@@ -189,10 +189,12 @@ def inference_mnist(flags, **kwargs):
       shard_param_on_dim_0=flags.shard_param_on_dim_0,
       pin_layout_in_collective_ops=flags.pin_layout_in_collective_ops,
       auto_wrap_policy=auto_wrap_policy,
-      auto_wrapper_callable=auto_wrapper_callable)
+      auto_wrapper_callable=auto_wrapper_callable,
+      optimization_barrier_in_forward=False,
+      optimization_barrier_in_backward=False)
   model = fsdp_wrap(model)
-  
-  model = torch.compile(model, backend='torchxla_trace_once')  
+
+  model = torch.compile(model, backend='torchxla_trace_once')
   # optimizer = optim.SGD(model.parameters(), lr=lr, momentum=flags.momentum)
   # loss_fn = nn.NLLLoss()
 
@@ -202,7 +204,7 @@ def inference_mnist(flags, **kwargs):
   def inference_loop_fn(model, loader):
     for data, target in loader:
       output = model(data)
-  
+
   test_device_loader = pl.MpDeviceLoader(test_loader, device)
   with torch.no_grad():
     inference_loop_fn(model, test_device_loader)
