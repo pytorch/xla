@@ -218,10 +218,9 @@ function run_mp_op_tests {
 }
 
 function run_tests {
-  if [[ "$XLA_SKIP_TORCH_OP_TESTS" == "1" ]]; then
-    run_xla_op_tests
-  else
-    run_op_tests
+  run_xla_op_tests
+  if [[ "$XLA_SKIP_TORCH_OP_TESTS" != "1" ]]; then
+    run_torch_op_tests
   fi
   if [[ "$XLA_SKIP_MP_OP_TESTS" != "1" ]]; then
     run_mp_op_tests
