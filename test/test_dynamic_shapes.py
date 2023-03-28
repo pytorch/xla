@@ -409,6 +409,35 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     dynamic_size = int(dyn_size)
     self.assertEqual(dynamic_size, 1)
 
+  def test_squeeze(self):
+    met.clear_all()
+    t1 = torch.tensor([1, 0, 3, 5, 0, 6, 7], device=dev)
+    t2 = torch.nonzero(t1)
+    # t2 has shape [<=7, 1]
+    t3 = torch.squeeze(t2)
+    print('t3.shape=', t3.shape)
+    print('t3.shape[0]=', t3.shape[0])
+    self.assertEqual(t3.shape[0], 5)
+    
+    self.assertIsInstance(t3.shape[0], torch.SymInt)
+    self.assertEqual(str(t3.shape[0]), '<=7')
+    self.assertEqual(t3.shape[0], 5)
+
+    # verify correctness.
+    t1_aten = torch.tensor([[1, 0, 3, 5, 0, 6, 7]])
+    t2_aten = torch.nonzero(t1_aten)
+    t3_aten = torch.squeeze(t2_aten)
+    self.assertEqual(t3.cpu(), t3_aten.cpu())
+
+  def test_squeeze_should_not_trigger_compilation(self):
+    met.clear_all()
+    t1 = torch.tensor([1, 0, 3, 5, 0, 6, 7], device=dev)
+    t2 = torch.nonzero(t1)
+    # t2 has shape [<=7, 1]
+    torch.squeeze(t2)
+    xm.mark_step(wait=True)
+    self.assertEqual(met.metric_data('CompileTime')[0], 1, 'Compiled {} times, expected value: 1'.format(met.metric_data('CompileTime')[0]))
+
 
 if __name__ == '__main__':
   assert os.environ['XLA_EXPERIMENTAL'] != ''
