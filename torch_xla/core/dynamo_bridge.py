@@ -190,10 +190,15 @@ class NoneRemover:
 
 
 def is_xla_tensor(tensor: torch.Tensor) -> bool:
+  # TODO(yeounoh) check if tensor sharding annotation can be accessed here
+  # 1) sourcing from the XLATensor
+  # 2) sourcing from the backend data
+  print(f'tensor sharding: {torch_xla._XLAC._get_xla_sharding_spec(tensor)}')
   return tensor.device.type == "xla"
 
 
 def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
+  print('*** check sharding specs from all tensors...')
   assert all(
       map(
           is_xla_tensor,
@@ -202,6 +207,7 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
               itertools.chain(xla_model.parameters(), xla_args),
           ),
       )), "All tensors should be on xla"
+  print('*** done! ***')
 
   # This call is critical to make sure xla_args' tensor id show up in graph_input_tensor_ids
   xm.mark_step()
