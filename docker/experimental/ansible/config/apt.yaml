@@ -13,6 +13,9 @@ apt:
       - rename
       - vim
       - wget
+      - clang-format-7
+      - lcov
+      - less
 
     build_cuda:
       - "cuda-libraries-{{ cuda_version | replace('.', '-')   }}"
