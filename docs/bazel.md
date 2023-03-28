@@ -56,7 +56,8 @@ new_local_repository(
 
 PyTorch headers are directly sourced from the `torch` dependency, the local checkout of PyTorch. The shared libraries
 (e.g. `libtorch.so`) are sourced from the same local checkout where the code has been built and `build/lib/` contains the
-built objects. For this to work, it's required to pass `-isystemexternal/torch` to the compiler so it can find `system` libraries and satisfy them from the local checkout. Some are included as `<system>` and some as `"user"` headers.
+built objects. For this to work, it's required to pass `-isystemexternal/torch` to the compiler so it can find `system`
+libraries and satisfy them from the local checkout. Some are included as `<system>` and some as `"user"` headers.
 
 Bazel brings in [pybind11](https://github.com/pybind/pybind11) embeded python and links against it to provide `libpython`
 to the plugin using this mechanism. Python headers are also sourced from there instead of depending on the system version.
@@ -93,7 +94,8 @@ The normal build can be achieved by the invoking the standard `python setup.py b
 bazel build //:_XLAC.so
 ```
 
-This will build the XLA client and the PyTorch plugin and link it all together. This can be useful when testing changes, to be able to compile the C++ code without building the python plugin faster iteration cycles.
+This will build the XLA client and the PyTorch plugin and link it all together. This can be useful when testing changes, to be
+able to compile the C++ code without building the python plugin faster iteration cycles.
 
 ## Remote caching
 
@@ -101,12 +103,14 @@ Bazel comes with [remote caching](https://bazel.build/remote/caching) built in. 
 
 Remote caching is disabled by default but because it speeds up incremental builds by a huge margin, it is almost always recommended, and it is enabled by default in the CI automation and on Cloud Build.
 
-Using the remote cache configured by `remote_cache` configuration setup requires authentication with GCP. There are various ways to authenticate with GCP. For individual developers who have access to the development GCP project, one only needs to
+Using the remote cache configured by `remote_cache` configuration setup requires authentication with GCP.
+There are various ways to authenticate with GCP. For individual developers who have access to the development GCP project, one only needs to
 specify the `--config=remote_cache` flag to bazel, and the default `--google_default_credentials` will be used and if the
 gcloud token is present on the machine, it will work out of the box, using the logged in user for authentication. The user
-needs to have remote build permissions in GCP. In the CI, the service account key is used for authentication and is passed to
-bazel using `--config=remote_cache --google_credentials=path/to/service.key`. On [Cloud Build](https://cloud.google.com/build), `docker build --network=cloudbuild` is used to pass the authentication from the service account running the cloud build down into the docker image doing the compilation: [Application Default Credentials](https://cloud.google.com/docs/authentication/provide-credentials-adc) does the work there and authenticates as the service account. All accounts, both
-user and service accounts, need to have remote cache read/write permissions.
+needs to have remote build permissions in GCP (add new developers into the `Remote Bazel` role). In the CI, the service account key
+is used for authentication and is passed to bazel using `--config=remote_cache --google_credentials=path/to/service.key`.
+On [Cloud Build](https://cloud.google.com/build), `docker build --network=cloudbuild` is used to pass the authentication from the service
+account running the cloud build down into the docker image doing the compilation: [Application Default Credentials](https://cloud.google.com/docs/authentication/provide-credentials-adc) does the work there and authenticates as the service account. All accounts, both user and service accounts, need to have remote cache read/write permissions.
 
 Remote cache uses cache silos. Each unique machine and build should specify a unique silo key to benefit from consistent caching. The silo key can be passed using a flag: `-remote_default_exec_properties=cache-silo-key=SOME_SILO_KEY'`.
 
