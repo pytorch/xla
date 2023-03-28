@@ -1081,22 +1081,15 @@ def _maybe_convert_to_cpu(data, convert=True):
 
 
 def send_cpu_data_to_device(data, device, input_sharding=None):
-  if input_sharding:
-
-    def apply_input_sharding(instance):
-      assert(len(instance) == 2), \
-        f"Expected input data and label pair, but got {instance}."
-      x, y = instance[0].to(device), instance[1].to(device)
-      input_sharding.apply(x)
-      return x, y
-
-    return list(map(apply_input_sharding, data))
 
   def convert_fn(tensors):
-    if input_sharding:
-      return list(map(input_sharding.apply, tensors))
     devices = [str(device)] * len(tensors)
-    return torch_xla._XLAC._xla_tensors_from_aten(tensors, devices)
+    xtensors = torch_xla._XLAC._xla_tensors_from_aten(tensors, devices)
+    if input_sharding:
+      assert(len(xtensors) == 2), \
+        f"Expected input data and label pair, but got {xtensors}."
+      input_sharding.apply(xtensors[0])
+    return xtensors
 
   def select_fn(v):
     return type(v) == torch.Tensor and v.device.type == 'cpu'
