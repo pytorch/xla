@@ -72,7 +72,7 @@ fi
 if [ $USE_COVERAGE -eq 1 ]; then
   pwd
   echo "$RUNDIR"
-  lcov --directory . --base-directory . --gcov-tool ./get_coverage.sh --capture -o cov.info
+  lcov --directory . --base-directory . --gcov-tool /tmp/pytorch/xla/test/cpp/get_coverage.sh --capture -o cov.info
 fi
 
 popd
