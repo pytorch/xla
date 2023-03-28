@@ -11,10 +11,7 @@ VERBOSITY=2
 # Set the `CONTINUE_ON_ERROR` flag to `true` to make the CircleCI tests continue on error.
 # This will allow you to see all the failures on your PR, not stopping with the first
 # test failure like the default behavior.
-#
-# This flag should be set to `false`` by default. After testing your changes, make sure
-# to set this flag back to `false`` before you merge your PR.
-CONTINUE_ON_ERROR=false
+CONTINUE_ON_ERROR="${CONTINUE_ON_ERROR:-0}"
 if [[ "$CONTINUE_ON_ERROR" == "1" ]]; then
   set +e
 fi
@@ -112,7 +109,7 @@ function run_xla_backend_mp {
 }
 
 function run_xrt {
-  if [ -x "$(command -v nvidia-smi)" ]; then
+  if [ -x "$(command -v nvidia-smi)" ] && [ "$XLA_CUDA" != "0" ]; then
     GPU_NUM_DEVICES=2 run_coverage "$@"
   else
     XRT_DEVICE_MAP="CPU:0;/job:localservice/replica:0/task:0/device:XLA_CPU:0" XRT_WORKERS="localservice:0;grpc://localhost:$(shuf -i 40701-40999 -n 1)" run_coverage "$@"
