@@ -1,4 +1,5 @@
 import dataclasses
+import operator
 
 import functools
 import itertools
