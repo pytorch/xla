@@ -7,6 +7,7 @@ import time
 from typing import Any, Dict, List
 
 import torch
+from torch.fx.passes.infra.partitioner import CapabilityBasedPartitioner
 import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as metrics
@@ -189,8 +190,30 @@ class NoneRemover:
       value_list.insert(pos, None)
 
 
+class XlaOperatorSupport(torch.fx.passes.operator_support.OperatorSupport):
+
+  def is_node_supported(self, submodules, node: torch.fx.Node) -> bool:
+    return node.op == "call_function" and (getattr(node.target, "xla",
+                                                   None) is not None or
+                                           node.target == operator.getitem)
+
+
 def is_xla_tensor(tensor: torch.Tensor) -> bool:
   return tensor.device.type == "xla"
+
+
+def maybe_partition_graph(xla_model: torch.fx.GraphModule):
+  supported_ops = XlaOperatorSupport()
+  partitioner = CapabilityBasedPartitioner(xla_model, supported_ops)
+  partitions = partitioner.propose_partitions()
+  partitioned_graph = partitioner.fuse_partitions(partitions)
+
+  for node in partitioned_graph.graph.nodes:
+    if node.op == "call_module" and "fused_" in node.name:
+      fused_module = getattr(partitioned_graph, node.name)
+      fused_module._wrapped_call = extract_compiled_graph
+
+  return partitioned_graph
 
 
 def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
@@ -216,6 +239,9 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
   tensor_id_to_arg_idx = {
       tensor_id: i for i, tensor_id in enumerate(args_tensor_ids)
   }
+
+  # partition the graph for unsupported ops
+  xla_model = maybe_partition_graph(xla_model)
 
   # get_fallback_ops below uses counters to detect torch_xla fallbacks.
   # Clear the counters here so we ignore pre-existing fallbacks and
