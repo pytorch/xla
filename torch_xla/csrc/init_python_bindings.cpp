@@ -62,7 +62,7 @@
 #include "torch_xla/csrc/xla_graph_executor.h"
 #include "torch_xla/csrc/xla_op_builder.h"
 #include "torch_xla/csrc/xla_sharding_util.h"
-#include "tensorflow/tsl/profiler/convert/xplane_to_trace_events.h"
+#include "tensorflow/tsl/profiler/rpc/client/capture_profile.h"
 
 namespace torch_xla {
 namespace {
