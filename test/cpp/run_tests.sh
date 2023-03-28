@@ -70,6 +70,8 @@ if [ $BUILD_ONLY -eq 0 ]; then
 fi
 
 if [ $USE_COVERAGE -eq 1 ]; then
+  pwd
+  echo "$RUNDIR"
   lcov --directory . --base-directory . --gcov-tool ./get_coverage.sh --capture -o cov.info
 fi
 
