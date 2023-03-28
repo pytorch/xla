@@ -568,6 +568,8 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
   MaybeDumpGraph("dynamo", hash);
   auto cachedComputation =
       XLAGraphExecutor::Get()->GetComputationCache()->Get(hash);
+  std::cout << "*** cached computation, is_sharded? "
+            << cachedComputation->is_sharded << std::endl;
   // TODO implement a fallback mechanism, or make sure those entries
   // never get kicked out
   XLA_CHECK(cachedComputation)
@@ -586,6 +588,9 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
             device.toString(), std::move(shape)));
     placeholders.push_back(handle);
   }
+  std::cout << "*** output placeholders ready!" << std::endl;
+  // TODO(yeounoh) supply proper sharding specs for sharded results.
+  std::vector<XLATensor::ShardingSpecPtr> sharding_specs(placeholders.size());
 
   SyncTensorCollection coll;
   coll.device = device;
@@ -596,34 +601,66 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
     // extract the placeholder inserted by previous execution.
     TORCH_LAZY_TIMED("RunCachedGraphInputData");
     // setup the arguments
+    std::cout << "*** preparing arguments... " << std::endl;
     int idx = 0;
     for (auto& ivalue : graph_inputs) {
       torch::lazy::BackendDataPtr dataptr;
       if (auto xla_tensor_ptr = bridge::TryGetXlaTensor(ivalue.toTensor())) {
+        std::cout << "- GetXlaData ... ";
         dataptr = xla_tensor_ptr->GetXlaData();
       } else {
+        std::cout << "- TensorToXlaData ... ";
+        XLA_CHECK(device.type() != (int8_t)XlaDeviceType::SPMD)
+            << "SPMD device data should already be on the XLA backend "
+               "(XLATensor).";
         dataptr = torch_xla::TensorToXlaData(ivalue.toTensor(), device);
       }
+      std::cout << " done! " << std::endl;
 
       ++idx;
       arguments.push_back(dataptr);
     }
   }
 
+  std::cout << "*** async ... " << std::endl;
   std::shared_ptr<XLAGraphExecutor::Async> async = std::make_shared<Async>(
       &coll, std::move(arguments), placeholders, std::move(cachedComputation));
 
-  auto syncfn = [async, hash]() {
+  auto syncfn = [async, hash, sharding_specs]() {
     TF_VLOG(3) << "Executing Dynamo IR graph hash "
                << torch::lazy::HashToString(hash) << " on device "
                << async->device << " ...";
-    std::vector<torch::lazy::BackendDataPtr> results =
-        torch::lazy::getBackend()->ExecuteComputation(
-            async->cached_computation->computation, async->parameters_data,
-            async->device);
-    TF_VLOG(3) << "Executing Dynamo IR graph hash "
-               << torch::lazy::HashToString(hash) << " on device "
-               << async->device << " done!";
+
+    std::vector<torch::lazy::BackendDataPtr> results;
+    if (async->cached_computation->is_sharded) {
+      std::vector<std::string> devices =
+          xla::ComputationClient::Get()->GetLocalDevices();
+      std::vector<std::vector<xla::ComputationClient::DataPtr>>
+          device_arguments = ShardingUtil::InputHandler(
+              UnwrapXlaData(async->parameters_data), devices);
+      xla::ComputationClient::ExecuteReplicatedOptions execute_options;
+      // OutputHandler creates sharded data for sharded
+      // tensor results. Both sharded and unsharded results should be
+      // "Assign"ed to the corresponding data placeholders.
+      std::vector<xla::ComputationClient::DataPtr> outputs =
+          ShardingUtil::OutputHandler(
+              xla::ComputationClient::Get()->ExecuteReplicated(
+                  *async->cached_computation->computation->client_computation(),
+                  device_arguments, devices, execute_options),
+              sharding_specs);
+      results = WrapXlaData(outputs);
+      TF_VLOG(3) << "Executing Dynamo IR graph hash "
+                 << torch::lazy::HashToString(hash) << " on devices "
+                 << absl::StrJoin(devices, ",") << " done!";
+    } else {
+      results = torch::lazy::getBackend()->ExecuteComputation(
+          async->cached_computation->computation, async->parameters_data,
+          async->device);
+      TF_VLOG(3) << "Executing Dynamo IR graph hash "
+                 << torch::lazy::HashToString(hash) << " on device "
+                 << async->device << " done!";
+    }
+
     // Updating placeholder with actual output handle.
     for (size_t i = 0; i < results.size(); ++i) {
       XLA_CHECK(async->tensors_data[i] != nullptr);

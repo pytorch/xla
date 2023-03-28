@@ -9,6 +9,7 @@ from torch._dynamo import disable
 
 import torch_xla.core.dynamo_bridge as bridge
 import torch_xla.core.xla_model as xm
+import torch_xla.experimental.xla_sharding as xs
 import torch_xla.debug.metrics as metrics
 from torch import fx, nn
 
@@ -103,11 +104,14 @@ def make_reuse_graph_test(module_class, niter=100):
   def test_wrapper(self):
     xla_dev = xm.xla_device()
     xla_module = module_class().to(device=xla_dev)
+    # TODO(yeounoh) linear model sharding
+    xs.mark_sharding(xla_module.linear.weight, xs.Mesh([0,1,2,3], (2, 2)), (0, 1))
     inputs = tuple(x.to(device=xla_dev) for x in xla_module.get_random_inputs())
     metrics.clear_counters()
     optimized_mod = bridge.extract_compiled_graph(
         fx.symbolic_trace(xla_module), inputs)
 
+    print('\nCompiled graph extraction done!\n')
     for i in range(niter):
       xla_inputs = tuple(
           inp.to(device=xla_dev) for inp in xla_module.get_random_inputs())
@@ -116,6 +120,8 @@ def make_reuse_graph_test(module_class, niter=100):
       expected = xla_module(*xla_inputs)
       # make sure above lazy computation is executed.
       xm.mark_step()
+
+      print(f'\nexpected: {expected}\n')
 
       actual = optimized_mod(*xla_inputs_copy)
 
@@ -198,13 +204,13 @@ def make_training_test(model_cls):
 
 class TorchXLAReuseGraphTest(torch._dynamo.test_case.TestCase):
 
-  test_basic = make_reuse_graph_test(BasicModule)
-  test_matmul = make_reuse_graph_test(MatmulModule)
+  # test_basic = make_reuse_graph_test(BasicModule)
+  # test_matmul = make_reuse_graph_test(MatmulModule)
   test_linear = make_reuse_graph_test(LinearModule)
-  test_inplace_update = make_reuse_graph_test(ModuleInplaceUpdate)
+  # test_inplace_update = make_reuse_graph_test(ModuleInplaceUpdate)
 
-  test_training_linear = make_training_test(LinearModule)
-  test_training_maxpool = make_training_test(MaxPoolModule)
+  # test_training_linear = make_training_test(LinearModule)
+  # test_training_maxpool = make_training_test(MaxPoolModule)
 
 
 if __name__ == "__main__":

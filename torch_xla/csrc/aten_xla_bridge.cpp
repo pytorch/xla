@@ -305,6 +305,11 @@ torch::lazy::BackendDevice AtenDeviceToXlaDevice(const c10::Device& device) {
 }
 
 c10::Device XlaDeviceToAtenDevice(const torch::lazy::BackendDevice& device) {
+  // TODO(yeounoh) until we expose SPMD virtual device to the frontend, this
+  // will just be `XLA:0`.
+  if (device.type() == (int8_t)XlaDeviceType::SPMD) {
+    return c10::Device(at::kXLA, (size_t)0);
+  }
   return c10::Device(at::kXLA,
                      AtenXlaDeviceMapper::Get()->GetDeviceOrdinal(device));
 }
