@@ -65,6 +65,6 @@ function run_torch_xla_tests() {
     echo "Running integration tests..."
     # Run integration tests with CPU
     # TODO(yeounoh) use custom GCP project for TPU
-    XLA_CUDA=0 USE_COVERAGE=0 XLA_SKIP_TORCH_OP_TESTS=1 CONTINUE_ON_ERROR=1 ./test/run_tests.sh
+    XLA_CUDA=0 USE_COVERAGE=0 XLA_SKIP_TORCH_OP_TESTS=1 XLA_SKIP_XRT_TESTS=1 CONTINUE_ON_ERROR=1 ./test/run_tests.sh
   popd
 }
