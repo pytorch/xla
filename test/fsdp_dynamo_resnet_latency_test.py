@@ -88,7 +88,8 @@ def inference_resnet(flags, **kwargs):
   
   start = time.time()
   torch.manual_seed(1)
-
+  device = xm.xla_device()
+  
   if flags.fake_data:
     test_loader = xu.SampleGenerator(
         data=(torch.randn(batch_size, 3, 224, 224, device=device),
@@ -112,10 +113,6 @@ def inference_resnet(flags, **kwargs):
   # Scale learning rate to num cores
   lr = flags.lr * xm.xrt_world_size()
 
-  # server = xp.start_server(9229)
-  # print('Profiling server started.')
-
-  device = xm.xla_device()
   model = torchvision.models.resnet18()
   # Automatic wrapping sub-modules with inner FSDP
   auto_wrap_policy = None

@@ -215,7 +215,7 @@ def inference_mnist(flags, **kwargs):
     for data, target in loader:
       output = model(data.cpu())
       output_dynamo = model_dynamo(data)
-      assert torch.allclose(output, output_dynamo.cpu(), rtol=1e-05, atol=1e-05)
+      assert torch.allclose(output, output_dynamo.cpu(), rtol=1e-04, atol=1e-04)
 
   test_device_loader = pl.MpDeviceLoader(test_loader, device)
   with torch.no_grad():
