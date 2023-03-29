@@ -1,6 +1,6 @@
-module "nightly_docker_images" {
-  source   = "../terraform_modules/docker_image_build"
-  for_each = nightly_docker_images_map
+module "nightly_builds" {
+  source   = "../terraform_modules/build_trigger"
+  for_each = nightly_builds_dict
 
   scheduler_account_email = scheduler_account.email
 
@@ -25,8 +25,8 @@ module "nightly_docker_images" {
 }
 
 locals {
-  nightly_docker_images_map = {
-    for di in var.nightly_docker_images :
+  nightly_builds_dict = {
+    for di in var.nightly_builds :
     format("%s_%s",
       di.python_version,
       di.accelerator == "tpu" ? "tpuvm" : format("cuda_%s", di.cuda_version)
@@ -34,7 +34,7 @@ locals {
   }
 }
 
-variable "nightly_docker_images" {
+variable "nightly_builds" {
   type = list(
     object({
       image_name     = optional(string, "xla")
