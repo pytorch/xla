@@ -25,6 +25,25 @@ variable "scheduler_service_account" {
   type = string
 }
 
+resource "google_service_account" "build_runner" {
+  account_id = "build_runner"
+}
+
+resource "google_project_iam_custom_role" "build_runner" {
+  role_id     = "build_runner"
+  title       = "Build Runner"
+  description = "Grants permissions to trigger Cloud Builds."
+  permissions = ["cloudbuild.builds.create"]
+}
+
+resource "google_project_iam_member" "build_runner" {
+  role    = google_project_iam_custom_role.build_runner.name
+  member  = "serviceAccount:${google_service_account.build_runner.email}"
+  condition {
+    expression =
+  }
+}
+
 resource "google_cloud_scheduler_job" "trigger-schedule" {
   name      = format("%s-schedule", var.trigger.name)
   schedule  = var.schedule
