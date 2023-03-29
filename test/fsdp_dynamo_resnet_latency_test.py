@@ -45,6 +45,12 @@ MODEL_OPTS = {
         'type': int,
         'default': 10000,
     },
+    '--use_fsdp': {
+        'action': 'store_true',
+    },
+    '--use_dynamo': {
+        'action': 'store_true',
+    },
 }
 
 FLAGS = args_parse.parse_common_options(
@@ -148,26 +154,35 @@ def inference_resnet(flags, **kwargs):
       auto_wrapper_callable=auto_wrapper_callable,
       optimization_barrier_in_forward=False,
       optimization_barrier_in_backward=False)
-  model = fsdp_wrap(model)
 
-  model = torch.compile(model, backend='torchxla_trace_once')
+  if(flags.use_fsdp):
+    model = fsdp_wrap(model)
+
+  if(flags.use_dynamo):
+    model = torch.compile(model, backend='torchxla_trace_once')
 
   print('Starting...')
 
   # @xp.trace_me("inference_loop_fn")
   def inference_loop_fn(model, loader):
     for step, (data, target) in enumerate(loader):
+      if(step == 2):
+        start_warm = time.time()
       output = model(data)
 
   test_device_loader = pl.MpDeviceLoader(test_loader, device)
   with torch.no_grad():
     inference_loop_fn(model, test_device_loader)
-  print('Done.')
   end = time.time()
-  elapsed_time = end-start;
-  elapsed_time_per_sample = elapsed_time/float(flags.sample_count)
-  print(f'Total time: {elapsed_time} for {flags.sample_count} samples')
-  print(f'Total per sample: {elapsed_time_per_sample}')
+  print('Done.')
+  elapsed_time_cold = end-start_cold;
+  elapsed_time_warm = end-start_warm;
+  elapsed_time_cold_per_sample = elapsed_time_cold/float(flags.sample_count)
+  elapsed_time_warm_per_sample = elapsed_time_warm/float(max(flags.sample_count-1, 1))
+  print(f'Total cold time: {elapsed_time_cold} for {flags.sample_count} samples')
+  print(f'Total cold per sample: {elapsed_time_cold_per_sample}')
+  print(f'Total warm time: {elapsed_time_warm} for {flags.sample_count-1} samples')
+  print(f'Total cold per sample: {elapsed_time_warm_per_sample}')
   xm.master_print(met.metrics_report(), flush=True)
 
   return 100
