@@ -1,4 +1,5 @@
 import args_parse
+import copy
 from functools import partial
 
 MODEL_OPTS = {
@@ -44,6 +45,9 @@ MODEL_OPTS = {
     '--sample_count': {
         'type': int,
         'default': 10000,
+    '--compare_cpu': {
+        'action': 'store_true',
+        'dest': 'compare_cpu',
     },
 }
 
@@ -73,6 +77,7 @@ import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.test.test_utils as test_utils
 import torch_xla.debug.profiler as xp
 import torch_xla.debug.metrics as met
+import numpy as np
 
 from torch_xla.distributed.fsdp import (
     XlaFullyShardedDataParallel as FSDP,
@@ -121,7 +126,7 @@ def inference_mnist(flags, **kwargs):
         transform=transforms.Compose(
             [transforms.ToTensor(),
              transforms.Normalize((0.1307,), (0.3081,))]))
-    
+
     if xm.xrt_world_size() > 1:
         test_loader = torch.utils.data.DataLoader(
             test_dataset,
@@ -138,6 +143,8 @@ def inference_mnist(flags, **kwargs):
 
   device = xm.xla_device()
   model = MNIST()
+  model.load_state_dict(torch.load("mnist_trained.pt"))
+  model_cpu = copy.deepcopy(model)
   # Automatic wrapping sub-modules with inner FSDP
   auto_wrap_policy = None
   auto_wrapper_callable = None
@@ -180,12 +187,25 @@ def inference_mnist(flags, **kwargs):
 
   # @xp.trace_me("inference_loop_fn")
   def inference_loop_fn(model, loader):
+    total_samples = 0
+    correct = 0
+    model.eval()
+    device = list(model.parameters())[0].device
     for step, (data, target) in enumerate(loader):
-      output = model(data)
+      output = model(data.to(device))
+      pred = output.max(1, keepdim=True)[1]
+      correct += pred.eq(target.to(device).view_as(pred)).sum()
+      total_samples += data.size()[0]
+
+    accuracy = 100.0 * correct.item() / total_samples
+    accuracy = xm.mesh_reduce('test_accuracy', accuracy, np.mean)
+    xm.master_print(device, accuracy)
 
   test_device_loader = pl.MpDeviceLoader(test_loader, device)
   with torch.no_grad():
     inference_loop_fn(model, test_device_loader)
+    if flags.compare_cpu:
+      inference_loop_fn(model_cpu, test_device_loader)
   print('Done.')
   xm.master_print(met.metrics_report(), flush=True)
 
