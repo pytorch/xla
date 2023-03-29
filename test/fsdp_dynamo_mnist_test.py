@@ -41,6 +41,10 @@ MODEL_OPTS = {
         'action': 'store_false',
         'dest': 'pin_layout_in_collective_ops',
     },
+    '--sample_count': {
+        'type': int,
+        'default': 10000,
+    },
 }
 
 FLAGS = args_parse.parse_common_options(
@@ -104,24 +108,12 @@ def inference_mnist(flags, **kwargs):
   torch.manual_seed(1)
 
   if flags.fake_data:
-    train_loader = xu.SampleGenerator(
-        data=(torch.zeros(flags.batch_size, 1, 28,
-                          28), torch.zeros(flags.batch_size,
-                                           dtype=torch.int64)),
-        sample_count=60000 // flags.batch_size // xm.xrt_world_size())
     test_loader = xu.SampleGenerator(
         data=(torch.zeros(flags.batch_size, 1, 28,
                           28), torch.zeros(flags.batch_size,
                                            dtype=torch.int64)),
-        sample_count=60000 // flags.batch_size // xm.xrt_world_size())
+        sample_count=flags.sample_count // flags.batch_size // xm.xrt_world_size())
   else:
-    train_dataset = datasets.MNIST(
-        os.path.join(flags.datadir, str(xm.get_ordinal())),
-        train=True,
-        download=True,
-        transform=transforms.Compose(
-            [transforms.ToTensor(),
-             transforms.Normalize((0.1307,), (0.3081,))]))
     test_dataset = datasets.MNIST(
         os.path.join(flags.datadir, str(xm.get_ordinal())),
         train=False,
@@ -129,26 +121,14 @@ def inference_mnist(flags, **kwargs):
         transform=transforms.Compose(
             [transforms.ToTensor(),
              transforms.Normalize((0.1307,), (0.3081,))]))
-    train_sampler = None
+    
     if xm.xrt_world_size() > 1:
-      train_sampler = torch.utils.data.distributed.DistributedSampler(
-          train_dataset,
-          num_replicas=xm.xrt_world_size(),
-          rank=xm.get_ordinal(),
-          shuffle=True)
-    train_loader = torch.utils.data.DataLoader(
-        train_dataset,
-        batch_size=flags.batch_size,
-        sampler=train_sampler,
-        drop_last=flags.drop_last,
-        shuffle=False if train_sampler else True,
-        num_workers=flags.num_workers)
-    test_loader = torch.utils.data.DataLoader(
-        test_dataset,
-        batch_size=flags.batch_size,
-        drop_last=flags.drop_last,
-        shuffle=False,
-        num_workers=flags.num_workers)
+        test_loader = torch.utils.data.DataLoader(
+            test_dataset,
+            batch_size=flags.batch_size,
+            drop_last=flags.drop_last,
+            shuffle=False,
+            num_workers=flags.num_workers)
 
   # Scale learning rate to num cores
   lr = flags.lr * xm.xrt_world_size()

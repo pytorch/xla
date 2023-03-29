@@ -57,14 +57,14 @@ FLAGS = args_parse.parse_common_options(
     opts=MODEL_OPTS.items())
 
 import os
-import copy
 import shutil
 import sys
+import time
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torchvision import datasets, transforms
+import torchvision
 import torch_xla
 import torch_xla.debug.metrics as met
 import torch_xla.distributed.parallel_loader as pl
@@ -84,49 +84,17 @@ from torch_xla.distributed.fsdp.wrap import (size_based_auto_wrap_policy,
                                              transformer_auto_wrap_policy)
 
 
-class MNIST(nn.Module):
-
-  def __init__(self):
-    super(MNIST, self).__init__()
-    self.conv1 = nn.Conv2d(1, 10, kernel_size=5)
-    self.bn1 = nn.BatchNorm2d(10)
-    self.conv2 = nn.Conv2d(10, 20, kernel_size=5)
-    self.bn2 = nn.BatchNorm2d(20)
-    self.fc1 = nn.Linear(320, 50)
-    self.fc2 = nn.Linear(50, 10)
-
-  def forward(self, x):
-    x = F.relu(F.max_pool2d(self.conv1(x), 2))
-    x = self.bn1(x)
-    x = F.relu(F.max_pool2d(self.conv2(x), 2))
-    x = self.bn2(x)
-    x = torch.flatten(x, 1)
-    x = F.relu(self.fc1(x))
-    x = self.fc2(x)
-    return F.log_softmax(x, dim=1)
-
-def inference_mnist(flags, **kwargs):
+def inference_resnet(flags, **kwargs):
+  
+  start = time.time()
   torch.manual_seed(1)
 
   if flags.fake_data:
-    train_loader = xu.SampleGenerator(
-        data=(torch.zeros(flags.batch_size, 1, 28,
-                          28), torch.zeros(flags.batch_size,
-                                           dtype=torch.int64)),
-        sample_count=60000 // flags.batch_size // xm.xrt_world_size())
     test_loader = xu.SampleGenerator(
-        data=(torch.zeros(flags.batch_size, 1, 28,
-                          28), torch.zeros(flags.batch_size,
-                                           dtype=torch.int64)),
+        data=(torch.randn(batch_size, 3, 224, 224, device=device),
+              torch.zeros(batch_size, dtype=torch.int64, device=device)),
         sample_count=flags.sample_count // flags.batch_size // xm.xrt_world_size())
   else:
-    train_dataset = datasets.MNIST(
-        os.path.join(flags.datadir, str(xm.get_ordinal())),
-        train=True,
-        download=True,
-        transform=transforms.Compose(
-            [transforms.ToTensor(),
-             transforms.Normalize((0.1307,), (0.3081,))]))
     test_dataset = datasets.MNIST(
         os.path.join(flags.datadir, str(xm.get_ordinal())),
         train=False,
@@ -134,20 +102,6 @@ def inference_mnist(flags, **kwargs):
         transform=transforms.Compose(
             [transforms.ToTensor(),
              transforms.Normalize((0.1307,), (0.3081,))]))
-    train_sampler = None
-    if xm.xrt_world_size() > 1:
-      train_sampler = torch.utils.data.distributed.DistributedSampler(
-          train_dataset,
-          num_replicas=xm.xrt_world_size(),
-          rank=xm.get_ordinal(),
-          shuffle=True)
-    train_loader = torch.utils.data.DataLoader(
-        train_dataset,
-        batch_size=flags.batch_size,
-        sampler=train_sampler,
-        drop_last=flags.drop_last,
-        shuffle=False if train_sampler else True,
-        num_workers=flags.num_workers)
     test_loader = torch.utils.data.DataLoader(
         test_dataset,
         batch_size=flags.batch_size,
@@ -162,9 +116,7 @@ def inference_mnist(flags, **kwargs):
   # print('Profiling server started.')
 
   device = xm.xla_device()
-  # CPU model and dynamo FSDP wrapped model
-  model = MNIST() 
-  model_dynamo = copy.deepcopy(model)
+  model = torchvision.models.resnet18()
   # Automatic wrapping sub-modules with inner FSDP
   auto_wrap_policy = None
   auto_wrapper_callable = None
@@ -199,34 +151,33 @@ def inference_mnist(flags, **kwargs):
       auto_wrapper_callable=auto_wrapper_callable,
       optimization_barrier_in_forward=False,
       optimization_barrier_in_backward=False)
-  
-  # model = fsdp_wrap(model)
-  
-  model_dynamo = fsdp_wrap(model_dynamo)
+  model = fsdp_wrap(model)
 
-  model_dynamo = torch.compile(model_dynamo, backend='torchxla_trace_once')
-  # optimizer = optim.SGD(model.parameters(), lr=lr, momentum=flags.momentum)
-  # loss_fn = nn.NLLLoss()
+  model = torch.compile(model, backend='torchxla_trace_once')
 
   print('Starting...')
-  
-  met.clear_all()
-  def inference_loop_comparison_fn(model, model_dynamo, loader):
-    for data, target in loader:
-      output = model(data.cpu())
-      output_dynamo = model_dynamo(data)
-      assert torch.allclose(output, output_dynamo.cpu(), rtol=1e-05, atol=1e-05)
+
+  # @xp.trace_me("inference_loop_fn")
+  def inference_loop_fn(model, loader):
+    for step, (data, target) in enumerate(loader):
+      output = model(data)
 
   test_device_loader = pl.MpDeviceLoader(test_loader, device)
   with torch.no_grad():
-    inference_loop_comparison_fn(model, model_dynamo, test_device_loader)
+    inference_loop_fn(model, test_device_loader)
   print('Done.')
+  end = time.time()
+  elapsed_time = end-start;
+  elapsed_time_per_sample = elapsed_time/float(sample_count)
+  print(f'Total time: {elapsed_time} for {flags.sample_count} samples')
+  print(f'Total per sample: {elapsed_time_per_sample}')
   xm.master_print(met.metrics_report(), flush=True)
+
   return 100
 
 def _mp_fn(index, flags):
   torch.set_default_tensor_type('torch.FloatTensor')
-  accuracy = inference_mnist(flags)
+  accuracy = inference_resnet(flags)
 
 
 if __name__ == '__main__':
