@@ -45,6 +45,7 @@ MODEL_OPTS = {
     '--sample_count': {
         'type': int,
         'default': 10000,
+    },
     '--compare_cpu': {
         'action': 'store_true',
         'dest': 'compare_cpu',
