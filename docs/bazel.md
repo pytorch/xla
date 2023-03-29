@@ -103,6 +103,8 @@ Bazel comes with [remote caching](https://bazel.build/remote/caching) built in. 
 
 Remote caching is disabled by default but because it speeds up incremental builds by a huge margin, it is almost always recommended, and it is enabled by default in the CI automation and on Cloud Build.
 
+To authenticate on a machine, please ensure that you have the credentials present with `gcloud auth login --no-browser` or equivalent.
+
 Using the remote cache configured by `remote_cache` configuration setup requires authentication with GCP.
 There are various ways to authenticate with GCP. For individual developers who have access to the development GCP project, one only needs to
 specify the `--config=remote_cache` flag to bazel, and the default `--google_default_credentials` will be used and if the
