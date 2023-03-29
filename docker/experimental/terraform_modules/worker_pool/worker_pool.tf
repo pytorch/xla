@@ -1,18 +1,30 @@
+variable "name" {
+  default = "main"
+}
+
+variable "location" {
+  default = "us-central1"
+}
+
+variable "machine_type" {
+  default = "e2-standard-32"
+}
+
+variable "disk_size_gb" {
+  default = 500
+}
+
 resource "google_cloudbuild_worker_pool" "worker_pool" {
-  name     = var.worker_pool.name
-  location = var.worker_pool.location
+  name     = var.name
+  location = var.location
 
   worker_config {
-    disk_size_gb   = var.worker_pool.disk_size_gb
-    machine_type   = var.worker_pool.machine_type
+    disk_size_gb   = var.disk_size_gb
+    machine_type   = var.machine_type
     no_external_ip = false
   }
 }
 
-locals {
-  worker_pool_id = google_cloudbuild_worker_pool.worker-pool.id
-}
-
-output "worker_pool_id" {
-  value = local.worker_pool_id
+output "id" {
+  value = google_cloudbuild_worker_pool.worker_pool.id
 }
