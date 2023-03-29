@@ -123,6 +123,25 @@ docker_images = [
     wheels    = true
     timeout_m = 60 * 6
   },
+  {
+    trigger_name = "xla-nightly-bazel-38-cuda11-8"
+    image        = "xla"
+    description  = "Build nightly image with bazel and TPU support"
+    trigger_schedule = "0 0 * * *"
+    build_args = {
+      python_version  = "3.8"
+      arch            = "amd64"
+      accelerator     = "tpu"
+      pytorch_git_rev = "master"
+      xla_git_rev     = "bazel-torchxla"
+      package_version = "2.0"
+    }
+    image_tags = [
+      "nightly_bazel_3.8_cuda11.8",
+    ]
+    wheels    = true
+    timeout_m = 60 * 6
+  },
 ]
 
 # Variables for the staging environment.
