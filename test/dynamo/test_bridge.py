@@ -105,8 +105,10 @@ def make_reuse_graph_test(module_class, niter=100):
     xla_dev = xm.xla_device()
     xla_module = module_class().to(device=xla_dev)
     # TODO(yeounoh) linear model sharding
-    xs.mark_sharding(xla_module.linear.weight, xs.Mesh([0,1,2,3], (2, 2)), (0, 1))
+    xs.mark_sharding(xla_module.linear.weight, xs.Mesh([0,1,2,3], (1, 4)), (0, 1))
+    # TODO(yeounoh) input sharding
     inputs = tuple(x.to(device=xla_dev) for x in xla_module.get_random_inputs())
+    xs.mark_sharding(inputs[0], xs.Mesh([0,1,2,3], (2,2)), (0,1))
     metrics.clear_counters()
     optimized_mod = bridge.extract_compiled_graph(
         fx.symbolic_trace(xla_module), inputs)
