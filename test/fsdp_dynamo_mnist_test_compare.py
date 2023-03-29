@@ -57,6 +57,7 @@ FLAGS = args_parse.parse_common_options(
     opts=MODEL_OPTS.items())
 
 import os
+import copy
 import shutil
 import sys
 import torch
@@ -117,7 +118,7 @@ def inference_mnist(flags, **kwargs):
         data=(torch.zeros(flags.batch_size, 1, 28,
                           28), torch.zeros(flags.batch_size,
                                            dtype=torch.int64)),
-        sample_count=args.sample_count // flags.batch_size // xm.xrt_world_size())
+        sample_count=flags.sample_count // flags.batch_size // xm.xrt_world_size())
   else:
     train_dataset = datasets.MNIST(
         os.path.join(flags.datadir, str(xm.get_ordinal())),
@@ -214,16 +215,16 @@ def inference_mnist(flags, **kwargs):
     for data, target in loader:
       output = model(data.cpu())
       output_dynamo = model_dynamo(data)
-      assert torch.allclose(output, output_dynamo.cpu(), rtol=1e-05, atol=1e-05))
+      assert torch.allclose(output, output_dynamo.cpu(), rtol=1e-05, atol=1e-05)
 
   test_device_loader = pl.MpDeviceLoader(test_loader, device)
   with torch.no_grad():
     inference_loop_comparison_fn(model, model_dynamo, test_device_loader)
   print('Done.')
   xm.master_print(met.metrics_report(), flush=True)
-  assert (met.metric_data('ExecuteTime')[0] == args.sample_count
-  assert (met.metric_data('RunCachedGraphInputData')[0] == args.sample_count)
-  assert (met.metric_data('RunCachedGraphOutputData')[0] == args.sample_count)
+  assert (met.metric_data('ExecuteTime')[0] == flags.sample_count)
+  assert (met.metric_data('RunCachedGraphInputData')[0] == flags.sample_count)
+  assert (met.metric_data('RunCachedGraphOutputData')[0] == flags.sample_count)
   return 100
 
 def _mp_fn(index, flags):
