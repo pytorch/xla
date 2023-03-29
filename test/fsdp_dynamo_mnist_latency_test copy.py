@@ -83,17 +83,36 @@ from torch_xla.distributed.fsdp import (
 from torch_xla.distributed.fsdp.wrap import (size_based_auto_wrap_policy,
                                              transformer_auto_wrap_policy)
 
+class MNIST(nn.Module):
 
-def inference_resnet(flags, **kwargs):
-  
+  def __init__(self):
+    super(MNIST, self).__init__()
+    self.conv1 = nn.Conv2d(1, 10, kernel_size=5)
+    self.bn1 = nn.BatchNorm2d(10)
+    self.conv2 = nn.Conv2d(10, 20, kernel_size=5)
+    self.bn2 = nn.BatchNorm2d(20)
+    self.fc1 = nn.Linear(320, 50)
+    self.fc2 = nn.Linear(50, 10)
+
+  def forward(self, x):
+    x = F.relu(F.max_pool2d(self.conv1(x), 2))
+    x = self.bn1(x)
+    x = F.relu(F.max_pool2d(self.conv2(x), 2))
+    x = self.bn2(x)
+    x = torch.flatten(x, 1)
+    x = F.relu(self.fc1(x))
+    x = self.fc2(x)
+    return F.log_softmax(x, dim=1)
+
+def inference_mnist(flags, **kwargs):
   start = time.time()
   torch.manual_seed(1)
-  device = xm.xla_device()
 
   if flags.fake_data:
     test_loader = xu.SampleGenerator(
-        data=(torch.randn(batch_size, 3, 224, 224, device=device),
-              torch.zeros(batch_size, dtype=torch.int64, device=device)),
+        data=(torch.zeros(flags.batch_size, 1, 28,
+                          28), torch.zeros(flags.batch_size,
+                                           dtype=torch.int64)),
         sample_count=flags.sample_count // flags.batch_size // xm.xrt_world_size())
   else:
     test_dataset = datasets.MNIST(
@@ -103,17 +122,19 @@ def inference_resnet(flags, **kwargs):
         transform=transforms.Compose(
             [transforms.ToTensor(),
              transforms.Normalize((0.1307,), (0.3081,))]))
-    test_loader = torch.utils.data.DataLoader(
-        test_dataset,
-        batch_size=flags.batch_size,
-        drop_last=flags.drop_last,
-        shuffle=False,
-        num_workers=flags.num_workers)
+
+    if xm.xrt_world_size() > 1:
+        test_loader = torch.utils.data.DataLoader(
+            test_dataset,
+            batch_size=flags.batch_size,
+            drop_last=flags.drop_last,
+            shuffle=False,
+            num_workers=flags.num_workers)
 
   # Scale learning rate to num cores
   lr = flags.lr * xm.xrt_world_size()
 
-  model = torchvision.models.resnet18()
+  model = MNIST()
   # Automatic wrapping sub-modules with inner FSDP
   auto_wrap_policy = None
   auto_wrapper_callable = None
@@ -174,7 +195,7 @@ def inference_resnet(flags, **kwargs):
 
 def _mp_fn(index, flags):
   torch.set_default_tensor_type('torch.FloatTensor')
-  accuracy = inference_resnet(flags)
+  accuracy = inference_mnist(flags)
 
 
 if __name__ == '__main__':
