@@ -1,1 +1,0 @@
-# Terraform setup for the pytorch-xla-releases GCP project
