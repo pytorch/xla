@@ -79,7 +79,6 @@ function install_deps_pytorch_xla() {
 
   # Install LCOV and llvm-cov to generate C++ coverage reports
   sudo apt-get install -y lcov
-  sudo apt-get install -y llvm-13 llvm-13-dev llvm-13-tools
 
   # XLA build requires Bazel
   # We use bazelisk to avoid updating Bazel version manually.
