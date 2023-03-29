@@ -195,14 +195,12 @@ def inference_mnist(flags, **kwargs):
   model = fsdp_wrap(model)
 
   model = torch.compile(model, backend='torchxla_trace_once')
-  # optimizer = optim.SGD(model.parameters(), lr=lr, momentum=flags.momentum)
-  # loss_fn = nn.NLLLoss()
 
   print('Starting...')
 
   # @xp.trace_me("inference_loop_fn")
   def inference_loop_fn(model, loader):
-    for data, target in loader:
+    for step, (data, target) in enumerate(loader):
       output = model(data)
 
   test_device_loader = pl.MpDeviceLoader(test_loader, device)

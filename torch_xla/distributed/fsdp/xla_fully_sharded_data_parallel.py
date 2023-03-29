@@ -483,19 +483,21 @@ class XlaFullyShardedDataParallel(nn.Module):
     # Here, we don't automatically unflatten XlaFlattenParamsWrapper's state dict
     # to avoid overhead on XLA devices. Use ``get_shard_metadata`` to save parameter info
     # ``consolidate_sharded_model_checkpoints`` to consolidate the sharded checkpoints.
-    self._fsdp_wrapped_module: nn.Module = XlaFlattenParamsWrapper(
-        module,
-        param_list=to_be_flatten_params,
-        auto_unflatten_state_dict=False,
-    )
-    del module  # free original module in case it helps garbage collection
+    assert not self.flatten_parameters
+    self._fsdp_wrapped_module: nn.Module = module
+    # XlaFlattenParamsWrapper(
+    #     module,
+    #     param_list=to_be_flatten_params,
+    #     auto_unflatten_state_dict=False,
+    # )
+    # del module  # free original module in case it helps garbage collection
 
     # Now, in this FSDP wrapper class, we keep a list of to-be-flatten and not-to-be-flatten
     # params for doing sharding, gradient hooks, etc. Note, the ordering of the
     # list matters: flatten params are always in the front.
-    params_to_shard = cast(
-        List[Parameter],
-        self._fsdp_wrapped_module.flat_params) + non_flatten_params
+    params_to_shard = non_flatten_params
+    # + cast(List[Parameter], self._fsdp_wrapped_module.flat_params)
+
 
     self.xla_device = xm.xla_device()
     # Shard module parameters in place
@@ -556,7 +558,7 @@ class XlaFullyShardedDataParallel(nn.Module):
   @property
   def module(self) -> XlaFlattenParamsWrapper:
     """make model.module accessible, just like DDP."""
-    assert isinstance(self._fsdp_wrapped_module, XlaFlattenParamsWrapper)
+    # assert isinstance(self._fsdp_wrapped_module, XlaFlattenParamsWrapper)
     return self._fsdp_wrapped_module
 
   @property

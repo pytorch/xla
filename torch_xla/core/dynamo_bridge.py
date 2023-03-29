@@ -152,7 +152,6 @@ class DumbReturnHandler:
     ret = self.deduper.recover(real_outputs)
     return ret
 
-
 class NoneRemover:
   """
   torchxla pybind APIs that accepts a Tensor list does not expect None value on
