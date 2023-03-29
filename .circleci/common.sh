@@ -78,7 +78,7 @@ function install_deps_pytorch_xla() {
   sudo apt-get -qq install npm nodejs
 
   # Install LCOV and llvm-cov to generate C++ coverage reports
-  sudo apt install -y lcov
+  sudo apt-get install -y lcov
   sudo apt-get install -y llvm-9
 
   # XLA build requires Bazel
