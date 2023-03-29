@@ -124,10 +124,11 @@ docker_images = [
     timeout_m = 60 * 6
   },
   {
-    trigger_name = "xla-nightly-bazel-38-cuda11-8"
-    image        = "xla"
-    description  = "Build nightly image with bazel and TPU support"
+    trigger_name     = "xla-nightly-bazel-38-cuda11-8"
+    image            = "xla"
+    description      = "Build nightly image with bazel and TPU support"
     trigger_schedule = "0 0 * * *"
+    branch           = "bazel-torchxla"
     build_args = {
       python_version  = "3.8"
       arch            = "amd64"
