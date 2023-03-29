@@ -134,6 +134,7 @@ def inference_mnist(flags, **kwargs):
   # Scale learning rate to num cores
   lr = flags.lr * xm.xrt_world_size()
 
+  device = xm.xla_device()
   model = MNIST()
   # Automatic wrapping sub-modules with inner FSDP
   auto_wrap_policy = None
@@ -186,7 +187,7 @@ def inference_mnist(flags, **kwargs):
   print('Done.')
   end = time.time()
   elapsed_time = end-start;
-  elapsed_time_per_sample = elapsed_time/float(sample_count)
+  elapsed_time_per_sample = elapsed_time/float(flags.sample_count)
   print(f'Total time: {elapsed_time} for {flags.sample_count} samples')
   print(f'Total per sample: {elapsed_time_per_sample}')
   xm.master_print(met.metrics_report(), flush=True)

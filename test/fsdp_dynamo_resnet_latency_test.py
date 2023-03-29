@@ -165,7 +165,7 @@ def inference_resnet(flags, **kwargs):
   print('Done.')
   end = time.time()
   elapsed_time = end-start;
-  elapsed_time_per_sample = elapsed_time/float(sample_count)
+  elapsed_time_per_sample = elapsed_time/float(flags.sample_count)
   print(f'Total time: {elapsed_time} for {flags.sample_count} samples')
   print(f'Total per sample: {elapsed_time_per_sample}')
   xm.master_print(met.metrics_report(), flush=True)
