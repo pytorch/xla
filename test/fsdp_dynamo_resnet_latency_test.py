@@ -316,7 +316,7 @@ def train_imagenet():
   if FLAGS.profile:
     server = xp.start_server(FLAGS.profiler_port)
 
-  def train_loop_fn(loader, epoch):
+  def train_loop_fn(model, loader, epoch):
     tracker = xm.RateTracker()
     model.train()
     for step, (data, target) in enumerate(loader):
@@ -334,7 +334,7 @@ def train_imagenet():
           xm.add_step_closure(
               _train_update, args=(device, step, loss, tracker, epoch, writer))
 
-  def inference_loop_fn(loader, epoch):
+  def inference_loop_fn(model, loader):
     model.eval()
     if(FLAGS.use_dynamo):
       model = torch.compile(model, backend='torchxla_trace_once')
@@ -348,13 +348,13 @@ def train_imagenet():
     train_device_loader = pl.MpDeviceLoader(train_loader, device)
     for epoch in range(1, FLAGS.num_epochs + 1):
       xm.master_print('Epoch {} train begin {}'.format(epoch, test_utils.now()))
-      train_loop_fn(train_device_loader, epoch)
+      train_loop_fn(model, train_device_loader, epoch)
       xm.master_print('Epoch {} train end {}'.format(epoch, test_utils.now()))
   
   print('Starting inference...')
   test_device_loader = pl.MpDeviceLoader(test_loader, device)
   with torch.no_grad():
-    start_warm = inference_loop_fn(test_device_loader, epoch)
+    start_warm = inference_loop_fn(model, test_device_loader)
   end = time.time()
   print('Done.')
   sample_count_per_device = float(FLAGS.sample_count)/xm.xrt_world_size()
