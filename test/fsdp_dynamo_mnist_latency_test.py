@@ -208,11 +208,11 @@ def inference_mnist(flags, **kwargs):
   elapsed_time_warm = end-start_warm;
   elapsed_time_cold_per_sample = elapsed_time_cold/sample_count_per_device*1000
   elapsed_time_warm_per_sample = elapsed_time_warm/max(sample_count_per_device-1, 1)*1000
-  print(f'Total cold time (s): {elapsed_time_cold} for {flags.sample_count} samples')
+  print(f'Total cold time (s): {elapsed_time_cold} for {sample_count_per_device} samples')
   print(f'Total cold per sample (ms): {elapsed_time_cold_per_sample}')
-  print(f'Total warm time (s): {elapsed_time_warm} for {flags.sample_count-1} samples')
+  print(f'Total warm time (s): {elapsed_time_warm} for {sample_count_per_device-1} samples')
   print(f'Total warm per sample (ms): {elapsed_time_warm_per_sample}')
-  if(print_metrics):
+  if(flags.print_metrics):
     xm.master_print(met.metrics_report(), flush=True)
   return 100
 
