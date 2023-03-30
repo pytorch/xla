@@ -188,7 +188,7 @@ def inference_mnist(flags, **kwargs):
   if(flags.use_dynamo):
     model = torch.compile(model, backend='torchxla_trace_once')
 
-  print('Starting...')
+  print('Starting inference...')
   # @xp.trace_me("inference_loop_fn")
   def inference_loop_fn(model, loader):
     for step, (data, target) in enumerate(loader):

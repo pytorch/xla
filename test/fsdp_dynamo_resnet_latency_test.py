@@ -72,7 +72,19 @@ MODEL_OPTS = {
     },
     '--profile': {
         'action': 'store_true',
-    }
+    },
+    '--use_fsdp': {
+        'action': 'store_true',
+    },
+    '--use_dynamo': {
+        'action': 'store_true',
+    },
+    '--print_metrics': {
+        'action': 'store_true',
+    },
+    '--do_train': {
+        'action': 'store_true',
+    },
 }
 
 FLAGS = args_parse.parse_common_options(
@@ -163,6 +175,7 @@ def _train_update(device, step, loss, tracker, epoch, writer):
 
 
 def train_imagenet():
+  start_cold = time.time()
   print('==> Preparing data..')
   img_dim = get_model_property('img_dim')
   if FLAGS.fake_data:
@@ -273,31 +286,12 @@ def train_imagenet():
       auto_wrapper_callable=auto_wrapper_callable,
       optimization_barrier_in_forward=False,
       optimization_barrier_in_backward=False)
-  # Manually wrapping sub-modules with inner FSDP (if not using auto-wrap)
-  # (in this case, the sub-modules should be wrapped before the base model)
-  if FLAGS.use_nested_fsdp:
-    assert FLAGS.auto_wrap_policy == "none", \
-        "--use_nested_fsdp is for manual nested wrapping should only be used" \
-        " without auto-wrapping"
-    # You may wrap all, a subset, or none of the sub-modules with inner FSDPs
-    # - to implement ZeRO-2, wrap none of the sub-modules
-    # - to implement ZeRO-3, wrap all of the sub-modules (nested FSDP)
-    # - you may wrap sub-modules at different granularity (e.g. at each resnet
-    #   stage or each residual block or each conv layer).
-    # Here we apply inner FSDP at the level of child modules for ZeRO-3, which
-    # corresponds to different stages in resnet (i.e. Stage 1 to 5).
-    # Apply gradient checkpointing to nested-wrapped sub-modules if specified
-    grad_ckpt_wrap = checkpoint_module if FLAGS.use_gradient_checkpointing else (
-        lambda x: x)
-    for submodule_name, submodule in model.named_children():
-      if sum(p.numel() for p in submodule.parameters()) == 0:
-        # Skip those submodules without parameters (i.e. no need to shard them)
-        continue
-      # Note: wrap with `checkpoint_module` first BEFORE wrapping with FSDP
-      m_fsdp = fsdp_wrap(grad_ckpt_wrap(getattr(model, submodule_name)))
-      setattr(model, submodule_name, m_fsdp)
+  
   # Always wrap the base model with an outer FSDP
-  model = fsdp_wrap(model)
+  if(flags.use_fsdp):
+    model = fsdp_wrap(model)
+  else:
+    model.to(device)
 
   writer = None
   if xm.is_master_ordinal():
@@ -339,51 +333,44 @@ def train_imagenet():
           xm.add_step_closure(
               _train_update, args=(device, step, loss, tracker, epoch, writer))
 
-  def test_loop_fn(loader, epoch):
-    total_samples, correct = 0, 0
-    nonlocal model
+  def inference_loop_fn(loader, epoch):
     model.eval()
-    model = torch.compile(model, backend='torchxla_trace_once')
+    if(flags.use_dynamo):
+      model = torch.compile(model, backend='torchxla_trace_once')
     for step, (data, target) in enumerate(loader):
+      if(step == 1):
+        start_warm = time.time()
       output = model(data)
-      pred = output.max(1, keepdim=True)[1]
-      correct += pred.eq(target.view_as(pred)).sum()
-      total_samples += data.size()[0]
-      if step % FLAGS.log_steps == 0:
-        xm.add_step_closure(
-            test_utils.print_test_update, args=(device, None, epoch, step))
-    accuracy = 100.0 * correct.item() / total_samples
-    accuracy = xm.mesh_reduce('test_accuracy', accuracy, np.mean)
-    return accuracy
+    return start_warm
 
-  train_device_loader = pl.MpDeviceLoader(train_loader, device)
+  if(flags.do_train):
+    train_device_loader = pl.MpDeviceLoader(train_loader, device)
+    for epoch in range(1, FLAGS.num_epochs + 1):
+      xm.master_print('Epoch {} train begin {}'.format(epoch, test_utils.now()))
+      train_loop_fn(train_device_loader, epoch)
+      xm.master_print('Epoch {} train end {}'.format(epoch, test_utils.now()))
+  
+  print('Starting inference...')
   test_device_loader = pl.MpDeviceLoader(test_loader, device)
-  accuracy, max_accuracy = 0.0, 0.0
-  for epoch in range(1, FLAGS.num_epochs + 1):
-    # xm.master_print('Epoch {} train begin {}'.format(epoch, test_utils.now()))
-    # train_loop_fn(train_device_loader, epoch)
-    # xm.master_print('Epoch {} train end {}'.format(epoch, test_utils.now()))
-    run_eval = ((not FLAGS.test_only_at_end and
-                 epoch % FLAGS.eval_interval == 0) or epoch == FLAGS.num_epochs)
-    if run_eval:
-      # TODO(alanwaketan): Investigate why inference would impact
-      # the next epoch's training.
-      with torch.no_grad():
-        accuracy = test_loop_fn(test_device_loader, epoch)
-      xm.master_print('Epoch {} test end {}, Accuracy={:.2f}'.format(
-          epoch, test_utils.now(), accuracy))
-      max_accuracy = max(accuracy, max_accuracy)
-      test_utils.write_to_summary(
-          writer,
-          epoch,
-          dict_to_write={'Accuracy/test': accuracy},
-          write_xla_metrics=True)
-    if FLAGS.metrics_debug:
-      xm.master_print(met.metrics_report())
+  with torch.no_grad():
+    start_warm = inference_loop_fn(test_device_loader, epoch)
+  end = time.time()
+  print('Done.')
+  sample_count_per_device = float(flags.sample_count)/xm.xrt_world_size()
+  elapsed_time_cold = end-start_cold;
+  elapsed_time_warm = end-start_warm;
+  elapsed_time_cold_per_sample = elapsed_time_cold/sample_count_per_device*1000
+  elapsed_time_warm_per_sample = elapsed_time_warm/max(sample_count_per_device-1, 1)*1000
+  print(f'Total cold time (s): {elapsed_time_cold} for {sample_count_per_device} samples')
+  print(f'Total cold per sample (ms): {elapsed_time_cold_per_sample}')
+  print(f'Total warm time (s): {elapsed_time_warm} for {sample_count_per_device-1} samples')
+  print(f'Total warm per sample (ms): {elapsed_time_warm_per_sample}')
+
+  if FLAGS.print_metrics:
+      xm.master_print(met.metrics_report(), flush=True)
 
   test_utils.close_summary_writer(writer)
-  xm.master_print('Max Accuracy: {:.2f}%'.format(max_accuracy))
-  return max_accuracy
+  return 100
 
 
 def _mp_fn(index, flags):
@@ -391,10 +378,6 @@ def _mp_fn(index, flags):
   FLAGS = flags
   torch.set_default_tensor_type('torch.FloatTensor')
   accuracy = train_imagenet()
-  if accuracy < FLAGS.target_accuracy:
-    print('Accuracy {} is below target {}'.format(accuracy,
-                                                  FLAGS.target_accuracy))
-    sys.exit(21)
 
 
 if __name__ == '__main__':
