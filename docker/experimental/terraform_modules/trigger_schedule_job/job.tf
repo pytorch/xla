@@ -6,7 +6,7 @@ variable "schedule" {
   default     = "0 0 * * *"
 }
 
-variable "trigger_id" {
+variable "trigger" {
   description = "An instance of google_cloudbuild_trigger for which the schedule job should be configured."
   type = object({
     project    = string
@@ -21,7 +21,7 @@ variable "time_zone" {
   type        = string
 }
 
-variable "scheduler_service_account_email" {
+variable "scheduler_account_email" {
   type = string
 }
 
@@ -35,7 +35,7 @@ resource "google_cloud_scheduler_job" "trigger_schedule" {
     uri         = "https://cloudbuild.googleapis.com/v1/projects/${var.trigger.project}/triggers/${var.trigger.trigger_id}:run"
 
     oauth_token {
-      service_account_email = var.scheduler_service_account_email
+      service_account_email = var.scheduler_account_email
     }
   }
 }

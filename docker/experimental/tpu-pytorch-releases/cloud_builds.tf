@@ -15,10 +15,7 @@ module "nightly_builds" {
   ]
 
   wheels_dest = "${releases_storage_bucket.url}/tpuvm"
-  wheels_srcs = [
-    "/src/pytorch/dist",
-    "/src/pytorch/xla/dist",
-  ]
+  wheels_srcs = ["/dist/*.whl"]
 
   arch     = "amd64"
   schedule = "0 0 * * *"
