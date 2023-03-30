@@ -5,31 +5,26 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 # b) get the sha256 hash of the commit by running:
 #    curl -L https://github.com/tensorflow/tensorflow/archive/<git hash>.tar.gz | sha256sum
 #    and update the sha256 with the result.
-# http_archive(
-#     name = "org_tensorflow",
-#     patch_args = [
-#         "-l",
-#         "-p1",
-#     ],
-#     patch_tool = "patch",
-#     patches = [
-#         "//tf_patches:cache_urls.diff",
-#         "//tf_patches:cudnn_int8x32.diff",
-#         "//tf_patches:f16_abi_clang.diff",
-#         "//tf_patches:gpu_race_condition.diff",
-#         "//tf_patches:grpc_version.diff",
-#         "//tf_patches:stream_executor.diff",
-#         "//tf_patches:thread_local_random.diff",
-#         "//tf_patches:xplane.diff",
-#     ],
-#     strip_prefix = "tensorflow-f7759359f8420d3ca7b9fd19493f2a01bd47b4ef",
-#     urls = [
-#         "https://github.com/tensorflow/tensorflow/archive/f7759359f8420d3ca7b9fd19493f2a01bd47b4ef.tar.gz",
-#     ],
-# )
-local_repository(
-   name = "org_tensorflow",
-   path = "/workspace/pytorch/xla/third_party/tensorflow",
+http_archive(
+    name = "org_tensorflow",
+    patch_args = [
+        "-l",
+        "-p1",
+    ],
+    patch_tool = "patch",
+    patches = [
+        "//tf_patches:cache_urls.diff",
+        "//tf_patches:f16_abi_clang.diff",
+        "//tf_patches:gpu_race_condition.diff",
+        "//tf_patches:grpc_version.diff",
+        "//tf_patches:stream_executor.diff",
+        "//tf_patches:thread_local_random.diff",
+        "//tf_patches:xplane.diff",
+    ],
+    strip_prefix = "tensorflow-99c036812fdf9bd5786cf5acaed427a925e95245",
+    urls = [
+        "https://github.com/tensorflow/tensorflow/archive/99c036812fdf9bd5786cf5acaed427a925e95245.tar.gz",
+    ],
 )
 
 # For development, one often wants to make changes to the TF repository as well
