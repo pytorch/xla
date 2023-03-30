@@ -750,8 +750,8 @@ c10::SymNode XLASymNodeImpl::sym_max(const c10::SymNode& other) {
 }
 
 c10::SymNode XLASymNodeImpl::sym_or(const c10::SymNode& other) {
-  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
-                   << " has not been implemented.";
+  auto error_node = torch::lazy::MakeNode<SizeError>();
+  return c10::make_intrusive<XLASymNodeImpl>(error_node, PyType::BOOL);
 }
 
 c10::SymNode XLASymNodeImpl::sym_and(const c10::SymNode& other) {
@@ -789,10 +789,12 @@ c10::SymNode XLASymNodeImpl::is_channels_last_strides_3d(
   XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
                    << " has not been implemented.";
 }
+
+// xw32: what's the reason that this function should never be called in practice?
 c10::SymNode XLASymNodeImpl::is_non_overlapping_and_dense(
     at::ArrayRef<c10::SymNode> sizes, at::ArrayRef<c10::SymNode> strides) {
-  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
-                   << " has not been implemented.";
+  auto error_node = torch::lazy::MakeNode<SizeError>();
+  return c10::make_intrusive<XLASymNodeImpl>(error_node, PyType::BOOL);
 }
 
 c10::SymNode XLASymNodeImpl::clone() {
@@ -813,6 +815,11 @@ c10::SymNode XLASymNodeImpl::wrap_int(int64_t num) {
 c10::SymNode XLASymNodeImpl::wrap_float(double num) {
   XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
                    << " has not been implemented.";
+}
+
+c10::SymNode XLASymNodeImpl::wrap_bool(bool num) {
+  auto cnst = torch::lazy::MakeNode<SizeConstant>(num);
+  return c10::make_intrusive<XLASymNodeImpl>(cnst, PyType::BOOL);
 }
 
 int64_t XLASymNodeImpl::guard_int(const char* file, int64_t line) {
@@ -843,10 +850,16 @@ bool XLASymNodeImpl::bool_() {
 // "a SymInt has_hint" is equivalent to "a SymInt is backed". Unbacked SymInt is
 // the result of a data dependent output like nonzero; we don't know what the
 // value is because it's data dependent.
+// xw32: what's the justification that this function can always return false?
+// What if we have
+/*
+t0=torch.zeros(3)
+t2=torch.nonzero(t1)
+sz=t2.shape[0]+t0.shape[0]
+*/
+// then sz is always an unbacked SymInt.
 bool XLASymNodeImpl::has_hint() {
-  if (is_int() || is_float() || is_bool()) {
-    return true;
-  }
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   return false;
 }
 
