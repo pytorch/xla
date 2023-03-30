@@ -203,7 +203,7 @@ def inference_mnist(flags, **kwargs):
     start_warm = inference_loop_fn(model, test_device_loader)
   end = time.time()
   print('Done.')
-  sample_count_per_device = float(sample_count)/xm.xrt_world_size()
+  sample_count_per_device = float(flags.sample_count)/xm.xrt_world_size()
   elapsed_time_cold = end-start_cold;
   elapsed_time_warm = end-start_warm;
   elapsed_time_cold_per_sample = elapsed_time_cold/sample_count_per_device*1000
