@@ -1616,6 +1616,10 @@ void InitXlaModuleBindings(py::module m) {
         [](at::Tensor& self, const at::Tensor& source) -> at::Tensor& {
           return XLANativeFunctions::set_(self, source);
         });
+  m.def("_constant_pad_nd",
+        [](const at::Tensor& input, at::IntArrayRef pad) -> at::Tensor {
+          return XLANativeFunctions::constant_pad_nd(input, pad, 0);
+        });
 
   /* The distributed runtime service is used by the PjRt GPU client. */
   py::class_<xla::DistributedRuntimeService,

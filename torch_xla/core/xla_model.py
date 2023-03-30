@@ -650,7 +650,7 @@ def _all_gather_using_all_reduce(value, dim=0, groups=None, pin_layout=True):
   idx = value.dim() - 1 - dim
   padding[2 * idx] = left * size
   padding[2 * idx + 1] = right * size
-  return all_reduce(REDUCE_SUM, F.pad(value, padding), groups=groups)
+  return all_reduce(REDUCE_SUM, torch_xla._XLAC._constant_pad_nd(value, padding), groups=groups)
 
 
 def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
