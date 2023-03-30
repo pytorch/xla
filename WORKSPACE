@@ -14,7 +14,6 @@ http_archive(
     patch_tool = "patch",
     patches = [
         "//tf_patches:cache_urls.diff",
-        "//tf_patches:cudnn_int8x32.diff",
         "//tf_patches:f16_abi_clang.diff",
         "//tf_patches:gpu_race_condition.diff",
         "//tf_patches:grpc_version.diff",
@@ -22,9 +21,9 @@ http_archive(
         "//tf_patches:thread_local_random.diff",
         "//tf_patches:xplane.diff",
     ],
-    strip_prefix = "tensorflow-f7759359f8420d3ca7b9fd19493f2a01bd47b4ef",
+    strip_prefix = "tensorflow-99c036812fdf9bd5786cf5acaed427a925e95245",
     urls = [
-        "https://github.com/tensorflow/tensorflow/archive/f7759359f8420d3ca7b9fd19493f2a01bd47b4ef.tar.gz",
+        "https://github.com/tensorflow/tensorflow/archive/99c036812fdf9bd5786cf5acaed427a925e95245.tar.gz",
     ],
 )
 
@@ -38,7 +37,7 @@ http_archive(
 # b) by commenting out the http_archive above and uncommenting the following:
 # local_repository(
 #    name = "org_tensorflow",
-#    path = "/path/to/tensorflow",
+#    path = "/workspaces/work/tensorflow",
 # )
 
 # Initialize TensorFlow's external dependencies.
