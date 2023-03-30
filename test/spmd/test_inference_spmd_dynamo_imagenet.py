@@ -121,7 +121,7 @@ def inference_imagenet():
   torch.manual_seed(42)
 
   device = xm.xla_device()
-  model = get_model_property('model_fn')().to(device)
+  model = torchvision.models.resnet50().to(device) # get_model_property('model_fn')().to(device)
 
   input_mesh = None
   if FLAGS.sharding:
