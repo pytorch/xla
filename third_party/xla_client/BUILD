@@ -423,12 +423,12 @@ cc_test(
 
 cc_shared_library(
     name = "xla_computation_client",
-    roots = [],
+    static_deps = [],
     shared_lib_name = None,
-    static_deps = [
+    roots = [
         ":computation_client",
-        ":openxla_exported_symbols.lds",
-        ":openxla_version_script.lds",
+        # ":openxla_exported_symbols.lds",
+        # ":openxla_version_script.lds",
         "@com_google_absl//absl/strings",
         "@xla//xla:literal_util",
         "@xla//xla/client",
