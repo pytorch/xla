@@ -101,6 +101,7 @@ FLAGS = args_parse.parse_common_options(
 import os
 import sys
 import schedulers
+import time
 import numpy as np
 import torch
 import torch.nn as nn
@@ -288,7 +289,7 @@ def train_imagenet():
       optimization_barrier_in_backward=False)
   
   # Always wrap the base model with an outer FSDP
-  if(flags.use_fsdp):
+  if(FLAGS.use_fsdp):
     model = fsdp_wrap(model)
   else:
     model.to(device)
@@ -335,7 +336,7 @@ def train_imagenet():
 
   def inference_loop_fn(loader, epoch):
     model.eval()
-    if(flags.use_dynamo):
+    if(FLAGS.use_dynamo):
       model = torch.compile(model, backend='torchxla_trace_once')
     for step, (data, target) in enumerate(loader):
       if(step == 1):
@@ -343,7 +344,7 @@ def train_imagenet():
       output = model(data)
     return start_warm
 
-  if(flags.do_train):
+  if(FLAGS.do_train):
     train_device_loader = pl.MpDeviceLoader(train_loader, device)
     for epoch in range(1, FLAGS.num_epochs + 1):
       xm.master_print('Epoch {} train begin {}'.format(epoch, test_utils.now()))
@@ -356,7 +357,7 @@ def train_imagenet():
     start_warm = inference_loop_fn(test_device_loader, epoch)
   end = time.time()
   print('Done.')
-  sample_count_per_device = float(flags.sample_count)/xm.xrt_world_size()
+  sample_count_per_device = float(FLAGS.sample_count)/xm.xrt_world_size()
   elapsed_time_cold = end-start_cold;
   elapsed_time_warm = end-start_warm;
   elapsed_time_cold_per_sample = elapsed_time_cold/sample_count_per_device*1000
