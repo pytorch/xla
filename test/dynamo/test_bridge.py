@@ -104,11 +104,7 @@ def make_reuse_graph_test(module_class, niter=100):
   def test_wrapper(self):
     xla_dev = xm.xla_device()
     xla_module = module_class().to(device=xla_dev)
-    # TODO(yeounoh) linear model sharding
-    xs.mark_sharding(xla_module.linear.weight, xs.Mesh([0,1,2,3], (1, 4)), (0, 1))
-    # TODO(yeounoh) input sharding
     inputs = tuple(x.to(device=xla_dev) for x in xla_module.get_random_inputs())
-    xs.mark_sharding(inputs[0], xs.Mesh([0,1,2,3], (2,2)), (0,1))
     metrics.clear_counters()
     optimized_mod = bridge.extract_compiled_graph(
         fx.symbolic_trace(xla_module), inputs)
@@ -117,7 +113,6 @@ def make_reuse_graph_test(module_class, niter=100):
     for i in range(niter):
       xla_inputs = tuple(
           inp.to(device=xla_dev) for inp in xla_module.get_random_inputs())
-      xs.mark_sharding(xla_inputs[0], xs.Mesh([0,1,2,3], (2,2)), (0,1))
       xla_inputs_copy = copy.deepcopy(xla_inputs)
 
       expected = xla_module(*xla_inputs)
@@ -207,13 +202,13 @@ def make_training_test(model_cls):
 
 class TorchXLAReuseGraphTest(torch._dynamo.test_case.TestCase):
 
-  # test_basic = make_reuse_graph_test(BasicModule)
-  # test_matmul = make_reuse_graph_test(MatmulModule)
+  test_basic = make_reuse_graph_test(BasicModule)
+  test_matmul = make_reuse_graph_test(MatmulModule)
   test_linear = make_reuse_graph_test(LinearModule)
-  # test_inplace_update = make_reuse_graph_test(ModuleInplaceUpdate)
+  test_inplace_update = make_reuse_graph_test(ModuleInplaceUpdate)
 
-  # test_training_linear = make_training_test(LinearModule)
-  # test_training_maxpool = make_training_test(MaxPoolModule)
+  test_training_linear = make_training_test(LinearModule)
+  test_training_maxpool = make_training_test(MaxPoolModule)
 
 
 if __name__ == "__main__":
