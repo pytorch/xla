@@ -568,8 +568,9 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
   MaybeDumpGraph("dynamo", hash);
   auto cachedComputation =
       XLAGraphExecutor::Get()->GetComputationCache()->Get(hash);
-  std::cout << "*** cached computation, is_sharded? "
-            << cachedComputation->is_sharded << std::endl;
+  TF_VLOG(5) << "Cached computation (hash: " << torch::lazy::HashToString(hash)
+             << ") is_sharded=" << cachedComputation->is_sharded << std::endl;
+
   // TODO implement a fallback mechanism, or make sure those entries
   // never get kicked out
   XLA_CHECK(cachedComputation)
@@ -588,7 +589,6 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
             device.toString(), std::move(shape)));
     placeholders.push_back(handle);
   }
-  std::cout << "*** output placeholders ready!" << std::endl;
   // TODO(yeounoh) supply proper sharding specs for sharded results.
   std::vector<XLATensor::ShardingSpecPtr> sharding_specs(placeholders.size());
 
@@ -601,28 +601,23 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
     // extract the placeholder inserted by previous execution.
     TORCH_LAZY_TIMED("RunCachedGraphInputData");
     // setup the arguments
-    std::cout << "*** preparing arguments... " << std::endl;
     int idx = 0;
     for (auto& ivalue : graph_inputs) {
       torch::lazy::BackendDataPtr dataptr;
       if (auto xla_tensor_ptr = bridge::TryGetXlaTensor(ivalue.toTensor())) {
-        std::cout << "- GetXlaData ... ";
         dataptr = xla_tensor_ptr->GetXlaData();
       } else {
-        std::cout << "- TensorToXlaData ... ";
         XLA_CHECK(device.type() != (int8_t)XlaDeviceType::SPMD)
             << "SPMD device data should already be on the XLA backend "
                "(XLATensor).";
         dataptr = torch_xla::TensorToXlaData(ivalue.toTensor(), device);
       }
-      std::cout << " done! " << std::endl;
 
       ++idx;
       arguments.push_back(dataptr);
     }
   }
 
-  std::cout << "*** async ... " << std::endl;
   std::shared_ptr<XLAGraphExecutor::Async> async = std::make_shared<Async>(
       &coll, std::move(arguments), placeholders, std::move(cachedComputation));
 

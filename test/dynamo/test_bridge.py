@@ -117,6 +117,7 @@ def make_reuse_graph_test(module_class, niter=100):
     for i in range(niter):
       xla_inputs = tuple(
           inp.to(device=xla_dev) for inp in xla_module.get_random_inputs())
+      xs.mark_sharding(xla_inputs[0], xs.Mesh([0,1,2,3], (2,2)), (0,1))
       xla_inputs_copy = copy.deepcopy(xla_inputs)
 
       expected = xla_module(*xla_inputs)
