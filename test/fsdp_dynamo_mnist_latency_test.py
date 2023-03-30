@@ -51,6 +51,9 @@ MODEL_OPTS = {
     '--use_dynamo': {
         'action': 'store_true',
     },
+    '--print_metrics': {
+        'action': 'store_true',
+    },
 }
 
 FLAGS = args_parse.parse_common_options(
@@ -179,35 +182,38 @@ def inference_mnist(flags, **kwargs):
   
   if(flags.use_fsdp):
     model = fsdp_wrap(model)
+  else:
+    model.to(device)
 
   if(flags.use_dynamo):
     model = torch.compile(model, backend='torchxla_trace_once')
 
   print('Starting...')
-
   # @xp.trace_me("inference_loop_fn")
   def inference_loop_fn(model, loader):
     for step, (data, target) in enumerate(loader):
-      if(step == 2):
+      if(step == 1):
         start_warm = time.time()
       output = model(data)
+    return start_warm
       
 
   test_device_loader = pl.MpDeviceLoader(test_loader, device)
   with torch.no_grad():
-    inference_loop_fn(model, test_device_loader)
+    start_warm = inference_loop_fn(model, test_device_loader)
   end = time.time()
   print('Done.')
+  sample_count_per_device = float(sample_count)/xm.xrt_world_size()
   elapsed_time_cold = end-start_cold;
   elapsed_time_warm = end-start_warm;
-  elapsed_time_cold_per_sample = elapsed_time_cold/float(flags.sample_count)
-  elapsed_time_warm_per_sample = elapsed_time_warm/float(max(flags.sample_count-1, 1))
-  print(f'Total cold time: {elapsed_time_cold} for {flags.sample_count} samples')
-  print(f'Total cold per sample: {elapsed_time_cold_per_sample}')
-  print(f'Total warm time: {elapsed_time_warm} for {flags.sample_count-1} samples')
-  print(f'Total cold per sample: {elapsed_time_warm_per_sample}')
-  xm.master_print(met.metrics_report(), flush=True)
-
+  elapsed_time_cold_per_sample = elapsed_time_cold/sample_count_per_device*1000
+  elapsed_time_warm_per_sample = elapsed_time_warm/max(sample_count_per_device-1, 1)*1000
+  print(f'Total cold time (s): {elapsed_time_cold} for {flags.sample_count} samples')
+  print(f'Total cold per sample (ms): {elapsed_time_cold_per_sample}')
+  print(f'Total warm time (s): {elapsed_time_warm} for {flags.sample_count-1} samples')
+  print(f'Total warm per sample (ms): {elapsed_time_warm_per_sample}')
+  if(print_metrics):
+    xm.master_print(met.metrics_report(), flush=True)
   return 100
 
 def _mp_fn(index, flags):
