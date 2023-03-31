@@ -12,9 +12,9 @@ terraform {
     }
   }
 
-  # backend "gcs" {
-  #   # Make sure that bucket name matches the only specified in ./storage_buckets.tf.
-  #   bucket = "tpu-pytorch-releases-tfstate"
-  #   prefix = "terraform/state"
-  # }
+  backend "gcs" {
+    # Make sure that bucket name matches the only specified in ./storage_buckets.tf.
+    bucket = "tpu-pytorch-releases-tfstate"
+    prefix = "terraform/state"
+  }
 }

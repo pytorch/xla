@@ -8,12 +8,27 @@ module "cloud_build" {
   worker_pool_id          = var.worker_pool_id
   description             = var.description
 
+  trigger_on_push = var.schedule == "" ? {
+    branch        = var.ansible_branch
+    include_files = var.include_files
+  } : null
+
+  trigger_on_schedule = var.schedule != "" ? {
+    schedule = var.schedule
+    branch   = var.ansible_branch
+  } : null
+
   steps = concat(local.build_and_push_docker_image_steps,
-    length(var.wheels_srcs) ? local.collect_and_publish_wheels_steps : []
+    length(var.wheels_srcs) > 0 ? local.collect_and_publish_wheels_steps : []
   )
 }
 
 locals {
+  build_args = merge(var.build_args, {
+    pytorch_git_rev = var.sources_git_rev
+    xla_git_rev     = var.sources_git_rev
+  })
+
   build_and_push_docker_image_steps = [
     # Build docker image.
     {
@@ -50,7 +65,7 @@ locals {
       id         = "push_${var.image_name}"
       entrypoint = "bash"
       name       = "gcr.io/cloud-builders/docker"
-      args       = ["-c", "docker push --all-tags ${var.repo_url}/${var.image_name}"]
+      args       = ["-c", "docker push --all-tags ${var.docker_repo_url}/${var.image_name}"]
     }
   ]
 
@@ -65,8 +80,8 @@ locals {
       args = [
         "-c", join(" ",
           ["echo The following wheels will be published &&",
-            "ls ${wheels_srcs_str} &&",
-            "cp ${wheels_srcs_str} /wheels",
+            "ls ${local.wheels_srcs_str} &&",
+            "cp ${local.wheels_srcs_str} /wheels",
           ]
         )
       ]

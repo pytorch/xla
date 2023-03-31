@@ -77,7 +77,7 @@ resource "google_cloudbuild_trigger" "trigger" {
   # The source exact version will be the commit which caused the trigger event (push).
   dynamic "github" {
     # Include this block only if trigger on push is configured.
-    for_each = var.trigger_on_push != null > 0 ? [1] : []
+    for_each = var.trigger_on_push != null ? [1] : []
 
     content {
       owner = local.github_repo_parts[0]
@@ -85,8 +85,8 @@ resource "google_cloudbuild_trigger" "trigger" {
 
       push {
         # The `branch` and `tag` fields are regexes, so look for exact match.
-        branch = "^${var.trigger_on_push.branch}$"
-        tag    = "^${var.trigger_on_push.tag}$"
+        branch = var.trigger_on_push.branch != null ? "^${var.trigger_on_push.branch}$" : null
+        tag    = var.trigger_on_push.tag != null ? "^${var.trigger_on_push.tag}$" : null
       }
     }
   }
@@ -96,13 +96,15 @@ resource "google_cloudbuild_trigger" "trigger" {
     # Include this block only if trigger on schedule is configured.
     for_each = var.trigger_on_schedule != null ? [1] : []
 
-    uri       = "https://github.com/${var.github_repo}"
-    repo_type = "GITHUB"
-    ref = (
-      var.trigger_on_schedule.branch != ""
-      ? "refs/heads/${var.trigger_on_schedule.branch}"
-      : "refs/tags/${var.trigger_on_schedule.tag}"
-    )
+    content {
+        uri       = "https://github.com/${var.github_repo}"
+        repo_type = "GITHUB"
+        ref = (
+          var.trigger_on_schedule.branch != ""
+          ? "refs/heads/${var.trigger_on_schedule.branch}"
+          : "refs/tags/${var.trigger_on_schedule.tag}"
+        )
+    }
   }
 
   included_files = var.trigger_on_push != null ? var.trigger_on_push.included_files : null
@@ -112,17 +114,18 @@ resource "google_cloudbuild_trigger" "trigger" {
       for_each = var.steps
 
       content {
-        id         = each.id
-        entrypoint = each.entrypoint
-        name       = each.name
-        args       = each.args
+        id         = step.value.id
+        entrypoint = step.value.entrypoint
+        name       = step.value.name
+        args       = step.value.args
 
         dynamic "volumes" {
-          for_each = each.volumes
+          iterator = volume
+          for_each = step.value.volumes
 
           content {
-            name = each.name
-            path = each.path
+            name = volume.value.name
+            path = volume.value.path
           }
         }
       }
@@ -131,7 +134,7 @@ resource "google_cloudbuild_trigger" "trigger" {
     options {
       substitution_option   = "ALLOW_LOOSE"
       dynamic_substitutions = true
-      worker_pool           = local.worker_pool_id
+      worker_pool           = var.worker_pool_id
     }
 
     timeout = "${var.timeout_minutes * 60}s"
@@ -143,9 +146,9 @@ resource "google_cloudbuild_trigger" "trigger" {
 # Add scheduled job if the build should be triggered on schedule
 module "schedule_triggers" {
   source = "../trigger_schedule_job"
-  count  = var.schedule != "" ? 1 : 0
+  count  = var.trigger_on_schedule != null ? 1 : 0
 
   trigger                 = google_cloudbuild_trigger.trigger
-  schedule                = var.schedule
+  schedule                = var.trigger_on_schedule.schedule
   scheduler_account_email = var.scheduler_account_email
 }

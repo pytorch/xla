@@ -54,17 +54,23 @@ module "nightly_builds" {
   for_each = local.nightly_builds_dict
 
   sources_git_rev = "master"
-  ansible_git_rev = "master"
+  ansible_branch  = "master"
 
   trigger_name = "nightly_${each.key}"
-  image_name   = each.value.image_name
+  image_name   = "xla"
   image_tags = [
     "nightly_${each.key}",
     # Append _YYYYMMDD suffix to nightly image name.
     "nightly_${each.key}_$(date +%Y%m%d)",
   ]
 
-  wheels_dest = "${releases_storage_bucket.url}/wheels/${each.key}"
+  description = format(
+    "Builds nightly 'xla:nightly_%s' %s docker image and corresponding wheels for PyTorch/XLA. Configured in Terraform.",
+    each.key,
+    each.value.accelerator == "tpu" ? "TPU" : format("CUDA %s", each.value.cuda_version)
+  )
+
+  wheels_dest = "${module.releases_storage_bucket.url}/wheels/${each.key}"
   wheels_srcs = ["/dist/*.whl"]
   build_args  = merge(each.value, { package_version = var.nightly_package_version })
 
@@ -78,19 +84,23 @@ module "versioned_builds" {
   source   = "../terraform_modules/xla_docker_build"
   for_each = local.versioned_builds_dict
 
-  sources_git_rev = each.git_tag
-  ansible_git_rev = "master"
+  sources_git_rev = each.value.git_tag
+  ansible_branch = "master"
 
   trigger_name = each.key
-  image_name   = each.value.image_name
+  image_name   = "xla"
   image_tags   = [each.key]
 
-  wheels_dest = "${releases_storage_bucket.url}/wheels/${each.key}"
+  description = format(
+    "Builds official 'xla:%s' %s docker image and corresponding wheels for PyTorch/XLA. Configured in Terraform.",
+    each.key,
+    each.value.accelerator == "tpu" ? "TPU" : format("CUDA %s", each.value.cuda_version)
+  )
+
+  wheels_dest = "${module.releases_storage_bucket.url}/wheels/${each.key}"
   wheels_srcs = ["/dist/*.whl"]
   build_args  = each.value
 
-  schedule                = "0 0 * * *"
-  scheduler_account_email = module.scheduler_account.email
-  worker_pool_id          = module.worker_pool.id
-  docker_repo_url         = module.docker_registry.url
+  worker_pool_id  = module.worker_pool.id
+  docker_repo_url = module.docker_registry.url
 }

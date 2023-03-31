@@ -13,8 +13,13 @@ variable "public_read_access" {
   description = "Set to true to allow public read access to the docker repository."
 }
 
+variable "location" {
+  default = "us-central1"
+}
+
 resource "google_artifact_registry_repository" "docker" {
   repository_id = var.name
+  location      = var.location
   description   = var.description
   format        = "DOCKER"
 }
@@ -32,5 +37,5 @@ locals {
 }
 
 output "url" {
-  value = "${local.repo.location}-docker.pkg.dev/${local.repo.project_id}/${local.repo.repository_id}"
+  value = "${local.repo.location}-docker.pkg.dev/${local.repo.project}/${local.repo.repository_id}"
 }

@@ -6,6 +6,11 @@ variable "image_name" {
   type = string
 }
 
+variable "description" {
+  type    = string
+  default = ""
+}
+
 variable "image_tags" {
   default = []
   type    = list(string)
@@ -15,8 +20,13 @@ variable "sources_git_rev" {
   default = "master"
 }
 
-variable "ansible_git_rev" {
+variable "ansible_branch" {
   default = "master"
+}
+
+variable "include_files" {
+  default = null
+  type    = list(string)
 }
 
 variable "build_args" {
