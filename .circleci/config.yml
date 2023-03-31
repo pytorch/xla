@@ -47,6 +47,9 @@ launch_docker_and_build: &launch_docker_and_build
     echo "declare -x CIRCLE_PROJECT_USERNAME=${CIRCLE_PROJECT_USERNAME}" >> /home/circleci/project/env
     echo "declare -x CIRCLE_PROJECT_REPONAME=${CIRCLE_PROJECT_REPONAME}" >> /home/circleci/project/env
 
+    # Set debug so that xla builds with coverage symbols
+    echo "declare -x DEBUG=1" >> /home/circleci/project/env
+
     pid=$(docker run -t -d -w $WORKDIR ${GCR_DOCKER_IMAGE})
     docker cp /home/circleci/project/. "$pid:$WORKDIR"
     docker exec -u jenkins ${pid} sudo chown -R jenkins ${WORKDIR}

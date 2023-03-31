@@ -177,6 +177,7 @@ function run_torch_xla_tests() {
           PJRT_DEVICE=CPU ./run_tests.sh
         fi
         if [ "$USE_COVERAGE" != "0" ]; then
+          export PATH=$PATH:/usr/lib/llvm-8/bin
           lcov --directory /tmp/pytorch/xla --base-directory . --gcov-tool /tmp/pytorch/xla/test/cpp/get_coverage.sh --capture -o cpp_lcov.info
           cp cpp_lcov.info htmlcov/
           mv htmlcov ~/
