@@ -28,6 +28,63 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     t6_cpu = t6.cpu()
     self.assertEqual(t6_cpu.shape[0], 2)
 
+  # Not working probably because t1 has is changed.
+  # Not for demo.
+  def test_simple_expand_check_hash_2(self):
+    # import pdb; pdb.set_trace()
+    size1 = 5
+    size2 = 2
+    # empty_symint -> empty_symint -> clone -> clone -> zero_ -> zero_
+    # -> _propagate_xla_data -> _propagate_xla_data
+    t1 = torch.zeros([size1, size2], device=dev)
+    print(met.metrics_report())
+ 
+    # t1[3][0] = 1
+    # t1[3][1] = 1
+    # print('t1 hash=', torch_xla._XLAC._get_graph_hash([t1]))
+    # # t2 has size [<=10, 2]
+    # t2 = torch.nonzero(t1)
+    # t5 = torch.ones(1, device=dev)
+    # t6 = t5.expand(t2.size(0))
+    # # print('t6.shape=', torch_xla._XLAC._get_xla_tensors_dot([t6]))
+    # hash0 = torch_xla._XLAC._get_graph_hash([t6])
+    # print(hash0)
+
+    # t1[0][1] = 1
+    # t1[0][1] = 1
+    # print('t1 hash=', torch_xla._XLAC._get_graph_hash([t1]))
+    # t7 = torch.nonzero(t1)
+    # t8 = t5.expand(t7.size(0))
+    # print('t8.shape=', t8.shape)
+    # hash1 = torch_xla._XLAC._get_graph_hash([t8])
+    # print(hash1)
+
+  # demo
+  def test_simple_expand_check_hash(self):
+    size1 = 5
+    size2 = 2
+    t1 = torch.zeros([size1, size2], device=dev)
+    t1[3][0] = 1
+    t1[3][1] = 1
+    # t2 has size [<=10, 2]
+    t2 = torch.nonzero(t1)
+    t5 = torch.ones(1, device=dev)
+    t6 = t5.expand(t2.size(0))
+    # print('t6.shape=', torch_xla._XLAC._get_xla_tensors_dot([t6]))
+    hash0 = torch_xla._XLAC._get_graph_hash([t6])
+    print(hash0)
+
+    t1_2 = torch.zeros([size1, size2], device=dev)
+    t1_2[3][0] = 1
+    t1_2[3][1] = 1
+    # t2_2 has size [<=10, 2]
+    t2_2 = torch.nonzero(t1_2)
+    t5_2 = torch.ones(1, device=dev)
+    t6_2 = t5_2.expand(t2_2.size(0))
+    # print('t6.shape=', torch_xla._XLAC._get_xla_tensors_dot([t6]))
+    hash0_2 = torch_xla._XLAC._get_graph_hash([t6_2])
+    print(hash0_2)
+
   def test_simple_expand_on_2d_tensor(self):
     size1 = 5
     size2 = 2
