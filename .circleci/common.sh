@@ -176,6 +176,11 @@ function run_torch_xla_tests() {
         else
           PJRT_DEVICE=CPU ./run_tests.sh
         fi
+        if [ "$USE_COVERAGE" != "0" ]; then
+          lcov --directory /tmp/pytorch/xla --base-directory . --gcov-tool /tmp/pytorch/xla/test/cpp/get_coverage.sh --capture -o cpp_lcov.info
+          cp cpp_lcov.info htmlcov/
+          mv htmlcov ~/
+        fi
       popd
     fi
   popd
