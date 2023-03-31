@@ -409,6 +409,15 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     dynamic_size = int(dyn_size)
     self.assertEqual(dynamic_size, 1)
 
+  def test_SizeEq_should_not_compile_for_identical_symints(self):
+    met.clear_all()
+    t1 = torch.tensor([1, 0, 3, 5, 0, 6, 7], device=dev)
+    t2 = torch.nonzero(t1)
+    dyn_size = t2.shape[0]
+    self.assertEqual(dyn_size, dyn_size)
+    # Without the code change, met.metric_data('CompileTime')[0] returns 1.
+    self.assertIsNone(met.metric_data('CompileTime'))
+
 
 if __name__ == '__main__':
   assert os.environ['XLA_EXPERIMENTAL'] != ''
