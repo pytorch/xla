@@ -1,9 +1,5 @@
-variable "sources_git_rev" {
-  default = "master"
-}
-
-variable "ansible_git_rev" {
-  default = "master"
+variable "trigger_name" {
+  type = string
 }
 
 variable "image_name" {
@@ -15,8 +11,18 @@ variable "image_tags" {
   type    = list(string)
 }
 
-variable "arch" {
-  default = ""
+variable "sources_git_rev" {
+  default = "master"
+}
+
+variable "ansible_git_rev" {
+  default = "master"
+}
+
+variable "build_args" {
+  type        = map(any)
+  description = "Build args to pass to the dockerfile (`ARG build_arg=`)."
+  default     = {}
 }
 
 variable "schedule" {

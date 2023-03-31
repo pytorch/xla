@@ -1,7 +1,7 @@
-module "build" {
+module "cloud_build" {
   source = "../build_trigger"
 
-  name                    = "${var.image_name}-${var.image_tags[0]}"
+  name                    = var.trigger_name
   github_repo             = "pytorch/xla"
   scheduler_account_email = var.scheduler_account_email
   timeout_minutes         = var.timeout_minutes
@@ -26,7 +26,7 @@ locals {
         join(" ",
           concat(
             ["docker", "build", "--progress=plain", "--network=cloudbuild"],
-            # Specify input docker file and context (current directory - each.value.dir)
+            # Specify input docker file within the context.
             ["-f=${var.dockerfile}", "."],
 
             # Pass build args to the docker image.
@@ -73,6 +73,7 @@ locals {
 
       volumes = [{ name = "wheels", path = "/wheels" }]
     },
+
     # Upload collected wheels from volume to the storage bucket.
     {
       id         = "upload_wheels_to_storage_bucket"

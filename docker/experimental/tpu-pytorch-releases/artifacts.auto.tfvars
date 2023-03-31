@@ -1,4 +1,6 @@
-nightly = [
+latest_package_version = "2.0"
+
+nightly_builds = [
   { accelerator = "tpu" },
   {
     accelerator  = "cuda"
@@ -10,7 +12,7 @@ nightly = [
   }
 ]
 
-releases = [
+versioned_builds = [
   {
     version     = "2.0"
     accelerator = "tpu"

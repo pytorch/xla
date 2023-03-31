@@ -1,15 +1,16 @@
 # Docker registry for official images.
-module "docker_regsitry" {
+module "docker_registry" {
   source      = "../terraform_modules/docker_registry"
   name        = "docker"
   description = "Official docker images for PyTorch/XLA."
+  # public_read_access = true
 }
 
 # Public storage bucket for PyTorch/XLA wheels.
 module "releases_storage_bucket" {
   source             = "../terraform_modules/storage_bucket"
   name               = "pytorch-xla-releases"
-  public_read_access = true
+  # public_read_access = true
 }
 
 # Storage bucket for Terraform state of this project.

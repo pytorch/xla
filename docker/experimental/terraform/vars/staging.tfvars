@@ -1,4 +1,4 @@
-# Each docker images is translated into a single build trigger.
+# Each docker image is translated into a single build trigger.
 docker_images = [
   {
     image       = "development"
