@@ -27,7 +27,7 @@ function install_llvm_clang() {
   sudo apt-get install -y llvm-8 llvm-8-dev llvm-8-tools
   sudo ln -s /usr/bin/clang-8 /usr/bin/clang
   sudo ln -s /usr/bin/clang++-8 /usr/bin/clang++
-  export CC=clang-8 CXX=clang++-8 PATH=$PATH:/usr/lib/llvm-8/bin
+  export CC=clang-8 CXX=clang++-8
 }
 
 install_llvm_clang

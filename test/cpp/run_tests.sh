@@ -71,6 +71,7 @@ fi
 
 if [ $USE_COVERAGE -eq 1 ]; then
   ls /usr/lib/llvm-8/bin
+  export PATH=$PATH:/usr/lib/llvm-8/bin
   echo "$PATH"
   chmod +x /tmp/pytorch/xla/test/cpp/get_coverage.sh
   lcov --directory . --base-directory . --gcov-tool /tmp/pytorch/xla/test/cpp/get_coverage.sh --capture -o cpp_lcov.info
