@@ -140,6 +140,9 @@ SizeEq::SizeEq(torch::lazy::Value a, torch::lazy::Value b)
 };
 
 int64_t SizeEq::getDynamicValue() const {
+  if (operand(0) == operand(1)) {
+    return 1;
+  }
   const torch::lazy::DimensionNode* dim_node_0 = DimCast(operand(0));
   const torch::lazy::DimensionNode* dim_node_1 = DimCast(operand(1));
   XLA_CHECK(dim_node_0);
