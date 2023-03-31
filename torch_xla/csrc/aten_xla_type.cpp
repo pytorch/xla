@@ -676,6 +676,58 @@ at::Tensor XLANativeFunctions::alias_copy(const at::Tensor& self) {
       tensor_methods::alias(bridge::GetXlaTensor(self)));
 }
 
+std::shared_ptr<torch::lazy::Value> g_token;
+
+std::shared_ptr<torch::lazy::Value> CreateToken(const torch::lazy::BackendDevice& device) {
+  // This should be using xla::CreateToken() once we have added Token support to
+  // XLA AllReduce(). Meanwhile we use a constant as token, and we handle it
+  // accordingly in cross_replica_reduces.cpp.
+  // This needs to be device data (hence coming in as XLA computation parameter)
+  // as otherwise the XLA compiler passes will remove it, vanishing its
+  // sequencing effects.
+  torch::lazy::Value ir_value = XLAGraphExecutor::Get()->GetDeviceDataIrValue(
+      0.0, xla::PrimitiveType::F32, device);
+  return std::make_shared<torch::lazy::Value>(std::move(ir_value));
+}
+
+AllReduceType GetReduceType(c10::string_view reduce_type) {
+  if (reduce_type == "sum") {
+    return AllReduceType::kSum;
+  } else if (reduce_type == "mul") {
+    return AllReduceType::kMul;
+  } else if (reduce_type == "and") {
+    return AllReduceType::kAnd;
+  } else if (reduce_type == "or") {
+    return AllReduceType::kOr;
+  } else if (reduce_type == "min") {
+    return AllReduceType::kMin;
+  } else if (reduce_type == "max") {
+    return AllReduceType::kMax;
+  }
+  XLA_ERROR() << "Unknown AllReduce type: " << reduce_type;
+}
+
+// TODO: Support tag.
+at::Tensor XLANativeFunctions::all_reduce(const at::Tensor & self, c10::string_view reduceOp, c10::string_view /*tag*/, at::IntArrayRef ranks, int64_t group_size) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+  auto self_tensor = bridge::GetXlaTensor(self);
+
+  if (g_token == nullptr) {
+    g_token = CreateToken(self_tensor->GetDevice());
+  }
+
+  // TODO: Use ranks and group_size to generate groups.
+  // Currently we just suse {} as a workaround.
+  // What about scale?
+  XLATensorPtr result;
+  torch::lazy::Value new_token;
+  std::tie(result, new_token) = tensor_methods::all_reduce(
+      self_tensor, *g_token, GetReduceType(reduceOp), 1.0,
+      {}, true);
+  g_token = std::make_shared<torch::lazy::Value>(std::move(new_token));
+  return bridge::AtenFromXlaTensor(result);
+}
+
 at::Tensor& XLANativeFunctions::arange_out(const at::Scalar& start,
                                            const at::Scalar& end,
                                            const at::Scalar& step,

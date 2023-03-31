@@ -13,13 +13,20 @@ def _mp_fn(index):
     twos = ones + 1.0
     xones = ones.to(device)
     xtwos = twos.to(device)
-    xm.all_reduce(xm.REDUCE_SUM, [xones, xtwos])
+    # xm.all_reduce(xm.REDUCE_SUM, [xones, xtwos])
+    xones = xm.all_reduce(xm.REDUCE_SUM, xones)
+    xtwos = xm.all_reduce(xm.REDUCE_SUM, xtwos)
+    # xones = torch._C._nn.all_reduce(xones, xm.REDUCE_SUM, "", [], 0)
+    # xtwos = torch._C._nn.all_reduce(xtwos, xm.REDUCE_SUM, "", [], 0)
 
     if (not xones.cpu().allclose(ones * float(world_size)) or
         not xtwos.cpu().allclose(twos * float(world_size))):
       print('xm.all_reduce() produced wrong reductions', file=sys.stderr)
       print(xones, file=sys.stderr)
       sys.exit(1)
+
+    xm.master_print(xones)
+    xm.master_print(xtwos)
   else:
     print(
         'Default device {} does not support replication'.format(device),
