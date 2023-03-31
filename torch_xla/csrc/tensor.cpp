@@ -790,7 +790,6 @@ c10::SymNode XLASymNodeImpl::is_channels_last_strides_3d(
                    << " has not been implemented.";
 }
 
-// xw32: what's the reason that this function should never be called in practice?
 c10::SymNode XLASymNodeImpl::is_non_overlapping_and_dense(
     at::ArrayRef<c10::SymNode> sizes, at::ArrayRef<c10::SymNode> strides) {
   auto error_node = torch::lazy::MakeNode<SizeError>();
@@ -850,16 +849,7 @@ bool XLASymNodeImpl::bool_() {
 // "a SymInt has_hint" is equivalent to "a SymInt is backed". Unbacked SymInt is
 // the result of a data dependent output like nonzero; we don't know what the
 // value is because it's data dependent.
-// xw32: what's the justification that this function can always return false?
-// What if we have
-/*
-t0=torch.zeros(3)
-t2=torch.nonzero(t1)
-sz=t2.shape[0]+t0.shape[0]
-*/
-// then sz is always an unbacked SymInt.
 bool XLASymNodeImpl::has_hint() {
-  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   return false;
 }
 
