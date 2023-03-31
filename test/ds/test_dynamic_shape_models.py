@@ -159,17 +159,19 @@ class TestDynamicShapeModels(unittest.TestCase):
     np.testing.assert_allclose(losses[0], losses[1], rtol=1e-2, atol=1e-2)
     print('Test passed.')
 
+  # For demo.
   def test_backward_pass_with_dynamic_input_multibatch_compile_once(self):
     met.clear_metrics()
     num_compilations = []
+    num_executions = []
     num_features = 2
-    num_test_samples = 5
+    num_test_samples = 200
     model = Feedforward(num_features, hidden_size=10).to(xla_dev)
     criterion = torch.nn.BCELoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
 
     # TODO: xw32 change the value from 1 to 4.
-    num_batches = 1
+    num_batches = 100
     batches = []
     for i in range(num_batches):
       batches.append(self.create_dynamic_test_data(num_test_samples, num_features, device=xla_dev, num_non_zeros=i))
@@ -186,10 +188,13 @@ class TestDynamicShapeModels(unittest.TestCase):
       # Backpropagation.
       loss.backward()
       xm.optimizer_step(optimizer, barrier=True)
-      print('num_compilation=', met.metric_data('CompileTime')[0])
-      print('num_executions=', met.metric_data('ExecuteTime')[0])
+      # print('num_compilation=', met.metric_data('CompileTime')[0])
+      # print('num_executions=', met.metric_data('ExecuteTime')[0])
       num_compilations.append(met.metric_data('CompileTime')[0])
+      num_executions.append(met.metric_data('ExecuteTime')[0])
     
+    print('Num compilations=', num_compilations)
+    print('Num executions=', num_executions)
     for i in range(len(batches)-1):
       self.assertEqual(num_compilations[i], num_compilations[i+1], 'number of compilation should not increase.')
 
