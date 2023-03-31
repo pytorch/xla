@@ -70,8 +70,11 @@ if [ $BUILD_ONLY -eq 0 ]; then
 fi
 
 if [ $USE_COVERAGE -eq 1 ]; then
+  ls /usr/lib/llvm-8/bin
+  echo "$PATH"
   chmod +x /tmp/pytorch/xla/test/cpp/get_coverage.sh
-  lcov --directory . --base-directory . --gcov-tool /tmp/pytorch/xla/test/cpp/get_coverage.sh --capture -o cov.info
+  lcov --directory . --base-directory . --gcov-tool /tmp/pytorch/xla/test/cpp/get_coverage.sh --capture -o cpp_lcov.info
+  mv cpp_lcov.info /home/jenkins/htmlcov
 fi
 
 popd
