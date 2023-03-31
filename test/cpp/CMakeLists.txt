@@ -99,6 +99,8 @@ target_include_directories(
   "${PTXLA_DIR}/bazel-bin"
   "${PTXLA_DIR}/bazel-bin/external/xla",
   "${PTXLA_DIR}/bazel-xla/external/xla",
+  "${PTXLA_DIR}/bazel-bin/external/tsl",
+  "${PTXLA_DIR}/bazel-xla/external/tsl",
   "${PTXLA_DIR}/bazel-xla/external/protobuf_archive/src"
   "${PTXLA_DIR}/bazel-xla/external/com_google_protobuf/src"
   "${PTXLA_DIR}/bazel-xla/external/eigen_archive"
