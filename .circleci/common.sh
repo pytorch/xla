@@ -167,22 +167,22 @@ function run_torch_xla_tests() {
           # python test/test_train_mp_mnist_amp.py --fake_data --num_epochs=1
         fi
       fi
-
-      pushd test/cpp
-        echo "Running C++ Tests on PJRT"
-        if [ -x "$(command -v nvidia-smi)" ]; then
-          PJRT_DEVICE=GPU ./run_tests.sh
-          PJRT_DEVICE=GPU ./run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L""
-        else
-          PJRT_DEVICE=CPU ./run_tests.sh
-        fi
-        if [ "$USE_COVERAGE" != "0" ]; then
-          export PATH=$PATH:/usr/lib/llvm-8/bin
-          lcov --directory /tmp/pytorch/xla --base-directory . --gcov-tool /tmp/pytorch/xla/test/cpp/get_coverage.sh --capture -o cpp_lcov.info
-          cp cpp_lcov.info htmlcov/
-          mv htmlcov ~/
-        fi
-      popd
     fi
+
+    pushd test/cpp
+      echo "Running C++ Tests on PJRT"
+      if [ -x "$(command -v nvidia-smi)" ]; then
+        PJRT_DEVICE=GPU ./run_tests.sh
+        PJRT_DEVICE=GPU ./run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L""
+      else
+        PJRT_DEVICE=CPU ./run_tests.sh
+      fi
+      if [ "$USE_COVERAGE" != "0" ]; then
+        export PATH=$PATH:/usr/lib/llvm-8/bin
+        lcov --directory /tmp/pytorch/xla/build/temp.linux-x86_64-cpython-38/torch_xla/csrc --base-directory . --gcov-tool /tmp/pytorch/xla/test/cpp/get_coverage.sh --capture -o cpp_lcov.info
+        cp cpp_lcov.info htmlcov/
+        mv htmlcov ~/
+      fi
+    popd
   popd
 }
