@@ -9,10 +9,10 @@
 #include <utility>
 #include <vector>
 
+#include "third_party/xla_client/debug_macros.h"
 #include "torch/csrc/lazy/core/dynamic_ir.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ops/scalar.h"
-#include "third_party/xla_client/debug_macros.h"
 
 namespace torch_xla {
 
@@ -187,7 +187,7 @@ class SizeError : public XlaNode, public torch::lazy::DimensionNode {
     XLA_CHECK(false) << "SizeError shouldn't be called.";
     return -1;
   }
-  bool isSymbolic() const override { 
+  bool isSymbolic() const override {
     XLA_CHECK(false) << "SizeError shouldn't be called.";
     return true;
   }

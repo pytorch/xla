@@ -333,8 +333,7 @@ SizeError::SizeError()
           {},
           xla::ShapeUtil::MakeShape(GetShapeDimensionType(/*device=*/nullptr),
                                     {}),
-          1) {
-};
+          1){};
 
 int64_t SizeError::getDynamicValue() const {
   XLA_CHECK(false) << "SizeError shouldn't be called.";
