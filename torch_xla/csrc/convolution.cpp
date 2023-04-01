@@ -152,7 +152,7 @@ xla::ConvOpAttrs MakeConvOpAttrs(
     conv_op_attrs.explicit_paddings.push_back(spatial_padding[spatial_dim]);
     conv_op_attrs.explicit_paddings.push_back(spatial_padding[spatial_dim]);
   }
-  conv_op_attrs.data_format = 1; //tensorflow::TensorFormat::FORMAT_NCHW; // use `ConvolutionDimensionNumbers` from /pytorch/tensorflow/tensorflow/compiler/xla/xla_data.proto ?
+  conv_op_attrs.data_format = xla::XLATensorFormat::FORMAT_NCHW; // 1; //tensorflow::TensorFormat::FORMAT_NCHW; // use `ConvolutionDimensionNumbers` from /pytorch/tensorflow/tensorflow/compiler/xla/xla_data.proto ?
   return conv_op_attrs;
 }
 
