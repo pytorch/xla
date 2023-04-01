@@ -1,0 +1,15 @@
+diff --git a/tensorflow/compiler/xla/service/topk_rewriter.cc b/tensorflow/compiler/xla/service/topk_rewriter.cc
+index 7aa62c7aed3..8ef7422bbf4 100644
+--- a/tensorflow/compiler/xla/service/topk_rewriter.cc
++++ b/tensorflow/compiler/xla/service/topk_rewriter.cc
+@@ -140,8 +140,8 @@ static bool HasIota(HloSortInstruction* sort, HloInstruction* data) {
+   auto match_iota = [](auto dims) {
+     return m::Iota().WithShape(m::Shape().WithElementType(S32).WithDims(dims));
+   };
+-  return Match(sort->operand(1), match_iota(data->shape().dimensions())) ||
+-         Match(sort->operand(1), m::Broadcast(match_iota(sort_dims)));
++  return Match(sort->operand(1), match_iota(absl::Span<const int64_t>(data->shape().dimensions()))) ||
++         Match(sort->operand(1), m::Broadcast(match_iota(absl::Span<const int64_t>(sort_dims))));
+ }
+ 
+ std::optional<int64_t> TopkRewriter::SortIsInTopK(HloInstruction* inst) {
