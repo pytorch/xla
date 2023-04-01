@@ -144,7 +144,7 @@ xla::ConvOpAttrs MakeConvOpAttrs(
   conv_op_attrs.strides = {1, 1};
   std::copy(spatial_stride.begin(), spatial_stride.end(),
             std::back_inserter(conv_op_attrs.strides));
-  conv_op_attrs.padding = xla::Padding::EXPLICIT; // 3; // tensorflow::Padding::EXPLICIT;
+  conv_op_attrs.padding = xla::ThreePadding::EXPLICIT; // 3; // tensorflow::Padding::EXPLICIT;
   // https://github.com/tensorflow/tensorflow/blob/ec81825aaf7e848d9f8ddffdf1e0d20aebe9172c/tensorflow/core/util/padding.cc#L40
   // explicit_padding requires to have (spatial_dims + 2) * 2 elements
   conv_op_attrs.explicit_paddings.resize(4);
