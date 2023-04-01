@@ -990,13 +990,14 @@ def reduce_gradients(optimizer, groups=None, pin_layout=True):
   count = max(cctx.replica_devcount, cctx.world_size)
   if count > 1:
     gradients = _fetch_gradients(optimizer)
-    all_reduce(
+    for gradient in gradients:
+      gradient = all_reduce(
         REDUCE_SUM,
-        gradients,
-        scale=1.0 / count,
+        gradient,
         groups=groups,
         cctx=cctx,
         pin_layout=pin_layout)
+      gradient /= count
 
 
 def optimizer_step(optimizer,
