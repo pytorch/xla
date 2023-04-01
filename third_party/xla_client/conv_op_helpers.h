@@ -98,7 +98,7 @@ struct ConvOpAttrs {
   std::vector<tsl::int32> strides;
   ThreePadding padding;
   std::vector<tsl::int64> explicit_paddings;
-  ConvolutionDimensionNumbers data_format; // or use TensorFormat from `https://github.com/tensorflow/tensorflow/blob/3fb52f183ff77b71e8de558b03ec92aa3011d447/tensorflow/core/util/tensor_format.h#L37`
+  XLATensorFormat data_format; // or use TensorFormat from `https://github.com/tensorflow/tensorflow/blob/3fb52f183ff77b71e8de558b03ec92aa3011d447/tensorflow/core/util/tensor_format.h#L37`
   // ConvolutionDimensionNumbers is from `tensorflow/compiler/xla/xla_data.proto`
 };
 
