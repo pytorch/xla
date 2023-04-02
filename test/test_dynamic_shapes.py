@@ -104,6 +104,52 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     # Exercise SizeAdd::Lower.
     t4 = t3.expand(dyn_size)
     self.assertEqual(t4.size(0), 3)
+  
+  def get_dynamic_tensor(self):
+    a1 = torch.tensor([[1, 0, 0, 5, 0, 6]], device=dev)
+    a2 = torch.nonzero(a1)
+    print('a2=', a2)
+    return a2
+
+  def test_xla_add(self):
+    # t1.shape= torch.Size([<=6, 2])
+    t1 = self.get_dynamic_tensor()
+    t2 = self.get_dynamic_tensor()
+    self.assertIsInstance(t1.shape[0], torch.SymInt)
+    self.assertIsInstance(t2.shape[0], torch.SymInt)
+    t3 = t1 + t2
+    self.assertIsInstance(t3.shape[0], torch.SymInt)
+
+  def test_xla_fill_(self):
+    # t1.shape= torch.Size([<=6, 2])
+    t1 = self.get_dynamic_tensor()
+    print('t1=', t1)
+    self.assertIsInstance(t1.shape[0], torch.SymInt)
+    t2 = t1.fill_(10)
+    self.assertIsInstance(t2.shape[0], torch.SymInt)
+
+  def test_xla_mm(self):
+    # t1.shape= torch.Size([<=6, 2])
+    t1 = self.get_dynamic_tensor() 
+    t2 = torch.ones((2, 2), device=dev)
+    t3= torch.mm(t1, t2)
+    self.assertIsInstance(t3.shape[0], torch.SymInt)
+
+  def test_xla_unsqueeze(self):
+    # t1.shape= torch.Size([<=6, 2])
+    t1 = self.get_dynamic_tensor() 
+    t2 = t1.unsqueeze(dim=0)
+    self.assertIsInstance(t2.shape[0], int)
+    self.assertIsInstance(t2.shape[1], torch.SymInt)
+
+
+  def test_xla_view_symint(self):
+    # t1.shape= torch.Size([<=6, 2])
+    t1 = self.get_dynamic_tensor()  
+    # TODO: xiowei continue from here.
+    
+  
+
 
   def test_sizeSub(self):
     size1 = 5
