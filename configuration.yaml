@@ -16,11 +16,6 @@ variables:
         - Addresses for the TPU services to be used by the XRT client. ";"
           separated list of addresses, e.g. localservice;0;localhost:51011.
       type: string
-    XRT_WORKERS:
-      description:
-        - Addresses for the XRT workers to be used by the XRT client, for
-          example localservice:0;grpc://localhost:51011
-      type: string
     XRT_DEVICE_MAP:
       description:
         - Maps devices to metadata about the job, replica, task that the device
@@ -32,17 +27,6 @@ variables:
         - Used to disable session conneciton sharing for XRT.
       type: bool
       default_value: true
-    XRT_START_LOCAL_SERVER:
-      description:
-        - Whether or not XRT should start the local service. If true, and if
-          the devices are CPU or GPU, XRT will try to start the local server.
-      type: bool
-      default_value: false
-    XRT_SHARD_LOCAL_ORDINAL:
-      description:
-        - Ordinal to be appended to the paths used by this thread of the xla
-          client.
-      type: int
     XRT_GRPC_COMPRESSION_LEVEL:
       description:
         - Configures compression level for rpc options on the XRT client.
@@ -60,11 +44,6 @@ variables:
           particularly the client mesh master
       type: int
       default_value: 300
-    XRT_LOCAL_WORKER:
-      description:
-        - Local service address for XRT local worker, e.g. localhost:8000.
-      type: string
-      default_value: ""
     XRT_SHARD_WORLD_SIZE:
       description:
         - Total number of XRT shards to consider in this client instance. Does
@@ -77,17 +56,6 @@ variables:
           device.
       type: string
       default_value: ""
-    XRT_HOST_ORDINAL:
-      description:
-        - Sets the host ordinal for the XRT computation client. Used to
-          identify the rank of current device. Does not have a default because
-          there's special behavior when the flag is not set.
-      type: int
-    XRT_SHARD_ORDINAL:
-      description:
-        - Sets the shard ordinal for the XRT computation client.
-      type: int
-      default_value: -1
   pjrt_variables:
     PJRT_DEVICE:
       description:
@@ -113,6 +81,21 @@ variables:
         - Max inflight computations that the PJRT client can handle for TPU.
       type: int
       default_value: 32
+    RT_SHARD_LOCAL_ORDINAL:
+      description:
+        - Ordinal to be appended to the paths used by this thread of the xla
+          client.
+      type: int
+    RT_SHARD_ORDINAL:
+      description:
+        - Sets the shard ordinal for the XRT computation client.
+      type: int
+      default_value: -1
+    RT_WORKERS:
+      description:
+        - Addresses for the RT workers to be used by the RT client, for
+          example localservice:0;grpc://localhost:51011
+      type: string
   build_variables:
     DEBUG:
       description:

@@ -179,6 +179,7 @@ def get_ordinal(defval=0):
   if pjrt.using_pjrt():
     return pjrt.global_ordinal()
 
+  print("Please set PJRT_DEVICE")
   return xu.getenv_as(xenv.ORDINAL, int, defval=defval)
 
 

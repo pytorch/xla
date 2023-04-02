@@ -16,7 +16,7 @@ std::string GetEnvOrdinalPath(const char* name, const std::string& defval,
 
 std::string GetEnvOrdinalPath(
     const char* name, const std::string& defval,
-    const char* ordinal_env = "XRT_SHARD_LOCAL_ORDINAL");
+    const char* ordinal_env = "RT_SHARD_LOCAL_ORDINAL");
 
 // Gets the integer environmental variable by `name`, or `defval` if unset.
 int64_t GetEnvInt(const char* name, int64_t defval);

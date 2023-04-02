@@ -51,12 +51,10 @@ cc_library(
     srcs = [
         "computation_client.cc",
         "pjrt_computation_client.cc",
-        "xrt_computation_client.cc",
     ],
     hdrs = [
         "computation_client.h",
         "pjrt_computation_client.h",
-        "xrt_computation_client.h",
     ],
     deps = [
         ":cache",
@@ -77,9 +75,6 @@ cc_library(
         ":unique",
         ":util",
         ":xla_util",
-        ":xrt_local_service",
-        ":xrt_session",
-        ":xrt_session_cache",
         "@org_tensorflow//tensorflow:grpc++",
         "@org_tensorflow//tensorflow/cc:client_session",
         "@org_tensorflow//tensorflow/cc:scope",
@@ -118,10 +113,6 @@ cc_library(
         "@org_tensorflow//tensorflow/compiler/xla/service:hlo_proto_cc",
         "@org_tensorflow//tensorflow/compiler/xla/hlo/ir:hlo",
         "@org_tensorflow//tensorflow/compiler/xla/service/spmd:spmd_partitioner",
-        "@org_tensorflow//tensorflow/compiler/xrt:xrt_proto_cc",
-        "@org_tensorflow//tensorflow/compiler/xrt:xrt_server",
-        "@org_tensorflow//tensorflow/compiler/xrt:xrt_utils",
-        "@org_tensorflow//tensorflow/compiler/xrt/cc:xrt_ops",
         "@org_tensorflow//tensorflow/core:core_cpu",
         "@org_tensorflow//tensorflow/core:framework_internal",
         "@org_tensorflow//tensorflow/core:lib",
@@ -383,7 +374,6 @@ cc_library(
         ":tf_logging",
         ":types",
         ":util",
-        ":xrt_session",
         "@com_google_absl//absl/types:span",
         "@org_tensorflow//tensorflow/compiler/xla:shape_util",
         "@org_tensorflow//tensorflow/compiler/xla:status_macros",
@@ -411,54 +401,6 @@ cc_test(
         "@org_tensorflow//tensorflow/tsl/platform:errors",
         "@org_tensorflow//tensorflow/tsl/platform:status_matchers",
     ],
-)
-
-cc_library(
-    name = "xrt_local_service",
-    srcs = ["xrt_local_service.cc"],
-    hdrs = ["xrt_local_service.h"],
-    deps = [
-        ":debug_macros",
-        ":xrt_session",
-        "@com_google_absl//absl/strings",
-        "@com_google_absl//absl/types:span",
-        "@org_tensorflow//tensorflow/compiler/xla:types",
-        "@org_tensorflow//tensorflow/compiler/xla/stream_executor/tpu:tpu_initializer_helper",
-        "@org_tensorflow//tensorflow/core:lib",
-        "@org_tensorflow//tensorflow/core/distributed_runtime:server_lib",
-        "@org_tensorflow//tensorflow/tsl/platform:errors",
-        "@org_tensorflow//tensorflow/tsl/platform:status",
-    ],
-    alwayslink = True,
-)
-
-cc_library(
-    name = "xrt_session_cache",
-    srcs = ["xrt_session_cache.cc"],
-    hdrs = ["xrt_session_cache.h"],
-    deps = [
-        ":metrics",
-        ":sys_util",
-        ":xrt_session",
-        "@org_tensorflow//tensorflow/compiler/xla:types",
-    ],
-    alwayslink = True,
-)
-
-cc_library(
-    name = "xrt_session",
-    srcs = ["xrt_session.cc"],
-    hdrs = ["xrt_session.h"],
-    deps = [
-        ":debug_macros",
-        "@com_google_absl//absl/strings",
-        "@com_google_absl//absl/types:span",
-        "@org_tensorflow//tensorflow/cc:cc_ops",
-        "@org_tensorflow//tensorflow/cc:client_session",
-        "@org_tensorflow//tensorflow/cc:scope",
-        "@org_tensorflow//tensorflow/compiler/xla:types",
-    ],
-    alwayslink = True,
 )
 
 tf_cc_shared_object(

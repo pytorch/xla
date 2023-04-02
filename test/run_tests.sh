@@ -226,7 +226,7 @@ function run_tests {
     run_mp_op_tests
   fi
   if [[ "$XLA_SKIP_XRT_TESTS" != "1" ]]; then
-    run_xrt_tests
+    # run_xrt_tests
   fi
 }
 

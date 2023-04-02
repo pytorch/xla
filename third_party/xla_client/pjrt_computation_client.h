@@ -229,4 +229,4 @@ class PjRtComputationClient : public ComputationClient {
 };
 
 }  // namespace xla
-#endif  // XLA_CLIENT_XRT_COMPUTATION_CLIENT_H_
+#endif  // XLA_CLIENT_PJRT_COMPUTATION_CLIENT_H_

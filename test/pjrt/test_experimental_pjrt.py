@@ -43,9 +43,6 @@ class TestExperimentalPjrt(parameterized.TestCase):
     self.assertLen(torch_xla._XLAC._xla_get_all_devices(),
                    pjrt.global_device_count())
 
-  def test_world_size(self):
-    self.assertEqual(xm.xrt_world_size(), pjrt.world_size())
-
   def test_xla_device_error(self):
     with self.assertRaises(IndexError):
       xm.xla_device(10)
@@ -55,24 +52,19 @@ class TestExperimentalPjrt(parameterized.TestCase):
   }, False), ('pjrt_cpu', {
       'PJRT_DEVICE': 'CPU',
       'PJRT_SELECT_DEFAULT_DEVICE': '0'
-  }, True), ('xrt_tpu', {
-      'XRT_TPU_CONFIG': 'localservice;0;localhost:51011'
-  }, False), ('pjrt_tpu_precedence', {
+  }, True), ('pjrt_tpu_precedence', {
       'PJRT_DEVICE': 'TPU',
       'XRT_TPU_CONFIG': 'localservice;0;localhost:51011',
-  }, True), ('xrt_gpu', {
-      'GPU_NUM_DEVICES': '4'
-  }, False), ('pjrt_gpu', {
+  }, True), ('pjrt_gpu', {
       'PJRT_DEVICE': 'GPU',
       'GPU_NUM_DEVICES': '4'
-  }, True), ('xla_dist_worker', {
-      'XRT_LOCAL_WORKER': 'c_localservice:2'
-  }, False))
+  }, True))
   def test_pjrt_default_device(self, env_vars, expect_using_pjrt):
     with mock.patch.dict(os.environ, env_vars, clear=True):
       # Print a warningif we had to select a default runtime
       if 'PJRT_DEVICE' not in os.environ and expect_using_pjrt:
         logs_context = self.assertLogs(level=logging.WARNING)
+        print("XRT has been deprecated, please set PJRT_DEVICE")
       else:
         logs_context = contextlib.nullcontext()
 
@@ -83,6 +75,7 @@ class TestExperimentalPjrt(parameterized.TestCase):
       if expect_using_pjrt:
         self.assertIn(pjrt.device_type(), ['CPU', 'GPU', 'TPU'])
       else:
+        print("XRT has been deprecated, please set PJRT_DEVICE")
         self.assertIsNone(pjrt.device_type())
 
 

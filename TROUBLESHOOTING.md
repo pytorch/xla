@@ -330,4 +330,4 @@ Running in single-core mode is also strongly suggested when debugging execution 
 
 ## Common Issues
 
-* `Missing XLA configuration` error message: You need to set `XRT_TPU_CONFIG` if using TPUs. If using GPUs set `GPU_NUM_DEVICES=N` for `N` number of GPUs. If using CPUs set `XRT_DEVICE_MAP="CPU:0;/job:localservice/replica:0/task:0/device:XLA_CPU:0"` and `XRT_WORKERS="localservice:0;grpc://localhost:9002"`
+* `Missing XLA configuration` error message: You need to set `PJRT_DEVICE` if using TPUs. If using GPUs set `GPU_NUM_DEVICES=N` for `N` number of GPUs.`
