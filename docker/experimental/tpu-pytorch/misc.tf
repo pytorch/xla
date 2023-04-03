@@ -2,10 +2,10 @@
 module "docker_registry" {
   source      = "../terraform_modules/docker_registry"
   name        = "docker"
-  description = <<EOT
-    Private docker images for PyTorch/XLA.
-    Managed by Terraform setup in docker/experimental/tpu-pytorch/misc.tf.
-  EOT
+  description = join(" ", [
+    "Private docker images for PyTorch/XLA.",
+    "Managed by Terraform setup in docker/experimental/tpu-pytorch/misc.tf.",
+  ])
   # public_read_access = true
 }
 
