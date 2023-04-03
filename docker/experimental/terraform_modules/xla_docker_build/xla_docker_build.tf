@@ -62,7 +62,7 @@ locals {
             ["-f=${var.dockerfile}", "."],
 
             # Pass build args to the docker image.
-            [for arg_key, arg_val in var.build_args : "--build-arg=${arg_key}=${arg_val}"],
+            [for arg_key, arg_val in local.build_args : "--build-arg=${arg_key}=${arg_val}"],
 
             # Pass Ansible variables as JSON object, to make sure that
             # types are preserved (e.g. boolean),
