@@ -208,7 +208,10 @@ module "nightly_builds" {
     : "cuda/${each.value.cuda_version}"
   }"
   wheels_srcs = ["/dist/*.whl"]
-  build_args  = merge(each.value, { package_version = var.nightly_package_version })
+  build_args  = merge(each.value, {
+    package_version = var.nightly_package_version
+    nightly_release = true
+  })
 
   scheduler_account_email = module.scheduler_account.email
   worker_pool_id          = module.worker_pool.id
