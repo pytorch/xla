@@ -13,6 +13,7 @@ ARG accelerator=tpu
 ARG cuda_version=11.8
 ARG pytorch_git_rev=HEAD
 ARG xla_git_rev=HEAD
+ARG nightly_release=false
 ARG package_version
 
 RUN ansible-playbook -vvv playbook.yaml -e \
@@ -22,6 +23,7 @@ RUN ansible-playbook -vvv playbook.yaml -e \
   cuda_version=${cuda_version} \
   pytorch_git_rev=${pytorch_git_rev} \
   xla_git_rev=${xla_git_rev} \
+  nightly_release=${nightly_release} \
   package_version=${package_version}"
 
 FROM python:${python_version}-${debian_version} AS release
@@ -46,8 +48,7 @@ RUN ansible-playbook -vvv playbook.yaml -e \
   " --tags "install_deps"
 
 WORKDIR /dist
-COPY --from=build /src/pytorch/dist/*.whl .
-COPY --from=build /src/pytorch/xla/dist/*.whl .
+COPY --from=build /dist/*.whl .
 
 RUN echo "Installing the following wheels" && ls /dist/*.whl
 RUN pip install *.whl
