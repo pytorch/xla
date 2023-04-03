@@ -214,7 +214,9 @@ module "versioned_builds" {
   for_each = local.versioned_builds_dict
 
   sources_git_rev = each.value.git_tag
-  ansible_branch  = "master"
+  # TODO: Change this branch to master. Currently the dev branch contains
+  # Ansible with deps for older versions of CUDA (see cuda_deps.yaml).
+  ansible_branch  = "mlewko/terraform-follow-up"
 
   trigger_name = replace(each.key, "/[_.]/", "-")
   image_name   = "xla"
