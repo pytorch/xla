@@ -330,4 +330,24 @@ XlaOpVector SizeMod::Lower(LoweringContext* loctx) const {
   return ReturnOp(xla::Rem(input1, input2), loctx);
 }
 
+SizeError::SizeError()
+    : XlaNode(
+          torch::lazy::OpKind{c10::Symbol::fromQualString("aten::size_error")},
+          {},
+          xla::ShapeUtil::MakeShape(GetShapeDimensionType(/*device=*/nullptr),
+                                    {}),
+          1){};
+
+int64_t SizeError::getDynamicValue() const {
+  XLA_CHECK(false) << "SizeError shouldn't be called.";
+  return -1;
+}
+
+std::string SizeError::ToString() const { return "aten::size_error"; }
+
+XlaOpVector SizeError::Lower(LoweringContext* loctx) const {
+  XLA_CHECK(false) << "SizeError shouldn't be called.";
+  return ReturnOp({}, loctx);
+}
+
 }  // namespace torch_xla

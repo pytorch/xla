@@ -83,6 +83,7 @@ class TORCH_API XLASymNodeImpl final : public c10::SymNodeImpl {
   c10::SymNode sym_float() override;
   c10::SymNode wrap_int(int64_t num) override;
   c10::SymNode wrap_float(double num) override;
+  c10::SymNode wrap_bool(bool num) override;
   int64_t guard_int(const char* file, int64_t line) override;
   double guard_float(const char* file, int64_t line) override;
   bool guard_bool(const char* file, int64_t line) override;
