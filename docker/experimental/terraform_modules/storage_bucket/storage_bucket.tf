@@ -17,8 +17,8 @@ variable "storage_class" {
 
 resource "google_storage_bucket" "bucket" {
   name = var.name
-  # If you try to delete a bucket that contains objects, Terraform will fail 
-  # that run. Delete all bucket objects before deleting the bucket: 
+  # If you try to delete a bucket that contains objects, Terraform will fail
+  # that run. Delete all bucket objects before deleting the bucket:
   # gsutil -m rm -r gs://my-bucket/*
   force_destroy = false
   location      = var.location
