@@ -749,6 +749,9 @@ c10::SymNode XLASymNodeImpl::sym_max(const c10::SymNode& other) {
                    << " has not been implemented.";
 }
 
+// It is used to compute contiguity fields on tensors like "is non overlapping
+// and dense" and it's never fetched. If they are never fetched it is fine for
+// them to error only if poked.
 c10::SymNode XLASymNodeImpl::sym_or(const c10::SymNode& other) {
   auto error_node = torch::lazy::MakeNode<SizeError>();
   return c10::make_intrusive<XLASymNodeImpl>(error_node, PyType::BOOL);
@@ -790,6 +793,9 @@ c10::SymNode XLASymNodeImpl::is_channels_last_strides_3d(
                    << " has not been implemented.";
 }
 
+// It is used to compute contiguity fields on tensors like "is non overlapping
+// and dense" and it's never fetched. If they are never fetched it is fine for
+// them to error only if poked.
 c10::SymNode XLASymNodeImpl::is_non_overlapping_and_dense(
     at::ArrayRef<c10::SymNode> sizes, at::ArrayRef<c10::SymNode> strides) {
   auto error_node = torch::lazy::MakeNode<SizeError>();
@@ -849,6 +855,10 @@ bool XLASymNodeImpl::bool_() {
 // "a SymInt has_hint" is equivalent to "a SymInt is backed". Unbacked SymInt is
 // the result of a data dependent output like nonzero; we don't know what the
 // value is because it's data dependent.
+// Returning false here because PyTorch/XLA only creates a SymNodeImpl for
+// nonzero output, such as in XLATensorImpl::SetupSymSizeProperties(). During
+// propagation such as sz = t1.shape[0] + t2.shape[1] where former argument is
+// an unbacked SymInt and latter is backed, sz remains to be an unbacked SymInt.
 bool XLASymNodeImpl::has_hint() { return false; }
 
 std::string XLASymNodeImpl::str() {
