@@ -54,7 +54,7 @@ locals {
             ["-f=${var.dockerfile}", "."],
 
             # Pass build args to the docker image.
-            [for arg_key, arg_val in var.build_args : "--build-arg=${arg_key}=${arg_val}"],
+            [for arg_key, arg_val in local.build_args : "--build-arg=${arg_key}=${arg_val}"],
 
             # Pass all specified tags as $(echo <tag's bash expression>).
             # This allows to compute dynamic tags, e.g. date.
