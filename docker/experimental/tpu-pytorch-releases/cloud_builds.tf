@@ -56,8 +56,8 @@ module "nightly_builds" {
   sources_git_rev = "master"
   # TODO: Change this branch to master. Currently the dev branch contains
   # Ansible with deps for older versions of CUDA (see cuda_deps.yaml).
-  ansible_branch  = "mlewko/terraform-follow-up"
-  trigger_on_schedule = { schedule = "0 0 * * *", branch = "master"}
+  ansible_branch      = "mlewko/terraform-follow-up"
+  trigger_on_schedule = { schedule = "0 0 * * *", branch = "master" }
 
   trigger_name = "nightly-${replace(each.key, "/[_.]/", "-")}"
   image_name   = "xla"
@@ -77,7 +77,11 @@ module "nightly_builds" {
     "docker/experimental/tpu-pytorch-releases/cloud_builds.tf."
   ])
 
-  wheels_dest = "${module.releases_storage_bucket.url}/wheels/${each.key}"
+  wheels_dest = "${module.releases_storage_bucket.url}/wheels/${
+    each.value.accelerator == "tpu"
+    ? "tpuvm"
+    : "cuda/${each.value.cuda_version}"
+  }"
   wheels_srcs = ["/dist/*.whl"]
   build_args  = merge(each.value, { package_version = var.nightly_package_version })
 
@@ -110,7 +114,11 @@ module "versioned_builds" {
     "docker/experimental/tpu-pytorch-releases/cloud_builds.tf."
   ])
 
-  wheels_dest = "${module.releases_storage_bucket.url}/wheels/${each.key}"
+  wheels_dest = "${module.releases_storage_bucket.url}/wheels/${
+    each.value.accelerator == "tpu"
+    ? "tpuvm"
+    : "cuda/${each.value.cuda_version}"
+  }"
   wheels_srcs = ["/dist/*.whl"]
   build_args  = each.value
 
