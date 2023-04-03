@@ -1616,6 +1616,10 @@ void InitXlaModuleBindings(py::module m) {
         [](at::Tensor& self, const at::Tensor& source) -> at::Tensor& {
           return XLANativeFunctions::set_(self, source);
         });
+  m.def("_reset_token",
+        []() -> void {
+          SetToken(nullptr);
+        });
 
   /* The distributed runtime service is used by the PjRt GPU client. */
   py::class_<xla::DistributedRuntimeService,

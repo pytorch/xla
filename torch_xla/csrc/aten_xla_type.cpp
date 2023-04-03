@@ -676,8 +676,6 @@ at::Tensor XLANativeFunctions::alias_copy(const at::Tensor& self) {
       tensor_methods::alias(bridge::GetXlaTensor(self)));
 }
 
-std::shared_ptr<torch::lazy::Value> g_token;
-
 std::shared_ptr<torch::lazy::Value> CreateToken(const torch::lazy::BackendDevice& device) {
   // This should be using xla::CreateToken() once we have added Token support to
   // XLA AllReduce(). Meanwhile we use a constant as token, and we handle it
@@ -712,8 +710,8 @@ at::Tensor XLANativeFunctions::all_reduce(const at::Tensor & self, c10::string_v
   TORCH_LAZY_FN_COUNTER("xla::");
   auto self_tensor = bridge::GetXlaTensor(self);
 
-  if (g_token == nullptr) {
-    g_token = CreateToken(self_tensor->GetDevice());
+  if (GetToken() == nullptr) {
+    SetToken(CreateToken(self_tensor->GetDevice()));
   }
 
   // TODO: Use ranks and group_size to generate groups.
@@ -722,9 +720,9 @@ at::Tensor XLANativeFunctions::all_reduce(const at::Tensor & self, c10::string_v
   XLATensorPtr result;
   torch::lazy::Value new_token;
   std::tie(result, new_token) = tensor_methods::all_reduce(
-      self_tensor, *g_token, GetReduceType(reduceOp), 1.0,
+      self_tensor, *GetToken(), GetReduceType(reduceOp), 1.0,
       {}, true);
-  g_token = std::make_shared<torch::lazy::Value>(std::move(new_token));
+  SetToken(std::make_shared<torch::lazy::Value>(std::move(new_token)));
   return bridge::AtenFromXlaTensor(result);
 }
 

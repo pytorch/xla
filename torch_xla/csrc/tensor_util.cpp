@@ -1253,4 +1253,14 @@ xla::PrimitiveType GetShapeDimensionType(
   return xla::PrimitiveType::S32;
 }
 
+std::shared_ptr<torch::lazy::Value> g_util_token;
+
+void SetToken(const std::shared_ptr<torch::lazy::Value>& token) {
+  g_util_token = token;
+}
+
+const std::shared_ptr<torch::lazy::Value>& GetToken() {
+  return g_util_token;
+}
+
 }  // namespace torch_xla

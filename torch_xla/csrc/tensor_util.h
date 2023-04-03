@@ -13,6 +13,7 @@
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/xla_backend_impl.h"
+#include "torch_xla/csrc/xla_graph_executor.h"
 #include "torch_xla/csrc/xla_sharding_util.h"
 
 namespace torch_xla {
@@ -161,5 +162,8 @@ inline std::vector<at::Tensor> xla_expand_outplace(at::TensorList to_expand) {
   }
   return result;
 }
+
+void SetToken(const std::shared_ptr<torch::lazy::Value>& token);
+const std::shared_ptr<torch::lazy::Value>& GetToken();
 
 }  // namespace torch_xla
