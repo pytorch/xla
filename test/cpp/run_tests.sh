@@ -69,12 +69,6 @@ if [ $BUILD_ONLY -eq 0 ]; then
   fi
 fi
 
-# if [ $USE_COVERAGE -eq 1 ]; then
-#   ls /usr/lib/llvm-8/bin
-#   echo "$PATH"
-#   chmod +x /tmp/pytorch/xla/test/cpp/get_coverage.sh
-# fi
-
 popd
 if [ $RMBUILD -eq 1 -a $BUILD_ONLY -eq 0 ]; then
   rm -rf "$BUILDDIR"

@@ -183,8 +183,6 @@ function run_torch_xla_tests() {
         chmod +x /tmp/pytorch/xla/test/cpp/get_coverage.sh
         lcov --directory /tmp/pytorch/xla/build/temp.linux-x86_64-cpython-38/torch_xla/csrc --base-directory . --gcov-tool /tmp/pytorch/xla/test/cpp/get_coverage.sh --capture -o cpp_lcov.info
         mv cpp_lcov.info ~/htmlcov/cpp_lcov.info
-        # mv htmlcov ~/
-        # chmod -R 755 ~/htmlcov
       fi
     popd
   popd
