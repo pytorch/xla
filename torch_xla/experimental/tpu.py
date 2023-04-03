@@ -84,7 +84,8 @@ def num_available_chips() -> int:
   """Returns the number of TPU chips attached through PCI."""
   pci_vendors_files = glob.glob('/sys/bus/pci/devices/*/vendor')
   pci_vendors = [
-    pathlib.Path(path).read_text().strip() for path in pci_vendors_files]
+      pathlib.Path(path).read_text().strip() for path in pci_vendors_files
+  ]
   # HACK: Assumes all Google devices are TPU chips
   num_chips = pci_vendors.count(f'0x{_GOOGLE_PCI_VENDOR_ID}')
   return num_chips
