@@ -6,7 +6,6 @@ BUILDTYPE="Release"
 VERB=
 FILTER=
 BUILD_ONLY=0
-USE_COVERAGE=1
 RMBUILD=1
 LOGFILE=/tmp/pytorch_cpp_test.log
 XLA_EXPERIMENTAL="nonzero:masked_select"
