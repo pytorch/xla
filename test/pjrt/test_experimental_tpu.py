@@ -32,7 +32,7 @@ class TestExperimentalTpu(parameterized.TestCase):
   )
   def test_num_available_chips(self, num_tpu_chips):
     vendor_id_files = []
-    vendor_ids = ['0x1234', '0x4321', 'abcd'
+    vendor_ids = ['0x1234', '0x4321', '0xabcd'
                  ] + [f'0x{tpu._GOOGLE_PCI_VENDOR_ID}'] * num_tpu_chips
     for v in vendor_ids:
       f = self.create_tempfile()
