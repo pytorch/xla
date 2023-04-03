@@ -33,6 +33,19 @@ locals {
     }
   ]
 
+  fetch_ansible_build_config = [
+    {
+      id   = "git_fetch"
+      name = "gcr.io/cloud-builders/git"
+      args = ["fetch", "origin", var.ansible_branch]
+    },
+    {
+      id   = "git_checkout"
+      name = "gcr.io/cloud-builders/git"
+      args = ["checkout", var.ansible_branch]
+    }
+  ]
+
   build_and_push_docker_image_steps = [
     # Build docker image.
     {

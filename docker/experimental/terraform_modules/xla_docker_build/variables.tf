@@ -36,11 +36,6 @@ variable "ansible_branch" {
   default = "master"
 }
 
-variable "include_files" {
-  default = null
-  type    = list(string)
-}
-
 variable "build_args" {
   type        = map(any)
   description = "Build args to pass to the dockerfile (`ARG build_arg=`)."
