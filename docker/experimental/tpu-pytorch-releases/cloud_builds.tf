@@ -179,7 +179,9 @@ module "nightly_builds" {
   for_each = local.nightly_builds_dict
 
   sources_git_rev = "master"
-  ansible_branch  = "master"
+  # TODO: Change this branch to master. Currently the dev branch contains
+  # Ansible with deps for older versions of CUDA (see cuda_deps.yaml).
+  ansible_branch  = "mlewko/terraform-follow-up"
   trigger_on_schedule = { schedule = "0 0 * * *", branch = "master"}
 
   trigger_name = "nightly-${replace(each.key, "/[_.]/", "-")}"
