@@ -333,6 +333,22 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     t9_aten = t8_aten.view(t4_aten.shape[0])
     self.assertEqual(t9.cpu(), t9_aten.cpu())
 
+  def test_clone(self):
+    t1 = torch.tensor([1, 0, 3, 5, 0, 6], device=dev)
+    # t2.shape=torch.Size([<=6, 1]) with real size [4, 1]
+    # t2 = [[0], [2], [3], [5]]
+    t2 = torch.nonzero(t1)
+    t2_clone = torch.clone(t2)
+    self.assertIsInstance(t2_clone.shape[0], torch.SymInt)
+    self.assertEqual(str(t2_clone.shape[0]), '<=6')
+    self.assertEqual(t2_clone.shape[0], 4)
+    self.assertIsInstance(t2_clone.shape[1], int)
+    self.assertEqual(str(t2_clone.shape[1]), '1')
+    self.assertEqual(t2_clone.shape[1], 1)
+
+    # For correctness
+    self.assertEqual(t2.cpu(), t2_clone.cpu())
+
   def test_sizeMod(self):
     met.clear_all()
 
