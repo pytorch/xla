@@ -179,7 +179,7 @@ module "nightly_builds" {
   sources_git_rev = "master"
   ansible_branch  = "master"
 
-  trigger_name = "nightly_${each.key}"
+  trigger_name = "nightly-${replace(each.key, "/[_.]/", "-")}"
   image_name   = "xla"
   image_tags = [
     "nightly_${each.key}",
@@ -188,7 +188,11 @@ module "nightly_builds" {
   ]
 
   description = format(
-    "Builds nightly 'xla:nightly_%s' %s docker image and corresponding wheels for PyTorch/XLA. Configured in Terraform.",
+    join(" ", [
+      "Builds nightly 'xla:nightly_%s' %s docker image and corresponding wheels",
+      "for PyTorch/XLA. Trigger managed by Terraform setup in",
+      "docker/experimental/tpu-pytorch-releases/cloud_builds.tf."
+    ]),
     each.key,
     each.value.accelerator == "tpu" ? "TPU" : format("CUDA %s", each.value.cuda_version)
   )
@@ -210,12 +214,16 @@ module "versioned_builds" {
   sources_git_rev = each.value.git_tag
   ansible_branch = "master"
 
-  trigger_name = each.key
+  trigger_name = replace(each.key, "/[_.]/", "-")
   image_name   = "xla"
   image_tags   = [each.key]
 
   description = format(
-    "Builds official 'xla:%s' %s docker image and corresponding wheels for PyTorch/XLA. Configured in Terraform.",
+        join(" ", [
+      "Builds official 'xla:%s' %s docker image and corresponding wheels",
+      "for PyTorch/XLA. Trigger managed by Terraform setup in",
+      "docker/experimental/tpu-pytorch-releases/cloud_builds.tf."
+    ]),
     each.key,
     each.value.accelerator == "tpu" ? "TPU" : format("CUDA %s", each.value.cuda_version)
   )
