@@ -180,6 +180,7 @@ module "nightly_builds" {
 
   sources_git_rev = "master"
   ansible_branch  = "master"
+  trigger_on_schedule = { schedule = "0 0 * * *", branch = "master"}
 
   trigger_name = "nightly-${replace(each.key, "/[_.]/", "-")}"
   image_name   = "xla"
@@ -203,7 +204,6 @@ module "nightly_builds" {
   wheels_srcs = ["/dist/*.whl"]
   build_args  = merge(each.value, { package_version = var.nightly_package_version })
 
-  schedule                = "0 0 * * *"
   scheduler_account_email = module.scheduler_account.email
   worker_pool_id          = module.worker_pool.id
   docker_repo_url         = module.docker_registry.url
@@ -217,6 +217,7 @@ module "versioned_builds" {
   # TODO: Change this branch to master. Currently the dev branch contains
   # Ansible with deps for older versions of CUDA (see cuda_deps.yaml).
   ansible_branch  = "mlewko/terraform-follow-up"
+  trigger_on_push = { tag = each.value.git_tag }
 
   trigger_name = replace(each.key, "/[_.]/", "-")
   image_name   = "xla"
