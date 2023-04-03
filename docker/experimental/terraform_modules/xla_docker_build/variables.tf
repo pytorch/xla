@@ -6,14 +6,17 @@ variable "image_name" {
   type = string
 }
 
+variable "image_tags" {
+  type    = list(string)
+}
+
+variable "location" {
+  default = "us-central1"
+}
+
 variable "description" {
   type    = string
   default = ""
-}
-
-variable "image_tags" {
-  default = []
-  type    = list(string)
 }
 
 variable "sources_git_rev" {

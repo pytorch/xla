@@ -7,6 +7,7 @@ module "cloud_build" {
   timeout_minutes         = var.timeout_minutes
   worker_pool_id          = var.worker_pool_id
   description             = var.description
+  location                = var.location
 
   trigger_on_push = var.schedule == "" ? {
     branch        = var.ansible_branch

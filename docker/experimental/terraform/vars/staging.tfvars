@@ -6,7 +6,7 @@ docker_images = [
     dockerfile  = "development.Dockerfile"
     trigger_files = [
       "docker/experimental/ansible/**",
-      "docker/experimental/terraform_cloudbuild/**",
+      "docker/experimental/terraform/**",
     ]
     build_args = {
       python_version = "3.8"
