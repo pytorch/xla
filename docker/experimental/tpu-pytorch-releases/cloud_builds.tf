@@ -146,7 +146,9 @@ variable "versioned_builds" {
       python_version  = optional(string, "3.8")
       arch            = optional(string, "amd64")
       accelerator     = string
-      cuda_version    = optional(string, "")
+      python_version  = optional(string, "3.8")
+      cuda_version    = optional(string, "11.8")
+      arch            = optional(string, "amd64")
     })
   )
 
@@ -177,7 +179,7 @@ module "nightly_builds" {
   for_each = local.nightly_builds_dict
 
   sources_git_rev = "master"
-  ansible_branch  = "mlewko/terraform-follow-up"
+  ansible_branch  = "master"
 
   trigger_name = "nightly-${replace(each.key, "/[_.]/", "-")}"
   image_name   = "xla"
@@ -187,15 +189,15 @@ module "nightly_builds" {
     "nightly_${each.key}_$(date +%Y%m%d)",
   ]
 
-  description = format(
-    join(" ", [
-      "Builds nightly 'xla:nightly_%s' %s docker image and corresponding wheels",
-      "for PyTorch/XLA. Trigger managed by Terraform setup in",
-      "docker/experimental/tpu-pytorch-releases/cloud_builds.tf."
-    ]),
-    each.key,
-    each.value.accelerator == "tpu" ? "TPU" : format("CUDA %s", each.value.cuda_version)
-  )
+  description = join(" ", [
+    "Builds nightly xla:nightly_${each.key}' ${
+      each.value.accelerator == "tpu"
+      ? "TPU"
+      : format("CUDA %s", each.value.cuda_version)
+    } docker image and corresponding wheels for PyTorch/XLA.",
+    "Trigger managed by Terraform setup in",
+    "docker/experimental/tpu-pytorch-releases/cloud_builds.tf."
+  ])
 
   wheels_dest = "${module.releases_storage_bucket.url}/wheels/${each.key}"
   wheels_srcs = ["/dist/*.whl"]
@@ -212,21 +214,21 @@ module "versioned_builds" {
   for_each = local.versioned_builds_dict
 
   sources_git_rev = each.value.git_tag
-  ansible_branch = "master"
+  ansible_branch  = "master"
 
   trigger_name = replace(each.key, "/[_.]/", "-")
   image_name   = "xla"
   image_tags   = [each.key]
 
-  description = format(
-        join(" ", [
-      "Builds official 'xla:%s' %s docker image and corresponding wheels",
-      "for PyTorch/XLA. Trigger managed by Terraform setup in",
-      "docker/experimental/tpu-pytorch-releases/cloud_builds.tf."
-    ]),
-    each.key,
-    each.value.accelerator == "tpu" ? "TPU" : format("CUDA %s", each.value.cuda_version)
-  )
+  description = join(" ", [
+    "Builds official xla:${each.key}' ${
+      each.value.accelerator == "tpu"
+      ? "TPU"
+      : format("CUDA %s", each.value.cuda_version)
+    } docker image and corresponding wheels for PyTorch/XLA.",
+    "Trigger managed by Terraform setup in",
+    "docker/experimental/tpu-pytorch-releases/cloud_builds.tf."
+  ])
 
   wheels_dest = "${module.releases_storage_bucket.url}/wheels/${each.key}"
   wheels_srcs = ["/dist/*.whl"]
