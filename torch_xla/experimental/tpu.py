@@ -2,6 +2,7 @@ import functools
 import glob
 import operator
 import os
+import pathlib
 import re
 from typing import Dict, NamedTuple, Optional, List, Tuple
 from typing_extensions import TypedDict
@@ -32,6 +33,8 @@ _ACCELERATOR_TYPE_TO_HOST_BOUNDS = {
     'v3-2048': '16,16,1',
     # Get v4 host bounds from TPU metadata
 }
+# Constant between machines. Should match /usr/share/misc/pci.ids
+_GOOGLE_PCI_VENDOR_ID = '1ae0'
 
 
 class TpuEnv(TypedDict):
@@ -78,8 +81,13 @@ def process_bounds_size() -> Optional[int]:
 
 
 def num_available_chips() -> int:
-  """Returns the number of local chips in /dev/"""
-  return len(glob.glob('/dev/accel?'))
+  """Returns the number of TPU chips attached through PCI."""
+  pci_vendors_files = glob.glob('/sys/bus/pci/devices/*/vendor')
+  pci_vendors = [
+    pathlib.Path(path).read_text().strip() for path in pci_vendors_files]
+  # HACK: Assumes all Google devices are TPU chips
+  num_chips = pci_vendors.count(f'0x{_GOOGLE_PCI_VENDOR_ID}')
+  return num_chips
 
 
 def num_local_processes() -> int:
