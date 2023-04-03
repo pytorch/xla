@@ -33,11 +33,16 @@ class TestExperimentalTpu(parameterized.TestCase):
   def test_num_available_chips(self, num_tpu_chips):
     vendor_id_files = []
     vendor_ids = ['0x1234', '0x4321', '0xabcd'
-                 ] + [f'0x{tpu._GOOGLE_PCI_VENDOR_ID}'] * num_tpu_chips
-    for v in vendor_ids:
-      f = self.create_tempfile()
-      f.write_text(v)
-      vendor_id_files.append(f.full_path)
+                 ] + [tpu._GOOGLE_PCI_VENDOR_ID] * num_tpu_chips
+    for vendor in vendor_ids:
+      tmpdir = self.create_tempdir()
+      vendor_file = tmpdir.create_file('vendor', content=vendor)
+
+      device = tpu._TPU_PCI_DEVICE_IDS[
+          0] if vendor == tpu._GOOGLE_PCI_VENDOR_ID else '0x7890'
+      tmpdir.create_file('device', content=device)
+
+      vendor_id_files.append(vendor_file.full_path)
 
     with mock.patch.object(glob, 'glob', return_value=vendor_id_files):
       self.assertEqual(tpu.num_available_chips(), num_tpu_chips)
