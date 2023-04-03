@@ -5,6 +5,16 @@ module "dev_image" {
 
   ansible_branch  = "master"
   sources_git_rev = "master"
+  trigger_on_push = {
+    branch = "master"
+    include_files = [
+      "docker/experimental/ansible/**",
+      "docker/experimental/terraform/**",
+      "docker/experimental/terraform_modules/**",
+      "docker/experimental/tpu-pytorch/**",
+      "docker/experimental/tpu-pytorch-releases/**",
+    ]
+  }
 
   image_name = "development"
   image_tags = [
@@ -18,14 +28,6 @@ module "dev_image" {
     "Trigger managed by Terraform setup in",
     "docker/experimental/tpu-pytorch/cloud_builds.tf.",
   ])
-
-  include_files = [
-    "docker/experimental/ansible/**",
-    "docker/experimental/terraform/**",
-    "docker/experimental/terraform_modules/**",
-    "docker/experimental/tpu-pytorch/**",
-    "docker/experimental/tpu-pytorch-releases/**",
-  ]
 
   build_args = {
     python_version = "3.8"

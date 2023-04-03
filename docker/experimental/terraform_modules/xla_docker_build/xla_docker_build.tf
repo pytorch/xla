@@ -9,17 +9,12 @@ module "cloud_build" {
   description             = var.description
   location                = var.location
 
-  trigger_on_push = var.schedule == "" ? {
-    branch        = var.ansible_branch
-    include_files = var.include_files
-  } : null
+  trigger_on_push     = var.trigger_on_push
+  trigger_on_schedule = var.trigger_on_schedule
 
-  trigger_on_schedule = var.schedule != "" ? {
-    schedule = var.schedule
-    branch   = var.ansible_branch
-  } : null
-
-  steps = concat(local.build_and_push_docker_image_steps,
+  steps = concat(
+    local.fetch_ansible_build_config,
+    local.build_and_push_docker_image_steps,
     length(var.wheels_srcs) > 0 ? local.collect_and_publish_wheels_steps : []
   )
 }
@@ -29,6 +24,19 @@ locals {
     pytorch_git_rev = var.sources_git_rev
     xla_git_rev     = var.sources_git_rev
   })
+
+  fetch_ansible_build_config = [
+    {
+      id   = "git_fetch"
+      name = "gcr.io/cloud-builders/git"
+      args = ["fetch", "origin", var.ansible_branch]
+    },
+    {
+      id   = "git_checkout"
+      name = "gcr.io/cloud-builders/git"
+      args = ["checkout", var.ansible_branch]
+    }
+  ]
 
   build_and_push_docker_image_steps = [
     # Build docker image.

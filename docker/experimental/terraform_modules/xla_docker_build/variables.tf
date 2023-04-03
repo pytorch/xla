@@ -27,19 +27,28 @@ variable "ansible_branch" {
   default = "master"
 }
 
-variable "include_files" {
-  default = null
-  type    = list(string)
-}
-
 variable "build_args" {
   type        = map(any)
   description = "Build args to pass to the dockerfile (`ARG build_arg=`)."
   default     = {}
 }
 
-variable "schedule" {
-  default = ""
+variable "trigger_on_push" {
+  type = object({
+    branch         = optional(string)
+    tag            = optional(string)
+    included_files = optional(list(string), [])
+  })
+  default = null
+}
+
+variable "trigger_on_schedule" {
+  type = object({
+    schedule = string
+    branch   = optional(string)
+    tag      = optional(string)
+  })
+  default = null
 }
 
 variable "scheduler_account_email" {
