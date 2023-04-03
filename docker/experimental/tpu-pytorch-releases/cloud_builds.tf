@@ -54,7 +54,7 @@ module "nightly_builds" {
   for_each = local.nightly_builds_dict
 
   sources_git_rev = "master"
-  ansible_branch  = "master"
+  ansible_branch  = "mlewko/terraform-follow-up"
 
   trigger_name = "nightly-${replace(each.key, "/[_.]/", "-")}"
   image_name   = "xla"
