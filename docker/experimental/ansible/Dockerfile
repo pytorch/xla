@@ -48,7 +48,7 @@ RUN ansible-playbook -vvv playbook.yaml -e \
   " --tags "install_deps"
 
 WORKDIR /dist
-COPY --from=build /dist/*.whl .
+COPY --from=build /dist/*.whl /dist/
 
 RUN echo "Installing the following wheels" && ls /dist/*.whl
 RUN pip install *.whl
