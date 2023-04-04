@@ -7,7 +7,7 @@ variable "image_name" {
 }
 
 variable "image_tags" {
-  type    = list(string)
+  type = list(string)
 }
 
 variable "location" {

@@ -208,10 +208,9 @@ module "nightly_builds" {
     : "cuda/${each.value.cuda_version}"
   }"
   wheels_srcs = ["/dist/*.whl"]
-  build_args  = merge(each.value, {
-    package_version = var.nightly_package_version
-    nightly_release = true
-  })
+  build_args = {
+    python_version = each.value.python_version
+  }
 
   scheduler_account_email = module.scheduler_account.email
   worker_pool_id          = module.worker_pool.id
@@ -222,7 +221,11 @@ module "versioned_builds" {
   source   = "../terraform_modules/xla_docker_build"
   for_each = local.versioned_builds_dict
 
-  sources_git_rev = each.value.git_tag
+  ansible_vars = merge(each.value, {
+    pytorch_git_rev = each.value.git_tag
+    xla_git_rev     = each.value.git_tag
+  })
+
   # TODO: Change this branch to master. Currently the dev branch contains
   # Ansible with deps for older versions of CUDA (see cuda_deps.yaml).
   ansible_branch  = "mlewko/terraform-follow-up"
