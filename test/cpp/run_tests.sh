@@ -67,7 +67,6 @@ if [ $BUILD_ONLY -eq 0 ]; then
     ./test_ptxla ${FILTER:+"$FILTER"}
   fi
 fi
-
 popd
 if [ $RMBUILD -eq 1 -a $BUILD_ONLY -eq 0 ]; then
   rm -rf "$BUILDDIR"
