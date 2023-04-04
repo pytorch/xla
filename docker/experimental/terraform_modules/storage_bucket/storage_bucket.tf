@@ -46,7 +46,7 @@ resource "google_storage_bucket_iam_policy" "policy" {
   count = var.public_read_access ? 1 : 0
 
   bucket      = google_storage_bucket.bucket.name
-  policy_data = data.google_iam_policy.public_read_access.policy_data
+  policy_data = data.google_iam_policy.public_read_access[0].policy_data
 }
 
 output "url" {
