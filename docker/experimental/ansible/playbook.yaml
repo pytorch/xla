@@ -33,7 +33,7 @@
         - apt.yaml
         - pip.yaml
         - env.yaml
-      tags: always # Execute this task even with `--skip-tags` is used.
+      tags: always # Execute this task even with `--skip-tags` or `--tags` is used.
 
   roles:
     - role: bazel
