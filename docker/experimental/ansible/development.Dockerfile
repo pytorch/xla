@@ -18,5 +18,6 @@ ARG accelerator=tpu
 # List Asnible tasks to apply for the dev image.
 ENV TAGS="bazel,configure_env,install_deps"
 
+RUN echo Ansible vars "${ansible_vars}"
 RUN ansible-playbook playbook.yaml -e "stage=build" -e "${ansible_vars}" --tags "${TAGS}"
 RUN ansible-playbook playbook.yaml -e "stage=release" -e "${ansible_vars}" --tags "${TAGS}"

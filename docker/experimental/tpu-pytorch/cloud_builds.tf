@@ -3,7 +3,7 @@ module "dev_image" {
 
   trigger_name = "dev-image"
 
-  ansible_branch = "master"
+  ansible_branch = "mlewko/terraform-follow-up"
   trigger_on_push = {
     branch = "master"
     include_files = [
