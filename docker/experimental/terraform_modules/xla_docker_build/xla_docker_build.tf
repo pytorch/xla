@@ -66,7 +66,7 @@ locals {
 
             # Pass Ansible variables as JSON object, to make sure that
             # types are preserved (e.g. boolean).
-            ["'--build_args=ansible_vars=${jsonencode(var.ansible_vars)}'"],
+            ["--build-arg=ansible_vars=${jsonencode(var.ansible_vars)}"],
 
             # Pass Ansible variables as JSON object, to make sure that
             # types are preserved (e.g. boolean),
