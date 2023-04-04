@@ -1,3 +1,4 @@
+import glob
 import os
 import textwrap
 
@@ -23,6 +24,28 @@ class TestExperimentalTpu(parameterized.TestCase):
       n = tpu.process_bounds_size()
 
     self.assertEqual(n, expected)
+
+  @parameterized.named_parameters(
+      ('no_chips', 0),
+      ('one_chip', 1),
+      ('four_chips', 4),
+  )
+  def test_num_available_chips(self, num_tpu_chips):
+    vendor_id_files = []
+    vendor_ids = ['0x1234', '0x4321', '0xabcd'
+                 ] + [tpu._GOOGLE_PCI_VENDOR_ID] * num_tpu_chips
+    for vendor in vendor_ids:
+      tmpdir = self.create_tempdir()
+      vendor_file = tmpdir.create_file('vendor', content=vendor)
+
+      device = tpu._TPU_PCI_DEVICE_IDS[
+          0] if vendor == tpu._GOOGLE_PCI_VENDOR_ID else '0x7890'
+      tmpdir.create_file('device', content=device)
+
+      vendor_id_files.append(vendor_file.full_path)
+
+    with mock.patch.object(glob, 'glob', return_value=vendor_id_files):
+      self.assertEqual(tpu.num_available_chips(), num_tpu_chips)
 
   @parameterized.named_parameters(
       ('default_one_host', None, 4),
