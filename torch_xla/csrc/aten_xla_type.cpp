@@ -1937,6 +1937,21 @@ at::Tensor XLANativeFunctions::mul(const at::Tensor& self,
                     });
 }
 
+at::Tensor XLANativeFunctions::multinomial(const at::Tensor & self, 
+                                           int64_t num_samples, bool replacement, 
+                                           c10::optional<at::Generator> generator) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+  if (generator.has_value() && generator->defined()) {
+    return at::native::call_fallback_fn<&xla_cpu_fallback,
+                                        ATEN_OP(multinomial)>::call(self, num_samples,
+                                                                    replacement,
+                                                                    generator);
+  }
+  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
+  return bridge::AtenFromXlaTensor(tensor_methods::multinomial(self_tensor, num_samples, 
+                                                               replacement));                
+}
+
 at::Tensor XLANativeFunctions::mv(const at::Tensor& self,
                                   const at::Tensor& vec) {
   TORCH_LAZY_FN_COUNTER("xla::");

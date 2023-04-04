@@ -13,7 +13,9 @@
 #include "torch/csrc/lazy/core/helpers.h"
 #include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/convert_ops.h"
+#include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/random.h"
 #include "torch_xla/csrc/ops/einsum_utilities.h"
 #include "torch_xla/csrc/tensor_util.h"
 
@@ -543,6 +545,53 @@ std::vector<xla::XlaOp> BuildEinsumBackward(const xla::XlaOp& grad_output,
   }
 
   return result;
+}
+
+xla::XlaOp BuildMultinomial(xla::XlaOp input, int64_t num_samples, 
+                            bool replacement, xla::XlaOp seed) {
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  // shape[2, 4] dim[0, 1] dim(0) == 2 dim(1) == 4
+  std::cout << "Shape of input " << input_shape << std::endl;
+  int64_t rank = input_shape.rank();
+  int64_t dim = rank - 1;
+  std::cout << "Rank of input and dim " << rank << " " << dim << std::endl;
+  xla::XlaOp zero = xla::Zero(input.builder(), input_shape.element_type());
+  xla::XlaOp one = xla::One(input.builder(), input_shape.element_type());
+
+  // Normalize input to calculate probabilities.
+  ReductionInfo rinfo = GetReductionInfo(input, input_shape, {dim}, true);
+  xla::XlaOp sums = xla::Reduce(
+      input, zero, XlaHelpers::CreateAddComputation(input_shape.element_type()), {dim});
+  xla::XlaOp probabilities;
+  if (rank == 1)
+    sums = xla::Reshape(sums, {input_shape.dimensions(0), 1});
+  probabilities = input / BuildExpand(sums, input_shape.dimensions());
+
+  // Build cumulative probability distribution
+  xla::XlaComputation reducer =
+      XlaHelpers::CreateAddComputation(input_shape.element_type());
+  xla::XlaOp cumprob = BuildCumulativeComputation(probabilities, dim, reducer, zero);
+  // TODO: Normalize with the last value of each row. Check that last value of each row sums to a postive value.
+  
+  // Output shape
+  xla::Shape output_shape;
+  if (rank == 2) 
+    output_shape = xla::ShapeUtil::MakeShape(input_shape.element_type(), {input_shape.dimensions(0), num_samples});
+  else
+    output_shape = xla::ShapeUtil::MakeShape(input_shape.element_type(), {num_samples});
+  
+  // Sample uniform distribution. 
+  zero = xla::Zeros(input.builder(), output_shape);
+  one = xla::Broadcast(xla::One(input.builder(), input_shape.element_type()), output_shape.dimensions());
+  xla::XlaOp rng = RngUniform(seed, output_shape, zero, one);
+  // TODO: Translate rngs to categories with binary search
+  xla::XlaOp out = xla::ConvertElementType(rng * 
+    xla::ConstantR0WithType(rng.builder(), input_shape.element_type(), 100.0),
+     xla::PrimitiveType::S64);
+  // for (int64_t n : num_samples) {
+    
+  // }
+  return out;
 }
 
 }  // namespace torch_xla

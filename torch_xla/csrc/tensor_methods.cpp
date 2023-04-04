@@ -78,6 +78,7 @@
 #include "torch_xla/csrc/ops/min_in_dim.h"
 #include "torch_xla/csrc/ops/mse_loss.h"
 #include "torch_xla/csrc/ops/mse_loss_backward.h"
+#include "torch_xla/csrc/ops/multinomial.h"
 #include "torch_xla/csrc/ops/native_batch_norm_backward.h"
 #include "torch_xla/csrc/ops/native_batch_norm_forward.h"
 #include "torch_xla/csrc/ops/nll_loss.h"
@@ -1728,6 +1729,15 @@ XLATensorPtr mul(const XLATensorPtr& input, const at::Scalar& other,
       other, input->shape(), logical_element_type, input->GetDevice());
   return input->CreateFrom(input->GetIrValue() * constant,
                            logical_element_type);
+}
+
+XLATensorPtr multinomial(const XLATensorPtr& input, int64_t num_samples, 
+                         bool replacement) {
+  auto input_shape = input->shape();
+  return input->CreateFrom(torch::lazy::MakeNode<Multinomial>(
+      input->GetIrValue(), 
+      XLAGraphExecutor::Get()->GetRngSeed(input->GetDevice()),
+      num_samples, replacement));
 }
 
 XLATensorPtr mv(const XLATensorPtr& input, const XLATensorPtr& vec) {
