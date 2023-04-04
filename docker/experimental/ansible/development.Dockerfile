@@ -3,7 +3,6 @@
 # running PyTorch and PyTorch/XLA. The image doesn't contain any source code.
 ARG python_version=3.8
 ARG debian_version=buster
-ARG ansible_vars
 
 FROM python:${python_version}-${debian_version}
 

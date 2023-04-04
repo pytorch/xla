@@ -65,7 +65,8 @@ locals {
             [for arg_key, arg_val in var.build_args : "--build-arg=${arg_key}=${arg_val}"],
 
             # Pass Ansible variables as JSON object, to make sure that
-            # types are preserved (e.g. boolean).
+            # types are preserved (e.g. boolean),
+            # see https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_variables.html#key-value-format.
             ["--build-arg=ansible_vars=${jsonencode(var.ansible_vars)}"],
 
             # Pass Ansible variables as JSON object, to make sure that
