@@ -1,7 +1,7 @@
 # Docker registry for official images.
 module "docker_registry" {
-  source      = "../terraform_modules/docker_registry"
-  name        = "docker"
+  source = "../terraform_modules/docker_registry"
+  name   = "docker"
   description = join(" ", [
     "Private docker images for PyTorch/XLA.",
     "Managed by Terraform setup in docker/experimental/tpu-pytorch/misc.tf.",
