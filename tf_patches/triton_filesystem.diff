@@ -1,8 +1,39 @@
 diff --git a/third_party/triton/cl518645628.patch b/third_party/triton/cl518645628.patch
-index a180e6114f4..a8d79450499 100644
+index a180e6114f4..0e23f4af975 100644
 --- a/third_party/triton/cl518645628.patch
 +++ b/third_party/triton/cl518645628.patch
-@@ -30,3 +30,41 @@
+@@ -10,6 +10,30 @@
+          "@llvm-project//mlir:ConversionPasses",
+          "@llvm-project//mlir:ExecutionEngine",
+          "@llvm-project//mlir:ExecutionEngineUtils",
++@@ -311,6 +311,7 @@ cc_library(
++         "include/triton/Dialect/TritonGPU/IR/*.h",
++     ]),
++     copts = ["-Wno-unused-variable"],  # TODO(csigg): fix
+++    linkopts = ["-lstdc++fs"],
++     includes = ["include"],
++     deps = [
++         ":TritonDialect",
++@@ -339,6 +340,7 @@ cc_library(
++     ]),
++     hdrs = glob(["include/triton/Dialect/TritonGPU/Transforms/*.h"]),
++     copts = ["-Wno-unused-variable"],  # TODO(csigg): fix
+++    linkopts = ["-lstdc++fs"],
++     includes = ["include"],
++     deps = [
++         ":TritonDialect",
++@@ -373,6 +375,7 @@ cc_library(
++         "include/triton/Conversion/TritonGPUToLLVM/*.h",
++     ]),
++     copts = ["-Wno-unused-variable"],  # TODO(csigg): fix
+++    linkopts = ["-lstdc++fs"],
++     includes = ["include"],
++     deps = [
++         ":TritonAnalysis",
+ ==== triton/lib/Target/LLVMIR/LLVMIRTranslation.cpp#9 - triton/lib/Target/LLVMIR/LLVMIRTranslation.cpp#10 ====
+ # action=edit type=text
+ --- triton/lib/Target/LLVMIR/LLVMIRTranslation.cpp	2023-03-10 07:24:02.000000000 -0800
+@@ -30,3 +54,41 @@
     mlir::registerLLVMDialectTranslation(registry);
     mlir::registerNVVMDialectTranslation(registry);
     module->getContext()->appendDialectRegistry(registry);
@@ -44,14 +75,3 @@ index a180e6114f4..a8d79450499 100644
 +       static const auto compiletime_path = this_file_path.parent_path()
 +                                                .parent_path()
 +                                                .parent_path()
-diff --git a/third_party/triton/BUILD b/third_party/triton/BUILD
-index 3c413807167..4c343812fbe 100644
---- a/third_party/triton/BUILD
-+++ b/third_party/triton/BUILD
-@@ -1 +1,5 @@
- # copybara:uncomment package(default_applicable_licenses = ["//tensorflow:license"])
-+cc_library(
-+    name = "filesystem",
-+    linkopts = ["-lstdc++fs"],
-+)
-\ No newline at end of file
