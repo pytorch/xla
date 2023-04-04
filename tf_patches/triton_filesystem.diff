@@ -44,3 +44,14 @@ index a180e6114f4..a8d79450499 100644
 +       static const auto compiletime_path = this_file_path.parent_path()
 +                                                .parent_path()
 +                                                .parent_path()
+diff --git a/third_party/triton/BUILD b/third_party/triton/BUILD
+index 3c413807167..4c343812fbe 100644
+--- a/third_party/triton/BUILD
++++ b/third_party/triton/BUILD
+@@ -1 +1,5 @@
+ # copybara:uncomment package(default_applicable_licenses = ["//tensorflow:license"])
++cc_library(
++    name = "filesystem",
++    linkopts = ["-lstdc++fs"],
++)
+\ No newline at end of file
