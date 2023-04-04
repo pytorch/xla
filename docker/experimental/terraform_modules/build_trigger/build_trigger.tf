@@ -101,13 +101,13 @@ resource "google_cloudbuild_trigger" "trigger" {
     for_each = var.trigger_on_schedule != null ? [1] : []
 
     content {
-        uri       = "https://github.com/${var.github_repo}"
-        repo_type = "GITHUB"
-        ref = (
-          var.trigger_on_schedule.branch != ""
-          ? "refs/heads/${var.trigger_on_schedule.branch}"
-          : "refs/tags/${var.trigger_on_schedule.tag}"
-        )
+      uri       = "https://github.com/${var.github_repo}"
+      repo_type = "GITHUB"
+      ref = (
+        var.trigger_on_schedule.branch != ""
+        ? "refs/heads/${var.trigger_on_schedule.branch}"
+        : "refs/tags/${var.trigger_on_schedule.tag}"
+      )
     }
   }
 
