@@ -41,7 +41,7 @@ locals {
   build_and_push_docker_image_steps = [
     # Build docker image.
     {
-      id         = "build_${var.image_name}"
+      id         = "build_${var.image_name}_docker_image"
       entrypoint = "bash"
       name       = "gcr.io/cloud-builders/docker"
       dir        = var.docker_context_dir
@@ -71,7 +71,7 @@ locals {
 
     # Push all tags.
     {
-      id         = "push_${var.image_name}"
+      id         = "push_${var.image_name}_docker_image"
       entrypoint = "bash"
       name       = "gcr.io/cloud-builders/docker"
       args       = ["-c", "docker push --all-tags ${var.docker_repo_url}/${var.image_name}"]
