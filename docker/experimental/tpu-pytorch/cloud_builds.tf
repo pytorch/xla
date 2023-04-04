@@ -3,8 +3,7 @@ module "dev_image" {
 
   trigger_name = "dev-image"
 
-  ansible_branch  = "master"
-  sources_git_rev = "master"
+  ansible_branch = "master"
   trigger_on_push = {
     branch = "master"
     include_files = [
@@ -32,8 +31,11 @@ module "dev_image" {
   build_args = {
     python_version = "3.8"
     debian_version = "buster"
-    arch           = "amd64"
-    accelerator    = "tpu"
+  }
+
+  ansible_vars = {
+    arch        = "amd64"
+    accelerator = "tpu"
   }
 
   docker_repo_url = module.docker_registry.url

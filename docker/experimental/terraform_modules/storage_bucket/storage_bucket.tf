@@ -31,11 +31,22 @@ resource "google_storage_bucket" "bucket" {
   }
 }
 
-resource "google_storage_bucket_access_control" "public_read_access" {
-  count  = var.public_read_access ? 1 : 0
-  bucket = google_storage_bucket.bucket.name
-  role   = "READER"
-  entity = "allUsers"
+data "google_iam_policy" "public_read_access" {
+  count = var.public_read_access ? 1 : 0
+
+  binding {
+    role = "roles/storage.objectViewer"
+    members = [
+      "allUsers",
+    ]
+  }
+}
+
+resource "google_storage_bucket_iam_policy" "policy" {
+  count = var.public_read_access ? 1 : 0
+
+  bucket      = google_storage_bucket.bucket.name
+  policy_data = data.google_iam_policy.public_read_access.policy_data
 }
 
 output "url" {

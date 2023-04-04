@@ -3,6 +3,7 @@
 # running PyTorch and PyTorch/XLA. The image doesn't contain any source code.
 ARG python_version=3.8
 ARG debian_version=buster
+ARG ansible_vars
 
 FROM python:${python_version}-${debian_version}
 
@@ -14,5 +15,8 @@ WORKDIR /ansible
 ARG arch=amd64
 ARG accelerator=tpu
 
-RUN ansible-playbook playbook.yaml -e "stage=build arch=${arch} accelerator=${accelerator}" --skip-tags "fetch_srcs,build_srcs"
-RUN ansible-playbook playbook.yaml -e "stage=release arch=${arch} accelerator=${accelerator}" --skip-tags "fetch_srcs,build_srcs"
+# List Asnible tasks to apply for the dev image.
+ENV TAGS="bazel,configure_env,install_deps"
+
+RUN ansible-playbook playbook.yaml -e "stage=build" -e "${ansible_vars}" --tags "${TAGS}"
+RUN ansible-playbook playbook.yaml -e "stage=release" -e "${ansible_vars}" --tags "${TAGS}"

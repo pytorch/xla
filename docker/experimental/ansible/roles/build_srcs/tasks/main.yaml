@@ -52,39 +52,36 @@
     state: directory
     mode: '0755'
 
-- name: Rename and collect wheels
+- name: Rename and append +YYYYMMDD suffix to nightly wheels
   ansible.builtin.shell: |
     pushd /tmp/staging-wheels
-    cp ${PYTORCH_DIST}/*.whl .
-    rename -v "s/^torch-(.*?)-cp/torch-${WHEEL_VERSION}-cp/" *.whl
-    popd
-    mv /tmp/staging-wheels/* .
-
-    pushd /tmp/staging-wheels
-    cp ${PYTORCH_XLA_DIST}/*.whl .
-    rename -v "s/^torch_xla-(.*?)-cp/torch_xla-${WHEEL_VERSION}-cp/" *.whl
-    popd
-    mv /tmp/staging-wheels/* .
-
-    # Clean up.
-    rm -rf /tmp/staging-wheels
-
-    pushd ${PYTORCH_DIST}
-    rename -v "s/^torch-(.*?)-cp/torch-${WHEEL_VERSION}+$(date -u +%Y%m%d)-cp/" *.whl
+    cp {{ item.dir }}/*.whl .
+    rename -v "s/^{{ item.prefix }}-(.*?)-cp/{{ item.prefix }}-nightly-cp/" *.whl
+    mv /tmp/staging-wheels/* /dist/
     popd
 
-    pushd ${PYTORCH_XLA_DIST}
-    rename -v "s/^torch_xla-(.*?)-cp/torch_xla-${WHEEL_VERSION}+$(date -u +%Y%m%d)-cp/" *.whl
-    popd
-
-    cp ${PYTORCH_DIST}/*.whl ./ && cp ${PYTORCH_XLA_DIST}/*.whl ./
+    rename -v "s/^{{ item.prefix }}-(.*?)-cp/{{ item.prefix }}-nightly+$(date -u +%Y%m%d)-cp/" *.whl
   args:
     executable: /bin/bash
-    chdir: /dist
-  environment:
-    WHEEL_VERSION: "{{ 'nightly' if nightly_release else package_version }}"
-    PYTORCH_DIST: "{{ (src_root, 'pytorch/dist') | path_join }}"
-    PYTORCH_XLA_DIST: "{{ (src_root, 'pytorch/xla/dist') | path_join }}"
+    chdir: "{{ item.dir }}"
+  loop:
+    - { dir: "{{ (src_root, 'pytorch/dist') | path_join }}", prefix: "torch" }
+    - { dir: "{{ (src_root, 'pytorch/xla/dist') | path_join }}", prefix: "torch_xla" }
+  when: nightly_release
+
+- name: Copy wheels to /dist
+  ansible.builtin.shell: "cp {{ item }}/*.whl /dist"
+  args:
+    executable: /bin/bash
+  loop:
+    - "{{ (src_root, 'pytorch/dist') | path_join }}"
+    - "{{ (src_root, 'pytorch/xla/dist') | path_join }}"
+
+- name: Delete temp directory
+  ansible.builtin.file:
+    path: /tmp/staging-wheels
+    state: absent
+    mode: '0755'
 
 - name: "Tests"
   include_tasks: tests.yaml

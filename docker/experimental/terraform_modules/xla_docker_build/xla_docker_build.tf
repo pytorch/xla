@@ -20,11 +20,6 @@ module "cloud_build" {
 }
 
 locals {
-  build_args = merge(var.build_args, {
-    pytorch_git_rev = var.sources_git_rev
-    xla_git_rev     = var.sources_git_rev
-  })
-
   fetch_ansible_build_config = [
     {
       id   = "git_fetch"
@@ -54,7 +49,11 @@ locals {
             ["-f=${var.dockerfile}", "."],
 
             # Pass build args to the docker image.
-            [for arg_key, arg_val in local.build_args : "--build-arg=${arg_key}=${arg_val}"],
+            [for arg_key, arg_val in var.build_args : "--build-arg=${arg_key}=${arg_val}"],
+
+            # Pass Ansible variables as JSON object, to make sure that
+            # types are preserved (e.g. boolean).
+            ["'--build_args=ansible_vars=${jsonencode(var.ansible_vars)}'"],
 
             # Pass all specified tags as $(echo <tag's bash expression>).
             # This allows to compute dynamic tags, e.g. date.

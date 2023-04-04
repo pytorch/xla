@@ -7,7 +7,7 @@ variable "image_name" {
 }
 
 variable "image_tags" {
-  type    = list(string)
+  type = list(string)
 }
 
 variable "location" {
@@ -19,10 +19,6 @@ variable "description" {
   default = ""
 }
 
-variable "sources_git_rev" {
-  default = "master"
-}
-
 variable "ansible_branch" {
   default = "master"
 }
@@ -31,6 +27,11 @@ variable "build_args" {
   type        = map(any)
   description = "Build args to pass to the dockerfile (`ARG build_arg=`)."
   default     = {}
+}
+
+variable "ansible_vars" {
+  type        = map(any)
+  description = "Variables passed to Ansible playbook. Encoded as JSON."
 }
 
 variable "trigger_on_push" {
