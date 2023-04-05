@@ -44,6 +44,33 @@ pip install --user https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch
   https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-nightly-cp38-cp38-linux_x86_64.whl
 pip install torch_xla[tpuvm] --user
 
+set +e
+# -E is for preserving environment
 run_torch_xla_tests $PYTORCH_DIR $XLA_DIR
+test_status="$(echo $?)"
+set -e
+
+CUSTOM_SPONGE_CONFIG="${KOKORO_ARTIFACTS_DIR}/custom_sponge_config.csv"
+
+export_to_sponge_config() {
+  local key="${1}"
+  local value="${2}"
+  printf "${key},${value}\n" >> "${CUSTOM_SPONGE_CONFIG}"
+}
+
+flakiness()
+{
+  export_to_sponge_config "ng3_sponge_url" \
+    "https://fusion2.corp.google.com/invocations/${KOKORO_BUILD_ID}"
+  export_to_sponge_config "ng3_commit" "$(git rev-parse HEAD)"
+  export_to_sponge_config "ng3_cl_target_branch" "master"
+  export_to_sponge_config "ng3_project_id" "pytorchxla"
+  export_to_sponge_config "ng3_job_type" "POSTSUBMIT"
+  export_to_sponge_config "ng3_test_type" "UNIT"
+}
+
+flakiness || true
+
+exit "${test_status}"
 
 
