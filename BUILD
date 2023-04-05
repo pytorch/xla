@@ -13,8 +13,6 @@ tf_cc_shared_object(
         "-fwrapv",
     ],
     linkopts = [
-        "-Wl,-rpath,$$EXEC_ORIGIN",
-        "-Wl,-rpath,$$ORIGIN",
         "-Wl,-rpath,$$ORIGIN/torch_xla/lib",  # for libtpu
     ],
     visibility = ["//visibility:public"],
