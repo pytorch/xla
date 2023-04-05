@@ -884,12 +884,6 @@ void celu_(XLATensorPtr& input, const at::Scalar& alpha) {
   input->SetInPlaceIrValue(Celu(input->GetIrValue(), alpha));
 }
 
-XLATensor XLATensor::linalg_cholesky(const XLATensor& input, bool upper) {
-  // Cholesky takes lower instead of upper, hence the negation.
-  return input.CreateFrom(
-      ir::MakeNode<ir::ops::Cholesky>(input.GetIrValue(), !upper));
-}
-
 XLATensorPtr clamp(const XLATensorPtr& input,
                    const c10::optional<at::Scalar>& min,
                    const c10::optional<at::Scalar>& max) {
