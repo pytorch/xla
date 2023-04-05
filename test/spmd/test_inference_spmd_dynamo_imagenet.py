@@ -1,4 +1,5 @@
 import args_parse
+import sys
 
 SUPPORTED_MODELS = [
     'alexnet', 'densenet121', 'densenet161', 'densenet169', 'densenet201',
@@ -88,11 +89,12 @@ def get_model_property(key):
 def inference_imagenet():
   print('==> Preparing data..')
   img_dim = get_model_property('img_dim')
+  device = xm.xla_device()
   if FLAGS.fake_data:
     assert FLAGS.test_set_batch_size == 1
     test_loader = xu.SampleGenerator(
-        data=(torch.zeros(FLAGS.test_set_batch_size, 3, img_dim, img_dim),
-              torch.zeros(FLAGS.test_set_batch_size, dtype=torch.int64)),
+        data=(torch.zeros(FLAGS.test_set_batch_size, 3, img_dim, img_dim).to(device),
+              torch.zeros(FLAGS.test_set_batch_size, dtype=torch.int64).to(device)),
         sample_count=FLAGS.sample_count // FLAGS.test_set_batch_size)
   else:
     normalize = transforms.Normalize(
@@ -120,7 +122,6 @@ def inference_imagenet():
 
   torch.manual_seed(42)
 
-  device = xm.xla_device()
   model = torchvision.models.resnet50().to(device) # get_model_property('model_fn')().to(device)
 
   input_mesh = None
@@ -188,7 +189,7 @@ def inference_imagenet():
 
   if FLAGS.use_dynamo:
     print('Running torch.compile...')
-    dynamo_model = torch.compile(model, backend='torchxla_trace_once')
+    model = torch.compile(model, backend='torchxla_trace_once')
 
   writer = None
   if xm.is_master_ordinal():
@@ -199,7 +200,7 @@ def inference_imagenet():
     for step, (data, _) in enumerate(loader):
       if step == 1:
         start_1 = time.time()
-      output = dynamo_model(data)
+      output = model(data)
     end = time.time()
     return end - start_0, end-start_1
 
