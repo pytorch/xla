@@ -77,6 +77,9 @@ function install_deps_pytorch_xla() {
 
   sudo apt-get -qq install npm nodejs
 
+  # Install LCOV and llvm-cov to generate C++ coverage reports
+  sudo apt-get install -y lcov
+
   # XLA build requires Bazel
   # We use bazelisk to avoid updating Bazel version manually.
   sudo npm install -g @bazel/bazelisk
@@ -164,16 +167,22 @@ function run_torch_xla_tests() {
           # python test/test_train_mp_mnist_amp.py --fake_data --num_epochs=1
         fi
       fi
-
-      pushd test/cpp
-        echo "Running C++ Tests on PJRT"
-        if [ -x "$(command -v nvidia-smi)" ]; then
-          PJRT_DEVICE=GPU ./run_tests.sh
-          PJRT_DEVICE=GPU ./run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L""
-        else
-          PJRT_DEVICE=CPU ./run_tests.sh
-        fi
-      popd
     fi
+
+    pushd test/cpp
+      echo "Running C++ Tests on PJRT"
+      if [ -x "$(command -v nvidia-smi)" ]; then
+        PJRT_DEVICE=GPU ./run_tests.sh
+        PJRT_DEVICE=GPU ./run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L""
+      else
+        PJRT_DEVICE=CPU ./run_tests.sh
+      fi
+      if [ "$USE_COVERAGE" != "0" ]; then
+        export PATH=$PATH:/usr/lib/llvm-8/bin
+        chmod +x /tmp/pytorch/xla/test/cpp/get_coverage.sh
+        lcov --directory /tmp/pytorch/xla/build/temp.linux-x86_64-cpython-38/torch_xla/csrc --base-directory . --gcov-tool /tmp/pytorch/xla/test/cpp/get_coverage.sh --capture -o cpp_lcov.info
+        mv cpp_lcov.info ~/htmlcov/cpp_lcov.info
+      fi
+    popd
   popd
 }
