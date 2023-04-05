@@ -950,7 +950,7 @@ at::Tensor XLANativeFunctions::celu(const at::Tensor& self,
 
 at::Tensor XLANativeFunctions::linalg_cholesky(const at::Tensor& self,
                                                bool upper) {
-  XLA_FN_COUNTER("xla::");
+  TORCH_LAZY_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       tensor_methods::linalg_cholesky(bridge::GetXlaTensor(self), upper));
 }
