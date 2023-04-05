@@ -2,7 +2,6 @@
 
 #include "tensorflow/compiler/tf2xla/kernels/conv_op_helpers.h"
 #include "tensorflow/compiler/xla/client/lib/constants.h"
-#include "tensorflow/core/framework/tensor_shape.h"
 #include "tensorflow/core/kernels/conv_grad_ops.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "torch_xla/csrc/helpers.h"
