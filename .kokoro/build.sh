@@ -50,6 +50,7 @@ run_torch_xla_tests $PYTORCH_DIR $XLA_DIR
 test_status="$(echo $?)"
 set -e
 
+# Create mapping for flakiness reporting
 CUSTOM_SPONGE_CONFIG="${KOKORO_ARTIFACTS_DIR}/custom_sponge_config.csv"
 
 export_to_sponge_config() {
