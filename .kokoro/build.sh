@@ -61,8 +61,6 @@ export_to_sponge_config() {
 
 flakiness()
 {
-  export_to_sponge_config "ng3_sponge_url" \
-    "https://fusion2.corp.google.com/invocations/${KOKORO_BUILD_ID}"
   export_to_sponge_config "ng3_commit" "$(git rev-parse HEAD)"
   export_to_sponge_config "ng3_cl_target_branch" "master"
   export_to_sponge_config "ng3_project_id" "pytorchxla"
