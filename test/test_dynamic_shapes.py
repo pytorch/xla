@@ -349,6 +349,25 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     # For correctness
     self.assertEqual(t2.cpu(), t2_clone.cpu())
 
+  def test_abs(self):
+    t1 = torch.tensor([1, 0, 3, 5, 0, 6], device=dev)
+    # t2.shape=torch.Size([<=6, 1]) with real size [4, 1]
+    # t2 = [[0], [2], [3], [5]]
+    t2 = torch.nonzero(t1)
+    t3 = torch.abs(t2)
+    self.assertIsInstance(t3.shape[0], torch.SymInt)
+    self.assertEqual(str(t3.shape[0]), '<=6')
+    self.assertEqual(t3.shape[0], 4)
+    self.assertIsInstance(t3.shape[1], int)
+    self.assertEqual(str(t3.shape[1]), '1')
+    self.assertEqual(t3.shape[1], 1)
+
+    # test for correctness
+    t1_aten = torch.tensor([1, 0, 3, 5, 0, 6])
+    t2_aten = torch.nonzero(t1_aten)
+    t3_aten = torch.abs(t2_aten)
+    self.assertEqual(t3.cpu(), t3_aten.cpu())
+
   def test_sizeMod(self):
     met.clear_all()
 
