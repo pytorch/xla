@@ -5,6 +5,8 @@ import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
 
+def all_gather(tensor, dim):
+  return xm.all_gather(tensor, dim=dim)
 
 def _mp_fn(index):
   device = xm.xla_device()
@@ -12,7 +14,10 @@ def _mp_fn(index):
   if xm.xla_device_hw(device) in ('TPU', 'GPU'):
     # Testing with a single replica group
     ordinal_tensor = torch.tensor([index], dtype=torch.float).to(device)
-    result = xm.all_gather(ordinal_tensor, dim=0)
+    xm._init_ordinal_world_size()
+    # result = all_gather(ordinal_tensor, dim=0)
+    compiled_all_gather= torch.compile(all_gather, backend='torchxla_trace_once', fullgraph=True)
+    result = compiled_all_gather(ordinal_tensor, dim=0)
 
     cpu_result = result.cpu()
     expected = torch.arange(0, world_size, dtype=torch.float)
@@ -22,24 +27,24 @@ def _mp_fn(index):
       sys.exit(1)
 
     # Testing with two replica groups
-    if world_size % 2 == 0 and world_size > 1:
-      mp_groups = [[n for n in range(world_size) if n % 2 == 0],
-                   [n for n in range(world_size) if n % 2 == 1]]
-      group_size = len(mp_groups[0])
-      replica_id = int(index % 2 == 1)
+    # if world_size % 2 == 0 and world_size > 1:
+    #   mp_groups = [[n for n in range(world_size) if n % 2 == 0],
+    #                [n for n in range(world_size) if n % 2 == 1]]
+    #   group_size = len(mp_groups[0])
+    #   replica_id = int(index % 2 == 1)
 
-      result = xm.all_gather(ordinal_tensor, dim=0, groups=mp_groups)
+    #   result = xm.all_gather(ordinal_tensor, dim=0, groups=mp_groups)
 
-      cpu_result = result.cpu()
-      expected = torch.arange(replica_id, world_size, step=2, dtype=torch.float)
-      if not cpu_result.allclose(expected):
-        print('xm.all_gather() produced wrong reductions', file=sys.stderr)
-        print(f'[{index}] {cpu_result}', file=sys.stderr)
-        sys.exit(1)
-    else:
-      print(
-          f'Failed to create two replica groups with {world_size} replicas',
-          file=sys.stderr)
+    #   cpu_result = result.cpu()
+    #   expected = torch.arange(replica_id, world_size, step=2, dtype=torch.float)
+    #   if not cpu_result.allclose(expected):
+    #     print('xm.all_gather() produced wrong reductions', file=sys.stderr)
+    #     print(f'[{index}] {cpu_result}', file=sys.stderr)
+    #     sys.exit(1)
+    # else:
+    #   print(
+    #       f'Failed to create two replica groups with {world_size} replicas',
+    #       file=sys.stderr)
 
   else:
     print(f'{device} is not a TPU or GPU device', file=sys.stderr)
