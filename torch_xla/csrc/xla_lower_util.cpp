@@ -17,8 +17,10 @@
 #include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/data_ops.h"
+#include "torch_xla/csrc/elementwise.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/random.h"
+#include "torch_xla/csrc/reduction.h"
 #include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
@@ -1122,5 +1124,51 @@ xla::XlaOp BuildCdistForward(xla::XlaOp x1, xla::XlaOp x2, xla::XlaOp p,
     return p_norm;
   }
 }
+
+xla::XlaOp BuildMultinomial(xla::XlaOp input, int64_t num_samples, 
+                            bool replacement, xla::XlaOp seed) {
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  std::vector<int64_t> sizes = XlaHelpers::SizesOfXlaOp(input);
+  int64_t dim = input_shape.rank() - 1;
+  xla::XlaOp zero = xla::Zero(input.builder(), input_shape.element_type());
+  xla::XlaOp one = xla::One(input.builder(), input_shape.element_type());
+
+  // Build cumulative probability distribution
+  xla::XlaComputation reducer =
+      XlaHelpers::CreateAddComputation(input_shape.element_type());
+  xla::XlaOp cumval = BuildCumulativeComputation(input, dim, reducer, zero);
+  xla::XlaOp maxval = SliceInDim(cumval, sizes[dim]-1, sizes[dim], 1, dim);
+  xla::XlaOp cumprob = cumval / XlaHelpers::ImplicitBroadcast(maxval, 
+    XlaHelpers::ShapeOfXlaOp(maxval), 
+    XlaHelpers::ShapeOfXlaOp(cumval));
+
+  // Output shape
+  std::vector<int64_t> output_size = XlaHelpers::SizesOfXlaOp(input);
+  output_size[dim] = num_samples;
+  xla::Shape output_shape = xla::ShapeUtil::MakeShape(input_shape.element_type(), output_size);
+
+  // Sample uniform distribution. 
+  zero = BuildExpand(zero, output_size);
+  one = BuildExpand(one, output_size);
+  xla::XlaOp rng = RngUniform(seed, output_shape, zero, one);
+
+  // Determine which category each sample maps to
+  // scan through this cumulative probabilities and increment counter as long as
+  // random number is >= cumulative probability
+  // Iterate backwards to prevent categories with 0 probability being selected.
+  auto output_type = xla::PrimitiveType::S64;
+  xla::XlaOp output = xla::ConvertElementType(xla::ConstantR0(rng.builder(), sizes[dim]), output_type);
+  for(auto i = sizes[dim]; i > 0; i--) {
+    xla::XlaOp prob_val = xla::SliceInDim(cumprob, i-1, i, 1, dim);
+    xla::XlaOp rhs = XlaHelpers::ImplicitBroadcast(prob_val, 
+      XlaHelpers::ShapeOfXlaOp(prob_val), 
+      XlaHelpers::ShapeOfXlaOp(rng));
+    xla::XlaOp x = BuildComparisonOp(at::aten::le, rng, rhs);
+    output = output - 
+      ConvertTo(x, xla::PrimitiveType::PRED, output_type, /*device=*/nullptr);
+  }
+  return output;
+}
+
 
 }  // namespace torch_xla

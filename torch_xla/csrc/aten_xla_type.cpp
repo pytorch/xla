@@ -1941,7 +1941,9 @@ at::Tensor XLANativeFunctions::multinomial(const at::Tensor & self,
                                            int64_t num_samples, bool replacement, 
                                            c10::optional<at::Generator> generator) {
   TORCH_LAZY_FN_COUNTER("xla::");
-  if (generator.has_value() && generator->defined()) {
+  // Fallback when sampling is not replaced because it is challenging to parallelize. 
+  if ((generator.has_value() && generator->defined()) || 
+      (!replacement && num_samples > 1)) {
     return at::native::call_fallback_fn<&xla_cpu_fallback,
                                         ATEN_OP(multinomial)>::call(self, num_samples,
                                                                     replacement,

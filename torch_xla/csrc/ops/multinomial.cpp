@@ -7,14 +7,13 @@
 namespace torch_xla {
 namespace {
 
-xla::Shape NodeOutputShape(const torch::lazy::Value& input, int64_t num_samples, bool replacement) {
+xla::Shape NodeOutputShape(const torch::lazy::Value& input, int64_t num_samples) {
   auto input_shape = GetXlaShape(input);
   int64_t rank = input_shape.rank();
   XLA_CHECK(rank == 1 || rank == 2);
-  if (!replacement)
-    XLA_CHECK_LE(num_samples, input_shape.dimensions(1));
   if (rank == 2) {
-    return  xla::ShapeUtil::MakeShape(xla::PrimitiveType::S64, {input_shape.dimensions(0), num_samples});
+    return  xla::ShapeUtil::MakeShape(xla::PrimitiveType::S64, 
+                                     {input_shape.dimensions(0), num_samples});
   } 
   return xla::ShapeUtil::MakeShape(xla::PrimitiveType::S64, {num_samples});
 }
@@ -25,7 +24,7 @@ Multinomial::Multinomial(const torch::lazy::Value& input, const torch::lazy::Val
                          int64_t num_samples, bool replacement)
     : XlaNode(torch::lazy::OpKind(at::aten::multinomial), {input, seed},
     [&]() {
-                return NodeOutputShape(input, num_samples, replacement);
+                return NodeOutputShape(input, num_samples);
               },
               /*num_outputs=*/1,
               torch::lazy::MHash(num_samples, replacement)),
