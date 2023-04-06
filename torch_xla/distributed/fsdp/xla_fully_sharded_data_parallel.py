@@ -307,6 +307,7 @@ class XlaFullyShardedDataParallel(nn.Module):
       _debug_dummy_all_reduce_op: bool = False,
       _debug_dummy_reduce_scatter_op: bool = False,
       _debug_dummy_optimization_barrier_op: bool = False,
+      quantized_weight: bool = False, # Parameters is int8
   ):
     if isinstance(module, XlaFullyShardedDataParallel):
       raise RuntimeError(
@@ -354,6 +355,7 @@ class XlaFullyShardedDataParallel(nn.Module):
           sharding_world_size=sharding_world_size,
           shard_param_on_dim_0=shard_param_on_dim_0,
           pin_layout_in_collective_ops=pin_layout_in_collective_ops,
+          quantized_weight=quantized_weight,
           # `auto_wrap_policy` doesn't need to be specified in auto-wrapping
           # `auto_wrapper_callable`` doesn't need to be specified in auto-wrapping
           param_init_fn=param_init_fn,
@@ -380,6 +382,7 @@ class XlaFullyShardedDataParallel(nn.Module):
       raise ValueError(
           f"compute_dtype must be one of {FLOAT_DTYPES}, not {compute_dtype}")
     self.compute_dtype = compute_dtype or torch.float32
+    self.quantized_weight = quantized_weight
     if buffer_dtype is not None and buffer_dtype not in FLOAT_DTYPES:
       raise ValueError(
           f"buffer_dtype must be one of {FLOAT_DTYPES}, not {buffer_dtype}")
@@ -666,8 +669,8 @@ class XlaFullyShardedDataParallel(nn.Module):
     full_params = []
     for module_name, m in self.named_modules():
       for n, p in m.named_parameters(recurse=False):
-        if p.dtype != torch.float32:
-          raise TypeError("only fp32 parameters are supported")
+        # if p.dtype != torch.float32:
+        #   raise TypeError("only fp32 parameters are supported")
         if p in params_to_shard_set:
           if p in shared_full_param_memo:
             mname, shared_m, shared_n = shared_full_param_memo[p]
@@ -1401,7 +1404,7 @@ class XlaFullyShardedDataParallel(nn.Module):
         p_shard_data = p_shard
         if apply_opt_barrier:
           self.optimization_barrier_op([p_shard_data])
-        if p_shard_data.dtype != self.compute_dtype:
+        if p_shard_data.dtype != self.compute_dtype and not self.quantized_weight:
           p_shard_data = p_shard_data.to(self.compute_dtype)
         if self._shard_param_on_dim_0 or self._shard_size_multiple == 1:
           p_padded = self.all_gather_op(
@@ -1432,6 +1435,9 @@ class XlaFullyShardedDataParallel(nn.Module):
                   p, p_padded[:p_shard._orig_size.numel()].view(
                       p_shard._orig_size))
         p._has_full_param = True
+        # print(f"In build full params:")
+        # print(f"current shard {p_shard}")
+        # print(f"full param {p}")
 
     self.has_full_params = True
 
