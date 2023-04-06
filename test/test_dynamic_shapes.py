@@ -459,6 +459,25 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     xm.mark_step(wait=True)
     self.assertEqual(met.metric_data('CompileTime')[0], 1, 'Compiled {} times, expected value: 1'.format(met.metric_data('CompileTime')[0]))
 
+  def test_backward(self):
+    t0 = torch.tensor([[1, 0], [0, 0], [0, 0]], device=dev)
+    # x has shape [<=6, 2] with real size [1, 2]
+    x = torch.nonzero(t0).float()
+    t1 = torch.tensor([1, 0, 0, 0, 0, 0], device=dev)
+    # y has shape [<=6] with real size [1]
+    y = torch.nonzero(t1).float().squeeze()
+
+    # 2 is the input size, 1 is the output size
+    y_pred = torch.nn.Linear(2, 1).to(dev)(x)
+    loss = torch.nn.BCELoss().to(dev)(y_pred.squeeze(), y)
+    loss.backward()
+    xm.mark_step()
+    # above test will print:
+    # xw32, file=/workspaces/work/pytorch/torch/csrc/autograd/input_metadata.h, line=102function=is_same_shape: &grad_sym_szs[0]=0x7f0bb80310d0, &shape_szs[0]=0x55d825ae5bc0
+    # xw32, file=/workspaces/work/pytorch/torch/csrc/autograd/input_metadata.h, line=102function=is_same_shape: &grad_sym_szs[0]=0x7f0bb81db860, &shape_szs[0]=0x55d825c54f90
+
+
+
 
 if __name__ == '__main__':
   assert os.environ['XLA_EXPERIMENTAL'] != ''
