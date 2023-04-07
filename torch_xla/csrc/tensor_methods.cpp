@@ -1731,13 +1731,15 @@ XLATensorPtr mul(const XLATensorPtr& input, const at::Scalar& other,
                            logical_element_type);
 }
 
-XLATensorPtr multinomial(const XLATensorPtr& input, int64_t num_samples, 
+XLATensorPtr multinomial(const XLATensorPtr& input, int64_t num_samples,
                          bool replacement) {
   auto input_shape = input->shape();
-  return input->CreateFrom(torch::lazy::MakeNode<Multinomial>(
-      input->GetIrValue(), 
-      XLAGraphExecutor::Get()->GetRngSeed(input->GetDevice()),
-      num_samples, replacement));
+  return input->CreateFrom(
+      torch::lazy::MakeNode<Multinomial>(
+          input->GetIrValue(),
+          XLAGraphExecutor::Get()->GetRngSeed(input->GetDevice()), num_samples,
+          replacement),
+      at::ScalarType::Long);
 }
 
 XLATensorPtr mv(const XLATensorPtr& input, const XLATensorPtr& vec) {

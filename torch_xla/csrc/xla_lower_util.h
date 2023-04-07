@@ -32,7 +32,7 @@ xla::XlaOp BuildDot(xla::XlaOp lhs, xla::XlaOp rhs);
 xla::XlaOp BuildBernoulli(xla::XlaOp probability, xla::XlaOp seed,
                           xla::PrimitiveType type);
 
-xla::XlaOp BuildMultinomial(xla::XlaOp input, int64_t num_samples, 
+xla::XlaOp BuildMultinomial(xla::XlaOp input, int64_t num_samples,
                             bool replacement, xla::XlaOp seed);
 
 xla::XlaOp BuildExponential(xla::XlaOp lambda, xla::XlaOp seed,

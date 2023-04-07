@@ -556,7 +556,7 @@ XLATensorPtr mul(
     const XLATensorPtr& input, const at::Scalar& other,
     c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
 
-XLATensorPtr multinomial(const XLATensorPtr& input, int64_t num_samples, 
+XLATensorPtr multinomial(const XLATensorPtr& input, int64_t num_samples,
                          bool replacement);
 
 XLATensorPtr mv(const XLATensorPtr& input, const XLATensorPtr& vec);

@@ -6,8 +6,7 @@ namespace torch_xla {
 
 class Multinomial : public XlaNode {
  public:
-  Multinomial(const torch::lazy::Value& input,
-              const torch::lazy::Value& seed,
+  Multinomial(const torch::lazy::Value& input, const torch::lazy::Value& seed,
               int64_t num_samples, bool replacement);
 
   torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;

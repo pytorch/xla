@@ -5623,7 +5623,7 @@ TEST_F(AtenXlaTensorTest, TestMultinomial) {
       at::Tensor cpu_a = ToCpuTensor(xla_a);
       int64_t res_min = cpu_a.min().item().toLong();
       int64_t res_max = cpu_a.max().item().toLong();
-      EXPECT_GT(res_min, 0);
+      EXPECT_GE(res_min, 0);
       EXPECT_LT(res_max, sizes[i][0]);
     });
   }
