@@ -59,7 +59,7 @@ import zipfile
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
-_libtpu_version = '0.1.dev20230213'
+_libtpu_version = '0.1.dev20230330'
 _libtpu_storage_path = f'https://storage.googleapis.com/cloud-tpu-tpuvm-artifacts/wheels/libtpu-nightly/libtpu_nightly-{_libtpu_version}-py3-none-any.whl'
 
 
