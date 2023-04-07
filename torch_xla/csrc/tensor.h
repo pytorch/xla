@@ -48,7 +48,7 @@ class TORCH_API XLASymNodeImpl final : public c10::SymNodeImpl {
     btWhenCreated_ = torch::symbolize({tb0.get()});
 
     if (!xlaTsIpAddr_.empty()) {
-      XLA_CHECK(false) << "xw32 xlaTsIpAddr_ is not empty";
+      XLA_CHECK(false) << "xlaTsIpAddr_ is not empty";
     }
     xlaTsIpAddr_ = xlaTsIpAddr;
   }

@@ -616,26 +616,18 @@ bool XLATensor::ShouldSyncIrNode() {
 }
 
 bool XLASymNodeImpl::is_bool() {
-  // std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ <<
-  // "function=" << __FUNCTION__ << ": " << std::endl;
   return pytype_ == PyType::BOOL;
 }
 
 bool XLASymNodeImpl::is_int() {
-  // std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ <<
-  // "function=" << __FUNCTION__ << ": " << std::endl;
   return pytype_ == PyType::INT;
 }
 
 bool XLASymNodeImpl::is_float() {
-  // std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ <<
-  // "function=" << __FUNCTION__ << ": " << std::endl;
   return pytype_ == PyType::FLOAT;
 }
 
 c10::SymNode XLASymNodeImpl::add(const c10::SymNode& other) {
-  // std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ <<
-  // "function=" << __FUNCTION__ << ": " << std::endl;
   auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
   XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
   XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
@@ -694,8 +686,6 @@ c10::SymNode XLASymNodeImpl::mod(const c10::SymNode& other) {
 }
 
 c10::SymNode XLASymNodeImpl::eq(const c10::SymNode& other) {
-  // std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ <<
-  // "function=" << __FUNCTION__ << ": " << std::endl;
   auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
   XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
   XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
@@ -831,8 +821,6 @@ c10::SymNode XLASymNodeImpl::is_non_overlapping_and_dense(
 }
 
 c10::SymNode XLASymNodeImpl::clone() {
-  // std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ <<
-  // "function=" << __FUNCTION__ << ": " << std::endl;
   TORCH_LAZY_FN_COUNTER("xla::size_");
   return c10::make_intrusive<XLASymNodeImpl>(node(), pytype_);
 }
@@ -843,8 +831,6 @@ c10::SymNode XLASymNodeImpl::sym_float() {
 }
 
 c10::SymNode XLASymNodeImpl::wrap_int(int64_t num) {
-  // std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ <<
-  // "function=" << __FUNCTION__ << ": " << std::endl;
   auto cnst = torch::lazy::MakeNode<SizeConstant>(num);
   return c10::make_intrusive<XLASymNodeImpl>(cnst, PyType::INT);
 }
@@ -865,35 +851,25 @@ double XLASymNodeImpl::guard_float(const char* file, int64_t line) {
 }
 
 bool XLASymNodeImpl::guard_bool(const char* file, int64_t line) {
-  // std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ <<
-  // "function=" << __FUNCTION__ << ": " << std::endl;
   // TODO: Take advantages of file and line.
   return bool_();
 }
 
 int64_t XLASymNodeImpl::int_() {
-  // std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ <<
-  // "function=" << __FUNCTION__ << ": " << std::endl;
   std::shared_ptr<torch::lazy::DimensionNode> dn = torch_xla::DimCast(node());
   return dn->getDynamicValue();
 }
 
 bool XLASymNodeImpl::bool_() {
-  // std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ <<
-  // "function=" << __FUNCTION__ << ": " << std::endl;
   auto dn = torch_xla::DimCast(node());
   return dn->getDynamicValue() != 0;
 }
 
 bool XLASymNodeImpl::has_hint() {
-  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__
-            << "function=" << __FUNCTION__ << ": " << std::endl;
   return false;
 }
 
 std::string XLASymNodeImpl::str() {
-  // std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ <<
-  // "function=" << __FUNCTION__ << ": " << std::endl;
   return "<=" + std::to_string(DimCast(node().get())->getStaticValue());
 }
 
