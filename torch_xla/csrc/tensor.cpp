@@ -692,6 +692,8 @@ c10::SymNode XLASymNodeImpl::eq(const c10::SymNode& other) {
   XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
   XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
   auto n_eq = torch::lazy::MakeNode<SizeEq>(node(), p_other->node());
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": this.get_backtrace_when_created()=" << get_backtrace_when_created() << std::endl;
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": p_other->get_backtrace_when_created()=" << p_other->get_backtrace_when_created() << std::endl;
   return c10::make_intrusive<XLASymNodeImpl>(n_eq, PyType::BOOL);
 }
 

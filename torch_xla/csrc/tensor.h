@@ -16,6 +16,7 @@
 #include "third_party/xla_client/util.h"
 #include "torch/csrc/autograd/variable.h"
 #include "torch/csrc/lazy/core/ir_util.h"
+#include "torch/csrc/profiler/combined_traceback.h"
 #include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/cross_replica_reduces.h"
 #include "torch_xla/csrc/device.h"
@@ -36,7 +37,14 @@ enum class PyType {
 class TORCH_API XLASymNodeImpl final : public c10::SymNodeImpl {
  public:
   XLASymNodeImpl(torch::lazy::NodePtr ptr, PyType pytype)
-      : node_(std::move(ptr)), pytype_(pytype) {}
+      : node_(std::move(ptr)), pytype_(pytype) {
+        std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
+        if (btWhenCreated_.all_frames.size()!=0) {
+          XLA_CHECK(false) << "backtrace has been set for the XLASymNodeImpl";
+        }
+        std::shared_ptr<torch::CapturedTraceback> tb0 = torch::CapturedTraceback::gather(/*python=*/true, /*script=*/true, /*cpp=*/true);
+        btWhenCreated_ = torch::symbolize({tb0.get()});
+      }
   bool is_bool() override;
   bool is_int() override;
   bool is_float() override;
@@ -92,10 +100,18 @@ class TORCH_API XLASymNodeImpl final : public c10::SymNodeImpl {
   std::string str() override;
 
   torch::lazy::NodePtr node() { return node_; }
+  std::string get_backtrace_when_created() {
+    std::string bt = "";
+    for (auto btwc : btWhenCreated_.all_frames) {
+      bt += "fileName=" + btwc.filename + ", funcname=" + btwc.funcname + "lineno=" + std::to_string(btwc.lineno) + "\n";
+    }
+    return bt;
+  } 
 
  private:
   torch::lazy::NodePtr node_;
   PyType pytype_;
+  torch::SymbolizedTracebacks btWhenCreated_;
 };
 
 class XLATensor;
