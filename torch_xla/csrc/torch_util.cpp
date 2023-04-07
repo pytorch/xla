@@ -6,6 +6,7 @@
 #include "torch_xla/csrc/ir_builder.h"
 #include "torch_xla/csrc/ops/constant.h"
 #include "torch_xla/csrc/tensor.h"
+#include "torch_xla/csrc/ir_builder.h"
 
 namespace torch_xla {
 
