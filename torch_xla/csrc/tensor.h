@@ -36,14 +36,22 @@ enum class PyType {
 
 class TORCH_API XLASymNodeImpl final : public c10::SymNodeImpl {
  public:
+  XLASymNodeImpl(torch::lazy::NodePtr ptr, PyType pytype, std::string xlaTsIpAddr)
+      : node_(std::move(ptr)), pytype_(pytype) {
+        // std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
+        // if (btWhenCreated_.all_frames.size()!=0) {
+        //   XLA_CHECK(false) << "backtrace has been set for the XLASymNodeImpl";
+        // }
+        // std::shared_ptr<torch::CapturedTraceback> tb0 = torch::CapturedTraceback::gather(/*python=*/true, /*script=*/true, /*cpp=*/true);
+        // btWhenCreated_ = torch::symbolize({tb0.get()});
+
+        if (!xlaTsIpAddr_.empty()) {
+          XLA_CHECK(false) << "xw32 xlaTsIpAddr_ is not empty";
+        }
+        xlaTsIpAddr_ = xlaTsIpAddr;
+      }
   XLASymNodeImpl(torch::lazy::NodePtr ptr, PyType pytype)
       : node_(std::move(ptr)), pytype_(pytype) {
-        std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
-        if (btWhenCreated_.all_frames.size()!=0) {
-          XLA_CHECK(false) << "backtrace has been set for the XLASymNodeImpl";
-        }
-        std::shared_ptr<torch::CapturedTraceback> tb0 = torch::CapturedTraceback::gather(/*python=*/true, /*script=*/true, /*cpp=*/true);
-        btWhenCreated_ = torch::symbolize({tb0.get()});
       }
   bool is_bool() override;
   bool is_int() override;
@@ -106,12 +114,14 @@ class TORCH_API XLASymNodeImpl final : public c10::SymNodeImpl {
       bt += "fileName=" + btwc.filename + ", funcname=" + btwc.funcname + "lineno=" + std::to_string(btwc.lineno) + "\n";
     }
     return bt;
-  } 
+  }
+  std::string get_xlaTensorImplAddr() { return xlaTsIpAddr_;}
 
  private:
   torch::lazy::NodePtr node_;
   PyType pytype_;
   torch::SymbolizedTracebacks btWhenCreated_;
+  std::string xlaTsIpAddr_;
 };
 
 class XLATensor;

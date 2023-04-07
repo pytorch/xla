@@ -1,5 +1,9 @@
 #include "torch_xla/csrc/tensor_impl.h"
 
+#include <iostream>
+#include <string>
+#include <sstream>
+
 #include <c10/core/ScalarType.h>
 #include <c10/core/impl/DeviceGuardImplInterface.h>
 #include <c10/macros/Macros.h>
@@ -215,8 +219,13 @@ void XLATensorImpl::SetupSymSizeProperties() {
   for (auto i : c10::irange(rank)) {
     if (shape.get().is_dynamic_dimension(i)) {
       auto dim_node = a.MakeSizeNode(tensor_->GetIrValue(), i);
+      // std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": tensor_.get()=" << tensor_.get() << std::endl;
+      std::ostringstream get_the_address; 
+      get_the_address << tensor_.get();
+      std::string address =  get_the_address.str();
+      // std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": address=" << address << std::endl;
       auto symint_node =
-          c10::make_intrusive<XLASymNodeImpl>(dim_node, PyType::INT);
+          c10::make_intrusive<XLASymNodeImpl>(dim_node, PyType::INT, address);
       sym_sizes.push_back(c10::SymInt(
           static_cast<c10::intrusive_ptr<c10::SymNodeImpl>>(symint_node)));
     } else {
