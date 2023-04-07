@@ -50,7 +50,8 @@ class LinearQuant(torch.nn.Module):
         # Set requires_grad is necessary as tensor with grad doesn't support integer tensors.
         self.int8_weights = torch.nn.Parameter(torch.randint(-128, 127, (in_feature, out_feature), dtype=torch.int8), requires_grad=False)
         # self.scaler = torch.nn.Parameter(torch.rand(1), requires_grad=False)
-        self.scaler = torch.rand(1, dtype=torch.bfloat16)
+        # self.scaler = torch.rand(1, dtype=torch.bfloat16) / 128
+        self.scaler = torch.rand(1) / 128
         self.bias = bias
         if bias:
             self.int8_bias = torch.nn.Parameter(torch.rand((out_feature), dtype=torch.int8), requires_grad=False)

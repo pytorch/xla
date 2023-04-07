@@ -307,12 +307,6 @@ def inference_mnist(flags, **kwargs):
     inference_loop_fn(model, test_device_loader)
     if flags.compare_cpu:
       inference_loop_compare_fn(model, model_cpu, test_device_loader)
-    # print(tpu_res)
-    # if flags.compare_cpu:
-    #   print("run cpu")
-    #   cpu_res = inference_loop_fn(model_cpu, test_device_loader)
-    #   print(cpu_res)
-    # print(tpu_res - cpu_res)
   print('Done.')
   # xm.master_print(met.metrics_report(), flush=True)
 

@@ -227,10 +227,6 @@ def inference_mnist(flags, **kwargs):
             transformer_layer_cls={nn.Linear})
     else:
       raise Exception(f"Invalid auto-wrap policy: {flags.auto_wrap_policy}")
-    if flags.use_gradient_checkpointing:
-      # Apply gradient checkpointing to auto-wrapped sub-modules if specified
-      auto_wrapper_callable = lambda m, *args, **kwargs: FSDP(
-          checkpoint_module(m), *args, **kwargs)
 
   fsdp_wrap = lambda m: FSDP(
       m,
@@ -257,9 +253,11 @@ def inference_mnist(flags, **kwargs):
     model.eval()
     device = list(model.parameters())[0].device
     start_time = time.time()
-    for step, (data, target) in enumerate(loader):
-      output = model(data.to(device))
+    for _ in range(10):
+      for step, (data, target) in enumerate(loader):
+        output = model(data.to(device))
     print(f"Inference time: {time.time() - start_time:.2f} seconds")
+    print(f"n frames: {10 * len(loader._loader.dataset)}")
 
   def inference_loop_compare_fn(model, model_cpu, loader):
     total_samples = 0
