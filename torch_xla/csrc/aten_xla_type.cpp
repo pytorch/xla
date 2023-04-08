@@ -1948,7 +1948,7 @@ at::Tensor XLANativeFunctions::multinomial(
   // Fallback when sampling is not replaced because it is challenging to
   // parallelize.
   if ((generator.has_value() && generator->defined()) ||
-      (!replacement && num_samples > 1)) {
+      (!replacement && num_samples != 1)) {
     return at::native::call_fallback_fn<&xla_cpu_fallback,
                                         ATEN_OP(multinomial)>::call(self,
                                                                     num_samples,
