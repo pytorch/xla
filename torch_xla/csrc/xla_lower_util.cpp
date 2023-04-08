@@ -6,6 +6,7 @@
 #include "tensorflow/compiler/xla/client/lib/arithmetic.h"
 #include "tensorflow/compiler/xla/client/lib/comparators.h"
 #include "tensorflow/compiler/xla/client/lib/constants.h"
+#include "tensorflow/compiler/xla/client/lib/loops.h"
 #include "tensorflow/compiler/xla/client/lib/math.h"
 #include "tensorflow/compiler/xla/client/lib/slicing.h"
 #include "tensorflow/compiler/xla/shape_util.h"
@@ -1158,17 +1159,43 @@ xla::XlaOp BuildMultinomial(xla::XlaOp input, int64_t num_samples,
   // sample is <= cumulative probability
   // Note: Iterate backwards to prevent selecting a category with 0 probability.
   auto output_type = xla::PrimitiveType::S64;
-  xla::XlaOp output = xla::ConvertElementType(
-      xla::ConstantR0(rng.builder(), sizes[dim]), output_type);
-  for (auto i = sizes[dim]; i > 0; i--) {
-    xla::XlaOp prob_val = xla::SliceInDim(cumprob, i - 1, i, 1, dim);
+  std::vector<int64_t> slice_sizes = XlaHelpers::SizesOfXlaOp(cumprob);
+  slice_sizes[dim] = 1;
+  xla::XlaOp max_index =
+      xla::ConstantR0<int64_t>(input.builder(), sizes[dim] - 1);
+  auto rank = slice_sizes.size();
+  xla::XlaOp output =
+      xla::ConstantR1<int64_t>(input.builder(), num_samples, sizes[dim]);
+  if (rank == 2) output = xla::BroadcastInDim(output, output_size, {1});
+
+  auto body_fn =
+      [&](xla::XlaOp counter, absl::Span<const xla::XlaOp> values,
+          xla::XlaBuilder* builder) -> xla::StatusOr<std::vector<xla::XlaOp>> {
+    auto output = values[0];
+    auto max_index = values[1];
+    auto cumprob = values[2];
+    auto rng = values[3];
+
+    xla::XlaOp prob_val;
+    if (rank == 2) {
+      xla::XlaOp zero = xla::ConstantR0<int64_t>(max_index.builder(), 0);
+      prob_val =
+          xla::DynamicSlice(cumprob, {zero, max_index - counter}, slice_sizes);
+    } else {  // rank == 1
+      prob_val = xla::DynamicSlice(cumprob, {max_index - counter}, slice_sizes);
+    }
     xla::XlaOp rhs = XlaHelpers::ImplicitBroadcast(
         prob_val, XlaHelpers::ShapeOfXlaOp(prob_val),
         XlaHelpers::ShapeOfXlaOp(rng));
     xla::XlaOp x = BuildComparisonOp(at::aten::le, rng, rhs);
     output = output - xla::ConvertElementType(x, output_type);
-  }
-  return output;
+    return std::vector<xla::XlaOp>{output, max_index, cumprob, rng};
+  };
+
+  std::vector<xla::XlaOp> results = ConsumeValue(xla::ForEachIndex(
+      sizes[dim], output_type, body_fn, {output, max_index, cumprob, rng},
+      "MultinomialMapping", output.builder()));
+  return results[0];
 }
 
 }  // namespace torch_xla

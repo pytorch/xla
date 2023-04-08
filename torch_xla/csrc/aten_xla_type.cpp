@@ -1940,6 +1940,10 @@ at::Tensor XLANativeFunctions::mul(const at::Tensor& self,
 at::Tensor XLANativeFunctions::multinomial(
     const at::Tensor& self, int64_t num_samples, bool replacement,
     c10::optional<at::Generator> generator) {
+  XLA_CHECK(num_samples > 0)
+      << "Multinomial number of samples must be greater than 0";
+  XLA_CHECK(at::isFloatingType(self.scalar_type()))
+      << "Multinomial input must be a floating type";
   TORCH_LAZY_FN_COUNTER("xla::");
   // Fallback when sampling is not replaced because it is challenging to
   // parallelize.
