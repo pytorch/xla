@@ -79,7 +79,7 @@ class XLAShard(DTensor):
     _local_tensor: torch.Tensor
     _spec: ShardingSpec
 
-    def to_local(self) -> torch.Tensor:
+    def to_local(self, rank: int = 0) -> torch.Tensor:
         return _ToTorchTensor.apply(self)
 
     @property
