@@ -1,4 +1,5 @@
 from torch.distributed._tensor.api import DTensor
+from torch.distributed._tensor.device_mesh import DeviceMesh
 from torch.distributed._tensor.placement_types import (
     _Partial,
     DTensorSpec,
@@ -6,6 +7,36 @@ from torch.distributed._tensor.placement_types import (
     Replicate,
     Shard,
 )
+
+# TODO convert this to a device mesh subclass
+class Mesh(DeviceMesh):
+  device_ids: np.ndarray
+  mesh_shape: Tuple[int, ...]
+  axis_names: Tuple[str, ...]
+
+  def __init__(self,
+               device_ids: Union[np.ndarray, List],
+               mesh_shape: Tuple[int, ...],
+               axis_names: Tuple[str, ...] = None):
+    if not isinstance(device_ids, np.ndarray):
+      device_ids = np.array(device_ids)
+    assert (axis_names is None) or (len(mesh_shape) == len(axis_names))
+    assert (len(device_ids) == np.prod(mesh_shape))
+    assert len(device_ids) == len(np.unique(device_ids))
+    self.device_ids = device_ids
+    self.mesh_shape = mesh_shape
+    self.axis_names = axis_names
+    assert all(d < self.size() for d in device_ids)
+
+  def size(self):
+    return np.prod(self.mesh_shape)
+
+  def shape(self):
+    return OrderedDict(
+        (name, size) for name, size in zip(self.axis_name, self.mesh_shape))
+
+  def get_logical_mesh(self):
+    return self.device_ids.reshape(self.mesh_shape)
 
 
 # TODO Convert this to a DTensorSpec subclass
@@ -43,10 +74,35 @@ class _ToTorchTensor(torch.autograd.Function):
             stride=dtensor_meta.stride,
         )
 
-
+# TODO convert to dtensor subclass
 class XLAShard(DTensor):
     _local_tensor: torch.Tensor
     _spec: ShardingSpec
 
     def to_local(self) -> torch.Tensor:
         return _ToTorchTensor.apply(self)
+
+    @property
+    def device_mesh(self) -> DeviceMesh:
+        return self._spec.mesh
+
+    @property
+    def placements(self) -> Sequence[Placement]:
+        return self._spec.placements
+
+    def redistribute(
+        self,
+        device_mesh: Optional[DeviceMesh] = None,
+        placements: Optional[Sequence[Placement]] = None,
+    ) -> "DTensor":
+        NotImplementedError
+
+    @classmethod
+    def from_local(
+        cls,
+        local_tensor: torch.Tensor,
+        device_mesh: Optional[DeviceMesh] = None,
+        placements: Optional[Sequence[Placement]] = None,
+        run_check: bool = True,
+    ) -> "DTensor":
+        NotImplementedError
