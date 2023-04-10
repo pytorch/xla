@@ -1946,7 +1946,7 @@ at::Tensor XLANativeFunctions::multinomial(
       << "Multinomial input must be a floating type";
   TORCH_LAZY_FN_COUNTER("xla::");
   // Fallback when sampling is not replaced because it is challenging to
-  // parallelize.
+  // parallelize. See https://github.com/pytorch/xla/issues/4865
   if ((generator.has_value() && generator->defined()) ||
       (!replacement && num_samples != 1)) {
     return at::native::call_fallback_fn<&xla_cpu_fallback,
