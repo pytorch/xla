@@ -5611,6 +5611,27 @@ TEST_F(AtenXlaTensorTest, TestMultiIndexTailBroadcast) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestMultinomial) {
+  std::vector<int64_t> num_samples = {1, 5};
+  std::vector<bool> replacement = {false, true};
+  std::vector<std::vector<int64_t>> sizes = {{8}, {6, 4}};
+  for (int i = 0; i < num_samples.size(); i++) {
+    ForEachDevice([&](const torch::lazy::BackendDevice& device) {
+      at::Tensor a = torch::rand(sizes[i], at::dtype(at::kFloat));
+      at::Tensor xla_a = bridge::CreateXlaTensor(a, device);
+      xla_a.multinomial(num_samples[i], replacement[i]);
+      at::Tensor cpu_a = ToCpuTensor(xla_a);
+      int64_t res_min = cpu_a.min().item().toLong();
+      int64_t res_max = cpu_a.max().item().toLong();
+      EXPECT_GE(res_min, 0);
+      EXPECT_LT(res_max, sizes[i][0]);
+    });
+  }
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::multinomial.*", cpp_test::GetIgnoredCounters());
+}
+
 TEST_F(AtenXlaTensorTest, TestMaskIndex) {
   for (torch::ScalarType scalar_type :
        {torch::kFloat, torch::kByte, torch::kChar, torch::kShort, torch::kInt,
