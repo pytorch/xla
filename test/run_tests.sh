@@ -161,8 +161,8 @@ function run_torch_op_tests {
 
 function run_xla_op_tests {
   run_dynamic "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
-  run_dynamic "$CDIR/test_dynamic_shapes.py"
-  run_dynamic "$CDIR/test_dynamic_shape_models.py" "$@" --verbosity=$VERBOSITY
+  run_dynamic "$CDIR/ds/test_dynamic_shapes.py"
+  run_dynamic "$CDIR/ds/test_dynamic_shape_models.py" "$@" --verbosity=$VERBOSITY
   run_eager_debug  "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_test "$CDIR/test_grad_checkpoint.py"
   run_test "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
