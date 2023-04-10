@@ -62,6 +62,7 @@ export_to_sponge_config() {
 flakiness()
 {
   pushd $XLA_DIR
+  export_to_sponge_config "ng3" ""
   export_to_sponge_config "ng3_commit" "$(git rev-parse HEAD)"
   popd
   export_to_sponge_config "ng3_cl_target_branch" "master"
