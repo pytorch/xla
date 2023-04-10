@@ -342,6 +342,31 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     t9_aten = t8_aten.view(t4_aten.shape[0])
     self.assertEqual(t9.cpu(), t9_aten.cpu())
 
+  def test_add(self):
+    t1 = torch.tensor([[1, 0, 3, 5, 0, 6]], device=dev)
+    t2 = torch.nonzero(t1)
+    print(t2)
+    t3 = torch.tensor([[1, 1, 0, 0, 0, 0]], device=dev)
+    t4 = torch.nonzero(t3)
+    print(t4)
+    # t2.shape=torch.Size([<=6, 2]) with real size [4, 2]
+    # t4.shape=torch.Size([<=4, 2]) with real size [2, 2]
+    # PyTorch eager mode will output error: "RuntimeError: The size of tensor a (4) must match the size of tensor b (2) at non-singleton dimension 0"
+    self.assertRaises(RuntimeError, lambda: torch.add(t2, t4))
+    # print('type(t3.shape[0])=', type(t3.shape[0]))
+    # self.assertIsInstance(t3.shape[0], torch.SymInt)
+    # self.assertEqual(str(t3.shape[0]), '<=6')
+    # self.assertEqual(t3.shape[0], 4)
+    # self.assertIsInstance(t3.shape[1], int)
+    # self.assertEqual(str(t3.shape[1]), '1')
+    # self.assertEqual(t3.shape[1], 1)
+
+    # # test for correctness
+    # t1_aten = torch.tensor([1, 0, 3, 5, 0, 6])
+    # t2_aten = torch.nonzero(t1_aten)
+    # t3_aten = torch.abs(t2_aten)
+    # self.assertEqual(t3.cpu(), t3_aten.cpu())
+
   def test_clone(self):
     t1 = torch.tensor([1, 0, 3, 5, 0, 6], device=dev)
     # t2.shape=torch.Size([<=6, 1]) with real size [4, 1]

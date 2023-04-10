@@ -265,6 +265,13 @@ torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(
 }
 
 torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(
+    const at::Scalar& value, SymIntElements size_elements,
+    xla::PrimitiveType primitive_type, const torch::lazy::BackendDevice& device) {
+  torch::lazy::Value ir_value = GetIrValueForScalar(value, primitive_type, device);
+  return torch::lazy::MakeNode<ExpandSymInt>(ir_value, size_elements);
+}
+
+torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(
     const at::Scalar& value, const xla::Shape& shape,
     const torch::lazy::BackendDevice& device) {
   return GetIrValueForScalar(value, shape.element_type(), shape.dimensions(),
