@@ -236,6 +236,7 @@ supported:
   - mse_loss_backward
   - mul.Scalar
   - mul.Tensor
+  - multinomial
   - mv
   - mv.out
   - nan_to_num
