@@ -458,6 +458,9 @@ PjRtComputationClient::ExecuteComputation(
   execute_options.untuple_result = options.explode_tuple;
   execute_options.strict_shape_checking = false;
 
+  // Required as of cl/518733871
+  execute_options.use_major_to_minor_data_layout_for_callbacks = true;  
+
   std::optional<PjRtFuture<Status>> returned_future;
   std::vector<std::unique_ptr<xla::PjRtBuffer>> results =
       pjrt_computation.executable
@@ -525,6 +528,10 @@ PjRtComputationClient::ExecuteReplicated(
   execute_options.strict_shape_checking = true;
   // TODO(yeounoh) currently only support single-slice execution
   execute_options.multi_slice_config = nullptr;
+
+  // Required as of cl/518733871
+  execute_options.use_major_to_minor_data_layout_for_callbacks = true;  
+
   std::vector<std::vector<std::unique_ptr<PjRtBuffer>>> results =
       pjrt_computation.executable->Execute(argument_handles, execute_options)
           .value();
