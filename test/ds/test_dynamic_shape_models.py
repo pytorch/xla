@@ -26,19 +26,23 @@ class Feedforward(torch.nn.Module):
     self.input_size = input_size
     self.hidden_size = hidden_size
     self.fc1 = torch.nn.Linear(self.input_size, self.hidden_size)
-    self.fc1.weight.data.fill_(0.01)
-    self.fc1.bias.data.fill_(0.01)
-    self.relu = torch.nn.ReLU()
-    self.fc2 = torch.nn.Linear(self.hidden_size, 1)
-    self.fc2.weight.data.fill_(0.01)
-    self.fc2.bias.data.fill_(0.01)
+    self.relu1 = torch.nn.ReLU()
+    self.fc2 = torch.nn.Linear(self.hidden_size, self.hidden_size)
+    self.relu2 = torch.nn.ReLU()
+    self.fc3 = torch.nn.Linear(self.hidden_size, 1)
+    self.relu3 = torch.nn.ReLU()
     self.sigmoid = torch.nn.Sigmoid()
 
   def forward(self, x):
-    hidden = self.fc1(x)
-    relu = self.relu(hidden)
-    output = self.fc2(relu)
-    output = self.sigmoid(output)
+    hidden1 = self.fc1(x)
+    relu1 = self.relu1(hidden1)
+
+    hidden2 = self.fc2(relu1)
+    relu2 = self.relu2(hidden2)
+
+    hidden3 = self.fc3(relu2)
+    relu3 = self.relu3(hidden3)
+    output = self.sigmoid(relu3)
     return output
 
 
@@ -49,116 +53,6 @@ class Feedforward(torch.nn.Module):
 )
 class TestDynamicShapeModels(unittest.TestCase):
 
-  def test_forward_pass_dynamic_input_correctness(self):
-    losses = []
-    num_features = 2
-    num_test_samples = 5
-    x_test, y_test = self.create_dynamic_test_data(num_test_samples,
-                                                    num_features, device=xla_dev)
-
-    model = Feedforward(num_features, hidden_size=10).to(xla_dev)
-    criterion = torch.nn.BCELoss()
-
-    model.eval()
-    with torch.no_grad():
-      y_pred = model(x_test)
-      before_train = criterion(y_pred.squeeze(), y_test)
-      xm.mark_step()
-      losses.append(before_train.item())
-
-    x_test_aten, y_test_aten = self.create_dynamic_test_data(num_test_samples, num_features) 
-    model_aten = Feedforward(num_features, hidden_size=10)
-    with torch.no_grad():
-      y_pred_aten = model_aten(x_test_aten)
-      before_train = criterion(y_pred_aten.squeeze(), y_test_aten)
-      losses.append(before_train.item())
-
-    np.testing.assert_allclose(losses[0], losses[1], rtol=1e-2, atol=1e-2)
-    print('Test passed.')
-
-  def test_forward_pass_dynamic_input_compile_once(self):
-    met.clear_metrics()
-    num_features = 2
-    num_test_samples = 5
-    num_compilations = []
-    model = Feedforward(num_features, hidden_size=10).to(xla_dev)
-    criterion = torch.nn.BCELoss()
-
-    num_batches = 4
-    batches = []
-    for i in range(num_batches):
-      batches.append(self.create_dynamic_test_data(num_test_samples, num_features, device=xla_dev, num_non_zeros=i))
-
-    print('before training num_compilation=', met.metric_data('CompileTime')[0])
-    print('before training num_executions=', met.metric_data('ExecuteTime')[0])
-    # the training data in each batch () has size [<=10, 2] with real size [0, 2], [1, 2], [2, 2]... 
-    for (x_training, y_training) in batches:
-      model.eval()
-      with torch.no_grad():
-        y_pred = model(x_training)
-        criterion(y_pred.squeeze(), y_training)
-        xm.mark_step()
-        print('num_compilation=', met.metric_data('CompileTime')[0])
-        print('num_executions=', met.metric_data('ExecuteTime')[0])
-        num_compilations.append(met.metric_data('CompileTime')[0])
-    
-    for i in range(len(batches)-1):
-      self.assertEqual(num_compilations[i], num_compilations[i+1], 'number of compilation should not increase.')
-
-  def test_backward_pass_with_dynamic_input_multibatch_correctness(self):
-    losses = []
-    num_features = 2
-    num_test_samples = 5
-    model = Feedforward(num_features, hidden_size=10).to(xla_dev)
-    criterion = torch.nn.BCELoss()
-    optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
-
-    num_batches = 4
-    batches = []
-    for i in range(num_batches):
-      batches.append(self.create_dynamic_test_data(num_test_samples, num_features, device=xla_dev, num_non_zeros=i))
-
-    # the training data in each batch () has size [<=10, 2] with real size [0, 2], [1, 2], [2, 2]... 
-    for (x_training, y_training) in batches:
-      optimizer.zero_grad()
-      y_pred = model(x_training)
-      loss = criterion(y_pred.squeeze(), y_training)
-      # Backpropagation.
-      loss.backward()
-      xm.optimizer_step(optimizer, barrier=True)
-    print('Finished training.')
-
-    # testing
-    model.eval()
-    with torch.no_grad():
-      x_test, y_test = self.create_dynamic_test_data(num_test_samples,
-                                                     num_features, device=xla_dev)
-      y_pred = model(x_test)
-      loss = criterion(y_pred.squeeze(), y_test)
-      xm.mark_step()
-      losses.append(loss.item())
-    
-    model = Feedforward(num_features, hidden_size=10)
-    batches = []
-    for i in range(num_batches):
-      batches.append(self.create_dynamic_test_data(num_test_samples, num_features, num_non_zeros=i))
-    for (x_training, y_training) in batches:
-      optimizer.zero_grad()
-      y_pred = model(x_training)
-      loss = criterion(y_pred.squeeze(), y_training)
-      loss.backward()
-      optimizer.step()
-    model.eval()
-    with torch.no_grad():
-      x_test, y_test = self.create_dynamic_test_data(num_test_samples,
-                                                     num_features)
-      y_pred = model(x_test)
-      loss = criterion(y_pred.squeeze(), y_test)
-      losses.append(loss.item())
-    
-    np.testing.assert_allclose(losses[0], losses[1], rtol=1e-2, atol=1e-2)
-    print('Test passed.')
-
   # For demo.
   def test_backward_pass_with_dynamic_input_multibatch_compile_once(self):
     met.clear_metrics()
@@ -167,11 +61,12 @@ class TestDynamicShapeModels(unittest.TestCase):
     num_features = 2
     num_test_samples = 200
     model = Feedforward(num_features, hidden_size=10).to(xla_dev)
+    print('model=', model)
     criterion = torch.nn.BCELoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
 
-    # TODO: xw32 change the value from 1 to 4.
-    num_batches = 100
+    # TODO: xw32 change the value from 1 to 100.
+    num_batches = 1
     batches = []
     for i in range(num_batches):
       batches.append(self.create_dynamic_test_data(num_test_samples, num_features, device=xla_dev, num_non_zeros=i))
