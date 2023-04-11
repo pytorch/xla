@@ -139,21 +139,28 @@ def train_mnist(flags, **kwargs):
   optimizer = optim_cls(model.parameters(), lr=lr, momentum=flags.momentum)
   loss_fn = nn.NLLLoss()
   if device_hw == 'TPU':
-        autocast = torch.xla.amp.autocast
+        device = "xla"
+        dtype = torch.bfloat16
         scaler = None
+        print("Setting autocast device to xla")
   elif device_hw == 'GPU':
-      autocast = torch.cuda.amp.autocast
+      device = "cuda"
+      dtype = torch.float16
       # GradScaler only used for GPU
       scaler = GradScaler(use_zero_grad=FLAGS.use_zero_grad)
+      print("Setting autocast device to cuda")
 
   def train_loop_fn(loader):
     tracker = xm.RateTracker()
     model.train()
     for step, (data, target) in enumerate(loader):
       optimizer.zero_grad()
-      with autocast():
+      print("Entering step", step)
+      with torch.autocast(device, dtype=dtype):
         output = model(data)
+        print(output.dtype)
         loss = loss_fn(output, target)
+      print("Exiting autocast region")
       if scaler:
         scaler.scale(loss).backward()
         gradients = xm._fetch_gradients(optimizer)
