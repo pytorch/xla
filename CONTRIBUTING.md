@@ -74,11 +74,24 @@ To build from source:
   sudo apt-get update
   ```
 
-* Build _PyTorch_ from source following the regular [instructions](https://github.com/pytorch/pytorch#from-source).
+* Prepare _PyTorch_.
 
-  ```Shell
-  python setup.py install
-  ```
+  * You can either build _PyTorch_ from source following the regular [instructions](https://github.com/pytorch/pytorch#from-source).
+
+    ```Shell
+    python setup.py install
+    ```
+
+  * or install PyTorch from PyPI source. The PyTorch version should match with your XLA branch.
+
+    ```Shell
+    # Use CPU version PyTorch if you are building PyTorch/XLA without CUDA support
+    # Otherwise use the regular version.
+    pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+
+    # Export this environment variable before build the PyTorch/XLA source
+    export BUILD_CPP_TESTS_USE_SITE_PYTORCH=1
+    ```
 
 * Install Bazelisk following the [instructions](https://github.com/bazelbuild/bazelisk#requirements). Bazelisk automatically picks a good version of Bazel for PyTorch/XLA build.
 

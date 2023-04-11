@@ -7,7 +7,14 @@ endif()
 set(GTEST_DIR "${CMAKE_BINARY_DIR}/gtest")
 
 get_filename_component(PTXLA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../.." ABSOLUTE)
-get_filename_component(PT_DIR "${PTXLA_DIR}/.." ABSOLUTE)
+
+set(USE_SITELIB_PYTORCH $ENV{BUILD_CPP_TESTS_USE_SITE_PYTORCH})
+if (NOT ${USE_SITELIB_PYTORCH} STREQUAL "1")
+  get_filename_component(PT_DIR "${PTXLA_DIR}/.." ABSOLUTE)
+else()
+  message("Python library path: ${PYTHON_LIBRARY_DIR}")
+  set(PT_DIR ${PYTHON_LIBRARY_DIR})
+endif()
 
 file(GLOB PTXLA_LIBDIRS "${PTXLA_DIR}/build/lib.*")
 list(GET PTXLA_LIBDIRS 0 PTXLA_LIBDIR)

@@ -22,6 +22,10 @@
 #   BUILD_CPP_TESTS=1
 #     build the C++ tests
 #
+#   BUILD_CPP_TESTS_USE_SITE_PYTORCH=0
+#     build the C++ tests with PyTorch installed in python site packages
+#     instead of local compiled PyTorch source directory.
+#
 #   XLA_DEBUG=0
 #     build the xla/xrt client in debug mode
 #
