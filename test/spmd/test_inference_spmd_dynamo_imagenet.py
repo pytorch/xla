@@ -93,8 +93,10 @@ def inference_imagenet():
   if FLAGS.fake_data:
     assert FLAGS.test_set_batch_size == 1
     test_loader = xu.SampleGenerator(
-        data=(torch.zeros(FLAGS.test_set_batch_size, 3, img_dim, img_dim).to(device),
-              torch.zeros(FLAGS.test_set_batch_size, dtype=torch.int64).to(device)),
+        data=(torch.zeros(FLAGS.test_set_batch_size, 3, img_dim,
+                          img_dim).to(device),
+              torch.zeros(FLAGS.test_set_batch_size,
+                          dtype=torch.int64).to(device)),
         sample_count=FLAGS.sample_count // FLAGS.test_set_batch_size)
   else:
     normalize = transforms.Normalize(
@@ -122,7 +124,8 @@ def inference_imagenet():
 
   torch.manual_seed(42)
 
-  model = torchvision.models.resnet50().to(device) # get_model_property('model_fn')().to(device)
+  model = torchvision.models.resnet50().to(
+      device)  # get_model_property('model_fn')().to(device)
 
   input_mesh = None
   if FLAGS.sharding:
@@ -202,7 +205,7 @@ def inference_imagenet():
         start_1 = time.time()
       output = model(data)
     end = time.time()
-    return end - start_0, end-start_1
+    return end - start_0, end - start_1
 
   latency, max_latency, avg_latency = 0.0, 0.0, 0.0
   for epoch in range(1, FLAGS.num_epochs + 1):
@@ -210,9 +213,8 @@ def inference_imagenet():
       elapsed_time_0, elapsed_time_1 = inference_loop_fn(test_loader)
     latency = elapsed_time_1
     avg_latency += latency
-    xm.master_print(
-      f'Elapsed time with example 0+: {elapsed_time_0}\n',
-      f'Elapsed time with example 1+: {elapsed_time_1}')
+    xm.master_print(f'Elapsed time with example 0+: {elapsed_time_0}\n',
+                    f'Elapsed time with example 1+: {elapsed_time_1}')
     max_latency = max(latency, max_latency)
 
     if FLAGS.metrics_debug:
@@ -232,6 +234,5 @@ if __name__ == '__main__':
   torch.set_default_tensor_type('torch.FloatTensor')
   latency = inference_imagenet()
   if latency > FLAGS.target_latency:
-    print('Latency {} is above target {}'.format(latency,
-                                                  FLAGS.target_latency))
+    print('Latency {} is above target {}'.format(latency, FLAGS.target_latency))
     sys.exit(21)
