@@ -334,10 +334,11 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromServer(
     if (pjrt_data.buffer->on_device_shape().is_static()) {
       XLA_CHECK_OK(pjrt_data.buffer->ToLiteralSync(&literal));
     } else {
-      std::shared_ptr<xla::Literal> bounded_literal =
-          pjrt_data.buffer->ToLiteralSync().value();
+      xla::Shape bounded_shape = ShapeUtil::DeviceShapeToHostShape(pjrt_data.buffer->on_device_shape());
+      xla::Literal bounded_literal(bounded_shape);
+      XLA_CHECK_OK(pjrt_data.buffer->ToLiteralSync(&bounded_literal));
       XLA_CHECK_OK(literal.CopySliceFrom(
-          *bounded_literal,
+          bounded_literal,
           /*src_base=*/std::vector<int64_t>(target_shape.rank(), 0),
           /*dest_base=*/std::vector<int64_t>(target_shape.rank(), 0),
           /*copy_size=*/target_shape.dimensions()));
