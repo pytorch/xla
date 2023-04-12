@@ -143,8 +143,6 @@ class PjRtComputationClient : public ComputationClient {
   std::shared_ptr<std::vector<std::string>> replication_devices_;
   std::unordered_map<std::string, std::unique_ptr<std::shared_mutex>>
       device_locks_;
-  // TODO(wcromar): Remove this when PJRT C API supports logical_on_device_shape
-  bool supports_logical_on_device_shape_ = true;
 
   xla::PjRtDevice* StringToPjRtDevice(const std::string& device);
   std::shared_lock<std::shared_mutex> lock_device_shared(
