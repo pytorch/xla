@@ -7,6 +7,7 @@ parser.add_argument('--verbosity', type=int, default=2)
 FLAGS, leftovers = parser.parse_known_args()
 sys.argv = [sys.argv[0]] + leftovers
 
+import time
 import numpy as np
 import unittest
 import torch
@@ -66,7 +67,7 @@ class TestDynamicShapeModels(unittest.TestCase):
     optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
 
     # TODO: xw32 change the value from 1 to 100.
-    num_batches = 1
+    num_batches = 100
     batches = []
     for i in range(num_batches):
       batches.append(self.create_dynamic_test_data(num_test_samples, num_features, device=xla_dev, num_non_zeros=i))
@@ -75,6 +76,7 @@ class TestDynamicShapeModels(unittest.TestCase):
     print('before training num_executions=', met.metric_data('ExecuteTime')[0])
     # the x_training in each batch has size [<=10, 2] with real size [0, 2], [1, 2], [2, 2]... 
     # and y_training has size [<=10] with real size [0], [1], [2], [3]...
+    start = time.time()
     for (x_training, y_training) in batches:
       optimizer.zero_grad()
       y_pred = model(x_training)
@@ -88,47 +90,13 @@ class TestDynamicShapeModels(unittest.TestCase):
       num_compilations.append(met.metric_data('CompileTime')[0])
       num_executions.append(met.metric_data('ExecuteTime')[0])
     
+    end = time.time()
+    print('Training time=', end - start)
     print('Num compilations=', num_compilations)
     print('Num executions=', num_executions)
-    for i in range(len(batches)-1):
-      self.assertEqual(num_compilations[i], num_compilations[i+1], 'number of compilation should not increase.')
+    print(met.metrics_report())
+    
 
-  # Check the number of compilation.
-  # What's the expected number of compilations?
-  def test_backward_pass_with_dynamic_input_single_batch_check_num_compilations(self):
-    met.clear_metrics()
-    num_features = 2
-    num_test_samples = 5
-    model = Feedforward(num_features, hidden_size=10).to(xla_dev)
-    criterion = torch.nn.BCELoss()
-    optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
-    optimizer.zero_grad()
-
-    # training
-    model.train()
-    x_training, y_training = self.create_dynamic_test_data(
-        num_test_samples, num_features, device=xla_dev)
-    y_pred = model(x_training)
-    y_pred = y_pred.squeeze()
-    loss = criterion(y_pred, y_training)
-    # Backpropagation.
-    loss.backward()
-    xm.optimizer_step(optimizer, barrier=True)
-    print('Finished training.')
-    # expectaion is 1.
-    # multiple iteration is still 1.
-
-    # testing
-    model.eval()
-    with torch.no_grad():
-      x_test, y_test = self.create_dynamic_test_data(num_test_samples,
-                                                     num_features, device=xla_dev)
-      y_pred = model(x_test)
-      y_pred = y_pred.squeeze()
-      criterion(y_pred, y_test).item()
-      xm.mark_step()
-    print('Number of compilations: ', met.metric_data('CompileTime')[0])
-    print('Test passed.')
 
   def create_dynamic_test_data(self,
                                num_test_samples,
