@@ -46,8 +46,8 @@ spec:
       python3 pytorch/xla/test/spmd/test_xla_virtual_device.py
       XLA_USE_SPMD=1 python3 pytorch/xla/test/spmd/test_train_spmd_linear_model.py --sharding batch
       XLA_USE_SPMD=1 python3 pytorch/xla/test/spmd/test_inference_spmd_dynamo_imagenet.py  --fake_data --use_dynamo --sharding batch
-      PJRT_DEVICE=TPU_LEGACY XLA_EXPERIMENTAL=nonzero:masked_select python3 pytorch/xla/test/test_dynamic_shape_models.py -v
-      PJRT_DEVICE=TPU_LEGACY XLA_EXPERIMENTAL=nonzero:masked_select python3 pytorch/xla/test/test_dynamic_shapes.py -v
+      PJRT_DEVICE=TPU_LEGACY XLA_EXPERIMENTAL=nonzero:masked_select python3 pytorch/xla/test/ds/test_dynamic_shape_models.py -v
+      PJRT_DEVICE=TPU_LEGACY XLA_EXPERIMENTAL=nonzero:masked_select python3 pytorch/xla/test/ds/test_dynamic_shapes.py -v
     volumeMounts:
     - mountPath: /dev/shm
       name: dshm
