@@ -42,6 +42,8 @@ try:
   from torch_xla.amp import syncfree
 except ImportError:
   assert False, "Missing package syncfree; the package is available in torch-xla>=1.11"
+import torch.xla.amp as xla_amp
+import torch.cuda.amp as xla_cuda
 
 
 class MNIST(nn.Module):
@@ -66,10 +68,10 @@ class MNIST(nn.Module):
     return F.log_softmax(x, dim=1)
 
 
-def _train_update(device, x, loss, tracker, writer):
+def _train_update(device, step, loss, tracker, writer):
   test_utils.print_training_update(
       device,
-      x,
+      step,
       loss.item(),
       tracker.rate(),
       tracker.global_rate(),
@@ -132,35 +134,34 @@ def train_mnist(flags, **kwargs):
   device = xm.xla_device()
   device_hw = xm.xla_device_hw(device)
   model = MNIST().to(device)
+
   writer = None
   if xm.is_master_ordinal():
     writer = test_utils.get_summary_writer(flags.logdir)
   optim_cls = syncfree.SGD if FLAGS.use_syncfree_optim else optim.SGD
   optimizer = optim_cls(model.parameters(), lr=lr, momentum=flags.momentum)
   loss_fn = nn.NLLLoss()
+
   if device_hw == 'TPU':
-        device = "xla"
-        dtype = torch.bfloat16
-        scaler = None
-        print("Setting autocast device to xla")
+    autocast = xla_amp.autocast
+    scaler = None
   elif device_hw == 'GPU':
-      device = "cuda"
-      dtype = torch.float16
-      # GradScaler only used for GPU
-      scaler = GradScaler(use_zero_grad=FLAGS.use_zero_grad)
-      print("Setting autocast device to cuda")
+    autocast = cuda_amp.autocast
+    # GradScaler only used for GPU
+    scaler = GradScaler(use_zero_grad=FLAGS.use_zero_grad)
+  else:
+    print("Only TPU or GPU supported for AMP.")
+    sys.exit(1)
+  scaler = None
 
   def train_loop_fn(loader):
     tracker = xm.RateTracker()
     model.train()
     for step, (data, target) in enumerate(loader):
       optimizer.zero_grad()
-      print("Entering step", step)
-      with torch.autocast(device, dtype=dtype):
+      with autocast():
         output = model(data)
-        print(output.dtype)
         loss = loss_fn(output, target)
-      print("Exiting autocast region")
       if scaler:
         scaler.scale(loss).backward()
         gradients = xm._fetch_gradients(optimizer)

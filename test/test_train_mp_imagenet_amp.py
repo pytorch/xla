@@ -67,6 +67,8 @@ import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.test.test_utils as test_utils
+import torch.xla.amp as xla_amp
+import torch.cuda.amp as xla_cuda
 from torch_xla.amp import GradScaler
 try:
   from torch_xla.amp import syncfree
@@ -220,12 +222,12 @@ def train_imagenet():
   loss_fn = nn.CrossEntropyLoss()
   if FLAGS.amp:
     if device_hw == 'TPU':
-        autocast = torch.xla.amp.autocast
-        scaler = None
+      autocast = xla_amp.autocast
+      scaler = None
     elif device_hw == 'GPU':
-        autocast = torch.cuda.amp.autocast
-        # GradScaler only used for GPU
-        scaler = GradScaler(use_zero_grad=FLAGS.use_zero_grad)
+      autocast = cuda_amp.autocast
+      # GradScaler only used for GPU
+      scaler = GradScaler(use_zero_grad=FLAGS.use_zero_grad)
 
   def train_loop_fn(loader, epoch):
     tracker = xm.RateTracker()

@@ -10,28 +10,6 @@
 namespace at {
 namespace autocast {
 
-// Note: Copied over from autocast_mode.cpp
-// Policies correspond to op categories that need code-divergent handling.
-// Wrapper templates below are specialized based on a policy template parameter.
-enum class CastPolicy : uint8_t {
-  lower_precision_fp = 0, // Cast all inputs to lower_precision_fp before running the op.
-                          // Currently, lower_precision_fp is fp16 for AutocastCUDA, and is defined by user(default bf16) for AutocastCPU.
-  fp32, // Cast all inputs to at::kFloat before running the op.
-  // TODO: fp32_set_opt_dtype seems to only be for CUDA devices?
-  fp32_set_opt_dtype, // Treats functions (like softmax) that
-                      //   1. we'd like to run in fp32 and
-                      //   2. have a c10::optional<ScalarType> arg that controls the output type.
-                      // fp32_set_opt_dtype wrappers' policy is:  if the output type is already set,
-                      // don't touch it, otherwise, set it to at::kFloat.
-  fp32_append_dtype, // Treats functions (like norm) that
-                     //   1. we'd like to run in fp32 and
-                     //   2. have some overloads that accept an output type and other overloads that don't.
-                     // fp32_append_dtype wrappers wrap the overloads that don't have an output dtype.
-                     // The wrapper policy is:  append at::kFloat to the args, and redispatch to the
-                     // type-aware overload.
-  promote, // Run in the widest dtype among several args.
-};
-
 // Base template for WrapFunction_, which is specialized to contain a "call" method each CastPolicy
 template<CastPolicy policy, DeviceType device_type, class Redispatch, Redispatch* F, class Ret, class ArgList> struct WrapFunction_ {};
 
@@ -63,7 +41,7 @@ struct WrapFunction_<CastPolicy::promote, device_type, Redispatch, F, Ret, guts:
   }
 };
 
-// Wrapper to infer return_type and parameter_types for WrapFunction_ (imitating core/boxing/impl/WrapFunctionIntoFunctor.h)
+// Wrapper to infer return_type and parameter_types for WrapFunction_ (imitating pytorch/core/boxing/impl/WrapFunctionIntoFunctor.h)
 template<CastPolicy policy,
          DeviceType device_type,
          class Registered, // The signature for which we're registering.  The dispatcher's calling code invokes our
@@ -99,7 +77,6 @@ TORCH_LIBRARY_IMPL(_, AutocastXLA, m) {
   m.fallback(torch::CppFunction::makeFallthrough());
 }
 
-
 TORCH_LIBRARY_IMPL(aten, AutocastXLA, m) {
   // lower_precision_fp cast policy
   KERNEL_XLA(conv1d, lower_precision_fp)
@@ -124,6 +101,7 @@ TORCH_LIBRARY_IMPL(aten, AutocastXLA, m) {
 
   // fp32 cast policy
   KERNEL_XLA(batch_norm, fp32)
+  KERNEL_XLA(_log_softmax, fp32)
   KERNEL_XLA(binary_cross_entropy, fp32)
   KERNEL_XLA(grid_sampler, fp32)
   KERNEL_XLA(polar, fp32)
