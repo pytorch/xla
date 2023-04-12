@@ -8,9 +8,9 @@ module "docker_registry" {
 
 # Public storage bucket for PyTorch/XLA wheels.
 module "releases_storage_bucket" {
-  source             = "../terraform_modules/storage_bucket"
-  name               = "pytorch-xla-releases"
-  public_read_access = true
+  source = "../terraform_modules/storage_bucket"
+  name   = "pytorch-xla-releases"
+  # public_read_access = true
 }
 
 # Storage bucket for Terraform state of this project.
