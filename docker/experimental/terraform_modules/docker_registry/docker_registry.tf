@@ -30,6 +30,8 @@ resource "google_artifact_registry_repository_iam_member" "public_read_access" {
   role       = "roles/artifactregistry.reader"
   member     = "allUsers"
   repository = google_artifact_registry_repository.docker.name
+  project    = google_artifact_registry_repository.docker.project
+  location   = google_artifact_registry_repository.docker.location
 }
 
 locals {
