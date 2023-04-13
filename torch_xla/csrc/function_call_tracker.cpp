@@ -8,7 +8,7 @@
 #include <unordered_set>
 
 #include "absl/strings/str_split.h"
-#include "tensorflow/tsl/platform/stacktrace.h"
+#include "tsl/platform/stacktrace.h"
 #include "third_party/xla_client/sys_util.h"
 #include "torch/csrc/lazy/python/python_util.h"
 

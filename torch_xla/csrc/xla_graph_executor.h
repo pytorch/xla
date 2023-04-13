@@ -6,9 +6,9 @@
 #include <unordered_map>
 
 #include "c10/core/SymNodeImpl.h"
-#include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "tensorflow/compiler/xla/status.h"
-#include "tensorflow/compiler/xla/types.h"
+#include "xla/client/xla_builder.h"
+#include "xla/status.h"
+#include "xla/types.h"
 #include "third_party/xla_client/async_task.h"
 #include "third_party/xla_client/cache.h"
 #include "third_party/xla_client/computation_client.h"

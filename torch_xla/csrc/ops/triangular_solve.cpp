@@ -1,7 +1,7 @@
 #include "torch_xla/csrc/ops/triangular_solve.h"
 
-#include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "tensorflow/compiler/xla/layout_util.h"
+#include "xla/client/xla_builder.h"
+#include "xla/layout_util.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 

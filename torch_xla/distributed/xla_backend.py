@@ -9,7 +9,6 @@ from torch._C._distributed_c10d import (
     ProcessGroup,
     Work,
 )
-from .xrt_init import init_xrt_context
 
 
 def _create_xla_process_group(prefix_store, rank, size, timeout):
@@ -42,13 +41,6 @@ class ProcessGroupXla(ProcessGroup):
     self.prefix_store = prefix_store  # reserved for future use.
     self.timeout = timeout
     self._mesh = []
-    # Initialize xrt neuron environment
-    # Passes in the store created by torch.distributed to avoid
-    # creating two TCP stores. We only want to call this
-    # when the user is using torchrun and not xmp.spawn()
-    # or some other flow.
-    if os.getenv('TORCHELASTIC_RUN_ID') != None:
-      init_xrt_context(store=prefix_store)
 
   def getBackendName(self):
     return 'xla'

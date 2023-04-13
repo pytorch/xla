@@ -69,7 +69,7 @@ WORKDIR /pytorch/xla/
 FROM builder AS artifacts
 
 COPY third_party/ third_party/
-COPY tf_patches/ tf_patches/
+COPY openxla_patches/ openxla_patches/
 COPY .bazelrc .
 COPY .bazelversion .
 COPY WORKSPACE .

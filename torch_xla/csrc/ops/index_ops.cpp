@@ -4,7 +4,7 @@
 #include <ATen/Functions.h>
 #include <ATen/ops/select_copy.h>
 
-#include "tensorflow/compiler/xla/permutation_util.h"
+#include "xla/permutation_util.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "third_party/xla_client/util.h"
 #include "torch/csrc/lazy/core/util.h"

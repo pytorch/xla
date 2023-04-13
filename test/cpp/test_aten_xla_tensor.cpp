@@ -4,8 +4,8 @@
 #include <iostream>
 
 #include "cpp_test_util.h"
-#include "tensorflow/compiler/xla/permutation_util.h"
-#include "tensorflow/compiler/xla/util.h"
+#include "xla/permutation_util.h"
+#include "xla/util.h"
 #include "third_party/xla_client/metrics.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/helpers.h"
