@@ -79,6 +79,7 @@ cc_library(
         ":cache",
         ":debug_macros",
         ":env_vars",
+        ":example_protos_cc",
         ":mesh_service", # TODO(manfei@): update related to keep this
         ":metrics_analysis",
         ":metrics_reader",
