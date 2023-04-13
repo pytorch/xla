@@ -137,37 +137,3 @@ module "versioned_builds" {
   worker_pool_id  = module.worker_pool.id
   docker_repo_url = module.docker_registry.url
 }
-
-module "bazel_builds" {
-  source = "../terraform_modules/xla_docker_build"
-
-  ansible_vars = {
-    package_version = "2.0"
-    pytorch_git_rev = "master"
-    xla_git_rev     = "bazel-torchxla"
-    python_version  = "3.8"
-    arch            = "amd64"
-    accelerator     = "tpu"
-  }
-
-  # TODO: Change this branch to master. Currently the dev branch contains
-  # Ansible with deps for older versions of CUDA (see cuda_deps.yaml).
-  ansible_branch  = "mlewko/terraform-follow-up"
-  trigger_on_push = { branch = "bazel-torchxla" }
-
-  trigger_name = "xla-bazel"
-  image_name   = "xla"
-  image_tags   = ["bazel"]
-
-  description = join(" ", [
-    "Bazel build of PyTorch/XLA (bazel-torchxla branch).",
-    "Trigger managed by Terraform setup in",
-    "docker/experimental/tpu-pytorch-releases/cloud_builds.tf."
-  ])
-
-  wheels_dest = "${module.releases_storage_bucket.url}/wheels/experimental/bazel_tpuvm"
-  wheels_srcs = ["/dist/*.whl"]
-
-  worker_pool_id  = module.worker_pool.id
-  docker_repo_url = module.docker_registry.url
-}
