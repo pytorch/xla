@@ -44,6 +44,17 @@ tf_proto_library_cc(
     ],
 )
 
+tf_proto_library(
+    name = "example_protos",
+    srcs = [
+        "example.proto",
+        "feature.proto",
+    ],
+    cc_api_version = 2,
+    make_default_target_header_only = True,
+    visibility = ["//visibility:public"],
+)
+
 cc_library(
     name = "async_task",
     hdrs = ["async_task.h"],

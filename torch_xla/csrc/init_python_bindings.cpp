@@ -22,7 +22,7 @@
 #include "xla/pjrt/distributed/distributed.h"
 #include "xla/python/profiler/internal/traceme_wrapper.h"
 #include "xla/service/hlo_parser.h"
-// #include "tensorflow/core/example/example.pb.h"
+#include "third_party/xla_client/example.pb.h"
 // #include "tensorflow/core/example/feature.pb.h"
 #include "tensorflow/python/profiler/internal/profiler_pywrap_impl.h"
 #include "tsl/platform/env.h"
