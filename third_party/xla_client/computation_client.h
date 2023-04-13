@@ -11,9 +11,9 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
-#include "tensorflow/compiler/xla/client/xla_computation.h"
-#include "tensorflow/compiler/xla/literal_util.h"
-#include "tensorflow/compiler/xla/types.h"
+#include "xla/client/xla_computation.h"
+#include "xla/literal_util.h"
+#include "xla/types.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "third_party/xla_client/metrics.h"
 #include "third_party/xla_client/types.h"
@@ -352,10 +352,6 @@ class ComputationClient {
   // be returned.
   std::vector<std::string> GetCompilationDevices(
       const std::string& device, absl::Span<const std::string> devices);
-
-  // Run the XRT local service, this will block the caller unitl the server
-  // being stopped.
-  static void RunLocalService(uint64_t service_port);
 
   // Retrieves the ordinal number out of a device string. This is the number
   // after the last ':' character of the device string.

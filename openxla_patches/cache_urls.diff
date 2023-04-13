@@ -1,7 +1,7 @@
-diff --git i/tensorflow/compiler/xla/mlir_hlo/WORKSPACE w/tensorflow/compiler/xla/mlir_hlo/WORKSPACE
+diff --git i/xla/mlir_hlo/WORKSPACE w/xla/mlir_hlo/WORKSPACE
 index cc9eeb64f02..b290eb4556c 100644
---- i/tensorflow/compiler/xla/mlir_hlo/WORKSPACE
-+++ w/tensorflow/compiler/xla/mlir_hlo/WORKSPACE
+--- i/xla/mlir_hlo/WORKSPACE
++++ w/xla/mlir_hlo/WORKSPACE
 @@ -35,7 +35,10 @@ http_archive(
      build_file_content = "# empty",
      sha256 = LLVM_SHA256,

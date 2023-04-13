@@ -12,16 +12,15 @@
 #include <numeric>
 #include <thread>
 
-#include "tensorflow/compiler/xla/literal_util.h"
-#include "tensorflow/compiler/xla/shape_util.h"
-#include "tensorflow/tsl/platform/bfloat16.h"
+#include "xla/literal_util.h"
+#include "xla/shape_util.h"
+#include "tsl/platform/bfloat16.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "third_party/xla_client/multi_wait.h"
 #include "third_party/xla_client/sys_util.h"
 #include "third_party/xla_client/tf_logging.h"
 #include "third_party/xla_client/thread_pool.h"
 #include "third_party/xla_client/util.h"
-#include "third_party/xla_client/xrt_computation_client.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/layout_manager.h"
 #include "torch_xla/csrc/torch_util.h"
