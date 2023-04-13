@@ -6,10 +6,10 @@
 
 #include <iostream>
 
-#include "tensorflow/compiler/xla/protobuf_util.h"
-#include "tensorflow/compiler/xla/xla_data.pb.h"
+#include "xla/protobuf_util.h"
 #include "test/cpp/cpp_test_util.h"
 #include "test/cpp/torch_xla_test.h"
+#include "xla/xla_data.pb.h"
 #include "third_party/xla_client/env_vars.h"
 #include "third_party/xla_client/sys_util.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"

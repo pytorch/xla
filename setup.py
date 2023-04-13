@@ -196,6 +196,47 @@ if build_mode not in ['clean']:
   # Copy libtpu.so into torch_xla/lib
   maybe_bundle_libtpu(base_dir)
 
+# # Fetch the sources to be built.
+# torch_xla_sources = (
+#     glob.glob('torch_xla/csrc/*.cpp') + glob.glob('torch_xla/csrc/ops/*.cpp') +
+#     glob.glob('torch_xla/pb/cpp/*.cc') +
+#     glob.glob('torch_xla/csrc/generated/*.cpp'))
+
+# # Constant known variables used throughout this file.
+# lib_path = os.path.join(base_dir, 'torch_xla/lib')
+# pytorch_source_path = os.getenv('PYTORCH_SOURCE_PATH',
+#                                 os.path.dirname(base_dir))
+
+# # Setup include directories folders.
+# include_dirs = [
+#     base_dir,
+# ]
+# for ipath in [
+#     'bazel-bin',
+#     'bazel-xla',
+#     'bazel-bin/external/xla/',
+#     'bazel-xla/external/xla/',
+#     'bazel-bin/external/tsl/',
+#     'bazel-xla/external/tsl/',
+#     'bazel-xla/external/com_github_grpc_grpc/include',
+#     'bazel-xla/external/com_google_protobuf/src',
+#     'bazel-xla/external/eigen_archive',
+#     'bazel-xla/external/com_google_absl',
+#     'bazel-xla/external/com_googlesource_code_re2',
+#     'bazel-xla/com_github_grpc_grpc/include',
+# ]:
+#   include_dirs.append(os.path.join(base_dir, ipath))
+# include_dirs += [
+#     pytorch_source_path,
+#     os.path.join(pytorch_source_path, 'torch/csrc'),
+#     os.path.join(pytorch_source_path, 'torch/lib/tmp_install/include'),
+# ]
+
+# library_dirs = []
+# library_dirs.append(lib_path)
+
+# extra_link_args = []
+
 DEBUG = _check_env_flag('DEBUG')
 IS_DARWIN = (platform.system() == 'Darwin')
 IS_WINDOWS = sys.platform.startswith('win')

@@ -108,7 +108,7 @@ class Op(object):
 
   And here:
 
-    https://github.com/tensorflow/tensorflow/blob/master/tensorflow/compiler/xla/client/xla_builder.h
+    https://github.com/tensorflow/tensorflow/blob/master/xla/client/xla_builder.h
 
   Args:
     op (_XLAC.XlaOp): The core XLA operation wrapped.
