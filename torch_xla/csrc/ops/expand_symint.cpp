@@ -1,7 +1,7 @@
 #include "torch_xla/csrc/ops/expand_symint.h"
 
 #include "absl/strings/str_join.h"
-#include "tensorflow/compiler/xla/client/lib/constants.h"
+#include "xla/client/lib/constants.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "torch/csrc/lazy/core/helpers.h"
 #include "torch/csrc/lazy/core/util.h"

@@ -6,7 +6,7 @@
 #include <unordered_set>
 #include <vector>
 
-#include "tensorflow/compiler/xla/types.h"
+#include "xla/types.h"
 #include "third_party/xla_client/metrics.h"
 
 namespace torch_xla {

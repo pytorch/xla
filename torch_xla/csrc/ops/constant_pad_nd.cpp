@@ -1,7 +1,7 @@
 #include "torch_xla/csrc/ops/constant_pad_nd.h"
 
 #include "absl/strings/str_join.h"
-#include "tensorflow/compiler/xla/client/lib/constants.h"
+#include "xla/client/lib/constants.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"

@@ -19,15 +19,16 @@
 #include "pybind11/pybind11.h"
 #include "pybind11/pytypes.h"
 #include "pybind11/stl_bind.h"
-#include "tensorflow/compiler/xla/pjrt/distributed/distributed.h"
-#include "tensorflow/compiler/xla/python/profiler/internal/traceme_wrapper.h"
-#include "tensorflow/compiler/xla/service/hlo_parser.h"
-#include "tensorflow/core/example/example.pb.h"
-#include "tensorflow/core/example/feature.pb.h"
-#include "tensorflow/python/profiler/internal/profiler_pywrap_impl.h"
-#include "tensorflow/tsl/platform/env.h"
-#include "tensorflow/tsl/profiler/lib/traceme.h"
+#include "xla/pjrt/distributed/distributed.h"
+#include "xla/python/profiler/internal/traceme_wrapper.h"
+#include "xla/service/hlo_parser.h"
+#include "third_party/xla_client/example.pb.h"
+// #include "tensorflow/core/example/feature.pb.h"
+// #include "tensorflow/python/profiler/internal/profiler_pywrap_impl.h"
+#include "tsl/platform/env.h"
+#include "tsl/profiler/lib/traceme.h"
 #include "third_party/xla_client/computation_client.h"
+#include "third_party/xla_client/conv_op_helpers.h"
 #include "third_party/xla_client/mesh_service.h"
 #include "third_party/xla_client/metrics.h"
 #include "third_party/xla_client/metrics_analysis.h"
@@ -504,15 +505,15 @@ py::object RecordReadExample(
   if (!RecordRead(reader, &value)) {
     return py::none();
   }
-  tensorflow::Example exmsg;
+  xla::Example exmsg;
   if (!exmsg.ParseFromArray(value.data(), value.size())) {
     XLA_ERROR() << "Unable to parse TF example from " << reader->path();
   }
   auto example = py::dict();
   for (auto& name_feat : exmsg.features().feature()) {
     switch (name_feat.second.kind_case()) {
-      case tensorflow::Feature::kBytesList: {
-        const tensorflow::BytesList& bvalue = name_feat.second.bytes_list();
+      case xla::Feature::kBytesList: {
+        const xla::BytesList& bvalue = name_feat.second.bytes_list();
         if (bvalue.value_size() == 1) {
           const std::string& svalue = bvalue.value(0);
           at::Tensor data = at::empty(make_r1_size(svalue.size()),
@@ -532,8 +533,8 @@ py::object RecordReadExample(
           example[py::str(name_feat.first)] = tlist;
         }
       } break;
-      case tensorflow::Feature::kFloatList: {
-        const tensorflow::FloatList& fvalue = name_feat.second.float_list();
+      case xla::Feature::kFloatList: {
+        const xla::FloatList& fvalue = name_feat.second.float_list();
         at::Tensor data = at::empty(make_r1_size(fvalue.value_size()),
                                     at::TensorOptions(at::kFloat));
         std::memcpy(data.data_ptr<float>(), fvalue.value().data(),
@@ -541,8 +542,8 @@ py::object RecordReadExample(
         example[py::str(name_feat.first)] =
             torch::autograd::make_variable(data);
       } break;
-      case tensorflow::Feature::kInt64List: {
-        const tensorflow::Int64List& ivalue = name_feat.second.int64_list();
+      case xla::Feature::kInt64List: {
+        const xla::Int64List& ivalue = name_feat.second.int64_list();
         at::Tensor data = at::empty(make_r1_size(ivalue.value_size()),
                                     at::TensorOptions(at::kLong));
         std::memcpy(data.data_ptr<int64_t>(), ivalue.value().data(),
@@ -821,13 +822,13 @@ void BuildProfilerSubmodule(py::module* m) {
         {
           NoGilSection nogil;
           for (int i = 0; i <= timeout_s / interval_s; i++) {
-            status = tensorflow::profiler::pywrap::Trace(
-                service_addr, logdir, /*worker_list=*/"",
-                /*include_dataset_ops=*/false, duration_ms,
-                num_tracing_attempts, opts);
-            if (status.ok()) {
-              return;
-            }
+//             status = tensorflow::profiler::pywrap::Trace(
+//                 service_addr, logdir, /*worker_list=*/"",
+//                 /*include_dataset_ops=*/false, duration_ms,
+//                 num_tracing_attempts, opts);
+//             if (status.ok()) {
+//               return;
+//             }
             std::this_thread::sleep_for(sleep_s);
           }
         }
@@ -1428,9 +1429,6 @@ void InitXlaModuleBindings(py::module m) {
            const std::vector<op_builder::OpPtr>& operands, py::dict args) {
           return op_builder::CreateOp(builder, opname, operands, args);
         });
-  m.def("_run_xrt_local_service", [](uint64_t service_port) {
-    xla::ComputationClient::RunLocalService(service_port);
-  });
   m.def("_xla_sgd_optimizer_step_",
         [](const at::Tensor& found_inf, at::Tensor& step, at::Tensor& param,
            at::Tensor& buf, const at::Tensor& d_p, double weight_decay,

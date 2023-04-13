@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "absl/types/span.h"
-#include "tensorflow/compiler/xla/types.h"
+#include "xla/types.h"
 #include "third_party/xla_client/async_task.h"
 #include "third_party/xla_client/cache.h"
 #include "third_party/xla_client/computation_client.h"

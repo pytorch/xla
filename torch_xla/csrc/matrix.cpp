@@ -1,10 +1,10 @@
 #include "torch_xla/csrc/matrix.h"
 
-#include "tensorflow/compiler/xla/client/lib/constants.h"
-#include "tensorflow/compiler/xla/client/lib/matrix.h"
-#include "tensorflow/compiler/xla/client/lib/qr.h"
-#include "tensorflow/compiler/xla/shape_util.h"
-#include "tensorflow/compiler/xla/util.h"
+#include "xla/client/lib/constants.h"
+#include "xla/client/lib/matrix.h"
+#include "xla/client/lib/qr.h"
+#include "xla/shape_util.h"
+#include "xla/util.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"
 
