@@ -23,11 +23,6 @@ limitations under the License.
 // XLA ops.
 
 namespace xla {
-
-message Example {
-  Features features = 1;
-}
-
 // Padding: the padding we apply to the input tensor along the rows and columns
 // dimensions. This is usually used to make sure that the spatial dimensions do
 // not shrink when we progress with convolutions. Three types of padding are
