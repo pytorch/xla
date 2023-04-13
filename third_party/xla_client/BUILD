@@ -51,7 +51,6 @@ tf_proto_library(
         "feature.proto",
     ],
     cc_api_version = 2,
-    make_default_target_header_only = True,
     visibility = ["//visibility:public"],
 )
 
