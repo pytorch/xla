@@ -152,7 +152,6 @@ def train_mnist(flags, **kwargs):
   else:
     print("Only TPU or GPU supported for AMP.")
     sys.exit(1)
-  scaler = None
 
   def train_loop_fn(loader):
     tracker = xm.RateTracker()

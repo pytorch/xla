@@ -98,10 +98,12 @@ TORCH_LIBRARY_IMPL(aten, AutocastXLA, m) {
   KERNEL_XLA2(conv_transpose3d, input, lower_precision_fp)
   KERNEL_XLA(prelu, lower_precision_fp)
   KERNEL_XLA(relu, lower_precision_fp)
+  KERNEL_XLA(max_pool2d, lower_precision_fp)
 
   // fp32 cast policy
   KERNEL_XLA(batch_norm, fp32)
-  KERNEL_XLA(_log_softmax, fp32)
+  KERNEL_XLA2(log_softmax, int, fp32)
+  KERNEL_XLA2(log_softmax, Dimname, fp32)
   KERNEL_XLA(binary_cross_entropy, fp32)
   KERNEL_XLA(grid_sampler, fp32)
   KERNEL_XLA(polar, fp32)
