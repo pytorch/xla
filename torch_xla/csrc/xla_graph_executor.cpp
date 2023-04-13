@@ -283,6 +283,13 @@ torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(
   return GetIrValueForScalar(value, type, shape.dimensions(), device);
 }
 
+torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(
+    const at::Scalar& value, SymIntElements size_elements,
+    xla::PrimitiveType type, const torch::lazy::BackendDevice& device) {
+  torch::lazy::Value ir_value = GetIrValueForScalar(value, type, device);
+  return torch::lazy::MakeNode<ExpandSymInt>(ir_value, size_elements);
+}
+
 torch::lazy::Value XLAGraphExecutor::GetRngSeed(
     const torch::lazy::BackendDevice& device) {
   return DeviceContextArena::Get()->GetRngSeed(device);

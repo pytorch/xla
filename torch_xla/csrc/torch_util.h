@@ -24,6 +24,7 @@ struct SymIntElements {
       AddSymIntNodeElements(_size);
     }
   }
+  SymIntElements(torch::lazy::Value ir, xla::Shape shape);
   std::vector<torch::lazy::NodePtr> GetSizeNodes() const { return size_nodes_; }
   std::vector<int64_t> GetUpperBounds() const { return upper_bounds_; }
   std::vector<bool> GetDynamicDims() const { return dynamic_dims_; }

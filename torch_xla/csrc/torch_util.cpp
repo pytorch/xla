@@ -5,8 +5,25 @@
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ops/constant.h"
 #include "torch_xla/csrc/tensor.h"
+#include "torch_xla/csrc/ir_builder.h"
 
 namespace torch_xla {
+
+SymIntElements::SymIntElements(torch::lazy::Value ir, xla::Shape shape) {
+  XLAIrBuilder a = XLAIrBuilder();
+  for (int i=0; i<shape.dimensions().size(); i++) {
+    if (shape.is_dynamic_dimension(i)) {
+      torch::lazy::NodePtr size_node = a.MakeSizeNode(ir, i);
+      size_nodes_.push_back(size_node);
+      upper_bounds_.push_back(shape.dimensions(i));
+      dynamic_dims_.push_back(true);
+    } else {
+      size_nodes_.push_back(nullptr);
+      upper_bounds_.push_back(shape.dimensions(i));
+      dynamic_dims_.push_back(false);
+    }
+  }
+}
 
 void SymIntElements::AddSymIntNodeElements(c10::SymInt& size) {
   if (size.is_symbolic()) {

@@ -1182,8 +1182,20 @@ void eye_out(XLATensorPtr& out, int64_t lines, int64_t cols) {
 }
 
 void fill_(XLATensorPtr& input, const at::Scalar& value) {
+  // torch::lazy::Value constant = XLAGraphExecutor::Get()->GetIrValueForScalar(
+  //     value, input->shape(), input->GetDevice());
+  // torch::lazy::Value input_val = input->GetIrValue();
+  // torch::lazy::Shape input_shape = input_val.shape();
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": input->shape()=" << input->shape() << ", input->shape().dynamic_dimensions()" << absl::StrJoin(input->shape().get().dynamic_dimensions(), ",") << std::endl;
+
+
+
+  SymIntElements sym_int_elements(input->GetIrValue(), input->shape());
   torch::lazy::Value constant = XLAGraphExecutor::Get()->GetIrValueForScalar(
-      value, input->shape(), input->GetDevice());
+      value, sym_int_elements, input->shape().get().element_type(), input->GetDevice());
+
+  // torch::lazy::Shape constant_shape = constant.shape(); // returns error `RuntimeError: vector::_M_range_check: __n (which is 0) >= this->size() (which is 0)`
+  // std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": constant_shape=" << constant_shape << std::endl;
   input->SetInPlaceIrValue(std::move(constant));
 }
 
