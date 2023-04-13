@@ -3,8 +3,8 @@
 #include <string>
 #include <tuple>
 
-#include "tensorflow/compiler/xla/client/lib/constants.h"
-#include "tensorflow/compiler/xla/client/lib/prng.h"
+#include "xla/client/lib/constants.h"
+#include "xla/client/lib/prng.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "third_party/xla_client/sys_util.h"
 #include "torch_xla/csrc/convert_ops.h"

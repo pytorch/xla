@@ -1,8 +1,8 @@
 # Tensorflow's patch to update the protobuf will regress the XRT runtime.
-diff --git a/tensorflow/compiler/xla/tests/build_defs.bzl b/tensorflow/compiler/xla/tests/build_defs.bzl
+diff --git a/xla/tests/build_defs.bzl b/xla/tests/build_defs.bzl
 index 10b30f63755..306512e21b8 100644
---- a/tensorflow/compiler/xla/tests/build_defs.bzl
-+++ b/tensorflow/compiler/xla/tests/build_defs.bzl
+--- a/xla/tests/build_defs.bzl
++++ b/xla/tests/build_defs.bzl
 @@ -112,6 +112,7 @@ def xla_test(
      native.cc_library(
          name = "%s_lib" % name,
@@ -182,7 +182,7 @@ index b7d33118665..dd38a09cd0c 100644
 
  licenses(["notice"])  # MIT
 
--load("@org_tensorflow//tensorflow/tsl/platform/default:build_config.bzl", "py_proto_library")
+-load("@tsl//tsl/platform/default:build_config.bzl", "py_proto_library")
 +load("@com_google_protobuf//:protobuf.bzl", "py_proto_library")
 
  exports_files(["pprof/LICENSE"])

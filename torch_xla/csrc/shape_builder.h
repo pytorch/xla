@@ -3,8 +3,8 @@
 #include <vector>
 
 #include "absl/types/span.h"
-#include "tensorflow/compiler/xla/shape.h"
-#include "tensorflow/compiler/xla/types.h"
+#include "xla/shape.h"
+#include "xla/types.h"
 
 namespace torch_xla {
 

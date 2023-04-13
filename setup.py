@@ -285,8 +285,10 @@ include_dirs = [
 for ipath in [
     'bazel-bin',
     'bazel-xla',
-    'bazel-bin/external/org_tensorflow/',
-    'bazel-xla/external/org_tensorflow/',
+    'bazel-bin/external/xla/',
+    'bazel-xla/external/xla/',
+    'bazel-bin/external/tsl/',
+    'bazel-xla/external/tsl/',
     'bazel-xla/external/com_github_grpc_grpc/include',
     'bazel-xla/external/com_google_protobuf/src',
     'bazel-xla/external/eigen_archive',

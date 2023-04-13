@@ -1,9 +1,9 @@
 #include "torch_xla/csrc/convolution.h"
 
-#include "tensorflow/compiler/tf2xla/kernels/conv_op_helpers.h"
-#include "tensorflow/compiler/xla/client/lib/constants.h"
-#include "tensorflow/core/framework/tensor_shape.h"
-#include "tensorflow/core/kernels/conv_grad_ops.h"
+#include "third_party/xla_client/conv_op_helpers.h"
+#include "xla/client/lib/constants.h"
+// #include "tensorflow/core/framework/tensor_shape.h"
+// #include "tensorflow/core/kernels/conv_grad_ops.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/tensor.h"
@@ -125,14 +125,14 @@ xla::XlaOp PadInputFromOutputSize(xla::XlaOp input,
 
 // Create a TF convolution metadata structure out of PyTorch convolution
 // attributes.
-tensorflow::ConvOpAttrs MakeConvOpAttrs(
+xla::ConvOpAttrs MakeConvOpAttrs(
     absl::Span<const int64_t> spatial_stride,
     absl::Span<const int64_t> spatial_padding,
     absl::Span<const int64_t> spatial_dilation, bool depthwise) {
   int num_spatial_dims = spatial_stride.size();
   XLA_CHECK_EQ(spatial_padding.size(), num_spatial_dims);
   XLA_CHECK_EQ(spatial_dilation.size(), num_spatial_dims);
-  tensorflow::ConvOpAttrs conv_op_attrs;
+  xla::ConvOpAttrs conv_op_attrs;
   conv_op_attrs.depthwise = depthwise;
   conv_op_attrs.num_spatial_dims = num_spatial_dims;
   // Stride, dilation and padding must be set for the batch and feature in the
@@ -144,7 +144,7 @@ tensorflow::ConvOpAttrs MakeConvOpAttrs(
   conv_op_attrs.strides = {1, 1};
   std::copy(spatial_stride.begin(), spatial_stride.end(),
             std::back_inserter(conv_op_attrs.strides));
-  conv_op_attrs.padding = tensorflow::Padding::EXPLICIT;
+  conv_op_attrs.padding = xla::ThreePadding::EXPLICIT; // 3; // tensorflow::Padding::EXPLICIT;
   // https://github.com/tensorflow/tensorflow/blob/ec81825aaf7e848d9f8ddffdf1e0d20aebe9172c/tensorflow/core/util/padding.cc#L40
   // explicit_padding requires to have (spatial_dims + 2) * 2 elements
   conv_op_attrs.explicit_paddings.resize(4);
@@ -152,7 +152,7 @@ tensorflow::ConvOpAttrs MakeConvOpAttrs(
     conv_op_attrs.explicit_paddings.push_back(spatial_padding[spatial_dim]);
     conv_op_attrs.explicit_paddings.push_back(spatial_padding[spatial_dim]);
   }
-  conv_op_attrs.data_format = tensorflow::TensorFormat::FORMAT_NCHW;
+  conv_op_attrs.data_format = xla::XLATensorFormat::FORMAT_NCHW; // 1; //tensorflow::TensorFormat::FORMAT_NCHW; // use `ConvolutionDimensionNumbers` from /pytorch/tensorflow/tensorflow/compiler/xla/xla_data.proto ?
   return conv_op_attrs;
 }
 
@@ -220,13 +220,13 @@ xla::XlaOp BuildConvBackwardInput(xla::XlaOp grad_output, xla::XlaOp kernel,
                                   absl::Span<const int64_t> spatial_padding,
                                   absl::Span<const int64_t> spatial_dilation,
                                   int64_t groups) {
-  tensorflow::ConvOpAttrs conv_op_attrs =
+  xla::ConvOpAttrs conv_op_attrs =
       MakeConvOpAttrs(spatial_stride, spatial_padding, spatial_dilation, false);
   xla::XlaOp kernel_transposed =
       xla::Transpose(kernel, FilterTransposePermutation(input_shape.rank()));
   xla::PrecisionConfig precision_config =
       XlaHelpers::BuildPrecisionConfig(XlaHelpers::mat_mul_precision());
-  return ConsumeValue(tensorflow::MakeXlaBackpropInputConvOp(
+  return ConsumeValue(xla::MakeXlaBackpropInputConvOp(
       "conv_backward_input", input_shape, kernel_transposed, grad_output,
       conv_op_attrs, &precision_config));
 }
@@ -238,7 +238,7 @@ xla::XlaOp BuildConvBackwardWeight(xla::XlaOp grad_output, xla::XlaOp input,
                                    absl::Span<const int64_t> spatial_padding,
                                    absl::Span<const int64_t> spatial_dilation,
                                    int64_t groups) {
-  tensorflow::ConvOpAttrs conv_op_attrs =
+  xla::ConvOpAttrs conv_op_attrs =
       MakeConvOpAttrs(spatial_stride, spatial_padding, spatial_dilation, false);
   auto transpose_permutation = FilterTransposePermutation(kernel_shape.rank());
   auto inv_transpose_permutation =
@@ -247,7 +247,7 @@ xla::XlaOp BuildConvBackwardWeight(xla::XlaOp grad_output, xla::XlaOp input,
       xla::ShapeUtil::PermuteDimensions(transpose_permutation, kernel_shape);
   xla::PrecisionConfig precision_config =
       XlaHelpers::BuildPrecisionConfig(XlaHelpers::mat_mul_precision());
-  xla::XlaOp conv = ConsumeValue(tensorflow::MakeXlaBackpropFilterConvOp(
+  xla::XlaOp conv = ConsumeValue(xla::MakeXlaBackpropFilterConvOp(
       "conv_backward_weight", input, transposed_weight_shape, grad_output,
       conv_op_attrs, &precision_config));
 

@@ -21,7 +21,7 @@
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_join.h"
-#include "tensorflow/compiler/xla/status.h"
+#include "xla/status.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "third_party/xla_client/mesh_service.grpc.pb.h"
 #include "third_party/xla_client/multi_wait.h"
