@@ -1,7 +1,7 @@
 #include "torch_xla/csrc/ops/ops_xla_shape_fn.h"
 
-#include "tensorflow/compiler/xla/client/lib/logdet.h"
-#include "tensorflow/compiler/xla/shape_util.h"
+#include "xla/client/lib/logdet.h"
+#include "xla/shape_util.h"
 #include "third_party/xla_client/util.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/elementwise.h"

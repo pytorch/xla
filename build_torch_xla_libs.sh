@@ -56,12 +56,12 @@ if [ "$CMD" == "clean" ]; then
   exit 0
 fi
 
-# TensorFlow and its dependencies may introduce warning flags from newer compilers
+# OpenXLA and its dependencies may introduce warning flags from newer compilers
 # that PyTorch and PyTorch/XLA's default compilers don't recognize. They become error
 # while '-Werror' is used. Therefore, surpress the warnings in .bazelrc or here.
 bazel build $MAX_JOBS $VERBOSE --show_progress_rate_limit=20 \
   --define framework_shared_object=false -c "$MODE" "${OPTS[@]}" \
-  $XLA_CUDA_CFG //third_party/xla_client:libxla_computation_client.so
+  $XLA_CUDA_CFG //third_party/xla_client:xla_computation_client --experimental_cc_shared_library
 
 mkdir -p torch_xla/lib
 chmod 0644 bazel-bin/third_party/xla_client/libxla_computation_client.so

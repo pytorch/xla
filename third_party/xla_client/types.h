@@ -6,7 +6,7 @@
 
 #include "absl/numeric/int128.h"
 #include "absl/types/optional.h"
-#include "tensorflow/compiler/xla/types.h"
+#include "xla/types.h"
 
 namespace xla {
 

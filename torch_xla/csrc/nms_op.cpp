@@ -2,12 +2,12 @@
 
 #include <limits>
 
-#include "tensorflow/compiler/xla/client/lib/arithmetic.h"
-#include "tensorflow/compiler/xla/client/lib/comparators.h"
-#include "tensorflow/compiler/xla/client/lib/constants.h"
-#include "tensorflow/compiler/xla/client/lib/loops.h"
-#include "tensorflow/compiler/xla/client/lib/sorting.h"
-#include "tensorflow/compiler/xla/util.h"
+#include "xla/client/lib/arithmetic.h"
+#include "xla/client/lib/comparators.h"
+#include "xla/client/lib/constants.h"
+#include "xla/client/lib/loops.h"
+#include "xla/client/lib/sorting.h"
+#include "xla/util.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "third_party/xla_client/util.h"
 #include "torch/csrc/lazy/core/util.h"

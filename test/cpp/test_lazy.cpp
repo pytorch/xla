@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "tensorflow/compiler/xla/shape.h"
+#include "xla/shape.h"
 #include "torch/csrc/lazy/core/shape.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla_test.h"

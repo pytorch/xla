@@ -19,15 +19,16 @@
 #include "pybind11/pybind11.h"
 #include "pybind11/pytypes.h"
 #include "pybind11/stl_bind.h"
-#include "tensorflow/compiler/xla/pjrt/distributed/distributed.h"
-#include "tensorflow/compiler/xla/python/profiler/internal/traceme_wrapper.h"
-#include "tensorflow/compiler/xla/service/hlo_parser.h"
-#include "tensorflow/core/example/example.pb.h"
-#include "tensorflow/core/example/feature.pb.h"
+#include "xla/pjrt/distributed/distributed.h"
+#include "xla/python/profiler/internal/traceme_wrapper.h"
+#include "xla/service/hlo_parser.h"
+// #include "tensorflow/core/example/example.pb.h"
+// #include "tensorflow/core/example/feature.pb.h"
 #include "tensorflow/python/profiler/internal/profiler_pywrap_impl.h"
-#include "tensorflow/tsl/platform/env.h"
-#include "tensorflow/tsl/profiler/lib/traceme.h"
+#include "tsl/platform/env.h"
+#include "tsl/profiler/lib/traceme.h"
 #include "third_party/xla_client/computation_client.h"
+#include "third_party/xla_client/conv_op_helpers.h"
 #include "third_party/xla_client/mesh_service.h"
 #include "third_party/xla_client/metrics.h"
 #include "third_party/xla_client/metrics_analysis.h"
@@ -538,7 +539,7 @@ py::object RecordReadExample(
   if (!RecordRead(reader, &value)) {
     return py::none();
   }
-  tensorflow::Example exmsg;
+  xla::Example exmsg;
   if (!exmsg.ParseFromArray(value.data(), value.size())) {
     XLA_ERROR() << "Unable to parse TF example from " << reader->path();
   }

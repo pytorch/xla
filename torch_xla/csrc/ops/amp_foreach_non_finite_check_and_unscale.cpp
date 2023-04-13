@@ -1,6 +1,6 @@
 #include "torch_xla/csrc/ops/amp_foreach_non_finite_check_and_unscale.h"
 
-#include "tensorflow/compiler/xla/shape_util.h"
+#include "xla/shape_util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
 #include "torch_xla/csrc/tensor_util.h"

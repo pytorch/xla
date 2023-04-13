@@ -1,7 +1,7 @@
 #pragma once
 
 #include "absl/types/span.h"
-#include "tensorflow/compiler/xla/xla_data.pb.h"
+#include "xla/xla_data.pb.h"
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
