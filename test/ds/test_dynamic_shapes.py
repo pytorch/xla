@@ -377,10 +377,14 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     t2 = torch.nonzero(t1)
     # self.assertIsInstance(t2.shape[0], torch.SymInt) # passed
     # self.assertIsInstance(t2.shape[1], int) # passed
-    print(t2.shape)
-    t2.fill_(1)
-    print(t2.shape)
+    # print(t2.shape)
     # print(torch_xla._XLAC._get_xla_tensors_text([t2]))
+    # import pdb; pdb.set_trace()
+    print('calling t2.fill_')
+    t2.fill_(1)
+    print('t2.shape=', t2.shape)
+    print('t2=', t2)
+    print(torch_xla._XLAC._get_xla_tensors_text([t2]))
     # print('===')
     # print(torch_xla._XLAC._get_xla_tensors_hlo([t2]))
     # self.assertIsInstance(t2.shape[0], torch.SymInt)
@@ -395,6 +399,20 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     # t2_aten = torch.nonzero(t1_aten)
     # t2_aten.fill_(1)
     # self.assertEqual(t2.cpu(), t2_aten.cpu())
+
+  def test_add(self):
+    t1 = torch.tensor([[1, 0, 3, 5, 0, 6]], device=dev)
+    t2 = torch.nonzero(t1)
+    # print(t2)
+    t3 = torch.tensor([[1, 1, 0, 0, 0, 0]], device=dev)
+    t4 = torch.nonzero(t3)
+    # print(t4)
+    # t2.shape=torch.Size([<=6, 2]) with real size [4, 2]
+    # t4.shape=torch.Size([<=4, 2]) with real size [2, 2]
+    # PyTorch eager mode will output error: "RuntimeError: The size of tensor a (4) must match the size of tensor b (2) at non-singleton dimension 0"
+    # self.assertRaises(RuntimeError, lambda: torch.add(t2, t4))
+    t5 = torch.add(t2, t4)
+    print(t5)
 
   def test_sizeMod(self):
     met.clear_all()

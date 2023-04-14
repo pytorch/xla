@@ -54,6 +54,7 @@ int64_t SizeNode::getDynamicValue() const {
       XLAGraphExecutor::Get()->GetTensors(&dummy_size_tensors);
   runtime_size_ = res[0].item().toInt();
   dynamic_value_computed_ = true;
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": runtime_size_=" << runtime_size_ << std::endl;
   return runtime_size_;
 }
 

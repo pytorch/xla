@@ -634,6 +634,7 @@ at::Tensor XLANativeFunctions::add(const at::Tensor& self,
                                    const at::Tensor& other,
                                    const at::Scalar& alpha) {
   TORCH_LAZY_FN_COUNTER("xla::");
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   at::native::alpha_check(at::result_type(self, other), alpha);
   return DoBinaryOp(self, other,
                     [&](const XLATensorPtr& xself, const XLATensorPtr& xother,

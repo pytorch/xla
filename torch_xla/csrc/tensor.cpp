@@ -29,6 +29,7 @@
 #include "torch/csrc/lazy/core/hash.h"
 #include "torch/csrc/lazy/core/helpers.h"
 #include "torch/csrc/lazy/core/ir_util.h"
+#include "torch/csrc/profiler/combined_traceback.h"
 #include "torch/csrc/lazy/core/lazy_graph_executor.h"
 #include "torch/csrc/lazy/core/metrics.h"
 #include "torch/csrc/lazy/core/tensor_util.h"
@@ -58,6 +59,7 @@ XLATensor::Data::~Data() { XLAGraphExecutor::Get()->UnregisterTensor(this); }
 
 XLATensorPtr XLATensor::Create(const at::Tensor& tensor,
                                const torch::lazy::BackendDevice& device) {
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   XLA_CHECK_EQ(tensor.device().type(), at::kCPU);
   XLATensorPtr xtensor =
       c10::make_intrusive<XLATensor>(XLATensor(tensor, device));
@@ -68,6 +70,7 @@ XLATensorPtr XLATensor::Create(const at::Tensor& tensor,
 XLATensorPtr XLATensor::Create(
     torch::lazy::BackendDataPtr handle,
     c10::optional<at::ScalarType> logical_element_type) {
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   XLATensorPtr xtensor = c10::make_intrusive<XLATensor>(
       XLATensor(std::move(handle), logical_element_type));
   XLAGraphExecutor::Get()->RegisterTensor(xtensor->data());
@@ -77,6 +80,7 @@ XLATensorPtr XLATensor::Create(
 XLATensorPtr XLATensor::Create(
     torch::lazy::Value ir_value, const torch::lazy::BackendDevice& device,
     c10::optional<at::ScalarType> logical_element_type) {
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   XLATensorPtr xtensor = c10::make_intrusive<XLATensor>(
       XLATensor(std::move(ir_value), device, logical_element_type));
   XLAGraphExecutor::Get()->RegisterTensor(xtensor->data());
@@ -90,6 +94,7 @@ XLATensorPtr XLATensor::Create(
 XLATensorPtr XLATensor::Create(
     std::shared_ptr<View> view, const torch::lazy::BackendDevice& device,
     c10::optional<at::ScalarType> logical_element_type) {
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   XLATensorPtr xtensor = c10::make_intrusive<XLATensor>(
       XLATensor(std::move(view), device, logical_element_type));
   XLAGraphExecutor::Get()->RegisterTensor(xtensor->data());
@@ -97,47 +102,74 @@ XLATensorPtr XLATensor::Create(
 }
 
 XLATensorPtr XLATensor::Create(std::shared_ptr<Data> data) {
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   return c10::make_intrusive<XLATensor>(XLATensor(std::move(data)));
 }
 
 XLATensor::XLATensor(const at::Tensor& tensor,
                      const torch::lazy::BackendDevice& device)
-    : XLATensor(std::make_shared<Data>(tensor, device)) {}
+    : XLATensor(std::make_shared<Data>(tensor, device)) {
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
+    }
 
 XLATensor::XLATensor(torch::lazy::BackendDataPtr handle,
                      c10::optional<at::ScalarType> logical_element_type)
     : XLATensor(std::make_shared<Data>(handle, handle->device(),
-                                       logical_element_type)) {}
+                                       logical_element_type)) {
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
+                                       }
 
 XLATensor::XLATensor(torch::lazy::Value ir_value,
                      const torch::lazy::BackendDevice& device,
                      c10::optional<at::ScalarType> logical_element_type)
     : XLATensor(std::make_shared<Data>(std::move(ir_value), device,
                                        logical_element_type)) {
+  // xw32: This is called
+  
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": Begin constructing XLATensor shape().get()=" << shape().get() << "data()->alias_id=" << data()->alias_id<< std::endl;
+  // std::shared_ptr<torch::CapturedTraceback> tb0 =
+  //       torch::CapturedTraceback::gather(/*python=*/true, /*script=*/true,
+  //                                        /*cpp=*/true);
+  // torch::SymbolizedTracebacks btWhenCreated_ = torch::symbolize({tb0.get()});
+  // std::string bt = "";
+  // for (auto btwc : btWhenCreated_.all_frames) {
+  //   bt += "fileName=" + btwc.filename + ", funcname=" + btwc.funcname +
+  //         "lineno=" + std::to_string(btwc.lineno) + "\n";
+  // }
+  // std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": bt=" << bt << std::endl;
+
   // Preserve sharding if a new tensor is created from a sharded IR node.
   if (CurrentIrValue()) {
-    auto* xla_node = dynamic_cast<XlaNode*>(CurrentIrValue().node.get());
+    XlaNode* xla_node = dynamic_cast<XlaNode*>(CurrentIrValue().node.get());
+    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": xla_node->xla_shape()=" << xla_node->xla_shape() << std::endl;
     if (xla_node->GetSharding()) {
       ShardingSpec sharding =
           ShardingSpec{*xla_node->GetSharding(), xla_node->xla_shape()};
       SetShardingSpec(sharding);
     }
+    
+    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": dynamic_cast<XlaNode*>(GetIrValue().node.get())->xla_shape()=" << dynamic_cast<XlaNode*>(GetIrValue().node.get())->xla_shape() << std::endl;
   }
   TryLimitGraphSize();
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": End constructing XLATensor shape().get()=" << shape().get() << std::endl;
 }
 
 XLATensor::XLATensor(std::shared_ptr<View> view,
                      const torch::lazy::BackendDevice& device,
                      c10::optional<at::ScalarType> logical_element_type)
     : XLATensor(std::make_shared<Data>(std::move(view), device,
-                                       logical_element_type)) {}
+                                       logical_element_type)) {
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
+}
 
 XLATensor::XLATensor(std::shared_ptr<Data> data)
     : torch::lazy::LazyTensor(data),
       data_(std::move(data)),
       storage_(c10::Storage(
           {}, 0,
-          c10::DataPtr(nullptr, backendDeviceToAtenDevice(data_->device)))) {}
+          c10::DataPtr(nullptr, backendDeviceToAtenDevice(data_->device)))) {
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
+          }
 
 auto XLATensor::data() const -> const std::shared_ptr<Data>& {
   XLA_CHECK(data_ != nullptr) << "Trying to access a null cursor";
@@ -246,6 +278,7 @@ void XLATensor::SetShardingSpec(const ShardingSpec& sharding) {
   dynamic_cast<XlaNode*>(GetIrValue().node.get())
       ->SetSharding(sharding_spec()->sharding);
 }
+
 void XLATensor::ClearShardingSpec() {
   data()->sharding = nullptr;
   torch::lazy::Value ir_value = CurrentIrValue();
@@ -348,8 +381,10 @@ torch::lazy::Value XLATensor::GetIrValue() const {
 
 torch::lazy::Value XLATensor::CurrentIrValue() const {
   if (data()->view != nullptr) {
+    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": data()->view != nullptr" << std::endl;
     return GetViewUpdate(data()->view).ir_value;
   }
+    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": data()->view == nullptr" << std::endl;
   return data()->ir_value;
 }
 

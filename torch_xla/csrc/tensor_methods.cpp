@@ -651,6 +651,8 @@ XLATensorPtr abs(const XLATensorPtr& input) {
 XLATensorPtr add(const XLATensorPtr& input, const XLATensorPtr& other,
                  const at::Scalar& alpha,
                  c10::optional<at::ScalarType> logical_element_type) {
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": input->shape()=" << input->shape() << ", input->shape().dynamic_dimensions()=" << absl::StrJoin(input->shape().get().dynamic_dimensions(), ",") << std::endl;
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": other->shape()=" << other->shape() << ", other->shape().dynamic_dimensions()=" << absl::StrJoin(other->shape().get().dynamic_dimensions(), ",") << std::endl;
   torch::lazy::Value constant = XLAGraphExecutor::Get()->GetIrValueForScalar(
       alpha, other->shape(), logical_element_type, input->GetDevice());
   return input->CreateFrom(input->GetIrValue() + other->GetIrValue() * constant,
@@ -1187,6 +1189,9 @@ void fill_(XLATensorPtr& input, const at::Scalar& value) {
   // torch::lazy::Value input_val = input->GetIrValue();
   // torch::lazy::Shape input_shape = input_val.shape();
   std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": input->shape()=" << input->shape() << ", input->shape().dynamic_dimensions()=" << absl::StrJoin(input->shape().get().dynamic_dimensions(), ",") << std::endl;
+  // xlatensor ctor: break on there
+  // print xltensor id and the original tensor id.
+  // or disalbe functaionlization, flag. Functionalization is on by default.
 
 
 
