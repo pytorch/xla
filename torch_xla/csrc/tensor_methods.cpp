@@ -1436,22 +1436,20 @@ XLATensorPtr lerp(const XLATensorPtr& input, const XLATensorPtr& end,
       Lerp(input->GetIrValue(), end->GetIrValue(), weight_val));
 }
 
-XLATensorPtr linalg_vector_norm(const XLATensorPtr& input, 
+XLATensorPtr linalg_vector_norm(const XLATensorPtr& input,
                                 const at::Scalar& ord,
-                                std::vector<int64_t> dimensions,
-                                bool keep_dim,
+                                std::vector<int64_t> dimensions, bool keep_dim,
                                 c10::optional<at::ScalarType> dtype) {
   auto canonical_dims = torch::lazy::GetCanonicalDimensionIndices(
       xla::util::ToVector<int64_t>(dimensions), input->shape().get().rank());
   at::ScalarType stype = input->dtype();
-  
+
   torch::lazy::Value res = LinalgVectorNorm(input->GetIrValue(), ord,
                                             canonical_dims, keep_dim, dtype);
 
-  if (!dtype) 
-    dtype = input->dtype_optional();
+  if (!dtype) dtype = input->dtype_optional();
   xla::PrimitiveType res_intended_type =
-        MakeXlaPrimitiveType(*dtype, &input->GetDevice());
+      MakeXlaPrimitiveType(*dtype, &input->GetDevice());
   if (GetXlaShape(res).element_type() != res_intended_type) {
     res = torch::lazy::MakeNode<Cast>(res, res_intended_type);
   }
