@@ -13,9 +13,147 @@ import collections
 import unittest
 from torch.testing._internal.autocast_test_lists import AutocastTestLists
 from torch_xla.amp import autocast, GradScaler
+import torch.xla.amp
 
 
-class AutocastTestUnsupportedLists(object):
+class AutocastTPUTestLists:
+  # Supplies ops and arguments for TPU autocast tests
+  def __init__(self, dev):
+    super().__init__()
+    n = 8
+    # Utility arguments, created as one-element tuples
+    pointwise0_bf16 = (torch.randn(n, dtype=torch.bfloat16, device=dev),)
+    pointwise1_bf16 = (torch.randn(n, dtype=torch.bfloat16, device=dev),)
+    pointwise2_bf16 = (torch.randn(n, dtype=torch.bfloat16, device=dev),)
+    mat0_bf16 = (torch.randn((n, n), dtype=torch.bfloat16, device=dev),)
+    mat1_bf16 = (torch.randn((n, n), dtype=torch.bfloat16, device=dev),)
+    mat2_bf16 = (torch.randn((n, n), dtype=torch.bfloat16, device=dev),)
+
+    dummy_dimsets = ((n,), (n, n), (n, n, n), (n, n, n, n), (n, n, n, n, n))
+
+    dummy_bf16 = [(torch.randn(dimset, dtype=torch.bfloat16, device=dev),)
+                  for dimset in dummy_dimsets]
+
+    dimsets = ((n, n, n), (n, n, n, n), (n, n, n, n, n))
+    conv_args_bf16 = [(torch.randn(dimset, dtype=torch.bfloat16, device=dev),
+                       torch.randn(dimset, dtype=torch.bfloat16, device=dev))
+                      for dimset in dimsets]
+    conv_args_fp32 = [(torch.randn(dimset, dtype=torch.float32, device=dev),
+                       torch.randn(dimset, dtype=torch.float32, device=dev))
+                      for dimset in dimsets]
+
+    bias_fp32 = (torch.randn((n,), dtype=torch.float32, device=dev),)
+    element0_fp32 = (torch.randn(1, dtype=torch.float32, device=dev),)
+    pointwise0_fp32 = (torch.randn(n, dtype=torch.float32, device=dev),)
+    pointwise1_fp32 = (torch.randn(n, dtype=torch.float32, device=dev),)
+    mat0_fp32 = (torch.randn((n, n), dtype=torch.float32, device=dev),)
+    mat1_fp32 = (torch.randn((n, n), dtype=torch.float32, device=dev),)
+    mat2_fp32 = (torch.randn((n, n), dtype=torch.float32, device=dev),)
+    mat3_fp32 = (torch.randn((n, n), dtype=torch.float32, device=dev),)
+
+    dummy_fp32 = [(torch.randn(dimset, dtype=torch.float32, device=dev),)
+                  for dimset in dummy_dimsets]
+    # The lists below organize ops that autocast needs to test.
+    # self.list_name corresponds to test_autocast_list_name .
+    # Each op is associated with a tuple of valid arguments.
+
+    # Some ops implement built-in type promotion.  These don't need autocasting,
+    # but autocasting relies on their promotion, so we include tests to double-check.
+    self.torch_expect_builtin_promote = [
+        ("eq", pointwise0_fp32 + pointwise1_bf16, torch.bool),
+        ("ge", pointwise0_fp32 + pointwise1_bf16, torch.bool),
+        ("gt", pointwise0_fp32 + pointwise1_bf16, torch.bool),
+        ("le", pointwise0_fp32 + pointwise1_bf16, torch.bool),
+        ("lt", pointwise0_fp32 + pointwise1_bf16, torch.bool),
+        ("ne", pointwise0_fp32 + pointwise1_bf16, torch.bool),
+        ("add", pointwise0_fp32 + pointwise1_bf16, torch.float32),
+        ("div", pointwise0_fp32 + pointwise1_bf16, torch.float32),
+        ("mul", pointwise0_fp32 + pointwise1_bf16, torch.float32),
+    ]
+    self.methods_expect_builtin_promote = [
+        ("__eq__", pointwise0_fp32 + pointwise1_bf16, torch.bool),
+        ("__ge__", pointwise0_fp32 + pointwise1_bf16, torch.bool),
+        ("__gt__", pointwise0_fp32 + pointwise1_bf16, torch.bool),
+        ("__le__", pointwise0_fp32 + pointwise1_bf16, torch.bool),
+        ("__lt__", pointwise0_fp32 + pointwise1_bf16, torch.bool),
+        ("__ne__", pointwise0_fp32 + pointwise1_bf16, torch.bool),
+        ("__add__", pointwise0_fp32 + pointwise1_bf16, torch.float32),
+        ("__div__", pointwise0_fp32 + pointwise1_bf16, torch.float32),
+        ("__mul__", pointwise0_fp32 + pointwise1_bf16, torch.float32),
+    ]
+    # The remaining lists organize ops that autocast treats explicitly.
+    self.torch_bf16 = [
+        ("conv1d", conv_args_fp32[0]),
+        ("conv2d", conv_args_fp32[1]),
+        ("conv3d", conv_args_fp32[2]),
+        ("bmm", (torch.randn((n, n, n), device=dev, dtype=torch.float32),
+                 torch.randn((n, n, n), device=dev, dtype=torch.float32))),
+        ("mm", mat0_fp32 + mat1_fp32),
+        ("matmul", mat0_fp32 + mat1_fp32),
+        ("baddbmm", (torch.randn((n, n, n), device=dev, dtype=torch.float32),
+                     torch.randn((n, n, n), device=dev, dtype=torch.float32),
+                     torch.randn((n, n, n), device=dev, dtype=torch.float32))),
+        ("addmm", mat1_fp32 + mat2_fp32 + mat3_fp32),
+        ("addbmm",
+         mat0_fp32 + (torch.randn((n, n, n), device=dev, dtype=torch.float32),
+                      torch.randn((n, n, n), device=dev, dtype=torch.float32))),
+        ("conv_tbc", (torch.randn((10, 7, 3), device=dev, dtype=torch.float32),
+                      torch.randn((5, 3, 5), device=dev, dtype=torch.float32),
+                      torch.randn(5, device=dev, dtype=torch.float32), 0)),
+        ("conv_transpose1d", conv_args_fp32[0]),
+        ("conv_transpose2d", conv_args_fp32[1]),
+        ("conv_transpose3d", conv_args_fp32[2]),
+        ("prelu", pointwise0_fp32 + element0_fp32),
+        ("relu", pointwise0_fp32 + element0_fp32),
+    ]
+    self.torch_fp32 = [
+        ("cosine_embedding_loss", (torch.tensor([[1, 2, 3]],
+                                                device=dev,
+                                                dtype=torch.bfloat16),
+                                   torch.tensor([[1, 3, 4]],
+                                                device=dev,
+                                                dtype=torch.bfloat16),
+                                   torch.tensor([1],
+                                                device=dev,
+                                                dtype=torch.int))),
+        ("hinge_embedding_loss",
+         mat0_bf16 + (torch.ones(n, device=dev, dtype=torch.int),)),
+        ("margin_ranking_loss", mat0_bf16 + mat1_bf16 + (torch.ones(
+            (n,), device=dev, dtype=torch.bfloat16),)),
+        ("triplet_margin_loss", mat0_bf16 + mat1_bf16 + mat2_bf16),
+        ("binary_cross_entropy_with_logits", mat0_bf16 + (torch.rand(
+            (n, n), device=dev, dtype=torch.bfloat16),)),
+    ]
+    self.nn_bf16 = [
+        ("linear", mat0_fp32 + mat1_fp32, {}),
+    ]
+    self.nn_fp32 = [
+        ("nll_loss", (torch.rand((n, n), device=dev, dtype=torch.float),
+                      torch.zeros((n,), device=dev, dtype=torch.long))),
+        ("nll_loss2d", (torch.rand((n, n, n, n),
+                                   device=dev,
+                                   dtype=torch.bfloat16),
+                        torch.zeros((n, n, n), device=dev, dtype=torch.long))),
+        ("l1_loss", mat0_bf16 + mat1_bf16),
+        ("smooth_l1_loss", mat0_bf16 + mat1_bf16),
+        ("mse_loss", mat0_bf16 + mat1_bf16),
+        ("multilabel_margin_loss", mat0_bf16 + (torch.ones(
+            (n, n), device=dev, dtype=torch.long),)),
+        ("soft_margin_loss", mat0_bf16 + (torch.ones(
+            (n, n), device=dev, dtype=torch.long),)),
+        ("multi_margin_loss", mat0_bf16 + (torch.ones(
+            (n,), device=dev, dtype=torch.long),)),
+    ]
+    self.torch_need_autocast_promote = [
+        ("cat", (pointwise0_bf16 + pointwise1_fp32,)),
+        ("stack", (pointwise0_bf16 + pointwise1_fp32,)),
+    ]
+    self.methods_fp32 = []
+
+    self.methods_bf16 = [("__matmul__", mat0_bf16 + mat1_fp32)]
+
+
+class AutocastCudaTestUnsupportedLists(object):
 
   def __init__(self):
     super().__init__()
@@ -30,7 +168,6 @@ class AutocastTestUnsupportedLists(object):
     # The remaining lists organize ops that autocast treats explicitly.
     self.torch_fp16 = [
         "_convolution_nogroup",  # need lowering
-        "prelu",  # need lowering
         "addmv",  # need lowering
     ]
     self.torch_fp32 = [
@@ -51,19 +188,23 @@ class TestAutocastBase(unittest.TestCase):
 
   def setUp(self):
     super(TestAutocastBase, self).setUp()
-    self.autocast_lists = AutocastTestLists(torch.device(xm.xla_device()))
-    self.autocast_unsupported_lists = AutocastTestUnsupportedLists()
-    self.skip_list = []
+    self.autocast = None
+    self.is_autocast_enabled = None
+    self.autocast_lists = None
+    self.autocast_unsupported_lists = None
 
   def tearDown(self):
     del self.autocast_lists
     super(TestAutocastBase, self).tearDown()
 
   def get_autocast_list(self, list_name):
-    return [
-        tp for tp in getattr(self.autocast_lists, list_name)
-        if tp[0] not in getattr(self.autocast_unsupported_lists, list_name)
-    ]
+    if self.autocast_unsupported_lists:
+      return [
+          tp for tp in getattr(self.autocast_lists, list_name)
+          if tp[0] not in getattr(self.autocast_unsupported_lists, list_name)
+      ]
+    else:
+      return [tp for tp in getattr(self.autocast_lists, list_name)]
 
   def args_maybe_kwargs(self, op_with_args):
     if len(op_with_args) == 2:
@@ -90,9 +231,9 @@ class TestAutocastBase(unittest.TestCase):
     if add_kwargs is None:
       add_kwargs = {}
 
-    self.assertFalse(torch.is_autocast_enabled())
-    with autocast():
-      self.assertTrue(torch.is_autocast_enabled())
+    self.assertFalse(self.is_autocast_enabled())
+    with self.autocast():
+      self.assertTrue(self.is_autocast_enabled())
 
       out_type = out_type if out_type is not None else run_as_type
       output = output_method = None
@@ -103,7 +244,7 @@ class TestAutocastBase(unittest.TestCase):
         if isinstance(output, torch.Tensor):
           self.assertTrue(
               out_type == output.dtype,
-              "autocast for torch.{} produced {}, should produce {}".format(
+              "autocast for {} produced {}, should produce {}".format(
                   op, output.dtype, out_type))
 
       # Try Tensor.* variant:
@@ -112,8 +253,8 @@ class TestAutocastBase(unittest.TestCase):
         if isinstance(output_method, torch.Tensor):
           self.assertTrue(
               out_type == output_method.dtype,
-              "autocast for torch.{} produced {}, should produce torch.{}".
-              format(op, output_method.dtype, out_type))
+              "autocast for {} produced {}, should produce torch.{}".format(
+                  op, output_method.dtype, out_type))
 
       self.assertTrue((output is not None) or (
           output_method is not None
@@ -141,8 +282,8 @@ class TestAutocastBase(unittest.TestCase):
       # Compare numerics to Python-side "autocasting" that (we expect) does the same thing
       # as the C++-side autocasting, and should be bitwise accurate.
       output_to_compare = output if output is not None else output_method
-      with autocast(enabled=False):
-        self.assertFalse(torch.is_autocast_enabled())
+      with self.autocast(enabled=False):
+        self.assertFalse(self.is_autocast_enabled())
 
         if module is not None and hasattr(module, op):
           control = getattr(module, op)(*cast(args, run_as_type), **add_kwargs)
@@ -153,11 +294,42 @@ class TestAutocastBase(unittest.TestCase):
         comparison = compare(output_to_compare, control)
         self.assertTrue(comparison,
                         "torch.{} result did not match control".format(op))
-      self.assertTrue(torch.is_autocast_enabled())
-    self.assertFalse(torch.is_autocast_enabled())
+      self.assertTrue(self.is_autocast_enabled())
+    self.assertFalse(self.is_autocast_enabled())
 
 
-class TestAutocast(TestAutocastBase):
+@unittest.skipIf(not torch.cuda.is_available(), "requires cuda")
+class TestAutocastCuda(TestAutocastBase):
+
+  def setUp(self):
+    super(TestAutocastCuda, self).setUp()
+    self.autocast = torch.xla.cuda.autocast
+    self.is_autocast_enabled = torch.is_autocast_enabled
+    self.autocast_lists = AutocastTestLists(torch.device(xm.xla_device()))
+    self.autocast_unsupported_lists = AutocastCudaTestUnsupportedLists()
+
+  def test_autocast_nn_fp16(self):
+    with torch.backends.cudnn.flags(enabled=True, deterministic=True):
+      for op, args in self.get_autocast_list('nn_fp16'):
+        self._run_autocast_outofplace(
+            op, args, torch.float16, module=torch._C._nn)
+
+  def test_autocast_linalg_fp16(self):
+    with torch.backends.cudnn.flags(enabled=True, deterministic=True):
+      for op, args in self.get_autocast_list('linalg_fp16'):
+        self._run_autocast_outofplace(
+            op, args, torch.float16, module=torch._C._linalg)
+
+  def test_autocast_methods_fp16(self):
+    with torch.backends.cudnn.flags(enabled=True, deterministic=True):
+      for op, args in self.get_autocast_list('methods_fp16'):
+        self._run_autocast_outofplace(op, args, torch.float16, module=None)
+
+  def test_autocast_banned(self):
+    with torch.cuda.amp.autocast():
+      for op, args, module in self.get_autocast_list('banned'):
+        with self.assertRaises(RuntimeError):
+          getattr(module, op)(*args)
 
   def test_autocast_torch_fp32(self):
     for op_with_args in self.get_autocast_list('torch_fp32'):
@@ -174,30 +346,14 @@ class TestAutocast(TestAutocastBase):
         'torch_expect_builtin_promote'):
       self._run_autocast_outofplace(op, args, torch.float32, out_type=out_type)
 
-  def test_autocast_nn_fp16(self):
-    with torch.backends.cudnn.flags(enabled=True, deterministic=True):
-      for op, args in self.get_autocast_list('nn_fp16'):
-        self._run_autocast_outofplace(
-            op, args, torch.float16, module=torch._C._nn)
-
   def test_autocast_nn_fp32(self):
     for op, args in self.get_autocast_list('nn_fp32'):
       self._run_autocast_outofplace(
           op, args, torch.float32, module=torch._C._nn)
 
-  def test_autocast_linalg_fp16(self):
-    with torch.backends.cudnn.flags(enabled=True, deterministic=True):
-      for op, args in self.get_autocast_list('linalg_fp16'):
-        self._run_autocast_outofplace(
-            op, args, torch.float16, module=torch._C._linalg)
-
-  def test_autocast_methods_fp16(self):
-    with torch.backends.cudnn.flags(enabled=True, deterministic=True):
-      for op, args in self.get_autocast_list('methods_fp16'):
-        self._run_autocast_outofplace(op, args, torch.float16, module=None)
-
   def test_autocast_methods_fp32(self):
     for op, args in self.get_autocast_list('methods_fp32'):
+      print("autocast fp32", op)
       self._run_autocast_outofplace(op, args, torch.float32, module=None)
 
   def test_autocast_methods_expect_builtin_promote(self):
@@ -206,11 +362,49 @@ class TestAutocast(TestAutocastBase):
       self._run_autocast_outofplace(
           op, args, torch.float32, module=None, out_type=out_type)
 
-  def test_autocast_banned(self):
-    with torch.cuda.amp.autocast():
-      for op, args, module in self.get_autocast_list('banned'):
-        with self.assertRaises(RuntimeError):
-          getattr(module, op)(*args)
+
+class TestAutocastTPU(TestAutocastBase):
+
+  def setUp(self):
+    super(TestAutocastTPU, self).setUp()
+    self.autocast = torch.xla.amp.autocast
+    self.is_autocast_enabled = torch.is_autocast_xla_enabled
+    self.autocast_lists = AutocastTPUTestLists(torch.device(xm.xla_device()))
+
+  def test_autocast_methods_bf16(self):
+    for op, args in self.get_autocast_list('methods_bf16'):
+      self._run_autocast_outofplace(op, args, torch.bfloat16, module=None)
+
+  def test_autocast_torch_fp32(self):
+    for op_with_args in self.get_autocast_list('torch_fp32'):
+      op, args, maybe_kwargs = self.args_maybe_kwargs(op_with_args)
+      self._run_autocast_outofplace(
+          op, args, torch.float32, add_kwargs=maybe_kwargs)
+
+  def test_autocast_torch_need_autocast_promote(self):
+    for op, args in self.get_autocast_list('torch_need_autocast_promote'):
+      self._run_autocast_outofplace(op, args, torch.float32)
+
+  def test_autocast_torch_expect_builtin_promote(self):
+    for op, args, out_type in self.get_autocast_list(
+        'torch_expect_builtin_promote'):
+      self._run_autocast_outofplace(op, args, torch.float32, out_type=out_type)
+
+  def test_autocast_nn_fp32(self):
+    for op, args in self.get_autocast_list('nn_fp32'):
+      self._run_autocast_outofplace(
+          op, args, torch.float32, module=torch._C._nn)
+
+  def test_autocast_methods_fp32(self):
+    for op, args in self.get_autocast_list('methods_fp32'):
+      print("autocast fp32", op)
+      self._run_autocast_outofplace(op, args, torch.float32, module=None)
+
+  def test_autocast_methods_expect_builtin_promote(self):
+    for op, args, out_type in self.get_autocast_list(
+        'methods_expect_builtin_promote'):
+      self._run_autocast_outofplace(
+          op, args, torch.float32, module=None, out_type=out_type)
 
 
 if __name__ == "__main__":
