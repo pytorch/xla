@@ -73,7 +73,7 @@ template <
                        // some ops (for example, ops where we append a dtype)
                        // it's useful to redispatch to a function with a
                        // different signature.
-    Redispatch* F>  // The actual function we're redispatching to.
+    Redispatch* F>     // The actual function we're redispatching to.
 struct WrapFunction final {
   using type = WrapFunction_<
       policy, device_type, Redispatch, F,
@@ -119,7 +119,7 @@ TORCH_LIBRARY_IMPL(aten, AutocastXLA, m) {
   KERNEL_XLA(conv_transpose1d, lower_precision_fp)
   KERNEL_XLA2(conv_transpose2d, input, lower_precision_fp)
   KERNEL_XLA2(conv_transpose3d, input, lower_precision_fp)
-  KERNEL_XLA(prelu, lower_precision_fp) 
+  KERNEL_XLA(prelu, lower_precision_fp)
   KERNEL_XLA(relu, lower_precision_fp)
   KERNEL_XLA(max_pool2d, lower_precision_fp)
 
