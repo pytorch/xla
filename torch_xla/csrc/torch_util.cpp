@@ -17,7 +17,8 @@ void SymIntElements::AddSymIntNodeElements(c10::SymInt& size) {
     // c10::SymInt --(convert)--> c10::SymIntNode --(cast)-->
     // lazy::SymIntNodeImpl
     // --(get)--> lazy::NodePtr --(cast)--> lazy::DimensionNode
-    auto* lazySymNode = dynamic_cast<XLASymNodeImpl*>(size.toSymNodeImplUnowned());
+    auto* lazySymNode =
+        dynamic_cast<XLASymNodeImpl*>(size.toSymNodeImplUnowned());
     torch::lazy::NodePtr size_node = lazySymNode->node();
     std::shared_ptr<torch::lazy::DimensionNode> dimension_node =
         std::dynamic_pointer_cast<torch::lazy::DimensionNode>(size_node);
