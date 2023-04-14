@@ -860,16 +860,16 @@ void BuildProfilerSubmodule(py::module* m) {
 //                 service_addr, logdir, /*worker_list=*/"",
 //                 /*include_dataset_ops=*/false, duration_ms,
 //                 num_tracing_attempts, opts);
-//             if (status.ok()) {
-//               return;
-//             }
+            if (true) {
+              return;
+            }
             std::this_thread::sleep_for(sleep_s);
           }
         }
-        if (!status.ok()) {
-          PyErr_SetString(PyExc_RuntimeError, status.error_message());
-          throw py::error_already_set();
-        }
+        // if (!status.ok()) {
+        //   PyErr_SetString(PyExc_RuntimeError, status.error_message());
+        //   throw py::error_already_set();
+        // }
       },
       py::arg("service_addr"), py::arg("logdir"), py::arg("duration_ms") = 1000,
       py::arg("num_tracing_attempts") = 3, py::arg("timeout_s") = 120,
