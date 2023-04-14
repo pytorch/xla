@@ -181,7 +181,7 @@ function run_torch_xla_tests() {
         export PATH=$PATH:/usr/lib/llvm-8/bin
         chmod +x /tmp/pytorch/xla/test/cpp/get_coverage.sh
         lcov --directory /tmp/pytorch/xla/build/temp.linux-x86_64-cpython-38/torch_xla/csrc --base-directory . --gcov-tool /tmp/pytorch/xla/test/cpp/get_coverage.sh --capture -o cpp_lcov.info
-        genhtml cpp_lcov.info -o ~/htmlcov/cpp_lcov.info
+        genhtml cpp_lcov.info -o ~/htmlcov//cpp/cpp_lcov.info
         mv cpp_lcov.info ~/htmlcov/cpp_lcov.info
       fi
     popd
