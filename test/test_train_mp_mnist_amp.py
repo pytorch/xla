@@ -42,8 +42,6 @@ try:
   from torch_xla.amp import syncfree
 except ImportError:
   assert False, "Missing package syncfree; the package is available in torch-xla>=1.11"
-import torch.xla.amp as xla_amp
-import torch.cuda.amp as xla_cuda
 
 
 class MNIST(nn.Module):
@@ -143,10 +141,8 @@ def train_mnist(flags, **kwargs):
   loss_fn = nn.NLLLoss()
 
   if device_hw == 'TPU':
-    autocast = xla_amp.autocast
     scaler = None
   elif device_hw == 'GPU':
-    autocast = cuda_amp.autocast
     # GradScaler only used for GPU
     scaler = GradScaler(use_zero_grad=FLAGS.use_zero_grad)
   else:
@@ -158,7 +154,7 @@ def train_mnist(flags, **kwargs):
     model.train()
     for step, (data, target) in enumerate(loader):
       optimizer.zero_grad()
-      with autocast():
+      with autocast(device):
         output = model(data)
         loss = loss_fn(output, target)
       if scaler:

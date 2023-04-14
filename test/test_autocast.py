@@ -13,7 +13,6 @@ import collections
 import unittest
 from torch.testing._internal.autocast_test_lists import AutocastTestLists
 from torch_xla.amp import autocast, GradScaler
-import torch.xla.amp
 
 
 class AutocastTPUTestLists:
@@ -188,7 +187,6 @@ class TestAutocastBase(unittest.TestCase):
 
   def setUp(self):
     super(TestAutocastBase, self).setUp()
-    self.autocast = None
     self.is_autocast_enabled = None
     self.autocast_lists = None
     self.autocast_unsupported_lists = None
@@ -232,7 +230,7 @@ class TestAutocastBase(unittest.TestCase):
       add_kwargs = {}
 
     self.assertFalse(self.is_autocast_enabled())
-    with self.autocast():
+    with autocast(xm.xla_device()):
       self.assertTrue(self.is_autocast_enabled())
 
       out_type = out_type if out_type is not None else run_as_type
@@ -282,7 +280,7 @@ class TestAutocastBase(unittest.TestCase):
       # Compare numerics to Python-side "autocasting" that (we expect) does the same thing
       # as the C++-side autocasting, and should be bitwise accurate.
       output_to_compare = output if output is not None else output_method
-      with self.autocast(enabled=False):
+      with autocast(xm.xla_device(), enabled=False):
         self.assertFalse(self.is_autocast_enabled())
 
         if module is not None and hasattr(module, op):
@@ -298,12 +296,12 @@ class TestAutocastBase(unittest.TestCase):
     self.assertFalse(self.is_autocast_enabled())
 
 
-@unittest.skipIf(not torch.cuda.is_available(), "requires cuda")
+@unittest.skipIf(not xm.get_xla_supported_devices("GPU"),
+                 f"GPU specific autocast test.")
 class TestAutocastCuda(TestAutocastBase):
 
   def setUp(self):
     super(TestAutocastCuda, self).setUp()
-    self.autocast = torch.xla.cuda.autocast
     self.is_autocast_enabled = torch.is_autocast_enabled
     self.autocast_lists = AutocastTestLists(torch.device(xm.xla_device()))
     self.autocast_unsupported_lists = AutocastCudaTestUnsupportedLists()
@@ -367,7 +365,6 @@ class TestAutocastTPU(TestAutocastBase):
 
   def setUp(self):
     super(TestAutocastTPU, self).setUp()
-    self.autocast = torch.xla.amp.autocast
     self.is_autocast_enabled = torch.is_autocast_xla_enabled
     self.autocast_lists = AutocastTPUTestLists(torch.device(xm.xla_device()))
 
