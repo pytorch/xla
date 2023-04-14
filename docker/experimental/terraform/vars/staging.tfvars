@@ -1,4 +1,4 @@
-# Each docker images is translated into a single build trigger.
+# Each docker image is translated into a single build trigger.
 docker_images = [
   {
     image       = "development"
@@ -6,7 +6,7 @@ docker_images = [
     dockerfile  = "development.Dockerfile"
     trigger_files = [
       "docker/experimental/ansible/**",
-      "docker/experimental/terraform_cloudbuild/**",
+      "docker/experimental/terraform/**",
     ]
     build_args = {
       python_version = "3.8"

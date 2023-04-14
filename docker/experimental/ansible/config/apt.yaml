@@ -18,9 +18,9 @@ apt:
       - less
 
     build_cuda:
-      - "cuda-libraries-{{ cuda_version | replace('.', '-')   }}"
-      - "cuda-toolkit-{{ cuda_version | replace('.', '-')   }}"
-      - "cuda-minimal-build-{{ cuda_version | replace('.', '-')   }}"
+      - "cuda-libraries-{{ cuda_version | replace('.', '-') }}"
+      - "cuda-toolkit-{{ cuda_version | replace('.', '-') }}"
+      - "cuda-minimal-build-{{ cuda_version | replace('.', '-') }}"
       - "{{ cuda_deps['libcudnn'][cuda_version] }}"
       - "{{ cuda_deps['libcudnn-dev'][cuda_version] }}"
 
@@ -42,8 +42,8 @@ apt:
       - patch
 
     release_cuda:
-      - "cuda-libraries-{{ cuda_version | replace('.', '-')   }}"
-      - "cuda-minimal-build-{{ cuda_version | replace('.', '-')   }}"
+      - "cuda-libraries-{{ cuda_version | replace('.', '-') }}"
+      - "cuda-minimal-build-{{ cuda_version | replace('.', '-') }}"
       - "{{ cuda_deps['libcudnn'][cuda_version] }}"
 
   # Specify objects with string fields `url` and `keyring`.
