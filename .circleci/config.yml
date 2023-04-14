@@ -239,7 +239,7 @@ run_clang_format: &run_clang_format
     if [[ $git_status ]]; then
       git diff
       echo "clang-format-7 recommends the changes above, please manually apply them OR automatically apply the changes "
-      echo "by running \"clang-format-7 -i -style /PATH/TO/foo.cpp\" to the following files"
+      echo "by running \"clang-format-7 -i -style=file /PATH/TO/foo.cpp\" to the following files"
       echo "${git_status}"
       exit 1
     else
