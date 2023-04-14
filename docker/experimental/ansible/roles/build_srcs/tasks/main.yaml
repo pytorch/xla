@@ -40,6 +40,49 @@
     name: "{{ xla_wheels.files | map(attribute='path') }}"
     state: "forcereinstall"
 
+- name: Create a temp directory for collecting wheels
+  ansible.builtin.file:
+    path: /tmp/staging-wheels
+    state: directory
+    mode: '0755'
+
+- name: Create /dist directory for exported wheels
+  ansible.builtin.file:
+    path: /dist
+    state: directory
+    mode: '0755'
+
+- name: Rename and append +YYYYMMDD suffix to nightly wheels
+  ansible.builtin.shell: |
+    pushd /tmp/staging-wheels
+    cp {{ item.dir }}/*.whl .
+    rename -v "s/^{{ item.prefix }}-(.*?)-cp/{{ item.prefix }}-nightly-cp/" *.whl
+    mv /tmp/staging-wheels/* /dist/
+    popd
+
+    rename -v "s/^{{ item.prefix }}-(.*?)-cp/{{ item.prefix }}-nightly+$(date -u +%Y%m%d)-cp/" *.whl
+  args:
+    executable: /bin/bash
+    chdir: "{{ item.dir }}"
+  loop:
+    - { dir: "{{ (src_root, 'pytorch/dist') | path_join }}", prefix: "torch" }
+    - { dir: "{{ (src_root, 'pytorch/xla/dist') | path_join }}", prefix: "torch_xla" }
+  when: nightly_release
+
+- name: Copy wheels to /dist
+  ansible.builtin.shell: "cp {{ item }}/*.whl /dist"
+  args:
+    executable: /bin/bash
+  loop:
+    - "{{ (src_root, 'pytorch/dist') | path_join }}"
+    - "{{ (src_root, 'pytorch/xla/dist') | path_join }}"
+
+- name: Delete temp directory
+  ansible.builtin.file:
+    path: /tmp/staging-wheels
+    state: absent
+    mode: '0755'
+
 - name: "Tests"
   include_tasks: tests.yaml
   tags:

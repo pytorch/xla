@@ -50,7 +50,7 @@ resource "google_cloudbuild_trigger" "docker_images" {
         "-c",
         join(" ",
           concat(
-            ["docker", "build", "--progress=plain"],
+            ["docker", "build", "--progress=plain", "--network=cloudbuild"],
             # Pass build args to the docker image.
             [for arg_key, arg_val in each.value.build_args : "--build-arg=${arg_key}=${arg_val}"],
             # Pass all specified tags as $(echo <tag's bash expression>).

@@ -11,8 +11,9 @@ RUN pip install ansible
 COPY . /ansible
 WORKDIR /ansible
 
-ARG arch=amd64
-ARG accelerator=tpu
+# List Asnible tasks to apply for the dev image.
+ENV TAGS="bazel,configure_env,install_deps"
 
-RUN ansible-playbook playbook.yaml -e "stage=build arch=${arch} accelerator=${accelerator}" --skip-tags "fetch_srcs,build_srcs"
-RUN ansible-playbook playbook.yaml -e "stage=release arch=${arch} accelerator=${accelerator}" --skip-tags "fetch_srcs,build_srcs"
+ARG ansible_vars
+RUN ansible-playbook playbook.yaml -e "stage=build" -e "${ansible_vars}" --tags "${TAGS}"
+RUN ansible-playbook playbook.yaml -e "stage=release" -e "${ansible_vars}" --tags "${TAGS}"
