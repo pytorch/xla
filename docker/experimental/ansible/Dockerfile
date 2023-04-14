@@ -3,31 +3,54 @@ ARG debian_version=buster
 
 FROM python:${python_version}-${debian_version} AS build
 
-WORKDIR /ansible
 RUN pip install ansible
-COPY . /ansible
 
-ARG ansible_vars
-RUN ansible-playbook -vvv playbook.yaml -e "stage=build" -e "${ansible_vars}"
+COPY . /ansible
+WORKDIR /ansible
+
+ARG arch=amd64
+ARG accelerator=tpu
+ARG cuda_version=11.8
+ARG pytorch_git_rev=HEAD
+ARG xla_git_rev=HEAD
+ARG package_version
+
+RUN ansible-playbook -vvv playbook.yaml -e \
+  "stage=build \
+  arch=${arch} \
+  accelerator=${accelerator} \
+  cuda_version=${cuda_version} \
+  pytorch_git_rev=${pytorch_git_rev} \
+  xla_git_rev=${xla_git_rev} \
+  package_version=${package_version}"
 
 FROM python:${python_version}-${debian_version} AS release
 
 WORKDIR /ansible
-RUN pip install ansible
 COPY . /ansible
 
-ARG ansible_vars
-RUN ansible-playbook -vvv playbook.yaml -e "stage=release" -e "${ansible_vars}" --tags "install_deps"
+ARG arch=amd64
+ARG accelerator=tpu
+ARG cuda_version=11.8
+ARG pytorch_git_rev=HEAD
+ARG xla_git_rev=HEAD
 
-WORKDIR /tmp/wheels
-COPY --from=build /src/pytorch/dist/*.whl ./
-COPY --from=build /src/pytorch/xla/dist/*.whl ./
+RUN pip install ansible
+RUN ansible-playbook -vvv playbook.yaml -e \
+  "stage=release \
+  arch=${arch} \
+  accelerator=${accelerator} \
+  cuda_version=${cuda_version} \
+  pytorch_git_rev=${pytorch_git_rev} \
+  xla_git_rev=${xla_git_rev} \
+  " --tags "install_deps"
 
-RUN echo "Installing the following wheels" && ls *.whl
+WORKDIR /dist
+COPY --from=build /src/pytorch/dist/*.whl .
+COPY --from=build /src/pytorch/xla/dist/*.whl .
+
+RUN echo "Installing the following wheels" && ls /dist/*.whl
 RUN pip install *.whl
 
 WORKDIR /
-
-RUN rm -rf /ansible /tmp/wheels
-COPY --from=build /dist/*.whl /dist/
-
+RUN rm -rf /ansible

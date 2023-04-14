@@ -1,8 +1,9 @@
 resource "google_service_account" "build_runner" {
-  project    = var.project_id
-  account_id = "build-scheduler${var.build_runner_account_id_suffix}"
+  project      = var.project_id
+  account_id   = "build-scheduler${var.build_runner_account_id_suffix}"
 }
 
+# TODO: No permission to add it.
 resource "google_project_iam_member" "build_runner_build_editor" {
   project = var.project_id
   role    = "roles/cloudbuild.builds.editor"

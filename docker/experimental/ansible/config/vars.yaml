@@ -6,5 +6,3 @@ llvm_debian_repo: buster
 clang_version: 10
 # PyTorch and PyTorch/XLA wheel versions.
 package_version: 2.0
-# If set to true, wheels will be renamed to $WHEEL_NAME-nightly-cp38-cp38-linux_x86_64.whl.
-nightly_release: false
