@@ -283,14 +283,14 @@ TEST_F(AtenXlaTensorTest, TestSymSizes) {
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor a = torch::rand({2, 3}, torch::TensorOptions(torch::kFloat));
     torch::Tensor xla_a = CopyToDevice(a, device);
-    ASSERT_EQ(a.sym_sizes().at(0).maybe_as_int(), c10::make_optional(2));
+    ASSERT_EQ(*a.sym_sizes().at(0).maybe_as_int(), 2);
 
     torch::Tensor b = torch::tensor({{0.0, 1.0}, {0.0, 0.0}},
                                     torch::TensorOptions(torch::kFloat));
     torch::Tensor xla_b = CopyToDevice(b, device);
     xla_b = torch::nonzero(xla_b);
     auto s0 = xla_b.sym_sizes().at(0);
-    ASSERT_EQ(s0.maybe_as_int(), c10::nullopt);
+    ASSERT_FALSE(s0.maybe_as_int().has_value());
     auto sininode = dynamic_cast<XLASymNodeImpl*>(s0.toSymNodeImplUnowned());
     auto snode =
         std::dynamic_pointer_cast<torch_xla::SizeNode>(sininode->node());
