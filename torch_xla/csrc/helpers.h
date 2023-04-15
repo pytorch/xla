@@ -205,9 +205,6 @@ class XlaHelpers {
 
   static xla::XlaComputation CreateOrComputation(xla::PrimitiveType type);
 
-  static xla::XlaComputation CreateComplexNumberComputation(
-      xla::PrimitiveType type);
-
   // Returns an XLA operation which is a reshape to the expected rank, by
   // appending 1s to the major dimension. If offset is greater than zero, 1s
   // will be prepened to the minor dimension as well.

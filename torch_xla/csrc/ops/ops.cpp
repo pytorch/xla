@@ -821,8 +821,7 @@ torch::lazy::NodePtr ViewAsComplexCopy(const torch::lazy::Value& input) {
         xla::TorchIndexSelect(xla_input, zero, input_shape.rank() - 1);
     xla::XlaOp first_dim =
         xla::TorchIndexSelect(xla_input, one, input_shape.rank() - 1);
-    xla::XlaOp ret = xla::Complex(zero_dim, first_dim);
-    return node.ReturnOp(ret, loctx);
+    return node.ReturnOp(xla::Complex(zero_dim, first_dim), loctx);
   };
 
   xla::Shape result_shape = GetXlaShape(input);
@@ -839,8 +838,7 @@ torch::lazy::NodePtr ViewAsRealCopy(const torch::lazy::Value& input) {
     const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(xla_input);
     xla::XlaOp real = xla::Real(xla_input);
     xla::XlaOp imag = xla::Imag(xla_input);
-    xla::XlaOp stacked = BuildStack({real, imag}, input_shape.rank());
-    return node.ReturnOp(stacked, loctx);
+    return node.ReturnOp(BuildStack({real, imag}, input_shape.rank()), loctx);
   };
 
   xla::Shape result_shape = GetXlaShape(input);
