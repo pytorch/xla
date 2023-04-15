@@ -222,6 +222,13 @@ xla::XlaComputation XlaHelpers::CreateOrComputation(xla::PrimitiveType type) {
       [&](xla::XlaOp x, xla::XlaOp y) { return xla::Or(x, y); });
 }
 
+xla::XlaComputation XlaHelpers::CreateComplexNumberComputation(
+    xla::PrimitiveType type) {
+  return CreateComputation(
+      "ComplexNumberComputation", type,
+      [&](xla::XlaOp x, xla::XlaOp y) { return xla::Complex(x, y); });
+}
+
 const xla::Shape& XlaHelpers::ShapeOfXlaOp(xla::XlaOp op) {
   const xla::Shape* shape = ConsumeValue(op.builder()->GetShapePtr(op));
   return *shape;

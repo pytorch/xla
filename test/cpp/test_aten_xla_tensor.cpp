@@ -7339,6 +7339,36 @@ TEST_F(AtenXlaTensorTest, TestViewModComplex) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestViewAsComplexCopy) {
+  torch::Tensor input =
+      torch::rand({5, 4, 2}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor output = torch::view_as_complex_copy(input);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_input = CopyToDevice(input, device);
+    torch::Tensor xla_output = torch::view_as_complex_copy(xla_input);
+    AllClose(output, xla_output);
+  });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::view_as_complex_copy",
+                       cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestViewAsRealCopy) {
+  torch::Tensor input =
+      torch::rand({5, 4, 2}, torch::TensorOptions(torch::kComplexFloat));
+  torch::Tensor output = torch::view_as_real_copy(input);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_input = CopyToDevice(input, device);
+    torch::Tensor xla_output = torch::view_as_real_copy(xla_input);
+    AllClose(output, xla_output);
+  });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::view_as_real_copy",
+                       cpp_test::GetIgnoredCounters());
+}
+
 TEST_F(AtenXlaTensorTest, TestViewOfViewMod) {
   torch::Tensor input =
       torch::zeros({32, 20, 4, 4}, torch::TensorOptions(torch::kFloat));
