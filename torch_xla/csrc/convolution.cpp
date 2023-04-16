@@ -15,10 +15,10 @@ namespace {
 // Converts the tensor data format to the one required by the XLA convolution
 // library.
 xla::ConvolutionDimensionNumbers MakeConvolutionDimensionNumbers(
-    tensorflow::TensorFormat data_format, int num_spatial_dims) {
+    tensorflow::XLATensorFormat data_format, int num_spatial_dims) {
   int num_dims = num_spatial_dims + 2;
-  int batch_dimension = GetTensorBatchDimIndex(num_dims, data_format);
-  int feature_dimension = GetTensorFeatureDimIndex(num_dims, data_format);
+  int batch_dimension = xla::GetTensorBatchDimIndex(num_dims, data_format);
+  int feature_dimension = xla::GetTensorFeatureDimIndex(num_dims, data_format);
   xla::ConvolutionDimensionNumbers conv_dim_numbers;
   for (int spatial_dim = 0; spatial_dim < num_spatial_dims; ++spatial_dim) {
     conv_dim_numbers.add_input_spatial_dimensions(

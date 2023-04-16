@@ -86,6 +86,95 @@ enum XLATensorFormat {
   FORMAT_HWCN = 5,
 };
 
+// Returns the index of the batch dimension.
+inline int GetTensorBatchDimIndex(int num_dims, XLATensorFormat format) {
+  switch (format) {
+    case FORMAT_NHWC:
+    case FORMAT_NCHW:
+    case FORMAT_NCHW_VECT_C:
+    case FORMAT_NHWC_VECT_W:
+      return 0;
+    case FORMAT_HWNC:
+      return num_dims - 2;
+    case FORMAT_HWCN:
+      return num_dims - 1;
+    default:
+      LOG(FATAL) << "Unknown format " << format;
+      return -1;  // Avoid compiler warning about missing return value
+  }
+}
+
+// Returns the index of the feature dimension. If format is NCHW_VECT_C, returns
+// the index of the outer feature dimension (i.e. dimension 1, whose size would
+// be num_features / 4 in this case).
+inline int GetTensorFeatureDimIndex(int num_dims, XLATensorFormat format) {
+  switch (format) {
+    case FORMAT_NHWC:
+    case FORMAT_HWNC:
+      return num_dims - 1;
+    case FORMAT_NHWC_VECT_W:
+    case FORMAT_HWCN:
+      return num_dims - 2;
+    case FORMAT_NCHW:
+    case FORMAT_NCHW_VECT_C:
+      return 1;
+    default:
+      LOG(FATAL) << "Unknown format " << format;
+      return -1;  // Avoid compiler warning about missing return value
+  }
+}
+
+// Returns the number of spatial dims of a tensor of rank 'num_dims' and tensor
+// format 'format'.
+inline int GetTensorSpatialDims(int num_dims, XLATensorFormat format) {
+  switch (format) {
+    case FORMAT_NHWC:
+    case FORMAT_NCHW:
+    case FORMAT_HWNC:
+    case FORMAT_HWCN:
+      return num_dims - 2;  // Exclude N,C.
+    case FORMAT_NCHW_VECT_C:
+    case FORMAT_NHWC_VECT_W:
+      // Note: the VECT_W is not counted as an independent spatial dim here,
+      // since it just a component of the width dimension.
+      return num_dims - 3;  // Exclude N,C,VectDim.
+    default:
+      LOG(FATAL) << "Unknown format " << format;
+      return -1;  // Avoid compiler warning about missing return value
+  }
+}
+
+// Convert a tensor format into string.
+std::string ToString(XLATensorFormat format);
+
+// // Convert a filter tensor format into string.
+// std::string ToString(FilterTensorFormat format);
+
+// Returns the dimension index of the specified 'spatial_dim' within an
+// activation tensor. If format is NHWC_VECT_W and spatial_dim is 1, returns
+// the index of the outer width dimension (i.e. dimension 2, whose size would
+// be width / 4 in this case).
+inline int GetTensorSpatialDimIndex(int num_dims, XLATensorFormat format,
+                                    int spatial_dim) {
+  CHECK(spatial_dim >= 0 &&
+        spatial_dim < GetTensorSpatialDims(num_dims, format))
+      << spatial_dim << " " << num_dims << " " << ToString(format);
+  switch (format) {
+    case FORMAT_NHWC:
+    case FORMAT_NHWC_VECT_W:
+      return spatial_dim + 1;
+    case FORMAT_NCHW:
+    case FORMAT_NCHW_VECT_C:
+      return spatial_dim + 2;
+    case FORMAT_HWNC:
+    case FORMAT_HWCN:
+      return spatial_dim;
+    default:
+      LOG(FATAL) << "Unknown format " << format;
+      return -1;  // Avoid compiler warning about missing return value
+  }
+}
+
 // ConvOpAttrs contains all of the metadata necessary to specify an XLA
 // convolution.
 struct ConvOpAttrs {

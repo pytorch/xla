@@ -28,6 +28,42 @@ limitations under the License.
 namespace xla {
 namespace {
 
+std::string ToString(XLATensorFormat format) {
+  switch (format) {
+    case FORMAT_NHWC:
+      return "NHWC";
+    case FORMAT_NCHW:
+      return "NCHW";
+    case FORMAT_NCHW_VECT_C:
+      return "NCHW_VECT_C";
+    case FORMAT_NHWC_VECT_W:
+      return "NHWC_VECT_W";
+    case FORMAT_HWNC:
+      return "HWNC";
+    case FORMAT_HWCN:
+      return "HWCN";
+    default:
+      LOG(FATAL) << "Invalid Format: " << static_cast<tsl::int32>(format);
+      return "INVALID_FORMAT";
+  }
+}
+
+// string ToString(FilterTensorFormat format) {
+//   switch (format) {
+//     case FORMAT_HWIO:
+//       return "HWIO";
+//     case FORMAT_OIHW:
+//       return "OIHW";
+//     case FORMAT_OHWI:
+//       return "OHWI";
+//     case FORMAT_OIHW_VECT_I:
+//       return "OIHW_VECT_I";
+//     default:
+//       LOG(FATAL) << "Invalid Filter Format: " << static_cast<int32>(format);
+//       return "INVALID_FORMAT";
+//   }
+// }
+
 // Returns the expanded size of a filter used for depthwise convolution.
 // If `shape` is [H, W, ..., M, N] returns [H, W, ..., M, M*N].
 Shape ExpandedFilterShapeForDepthwiseConvolution(const Shape& shape) {
