@@ -12,7 +12,7 @@ limitations under the License.
 
 // XLA-specific Ops for 2D convolution.
 
-#include "xla/client/lib/conv_op_helpers.h"
+#include "third_party/xla_client/conv_op_helpers.h"
 
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
