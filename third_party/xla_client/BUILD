@@ -367,31 +367,17 @@ cc_library(
 )
 
 cc_library(
-    name = "constants",
-    srcs = ["constants.cc"],
-    hdrs = ["constants.h"],
-    deps = [
-        "@xla//xla:literal_util",
-        "@xla//xla:shape_util",
-        "@xla//xla:types",
-        "@xla//xla:util",
-        "@xla//xla:xla_data_proto_cc",
-        "@xla//xla/client:xla_builder",
-    ],
-)
-
-cc_library(
     name = "conv_op_helpers",
     srcs = ["conv_op_helpers.cc"],
     hdrs = ["conv_op_helpers.h"],
     deps = [
         "@xla//xla/client/lib:arithmetic",
-        ":constants",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:span",
         "@xla//xla:literal_util",
         "@xla//xla:statusor",
         "@xla//xla/client:xla_builder",
+        "@xla//xla/stream_executor:dnn",
     ],
 )
 

@@ -1,8 +1,11 @@
 /* Copyright 2017 The TensorFlow Authors. All Rights Reserved.
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
+
     http://www.apache.org/licenses/LICENSE-2.0
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,6 +23,7 @@ limitations under the License.
 #include "xla/client/lib/constants.h"
 #include "xla/client/xla_builder.h"
 #include "xla/literal_util.h"
+#include "xla/stream_executor/dnn.h"
 
 namespace xla {
 namespace {
@@ -63,32 +67,32 @@ XlaOp TransposeFilterForGroupConvolutionBackpropInput(const XlaOp& filter,
 }
 
 // Returns the transposed input for use in BackpropFilter of group convolution.
-XlaOp TransposeInputForGroupConvolutionBackpropFilter(const XlaOp& input,
-                                                      const Shape& input_shape,
-                                                      tsl::int64 num_groups,
-                                                      int batch_dim,
-                                                      int depth_dim) {
-  // 1. Reshape the depth_dim C into [G, C/G]
-  int num_dims = input_shape.dimensions_size();
-  std::vector<tsl::int64> reshape_dims = input_shape.dimensions();
-  reshape_dims[depth_dim] = reshape_dims[depth_dim] / num_groups;
-  reshape_dims.insert(reshape_dims.begin() + depth_dim, num_groups);
-  XlaOp result = Reshape(input, reshape_dims);
+// XlaOp TransposeInputForGroupConvolutionBackpropFilter(const XlaOp& input,
+//                                                       const Shape& input_shape,
+//                                                       tsl::int64 num_groups,
+//                                                       int batch_dim,
+//                                                       int depth_dim) {
+//   // 1. Reshape the depth_dim C into [G, C/G]
+//   int num_dims = input_shape.dimensions_size();
+//   std::vector<tsl::int64> reshape_dims = input_shape.dimensions();
+//   reshape_dims[depth_dim] = reshape_dims[depth_dim] / num_groups;
+//   reshape_dims.insert(reshape_dims.begin() + depth_dim, num_groups);
+//   XlaOp result = Reshape(input, reshape_dims);
 
-  // 2. Transpose G to the axis before N, e.g.: [G, N, H, W, C/G]
-  std::vector<tsl::int64> transpose_dims(num_dims + 1);
-  std::iota(transpose_dims.begin(), transpose_dims.end(),
-            0);  // e.g.: [0, 1, 2, 3, 4] -> [N, H, W, G, C/G]
-  transpose_dims.erase(transpose_dims.begin() + depth_dim);
-  transpose_dims.insert(
-      transpose_dims.begin() + batch_dim,
-      depth_dim);  // e.g.: [3, 0, 1, 2, 4] -> [G, N, H, W, C/G]
-  result = Transpose(result, transpose_dims);
+//   // 2. Transpose G to the axis before N, e.g.: [G, N, H, W, C/G]
+//   std::vector<tsl::int64> transpose_dims(num_dims + 1);
+//   std::iota(transpose_dims.begin(), transpose_dims.end(),
+//             0);  // e.g.: [0, 1, 2, 3, 4] -> [N, H, W, G, C/G]
+//   transpose_dims.erase(transpose_dims.begin() + depth_dim);
+//   transpose_dims.insert(
+//       transpose_dims.begin() + batch_dim,
+//       depth_dim);  // e.g.: [3, 0, 1, 2, 4] -> [G, N, H, W, C/G]
+//   result = Transpose(result, transpose_dims);
 
-  // 3. Merge [G, N] to [G*N]
-  result = Collapse(result, {batch_dim, batch_dim + 1});
-  return result;
-}
+//   // 3. Merge [G, N] to [G*N]
+//   result = Collapse(result, {batch_dim, batch_dim + 1});
+//   return result;
+// }
 
 // Create a mask for depthwise convolution that will make a normal convolution
 // produce the same results as a depthwise convolution. For a [2, 2, 3, 2]
@@ -173,7 +177,7 @@ XlaOp ReshapeFilterForDepthwiseConvolution(const Shape& filter_shape,
   implicit_broadcast_filter_shape.set_dimensions(
       output_feature_dim, depthwise_multiplier * input_feature);
   return Reshape(filter,
-                 AsInt64Slice(implicit_broadcast_filter_shape.dimensions()));
+                 stream_executor::dnn::AsInt64Slice(implicit_broadcast_filter_shape.dimensions()));
 }
 
 // Reduces the results of the convolution with an expanded filter to the
@@ -194,7 +198,7 @@ XlaOp ContractFilterForDepthwiseBackprop(const Shape& filter_shape,
       Reduce(masked_expanded_filter, Zero(builder, elem_type),
              CreateScalarAddComputation(elem_type, builder),
              {filter_shape.dimensions_size() - 2}),
-      AsInt64Slice(filter_shape.dimensions()));
+      stream_executor::dnn::AsInt64Slice(filter_shape.dimensions()));
 }
 
 // Performs some basic checks on ConvOpAttrs that are true for all kinds of XLA
@@ -230,7 +234,7 @@ Status CheckConvAttrs(const ConvOpAttrs& attrs) {
           i, attrs.dilations[input_dim]);
     }
   }
-  return Status::OK();
+  return OkStatus();
 }
 
 // Information about a single spatial dimension for a convolution
@@ -260,8 +264,8 @@ struct ConvBackpropDimensions {
 
 Status ConvBackpropExtractAndVerifyDimension(
     absl::Span<const tsl::int64> input_shape, absl::Span<const tsl::int64> filter_shape,
-    absl::Span<const tsl::int64> output_shape, absl::Span<const int32> dilations,
-    const std::vector<int32>& strides, tsl::int64 padding_before,
+    absl::Span<const tsl::int64> output_shape, absl::Span<const tsl::int32> dilations,
+    const std::vector<tsl::int32>& strides, tsl::int64 padding_before,
     tsl::int64 padding_after, int spatial_dim, int filter_spatial_dim,
     ConvBackpropSpatialDimension* dim) {
   dim->input_size = input_shape.at(spatial_dim);
@@ -295,7 +299,7 @@ Status ConvBackpropExtractAndVerifyDimension(
           << ", pad_before = " << dim->pad_before
           << ", pad_after = " << dim->pad_after
           << ", dilation = " << dim->dilation << ", strides = " << dim->stride;
-  return Status::OK();
+  return OkStatus();
 }
 
 // Verifies that the dimensions all match, and computes sizes/padding for the
@@ -304,7 +308,7 @@ Status ConvBackpropComputeDimensions(
     absl::string_view label, int num_spatial_dims,
     absl::Span<const tsl::int64> input_shape, absl::Span<const tsl::int64> filter_shape,
     absl::Span<const tsl::int64> out_backprop_shape,
-    absl::Span<const int32> dilations, const std::vector<int32>& strides,
+    absl::Span<const tsl::int32> dilations, const std::vector<tsl::int32>& strides,
     absl::Span<const tsl::int64> explicit_paddings,
     const ConvolutionDimensionNumbers& data_format,
     ConvBackpropDimensions* dims) {
@@ -355,7 +359,7 @@ Status ConvBackpropComputeDimensions(
         input_shape, filter_shape, out_backprop_shape, dilations, strides,
         padding_before, padding_after, image_dim, i, &dims->spatial_dims[i]));
   }
-  return Status::OK();
+  return OkStatus();
 }
 
 }  // anonymous namespace
@@ -565,10 +569,10 @@ StatusOr<XlaOp> MakeXlaBackpropFilterConvOp(
   // 1. In the case of group convolution, move the num_groups dimension before
   // the batch dimension
   // 2. Swap the roles of the batch and feature dimensions.
-  if (feature_group_count != 1 && !attrs.depthwise) {
-    activations = TransposeInputForGroupConvolutionBackpropFilter(
-        activations, input_shape, feature_group_count, n_dim, c_dim);
-  }
+//   if (feature_group_count != 1 && !attrs.depthwise) {
+//     activations = TransposeInputForGroupConvolutionBackpropFilter(
+//         activations, input_shape, feature_group_count, n_dim, c_dim);
+//   }
 
   // In the case of depthwise convolution with no multiplier,
   // the computation can be done by the batch_group_count parameter.
