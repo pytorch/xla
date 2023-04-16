@@ -15,7 +15,7 @@ namespace {
 // Converts the tensor data format to the one required by the XLA convolution
 // library.
 xla::ConvolutionDimensionNumbers MakeConvolutionDimensionNumbers(
-    tensorflow::XLATensorFormat data_format, int num_spatial_dims) {
+    xla::XLATensorFormat data_format, int num_spatial_dims) {
   int num_dims = num_spatial_dims + 2;
   int batch_dimension = xla::GetTensorBatchDimIndex(num_dims, data_format);
   int feature_dimension = xla::GetTensorFeatureDimIndex(num_dims, data_format);
@@ -171,7 +171,7 @@ xla::ConvOpAttrs MakeConvOpAttrs(
     conv_op_attrs.explicit_paddings.push_back(spatial_padding[spatial_dim]);
   }
   conv_op_attrs.data_format = MakeConvolutionDimensionNumbers(
-      tensorflow::TensorFormat::FORMAT_NCHW, num_spatial_dims);
+      xla::XLATensorFormat::FORMAT_NCHW, num_spatial_dims);
   // xla::XLATensorFormat::FORMAT_NCHW; // 1; //tensorflow::TensorFormat::FORMAT_NCHW; // use `ConvolutionDimensionNumbers` from /pytorch/tensorflow/tensorflow/compiler/xla/xla_data.proto ?
   return conv_op_attrs;
 }
