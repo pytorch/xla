@@ -378,6 +378,7 @@ cc_library(
         "@xla//xla:statusor",
         "@xla//xla/client:xla_builder",
         "@xla//xla/stream_executor:dnn",
+        "@xla//xla:xla_data_proto_cc",
     ],
 )
 

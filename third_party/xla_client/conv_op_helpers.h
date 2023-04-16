@@ -21,6 +21,7 @@ limitations under the License.
 #include "absl/strings/string_view.h"
 #include "xla/client/xla_builder.h"
 #include "xla/statusor.h"
+#include "xla/xla_data.pb.h"
 
 // This header exposes utilities for translating TensorFlow convolution ops into
 // XLA ops.
