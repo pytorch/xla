@@ -381,27 +381,11 @@ cc_library(
 )
 
 cc_library(
-    name = "arithmetic",
-    srcs = ["arithmetic.cc"],
-    hdrs = ["arithmetic.h"],
-    deps = [
-        ":constants",
-        "@com_google_absl//absl/strings",
-        "@xla//xla:shape_util",
-        "@xla//xla:status_macros",
-        "@xla//xla:types",
-        "@xla//xla:xla_data_proto_cc",
-        "@xla//xla/client:xla_builder",
-        "@xla//xla/client:xla_computation",
-    ],
-)
-
-cc_library(
     name = "conv_op_helpers",
     srcs = ["conv_op_helpers.cc"],
     hdrs = ["conv_op_helpers.h"],
     deps = [
-        ":arithmetic",
+        "@xla//xla/client/lib:arithmetic",
         ":constants",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:span",
