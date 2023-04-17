@@ -13,7 +13,7 @@ std::vector<xla::XlaOp> LowerSymEig(xla::XlaOp input, bool eigenvectors,
                                     bool lower) {
   xla::SelfAdjointEigResult self_adj_eig_result =
       xla::SelfAdjointEig(input, /*lower=*/lower, /*max_iter=*/100,
-                          /*epsilon=*/1e-6);
+                          /*epsilon=*/1e-6, true);
   xla::XlaOp v = self_adj_eig_result.v;
   xla::XlaOp w = self_adj_eig_result.w;
   if (!eigenvectors) {
