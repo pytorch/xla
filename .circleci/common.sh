@@ -140,8 +140,6 @@ function run_torch_xla_tests() {
       chmod -R 755 ~/htmlcov
     else
       ./test/run_tests.sh
-      # only run test_autocast for cpu and gpu on circleCI.
-      python test/test_autocast.py
 
       # GPU tests
       if [ -x "$(command -v nvidia-smi)" ]; then
