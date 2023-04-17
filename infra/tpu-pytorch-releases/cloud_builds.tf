@@ -56,7 +56,7 @@ module "nightly_builds" {
   ansible_vars = merge(each.value, {
     package_version = var.nightly_package_version
     nightly_release = true
-    pytorch_git_rev = "master"
+    pytorch_git_rev = "main"
     xla_git_rev     = "master"
   })
 
