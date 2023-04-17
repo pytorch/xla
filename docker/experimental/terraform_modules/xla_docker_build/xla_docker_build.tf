@@ -33,19 +33,6 @@ locals {
     }
   ]
 
-  fetch_ansible_build_config = [
-    {
-      id   = "git_fetch"
-      name = "gcr.io/cloud-builders/git"
-      args = ["fetch", "origin", var.ansible_branch]
-    },
-    {
-      id   = "git_checkout"
-      name = "gcr.io/cloud-builders/git"
-      args = ["checkout", var.ansible_branch]
-    }
-  ]
-
   build_and_push_docker_image_steps = [
     # Build docker image.
     {
@@ -63,11 +50,6 @@ locals {
 
             # Pass build args to the docker image.
             [for arg_key, arg_val in var.build_args : "--build-arg=${arg_key}=${arg_val}"],
-
-            # Pass Ansible variables as JSON object, to make sure that
-            # types are preserved (e.g. boolean),
-            # see https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_variables.html#key-value-format.
-            ["--build-arg=ansible_vars='${jsonencode(var.ansible_vars)}'"],
 
             # Pass Ansible variables as JSON object, to make sure that
             # types are preserved (e.g. boolean),

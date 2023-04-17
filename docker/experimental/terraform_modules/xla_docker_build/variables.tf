@@ -19,19 +19,6 @@ variable "description" {
   default = ""
 }
 
-variable "image_tags" {
-  type = list(string)
-}
-
-variable "location" {
-  default = "us-central1"
-}
-
-variable "description" {
-  type    = string
-  default = ""
-}
-
 variable "ansible_branch" {
   default = "master"
 }
