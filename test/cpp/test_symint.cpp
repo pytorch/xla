@@ -175,7 +175,11 @@ TEST(SymintTest, TestDynamicSymintArithmetic) {
   // Testing XLASymNodeImpl::add
   c10::SymInt c = a + b;
   auto size_add_symnode =
+<<<<<<< HEAD
       dynamic_cast<XLASymNodeImpl*>(c.toSymNodeImplUnowned());
+=======
+      dynamic_cast<XLASymNodeImpl*>(c.toSymNode().get());
+>>>>>>> updtae
   ASSERT_TRUE(size_add_symnode);
   auto size_add =
       std::dynamic_pointer_cast<torch_xla::SizeAdd>(size_add_symnode->node());
@@ -185,7 +189,11 @@ TEST(SymintTest, TestDynamicSymintArithmetic) {
   // Testing XLASymNodeImpl::mul
   c = a * b;
   auto size_mul_symnode =
+<<<<<<< HEAD
       dynamic_cast<XLASymNodeImpl*>(c.toSymNodeImplUnowned());
+=======
+      dynamic_cast<XLASymNodeImpl*>(c.toSymNode().get());
+>>>>>>> updtae
   ASSERT_TRUE(size_mul_symnode);
   auto size_mul =
       std::dynamic_pointer_cast<torch_xla::SizeMul>(size_mul_symnode->node());
