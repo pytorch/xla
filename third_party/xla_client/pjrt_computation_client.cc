@@ -104,6 +104,16 @@ PjRtComputationClient::PjRtComputationClient() {
                       /*distributed_client=*/distributed_client,
                       /*node_id=*/local_rank, allowed_devices = allowed_devices)
                       .value());
+  } else if (device_type == "XPU") {
+    TF_VLOG(1) << "Initializing PjRt XPU client...";
+    std::cout << "library path = "
+              << sys_util::GetEnvString(env::kEnvXpuLibraryPath, "libxpu.so")
+              << std::endl;
+    XLA_CHECK_OK(pjrt::LoadPjrtPlugin(
+        "xpu", sys_util::GetEnvString(env::kEnvXpuLibraryPath, "libxpu.so")));
+    supports_logical_on_device_shape_ = false;
+    client_ = std::move(xla::GetCApiClient("XPU").value());
+
   } else {
     XLA_ERROR() << absl::StrFormat("Unknown %s '%s'", env::kEnvPjRtDevice,
                                    device_type);
