@@ -45,7 +45,7 @@ RUN pip install mkl mkl-include setuptools typing_extensions cmake requests
 RUN git clone --depth=1 https://github.com/pytorch/pytorch.git
 WORKDIR /pytorch
 COPY torch_patches/ torch_patches/
-RUN bash -c 'torch_pin=$(cat torch_patches/.torch_pin &); git fetch origin ${torch_pin:-master}; git checkout FETCH_HEAD'
+RUN bash -c 'torch_pin=$(cat torch_patches/.torch_pin &); git fetch origin ${torch_pin:-HEAD}; git checkout FETCH_HEAD'
 RUN git submodule update --init --recursive
 RUN find torch_patches -name '*.diff' | xargs -t -r -n 1 patch -N -p1 -l -i
 
