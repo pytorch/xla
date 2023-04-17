@@ -3244,6 +3244,33 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::var_mean(
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
 }
 
+at::Tensor XLANativeFunctions::view_as_complex_copy(const at::Tensor& self) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+
+  XLA_CHECK(self.scalar_type() == at::kFloat ||
+            self.scalar_type() == at::kDouble ||
+            self.scalar_type() == at::kHalf)
+      << "view_as_complex is only supported for half, float and double "
+         "tensors, but got a tensor of scalar type: "
+      << self.scalar_type();
+
+  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::view_as_complex_copy(self_tensor));
+}
+
+at::Tensor XLANativeFunctions::view_as_real_copy(const at::Tensor& self) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+
+  XLA_CHECK(self.is_complex()) << "view_as_real is only supported for complex "
+                                  "tensors, but got a tensor of scalar type: "
+                               << self.scalar_type();
+
+  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::view_as_real_copy(self_tensor));
+}
+
 at::Tensor XLANativeFunctions::view_copy_symint(const at::Tensor& self,
                                                 at::SymIntArrayRef shape) {
   TORCH_LAZY_FN_COUNTER("xla::");

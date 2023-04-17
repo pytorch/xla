@@ -2,9 +2,11 @@
 
 #include <cmath>
 
+#include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/client/lib/logdet.h"
 #include "tensorflow/compiler/xla/client/lib/math.h"
 #include "tensorflow/compiler/xla/client/lib/matrix.h"
+#include "tensorflow/compiler/xla/client/lib/slicing.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "third_party/xla_client/util.h"
@@ -806,6 +808,44 @@ torch::lazy::NodePtr Selu(const torch::lazy::Value& input) {
   };
   return GenericOp(torch::lazy::OpKind(at::aten::selu), {input},
                    GetXlaShape(input), std::move(lower_fn));
+}
+
+torch::lazy::NodePtr ViewAsComplexCopy(const torch::lazy::Value& input) {
+  auto lower_fn = [](const XlaNode& node,
+                     LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(xla_input);
+    xla::XlaOp zero = xla::Zero(xla_input.builder(), xla::PrimitiveType::S32);
+    xla::XlaOp one = xla::One(xla_input.builder(), xla::PrimitiveType::S32);
+    xla::XlaOp zero_dim =
+        xla::TorchIndexSelect(xla_input, zero, input_shape.rank() - 1);
+    xla::XlaOp first_dim =
+        xla::TorchIndexSelect(xla_input, one, input_shape.rank() - 1);
+    return node.ReturnOp(xla::Complex(zero_dim, first_dim), loctx);
+  };
+
+  xla::Shape result_shape = GetXlaShape(input);
+  result_shape.DeleteDimension(result_shape.rank() - 1);
+
+  return GenericOp(torch::lazy::OpKind(at::aten::view_as_complex_copy), {input},
+                   result_shape, std::move(lower_fn));
+}
+
+torch::lazy::NodePtr ViewAsRealCopy(const torch::lazy::Value& input) {
+  auto lower_fn = [](const XlaNode& node,
+                     LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(xla_input);
+    xla::XlaOp real = xla::Real(xla_input);
+    xla::XlaOp imag = xla::Imag(xla_input);
+    return node.ReturnOp(BuildStack({real, imag}, input_shape.rank()), loctx);
+  };
+
+  xla::Shape result_shape = GetXlaShape(input);
+  result_shape.add_dimensions(2);
+
+  return GenericOp(torch::lazy::OpKind(at::aten::view_as_real_copy), {input},
+                   result_shape, std::move(lower_fn));
 }
 
 }  // namespace torch_xla
