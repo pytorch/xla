@@ -139,4 +139,3 @@ WORKDIR /pytorch/xla
 RUN python setup.py clean || exit 0
 
 WORKDIR /
-

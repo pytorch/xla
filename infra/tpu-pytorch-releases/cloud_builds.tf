@@ -60,9 +60,7 @@ module "nightly_builds" {
     xla_git_rev     = "master"
   })
 
-  # TODO: Change this branch to master. Currently the dev branch contains
-  # Ansible with deps for older versions of CUDA (see cuda_deps.yaml).
-  ansible_branch      = "mlewko/terraform-follow-up"
+  ansible_branch      = "master"
   trigger_on_schedule = { schedule = "0 0 * * *", branch = "master" }
 
   trigger_name = "nightly-${replace(each.key, "/[_.]/", "-")}"
@@ -107,9 +105,7 @@ module "versioned_builds" {
     xla_git_rev     = each.value.git_tag
   })
 
-  # TODO: Change this branch to master. Currently the dev branch contains
-  # Ansible with deps for older versions of CUDA (see cuda_deps.yaml).
-  ansible_branch  = "mlewko/terraform-follow-up"
+  ansible_branch  = "master"
   trigger_on_push = { tag = each.value.git_tag }
 
   trigger_name = replace(each.key, "/[_.]/", "-")
