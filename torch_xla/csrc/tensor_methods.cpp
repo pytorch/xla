@@ -1242,8 +1242,10 @@ XLATensorPtr full_symint(at::SymIntArrayRef sym_size,
                          const torch::lazy::BackendDevice& device,
                          at::ScalarType scalar_type) {
   XLA_CHECK(std::all_of(sym_size.begin(), sym_size.end(), [](at::SymInt dim) {
-    if (!dim.is_symbolic()) {
-      return dim >= 0;
+    // TODO: It should be OK to perform this test on symbolic ints too, not
+    // sure why you conditionalized it.
+    if (auto c = dim.maybe_as_int()) {
+      return *c >= 0;
     }
     return true;
   })) << "Dimensions cannot be negative numbers";
