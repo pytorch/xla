@@ -62,7 +62,7 @@ class TestDynamicShapeModels(unittest.TestCase):
     num_features = 2
     num_test_samples = 200
     model = Feedforward(num_features, hidden_size=10).to(xla_dev)
-    print('model=', model)
+    # print('model=', model)
     criterion = torch.nn.BCELoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
 
@@ -72,8 +72,8 @@ class TestDynamicShapeModels(unittest.TestCase):
     for i in range(num_batches):
       batches.append(self.create_dynamic_test_data(num_test_samples, num_features, device=xla_dev, num_non_zeros=i))
 
-    print('before training num_compilation=', met.metric_data('CompileTime')[0])
-    print('before training num_executions=', met.metric_data('ExecuteTime')[0])
+    # print('before training num_compilation=', met.metric_data('CompileTime')[0])
+    # print('before training num_executions=', met.metric_data('ExecuteTime')[0])
     # the x_training in each batch has size [<=10, 2] with real size [0, 2], [1, 2], [2, 2]... 
     # and y_training has size [<=10] with real size [0], [1], [2], [3]...
     start = time.time()
@@ -92,9 +92,9 @@ class TestDynamicShapeModels(unittest.TestCase):
     
     end = time.time()
     print('Training time=', end - start)
-    print('Num compilations=', num_compilations)
-    print('Num executions=', num_executions)
-    print(met.metrics_report())
+    # print('Num compilations=', num_compilations)
+    # print('Num executions=', num_executions)
+    # print(met.metrics_report())
     
 
 
