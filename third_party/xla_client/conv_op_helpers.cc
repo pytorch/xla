@@ -26,9 +26,8 @@ limitations under the License.
 #include "xla/stream_executor/dnn.h"
 
 namespace xla {
-namespace {
 
-std::string ToString(XLATensorFormat format) {
+std::string XLAToString(XLATensorFormat format) {
   switch (format) {
     case FORMAT_NHWC:
       return "NHWC";
@@ -47,6 +46,8 @@ std::string ToString(XLATensorFormat format) {
       return "INVALID_FORMAT";
   }
 }
+
+namespace {
 
 // string ToString(FilterTensorFormat format) {
 //   switch (format) {

@@ -86,6 +86,9 @@ enum XLATensorFormat {
   FORMAT_HWCN = 5,
 };
 
+// Convert a tensor format into string.
+std::string XLAToString(XLATensorFormat format);
+
 // Returns the index of the batch dimension.
 inline int GetTensorBatchDimIndex(int num_dims, XLATensorFormat format) {
   switch (format) {
@@ -144,11 +147,8 @@ inline int GetTensorSpatialDims(int num_dims, XLATensorFormat format) {
   }
 }
 
-// Convert a tensor format into string.
-std::string ToString(XLATensorFormat format);
-
 // // Convert a filter tensor format into string.
-// std::string ToString(FilterTensorFormat format);
+// std::string XLAToString(FilterTensorFormat format);
 
 // Returns the dimension index of the specified 'spatial_dim' within an
 // activation tensor. If format is NHWC_VECT_W and spatial_dim is 1, returns
@@ -158,7 +158,7 @@ inline int GetTensorSpatialDimIndex(int num_dims, XLATensorFormat format,
                                     int spatial_dim) {
   CHECK(spatial_dim >= 0 &&
         spatial_dim < GetTensorSpatialDims(num_dims, format))
-      << spatial_dim << " " << num_dims << " " << ToString(format);
+      << spatial_dim << " " << num_dims << " " << XLAToString(format);
   switch (format) {
     case FORMAT_NHWC:
     case FORMAT_NHWC_VECT_W:
