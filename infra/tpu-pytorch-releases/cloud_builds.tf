@@ -78,7 +78,7 @@ module "nightly_builds" {
       : format("CUDA %s", each.value.cuda_version)
     } docker image and corresponding wheels for PyTorch/XLA.",
     "Trigger managed by Terraform setup in",
-    "docker/experimental/tpu-pytorch-releases/cloud_builds.tf."
+    "infra/tpu-pytorch-releases/cloud_builds.tf."
   ])
 
   wheels_dest = "${module.releases_storage_bucket.url}/wheels/${
