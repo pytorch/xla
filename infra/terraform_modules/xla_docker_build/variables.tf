@@ -65,7 +65,7 @@ variable "dockerfile" {
 }
 
 variable "docker_context_dir" {
-  default = "docker/experimental/ansible"
+  default = "infra/ansible"
 }
 
 variable "docker_repo_url" {

@@ -19,7 +19,7 @@ module "dev_image" {
   description = join(" ", [
     "Build development image with TPU support.",
     "Trigger managed by Terraform setup in",
-    "docker/experimental/tpu-pytorch/cloud_builds.tf.",
+    "infra/tpu-pytorch/cloud_builds.tf.",
   ])
 
   build_args = {
