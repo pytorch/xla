@@ -409,6 +409,7 @@ workflows:
               only:
                 - master
                 - ci_test_coverage
+                - stk_ci_test_coverage
       - pytorch_xla_run_test_coverage:
           name: pytorch_xla_GPU_test_coverage
           resource_class: gpu.nvidia.small.multi
