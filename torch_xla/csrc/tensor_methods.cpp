@@ -7,7 +7,7 @@
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
-#include "tensorflow/compiler/xla/literal_util.h"
+#include "xla/literal_util.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "third_party/xla_client/metrics.h"
 #include "third_party/xla_client/util.h"

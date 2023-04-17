@@ -234,7 +234,7 @@ run_clang_format: &run_clang_format
       exit 1
     fi
 
-    find -name '*.cpp' -o -name '*.h' | xargs clang-format-7 -i -style=file
+    find -name '*.cpp' -o -name '*.h' -name '*.cc' | xargs clang-format-7 -i -style=file
     git_status=$(git status --porcelain)
     if [[ $git_status ]]; then
       git diff

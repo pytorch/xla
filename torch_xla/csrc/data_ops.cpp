@@ -5,10 +5,10 @@
 #include <numeric>
 
 #include "absl/strings/str_join.h"
-#include "tensorflow/compiler/xla/client/lib/constants.h"
-#include "tensorflow/compiler/xla/client/lib/slicing.h"
-#include "tensorflow/compiler/xla/shape_util.h"
-#include "tensorflow/compiler/xla/util.h"
+#include "xla/client/lib/constants.h"
+#include "xla/client/lib/slicing.h"
+#include "xla/shape_util.h"
+#include "xla/util.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "third_party/xla_client/sys_util.h"
 #include "third_party/xla_client/util.h"

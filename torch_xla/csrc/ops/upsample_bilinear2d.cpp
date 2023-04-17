@@ -1,7 +1,7 @@
 #include "torch_xla/csrc/ops/upsample_bilinear2d.h"
 
 #include "absl/strings/str_join.h"
-#include "tensorflow/compiler/xla/util.h"
+#include "xla/util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/resize_ops.h"
 

@@ -6,7 +6,7 @@
 #include <memory>
 #include <mutex>
 
-#include "tensorflow/compiler/xla/types.h"
+#include "xla/types.h"
 
 namespace xla {
 namespace util {

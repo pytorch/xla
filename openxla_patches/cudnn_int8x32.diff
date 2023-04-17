@@ -1,8 +1,8 @@
 # TODO: Try removing with the next pin update. See https://github.com/pytorch/xla/pull/4615#issuecomment-1428883781
-diff --git a/tensorflow/compiler/xla/debug_options_flags.cc b/tensorflow/compiler/xla/debug_options_flags.cc
+diff --git a/xla/debug_options_flags.cc b/xla/debug_options_flags.cc
 index fac64573c54..dec0f1823c1 100644
---- a/tensorflow/compiler/xla/debug_options_flags.cc
-+++ b/tensorflow/compiler/xla/debug_options_flags.cc
+--- a/xla/debug_options_flags.cc
++++ b/xla/debug_options_flags.cc
 @@ -110,7 +110,6 @@ DebugOptions DefaultDebugOptionsIgnoringFlags() {
        DebugOptions::PARTITIONING_ALGORITHM_NOOP);
 
@@ -25,10 +25,10 @@ index fac64573c54..dec0f1823c1 100644
  }  // NOLINT(readability/fn_size)
 
  // Allocates flag_values and flag_objects; this function must not be called more
-diff --git a/tensorflow/compiler/xla/service/gpu/BUILD b/tensorflow/compiler/xla/service/gpu/BUILD
+diff --git a/xla/service/gpu/BUILD b/xla/service/gpu/BUILD
 index 7fff6bdad13..b21105a42d7 100644
---- a/tensorflow/compiler/xla/service/gpu/BUILD
-+++ b/tensorflow/compiler/xla/service/gpu/BUILD
+--- a/xla/service/gpu/BUILD
++++ b/xla/service/gpu/BUILD
 @@ -1658,11 +1658,8 @@ cc_library(
      srcs = ["cudnn_vectorize_convolutions.cc"],
      hdrs = ["cudnn_vectorize_convolutions.h"],
@@ -37,28 +37,28 @@ index 7fff6bdad13..b21105a42d7 100644
 -        ":cublas_cudnn",
          ":cudnn_support_utils",
          ":stream_executor_util",
--        "//tensorflow/compiler/xla:shape_util",
-         "//tensorflow/compiler/xla:statusor",
-         "//tensorflow/compiler/xla/client:xla_builder",
-         "//tensorflow/compiler/xla/hlo/ir:hlo",
-diff --git a/tensorflow/compiler/xla/service/gpu/conv_layout_normalization.cc b/tensorflow/compiler/xla/service/gpu/conv_layout_normalization.cc
+-        "//xla:shape_util",
+         "//xla:statusor",
+         "//xla/client:xla_builder",
+         "//xla/hlo/ir:hlo",
+diff --git a/xla/service/gpu/conv_layout_normalization.cc b/xla/service/gpu/conv_layout_normalization.cc
 index 7254e02f513..c2ab437b48e 100644
---- a/tensorflow/compiler/xla/service/gpu/conv_layout_normalization.cc
-+++ b/tensorflow/compiler/xla/service/gpu/conv_layout_normalization.cc
+--- a/xla/service/gpu/conv_layout_normalization.cc
++++ b/xla/service/gpu/conv_layout_normalization.cc
 @@ -16,23 +16,22 @@ limitations under the License.
- #include "tensorflow/compiler/xla/service/gpu/conv_layout_normalization.h"
+ #include "xla/service/gpu/conv_layout_normalization.h"
 
  #include <optional>
 -#include <tuple>
  #include <vector>
 
- #include "tensorflow/compiler/xla/hlo/ir/hlo_casting_utils.h"
--#include "tensorflow/compiler/xla/hlo/ir/hlo_instructions.h"
- #include "tensorflow/compiler/xla/hlo/ir/hlo_module.h"
--#include "tensorflow/compiler/xla/layout_util.h"
- #include "tensorflow/compiler/xla/service/gpu/cublas_cudnn.h"
- #include "tensorflow/compiler/xla/service/hlo_creation_utils.h"
--#include "tensorflow/compiler/xla/shape_util.h"
+ #include "xla/hlo/ir/hlo_casting_utils.h"
+-#include "xla
+ #include "xla/hlo/ir/hlo_module.h"
+-#include "xla/layout_util.h"
+ #include "xla/service/gpu/cublas_cudnn.h"
+ #include "xla/service/hlo_creation_utils.h"
+-#include "xla/shape_util.h"
 
  namespace xla {
  namespace gpu {
@@ -141,10 +141,10 @@ index 7254e02f513..c2ab437b48e 100644
  }
 
  }  // end namespace gpu
-diff --git a/tensorflow/compiler/xla/service/gpu/conv_layout_normalization.h b/tensorflow/compiler/xla/service/gpu/conv_layout_normalization.h
+diff --git a/xla/service/gpu/conv_layout_normalization.h b/xla/service/gpu/conv_layout_normalization.h
 index bb38a299435..c6305784f94 100644
---- a/tensorflow/compiler/xla/service/gpu/conv_layout_normalization.h
-+++ b/tensorflow/compiler/xla/service/gpu/conv_layout_normalization.h
+--- a/xla/service/gpu/conv_layout_normalization.h
++++ b/xla/service/gpu/conv_layout_normalization.h
 @@ -28,8 +28,8 @@ limitations under the License.
  namespace xla {
  namespace gpu {
@@ -156,25 +156,25 @@ index bb38a299435..c6305784f94 100644
 
  }  // end namespace gpu
  }  // end namespace xla
-diff --git a/tensorflow/compiler/xla/service/gpu/cudnn_vectorize_convolutions.cc b/tensorflow/compiler/xla/service/gpu/cudnn_vectorize_convolutions.cc
+diff --git a/xla/service/gpu/cudnn_vectorize_convolutions.cc b/xla/service/gpu/cudnn_vectorize_convolutions.cc
 index f9af729cf36..7511e81a423 100644
---- a/tensorflow/compiler/xla/service/gpu/cudnn_vectorize_convolutions.cc
-+++ b/tensorflow/compiler/xla/service/gpu/cudnn_vectorize_convolutions.cc
+--- a/xla/service/gpu/cudnn_vectorize_convolutions.cc
++++ b/xla/service/gpu/cudnn_vectorize_convolutions.cc
 @@ -16,21 +16,16 @@ limitations under the License.
- #include "tensorflow/compiler/xla/service/gpu/cudnn_vectorize_convolutions.h"
+ #include "xla/service/gpu/cudnn_vectorize_convolutions.h"
 
  #include <optional>
 -#include <string>
  #include <vector>
 
- #include "tensorflow/compiler/xla/client/xla_builder.h"
- #include "tensorflow/compiler/xla/hlo/ir/hlo_casting_utils.h"
- #include "tensorflow/compiler/xla/hlo/ir/hlo_instructions.h"
--#include "tensorflow/compiler/xla/service/gpu/backend_configs.pb.h"
--#include "tensorflow/compiler/xla/service/gpu/cublas_cudnn.h"
- #include "tensorflow/compiler/xla/service/gpu/cudnn_support_utils.h"
- #include "tensorflow/compiler/xla/service/gpu/stream_executor_util.h"
--#include "tensorflow/compiler/xla/shape_util.h"
+ #include "xla/client/xla_builder.h"
+ #include "xla/hlo/ir/hlo_casting_utils.h"
+ #include "xla/hlo/ir/hlo_instructions.h"
+-#include "xla/service/gpu/backend_configs.pb.h"
+-#include "xla/service/gpu/cublas_cudnn.h"
+ #include "xla/service/gpu/cudnn_support_utils.h"
+ #include "xla/service/gpu/stream_executor_util.h"
+-#include "xla/shape_util.h"
 
  namespace xla {
  namespace gpu {
@@ -257,10 +257,10 @@ index f9af729cf36..7511e81a423 100644
  StatusOr<bool> CudnnVectorizeConvolutions::Run(
      HloModule* module,
      const absl::flat_hash_set<absl::string_view>& execution_threads) {
-diff --git a/tensorflow/compiler/xla/service/gpu/gpu_compiler.cc b/tensorflow/compiler/xla/service/gpu/gpu_compiler.cc
+diff --git a/xla/service/gpu/gpu_compiler.cc b/xla/service/gpu/gpu_compiler.cc
 index 9e4d8c95bb0..9b242ce3b04 100644
---- a/tensorflow/compiler/xla/service/gpu/gpu_compiler.cc
-+++ b/tensorflow/compiler/xla/service/gpu/gpu_compiler.cc
+--- a/xla/service/gpu/gpu_compiler.cc
++++ b/xla/service/gpu/gpu_compiler.cc
 @@ -836,7 +836,8 @@ Status GpuCompiler::OptimizeHloPostLayoutAssignment(
      pipeline.AddPass<GemmBroadcastFoldingRewriter>();
 
@@ -271,10 +271,10 @@ index 9e4d8c95bb0..9b242ce3b04 100644
        pipeline.AddPass<HloPassFix<AlgebraicSimplifier>>(options);
      }
      pipeline.AddPass<BroadcastCanonicalizer>();
-diff --git a/tensorflow/compiler/xla/stream_executor/cuda/cuda_dnn.cc b/tensorflow/compiler/xla/stream_executor/cuda/cuda_dnn.cc
+diff --git a/xla/stream_executor/cuda/cuda_dnn.cc b/xla/stream_executor/cuda/cuda_dnn.cc
 index cb2aa3f2ac1..4c995b4f142 100644
---- a/tensorflow/compiler/xla/stream_executor/cuda/cuda_dnn.cc
-+++ b/tensorflow/compiler/xla/stream_executor/cuda/cuda_dnn.cc
+--- a/xla/stream_executor/cuda/cuda_dnn.cc
++++ b/xla/stream_executor/cuda/cuda_dnn.cc
 @@ -3485,7 +3485,7 @@ std::tuple<int, int> GetTensorVectorSizeAndDim(
  tsl::StatusOr<cudnn_frontend::Tensor> CreateCudnnTensor(
      absl::Span<const int64_t> dims, absl::Span<const int64_t> strides,
@@ -451,10 +451,10 @@ index cb2aa3f2ac1..4c995b4f142 100644
      } else if (is_broken_identity_fused_conv) {
        reason = "it uses an identity activation.";
      }
-diff --git a/tensorflow/compiler/xla/tests/BUILD b/tensorflow/compiler/xla/tests/BUILD
+diff --git a/xla/tests/BUILD b/xla/tests/BUILD
 index a7ece361f17..efa6e41c4a0 100644
---- a/tensorflow/compiler/xla/tests/BUILD
-+++ b/tensorflow/compiler/xla/tests/BUILD
+--- a/xla/tests/BUILD
++++ b/xla/tests/BUILD
 @@ -1298,7 +1298,7 @@ xla_test(
      srcs = ["convolution_cudnn_test.cc"],
      backend_tags = {"gpu": [
@@ -464,10 +464,10 @@ index a7ece361f17..efa6e41c4a0 100644
      ]},
      backends = ["gpu"],
      deps = [
-diff --git a/tensorflow/compiler/xla/tests/convolution_cudnn_test.cc b/tensorflow/compiler/xla/tests/convolution_cudnn_test.cc
+diff --git a/xla/tests/convolution_cudnn_test.cc b/xla/tests/convolution_cudnn_test.cc
 index 04b9126302d..596f2be8f77 100644
---- a/tensorflow/compiler/xla/tests/convolution_cudnn_test.cc
-+++ b/tensorflow/compiler/xla/tests/convolution_cudnn_test.cc
+--- a/xla/tests/convolution_cudnn_test.cc
++++ b/xla/tests/convolution_cudnn_test.cc
 @@ -61,60 +61,5 @@ ENTRY TestComputation {
    EXPECT_TRUE(RunAndCompare(kHlo, ErrorSpec{0, 0}));
  }
@@ -529,10 +529,10 @@ index 04b9126302d..596f2be8f77 100644
 -
  }  // namespace
  }  // namespace xla
-diff --git a/tensorflow/compiler/xla/translate/mhlo_to_lhlo_with_xla/mhlo_to_lhlo_with_xla.cc b/tensorflow/compiler/xla/translate/mhlo_to_lhlo_with_xla/mhlo_to_lhlo_with_xla.cc
+diff --git a/xla/translate/mhlo_to_lhlo_with_xla/mhlo_to_lhlo_with_xla.cc b/xla/translate/mhlo_to_lhlo_with_xla/mhlo_to_lhlo_with_xla.cc
 index a25931e6fce..33de736599c 100644
---- a/tensorflow/compiler/xla/translate/mhlo_to_lhlo_with_xla/mhlo_to_lhlo_with_xla.cc
-+++ b/tensorflow/compiler/xla/translate/mhlo_to_lhlo_with_xla/mhlo_to_lhlo_with_xla.cc
+--- a/xla/translate/mhlo_to_lhlo_with_xla/mhlo_to_lhlo_with_xla.cc
++++ b/xla/translate/mhlo_to_lhlo_with_xla/mhlo_to_lhlo_with_xla.cc
 @@ -1233,10 +1233,10 @@ LhloDialectEmitter::EmitDnnConvolutionReorderVectorized(
      }
 
@@ -547,10 +547,10 @@ index a25931e6fce..33de736599c 100644
      op->setAttr("filter_dims", GetI64DenseElementsAttr(nchw));
 
      return op.getOperation();
-diff --git a/tensorflow/compiler/xla/xla.proto b/tensorflow/compiler/xla/xla.proto
+diff --git a/xla/xla.proto b/xla/xla.proto
 index 78e4706edfe..9f5b65a5858 100644
---- a/tensorflow/compiler/xla/xla.proto
-+++ b/tensorflow/compiler/xla/xla.proto
+--- a/xla/xla.proto
++++ b/xla/xla.proto
 @@ -462,9 +462,7 @@ message DebugOptions {
 
    bool xla_gpu_enable_triton_gemm = 188;

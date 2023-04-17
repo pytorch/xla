@@ -1,6 +1,6 @@
 #include "torch_xla/csrc/softmax_builder.h"
 
-#include "tensorflow/compiler/xla/client/lib/constants.h"
+#include "xla/client/lib/constants.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "torch_xla/csrc/helpers.h"
 

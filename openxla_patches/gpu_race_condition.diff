@@ -1,7 +1,7 @@
-diff --git a/tensorflow/compiler/xla/service/gpu/gpu_executable.cc b/tensorflow/compiler/xla/service/gpu/gpu_executable.cc
+diff --git a/xla/service/gpu/gpu_executable.cc b/xla/service/gpu/gpu_executable.cc
 index ed55b32c47a..260fddb3f5c 100644
---- a/tensorflow/compiler/xla/service/gpu/gpu_executable.cc
-+++ b/tensorflow/compiler/xla/service/gpu/gpu_executable.cc
+--- a/xla/service/gpu/gpu_executable.cc
++++ b/xla/service/gpu/gpu_executable.cc
 @@ -489,8 +489,7 @@ StatusOr<ExecutionOutput> GpuExecutable::ExecuteAsyncOnStreamImpl(
        "GpuExecutable::ExecuteAsyncOnStreamImpl(", module_name_, ")"));
    se::DeviceMemoryAllocator* const memory_allocator = run_options->allocator();

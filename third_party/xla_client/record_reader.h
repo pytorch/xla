@@ -5,8 +5,8 @@
 #include <mutex>
 #include <string>
 
-#include "tensorflow/compiler/xla/types.h"
-#include "tensorflow/tsl/lib/io/record_reader.h"
+#include "xla/types.h"
+#include "tsl/lib/io/record_reader.h"
 
 namespace xla {
 namespace util {
