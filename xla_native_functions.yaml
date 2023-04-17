@@ -130,6 +130,7 @@ supported:
   - add.Tensor
   - addmm
   - alias_copy
+  - all_reduce
   - arange.start_out
   - argmax
   - argmin

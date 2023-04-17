@@ -706,7 +706,7 @@ AllReduceType GetReduceType(c10::string_view reduce_type) {
 }
 
 // TODO: Support tag.
-at::Tensor all_reduce(const at::Tensor & self, c10::string_view reduceOp, c10::string_view /*tag*/, at::IntArrayRef ranks, int64_t group_size) {
+at::Tensor XLANativeFunctions::all_reduce(const at::Tensor & self, c10::string_view reduceOp, c10::string_view /*tag*/, at::IntArrayRef ranks, int64_t group_size) {
   TORCH_LAZY_FN_COUNTER("xla::");
   auto self_tensor = bridge::GetXlaTensor(self);
 
@@ -724,10 +724,6 @@ at::Tensor all_reduce(const at::Tensor & self, c10::string_view reduceOp, c10::s
       {}, true);
   SetToken(std::make_shared<torch::lazy::Value>(std::move(new_token)));
   return bridge::AtenFromXlaTensor(result);
-}
-
-TORCH_LIBRARY_IMPL(c10d_functional, XLA, m) {
-  m.impl("all_reduce", all_reduce);
 }
 
 at::Tensor& XLANativeFunctions::arange_out(const at::Scalar& start,

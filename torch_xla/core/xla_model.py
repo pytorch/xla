@@ -15,7 +15,6 @@ import torch_xla.debug.metrics_saver as ms
 import torch_xla.utils.utils as xu
 import torch_xla.utils.closures as xc
 import torch_xla.utils.keyd_queue as kq
-import torch.distributed._functional_collectives
 
 _DEVICES = xu.LazyProperty(lambda: torch_xla._XLAC._xla_get_devices())
 
@@ -596,7 +595,7 @@ def all_reduce(reduce_type,
     #                                          pin_layout)
     # devctx.all_reduce_token = result[1]
     # results = [result[0]]
-    result = torch.ops.c10d_functional.all_reduce(inputs, reduce_type, "", [], 0)
+    result = torch._C._nn.all_reduce(inputs, reduce_type, "", [], 0)
     results = [result]
   else:
     assert False, "Doesn't support inplace reduce."
