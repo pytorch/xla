@@ -493,6 +493,7 @@ cc_binary(
         "@xla//xla/rpc:grpc_stub",
         "@xla//xla/rpc:xla_service_cc_grpc_proto",
         "@xla//xla/service:hlo_proto_cc",
+        "@xla//xla/client/lib:self_adjoint_eig",
     ],
 )
 
