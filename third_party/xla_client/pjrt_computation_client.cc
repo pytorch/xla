@@ -49,7 +49,8 @@ MaybeInitializeDistributedRuntimeClient(int local_rank,
 
 }  // namespace
 
-std::string PjRtComputationClient::PjRtDeviceToString(PjRtDevice* const device) const {
+std::string PjRtComputationClient::PjRtDeviceToString(
+    PjRtDevice* const device) const {
   std::string platform =
       absl::AsciiStrToUpper(device->client()->platform_name());
   int ordinal = global_ordinals_.at(device->id());
@@ -115,8 +116,8 @@ PjRtComputationClient::PjRtComputationClient() {
   // devices by increasing ID to assign global ordinals.
   std::vector<PjRtDevice*> ordered_devices(client_->device_count());
   std::partial_sort_copy(client_->devices().begin(), client_->devices().end(),
-    ordered_devices.begin(), ordered_devices.end(),
-    [](auto &a, auto &b) { return a->id() < b->id(); });
+                         ordered_devices.begin(), ordered_devices.end(),
+                         [](auto& a, auto& b) { return a->id() < b->id(); });
   for (auto* device : ordered_devices) {
     global_ordinals_[device->id()] = global_ordinals_.size();
     std::string device_str = PjRtDeviceToString(device);
@@ -178,9 +179,8 @@ std::optional<xla::OpSharding> PjRtComputationClient::GetDataSharding(
 std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
     absl::Span<const TensorSource> tensors) {
   metrics::TimedSection timed(TransferToServerMetric());
-  tsl::profiler::TraceMe activity(
-      "PjRtComputationClient::TransferToServer",
-      tsl::profiler::TraceMeLevel::kInfo);
+  tsl::profiler::TraceMe activity("PjRtComputationClient::TransferToServer",
+                                  tsl::profiler::TraceMeLevel::kInfo);
   std::vector<ComputationClient::DataPtr> datas;
   datas.reserve(tensors.size());
   int64_t total_size = 0;
@@ -236,9 +236,8 @@ ComputationClient::DataPtr PjRtComputationClient::TransferShardsToServer(
 
 ComputationClient::DataPtr PjRtComputationClient::CopyToDevice(
     ComputationClient::DataPtr data, std::string dst) {
-  tsl::profiler::TraceMe activity(
-      "PjRtComputationClient::CopyToDevice",
-      tsl::profiler::TraceMeLevel::kInfo);
+  tsl::profiler::TraceMe activity("PjRtComputationClient::CopyToDevice",
+                                  tsl::profiler::TraceMeLevel::kInfo);
   const PjRtData* pjrt_data = dynamic_cast<PjRtData*>(data.get());
   XLA_CHECK(pjrt_data->HasValue()) << "Can't copy invalid device data.";
 
@@ -308,9 +307,8 @@ ComputationClient::DataPtr PjRtComputationClient::ReplicateShardedData(
 std::vector<xla::Literal> PjRtComputationClient::TransferFromServer(
     absl::Span<const DataPtr> handles) {
   metrics::TimedSection timed(TransferFromServerMetric());
-  tsl::profiler::TraceMe activity(
-      "PjRtComputationClient::TransferFromServer",
-      tsl::profiler::TraceMeLevel::kInfo);
+  tsl::profiler::TraceMe activity("PjRtComputationClient::TransferFromServer",
+                                  tsl::profiler::TraceMeLevel::kInfo);
   std::vector<xla::Literal> literals;
   literals.reserve(handles.size());
   int64_t total_size = 0;
@@ -353,9 +351,8 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromServer(
 std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
     std::vector<ComputationClient::CompileInstance> instances) {
   metrics::TimedSection timed(CompileMetric());
-  tsl::profiler::TraceMe activity(
-      "PjRtComputationClient::Compile",
-      tsl::profiler::TraceMeLevel::kInfo);
+  tsl::profiler::TraceMe activity("PjRtComputationClient::Compile",
+                                  tsl::profiler::TraceMeLevel::kInfo);
   std::vector<ComputationClient::ComputationPtr> computations;
 
   for (auto& instance : instances) {
@@ -378,7 +375,7 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
       xla::DeviceAssignment device_assignment(1, client_->device_count());
       // DeviceAssignment values must be the PjRtDevice ID, so we need to
       // unwind the global ordinal mapping.
-      for (const auto &[device_id, global_ordinal] : global_ordinals_) {
+      for (const auto& [device_id, global_ordinal] : global_ordinals_) {
         device_assignment(0, global_ordinal) = device_id;
       }
       compile_options.executable_build_options.set_device_assignment(
@@ -395,7 +392,7 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
       xla::DeviceAssignment device_assignment(client_->device_count(), 1);
       // DeviceAssignment values must be the PjRtDevice ID, so we need to
       // unwind the global ordinal mapping.
-      for (const auto &[device_id, global_ordinal] : global_ordinals_) {
+      for (const auto& [device_id, global_ordinal] : global_ordinals_) {
         device_assignment(global_ordinal, 0) = device_id;
       }
       compile_options.executable_build_options.set_device_assignment(
@@ -433,9 +430,8 @@ PjRtComputationClient::ExecuteComputation(
   // once both `ExecuteComputation` and the async work in `ExecuteSharded` are
   // complete; a copy is held from the lambda that releases it when done.
   auto timed = std::make_shared<metrics::TimedSection>(ExecuteMetric());
-  tsl::profiler::TraceMe activity(
-      "PjRtComputationClient::ExecuteComputation",
-      tsl::profiler::TraceMeLevel::kInfo);
+  tsl::profiler::TraceMe activity("PjRtComputationClient::ExecuteComputation",
+                                  tsl::profiler::TraceMeLevel::kInfo);
   TF_VLOG(1) << "Executing PjRt computation on " << device;
   const PjRtComputation& pjrt_computation =
       dynamic_cast<const PjRtComputation&>(computation);
