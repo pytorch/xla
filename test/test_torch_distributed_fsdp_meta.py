@@ -7,8 +7,10 @@ from torch_xla.distributed.fsdp.wrap import (
 import torch.distributed as dist
 import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.core.xla_model as xm
+from torch_xla.experimental import pjrt
 
 import sys
+import unittest
 
 _TORCHDISTX_AVAIL = True
 try:
