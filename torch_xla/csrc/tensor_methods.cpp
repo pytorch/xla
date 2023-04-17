@@ -2666,6 +2666,16 @@ XLATensorPtr view_symint(const XLATensorPtr& input,
   return input->CreateViewTensor(std::move(view_info));
 }
 
+XLATensorPtr view_as_complex_copy(const XLATensorPtr& input) {
+  return input->CreateFrom(ViewAsComplexCopy(input->GetIrValue()),
+                           at::ScalarType::ComplexFloat);
+}
+
+XLATensorPtr view_as_real_copy(const XLATensorPtr& input) {
+  return input->CreateFrom(ViewAsRealCopy(input->GetIrValue()),
+                           at::ScalarType::Float);
+}
+
 XLATensorPtr var(const XLATensorPtr& input, std::vector<int64_t> dimensions,
                  double correction, bool keep_reduced_dimensions) {
   return input->CreateFrom(

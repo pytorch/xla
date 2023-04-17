@@ -223,4 +223,8 @@ torch::lazy::NodePtr Softplus(const torch::lazy::Value& input,
 
 torch::lazy::NodePtr Selu(const torch::lazy::Value& input);
 
+torch::lazy::NodePtr ViewAsComplexCopy(const torch::lazy::Value& input);
+
+torch::lazy::NodePtr ViewAsRealCopy(const torch::lazy::Value& input);
+
 }  // namespace torch_xla

@@ -885,6 +885,10 @@ XLATensorPtr view(const XLATensorPtr& input,
 XLATensorPtr view_symint(const XLATensorPtr& input,
                          at::SymIntArrayRef sym_size);
 
+XLATensorPtr view_as_complex_copy(const XLATensorPtr& input);
+
+XLATensorPtr view_as_real_copy(const XLATensorPtr& input);
+
 void zero_(XLATensorPtr& input);
 
 XLATensorPtr where(const XLATensorPtr& condition, const XLATensorPtr& input,
