@@ -545,12 +545,11 @@ def _host_all_reduce(reduce_type, inputs, cctx, scale=None):
 
 
 def all_reduce(reduce_type,
-               inputs,
+               inputs, 
                scale=1.0,
-               groups=None,
-               cctx=None,
-               pin_layout=True):
-  """Performs an inplace reduce operation on the input tensor(s).
+               groups=None, 
+               cctx=None):
+  """Performs an all-reduce operation on the input tensor(s).
 
   Args:
     reduce_type (string): One of ``xm.REDUCE_SUM``, ``xm.REDUCE_MUL``,
@@ -572,10 +571,10 @@ def all_reduce(reduce_type,
       like "HloModule has a mix of layout constrained".
 
   Returns:
-    If a single `torch.Tensor` is passed, the return value is a `torch.Tensor`
-    holding the reduced value (across the replicas). If a list/tuple is passed,
-    this function performs an inplace all-reduce op on the input tensors, and
-    returns the list/tuple itself.
+    If a list/tuple is passed, this function performs an inplace all-reduce op 
+    (across the replicas) on the input tensors, and returns the list/tuple itself.
+    If a single `torch.Tensor` is passed, the all-reduce op is NOT inplace and
+    the reduced value (across the replicas) is returned as a single `torch.Tensor`.
   """
   # In a sea-of-devices case we use two level of reductions. One using the fast
   # device interconnect, and then using the torch.distributed reduction API to
