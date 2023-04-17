@@ -3,8 +3,7 @@ module "dev_image" {
 
   trigger_name = "dev-image"
 
-  # TODO: Change this branch to master once new Ansible setup changes are merged into master.
-  ansible_branch = "mlewko/terraform-follow-up"
+  ansible_branch = "master"
   trigger_on_push = {
     branch        = "master"
     include_files = ["infra/**"]
