@@ -1,4 +1,4 @@
-# Docker registry for official images.
+# Docker registry for private images.
 module "docker_registry" {
   source = "../terraform_modules/docker_registry"
   name   = "docker"
@@ -6,7 +6,6 @@ module "docker_registry" {
     "Private docker images for PyTorch/XLA.",
     "Managed by Terraform setup in docker/experimental/tpu-pytorch/misc.tf.",
   ])
-  # public_read_access = true
 }
 
 # Storage bucket for Terraform state of this project.
