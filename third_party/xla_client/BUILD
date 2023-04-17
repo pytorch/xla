@@ -490,10 +490,10 @@ cc_binary(
         "@xla//xla/client:xla_builder",
         "@xla//xla/client:xla_computation",
         "@xla//xla/client/lib:svd",
+        "@xla//xla/client/lib:self_adjoint_eig",
         "@xla//xla/rpc:grpc_stub",
         "@xla//xla/rpc:xla_service_cc_grpc_proto",
         "@xla//xla/service:hlo_proto_cc",
-        "@xla//xla/client/lib:self_adjoint_eig",
     ],
 )
 
