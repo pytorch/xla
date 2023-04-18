@@ -106,9 +106,6 @@ PjRtComputationClient::PjRtComputationClient() {
                       .value());
   } else if (device_type == "XPU") {
     TF_VLOG(1) << "Initializing PjRt XPU client...";
-    std::cout << "library path = "
-              << sys_util::GetEnvString(env::kEnvXpuLibraryPath, "libxpu.so")
-              << std::endl;
     XLA_CHECK_OK(pjrt::LoadPjrtPlugin(
         "xpu", sys_util::GetEnvString(env::kEnvXpuLibraryPath, "libxpu.so")));
     supports_logical_on_device_shape_ = false;
