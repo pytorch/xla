@@ -25,7 +25,6 @@
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/torch_util.h"
-#include "torch_xla/csrc/view.h"
 
 namespace torch_xla {
 
