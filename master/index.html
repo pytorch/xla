@@ -736,7 +736,7 @@ networks on TPUs are available
 <li><p><strong>n</strong> (<em>python:int</em><em>, </em><em>optional</em>) – The specific instance (ordinal) to be returned. If
 specified, the specific XLA device instance will be returned. Otherwise
 the first device of <cite>devkind</cite> will be returned.</p></li>
-<li><p><strong>devkind</strong> (<em>string...</em><em>, </em><em>optional</em>) – If specified, one of <cite>TPU</cite>, <cite>GPU</cite> or <cite>CPU</cite>.</p></li>
+<li><p><strong>devkind</strong> (<em>string...</em><em>, </em><em>optional</em>) – If specified, one of <cite>TPU</cite>, <cite>GPU</cite>, <cite>XPU</cite> or <cite>CPU</cite>.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -752,7 +752,7 @@ the first device of <cite>devkind</cite> will be returned.</p></li>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>devkind</strong> (<em>string...</em><em>, </em><em>optional</em>) – If specified, one of <cite>TPU</cite>, <cite>GPU</cite> or <cite>CPU</cite>
+<li><p><strong>devkind</strong> (<em>string...</em><em>, </em><em>optional</em>) – If specified, one of <cite>TPU</cite>, <cite>GPU</cite>, <cite>XPU</cite> or <cite>CPU</cite>
 (the ‘GPU’ XLA device is currently not implemented).</p></li>
 <li><p><strong>max_devices</strong> (<em>python:int</em><em>, </em><em>optional</em>) – The maximum number of devices to be returned of
 that kind.</p></li>
@@ -774,7 +774,7 @@ that kind.</p></li>
 real device.</p>
 </dd>
 <dt class="field-even">Returns</dt>
-<dd class="field-even"><p>A string representation of the hardware type (<cite>CPU</cite>, <cite>TPU</cite>, <cite>GPU</cite>) of the
+<dd class="field-even"><p>A string representation of the hardware type (<cite>CPU</cite>, <cite>TPU</cite>, <cite>XPU</cite>, <cite>GPU</cite>) of the
 given device.</p>
 </dd>
 </dl>
