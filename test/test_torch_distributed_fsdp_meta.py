@@ -7,10 +7,8 @@ from torch_xla.distributed.fsdp.wrap import (
 import torch.distributed as dist
 import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.core.xla_model as xm
-from torch_xla.experimental import pjrt
 
 import sys
-import unittest
 
 _TORCHDISTX_AVAIL = True
 try:
@@ -111,10 +109,6 @@ class TestFSDPWithMetaDevice():
 
     self._compare_fsdp(fsdp_meta, fsdp_regular)
 
-  @unittest.skipIf(
-      pjrt.device_type() == 'GPU',
-      "This test fails only on GPU with 03/30 TF-pin update (https://github.com/pytorch/xla/pull/4840)"
-  )
   def test_simple_model_with_meta_device_reset_params(self):
 
     def meta_module_fn():
@@ -123,10 +117,6 @@ class TestFSDPWithMetaDevice():
     self._test_simple_model_with_meta_device(meta_module_fn,
                                              _init_with_reset_params)
 
-  @unittest.skipIf(
-      pjrt.device_type() == 'GPU',
-      "This test fails only on GPU with 03/30 TF-pin update (https://github.com/pytorch/xla/pull/4840)"
-  )
   def test_simple_model_with_meta_default_reset_params(self):
 
     def meta_module_fn():
@@ -134,10 +124,6 @@ class TestFSDPWithMetaDevice():
 
     self._test_simple_model_with_meta_device(meta_module_fn)
 
-  @unittest.skipIf(
-      pjrt.device_type() == 'GPU',
-      "This test fails only on GPU with 03/30 TF-pin update (https://github.com/pytorch/xla/pull/4840)"
-  )
   def test_simple_model_with_torchdistX_init_fn(self):
 
     def meta_module_fn():
@@ -146,10 +132,6 @@ class TestFSDPWithMetaDevice():
     self._test_simple_model_with_meta_device(
         meta_module_fn, init_fn=_init_with_torchdistX)
 
-  @unittest.skipIf(
-      pjrt.device_type() == 'GPU',
-      "This test fails only on GPU with 03/30 TF-pin update (https://github.com/pytorch/xla/pull/4840)"
-  )
   def test_simple_model_with_default_torchdistX(self):
 
     def meta_module_fn():
@@ -160,7 +142,8 @@ class TestFSDPWithMetaDevice():
 
 def _mp_fn(index):
   device = xm.xla_device()
-  if xm.xla_device_hw(device) in ('TPU', 'GPU'):
+  # This test fails on GPU with 03/30 TF-pin update (https://github.com/pytorch/xla/pull/4840)
+  if xm.xla_device_hw(device) in ('TPU'):
     dist.init_process_group(
         'xla', world_size=xm.xrt_world_size(), rank=xm.get_ordinal())
     test = TestFSDPWithMetaDevice()
@@ -171,7 +154,7 @@ def _mp_fn(index):
       test.test_simple_model_with_default_torchdistX()
   else:
     print(
-        'Default device {} is not a TPU or GPU device'.format(device),
+        'Default device {} is not a TPU device'.format(device),
         file=sys.stderr)
 
 
