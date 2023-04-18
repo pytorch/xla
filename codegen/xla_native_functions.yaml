@@ -236,6 +236,7 @@ supported:
   - mse_loss_backward
   - mul.Scalar
   - mul.Tensor
+  - multinomial
   - mv
   - mv.out
   - nan_to_num
@@ -334,6 +335,8 @@ supported:
   - upsample_nearest2d_backward
   - var.correction
   - var_mean.correction
+  - view_as_complex_copy
+  - view_as_real_copy
   - view_copy
   - where.self
   - xlogy.Tensor
