@@ -154,8 +154,7 @@ def _mp_fn(index):
       test.test_simple_model_with_default_torchdistX()
   else:
     print(
-        'Default device {} is not a TPU device'.format(device),
-        file=sys.stderr)
+        'Default device {} is not a TPU device'.format(device), file=sys.stderr)
 
 
 if __name__ == '__main__':
