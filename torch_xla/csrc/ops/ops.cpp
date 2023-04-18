@@ -539,9 +539,15 @@ torch::lazy::NodePtr LinalgVectorNorm(const torch::lazy::Value& input,
                                       c10::optional<at::ScalarType> dtype) {
   torch::lazy::ScopePusher ir_scope(at::aten::norm.toQualString());
   double ord_value = ord.to<double>();
-  if (ord_value == 0.0) {
+  auto input_shape = GetXlaShape(input);
+  // Handle vector norm of scalars separately.
+  if (input_shape.rank() == 0 && ord_value == 0.0) {
+    return ComparisonOp(at::aten::ne, input, ScalarOp(0, input_shape));
+  } else if (input_shape.rank() == 0) {
+    return torch::lazy::MakeNode<Abs>(input);
+  } else if (ord_value == 0.0) {
     torch::lazy::NodePtr ne =
-        ComparisonOp(at::aten::ne, input, ScalarOp(0, GetXlaShape(input)));
+        ComparisonOp(at::aten::ne, input, ScalarOp(0, input_shape));
     return torch::lazy::MakeNode<Sum>(ne, dimensions, keepdim, dtype);
   } else if (ord_value == std::numeric_limits<float>::infinity()) {
     return torch::lazy::MakeNode<Amax>(torch::lazy::MakeNode<Abs>(input),
@@ -551,9 +557,9 @@ torch::lazy::NodePtr LinalgVectorNorm(const torch::lazy::Value& input,
                                        dimensions, keepdim);
   } else {
     torch::lazy::NodePtr ord_exp =
-        ScalarOp(ord_value, GetXlaShape(input).element_type());
+        ScalarOp(ord_value, input_shape.element_type());
     torch::lazy::NodePtr ord_exp_inv =
-        ScalarOp(1.0 / ord_value, GetXlaShape(input).element_type());
+        ScalarOp(1.0 / ord_value, input_shape.element_type());
     torch::lazy::NodePtr exp = Pow(torch::lazy::MakeNode<Abs>(input), ord_exp);
     torch::lazy::NodePtr result =
         torch::lazy::MakeNode<Sum>(exp, dimensions, keepdim, dtype);
