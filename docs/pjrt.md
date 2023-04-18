@@ -137,16 +137,16 @@ PJRT_DEVICE=CPU python3 xla/test/test_train_mp_mnist.py --fake_data
 
 ### TPU
 
-To create a new TPU with PyTorch/XLA r1.13 installed:
+To create a new TPU with PyTorch/XLA r2.0 installed:
 
 ```
-gcloud alpha compute tpus tpu-vm create $USER-pjrt --accelerator-type=v4-8 --version=tpu-vm-v4-pt-1.13 --zone=us-central2-b --project=$PROJECT
+gcloud alpha compute tpus tpu-vm create $USER-pjrt --accelerator-type=v4-8 --version=tpu-vm-v4-pt-2.0 --zone=us-central2-b --project=$PROJECT
 ```
 
 On a v4-8, you can run our ResNet50 example like this:
 
 ```
-git clone --depth=1 --branch r1.13 https://github.com/pytorch/xla.git
+git clone --depth=1 --branch r2.0 https://github.com/pytorch/xla.git
 PJRT_DEVICE=TPU python3 xla/test/test_train_mp_imagenet.py --fake_data --batch_size=256 --num_epochs=1
 ```
 
