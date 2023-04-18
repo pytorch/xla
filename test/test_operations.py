@@ -1387,13 +1387,20 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     with tempfile.TemporaryDirectory() as tmpdir:
       path = os.path.join(tmpdir, 'data.pt')
       xla_device = xm.xla_device()
-      model = XlaMNIST().to(xla_device)
-      xser.save(model.state_dict(), path)
-      state_dict = xser.load(path)
+      xla_model = XlaMNIST().to(xla_device)
+      xser.save(xla_model.state_dict(), path)
+      # test loading cpu weights and moving to device
+      cpu_state_dict = xser.load(path)
       cpu_model = XlaMNIST()
-      cpu_model.load_state_dict(state_dict)
-      loaded_model = cpu_model.to(xla_device)
-      self.assertEqual(model.state_dict(), loaded_model.state_dict())
+      cpu_model.load_state_dict(cpu_state_dict)
+      xla_loaded_model = cpu_model.to(xla_device)
+      self.assertEqual(xla_model.state_dict(), xla_loaded_model.state_dict())
+      # test loading xla weights directly on device
+      xla_state_dict = xser.load(path, map_location=xla_device)
+      xla_loaded_model = XlaMNIST().to(xla_device)
+      xla_loaded_model.load_state_dict(xla_state_dict)
+      self.assertEqual(xla_model.state_dict(), xla_loaded_model.state_dict())
+
 
   def test_deepcopy(self):
     xla_device = xm.xla_device()
