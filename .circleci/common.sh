@@ -77,6 +77,9 @@ function install_deps_pytorch_xla() {
 
   sudo apt-get -qq install npm nodejs
 
+  # Install LCOV and llvm-cov to generate C++ coverage reports
+  sudo apt-get install -y lcov
+
   # XLA build requires Bazel
   # We use bazelisk to avoid updating Bazel version manually.
   sudo npm install -g @bazel/bazelisk
@@ -102,7 +105,7 @@ function install_deps_pytorch_xla() {
     BAZELS3CACHE="$(which /usr/local/bin/bazels3cache)"
     if [ -z "${BAZELS3CACHE}" ]; then
       echo "Unable to find bazels3cache..."
-      exit 1
+      return 1
     fi
     /usr/local/bin/bazels3cache --bucket=${XLA_CLANG_CACHE_S3_BUCKET_NAME} --maxEntrySizeBytes=0 --logging.level=verbose
     sed -i '/bazel build/ a --remote_http_cache=http://localhost:7777 \\' $XLA_DIR/build_torch_xla_libs.sh
@@ -147,6 +150,7 @@ function run_torch_xla_tests() {
       if [ -x "$(command -v nvidia-smi)" ]; then
         PJRT_DEVICE=GPU python test/test_train_mp_imagenet_fsdp.py --fake_data --use_nested_fsdp --use_small_fake_sample --num_epochs=1
         PJRT_DEVICE=GPU python test/test_train_mp_imagenet_fsdp.py --fake_data --auto_wrap_policy type_based --use_small_fake_sample --num_epochs=1
+        XLA_DISABLE_FUNCTIONALIZATION=1 PJRT_DEVICE=GPU python test/test_train_mp_imagenet_fsdp.py --fake_data --use_nested_fsdp --use_small_fake_sample --num_epochs=1
         # Syncfree SGD optimizer tests
         if [ -d ./torch_xla/amp/syncfree ]; then
           echo "Running Syncfree Optimizer Test"
@@ -163,16 +167,23 @@ function run_torch_xla_tests() {
           # python test/test_train_mp_mnist_amp.py --fake_data --num_epochs=1
         fi
       fi
-
-      pushd test/cpp
-        echo "Running C++ Tests on PJRT"
-        if [ -x "$(command -v nvidia-smi)" ]; then
-          PJRT_DEVICE=GPU ./run_tests.sh
-          PJRT_DEVICE=GPU ./run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L""
-        else
-          PJRT_DEVICE=CPU ./run_tests.sh
-        fi
-      popd
     fi
+
+    pushd test/cpp
+      echo "Running C++ Tests on PJRT"
+      if [ -x "$(command -v nvidia-smi)" ]; then
+        PJRT_DEVICE=GPU ./run_tests.sh
+        PJRT_DEVICE=GPU ./run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L""
+      else
+        PJRT_DEVICE=CPU ./run_tests.sh
+      fi
+      if [ "$USE_COVERAGE" != "0" ]; then
+        export PATH=$PATH:/usr/lib/llvm-8/bin
+        chmod +x /tmp/pytorch/xla/test/cpp/get_coverage.sh
+        lcov --directory /tmp/pytorch/xla/build/temp.linux-x86_64-cpython-38/torch_xla/csrc --base-directory . --gcov-tool /tmp/pytorch/xla/test/cpp/get_coverage.sh --capture -o cpp_lcov.info
+        genhtml cpp_lcov.info -o ~/htmlcov//cpp/cpp_lcov.info
+        mv cpp_lcov.info ~/htmlcov/cpp_lcov.info
+      fi
+    popd
   popd
 }

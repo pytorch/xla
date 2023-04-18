@@ -78,6 +78,7 @@
 #include "torch_xla/csrc/ops/min_in_dim.h"
 #include "torch_xla/csrc/ops/mse_loss.h"
 #include "torch_xla/csrc/ops/mse_loss_backward.h"
+#include "torch_xla/csrc/ops/multinomial.h"
 #include "torch_xla/csrc/ops/native_batch_norm_backward.h"
 #include "torch_xla/csrc/ops/native_batch_norm_forward.h"
 #include "torch_xla/csrc/ops/nll_loss.h"
@@ -1241,8 +1242,10 @@ XLATensorPtr full_symint(at::SymIntArrayRef sym_size,
                          const torch::lazy::BackendDevice& device,
                          at::ScalarType scalar_type) {
   XLA_CHECK(std::all_of(sym_size.begin(), sym_size.end(), [](at::SymInt dim) {
-    if (!dim.is_symbolic()) {
-      return dim >= 0;
+    // TODO: It should be OK to perform this test on symbolic ints too, not
+    // sure why you conditionalized it.
+    if (auto c = dim.maybe_as_int()) {
+      return *c >= 0;
     }
     return true;
   })) << "Dimensions cannot be negative numbers";
@@ -1752,6 +1755,17 @@ XLATensorPtr mul(const XLATensorPtr& input, const at::Scalar& other,
       other, input->shape(), logical_element_type, input->GetDevice());
   return input->CreateFrom(input->GetIrValue() * constant,
                            logical_element_type);
+}
+
+XLATensorPtr multinomial(const XLATensorPtr& input, int64_t num_samples,
+                         bool replacement) {
+  auto input_shape = input->shape();
+  return input->CreateFrom(
+      torch::lazy::MakeNode<Multinomial>(
+          input->GetIrValue(),
+          XLAGraphExecutor::Get()->GetRngSeed(input->GetDevice()), num_samples,
+          replacement),
+      at::ScalarType::Long);
 }
 
 XLATensorPtr mv(const XLATensorPtr& input, const XLATensorPtr& vec) {
@@ -2674,6 +2688,16 @@ XLATensorPtr view_symint(const XLATensorPtr& input,
   ViewInfo view_info(ViewInfo::Type::kReshape, std::move(result_shape),
                      input_shape);
   return input->CreateViewTensor(std::move(view_info));
+}
+
+XLATensorPtr view_as_complex_copy(const XLATensorPtr& input) {
+  return input->CreateFrom(ViewAsComplexCopy(input->GetIrValue()),
+                           at::ScalarType::ComplexFloat);
+}
+
+XLATensorPtr view_as_real_copy(const XLATensorPtr& input) {
+  return input->CreateFrom(ViewAsRealCopy(input->GetIrValue()),
+                           at::ScalarType::Float);
 }
 
 XLATensorPtr var(const XLATensorPtr& input, std::vector<int64_t> dimensions,

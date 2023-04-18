@@ -561,6 +561,9 @@ XLATensorPtr mul(
     const XLATensorPtr& input, const at::Scalar& other,
     c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
 
+XLATensorPtr multinomial(const XLATensorPtr& input, int64_t num_samples,
+                         bool replacement);
+
 XLATensorPtr mv(const XLATensorPtr& input, const XLATensorPtr& vec);
 void mv_out(XLATensorPtr& out, const XLATensorPtr& input,
             const XLATensorPtr& vec);
@@ -886,6 +889,10 @@ XLATensorPtr view(const XLATensorPtr& input,
                   absl::Span<const int64_t> output_size);
 XLATensorPtr view_symint(const XLATensorPtr& input,
                          at::SymIntArrayRef sym_size);
+
+XLATensorPtr view_as_complex_copy(const XLATensorPtr& input);
+
+XLATensorPtr view_as_real_copy(const XLATensorPtr& input);
 
 void zero_(XLATensorPtr& input);
 

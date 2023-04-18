@@ -33,7 +33,9 @@ pushd $PYTORCH_DIR
 
 checkout_torch_pin_if_available
 
-install_deps_pytorch_xla $XLA_DIR $USE_CACHE
+if ! install_deps_pytorch_xla $XLA_DIR $USE_CACHE; then
+  exit 1
+fi
 
 apply_patches
 

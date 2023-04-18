@@ -10,6 +10,7 @@ import torch
 import torch.nn.functional as F
 import torch_xla
 from torch_xla.experimental import pjrt
+import torch_xla.experimental.xla_sharding as xs
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.debug.metrics_saver as ms
 import torch_xla.utils.utils as xu
@@ -117,7 +118,7 @@ def is_xla_tensor(tensor):
 
 
 def parse_xla_device(device):
-  m = re.match(r'(CPU|TPU|GPU):(\d+)$', device)
+  m = re.match(r'(CPU|TPU|GPU|XPU):(\d+)$', device)
   if m:
     return (m.group(1), int(m.group(2)))
 
@@ -126,7 +127,7 @@ def get_xla_supported_devices(devkind=None, max_devices=None):
   """Returns a list of supported devices of a given kind.
 
   Args:
-    devkind (string..., optional): If specified, one of `TPU`, `GPU` or `CPU`
+    devkind (string..., optional): If specified, one of `TPU`, `GPU`, `XPU` or `CPU`
       (the 'GPU' XLA device is currently not implemented).
     max_devices (int, optional): The maximum number of devices to be returned of
       that kind.
@@ -135,7 +136,7 @@ def get_xla_supported_devices(devkind=None, max_devices=None):
     The list of device strings.
   """
   xla_devices = _DEVICES.value
-  devkind = [devkind] if devkind else ['TPU', 'GPU', 'CPU']
+  devkind = [devkind] if devkind else ['TPU', 'GPU', 'XPU', 'CPU']
   for kind in devkind:
     kind_devices = []
     for i, device in enumerate(xla_devices):
@@ -231,7 +232,7 @@ def xla_device(n=None, devkind=None):
     n (int, optional): The specific instance (ordinal) to be returned. If
       specified, the specific XLA device instance will be returned. Otherwise
       the first device of `devkind` will be returned.
-    devkind (string..., optional): If specified, one of `TPU`, `GPU` or `CPU`.
+    devkind (string..., optional): If specified, one of `TPU`, `GPU`, `XPU` or `CPU`.
 
   Returns:
     A `torch.device` with the requested instance.
@@ -279,7 +280,7 @@ def xla_device_hw(device):
       real device.
 
   Returns:
-    A string representation of the hardware type (`CPU`, `TPU`, `GPU`) of the
+    A string representation of the hardware type (`CPU`, `TPU`, `XPU`, `GPU`) of the
     given device.
   """
   real_device = _xla_real_device(device)
@@ -677,7 +678,7 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
     participating replicas.
   """
   if pin_layout and xla_device_hw(
-      value.device) in ('TPU', 'GPU') and output == None:
+      value.device) in ('TPU', 'GPU', 'XPU') and output == None:
     # There is not an easy way to pin the all_gather layout on TPU and GPU, use
     # all_reduce based all_gather for this purpose.
     return _all_gather_using_all_reduce(
@@ -1080,11 +1081,18 @@ def _maybe_convert_to_cpu(data, convert=True):
   return ToXlaTensorArena(convert_fn, select_fn).transform(data)
 
 
-def send_cpu_data_to_device(data, device):
+def send_cpu_data_to_device(data,
+                            device,
+                            input_sharding: xs.ShardingSpec = None):
 
   def convert_fn(tensors):
     devices = [str(device)] * len(tensors)
-    return torch_xla._XLAC._xla_tensors_from_aten(tensors, devices)
+    xtensors = torch_xla._XLAC._xla_tensors_from_aten(tensors, devices)
+    if input_sharding:
+      for xtensor in xtensors:
+        if input_sharding.can_apply(xtensor):
+          input_sharding.apply(xtensor)
+    return xtensors
 
   def select_fn(v):
     return type(v) == torch.Tensor and v.device.type == 'cpu'

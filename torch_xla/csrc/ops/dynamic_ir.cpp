@@ -140,6 +140,9 @@ SizeEq::SizeEq(torch::lazy::Value a, torch::lazy::Value b)
 };
 
 int64_t SizeEq::getDynamicValue() const {
+  if (operand(0) == operand(1)) {
+    return 1;
+  }
   const torch::lazy::DimensionNode* dim_node_0 = DimCast(operand(0));
   const torch::lazy::DimensionNode* dim_node_1 = DimCast(operand(1));
   XLA_CHECK(dim_node_0);
@@ -325,6 +328,26 @@ XlaOpVector SizeMod::Lower(LoweringContext* loctx) const {
   auto input1 = loctx->GetOutputOp(operand(0));
   auto input2 = loctx->GetOutputOp(operand(1));
   return ReturnOp(xla::Rem(input1, input2), loctx);
+}
+
+SizeError::SizeError()
+    : XlaNode(
+          torch::lazy::OpKind{c10::Symbol::fromQualString("aten::size_error")},
+          {},
+          xla::ShapeUtil::MakeShape(GetShapeDimensionType(/*device=*/nullptr),
+                                    {}),
+          1){};
+
+int64_t SizeError::getDynamicValue() const {
+  XLA_CHECK(false) << "SizeError shouldn't be called.";
+  return -1;
+}
+
+std::string SizeError::ToString() const { return "aten::size_error"; }
+
+XlaOpVector SizeError::Lower(LoweringContext* loctx) const {
+  XLA_CHECK(false) << "SizeError shouldn't be called.";
+  return ReturnOp({}, loctx);
 }
 
 }  // namespace torch_xla

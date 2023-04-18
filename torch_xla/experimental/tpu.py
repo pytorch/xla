@@ -2,6 +2,7 @@ import functools
 import glob
 import operator
 import os
+import pathlib
 import re
 from typing import Dict, NamedTuple, Optional, List, Tuple
 from typing_extensions import TypedDict
@@ -32,6 +33,17 @@ _ACCELERATOR_TYPE_TO_HOST_BOUNDS = {
     'v3-2048': '16,16,1',
     # Get v4 host bounds from TPU metadata
 }
+
+_GOOGLE_PCI_VENDOR_ID = '0x1ae0'
+_TPU_PCI_DEVICE_IDS = [
+    # TPU v2, v3
+    '0x0027',
+    # TPU v4
+    '0x005e',
+    # Other
+    '0x0056',
+    '0x0063',
+]
 
 
 class TpuEnv(TypedDict):
@@ -78,8 +90,19 @@ def process_bounds_size() -> Optional[int]:
 
 
 def num_available_chips() -> int:
-  """Returns the number of local chips in /dev/"""
-  return len(glob.glob('/dev/accel?'))
+  """Returns the number of TPU chips attached through PCI."""
+  num_chips = 0
+  for vendor_path in glob.glob('/sys/bus/pci/devices/*/vendor'):
+    vendor_id = pathlib.Path(vendor_path).read_text().strip()
+    if vendor_id != _GOOGLE_PCI_VENDOR_ID:
+      continue
+
+    device_path = os.path.join(os.path.dirname(vendor_path), 'device')
+    device_id = pathlib.Path(device_path).read_text().strip()
+    if device_id in _TPU_PCI_DEVICE_IDS:
+      num_chips += 1
+
+  return num_chips
 
 
 def num_local_processes() -> int:
@@ -172,7 +195,7 @@ def configure_topology(local_rank: int,
   tpu_env = get_tpu_env()
 
   accelerator_type = tpu_env[xenv.ACCELERATOR_TYPE]
-  if version() == 4:
+  if version() >= 4:
     # Process bounds with 4 chips per process
     default_process_bounds = MeshShape.from_string(
         tpu_env[xenv.TPU_PROCESS_BOUNDS])

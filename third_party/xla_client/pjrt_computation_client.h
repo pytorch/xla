@@ -136,6 +136,9 @@ class PjRtComputationClient : public ComputationClient {
 
  private:
   std::shared_ptr<PjRtClient> client_;
+  // global_ordinals_ tracks a map from PjRtDeviceId to the device's
+  // dense global ordinal.
+  std::unordered_map<int, int> global_ordinals_;
   std::unordered_map<std::string, xla::PjRtDevice* const> string_to_device_;
   std::shared_ptr<std::vector<std::string>> replication_devices_;
   std::unordered_map<std::string, std::unique_ptr<std::shared_mutex>>
@@ -148,6 +151,10 @@ class PjRtComputationClient : public ComputationClient {
       const std::string& device);
   std::unique_lock<std::shared_mutex> lock_device(const std::string& device);
 
+  std::string PjRtDeviceToString(PjRtDevice* const device) const;
+  std::vector<std::string> PjRtDevicesToString(
+      absl::Span<PjRtDevice* const> devices) const;
+
   struct PjRtData : public Data {
     PjRtData(std::string device, Shape device_shape)
         : Data(std::move(device), std::move(device_shape)) {}
@@ -157,7 +164,8 @@ class PjRtComputationClient : public ComputationClient {
         : Data(std::move(device), std::move(device_shape)), buffer(buffer) {}
 
     OpaqueHandle GetOpaqueHandle() override {
-      XLA_CHECK(HasValue());
+      XLA_CHECK(HasValue())
+          << (buffer == nullptr ? "buffer is null" : "buffer is deleted");
       return reinterpret_cast<std::uintptr_t>(buffer.get());
     };
     void Assign(const Data& data) override;

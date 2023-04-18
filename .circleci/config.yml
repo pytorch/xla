@@ -42,10 +42,13 @@ launch_docker_and_build: &launch_docker_and_build
     echo "declare -x XLA_USE_XRT=1" >> /home/circleci/project/xla_env
     echo "declare -x XLA_CUDA=1" >> /home/circleci/project/xla_env
     echo "declare -x USE_CUDA=0" >> /home/circleci/project/env
-    echo "declare -x GITHUB_TORCH_XLA_BOT_TOKEN=${GITHUB_TORCH_XLA_BOT_2_TOKEN}" >> /home/circleci/project/xla_env
+    echo "declare -x GITHUB_TORCH_XLA_BOT_TOKEN=${GITHUB_TORCH_XLA_BOT_TOKEN}" >> /home/circleci/project/xla_env
     echo "declare -x CIRCLE_PULL_REQUEST=${CIRCLE_PULL_REQUEST}" >> /home/circleci/project/env
     echo "declare -x CIRCLE_PROJECT_USERNAME=${CIRCLE_PROJECT_USERNAME}" >> /home/circleci/project/env
     echo "declare -x CIRCLE_PROJECT_REPONAME=${CIRCLE_PROJECT_REPONAME}" >> /home/circleci/project/env
+
+    # Set debug so that xla builds with coverage symbols
+    echo "declare -x DEBUG=1" >> /home/circleci/project/env
 
     pid=$(docker run -t -d -w $WORKDIR ${GCR_DOCKER_IMAGE})
     docker cp /home/circleci/project/. "$pid:$WORKDIR"
@@ -191,11 +194,21 @@ run_test_coverage: &run_test_coverage
         '. ~/.bashrc && USE_COVERAGE=1 .circleci/test.sh'
         docker cp $(cat .docker_pid):/home/jenkins/htmlcov /home/circleci/project
         if [ -n "${USE_CUDA_DOCKER_RUNTIME:-}" ]; then
-          gsutil cp /home/circleci/project/htmlcov/lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/gpu_combined_coverage.out
-          gsutil cp /home/circleci/project/htmlcov/lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/incremental/pytorchxla/${CIRCLE_WORKFLOW_ID}/gpu_combined_coverage.out
+          # Python
+          gsutil cp /home/circleci/project/htmlcov/lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/gpu_python_coverage.out
+          gsutil cp /home/circleci/project/htmlcov/lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/incremental/pytorchxla/${CIRCLE_WORKFLOW_ID}/gpu_python_coverage.out
+
+          # CPP
+          gsutil cp /home/circleci/project/htmlcov/cpp_lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/gpu_cpp_coverage.out
+          gsutil cp /home/circleci/project/htmlcov/cpp_lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/incremental/pytorchxla/${CIRCLE_WORKFLOW_ID}/gpu_cpp_coverage.out
         else
-          gsutil cp /home/circleci/project/htmlcov/lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/cpu_combined_coverage.out
-          gsutil cp /home/circleci/project/htmlcov/lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/incremental/pytorchxla/${CIRCLE_WORKFLOW_ID}/cpu_combined_coverage.out
+          # Python
+          gsutil cp /home/circleci/project/htmlcov/lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/cpu_python_coverage.out
+          gsutil cp /home/circleci/project/htmlcov/lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/incremental/pytorchxla/${CIRCLE_WORKFLOW_ID}/cpu_python_coverage.out
+
+          # CPP
+          gsutil cp /home/circleci/project/htmlcov/cpp_lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/cpu_cpp_coverage.out
+          gsutil cp /home/circleci/project/htmlcov/cpp_lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/incremental/pytorchxla/${CIRCLE_WORKFLOW_ID}/cpu_cpp_coverage.out
 
           ABS_METADATA='{"host": "github", "project": "pytorchxla", "trace_type": "LCOV", "commit_id": '\"${CIRCLE_SHA1}\"', "ref": "HEAD", "source": "https://github.com/pytorch/xla", "owner": "cloud-tpu-pt-dev", "bug_component": "587012"}'
           echo $ABS_METADATA > abs_metadata.json
@@ -221,12 +234,12 @@ run_clang_format: &run_clang_format
       exit 1
     fi
 
-    find -name '*.cpp' -o -name '*.h' | xargs clang-format-7 -i -style=file
+    find -name '*.cpp' -o -name '*.h' -name '*.cc' | xargs clang-format-7 -i -style=file
     git_status=$(git status --porcelain)
     if [[ $git_status ]]; then
       git diff
       echo "clang-format-7 recommends the changes above, please manually apply them OR automatically apply the changes "
-      echo "by running \"clang-format-7 -i -style /PATH/TO/foo.cpp\" to the following files"
+      echo "by running \"clang-format-7 -i -style=file /PATH/TO/foo.cpp\" to the following files"
       echo "${git_status}"
       exit 1
     else
@@ -394,8 +407,9 @@ workflows:
           filters:
             branches:
               only:
-                #- master
+                - master
                 - ci_test_coverage
+                - stk_ci_test_coverage
       - pytorch_xla_run_test_coverage:
           name: pytorch_xla_GPU_test_coverage
           resource_class: gpu.nvidia.small.multi
@@ -405,5 +419,5 @@ workflows:
           filters:
             branches:
               only:
-                #- master
+                - master
                 - ci_test_coverage

@@ -1,7 +1,0 @@
-# Used for fetching cuda from the right repo, see apt.yaml.
-cuda_repo: ubuntu1804
-# Used for fetching clang from the right repo, see apt.yaml.
-llvm_debian_repo: buster
-clang_version: 10
-# PyTorch and PyTorch/XLA wheel versions.
-package_version: 2.0
