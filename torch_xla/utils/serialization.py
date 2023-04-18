@@ -77,11 +77,12 @@ def save(data, path, master_only=True, global_master=False):
   xm.rendezvous('torch_xla.utils.serialization.save')
 
 
-def load(path):
+def load(path, map_location):
   """Loads data previously saved with the `save()` API.
 
   Args:
     path (str): The path passed to the `save()` API.
+    map_location: The map location passed to :func:`torch.load`.
   Returns:
     The loaded data.
   """
@@ -92,7 +93,7 @@ def load(path):
     rewritten_tensors = []
     for t in tensors:
       rewritten_tensors.append(
-          torch.load(_get_tensor_file(tensor_folder, t.tid)))
+          torch.load(_get_tensor_file(tensor_folder, t.tid)), map_location=map_location)
     return rewritten_tensors
 
   def select_fn(v):
