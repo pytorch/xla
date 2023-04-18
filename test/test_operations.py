@@ -1401,7 +1401,6 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
       xla_loaded_model.load_state_dict(xla_state_dict)
       self.assertEqual(xla_model.state_dict(), xla_loaded_model.state_dict())
 
-
   def test_deepcopy(self):
     xla_device = xm.xla_device()
     x = torch.rand(5, device=xla_device)
