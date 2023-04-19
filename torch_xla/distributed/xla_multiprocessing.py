@@ -139,7 +139,7 @@ def _setup_world_size(pf_cfg):
 
 
 def _get_mp_device_ordinal(index, gindex):
-  # If xenv.HOST_ORDINAL is set, we are in a sea-of-devices setup, where devices
+  # If xenv.HOST_ORDINAL is set, we are in a multi CPU setup, where devices
   # are numbered locally within the single host (but the ordinal/rank is still
   # global).
   return index if xenv.HOST_ORDINAL in os.environ else gindex
@@ -253,8 +253,6 @@ def _setup_cpu_worker(index, gindex):
 
 
 def _wants_tpu_env_config(index, gindex):
-  if xenv.HOST_ORDINAL in os.environ:
-    return index == 0
   return gindex == 0
 
 
@@ -287,22 +285,6 @@ def _prepare_env_for_index(index, pf_cfg):
 
   if pf_cfg.dev_kind == 'TPU':
     _setup_tpu_worker(index, gindex, os.environ.get(xenv.TPU_CONFIG, None))
-    if xenv.HOST_ORDINAL in os.environ:
-      # If xenv.HOST_ORDINAL is set, we are in a sea-of-devices TPU setup, where
-      # each host has local TPU devices, but not interconnected with the fast TPU
-      # link. In this case each TPU host sees only local TPU devices, as far as
-      # fast TPU reduction goes, and global redcutions are performed with normal
-      # torch.distributed facilities. The ordinal 0 of each TPU host will be the
-      # one performing the global reductions, if no groups are defined in the
-      # reduce operation.
-      # Sea of devices configuration:
-      #  - xenv.HOST_ORDINAL must be set to the host ordinal.
-      #  - xenv.TORCH_DIST_ROOT must be set to the HOST:PORT, where HOST can be
-      #    the same host of the mesh master, but different port.
-      #  - xenv.TPU_CONFIG must be set on all host, with task number equal 0.
-      #  - The worker ordinal (task number) in the xenv.LOCAL_WORKER must be set
-      #    to 0 in all hosts.
-      _setup_torch_distributed()
   elif pf_cfg.dev_kind == 'GPU':
     _setup_gpu_worker(index, gindex)
   elif pf_cfg.dev_kind == 'CPU':
