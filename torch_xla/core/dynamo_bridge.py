@@ -194,15 +194,18 @@ class NoneRemover:
 class XlaOperatorSupport(torch.fx.passes.operator_support.OperatorSupport):
 
   def is_node_supported(self, submodules, node: torch.fx.Node) -> bool:
-    return node.op == "call_function" and (getattr(node.target, "xla",
+    if node.name in ['add', 'add_1']:
+      return True
+    ret = node.op == "call_function" and (getattr(node.target, "xla",
                                                    None) is not None or
                                            node.target == operator.getitem)
+    return ret
 
 
 def is_xla_tensor(tensor: torch.Tensor) -> bool:
   return tensor.device.type == "xla"
 
-
+"""
 def maybe_partition_graph(xla_model: torch.fx.GraphModule):
   supported_ops = XlaOperatorSupport()
   partitioner = CapabilityBasedPartitioner(xla_model, supported_ops)
@@ -215,9 +218,9 @@ def maybe_partition_graph(xla_model: torch.fx.GraphModule):
       fused_module._wrapped_call = extract_compiled_graph
 
   return partitioned_graph
+"""
 
-
-def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
+def extract_internal(xla_model: torch.fx.GraphModule, *xla_args):
   assert all(
       map(
           is_xla_tensor,
@@ -242,12 +245,13 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
   }
 
   # partition the graph for unsupported ops
-  xla_model = maybe_partition_graph(xla_model)
+  #xla_model = maybe_partition_graph(xla_model)
 
   # get_fallback_ops below uses counters to detect torch_xla fallbacks.
   # Clear the counters here so we ignore pre-existing fallbacks and
   # only detect fallbacks happening when running the xla_model below.
   metrics.clear_counters()
+  delattr(xla_model, '_wrapped_call')
   xla_out = xla_model(*xla_args)
 
   fallback_ops = get_fallback_ops()
@@ -345,4 +349,18 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
     none_remover.add_nones(result)
     return result
 
-  return optimized_mod
+  return optimized_mod(*xla_args)
+
+def extract_compile_graph(xla_model, xla_args):
+  supported_ops = XlaOperatorSupport()
+  partitioner = CapabilityBasedPartitioner(xla_model, supported_ops)
+  partitions = partitioner.propose_partitions()
+  partitioned_graph = partitioner.fuse_partitions(partitions)
+
+  for node in partitioned_graph.graph.nodes:
+    if node.op == "call_module" and "fused_" in node.name:
+      fused_module = getattr(partitioned_graph, node.name)
+      fused_module._wrapped_call = extract_internal
+  
+  return partitioned_graph
+
