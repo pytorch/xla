@@ -26,21 +26,6 @@ def new_group_barrier_disabled():
 
 
 @contextlib.contextmanager
-def always_intercore_reduce():
-  OriginalCollectiveContext = xm.CollectiveContext
-
-  @functools.wraps(OriginalCollectiveContext)
-  def MockCollectiveContext(groups=None):
-    ctx = OriginalCollectiveContext()
-    ctx.requires_intercore_reduce = True
-    ctx.intercore_group = groups
-    return ctx
-
-  with mock.patch.object(xm, 'CollectiveContext', new=MockCollectiveContext):
-    yield
-
-
-@contextlib.contextmanager
 def patch_world(rank, size):
   assert isinstance(dist.group.WORLD,
                     torch_xla.distributed.xla_backend.ProcessGroupXla)
@@ -66,7 +51,6 @@ class XlaBackendTest(parameterized.TestCase):
     pg_xla_creator = dist.Backend.XLA
     self.assertIsNotNone(pg_xla_creator)
 
-  @always_intercore_reduce()
   def test_allreduce(self):
     device = xm.xla_device()
     tensor = torch.arange(2, device=device) + 1 + 2 * dist.get_rank()
@@ -75,7 +59,6 @@ class XlaBackendTest(parameterized.TestCase):
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([tensor])
     hlo_matches(hlo, all_reduce_pattern)
 
-  @always_intercore_reduce()
   @patch_world(rank=3, size=6)
   def test_allreduce_with_mesh(self):
     device = xm.xla_device()
@@ -92,7 +75,6 @@ class XlaBackendTest(parameterized.TestCase):
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([tensor])
     hlo_matches(hlo, all_reduce_pattern)
 
-  @always_intercore_reduce()
   @patch_world(rank=3, size=8)
   def test_allgather(self):
     device = xm.xla_device()
@@ -103,7 +85,6 @@ class XlaBackendTest(parameterized.TestCase):
     hlo = torch_xla._XLAC._get_xla_tensors_hlo(output_tensors)
     hlo_matches(hlo, all_gather_pattern)
 
-  @always_intercore_reduce()
   def test_broadcast(self):
     device = xm.xla_device()
     tensor = torch.arange(2, device=device) + 1 + 2 * dist.get_rank()
@@ -113,7 +94,6 @@ class XlaBackendTest(parameterized.TestCase):
     hlo_matches(hlo, all_reduce_pattern)
 
   # Needed for ZeRO stage 1
-  @always_intercore_reduce()
   def test_reduce_scatter(self):
     device = xm.xla_device()
     tensor = torch.arange(2, device=device) + 1 + 2 * dist.get_rank()
