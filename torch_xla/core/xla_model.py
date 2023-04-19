@@ -490,7 +490,7 @@ def _get_all_reduce_token():
 def all_reduce(reduce_type,
                inputs,
                scale=1.0,
-               groups=[],
+               groups=None,
                pin_layout=True):
   """Performs an inplace reduce operation on the input tensor(s).
 
@@ -520,6 +520,7 @@ def all_reduce(reduce_type,
     returns the list/tuple itself.
   """
   token, devctx = _get_all_reduce_token()
+  groups = groups or []
   if isinstance(inputs, torch.Tensor):
     result = torch_xla._XLAC._xla_all_reduce(reduce_type, inputs, token,
                                               scale, groups,
@@ -904,8 +905,7 @@ def reduce_gradients(optimizer, groups=None, pin_layout=True):
     pin_layout (bool, optional): whether to pin the layout when reducing gradients.
       See `xm.all_reduce` for details.
   """
-  cctx = CollectiveContext()
-  count = max(cctx.replica_devcount, cctx.world_size)
+  count = xrt_world_size()
   if count > 1:
     gradients = _fetch_gradients(optimizer)
     all_reduce(
@@ -913,7 +913,6 @@ def reduce_gradients(optimizer, groups=None, pin_layout=True):
         gradients,
         scale=1.0 / count,
         groups=groups,
-        cctx=cctx,
         pin_layout=pin_layout)
 
 
