@@ -165,6 +165,12 @@ torch::lazy::NodePtr Norm(const torch::lazy::Value& input,
                           c10::optional<at::ScalarType> dtype,
                           absl::Span<const int64_t> dims, bool keepdim);
 
+torch::lazy::NodePtr LinalgVectorNorm(const torch::lazy::Value& input,
+                                      const at::Scalar& ord,
+                                      std::vector<int64_t> dimensions,
+                                      bool keepdim,
+                                      c10::optional<at::ScalarType> dtype);
+
 torch::lazy::NodePtr Identity(int64_t lines, int64_t cols,
                               xla::PrimitiveType element_type);
 

@@ -1439,6 +1439,30 @@ XLATensorPtr lerp(const XLATensorPtr& input, const XLATensorPtr& end,
       Lerp(input->GetIrValue(), end->GetIrValue(), weight_val));
 }
 
+XLATensorPtr linalg_vector_norm(const XLATensorPtr& input,
+                                const at::Scalar& ord,
+                                std::vector<int64_t> dimensions, bool keep_dim,
+                                c10::optional<at::ScalarType> dtype) {
+  // If the input is a scalar, we have to manually create the dimensions vector.
+  auto input_rank = input->shape().get().rank();
+  std::vector<int64_t> canonical_dims;
+  if (input_rank != 0) {
+    canonical_dims = torch::lazy::GetCanonicalDimensionIndices(
+        xla::util::ToVector<int64_t>(dimensions), input_rank);
+  } else {
+    canonical_dims = {0};
+  }
+  torch::lazy::Value res = LinalgVectorNorm(input->GetIrValue(), ord,
+                                            canonical_dims, keep_dim, dtype);
+  if (!dtype) dtype = input->dtype_optional();
+  xla::PrimitiveType res_intended_type =
+      MakeXlaPrimitiveType(*dtype, &input->GetDevice());
+  if (GetXlaShape(res).element_type() != res_intended_type) {
+    res = torch::lazy::MakeNode<Cast>(res, res_intended_type);
+  }
+  return input->CreateFrom(res, dtype);
+}
+
 XLATensorPtr linspace(const at::Scalar& start, const at::Scalar& end,
                       const int64_t steps, at::ScalarType element_type,
                       const torch::lazy::BackendDevice& device) {

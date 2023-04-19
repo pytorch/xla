@@ -453,6 +453,11 @@ XLATensorPtr lerp(const XLATensorPtr& input, const XLATensorPtr& end,
 XLATensorPtr lerp(const XLATensorPtr& input, const XLATensorPtr& end,
                   const at::Scalar& weight);
 
+XLATensorPtr linalg_vector_norm(const XLATensorPtr& input,
+                                const at::Scalar& ord,
+                                std::vector<int64_t> dimensions, bool keep_dim,
+                                c10::optional<at::ScalarType> dtype);
+
 XLATensorPtr linspace(const at::Scalar& start, const at::Scalar& end,
                       const int64_t steps, at::ScalarType element_type,
                       const torch::lazy::BackendDevice& device);

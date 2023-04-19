@@ -107,6 +107,7 @@ allowed_opinfo = set(
             AllowedOpInfoEntry('linalg.cholesky'),
             AllowedOpInfoEntry('linalg.cholesky_ex'),
             AllowedOpInfoEntry('linalg.householder_product'),
+            AllowedOpInfoEntry('linalg.vector_norm'),
             AllowedOpInfoEntry('log'),
             AllowedOpInfoEntry('log10'),
             AllowedOpInfoEntry('log1p'),
@@ -292,7 +293,6 @@ allowed_opinfo = set(
             # AllowedOpInfoEntry('linalg.solve'),  # Slice dim size 1 greater than dynamic slice dimension: 0
             # AllowedOpInfoEntry('linalg.svd'),  # Slice dim size 1 greater than dynamic slice dimension: 0
             # AllowedOpInfoEntry('linalg.svdvals'),  # Slice dim size 1 greater than dynamic slice dimension: 0
-            # AllowedOpInfoEntry('linalg.vector_norm'),
             # AllowedOpInfoEntry('lu'),  # Slice dim size 1 greater than dynamic slice dimension: 0
             # AllowedOpInfoEntry('std_mean'),
             # AllowedOpInfoEntry('sum'),
