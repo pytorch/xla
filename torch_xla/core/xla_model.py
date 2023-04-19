@@ -548,8 +548,7 @@ def _host_all_reduce(reduce_type, inputs, cctx, scale=None):
 def all_reduce(reduce_type,
                inputs,
                scale=1.0,
-               groups=None,
-               cctx=None,
+               groups=[],
                pin_layout=True):
   """Performs an inplace reduce operation on the input tensor(s).
 
@@ -578,37 +577,18 @@ def all_reduce(reduce_type,
     this function performs an inplace all-reduce op on the input tensors, and
     returns the list/tuple itself.
   """
-  # In a sea-of-devices case we use two level of reductions. One using the fast
-  # device interconnect, and then using the torch.distributed reduction API to
-  # reduce across the detached hosts.
-  # One special case is XLA CPU devices, which do not support in graph reductions,
-  # so in that case we create differente processes having a single replication
-  # device. That will skip the in graph reductions and use the torch.distributed
-  # support across all XLA CPU devices.
-  if cctx is None:
-    cctx = CollectiveContext(groups=groups)
-  if cctx.requires_intercore_reduce:
-    token, devctx = _get_all_reduce_token()
-    if isinstance(inputs, torch.Tensor):
-      result = torch_xla._XLAC._xla_all_reduce(reduce_type, inputs, token,
-                                               scale, cctx.intercore_group,
-                                               pin_layout)
-      devctx.all_reduce_token = result[1]
-      results = [result[0]]
-    else:
-      devctx.all_reduce_token = torch_xla._XLAC._xla_all_reduce_inplace(
-          reduce_type, inputs, token, scale, cctx.intercore_group, pin_layout)
-      results = inputs
+  token, devctx = _get_all_reduce_token()
+  if isinstance(inputs, torch.Tensor):
+    result = torch_xla._XLAC._xla_all_reduce(reduce_type, inputs, token,
+                                              scale, groups,
+                                              pin_layout)
+    devctx.all_reduce_token = result[1]
+    results = [result[0]]
   else:
-    if isinstance(inputs, torch.Tensor):
-      results = [inputs.clone()]
-    else:
-      results = inputs
+    devctx.all_reduce_token = torch_xla._XLAC._xla_all_reduce_inplace(
+        reduce_type, inputs, token, scale, groups, pin_layout)
+    results = inputs
 
-  if cctx.requires_interhost_reduce:
-    assert groups is None, 'Groups are not supported in sea-of-devices mode'
-    hscale = scale if cctx.replica_devcount <= 1 and scale != 1.0 else None
-    _host_all_reduce(reduce_type, results, cctx, scale=hscale)
   return results[0] if isinstance(inputs, torch.Tensor) else results
 
 
