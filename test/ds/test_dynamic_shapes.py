@@ -171,9 +171,9 @@ class TestDynamicShapes(test_utils.XlaTestCase):
   def test_nonzero_correctness(self):
     t1 = torch.tensor([[1, 0, 0, 5, 0, 6]], device=dev)
     t2 = torch.nonzero(t1)
-    t1_aten = torch.tensor([[1, 0, 0, 5, 0, 6]])
+    t1_aten = t1.cpu()
     t2_aten = torch.nonzero(t1_aten)
-    self.assertEqual(t2.cpu(), t2_aten.cpu())
+    self.assertEqual(t2.cpu(), t2_aten)
 
   def test_masked_select_shape(self):
     x = torch.tensor((0, 1, 2, 0, 3, 4), device=xm.xla_device())
