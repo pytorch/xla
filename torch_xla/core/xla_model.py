@@ -487,39 +487,6 @@ def _get_all_reduce_token():
   return token, devctx
 
 
-def _torch_all_reduce(reduce_type, inputs, group=None):
-  import torch.distributed as dist
-
-  if reduce_type == REDUCE_SUM:
-    reduce_op = dist.ReduceOp.SUM
-  elif reduce_type == REDUCE_MUL:
-    reduce_op = dist.ReduceOp.PRODUCT
-  elif reduce_type == REDUCE_MIN:
-    reduce_op = dist.ReduceOp.MIN
-  elif reduce_type == REDUCE_MAX:
-    reduce_op = dist.ReduceOp.MAX
-  elif reduce_type == REDUCE_OR:
-    reduce_op = dist.ReduceOp.BOR
-  elif reduce_type == REDUCE_AND:
-    reduce_op = dist.ReduceOp.BAND
-  else:
-    raise RuntimeError('Invalid reduce type: {}'.format(reduce_type))
-
-  results = []
-  async_op = None
-  for tensor in inputs:
-    # Use async flag to overlap pytorch reduce ops with XLA tensor fetches.
-    cpu_tensor = torch_xla._XLAC._xla_get_cpu_tensors([tensor])[0]
-    results.append(cpu_tensor)
-    if async_op is not None:
-      async_op.wait()
-    async_op = dist.all_reduce(
-        cpu_tensor, reduce_op, async_op=True, group=group)
-  if async_op is not None:
-    async_op.wait()
-  return results
-
-
 def all_reduce(reduce_type,
                inputs,
                scale=1.0,
