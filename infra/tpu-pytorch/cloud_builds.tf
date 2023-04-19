@@ -37,3 +37,39 @@ module "dev_image" {
   timeout_minutes = 60
   location        = "global"
 }
+
+# This trigger should be removed once bazel is merged.
+module "bazel_build" {
+  source = "../terraform_modules/xla_docker_build"
+
+  ansible_vars = {
+    package_version = "2.0"
+    pytorch_git_rev = "main"
+    xla_git_rev     = "bazel-torchxla"
+    python_version  = "3.8"
+    arch            = "amd64"
+    accelerator     = "tpu"
+  }
+
+  ansible_branch  = "bazel-torchxla"
+  trigger_on_push = { branch = "bazel-torchxla" }
+
+  trigger_name = "xla-bazel"
+  image_name   = "xla"
+  image_tags   = ["bazel"]
+
+  description = join(" ", [
+    "Bazel build of PyTorch/XLA (bazel-torchxla branch).",
+    "Trigger managed by Terraform setup in",
+    "infra/tpu-pytorch/cloud_builds.tf."
+  ])
+
+  # TODO: This bucket was created for testing and should be removed.
+  wheels_dest = "gs://tpu-pytorch-wheels-public/bazel/tpuvm"
+  wheels_srcs = ["/dist/*.whl"]
+
+  worker_pool_id  = module.worker_pool.id
+  docker_repo_url = module.docker_registry.url
+
+  location = "global"
+}
