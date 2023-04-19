@@ -297,8 +297,7 @@ function install_torchvision_from_source() {
   # https://github.com/pytorch/vision/issues/967
   git clone -b "${torchvision_repo_version}" https://github.com/pytorch/vision.git
   pushd vision
-  python setup.py bdist_wheel
-  pip install dist/*.whl
+  python setup.py install
   popd
 
   # collect_wheels expects this
