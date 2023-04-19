@@ -293,4 +293,8 @@ void SetAllReduceToken(const torch::lazy::BackendDevice& device,
   g_all_reduce_tokens[device.ordinal()] = token;
 }
 
+void ResetAllReduceToken() {
+  g_token.reset();
+}
+
 }  // namespace torch_xla
