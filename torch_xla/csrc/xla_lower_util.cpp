@@ -1157,8 +1157,17 @@ xla::XlaOp BuildMultinomial(xla::XlaOp input, int64_t num_samples,
   // Map samples to categories
   std::vector<int64_t> broadcast_size = XlaHelpers::SizesOfXlaOp(input);
   broadcast_size.push_back(num_samples);
-  cumprob = xla::BroadcastInDim(cumprob, broadcast_size, {dim});
-  rng = xla::BroadcastInDim(rng, broadcast_size, {input_shape.rank()});
+  std::vector<int64_t> cumprob_broadcast_dim;
+  std::vector<int64_t> rng_broadcast_dim;
+  if (input_shape.rank() == 1) {
+    cumprob_broadcast_dim = {0};
+    rng_broadcast_dim = {1};
+  } else {
+    cumprob_broadcast_dim = {0, 1};
+    rng_broadcast_dim = {0, 2};
+  }
+  cumprob = xla::BroadcastInDim(cumprob, broadcast_size, cumprob_broadcast_dim);
+  rng = xla::BroadcastInDim(rng, broadcast_size, rng_broadcast_dim);
 
   // Build comparison mask and sum along K dimension
   auto output_type = xla::PrimitiveType::S64;
