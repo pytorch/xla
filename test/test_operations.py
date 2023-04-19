@@ -1392,7 +1392,8 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
       xser.save(xla_model.state_dict(), path)
       # test loading XLA weights
       xla_state_dict = xser.load(path)
-      self.assertEqual(xla_state_dict["fc2.weight"].device.type, xla_device.type)
+      self.assertEqual(xla_state_dict["fc2.weight"].device.type,
+                       xla_device.type)
       cpu_model = XlaMNIST()
       cpu_model.load_state_dict(xla_state_dict)
       self.assertEqual(cpu_model.fc2.weight.device.type, "cpu")
