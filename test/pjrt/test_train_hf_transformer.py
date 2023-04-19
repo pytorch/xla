@@ -75,6 +75,7 @@ def finetune(rank, train_dataset, test_dataset, tokenizer, flags):
       num_training_steps=flags.num_epochs * len(train_loader))
 
   def train_loop_fn(loader, epoch):
+    print('rank: ', rank, ', train_loop_fn() begins', flush=True)
     tracker = xm.RateTracker()
     model.train()
     for step, batch in enumerate(loader):
@@ -88,10 +89,14 @@ def finetune(rank, train_dataset, test_dataset, tokenizer, flags):
       if step % flags.log_steps == 0:
         xm.add_step_closure(
             _train_update, args=(device, step, loss, tracker, epoch, writer))
+    print('rank: ', rank, ', train_loop_fn() ends', flush=True)
 
   def test_loop_fn(loader, epoch):
+    print('rank: ', rank, ', test_loop_fn() begins', flush=True)
     metric = evaluate.load("sacrebleu")
     model.eval()
+
+    i = 0
     for batch in loader:
       with torch.no_grad():
         outputs = model(**batch)
@@ -106,8 +111,12 @@ def finetune(rank, train_dataset, test_dataset, tokenizer, flags):
       decoded_labels = [[label.strip()] for label in tokenizer.batch_decode(
           batch["labels"], skip_special_tokens=True)]
       metric.add_batch(predictions=decoded_preds, references=decoded_labels)
+      print('rank: ', rank, ', test_loop_fn() finishes processing batch=', i, flush=True)
+      i += 1
 
+    print('rank: ', rank, ', test_loop_fn() finishes evaluating', flush=True)
     eval_metric = metric.compute()
+    print('rank: ', rank, ', test_loop_fn() metric.compute() finishes', flush=True)
     xm.mark_step()
     print(
         '[xla:{}] Bleu={:.5f} Time={}'.format(xm.get_ordinal(),
@@ -119,21 +128,24 @@ def finetune(rank, train_dataset, test_dataset, tokenizer, flags):
         epoch,
         dict_to_write={'bleu': eval_metric["score"]},
         write_xla_metrics=True)
+    print('rank: ', rank, ', test_loop_fn() ends', flush=True)
 
   train_device_loader = pl.MpDeviceLoader(train_loader, device)
   test_device_loader = pl.MpDeviceLoader(test_loader, device)
   for epoch in range(1, flags.num_epochs + 1):
-    xm.master_print("Started training epoch {}".format(epoch))
+    xm.master_print("Started training epoch {}".format(epoch), flush=True)
     train_loop_fn(train_device_loader, epoch)
-    xm.master_print("Finished training epoch {}".format(epoch))
+    xm.master_print("Finished training epoch {}".format(epoch), flush=True)
 
-    xm.master_print("Evaluate epoch {}".format(epoch))
+    xm.master_print("Start evaluating epoch {}".format(epoch), flush=True)
     test_loop_fn(test_device_loader, epoch)
+    xm.master_print("Finished evaluating epoch {}".format(epoch), flush=True)
     if flags.metrics_debug:
       xm.master_print(met.metrics_report(), flush=True)
 
 
 def get_dataset(tokenizer, flags):
+  print('xw32 get_dataset() begins.', flush=True)
 
   def preprocess(examples):
     inputs = [ex['de'] for ex in examples["translation"]]
@@ -149,6 +161,7 @@ def get_dataset(tokenizer, flags):
   ds = ds.train_test_split(test_size=0.2)
   ds.set_format("torch")
 
+  print('xw32 get_dataset() ends.', flush=True)
   return ds["train"], ds["test"]
 
 
