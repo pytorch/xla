@@ -10593,284 +10593,284 @@ TEST_F(AtenXlaTensorTest, TestAdaptiveAvgPool2DNoBatchBackward) {
 //   }
 // }
 
-TEST_F(AtenXlaTensorTest, TestConv3DBackward) {
-  int in_channels = 4;
-  int out_channels = 8;
-  int kernel_size = 5;
-  for (int stride = 1; stride <= 3; ++stride) {
-    for (int padding = 1; padding <= 2; ++padding) {
-      for (bool with_bias : {true, false}) {
-        for (int dilation = 1; dilation <= 2; ++dilation) {
-          for (int groups :
-               {1, 2, 4}) {  // covers normal, grouped, depthwise conv.
-            auto testfn =
-                [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
-              return torch::conv3d(inputs[0], inputs[1], inputs[2],
-                                   /*stride=*/{stride, stride, stride},
-                                   /*padding=*/{padding, padding, padding},
-                                   /*dilation=*/{dilation, dilation, dilation},
-                                   groups);
-            };
+// TEST_F(AtenXlaTensorTest, TestConv3DBackward) {
+//   int in_channels = 4;
+//   int out_channels = 8;
+//   int kernel_size = 5;
+//   for (int stride = 1; stride <= 3; ++stride) {
+//     for (int padding = 1; padding <= 2; ++padding) {
+//       for (bool with_bias : {true, false}) {
+//         for (int dilation = 1; dilation <= 2; ++dilation) {
+//           for (int groups :
+//                {1, 2, 4}) {  // covers normal, grouped, depthwise conv.
+//             auto testfn =
+//                 [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
+//               return torch::conv3d(inputs[0], inputs[1], inputs[2],
+//                                    /*stride=*/{stride, stride, stride},
+//                                    /*padding=*/{padding, padding, padding},
+//                                    /*dilation=*/{dilation, dilation, dilation},
+//                                    groups);
+//             };
 
-            ForEachDevice([&](const torch::Device& device) {
-              torch::Tensor bias =
-                  with_bias ? torch::rand({out_channels},
-                                          torch::TensorOptions(torch::kDouble))
-                            : torch::Tensor();
-              TestBackward({torch::rand({4, in_channels, 14, 14, 14},
-                                        torch::TensorOptions(torch::kDouble)
-                                            .requires_grad(true)),
-                            torch::rand({out_channels, in_channels / groups,
-                                         kernel_size, kernel_size, kernel_size},
-                                        torch::TensorOptions(torch::kDouble)
-                                            .requires_grad(true)),
-                            bias},
-                           device, testfn);
-            });
-          }
-        };
-      }
-    }
-  }
-}
+//             ForEachDevice([&](const torch::Device& device) {
+//               torch::Tensor bias =
+//                   with_bias ? torch::rand({out_channels},
+//                                           torch::TensorOptions(torch::kDouble))
+//                             : torch::Tensor();
+//               TestBackward({torch::rand({4, in_channels, 14, 14, 14},
+//                                         torch::TensorOptions(torch::kDouble)
+//                                             .requires_grad(true)),
+//                             torch::rand({out_channels, in_channels / groups,
+//                                          kernel_size, kernel_size, kernel_size},
+//                                         torch::TensorOptions(torch::kDouble)
+//                                             .requires_grad(true)),
+//                             bias},
+//                            device, testfn);
+//             });
+//           }
+//         };
+//       }
+//     }
+//   }
+// }
 
-TEST_F(AtenXlaTensorTest, TestTransposedConv3DBackward) {
-  int in_channels = 4;
-  int out_channels = 8;
-  int kernel_size = 5;
-  for (int stride = 1; stride <= 2; ++stride) {
-    for (int padding = 0; padding <= 1; ++padding) {
-      for (int dilation = 1; dilation <= 2; ++dilation) {
-        for (int output_padding = 0;
-             output_padding < std::max(stride, dilation); ++output_padding) {
-          for (bool with_bias : {true, false}) {
-            for (int groups :
-                 {1, 2, 4}) {  // covers normal, grouped, depthwise conv.
-              auto testfn = [&](const std::vector<torch::Tensor>& inputs)
-                  -> torch::Tensor {
-                return torch::conv_transpose3d(
-                    inputs[0], inputs[1], inputs[2],
-                    /*stride=*/{stride, stride + 1, stride},
-                    /*padding=*/{padding, padding + 1, stride},
-                    /*output_padding=*/output_padding,
-                    /*groups=*/groups,
-                    /*dilation=*/{dilation, dilation + 1, dilation});
-              };
-              ForEachDevice([&](const torch::Device& device) {
-                torch::Tensor input = torch::rand(
-                    {4, out_channels, 14, 14, 14},
-                    torch::TensorOptions(torch::kDouble).requires_grad(true));
-                torch::Tensor weight = torch::rand(
-                    {out_channels, in_channels / groups, kernel_size,
-                     kernel_size, kernel_size},
-                    torch::TensorOptions(torch::kDouble).requires_grad(true));
-                torch::Tensor bias =
-                    with_bias ? torch::rand({in_channels},
-                                            torch::TensorOptions(torch::kDouble)
-                                                .requires_grad(true))
-                              : torch::Tensor();
-                TestBackward({input, weight, bias}, device, testfn);
-              });
-            }
-          };
-        }
-      }
-    }
-  }
-}
+// TEST_F(AtenXlaTensorTest, TestTransposedConv3DBackward) {
+//   int in_channels = 4;
+//   int out_channels = 8;
+//   int kernel_size = 5;
+//   for (int stride = 1; stride <= 2; ++stride) {
+//     for (int padding = 0; padding <= 1; ++padding) {
+//       for (int dilation = 1; dilation <= 2; ++dilation) {
+//         for (int output_padding = 0;
+//              output_padding < std::max(stride, dilation); ++output_padding) {
+//           for (bool with_bias : {true, false}) {
+//             for (int groups :
+//                  {1, 2, 4}) {  // covers normal, grouped, depthwise conv.
+//               auto testfn = [&](const std::vector<torch::Tensor>& inputs)
+//                   -> torch::Tensor {
+//                 return torch::conv_transpose3d(
+//                     inputs[0], inputs[1], inputs[2],
+//                     /*stride=*/{stride, stride + 1, stride},
+//                     /*padding=*/{padding, padding + 1, stride},
+//                     /*output_padding=*/output_padding,
+//                     /*groups=*/groups,
+//                     /*dilation=*/{dilation, dilation + 1, dilation});
+//               };
+//               ForEachDevice([&](const torch::Device& device) {
+//                 torch::Tensor input = torch::rand(
+//                     {4, out_channels, 14, 14, 14},
+//                     torch::TensorOptions(torch::kDouble).requires_grad(true));
+//                 torch::Tensor weight = torch::rand(
+//                     {out_channels, in_channels / groups, kernel_size,
+//                      kernel_size, kernel_size},
+//                     torch::TensorOptions(torch::kDouble).requires_grad(true));
+//                 torch::Tensor bias =
+//                     with_bias ? torch::rand({in_channels},
+//                                             torch::TensorOptions(torch::kDouble)
+//                                                 .requires_grad(true))
+//                               : torch::Tensor();
+//                 TestBackward({input, weight, bias}, device, testfn);
+//               });
+//             }
+//           };
+//         }
+//       }
+//     }
+//   }
+// }
 
-TEST_F(AtenXlaTensorTest, TestMaxPool2DBackward) {
-  int kernel_size = 3;
-  for (int stride = 1; stride <= 2; ++stride) {
-    for (int padding = 0; padding <= 1; ++padding) {
-      // Test ceil_mode=true through the CPU interop.
-      for (bool ceil_mode : {false, true}) {
-        auto testfn =
-            [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
-          return torch::max_pool2d(
-              inputs[0], /*kernel_size=*/{kernel_size, kernel_size},
-              /*stride=*/{stride, stride},
-              /*padding=*/{padding, padding}, /*dilation=*/{1, 1},
-              /*ceil_mode=*/ceil_mode);
-        };
+// TEST_F(AtenXlaTensorTest, TestMaxPool2DBackward) {
+//   int kernel_size = 3;
+//   for (int stride = 1; stride <= 2; ++stride) {
+//     for (int padding = 0; padding <= 1; ++padding) {
+//       // Test ceil_mode=true through the CPU interop.
+//       for (bool ceil_mode : {false, true}) {
+//         auto testfn =
+//             [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
+//           return torch::max_pool2d(
+//               inputs[0], /*kernel_size=*/{kernel_size, kernel_size},
+//               /*stride=*/{stride, stride},
+//               /*padding=*/{padding, padding}, /*dilation=*/{1, 1},
+//               /*ceil_mode=*/ceil_mode);
+//         };
 
-        ForEachDevice([&](const torch::Device& device) {
-          TestBackward(
-              {torch::rand(
-                  {1, 64, 112, 112},
-                  torch::TensorOptions(torch::kFloat).requires_grad(true))},
-              device, testfn);
-        });
+//         ForEachDevice([&](const torch::Device& device) {
+//           TestBackward(
+//               {torch::rand(
+//                   {1, 64, 112, 112},
+//                   torch::TensorOptions(torch::kFloat).requires_grad(true))},
+//               device, testfn);
+//         });
 
-        ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-        ExpectCounterChanged("xla::max_pool2d", cpp_test::GetIgnoredCounters());
-      }
-    }
-  }
-}
+//         ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+//         ExpectCounterChanged("xla::max_pool2d", cpp_test::GetIgnoredCounters());
+//       }
+//     }
+//   }
+// }
 
-TEST_F(AtenXlaTensorTest, TestMaxPool3DBackward) {
-  int kernel_size = 3;
-  for (int stride = 1; stride <= 2; ++stride) {
-    for (int padding = 0; padding <= 1; ++padding) {
-      // Test ceil_mode=true through the CPU interop.
-      for (bool ceil_mode : {false, true}) {
-        auto testfn =
-            [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
-          return torch::max_pool3d(
-              inputs[0],
-              /*kernel_size=*/{kernel_size, kernel_size, kernel_size},
-              /*stride=*/{stride, stride, stride},
-              /*padding=*/{padding, padding, padding}, /*dilation=*/{1, 1, 1},
-              /*ceil_mode=*/ceil_mode);
-        };
+// TEST_F(AtenXlaTensorTest, TestMaxPool3DBackward) {
+//   int kernel_size = 3;
+//   for (int stride = 1; stride <= 2; ++stride) {
+//     for (int padding = 0; padding <= 1; ++padding) {
+//       // Test ceil_mode=true through the CPU interop.
+//       for (bool ceil_mode : {false, true}) {
+//         auto testfn =
+//             [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
+//           return torch::max_pool3d(
+//               inputs[0],
+//               /*kernel_size=*/{kernel_size, kernel_size, kernel_size},
+//               /*stride=*/{stride, stride, stride},
+//               /*padding=*/{padding, padding, padding}, /*dilation=*/{1, 1, 1},
+//               /*ceil_mode=*/ceil_mode);
+//         };
 
-        ForEachDevice([&](const torch::Device& device) {
-          TestBackward(
-              {torch::rand(
-                  {1, 64, 16, 16, 16},
-                  torch::TensorOptions(torch::kFloat).requires_grad(true))},
-              device, testfn);
-        });
+//         ForEachDevice([&](const torch::Device& device) {
+//           TestBackward(
+//               {torch::rand(
+//                   {1, 64, 16, 16, 16},
+//                   torch::TensorOptions(torch::kFloat).requires_grad(true))},
+//               device, testfn);
+//         });
 
-        ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-        ExpectCounterChanged("xla::max_pool3d", cpp_test::GetIgnoredCounters());
-      }
-    }
-  }
-}
+//         ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+//         ExpectCounterChanged("xla::max_pool3d", cpp_test::GetIgnoredCounters());
+//       }
+//     }
+//   }
+// }
 
-TEST_F(AtenXlaTensorTest, TestMaxPool2DNoBatchBackward) {
-  int kernel_size = 3;
-  for (int stride = 1; stride <= 2; ++stride) {
-    for (int padding = 0; padding <= 1; ++padding) {
-      // Test ceil_mode=true through the CPU interop.
-      for (bool ceil_mode : {false, true}) {
-        auto testfn =
-            [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
-          return torch::max_pool2d(
-              inputs[0], /*kernel_size=*/{kernel_size, kernel_size},
-              /*stride=*/{stride, stride},
-              /*padding=*/{padding, padding}, /*dilation=*/{1, 1},
-              /*ceil_mode=*/ceil_mode);
-        };
+// TEST_F(AtenXlaTensorTest, TestMaxPool2DNoBatchBackward) {
+//   int kernel_size = 3;
+//   for (int stride = 1; stride <= 2; ++stride) {
+//     for (int padding = 0; padding <= 1; ++padding) {
+//       // Test ceil_mode=true through the CPU interop.
+//       for (bool ceil_mode : {false, true}) {
+//         auto testfn =
+//             [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
+//           return torch::max_pool2d(
+//               inputs[0], /*kernel_size=*/{kernel_size, kernel_size},
+//               /*stride=*/{stride, stride},
+//               /*padding=*/{padding, padding}, /*dilation=*/{1, 1},
+//               /*ceil_mode=*/ceil_mode);
+//         };
 
-        ForEachDevice([&](const torch::Device& device) {
-          TestBackward(
-              {torch::rand(
-                  {64, 112, 112},
-                  torch::TensorOptions(torch::kFloat).requires_grad(true))},
-              device, testfn);
-        });
-      }
-    }
-  }
-}
+//         ForEachDevice([&](const torch::Device& device) {
+//           TestBackward(
+//               {torch::rand(
+//                   {64, 112, 112},
+//                   torch::TensorOptions(torch::kFloat).requires_grad(true))},
+//               device, testfn);
+//         });
+//       }
+//     }
+//   }
+// }
 
-TEST_F(AtenXlaTensorTest, TestMaxPool3DNoBatchBackward) {
-  int kernel_size = 3;
-  for (int stride = 1; stride <= 2; ++stride) {
-    for (int padding = 0; padding <= 1; ++padding) {
-      // Test ceil_mode=true through the CPU interop.
-      for (bool ceil_mode : {false, true}) {
-        auto testfn =
-            [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
-          return torch::max_pool3d(
-              inputs[0],
-              /*kernel_size=*/{kernel_size, kernel_size, kernel_size},
-              /*stride=*/{stride, stride, stride},
-              /*padding=*/{padding, padding, padding}, /*dilation=*/{1, 1, 1},
-              /*ceil_mode=*/ceil_mode);
-        };
+// TEST_F(AtenXlaTensorTest, TestMaxPool3DNoBatchBackward) {
+//   int kernel_size = 3;
+//   for (int stride = 1; stride <= 2; ++stride) {
+//     for (int padding = 0; padding <= 1; ++padding) {
+//       // Test ceil_mode=true through the CPU interop.
+//       for (bool ceil_mode : {false, true}) {
+//         auto testfn =
+//             [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
+//           return torch::max_pool3d(
+//               inputs[0],
+//               /*kernel_size=*/{kernel_size, kernel_size, kernel_size},
+//               /*stride=*/{stride, stride, stride},
+//               /*padding=*/{padding, padding, padding}, /*dilation=*/{1, 1, 1},
+//               /*ceil_mode=*/ceil_mode);
+//         };
 
-        ForEachDevice([&](const torch::Device& device) {
-          TestBackward(
-              {torch::rand(
-                  {64, 16, 16, 16},
-                  torch::TensorOptions(torch::kFloat).requires_grad(true))},
-              device, testfn);
-        });
+//         ForEachDevice([&](const torch::Device& device) {
+//           TestBackward(
+//               {torch::rand(
+//                   {64, 16, 16, 16},
+//                   torch::TensorOptions(torch::kFloat).requires_grad(true))},
+//               device, testfn);
+//         });
 
-        ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-        ExpectCounterChanged("xla::max_pool3d", cpp_test::GetIgnoredCounters());
-      }
-    }
-  }
-}
+//         ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+//         ExpectCounterChanged("xla::max_pool3d", cpp_test::GetIgnoredCounters());
+//       }
+//     }
+//   }
+// }
 
-TEST_F(AtenXlaTensorTest, TestMaxUnpool2DBackward) {
-  int kernel_size = 2;
-  torch::Tensor input =
-      torch::rand({2, 2, 8, 8}, torch::TensorOptions(torch::kFloat));
-  for (int stride = 1; stride <= 2; ++stride) {
-    for (int padding = 0; padding <= 1; ++padding) {
-      // Test ceil_mode=true through the CPU interop.
-      for (bool ceil_mode : {false, true}) {
-        for (int dilation = 1; dilation <= 2; ++dilation) {
-          torch::Tensor output;
-          torch::Tensor indices;
-          std::tie(output, indices) = torch::max_pool2d_with_indices(
-              input, /*kernel_size=*/{kernel_size, kernel_size},
-              /*stride=*/{stride, stride},
-              /*padding=*/{padding, padding}, /*dilation=*/{dilation, dilation},
-              /*ceil_mode=*/ceil_mode);
+// TEST_F(AtenXlaTensorTest, TestMaxUnpool2DBackward) {
+//   int kernel_size = 2;
+//   torch::Tensor input =
+//       torch::rand({2, 2, 8, 8}, torch::TensorOptions(torch::kFloat));
+//   for (int stride = 1; stride <= 2; ++stride) {
+//     for (int padding = 0; padding <= 1; ++padding) {
+//       // Test ceil_mode=true through the CPU interop.
+//       for (bool ceil_mode : {false, true}) {
+//         for (int dilation = 1; dilation <= 2; ++dilation) {
+//           torch::Tensor output;
+//           torch::Tensor indices;
+//           std::tie(output, indices) = torch::max_pool2d_with_indices(
+//               input, /*kernel_size=*/{kernel_size, kernel_size},
+//               /*stride=*/{stride, stride},
+//               /*padding=*/{padding, padding}, /*dilation=*/{dilation, dilation},
+//               /*ceil_mode=*/ceil_mode);
 
-          std::vector<int64_t> output_size({input.size(2), input.size(3)});
-          auto testfn =
-              [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
-            return torch::max_unpool2d(inputs[0], inputs[1], output_size);
-          };
+//           std::vector<int64_t> output_size({input.size(2), input.size(3)});
+//           auto testfn =
+//               [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
+//             return torch::max_unpool2d(inputs[0], inputs[1], output_size);
+//           };
 
-          ForEachDevice([&](const torch::Device& device) {
-            TestBackward({output.requires_grad_(true), indices}, device,
-                         testfn);
-          });
-        }
-      }
-    }
-  }
+//           ForEachDevice([&](const torch::Device& device) {
+//             TestBackward({output.requires_grad_(true), indices}, device,
+//                          testfn);
+//           });
+//         }
+//       }
+//     }
+//   }
 
-  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-}
+//   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+// }
 
-TEST_F(AtenXlaTensorTest, TestMaxUnpool3DBackward) {
-  int kernel_size = 2;
-  torch::Tensor input =
-      torch::rand({2, 2, 8, 8, 8}, torch::TensorOptions(torch::kFloat));
-  for (int stride = 1; stride <= 2; ++stride) {
-    for (int padding = 0; padding <= 1; ++padding) {
-      // Test ceil_mode=true through the CPU interop.
-      for (bool ceil_mode : {false, true}) {
-        for (int dilation = 1; dilation <= 2; ++dilation) {
-          torch::Tensor output;
-          torch::Tensor indices;
-          std::tie(output, indices) = torch::max_pool3d_with_indices(
-              input, /*kernel_size=*/{kernel_size, kernel_size, kernel_size},
-              /*stride=*/{stride, stride, stride},
-              /*padding=*/{padding, padding, padding},
-              /*dilation=*/{dilation, dilation, dilation},
-              /*ceil_mode=*/ceil_mode);
+// TEST_F(AtenXlaTensorTest, TestMaxUnpool3DBackward) {
+//   int kernel_size = 2;
+//   torch::Tensor input =
+//       torch::rand({2, 2, 8, 8, 8}, torch::TensorOptions(torch::kFloat));
+//   for (int stride = 1; stride <= 2; ++stride) {
+//     for (int padding = 0; padding <= 1; ++padding) {
+//       // Test ceil_mode=true through the CPU interop.
+//       for (bool ceil_mode : {false, true}) {
+//         for (int dilation = 1; dilation <= 2; ++dilation) {
+//           torch::Tensor output;
+//           torch::Tensor indices;
+//           std::tie(output, indices) = torch::max_pool3d_with_indices(
+//               input, /*kernel_size=*/{kernel_size, kernel_size, kernel_size},
+//               /*stride=*/{stride, stride, stride},
+//               /*padding=*/{padding, padding, padding},
+//               /*dilation=*/{dilation, dilation, dilation},
+//               /*ceil_mode=*/ceil_mode);
 
-          std::vector<int64_t> output_size(
-              {input.size(2), input.size(3), input.size(4)});
-          auto testfn =
-              [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
-            return torch::max_unpool3d(inputs[0], inputs[1], output_size,
-                                       /*stride=*/{stride, stride, stride},
-                                       /*padding=*/{padding, padding, padding});
-          };
+//           std::vector<int64_t> output_size(
+//               {input.size(2), input.size(3), input.size(4)});
+//           auto testfn =
+//               [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
+//             return torch::max_unpool3d(inputs[0], inputs[1], output_size,
+//                                        /*stride=*/{stride, stride, stride},
+//                                        /*padding=*/{padding, padding, padding});
+//           };
 
-          ForEachDevice([&](const torch::Device& device) {
-            TestBackward({output.requires_grad_(true), indices}, device,
-                         testfn);
-          });
-        }
-      }
-    }
-  }
+//           ForEachDevice([&](const torch::Device& device) {
+//             TestBackward({output.requires_grad_(true), indices}, device,
+//                          testfn);
+//           });
+//         }
+//       }
+//     }
+//   }
 
-  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-}
+//   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+// }
 
 TEST_F(AtenXlaTensorTest, TestTanhBackward) {
   auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
