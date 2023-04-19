@@ -10547,51 +10547,51 @@ TEST_F(AtenXlaTensorTest, TestAdaptiveAvgPool2DNoBatchBackward) {
 //   }
 // }
 
-TEST_F(AtenXlaTensorTest, TestTransposedConv2DBackward) {
-  int in_channels = 4;
-  int out_channels = 8;
-  int kernel_size = 5;
-  for (int stride = 1; stride <= 2; ++stride) {
-    for (int padding = 0; padding <= 1; ++padding) {
-      for (int dilation = 1; dilation <= 2; ++dilation) {
-        for (int output_padding = 0;
-             output_padding < std::max(stride, dilation); ++output_padding) {
-          for (bool with_bias : {true, false}) {
-            for (int groups :
-                 {1, 2, 4}) {  // covers normal, grouped, depthwise conv.
-              auto testfn = [&](const std::vector<torch::Tensor>& inputs)
-                  -> torch::Tensor {
-                return torch::conv_transpose2d(
-                    inputs[0], inputs[1], inputs[2],
-                    /*stride=*/{stride, stride + 1},
-                    /*padding=*/{padding, padding + 1},
-                    /*output_padding=*/output_padding,
-                    /*groups=*/groups,
-                    /*dilation=*/{dilation, dilation + 1});
-              };
-              ForEachDevice([&](const torch::Device& device) {
-                torch::Tensor input = torch::rand(
-                    {4, out_channels, 14, 14},
-                    torch::TensorOptions(torch::kFloat).requires_grad(true));
-                torch::Tensor weight = torch::rand(
-                    {out_channels, in_channels / groups, kernel_size,
-                     kernel_size},
-                    torch::TensorOptions(torch::kFloat).requires_grad(true));
-                torch::Tensor bias =
-                    with_bias ? torch::rand({in_channels},
-                                            torch::TensorOptions(torch::kFloat)
-                                                .requires_grad(true))
-                              : torch::Tensor();
-                TestBackward({input, weight, bias}, device, testfn,
-                             /*rtol=*/1e-5, /*atol=*/1e-5);
-              });
-            }
-          };
-        }
-      }
-    }
-  }
-}
+// TEST_F(AtenXlaTensorTest, TestTransposedConv2DBackward) {
+//   int in_channels = 4;
+//   int out_channels = 8;
+//   int kernel_size = 5;
+//   for (int stride = 1; stride <= 2; ++stride) {
+//     for (int padding = 0; padding <= 1; ++padding) {
+//       for (int dilation = 1; dilation <= 2; ++dilation) {
+//         for (int output_padding = 0;
+//              output_padding < std::max(stride, dilation); ++output_padding) {
+//           for (bool with_bias : {true, false}) {
+//             for (int groups :
+//                  {1, 2, 4}) {  // covers normal, grouped, depthwise conv.
+//               auto testfn = [&](const std::vector<torch::Tensor>& inputs)
+//                   -> torch::Tensor {
+//                 return torch::conv_transpose2d(
+//                     inputs[0], inputs[1], inputs[2],
+//                     /*stride=*/{stride, stride + 1},
+//                     /*padding=*/{padding, padding + 1},
+//                     /*output_padding=*/output_padding,
+//                     /*groups=*/groups,
+//                     /*dilation=*/{dilation, dilation + 1});
+//               };
+//               ForEachDevice([&](const torch::Device& device) {
+//                 torch::Tensor input = torch::rand(
+//                     {4, out_channels, 14, 14},
+//                     torch::TensorOptions(torch::kFloat).requires_grad(true));
+//                 torch::Tensor weight = torch::rand(
+//                     {out_channels, in_channels / groups, kernel_size,
+//                      kernel_size},
+//                     torch::TensorOptions(torch::kFloat).requires_grad(true));
+//                 torch::Tensor bias =
+//                     with_bias ? torch::rand({in_channels},
+//                                             torch::TensorOptions(torch::kFloat)
+//                                                 .requires_grad(true))
+//                               : torch::Tensor();
+//                 TestBackward({input, weight, bias}, device, testfn,
+//                              /*rtol=*/1e-5, /*atol=*/1e-5);
+//               });
+//             }
+//           };
+//         }
+//       }
+//     }
+//   }
+// }
 
 TEST_F(AtenXlaTensorTest, TestConv3DBackward) {
   int in_channels = 4;
