@@ -56,7 +56,8 @@ RUN if [ "${git_clone}" = "true" ]; then \
   echo "\nxla_branch: ${xla_branch} example_branch: ${example_branch} \n" && \
   cd /pytorch && \
   rm -rf xla && \
-  git clone -b "${xla_branch}" --recursive https://github.com/pytorch/xla && \
+  # Temp fix ti make trigger to pick up the right branch for build
+  git clone -b JackCaoG/fix_vision_build --recursive https://github.com/pytorch/xla && \
   cd / && \
   git clone -b "${example_branch}" --recursive https://github.com/pytorch-tpu/examples tpu-examples; fi
 
