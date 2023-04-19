@@ -1031,7 +1031,11 @@ def optimizer_step(optimizer,
   return loss
 
 
-def save(data, file_or_path, master_only=True, global_master=False):
+def save(data,
+         file_or_path,
+         master_only=True,
+         global_master=False,
+         rendezvous=True):
   """Saves the input data into a file.
 
   The saved data is transferred to PyTorch CPU device before being saved, so a
@@ -1056,6 +1060,9 @@ def save(data, file_or_path, master_only=True, global_master=False):
       controls whether every host's master (if ``global_master`` is ``False``)
       saves the content, or only the global master (ordinal 0).
       Default: False
+    rendezvous (bool, optional): Whether to synchronize all replicas after
+      saving tensors. If True, all replicas must call `xm.save` or the main
+      process will hang.
   """
   should_write_data = not master_only or is_master_ordinal(
       local=not global_master)
@@ -1063,7 +1070,8 @@ def save(data, file_or_path, master_only=True, global_master=False):
   cpu_data = _maybe_convert_to_cpu(data, convert=should_write_data)
   if should_write_data:
     torch.save(cpu_data, file_or_path)
-  rendezvous('torch_xla.core.xla_model.save')
+  if rendezvous:
+    rendezvous('torch_xla.core.xla_model.save')
 
 
 def _maybe_convert_to_cpu(data, convert=True):
