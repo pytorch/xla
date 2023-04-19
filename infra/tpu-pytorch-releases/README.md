@@ -14,7 +14,7 @@ The list of Cloud Build triggers is specified in the
 [artifacts.auto.tfvars](./artifacts.auto.tfvars) file, in two variables 
 `versioned_builds` and `nightly_builds`.
 
-These variables are consumed in the [cloud_builds.tf](./cloud_builds.tf) file.
+These variables are consumed in the [artifacts_builds.tf](./artifacts_builds.tf) file.
 
 Each build is associated with a separate build trigger.
 Build trigger builds both docker image and Python wheels.
@@ -45,7 +45,7 @@ consists of the following fields.
   influences installed dependencies and build process.
 
 To modify default values see `variable "versioned_builds"` in 
-[cloud_builds.tf](./cloud_builds.tf). Modifying default values will modify 
+[artifacts_builds.tf](./artifacts_builds.tf). Modifying default values will modify 
 unset properties of existing triggers.
 
 #### Add a new versioned release
@@ -100,7 +100,7 @@ Additionally, **`package_version` of all nightly builds** is configured through
 a separate `nightly_package_version` variable.
 
 To modify default values see `variable "nightly_builds"` in 
-[cloud_builds.tf](./cloud_builds.tf). Modifying default values will modify 
+[artifacts_builds.tf](./artifacts_builds.tf). Modifying default values will modify 
 unset properties of existing triggers.
 
 #### Add a new nightly release
@@ -138,7 +138,7 @@ See all variables in the section above.
    
    **Note:** "Branch" input in the "Run trigger" window is irrelevant, since 
    Ansible setup and repository sources will be fetched at revisions specified 
-   in [cloud_builds.tf](./cloud_builds.tf).
+   in [artifacts_builds.tf](./artifacts_builds.tf).
 
 3. Click "Run Trigger"
 4. Go to [History] (https://pantheon.corp.google.com/cloud-build/builds;region=us-central1?project=tpu-pytorch-releases)
