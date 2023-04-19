@@ -132,8 +132,7 @@ def _setup_world_size(pf_cfg):
   if pf_cfg.dev_kind == 'CPU':
     # Since XLA CPU does not support across device reduces, and suport only one
     # device per process, we make each CPU device look like if it was a single
-    # process host, and use torch.distributed for inter-host reductions (like in
-    # the sea-of-devices case).
+    # process host, and use torch.distributed for inter-host reductions.
     os.environ[xenv.HOST_WORLD_SIZE] = str(world_size)
   else:
     os.environ[xenv.HOST_WORLD_SIZE] = str(host_world_size)

@@ -1,7 +1,5 @@
-import collections
 import io
 import sys
-import os
 import re
 import threading
 import time
@@ -15,7 +13,6 @@ import torch_xla.core.xla_env_vars as xenv
 import torch_xla.debug.metrics_saver as ms
 import torch_xla.utils.utils as xu
 import torch_xla.utils.closures as xc
-import torch_xla.utils.keyd_queue as kq
 
 _DEVICES = xu.LazyProperty(lambda: torch_xla._XLAC._xla_get_devices())
 
@@ -25,9 +22,6 @@ REDUCE_AND = 'and'
 REDUCE_OR = 'or'
 REDUCE_MIN = 'min'
 REDUCE_MAX = 'max'
-
-_TORCH_DIST_GROUPS = dict()
-_TORCH_DIST_LOCK = threading.Lock()
 
 _DEVICE_CONTEXTS = dict()
 _DEVICE_CONTEXTS_LOCK = threading.Lock()
@@ -50,35 +44,6 @@ def _get_device_context(device=None):
       devctx = DeviceContext(device)
       _DEVICE_CONTEXTS[device] = devctx
     return devctx
-
-
-def _get_torch_dist_group(ranks):
-  import torch.distributed as dist
-
-  with _TORCH_DIST_LOCK:
-    pg = _TORCH_DIST_GROUPS.get(ranks, None)
-    if not pg:
-      pg = dist.new_group(ranks=ranks)
-      _TORCH_DIST_GROUPS[ranks] = pg
-    return pg
-
-
-def _make_group_for_ordinal(ordinal, groups):
-  for g in groups:
-    if ordinal in g:
-      return _get_torch_dist_group(sorted(g))
-  raise RuntimeError('Ordinal {} not found in groups {}'.format(
-      ordinal, groups))
-
-
-def _make_interhost_group(replica_devcount, world_size):
-  # Every host in a sea-of-devices case handles replica_devcount devices.
-  # The replica device index 0 of each host does the inter-host replication
-  # using torch.distributed.
-  # The XLA CPU is a special case where there is one process per XLA CPU device,
-  # which is also a virtual host within a physical host.
-  ranks = tuple(range(0, world_size, replica_devcount))
-  return _get_torch_dist_group(ranks), ranks
 
 
 def is_xla_tensor(tensor):
