@@ -54,6 +54,7 @@ build:cuda --repo_env TF_NEED_CUDA=1
 # "compute" means we emit both cubin and PTX, which is larger but also forward compatible to future GPU generations.
 build:cuda --crosstool_top=@local_config_cuda//crosstool:toolchain
 build:cuda --@local_config_cuda//:enable_cuda
+build:cuda --@xla//xla/python:enable_gpu=true
 build:cuda --define=xla_python_enable_gpu=true
 build:cuda --cxxopt=-DXLA_CUDA=1
 
