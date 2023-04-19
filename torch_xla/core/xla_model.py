@@ -520,31 +520,6 @@ def _torch_all_reduce(reduce_type, inputs, group=None):
   return results
 
 
-def _host_all_reduce(reduce_type, inputs, cctx, scale=None):
-  # Barrier must happen on all devices.
-  torch_xla._XLAC._xla_sync_multi(
-      inputs, devices=[], wait=True, sync_xla_data=True)
-
-  # Here we use the torch.distributed reductions only on one device in the
-  # replication set, and then use in graph fast interconnect reduction to
-  # transfer the result to all replication devices.
-  # One core per fast interconnect replica group does the torch.distributed
-  # reduction and post the result, while the others post zeros.
-  if cctx.is_reduce_host:
-    results = _torch_all_reduce(reduce_type, inputs, group=cctx.interhost_group)
-    for i in range(0, len(inputs)):
-      inputs[i].copy_(results[i])
-      if scale is not None:
-        inputs[i].mul_(scale)
-  else:
-    for tensor in inputs:
-      tensor.zero_()
-  if cctx.requires_intercore_reduce:
-    token, devctx = _get_all_reduce_token()
-    devctx.all_reduce_token = torch_xla._XLAC._xla_all_reduce_inplace(
-        REDUCE_SUM, inputs, token, 1.0, [])
-
-
 def all_reduce(reduce_type,
                inputs,
                scale=1.0,
