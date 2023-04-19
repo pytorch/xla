@@ -96,9 +96,7 @@ def load(path, map_location=None):
       rewritten_tensors.append(
           torch.load(
               _get_tensor_file(tensor_folder, t.tid),
-              map_location=map_location
-          )
-      )
+              map_location=map_location))
     return rewritten_tensors
 
   def select_fn(v):
