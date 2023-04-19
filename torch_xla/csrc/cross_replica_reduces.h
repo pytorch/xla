@@ -79,5 +79,6 @@ ReduceScatterResult BuildReduceScatter(
     const std::vector<std::vector<int64_t>>& groups, bool pin_layout);
 
 const torch::lazy::Value& GetAllReduceToken();
+void ResetAllReduceToken();
 
 }  // namespace torch_xla

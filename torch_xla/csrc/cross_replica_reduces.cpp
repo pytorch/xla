@@ -281,4 +281,8 @@ const torch::lazy::Value& GetAllReduceToken(const torch::lazy::BackendDevice& de
   return *g_token;
 }
 
+void ResetAllReduceToken() {
+  g_token.reset();
+}
+
 }  // namespace torch_xla
