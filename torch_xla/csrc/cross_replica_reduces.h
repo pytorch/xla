@@ -4,6 +4,7 @@
 
 #include "absl/types/span.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "torch/csrc/lazy/core/ir.h"
 
 namespace torch_xla {
 
@@ -76,5 +77,7 @@ ReduceScatterResult BuildReduceScatter(
     AllReduceType reduce_type, xla::XlaOp input, xla::XlaOp token, double scale,
     int64_t scatter_dim, int64_t shard_count,
     const std::vector<std::vector<int64_t>>& groups, bool pin_layout);
+
+const torch::lazy::Value& GetAllReduceToken();
 
 }  // namespace torch_xla
