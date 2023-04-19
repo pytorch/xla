@@ -83,7 +83,7 @@ def load(path, map_location=None):
   Args:
     path (str): The path passed to the `save()` API.
     map_location: The map location passed to :func:`torch.load`.
-      Saving and loading on CPU (default) is recommended.
+      Saving and loading on CPU is recommended.
   Returns:
     The loaded data.
   """
