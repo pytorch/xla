@@ -52,38 +52,6 @@ def _get_device_context(device=None):
     return devctx
 
 
-class CollectiveContext(object):
-
-  def __init__(self, groups=None):
-    self.replica_devcount = torch_xla._XLAC._xla_get_replication_devices_count()
-    self.world_size = xrt_world_size()
-    self.ordinal = get_ordinal()
-    if self.world_size > self.replica_devcount:
-      # This is the sea-of-devices path.
-      self.requires_interhost_reduce = self.world_size > 1
-      # If groups are enabled we avoid using the two level reduce (first among the
-      # fast interconnected cores, then using the torch.distributed support).
-      # The intercore_group is always empty, which means all cores, but in the not
-      # empty groups case, it won't be used as requires_intercore_reduce is False.
-      self.intercore_group = []
-      if groups:
-        self.requires_intercore_reduce = False
-        if self.requires_interhost_reduce:
-          self.interhost_group = _make_group_for_ordinal(self.ordinal, groups)
-          self.is_reduce_host = True
-      else:
-        self.requires_intercore_reduce = self.replica_devcount > 1
-        if self.requires_interhost_reduce:
-          self.interhost_group, ranks = _make_interhost_group(
-              self.replica_devcount, self.world_size)
-          self.is_reduce_host = self.ordinal in ranks
-    else:
-      # Standard replication path.
-      self.requires_intercore_reduce = self.replica_devcount > 1
-      self.requires_interhost_reduce = False
-      self.intercore_group = groups or []
-
-
 def _get_torch_dist_group(ranks):
   import torch.distributed as dist
 
