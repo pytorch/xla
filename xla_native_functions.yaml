@@ -206,6 +206,7 @@ supported:
   - lift
   - lift_fresh
   - linalg_inv_ex
+  - linalg_vector_norm
   - linspace
   - log
   - log1p

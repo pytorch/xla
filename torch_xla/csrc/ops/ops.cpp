@@ -30,6 +30,7 @@
 #include "torch_xla/csrc/ops/sum.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
 #include "torch_xla/csrc/pooling.h"
+#include "torch_xla/csrc/tensor_methods.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/xla_lower_util.h"
@@ -531,6 +532,41 @@ torch::lazy::NodePtr Norm(const torch::lazy::Value& input,
   torch::lazy::NodePtr result =
       torch::lazy::MakeNode<Sum>(exp, dimensions, keepdim, dtype);
   return Pow(result, norm_exp_inv);
+}
+
+torch::lazy::NodePtr LinalgVectorNorm(const torch::lazy::Value& input,
+                                      const at::Scalar& ord,
+                                      std::vector<int64_t> dimensions,
+                                      bool keepdim,
+                                      c10::optional<at::ScalarType> dtype) {
+  torch::lazy::ScopePusher ir_scope(at::aten::norm.toQualString());
+  double ord_value = ord.to<double>();
+  auto input_shape = GetXlaShape(input);
+  // Handle vector norm of scalars separately.
+  if (input_shape.rank() == 0 && ord_value == 0.0) {
+    return ComparisonOp(at::aten::ne, input, ScalarOp(0, input_shape));
+  } else if (input_shape.rank() == 0) {
+    return torch::lazy::MakeNode<Abs>(input);
+  } else if (ord_value == 0.0) {
+    torch::lazy::NodePtr ne =
+        ComparisonOp(at::aten::ne, input, ScalarOp(0, input_shape));
+    return torch::lazy::MakeNode<Sum>(ne, dimensions, keepdim, dtype);
+  } else if (ord_value == std::numeric_limits<float>::infinity()) {
+    return torch::lazy::MakeNode<Amax>(torch::lazy::MakeNode<Abs>(input),
+                                       dimensions, keepdim);
+  } else if (ord_value == -std::numeric_limits<float>::infinity()) {
+    return torch::lazy::MakeNode<Amin>(torch::lazy::MakeNode<Abs>(input),
+                                       dimensions, keepdim);
+  } else {
+    torch::lazy::NodePtr ord_exp =
+        ScalarOp(ord_value, input_shape.element_type());
+    torch::lazy::NodePtr ord_exp_inv =
+        ScalarOp(1.0 / ord_value, input_shape.element_type());
+    torch::lazy::NodePtr exp = Pow(torch::lazy::MakeNode<Abs>(input), ord_exp);
+    torch::lazy::NodePtr result =
+        torch::lazy::MakeNode<Sum>(exp, dimensions, keepdim, dtype);
+    return Pow(result, ord_exp_inv);
+  }
 }
 
 torch::lazy::NodePtr Identity(int64_t lines, int64_t cols,

@@ -946,6 +946,91 @@ TEST_F(AtenXlaTensorTest, TestLinalgSVD) {
   ExpectCounterChanged("xla::_linalg_svd", cpp_test::GetIgnoredCounters());
 }
 
+TEST_F(AtenXlaTensorTest, TestLinalgVectorNorm) {
+  torch::Tensor a = torch::rand({4, 3}, torch::TensorOptions(torch::kFloat));
+  std::vector<float> ords = {0.0, 1.5, std::numeric_limits<float>::infinity(),
+                             -std::numeric_limits<float>::infinity()};
+  for (auto ord : ords) {
+    torch::Tensor a_vn = torch::linalg_vector_norm(a, ord);
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_a = CopyToDevice(a, device);
+      torch::Tensor xla_a_vn = torch::linalg_vector_norm(xla_a, ord);
+      AllClose(a_vn, xla_a_vn, /*rtol=*/1e-3,
+               /*atol=*/1e-4);
+    });
+  }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::linalg_vector_norm",
+                       cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestLinalgVectorNormInDim) {
+  torch::Tensor a = torch::rand({4, 3, 4}, torch::TensorOptions(torch::kFloat));
+  for (int dim : {1, -2}) {
+    torch::Tensor b = torch::linalg_vector_norm(a, 2, {dim}, /*keepdim=*/false);
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_a = CopyToDevice(a, device);
+      torch::Tensor xla_b =
+          torch::linalg_vector_norm(xla_a, 2, {dim}, /*keepdim=*/false);
+      AllClose(b, xla_b);
+    });
+  }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::linalg_vector_norm",
+                       cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestLinalgVectorNormInDims) {
+  torch::Tensor a = torch::rand({4, 3, 4}, torch::TensorOptions(torch::kFloat));
+  for (auto dims : std::vector<std::vector<int64_t>>{{1, 2}, {-2, -1}}) {
+    torch::Tensor b = torch::linalg_vector_norm(a, 2, dims, /*keepdim=*/false);
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_a = CopyToDevice(a, device);
+      torch::Tensor xla_b =
+          torch::linalg_vector_norm(xla_a, 2, dims, /*keepdim=*/false);
+      AllClose(b, xla_b);
+    });
+  }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::linalg_vector_norm",
+                       cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestLinalgVectorNormInDimsKeep) {
+  torch::Tensor a = torch::rand({4, 3, 4}, torch::TensorOptions(torch::kFloat));
+  for (auto dims : std::vector<std::vector<int64_t>>{{1, 2}, {-2, -1}}) {
+    torch::Tensor b = torch::linalg_vector_norm(a, 2, dims, /*keepdim=*/true);
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_a = CopyToDevice(a, device);
+      torch::Tensor xla_b =
+          torch::linalg_vector_norm(xla_a, 2, dims, /*keepdim=*/true);
+      AllClose(b, xla_b);
+    });
+  }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::linalg_vector_norm",
+                       cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestLinalgVectorNormInDimsKeepDtype) {
+  torch::Tensor a = torch::rand({4, 3, 4}, torch::TensorOptions(torch::kFloat));
+  for (auto dims : std::vector<std::vector<int64_t>>{{1, 2}, {-2, -1}}) {
+    torch::Tensor b =
+        torch::linalg_vector_norm(a, 2, dims,
+                                  /*keepdim=*/true, /*dtype=*/torch::kDouble);
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_a = CopyToDevice(a, device);
+      torch::Tensor xla_b =
+          torch::linalg_vector_norm(xla_a, 2, dims,
+                                    /*keepdim=*/true, /*dtype=*/torch::kDouble);
+      AllClose(b, xla_b);
+    });
+  }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::linalg_vector_norm",
+                       cpp_test::GetIgnoredCounters());
+}
+
 TEST_F(AtenXlaTensorTest, TestQR) {
   static const int dims[] = {4, 7};
   for (auto m : dims) {

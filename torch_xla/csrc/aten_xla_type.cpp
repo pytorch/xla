@@ -3601,6 +3601,20 @@ at::Tensor XLANativeFunctions::mvlgamma(const at::Tensor& self, int64_t p) {
       self, p);
 }
 
+at::Tensor XLANativeFunctions::linalg_vector_norm(
+    const at::Tensor& self, const at::Scalar& ord, at::OptionalIntArrayRef dim,
+    bool keepdim, c10::optional<at::ScalarType> dtype) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+  XLA_CHECK(at::isFloatingType(self.scalar_type()))
+      << "Input must be a floating type";
+  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
+  return bridge::AtenFromXlaTensor(tensor_methods::linalg_vector_norm(
+      self_tensor, ord,
+      dim ? torch::lazy::ToVector<int64_t>(*dim)
+          : torch::lazy::Iota<int64_t>(self_tensor->shape().get().rank()),
+      keepdim, dtype));
+}
+
 at::Tensor XLANativeFunctions::diagonal_backward_symint(
     const at::Tensor& grad_output, at::SymIntArrayRef input_sizes,
     int64_t offset, int64_t dim1, int64_t dim2) {
