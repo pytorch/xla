@@ -8,7 +8,6 @@ import torch
 import torch.nn.functional as F
 import torch_xla
 from torch_xla.experimental import pjrt
-import torch_xla.experimental.xla_sharding as xs
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.debug.metrics_saver as ms
 import torch_xla.utils.utils as xu
@@ -930,17 +929,15 @@ def _maybe_convert_to_cpu(data, convert=True):
   return ToXlaTensorArena(convert_fn, select_fn).transform(data)
 
 
-def send_cpu_data_to_device(data,
-                            device,
-                            input_sharding: xs.ShardingSpec = None):
+def send_cpu_data_to_device(data, device, input_sharding=None):
 
   def convert_fn(tensors):
     devices = [str(device)] * len(tensors)
     xtensors = torch_xla._XLAC._xla_tensors_from_aten(tensors, devices)
     if input_sharding:
-      for xtensor in xtensors:
-        if input_sharding.can_apply(xtensor):
-          input_sharding.apply(xtensor)
+      assert(len(xtensors) == 2), \
+        f"Expected input data and label pair, but got {xtensors}."
+      input_sharding.apply(xtensors[0])
     return xtensors
 
   def select_fn(v):
