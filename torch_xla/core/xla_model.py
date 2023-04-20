@@ -1031,11 +1031,7 @@ def optimizer_step(optimizer,
   return loss
 
 
-def save(data,
-         file_or_path,
-         master_only=True,
-         global_master=False,
-         sync=True):
+def save(data, file_or_path, master_only=True, global_master=False, sync=True):
   """Saves the input data into a file.
 
   The saved data is transferred to PyTorch CPU device before being saved, so a
