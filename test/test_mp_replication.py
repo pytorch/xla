@@ -4,8 +4,10 @@ import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
 
+
 def all_reduce(tensor):
   return xm.all_reduce(xm.REDUCE_SUM, tensor)
+
 
 def _mp_fn(index):
   device = xm.xla_device()
@@ -26,7 +28,8 @@ def _mp_fn(index):
     xthrees = all_reduce(xthrees)
     xfours = xm.all_reduce(xm.REDUCE_SUM, xfours, scale=scale)
 
-    compiled_all_reduce = torch.compile(all_reduce, backend='torchxla_trace_once', fullgraph=True)
+    compiled_all_reduce = torch.compile(
+        all_reduce, backend='torchxla_trace_once', fullgraph=True)
     xfives = compiled_all_reduce(xfives)
 
     if (not xones.cpu().allclose(ones * float(world_size)) or
