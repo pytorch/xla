@@ -15,8 +15,11 @@ module "cloud_build" {
   steps = concat(
     local.fetch_ansible_build_config,
     local.build_and_push_docker_image_steps,
-    length(var.wheels_srcs) > 0 ? local.collect_and_publish_wheels_steps : []
+    length(var.wheels_srcs) > 0 ? local.collect_and_publish_wheels_steps : [],
+    var.run_e2e_tests ? local.e2e_tests_steps : [],
   )
+
+  substitutions = var.substitutions
 }
 
 locals {
@@ -109,5 +112,43 @@ locals {
 
       volumes = [{ name = "wheels", path = "/wheels" }]
     },
+  ]
+
+  # Runs CI end2end tests on k8s.
+  e2e_tests_steps = [
+    {
+      id         = "run_e2e_tests"
+      name       = "google/cloud-sdk"
+      entrypoint = "bash"
+      args = [
+        "-c", <<EOT
+          set -u # Fail if any variables are unset.
+          set -e # Exit immediately if any command fails.
+          set -x # Print executed commands.
+
+          apt-get update
+          apt-get -y install gettext
+
+          # Try to setup kubectl credentials the new way,
+          # see https://cloud.google.com/blog/products/containers-kubernetes/kubectl-auth-changes-in-gke
+          apt-get install google-cloud-sdk-gke-gcloud-auth-plugin -o DPkg::options::="--force-overwrite"
+          export USE_GKE_GCLOUD_AUTH_PLUGIN=True
+          apt-get install kubectl
+          gcloud container clusters get-credentials $_CLUSTER_NAME --zone $_CLUSTER_ZONE
+
+          # Export variables to shell environment so that we can pass them into the
+          # k8s deployment using envsubst
+          export BUILD_ID=$BUILD_ID
+          export PROJECT_ID=$PROJECT_ID
+
+          # Launch k8s deployment, wait for completion, print logs
+          pod_name=$(envsubst < test/tpu/xla_test_job.yaml | kubectl create -f - -o name)
+          pod_name=$(kubectl wait --for condition=ready --timeout=10m $pod_name -o name)
+          kubectl logs -f $pod_name --container=xla-test
+
+          exit $(kubectl get $pod_name -o jsonpath='{.status.containerStatuses[?(@.name=="xla-test")].state.terminated.exitCode}')
+        EOT
+      ]
+    }
   ]
 }
