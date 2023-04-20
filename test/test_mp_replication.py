@@ -12,15 +12,20 @@ def _mp_fn(index):
     ones = torch.ones((2, 3))
     twos = ones + 1.0
     threes = ones + 2.0
+    fours = ones + 3.0
+    scale = 0.5
     xones = ones.to(device)
     xtwos = twos.to(device)
     xthrees = threes.to(device)
+    xfours = fours.to(device)
     xm.all_reduce(xm.REDUCE_SUM, [xones, xtwos])
     xthrees = xm.all_reduce(xm.REDUCE_SUM, xthrees)
+    xfours = xm.all_reduce(xm.REDUCE_SUM, xfours, scale=scale)
 
     if (not xones.cpu().allclose(ones * float(world_size)) or
         not xtwos.cpu().allclose(twos * float(world_size)) or
-        not xthrees.cpu().allclose(threes * float(world_size))):
+        not xthrees.cpu().allclose(threes * float(world_size)) or
+        not xfours.cpu().allclose(fours * float(world_size) * scale)):
       print('xm.all_reduce() produced wrong reductions', file=sys.stderr)
       print(xones, file=sys.stderr)
       print(xtwos, file=sys.stderr)
