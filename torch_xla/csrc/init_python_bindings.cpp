@@ -205,13 +205,13 @@ std::shared_ptr<torch::lazy::Value> AllReduceInPlace(
                                  scale, replica_groups, pin_layout));
 }
 
-at::Tensor AllReduce(
-    const std::string& reduce_type, const at::Tensor& input,
-    double scale,
-    const std::vector<std::vector<int64_t>>& replica_groups, bool pin_layout) {
-  auto result = tensor_methods::all_reduce(
-      bridge::GetXlaTensor(input), GetReduceType(reduce_type), scale,
-      replica_groups, pin_layout);
+at::Tensor AllReduce(const std::string& reduce_type, const at::Tensor& input,
+                     double scale,
+                     const std::vector<std::vector<int64_t>>& replica_groups,
+                     bool pin_layout) {
+  auto result = tensor_methods::all_reduce(bridge::GetXlaTensor(input),
+                                           GetReduceType(reduce_type), scale,
+                                           replica_groups, pin_layout);
   return bridge::AtenFromXlaTensor(std::move(result));
 }
 
@@ -1009,19 +1009,18 @@ void InitXlaModuleBindings(py::module m) {
         }
         return new_token;
       });
-  m.def("_xla_all_reduce",
-        [](const std::string& reduce_type, const at::Tensor& input, double scale,
-           const py::list& groups, bool pin_layout) {
-          std::vector<std::vector<int64_t>> replica_groups =
-              CreateReduceGroups(groups);
-          at::Tensor result;
-          {
-            NoGilSection nogil;
-            result = AllReduce(
-                reduce_type, input, scale, replica_groups, pin_layout);
-          }
-          return result;
-        });
+  m.def("_xla_all_reduce", [](const std::string& reduce_type,
+                              const at::Tensor& input, double scale,
+                              const py::list& groups, bool pin_layout) {
+    std::vector<std::vector<int64_t>> replica_groups =
+        CreateReduceGroups(groups);
+    at::Tensor result;
+    {
+      NoGilSection nogil;
+      result = AllReduce(reduce_type, input, scale, replica_groups, pin_layout);
+    }
+    return result;
+  });
   m.def("_xla_all_to_all",
         [](const at::Tensor& input,
            const std::shared_ptr<torch::lazy::Value>& token,

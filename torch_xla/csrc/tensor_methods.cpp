@@ -330,13 +330,13 @@ XLATensorPtr DispatchComparisonOp(c10::Symbol kind, const XLATensorPtr& input,
 //////////////////////////////////////////////////////////////////////////////
 // XLA dedicated operators follows here, listed in alphabetical order.
 //////////////////////////////////////////////////////////////////////////////
-XLATensorPtr all_reduce(
-    const XLATensorPtr& input,
-    AllReduceType reduce_type, double scale,
-    std::vector<std::vector<int64_t>> groups, bool pin_layout) {
+XLATensorPtr all_reduce(const XLATensorPtr& input, AllReduceType reduce_type,
+                        double scale, std::vector<std::vector<int64_t>> groups,
+                        bool pin_layout) {
   std::vector<torch::lazy::Value> input_values({input->GetIrValue()});
   torch::lazy::NodePtr node = torch::lazy::MakeNode<AllReduce>(
-      reduce_type, input_values, GetAllReduceToken(input->GetDevice()), scale, std::move(groups), pin_layout);
+      reduce_type, input_values, GetAllReduceToken(input->GetDevice()), scale,
+      std::move(groups), pin_layout);
   SetAllReduceToken(std::make_shared<torch::lazy::Value>(node, 1));
   return input->CreateFrom(torch::lazy::Value(node, 0));
 }
