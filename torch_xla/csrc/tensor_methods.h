@@ -8,8 +8,8 @@ namespace tensor_methods {
 //////////////////////////////////////////////////////////////////////////////
 // XLA dedicated operators follows here, listed in alphabetical order.
 //////////////////////////////////////////////////////////////////////////////
-std::pair<XLATensorPtr, torch::lazy::Value> all_reduce(
-    const XLATensorPtr& input, const torch::lazy::Value& token,
+XLATensorPtr all_reduce(
+    const XLATensorPtr& input,
     AllReduceType reduce_type, double scale,
     std::vector<std::vector<int64_t>> groups, bool pin_layout);
 
