@@ -443,19 +443,6 @@ std::vector<at::Tensor> GetXlaTensorsFromAten(
   return xla_tensors;
 }
 
-std::shared_ptr<torch::lazy::Value> CreateToken(const std::string& device_str) {
-  // This should be using xla::CreateToken() once we have added Token support to
-  // XLA AllReduce(). Meanwhile we use a constant as token, and we handle it
-  // accordingly in cross_replica_reduces.cpp.
-  // This needs to be device data (hence coming in as XLA computation parameter)
-  // as otherwise the XLA compiler passes will remove it, vanishing its
-  // sequencing effects.
-  torch::lazy::BackendDevice device = GetDeviceOrCurrent(device_str);
-  torch::lazy::Value ir_value = XLAGraphExecutor::Get()->GetDeviceDataIrValue(
-      0.0, xla::PrimitiveType::F32, device);
-  return std::make_shared<torch::lazy::Value>(std::move(ir_value));
-}
-
 at::Tensor GetXlaTensorDimensionSize(const at::Tensor& tensor, int64_t dim) {
   XLATensorPtr xtensor = bridge::GetXlaTensor(tensor);
   return bridge::AtenFromXlaTensor(
@@ -1011,8 +998,6 @@ void InitXlaModuleBindings(py::module m) {
 
   py::class_<torch::lazy::Value, std::shared_ptr<torch::lazy::Value>>(
       m, "IrValue");
-  m.def("_xla_create_token",
-        [](const std::string& device) { return CreateToken(device); });
   m.def(
       "_xla_all_reduce_inplace",
       [](const std::string& reduce_type, const std::vector<at::Tensor>& tensors,
