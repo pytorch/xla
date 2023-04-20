@@ -293,8 +293,4 @@ void SetAllReduceToken(const torch::lazy::BackendDevice& device,
   g_all_reduce_tokens[device.ordinal()] = token;
 }
 
-void SetAllReduceToken(const std::shared_ptr<torch::lazy::Value>& token) {
-  g_token = token;
-}
-
 }  // namespace torch_xla
