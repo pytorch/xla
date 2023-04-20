@@ -104,19 +104,23 @@ std::shared_ptr<torch::lazy::Value> CreateToken(
 }
 
 ////////////////////////////////////////////////////////////////////////////////////
-// The traceable collectives integration follows here, listed in alphabetical order.
-// RFC: https://github.com/pytorch/pytorch/issues/93173
+// The traceable collectives integration follows here, listed in alphabetical
+// order. RFC: https://github.com/pytorch/pytorch/issues/93173
 ////////////////////////////////////////////////////////////////////////////////////
 
-// tag is ignored as it's only used in PyTorch to provide backward compatibility with the traditional process group API.
-at::Tensor all_reduce(const at::Tensor & self, c10::string_view reduceOp, c10::string_view /*tag*/, at::IntArrayRef /*ranks*/, int64_t /*group_size*/) {
+// tag is ignored as it's only used in PyTorch to provide backward compatibility
+// with the traditional process group API.
+at::Tensor all_reduce(const at::Tensor& self, c10::string_view reduceOp,
+                      c10::string_view /*tag*/, at::IntArrayRef /*ranks*/,
+                      int64_t /*group_size*/) {
   TORCH_LAZY_FN_COUNTER("xla::");
   auto self_tensor = bridge::GetXlaTensor(self);
-  // TODO(alanwaketan): Use ranks and group_size to generate groups. Currently we just suse {} as a workaround.
-  // Scale is always 1.0 here, and we always pin layout.
-  auto result = tensor_methods::all_reduce(
-      self_tensor, GetReduceType(reduceOp), /*scale*/1.0,
-      /*groups*/{}, /*pin_layout*/true);
+  // TODO(alanwaketan): Use ranks and group_size to generate groups. Currently
+  // we just suse {} as a workaround. Scale is always 1.0 here, and we always
+  // pin layout.
+  auto result = tensor_methods::all_reduce(self_tensor, GetReduceType(reduceOp),
+                                           /*scale*/ 1.0,
+                                           /*groups*/ {}, /*pin_layout*/ true);
   return bridge::AtenFromXlaTensor(result);
 }
 
