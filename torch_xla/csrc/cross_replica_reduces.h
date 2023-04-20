@@ -79,7 +79,8 @@ ReduceScatterResult BuildReduceScatter(
     int64_t scatter_dim, int64_t shard_count,
     const std::vector<std::vector<int64_t>>& groups, bool pin_layout);
 
-const torch::lazy::Value& GetAllReduceToken(const torch::lazy::BackendDevice& device);
+const torch::lazy::Value& GetAllReduceToken(
+    const torch::lazy::BackendDevice& device);
 void SetAllReduceToken(const std::shared_ptr<torch::lazy::Value>& token);
 
 }  // namespace torch_xla

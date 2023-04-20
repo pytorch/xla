@@ -85,7 +85,8 @@ std::vector<xla::ReplicaGroup> CreateReduceGroups(
   return reduce_groups;
 }
 
-std::shared_ptr<torch::lazy::Value> CreateToken(const torch::lazy::BackendDevice& device) {
+std::shared_ptr<torch::lazy::Value> CreateToken(
+    const torch::lazy::BackendDevice& device) {
   // This should be using xla::CreateToken() once we have added Token support to
   // XLA AllReduce(). Meanwhile we use a constant as token, and we handle it
   // accordingly in cross_replica_reduces.cpp.
@@ -274,7 +275,8 @@ ReduceScatterResult BuildReduceScatter(
   return {reduce_result, token_handler.GetNewToken(reduce_result)};
 }
 
-const torch::lazy::Value& GetAllReduceToken(const torch::lazy::BackendDevice& device) {
+const torch::lazy::Value& GetAllReduceToken(
+    const torch::lazy::BackendDevice& device) {
   if (!g_token) {
     g_token = CreateToken(device);
   }

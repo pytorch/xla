@@ -1602,14 +1602,14 @@ void InitXlaModuleBindings(py::module m) {
           return XLANativeFunctions::set_(self, source);
         });
   m.def("_get_all_reduce_token",
-      [](const std::string& device_str) -> const torch::lazy::Value& {
-        auto device = GetDeviceOrCurrent(device_str);
-        return GetAllReduceToken(device);
-      });
+        [](const std::string& device_str) -> const torch::lazy::Value& {
+          auto device = GetDeviceOrCurrent(device_str);
+          return GetAllReduceToken(device);
+        });
   m.def("_set_all_reduce_token",
-    [](const std::shared_ptr<torch::lazy::Value>& token) {
-      SetAllReduceToken(token);
-    });
+        [](const std::shared_ptr<torch::lazy::Value>& token) {
+          SetAllReduceToken(token);
+        });
 
   /* The distributed runtime service is used by the PjRt GPU client. */
   py::class_<xla::DistributedRuntimeService,
