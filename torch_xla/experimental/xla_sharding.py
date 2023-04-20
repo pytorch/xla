@@ -148,12 +148,6 @@ class ShardingSpec:
   mesh: Mesh
   partition_spec: Tuple[Union[int, None]]
 
-  def can_apply(self, t: torch.Tensor) -> bool:
-    """
-    Test whether the ShardingSpec is compatible with the given torch.Tensor.
-    """
-    return len(self.partition_spec) == len(t.shape)
-
   def apply(self, t: torch.Tensor):
     # TODO(yeounoh) use virtual device interface when available.
     assert (t.device == xm.xla_device())

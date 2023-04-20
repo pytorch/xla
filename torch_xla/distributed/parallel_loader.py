@@ -72,9 +72,6 @@ class ParallelLoader(object):
     host_to_device_transfer_threads (int, optional): The number of threads that
       work in parallel to transfer data from loader queue to device queue.
       Default: 1
-    input_sharding (ShardingSpec, optional): Sharding spec to apply to
-      compatible input tensors after loading.
-      Default: None
   """
 
   def __init__(self,
