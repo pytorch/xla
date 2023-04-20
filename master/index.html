@@ -849,7 +849,7 @@ Default: 1</p>
 
 <dl class="function">
 <dt id="torch_xla.core.xla_model.all_reduce">
-<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">all_reduce</code><span class="sig-paren">(</span><em class="sig-param">reduce_type</em>, <em class="sig-param">inputs</em>, <em class="sig-param">scale=1.0</em>, <em class="sig-param">groups=None</em>, <em class="sig-param">cctx=None</em>, <em class="sig-param">pin_layout=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#all_reduce"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.all_reduce" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">all_reduce</code><span class="sig-paren">(</span><em class="sig-param">reduce_type</em>, <em class="sig-param">inputs</em>, <em class="sig-param">scale=1.0</em>, <em class="sig-param">groups=None</em>, <em class="sig-param">pin_layout=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#all_reduce"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.all_reduce" title="Permalink to this definition">¶</a></dt>
 <dd><p>Performs an inplace reduce operation on the input tensor(s).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -1274,9 +1274,6 @@ Default: 4</p></li>
 <li><p><strong>host_to_device_transfer_threads</strong> (<em>python:int</em><em>, </em><em>optional</em>) – The number of threads that
 work in parallel to transfer data from loader queue to device queue.
 Default: 1</p></li>
-<li><p><strong>input_sharding</strong> (<em>ShardingSpec</em><em>, </em><em>optional</em>) – Sharding spec to apply to
-compatible input tensors after loading.
-Default: None</p></li>
 </ul>
 </dd>
 </dl>

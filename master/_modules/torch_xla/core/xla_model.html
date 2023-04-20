@@ -308,10 +308,8 @@
              <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
               
   <h1>Source code for torch_xla.core.xla_model</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">collections</span>
-<span class="kn">import</span> <span class="nn">io</span>
+<span></span><span class="kn">import</span> <span class="nn">io</span>
 <span class="kn">import</span> <span class="nn">sys</span>
-<span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">re</span>
 <span class="kn">import</span> <span class="nn">threading</span>
 <span class="kn">import</span> <span class="nn">time</span>
@@ -320,12 +318,10 @@
 <span class="kn">import</span> <span class="nn">torch.nn.functional</span> <span class="k">as</span> <span class="nn">F</span>
 <span class="kn">import</span> <span class="nn">torch_xla</span>
 <span class="kn">from</span> <span class="nn">torch_xla.experimental</span> <span class="kn">import</span> <span class="n">pjrt</span>
-<span class="kn">import</span> <span class="nn">torch_xla.experimental.xla_sharding</span> <span class="k">as</span> <span class="nn">xs</span>
 <span class="kn">import</span> <span class="nn">torch_xla.core.xla_env_vars</span> <span class="k">as</span> <span class="nn">xenv</span>
 <span class="kn">import</span> <span class="nn">torch_xla.debug.metrics_saver</span> <span class="k">as</span> <span class="nn">ms</span>
 <span class="kn">import</span> <span class="nn">torch_xla.utils.utils</span> <span class="k">as</span> <span class="nn">xu</span>
 <span class="kn">import</span> <span class="nn">torch_xla.utils.closures</span> <span class="k">as</span> <span class="nn">xc</span>
-<span class="kn">import</span> <span class="nn">torch_xla.utils.keyd_queue</span> <span class="k">as</span> <span class="nn">kq</span>
 
 <span class="n">_DEVICES</span> <span class="o">=</span> <span class="n">xu</span><span class="o">.</span><span class="n">LazyProperty</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_devices</span><span class="p">())</span>
 
@@ -335,9 +331,6 @@
 <span class="n">REDUCE_OR</span> <span class="o">=</span> <span class="s1">&#39;or&#39;</span>
 <span class="n">REDUCE_MIN</span> <span class="o">=</span> <span class="s1">&#39;min&#39;</span>
 <span class="n">REDUCE_MAX</span> <span class="o">=</span> <span class="s1">&#39;max&#39;</span>
-
-<span class="n">_TORCH_DIST_GROUPS</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
-<span class="n">_TORCH_DIST_LOCK</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
 
 <span class="n">_DEVICE_CONTEXTS</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
 <span class="n">_DEVICE_CONTEXTS_LOCK</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
@@ -360,67 +353,6 @@
       <span class="n">devctx</span> <span class="o">=</span> <span class="n">DeviceContext</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
       <span class="n">_DEVICE_CONTEXTS</span><span class="p">[</span><span class="n">device</span><span class="p">]</span> <span class="o">=</span> <span class="n">devctx</span>
     <span class="k">return</span> <span class="n">devctx</span>
-
-
-<span class="k">class</span> <span class="nc">CollectiveContext</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-
-  <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">replica_devcount</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_replication_devices_count</span><span class="p">()</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">world_size</span> <span class="o">=</span> <span class="n">xrt_world_size</span><span class="p">()</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">ordinal</span> <span class="o">=</span> <span class="n">get_ordinal</span><span class="p">()</span>
-    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">world_size</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">replica_devcount</span><span class="p">:</span>
-      <span class="c1"># This is the sea-of-devices path.</span>
-      <span class="bp">self</span><span class="o">.</span><span class="n">requires_interhost_reduce</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">world_size</span> <span class="o">&gt;</span> <span class="mi">1</span>
-      <span class="c1"># If groups are enabled we avoid using the two level reduce (first among the</span>
-      <span class="c1"># fast interconnected cores, then using the torch.distributed support).</span>
-      <span class="c1"># The intercore_group is always empty, which means all cores, but in the not</span>
-      <span class="c1"># empty groups case, it won&#39;t be used as requires_intercore_reduce is False.</span>
-      <span class="bp">self</span><span class="o">.</span><span class="n">intercore_group</span> <span class="o">=</span> <span class="p">[]</span>
-      <span class="k">if</span> <span class="n">groups</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">requires_intercore_reduce</span> <span class="o">=</span> <span class="kc">False</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">requires_interhost_reduce</span><span class="p">:</span>
-          <span class="bp">self</span><span class="o">.</span><span class="n">interhost_group</span> <span class="o">=</span> <span class="n">_make_group_for_ordinal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ordinal</span><span class="p">,</span> <span class="n">groups</span><span class="p">)</span>
-          <span class="bp">self</span><span class="o">.</span><span class="n">is_reduce_host</span> <span class="o">=</span> <span class="kc">True</span>
-      <span class="k">else</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">requires_intercore_reduce</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">replica_devcount</span> <span class="o">&gt;</span> <span class="mi">1</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">requires_interhost_reduce</span><span class="p">:</span>
-          <span class="bp">self</span><span class="o">.</span><span class="n">interhost_group</span><span class="p">,</span> <span class="n">ranks</span> <span class="o">=</span> <span class="n">_make_interhost_group</span><span class="p">(</span>
-              <span class="bp">self</span><span class="o">.</span><span class="n">replica_devcount</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">world_size</span><span class="p">)</span>
-          <span class="bp">self</span><span class="o">.</span><span class="n">is_reduce_host</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ordinal</span> <span class="ow">in</span> <span class="n">ranks</span>
-    <span class="k">else</span><span class="p">:</span>
-      <span class="c1"># Standard replication path.</span>
-      <span class="bp">self</span><span class="o">.</span><span class="n">requires_intercore_reduce</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">replica_devcount</span> <span class="o">&gt;</span> <span class="mi">1</span>
-      <span class="bp">self</span><span class="o">.</span><span class="n">requires_interhost_reduce</span> <span class="o">=</span> <span class="kc">False</span>
-      <span class="bp">self</span><span class="o">.</span><span class="n">intercore_group</span> <span class="o">=</span> <span class="n">groups</span> <span class="ow">or</span> <span class="p">[]</span>
-
-
-<span class="k">def</span> <span class="nf">_get_torch_dist_group</span><span class="p">(</span><span class="n">ranks</span><span class="p">):</span>
-  <span class="kn">import</span> <span class="nn">torch.distributed</span> <span class="k">as</span> <span class="nn">dist</span>
-
-  <span class="k">with</span> <span class="n">_TORCH_DIST_LOCK</span><span class="p">:</span>
-    <span class="n">pg</span> <span class="o">=</span> <span class="n">_TORCH_DIST_GROUPS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">ranks</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">pg</span><span class="p">:</span>
-      <span class="n">pg</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">new_group</span><span class="p">(</span><span class="n">ranks</span><span class="o">=</span><span class="n">ranks</span><span class="p">)</span>
-      <span class="n">_TORCH_DIST_GROUPS</span><span class="p">[</span><span class="n">ranks</span><span class="p">]</span> <span class="o">=</span> <span class="n">pg</span>
-    <span class="k">return</span> <span class="n">pg</span>
-
-
-<span class="k">def</span> <span class="nf">_make_group_for_ordinal</span><span class="p">(</span><span class="n">ordinal</span><span class="p">,</span> <span class="n">groups</span><span class="p">):</span>
-  <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">groups</span><span class="p">:</span>
-    <span class="k">if</span> <span class="n">ordinal</span> <span class="ow">in</span> <span class="n">g</span><span class="p">:</span>
-      <span class="k">return</span> <span class="n">_get_torch_dist_group</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">g</span><span class="p">))</span>
-  <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">&#39;Ordinal </span><span class="si">{}</span><span class="s1"> not found in groups </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
-      <span class="n">ordinal</span><span class="p">,</span> <span class="n">groups</span><span class="p">))</span>
-
-
-<span class="k">def</span> <span class="nf">_make_interhost_group</span><span class="p">(</span><span class="n">replica_devcount</span><span class="p">,</span> <span class="n">world_size</span><span class="p">):</span>
-  <span class="c1"># Every host in a sea-of-devices case handles replica_devcount devices.</span>
-  <span class="c1"># The replica device index 0 of each host does the inter-host replication</span>
-  <span class="c1"># using torch.distributed.</span>
-  <span class="c1"># The XLA CPU is a special case where there is one process per XLA CPU device,</span>
-  <span class="c1"># which is also a virtual host within a physical host.</span>
-  <span class="n">ranks</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">world_size</span><span class="p">,</span> <span class="n">replica_devcount</span><span class="p">))</span>
-  <span class="k">return</span> <span class="n">_get_torch_dist_group</span><span class="p">(</span><span class="n">ranks</span><span class="p">),</span> <span class="n">ranks</span>
 
 
 <span class="k">def</span> <span class="nf">is_xla_tensor</span><span class="p">(</span><span class="n">tensor</span><span class="p">):</span>
@@ -797,70 +729,7 @@
   <span class="k">return</span> <span class="n">token</span><span class="p">,</span> <span class="n">devctx</span>
 
 
-<span class="k">def</span> <span class="nf">_torch_all_reduce</span><span class="p">(</span><span class="n">reduce_type</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">group</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-  <span class="kn">import</span> <span class="nn">torch.distributed</span> <span class="k">as</span> <span class="nn">dist</span>
-
-  <span class="k">if</span> <span class="n">reduce_type</span> <span class="o">==</span> <span class="n">REDUCE_SUM</span><span class="p">:</span>
-    <span class="n">reduce_op</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">ReduceOp</span><span class="o">.</span><span class="n">SUM</span>
-  <span class="k">elif</span> <span class="n">reduce_type</span> <span class="o">==</span> <span class="n">REDUCE_MUL</span><span class="p">:</span>
-    <span class="n">reduce_op</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">ReduceOp</span><span class="o">.</span><span class="n">PRODUCT</span>
-  <span class="k">elif</span> <span class="n">reduce_type</span> <span class="o">==</span> <span class="n">REDUCE_MIN</span><span class="p">:</span>
-    <span class="n">reduce_op</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">ReduceOp</span><span class="o">.</span><span class="n">MIN</span>
-  <span class="k">elif</span> <span class="n">reduce_type</span> <span class="o">==</span> <span class="n">REDUCE_MAX</span><span class="p">:</span>
-    <span class="n">reduce_op</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">ReduceOp</span><span class="o">.</span><span class="n">MAX</span>
-  <span class="k">elif</span> <span class="n">reduce_type</span> <span class="o">==</span> <span class="n">REDUCE_OR</span><span class="p">:</span>
-    <span class="n">reduce_op</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">ReduceOp</span><span class="o">.</span><span class="n">BOR</span>
-  <span class="k">elif</span> <span class="n">reduce_type</span> <span class="o">==</span> <span class="n">REDUCE_AND</span><span class="p">:</span>
-    <span class="n">reduce_op</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">ReduceOp</span><span class="o">.</span><span class="n">BAND</span>
-  <span class="k">else</span><span class="p">:</span>
-    <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">&#39;Invalid reduce type: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">reduce_type</span><span class="p">))</span>
-
-  <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
-  <span class="n">async_op</span> <span class="o">=</span> <span class="kc">None</span>
-  <span class="k">for</span> <span class="n">tensor</span> <span class="ow">in</span> <span class="n">inputs</span><span class="p">:</span>
-    <span class="c1"># Use async flag to overlap pytorch reduce ops with XLA tensor fetches.</span>
-    <span class="n">cpu_tensor</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_cpu_tensors</span><span class="p">([</span><span class="n">tensor</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
-    <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cpu_tensor</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">async_op</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-      <span class="n">async_op</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
-    <span class="n">async_op</span> <span class="o">=</span> <span class="n">dist</span><span class="o">.</span><span class="n">all_reduce</span><span class="p">(</span>
-        <span class="n">cpu_tensor</span><span class="p">,</span> <span class="n">reduce_op</span><span class="p">,</span> <span class="n">async_op</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">group</span><span class="o">=</span><span class="n">group</span><span class="p">)</span>
-  <span class="k">if</span> <span class="n">async_op</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="n">async_op</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
-  <span class="k">return</span> <span class="n">results</span>
-
-
-<span class="k">def</span> <span class="nf">_host_all_reduce</span><span class="p">(</span><span class="n">reduce_type</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">cctx</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-  <span class="c1"># Barrier must happen on all devices.</span>
-  <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_sync_multi</span><span class="p">(</span>
-      <span class="n">inputs</span><span class="p">,</span> <span class="n">devices</span><span class="o">=</span><span class="p">[],</span> <span class="n">wait</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">sync_xla_data</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-
-  <span class="c1"># Here we use the torch.distributed reductions only on one device in the</span>
-  <span class="c1"># replication set, and then use in graph fast interconnect reduction to</span>
-  <span class="c1"># transfer the result to all replication devices.</span>
-  <span class="c1"># One core per fast interconnect replica group does the torch.distributed</span>
-  <span class="c1"># reduction and post the result, while the others post zeros.</span>
-  <span class="k">if</span> <span class="n">cctx</span><span class="o">.</span><span class="n">is_reduce_host</span><span class="p">:</span>
-    <span class="n">results</span> <span class="o">=</span> <span class="n">_torch_all_reduce</span><span class="p">(</span><span class="n">reduce_type</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">group</span><span class="o">=</span><span class="n">cctx</span><span class="o">.</span><span class="n">interhost_group</span><span class="p">)</span>
-    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">inputs</span><span class="p">)):</span>
-      <span class="n">inputs</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">copy_</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
-      <span class="k">if</span> <span class="n">scale</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">inputs</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">mul_</span><span class="p">(</span><span class="n">scale</span><span class="p">)</span>
-  <span class="k">else</span><span class="p">:</span>
-    <span class="k">for</span> <span class="n">tensor</span> <span class="ow">in</span> <span class="n">inputs</span><span class="p">:</span>
-      <span class="n">tensor</span><span class="o">.</span><span class="n">zero_</span><span class="p">()</span>
-  <span class="k">if</span> <span class="n">cctx</span><span class="o">.</span><span class="n">requires_intercore_reduce</span><span class="p">:</span>
-    <span class="n">token</span><span class="p">,</span> <span class="n">devctx</span> <span class="o">=</span> <span class="n">_get_all_reduce_token</span><span class="p">()</span>
-    <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_all_reduce_inplace</span><span class="p">(</span>
-        <span class="n">REDUCE_SUM</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="p">[])</span>
-
-
-<div class="viewcode-block" id="all_reduce"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.all_reduce">[docs]</a><span class="k">def</span> <span class="nf">all_reduce</span><span class="p">(</span><span class="n">reduce_type</span><span class="p">,</span>
-               <span class="n">inputs</span><span class="p">,</span>
-               <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
-               <span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-               <span class="n">cctx</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-               <span class="n">pin_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<div class="viewcode-block" id="all_reduce"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.all_reduce">[docs]</a><span class="k">def</span> <span class="nf">all_reduce</span><span class="p">(</span><span class="n">reduce_type</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">pin_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Performs an inplace reduce operation on the input tensor(s).</span>
 
 <span class="sd">  Args:</span>
@@ -888,37 +757,18 @@
 <span class="sd">    this function performs an inplace all-reduce op on the input tensors, and</span>
 <span class="sd">    returns the list/tuple itself.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
-  <span class="c1"># In a sea-of-devices case we use two level of reductions. One using the fast</span>
-  <span class="c1"># device interconnect, and then using the torch.distributed reduction API to</span>
-  <span class="c1"># reduce across the detached hosts.</span>
-  <span class="c1"># One special case is XLA CPU devices, which do not support in graph reductions,</span>
-  <span class="c1"># so in that case we create differente processes having a single replication</span>
-  <span class="c1"># device. That will skip the in graph reductions and use the torch.distributed</span>
-  <span class="c1"># support across all XLA CPU devices.</span>
-  <span class="k">if</span> <span class="n">cctx</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="n">cctx</span> <span class="o">=</span> <span class="n">CollectiveContext</span><span class="p">(</span><span class="n">groups</span><span class="o">=</span><span class="n">groups</span><span class="p">)</span>
-  <span class="k">if</span> <span class="n">cctx</span><span class="o">.</span><span class="n">requires_intercore_reduce</span><span class="p">:</span>
-    <span class="n">token</span><span class="p">,</span> <span class="n">devctx</span> <span class="o">=</span> <span class="n">_get_all_reduce_token</span><span class="p">()</span>
-    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
-      <span class="n">result</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_all_reduce</span><span class="p">(</span><span class="n">reduce_type</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span>
-                                               <span class="n">scale</span><span class="p">,</span> <span class="n">cctx</span><span class="o">.</span><span class="n">intercore_group</span><span class="p">,</span>
-                                               <span class="n">pin_layout</span><span class="p">)</span>
-      <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
-      <span class="n">results</span> <span class="o">=</span> <span class="p">[</span><span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
-    <span class="k">else</span><span class="p">:</span>
-      <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_all_reduce_inplace</span><span class="p">(</span>
-          <span class="n">reduce_type</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span> <span class="n">cctx</span><span class="o">.</span><span class="n">intercore_group</span><span class="p">,</span> <span class="n">pin_layout</span><span class="p">)</span>
-      <span class="n">results</span> <span class="o">=</span> <span class="n">inputs</span>
+  <span class="n">token</span><span class="p">,</span> <span class="n">devctx</span> <span class="o">=</span> <span class="n">_get_all_reduce_token</span><span class="p">()</span>
+  <span class="n">groups</span> <span class="o">=</span> <span class="n">groups</span> <span class="ow">or</span> <span class="p">[]</span>
+  <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_all_reduce</span><span class="p">(</span><span class="n">reduce_type</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span>
+                                             <span class="n">groups</span><span class="p">,</span> <span class="n">pin_layout</span><span class="p">)</span>
+    <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="p">[</span><span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
   <span class="k">else</span><span class="p">:</span>
-    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
-      <span class="n">results</span> <span class="o">=</span> <span class="p">[</span><span class="n">inputs</span><span class="o">.</span><span class="n">clone</span><span class="p">()]</span>
-    <span class="k">else</span><span class="p">:</span>
-      <span class="n">results</span> <span class="o">=</span> <span class="n">inputs</span>
+    <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_all_reduce_inplace</span><span class="p">(</span>
+        <span class="n">reduce_type</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span> <span class="n">groups</span><span class="p">,</span> <span class="n">pin_layout</span><span class="p">)</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="n">inputs</span>
 
-  <span class="k">if</span> <span class="n">cctx</span><span class="o">.</span><span class="n">requires_interhost_reduce</span><span class="p">:</span>
-    <span class="k">assert</span> <span class="n">groups</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;Groups are not supported in sea-of-devices mode&#39;</span>
-    <span class="n">hscale</span> <span class="o">=</span> <span class="n">scale</span> <span class="k">if</span> <span class="n">cctx</span><span class="o">.</span><span class="n">replica_devcount</span> <span class="o">&lt;=</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">scale</span> <span class="o">!=</span> <span class="mf">1.0</span> <span class="k">else</span> <span class="kc">None</span>
-    <span class="n">_host_all_reduce</span><span class="p">(</span><span class="n">reduce_type</span><span class="p">,</span> <span class="n">results</span><span class="p">,</span> <span class="n">cctx</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="n">hscale</span><span class="p">)</span>
   <span class="k">return</span> <span class="n">results</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="k">else</span> <span class="n">results</span></div>
 
 
@@ -1292,8 +1142,7 @@
 <span class="sd">    pin_layout (bool, optional): whether to pin the layout when reducing gradients.</span>
 <span class="sd">      See `xm.all_reduce` for details.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
-  <span class="n">cctx</span> <span class="o">=</span> <span class="n">CollectiveContext</span><span class="p">()</span>
-  <span class="n">count</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">cctx</span><span class="o">.</span><span class="n">replica_devcount</span><span class="p">,</span> <span class="n">cctx</span><span class="o">.</span><span class="n">world_size</span><span class="p">)</span>
+  <span class="n">count</span> <span class="o">=</span> <span class="n">xrt_world_size</span><span class="p">()</span>
   <span class="k">if</span> <span class="n">count</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
     <span class="n">gradients</span> <span class="o">=</span> <span class="n">_fetch_gradients</span><span class="p">(</span><span class="n">optimizer</span><span class="p">)</span>
     <span class="n">all_reduce</span><span class="p">(</span>
@@ -1301,7 +1150,6 @@
         <span class="n">gradients</span><span class="p">,</span>
         <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">count</span><span class="p">,</span>
         <span class="n">groups</span><span class="o">=</span><span class="n">groups</span><span class="p">,</span>
-        <span class="n">cctx</span><span class="o">=</span><span class="n">cctx</span><span class="p">,</span>
         <span class="n">pin_layout</span><span class="o">=</span><span class="n">pin_layout</span><span class="p">)</span>
 
 
@@ -1391,17 +1239,15 @@
   <span class="k">return</span> <span class="n">ToXlaTensorArena</span><span class="p">(</span><span class="n">convert_fn</span><span class="p">,</span> <span class="n">select_fn</span><span class="p">)</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 
 
-<span class="k">def</span> <span class="nf">send_cpu_data_to_device</span><span class="p">(</span><span class="n">data</span><span class="p">,</span>
-                            <span class="n">device</span><span class="p">,</span>
-                            <span class="n">input_sharding</span><span class="p">:</span> <span class="n">xs</span><span class="o">.</span><span class="n">ShardingSpec</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">send_cpu_data_to_device</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="n">input_sharding</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 
   <span class="k">def</span> <span class="nf">convert_fn</span><span class="p">(</span><span class="n">tensors</span><span class="p">):</span>
     <span class="n">devices</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">device</span><span class="p">)]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">tensors</span><span class="p">)</span>
     <span class="n">xtensors</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_tensors_from_aten</span><span class="p">(</span><span class="n">tensors</span><span class="p">,</span> <span class="n">devices</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">input_sharding</span><span class="p">:</span>
-      <span class="k">for</span> <span class="n">xtensor</span> <span class="ow">in</span> <span class="n">xtensors</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">input_sharding</span><span class="o">.</span><span class="n">can_apply</span><span class="p">(</span><span class="n">xtensor</span><span class="p">):</span>
-          <span class="n">input_sharding</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">xtensor</span><span class="p">)</span>
+      <span class="k">assert</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">xtensors</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">),</span> \
+        <span class="sa">f</span><span class="s2">&quot;Expected input data and label pair, but got </span><span class="si">{</span><span class="n">xtensors</span><span class="si">}</span><span class="s2">.&quot;</span>
+      <span class="n">input_sharding</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">xtensors</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
     <span class="k">return</span> <span class="n">xtensors</span>
 
   <span class="k">def</span> <span class="nf">select_fn</span><span class="p">(</span><span class="n">v</span><span class="p">):</span>

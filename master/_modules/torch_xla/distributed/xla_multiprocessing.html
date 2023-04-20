@@ -442,15 +442,14 @@
   <span class="k">if</span> <span class="n">pf_cfg</span><span class="o">.</span><span class="n">dev_kind</span> <span class="o">==</span> <span class="s1">&#39;CPU&#39;</span><span class="p">:</span>
     <span class="c1"># Since XLA CPU does not support across device reduces, and suport only one</span>
     <span class="c1"># device per process, we make each CPU device look like if it was a single</span>
-    <span class="c1"># process host, and use torch.distributed for inter-host reductions (like in</span>
-    <span class="c1"># the sea-of-devices case).</span>
+    <span class="c1"># process host, and use torch.distributed for inter-host reductions.</span>
     <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">HOST_WORLD_SIZE</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">world_size</span><span class="p">)</span>
   <span class="k">else</span><span class="p">:</span>
     <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">HOST_WORLD_SIZE</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">host_world_size</span><span class="p">)</span>
 
 
 <span class="k">def</span> <span class="nf">_get_mp_device_ordinal</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">gindex</span><span class="p">):</span>
-  <span class="c1"># If xenv.HOST_ORDINAL is set, we are in a sea-of-devices setup, where devices</span>
+  <span class="c1"># If xenv.HOST_ORDINAL is set, we are in a multi CPU setup, where devices</span>
   <span class="c1"># are numbered locally within the single host (but the ordinal/rank is still</span>
   <span class="c1"># global).</span>
   <span class="k">return</span> <span class="n">index</span> <span class="k">if</span> <span class="n">xenv</span><span class="o">.</span><span class="n">HOST_ORDINAL</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span> <span class="k">else</span> <span class="n">gindex</span>
@@ -564,8 +563,6 @@
 
 
 <span class="k">def</span> <span class="nf">_wants_tpu_env_config</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">gindex</span><span class="p">):</span>
-  <span class="k">if</span> <span class="n">xenv</span><span class="o">.</span><span class="n">HOST_ORDINAL</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
-    <span class="k">return</span> <span class="n">index</span> <span class="o">==</span> <span class="mi">0</span>
   <span class="k">return</span> <span class="n">gindex</span> <span class="o">==</span> <span class="mi">0</span>
 
 
@@ -598,22 +595,6 @@
 
   <span class="k">if</span> <span class="n">pf_cfg</span><span class="o">.</span><span class="n">dev_kind</span> <span class="o">==</span> <span class="s1">&#39;TPU&#39;</span><span class="p">:</span>
     <span class="n">_setup_tpu_worker</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">gindex</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">TPU_CONFIG</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
-    <span class="k">if</span> <span class="n">xenv</span><span class="o">.</span><span class="n">HOST_ORDINAL</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
-      <span class="c1"># If xenv.HOST_ORDINAL is set, we are in a sea-of-devices TPU setup, where</span>
-      <span class="c1"># each host has local TPU devices, but not interconnected with the fast TPU</span>
-      <span class="c1"># link. In this case each TPU host sees only local TPU devices, as far as</span>
-      <span class="c1"># fast TPU reduction goes, and global redcutions are performed with normal</span>
-      <span class="c1"># torch.distributed facilities. The ordinal 0 of each TPU host will be the</span>
-      <span class="c1"># one performing the global reductions, if no groups are defined in the</span>
-      <span class="c1"># reduce operation.</span>
-      <span class="c1"># Sea of devices configuration:</span>
-      <span class="c1">#  - xenv.HOST_ORDINAL must be set to the host ordinal.</span>
-      <span class="c1">#  - xenv.TORCH_DIST_ROOT must be set to the HOST:PORT, where HOST can be</span>
-      <span class="c1">#    the same host of the mesh master, but different port.</span>
-      <span class="c1">#  - xenv.TPU_CONFIG must be set on all host, with task number equal 0.</span>
-      <span class="c1">#  - The worker ordinal (task number) in the xenv.LOCAL_WORKER must be set</span>
-      <span class="c1">#    to 0 in all hosts.</span>
-      <span class="n">_setup_torch_distributed</span><span class="p">()</span>
   <span class="k">elif</span> <span class="n">pf_cfg</span><span class="o">.</span><span class="n">dev_kind</span> <span class="o">==</span> <span class="s1">&#39;GPU&#39;</span><span class="p">:</span>
     <span class="n">_setup_gpu_worker</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">gindex</span><span class="p">)</span>
   <span class="k">elif</span> <span class="n">pf_cfg</span><span class="o">.</span><span class="n">dev_kind</span> <span class="o">==</span> <span class="s1">&#39;CPU&#39;</span><span class="p">:</span>
