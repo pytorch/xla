@@ -19,7 +19,7 @@ if [ "$DEBUG" == "1" ]; then
   BUILDTYPE="dbg"
 fi
 
-while getopts 'VLDKBF:X:R' OPTION
+while getopts 'VLDKBF:X:RC' OPTION
 do
   case $OPTION in
     V)
@@ -30,12 +30,6 @@ do
       ;;
     D)
       BUILDTYPE="dbg"
-      ;;
-    K)
-      RMBUILD=0
-      ;;
-    B)
-      BUILD_ONLY=1
       ;;
     F)
       FILTER="--test_filter=$OPTARG"
@@ -79,10 +73,8 @@ if [[ "$XLA_CUDA" == "1" ]]; then
 fi
 
 
-if [ $BUILD_ONLY -eq 0 ]; then
-  if [ "$LOGFILE" != "" ]; then
-    bazel $BAZEL_VERB $EXTRA_FLAGS --test_output=all //third_party/xla_client:all //test/cpp:all ${FILTER:+"$FILTER"} 2> $LOGFILE
-  else 
-    bazel $BAZEL_VERB $EXTRA_FLAGS --test_output=all //third_party/xla_client:all //test/cpp:all ${FILTER:+"$FILTER"}
-  fi
+if [ "$LOGFILE" != "" ]; then
+  bazel $BAZEL_VERB $EXTRA_FLAGS --test_output=all //third_party/xla_client:all //test/cpp:all ${FILTER:+"$FILTER"} 2> $LOGFILE
+else
+  bazel $BAZEL_VERB $EXTRA_FLAGS --test_output=all //third_party/xla_client:all //test/cpp:all ${FILTER:+"$FILTER"}
 fi
