@@ -16,7 +16,12 @@
 namespace torch_xla {
 namespace {
 
-thread_local std::shared_ptr<torch::lazy::Value> g_token;
+struct AllReduceToken {
+  std::shared_ptr<torch::lazy::Value> token;
+  std::mutex lock;
+};
+
+AllReduceToken g_all_reduce_token;
 
 struct PerTypeContext {
   std::vector<xla::XlaOp> ops;
@@ -277,14 +282,16 @@ ReduceScatterResult BuildReduceScatter(
 
 const torch::lazy::Value& GetAllReduceToken(
     const torch::lazy::BackendDevice& device) {
-  if (!g_token) {
-    g_token = CreateToken(device);
+  if (!g_all_reduce_token.token) {
+    std::lock_guard<std::mutex> lock(g_all_reduce_token.lock);
+    g_all_reduce_token.token = CreateToken(device);
   }
-  return *g_token;
+  return *g_all_reduce_token.token;
 }
 
 void SetAllReduceToken(const std::shared_ptr<torch::lazy::Value>& token) {
-  g_token = token;
+  std::lock_guard<std::mutex> lock(g_all_reduce_token.lock);
+  g_all_reduce_token.token = token;
 }
 
 }  // namespace torch_xla

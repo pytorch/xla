@@ -1,7 +1,6 @@
 #include "torch_xla/csrc/tensor.h"
 
 #include <algorithm>
-#include <atomic>
 #include <cmath>
 #include <condition_variable>
 #include <exception>
