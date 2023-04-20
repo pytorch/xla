@@ -4,6 +4,7 @@
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "torch/csrc/lazy/core/helpers.h"
+#include "torch/csrc/profiler/combined_traceback.h"
 #include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -48,7 +49,19 @@ ExpandSymInt::ExpandSymInt(const torch::lazy::Value& input,
               torch::lazy::MHash(size_elements.GetUpperBounds(),
                                  size_elements.GetDynamicDims())),
       upper_bounds_(size_elements.GetUpperBounds()),
-      dynamic_dims_(size_elements.GetDynamicDims()) {}
+      dynamic_dims_(size_elements.GetDynamicDims()) {
+        // std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
+        // std::shared_ptr<torch::CapturedTraceback> tb0 =
+        //       torch::CapturedTraceback::gather(/*python=*/true, /*script=*/true,
+        //                                        /*cpp=*/true);
+        // torch::SymbolizedTracebacks btWhenCreated_ = torch::symbolize({tb0.get()});
+        // std::string bt = "";
+        // for (auto btwc : btWhenCreated_.all_frames) {
+        //   bt += "fileName=" + btwc.filename + ", funcname=" + btwc.funcname +
+        //         "lineno=" + std::to_string(btwc.lineno) + "\n";
+        // }
+        // std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": bt=" << bt << std::endl;
+      }
 
 XlaOpVector ExpandSymInt::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));

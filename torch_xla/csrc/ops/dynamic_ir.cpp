@@ -2,6 +2,7 @@
 
 #include "absl/strings/str_join.h"
 #include "third_party/xla_client/debug_macros.h"
+#include "torch/csrc/profiler/combined_traceback.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/tensor.h"
@@ -39,10 +40,23 @@ SizeNode::SizeNode(torch::lazy::Value input, size_t dim)
 };
 
 int64_t SizeNode::getDynamicValue() const {
+  // std::shared_ptr<torch::CapturedTraceback> tb0 =
+  //       torch::CapturedTraceback::gather(/*python=*/true, /*script=*/true,
+  //                                        /*cpp=*/true);
+  // torch::SymbolizedTracebacks btWhenCreated_ = torch::symbolize({tb0.get()});
+  // std::string bt = "";
+  // for (auto btwc : btWhenCreated_.all_frames) {
+  //   bt += "fileName=" + btwc.filename + ", funcname=" + btwc.funcname +
+  //         "lineno=" + std::to_string(btwc.lineno) + "\n";
+  // }
+  // std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": bt=" << bt << std::endl;
+
   if (dynamic_value_computed_) {
+    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": SizeNode::getDynamicValue() get value from cache" << std::endl;
     TORCH_LAZY_COUNTER("CachedSizeNodeValue", 1);
     return runtime_size_;
   }
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": SizeNode::getDynamicValue() cannot find value from cache" << std::endl;
   torch::lazy::NodePtr cloned =
       torch::lazy::MakeNode<SizeNode>(operands_[0], dim_);
   // Wrap the IR of SizeNode into a dummy tensor and execute/fetch the value
@@ -141,6 +155,7 @@ SizeEq::SizeEq(torch::lazy::Value a, torch::lazy::Value b)
 };
 
 int64_t SizeEq::getDynamicValue() const {
+
   if (operand(0) == operand(1)) {
     return 1;
   }
@@ -192,6 +207,13 @@ int64_t SizeGe::getDynamicValue() const {
   const torch::lazy::DimensionNode* dim_node_1 = DimCast(operand(1));
   XLA_CHECK(dim_node_0);
   XLA_CHECK(dim_node_1);
+
+  // std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": dim_node_1->isSymbolic()=" << dim_node_1->isSymbolic() << ", dim_node_1->getStaticValue()=" << dim_node_1->getStaticValue() << std::endl;
+  // std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": dim_node_1=" << (*dim_node_1) << std::endl;
+  // if (!dim_node_1->isSymbolic() && dim_node_1->getStaticValue()==0) {
+  //   return 1;
+  // }
+
   return dim_node_0->getDynamicValue() >= dim_node_1->getDynamicValue() ? 1 : 0;
 }
 

@@ -46,6 +46,13 @@ class SizeNode : public XlaNode, public torch::lazy::DimensionNode {
   std::string ToString() const override;
   virtual XlaOpVector Lower(LoweringContext* loctx) const override;
 
+  struct Range {
+    int64_t upperbound = -1;
+    int64_t lowerbound = -1;
+  };
+  Range range;
+
+
  private:
   size_t dim_ = 0;
   int64_t upper_bound_;

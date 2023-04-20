@@ -301,6 +301,36 @@ TEST_F(AtenXlaTensorTest, TestSymSizes) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestSymSizesXiowei) {
+  ForEachDevice([&](const torch::Device& device) {
+    // torch::Tensor a = torch::rand({2, 3}, torch::TensorOptions(torch::kFloat));
+    // torch::Tensor xla_a = CopyToDevice(a, device);
+    // ASSERT_EQ(a.sym_sizes().at(0).expect_int(), 2);
+    // ASSERT_EQ(a.sym_sizes().at(0).is_symbolic(), false);
+
+    torch::Tensor b = torch::tensor({{0.0, 1.0}, {0.0, 0.0}},
+                                    torch::TensorOptions(torch::kFloat));
+    torch::Tensor xla_b = CopyToDevice(b, device);
+    xla_b = torch::nonzero(xla_b);
+    c10::SymInt s0 = xla_b.sym_sizes().at(0);
+    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": s0=" << s0 << ", s0.is_symbolic()=" << s0.is_symbolic() << std::endl;
+    // ASSERT_EQ(s0.is_symbolic(), true);
+    // ASSERT_EQ(s0, 0);
+    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": s0=" << s0 << ", s0.is_symbolic()=" << s0.is_symbolic() << std::endl;
+    // ASSERT_EQ(s0.is_symbolic(), true);
+    c10::SymInt s1 = xla_b.sym_sizes().at(0);
+    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": s1=" << s1 << ", s1.is_symbolic()=" << s1.is_symbolic() << std::endl;
+    // ASSERT_EQ(s1.is_symbolic(), true);
+
+    // auto sininode = dynamic_cast<XLASymNodeImpl*>(s0.toSymNodeImpl().get());
+    // auto snode =
+    //     std::dynamic_pointer_cast<torch_xla::SizeNode>(sininode->node());
+    // ASSERT_TRUE(snode);
+    // ASSERT_EQ(snode->getStaticValue(), 4);
+    // ASSERT_EQ(snode->getDynamicValue(), 1);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestMul) {
   torch::Tensor a = torch::rand({2, 2}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = torch::rand({2, 2}, torch::TensorOptions(torch::kFloat));

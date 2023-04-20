@@ -375,16 +375,16 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     # t2.shape=torch.Size([<=6, 1]) with real size [4, 1]
     # t2 = [[0], [2], [3], [5]]
     t2 = torch.nonzero(t1)
-    # self.assertIsInstance(t2.shape[0], torch.SymInt) # passed
-    # self.assertIsInstance(t2.shape[1], int) # passed
+    self.assertIsInstance(t2.shape[0], torch.SymInt) # passed
+    self.assertIsInstance(t2.shape[1], int) # passed
     # print(t2.shape)
     # print(torch_xla._XLAC._get_xla_tensors_text([t2]))
     # import pdb; pdb.set_trace()
     print('calling t2.fill_')
     t2.fill_(1)
     print('t2.shape=', t2.shape)
-    print('t2=', t2)
     print(torch_xla._XLAC._get_xla_tensors_text([t2]))
+    print('t2=', t2)
     # print('===')
     # print(torch_xla._XLAC._get_xla_tensors_hlo([t2]))
     # self.assertIsInstance(t2.shape[0], torch.SymInt)

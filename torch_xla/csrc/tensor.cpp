@@ -124,9 +124,10 @@ XLATensor::XLATensor(torch::lazy::Value ir_value,
                      c10::optional<at::ScalarType> logical_element_type)
     : XLATensor(std::make_shared<Data>(std::move(ir_value), device,
                                        logical_element_type)) {
-  // xw32: This is called
+  // xw32: This is called 
   
-  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": Begin constructing XLATensor shape().get()=" << shape().get() << "data()->alias_id=" << data()->alias_id<< std::endl;
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": Begin constructing XLATensor shape().get()=" << std::endl;
+
   // std::shared_ptr<torch::CapturedTraceback> tb0 =
   //       torch::CapturedTraceback::gather(/*python=*/true, /*script=*/true,
   //                                        /*cpp=*/true);

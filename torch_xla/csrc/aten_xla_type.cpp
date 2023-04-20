@@ -1215,6 +1215,7 @@ at::Tensor XLANativeFunctions::empty_symint(
     c10::optional<at::Layout> layout, c10::optional<at::Device> device,
     c10::optional<bool> pin_memory,
     c10::optional<at::MemoryFormat> /* memory_format */) {
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   TORCH_LAZY_FN_COUNTER("xla::");
   c10::optional<at::IntArrayRef> int_sizes =
       c10::asIntArrayRefSlowOpt(sym_size);
@@ -1225,6 +1226,7 @@ at::Tensor XLANativeFunctions::empty_symint(
   // avoid going to CPU for it. A common PT pattern is indeed doing empty() plus
   // s_copy_().
   if (all_dims_static) {
+    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": XlaHelpers::I64List(int_sizes.value())=" << XlaHelpers::I64List(int_sizes.value()) << std::endl;
     return bridge::AtenFromXlaTensor(tensor_methods::full(
         XlaHelpers::I64List(int_sizes.value()), 0,
         GetXlaDeviceOrCurrent(device), at::dtype_or_default(dtype)));
@@ -1249,6 +1251,7 @@ at::Tensor XLANativeFunctions::empty_strided_symint(
 at::Tensor XLANativeFunctions::expand_copy_symint(const at::Tensor& self,
                                                   at::SymIntArrayRef sym_size,
                                                   bool implicit) {
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   TORCH_LAZY_FN_COUNTER("xla::");
   c10::optional<at::IntArrayRef> size = c10::asIntArrayRefSlowOpt(sym_size);
   if (size.has_value()) {
@@ -2183,7 +2186,17 @@ at::Tensor XLANativeFunctions::nonzero(const at::Tensor& self) {
     return at::native::call_fallback_fn<&xla_cpu_fallback,
                                         ATEN_OP(nonzero)>::call(self);
   }
-  return bridge::AtenFromXlaTensor(tensor_methods::nonzero(self_tensor));
+  at::Tensor ret = bridge::AtenFromXlaTensor(tensor_methods::nonzero(self_tensor));
+  auto size = ret.sizes(); // should an error be thrown?
+  auto sym_sizes = ret.sym_sizes();
+  c10::SymInt size0 = ret.sym_sizes()[0];
+  c10::SymNode symNode0 = size0.toSymNodeImpl();
+  c10::SymInt size1 = ret.sym_sizes()[0];
+  c10::SymNode symNode1 = size1.toSymNodeImpl();
+  auto intArrOpt = c10::asIntArrayRefSlowOpt(sym_sizes);
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": c10::asIntArrayRefSlowOpt(ret.sym_sizes()).has_value()=" << intArrOpt.has_value() << std::endl;
+
+  return ret;
 }
 
 at::Tensor XLANativeFunctions::norm(const at::Tensor& self,
@@ -3655,6 +3668,7 @@ at::Tensor XLANativeFunctions::diagonal(const at::Tensor& self, int64_t offset,
 at::Tensor XLANativeFunctions::expand_symint(const at::Tensor& self,
                                              at::SymIntArrayRef sym_size,
                                              bool implicit) {
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   TORCH_LAZY_FN_COUNTER("xla::");
   c10::optional<at::IntArrayRef> size = c10::asIntArrayRefSlowOpt(sym_size);
   if (size.has_value()) {
