@@ -14,17 +14,19 @@ http_archive(
     patch_tool = "patch",
     patches = [
         "//tf_patches:cache_urls.diff",
-        "//tf_patches:cudnn_int8x32.diff",
         "//tf_patches:f16_abi_clang.diff",
         "//tf_patches:gpu_race_condition.diff",
         "//tf_patches:grpc_version.diff",
         "//tf_patches:stream_executor.diff",
         "//tf_patches:thread_local_random.diff",
         "//tf_patches:xplane.diff",
+        "//tf_patches:topk_rewriter.diff",
+        "//tf_patches:local_rendezvous.diff",
+        "//tf_patches:triton_filesystem.diff",
     ],
-    strip_prefix = "tensorflow-f7759359f8420d3ca7b9fd19493f2a01bd47b4ef",
+    strip_prefix = "tensorflow-5e229cfaa3c13c389f864b0ed38877fb61936161",
     urls = [
-        "https://github.com/tensorflow/tensorflow/archive/f7759359f8420d3ca7b9fd19493f2a01bd47b4ef.tar.gz",
+        "https://github.com/tensorflow/tensorflow/archive/5e229cfaa3c13c389f864b0ed38877fb61936161.tar.gz",
     ],
 )
 

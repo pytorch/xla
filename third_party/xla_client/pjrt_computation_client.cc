@@ -81,7 +81,6 @@ PjRtComputationClient::PjRtComputationClient() {
     TF_VLOG(1) << "Initializing TFRT TPU client...";
     XLA_CHECK_OK(pjrt::LoadPjrtPlugin(
         "tpu", sys_util::GetEnvString(env::kEnvTpuLibraryPath, "libtpu.so")));
-    supports_logical_on_device_shape_ = false;
     client_ = std::move(xla::GetCApiClient("TPU").value());
   } else if (device_type == "TPU_LEGACY") {
     TF_VLOG(1) << "Initializing PjRt StreamExecutor TPU client...";
@@ -108,7 +107,6 @@ PjRtComputationClient::PjRtComputationClient() {
     TF_VLOG(1) << "Initializing PjRt XPU client...";
     XLA_CHECK_OK(pjrt::LoadPjrtPlugin(
         "xpu", sys_util::GetEnvString(env::kEnvXpuLibraryPath, "libxpu.so")));
-    supports_logical_on_device_shape_ = false;
     client_ = std::move(xla::GetCApiClient("XPU").value());
 
   } else {
@@ -325,12 +323,8 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromServer(
     auto new_handle = ReplicateShardedData(handle);
     const PjRtData& pjrt_data = dynamic_cast<const PjRtData&>(*new_handle);
 
-    // TODO(wcromar): Only use logical_on_device_shape when PJRT C API supports
-    // it.
     xla::Shape target_shape = ShapeUtil::DeviceShapeToHostShape(
-        supports_logical_on_device_shape_
-            ? pjrt_data.buffer->logical_on_device_shape().value()
-            : pjrt_data.buffer->on_device_shape());
+        pjrt_data.buffer->logical_on_device_shape().value());
     auto& literal = literals.emplace_back(target_shape);
 
     // PJRT will always try to copy the full bounded size into our literal. If
@@ -340,10 +334,12 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromServer(
     if (pjrt_data.buffer->on_device_shape().is_static()) {
       XLA_CHECK_OK(pjrt_data.buffer->ToLiteralSync(&literal));
     } else {
-      std::shared_ptr<xla::Literal> bounded_literal =
-          pjrt_data.buffer->ToLiteralSync().value();
+      xla::Shape bounded_shape = ShapeUtil::DeviceShapeToHostShape(
+          pjrt_data.buffer->on_device_shape());
+      xla::Literal bounded_literal(bounded_shape);
+      XLA_CHECK_OK(pjrt_data.buffer->ToLiteralSync(&bounded_literal));
       XLA_CHECK_OK(literal.CopySliceFrom(
-          *bounded_literal,
+          bounded_literal,
           /*src_base=*/std::vector<int64_t>(target_shape.rank(), 0),
           /*dest_base=*/std::vector<int64_t>(target_shape.rank(), 0),
           /*copy_size=*/target_shape.dimensions()));
@@ -461,6 +457,9 @@ PjRtComputationClient::ExecuteComputation(
   execute_options.untuple_result = options.explode_tuple;
   execute_options.strict_shape_checking = false;
 
+  // Required as of cl/518733871
+  execute_options.use_major_to_minor_data_layout_for_callbacks = true;
+
   std::optional<PjRtFuture<Status>> returned_future;
   std::vector<std::unique_ptr<xla::PjRtBuffer>> results =
       pjrt_computation.executable
@@ -528,6 +527,10 @@ PjRtComputationClient::ExecuteReplicated(
   execute_options.strict_shape_checking = true;
   // TODO(yeounoh) currently only support single-slice execution
   execute_options.multi_slice_config = nullptr;
+
+  // Required as of cl/518733871
+  execute_options.use_major_to_minor_data_layout_for_callbacks = true;
+
   std::vector<std::vector<std::unique_ptr<PjRtBuffer>>> results =
       pjrt_computation.executable->Execute(argument_handles, execute_options)
           .value();
