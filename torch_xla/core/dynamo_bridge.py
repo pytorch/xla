@@ -220,7 +220,13 @@ def maybe_partition_graph(xla_model: torch.fx.GraphModule):
   return partitioned_graph
 """
 
-def extract_internal(xla_model: torch.fx.GraphModule, *xla_args):
+def collect_inputs(model, *args):
+  model.xla_args = args
+  delattr(model, '_wrapped_call')
+  return model(*args)
+
+def extract_internal(xla_model: torch.fx.GraphModule):
+  xla_args = xla_model.xla_args
   assert all(
       map(
           is_xla_tensor,
@@ -251,7 +257,7 @@ def extract_internal(xla_model: torch.fx.GraphModule, *xla_args):
   # Clear the counters here so we ignore pre-existing fallbacks and
   # only detect fallbacks happening when running the xla_model below.
   metrics.clear_counters()
-  delattr(xla_model, '_wrapped_call')
+  #delattr(xla_model, '_wrapped_call')
   xla_out = xla_model(*xla_args)
 
   fallback_ops = get_fallback_ops()
@@ -349,7 +355,15 @@ def extract_internal(xla_model: torch.fx.GraphModule, *xla_args):
     none_remover.add_nones(result)
     return result
 
-  return optimized_mod(*xla_args)
+  class OptimizedMod(torch.nn.Module):
+    def __init__(self):
+      super().__init__()
+
+    def forward(self, *args):
+      return optimized_mod(*args)
+
+  optimized = OptimizedMod()
+  return optimized
 
 def extract_compile_graph(xla_model, xla_args):
   supported_ops = XlaOperatorSupport()
@@ -360,7 +374,15 @@ def extract_compile_graph(xla_model, xla_args):
   for node in partitioned_graph.graph.nodes:
     if node.op == "call_module" and "fused_" in node.name:
       fused_module = getattr(partitioned_graph, node.name)
-      fused_module._wrapped_call = extract_internal
+      fused_module._wrapped_call = collect_inputs
+
+  partitioned_graph(*xla_args)
+
+  for node in partitioned_graph.graph.nodes:
+    if node.op == "call_module" and "fused_" in node.name:
+      fused_module = getattr(partitioned_graph, node.name)
+      partitioned_graph.delete_submodule(node.target)
+      partitioned_graph.add_submodule(node.target, extract_internal(fused_module)) 
   
   return partitioned_graph
 
