@@ -50,8 +50,7 @@ shift $(($OPTIND - 1))
 # Set XLA_EXPERIMENTAL var to subsequently executed commands.
 export XLA_EXPERIMENTAL
 
-# Inherit env flags for tests.
-EXTRA_FLAGS="--test_env=XRT_DEVICE_MAP --test_env=XRT_WORKERS --test_env=XRT_TPU_CONFIG --test_env=GPU_NUM_DEVICES --test_env=PJRT_DEVICE"
+EXTRA_FLAGS=""
 
 # Set up coverage flags.
 if [[ "$BAZEL_VERB" == "coverage" ]]; then

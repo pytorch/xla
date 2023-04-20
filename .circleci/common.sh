@@ -170,7 +170,7 @@ function run_torch_xla_tests() {
         PJRT_DEVICE=CPU ./run_tests.sh $EXTRA_ARGS
       fi
       if [ "$USE_COVERAGE" != "0" ]; then
-        genhtml .bazel-out/_coverage/_coverage_report.dat -o ~/htmlcov//cpp/cpp_lcov.info
+        genhtml .bazel-out/_coverage/_coverage_report.dat -o ~/htmlcov/cpp/cpp_lcov.info
         mv ./.bazel-out/_coverage/_coverage_report.dat ~/htmlcov/cpp_lcov.info
       fi
     popd
