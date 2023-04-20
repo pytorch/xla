@@ -935,9 +935,9 @@ def send_cpu_data_to_device(data, device, input_sharding=None):
     devices = [str(device)] * len(tensors)
     xtensors = torch_xla._XLAC._xla_tensors_from_aten(tensors, devices)
     if input_sharding:
-      assert(len(xtensors) == 2), \
-        f"Expected input data and label pair, but got {xtensors}."
-      input_sharding.apply(xtensors[0])
+      for xtensor in xtensors:
+        if input_sharding.can_apply(xtensor):
+          input_sharding.apply(xtensor)
     return xtensors
 
   def select_fn(v):
