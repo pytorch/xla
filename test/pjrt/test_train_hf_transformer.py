@@ -96,23 +96,25 @@ def finetune(rank, train_dataset, test_dataset, tokenizer, flags):
     metric = evaluate.load("sacrebleu")
     model.eval()
 
-    i = 0
     for batch in loader:
       with torch.no_grad():
         outputs = model(**batch)
 
+      print('rank: ', rank, ', test_loop_fn() done with model(**batch)', flush=True)
       logits = outputs.logits
       predictions = torch.argmax(logits, dim=-1)
+      print('rank: ', rank, ', test_loop_fn() done with torch.argmax', flush=True)
 
       decoded_preds = [
           pred.strip() for pred in tokenizer.batch_decode(
               predictions, skip_special_tokens=True)
       ]
+      print('rank: ', rank, ', test_loop_fn() done with decoded_preds', flush=True)
       decoded_labels = [[label.strip()] for label in tokenizer.batch_decode(
           batch["labels"], skip_special_tokens=True)]
+      print('rank: ', rank, ', test_loop_fn() done with decoded_labels', flush=True)
       metric.add_batch(predictions=decoded_preds, references=decoded_labels)
-      print('rank: ', rank, ', test_loop_fn() finishes processing batch=', i, flush=True)
-      i += 1
+      print('rank: ', rank, ', test_loop_fn() finishes processing batch', flush=True)
 
     print('rank: ', rank, ', test_loop_fn() finishes evaluating', flush=True)
     eval_metric = metric.compute()
