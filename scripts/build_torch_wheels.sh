@@ -199,7 +199,7 @@ function install_and_setup_conda() {
   conda activate "$ENVNAME"
   export CMAKE_PREFIX_PATH="$(dirname $(which conda))/../"
 
-  conda install -y numpy pyyaml setuptools cmake cffi typing tqdm coverage tensorboard hypothesis dataclasses
+  conda install -y numpy pyyaml setuptools==65.6.3 cmake cffi typing tqdm coverage tensorboard hypothesis dataclasses
   if [[ $(uname -m) == "x86_64" ]]; then
     # Overwrite mkl packages here, since nomkl conflicts with the anaconda env setup.
     conda remove -y tbb
