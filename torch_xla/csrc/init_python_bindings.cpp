@@ -154,23 +154,6 @@ std::vector<XLATensorPtr> GetXlaTensors(const std::vector<at::Tensor>& tensors,
   return xtensors;
 }
 
-AllReduceType GetReduceType(const std::string& reduce_type) {
-  if (reduce_type == "sum") {
-    return AllReduceType::kSum;
-  } else if (reduce_type == "mul") {
-    return AllReduceType::kMul;
-  } else if (reduce_type == "and") {
-    return AllReduceType::kAnd;
-  } else if (reduce_type == "or") {
-    return AllReduceType::kOr;
-  } else if (reduce_type == "min") {
-    return AllReduceType::kMin;
-  } else if (reduce_type == "max") {
-    return AllReduceType::kMax;
-  }
-  XLA_ERROR() << "Unknown AllReduce type: " << reduce_type;
-}
-
 std::vector<std::vector<int64_t>> CreateReduceGroups(const py::list& groups) {
   std::vector<std::vector<int64_t>> replica_groups;
   for (auto& group : groups) {
