@@ -336,7 +336,8 @@ std::pair<XLATensorPtr, torch::lazy::Value> all_reduce(
     std::vector<std::vector<int64_t>> groups, bool pin_layout) {
   std::vector<torch::lazy::Value> input_values({input->GetIrValue()});
   torch::lazy::NodePtr node = torch::lazy::MakeNode<AllReduce>(
-      reduce_type, input_values, token, scale, std::move(groups), pin_layout);
+      reduce_type, input_values, GetAllReduceToken(input->GetDevice()), scale, std::move(groups), pin_layout);
+  SetAllReduceToken(std::make_shared<torch::lazy::Value>(node, 1));
   return {input->CreateFrom(torch::lazy::Value(node, 0)),
           torch::lazy::Value(node, 1)};
 }
