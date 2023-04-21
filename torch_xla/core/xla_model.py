@@ -450,6 +450,7 @@ def all_reduce(reduce_type, inputs, scale=1.0, groups=None, pin_layout=True):
     result = None
     if scale == 1.0 and groups == [] and pin_layout:
       # TODO(alanwaketan): Support groups.
+      # Only c10d_functional version cc ops are traceable by Dynamo.
       result = torch.ops.c10d_functional.all_reduce(inputs, reduce_type, "", [],
                                                     0)
     else:
