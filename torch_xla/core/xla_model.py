@@ -30,6 +30,7 @@ _DEVICE_CONTEXTS_LOCK = threading.Lock()
 _WORLD_SIZE = None
 _ORDINAL = None
 
+
 def _init_world_size_ordinal():
   global _WORLD_SIZE, _ORDINAL
 
@@ -37,12 +38,13 @@ def _init_world_size_ordinal():
     return
 
   # We don't support V3-8. See Note [V3-8 Threading]
-  if tpu.version() <= 3:
+  if tpu.version() < 3:
     return
 
   if _WORLD_SIZE is None:
     _WORLD_SIZE = xrt_world_size()
     _ORDINAL = get_ordinal()
+
 
 class DeviceContext(object):
 
@@ -113,6 +115,7 @@ def xrt_world_size(defval=1):
 
   if pjrt.using_pjrt():
     return pjrt.world_size()
+
   return xu.getenv_as(xenv.WORLD_SIZE, int, defval=defval)
 
 
@@ -134,6 +137,7 @@ def get_ordinal(defval=0):
 
   if pjrt.using_pjrt():
     return pjrt.global_ordinal()
+
   return xu.getenv_as(xenv.ORDINAL, int, defval=defval)
 
 
