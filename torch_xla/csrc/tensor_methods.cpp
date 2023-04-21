@@ -337,7 +337,8 @@ XLATensorPtr all_reduce(const XLATensorPtr& input, AllReduceType reduce_type,
   torch::lazy::NodePtr node = torch::lazy::MakeNode<AllReduce>(
       reduce_type, input_values, GetAllReduceToken(input->GetDevice()), scale,
       std::move(groups), pin_layout);
-  SetAllReduceToken(input->GetDevice(), std::make_shared<torch::lazy::Value>(node, 1));
+  SetAllReduceToken(input->GetDevice(),
+                    std::make_shared<torch::lazy::Value>(node, 1));
   return input->CreateFrom(torch::lazy::Value(node, 0));
 }
 
