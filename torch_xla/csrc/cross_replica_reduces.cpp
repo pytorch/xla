@@ -11,9 +11,15 @@
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/layout_manager.h"
 #include "torch_xla/csrc/token_handler.h"
+#include "torch_xla/csrc/xla_graph_executor.h"
 
 namespace torch_xla {
 namespace {
+
+// For V3-8 + PJRT, we have 4 processes and each process has 2 threads to manage
+// the 8 cores. Therefore, we need different tokens for different threads.
+std::unordered_map<int64_t, std::shared_ptr<torch::lazy::Value>>
+    g_all_reduce_tokens;
 
 struct PerTypeContext {
   std::vector<xla::XlaOp> ops;
@@ -80,6 +86,19 @@ std::vector<xla::ReplicaGroup> CreateReduceGroups(
     reduce_groups.push_back(std::move(rgroup));
   }
   return reduce_groups;
+}
+
+std::shared_ptr<torch::lazy::Value> CreateToken(
+    const torch::lazy::BackendDevice& device) {
+  // This should be using xla::CreateToken() once we have added Token support to
+  // XLA AllReduce(). Meanwhile we use a constant as token, and we handle it
+  // accordingly in cross_replica_reduces.cpp.
+  // This needs to be device data (hence coming in as XLA computation parameter)
+  // as otherwise the XLA compiler passes will remove it, vanishing its
+  // sequencing effects.
+  torch::lazy::Value ir_value = XLAGraphExecutor::Get()->GetDeviceDataIrValue(
+      0.0, xla::PrimitiveType::F32, device);
+  return std::make_shared<torch::lazy::Value>(std::move(ir_value));
 }
 
 }  // namespace
@@ -257,6 +276,21 @@ ReduceScatterResult BuildReduceScatter(
   }
 
   return {reduce_result, token_handler.GetNewToken(reduce_result)};
+}
+
+const torch::lazy::Value& GetAllReduceToken(
+    const torch::lazy::BackendDevice& device) {
+  auto it = g_all_reduce_tokens.find(device.ordinal());
+  if (it == g_all_reduce_tokens.end() || it->second == nullptr) {
+    g_all_reduce_tokens[device.ordinal()] = CreateToken(device);
+    return *g_all_reduce_tokens[device.ordinal()];
+  }
+  return *it->second;
+}
+
+void SetAllReduceToken(const torch::lazy::BackendDevice& device,
+                       const std::shared_ptr<torch::lazy::Value>& token) {
+  g_all_reduce_tokens[device.ordinal()] = token;
 }
 
 }  // namespace torch_xla
