@@ -54,7 +54,7 @@ def finetune(rank, train_dataset, test_dataset, tokenizer, flags):
       drop_last=True,
       generator=rng)
   test_loader = torch.utils.data.DataLoader(
-      train_dataset,
+      test_dataset,
       batch_size=flags.batch_size,
       shuffle=False,
       num_workers=flags.num_workers,
