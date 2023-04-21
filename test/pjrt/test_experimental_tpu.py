@@ -48,6 +48,18 @@ class TestExperimentalTpu(parameterized.TestCase):
       self.assertEqual(tpu.num_available_chips(), num_tpu_chips)
 
   @parameterized.named_parameters(
+      ('v2-8', 2, 4, 8),
+      ('v3-8', 3, 4, 8),
+      ('v4-8', 4, 4, 4),
+      ('v4-8_one_chip', 4, 1, 1),
+  )
+  def test_num_available_devices(self, version, num_tpu_chips, expected):
+    with mock.patch.object(
+        tpu, 'version', return_value=version), mock.patch.object(
+            tpu, 'num_available_chips', return_value=num_tpu_chips):
+      self.assertEqual(tpu.num_available_devices(), expected)
+
+  @parameterized.named_parameters(
       ('default_one_host', None, 4),
       ('one_process_one_host', '1,1,1', 1),
       ('multi_process_one_host', '2,2,1', 4),
