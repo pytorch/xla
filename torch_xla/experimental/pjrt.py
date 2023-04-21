@@ -235,6 +235,11 @@ def _run_thread_per_device(
   def _thread_fn(device: torch.device):
     torch_xla._XLAC._xla_set_default_device(device)
 
+    # Belows are workaround to cache the ordinal and world_size such that
+    # Dynamo won't do graph breaks when they are called.
+    xm.xrt_world_size()
+    xm.get_ordinal()
+
     return fn()
 
   with concurrent.futures.ThreadPoolExecutor(
