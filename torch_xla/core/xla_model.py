@@ -9,6 +9,7 @@ import torch.distributed._functional_collectives
 import torch.nn.functional as F
 import torch_xla
 from torch_xla.experimental import pjrt
+from torch_xla.experimental import tpu
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.debug.metrics_saver as ms
 import torch_xla.utils.utils as xu
@@ -26,6 +27,22 @@ REDUCE_MAX = 'max'
 _DEVICE_CONTEXTS = dict()
 _DEVICE_CONTEXTS_LOCK = threading.Lock()
 
+_WORLD_SIZE = None
+_ORDINAL = None
+
+def _init_world_size_ordinal():
+  global _WORLD_SIZE, _ORDINAL
+
+  if not pjrt.using_pjrt():
+    return
+
+  # We don't support V3-8. See Note [V3-8 Threading]
+  if tpu.version() <= 3:
+    return
+
+  if _WORLD_SIZE is None:
+    _WORLD_SIZE = xrt_world_size()
+    _ORDINAL = get_ordinal()
 
 class DeviceContext(object):
 
@@ -79,9 +96,6 @@ def get_xla_supported_devices(devkind=None, max_devices=None):
       return kind_devices[:max_devices] if max_devices else kind_devices
 
 
-g_xrt_world_size = None
-
-
 def xrt_world_size(defval=1):
   """Retrieves the number of devices which is taking part of the replication.
 
@@ -93,20 +107,13 @@ def xrt_world_size(defval=1):
   Returns:
     The number of devices which is taking part of the replication.
   """
-  global g_xrt_world_size
-  if g_xrt_world_size is not None:
-    return g_xrt_world_size
+  global _WORLD_SIZE
+  if _WORLD_SIZE is not None:
+    return _WORLD_SIZE
 
   if pjrt.using_pjrt():
-    g_xrt_world_size = pjrt.world_size()
-  else:
-    g_xrt_world_size = xu.getenv_as(xenv.WORLD_SIZE, int, defval=defval)
-  return g_xrt_world_size
-
-
-# See Note [V3-8 Threading]
-g_ordinals = {}
-g_thread_id = None
+    return pjrt.world_size()
+  return xu.getenv_as(xenv.WORLD_SIZE, int, defval=defval)
 
 
 def get_ordinal(defval=0):
@@ -122,17 +129,12 @@ def get_ordinal(defval=0):
   Returns:
     The replication ordinal of the current thread.
   """
-  global g_ordinals
-  global g_thread_id
-  if g_thread_id is not None:
-    return g_ordinals[g_thread_id]
-  g_thread_id = threading.get_native_id()
+  if _ORDINAL is not None:
+    return _ORDINAL
 
   if pjrt.using_pjrt():
-    g_ordinals[g_thread_id] = pjrt.global_ordinal()
-  else:
-    g_ordinals[g_thread_id] = xu.getenv_as(xenv.ORDINAL, int, defval=defval)
-  return g_ordinals[g_thread_id]
+    return pjrt.global_ordinal()
+  return xu.getenv_as(xenv.ORDINAL, int, defval=defval)
 
 
 def get_local_ordinal(defval=0):
