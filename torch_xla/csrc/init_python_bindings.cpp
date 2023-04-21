@@ -205,18 +205,14 @@ std::shared_ptr<torch::lazy::Value> AllReduceInPlace(
                                  scale, replica_groups, pin_layout));
 }
 
-std::pair<at::Tensor, std::shared_ptr<torch::lazy::Value>> AllReduce(
-    const std::string& reduce_type, const at::Tensor& input,
-    const std::shared_ptr<torch::lazy::Value>& token, double scale,
-    const std::vector<std::vector<int64_t>>& replica_groups, bool pin_layout) {
-  XLATensorPtr result;
-  torch::lazy::Value new_token;
-  std::tie(result, new_token) = tensor_methods::all_reduce(
-      bridge::GetXlaTensor(input), *token, GetReduceType(reduce_type), scale,
-      replica_groups, pin_layout);
-  return std::pair<at::Tensor, std::shared_ptr<torch::lazy::Value>>(
-      bridge::AtenFromXlaTensor(std::move(result)),
-      std::make_shared<torch::lazy::Value>(new_token));
+at::Tensor AllReduce(const std::string& reduce_type, const at::Tensor& input,
+                     double scale,
+                     const std::vector<std::vector<int64_t>>& replica_groups,
+                     bool pin_layout) {
+  auto result = tensor_methods::all_reduce(bridge::GetXlaTensor(input),
+                                           GetReduceType(reduce_type), scale,
+                                           replica_groups, pin_layout);
+  return bridge::AtenFromXlaTensor(std::move(result));
 }
 
 std::pair<at::Tensor, std::shared_ptr<torch::lazy::Value>> ReduceScatter(
@@ -1013,25 +1009,18 @@ void InitXlaModuleBindings(py::module m) {
         }
         return new_token;
       });
-  m.def("_xla_all_reduce",
-        [](const std::string& reduce_type, const at::Tensor& input,
-           const std::shared_ptr<torch::lazy::Value>& token, double scale,
-           const py::list& groups, bool pin_layout) {
-          std::vector<std::vector<int64_t>> replica_groups =
-              CreateReduceGroups(groups);
-          at::Tensor result;
-          std::shared_ptr<torch::lazy::Value> new_token;
-          {
-            NoGilSection nogil;
-            std::tie(result, new_token) = AllReduce(
-                reduce_type, input, token, scale, replica_groups, pin_layout);
-          }
-          auto result_tuple = py::tuple(2);
-          result_tuple[0] = torch::autograd::make_variable(
-              result, /*requires_grad=*/input.requires_grad());
-          result_tuple[1] = new_token;
-          return result_tuple;
-        });
+  m.def("_xla_all_reduce", [](const std::string& reduce_type,
+                              const at::Tensor& input, double scale,
+                              const py::list& groups, bool pin_layout) {
+    std::vector<std::vector<int64_t>> replica_groups =
+        CreateReduceGroups(groups);
+    at::Tensor result;
+    {
+      NoGilSection nogil;
+      result = AllReduce(reduce_type, input, scale, replica_groups, pin_layout);
+    }
+    return result;
+  });
   m.def("_xla_all_to_all",
         [](const at::Tensor& input,
            const std::shared_ptr<torch::lazy::Value>& token,

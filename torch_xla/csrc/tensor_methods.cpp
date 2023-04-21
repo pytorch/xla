@@ -330,15 +330,16 @@ XLATensorPtr DispatchComparisonOp(c10::Symbol kind, const XLATensorPtr& input,
 //////////////////////////////////////////////////////////////////////////////
 // XLA dedicated operators follows here, listed in alphabetical order.
 //////////////////////////////////////////////////////////////////////////////
-std::pair<XLATensorPtr, torch::lazy::Value> all_reduce(
-    const XLATensorPtr& input, const torch::lazy::Value& token,
-    AllReduceType reduce_type, double scale,
-    std::vector<std::vector<int64_t>> groups, bool pin_layout) {
+XLATensorPtr all_reduce(const XLATensorPtr& input, AllReduceType reduce_type,
+                        double scale, std::vector<std::vector<int64_t>> groups,
+                        bool pin_layout) {
   std::vector<torch::lazy::Value> input_values({input->GetIrValue()});
   torch::lazy::NodePtr node = torch::lazy::MakeNode<AllReduce>(
-      reduce_type, input_values, token, scale, std::move(groups), pin_layout);
-  return {input->CreateFrom(torch::lazy::Value(node, 0)),
-          torch::lazy::Value(node, 1)};
+      reduce_type, input_values, GetAllReduceToken(input->GetDevice()), scale,
+      std::move(groups), pin_layout);
+  SetAllReduceToken(input->GetDevice(),
+                    std::make_shared<torch::lazy::Value>(node, 1));
+  return input->CreateFrom(torch::lazy::Value(node, 0));
 }
 
 torch::lazy::Value all_reduce_(XLATensorPtr& input,
