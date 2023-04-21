@@ -16,12 +16,9 @@
 namespace torch_xla {
 namespace {
 
-struct AllReduceToken {
-  std::shared_ptr<torch::lazy::Value> token;
-  std::mutex lock;
-};
-
-AllReduceToken g_all_reduce_token;
+// For V3, we have 4 processes and each process has 2 threads to manage the 8 cores.
+// Therefore, we need different tokens for different threads.
+std::unordered_map<int64_t, std::shared_ptr<torch::lazy::Value>> g_all_reduce_tokens;
 
 struct PerTypeContext {
   std::vector<xla::XlaOp> ops;
@@ -282,16 +279,16 @@ ReduceScatterResult BuildReduceScatter(
 
 const torch::lazy::Value& GetAllReduceToken(
     const torch::lazy::BackendDevice& device) {
-  if (!g_all_reduce_token.token) {
-    std::lock_guard<std::mutex> lock(g_all_reduce_token.lock);
-    g_all_reduce_token.token = CreateToken(device);
+  auto it = g_all_reduce_tokens.find(device.ordinal());
+  if (it == g_all_reduce_tokens.end() || it->second == nullptr) {
+    g_all_reduce_tokens[device.ordinal()] = CreateToken(device);
+    return *g_all_reduce_tokens[device.ordinal()];
   }
-  return *g_all_reduce_token.token;
+  return *it->second;
 }
 
-void SetAllReduceToken(const std::shared_ptr<torch::lazy::Value>& token) {
-  std::lock_guard<std::mutex> lock(g_all_reduce_token.lock);
-  g_all_reduce_token.token = token;
+void SetAllReduceToken(const torch::lazy::BackendDevice& device, const std::shared_ptr<torch::lazy::Value>& token) {
+  g_all_reduce_tokens[device.ordinal()] = token;
 }
 
 }  // namespace torch_xla

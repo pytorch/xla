@@ -1607,8 +1607,9 @@ void InitXlaModuleBindings(py::module m) {
           return GetAllReduceToken(device);
         });
   m.def("_set_all_reduce_token",
-        [](const std::shared_ptr<torch::lazy::Value>& token) {
-          SetAllReduceToken(token);
+        [](const std::string& device_str, const std::shared_ptr<torch::lazy::Value>& token) {
+          auto device = GetDeviceOrCurrent(device_str);
+          SetAllReduceToken(device, token);
         });
 
   /* The distributed runtime service is used by the PjRt GPU client. */

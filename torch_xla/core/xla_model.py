@@ -272,7 +272,7 @@ def set_replication(device, devices):
   else:
     torch_xla._XLAC._xla_set_replication_devices([])
     devctx.device_index = 0
-  torch_xla._XLAC._set_all_reduce_token(None)
+  torch_xla._XLAC._set_all_reduce_token(devctx.device, None)
   torch_xla._XLAC._xla_set_default_device(device)
 
 
@@ -449,10 +449,10 @@ def all_reduce(reduce_type, inputs, scale=1.0, groups=None, pin_layout=True):
   if isinstance(inputs, torch.Tensor):
     result = torch_xla._XLAC._xla_all_reduce(reduce_type, inputs, token, scale,
                                              groups, pin_layout)
-    torch_xla._XLAC._set_all_reduce_token(result[1])
+    torch_xla._XLAC._set_all_reduce_token(devctx.device, result[1])
     results = [result[0]]
   else:
-    torch_xla._XLAC._set_all_reduce_token(
+    torch_xla._XLAC._set_all_reduce_token(devctx.device,
         torch_xla._XLAC._xla_all_reduce_inplace(reduce_type, inputs, token,
                                                 scale, groups, pin_layout))
     results = inputs
@@ -546,12 +546,12 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
     new_token = torch_xla._XLAC._xla_all_gather_out(output, value, token, dim,
                                                     shard_count, groups or [],
                                                     pin_layout)
-    torch_xla._XLAC._set_all_reduce_token(new_token)
+    torch_xla._XLAC._set_all_reduce_token(devctx.device, new_token)
     return output
 
   result = torch_xla._XLAC._xla_all_gather(value, token, dim, shard_count,
                                            groups or [], pin_layout)
-  torch_xla._XLAC._set_all_reduce_token(result[1])
+  torch_xla._XLAC._set_all_reduce_token(devctx.device, result[1])
   return result[0]
 
 
@@ -588,7 +588,7 @@ def all_to_all(value,
   result = torch_xla._XLAC._xla_all_to_all(value, token, split_dimension,
                                            concat_dimension, split_count,
                                            groups or [], pin_layout)
-  torch_xla._XLAC._set_all_reduce_token(result[1])
+  torch_xla._XLAC._set_all_reduce_token(devctx.device, result[1])
   return result[0]
 
 
@@ -613,7 +613,7 @@ def collective_permute(value, pairs):
   """
   token, devctx = _get_all_reduce_token()
   result = torch_xla._XLAC._xla_collective_permute(value, token, pairs)
-  torch_xla._XLAC._set_all_reduce_token(result[1])
+  torch_xla._XLAC._set_all_reduce_token(devctx.device, result[1])
   return result[0]
 
 
@@ -663,7 +663,7 @@ def send(value, channel_id):
   # The input will be returned as result.
   input_as_result, new_token = torch_xla._XLAC._xla_send(
       value, token, channel_id)
-  torch_xla._XLAC._set_all_reduce_token(new_token)
+  torch_xla._XLAC._set_all_reduce_token(devctx.device, new_token)
   return input_as_result
 
 
@@ -678,7 +678,7 @@ def recv(output, channel_id):
   """
   token, devctx = _get_all_reduce_token()
   result, new_token = torch_xla._XLAC._xla_recv(output, token, channel_id)
-  torch_xla._XLAC._set_all_reduce_token(new_token)
+  torch_xla._XLAC._set_all_reduce_token(devctx.device, new_token)
   return result
 
 
@@ -727,13 +727,13 @@ def reduce_scatter(reduce_type,
                                                         scatter_dim,
                                                         shard_count, groups or
                                                         [], pin_layout)
-    torch_xla._XLAC._set_all_reduce_token(new_token)
+    torch_xla._XLAC._set_all_reduce_token(devctx.device, new_token)
     return output
 
   result = torch_xla._XLAC._xla_reduce_scatter(reduce_type, input, token, scale,
                                                scatter_dim, shard_count,
                                                groups or [], pin_layout)
-  torch_xla._XLAC._set_all_reduce_token(result[1])
+  torch_xla._XLAC._set_all_reduce_token(devctx.device, result[1])
   return result[0]
 
 
@@ -803,7 +803,7 @@ def mark_step(wait=False):
   if is_master_ordinal():
     ms.save_metrics()
   devctx = _run_step_closures()
-  torch_xla._XLAC._set_all_reduce_token(None)
+  torch_xla._XLAC._set_all_reduce_token(devctx.device, None)
 
 
 def wait_device_ops(devices=[]):
