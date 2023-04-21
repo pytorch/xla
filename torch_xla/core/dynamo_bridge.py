@@ -205,21 +205,6 @@ class XlaOperatorSupport(torch.fx.passes.operator_support.OperatorSupport):
 def is_xla_tensor(tensor: torch.Tensor) -> bool:
   return tensor.device.type == "xla"
 
-"""
-def maybe_partition_graph(xla_model: torch.fx.GraphModule):
-  supported_ops = XlaOperatorSupport()
-  partitioner = CapabilityBasedPartitioner(xla_model, supported_ops)
-  partitions = partitioner.propose_partitions()
-  partitioned_graph = partitioner.fuse_partitions(partitions)
-
-  for node in partitioned_graph.graph.nodes:
-    if node.op == "call_module" and "fused_" in node.name:
-      fused_module = getattr(partitioned_graph, node.name)
-      fused_module._wrapped_call = extract_compiled_graph
-
-  return partitioned_graph
-"""
-
 def collect_inputs(model, *args):
   model.xla_args = args
   delattr(model, '_wrapped_call')
@@ -250,14 +235,10 @@ def extract_internal(xla_model: torch.fx.GraphModule):
       tensor_id: i for i, tensor_id in enumerate(args_tensor_ids)
   }
 
-  # partition the graph for unsupported ops
-  #xla_model = maybe_partition_graph(xla_model)
-
   # get_fallback_ops below uses counters to detect torch_xla fallbacks.
   # Clear the counters here so we ignore pre-existing fallbacks and
   # only detect fallbacks happening when running the xla_model below.
   metrics.clear_counters()
-  #delattr(xla_model, '_wrapped_call')
   xla_out = xla_model(*xla_args)
 
   fallback_ops = get_fallback_ops()
@@ -355,15 +336,7 @@ def extract_internal(xla_model: torch.fx.GraphModule):
     none_remover.add_nones(result)
     return result
 
-  class OptimizedMod(torch.nn.Module):
-    def __init__(self):
-      super().__init__()
-
-    def forward(self, *args):
-      return optimized_mod(*args)
-
-  optimized = OptimizedMod()
-  return optimized
+  return optimized_mod
 
 def extract_compile_graph(xla_model, xla_args):
   supported_ops = XlaOperatorSupport()
@@ -382,7 +355,11 @@ def extract_compile_graph(xla_model, xla_args):
     if node.op == "call_module" and "fused_" in node.name:
       fused_module = getattr(partitioned_graph, node.name)
       partitioned_graph.delete_submodule(node.target)
-      partitioned_graph.add_submodule(node.target, extract_internal(fused_module)) 
-  
+      with partitioned_graph.graph.inserting_after(node):
+        new_node = partitioned_graph.graph.call_function(extract_internal(fused_module), node.args, None)
+        node.replace_all_uses_with(new_node)
+      partitioned_graph.graph.erase_node(node)
+ 
+  partitioned_graph.recompile()
   return partitioned_graph
 
