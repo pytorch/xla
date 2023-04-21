@@ -78,7 +78,10 @@ def get_xla_supported_devices(devkind=None, max_devices=None):
     if kind_devices:
       return kind_devices[:max_devices] if max_devices else kind_devices
 
+
 g_xrt_world_size = None
+
+
 def xrt_world_size(defval=1):
   """Retrieves the number of devices which is taking part of the replication.
 
@@ -100,9 +103,12 @@ def xrt_world_size(defval=1):
     g_xrt_world_size = xu.getenv_as(xenv.WORLD_SIZE, int, defval=defval)
   return g_xrt_world_size
 
+
 # See Note [V3-8 Threading]
-g_ordinal = {}
+g_ordinals = {}
 g_thread_id = None
+
+
 def get_ordinal(defval=0):
   """Retrieves the replication ordinal of the current thread.
 
@@ -116,17 +122,17 @@ def get_ordinal(defval=0):
   Returns:
     The replication ordinal of the current thread.
   """
-  global g_ordinal
+  global g_ordinals
   global g_thread_id
   if g_thread_id is not None:
-    return g_ordinal[g_thread_id]
+    return g_ordinals[g_thread_id]
   g_thread_id = threading.get_native_id()
 
   if pjrt.using_pjrt():
-    g_ordinal[g_thread_id] = pjrt.global_ordinal()
+    g_ordinals[g_thread_id] = pjrt.global_ordinal()
   else:
-    g_ordinal[g_thread_id] = xu.getenv_as(xenv.ORDINAL, int, defval=defval)
-  return g_ordinal[g_thread_id]
+    g_ordinals[g_thread_id] = xu.getenv_as(xenv.ORDINAL, int, defval=defval)
+  return g_ordinals[g_thread_id]
 
 
 def get_local_ordinal(defval=0):

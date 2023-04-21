@@ -5,8 +5,10 @@ import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
 
+
 def all_gather(tensor, dim):
   return xm.all_gather(tensor, dim=dim)
+
 
 def _mp_fn(index):
   device = xm.xla_device()
@@ -27,7 +29,8 @@ def _mp_fn(index):
     # Dynamo won't do graph breaks.
     xm.get_ordinal()
     xm.xrt_world_size()
-    compiled_all_gather= torch.compile(all_gather, backend='torchxla_trace_once', fullgraph=True)
+    compiled_all_gather = torch.compile(
+        all_gather, backend='torchxla_trace_once', fullgraph=True)
     ordinal_tensor = torch.tensor([index], dtype=torch.float).to(device)
     result = compiled_all_gather(ordinal_tensor, dim=0)
 
