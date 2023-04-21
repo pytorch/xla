@@ -74,7 +74,6 @@ def save(data, path, master_only=True, global_master=False):
   ref_data = _rewrite_data(_get_tensors_folder(path), data, should_write_data)
   if should_write_data:
     torch.save(ref_data, path)
-  xm.rendezvous('torch_xla.utils.serialization.save')
 
 
 def load(path):
