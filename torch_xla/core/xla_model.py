@@ -885,7 +885,7 @@ def optimizer_step(optimizer,
   return loss
 
 
-def save(data, file_or_path, master_only=True, global_master=False, sync=True):
+def save(data, file_or_path, master_only=True, global_master=False):
   """Saves the input data into a file.
 
   The saved data is transferred to PyTorch CPU device before being saved, so a
@@ -920,8 +920,6 @@ def save(data, file_or_path, master_only=True, global_master=False, sync=True):
   cpu_data = _maybe_convert_to_cpu(data, convert=should_write_data)
   if should_write_data:
     torch.save(cpu_data, file_or_path)
-  if sync:
-    rendezvous('torch_xla.core.xla_model.save')
 
 
 def _maybe_convert_to_cpu(data, convert=True):
