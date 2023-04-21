@@ -23,6 +23,26 @@ variable "name" {
   type = string
 }
 
+data "google_project" "project" {}
+
+resource "google_service_account" "runner_account" {
+  account_id   = "terraform-applier"
+  display_name = "Runner of ${var.name}"
+  description  = "Service Account that runs ${var.name} trigger. Has roles/editor permissions"
+}
+
+resource "google_project_iam_member" "runner_is_editor" {
+  for_each = toset([
+    "roles/storage.admin",
+    "roles/resourcemanager.projectIamAdmin",
+    "roles/editor",
+  ])
+
+  project = data.google_project.project.project_id
+  role    = each.value
+  member  = "serviceAccount:${google_service_account.runner_account.email}"
+}
+
 module "cloud_build" {
   source = "../build_trigger"
 
@@ -31,7 +51,8 @@ module "cloud_build" {
   timeout_minutes = 60
   worker_pool_id  = var.worker_pool_id
   description     = var.description
-
+  service_account = google_service_account.runner_account.id
+  logging         = "CLOUD_LOGGING_ONLY"
   trigger_on_push = { branch = var.branch }
 
   steps = [
