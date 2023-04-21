@@ -582,7 +582,7 @@
   <span class="k">else</span><span class="p">:</span>
     <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_set_replication_devices</span><span class="p">([])</span>
     <span class="n">devctx</span><span class="o">.</span><span class="n">device_index</span> <span class="o">=</span> <span class="mi">0</span>
-  <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="kc">None</span>
+  <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_set_all_reduce_token</span><span class="p">(</span><span class="n">devctx</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
   <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_set_default_device</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
 
 
@@ -722,10 +722,7 @@
 
 <span class="k">def</span> <span class="nf">_get_all_reduce_token</span><span class="p">():</span>
   <span class="n">devctx</span> <span class="o">=</span> <span class="n">_get_device_context</span><span class="p">()</span>
-  <span class="n">token</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">devctx</span><span class="p">,</span> <span class="s1">&#39;all_reduce_token&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
-  <span class="k">if</span> <span class="n">token</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="n">token</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_create_token</span><span class="p">(</span><span class="n">devctx</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
-    <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">token</span>
+  <span class="n">token</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_get_all_reduce_token</span><span class="p">(</span><span class="n">devctx</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
   <span class="k">return</span> <span class="n">token</span><span class="p">,</span> <span class="n">devctx</span>
 
 
@@ -762,11 +759,13 @@
   <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
     <span class="n">result</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_all_reduce</span><span class="p">(</span><span class="n">reduce_type</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span>
                                              <span class="n">groups</span><span class="p">,</span> <span class="n">pin_layout</span><span class="p">)</span>
-    <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_set_all_reduce_token</span><span class="p">(</span><span class="n">devctx</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">result</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
     <span class="n">results</span> <span class="o">=</span> <span class="p">[</span><span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
   <span class="k">else</span><span class="p">:</span>
-    <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_all_reduce_inplace</span><span class="p">(</span>
-        <span class="n">reduce_type</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span> <span class="n">groups</span><span class="p">,</span> <span class="n">pin_layout</span><span class="p">)</span>
+    <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_set_all_reduce_token</span><span class="p">(</span>
+        <span class="n">devctx</span><span class="o">.</span><span class="n">device</span><span class="p">,</span>
+        <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_all_reduce_inplace</span><span class="p">(</span><span class="n">reduce_type</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span>
+                                                <span class="n">scale</span><span class="p">,</span> <span class="n">groups</span><span class="p">,</span> <span class="n">pin_layout</span><span class="p">))</span>
     <span class="n">results</span> <span class="o">=</span> <span class="n">inputs</span>
 
   <span class="k">return</span> <span class="n">results</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="k">else</span> <span class="n">results</span></div>
@@ -858,12 +857,12 @@
     <span class="n">new_token</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_all_gather_out</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">dim</span><span class="p">,</span>
                                                     <span class="n">shard_count</span><span class="p">,</span> <span class="n">groups</span> <span class="ow">or</span> <span class="p">[],</span>
                                                     <span class="n">pin_layout</span><span class="p">)</span>
-    <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">new_token</span>
+    <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_set_all_reduce_token</span><span class="p">(</span><span class="n">devctx</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">new_token</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">output</span>
 
   <span class="n">result</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_all_gather</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">dim</span><span class="p">,</span> <span class="n">shard_count</span><span class="p">,</span>
                                            <span class="n">groups</span> <span class="ow">or</span> <span class="p">[],</span> <span class="n">pin_layout</span><span class="p">)</span>
-  <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+  <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_set_all_reduce_token</span><span class="p">(</span><span class="n">devctx</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">result</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
   <span class="k">return</span> <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
 
 
@@ -900,7 +899,7 @@
   <span class="n">result</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_all_to_all</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">split_dimension</span><span class="p">,</span>
                                            <span class="n">concat_dimension</span><span class="p">,</span> <span class="n">split_count</span><span class="p">,</span>
                                            <span class="n">groups</span> <span class="ow">or</span> <span class="p">[],</span> <span class="n">pin_layout</span><span class="p">)</span>
-  <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+  <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_set_all_reduce_token</span><span class="p">(</span><span class="n">devctx</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">result</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
   <span class="k">return</span> <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
 
 
@@ -925,7 +924,7 @@
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="n">token</span><span class="p">,</span> <span class="n">devctx</span> <span class="o">=</span> <span class="n">_get_all_reduce_token</span><span class="p">()</span>
   <span class="n">result</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_collective_permute</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">pairs</span><span class="p">)</span>
-  <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+  <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_set_all_reduce_token</span><span class="p">(</span><span class="n">devctx</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">result</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
   <span class="k">return</span> <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
 
@@ -975,7 +974,7 @@
   <span class="c1"># The input will be returned as result.</span>
   <span class="n">input_as_result</span><span class="p">,</span> <span class="n">new_token</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_send</span><span class="p">(</span>
       <span class="n">value</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">channel_id</span><span class="p">)</span>
-  <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">new_token</span>
+  <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_set_all_reduce_token</span><span class="p">(</span><span class="n">devctx</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">new_token</span><span class="p">)</span>
   <span class="k">return</span> <span class="n">input_as_result</span>
 
 
@@ -990,7 +989,7 @@
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="n">token</span><span class="p">,</span> <span class="n">devctx</span> <span class="o">=</span> <span class="n">_get_all_reduce_token</span><span class="p">()</span>
   <span class="n">result</span><span class="p">,</span> <span class="n">new_token</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_recv</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">channel_id</span><span class="p">)</span>
-  <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">new_token</span>
+  <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_set_all_reduce_token</span><span class="p">(</span><span class="n">devctx</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">new_token</span><span class="p">)</span>
   <span class="k">return</span> <span class="n">result</span>
 
 
@@ -1039,13 +1038,13 @@
                                                         <span class="n">scatter_dim</span><span class="p">,</span>
                                                         <span class="n">shard_count</span><span class="p">,</span> <span class="n">groups</span> <span class="ow">or</span>
                                                         <span class="p">[],</span> <span class="n">pin_layout</span><span class="p">)</span>
-    <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">new_token</span>
+    <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_set_all_reduce_token</span><span class="p">(</span><span class="n">devctx</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">new_token</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">output</span>
 
   <span class="n">result</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_reduce_scatter</span><span class="p">(</span><span class="n">reduce_type</span><span class="p">,</span> <span class="nb">input</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span>
                                                <span class="n">scatter_dim</span><span class="p">,</span> <span class="n">shard_count</span><span class="p">,</span>
                                                <span class="n">groups</span> <span class="ow">or</span> <span class="p">[],</span> <span class="n">pin_layout</span><span class="p">)</span>
-  <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+  <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_set_all_reduce_token</span><span class="p">(</span><span class="n">devctx</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">result</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
   <span class="k">return</span> <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 
 
@@ -1115,7 +1114,7 @@
   <span class="k">if</span> <span class="n">is_master_ordinal</span><span class="p">():</span>
     <span class="n">ms</span><span class="o">.</span><span class="n">save_metrics</span><span class="p">()</span>
   <span class="n">devctx</span> <span class="o">=</span> <span class="n">_run_step_closures</span><span class="p">()</span>
-  <span class="n">devctx</span><span class="o">.</span><span class="n">all_reduce_token</span> <span class="o">=</span> <span class="kc">None</span>
+  <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_set_all_reduce_token</span><span class="p">(</span><span class="n">devctx</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="wait_device_ops"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.wait_device_ops">[docs]</a><span class="k">def</span> <span class="nf">wait_device_ops</span><span class="p">(</span><span class="n">devices</span><span class="o">=</span><span class="p">[]):</span>
