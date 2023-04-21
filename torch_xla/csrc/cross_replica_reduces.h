@@ -81,6 +81,7 @@ ReduceScatterResult BuildReduceScatter(
 
 const torch::lazy::Value& GetAllReduceToken(
     const torch::lazy::BackendDevice& device);
-void SetAllReduceToken(const torch::lazy::BackendDevice& device, const std::shared_ptr<torch::lazy::Value>& token);
+void SetAllReduceToken(const torch::lazy::BackendDevice& device,
+                       const std::shared_ptr<torch::lazy::Value>& token);
 
 }  // namespace torch_xla

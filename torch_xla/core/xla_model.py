@@ -452,7 +452,8 @@ def all_reduce(reduce_type, inputs, scale=1.0, groups=None, pin_layout=True):
     torch_xla._XLAC._set_all_reduce_token(devctx.device, result[1])
     results = [result[0]]
   else:
-    torch_xla._XLAC._set_all_reduce_token(devctx.device,
+    torch_xla._XLAC._set_all_reduce_token(
+        devctx.device,
         torch_xla._XLAC._xla_all_reduce_inplace(reduce_type, inputs, token,
                                                 scale, groups, pin_layout))
     results = inputs

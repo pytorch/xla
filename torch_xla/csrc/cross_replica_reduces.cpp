@@ -16,9 +16,10 @@
 namespace torch_xla {
 namespace {
 
-// For V3, we have 4 processes and each process has 2 threads to manage the 8 cores.
-// Therefore, we need different tokens for different threads.
-std::unordered_map<int64_t, std::shared_ptr<torch::lazy::Value>> g_all_reduce_tokens;
+// For V3, we have 4 processes and each process has 2 threads to manage the 8
+// cores. Therefore, we need different tokens for different threads.
+std::unordered_map<int64_t, std::shared_ptr<torch::lazy::Value>>
+    g_all_reduce_tokens;
 
 struct PerTypeContext {
   std::vector<xla::XlaOp> ops;
@@ -287,7 +288,8 @@ const torch::lazy::Value& GetAllReduceToken(
   return *it->second;
 }
 
-void SetAllReduceToken(const torch::lazy::BackendDevice& device, const std::shared_ptr<torch::lazy::Value>& token) {
+void SetAllReduceToken(const torch::lazy::BackendDevice& device,
+                       const std::shared_ptr<torch::lazy::Value>& token) {
   g_all_reduce_tokens[device.ordinal()] = token;
 }
 
