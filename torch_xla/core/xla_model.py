@@ -5,6 +5,7 @@ import threading
 import time
 from typing import List, Optional
 import torch
+import torch.distributed._functional_collectives
 import torch.nn.functional as F
 import torch_xla
 from torch_xla.experimental import pjrt
@@ -446,8 +447,15 @@ def all_reduce(reduce_type, inputs, scale=1.0, groups=None, pin_layout=True):
   """
   groups = groups or []
   if isinstance(inputs, torch.Tensor):
-    result = torch_xla._XLAC._xla_all_reduce(reduce_type, inputs, scale, groups,
-                                             pin_layout)
+    result = None
+    if scale == 1.0 and groups == [] and pin_layout:
+      # TODO(alanwaketan): Support groups.
+      # Only c10d_functional version cc ops are traceable by Dynamo.
+      result = torch.ops.c10d_functional.all_reduce(inputs, reduce_type, "", [],
+                                                    0)
+    else:
+      result = torch_xla._XLAC._xla_all_reduce(reduce_type, inputs, scale,
+                                               groups, pin_layout)
     results = [result]
   else:
     token, devctx = _get_all_reduce_token()

@@ -6,10 +6,12 @@
 #include "third_party/xla_client/debug_macros.h"
 #include "third_party/xla_client/util.h"
 #include "torch/csrc/lazy/core/util.h"
+#include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/layout_manager.h"
+#include "torch_xla/csrc/tensor_methods.h"
 #include "torch_xla/csrc/token_handler.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
 
@@ -99,6 +101,31 @@ std::shared_ptr<torch::lazy::Value> CreateToken(
   torch::lazy::Value ir_value = XLAGraphExecutor::Get()->GetDeviceDataIrValue(
       0.0, xla::PrimitiveType::F32, device);
   return std::make_shared<torch::lazy::Value>(std::move(ir_value));
+}
+
+////////////////////////////////////////////////////////////////////////////////////
+// The traceable collectives integration follows here, listed in alphabetical
+// order. RFC: https://github.com/pytorch/pytorch/issues/93173
+////////////////////////////////////////////////////////////////////////////////////
+
+// tag is ignored as it's only used in PyTorch to provide backward compatibility
+// with the traditional process group API.
+at::Tensor all_reduce(const at::Tensor& self, c10::string_view reduceOp,
+                      c10::string_view /*tag*/, at::IntArrayRef /*ranks*/,
+                      int64_t /*group_size*/) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+  auto self_tensor = bridge::GetXlaTensor(self);
+  // TODO(alanwaketan): Use ranks and group_size to generate groups. Currently
+  // we just suse {} as a workaround. Scale is always 1.0 here, and we always
+  // pin layout.
+  auto result = tensor_methods::all_reduce(self_tensor, GetReduceType(reduceOp),
+                                           /*scale*/ 1.0,
+                                           /*groups*/ {}, /*pin_layout*/ true);
+  return bridge::AtenFromXlaTensor(result);
+}
+
+TORCH_LIBRARY_IMPL(c10d_functional, XLA, m) {
+  m.impl("all_reduce", all_reduce);
 }
 
 }  // namespace
@@ -291,6 +318,23 @@ const torch::lazy::Value& GetAllReduceToken(
 void SetAllReduceToken(const torch::lazy::BackendDevice& device,
                        const std::shared_ptr<torch::lazy::Value>& token) {
   g_all_reduce_tokens[device.ordinal()] = token;
+}
+
+AllReduceType GetReduceType(c10::string_view reduce_type) {
+  if (reduce_type == "sum") {
+    return AllReduceType::kSum;
+  } else if (reduce_type == "mul") {
+    return AllReduceType::kMul;
+  } else if (reduce_type == "and") {
+    return AllReduceType::kAnd;
+  } else if (reduce_type == "or") {
+    return AllReduceType::kOr;
+  } else if (reduce_type == "min") {
+    return AllReduceType::kMin;
+  } else if (reduce_type == "max") {
+    return AllReduceType::kMax;
+  }
+  XLA_ERROR() << "Unknown AllReduce type: " << reduce_type;
 }
 
 }  // namespace torch_xla

@@ -84,4 +84,6 @@ const torch::lazy::Value& GetAllReduceToken(
 void SetAllReduceToken(const torch::lazy::BackendDevice& device,
                        const std::shared_ptr<torch::lazy::Value>& token);
 
+AllReduceType GetReduceType(c10::string_view reduce_type);
+
 }  // namespace torch_xla
