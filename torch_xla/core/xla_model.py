@@ -78,7 +78,7 @@ def get_xla_supported_devices(devkind=None, max_devices=None):
     if kind_devices:
       return kind_devices[:max_devices] if max_devices else kind_devices
 
-
+g_xrt_world_size = None
 def xrt_world_size(defval=1):
   """Retrieves the number of devices which is taking part of the replication.
 
@@ -90,12 +90,17 @@ def xrt_world_size(defval=1):
   Returns:
     The number of devices which is taking part of the replication.
   """
+  global g_xrt_world_size
+  if g_xrt_world_size is not None:
+    return g_xrt_world_size
+
   if pjrt.using_pjrt():
-    return pjrt.world_size()
+    g_xrt_world_size = pjrt.world_size()
+  else:
+    g_xrt_world_size = xu.getenv_as(xenv.XRT_WORLD_SIZE, int, defval=defval)
+  return g_xrt_world_size
 
-  return xu.getenv_as(xenv.WORLD_SIZE, int, defval=defval)
-
-
+g_ordinal = None
 def get_ordinal(defval=0):
   """Retrieves the replication ordinal of the current thread.
 
@@ -109,10 +114,15 @@ def get_ordinal(defval=0):
   Returns:
     The replication ordinal of the current thread.
   """
-  if pjrt.using_pjrt():
-    return pjrt.global_ordinal()
+  global g_ordinal
+  if g_ordinal is not None:
+    return g_ordinal
 
-  return xu.getenv_as(xenv.ORDINAL, int, defval=defval)
+  if pjrt.using_pjrt():
+    g_ordinal = pjrt.global_ordinal()
+  else:
+    g_ordinal = xu.getenv_as(xenv.ORDINAL, int, defval=defval)
+  return g_ordinal
 
 
 def get_local_ordinal(defval=0):
@@ -533,8 +543,7 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
     A tensor which has, in the ``dim`` dimension, all the values from the
     participating replicas.
   """
-  if pin_layout and xla_device_hw(
-      value.device) in ('TPU', 'GPU', 'XPU') and output == None:
+  if pin_layout and output == None:
     # There is not an easy way to pin the all_gather layout on TPU and GPU, use
     # all_reduce based all_gather for this purpose.
     return _all_gather_using_all_reduce(
