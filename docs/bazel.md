@@ -103,7 +103,7 @@ Bazel comes with [remote caching](https://bazel.build/remote/caching) built in. 
 
 Remote caching is disabled by default but because it speeds up incremental builds by a huge margin, it is almost always recommended, and it is enabled by default in the CI automation and on Cloud Build.
 
-To authenticate on a machine, please ensure that you have the credentials present with `gcloud auth login --no-browser` or equivalent.
+To authenticate on a machine, please ensure that you have the credentials present with `gcloud auth application-default login --no-launch-browser` or equivalent.
 
 Using the remote cache configured by `remote_cache` configuration setup requires authentication with GCP.
 There are various ways to authenticate with GCP. For individual developers who have access to the development GCP project, one only needs to
@@ -121,6 +121,14 @@ Running the build with remote cache:
 ```bash
 BAZEL_REMOTE_CACHE=1 SILO_NAME="cache-silo-YOUR-USER" TPUVM_MODE=1 python setup.py bdist_wheel
 ```
+
+Adding 
+
+```bash
+GCLOUD_SERVICE_KEY_FILE=~/.config/gcloud/application_default_credentials.json
+```
+
+might help too if `bazel` cannot find the auth token.
 
 `YOUR-USER` here can the author's username or machine name, a unique name that ensures good cache behavior. Other `setup.py` functionality works as intended too (e.g. `develop`).
 
