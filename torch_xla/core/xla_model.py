@@ -27,6 +27,9 @@ REDUCE_MAX = 'max'
 _DEVICE_CONTEXTS = dict()
 _DEVICE_CONTEXTS_LOCK = threading.Lock()
 
+# Note [Dynamo WORLD_SIEZ and ORDINAL]
+# Belows are workaround to cache the ordinal and world_size such that
+# Dynamo won't do graph breaks when xm.xrt_world_size() and xm.get_ordinal() are called.
 _WORLD_SIZE = None
 _ORDINAL = None
 
@@ -38,7 +41,7 @@ def _init_world_size_ordinal():
     return
 
   # We don't support V3-8. See Note [V3-8 Threading]
-  if tpu.version() < 3:
+  if pjrt.device_type() == 'TPU' and tpu.version() < 4:
     return
 
   if _WORLD_SIZE is None:
