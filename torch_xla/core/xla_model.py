@@ -97,7 +97,7 @@ def xrt_world_size(defval=1):
   if pjrt.using_pjrt():
     g_xrt_world_size = pjrt.world_size()
   else:
-    g_xrt_world_size = xu.getenv_as(xenv.XRT_WORLD_SIZE, int, defval=defval)
+    g_xrt_world_size = xu.getenv_as(xenv.WORLD_SIZE, int, defval=defval)
   return g_xrt_world_size
 
 g_ordinal = None
