@@ -135,6 +135,7 @@ def get_ordinal(defval=0):
   Returns:
     The replication ordinal of the current thread.
   """
+  global _ORDINAL
   if _ORDINAL is not None:
     return _ORDINAL
 
