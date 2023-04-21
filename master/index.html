@@ -1029,7 +1029,7 @@ See <cite>xm.all_reduce</cite> for details.</p></li>
 
 <dl class="function">
 <dt id="torch_xla.core.xla_model.save">
-<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">save</code><span class="sig-paren">(</span><em class="sig-param">data</em>, <em class="sig-param">file_or_path</em>, <em class="sig-param">master_only=True</em>, <em class="sig-param">global_master=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#save"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.save" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">save</code><span class="sig-paren">(</span><em class="sig-param">data</em>, <em class="sig-param">file_or_path</em>, <em class="sig-param">master_only=True</em>, <em class="sig-param">global_master=False</em>, <em class="sig-param">sync=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#save"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.save" title="Permalink to this definition">¶</a></dt>
 <dd><p>Saves the input data into a file.</p>
 <p>The saved data is transferred to PyTorch CPU device before being saved, so a
 following <cite>torch.load()</cite> will load CPU data.
@@ -1054,6 +1054,9 @@ Default: True</p></li>
 controls whether every host’s master (if <code class="docutils literal notranslate"><span class="pre">global_master</span></code> is <code class="docutils literal notranslate"><span class="pre">False</span></code>)
 saves the content, or only the global master (ordinal 0).
 Default: False</p></li>
+<li><p><strong>sync</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether to synchronize all replicas after saving
+tensors. If True, all replicas must call <cite>xm.save</cite> or the main process
+will hang.</p></li>
 </ul>
 </dd>
 </dl>

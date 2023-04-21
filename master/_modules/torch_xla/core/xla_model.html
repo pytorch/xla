@@ -1189,7 +1189,7 @@
   <span class="k">return</span> <span class="n">loss</span></div>
 
 
-<div class="viewcode-block" id="save"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.save">[docs]</a><span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">file_or_path</span><span class="p">,</span> <span class="n">master_only</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">global_master</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<div class="viewcode-block" id="save"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.save">[docs]</a><span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">file_or_path</span><span class="p">,</span> <span class="n">master_only</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">global_master</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">sync</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Saves the input data into a file.</span>
 
 <span class="sd">  The saved data is transferred to PyTorch CPU device before being saved, so a</span>
@@ -1214,6 +1214,9 @@
 <span class="sd">      controls whether every host&#39;s master (if ``global_master`` is ``False``)</span>
 <span class="sd">      saves the content, or only the global master (ordinal 0).</span>
 <span class="sd">      Default: False</span>
+<span class="sd">    sync (bool, optional): Whether to synchronize all replicas after saving</span>
+<span class="sd">      tensors. If True, all replicas must call `xm.save` or the main process</span>
+<span class="sd">      will hang.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="n">should_write_data</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">master_only</span> <span class="ow">or</span> <span class="n">is_master_ordinal</span><span class="p">(</span>
       <span class="n">local</span><span class="o">=</span><span class="ow">not</span> <span class="n">global_master</span><span class="p">)</span>
@@ -1221,7 +1224,8 @@
   <span class="n">cpu_data</span> <span class="o">=</span> <span class="n">_maybe_convert_to_cpu</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">convert</span><span class="o">=</span><span class="n">should_write_data</span><span class="p">)</span>
   <span class="k">if</span> <span class="n">should_write_data</span><span class="p">:</span>
     <span class="n">torch</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">cpu_data</span><span class="p">,</span> <span class="n">file_or_path</span><span class="p">)</span>
-  <span class="n">rendezvous</span><span class="p">(</span><span class="s1">&#39;torch_xla.core.xla_model.save&#39;</span><span class="p">)</span></div>
+  <span class="k">if</span> <span class="n">sync</span><span class="p">:</span>
+    <span class="n">rendezvous</span><span class="p">(</span><span class="s1">&#39;torch_xla.core.xla_model.save&#39;</span><span class="p">)</span></div>
 
 
 <span class="k">def</span> <span class="nf">_maybe_convert_to_cpu</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">convert</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
