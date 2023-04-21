@@ -100,7 +100,9 @@ def xrt_world_size(defval=1):
     g_xrt_world_size = xu.getenv_as(xenv.WORLD_SIZE, int, defval=defval)
   return g_xrt_world_size
 
-g_ordinal = None
+# See Note [V3-8 Threading]
+g_ordinal = {}
+g_thread_id = None
 def get_ordinal(defval=0):
   """Retrieves the replication ordinal of the current thread.
 
@@ -115,14 +117,16 @@ def get_ordinal(defval=0):
     The replication ordinal of the current thread.
   """
   global g_ordinal
-  if g_ordinal is not None:
-    return g_ordinal
+  global g_thread_id
+  if g_thread_id is not None:
+    return g_ordinal[g_thread_id]
+  g_thread_id = threading.get_native_id()
 
   if pjrt.using_pjrt():
-    g_ordinal = pjrt.global_ordinal()
+    g_ordinal[g_thread_id] = pjrt.global_ordinal()
   else:
-    g_ordinal = xu.getenv_as(xenv.ORDINAL, int, defval=defval)
-  return g_ordinal
+    g_ordinal[g_thread_id] = xu.getenv_as(xenv.ORDINAL, int, defval=defval)
+  return g_ordinal[g_thread_id]
 
 
 def get_local_ordinal(defval=0):

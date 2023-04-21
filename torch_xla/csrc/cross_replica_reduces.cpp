@@ -18,6 +18,7 @@
 namespace torch_xla {
 namespace {
 
+// Note [V3-8 Threading]
 // For V3-8 + PJRT, we have 4 processes and each process has 2 threads to manage
 // the 8 cores. Therefore, we need different tokens for different threads.
 std::unordered_map<int64_t, std::shared_ptr<torch::lazy::Value>>
