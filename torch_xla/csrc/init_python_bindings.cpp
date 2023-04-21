@@ -820,10 +820,7 @@ std::vector<bool> check_materialization_helper(
         need_materialization.push_back(true);
       }
     } else {
-      // TODO: maybe also handle it is a XLATensor with tensor_data case
-      XLA_CHECK(false)
-          << "_check_tensor_need_materialization "
-             "currently does not handle XLATensor without XLAData and IR";
+			need_materialization.push_back(true);
     }
   }
   return need_materialization;
