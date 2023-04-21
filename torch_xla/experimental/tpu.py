@@ -106,10 +106,16 @@ def num_available_chips() -> int:
 
 
 def num_logical_cores_per_chip() -> int:
+  """Returns number of XLA TPU devices per physical chip on the current host."""
   return 2 if version() <= 3 else 1
 
 
 def num_available_devices() -> int:
+  """Returns number of XLA TPU devices on the current host.
+
+  Note: this does not intitialize the computation client and is safe to call
+  before `xmp.spawn`.
+  """
   return num_available_chips() * num_logical_cores_per_chip()
 
 
