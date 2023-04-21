@@ -1,7 +1,7 @@
 module "tpu_e2e_tests" {
   source = "../terraform_modules/xla_docker_build"
 
-  trigger_name = "ci-tpu-test-trigger"
+  trigger_name = "ci-tpu-test-trigger2"
 
   ansible_branch  = "master"
   trigger_on_push = { branch = "master" }

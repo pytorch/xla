@@ -138,7 +138,7 @@ locals {
 
           # Export variables to shell environment so that we can pass them into the
           # k8s deployment using envsubst
-          export BUILD_ID=$BUILD_ID
+          export IMAGE=${var.docker_repo_url}/${var.image_name}:${var.image_tags[0]}
           export PROJECT_ID=$PROJECT_ID
 
           # Launch k8s deployment, wait for completion, print logs

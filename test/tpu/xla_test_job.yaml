@@ -36,7 +36,7 @@ spec:
   - name: xla-test
     securityContext:
       privileged: true
-    image: gcr.io/$PROJECT_ID/pytorch-xla-test:$BUILD_ID
+    image: $IMAGE
     command:
     - bash
     - -cxe
