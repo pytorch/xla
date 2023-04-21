@@ -242,7 +242,7 @@ class BuildBazelExtension(command.build_ext.build_ext):
 
     # Debug build.
     if DEBUG:
-      bazel_argv.append('--compilation_mode=dbg')
+      bazel_argv.append('--config=dbg')
 
     # Remote cache authentication.
 

@@ -163,6 +163,9 @@ function run_torch_xla_tests() {
       if [ "$USE_COVERAGE" != "0" ]; then
 	      EXTRA_ARGS="-C"
       fi
+      if [ ! -z "$GCLOUD_SERVICE_KEY_FILE" ]; then
+	      EXTRA_ARGS="-R"
+      fi
       if [ -x "$(command -v nvidia-smi)" ]; then
         PJRT_DEVICE=GPU ./run_tests.sh $EXTRA_ARGS
         PJRT_DEVICE=GPU ./run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L"" $EXTRA_ARGS

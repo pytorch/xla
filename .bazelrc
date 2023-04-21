@@ -207,3 +207,16 @@ build:linux --copt="-Wswitch"
 build:linux --copt="-Werror=switch"
 # Required for building with clang
 build:linux --copt="-Wno-error=unused-but-set-variable"
+
+# Debug builds
+build:dbg -c dbg
+# Only include debug info for files under tensorflow/, excluding kernels, to
+# reduce the size of the debug info in the binary. This is because if the debug
+# sections in the ELF binary are too large, errors can occur. See
+# https://github.com/tensorflow/tensorflow/issues/48919.
+# Users can still include debug info for a specific kernel, e.g. with:
+#     --config=dbg --per_file_copt=+tensorflow/core/kernels/identity_op.*@-g
+build:dbg --per_file_copt=+.*,-tensorflow.*,-torch_xla.*,-xla_client.*,@-g0
+build:dbg --per_file_copt=+tensorflow/core/kernels.*@-g0
+# AWS SDK must be compiled in release mode. see: https://github.com/tensorflow/tensorflow/issues/37498
+build:dbg --copt -DDEBUG_BUILD
