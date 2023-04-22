@@ -319,6 +319,7 @@
 <span class="kn">import</span> <span class="nn">torch.nn.functional</span> <span class="k">as</span> <span class="nn">F</span>
 <span class="kn">import</span> <span class="nn">torch_xla</span>
 <span class="kn">from</span> <span class="nn">torch_xla.experimental</span> <span class="kn">import</span> <span class="n">pjrt</span>
+<span class="kn">from</span> <span class="nn">torch_xla.experimental</span> <span class="kn">import</span> <span class="n">tpu</span>
 <span class="kn">import</span> <span class="nn">torch_xla.core.xla_env_vars</span> <span class="k">as</span> <span class="nn">xenv</span>
 <span class="kn">import</span> <span class="nn">torch_xla.debug.metrics_saver</span> <span class="k">as</span> <span class="nn">ms</span>
 <span class="kn">import</span> <span class="nn">torch_xla.utils.utils</span> <span class="k">as</span> <span class="nn">xu</span>
@@ -335,6 +336,27 @@
 
 <span class="n">_DEVICE_CONTEXTS</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
 <span class="n">_DEVICE_CONTEXTS_LOCK</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
+
+<span class="c1"># Note [Dynamo WORLD_SIEZ and ORDINAL]</span>
+<span class="c1"># Belows are workaround to cache the ordinal and world_size such that</span>
+<span class="c1"># Dynamo won&#39;t do graph breaks when xm.xrt_world_size() and xm.get_ordinal() are called.</span>
+<span class="n">_WORLD_SIZE</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="n">_ORDINAL</span> <span class="o">=</span> <span class="kc">None</span>
+
+
+<span class="k">def</span> <span class="nf">_init_world_size_ordinal</span><span class="p">():</span>
+  <span class="k">global</span> <span class="n">_WORLD_SIZE</span><span class="p">,</span> <span class="n">_ORDINAL</span>
+
+  <span class="k">if</span> <span class="ow">not</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">using_pjrt</span><span class="p">():</span>
+    <span class="k">return</span>
+
+  <span class="c1"># We don&#39;t support V3-8. See Note [V3-8 Threading]</span>
+  <span class="k">if</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">device_type</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;TPU&#39;</span> <span class="ow">and</span> <span class="n">tpu</span><span class="o">.</span><span class="n">version</span><span class="p">()</span> <span class="o">&lt;</span> <span class="mi">4</span><span class="p">:</span>
+    <span class="k">return</span>
+
+  <span class="k">if</span> <span class="n">_WORLD_SIZE</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">_WORLD_SIZE</span> <span class="o">=</span> <span class="n">xrt_world_size</span><span class="p">()</span>
+    <span class="n">_ORDINAL</span> <span class="o">=</span> <span class="n">get_ordinal</span><span class="p">()</span>
 
 
 <span class="k">class</span> <span class="nc">DeviceContext</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
@@ -400,6 +422,10 @@
 <span class="sd">  Returns:</span>
 <span class="sd">    The number of devices which is taking part of the replication.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">global</span> <span class="n">_WORLD_SIZE</span>
+  <span class="k">if</span> <span class="n">_WORLD_SIZE</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">_WORLD_SIZE</span>
+
   <span class="k">if</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">using_pjrt</span><span class="p">():</span>
     <span class="k">return</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">world_size</span><span class="p">()</span>
 
@@ -419,6 +445,10 @@
 <span class="sd">  Returns:</span>
 <span class="sd">    The replication ordinal of the current thread.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">global</span> <span class="n">_ORDINAL</span>
+  <span class="k">if</span> <span class="n">_ORDINAL</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">_ORDINAL</span>
+
   <span class="k">if</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">using_pjrt</span><span class="p">():</span>
     <span class="k">return</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">global_ordinal</span><span class="p">()</span>
 
@@ -843,8 +873,7 @@
 <span class="sd">    A tensor which has, in the ``dim`` dimension, all the values from the</span>
 <span class="sd">    participating replicas.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
-  <span class="k">if</span> <span class="n">pin_layout</span> <span class="ow">and</span> <span class="n">xla_device_hw</span><span class="p">(</span>
-      <span class="n">value</span><span class="o">.</span><span class="n">device</span><span class="p">)</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;TPU&#39;</span><span class="p">,</span> <span class="s1">&#39;GPU&#39;</span><span class="p">,</span> <span class="s1">&#39;XPU&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">output</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="k">if</span> <span class="n">pin_layout</span> <span class="ow">and</span> <span class="n">output</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
     <span class="c1"># There is not an easy way to pin the all_gather layout on TPU and GPU, use</span>
     <span class="c1"># all_reduce based all_gather for this purpose.</span>
     <span class="k">return</span> <span class="n">_all_gather_using_all_reduce</span><span class="p">(</span>
