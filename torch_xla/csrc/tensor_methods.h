@@ -484,6 +484,8 @@ XLATensorPtr logsumexp(const XLATensorPtr& input,
 
 XLATensorPtr xlogy(const XLATensorPtr& input, const XLATensorPtr& other);
 
+XLATensorPtr linalg_cholesky(const XLATensorPtr& input, bool upper);
+
 XLATensorPtr lt(const XLATensorPtr& input, const at::Scalar& other);
 
 XLATensorPtr lt(const XLATensorPtr& input, const XLATensorPtr& other);

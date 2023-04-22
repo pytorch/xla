@@ -1556,6 +1556,12 @@ XLATensorPtr xlogy(const XLATensorPtr& input, const XLATensorPtr& other) {
       c10::nullopt);
 }
 
+XLATensorPtr linalg_cholesky(const XLATensorPtr& input, bool upper) {
+  // Cholesky takes lower instead of upper, hence the negation.
+  return input->CreateFrom(
+      torch::lazy::MakeNode<ir::ops::Cholesky>(input->GetIrValue(), !upper));
+}
+
 XLATensorPtr lt(const XLATensorPtr& input, const at::Scalar& other) {
   return DispatchComparisonOp(at::aten::lt, input, other);
 }

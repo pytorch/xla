@@ -1058,10 +1058,10 @@ TEST_F(AtenXlaTensorTest, TestCholesky) {
           torch::rand({3, m, m}, torch::TensorOptions(torch::kFloat));
       torch::Tensor pd_a = torch::matmul(a, torch::transpose(a, 1, 2)) +
                            torch::eye(m, torch::TensorOptions(torch::kFloat));
-      auto b = torch::cholesky(pd_a, upper);
+      auto b = torch::linalg_cholesky(pd_a, upper);
       ForEachDevice([&](const torch::Device& device) {
         torch::Tensor xla_a = CopyToDevice(pd_a, device);
-        auto xla_b = torch::cholesky(xla_a, upper);
+        auto xla_b = torch::linalg_cholesky(xla_a, upper);
         AllClose(b, xla_b, /*rtol=*/1e-3, /*atol=*/1e-4);
       });
     }
