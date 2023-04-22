@@ -6,6 +6,10 @@ import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
 
 
+def all_gather(tensor, dim):
+  return xm.all_gather(tensor, dim=dim)
+
+
 def _mp_fn(index):
   device = xm.xla_device()
   world_size = xm.xrt_world_size()
@@ -13,6 +17,18 @@ def _mp_fn(index):
     # Testing with a single replica group
     ordinal_tensor = torch.tensor([index], dtype=torch.float).to(device)
     result = xm.all_gather(ordinal_tensor, dim=0)
+
+    cpu_result = result.cpu()
+    expected = torch.arange(0, world_size, dtype=torch.float)
+    if not cpu_result.allclose(expected):
+      print('xm.all_gather() produced wrong reductions', file=sys.stderr)
+      print(f'[{index}] {cpu_result}', file=sys.stderr)
+      sys.exit(1)
+
+    compiled_all_gather = torch.compile(
+        all_gather, backend='torchxla_trace_once', fullgraph=True)
+    ordinal_tensor = torch.tensor([index], dtype=torch.float).to(device)
+    result = compiled_all_gather(ordinal_tensor, dim=0)
 
     cpu_result = result.cpu()
     expected = torch.arange(0, world_size, dtype=torch.float)

@@ -9,6 +9,7 @@ import torch.distributed._functional_collectives
 import torch.nn.functional as F
 import torch_xla
 from torch_xla.experimental import pjrt
+from torch_xla.experimental import tpu
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.debug.metrics_saver as ms
 import torch_xla.utils.utils as xu
@@ -25,6 +26,27 @@ REDUCE_MAX = 'max'
 
 _DEVICE_CONTEXTS = dict()
 _DEVICE_CONTEXTS_LOCK = threading.Lock()
+
+# Note [Dynamo WORLD_SIEZ and ORDINAL]
+# Belows are workaround to cache the ordinal and world_size such that
+# Dynamo won't do graph breaks when xm.xrt_world_size() and xm.get_ordinal() are called.
+_WORLD_SIZE = None
+_ORDINAL = None
+
+
+def _init_world_size_ordinal():
+  global _WORLD_SIZE, _ORDINAL
+
+  if not pjrt.using_pjrt():
+    return
+
+  # We don't support V3-8. See Note [V3-8 Threading]
+  if pjrt.device_type() == 'TPU' and tpu.version() < 4:
+    return
+
+  if _WORLD_SIZE is None:
+    _WORLD_SIZE = xrt_world_size()
+    _ORDINAL = get_ordinal()
 
 
 class DeviceContext(object):
@@ -90,6 +112,10 @@ def xrt_world_size(defval=1):
   Returns:
     The number of devices which is taking part of the replication.
   """
+  global _WORLD_SIZE
+  if _WORLD_SIZE is not None:
+    return _WORLD_SIZE
+
   if pjrt.using_pjrt():
     return pjrt.world_size()
 
@@ -109,6 +135,10 @@ def get_ordinal(defval=0):
   Returns:
     The replication ordinal of the current thread.
   """
+  global _ORDINAL
+  if _ORDINAL is not None:
+    return _ORDINAL
+
   if pjrt.using_pjrt():
     return pjrt.global_ordinal()
 
@@ -533,8 +563,7 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
     A tensor which has, in the ``dim`` dimension, all the values from the
     participating replicas.
   """
-  if pin_layout and xla_device_hw(
-      value.device) in ('TPU', 'GPU', 'XPU') and output == None:
+  if pin_layout and output == None:
     # There is not an easy way to pin the all_gather layout on TPU and GPU, use
     # all_reduce based all_gather for this purpose.
     return _all_gather_using_all_reduce(
