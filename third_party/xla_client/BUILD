@@ -136,7 +136,7 @@ cc_library(
         "@com_google_absl//absl/numeric:int128",
         "@com_google_absl//absl/strings",
     ] + if_cuda_is_configured([
-        "@org_tensorflow//tensorflow/compiler/jit:xla_gpu_device",
+        # "@org_tensorflow//tensorflow/compiler/jit:xla_gpu_device",
         "@org_tensorflow//tensorflow/compiler/xla/stream_executor:cuda_platform",
     ]) + if_with_tpu_support([
         "@org_tensorflow//tensorflow/compiler/jit:xla_tpu_device",
