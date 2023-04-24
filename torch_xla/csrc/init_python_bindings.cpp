@@ -154,23 +154,6 @@ std::vector<XLATensorPtr> GetXlaTensors(const std::vector<at::Tensor>& tensors,
   return xtensors;
 }
 
-AllReduceType GetReduceType(const std::string& reduce_type) {
-  if (reduce_type == "sum") {
-    return AllReduceType::kSum;
-  } else if (reduce_type == "mul") {
-    return AllReduceType::kMul;
-  } else if (reduce_type == "and") {
-    return AllReduceType::kAnd;
-  } else if (reduce_type == "or") {
-    return AllReduceType::kOr;
-  } else if (reduce_type == "min") {
-    return AllReduceType::kMin;
-  } else if (reduce_type == "max") {
-    return AllReduceType::kMax;
-  }
-  XLA_ERROR() << "Unknown AllReduce type: " << reduce_type;
-}
-
 std::vector<std::vector<int64_t>> CreateReduceGroups(const py::list& groups) {
   std::vector<std::vector<int64_t>> replica_groups;
   for (auto& group : groups) {
@@ -205,18 +188,14 @@ std::shared_ptr<torch::lazy::Value> AllReduceInPlace(
                                  scale, replica_groups, pin_layout));
 }
 
-std::pair<at::Tensor, std::shared_ptr<torch::lazy::Value>> AllReduce(
-    const std::string& reduce_type, const at::Tensor& input,
-    const std::shared_ptr<torch::lazy::Value>& token, double scale,
-    const std::vector<std::vector<int64_t>>& replica_groups, bool pin_layout) {
-  XLATensorPtr result;
-  torch::lazy::Value new_token;
-  std::tie(result, new_token) = tensor_methods::all_reduce(
-      bridge::GetXlaTensor(input), *token, GetReduceType(reduce_type), scale,
-      replica_groups, pin_layout);
-  return std::pair<at::Tensor, std::shared_ptr<torch::lazy::Value>>(
-      bridge::AtenFromXlaTensor(std::move(result)),
-      std::make_shared<torch::lazy::Value>(new_token));
+at::Tensor AllReduce(const std::string& reduce_type, const at::Tensor& input,
+                     double scale,
+                     const std::vector<std::vector<int64_t>>& replica_groups,
+                     bool pin_layout) {
+  auto result = tensor_methods::all_reduce(bridge::GetXlaTensor(input),
+                                           GetReduceType(reduce_type), scale,
+                                           replica_groups, pin_layout);
+  return bridge::AtenFromXlaTensor(std::move(result));
 }
 
 std::pair<at::Tensor, std::shared_ptr<torch::lazy::Value>> ReduceScatter(
@@ -441,19 +420,6 @@ std::vector<at::Tensor> GetXlaTensorsFromAten(
     xla_tensors.push_back(bridge::AtenFromXlaTensor(std::move(xla_tensor)));
   }
   return xla_tensors;
-}
-
-std::shared_ptr<torch::lazy::Value> CreateToken(const std::string& device_str) {
-  // This should be using xla::CreateToken() once we have added Token support to
-  // XLA AllReduce(). Meanwhile we use a constant as token, and we handle it
-  // accordingly in cross_replica_reduces.cpp.
-  // This needs to be device data (hence coming in as XLA computation parameter)
-  // as otherwise the XLA compiler passes will remove it, vanishing its
-  // sequencing effects.
-  torch::lazy::BackendDevice device = GetDeviceOrCurrent(device_str);
-  torch::lazy::Value ir_value = XLAGraphExecutor::Get()->GetDeviceDataIrValue(
-      0.0, xla::PrimitiveType::F32, device);
-  return std::make_shared<torch::lazy::Value>(std::move(ir_value));
 }
 
 at::Tensor GetXlaTensorDimensionSize(const at::Tensor& tensor, int64_t dim) {
@@ -1011,8 +977,6 @@ void InitXlaModuleBindings(py::module m) {
 
   py::class_<torch::lazy::Value, std::shared_ptr<torch::lazy::Value>>(
       m, "IrValue");
-  m.def("_xla_create_token",
-        [](const std::string& device) { return CreateToken(device); });
   m.def(
       "_xla_all_reduce_inplace",
       [](const std::string& reduce_type, const std::vector<at::Tensor>& tensors,
@@ -1028,25 +992,18 @@ void InitXlaModuleBindings(py::module m) {
         }
         return new_token;
       });
-  m.def("_xla_all_reduce",
-        [](const std::string& reduce_type, const at::Tensor& input,
-           const std::shared_ptr<torch::lazy::Value>& token, double scale,
-           const py::list& groups, bool pin_layout) {
-          std::vector<std::vector<int64_t>> replica_groups =
-              CreateReduceGroups(groups);
-          at::Tensor result;
-          std::shared_ptr<torch::lazy::Value> new_token;
-          {
-            NoGilSection nogil;
-            std::tie(result, new_token) = AllReduce(
-                reduce_type, input, token, scale, replica_groups, pin_layout);
-          }
-          auto result_tuple = py::tuple(2);
-          result_tuple[0] = torch::autograd::make_variable(
-              result, /*requires_grad=*/input.requires_grad());
-          result_tuple[1] = new_token;
-          return result_tuple;
-        });
+  m.def("_xla_all_reduce", [](const std::string& reduce_type,
+                              const at::Tensor& input, double scale,
+                              const py::list& groups, bool pin_layout) {
+    std::vector<std::vector<int64_t>> replica_groups =
+        CreateReduceGroups(groups);
+    at::Tensor result;
+    {
+      NoGilSection nogil;
+      result = AllReduce(reduce_type, input, scale, replica_groups, pin_layout);
+    }
+    return result;
+  });
   m.def("_xla_all_to_all",
         [](const at::Tensor& input,
            const std::shared_ptr<torch::lazy::Value>& token,
@@ -1615,6 +1572,17 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_replace_xla_tensor",
         [](at::Tensor& self, const at::Tensor& source) -> at::Tensor& {
           return XLANativeFunctions::set_(self, source);
+        });
+  m.def("_get_all_reduce_token",
+        [](const std::string& device_str) -> const torch::lazy::Value& {
+          auto device = GetDeviceOrCurrent(device_str);
+          return GetAllReduceToken(device);
+        });
+  m.def("_set_all_reduce_token",
+        [](const std::string& device_str,
+           const std::shared_ptr<torch::lazy::Value>& token) {
+          auto device = GetDeviceOrCurrent(device_str);
+          SetAllReduceToken(device, token);
         });
 
   /* The distributed runtime service is used by the PjRt GPU client. */

@@ -32,6 +32,8 @@
 #include "torch_xla/csrc/ops/einsum_utilities.h"
 #include "torch_xla/csrc/ops/index_ops.h"
 #include "torch_xla/csrc/ops/unselect.h"
+#include "torch_xla/csrc/ops/update_slice.h"
+#include "torch_xla/csrc/ops/view.h"
 #include "torch_xla/csrc/pooling.h"
 #include "torch_xla/csrc/tensor_impl.h"
 #include "torch_xla/csrc/tensor_methods.h"
@@ -1927,6 +1929,29 @@ at::Tensor XLANativeFunctions::mul(const at::Tensor& self,
                     });
 }
 
+at::Tensor XLANativeFunctions::multinomial(
+    const at::Tensor& self, int64_t num_samples, bool replacement,
+    c10::optional<at::Generator> generator) {
+  XLA_CHECK(num_samples > 0)
+      << "Multinomial number of samples must be greater than 0";
+  XLA_CHECK(at::isFloatingType(self.scalar_type()))
+      << "Multinomial input must be a floating type";
+  TORCH_LAZY_FN_COUNTER("xla::");
+  // Fallback when sampling is not replaced because it is challenging to
+  // parallelize. See https://github.com/pytorch/xla/issues/4865
+  if ((generator.has_value() && generator->defined()) ||
+      (!replacement && num_samples != 1)) {
+    return at::native::call_fallback_fn<&xla_cpu_fallback,
+                                        ATEN_OP(multinomial)>::call(self,
+                                                                    num_samples,
+                                                                    replacement,
+                                                                    generator);
+  }
+  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::multinomial(self_tensor, num_samples, replacement));
+}
+
 at::Tensor XLANativeFunctions::mv(const at::Tensor& self,
                                   const at::Tensor& vec) {
   TORCH_LAZY_FN_COUNTER("xla::");
@@ -2681,12 +2706,29 @@ at::Tensor XLANativeFunctions::select_scatter(const at::Tensor& base,
                                               const at::Tensor& mutated_view,
                                               int64_t dim, int64_t index) {
   TORCH_LAZY_FN_COUNTER("xla::");
-  auto base_ = bridge::GetXlaTensor(base);
-  auto mutated_view_ = bridge::GetXlaTensor(mutated_view);
-  auto base_clone = tensor_methods::clone(base_);
-  auto base_clone_slice = tensor_methods::select(base_clone, dim, index);
-  tensor_methods::copy_(base_clone_slice, mutated_view_);
-  return bridge::AtenFromXlaTensor(base_clone);
+  auto base_tensor = bridge::GetXlaTensor(base);
+  auto base_tensor_shape = base_tensor->shape();
+  auto mutated_view_tensor = bridge::GetXlaTensor(mutated_view);
+  auto mutated_view_tensor_shape = mutated_view_tensor->shape();
+  auto common_device = torch_xla::bridge::GetXlaDevice(base);
+
+  dim = torch::lazy::GetCanonicalDimensionIndex(dim,
+                                                base_tensor_shape.get().rank());
+  xla::Shape narrow_shape = base_tensor_shape;
+  narrow_shape.set_dimensions(dim, 1);
+  torch::lazy::NodePtr mutated_view_tensor_reshaped_node =
+      torch::lazy::MakeNode<ViewOp>(
+          mutated_view_tensor->GetIrValue(),
+          torch::lazy::ToVector<int64_t>(narrow_shape.dimensions()));
+
+  std::vector<int64_t> indices(base_tensor_shape.get().rank(), 0);
+  indices[dim] = torch::lazy::GetCanonicalPosition(
+      xla::util::ToVector<int64_t>(base_tensor_shape.get().dimensions()), dim,
+      index);
+  return bridge::AtenFromXlaTensor(
+      base_tensor->CreateFrom(torch::lazy::MakeNode<UpdateSlice>(
+          base_tensor->GetIrValue(), mutated_view_tensor_reshaped_node,
+          indices)));
 }
 
 // TODO(JackCaoG): Remove after elu being codegened
@@ -3194,6 +3236,33 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::var_mean(
                          bridge::AtenFromXlaTensor(std::get<1>(results)));
 }
 
+at::Tensor XLANativeFunctions::view_as_complex_copy(const at::Tensor& self) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+
+  XLA_CHECK(self.scalar_type() == at::kFloat ||
+            self.scalar_type() == at::kDouble ||
+            self.scalar_type() == at::kHalf)
+      << "view_as_complex is only supported for half, float and double "
+         "tensors, but got a tensor of scalar type: "
+      << self.scalar_type();
+
+  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::view_as_complex_copy(self_tensor));
+}
+
+at::Tensor XLANativeFunctions::view_as_real_copy(const at::Tensor& self) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+
+  XLA_CHECK(self.is_complex()) << "view_as_real is only supported for complex "
+                                  "tensors, but got a tensor of scalar type: "
+                               << self.scalar_type();
+
+  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::view_as_real_copy(self_tensor));
+}
+
 at::Tensor XLANativeFunctions::view_copy_symint(const at::Tensor& self,
                                                 at::SymIntArrayRef shape) {
   TORCH_LAZY_FN_COUNTER("xla::");
@@ -3522,6 +3591,20 @@ at::Tensor XLANativeFunctions::mvlgamma(const at::Tensor& self, int64_t p) {
   XLA_CHECK(!xla::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false));
   return at::functionalization::functionalize_aten_op<ATEN_OP(mvlgamma)>::call(
       self, p);
+}
+
+at::Tensor XLANativeFunctions::linalg_vector_norm(
+    const at::Tensor& self, const at::Scalar& ord, at::OptionalIntArrayRef dim,
+    bool keepdim, c10::optional<at::ScalarType> dtype) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+  XLA_CHECK(at::isFloatingType(self.scalar_type()))
+      << "Input must be a floating type";
+  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
+  return bridge::AtenFromXlaTensor(tensor_methods::linalg_vector_norm(
+      self_tensor, ord,
+      dim ? torch::lazy::ToVector<int64_t>(*dim)
+          : torch::lazy::Iota<int64_t>(self_tensor->shape().get().rank()),
+      keepdim, dtype));
 }
 
 at::Tensor XLANativeFunctions::diagonal_backward_symint(

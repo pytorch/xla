@@ -235,6 +235,9 @@ def _run_thread_per_device(
   def _thread_fn(device: torch.device):
     torch_xla._XLAC._xla_set_default_device(device)
 
+    # See Note Note [Dynamo WORLD_SIEZ and ORDINAL].
+    xm._init_world_size_ordinal()
+
     return fn()
 
   with concurrent.futures.ThreadPoolExecutor(

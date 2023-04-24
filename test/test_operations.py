@@ -1899,6 +1899,16 @@ class XpTraceTest(test_utils.XlaTestCase):
       with xp.Trace('conv1'):
         xm.mark_step()
 
+  def test_non_empty_scope_decorator(self):
+
+    @xp.trace_me("conv2")
+    def func():
+      xm.mark_step()
+
+    with self.assertRaisesRegex(RuntimeError,
+                                r'Expecting scope to be empty but it is conv2'):
+      func()
+
 
 class RegisterXLAKeyTest(test_utils.XlaTestCase):
 

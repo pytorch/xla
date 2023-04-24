@@ -78,6 +78,7 @@
 #include "torch_xla/csrc/ops/min_in_dim.h"
 #include "torch_xla/csrc/ops/mse_loss.h"
 #include "torch_xla/csrc/ops/mse_loss_backward.h"
+#include "torch_xla/csrc/ops/multinomial.h"
 #include "torch_xla/csrc/ops/native_batch_norm_backward.h"
 #include "torch_xla/csrc/ops/native_batch_norm_forward.h"
 #include "torch_xla/csrc/ops/nll_loss.h"
@@ -329,15 +330,16 @@ XLATensorPtr DispatchComparisonOp(c10::Symbol kind, const XLATensorPtr& input,
 //////////////////////////////////////////////////////////////////////////////
 // XLA dedicated operators follows here, listed in alphabetical order.
 //////////////////////////////////////////////////////////////////////////////
-std::pair<XLATensorPtr, torch::lazy::Value> all_reduce(
-    const XLATensorPtr& input, const torch::lazy::Value& token,
-    AllReduceType reduce_type, double scale,
-    std::vector<std::vector<int64_t>> groups, bool pin_layout) {
+XLATensorPtr all_reduce(const XLATensorPtr& input, AllReduceType reduce_type,
+                        double scale, std::vector<std::vector<int64_t>> groups,
+                        bool pin_layout) {
   std::vector<torch::lazy::Value> input_values({input->GetIrValue()});
   torch::lazy::NodePtr node = torch::lazy::MakeNode<AllReduce>(
-      reduce_type, input_values, token, scale, std::move(groups), pin_layout);
-  return {input->CreateFrom(torch::lazy::Value(node, 0)),
-          torch::lazy::Value(node, 1)};
+      reduce_type, input_values, GetAllReduceToken(input->GetDevice()), scale,
+      std::move(groups), pin_layout);
+  SetAllReduceToken(input->GetDevice(),
+                    std::make_shared<torch::lazy::Value>(node, 1));
+  return input->CreateFrom(torch::lazy::Value(node, 0));
 }
 
 torch::lazy::Value all_reduce_(XLATensorPtr& input,
@@ -1241,8 +1243,10 @@ XLATensorPtr full_symint(at::SymIntArrayRef sym_size,
                          const torch::lazy::BackendDevice& device,
                          at::ScalarType scalar_type) {
   XLA_CHECK(std::all_of(sym_size.begin(), sym_size.end(), [](at::SymInt dim) {
-    if (!dim.is_symbolic()) {
-      return dim >= 0;
+    // TODO: It should be OK to perform this test on symbolic ints too, not
+    // sure why you conditionalized it.
+    if (auto c = dim.maybe_as_int()) {
+      return *c >= 0;
     }
     return true;
   })) << "Dimensions cannot be negative numbers";
@@ -1434,6 +1438,30 @@ XLATensorPtr lerp(const XLATensorPtr& input, const XLATensorPtr& end,
       weight, input->shape().get().element_type(), input->GetDevice());
   return input->CreateFrom(
       Lerp(input->GetIrValue(), end->GetIrValue(), weight_val));
+}
+
+XLATensorPtr linalg_vector_norm(const XLATensorPtr& input,
+                                const at::Scalar& ord,
+                                std::vector<int64_t> dimensions, bool keep_dim,
+                                c10::optional<at::ScalarType> dtype) {
+  // If the input is a scalar, we have to manually create the dimensions vector.
+  auto input_rank = input->shape().get().rank();
+  std::vector<int64_t> canonical_dims;
+  if (input_rank != 0) {
+    canonical_dims = torch::lazy::GetCanonicalDimensionIndices(
+        xla::util::ToVector<int64_t>(dimensions), input_rank);
+  } else {
+    canonical_dims = {0};
+  }
+  torch::lazy::Value res = LinalgVectorNorm(input->GetIrValue(), ord,
+                                            canonical_dims, keep_dim, dtype);
+  if (!dtype) dtype = input->dtype_optional();
+  xla::PrimitiveType res_intended_type =
+      MakeXlaPrimitiveType(*dtype, &input->GetDevice());
+  if (GetXlaShape(res).element_type() != res_intended_type) {
+    res = torch::lazy::MakeNode<Cast>(res, res_intended_type);
+  }
+  return input->CreateFrom(res, dtype);
 }
 
 XLATensorPtr linspace(const at::Scalar& start, const at::Scalar& end,
@@ -1728,6 +1756,17 @@ XLATensorPtr mul(const XLATensorPtr& input, const at::Scalar& other,
       other, input->shape(), logical_element_type, input->GetDevice());
   return input->CreateFrom(input->GetIrValue() * constant,
                            logical_element_type);
+}
+
+XLATensorPtr multinomial(const XLATensorPtr& input, int64_t num_samples,
+                         bool replacement) {
+  auto input_shape = input->shape();
+  return input->CreateFrom(
+      torch::lazy::MakeNode<Multinomial>(
+          input->GetIrValue(),
+          XLAGraphExecutor::Get()->GetRngSeed(input->GetDevice()), num_samples,
+          replacement),
+      at::ScalarType::Long);
 }
 
 XLATensorPtr mv(const XLATensorPtr& input, const XLATensorPtr& vec) {
@@ -2650,6 +2689,16 @@ XLATensorPtr view_symint(const XLATensorPtr& input,
   ViewInfo view_info(ViewInfo::Type::kReshape, std::move(result_shape),
                      input_shape);
   return input->CreateViewTensor(std::move(view_info));
+}
+
+XLATensorPtr view_as_complex_copy(const XLATensorPtr& input) {
+  return input->CreateFrom(ViewAsComplexCopy(input->GetIrValue()),
+                           at::ScalarType::ComplexFloat);
+}
+
+XLATensorPtr view_as_real_copy(const XLATensorPtr& input) {
+  return input->CreateFrom(ViewAsRealCopy(input->GetIrValue()),
+                           at::ScalarType::Float);
 }
 
 XLATensorPtr var(const XLATensorPtr& input, std::vector<int64_t> dimensions,

@@ -14,7 +14,7 @@ steps:
       --build-arg=bazel_jobs=${_BAZEL_JOBS}
       --build-arg=python_version=${_PYTHON_VERSION}
       # TODO: use current version in setup.py
-      --build-arg=package_version="2.0.0.dev$(date +%Y%m%d)${_PLATFORM:++$_PLATFORM}"
+      --build-arg=package_version="2.1.0.dev$(date +%Y%m%d)${_PLATFORM:++$_PLATFORM}"
       ${args[@]/#/--build-arg=})
     echo ${flags[@]} | tee /docker/flags.txt
   volumes:
