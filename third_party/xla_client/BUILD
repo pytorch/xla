@@ -155,9 +155,12 @@ cc_library(
         "@com_google_absl//absl/numeric:int128",
         "@com_google_absl//absl/strings",
     ] + if_cuda_is_configured([
-        # "@org_tensorflow//tensorflow/compiler/jit:xla_gpu_device",
-        # "@xla//xla/service:gpu_plugin",
+        "@xla//xla/service:gpu_plugin_impl",
+        "@xla//xla/service:gpu_plugin_stub",
+        "@xla//xla/service:gpu_plugin_noncuda",
+        "@xla//xla/service:gpu_plugin",
         "@xla//xla/stream_executor:cuda_platform",
+        "@xla//xla/stream_executor/gpu:gpu_init",
     ]) + if_with_tpu_support([
         # "@org_tensorflow//tensorflow/compiler/jit:xla_tpu_device",
         # "@org_tensorflow//tensorflow/compiler/jit:xla_tpu_jit",
