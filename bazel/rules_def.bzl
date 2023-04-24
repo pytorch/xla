@@ -23,6 +23,7 @@ def ptxla_cc_test(
         copts = [],
         **kwargs):
     tf_cc_test(
+        linkstatic = True,
         extra_copts = copts + [
             "-isystemexternal/torch",  # Required for system includes.
             "-fexceptions",  # Required for testing crashes.

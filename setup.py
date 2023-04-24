@@ -27,6 +27,9 @@
 #
 #   BUNDLE_LIBTPU=0
 #     include libtpu in final wheel
+
+#   BUILD_CPP_TESTS=1
+#     build the C++ tests
 #
 #   GCLOUD_SERVICE_KEY_FILE=''
 #     file containing the auth tokens for remote cache/build. implies remote cache.
@@ -244,8 +247,10 @@ class BuildBazelExtension(command.build_ext.build_ext):
     if DEBUG:
       bazel_argv.append('--config=dbg')
 
-    # Remote cache authentication.
+    if _check_env_flag('TPUVM_MODE'):
+      bazel_argv.append('--config=tpu')
 
+    # Remote cache authentication.
     if _check_env_flag('BAZEL_REMOTE_CACHE'):
       bazel_argv.append('--config=remote_cache')
 
@@ -256,6 +261,11 @@ class BuildBazelExtension(command.build_ext.build_ext):
     if CACHE_SILO_NAME:
       bazel_argv.append('--remote_default_exec_properties=cache-silo-key=%s' %
                         CACHE_SILO_NAME)
+
+    if _check_env_flag('BUILD_CPP_TESTS', default='1'):
+      bazel_argv.append('//test/cpp:all')
+      bazel_argv.append('//third_party/xla_client:all')
+
     if BAZEL_JOBS:
       bazel_argv.append('--jobs=%s' % BAZEL_JOBS)
 
