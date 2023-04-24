@@ -191,15 +191,9 @@ class NoneRemover:
       value_list.insert(pos, None)
 
 
-
-
 def is_xla_tensor(tensor: torch.Tensor) -> bool:
   return tensor.device.type == "xla"
 
-def collect_inputs(model, *args):
-  model.xla_args = args
-  delattr(model, '_wrapped_call')
-  return model(*args)
 
 def extract_internal(xla_model: torch.fx.GraphModule):
   xla_args = xla_model.xla_args
@@ -240,18 +234,7 @@ def extract_internal(xla_model: torch.fx.GraphModule):
       tensor_id: i for i, tensor_id in enumerate(args_tensor_ids)
   }
 
-  # get_fallback_ops below uses counters to detect torch_xla fallbacks.
-  # Clear the counters here so we ignore pre-existing fallbacks and
-  # only detect fallbacks happening when running the xla_model below.
-  metrics.clear_counters()
   xla_out = xla_model(*xla_args)
-
-  fallback_ops = get_fallback_ops()
-  if len(fallback_ops) > 0:
-    raise RuntimeError(
-        f"Fail to extact the compiled graph because of fallback: {','.join(fallback_ops)}"
-    )
-
   if not isinstance(xla_out, (tuple, list)):
     xla_out = (xla_out,)
 
@@ -364,10 +347,12 @@ def extract_internal(xla_model: torch.fx.GraphModule):
 
   return optimized_mod
 
+
 class FallBackNodeCollector(torch.fx.Interpreter):
+
   def __init__(self, module):
     super().__init__(module)
-    self._fallback_ops =[]
+    self._fallback_ops = []
 
   def run_node(self, n: torch.fx.Node):
     metrics.clear_counters()
@@ -380,6 +365,13 @@ class FallBackNodeCollector(torch.fx.Interpreter):
   def get_fallback_ops(self):
     return self._fallback_ops
 
+
+def collect_inputs(model, *args):
+  model.xla_args = args
+  delattr(model, '_wrapped_call')
+  return model(*args)
+
+
 def extract_compile_graph(xla_model, xla_args):
   # execute model once to collect fallback ops
   collector = FallBackNodeCollector(xla_model)
@@ -389,15 +381,14 @@ def extract_compile_graph(xla_model, xla_args):
   class XlaOperatorSupport(torch.fx.passes.operator_support.OperatorSupport):
 
     def is_node_supported(self, submodules, node: torch.fx.Node) -> bool:
-      return node.op == "call_function" and (node not in fallback_ops or node.target == operator.getitem)
+      return node.op == "call_function" and (node not in fallback_ops or
+                                             node.target == operator.getitem)
 
   # partition the model and exectue to collect inputs
   supported_ops = XlaOperatorSupport()
   partitioner = CapabilityBasedPartitioner(xla_model, supported_ops)
   partitions = partitioner.propose_partitions()
   partitioned_graph = partitioner.fuse_partitions(partitions)
-
-  print(partitioned_graph)
 
   for node in partitioned_graph.graph.nodes:
     if node.op == "call_module" and "fused_" in node.name:
@@ -411,10 +402,10 @@ def extract_compile_graph(xla_model, xla_args):
       fused_module = getattr(partitioned_graph, node.name)
       partitioned_graph.delete_submodule(node.target)
       with partitioned_graph.graph.inserting_after(node):
-        new_node = partitioned_graph.graph.call_function(extract_internal(fused_module), node.args, None)
+        new_node = partitioned_graph.graph.call_function(
+            extract_internal(fused_module), node.args, None)
         node.replace_all_uses_with(new_node)
       partitioned_graph.graph.erase_node(node)
- 
+
   partitioned_graph.recompile()
   return partitioned_graph
-
