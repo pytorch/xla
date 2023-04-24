@@ -3,7 +3,7 @@ module "tpu_e2e_tests" {
 
   trigger_name = "ci-tpu-test-trigger2"
 
-  ansible_branch  = "master"
+  ansible_branch  = "mlewko/ci-tpu-test-trigger"
   trigger_on_push = { branch = "master" }
   run_e2e_tests   = true
 
@@ -13,7 +13,7 @@ module "tpu_e2e_tests" {
     # See https://cloud.google.com/build/docs/configuring-builds/substitute-variable-values#using_default_substitutions.
     "$BUILD_ID",
   ]
-  dockerfile = "Dockerfile"
+  dockerfile = "e2e_tests.Dockerfile"
   description = join(" ", [
     "Run e2e TPU tests on an image built from master branch.",
     "Trigger managed by Terraform setup in",
