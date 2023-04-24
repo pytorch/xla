@@ -372,7 +372,7 @@ def collect_inputs(model, *args):
   return model(*args)
 
 
-def extract_compile_graph(xla_model, xla_args):
+def extract_compiled_graph(xla_model, xla_args):
   # execute model once to collect fallback ops
   collector = FallBackNodeCollector(xla_model)
   collector.run(*xla_args)
@@ -408,4 +408,5 @@ def extract_compile_graph(xla_model, xla_args):
       partitioned_graph.graph.erase_node(node)
 
   partitioned_graph.recompile()
+
   return partitioned_graph
