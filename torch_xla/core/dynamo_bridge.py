@@ -191,15 +191,6 @@ class NoneRemover:
       value_list.insert(pos, None)
 
 
-class XlaOperatorSupport(torch.fx.passes.operator_support.OperatorSupport):
-
-  def is_node_supported(self, submodules, node: torch.fx.Node) -> bool:
-    if node.name in ['add', 'add_1']:
-      return True
-    ret = node.op == "call_function" and (getattr(node.target, "xla",
-                                                   None) is not None or
-                                           node.target == operator.getitem)
-    return ret
 
 
 def is_xla_tensor(tensor: torch.Tensor) -> bool:
@@ -373,11 +364,40 @@ def extract_internal(xla_model: torch.fx.GraphModule):
 
   return optimized_mod
 
+class FallBackNodeCollector(torch.fx.Interpreter):
+  def __init__(self, module):
+    super().__init__(module)
+    self._fallback_ops =[]
+
+  def run_node(self, n: torch.fx.Node):
+    metrics.clear_counters()
+    result = super().run_node(n)
+    fallback_ops = get_fallback_ops()
+    if len(fallback_ops) > 0:
+      self._fallback_ops.append(n)
+    return result
+
+  def get_fallback_ops(self):
+    return self._fallback_ops
+
 def extract_compile_graph(xla_model, xla_args):
+  # execute model once to collect fallback ops
+  collector = FallBackNodeCollector(xla_model)
+  collector.run(*xla_args)
+  fallback_ops = collector.get_fallback_ops()
+
+  class XlaOperatorSupport(torch.fx.passes.operator_support.OperatorSupport):
+
+    def is_node_supported(self, submodules, node: torch.fx.Node) -> bool:
+      return node.op == "call_function" and (node not in fallback_ops or node.target == operator.getitem)
+
+  # partition the model and exectue to collect inputs
   supported_ops = XlaOperatorSupport()
   partitioner = CapabilityBasedPartitioner(xla_model, supported_ops)
   partitions = partitioner.propose_partitions()
   partitioned_graph = partitioner.fuse_partitions(partitions)
+
+  print(partitioned_graph)
 
   for node in partitioned_graph.graph.nodes:
     if node.op == "call_module" and "fused_" in node.name:
