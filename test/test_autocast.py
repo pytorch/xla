@@ -360,7 +360,7 @@ class TestAutocastCuda(TestAutocastBase):
           op, args, torch.float32, module=None, out_type=out_type)
 
 
-@unittest.skipIf(xm.get_xla_supported_devices("GPU"), f"TPU autocast test.")
+@unittest.skipIf(not xm.get_xla_supported_devices("TPU"), f"TPU autocast test.")
 class TestAutocastTPU(TestAutocastBase):
 
   def setUp(self):

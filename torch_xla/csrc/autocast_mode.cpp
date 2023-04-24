@@ -11,75 +11,75 @@ namespace autocast {
 
 // Base template for WrapFunction_, which is specialized to contain a "call"
 // method each CastPolicy
-template <CastPolicy policy, DeviceType device_type, class Redispatch,
-          Redispatch* F, class Ret, class ArgList>
-struct WrapFunction_ {};
+// template <CastPolicy policy, DeviceType device_type, class Redispatch,
+//           Redispatch* F, class Ret, class ArgList>
+// struct WrapFunction_ {};
 
-// CastPolicy::lower_precision_fp General_DeviceType
-template <DeviceType device_type, class Redispatch, Redispatch* F, class Ret,
-          class... Args>
-struct WrapFunction_<CastPolicy::lower_precision_fp, device_type, Redispatch, F,
-                     Ret, guts::typelist::typelist<Args...>> {
-  static Ret call(Args... args) {
-    c10::impl::ExcludeDispatchKeyGuard no_autocast(
-        get_autocast_dispatch_key_from_device_type(device_type));
-    return (*F)(
-        cached_cast(get_lower_precision_fp_from_device_type(device_type), args,
-                    device_type)...);
-  }
-};
+// // CastPolicy::lower_precision_fp General_DeviceType
+// template <DeviceType device_type, class Redispatch, Redispatch* F, class Ret,
+//           class... Args>
+// struct WrapFunction_<CastPolicy::lower_precision_fp, device_type, Redispatch, F,
+//                      Ret, guts::typelist::typelist<Args...>> {
+//   static Ret call(Args... args) {
+//     c10::impl::ExcludeDispatchKeyGuard no_autocast(
+//         get_autocast_dispatch_key_from_device_type(device_type));
+//     return (*F)(
+//         cached_cast(get_lower_precision_fp_from_device_type(device_type), args,
+//                     device_type)...);
+//   }
+// };
 
 // CastPolicy::fp32 General_DeviceType
-template <DeviceType device_type, class Redispatch, Redispatch* F, class Ret,
-          class... Args>
-struct WrapFunction_<CastPolicy::fp32, device_type, Redispatch, F, Ret,
-                     guts::typelist::typelist<Args...>> {
-  static Ret call(Args... args) {
-    c10::impl::ExcludeDispatchKeyGuard no_autocast(
-        get_autocast_dispatch_key_from_device_type(device_type));
-    return (*F)(cached_cast(at::kFloat, args, device_type)...);
-  }
-};
+// template <DeviceType device_type, class Redispatch, Redispatch* F, class Ret,
+//           class... Args>
+// struct WrapFunction_<CastPolicy::fp32, device_type, Redispatch, F, Ret,
+//                      guts::typelist::typelist<Args...>> {
+//   static Ret call(Args... args) {
+//     c10::impl::ExcludeDispatchKeyGuard no_autocast(
+//         get_autocast_dispatch_key_from_device_type(device_type));
+//     return (*F)(cached_cast(at::kFloat, args, device_type)...);
+//   }
+// };
 
 // CastPolicy::promote General_DeviceType
-template <DeviceType device_type, class Redispatch, Redispatch* F, class Ret,
-          class... Args>
-struct WrapFunction_<CastPolicy::promote, device_type, Redispatch, F, Ret,
-                     guts::typelist::typelist<Args...>> {
-  static Ret call(Args... args) {
-    c10::impl::ExcludeDispatchKeyGuard no_autocast(
-        get_autocast_dispatch_key_from_device_type(device_type));
-    auto to_type =
-        promote_type(get_lower_precision_fp_from_device_type(device_type),
-                     device_type, args...);
-    return (*F)(cached_cast(to_type, args, device_type)...);
-  }
-};
+// template <DeviceType device_type, class Redispatch, Redispatch* F, class Ret,
+//           class... Args>
+// struct WrapFunction_<CastPolicy::promote, device_type, Redispatch, F, Ret,
+//                      guts::typelist::typelist<Args...>> {
+//   static Ret call(Args... args) {
+//     c10::impl::ExcludeDispatchKeyGuard no_autocast(
+//         get_autocast_dispatch_key_from_device_type(device_type));
+//     auto to_type =
+//         promote_type(get_lower_precision_fp_from_device_type(device_type),
+//                      device_type, args...);
+//     return (*F)(cached_cast(to_type, args, device_type)...);
+//   }
+// };
 
 // Wrapper to infer return_type and parameter_types for WrapFunction_ (imitating
 // pytorch/core/boxing/impl/WrapFunctionIntoFunctor.h)
-template <
-    CastPolicy policy, DeviceType device_type,
-    class Registered,  // The signature for which we're registering.  The
-                       // dispatcher's calling code invokes our registered
-                       // functions with arguments matching Registered, so we
-                       // register WrapFunction_::call methods with a matching
-                       // signature to properly field those arguments.
-                       // guts::function_traits below extracts return_type and
-                       // parameter_types from Registered, which WrapFunction_
-                       // templates above use to declare their call methods.
-    class Redispatch,  // The signature for the function we're redispatching to.
-                       // In most cases this is the same as Registered, but for
-                       // some ops (for example, ops where we append a dtype)
-                       // it's useful to redispatch to a function with a
-                       // different signature.
-    Redispatch* F>     // The actual function we're redispatching to.
-struct WrapFunction final {
-  using type = WrapFunction_<
-      policy, device_type, Redispatch, F,
-      typename guts::function_traits<Registered>::return_type,
-      typename guts::function_traits<Registered>::parameter_types>;
-};
+// template <
+//     CastPolicy policy, DeviceType device_type,
+//     class Registered,  // The signature for which we're registering.  The
+//                        // dispatcher's calling code invokes our registered
+//                        // functions with arguments matching Registered, so we
+//                        // register WrapFunction_::call methods with a matching
+//                        // signature to properly field those arguments.
+//                        // guts::function_traits below extracts return_type and
+//                        // parameter_types from Registered, which WrapFunction_
+//                        // templates above use to declare their call methods.
+//     class Redispatch,  // The signature for the function we're redispatching to.
+//                        // In most cases this is the same as Registered, but for
+//                        // some ops (for example, ops where we append a dtype)
+//                        // it's useful to redispatch to a function with a
+//                        // different signature.
+//     Redispatch* F>     // The actual function we're redispatching to.
+// struct WrapFunction final {
+//   using type = WrapFunction_<
+//       policy, device_type, Redispatch, F,
+//       typename guts::function_traits<Registered>::return_type,
+//       typename guts::function_traits<Registered>::parameter_types>;
+// };
 
 namespace {
 
