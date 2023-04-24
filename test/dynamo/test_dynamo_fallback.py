@@ -2,10 +2,10 @@ import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
 import torch._dynamo as dynamo
-import unittest
+import torch._dynamo.test_case as dt
 
 
-class XlaDynamoFallbackTest(unittest.TestCase):
+class XlaDynamoFallbackTest(dt.TestCase):
 
   def test_operator_fallback(self):
 
@@ -38,5 +38,6 @@ class XlaDynamoFallbackTest(unittest.TestCase):
 
 
 if __name__ == '__main__':
-  test = unittest.main()
-  sys.exit(0 if test.result.wasSuccessful() else 1)
+  from torch._dynamo.test_case import run_tests
+
+  run_tests()
