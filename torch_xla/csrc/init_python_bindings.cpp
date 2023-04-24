@@ -798,7 +798,7 @@ std::vector<bool> check_materialization_helper(
         need_materialization.push_back(true);
       }
     } else {
-			need_materialization.push_back(true);
+      need_materialization.push_back(true);
     }
   }
   return need_materialization;
