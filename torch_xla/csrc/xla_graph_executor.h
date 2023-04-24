@@ -9,11 +9,11 @@
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/status.h"
 #include "tensorflow/compiler/xla/types.h"
-#include "tensorflow/compiler/xla/xla_client/async_task.h"
-#include "tensorflow/compiler/xla/xla_client/cache.h"
-#include "tensorflow/compiler/xla/xla_client/computation_client.h"
-#include "tensorflow/compiler/xla/xla_client/multi_wait.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
+#include "third_party/xla_client/async_task.h"
+#include "third_party/xla_client/cache.h"
+#include "third_party/xla_client/computation_client.h"
+#include "third_party/xla_client/multi_wait.h"
+#include "third_party/xla_client/util.h"
 #include "torch/csrc/autograd/variable.h"
 #include "torch/csrc/lazy/core/ir_util.h"
 #include "torch_xla/csrc/computation.h"
@@ -272,6 +272,9 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
       const std::vector<XLATensorPtr>& tensors,
       absl::Span<const size_t> indices);
 
+  std::vector<XLATensor::ShardingSpecPtr> CollectShardingSpecs(
+      std::vector<XLATensorPtr>* tensors, absl::Span<const size_t> indices);
+
   // TODO(alanwaketan): Reuse the upstream one once Functionalization is done.
   std::vector<torch::lazy::BackendDataPtr> SetTensorData(
       std::vector<XLATensorPtr>* tensors, const SyncTensorsConfig& config,
@@ -300,6 +303,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
       SyncTensorCollection* coll,
       std::vector<torch::lazy::BackendDataPtr> parameters_data,
       std::vector<torch::lazy::BackendDataPtr> tensors_data,
+      std::vector<XLATensor::ShardingSpecPtr> sharding_specs,
       ComputationCache::TypePtr cached_computation);
   std::shared_ptr<Async> ScheduleSyncTensorsGraph(
       std::vector<XLATensorPtr>* tensors, SyncTensorCollection* coll,

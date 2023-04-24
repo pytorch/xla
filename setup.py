@@ -58,9 +58,8 @@ import torch
 import zipfile
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
-third_party_path = os.path.join(base_dir, 'third_party')
 
-_libtpu_version = '0.1.dev20230213'
+_libtpu_version = '0.1.dev20230330'
 _libtpu_storage_path = f'https://storage.googleapis.com/cloud-tpu-tpuvm-artifacts/wheels/libtpu-nightly/libtpu_nightly-{_libtpu_version}-py3-none-any.whl'
 _torchdistx_source_path=f'https://storage.cloud.google.com/manfei_bucket/VL_VLP/torchdistx-0.3.0.dev0%2Bcpu-cp38-cp38-linux_x86_64.whl'
 
@@ -89,7 +88,7 @@ def get_git_head_sha(base_dir):
 
 
 def get_build_version(xla_git_sha):
-  version = os.getenv('TORCH_XLA_VERSION', '2.0.0')
+  version = os.getenv('TORCH_XLA_VERSION', '2.1.0')
   if _check_env_flag('VERSIONED_XLA_BUILD', default='0'):
     try:
       version += '+' + xla_git_sha[:7]
@@ -173,27 +172,6 @@ def maybe_bundle_libtpu(base_dir):
       with open(libtpu_path, 'wb') as libtpu_so:
         z = zipfile.ZipFile(whl.name)
         libtpu_so.write(z.read('libtpu/libtpu.so'))
-
-
-def generate_protos(base_dir, third_party_path):
-  # Application proto files should be in torch_xla/pb/src/ and the generated
-  # files will go in torch_xla/pb/cpp/.
-  proto_files = glob.glob(os.path.join(base_dir, 'torch_xla/pb/src/*.proto'))
-  if proto_files:
-    protoc = os.path.join(
-        third_party_path,
-        'tensorflow/bazel-out/host/bin/external/com_google_protobuf/protoc')
-    protoc_cmd = [
-        protoc, '-I',
-        os.path.join(third_party_path, 'tensorflow'), '-I',
-        os.path.join(base_dir, 'torch_xla/pb/src'), '--cpp_out',
-        os.path.join(base_dir, 'torch_xla/pb/cpp')
-    ] + proto_files
-    if subprocess.call(protoc_cmd) != 0:
-      print(
-          'Failed to generate protobuf files: {}'.format(protoc_cmd),
-          file=sys.stderr)
-      sys.exit(1)
 
 
 def _compile_parallel(self,
@@ -290,9 +268,6 @@ if build_mode not in ['clean']:
   # Copy libtpu.so into torch_xla/lib
   maybe_bundle_libtpu(base_dir)
 
-  # Generate the proto C++/python files only after third_party has built.
-  generate_protos(base_dir, third_party_path)
-
 # Fetch the sources to be built.
 torch_xla_sources = (
     glob.glob('torch_xla/csrc/*.cpp') + glob.glob('torch_xla/csrc/ops/*.cpp') +
@@ -309,16 +284,18 @@ include_dirs = [
     base_dir,
 ]
 for ipath in [
-    'tensorflow/bazel-bin',
-    'tensorflow/bazel-tensorflow',
-    'tensorflow/bazel-tensorflow/external/protobuf_archive/src',
-    'tensorflow/bazel-tensorflow/external/com_google_protobuf/src',
-    'tensorflow/bazel-tensorflow/external/eigen_archive',
-    'tensorflow/bazel-tensorflow/external/com_google_absl',
-    'tensorflow/bazel-tensorflow/external/com_googlesource_code_re2',
-    'tensorflow/bazel-tensorflow/external/com_github_grpc_grpc/include',
+    'bazel-bin',
+    'bazel-xla',
+    'bazel-bin/external/org_tensorflow/',
+    'bazel-xla/external/org_tensorflow/',
+    'bazel-xla/external/com_github_grpc_grpc/include',
+    'bazel-xla/external/com_google_protobuf/src',
+    'bazel-xla/external/eigen_archive',
+    'bazel-xla/external/com_google_absl',
+    'bazel-xla/external/com_googlesource_code_re2',
+    'bazel-xla/com_github_grpc_grpc/include',
 ]:
-  include_dirs.append(os.path.join(third_party_path, ipath))
+  include_dirs.append(os.path.join(base_dir, ipath))
 include_dirs += [
     pytorch_source_path,
     os.path.join(pytorch_source_path, 'torch/csrc'),
@@ -354,6 +331,12 @@ if re.match(r'clang', os.getenv('CC', '')):
       '-Wno-macro-redefined',
       '-Wno-return-std-move',
   ]
+  if DEBUG:
+    extra_compile_args += [
+        '-fprofile-arcs',
+        '-ftest-coverage',
+    ]
+    extra_link_args += ['--coverage']
 
 if DEBUG:
   extra_compile_args += ['-O0', '-g']

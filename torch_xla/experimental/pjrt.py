@@ -235,6 +235,9 @@ def _run_thread_per_device(
   def _thread_fn(device: torch.device):
     torch_xla._XLAC._xla_set_default_device(device)
 
+    # See Note Note [Dynamo WORLD_SIEZ and ORDINAL].
+    xm._init_world_size_ordinal()
+
     return fn()
 
   with concurrent.futures.ThreadPoolExecutor(
@@ -373,6 +376,7 @@ def _initialize_single_process(local_rank: int, local_world_size: int):
 
 def spawn_threads(fn: Callable, args: Tuple = ()) -> None:
   """Run function in one process with one thread per addressable device."""
+  assert device_type() != 'GPU', "spawn_threads does not support GPU device"
   spawn_fn = _SpawnFn(fn, *args)
   _run_thread_per_device(
       local_rank=0,

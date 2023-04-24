@@ -35,7 +35,7 @@ xla::XlaOp BuildMean(xla::XlaOp input, absl::Span<const int64_t> dimensions,
 
 xla::XlaOp BuildStdDeviation(xla::XlaOp input,
                              absl::Span<const int64_t> dimensions,
-                             bool keep_reduced_dimensions, int64_t correction);
+                             bool keep_reduced_dimensions, double correction);
 
 // Builds the sum of all values by reducing all the dimensions listed in
 // dimensions. If keep_reduced_dimensions is true, the reduced dimensions will
@@ -94,7 +94,7 @@ xla::XlaOp BuildAny(xla::XlaOp input, absl::Span<const int64_t> dimensions,
                     bool keep_reduced_dimensions);
 
 xla::XlaOp BuildVar(xla::XlaOp input, absl::Span<const int64_t> dimensions,
-                    int64_t correction, bool keep_reduced_dimensions);
+                    double correction, bool keep_reduced_dimensions);
 
 xla::XlaOp BuildLogsumexp(xla::XlaOp input,
                           absl::Span<const int64_t> dimensions,

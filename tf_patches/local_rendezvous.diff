@@ -1,0 +1,13 @@
+diff --git a/tensorflow/core/framework/local_rendezvous.cc b/tensorflow/core/framework/local_rendezvous.cc
+index 841451a7bd3..7bf5e54f656 100644
+--- a/tensorflow/core/framework/local_rendezvous.cc
++++ b/tensorflow/core/framework/local_rendezvous.cc
+@@ -232,7 +232,7 @@ LocalRendezvous::OptionalOwnerPtr LocalRendezvous::GetOwnerRefCountPtr() {
+       LOG(ERROR) << "Calling Send on a destroyed Local Rendezvous. "
+                     "This may indicate a bug on the caller side. (b/274683676)";
+     }
+-    return rc_keep_alive;
++    return std::make_optional<tsl::core::RefCountPtr<Rendezvous>>(std::move(rc_keep_alive));
+   }
+   return {};
+ }

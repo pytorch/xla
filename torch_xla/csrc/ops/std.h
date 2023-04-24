@@ -10,7 +10,7 @@ namespace torch_xla {
 class Std : public XlaNode {
  public:
   Std(const torch::lazy::Value& input, std::vector<int64_t> dimensions,
-      bool keep_reduced_dimensions, int64_t correction);
+      bool keep_reduced_dimensions, double correction);
 
   std::string ToString() const override;
 
@@ -22,12 +22,12 @@ class Std : public XlaNode {
 
   bool keep_reduced_dimensions() const { return keep_reduced_dimensions_; }
 
-  int64_t correction() const { return correction_; }
+  double correction() const { return correction_; }
 
  private:
   std::vector<int64_t> dimensions_;
   bool keep_reduced_dimensions_;
-  int64_t correction_;
+  double correction_;
 };
 
 }  // namespace torch_xla

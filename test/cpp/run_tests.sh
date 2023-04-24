@@ -10,6 +10,12 @@ RMBUILD=1
 LOGFILE=/tmp/pytorch_cpp_test.log
 XLA_EXPERIMENTAL="nonzero:masked_select"
 
+# See Note [Keep Going]
+CONTINUE_ON_ERROR=false
+if [[ "$CONTINUE_ON_ERROR" == "1" ]]; then
+  set +e
+fi
+
 if [ "$DEBUG" == "1" ]; then
   BUILDTYPE="Debug"
 fi
@@ -42,10 +48,8 @@ do
 done
 shift $(($OPTIND - 1))
 
-if [[ "$TPUVM_MODE" != "1" ]]; then
-  # Dynamic shape is not supported on the tpuvm.
-  export XLA_EXPERIMENTAL
-fi
+# Set XLA_EXPERIMENTAL var to subsequently executed commands.
+export XLA_EXPERIMENTAL
 
 rm -rf "$BUILDDIR"
 mkdir "$BUILDDIR" 2>/dev/null

@@ -1,20 +1,19 @@
-import collections
 import io
 import sys
-import os
 import re
 import threading
 import time
 from typing import List, Optional
 import torch
+import torch.distributed._functional_collectives
 import torch.nn.functional as F
 import torch_xla
 from torch_xla.experimental import pjrt
+from torch_xla.experimental import tpu
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.debug.metrics_saver as ms
 import torch_xla.utils.utils as xu
 import torch_xla.utils.closures as xc
-import torch_xla.utils.keyd_queue as kq
 
 _DEVICES = xu.LazyProperty(lambda: torch_xla._XLAC._xla_get_devices())
 
@@ -25,11 +24,29 @@ REDUCE_OR = 'or'
 REDUCE_MIN = 'min'
 REDUCE_MAX = 'max'
 
-_TORCH_DIST_GROUPS = dict()
-_TORCH_DIST_LOCK = threading.Lock()
-
 _DEVICE_CONTEXTS = dict()
 _DEVICE_CONTEXTS_LOCK = threading.Lock()
+
+# Note [Dynamo WORLD_SIEZ and ORDINAL]
+# Belows are workaround to cache the ordinal and world_size such that
+# Dynamo won't do graph breaks when xm.xrt_world_size() and xm.get_ordinal() are called.
+_WORLD_SIZE = None
+_ORDINAL = None
+
+
+def _init_world_size_ordinal():
+  global _WORLD_SIZE, _ORDINAL
+
+  if not pjrt.using_pjrt():
+    return
+
+  # We don't support V3-8. See Note [V3-8 Threading]
+  if pjrt.device_type() == 'TPU' and tpu.version() < 4:
+    return
+
+  if _WORLD_SIZE is None:
+    _WORLD_SIZE = xrt_world_size()
+    _ORDINAL = get_ordinal()
 
 
 class DeviceContext(object):
@@ -51,73 +68,12 @@ def _get_device_context(device=None):
     return devctx
 
 
-class CollectiveContext(object):
-
-  def __init__(self, groups=None):
-    self.replica_devcount = torch_xla._XLAC._xla_get_replication_devices_count()
-    self.world_size = xrt_world_size()
-    self.ordinal = get_ordinal()
-    if self.world_size > self.replica_devcount:
-      # This is the sea-of-devices path.
-      self.requires_interhost_reduce = self.world_size > 1
-      # If groups are enabled we avoid using the two level reduce (first among the
-      # fast interconnected cores, then using the torch.distributed support).
-      # The intercore_group is always empty, which means all cores, but in the not
-      # empty groups case, it won't be used as requires_intercore_reduce is False.
-      self.intercore_group = []
-      if groups:
-        self.requires_intercore_reduce = False
-        if self.requires_interhost_reduce:
-          self.interhost_group = _make_group_for_ordinal(self.ordinal, groups)
-          self.is_reduce_host = True
-      else:
-        self.requires_intercore_reduce = self.replica_devcount > 1
-        if self.requires_interhost_reduce:
-          self.interhost_group, ranks = _make_interhost_group(
-              self.replica_devcount, self.world_size)
-          self.is_reduce_host = self.ordinal in ranks
-    else:
-      # Standard replication path.
-      self.requires_intercore_reduce = self.replica_devcount > 1
-      self.requires_interhost_reduce = False
-      self.intercore_group = groups or []
-
-
-def _get_torch_dist_group(ranks):
-  import torch.distributed as dist
-
-  with _TORCH_DIST_LOCK:
-    pg = _TORCH_DIST_GROUPS.get(ranks, None)
-    if not pg:
-      pg = dist.new_group(ranks=ranks)
-      _TORCH_DIST_GROUPS[ranks] = pg
-    return pg
-
-
-def _make_group_for_ordinal(ordinal, groups):
-  for g in groups:
-    if ordinal in g:
-      return _get_torch_dist_group(sorted(g))
-  raise RuntimeError('Ordinal {} not found in groups {}'.format(
-      ordinal, groups))
-
-
-def _make_interhost_group(replica_devcount, world_size):
-  # Every host in a sea-of-devices case handles replica_devcount devices.
-  # The replica device index 0 of each host does the inter-host replication
-  # using torch.distributed.
-  # The XLA CPU is a special case where there is one process per XLA CPU device,
-  # which is also a virtual host within a physical host.
-  ranks = tuple(range(0, world_size, replica_devcount))
-  return _get_torch_dist_group(ranks), ranks
-
-
 def is_xla_tensor(tensor):
   return tensor.device.type == 'xla'
 
 
 def parse_xla_device(device):
-  m = re.match(r'(CPU|TPU|GPU):(\d+)$', device)
+  m = re.match(r'(CPU|TPU|GPU|XPU):(\d+)$', device)
   if m:
     return (m.group(1), int(m.group(2)))
 
@@ -126,7 +82,7 @@ def get_xla_supported_devices(devkind=None, max_devices=None):
   """Returns a list of supported devices of a given kind.
 
   Args:
-    devkind (string..., optional): If specified, one of `TPU`, `GPU` or `CPU`
+    devkind (string..., optional): If specified, one of `TPU`, `GPU`, `XPU` or `CPU`
       (the 'GPU' XLA device is currently not implemented).
     max_devices (int, optional): The maximum number of devices to be returned of
       that kind.
@@ -135,7 +91,7 @@ def get_xla_supported_devices(devkind=None, max_devices=None):
     The list of device strings.
   """
   xla_devices = _DEVICES.value
-  devkind = [devkind] if devkind else ['TPU', 'GPU', 'CPU']
+  devkind = [devkind] if devkind else ['TPU', 'GPU', 'XPU', 'CPU']
   for kind in devkind:
     kind_devices = []
     for i, device in enumerate(xla_devices):
@@ -156,6 +112,10 @@ def xrt_world_size(defval=1):
   Returns:
     The number of devices which is taking part of the replication.
   """
+  global _WORLD_SIZE
+  if _WORLD_SIZE is not None:
+    return _WORLD_SIZE
+
   if pjrt.using_pjrt():
     return pjrt.world_size()
 
@@ -175,6 +135,10 @@ def get_ordinal(defval=0):
   Returns:
     The replication ordinal of the current thread.
   """
+  global _ORDINAL
+  if _ORDINAL is not None:
+    return _ORDINAL
+
   if pjrt.using_pjrt():
     return pjrt.global_ordinal()
 
@@ -231,7 +195,7 @@ def xla_device(n=None, devkind=None):
     n (int, optional): The specific instance (ordinal) to be returned. If
       specified, the specific XLA device instance will be returned. Otherwise
       the first device of `devkind` will be returned.
-    devkind (string..., optional): If specified, one of `TPU`, `GPU` or `CPU`.
+    devkind (string..., optional): If specified, one of `TPU`, `GPU`, `XPU` or `CPU`.
 
   Returns:
     A `torch.device` with the requested instance.
@@ -279,7 +243,7 @@ def xla_device_hw(device):
       real device.
 
   Returns:
-    A string representation of the hardware type (`CPU`, `TPU`, `GPU`) of the
+    A string representation of the hardware type (`CPU`, `TPU`, `XPU`, `GPU`) of the
     given device.
   """
   real_device = _xla_real_device(device)
@@ -339,7 +303,7 @@ def set_replication(device, devices):
   else:
     torch_xla._XLAC._xla_set_replication_devices([])
     devctx.device_index = 0
-  devctx.all_reduce_token = None
+  torch_xla._XLAC._set_all_reduce_token(devctx.device, None)
   torch_xla._XLAC._xla_set_default_device(device)
 
 
@@ -479,77 +443,11 @@ def _fetch_gradients(optimizer):
 
 def _get_all_reduce_token():
   devctx = _get_device_context()
-  token = getattr(devctx, 'all_reduce_token', None)
-  if token is None:
-    token = torch_xla._XLAC._xla_create_token(devctx.device)
-    devctx.all_reduce_token = token
+  token = torch_xla._XLAC._get_all_reduce_token(devctx.device)
   return token, devctx
 
 
-def _torch_all_reduce(reduce_type, inputs, group=None):
-  import torch.distributed as dist
-
-  if reduce_type == REDUCE_SUM:
-    reduce_op = dist.ReduceOp.SUM
-  elif reduce_type == REDUCE_MUL:
-    reduce_op = dist.ReduceOp.PRODUCT
-  elif reduce_type == REDUCE_MIN:
-    reduce_op = dist.ReduceOp.MIN
-  elif reduce_type == REDUCE_MAX:
-    reduce_op = dist.ReduceOp.MAX
-  elif reduce_type == REDUCE_OR:
-    reduce_op = dist.ReduceOp.BOR
-  elif reduce_type == REDUCE_AND:
-    reduce_op = dist.ReduceOp.BAND
-  else:
-    raise RuntimeError('Invalid reduce type: {}'.format(reduce_type))
-
-  results = []
-  async_op = None
-  for tensor in inputs:
-    # Use async flag to overlap pytorch reduce ops with XLA tensor fetches.
-    cpu_tensor = torch_xla._XLAC._xla_get_cpu_tensors([tensor])[0]
-    results.append(cpu_tensor)
-    if async_op is not None:
-      async_op.wait()
-    async_op = dist.all_reduce(
-        cpu_tensor, reduce_op, async_op=True, group=group)
-  if async_op is not None:
-    async_op.wait()
-  return results
-
-
-def _host_all_reduce(reduce_type, inputs, cctx, scale=None):
-  # Barrier must happen on all devices.
-  torch_xla._XLAC._xla_sync_multi(
-      inputs, devices=[], wait=True, sync_xla_data=True)
-
-  # Here we use the torch.distributed reductions only on one device in the
-  # replication set, and then use in graph fast interconnect reduction to
-  # transfer the result to all replication devices.
-  # One core per fast interconnect replica group does the torch.distributed
-  # reduction and post the result, while the others post zeros.
-  if cctx.is_reduce_host:
-    results = _torch_all_reduce(reduce_type, inputs, group=cctx.interhost_group)
-    for i in range(0, len(inputs)):
-      inputs[i].copy_(results[i])
-      if scale is not None:
-        inputs[i].mul_(scale)
-  else:
-    for tensor in inputs:
-      tensor.zero_()
-  if cctx.requires_intercore_reduce:
-    token, devctx = _get_all_reduce_token()
-    devctx.all_reduce_token = torch_xla._XLAC._xla_all_reduce_inplace(
-        REDUCE_SUM, inputs, token, 1.0, [])
-
-
-def all_reduce(reduce_type,
-               inputs,
-               scale=1.0,
-               groups=None,
-               cctx=None,
-               pin_layout=True):
+def all_reduce(reduce_type, inputs, scale=1.0, groups=None, pin_layout=True):
   """Performs an inplace reduce operation on the input tensor(s).
 
   Args:
@@ -577,37 +475,26 @@ def all_reduce(reduce_type,
     this function performs an inplace all-reduce op on the input tensors, and
     returns the list/tuple itself.
   """
-  # In a sea-of-devices case we use two level of reductions. One using the fast
-  # device interconnect, and then using the torch.distributed reduction API to
-  # reduce across the detached hosts.
-  # One special case is XLA CPU devices, which do not support in graph reductions,
-  # so in that case we create differente processes having a single replication
-  # device. That will skip the in graph reductions and use the torch.distributed
-  # support across all XLA CPU devices.
-  if cctx is None:
-    cctx = CollectiveContext(groups=groups)
-  if cctx.requires_intercore_reduce:
-    token, devctx = _get_all_reduce_token()
-    if isinstance(inputs, torch.Tensor):
-      result = torch_xla._XLAC._xla_all_reduce(reduce_type, inputs, token,
-                                               scale, cctx.intercore_group,
-                                               pin_layout)
-      devctx.all_reduce_token = result[1]
-      results = [result[0]]
+  groups = groups or []
+  if isinstance(inputs, torch.Tensor):
+    result = None
+    if scale == 1.0 and groups == [] and pin_layout:
+      # TODO(alanwaketan): Support groups.
+      # Only c10d_functional version cc ops are traceable by Dynamo.
+      result = torch.ops.c10d_functional.all_reduce(inputs, reduce_type, "", [],
+                                                    0)
     else:
-      devctx.all_reduce_token = torch_xla._XLAC._xla_all_reduce_inplace(
-          reduce_type, inputs, token, scale, cctx.intercore_group, pin_layout)
-      results = inputs
+      result = torch_xla._XLAC._xla_all_reduce(reduce_type, inputs, scale,
+                                               groups, pin_layout)
+    results = [result]
   else:
-    if isinstance(inputs, torch.Tensor):
-      results = [inputs.clone()]
-    else:
-      results = inputs
+    token, devctx = _get_all_reduce_token()
+    torch_xla._XLAC._set_all_reduce_token(
+        devctx.device,
+        torch_xla._XLAC._xla_all_reduce_inplace(reduce_type, inputs, token,
+                                                scale, groups, pin_layout))
+    results = inputs
 
-  if cctx.requires_interhost_reduce:
-    assert groups is None, 'Groups are not supported in sea-of-devices mode'
-    hscale = scale if cctx.replica_devcount <= 1 and scale != 1.0 else None
-    _host_all_reduce(reduce_type, results, cctx, scale=hscale)
   return results[0] if isinstance(inputs, torch.Tensor) else results
 
 
@@ -676,8 +563,7 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
     A tensor which has, in the ``dim`` dimension, all the values from the
     participating replicas.
   """
-  if pin_layout and xla_device_hw(
-      value.device) in ('TPU', 'GPU') and output == None:
+  if pin_layout and output == None:
     # There is not an easy way to pin the all_gather layout on TPU and GPU, use
     # all_reduce based all_gather for this purpose.
     return _all_gather_using_all_reduce(
@@ -697,12 +583,12 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
     new_token = torch_xla._XLAC._xla_all_gather_out(output, value, token, dim,
                                                     shard_count, groups or [],
                                                     pin_layout)
-    devctx.all_reduce_token = new_token
+    torch_xla._XLAC._set_all_reduce_token(devctx.device, new_token)
     return output
 
   result = torch_xla._XLAC._xla_all_gather(value, token, dim, shard_count,
                                            groups or [], pin_layout)
-  devctx.all_reduce_token = result[1]
+  torch_xla._XLAC._set_all_reduce_token(devctx.device, result[1])
   return result[0]
 
 
@@ -739,7 +625,7 @@ def all_to_all(value,
   result = torch_xla._XLAC._xla_all_to_all(value, token, split_dimension,
                                            concat_dimension, split_count,
                                            groups or [], pin_layout)
-  devctx.all_reduce_token = result[1]
+  torch_xla._XLAC._set_all_reduce_token(devctx.device, result[1])
   return result[0]
 
 
@@ -764,7 +650,7 @@ def collective_permute(value, pairs):
   """
   token, devctx = _get_all_reduce_token()
   result = torch_xla._XLAC._xla_collective_permute(value, token, pairs)
-  devctx.all_reduce_token = result[1]
+  torch_xla._XLAC._set_all_reduce_token(devctx.device, result[1])
   return result[0]
 
 
@@ -814,7 +700,7 @@ def send(value, channel_id):
   # The input will be returned as result.
   input_as_result, new_token = torch_xla._XLAC._xla_send(
       value, token, channel_id)
-  devctx.all_reduce_token = new_token
+  torch_xla._XLAC._set_all_reduce_token(devctx.device, new_token)
   return input_as_result
 
 
@@ -829,7 +715,7 @@ def recv(output, channel_id):
   """
   token, devctx = _get_all_reduce_token()
   result, new_token = torch_xla._XLAC._xla_recv(output, token, channel_id)
-  devctx.all_reduce_token = new_token
+  torch_xla._XLAC._set_all_reduce_token(devctx.device, new_token)
   return result
 
 
@@ -878,13 +764,13 @@ def reduce_scatter(reduce_type,
                                                         scatter_dim,
                                                         shard_count, groups or
                                                         [], pin_layout)
-    devctx.all_reduce_token = new_token
+    torch_xla._XLAC._set_all_reduce_token(devctx.device, new_token)
     return output
 
   result = torch_xla._XLAC._xla_reduce_scatter(reduce_type, input, token, scale,
                                                scatter_dim, shard_count,
                                                groups or [], pin_layout)
-  devctx.all_reduce_token = result[1]
+  torch_xla._XLAC._set_all_reduce_token(devctx.device, result[1])
   return result[0]
 
 
@@ -954,7 +840,7 @@ def mark_step(wait=False):
   if is_master_ordinal():
     ms.save_metrics()
   devctx = _run_step_closures()
-  devctx.all_reduce_token = None
+  torch_xla._XLAC._set_all_reduce_token(devctx.device, None)
 
 
 def wait_device_ops(devices=[]):
@@ -981,8 +867,7 @@ def reduce_gradients(optimizer, groups=None, pin_layout=True):
     pin_layout (bool, optional): whether to pin the layout when reducing gradients.
       See `xm.all_reduce` for details.
   """
-  cctx = CollectiveContext()
-  count = max(cctx.replica_devcount, cctx.world_size)
+  count = xrt_world_size()
   if count > 1:
     gradients = _fetch_gradients(optimizer)
     all_reduce(
@@ -990,7 +875,6 @@ def reduce_gradients(optimizer, groups=None, pin_layout=True):
         gradients,
         scale=1.0 / count,
         groups=groups,
-        cctx=cctx,
         pin_layout=pin_layout)
 
 
@@ -1055,6 +939,9 @@ def save(data, file_or_path, master_only=True, global_master=False):
       controls whether every host's master (if ``global_master`` is ``False``)
       saves the content, or only the global master (ordinal 0).
       Default: False
+    sync (bool, optional): Whether to synchronize all replicas after saving
+      tensors. If True, all replicas must call `xm.save` or the main process
+      will hang.
   """
   should_write_data = not master_only or is_master_ordinal(
       local=not global_master)
@@ -1062,7 +949,6 @@ def save(data, file_or_path, master_only=True, global_master=False):
   cpu_data = _maybe_convert_to_cpu(data, convert=should_write_data)
   if should_write_data:
     torch.save(cpu_data, file_or_path)
-  rendezvous('torch_xla.core.xla_model.save')
 
 
 def _maybe_convert_to_cpu(data, convert=True):
@@ -1080,11 +966,16 @@ def _maybe_convert_to_cpu(data, convert=True):
   return ToXlaTensorArena(convert_fn, select_fn).transform(data)
 
 
-def send_cpu_data_to_device(data, device):
+def send_cpu_data_to_device(data, device, input_sharding=None):
 
   def convert_fn(tensors):
     devices = [str(device)] * len(tensors)
-    return torch_xla._XLAC._xla_tensors_from_aten(tensors, devices)
+    xtensors = torch_xla._XLAC._xla_tensors_from_aten(tensors, devices)
+    if input_sharding:
+      for xtensor in xtensors:
+        if input_sharding.can_apply(xtensor):
+          input_sharding.apply(xtensor)
+    return xtensors
 
   def select_fn(v):
     return type(v) == torch.Tensor and v.device.type == 'cpu'

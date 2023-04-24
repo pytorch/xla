@@ -215,6 +215,9 @@ xla::Shape ReciprocalOutputShape(const torch::lazy::Value& input);
 
 xla::Shape ReluOutputShape(const torch::lazy::Value& input);
 
+xla::Shape RepeatOutputShape(const torch::lazy::Value& input,
+                             absl::Span<const int64_t> repeats);
+
 xla::Shape RoundOutputShape(const torch::lazy::Value& input);
 
 xla::Shape RsqrtOutputShape(const torch::lazy::Value& input);

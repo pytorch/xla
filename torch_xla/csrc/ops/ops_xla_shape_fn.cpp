@@ -2,7 +2,8 @@
 
 #include "tensorflow/compiler/xla/client/lib/logdet.h"
 #include "tensorflow/compiler/xla/shape_util.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
+#include "third_party/xla_client/util.h"
+#include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/elementwise.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/pooling.h"
@@ -634,6 +635,16 @@ xla::Shape ReluOutputShape(const torch::lazy::Value& input) {
       [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     XLA_CHECK_EQ(operands.size(), 1) << "Unexpected number of operands";
     return BuildRelu(operands[0]);
+  };
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
+}
+
+xla::Shape RepeatOutputShape(const torch::lazy::Value& input,
+                             absl::Span<const int64_t> repeats) {
+  auto lower_for_shape_fn =
+      [repeats](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    XLA_CHECK_EQ(operands.size(), 1);
+    return BuildRepeat(operands[0], repeats);
   };
   return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
 }

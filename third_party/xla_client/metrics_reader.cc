@@ -1,11 +1,10 @@
-#include "tensorflow/compiler/xla/xla_client/metrics_reader.h"
+#include "third_party/xla_client/metrics_reader.h"
 
 #include <sstream>
 
-#include "tensorflow/compiler/xla/xla_client/computation_client.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/metrics.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
+#include "third_party/xla_client/debug_macros.h"
+#include "third_party/xla_client/metrics.h"
+#include "third_party/xla_client/util.h"
 
 namespace xla {
 namespace metrics_reader {
@@ -28,10 +27,10 @@ MetricFnInfo GetMetricRenderInfo(const Percentile& percentile) {
   }
 }
 
-std::string CreateXrtMetricReport() {
-  auto xrt_metrics = ComputationClient::Get()->GetMetrics();
+std::string CreateXrtMetricReport(
+    const std::map<std::string, Metric>& xrt_metrics) {
   std::stringstream ss;
-  for (auto& name_metric : xrt_metrics) {
+  for (const auto& name_metric : xrt_metrics) {
     if (name_metric.second.percentile) {
       const Percentile& percentile = *name_metric.second.percentile;
       MetricFnInfo minfo = GetMetricRenderInfo(percentile);
@@ -70,8 +69,9 @@ std::string CreateXrtMetricReport() {
 
 }  // namespace
 
-std::string CreateMetricReport() {
-  return metrics::CreateMetricReport() + CreateXrtMetricReport();
+std::string CreateMetricReport(
+    const std::map<std::string, Metric>& xrt_metrics) {
+  return metrics::CreateMetricReport() + CreateXrtMetricReport(xrt_metrics);
 }
 
 std::string CreateMetricReport(const std::vector<std::string>& counter_names,

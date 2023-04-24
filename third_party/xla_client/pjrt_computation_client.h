@@ -11,9 +11,9 @@
 #include "tensorflow/compiler/xla/pjrt/pjrt_client.h"
 #include "tensorflow/compiler/xla/pjrt/pjrt_executable.h"
 #include "tensorflow/compiler/xla/shape.h"
-#include "tensorflow/compiler/xla/xla_client/computation_client.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
+#include "third_party/xla_client/computation_client.h"
+#include "third_party/xla_client/debug_macros.h"
+#include "third_party/xla_client/util.h"
 
 namespace xla {
 
@@ -24,6 +24,11 @@ class PjRtComputationClient : public ComputationClient {
   DataPtr CreateDataPlaceholder(std::string device, Shape shape) override;
 
   std::vector<DataPtr> GetDataShards(DataPtr data) override;
+
+  DataPtr WrapDataShards(const std::vector<DataPtr>& shards, std::string device,
+                         xla::Shape shape, xla::OpSharding sharding) override;
+
+  std::optional<xla::OpSharding> GetDataSharding(DataPtr handle) override;
 
   std::vector<DataPtr> TransferToServer(
       absl::Span<const TensorSource> tensors) override;
@@ -131,17 +136,22 @@ class PjRtComputationClient : public ComputationClient {
 
  private:
   std::shared_ptr<PjRtClient> client_;
+  // global_ordinals_ tracks a map from PjRtDeviceId to the device's
+  // dense global ordinal.
+  std::unordered_map<int, int> global_ordinals_;
   std::unordered_map<std::string, xla::PjRtDevice* const> string_to_device_;
   std::shared_ptr<std::vector<std::string>> replication_devices_;
   std::unordered_map<std::string, std::unique_ptr<std::shared_mutex>>
       device_locks_;
-  // TODO(wcromar): Remove this when PJRT C API supports logical_on_device_shape
-  bool supports_logical_on_device_shape_ = true;
 
   xla::PjRtDevice* StringToPjRtDevice(const std::string& device);
   std::shared_lock<std::shared_mutex> lock_device_shared(
       const std::string& device);
   std::unique_lock<std::shared_mutex> lock_device(const std::string& device);
+
+  std::string PjRtDeviceToString(PjRtDevice* const device) const;
+  std::vector<std::string> PjRtDevicesToString(
+      absl::Span<PjRtDevice* const> devices) const;
 
   struct PjRtData : public Data {
     PjRtData(std::string device, Shape device_shape)
@@ -152,7 +162,8 @@ class PjRtComputationClient : public ComputationClient {
         : Data(std::move(device), std::move(device_shape)), buffer(buffer) {}
 
     OpaqueHandle GetOpaqueHandle() override {
-      XLA_CHECK(HasValue());
+      XLA_CHECK(HasValue())
+          << (buffer == nullptr ? "buffer is null" : "buffer is deleted");
       return reinterpret_cast<std::uintptr_t>(buffer.get());
     };
     void Assign(const Data& data) override;
@@ -179,7 +190,11 @@ class PjRtComputationClient : public ComputationClient {
     }
 
     void Assign(const Data& data) override {
-      XLA_ERROR() << __FUNCTION__ << " not supported.";
+      const PjRtShardedData& pjrt_sharded_data =
+          dynamic_cast<const PjRtShardedData&>(data);
+      if (&pjrt_sharded_data != this) {
+        shards = std::move(pjrt_sharded_data.shards);
+      }
     }
 
     bool HasValue() const override {

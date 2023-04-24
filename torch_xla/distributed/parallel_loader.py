@@ -72,6 +72,9 @@ class ParallelLoader(object):
     host_to_device_transfer_threads (int, optional): The number of threads that
       work in parallel to transfer data from loader queue to device queue.
       Default: 1
+    input_sharding (ShardingSpec, optional): Sharding spec to apply to
+      compatible input tensors after loading.
+      Default: None
   """
 
   def __init__(self,
@@ -81,13 +84,15 @@ class ParallelLoader(object):
                batches_per_execution=1,
                loader_prefetch_size=8,
                device_prefetch_size=4,
-               host_to_device_transfer_threads=1):
+               host_to_device_transfer_threads=1,
+               input_sharding=None):
     self._loader = loader
     self._devices = [torch.device(x) for x in devices]
     self._batchdim = batchdim
     self._batches_per_execution = batches_per_execution
     self._done = False
     self._queues = dict()
+    self._input_sharding = input_sharding
     for device in self._devices:
       self._queues[device] = PerDeviceQueue(device, loader_prefetch_size,
                                             device_prefetch_size)
@@ -163,7 +168,7 @@ class ParallelLoader(object):
       batch = self._get_batch(dqueue)
       if not batch:
         break
-      batch = xm.send_cpu_data_to_device(batch, device)
+      batch = xm.send_cpu_data_to_device(batch, device, self._input_sharding)
       for data in batch:
         dqueue.queue.put(data)
     dqueue.queue.close_write()

@@ -1,4 +1,6 @@
-#include "tensorflow/compiler/xla/xla_client/pjrt_computation_client.h"
+#include "third_party/xla_client/pjrt_computation_client.h"
+
+#include <gtest/gtest.h>
 
 #include <memory>
 #include <string>
@@ -11,11 +13,11 @@
 #include "tensorflow/compiler/xla/status.h"
 #include "tensorflow/compiler/xla/statusor.h"
 #include "tensorflow/compiler/xla/tests/literal_test_util.h"
-#include "tensorflow/compiler/xla/xla_client/computation_client.h"
-#include "tensorflow/core/platform/logging.h"
+#include "tensorflow/tsl/platform/logging.h"
 #include "tensorflow/tsl/lib/core/status_test_util.h"
 #include "tensorflow/tsl/platform/env.h"
 #include "tensorflow/tsl/platform/test.h"
+#include "third_party/xla_client/computation_client.h"
 
 namespace xla {
 

@@ -13,9 +13,9 @@
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/permutation_util.h"
 #include "tensorflow/compiler/xla/types.h"
-#include "tensorflow/compiler/xla/xla_client/debug_macros.h"
-#include "tensorflow/compiler/xla/xla_client/util.h"
-#include "tensorflow/core/lib/bfloat16/bfloat16.h"
+#include "tensorflow/tsl/platform/bfloat16.h"
+#include "third_party/xla_client/debug_macros.h"
+#include "third_party/xla_client/util.h"
 #include "torch/csrc/lazy/core/shape.h"
 #include "torch/csrc/lazy/core/util.h"
 
@@ -47,9 +47,8 @@ class XlaHelpers {
       case xla::PrimitiveType::F32:
         return xla::LiteralUtil::CreateR0<float>(scalar_value);
       case xla::PrimitiveType::BF16:
-        return xla::LiteralUtil::CreateR0<tensorflow::bfloat16>(
-            static_cast<tensorflow::bfloat16>(
-                static_cast<float>(scalar_value)));
+        return xla::LiteralUtil::CreateR0<tsl::bfloat16>(
+            static_cast<tsl::bfloat16>(static_cast<float>(scalar_value)));
       case xla::PrimitiveType::F16:
         return xla::LiteralUtil::CreateR0<xla::half>(
             static_cast<xla::half>(static_cast<float>(scalar_value)));

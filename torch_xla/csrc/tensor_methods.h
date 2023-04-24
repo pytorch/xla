@@ -8,10 +8,9 @@ namespace tensor_methods {
 //////////////////////////////////////////////////////////////////////////////
 // XLA dedicated operators follows here, listed in alphabetical order.
 //////////////////////////////////////////////////////////////////////////////
-std::pair<XLATensorPtr, torch::lazy::Value> all_reduce(
-    const XLATensorPtr& input, const torch::lazy::Value& token,
-    AllReduceType reduce_type, double scale,
-    std::vector<std::vector<int64_t>> groups, bool pin_layout);
+XLATensorPtr all_reduce(const XLATensorPtr& input, AllReduceType reduce_type,
+                        double scale, std::vector<std::vector<int64_t>> groups,
+                        bool pin_layout);
 
 torch::lazy::Value all_reduce_(XLATensorPtr& input,
                                const torch::lazy::Value& token,
@@ -453,6 +452,11 @@ XLATensorPtr lerp(const XLATensorPtr& input, const XLATensorPtr& end,
 XLATensorPtr lerp(const XLATensorPtr& input, const XLATensorPtr& end,
                   const at::Scalar& weight);
 
+XLATensorPtr linalg_vector_norm(const XLATensorPtr& input,
+                                const at::Scalar& ord,
+                                std::vector<int64_t> dimensions, bool keep_dim,
+                                c10::optional<at::ScalarType> dtype);
+
 XLATensorPtr linspace(const at::Scalar& start, const at::Scalar& end,
                       const int64_t steps, at::ScalarType element_type,
                       const torch::lazy::BackendDevice& device);
@@ -484,12 +488,11 @@ XLATensorPtr lt(const XLATensorPtr& input, const at::Scalar& other);
 
 XLATensorPtr lt(const XLATensorPtr& input, const XLATensorPtr& other);
 
-// In-place version of the method above.
-void masked_fill_(XLATensorPtr& input, const XLATensorPtr& mask,
-                  const at::Scalar& value);
+XLATensorPtr masked_fill(XLATensorPtr& input, const XLATensorPtr& mask,
+                         const at::Scalar& value);
 
-void masked_scatter_(XLATensorPtr& input, const XLATensorPtr& mask,
-                     const XLATensorPtr& source);
+XLATensorPtr masked_scatter(XLATensorPtr& input, const XLATensorPtr& mask,
+                            const XLATensorPtr& source);
 
 XLATensorPtr masked_select(const XLATensorPtr& input, const XLATensorPtr& mask);
 
@@ -556,6 +559,9 @@ XLATensorPtr mul(
 XLATensorPtr mul(
     const XLATensorPtr& input, const at::Scalar& other,
     c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
+
+XLATensorPtr multinomial(const XLATensorPtr& input, int64_t num_samples,
+                         bool replacement);
 
 XLATensorPtr mv(const XLATensorPtr& input, const XLATensorPtr& vec);
 void mv_out(XLATensorPtr& out, const XLATensorPtr& input,
@@ -667,10 +673,6 @@ XLATensorPtr reflection_pad2d_backward(const XLATensorPtr& grad_output,
 
 XLATensorPtr remainder(const XLATensorPtr& input, const XLATensorPtr& other);
 XLATensorPtr remainder(const XLATensorPtr& input, const at::Scalar& other);
-
-// Repeats the input tensor along each dimension by the given number of
-// repeats.
-XLATensorPtr repeat(const XLATensorPtr& input, std::vector<int64_t> repeats);
 
 XLATensorPtr replication_pad1d(const XLATensorPtr& input,
                                std::vector<int64_t> padding);
@@ -791,11 +793,11 @@ void squeeze_(XLATensorPtr& input, int64_t dim);
 XLATensorPtr stack(absl::Span<const XLATensorPtr> tensors, int64_t dim);
 
 XLATensorPtr std(const XLATensorPtr& input, std::vector<int64_t> dimensions,
-                 bool keep_reduced_dimensions, int64_t correction);
+                 bool keep_reduced_dimensions, double correction);
 
 std::tuple<XLATensorPtr, XLATensorPtr> std_mean(const XLATensorPtr& input,
                                                 std::vector<int64_t> dimensions,
-                                                int64_t correction,
+                                                double correction,
                                                 bool keep_reduced_dimensions);
 
 XLATensorPtr sub(
@@ -874,16 +876,22 @@ XLATensorPtr upsample_nearest2d_backward(const XLATensorPtr& grad_output,
                                          std::vector<int64_t> input_size);
 
 XLATensorPtr var(const XLATensorPtr& input, std::vector<int64_t> dimensions,
-                 int64_t correction, bool keep_reduced_dimensions);
+                 double correction, bool keep_reduced_dimensions);
 
 std::tuple<XLATensorPtr, XLATensorPtr> var_mean(const XLATensorPtr& input,
                                                 std::vector<int64_t> dimensions,
-                                                int64_t correction,
+                                                double correction,
                                                 bool keep_reduced_dimensions);
 
 // Like reshape, but it returns a view into the original tensor.
 XLATensorPtr view(const XLATensorPtr& input,
                   absl::Span<const int64_t> output_size);
+XLATensorPtr view_symint(const XLATensorPtr& input,
+                         at::SymIntArrayRef sym_size);
+
+XLATensorPtr view_as_complex_copy(const XLATensorPtr& input);
+
+XLATensorPtr view_as_real_copy(const XLATensorPtr& input);
 
 void zero_(XLATensorPtr& input);
 
