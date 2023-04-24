@@ -190,10 +190,6 @@ class NoneRemover:
 
 
 def is_xla_tensor(tensor: torch.Tensor) -> bool:
-  # TODO(yeounoh) check if tensor sharding annotation can be accessed here
-  # 1) sourcing from the XLATensor
-  # 2) sourcing from the backend data
-  # print(f'tensor sharding: {torch_xla._XLAC._get_xla_sharding_spec(tensor)}')
   return tensor.device.type == "xla"
 
 

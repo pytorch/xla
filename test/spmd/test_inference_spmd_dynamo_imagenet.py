@@ -133,7 +133,7 @@ def inference_imagenet():
     device_ids = np.arange(num_devices)
     # Model sharding
     if 'conv' in FLAGS.sharding:
-      # Shard the model's convlution layers along two dimensions
+      # Shard the model's convolution layers along two dimensions
       mesh_shape = (2, num_devices // 2, 1, 1)
       mesh = xs.Mesh(device_ids, mesh_shape, ('w', 'x', 'y', 'z'))
       partition_spec = (0, 1, 2, 3)  # Apply sharding along all axes

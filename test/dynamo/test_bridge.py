@@ -9,7 +9,6 @@ from torch._dynamo import disable
 
 import torch_xla.core.dynamo_bridge as bridge
 import torch_xla.core.xla_model as xm
-import torch_xla.experimental.xla_sharding as xs
 import torch_xla.debug.metrics as metrics
 from torch import fx, nn
 
@@ -109,7 +108,6 @@ def make_reuse_graph_test(module_class, niter=100):
     optimized_mod = bridge.extract_compiled_graph(
         fx.symbolic_trace(xla_module), inputs)
 
-    print('\nCompiled graph extraction done!\n')
     for i in range(niter):
       xla_inputs = tuple(
           inp.to(device=xla_dev) for inp in xla_module.get_random_inputs())
@@ -118,8 +116,6 @@ def make_reuse_graph_test(module_class, niter=100):
       expected = xla_module(*xla_inputs)
       # make sure above lazy computation is executed.
       xm.mark_step()
-
-      print(f'\nexpected: {expected}\n')
 
       actual = optimized_mod(*xla_inputs_copy)
 
