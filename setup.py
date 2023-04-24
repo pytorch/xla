@@ -62,7 +62,7 @@ third_party_path = os.path.join(base_dir, 'third_party')
 
 _libtpu_version = '0.1.dev20230213'
 _libtpu_storage_path = f'https://storage.googleapis.com/cloud-tpu-tpuvm-artifacts/wheels/libtpu-nightly/libtpu_nightly-{_libtpu_version}-py3-none-any.whl'
-_torchdistx_source_path=f'https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/experimental/torchdistx-0.3.0.dev0+cpu-cp38-cp38-linux_x86_64.whl'
+_torchdistx_source_path=f'https://storage.cloud.google.com/manfei_bucket/VL_VLP/torchdistx-0.3.0.dev0%2Bcpu-cp38-cp38-linux_x86_64.whl'
 
 
 def _get_build_mode():
