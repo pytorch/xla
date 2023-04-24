@@ -92,12 +92,23 @@ def inference_imagenet():
   device = xm.xla_device()
   if FLAGS.fake_data:
     assert FLAGS.test_set_batch_size == 1
-    test_loader = xu.SampleGenerator(
-        data=(torch.zeros(FLAGS.test_set_batch_size, 3, img_dim,
-                          img_dim).to(device),
-              torch.zeros(FLAGS.test_set_batch_size,
-                          dtype=torch.int64).to(device)),
-        sample_count=FLAGS.sample_count // FLAGS.test_set_batch_size)
+    # If we aren't using the parallel loader, we need to send the data
+    # to device here. Otherwise, it won't be materialized on the device
+    # at compile time.
+    if 'batch' in FLAGS.sharding or 'spatial' in FLAGS.sharding:
+      test_loader = xu.SampleGenerator(
+          data=(torch.zeros(FLAGS.test_set_batch_size, 3, img_dim,
+                            img_dim),
+                torch.zeros(FLAGS.test_set_batch_size,
+                            dtype=torch.int64)),
+          sample_count=FLAGS.sample_count // FLAGS.test_set_batch_size)
+    else: 
+      test_loader = xu.SampleGenerator(
+          data=(torch.zeros(FLAGS.test_set_batch_size, 3, img_dim,
+                            img_dim).to(device),
+                torch.zeros(FLAGS.test_set_batch_size,
+                            dtype=torch.int64).to(device)),
+          sample_count=FLAGS.sample_count // FLAGS.test_set_batch_size)
   else:
     normalize = transforms.Normalize(
         mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
@@ -124,8 +135,8 @@ def inference_imagenet():
 
   torch.manual_seed(42)
 
-  model = torchvision.models.resnet50().to(
-      device)  # get_model_property('model_fn')().to(device)
+  model = torchvision.models.resnet50().to(device)
+  # model = get_model_property('model_fn')().to(device)
 
   input_mesh = None
   if FLAGS.sharding:
