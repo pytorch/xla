@@ -10,25 +10,17 @@ namespace at {
 namespace autocast {
 namespace {
 
-#define KERNEL_XLA(OP, POLICY) \
-  KERNEL(c10::DeviceType::XLA, OP, POLICY)
+#define KERNEL_XLA(OP, POLICY) KERNEL(c10::DeviceType::XLA, OP, POLICY)
 
 #define KERNEL_XLA2(OP, OVERLOAD, POLICY) \
   KERNEL2(c10::DeviceType::XLA, OP, OVERLOAD, POLICY)
 
-#define KERNEL_DIFFERENT_REDISPATCH_SIGNATURE_XLA( \
-    REDISPATCH_FUNC,                                \
-    REGISTER_NAME,                                  \
-    REGISTER_SIGNATURE,                             \
-    REDISPATCH_SIGNATURE,                           \
-    POLICY)                                         \
-  KERNEL_DIFFERENT_REDISPATCH_SIGNATURE(            \
-      c10::DeviceType::XLA,                         \
-      REDISPATCH_FUNC,                              \
-      REGISTER_NAME,                                \
-      REGISTER_SIGNATURE,                           \
-      REDISPATCH_SIGNATURE,                         \
-      POLICY)
+#define KERNEL_DIFFERENT_REDISPATCH_SIGNATURE_XLA(                             \
+    REDISPATCH_FUNC, REGISTER_NAME, REGISTER_SIGNATURE, REDISPATCH_SIGNATURE,  \
+    POLICY)                                                                    \
+  KERNEL_DIFFERENT_REDISPATCH_SIGNATURE(c10::DeviceType::XLA, REDISPATCH_FUNC, \
+                                        REGISTER_NAME, REGISTER_SIGNATURE,     \
+                                        REDISPATCH_SIGNATURE, POLICY)
 
 TORCH_LIBRARY_IMPL(_, AutocastXLA, m) {
   m.fallback(torch::CppFunction::makeFallthrough());

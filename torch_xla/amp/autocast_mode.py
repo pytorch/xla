@@ -25,7 +25,9 @@ class autocast(torch.amp.autocast_mode.autocast):
       super().__init__(
           "xla", enabled=enabled, dtype=dtype, cache_enabled=cache_enabled)
     else:
-      print('Warning: AMP only supported for XLA:TPU and XLA:GPU. Ignoring autocast.')
+      print(
+          'Warning: AMP only supported for XLA:TPU and XLA:GPU. Ignoring autocast.'
+      )
 
   def __enter__(self):
     return super().__enter__()
