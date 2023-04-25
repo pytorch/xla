@@ -1,4 +1,9 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_LOWERING_CONTEXT_H_
+#define XLA_TORCH_XLA_CSRC_LOWERING_CONTEXT_H_
+
+#include <torch/csrc/lazy/backend/backend_data.h>
+#include <torch/csrc/lazy/backend/lowering_context.h>
+#include <torch/csrc/lazy/core/ir_util.h>
 
 #include <memory>
 #include <string>
@@ -11,9 +16,6 @@
 #include "tensorflow/compiler/xla/types.h"
 #include "tensorflow/tsl/platform/macros.h"
 #include "third_party/xla_client/computation_client.h"
-#include "torch/csrc/lazy/backend/backend_data.h"
-#include "torch/csrc/lazy/backend/lowering_context.h"
-#include "torch/csrc/lazy/core/ir_util.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ir_util.h"
@@ -111,3 +113,5 @@ class LoweringContext : public torch::lazy::LoweringContext {
 };  // namespace torch_xla
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_LOWERING_CONTEXT_H_

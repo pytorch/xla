@@ -1,3 +1,6 @@
+import sys
+import os
+
 from dataclasses import dataclass
 from typing import List, Union
 from torchgen.api.lazy import LazyIrSchema
@@ -11,16 +14,16 @@ from torchgen.api.types import (
     boolT,
     kernel_signature,
 )
-import pathlib
 
-# assuming this file is under pytorch/xla
-torch_xla_root = pathlib.Path(__file__).parent.absolute().parent
-torch_root = torch_xla_root.parent
-aten_path = str(torch_root / "aten" / "src" / "ATen")
-shape_inference_hdr = str(torch_root / "torch" / "csrc" / "lazy" / "core" /
-                          "shape_inference.h")
-impl_path = str(torch_xla_root / "torch_xla" / "csrc" / "aten_xla_type.cpp")
-source_yaml = str(torch_xla_root / "xla_native_functions.yaml")
+xla_root = sys.argv[1]
+torch_root = os.path.join(xla_root, "torch")
+aten_path = os.path.join(torch_root, "aten", "src", "ATen")
+shape_inference_hdr = os.path.join(torch_root, "torch", "csrc", "lazy", "core",
+                                   "shape_inference.h")
+impl_path = os.path.join(xla_root, "__main__",
+                         "torch_xla/csrc/aten_xla_type.cpp")
+source_yaml = sys.argv[2]
+output_dir = sys.argv[3]
 
 
 def is_boolean_dtype(lazy_type):
@@ -69,7 +72,7 @@ class GenXlaLazyIR(GenLazyIR):
 
 # Upstream class lives at torchgen/dest/lazy_ir.py.
 # We override this class to remove torch::lazy::Shape related logic.
-# Resulting NativeFuncDefinition is generated at xla/torch_xla/csrc/generated/XlaNativeFunctions.cpp.
+# Resulting NativeFuncDefinition is generated at xla/torch_xla/csrc/XlaNativeFunctions.cpp.
 @dataclass(frozen=True)
 class GenXlaLazyNativeFuncDefinition(GenLazyNativeFuncDefinition):
 
@@ -93,7 +96,7 @@ if __name__ == '__main__':
   run_gen_lazy_tensor(
       aten_path=aten_path,
       source_yaml=source_yaml,
-      output_dir="torch_xla/csrc/generated",
+      output_dir=output_dir,
       dry_run=False,
       impl_path=impl_path,
       node_base="XlaNode",

@@ -1,11 +1,13 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_XLA_OP_BUILDER_H_
+#define XLA_TORCH_XLA_CSRC_XLA_OP_BUILDER_H_
+
+#include <torch/csrc/jit/python/pybind.h>
 
 #include <memory>
 #include <string>
 #include <vector>
 
 #include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "torch/csrc/jit/python/pybind.h"
 
 namespace torch_xla {
 namespace op_builder {
@@ -31,3 +33,5 @@ OpPtr CreateOp(BuilderPtr builder, const std::string& opname,
 
 }  // namespace op_builder
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_XLA_OP_BUILDER_H_

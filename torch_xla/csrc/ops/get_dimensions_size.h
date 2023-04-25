@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_GET_DIMENSIONS_SIZE_H_
+#define XLA_TORCH_XLA_CSRC_OPS_GET_DIMENSIONS_SIZE_H_
 
 #include <vector>
 
@@ -24,3 +25,5 @@ class GetDimensionsSize : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_GET_DIMENSIONS_SIZE_H_

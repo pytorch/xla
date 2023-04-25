@@ -10,7 +10,6 @@ ARG tf_cuda_compute_capabilities="7.0,7.5,8.0"
 
 ARG bazel_jobs
 ARG tpuvm=1
-ARG build_cpp_tests=0
 ARG package_version=2.1.0
 
 # Contains all build dependencies for PT/XLA
@@ -73,12 +72,12 @@ COPY tf_patches/ tf_patches/
 COPY .bazelrc .
 COPY .bazelversion .
 COPY WORKSPACE .
+COPY BUILD .
 COPY bazel/ bazel/
-COPY build_torch_xla_libs.sh .
 
 COPY torch_xla/ torch_xla/
 COPY setup.py .
-COPY xla_native_functions.yaml .
+COPY codegen/ codegen/
 
 COPY scripts/ scripts/
 
@@ -86,9 +85,8 @@ ARG tpuvm
 ARG cuda
 ARG tf_cuda_compute_capabilities
 ARG bazel_jobs
-ARG build_cpp_tests
 ARG package_version
-RUN TORCH_XLA_VERSION=${package_version} BUILD_CPP_TESTS=${build_cpp_tests} BAZEL_JOBS=${bazel_jobs} TPUVM_MODE=${tpuvm} BUNDLE_LIBTPU=${tpuvm} XLA_CUDA=${cuda} TF_CUDA_COMPUTE_CAPABILITIES=${tf_cuda_compute_capabilities} python setup.py bdist_wheel
+RUN SILO_NAME='cache-silo-cb' BAZEL_REMOTE_CACHE=1 TORCH_XLA_VERSION=${package_version} BAZEL_JOBS=${bazel_jobs} TPUVM_MODE=${tpuvm} BUNDLE_LIBTPU=${tpuvm} XLA_CUDA=${cuda} TF_CUDA_COMPUTE_CAPABILITIES=${tf_cuda_compute_capabilities} python setup.py bdist_wheel
 
 # Expunge cache to keep image size under control
 RUN bazel clean --expunge
@@ -125,6 +123,7 @@ RUN pip install *.whl
 RUN rm *.whl
 
 ARG tpuvm
+ENV TPUVM_MODE=$tpuvm
 RUN if [ "${tpuvm}" = "1" ]; then pip install torch_xla[tpuvm]; fi
 
 # TODO: make this version selectable

@@ -1,5 +1,7 @@
 #include "torch_xla/csrc/cross_replica_reduces.h"
 
+#include <torch/csrc/lazy/core/util.h>
+
 #include <map>
 
 #include "tensorflow/compiler/xla/shape_util.h"

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_ELEMENTWISE_H_
+#define XLA_TORCH_XLA_CSRC_ELEMENTWISE_H_
 
 #include <ATen/core/interned_strings.h>
 #include <c10/core/Scalar.h>
@@ -106,3 +107,5 @@ xla::XlaOp BuildEluBackward(xla::XlaOp grad_output, xla::XlaOp output,
                             const at::Scalar& input_scale);
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_ELEMENTWISE_H_

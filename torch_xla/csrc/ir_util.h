@@ -1,10 +1,12 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_IR_UTIL_H_
+#define XLA_TORCH_XLA_CSRC_IR_UTIL_H_
+
+#include <torch/csrc/lazy/core/ir_util.h>
 
 #include <unordered_map>
 #include <vector>
 
 #include "absl/types/span.h"
-#include "torch/csrc/lazy/core/ir_util.h"
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
@@ -22,3 +24,5 @@ class Util {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_IR_UTIL_H_

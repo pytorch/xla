@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_REFLECTION_PAD2D_H_
+#define XLA_TORCH_XLA_CSRC_OPS_REFLECTION_PAD2D_H_
 
 #include <vector>
 
@@ -24,3 +25,5 @@ class ReflectionPad2d : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_REFLECTION_PAD2D_H_
