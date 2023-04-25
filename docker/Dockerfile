@@ -51,7 +51,7 @@ RUN if [ "${git_clone}" = "true" ]; then \
   echo "\nxla_branch: ${xla_branch} example_branch: ${example_branch} \n" && \
   cd /pytorch && \
   rm -rf xla && \
-  git clone -b "${xla_branch}" --recursive https://github.com/pytorch/xla && \
+  git clone -b JackCaoG/build_audio_whl --recursive https://github.com/pytorch/xla && \
   cd / && \
   git clone -b "${example_branch}" --recursive https://github.com/pytorch-tpu/examples tpu-examples; fi
 
