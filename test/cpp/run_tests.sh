@@ -57,6 +57,10 @@ if [[ "$BAZEL_VERB" == "coverage" ]]; then
   EXTRA_FLAGS="$EXTRA_FLAGS --combined_report=lcov"
 fi
 
+if [[ "$TPUVM_MODE" == "1" ]]; then
+  EXTRA_FLAGS="$EXTRA_FLAGS --config=tpu"
+fi
+
 # Handle remote builds and remote cache. Use a CI-private cache silo to avoid cachce polution.
 if [[ "$BAZEL_REMOTE_CACHE" == "1" ]]; then
   EXTRA_FLAGS="$EXTRA_FLAGS --config=remote_cache"

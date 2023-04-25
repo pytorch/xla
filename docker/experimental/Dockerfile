@@ -123,6 +123,7 @@ RUN pip install *.whl
 RUN rm *.whl
 
 ARG tpuvm
+ENV TPUVM_MODE=$tpuvm
 RUN if [ "${tpuvm}" = "1" ]; then pip install torch_xla[tpuvm]; fi
 
 # TODO: make this version selectable
