@@ -350,7 +350,9 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     t4 = torch.nonzero(t3)
     # print(t4)
     # t2.shape=torch.Size([<=6, 2]) with real size [4, 2]
-    # t4.shape=torch.Size([<=4, 2]) with real size [2, 2]
+    # t2=[[0,0], [0,2], [0,3], [0,5]]
+    # t4.shape=torch.Size([<=6, 2]) with real size [2, 2]
+    # t4=[[0,0], [0,1]]
     # PyTorch eager mode will output error: "RuntimeError: The size of tensor a (4) must match the size of tensor b (2) at non-singleton dimension 0"
     # self.assertRaises(RuntimeError, lambda: torch.add(t2, t4))
     t5 = torch.add(t2, t4)

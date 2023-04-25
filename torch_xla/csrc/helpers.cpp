@@ -481,11 +481,63 @@ xla::Shape XlaHelpers::GetPromotedShape(const xla::Shape& shape1,
 
 xla::Shape XlaHelpers::GetPromotedBinaryOpShape(const xla::Shape& shape1,
                                                 const xla::Shape& shape2) {
-  return xla::ShapeUtil::MakeShape(
-      PromoteType(shape1.element_type(), shape2.element_type()),
-      torch::lazy::GetPromotedShape(
-          xla::util::ToVector<int64_t>(shape1.dimensions()),
-          xla::util::ToVector<int64_t>(shape2.dimensions())));
+  if (!shape1.is_dynamic() && !shape2.is_dynamic()) {
+    return xla::ShapeUtil::MakeShape(
+        PromoteType(shape1.element_type(), shape2.element_type()),
+        torch::lazy::GetPromotedShape(
+            xla::util::ToVector<int64_t>(shape1.dimensions()),
+            xla::util::ToVector<int64_t>(shape2.dimensions())));
+  }
+  return GetPromotedDynamicShape(shape1, shape2);
+}
+
+xla::Shape XlaHelpers::GetPromotedDynamicShape(const xla::Shape& shape1,
+                                               const xla::Shape& shape2) {
+  std::vector<int64_t> upper_bounds1 = xla::util::ToVector<int64_t>(shape1.dimensions());
+  std::vector<int64_t> upper_bounds2_cp = xla::util::ToVector<int64_t>(shape1.dimensions());
+
+  std::vector<int64_t> upper_bounds2 = xla::util::ToVector<int64_t>(shape2.dimensions());
+  absl::Span<const bool> dyn_dims1 = shape1.dynamic_dimensions();
+  absl::Span<const bool> dyn_dims2 = shape2.dynamic_dimensions();
+  std::vector<int64_t> upper_bounds;
+  std::vector<bool> dyn_dims;
+
+  if (upper_bounds1.size() > upper_bounds2.size()) {
+    upper_bounds.insert(
+      upper_bounds.end(),
+      upper_bounds1.begin(),
+      upper_bounds1.begin() + (upper_bounds1.size() - upper_bounds2.size()));
+    dyn_dims.insert(
+      dyn_dims.end(),
+      dyn_dims1.begin(),
+      dyn_dims1.begin() + (dyn_dims1.size() - dyn_dims2.size()));
+  } else {
+    upper_bounds.insert(
+      upper_bounds.end(),
+      upper_bounds2.begin(),
+      upper_bounds2.begin() + (upper_bounds2.size() - upper_bounds1.size()));
+    dyn_dims.insert(
+      dyn_dims.end(),
+      dyn_dims2.begin(),
+      dyn_dims2.begin() + (dyn_dims2.size() - dyn_dims1.size()));
+  }
+  size_t min_size = std::min(upper_bounds1.size(), upper_bounds2.size());
+  for (const auto i : c10::irange(min_size)) {
+    int64_t ubound1 = upper_bounds1[upper_bounds1.size() - min_size + i];
+    int64_t ubound2 = upper_bounds2[upper_bounds2.size() - min_size + i];
+    upper_bounds.push_back(std::max<int64_t>(ubound1, ubound2));
+    
+    bool ddim1 = dyn_dims1[dyn_dims1.size() - min_size + i];
+    bool ddim2 = dyn_dims2[dyn_dims2.size() - min_size + i];
+    dyn_dims.push_back(ddim1||ddim2);
+  }
+  const xla::Shape& promoted_shape = xla::ShapeUtil::MakeShape(
+    PromoteType(shape1.element_type(), shape2.element_type()),
+    upper_bounds, dyn_dims);
+  
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": promoted_shape=" << promoted_shape << std::endl;
+  
+  return promoted_shape;
 }
 
 std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteShapes(xla::XlaOp op1,

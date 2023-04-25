@@ -656,20 +656,19 @@ XLATensorPtr add(const XLATensorPtr& input, const XLATensorPtr& other,
   //     alpha, other->shape(), logical_element_type, input->GetDevice());
   // return input->CreateFrom(input->GetIrValue() + other->GetIrValue() * constant,
   //                          logical_element_type);
-  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   SymIntElements sym_int_elements(other->GetIrValue(), other->shape());
   xla::PrimitiveType primitive_type =
       logical_element_type
           ? MakeXlaPrimitiveType(*logical_element_type, &(input->GetDevice()))
           : other->shape().get().element_type();
-  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": primitive_type=" << primitive_type << std::endl;
+  // xw32 After the change, primitive_type is S32(4).
 
   torch::lazy::Value constant = XLAGraphExecutor::Get()->GetIrValueForScalar(
       alpha, sym_int_elements, primitive_type, input->GetDevice());
-  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": constant.shape()=" << constant.shape() << std::endl;
   torch::lazy::Value other_ir_value = other->GetIrValue();
-  torch::lazy::Value const_other_ir_value = other_ir_value * constant;
-  return input->CreateFrom(input->GetIrValue() + const_other_ir_value,
+  torch::lazy::Value ir_value_production = other_ir_value * constant;
+  torch::lazy::Value ir_value_summation = input->GetIrValue() + ir_value_production;
+  return input->CreateFrom(ir_value_summation,
                            logical_element_type);
 }
 
