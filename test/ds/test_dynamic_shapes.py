@@ -358,6 +358,16 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     # For correctness
     self.assertEqual(t2.cpu(), t2_clone.cpu())
 
+  def test_xlatensor_memoize_symsizes(self):
+    t1 = torch.tensor([1, 0, 3, 5, 0, 6], device=dev)
+    # t2.shape=torch.Size([<=6, 1]) with real size [4, 1]
+    # t2 = [[0], [2], [3], [5]]
+    t2 = torch.nonzero(t1)
+    sym_size0 = t2.shape[0]
+    sym_size1 = t2.shape[0]
+    self.assertEqual(sym_size0, sym_size1)
+    self.assertIsNone(met.metric_data('CompileTime'))
+
   def test_abs(self):
     t1 = torch.tensor([1, 0, 3, 5, 0, 6], device=dev)
     # t2.shape=torch.Size([<=6, 1]) with real size [4, 1]
