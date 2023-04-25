@@ -338,7 +338,7 @@ function main() {
   build_and_install_torch_xla
   popd
   install_torchvision_from_source
-  # install_torchaudio_from_source
+  install_torchaudio_from_source
   install_gcloud
 }
 
