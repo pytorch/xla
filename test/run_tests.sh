@@ -176,7 +176,7 @@ function run_xla_op_tests {
   run_test "$CDIR/dynamo/test_dynamo_integrations_util.py"
   run_test "$CDIR/dynamo/test_dynamo.py"
   run_test "$CDIR/dynamo/test_bridge.py"
-  run_test "$CDIR/dynamo/test_dynamo_fallback.py"
+  run_test "$CDIR/dynamo/test_fallback.py"
   run_test "$CDIR/dynamo/test_num_output.py"
   run_save_tensor_file "$CDIR/dynamo/test_dynamo_graph_dump.py"
   run_downcast_bf16 "$CDIR/test_data_type.py"
