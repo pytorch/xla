@@ -7,9 +7,8 @@ WORKDIR /ansible
 RUN pip install ansible
 COPY . /ansible
 
-ARG ansible_vars
-
 # Build PyTorch and PyTorch/XLA wheels.
+ARG ansible_vars
 RUN ansible-playbook -vvv playbook.yaml -e "stage=build" -e "${ansible_vars}"
 
 FROM python:${python_version}-${debian_version}
@@ -18,6 +17,7 @@ RUN pip install ansible
 COPY . /ansible
 
 # Install runtime pip and apt dependencies.
+ARG ansible_vars
 RUN ansible-playbook -vvv playbook.yaml -e "stage=release" -e "${ansible_vars}" --tags "install_deps"
 
 # Copy test sources.
