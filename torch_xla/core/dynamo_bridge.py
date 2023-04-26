@@ -1,3 +1,4 @@
+import copy
 import dataclasses
 import operator
 
@@ -196,6 +197,8 @@ def is_xla_tensor(tensor: torch.Tensor) -> bool:
 
 
 def extract_internal(xla_model: torch.fx.GraphModule):
+  # This call is critical to make sure xla_args' tensor id show up in graph_input_tensor_ids
+  xm.mark_step()
   xla_args = xla_model.xla_args
   assert all(
       map(
@@ -205,9 +208,6 @@ def extract_internal(xla_model: torch.fx.GraphModule):
               itertools.chain(xla_model.parameters(), xla_args),
           ),
       )), "All tensors should be on xla"
-
-  # This call is critical to make sure xla_args' tensor id show up in graph_input_tensor_ids
-  xm.mark_step()
 
   # Clone the input tensors which can be used to restore the origional value of the xla_args
   # if model applied inplace operations to the input.
@@ -343,7 +343,10 @@ def extract_internal(xla_model: torch.fx.GraphModule):
       print(f"optimized_mod takes {time.time() - enter_ts} seconds overall")
 
     none_remover.add_nones(result)
-    return result
+    if len(result) == 1:
+      return result[0]
+    else:
+      return result
 
   return optimized_mod
 
@@ -360,16 +363,30 @@ class FallBackNodeCollector(torch.fx.Interpreter):
     fallback_ops = get_fallback_ops()
     if len(fallback_ops) > 0:
       self._fallback_ops.append(n)
+    else:
+      # if inputs are non-xla tensors, it should be executed on CPU
+      if n.op in ["call_function", "call_module"]:
+        args, kwargs = self.fetch_args_kwargs_from_env(n)
+        for arg in args:
+          if isinstance(arg, torch.Tensor) and not is_xla_tensor(arg):
+            self._fallback_ops.append(n)
+            break
     return result
 
   def get_fallback_ops(self):
     return self._fallback_ops
 
 
-def collect_inputs(model, *args):
-  model.xla_args = args
-  delattr(model, '_wrapped_call')
-  return model(*args)
+class InputCollector(torch.fx.Interpreter):
+
+  def __init__(self, module):
+    super().__init__(module)
+
+  def call_module(self, target, args, kwargs):
+    if "fused_" in target:
+      submod = self.fetch_attr(target)
+      submod.xla_args = args
+    return super().call_module(target, args, kwargs)
 
 
 def extract_compiled_graph(xla_model, xla_args):
@@ -381,22 +398,18 @@ def extract_compiled_graph(xla_model, xla_args):
   class XlaOperatorSupport(torch.fx.passes.operator_support.OperatorSupport):
 
     def is_node_supported(self, submodules, node: torch.fx.Node) -> bool:
-      return node.op == "call_function" and (node not in fallback_ops or
-                                             node.target == operator.getitem)
+      return node.op in [
+          "call_function", "call_module"
+      ] and (node not in fallback_ops or node.target == operator.getitem)
 
   # partition the model and exectue to collect inputs
   supported_ops = XlaOperatorSupport()
   partitioner = CapabilityBasedPartitioner(xla_model, supported_ops)
   partitions = partitioner.propose_partitions()
   partitioned_graph = partitioner.fuse_partitions(partitions)
+  InputCollector(partitioned_graph).run(*xla_args)
 
-  for node in partitioned_graph.graph.nodes:
-    if node.op == "call_module" and "fused_" in node.name:
-      fused_module = getattr(partitioned_graph, node.name)
-      fused_module._wrapped_call = collect_inputs
-
-  partitioned_graph(*xla_args)
-
+  # compile each submodule and replace it with a call
   for node in partitioned_graph.graph.nodes:
     if node.op == "call_module" and "fused_" in node.name:
       fused_module = getattr(partitioned_graph, node.name)
