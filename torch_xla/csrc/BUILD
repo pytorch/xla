@@ -71,6 +71,7 @@ ptxla_cc_library(
         "softmax_builder.cpp",
         "batch_norm.cpp",
         "resize_ops.cpp",
+        "autocast_mode.cpp",
     ] + glob(["ops/*.cpp"]),
     hdrs = [
         ":LazyIr.h",
