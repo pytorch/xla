@@ -164,7 +164,7 @@ function run_torch_xla_tests() {
 	      EXTRA_ARGS="-C"
       fi
       if [ ! -z "$GCLOUD_SERVICE_KEY_FILE" ]; then
-	      EXTRA_ARGS="-R"
+	      EXTRA_ARGS="$EXTRA_ARGS -R"
       fi
       if [ -x "$(command -v nvidia-smi)" ]; then
         PJRT_DEVICE=GPU ./run_tests.sh $EXTRA_ARGS
