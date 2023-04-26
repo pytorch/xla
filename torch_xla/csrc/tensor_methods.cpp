@@ -1,6 +1,9 @@
 #include "torch_xla/csrc/tensor_methods.h"
 
 #include <ATen/core/Reduction.h>
+#include <torch/csrc/autograd/variable.h>
+#include <torch/csrc/lazy/core/helpers.h>
+#include <torch/csrc/lazy/core/util.h>
 
 #include <algorithm>
 #include <functional>
@@ -12,12 +15,9 @@
 #include "third_party/xla_client/metrics.h"
 #include "third_party/xla_client/util.h"
 #include "third_party/xla_client/xla_util.h"
-#include "torch/csrc/autograd/variable.h"
-#include "torch/csrc/lazy/core/helpers.h"
-#include "torch/csrc/lazy/core/util.h"
+#include "torch_xla/csrc/LazyIr.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/data_ops.h"
-#include "torch_xla/csrc/generated/LazyIr.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir_util.h"
 #include "torch_xla/csrc/layout_manager.h"

@@ -1,11 +1,11 @@
 #include "torch_xla/csrc/aten_cpu_fallback.h"
 
-#include <third_party/xla_client/debug_macros.h>
-#include <third_party/xla_client/metrics.h>
-#include <third_party/xla_client/tf_logging.h>
-#include <torch_xla/csrc/function_call_tracker.h>
-
 #include <unordered_map>
+
+#include "third_party/xla_client/debug_macros.h"
+#include "third_party/xla_client/metrics.h"
+#include "third_party/xla_client/tf_logging.h"
+#include "torch_xla/csrc/function_call_tracker.h"
 
 namespace torch_xla {
 

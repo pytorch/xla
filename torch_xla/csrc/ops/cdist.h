@@ -1,4 +1,6 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_CDIST_H_
+#define XLA_TORCH_XLA_CSRC_OPS_CDIST_H_
+
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
@@ -21,3 +23,5 @@ class CdistForward : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_CDIST_H_

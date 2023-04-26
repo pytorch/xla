@@ -2,6 +2,8 @@
 
 #include <ATen/Formatting.h>
 #include <ATen/Functions.h>
+#include <torch/csrc/lazy/core/hash.h>
+#include <torch/csrc/lazy/core/util.h>
 
 #include <algorithm>
 #include <cstring>
@@ -20,8 +22,6 @@
 #include "third_party/xla_client/thread_pool.h"
 #include "third_party/xla_client/util.h"
 #include "third_party/xla_client/xrt_computation_client.h"
-#include "torch/csrc/lazy/core/hash.h"
-#include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/layout_manager.h"
 #include "torch_xla/csrc/torch_util.h"

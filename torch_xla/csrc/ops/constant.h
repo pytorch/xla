@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_CONSTANT_H_
+#define XLA_TORCH_XLA_CSRC_OPS_CONSTANT_H_
 
 #include "torch_xla/csrc/ir.h"
 
@@ -21,3 +22,5 @@ class Constant : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_CONSTANT_H_

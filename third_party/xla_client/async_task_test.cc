@@ -1,12 +1,10 @@
+#include "third_party/xla_client/async_task.h"
+
 #include <gtest/gtest.h>
 
 #include <stdexcept>
 
-#include "cpp_test_util.h"
-#include "third_party/xla_client/async_task.h"
-
-namespace torch_xla {
-namespace cpp_test {
+namespace xla {
 
 TEST(AsyncTaskTest, BaseTest) {
   auto taskfn = []() -> int { return 17; };
@@ -62,5 +60,4 @@ TEST(AsyncTaskTest, NoResultCopyTest) {
   EXPECT_EQ(result.counter, &copy_counter);
 }
 
-}  // namespace cpp_test
-}  // namespace torch_xla
+}  // namespace xla

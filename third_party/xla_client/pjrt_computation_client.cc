@@ -326,24 +326,8 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromServer(
     xla::Shape target_shape = ShapeUtil::DeviceShapeToHostShape(
         pjrt_data.buffer->logical_on_device_shape().value());
     auto& literal = literals.emplace_back(target_shape);
+    XLA_CHECK_OK(pjrt_data.buffer->ToLiteralSync(&literal));
 
-    // PJRT will always try to copy the full bounded size into our literal. If
-    // the bounded size is larger than the logical output size, we have to
-    // allocate a bounded-size literal and copy a slice of the values into our
-    // output literal.
-    if (pjrt_data.buffer->on_device_shape().is_static()) {
-      XLA_CHECK_OK(pjrt_data.buffer->ToLiteralSync(&literal));
-    } else {
-      xla::Shape bounded_shape = ShapeUtil::DeviceShapeToHostShape(
-          pjrt_data.buffer->on_device_shape());
-      xla::Literal bounded_literal(bounded_shape);
-      XLA_CHECK_OK(pjrt_data.buffer->ToLiteralSync(&bounded_literal));
-      XLA_CHECK_OK(literal.CopySliceFrom(
-          bounded_literal,
-          /*src_base=*/std::vector<int64_t>(target_shape.rank(), 0),
-          /*dest_base=*/std::vector<int64_t>(target_shape.rank(), 0),
-          /*copy_size=*/target_shape.dimensions()));
-    }
     total_size += literal.size_bytes();
   }
   InboundDataMetric()->AddSample(total_size);

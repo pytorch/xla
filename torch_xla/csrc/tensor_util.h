@@ -1,4 +1,8 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_TENSOR_UTIL_H_
+#define XLA_TORCH_XLA_CSRC_TENSOR_UTIL_H_
+
+#include <torch/csrc/autograd/variable.h>
+#include <torch/csrc/lazy/core/hash.h>
 
 #include <string>
 #include <vector>
@@ -8,8 +12,6 @@
 #include "tensorflow/compiler/xla/shape.h"
 #include "tensorflow/compiler/xla/types.h"
 #include "third_party/xla_client/computation_client.h"
-#include "torch/csrc/autograd/variable.h"
-#include "torch/csrc/lazy/core/hash.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/xla_backend_impl.h"
@@ -163,3 +165,5 @@ inline std::vector<at::Tensor> xla_expand_outplace(at::TensorList to_expand) {
 }
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_TENSOR_UTIL_H_

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_XLA_OPS_H_
+#define XLA_TORCH_XLA_CSRC_OPS_XLA_OPS_H_
 
 #include <mutex>
 #include <string>
@@ -55,3 +56,5 @@ extern const OpKindWrapper xla_unselect;
 extern const OpKindWrapper xla_update_slice;
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_XLA_OPS_H_

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_CROSS_REPLICA_REDUCES_H_
+#define XLA_TORCH_XLA_CSRC_CROSS_REPLICA_REDUCES_H_
 
 #include <vector>
 
@@ -87,3 +88,5 @@ void SetAllReduceToken(const torch::lazy::BackendDevice& device,
 AllReduceType GetReduceType(c10::string_view reduce_type);
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_CROSS_REPLICA_REDUCES_H_

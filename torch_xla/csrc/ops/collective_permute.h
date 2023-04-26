@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_COLLECTIVE_PERMUTE_H_
+#define XLA_TORCH_XLA_CSRC_OPS_COLLECTIVE_PERMUTE_H_
 
 #include "torch_xla/csrc/cross_replica_reduces.h"
 #include "torch_xla/csrc/ir.h"
@@ -26,3 +27,5 @@ class CollectivePermute : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_COLLECTIVE_PERMUTE_H_

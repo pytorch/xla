@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_REPLICATION_PAD_H_
+#define XLA_TORCH_XLA_CSRC_OPS_REPLICATION_PAD_H_
 
 #include "absl/types/span.h"
 #include "torch_xla/csrc/ir.h"
@@ -22,3 +23,5 @@ class ReplicationPad : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_REPLICATION_PAD_H_
