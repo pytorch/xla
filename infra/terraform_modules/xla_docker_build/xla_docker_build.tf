@@ -143,7 +143,7 @@ locals {
 
           # Launch k8s deployment, wait for completion, print logs
           pod_name=$(envsubst < test/tpu/xla_test_job.yaml | kubectl create -f - -o name)
-          pod_name=$(kubectl wait --for condition=ready --timeout=10m $pod_name -o name)
+          pod_name=$(kubectl wait --for condition=ready --timeout=60m $pod_name -o name)
           kubectl logs -f $pod_name --container=xla-test
 
           exit $(kubectl get $pod_name -o jsonpath='{.status.containerStatuses[?(@.name=="xla-test")].state.terminated.exitCode}')
