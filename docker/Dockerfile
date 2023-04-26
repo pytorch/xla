@@ -29,8 +29,9 @@ RUN git clone https://github.com/pytorch/pytorch
 ENV USE_CUDA "0"
 ENV USE_MPI "0"
 
-# Value for -D_GLIBCXX_USE_CXX11_ABI flag; if empty, it is infered from `torch._C`.
-ENV CXX_ABI "${cxx_abi}"
+# Value for -D_GLIBCXX_USE_CXX11_ABI flag in `torch` build.
+# `torch._C._GLIBCXX_USE_CXX11_ABI` will be inherited by `torch_xla`.
+ENV CFLAGS "${CFLAGS} -D_GLIBCXX_USE_CXX11_ABI=${cxx_abi}"
 
 # Enable CUDA for XLA
 ENV XLA_CUDA "${cuda}"
