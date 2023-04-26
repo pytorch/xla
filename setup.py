@@ -28,7 +28,7 @@
 #   BUNDLE_LIBTPU=0
 #     include libtpu in final wheel
 
-#   BUILD_CPP_TESTS=1
+#   BUILD_CPP_TESTS=0
 #     build the C++ tests
 #
 #   GCLOUD_SERVICE_KEY_FILE=''
@@ -262,7 +262,7 @@ class BuildBazelExtension(command.build_ext.build_ext):
       bazel_argv.append('--remote_default_exec_properties=cache-silo-key=%s' %
                         CACHE_SILO_NAME)
 
-    if _check_env_flag('BUILD_CPP_TESTS', default='1'):
+    if _check_env_flag('BUILD_CPP_TESTS', default='0'):
       bazel_argv.append('//test/cpp:all')
       bazel_argv.append('//third_party/xla_client:all')
 
