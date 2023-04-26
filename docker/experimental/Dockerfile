@@ -74,6 +74,7 @@ COPY .bazelversion .
 COPY WORKSPACE .
 COPY BUILD .
 COPY bazel/ bazel/
+COPY test/ test/
 
 COPY torch_xla/ torch_xla/
 COPY setup.py .
