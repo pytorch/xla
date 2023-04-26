@@ -5,8 +5,8 @@ module "dev_image" {
 
   ansible_branch = "master"
   trigger_on_push = {
-    branch        = "master"
-    include_files = ["infra/**"]
+    branch         = "master"
+    included_files = ["infra/**"]
   }
 
   image_name = "development"
