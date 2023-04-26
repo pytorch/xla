@@ -135,8 +135,7 @@ def inference_imagenet():
 
   torch.manual_seed(42)
 
-  model = torchvision.models.resnet50().to(device)
-  # model = get_model_property('model_fn')().to(device)
+  model = get_model_property('model_fn')().to(device)
 
   input_mesh = None
   if FLAGS.sharding:
@@ -196,6 +195,7 @@ def inference_imagenet():
           device,
           input_sharding=xs.ShardingSpec(input_mesh, (0, 1, 2, 3)))
 
+  # We do this to materialize fake data before the inference loop
   model.eval()
   xm.mark_step()
   xm.wait_device_ops()
