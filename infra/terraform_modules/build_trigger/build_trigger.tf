@@ -66,6 +66,11 @@ variable "location" {
   default = "us-central1"
 }
 
+variable "substitutions" {
+  type    = map(string)
+  default = {}
+}
+
 locals {
   github_repo_parts = split("/", var.github_repo)
 }
@@ -145,6 +150,7 @@ resource "google_cloudbuild_trigger" "trigger" {
     timeout = "${var.timeout_minutes * 60}s"
   }
 
+  substitutions      = var.substitutions
   include_build_logs = var.trigger_on_push != null ? "INCLUDE_BUILD_LOGS_WITH_STATUS" : null
 }
 
