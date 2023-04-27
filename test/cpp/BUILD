@@ -159,7 +159,7 @@ ptxla_cc_library(
 # but XRT gRPC ports cannot be reused and are inhereted from the environment.
 ptxla_cc_test(
     name = "main",
-    size = "enormous",
+    timeout = "long",
     srcs = ["main.cpp"],
     deps = [
         ":test_aten_xla_tensor",
