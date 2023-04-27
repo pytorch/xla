@@ -11,16 +11,13 @@ variable "branch" {
   type = string
 }
 
-variable "description" {
-  default = ""
-}
-
 variable "worker_pool_id" {
   type = string
 }
 
 variable "name" {
-  type = string
+  type    = string
+  default = "terraform-provision-trigger"
 }
 
 data "google_project" "project" {}
@@ -43,6 +40,10 @@ resource "google_project_iam_member" "runner_is_editor" {
   member  = "serviceAccount:${google_service_account.runner_account.email}"
 }
 
+variable "location" {
+  default = "us-central1"
+}
+
 module "cloud_build" {
   source = "../build_trigger"
 
@@ -50,10 +51,11 @@ module "cloud_build" {
   github_repo     = "pytorch/xla"
   timeout_minutes = 60
   worker_pool_id  = var.worker_pool_id
-  description     = var.description
+  description     = "Trigger that provisions Terraform setup in ${var.config_directory}."
   service_account = google_service_account.runner_account.id
   logging         = "CLOUD_LOGGING_ONLY"
   trigger_on_push = { branch = var.branch }
+  location        = var.location
 
   steps = [
     {
