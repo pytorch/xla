@@ -64,8 +64,8 @@ module "cloud_build" {
       entrypoint = "sh"
       args = [
         "-c", join(" ", [
-          "terraform -no-color -chdir=${var.config_directory} init &&",
-          "terraform -no-color -chdir=${var.config_directory} apply -auto-approve",
+          "terraform -chdir=${var.config_directory} init -no-color &&",
+          "terraform -chdir=${var.config_directory} apply -no-color -auto-approve",
         ])
       ]
     },
