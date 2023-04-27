@@ -77,7 +77,7 @@ fi
 
 
 if [ "$LOGFILE" != "" ]; then
-  bazel $BAZEL_VERB $EXTRA_FLAGS --test_output=streamed //third_party/xla_client:all //test/cpp:all ${FILTER:+"$FILTER"} 2> $LOGFILE
+  bazel $BAZEL_VERB $EXTRA_FLAGS --nocache_test_results --test_verbose_timeout_warnings --test_output=streamed //third_party/xla_client:all //test/cpp:all ${FILTER:+"$FILTER"} 2> $LOGFILE
 else
-  bazel $BAZEL_VERB $EXTRA_FLAGS --test_output=streamed //third_party/xla_client:all //test/cpp:all ${FILTER:+"$FILTER"}
+  bazel $BAZEL_VERB $EXTRA_FLAGS --nocache_test_results --test_verbose_timeout_warnings --test_output=streamed //third_party/xla_client:all //test/cpp:all ${FILTER:+"$FILTER"}
 fi
