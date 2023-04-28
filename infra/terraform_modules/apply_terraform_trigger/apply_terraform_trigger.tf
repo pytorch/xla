@@ -2,7 +2,7 @@ variable "config_directory" {
   type = string
 }
 
-variable "include_files" {
+variable "included_files" {
   type    = list(string)
   default = []
 }
@@ -54,8 +54,11 @@ module "cloud_build" {
   description     = "Trigger that provisions Terraform setup in ${var.config_directory}."
   service_account = google_service_account.runner_account.id
   logging         = "CLOUD_LOGGING_ONLY"
-  trigger_on_push = { branch = var.branch }
-  location        = var.location
+  trigger_on_push = {
+    branch         = var.branch
+    included_files = var.included_files
+  }
+  location = var.location
 
   steps = [
     {

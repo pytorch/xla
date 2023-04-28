@@ -1,7 +1,7 @@
 module "terraform_apply" {
   source = "../terraform_modules/apply_terraform_trigger"
 
-  include_files    = ["infra/**"]
+  included_files   = ["infra/**"]
   branch           = "master"
   config_directory = "infra/tpu-pytorch-releases"
 
