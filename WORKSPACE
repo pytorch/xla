@@ -2,29 +2,6 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 ################################ Python Setup ################################
 
-# For embedded python interpreter (libpython.so.)
-http_archive(
-    name = "pybind11_bazel",
-    strip_prefix = "pybind11_bazel-fc56ce8a8b51e3dd941139d329b63ccfea1d304b",
-    urls = ["https://github.com/pybind/pybind11_bazel/archive/fc56ce8a8b51e3dd941139d329b63ccfea1d304b.zip"],
-)
-
-http_archive(
-    name = "pybind11",
-    build_file = "@pybind11_bazel//:pybind11.BUILD",
-    strip_prefix = "pybind11-442261da585536521ff459b1457b2904895f23b4",
-    urls = ["https://github.com/pybind/pybind11/archive/442261da585536521ff459b1457b2904895f23b4.tar.gz"],
-)
-
-load("@pybind11_bazel//:python_configure.bzl", "python_configure")
-
-# This is required for setting up the linkopts for -lpython.q
-python_configure(
-    name = "local_config_python",
-    python_version = "3",  # required to use `python3-config`
-)
-############################# TensorFlow Setup ###############################
-
 # To update TensorFlow to a new revision,
 # a) update URL and strip_prefix to the new git commit hash
 # b) get the sha256 hash of the commit by running:

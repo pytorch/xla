@@ -29,7 +29,6 @@ def ptxla_cc_test(
             "-fexceptions",  # Required for testing crashes.
         ],
         deps = deps + [
-            "@pybind11//:pybind11_embed",  # libpython
             "@torch//:headers",
             "@torch//:libc10",
             "@torch//:libtorch",

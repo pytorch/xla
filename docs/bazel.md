@@ -59,11 +59,6 @@ PyTorch headers are directly sourced from the `torch` dependency, the local chec
 built objects. For this to work, it's required to pass `-isystemexternal/torch` to the compiler so it can find `system`
 libraries and satisfy them from the local checkout. Some are included as `<system>` and some as `"user"` headers.
 
-Bazel brings in [pybind11](https://github.com/pybind/pybind11) embeded python and links against it to provide `libpython`
-to the plugin using this mechanism. Python headers are also sourced from there instead of depending on the system version.
-These are satisfied from the `"@pybind11//:pybind11_embed"`, which sets up compiler options for linking with `libpython`
-transitively.
-
 ## How to build XLA libraries
 
 Building the libraries is simple:
