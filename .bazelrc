@@ -128,7 +128,6 @@ coverage --instrumentation_filter="//torch_xla/,//third_party/"
 build:coverage --combined_report=lcov
 build:coverage --strategy=CoverageReport=sandboxed,local
 build:coverage --test_tag_filters=-nocoverage
-build:coverage --nocache_test_results
 
 ############################################################################
 ############## TensorFlow .bazelrc greatest hits ###########################
