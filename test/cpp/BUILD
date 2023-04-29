@@ -133,13 +133,13 @@ ptxla_cc_test(
     ],
 )
 
-# This tets is very large so it's split into `i` shards.
-# To make it run fast, please add new shards when needed and
-# bump the `range` below.
+# This tets is very large so it's split into shards.
+# To make it run fast, please add new shards when needed.
 [
     ptxla_cc_test(
-        name = "test_aten_xla_tensor_%d" % i,
-        srcs = ["test_aten_xla_tensor_%d.cpp" % i],
+        name = test[:-len(".cpp")],
+        size = "enormous",
+        srcs = [test],
         deps = [
             ":cpp_test_util",
             ":torch_xla_test",
@@ -149,5 +149,5 @@ ptxla_cc_test(
             "@org_tensorflow//tensorflow/compiler/xla:permutation_util",
         ],
     )
-    for i in range(1, 5)
+    for test in glob(["test_aten_xla_tensor*cpp"])
 ]
