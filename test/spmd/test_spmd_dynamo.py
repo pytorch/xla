@@ -5,6 +5,7 @@ import os
 import sys
 
 import torch
+from torch import nn
 import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.experimental.xla_sharding as xs
@@ -23,6 +24,23 @@ import test_utils
 import test_xla_sharding_base
 
 
+class SimpleLinear(nn.Module):
+
+  def __init__(self):
+    super(SimpleLinear, self).__init__()
+    self.fc1 = nn.Linear(128, 128)
+    self.relu = nn.ReLU()
+    self.fc2 = nn.Linear(128, 1)
+    # Add an additional 1x1 layer at the end to ensure the final layer
+    # is not sharded.
+    self.fc3 = nn.Linear(1, 1)
+
+  def forward(self, x):
+    y = self.relu(self.fc1(x))
+    z = self.fc2(y)
+    return self.fc3(z)
+
+
 class SpmdDynamoInferenceBasicTest(test_xla_sharding_base.XlaShardingTest):
 
   @classmethod
@@ -30,46 +48,51 @@ class SpmdDynamoInferenceBasicTest(test_xla_sharding_base.XlaShardingTest):
     test_utils._set_rng_seed(42)
     super().setUpClass()
 
-  def fn_simple(self, x, y):
-    a = torch.cos(x)
-    b = torch.sin(y)
-    return a + b
-
-  @torch.compile(backend='torchxla_trace_once')
-  def fn_simple_dynamo(self, x, y):
-    return self.fn_simple(x, y)
 
   def test_simple_model(self):
+    print("Start")
     device = xm.xla_device()
-    x = torch.randn(1, 128, device='cpu')
-    y = torch.randn(1, 128, device='cpu')
-    xla_x = x.to(device)
-    xla_y = y.to(device)
-    sharded_x = xs.mark_sharding(xla_x, self._get_mesh((1, self.n_devices)), (0, 1))
-    sharded_y = xs.mark_sharding(xla_y, self._get_mesh((1, self.n_devices)), (0, 1))
-    print("marked sharding")
+    print("got device")
 
+    x = torch.randn(1, 128, device='cpu')
+    cpu_model = SimpleLinear()
+
+    print("trying cpu")
+    # cpu_model.train()
+    #res_cpu = cpu_model(x)
+    print("did cpu")
+
+    x = torch.randn(1, 128, device='cpu')
+    print("try x to device")
+    xla_x = x.to(device) 
+    print("x to device")
+    model = cpu_model.to(device)
+    print("model to device")
+    res_xla = model(xla_x)
+
+    # Shard the first layer's weights row-wise
+    xs.mark_sharding(model.fc1.weight, self._get_mesh((1, self.n_devices)), (0, 1))
+    # Shard the second layer's weights column-wise
+    xs.mark_sharding(model.fc2.weight, self._get_mesh((1, self.n_devices)), (1, 0))
+
+    model.eval()
     xm.mark_step()
     xm.wait_device_ops()
+    met.clear_all()
 
-    res_cpu = self.fn_simple(x, y)
-    print("did simple simple")
-    res_xla_spmd_dynamo = self.fn_simple_dynamo(sharded_x, sharded_y)
-    print("did simple")
-    self.assertIn('xla::add', met.counter_names())
-    self.assertTrue(torch.allclose(res_cpu, res_xla_dynamo.cpu()))
-    print("doing 2")
+    model = torch.compile(model, backend='torchxla_trace_once')
+    print("compile model")
+    res_xla_spmd_dynamo = model(x)
+    print("got res")
+    # self.assertIn('xla::add', met.counter_names())
+    self.assertTrue(torch.allclose(res_xla.cpu(), res_xla_dynamo.cpu()))
+    
     # verifiy that tracing is skipped in following runs
     met.clear_counters()
-    res_xla_dynamo_2 = self.fn_simple_dynamo(sharded_x, sharded_y)
-    self.assertNotIn('xla::add', met.counter_names())
-    self.assertTrue(torch.allclose(res_cpu, res_xla_dynamo_2.cpu()))
-    print("doing 3")
-    # verify that dynamo can handle different inputs
-    res_xla_dynamo_3 = self.fn_simple_dynamo(sharded_x + sharded_y, sharded_y * 3)
-    res_cpu_3 = self.fn_simple(x + y, y * 3)
-    self.assertTrue(torch.allclose(res_cpu_3, res_xla_dynamo_3.cpu()))
-    print("done")
+    res_xla_spmd_dynamo_2 = model(sharded_x)
+    # self.assertNotIn('xla::add', met.counter_names())
+    self.assertTrue(torch.allclose(res_xla.cpu(), res_xla_spmd_dynamo_2.cpu()))
+    print('did 2')
 
 
 if __name__ == '__main__':

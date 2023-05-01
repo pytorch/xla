@@ -203,6 +203,8 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
           ),
       )), "All tensors should be on xla"
 
+
+  print("Starting extract_compiled_graph")
   # This call is critical to make sure xla_args' tensor id show up in graph_input_tensor_ids
   xm.mark_step()
   args_tensor_ids = [
@@ -217,11 +219,13 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
       tensor_id: i for i, tensor_id in enumerate(args_tensor_ids)
   }
 
+  print("getting xla_out")
   # get_fallback_ops below uses counters to detect torch_xla fallbacks.
   # Clear the counters here so we ignore pre-existing fallbacks and
   # only detect fallbacks happening when running the xla_model below.
   metrics.clear_counters()
   xla_out = xla_model(*xla_args)
+  print("got xla_out")
 
   fallback_ops = get_fallback_ops()
   if len(fallback_ops) > 0:
@@ -237,6 +241,7 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
 
   xla_out_ids = {id(x) for x in xla_out}
 
+  print("making updates")
   # If a arg is being in place updated by model, we need to include arg as part of the graph result.
   xla_args_need_update_bool = torch_xla._XLAC._check_tensor_need_materialization(
       xla_args)
@@ -250,6 +255,8 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
       xla_args_need_update.append(xla_args[i])
 
   args_and_out = tuple(xla_args_need_update) + tuple(xla_out)
+
+  print("made updates")
 
   if debug:
     print(f"#inplace update: {len(xla_args_need_update)}")
@@ -275,9 +282,11 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
                                           graph_input_tensor_ids,
                                           graph_input_xla_values)
 
+  print("compile and cache graph")
   # compiles and cache graph rooted at tensors in 'args_and_out'
   torch_xla._XLAC._xla_warm_up_cache(args_and_out, [])
   torch_xla._XLAC._clear_pending_irs(str(xm.xla_device()))
+  print("warmed cache")
 
   def optimized_mod(*args):
     # mark_step needs to be blocking since we want to access args's XLADatas
@@ -288,10 +297,13 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
     if len(args_and_out) == 0:
       return ()
 
+    print("did mark step")
+
     assert len(args) > 0  # can not handle no args case for now
     graph_input = graph_input_matcher(args)
     start_ts = time.time()
     res = torch_xla._XLAC._run_cached_graph(graph_hash, graph_input)
+    print("ran cached graph")
     res = dumb_return_handler.addDumbReturn(args, res)
     if debug:
       print(
@@ -316,6 +328,7 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
       print(f"optimized_mod takes {time.time() - enter_ts} seconds overall")
 
     none_remover.add_nones(result)
+    print("done")
     return result
 
   return optimized_mod
