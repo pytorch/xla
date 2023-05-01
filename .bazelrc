@@ -1,9 +1,6 @@
 ############################################################################
 # All default build options below.
 
-# Enable exceptions in C++.
-common --copt=-fexceptions
-
 # Make Bazel print out all options from rc files.
 build --announce_rc
 
@@ -28,9 +25,9 @@ build -c opt
 build --config=short_logs
 
 # Force GCC because clang/bazel has issues.
-common --action_env=CC=gcc
-common --action_env=CXX=g++
-common --spawn_strategy=standalone
+build --action_env=CC=gcc
+build --action_env=CXX=g++
+build --spawn_strategy=standalone
 
 ###########################################################################
 
@@ -63,7 +60,6 @@ build:acl --define==build_with_acl=true
 build:nonccl --define=no_nccl_support=true
 
 build:linux --config=posix
-build:linux --copt=-Wno-unknown-warning-option
 
 # Suppress all warning messages.
 build:short_logs --output_filter=DONT_MATCH_ANYTHING
@@ -75,6 +71,45 @@ build:tpu --define=with_tpu_support=true
 # RBE config options below.
 # Flag to enable remote config
 common --experimental_repo_remote_exec
+
+# Inherit environmental variables that are used in testing.
+test --test_env=TPU_NUM_DEVICES --test_env=GPU_NUM_DEVICES --test_env=CPU_NUM_DEVICES --test_env=XRT_LOCAL_WORKER
+test --test_env=XRT_TPU_CONFIG --test_env=XRT_DEVICE_MAP --test_env=XRT_WORKERS --test_env=XRT_MESH_SERVICE_ADDRESS
+test --test_env=XRT_SHARD_WORLD_SIZE --test_env=XRT_MULTI_PROCESSING_DEVICE --test_env=XRT_HOST_ORDINAL --test_env=XRT_SHARD_ORDINAL
+test --test_env=XRT_START_LOCAL_SERVER --test_env=TPUVM_MODE --test_env=PJRT_DEVICE --test_env=PJRT_TPU_MAX_INFLIGHT_COMPUTATIONS
+test --test_env=PJRT_CPU_ASYNC_CLIENT --test_env=PJRT_GPU_ASYNC_CLIENT --test_env=TPU_LIBRARY_PATH --test_env=PJRT_DIST_SERVICE_ADDR
+test --test_env=PJRT_LOCAL_PROCESS_RANK
+
+# This environmental variable is important for properly integrating with XLA.
+test --test_env=XLA_EXPERIMENTAL
+
+# To find `libpython` that is required to run tests (they run using installed wheels).
+test --test_env=LD_LIBRARY_PATH
+
+# This fixes an issue where targets are configured differently because of `test_filter`.
+# https://github.com/bazelbuild/bazel/issues/6842
+test --notrim_test_configuration
+
+# Stabilize the environmental variables used to minimize cache misses (src and env affects cache keys).
+build --incompatible_strict_action_env
+
+# By default in local builds, do not upload local results to cache.
+build --noremote_upload_local_results
+
+# Remote caching with local builds.
+build:remote_cache --remote_cache=grpcs://remotebuildexecution.googleapis.com
+build:remote_cache --remote_instance_name=projects/tpu-pytorch/instances/default_instance
+build:remote_cache --google_default_credentials
+build:remote_cache --remote_upload_local_results
+build:remote_cache --bes_backend=buildeventservice.googleapis.com
+build:remote_cache --bes_upload_mode=fully_async
+build:remote_cache --bes_results_url="https://source.cloud.google.com/results/invocations"
+build:remote_cache --bes_instance_name="tpu-pytorch"
+build:remote_cache --bes_timeout=600s  # On longer builds, BES can cause a non-zero exit from bazel.
+
+# Attempt to minimize the amount of data transfer between bazel and the remote
+# workers:
+build:remote_cache --remote_download_toplevel
 #########################################################################
 
 # Load rc file with user-specific options.
@@ -84,17 +119,14 @@ try-import %workspace%/.bazelrc.user
 build:compdb --features=-layering_check
 
 # Compiling tests requires Java.
-common --java_runtime_version=remotejdk_11
+build --java_runtime_version=remotejdk_11
 
 # Coverage requires Java and GCC.
 coverage --config=coverage
 coverage --build_tests_only
-build:coverage --copt=-DNDEBUG
+coverage --instrumentation_filter="//torch_xla/,//third_party/"
 build:coverage --combined_report=lcov
-build:coverage --strategy=TestRunner=sandboxed,local
 build:coverage --strategy=CoverageReport=sandboxed,local
-build:coverage --experimental_use_llvm_covmap
-build:coverage --collect_code_coverage
 build:coverage --test_tag_filters=-nocoverage
 
 ############################################################################
@@ -175,3 +207,7 @@ build:linux --copt="-Wswitch"
 build:linux --copt="-Werror=switch"
 # Required for building with clang
 build:linux --copt="-Wno-error=unused-but-set-variable"
+
+# Only include debug info for files in this repository, excluding external deps.
+build:dbg -c dbg
+build:dbg --per_file_copt=+external/.*@-g0,-DNDEBUG

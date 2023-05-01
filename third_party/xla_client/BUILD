@@ -43,7 +43,16 @@ cc_library(
         ":thread_pool",
         "@com_google_absl//absl/types:optional",
     ],
-    alwayslink = True,
+)
+
+cc_test(
+    name = "async_task_test",
+    size = "small",
+    srcs = ["async_task_test.cc"],
+    deps = [
+        ":async_task",
+        "@com_google_googletest//:gtest_main",
+    ],
 )
 
 cc_library(
@@ -142,13 +151,21 @@ cc_library(
         "@org_tensorflow//tensorflow/compiler/jit:xla_tpu_device",
         "@org_tensorflow//tensorflow/compiler/jit:xla_tpu_jit",
     ]),
-    alwayslink = True,
 )
 
 cc_library(
     name = "cache",
     hdrs = ["cache.h"],
-    alwayslink = True,
+)
+
+cc_test(
+    name = "cache_test",
+    size = "small",
+    srcs = ["cache_test.cc"],
+    deps = [
+        ":cache",
+        "@com_google_googletest//:gtest_main",
+    ],
 )
 
 cc_library(
@@ -159,14 +176,12 @@ cc_library(
         "@org_tensorflow//tensorflow/compiler/xla:statusor",
         "@org_tensorflow//tensorflow/tsl/platform:stacktrace",
     ],
-    alwayslink = True,
 )
 
 cc_library(
     name = "env_vars",
     srcs = ["env_vars.cc"],
     hdrs = ["env_vars.h"],
-    alwayslink = True,
 )
 
 cc_library(
@@ -184,7 +199,6 @@ cc_library(
         "@com_google_absl//absl/strings",
         "@org_tensorflow//tensorflow/compiler/xla:statusor",
     ],
-    alwayslink = True,
 )
 
 cc_library(
@@ -197,7 +211,6 @@ cc_library(
         ":types",
         "@com_google_absl//absl/types:variant",
     ],
-    alwayslink = True,
 )
 
 cc_library(
@@ -209,7 +222,6 @@ cc_library(
         ":metrics",
         ":util",
     ],
-    alwayslink = True,
 )
 
 cc_library(
@@ -225,7 +237,6 @@ cc_library(
         "@org_tensorflow//tensorflow/compiler/xla:types",
         "@org_tensorflow//tensorflow/compiler/xla/service:platform_util",
     ],
-    alwayslink = True,
 )
 
 cc_library(
@@ -235,7 +246,6 @@ cc_library(
     deps = [
         "@org_tensorflow//tensorflow/compiler/xla:types",
     ],
-    alwayslink = True,
 )
 
 cc_library(
@@ -250,7 +260,6 @@ cc_library(
     ] + if_cuda_is_configured([
         "@local_config_nccl//:nccl",
     ]),
-    alwayslink = True,
 )
 
 cc_library(
@@ -260,7 +269,6 @@ cc_library(
     deps = [
         "@org_tensorflow//tensorflow/tsl/profiler/rpc:profiler_server_impl",
     ],
-    alwayslink = True,
 )
 
 cc_library(
@@ -274,7 +282,6 @@ cc_library(
         "@org_tensorflow//tensorflow/tsl/platform:errors",
         "@org_tensorflow//tensorflow/tsl/platform:strcat",
     ],
-    alwayslink = True,
 )
 
 cc_library(
@@ -285,11 +292,11 @@ cc_library(
         "@com_google_absl//absl/strings",
         "@org_tensorflow//tensorflow/compiler/xla:types",
     ],
-    alwayslink = True,
 )
 
 cc_test(
     name = "sys_util_test",
+    size = "small",
     srcs = ["sys_util_test.cc"],
     deps = [
         ":sys_util",
@@ -305,7 +312,6 @@ cc_library(
         "@org_tensorflow//tensorflow/compiler/xla:statusor",
         "@org_tensorflow//tensorflow/compiler/xla/service:platform_util",
     ],
-    alwayslink = True,
 )
 
 cc_library(
@@ -316,14 +322,12 @@ cc_library(
         ":metrics",
         ":tf_logging",
     ],
-    alwayslink = True,
 )
 
 cc_library(
     name = "triggered_task",
     srcs = ["triggered_task.cc"],
     hdrs = ["triggered_task.h"],
-    alwayslink = True,
 )
 
 cc_library(
@@ -334,7 +338,6 @@ cc_library(
         "@com_google_absl//absl/types:optional",
         "@org_tensorflow//tensorflow/compiler/xla:types",
     ],
-    alwayslink = True,
 )
 
 cc_library(
@@ -344,7 +347,6 @@ cc_library(
         ":debug_macros",
         "@com_google_absl//absl/types:optional",
     ],
-    alwayslink = True,
 )
 
 cc_library(
@@ -360,11 +362,11 @@ cc_library(
         "@org_tensorflow//tensorflow/compiler/xla:types",
         "@org_tensorflow//tensorflow/core:lib",
     ],
-    alwayslink = True,
 )
 
 cc_test(
     name = "util_test",
+    size = "small",
     srcs = ["util_test.cc"],
     deps = [
         ":util",
@@ -394,7 +396,6 @@ cc_library(
         "@org_tensorflow//tensorflow/compiler/xla/service/spmd:spmd_partitioner",
         "@org_tensorflow//tensorflow/tsl/platform:errors",
     ],
-    alwayslink = True,
 )
 
 cc_test(
@@ -429,7 +430,6 @@ cc_library(
         "@org_tensorflow//tensorflow/tsl/platform:errors",
         "@org_tensorflow//tensorflow/tsl/platform:status",
     ],
-    alwayslink = True,
 )
 
 cc_library(
@@ -442,7 +442,6 @@ cc_library(
         ":xrt_session",
         "@org_tensorflow//tensorflow/compiler/xla:types",
     ],
-    alwayslink = True,
 )
 
 cc_library(
@@ -458,7 +457,6 @@ cc_library(
         "@org_tensorflow//tensorflow/cc:scope",
         "@org_tensorflow//tensorflow/compiler/xla:types",
     ],
-    alwayslink = True,
 )
 
 tf_cc_shared_object(
@@ -485,8 +483,8 @@ tf_cc_shared_object(
         "@org_tensorflow//tensorflow/compiler/xla/client/lib:svd",
         "@org_tensorflow//tensorflow/compiler/xla/rpc:grpc_stub",
         "@org_tensorflow//tensorflow/core:lib",
-        "@org_tensorflow//tensorflow/tsl/platform/cloud:gcs_file_system",
         "@org_tensorflow//tensorflow/python/profiler/internal:profiler_pywrap_impl",
+        "@org_tensorflow//tensorflow/tsl/platform/cloud:gcs_file_system",
     ],
 )
 

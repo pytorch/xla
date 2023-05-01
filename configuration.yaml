@@ -186,11 +186,6 @@ variables:
           Tensorflow, or JAX.
       type: string
       default_value: "PyTorch/XLA"
-    XLA_DEBUG:
-      description:
-        - Whether or not to build xla and the xrt client in debug mode.
-      type: bool
-      default_value: false
     XLA_BAZEL_VERBOSE:
       description:
         - Turn on verbose messages during the bazel build of the xla/xrt client.
@@ -271,7 +266,7 @@ variables:
       description:
         - Size for the shape cache used by XLA.
       type: int
-      default_value: 4096
+      default_value: 12288
     XLA_DEVDATA_CACHE_SIZE:
       description:
         - Max cache size for XLA Data cache.

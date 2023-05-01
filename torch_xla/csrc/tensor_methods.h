@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_TENSOR_METHODS_H_
+#define XLA_TORCH_XLA_CSRC_TENSOR_METHODS_H_
 
 #include "torch_xla/csrc/tensor.h"
 
@@ -8,10 +9,9 @@ namespace tensor_methods {
 //////////////////////////////////////////////////////////////////////////////
 // XLA dedicated operators follows here, listed in alphabetical order.
 //////////////////////////////////////////////////////////////////////////////
-std::pair<XLATensorPtr, torch::lazy::Value> all_reduce(
-    const XLATensorPtr& input, const torch::lazy::Value& token,
-    AllReduceType reduce_type, double scale,
-    std::vector<std::vector<int64_t>> groups, bool pin_layout);
+XLATensorPtr all_reduce(const XLATensorPtr& input, AllReduceType reduce_type,
+                        double scale, std::vector<std::vector<int64_t>> groups,
+                        bool pin_layout);
 
 torch::lazy::Value all_reduce_(XLATensorPtr& input,
                                const torch::lazy::Value& token,
@@ -453,6 +453,11 @@ XLATensorPtr lerp(const XLATensorPtr& input, const XLATensorPtr& end,
 XLATensorPtr lerp(const XLATensorPtr& input, const XLATensorPtr& end,
                   const at::Scalar& weight);
 
+XLATensorPtr linalg_vector_norm(const XLATensorPtr& input,
+                                const at::Scalar& ord,
+                                std::vector<int64_t> dimensions, bool keep_dim,
+                                c10::optional<at::ScalarType> dtype);
+
 XLATensorPtr linspace(const at::Scalar& start, const at::Scalar& end,
                       const int64_t steps, at::ScalarType element_type,
                       const torch::lazy::BackendDevice& device);
@@ -555,6 +560,9 @@ XLATensorPtr mul(
 XLATensorPtr mul(
     const XLATensorPtr& input, const at::Scalar& other,
     c10::optional<at::ScalarType> logical_element_type = c10::nullopt);
+
+XLATensorPtr multinomial(const XLATensorPtr& input, int64_t num_samples,
+                         bool replacement);
 
 XLATensorPtr mv(const XLATensorPtr& input, const XLATensorPtr& vec);
 void mv_out(XLATensorPtr& out, const XLATensorPtr& input,
@@ -882,6 +890,10 @@ XLATensorPtr view(const XLATensorPtr& input,
 XLATensorPtr view_symint(const XLATensorPtr& input,
                          at::SymIntArrayRef sym_size);
 
+XLATensorPtr view_as_complex_copy(const XLATensorPtr& input);
+
+XLATensorPtr view_as_real_copy(const XLATensorPtr& input);
+
 void zero_(XLATensorPtr& input);
 
 XLATensorPtr where(const XLATensorPtr& condition, const XLATensorPtr& input,
@@ -889,3 +901,5 @@ XLATensorPtr where(const XLATensorPtr& condition, const XLATensorPtr& input,
 
 }  // namespace tensor_methods
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_TENSOR_METHODS_H_

@@ -1,3 +1,6 @@
+#ifndef XLA_TORCH_XLA_CSRC_OPS_OPS_XLA_SHAPE_FN_H_
+#define XLA_TORCH_XLA_CSRC_OPS_OPS_XLA_SHAPE_FN_H_
+
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 
@@ -260,3 +263,5 @@ xla::Shape TriuOutputShape(const torch::lazy::Value& input);
 xla::Shape TruncOutputShape(const torch::lazy::Value& input);
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_OPS_XLA_SHAPE_FN_H_

@@ -1,9 +1,9 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_BATCH_NORM_H_
+#define XLA_TORCH_XLA_CSRC_BATCH_NORM_H_
 
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 
 namespace torch_xla {
-
 struct BatchNormOutput {
   xla::XlaOp output;
   xla::XlaOp batch_mean;
@@ -31,3 +31,5 @@ BatchNormGrads BuildBatchNormBackward(xla::XlaOp grad, xla::XlaOp input,
                                       float eps_value);
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_BATCH_NORM_H_

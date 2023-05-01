@@ -1,3 +1,4 @@
+import glob
 import os
 import textwrap
 
@@ -23,6 +24,40 @@ class TestExperimentalTpu(parameterized.TestCase):
       n = tpu.process_bounds_size()
 
     self.assertEqual(n, expected)
+
+  @parameterized.named_parameters(
+      ('no_chips', 0),
+      ('one_chip', 1),
+      ('four_chips', 4),
+  )
+  def test_num_available_chips(self, num_tpu_chips):
+    vendor_id_files = []
+    vendor_ids = ['0x1234', '0x4321', '0xabcd'
+                 ] + [tpu._GOOGLE_PCI_VENDOR_ID] * num_tpu_chips
+    for vendor in vendor_ids:
+      tmpdir = self.create_tempdir()
+      vendor_file = tmpdir.create_file('vendor', content=vendor)
+
+      device = tpu._TPU_PCI_DEVICE_IDS[
+          0] if vendor == tpu._GOOGLE_PCI_VENDOR_ID else '0x7890'
+      tmpdir.create_file('device', content=device)
+
+      vendor_id_files.append(vendor_file.full_path)
+
+    with mock.patch.object(glob, 'glob', return_value=vendor_id_files):
+      self.assertEqual(tpu.num_available_chips(), num_tpu_chips)
+
+  @parameterized.named_parameters(
+      ('v2-8', 2, 4, 8),
+      ('v3-8', 3, 4, 8),
+      ('v4-8', 4, 4, 4),
+      ('v4-8_one_chip', 4, 1, 1),
+  )
+  def test_num_available_devices(self, version, num_tpu_chips, expected):
+    with mock.patch.object(
+        tpu, 'version', return_value=version), mock.patch.object(
+            tpu, 'num_available_chips', return_value=num_tpu_chips):
+      self.assertEqual(tpu.num_available_devices(), expected)
 
   @parameterized.named_parameters(
       ('default_one_host', None, 4),
@@ -145,6 +180,63 @@ class TestExperimentalTpu(parameterized.TestCase):
     self.assertListEqual(worker_ips, expected)
 
   @parameterized.named_parameters(
+      ('v5-4_process_0', {
+          'ACCELERATOR_TYPE': 'v5-4',
+          xenv.TPU_PROCESS_BOUNDS: '2,2,1',
+          xenv.TPU_CHIPS_PER_PROCESS_BOUNDS: '1,1,1',
+          'WORKER_ID': '0'
+      }, ['localhost'], 0, 4, {
+          xenv.TPU_CHIPS_PER_PROCESS_BOUNDS:
+              '1,1,1',
+          xenv.TPU_PROCESS_BOUNDS:
+              '2,2,1',
+          xenv.CLOUD_TPU_TASK_ID:
+              '0',
+          xenv.TPU_PROCESS_PORT:
+              '8476',
+          xenv.TPU_PROCESS_ADDRESSES:
+              'localhost:8476,localhost:8477,localhost:8478,localhost:8479',
+          xenv.TPU_VISIBLE_CHIPS:
+              '0',
+      }),
+      ('v5abcdefg-4_process_0', {
+          'ACCELERATOR_TYPE': 'v5abcdefg-4',
+          xenv.TPU_PROCESS_BOUNDS: '2,2,1',
+          xenv.TPU_CHIPS_PER_PROCESS_BOUNDS: '1,1,1',
+          'WORKER_ID': '0'
+      }, ['localhost'], 0, 4, {
+          xenv.TPU_CHIPS_PER_PROCESS_BOUNDS:
+              '1,1,1',
+          xenv.TPU_PROCESS_BOUNDS:
+              '2,2,1',
+          xenv.CLOUD_TPU_TASK_ID:
+              '0',
+          xenv.TPU_PROCESS_PORT:
+              '8476',
+          xenv.TPU_PROCESS_ADDRESSES:
+              'localhost:8476,localhost:8477,localhost:8478,localhost:8479',
+          xenv.TPU_VISIBLE_CHIPS:
+              '0',
+      }),
+      ('v5abcdefg-16_process_0', {
+          'ACCELERATOR_TYPE': 'v5abcdefg-16',
+          xenv.TPU_PROCESS_BOUNDS: '2,2,1',
+          xenv.TPU_CHIPS_PER_PROCESS_BOUNDS: '1,1,1',
+          'WORKER_ID': '0'
+      }, ['localhost'], 0, 4, {
+          xenv.TPU_CHIPS_PER_PROCESS_BOUNDS:
+              '1,1,1',
+          xenv.TPU_PROCESS_BOUNDS:
+              '2,2,1',
+          xenv.CLOUD_TPU_TASK_ID:
+              '0',
+          xenv.TPU_PROCESS_PORT:
+              '8476',
+          xenv.TPU_PROCESS_ADDRESSES:
+              'localhost:8476,localhost:8477,localhost:8478,localhost:8479',
+          xenv.TPU_VISIBLE_CHIPS:
+              '0',
+      }),
       ('v4-8_process_0', {
           'ACCELERATOR_TYPE': 'v4-8',
           xenv.TPU_PROCESS_BOUNDS: '1,1,1',

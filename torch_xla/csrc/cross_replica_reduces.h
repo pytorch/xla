@@ -1,9 +1,12 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_CROSS_REPLICA_REDUCES_H_
+#define XLA_TORCH_XLA_CSRC_CROSS_REPLICA_REDUCES_H_
 
 #include <vector>
 
 #include "absl/types/span.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "torch/csrc/lazy/core/ir.h"
+#include "torch_xla/csrc/device.h"
 
 namespace torch_xla {
 
@@ -77,4 +80,13 @@ ReduceScatterResult BuildReduceScatter(
     int64_t scatter_dim, int64_t shard_count,
     const std::vector<std::vector<int64_t>>& groups, bool pin_layout);
 
+const torch::lazy::Value& GetAllReduceToken(
+    const torch::lazy::BackendDevice& device);
+void SetAllReduceToken(const torch::lazy::BackendDevice& device,
+                       const std::shared_ptr<torch::lazy::Value>& token);
+
+AllReduceType GetReduceType(c10::string_view reduce_type);
+
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_CROSS_REPLICA_REDUCES_H_

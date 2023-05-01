@@ -120,6 +120,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_norm',
         'test_multinomial',
         'test_multinomial_alias',
+        'test_multinomial_rng_state_advance',  # very slow compile
         'test_masked_select',  # uses half
         'test_masked_fill_bool_tensor',  # lowering
         'test_lu',
@@ -283,8 +284,8 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_CTCLoss_no_batch_dim_xla',  # Value out of range
         'test_upsamplingBilinear2d_xla',  # precision on GPU/TPU, slow compilation on CPU
         # torch.autograd.gradcheck.GradcheckError: Jacobian mismatch for output 0 with respect to input 0
-        'test_GRU_grad_and_gradgrad_xla_float64',  # Broke by functionalization, #4711
-        'test_LSTM_grad_and_gradgrad_xla_float64',  # Broke by functionalization, #4711
+        'test_GRU_grad_and_gradgrad_xla_float64',  # grad check failure
+        'test_LSTM_grad_and_gradgrad_xla_float64',  # grad check failure
     },
 
     # test/nn/test_dropout.py
@@ -422,8 +423,6 @@ DISABLED_TORCH_TESTS_TPU_ONLY = {
         'test_EmbeddingBag_per_sample_weights_and_new_offsets_xla',  # server side crash
         'test_EmbeddingBag_per_sample_weights_and_offsets_xla',  # server side crash
         'test_upsamplingNearest2d_xla',  # precision
-        'test_GRU_grad_and_gradgrad_xla_float64',  # grad check failure
-        'test_LSTM_grad_and_gradgrad_xla_float64',  # grad check failure
         'test_conv3d_valid_padding_backward_xla',  # grad check failure
         'test_ctc_loss_xla',  # runtime overflow error
         'test_upsamplingBicubic2d_xla',  # grad check failure

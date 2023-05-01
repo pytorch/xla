@@ -1,5 +1,7 @@
 #include "torch_xla/csrc/view.h"
 
+#include <torch/csrc/lazy/core/util.h>
+
 #include <algorithm>
 #include <functional>
 #include <numeric>
@@ -8,7 +10,6 @@
 #include "tensorflow/compiler/xla/util.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "third_party/xla_client/util.h"
-#include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ops/as_strided.h"
 #include "torch_xla/csrc/ops/as_strided_view_update.h"

@@ -1,5 +1,10 @@
 #include "torch_xla/csrc/ir.h"
 
+#include <torch/csrc/lazy/core/config.h>
+#include <torch/csrc/lazy/core/hash.h>
+#include <torch/csrc/lazy/core/ir_metadata.h>
+#include <torch/csrc/lazy/python/python_util.h>
+
 #include <functional>
 #include <sstream>
 
@@ -7,10 +12,6 @@
 #include "third_party/xla_client/cache.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "third_party/xla_client/sys_util.h"
-#include "torch/csrc/lazy/core/config.h"
-#include "torch/csrc/lazy/core/hash.h"
-#include "torch/csrc/lazy/core/ir_metadata.h"
-#include "torch/csrc/lazy/python/python_util.h"
 #include "torch_xla/csrc/lowering_context.h"
 
 namespace torch_xla {
@@ -21,7 +22,7 @@ using ShapeCache =
 
 ShapeCache* GetShapeCache() {
   static int64_t shape_cache_size =
-      xla::sys_util::GetEnvInt("XLA_IR_SHAPE_CACHE_SIZE", 4096);
+      xla::sys_util::GetEnvInt("XLA_IR_SHAPE_CACHE_SIZE", 12288);
   static ShapeCache* cache = new ShapeCache(shape_cache_size);
   return cache;
 }

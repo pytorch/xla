@@ -14,6 +14,8 @@ fi
 # 2. CONDA_PREFIX (if it exists)
 # 3. The conda install directory (if it exists)
 export CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH:-${CONDA_PREFIX:-"$(dirname $(which conda))/../"}}
+export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$(python3-config --prefix)/lib"
+echo $LD_LIBRARY_PATH
 
 function clone_pytorch() {
   PYTORCH_DIR=$1
@@ -77,6 +79,9 @@ function install_deps_pytorch_xla() {
 
   sudo apt-get -qq install npm nodejs
 
+  # Install LCOV and llvm-cov to generate C++ coverage reports
+  sudo apt-get install -y lcov
+
   # XLA build requires Bazel
   # We use bazelisk to avoid updating Bazel version manually.
   sudo npm install -g @bazel/bazelisk
@@ -91,21 +96,6 @@ function install_deps_pytorch_xla() {
   CUBLAS_PATTERN="/usr/include/cublas*"
   if ls $CUBLAS_PATTERN 1> /dev/null 2>&1; then
     sudo ln -s $CUBLAS_PATTERN /usr/local/cuda/include
-  fi
-
-  # Use cloud cache to build when available.
-  if [[ "$USE_CACHE" == 1 ]]; then
-    # Install bazels3cache for cloud cache
-    sudo npm install -g n
-    sudo n 16.18.0
-    sudo npm install -g bazels3cache
-    BAZELS3CACHE="$(which /usr/local/bin/bazels3cache)"
-    if [ -z "${BAZELS3CACHE}" ]; then
-      echo "Unable to find bazels3cache..."
-      exit 1
-    fi
-    /usr/local/bin/bazels3cache --bucket=${XLA_CLANG_CACHE_S3_BUCKET_NAME} --maxEntrySizeBytes=0 --logging.level=verbose
-    sed -i '/bazel build/ a --remote_http_cache=http://localhost:7777 \\' $XLA_DIR/build_torch_xla_libs.sh
   fi
 }
 
@@ -145,8 +135,10 @@ function run_torch_xla_tests() {
 
       # GPU tests
       if [ -x "$(command -v nvidia-smi)" ]; then
-        PJRT_DEVICE=GPU python test/test_train_mp_imagenet_fsdp.py --fake_data --use_nested_fsdp --use_small_fake_sample --num_epochs=1
-        PJRT_DEVICE=GPU python test/test_train_mp_imagenet_fsdp.py --fake_data --auto_wrap_policy type_based --use_small_fake_sample --num_epochs=1
+        # These tests fail on GPU with 03/30 TF-pin update (https://github.com/pytorch/xla/pull/4840)
+        # PJRT_DEVICE=GPU python test/test_train_mp_imagenet_fsdp.py --fake_data --use_nested_fsdp --use_small_fake_sample --num_epochs=1
+        # PJRT_DEVICE=GPU python test/test_train_mp_imagenet_fsdp.py --fake_data --auto_wrap_policy type_based --use_small_fake_sample --num_epochs=1
+        # XLA_DISABLE_FUNCTIONALIZATION=1 PJRT_DEVICE=GPU python test/test_train_mp_imagenet_fsdp.py --fake_data --use_nested_fsdp --use_small_fake_sample --num_epochs=1
         # Syncfree SGD optimizer tests
         if [ -d ./torch_xla/amp/syncfree ]; then
           echo "Running Syncfree Optimizer Test"
@@ -163,16 +155,27 @@ function run_torch_xla_tests() {
           # python test/test_train_mp_mnist_amp.py --fake_data --num_epochs=1
         fi
       fi
-
-      pushd test/cpp
-        echo "Running C++ Tests on PJRT"
-        if [ -x "$(command -v nvidia-smi)" ]; then
-          PJRT_DEVICE=GPU ./run_tests.sh
-          PJRT_DEVICE=GPU ./run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L""
-        else
-          PJRT_DEVICE=CPU ./run_tests.sh
-        fi
-      popd
     fi
+
+    pushd test/cpp
+      echo "Running C++ Tests on PJRT"
+      EXTRA_ARGS=""
+      if [ "$USE_COVERAGE" != "0" ]; then
+	      EXTRA_ARGS="-C"
+      fi
+      if [ ! -z "$GCLOUD_SERVICE_KEY_FILE" ]; then
+	      EXTRA_ARGS="$EXTRA_ARGS -R"
+      fi
+      if [ -x "$(command -v nvidia-smi)" ]; then
+        PJRT_DEVICE=GPU ./run_tests.sh $EXTRA_ARGS
+        PJRT_DEVICE=GPU ./run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L"" $EXTRA_ARGS
+      else
+        PJRT_DEVICE=CPU ./run_tests.sh $EXTRA_ARGS
+      fi
+      if [ "$USE_COVERAGE" != "0" ]; then
+        genhtml $XLA_DIR/bazel-out/_coverage/_coverage_report.dat -o ~/htmlcov/cpp/cpp_lcov.info
+        mv $XLA_DIR/bazel-out/_coverage/_coverage_report.dat ~/htmlcov/cpp_lcov.info
+      fi
+    popd
   popd
 }

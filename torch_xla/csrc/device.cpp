@@ -19,6 +19,8 @@ std::string XlaDeviceTypeToString(XlaDeviceType hw_type) {
       return "GPU";
     case XlaDeviceType::TPU:
       return "TPU";
+    case XlaDeviceType::XPU:
+      return "XPU";
     case XlaDeviceType::SPMD:
       return "SPMD";
   }
@@ -64,6 +66,9 @@ torch::lazy::BackendDevice ParseDeviceString(const std::string& device_spec) {
   } else if (device_spec_parts[0] == "GPU") {
     device_type->type =
         static_cast<std::underlying_type_t<XlaDeviceType>>(XlaDeviceType::GPU);
+  } else if (device_spec_parts[0] == "XPU") {
+    device_type->type =
+        static_cast<std::underlying_type_t<XlaDeviceType>>(XlaDeviceType::XPU);
   } else {
     XLA_ERROR() << "Invalid device specification: " << device_spec;
   }

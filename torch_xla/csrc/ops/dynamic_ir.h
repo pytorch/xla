@@ -1,4 +1,7 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_DYNAMIC_IR_H_
+#define XLA_TORCH_XLA_CSRC_OPS_DYNAMIC_IR_H_
+
+#include <torch/csrc/lazy/core/dynamic_ir.h>
 
 #include <functional>
 #include <memory>
@@ -9,6 +12,7 @@
 #include <utility>
 #include <vector>
 
+#include "third_party/xla_client/debug_macros.h"
 #include "torch/csrc/lazy/core/dynamic_ir.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ops/scalar.h"
@@ -178,6 +182,22 @@ class SizeMod : public XlaNode, public torch::lazy::DimensionNode {
   int64_t upper_bound_;
 };
 
+class SizeError : public XlaNode, public torch::lazy::DimensionNode {
+ public:
+  SizeError();
+  int64_t getDynamicValue() const override;
+  int64_t getStaticValue() const override {
+    XLA_CHECK(false) << "SizeError shouldn't be called.";
+    return -1;
+  }
+  bool isSymbolic() const override {
+    XLA_CHECK(false) << "SizeError shouldn't be called.";
+    return true;
+  }
+  std::string ToString() const override;
+  virtual XlaOpVector Lower(LoweringContext* loctx) const override;
+};
+
 const torch::lazy::DimensionNode* DimCast(torch::lazy::Output output);
 const torch::lazy::DimensionNode* DimCast(const torch::lazy::Node* node);
 const std::shared_ptr<torch::lazy::DimensionNode> DimCast(
@@ -199,3 +219,5 @@ class SizeConstant : public torch_xla::Scalar,
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_DYNAMIC_IR_H_

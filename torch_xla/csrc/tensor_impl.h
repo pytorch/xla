@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_TENSOR_IMPL_H_
+#define XLA_TORCH_XLA_CSRC_TENSOR_IMPL_H_
 
 #include <ATen/Tensor.h>
 #include <c10/core/Storage.h>
@@ -70,3 +71,5 @@ class XLATensorImpl : public c10::TensorImpl {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_TENSOR_IMPL_H_

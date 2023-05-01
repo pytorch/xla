@@ -23,6 +23,7 @@ extern const char* const kEnvPjRtTpuMaxInflightComputations;
 extern const char* const kEnvPjrtAsyncCpuClient;
 extern const char* const kEnvPjrtAsyncGpuClient;
 extern const char* const kEnvTpuLibraryPath;
+extern const char* const kEnvXpuLibraryPath;
 extern const char* const kEnvPjrtDistServiceAddr;
 extern const char* const kEnvPjRtLocalRank;
 

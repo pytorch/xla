@@ -1,19 +1,21 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_DEVICE_H_
+#define XLA_TORCH_XLA_CSRC_DEVICE_H_
+
+#include <torch/csrc/lazy/backend/backend_device.h>
+#include <torch/csrc/lazy/core/hash.h>
+#include <torch/csrc/lazy/core/util.h>
 
 #include <iostream>
 #include <string>
 
 #include "third_party/xla_client/util.h"
-#include "torch/csrc/lazy/backend/backend_device.h"
-#include "torch/csrc/lazy/core/hash.h"
-#include "torch/csrc/lazy/core/util.h"
 
 namespace torch_xla {
 
 // TODO(yeounoh) `SPMD` is a virtual device that defers data `TransferToServer`
 // until after the paritioning pass. This avoids transfering  the full input
 // tensor to the device.
-enum class XlaDeviceType { CPU, GPU, TPU, SPMD };
+enum class XlaDeviceType { CPU, GPU, TPU, XPU, SPMD };
 
 struct DeviceType : public torch::lazy::BackendDeviceType {
   DeviceType() { type = static_cast<int>(XlaDeviceType::CPU); }
@@ -41,3 +43,5 @@ static inline torch::lazy::BackendDevice GetDeviceOrCurrent(
 }
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_DEVICE_H_

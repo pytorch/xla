@@ -1,11 +1,15 @@
 #include "torch_xla/csrc/xla_lower_util.h"
 
+#include <torch/csrc/lazy/core/helpers.h>
+#include <torch/csrc/lazy/core/util.h>
+
 #include <algorithm>
 #include <vector>
 
 #include "tensorflow/compiler/xla/client/lib/arithmetic.h"
 #include "tensorflow/compiler/xla/client/lib/comparators.h"
 #include "tensorflow/compiler/xla/client/lib/constants.h"
+#include "tensorflow/compiler/xla/client/lib/loops.h"
 #include "tensorflow/compiler/xla/client/lib/math.h"
 #include "tensorflow/compiler/xla/client/lib/slicing.h"
 #include "tensorflow/compiler/xla/shape_util.h"
@@ -13,12 +17,12 @@
 #include "tensorflow/compiler/xla/util.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "third_party/xla_client/util.h"
-#include "torch/csrc/lazy/core/helpers.h"
-#include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/data_ops.h"
+#include "torch_xla/csrc/elementwise.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/random.h"
+#include "torch_xla/csrc/reduction.h"
 #include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
@@ -1121,6 +1125,57 @@ xla::XlaOp BuildCdistForward(xla::XlaOp x1, xla::XlaOp x2, xla::XlaOp p,
     xla::XlaOp p_norm = xla::Pow(reduced, xla::Div(one, p));
     return p_norm;
   }
+}
+
+xla::XlaOp BuildMultinomial(xla::XlaOp input, int64_t num_samples,
+                            bool replacement, xla::XlaOp seed) {
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  std::vector<int64_t> sizes = XlaHelpers::SizesOfXlaOp(input);
+  int64_t dim = input_shape.rank() - 1;
+  xla::XlaOp zero = xla::Zero(input.builder(), input_shape.element_type());
+  xla::XlaOp one = xla::One(input.builder(), input_shape.element_type());
+
+  // Build cumulative probability distribution.
+  xla::XlaComputation reducer =
+      XlaHelpers::CreateAddComputation(input_shape.element_type());
+  xla::XlaOp cumval = BuildCumulativeComputation(input, dim, reducer, zero);
+  xla::XlaOp maxval = SliceInDim(cumval, sizes[dim] - 1, sizes[dim], 1, dim);
+  xla::XlaOp cumprob = cumval / XlaHelpers::ImplicitBroadcast(
+                                    maxval, XlaHelpers::ShapeOfXlaOp(maxval),
+                                    XlaHelpers::ShapeOfXlaOp(cumval));
+
+  // Output shape
+  std::vector<int64_t> output_size = XlaHelpers::SizesOfXlaOp(input);
+  output_size[dim] = num_samples;
+  xla::Shape output_shape =
+      xla::ShapeUtil::MakeShape(input_shape.element_type(), output_size);
+
+  // Sample uniform distribution.
+  zero = BuildExpand(zero, output_size);
+  one = BuildExpand(one, output_size);
+  xla::XlaOp rng = RngUniform(seed, output_shape, zero, one);
+
+  // Map samples to categories
+  std::vector<int64_t> broadcast_size = XlaHelpers::SizesOfXlaOp(input);
+  broadcast_size.push_back(num_samples);
+  std::vector<int64_t> cumprob_broadcast_dim;
+  std::vector<int64_t> rng_broadcast_dim;
+  if (input_shape.rank() == 1) {
+    cumprob_broadcast_dim = {0};
+    rng_broadcast_dim = {1};
+  } else {
+    cumprob_broadcast_dim = {0, 1};
+    rng_broadcast_dim = {0, 2};
+  }
+  cumprob = xla::BroadcastInDim(cumprob, broadcast_size, cumprob_broadcast_dim);
+  rng = xla::BroadcastInDim(rng, broadcast_size, rng_broadcast_dim);
+
+  // Build comparison mask and sum along K dimension
+  auto output_type = xla::PrimitiveType::S64;
+  auto mask = BuildComparisonOp(at::aten::gt, rng, cumprob);
+  mask = xla::ConvertElementType(mask, output_type);
+  auto output = BuildSum(mask, {dim}, false);
+  return output;
 }
 
 }  // namespace torch_xla

@@ -33,7 +33,9 @@ pushd $PYTORCH_DIR
 
 checkout_torch_pin_if_available
 
-install_deps_pytorch_xla $XLA_DIR $USE_CACHE
+if ! install_deps_pytorch_xla $XLA_DIR $USE_CACHE; then
+  exit 1
+fi
 
 apply_patches
 
@@ -44,6 +46,8 @@ python setup.py install
 sccache --show-stats
 
 source $XLA_DIR/xla_env
+export GCLOUD_SERVICE_KEY_FILE="$XLA_DIR/default_credentials.json"
+export SILO_NAME='cache-silo-ci'  # cache bucket for CI
 build_torch_xla $XLA_DIR
 
 popd

@@ -11,10 +11,7 @@ VERBOSITY=2
 # Set the `CONTINUE_ON_ERROR` flag to `true` to make the CircleCI tests continue on error.
 # This will allow you to see all the failures on your PR, not stopping with the first
 # test failure like the default behavior.
-#
-# This flag should be set to `false`` by default. After testing your changes, make sure
-# to set this flag back to `false`` before you merge your PR.
-CONTINUE_ON_ERROR=false
+CONTINUE_ON_ERROR="${CONTINUE_ON_ERROR:-0}"
 if [[ "$CONTINUE_ON_ERROR" == "1" ]]; then
   set +e
 fi
@@ -58,12 +55,17 @@ function run_coverage {
 
 function run_test {
   echo "Running in PjRt runtime: $@"
-  if [ -x "$(command -v nvidia-smi)" ]; then
+  if [ -x "$(command -v nvidia-smi)" ] && [ "$XLA_CUDA" != "0" ]; then
     PJRT_DEVICE=GPU run_coverage "$@"
   else
     # TODO(darisoy): run these tests with multiple CPU devices, this fails due to TF issue.
     PJRT_DEVICE=CPU CPU_NUM_DEVICES=1 run_coverage "$@"
   fi
+}
+
+function run_test_without_functionalization {
+  echo "Running with XLA_DISABLE_FUNCTIONALIZATION: $@"
+  XLA_DISABLE_FUNCTIONALIZATION=1 run_test "$@"
 }
 
 function run_use_bf16 {
@@ -107,7 +109,7 @@ function run_xla_backend_mp {
 }
 
 function run_xrt {
-  if [ -x "$(command -v nvidia-smi)" ]; then
+  if [ -x "$(command -v nvidia-smi)" ] && [ "$XLA_CUDA" != "0" ]; then
     GPU_NUM_DEVICES=2 run_coverage "$@"
   else
     XRT_DEVICE_MAP="CPU:0;/job:localservice/replica:0/task:0/device:XLA_CPU:0" XRT_WORKERS="localservice:0;grpc://localhost:$(shuf -i 40701-40999 -n 1)" run_coverage "$@"
@@ -141,7 +143,7 @@ function run_xrt_tests {
   run_torchrun  "$CDIR/test_allreduce_torchrun.py"
 }
 
-function run_op_tests {
+function run_torch_op_tests {
   run_dynamic "$CDIR/../../test/test_view_ops.py" "$@" -v TestViewOpsXLA
   run_test "$CDIR/../../test/test_torch.py" "$@" -v TestTorchDeviceTypeXLA
   run_dynamic "$CDIR/../../test/test_torch.py" "$@" -v TestDevicePrecisionXLA
@@ -155,12 +157,16 @@ function run_op_tests {
   run_dynamic "$CDIR/../../test/nn/test_convolution.py" "$@" -v TestConvolutionNNDeviceTypeXLA
   run_dynamic "$CDIR/../../test/nn/test_multihead_attention.py" "$@" -v TestMultiheadAttentionNNDeviceTypeXLA
   run_dynamic "$CDIR/../../test/test_type_promotion.py" "$@" -v TestTypePromotionXLA
+}
+
+function run_xla_op_tests {
   run_dynamic "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
-  run_dynamic "$CDIR/test_dynamic_shapes.py"
-  run_dynamic "$CDIR/test_dynamic_shape_models.py" "$@" --verbosity=$VERBOSITY
+  run_dynamic "$CDIR/ds/test_dynamic_shapes.py"
+  run_dynamic "$CDIR/ds/test_dynamic_shape_models.py" "$@" --verbosity=$VERBOSITY
   run_eager_debug  "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_test "$CDIR/test_grad_checkpoint.py"
   run_test "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
+  run_test_without_functionalization "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_test "$CDIR/test_async_closures.py"
   run_test "$CDIR/test_xla_dist.py"
   run_test "$CDIR/test_profiler.py"
@@ -187,6 +193,11 @@ function run_op_tests {
   run_test "$CDIR/test_torch_distributed_xla_backend.py"
 }
 
+function run_op_tests {
+  run_torch_op_tests
+  run_xla_op_tests
+}
+
 function run_mp_op_tests {
   run_test "$CDIR/test_mp_replication.py"
   run_test "$CDIR/test_mp_all_to_all.py"
@@ -207,11 +218,16 @@ function run_mp_op_tests {
 }
 
 function run_tests {
-  run_op_tests
+  run_xla_op_tests
+  if [[ "$XLA_SKIP_TORCH_OP_TESTS" != "1" ]]; then
+    run_torch_op_tests
+  fi
   if [[ "$XLA_SKIP_MP_OP_TESTS" != "1" ]]; then
     run_mp_op_tests
   fi
-  run_xrt_tests
+  if [[ "$XLA_SKIP_XRT_TESTS" != "1" ]]; then
+    run_xrt_tests
+  fi
 }
 
 if [ "$LOGFILE" != "" ]; then

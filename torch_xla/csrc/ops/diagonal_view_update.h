@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_DIAGONAL_VIEW_UPDATE_H_
+#define XLA_TORCH_XLA_CSRC_OPS_DIAGONAL_VIEW_UPDATE_H_
 
 #include "torch_xla/csrc/ir.h"
 
@@ -29,3 +30,5 @@ class DiagonalViewUpdate : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_DIAGONAL_VIEW_UPDATE_H_

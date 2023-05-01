@@ -1,16 +1,4 @@
 # Tensorflow's patch to update the protobuf will regress the XRT runtime.
-diff --git a/tensorflow/compiler/xla/tests/build_defs.bzl b/tensorflow/compiler/xla/tests/build_defs.bzl
-index 10b30f63755..306512e21b8 100644
---- a/tensorflow/compiler/xla/tests/build_defs.bzl
-+++ b/tensorflow/compiler/xla/tests/build_defs.bzl
-@@ -112,6 +112,7 @@ def xla_test(
-     native.cc_library(
-         name = "%s_lib" % name,
-         srcs = srcs,
-+        tags = tags,
-         copts = copts,
-         testonly = True,
-         deps = deps,
 diff --git a/tensorflow/tools/ci_build/release/requirements_common.txt b/tensorflow/tools/ci_build/release/requirements_common.txt
 index 051387bf64e..be3f16a4edb 100644
 --- a/tensorflow/tools/ci_build/release/requirements_common.txt
@@ -24,56 +12,57 @@ index 051387bf64e..be3f16a4edb 100644
  six ~= 1.16.0
  termcolor ~= 2.1.1
  typing_extensions ~= 3.10.0.0
-diff --git a/tensorflow/tools/def_file_filter/def_file_filter.py.tpl b/tensorflow/tools/def_file_filter/def_file_filter.py.tpl
-index 444c2d151ab..8e97ea56f9f 100644
---- a/tensorflow/tools/def_file_filter/def_file_filter.py.tpl
-+++ b/tensorflow/tools/def_file_filter/def_file_filter.py.tpl
-@@ -288,21 +288,15 @@ def main():
-     def_fp.write("\t ?NewSession@tensorflow@@YAPEAVSession@1@AEBUSessionOptions@1@@Z\n")
-     def_fp.write("\t ??1SavedModelBundleInterface@tensorflow@@UEAA@XZ\n")
-     def_fp.write("\t ?MaybeSavedModelDirectory@tensorflow@@YA_NAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@@Z\n")
-+    def_fp.write("\t ?_TensorShapeProto_default_instance_@tensorflow@@3VTensorShapeProtoDefaultTypeInternal@1@A\n")
-+    def_fp.write("\t ?_GraphDef_default_instance_@tensorflow@@3VGraphDefDefaultTypeInternal@1@A\n")
-     def_fp.write("\t ??_7HistogramProto@tensorflow@@6B@\n")
-     def_fp.write("\t ??_7ConfigProto@tensorflow@@6B@\n") # for _pywrap_tfe
-     def_fp.write("\t ??_7CoordinatedTask@tensorflow@@6B@\n") # for _pywrap_tfe
-+    def_fp.write("\t ??0CoordinatedTask@tensorflow@@QEAA@XZ\n") # for _pywrap_tfe
-     def_fp.write("\t ?InternalSwap@CoordinatedTask@tensorflow@@AEAAXPEAV12@@Z\n") # for _pywrap_tfe
-     def_fp.write("\t ?kSeed@MixingHashState@hash_internal@lts_20220623@absl@@0QEBXEB\n") # for _pywrap_tfcompile
-     def_fp.write("\t ?kEmptyGroup@container_internal@lts_20220623@absl@@3QBW4ctrl_t@123@B\n") # for _pywrap_tfcompile
--    def_fp.write("\t ??_7GraphDef@tensorflow@@6B@\n")
--    def_fp.write("\t ??_7DeviceProperties@tensorflow@@6B@\n")
--    def_fp.write("\t ??_7MetaGraphDef@tensorflow@@6B@\n")
--    def_fp.write("\t ??_7SavedModel@tensorflow@@6B@\n")
--    def_fp.write("\t ??0CoordinatedTask@tensorflow@@QEAA@XZ\n") # for _pywrap_tfe
--    def_fp.write("\t ?Set@ArenaStringPtr@internal@protobuf@google@@QEAAXAEBV?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@PEAVArena@34@@Z\n") # _pywrap_tfe
--    def_fp.write("\t ??1CoordinatedTask@tensorflow@@UEAA@XZ\n") # for _pywrap_tfe
--    def_fp.write("\t ?CopyFrom@CoordinatedTask@tensorflow@@QEAAXAEBV12@@Z\n") # for _pywrap_tfe
--    def_fp.write("\t ??0CoordinatedTask@tensorflow@@IEAA@PEAVArena@protobuf@google@@_N@Z\n") # for _pywrap_tfe
-
-     # Each symbols returned by undname matches the same position in candidates.
-     # We compare on undname but use the decorated name from candidates.
 diff --git a/tensorflow/tools/pip_package/setup.py b/tensorflow/tools/pip_package/setup.py
-index cc17d57800e..329588662e9 100644
+index 300232e8e40..fc4279580d5 100644
 --- a/tensorflow/tools/pip_package/setup.py
 +++ b/tensorflow/tools/pip_package/setup.py
-@@ -104,7 +104,7 @@ REQUIRED_PACKAGES = [
-     # See also: https://github.com/protocolbuffers/protobuf/issues/9954
-     # See also: https://github.com/tensorflow/tensorflow/issues/56077
-     # This is a temporary patch for now, to patch previous TF releases.
+@@ -97,7 +97,7 @@ REQUIRED_PACKAGES = [
+     'numpy >= 1.22, <1.24',
+     'opt_einsum >= 2.3.2',
+     'packaging',
 -    'protobuf>=3.20.3,<5.0.0dev,!=4.21.0,!=4.21.1,!=4.21.2,!=4.21.3,!=4.21.4,!=4.21.5',
 +    'protobuf >= 3.9.2, < 3.20',
      'setuptools',
      'six >= 1.12.0',
      'termcolor >= 1.1.0',
+diff --git a/tensorflow/tools/proto_text/gen_proto_text_functions_lib.cc b/tensorflow/tools/proto_text/gen_proto_text_functions_lib.cc
+index 25b1d57cc3b..21c9bdde36b 100644
+--- a/tensorflow/tools/proto_text/gen_proto_text_functions_lib.cc
++++ b/tensorflow/tools/proto_text/gen_proto_text_functions_lib.cc
+@@ -250,14 +250,7 @@ string GetHeaderGuard(const FileDescriptor& fd, bool impl) {
+ void Generator::AppendFieldValueAppend(const FieldDescriptor& field,
+                                        const bool omit_default,
+                                        const string& field_expr) {
+-  // This does not emit code with proper presence semantics (e.g. it doesn't
+-  // check 'has' fields on non-messages).
+-  CHECK(!field.has_presence() || field.containing_oneof() != nullptr ||
+-        field.cpp_type() == FieldDescriptor::CPPTYPE_MESSAGE)
+-      << field.file()->name();
+-
+   SetOutput(&cc_);
+-
+   switch (field.cpp_type()) {
+     case FieldDescriptor::CPPTYPE_INT32:
+     case FieldDescriptor::CPPTYPE_INT64:
+@@ -768,6 +761,10 @@ void GetAllFileDescriptorsFromFile(const FileDescriptor* fd,
+ }
+ 
+ void Generator::Generate(const FileDescriptor& fd) {
++  // This does not emit code with proper proto2 semantics (e.g. it doesn't check
++  // 'has' fields on non-messages), so check that only proto3 is passed.
++  CHECK_EQ(fd.syntax(), FileDescriptor::SYNTAX_PROTO3) << fd.name();
++
+   const string package = fd.package();
+   std::set<const FileDescriptor*> all_fd;
+   std::set<const Descriptor*> all_d;
 diff --git a/tensorflow/tsl/platform/default/build_config.bzl b/tensorflow/tsl/platform/default/build_config.bzl
-index c6b49ba7ca4..827e51a4a8d 100644
+index a325340067d..3fc976efd98 100644
 --- a/tensorflow/tsl/platform/default/build_config.bzl
 +++ b/tensorflow/tsl/platform/default/build_config.bzl
 @@ -401,13 +401,6 @@ def py_proto_library(
          # is not explicitly listed in py_libs. Instead, host system is assumed to
          # have grpc installed.
-
+ 
 -    genproto_deps = []
 -    for dep in deps:
 -        if dep != "@com_google_protobuf//:protobuf_python":
@@ -91,13 +80,13 @@ index c6b49ba7ca4..827e51a4a8d 100644
 -        deps = genproto_deps,
 +        deps = [s + "_genproto" for s in deps],
      )
-
+ 
      if default_runtime and not default_runtime in py_libs + deps:
 diff --git a/tensorflow/workspace2.bzl b/tensorflow/workspace2.bzl
-index 80072dec290..3506f7d22c0 100644
+index 3d1534d3803..4de954cc19b 100644
 --- a/tensorflow/workspace2.bzl
 +++ b/tensorflow/workspace2.bzl
-@@ -457,14 +457,14 @@ def _tf_repositories():
+@@ -463,14 +463,14 @@ def _tf_repositories():
      tf_http_archive(
          name = "com_google_protobuf",
          patch_file = ["//third_party/protobuf:protobuf.patch"],
@@ -113,10 +102,10 @@ index 80072dec290..3506f7d22c0 100644
 -        urls = tf_mirror_urls("https://github.com/protocolbuffers/protobuf/archive/v3.21.9.zip"),
 +        urls = tf_mirror_urls("https://github.com/protocolbuffers/protobuf/archive/v3.9.2.zip"),
      )
-
+ 
      tf_http_archive(
-@@ -485,9 +485,9 @@ def _tf_repositories():
-
+@@ -491,9 +491,9 @@ def _tf_repositories():
+ 
      tf_http_archive(
          name = "com_google_fuzztest",
 -        sha256 = "c75f224b34c3c62ee901381fb743f6326f7b91caae0ceb8fe62f3fd36f187627",
@@ -126,43 +115,15 @@ index 80072dec290..3506f7d22c0 100644
 +        strip_prefix = "fuzztest-6d79ceb1dc2398e02a39efc23ce40d68baa16a42",
 +        urls = tf_mirror_urls("https://github.com/google/fuzztest/archive/6d79ceb1dc2398e02a39efc23ce40d68baa16a42.zip"),
      )
-
+ 
      tf_http_archive(
-@@ -567,10 +567,10 @@ def _tf_repositories():
-
-     tf_http_archive(
-         name = "boringssl",
--        sha256 = "534fa658bd845fd974b50b10f444d392dfd0d93768c4a51b61263fd37d851c40",
--        strip_prefix = "boringssl-b9232f9e27e5668bc0414879dcdedb2a59ea75f2",
-+        sha256 = "fd0e06a8a57dcba1132f91fef1c1327191e913b6c50a84633f7175090972196c",
-+        strip_prefix = "boringssl-f9eff21461cf79556a0fb8ca9b1bf60c3b283ce8",
-         system_build_file = "//third_party/systemlibs:boringssl.BUILD",
--        urls = tf_mirror_urls("https://github.com/google/boringssl/archive/b9232f9e27e5668bc0414879dcdedb2a59ea75f2.tar.gz"),
-+        urls = tf_mirror_urls("https://github.com/google/boringssl/archive/f9eff21461cf79556a0fb8ca9b1bf60c3b283ce8.tar.gz"),
-     )
-
-     # Note: if you update this, you have to update libpng too. See cl/437813808
-@@ -873,13 +873,6 @@ def _tf_repositories():
-         system_build_file = "//third_party/systemlibs:pybind11.BUILD",
-     )
-
--    tf_http_archive(
--        name = "pybind11_protobuf",
--        urls = tf_mirror_urls("https://github.com/pybind/pybind11_protobuf/archive/80f3440cd8fee124e077e2e47a8a17b78b451363.zip"),
--        sha256 = "",
--        strip_prefix = "pybind11_protobuf-80f3440cd8fee124e077e2e47a8a17b78b451363",
--    )
--
-     tf_http_archive(
-         name = "wrapt",
-         build_file = "//third_party:wrapt.BUILD",
 diff --git a/tensorflow/workspace3.bzl b/tensorflow/workspace3.bzl
 index 91871db22c8..5cfa0553579 100644
 --- a/tensorflow/workspace3.bzl
 +++ b/tensorflow/workspace3.bzl
 @@ -37,11 +37,11 @@ def workspace():
      )
-
+ 
      # Maven dependencies.
 -    RULES_JVM_EXTERNAL_TAG = "4.3"
 +    RULES_JVM_EXTERNAL_TAG = "3.2"
@@ -173,25 +134,25 @@ index 91871db22c8..5cfa0553579 100644
 +        sha256 = "82262ff4223c5fda6fb7ff8bd63db8131b51b413d26eb49e3131037e79e324af",
          url = "https://github.com/bazelbuild/rules_jvm_external/archive/%s.zip" % RULES_JVM_EXTERNAL_TAG,
      )
-
+ 
 diff --git a/third_party/pprof.BUILD b/third_party/pprof.BUILD
 index b7d33118665..dd38a09cd0c 100644
 --- a/third_party/pprof.BUILD
 +++ b/third_party/pprof.BUILD
 @@ -4,7 +4,7 @@ package(
-
+ 
  licenses(["notice"])  # MIT
-
+ 
 -load("@org_tensorflow//tensorflow/tsl/platform/default:build_config.bzl", "py_proto_library")
 +load("@com_google_protobuf//:protobuf.bzl", "py_proto_library")
-
+ 
  exports_files(["pprof/LICENSE"])
-
+ 
 diff --git a/third_party/protobuf/protobuf.patch b/third_party/protobuf/protobuf.patch
-index 9d928ba175f..5ff9f425b76 100644
+index 9d928ba175f..9f0cf0aa771 100644
 --- a/third_party/protobuf/protobuf.patch
 +++ b/third_party/protobuf/protobuf.patch
-@@ -1,30 +1,181 @@
+@@ -1,7 +1,25 @@
 -diff --git a/BUILD.bazel b/BUILD.bazel
 ---- a/BUILD.bazel	(revision 90b73ac3f0b10320315c2ca0d03a5a9b095d2f66)
 -+++ b/BUILD.bazel	(date 1670471682469)
@@ -221,12 +182,11 @@ index 9d928ba175f..5ff9f425b76 100644
       copts = COPTS,
       includes = ["src/"],
       linkopts = LINK_OPTS,
- +    alwayslink = 1,
+@@ -9,22 +27,155 @@ diff --git a/BUILD.bazel b/BUILD.bazel
       visibility = ["//visibility:public"],
   )
--
+ 
 -@@ -135,6 +136,7 @@
-+
 +@@ -213,6 +215,7 @@ cc_library(
       copts = COPTS,
       includes = ["src/"],
@@ -378,7 +338,7 @@ index 9d928ba175f..5ff9f425b76 100644
 -@@ -58,6 +58,37 @@
 -               : 0)                                               \
 -        : PyBytes_AsStringAndSize(ob, (charpp), (sizep)))
--
+- 
 +@@ -63,6 +63,37 @@
 +                        : PyBytes_AsStringAndSize(ob, (charpp), (sizep)))
 + #endif
@@ -414,7 +374,7 @@ index 9d928ba175f..5ff9f425b76 100644
  +      goto exit;
       }
     }
--
+- 
 --  if (frame->f_code->co_filename == nullptr) {
 +-
 +-  if (frame->f_code->co_filename == NULL) {
@@ -429,7 +389,7 @@ index 9d928ba175f..5ff9f425b76 100644
  -    return false;
  +    goto exit;
     }
--
+- 
 +
  -  if (frame->f_globals != frame->f_locals) {
  +  frame_globals = PyFrame_GetGlobals(frame);
@@ -447,7 +407,7 @@ index 9d928ba175f..5ff9f425b76 100644
 +@@ -2991,8 +2991,12 @@ bool InitProto2MessageModule(PyObject *m) {
 +         reinterpret_cast<PyObject*>(
 +             &RepeatedCompositeContainer_Type));
-
+  
 - // If the calling code is not a _pb2.py file, raise AttributeError.
 \ No newline at end of file
 +-    // Register them as collections.Sequence

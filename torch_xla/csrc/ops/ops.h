@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_OPS_H_
+#define XLA_TORCH_XLA_CSRC_OPS_OPS_H_
 
 // This header can depend on ops/ and ir.h, as well as system/c++, tensorflow,
 // PT,... but not on other PT/XLA headers.
@@ -165,6 +166,12 @@ torch::lazy::NodePtr Norm(const torch::lazy::Value& input,
                           c10::optional<at::ScalarType> dtype,
                           absl::Span<const int64_t> dims, bool keepdim);
 
+torch::lazy::NodePtr LinalgVectorNorm(const torch::lazy::Value& input,
+                                      const at::Scalar& ord,
+                                      std::vector<int64_t> dimensions,
+                                      bool keepdim,
+                                      c10::optional<at::ScalarType> dtype);
+
 torch::lazy::NodePtr Identity(int64_t lines, int64_t cols,
                               xla::PrimitiveType element_type);
 
@@ -223,4 +230,10 @@ torch::lazy::NodePtr Softplus(const torch::lazy::Value& input,
 
 torch::lazy::NodePtr Selu(const torch::lazy::Value& input);
 
+torch::lazy::NodePtr ViewAsComplexCopy(const torch::lazy::Value& input);
+
+torch::lazy::NodePtr ViewAsRealCopy(const torch::lazy::Value& input);
+
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_OPS_H_
