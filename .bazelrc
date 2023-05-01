@@ -56,7 +56,7 @@ build:cuda --define=xla_python_enable_gpu=true
 build:cuda --cxxopt=-DXLA_CUDA=1
 
 # Coverage with cuda/gcc/nvcc requires manually setting coverage flags.
-coverage:cuda --cxxopt=--coverage
+coverage:cuda --per_file_copt=-external/.*@--coverage
 coverage:cuda --linkopt=-lgcov
 
 build:acl --define==build_with_acl=true
