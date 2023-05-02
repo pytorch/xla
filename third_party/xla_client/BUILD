@@ -65,6 +65,320 @@ cc_library(
     alwayslink = True,
 )
 
+# openxla_common : used
+cc_library(
+    name = "openxla_common",
+    srcs = [
+        "openxla_defs.cc",
+    ],
+    hdrs = [
+        "openxla_defs.h",
+    ],
+    visibility = [":friends"],
+)
+
+# openxla_flags
+cc_library(
+    name = "openxla_flags",
+    srcs = ["openxla_flags.cc"],
+    hdrs = ["openxla_flags.h"],
+    visibility = [":friends"],
+    deps = [
+        "//tensorflow/compiler/mlir/tensorflow:dump_graph",
+        "@xla//xla:parse_flags_from_env",
+        "//tensorflow/core:framework_internal",
+        "//tensorflow/core:lib",
+        "//tensorflow/core:protos_all_cc",
+        "@com_google_absl//absl/base",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/types:optional",
+    ],
+)
+
+# # openxla_compilation_passes
+# cc_library(
+#     name = "openxla_compilation_passes",
+#     srcs = [
+#         "build_xla_ops_pass.cc",
+#         "clone_constants_for_better_clustering.cc",
+#         "cluster_scoping_pass.cc",
+#         "deadness_analysis.cc",
+#         "deadness_analysis_internal.h",
+#         "encapsulate_subgraphs_pass.cc",
+#         "encapsulate_xla_computations_pass.cc",
+#         "extract_outside_compilation_pass.cc",
+#         "force_xla_constants_on_host_pass.cc",
+#         "increase_dynamism_for_auto_jit_pass.cc",
+#         "mark_for_compilation_pass.cc",
+#         "mark_for_compilation_pass_test_helper.cc",
+#         "partially_decluster_pass.cc",
+#         "report_clustering_info_pass.cc",
+#     ],
+#     hdrs = [
+#         "build_xla_ops_pass.h",
+#         "clone_constants_for_better_clustering.h",
+#         "cluster_scoping_pass.h",
+#         "deadness_analysis.h",
+#         "encapsulate_subgraphs_pass.h",
+#         "encapsulate_xla_computations_pass.h",
+#         "extract_outside_compilation_pass.h",
+#         "force_xla_constants_on_host_pass.h",
+#         "increase_dynamism_for_auto_jit_pass.h",
+#         "mark_for_compilation_pass.h",
+#         "mark_for_compilation_pass_test_helper.h",
+#         "partially_decluster_pass.h",
+#         "report_clustering_info_pass.h",
+#     ],
+#     visibility = [
+#         ":internal",
+#         "//tensorflow/core/tfrt/utils:__pkg__",
+#         "//third_party/cloud_tpu/inference_converter:__pkg__",
+#     ],
+#     deps = [
+#         "compilability_check_util",
+#         ":openxla_common",
+#         ":device_util",
+#         ":encapsulate_util",
+#         ":openxla_flags",
+#         ":resource_operation_safety_analysis",
+#         ":shape_inference_helpers",
+#         ":xla_activity_listener",
+#         ":xla_cluster_util",
+#         "//tensorflow/cc:cc_ops",
+#         "//tensorflow/cc:functional_ops",
+#         "//tensorflow/cc:ops",
+#         "//tensorflow/cc:scope",
+#         "//tensorflow/cc:scope_internal",
+#         "//tensorflow/compiler/jit/ops:xla_ops",
+#         "//tensorflow/compiler/tf2xla:resource_operation_table",
+#         "//tensorflow/compiler/tf2xla:side_effect_util",
+#         "//tensorflow/compiler/tf2xla:tf2xla_util",
+#         "//tensorflow/compiler/tf2xla:xla_compiler",
+#         "//tensorflow/compiler/tf2xla:xla_op_registry",
+#         "//tensorflow/compiler/tf2xla/cc:xla_jit_ops",
+#         "//tensorflow/compiler/tf2xla/cc:xla_ops",
+#         "//tensorflow/compiler/xla:status_macros",
+#         "//tensorflow/compiler/xla:statusor",
+#         "//tensorflow/compiler/xla:union_find",
+#         "//tensorflow/compiler/xla:util",
+#         "//tensorflow/compiler/xla:xla_data_proto_cc",
+#         "//tensorflow/compiler/xla/service/graphcycles",
+#         "//tensorflow/core:core_cpu",
+#         "//tensorflow/core:core_cpu_internal",
+#         "//tensorflow/core:framework",
+#         "//tensorflow/core:lib",
+#         "//tensorflow/core:lib_internal",
+#         "//tensorflow/core:protos_all_cc",
+#         "//tensorflow/core/framework:bounds_check",
+#         "@com_google_absl//absl/algorithm:container",
+#         "@com_google_absl//absl/base",
+#         "@com_google_absl//absl/container:flat_hash_map",
+#         "@com_google_absl//absl/container:flat_hash_set",
+#         "@com_google_absl//absl/container:inlined_vector",
+#         "@com_google_absl//absl/memory",
+#         "@com_google_absl//absl/strings",
+#         "@com_google_absl//absl/types:optional",
+#     ],
+# )
+
+# # openxla_xla_activity_logging_listener
+# cc_library(
+#     name = "openxla_xla_activity_logging_listener",
+#     srcs = ["openxla_xla_activity_logging_listener.cc"],
+#     deps = [
+#         ":xla_activity_listener",
+#         ":xla_activity_proto_cc",
+#         "//tensorflow/core:lib",
+#         "@com_google_absl//absl/memory",
+#     ],
+#     alwayslink = 1,
+# )
+
+# # openxla_jit_compilation_passes
+# cc_library(
+#     name = "openxla_jit_compilation_passes",
+#     srcs = ["openxla_jit_compilation_pass_registration.cc"],
+#     deps = [
+#         ":openxla_compilation_passes",
+#         ":openxla_xla_activity_logging_listener",
+#         "//tensorflow/compiler/tf2xla:functionalize_control_flow_pass_registration",
+#         "//tensorflow/compiler/tf2xla:mlir_bridge_pass_registration",
+#         "//tensorflow/core:core_cpu_internal",
+#     ] + tf_jit_compilation_passes_extra_deps(),
+#     alwayslink = 1,
+# )
+
+# # openxla_xla_device
+# cc_library(
+#     name = "openxla_xla_device",
+#     hdrs = [
+#         # "xla_compile_on_demand_op.h",
+#         "openxla_xla_device.h",
+#         # "xla_device_context.h",
+#         "xla_device_ops.h",
+#     ],
+#     # Public visibility is needed for external TF/XLA backends.
+#     visibility = ["//visibility:public"],
+#     # deps = XLA_DEVICE_DEPS + [
+#     #     # ":device_compilation_profiler",
+#     #     # ":openxla_jit_compilation_passes",
+#     #     # ":openxla_xla_device_no_jit_rewrite_registration",
+#     # ],
+# )
+
+# # openxla_xla_kernel_creator
+# cc_library(
+#     name = "openxla_xla_kernel_creator",
+#     srcs = [
+#         "openxla_xla_kernel_creator.cc",
+#         "openxla_xla_kernel_creator.h",
+#     ],
+#     visibility = [
+#         ":internal",
+#         "//tensorflow/core/common_runtime/eager:__pkg__",
+#     ],
+#     deps = [
+#         ":common",
+#         ":compilability_check_util",
+#         ":compilation_passes",
+#         ":flags",
+#         ":jit_compilation_passes",
+#         "//tensorflow/compiler/jit/kernels:xla_ops_no_jit_rewrite_registration",
+#         "//tensorflow/compiler/tf2xla:mlir_bridge_pass",
+#         "//tensorflow/compiler/tf2xla:xla_compiler",
+#         "//tensorflow/compiler/tf2xla:xla_op_registry",
+#         "//tensorflow/core:core_cpu_internal",
+#         "//tensorflow/core:framework",
+#         "//tensorflow/core:lib",
+#         "//tensorflow/core:protos_all_cc",
+#         "@com_google_absl//absl/memory",
+#         "@com_google_absl//absl/strings",
+#         "@com_google_absl//absl/strings:str_format",
+#     ],
+#     alwayslink = 1,
+# )
+
+# # openxla_xla_device_no_jit_rewrite_registration
+# cc_library(
+#     name = "openxla_xla_device_no_jit_rewrite_registration",
+#     srcs = [
+#         "xla_compile_on_demand_op.cc",
+#         "xla_device.cc",
+#         "xla_device_context.cc",
+#         "xla_device_ops.cc",
+#         "xla_ops_on_regular_devices.cc",
+#         "xla_platform_info.cc",
+#     ],
+#     hdrs = [
+#         "xla_compile_on_demand_op.h",
+#         "xla_device.h",
+#         "xla_device_context.h",
+#         "xla_device_ops.h",
+#         "xla_platform_info.h",
+#     ],
+#     # Public visibility is needed for external TF/XLA backends.
+#     visibility = ["//visibility:public"],
+#     deps = XLA_DEVICE_DEPS + [
+#         ":device_compilation_cache",
+#         ":device_compilation_profiler",
+#         ":device_compiler_client",
+#         ":device_executable_persistor",
+#         ":flags_headers",
+#         ":device_compiler",
+#         ":xla_device_compiler_client",
+#         "//tensorflow/core/tpu:tpu_defs",
+#     ],
+#     alwayslink = 1,
+# )
+
+# # openxla_dump_graph
+# cc_library(
+#     name = "openxla_dump_graph",
+#     srcs = ["utils/dump_graph.cc"],
+#     hdrs = ["utils/dump_graph.h"],
+#     deps = [
+#         ":error_util",
+#         ":tensorflow",
+#         "//tensorflow/core:framework",
+#         "//tensorflow/core:graph",
+#         "//tensorflow/core:lib",
+#         "//tensorflow/core/ir/importexport:graphdef_import",
+#         "//tensorflow/core/platform:logging",
+#         "@llvm-project//llvm:Support",
+#         "@llvm-project//mlir:IR",
+#     ],
+# )
+
+# # Linked by tensorflow core, without registration of jit compilation passes.
+# cc_library(
+#     name = "openxla_xla_ops_no_jit_rewrite_registration",
+#     srcs = ["openxla_xla_ops.cc"],
+#     hdrs = ["openxla_xla_ops.h"],
+#     deps = XLA_OPS_DEPS + [
+#         "//tensorflow/compiler/jit:device_compilation_cache",
+#         "//tensorflow/compiler/jit:device_compilation_profiler",
+#         "//tensorflow/compiler/jit:tf_graph_to_hlo_compiler",
+#         "//tensorflow/compiler/jit:tf_to_hlo_compiler",
+#         "//tensorflow/compiler/jit:xla_compile_util",
+#         "//tensorflow/compiler/xla/pjrt:pjrt_client",
+#         "//tensorflow/core/platform:refcount",
+#     ],
+#     alwayslink = 1,
+# )
+
+# # openxla_xla_ops
+# cc_library(
+#     name = "openxla_xla_ops",
+#     hdrs = ["openxla_xla_ops.h"],
+#     deps = XLA_OPS_DEPS + [
+#         ":openxla_xla_ops_no_jit_rewrite_registration",
+#         "//tensorflow/compiler/jit:jit_compilation_passes",
+#     ],
+#     alwayslink = 1,
+# )
+
+# # defs.cc/h only contains string constants, and can be included in mobile
+# # builds.
+# filegroup(
+#     name = "openxla_mobile_srcs_no_runtime",
+#     srcs = [
+#         "openxla_defs.cc",
+#         "openxla_defs.h",
+#     ],
+#     visibility = [":friends"],
+# )
+
+# openxla_gpu_device
+cc_library(
+    name = "openxla_gpu_device",
+    srcs = ["openxla_gpu_device.cc"],
+    visibility = [":friends"],
+    deps = [
+        "@com_google_absl//absl/memory", # #include "absl/memory/memory.h"
+        "@com_google_absl//absl/strings", # #include "absl/strings/numbers.h", #include "absl/strings/str_split.h"
+        "@xla//xla/stream_executor/gpu:gpu_init", # #include "tensorflow/compiler/xla/stream_executor/gpu/gpu_init.h"
+        ":openxla_common", # #include "third_party/xla_client/openxla_defs.h"
+        ":openxla_flags", # #include "third_party/xla_client/openxla_flags.h"
+        ":openxla_jit_compilation_passes",
+        ":openxla_xla_device",
+        ":openxla_xla_kernel_creator",  # buildcleaner: keep
+        ":openxla_xla_device_no_jit_rewrite_registration",
+        ":openxla_xla_ops",
+        "//tensorflow/compiler/tf2xla:layout_util",
+        "//tensorflow/compiler/tf2xla:xla_compiler",
+        "//tensorflow/compiler/tf2xla:xla_op_registry",
+        "//tensorflow/compiler/tf2xla/kernels:xla_ops",
+        "//tensorflow/core:core_cpu_internal",
+        "//tensorflow/core:lib",
+    ] + if_libtpu(
+        if_false = [
+            "@xla//xla/service:gpu_plugin",  # buildcleaner: keep
+        ],
+        if_true = [],
+    ),
+    alwayslink = 1,
+)
+
 cc_library(
     name = "computation_client",
     srcs = [
@@ -155,6 +469,7 @@ cc_library(
         "@com_google_absl//absl/numeric:int128",
         "@com_google_absl//absl/strings",
     ] + if_cuda_is_configured([
+        ":openxla_gpu_device",
         "@xla//xla/service:gpu_plugin_impl",
         "@xla//xla/service:gpu_plugin_stub",
         "@xla//xla/service:gpu_plugin_noncuda",
