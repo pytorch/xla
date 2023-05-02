@@ -24,21 +24,15 @@ running on Cloud TPUs and learn how to use Cloud TPUs as PyTorch devices:
 
 The rest of this README covers:
 
-- [PyTorch/XLA](#pytorchxla)
-  - [User Guide \& Best Practices](#user-guide--best-practices)
-  - [Running PyTorch/XLA on Cloud TPU and GPU](#running-pytorchxla-on-cloud-tpu-and-gpu)
-  - [Running on a Single Cloud TPU VM](#running-on-a-single-cloud-tpu-vm)
-  - [How to Run on TPU VM Pods (distributed training)](#how-to-run-on-tpu-vm-pods-distributed-training)
-  - [Available docker images and wheels](#available-docker-images-and-wheels)
-    - [Docker](#docker)
-    - [Wheel](#wheel)
-    - [Installing libtpu](#installing-libtpu)
-  - [Performance Profiling and Auto-Metrics Analysis](#performance-profiling-and-auto-metrics-analysis)
-  - [Troubleshooting](#troubleshooting)
-  - [Providing Feedback](#providing-feedback)
-  - [Contributing](#contributing)
-  - [Disclaimer](#disclaimer)
-  - [Additional Reads](#additional-reads)
+* [User Guide & Best Practices](#user-guide--best-practices)
+* [Running PyTorch on Cloud TPUs and GPU](#running-pytorchxla-on-cloud-tpu-and-gpu)
+Google Cloud also runs networks faster than Google Colab.
+* [Available docker images and wheels](#available-docker-images-and-wheels)
+* [Performance Profiling and Auto-Metrics Analysis](#performance-profiling-and-auto-metrics-analysis)
+* [Troubleshooting](#troubleshooting)
+* [Providing Feedback](#providing-feedback)
+* [Building and Contributing to PyTorch/XLA](#contributing)
+* [Additional Reads](#additional-reads)
 
 
 
