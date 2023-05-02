@@ -124,7 +124,7 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
     replicated = True
   elif any(d is None for d in partition_spec):
     partial = True
-  # TODO(yeounoh) suport partially replicated sharding.
+  # TODO(yeounoh) support partially replicated sharding.
   assert not partial, "Partial replication is currently not supported."
 
   if isinstance(t, XLAShardedTensor):

@@ -58,7 +58,7 @@ def _maybe_select_default_device():
 
 
 def device_type() -> Optional[str]:
-  """Returns the currrent PjRt device type.
+  """Returns the current PjRt device type.
 
   Selects a default device if none has been configured
   """

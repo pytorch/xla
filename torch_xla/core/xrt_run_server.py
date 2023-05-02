@@ -29,7 +29,7 @@ def run_service(port, flag_env):
     return
 
   local_env = os.environ.copy()
-  # Enable the basic logging by defualt
+  # Enable the basic logging by default
   local_env['TF_CPP_MIN_LOG_LEVEL'] = '0'
   local_env[
       'TF_CPP_VMODULE'] = 'tpu_configuration_ops=1,tpu_execute_op=1,tpu_compile_op=1,tpu_compile_op_impl=1,tpu_compile_op_common=1,tpu_compile_ops=1,master=1,computation_client=5'

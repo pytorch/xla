@@ -9,7 +9,7 @@ Here is a small code example of running resnet18 with `torch.compile`
 
 ```python
 import torch
-imprt torchvision
+import torchvision
 import torch_xla.core.xla_model as xm
 
 def eval_model(loader):
@@ -23,28 +23,28 @@ def eval_model(loader):
 ```
 > **NOTE:** inference backend name `torchxla_trace_once` is subject to change.
 
-With the `torch.compile` you will see that PyTorch/XLA only traces the resent18 model once during the init time and executes the compiled binary everytime `dynamo_resnet18` is invoked, instead of tracing the model every time. Note that currently Dynamo does not support fallback so if there is an op that can not be traced by XLA, it will error out. Feel free to open a github issue and we We prioritize adding the lowering. We will add the fallback support for dynamo in the upcoming 2.1 release. Here is a inference speed analysis to compare Dynamo and Lazy using torch bench on Cloud TPU v4-8
+With the `torch.compile` you will see that PyTorch/XLA only traces the resent18 model once during the init time and executes the compiled binary every time `dynamo_resnet18` is invoked, instead of tracing the model every time. Note that currently Dynamo does not support fallback so if there is an op that can not be traced by XLA, it will error out. Feel free to open a github issue and we We prioritize adding the lowering. We will add the fallback support for dynamo in the upcoming 2.1 release. Here is a inference speed analysis to compare Dynamo and Lazy using torch bench on Cloud TPU v4-8
 
-| model | Speed up |
-| --- | ----------- |
-resnet18 | 1.768
-resnet50 | 1.61
-resnext50_32x4d	| 1.328
-alexnet | 1.261
-mobilenet_v2 | 2.017
-mnasnet1_0 | 1.686
-vgg16 | 1.155
-BERT_pytorch | 3.502
-squeezenet1_1 | 1.674
-timm_vision_transformer | 3.138
-average | 1.9139
+| model                   | Speed up |
+| ----------------------- | -------- |
+| resnet18                | 1.768    |
+| resnet50                | 1.61     |
+| resnext50_32x4d         | 1.328    |
+| alexnet                 | 1.261    |
+| mobilenet_v2            | 2.017    |
+| mnasnet1_0              | 1.686    |
+| vgg16                   | 1.155    |
+| BERT_pytorch            | 3.502    |
+| squeezenet1_1           | 1.674    |
+| timm_vision_transformer | 3.138    |
+| average                 | 1.9139   |
 
 ### Training
 PyTorch/XLA also supports Dynamo for training, but it is very experimental and we are working with the PyTorch Compiler team to iterate on the implementation. On the 2.0 release it only supports forward and backward pass but not the optimizer. Here is an example of training a resnet18 with `torch.compile`
 
 ```python
 import torch
-imprt torchvision
+import torchvision
 import torch_xla.core.xla_model as xm
 
 def train_model(model, data, target):
@@ -68,23 +68,23 @@ def train_model_main(loader):
 
 We expect to extract and execute 3 graphs per training step instead of one training step if you use the Lazy tensor. Here is a training speed analysis to compare Dynamo and Lazy using a torch bench on Cloud TPU v4-8.
 
-| model | Speed up |
-| --- | ----------- |
-resnet50 | 0.937
-resnet18 | 1.003
-BERT_pytorch | 1.869
-resnext50_32x4d | 1.139
-alexnet | 0.802
-mobilenet_v2 | 0.672
-mnasnet1_0 | 0.967
-vgg16 | 0.742
-timm_vision_transformer | 1.69
-squeezenet1_1 | 0.958
-average | 1.0779
+| model                   | Speed up |
+| ----------------------- | -------- |
+| resnet50                | 0.937    |
+| resnet18                | 1.003    |
+| BERT_pytorch            | 1.869    |
+| resnext50_32x4d         | 1.139    |
+| alexnet                 | 0.802    |
+| mobilenet_v2            | 0.672    |
+| mnasnet1_0              | 0.967    |
+| vgg16                   | 0.742    |
+| timm_vision_transformer | 1.69     |
+| squeezenet1_1           | 0.958    |
+| average                 | 1.0779   |
 
 > **NOTE:** We run each model's fwd and bwd for a single step and then collect the e2e time. In the real world we will run multiple steps at each training job which can easily hide the tracing cost from execution(since it is async). Lazy Tensor will have much better performance in that scenario.
 
-We are currently working on the optimizer support and that will be availiable on nightly soon but won't be in the 2.0 release.
+We are currently working on the optimizer support and that will be available on nightly soon but won't be in the 2.0 release.
 
 ### Feature gaps
 There are few gaps we want to call out that are preventing us from using the TorchDynamo on larger scale models.

@@ -22,7 +22,7 @@ def get_args_parser() -> argparse.ArgumentParser:
   """Helper function parsing the command line options."""
 
   parser = argparse.ArgumentParser(
-      description='PyTorch on TPU distrubuted training launcher.',
+      description='PyTorch on TPU distributed training launcher.',
       epilog=('Usage example: python3 -m'
               ' torch_xla.distributed.xla_dist --tpu=[TPU_NAME]'
               ' --conda-env torch-xla-nightly -- python3 train.py'))
@@ -585,7 +585,7 @@ class DistributedExecutor(object):
       exit_code = self._build_and_run_ssh([script_path], client_worker)
       if exit_code != 0:
         raise RuntimeError(
-            'Remote command exitted with code: {}'.format(exit_code))
+            'Remote command exited with code: {}'.format(exit_code))
 
     def _regular_health_check():
       uneven_health_timeout = xu.getenv_as('XLA_UNEVEN_HEARTBEAT_TIMEOUT', int,

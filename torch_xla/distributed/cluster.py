@@ -22,7 +22,7 @@ except ImportError:
 
 _GCE_METADATA_ENDPOINT = 'http://metadata.google.internal'
 
-# Silence noisy loggging
+# Silence noisy logging
 logging.getLogger('oauth2client').setLevel(logging.ERROR)
 logging.getLogger('googleapiclient').setLevel(logging.ERROR)
 
@@ -169,7 +169,7 @@ class Cluster(object):
   def wait_for_healthy_client(self, dist_executor, timeout=1200, interval=10):
 
     def wait_for_healthy_client_worker(client_worker):
-      heartbeart_check = [
+      heartbeat_check = [
           'echo', 'client_worker', '$(hostname)', 'is', 'healthy'
       ]
       check_timeout = time.time() + timeout
@@ -178,7 +178,7 @@ class Cluster(object):
         proc = multiprocessing.Process(
             target=dist_executor._build_and_run_ssh,
             args=(
-                heartbeart_check,
+                heartbeat_check,
                 client_worker,
             ))
         proc.daemon = True
@@ -287,7 +287,7 @@ class ClusterResolver(object):
     accel_type = ClusterResolver.get_instance_metadata(
         'instance/attributes/accelerator-type')
     if re.match(r'v[0-9]+-[0-9]+', accel_type):
-      # Only VM with TPU attched will carry the accelerator-type metadata
+      # Only VM with TPU attached will carry the accelerator-type metadata
       self._tpuvm_mode = True
       return
 

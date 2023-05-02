@@ -217,7 +217,7 @@ def _infer_mesh(slice_ranks, world_size):
          [2, 6, 10],
          [3, 7, 11]]
 
-    We only support ractangular meshes.
+    We only support rectangular meshes.
     '''
   slice_len = len(slice_ranks)
   if world_size % slice_len != 0:

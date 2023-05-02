@@ -240,7 +240,7 @@ only be enabled for debugging.
   So to get accurate metrics such as average loss value over many steps, use manual mixed
   precision where metrics stay in FP32.
 
-* ```XLA_USE_F16```: If set to 1, tranforms all the _PyTorch_ _Float_ values into _Float16_
+* ```XLA_USE_F16```: If set to 1, transforms all the _PyTorch_ _Float_ values into _Float16_
   (_PyTorch_ _Half_ type) when sending to devices which supports them.
 
 * ```XLA_USE_32BIT_LONG```: If set to 1, maps _PyTorch_ _Long_ types to _XLA_ 32bit type.
@@ -325,7 +325,7 @@ than hundred steps or so.
 If the SCRIPT has arguments to control the number of steps, those should be used,
 otherwise hitting `CTRL^C` will interrupt the run.
 
-It is also sugested to run in single-core mode, to minimize the amount of data.
+It is also suggested to run in single-core mode, to minimize the amount of data.
 Running in single-core mode is also strongly suggested when debugging execution issues.
 
 ## Common Issues
