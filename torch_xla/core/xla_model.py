@@ -37,11 +37,8 @@ _ORDINAL = None
 def _init_world_size_ordinal():
   global _WORLD_SIZE, _ORDINAL
 
-  if not pjrt.using_pjrt():
-    return
-
-  # We don't support V3-8. See Note [V3-8 Threading]
-  if pjrt.device_type() == 'TPU' and tpu.version() < 4:
+  # Dynamo doesn't support XRT or multithreaded PJRT. See Note [V3-8 Threading]
+  if not pjrt.using_pjrt() or pjrt.addressable_device_count() > 1:
     return
 
   if _WORLD_SIZE is None:
