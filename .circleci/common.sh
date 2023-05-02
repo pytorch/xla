@@ -157,25 +157,33 @@ function run_torch_xla_tests() {
       fi
     fi
 
-    pushd test/cpp
-      echo "Running C++ Tests on PJRT"
-      EXTRA_ARGS=""
+    echo "Running C++ Tests on PJRT"
+    EXTRA_ARGS=""
+    if [ "$USE_COVERAGE" != "0" ]; then
+	    EXTRA_ARGS="-C"
+    fi
+    if [ ! -z "$GCLOUD_SERVICE_KEY_FILE" ]; then
+	    EXTRA_ARGS="$EXTRA_ARGS -R"
+    fi
+    if [ -x "$(command -v nvidia-smi)" ]; then
+      PJRT_DEVICE=GPU test/cpp/run_tests.sh $EXTRA_ARGS
       if [ "$USE_COVERAGE" != "0" ]; then
-	      EXTRA_ARGS="-C"
+        cp $XLA_DIR/bazel-out/_coverage/_coverage_report.dat /tmp/cov1.dat
       fi
-      if [ ! -z "$GCLOUD_SERVICE_KEY_FILE" ]; then
-	      EXTRA_ARGS="$EXTRA_ARGS -R"
-      fi
-      if [ -x "$(command -v nvidia-smi)" ]; then
-        PJRT_DEVICE=GPU ./run_tests.sh $EXTRA_ARGS
-        PJRT_DEVICE=GPU ./run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L"" $EXTRA_ARGS
-      else
-        PJRT_DEVICE=CPU ./run_tests.sh $EXTRA_ARGS
-      fi
+      PJRT_DEVICE=GPU test/cpp/run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L"" $EXTRA_ARGS
       if [ "$USE_COVERAGE" != "0" ]; then
-        genhtml $XLA_DIR/bazel-out/_coverage/_coverage_report.dat -o ~/htmlcov/cpp/cpp_lcov.info
-        mv $XLA_DIR/bazel-out/_coverage/_coverage_report.dat ~/htmlcov/cpp_lcov.info
+        cp $XLA_DIR/bazel-out/_coverage/_coverage_report.dat /tmp/cov2.dat
+        lcov --add-tracefile /tmp/cov1.dat -a /tmp/cov2.dat -o /tmp/merged.dat
       fi
-    popd
+    else
+      PJRT_DEVICE=CPU test/cpp/run_tests.sh $EXTRA_ARGS
+      if [ "$USE_COVERAGE" != "0" ]; then
+        cp $XLA_DIR/bazel-out/_coverage/_coverage_report.dat /tmp/merged.dat
+      fi
+    fi
+    if [ "$USE_COVERAGE" != "0" ]; then
+      genhtml /tmp/merged.dat -o ~/htmlcov/cpp/cpp_lcov.info
+      mv /tmp/merged.dat ~/htmlcov/cpp_lcov.info
+    fi
   popd
 }
