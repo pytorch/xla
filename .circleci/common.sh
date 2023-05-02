@@ -167,13 +167,19 @@ function run_torch_xla_tests() {
     fi
     if [ -x "$(command -v nvidia-smi)" ]; then
       PJRT_DEVICE=GPU test/cpp/run_tests.sh $EXTRA_ARGS
-      cp $XLA_DIR/bazel-out/_coverage/_coverage_report.dat /tmp/cov1.dat
+      if [ "$USE_COVERAGE" != "0" ]; then
+        cp $XLA_DIR/bazel-out/_coverage/_coverage_report.dat /tmp/cov1.dat
+      fi
       PJRT_DEVICE=GPU test/cpp/run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L"" $EXTRA_ARGS
-      cp $XLA_DIR/bazel-out/_coverage/_coverage_report.dat /tmp/cov2.dat
-      lcov --add-tracefile /tmp/cov1.dat -a /tmp/cov2.dat -o /tmp/merged.dat
+      if [ "$USE_COVERAGE" != "0" ]; then
+        cp $XLA_DIR/bazel-out/_coverage/_coverage_report.dat /tmp/cov2.dat
+        lcov --add-tracefile /tmp/cov1.dat -a /tmp/cov2.dat -o /tmp/merged.dat
+      fi
     else
       PJRT_DEVICE=CPU test/cpp/run_tests.sh $EXTRA_ARGS
-      cp $XLA_DIR/bazel-out/_coverage/_coverage_report.dat /tmp/merged.dat
+      if [ "$USE_COVERAGE" != "0" ]; then
+        cp $XLA_DIR/bazel-out/_coverage/_coverage_report.dat /tmp/merged.dat
+      fi
     fi
     if [ "$USE_COVERAGE" != "0" ]; then
       genhtml /tmp/merged.dat -o ~/htmlcov/cpp/cpp_lcov.info
