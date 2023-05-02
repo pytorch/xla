@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package xla;
+
+option cc_enable_arenas = true;
+
+message ConfigProto {
+  message Experimental {
+    enum MlirBridgeRollout {
+      MLIR_BRIDGE_ROLLOUT_UNSPECIFIED = 0;
+      MLIR_BRIDGE_ROLLOUT_ENABLED = 1;
+      MLIR_BRIDGE_ROLLOUT_DISABLED = 2;
+      reserved 3, 4;
+      reserved "MLIR_BRIDGE_ROLLOUT_SAFE_MODE_ENABLED",
+          "MLIR_BRIDGE_ROLLOUT_SAFE_MODE_FALLBACK_ENABLED";
+    }
+    MlirBridgeRollout mlir_bridge_rollout = 17;
+  }
+}
