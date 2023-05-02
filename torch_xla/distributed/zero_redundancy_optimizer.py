@@ -54,6 +54,8 @@ class ZeroRedundancyOptimizer(Optimizer):
   ):
     self.params = list(params)
     super().__init__(self.params, defaults)
+    if isinstance(self.params[0], dict):
+      self.params = [p for pg in self.params for p in pg['params']]
 
     self.device = self.params[0].device
 
