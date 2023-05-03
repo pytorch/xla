@@ -163,8 +163,8 @@ unset properties of existing triggers.
       ansible_vars = merge(each.value, {
         pytorch_git_rev = "main"
         # Fetch XLA sources from "my-branch".
-        # You can also use any git revision (commit sha), or
-        # "$COMMIT_ID" to fetch the sources at the same commit that
+        # You can also use any git revision (e.g. tag), or
+        # "$COMMIT_SHA" to fetch the sources at the same commit that
         # the Build was triggered.
         xla_git_rev     = "my-branch"
       })
