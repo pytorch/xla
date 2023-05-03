@@ -129,7 +129,7 @@ build --java_runtime_version=remotejdk_11
 coverage --config=coverage
 coverage --build_tests_only
 coverage --instrumentation_filter="//torch_xla/,//third_party/"
-build:coverage --combined_report=lcov
+coverage --combined_report=lcov
 build:coverage --strategy=CoverageReport=sandboxed,local
 build:coverage --test_tag_filters=-nocoverage
 
