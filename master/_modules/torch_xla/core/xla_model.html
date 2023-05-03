@@ -347,11 +347,8 @@
 <span class="k">def</span> <span class="nf">_init_world_size_ordinal</span><span class="p">():</span>
   <span class="k">global</span> <span class="n">_WORLD_SIZE</span><span class="p">,</span> <span class="n">_ORDINAL</span>
 
-  <span class="k">if</span> <span class="ow">not</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">using_pjrt</span><span class="p">():</span>
-    <span class="k">return</span>
-
-  <span class="c1"># We don&#39;t support V3-8. See Note [V3-8 Threading]</span>
-  <span class="k">if</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">device_type</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;TPU&#39;</span> <span class="ow">and</span> <span class="n">tpu</span><span class="o">.</span><span class="n">version</span><span class="p">()</span> <span class="o">&lt;</span> <span class="mi">4</span><span class="p">:</span>
+  <span class="c1"># Dynamo doesn&#39;t support XRT or multithreaded PJRT. See Note [V3-8 Threading]</span>
+  <span class="k">if</span> <span class="ow">not</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">using_pjrt</span><span class="p">()</span> <span class="ow">or</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">addressable_device_count</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
     <span class="k">return</span>
 
   <span class="k">if</span> <span class="n">_WORLD_SIZE</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
