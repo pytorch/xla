@@ -4,6 +4,10 @@ nightly_package_version = "2.0"
 nightly_builds = [
   { accelerator = "tpu" },
   {
+    accelerator  = "tpu"
+    python_version = "3.10"
+  },
+  {
     accelerator  = "cuda"
     cuda_version = "11.8"
   },
