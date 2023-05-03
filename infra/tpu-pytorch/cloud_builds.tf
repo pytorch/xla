@@ -53,7 +53,7 @@ module "dev_images" {
   }
 
   ansible_vars = {
-    xla_git_rev     = "$COMMIT_ID"
+    xla_git_rev     = "$COMMIT_SHA"
     pytorch_git_rev = "main"
 
     accelerator    = each.value.accelerator
