@@ -4,9 +4,6 @@
   "runArgs": [
     "--privileged"
   ],
-  "forwardPorts": [
-    4200
-  ],
   "initializeCommand": "docker pull us-central1-docker.pkg.dev/tpu-pytorch/docker/development:tpu",
   "customizations": {
     "vscode": {
