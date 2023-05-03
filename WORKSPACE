@@ -45,6 +45,7 @@ http_archive(
         "//tf_patches:stream_executor.diff",
         "//tf_patches:thread_local_random.diff",
         "//tf_patches:xplane.diff",
+        "//tf_patches:triton_filesystem.diff",
     ],
     strip_prefix = "tensorflow-48b5f9f5a468f849a4628600b6eae407de0e01b5",
     urls = [
