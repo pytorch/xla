@@ -183,13 +183,15 @@ std::optional<xla::OpSharding> PjRtComputationClient::GetDataSharding(
 
 std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
     absl::Span<const TensorSource> tensors) {
-  auto timed = std::make_shared<metrics::TimedSection>(TransferToServer());
+  auto timed = std::make_shared<metrics::TimedSection>(TransferToServerMetric());
   tensorflow::profiler::TraceMe activity(
       "PjRtComputationClient::TransferToServer",
       tensorflow::profiler::TraceMeLevel::kInfo);
   std::vector<ComputationClient::DataPtr> datas;
   datas.reserve(tensors.size());
   int64_t total_size = 0;
+  int64_t completed_transfers = 0;
+  std::optional<PjRtFuture<Status>> returned_future;
   for (auto& tensor : tensors) {
     PjRtDevice* pjrt_device = StringToPjRtDevice(tensor.device);
 
@@ -210,7 +212,12 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
                 literal_pointer->shape().dimensions(), byte_strides,
                 xla::PjRtClient::HostBufferSemantics::
                     kImmutableUntilTransferCompletes,
-                [literal{std::move(literal)}]() { /* frees literal */ },
+                [literal{std::move(literal)}, &completed_transfers, &all_transfers_done, total_tensors = tensors.size()]() { 
+                    completed_transfers += 1;
+                    if (completed_transfers == total_tensors) {
+                      returned_future.Set(Status::OK());
+                  }
+                },
                 pjrt_device)
             .value());
 
@@ -218,6 +225,7 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
         std::make_shared<PjRtData>(tensor.device, tensor.shape, buffer);
     datas.push_back(data);
   }
+  returned_future->OnReady([timed](Status unused) mutable { timed.reset(); });
   OutboundDataMetric()->AddSample(total_size);
   CreateDataHandlesCounter()->AddValue(datas.size());
 
