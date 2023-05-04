@@ -212,7 +212,7 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
                 literal_pointer->shape().dimensions(), byte_strides,
                 xla::PjRtClient::HostBufferSemantics::
                     kImmutableUntilTransferCompletes,
-                [literal{std::move(literal)}, &completed_transfers, &all_transfers_done, total_tensors = tensors.size()]() { 
+                [literal{std::move(literal)}, &completed_transfers, &returned_future, total_tensors = tensors.size()]() { 
                     completed_transfers += 1;
                     if (completed_transfers == total_tensors) {
                       returned_future.Set(Status::OK());
