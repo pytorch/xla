@@ -43,6 +43,7 @@ http_archive(
         "//tf_patches:gpu_race_condition.diff",
         "//tf_patches:grpc_version.diff",
         "//tf_patches:optimized_function_graph.diff",
+        "//tf_patches:small_constants_optimizer.diff",
         "//tf_patches:stream_executor.diff",
         "//tf_patches:thread_local_random.diff",
         "//tf_patches:topk_rewriter.diff",
