@@ -183,9 +183,10 @@ std::optional<xla::OpSharding> PjRtComputationClient::GetDataSharding(
 
 std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
     absl::Span<const TensorSource> tensors) {
-  metrics::TimedSection timed(TransferToServerMetric());
-  tsl::profiler::TraceMe activity("PjRtComputationClient::TransferToServer",
-                                  tsl::profiler::TraceMeLevel::kInfo);
+  auto timed = std::make_shared<metrics::TimedSection>(TransferToServer());
+  tensorflow::profiler::TraceMe activity(
+      "PjRtComputationClient::TransferToServer",
+      tensorflow::profiler::TraceMeLevel::kInfo);
   std::vector<ComputationClient::DataPtr> datas;
   datas.reserve(tensors.size());
   int64_t total_size = 0;
