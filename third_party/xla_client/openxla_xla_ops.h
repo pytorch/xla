@@ -15,20 +15,23 @@ limitations under the License.
 
 #include <atomic>
 
-#include "tensorflow/compiler/jit/device_compiler.h"
-#include "tensorflow/compiler/jit/xla_device.h"
-#include "tensorflow/compiler/jit/xla_launch_util.h"
-#include "tensorflow/compiler/jit/xla_platform_info.h"
-#include "tensorflow/compiler/xla/stream_executor/tf_allocator_adapter.h"
-#include "tensorflow/core/framework/allocator.h"
-#include "tensorflow/core/framework/op.h"
-#include "tensorflow/core/framework/op_kernel.h"
-#include "tensorflow/core/framework/tensor.h"
-#include "tensorflow/core/platform/macros.h"
-#include "tensorflow/core/util/stream_executor_util.h"
+// #include "tensorflow/compiler/jit/device_compiler.h"
+// #include "tensorflow/compiler/jit/xla_device.h"
+// #include "tensorflow/compiler/jit/xla_launch_util.h"
+#include "xla/stream_executor/tf_allocator_adapter.h"
+// #include "tensorflow/core/framework/allocator.h"
+#include "tsl/framework/allocator.h"
+#include "third_party/xla_client/xla_platform_info.h"
+// #include "tensorflow/core/framework/op.h"
+#include "third_party/xla_client/op_kernel.h" // class OpKernelContext
+// #include "tensorflow/core/platform/macros.h"
+#include "tsl/platform/macros.h"
+// #include "tensorflow/core/framework/tensor.h"
+// #include "tensorflow/core/util/stream_executor_util.h"
+// - // #include "tensorflow/core/platform/platform.h"
+// - // #include "tensorflow/core/platform/types.h"
 
 namespace tensorflow {
-
 
 // XlaLocalLaunchBase is almost the same as XlaLocalLaunchOp.
 // The only difference is that it does not require arguments to follow

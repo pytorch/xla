@@ -23,76 +23,76 @@ limitations under the License.
 
 namespace xla {
 
-// // Holds some information about the platform on which an
-// // XlaLaunch/_XlaCompile/_XlaRun op must run on. Provides a common layer of
-// // abstraction for normal, XLA devices and devices inheriting from
-// // PjRtBaseDevice.
-// class XlaPlatformInfo {
-//  public:
-//   XlaPlatformInfo() : device_type_("") {}
-//   XlaPlatformInfo(XlaPlatformInfo&&) = default;
-//   explicit XlaPlatformInfo(
-//       const DeviceType device_type, se::Platform::Id platform_id,
-//       const XlaDevice::Metadata* xla_device_metadata,
-//       const PjRtBaseDevice::Metadata* pjrt_device_metadata,
-//       std::shared_ptr<se::DeviceMemoryAllocator> device_allocator)
-//       : device_type_(device_type),
-//         platform_id_(platform_id),
-//         xla_device_metadata_(xla_device_metadata),
-//         pjrt_device_metadata_(pjrt_device_metadata),
-//         device_allocator_(device_allocator) {}
+// Holds some information about the platform on which an
+// XlaLaunch/_XlaCompile/_XlaRun op must run on. Provides a common layer of
+// abstraction for normal, XLA devices and devices inheriting from
+// PjRtBaseDevice.
+class XlaPlatformInfo {
+ public:
+  XlaPlatformInfo() : device_type_("") {}
+  XlaPlatformInfo(XlaPlatformInfo&&) = default;
+  explicit XlaPlatformInfo(
+      const DeviceType device_type, se::Platform::Id platform_id,
+      const XlaDevice::Metadata* xla_device_metadata,
+      const PjRtBaseDevice::Metadata* pjrt_device_metadata,
+      std::shared_ptr<se::DeviceMemoryAllocator> device_allocator)
+      : device_type_(device_type),
+        platform_id_(platform_id),
+        xla_device_metadata_(xla_device_metadata),
+        pjrt_device_metadata_(pjrt_device_metadata),
+        device_allocator_(device_allocator) {}
 
-//   XlaPlatformInfo& operator=(XlaPlatformInfo&& other) = default;
+  XlaPlatformInfo& operator=(XlaPlatformInfo&& other) = default;
 
-//   bool UseMultipleStreams() const {
-//     return xla_device_metadata_ && xla_device_metadata_->UseMultipleStreams();
-//   }
+  bool UseMultipleStreams() const {
+    return xla_device_metadata_ && xla_device_metadata_->UseMultipleStreams();
+  }
 
-//   // Non-null only when run on an XLA device.
-//   std::shared_ptr<se::DeviceMemoryAllocator> custom_allocator() const {
-//     return device_allocator_;
-//   }
+  // Non-null only when run on an XLA device.
+  std::shared_ptr<se::DeviceMemoryAllocator> custom_allocator() const {
+    return device_allocator_;
+  }
 
-//   DeviceType device_type() const { return device_type_; }
+  DeviceType device_type() const { return device_type_; }
 
-//   // This is equal to xla_device_metadata()->platform()->id() if
-//   // xla_device_metadata() is not nullptr.
-//   se::Platform::Id platform_id() const { return platform_id_; }
+  // This is equal to xla_device_metadata()->platform()->id() if
+  // xla_device_metadata() is not nullptr.
+  se::Platform::Id platform_id() const { return platform_id_; }
 
-//   // This may be null if the op this XlaPlatformInfo is for was not placed on an
-//   // XLA device.
-//   const XlaDevice::Metadata* xla_device_metadata() const {
-//     return xla_device_metadata_;
-//   }
-//   bool is_on_xla_device() const { return xla_device_metadata() != nullptr; }
+  // This may be null if the op this XlaPlatformInfo is for was not placed on an
+  // XLA device.
+  const XlaDevice::Metadata* xla_device_metadata() const {
+    return xla_device_metadata_;
+  }
+  bool is_on_xla_device() const { return xla_device_metadata() != nullptr; }
 
-//   const PjRtBaseDevice::Metadata* pjrt_device_metadata() const {
-//     return pjrt_device_metadata_;
-//   }
+  const PjRtBaseDevice::Metadata* pjrt_device_metadata() const {
+    return pjrt_device_metadata_;
+  }
 
-//  private:
-//   DeviceType device_type_;
-//   se::Platform::Id platform_id_;
+ private:
+  DeviceType device_type_;
+  se::Platform::Id platform_id_;
 
-//   // xla_device_metadata_ lives in the tensorflow::DeviceBase in which the
-//   // XlaLaunch/_XlaCompile/_XlaRun op is placed and thus does not die before the
-//   // XlaLaunch/_XlaCompile/_XlaRun OpKernel.
-//   const XlaDevice::Metadata* xla_device_metadata_;
+  // xla_device_metadata_ lives in the tensorflow::DeviceBase in which the
+  // XlaLaunch/_XlaCompile/_XlaRun op is placed and thus does not die before the
+  // XlaLaunch/_XlaCompile/_XlaRun OpKernel.
+  const XlaDevice::Metadata* xla_device_metadata_;
 
-//   // pjrt_device_metadata_ lives in tensorflow::PjRtBaseDevice in which the
-//   // XlaLaunch/XlaCompileOnDemand op is placed and thus does not die before the
-//   // op kernel.
-//   const PjRtBaseDevice::Metadata* pjrt_device_metadata_;
+  // pjrt_device_metadata_ lives in tensorflow::PjRtBaseDevice in which the
+  // XlaLaunch/XlaCompileOnDemand op is placed and thus does not die before the
+  // op kernel.
+  const PjRtBaseDevice::Metadata* pjrt_device_metadata_;
 
-//   // If the op associated with this XlaPlatformInfo is placed on an XLA device
-//   // then device_allocator_ is the xla::Backend's memory allocator.  If the op
-//   // is placed on a regular CPU or GPU device then device_allocator_ is null.
-//   // The allocator is of unknown provenance; keep it in a shared pointer to
-//   // set an artificial refcount of one.
-//   std::shared_ptr<se::DeviceMemoryAllocator> device_allocator_;
+  // If the op associated with this XlaPlatformInfo is placed on an XLA device
+  // then device_allocator_ is the xla::Backend's memory allocator.  If the op
+  // is placed on a regular CPU or GPU device then device_allocator_ is null.
+  // The allocator is of unknown provenance; keep it in a shared pointer to
+  // set an artificial refcount of one.
+  std::shared_ptr<se::DeviceMemoryAllocator> device_allocator_;
 
-//   TF_DISALLOW_COPY_AND_ASSIGN(XlaPlatformInfo);
-// };
+  TF_DISALLOW_COPY_AND_ASSIGN(XlaPlatformInfo);
+};
 
 // Returns a set containing the device ids contained in visible_device_list or
 // nullopt if it is empty. It returns error in case of malformed configuration

@@ -24,8 +24,8 @@ limitations under the License.
 #include "absl/strings/strip.h"
 #include "xla/parse_flags_from_env.h"
 #include "tsl/util/command_line_flags.h"
-#include "tensorflow/compiler/mlir/tensorflow/utils/dump_graph.h"
-#include "tensorflow/core/platform/macros.h"
+#include "openxla_dump_graph.h"
+#include "tsl/platform/macros.h"
 
 namespace xla {
 namespace {

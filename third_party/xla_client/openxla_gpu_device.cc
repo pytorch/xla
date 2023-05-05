@@ -22,17 +22,17 @@ limitations under the License.
 #include "absl/memory/memory.h"
 #include "absl/strings/numbers.h"
 #include "absl/strings/str_split.h"
-#include "tensorflow/compiler/xla/stream_executor/gpu/gpu_init.h"
+#include "xla/stream_executor/gpu/gpu_init.h"
+#include "tsl/platform/status.h"
 #include "third_party/xla_client/openxla_defs.h"
 #include "third_party/xla_client/openxla_flags.h"
 #include "third_party/xla_client/openxla_xla_ops.h"
 #include "third_party/xla_client/openxla_xla_device.h"
-#include "third_party/xla_client/openxla_xla_device_ops.h"
-#include "third_party/xla_client/openxla_xla_platform_info.h"
+#include "third_party/xla_client/openxla_xla_device_ops.h" // later check
+#include "third_party/xla_client/openxla_xla_platform_info.h" // later check deep
 #include "third_party/xla_client/openxla_layout_util.h"
 #include "third_party/xla_client/openxla_xla_op_registry.h"
 #include "third_party/xla_client/openxla_device_factory.h"
-#include "third_party/xla_client/openxla_status.h"
 
 namespace xla {
 

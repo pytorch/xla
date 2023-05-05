@@ -326,16 +326,16 @@ cc_library(
 #     alwayslink = 1,
 # )
 
-# # openxla_xla_ops
-# cc_library(
-#     name = "openxla_xla_ops",
-#     hdrs = ["openxla_xla_ops.h"],
-#     deps = XLA_OPS_DEPS + [
-#         ":openxla_xla_ops_no_jit_rewrite_registration",
-#         "//tensorflow/compiler/jit:jit_compilation_passes",
-#     ],
-#     alwayslink = 1,
-# )
+# openxla_xla_ops
+cc_library(
+    name = "openxla_xla_ops",
+    hdrs = ["openxla_xla_ops.h"],
+    deps = XLA_OPS_DEPS + [
+        ":openxla_xla_ops_no_jit_rewrite_registration",
+        "//tensorflow/compiler/jit:jit_compilation_passes",
+    ],
+    alwayslink = 1,
+)
 
 # # defs.cc/h only contains string constants, and can be included in mobile
 # # builds.
@@ -359,11 +359,11 @@ cc_library(
         "@xla//xla/stream_executor/gpu:gpu_init", # #include "tensorflow/compiler/xla/stream_executor/gpu/gpu_init.h"
         ":openxla_common", # #include "third_party/xla_client/openxla_defs.h"
         ":openxla_flags", # #include "third_party/xla_client/openxla_flags.h"
+        ":openxla_xla_ops", # #include "third_party/xla_client/openxla_xla_ops.h"
         ":openxla_jit_compilation_passes",
         ":openxla_xla_device",
         ":openxla_xla_kernel_creator",  # buildcleaner: keep
         ":openxla_xla_device_no_jit_rewrite_registration",
-        ":openxla_xla_ops",
         "//tensorflow/compiler/tf2xla:layout_util",
         "//tensorflow/compiler/tf2xla:xla_compiler",
         "//tensorflow/compiler/tf2xla:xla_op_registry",

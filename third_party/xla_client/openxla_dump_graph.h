@@ -17,8 +17,8 @@ limitations under the License.
 
 #include "mlir/IR/OperationSupport.h"  // from @llvm-project
 #include "tsl/platform/status.h"
-#include "tensorflow/core/framework/function.h"
-#include "tensorflow/core/graph/graph.h"
+// #include "third_party/xla_client/openxla_function.h"
+// #include "tensorflow/core/graph/graph.h"
 // #include "tensorflow/core/platform/status.h"
 
 namespace xla {
@@ -29,8 +29,8 @@ struct MlirDumpConfig;
 // //
 // // Note: This is for debugging use and is not optimized for performance.
 // Status DumpTextualIRToFile(const MlirDumpConfig& config, const Graph& graph,
-                           const FunctionLibraryDefinition* flib_def,
-                           WritableFile* file);
+                          //  const FunctionLibraryDefinition* flib_def,
+                          //  WritableFile* file);
 
 // Config of the textual dump.
 struct MlirDumpConfig {
