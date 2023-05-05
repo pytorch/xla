@@ -209,7 +209,7 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
                 literal_pointer->shape().dimensions(), byte_strides,
                 xla::PjRtClient::HostBufferSemantics::
                     kImmutableUntilTransferCompletes,
-                [literal{std::move(literal)}, timed]() { /* frees literal & timed*/ },
+                [literal{std::move(literal)}, timed]() { /* frees literal & timed */ },
                 pjrt_device)
             .value());
 
