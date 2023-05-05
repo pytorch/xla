@@ -35,6 +35,34 @@ struct DataAsync {
   std::vector<xla::util::ExceptionCleanup> handle_unlockers;
 };
 
+void PopulateTensorBuffer(const at::Tensor& tensor,
+                          const xla::Shape& dest_shape, void* dest_buffer,
+                          size_t dest_buffer_size,
+                          const torch::lazy::BackendDevice& device);
+
+xla::ComputationClient::DataPtr TransferToServerReplicated(
+    at::Tensor tensor, const std::string& device, const xla::Shape& shape,
+    const std::vector<std::string>& devices) {
+  // Replicate the tensor across local devices
+  XLA_CHECK(ShardingUtil::UseVirtualDevice())
+      << "Can only transfer replicated with SPMD virtual device enabled";
+  std::vector<xla::ComputationClient::TensorSource> source_tensors;
+  for (int64_t j = 0; j < devices.size(); ++j) {
+    auto shard_device = ParseDeviceString(devices[j]);
+    auto populate_fn =
+        [&, j, shard_device](
+            const xla::ComputationClient::TensorSource& source_tensor,
+            void* dest_buffer, size_t dest_buffer_size) {
+          PopulateTensorBuffer(tensor, source_tensor.shape, dest_buffer,
+                               dest_buffer_size, shard_device);
+        };
+    source_tensors.emplace_back(shape, devices[j], std::move(populate_fn));
+  }
+
+  return xla::ComputationClient::Get()->TransferShardsToServer(
+      source_tensors, device, shape, xla::HloSharding::Replicate().ToProto());
+}
+
 void TransferToServerAsync(std::shared_ptr<DataAsync> async,
                            const std::vector<std::string>& devices) {
   TORCH_LAZY_TIMED("TransferToServerAsync");
@@ -685,6 +713,11 @@ torch::lazy::BackendDataPtr TensorToXlaData(
     // called.
     populate_mwait->Wait();
     return async->async_datas.front();
+  } else if (ShardingUtil::UseVirtualDevice()) {
+    std::vector<std::string> local_devices =
+        xla::ComputationClient::Get()->GetLocalDevices();
+    return WrapXlaData(TransferToServerReplicated(tensor, device.toString(),
+                                                  shape, local_devices));
   } else {
     auto populate_fn =
         [&](const xla::ComputationClient::TensorSource& source_tensor,
@@ -893,6 +926,18 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
     // populate_fn to be called.
     populate_mwait->Wait();
     return async->async_datas;
+  } else if (ShardingUtil::UseVirtualDevice()) {
+    // If running in SPMD mode, replicate the data across addressable devices
+    std::vector<std::string> local_devices =
+        xla::ComputationClient::Get()->GetLocalDevices();
+    std::vector<xla::ComputationClient::DataPtr> handles;
+    for (size_t i = 0; i < tensors.size(); ++i) {
+      auto device = ParseDeviceString(devices[i]);
+      auto shape = CreateComputationShapeFromTensor(tensors[i], &device);
+      handles.push_back(TransferToServerReplicated(tensors[i], devices[i],
+                                                   shape, local_devices));
+    }
+    return WrapXlaData(handles);
   } else {
     std::vector<xla::ComputationClient::TensorSource> source_tensors;
     for (size_t i = 0; i < tensors.size(); ++i) {
@@ -928,12 +973,19 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
 
     std::vector<xla::ComputationClient::TensorSource> source_tensors;  // in
     std::vector<xla::ComputationClient::DataPtr> new_handles;          // out
-    if (shardings[i] != nullptr) {
-      xla::OpSharding sharding = shardings[i]->sharding;
+    if (ShardingUtil::UseVirtualDevice()) {
       // GetLocalDevices returns the list of local devices specified by their
       // global ordinals (e.g. ["TPU:4", "TPU:5", "TPU:6", "TPU:7"]).
       std::vector<std::string> local_devices =
           xla::ComputationClient::Get()->GetLocalDevices();
+      xla::OpSharding sharding;
+      if (shardings[i] != nullptr) {
+        sharding = shardings[i]->sharding;
+      } else {
+        // If using SPMD and no sharding is attached to the tensor, implicitly
+        // replicate to all local devices.
+        sharding = xla::HloSharding::Replicate().ToProto();
+      }
       // Shards the input tensors with padding, to split evenly.
       // The execution requires consistent shard sizes, and the zero-padded
       // values should be ignored.

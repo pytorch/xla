@@ -72,17 +72,10 @@ class VirtualDeviceTest(test_xla_sharding_base.XlaShardingTest):
     xs.mark_sharding(xt1, self._get_mesh((1, self.n_devices)), partition_spec)
     outbound_with_virtual_device = met.metric_data("OutboundData")[1]
 
-    os.environ["XLA_USE_SPMD"] = "0"
-
-    met.clear_all()
-    xt2 = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
-                       dtype=torch.float,
-                       device=xm.xla_device())
-    xs.mark_sharding(xt2, self._get_mesh((1, self.n_devices)), partition_spec)
-    outbound_without_virtual_device = met.metric_data("OutboundData")[1]
-
+    # Without virtual device optimization, we expect the data to be transferred to
+    # device at least twice, so assert that the actual transfer amount is less.
     self.assertLess(outbound_with_virtual_device,
-                    outbound_without_virtual_device)
+                    2 * xt1.nelement() * xt1.element_size())
 
 
 if __name__ == '__main__':

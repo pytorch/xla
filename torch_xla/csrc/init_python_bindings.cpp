@@ -1474,6 +1474,9 @@ void InitXlaModuleBindings(py::module m) {
                                  const py::list& tile_assignment,
                                  bool replicated = false, bool manual = false) {
     TORCH_LAZY_COUNTER("XlaMarkSharding", 1);
+    XLA_CHECK(ShardingUtil::UseVirtualDevice())
+        << "Virtual device is required for SPMD execution. Please set the "
+           "environment variable `XLA_USE_SPMD` to `1`.";
     XLATensorPtr xtensor = bridge::GetXlaTensor(input);
     xla::OpSharding sharding =
         ShardingUtil::CreateOpSharding(tile_assignment, replicated, manual);
@@ -1483,7 +1486,7 @@ void InitXlaModuleBindings(py::module m) {
                       static_cast<XlaDeviceType>(xtensor->GetDevice().type())));
 
     at::Tensor cpu_tensor;
-    if (xla::sys_util::GetEnvBool("XLA_USE_SPMD", false) &&
+    if (ShardingUtil::UseVirtualDevice() &&
         xtensor->CurrentTensorData().has_value()) {
       TORCH_LAZY_COUNTER("VirtualDeviceUsage", 1);
       // When virtual device is enabled for SPMD, we defer the initial data

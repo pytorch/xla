@@ -14,6 +14,11 @@ namespace torch_xla {
 
 class ShardingUtil {
  public:
+  // Test whether the XLA_USE_SPMD environment variable is set to enable the
+  // virtual device optimization.
+  // TODO(jonbolin): Setting this is required for SPMD execution.
+  static bool UseVirtualDevice();
+
   // Annotates HLO instructions in the lowered computation and returns true if
   // the computation needs to be compiled with SPMD partitioning. For this call
   // to be effective, this needs to be called after the lowering and before
