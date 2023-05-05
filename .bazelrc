@@ -56,7 +56,6 @@ build:cuda --define=xla_python_enable_gpu=true
 build:cuda --cxxopt=-DXLA_CUDA=1
 
 # Coverage with cuda/gcc/nvcc requires manually setting coverage flags.
-coverage:cuda --per_file_copt=third_party/.*,torch_xla/.*@--coverage
 coverage:cuda --linkopt=-lgcov
 
 build:acl --define==build_with_acl=true
@@ -125,13 +124,15 @@ build:compdb --features=-layering_check
 # Compiling tests requires Java.
 build --java_runtime_version=remotejdk_11
 
-# Coverage requires Java and GCC.
+# Coverage setup.
 coverage --config=coverage
-coverage --build_tests_only
-coverage --instrumentation_filter="//torch_xla/,//third_party/"
+coverage --instrumentation_filter="//torch_xla[/:],//third_party[/:],-//test[/:]"
 coverage --combined_report=lcov
 coverage --nocache_test_results
-build:coverage --strategy=CoverageReport=sandboxed,local
+
+# Only instrument the repository, not external dependencies.
+build:coverage --per_file_copt=-external/.*,-test/.*@--coverage
+
 build:coverage --test_tag_filters=-nocoverage
 
 ############################################################################
