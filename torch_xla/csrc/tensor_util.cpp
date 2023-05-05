@@ -35,41 +35,6 @@ struct DataAsync {
   std::vector<xla::util::ExceptionCleanup> handle_unlockers;
 };
 
-void TransferToServerAsync(std::shared_ptr<DataAsync> async,
-                           const std::vector<std::string>& devices) {
-  TORCH_LAZY_TIMED("TransferToServerAsync");
-
-  std::vector<xla::ComputationClient::DataPtr> async_xla_datas =
-      xla::ComputationClient::Get()->CreateAsyncDatas(async->source_tensors);
-  async->handle_unlockers =
-      xla::ComputationClient::Get()->LockAsyncDatas(async_xla_datas);
-  async->async_datas = WrapXlaData(async_xla_datas);
-  auto mwait = std::make_shared<xla::util::MultiWait>(/*num_wait=*/1);
-  auto update_data = [async, async_xla_datas]() {
-    try {
-      xla::ComputationClient::Get()->TransferToServer(async->source_tensors,
-                                                      async_xla_datas);
-    } catch (...) {
-      // There are two paths of discovery of an exception happening on an
-      // asynchronous task. One happens if the creator of the asynchronous task
-      // explicitly waits for completion, in which case the exception will be
-      // thrown from the Wait() API. Re-throwing the exception below makes sure
-      // this will be captured by the completer function created below, and
-      // surfaced by the Wait() API. But we also need to surface the exception
-      // even in case the caller does not wait, and that is accomplished by
-      // setting the unlockers status. In that case the exception will be
-      // surfaced when the user tries to acquire the device locks the next time.
-      std::exception_ptr exptr = std::current_exception();
-      for (auto& unlocker : async->handle_unlockers) {
-        unlocker.SetStatus(exptr);
-      }
-      throw;
-    }
-  };
-  xla::env::ScheduleIoClosure(
-      xla::util::MultiWait::Completer(mwait, std::move(update_data)));
-}
-
 bool ShouldUseBF16() {
   bool use_bf16 = xla::sys_util::GetEnvBool("XLA_USE_BF16", false);
   if (use_bf16) {
@@ -648,18 +613,85 @@ void PopulateTensorBuffer(const at::Tensor& tensor,
   }
 }
 
+xla::ComputationClient::DataPtr TransferToServerReplicated(
+    at::Tensor tensor, const std::string& device, const xla::Shape& shape,
+    const std::vector<std::string>& devices) {
+  // Replicate the tensor across local devices
+  XLA_CHECK(ShardingUtil::UseVirtualDevice())
+      << "Can only transfer replicated with SPMD virtual device enabled";
+  std::vector<xla::ComputationClient::TensorSource> source_tensors;
+  for (int64_t j = 0; j < devices.size(); ++j) {
+    auto shard_device = ParseDeviceString(devices[j]);
+    auto populate_fn =
+        [&, j, shard_device](
+            const xla::ComputationClient::TensorSource& source_tensor,
+            void* dest_buffer, size_t dest_buffer_size) {
+          PopulateTensorBuffer(tensor, source_tensor.shape, dest_buffer,
+                               dest_buffer_size, shard_device);
+        };
+    source_tensors.emplace_back(shape, devices[j], std::move(populate_fn));
+  }
+
+  return xla::ComputationClient::Get()->TransferShardsToServer(
+      source_tensors, device, shape, xla::HloSharding::Replicate().ToProto());
+}
+
+void TransferToServerAsync(std::shared_ptr<DataAsync> async,
+                           const std::vector<std::string>& devices) {
+  TORCH_LAZY_TIMED("TransferToServerAsync");
+
+  std::vector<xla::ComputationClient::DataPtr> async_xla_datas =
+      xla::ComputationClient::Get()->CreateAsyncDatas(async->source_tensors);
+  async->handle_unlockers =
+      xla::ComputationClient::Get()->LockAsyncDatas(async_xla_datas);
+  async->async_datas = WrapXlaData(async_xla_datas);
+  auto mwait = std::make_shared<xla::util::MultiWait>(/*num_wait=*/1);
+  auto update_data = [async, async_xla_datas]() {
+    try {
+      xla::ComputationClient::Get()->TransferToServer(async->source_tensors,
+                                                      async_xla_datas);
+    } catch (...) {
+      // There are two paths of discovery of an exception happening on an
+      // asynchronous task. One happens if the creator of the asynchronous task
+      // explicitly waits for completion, in which case the exception will be
+      // thrown from the Wait() API. Re-throwing the exception below makes sure
+      // this will be captured by the completer function created below, and
+      // surfaced by the Wait() API. But we also need to surface the exception
+      // even in case the caller does not wait, and that is accomplished by
+      // setting the unlockers status. In that case the exception will be
+      // surfaced when the user tries to acquire the device locks the next time.
+      std::exception_ptr exptr = std::current_exception();
+      for (auto& unlocker : async->handle_unlockers) {
+        unlocker.SetStatus(exptr);
+      }
+      throw;
+    }
+  };
+  xla::env::ScheduleIoClosure(
+      xla::util::MultiWait::Completer(mwait, std::move(update_data)));
+}
+
 torch::lazy::BackendDataPtr TensorToXlaData(
     const at::Tensor& tensor, const xla::Shape& shape,
     const torch::lazy::BackendDevice& device) {
   TORCH_LAZY_TIMED("TensorToData");
-  if (device.type() == (int8_t)XlaDeviceType::SPMD) {
-    // When SPMD is enabled, we want to delay the data transfer for XLA
-    // tensors until the data is sharded. So, we skip the data transfer
-    // here and simply return a placeholder for the backend data ptr.
-    // Data will only be transferred via CreateTensorsData, when users
-    // call the mark_sharding API.
-    return WrapXlaData(
-        xla::ComputationClient::Get()->CreateDataPlaceholder("SPMD:0", shape));
+  if (ShardingUtil::UseVirtualDevice()) {
+    if (device.type() == (int8_t)XlaDeviceType::SPMD) {
+      // When SPMD is enabled, we want to delay the data transfer for XLA
+      // tensors until the data is sharded. So, we skip the data transfer
+      // here and simply return a placeholder for the backend data ptr.
+      // Data will only be transferred via CreateTensorsData, when users
+      // call the mark_sharding API.
+      return WrapXlaData(xla::ComputationClient::Get()->CreateDataPlaceholder(
+          "SPMD:0", shape));
+    }
+
+    // The tensor is bypassing the virtual device, so it should be replicated
+    // to all devices.
+    std::vector<std::string> local_devices =
+        xla::ComputationClient::Get()->GetLocalDevices();
+    return WrapXlaData(TransferToServerReplicated(tensor, device.toString(),
+                                                  shape, local_devices));
   }
 
   static const bool transfer_async =
@@ -869,6 +901,25 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
     const std::vector<std::string>& devices, bool transfer_async) {
   TORCH_LAZY_TIMED("TensorToData");
   XLA_CHECK_EQ(tensors.size(), devices.size());
+
+  if (ShardingUtil::UseVirtualDevice()) {
+    // When running in SPMD mode, tensors here in the unsharded
+    // CreateTensorsData should be implicitly replicated to all devices.
+    // Additionally, this case should always apply when using SPMD regardless
+    // of transfer_async's value, since SPMD requires PjRt and all transfers
+    // are asynchronous in PjRt.
+    std::vector<std::string> local_devices =
+        xla::ComputationClient::Get()->GetLocalDevices();
+    std::vector<xla::ComputationClient::DataPtr> handles;
+    for (size_t i = 0; i < tensors.size(); ++i) {
+      auto device = ParseDeviceString(devices[i]);
+      auto shape = CreateComputationShapeFromTensor(tensors[i], &device);
+      handles.push_back(TransferToServerReplicated(tensors[i], devices[i],
+                                                   shape, local_devices));
+    }
+    return WrapXlaData(handles);
+  }
+
   if (transfer_async) {
     std::shared_ptr<DataAsync> async = std::make_shared<DataAsync>();
     auto populate_mwait =
@@ -928,12 +979,19 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
 
     std::vector<xla::ComputationClient::TensorSource> source_tensors;  // in
     std::vector<xla::ComputationClient::DataPtr> new_handles;          // out
-    if (shardings[i] != nullptr) {
-      xla::OpSharding sharding = shardings[i]->sharding;
+    if (ShardingUtil::UseVirtualDevice()) {
       // GetLocalDevices returns the list of local devices specified by their
       // global ordinals (e.g. ["TPU:4", "TPU:5", "TPU:6", "TPU:7"]).
       std::vector<std::string> local_devices =
           xla::ComputationClient::Get()->GetLocalDevices();
+      xla::OpSharding sharding;
+      if (shardings[i] != nullptr) {
+        sharding = shardings[i]->sharding;
+      } else {
+        // If using SPMD and no sharding is attached to the tensor, implicitly
+        // replicate to all local devices.
+        sharding = xla::HloSharding::Replicate().ToProto();
+      }
       // Shards the input tensors with padding, to split evenly.
       // The execution requires consistent shard sizes, and the zero-padded
       // values should be ignored.
