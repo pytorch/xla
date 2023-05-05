@@ -177,7 +177,8 @@ std::pair<XLATensorPtr, XLATensorPtr> GetBinaryOperands(
 std::vector<int64_t> GetOutputSizeWithScale(
     absl::Span<const int64_t> input_size, const c10::optional<double> scales_h,
     const c10::optional<double> scales_w,
-    const std::vector<int64_t>& output_size, bool round_with_scale_factor) {
+    const std::vector<int64_t>& output_size,
+    bool round_with_scale_factor = false) {
   XLA_CHECK(scales_h);
   XLA_CHECK(scales_w);
   // Calculate the output size from input_shape and scale_factors
@@ -3124,16 +3125,17 @@ at::Tensor XLANativeFunctions::upsample_bilinear2d(
     scaled_output_size = GetOutputSizeWithScale(
         input_dims, scales_h, scales_w, scaled_output_size,
         /*round_with_scale_factor=*/false);
-  }
-  if (!output_size.empty()) {
-    if (!(scaled_output_size.at(0) == output_size.at(0) &&
-          scaled_output_size.at(1) == output_size.at(1))) {
-      scaled_output_size = GetOutputSizeWithScale(
-          input_dims, scales_h, scales_w, scaled_output_size,
-          /*round_with_scale_factor=*/true);
-      XLA_CHECK(scaled_output_size.at(0) == output_size.at(0) &&
-                scaled_output_size.at(1) == output_size.at(1))
-          << "Inferred output size and output_size from upstream are different";
+    if (!output_size.empty()) {
+      if (!(scaled_output_size.at(0) == output_size.at(0) &&
+            scaled_output_size.at(1) == output_size.at(1))) {
+        scaled_output_size = GetOutputSizeWithScale(
+            input_dims, scales_h, scales_w, scaled_output_size,
+            /*round_with_scale_factor=*/true);
+        XLA_CHECK(scaled_output_size.at(0) == output_size.at(0) &&
+                  scaled_output_size.at(1) == output_size.at(1))
+            << "Inferred output size and output_size from upstream are "
+               "different";
+      }
     }
   }
   return bridge::AtenFromXlaTensor(tensor_methods::upsample_bilinear2d(
@@ -3146,6 +3148,8 @@ at::Tensor XLANativeFunctions::upsample_bilinear2d_backward(
     c10::optional<double> scales_h, c10::optional<double> scales_w) {
   TORCH_LAZY_FN_COUNTER("xla::");
   XLATensorPtr grad_output_tensor = bridge::GetXlaTensor(grad_output);
+  absl::Span<const int64_t> input_dims =
+      grad_output_tensor->shape().get().dimensions();
   // Only the XLA TPU backend for now implements the CustomCall required by
   // our XLA lowering.
   XlaDeviceType hw_type =
@@ -3161,12 +3165,19 @@ at::Tensor XLANativeFunctions::upsample_bilinear2d_backward(
       torch::lazy::ToVector<int64_t>(output_size);
   if ((scales_h && *scales_h != 1.0) || (scales_w && *scales_w != 1.0)) {
     scaled_output_size = GetOutputSizeWithScale(
-        input_size, scales_h, scales_w, scaled_output_size,
+        input_dims, scales_h, scales_w, scaled_output_size,
         /*round_with_scale_factor=*/false);
     if (!output_size.empty()) {
-      XLA_CHECK(scaled_output_size.at(0) == output_size.at(0) &&
-                scaled_output_size.at(1) == output_size.at(1))
-          << "Inferred output size and output_size from upstream are different";
+      if (!(scaled_output_size.at(0) == output_size.at(0) &&
+            scaled_output_size.at(1) == output_size.at(1))) {
+        scaled_output_size = GetOutputSizeWithScale(
+            input_dims, scales_h, scales_w, scaled_output_size,
+            /*round_with_scale_factor=*/true);
+        XLA_CHECK(scaled_output_size.at(0) == output_size.at(0) &&
+                  scaled_output_size.at(1) == output_size.at(1))
+            << "Inferred output size and output_size from upstream are "
+               "different";
+      }
     }
   }
   return bridge::AtenFromXlaTensor(tensor_methods::upsample_bilinear2d_backward(
@@ -3187,16 +3198,17 @@ at::Tensor XLANativeFunctions::upsample_nearest2d(
     scaled_output_size = GetOutputSizeWithScale(
         input_dims, scales_h, scales_w, scaled_output_size,
         /*round_with_scale_factor=*/false);
-  }
-  if (!output_size.empty()) {
-    if (!(scaled_output_size.at(0) == output_size.at(0) &&
-          scaled_output_size.at(1) == output_size.at(1))) {
-      scaled_output_size = GetOutputSizeWithScale(
-          input_dims, scales_h, scales_w, scaled_output_size,
-          /*round_with_scale_factor=*/true);
-      XLA_CHECK(scaled_output_size.at(0) == output_size.at(0) &&
-                scaled_output_size.at(1) == output_size.at(1))
-          << "Inferred output size and output_size from upstream are different";
+    if (!output_size.empty()) {
+      if (!(scaled_output_size.at(0) == output_size.at(0) &&
+            scaled_output_size.at(1) == output_size.at(1))) {
+        scaled_output_size = GetOutputSizeWithScale(
+            input_dims, scales_h, scales_w, scaled_output_size,
+            /*round_with_scale_factor=*/true);
+        XLA_CHECK(scaled_output_size.at(0) == output_size.at(0) &&
+                  scaled_output_size.at(1) == output_size.at(1))
+            << "Inferred output size and output_size from upstream are "
+               "different";
+      }
     }
   }
   return bridge::AtenFromXlaTensor(
@@ -3209,6 +3221,8 @@ at::Tensor XLANativeFunctions::upsample_nearest2d_backward(
     c10::optional<double> scales_w) {
   TORCH_LAZY_FN_COUNTER("xla::");
   XLATensorPtr grad_output_tensor = bridge::GetXlaTensor(grad_output);
+  absl::Span<const int64_t> input_dims =
+      grad_output_tensor->shape().get().dimensions();
   // Only the XLA TPU backend for now implements the CustomCall required by
   // our XLA lowering.
   XlaDeviceType hw_type =
@@ -3224,12 +3238,19 @@ at::Tensor XLANativeFunctions::upsample_nearest2d_backward(
       torch::lazy::ToVector<int64_t>(output_size);
   if ((scales_h && *scales_h != 1.0) || (scales_w && *scales_w != 1.0)) {
     scaled_output_size = GetOutputSizeWithScale(
-        input_size, scales_h, scales_w, scaled_output_size,
+        input_dims, scales_h, scales_w, scaled_output_size,
         /*round_with_scale_factor=*/false);
     if (!output_size.empty()) {
-      XLA_CHECK(scaled_output_size.at(0) == output_size.at(0) &&
-                scaled_output_size.at(1) == output_size.at(1))
-          << "Inferred output size and output_size from upstream are different";
+      if (!(scaled_output_size.at(0) == output_size.at(0) &&
+            scaled_output_size.at(1) == output_size.at(1))) {
+        scaled_output_size = GetOutputSizeWithScale(
+            input_dims, scales_h, scales_w, scaled_output_size,
+            /*round_with_scale_factor=*/true);
+        XLA_CHECK(scaled_output_size.at(0) == output_size.at(0) &&
+                  scaled_output_size.at(1) == output_size.at(1))
+            << "Inferred output size and output_size from upstream are "
+               "different";
+      }
     }
   }
   return bridge::AtenFromXlaTensor(tensor_methods::upsample_nearest2d_backward(
