@@ -56,6 +56,7 @@ build:cuda --define=xla_python_enable_gpu=true
 build:cuda --cxxopt=-DXLA_CUDA=1
 
 # Coverage with cuda/gcc/nvcc requires manually setting coverage flags.
+coverage:cuda --per_file_copt=third_party/.*,torch_xla/.*@--coverage
 coverage:cuda --linkopt=-lgcov
 
 build:acl --define==build_with_acl=true
@@ -129,9 +130,10 @@ coverage --config=coverage
 coverage --instrumentation_filter="//torch_xla[/:],//third_party[/:],-//test[/:]"
 coverage --combined_report=lcov
 coverage --nocache_test_results
+build:coverage --strategy=CoverageReport=sandboxed,local
 
-# Only instrument the repository, not external dependencies.
-build:coverage --per_file_copt=-external/.*,-test/.*@--coverage
+# Required for downloading coverage information; otherwise coverage succeeds but not present.
+coverage --remote_download_outputs=all
 
 build:coverage --test_tag_filters=-nocoverage
 
