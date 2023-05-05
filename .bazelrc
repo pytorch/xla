@@ -125,13 +125,16 @@ build:compdb --features=-layering_check
 # Compiling tests requires Java.
 build --java_runtime_version=remotejdk_11
 
-# Coverage requires Java and GCC.
+# Coverage setup.
 coverage --config=coverage
-coverage --build_tests_only
-coverage --instrumentation_filter="//torch_xla/,//third_party/"
+coverage --instrumentation_filter="//torch_xla[/:],//third_party[/:],-//test[/:]"
 coverage --combined_report=lcov
 coverage --nocache_test_results
 build:coverage --strategy=CoverageReport=sandboxed,local
+
+# Required for downloading coverage information; otherwise coverage succeeds but not present.
+coverage --remote_download_outputs=all
+
 build:coverage --test_tag_filters=-nocoverage
 
 ############################################################################
