@@ -189,7 +189,6 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
       tensorflow::profiler::TraceMeLevel::kInfo);
   std::vector<ComputationClient::DataPtr> datas;
   datas.reserve(tensors.size());
-  std::optional<PjRtFuture<Status>> returned_future;
   for (auto& tensor : tensors) {
     PjRtDevice* pjrt_device = StringToPjRtDevice(tensor.device);
 
