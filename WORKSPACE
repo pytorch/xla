@@ -67,7 +67,7 @@ http_archive(
 # b) by commenting out the http_archive above and uncommenting the following:
 # local_repository(
 #    name = "org_tensorflow",
-#    path = "/workspaces/work/pytorch/xla/third_party/tensorflow",
+#    path = "/path/to/tensorflow",
 # )
 
 # Initialize TensorFlow's external dependencies.
