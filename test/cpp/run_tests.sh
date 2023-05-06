@@ -69,6 +69,9 @@ fi
 if [[ "$XLA_CUDA" == "1" ]]; then
   EXTRA_FLAGS="$EXTRA_FLAGS --config=cuda"
 fi
+if [[ "$BAZEL_VERB" == "coverage" ]]; then
+  EXTRA_FLAGS="$EXTRA_FLAGS --remote_download_outputs=all" # for lcov symlink
+fi
 
 
 if [ "$LOGFILE" != "" ]; then
