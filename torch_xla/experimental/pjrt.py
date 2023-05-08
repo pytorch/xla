@@ -443,6 +443,7 @@ def rendezvous(tag: str, payload: bytes,
   )).to(xm.xla_device())
   raw_data = xm.all_gather(padded_data)
   data_list = torch.split(raw_data, max_size)
+
   payloads = [d[:sz] for d, sz in zip(data_list, sizes.cpu())]
   xm.mark_step()
 
