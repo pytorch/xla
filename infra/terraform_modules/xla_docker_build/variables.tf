@@ -84,3 +84,12 @@ variable "wheels_dest" {
 variable "worker_pool_id" {
   type = string
 }
+
+variable "substitutions" {
+  type    = map(string)
+  default = {}
+}
+
+variable "run_e2e_tests" {
+  default = false
+}

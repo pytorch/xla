@@ -47,6 +47,7 @@ cc_library(
 
 cc_test(
     name = "async_task_test",
+    size = "small",
     srcs = ["async_task_test.cc"],
     deps = [
         ":async_task",
@@ -159,6 +160,7 @@ cc_library(
 
 cc_test(
     name = "cache_test",
+    size = "small",
     srcs = ["cache_test.cc"],
     deps = [
         ":cache",
@@ -294,6 +296,7 @@ cc_library(
 
 cc_test(
     name = "sys_util_test",
+    size = "small",
     srcs = ["sys_util_test.cc"],
     deps = [
         ":sys_util",
@@ -363,6 +366,7 @@ cc_library(
 
 cc_test(
     name = "util_test",
+    size = "small",
     srcs = ["util_test.cc"],
     deps = [
         ":util",

@@ -52,11 +52,6 @@ export XLA_EXPERIMENTAL
 
 EXTRA_FLAGS=""
 
-# Set up coverage flags.
-if [[ "$BAZEL_VERB" == "coverage" ]]; then
-  EXTRA_FLAGS="$EXTRA_FLAGS --combined_report=lcov"
-fi
-
 if [[ "$TPUVM_MODE" == "1" ]]; then
   EXTRA_FLAGS="$EXTRA_FLAGS --config=tpu"
 fi
@@ -74,10 +69,13 @@ fi
 if [[ "$XLA_CUDA" == "1" ]]; then
   EXTRA_FLAGS="$EXTRA_FLAGS --config=cuda"
 fi
+if [[ "$BAZEL_VERB" == "coverage" ]]; then
+  EXTRA_FLAGS="$EXTRA_FLAGS --remote_download_outputs=all" # for lcov symlink
+fi
 
 
 if [ "$LOGFILE" != "" ]; then
-  bazel $BAZEL_VERB $EXTRA_FLAGS --test_output=streamed //third_party/xla_client:all //test/cpp:all ${FILTER:+"$FILTER"} 2> $LOGFILE
+  bazel $BAZEL_VERB $EXTRA_FLAGS //third_party/xla_client:all //test/cpp:all ${FILTER:+"$FILTER"} 2> $LOGFILE
 else
-  bazel $BAZEL_VERB $EXTRA_FLAGS --test_output=streamed //third_party/xla_client:all //test/cpp:all ${FILTER:+"$FILTER"}
+  bazel $BAZEL_VERB $EXTRA_FLAGS //third_party/xla_client:all //test/cpp:all ${FILTER:+"$FILTER"}
 fi

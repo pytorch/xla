@@ -55,6 +55,10 @@ build:cuda --@org_tensorflow//tensorflow/compiler/xla/python:enable_gpu=true
 build:cuda --define=xla_python_enable_gpu=true
 build:cuda --cxxopt=-DXLA_CUDA=1
 
+# Coverage with cuda/gcc/nvcc requires manually setting coverage flags.
+coverage:cuda --per_file_copt=third_party/.*,torch_xla/.*@--coverage
+coverage:cuda --linkopt=-lgcov
+
 build:acl --define==build_with_acl=true
 
 build:nonccl --define=no_nccl_support=true
@@ -121,12 +125,14 @@ build:compdb --features=-layering_check
 # Compiling tests requires Java.
 build --java_runtime_version=remotejdk_11
 
-# Coverage requires Java and GCC.
-coverage --config=coverage
+# Coverage setup.
 coverage --build_tests_only
-coverage --instrumentation_filter="//torch_xla/,//third_party/"
-build:coverage --combined_report=lcov
+coverage --config=coverage
+coverage --instrumentation_filter="//torch_xla[/:],//third_party[/:],-//test[/:]"
+coverage --combined_report=lcov
+coverage --nocache_test_results
 build:coverage --strategy=CoverageReport=sandboxed,local
+
 build:coverage --test_tag_filters=-nocoverage
 
 ############################################################################

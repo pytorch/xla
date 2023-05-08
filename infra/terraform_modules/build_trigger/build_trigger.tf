@@ -62,8 +62,21 @@ variable "timeout_minutes" {
   default = 60
 }
 
+variable "service_account" {
+  default = ""
+}
+
 variable "location" {
   default = "us-central1"
+}
+
+variable "substitutions" {
+  type    = map(string)
+  default = {}
+}
+
+variable "logging" {
+  default = ""
 }
 
 locals {
@@ -73,9 +86,10 @@ locals {
 # Detailed documentation on CloudBuild parameters:
 # https://cloud.google.com/build/docs/api/reference/rest/v1/projects.builds#resource-build
 resource "google_cloudbuild_trigger" "trigger" {
-  name        = var.name
-  description = var.description
-  location    = var.location
+  name            = var.name
+  description     = var.description
+  location        = var.location
+  service_account = var.service_account
 
   # Source (context) in which build trigger will run when triggered on branch or tag push.
   # The source exact version will be the commit which caused the trigger event (push).
@@ -140,11 +154,13 @@ resource "google_cloudbuild_trigger" "trigger" {
       substitution_option   = "ALLOW_LOOSE"
       dynamic_substitutions = true
       worker_pool           = var.worker_pool_id
+      logging               = var.logging
     }
 
     timeout = "${var.timeout_minutes * 60}s"
   }
 
+  substitutions      = var.substitutions
   include_build_logs = var.trigger_on_push != null ? "INCLUDE_BUILD_LOGS_WITH_STATUS" : null
 }
 

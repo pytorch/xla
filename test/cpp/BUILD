@@ -55,6 +55,7 @@ ptxla_cc_library(
         "//torch_xla/csrc:tensor",
         "@com_google_googletest//:gtest",
     ],
+    alwayslink = True,
 )
 
 ptxla_cc_library(
@@ -68,6 +69,7 @@ ptxla_cc_library(
         "@com_google_googletest//:gtest",
         "@org_tensorflow//tensorflow/compiler/xla:permutation_util",
     ],
+    alwayslink = True,
 )
 
 ptxla_cc_library(
@@ -79,6 +81,7 @@ ptxla_cc_library(
         "@com_google_googletest//:gtest",
         "@org_tensorflow//tensorflow/compiler/xla:shape_util",
     ],
+    alwayslink = True,
 )
 
 ptxla_cc_library(
@@ -89,6 +92,7 @@ ptxla_cc_library(
         "//torch_xla/csrc:tensor",
         "@com_google_googletest//:gtest",
     ],
+    alwayslink = True,
 )
 
 ptxla_cc_library(
@@ -106,6 +110,7 @@ ptxla_cc_library(
         "@org_tensorflow//tensorflow/compiler/xla:shape_util",
         "@org_tensorflow//tensorflow/compiler/xla/client:xla_builder",
     ],
+    alwayslink = True,
 )
 
 ptxla_cc_library(
@@ -116,6 +121,7 @@ ptxla_cc_library(
         "//torch_xla/csrc:tensor",
         "@com_google_googletest//:gtest",
     ],
+    alwayslink = True,
 )
 
 ptxla_cc_library(
@@ -127,6 +133,7 @@ ptxla_cc_library(
         "//torch_xla/csrc:tensor",
         "@com_google_googletest//:gtest",
     ],
+    alwayslink = True,
 )
 
 ptxla_cc_library(
@@ -137,6 +144,7 @@ ptxla_cc_library(
         "//torch_xla/csrc:tensor",
         "@com_google_googletest//:gtest",
     ],
+    alwayslink = True,
 )
 
 ptxla_cc_library(
@@ -151,6 +159,7 @@ ptxla_cc_library(
         "@com_google_googletest//:gtest",
         "@org_tensorflow//tensorflow/compiler/xla:xla_data_proto_cc",
     ],
+    alwayslink = True,
 )
 
 # Keep all the tests in the same binary as long as XRT is supported.
