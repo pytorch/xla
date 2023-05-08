@@ -2,6 +2,9 @@
   "name": "pytorch_xla",
   "image": "us-central1-docker.pkg.dev/tpu-pytorch/docker/development:tpu",
   "privileged": true,
+  "runArgs": [
+    "--shm-size=16G"
+  ],
   "containerEnv": {
     "TPUVM_MODE": "1",
     "BAZEL_REMOTE_CACHE": "1",
