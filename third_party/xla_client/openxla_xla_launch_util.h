@@ -20,17 +20,17 @@ limitations under the License.
 #include <set>
 #include <vector>
 
-#include "tensorflow/compiler/jit/variable_info.h"
-#include "tensorflow/compiler/jit/xla_tensor.h"
-#include "tensorflow/compiler/tf2xla/xla_compiler.h"
-#include "tensorflow/compiler/xla/client/local_client.h"
-#include "tensorflow/compiler/xla/pjrt/pjrt_client.h"
-#include "tensorflow/compiler/xla/service/shaped_buffer.h"
-#include "tensorflow/compiler/xla/stream_executor/device_memory_allocator.h"
-#include "tensorflow/core/framework/allocation_description.pb.h"
-#include "tensorflow/core/framework/tensor.h"
-#include "tensorflow/core/lib/core/status.h"
-#include "tensorflow/core/platform/thread_annotations.h"
+#include "third_party/xla_client/openxla_variable_info.h"
+#include "third_party/xla_client/openxla_xla_tensor.h"
+#include "third_party/xla_client/openxla_xla_compiler.h"
+#include "xla/client/local_client.h"
+#include "xla/pjrt/pjrt_client.h"
+#include "xla/service/shaped_buffer.h"
+#include "xla/stream_executor/device_memory_allocator.h"
+#include "third_party/xla_client/openxla_allocation_description.pb.h"
+#include "third_party/xla_client/openxla_tensor.h"
+#include "tsl/platform/status.h"
+#include "tsl/platform/thread_annotations.h"
 
 namespace xla {
 

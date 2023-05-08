@@ -15,9 +15,9 @@ limitations under the License.
 #ifndef XLA_CLIENT_XLA_KERNEL_CREATOR_H_
 #define XLA_CLIENT_XLA_KERNEL_CREATOR_H_
 
-#include "tensorflow/core/framework/function.h"
-#include "tensorflow/core/framework/node_def.pb.h"
-#include "tensorflow/core/lib/core/status.h"
+#include "third_party/xla_client/openxla_function.h"
+#include "third_party/xla_client/openxla_node_def.pb.h"
+#include "tsl/platform/status.h"
 
 namespace xla {
 
