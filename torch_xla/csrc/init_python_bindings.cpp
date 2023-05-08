@@ -410,13 +410,25 @@ std::ptrdiff_t GetTensorId(const at::Tensor& tensor) {
 
 std::vector<at::Tensor> GetXlaTensorsFromAten(
     const std::vector<at::Tensor>& aten_tensors,
-    const std::vector<std::string>& devices) {
-  auto data_handles = CreateTensorsData(aten_tensors, GetXlaDevices(devices));
+    const std::vector<std::string>& devices,
+    const std::optional<std::vector<XLATensor::ShardingSpecPtr>>
+        sharding_specs) {
+  std::vector<std::shared_ptr<torch::lazy::BackendData>> data_handles;
+  if (sharding_specs.has_value()) {
+    data_handles = CreateTensorsData(aten_tensors, sharding_specs.value(),
+                                     GetXlaDevices(devices));
+  } else {
+    data_handles = CreateTensorsData(aten_tensors, GetXlaDevices(devices));
+  }
 
   std::vector<at::Tensor> xla_tensors;
   xla_tensors.reserve(data_handles.size());
-  for (auto& data_handle : data_handles) {
+  for (int i = 0; i < data_handles.size(); i++) {
+    auto& data_handle = data_handles[i];
     XLATensorPtr xla_tensor = XLATensor::Create(std::move(data_handle));
+    if (sharding_specs.has_value() && sharding_specs.value()[i] != nullptr) {
+      xla_tensor->SetShardingSpec(*sharding_specs.value()[i]);
+    }
     xla_tensors.push_back(bridge::AtenFromXlaTensor(std::move(xla_tensor)));
   }
   return xla_tensors;
@@ -904,21 +916,36 @@ void InitXlaModuleBindings(py::module m) {
         [](const std::vector<at::Tensor>& tensors) -> std::string {
           return GetTensorsHloGraph(tensors);
         });
-  m.def("_xla_tensors_from_aten", [](const std::vector<at::Tensor>& tensors,
-                                     const std::vector<std::string>& devices) {
-    std::vector<at::Tensor> result;
-    {
-      NoGilSection nogil;
-      std::vector<at::Tensor> xla_tensors =
-          GetXlaTensorsFromAten(tensors, devices);
-      result.reserve(xla_tensors.size());
-      for (size_t i = 0; i < xla_tensors.size(); ++i) {
-        result.push_back(torch::autograd::make_variable(
-            xla_tensors[i], /*requires_grad=*/tensors.at(i).requires_grad()));
-      }
-    }
-    return result;
-  });
+  py::class_<XLATensor::ShardingSpec, XLATensor::ShardingSpecPtr>(
+      m, "XlaShardingSpec")
+      .def(py::init([](at::Tensor tensor, py::list& tile_assignment,
+                       bool replicated, bool manual) {
+        auto op_sharding =
+            ShardingUtil::CreateOpSharding(tile_assignment, replicated, manual);
+        auto shape = CreateComputationShapeFromTensor(tensor, nullptr);
+        return std::make_shared<XLATensor::ShardingSpec>(op_sharding, shape);
+      }));
+  m.def("_xla_tensors_from_aten",
+        [](const std::vector<at::Tensor>& tensors,
+           const std::vector<std::string>& devices,
+           const std::optional<std::vector<XLATensor::ShardingSpecPtr>>&
+               shardings) {
+          std::vector<at::Tensor> result;
+          {
+            NoGilSection nogil;
+            std::vector<at::Tensor> xla_tensors =
+                GetXlaTensorsFromAten(tensors, devices, shardings);
+            result.reserve(xla_tensors.size());
+            for (size_t i = 0; i < xla_tensors.size(); ++i) {
+              result.push_back(torch::autograd::make_variable(
+                  xla_tensors[i],
+                  /*requires_grad=*/tensors.at(i).requires_grad()));
+            }
+          }
+          return result;
+        },
+        py::arg("tensors"), py::arg("devices"),
+        py::arg("shardings") = py::none());
   m.def("_xla_get_cpu_tensors", [](const std::vector<at::Tensor>& tensors) {
     std::vector<at::Tensor> result;
     {
