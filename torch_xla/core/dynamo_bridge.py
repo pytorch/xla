@@ -205,6 +205,20 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
 
   # This call is critical to make sure xla_args' tensor id show up in graph_input_tensor_ids
   xm.mark_step()
+
+  # Clone the input tensors which can be used to restore the origional value of the xla_args
+  # if model applied inplace operations to the input.
+  # Note that we currently can't use `cloned_xla_args` to perform the tracing since cloned
+  # Tensor and base tensor will share the same XLAData and XLAData only store the tensor ID
+  # of the first XLATensor, which is the base tensor. When we try to map the XLAData back to
+  # TensorID in `_get_tensors_xla_device_data_node` to create the mapping, the wrong Tensor ID
+  # will be returned.
+  # TODO(JackCaoG): fix the cloned tensor can't be used to warm up the cache.
+  cloned_xla_args = [
+      torch.clone(xla_arg) if isinstance(xla_arg, torch.Tensor) else xla_arg
+      for xla_arg in xla_args
+  ]
+
   args_tensor_ids = [
       torch_xla._XLAC._xla_get_tensor_id(xla_arg) for xla_arg in xla_args
   ]
@@ -262,6 +276,10 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
   if debug:
     print("graph_hash", graph_hash)
 
+  # Collect all device data nodes that is needed to compute the args_and_out
+  # and wrap those device data nodes inside a at::tensor(graph_input_xla_values).
+  # Return the tensor_id that is corresponding to every device_data node as
+  # graph_input_tensor_ids.
   (
       graph_input_tensor_ids,
       graph_input_xla_values,
@@ -277,7 +295,22 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
 
   # compiles and cache graph rooted at tensors in 'args_and_out'
   torch_xla._XLAC._xla_warm_up_cache(args_and_out, [])
+  # Remove all of the pending IR from all live tensors. The assumptions are
+  # 1. With the  `xm.mark_step` in the beginning of this call, every XLATensor
+  # should be materialized
+  # 2. All of the pending IRs are result of our warm up cache tracing and they
+  # should be removed to avoid extra computation executed and in place updates op
+  # mistakenlly update the input tensors.
   torch_xla._XLAC._clear_pending_irs(str(xm.xla_device()))
+
+  # Restore the origional `xla_args`. Dynamo passed the real tensor as
+  # `xla_args`` and we performend the tracing on them. During the tracing,
+  # in place update will replace the underlying DeviceData of the `xla_args`
+  # with a pending IR which will be removed by `_clear_pending_irs` call above.
+  if xla_args_need_update_bool:
+    for xla_arg, cloned_xla_arg in zip(xla_args, cloned_xla_args):
+      if isinstance(xla_arg, torch.Tensor):
+        xla_arg.copy_(cloned_xla_arg)
 
   def optimized_mod(*args):
     # mark_step needs to be blocking since we want to access args's XLADatas

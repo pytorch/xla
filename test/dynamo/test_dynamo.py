@@ -18,6 +18,21 @@ sys.path.append(xla_test_folder)
 import test_utils
 
 
+class DynamoInPlaceTest(unittest.TestCase):
+
+  def inplace_update(self, a):
+    a += 1
+    return a
+
+  def test_inplace_update_correctness(self):
+    dynamo_inplace = torch.compile(
+        self.inplace_update, backend="torchxla_trace_once", fullgraph=True)
+    t = torch.tensor([0, 1, 2], device=xm.xla_device())
+    for i in range(10):
+      t = dynamo_inplace(t)
+    self.assertTrue(torch.all(torch.eq(t.cpu(), torch.tensor([10, 11, 12]))))
+
+
 class DynamoInferenceBasicTest(unittest.TestCase):
 
   @classmethod

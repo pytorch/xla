@@ -454,7 +454,9 @@ void XLAGraphExecutor::ClearPendingIrs(
     if (tensor_ids.insert(tensors[i]->GetUniqueId()).second &&
         tensors[i]->CurrentDataHandle() == nullptr) {
       torch::lazy::Value ir_value = tensors[i]->CurrentIrValue();
-      if (ir_value) {
+      // Only clear the IR that is not a DeviceData Node.
+      if (ir_value &&
+          torch_xla::DeviceData::Cast(ir_value.node.get()) == nullptr) {
         xla::Shape shape = MakeShapeWithDeviceLayout(
             tensors[i]->shape(), static_cast<XlaDeviceType>(device.type()));
         torch::lazy::BackendDataPtr handle =
