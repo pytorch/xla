@@ -18,16 +18,16 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
-#include "tensorflow/compiler/jit/device_executable_persistor.h"
-#include "tensorflow/compiler/jit/flags.h"
-#include "tensorflow/compiler/jit/pjrt_device_compiler_client.h"
-#include "tensorflow/compiler/jit/xla_device_compiler_client.h"
-#include "tensorflow/compiler/xla/client/client_library.h"
-#include "tensorflow/compiler/xla/client/local_client.h"
-#include "tensorflow/compiler/xla/pjrt/pjrt_client.h"
-#include "tensorflow/core/tfrt/common/create_pjrt_client_util.h"
-#include "tensorflow/core/tfrt/common/pjrt_util.h"
-#include "tensorflow/core/tpu/tpu_defs.h"
+#include "third_party/xla_client/openxla_device_executable_persistor.h"
+#include "third_party/xla_client/openxla_flags.h"
+#include "third_party/xla_client/openxla_pjrt_device_compiler_client.h"
+#include "third_party/xla_client/openxla_xla_device_compiler_client.h"
+#include "xla/client/client_library.h"
+#include "xla/client/local_client.h"
+#include "xla/pjrt/pjrt_client.h"
+#include "third_party/xla_client/openxla_create_pjrt_client_util.h"
+#include "third_party/xla_client/openxla_pjrt_util.h"
+#include "third_party/xla_client/openxla_tpu_defs.h"
 
 namespace xla {
 namespace {

@@ -23,30 +23,30 @@ limitations under the License.
 // * Task numbers are within the specified replica, so there are as
 //   many "task zeros" as replicas.
 
-#ifndef TENSORFLOW_CORE_FRAMEWORK_DEVICE_H_
-#define TENSORFLOW_CORE_FRAMEWORK_DEVICE_H_
+#ifndef XLA_CLIENT_DEVICE_H_
+#define XLA_CLIENT_DEVICE_H_
 
 #include <memory>
 #include <string>
 
 #include "tsl/framework/allocator.h"
-#include "tensorflow/core/framework/op_kernel.h"
-#include "tensorflow/core/framework/op_segment.h"
-#include "tensorflow/core/framework/resource_mgr.h"
-#include "tensorflow/core/framework/types.h"
-#include "tensorflow/core/graph/graph.h"
-#include "tensorflow/core/graph/types.h"
-#include "tensorflow/core/platform/errors.h"
-#include "tensorflow/core/platform/macros.h"
-#include "tensorflow/core/platform/status.h"
-#include "tensorflow/core/platform/types.h"
-#include "tensorflow/core/util/device_name_utils.h"
-#include "tensorflow/core/framework/control_flow.h"
-#include "tensorflow/core/framework/device_attributes.pb.h"
-#include "tensorflow/core/framework/device_base.h"
-#include "tensorflow/core/framework/graph.pb.h"
+#include "third_party/xla_client/openxla_op_kernel.h"
+#include "third_party/xla_client/openxla_op_segment.h"
+#include "third_party/xla_client/openxla_resource_mgr.h"
+#include "third_party/xla_client/openxla_types.h"
+#include "third_party/xla_client/openxla_graph.h"
+#include "third_party/xla_client/openxla_graph_types.h"
+#include "tsl/platform/errors.h"
+#include "tsl/platform/macros.h"
+#include "tsl/platform/status.h"
+#include "tsl/platform/types.h"
+#include "tsl/util/device_name_utils.h"
+#include "third_party/xla_client/openxla_control_flow.h"
+#include "third_party/xla_client/openxla_device_attributes.pb.h"
+#include "third_party/xla_client/device_base.h"
+#include "third_party/xla_client/openxla_graph.pb.h"
 
-namespace tensorflow {
+namespace xla {
 
 class Device : public DeviceBase {
  public:
@@ -209,6 +209,6 @@ class Device : public DeviceBase {
   TF_DISALLOW_COPY_AND_ASSIGN(Device);
 };
 
-}  // namespace tensorflow
+}  // namespace xla
 
-#endif  // TENSORFLOW_CORE_FRAMEWORK_DEVICE_H_
+#endif  // XLA_CLIENT_DEVICE_H_

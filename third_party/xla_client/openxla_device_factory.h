@@ -10,19 +10,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#ifndef TENSORFLOW_CORE_FRAMEWORK_DEVICE_FACTORY_H_
-#define TENSORFLOW_CORE_FRAMEWORK_DEVICE_FACTORY_H_
+#ifndef XLA_CLIENT_DEVICE_FACTORY_H_
+#define XLA_CLIENT_DEVICE_FACTORY_H_
 
 #include <string>
 #include <vector>
 
 #include "absl/base/attributes.h"
-// #include "tensorflow/core/platform/status.h"
 #include "tsl/platform/status.h"
-// #include "tensorflow/core/platform/types.h"
 #include "tsl/platform/types.h"
 
-namespace tensorflow {
+namespace xla {
 
 class Device;
 struct SessionOptions;
@@ -166,6 +164,6 @@ class DeviceFactory {
 // // __COUNTER__ must go through another macro to be properly expanded
 // #define INTERNAL_REGISTER_LOCAL_DEVICE_FACTORY_NAME(ctr) ___##ctr##__object_
 
-}  // namespace tensorflow
+}  // namespace xla
 
-#endif  // TENSORFLOW_CORE_FRAMEWORK_DEVICE_FACTORY_H_
+#endif  // XLA_CLIENT_DEVICE_FACTORY_H_

@@ -10,8 +10,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#ifndef TENSORFLOW_COMPILER_JIT_DEVICE_COMPILER_H_
-#define TENSORFLOW_COMPILER_JIT_DEVICE_COMPILER_H_
+#ifndef XLA_CLIENT_DEVICE_COMPILER_H_
+#define XLA_CLIENT_DEVICE_COMPILER_H_
 
 #include <memory>
 #include <numeric>
@@ -25,22 +25,22 @@ limitations under the License.
 #include "absl/container/flat_hash_map.h"
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
-#include "tensorflow/compiler/jit/device_compilation_cache.h"
-#include "tensorflow/compiler/jit/device_compilation_cluster_signature.h"
-#include "tensorflow/compiler/jit/device_compilation_profiler.h"
-#include "tensorflow/compiler/jit/device_compiler_client.h"
-#include "tensorflow/compiler/jit/device_executable_persistor.h"
-#include "tensorflow/compiler/jit/flags.h"
-#include "tensorflow/compiler/jit/tf_graph_to_hlo_compiler.h"
-#include "tensorflow/compiler/jit/xla_compile_util.h"
-#include "tensorflow/compiler/tf2xla/xla_compiler.h"
-#include "tensorflow/compiler/xla/client/local_client.h"
-#include "tensorflow/core/framework/op_kernel.h"
-#include "tensorflow/core/lib/core/threadpool.h"
-#include "tensorflow/core/platform/mutex.h"
-#include "tensorflow/core/platform/thread_annotations.h"
+#include "third_party/xla_client/openxla_device_compilation_cache.h"
+#include "third_party/xla_client/openxla_device_compilation_cluster_signature.h"
+#include "third_party/xla_client/openxla_device_compilation_profiler.h"
+#include "third_party/xla_client/openxla_device_compiler_client.h"
+#include "third_party/xla_client/openxla_device_executable_persistor.h"
+#include "third_party/xla_client/openxla_flags.h"
+#include "third_party/xla_client/openxla_tf_graph_to_hlo_compiler.h"
+#include "third_party/xla_client/openxla_xla_compile_util.h"
+#include "third_party/xla_client/openxla_xla_compiler.h"
+#include "xla/client/local_client.h"
+#include "third_party/xla_client/openxla_op_kernel.h"
+#include "tsl/platform/threadpool.h"
+#include "tsl/platform/mutex.h"
+#include "tsl/platform/thread_annotations.h"
 
-namespace tensorflow {
+namespace xla {
 
 // template <typename ExecutableType, typename ClientType>
 // class DeviceCompiler : public ResourceBase {
@@ -474,6 +474,6 @@ namespace device_compiler_internal {
 //   return OkStatus();
 // }
 
-}  // namespace tensorflow
+}  // namespace xla
 
-#endif  // TENSORFLOW_COMPILER_JIT_DEVICE_COMPILER_H_
+#endif  // XLA_CLIENT_DEVICE_COMPILER_H_

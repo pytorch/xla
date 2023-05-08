@@ -10,8 +10,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#ifndef TENSORFLOW_CORE_FRAMEWORK_OP_KERNEL_H_
-#define TENSORFLOW_CORE_FRAMEWORK_OP_KERNEL_H_
+#ifndef XLA_CLIENT_OP_KERNEL_H_
+#define XLA_CLIENT_OP_KERNEL_H_
 
 #include <functional>
 #include <unordered_set>
@@ -21,40 +21,40 @@ limitations under the License.
 #include "absl/time/time.h"
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
-#include "tensorflow/core/framework/allocator.h"
-#include "tensorflow/core/framework/cancellation.h"
-#include "tensorflow/core/framework/control_flow.h"
-#include "tensorflow/core/framework/device_base.h"
-#include "tensorflow/core/framework/graph.pb.h"
-#include "tensorflow/core/framework/kernel_def.pb.h"
-#include "tensorflow/core/framework/kernel_def_builder.h"
-#include "tensorflow/core/framework/node_def.pb.h"
-#include "tensorflow/core/framework/node_def_util.h"
-#include "tensorflow/core/framework/node_properties.h"
-#include "tensorflow/core/framework/op.h"  // TODO(b/62899350): Remove
-#include "tensorflow/core/framework/op_requires.h"
-#include "tensorflow/core/framework/registration/registration.h"
-#include "tensorflow/core/framework/rendezvous.h"
-#include "tensorflow/core/framework/session_state.h"
-#include "tensorflow/core/framework/tensor.h"
-#include "tensorflow/core/framework/tensor_shape.h"
-#include "tensorflow/core/framework/tensor_shape.pb.h"  // TODO(b/62899350): Remove
-#include "tensorflow/core/framework/tracking_allocator.h"
-#include "tensorflow/core/framework/types.h"
-#include "tensorflow/core/framework/types.pb.h"
-#include "tensorflow/core/lib/core/errors.h"
-#include "tensorflow/core/lib/core/status.h"
-#include "tensorflow/core/lib/gtl/array_slice.h"
-#include "tensorflow/core/lib/gtl/manual_constructor.h"
-#include "tensorflow/core/platform/env.h"
-#include "tensorflow/core/platform/logging.h"
-#include "tensorflow/core/platform/macros.h"
-#include "tensorflow/core/platform/mutex.h"
-#include "tensorflow/core/platform/profile_utils/cpu_utils.h"
-#include "tensorflow/core/platform/thread_annotations.h"
-#include "tensorflow/core/platform/types.h"
-#include "tensorflow/core/protobuf/config.pb.h"
-#include "tensorflow/core/util/managed_stack_trace.h"
+#include "tsl/framework/allocator.h"
+#include "tsl/framework/cancellation.h"
+#include "third_party/xla_client/control_flow.h"
+#include "third_party/xla_client/device_base.h"
+#include "third_party/xla_client/openxla_graph.pb.h"
+#include "third_party/xla_client/openxla_kernel_def.pb.h"
+#include "third_party/xla_client/openxla_kernel_def_builder.h"
+#include "third_party/xla_client/openxla_node_def.pb.h"
+#include "third_party/xla_client/openxla_node_def_util.h"
+#include "third_party/xla_client/openxla_node_properties.h"
+#include "third_party/xla_client/openxla_op.h"  // TODO(b/62899350): Remove
+#include "third_party/xla_client/openxla_op_requires.h"
+#include "third_party/xla_client/openxla_registration.h"
+#include "third_party/xla_client/openxla_rendezvous.h"
+#include "third_party/xla_client/openxla_session_state.h"
+#include "third_party/xla_client/openxla_tensor.h"
+#include "third_party/xla_client/openxla_tensor_shape.h"
+#include "third_party/xla_client/openxla_tensor_shape.pb.h"  // TODO(b/62899350): Remove
+#include "tsl/framework/tracking_allocator.h"
+#include "third_party/xla_client/openxla_types.h"
+#include "third_party/xla_client/openxla_types.pb.h"
+#include "tsl/platform/errors.h"
+#include "tsl/platform/status.h"
+#include "third_party/xla_client/openxla_array_slice.h"
+#include "third_party/xla_client/openxla_manual_constructor.h"
+#include "tsl/platform/env.h"
+#include "tsl/platform/logging.h"
+#include "tsl/platform/macros.h"
+#include "tsl/platform/mutex.h"
+#include "third_party/xla_client/openxla_cpu_utils.h"
+#include "tsl/platform/thread_annotations.h"
+#include "tsl/platform/types.h"
+#include "third_party/xla_client/openxla_config.pb.h"
+#include "third_party/xla_client/openxla_managed_stack_trace.h"
 
 // // Used to match ops to kernel sources (and eventually to kernel targets)
 // #ifdef TF_LOG_KERNEL_SOURCES
@@ -73,7 +73,7 @@ limitations under the License.
 // class CoordinationServiceAgent;
 // }
 
-namespace tensorflow {
+namespace xla {
 
 // namespace checkpoint {
 // class TensorSliceReaderCacheWrapper;
@@ -1625,6 +1625,6 @@ namespace kernel_factory {
 // void CheckNotInComputeAsync(OpKernelContext* ctx,
 //                             const char* correct_macro_name);
 
-}  // namespace tensorflow
+}  // namespace xla
 
-#endif  // TENSORFLOW_CORE_FRAMEWORK_OP_KERNEL_H_
+#endif  // XLA_CLIENT_OP_KERNEL_H_

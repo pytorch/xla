@@ -10,46 +10,46 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#ifndef TENSORFLOW_CORE_FRAMEWORK_FUNCTION_H_
-#define TENSORFLOW_CORE_FRAMEWORK_FUNCTION_H_
+#ifndef XLA_CLIENT_FUNCTION_H_
+#define XLA_CLIENT_FUNCTION_H_
 
 #include <memory>
 #include <vector>
 
 // clang-format off
 // Required for IS_MOBILE_PLATFORM
-#include "tensorflow/core/framework/op_def_builder.h"
-#include "tensorflow/core/platform/platform.h"
+#include "third_party/xla_client/openxla_op_def_builder.h"
+#include "tsl/platform/platform.h"
 // clang-format on
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/types/optional.h"
 #include "absl/types/variant.h"
-#include "tensorflow/core/framework/attr_value.pb.h"
-#include "tensorflow/core/framework/attr_value_util.h"
-#include "tensorflow/core/framework/cancellation.h"
-#include "tensorflow/core/framework/function.pb.h"
-#include "tensorflow/core/framework/node_def_util.h"
-#include "tensorflow/core/framework/op.h"
-#include "tensorflow/core/framework/op_kernel.h"
-#include "tensorflow/core/framework/optimized_function_graph.pb.h"
-#include "tensorflow/core/framework/registration/registration.h"
-#include "tensorflow/core/framework/types.h"
-#include "tensorflow/core/lib/gtl/flatmap.h"
-#include "tensorflow/core/lib/hash/hash.h"
-#include "tensorflow/core/lib/random/random.h"
-#include "tensorflow/core/platform/env.h"
-#include "tensorflow/core/platform/macros.h"
-#include "tensorflow/core/platform/mutex.h"
-#include "tensorflow/core/platform/protobuf.h"
-#include "tensorflow/core/platform/threadpool_interface.h"
-#include "tensorflow/core/protobuf/config.pb.h"
-#include "tensorflow/tsl/protobuf/error_codes.pb.h"
+#include "third_party/xla_client/openxla_attr_value.pb.h"
+#include "third_party/xla_client/openxla_attr_value_util.h"
+#include "tsl/framework/cancellation.h"
+#include "third_party/xla_client/openxla_function.pb.h"
+#include "third_party/xla_client/openxla_node_def_util.h"
+#include "third_party/xla_client/openxla_op.h"
+#include "tthird_party/xla_client/openxla_op_kernel.h"
+#include "third_party/xla_client/openxla_optimized_function_graph.pb.h"
+#include "third_party/xla_client/openxla_registration.h"
+#include "third_party/xla_client/openxla_types.h"
+#include "tsl/lib/gtl/flatmap.h"
+#include "tsl/platform/hash.h"
+#include "tsl/platform/random.h"
+#include "tsl/platform/env.h"
+#include "tsl/platform/macros.h"
+#include "tsl/platform/mutex.h"
+#include "tsl/platform/protobuf.h"
+#include "tsl/platform/threadpool_interface.h"
+#include "third_party/xla_client/openxla_config.pb.h"
+#include "tsl/protobuf/error_codes.pb.h"
 #if !defined(IS_MOBILE_PLATFORM)
-#include "tensorflow/core/protobuf/remote_tensor_handle.pb.h"
+#include "third_party/xla_client/openxla_remote_tensor_handle.pb.h"
 #endif  // IS_MOBILE_PLATFORM
 
-namespace tensorflow {
+namespace xla {
 
 // class CollectiveExecutor;
 // class DeviceSet;
@@ -1094,6 +1094,6 @@ namespace tensorflow {
 // GET_ATTR(bool)
 // #undef GET_ATTR
 
-}  // end namespace tensorflow
+}  // end namespace xla
 
-#endif  // TENSORFLOW_CORE_FRAMEWORK_FUNCTION_H_
+#endif  // XLA_CLIENT_FUNCTION_H_

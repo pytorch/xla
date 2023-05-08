@@ -13,17 +13,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#include "tensorflow/compiler/jit/build_xla_ops_pass.h"
-#include "tensorflow/compiler/jit/clone_constants_for_better_clustering.h"
-#include "tensorflow/compiler/jit/cluster_scoping_pass.h"
-#include "tensorflow/compiler/jit/encapsulate_subgraphs_pass.h"
-#include "tensorflow/compiler/jit/encapsulate_xla_computations_pass.h"
-#include "tensorflow/compiler/jit/force_xla_constants_on_host_pass.h"
-#include "tensorflow/compiler/jit/increase_dynamism_for_auto_jit_pass.h"
-#include "tensorflow/compiler/jit/mark_for_compilation_pass.h"
-#include "tensorflow/compiler/jit/partially_decluster_pass.h"
-#include "tensorflow/compiler/jit/report_clustering_info_pass.h"
-#include "tensorflow/core/common_runtime/optimization_registry.h"
+#include "third_party/xla_client/openxla_build_xla_ops_pass.h"
+#include "third_party/xla_client/openxla_clone_constants_for_better_clustering.h"
+#include "third_party/xla_client/openxla_cluster_scoping_pass.h"
+#include "third_party/xla_client/openxla_encapsulate_subgraphs_pass.h"
+#include "third_party/xla_client/openxla_encapsulate_xla_computations_pass.h"
+#include "third_party/xla_client/openxla_force_xla_constants_on_host_pass.h"
+#include "third_party/xla_client/openxla_increase_dynamism_for_auto_jit_pass.h"
+#include "third_party/xla_client/openxla_mark_for_compilation_pass.h"
+#include "third_party/xla_client/openxla_partially_decluster_pass.h"
+#include "third_party/xla_client/openxla_report_clustering_info_pass.h"
+#include "third_party/xla_client/openxla_optimization_registry.h"
 
 namespace xla {
 

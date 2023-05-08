@@ -20,18 +20,18 @@ limitations under the License.
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
-#include "tensorflow/core/framework/full_type.pb.h"
-#include "tensorflow/core/framework/full_type_inference_util.h"  // IWYU pragma: export
-#include "tensorflow/core/framework/full_type_util.h"  // IWYU pragma: export
-#include "tensorflow/core/framework/op_def_builder.h"
-#include "tensorflow/core/framework/op_def_util.h"  // IWYU pragma: export
-#include "tensorflow/core/framework/registration/registration.h"
-#include "tensorflow/core/lib/core/errors.h"
-#include "tensorflow/core/lib/core/status.h"
-#include "tensorflow/core/platform/macros.h"
-#include "tensorflow/core/platform/mutex.h"
-#include "tensorflow/core/platform/thread_annotations.h"
-#include "tensorflow/core/platform/types.h"
+#include "third_party/xla_client/openxla_full_type.pb.h"
+#include "third_party/xla_client/openxla_full_type_inference_util.h"  // IWYU pragma: export
+#include "third_party/xla_client/openxla_full_type_util.h"  // IWYU pragma: export
+#include "third_party/xla_client/openxla_op_def_builder.h"
+#include "third_party/xla_client/openxla_op_def_util.h"  // IWYU pragma: export
+#include "third_party/xla_client/openxla_registration.h"
+#include "tsl/platform/errors.h"
+#include "tsl/platform/status.h"
+#include "tsl/platform/macros.h"
+#include "tsl/platform/mutex.h"
+#include "tsl/platform/thread_annotations.h"
+#include "tsl/platform/types.h"
 
 namespace xla {
 
