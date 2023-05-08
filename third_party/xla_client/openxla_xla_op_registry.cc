@@ -16,19 +16,19 @@ limitations under the License.
 #include <memory>
 #include <string>
 
-#include "tensorflow/compiler/jit/flags.h"
-#include "tensorflow/compiler/jit/xla_cluster_util.h"
-#include "tensorflow/compiler/tf2xla/type_util.h"
-#include "tensorflow/compiler/tf2xla/xla_context.h"
-#include "tensorflow/compiler/xla/client/client_library.h"
-#include "tensorflow/core/common_runtime/device_factory.h"
-#include "tensorflow/core/common_runtime/local_device.h"
-#include "tensorflow/core/framework/device_base.h"
-#include "tensorflow/core/framework/kernel_def.pb.h"
-#include "tensorflow/core/framework/node_def.pb.h"
-#include "tensorflow/core/framework/op_def_util.h"
-#include "tensorflow/core/platform/mem.h"
-#include "tensorflow/core/platform/stream_executor_no_cuda.h"
+#include "third_party/xla_client/openxla_flags.h"
+#include "third_party/xla_client/openxla_xla_cluster_util.h"
+#include "third_party/xla_client/openxla_type_util.h"
+#include "third_party/xla_client/openxla_xla_context.h"
+#include "xla/client/client_library.h"
+#include "third_party/xla_client/openxla_device_factory.h"
+#include "third_party/xla_client/openxla_local_device.h"
+#include "third_party/xla_client/device_base.h"
+#include "third_party/xla_client/openxla_kernel_def.pb.h"
+#include "third_party/xla_client/openxla_node_def.pb.h"
+#include "third_party/xla_client/openxla_op_def_util.h"
+#include "tsl/platform/mem.h"
+#include "third_party/xla_client/openxla_stream_executor_no_cuda.h"
 
 namespace xla {
 
@@ -591,4 +591,4 @@ XlaOpRegistrationBuilder& XlaOpRegistrationBuilder::Device(
 //   AddSymbolicExecutionDevice(name);
 // }
 
-}  // namespace tensorflow
+}  // namespace xla

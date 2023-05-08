@@ -10,7 +10,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#include "tensorflow/compiler/jit/kernels/xla_ops.h"
+#include "third_party/xla_client/openxla_xla_ops.h"
 
 #include <functional>
 #include <map>
@@ -23,41 +23,41 @@ limitations under the License.
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/types/optional.h"
-#include "tensorflow/compiler/jit/device_compilation_profiler.h"
-#include "tensorflow/compiler/jit/device_compiler.h"
-#include "tensorflow/compiler/jit/encapsulate_subgraphs_pass.h"
-#include "tensorflow/compiler/jit/flags.h"
-#include "tensorflow/compiler/jit/variable_info.h"
-#include "tensorflow/compiler/jit/variable_info_util.h"
-#include "tensorflow/compiler/jit/xla_activity_listener.h"
-#include "tensorflow/compiler/jit/xla_compile_util.h"
-#include "tensorflow/compiler/jit/xla_compiler_options_util.h"
-#include "tensorflow/compiler/jit/xla_launch_util.h"
-#include "tensorflow/compiler/jit/xla_platform_info.h"
-#include "tensorflow/compiler/tf2xla/tf2xla_util.h"
-#include "tensorflow/compiler/tf2xla/xla_compiler.h"
-#include "tensorflow/compiler/tf2xla/xla_helpers.h"
-#include "tensorflow/compiler/tf2xla/xla_op_registry.h"
-#include "tensorflow/compiler/xla/client/local_client.h"
-#include "tensorflow/compiler/xla/executable_run_options.h"
-#include "tensorflow/compiler/xla/pjrt/pjrt_client.h"
-#include "tensorflow/compiler/xla/service/gpu/gpu_executable_run_options.h"
-#include "tensorflow/compiler/xla/statusor.h"
-#include "tensorflow/core/framework/allocator.h"
-#include "tensorflow/core/framework/node_def_util.h"
-#include "tensorflow/core/framework/op_kernel.h"
-#include "tensorflow/core/framework/op_requires.h"
-#include "tensorflow/core/framework/tensor.h"
-#include "tensorflow/core/framework/types.h"
-#include "tensorflow/core/lib/monitoring/counter.h"
-#include "tensorflow/core/platform/env.h"
-#include "tensorflow/core/platform/errors.h"
-#include "tensorflow/core/platform/refcount.h"
-#include "tensorflow/core/platform/statusor.h"
-#include "tensorflow/core/platform/stream_executor_no_cuda.h"
-#include "tensorflow/core/profiler/lib/traceme.h"
-#include "tensorflow/core/util/stream_executor_util.h"
-#include "tensorflow/tsl/platform/statusor.h"
+#include "third_party/xla_client/openxla_device_compilation_profiler.h"
+#include "third_party/xla_client/openxla_device_compiler.h"
+#include "third_party/xla_client/openxla_encapsulate_subgraphs_pass.h"
+#include "third_party/xla_client/openxla_flags.h"
+#include "third_party/xla_client/openxla_variable_info.h"
+#include "third_party/xla_client/openxla_variable_info_util.h"
+#include "third_party/xla_client/openxla_xla_activity_listener.h"
+#include "third_party/xla_client/openxla_xla_compile_util.h"
+#include "third_party/xla_client/openxla_xla_compiler_options_util.h"
+#include "third_party/xla_client/openxla_xla_launch_util.h"
+#include "third_party/xla_client/openxla_xla_platform_info.h"
+#include "third_party/xla_client/openxla_tf2xla_util.h"
+#include "third_party/xla_client/openxla_xla_compiler.h"
+#include "third_party/xla_client/openxla_xla_helpers.h"
+#include "third_party/xla_client/openxla_xla_op_registry.h"
+#include "xla/client/local_client.h"
+#include "xla/executable_run_options.h"
+#include "xla/pjrt/pjrt_client.h"
+#include "xla/service/gpu/gpu_executable_run_options.h"
+#include "xla/statusor.h"
+#include "tsl/framework/allocator.h"
+#include "third_party/xla_client/openxla_node_def_util.h"
+#include "third_party/xla_client/openxla_op_kernel.h"
+#include "third_party/xla_client/openxla_op_requires.h"
+#include "third_party/xla_client/openxla_tensor.h"
+#include "third_party/xla_client/openxla_types.h"
+#include "tsl/lib/monitoring/counter.h"
+#include "tsl/platform/env.h"
+#include "tsl/platform/errors.h"
+#include "tsl/platform/refcount.h"
+#include "tsl/platform/statusor.h"
+#include "third_party/xla_client/openxla_stream_executor_no_cuda.h"
+#include "tsl/profiler/lib/traceme.h"
+#include "third_party/xla_client/openxla_stream_executor_util.h"
+#include "tsl/platform/statusor.h"
 
 // OP_REQUIRES_OK_RETURN is the same as OP_REQUIRES_OK except that
 // in error case, it returns RET instead of void.
@@ -70,7 +70,7 @@ limitations under the License.
     }                                                       \
   } while (0)
 
-namespace tensorflow {
+namespace xla {
 
 namespace {
 using XlaDeviceCompiler =
@@ -849,4 +849,4 @@ REGISTER_KERNEL_BUILDER(Name("_XlaRun").Device(DEVICE_GPU).HostMemory("key"),
 // REGISTER_KERNEL_BUILDER(Name("_XlaMerge").Device(DEVICE_CPU), XlaMergeOp);
 // REGISTER_KERNEL_BUILDER(Name("_XlaMerge").Device(DEVICE_GPU), XlaMergeOp);
 
-}  // namespace tensorflow
+}  // namespace xla

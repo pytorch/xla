@@ -20,17 +20,17 @@ limitations under the License.
 #include <string>
 #include <utility>
 
-#include "tensorflow/compiler/jit/xla_device.h"
-#include "tensorflow/compiler/jit/xla_launch_util.h"
-#include "tensorflow/compiler/tf2xla/literal_util.h"
-#include "tensorflow/compiler/tf2xla/shape_util.h"
-#include "tensorflow/compiler/tf2xla/xla_helpers.h"
+#include "third_party/xla_client/openxla_xla_device.h"
+#include "third_party/xla_client/openxla_xla_launch_util.h"
+#include "third_party/xla_client/openxla_literal_util.h"
+#include "third_party/xla_client/openxla_shape_util.h"
+#include "third_party/xla_client/openxla_xla_helpers.h"
 #include "xla/stream_executor/platform/port.h"
 #include "xla/util.h"
-#include "tensorflow/core/common_runtime/device.h"
-#include "tensorflow/core/common_runtime/dma_helper.h"
-#include "tensorflow/core/framework/tensor_reference.h"
-#include "tensorflow/core/platform/mem.h"
+#include "third_party/xla_client/openxla_device.h"
+#include "third_party/xla_client/openxla_dma_helper.h"
+#include "third_party/xla_client/openxla_tensor_reference.h"
+#include "tsl/platform/mem.h"
 
 namespace xla {
 
