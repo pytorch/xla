@@ -434,7 +434,7 @@ def rendezvous(tag: str, payload: bytes,
   xm.mark_step()
 
   # If all payloads are empty, return immediately to avoid more CPU transfers
-  if max_size < 1:
+  if max_size.item() < 1:
     return [b'' for _ in range(sizes.size()[0])]
 
   padded_data = torch.nn.functional.pad(data, (
@@ -443,8 +443,7 @@ def rendezvous(tag: str, payload: bytes,
   )).to(xm.xla_device())
   raw_data = xm.all_gather(padded_data)
   data_list = torch.split(raw_data, max_size)
-
-  payloads = [d[:sz] for d, sz in zip(data_list, sizes)]
+  payloads = [d[:sz] for d, sz in zip(data_list, sizes.cpu())]
   xm.mark_step()
 
   return [bytes(p.cpu().tolist()) for p in payloads]
