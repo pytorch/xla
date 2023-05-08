@@ -422,6 +422,22 @@ std::vector<at::Tensor> GetXlaTensorsFromAten(
   return xla_tensors;
 }
 
+std::vector<at::Tensor> MoveToVirtualDevice(
+    const std::vector<at::Tensor>& aten_tensors) {
+  XLA_CHECK(ShardingUtil::UseVirtualDevice())
+      << "Virtual device not active, please set the `XLA_USE_SPMD` environment "
+         "variable to `1`.";
+  auto device =
+      ParseDeviceString(xla::ComputationClient::Get()->GetDefaultDevice());
+  std::vector<at::Tensor> xla_tensors;
+  xla_tensors.reserve(aten_tensors.size());
+  for (auto& tensor : aten_tensors) {
+    XLATensorPtr xla_tensor = XLATensor::Create(tensor, device);
+    xla_tensors.push_back(bridge::AtenFromXlaTensor(std::move(xla_tensor)));
+  }
+  return xla_tensors;
+}
+
 at::Tensor GetXlaTensorDimensionSize(const at::Tensor& tensor, int64_t dim) {
   XLATensorPtr xtensor = bridge::GetXlaTensor(tensor);
   return bridge::AtenFromXlaTensor(
@@ -919,6 +935,45 @@ void InitXlaModuleBindings(py::module m) {
     }
     return result;
   });
+  m.def("_xla_move_to_virtual_device",
+        [](const std::vector<at::Tensor>& tensors) {
+          std::vector<at::Tensor> result;
+          {
+            NoGilSection nogil;
+            auto xla_tensors = MoveToVirtualDevice(tensors);
+            result.reserve(xla_tensors.size());
+            for (size_t i = 0; i < xla_tensors.size(); ++i) {
+              result.push_back(torch::autograd::make_variable(
+                  xla_tensors[i],
+                  /*requires_grad=*/tensors.at(i).requires_grad()));
+            }
+          }
+          return result;
+        });
+  m.def("_xla_materialize_virtual_tensors",
+        [](const std::vector<at::Tensor>& xtensors) {
+          XLA_CHECK(ShardingUtil::UseVirtualDevice())
+              << "Virtual device not active, please set the `XLA_USE_SPMD` "
+                 "environment variable to `1`.";
+          {
+            NoGilSection nogil;
+            auto virtual_device = GetVirtualDevice().toString();
+            for (auto& tensor : xtensors) {
+              XLATensorPtr xtensor = bridge::GetXlaTensor(tensor);
+              if (xtensor->GetXlaData() == nullptr &&
+                  xtensor->CurrentTensorData().has_value()) {
+                // Start the transfer to physical devices for tensors which
+                // have been deferred via virtual device
+                auto cpu_tensor = xtensor->CurrentTensorData().value();
+                auto xla_data = CreateTensorsData(
+                    std::vector<at::Tensor>{cpu_tensor},
+                    std::vector<std::string>{virtual_device})[0];
+                xtensor->SetXlaData(xla_data);
+                XLAGraphExecutor::Get()->RegisterTensor(xtensor->data());
+              }
+            }
+          }
+        });
   m.def("_xla_get_cpu_tensors", [](const std::vector<at::Tensor>& tensors) {
     std::vector<at::Tensor> result;
     {
