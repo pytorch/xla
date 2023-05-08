@@ -1,3 +1,4 @@
+This has been fixed in tensorflow on 05/03/2023. Whoever wants to upgrade libtpu to a date later than 05/03 can remove this diff file. 
 diff --git a/tensorflow/core/common_runtime/eager/small_constants_optimizer.cc b/tensorflow/core/common_runtime/eager/small_constants_optimizer.cc
 index 0d6b36ea3d1..f7c439fb6aa 100644
 --- a/tensorflow/core/common_runtime/eager/small_constants_optimizer.cc
