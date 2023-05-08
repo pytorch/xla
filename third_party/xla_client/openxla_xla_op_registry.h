@@ -19,16 +19,16 @@ limitations under the License.
 #include <unordered_map>
 #include <vector>
 
-#include "tensorflow/core/common_runtime/device_factory.h"
-#include "tensorflow/core/common_runtime/local_device.h"
-#include "tensorflow/core/framework/device_base.h"
-#include "tensorflow/core/framework/tensor.h"
-#include "tensorflow/core/framework/types.pb.h"
-#include "tensorflow/core/lib/core/status.h"
-#include "tensorflow/core/platform/mem.h"
-#include "tensorflow/core/platform/mutex.h"
-#include "tensorflow/core/platform/thread_annotations.h"
-#include "tensorflow/core/public/session_options.h"
+#include "third_party/xla_client/openxla_device_factory.h"
+#include "third_party/xla_client/openxla_local_device.h"
+#include "third_party/xla_client/device_base.h"
+#include "third_party/xla_client/openxla_tensor.h"
+#include "third_party/xla_client/openxla_types.pb.h"
+#include "tsl/platform/status.h"
+#include "tsl/platform/mem.h"
+#include "tsl/platform/mutex.h"
+#include "tsl/platform/thread_annotations.h"
+#include "third_party/xla_client/openxla_session_options.h"
 
 namespace xla {
 

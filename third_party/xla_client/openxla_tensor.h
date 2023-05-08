@@ -10,8 +10,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#ifndef TENSORFLOW_CORE_FRAMEWORK_TENSOR_H_
-#define TENSORFLOW_CORE_FRAMEWORK_TENSOR_H_
+#ifndef XLA_CLIENT_TENSOR_H_
+#define XLA_CLIENT_TENSOR_H_
 
 #include <cstdint>
 #include <iosfwd>
@@ -19,33 +19,33 @@ limitations under the License.
 #include <type_traits>
 #include <utility>
 
-#include "third_party/eigen3/unsupported/Eigen/CXX11/Tensor"
-#include "tensorflow/core/framework/allocator.h"
-#include "tensorflow/core/framework/tensor_shape.h"
-#include "tensorflow/core/framework/tensor_types.h"
-#include "tensorflow/core/framework/types.h"
-#include "tensorflow/core/framework/types.pb.h"
-#include "tensorflow/core/lib/core/refcount.h"
-#include "tensorflow/core/lib/core/status.h"
-#include "tensorflow/core/lib/core/stringpiece.h"
-#include "tensorflow/core/lib/gtl/inlined_vector.h"
-#include "tensorflow/core/platform/mem.h"
-#include "tensorflow/core/platform/types.h"
+#include "eigen3/unsupported/Eigen/CXX11/Tensor"
+#include "tsl/framework/allocator.h"
+#include "third_party/xla_client/tensor_shape.h"
+#include "third_party/xla_client/openxla_tensor_types.h"
+#include "third_party/xla_client/openxla_types.h"
+#include "third_party/xla_client/openxla_types.pb.h"
+#include "tsl/platform/refcount.h"
+#include "tsl/platform/status.h"
+#include "tsl/platform/stringpiece.h"
+#include "tsl/lib/gtl/inlined_vector.h"
+#include "tsl/platform/mem.h"
+#include "tsl/platform/types.h"
 
-namespace tensorflow {
+namespace xla {
 
 // Forward declarations.  In particular, we forward declare protos so that their
 // symbols can be removed from .so exports.
-class AllocationDescription;
+// class AllocationDescription;
 class OpKernelContext;
-class Tensor;
-class TensorBuffer;
-class TensorCApi;
-class TensorInterface;
-class TensorCord;
-class TensorDescription;
-class TensorProto;
-class Var;
+// class Tensor;
+// class TensorBuffer;
+// class TensorCApi;
+// class TensorInterface;
+// class TensorCord;
+// class TensorDescription;
+// class TensorProto;
+// class Var;
 
 // namespace batch_util {
 // Status CopyElementToSlice(Tensor element, Tensor* parent, int64_t index);
@@ -1087,6 +1087,6 @@ void Tensor::ValueAndTensorBuffer<T>::HostScalarTensorBuffer::operator delete(
 
 // END_SKIP_DOXYGEN
 
-}  // namespace tensorflow
+}  // namespace xla
 
-#endif  // TENSORFLOW_CORE_FRAMEWORK_TENSOR_H_
+#endif  // XLA_CLIENT_TENSOR_H_

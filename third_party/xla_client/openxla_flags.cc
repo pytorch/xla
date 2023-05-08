@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#include "tensorflow/compiler/jit/flags.h"
+#include "third_party/xla_client/openxla_flags.h"
 
 #include <mutex>  // NOLINT
 #include <vector>
@@ -24,7 +24,7 @@ limitations under the License.
 #include "absl/strings/strip.h"
 #include "xla/parse_flags_from_env.h"
 #include "tsl/util/command_line_flags.h"
-#include "openxla_dump_graph.h"
+#include "third_party/xla_client/openxla_dump_graph.h"
 #include "tsl/platform/macros.h"
 
 namespace xla {

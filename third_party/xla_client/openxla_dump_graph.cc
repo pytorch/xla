@@ -23,12 +23,12 @@ limitations under the License.
 #include "llvm/Support/raw_ostream.h"
 #include "mlir/IR/Operation.h"  // from @llvm-project
 #include "mlir/IR/Verifier.h"  // from @llvm-project
-#include "tensorflow/compiler/mlir/tensorflow/utils/error_util.h"
-#include "tensorflow/core/ir/importexport/graphdef_import.h"
-#include "tensorflow/core/platform/env.h"
-#include "tensorflow/core/platform/logging.h"
-#include "tensorflow/core/platform/path.h"
-#include "tensorflow/core/util/dump_graph.h"
+#include "third_party/xla_client/openxla_error_util.h"
+#include "third_party/xla_client/openxla_graphdef_import.h"
+#include "tsl/platform/env.h"
+#include "tsl/platform/logging.h"
+#include "tsl/platform/path.h"
+#include "third_party/xla_client/openxla_core_util_dump_graph.h"
 
 namespace xla {
 

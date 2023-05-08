@@ -13,6 +13,6 @@ limitations under the License.
 #ifndef TENSORFLOW_CORE_LIB_CORE_STATUS_H_
 #define TENSORFLOW_CORE_LIB_CORE_STATUS_H_
 
-#include "tensorflow/core/platform/status.h"  // IWYU pragma: export
+#include "tsl/platform/status.h"  // IWYU pragma: export
 
 #endif  // TENSORFLOW_CORE_LIB_CORE_STATUS_H_

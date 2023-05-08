@@ -10,13 +10,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#include "tensorflow/compiler/tf2xla/layout_util.h"
+#include "third_party/xla_client/openxla_layout_util.h"
 
-#include "tensorflow/compiler/tf2xla/shape_util.h"
-#include "tensorflow/compiler/tf2xla/type_util.h"
-#include "tensorflow/core/lib/core/status.h"
+#include "third_party/xla_client/openxla_shape_util.h"
+#include "third_party/xla_client/openxla_type_util.h"
+#include "tsl/platform/status.h"
 
-namespace tensorflow {
+namespace xla {
 
 XlaShapeLayoutHelpers::ShapeDeterminationFns::ShapeDeterminationFns() {
   layout_preference_fn = UseNoPreferenceLayoutFn();
@@ -118,4 +118,4 @@ XlaShapeLayoutHelpers::LayoutPreferenceFn UseNoPreferenceLayoutFn() {
 //   return xla::Reshape(to_shape, original);
 // }
 
-}  // namespace tensorflow
+}  // namespace xla

@@ -14,9 +14,9 @@ limitations under the License.
 ==============================================================================*/
 
 #include "absl/memory/memory.h"
-#include "tensorflow/compiler/jit/xla_activity.pb.h"
-#include "tensorflow/compiler/jit/xla_activity_listener.h"
-#include "tensorflow/core/platform/logger.h"
+#include "third_party/xla_client/openxla_xla_activity.pb.h"
+#include "third_party/xla_client/openxla_xla_activity_listener.h"
+#include "tsl/platform/logger.h"
 
 namespace xla {
 namespace {

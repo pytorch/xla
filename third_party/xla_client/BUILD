@@ -348,6 +348,42 @@ cc_library(
 #     visibility = [":friends"],
 # )
 
+# openxla_device_attributes_proto
+tf_proto_library(
+    name = "openxla_device_attributes_proto",
+    srcs = ["openxla_device_attributes.proto"],
+    cc_api_version = 2,
+    make_default_target_header_only = True,
+)
+
+# openxla_types_proto
+tf_proto_library(
+    name = "openxla_types_proto",
+    srcs = ["openxla_types.proto"],
+    cc_api_version = 2,
+    make_default_target_header_only = True,
+)
+
+# openxla_full_type_proto
+tf_proto_library(
+    name = "openxla_full_type_proto",
+    srcs = ["openxla_full_type.proto"],
+    cc_api_version = 2,
+    make_default_target_header_only = True,
+    protodeps = [],
+)
+
+# openxla_host_compute_metadata_proto
+tf_proto_library(
+    name = "openxla_host_compute_metadata_proto",
+    srcs = ["openxla_host_compute_metadata.proto"],
+    cc_api_version = 2,
+    protodeps = [
+        # "//tensorflow/core:protos_all",
+    ],
+    visibility = ["//visibility:public"],
+)
+
 # openxla_gpu_device
 cc_library(
     name = "openxla_gpu_device",

@@ -10,7 +10,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#include "tensorflow/core/framework/device_factory.h"
+#include "third_party/xla_client/device_factory.h"
 
 #include <memory>
 #include <string>
@@ -24,42 +24,42 @@ limitations under the License.
 #include "tsl/platform/types.h"
 #include "tsl/platform/strcat.h"
 #include "tsl/util/env_var.h"
-#include "tensorflow/core/framework/device.h"
-#include "tensorflow/core/public/session_options.h"
-#include "tensorflow/core/util/device_name_utils.h"
+#include "third_party/xla_client/openxla_device.h"
+#include "third_party/xla_client/openxla_session_options.h"
+#include "tsl/util/device_name_utils.h"
 
-namespace tensorflow {
+namespace xla {
 
 namespace {
 
-static mutex* get_device_factory_lock() {
-  static mutex device_factory_lock(LINKER_INITIALIZED);
-  return &device_factory_lock;
-}
+// static mutex* get_device_factory_lock() {
+//   static mutex device_factory_lock(LINKER_INITIALIZED);
+//   return &device_factory_lock;
+// }
 
-struct FactoryItem {
-  std::unique_ptr<DeviceFactory> factory;
-  int priority;
-  bool is_pluggable_device;
-};
+// struct FactoryItem {
+//   std::unique_ptr<DeviceFactory> factory;
+//   int priority;
+//   bool is_pluggable_device;
+// };
 
-std::unordered_map<string, FactoryItem>& device_factories() {
-  static std::unordered_map<string, FactoryItem>* factories =
-      new std::unordered_map<string, FactoryItem>;
-  return *factories;
-}
+// std::unordered_map<string, FactoryItem>& device_factories() {
+//   static std::unordered_map<string, FactoryItem>* factories =
+//       new std::unordered_map<string, FactoryItem>;
+//   return *factories;
+// }
 
-bool IsDeviceFactoryEnabled(const string& device_type) {
-  std::vector<string> enabled_devices;
-  TF_CHECK_OK(tensorflow::ReadStringsFromEnvVar(
-      /*env_var_name=*/"TF_ENABLED_DEVICE_TYPES", /*default_val=*/"",
-      &enabled_devices));
-  if (enabled_devices.empty()) {
-    return true;
-  }
-  return std::find(enabled_devices.begin(), enabled_devices.end(),
-                   device_type) != enabled_devices.end();
-}
+// bool IsDeviceFactoryEnabled(const string& device_type) {
+//   std::vector<string> enabled_devices;
+//   TF_CHECK_OK(tensorflow::ReadStringsFromEnvVar(
+//       /*env_var_name=*/"TF_ENABLED_DEVICE_TYPES", /*default_val=*/"",
+//       &enabled_devices));
+//   if (enabled_devices.empty()) {
+//     return true;
+//   }
+//   return std::find(enabled_devices.begin(), enabled_devices.end(),
+//                    device_type) != enabled_devices.end();
+// }
 }  // namespace
 
 // static
@@ -278,4 +278,4 @@ std::unique_ptr<Device> DeviceFactory::NewDevice(const string& type,
   return std::move(devices[0]);
 }
 
-}  // namespace tensorflow
+}  // namespace xla

@@ -16,9 +16,9 @@ limitations under the License.
 #include <memory>
 #include <optional>
 
-#include "tensorflow/compiler/jit/device_compiler.h"
-#include "tensorflow/compiler/jit/pjrt_base_device.h"
-#include "tensorflow/compiler/jit/xla_device.h"
+#include "third_party/xla_client/openxla_device_compiler.h"
+#include "third_party/xla_client/openxla_pjrt_base_device.h"
+#include "third_party/xla_client/openxla_xla_device.h"
 #include "xla/stream_executor/tf_allocator_adapter.h"
 
 namespace xla {

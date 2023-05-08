@@ -15,21 +15,21 @@ limitations under the License.
 #ifndef XLA_CLIENT_XLA_DEVICE_OPS_H_
 #define XLA_CLIENT_XLA_DEVICE_OPS_H_
 
-#include "tensorflow/core/framework/op_kernel.h"
-#include "tensorflow/core/framework/resource_mgr.h"
-#include "tensorflow/core/kernels/constant_op.h"
-#include "tensorflow/core/kernels/data/finalize_dataset_op.h"
-#include "tensorflow/core/kernels/data/generator_dataset_op.h"
-#include "tensorflow/core/kernels/data/iterator_ops.h"
-#include "tensorflow/core/kernels/data/optional_ops.h"
-#include "tensorflow/core/kernels/data/options_dataset_op.h"
-#include "tensorflow/core/kernels/data/prefetch_dataset_op.h"
-#include "tensorflow/core/kernels/fifo_queue.h"
-#include "tensorflow/core/kernels/function_ops.h"
-#include "tensorflow/core/kernels/identity_op.h"
-#include "tensorflow/core/kernels/resource_variable_ops.h"
-#include "tensorflow/core/kernels/shape_ops.h"
-#include "tensorflow/core/kernels/variable_ops.h"
+#include "third_party/xla_client/openxla_op_kernel.h"
+#include "third_party/xla_client/openxla_resource_mgr.h"
+#include "third_party/xla_client/openxla_constant_op.h"
+#include "third_party/xla_client/openxla_finalize_dataset_op.h"
+#include "third_party/xla_client/openxla_generator_dataset_op.h"
+#include "third_party/xla_client/openxla_iterator_ops.h"
+#include "third_party/xla_client/openxla_optional_ops.h"
+#include "third_party/xla_client/openxla_options_dataset_op.h"
+#include "third_party/xla_client/openxla_prefetch_dataset_op.h"
+#include "third_party/xla_client/openxla_fifo_queue.h"
+#include "third_party/xla_client/openxla_function_ops.h"
+#include "third_party/xla_client/openxla_identity_op.h"
+#include "third_party/xla_client/openxla_resource_variable_ops.h"
+#include "third_party/xla_client/openxla_shape_ops.h"
+#include "third_party/xla_client/openxla_variable_ops.h"
 
 namespace xla {
 

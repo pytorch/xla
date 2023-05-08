@@ -10,7 +10,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#include "tensorflow/core/framework/function.h"
+#include "third_party/xla_client/openxla_function.h"
 
 #include <ctype.h>
 
@@ -23,24 +23,24 @@ limitations under the License.
 #include "absl/strings/escaping.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_join.h"
-#include "tensorflow/core/framework/allocator.h"
-#include "tensorflow/core/framework/common_shape_fns.h"
-#include "tensorflow/core/framework/function.pb.h"
-#include "tensorflow/core/framework/graph.pb.h"
-#include "tensorflow/core/framework/graph_debug_info.pb.h"
-#include "tensorflow/core/framework/node_def.pb.h"
-#include "tensorflow/core/framework/node_def_util.h"
-#include "tensorflow/core/framework/op.h"
-#include "tensorflow/core/graph/graph.h"
-#include "tensorflow/core/lib/core/errors.h"
-#include "tensorflow/core/lib/gtl/inlined_vector.h"
-#include "tensorflow/core/lib/gtl/map_util.h"
-#include "tensorflow/core/lib/strings/proto_serialization.h"
-#include "tensorflow/core/platform/fingerprint.h"
-#include "tensorflow/core/platform/refcount.h"
-#include "tensorflow/core/util/device_name_utils.h"
-#include "tensorflow/core/util/equal_graph_def.h"
-#include "tensorflow/tsl/platform/errors.h"
+#include "tsl/framework/allocator.h"
+#include "third_party/xla_client/openxla_common_shape_fns.h"
+#include "third_party/xla_client/openxla_function.pb.h"
+#include "third_party/xla_client/openxla_graph.pb.h"
+#include "third_party/xla_client/openxla_graph_debug_info.pb.h"
+#include "third_party/xla_client/openxla_node_def.pb.h"
+#include "third_party/xla_client/openxla_node_def_util.h"
+#include "third_party/xla_client/openxla_op.h"
+#include "third_party/xla_client/openxla_graph.h"
+#include "tsl/platform/errors.h"
+#include "tsl/lib/gtl/inlined_vector.h"
+#include "tsl/lib/gtl/map_util.h"
+#include "tsl/lib/strings/proto_serialization.h"
+#include "tsl/platform/fingerprint.h"
+#include "tsl/platform/refcount.h"
+#include "tsl/util/device_name_utils.h"
+#include "third_party/xla_client/openxla_equal_graph_def.h"
+#include "tsl/platform/errors.h"
 
 namespace tensorflow {
 
