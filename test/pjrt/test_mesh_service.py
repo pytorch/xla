@@ -55,7 +55,8 @@ class PjRtMeshServiceTest(parameterized.TestCase):
     return met.counter_value('xla::_to_cpu')
 
   def test_rendezvous_default_payload_cpu_transfers(self):
-    results = pjrt._run_multiprocess(self.rendezvous_default_payload_cpu_transfers)
+    results = pjrt._run_multiprocess(
+        self.rendezvous_default_payload_cpu_transfers)
 
     # Expect one CPU transfer: the max size of all payloads
     for val in results.values():
