@@ -1,13 +1,15 @@
 {
   "name": "pytorch_xla",
   "image": "us-central1-docker.pkg.dev/tpu-pytorch/docker/development:tpu",
-  "runArgs": [
-    "--privileged"
-  ],
+  "privileged": true,
+  "containerEnv": {
+    "TPUVM_MODE": "1",
+    "BAZEL_REMOTE_CACHE": "1",
+    "SILO_NAME": "cache-silo-${localEnv:USER}"
+  },
   "initializeCommand": "docker pull us-central1-docker.pkg.dev/tpu-pytorch/docker/development:tpu",
   "customizations": {
     "vscode": {
-      "settings": {},
       "extensions": [
         "llvm-vs-code-extensions.vscode-clangd",
         "ms-vscode.cpptools-themes",
@@ -17,7 +19,8 @@
         "StackBuild.bazel-stack-vscode-cc",
         "xaver.clang-format",
         "ryanluker.vscode-coverage-gutters",
-        "ms-azuretools.vscode-docker"
+        "ms-azuretools.vscode-docker",
+        "ms-python.python"
       ]
     }
   }
