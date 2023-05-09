@@ -39,20 +39,21 @@ http_archive(
     patch_tool = "patch",
     patches = [
         "//tf_patches:cache_urls.diff",
-        "//tf_patches:cpu_dynamic_shape.diff",
         "//tf_patches:f16_abi_clang.diff",
+        "//tf_patches:gpu_hlo_schedule.diff",
         "//tf_patches:gpu_race_condition.diff",
         "//tf_patches:grpc_version.diff",
+        "//tf_patches:optimized_function_graph.diff",
+        "//tf_patches:small_constants_optimizer.diff",
         "//tf_patches:stream_executor.diff",
         "//tf_patches:thread_local_random.diff",
-        "//tf_patches:xplane.diff",
         "//tf_patches:topk_rewriter.diff",
-        "//tf_patches:local_rendezvous.diff",
         "//tf_patches:triton_filesystem.diff",
+        "//tf_patches:xplane.diff",
     ],
-    strip_prefix = "tensorflow-5e229cfaa3c13c389f864b0ed38877fb61936161",
+    strip_prefix = "tensorflow-48b5f9f5a468f849a4628600b6eae407de0e01b5",
     urls = [
-        "https://github.com/tensorflow/tensorflow/archive/5e229cfaa3c13c389f864b0ed38877fb61936161.tar.gz",
+        "https://github.com/tensorflow/tensorflow/archive/48b5f9f5a468f849a4628600b6eae407de0e01b5.tar.gz",
     ],
 )
 
