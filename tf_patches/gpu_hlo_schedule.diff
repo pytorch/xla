@@ -1,3 +1,4 @@
+This should have been fixed in tf. It fails to build probably because absl::string_view maps to std::string_view in google3 vs in OSS that may not be the case. Whoever wants to upgrade libtpu to a date later than 05/03 should be able to remove this diff file.
 diff --git a/tensorflow/compiler/xla/service/gpu/gpu_hlo_schedule.cc b/tensorflow/compiler/xla/service/gpu/gpu_hlo_schedule.cc
 index 1197bc8b323..b4809b50e4f 100644
 --- a/tensorflow/compiler/xla/service/gpu/gpu_hlo_schedule.cc
