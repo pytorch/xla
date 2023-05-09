@@ -67,7 +67,7 @@ Google Cloud offers TPU VMs for more transparent and easier access to the TPU ha
 
 ## How to Run on TPU VM Pods (distributed training)
 
-If a single TPU VM does not suit your requirment, you can consider using TPU Pod. TPU Pod is a collection of TPU devices connected by dedicated high-speed network interfaces. Please checkout our [Cloud TPU VM Pod User Guide](https://cloud.google.com/tpu/docs/pytorch-pods).
+If a single TPU VM does not suit your requirement, you can consider using TPU Pod. TPU Pod is a collection of TPU devices connected by dedicated high-speed network interfaces. Please checkout our [Cloud TPU VM Pod User Guide](https://cloud.google.com/tpu/docs/pytorch-pods).
 
 
 ## Available docker images and wheels

@@ -89,7 +89,7 @@ To build from source:
   python setup.py install
   ```
 
-## Before Submiting A Pull Request:
+## Before Submitting A Pull Request:
 
 In `pytorch/xla` repo we enforce coding style for both C++ and Python files. Please try to format
 your code before submitting a pull request.
@@ -97,20 +97,20 @@ your code before submitting a pull request.
 ### C++ Style Guide
 
 `pytorch/xla` uses `clang-format-7` with a customized style config.
-If your PR touches the C++ source files, please run the following command before submmiting a PR.
+If your PR touches the C++ source files, please run the following command before submitting a PR.
 
 ```Shell
 # How to install: sudo apt install clang-format-7
 # If your PR only changes foo.cpp, run the following in xla/ folder
 clang-format-7 -i -style=file /PATH/TO/foo.cpp
-# To format all cpp files, run the follwoing in xla/ folder
+# To format all cpp files, run the following in xla/ folder
 find -name '*.cpp' -o -name '*.h' | xargs clang-format-7 -i -style=file
 ```
 
 ### Python Style Guide
 
 `pytorch/xla` uses `yapf`(specially version 0.30.0 in case it's not backward compatible) with a customized style config.
-If your PR touches the Python source files, please run the following command before submmiting a PR.
+If your PR touches the Python source files, please run the following command before submitting a PR.
 
 ```Shell
 # How to install: pip install yapf==0.30.0
