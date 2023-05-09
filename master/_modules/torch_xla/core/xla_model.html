@@ -773,7 +773,7 @@
 <span class="sd">    pin_layout (bool, optional): whether to pin the layout for this communication op.</span>
 <span class="sd">      Layout pining can prevent potential data corruption when each process that</span>
 <span class="sd">      participate in the communication has slightly different program, but it might</span>
-<span class="sd">      cause some xla compiation to fail. Unpin the layout when you see error message</span>
+<span class="sd">      cause some xla compilation to fail. Unpin the layout when you see error message</span>
 <span class="sd">      like &quot;HloModule has a mix of layout constrained&quot;.</span>
 
 <span class="sd">  Returns:</span>
@@ -821,7 +821,7 @@
 <span class="sd">    pin_layout (bool, optional): whether to pin the layout for this communication op.</span>
 <span class="sd">      Layout pining can prevent potential data corruption when each process that</span>
 <span class="sd">      participate in the communication has slightly different program, but it might</span>
-<span class="sd">      cause some xla compiation to fail. Unpin the layout when you see error message</span>
+<span class="sd">      cause some xla compilation to fail. Unpin the layout when you see error message</span>
 <span class="sd">      like &quot;HloModule has a mix of layout constrained&quot;.</span>
 
 <span class="sd">  Returns:</span>
@@ -863,7 +863,7 @@
 <span class="sd">    pin_layout (bool, optional): whether to pin the layout for this communication op.</span>
 <span class="sd">      Layout pining can prevent potential data corruption when each process that</span>
 <span class="sd">      participate in the communication has slightly different program, but it might</span>
-<span class="sd">      cause some xla compiation to fail. Unpin the layout when you see error message</span>
+<span class="sd">      cause some xla compilation to fail. Unpin the layout when you see error message</span>
 <span class="sd">      like &quot;HloModule has a mix of layout constrained&quot;.</span>
 
 <span class="sd">  Returns:</span>
@@ -922,7 +922,7 @@
 <span class="sd">    pin_layout (bool, optional): whether to pin the layout for this communication op.</span>
 <span class="sd">      Layout pining can prevent potential data corruption when each process that</span>
 <span class="sd">      participate in the communication has slightly different program, but it might</span>
-<span class="sd">      cause some xla compiation to fail. Unpin the layout when you see error message</span>
+<span class="sd">      cause some xla compilation to fail. Unpin the layout when you see error message</span>
 <span class="sd">      like &quot;HloModule has a mix of layout constrained&quot;.</span>
 
 <span class="sd">  Returns:</span>
@@ -978,7 +978,7 @@
 <span class="sd">    pin_layout (bool, optional): whether to pin the layout for this communication op.</span>
 <span class="sd">      Layout pining can prevent potential data corruption when each process that</span>
 <span class="sd">      participate in the communication has slightly different program, but it might</span>
-<span class="sd">      cause some xla compiation to fail. Unpin the layout when you see error message</span>
+<span class="sd">      cause some xla compilation to fail. Unpin the layout when you see error message</span>
 <span class="sd">      like &quot;HloModule has a mix of layout constrained&quot;.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">():</span>
@@ -1055,11 +1055,11 @@
 <span class="sd">    pin_layout (bool, optional): whether to pin the layout for this communication op.</span>
 <span class="sd">      Layout pining can prevent potential data corruption when each process that</span>
 <span class="sd">      participate in the communication has slightly different program, but it might</span>
-<span class="sd">      cause some xla compiation to fail. Unpin the layout when you see error message</span>
+<span class="sd">      cause some xla compilation to fail. Unpin the layout when you see error message</span>
 <span class="sd">      like &quot;HloModule has a mix of layout constrained&quot;.</span>
 
 <span class="sd">  Returns:</span>
-<span class="sd">    A `torch.Tensor` with all the values reduced accross replicas. Each process</span>
+<span class="sd">    A `torch.Tensor` with all the values reduced across replicas. Each process</span>
 <span class="sd">    gets a shard split along the `scatter_dim`. All other dimensions are</span>
 <span class="sd">    the same as the input.</span>
 <span class="sd">  &quot;&quot;&quot;</span>

@@ -339,8 +339,8 @@
   <span class="k">return</span> <span class="kc">False</span>
 
 
-<span class="c1"># TODO: Some usages of this function are to caculate the number of hosts (a TPU concept),</span>
-<span class="c1"># and some are to caculate the number of processes within a world (which can span multiple hosts).</span>
+<span class="c1"># TODO: Some usages of this function are to calculate the number of hosts (a TPU concept),</span>
+<span class="c1"># and some are to calculate the number of processes within a world (which can span multiple hosts).</span>
 <span class="c1"># The latter should really be what this function is supposed to do. It&#39;s so confusing. We</span>
 <span class="c1"># should improve it.</span>
 <span class="k">def</span> <span class="nf">_get_world_size</span><span class="p">():</span>
@@ -440,9 +440,9 @@
   <span class="n">world_size</span> <span class="o">=</span> <span class="n">host_world_size</span> <span class="o">*</span> <span class="n">pf_cfg</span><span class="o">.</span><span class="n">num_devices</span>
   <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">WORLD_SIZE</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">world_size</span><span class="p">)</span>
   <span class="k">if</span> <span class="n">pf_cfg</span><span class="o">.</span><span class="n">dev_kind</span> <span class="o">==</span> <span class="s1">&#39;CPU&#39;</span><span class="p">:</span>
-    <span class="c1"># Since XLA CPU does not support across device reduces, and suport only one</span>
-    <span class="c1"># device per process, we make each CPU device look like if it was a single</span>
-    <span class="c1"># process host, and use torch.distributed for inter-host reductions.</span>
+    <span class="c1"># Since XLA CPU does not support across device reduces, and support only</span>
+    <span class="c1"># one device per process, we make each CPU device look like if it was a</span>
+    <span class="c1"># single process host, and use torch.distributed for inter-host reductions.</span>
     <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">HOST_WORLD_SIZE</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">world_size</span><span class="p">)</span>
   <span class="k">else</span><span class="p">:</span>
     <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">xenv</span><span class="o">.</span><span class="n">HOST_WORLD_SIZE</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">host_world_size</span><span class="p">)</span>
