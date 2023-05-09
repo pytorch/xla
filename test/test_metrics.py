@@ -186,7 +186,7 @@ class MetricsTest(unittest.TestCase):
     self.assertGreater(execute_time_ns, .5 * wall_time_ns)
   def test_transfer_to_server_time(self):
     device = xm.xla_device()
-    tensor = torch.ones_like(128,3,224,224)
+    tensor = torch.ones(128,3,224,224)
     begin = time.perf_counter_ns()
     tensor = xm.send_cpu_data_to_device(tensor, device)
     wall_time_ns = time.perf_counter_ns() - begin
