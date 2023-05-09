@@ -117,9 +117,13 @@ To run on [compute instances with GPUs](https://cloud.google.com/compute/docs/gp
 ### Wheel
 | Version | Cloud TPU VMs Wheel |
 | --- | ----------- |
-| 2.0 | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.0-cp38-cp38-linux_x86_64.whl` |
-| 1.13 | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-1.13-cp38-cp38-linux_x86_64.whl` |
-| nightly | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-nightly-cp38-cp38-linux_x86_64.whl` |
+| 2.0 | `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-2.0-cp38-cp38-linux_x86_64.whl` |
+| 1.13 | `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.13-cp38-cp38-linux_x86_64.whl` |
+| 1.12 | `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.12-cp38-cp38-linux_x86_64.whl` |
+| 1.11 | `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.11-cp38-cp38-linux_x86_64.whl` |
+| 1.10 | `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.10-cp38-cp38-linux_x86_64.whl` |
+| nightly < 2024/05/02 |  `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-nightly-cp38-cp38-linux_x86_64.whl` |
+| nightly > 2024/05/01| `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-nightly-cp38-cp38-linux_x86_64.whl` |
 
 <br/>
 
@@ -135,18 +139,22 @@ Note: For TPU Pod customers using XRT (our legacy runtime), we have custom wheel
 
 | Version | GPU Wheel + Python 3.8 |
 | --- | ----------- |
-| 2.0 + CUDA 11.8 | `https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/11.8/torch_xla-2.0-cp38-cp38-linux_x86_64.whl` |
-| 2.0 + CUDA 11.7 | `https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/11.7/torch_xla-2.0-cp38-cp38-linux_x86_64.whl` |
-| 1.13 | `https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/11.2/torch_xla-1.13-cp38-cp38-linux_x86_64.whl` |
-| nightly + CUDA 11.7 | `https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/11.7/torch-nightly-cp38-cp38-linux_x86_64.whl` |
-| nightly + CUDA 11.8 | `https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/11.8/torch_xla-nightly-cp38-cp38-linux_x86_64.whl` |
+| 2.0 + CUDA 11.8 | `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/118/torch_xla-2.0-cp38-cp38-linux_x86_64.whl` |
+| 2.0 + CUDA 11.7 | `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/117/torch_xla-2.0-cp38-cp38-linux_x86_64.whl` |
+| 1.13 | `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/112/torch_xla-1.13-cp38-cp38-linux_x86_64.whl` |
+| nightly + CUDA 11.7 < 2024/05/02| `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/117/torch_xla-nightly-cp38-cp38-linux_x86_64.whl` |
+| nightly + CUDA 11.7 > 2024/05/01| `https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/11.7/torch-nightly-cp38-cp38-linux_x86_64.whl` |
+| nightly + CUDA 11.8 < 2024/05/02| `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/118/torch_xla-nightly-cp38-cp38-linux_x86_64.whl` |
+| nightly + CUDA 11.8 > 2024/05/01| `https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/11.8/torch_xla-nightly-cp38-cp38-linux_x86_64.whl` |
 
 <br/>
 
 | Version | GPU Wheel + Python 3.7 |
 | --- | ----------- |
-| 1.13 | `https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/11.2/torch_xla-1.13-cp37-cp37m-linux_x86_64.whl` |
-| 1.12 | `https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/11.2/torch_xla-1.12-cp37-cp37m-linux_x86_64.whl` |
+| 1.13 | `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/112/torch_xla-1.13-cp37-cp37m-linux_x86_64.whl` |
+| 1.12 | `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/112/torch_xla-1.12-cp37-cp37m-linux_x86_64.whl` |
+| 1.11 | `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/112/torch_xla-1.11-cp37-cp37m-linux_x86_64.whl` |
+| nightly | `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/112/torch_xla-nightly-cp37-cp37-linux_x86_64.whl` |
 
 <br/>
 
