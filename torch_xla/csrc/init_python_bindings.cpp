@@ -832,7 +832,7 @@ void BuildProfilerSubmodule(py::module* m) {
           }
         }
         if (!status.ok()) {
-          PyErr_SetString(PyExc_RuntimeError, status.error_message());
+          PyErr_SetString(PyExc_RuntimeError, std::string(status.message()));
           throw py::error_already_set();
         }
       },

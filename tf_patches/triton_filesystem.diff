@@ -1,12 +1,26 @@
-diff --git a/third_party/triton/cl518645628.patch b/third_party/triton/cl518645628.patch
-index a180e6114f4..0e23f4af975 100644
---- a/third_party/triton/cl518645628.patch
-+++ b/third_party/triton/cl518645628.patch
-@@ -10,6 +10,30 @@
-          "@llvm-project//mlir:ConversionPasses",
-          "@llvm-project//mlir:ExecutionEngine",
-          "@llvm-project//mlir:ExecutionEngineUtils",
-+@@ -311,6 +311,7 @@ cc_library(
+This diff tries to fix a compilation error that std::filesystem cannot be found.
+diff --git a/third_party/triton/cl526173620.patch b/third_party/triton/cl526173620.patch
+index b1addd9b585..8516a725680 100644
+--- a/third_party/triton/cl526173620.patch
++++ b/third_party/triton/cl526173620.patch
+@@ -79,3 +79,82 @@
+        rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, newRet);
+        return mlir::success();
+      }
++
++diff --git a/BUILD b/BUILD
++index b6b2357..18be1fc 100644
++--- a/BUILD
+++++ b/BUILD
++@@ -277,6 +277,7 @@ cc_library(
++     srcs = glob(["lib/Dialect/Triton/IR/*.cpp"]),
++     hdrs = glob(["include/triton/Dialect/Triton/IR/*.h"]),
++     copts = ["-Wno-unused-variable"],  # TODO(manany): fix
+++    linkopts = ["-lstdc++fs"],
++     includes = ["include"],
++     deps = [
++         ":triton_dialect_inc_gen",
++@@ -329,6 +330,7 @@ cc_library(
 +         "include/triton/Dialect/TritonGPU/IR/*.h",
 +     ]),
 +     copts = ["-Wno-unused-variable"],  # TODO(csigg): fix
@@ -14,7 +28,7 @@ index a180e6114f4..0e23f4af975 100644
 +     includes = ["include"],
 +     deps = [
 +         ":TritonDialect",
-+@@ -339,6 +340,7 @@ cc_library(
++@@ -357,6 +359,7 @@ cc_library(
 +     ]),
 +     hdrs = glob(["include/triton/Dialect/TritonGPU/Transforms/*.h"]),
 +     copts = ["-Wno-unused-variable"],  # TODO(csigg): fix
@@ -22,22 +36,19 @@ index a180e6114f4..0e23f4af975 100644
 +     includes = ["include"],
 +     deps = [
 +         ":TritonDialect",
-+@@ -373,6 +375,7 @@ cc_library(
++@@ -392,6 +395,7 @@ cc_library(
 +         "include/triton/Conversion/TritonGPUToLLVM/*.h",
 +     ]),
 +     copts = ["-Wno-unused-variable"],  # TODO(csigg): fix
 ++    linkopts = ["-lstdc++fs"],
-+     includes = ["include"],
-+     deps = [
-+         ":TritonAnalysis",
- ==== triton/lib/Target/LLVMIR/LLVMIRTranslation.cpp#9 - triton/lib/Target/LLVMIR/LLVMIRTranslation.cpp#10 ====
- # action=edit type=text
- --- triton/lib/Target/LLVMIR/LLVMIRTranslation.cpp	2023-03-10 07:24:02.000000000 -0800
-@@ -30,3 +54,41 @@
-    mlir::registerLLVMDialectTranslation(registry);
-    mlir::registerNVVMDialectTranslation(registry);
-    module->getContext()->appendDialectRegistry(registry);
-+@@ -23,7 +24,7 @@
++     includes = [
++         "include",
++         "lib/Conversion/TritonGPUToLLVM",
++diff --git a/lib/Target/LLVMIR/LLVMIRTranslation.cpp b/lib/Target/LLVMIR/LLVMIRTranslation.cpp
++index a7ea05a..92bddc5 100644
++--- a/lib/Target/LLVMIR/LLVMIRTranslation.cpp
+++++ b/lib/Target/LLVMIR/LLVMIRTranslation.cpp
++@@ -26,7 +26,7 @@
 + #include "llvm/Linker/Linker.h"
 + #include "llvm/Support/SourceMgr.h"
 + #include <dlfcn.h>
@@ -46,7 +57,7 @@ index a180e6114f4..0e23f4af975 100644
 + #include <iterator>
 + 
 + namespace mlir {
-+@@ -143,16 +144,16 @@ static std::map<std::string, std::string> getExternLibs(mlir::ModuleOp module) {
++@@ -152,16 +152,16 @@ static std::map<std::string, std::string> getExternLibs(mlir::ModuleOp module) {
 +       externLibs.try_emplace(libdevice, env_path);
 +       return externLibs;
 +     }
@@ -66,7 +77,7 @@ index a180e6114f4..0e23f4af975 100644
 +     }();
 +     static const auto runtime_path =
 +         this_library_path.parent_path().parent_path() / "third_party" / "cuda" /
-+@@ -165,7 +166,7 @@ static std::map<std::string, std::string> getExternLibs(mlir::ModuleOp module) {
++@@ -174,7 +174,7 @@ static std::map<std::string, std::string> getExternLibs(mlir::ModuleOp module) {
 +       // using its default path:
 +       // [triton root dir]/python/triton/language/libdevice.10.bc
 +       // TODO(Keren): handle external linkage other than libdevice?
