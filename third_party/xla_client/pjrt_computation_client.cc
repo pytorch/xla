@@ -228,6 +228,11 @@ ComputationClient::DataPtr PjRtComputationClient::TransferShardsToServer(
     xla::Shape shape, xla::OpSharding sharding) {
   TF_VLOG(1) << "TransferShardsToServer with " << tensor_shards.size()
              << " shards.";
+  // TODO(jonbolin): Consider using CopyToDevice when sharding is REPLICATED.
+  // We are opting out of CopyToDevice for now due to the synchronization
+  // issues observed in ShardingUtil::InputHandler, but because CopyToDevice
+  // directly copies buffers between devices using ICI, it can be much faster
+  // than transferring from the host to each device.
   auto data_shards = TransferToServer(tensor_shards);
   std::vector<std::shared_ptr<PjRtData>> pjrt_data_shards;
   for (auto& shard : data_shards) {
@@ -265,6 +270,10 @@ ComputationClient::DataPtr PjRtComputationClient::ReplicateShardedData(
           dynamic_cast<PjRtShardedData*>(handle.get())) {
     TF_VLOG(1) << "ReplicateShardedData (handle=" << handle->GetOpaqueHandle()
                << ", shape=" << handle->shape() << ")";
+    if (sharded_data->GetSharding().type() == xla::OpSharding::REPLICATED) {
+      // Data is replicated, return the first shard
+      return sharded_data->shards[0];
+    }
     xla::XlaBuilder b("ReplicateShardedData");
     xla::Shape shape = sharded_data->shape();
     b.SetSharding(sharded_data->GetSharding());

@@ -157,5 +157,4 @@ class ShardingSpec:
   def apply(self, t: torch.Tensor):
     # TODO(yeounoh) use virtual device interface when available.
     assert (t.device == xm.xla_device())
-    assert (xu.check_env_flag('XLA_USE_SPMD'))
     mark_sharding(t, self.mesh, self.partition_spec)

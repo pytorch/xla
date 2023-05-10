@@ -872,11 +872,16 @@ void XLAGraphExecutor::ExtractIRAndPrepareXlaData_(
     torch::lazy::BackendDataPtr handle =
         WrapXlaData(xla::ComputationClient::Get()->CreateDataPlaceholder(
             tensor_device.toString(), std::move(shape)));
-    // Create sharded data placeholder, this will be used to
-    // hold the corresponding computation results.
-    if (tensor->sharding_spec()) {
+    if (ShardingUtil::UseVirtualDevice()) {
+      // Create sharded data placeholder, this will be used to
+      // hold the corresponding computation results.
       auto sharding = tensor->sharding_spec();
-      if (!sharding->shape.has_value()) {
+      if (!sharding) {
+        // Implicitly replicate tensors without a user-provided sharding
+        // annotation.
+        sharding = std::make_shared<XLATensor::ShardingSpec>(
+            xla::HloSharding::Replicate().ToProto(), tensor->shape());
+      } else if (!sharding->shape.has_value()) {
         sharding->shape = tensor->shape();
       }
       handle = WrapXlaData(xla::ComputationClient::Get()->WrapDataShards(

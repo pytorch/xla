@@ -2,6 +2,7 @@ import copy
 
 import unittest
 import numpy as np
+import os
 
 import torch
 from torch import nn
@@ -14,6 +15,11 @@ import test_xla_sharding_base
 
 
 class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
+
+  @classmethod
+  def setUpClass(cls):
+    os.environ["XLA_USE_SPMD"] = "1"
+    super().setUpClass()
 
   def test_xla_sharded_tensor(self):
     partition_spec = (0, 1)
