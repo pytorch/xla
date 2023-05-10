@@ -455,15 +455,20 @@ void XLAGraphExecutor::ClearPendingIrs(
         tensors[i]->CurrentDataHandle() == nullptr) {
       torch::lazy::Value ir_value = tensors[i]->CurrentIrValue();
       // Only clear the IR that is not a DeviceData Node.
-      if (ir_value &&
-          torch_xla::DeviceData::Cast(ir_value.node.get()) == nullptr) {
-        xla::Shape shape = MakeShapeWithDeviceLayout(
-            tensors[i]->shape(), static_cast<XlaDeviceType>(device.type()));
-        torch::lazy::BackendDataPtr handle =
-            WrapXlaData(xla::ComputationClient::Get()->CreateDataPlaceholder(
-                device.toString(), std::move(shape)));
+      if (ir_value) {
+        DeviceData* device_data =
+            torch_xla::DeviceData::Cast(ir_value.node.get());
+        if (device_data != nullptr) {
+          tensors[i]->data()->handle = device_data->data();
+        } else {
+          xla::Shape shape = MakeShapeWithDeviceLayout(
+              tensors[i]->shape(), static_cast<XlaDeviceType>(device.type()));
+          torch::lazy::BackendDataPtr handle =
+              WrapXlaData(xla::ComputationClient::Get()->CreateDataPlaceholder(
+                  device.toString(), std::move(shape)));
+          tensors[i]->data()->handle = handle;
+        }
         tensors[i]->AssignIrValue(torch::lazy::Value());
-        tensors[i]->data()->handle = handle;
         tensors[i]->data()->view = nullptr;
         tensors[i]->data()->tensor_data = c10::nullopt;
       }
