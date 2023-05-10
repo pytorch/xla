@@ -1625,7 +1625,8 @@ void InitXlaModuleBindings(py::module m) {
 
   // -------------Dynamo Integration API Start-------------------------
   /*
-   * Return tensor ids and tensors for DeviceData nodes.
+   * Return tensor ids and at::tensors for all DeviceData nodes that is needed
+   * to compute the value of tensors.
    */
   m.def("_get_tensors_xla_device_data_node",
         [](const std::vector<at::Tensor>& tensors)
