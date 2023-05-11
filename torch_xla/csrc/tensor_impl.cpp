@@ -81,6 +81,8 @@ XLATensorImpl::XLATensorImpl(XLATensor&& tensor)
     key_set_ = (key_set_ - autocast_xla_ks) | autocast_cuda_ks;
   }
   is_non_overlapping_and_dense_ = false;
+  const_cast<XLATensorImpl*>(this)->SetupSizeProperties();
+  set_sizes_and_strides(c10::SymIntArrayRef(sym_sizes_.data(), sym_sizes_.size()), c10::fromIntArrayRefSlow(strides_default()));
   set_custom_sizes_strides(SizesStridesPolicy::CustomSizes);
 }
 
@@ -132,8 +134,7 @@ void XLATensorImpl::shallow_copy_from(
 }
 
 at::IntArrayRef XLATensorImpl::sizes_custom() const {
-  xla::Shape xla_shape = tensor_->shape().get();
-  XLA_CHECK(!xla_shape.is_dynamic())
+  XLA_CHECK(!has_symbolic_sizes_strides_)
       << "Cannot call sizes_custom() on an XLA tensor with symbolic "
          "sizes/strides";
   const_cast<XLATensorImpl*>(this)->SetupSizeProperties();
