@@ -1296,8 +1296,6 @@ at::Tensor& XLANativeFunctions::eye_out(int64_t n, int64_t m, at::Tensor& out) {
 
 at::Tensor& XLANativeFunctions::fill_(at::Tensor& self,
                                       const at::Scalar& value) {
-  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__
-            << "function=" << __FUNCTION__ << ": " << std::endl;
   TORCH_LAZY_FN_COUNTER("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   tensor_methods::fill_(self_tensor, value);
@@ -1306,8 +1304,6 @@ at::Tensor& XLANativeFunctions::fill_(at::Tensor& self,
 
 at::Tensor& XLANativeFunctions::fill_(at::Tensor& self,
                                       const at::Tensor& value) {
-  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__
-            << "function=" << __FUNCTION__ << ": " << std::endl;
   TORCH_LAZY_FN_COUNTER("xla::");
   XLA_CHECK_EQ(value.dim(), 0) << "fill_ only supports a 0-dimensional "
                                << "value tensor, but got tensor "
