@@ -42,7 +42,9 @@ class Feedforward(torch.nn.Module):
     output = self.sigmoid(output)
     return output
 
+
 class CNN(torch.nn.Module):
+
   def __init__(self, input_size, hidden_size):
     super().__init__()
     self.conv1 = torch.nn.Conv2d(3, 6, 5)
@@ -51,15 +53,16 @@ class CNN(torch.nn.Module):
     self.fc1 = torch.nn.Linear(16 * 5 * 5, 120)
     self.fc2 = torch.nn.Linear(120, 84)
     self.fc3 = torch.nn.Linear(84, 10)
- 
+
   def forward(self, x):
     x = self.pool(F.relu(self.conv1(x)))
     x = self.pool(F.relu(self.conv2(x)))
-    x = torch.flatten(x, 1) # flatten all dimensions except batch
+    x = torch.flatten(x, 1)  # flatten all dimensions except batch
     x = F.relu(self.fc1(x))
     x = F.relu(self.fc2(x))
     x = self.fc3(x)
     return x
+
 
 @unittest.skipIf(
     not xm.get_xla_supported_devices("GPU") and
@@ -157,9 +160,11 @@ class TestDynamicShapeModels(unittest.TestCase):
     num_batches = 5
     batches = []
     for i in range(num_batches):
-      batches.append(self.create_dynamic_image_data(num_test_samples, num_features, device=xla_dev))
+      batches.append(
+          self.create_dynamic_image_data(
+              num_test_samples, num_features, device=xla_dev))
 
-    # the x_training in each batch has size [<=10, 2] with real size [0, 2], [1, 2], [2, 2]... 
+    # the x_training in each batch has size [<=10, 2] with real size [0, 2], [1, 2], [2, 2]...
     # and y_training has size [<=10] with real size [0], [1], [2], [3]...
     for (x_training, y_training) in batches:
       optimizer.zero_grad()
@@ -171,7 +176,7 @@ class TestDynamicShapeModels(unittest.TestCase):
       xm.optimizer_step(optimizer, barrier=True)
       num_compilations.append(met.metric_data('CompileTime')[0])
       num_executions.append(met.metric_data('ExecuteTime')[0])
-    
+
     print('Num compilations=', num_compilations)
     print('Num executions=', num_executions)
 
@@ -210,14 +215,17 @@ class TestDynamicShapeModels(unittest.TestCase):
     x_test[0][0] = 0
     y_test = torch.ones(num_samples * 2)
     y_test[0] = 0
- 
+
     x_test_xla = x_test.to(device)
     x_test_nonzero_dev = torch.nonzero(x_test_xla.int()).float()
-    x_train = torch.ones(3, 32, 32, device=device).expand(x_test_nonzero_dev.shape[0], 3, 32, 32)
+    x_train = torch.ones(
+        3, 32, 32, device=device).expand(x_test_nonzero_dev.shape[0], 3, 32, 32)
     y_test_xla = y_test.to(device)
     y_test_nonzero_dev = torch.nonzero(y_test_xla.int()).float().squeeze()
-    y_train = torch.ones(10, device=device).expand(y_test_nonzero_dev.shape[0], 10)
+    y_train = torch.ones(
+        10, device=device).expand(y_test_nonzero_dev.shape[0], 10)
     return x_train, y_train
+
 
 if __name__ == '__main__':
   assert os.environ['XLA_EXPERIMENTAL'] != ''
