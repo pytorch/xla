@@ -174,7 +174,6 @@ class TestDynamicShapeModels(unittest.TestCase):
     
     print('Num compilations=', num_compilations)
     print('Num executions=', num_executions)
-    print(met.metrics_report())
 
   def create_dynamic_test_data(self,
                                num_test_samples,
