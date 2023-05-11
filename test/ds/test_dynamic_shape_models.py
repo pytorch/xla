@@ -150,7 +150,6 @@ class TestDynamicShapeModels(unittest.TestCase):
     num_features = 2
     num_test_samples = 200
     model = Feedforward(num_features, hidden_size=10).to(xla_dev)
-    print('model=', model)
     criterion = torch.nn.BCELoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
 
