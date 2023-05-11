@@ -10,6 +10,7 @@ sys.argv = [sys.argv[0]] + leftovers
 import numpy as np
 import unittest
 import torch
+import torch.nn.functional as F
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
 
@@ -52,11 +53,11 @@ class CNN(torch.nn.Module):
     self.fc3 = torch.nn.Linear(84, 10)
  
   def forward(self, x):
-    x = self.pool(self.relu(self.conv1(x)))
-    x = self.pool(self.relu(self.conv2(x)))
+    x = self.pool(F.relu(self.conv1(x)))
+    x = self.pool(F.relu(self.conv2(x)))
     x = torch.flatten(x, 1) # flatten all dimensions except batch
-    x = self.relu(self.fc1(x))
-    x = self.relu(self.fc2(x))
+    x = F.relu(self.fc1(x))
+    x = F.relu(self.fc2(x))
     x = self.fc3(x)
     return x
 
@@ -149,7 +150,7 @@ class TestDynamicShapeModels(unittest.TestCase):
     num_executions = []
     num_features = 2
     num_test_samples = 200
-    model = Feedforward(num_features, hidden_size=10).to(xla_dev)
+    model = CNN(num_features, hidden_size=10).to(xla_dev)
     criterion = torch.nn.BCELoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
 
