@@ -397,8 +397,8 @@ class ClusterResolverTest(unittest.TestCase):
     }
     instance_resp_map = {
         'fake-ig-' + c:
-        gen_fake_instances_get_entry('fake-ig-' + c, 'n1-standard-16',
-                                     '10.0.0.' + ip, 'RUNNING')
+            gen_fake_instances_get_entry('fake-ig-' + c, 'n1-standard-16',
+                                         '10.0.0.' + ip, 'RUNNING')
         for c, ip in zip('abcd', '0123')
     }
     compute_service = build_mock_compute_service(instance_resp_map,
@@ -424,8 +424,8 @@ class ClusterResolverTest(unittest.TestCase):
     list_instances_map = {}
     instance_resp_map = {
         'fake-ig-' + c:
-        gen_fake_instances_get_entry('fake-ig-' + c, 'n1-standard-16',
-                                     '10.0.0.' + ip, 'RUNNING')
+            gen_fake_instances_get_entry('fake-ig-' + c, 'n1-standard-16',
+                                         '10.0.0.' + ip, 'RUNNING')
         for c, ip in zip('abcd', '0123')
     }
     compute_service = build_mock_compute_service(instance_resp_map,
@@ -676,8 +676,8 @@ class ClusterResolverTest(unittest.TestCase):
     }
     instance_resp_map = {
         'fake-ig-' + c:
-        gen_fake_instances_get_entry('fake-ig-' + c, 'n1-standard-16',
-                                     '10.0.0.' + ip, 'RUNNING')
+            gen_fake_instances_get_entry('fake-ig-' + c, 'n1-standard-16',
+                                         '10.0.0.' + ip, 'RUNNING')
         for c, ip in zip('abcd', '0123')
     }
     compute_service = build_mock_compute_service(instance_resp_map,
@@ -848,8 +848,8 @@ class ClusterResolverTest(unittest.TestCase):
     }
     instance_resp_map = {
         'fake-ig-' + c:
-        gen_fake_instances_get_entry('fake-ig-' + c, 'n1-standard-16',
-                                     '10.0.0.' + ip, 'RUNNING')
+            gen_fake_instances_get_entry('fake-ig-' + c, 'n1-standard-16',
+                                         '10.0.0.' + ip, 'RUNNING')
         for c, ip in zip('abcd', '0123')
     }
     compute_service = build_mock_compute_service(instance_resp_map,

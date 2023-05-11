@@ -3,15 +3,15 @@
 #include "third_party/xla_client/debug_macros.h"
 #include "third_party/xla_client/xla_util.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/ir_builder.h"
 #include "torch_xla/csrc/ops/constant.h"
 #include "torch_xla/csrc/tensor.h"
-#include "torch_xla/csrc/ir_builder.h"
 
 namespace torch_xla {
 
 SymIntElements::SymIntElements(torch::lazy::Value ir, xla::Shape shape) {
   XLAIrBuilder a = XLAIrBuilder();
-  for (int i=0; i<shape.dimensions().size(); i++) {
+  for (int i = 0; i < shape.dimensions().size(); i++) {
     if (shape.is_dynamic_dimension(i)) {
       torch::lazy::NodePtr size_node = a.MakeSizeNode(ir, i);
       size_nodes_.push_back(size_node);
