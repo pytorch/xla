@@ -3574,6 +3574,7 @@ at::Tensor XLANativeFunctions::embedding_symint(const at::Tensor& weight,
 
 at::Tensor XLANativeFunctions::_euclidean_dist(const at::Tensor& x1,
                                                const at::Tensor& x2) {
+  XLA_CHECK(!xla::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false));
   return at::functionalization::functionalize_aten_op<ATEN_OP(
       _euclidean_dist)>::call(x1, x2);
 }
