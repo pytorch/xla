@@ -3813,10 +3813,4 @@ at::Tensor XLANativeFunctions::view_symint(const at::Tensor& self,
       bridge::GetXlaTensor(self), XlaHelpers::I64List(size)));
 }
 
-at::Tensor XLANativeFunctions::permute(const at::Tensor& self,
-                                       at::IntArrayRef dims) {
-  return at::functionalization::functionalize_aten_op<ATEN_OP(permute)>::call(
-      self, dims);
-}
-
 }  // namespace torch_xla

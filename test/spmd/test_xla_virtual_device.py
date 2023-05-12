@@ -48,7 +48,8 @@ class VirtualDeviceTest(test_xla_sharding_base.XlaShardingTest):
     model = nn.Linear(128, 64).to(xm.xla_device())
     xs.mark_sharding(model.weight, self._get_mesh((1, self.n_devices)),
                      partition_spec)
-    self.assertNotIn("VirtualDeviceUsage", met.counter_names())
+    self.assertIn("VirtualDeviceUsage", met.counter_names())
+    self.assertNotEqual(met.counter_value("VirtualDeviceUsage"), 0)
 
   def test_no_sharding(self):
     t1 = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
