@@ -7,6 +7,7 @@ ARG cudnn_version=8.1.1.33
 # Debian repo doesn't have libcudnn
 ARG cuda_repo=ubuntu1804
 ARG tf_cuda_compute_capabilities="7.0,7.5,8.0"
+ARG cxx_abi="0"
 
 ARG tpuvm=1
 ARG build_cpp_tests=0
@@ -54,6 +55,11 @@ RUN find torch_patches -name '*.diff' | xargs -t -r -n 1 patch -N -p1 -l -i
 # Disable CUDA for PyTorch
 ENV USE_CUDA "0"
 
+# Whether to build torch and torch_xla libraries with CXX ABI
+ENV _GLIBCXX_USE_CXX11_ABI "${cxx_abi}"
+ENV CFLAGS "${CFLAGS} -D_GLIBCXX_USE_CXX11_ABI=${cxx_abi}"
+ENV CXXFLAGS "${CXXFLAGS} -D_GLIBCXX_USE_CXX11_ABI=${cxx_abi}"
+
 ARG package_version
 RUN PYTORCH_BUILD_VERSION=${package_version} PYTORCH_BUILD_NUMBER=1 python setup.py bdist_wheel
 
@@ -83,7 +89,7 @@ ARG tpuvm
 ARG cuda
 ARG tf_cuda_compute_capabilities
 ARG bazel_jobs
-RUN TPUVM_MODE=${tpuvm} XLA_CUDA=${cuda} BAZEL_JOBS=${bazel_jobs} TF_CUDA_COMPUTE_CAPABILITIES=${tf_cuda_compute_capabilities} bash build_torch_xla_libs.sh -O -D_GLIBCXX_USE_CXX11_ABI=0
+RUN TPUVM_MODE=${tpuvm} XLA_CUDA=${cuda} BAZEL_JOBS=${bazel_jobs} TF_CUDA_COMPUTE_CAPABILITIES=${tf_cuda_compute_capabilities} bash build_torch_xla_libs.sh
 
 COPY torch_xla/ torch_xla/
 COPY setup.py .
