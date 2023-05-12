@@ -17,6 +17,7 @@ tf_cc_shared_object(
     ],
     visibility = ["//visibility:public"],
     deps = [
+        "@org_tensorflow//tensorflow/compiler/xla/python:xla_client", # to include xla_client.heap_profile which is defined in xla_client.py
         "//third_party/xla_client:computation_client",
         "//third_party/xla_client:mesh_service",
         "//third_party/xla_client:metrics",
