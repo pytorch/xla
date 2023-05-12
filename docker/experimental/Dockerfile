@@ -89,7 +89,6 @@ ARG tpuvm
 ARG cuda
 ARG tf_cuda_compute_capabilities
 ARG bazel_jobs
-RUN TPUVM_MODE=${tpuvm} XLA_CUDA=${cuda} BAZEL_JOBS=${bazel_jobs} TF_CUDA_COMPUTE_CAPABILITIES=${tf_cuda_compute_capabilities} bash build_torch_xla_libs.sh
 
 COPY torch_xla/ torch_xla/
 COPY setup.py .
