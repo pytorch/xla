@@ -68,6 +68,20 @@ class ShardingUtil {
       std::vector<XLATensor::ShardingSpecPtr> sharding_specs,
       bool replicated_output = true);
 
+  // Returns the shape of the resulting shards of `tensor` after applying
+  // `sharding`. This assumes the shards will be padded to ensure they all
+  // have the same shape.
+  static std::vector<int64_t> GetShardShape(const at::Tensor& tensor,
+                                            const xla::OpSharding sharding);
+
+  // Uses the provided `sharding` spec and expected shard shape to determine the
+  // index slices for the shards which belong on `devices`. Only supports
+  // `REPLICATED` and `OTHER` sharding types.
+  static std::vector<std::vector<at::indexing::TensorIndex>>
+  GetShardIndicesForDevices(const std::vector<int64_t>& shard_shape,
+                            const xla::OpSharding sharding,
+                            const std::vector<std::string>& devices);
+
   // Shards a tensor and returns the sharded tensors which belong on `devices`
   // based on the `sharding` spec. REPLICATED sharding should result in shards
   // identical to the input; OTHERS (tiled) sharding result in shards where
