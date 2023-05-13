@@ -15,7 +15,8 @@ TORCHVISION_COMMIT="$(cat $PYTORCH_DIR/.github/ci_commit_pins/vision.txt)"
 apt-get clean && apt-get update
 apt-get upgrade -y
 apt-get install --fix-missing -y python3-pip git curl libopenblas-dev vim jq \
-  apt-transport-https ca-certificates procps openssl sudo wget libssl-dev libc6-dbg
+  apt-transport-https ca-certificates procps openssl sudo wget libssl-dev libc6-dbg \
+  libopenblas-dev
 
 curl -LO https://github.com/bazelbuild/bazelisk/releases/download/v1.11.0/bazelisk-linux-amd64
 mv bazelisk-linux-amd64 /usr/local/bin/bazel
