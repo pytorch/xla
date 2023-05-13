@@ -28,6 +28,66 @@ bool XlaDataValuesEqual(torch::lazy::BackendDataPtr a,
 
 class XLAShardingTest : public AtenXlaTensorTestBase {};
 
+TEST_F(XLAShardingTest, GetShardShape) {
+  auto tensor = at::ones({8, 7}, at::TensorOptions(at::kFloat));
+  xla::Array2D<int64_t> mesh({
+      {0, 1},
+      {2, 3},
+  });
+  auto sharding = xla::HloSharding::Tile(mesh).ToProto();
+  auto shard_shape = ShardingUtil::GetShardShape(tensor, sharding);
+  // For tiled sharding, each dimension should be halved
+  EXPECT_EQ(shard_shape, std::vector<int64_t>({4, 4}));
+
+  sharding = xla::HloSharding::Replicate().ToProto();
+  shard_shape = ShardingUtil::GetShardShape(tensor, sharding);
+  // For replicated sharding, each dimension should be preserved
+  EXPECT_EQ(shard_shape, std::vector<int64_t>({8, 7}));
+}
+
+TEST_F(XLAShardingTest, GetShardIndicesForDevices) {
+  std::vector<std::string> devices = {"TPU:0", "TPU:1", "TPU:2", "TPU:3"};
+
+  auto tensor = at::ones({8, 7}, at::TensorOptions(at::kFloat));
+  xla::Array2D<int64_t> mesh({
+      {0, 1},
+      {2, 3},
+  });
+  auto sharding = xla::HloSharding::Tile(mesh).ToProto();
+  auto shard_shape = ShardingUtil::GetShardShape(tensor, sharding);
+  auto shard_indices =
+      ShardingUtil::GetShardIndicesForDevices(shard_shape, sharding, devices);
+  EXPECT_EQ(shard_indices.size(), devices.size());
+  /* Tiled indices should be:
+                 dim=0 dim=1
+       device=0  [0:4,  0:4]
+       device=1  [0:4,  4:8]
+       device=2  [4:8,  0:4]
+       device=3  [4:8,  4:8] */
+  std::vector<std::vector<int>> slice_starts = {{0, 0}, {0, 4}, {4, 0}, {4, 4}};
+  std::vector<std::vector<int>> slice_ends = {{4, 4}, {4, 8}, {8, 4}, {8, 8}};
+  for (int device = 0; device < shard_indices.size(); ++device) {
+    EXPECT_EQ(shard_indices[device].size(), tensor.sizes().size());
+    for (int dim = 0; dim < shard_indices[device].size(); ++dim) {
+      EXPECT_TRUE(shard_indices[device][dim].is_slice());
+      auto slice = shard_indices[device][dim].slice();
+      EXPECT_EQ(slice.start(), slice_starts[device][dim]);
+      EXPECT_EQ(slice.stop(), slice_ends[device][dim]);
+      EXPECT_EQ(slice.step(), 1);
+    }
+  }
+
+  sharding = xla::HloSharding::Replicate().ToProto();
+  shard_shape = ShardingUtil::GetShardShape(tensor, sharding);
+  shard_indices =
+      ShardingUtil::GetShardIndicesForDevices(shard_shape, sharding, devices);
+  EXPECT_EQ(shard_indices.size(), devices.size());
+  for (int i = 0; i < devices.size(); ++i) {
+    EXPECT_EQ(shard_indices[i].size(), 1);
+    EXPECT_TRUE(shard_indices[i][0].is_ellipsis());
+  }
+}
+
 TEST_F(XLAShardingTest, ShardTensor) {
   std::vector<std::string> devices = {"TPU:0", "TPU:1", "TPU:2", "TPU:3",
                                       "TPU:4", "TPU:5", "TPU:6", "TPU:7"};

@@ -271,28 +271,39 @@ std::vector<xla::ComputationClient::DataPtr> ShardingUtil::OutputHandler(
   return outputs;
 }
 
-std::vector<at::Tensor> ShardingUtil::ShardTensor(
-    const at::Tensor& tensor, const xla::OpSharding sharding,
-    const std::vector<std::string>& devices, bool padded) {
-  TF_LOG(INFO) << "ShardTensor with sharding type(" << sharding.type() << ")..."
-               << std::endl;
-  auto device_index = build_index_map(devices);
-  std::vector<at::Tensor> shards(devices.size());
+std::vector<int64_t> ShardingUtil::GetShardShape(
+    const at::Tensor& tensor, const xla::OpSharding sharding) {
   if (sharding.type() == xla::OpSharding::REPLICATED) {
-    std::fill_n(shards.begin(), shards.size(), tensor);
+    return tensor.sizes().vec();
   } else if (sharding.type() == xla::OpSharding::OTHER) {
-    XLA_CHECK(sharding.tile_shape().dimensions_size() <= 2);
-    XLA_CHECK(tensor.sizes().size() >= sharding.tile_shape().dimensions_size());
-
     auto tile_shape = sharding.tile_assignment_dimensions();
 
-    // `partition_len[j]` is the size of dimension `j` in the resulting shard.
-    std::vector<int64_t> partition_len;
+    // `shard_shape[j]` is the size of dimension `j` in the resulting shard.
+    std::vector<int64_t> shard_shape;
     for (int j = 0; j < tile_shape.size(); j++) {
-      partition_len.push_back(tensor.sizes()[j] / tile_shape[j] +
-                              (tensor.sizes()[j] % tile_shape[j] != 0));
+      shard_shape.push_back(tensor.sizes()[j] / tile_shape[j] +
+                            (tensor.sizes()[j] % tile_shape[j] != 0));
     }
+    return shard_shape;
+  } else {
+    TF_LOG(ERROR) << "Unsupported OpSharding type " << sharding.type();
+  }
+}
 
+std::vector<std::vector<at::indexing::TensorIndex>>
+ShardingUtil::GetShardIndicesForDevices(
+    const std::vector<int64_t>& shard_shape, const xla::OpSharding sharding,
+    const std::vector<std::string>& devices) {
+  std::vector<std::vector<at::indexing::TensorIndex>> shard_indices(
+      devices.size());
+  auto tile_shape = sharding.tile_assignment_dimensions();
+  if (sharding.type() == xla::OpSharding::REPLICATED) {
+    // Use Ellipsis to indicate all dimensions are replicated
+    auto ellipsis = at::indexing::TensorIndex(at::indexing::Ellipsis);
+    auto indices = std::vector<at::indexing::TensorIndex>({ellipsis});
+    std::fill_n(shard_indices.begin(), shard_indices.size(), indices);
+  } else if (sharding.type() == xla::OpSharding::OTHER) {
+    auto device_index = build_index_map(devices);
     for (size_t i = 0; i < sharding.tile_assignment_devices().size(); i++) {
       int64_t core = sharding.tile_assignment_devices()[i];
       if (device_index.find(core) == device_index.end()) {
@@ -312,26 +323,50 @@ std::vector<at::Tensor> ShardingUtil::ShardTensor(
       std::vector<at::indexing::TensorIndex> indices;
       for (int j = tile_shape.size() - 1; j >= 0; j--) {
         int64_t n_j = offset % tile_shape[j];
-        auto slice = at::indexing::Slice(n_j * partition_len[j],
-                                         (n_j + 1) * partition_len[j]);
+        auto slice = at::indexing::Slice(n_j * shard_shape[j],
+                                         (n_j + 1) * shard_shape[j]);
         indices.push_back(at::indexing::TensorIndex(slice));
         offset /= tile_shape[j];
       }
       std::reverse(indices.begin(), indices.end());
-      at::Tensor shard =
-          tensor.index(c10::ArrayRef<at::indexing::TensorIndex>(indices));
+      shard_indices[device_index[core]] = indices;
+    }
+  } else {
+    TF_LOG(ERROR) << "Unsupported OpSharding type " << sharding.type();
+  }
+  return shard_indices;
+}
 
-      shards[device_index[core]] =
-          shard.contiguous(at::MemoryFormat::Contiguous);
+std::vector<at::Tensor> ShardingUtil::ShardTensor(
+    const at::Tensor& tensor, const xla::OpSharding sharding,
+    const std::vector<std::string>& devices, bool padded) {
+  TF_LOG(INFO) << "ShardTensor with sharding type(" << sharding.type() << ")..."
+               << std::endl;
+  auto device_index = build_index_map(devices);
+  std::vector<at::Tensor> shards(devices.size());
+  if (sharding.type() == xla::OpSharding::REPLICATED) {
+    std::fill_n(shards.begin(), shards.size(), tensor);
+  } else if (sharding.type() == xla::OpSharding::OTHER) {
+    XLA_CHECK(sharding.tile_shape().dimensions_size() <= 2);
+    XLA_CHECK(tensor.sizes().size() >= sharding.tile_shape().dimensions_size());
+
+    auto shard_shape = GetShardShape(tensor, sharding);
+    auto shard_indices =
+        GetShardIndicesForDevices(shard_shape, sharding, devices);
+
+    for (size_t i = 0; i < shard_indices.size(); i++) {
+      at::Tensor shard = tensor.index(
+          c10::ArrayRef<at::indexing::TensorIndex>(shard_indices[i]));
+      shards[i] = shard.contiguous(at::MemoryFormat::Contiguous);
     }
 
     // Zero-pad to the right to ensure the sizes are even
     if (shards.size() > 0 && padded) {
       for (size_t i = 0; i < shards.size(); ++i) {
         std::vector<long> pads;
-        for (size_t j = 0; j < partition_len.size(); ++j) {
-          XLA_CHECK_GE(partition_len[j], shards[i].sizes().at(j));
-          pads.push_back(partition_len[j] - shards[i].sizes().at(j));
+        for (size_t j = 0; j < shard_shape.size(); ++j) {
+          XLA_CHECK_GE(shard_shape[j], shards[i].sizes().at(j));
+          pads.push_back(shard_shape[j] - shards[i].sizes().at(j));
           pads.push_back(0);  // no padding on lhs
         }
         // Padding starts from the last dimension
