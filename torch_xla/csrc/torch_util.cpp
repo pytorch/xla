@@ -9,8 +9,9 @@
 
 namespace torch_xla {
 
-SymIntElements::SymIntElements(torch::lazy::Value ir, xla::Shape shape) {
+SymIntElements::SymIntElements(torch::lazy::Value ir) {
   XLAIrBuilder a = XLAIrBuilder();
+  xla::Shape shape = GetXlaShape(ir);
   for (int i = 0; i < shape.dimensions().size(); i++) {
     if (shape.is_dynamic_dimension(i)) {
       torch::lazy::NodePtr size_node = a.MakeSizeNode(ir, i);
