@@ -1,6 +1,6 @@
 import os
 from collections import OrderedDict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
@@ -78,7 +78,7 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
     Annotates the tensor provided with XLA partition spec. Internally,
     it annotates the corresponding XLATensor as sharded for the XLA SpmdPartitioner pass.
     Args:
-        t (Union[torch.Tensor, XLAShardedTensor]): input tensor to be annotated with partition_sepc.
+        t (Union[torch.Tensor, XLAShardedTensor]): input tensor to be annotated with partition_spec.
 
         mesh (Mesh): describes the logical XLA device topology and the underlying device IDs.
 
@@ -147,6 +147,29 @@ def clear_sharding(t: Union[torch.Tensor, XLAShardedTensor]) -> torch.Tensor:
 class ShardingSpec:
   mesh: Mesh
   partition_spec: Tuple[Union[int, None]]
+
+  # Derived fields
+  _tile_assignment: List[int] = field(init=False)
+  _replicated: bool = field(init=False)
+  _partial: bool = field(init=False)
+
+  def __post_init__(self):
+    self._tile_assignment = self.mesh.get_logical_mesh().tolist()
+    self._replicated = all(d is None for d in self.partition_spec)
+    self._partial = not self._replicated and any(
+        d is None for d in self.partition_spec)
+    # TODO(yeounoh) support partially replicated sharding.
+    assert not self._partial, "Partial replication is currently not supported"
+
+  def xla_spec(self, t: torch.Tensor) -> Union['XlaShardingSpec', None]:
+    """
+    Create an XlaShardingSpec for the given tensor. If the tensor is
+    incompatible with the ShardingSpec, returns None.
+    """
+    if not self.can_apply(t):
+      return None
+    return torch_xla._XLAC.XlaShardingSpec(t, self._tile_assignment,
+                                           self._replicated, False)
 
   def can_apply(self, t: torch.Tensor) -> bool:
     """
