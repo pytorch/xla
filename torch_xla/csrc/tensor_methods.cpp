@@ -656,7 +656,7 @@ XLATensorPtr add(const XLATensorPtr& input, const XLATensorPtr& other,
   //     alpha, other->shape(), logical_element_type, input->GetDevice());
   // return input->CreateFrom(input->GetIrValue() + other->GetIrValue() * constant,
   //                          logical_element_type);
-  SymIntElements sym_int_elements(other->GetIrValue(), other->shape());
+  SymIntElements sym_int_elements(other->GetIrValue());
   xla::PrimitiveType primitive_type =
       logical_element_type
           ? MakeXlaPrimitiveType(*logical_element_type, &(input->GetDevice()))

@@ -342,34 +342,27 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     t9_aten = t8_aten.view(t4_aten.shape[0])
     self.assertEqual(t9.cpu(), t9_aten.cpu())
 
-  def test_add(self):
+  def test_add_dyn_with_static_broadcastable(self):
     t1 = torch.tensor([[1, 0, 3, 5, 0, 6]], device=dev)
     t2 = torch.nonzero(t1)
-    # print(t2)
-    t3 = torch.tensor([[1, 1, 0, 0, 0, 0]], device=dev)
-    t4 = torch.nonzero(t3)
-    # print(t4)
-    # t2.shape=torch.Size([<=6, 2]) with real size [4, 2]
-    # t2=[[0,0], [0,2], [0,3], [0,5]]
-    # t4.shape=torch.Size([<=6, 2]) with real size [2, 2]
-    # t4=[[0,0], [0,1]]
-    # PyTorch eager mode will output error: "RuntimeError: The size of tensor a (4) must match the size of tensor b (2) at non-singleton dimension 0"
-    # self.assertRaises(RuntimeError, lambda: torch.add(t2, t4))
-    t5 = torch.add(t2, t4)
-    print(t5)
-    # print('type(t3.shape[0])=', type(t3.shape[0]))
-    # self.assertIsInstance(t3.shape[0], torch.SymInt)
-    # self.assertEqual(str(t3.shape[0]), '<=6')
-    # self.assertEqual(t3.shape[0], 4)
-    # self.assertIsInstance(t3.shape[1], int)
-    # self.assertEqual(str(t3.shape[1]), '1')
-    # self.assertEqual(t3.shape[1], 1)
+    t3 = torch.tensor([[1, 1]], device=dev)
 
-    # # test for correctness
-    # t1_aten = torch.tensor([1, 0, 3, 5, 0, 6])
-    # t2_aten = torch.nonzero(t1_aten)
-    # t3_aten = torch.abs(t2_aten)
-    # self.assertEqual(t3.cpu(), t3_aten.cpu())
+    # t2.shape=torch.Size([<=6, 2]) with real size [4, 2]
+    # t4.shape=torch.Size([1, 2]) with real size [2, 2]
+    t4 = torch.add(t2, t3)
+    self.assertIsInstance(t4.shape[0], torch.SymInt)
+    self.assertEqual(str(t4.shape[0]), '<=6')
+    self.assertEqual(t4.shape[0], 4)
+    self.assertIsInstance(t4.shape[1], int)
+    self.assertEqual(str(t4.shape[1]), '2')
+    self.assertEqual(t4.shape[1], 2)
+
+    # test for correctness
+    t1_aten = torch.tensor([[1, 0, 3, 5, 0, 6]])
+    t2_aten = torch.nonzero(t1_aten)
+    t3_aten = torch.tensor([[1, 1]])
+    t4_aten = torch.add(t2_aten, t3_aten)
+    self.assertEqual(t4.cpu(), t4_aten.cpu())
 
   def test_clone(self):
     t1 = torch.tensor([1, 0, 3, 5, 0, 6], device=dev)

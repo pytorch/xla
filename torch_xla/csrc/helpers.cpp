@@ -494,8 +494,6 @@ xla::Shape XlaHelpers::GetPromotedBinaryOpShape(const xla::Shape& shape1,
 xla::Shape XlaHelpers::GetPromotedDynamicShape(const xla::Shape& shape1,
                                                const xla::Shape& shape2) {
   std::vector<int64_t> upper_bounds1 = xla::util::ToVector<int64_t>(shape1.dimensions());
-  std::vector<int64_t> upper_bounds2_cp = xla::util::ToVector<int64_t>(shape1.dimensions());
-
   std::vector<int64_t> upper_bounds2 = xla::util::ToVector<int64_t>(shape2.dimensions());
   absl::Span<const bool> dyn_dims1 = shape1.dynamic_dimensions();
   absl::Span<const bool> dyn_dims2 = shape2.dynamic_dimensions();
@@ -525,11 +523,14 @@ xla::Shape XlaHelpers::GetPromotedDynamicShape(const xla::Shape& shape1,
   for (const auto i : c10::irange(min_size)) {
     int64_t ubound1 = upper_bounds1[upper_bounds1.size() - min_size + i];
     int64_t ubound2 = upper_bounds2[upper_bounds2.size() - min_size + i];
-    upper_bounds.push_back(std::max<int64_t>(ubound1, ubound2));
+    int64_t ubound = std::max<int64_t>(ubound1, ubound2);
+    upper_bounds.push_back(ubound);
     
     bool ddim1 = dyn_dims1[dyn_dims1.size() - min_size + i];
     bool ddim2 = dyn_dims2[dyn_dims2.size() - min_size + i];
-    dyn_dims.push_back(ddim1||ddim2);
+    bool ddim = ddim1||ddim2;
+    dyn_dims.push_back(ddim);
+    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": ubound=" << ubound << ", ddim=" << ddim << std::endl;
   }
   const xla::Shape& promoted_shape = xla::ShapeUtil::MakeShape(
     PromoteType(shape1.element_type(), shape2.element_type()),
