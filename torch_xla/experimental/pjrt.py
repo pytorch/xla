@@ -3,7 +3,7 @@ from torch_xla._internal import multiprocess
 from torch_xla.experimental.deprecation import register_deprecated
 import torch_xla.core.xla_model as xm
 
-from . import pjrt
+from . import pjrt as this_module
 
 
 aliases = [
@@ -27,4 +27,4 @@ aliases = [
 ]
 
 for alias in aliases:
-  register_deprecated(pjrt, alias)
+  register_deprecated(this_module, alias)
