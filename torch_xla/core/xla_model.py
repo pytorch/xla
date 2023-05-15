@@ -1,4 +1,5 @@
 import io
+import itertools
 import sys
 import re
 import threading
@@ -8,8 +9,7 @@ import torch
 import torch.distributed._functional_collectives
 import torch.nn.functional as F
 import torch_xla
-from torch_xla.experimental import pjrt
-from torch_xla.experimental import tpu
+from torch_xla import runtime
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.debug.metrics_saver as ms
 import torch_xla.utils.utils as xu
@@ -37,8 +37,8 @@ _ORDINAL = None
 def _init_world_size_ordinal():
   global _WORLD_SIZE, _ORDINAL
 
-  # Dynamo doesn't support XRT or multithreaded PJRT. See Note [V3-8 Threading]
-  if not pjrt.using_pjrt() or pjrt.addressable_device_count() > 1:
+  # Dynamo doesn't support XRT or multithreaded runtime. See Note [V3-8 Threading]
+  if not runtime.using_pjrt() or runtime.addressable_device_count() > 1:
     return
 
   if _WORLD_SIZE is None:
@@ -113,8 +113,8 @@ def xrt_world_size(defval=1):
   if _WORLD_SIZE is not None:
     return _WORLD_SIZE
 
-  if pjrt.using_pjrt():
-    return pjrt.world_size()
+  if runtime.using_pjrt():
+    return runtime.world_size()
 
   return xu.getenv_as(xenv.WORLD_SIZE, int, defval=defval)
 
@@ -126,7 +126,7 @@ def get_ordinal(defval=0):
 
   Args:
     defval (int, optional): The default value to be returned in case there is no
-      replication information available. Ignored for PjRt.
+      replication information available. Ignored for runtime.
       Default: 0
 
   Returns:
@@ -136,8 +136,8 @@ def get_ordinal(defval=0):
   if _ORDINAL is not None:
     return _ORDINAL
 
-  if pjrt.using_pjrt():
-    return pjrt.global_ordinal()
+  if runtime.using_pjrt():
+    return runtime.global_ordinal()
 
   return xu.getenv_as(xenv.ORDINAL, int, defval=defval)
 
@@ -149,14 +149,14 @@ def get_local_ordinal(defval=0):
 
   Args:
     defval (int, optional): The default value to be returned in case there is no
-      replication information available. Ignored for PjRt.
+      replication information available. Ignored for runtime.
       Default: 0
 
   Returns:
     The replication local ordinal of the current thread.
   """
-  if pjrt.using_pjrt():
-    return pjrt.local_ordinal()
+  if runtime.using_pjrt():
+    return runtime.local_ordinal()
 
   ordinal = xu.getenv_as(xenv.LOCAL_ORDINAL, int, defval=-1)
   if ordinal >= 0:
@@ -204,8 +204,8 @@ def xla_device(n=None, devkind=None):
     torch_xla._XLAC._xla_set_default_device(device)
     return torch.device(device)
 
-  if pjrt.using_pjrt():
-    return pjrt.xla_device(n, devkind)
+  if runtime.using_pjrt():
+    return runtime.xla_device(n, devkind)
 
   if n is None:
     devices = get_xla_supported_devices(devkind=devkind)
@@ -994,8 +994,8 @@ def rendezvous(tag, payload=b'', replicas=[]):
     The payloads exchanged by all the other cores, with the payload of core
     ordinal `i` at position `i` in the returned tuple.
   """
-  if pjrt.using_pjrt():
-    return pjrt.rendezvous(tag, payload, replicas or None)
+  if runtime.using_pjrt():
+    return runtime.rendezvous(tag, payload, replicas or None)
 
   return torch_xla._XLAC._xla_rendezvous(get_ordinal(), tag, payload, replicas)
 
@@ -1103,3 +1103,12 @@ def optimization_barrier_(tensors):
     tensors (List[torch.Tensor]): List of `torch.Tensor` to add barrier to.
   """
   torch_xla._XLAC._xla_optimization_barrier_(tensors)
+
+
+def broadcast_master_param(model: torch.nn.Module) -> None:
+  """
+  Broadcast the model parameters from master process to other processes
+  """
+  parameters_and_buffers = list(itertools.chain(model.parameters(), model.buffers()))
+  collective_broadcast(parameters_and_buffers)
+  mark_step()
