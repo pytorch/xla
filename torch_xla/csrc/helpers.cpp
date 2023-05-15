@@ -523,11 +523,12 @@ xla::Shape XlaHelpers::GetPromotedDynamicShape(const xla::Shape& shape1,
   for (const auto i : c10::irange(min_size)) {
     int64_t ubound1 = upper_bounds1[upper_bounds1.size() - min_size + i];
     int64_t ubound2 = upper_bounds2[upper_bounds2.size() - min_size + i];
-    int64_t ubound = std::max<int64_t>(ubound1, ubound2);
-    upper_bounds.push_back(ubound);
-    
     bool ddim1 = dyn_dims1[dyn_dims1.size() - min_size + i];
     bool ddim2 = dyn_dims2[dyn_dims2.size() - min_size + i];
+    XLA_CHECK((!ddim1&&!ddim2)||(ddim1&&!ddim2&&ubound2==1)||(ddim2||!ddim1||ubound1==1)) << "At dimension " << i << ", operand1 has dimension size " << ubound1 << " isDynamic=" << ddim1 << " vs operand2 has dimension size " << ubound2 << " isDynamic=" << ddim2;
+
+    int64_t ubound = std::max<int64_t>(ubound1, ubound2);
+    upper_bounds.push_back(ubound);
     bool ddim = ddim1||ddim2;
     dyn_dims.push_back(ddim);
     std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": ubound=" << ubound << ", ddim=" << ddim << std::endl;
