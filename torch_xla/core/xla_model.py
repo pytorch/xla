@@ -967,11 +967,11 @@ def send_cpu_data_to_device(data, device, input_sharding=None):
 
   def convert_fn(tensors):
     devices = [str(device)] * len(tensors)
-    shardings = None
+    xtensors = torch_xla._XLAC._xla_tensors_from_aten(tensors, devices)
     if input_sharding:
-      shardings = [input_sharding.xla_spec(t) for t in tensors]
-    xtensors = torch_xla._XLAC._xla_tensors_from_aten(tensors, devices,
-                                                      shardings)
+      for xtensor in xtensors:
+        if input_sharding.can_apply(xtensor):
+          input_sharding.apply(xtensor)
     return xtensors
 
   def select_fn(v):
