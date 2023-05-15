@@ -14,7 +14,6 @@ import torch_xla.distributed.xla_backend
 from torch_xla.experimental import tpu, gpu
 from torch_xla import runtime
 
-
 R = TypeVar('R')
 
 
@@ -205,7 +204,8 @@ def _initialize_single_process(local_rank: int, local_world_size: int):
 
 def spawn_threads(fn: Callable, args: Tuple = ()) -> None:
   """Run function in one process with one thread per addressable device."""
-  assert runtime.device_type() != 'GPU', "spawn_threads does not support GPU device"
+  assert runtime.device_type(
+  ) != 'GPU', "spawn_threads does not support GPU device"
   spawn_fn = _SpawnFn(fn, *args)
   _run_thread_per_device(
       local_rank=0,
