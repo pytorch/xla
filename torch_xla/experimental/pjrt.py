@@ -1,28 +1,9 @@
-import functools
-import logging
-
-from typing import TypeVar
 from torch_xla import runtime
 from torch_xla._internal import multiprocess
+from torch_xla.experimental.deprecation import register_deprecated
 import torch_xla.core.xla_model as xm
 
-FN = TypeVar('FN')
-
-
-def deprecated(new: FN) -> FN:
-  already_warned = [False]
-  @functools.wraps(new)
-  def wrapped(*args, **kwargs):
-    if not already_warned[0]:
-      logging.warning(f'{__name__}.{new.__name__} is deprecated. Use {new.__module__}.{new.__name__} instead.')
-      already_warned[0] = True
-
-    return new(*args, **kwargs)
-
-  return wrapped
-
-def register_deprecated(new: FN):
-  globals()[new.__name__] = deprecated(new)
+from . import pjrt
 
 
 aliases = [
@@ -45,5 +26,5 @@ aliases = [
   xm.broadcast_master_param,
 ]
 
-for a in aliases:
-  register_deprecated(a)
+for alias in aliases:
+  register_deprecated(pjrt, alias)
