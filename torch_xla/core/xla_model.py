@@ -1109,6 +1109,7 @@ def broadcast_master_param(model: torch.nn.Module) -> None:
   """
   Broadcast the model parameters from master process to other processes
   """
-  parameters_and_buffers = list(itertools.chain(model.parameters(), model.buffers()))
+  parameters_and_buffers = list(
+      itertools.chain(model.parameters(), model.buffers()))
   collective_broadcast(parameters_and_buffers)
   mark_step()
