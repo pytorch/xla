@@ -97,7 +97,8 @@ def start_trace(log_dir, create_perfetto_link: bool = False,
     # session. Otherwise on Cloud TPU, libtpu may not be initialized before
     # creating the tracer, which will cause the TPU tracer initialization to
     # fail and no TPU operations will be included in the profile.
-    xla_bridge.get_backend()
+    if not torch_xla._found_libtpu:
+      raise RuntimeError("Libtpu is not initialized correctly ")
 
     _profile_state.profile_session = xla_client.profiler.ProfilerSession()
     _profile_state.create_perfetto_link = create_perfetto_link
@@ -325,7 +326,7 @@ def device_memory_profile(backend: Optional[str] = None) -> bytes:
   Returns:
     A byte string containing a binary `pprof`-format protocol buffer.
   """
-  return xla_client.heap_profile(xla_bridge.get_backend(backend))
+  return xla_client.heap_profile(torch_xla._found_libtpu)
 
 
 def save_device_memory_profile(filename, backend: Optional[str] = None) -> None:
