@@ -190,13 +190,13 @@ class DynamoTrainingBasicTest(unittest.TestCase):
       # TODO(JackCaoG): Understand why `data.grad` is a pending IR starting
       # from second iteration instead of a `DeviceData`
       # torch.allclose(data.grad.cpu(), cpu_data.grad)
-    # Graph 1: forward 
+    # Graph 1: forward
     # Graph 2: backward
     # Graph 3: sync input for backward
     # Graph 4: sync input for backward (TODO(JackCaoG) understand why there are two graphs)
-    # In total, 4 compilations for graphs mentioned above and 2 compilation for fetching fallback ops for each forward/backward graph. 
+    # In total, 4 compilations for graphs mentioned above and 2 compilation for fetching fallback ops for each forward/backward graph.
     self.assertEqual(met.metric_data('CompileTime')[0], 6)
-    # We execute 3 graphs per step. And +1 offset for fetching fallback ops. 
+    # We execute 3 graphs per step. And +1 offset for fetching fallback ops.
     self.assertEqual(met.metric_data('ExecuteTime')[0], sample_count * 3 + 1)
     # one for each forward and one for each backward
     self.assertEqual(
@@ -301,9 +301,9 @@ class DynamoTrainingOptimizerTest(unittest.TestCase):
     # Graph 3: optimizer
     # Graph 4: sync input for backward
     # Graph 5: sync input for backward (TODO(JackCaoG) understand why there are two graphs)
-    # In total, 5 compilations for graphs mentioned above and 3 compilations for fetching fallback ops for each forward/backward/optimizer graph. 
+    # In total, 5 compilations for graphs mentioned above and 3 compilations for fetching fallback ops for each forward/backward/optimizer graph.
     self.assertEqual(met.metric_data('CompileTime')[0], 8)
-    # We execute 4 graphs per step when optimizer is enabled. And +2 offset for fetching fallback ops. One during forward/backward graphs and another one during optimizer graph. 
+    # We execute 4 graphs per step when optimizer is enabled. And +2 offset for fetching fallback ops. One during forward/backward graphs and another one during optimizer graph.
     self.assertEqual(met.metric_data('ExecuteTime')[0], sample_count * 4 + 2)
     # one for each forward, backward and optimizer
     self.assertEqual(
