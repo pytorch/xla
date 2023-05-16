@@ -112,14 +112,19 @@ class ShardingUtil {
     void RegisterShardingPropagation(torch::lazy::BackendData* src_data,
                                      XLATensorPtr tensor);
 
-    // Update data placeholder in the operands if it is partitioned by the
-    // compiler sharding propagation.
+    void ClearShardingPropagation() { propagation_map.clear(); }
+
+    // Update BackendDataPtr in the operands of the IR value nodeif, if the
+    // device data has been partitioned by the sharding propagation.
+    // TODO(yeounoh) this may increase the tracing time and trace twice in the
+    // worst case.
     void ApplyShardingPropagation(torch::lazy::Value ir_value);
 
     int size() { return propagation_map.size(); }
 
    private:
     // Below two maps are used for dynamo integration.
+    // TODO(yeounoh) save partitioned BackendData ptr instead of XLATensorPtr.
     std::unordered_map<torch::lazy::BackendData*, XLATensorPtr> propagation_map;
   };
 };

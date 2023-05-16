@@ -280,7 +280,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   void CollectShardingSpecs(
       std::vector<XLATensorPtr>* tensors, absl::Span<const size_t> indices,
       ComputationPtr computation,
-      std::vector<torch::lazy::BackendDataPtr>* data_placholders,
+      std::vector<torch::lazy::BackendDataPtr>* data_placeholders,
       std::vector<XLATensor::ShardingSpecPtr>* sharding_specs);
 
   // TODO(alanwaketan): Reuse the upstream one once Functionalization is done.

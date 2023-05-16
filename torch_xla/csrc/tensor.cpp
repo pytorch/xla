@@ -197,9 +197,6 @@ torch::lazy::BackendDataPtr XLATensor::GetXlaData() {
   if (up_to_date) {
     torch::lazy::BackendDataPtr handle = CurrentDataHandle();
     if (handle != nullptr) {
-      if (CurrentIrValue())
-        std::cout << "- Current IR: " << CurrentIrValue()->ToString()
-                  << std::endl;
       XLA_CHECK(handle->HasValue())
           << "Trying to access XLA data while an async operation is in flight: "
           << handle->shape();

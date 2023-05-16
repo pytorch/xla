@@ -192,7 +192,6 @@ class PjRtComputationClient : public ComputationClient {
     void Assign(const Data& data) override {
       const PjRtShardedData& pjrt_sharded_data =
           dynamic_cast<const PjRtShardedData&>(data);
-      std::cout << "*** PjRtShardedData::Assign..." << std::endl;
       if (&pjrt_sharded_data != this) {
         shards = std::move(pjrt_sharded_data.shards);
       }

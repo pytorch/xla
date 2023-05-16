@@ -236,7 +236,6 @@ std::vector<xla::ComputationClient::DataPtr> ShardingUtil::OutputHandler(
   std::vector<xla::ComputationClient::DataPtr> outputs;
   outputs.reserve(sharding_specs.size());
   for (int i = 0; i < sharding_specs.size(); ++i) {
-    std::cout << "- sharding specs " << i << ", ";
     XLATensor::ShardingSpecPtr sharding = sharding_specs[i];
     if (replicated_output && sharding &&
         (sharding->sharding.type() != xla::OpSharding::REPLICATED)) {
@@ -269,7 +268,6 @@ std::vector<xla::ComputationClient::DataPtr> ShardingUtil::OutputHandler(
           shards, GetVirtualDevice().toString(), sharding->shape.value(),
           sharding->sharding));
     }
-    std::cout << std::endl;
   }
   return outputs;
 }
@@ -398,38 +396,36 @@ void ShardingUtil::ShardingContextArena::RegisterShardingPropagation(
     torch::lazy::BackendData* src_data, XLATensorPtr tensor) {
   // Override if already present and keep the latest.
   propagation_map[src_data] = tensor;
+  TF_VLOG(5) << "Registering sharding propagation to "
+             << (tensor->GetIrValue() ? tensor->GetIrValue()->ToString()
+                                      : "empty node.");
 }
 
 void ShardingUtil::ShardingContextArena::ApplyShardingPropagation(
     torch::lazy::Value ir_value) {
-  // TODO(yeounoh) need to check all the nested operands.
-  const torch::lazy::Node* node = ir_value.node.get();
-  std::vector<const torch::lazy::Node*> queue{node};
+  std::vector<const torch::lazy::Node*> queue{ir_value.node.get()};
+  std::unordered_map<const torch::lazy::Node*, int64_t> emitted;
   while (!queue.empty()) {
-    node = queue.back();
+    const torch::lazy::Node* node = queue.back();
     queue.pop_back();
-    for (const torch::lazy::Output output : node->operands()) {
-      std::cout << "-operand IR: " << output.node->ToString() << std::endl;
-      // torch::lazy::BackendDataPtr backend_data =
-      //     torch::lazy::getBackend()->GetComputationDataFromNode(output.node);
-      DeviceData* device_data_node = DeviceData::Cast(output.node);
-      if ((device_data_node != nullptr) &&
-          (propagation_map.find(device_data_node->data().get()) !=
-           propagation_map.end())) {
-        // The tensor has been sharding annotated by the compiler sharding
-        // propagation. It holds either an updated device handle or a DeviceData
-        // node.
-        const auto tensor = propagation_map[device_data_node->data().get()];
-        device_data_node->Assign(tensor->data()->handle);
-        std::cout << "-- updated IR: " << tensor->GetIrValue()->ToString()
-                  << std::endl;
-
-        // TODO(yeounoh) an alternative approach to `Assign`
-        // operands[i] =
-        //     torch::lazy::Output(tensor->GetIrValue().node.get(),
-        //     output.index);
-      } else {
-        queue.push_back(output.node);
+    if (emitted.find(node) == emitted.end()) {
+      emitted[node] = emitted.size();
+      for (const torch::lazy::Output output : node->operands()) {
+        DeviceData* device_data_node = DeviceData::Cast(output.node);
+        if ((device_data_node != nullptr) &&
+            (propagation_map.find(device_data_node->data().get()) !=
+             propagation_map.end())) {
+          // The tensor has been sharding annotated by the compiler sharding
+          // propagation. It holds either an updated device handle or a
+          // DeviceData node.
+          const auto tensor = propagation_map[device_data_node->data().get()];
+          device_data_node->Assign(tensor->data()->handle);
+          TF_VLOG(5) << "Applying sharding propagation to "
+                     << (tensor->GetIrValue() ? tensor->GetIrValue()->ToString()
+                                              : "empty node.");
+        } else {
+          queue.push_back(output.node);
+        }
       }
     }
   }

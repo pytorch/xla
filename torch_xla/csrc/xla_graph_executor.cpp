@@ -495,7 +495,7 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
   if (!unique_device) {
     return coll;
   }
-  std::cout << "*** CollectSyncTensors ... " << std::endl;
+
   std::vector<at::Tensor> at_tensors;
   std::vector<std::string> devices;
   std::vector<XLATensor::ShardingSpecPtr> shardings;
@@ -517,9 +517,6 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
       torch::lazy::Value ir_value = tensors[i]->CurrentIrValue();
       if (ir_value) {
         if (ShouldSyncIrValue(ir_value)) {
-          std::cout << "- xtensor " << i
-                    << ", CurrenIrValue: " << ir_value->ToString();
-
           // Add only tensors which need to be synced.
           coll.hash = torch::lazy::HashCombine(coll.hash, ir_value.hash());
           coll.indices.push_back(i);
@@ -530,11 +527,9 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
           // truth.
           XLATensor::ShardingSpecPtr sharding = tensors[i]->sharding_spec();
           if (sharding) {
-            std::cout << ", sharded, ";
             dynamic_cast<XlaNode*>(ir_value.node.get())
                 ->SetSharding(sharding->sharding);
           }
-          std::cout << std::endl;
         }
       } else if (config.force_ltc_data) {
         // The tensor only has at::Tensor data. We need to queue it for a
@@ -885,9 +880,9 @@ std::vector<torch::lazy::Value> XLAGraphExecutor::CollectRoots(
 void XLAGraphExecutor::CollectShardingSpecs(
     std::vector<XLATensorPtr>* tensors, absl::Span<const size_t> indices,
     ComputationPtr computation,
-    std::vector<torch::lazy::BackendDataPtr>* data_placholders,
+    std::vector<torch::lazy::BackendDataPtr>* data_placeholders,
     std::vector<XLATensor::ShardingSpecPtr>* sharding_specs) {
-  std::cout << "*** CollectShardingSpecs ... " << std::endl;
+  // TODO(yeounoh) refactoring.
   auto tuple_shardings = computation->computation()
                              .proto()
                              .spmd_output_sharding()
@@ -899,20 +894,11 @@ void XLAGraphExecutor::CollectShardingSpecs(
 
   for (int i = 0; i < indices.size(); ++i) {
     auto xtensor = (*tensors)[indices[i]];
-    std::cout << "- tensor " << i;
-    if (xtensor->CurrentIrValue()) {
-      std::cout << " IR: " << xtensor->CurrentIrValue()->ToString();
-    } else {
-      std::cout << " IR: null?!";
-    }
-    std::cout << std::endl;
     auto sharding = std::make_shared<XLATensor::ShardingSpec>(
         tuple_shardings[i],
         MakeShapeWithDeviceLayout(
-            UnwrapXlaData((*data_placholders)[i])->shape(),
+            xtensor->shape().get(),
             static_cast<XlaDeviceType>(xtensor->GetDevice().type())));
-    std::cout << "- sharding: " << sharding->sharding.DebugString()
-              << std::endl;
     if (tuple_shardings[i].type()) {
       if (xtensor->sharding_spec()) {
         XLA_CHECK(ShardingUtil::EqualShardingSpecs(*xtensor->sharding_spec(),
@@ -923,9 +909,6 @@ void XLAGraphExecutor::CollectShardingSpecs(
 
       // Create sharded data placeholder, this will be used to
       // hold the corresponding computation results.
-      XLA_CHECK((*data_placholders)[i])
-          << "We don't expect data_placeholders[" << i << "] ("
-          << xtensor->CurrentIrValue()->ToString() << ") to be null.";
       auto sharded_data_placeholder =
           WrapXlaData(xla::ComputationClient::Get()->WrapDataShards(
               {}, GetVirtualDevice().toString(), sharding->shape.value(),
@@ -935,9 +918,11 @@ void XLAGraphExecutor::CollectShardingSpecs(
       // correctly used during the next round of tracing.
       // TODO(yeounoh) check `force_ltc_data`
       xtensor->data()->handle = sharded_data_placeholder;
+      // TODO(yeounoh) can we de-register the original data placholders?
+
       ShardingUtil::ShardingContextArena::Get()->RegisterShardingPropagation(
-          (*data_placholders)[i].get(), xtensor);
-      (*data_placholders)[i] = sharded_data_placeholder;
+          (*data_placeholders)[i].get(), xtensor);
+      (*data_placeholders)[i] = sharded_data_placeholder;
     } else {
       // Clear sharding if the output parameter is no longer sharded. This is
       // no-op if the tensor is not annotated.
@@ -952,7 +937,6 @@ std::vector<torch::lazy::BackendDataPtr> XLAGraphExecutor::SetTensorData(
     const std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec) {
   tsl::profiler::TraceMe activity("SetTensorData",
                                   tsl::profiler::TraceMeLevel::kInfo);
-  std::cout << "*** SetTensorData ... " << std::endl;
   std::vector<torch::lazy::BackendDataPtr> tensors_data;
   tensors_data.reserve(indices.size());
   for (int i = 0; i < indices.size(); i++) {
@@ -968,25 +952,12 @@ std::vector<torch::lazy::BackendDataPtr> XLAGraphExecutor::SetTensorData(
     // operation trying to access the tensor's device data will have to wait
     // until the asynchronous operation completes.
     torch::lazy::BackendDataPtr handle = tensor->CurrentDataHandle();
-    std::cout << "- IR: "
-              << (tensor->CurrentIrValue()
-                      ? tensor->CurrentIrValue()->ToString()
-                      : "null");
-    std::cout << ", handle null? " << (handle == nullptr);
-    if (handle) {
-      std::cout << ", HasValue? " << handle->HasValue();
-    }
-    std::cout << std::endl;
     if (!handle && tensor->CurrentIrValue()) {
-      std::cout << "- attempting to get handle from IR: "
-                << tensor->CurrentIrValue()->ToString() << std::endl;
       handle = torch::lazy::getBackend()->GetComputationDataFromNode(
           tensor->CurrentIrValue().node.get());
     }
 
     if (handle == nullptr && config.force_ltc_data) {
-      std::cout << "- setting placeholder, HasValue? "
-                << tensor_data_vec[i]->HasValue() << std::endl;
       handle = tensor_data_vec[i];
       // Note: We are not using SetXlaData method here since that method
       // resets the ir_value. We have already done the resetting as part
@@ -1007,27 +978,27 @@ void XLAGraphExecutor::ExtractIRAndPrepareXlaData_(
     std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec) {
   tsl::profiler::TraceMe activity("ExtractIRAndPrepareXlaData_",
                                   tsl::profiler::TraceMeLevel::kInfo);
-  std::cout << "*** ExtractIRAndPrepareXlaData_ ... " << std::endl;
   ir_values.reserve(indices.size());
   tensor_data_vec.reserve(indices.size());
   for (auto index : indices) {
     XLATensorPtr& tensor = (*tensors)[index];
     torch::lazy::Value ir_value = tensor->CurrentIrValue();
-    std::cout << "- tensor " << index
-              << " IR: " << ((ir_value) ? ir_value->ToString() : "(empty)")
-              << std::endl;
 
     // In case the in-place updated node is sharded by XLA sharding propagation,
     // we also need to update the linked data handle.
-    ShardingUtil::ShardingContextArena::Get()->ApplyShardingPropagation(
-        ir_value);
-    std::cout << ", propated IR: "
-              << ((ir_value) ? ir_value->ToString() : "(empty)") << std::endl;
+    // ShardingUtil::ShardingContextArena::Get()->ApplyShardingPropagation(
+    //    ir_value);
 
     ir_values.push_back(ir_value);
     const torch::lazy::BackendDevice& tensor_device = tensor->GetDevice();
     xla::Shape shape = MakeShapeWithDeviceLayout(
         tensor->shape(), static_cast<XlaDeviceType>(tensor_device.type()));
+    // TODO(yeounoh) this is garbage in case of partitioned output. Check when
+    // this handle becomes a DeviceData; then we can prevent it.
+    // This shouldn't be a DeviceData, b/c we've already traced -- and the next
+    // round of tracing hasn't started. Thus, hopefully this happened not after
+    // compilation. The premise is that if this is not needed (replaced by the
+    // partitioned one), we never create a DeviceData with this (possible bug).
     torch::lazy::BackendDataPtr handle =
         WrapXlaData(xla::ComputationClient::Get()->CreateDataPlaceholder(
             tensor_device.toString(), std::move(shape)));
@@ -1036,6 +1007,7 @@ void XLAGraphExecutor::ExtractIRAndPrepareXlaData_(
       tensor->AssignIrValue(torch::lazy::Value());
     }
   }
+  ShardingUtil::ShardingContextArena::Get()->ClearShardingPropagation();
 }
 
 std::vector<at::Tensor> XLAGraphExecutor::FetchTensors(
@@ -1124,23 +1096,8 @@ XLAGraphExecutor::ScheduleSyncTensorsGraph(
       for (size_t i = 0; i < results.size(); ++i) {
         if (async->tensors_data[i] != nullptr) {
           async->tensors_data[i]->Assign(*results[i]);
-          std::cout << "- After execution, assigned tensors_data " << i
-                    << " HasValue? " << async->tensors_data[i]->HasValue()
-                    << ", shape: "
-                    << UnwrapXlaData(async->tensors_data[i])->shape().ToString()
-                    << ", num shards: "
-                    << xla::ComputationClient::Get()
-                           ->GetDataShards(
-                               UnwrapXlaData(async->tensors_data[i]))
-                           .size()
-                    << ", device: "
-                    << async->tensors_data[i]->device().toString() << std::endl;
-
         } else {
           async->tensors_data[i] = std::move(results[i]);
-          std::cout << "- After execution, moved tensors_data " << i
-                    << " HasValue? " << async->tensors_data[i]->HasValue()
-                    << std::endl;
         }
       }
     } catch (...) {
