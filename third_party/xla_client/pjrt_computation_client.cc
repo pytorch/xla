@@ -365,7 +365,7 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
       // to expose the knob for future reference. We can override the compiler's
       // default behavior to further optimize parameter sharding in the future.
       compile_options.executable_build_options
-          .set_allow_spmd_sharding_propagation_to_output({false});
+          .set_allow_spmd_sharding_propagation_to_output({true});
       compile_options.executable_build_options.set_num_partitions(
           client_->device_count());
       compile_options.executable_build_options.set_num_replicas(1);

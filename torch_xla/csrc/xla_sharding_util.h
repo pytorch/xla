@@ -95,6 +95,33 @@ class ShardingUtil {
   static std::vector<at::Tensor> ShardTensor(
       const at::Tensor& tensor, const xla::OpSharding sharding,
       const std::vector<std::string>& devices, bool padded = true);
+
+  friend class XLAGraphExecutor;
+
+ private:
+  class ShardingContextArena {
+   public:
+    static ShardingContextArena* Get() {
+      static ShardingContextArena* arena = new ShardingContextArena();
+      return arena;
+    }
+
+    // Register `tensor` and its original data handle `src_data` if the
+    // `handle` needs to be updated  after sharding propagation. Caller should
+    // maintain the ownership and is responsible for keeping the data valid.
+    void RegisterShardingPropagation(torch::lazy::BackendData* src_data,
+                                     XLATensorPtr tensor);
+
+    // Update data placeholder in the operands if it is partitioned by the
+    // compiler sharding propagation.
+    void ApplyShardingPropagation(torch::lazy::Value ir_value);
+
+    int size() { return propagation_map.size(); }
+
+   private:
+    // Below two maps are used for dynamo integration.
+    std::unordered_map<torch::lazy::BackendData*, XLATensorPtr> propagation_map;
+  };
 };
 
 }  // namespace torch_xla

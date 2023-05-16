@@ -248,7 +248,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
       const std::vector<XLATensorPtr>& tensors,
       const SyncTensorsConfig& config);
 
-  // Waits for this SyncTensorCollection's device barrier and acuire the lock.
+  // Waits for this SyncTensorCollection's device barrier and acquire the lock.
   // Override to enable SPMD.
   void TensorCollectionBarrier(SyncTensorCollection* coll) final;
 
@@ -277,8 +277,11 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
       const std::vector<XLATensorPtr>& tensors,
       absl::Span<const size_t> indices);
 
-  std::vector<XLATensor::ShardingSpecPtr> CollectShardingSpecs(
-      std::vector<XLATensorPtr>* tensors, absl::Span<const size_t> indices);
+  void CollectShardingSpecs(
+      std::vector<XLATensorPtr>* tensors, absl::Span<const size_t> indices,
+      ComputationPtr computation,
+      std::vector<torch::lazy::BackendDataPtr>* data_placholders,
+      std::vector<XLATensor::ShardingSpecPtr>* sharding_specs);
 
   // TODO(alanwaketan): Reuse the upstream one once Functionalization is done.
   std::vector<torch::lazy::BackendDataPtr> SetTensorData(
