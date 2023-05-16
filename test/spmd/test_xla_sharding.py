@@ -1,11 +1,13 @@
 import copy
 
 import unittest
+import math
 import numpy as np
 import os
 
 import torch
 from torch import nn
+import torch.nn.functional as F
 import torch.optim as optim
 import torch_xla
 import torch_xla.core.xla_model as xm
@@ -31,6 +33,66 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
 
     # TODO(244003536) add more tests for XLAShardedTensror.
     self.assertTrue(isinstance(xst1, XLAShardedTensor))
+
+  def test_xla_shards(self):
+    num_element = self.n_devices
+    mesh = self._get_mesh((self.n_devices,))
+    t = torch.arange(num_element, dtype=torch.float32)
+    xt = xs.mark_sharding(t.to(xm.xla_device()), mesh, (0,))
+
+    shards = xt.local_shards
+    self.assertEqual(len(shards), self.n_devices)
+    shard_len = math.ceil(num_element / self.n_devices)
+    for i, shard in enumerate(shards):
+      self.assertEqual(shard.data.shape, (shard_len,))
+      start, end = (i, i + 1) * shard_len
+      expected = torch.arange(start, end, dtype=torch.float32)
+      self.assertTrue(torch.allclose(shard.data.cpu(), expected))
+      self.assertIsInstance(shard.indices, list)
+      self.assertEqual(len(shard.indices), len(t.shape))
+      self.assertEqual(shard.indices[0], slice(start, end, 1))
+      self.assertTrue(torch.allclose(shard.data.cpu(), t[shard.indices]))
+
+  def test_padded_xla_shards(self):
+    num_element = self.n_devices + 1  # Ensure padding with two or more devices
+    mesh = self._get_mesh((self.n_devices,))
+    t = torch.arange(num_element, dtype=torch.float32)
+    xt = xs.mark_sharding(t.to(xm.xla_device()), mesh, (0,))
+    shards = xt.local_shards
+    self.assertEqual(len(shards), self.n_devices)
+    shard_len = math.ceil(num_element / self.n_devices)
+    for i, shard in enumerate(shards):
+      self.assertEqual(shard.data.shape, (shard_len,))
+      # Tensor shards will be zero-padded
+      start, end = i * shard_len, min((i + 1) * shard_len, t.shape[0])
+      if start < num_element:
+        expected = torch.arange(start, end, dtype=torch.float32)
+        pad_len = shard_len - expected.shape[0]
+        expected = F.pad(expected, (0, pad_len), "constant", 0)
+      else:
+        expected = torch.zeros(shard.data.shape, dtype=torch.float32)
+      self.assertTrue(torch.allclose(shard.data.cpu(), expected))
+      self.assertIsInstance(shard.indices, list)
+      self.assertEqual(len(shard.indices), len(t.shape))
+      self.assertEqual(shard.indices[0], slice(start, end, 1))
+      self.assertTrue(
+          torch.allclose(shard.cpu().unpadded_data, t[shard.indices]))
+
+  def test_replicated_xla_shards(self):
+    num_element = self.n_devices
+    mesh = self._get_mesh((self.n_devices,))
+    t = torch.arange(num_element, dtype=torch.float32)
+    xt = xs.mark_sharding(t.to(xm.xla_device()), mesh, (None,))
+    shards = xt.local_shards
+    self.assertEqual(len(shards), self.n_devices)
+    for i, shard in enumerate(shards):
+      self.assertEqual(shard.data.shape, (num_element,))
+      self.assertTrue(torch.allclose(shard.data.cpu(), t))
+      self.assertIsInstance(shard.indices, type(Ellipsis))
+      self.assertTrue(torch.allclose(shard.data.cpu(), t[shard.indices]))
+      self.assertTrue(
+          torch.allclose(shard.cpu().data,
+                         shard.cpu().unpadded_data))
 
   def test_custom_tile_assignment(self):
     xt = torch.randn(10, 20).to(device=xm.xla_device())

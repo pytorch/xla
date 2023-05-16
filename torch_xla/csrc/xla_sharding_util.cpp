@@ -292,8 +292,14 @@ std::vector<int64_t> ShardingUtil::GetShardShape(
 
 std::vector<std::vector<at::indexing::TensorIndex>>
 ShardingUtil::GetShardIndicesForDevices(
-    const std::vector<int64_t>& shard_shape, const xla::OpSharding sharding,
+    const std::vector<int64_t>& shard_shape,
+    const std::vector<int64_t>& tensor_shape, const xla::OpSharding sharding,
     const std::vector<std::string>& devices) {
+  // `shard_indices[dev][dim]` represents the index slice for dimension `dim`
+  // that belongs on device `devices[dev]` if the tensor is sharded. If
+  // `sharding` is REPLICATED, `shard_indices[dev]` will only have a single
+  // Ellipsis element to indicate that the tensor is replicated across all
+  // dimensions.
   std::vector<std::vector<at::indexing::TensorIndex>> shard_indices(
       devices.size());
   auto tile_shape = sharding.tile_assignment_dimensions();
@@ -323,8 +329,11 @@ ShardingUtil::GetShardIndicesForDevices(
       std::vector<at::indexing::TensorIndex> indices;
       for (int j = tile_shape.size() - 1; j >= 0; j--) {
         int64_t n_j = offset % tile_shape[j];
-        auto slice = at::indexing::Slice(n_j * shard_shape[j],
-                                         (n_j + 1) * shard_shape[j]);
+        int start = n_j * shard_shape[j];
+        // Clamp the end of the slice to the tensor shape to accurately reflect
+        // the shard size without padding.
+        int end = std::min((n_j + 1) * shard_shape[j], tensor_shape[j]);
+        auto slice = at::indexing::Slice(start, end);
         indices.push_back(at::indexing::TensorIndex(slice));
         offset /= tile_shape[j];
       }
@@ -351,8 +360,8 @@ std::vector<at::Tensor> ShardingUtil::ShardTensor(
     XLA_CHECK(tensor.sizes().size() >= sharding.tile_shape().dimensions_size());
 
     auto shard_shape = GetShardShape(tensor, sharding);
-    auto shard_indices =
-        GetShardIndicesForDevices(shard_shape, sharding, devices);
+    auto shard_indices = GetShardIndicesForDevices(
+        shard_shape, tensor.sizes().vec(), sharding, devices);
 
     for (size_t i = 0; i < shard_indices.size(); i++) {
       at::Tensor shard = tensor.index(
