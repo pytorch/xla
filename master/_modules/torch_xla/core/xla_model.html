@@ -1277,11 +1277,11 @@
 
   <span class="k">def</span> <span class="nf">convert_fn</span><span class="p">(</span><span class="n">tensors</span><span class="p">):</span>
     <span class="n">devices</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">device</span><span class="p">)]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">tensors</span><span class="p">)</span>
-    <span class="n">xtensors</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_tensors_from_aten</span><span class="p">(</span><span class="n">tensors</span><span class="p">,</span> <span class="n">devices</span><span class="p">)</span>
+    <span class="n">shardings</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="k">if</span> <span class="n">input_sharding</span><span class="p">:</span>
-      <span class="k">for</span> <span class="n">xtensor</span> <span class="ow">in</span> <span class="n">xtensors</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">input_sharding</span><span class="o">.</span><span class="n">can_apply</span><span class="p">(</span><span class="n">xtensor</span><span class="p">):</span>
-          <span class="n">input_sharding</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">xtensor</span><span class="p">)</span>
+      <span class="n">shardings</span> <span class="o">=</span> <span class="p">[</span><span class="n">input_sharding</span><span class="o">.</span><span class="n">xla_spec</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">tensors</span><span class="p">]</span>
+    <span class="n">xtensors</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_tensors_from_aten</span><span class="p">(</span><span class="n">tensors</span><span class="p">,</span> <span class="n">devices</span><span class="p">,</span>
+                                                      <span class="n">shardings</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">xtensors</span>
 
   <span class="k">def</span> <span class="nf">select_fn</span><span class="p">(</span><span class="n">v</span><span class="p">):</span>
