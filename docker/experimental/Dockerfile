@@ -7,7 +7,6 @@ ARG cudnn_version=8.1.1.33
 # Debian repo doesn't have libcudnn
 ARG cuda_repo=ubuntu1804
 ARG tf_cuda_compute_capabilities="7.0,7.5,8.0"
-ARG cxx_abi="0"
 
 ARG tpuvm=1
 ARG build_cpp_tests=0
@@ -54,6 +53,8 @@ RUN find torch_patches -name '*.diff' | xargs -t -r -n 1 patch -N -p1 -l -i
 
 # Disable CUDA for PyTorch
 ENV USE_CUDA "0"
+
+ARG cxx_abi="0"
 
 # Whether to build torch and torch_xla libraries with CXX ABI
 ENV _GLIBCXX_USE_CXX11_ABI "${cxx_abi}"
