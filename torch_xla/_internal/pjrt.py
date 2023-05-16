@@ -113,7 +113,7 @@ def _initialize_multiprocess(local_rank: int, local_world_size: int):
 
 
 @runtime.requires_pjrt
-def _run_multiprocess(fn: Callable[..., R],
+def run_multiprocess(fn: Callable[..., R],
                       *args,
                       start_method: str = 'spawn',
                       **kwargs) -> Dict[int, R]:
@@ -193,7 +193,7 @@ def spawn(fn: Callable,
   elif nprocs is not None:
     logging.warning('Unsupported nprocs (%d), ignoring...' % nprocs)
 
-  _run_multiprocess(spawn_fn, start_method=start_method)
+  run_multiprocess(spawn_fn, start_method=start_method)
 
 
 @runtime.requires_pjrt

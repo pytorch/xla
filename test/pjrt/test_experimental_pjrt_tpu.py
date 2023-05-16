@@ -62,7 +62,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
           self.accelerator_type))
     expected = accelerator_devices[self.accelerator_type]
 
-    devices_per_process = pjrt._run_multiprocess(xm.xla_device)
+    devices_per_process = pjrt.run_multiprocess(xm.xla_device)
     self.assertDictEqual(devices_per_process, expected)
 
   @absltest.skipIf(
@@ -82,7 +82,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
     os.environ[xenv.TPU_VISIBLE_CHIPS] = '0,1,2,3'
     os.environ[xenv.TPU_PROCESS_BOUNDS] = '1,1,1'
 
-    devices = pjrt._run_multiprocess(xm.xla_device)
+    devices = pjrt.run_multiprocess(xm.xla_device)
     self.assertDictEqual(devices, expected)
 
   @absltest.skipIf(
@@ -107,7 +107,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
     os.environ[xenv.TPU_VISIBLE_CHIPS] = '0'
     os.environ[xenv.TPU_PROCESS_BOUNDS] = '1,1,1'
 
-    devices = pjrt._run_multiprocess(xm.xla_device)
+    devices = pjrt.run_multiprocess(xm.xla_device)
     self.assertDictEqual(devices, expected)
 
   @staticmethod
@@ -140,7 +140,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
       tpu.version() <= 2,
       'This test is not currently supported on v2 TPUVMs or earlier.')
   def test_global_ordinal(self, ordinal_func):
-    results = pjrt._run_multiprocess(ordinal_func)
+    results = pjrt.run_multiprocess(ordinal_func)
     values = list(results.values())
     self.assertListEqual(sorted(values), list(range(self.num_devices)))
 
@@ -150,7 +150,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
       tpu.version() <= 2,
       'This test is not currently supported on v2 TPUVMs or earlier.')
   def test_local_ordinal(self, ordinal_func):
-    results = pjrt._run_multiprocess(ordinal_func)
+    results = pjrt.run_multiprocess(ordinal_func)
     self.assertCountEqual(results.values(), list(range(self.num_devices)))
 
   @staticmethod
@@ -165,7 +165,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
 
   @absltest.skipIf(tpu.version() < 4, "Not implemented")
   def test_local_ordinal_with_discontiguous_global_ordinal_v4(self):
-    results = pjrt._run_multiprocess(
+    results = pjrt.run_multiprocess(
         self._local_ordinal_with_discontiguous_global_ordinal_v4)
     self.assertCountEqual(results.values(), [0, 1, 2, 3])
 
@@ -174,7 +174,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
     os.environ[xenv.TPU_PROCESS_BOUNDS] = '1,1,1'
     os.environ[xenv.TPU_VISIBLE_CHIPS] = '0,1,2,3'
 
-    results = pjrt._run_multiprocess(
+    results = pjrt.run_multiprocess(
         self._local_ordinal_with_discontiguous_global_ordinal_v4)
     self.assertCountEqual(results.values(), [0, 1, 2, 3])
 
@@ -198,7 +198,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
     return pjrt.device_attributes(str(xm.xla_device()))
 
   def test_device_attributes(self):
-    result = pjrt._run_multiprocess(self._device_attributes)
+    result = pjrt.run_multiprocess(self._device_attributes)
     for device in result.values():
       self.assertCountEqual(['coords', 'core_on_chip'], list(device.keys()))
       self.assertIsInstance(device['coords'], list)
@@ -234,7 +234,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
     return execute_time_ns
 
   def test_execute_time_metric(self):
-    results = pjrt._run_multiprocess(self._execute_time_metric)
+    results = pjrt.run_multiprocess(self._execute_time_metric)
 
     for i, v in results.items():
       expected_time_seconds = .1
@@ -260,7 +260,7 @@ class TestTpuCollectiveOps(parameterized.TestCase):
   @parameterized.named_parameters(('synchronized_parameters', True),
                                   ('unsynchronized_parameters', False))
   def test_broadcast_master_param(self, sync):
-    results = pjrt._run_multiprocess(self._broadcast, sync)
+    results = pjrt.run_multiprocess(self._broadcast, sync)
     master_params = results[0]
     for ordinal, worker_params in results.items():
       if sync:
@@ -280,7 +280,7 @@ class TestTpuCollectiveOps(parameterized.TestCase):
 
   @parameterized.named_parameters(('pinned', True), ('unpinned', False))
   def test_all_gather(self, pin_layout):
-    results = pjrt._run_multiprocess(self._all_gather, pin_layout)
+    results = pjrt.run_multiprocess(self._all_gather, pin_layout)
 
     expected = list(range(len(results)))
     for v in results.values():
@@ -306,7 +306,7 @@ class TestTpuCollectiveOps(parameterized.TestCase):
 
   @parameterized.named_parameters(('pinned', True), ('unpinned', False))
   def test_reduce_scatter(self, pin_layout):
-    results = pjrt._run_multiprocess(self._reduce_scatter, pin_layout)
+    results = pjrt.run_multiprocess(self._reduce_scatter, pin_layout)
 
     for ordinal, value in results.items():
       np.testing.assert_array_equal(value, [-ordinal])
@@ -337,7 +337,7 @@ class TestTpuCollectiveOps(parameterized.TestCase):
 
   @parameterized.named_parameters(('pinned', True), ('unpinned', False))
   def test_all_to_all(self, pin_layout):
-    results = pjrt._run_multiprocess(self._all_to_all, pin_layout)
+    results = pjrt.run_multiprocess(self._all_to_all, pin_layout)
 
     for ordinal, value in results.items():
       np.testing.assert_array_equal(value, [[[-ordinal] * len(results),

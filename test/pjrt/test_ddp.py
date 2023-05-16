@@ -29,7 +29,7 @@ class TestPjRtDistributedDataParallel(parameterized.TestCase):
     ddp_model = DDP(model)
 
   def test_ddp_init(self):
-    pjrt._run_multiprocess(self._ddp_init)
+    pjrt.run_multiprocess(self._ddp_init)
 
   @absltest.skipIf(pjrt.device_type() == 'GPU',
                    "GPU device is not supported by pjrt.spawn_threads")
@@ -38,7 +38,7 @@ class TestPjRtDistributedDataParallel(parameterized.TestCase):
 
   @parameterized.named_parameters(('small_net', False), ('large_net', True))
   def test_ddp_correctness(self, use_large_net: bool):
-    pjrt._run_multiprocess(
+    pjrt.run_multiprocess(
         util.ddp_correctness,
         init_method='pjrt://',
         use_large_net=use_large_net,
@@ -51,7 +51,7 @@ class TestPjRtDistributedDataParallel(parameterized.TestCase):
         'MASTER_ADDR': 'localhost',
         'MASTER_PORT': '12355'
     }):
-      pjrt._run_multiprocess(
+      pjrt.run_multiprocess(
           util.ddp_correctness, use_large_net=False, debug=FLAGS.debug)
 
 

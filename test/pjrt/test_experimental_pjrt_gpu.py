@@ -29,27 +29,27 @@ class TestExperimentalPjrtGpu(parameterized.TestCase):
 
     num_devices = int(os.environ[xenv.GPU_NUM_DEVICES])
     expected = {i: torch.device(f'xla:0') for i in range(num_devices)}
-    devices_per_process = pjrt._run_multiprocess(xm.xla_device)
+    devices_per_process = pjrt.run_multiprocess(xm.xla_device)
     self.assertDictEqual(devices_per_process, expected)
 
   def test_multi_gpu_devices(self):
     num_devices = int(os.environ[xenv.GPU_NUM_DEVICES])
     expected = {i: torch.device(f'xla:0') for i in range(num_devices)}
 
-    devices_per_process = pjrt._run_multiprocess(xm.xla_device)
+    devices_per_process = pjrt.run_multiprocess(xm.xla_device)
     self.assertDictEqual(devices_per_process, expected)
 
   @parameterized.named_parameters(('xla_model', xm.get_ordinal),
                                   ('pjrt', pjrt.global_ordinal))
   def test_global_ordinal(self, ordinal_func):
-    results = pjrt._run_multiprocess(ordinal_func)
+    results = pjrt.run_multiprocess(ordinal_func)
     self.assertListEqual(sorted(results.values()), [0, 1, 2, 3])
 
   @parameterized.named_parameters(('xla_model', xm.get_local_ordinal),
                                   ('pjrt', pjrt.local_ordinal))
   def test_local_ordinal(self, ordinal_func):
     # TODO(wcromar): add multiprocess tests
-    results = pjrt._run_multiprocess(ordinal_func)
+    results = pjrt.run_multiprocess(ordinal_func)
     self.assertListEqual(sorted(results.values()), [0, 1, 2, 3])
 
   @staticmethod
@@ -90,7 +90,7 @@ class TestExperimentalPjrtGpu(parameterized.TestCase):
             'device': f'xla:0'
         } for i in range(4)
     }
-    results = pjrt._run_multiprocess(self._multi_gpu_backwards)
+    results = pjrt.run_multiprocess(self._multi_gpu_backwards)
 
     self.assertDictEqual(results, expected)
 
@@ -121,7 +121,7 @@ class TestExperimentalPjrtGpu(parameterized.TestCase):
   @parameterized.named_parameters(('synchronized_parameters', True),
                                   ('unsynchronized_parameters', False))
   def test_broadcast_master_param(self, sync):
-    results = pjrt._run_multiprocess(self._broadcast, sync)
+    results = pjrt.run_multiprocess(self._broadcast, sync)
     master_params = results[0]
     for ordinal, worker_params in results.items():
       if sync:
@@ -141,7 +141,7 @@ class TestExperimentalPjrtGpu(parameterized.TestCase):
 
   @parameterized.named_parameters(('pinned', True), ('unpinned', False))
   def test_all_gather(self, pin_layout):
-    results = pjrt._run_multiprocess(self._all_gather, pin_layout)
+    results = pjrt.run_multiprocess(self._all_gather, pin_layout)
 
     expected = list(range(len(results)))
     for v in results.values():
@@ -167,7 +167,7 @@ class TestExperimentalPjrtGpu(parameterized.TestCase):
 
   @parameterized.named_parameters(('pinned', True), ('unpinned', False))
   def test_reduce_scatter(self, pin_layout):
-    results = pjrt._run_multiprocess(self._reduce_scatter, pin_layout)
+    results = pjrt.run_multiprocess(self._reduce_scatter, pin_layout)
 
     for ordinal, value in results.items():
       np.testing.assert_array_equal(value, [-ordinal])
@@ -198,7 +198,7 @@ class TestExperimentalPjrtGpu(parameterized.TestCase):
 
   @parameterized.named_parameters(('pinned', True), ('unpinned', False))
   def test_all_to_all(self, pin_layout):
-    results = pjrt._run_multiprocess(self._all_to_all, pin_layout)
+    results = pjrt.run_multiprocess(self._all_to_all, pin_layout)
 
     for ordinal, value in results.items():
       np.testing.assert_array_equal(value, [[[-ordinal] * len(results),

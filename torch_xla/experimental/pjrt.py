@@ -1,5 +1,5 @@
 from torch_xla import runtime
-from torch_xla._internal import multiprocess
+from torch_xla._internal import pjrt
 from torch_xla.experimental.deprecation import register_deprecated
 import torch_xla.core.xla_model as xm
 
@@ -21,7 +21,9 @@ aliases = [
     runtime.using_pjrt,
     runtime.world_size,
     runtime.xla_device,
-    multiprocess.spawn,
+    pjrt.spawn,
+    pjrt.spawn_threads,
+    pjrt.run_multiprocess,
     xm.broadcast_master_param,
 ]
 
