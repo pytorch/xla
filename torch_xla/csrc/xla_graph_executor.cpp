@@ -265,15 +265,6 @@ torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(
 }
 
 torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(
-    const at::Scalar& value, SymIntElements size_elements,
-    xla::PrimitiveType primitive_type,
-    const torch::lazy::BackendDevice& device) {
-  torch::lazy::Value ir_value =
-      GetIrValueForScalar(value, primitive_type, device);
-  return torch::lazy::MakeNode<ExpandSymInt>(ir_value, size_elements);
-}
-
-torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(
     const at::Scalar& value, const xla::Shape& shape,
     const torch::lazy::BackendDevice& device) {
   return GetIrValueForScalar(value, shape.element_type(), shape.dimensions(),
@@ -289,6 +280,13 @@ torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(
           ? MakeXlaPrimitiveType(*logical_element_type, &device)
           : shape.element_type();
   return GetIrValueForScalar(value, type, shape.dimensions(), device);
+}
+
+torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(
+    const at::Scalar& value, SymIntElements size_elements,
+    xla::PrimitiveType type, const torch::lazy::BackendDevice& device) {
+  torch::lazy::Value ir_value = GetIrValueForScalar(value, type, device);
+  return torch::lazy::MakeNode<ExpandSymInt>(ir_value, size_elements);
 }
 
 torch::lazy::Value XLAGraphExecutor::GetRngSeed(

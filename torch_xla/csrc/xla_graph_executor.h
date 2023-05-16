@@ -82,16 +82,15 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
       const at::Scalar& value, xla::PrimitiveType type,
       c10::SymIntArrayRef sym_size, const torch::lazy::BackendDevice& device);
   torch::lazy::Value GetIrValueForScalar(
-      const at::Scalar& value, SymIntElements size_elements,
-      xla::PrimitiveType primitive_type,
-      const torch::lazy::BackendDevice& device);
-  torch::lazy::Value GetIrValueForScalar(
       const at::Scalar& value, const xla::Shape& shape,
       const torch::lazy::BackendDevice& device);
   torch::lazy::Value GetIrValueForScalar(
       const at::Scalar& value, const xla::Shape& shape,
       c10::optional<at::ScalarType> logical_element_type,
       const torch::lazy::BackendDevice& device);
+  torch::lazy::Value GetIrValueForScalar(
+      const at::Scalar& value, SymIntElements size_elements,
+      xla::PrimitiveType type, const torch::lazy::BackendDevice& device);
 
   // Override to use our own DeviceContextArena.
   torch::lazy::Value GetRngSeed(const torch::lazy::BackendDevice& device) final;
