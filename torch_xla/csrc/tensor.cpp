@@ -451,7 +451,6 @@ at::Tensor XLATensor::ToTensor(bool detached) {
   c10::optional<at::Tensor> tensor_data = CurrentTensorData();
   if (!tensor_data) {
     XLAGraphExecutor::Get()->DeviceBarrier(GetDevice());
-
     // The GetXlaData() call will trigger an ApplyPendingGraph() if an IR
     // XlaNode is available on the tensor.
     std::vector<at::Tensor> tensors = XlaDataToTensors({GetXlaData()}, dtype());

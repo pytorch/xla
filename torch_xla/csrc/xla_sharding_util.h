@@ -96,37 +96,17 @@ class ShardingUtil {
       const at::Tensor& tensor, const xla::OpSharding sharding,
       const std::vector<std::string>& devices, bool padded = true);
 
-  friend class XLAGraphExecutor;
-
- private:
-  class ShardingContextArena {
-   public:
-    static ShardingContextArena* Get() {
-      static ShardingContextArena* arena = new ShardingContextArena();
-      return arena;
-    }
-
-    // Register `tensor` and its original data handle `src_data` if the
-    // `handle` needs to be updated  after sharding propagation. Caller should
-    // maintain the ownership and is responsible for keeping the data valid.
-    void RegisterShardingPropagation(torch::lazy::BackendData* src_data,
-                                     XLATensorPtr tensor);
-
-    void ClearShardingPropagation() { propagation_map.clear(); }
-
-    // Update BackendDataPtr in the operands of the IR value nodeif, if the
-    // device data has been partitioned by the sharding propagation.
-    // TODO(yeounoh) this may increase the tracing time and trace twice in the
-    // worst case.
-    void ApplyShardingPropagation(torch::lazy::Value ir_value);
-
-    int size() { return propagation_map.size(); }
-
-   private:
-    // Below two maps are used for dynamo integration.
-    // TODO(yeounoh) save partitioned BackendData ptr instead of XLATensorPtr.
-    std::unordered_map<torch::lazy::BackendData*, XLATensorPtr> propagation_map;
-  };
+  // Prepares output sharding propagation by extracting output parameter
+  // ShardingSpec into `sharding_specs` from the SPMD compiled `computation` and
+  // placing PjRtShardedData into `data_placeholders`. `data_placeholders`
+  // should already contain data placeholders to be used for unsharded output
+  // parameters. `tensors` and its `indices` define sync tensors for the
+  // outputs.
+  static void PrepareOutputShardingPropagation(
+      std::vector<XLATensorPtr>* tensors, absl::Span<const size_t> indices,
+      ComputationPtr computation,
+      std::vector<torch::lazy::BackendDataPtr>* data_placeholders,
+      std::vector<XLATensor::ShardingSpecPtr>* sharding_specs);
 };
 
 }  // namespace torch_xla

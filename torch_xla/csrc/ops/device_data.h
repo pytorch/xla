@@ -23,11 +23,13 @@ class DeviceData : public XlaNode {
   }
 
   // With SPMD sharding propagation, we need to update the unpartitioned
-  // backend data with a partitioned one in the node operands. The node and its
-  // device data operands are fixed, but the underlying device data address need
-  // to be updated. An alternative to `Assign` would be make the operands of
-  // nodes mutable and modify with new device data nodes.
-  void Assign(std::shared_ptr<torch::lazy::BackendData> data) { data_ = data; }
+  // backend data with a partitioned one in the node operands.
+  void Assign(std::shared_ptr<torch::lazy::BackendData> data) {
+    XLA_CHECK(data->shape() == data_->shape())
+        << "Shape mismatch: expected (" << data_->shape().to_string()
+        << "), actual (" << data->shape().to_string() << ")";
+    data_ = data;
+  }
 
   static DeviceData* Cast(const torch::lazy::Node* node);
 
