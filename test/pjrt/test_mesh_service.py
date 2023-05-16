@@ -3,7 +3,8 @@ from absl.testing import absltest, parameterized
 
 import torch_xla.debug.metrics as met
 import torch_xla.core.xla_model as xm
-from torch_xla.experimental import pjrt
+from torch_xla import runtime as xr
+from torch_xla._internal import pjrt
 
 
 class PjRtMeshServiceTest(parameterized.TestCase):
@@ -32,7 +33,7 @@ class PjRtMeshServiceTest(parameterized.TestCase):
 
   @staticmethod
   def _rendezvous_replica_groups():
-    replicas = list(range(pjrt.global_device_count()))
+    replicas = list(range(xr.global_device_count()))
     return xm.rendezvous("test rendezvous", b'message', replicas)
 
   def test_rendezvous_replica_groups(self):

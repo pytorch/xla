@@ -12,7 +12,7 @@ import subprocess
 import sys
 import time
 import threading
-from torch_xla.experimental import pjrt
+from torch_xla import runtime as xr
 import torch_xla.core.xla_env_vars as xenv
 from torch_xla.distributed.cluster import ClusterResolver
 import torch_xla.utils.utils as xu
@@ -677,7 +677,7 @@ class DistributedExecutor(object):
 
 def main(args=None):
   os.environ[xenv.PJRT_SELECT_DEFAULT_DEVICE] = '0'
-  if pjrt.using_pjrt():
+  if xr.using_pjrt():
     logging.warning(
         'PJRT runtime detected. `xla_dist` is NOT compatible with PJRT, and you may run into unexpected errors. Unset $PJRT_DEVICE to silence this warning.'
     )

@@ -12,7 +12,8 @@ from absl.testing import absltest, parameterized
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
-from torch_xla.experimental import pjrt
+from torch_xla import runtime as xr
+from torch_xla._internal import pjrt
 from torch_xla.experimental import tpu
 import torch_xla.distributed.xla_multiprocessing as xmp
 
@@ -20,7 +21,7 @@ import torch_xla.distributed.xla_multiprocessing as xmp
 class TestExperimentalPjrtTpu(parameterized.TestCase):
 
   def setUp(self):
-    pjrt.set_device_type('TPU')
+    xr.set_device_type('TPU')
 
     try:
       tpu_env = tpu.get_tpu_env()
@@ -135,7 +136,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
         devices, [torch.device(f'xla:{i}') for i in range(self.num_devices)])
 
   @parameterized.named_parameters(('xla_model', xm.get_ordinal),
-                                  ('pjrt', pjrt.global_ordinal))
+                                  ('pjrt', xr.global_ordinal))
   @absltest.skipIf(
       tpu.version() <= 2,
       'This test is not currently supported on v2 TPUVMs or earlier.')
@@ -145,7 +146,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
     self.assertListEqual(sorted(values), list(range(self.num_devices)))
 
   @parameterized.named_parameters(('xla_model', xm.get_local_ordinal),
-                                  ('pjrt', pjrt.local_ordinal))
+                                  ('pjrt', xr.local_ordinal))
   @absltest.skipIf(
       tpu.version() <= 2,
       'This test is not currently supported on v2 TPUVMs or earlier.')
@@ -157,11 +158,11 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
   def _local_ordinal_with_discontiguous_global_ordinal_v4():
     # Actual set of global ordinals from one v4-128 host
     global_ordinals = [58, 59, 62, 63]
-    new_global_ordinal = global_ordinals[pjrt.global_ordinal()]
+    new_global_ordinal = global_ordinals[xr.global_ordinal()]
 
     with mock.patch.object(
         pjrt, 'global_ordinal', return_value=new_global_ordinal):
-      return pjrt.local_ordinal()
+      return xr.local_ordinal()
 
   @absltest.skipIf(tpu.version() < 4, "Not implemented")
   def test_local_ordinal_with_discontiguous_global_ordinal_v4(self):
@@ -195,7 +196,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
 
   @staticmethod
   def _device_attributes():
-    return pjrt.device_attributes(str(xm.xla_device()))
+    return xr.device_attributes(str(xm.xla_device()))
 
   def test_device_attributes(self):
     result = pjrt.run_multiprocess(self._device_attributes)
@@ -252,7 +253,7 @@ class TestTpuCollectiveOps(parameterized.TestCase):
     device = xm.xla_device()
     model = nn.Linear(5, 5).to(device)
     if sync:
-      pjrt.broadcast_master_param(model)
+      xm.broadcast_master_param(model)
 
     xm.mark_step()
     return next(model.parameters()).detach().cpu().numpy()

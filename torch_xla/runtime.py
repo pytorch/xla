@@ -40,7 +40,7 @@ def _maybe_select_default_device():
       'disable default device selection, set PJRT_SELECT_DEFAULT_DEVICE=0')
   # TODO: Update this link in the release branch
   logging.warning('For more information about the status of PJRT, see '
-                  'https://github.com/pytorch/xla/blob/master/docs/pjrt.md')
+                  'https://github.com/pytorch/xla/blob/master/docs/xr.md')
   # Check for libtpu _and_ the TPU device
   if torch_xla._found_libtpu and os.path.exists('/dev/accel0'):
     logging.warning('libtpu.so and TPU device found. Setting PJRT_DEVICE=TPU.')

@@ -11,14 +11,15 @@ import torch_xla
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
-from torch_xla.experimental import pjrt
+from torch_xla import runtime as xr
+from torch_xla._internal import pjrt
 from absl.testing import absltest, parameterized
 
 
 class TestExperimentalPjrtGpu(parameterized.TestCase):
 
   def setUp(self):
-    pjrt.set_device_type('GPU')
+    xr.set_device_type('GPU')
 
     os.environ.update({
         xenv.PJRT_GPU_ASYNC_CLIENT: 'true',
@@ -40,13 +41,13 @@ class TestExperimentalPjrtGpu(parameterized.TestCase):
     self.assertDictEqual(devices_per_process, expected)
 
   @parameterized.named_parameters(('xla_model', xm.get_ordinal),
-                                  ('pjrt', pjrt.global_ordinal))
+                                  ('pjrt', xr.global_ordinal))
   def test_global_ordinal(self, ordinal_func):
     results = pjrt.run_multiprocess(ordinal_func)
     self.assertListEqual(sorted(results.values()), [0, 1, 2, 3])
 
   @parameterized.named_parameters(('xla_model', xm.get_local_ordinal),
-                                  ('pjrt', pjrt.local_ordinal))
+                                  ('pjrt', xr.local_ordinal))
   def test_local_ordinal(self, ordinal_func):
     # TODO(wcromar): add multiprocess tests
     results = pjrt.run_multiprocess(ordinal_func)
@@ -113,7 +114,7 @@ class TestExperimentalPjrtGpu(parameterized.TestCase):
     device = xm.xla_device()
     model = nn.Linear(5, 5).to(device)
     if sync:
-      pjrt.broadcast_master_param(model)
+      xm.broadcast_master_param(model)
 
     xm.mark_step()
     return next(model.parameters()).detach().cpu().numpy()

@@ -201,7 +201,7 @@ def train_imagenet():
 
   input_mesh = None
   if FLAGS.sharding:
-    num_devices = pjrt.global_device_count()
+    num_devices = xr.global_device_count()
     device_ids = np.arange(num_devices)
     # Model sharding
     if 'conv' in FLAGS.sharding:

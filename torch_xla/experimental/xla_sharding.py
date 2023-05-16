@@ -146,7 +146,7 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
     Examples
     —------------------------------
     mesh_shape = (4, 2)
-    num_devices = pjrt.global_device_count()
+    num_devices = xr.global_device_count()
     device_ids = np.array(range(num_devices))
     mesh = Mesh(device_ids, mesh_shape, ('x', 'y'))
 
@@ -158,7 +158,7 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
     linear = nn.Linear(32, 10).to(xm.xla_device())
     xs.mark_sharding(linear.weight, mesh, (None, 1))
   """
-  num_devices = pjrt.global_device_count()
+  num_devices = xr.global_device_count()
   assert num_devices > 0, "This requires XLA supported device(s)."
   assert mesh.size() == num_devices, \
     f"{mesh.mesh_shape} is not mappable over {num_devices} devices."

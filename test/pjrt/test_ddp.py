@@ -7,7 +7,8 @@ import torch.nn as nn
 from torch.nn.parallel import DistributedDataParallel as DDP
 import torch_xla.core.xla_model as xm
 import torch_xla.experimental.pjrt_backend
-from torch_xla.experimental import pjrt, tpu
+from torch_xla import runtime as xr, tpu
+from torch_xla._internal import pjrt
 
 # Setup import folders.
 xla_test_folder = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
@@ -31,7 +32,7 @@ class TestPjRtDistributedDataParallel(parameterized.TestCase):
   def test_ddp_init(self):
     pjrt.run_multiprocess(self._ddp_init)
 
-  @absltest.skipIf(pjrt.device_type() == 'GPU',
+  @absltest.skipIf(xr.device_type() == 'GPU',
                    "GPU device is not supported by pjrt.spawn_threads")
   def test_ddp_init_threaded(self):
     pjrt.spawn_threads(self._ddp_init)
@@ -44,7 +45,7 @@ class TestPjRtDistributedDataParallel(parameterized.TestCase):
         use_large_net=use_large_net,
         debug=FLAGS.debug)
 
-  @absltest.skipIf(pjrt.device_type() == 'TPU' and tpu.version() < 4,
+  @absltest.skipIf(xr.device_type() == 'TPU' and tpu.version() < 4,
                    "env:// doesn't support multithreading")
   def test_ddp_correctness_env_init(self):
     with mock.patch.dict(os.environ, {
