@@ -502,7 +502,8 @@ xla::Shape XlaHelpers::GetPromotedDynamicShape(const xla::Shape& shape1,
   std::vector<int64_t> upper_bounds;
   std::vector<bool> dyn_dims;
 
-  // See https://pytorch.org/docs/stable/notes/broadcasting.html#broadcasting-semantics
+  // See
+  // https://pytorch.org/docs/stable/notes/broadcasting.html#broadcasting-semantics
   if (upper_bounds1.size() > upper_bounds2.size()) {
     upper_bounds.insert(
         upper_bounds.end(), upper_bounds1.begin(),
