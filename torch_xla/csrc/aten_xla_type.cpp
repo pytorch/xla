@@ -167,7 +167,6 @@ std::pair<XLATensorPtr, XLATensorPtr> GetBinaryOperands(
     other_tensor = bridge::GetXlaTensor(other);
     self_tensor = bridge::GetOrCreateXlaTensor(self, other_tensor->GetDevice());
   } else {
-    // xw32: this branch is called.
     self_tensor = self_xtensor;
     other_tensor =
         bridge::GetOrCreateXlaTensor(other, self_tensor->GetDevice());
@@ -664,7 +663,6 @@ at::Tensor XLANativeFunctions::addmm(const at::Tensor& self,
                                      const at::Scalar& beta,
                                      const at::Scalar& alpha) {
   TORCH_LAZY_FN_COUNTER("xla::");
-  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   if (beta.to<double>() != 1 || alpha.to<double>() != 1) {
     return at::native::call_fallback_fn<&xla_cpu_fallback,
                                         ATEN_OP(addmm)>::call(self, mat1, mat2,

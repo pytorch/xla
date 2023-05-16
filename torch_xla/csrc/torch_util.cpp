@@ -6,7 +6,6 @@
 #include "torch_xla/csrc/ir_builder.h"
 #include "torch_xla/csrc/ops/constant.h"
 #include "torch_xla/csrc/tensor.h"
-#include "torch_xla/csrc/ir_builder.h"
 
 namespace torch_xla {
 
@@ -61,8 +60,6 @@ at::ScalarType GetScalarType(const at::Scalar& scalar) {
 }
 
 at::Tensor UnwrapNumber(const at::Tensor& tensor, at::ScalarType dtype) {
-  // xw32 TODO: delete the comment later.
-  // tensor.unsafeGetTensorImpl()->is_wrapped_number()==0, so just returned tensor.
   return tensor.unsafeGetTensorImpl()->is_wrapped_number() ? tensor.to(dtype)
                                                            : tensor;
 }

@@ -652,23 +652,15 @@ XLATensorPtr abs(const XLATensorPtr& input) {
 XLATensorPtr add(const XLATensorPtr& input, const XLATensorPtr& other,
                  const at::Scalar& alpha,
                  c10::optional<at::ScalarType> logical_element_type) {
-  // torch::lazy::Value constant = XLAGraphExecutor::Get()->GetIrValueForScalar(
-  //     alpha, other->shape(), logical_element_type, input->GetDevice());
-  // return input->CreateFrom(input->GetIrValue() + other->GetIrValue() * constant,
-  //                          logical_element_type);
   SymIntElements sym_int_elements(other->GetIrValue());
   xla::PrimitiveType primitive_type =
       logical_element_type
           ? MakeXlaPrimitiveType(*logical_element_type, &(input->GetDevice()))
           : other->shape().get().element_type();
-  // xw32 After the change, primitive_type is S32(4).
 
   torch::lazy::Value constant = XLAGraphExecutor::Get()->GetIrValueForScalar(
       alpha, sym_int_elements, primitive_type, input->GetDevice());
-  torch::lazy::Value other_ir_value = other->GetIrValue();
-  torch::lazy::Value ir_value_production = other_ir_value * constant;
-  torch::lazy::Value ir_value_summation = input->GetIrValue() + ir_value_production;
-  return input->CreateFrom(ir_value_summation,
+  return input->CreateFrom(input->GetIrValue() + other->GetIrValue() * constant,
                            logical_element_type);
 }
 
