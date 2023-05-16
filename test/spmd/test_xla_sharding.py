@@ -172,12 +172,15 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertTrue(torch.allclose(t1, torch.ones(16, 16)))
 
   def test_send_cpu_data_to_device_with_sharding(self):
-    xm.mark_step()  # Execute pending graph to avoid contaminating metrics
+    # Execute pending graph to avoid contaminating metrics
+    xm.mark_step(wait=True)
     met.clear_all()
-    tensor = torch.arange(16, dtype=torch.float32).reshape(4, 4)
+
+    tensor = torch.arange(16, dtype=torch.float32).reshape(1, 16)
     mesh = self._get_mesh((1, self.n_devices))
 
-    # Create a ShardingSpec and use it to shard the tensor while sending to device
+    # Create a ShardingSpec and use it to shard the tensor while sending to
+    # device
     sharding_spec = xs.ShardingSpec(mesh, (0, 1))
     self.assertTrue(sharding_spec.can_apply(tensor))
     xtensors = xm.send_cpu_data_to_device([tensor],
@@ -187,7 +190,8 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     outbound = met.metric_data("OutboundData")[1]
     self.assertEqual(outbound, tensor.element_size() * tensor.nelement())
 
-    # Verify the resulting sharding annotation matches an explicit `mark_sharding` call
+    # Verify the resulting sharding annotation matches an explicit
+    # `mark_sharding` call.
     xt = xtensors[0]
     explicit_xt = tensor.to(xm.xla_device())
     xs.mark_sharding(explicit_xt, mesh, (0, 1))
