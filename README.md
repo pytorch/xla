@@ -160,10 +160,7 @@ Note: For TPU Pod customers using XRT (our legacy runtime), we have custom wheel
 
 | Version | Colab TPU Wheel |
 | --- | ----------- |
-| 2.0 | `https://storage.googleapis.com/tpu-pytorch/wheels/colab/torch_xla-2.0-cp39-cp39-linux_x86_64.whl` |
-| 1.13 | `https://storage.googleapis.com/tpu-pytorch/wheels/colab/torch_xla-1.13-cp37-cp37m-linux_x86_64.whl` |
-| 1.12 | `https://storage.googleapis.com/tpu-pytorch/wheels/colab/torch_xla-1.12-cp37-cp37m-linux_x86_64.whl` |
-| 1.11 | `https://storage.googleapis.com/tpu-pytorch/wheels/colab/torch_xla-1.11-cp37-cp37m-linux_x86_64.whl` |
+| 2.0 | `https://storage.googleapis.com/tpu-pytorch/wheels/colab/torch_xla-2.0-cp310-cp310-linux_x86_64.whl` |
 
 You can also add `+yyyymmdd` after `torch_xla-nightly` to get the nightly wheel of a specified date. To get the companion pytorch and torchvision nightly wheel, replace the `torch_xla` with `torch` or `torchvision` on above wheel links.
 
