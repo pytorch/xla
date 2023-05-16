@@ -1183,8 +1183,14 @@ void eye_out(XLATensorPtr& out, int64_t lines, int64_t cols) {
 }
 
 void fill_(XLATensorPtr& input, const at::Scalar& value) {
+  // Fill_ is implemented by expanding the pass in value to the same shape of
+  // input and replace input Tensor's IR with the expanded value. In order to
+  // support input with dynamic shapes, we need to expand the value to its
+  // dynamic dimension hence we need to create a sym_int_elements here.
+  SymIntElements sym_int_elements(input->GetIrValue());
   torch::lazy::Value constant = XLAGraphExecutor::Get()->GetIrValueForScalar(
-      value, input->shape(), input->GetDevice());
+      value, sym_int_elements, input->shape().get().element_type(),
+      input->GetDevice());
   input->SetInPlaceIrValue(std::move(constant));
 }
 
