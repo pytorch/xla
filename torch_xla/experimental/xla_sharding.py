@@ -4,8 +4,7 @@ from dataclasses import dataclass, field
 import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
-import torch_xla.utils.utils as xu
-import torch_xla.experimental.pjrt as pjrt
+import torch_xla.runtime as xr
 from torch_xla.experimental.xla_sharded_tensor import XLAShardedTensor
 from torch_xla.experimental.pjrt import requires_pjrt
 
