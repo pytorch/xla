@@ -551,7 +551,7 @@ PjRtComputationClient::ExecuteReplicated(
   // Since this is the SPMD code path.
   // There is no points to grab devices lock for every individual device.
   auto lock = lock_device_shared(spmd_device_str);
-  TF_VLOG(3) << "ExecuteReplicated grep the lock for " << spmd_device_str;
+  TF_VLOG(3) << "ExecuteReplicated grab the lock for " << spmd_device_str;
   // Signal that `ExecuteReplicated` has completed for one of the devices the
   // ExecuteReplicatedTime metric. Here, we assume that all devices will finish
   // execution roughly at the same time, hence only use one of the
