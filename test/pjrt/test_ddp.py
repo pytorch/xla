@@ -7,8 +7,8 @@ import torch.nn as nn
 from torch.nn.parallel import DistributedDataParallel as DDP
 import torch_xla.core.xla_model as xm
 import torch_xla.experimental.pjrt_backend
-from torch_xla import runtime as xr, tpu
-from torch_xla._internal import pjrt
+from torch_xla import runtime as xr
+from torch_xla._internal import pjrt, tpu
 
 # Setup import folders.
 xla_test_folder = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
