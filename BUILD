@@ -8,6 +8,7 @@ tf_cc_shared_object(
     copts = [
         "-DTORCH_API_INCLUDE_EXTENSION_H",
         "-DTORCH_EXTENSION_NAME=_XLAC",
+        "-DC10_USING_CUSTOM_GENERATED_MACROS",
         "-fopenmp",
         "-fPIC",
         "-fwrapv",
