@@ -12,14 +12,13 @@ import socketserver
 import threading
 
 from typing import Callable, Optional
+from . import xla_extension as _xla
 
-from torch_xla._XLAC import xla_client
-
-_profiler_server: Optional[xla_client.profiler.ProfilerServer] = None
+_profiler_server: Optional[torch_xla._XLAC.profiler.ProfilerServer] = None
 
 logger = logging.getLogger(__name__)
 
-def start_server(port: int) -> xla_client.profiler.ProfilerServer:
+def start_server(port: int) -> torch_xla._XLAC.profiler.ProfilerServer:
   """Starts the profiler server on port `port`.
 
   Using the "TensorFlow profiler" feature in `TensorBoard
@@ -39,7 +38,7 @@ def start_server(port: int) -> xla_client.profiler.ProfilerServer:
   # # is for start_trace), but I'm putting it here to be safe.
   # xla_bridge.get_backend()
 
-  _profiler_server = xla_client.profiler.start_server(port)
+  _profiler_server = torch_xla._XLAC.profiler.start_server(port)
   return _profiler_server
 
 
@@ -100,7 +99,7 @@ def start_trace(log_dir, create_perfetto_link: bool = False,
     if not torch_xla._found_libtpu:
       raise RuntimeError("Libtpu is not initialized correctly ")
 
-    _profile_state.profile_session = xla_client.profiler.ProfilerSession()
+    _profile_state.profile_session = torch_xla._XLAC.profiler.ProfilerSession()
     _profile_state.create_perfetto_link = create_perfetto_link
     _profile_state.create_perfetto_trace = (
         create_perfetto_trace or create_perfetto_link)
@@ -221,7 +220,7 @@ def trace(log_dir, create_perfetto_link=False, create_perfetto_trace=False):
     stop_trace()
 
 
-class TraceAnnotation(xla_client.profiler.TraceMe):
+class TraceAnnotation(torch_xla._XLAC.profiler.TraceMe):
   """Context manager that generates a trace event in the profiler.
 
   The trace event spans the duration of the code enclosed by the context.
@@ -299,7 +298,9 @@ def annotate_function(func: Callable, name: Optional[str] = None,
     return wrapper
   return wrapper
 
-
+def heap_profile(client: _xla.Client) -> bytes:
+  """Returns a gzipped pprof protocol buffer containing a heap profile."""
+  return gzip.compress(client.heap_profile())
 
 def device_memory_profile(backend: Optional[str] = None) -> bytes:
   """Captures a PTXLA device memory profile as ``pprof``-format protocol buffer.
@@ -326,8 +327,7 @@ def device_memory_profile(backend: Optional[str] = None) -> bytes:
   Returns:
     A byte string containing a binary `pprof`-format protocol buffer.
   """
-  return xla_client.heap_profile(torch_xla._found_libtpu)
-
+  return heap_profile(torch_xla._found_libtpu)
 
 def save_device_memory_profile(filename, backend: Optional[str] = None) -> None:
   """Collects a device memory profile and writes it to a file.
