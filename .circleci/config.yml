@@ -274,6 +274,17 @@ run_yapf: &run_yapf
       echo "PASSED Python format"
     fi
 
+run_pylint: &run_pylint
+  name: Run pylint
+  command: |
+    pyenv install 3.7.0
+    pyenv global 3.7.0
+    pip install --upgrade pip
+    pip install pylint
+
+    set -e
+    pylint torch_xla --errors-only
+
 assert_no_torch_pin: &assert_no_torch_pin
   name: Make sure torch_patches/.torch_pin is removed before merging
   command: |
