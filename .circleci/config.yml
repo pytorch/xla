@@ -277,9 +277,6 @@ run_yapf: &run_yapf
 run_pylint: &run_pylint
   name: Run pylint
   command: |
-    pyenv install 3.7.0
-    pyenv global 3.7.0
-    pip install --upgrade pip
     pip install pylint
 
     set -e
@@ -334,6 +331,8 @@ jobs:
         <<: *run_clang_format
     - run:
         <<: *run_yapf
+    - run:
+        <<: *run_pylint
 
   linter_check_no_torch_pin:
     machine:
