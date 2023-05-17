@@ -565,6 +565,7 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
 void XLAGraphExecutor::TensorCollectionBarrier(SyncTensorCollection* coll) {
   torch::lazy::LazyGraphExecutor::TensorCollectionBarrier(coll);
   // TODO(yeounoh) lock SPMD device
+  TF_VLOG(4) << "waiting barrier for device " << coll->device.toString();
 }
 
 std::vector<torch::lazy::BackendDataPtr>

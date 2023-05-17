@@ -1222,7 +1222,12 @@ void InitXlaModuleBindings(py::module m) {
         [](const std::vector<std::string>& devices) {
           NoGilSection nogil;
           XLAGraphExecutor::Get()->WaitDeviceOps(devices);
-          xla::ComputationClient::Get()->WaitDeviceOps(devices);
+          if (ShardingUtil::UseVirtualDevice()) {
+            std::vector<std::string> spmd_device = {"SPMD:0"};
+            xla::ComputationClient::Get()->WaitDeviceOps(spmd_device);
+          } else {
+            xla::ComputationClient::Get()->WaitDeviceOps(devices);
+          }
         },
         py::arg("devices"));
   m.def("_xla_counter_names", []() {
