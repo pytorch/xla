@@ -390,6 +390,18 @@ class InputCollector(torch.fx.Interpreter):
 
 
 def extract_compiled_graph(xla_model, xla_args):
+  # This logic, needed for supporting in-place operations, is a duplicate of
+  # the one in the main `extract_internal` function above. We need to do this
+  # check for fetching fallback ops as well.
+  # TODO (@wonjoo): Make this duplicate code a bit cleaner.
+  xla_args_need_update_bool = torch_xla._XLAC._check_tensor_need_materialization(
+      xla_args)
+
+  cloned_xla_args = [
+      torch.clone(xla_arg) if isinstance(xla_arg, torch.Tensor) else xla_arg
+      for xla_arg in xla_args
+  ]
+
   # execute model once to collect fallback ops
   collector = FallBackNodeCollector(xla_model)
   collector.run(*xla_args)
@@ -408,6 +420,13 @@ def extract_compiled_graph(xla_model, xla_args):
   partitions = partitioner.propose_partitions()
   partitioned_graph = partitioner.fuse_partitions(partitions)
   InputCollector(partitioned_graph).run(*xla_args)
+
+  # Again, same logic in the `extract_internal` above to support in-place operations.
+  # TODO (@wonjoo): Make this duplicate code a bit cleaner.
+  if xla_args_need_update_bool:
+    for xla_arg, cloned_xla_arg in zip(xla_args, cloned_xla_args):
+      if isinstance(xla_arg, torch.Tensor):
+        xla_arg.copy_(cloned_xla_arg)
 
   # compile each submodule and replace it with a call
   for node in partitioned_graph.graph.nodes:
