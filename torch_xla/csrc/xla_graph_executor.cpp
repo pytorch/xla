@@ -593,7 +593,8 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
     torch::lazy::BackendDataPtr handle =
         WrapXlaData(xla::ComputationClient::Get()->CreateDataPlaceholder(
             device.toString(), std::move(shape)));
-    // if SPMD is enabled, we assume all output will be replicated
+    // If SPMD is enabled, we assume all output will be sharded or replicated
+    // and wrapped inside PjRtShardedData handle.
     if (ShardingUtil::UseVirtualDevice()) {
       XLATensor::ShardingSpecPtr sharding =
           std::make_shared<XLATensor::ShardingSpec>(
