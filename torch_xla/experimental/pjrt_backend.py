@@ -4,7 +4,8 @@ import threading
 import torch.distributed as dist
 from torch.testing._internal.distributed import multi_threaded_pg
 from torch_xla.distributed import xla_backend
-from torch_xla import runtime as xr, tpu
+from torch_xla import runtime as xr
+from torch_xla._internal import tpu
 import torch_xla.utils.utils as xu
 
 _store = None
