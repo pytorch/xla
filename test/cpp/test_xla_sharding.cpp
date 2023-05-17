@@ -55,17 +55,17 @@ TEST_F(XLAShardingTest, GetShardIndicesForDevices) {
   });
   auto sharding = xla::HloSharding::Tile(mesh).ToProto();
   auto shard_shape = ShardingUtil::GetShardShape(tensor, sharding);
-  auto shard_indices =
-      ShardingUtil::GetShardIndicesForDevices(shard_shape, sharding, devices);
+  auto shard_indices = ShardingUtil::GetShardIndicesForDevices(
+      shard_shape, tensor.sizes().vec(), sharding, devices);
   EXPECT_EQ(shard_indices.size(), devices.size());
   /* Tiled indices should be:
                  dim=0 dim=1
        device=0  [0:4,  0:4]
-       device=1  [0:4,  4:8]
+       device=1  [0:4,  4:7]
        device=2  [4:8,  0:4]
-       device=3  [4:8,  4:8] */
+       device=3  [4:8,  4:7] */
   std::vector<std::vector<int>> slice_starts = {{0, 0}, {0, 4}, {4, 0}, {4, 4}};
-  std::vector<std::vector<int>> slice_ends = {{4, 4}, {4, 8}, {8, 4}, {8, 8}};
+  std::vector<std::vector<int>> slice_ends = {{4, 4}, {4, 7}, {8, 4}, {8, 7}};
   for (int device = 0; device < shard_indices.size(); ++device) {
     EXPECT_EQ(shard_indices[device].size(), tensor.sizes().size());
     for (int dim = 0; dim < shard_indices[device].size(); ++dim) {
@@ -79,8 +79,8 @@ TEST_F(XLAShardingTest, GetShardIndicesForDevices) {
 
   sharding = xla::HloSharding::Replicate().ToProto();
   shard_shape = ShardingUtil::GetShardShape(tensor, sharding);
-  shard_indices =
-      ShardingUtil::GetShardIndicesForDevices(shard_shape, sharding, devices);
+  shard_indices = ShardingUtil::GetShardIndicesForDevices(
+      shard_shape, tensor.sizes().vec(), sharding, devices);
   EXPECT_EQ(shard_indices.size(), devices.size());
   for (int i = 0; i < devices.size(); ++i) {
     EXPECT_EQ(shard_indices[i].size(), 1);

@@ -79,6 +79,7 @@ class ShardingUtil {
   // `REPLICATED` and `OTHER` sharding types.
   static std::vector<std::vector<at::indexing::TensorIndex>>
   GetShardIndicesForDevices(const std::vector<int64_t>& shard_shape,
+                            const std::vector<int64_t>& tensor_shape,
                             const xla::OpSharding sharding,
                             const std::vector<std::string>& devices);
 
