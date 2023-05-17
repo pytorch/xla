@@ -216,6 +216,6 @@ build:linux --copt="-Werror=switch"
 # Required for building with clang
 build:linux --copt="-Wno-error=unused-but-set-variable"
 
-# Only include debug info for files in this repository, excluding external deps.
+# Only include debug info for files not under tensorflow.
 build:dbg -c dbg
-build:dbg --per_file_copt=+external/.*@-g0,-DNDEBUG
+build:dbg --per_file_copt=external/org_tensorflow/.*@-g0,-DNDEBUG
