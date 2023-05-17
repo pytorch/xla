@@ -605,9 +605,6 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
     placeholders.push_back(handle);
   }
 
-  // TODO(yeounoh) supply proper sharding specs for sharded results.
-  std::vector<XLATensor::ShardingSpecPtr> sharding_specs(placeholders.size());
-
   SyncTensorCollection coll;
   coll.device = device;
   coll.unlocker = DeviceLockerArena::Get()->LockDevices({device});
@@ -636,6 +633,9 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
 
   std::shared_ptr<XLAGraphExecutor::Async> async = std::make_shared<Async>(
       &coll, std::move(arguments), placeholders, std::move(cachedComputation));
+
+  // TODO(yeounoh) supply proper sharding specs for sharded results.
+  std::vector<XLATensor::ShardingSpecPtr> sharding_specs(placeholders.size());
 
   auto syncfn = [async, hash, sharding_specs]() {
     try {
