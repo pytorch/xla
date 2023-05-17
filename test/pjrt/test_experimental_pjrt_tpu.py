@@ -14,7 +14,7 @@ import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
 from torch_xla import runtime as xr
 from torch_xla._internal import pjrt
-from torch_xla.experimental import tpu
+from torch_xla._internal import tpu
 import torch_xla.distributed.xla_multiprocessing as xmp
 
 

@@ -11,7 +11,7 @@ import torch_xla
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_backend
-from torch_xla.experimental import tpu, gpu
+from torch_xla._internal import tpu, gpu
 from torch_xla import runtime
 
 R = TypeVar('R')

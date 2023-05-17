@@ -4,9 +4,8 @@ from dataclasses import dataclass, field
 import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
-import torch_xla.runtime as xr
 from torch_xla.experimental.xla_sharded_tensor import XLAShardedTensor
-from torch_xla.experimental.pjrt import requires_pjrt
+import torch_xla.runtime as xr
 
 import numpy as np
 from typing import Tuple, Union, List
@@ -124,7 +123,7 @@ def _get_group_assignment(
   return group_assignment, replication_groups
 
 
-@requires_pjrt
+@xr.requires_pjrt
 def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
                   partition_spec: Tuple[Union[int, None]]) -> XLAShardedTensor:
   """

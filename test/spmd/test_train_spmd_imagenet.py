@@ -68,12 +68,10 @@ from torch_xla.distributed.fsdp.wrap import (recursive_wrap,
                                              transformer_auto_wrap_policy)
 from torch_xla.distributed.fsdp.utils import checkpoint_module
 import torch_xla.utils.utils as xu
-import torch_xla.utils.checkpoint as checkpoint
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.profiler as xp
 import torch_xla.test.test_utils as test_utils
 import torch_xla.experimental.xla_sharding as xs
-import torch_xla.experimental.pjrt as pjrt
 
 DEFAULT_KWARGS = dict(
     batch_size=128,
