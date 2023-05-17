@@ -114,9 +114,9 @@ def _initialize_multiprocess(local_rank: int, local_world_size: int):
 
 @runtime.requires_pjrt
 def run_multiprocess(fn: Callable[..., R],
-                      *args,
-                      start_method: str = 'spawn',
-                      **kwargs) -> Dict[int, R]:
+                     *args,
+                     start_method: str = 'spawn',
+                     **kwargs) -> Dict[int, R]:
   """Runs `fn` on all devices available to PjRt.
 
   Spawns one process per physical device (e.g. TPU chip).
