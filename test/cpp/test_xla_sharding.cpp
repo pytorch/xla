@@ -353,5 +353,11 @@ TEST_F(XLAShardingTest, OutputHandler) {
       xla::Shape::Equal().IgnoreLayout()(shards[0]->shape(), tensor_shape));
 }
 
+TEST_F(XLAShardingTest, PrepareOutputShardingPropagation) {
+  // Check if data placholders are properly updated
+
+  // Check if the corresponding parameter data handles are sharded
+}
+
 }  // namespace cpp_test
 }  // namespace torch_xla
