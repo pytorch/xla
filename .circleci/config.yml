@@ -402,6 +402,9 @@ workflows:
                 - master
                 - ^r\d*\.?\d*$
       - pytorch_xla_run_build
+      - pytorch_xla_pylint_check
+        requires:
+          - pytorch_xla_pylint_check
       - pytorch_xla_run_test:
           name: pytorch_xla_run_CPU_test
           resource_class: 2xlarge
