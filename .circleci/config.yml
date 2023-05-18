@@ -112,6 +112,30 @@ run_build: &run_build
   - run:
       <<: *launch_docker_and_build
 
+run_pylint: &run_pylint
+  machine:
+    image: ubuntu-2004:202111-02
+  steps:
+  - checkout
+  - run:
+      name: "Setup custom environment variables"
+      command: |
+        pyenv install 3.7.0
+        pyenv global 3.7.0
+        echo "export CLOUDSDK_PYTHON=$(which python3)" >> $BASH_ENV
+  - run:
+      <<: *update_submodule
+  - run:
+      <<: *setup_base_docker
+  - run:
+      <<: *calculate_docker_image
+  - run:
+      <<: *download_docker
+  - run:
+      name: Pylint
+      command: |
+        docker exec -u jenkins $(cat .docker_pid) bash -c '. ~/.bashrc && pip install pylint && pylint torch_xla'
+
 run_test: &run_test
   machine:
     image: ubuntu-2004:202111-02
@@ -274,14 +298,6 @@ run_yapf: &run_yapf
       echo "PASSED Python format"
     fi
 
-run_pylint: &run_pylint
-  name: Run pylint
-  command: |
-    pip install pylint
-
-    set -e
-    pylint torch_xla --errors-only
-
 assert_no_torch_pin: &assert_no_torch_pin
   name: Make sure torch_patches/.torch_pin is removed before merging
   command: |
@@ -331,8 +347,6 @@ jobs:
         <<: *run_clang_format
     - run:
         <<: *run_yapf
-    - run:
-        <<: *run_pylint
 
   linter_check_no_torch_pin:
     machine:
@@ -356,6 +370,9 @@ jobs:
 
   pytorch_xla_run_build:
     <<: *run_build
+
+  pytorch_xla_pylint_check:
+    <<: *run_pylint
 
   pytorch_xla_run_test:
     <<: *ci_params
