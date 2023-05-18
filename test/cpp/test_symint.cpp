@@ -9,6 +9,7 @@
 #include "torch_xla/csrc/ops/expand.h"
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/torch_util.h"
+using std::cerr;
 
 namespace torch_xla {
 namespace cpp_test {
