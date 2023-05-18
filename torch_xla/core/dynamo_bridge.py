@@ -197,8 +197,6 @@ def is_xla_tensor(tensor: torch.Tensor) -> bool:
 
 
 def extract_internal(xla_model: torch.fx.GraphModule):
-  # This call is critical to make sure xla_args' tensor id show up in graph_input_tensor_ids
-  xm.mark_step()
   xla_args = xla_model.xla_args
   assert all(
       map(
@@ -390,6 +388,9 @@ class InputCollector(torch.fx.Interpreter):
 
 
 def extract_compiled_graph(xla_model, xla_args):
+  # This call is critical to make sure xla_args' tensor id show up in graph_input_tensor_ids
+  xm.mark_step()
+
   # This logic, needed for supporting in-place operations, is a duplicate of
   # the one in the main `extract_internal` function above. We need to do this
   # check for fetching fallback ops as well.
@@ -427,6 +428,8 @@ def extract_compiled_graph(xla_model, xla_args):
     for xla_arg, cloned_xla_arg in zip(xla_args, cloned_xla_args):
       if isinstance(xla_arg, torch.Tensor):
         xla_arg.copy_(cloned_xla_arg)
+
+  torch_xla._XLAC._clear_pending_irs(str(xm.xla_device()))
 
   # compile each submodule and replace it with a call
   for node in partitioned_graph.graph.nodes:
