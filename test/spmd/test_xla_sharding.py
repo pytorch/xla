@@ -179,6 +179,16 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     xm.mark_step()  # mark_step should preserve the sharding
     self.assertEqual(sharding_spec, torch_xla._XLAC._get_xla_sharding_spec(xt))
 
+  def test_execute_replicated_metrics(self):
+    met.clear_all()
+    xt = torch.ones(2, 2).to(xm.xla_device())
+    xs.mark_sharding(xt, self._get_mesh((1, self.n_devices)), (0, 1))
+    xt += 2
+    sharding_spec = torch_xla._XLAC._get_xla_sharding_spec(xt)
+    xm.mark_step()
+    xm.wait_device_ops()
+    self.assertEqual(met.metric_data('ExecuteReplicatedTime')[0], 1)
+
   def test_optimizer_step_with_sharding(self):
     # Use simple linear model to test model parameter sharding
     model = self.SimpleLinear().to(xm.xla_device())

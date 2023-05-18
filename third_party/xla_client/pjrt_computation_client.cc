@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <unordered_set>
+#include <vector>
 
 #include "absl/strings/ascii.h"
 #include "absl/types/span.h"
@@ -28,6 +29,8 @@
 namespace xla {
 
 namespace {
+
+static std::string spmd_device_str = "SPMD:0";
 
 // Initializes a distributed runtime client if dist_service_addr is specified
 std::shared_ptr<DistributedRuntimeClient>
@@ -129,6 +132,8 @@ PjRtComputationClient::PjRtComputationClient() {
     string_to_device_.emplace(device_str, device);
     device_locks_.emplace(device_str, std::make_unique<std::shared_mutex>());
   }
+  // manually create the device_locks for SPMD device
+  device_locks_.emplace(spmd_device_str, std::make_unique<std::shared_mutex>());
 }
 
 void PjRtComputationClient::PjRtData::Assign(const Data& data) {
@@ -492,6 +497,13 @@ PjRtComputationClient::ExecuteReplicated(
     const std::vector<std::vector<ComputationClient::DataPtr>>& arguments,
     absl::Span<const std::string> devices,
     const ExecuteReplicatedOptions& options) {
+  // Shared ownership of the timed section ensures that it will only get logged
+  // once both `ExecuteReplicated` and the async work in `Execute` are
+  // complete; a copy is held from the lambda that releases it when done.
+  auto timed =
+      std::make_shared<metrics::TimedSection>(ExecuteReplicatedMetric());
+  tsl::profiler::TraceMe activity("PjRtComputationClient::ExecuteReplicated",
+                                  tsl::profiler::TraceMeLevel::kInfo);
   const PjRtComputation& pjrt_computation =
       dynamic_cast<const PjRtComputation&>(computation);
   XLA_CHECK(devices.size() == arguments.size())
@@ -524,13 +536,31 @@ PjRtComputationClient::ExecuteReplicated(
   // Required as of cl/518733871
   execute_options.use_major_to_minor_data_layout_for_callbacks = true;
 
+  std::optional<std::vector<PjRtFuture<Status>>> returned_futures(devices.size());
   std::vector<std::vector<std::unique_ptr<PjRtBuffer>>> results =
-      pjrt_computation.executable->Execute(argument_handles, execute_options)
+      pjrt_computation.executable
+          ->Execute(argument_handles, execute_options, returned_futures)
           .value();
 
   std::vector<std::vector<ComputationClient::DataPtr>> data_handles;
   data_handles.reserve(results.size());
   std::vector<size_t> dims(results.size());
+
+  // Grab the shared lock and block the `WaitDeviceOps` until buffer is ready.
+  // Since this is the SPMD code path.
+  // There is no points to grab devices lock for every individual device.
+  auto lock = lock_device_shared(spmd_device_str);
+  TF_VLOG(3) << "ExecuteReplicated grab the lock for " << spmd_device_str;
+  // Signal that `ExecuteReplicated` has completed for one of the devices the
+  // ExecuteReplicatedTime metric. Here, we assume that all devices will finish
+  // execution roughly at the same time, hence only use one of the
+  // returned_futures. Copies the `timed` shared pointer into the lambda.
+  (*returned_futures)[0].OnReady(
+      [timed, lock = std::move(lock)](Status unused) mutable {
+        timed.reset();
+        TF_VLOG(3) << "ExecuteReplicated returned_future->OnReady finished";
+      });
+
   for (int32_t i = 0; i < results.size(); ++i) {
     xla::PjRtDevice* pjrt_device = StringToPjRtDevice(devices[i]);
     XLA_CHECK(pjrt_device->IsAddressable())
