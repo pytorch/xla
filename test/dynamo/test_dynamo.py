@@ -94,10 +94,9 @@ class DynamoInferenceBasicTest(unittest.TestCase):
       self.assertTrue(
           torch.allclose(output_cpu, output.cpu(), rtol=1e-05, atol=1e-05))
     # One graph for fetching the fallback ops.
-    # Another graph for the resnet18 inference.
-    self.assertEqual(met.metric_data('CompileTime')[0], 2)
+    self.assertEqual(met.metric_data('CompileTime')[0], 1)
     # Again, +1 offset in ExecuteTime for fetching the fallback ops.
-    self.assertEqual(met.metric_data('ExecuteTime')[0], sample_count + 1)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], sample_count)
     self.assertEqual(
         met.metric_data('RunCachedGraphInputData')[0], sample_count)
     self.assertEqual(
@@ -194,10 +193,9 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     # Graph 2: backward
     # Graph 3: sync input for backward
     # Graph 4: sync input for backward (TODO(JackCaoG) understand why there are two graphs)
-    # In total, 4 compilations for graphs mentioned above and 2 compilation for fetching fallback ops for each forward/backward graph.
-    self.assertEqual(met.metric_data('CompileTime')[0], 6)
-    # We execute 3 graphs per step. And +1 offset for fetching fallback ops.
-    self.assertEqual(met.metric_data('ExecuteTime')[0], sample_count * 3 + 1)
+    self.assertEqual(met.metric_data('CompileTime')[0], 4)
+    # We execute 3 graphs per step.
+    self.assertEqual(met.metric_data('ExecuteTime')[0], sample_count * 3)
     # one for each forward and one for each backward
     self.assertEqual(
         met.metric_data('RunCachedGraphInputData')[0], sample_count * 2)
@@ -301,10 +299,9 @@ class DynamoTrainingOptimizerTest(unittest.TestCase):
     # Graph 3: optimizer
     # Graph 4: sync input for backward
     # Graph 5: sync input for backward (TODO(JackCaoG) understand why there are two graphs)
-    # In total, 5 compilations for graphs mentioned above and 3 compilations for fetching fallback ops for each forward/backward/optimizer graph.
-    self.assertEqual(met.metric_data('CompileTime')[0], 8)
-    # We execute 4 graphs per step when optimizer is enabled. And +2 offset for fetching fallback ops. One during forward/backward graphs and another one during optimizer graph.
-    self.assertEqual(met.metric_data('ExecuteTime')[0], sample_count * 4 + 2)
+    self.assertEqual(met.metric_data('CompileTime')[0], 5)
+    # We execute 4 graphs per step when optimizer is enabled.
+    self.assertEqual(met.metric_data('ExecuteTime')[0], sample_count * 4)
     # one for each forward, backward and optimizer
     self.assertEqual(
         met.metric_data('RunCachedGraphInputData')[0], sample_count * 3)
