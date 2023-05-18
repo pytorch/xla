@@ -397,18 +397,33 @@ void ShardingUtil::PrepareOutputShardingPropagation(
     ComputationPtr computation,
     std::vector<torch::lazy::BackendDataPtr>* data_placeholders,
     std::vector<XLATensor::ShardingSpecPtr>* sharding_specs) {
+  // Resizes the containers to `indices.size()`.
+  data_placeholders->resize(indices.size());
+  sharding_specs->resize(indices.size());
+
   auto computation_proto = computation->computation().proto();
+
+  std::vector<xla::OpSharding> output_shardings;
+  if (computation_proto.has_spmd_output_sharding()) {
+    if (computation_proto.spmd_output_sharding().tuple_shardings().size() > 0) {
+      auto tuple_shardings =
+          computation_proto.spmd_output_sharding().tuple_shardings();
+      output_shardings = std::vector<xla::OpSharding>(tuple_shardings.begin(),
+                                                      tuple_shardings.end());
+    } else {
+      output_shardings = std::vector<xla::OpSharding>{
+          computation_proto.spmd_output_sharding()};
+    }
+  }
+
   // Output parameter sharding annotations, defaults to REPLICATED(0) if unset.
-  auto tuple_shardings =
-      computation_proto.spmd_output_sharding().tuple_shardings();
-  std::vector output_shardings(tuple_shardings.begin(), tuple_shardings.end());
   if (output_shardings.empty()) {
     // Initializes with default sharding type, REPLCIATED.
     output_shardings.resize(indices.size());
   }
   XLA_CHECK(indices.size() == output_shardings.size())
-      << "Expected " << indices.size() << " sharding annotations, but got "
-      << output_shardings.size();
+      << "Expected size: " << indices.size()
+      << ", actual size: " << output_shardings.size();
 
   for (int i = 0; i < indices.size(); ++i) {
     auto xtensor = (*tensors)[indices[i]];

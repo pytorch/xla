@@ -1,9 +1,12 @@
 #include <ATen/ATen.h>
+#include <google/protobuf/repeated_field.h>
 #include <gtest/gtest.h>
 #include <stdlib.h>
+#include <torch/csrc/lazy/core/lazy_graph_executor.h>
 
 #include <iostream>
 
+#include "tensorflow/compiler/xla/protobuf_util.h"
 #include "tensorflow/compiler/xla/xla_data.pb.h"
 #include "test/cpp/cpp_test_util.h"
 #include "test/cpp/torch_xla_test.h"
@@ -12,6 +15,7 @@
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/tensor.h"
+#include "torch_xla/csrc/tensor_methods.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/xla_sharding_util.h"
 
@@ -354,9 +358,59 @@ TEST_F(XLAShardingTest, OutputHandler) {
 }
 
 TEST_F(XLAShardingTest, PrepareOutputShardingPropagation) {
-  // Check if data placholders are properly updated
+  xla::Shape shape = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {4, 4});
+  int64_t n_devices = xla::ComputationClient::Get()->GetLocalDevices().size();
+  xla::Array<int64_t> tile_assignment({1, n_devices});
+  tile_assignment.FillIota(0);
+  xla::OpSharding tiled = xla::HloSharding::Tile(tile_assignment).ToProto();
 
-  // Check if the corresponding parameter data handles are sharded
+  // Build simple addition with a sharded input.
+  xla::XlaBuilder b("builder");
+  b.SetSharding(tiled);
+  auto x = xla::Parameter(&b, 0, shape, "p0");
+  b.ClearSharding();
+  auto y = xla::Add(x, xla::ConstantR0<float>(&b, 3));
+  xla::XlaComputation xla_computation =
+      ConsumeValue(b.Build(/*remove_dynamic_dimensions=*/false));
+  std::vector<xla::ComputationClient::CompileInstance> instances;
+  instances.push_back({std::move(xla_computation),
+                       GetDefaultDevice()->toString(),
+                       {GetDefaultDevice()->toString()},
+                       &shape,
+                       /*should_wrap_parameter=*/false,
+                       /*is_sharded=*/true});
+
+  std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
+      computations =
+          xla::ComputationClient::Get()->Compile(std::move(instances));
+  ComputationPtr computation = std::make_shared<Computation>(
+      "add", std::move(computations[0]->move_computation()));
+
+  // Prepare output sharding propagation, expect a sharded output placeholder.
+  std::vector<XLATensorPtr> tensors{XLATensor::Create(
+      WrapXlaData(xla::ComputationClient::Get()->CreateDataPlaceholder(
+          GetDefaultDevice()->toString(), std::move(shape))))};
+  std::vector<torch::lazy::BackendDataPtr> data_placeholders;
+  std::vector<XLATensor::ShardingSpecPtr> sharding_specs;
+  ShardingUtil::PrepareOutputShardingPropagation(
+      &tensors, {0}, computation, &data_placeholders, &sharding_specs);
+
+  // Check if the output sharding spec is correctly extracted.
+  EXPECT_EQ(sharding_specs.size(), 1);
+  if (n_devices > 1) {
+    // Tiled sharding requires multiple devices.
+    EXPECT_TRUE(
+        xla::protobuf_util::ProtobufEquals(tiled, sharding_specs[0]->sharding));
+  } else {
+    // Sincle device execution defaults to replication sharding.
+    EXPECT_TRUE(xla::protobuf_util::ProtobufEquals(
+        xla::HloSharding::Replicate().ToProto(), sharding_specs[0]->sharding));
+  }
+
+  // Check if the placeholder is on a SPMD device (sharded) with no real values.
+  EXPECT_EQ(data_placeholders.size(), 1);
+  EXPECT_EQ(UnwrapXlaData(data_placeholders[0])->device(), "SPMD:0");
+  EXPECT_FALSE(UnwrapXlaData(data_placeholders[0])->HasValue());
 }
 
 }  // namespace cpp_test

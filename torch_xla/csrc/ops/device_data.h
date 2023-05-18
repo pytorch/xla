@@ -23,8 +23,11 @@ class DeviceData : public XlaNode {
   }
 
   // With SPMD sharding propagation, we need to update the unpartitioned
-  // backend data with a partitioned one in the node operands.
+  // backend data with a partitioned one in the node operands. Note that
+  // this is permitted only if the node holds a placeholder.
   void Assign(std::shared_ptr<torch::lazy::BackendData> data) {
+    // TODO(yeounoh) check if the existing data is a placeholder after we
+    // address the issue where some of the sync tensors spill with device node.
     XLA_CHECK(data->shape() == data_->shape())
         << "Shape mismatch: expected (" << data_->shape().to_string()
         << "), actual (" << data->shape().to_string() << ")";
