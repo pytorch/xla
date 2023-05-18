@@ -1819,7 +1819,10 @@ void InitXlaModuleBindings(py::module m) {
             -> std::vector<at::Tensor> {
           XLA_CHECK(hash_str.size() == sizeof(torch::lazy::hash_t));
           torch::lazy::hash_t hash = *(torch::lazy::hash_t*)(hash_str.c_str());
-          torch::lazy::BackendDevice device = torch_xla::GetCurrentDevice();
+          // Device will be Virtual device if SPMD is enabled.
+          torch::lazy::BackendDevice device =
+              ShardingUtil::UseVirtualDevice() ? ParseDeviceString("SPMD:0")
+                                               : torch_xla::GetCurrentDevice();
           auto results = XLAGraphExecutor::Get()->ExecuteComputationWithBarrier(
               hash, graph_inputs, device);
           std::vector<at::Tensor> retlist;
