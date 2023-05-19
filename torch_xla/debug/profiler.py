@@ -12,7 +12,7 @@ import socketserver
 import threading
 
 from typing import Callable, Optional
-from . import xla_extension as _xla
+from torch_xla. import xla_client
 
 _profiler_server: Optional[torch_xla._XLAC.profiler.ProfilerServer] = None
 
@@ -298,7 +298,7 @@ def annotate_function(func: Callable, name: Optional[str] = None,
     return wrapper
   return wrapper
 
-def heap_profile(client: _xla.Client) -> bytes:
+def heap_profile(client: torch_xla._XLAC.xla_extension._xla.Client) -> bytes:
   """Returns a gzipped pprof protocol buffer containing a heap profile."""
   return gzip.compress(client.heap_profile())
 

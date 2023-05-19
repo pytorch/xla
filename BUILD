@@ -38,6 +38,7 @@ tf_cc_shared_object(
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:variant",
         "@org_tensorflow//tensorflow/compiler/xla/python/profiler/internal:traceme_wrapper",
+        "@org_tensorflow//tensorflow/compiler/xla/python:xla_extension",
         "@org_tensorflow//tensorflow/compiler/xla/service:hlo_parser",
         "@org_tensorflow//tensorflow/compiler/xla/service:hlo_pass_pipeline",
         "@org_tensorflow//tensorflow/compiler/xla/service:hlo_verifier",

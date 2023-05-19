@@ -251,10 +251,193 @@ cc_library(
     hdrs = ["version.h"],
 )
 
+load("//tensorflow/tsl:tsl.default.bzl", "tsl_pybind_extension")
+load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
+
+# enable_gpu
+bool_flag(
+    name = "enable_gpu",
+    build_setting_default = True,
+)
+
+# gpu_enabled
+config_setting(
+    name = "gpu_enabled",
+    flag_values = {
+        ":enable_gpu": "True",
+    },
+)
+
+# enable_tpu
+bool_flag(
+    name = "enable_tpu",
+    build_setting_default = True,
+)
+
+# tpu_enabled
+config_setting(
+    name = "tpu_enabled",
+    flag_values = {
+        ":enable_tpu": "True",
+    },
+)
+
+# enable_plugin_device
+bool_flag(
+    name = "enable_plugin_device",
+    build_setting_default = False,
+)
+
+# plugin_device_enabled
+config_setting(
+    name = "plugin_device_enabled",
+    flag_values = {
+        ":enable_plugin_device": "True",
+    },
+)
+
+# ptxla_cuda_pip_rpaths
+# If this flag is enabled, it sets RPATH on the xla_extension to values that are suitable for
+# finding NVIDIA's CUDA libraries when they are installed as pip packages.
+bool_flag(
+    name = "ptxla_cuda_pip_rpaths",
+    build_setting_default = False,
+)
+
+# use_ptxla_cuda_pip_rpaths
+config_setting(
+    name = "use_ptxla_cuda_pip_rpaths",
+    flag_values = {
+        ":ptxla_cuda_pip_rpaths": "True",
+    },
+)
+
+# link_gpu_plugin
+# TODO(phawkins): the configuration settings here are overly confusing. The right fix is to split
+# xla_extension.so so that each backend is a separate plugin, however that must wait for a clean
+# ABI separation between devices.
+config_setting(
+    name = "link_gpu_plugin",
+    define_values = {"xla_python_enable_gpu": "true"},
+)
+
+# xla_extension
+tsl_pybind_extension(
+    name = "xla_extension",
+    srcs = [
+        "xla.cc",
+    ],
+    defines = select({
+        ":gpu_enabled": ["XLA_PYTHON_ENABLE_GPU=1"],
+        "//conditions:default": [],
+    }) + select({
+        ":tpu_enabled": ["XLA_PYTHON_ENABLE_TPU=1"],
+        "//conditions:default": [],
+    }) + select({
+        ":plugin_device_enabled": ["XLA_PYTHON_ENABLE_PLUGIN_DEVICE=1"],
+        "//conditions:default": [],
+    }),
+    linkopts = select({
+        ":use_ptxla_cuda_pip_rpaths": [
+            "-Wl,-rpath,$$ORIGIN/../nvidia/cuda_cupti/lib",
+            "-Wl,-rpath,$$ORIGIN/../nvidia/cuda_runtime/lib",
+            "-Wl,-rpath,$$ORIGIN/../nvidia/cublas/lib",
+            "-Wl,-rpath,$$ORIGIN/../nvidia/cufft/lib",
+            "-Wl,-rpath,$$ORIGIN/../nvidia/cudnn/lib",
+            "-Wl,-rpath,$$ORIGIN/../nvidia/cusolver/lib",
+        ],
+        "//conditions:default": [],
+    }),
+    pytype_deps = [
+        "//third_party/py/numpy", # not sure the current numpy path
+    ],
+    pytype_srcs = glob(["xla_extension/*.pyi"]),
+    visibility = ["//visibility:public"],
+    deps = [
+        "@org_tensorflow//tensorflow/compiler/xla/python:custom_call_sharding",
+        "@org_tensorflow//tensorflow/compiler/xla/python:dlpack",
+        "@org_tensorflow//tensorflow/compiler/xla/python:jax_jit",
+        "@org_tensorflow//tensorflow/compiler/xla/python:mlir",
+        "@org_tensorflow//tensorflow/compiler/xla/python:ops",
+        "@org_tensorflow//tensorflow/compiler/xla/python:outfeed_receiver_py",
+        "@org_tensorflow//tensorflow/compiler/xla/python:pjit",
+        "@org_tensorflow//tensorflow/compiler/xla/python:pmap_lib",
+        "@org_tensorflow//tensorflow/compiler/xla/python:pprof_profile_builder",
+        "@org_tensorflow//tensorflow/compiler/xla/python:profiler",
+        "@org_tensorflow//tensorflow/compiler/xla/python:py_client",
+        "@org_tensorflow//tensorflow/compiler/xla/python:python_ref_manager",
+        "@org_tensorflow//tensorflow/compiler/xla/python:pytree",
+        "@org_tensorflow//tensorflow/compiler/xla/python:status_casters",
+        "@org_tensorflow//tensorflow/compiler/xla/python:traceback",
+        "@org_tensorflow//tensorflow/compiler/xla/python:transfer_guard_lib",
+        "@org_tensorflow//tensorflow/compiler/xla/python:types",
+        "@org_tensorflow//tensorflow/compiler/xla/python:util",
+        "@org_tensorflow//tensorflow/compiler/xla/python:weakref_lru_cache",
+        "@org_tensorflow//tensorflow/compiler/xla/python:xla_compiler",
+        "@org_tensorflow//tensorflow/compiler/xla:literal",
+        "@org_tensorflow//tensorflow/compiler/xla:shape_util",
+        "@org_tensorflow//tensorflow/compiler/xla:status",
+        "@org_tensorflow//tensorflow/compiler/xla:statusor",
+        "@org_tensorflow//tensorflow/compiler/xla:types",
+        "@org_tensorflow//tensorflow/compiler/xla:util",
+        "@org_tensorflow//tensorflow/compiler/xla/pjrt:interpreter_device",
+        "@org_tensorflow//tensorflow/compiler/xla/pjrt:mlir_to_hlo",
+        "@org_tensorflow//tensorflow/compiler/xla/pjrt:pjrt_api",
+        "@org_tensorflow//tensorflow/compiler/xla/pjrt:pjrt_client",
+        "@org_tensorflow//tensorflow/compiler/xla/pjrt:pjrt_compiler",
+        "@org_tensorflow//tensorflow/compiler/xla/pjrt:tfrt_cpu_pjrt_client",
+        "@org_tensorflow//tensorflow/compiler/xla/pjrt/distributed",
+        "@org_tensorflow//tensorflow/compiler/xla/pjrt/distributed:client",
+        "@org_tensorflow//tensorflow/compiler/xla/pjrt/distributed:service",
+        "@org_tensorflow//tensorflow/compiler/xla/python/ifrt",
+        "@org_tensorflow//tensorflow/compiler/xla/python/pjrt_ifrt",
+        "@org_tensorflow//tensorflow/tsl/distributed_runtime/preemption:preemption_sync_manager",
+        "@org_tensorflow//tensorflow/tsl/platform:logging",
+        "@org_tensorflow//tensorflow/tsl/python/lib/core:numpy",
+        "@org_tensorflow//third_party/python_runtime:headers",  # buildcleaner: keep
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/strings:str_format",
+        "@com_google_absl//absl/types:span",
+        "@pybind11",
+    ] + select({
+        ":gpu_enabled": [
+            "@org_tensorflow//tensorflow/compiler/xla/pjrt/gpu:se_gpu_pjrt_client",
+        ],
+        "//conditions:default": [],
+    }) + select({
+        ":link_gpu_plugin": [
+            "@org_tensorflow//tensorflow/compiler/xla/python:gpu_plugin_deps",
+        ],
+        "//conditions:default": [],
+    }) + select({
+        ":tpu_enabled": [
+            "@org_tensorflow//tensorflow/compiler/xla/pjrt:pjrt_c_api_client",
+            "@org_tensorflow//tensorflow/compiler/xla/pjrt:tpu_client",
+        ],
+        "//conditions:default": [],
+    }) + select({
+        ":plugin_device_enabled": [
+            "@org_tensorflow//tensorflow/compiler/xla/pjrt:pjrt_plugin_device_client",
+        ],
+        "//conditions:default": [],
+    }),
+)
+
+# xla_client
+pytype_library(
+    name = "xla_client",
+    srcs = ["xla_client.py"],
+    pytype_srcs = ["xla_client.pyi"],
+    srcs_version = "PY3",
+    visibility = ["//visibility:public"],
+    deps = [":xla_extension"],
+)
+
 ptxla_cc_library(
     name = "init_python_bindings",
     srcs = ["init_python_bindings.cpp"],
     deps = [
+        ":xla_client",
         ":computation",
         ":device",
         ":tensor",
