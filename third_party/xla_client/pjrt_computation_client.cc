@@ -536,7 +536,8 @@ PjRtComputationClient::ExecuteReplicated(
   // Required as of cl/518733871
   execute_options.use_major_to_minor_data_layout_for_callbacks = true;
 
-  std::optional<std::vector<PjRtFuture<Status>>> returned_futures(devices.size());
+  std::optional<std::vector<PjRtFuture<Status>>> returned_futures(
+      devices.size());
   std::vector<std::vector<std::unique_ptr<PjRtBuffer>>> results =
       pjrt_computation.executable
           ->Execute(argument_handles, execute_options, returned_futures)
