@@ -123,8 +123,8 @@ class BenchmarkModel:
       raise NotImplementedError
 
     if self.benchmark_experiment.dynamo:
-      self.model_iter_fn = dynamo.optimize(self.benchmark_experiment.dynamo)(
-          self.model_iter_fn)
+      self.model_iter_fn = torch.compile(self.model_iter_fn,
+                                         backend=self.benchmark_experiment.dynamo)
 
   def pick_grad(self):
     if self.benchmark_experiment.test == "eval":

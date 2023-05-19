@@ -35,6 +35,25 @@ DETECTRON2_MODELS = {
     "detectron2_fcos_r_50_fpn",
 }
 
+# Skip the experiment of a model if any of the experiment configs in the list is fully matched
+DENY_LIST = {
+  "doctr_det_predictor": [{"test": "train"},],  # not implemented
+  "doctr_reco_predictor": [{"test": "train"},],  # not implemented
+  "detectron2_fcos_r_50_fpn": [{"test": "train"},],  # not implemented
+  # https://github.com/pytorch/torchdynamo/issues/145
+  "fambench_xlmr": [{}],
+  "llama": [{"test": "train"},],  # not implemented
+  "mobilenet_v2_quantized_qat": [{"test": "eval", "accelerator": "gpu"},  # not implemented
+                                 {"test": "eval", "accelerator": "tpu"},],  # not implemented
+  "pyhpc_equation_of_state": [{"test": "train"},],  # not implemented
+  "pyhpc_isoneutral_mixing": [{"test": "train"},],  # not implemented
+  "pyhpc_turbulent_kinetic_energy": [{"test": "train"},],  # not implemented
+  "pytorch_struct": [{"test": "eval"},],  # not implemented
+  "resnet50_quantized_qat": [{"test": "eval", "accelerator": "gpu"},  # not implemented
+                             {"test": "eval", "accelerator": "tpu"},],  # not implemented
+  # https://github.com/pytorch/pytorch/issues/99438
+  "vision_maskrcnn": [{}],
+}
 
 class TorchBenchModelLoader(ModelLoader):
 
@@ -86,6 +105,19 @@ class TorchBenchModelLoader(ModelLoader):
       model_configs.append({"model_name": model_name})
 
     return model_configs
+
+  def is_compatible(self, dummy_benchmark_model, benchmark_experiment):
+    if dummy_benchmark_model.model_name in DENY_LIST:
+      for deny_experiment_config in DENY_LIST[dummy_benchmark_model.model_name]:
+        matched = True
+        for k, v in deny_experiment_config.items():
+          if getattr(benchmark_experiment, k) != v:
+            matched = False
+            break
+        if matched:
+          return False
+
+    return True
 
 
 class TorchBenchModel(BenchmarkModel):
@@ -144,6 +176,16 @@ class TorchBenchModel(BenchmarkModel):
 
     del benchmark
     gc.collect()
+
+  def pick_grad(self):
+    # special case
+    if self.model_name in ("maml",):
+      return torch.enable_grad()
+
+    if self.benchmark_experiment.test == "eval":
+      return torch.no_grad()
+    elif self.benchmark_experiment.test == "train":
+      return torch.enable_grad()
 
   def compute_loss(self, pred):
     """Reduce the output of a model to get scalar loss"""
