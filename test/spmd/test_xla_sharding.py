@@ -196,7 +196,6 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
                      (0, 1))
     sharding_spec = torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight)
 
-
     model.train()
     optimizer = optim.SGD(model.parameters(), lr=0.1)
     data = torch.randn(128, 128).to(xm.xla_device())
@@ -212,11 +211,13 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
       # Sharding is persisted across mark_step calls, and test if the sharded computation
       # can repeat more than once without crashing.
       if self.n_devices > 1:
-        self.assertEqual(sharding_spec,
-                       torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight))
+        self.assertEqual(
+            sharding_spec,
+            torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight))
       else:
         # single device execution defaults to implicit replication.
-        self.assertFalse(torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight))
+        self.assertFalse(
+            torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight))
 
   def test_sharding_propagation(self):
     met.clear_all()
