@@ -68,7 +68,10 @@ torch::lazy::Value IrValueFromScalar(const at::Scalar& value,
 }
 
 bool ShouldSyncIrValue(const torch::lazy::Value& ir_value) {
-  return ir_value->op() != xla_not_supported;
+  // We don't need to sync device datas since the value of them are already
+  // known.
+  return ir_value->op() != xla_not_supported &&
+         torch_xla::DeviceData::Cast(ir_value.node.get()) == nullptr;
 }
 
 }  // namespace

@@ -45,12 +45,14 @@ class DynamoSpmdInferenceTest(test_xla_sharding_base.XlaShardingTest):
                      (1, 0))
     xla_res = linear(xla_x)
     xm.mark_step()
+    xm.wait_device_ops()
+    met.clear_all()
 
     dynamo_linear = torch.compile(linear, backend="torchxla_trace_once")
     dynamo_res = dynamo_linear(xla_x)
     torch.allclose(xla_res.cpu(), dynamo_res.cpu())
-    # TODO(JackCaoG): add counter checks after ExecuteReplicated also creates
-    # a ExecuteMetric.
+    self.assertEqual(met.metric_data('CompileTime')[0], 1)
+    self.assertEqual(met.metric_data('ExecuteReplicatedTime')[0], 1)
 
 
 if __name__ == '__main__':

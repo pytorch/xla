@@ -1651,6 +1651,41 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertTrue(
         torch.allclose(conv.weight.grad.cpu(), torch.tensor([[[[2077.0]]]])))
 
+  def test_device_data(self):
+    device = xm.xla_device()
+
+    # Clear all states before this test
+    xm.mark_step()
+    xm.wait_device_ops()
+    met.clear_all()
+
+    # Test that we don't execute when there is only device data node presented
+    # in the graph.
+    t1 = torch.tensor(100, device=device)
+    xm.mark_step()
+    xm.wait_device_ops()
+    self.assertTrue(met.metric_data('CompileTime') == None)
+    self.assertTrue(met.metric_data('ExecuteTime') == None)
+    self.assertEqual(met.metric_data('TransferToServerTime')[0], 1)
+
+    # Moving DeviceData Node tensor to CPU should not incur execution either
+    t1_cpu = t1.cpu()
+    self.assertTrue(met.metric_data('CompileTime') == None)
+    self.assertTrue(met.metric_data('ExecuteTime') == None)
+    self.assertEqual(met.metric_data('TransferFromServerTime')[0], 1)
+
+    # Execute a simple computation to make sure normal execution does not break
+    t2 = t1 * 3 + 100
+    xm.mark_step()
+    xm.wait_device_ops()
+    self.assertEqual(met.metric_data('CompileTime')[0], 1)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
+
+    # t2's value is known, moving it back to CPU should not cause additonal execution
+    self.assertEqual(t2.cpu().item(), 400)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
+    self.assertEqual(met.metric_data('TransferFromServerTime')[0], 2)
+
 
 class MNISTComparator(nn.Module):
 
