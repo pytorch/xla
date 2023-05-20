@@ -1,3 +1,4 @@
+Revert 0946f40bab84fb3f23648eb2544c7a46fd9e0700
 diff --git a/tensorflow/compiler/tf2xla/BUILD b/tensorflow/compiler/tf2xla/BUILD
 index 0bf252386bc..39f79364f0e 100644
 --- a/tensorflow/compiler/tf2xla/BUILD

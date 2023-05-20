@@ -40,6 +40,7 @@ http_archive(
     patches = [
         "//tf_patches:absl_statusor.diff",
         "//tf_patches:cache_urls.diff",
+        "//tf_patches:cuda_graph.diff",
         "//tf_patches:f16_abi_clang.diff",
         "//tf_patches:gpu_hlo_schedule.diff",
         "//tf_patches:gpu_race_condition.diff",
@@ -51,9 +52,9 @@ http_archive(
         "//tf_patches:triton_filesystem.diff",
         "//tf_patches:xplane.diff",
     ],
-    strip_prefix = "tensorflow-b475cd359fbbc325ccfef18cd5c78259a4987bed",
+    strip_prefix = "tensorflow-d577af9cac504776a2d0ddbb0a445ba311aa1fea",
     urls = [
-        "https://github.com/tensorflow/tensorflow/archive/b475cd359fbbc325ccfef18cd5c78259a4987bed.tar.gz",
+        "https://github.com/tensorflow/tensorflow/archive/d577af9cac504776a2d0ddbb0a445ba311aa1fea.tar.gz",
     ],
 )
 
