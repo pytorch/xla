@@ -231,8 +231,9 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
 ComputationClient::DataPtr PjRtComputationClient::TransferShardsToServer(
     absl::Span<const TensorSource> tensor_shards, std::string device,
     xla::Shape shape, xla::OpSharding sharding) {
-  TF_VLOG(1) << "TransferShardsToServer with " << tensor_shards.size()
-             << " shards.";
+  tsl::profiler::TraceMe activity(
+      "PjRtComputationClient::TransferShardsToServer",
+      tsl::profiler::TraceMeLevel::kInfo);
   // TODO(jonbolin): Consider using CopyToDevice when sharding is REPLICATED.
   // We are opting out of CopyToDevice for now due to the synchronization
   // issues observed in ShardingUtil::InputHandler, but because CopyToDevice
@@ -273,6 +274,7 @@ ComputationClient::DataPtr PjRtComputationClient::ReplicateShardedData(
     const ComputationClient::DataPtr& handle) {
   if (PjRtShardedData* sharded_data =
           dynamic_cast<PjRtShardedData*>(handle.get())) {
+    XLA_COUNTER("ReplicateShardedData", 1);
     TF_VLOG(1) << "ReplicateShardedData (handle=" << handle->GetOpaqueHandle()
                << ", shape=" << handle->shape() << ")";
     if (sharded_data->GetSharding().type() == xla::OpSharding::REPLICATED) {
@@ -361,11 +363,11 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
     if (instance.is_sharded) {
       // TODO(yeounoh) multi-host, multi-slice configurations
       compile_options.executable_build_options.set_use_spmd_partitioning(true);
-      // TODO(yeounoh) this is set to false by default, but explicitly set here
-      // to expose the knob for future reference. We can override the compiler's
-      // default behavior to further optimize parameter sharding in the future.
+      // We can override the compiler's default behavior to replicate the
+      // outputs. Setting this to true would wrapping the sharded outputs in
+      // PjRtShardedData.
       compile_options.executable_build_options
-          .set_allow_spmd_sharding_propagation_to_output({false});
+          .set_allow_spmd_sharding_propagation_to_output({true});
       compile_options.executable_build_options.set_num_partitions(
           client_->device_count());
       compile_options.executable_build_options.set_num_replicas(1);

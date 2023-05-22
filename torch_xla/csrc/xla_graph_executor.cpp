@@ -876,17 +876,6 @@ std::vector<torch::lazy::Value> XLAGraphExecutor::CollectRoots(
   return roots;
 }
 
-std::vector<XLATensor::ShardingSpecPtr> XLAGraphExecutor::CollectShardingSpecs(
-    std::vector<XLATensorPtr>* tensors, absl::Span<const size_t> indices) {
-  std::vector<XLATensor::ShardingSpecPtr> sharding_specs;
-  sharding_specs.reserve(indices.size());
-  for (const size_t index : indices) {
-    XLATensorPtr& tensor = (*tensors)[index];
-    sharding_specs.push_back(tensor->sharding_spec());
-  }
-  return sharding_specs;
-}
-
 std::vector<torch::lazy::BackendDataPtr> XLAGraphExecutor::SetTensorData(
     std::vector<XLATensorPtr>* tensors, const SyncTensorsConfig& config,
     absl::Span<const size_t> indices,
@@ -939,7 +928,6 @@ void XLAGraphExecutor::ExtractIRAndPrepareXlaData_(
   for (auto index : indices) {
     XLATensorPtr& tensor = (*tensors)[index];
     torch::lazy::Value ir_value = tensor->CurrentIrValue();
-
     ir_values.push_back(ir_value);
     const torch::lazy::BackendDevice& tensor_device = tensor->GetDevice();
     xla::Shape shape = MakeShapeWithDeviceLayout(
@@ -947,22 +935,6 @@ void XLAGraphExecutor::ExtractIRAndPrepareXlaData_(
     torch::lazy::BackendDataPtr handle =
         WrapXlaData(xla::ComputationClient::Get()->CreateDataPlaceholder(
             tensor_device.toString(), std::move(shape)));
-    if (ShardingUtil::UseVirtualDevice()) {
-      // Create sharded data placeholder, this will be used to
-      // hold the corresponding computation results.
-      auto sharding = tensor->sharding_spec();
-      if (!sharding) {
-        // Implicitly replicate tensors without a user-provided sharding
-        // annotation.
-        sharding = std::make_shared<XLATensor::ShardingSpec>(
-            xla::HloSharding::Replicate().ToProto(), tensor->shape());
-      } else if (!sharding->shape.has_value()) {
-        sharding->shape = tensor->shape();
-      }
-      handle = WrapXlaData(xla::ComputationClient::Get()->WrapDataShards(
-          {UnwrapXlaData(handle)}, GetVirtualDevice().toString(),
-          sharding->shape.value(), sharding->sharding));
-    }
     tensor_data_vec.push_back(handle);
     if (tensor->CurrentDataHandle() == nullptr && config.force_ltc_data) {
       tensor->AssignIrValue(torch::lazy::Value());
@@ -1036,7 +1008,7 @@ XLAGraphExecutor::ScheduleSyncTensorsGraph(
                     *async->cached_computation->computation
                          ->client_computation(),
                     device_arguments, devices, execute_options),
-                sharding_specs);
+                sharding_specs, /*replicated_output=*/false);
         results = WrapXlaData(outputs);
         TF_VLOG(3) << "Executing IR graph hash "
                    << torch::lazy::HashToString(hash)
@@ -1089,7 +1061,17 @@ XLAGraphExecutor::ScheduleSyncTensorsGraph(
     const std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec) {
   auto tensors_data =
       SetTensorData(tensors, coll->config, coll->indices, tensor_data_vec);
-  auto sharding_specs = CollectShardingSpecs(tensors, coll->indices);
+  std::vector<XLATensor::ShardingSpecPtr> sharding_specs(coll->indices.size(),
+                                                         nullptr);
+
+  // Extract sharding specs for the results and prepare the sharded data
+  // placeholders if the computation is sharded.
+  if (cached_computation->is_sharded) {
+    ShardingUtil::PrepareOutputShardingPropagation(
+        tensors, coll->indices, cached_computation->computation, &tensors_data,
+        &sharding_specs);
+  }
+
   return ScheduleSyncTensorsGraph(
       coll, std::move(parameters_data), std::move(tensors_data),
       std::move(sharding_specs), std::move(cached_computation));

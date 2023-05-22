@@ -16,6 +16,7 @@
 #include "tensorflow/compiler/xla/xla.pb.h"
 #include "torch/csrc/lazy/core/ir_util.h"
 #include "torch_xla/csrc/device.h"
+#include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/tensor_util.h"
 
@@ -242,7 +243,6 @@ std::vector<xla::ComputationClient::DataPtr> ShardingUtil::OutputHandler(
           << "Sharding or Wrapping data shards in OutputHandler requires "
              "unpartitioned tensor shape.";
       // Reshards replicated output if `sharding` is present.
-      // TODO(yeounoh) consider propagating input sharding to output.
       std::vector<at::Tensor> tensors = XlaDataToTensors(
           {WrapXlaData(sharded_results[0][i])},
           TensorTypeFromXlaType(sharding->shape.value().element_type()));
@@ -250,6 +250,7 @@ std::vector<xla::ComputationClient::DataPtr> ShardingUtil::OutputHandler(
           tensors, {sharding},
           std::vector<std::string>{GetVirtualDevice().toString()})[0]));
     } else {
+      // The output is sharded or replicated.
       std::vector<xla::ComputationClient::DataPtr> shards;
       shards.reserve(sharded_results.size());
       for (int j = 0; j < sharded_results.size(); ++j) {
@@ -391,4 +392,79 @@ std::vector<at::Tensor> ShardingUtil::ShardTensor(
   return shards;
 }
 
+void ShardingUtil::PrepareOutputShardingPropagation(
+    std::vector<XLATensorPtr>* tensors, absl::Span<const size_t> indices,
+    ComputationPtr computation,
+    std::vector<torch::lazy::BackendDataPtr>* data_placeholders,
+    std::vector<XLATensor::ShardingSpecPtr>* sharding_specs) {
+  // Resizes the containers to `indices.size()`.
+  data_placeholders->resize(indices.size());
+  sharding_specs->resize(indices.size());
+
+  auto computation_proto = computation->computation().proto();
+
+  std::vector<xla::OpSharding> output_shardings;
+  if (computation_proto.has_spmd_output_sharding()) {
+    if (computation_proto.spmd_output_sharding().tuple_shardings().size() > 0) {
+      auto tuple_shardings =
+          computation_proto.spmd_output_sharding().tuple_shardings();
+      output_shardings = std::vector<xla::OpSharding>(tuple_shardings.begin(),
+                                                      tuple_shardings.end());
+    } else {
+      output_shardings = std::vector<xla::OpSharding>{
+          computation_proto.spmd_output_sharding()};
+    }
+  }
+
+  // Output parameter sharding annotations, defaults to REPLICATED(0) if unset.
+  if (output_shardings.empty()) {
+    // Initializes with default sharding type, REPLCIATED.
+    output_shardings.resize(indices.size());
+  }
+  XLA_CHECK(indices.size() == output_shardings.size())
+      << "Expected size: " << indices.size()
+      << ", actual size: " << output_shardings.size();
+
+  for (int i = 0; i < indices.size(); ++i) {
+    auto xtensor = (*tensors)[indices[i]];
+    if (output_shardings[i].type()) {
+      // Tensor sharding annotation type is non-zero (sharded).
+      (*sharding_specs)[i] = std::make_shared<XLATensor::ShardingSpec>(
+          output_shardings[i],
+          MakeShapeWithDeviceLayout(
+              xtensor->shape().get(),
+              static_cast<XlaDeviceType>(xtensor->GetDevice().type())));
+      xtensor->SetShardingSpec(*(*sharding_specs)[i]);
+    } else {
+      // Clear sharding if the output parameter is no longer sharded, this
+      // assumes that the output is implicitly replicated and wrapped inside
+      // PjRtShardedData.
+      (*sharding_specs)[i] = std::make_shared<XLATensor::ShardingSpec>(
+          xla::HloSharding::Replicate().ToProto(),
+          MakeShapeWithDeviceLayout(
+              xtensor->shape().get(),
+              static_cast<XlaDeviceType>(xtensor->GetDevice().type())));
+      xtensor->ClearShardingSpec();
+    }
+
+    // Create sharded data placeholder, this will be used to
+    // hold the corresponding computation results for both sharding &
+    // replication.
+    auto sharded_data_placeholder =
+        WrapXlaData(xla::ComputationClient::Get()->WrapDataShards(
+            {}, GetVirtualDevice().toString(),
+            (*sharding_specs)[i]->shape.value(),
+            (*sharding_specs)[i]->sharding));
+
+    // Register the sharded data placeholder to the tensor and its node.
+    (*data_placeholders)[i] = sharded_data_placeholder;
+    xtensor->data()->handle = (*data_placeholders)[i];
+    if (auto ir_value = xtensor->CurrentIrValue()) {
+      if (DeviceData* device_data_node =
+              DeviceData::Cast(ir_value.node.get())) {
+        device_data_node->Assign(xtensor->data()->handle);
+      }
+    }
+  }
+}
 }  // namespace torch_xla

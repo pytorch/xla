@@ -210,8 +210,43 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
       xm.mark_step()
       # Sharding is persisted across mark_step calls, and test if the sharded computation
       # can repeat more than once without crashing.
-      self.assertEqual(sharding_spec,
-                       torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight))
+      if self.n_devices > 1:
+        self.assertEqual(
+            sharding_spec,
+            torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight))
+      else:
+        # single device execution defaults to implicit replication.
+        self.assertFalse(
+            torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight))
+
+  def test_sharding_propagation(self):
+    met.clear_all()
+    self.assertFalse(met.counter_value("ReplicateShardedData"))
+
+    # Linear model with two linear layers and only one is annotated.
+    model = self.SimpleLinear().to(xm.xla_device())
+    xs.mark_sharding(model.fc1.weight, self._get_mesh((1, self.n_devices)),
+                     (0, 1))
+    self.assertTrue(torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight))
+    self.assertFalse(torch_xla._XLAC._get_xla_sharding_spec(model.fc2.weight))
+
+    model.train()
+    optimizer = optim.SGD(model.parameters(), lr=0.1)
+    data = torch.randn(128, 128).to(xm.xla_device())
+    target = torch.zeros(128).to(xm.xla_device())
+    loss_fn = nn.CrossEntropyLoss()
+    for i in range(3):
+      optimizer.zero_grad()
+      output = model(data)
+      loss = loss_fn(output, target)
+      loss.backward()
+      optimizer.step()
+      xm.mark_step()
+
+    # Verify that the fc1 & output are sharded and valid
+    model.fc1.weight.to('cpu')
+    output.to('cpu')
+    self.assertEqual(met.counter_value("ReplicateShardedData"), 2)
 
   def test_inplace_add_with_sharding(self):
     xt = torch.ones(2, 2).to(xm.xla_device())
