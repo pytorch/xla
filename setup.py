@@ -307,7 +307,7 @@ setup(
     install_requires=[
         'absl-py>=1.0.0',
         'cloud-tpu-client>=0.10.0',
-        'yaml',
+        'pyyaml',
     ],
     package_data={
         'torch_xla': ['lib/*.so*',],
