@@ -1,0 +1,136 @@
+name: Build & Test
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+    tags:
+      - r[0-9]+.[0-9]+
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}-${{ github.event_name == 'workflow_dispatch' }}-${{ github.event_name == 'schedule' }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: "Build XLA"
+    runs-on: linux.4xlarge
+    env:
+      ECR_DOCKER_IMAGE_BASE: 308535385114.dkr.ecr.us-east-1.amazonaws.com/pytorch/xla_base
+      GCR_DOCKER_IMAGE: gcr.io/tpu-pytorch/xla_base:latest
+      WORKDIR: /var/lib/jenkins/workspace
+      SCCACHE_BUCKET: ossci-compiler-cache-circleci-v2
+      GCLOUD_SERVICE_KEY: ${{ secrets.GCLOUD_SERVICE_KEY }}
+    steps:
+      - name: Setup SSH (Click me for login details)
+        uses: pytorch/test-infra/.github/actions/setup-ssh@main
+        with:
+          github-secret: ${{ secrets.GITHUB_TOKEN }}
+          instructions: |
+            Build is  done inside the container, to start an interactive session run:
+              docker exec -it $(docker container ps --format '{{.ID}}') bash
+      - name: Install gcloud CLI
+        shell: bash
+        run: |
+          sudo tee -a /etc/yum.repos.d/google-cloud-sdk.repo << EOM
+          [google-cloud-cli]
+          name=Google Cloud CLI
+          baseurl=https://packages.cloud.google.com/yum/repos/cloud-sdk-el8-x86_64
+          enabled=1
+          gpgcheck=1
+          repo_gpgcheck=0
+          gpgkey=https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+          EOM
+          sudo yum install -y google-cloud-cli
+      - name: Auth to GCR
+        shell: bash
+        run: |
+          echo "${GCLOUD_SERVICE_KEY}" | gcloud auth activate-service-account --key-file=-
+          gcloud auth configure-docker --quiet
+
+      - name: Checkout repo
+        uses: actions/checkout@v3
+      - name: Download docker image from GCR
+        shell: bash
+        run: docker pull "${GCR_DOCKER_IMAGE}"
+      - name: Stage image to ECR
+        shell: bash
+        run: |
+            # This is to stage PyTorch/XLA base image for use in the upstream.
+            # To allow the upstream workflow to access PyTorch/XLA build images, we
+            # need to have them in the ECR. This is not expensive, and only pushes it
+            # if image layers are not present in the repo.
+            # Note: disable the following 2 lines while testing a new image, so we do not
+            # push to the upstream.
+            docker tag "${GCR_DOCKER_IMAGE}" "${ECR_DOCKER_IMAGE_BASE}:v1.0" >/dev/null
+            docker push "${ECR_DOCKER_IMAGE_BASE}:v1.0" >/dev/null
+      - name: Start the container
+        shell: bash
+        run: |
+          pid=$(docker run -t -d -w "$WORKDIR" "${GCR_DOCKER_IMAGE}")
+          docker exec -u jenkins "${pid}" sudo chown -R jenkins "${WORKDIR}"
+          docker cp "${GITHUB_WORKSPACE}/." "$pid:$WORKDIR"
+          echo "pid=${pid}" >> "${GITHUB_ENV}"
+
+      - name: Prepare build env
+        shell: bash
+        run: |
+          echo "declare -x SCCACHE_BUCKET=${SCCACHE_BUCKET}" | docker exec -i ${pid} sh -c "cat >> env"
+          echo "declare -x CC=clang-8 CXX=clang++-8" | docker exec -i ${pid} sh -c "cat >> xla_env"
+          echo "declare -x XLA_USE_XRT=1" | docker exec -i ${pid} sh -c "cat >> xla_env"
+          echo "declare -x XLA_CUDA=1" | docker exec -i ${pid} sh -c "cat >> xla_env"
+          echo "declare -x BAZEL_REMOTE_CACHE=1" | docker exec -i ${pid} sh -c "cat >> xla_env"
+          echo "${GCLOUD_SERVICE_KEY}" | docker exec -i ${pid} sh -c "cat >> default_credentials.json"
+
+      - name: Build
+        shell: bash
+        run: |
+          docker exec -u jenkins ${pid} bash -c ". ~/.bashrc && .circleci/build.sh"
+
+      - name: Cleanup build env
+        shell: bash
+        run: |
+           docker exec ${pid} rm default_credentials.json /tmp/pytorch/xla/default_credentials.json
+      - name: Push built docker image to GCR
+        shell: bash
+        run: |
+          export COMMIT_DOCKER_IMAGE="${GCR_DOCKER_IMAGE}-${GITHUB_SHA}"
+          docker commit "${pid}" "${COMMIT_DOCKER_IMAGE}"
+          time docker push "${COMMIT_DOCKER_IMAGE}"
+
+      - name: Teardown Linux
+        uses: pytorch/test-infra/.github/actions/teardown-linux@main
+        if: always()
+
+  test-cpu:
+    needs: build
+    runs-on: linux.4xlarge
+    env:
+      GCR_DOCKER_IMAGE: gcr.io/tpu-pytorch/xla_base:latest
+      WORKDIR: /var/lib/jenkins/workspace
+      GCLOUD_SERVICE_KEY: ${{ secrets.GCLOUD_SERVICE_KEY }}
+    steps:
+      - name: Setup SSH (Click me for login details)
+        uses: pytorch/test-infra/.github/actions/setup-ssh@main
+        with:
+          github-secret: ${{ secrets.GITHUB_TOKEN }}
+          instructions: |
+            Build is  done inside the container, to start an interactive session run:
+              docker exec -it $(docker container ps --format '{{.ID}}') bash
+      - name: Download and run docker image from GCR
+        shell: bash
+        run: |
+          export COMMIT_DOCKER_IMAGE="${GCR_DOCKER_IMAGE}-${GITHUB_SHA}"
+          echo "DOCKER_IMAGE: "${COMMIT_DOCKER_IMAGE}
+          docker pull "${COMMIT_DOCKER_IMAGE}"
+          pid=$(docker run -t -d -w $WORKDIR ${COMMIT_DOCKER_IMAGE})
+          echo "${GCLOUD_SERVICE_KEY}" | docker exec -i "${pid}" sh -c "cat >> /tmp/pytorch/xla/default_credentials.json"
+          echo "pid=${pid}" >> "${GITHUB_ENV}"
+      - name: Test
+        shell: bash
+        run: docker exec -u jenkins "${pid}" bash -c '. ~/.bashrc && .circleci/test.sh'
+
+      - name: Teardown Linux
+        uses: pytorch/test-infra/.github/actions/teardown-linux@main
+        if: always()
