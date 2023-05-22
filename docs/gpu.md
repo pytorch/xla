@@ -3,12 +3,12 @@
 PyTorch/XLA enables PyTorch users to utilize the XLA compiler which supports accelerators including TPU, GPU, CPU and … This doc will go over the basic steps to run PyTorch/XLA on a nvidia gpu instance
 
 ## Create a GPU instance
-Pytorch/XLA currently publish prebuilt docker images and wheels with cuda11.2 and python 3.7/3.8. We recommend users to create a GPU instance with corresponding config. For a full list of docker images and wheels, please refer to [this doc](https://github.com/pytorch/xla/tree/jackcao/gpu_doc#-available-images-and-wheels).
+Pytorch/XLA currently publish prebuilt docker images and wheels with cuda11.7/8 and python 3.8. We recommend users to create a GPU instance with corresponding config. For a full list of docker images and wheels, please refer to [this doc](https://github.com/pytorch/xla/tree/jackcao/gpu_doc#-available-images-and-wheels).
 
 ## Environment Setup
 ### Docker
 ```
-sudo docker pull gcr.io/tpu-pytorch/xla:nightly_3.8_cuda_11.2
+sudo docker pull us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_cuda_11.7
 sudo apt-get install -y apt-transport-https ca-certificates curl gnupg-agent    software-properties-common
 distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
 curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -
@@ -48,20 +48,19 @@ Thu Dec  8 06:24:29 2022
 
 ### Wheel
 ```
-pip3 install torch=1.13
-pip3 install https://storage.googleapis.com/tpu-pytorch/wheels/cuda/112/torch_xla-1.13-cp37-cp37m-linux_x86_64.whl
+pip3 install torch=2.0
+pip3 install https://storage.googleapis.com/tpu-pytorch/wheels/cuda/117/torch_xla-2.0-cp38-cp38-linux_x86_64.whl
 ```
 
 ## Run a simple model
 In order to run below examples, you need to clone the pytorch/xla repo to access the imagenet example(We already clone it in our docker).
 
 ```
-(pytorch) root@20ab2c7a2d06:/# export GPU_NUM_DEVICES=1
-(pytorch) root@20ab2c7a2d06:/# python pytorch/xla/test/test_train_mp_imagenet.py --fake_data
+(pytorch) root@20ab2c7a2d06:/# export GPU_NUM_DEVICES=1 PJRT_DEVICE=GPU
+(pytorch) root@20ab2c7a2d06:/# git clone --recursive https://github.com/pytorch/xla.git
+(pytorch) root@20ab2c7a2d06:/# python xla/test/test_train_mp_imagenet.py --fake_data
 ==> Preparing data..
 Epoch 1 train begin 06:12:38
-2022-12-08 06:13:12.452874: W      79 tensorflow/compiler/xla/service/gpu/gpu_conv_algorithm_picker.cc:729] None of the algorithms provided by cuDNN heuristics worked; trying fallback algorithms.  Conv: (f32[128,256,28,28]{3,2,1,0}, u8[0]{0}) custom-call(f32[128,256,14,14]{3,2,1,0}, f32[3,3,256,256]{1,0,2,3}), window={size=3x3 stride=2x2 pad=1_1x1_1}, dim_labels=bf01_01io->bf01, custom_call_target="__cudnn$convBackwardInput", backend_config="{\"conv_result_scale\":1,\"activation_mode\":\"0\",\"side_input_scale\":0}"
-2022-12-08 06:13:13.780992: W      79 tensorflow/compiler/xla/service/gpu/gpu_conv_algorithm_picker.cc:729] None of the algorithms provided by cuDNN heuristics worked; trying fallback algorithms.  Conv: (f32[128,128,56,56]{3,2,1,0}, u8[0]{0}) custom-call(f32[128,128,28,28]{3,2,1,0}, f32[3,3,128,128]{1,0,2,3}), window={size=3x3 stride=2x2 pad=1_1x1_1}, dim_labels=bf01_01io->bf01, custom_call_target="__cudnn$convBackwardInput", backend_config="{\"conv_result_scale\":1,\"activation_mode\":\"0\",\"side_input_scale\":0}"
 | Training Device=xla:0/0 Epoch=1 Step=0 Loss=6.89059 Rate=2.82 GlobalRate=2.82 Time=06:13:23
 | Training Device=xla:0/0 Epoch=1 Step=20 Loss=6.79297 Rate=117.16 GlobalRate=45.84 Time=06:13:36
 | Training Device=xla:0/0 Epoch=1 Step=40 Loss=6.43628 Rate=281.16 GlobalRate=80.49 Time=06:13:43
