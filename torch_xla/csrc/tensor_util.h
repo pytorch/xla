@@ -139,15 +139,15 @@ xla_expand_outplace(const at::Tensor& to_expand1, const at::Tensor& to_expand2,
 inline std::vector<at::Tensor> xla_expand_outplace(at::TensorList to_expand) {
   // expands a list of Tensors; ignores undefined (null) tensors
   bool first = true;
-  at::DimVector sizes;
+  at::SymDimVector sizes;
   for (const auto i : c10::irange(to_expand.size())) {
     if (!to_expand[i].defined()) {
       continue;
     } else if (first) {
-      sizes = to_expand[i].sizes();
+      sizes = to_expand[i].sym_sizes();
       first = false;
     } else {
-      sizes = at::infer_size_dimvector(sizes, to_expand[i].sizes());
+      sizes = at::infer_size_symdimvector(sizes, to_expand[i].sym_sizes());
     }
   }
 
@@ -155,10 +155,10 @@ inline std::vector<at::Tensor> xla_expand_outplace(at::TensorList to_expand) {
   for (const auto i : c10::irange(to_expand.size())) {
     if (!to_expand[i].defined()) {
       continue;
-    } else if (to_expand[i].sizes().equals(sizes)) {
+    } else if (to_expand[i].sym_sizes().equals(sizes)) {
       result[i] = to_expand[i];
     } else {
-      result[i] = at::expand_copy(to_expand[i], sizes);
+      result[i] = at::expand_copy_symint(to_expand[i], sizes, false);
     }
   }
   return result;
