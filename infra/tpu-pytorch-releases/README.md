@@ -3,6 +3,10 @@
 This setup configures all resources for building public artifacts: docker images
 and python wheels.
 
+In addition to public artifacts, the setup also configures:
+* Cloud Build trigger for the public development Docker image (`dev-image`).
+
+
 ## Cloud Build Triggers
 
 This section explains how to add, modify and run Cloud Build triggers to:
