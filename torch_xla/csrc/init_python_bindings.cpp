@@ -866,6 +866,26 @@ void BuildProfilerSubmodule(py::module* m) {
       .def("set_metadata", &xla::profiler::TraceMeWrapper::SetMetadata)
       .def_static("is_enabled", &xla::profiler::TraceMeWrapper::IsEnabled);
 
+  py::class_<xla::profiler::ProfilerSession> profiler_session_class(profiler,
+                                                          "ProfilerSession");
+  profiler_session_class
+      .def(py::init([]() {
+        return xla::profiler::ProfilerSession::Create(
+          xla::profiler::ProfilerSession::DefaultPythonProfileOptions());
+      }))
+      .def(py::init([](const tensorflow::ProfileOptions& options) {
+        return xla::profiler::ProfilerSession::Create(options);
+      }))
+      .def("stop_and_export",
+           [](xla::profiler::ProfilerSession* sess,
+              const std::string& tensorboard_dir) -> void {
+             tensorflow::profiler::XSpace xspace;
+             // Disables the ProfilerSession
+             xla::ThrowIfError(sess->CollectData(&xspace));
+             xla::ThrowIfError(xla::profiler::profiler::ExportToTensorBoard(
+                 xspace, tensorboard_dir, /* also_export_trace_json= */ true));
+           });
+
   py::class_<torch::lazy::ScopePusher,
              std::unique_ptr<torch::lazy::ScopePusher>>
       scope_pusher_class(profiler, "ScopePusher");
