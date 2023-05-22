@@ -45,14 +45,15 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertEqual(len(shards), self.n_devices)
     shard_len = math.ceil(num_element / self.n_devices)
     for i, shard in enumerate(shards):
+      self.assertEqual(shard.data.device, torch.device('cpu'))
       self.assertEqual(shard.data.shape, (shard_len,))
       start, end = (i, i + 1) * shard_len
       expected = torch.arange(start, end, dtype=torch.float32)
-      self.assertTrue(torch.allclose(shard.data.cpu(), expected))
+      self.assertTrue(torch.allclose(shard.data, expected))
       self.assertIsInstance(shard.indices, list)
       self.assertEqual(len(shard.indices), len(t.shape))
       self.assertEqual(shard.indices[0], slice(start, end, 1))
-      self.assertTrue(torch.allclose(shard.data.cpu(), t[shard.indices]))
+      self.assertTrue(torch.allclose(shard.data, t[shard.indices]))
 
   def test_padded_xla_shards(self):
     num_element = self.n_devices + 1  # Ensure padding with two or more devices
@@ -63,6 +64,7 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertEqual(len(shards), self.n_devices)
     shard_len = math.ceil(num_element / self.n_devices)
     for i, shard in enumerate(shards):
+      self.assertEqual(shard.data.device, torch.device('cpu'))
       self.assertEqual(shard.data.shape, (shard_len,))
       # Tensor shards will be zero-padded
       start, end = i * shard_len, min((i + 1) * shard_len, t.shape[0])
@@ -72,12 +74,11 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
         expected = F.pad(expected, (0, pad_len), "constant", 0)
       else:
         expected = torch.zeros(shard.data.shape, dtype=torch.float32)
-      self.assertTrue(torch.allclose(shard.data.cpu(), expected))
+      self.assertTrue(torch.allclose(shard.data, expected))
       self.assertIsInstance(shard.indices, list)
       self.assertEqual(len(shard.indices), len(t.shape))
       self.assertEqual(shard.indices[0], slice(start, end, 1))
-      self.assertTrue(
-          torch.allclose(shard.cpu().unpadded_data, t[shard.indices]))
+      self.assertTrue(torch.allclose(shard.unpadded_data, t[shard.indices]))
 
   def test_replicated_xla_shards(self):
     num_element = self.n_devices
@@ -87,13 +88,12 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     shards = xt.local_shards
     self.assertEqual(len(shards), self.n_devices)
     for i, shard in enumerate(shards):
+      self.assertEqual(shard.data.device, torch.device('cpu'))
       self.assertEqual(shard.data.shape, (num_element,))
-      self.assertTrue(torch.allclose(shard.data.cpu(), t))
+      self.assertTrue(torch.allclose(shard.data, t))
       self.assertIsInstance(shard.indices, type(Ellipsis))
-      self.assertTrue(torch.allclose(shard.data.cpu(), t[shard.indices]))
-      self.assertTrue(
-          torch.allclose(shard.cpu().data,
-                         shard.cpu().unpadded_data))
+      self.assertTrue(torch.allclose(shard.data, t[shard.indices]))
+      self.assertTrue(torch.allclose(shard.data, shard.unpadded_data))
 
   def test_custom_tile_assignment(self):
     xt = torch.randn(10, 20).to(device=xm.xla_device())
