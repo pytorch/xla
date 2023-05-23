@@ -224,11 +224,9 @@ xla::XlaOp BuildConvBackwardInput(xla::XlaOp grad_output, xla::XlaOp kernel,
       MakeConvOpAttrs(spatial_stride, spatial_padding, spatial_dilation, false);
   xla::XlaOp kernel_transposed =
       xla::Transpose(kernel, FilterTransposePermutation(input_shape.rank()));
-  xla::PrecisionConfig precision_config =
-      XlaHelpers::BuildPrecisionConfig(XlaHelpers::mat_mul_precision());
   return ConsumeValue(tensorflow::MakeXlaBackpropInputConvOp(
       "conv_backward_input", input_shape, kernel_transposed, grad_output,
-      conv_op_attrs, &precision_config));
+      conv_op_attrs));
 }
 
 // Computes the kernel gradient for a convolution.
@@ -245,11 +243,9 @@ xla::XlaOp BuildConvBackwardWeight(xla::XlaOp grad_output, xla::XlaOp input,
       xla::InversePermutation(transpose_permutation);
   xla::Shape transposed_weight_shape =
       xla::ShapeUtil::PermuteDimensions(transpose_permutation, kernel_shape);
-  xla::PrecisionConfig precision_config =
-      XlaHelpers::BuildPrecisionConfig(XlaHelpers::mat_mul_precision());
   xla::XlaOp conv = ConsumeValue(tensorflow::MakeXlaBackpropFilterConvOp(
       "conv_backward_weight", input, transposed_weight_shape, grad_output,
-      conv_op_attrs, &precision_config));
+      conv_op_attrs));
 
   // Reorder the dimensions of the filter gradient to match the NCHW convention
   // of PyTorch. The original result of the convolution has the spatial and
