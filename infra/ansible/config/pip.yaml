@@ -29,7 +29,7 @@ pip:
       - typing
       - typing_extensions
       - sympy
-      - yapf
+      - yapf==0.30.0
 
     build_amd64:
       - mkl
@@ -45,7 +45,6 @@ pip:
       - mkl-include
 
     release_tpu:
-      - torch_xla[tpuvm]
 
   # Packages that will be installed with the `--nodeps` flag.
   pkgs_nodeps:

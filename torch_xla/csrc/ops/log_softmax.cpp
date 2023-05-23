@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/log_softmax.h"
 
-#include "torch/csrc/lazy/core/tensor_util.h"
+#include <torch/csrc/lazy/core/tensor_util.h>
+
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/softmax_builder.h"

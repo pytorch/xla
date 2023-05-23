@@ -25,4 +25,6 @@ function install_torchvision() {
 
 install_torchvision
 
+export GCLOUD_SERVICE_KEY_FILE="$XLA_DIR/default_credentials.json"
+export SILO_NAME='cache-silo-ci'  # cache bucket for CI
 run_torch_xla_tests $PYTORCH_DIR $XLA_DIR $USE_COVERAGE

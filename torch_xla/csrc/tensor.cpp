@@ -1,5 +1,14 @@
 #include "torch_xla/csrc/tensor.h"
 
+#include <torch/csrc/autograd/variable.h>
+#include <torch/csrc/lazy/core/hash.h>
+#include <torch/csrc/lazy/core/helpers.h>
+#include <torch/csrc/lazy/core/ir_util.h>
+#include <torch/csrc/lazy/core/lazy_graph_executor.h>
+#include <torch/csrc/lazy/core/metrics.h>
+#include <torch/csrc/lazy/core/tensor_util.h>
+#include <torch/csrc/lazy/core/util.h>
+
 #include <algorithm>
 #include <cmath>
 #include <condition_variable>
@@ -24,14 +33,6 @@
 #include "third_party/xla_client/thread_pool.h"
 #include "third_party/xla_client/unique.h"
 #include "third_party/xla_client/xla_util.h"
-#include "torch/csrc/autograd/variable.h"
-#include "torch/csrc/lazy/core/hash.h"
-#include "torch/csrc/lazy/core/helpers.h"
-#include "torch/csrc/lazy/core/ir_util.h"
-#include "torch/csrc/lazy/core/lazy_graph_executor.h"
-#include "torch/csrc/lazy/core/metrics.h"
-#include "torch/csrc/lazy/core/tensor_util.h"
-#include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/helpers.h"
@@ -496,10 +497,9 @@ void XLATensor::SetTensor(at::Tensor tensor) {
 }
 
 void XLATensor::UpdateFromTensor(at::Tensor tensor, bool sync) {
-  torch::lazy::BackendDevice device =
-      xla::sys_util::GetEnvBool("XLA_USE_SPMD", false)
-          ? ParseDeviceString("SPMD:0")
-          : GetDevice();
+  torch::lazy::BackendDevice device = ShardingUtil::UseVirtualDevice()
+                                          ? ParseDeviceString("SPMD:0")
+                                          : GetDevice();
   if (sync) {
     at::Tensor typed_tensor =
         torch::lazy::CopyTensor(tensor, dtype(), /*copy=*/false);

@@ -1,7 +1,9 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_DEVICE_DATA_H_
+#define XLA_TORCH_XLA_CSRC_OPS_DEVICE_DATA_H_
+
+#include <torch/csrc/lazy/backend/backend_data.h>
 
 #include "third_party/xla_client/computation_client.h"
-#include "torch/csrc/lazy/backend/backend_data.h"
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
@@ -20,6 +22,18 @@ class DeviceData : public XlaNode {
     return data_;
   }
 
+  // With SPMD sharding propagation, we need to update the unpartitioned
+  // backend data with a partitioned one in the node operands. Note that
+  // this is permitted only if the node holds a placeholder.
+  void Assign(std::shared_ptr<torch::lazy::BackendData> data) {
+    // TODO(yeounoh) check if the existing data is a placeholder after we
+    // address the issue where some of the sync tensors spill with device node.
+    XLA_CHECK(data->shape() == data_->shape())
+        << "Shape mismatch: expected (" << data_->shape().to_string()
+        << "), actual (" << data->shape().to_string() << ")";
+    data_ = data;
+  }
+
   static DeviceData* Cast(const torch::lazy::Node* node);
 
  private:
@@ -27,3 +41,5 @@ class DeviceData : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_DEVICE_DATA_H_

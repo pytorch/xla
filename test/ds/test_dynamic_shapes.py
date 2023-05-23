@@ -358,6 +358,17 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     # For correctness
     self.assertEqual(t2.cpu(), t2_clone.cpu())
 
+  def test_xlatensor_memoize_symsizes(self):
+    met.clear_all()
+    t1 = torch.tensor([1, 0, 3, 5, 0, 6], device=dev)
+    # t2.shape=torch.Size([<=6, 1]) with real size [4, 1]
+    # t2 = [[0], [2], [3], [5]]
+    t2 = torch.nonzero(t1)
+    sym_size0 = t2.shape[0]
+    sym_size1 = t2.shape[0]
+    self.assertEqual(sym_size0, sym_size1)
+    self.assertIsNone(met.metric_data('CompileTime'))
+
   def test_abs(self):
     t1 = torch.tensor([1, 0, 3, 5, 0, 6], device=dev)
     # t2.shape=torch.Size([<=6, 1]) with real size [4, 1]
@@ -376,6 +387,28 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     t2_aten = torch.nonzero(t1_aten)
     t3_aten = torch.abs(t2_aten)
     self.assertEqual(t3.cpu(), t3_aten.cpu())
+
+  def test_fill_(self):
+    t1 = torch.tensor([1, 0, 3, 5, 0, 6], device=dev)
+    # t2.shape=torch.Size([<=6, 1]) with real size [4, 1]
+    # t2 = [[0], [2], [3], [5]]
+    t2 = torch.nonzero(t1)
+    self.assertIsInstance(t2.shape[0], torch.SymInt)
+    self.assertIsInstance(t2.shape[1], int)
+
+    t2.fill_(1)
+    self.assertIsInstance(t2.shape[0], torch.SymInt)
+    self.assertEqual(str(t2.shape[0]), '<=6')
+    self.assertEqual(t2.shape[0], 4)
+    self.assertIsInstance(t2.shape[1], int)
+    self.assertEqual(str(t2.shape[1]), '1')
+    self.assertEqual(t2.shape[1], 1)
+
+    # test for correctness
+    t1_aten = torch.tensor([1, 0, 3, 5, 0, 6])
+    t2_aten = torch.nonzero(t1_aten)
+    t2_aten.fill_(1)
+    self.assertEqual(t2.cpu(), t2_aten.cpu())
 
   def test_sizeMod(self):
     met.clear_all()

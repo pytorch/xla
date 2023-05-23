@@ -1,12 +1,14 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_DEVICE_H_
+#define XLA_TORCH_XLA_CSRC_DEVICE_H_
+
+#include <torch/csrc/lazy/backend/backend_device.h>
+#include <torch/csrc/lazy/core/hash.h>
+#include <torch/csrc/lazy/core/util.h>
 
 #include <iostream>
 #include <string>
 
 #include "third_party/xla_client/util.h"
-#include "torch/csrc/lazy/backend/backend_device.h"
-#include "torch/csrc/lazy/core/hash.h"
-#include "torch/csrc/lazy/core/util.h"
 
 namespace torch_xla {
 
@@ -41,3 +43,5 @@ static inline torch::lazy::BackendDevice GetDeviceOrCurrent(
 }
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_DEVICE_H_

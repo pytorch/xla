@@ -1,0 +1,14 @@
+This should have been fixed in tf. It fails to build probably because absl::string_view maps to std::string_view in google3 vs in OSS that may not be the case. Whoever wants to upgrade libtpu to a date later than 05/03 should be able to remove this diff file.
+diff --git a/tensorflow/compiler/xla/service/gpu/gpu_hlo_schedule.cc b/tensorflow/compiler/xla/service/gpu/gpu_hlo_schedule.cc
+index 1197bc8b323..b4809b50e4f 100644
+--- a/tensorflow/compiler/xla/service/gpu/gpu_hlo_schedule.cc
++++ b/tensorflow/compiler/xla/service/gpu/gpu_hlo_schedule.cc
+@@ -356,7 +356,7 @@ Status ScheduleGpuModule(HloModule* module, int64_t pointer_size,
+       HloPrintOptions::Canonical().set_print_backend_config(true));
+   HloInstruction* root = module->entry_computation()->root_instruction();
+   FrontendAttributes attributes;
+-  (*attributes.mutable_map())[kFingerprintBeforeLHS] = fingerprint;
++  (*attributes.mutable_map())[std::string(kFingerprintBeforeLHS)] = fingerprint;
+   root->add_frontend_attributes(attributes);
+   VLOG(1) << "Fingerprint before LHS for module " << module->name() << " = "
+           << fingerprint;

@@ -7,6 +7,9 @@
 #include <ATen/native/CPUFallback.h>
 #include <ATen/native/TypeProperties.h>
 #include <ATen/ops/expand_copy.h>
+#include <torch/csrc/lazy/core/shape_inference.h>
+#include <torch/csrc/lazy/core/tensor_util.h>
+#include <torch/csrc/lazy/core/util.h>
 
 #include <mutex>
 
@@ -18,13 +21,13 @@
 #include "torch/csrc/lazy/core/shape_inference.h"
 #include "torch/csrc/lazy/core/tensor_util.h"
 #include "torch/csrc/lazy/core/util.h"
+#include "torch_xla/csrc/LazyIr.h"
+#include "torch_xla/csrc/XLANativeFunctions.h"
 #include "torch_xla/csrc/aten_autograd_ops.h"
 #include "torch_xla/csrc/aten_cpu_fallback.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/device.h"
-#include "torch_xla/csrc/generated/LazyIr.h"
-#include "torch_xla/csrc/generated/XLANativeFunctions.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ops/as_strided.h"
 #include "torch_xla/csrc/ops/as_strided_view_update.h"
@@ -40,6 +43,7 @@
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
+#include "torch_xla/csrc/xla_sharding_util.h"
 
 // [Implementation Guidelines]
 // - If you want to call a at::func which doesn't have a kernel registered
@@ -471,7 +475,7 @@ at::Tensor XLANativeFunctions::_copy_from(const at::Tensor& self,
   if (!self_tensor) {
     static bool sync_update =
         xla::sys_util::GetEnvBool("XLA_TENSOR_UPDATE_SYNC", true) &&
-        !xla::sys_util::GetEnvBool("XLA_USE_SPMD", false);
+        !ShardingUtil::UseVirtualDevice();
     XLA_CHECK(dst_tensor);
     dst_tensor->UpdateFromTensor(self, /*sync=*/sync_update);
   } else if (!dst_tensor) {

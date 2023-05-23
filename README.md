@@ -67,7 +67,7 @@ Google Cloud offers TPU VMs for more transparent and easier access to the TPU ha
 
 ## How to Run on TPU VM Pods (distributed training)
 
-If a single TPU VM does not suit your requirment, you can consider using TPU Pod. TPU Pod is a collection of TPU devices connected by dedicated high-speed network interfaces. Please checkout our [Cloud TPU VM Pod User Guide](https://cloud.google.com/tpu/docs/pytorch-pods).
+If a single TPU VM does not suit your requirement, you can consider using TPU Pod. TPU Pod is a collection of TPU devices connected by dedicated high-speed network interfaces. Please checkout our [Cloud TPU VM Pod User Guide](https://cloud.google.com/tpu/docs/pytorch-pods).
 
 
 ## Available docker images and wheels
@@ -122,7 +122,8 @@ To run on [compute instances with GPUs](https://cloud.google.com/compute/docs/gp
 | 1.12 | `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.12-cp38-cp38-linux_x86_64.whl` |
 | 1.11 | `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.11-cp38-cp38-linux_x86_64.whl` |
 | 1.10 | `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.10-cp38-cp38-linux_x86_64.whl` |
-| nightly | `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-nightly-cp38-cp38-linux_x86_64.whl` |
+| nightly <= 2023/04/25 |  `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-nightly-cp38-cp38-linux_x86_64.whl` |
+| nightly >= 2023/04/25| `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-nightly-cp38-cp38-linux_x86_64.whl` |
 
 <br/>
 
@@ -141,8 +142,10 @@ Note: For TPU Pod customers using XRT (our legacy runtime), we have custom wheel
 | 2.0 + CUDA 11.8 | `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/118/torch_xla-2.0-cp38-cp38-linux_x86_64.whl` |
 | 2.0 + CUDA 11.7 | `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/117/torch_xla-2.0-cp38-cp38-linux_x86_64.whl` |
 | 1.13 | `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/112/torch_xla-1.13-cp38-cp38-linux_x86_64.whl` |
-| nightly + CUDA 11.7 | `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/117/torch_xla-nightly-cp38-cp38-linux_x86_64.whl` |
-| nightly + CUDA 11.8 | `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/118/torch_xla-nightly-cp38-cp38-linux_x86_64.whl` |
+| nightly + CUDA 11.7 <= 2023/04/25| `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/117/torch_xla-nightly-cp38-cp38-linux_x86_64.whl` |
+| nightly + CUDA 11.7 >= 2023/04/25| `https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/11.7/torch_xla-nightly-cp38-cp38-linux_x86_64.whl` |
+| nightly + CUDA 11.8 <= 2023/04/25| `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/118/torch_xla-nightly-cp38-cp38-linux_x86_64.whl` |
+| nightly + CUDA 11.8 >= 2023/04/25| `https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/11.8/torch_xla-nightly-cp38-cp38-linux_x86_64.whl` |
 
 <br/>
 
@@ -157,10 +160,7 @@ Note: For TPU Pod customers using XRT (our legacy runtime), we have custom wheel
 
 | Version | Colab TPU Wheel |
 | --- | ----------- |
-| 2.0 | `https://storage.googleapis.com/tpu-pytorch/wheels/colab/torch_xla-2.0-cp39-cp39-linux_x86_64.whl` |
-| 1.13 | `https://storage.googleapis.com/tpu-pytorch/wheels/colab/torch_xla-1.13-cp37-cp37m-linux_x86_64.whl` |
-| 1.12 | `https://storage.googleapis.com/tpu-pytorch/wheels/colab/torch_xla-1.12-cp37-cp37m-linux_x86_64.whl` |
-| 1.11 | `https://storage.googleapis.com/tpu-pytorch/wheels/colab/torch_xla-1.11-cp37-cp37m-linux_x86_64.whl` |
+| 2.0 | `https://storage.googleapis.com/tpu-pytorch/wheels/colab/torch_xla-2.0-cp310-cp310-linux_x86_64.whl` |
 
 You can also add `+yyyymmdd` after `torch_xla-nightly` to get the nightly wheel of a specified date. To get the companion pytorch and torchvision nightly wheel, replace the `torch_xla` with `torch` or `torchvision` on above wheel links.
 

@@ -47,8 +47,9 @@ launch_docker_and_build: &launch_docker_and_build
     echo "declare -x CIRCLE_PROJECT_USERNAME=${CIRCLE_PROJECT_USERNAME}" >> /home/circleci/project/env
     echo "declare -x CIRCLE_PROJECT_REPONAME=${CIRCLE_PROJECT_REPONAME}" >> /home/circleci/project/env
 
-    # Set debug so that xla builds with coverage symbols
-    echo "declare -x DEBUG=1" >> /home/circleci/project/env
+    # Set up remote cache/build authentication.
+    echo "declare -x BAZEL_REMOTE_CACHE=1" >> /home/circleci/project/xla_env
+    (set +x; echo $GCLOUD_SERVICE_KEY  > /home/circleci/project/default_credentials.json; set -x)
 
     pid=$(docker run -t -d -w $WORKDIR ${GCR_DOCKER_IMAGE})
     docker cp /home/circleci/project/. "$pid:$WORKDIR"
@@ -132,7 +133,7 @@ run_test: &run_test
       <<: *download_docker
   - run:
       name: Test
-      no_output_timeout: "1h"
+      no_output_timeout: "3h"
       command: |
         docker exec -u jenkins $(cat .docker_pid) bash -c '. ~/.bashrc && .circleci/test.sh'
 
@@ -188,7 +189,7 @@ run_test_coverage: &run_test_coverage
       <<: *download_docker
   - run:
       name: Test
-      no_output_timeout: "1h"
+      no_output_timeout: "3h"
       command: |
         docker exec -u jenkins $(cat .docker_pid) bash -c \
         '. ~/.bashrc && USE_COVERAGE=1 .circleci/test.sh'
@@ -222,68 +223,6 @@ run_test_coverage: &run_test_coverage
   - store_artifacts:
       path: htmlcov
 
-run_clang_format: &run_clang_format
-  name: Run clang-format
-  command: |
-    sudo apt-get update
-    sudo apt install -y clang-format-7
-    git_status=$(git status --porcelain)
-    if [[ $git_status ]]; then
-      echo "Checkout code is not clean"
-      echo "${git_status}"
-      exit 1
-    fi
-
-    find -name '*.cpp' -o -name '*.h' -name '*.cc' | xargs clang-format-7 -i -style=file
-    git_status=$(git status --porcelain)
-    if [[ $git_status ]]; then
-      git diff
-      echo "clang-format-7 recommends the changes above, please manually apply them OR automatically apply the changes "
-      echo "by running \"clang-format-7 -i -style=file /PATH/TO/foo.cpp\" to the following files"
-      echo "${git_status}"
-      exit 1
-    else
-      echo "PASSED C++ format"
-    fi
-
-run_yapf: &run_yapf
-  name: Run yapf
-  command: |
-    pyenv install 3.7.0
-    pyenv global 3.7.0
-    pip install --upgrade pip
-    pip install yapf==0.30.0
-
-    git_status=$(git status --porcelain)
-    if [[ $git_status ]]; then
-      echo "Checkout code is not clean"
-      echo "${git_status}"
-      exit 1
-    fi
-
-    yapf -i -r *.py test/ scripts/ torch_xla/
-    git_status=$(git status --porcelain)
-    if [[ $git_status ]]; then
-      git diff
-      echo "yapf recommends the changes above, please manually apply them OR automatically apply the changes "
-      echo "by running `yapf -i /PATH/TO/foo.py` to the following files"
-      echo "${git_status}"
-      exit 1
-    else
-      echo "PASSED Python format"
-    fi
-
-assert_no_torch_pin: &assert_no_torch_pin
-  name: Make sure torch_patches/.torch_pin is removed before merging
-  command: |
-      TORCH_PIN=./torch_patches/.torch_pin
-      if [[ -f "${TORCH_PIN}" ]]; then
-        echo "Please remove ${TORCH_PIN} before landing."
-        exit 1
-      else
-        echo "No ${TORCH_PIN} found, safe to land..."
-      fi
-
 assert_continue_on_error_is_false: &assert_continue_on_error_is_false
   name: Make sure CONTINUE_ON_ERROR flags are set to false before merging
   command: |
@@ -313,28 +252,6 @@ ci_params: &ci_params
   resource_class: << parameters.resource_class >>
 
 jobs:
-  linter_check:
-    machine:
-      image: ubuntu-2004:202111-02
-    steps:
-    - checkout
-    - run:
-        <<: *run_clang_format
-    - run:
-        <<: *run_yapf
-
-  linter_check_no_torch_pin:
-    machine:
-      image: ubuntu-2004:202111-02
-    steps:
-    - checkout
-    - run:
-        <<: *assert_no_torch_pin
-    - run:
-        <<: *run_clang_format
-    - run:
-        <<: *run_yapf
-
   continue_on_error_is_false:
     machine:
       image: ubuntu-2004:202111-02
@@ -361,18 +278,6 @@ jobs:
 workflows:
   build:
     jobs:
-      - linter_check:
-          filters:
-            branches:
-              ignore:
-                - master
-                - ^r\d*\.?\d*$
-      - linter_check_no_torch_pin:
-          filters:
-            branches:
-              only:
-                - master
-                - ^r\d*\.?\d*$
       - pytorch_xla_run_build
       - pytorch_xla_run_test:
           name: pytorch_xla_run_CPU_test

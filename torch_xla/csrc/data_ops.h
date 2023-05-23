@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_DATA_OPS_H_
+#define XLA_TORCH_XLA_CSRC_DATA_OPS_H_
 
 #include <c10/core/ScalarType.h>
 
@@ -105,3 +106,5 @@ xla::XlaOp PadInDim(xla::XlaOp input, int64_t dim, int64_t pad_lo,
                     int64_t pad_hi, const xla::XlaOp* pad_value = nullptr);
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_DATA_OPS_H_

@@ -1,11 +1,12 @@
 #include "torch_xla/csrc/ops/as_strided.h"
 
+#include <torch/csrc/lazy/core/util.h>
+
 #include <algorithm>
 
 #include "xla/shape_util.h"
 #include "xla/util.h"
 #include "third_party/xla_client/util.h"
-#include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"

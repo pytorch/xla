@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_CONVERT_OPS_H_
+#define XLA_TORCH_XLA_CSRC_CONVERT_OPS_H_
 
 #include <c10/core/ScalarType.h>
 #include <c10/util/Optional.h>
@@ -30,3 +31,5 @@ xla::XlaOp CastToScalarType(xla::XlaOp input,
 xla::XlaOp MaybeConvertTo(xla::XlaOp input, xla::PrimitiveType type);
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_CONVERT_OPS_H_

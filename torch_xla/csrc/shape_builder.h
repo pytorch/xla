@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_SHAPE_BUILDER_H_
+#define XLA_TORCH_XLA_CSRC_SHAPE_BUILDER_H_
 
 #include <vector>
 
@@ -32,3 +33,5 @@ class ShapeBuilder {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_SHAPE_BUILDER_H

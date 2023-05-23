@@ -5,6 +5,7 @@ set -ex
 cd /tmp/pytorch/xla
 
 source ./xla_env
+source .circleci/common.sh
 
 echo "Building docs"
 pushd docs

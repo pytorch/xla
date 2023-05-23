@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <unordered_set>
+#include <vector>
 
 #include "absl/strings/ascii.h"
 #include "absl/types/span.h"
@@ -28,6 +29,8 @@
 namespace xla {
 
 namespace {
+
+static std::string spmd_device_str = "SPMD:0";
 
 // Initializes a distributed runtime client if dist_service_addr is specified
 std::shared_ptr<DistributedRuntimeClient>
@@ -129,6 +132,8 @@ PjRtComputationClient::PjRtComputationClient() {
     string_to_device_.emplace(device_str, device);
     device_locks_.emplace(device_str, std::make_unique<std::shared_mutex>());
   }
+  // manually create the device_locks for SPMD device
+  device_locks_.emplace(spmd_device_str, std::make_unique<std::shared_mutex>());
 }
 
 void PjRtComputationClient::PjRtData::Assign(const Data& data) {
@@ -226,8 +231,14 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
 ComputationClient::DataPtr PjRtComputationClient::TransferShardsToServer(
     absl::Span<const TensorSource> tensor_shards, std::string device,
     xla::Shape shape, xla::OpSharding sharding) {
-  TF_VLOG(1) << "TransferShardsToServer with " << tensor_shards.size()
-             << " shards.";
+  tsl::profiler::TraceMe activity(
+      "PjRtComputationClient::TransferShardsToServer",
+      tsl::profiler::TraceMeLevel::kInfo);
+  // TODO(jonbolin): Consider using CopyToDevice when sharding is REPLICATED.
+  // We are opting out of CopyToDevice for now due to the synchronization
+  // issues observed in ShardingUtil::InputHandler, but because CopyToDevice
+  // directly copies buffers between devices using ICI, it can be much faster
+  // than transferring from the host to each device.
   auto data_shards = TransferToServer(tensor_shards);
   std::vector<std::shared_ptr<PjRtData>> pjrt_data_shards;
   for (auto& shard : data_shards) {
@@ -263,8 +274,13 @@ ComputationClient::DataPtr PjRtComputationClient::ReplicateShardedData(
     const ComputationClient::DataPtr& handle) {
   if (PjRtShardedData* sharded_data =
           dynamic_cast<PjRtShardedData*>(handle.get())) {
+    XLA_COUNTER("ReplicateShardedData", 1);
     TF_VLOG(1) << "ReplicateShardedData (handle=" << handle->GetOpaqueHandle()
                << ", shape=" << handle->shape() << ")";
+    if (sharded_data->GetSharding().type() == xla::OpSharding::REPLICATED) {
+      // Data is replicated, return the first shard
+      return sharded_data->shards[0];
+    }
     xla::XlaBuilder b("ReplicateShardedData");
     xla::Shape shape = sharded_data->shape();
     b.SetSharding(sharded_data->GetSharding());
@@ -326,24 +342,8 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromServer(
     xla::Shape target_shape = ShapeUtil::DeviceShapeToHostShape(
         pjrt_data.buffer->logical_on_device_shape().value());
     auto& literal = literals.emplace_back(target_shape);
+    XLA_CHECK_OK(pjrt_data.buffer->ToLiteralSync(&literal));
 
-    // PJRT will always try to copy the full bounded size into our literal. If
-    // the bounded size is larger than the logical output size, we have to
-    // allocate a bounded-size literal and copy a slice of the values into our
-    // output literal.
-    if (pjrt_data.buffer->on_device_shape().is_static()) {
-      XLA_CHECK_OK(pjrt_data.buffer->ToLiteralSync(&literal));
-    } else {
-      xla::Shape bounded_shape = ShapeUtil::DeviceShapeToHostShape(
-          pjrt_data.buffer->on_device_shape());
-      xla::Literal bounded_literal(bounded_shape);
-      XLA_CHECK_OK(pjrt_data.buffer->ToLiteralSync(&bounded_literal));
-      XLA_CHECK_OK(literal.CopySliceFrom(
-          bounded_literal,
-          /*src_base=*/std::vector<int64_t>(target_shape.rank(), 0),
-          /*dest_base=*/std::vector<int64_t>(target_shape.rank(), 0),
-          /*copy_size=*/target_shape.dimensions()));
-    }
     total_size += literal.size_bytes();
   }
   InboundDataMetric()->AddSample(total_size);
@@ -363,11 +363,11 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
     if (instance.is_sharded) {
       // TODO(yeounoh) multi-host, multi-slice configurations
       compile_options.executable_build_options.set_use_spmd_partitioning(true);
-      // TODO(yeounoh) this is set to false by default, but explicitly set here
-      // to expose the knob for future reference. We can override the compiler's
-      // default behavior to further optimize parameter sharding in the future.
+      // We can override the compiler's default behavior to replicate the
+      // outputs. Setting this to true would wrapping the sharded outputs in
+      // PjRtShardedData.
       compile_options.executable_build_options
-          .set_allow_spmd_sharding_propagation_to_output({false});
+          .set_allow_spmd_sharding_propagation_to_output({true});
       compile_options.executable_build_options.set_num_partitions(
           client_->device_count());
       compile_options.executable_build_options.set_num_replicas(1);
@@ -499,6 +499,13 @@ PjRtComputationClient::ExecuteReplicated(
     const std::vector<std::vector<ComputationClient::DataPtr>>& arguments,
     absl::Span<const std::string> devices,
     const ExecuteReplicatedOptions& options) {
+  // Shared ownership of the timed section ensures that it will only get logged
+  // once both `ExecuteReplicated` and the async work in `Execute` are
+  // complete; a copy is held from the lambda that releases it when done.
+  auto timed =
+      std::make_shared<metrics::TimedSection>(ExecuteReplicatedMetric());
+  tsl::profiler::TraceMe activity("PjRtComputationClient::ExecuteReplicated",
+                                  tsl::profiler::TraceMeLevel::kInfo);
   const PjRtComputation& pjrt_computation =
       dynamic_cast<const PjRtComputation&>(computation);
   XLA_CHECK(devices.size() == arguments.size())
@@ -531,13 +538,32 @@ PjRtComputationClient::ExecuteReplicated(
   // Required as of cl/518733871
   // execute_options.use_major_to_minor_data_layout_for_callbacks = true;
 
+  std::optional<std::vector<PjRtFuture<Status>>> returned_futures(
+      devices.size());
   std::vector<std::vector<std::unique_ptr<PjRtBuffer>>> results =
-      pjrt_computation.executable->Execute(argument_handles, execute_options)
+      pjrt_computation.executable
+          ->Execute(argument_handles, execute_options, returned_futures)
           .value();
 
   std::vector<std::vector<ComputationClient::DataPtr>> data_handles;
   data_handles.reserve(results.size());
   std::vector<size_t> dims(results.size());
+
+  // Grab the shared lock and block the `WaitDeviceOps` until buffer is ready.
+  // Since this is the SPMD code path.
+  // There is no points to grab devices lock for every individual device.
+  auto lock = lock_device_shared(spmd_device_str);
+  TF_VLOG(3) << "ExecuteReplicated grab the lock for " << spmd_device_str;
+  // Signal that `ExecuteReplicated` has completed for one of the devices the
+  // ExecuteReplicatedTime metric. Here, we assume that all devices will finish
+  // execution roughly at the same time, hence only use one of the
+  // returned_futures. Copies the `timed` shared pointer into the lambda.
+  (*returned_futures)[0].OnReady(
+      [timed, lock = std::move(lock)](Status unused) mutable {
+        timed.reset();
+        TF_VLOG(3) << "ExecuteReplicated returned_future->OnReady finished";
+      });
+
   for (int32_t i = 0; i < results.size(); ++i) {
     xla::PjRtDevice* pjrt_device = StringToPjRtDevice(devices[i]);
     XLA_CHECK(pjrt_device->IsAddressable())

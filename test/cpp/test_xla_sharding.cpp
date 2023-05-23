@@ -1,19 +1,23 @@
 #include <ATen/ATen.h>
+#include <google/protobuf/repeated_field.h>
 #include <gtest/gtest.h>
 #include <stdlib.h>
+#include <torch/csrc/lazy/core/lazy_graph_executor.h>
 
 #include <iostream>
 
-#include "cpp_test_util.h"
 #include "xla/xla_data.pb.h"
+#include "xla/protobuf_util.h"
+#include "test/cpp/cpp_test_util.h"
+#include "test/cpp/torch_xla_test.h"
 #include "third_party/xla_client/env_vars.h"
 #include "third_party/xla_client/sys_util.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/tensor.h"
+#include "torch_xla/csrc/tensor_methods.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/xla_sharding_util.h"
-#include "torch_xla_test.h"
 
 namespace torch_xla {
 namespace cpp_test {
@@ -27,6 +31,66 @@ bool XlaDataValuesEqual(torch::lazy::BackendDataPtr a,
 }  // namespace
 
 class XLAShardingTest : public AtenXlaTensorTestBase {};
+
+TEST_F(XLAShardingTest, GetShardShape) {
+  auto tensor = at::ones({8, 7}, at::TensorOptions(at::kFloat));
+  xla::Array2D<int64_t> mesh({
+      {0, 1},
+      {2, 3},
+  });
+  auto sharding = xla::HloSharding::Tile(mesh).ToProto();
+  auto shard_shape = ShardingUtil::GetShardShape(tensor, sharding);
+  // For tiled sharding, each dimension should be halved
+  EXPECT_EQ(shard_shape, std::vector<int64_t>({4, 4}));
+
+  sharding = xla::HloSharding::Replicate().ToProto();
+  shard_shape = ShardingUtil::GetShardShape(tensor, sharding);
+  // For replicated sharding, each dimension should be preserved
+  EXPECT_EQ(shard_shape, std::vector<int64_t>({8, 7}));
+}
+
+TEST_F(XLAShardingTest, GetShardIndicesForDevices) {
+  std::vector<std::string> devices = {"TPU:0", "TPU:1", "TPU:2", "TPU:3"};
+
+  auto tensor = at::ones({8, 7}, at::TensorOptions(at::kFloat));
+  xla::Array2D<int64_t> mesh({
+      {0, 1},
+      {2, 3},
+  });
+  auto sharding = xla::HloSharding::Tile(mesh).ToProto();
+  auto shard_shape = ShardingUtil::GetShardShape(tensor, sharding);
+  auto shard_indices = ShardingUtil::GetShardIndicesForDevices(
+      shard_shape, tensor.sizes().vec(), sharding, devices);
+  EXPECT_EQ(shard_indices.size(), devices.size());
+  /* Tiled indices should be:
+                 dim=0 dim=1
+       device=0  [0:4,  0:4]
+       device=1  [0:4,  4:7]
+       device=2  [4:8,  0:4]
+       device=3  [4:8,  4:7] */
+  std::vector<std::vector<int>> slice_starts = {{0, 0}, {0, 4}, {4, 0}, {4, 4}};
+  std::vector<std::vector<int>> slice_ends = {{4, 4}, {4, 7}, {8, 4}, {8, 7}};
+  for (int device = 0; device < shard_indices.size(); ++device) {
+    EXPECT_EQ(shard_indices[device].size(), tensor.sizes().size());
+    for (int dim = 0; dim < shard_indices[device].size(); ++dim) {
+      EXPECT_TRUE(shard_indices[device][dim].is_slice());
+      auto slice = shard_indices[device][dim].slice();
+      EXPECT_EQ(slice.start(), slice_starts[device][dim]);
+      EXPECT_EQ(slice.stop(), slice_ends[device][dim]);
+      EXPECT_EQ(slice.step(), 1);
+    }
+  }
+
+  sharding = xla::HloSharding::Replicate().ToProto();
+  shard_shape = ShardingUtil::GetShardShape(tensor, sharding);
+  shard_indices = ShardingUtil::GetShardIndicesForDevices(
+      shard_shape, tensor.sizes().vec(), sharding, devices);
+  EXPECT_EQ(shard_indices.size(), devices.size());
+  for (int i = 0; i < devices.size(); ++i) {
+    EXPECT_EQ(shard_indices[i].size(), 1);
+    EXPECT_TRUE(shard_indices[i][0].is_ellipsis());
+  }
+}
 
 TEST_F(XLAShardingTest, ShardTensor) {
   std::vector<std::string> devices = {"TPU:0", "TPU:1", "TPU:2", "TPU:3",
@@ -291,6 +355,62 @@ TEST_F(XLAShardingTest, OutputHandler) {
   EXPECT_EQ(shards.size(), devices.size());
   EXPECT_TRUE(
       xla::Shape::Equal().IgnoreLayout()(shards[0]->shape(), tensor_shape));
+}
+
+TEST_F(XLAShardingTest, PrepareOutputShardingPropagation) {
+  xla::Shape shape = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {4, 4});
+  int64_t n_devices = xla::ComputationClient::Get()->GetLocalDevices().size();
+  xla::Array<int64_t> tile_assignment({1, n_devices});
+  tile_assignment.FillIota(0);
+  xla::OpSharding tiled = xla::HloSharding::Tile(tile_assignment).ToProto();
+
+  // Build simple addition with a sharded input.
+  xla::XlaBuilder b("builder");
+  b.SetSharding(tiled);
+  auto x = xla::Parameter(&b, 0, shape, "p0");
+  b.ClearSharding();
+  auto y = xla::Add(x, xla::ConstantR0<float>(&b, 3));
+  xla::XlaComputation xla_computation =
+      ConsumeValue(b.Build(/*remove_dynamic_dimensions=*/false));
+  std::vector<xla::ComputationClient::CompileInstance> instances;
+  instances.push_back({std::move(xla_computation),
+                       GetDefaultDevice()->toString(),
+                       {GetDefaultDevice()->toString()},
+                       &shape,
+                       /*should_wrap_parameter=*/false,
+                       /*is_sharded=*/true});
+
+  std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
+      computations =
+          xla::ComputationClient::Get()->Compile(std::move(instances));
+  ComputationPtr computation = std::make_shared<Computation>(
+      "add", std::move(computations[0]->move_computation()));
+
+  // Prepare output sharding propagation, expect a sharded output placeholder.
+  std::vector<XLATensorPtr> tensors{XLATensor::Create(
+      WrapXlaData(xla::ComputationClient::Get()->CreateDataPlaceholder(
+          GetDefaultDevice()->toString(), std::move(shape))))};
+  std::vector<torch::lazy::BackendDataPtr> data_placeholders;
+  std::vector<XLATensor::ShardingSpecPtr> sharding_specs;
+  ShardingUtil::PrepareOutputShardingPropagation(
+      &tensors, {0}, computation, &data_placeholders, &sharding_specs);
+
+  // Check if the output sharding spec is correctly extracted.
+  EXPECT_EQ(sharding_specs.size(), 1);
+  if (n_devices > 1) {
+    // Tiled sharding requires multiple devices.
+    EXPECT_TRUE(
+        xla::protobuf_util::ProtobufEquals(tiled, sharding_specs[0]->sharding));
+  } else {
+    // Sincle device execution defaults to replication sharding.
+    EXPECT_TRUE(xla::protobuf_util::ProtobufEquals(
+        xla::HloSharding::Replicate().ToProto(), sharding_specs[0]->sharding));
+  }
+
+  // Check if the placeholder is on a SPMD device (sharded) with no real values.
+  EXPECT_EQ(data_placeholders.size(), 1);
+  EXPECT_EQ(UnwrapXlaData(data_placeholders[0])->device(), "SPMD:0");
+  EXPECT_FALSE(UnwrapXlaData(data_placeholders[0])->HasValue());
 }
 
 }  // namespace cpp_test

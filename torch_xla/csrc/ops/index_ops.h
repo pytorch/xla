@@ -21,7 +21,8 @@
 // adjacent (e.g. x[[0, 1], :, [2, 3]]). In this case, self and the index
 // tensors are transposed to the front: x.transpose(1, 2)[[0, 1], [2, 3]]
 
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_INDEX_OPS_H_
+#define XLA_TORCH_XLA_CSRC_OPS_INDEX_OPS_H_
 
 #include <ATen/core/List.h>
 #include <ATen/core/Tensor.h>
@@ -81,3 +82,5 @@ torch::lazy::Value IndexCopy(const XLATensorPtr& base, int64_t dim,
                              const XLATensorPtr& source);
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_INDEX_OPS_H_

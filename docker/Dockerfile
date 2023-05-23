@@ -10,7 +10,7 @@ ARG xla_branch=""
 ARG example_branch="master"
 ARG cuda="0"
 ARG cuda_compute="3.7,7.0,7.5,8.0"
-ARG cxx_abi="1"
+ARG cxx_abi="0"
 ARG tpuvm=""
 ARG bazel_jobs=""
 ARG git_clone="true"
@@ -32,11 +32,6 @@ ENV USE_MPI "0"
 # Enable CUDA for XLA
 ENV XLA_CUDA "${cuda}"
 ENV TF_CUDA_COMPUTE_CAPABILITIES "${cuda_compute}"
-
-# Whether to build torch and torch_xla libraries with CXX ABI
-ENV _GLIBCXX_USE_CXX11_ABI "${cxx_abi}"
-ENV CFLAGS "${CFLAGS} -D_GLIBCXX_USE_CXX11_ABI=${cxx_abi}"
-ENV CXXFLAGS "${CXXFLAGS} -D_GLIBCXX_USE_CXX11_ABI=${cxx_abi}"
 
 # Whether to build for TPUVM mode
 ENV TPUVM_MODE "${tpuvm}"

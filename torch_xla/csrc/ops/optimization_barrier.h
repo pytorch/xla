@@ -1,4 +1,5 @@
-#pragma once
+#ifndef XLA_TORCH_XLA_CSRC_OPS_OPTIMIZATION_BARRIER_H_
+#define XLA_TORCH_XLA_CSRC_OPS_OPTIMIZATION_BARRIER_H_
 
 #include "torch_xla/csrc/ir.h"
 
@@ -14,3 +15,5 @@ class OptimizationBarrier : public XlaNode {
 };
 
 }  // namespace torch_xla
+
+#endif  // XLA_TORCH_XLA_CSRC_OPS_OPTIMIZATION_BARRIER_H_

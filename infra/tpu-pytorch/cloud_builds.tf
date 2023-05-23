@@ -1,35 +1,65 @@
-module "dev_image" {
-  source = "../terraform_modules/xla_docker_build"
+variable "dev_images" {
+  type = list(object({
+    accelerator    = string
+    arch           = optional(string, "amd64")
+    python_version = optional(string, "3.8")
+    cuda_version   = optional(string, "11.8")
 
-  trigger_name = "dev-image"
+    # Additional tags on top of uniquely generated tag based on accelerator,
+    # python and cuda versions.
+    extra_tags = optional(list(string), [])
+  }))
+}
+
+locals {
+  dev_images_dict = {
+    for di in var.dev_images :
+    format("%s_%s",
+      di.python_version,
+      di.accelerator == "tpu" ? "tpuvm" : format("cuda_%s", di.cuda_version)
+    ) => di
+  }
+}
+
+module "dev_images" {
+  source   = "../terraform_modules/xla_docker_build"
+  for_each = local.dev_images_dict
+
+  # Replace `.` and `_` with `-` as they're not allowed in trigger name.
+  trigger_name = "dev-${replace(each.key, "/[_.]/", "-")}"
 
   ansible_branch = "master"
   trigger_on_push = {
-    branch        = "master"
-    include_files = ["infra/**"]
+    branch         = "master"
+    included_files = ["infra/**"]
   }
 
   image_name = "development"
-  image_tags = [
-    "tpu",
-    # Append _YYYYMMDD suffix to nightly image name.
-    "tpu_$(date +%Y%m%d)",
-  ]
+  image_tags = concat(each.value.extra_tags, [
+    each.key,
+    # Append _YYYYMMDD suffix to the dev image name.
+    "${each.key}_$(date +%Y%m%d)",
+  ])
+
   dockerfile = "development.Dockerfile"
   description = join(" ", [
-    "Build development image with TPU support.",
-    "Trigger managed by Terraform setup in",
-    "infra/tpu-pytorch/cloud_builds.tf.",
+    "Builds development:${each.key} image.",
+    "Trigger managed by Terraform setup in infra/tpu-pytorch/cloud_builds.tf.",
   ])
 
   build_args = {
-    python_version = "3.8"
+    python_version = each.value.python_version
     debian_version = "buster"
   }
 
   ansible_vars = {
-    arch        = "amd64"
-    accelerator = "tpu"
+    xla_git_rev     = "$COMMIT_SHA"
+    pytorch_git_rev = "main"
+
+    accelerator    = each.value.accelerator
+    arch           = each.value.arch
+    python_version = each.value.python_version
+    cuda_version   = each.value.cuda_version
   }
 
   docker_repo_url = module.docker_registry.url

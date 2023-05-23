@@ -1,14 +1,13 @@
 #!/bin/bash
 set -ex
 RUNDIR="$(cd "$(dirname "$0")" ; pwd -P)"
-BUILDDIR="$RUNDIR/build"
-BUILDTYPE="Release"
+BUILDTYPE="opt"
 VERB=
 FILTER=
-BUILD_ONLY=0
-RMBUILD=1
 LOGFILE=/tmp/pytorch_cpp_test.log
 XLA_EXPERIMENTAL="nonzero:masked_select"
+BAZEL_REMOTE_CACHE="0"
+BAZEL_VERB="test"
 
 # See Note [Keep Going]
 CONTINUE_ON_ERROR=false
@@ -17,10 +16,10 @@ if [[ "$CONTINUE_ON_ERROR" == "1" ]]; then
 fi
 
 if [ "$DEBUG" == "1" ]; then
-  BUILDTYPE="Debug"
+  BUILDTYPE="dbg"
 fi
 
-while getopts 'VLDKBF:X:' OPTION
+while getopts 'VLDKBF:X:RC' OPTION
 do
   case $OPTION in
     V)
@@ -30,19 +29,19 @@ do
       LOGFILE=
       ;;
     D)
-      BUILDTYPE="Debug"
-      ;;
-    K)
-      RMBUILD=0
-      ;;
-    B)
-      BUILD_ONLY=1
+      BUILDTYPE="dbg"
       ;;
     F)
-      FILTER="--gtest_filter=$OPTARG"
+      FILTER="--test_filter=$OPTARG"
       ;;
     X)
       XLA_EXPERIMENTAL="$OPTARG"
+      ;;
+    R)
+      BAZEL_REMOTE_CACHE="1"
+      ;;
+    C)
+      BAZEL_VERB="coverage"
       ;;
   esac
 done
@@ -51,23 +50,32 @@ shift $(($OPTIND - 1))
 # Set XLA_EXPERIMENTAL var to subsequently executed commands.
 export XLA_EXPERIMENTAL
 
-rm -rf "$BUILDDIR"
-mkdir "$BUILDDIR" 2>/dev/null
-pushd "$BUILDDIR"
-cmake "$RUNDIR" \
-  -DCMAKE_BUILD_TYPE=$BUILDTYPE \
-  -DPYTHON_INCLUDE_DIR=$(python -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())") \
-  -DPYTHON_LIBRARY=$(python -c "import distutils.sysconfig as sysconfig; print(sysconfig.get_config_var('LIBDIR') + '/' + sysconfig.get_config_var('LDLIBRARY'))")
-make -j $VERB
+EXTRA_FLAGS=""
 
-if [ $BUILD_ONLY -eq 0 ]; then
-  if [ "$LOGFILE" != "" ]; then
-    ./test_ptxla ${FILTER:+"$FILTER"} 2> $LOGFILE
-  else
-    ./test_ptxla ${FILTER:+"$FILTER"}
+if [[ "$TPUVM_MODE" == "1" ]]; then
+  EXTRA_FLAGS="$EXTRA_FLAGS --config=tpu"
+fi
+
+# Handle remote builds and remote cache. Use a CI-private cache silo to avoid cachce polution.
+if [[ "$BAZEL_REMOTE_CACHE" == "1" ]]; then
+  EXTRA_FLAGS="$EXTRA_FLAGS --config=remote_cache"
+  if [[ ! -z "$GCLOUD_SERVICE_KEY_FILE" ]]; then
+    EXTRA_FLAGS="$EXTRA_FLAGS --google_credentials=$GCLOUD_SERVICE_KEY_FILE"
+  fi
+  if [[ ! -z "$SILO_NAME" ]]; then
+    EXTRA_FLAGS="$EXTRA_FLAGS --remote_default_exec_properties=cache-silo-key=$SILO_NAME"
   fi
 fi
-popd
-if [ $RMBUILD -eq 1 -a $BUILD_ONLY -eq 0 ]; then
-  rm -rf "$BUILDDIR"
+if [[ "$XLA_CUDA" == "1" ]]; then
+  EXTRA_FLAGS="$EXTRA_FLAGS --config=cuda"
+fi
+if [[ "$BAZEL_VERB" == "coverage" ]]; then
+  EXTRA_FLAGS="$EXTRA_FLAGS --remote_download_outputs=all" # for lcov symlink
+fi
+
+
+if [ "$LOGFILE" != "" ]; then
+  bazel $BAZEL_VERB $EXTRA_FLAGS //third_party/xla_client:all //test/cpp:all ${FILTER:+"$FILTER"} 2> $LOGFILE
+else
+  bazel $BAZEL_VERB $EXTRA_FLAGS //third_party/xla_client:all //test/cpp:all ${FILTER:+"$FILTER"}
 fi

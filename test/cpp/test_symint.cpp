@@ -2,8 +2,8 @@
 
 #include <iostream>
 
-#include "cpp_test_util.h"
-#include "torch_xla/csrc/generated/LazyIr.h"
+#include "test/cpp/cpp_test_util.h"
+#include "torch_xla/csrc/LazyIr.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ops/dynamic_ir.h"
 #include "torch_xla/csrc/ops/expand.h"

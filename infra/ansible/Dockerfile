@@ -30,4 +30,3 @@ WORKDIR /
 
 RUN rm -rf /ansible /tmp/wheels
 COPY --from=build /dist/*.whl /dist/
-

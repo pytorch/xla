@@ -1,8 +1,7 @@
-#include <torch_xla/csrc/generated/LazyIr.h>
-
 #include "xla/client/lib/logdet.h"
 #include "xla/client/lib/math.h"
 #include "xla/client/lib/matrix.h"
+#include "torch_xla/csrc/LazyIr.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/elementwise.h"
