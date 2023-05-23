@@ -23,6 +23,8 @@ jobs:
       SCCACHE_BUCKET: ossci-compiler-cache-circleci-v2
       GCLOUD_SERVICE_KEY: ${{ secrets.GCLOUD_SERVICE_KEY }}
     steps:
+      - name: Setup Linux
+        uses: pytorch/test-infra/.github/actions/setup-linux@main
       - name: Setup SSH (Click me for login details)
         uses: pytorch/test-infra/.github/actions/setup-ssh@main
         with:
@@ -30,7 +32,6 @@ jobs:
           instructions: |
             Build is  done inside the container, to start an interactive session run:
               docker exec -it $(docker container ps --format '{{.ID}}') bash
-
       - name: Checkout repo
         uses: actions/checkout@v3
       - name: Download docker image from GCR
@@ -96,6 +97,8 @@ jobs:
       WORKDIR: /var/lib/jenkins/workspace
       GCLOUD_SERVICE_KEY: ${{ secrets.GCLOUD_SERVICE_KEY }}
     steps:
+      - name: Setup Linux
+        uses: pytorch/test-infra/.github/actions/setup-linux@main
       - name: Setup SSH (Click me for login details)
         uses: pytorch/test-infra/.github/actions/setup-ssh@main
         with:
@@ -103,10 +106,6 @@ jobs:
           instructions: |
             Build is  done inside the container, to start an interactive session run:
               docker exec -it $(docker container ps --format '{{.ID}}') bash
-      - name: Install nvidia driver, nvidia-docker runtime, set GPU_FLAG
-        id: install-nvidia-driver
-        uses: pytorch/test-infra/.github/actions/setup-nvidia@main
-        if: contains(matrix.runner, 'nvidia')
       - name: Download and run docker image from GCR
         shell: bash
         run: |
