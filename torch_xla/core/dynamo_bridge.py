@@ -363,7 +363,7 @@ class FallBackNodeCollector(torch.fx.Interpreter):
       self._fallback_ops.append(n)
     else:
       # if inputs are non-xla tensors, it should be executed on CPU
-      if n.op in ["call_function", "call_module"]:
+      if n.op in ["call_function", "call_module", "call_method"]:
         args, kwargs = self.fetch_args_kwargs_from_env(n)
         for arg in args:
           if isinstance(arg, torch.Tensor) and not is_xla_tensor(arg):
@@ -412,7 +412,7 @@ def extract_compiled_graph(xla_model, xla_args):
 
     def is_node_supported(self, submodules, node: torch.fx.Node) -> bool:
       return node.op in [
-          "call_function", "call_module"
+          "call_function", "call_module", "call_method"
       ] and (node not in fallback_ops or node.target == operator.getitem)
 
   # partition the model and exectue to collect inputs
