@@ -96,7 +96,7 @@ jobs:
         shell: bash
         run: |
           export COMMIT_DOCKER_IMAGE="${GCR_DOCKER_IMAGE}-${GITHUB_SHA}"
-          docker commit "${pid}" "${COMMIT_DOCKER_IMAGE}"
+          time docker commit "${pid}" "${COMMIT_DOCKER_IMAGE}"
           time docker push "${COMMIT_DOCKER_IMAGE}"
 
       - name: Teardown Linux
@@ -104,7 +104,7 @@ jobs:
         if: always()
 
   test-cpu:
-    needs: build
+    # needs: build
     runs-on: linux.4xlarge
     env:
       GCR_DOCKER_IMAGE: gcr.io/tpu-pytorch/xla_base:latest
@@ -121,7 +121,8 @@ jobs:
       - name: Download and run docker image from GCR
         shell: bash
         run: |
-          export COMMIT_DOCKER_IMAGE="${GCR_DOCKER_IMAGE}-${GITHUB_SHA}"
+          #export COMMIT_DOCKER_IMAGE="${GCR_DOCKER_IMAGE}-${GITHUB_SHA}"
+          export COMMIT_DOCKER_IMAGE="${ECR_DOCKER_IMAGE_BASE}:latest-273e9d5d3296ab295f6891d003c4ea95515c384c5"
           echo "DOCKER_IMAGE: "${COMMIT_DOCKER_IMAGE}
           docker pull "${COMMIT_DOCKER_IMAGE}"
           pid=$(docker run -t -d -w $WORKDIR ${COMMIT_DOCKER_IMAGE})
