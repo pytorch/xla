@@ -334,7 +334,7 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertEqual(t3.tolist()[0], t3_expected)
 
   def test_multiple_operations(self):
-    t1 = torch.randn(2, 2) 
+    t1 = torch.randn(2, 2)
     t2 = torch.randn(2, 2)
     expected_1 = t1 + t2
     xt1 = t1.to(xm.xla_device())
@@ -350,7 +350,7 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     xt5 = t5.to(xm.xla_device())
     xs.mark_sharding(xt4, self._get_mesh((1, self.n_devices)), (0, 1))
     xs.mark_sharding(xt5, self._get_mesh((1, self.n_devices)), (0, 1))
-    xt6 = xt4 + xt5 
+    xt6 = xt4 + xt5
     self.assertTrue(torch.allclose(expected_2, xt6.cpu()))
 
   def test_no_sharding(self):
