@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package tensorflow;
+package xla;
 
 import "third_party/xla_client/openxla_attr_value.proto";
 import "third_party/xla_client/openxla_full_type.proto";

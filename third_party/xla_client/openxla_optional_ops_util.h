@@ -24,7 +24,7 @@ limitations under the License.
 namespace xla {
 namespace data {
 
-const char kOptionalVariantTypeName[] = "tensorflow::data::Optional";
+// const char kOptionalVariantTypeName[] = "tensorflow::data::Optional";
 
 // An `OptionalVariant` can represent either an "actual value" (a tuple of
 // tensors) or "none", and may be stored in a DT_VARIANT tensor.

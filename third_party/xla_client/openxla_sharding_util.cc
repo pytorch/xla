@@ -113,29 +113,29 @@ StatusOr<std::optional<xla::OpSharding>> ParseShardingFromDevice(
                    : std::nullopt);
 }
 
-StatusOr<std::optional<xla::OpSharding>> ParseShardingFromEdgeSource(
-    const Edge& edge, int num_cores_per_replica, bool add_metadata) {
-  if (edge.src() == nullptr) {
-    return tensorflow::errors::InvalidArgument(
-        "Null src for ParseShardingFromEdgeSource edge=", edge.DebugString());
-  }
-  TF_ASSIGN_OR_RETURN(std::optional<xla::OpSharding> sharding,
-                      ParseShardingFromDevice(
-                          *edge.src(), num_cores_per_replica, add_metadata));
-  if (sharding.has_value() &&
-      sharding.value().type() == xla::OpSharding::TUPLE) {
-    if (edge.src_output() < 0 ||
-        edge.src_output() >= sharding.value().tuple_shardings_size()) {
-      return tensorflow::errors::InvalidArgument(
-          "Tuple index out of bound: edge=", edge.DebugString(),
-          " sharding=", sharding->DebugString());
-    }
-    std::optional<xla::OpSharding> subsharding =
-        sharding.value().tuple_shardings(edge.src_output());
-    return subsharding;
-  }
-  return sharding;
-}
+// StatusOr<std::optional<xla::OpSharding>> ParseShardingFromEdgeSource(
+//     const Edge& edge, int num_cores_per_replica, bool add_metadata) {
+//   if (edge.src() == nullptr) {
+//     return tensorflow::errors::InvalidArgument(
+//         "Null src for ParseShardingFromEdgeSource edge=", edge.DebugString());
+//   }
+//   TF_ASSIGN_OR_RETURN(std::optional<xla::OpSharding> sharding,
+//                       ParseShardingFromDevice(
+//                           *edge.src(), num_cores_per_replica, add_metadata));
+//   if (sharding.has_value() &&
+//       sharding.value().type() == xla::OpSharding::TUPLE) {
+//     if (edge.src_output() < 0 ||
+//         edge.src_output() >= sharding.value().tuple_shardings_size()) {
+//       return tensorflow::errors::InvalidArgument(
+//           "Tuple index out of bound: edge=", edge.DebugString(),
+//           " sharding=", sharding->DebugString());
+//     }
+//     std::optional<xla::OpSharding> subsharding =
+//         sharding.value().tuple_shardings(edge.src_output());
+//     return subsharding;
+//   }
+//   return sharding;
+// }
 
 void SetShardingDeviceAssignmentFromNode(const Node& src, Node* dst) {
   string device_name = src.assigned_device_name();

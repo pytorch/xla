@@ -83,9 +83,9 @@ TF_LIB_GTL_ALIGNTYPE_TEMPLATE(4096);
 TF_LIB_GTL_ALIGNTYPE_TEMPLATE(8192);
 // Any larger and MSVC++ will complain.
 
-#define TF_LIB_GTL_ALIGNED_CHAR_ARRAY(T, Size)                          \
-  typename tensorflow::gtl::internal::AlignType<TF_LIB_GTL_ALIGN_OF(T), \
-                                                sizeof(T) * Size>::result
+// #define TF_LIB_GTL_ALIGNED_CHAR_ARRAY(T, Size)                          \
+//   typename tensorflow::gtl::internal::AlignType<TF_LIB_GTL_ALIGN_OF(T), \
+//                                                 sizeof(T) * Size>::result
 
 #undef TF_LIB_GTL_ALIGNTYPE_TEMPLATE
 #undef TF_LIB_GTL_ALIGN_ATTRIBUTE
@@ -102,8 +102,8 @@ template <typename Size>
 struct AlignType {
   typedef char result[Size];
 };
-#define TF_LIB_GTL_ALIGNED_CHAR_ARRAY(T, Size) \
-  tensorflow::gtl::internal::AlignType<Size * sizeof(T)>::result
+// #define TF_LIB_GTL_ALIGNED_CHAR_ARRAY(T, Size) \
+//   tensorflow::gtl::internal::AlignType<Size * sizeof(T)>::result
 
 // Enough to parse with SWIG, will never be used by running code.
 #define TF_LIB_GTL_ALIGN_OF(Type) 16

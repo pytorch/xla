@@ -61,14 +61,14 @@ limitations under the License.
 
 // OP_REQUIRES_OK_RETURN is the same as OP_REQUIRES_OK except that
 // in error case, it returns RET instead of void.
-#define OP_REQUIRES_OK_RETURN(CTX, RET, ...)                \
-  do {                                                      \
-    ::tensorflow::Status _s(__VA_ARGS__);                   \
-    if (!TF_PREDICT_TRUE(_s.ok())) {                        \
-      (CTX)->CtxFailureWithWarning(__FILE__, __LINE__, _s); \
-      return RET;                                           \
-    }                                                       \
-  } while (0)
+// #define OP_REQUIRES_OK_RETURN(CTX, RET, ...)                \
+//   do {                                                      \
+//     ::tensorflow::Status _s(__VA_ARGS__);                   \
+//     if (!TF_PREDICT_TRUE(_s.ok())) {                        \
+//       (CTX)->CtxFailureWithWarning(__FILE__, __LINE__, _s); \
+//       return RET;                                           \
+//     }                                                       \
+//   } while (0)
 
 namespace xla {
 
@@ -78,9 +78,9 @@ using XlaDeviceCompiler =
 using PjRtDeviceCompiler =
     DeviceCompiler<xla::PjRtLoadedExecutable, xla::PjRtClient>;
 
-auto* xla_launch_counter = monitoring::Counter<1>::New(
-    "/tensorflow/core/xla_launch_counter",
-    "The number of times a XlaLaunch is called.", "device");
+// auto* xla_launch_counter = monitoring::Counter<1>::New(
+//     "/tensorflow/core/xla_launch_counter",
+//     "The number of times a XlaLaunch is called.", "device");
 
 // A closure describing how to run a compiled version of a TensorFlow function.
 //
@@ -763,31 +763,31 @@ void XlaRunOp::Compute(OpKernelContext* ctx) {
   // We're missing the must-be-constant inputs, tell `PopulateInputs`
   // about this.  We don't actually need these inputs because they've
   // already been baked into the compiled kernel.
-  const xla::HloInputOutputAliasConfig& input_output_alias =
-      closure.executable()->executable()->module().input_output_alias_config();
-  StatusOr<std::vector<xla::ExecutionInput>> execution_inputs;
-  std::map<int, const Tensor*> snapshot_ptrs;
-  {
-    tensorflow::profiler::TraceMe hlo_module_activity(
-        [&] {
-          return absl::StrCat(
-              "Populate Inputs (",
-              closure.compilation_result()->xla_input_shapes.size(), ")");
-        },
-        tensorflow::profiler::TraceMeLevel::kInfo);
+  // const xla::HloInputOutputAliasConfig& input_output_alias =
+  //     closure.executable()->executable()->module().input_output_alias_config();
+  // StatusOr<std::vector<xla::ExecutionInput>> execution_inputs;
+  // std::map<int, const Tensor*> snapshot_ptrs;
+  // {
+  //   tensorflow::profiler::TraceMe hlo_module_activity(
+  //       [&] {
+  //         return absl::StrCat(
+  //             "Populate Inputs (",
+  //             closure.compilation_result()->xla_input_shapes.size(), ")");
+  //       },
+  //       tensorflow::profiler::TraceMeLevel::kInfo);
 
-    for (const auto& [variable_index, variable_tensor] :
-         closure.resource_var_snapshots()) {
-      snapshot_ptrs.emplace(variable_index, variable_tensor.has_value()
-                                                ? &variable_tensor.value()
-                                                : nullptr);
-    }
-    execution_inputs = launch_context.PopulateInputs(
-        ctx, closure.compilation_result(), snapshot_ptrs,
-        /*missing_ctx_input_prefix=*/closure.num_constant_args(),
-        input_output_alias);
-    OP_REQUIRES_OK(ctx, execution_inputs.status());
-  }
+  //   for (const auto& [variable_index, variable_tensor] :
+  //        closure.resource_var_snapshots()) {
+  //     snapshot_ptrs.emplace(variable_index, variable_tensor.has_value()
+  //                                               ? &variable_tensor.value()
+  //                                               : nullptr);
+  //   }
+  //   execution_inputs = launch_context.PopulateInputs(
+  //       ctx, closure.compilation_result(), snapshot_ptrs,
+  //       /*missing_ctx_input_prefix=*/closure.num_constant_args(),
+  //       input_output_alias);
+  //   OP_REQUIRES_OK(ctx, execution_inputs.status());
+  // }
 
   xla::ExecutableRunOptions run_options;
   StatusOr<xla::ExecutionOutput> execution_output = RunExecutable(
@@ -795,11 +795,11 @@ void XlaRunOp::Compute(OpKernelContext* ctx) {
       closure.executable(), ctx, allocator.get());
   OP_REQUIRES(ctx, execution_output.ok(), execution_output.status());
 
-  tensorflow::profiler::TraceMe hlo_module_activity(
-      [&] {
-        return absl::StrCat("Populate Outputs (", ctx->num_outputs(), ")");
-      },
-      tensorflow::profiler::TraceMeLevel::kInfo);
+  // tensorflow::profiler::TraceMe hlo_module_activity(
+  //     [&] {
+  //       return absl::StrCat("Populate Outputs (", ctx->num_outputs(), ")");
+  //     },
+  //     tensorflow::profiler::TraceMeLevel::kInfo);
 
   StatusOr<std::vector<VariableInfo>> variable_infos = GatherVariableInfo(
       ctx, *closure.compilation_result(), closure.num_constant_args());

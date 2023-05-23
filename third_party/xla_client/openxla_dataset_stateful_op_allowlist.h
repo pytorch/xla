@@ -65,13 +65,13 @@ class AllowlistedStatefulOpRegistry {
 //
 //   ALLOW_STATEFUL_OP_FOR_DATASET_FUNCTIONS("LegacyStatefulReader");
 //
-#define ALLOW_STATEFUL_OP_FOR_DATASET_FUNCTIONS(name) \
-  ALLOW_STATEFUL_OP_FOR_DATASET_FUNCTIONS_UNIQ_HELPER(__COUNTER__, name)
-#define ALLOW_STATEFUL_OP_FOR_DATASET_FUNCTIONS_UNIQ_HELPER(ctr, name) \
-  ALLOW_STATEFUL_OP_FOR_DATASET_FUNCTIONS_UNIQ(ctr, name)
-#define ALLOW_STATEFUL_OP_FOR_DATASET_FUNCTIONS_UNIQ(ctr, name)       \
-  static ::tensorflow::Status allowlist_op##ctr TF_ATTRIBUTE_UNUSED = \
-      ::tensorflow::data::AllowlistedStatefulOpRegistry::Global()->Add(name)
+// #define ALLOW_STATEFUL_OP_FOR_DATASET_FUNCTIONS(name) \
+//   ALLOW_STATEFUL_OP_FOR_DATASET_FUNCTIONS_UNIQ_HELPER(__COUNTER__, name)
+// #define ALLOW_STATEFUL_OP_FOR_DATASET_FUNCTIONS_UNIQ_HELPER(ctr, name) \
+//   ALLOW_STATEFUL_OP_FOR_DATASET_FUNCTIONS_UNIQ(ctr, name)
+// #define ALLOW_STATEFUL_OP_FOR_DATASET_FUNCTIONS_UNIQ(ctr, name)       \
+//   static ::tensorflow::Status allowlist_op##ctr TF_ATTRIBUTE_UNUSED = \
+//       ::tensorflow::data::AllowlistedStatefulOpRegistry::Global()->Add(name)
 
 }  // namespace xla
 

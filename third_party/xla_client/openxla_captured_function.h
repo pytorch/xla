@@ -73,17 +73,17 @@ class FunctionMetadata {
     bool use_default_device = true;
   };
 
-  // Creates a new instance of the `FunctionMetadata` class, fetching function
-  // from a context argument.
-  static Status Create(tensorflow::OpKernelConstruction* ctx,
-                       const string& func_name, Params params,
-                       std::shared_ptr<FunctionMetadata>* out_metadata);
+  // // Creates a new instance of the `FunctionMetadata` class, fetching function
+  // // from a context argument.
+  // static Status Create(tensorflow::OpKernelConstruction* ctx,
+  //                      const string& func_name, Params params,
+  //                      std::shared_ptr<FunctionMetadata>* out_metadata);
 
-  // Creates a new instance of the `FunctionMetadata` class, using the provided
-  // function.
-  static Status Create(tensorflow::OpKernelConstruction* ctx,
-                       NameAttrList&& func, Params params,
-                       std::shared_ptr<FunctionMetadata>* out_metadata);
+  // // Creates a new instance of the `FunctionMetadata` class, using the provided
+  // // function.
+  // static Status Create(tensorflow::OpKernelConstruction* ctx,
+  //                      NameAttrList&& func, Params params,
+  //                      std::shared_ptr<FunctionMetadata>* out_metadata);
 
   // Returns the named list of function arguments.
   const NameAttrList& func() const { return func_; }

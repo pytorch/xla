@@ -93,7 +93,7 @@ class StringListDecoder {
 std::unique_ptr<StringListEncoder> NewStringListEncoder(string* out);
 std::unique_ptr<StringListDecoder> NewStringListDecoder(const string& in);
 
-#if defined(TENSORFLOW_PROTOBUF_USES_CORD)
+// #if defined(TENSORFLOW_PROTOBUF_USES_CORD)
 // Store src contents in *out.  If backing memory for src is shared with *out,
 // will ref obj during the call and will arrange to unref obj when no
 // longer needed.
@@ -124,7 +124,7 @@ void CopyFromArray(absl::Cord* c, const char* base, size_t bytes);
 
 std::unique_ptr<StringListEncoder> NewStringListEncoder(absl::Cord* out);
 std::unique_ptr<StringListDecoder> NewStringListDecoder(const absl::Cord& in);
-#endif  // defined(TENSORFLOW_PROTOBUF_USES_CORD)
+// #endif  // defined(TENSORFLOW_PROTOBUF_USES_CORD)
 
 }  // namespace port
 }  // namespace xla

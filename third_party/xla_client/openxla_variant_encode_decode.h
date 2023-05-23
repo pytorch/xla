@@ -36,12 +36,12 @@ namespace xla {
 // * A protocol buffer (TypeResolver<T, false, false, true>)
 // * None of the above (TypeResolver<T, false, false, false>)
 //
-template <typename T, bool = std::is_pod<typename std::decay<T>::type>::value,
-          bool = std::is_same<typename std::decay<T>::type,
-                              ::tensorflow::Tensor>::value,
-          bool = std::is_base_of<protobuf::MessageLite,
-                                 typename std::decay<T>::type>::value>
-struct TypeResolver {};
+// template <typename T, bool = std::is_pod<typename std::decay<T>::type>::value,
+//           bool = std::is_same<typename std::decay<T>::type,
+//                               ::tensorflow::Tensor>::value,
+//           bool = std::is_base_of<protobuf::MessageLite,
+//                                  typename std::decay<T>::type>::value>
+// struct TypeResolver {};
 
 // Specialization for POD type
 template <typename T>
@@ -125,12 +125,12 @@ struct has_type_name<
            decltype(std::declval<C>().TypeName()), string>::value>::type>
     : std::true_type {};
 
-template <typename T, bool = has_type_name<typename std::decay<T>::type>::value,
-          bool = std::is_same<typename std::decay<T>::type,
-                              ::tensorflow::Tensor>::value,
-          bool = std::is_base_of<protobuf::MessageLite,
-                                 typename std::decay<T>::type>::value>
-struct TypeNameResolver {};
+// template <typename T, bool = has_type_name<typename std::decay<T>::type>::value,
+//           bool = std::is_same<typename std::decay<T>::type,
+//                               ::tensorflow::Tensor>::value,
+//           bool = std::is_base_of<protobuf::MessageLite,
+//                                  typename std::decay<T>::type>::value>
+// struct TypeNameResolver {};
 
 template <typename T>
 std::string TypeNameVariantImpl(const T& value,
@@ -138,12 +138,12 @@ std::string TypeNameVariantImpl(const T& value,
   return value.TypeName();
 }
 
-template <typename T>
-std::string TypeNameVariantImpl(
-    const T& value,
-    TypeNameResolver<T, false /* has_type_name */, true /* Tensor */>) {
-  return "tensorflow::Tensor";
-}
+// template <typename T>
+// std::string TypeNameVariantImpl(
+//     const T& value,
+//     TypeNameResolver<T, false /* has_type_name */, true /* Tensor */>) {
+//   return "tensorflow::Tensor";
+// }
 
 template <typename T>
 std::string TypeNameVariantImpl(

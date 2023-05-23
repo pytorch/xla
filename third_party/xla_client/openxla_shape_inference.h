@@ -141,8 +141,8 @@ class DimensionHandle {
   friend class InferenceContext;
   friend class ShapeInferenceTest;
   friend class ShapeInferenceTestutil;
-  friend class ::tensorflow::grappler::GraphProperties;
-  friend class ::tensorflow::grappler::SymbolicShapeManager;
+  // friend class ::tensorflow::grappler::GraphProperties;
+  // friend class ::tensorflow::grappler::SymbolicShapeManager;
 
   // Intentionally copyable.
 };
@@ -158,7 +158,7 @@ class Shape {
   const std::vector<DimensionHandle> dims_;
 
   friend class InferenceContext;
-  friend class ::tensorflow::grappler::SymbolicShapeManager;
+  // friend class ::tensorflow::grappler::SymbolicShapeManager;
 
   TF_DISALLOW_COPY_AND_ASSIGN(Shape);
 };
@@ -179,7 +179,7 @@ class ShapeHandle {
   friend class InferenceContext;
   friend class ShapeInferenceTest;
   friend class ShapeInferenceTestutil;
-  friend class ::tensorflow::grappler::SymbolicShapeManager;
+  // friend class ::tensorflow::grappler::SymbolicShapeManager;
 
   // Intentionally copyable.
 };
@@ -751,7 +751,7 @@ class InferenceContext {
     std::vector<Dimension*> all_dims_;  // values are owned.
   };
 
-  friend class ::tensorflow::grappler::GraphProperties;
+  // friend class ::tensorflow::grappler::GraphProperties;
 
   friend class ShapeInferenceTest;      // For testing Relax functions.
   friend class ShapeInferenceTestutil;  // For testing shapes.

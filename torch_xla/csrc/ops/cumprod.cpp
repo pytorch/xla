@@ -2,7 +2,7 @@
 
 #include <torch/csrc/lazy/core/tensor_util.h>
 
-#include "tensorflow/compiler/xla/client/lib/constants.h"
+#include "xla/client/lib/constants.h"
 
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"

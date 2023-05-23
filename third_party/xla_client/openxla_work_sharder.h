@@ -10,15 +10,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#ifndef TENSORFLOW_CORE_UTIL_WORK_SHARDER_H_
-#define TENSORFLOW_CORE_UTIL_WORK_SHARDER_H_
+#ifndef XLA_CLIENT_WORK_SHARDER_H_
+#define XLA_CLIENGT_WORK_SHARDER_H_
 
 #include <functional>
 
 #include "tsl/platform/threadpool.h"
 #include "tsl/platform/types.h"
 
-namespace tensorflow {
+namespace xla {
 
 // DEPRECATED: Prefer threadpool->ParallelFor with SchedulingStrategy, which
 // allows you to specify the strategy for choosing shard sizes, including using
@@ -95,6 +95,6 @@ class Sharder {
                  const Runner& runner, int max_parallelism);
 };
 
-}  // end namespace tensorflow
+}  // end namespace xla
 
-#endif  // TENSORFLOW_CORE_UTIL_WORK_SHARDER_H_
+#endif  // XLA_CLIENT_WORK_SHARDER_H_

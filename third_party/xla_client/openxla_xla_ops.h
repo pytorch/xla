@@ -10,8 +10,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#ifndef TENSORFLOW_COMPILER_JIT_KERNELS_XLA_OPS_H_
-#define TENSORFLOW_COMPILER_JIT_KERNELS_XLA_OPS_H_
+#ifndef XLA_CLIENT_XLA_OPS_H_
+#define XLA_CLIENT_XLA_OPS_H_
 
 #include <atomic>
 
@@ -31,7 +31,7 @@ limitations under the License.
 // - // #include "tensorflow/core/platform/platform.h"
 // - // #include "tensorflow/core/platform/types.h"
 
-namespace tensorflow {
+namespace xla {
 
 // XlaLocalLaunchBase is almost the same as XlaLocalLaunchOp.
 // The only difference is that it does not require arguments to follow
@@ -134,6 +134,6 @@ class XlaRunOp : public OpKernel {
 //   void Compute(OpKernelContext* ctx) override;
 // };
 
-}  // namespace tensorflow
+}  // namespace xla
 
-#endif  // TENSORFLOW_COMPILER_JIT_KERNELS_XLA_OPS_H_
+#endif  // XLA_CLIENT_XLA_OPS_H_

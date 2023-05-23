@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package tensorflow;
+package xla;
 
 import "third_party/xla_client/openxla_allocation_description.proto";
 import "third_party/xla_client/openxla_tensor_shape.proto";

@@ -1,9 +1,7 @@
-load(
-    "@org_tensorflow//tensorflow:tensorflow.bzl",
-    "tf_cc_shared_object",
-)
+load("@tsl//tsl/platform:rules_cc.bzl", "cc_library")
 
-tf_cc_shared_object(
+
+cc_binary(
     name = "_XLAC.so",
     copts = [
         "-DTORCH_API_INCLUDE_EXTENSION_H",
@@ -38,17 +36,17 @@ tf_cc_shared_object(
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:variant",
-        "@org_tensorflow//tensorflow/compiler/xla/python/profiler/internal:traceme_wrapper",
-        "@org_tensorflow//tensorflow/compiler/xla/service:hlo_parser",
-        "@org_tensorflow//tensorflow/compiler/xla/service:hlo_pass_pipeline",
-        "@org_tensorflow//tensorflow/compiler/xla/service:hlo_verifier",
-        "@org_tensorflow//tensorflow/compiler/xla/service:sharding_propagation",
-        "@org_tensorflow//tensorflow/compiler/xla/service/spmd:spmd_partitioner",
-        "@org_tensorflow//tensorflow/core",
-        "@org_tensorflow//tensorflow/core:protos_all_cc",
-        "@org_tensorflow//tensorflow/core/platform:env",
-        "@org_tensorflow//tensorflow/core/profiler/lib:traceme",
-        "@org_tensorflow//tensorflow/python/profiler/internal:profiler_pywrap_impl",
+        "@xla//xla/python/profiler/internal:traceme_wrapper",
+        "@xla//xla/service:hlo_parser",
+        "@xla//xla/service:hlo_pass_pipeline",
+        "@xla//xla/service:hlo_verifier",
+        "@xla//xla/service:sharding_propagation",
+        "@xla//xla/service/spmd:spmd_partitioner",
+#         "@org_tensorflow//tensorflow/core",
+#         "@org_tensorflow//tensorflow/core:protos_all_cc",
+#         "@org_tensorflow//tensorflow/core/platform:env",
+#         "@org_tensorflow//tensorflow/core/profiler/lib:traceme",
+#         "@org_tensorflow//tensorflow/python/profiler/internal:profiler_pywrap_impl",
         "@torch//:headers",
         "@torch//:libc10",
         "@torch//:libtorch",

@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package tensorflow;
+package xla;
 
 import "third_party/xla_client/openxla_function.proto";
 import "third_party/xla_client/openxla_graph_debug_info.proto";
@@ -8,10 +8,10 @@ import "third_party/xla_client/openxla_node_def.proto";
 import "third_party/xla_client/openxla_versions.proto";
 
 option cc_enable_arenas = true;
-option java_outer_classname = "GraphProtos";
-option java_multiple_files = true;
-option java_package = "org.tensorflow.framework";
-option go_package = "github.com/tensorflow/tensorflow/tensorflow/go/core/framework/graph_go_proto";
+// option java_outer_classname = "GraphProtos";
+// option java_multiple_files = true;
+// option java_package = "org.tensorflow.framework";
+// option go_package = "github.com/tensorflow/tensorflow/tensorflow/go/core/framework/graph_go_proto";
 
 // Represents the graph of operations
 message GraphDef {

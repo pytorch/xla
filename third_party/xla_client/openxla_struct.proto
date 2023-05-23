@@ -54,9 +54,9 @@ message StructuredValue {
     bool bool_value = 14;
 
     // Represents a TensorShape.
-    tensorflow.TensorShapeProto tensor_shape_value = 31;
+    // tensorflow.TensorShapeProto tensor_shape_value = 31;
     // Represents an enum value for dtype.
-    tensorflow.DataType tensor_dtype_value = 32;
+    // tensorflow.DataType tensor_dtype_value = 32;
     // Represents a value for tf.TensorSpec.
     TensorSpecProto tensor_spec_value = 33;
     // Represents a value for tf.TypeSpec.
@@ -73,7 +73,7 @@ message StructuredValue {
     // Represents Python's namedtuple.
     NamedTupleValue named_tuple_value = 54;
     // Represents a value for tf.Tensor.
-    tensorflow.TensorProto tensor_value = 55;
+    // tensorflow.TensorProto tensor_value = 55;
   }
 }
 
@@ -111,17 +111,17 @@ message NamedTupleValue {
 // A protobuf to represent tf.TensorSpec.
 message TensorSpecProto {
   string name = 1;
-  tensorflow.TensorShapeProto shape = 2;
-  tensorflow.DataType dtype = 3;
+  // tensorflow.TensorShapeProto shape = 2;
+  // tensorflow.DataType dtype = 3;
 }
 
 // A protobuf to represent tf.BoundedTensorSpec.
 message BoundedTensorSpecProto {
   string name = 1;
-  tensorflow.TensorShapeProto shape = 2;
-  tensorflow.DataType dtype = 3;
-  tensorflow.TensorProto minimum = 4;
-  tensorflow.TensorProto maximum = 5;
+  // tensorflow.TensorShapeProto shape = 2;
+  // tensorflow.DataType dtype = 3;
+  // tensorflow.TensorProto minimum = 4;
+  // tensorflow.TensorProto maximum = 5;
 }
 
 // Represents a tf.TypeSpec

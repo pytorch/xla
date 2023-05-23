@@ -76,9 +76,9 @@ class QueueBase : public QueueInterface {
   // NOTE(mrry): This method is deprecated. Use
   // `tensorflow::batch_util::CopySliceToElement()` defined in
   // "./batch_util.h" instead.
-  ABSL_DEPRECATED(
-      "Use `tensorflow::batch_util::CopySliceToElement()` defined in "
-      "\"./batch_util.h\" instead.")
+  // ABSL_DEPRECATED(
+  //     "Use `tensorflow::batch_util::CopySliceToElement()` defined in "
+  //     "\"./batch_util.h\" instead.")
   static Status CopyElementToSlice(const Tensor& element, Tensor* parent,
                                    int64_t index);
 

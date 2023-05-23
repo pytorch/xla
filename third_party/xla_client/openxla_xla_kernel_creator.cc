@@ -64,7 +64,7 @@ std::optional<AllocatorStats> XlaDeviceAllocator::GetStats() {
     return std::nullopt;
   }
 
-  tensorflow::AllocatorStats tf_stats;
+  // tensorflow::AllocatorStats tf_stats;
   tf_stats.num_allocs = se_stats->num_allocs;
   tf_stats.bytes_in_use = se_stats->bytes_in_use;
   tf_stats.peak_bytes_in_use = se_stats->peak_bytes_in_use;

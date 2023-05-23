@@ -10,13 +10,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#ifndef TENSORFLOW_CORE_GRAPH_TYPES_H_
-#define TENSORFLOW_CORE_GRAPH_TYPES_H_
+#ifndef XLA_CLIENT_GRAPH_TYPES_H_
+#define XLA_CLIENT_CORE_GRAPH_TYPES_H_
 
 #include "tsl/lib/gtl/int_type.h"
 #include "tsl/platform/types.h"
 
-namespace tensorflow {
+namespace xla {
 
 // We model running time in microseconds.
 TSL_LIB_GTL_DEFINE_INT_TYPE(Microseconds, int64_t);
@@ -27,6 +27,6 @@ TSL_LIB_GTL_DEFINE_INT_TYPE(Nanoseconds, int64_t);
 // We model size in bytes.
 TSL_LIB_GTL_DEFINE_INT_TYPE(Bytes, int64_t);
 
-}  // namespace tensorflow
+}  // namespace xla
 
-#endif  // TENSORFLOW_CORE_GRAPH_TYPES_H_
+#endif  // XLA_CLIENT_CORE_GRAPH_TYPES_H_

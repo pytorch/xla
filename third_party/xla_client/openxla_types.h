@@ -62,13 +62,13 @@ struct DeviceName<Eigen::ThreadPoolDevice> {
   static const std::string value;
 };
 
-#if (defined(GOOGLE_CUDA) && GOOGLE_CUDA) || \
-    (defined(TENSORFLOW_USE_ROCM) && TENSORFLOW_USE_ROCM)
-template <>
-struct DeviceName<Eigen::GpuDevice> {
-  static const std::string value;
-};
-#endif  // GOOGLE_CUDA || TENSORFLOW_USE_ROCM
+// #if (defined(GOOGLE_CUDA) && GOOGLE_CUDA) || \
+//     (defined(TENSORFLOW_USE_ROCM) && TENSORFLOW_USE_ROCM)
+// template <>
+// struct DeviceName<Eigen::GpuDevice> {
+//   static const std::string value;
+// };
+// #endif  // GOOGLE_CUDA || TENSORFLOW_USE_ROCM
 
 
 typedef gtl::InlinedVector<MemoryType, 4> MemoryTypeVector;
@@ -405,10 +405,10 @@ template <>
 struct IsValidDataType<unsigned long> {
   static constexpr bool value = true;
 };
-template <>
-struct EnumToDataType<DT_UINT64> {
-  typedef tensorflow::uint64 Type;
-};
+// template <>
+// struct EnumToDataType<DT_UINT64> {
+//   typedef tensorflow::uint64 Type;
+// };
 
 template <>
 struct DataTypeToEnum<long long> {

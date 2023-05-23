@@ -494,13 +494,13 @@ class IsResourceInitialized : public OpKernel {
 // specified type. The type will be a part of the generated op name.
 // TODO(apassos): figure out how to get non-cpu-allocated tensors to work
 // through constant folding so this doesn't have to be marked as stateful.
-#define REGISTER_RESOURCE_HANDLE_OP(Type) \
-  REGISTER_OP(#Type "HandleOp")           \
-      .Attr("container: string = ''")     \
-      .Attr("shared_name: string = ''")   \
-      .Output("resource: resource")       \
-      .SetIsStateful()                    \
-      .SetShapeFn(tensorflow::shape_inference::ScalarShape)
+// #define REGISTER_RESOURCE_HANDLE_OP(Type) \
+//   REGISTER_OP(#Type "HandleOp")           \
+//       .Attr("container: string = ''")     \
+//       .Attr("shared_name: string = ''")   \
+//       .Output("resource: resource")       \
+//       .SetIsStateful()                    \
+//       .SetShapeFn(tensorflow::shape_inference::ScalarShape)
 
 // Utility op kernel to produce a handle to a resource of type T.
 template <typename T>
@@ -972,14 +972,14 @@ void ResourceHandlesOp<T>::Compute(OpKernelContext* ctx) {
   }
 }
 
-template <typename T>
-ResourceHandle ScopedStepContainer::MakeResourceHandle(
-    const std::string& name, const DeviceBase& device) {
-  mutex_lock ml(mu_);
-  dirty_ = true;
-  return tensorflow::MakeResourceHandle(container_, name, device,
-                                        TypeIndex::Make<T>(), {});
-}
+// template <typename T>
+// ResourceHandle ScopedStepContainer::MakeResourceHandle(
+//     const std::string& name, const DeviceBase& device) {
+//   mutex_lock ml(mu_);
+//   dirty_ = true;
+//   return tensorflow::MakeResourceHandle(container_, name, device,
+//                                         TypeIndex::Make<T>(), {});
+// }
 
 template <typename T>
 Status ScopedStepContainer::Lookup(ResourceMgr* rm, const std::string& name,

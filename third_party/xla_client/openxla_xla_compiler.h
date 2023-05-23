@@ -100,7 +100,7 @@ class XlaCompiler {
  public:
   // TODO(b/255826209): Remove this alias. Depending on XlaCompiler just to use
   // XlaArgument seeems weird and can cause circular dependencies.
-  using Argument = ::tensorflow::XlaArgument;
+  // using Argument = ::tensorflow::XlaArgument;
 
   // Options pertaining to an individual call to CompileGraph() or
   // CompileFunction().
@@ -133,11 +133,11 @@ class XlaCompiler {
     bool alias_resource_update = false;
   };
 
-  using OutputDescription = ::tensorflow::XlaOutputDescription;
+  // using OutputDescription = ::tensorflow::XlaOutputDescription;
 
-  using ResourceUpdate = ::tensorflow::XlaResourceUpdate;
+  // using ResourceUpdate = ::tensorflow::XlaResourceUpdate;
 
-  using CompilationResult = ::tensorflow::XlaCompilationResult;
+  // using CompilationResult = ::tensorflow::XlaCompilationResult;
 
   struct Options {
     // Name of the compilation device to use. It must be set by the caller.

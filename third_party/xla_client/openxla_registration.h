@@ -127,10 +127,10 @@ struct InitOnStartupMarker {
 //
 // The parens are necessary to hide the ',' from the preprocessor; it could
 // otherwise act as a macro argument separator.
-#define TF_INIT_ON_STARTUP_IF(cond)                \
-  (::std::integral_constant<bool, !(cond)>::value) \
-      ? ::tensorflow::InitOnStartupMarker{}        \
-      : ::tensorflow::InitOnStartupMarker {}
+// #define TF_INIT_ON_STARTUP_IF(cond)                \
+//   (::std::integral_constant<bool, !(cond)>::value) \
+//       ? ::tensorflow::InitOnStartupMarker{}        \
+//       : ::tensorflow::InitOnStartupMarker {}
 
 // Wrapper for generating unique IDs (for 'anonymous' InitOnStartup definitions)
 // using __COUNTER__. The new ID (__COUNTER__ already expanded) is provided as a

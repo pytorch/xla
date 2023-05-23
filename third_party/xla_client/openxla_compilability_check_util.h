@@ -315,17 +315,17 @@ bool CanCreateXlaKernel(const NodeDef& node_def);
 // the actual executable, which is copied to the device before being
 // executed. Thus, when this executable runs, the constant is available in
 // device memory.
-tensorflow::MemoryTypeVector GetInputMemoryTypes(
-    const tensorflow::FunctionBody* fbody,
-    absl::Span<int const> constant_arg_indices,
-    absl::Span<int const> resource_arg_indices);
+// tensorflow::MemoryTypeVector GetInputMemoryTypes(
+//     const tensorflow::FunctionBody* fbody,
+//     absl::Span<int const> constant_arg_indices,
+//     absl::Span<int const> resource_arg_indices);
 
 // Returns output memory types.
 //
 // XlaLaunch kernel keeps all outputs (including constants, which it copies),
 // in device memory except for resources.
-tensorflow::MemoryTypeVector GetOutputMemoryTypes(
-    const tensorflow::FunctionBody* fbody);
+// tensorflow::MemoryTypeVector GetOutputMemoryTypes(
+//     const tensorflow::FunctionBody* fbody);
 
 // Check whether graph can trigger XLA compilation.
 bool CanTriggerXlaCompilation(const GraphDef& graph);

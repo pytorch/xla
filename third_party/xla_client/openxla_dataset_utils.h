@@ -409,19 +409,19 @@ class DatasetExperimentRegistrar {
 };
 
 // Macro that can be used to register a dataset experiment.
-#define REGISTER_DATASET_EXPERIMENT(experiment, job_selector, task_selector)  \
-  REGISTER_DATASET_OP_NAME_UNIQ_HELPER(__COUNTER__, experiment, job_selector, \
-                                       task_selector)
+// #define REGISTER_DATASET_EXPERIMENT(experiment, job_selector, task_selector)  \
+//   REGISTER_DATASET_OP_NAME_UNIQ_HELPER(__COUNTER__, experiment, job_selector, \
+//                                        task_selector)
 
-#define REGISTER_DATASET_OP_NAME_UNIQ_HELPER(ctr, experiment, job_selector, \
-                                             task_selector)                 \
-  REGISTER_DATASET_OP_NAME_UNIQ(ctr, experiment, job_selector, task_selector)
+// #define REGISTER_DATASET_OP_NAME_UNIQ_HELPER(ctr, experiment, job_selector, \
+//                                              task_selector)                 \
+//   REGISTER_DATASET_OP_NAME_UNIQ(ctr, experiment, job_selector, task_selector)
 
-#define REGISTER_DATASET_OP_NAME_UNIQ(ctr, experiment, job_selector, \
-                                      task_selector)                 \
-  static ::tensorflow::data::DatasetExperimentRegistrar              \
-      registrar__body__##ctr##__object(experiment, job_selector,     \
-                                       task_selector)
+// #define REGISTER_DATASET_OP_NAME_UNIQ(ctr, experiment, job_selector, \
+//                                       task_selector)                 \
+//   static ::tensorflow::data::DatasetExperimentRegistrar              \
+//       registrar__body__##ctr##__object(experiment, job_selector,     \
+//                                        task_selector)
 
 }  // namespace data
 }  // namespace xla

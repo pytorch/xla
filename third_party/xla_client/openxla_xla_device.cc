@@ -58,7 +58,7 @@ limitations under the License.
 #include "third_party/xla_client/openxla_core_util_dump_graph.h"
 #include "third_party/xla_client/openxla_stream_executor_util.h"
 
-namespace tensorflow {
+namespace xla {
 
 // // Default PaddedShapeFn implementation that simply returns the unpadded
 // // on-device shape. This is accurate for CPU and GPU devices that neither
@@ -648,4 +648,4 @@ XlaDeviceOpRegistrations* RegisterXlaDeviceKernels(const char* device,
                                   /*kernel_class_name=*/"XlaCompileOnDemandOp");
 }
 
-}  // namespace tensorflow
+}  // namespace xla
