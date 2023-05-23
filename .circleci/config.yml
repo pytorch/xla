@@ -89,7 +89,7 @@ calculate_docker_image: &calculate_docker_image
     # For staging our build image in ECR for upstream testing
     echo "declare -x ECR_DOCKER_IMAGE_BASE=308535385114.dkr.ecr.us-east-1.amazonaws.com/pytorch/xla_base" >> "${BASH_ENV}"
     # For PyTorch/XLA CI workflow, we only pull & push to gcr.io
-    echo "declare -x GCR_DOCKER_IMAGE=gcr.io/tpu-pytorch/xla_base:latest" >> "${BASH_ENV}"
+    echo "declare -x GCR_DOCKER_IMAGE=us.gcr.io/tpu-pytorch/xla_base:latest" >> "${BASH_ENV}"
 
 run_build: &run_build
   resource_class: 2xlarge
