@@ -7,7 +7,7 @@ on:
         type: string
         description: Image to test on
       runner:
-        required: true
+        required: false
         type: string
         description: Runner type for the test
         default: linux.4xlarge
