@@ -92,10 +92,10 @@ jobs:
         shell: bash
         run: |
            docker exec ${pid} rm default_credentials.json /tmp/pytorch/xla/default_credentials.json
-      - name: Push built docker image to GCR
+      - name: Push built docker image to ECR
         shell: bash
         run: |
-          export COMMIT_DOCKER_IMAGE="${GCR_DOCKER_IMAGE}-${GITHUB_SHA}"
+          export COMMIT_DOCKER_IMAGE="${ECR_DOCKER_IMAGE_BASE}:latest-${GITHUB_SHA}"
           time docker commit "${pid}" "${COMMIT_DOCKER_IMAGE}"
           time docker push "${COMMIT_DOCKER_IMAGE}"
 
@@ -122,7 +122,7 @@ jobs:
         shell: bash
         run: |
           #export COMMIT_DOCKER_IMAGE="${GCR_DOCKER_IMAGE}-${GITHUB_SHA}"
-          export COMMIT_DOCKER_IMAGE="${ECR_DOCKER_IMAGE_BASE}:latest-273e9d5d3296ab295f6891d003c4ea95515c384c5"
+          export COMMIT_DOCKER_IMAGE="${GCR_DOCKER_IMAGE}-273e9d5d3296ab295f6891d003c4ea95515c384c"
           echo "DOCKER_IMAGE: "${COMMIT_DOCKER_IMAGE}
           docker pull "${COMMIT_DOCKER_IMAGE}"
           pid=$(docker run -t -d -w $WORKDIR ${COMMIT_DOCKER_IMAGE})
