@@ -46,7 +46,7 @@ TORCH_XLA_DIR=$(cd ~; dirname "$(python -c 'import torch_xla; print(torch_xla.__
 COVERAGE_FILE="$CDIR/../.coverage"
 
 function run_coverage {
-  if [ "$USE_COVERAGE" != "0" ]; then
+  if [ "${USE_COVERAGE:-0}" != "0" ]; then
     coverage run --source="$TORCH_XLA_DIR" -p "$@"
   else
     python3 "$@"
