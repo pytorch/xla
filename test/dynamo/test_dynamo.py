@@ -93,14 +93,91 @@ class DynamoInferenceBasicTest(unittest.TestCase):
       output_cpu = resnet18(data.cpu())
       self.assertTrue(
           torch.allclose(output_cpu, output.cpu(), rtol=1e-05, atol=1e-05))
-    # One graph for fetching the fallback ops.
+    # We only expect one graph for the resnet18 inference.
     self.assertEqual(met.metric_data('CompileTime')[0], 1)
-    # Again, +1 offset in ExecuteTime for fetching the fallback ops.
     self.assertEqual(met.metric_data('ExecuteTime')[0], sample_count)
     self.assertEqual(
         met.metric_data('RunCachedGraphInputData')[0], sample_count)
     self.assertEqual(
         met.metric_data('RunCachedGraphOutputData')[0], sample_count)
+
+
+class DynamoCpuFallbackTest(unittest.TestCase):
+
+  @classmethod
+  def setUpClass(self):
+    test_utils._set_rng_seed(42)
+
+  def test_operator_fallback(self):
+
+    def fn_fallback(t):
+      # As of 05/18/2023, torch.median is not lowered by PyTorch/XLA
+      return torch.median(t)
+
+    torch._dynamo.reset()
+    met.clear_counters()
+    device = xm.xla_device()
+
+    # Initial tracing
+    dynamo_fn = torch.compile(fn_fallback, backend="torchxla_trace_once")
+    t = torch.randn(5)
+    t_xla = t.to(device)
+    cpu_res = fn_fallback(t)
+    xla_dynamo_res = dynamo_fn(t_xla)
+    self.assertTrue(torch.allclose(cpu_res, xla_dynamo_res.cpu()))
+    self.assertEqual(met.metric_data('CompileTime')[0], 2)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 2)
+
+    # Second tracing
+    met.clear_counters()
+    xla_dynamo_res_2 = dynamo_fn(t_xla)
+    self.assertTrue(torch.allclose(cpu_res, xla_dynamo_res_2.cpu()))
+    self.assertEqual(met.metric_data('CompileTime')[0], 2)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 2)
+
+    # Verify that dynamo can handle different inputs
+    xla_dynamo_res_3 = dynamo_fn(t_xla * 3)
+    cpu_res_3 = fn_fallback(t * 3)
+    self.assertTrue(torch.allclose(cpu_res_3, xla_dynamo_res_3.cpu()))
+    self.assertEqual(met.metric_data('CompileTime')[0], 3)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 3)
+
+  def test_fallback_multiple_submodules(self):
+
+    def fn_fallback(t):
+      t_2 = torch.mul(t, 2)
+      # As of 05/18/2023, torch.median is not lowered by PyTorch/XLA
+      t_3 = torch.median(t_2)
+      t_4 = torch.mul(t_3, 2)
+      return t_4
+
+    torch._dynamo.reset()
+    met.clear_counters()
+    device = xm.xla_device()
+
+    # Initial tracing
+    dynamo_fn = torch.compile(fn_fallback, backend="torchxla_trace_once")
+    t = torch.randn(5)
+    t_xla = t.to(device)
+    cpu_res = fn_fallback(t)
+    xla_dynamo_res = dynamo_fn(t_xla)
+    self.assertTrue(torch.allclose(cpu_res, xla_dynamo_res.cpu()))
+    self.assertEqual(met.metric_data('CompileTime')[0], 4)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 6)
+
+    # Second tracing
+    met.clear_counters()
+    xla_dynamo_res_2 = dynamo_fn(t_xla)
+    self.assertTrue(torch.allclose(cpu_res, xla_dynamo_res_2.cpu()))
+    self.assertEqual(met.metric_data('CompileTime')[0], 4)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 8)
+
+    # Verify that dynamo can handle different inputs
+    xla_dynamo_res_3 = dynamo_fn(t_xla * 3)
+    cpu_res_3 = fn_fallback(t * 3)
+    self.assertTrue(torch.allclose(cpu_res_3, xla_dynamo_res_3.cpu()))
+    self.assertEqual(met.metric_data('CompileTime')[0], 5)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 10)
 
 
 class DynamoTrainingBasicTest(unittest.TestCase):
