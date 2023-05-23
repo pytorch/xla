@@ -1,0 +1,51 @@
+name: xla-test
+on:
+  workflow_call:
+    inputs:
+      docker-image:
+        required: true
+        type: string
+        description: Image to test on
+      runner:
+        required: true
+        type: string
+        description: Runner type for the test
+        default: linux.4xlarge
+    secrets:
+      gcloud-service-key:
+        required: true
+        description: Secret to access Bazel build cache
+jobs:
+  test:
+    runs-on: ${{ inputs.runner }}
+    env:
+      ECR_DOCKER_IMAGE: ${{ inputs.docker-image }}
+      WORKDIR: /var/lib/jenkins/workspace
+      GCLOUD_SERVICE_KEY: ${{ secrets.gcloud-service-key }}
+    steps:
+      - name: Setup Linux
+        uses: pytorch/test-infra/.github/actions/setup-linux@main
+      - name: Setup SSH (Click me for login details)
+        uses: pytorch/test-infra/.github/actions/setup-ssh@main
+        with:
+          github-secret: ${{ secrets.GITHUB_TOKEN }}
+          instructions: |
+            Build is  done inside the container, to start an interactive session run:
+              docker exec -it $(docker container ps --format '{{.ID}}') bash
+      - name: Download and run docker image from GCR
+        shell: bash
+        run: |
+          export COMMIT_DOCKER_IMAGE="${ECR_DOCKER_IMAGE}-${GITHUB_SHA}"
+          echo "DOCKER_IMAGE: ${COMMIT_DOCKER_IMAGE}"
+          docker pull "${COMMIT_DOCKER_IMAGE}"
+          pid=$(docker run ${GPU_FLAG:-} -t -d -w "$WORKDIR" "${COMMIT_DOCKER_IMAGE}")
+          echo "${GCLOUD_SERVICE_KEY}" | docker exec -i "${pid}" sh -c "cat >> /tmp/pytorch/xla/default_credentials.json"
+          echo "pid=${pid}" >> "${GITHUB_ENV}"
+      - name: Test
+        shell: bash
+        run: docker exec -u jenkins "${pid}" bash -c '. ~/.bashrc && .circleci/test.sh'
+
+      - name: Teardown Linux
+        uses: pytorch/test-infra/.github/actions/teardown-linux@main
+        if: always()
+
