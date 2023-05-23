@@ -95,6 +95,18 @@ class ShardingUtil {
   static std::vector<at::Tensor> ShardTensor(
       const at::Tensor& tensor, const xla::OpSharding sharding,
       const std::vector<std::string>& devices, bool padded = true);
+
+  // Prepares output sharding propagation by extracting output parameter
+  // ShardingSpec into `sharding_specs` from the SPMD compiled `computation` and
+  // placing PjRtShardedData into `data_placeholders`. `data_placeholders`
+  // should already contain data placeholders to be used for unsharded output
+  // parameters. `tensors` and its `indices` define sync tensors for the
+  // outputs.
+  static void PrepareOutputShardingPropagation(
+      std::vector<XLATensorPtr>* tensors, absl::Span<const size_t> indices,
+      ComputationPtr computation,
+      std::vector<torch::lazy::BackendDataPtr>* data_placeholders,
+      std::vector<XLATensor::ShardingSpecPtr>* sharding_specs);
 };
 
 }  // namespace torch_xla

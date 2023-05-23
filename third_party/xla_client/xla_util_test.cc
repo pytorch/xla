@@ -11,8 +11,8 @@
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/client/xla_computation.h"
 #include "tensorflow/tsl/lib/core/status_test_util.h"
-#include "tensorflow/tsl/platform/protobuf.h"
 #include "tensorflow/tsl/platform/errors.h"
+#include "tensorflow/tsl/platform/protobuf.h"
 #include "tensorflow/tsl/platform/status_matchers.h"
 #include "tensorflow/tsl/protobuf/error_codes.pb.h"
 #include "xla_util.h"
@@ -36,10 +36,10 @@ StatusOr<MessageType> ParseTextProto(const std::string& text_proto) {
   tsl::protobuf::TextFormat::Parser parser;
   MessageType parsed_proto;
   tsl::protobuf::io::ArrayInputStream input_stream(text_proto.data(),
-                                                          text_proto.size());
+                                                   text_proto.size());
   if (!parser.Parse(&input_stream, &parsed_proto)) {
     return tsl::errors::InvalidArgument("Could not parse text proto: ",
-                                               text_proto);
+                                        text_proto);
   }
   return parsed_proto;
 }

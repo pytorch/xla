@@ -23,9 +23,6 @@ class XLAShard:
   # TODO(jonbolin): Expose replica rank with partial replication
   # rank: int
 
-  def cpu(self) -> 'XLAShard':
-    return XLAShard(self.data.cpu(), self.indices)
-
   @property
   def unpadded_data(self) -> torch.Tensor:
     ''' Returns a copy of `data` with padding removed '''
@@ -96,11 +93,9 @@ class XLAShardedTensor(torch.Tensor):
     return r
 
   # Shards on the devices are materialized/available after the lazy
-  # execution of the SPMDPartitioned HLO graph. Each XLAShard points
-  # to torch.Tensor (xla::device_data). The shards represent a snapshot
-  # of the underlying tensor's value and will NOT remain up-to-date with the
-  # underlying tensor - the shards should be regenerated whenever an updated
-  # value is needed. Additionally, the shards will include any padding
+  # execution of the partitioned HLO graph. Each XLAShard points
+  # to torch.Tensor. The shards represent a snapshot on CPU, detached
+  # from the global tensor. The shard data will contain any padding
   # which results from the sharding.
   @property
   def local_shards(self) -> List[XLAShard]:
@@ -108,7 +103,7 @@ class XLAShardedTensor(torch.Tensor):
     devices = [str(shard.device) for shard in shards]
     indices = torch_xla._XLAC._get_local_shard_indices(self.global_tensor,
                                                        devices)
-    return [XLAShard(s, i) for s, i in zip(shards, indices)]
+    return [XLAShard(s.cpu(), i) for s, i in zip(shards, indices)]
 
   @property
   def sharding_spec(self):

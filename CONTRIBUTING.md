@@ -104,7 +104,7 @@ If your PR touches the C++ source files, please run the following command before
 # If your PR only changes foo.cpp, run the following in xla/ folder
 clang-format-7 -i -style=file /PATH/TO/foo.cpp
 # To format all cpp files, run the following in xla/ folder
-find -name '*.cpp' -o -name '*.h' | xargs clang-format-7 -i -style=file
+find -name '*.cpp' -o -name '*.h' -o -name '*.cc' | xargs clang-format-7 -i -style=file
 ```
 
 ### Python Style Guide

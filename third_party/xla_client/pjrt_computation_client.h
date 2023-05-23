@@ -198,11 +198,13 @@ class PjRtComputationClient : public ComputationClient {
     }
 
     bool HasValue() const override {
-      if (!shards.empty()) {
-        for (auto& shard : shards) {
-          if (!shard->HasValue()) {
-            return false;
-          }
+      if (shards.empty()) {
+        return false;
+      }
+
+      for (auto& shard : shards) {
+        if (!shard->HasValue()) {
+          return false;
         }
       }
       return true;

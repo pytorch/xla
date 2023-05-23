@@ -17,9 +17,9 @@
 #include "tensorflow/compiler/xla/util.h"
 #include "tensorflow/compiler/xrt/xrt_util.h"
 #include "tensorflow/tsl/framework/allocator.h"
+#include "tensorflow/tsl/lib/math/math_util.h"
 #include "tensorflow/tsl/profiler/lib/traceme.h"
 #include "tensorflow/tsl/util/device_name_utils.h"
-#include "tensorflow/tsl/lib/math/math_util.h"
 #include "third_party/xla_client/env_vars.h"
 #include "third_party/xla_client/multi_wait.h"
 #include "third_party/xla_client/sys_util.h"
@@ -406,8 +406,8 @@ std::vector<ComputationClient::DataPtr>
 XrtComputationClient::TransferToServerInternal(
     absl::Span<const TensorSource> tensors, absl::Span<const DataPtr> datas) {
   metrics::TimedSection timed(TransferToServerMetric());
-  tsl::profiler::TraceMe activity(
-      "TransferToServerInternal", tsl::profiler::TraceMeLevel::kInfo);
+  tsl::profiler::TraceMe activity("TransferToServerInternal",
+                                  tsl::profiler::TraceMeLevel::kInfo);
 
   // If datas are passed in, don't create new datas but modify the passed in
   // datas.
@@ -418,8 +418,8 @@ XrtComputationClient::TransferToServerInternal(
   auto mwait = std::make_shared<util::MultiWait>(tensors.size());
   std::map<XrtSession*, SessionWork> session_work_map;
   {
-    tsl::profiler::TraceMe activity(
-        "TransferToServerTransform", tsl::profiler::TraceMeLevel::kInfo);
+    tsl::profiler::TraceMe activity("TransferToServerTransform",
+                                    tsl::profiler::TraceMeLevel::kInfo);
     metrics::TimedSection timed(TransferToServerTransformMetric());
 
     for (size_t i = 0; i < tensors.size(); ++i) {
@@ -505,8 +505,8 @@ XrtComputationClient::TransferToServerInternal(
 std::vector<Literal> XrtComputationClient::TransferFromServer(
     absl::Span<const DataPtr> handles) {
   metrics::TimedSection timed(TransferFromServerMetric());
-  tsl::profiler::TraceMe activity(
-      "TransferFromServer", tsl::profiler::TraceMeLevel::kInfo);
+  tsl::profiler::TraceMe activity("TransferFromServer",
+                                  tsl::profiler::TraceMeLevel::kInfo);
 
   int64_t max_partition_size = GetMaxTensorsPartitionSize();
   std::list<XrtSessionCache::SessionMap> session_maps;
@@ -573,8 +573,8 @@ std::vector<Literal> XrtComputationClient::TransferFromServer(
 std::vector<ComputationClient::ComputationPtr> XrtComputationClient::Compile(
     std::vector<CompileInstance> instances) {
   metrics::TimedSection timed(CompileMetric());
-  tsl::profiler::TraceMe activity(
-      "Compile", tsl::profiler::TraceMeLevel::kInfo);
+  tsl::profiler::TraceMe activity("Compile",
+                                  tsl::profiler::TraceMeLevel::kInfo);
 
   std::mutex lock;
   auto mwait = std::make_shared<util::MultiWait>(instances.size());
@@ -680,8 +680,8 @@ XrtComputationClient::ExecuteComputation(
     const Computation& computation, absl::Span<const DataPtr> arguments,
     const std::string& device, const ExecuteComputationOptions& options) {
   metrics::TimedSection timed(ExecuteMetric());
-  tsl::profiler::TraceMe activity(
-      "ExecuteComputation", tsl::profiler::TraceMeLevel::kInfo);
+  tsl::profiler::TraceMe activity("ExecuteComputation",
+                                  tsl::profiler::TraceMeLevel::kInfo);
 
   XrtSessionCache::SessionMap session_map;
   tensorflow::ClientSession::FeedType feed_inputs;
@@ -709,8 +709,8 @@ XrtComputationClient::ExecuteReplicated(
     absl::Span<const std::string> devices,
     const ExecuteReplicatedOptions& options) {
   metrics::TimedSection timed(ExecuteReplicatedMetric());
-  tsl::profiler::TraceMe activity(
-      "ExecuteReplicated", tsl::profiler::TraceMeLevel::kInfo);
+  tsl::profiler::TraceMe activity("ExecuteReplicated",
+                                  tsl::profiler::TraceMeLevel::kInfo);
 
   XrtSessionCache::SessionMap session_map;
   tensorflow::ClientSession::FeedType feed_inputs;
@@ -731,8 +731,8 @@ XrtComputationClient::RunComputations(
     absl::Span<const Computation* const> computations,
     absl::Span<const std::string> devices,
     const tensorflow::ClientSession::FeedType& feed_inputs) {
-  tsl::profiler::TraceMe activity(
-      "RunComputations", tsl::profiler::TraceMeLevel::kInfo);
+  tsl::profiler::TraceMe activity("RunComputations",
+                                  tsl::profiler::TraceMeLevel::kInfo);
   // In the PyTorch/XRT interface we keep a map (options_.workers_map) from a
   // worker+taskno, to the GRPC server which is the entry point for that worker.
   // Since XRT could re-distribute ops internally, if we have N hosts
@@ -797,8 +797,8 @@ XrtComputationClient::ExecuteParallel(
     absl::Span<const std::string> devices,
     const ExecuteParallelOptions& options) {
   metrics::TimedSection timed(ExecuteParallelMetric());
-  tsl::profiler::TraceMe activity(
-      "ExecuteParallel", tsl::profiler::TraceMeLevel::kInfo);
+  tsl::profiler::TraceMe activity("ExecuteParallel",
+                                  tsl::profiler::TraceMeLevel::kInfo);
 
   XrtSessionCache::SessionMap session_map;
   tensorflow::ClientSession::FeedType feed_inputs;
@@ -832,8 +832,8 @@ void XrtComputationClient::SetupExecConfig(const Device& device,
 
 std::vector<ComputationClient::DataPtr> XrtComputationClient::ExecuteChained(
     absl::Span<const ExecuteChainedOp> ops, const std::string& device) {
-  tsl::profiler::TraceMe activity(
-      "ExecuteChained", tsl::profiler::TraceMeLevel::kInfo);
+  tsl::profiler::TraceMe activity("ExecuteChained",
+                                  tsl::profiler::TraceMeLevel::kInfo);
   static int64_t split_mode = sys_util::GetEnvInt("XRT_SPLIT_CHAINED_EXEC", 0);
   return split_mode ? ExecuteChainedSplit(ops, device)
                     : ExecuteChainedXrt(ops, device);
@@ -1203,8 +1203,8 @@ void XrtComputationClient::ReleaseHandles(
         XrtSession*, const tensorflow::Scope&, const std::string&)>&
         op_generator,
     metrics::Metric* timed_metric, metrics::Counter* destroy_counter) {
-  tsl::profiler::TraceMe activity(
-      "ReleaseHandles", tsl::profiler::TraceMeLevel::kInfo);
+  tsl::profiler::TraceMe activity("ReleaseHandles",
+                                  tsl::profiler::TraceMeLevel::kInfo);
   std::vector<DeviceHandle> released_handles;
   {
     std::lock_guard<std::mutex> lock(lock_);
@@ -1713,7 +1713,7 @@ void XrtComputationClient::InitSession(XrtSession* session) const {
   struct InitNode {
     int count;
     const XrtSession::CachedNode& (XrtComputationClient::*node_ctor)(
-        XrtSession*, const tensorflow::Scope&, const std::string&) const;
+        XrtSession*, const tensorflow::Scope&, const std::string&)const;
   } const init_nodes[] = {
       {16, &XrtComputationClient::GetCompileNode},
       {16, &XrtComputationClient::GetExecuteNode},

@@ -45,14 +45,15 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertEqual(len(shards), self.n_devices)
     shard_len = math.ceil(num_element / self.n_devices)
     for i, shard in enumerate(shards):
+      self.assertEqual(shard.data.device, torch.device('cpu'))
       self.assertEqual(shard.data.shape, (shard_len,))
       start, end = (i, i + 1) * shard_len
       expected = torch.arange(start, end, dtype=torch.float32)
-      self.assertTrue(torch.allclose(shard.data.cpu(), expected))
+      self.assertTrue(torch.allclose(shard.data, expected))
       self.assertIsInstance(shard.indices, list)
       self.assertEqual(len(shard.indices), len(t.shape))
       self.assertEqual(shard.indices[0], slice(start, end, 1))
-      self.assertTrue(torch.allclose(shard.data.cpu(), t[shard.indices]))
+      self.assertTrue(torch.allclose(shard.data, t[shard.indices]))
 
   def test_padded_xla_shards(self):
     num_element = self.n_devices + 1  # Ensure padding with two or more devices
@@ -63,6 +64,7 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertEqual(len(shards), self.n_devices)
     shard_len = math.ceil(num_element / self.n_devices)
     for i, shard in enumerate(shards):
+      self.assertEqual(shard.data.device, torch.device('cpu'))
       self.assertEqual(shard.data.shape, (shard_len,))
       # Tensor shards will be zero-padded
       start, end = i * shard_len, min((i + 1) * shard_len, t.shape[0])
@@ -72,12 +74,11 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
         expected = F.pad(expected, (0, pad_len), "constant", 0)
       else:
         expected = torch.zeros(shard.data.shape, dtype=torch.float32)
-      self.assertTrue(torch.allclose(shard.data.cpu(), expected))
+      self.assertTrue(torch.allclose(shard.data, expected))
       self.assertIsInstance(shard.indices, list)
       self.assertEqual(len(shard.indices), len(t.shape))
       self.assertEqual(shard.indices[0], slice(start, end, 1))
-      self.assertTrue(
-          torch.allclose(shard.cpu().unpadded_data, t[shard.indices]))
+      self.assertTrue(torch.allclose(shard.unpadded_data, t[shard.indices]))
 
   def test_replicated_xla_shards(self):
     num_element = self.n_devices
@@ -87,13 +88,12 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     shards = xt.local_shards
     self.assertEqual(len(shards), self.n_devices)
     for i, shard in enumerate(shards):
+      self.assertEqual(shard.data.device, torch.device('cpu'))
       self.assertEqual(shard.data.shape, (num_element,))
-      self.assertTrue(torch.allclose(shard.data.cpu(), t))
+      self.assertTrue(torch.allclose(shard.data, t))
       self.assertIsInstance(shard.indices, type(Ellipsis))
-      self.assertTrue(torch.allclose(shard.data.cpu(), t[shard.indices]))
-      self.assertTrue(
-          torch.allclose(shard.cpu().data,
-                         shard.cpu().unpadded_data))
+      self.assertTrue(torch.allclose(shard.data, t[shard.indices]))
+      self.assertTrue(torch.allclose(shard.data, shard.unpadded_data))
 
   def test_custom_tile_assignment(self):
     xt = torch.randn(10, 20).to(device=xm.xla_device())
@@ -179,6 +179,16 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     xm.mark_step()  # mark_step should preserve the sharding
     self.assertEqual(sharding_spec, torch_xla._XLAC._get_xla_sharding_spec(xt))
 
+  def test_execute_replicated_metrics(self):
+    met.clear_all()
+    xt = torch.ones(2, 2).to(xm.xla_device())
+    xs.mark_sharding(xt, self._get_mesh((1, self.n_devices)), (0, 1))
+    xt += 2
+    sharding_spec = torch_xla._XLAC._get_xla_sharding_spec(xt)
+    xm.mark_step()
+    xm.wait_device_ops()
+    self.assertEqual(met.metric_data('ExecuteReplicatedTime')[0], 1)
+
   def test_optimizer_step_with_sharding(self):
     # Use simple linear model to test model parameter sharding
     model = self.SimpleLinear().to(xm.xla_device())
@@ -200,8 +210,43 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
       xm.mark_step()
       # Sharding is persisted across mark_step calls, and test if the sharded computation
       # can repeat more than once without crashing.
-      self.assertEqual(sharding_spec,
-                       torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight))
+      if self.n_devices > 1:
+        self.assertEqual(
+            sharding_spec,
+            torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight))
+      else:
+        # single device execution defaults to implicit replication.
+        self.assertFalse(
+            torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight))
+
+  def test_sharding_propagation(self):
+    met.clear_all()
+    self.assertFalse(met.counter_value("ReplicateShardedData"))
+
+    # Linear model with two linear layers and only one is annotated.
+    model = self.SimpleLinear().to(xm.xla_device())
+    xs.mark_sharding(model.fc1.weight, self._get_mesh((1, self.n_devices)),
+                     (0, 1))
+    self.assertTrue(torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight))
+    self.assertFalse(torch_xla._XLAC._get_xla_sharding_spec(model.fc2.weight))
+
+    model.train()
+    optimizer = optim.SGD(model.parameters(), lr=0.1)
+    data = torch.randn(128, 128).to(xm.xla_device())
+    target = torch.zeros(128).to(xm.xla_device())
+    loss_fn = nn.CrossEntropyLoss()
+    for i in range(3):
+      optimizer.zero_grad()
+      output = model(data)
+      loss = loss_fn(output, target)
+      loss.backward()
+      optimizer.step()
+      xm.mark_step()
+
+    # Verify that the fc1 & output are sharded and valid
+    model.fc1.weight.to('cpu')
+    output.to('cpu')
+    self.assertEqual(met.counter_value("ReplicateShardedData"), 2)
 
   def test_inplace_add_with_sharding(self):
     xt = torch.ones(2, 2).to(xm.xla_device())
