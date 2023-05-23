@@ -30,24 +30,6 @@ jobs:
           instructions: |
             Build is  done inside the container, to start an interactive session run:
               docker exec -it $(docker container ps --format '{{.ID}}') bash
-      - name: Install gcloud CLI
-        shell: bash
-        run: |
-          sudo tee -a /etc/yum.repos.d/google-cloud-sdk.repo << EOM
-          [google-cloud-cli]
-          name=Google Cloud CLI
-          baseurl=https://packages.cloud.google.com/yum/repos/cloud-sdk-el8-x86_64
-          enabled=1
-          gpgcheck=1
-          repo_gpgcheck=0
-          gpgkey=https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
-          EOM
-          sudo yum install -y google-cloud-cli
-      - name: Auth to GCR
-        shell: bash
-        run: |
-          echo "${GCLOUD_SERVICE_KEY}" | gcloud auth activate-service-account --key-file=-
-          gcloud auth configure-docker --quiet
 
       - name: Checkout repo
         uses: actions/checkout@v3
@@ -103,11 +85,14 @@ jobs:
         uses: pytorch/test-infra/.github/actions/teardown-linux@main
         if: always()
 
-  test-cpu:
-    # needs: build
-    runs-on: linux.4xlarge
+  test:
+    needs: build
+    strategy:
+      matrix:
+        runner: [linux.4x.large, linux.8xlarge.nvidia.gpu]
+    runs-on: ${{ matrix.runner }}
     env:
-      GCR_DOCKER_IMAGE: gcr.io/tpu-pytorch/xla_base:latest
+      ECR_DOCKER_IMAGE: 308535385114.dkr.ecr.us-east-1.amazonaws.com/pytorch/xla_base:latest
       WORKDIR: /var/lib/jenkins/workspace
       GCLOUD_SERVICE_KEY: ${{ secrets.GCLOUD_SERVICE_KEY }}
     steps:
@@ -121,8 +106,7 @@ jobs:
       - name: Download and run docker image from GCR
         shell: bash
         run: |
-          #export COMMIT_DOCKER_IMAGE="${GCR_DOCKER_IMAGE}-${GITHUB_SHA}"
-          export COMMIT_DOCKER_IMAGE="${GCR_DOCKER_IMAGE}-273e9d5d3296ab295f6891d003c4ea95515c384c"
+          export COMMIT_DOCKER_IMAGE="${ECR_DOCKER_IMAGE}-${GITHUB_SHA}"
           echo "DOCKER_IMAGE: "${COMMIT_DOCKER_IMAGE}
           docker pull "${COMMIT_DOCKER_IMAGE}"
           pid=$(docker run -t -d -w $WORKDIR ${COMMIT_DOCKER_IMAGE})
