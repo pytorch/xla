@@ -126,7 +126,7 @@ class DynamoCpuFallbackTest(unittest.TestCase):
     xla_dynamo_res = dynamo_fn(t_xla)
     self.assertTrue(torch.allclose(cpu_res, xla_dynamo_res.cpu()))
     self.assertEqual(met.metric_data('CompileTime')[0], 2)
-    self.assertEqual(met.metric_data('ExecuteTime')[0], 2)    
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 2)
 
     # Second tracing
     met.clear_counters()
