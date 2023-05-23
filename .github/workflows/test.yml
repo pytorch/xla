@@ -15,7 +15,7 @@ concurrency:
 jobs:
   build:
     name: "Build XLA"
-    runs-on: linux.4xlarge
+    runs-on: linux.12xlarge
     env:
       ECR_DOCKER_IMAGE_BASE: 308535385114.dkr.ecr.us-east-1.amazonaws.com/pytorch/xla_base
       GCR_DOCKER_IMAGE: gcr.io/tpu-pytorch/xla_base:latest
@@ -58,22 +58,22 @@ jobs:
       - name: Prepare build env
         shell: bash
         run: |
-          echo "declare -x SCCACHE_BUCKET=${SCCACHE_BUCKET}" | docker exec -i ${pid} sh -c "cat >> env"
-          echo "declare -x CC=clang-8 CXX=clang++-8" | docker exec -i ${pid} sh -c "cat >> xla_env"
-          echo "declare -x XLA_USE_XRT=1" | docker exec -i ${pid} sh -c "cat >> xla_env"
-          echo "declare -x XLA_CUDA=1" | docker exec -i ${pid} sh -c "cat >> xla_env"
-          echo "declare -x BAZEL_REMOTE_CACHE=1" | docker exec -i ${pid} sh -c "cat >> xla_env"
-          echo "${GCLOUD_SERVICE_KEY}" | docker exec -i ${pid} sh -c "cat >> default_credentials.json"
+          echo "declare -x SCCACHE_BUCKET=${SCCACHE_BUCKET}" | docker exec -i "${pid}" sh -c "cat >> env"
+          echo "declare -x CC=clang-8 CXX=clang++-8" | docker exec -i "${pid}" sh -c "cat >> xla_env"
+          echo "declare -x XLA_USE_XRT=1" | docker exec -i "${pid}" sh -c "cat >> xla_env"
+          echo "declare -x XLA_CUDA=1" | docker exec -i "${pid}" sh -c "cat >> xla_env"
+          echo "declare -x BAZEL_REMOTE_CACHE=1" | docker exec -i "${pid}" sh -c "cat >> xla_env"
+          echo "${GCLOUD_SERVICE_KEY}" | docker exec -i "${pid}" sh -c "cat >> default_credentials.json"
 
       - name: Build
         shell: bash
         run: |
-          docker exec -u jenkins ${pid} bash -c ". ~/.bashrc && .circleci/build.sh"
+          docker exec -u jenkins "${pid}" bash -c ". ~/.bashrc && .circleci/build.sh"
 
       - name: Cleanup build env
         shell: bash
         run: |
-           docker exec ${pid} rm default_credentials.json /tmp/pytorch/xla/default_credentials.json
+           docker exec "${pid}" rm default_credentials.json /tmp/pytorch/xla/default_credentials.json
       - name: Push built docker image to ECR
         shell: bash
         run: |
@@ -89,7 +89,7 @@ jobs:
     needs: build
     strategy:
       matrix:
-        runner: [linux.4x.large, linux.8xlarge.nvidia.gpu]
+        runner: [linux.4xlarge, linux.8xlarge.nvidia.gpu]
     runs-on: ${{ matrix.runner }}
     env:
       ECR_DOCKER_IMAGE: 308535385114.dkr.ecr.us-east-1.amazonaws.com/pytorch/xla_base:latest
@@ -103,13 +103,17 @@ jobs:
           instructions: |
             Build is  done inside the container, to start an interactive session run:
               docker exec -it $(docker container ps --format '{{.ID}}') bash
+      - name: Install nvidia driver, nvidia-docker runtime, set GPU_FLAG
+        id: install-nvidia-driver
+        uses: pytorch/test-infra/.github/actions/setup-nvidia@main
+        if: contains(matrix.runner, 'nvidia')
       - name: Download and run docker image from GCR
         shell: bash
         run: |
           export COMMIT_DOCKER_IMAGE="${ECR_DOCKER_IMAGE}-${GITHUB_SHA}"
-          echo "DOCKER_IMAGE: "${COMMIT_DOCKER_IMAGE}
+          echo "DOCKER_IMAGE: ${COMMIT_DOCKER_IMAGE}"
           docker pull "${COMMIT_DOCKER_IMAGE}"
-          pid=$(docker run -t -d -w $WORKDIR ${COMMIT_DOCKER_IMAGE})
+          pid=$(docker run ${GPU_FLAG:-} -t -d -w "$WORKDIR" "${COMMIT_DOCKER_IMAGE}")
           echo "${GCLOUD_SERVICE_KEY}" | docker exec -i "${pid}" sh -c "cat >> /tmp/pytorch/xla/default_credentials.json"
           echo "pid=${pid}" >> "${GITHUB_ENV}"
       - name: Test
