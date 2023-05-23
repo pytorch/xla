@@ -65,5 +65,4 @@ module "dev_images" {
   docker_repo_url = module.docker_registry.url
   worker_pool_id  = module.worker_pool.id
   timeout_minutes = 60
-  location        = "global"
 }
