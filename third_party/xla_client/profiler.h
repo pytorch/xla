@@ -18,6 +18,21 @@ class ProfilerServer {
   std::unique_ptr<Impl> impl_;
 };
 
+class ProfilerSession {
+  struct Impl;
+
+ public:
+  ProfilerSession();
+  ~ProfilerSession();
+  // void Start(int port);
+  tensorflow::ProfileOptions DefaultPythonProfileOptions();
+  static std::unique_ptr<ProfilerSession> Create(
+    const tensorflow::ProfileOptions& options);
+
+ private:
+  std::unique_ptr<Impl> impl_;
+};
+
 }  // namespace profiler
 }  // namespace xla
 
