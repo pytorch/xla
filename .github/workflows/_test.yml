@@ -10,7 +10,7 @@ on:
         required: false
         type: string
         description: Runner type for the test
-        default: linux.4xlarge
+        default: linux.12xlarge
       build-docs:
         required: false
         type: boolean
