@@ -133,7 +133,6 @@ cc_library(
         "@org_tensorflow//tensorflow/compiler/xrt/cc:xrt_ops",
         "@org_tensorflow//tensorflow/core:core_cpu",
         "@org_tensorflow//tensorflow/core:framework_internal",
-        "@org_tensorflow//tensorflow/core:lib",
         "@org_tensorflow//tensorflow/core:protos_all_cc",
         "@org_tensorflow//tensorflow/core/distributed_runtime:server_lib",
         "@org_tensorflow//tensorflow/core/distributed_runtime/rpc:grpc_runtime",
