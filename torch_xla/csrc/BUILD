@@ -143,7 +143,6 @@ ptxla_cc_library(
         "@org_tensorflow//tensorflow/compiler/xla/client/lib:math",
         "@org_tensorflow//tensorflow/compiler/xla/client/lib:slicing",
         "@org_tensorflow//tensorflow/compiler/xla/stream_executor:dnn",
-        "@org_tensorflow//tensorflow/core:lib",
         "@org_tensorflow//tensorflow/core/framework:tensor_shape",
         "@org_tensorflow//tensorflow/core/kernels:conv_ops",
         "@org_tensorflow//tensorflow/core/lib/core:errors",
