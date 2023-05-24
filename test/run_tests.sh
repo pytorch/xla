@@ -184,7 +184,7 @@ function run_xla_op_tests {
   run_xla_hlo_debug "$CDIR/test_env_var_mapper.py"
   run_test "$CDIR/pjrt/test_runtime.py"
   run_test "$CDIR/pjrt/test_runtime_multi_cpu.py"
-  run_test "$CDIR/pjrt/test_internal.py"
+  run_test "$CDIR/pjrt/test_internal_tpu.py"
   run_test "$CDIR/pjrt/test_ddp.py"
   run_test "$CDIR/pjrt/test_mesh_service.py"
   run_test "$CDIR/spmd/test_xla_sharding.py"
