@@ -1,5 +1,6 @@
 import io
 import itertools
+import logging
 import sys
 import re
 import threading
@@ -980,8 +981,65 @@ def send_cpu_data_to_device(data, device, input_sharding=None):
   return ToXlaTensorArena(convert_fn, select_fn).transform(data)
 
 
+def xla_rendezvous(payload: bytes = b'', ordinals: Optional[List[int]] = None, tag: Optional[str] = None) -> List[bytes]:
+  """Share `payload` with all replicas in `ordinals`.
+
+  `tag` is ignored except for logging.
+
+  Uses XLA collective communication to communicate between replicas, so this
+  will sync the graph (`xm.mark_step`).
+
+  Args:
+    tag: Name of this rendezvous operation.
+    payload: Payload to share with other replicas.
+    ordinals: List of replicas participating in rendezvous.
+  Returns:
+    List of bytes from other replicas.
+  """
+  if ordinals and len(ordinals) != runtime.global_device_count():
+    raise ValueError('Only global rendezvous is supported')
+
+  if not isinstance(payload, bytes):
+    raise TypeError('`payload` must be bytes, not {}'.format(type(payload)))
+
+  # Finish all execution of previous graphs to avoid recompilation
+  mark_step()
+
+  device = xla_device()
+
+  data = torch.tensor(list(payload), dtype=torch.uint8)
+  size = torch.tensor([data.shape[0]], dtype=torch.int, device=device)
+
+  if tag:
+    logging.info(f"Joining rendezvous '{tag}'...")
+
+  sizes = all_gather(size)
+
+  max_size = torch.max(sizes)
+  mark_step()
+
+  # If all payloads are empty, return immediately to avoid more CPU transfers
+  if max_size.item() < 1:
+    return [b'' for _ in range(sizes.size()[0])]
+
+  padded_data = torch.nn.functional.pad(data, (
+      0,
+      max_size.item() - size.item(),
+  )).to(xla_device())
+  raw_data = all_gather(padded_data)
+  data_list = torch.split(raw_data, max_size)
+
+  payloads = [d[:sz] for d, sz in zip(data_list, sizes.cpu())]
+  mark_step()
+
+  return [bytes(p.cpu().tolist()) for p in payloads]
+
+
 def rendezvous(tag, payload=b'', replicas=[]):
   """Waits for all the mesh clients to reach the named rendezvous.
+
+  Note: PJRT does not support the XRT mesh server, so this is effectively an
+  alias to `xla_rendezvous`.
 
   Args:
     tag (string): The name of the rendezvous to join.
@@ -995,7 +1053,7 @@ def rendezvous(tag, payload=b'', replicas=[]):
     ordinal `i` at position `i` in the returned tuple.
   """
   if runtime.using_pjrt():
-    return runtime.rendezvous(tag, payload, replicas or None)
+    return xla_rendezvous(payload, replicas or None, tag=tag)
 
   return torch_xla._XLAC._xla_rendezvous(get_ordinal(), tag, payload, replicas)
 
