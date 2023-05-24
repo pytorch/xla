@@ -343,8 +343,8 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     xt3 = xt1 + xt2
     self.assertTrue(torch.allclose(expected_1, xt3.cpu()))
 
-    t4 = torch.randn(2, 2).to(xm.xla_device())
-    t5 = torch.randn(2, 2).to(xm.xla_device())
+    t4 = torch.randn(2, 2)
+    t5 = torch.randn(2, 2)
     expected_2 = t4 + t5
     xt4 = t4.to(xm.xla_device())
     xt5 = t5.to(xm.xla_device())
