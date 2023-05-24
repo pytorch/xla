@@ -149,7 +149,6 @@ cc_library(
         "@org_tensorflow//tensorflow/compiler/xla/stream_executor:cuda_platform",
     ]) + if_with_tpu_support([
         "@org_tensorflow//tensorflow/compiler/jit:xla_tpu_device",
-        "@org_tensorflow//tensorflow/compiler/jit:xla_tpu_jit",
     ]),
 )
 
