@@ -78,24 +78,29 @@ The following pre-built docker images are available. For running dockers, check 
 | --- | ----------- |
 2.0 | `gcr.io/tpu-pytorch/xla:r2.0_3.8_tpuvm` |
 1.13 | `gcr.io/tpu-pytorch/xla:r1.13_3.8_tpuvm` |
-nightly | `gcr.io/tpu-pytorch/xla:nightly_3.8_tpuvm` |
-nightly at date | `gcr.io/tpu-pytorch/xla:nightly_3.8_YYYYMMDD` |
+nightly python 3.10 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.10_tpuvm` |
+nightly python 3.8 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_tpuvm` |
+nightly python 3.10(>= 2023/04/25) | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.10_tpuvm_YYYYMMDD` |
+nightly python 3.8(>= 2023/04/25) | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_tpuvm_YYYYMMDD` |
+nightly at date(< 2023/04/25) | `gcr.io/tpu-pytorch/xla:nightly_3.8_YYYYMMDD` |
 
 <br/>
 
 | Version | GPU CUDA 11.8 + Python 3.8 Docker |
 | --- | ----------- |
 | 2.0 | `gcr.io/tpu-pytorch/xla:r2.0_3.8_cuda_11.8` |
-| nightly | `gcr.io/tpu-pytorch/xla:nightly_3.8_cuda_11.8` |
-| nightly at date(>=20230210) | `gcr.io/tpu-pytorch/xla:nightly_3.8_cuda_11.8_YYYYMMDD` |
+| nightly | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_cuda_11.8` |
+| nightly at date(>=2023/04/25) | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_cuda_11.8` |
+| nightly at date(<2023/04/25) | `gcr.io/tpu-pytorch/xla:nightly_3.8_cuda_11.8_YYYYMMDD` |
 
 <br/>
 
 | Version | GPU CUDA 11.7 + Python 3.8 Docker |
 | --- | ----------- |
 | 2.0 | `gcr.io/tpu-pytorch/xla:r2.0_3.8_cuda_11.7` |
-| nightly | `gcr.io/tpu-pytorch/xla:nightly_3.8_cuda_11.7` |
-| nightly at date(>=20230210) | `gcr.io/tpu-pytorch/xla:nightly_3.8_cuda_11.7_YYYYMMDD` |
+| nightly | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_cuda_11.7` |
+| nightly at date(>=2023/04/25) | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_cuda_11.7_YYYYMMDD` |
+| nightly at date(<2023/04/25) | `gcr.io/tpu-pytorch/xla:nightly_3.8_cuda_11.7_YYYYMMDD` |
 
 <br/>
 
