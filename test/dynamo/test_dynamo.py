@@ -104,10 +104,6 @@ class DynamoInferenceBasicTest(unittest.TestCase):
 
 class DynamoCpuFallbackTest(unittest.TestCase):
 
-  @classmethod
-  def setUpClass(self):
-    test_utils._set_rng_seed(42)
-
   def test_operator_fallback(self):
 
     def fn_fallback(t):
@@ -116,6 +112,7 @@ class DynamoCpuFallbackTest(unittest.TestCase):
 
     torch._dynamo.reset()
     met.clear_counters()
+    met.clear_all()
     device = xm.xla_device()
 
     # Initial tracing
@@ -153,11 +150,12 @@ class DynamoCpuFallbackTest(unittest.TestCase):
 
     torch._dynamo.reset()
     met.clear_counters()
+    met.clear_all()
     device = xm.xla_device()
 
     # Initial tracing
     dynamo_fn = torch.compile(fn_fallback, backend="torchxla_trace_once")
-    t = torch.randn(5)
+    t = torch.randn(7)
     t_xla = t.to(device)
     cpu_res = fn_fallback(t)
     xla_dynamo_res = dynamo_fn(t_xla)
