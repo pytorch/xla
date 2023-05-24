@@ -12,9 +12,9 @@
 #include "third_party/xla_client/util.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/xla_lower_util.h"
-#include "torch_xla/csrc/shape_helper.h"
 
 namespace torch_xla {
 namespace {
