@@ -63,3 +63,13 @@ jobs:
       collect-coverage: true
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
+
+  push-docs:
+    name: "Publish docs"
+    uses: ./.github/workflows/_docs.yml
+    # needs: build
+    with:
+      # docker-image: ${{ needs.build.outputs.docker-image }}
+      docker-image: 308535385114.dkr.ecr.us-east-1.amazonaws.com/pytorch/xla_base:latest-d72cadf8d8797d34f5d0039f6a2be3f5ca27e194
+    secrets:
+      torchxla-bot-token: ${{ secrets.TORCH_XLA_BOT_TOKEN }}
