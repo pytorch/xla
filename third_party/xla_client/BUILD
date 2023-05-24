@@ -92,7 +92,6 @@ cc_library(
         "@org_tensorflow//tensorflow:grpc++",
         "@org_tensorflow//tensorflow/cc:client_session",
         "@org_tensorflow//tensorflow/cc:scope",
-        "@org_tensorflow//tensorflow/compiler/jit:xla_cpu_device",
         "@org_tensorflow//tensorflow/compiler/xla:debug_options_flags",
         "@org_tensorflow//tensorflow/compiler/xla:literal",
         "@org_tensorflow//tensorflow/compiler/xla:literal_util",
