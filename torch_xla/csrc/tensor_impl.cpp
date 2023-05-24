@@ -10,6 +10,7 @@
 
 #include "third_party/xla_client/computation_client.h"
 #include "third_party/xla_client/debug_macros.h"
+#include "third_party/xla_client/tf_logging.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir_builder.h"
@@ -48,7 +49,14 @@ struct XLAGuardImpl : public c10::impl::DeviceGuardImplInterface {
   }
 
   c10::DeviceIndex deviceCount() const noexcept override {
-    return xla::ComputationClient::Get()->GetNumDevices();
+    auto* client = xla::ComputationClient::GetIfInitialized();
+
+    if (client == nullptr) {
+      TF_VLOG(5) << "XLA client uninitialized. Returning 0 devices.";
+      return 0;
+    }
+
+    return client->GetNumDevices();
   }
 };
 
