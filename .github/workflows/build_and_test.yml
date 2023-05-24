@@ -65,11 +65,11 @@ jobs:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
   push-docs:
-    name: "Publish docs"
+    name: "Build & ublish docs"
+    if: github.event_name == 'push' && (github.event.ref == 'master' || startsWith(github.event.ref, 'refs/tags/r')) }
     uses: ./.github/workflows/_docs.yml
-    # needs: build
+    needs: build
     with:
-      # docker-image: ${{ needs.build.outputs.docker-image }}
-      docker-image: 308535385114.dkr.ecr.us-east-1.amazonaws.com/pytorch/xla_base:latest-d72cadf8d8797d34f5d0039f6a2be3f5ca27e194
+      docker-image: ${{ needs.build.outputs.docker-image }}
     secrets:
       torchxla-bot-token: ${{ secrets.TORCH_XLA_BOT_TOKEN }}

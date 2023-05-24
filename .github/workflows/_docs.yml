@@ -15,7 +15,7 @@ on:
       torchxla-bot-token:
         required: true
 jobs:
-  test:
+  push-docs:
     runs-on: ${{ inputs.runner }}
     env:
       DOCKER_IMAGE: ${{ inputs.docker-image }}
