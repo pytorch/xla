@@ -133,7 +133,6 @@ cc_library(
         "@org_tensorflow//tensorflow/compiler/xrt/cc:xrt_ops",
         "@org_tensorflow//tensorflow/core:core_cpu",
         "@org_tensorflow//tensorflow/core:framework_internal",
-        "@org_tensorflow//tensorflow/core:lib",
         "@org_tensorflow//tensorflow/core:protos_all_cc",
         "@org_tensorflow//tensorflow/core/distributed_runtime:server_lib",
         "@org_tensorflow//tensorflow/core/distributed_runtime/rpc:grpc_runtime",
@@ -360,7 +359,6 @@ cc_library(
         "@com_google_absl//absl/types:span",
         "@org_tensorflow//tensorflow/compiler/xla:statusor",
         "@org_tensorflow//tensorflow/compiler/xla:types",
-        "@org_tensorflow//tensorflow/core:lib",
     ],
 )
 
@@ -425,7 +423,6 @@ cc_library(
         "@com_google_absl//absl/types:span",
         "@org_tensorflow//tensorflow/compiler/xla:types",
         "@org_tensorflow//tensorflow/compiler/xla/stream_executor/tpu:tpu_initializer_helper",
-        "@org_tensorflow//tensorflow/core:lib",
         "@org_tensorflow//tensorflow/core/distributed_runtime:server_lib",
         "@org_tensorflow//tensorflow/tsl/platform:errors",
         "@org_tensorflow//tensorflow/tsl/platform:status",
@@ -482,7 +479,6 @@ tf_cc_shared_object(
         "@org_tensorflow//tensorflow/compiler/xla/client:xla_computation",
         "@org_tensorflow//tensorflow/compiler/xla/client/lib:svd",
         "@org_tensorflow//tensorflow/compiler/xla/rpc:grpc_stub",
-        "@org_tensorflow//tensorflow/core:lib",
         "@org_tensorflow//tensorflow/python/profiler/internal:profiler_pywrap_impl",
         "@org_tensorflow//tensorflow/tsl/platform/cloud:gcs_file_system",
     ],
