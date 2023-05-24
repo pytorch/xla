@@ -11,6 +11,16 @@ on:
         type: string
         description: Runner type for the test
         default: linux.4xlarge
+      build-docs:
+        required: false
+        type: boolean
+        description: Set to true to build docs
+        default: false
+      collect-coverage:
+        required: false
+        type: boolean
+        description: Set to true to collect coverage information
+        default: false
     secrets:
       gcloud-service-key:
         required: true
@@ -22,6 +32,7 @@ jobs:
       ECR_DOCKER_IMAGE: ${{ inputs.docker-image }}
       WORKDIR: /var/lib/jenkins/workspace
       GCLOUD_SERVICE_KEY: ${{ secrets.gcloud-service-key }}
+      USE_COVERAGE: ${{ inputs.collect-coverage && '1' || '0' }}
     steps:
       - name: Setup Linux
         uses: pytorch/test-infra/.github/actions/setup-linux@main
@@ -30,20 +41,71 @@ jobs:
         with:
           github-secret: ${{ secrets.GITHUB_TOKEN }}
           instructions: |
-            Build is  done inside the container, to start an interactive session run:
+            Tests are done inside the container, to start an interactive session run:
               docker exec -it $(docker container ps --format '{{.ID}}') bash
+      - name: Install gcloud CLI
+        if: ${{ inputs.collect-coverage }}
+        shell: bash
+        run: |
+          sudo tee -a /etc/yum.repos.d/google-cloud-sdk.repo << EOM
+          [google-cloud-cli]
+          name=Google Cloud CLI
+          baseurl=https://packages.cloud.google.com/yum/repos/cloud-sdk-el8-x86_64
+          enabled=1
+          gpgcheck=1
+          repo_gpgcheck=0
+          gpgkey=https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+          EOM
+          sudo yum install -y google-cloud-cli
+      - name: Auth to GCR
+        if: ${{ inputs.collect-coverage }}
+        shell: bash
+        run: |
+          echo "${GCLOUD_SERVICE_KEY}" | gcloud auth activate-service-account --key-file=-
       - name: Download and run docker image from GCR
         shell: bash
         run: |
           export COMMIT_DOCKER_IMAGE="${ECR_DOCKER_IMAGE}-${GITHUB_SHA}"
           echo "DOCKER_IMAGE: ${COMMIT_DOCKER_IMAGE}"
           docker pull "${COMMIT_DOCKER_IMAGE}"
-          pid=$(docker run ${GPU_FLAG:-} -t -d -w "$WORKDIR" "${COMMIT_DOCKER_IMAGE}")
+          pid=$(docker run ${GPU_FLAG:-} -e USE_COVERAGE -t -d -w "$WORKDIR" "${COMMIT_DOCKER_IMAGE}")
           echo "${GCLOUD_SERVICE_KEY}" | docker exec -i "${pid}" sh -c "cat >> /tmp/pytorch/xla/default_credentials.json"
           echo "pid=${pid}" >> "${GITHUB_ENV}"
       - name: Test
         shell: bash
         run: docker exec -u jenkins "${pid}" bash -c '. ~/.bashrc && .circleci/test.sh'
+      - name: Upload coverage results
+        if: ${{ inputs.collect-coverage }}
+        shell: bash
+        env:
+          CIRCLE_WORKFLOW_ID: ${{ github.run_id }}
+        run: |
+            docker cp "${pid}":/home/jenkins/htmlcov "${GITHUB_WORKSPACE}"
+            if [ -n "${GPU_FLAG:-}" ]; then
+              # Python
+              gsutil cp /home/circleci/project/htmlcov/lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/gpu_python_coverage.out
+              gsutil cp /home/circleci/project/htmlcov/lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/incremental/pytorchxla/${CIRCLE_WORKFLOW_ID}/gpu_python_coverage.out
+
+              # CPP
+              gsutil cp /home/circleci/project/htmlcov/cpp_lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/gpu_cpp_coverage.out
+              gsutil cp /home/circleci/project/htmlcov/cpp_lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/incremental/pytorchxla/${CIRCLE_WORKFLOW_ID}/gpu_cpp_coverage.out
+            else
+              # Python
+              gsutil cp /home/circleci/project/htmlcov/lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/cpu_python_coverage.out
+              gsutil cp /home/circleci/project/htmlcov/lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/incremental/pytorchxla/${CIRCLE_WORKFLOW_ID}/cpu_python_coverage.out
+
+              # CPP
+              gsutil cp /home/circleci/project/htmlcov/cpp_lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/cpu_cpp_coverage.out
+              gsutil cp /home/circleci/project/htmlcov/cpp_lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/incremental/pytorchxla/${CIRCLE_WORKFLOW_ID}/cpu_cpp_coverage.out
+
+              ABS_METADATA='{"host": "github", "project": "pytorchxla", "trace_type": "LCOV", "commit_id": '\"${CIRCLE_SHA1}\"', "ref": "HEAD", "source": "https://github.com/pytorch/xla", "owner": "cloud-tpu-pt-dev", "bug_component": "587012"}'
+              echo $ABS_METADATA > abs_metadata.json
+              gsutil cp abs_metadata.json gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/metadata.json
+
+              INC_METADATA='{"host": "github", "project": "pytorchxla", "trace_type": "LCOV", "patchset_num": 1, "change_id": '\"${CIRCLE_BUILD_NUM}\"', "owner": "cloud-tpu-pt-dev", "bug_component": "587012"}'
+              echo $INC_METADATA > inc_metadata.json
+              gsutil cp inc_metadata.json gs://ng3-metrics/ng3-pytorchxla-coverage/incremental/pytorchxla/${CIRCLE_WORKFLOW_ID}/metadtaa.json
+            fi
 
       - name: Teardown Linux
         uses: pytorch/test-infra/.github/actions/teardown-linux@main

@@ -104,3 +104,14 @@ jobs:
       runner: linux.8xlarge.nvidia.gpu
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
+
+  test-cpu-coverage:
+    name: "Collect CPU test coverage"
+    uses: ./.github/workflows/_test.yml
+    needs: build
+    with:
+      docker-image: 308535385114.dkr.ecr.us-east-1.amazonaws.com/pytorch/xla_base:latest
+      collect-coverage: true
+    secrets:
+      gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
+
