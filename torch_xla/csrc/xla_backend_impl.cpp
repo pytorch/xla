@@ -9,8 +9,6 @@
 #include "torch_xla/csrc/ir_builder.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/device_data.h"
-#include "torch_xla/csrc/tensor.h"
-#include "torch_xla/csrc/tensor_util.h"
 
 namespace at {
 // This function is defined in the codegenerated RegisterDispatchKey.cpp file.

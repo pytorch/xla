@@ -16,7 +16,6 @@
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ir_dump_util.h"
-#include "torch_xla/csrc/ir_util.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
 
 namespace torch_xla {

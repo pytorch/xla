@@ -1,6 +1,7 @@
 #ifndef XLA_TORCH_XLA_CSRC_TENSOR_UTIL_H_
 #define XLA_TORCH_XLA_CSRC_TENSOR_UTIL_H_
 
+#include <ATen/ExpandUtils.h>
 #include <torch/csrc/autograd/variable.h>
 #include <torch/csrc/lazy/core/hash.h>
 
@@ -14,8 +15,6 @@
 #include "third_party/xla_client/computation_client.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/tensor.h"
-#include "torch_xla/csrc/xla_backend_impl.h"
-#include "torch_xla/csrc/xla_sharding_util.h"
 
 namespace torch_xla {
 

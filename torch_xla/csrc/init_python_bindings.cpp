@@ -52,8 +52,8 @@
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ir_dump_util.h"
-#include "torch_xla/csrc/ir_util.h"
 #include "torch_xla/csrc/ops/device_data.h"
+#include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/tensor_impl.h"
 #include "torch_xla/csrc/tensor_methods.h"
 #include "torch_xla/csrc/tensor_util.h"
@@ -1451,7 +1451,7 @@ void InitXlaModuleBindings(py::module m) {
     return hlo_text;
   });
   m.def("_xla_op_shape", [](op_builder::OpPtr op) {
-    const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(op->op);
+    const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(op->op);
     return op_builder::ShapeToPyShape(shape);
   });
   m.def("_xla_op_builder", [](op_builder::OpPtr op) { return op->builder; });

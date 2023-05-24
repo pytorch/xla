@@ -6,7 +6,7 @@
 #include "tensorflow/core/kernels/conv_grad_ops.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "torch_xla/csrc/helpers.h"
-#include "torch_xla/csrc/tensor.h"
+#include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/xla_lower_util.h"
 
 namespace torch_xla {
@@ -103,7 +103,7 @@ xla::XlaOp PadInputFromOutputSize(xla::XlaOp input,
                                   absl::Span<const int64_t> stride,
                                   absl::Span<const int64_t> output_padding,
                                   bool unpad = false) {
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   int64_t num_spatial = input_shape.rank() - 2;
   // No padding for batch dimension and features dimension.
   std::vector<int64_t> expected_input_sizes{input_shape.dimensions(0),
@@ -254,7 +254,7 @@ xla::XlaOp BuildConvBackwardWeight(xla::XlaOp grad_output, xla::XlaOp input,
 }
 
 xla::XlaOp BuildGradBias(xla::XlaOp grad_output) {
-  const xla::Shape& grad_output_shape = XlaHelpers::ShapeOfXlaOp(grad_output);
+  const xla::Shape& grad_output_shape = ShapeHelper::ShapeOfXlaOp(grad_output);
   // The bias contribution is linear in each output feature. Reduce the
   // remaining dimensions to get a tensor of the same shape as the bias, rank-1
   // with number of output features elements.
@@ -271,8 +271,8 @@ xla::XlaOp BuildTransposedConvolution(xla::XlaOp input, xla::XlaOp kernel,
                                       absl::Span<const int64_t> dilation,
                                       absl::Span<const int64_t> output_padding,
                                       int64_t groups) {
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  const xla::Shape& kernel_shape = XlaHelpers::ShapeOfXlaOp(kernel);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  const xla::Shape& kernel_shape = ShapeHelper::ShapeOfXlaOp(kernel);
   int64_t num_spatial = input_shape.rank() - 2;
   // We only support 2D or 3D convolution.
   XLA_CHECK(num_spatial == 2 || num_spatial == 3) << num_spatial;
@@ -310,7 +310,7 @@ ConvGrads BuildTransposedConvolutionBackward(
   xla::XlaOp padded_input =
       PadInputFromOutputSize(input, stride, output_padding);
   xla::XlaOp grad_weight = BuildConvBackwardWeight(
-      padded_input, grad_output, XlaHelpers::ShapeOfXlaOp(kernel), stride,
+      padded_input, grad_output, ShapeHelper::ShapeOfXlaOp(kernel), stride,
       padding, dilation, groups);
   xla::XlaOp grad_bias = BuildGradBias(grad_output);
   return {unpadded_grad_input, grad_weight, grad_bias};
@@ -369,10 +369,10 @@ ConvGrads BuildConvolutionBackwardOverrideable(
                                               output_padding, groups);
   } else {
     xla::XlaOp grad_input = BuildConvBackwardInput(
-        grad_output, kernel, XlaHelpers::ShapeOfXlaOp(input), stride, padding,
+        grad_output, kernel, ShapeHelper::ShapeOfXlaOp(input), stride, padding,
         dilation, groups);
     xla::XlaOp grad_weight = BuildConvBackwardWeight(
-        grad_output, input, XlaHelpers::ShapeOfXlaOp(kernel), stride, padding,
+        grad_output, input, ShapeHelper::ShapeOfXlaOp(kernel), stride, padding,
         dilation, groups);
     xla::XlaOp grad_bias = BuildGradBias(grad_output);
     return {grad_input, grad_weight, grad_bias};

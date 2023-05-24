@@ -9,6 +9,7 @@
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/shape_builder.h"
+#include "torch_xla/csrc/shape_helper.h"
 
 namespace torch_xla {
 namespace resize {
@@ -25,7 +26,7 @@ xla::XlaOp BuildResize(xla::XlaOp input, const xla::Shape& output_shape,
   // We then construct the weights that are necessary to calculate the weighted
   // sum for each output pixel. We do this with a DotGeneral op.
   xla::XlaBuilder* builder = input.builder();
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   XLA_CHECK_EQ(input_shape.rank(), 4)
       << "input must be 4-dimensional, got " << input_shape;
 
@@ -245,7 +246,7 @@ xla::Shape GetBackwardOutputShape2d(const xla::Shape& input_shape,
 xla::XlaOp LowerForward2d(const std::string& target, xla::XlaOp input,
                           const xla::Shape& output_shape, bool align_corners,
                           bool half_pixel_centers) {
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   if (input_shape.dimensions(2) == output_shape.dimensions(2) &&
       input_shape.dimensions(3) == output_shape.dimensions(3)) {
     return input;
@@ -289,7 +290,7 @@ xla::XlaOp LowerBackward2d(const std::string& target, xla::XlaOp input,
                            bool half_pixel_centers) {
   static double resiple_split_factor =
       xla::sys_util::GetEnvDouble("XLA_RESIZE_SPLIT_FACTOR", 3.0);
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   if (input_shape.dimensions(2) == output_shape.dimensions(2) &&
       input_shape.dimensions(3) == output_shape.dimensions(3)) {
     return input;

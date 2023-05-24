@@ -25,6 +25,8 @@
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/layout_manager.h"
 #include "torch_xla/csrc/torch_util.h"
+#include "torch_xla/csrc/xla_backend_impl.h"
+#include "torch_xla/csrc/xla_sharding_util.h"
 
 namespace torch_xla {
 namespace {
@@ -791,40 +793,6 @@ at::Tensor XlaLiteralToTensorHelper(const xla::Literal& literal,
 }
 
 }  // namespace
-
-xla::ComputationClient::DataPtr UnwrapXlaData(
-    const torch::lazy::BackendDataPtr& data) {
-  TORCH_LAZY_TIMED("UnwrapXlaData");
-  return dynamic_cast<XLAData*>(data.get())->xla_data();
-}
-
-std::vector<xla::ComputationClient::DataPtr> UnwrapXlaData(
-    absl::Span<const torch::lazy::BackendDataPtr> datas) {
-  TORCH_LAZY_TIMED("UnwrapXlaData");
-  std::vector<xla::ComputationClient::DataPtr> xla_datas;
-  xla_datas.reserve(datas.size());
-  for (const auto& data : datas) {
-    xla_datas.push_back(dynamic_cast<XLAData*>(data.get())->xla_data());
-  }
-  return xla_datas;
-}
-
-torch::lazy::BackendDataPtr WrapXlaData(
-    const xla::ComputationClient::DataPtr& xla_data) {
-  TORCH_LAZY_TIMED("WrapXlaData");
-  return std::make_shared<XLAData>(xla_data);
-}
-
-std::vector<torch::lazy::BackendDataPtr> WrapXlaData(
-    absl::Span<const xla::ComputationClient::DataPtr> xla_datas) {
-  TORCH_LAZY_TIMED("WrapXlaData");
-  std::vector<torch::lazy::BackendDataPtr> datas;
-  datas.reserve(xla_datas.size());
-  for (const auto& xla_data : xla_datas) {
-    datas.push_back(std::make_shared<XLAData>(xla_data));
-  }
-  return datas;
-}
 
 std::vector<int64_t> ComputeShapeStrides(const xla::Shape& shape) {
   std::vector<int64_t> strides(shape.rank());
