@@ -981,7 +981,9 @@ def send_cpu_data_to_device(data, device, input_sharding=None):
   return ToXlaTensorArena(convert_fn, select_fn).transform(data)
 
 
-def xla_rendezvous(payload: bytes = b'', ordinals: Optional[List[int]] = None, tag: Optional[str] = None) -> List[bytes]:
+def xla_rendezvous(payload: bytes = b'',
+                   ordinals: Optional[List[int]] = None,
+                   tag: Optional[str] = None) -> List[bytes]:
   """Share `payload` with all replicas in `ordinals`.
 
   `tag` is ignored except for logging.
