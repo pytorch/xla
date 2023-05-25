@@ -524,7 +524,8 @@ xla::Shape XlaHelpers::GetPromotedDynamicShape(const xla::Shape& shape1,
     bool ddim1 = dyn_dims1[dyn_dims1.size() - min_size + i];
     bool ddim2 = dyn_dims2[dyn_dims2.size() - min_size + i];
     XLA_CHECK((!ddim1 && !ddim2) || (ddim1 && !ddim2 && ubound2 == 1) ||
-              (ddim2 && !ddim1 && ubound1 == 1))
+              (ddim2 && !ddim1 && ubound1 == 1) ||
+              (ddim1 && ddim2 && ubound1 == ubound2))
         << "At dimension " << i << ", operand1 has dimension size " << ubound1
         << " isDynamic=" << ddim1 << " vs operand2 has dimension size "
         << ubound2 << " isDynamic=" << ddim2;
