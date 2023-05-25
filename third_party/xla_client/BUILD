@@ -56,18 +56,60 @@ cc_test(
 )
 
 cc_library(
+  name = "computation_client_hdrs",
+  hdrs = [
+    "computation_client.h",
+  ],
+  deps = [
+    "@org_tensorflow//tensorflow/compiler/xla/client:xla_computation",
+    "@org_tensorflow//tensorflow/compiler/xla:literal_util",
+    ":debug_macros",
+    ":metrics",
+    ":types",
+    ":util",
+  ]
+)
+
+cc_library(
+  name = "pjrt_computation_client",
+  srcs = [
+    "pjrt_computation_client.cc",
+    "computation_client.h",
+  ],
+  hdrs = [
+    "pjrt_computation_client.h",
+  ],
+  deps = [
+    ":computation_client_hdrs",
+    ":debug_macros",
+    ":env_vars",
+    ":tf_logging",
+    "@org_tensorflow//tensorflow/compiler/xla:literal",
+    "@org_tensorflow//tensorflow/compiler/xla:shape_util",
+    "@org_tensorflow//tensorflow/compiler/xla/client:xla_computation",
+    "@org_tensorflow//tensorflow/compiler/xla/pjrt/distributed",
+    "@org_tensorflow//tensorflow/compiler/xla/pjrt/gpu:se_gpu_pjrt_client",
+    "@org_tensorflow//tensorflow/compiler/xla/pjrt:tpu_client",
+    "@org_tensorflow//tensorflow/compiler/xla/pjrt:pjrt_client",
+    "@org_tensorflow//tensorflow/compiler/xla/pjrt:tfrt_cpu_pjrt_client",
+    "@org_tensorflow//tensorflow/compiler/xla/pjrt:pjrt_c_api_client",
+    "@org_tensorflow//tensorflow/tsl/profiler/lib:traceme",
+    "@com_google_absl//absl/strings",
+  ],
+)
+
+cc_library(
     name = "computation_client",
     srcs = [
         "computation_client.cc",
-        "pjrt_computation_client.cc",
         "xrt_computation_client.cc",
     ],
     hdrs = [
         "computation_client.h",
-        "pjrt_computation_client.h",
         "xrt_computation_client.h",
     ],
     deps = [
+        ":pjrt_computation_client",
         ":cache",
         ":debug_macros",
         ":env_vars",
@@ -113,12 +155,6 @@ cc_library(
         "@org_tensorflow//tensorflow/compiler/xla/client/lib:tridiagonal",
         "@org_tensorflow//tensorflow/compiler/xla/client:global_data",
         "@org_tensorflow//tensorflow/compiler/xla/client:xla_computation",
-        "@org_tensorflow//tensorflow/compiler/xla/pjrt/distributed",
-        "@org_tensorflow//tensorflow/compiler/xla/pjrt/gpu:se_gpu_pjrt_client",
-        "@org_tensorflow//tensorflow/compiler/xla/pjrt:tpu_client",
-        "@org_tensorflow//tensorflow/compiler/xla/pjrt:pjrt_client",
-        "@org_tensorflow//tensorflow/compiler/xla/pjrt:tfrt_cpu_pjrt_client",
-        "@org_tensorflow//tensorflow/compiler/xla/pjrt:pjrt_c_api_client",
         "@org_tensorflow//tensorflow/compiler/xla/rpc:grpc_stub",
         "@org_tensorflow//tensorflow/compiler/xla/service:cpu_plugin",
         "@org_tensorflow//tensorflow/compiler/xla/service:platform_util",
