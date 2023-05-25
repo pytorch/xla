@@ -61,12 +61,12 @@ cc_library(
     "computation_client.h",
   ],
   deps = [
-    "@org_tensorflow//tensorflow/compiler/xla/client:xla_computation",
-    "@org_tensorflow//tensorflow/compiler/xla:literal_util",
     ":debug_macros",
     ":metrics",
     ":types",
     ":util",
+    "@org_tensorflow//tensorflow/compiler/xla/client:xla_computation",
+    "@org_tensorflow//tensorflow/compiler/xla:literal_util",
   ]
 )
 
