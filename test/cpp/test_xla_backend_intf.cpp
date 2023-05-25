@@ -1,7 +1,9 @@
 #include <vector>
 
 #include "test/cpp/cpp_test_util.h"
+#include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/tensor_util.h"
+#include "torch_xla/csrc/xla_backend_impl.h"
 
 namespace torch_xla {
 namespace cpp_test {

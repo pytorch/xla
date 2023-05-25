@@ -17,6 +17,7 @@
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/tensor_methods.h"
 #include "torch_xla/csrc/tensor_util.h"
+#include "torch_xla/csrc/xla_data.h"
 #include "torch_xla/csrc/xla_sharding_util.h"
 
 namespace torch_xla {
