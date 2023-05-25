@@ -19,8 +19,9 @@ variable "description" {
   default = ""
 }
 
-variable "ansible_branch" {
-  default = "master"
+variable "ansible_git_rev" {
+  # Checkout Ansible setup (/infra/ansible) at current Cloud Build commit.
+  default = "$COMMIT_SHA"
 }
 
 variable "build_args" {

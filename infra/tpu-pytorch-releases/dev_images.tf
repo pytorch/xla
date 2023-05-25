@@ -28,7 +28,6 @@ module "dev_images" {
   # Replace `.` and `_` with `-` as they're not allowed in trigger name.
   trigger_name = "dev-${replace(each.key, "/[_.]/", "-")}"
 
-  ansible_branch = "master"
   trigger_on_push = {
     branch         = "master"
     included_files = ["infra/**"]
