@@ -28,7 +28,6 @@ def ptxla_cc_test(
             "-isystemexternal/torch",  # Required for system includes.
             "-fexceptions",  # Required for testing crashes.
         ],
-        hdrs_check = "strict",
         deps = deps + [
             "@pybind11//:pybind11_embed",  # libpython
             "@torch//:headers",
