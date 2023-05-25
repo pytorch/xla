@@ -291,7 +291,9 @@ ComputationClient::DataPtr PjRtComputationClient::ReplicateShardedData(
     // replicated output.
     auto x = xla::Parameter(&b, 0, shape, "p0");
     b.SetSharding(xla::HloSharding::Replicate().ToProto());
-    auto y = xla::Div(x, ConstantR0<float>(&b, 2));
+    xla::XlaOp scalar_two_op =
+        xla::ConvertElementType(xla::ConstantR0(&b, 2), shape.element_type());
+    auto y = xla::Div(x, scalar_two_op);
     auto z = xla::Add(y, y);
 
     xla::XlaComputation computation =
