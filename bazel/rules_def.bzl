@@ -86,11 +86,12 @@ def ptxla_py_test(
         modes = ["default"],
         accelerators = ["cpu", "gpu", "tpu"],
         deps = [],
+        tags = [],
         **kwargs):
     for mode in modes:
         for accelerator in accelerators:
             native.py_test(
-                tags = [mode, "py_%s" % accelerator],
+                tags = tags + [mode, "py_%s" % accelerator],
                 python_version = "PY3",
                 deps = deps + ["//test:test_utils"],
                 timeout = "eternal",

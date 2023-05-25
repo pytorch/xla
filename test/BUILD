@@ -10,6 +10,7 @@ ptxla_py_test(
         "dynamic",
         "without_functionalization",
     ],
+    tags = ["xla_op"],
 )
 
 ptxla_py_test(
@@ -18,6 +19,7 @@ ptxla_py_test(
     modes = [
         "default",
     ],
+    tags = ["xla_op"],
 )
 
 ptxla_py_test(
@@ -26,6 +28,7 @@ ptxla_py_test(
     modes = [
         "default",
     ],
+    tags = ["xla_op"],
 )
 
 ptxla_py_test(
@@ -34,6 +37,7 @@ ptxla_py_test(
     modes = [
         "default",
     ],
+    tags = ["xla_op"],
 )
 
 ptxla_py_test(
@@ -42,6 +46,7 @@ ptxla_py_test(
     modes = [
         "default",
     ],
+    tags = ["xla_op"],
 )
 
 ptxla_py_test(
@@ -50,6 +55,7 @@ ptxla_py_test(
     modes = [
         "default",
     ],
+    tags = ["xla_op"],
 )
 
 ptxla_py_test(
@@ -58,6 +64,7 @@ ptxla_py_test(
     modes = [
         "default",
     ],
+    tags = ["xla_op"],
 )
 
 ptxla_py_test(
@@ -67,6 +74,7 @@ ptxla_py_test(
         "downcast_bf16",
         "use_bf16",
     ],
+    tags = ["xla_op"],
 )
 
 ptxla_py_test(
@@ -76,6 +84,7 @@ ptxla_py_test(
         "xla_ir_debug",
         "xla_hlo_debug",
     ],
+    tags = ["xla_op"],
 )
 
 ptxla_py_test(
@@ -85,6 +94,7 @@ ptxla_py_test(
     modes = [
         "default",
     ],
+    tags = ["xla_op"],
 )
 
 ptxla_py_test(
@@ -93,6 +103,7 @@ ptxla_py_test(
     modes = [
         "default",
     ],
+    tags = ["xla_op"],
 )
 
 ptxla_py_test(
@@ -101,6 +112,7 @@ ptxla_py_test(
     modes = [
         "default",
     ],
+    tags = ["xla_op"],
 )
 
 ptxla_py_test(
@@ -109,6 +121,7 @@ ptxla_py_test(
     modes = [
         "default",
     ],
+    tags = ["mp"],
 )
 
 ptxla_py_test(
@@ -117,6 +130,7 @@ ptxla_py_test(
     modes = [
         "default",
     ],
+    tags = ["mp"],
 )
 
 ptxla_py_test(
@@ -125,6 +139,7 @@ ptxla_py_test(
     modes = [
         "default",
     ],
+    tags = ["mp"],
 )
 
 ptxla_py_test(
@@ -133,6 +148,7 @@ ptxla_py_test(
     modes = [
         "default",
     ],
+    tags = ["mp"],
 )
 
 ptxla_py_test(
@@ -141,6 +157,7 @@ ptxla_py_test(
     modes = [
         "default",
     ],
+    tags = ["mp"],
 )
 
 ptxla_py_test(
@@ -149,6 +166,7 @@ ptxla_py_test(
     modes = [
         "default",
     ],
+    tags = ["mp"],
 )
 
 ptxla_py_test(
@@ -157,6 +175,7 @@ ptxla_py_test(
     modes = [
         "default",
     ],
+    tags = ["mp"],
 )
 
 ptxla_py_test(
@@ -165,6 +184,7 @@ ptxla_py_test(
     modes = [
         "default",
     ],
+    tags = ["mp"],
 )
 
 ptxla_py_test(
@@ -173,6 +193,7 @@ ptxla_py_test(
     modes = [
         "default",
     ],
+    tags = ["mp"],
 )
 
 ptxla_py_test(
@@ -181,6 +202,7 @@ ptxla_py_test(
     modes = [
         "xla_backend_mp",
     ],
+    tags = ["mp"],
 )
 
 ptxla_py_test(
@@ -189,6 +211,7 @@ ptxla_py_test(
     modes = [
         "xla_backend_mp",
     ],
+    tags = ["mp"],
 )
 
 ptxla_py_test(
@@ -197,6 +220,7 @@ ptxla_py_test(
     modes = [
         "xla_backend_mp",
     ],
+    tags = ["mp"],
 )
 
 ptxla_py_test(
@@ -205,6 +229,7 @@ ptxla_py_test(
     modes = [
         "xla_backend_mp",
     ],
+    tags = ["mp"],
 )
 
 ptxla_py_test(
@@ -213,6 +238,7 @@ ptxla_py_test(
     modes = [
         "xla_backend_mp",
     ],
+    tags = ["mp"],
 )
 
 ptxla_py_test(
@@ -221,6 +247,7 @@ ptxla_py_test(
     modes = [
         "xla_backend_mp",
     ],
+    tags = ["mp"],
 )
 
 ptxla_py_test(
@@ -229,6 +256,7 @@ ptxla_py_test(
     modes = [
         "xla_backend_mp",
     ],
+    tags = ["mp"],
 )
 
 py_library(
