@@ -189,6 +189,7 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
       tsl::profiler::TraceMeLevel::kInfo);
   std::vector<ComputationClient::DataPtr> datas;
   datas.reserve(tensors.size());
+  int64_t total_size = 0;
   for (auto& tensor : tensors) {
     PjRtDevice* pjrt_device = StringToPjRtDevice(tensor.device);
 
