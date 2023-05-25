@@ -306,6 +306,38 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
         torch_xla._XLAC._get_xla_sharding_spec(xt),
         torch_xla._XLAC._get_xla_sharding_spec(explicit_xt))
 
+  def test_multiple_operations(self):
+    t1 = torch.randn(2, 2)
+    t2 = torch.randn(2, 2)
+    expected_1 = t1 + t2
+    xt1 = t1.to(xm.xla_device())
+    xt2 = t2.to(xm.xla_device())
+    xs.mark_sharding(xt1, self._get_mesh((1, self.n_devices)), (0, 1))
+    xt3 = xt1 + xt2
+    self.assertTrue(torch.allclose(expected_1, xt3.cpu()))
+
+    t4 = torch.randn(2, 2)
+    t5 = torch.randn(2, 2)
+    expected_2 = t4 + t5
+    xt4 = t4.to(xm.xla_device())
+    xt5 = t5.to(xm.xla_device())
+    xs.mark_sharding(xt4, self._get_mesh((1, self.n_devices)), (0, 1))
+    xs.mark_sharding(xt5, self._get_mesh((1, self.n_devices)), (0, 1))
+    xt6 = xt4 + xt5
+    self.assertTrue(torch.allclose(expected_2, xt6.cpu()))
+
+  def test_no_sharding(self):
+    partition_spec = (0, 1)
+    t1 = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
+                      dtype=torch.float,
+                      device=xm.xla_device())
+    t2 = torch.tensor([[8, 7, 6, 5, 4, 3, 2, 1]],
+                      dtype=torch.float,
+                      device=xm.xla_device())
+    t3 = t1 + t2
+    t3_expected = [9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0]
+    self.assertEqual(t3.tolist()[0], t3_expected)
+
 
 if __name__ == '__main__':
   test = unittest.main()
