@@ -730,9 +730,9 @@ XLATensorPtr argmin(const XLATensorPtr& input) {
 XLATensorPtr as_strided(const XLATensorPtr& input, std::vector<int64_t> size,
                         std::vector<int64_t> stride,
                         c10::optional<int64_t> storage_offset) {
-  auto input_shape = input->shape();
-  return input->CreateViewTensor(CreateAsStridedViewInfo(
-      input_shape, std::move(size), std::move(stride), storage_offset));
+  return input->CreateFrom(torch::lazy::MakeNode<AsStrided>(
+          input->GetIrValue(),
+          std::move(size), std::move(stride), storage_offset.value_or(0)));
 }
 
 void as_strided_(XLATensorPtr& input, std::vector<int64_t> size,
