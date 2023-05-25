@@ -90,7 +90,7 @@ nightly at date(< 2023/04/25) | `gcr.io/tpu-pytorch/xla:nightly_3.8_YYYYMMDD` |
 | --- | ----------- |
 | 2.0 | `gcr.io/tpu-pytorch/xla:r2.0_3.8_cuda_11.8` |
 | nightly | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_cuda_11.8` |
-| nightly at date(>=2023/04/25) | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_cuda_11.8` |
+| nightly at date(>=2023/04/25) | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_cuda_11.8_YYYYMMDD` |
 | nightly at date(<2023/04/25) | `gcr.io/tpu-pytorch/xla:nightly_3.8_cuda_11.8_YYYYMMDD` |
 
 <br/>
