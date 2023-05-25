@@ -467,16 +467,6 @@ PjRtComputationClient::ExecuteComputation(
                            returned_future)
           .value();
 
-  // Grab the shared lock and block the `WaitDeviceOps` until buffer is ready.
-  auto lock = lock_device_shared(device);
-  // Signal that `ExecuteSharded` has completed for the ExecuteTime metric.
-  // Copies the `timed` shared pointer into the lambda.
-  returned_future->OnReady(
-      [timed, lock = std::move(lock)](Status unused) mutable {
-        timed.reset();
-        TF_VLOG(3) << "ExecuteComputation returned_future->OnReady finished";
-      });
-
   std::vector<DataPtr> datas;
   datas.reserve(results.size());
   for (auto& result : results) {
@@ -488,6 +478,20 @@ PjRtComputationClient::ExecuteComputation(
     datas.push_back(data);
   }
   CreateDataHandlesCounter()->AddValue(datas.size());
+
+  TF_VLOG(5) << "ExecuteComputation acquiring PJRT device lock for "
+             << spmd_device_str;
+  // Grab the shared lock and block the `WaitDeviceOps` until buffer is ready.
+  auto lock = lock_device_shared(device);
+  TF_VLOG(5) << "ExecuteComputation acquiring PJRT device lock for "
+             << spmd_device_str << " Done";
+  // Signal that `ExecuteSharded` has completed for the ExecuteTime metric.
+  // Copies the `timed` shared pointer into the lambda.
+  returned_future->OnReady(
+      [timed, lock = std::move(lock)](Status unused) mutable {
+        timed.reset();
+        TF_VLOG(3) << "ExecuteComputation returned_future->OnReady finished";
+      });
 
   TF_VLOG(1) << "Returning " << datas.size() << " results";
   return datas;
@@ -549,21 +553,6 @@ PjRtComputationClient::ExecuteReplicated(
   data_handles.reserve(results.size());
   std::vector<size_t> dims(results.size());
 
-  // Grab the shared lock and block the `WaitDeviceOps` until buffer is ready.
-  // Since this is the SPMD code path.
-  // There is no points to grab devices lock for every individual device.
-  auto lock = lock_device_shared(spmd_device_str);
-  TF_VLOG(3) << "ExecuteReplicated grab the lock for " << spmd_device_str;
-  // Signal that `ExecuteReplicated` has completed for one of the devices the
-  // ExecuteReplicatedTime metric. Here, we assume that all devices will finish
-  // execution roughly at the same time, hence only use one of the
-  // returned_futures. Copies the `timed` shared pointer into the lambda.
-  (*returned_futures)[0].OnReady(
-      [timed, lock = std::move(lock)](Status unused) mutable {
-        timed.reset();
-        TF_VLOG(3) << "ExecuteReplicated returned_future->OnReady finished";
-      });
-
   for (int32_t i = 0; i < results.size(); ++i) {
     xla::PjRtDevice* pjrt_device = StringToPjRtDevice(devices[i]);
     XLA_CHECK(pjrt_device->IsAddressable())
@@ -584,6 +573,24 @@ PjRtComputationClient::ExecuteReplicated(
     }
     data_handles.push_back(datas);
   }
+
+  // Grab the shared lock and block the `WaitDeviceOps` until buffer is ready.
+  // Since this is the SPMD code path.
+  // There is no points to grab devices lock for every individual device.
+  TF_VLOG(5) << "ExecuteReplicated acquiring PJRT device lock for "
+             << spmd_device_str;
+  auto lock = lock_device_shared(spmd_device_str);
+  TF_VLOG(5) << "ExecuteReplicated acquiring PJRT device lock for "
+             << spmd_device_str << " Done";
+  // Signal that `ExecuteReplicated` has completed for one of the devices the
+  // ExecuteReplicatedTime metric. Here, we assume that all devices will finish
+  // execution roughly at the same time, hence only use one of the
+  // returned_futures. Copies the `timed` shared pointer into the lambda.
+  (*returned_futures)[0].OnReady(
+      [timed, lock = std::move(lock)](Status unused) mutable {
+        timed.reset();
+        TF_VLOG(3) << "ExecuteReplicated returned_future->OnReady finished";
+      });
 
   TF_VLOG(1) << "Returning " << data_handles.size() << " sets of results "
              << "with dimensions [" << absl::StrJoin(dims, ",") << "].";
