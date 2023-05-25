@@ -15,6 +15,7 @@ on:
         type: string
         description: Runner type for the test
         default: linux.12xlarge
+
     secrets:
       gcloud-service-key:
         required: true
@@ -27,6 +28,7 @@ on:
 jobs:
   build:
     runs-on: ${{ inputs.runner }}
+    timeout-minutes: 60
     outputs:
       docker-image: ${{ steps.upload-docker-image.outputs.docker-image }}
     env:
