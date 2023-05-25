@@ -4,12 +4,12 @@ ptxla_py_test(
     name = "test_xla_sharding",
     srcs = ["test_xla_sharding.py"],
     accelerators = ["cpu"],
-    modes = ["dynamic"],
+    modes = ["default"],
 )
 
 ptxla_py_test(
     name = "test_xla_virtual_device",
     srcs = ["test_xla_virtual_device.py"],
     accelerators = ["cpu"],
-    modes = ["dynamic"],
+    modes = ["default"],
 )

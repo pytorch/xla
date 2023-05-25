@@ -84,13 +84,13 @@ def union(a, b):
 def ptxla_py_test(
         name = "name",
         modes = ["default"],
-        accelerators = ["cpu"],
+        accelerators = ["cpu", "gpu", "tpu"],
         deps = [],
         **kwargs):
     for mode in modes:
         for accelerator in accelerators:
             native.py_test(
-                tags = ["py", mode, accelerator],
+                tags = [mode, "py_%s" % accelerator],
                 python_version = "PY3",
                 deps = deps + ["//test:test_utils"],
                 timeout = "eternal",
