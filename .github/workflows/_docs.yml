@@ -17,6 +17,7 @@ on:
 jobs:
   push-docs:
     runs-on: ${{ inputs.runner }}
+    timeout-minutes: 45
     env:
       DOCKER_IMAGE: ${{ inputs.docker-image }}
       WORKDIR: /var/lib/jenkins/workspace
@@ -40,7 +41,7 @@ jobs:
           pid=$(docker run -e GITHUB_TORCH_XLA_BOT_TOKEN -t -d -w "$WORKDIR" "${DOCKER_IMAGE}")
           echo "${GCLOUD_SERVICE_KEY}" | docker exec -i "${pid}" sh -c "cat >> /tmp/pytorch/xla/default_credentials.json"
           echo "pid=${pid}" >> "${GITHUB_ENV}"
-      - name: Test
+      - name: Build & publish docs
         shell: bash
         run: docker exec -u jenkins "${pid}" bash -c '. ~/.bashrc && .circleci/doc_push.sh'
       - name: Teardown Linux
