@@ -24,7 +24,9 @@
 #include "third_party/xla_client/computation_client.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "third_party/xla_client/env_vars.h"
+#include "third_party/xla_client/multi_wait.h"
 #include "third_party/xla_client/tf_logging.h"
+#include "third_party/xla_client/thread_pool.h"
 
 namespace xla {
 
@@ -479,19 +481,25 @@ PjRtComputationClient::ExecuteComputation(
   }
   CreateDataHandlesCounter()->AddValue(datas.size());
 
-  TF_VLOG(5) << "ExecuteComputation acquiring PJRT device lock for "
-             << spmd_device_str;
-  // Grab the shared lock and block the `WaitDeviceOps` until buffer is ready.
-  auto lock = lock_device_shared(device);
-  TF_VLOG(5) << "ExecuteComputation acquiring PJRT device lock for "
-             << spmd_device_str << " Done";
-  // Signal that `ExecuteSharded` has completed for the ExecuteTime metric.
-  // Copies the `timed` shared pointer into the lambda.
-  returned_future->OnReady(
-      [timed, lock = std::move(lock)](Status unused) mutable {
-        timed.reset();
-        TF_VLOG(3) << "ExecuteComputation returned_future->OnReady finished";
-      });
+  auto mwait = std::make_shared<util::MultiWait>(1);
+  auto lockfn = [&, this, device, returned_future, timed]() mutable {
+    TF_VLOG(5) << "ExecuteComputation acquiring PJRT device lock for "
+               << device;
+    // Grab the shared lock and block the `WaitDeviceOps` until buffer is
+    // ready.
+    auto lock = lock_device_shared(device);
+    TF_VLOG(5) << "ExecuteComputation acquiring PJRT device lock for " << device
+               << " Done";
+    // Signal that `ExecuteSharded` has completed for the ExecuteTime
+    // metric. Copies the `timed` shared pointer into the lambda.
+    returned_future->OnReady(
+        [timed, lock = std::move(lock)](Status unused) mutable {
+          timed.reset();
+          TF_VLOG(3) << "ExecuteComputation returned_future->OnReady finished";
+        });
+  };
+
+  env::ScheduleIoClosure(util::MultiWait::Completer(mwait, std::move(lockfn)));
 
   TF_VLOG(1) << "Returning " << datas.size() << " results";
   return datas;
@@ -574,23 +582,28 @@ PjRtComputationClient::ExecuteReplicated(
     data_handles.push_back(datas);
   }
 
-  // Grab the shared lock and block the `WaitDeviceOps` until buffer is ready.
-  // Since this is the SPMD code path.
-  // There is no points to grab devices lock for every individual device.
-  TF_VLOG(5) << "ExecuteReplicated acquiring PJRT device lock for "
-             << spmd_device_str;
-  auto lock = lock_device_shared(spmd_device_str);
-  TF_VLOG(5) << "ExecuteReplicated acquiring PJRT device lock for "
-             << spmd_device_str << " Done";
-  // Signal that `ExecuteReplicated` has completed for one of the devices the
-  // ExecuteReplicatedTime metric. Here, we assume that all devices will finish
-  // execution roughly at the same time, hence only use one of the
-  // returned_futures. Copies the `timed` shared pointer into the lambda.
-  (*returned_futures)[0].OnReady(
-      [timed, lock = std::move(lock)](Status unused) mutable {
-        timed.reset();
-        TF_VLOG(3) << "ExecuteReplicated returned_future->OnReady finished";
-      });
+  auto mwait = std::make_shared<util::MultiWait>(1);
+  auto lockfn = [&, this, spmd_device_str, returned_futures, timed]() mutable {
+    // Grab the shared lock and block the `WaitDeviceOps` until buffer is
+    // ready. Since this is the SPMD code path. There is no points to grab
+    // devices lock for every individual device.
+    TF_VLOG(5) << "ExecuteReplicated acquiring PJRT device lock for "
+               << spmd_device_str;
+    auto lock = lock_device_shared(spmd_device_str);
+    TF_VLOG(5) << "ExecuteReplicated acquiring PJRT device lock for "
+               << spmd_device_str << " Done";
+    // Signal that `ExecuteReplicated` has completed for one of the devices
+    // the ExecuteReplicatedTime metric. Here, we assume that all devices
+    // will finish execution roughly at the same time, hence only use one of
+    // the returned_futures. Copies the `timed` shared pointer into the
+    // lambda.
+    (*returned_futures)[0].OnReady(
+        [timed, lock = std::move(lock)](Status unused) mutable {
+          timed.reset();
+          TF_VLOG(3) << "ExecuteReplicated returned_future->OnReady finished";
+        });
+  };
+  env::ScheduleIoClosure(util::MultiWait::Completer(mwait, std::move(lockfn)));
 
   TF_VLOG(1) << "Returning " << data_handles.size() << " sets of results "
              << "with dimensions [" << absl::StrJoin(dims, ",") << "].";
