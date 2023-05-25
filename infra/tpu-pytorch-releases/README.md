@@ -174,7 +174,7 @@ unset properties of existing triggers.
       })
 
       # Fetch Ansible configuration from "my-branch".
-      ansible_branch  = "my-branch"
+      ansible_git_rev  = "my-branch"
 
       # Build will be triggered on every push to "my-branch".
       trigger_on_push = {
