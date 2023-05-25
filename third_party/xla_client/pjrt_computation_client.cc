@@ -186,7 +186,7 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
   auto timed = std::make_shared<metrics::TimedSection>(TransferToServerMetric());
   tsl::profiler::TraceMe activity(
       "PjRtComputationClient::TransferToServer",
-      tensorflow::profiler::TraceMeLevel::kInfo);
+      tsl::profiler::TraceMeLevel::kInfo);
   std::vector<ComputationClient::DataPtr> datas;
   datas.reserve(tensors.size());
   for (auto& tensor : tensors) {
