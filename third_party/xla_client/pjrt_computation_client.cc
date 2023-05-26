@@ -482,7 +482,8 @@ PjRtComputationClient::ExecuteComputation(
   CreateDataHandlesCounter()->AddValue(datas.size());
 
   auto mwait = std::make_shared<util::MultiWait>(1);
-  auto lockfn = [&, this, device, returned_future, timed]() mutable {
+  auto lockfn = [&, this, device, returned_future = std::move(returned_future),
+                 timed]() mutable {
     TF_VLOG(5) << "ExecuteComputation acquiring PJRT device lock for "
                << device;
     // Grab the shared lock and block the `WaitDeviceOps` until buffer is
@@ -583,7 +584,9 @@ PjRtComputationClient::ExecuteReplicated(
   }
 
   auto mwait = std::make_shared<util::MultiWait>(1);
-  auto lockfn = [&, this, spmd_device_str, returned_futures, timed]() mutable {
+  auto lockfn = [&, this, spmd_device_str,
+                 returned_futures = std::move(returned_futures),
+                 timed]() mutable {
     // Grab the shared lock and block the `WaitDeviceOps` until buffer is
     // ready. Since this is the SPMD code path. There is no points to grab
     // devices lock for every individual device.
