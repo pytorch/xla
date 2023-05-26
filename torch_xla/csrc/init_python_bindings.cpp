@@ -1207,17 +1207,18 @@ void InitXlaModuleBindings(py::module m) {
     return dict;
   });
   m.def("_xla_get_all_device_attributes", []() {
-    std::vector<std::string> global_devices = xla::ComputationClient::Get()->GetAllDevices();
+    std::vector<std::string> global_devices =
+        xla::ComputationClient::Get()->GetAllDevices();
     std::vector<py::dict> list;
     for (auto const& device : global_devices) {
       const absl::flat_hash_map<
-        std::string, xla::ComputationClient::DeviceAttribute>& attributes =
-        xla::ComputationClient::Get()->GetDeviceAttributes(device);
-        py::dict dict;
-        for (auto const& [name, value] : attributes) {
-            dict[py::str(name)] = py::cast(value);
-        }
-        list.push_back(dict);
+          std::string, xla::ComputationClient::DeviceAttribute>& attributes =
+          xla::ComputationClient::Get()->GetDeviceAttributes(device);
+      py::dict dict;
+      for (auto const& [name, value] : attributes) {
+        dict[py::str(name)] = py::cast(value);
+      }
+      list.push_back(dict);
     }
     return list;
   });
