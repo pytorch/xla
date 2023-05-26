@@ -43,24 +43,70 @@ class Feedforward(torch.nn.Module):
     return output
 
 
+# TODO(xiowei): continue from here. The error is
+"""
+Traceback (most recent call last):
+  File "pytorch/xla/test/ds/test_dynamic_shape_models.py", line 201, in test_cnn
+    loss = criterion(y_pred, y_training)
+  File "/home/ptxla/.local/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1502, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/ptxla/.local/lib/python3.8/site-packages/torch/nn/modules/module.py", line 1511, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/ptxla/.local/lib/python3.8/site-packages/torch/nn/modules/loss.py", line 618, in forward
+    return F.binary_cross_entropy(input, target, weight=self.weight, reduction=self.reduction)
+  File "/home/ptxla/.local/lib/python3.8/site-packages/torch/nn/functional.py", line 3121, in binary_cross_entropy
+    raise ValueError(
+ValueError: Using a target size (torch.Size([<=400, 10])) that is different to the input size (torch.Size([400, 10])) is deprecated. Please ensure they have the same size.
+"""
+# This is because y_pred.shape=[400, 10] while
+# y_test.shape=[<=400, 10]. This suggest dynamism
+# has not been propagated properly.
+# The example comes from https://www.reachiteasily.com/2021/06/3d-convolutional-neural-network-pytorch.html.
 class CNN(torch.nn.Module):
 
   def __init__(self, input_size, hidden_size):
     super().__init__()
-    self.conv1 = torch.nn.Conv2d(3, 6, 5)
-    self.pool = torch.nn.MaxPool2d(2, 2)
-    self.conv2 = torch.nn.Conv2d(6, 16, 5)
-    self.fc1 = torch.nn.Linear(16 * 5 * 5, 120)
-    self.fc2 = torch.nn.Linear(120, 84)
-    self.fc3 = torch.nn.Linear(84, 10)
+    num_classes=10
+    self.model= torch.nn.Sequential(
+    
+    #Conv layer 1    
+    torch.nn.Conv3d(3, 32, kernel_size=(3, 3, 3), padding=0),
+    torch.nn.ReLU(),
+    torch.nn.MaxPool3d((2, 2, 2)),   
+    
+    #Conv layer 2  
+    torch.nn.Conv3d(32, 64, kernel_size=(3, 3, 3), padding=0),
+    torch.nn.ReLU(),
+    torch.nn.MaxPool3d((2, 2, 2)),
+            
+    #Flatten
+    torch.nn.Flatten(),  
+    #Linear 1
+    torch.nn.Linear(2**3*64, 128), 
+    #Relu
+    torch.nn.ReLU(),
+    #BatchNorm1d
+    torch.nn.BatchNorm1d(128),
+    #Dropout
+    torch.nn.Dropout(p=0.15),
+    #Linear 2
+    torch.nn.Linear(128, num_classes)
+    )
+    # self.conv1 = torch.nn.Conv3d(3, 6, 5)
+    # self.pool = torch.nn.MaxPool3d(2, 2)
+    # self.conv2 = torch.nn.Conv3d(6, 16, 5)
+    # self.fc1 = torch.nn.Linear(16 * 5 * 5, 120)
+    # self.fc2 = torch.nn.Linear(120, 84)
+    # self.fc3 = torch.nn.Linear(84, 10)
 
   def forward(self, x):
-    x = self.pool(F.relu(self.conv1(x)))
-    x = self.pool(F.relu(self.conv2(x)))
-    x = torch.flatten(x, 1)  # flatten all dimensions except batch
-    x = F.relu(self.fc1(x))
-    x = F.relu(self.fc2(x))
-    x = self.fc3(x)
+    x = self.model(x)
+    # x = self.pool(F.relu(self.conv1(x)))
+    # x = self.pool(F.relu(self.conv2(x)))
+    # x = torch.flatten(x, 1)  # flatten all dimensions except batch
+    # x = F.relu(self.fc1(x))
+    # x = F.relu(self.fc2(x))
+    # x = self.fc3(x)
     return x
 
 
@@ -170,6 +216,7 @@ class TestDynamicShapeModels(unittest.TestCase):
       optimizer.zero_grad()
       y_pred = model(x_training)
       y_pred = y_pred.squeeze()
+      # print('y_pred.shape=', y_pred.shape)
       loss = criterion(y_pred, y_training)
       # Backpropagation.
       loss.backward()
@@ -219,7 +266,7 @@ class TestDynamicShapeModels(unittest.TestCase):
     x_test_xla = x_test.to(device)
     x_test_nonzero_dev = torch.nonzero(x_test_xla.int()).float()
     x_train = torch.ones(
-        3, 32, 32, device=device).expand(x_test_nonzero_dev.shape[0], 3, 32, 32)
+        3, 16, 16, 16, device=device).expand(x_test_nonzero_dev.shape[0], 3, 16, 16, 16)
     y_test_xla = y_test.to(device)
     y_test_nonzero_dev = torch.nonzero(y_test_xla.int()).float().squeeze()
     y_train = torch.ones(
@@ -228,7 +275,7 @@ class TestDynamicShapeModels(unittest.TestCase):
 
 
 if __name__ == '__main__':
-  assert os.environ['XLA_EXPERIMENTAL'] != ''
+  # assert os.environ['XLA_EXPERIMENTAL'] != ''
   test = unittest.main(verbosity=FLAGS.verbosity, exit=False)
   # DISABLE PYTHON DISPATCHER FLAG
   del pd
