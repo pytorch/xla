@@ -482,7 +482,7 @@ PjRtComputationClient::ExecuteComputation(
   CreateDataHandlesCounter()->AddValue(datas.size());
 
   auto mwait = std::make_shared<util::MultiWait>(1);
-  auto lockfn = [&, this, device, returned_future = std::move(returned_future),
+  auto lockfn = [&, this, device, returned_future = std::move(*returned_future),
                  timed]() mutable {
     TF_VLOG(5) << "ExecuteComputation acquiring PJRT device lock for "
                << device;
@@ -493,7 +493,7 @@ PjRtComputationClient::ExecuteComputation(
                << " Done";
     // Signal that `ExecuteSharded` has completed for the ExecuteTime
     // metric. Copies the `timed` shared pointer into the lambda.
-    returned_future->OnReady(
+    returned_future.OnReady(
         [timed, lock = std::move(lock)](Status unused) mutable {
           timed.reset();
           TF_VLOG(3) << "ExecuteComputation returned_future->OnReady finished";
@@ -585,7 +585,7 @@ PjRtComputationClient::ExecuteReplicated(
 
   auto mwait = std::make_shared<util::MultiWait>(1);
   auto lockfn = [&, this, spmd_device_str,
-                 returned_futures = std::move(returned_futures),
+                 returned_futures = std::move(*returned_futures),
                  timed]() mutable {
     // Grab the shared lock and block the `WaitDeviceOps` until buffer is
     // ready. Since this is the SPMD code path. There is no points to grab
@@ -600,7 +600,7 @@ PjRtComputationClient::ExecuteReplicated(
     // will finish execution roughly at the same time, hence only use one of
     // the returned_futures. Copies the `timed` shared pointer into the
     // lambda.
-    (*returned_futures)[0].OnReady(
+    returned_futures[0].OnReady(
         [timed, lock = std::move(lock)](Status unused) mutable {
           timed.reset();
           TF_VLOG(3) << "ExecuteReplicated returned_future->OnReady finished";
