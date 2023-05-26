@@ -17,9 +17,6 @@ namespace {
 xla::XlaOp BuildResize(xla::XlaOp input, const xla::Shape& output_shape,
                        bool align_corners, bool half_pixel_centers,
                        bool is_kernel_bilinear) {
-  // Code copied from
-  // https://github.com/tensorflow/tensorflow/blob/e51d6ab5730092775d516b18fa4ee85d49602cd8/tensorflow/compiler/tf2xla/kernels/image_resize_ops.cc#L477-L672
-
   // We implement bilinear interpolation and nearest neighbor with a Gather op.
   // For each output pixel, we gather the necessary slices of the input.
   // We then construct the weights that are necessary to calculate the weighted

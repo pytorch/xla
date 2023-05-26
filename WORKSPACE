@@ -67,7 +67,7 @@ http_archive(
 #    path = "/path/to/xla",
 # )
 
-# Initialize TensorFlow's external dependencies.
+# Initialize tf's external dependencies.
 load("@xla//:workspace4.bzl", "xla_workspace4")
 
 xla_workspace4()

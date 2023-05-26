@@ -1,7 +1,7 @@
 #ifndef XLA_TORCH_XLA_CSRC_OPS_OPS_H_
 #define XLA_TORCH_XLA_CSRC_OPS_OPS_H_
 
-// This header can depend on ops/ and ir.h, as well as system/c++, tensorflow,
+// This header can depend on ops/ and ir.h, as well as system/c++, tf,
 // PT,... but not on other PT/XLA headers.
 
 #include <memory>

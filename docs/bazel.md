@@ -1,15 +1,15 @@
 ## Bazel in Pytorch/XLA
 
-[Bazel](https://bazel.build/) is a free software tool used for the automation of building and testing software. [TensorFlow](https://www.tensorflow.org/http) and [OpenXLA](https://github.com/openxla/xla) both use it, which makes it a good fit for PyTorch/XLA as well.
+[Bazel](https://bazel.build/) is a free software tool used for the automation of building and testing software. [tf](https://www.tf.org/http) and [OpenXLA](https://github.com/openxla/xla) both use it, which makes it a good fit for PyTorch/XLA as well.
 
 ## Bazel dependencies
 
-Tensorflow is a [bazel external dependency](https://bazel.build/external/overview) for PyTorch/XLA, which can be seen in the `WORKSPACE` file:
+tf is a [bazel external dependency](https://bazel.build/external/overview) for PyTorch/XLA, which can be seen in the `WORKSPACE` file:
 
 `WORKSPACE`
 ```bzl
 http_archive(
-    name = "org_tensorflow",
+    name = "org_tf",
     patch_args = [ "-l", "-p1"],
     patch_tool = "patch",
     patches = [
@@ -17,14 +17,14 @@ http_archive(
         "//tf_patches:xplane.diff",
         ...
     ],
-    strip_prefix = "tensorflow-f7759359f8420d3ca7b9fd19493f2a01bd47b4ef",
+    strip_prefix = "tf-f7759359f8420d3ca7b9fd19493f2a01bd47b4ef",
     urls = [
-        "https://github.com/tensorflow/tensorflow/archive/f7759359f8420d3ca7b9fd19493f2a01bd47b4ef.tar.gz",
+        "https://github.com/tf/tf/archive/f7759359f8420d3ca7b9fd19493f2a01bd47b4ef.tar.gz",
     ],
 )
 ```
 
-TensorFlow pin can be updated by pointing this repository to a different revision. Patches may be added as needed.
+tf pin can be updated by pointing this repository to a different revision. Patches may be added as needed.
 Bazel will resolve the dependency, prepare the code and patch it hermetically.
 
 For PyTorch, a different dependency mechanism is deployed because a local [PyTorch](https://github.com/pytorch/pytorch)
@@ -34,7 +34,7 @@ compatibility (e.g. codegen in PyTorch/XLA uses `torchgen` python module that sh
 The local directory can either set in `bazel/dependencies.bzl`, or overriden on the command line:
 
 ```bash
-bazel build --override_repository=org_tensorflow=/path/to/exported/tf_repo //...
+bazel build --override_repository=org_tf=/path/to/exported/tf_repo //...
 ```
 
 ```bash
@@ -132,7 +132,7 @@ might help too if `bazel` cannot find the auth token.
 
 `YOUR-USER` here can the author's username or machine name, a unique name that ensures good cache behavior. Other `setup.py` functionality works as intended too (e.g. `develop`).
 
-The first time the code is compiled using a new cached key will be slow because it will compile everything from scratch, but incremental compilations will be very fast. On updating the TensorFlow pin, it will once again be a bit slower the first time per key, and then until the next update quite fast again.
+The first time the code is compiled using a new cached key will be slow because it will compile everything from scratch, but incremental compilations will be very fast. On updating the tf pin, it will once again be a bit slower the first time per key, and then until the next update quite fast again.
 
 ## Running tests
 

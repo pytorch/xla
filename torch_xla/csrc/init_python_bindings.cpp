@@ -29,8 +29,6 @@
 #include "xla/python/profiler/internal/traceme_wrapper.h"
 #include "xla/service/hlo_parser.h"
 #include "third_party/xla_client/example.pb.h"
-// #include "tensorflow/core/example/feature.pb.h"
-// #include "tensorflow/python/profiler/internal/profiler_pywrap_impl.h"
 #include "tsl/platform/env.h"
 #include "tsl/profiler/lib/traceme.h"
 #include "third_party/xla_client/computation_client.h"
@@ -834,7 +832,7 @@ void BuildProfilerSubmodule(py::module* m) {
         {
           NoGilSection nogil;
           for (int i = 0; i <= timeout_s / interval_s; i++) {
-//             status = tensorflow::profiler::pywrap::Trace(
+//             status = TF::profiler::pywrap::Trace(
 //                 service_addr, logdir, /*worker_list=*/"",
 //                 /*include_dataset_ops=*/false, duration_ms,
 //                 num_tracing_attempts, opts);
@@ -1286,15 +1284,6 @@ void InitXlaModuleBindings(py::module m) {
     return GetMetricData(name);
   });
   m.def("_xla_metrics_report", []() {
-    // NOTE: [TORCH_LAZY_COUNTER v.s. XLA_COUNTER]
-    // Counters and Metrics are divided into two groups: one in PyTorch/XLA and
-    // another in ComputationClient. Therefore, we need to stitch the report
-    // together. Ideally, those two sets shouldn't have any overlaps. The reason
-    // why is that we cannot have ComputationClient to use the
-    // TORCH_LAZY_COUNTER as it currently cannot depend on PyTorch (as part of
-    // TensorFlow).
-    // TODO(jwtan): Unify them once ComputationClient becomes a standalone
-    // library.
     return torch::lazy::CreateMetricReport() +
            xla::metrics_reader::CreateMetricReport(
                xla::ComputationClient::Get()->GetMetrics());

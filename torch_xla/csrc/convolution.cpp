@@ -2,8 +2,6 @@
 
 #include "third_party/xla_client/conv_op_helpers.h"
 #include "xla/client/lib/constants.h"
-// #include "tensorflow/core/framework/tensor_shape.h"
-// #include "tensorflow/core/kernels/conv_grad_ops.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/tensor.h"
@@ -55,7 +53,6 @@ xla::ConvolutionDimensionNumbers MakeConvolutionDimensionNumbers(
  *
  * XLA provides the following wrappers instead of calling into raw
  * ConvGeneralDilated.
- * https://github.com/tensorflow/tensorflow/blob/master/tensorflow/compiler/tf2xla/kernels/conv_op_helpers.cc
  *   - MakeXlaForwardConvOp (not used in our lowering, see below)
  *   - MakeXlaBackpropInputConvOp
  *   - MakeXlaBackpropFilterConvOp
@@ -162,9 +159,7 @@ xla::ConvOpAttrs MakeConvOpAttrs(
   conv_op_attrs.strides = {1, 1};
   std::copy(spatial_stride.begin(), spatial_stride.end(),
             std::back_inserter(conv_op_attrs.strides));
-  conv_op_attrs.padding = xla::ThreePadding::EXPLICIT; // 3; // tensorflow::Padding::EXPLICIT;
-  // https://github.com/tensorflow/tensorflow/blob/ec81825aaf7e848d9f8ddffdf1e0d20aebe9172c/tensorflow/core/util/padding.cc#L40
-  // explicit_padding requires to have (spatial_dims + 2) * 2 elements
+  conv_op_attrs.padding = xla::ThreePadding::EXPLICIT;
   conv_op_attrs.explicit_paddings.resize(4);
   for (int spatial_dim = 0; spatial_dim < num_spatial_dims; ++spatial_dim) {
     conv_op_attrs.explicit_paddings.push_back(spatial_padding[spatial_dim]);
@@ -172,7 +167,6 @@ xla::ConvOpAttrs MakeConvOpAttrs(
   }
   conv_op_attrs.data_format = MakeConvolutionDimensionNumbers(
       xla::XLATensorFormat::FORMAT_NCHW, num_spatial_dims);
-  // xla::XLATensorFormat::FORMAT_NCHW; // 1; //tensorflow::TensorFormat::FORMAT_NCHW; // use `ConvolutionDimensionNumbers` from /pytorch/tensorflow/tensorflow/compiler/xla/xla_data.proto ?
   return conv_op_attrs;
 }
 

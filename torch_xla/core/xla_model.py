@@ -598,8 +598,6 @@ def all_to_all(value,
                pin_layout=True):
   """Performs an XLA `AllToAll()` operation on the input tensor.
 
-  See: https://www.tensorflow.org/xla/operation_semantics#alltoall
-
   Args:
     value (torch.Tensor): The input tensor.
     split_dimension (int): The dimension upon which the split should happen.
@@ -632,8 +630,6 @@ def collective_permute(value, pairs):
 
   WARNING: This function is not very reliable, may produce wrong results under
            certain inputs. Use it at your own risk.
-
-  See: https://www.tensorflow.org/xla/operation_semantics#collectivepermute
 
   Args:
     value (torch.Tensor): The input tensor.
@@ -688,8 +684,6 @@ def collective_broadcast(tensors: List[torch.Tensor],
 def send(value, channel_id):
   """Performs a XLA `Send()` operation on the input tensor.
 
-  See: https://www.tensorflow.org/xla/operation_semantics#send
-
   Args:
     value (torch.Tensor): The input tensor.
     channel_id (int64): opaque id identifying the destination of the send op.
@@ -704,8 +698,6 @@ def send(value, channel_id):
 
 def recv(output, channel_id):
   """Performs a XLA `Send()` operation on the input tensor.
-
-  See: https://www.tensorflow.org/xla/operation_semantics#recv
 
   Args:
     output (torch.Tensor): The output tensor.
@@ -726,8 +718,6 @@ def reduce_scatter(reduce_type,
                    output=None,
                    pin_layout=True):
   """Performs a XLA `ReduceScatter()` operation on the input tensor.
-
-  See: https://www.tensorflow.org/xla/operation_semantics#reducescatter
 
   Args:
     reduce_type (string): One of ``xm.REDUCE_SUM``, ``xm.REDUCE_MUL``,

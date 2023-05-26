@@ -106,8 +106,6 @@ cc_library(
         ":xla_util",
         ":conv_op_helpers",
         "@com_github_grpc_grpc//:grpc++",
-        # "@org_tensorflow//tensorflow/cc:client_session",
-        # "@org_tensorflow//tensorflow/cc:scope",
         "@xla//xla:debug_options_flags",
         "@xla//xla:literal",
         "@xla//xla:literal_util",
@@ -142,15 +140,6 @@ cc_library(
         "@xla//xla/service:hlo_proto_cc_impl",
         "@xla//xla/hlo/ir:hlo",
         "@xla//xla/service/spmd:spmd_partitioner",
-        # "@org_tensorflow//tensorflow/core:core_cpu",
-        # "@org_tensorflow//tensorflow/core:framework_internal",
-        # "@org_tensorflow//tensorflow/core:lib",
-        # "@org_tensorflow//tensorflow/core:protos_all_cc",
-        # "@org_tensorflow//tensorflow/core/distributed_runtime:server_lib",
-        # "@tsl//tsl/profiler/protobuf/profiler_service_cc_impl",
-        # "@org_tensorflow//tensorflow/core/distributed_runtime/rpc:grpc_runtime",
-        # "@org_tensorflow//tensorflow/core/kernels:data_flow",
-        # "@org_tensorflow//tensorflow/core/protobuf/tpu:topology_proto_cc",
         "@tsl//tsl/protobuf:coordination_config_proto_cc_impl",
         "@tsl//tsl/protobuf:distributed_runtime_payloads_proto_cc_impl",
         "@tsl//tsl/protobuf:histogram_proto_cc_impl",
@@ -164,12 +153,10 @@ cc_library(
         "@com_google_absl//absl/numeric:int128",
         "@com_google_absl//absl/strings",
     ] + if_cuda_is_configured([
-        # "@org_tensorflow//tensorflow/compiler/jit:xla_gpu_device",
-        # "@xla//xla/service:gpu_plugin",
+        "@xla//xla/stream_executor/gpu:gpu_init",
+        "@oxla//xla/service:gpu_plugin",
         "@xla//xla/stream_executor:cuda_platform",
     ]) + if_with_tpu_support([
-        # "@org_tensorflow//tensorflow/compiler/jit:xla_tpu_device",
-        # "@org_tensorflow//tensorflow/compiler/jit:xla_tpu_jit",
     ]),
 )
 
@@ -398,7 +385,6 @@ cc_library(
         "@xla//xla:types",
         "@tsl//tsl/platform:errors",
         "@tsl//tsl/platform:hash",
-        # "@org_tensorflow//tensorflow/core:lib",
     ],
 )
 
@@ -500,26 +486,3 @@ cc_binary(
         "@xla//xla/service:hlo_proto_cc",
     ],
 )
-
-# TODO(goranpetrovic): reenable when `xla_cc_test` is fixed upstream.
-# xla_cc_test(
-#     name = "pjrt_computation_client_test",
-#     srcs = ["pjrt_computation_client_test.cc"],
-#     deps = [
-#         ":computation_client",
-#         "@xla/xla:literal",
-#         "@xla/xla:literal_util",
-#         "@xla/xla:shape_util",
-#         "@xla/xla:status",
-#         "@xla/xla:statusor",
-#         "@xla/xla/client:xla_builder",
-#         "@xla/xla/client:xla_computation",
-#         "@xla/xla/tests:literal_test_util",
-#         "@xla/xla/tools:hlo_module_loader",
-#         "@org_tensorflow//tensorflow/core/platform:logging",
-#         "@tsl//tsl/lib/core:status_test_util",
-#         "@tsl//tsl/platform:env",
-#         "@tsl//tsl/platform:test",
-#         "@tsl//tsl/platform:test_main",
-#     ],
-# )

@@ -1,4 +1,4 @@
-/* Copyright 2018 The TensorFlow Authors. All Rights Reserved.
+/* Copyright 2018 The TF Authors. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -13,8 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#ifndef TENSORFLOW_COMPILER_XLA_CLIENT_LIB_CONV_OP_HELPERS_H_
-#define TENSORFLOW_COMPILER_XLA_CLIENT_LIB_CONV_OP_HELPERS_H_
+#ifndef XLA_CLIENT_CONV_OP_HELPERS_H_
+#define XLA_CLIENT_CONV_OP_HELPERS_H_
 
 #include <vector>
 
@@ -23,7 +23,7 @@ limitations under the License.
 #include "xla/statusor.h"
 #include "xla/xla_data.pb.h"
 
-// This header exposes utilities for translating TensorFlow convolution ops into
+// This header exposes utilities for translating TF convolution ops into
 // XLA ops.
 
 namespace xla {
@@ -52,7 +52,7 @@ enum ThreePadding {
 // process for tensor formats, so specialized formats could be defined more
 // locally to where they are used.
 enum XLATensorFormat {
-  // FORMAT_NHWC is the default format in TensorFlow.
+  // FORMAT_NHWC is the default format in TF.
   FORMAT_NHWC = 0,
 
   // FORMAT_NCHW often improves performance on GPUs.
@@ -189,7 +189,7 @@ struct ConvOpAttrs {
 
 // Computes the convolution with the given input, filter and attributes. Errors
 // returned by this function and the ones below are tagged with "type_string",
-// which is the name of the TensorFlow operator using them.
+// which is the name of the TF operator using them.
 StatusOr<XlaOp> MakeXlaForwardConvOp(
     absl::string_view type_string, XlaOp conv_input, XlaOp filter,
     const ConvOpAttrs& attrs,
@@ -209,4 +209,4 @@ StatusOr<XlaOp> MakeXlaBackpropFilterConvOp(
 
 }  // namespace xla
 
-#endif  // TENSORFLOW_COMPILER_XLA_CLIENT_LIB_CONV_OP_HELPERS_H_
+#endif  // XLA_CLIENT_CONV_OP_HELPERS_H_

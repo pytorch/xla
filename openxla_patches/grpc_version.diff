@@ -1,8 +1,8 @@
-# Tensorflow's patch to update the protobuf will regress the XRT runtime.
-diff --git a/tensorflow/tools/ci_build/release/requirements_common.txt b/tensorflow/tools/ci_build/release/requirements_common.txt
+# tf's patch to update the protobuf will regress the XRT runtime.
+diff --git a/tf/tools/ci_build/release/requirements_common.txt b/tf/tools/ci_build/release/requirements_common.txt
 index 051387bf64e..be3f16a4edb 100644
---- a/tensorflow/tools/ci_build/release/requirements_common.txt
-+++ b/tensorflow/tools/ci_build/release/requirements_common.txt
+--- a/tf/tools/ci_build/release/requirements_common.txt
++++ b/tf/tools/ci_build/release/requirements_common.txt
 @@ -11,7 +11,7 @@ h5py ~= 3.8.0  # Earliest version for Python 3.11
  numpy ~= 1.22.0; python_version < '3.11'
  numpy ~= 1.23.2; python_version >= '3.11' # Earliest version for Python 3.11
@@ -12,10 +12,10 @@ index 051387bf64e..be3f16a4edb 100644
  six ~= 1.16.0
  termcolor ~= 2.1.1
  typing_extensions ~= 3.10.0.0
-diff --git a/tensorflow/tools/pip_package/setup.py b/tensorflow/tools/pip_package/setup.py
+diff --git a/tf/tools/pip_package/setup.py b/tf/tools/pip_package/setup.py
 index 300232e8e40..fc4279580d5 100644
---- a/tensorflow/tools/pip_package/setup.py
-+++ b/tensorflow/tools/pip_package/setup.py
+--- a/tf/tools/pip_package/setup.py
++++ b/tf/tools/pip_package/setup.py
 @@ -97,7 +97,7 @@ REQUIRED_PACKAGES = [
      'numpy >= 1.22, <1.24',
      'opt_einsum >= 2.3.2',
@@ -25,10 +25,10 @@ index 300232e8e40..fc4279580d5 100644
      'setuptools',
      'six >= 1.12.0',
      'termcolor >= 1.1.0',
-diff --git a/tensorflow/tools/proto_text/gen_proto_text_functions_lib.cc b/tensorflow/tools/proto_text/gen_proto_text_functions_lib.cc
+diff --git a/tf/tools/proto_text/gen_proto_text_functions_lib.cc b/tf/tools/proto_text/gen_proto_text_functions_lib.cc
 index 25b1d57cc3b..21c9bdde36b 100644
---- a/tensorflow/tools/proto_text/gen_proto_text_functions_lib.cc
-+++ b/tensorflow/tools/proto_text/gen_proto_text_functions_lib.cc
+--- a/tf/tools/proto_text/gen_proto_text_functions_lib.cc
++++ b/tf/tools/proto_text/gen_proto_text_functions_lib.cc
 @@ -250,14 +250,7 @@ string GetHeaderGuard(const FileDescriptor& fd, bool impl) {
  void Generator::AppendFieldValueAppend(const FieldDescriptor& field,
                                         const bool omit_default,
@@ -55,10 +55,10 @@ index 25b1d57cc3b..21c9bdde36b 100644
    const string package = fd.package();
    std::set<const FileDescriptor*> all_fd;
    std::set<const Descriptor*> all_d;
-diff --git a/tensorflow/tsl/platform/default/build_config.bzl b/tensorflow/tsl/platform/default/build_config.bzl
+diff --git a/tf/tsl/platform/default/build_config.bzl b/tf/tsl/platform/default/build_config.bzl
 index a325340067d..3fc976efd98 100644
---- a/tensorflow/tsl/platform/default/build_config.bzl
-+++ b/tensorflow/tsl/platform/default/build_config.bzl
+--- a/tf/tsl/platform/default/build_config.bzl
++++ b/tf/tsl/platform/default/build_config.bzl
 @@ -401,13 +401,6 @@ def py_proto_library(
          # is not explicitly listed in py_libs. Instead, host system is assumed to
          # have grpc installed.
@@ -82,10 +82,10 @@ index a325340067d..3fc976efd98 100644
      )
  
      if default_runtime and not default_runtime in py_libs + deps:
-diff --git a/tensorflow/workspace2.bzl b/tensorflow/workspace2.bzl
+diff --git a/tf/workspace2.bzl b/tf/workspace2.bzl
 index 3d1534d3803..4de954cc19b 100644
---- a/tensorflow/workspace2.bzl
-+++ b/tensorflow/workspace2.bzl
+--- a/tf/workspace2.bzl
++++ b/tf/workspace2.bzl
 @@ -463,14 +463,14 @@ def _tf_repositories():
      tf_http_archive(
          name = "com_google_protobuf",
@@ -117,10 +117,10 @@ index 3d1534d3803..4de954cc19b 100644
      )
  
      tf_http_archive(
-diff --git a/tensorflow/workspace3.bzl b/tensorflow/workspace3.bzl
+diff --git a/tf/workspace3.bzl b/tf/workspace3.bzl
 index 91871db22c8..5cfa0553579 100644
---- a/tensorflow/workspace3.bzl
-+++ b/tensorflow/workspace3.bzl
+--- a/tf/workspace3.bzl
++++ b/tf/workspace3.bzl
 @@ -37,11 +37,11 @@ def workspace():
      )
  
@@ -442,4 +442,4 @@ index 3b946e563d4..00000000000
 @@ -1,3 +0,0 @@
 -# Necessary for bazel to recognize this as a package.
 -
--# copybara:uncomment package(default_applicable_licenses = ["//tensorflow:license"])
+-# copybara:uncomment package(default_applicable_licenses = ["//tf:license"])

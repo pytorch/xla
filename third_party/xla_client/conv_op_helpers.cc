@@ -1,4 +1,4 @@
-/* Copyright 2017 The TensorFlow Authors. All Rights Reserved.
+/* Copyright 2017 The TF Authors. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -640,7 +640,6 @@ StatusOr<XlaOp> MakeXlaBackpropFilterConvOp(
     dnums.set_output_feature_dimension(attrs.num_spatial_dims + 1);
   }
 
-  // Tensorflow filter shape is [ H, W, ..., inC, outC ].
   for (int i = 0; i < attrs.num_spatial_dims; ++i) {
     dnums.add_output_spatial_dimensions(i);
   }

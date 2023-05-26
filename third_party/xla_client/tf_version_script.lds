@@ -1,6 +1,5 @@
-tensorflow {
+tf {
   global:
-    *tensorflow*;
     *tsl*;
     *absl*;
     *protobuf*;

@@ -14,9 +14,6 @@
 #include "third_party/xla_client/util.h"
 #include "torch_xla/csrc/helpers.h"
 
-// Code extracted from:
-// https://github.com/tensorflow/tensorflow/blob/dc4c6d305ba3d2de4a795ec77b483b0fa695b9ee/tensorflow/compiler/tf2xla/kernels/image_ops.cc#L399
-
 namespace torch_xla {
 namespace {
 

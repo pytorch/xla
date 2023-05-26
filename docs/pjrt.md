@@ -5,9 +5,8 @@ builds_. See the [same document on the r2.0 branch](https://github.com/pytorch/x
 for the status in the latest stable release.
 
 The PyTorch/XLA team is currently migrating from the currently-supported XRT
-runtime to the [PJRT
-runtime](https://github.com/tensorflow/tensorflow/tree/master/xla/pjrt)
-used by [JAX](https://github.com/google/jax).
+runtime to the PJRT
+runtime used by [JAX](https://github.com/google/jax).
 
 PJRT is available for preview in PyTorch/XLA 2.0. **We are planning to make
 PJRT our officially supported runtime**, so we encourage all users to experiment

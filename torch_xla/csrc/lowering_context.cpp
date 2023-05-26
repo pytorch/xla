@@ -42,10 +42,6 @@ class HloMetadataSetter {
   static void PopulateXlaOpMetadata(LoweringContext* loctx,
                                     const torch::lazy::Node* node) {
     xla::OpMetadata metadata;
-    // NOTE: we apply some string manipulation as xprof backend utility
-    // for nesting/grouping traces depends on certain op name/type
-    // patterns for classification.
-    // https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/profiler/utils/tf_op_utils.cc#L55
     std::string op_type =
         absl::StrReplaceAll(node->op().ToString(), {{":", "_"}});
     metadata.set_op_type(op_type);

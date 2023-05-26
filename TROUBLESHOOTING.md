@@ -268,7 +268,7 @@ only be enabled for debugging.
 
 * ```TF_CPP_MIN_LOG_LEVEL```: Level to print messages for. `TF_CPP_MIN_LOG_LEVEL=0` will turn
   on INFO logging, `TF_CPP_MIN_LOG_LEVEL=1` WARNING and so on. Our PyTorch/XLA `TF_VLOG` uses
-  `tensorflow::INFO` level by default so to see VLOGs set `TF_CPP_MIN_LOG_LEVEL=0`.
+  `tf::INFO` level by default so to see VLOGs set `TF_CPP_MIN_LOG_LEVEL=0`.
 
 * ```XLA_DUMP_HLO_GRAPH```: If set to `=1` in case of a compilation or execution error the
   offending HLO graph will be dumped as part of the runtime error raised by `xla_util.cc`.

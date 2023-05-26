@@ -147,7 +147,7 @@ variables:
     TPUVM_MODE:
       description:
         - Include some additional TPUVM features and code when building the
-          third party tensorflow.
+          third party tf.
       type: bool
       default_value: false
     TORCH_XLA_VERSION:
@@ -166,7 +166,7 @@ variables:
     TPU_ML_PLATFORM:
       description:
         - Name of the ML platform being used on TPU, e.g. PyTorch/XLA,
-          Tensorflow, or JAX.
+          tf, or JAX.
       type: string
       default_value: "PyTorch/XLA"
     XLA_BAZEL_VERBOSE:
@@ -425,7 +425,7 @@ variables:
       description:
         - Level to print messages for. TF_CPP_MIN_LOG_LEVEL=0 will turn on INFO
           logging, TF_CPP_MIN_LOG_LEVEL=1 WARNING and so on. Our PyTorch/XLA
-          TF_VLOG uses tensorflow::INFO level by default so to see VLOGs set
+          TF_VLOG uses tf::INFO level by default so to see VLOGs set
           TF_CPP_MIN_LOG_LEVEL=0.
       type: int
       default_value: 1

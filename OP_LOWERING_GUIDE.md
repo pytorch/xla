@@ -11,7 +11,7 @@ export PJRT_DEVICE=CPU
 ```
 
 ## Understanding the operation
-You can find the definition of the C++ ATen operations in [native_functions.yaml](https://github.com/pytorch/pytorch/blob/main/aten/src/ATen/native/native_functions.yaml). After you build Pytorch/XLA from source, you will also find our default implementation (a boxed kernel which forwards calls to PyTorch native CPU) in `xla/torch_xla/csrc/aten_cpu_fallback.h/cpp`. Pytorch operations can usually be mapped to [PyTorch tensor api](https://pytorch.org/docs/stable/index.html) easily. If that is not the case searching the PyTorch native implementation under [PyTorch repo](https://github.com/pytorch/pytorch) is recommended. The goal is to lower the PyTorch operations into a sequence of XLA operations defined in [here](https://www.tensorflow.org/xla/operation_semantics).
+You can find the definition of the C++ ATen operations in [native_functions.yaml](https://github.com/pytorch/pytorch/blob/main/aten/src/ATen/native/native_functions.yaml). After you build Pytorch/XLA from source, you will also find our default implementation (a boxed kernel which forwards calls to PyTorch native CPU) in `xla/torch_xla/csrc/aten_cpu_fallback.h/cpp`. Pytorch operations can usually be mapped to [PyTorch tensor api](https://pytorch.org/docs/stable/index.html) easily. If that is not the case searching the PyTorch native implementation under [PyTorch repo](https://github.com/pytorch/pytorch) is recommended. The goal is to lower the PyTorch operations into a sequence of XLA operations defined.
 
 ## File structure
 All file mentioned below lives under the `xla/torch_xla/csrc` folder, with the exception of `codegen/xla_native_functions.yaml`

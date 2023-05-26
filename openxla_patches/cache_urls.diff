@@ -21,7 +21,7 @@ index 02a0c926c99..caa0f5cbed9 100644
 @@ -13,7 +13,9 @@ def repo(name):
          strip_prefix = "llvm-project-{commit}".format(commit = LLVM_COMMIT),
          urls = [
-             "https://storage.googleapis.com/mirror.tensorflow.org/github.com/llvm/llvm-project/archive/{commit}.tar.gz".format(commit = LLVM_COMMIT),
+             "https://storage.googleapis.com/mirror.tf.org/github.com/llvm/llvm-project/archive/{commit}.tar.gz".format(commit = LLVM_COMMIT),
 +            "https://storage.googleapis.com/tpu-pytorch/llvm-raw/{commit}.tar.gz".format(commit = LLVM_COMMIT),
              "https://github.com/llvm/llvm-project/archive/{commit}.tar.gz".format(commit = LLVM_COMMIT),
 +            "https://storage.googleapis.com/tpu-pytorch/llvm-raw/{commit}.tar.gz".format(commit = LLVM_COMMIT),

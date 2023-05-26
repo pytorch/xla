@@ -1,8 +1,8 @@
 link error during building
-diff --git a/tensorflow/core/profiler/convert/xplane_to_tools_data.cc b/tensorflow/core/profiler/convert/xplane_to_tools_data.cc
+diff --git a/tf/core/profiler/convert/xplane_to_tools_data.cc b/tf/core/profiler/convert/xplane_to_tools_data.cc
 index 787287d0107..ebc74d74802 100644
---- a/tensorflow/core/profiler/convert/xplane_to_tools_data.cc
-+++ b/tensorflow/core/profiler/convert/xplane_to_tools_data.cc
+--- a/tf/core/profiler/convert/xplane_to_tools_data.cc
++++ b/tf/core/profiler/convert/xplane_to_tools_data.cc
 @@ -251,8 +251,9 @@ StatusOr<std::string> ConvertMultiXSpacesToToolData(
      return ConvertMultiXSpacesToTfDataBottleneckAnalysis(session_snapshot);
    } else if (tool_name == "op_profile") {

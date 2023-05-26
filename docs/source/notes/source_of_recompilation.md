@@ -14,7 +14,7 @@ Often when recompilation happens we say we just need dynamic shape support and t
 
 Yes it’s pretty common that input dataset contains examples with different shapes, e.g. sentences with varying length or images with different sizes. Without normalization, it’ll cause recompilation for every new input shape.
 
-Tensorflow graph mode users are more used to do padding/bucketization (`tf.pad`) to normalize input shapes to one or a few buckets. But this is kinda anti-pattern for PyTorch eager frontend users (which is the same user lazy tensor frontend is trying to target) since different input shapes just doesn’t matter for eager CPU/CUDA backend.
+tf graph mode users are more used to do padding/bucketization (`tf.pad`) to normalize input shapes to one or a few buckets. But this is kinda anti-pattern for PyTorch eager frontend users (which is the same user lazy tensor frontend is trying to target) since different input shapes just doesn’t matter for eager CPU/CUDA backend.
 
 **Proposed workaround:** okay now let’s say we can work around this problem by teaching our users to do padding/bucketization (it’s hard in practice :P). What’s next?
 

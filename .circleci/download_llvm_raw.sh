@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# Local llvm cache in case the tensorflow mirror becomes unavailable
+# Local llvm cache in case the tf mirror becomes unavailable
 function download_llvm_raw_archive() {
-  # Extract the xla pinned tensorflow/third_party/llvm version,
+  # Extract the xla pinned tf/third_party/llvm version,
   # avoid doing this manually.
   git clone --recursive --quiet https://github.com/pytorch/xla.git
   local LLVM_COMMIT=$(cat xla/third_party/tensorflow/third_party/llvm/workspace.bzl \
