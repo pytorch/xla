@@ -34,28 +34,3 @@ class TfRecordReader(object):
       The raw bytes of the record, or ``None`` in case of EOF.
     """
     return torch_xla._XLAC._xla_tfrecord_read(self._reader)
-
-  def read_example(self):
-    """Reads a TfExample.
-
-    Returns:
-      In case of EOD returns ``None``, otherwise a dictionary whose keys
-      are the feature names, and values the tensors containing their
-      data.
-    """
-    ex = torch_xla._XLAC._xla_tfexample_read(self._reader)
-    if self._transforms is None or ex is None:
-      return ex
-    return self._transform_example(ex)
-
-  def _transform_example(self, ex):
-    for lbl, data in ex.items():
-      trs = self._transforms.get(lbl, None)
-      if trs is not None:
-        if callable(trs):
-          ex[lbl] = trs(data)
-        elif trs == 'STR':
-          ex[lbl] = data.numpy().tobytes().decode('ascii')
-        else:
-          raise RuntimeError('Invalid transform: {}'.format(trs))
-    return ex
