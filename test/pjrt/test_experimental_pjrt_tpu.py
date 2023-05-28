@@ -205,6 +205,17 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
       self.assertIsInstance(device['core_on_chip'], int)
 
   @staticmethod
+  def _global_device_attributes():
+    return pjrt._global_device_attributes()
+
+  def test_global_device_attributes(self):
+    result = pjrt._run_multiprocess(self._global_device_attributes())
+    for device in result.values():
+      self.assertCountEqual(['coords', 'core_on_chip'], list(device.keys()))
+      self.assertIsInstance(device['coords'], list)
+      self.assertIsInstance(device['core_on_chip'], int) 
+
+  @staticmethod
   def _execute_time_metric():
     # Initialize the client before starting the timer.
     xm.xla_device()
