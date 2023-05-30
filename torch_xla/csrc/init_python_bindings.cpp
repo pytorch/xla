@@ -797,8 +797,9 @@ std::vector<bool> check_materialization_helper(
         // compuation is required to get the value of this tensor.
         need_materialization.push_back(true);
       }
+    } else if (xtensor->CurrentTensorData().has_value()) {
+      need_materialization.push_back(false);
     } else {
-      // TODO: maybe also handle it is a XLATensor with tensor_data case
       XLA_CHECK(false)
           << "_check_tensor_need_materialization "
              "currently does not handle XLATensor without XLAData and IR";
