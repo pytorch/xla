@@ -45,7 +45,6 @@ tf_cc_shared_object(
         "@org_tensorflow//tensorflow/compiler/xla/service:sharding_propagation",
         "@org_tensorflow//tensorflow/compiler/xla/service/spmd:spmd_partitioner",
         "@org_tensorflow//tensorflow/core",
-        "@org_tensorflow//tensorflow/core:protos_all_cc",
         "@org_tensorflow//tensorflow/core/platform:env",
         "@org_tensorflow//tensorflow/core/profiler/lib:traceme",
         "@org_tensorflow//tensorflow/python/profiler/internal:profiler_pywrap_impl",
