@@ -145,7 +145,6 @@ ptxla_cc_library(
         "@org_tensorflow//tensorflow/compiler/xla/stream_executor:dnn",
         "@org_tensorflow//tensorflow/core:lib",
         "@org_tensorflow//tensorflow/core/framework:tensor_shape",
-        "@org_tensorflow//tensorflow/core/kernels:conv_ops",
         "@org_tensorflow//tensorflow/core/lib/core:errors",
         "@org_tensorflow//tensorflow/core/lib/gtl:inlined_vector",
         "@org_tensorflow//tensorflow/core/profiler/lib:traceme",
