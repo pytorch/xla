@@ -495,6 +495,8 @@ PjRtComputationClient::ExecuteComputation(
                << " Done";
     // Signal that `ExecuteSharded` has completed for the ExecuteTime
     // metric. Copies the `timed` shared pointer into the lambda.
+    XLA_CHECK(returned_future.IsValid())
+        << "returned_future in ExecuteComputation is empty";
     returned_future.OnReady(
         [timed, lock = std::move(lock)](Status unused) mutable {
           timed.reset();
@@ -602,6 +604,8 @@ PjRtComputationClient::ExecuteReplicated(
     // will finish execution roughly at the same time, hence only use one of
     // the returned_futures. Copies the `timed` shared pointer into the
     // lambda.
+    XLA_CHECK(returned_futures[0].IsValid())
+        << "returned_future in ExecuteReplicated is empty";
     returned_futures[0].OnReady(
         [timed, lock = std::move(lock)](Status unused) mutable {
           timed.reset();
