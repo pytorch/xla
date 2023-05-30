@@ -1,6 +1,6 @@
 syntax = "proto2";
 
-import "tensorflow/core/protobuf/tpu/topology.proto";
+
 
 package xla.service.grpc;
 
