@@ -50,8 +50,8 @@ spec:
       python3 /src/pytorch/xla/test/dynamo/test_num_output.py
       python3 /src/pytorch/xla/test/dynamo/test_dynamo_integrations_util.py
       python3 /src/pytorch/xla/test/dynamo/test_dynamo.py
-      PJRT_DEVICE=TPU_LEGACY XLA_EXPERIMENTAL=nonzero:masked_select python3 /src/pytorch/xla/test/ds/test_dynamic_shape_models.py -v
-      PJRT_DEVICE=TPU_LEGACY XLA_EXPERIMENTAL=nonzero:masked_select python3 /src/pytorch/xla/test/ds/test_dynamic_shapes.py -v
+      XLA_EXPERIMENTAL=nonzero:masked_select python3 /src/pytorch/xla/test/ds/test_dynamic_shape_models.py -v
+      XLA_EXPERIMENTAL=nonzero:masked_select python3 /src/pytorch/xla/test/ds/test_dynamic_shapes.py -v
     volumeMounts:
     - mountPath: /dev/shm
       name: dshm
