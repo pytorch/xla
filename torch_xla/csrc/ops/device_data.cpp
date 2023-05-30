@@ -2,6 +2,7 @@
 
 #include <sstream>
 
+#include "third_party/xla_client/runtime.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
 #include "torch_xla/csrc/tensor_util.h"
@@ -13,7 +14,7 @@ DeviceData::DeviceData(std::shared_ptr<torch::lazy::BackendData> data)
               /*hash_seed=*/(uint32_t)101),
       data_(std::move(data)) {
   std::optional<xla::OpSharding> op_sharding =
-      xla::ComputationClient::Get()->GetDataSharding(UnwrapXlaData(data_));
+      xla::GetClient()->GetDataSharding(UnwrapXlaData(data_));
   if (op_sharding.has_value()) {
     SetSharding(op_sharding.value());
   }

@@ -37,7 +37,7 @@ ptxla_cc_library(
     srcs = ["cpp_test_util.cpp"],
     hdrs = ["cpp_test_util.h"],
     deps = [
-        "//third_party/xla_client:computation_client",
+        "//third_party/xla_client:runtime",
         "//third_party/xla_client:debug_macros",
         "//third_party/xla_client:sys_util",
         "//torch_xla/csrc:tensor",
@@ -101,7 +101,7 @@ ptxla_cc_library(
     deps = [
         ":cpp_test_util",
         ":torch_xla_test",
-        "//third_party/xla_client:computation_client",
+        "//third_party/xla_client:runtime",
         "//third_party/xla_client:debug_macros",
         "//third_party/xla_client:multi_wait",
         "//third_party/xla_client:thread_pool",

@@ -15,38 +15,9 @@
 #include "third_party/xla_client/debug_macros.h"
 #include "third_party/xla_client/env_vars.h"
 #include "third_party/xla_client/mesh_service.h"
-#include "third_party/xla_client/pjrt_computation_client.h"
 #include "third_party/xla_client/sys_util.h"
-#include "third_party/xla_client/xrt_computation_client.h"
 
 namespace xla {
-namespace {
-
-std::atomic<ComputationClient*> g_computation_client(nullptr);
-std::once_flag g_computation_client_once;
-
-ComputationClient* CreateClient() {
-  if (sys_util::GetEnvBool("XLA_DUMP_FATAL_STACK", false)) {
-    tsl::testing::InstallStacktraceHandler();
-  }
-  auto client = ComputationClient::Create();
-  return client.release();
-}
-
-}  // namespace
-
-std::unique_ptr<ComputationClient> ComputationClient::Create() {
-  std::unique_ptr<ComputationClient> client;
-
-  if (sys_util::GetEnvString(env::kEnvPjRtDevice, "") != "") {
-    client = std::unique_ptr<ComputationClient>(new PjRtComputationClient());
-  } else {
-    client = std::unique_ptr<ComputationClient>(new XrtComputationClient());
-  }
-
-  XLA_CHECK(client.get() != nullptr);
-  return client;
-}
 
 std::shared_ptr<ComputationClient::Computation> ComputationClient::Compile(
     XlaComputation computation, std::string compilation_device,
@@ -76,37 +47,10 @@ std::vector<std::string> ComputationClient::GetCompilationDevices(
   return compilation_devices;
 }
 
-void ComputationClient::RunLocalService(uint64_t service_port) {
-  try {
-    XrtLocalService* service = new XrtLocalService(
-        "localservice|localhost:" + std::to_string(service_port),
-        "localservice", 0);
-    service->Start();
-    service->Join();
-  } catch (const std::runtime_error& error) {
-    if (std::string(error.what()).find("Couldn't open device: /dev/accel0") !=
-        std::string::npos) {
-      TF_LOG(INFO) << "Local service has been created by other process, return";
-    } else {
-      throw;
-    }
-  }
-}
-
 int64_t ComputationClient::GetDeviceOrdinal(const std::string& device) {
   auto pos = device.rfind(':');
   XLA_CHECK_NE(pos, std::string::npos) << device;
   return std::stoi(device.substr(pos + 1));
-}
-
-ComputationClient* ComputationClient::Get() {
-  std::call_once(g_computation_client_once,
-                 [&]() { g_computation_client = CreateClient(); });
-  return g_computation_client.load();
-}
-
-ComputationClient* ComputationClient::GetIfInitialized() {
-  return g_computation_client.load();
 }
 
 metrics::Metric* ComputationClient::TransferToServerMetric() {

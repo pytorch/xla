@@ -3,6 +3,7 @@
 #include <ATen/ScalarOps.h>
 
 #include "third_party/xla_client/debug_macros.h"
+#include "third_party/xla_client/runtime.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/device.h"
@@ -75,7 +76,7 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
       const torch::lazy::BackendDevice& device,
       const torch::lazy::Shape& shape) const override {
     xla::Shape xla_shape = MakeXlaShapeFromLazyShape(shape, device);
-    return WrapXlaData(xla::ComputationClient::Get()->CreateDataPlaceholder(
+    return WrapXlaData(xla::GetClient()->CreateDataPlaceholder(
         device.toString(), std::move(xla_shape)));
   }
 
@@ -117,7 +118,7 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
   std::vector<std::string> GetCompilationDevices(
       const std::string& device,
       c10::ArrayRef<std::string> devices) const override {
-    return xla::ComputationClient::Get()->GetCompilationDevices(device,
+    return xla::GetClient()->GetCompilationDevices(device,
                                                                 devices);
   }
 
@@ -151,7 +152,7 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
           {current_device.toString()}, &output_shapes.back()));
     }
     std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
-        client_computations = xla::ComputationClient::Get()->Compile(
+        client_computations = xla::GetClient()->Compile(
             std::move(compile_instances));
     return WrapClientComputation(client_computations);
   }
@@ -161,7 +162,7 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
       c10::ArrayRef<torch::lazy::BackendDataPtr> arguments,
       const torch::lazy::BackendDevice& device) const override {
     std::vector<xla::ComputationClient::DataPtr> results =
-        xla::ComputationClient::Get()->ExecuteComputation(
+        xla::GetClient()->ExecuteComputation(
             *(UnwrapClientComputation(computation).get()),
             UnwrapXlaData(arguments), device.toString());
     return WrapXlaData(results);

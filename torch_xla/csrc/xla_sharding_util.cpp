@@ -14,6 +14,7 @@
 #include "tensorflow/compiler/xla/service/sharding_propagation.h"
 #include "tensorflow/compiler/xla/service/spmd/spmd_partitioner.h"
 #include "tensorflow/compiler/xla/xla.pb.h"
+#include "third_party/xla_client/runtime.h"
 #include "torch/csrc/lazy/core/ir_util.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ops/device_data.h"
@@ -216,7 +217,7 @@ ShardingUtil::InputHandler(
 
   for (int64_t argument_i = 0; argument_i < arguments.size(); ++argument_i) {
     auto shards =
-        xla::ComputationClient::Get()->GetDataShards(arguments[argument_i]);
+        xla::GetClient()->GetDataShards(arguments[argument_i]);
     // With SPMD execution, all input is distributed across addressable devices,
     // either by sharding or replication.
     for (auto shard : shards) {
@@ -264,7 +265,7 @@ std::vector<xla::ComputationClient::DataPtr> ShardingUtil::OutputHandler(
             xla::HloSharding::Replicate().ToProto(),
             sharded_results[0][i]->shape());
       }
-      outputs.push_back(xla::ComputationClient::Get()->WrapDataShards(
+      outputs.push_back(xla::GetClient()->WrapDataShards(
           shards, GetVirtualDevice().toString(), sharding->shape.value(),
           sharding->sharding));
     }
@@ -451,7 +452,7 @@ void ShardingUtil::PrepareOutputShardingPropagation(
     // hold the corresponding computation results for both sharding &
     // replication.
     auto sharded_data_placeholder =
-        WrapXlaData(xla::ComputationClient::Get()->WrapDataShards(
+        WrapXlaData(xla::GetClient()->WrapDataShards(
             {}, GetVirtualDevice().toString(),
             (*sharding_specs)[i]->shape.value(),
             (*sharding_specs)[i]->sharding));

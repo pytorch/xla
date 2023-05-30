@@ -56,31 +56,57 @@ cc_test(
 )
 
 cc_library(
-  name = "computation_client_hdrs",
+  name = "runtime",
+  srcs = [
+    "runtime.cc",
+  ],
+  hdrs = [
+    "runtime.h",
+  ],
+  deps = [
+    ":computation_client",
+    ":env_vars",
+    ":pjrt_computation_client",
+    ":xrt_computation_client",
+    ":xrt_local_service",
+    "@org_tensorflow//tensorflow/tsl/platform:stacktrace",
+  ],
+)
+
+cc_library(
+  name = "computation_client",
+  srcs = [
+    "computation_client.cc",
+  ],
   hdrs = [
     "computation_client.h",
   ],
   deps = [
     ":debug_macros",
+    ":env_vars",
+    ":mesh_service",
+    ":metrics_analysis",
+    ":metrics_reader",
     ":metrics",
+    ":sys_util",
     ":types",
     ":util",
-    "@org_tensorflow//tensorflow/compiler/xla/client:xla_computation",
     "@org_tensorflow//tensorflow/compiler/xla:literal_util",
-  ]
+    "@org_tensorflow//tensorflow/compiler/xla/client:xla_computation",
+    "@com_google_absl//absl/strings",
+  ],
 )
 
 cc_library(
   name = "pjrt_computation_client",
   srcs = [
     "pjrt_computation_client.cc",
-    "computation_client.h",
   ],
   hdrs = [
     "pjrt_computation_client.h",
   ],
   deps = [
-    ":computation_client_hdrs",
+    ":computation_client",
     ":debug_macros",
     ":env_vars",
     ":tf_logging",
@@ -107,8 +133,8 @@ cc_library(
     "xrt_computation_client.h",
   ],
   deps = [
-    ":computation_client_hdrs",
     ":cache",
+    ":computation_client",
     ":debug_macros",
     ":env_vars",
     ":mesh_service",
@@ -185,31 +211,6 @@ cc_library(
     "@org_tensorflow//tensorflow/compiler/jit:xla_tpu_device",
     "@org_tensorflow//tensorflow/compiler/jit:xla_tpu_jit",
   ]),
-)
-
-cc_library(
-  name = "computation_client",
-  srcs = [
-      "computation_client.cc",
-  ],
-  hdrs = [
-      "computation_client.h",
-  ],
-  deps = [
-    ":pjrt_computation_client",
-    ":xrt_computation_client",
-    ":debug_macros",
-    ":env_vars",
-    ":mesh_service",
-    ":metrics_analysis",
-    ":metrics_reader",
-    ":metrics",
-    ":sys_util",
-    "@org_tensorflow//tensorflow/compiler/xla:literal_util",
-    "@org_tensorflow//tensorflow/compiler/xla/client:xla_computation",
-    "@org_tensorflow//tensorflow/tsl/platform:stacktrace",
-    "@com_google_absl//absl/strings",
-  ],
 )
 
 cc_library(

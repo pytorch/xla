@@ -18,7 +18,7 @@ tf_cc_shared_object(
     ],
     visibility = ["//visibility:public"],
     deps = [
-        "//third_party/xla_client:computation_client",
+        "//third_party/xla_client:runtime",
         "//third_party/xla_client:mesh_service",
         "//third_party/xla_client:metrics",
         "//third_party/xla_client:metrics_analysis",
