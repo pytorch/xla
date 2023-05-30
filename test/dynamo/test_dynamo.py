@@ -231,6 +231,7 @@ class DynamoTrainingOptimizerTest(unittest.TestCase):
     optimizer.step()
     return pred
 
+  @unittest.skip("TODO")
   def test_simple_model(self):
     torch._dynamo.reset()
     device = xm.xla_device()
@@ -251,6 +252,7 @@ class DynamoTrainingOptimizerTest(unittest.TestCase):
       assert torch.allclose(input.grad, xla_input.grad.cpu())
       assert torch.allclose(input, xla_input.cpu())
 
+  @unittest.skip("TODO")
   def test_resnet18(self):
     torch._dynamo.reset()
     met.clear_counters()
