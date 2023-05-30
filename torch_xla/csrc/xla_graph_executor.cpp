@@ -598,6 +598,19 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
       << ". Maybe the entry get "
          "kicked out of the LRU cache";
 
+  // std::vector<XLATensor::ShardingSpecPtr> sharding_specs(coll->indices.size(),
+  //                                                        nullptr);
+  // auto tensors = GetLiveTensors(device);
+
+
+  // // Extract sharding specs for the results and prepare the sharded data
+  // // placeholders if the computation is sharded.
+  // if (cachedComputation->is_sharded) {
+  //   ShardingUtil::PrepareOutputShardingPropagation(
+  //       tensors, coll->indices, cachedComputation->computation, &tensors_data,
+  //       &sharding_specs);
+  // }
+
   // Create DataPlaceHolder that will get filled in async executions.
   std::vector<xla::Shape>* output_shapes =
       DeviceContextArena::Get()->GetOutputShapesByHash(hash);
@@ -609,14 +622,14 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
             device.toString(), std::move(shape)));
     // If SPMD is enabled, we assume all output will be sharded or replicated
     // and wrapped inside PjRtShardedData handle.
-    if (ShardingUtil::UseVirtualDevice()) {
-      XLATensor::ShardingSpecPtr sharding =
-          std::make_shared<XLATensor::ShardingSpec>(
-              xla::HloSharding::Replicate().ToProto(), shape);
-      handle = WrapXlaData(runtime::GetComputationClient()->WrapDataShards(
-          {UnwrapXlaData(handle)}, GetVirtualDevice().toString(),
-          sharding->shape.value(), sharding->sharding));
-    }
+    // if (ShardingUtil::UseVirtualDevice()) {
+    //   XLATensor::ShardingSpecPtr sharding =
+    //       std::make_shared<XLATensor::ShardingSpec>(
+    //           xla::HloSharding::Replicate().ToProto(), shape);
+    //   handle = WrapXlaData(xla::GetComputationClient()->WrapDataShards(
+    //       {UnwrapXlaData(handle)}, GetVirtualDevice().toString(),
+    //       sharding->shape.value(), sharding->sharding));
+    // }
     placeholders.push_back(handle);
   }
 
@@ -646,11 +659,26 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
     }
   }
 
+  // TODO: verify is this the right place to call PrepareOutputShardingPropagation?
+  std::vector<XLATensor::ShardingSpecPtr> sharding_specs(coll->indices.size(),
+                                                         nullptr);
+  auto tensors = GetLiveTensors(device);
+  
+
+  // Extract sharding specs for the results and prepare the sharded data
+  // placeholders if the computation is sharded.
+  if (cachedComputation->is_sharded) {
+    ShardingUtil::PrepareOutputShardingPropagation(
+        tensors, coll->indices, cachedComputation->computation, &tensors_data,
+        &sharding_specs);
+  }
+
   std::shared_ptr<XLAGraphExecutor::Async> async = std::make_shared<Async>(
       &coll, std::move(arguments), placeholders, std::move(cachedComputation));
 
   // TODO(yeounoh) supply proper sharding specs for sharded results.
-  std::vector<XLATensor::ShardingSpecPtr> sharding_specs(placeholders.size());
+  // std::vector<XLATensor::ShardingSpecPtr> sharding_specs(placeholders.size());
+  sharding_specs = placeholders.size();
 
   auto syncfn = [async, hash, sharding_specs]() {
     try {
@@ -675,7 +703,7 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
                     *async->cached_computation->computation
                          ->client_computation(),
                     device_arguments, devices, execute_options),
-                sharding_specs);
+                sharding_specs, /*replicated_output=*/false);
         results = WrapXlaData(outputs);
         TF_VLOG(3) << "Executing Dynamo IR sharded graph hash "
                    << torch::lazy::HashToString(hash) << " on devices "
