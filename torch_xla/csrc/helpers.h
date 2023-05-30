@@ -112,9 +112,6 @@ class XlaHelpers {
   static xla::XlaOp LinearInterpolation(xla::XlaOp value0, xla::XlaOp value1,
                                         double alpha);
 
-  // Returns the shape of the given XLA operation.
-  static const xla::Shape& ShapeOfXlaOp(xla::XlaOp op);
-
   // Returns the list of dimension sizes for the given XLA operation.
   static std::vector<int64_t> SizesOfXlaOp(xla::XlaOp op);
 

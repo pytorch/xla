@@ -23,7 +23,6 @@
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir.h"
-#include "torch_xla/csrc/ir_util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/torch_util.h"

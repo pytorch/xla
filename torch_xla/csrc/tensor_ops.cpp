@@ -5,6 +5,7 @@
 
 #include "third_party/xla_client/debug_macros.h"
 #include "third_party/xla_client/util.h"
+#include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/tensor_methods.h"

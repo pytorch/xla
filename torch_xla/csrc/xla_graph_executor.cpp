@@ -49,6 +49,7 @@
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/ops/view.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
+#include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/xla_backend_impl.h"
@@ -1148,7 +1149,7 @@ XLAGraphExecutor::BuildInputOutputAliases(
       if (it != output_tensor_id_map.end()) {
         size_t output_index = it->second;
         xla::XlaOp root = lowering_ctx->GetResult(output_index);
-        const xla::Shape& root_shape = XlaHelpers::ShapeOfXlaOp(root);
+        const xla::Shape& root_shape = ShapeHelper::ShapeOfXlaOp(root);
         auto parameter_data_shape = UnwrapXlaData(parameters_data[i])->shape();
         // Need to check whether existing buffer and the new value has the same
         // shape and the existing buffer has not been aliased before aliasing
