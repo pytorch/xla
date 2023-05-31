@@ -200,7 +200,6 @@ cc_library(
     "@org_tensorflow//tensorflow/core/kernels:data_flow",
     "@org_tensorflow//tensorflow/core/protobuf/tpu:topology_proto_cc",
     "@org_tensorflow//tensorflow/compiler/xla/stream_executor:stream_executor_impl",
-    "@org_tensorflow//tensorflow/tsl/profiler/rpc:profiler_server_impl",
     "@com_google_absl//absl/numeric:int128",
     "@com_google_absl//absl/strings",
   ] + if_cuda_is_configured([
@@ -327,6 +326,7 @@ cc_library(
     hdrs = ["profiler.h"],
     deps = [
       "@org_tensorflow//tensorflow/tsl/profiler/rpc:profiler_server_impl",
+      "@org_tensorflow//tensorflow/tsl/profiler/rpc/client:profiler_client",
     ],
 )
 
