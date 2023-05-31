@@ -214,7 +214,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
       for device in result:
         self.assertCountEqual(['coords', 'core_on_chip'], list(device.keys()))
         self.assertIsInstance(device['coords'], list)
-        self.assertIsInstance(device['core_on_chip'], int) 
+        self.assertIsInstance(device['core_on_chip'], int)
 
   @staticmethod
   def _execute_time_metric():
