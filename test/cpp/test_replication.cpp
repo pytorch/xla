@@ -7,9 +7,9 @@
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "test/cpp/cpp_test_util.h"
 #include "test/cpp/torch_xla_test.h"
-#include "third_party/xla_client/runtime.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "third_party/xla_client/multi_wait.h"
+#include "third_party/xla_client/runtime.h"
 #include "third_party/xla_client/thread_pool.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/helpers.h"
@@ -46,8 +46,7 @@ void TestSingleReplication(
     instances.emplace_back(CreateCrsComputation(shape), device_str,
                            all_device_strings, &shape);
   }
-  auto compiled_computations =
-      xla::GetClient()->Compile(std::move(instances));
+  auto compiled_computations = xla::GetClient()->Compile(std::move(instances));
 
   std::vector<at::Tensor> tensors;
   for (size_t i = 0; i < device_strings.size(); ++i) {
@@ -70,8 +69,7 @@ void TestSingleReplication(
   mwait.Wait();
 
   for (size_t i = 0; i < results.size(); ++i) {
-    auto literals =
-        xla::GetClient()->TransferFromServer(results[i]);
+    auto literals = xla::GetClient()->TransferFromServer(results[i]);
     ASSERT_EQ(literals.size(), 1);
 
     // The result must be the original tensor value, multiplied by the number of

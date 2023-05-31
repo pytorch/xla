@@ -33,7 +33,6 @@
 #include "tensorflow/python/profiler/internal/profiler_pywrap_impl.h"
 #include "tensorflow/tsl/platform/env.h"
 #include "tensorflow/tsl/profiler/lib/traceme.h"
-#include "third_party/xla_client/runtime.h"
 #include "third_party/xla_client/mesh_service.h"
 #include "third_party/xla_client/metrics.h"
 #include "third_party/xla_client/metrics_analysis.h"
@@ -41,6 +40,7 @@
 #include "third_party/xla_client/multi_wait.h"
 #include "third_party/xla_client/profiler.h"
 #include "third_party/xla_client/record_reader.h"
+#include "third_party/xla_client/runtime.h"
 #include "third_party/xla_client/sys_util.h"
 #include "third_party/xla_client/thread_pool.h"
 #include "third_party/xla_client/util.h"
@@ -331,8 +331,8 @@ void StepMarker(const std::string& device_str,
   XLAGraphExecutor::Get()->MarkStep(device);
   bool debug_mode = xla::sys_util::GetEnvBool("PT_XLA_DEBUG", false);
   if (TF_PREDICT_FALSE(debug_mode)) {
-    std::string report = xla::metrics::CreatePerformanceReport(
-        xla::GetClient()->GetMetrics());
+    std::string report =
+        xla::metrics::CreatePerformanceReport(xla::GetClient()->GetMetrics());
     if (!report.empty()) {
       std::string fout = xla::sys_util::GetEnvString("PT_XLA_DEBUG_FILE", "");
       if (TF_PREDICT_FALSE(!fout.empty())) {
@@ -967,8 +967,7 @@ void InitXlaModuleBindings(py::module m) {
         [](const at::Tensor& tensor) { return GetTensorId(tensor); });
   m.def("_xla_get_devices",
         []() { return xla::GetClient()->GetLocalDevices(); });
-  m.def("_xla_num_devices",
-        []() { return xla::GetClient()->GetNumDevices(); });
+  m.def("_xla_num_devices", []() { return xla::GetClient()->GetNumDevices(); });
   m.def("_xla_get_all_devices",
         []() { return xla::GetClient()->GetAllDevices(); });
   m.def("_xla_real_devices", [](const std::vector<std::string>& devices) {
@@ -979,22 +978,20 @@ void InitXlaModuleBindings(py::module m) {
     }
     return xla_devices;
   });
-  m.def("_xla_set_replication_devices",
-        [](const std::vector<std::string>& devices) {
-          auto replication_devices =
-              std::make_shared<std::vector<std::string>>(devices);
-          xla::GetClient()->SetReplicationDevices(
-              std::move(replication_devices));
-        });
+  m.def(
+      "_xla_set_replication_devices",
+      [](const std::vector<std::string>& devices) {
+        auto replication_devices =
+            std::make_shared<std::vector<std::string>>(devices);
+        xla::GetClient()->SetReplicationDevices(std::move(replication_devices));
+      });
   m.def("_xla_get_replication_devices", []() {
-    auto replication_devices =
-        xla::GetClient()->GetReplicationDevices();
+    auto replication_devices = xla::GetClient()->GetReplicationDevices();
     return replication_devices != nullptr ? *replication_devices
                                           : std::vector<std::string>();
   });
   m.def("_xla_get_replication_devices_count", []() {
-    auto replication_devices =
-        xla::GetClient()->GetReplicationDevices();
+    auto replication_devices = xla::GetClient()->GetReplicationDevices();
     return replication_devices != nullptr ? replication_devices->size() : 0;
   });
   m.def("_xla_rendezvous",
@@ -1461,9 +1458,8 @@ void InitXlaModuleBindings(py::module m) {
            const std::vector<op_builder::OpPtr>& operands, py::dict args) {
           return op_builder::CreateOp(builder, opname, operands, args);
         });
-  m.def("_run_xrt_local_service", [](uint64_t service_port) {
-    xla::RunLocalService(service_port);
-  });
+  m.def("_run_xrt_local_service",
+        [](uint64_t service_port) { xla::RunLocalService(service_port); });
   m.def("_xla_sgd_optimizer_step_",
         [](const at::Tensor& found_inf, at::Tensor& step, at::Tensor& param,
            at::Tensor& buf, const at::Tensor& d_p, double weight_decay,
@@ -1585,8 +1581,7 @@ void InitXlaModuleBindings(py::module m) {
           XLA_CHECK(ShardingUtil::UseVirtualDevice())
               << "Virtual device must be enabled to use _get_local_shards";
           auto handle = UnwrapXlaData(xtensor->GetXlaData());
-          auto shard_handles =
-              xla::GetClient()->GetDataShards(handle);
+          auto shard_handles = xla::GetClient()->GetDataShards(handle);
           std::vector<at::Tensor> shards;
           for (auto& shard_handle : shard_handles) {
             auto xshard = XLATensor::Create(WrapXlaData(shard_handle));

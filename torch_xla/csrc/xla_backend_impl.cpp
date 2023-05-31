@@ -118,8 +118,7 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
   std::vector<std::string> GetCompilationDevices(
       const std::string& device,
       c10::ArrayRef<std::string> devices) const override {
-    return xla::GetClient()->GetCompilationDevices(device,
-                                                                devices);
+    return xla::GetClient()->GetCompilationDevices(device, devices);
   }
 
   std::vector<torch::lazy::ComputationPtr> Compile(
@@ -152,8 +151,8 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
           {current_device.toString()}, &output_shapes.back()));
     }
     std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
-        client_computations = xla::GetClient()->Compile(
-            std::move(compile_instances));
+        client_computations =
+            xla::GetClient()->Compile(std::move(compile_instances));
     return WrapClientComputation(client_computations);
   }
 

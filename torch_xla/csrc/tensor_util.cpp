@@ -645,14 +645,13 @@ void TransferToServerAsync(std::shared_ptr<DataAsync> async,
 
   std::vector<xla::ComputationClient::DataPtr> async_xla_datas =
       xla::GetClient()->CreateAsyncDatas(async->source_tensors);
-  async->handle_unlockers =
-      xla::GetClient()->LockAsyncDatas(async_xla_datas);
+  async->handle_unlockers = xla::GetClient()->LockAsyncDatas(async_xla_datas);
   async->async_datas = WrapXlaData(async_xla_datas);
   auto mwait = std::make_shared<xla::util::MultiWait>(/*num_wait=*/1);
   auto update_data = [async, async_xla_datas]() {
     try {
       xla::GetClient()->TransferToServer(async->source_tensors,
-                                                      async_xla_datas);
+                                         async_xla_datas);
     } catch (...) {
       // There are two paths of discovery of an exception happening on an
       // asynchronous task. One happens if the creator of the asynchronous task
@@ -685,8 +684,8 @@ torch::lazy::BackendDataPtr TensorToXlaData(
       // here and simply return a placeholder for the backend data ptr.
       // Data will only be transferred via CreateTensorsData, when users
       // call the mark_sharding API.
-      return WrapXlaData(xla::GetClient()->CreateDataPlaceholder(
-          "SPMD:0", shape));
+      return WrapXlaData(
+          xla::GetClient()->CreateDataPlaceholder("SPMD:0", shape));
     }
 
     // The tensor is bypassing the virtual device, so it should be replicated
@@ -732,8 +731,7 @@ torch::lazy::BackendDataPtr TensorToXlaData(
     source_tensors.emplace_back(shape, device.toString(),
                                 std::move(populate_fn));
 
-    auto handles =
-        xla::GetClient()->TransferToServer(source_tensors);
+    auto handles = xla::GetClient()->TransferToServer(source_tensors);
     XLA_CHECK_EQ(handles.size(), 1);
     return WrapXlaData(handles.front());
   }
@@ -928,8 +926,7 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
       source_tensors.emplace_back(std::move(shape), devices[i],
                                   std::move(populate_fn));
     }
-    return WrapXlaData(
-        xla::GetClient()->TransferToServer(source_tensors));
+    return WrapXlaData(xla::GetClient()->TransferToServer(source_tensors));
   }
 }
 
@@ -982,9 +979,8 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
                                     shard_device.toString(),
                                     std::move(populate_fn));
       }
-      new_handles.push_back(
-          xla::GetClient()->TransferShardsToServer(
-              source_tensors, devices[i], shape, sharding));
+      new_handles.push_back(xla::GetClient()->TransferShardsToServer(
+          source_tensors, devices[i], shape, sharding));
     } else {
       // If data is not explicilty marked for sharding, then it is replicated to
       // the rest of the available devices. This implicit replication is needed
@@ -998,8 +994,7 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
           };
       source_tensors.emplace_back(std::move(shape), devices[i],
                                   std::move(populate_fn));
-      new_handles =
-          xla::GetClient()->TransferToServer(source_tensors);
+      new_handles = xla::GetClient()->TransferToServer(source_tensors);
     }
     handles.insert(handles.end(), new_handles.begin(), new_handles.end());
   }
@@ -1027,8 +1022,7 @@ std::vector<at::Tensor> XlaDataToTensors(
     absl::Span<const torch::lazy::BackendDataPtr> xla_data,
     at::ScalarType dest_element_type) {
   std::vector<xla::Literal> literals =
-      xla::GetClient()->TransferFromServer(
-          UnwrapXlaData(xla_data));
+      xla::GetClient()->TransferFromServer(UnwrapXlaData(xla_data));
   std::vector<at::Tensor> tensors;
   tensors.reserve(literals.size());
   for (auto& literal : literals) {

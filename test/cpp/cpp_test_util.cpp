@@ -4,6 +4,7 @@
 #include <string>
 
 #include "third_party/xla_client/debug_macros.h"
+#include "third_party/xla_client/runtime.h"
 #include "third_party/xla_client/sys_util.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/ir_dump_util.h"
@@ -16,7 +17,6 @@
 #include "torch_xla/csrc/tensor_impl.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
-#include "third_party/xla_client/runtime.h"
 
 namespace torch_xla {
 namespace cpp_test {
@@ -224,15 +224,13 @@ void WithAllDevices(
   for (auto device_type : device_types) {
     std::vector<torch::lazy::BackendDevice> devices;
     std::vector<torch::lazy::BackendDevice> all_devices;
-    for (const auto& device_str :
-         xla::GetClient()->GetLocalDevices()) {
+    for (const auto& device_str : xla::GetClient()->GetLocalDevices()) {
       torch::lazy::BackendDevice device = ParseDeviceString(device_str);
       if (device.type() == device_type.type) {
         devices.push_back(device);
       }
     }
-    for (const auto& device_str :
-         xla::GetClient()->GetAllDevices()) {
+    for (const auto& device_str : xla::GetClient()->GetAllDevices()) {
       torch::lazy::BackendDevice device = ParseDeviceString(device_str);
       if (device.type() == device_type.type) {
         all_devices.push_back(device);
@@ -281,14 +279,12 @@ std::vector<xla::ComputationClient::DataPtr> Execute(
       program_shape.result(), static_cast<XlaDeviceType>(device.type()));
 
   std::vector<xla::ComputationClient::CompileInstance> instances;
-  instances.push_back({std::move(computation), device.toString(),
-                       xla::GetClient()->GetCompilationDevices(
-                           device.toString(), {}),
-                       &shape});
+  instances.push_back(
+      {std::move(computation), device.toString(),
+       xla::GetClient()->GetCompilationDevices(device.toString(), {}), &shape});
 
   std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
-      computations =
-          xla::GetClient()->Compile(std::move(instances));
+      computations = xla::GetClient()->Compile(std::move(instances));
 
   xla::ComputationClient::ExecuteComputationOptions options;
   return xla::GetClient()->ExecuteComputation(

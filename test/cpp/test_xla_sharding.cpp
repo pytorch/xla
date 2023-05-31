@@ -314,8 +314,7 @@ TEST_F(XLAShardingTest, OutputHandler) {
         << " local devices detected).";
   }
 
-  std::vector<std::string> devices =
-      xla::GetClient()->GetLocalDevices();
+  std::vector<std::string> devices = xla::GetClient()->GetLocalDevices();
 
   // Prepare an input vecotr `outputs` with 2 arguments per device.
   std::vector<std::vector<xla::ComputationClient::DataPtr>> outputs;
@@ -342,8 +341,7 @@ TEST_F(XLAShardingTest, OutputHandler) {
       ShardingUtil::OutputHandler(outputs, sharding_specs,
                                   /*replicated_output=*/true);
   EXPECT_EQ(sharded_outputs.size(), 2);
-  auto shards =
-      xla::GetClient()->GetDataShards(sharded_outputs[0]);
+  auto shards = xla::GetClient()->GetDataShards(sharded_outputs[0]);
   EXPECT_EQ(shards.size(), devices.size());
   EXPECT_FALSE(
       xla::Shape::Equal().IgnoreLayout()(shards[0]->shape(), tensor_shape));
@@ -383,14 +381,13 @@ TEST_F(XLAShardingTest, PrepareOutputShardingPropagation) {
                        /*is_sharded=*/true});
 
   std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
-      computations =
-          xla::GetClient()->Compile(std::move(instances));
+      computations = xla::GetClient()->Compile(std::move(instances));
   ComputationPtr computation = std::make_shared<Computation>(
       "add", std::move(computations[0]->move_computation()));
 
   // Prepare output sharding propagation, expect a sharded output placeholder.
-  std::vector<XLATensorPtr> tensors{XLATensor::Create(
-      WrapXlaData(xla::GetClient()->CreateDataPlaceholder(
+  std::vector<XLATensorPtr> tensors{
+      XLATensor::Create(WrapXlaData(xla::GetClient()->CreateDataPlaceholder(
           GetDefaultDevice()->toString(), std::move(shape))))};
   std::vector<torch::lazy::BackendDataPtr> data_placeholders;
   std::vector<XLATensor::ShardingSpecPtr> sharding_specs;
