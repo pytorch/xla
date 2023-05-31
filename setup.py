@@ -69,6 +69,8 @@ import sys
 import tempfile
 import torch
 import zipfile
+import traceback
+import pdb
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -215,81 +217,99 @@ class BazelExtension(Extension):
   """A C/C++ extension that is defined as a Bazel BUILD target."""
 
   def __init__(self, bazel_target):
-    self.bazel_target = bazel_target
-    self.relpath, self.target_name = (
-        posixpath.relpath(bazel_target, '//').split(':'))
-    ext_name = os.path.join(
-        self.relpath.replace(posixpath.sep, os.path.sep), self.target_name)
-    if ext_name.endswith('.so'):
-      ext_name = ext_name[:-3]
-    Extension.__init__(self, ext_name, sources=[])
+    try:
+      print("try to test BazelExtension!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+      self.bazel_target = bazel_target
+      self.relpath, self.target_name = (
+          posixpath.relpath(bazel_target, '//').split(':'))
+      ext_name = os.path.join(
+          self.relpath.replace(posixpath.sep, os.path.sep), self.target_name)
+      if ext_name.endswith('.so'):
+        ext_name = ext_name[:-3]
+      Extension.__init__(self, ext_name, sources=[])
+    except:
+      extype, value, tb = sys.exc_info()
+      traceback.print_exc()
+      pdb.post_mortem(tb)
 
 
 class BuildBazelExtension(command.build_ext.build_ext):
   """A command that runs Bazel to build a C/C++ extension."""
 
   def run(self):
-    for ext in self.extensions:
-      self.bazel_build(ext)
-    command.build_ext.build_ext.run(self)
+    try:
+      print("test run of BuildBazelExtension !!!!!!!!!!!!!!!!!!!!!!!!!!!")
+      for ext in self.extensions:
+        self.bazel_build(ext)
+      command.build_ext.build_ext.run(self)
+    except:
+      extype, value, tb = sys.exc_info()
+      traceback.print_exc()
+      pdb.post_mortem(tb)
 
   def bazel_build(self, ext):
-    if not os.path.exists(self.build_temp):
-      os.makedirs(self.build_temp)
+    try:
+      print("test bazel_build of BuildBazelExtension !!!!!!!!!!!!!!!!!!!!!!!!!!!")
+      if not os.path.exists(self.build_temp):
+        os.makedirs(self.build_temp)
 
-    bazel_argv = [
-        'bazel', 'build', ext.bazel_target,
-        f"--symlink_prefix={os.path.join(self.build_temp, 'bazel-')}",
-        '\n'.join(['--cxxopt=%s' % opt for opt in extra_compile_args])
-    ]
+      bazel_argv = [
+          'bazel', 'build', ext.bazel_target,
+          f"--symlink_prefix={os.path.join(self.build_temp, 'bazel-')}",
+          '\n'.join(['--cxxopt=%s' % opt for opt in extra_compile_args])
+      ]
 
-    # Debug build.
-    if DEBUG:
-      bazel_argv.append('--config=dbg')
+      # Debug build.
+      if DEBUG:
+        bazel_argv.append('--config=dbg')
 
-    if _check_env_flag('TPUVM_MODE'):
-      bazel_argv.append('--config=tpu')
+      if _check_env_flag('TPUVM_MODE'):
+        bazel_argv.append('--config=tpu')
 
-    # Remote cache authentication.
-    if _check_env_flag('BAZEL_REMOTE_CACHE'):
-      bazel_argv.append('--config=remote_cache')
-
-    if GCLOUD_KEY_FILE:
-      bazel_argv.append('--google_credentials=%s' % GCLOUD_KEY_FILE)
-      if not _check_env_flag('BAZEL_REMOTE_CACHE'):
+      # Remote cache authentication.
+      if _check_env_flag('BAZEL_REMOTE_CACHE'):
         bazel_argv.append('--config=remote_cache')
-    if CACHE_SILO_NAME:
-      bazel_argv.append('--remote_default_exec_properties=cache-silo-key=%s' %
-                        CACHE_SILO_NAME)
 
-    if _check_env_flag('BUILD_CPP_TESTS', default='0'):
-      bazel_argv.append('//test/cpp:all')
-      bazel_argv.append('//third_party/xla_client:all')
+      if GCLOUD_KEY_FILE:
+        bazel_argv.append('--google_credentials=%s' % GCLOUD_KEY_FILE)
+        if not _check_env_flag('BAZEL_REMOTE_CACHE'):
+          bazel_argv.append('--config=remote_cache')
+      if CACHE_SILO_NAME:
+        bazel_argv.append('--remote_default_exec_properties=cache-silo-key=%s' %
+                          CACHE_SILO_NAME)
 
-    if BAZEL_JOBS:
-      bazel_argv.append('--jobs=%s' % BAZEL_JOBS)
+      if _check_env_flag('BUILD_CPP_TESTS', default='0'):
+        bazel_argv.append('//test/cpp:all')
+        bazel_argv.append('//third_party/xla_client:all')
 
-    # Build configuration.
-    if _check_env_flag('BAZEL_VERBOSE'):
-      bazel_argv.append('-s')
-    if _check_env_flag('XLA_CUDA'):
-      bazel_argv.append('--config=cuda')
-    if _check_env_flag('XLA_CPU_USE_ACL'):
-      bazel_argv.append('--config=acl')
+      if BAZEL_JOBS:
+        bazel_argv.append('--jobs=%s' % BAZEL_JOBS)
 
-    if IS_WINDOWS:
-      for library_dir in self.library_dirs:
-        bazel_argv.append('--linkopt=/LIBPATH:' + library_dir)
+      # Build configuration.
+      if _check_env_flag('BAZEL_VERBOSE'):
+        bazel_argv.append('-s')
+      if _check_env_flag('XLA_CUDA'):
+        bazel_argv.append('--config=cuda')
+      if _check_env_flag('XLA_CPU_USE_ACL'):
+        bazel_argv.append('--config=acl')
 
-    self.spawn(bazel_argv)
+      if IS_WINDOWS:
+        for library_dir in self.library_dirs:
+          bazel_argv.append('--linkopt=/LIBPATH:' + library_dir)
 
-    ext_bazel_bin_path = os.path.join(self.build_temp, 'bazel-bin', ext.relpath,
-                                      ext.target_name)
-    ext_dest_path = self.get_ext_fullpath(ext.name)
-    ext_dest_dir = os.path.dirname(ext_dest_path)
-    if not os.path.exists(ext_dest_dir):
-      os.makedirs(ext_dest_dir)
-    shutil.copyfile(ext_bazel_bin_path, ext_dest_path)
+      self.spawn(bazel_argv)
+
+      ext_bazel_bin_path = os.path.join(self.build_temp, 'bazel-bin', ext.relpath,
+                                        ext.target_name)
+      ext_dest_path = self.get_ext_fullpath(ext.name)
+      ext_dest_dir = os.path.dirname(ext_dest_path)
+      if not os.path.exists(ext_dest_dir):
+        os.makedirs(ext_dest_dir)
+      shutil.copyfile(ext_bazel_bin_path, ext_dest_path)
+    except:
+      extype, value, tb = sys.exc_info()
+      traceback.print_exc()
+      pdb.post_mortem(tb)
 
 
 setup(
