@@ -226,8 +226,11 @@ class BazelExtension(Extension):
           self.relpath.replace(posixpath.sep, os.path.sep), self.target_name)
       if ext_name.endswith('.so'):
         ext_name = ext_name[:-3]
+      print("middle run of BazelExtension !!!!!!!!!!!!!!!!!!!!!!!!!!!")
       Extension.__init__(self, ext_name, sources=[])
+      print("finished test run of BazelExtension !!!!!!!!!!!!!!!!!!!!!!!!!!!")
     except:
+      print("failed test run of BazelExtension !!!!!!!!!!!!!!!!!!!!!!!!!!!")
       extype, value, tb = sys.exc_info()
       traceback.print_exc()
       pdb.post_mortem(tb)
@@ -241,8 +244,11 @@ class BuildBazelExtension(command.build_ext.build_ext):
       print("test run of BuildBazelExtension !!!!!!!!!!!!!!!!!!!!!!!!!!!")
       for ext in self.extensions:
         self.bazel_build(ext)
+      print("middle run of BuildBazelExtension !!!!!!!!!!!!!!!!!!!!!!!!!!!")
       command.build_ext.build_ext.run(self)
+      print("finished run of BuildBazelExtension !!!!!!!!!!!!!!!!!!!!!!!!!!!")
     except:
+      print("failed run of BuildBazelExtension !!!!!!!!!!!!!!!!!!!!!!!!!!!")
       extype, value, tb = sys.exc_info()
       traceback.print_exc()
       pdb.post_mortem(tb)
@@ -252,7 +258,7 @@ class BuildBazelExtension(command.build_ext.build_ext):
       print("test bazel_build of BuildBazelExtension !!!!!!!!!!!!!!!!!!!!!!!!!!!")
       if not os.path.exists(self.build_temp):
         os.makedirs(self.build_temp)
-
+      print("259 bazel_build of BuildBazelExtension !!!!!!!!!!!!!!!!!!!!!!!!!!!")
       bazel_argv = [
           'bazel', 'build', ext.bazel_target,
           f"--symlink_prefix={os.path.join(self.build_temp, 'bazel-')}",
@@ -296,17 +302,20 @@ class BuildBazelExtension(command.build_ext.build_ext):
       if IS_WINDOWS:
         for library_dir in self.library_dirs:
           bazel_argv.append('--linkopt=/LIBPATH:' + library_dir)
-
+      print("303 bazel_build of BuildBazelExtension !!!!!!!!!!!!!!!!!!!!!!!!!!!")
       self.spawn(bazel_argv)
-
+      print("305 bazel_build of BuildBazelExtension !!!!!!!!!!!!!!!!!!!!!!!!!!!")
       ext_bazel_bin_path = os.path.join(self.build_temp, 'bazel-bin', ext.relpath,
                                         ext.target_name)
       ext_dest_path = self.get_ext_fullpath(ext.name)
       ext_dest_dir = os.path.dirname(ext_dest_path)
       if not os.path.exists(ext_dest_dir):
         os.makedirs(ext_dest_dir)
+      print("312 bazel_build of BuildBazelExtension !!!!!!!!!!!!!!!!!!!!!!!!!!!")
       shutil.copyfile(ext_bazel_bin_path, ext_dest_path)
+      print("finished bazel_build of BuildBazelExtension !!!!!!!!!!!!!!!!!!!!!!!!!!!")
     except:
+      print("failed bazel_build of BuildBazelExtension !!!!!!!!!!!!!!!!!!!!!!!!!!!")
       extype, value, tb = sys.exc_info()
       traceback.print_exc()
       pdb.post_mortem(tb)
