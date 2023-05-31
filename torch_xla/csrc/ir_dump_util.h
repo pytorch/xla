@@ -25,7 +25,8 @@ class DumpUtil {
       absl::Span<const torch::lazy::Node* const> roots);
 
   static std::string ToHlo(c10::ArrayRef<torch::lazy::Value> values,
-                           const torch::lazy::BackendDevice& device);
+                           const torch::lazy::BackendDevice& device,
+                           bool to_stable_hlo = false);
 };
 
 }  // namespace torch_xla

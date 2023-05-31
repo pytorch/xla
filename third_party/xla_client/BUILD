@@ -347,6 +347,19 @@ cc_library(
 )
 
 cc_library(
+    name = "stablehlo_helper",
+    srcs = ["stablehlo_helper.cc"],
+    hdrs = ["stablehlo_helper.h"],
+    deps = [
+        ":types",
+        ":xla_util",
+        "@org_tensorflow//tensorflow/compiler/xla/translate/hlo_to_mhlo:hlo_to_mlir_hlo",
+        "@org_tensorflow//tensorflow/compiler/xla/translate/mhlo_to_hlo:mlir_hlo_to_hlo",
+        "@org_tensorflow//tensorflow/compiler/xla/mlir_hlo:all_passes",
+    ],
+)
+
+cc_library(
     name = "sys_util",
     srcs = ["sys_util.cc"],
     hdrs = ["sys_util.h"],

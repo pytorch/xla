@@ -16,6 +16,7 @@ class DebugUtil {
     kText,
     kDot,
     kHlo,
+    kStableHlo,
   };
 
   static GraphFormat GetDefaultGraphFormat();
@@ -27,6 +28,10 @@ class DebugUtil {
       absl::Span<const XLATensorPtr> tensors,
       const std::vector<size_t>* indices,
       GraphFormat format = GetDefaultGraphFormat());
+
+  // Get 
+  static std::string GetTensorsGraphHlo(absl::Span<const XLATensorPtr> tensors,
+                                        const std::vector<size_t>* indices);
 
   // If the environment variable XLA_SAVE_TENSORS_FILE is set to the proper
   // output path, an instance of the report returned by GetTensorsGraphInfo() is

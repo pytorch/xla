@@ -102,7 +102,8 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   // Dumps the XLA HLO text of the computation accumulated in the graph which is
   // attached the tensors.
   // We don't use upstream DumpBackendComputation given we have our own format.
-  std::string DumpHloComputation(const std::vector<XLATensorPtr>& tensors);
+  std::string DumpHloComputation(const std::vector<XLATensorPtr>& tensors,
+                                 bool dump_stablehlo = false);
 
   // Retrieves the set of XLA tensors which are currently live in the system,
   // for the given device. If device is nullptr, the live tensors for all
@@ -120,6 +121,11 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   void SyncTensorsGraph(std::vector<XLATensorPtr>* tensors,
                         absl::Span<const std::string> devices, bool wait,
                         bool sync_ltc_data, bool warm_up_cache_only = false);
+
+  // 
+  std::string SyncTensorsGraphDumpHlo(std::vector<XLATensorPtr>* tensors,
+                                      absl::Span<const std::string> devices,
+                                      bool sync_ltc_data);
 
   // Makes sure that any outstanding IR operation accumulated over live tensors,
   // gets turned into device data. If wait is true, the sync operation will be

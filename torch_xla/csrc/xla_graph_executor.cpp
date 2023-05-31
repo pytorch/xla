@@ -312,7 +312,7 @@ torch::lazy::BackendDataPtr XLAGraphExecutor::GetBaseSeedData(
 }
 
 std::string XLAGraphExecutor::DumpHloComputation(
-    const std::vector<XLATensorPtr>& tensors) {
+    const std::vector<XLATensorPtr>& tensors, bool dump_stablehlo) {
   std::vector<torch::lazy::Value> ir_values;
   for (auto& tensor : tensors) {
     torch::lazy::Value ir_value = tensor->CurrentIrValue();
@@ -320,8 +320,9 @@ std::string XLAGraphExecutor::DumpHloComputation(
       ir_values.push_back(std::move(ir_value));
     }
   }
-  return !ir_values.empty() ? DumpUtil::ToHlo(ir_values, GetCurrentDevice())
-                            : std::string();
+  return !ir_values.empty()
+             ? DumpUtil::ToHlo(ir_values, GetCurrentDevice(), dump_stablehlo)
+             : std::string();
 }
 
 std::vector<XLATensorPtr> XLAGraphExecutor::GetLiveTensors(
@@ -356,6 +357,23 @@ void XLAGraphExecutor::SyncTensorsGraph(std::vector<XLATensorPtr>* tensors,
       async->mwait.Wait();
     }
   }
+}
+
+std::string XLAGraphExecutor::SyncTensorsGraphDumpHlo(
+    std::vector<XLATensorPtr>* tensors, absl::Span<const std::string> devices,
+    bool sync_ltc_data) {
+  tsl::profiler::TraceMe activity("SyncTensorsGraphDumpHlo",
+                                  tsl::profiler::TraceMeLevel::kInfo);
+  SyncTensorsConfig config;
+  config.sync_ltc_data = sync_ltc_data;
+  SyncTensorCollection coll = CollectSyncTensors(*tensors, config);
+  if (coll.indices.empty()) {
+    /* Enure previous execution is complete before exiting this
+     * function */
+    TensorCollectionBarrier(&coll);
+    return "";
+  }
+  return DebugUtil::GetTensorsGraphHlo(*tensors, &coll.indices);
 }
 
 void XLAGraphExecutor::SyncLiveTensorsGraph(

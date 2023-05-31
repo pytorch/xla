@@ -30,6 +30,8 @@ DebugUtil::GraphFormat DefaultGraphFormat() {
     return DebugUtil::GraphFormat::kHlo;
   } else if (fmt_str == "dot") {
     return DebugUtil::GraphFormat::kDot;
+  } else if (fmt_str == "stablehlo") {
+    return DebugUtil::GraphFormat::kStableHlo;
   }
   XLA_ERROR() << "Invalid save graph format: " << fmt_str;
 }
@@ -50,6 +52,34 @@ std::unordered_set<std::string>* LoadExperiments() {
 DebugUtil::GraphFormat DebugUtil::GetDefaultGraphFormat() {
   static GraphFormat format = DefaultGraphFormat();
   return format;
+}
+
+std::string DebugUtil::GetTensorsGraphHlo(
+    absl::Span<const XLATensorPtr> tensors,
+    const std::vector<size_t>* indices) {
+  std::vector<torch::lazy::Value> root_values;
+  xla::util::Unique<torch::lazy::BackendDevice> unique_device;
+  if (indices != nullptr) {
+    for (auto index : *indices) {
+      const XLATensorPtr& tensor = tensors[index];
+      torch::lazy::Value ir_value = tensor->CurrentIrValue();
+      if (ir_value) {
+        root_values.push_back(std::move(ir_value));
+        unique_device.set(tensor->GetDevice());
+      }
+    }
+  } else {
+    for (auto& tensor : tensors) {
+      torch::lazy::Value ir_value = tensor->CurrentIrValue();
+      if (ir_value) {
+        root_values.push_back(std::move(ir_value));
+        unique_device.set(tensor->GetDevice());
+      }
+    }
+  }
+  return DumpUtil::ToHlo(root_values,
+                         unique_device ? *unique_device : GetCurrentDevice(),
+                         /* to_stablehlo */ true);
 }
 
 std::string DebugUtil::GetTensorsGraphInfo(
@@ -106,6 +136,10 @@ std::string DebugUtil::GetTensorsGraphInfo(
   } else if (format == GraphFormat::kHlo) {
     graph_str = DumpUtil::ToHlo(
         root_values, unique_device ? *unique_device : GetCurrentDevice());
+  } else if (format == GraphFormat::kStableHlo) {
+    graph_str = DumpUtil::ToHlo(
+        root_values, unique_device ? *unique_device : GetCurrentDevice(),
+        /* to_stablehlo */ true);
   } else {
     XLA_ERROR() << "Invalid graph format: " << format;
   }
@@ -121,7 +155,9 @@ void DebugUtil::SaveTensorsGraphInfo(const char* name,
       "XLA_SAVE_TENSORS_FILE", "", GetCurrentDevice().ordinal());
   if (!save_file.empty()) {
     static std::mutex lock;
-    if (format == DebugUtil::GraphFormat::kHlo && indices->size() > 0) {
+    if ((format == DebugUtil::GraphFormat::kHlo ||
+         format == DebugUtil::GraphFormat::kStableHlo) &&
+        indices->size() > 0) {
       // Dumping the HLO might access the placeholder data created during
       // previous execution. We need to wait for last execution to finish before
       // proceeding.
