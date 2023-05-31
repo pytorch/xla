@@ -211,7 +211,10 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
   def test_global_device_attributes(self):
     result = pjrt._run_multiprocess(self._global_device_attributes())
     for device in result.values():
-      self.assertCountEqual(['coords', 'core_on_chip'], list(device.keys()))
+      if 'slice_id' in list(device.keys()): # for multislice scenario
+        self.assertCountEqual(['coords', 'core_on_chip', 'slice_id'], list(device.keys()))
+      else:
+        self.assertCountEqual(['coords', 'core_on_chip'], list(device.keys()))
       self.assertIsInstance(device['coords'], list)
       self.assertIsInstance(device['core_on_chip'], int) 
 

@@ -70,6 +70,111 @@ class Mesh:
   def get_logical_mesh(self):
     return self.device_ids.reshape(self.mesh_shape)
 
+class HybridMesh:
+  device_ids: np.ndarray
+  ici_mesh_shape: Tuple[int, ...]
+  dcn_mesh_shape: Tuple[int, ...]
+  axis_names: Tuple[str, ...]
+
+  def __init__(self, device_ids: Union[np.ndarray, List],
+              ici_mesh_shape: Tuple[int, ...],
+              dcn_mesh_shape: Tuple[int, ...],
+              axis_names: Tuple[str, ...] = None):
+    if not isinstance(device_ids, np.ndarray):
+      device_ids = np.array(device_ids)
+    assert (axis_names is None) or ((len(ici_mesh_shape) == len(axis_names)) and (len(dcn_mesh_shape) == len(axis_names)))
+    assert (len(device_ids) == np.prod(ici_mesh_shape) * np.prod(dcn_mesh_shape))
+    assert len(device_ids) == len(np.unique(device_ids))
+    self.device_ids = device_ids
+    self.ici_mesh_shape = ici_mesh_shape
+    self.dcn_mesh_shape = dcn_mesh_shape
+    self.axis_names = axis_names
+    assert all(d < self.size() for d in device_ids)
+
+  def size(self):
+    return np.prod(ici_mesh_shape) * np.prod(dcn_mesh_shape)
+
+  def shape(self):
+    return OrderedDict(
+        (name, ici_size * dcn_size) for name, ici_size, dcn_size in zip(self.axis_name, self.ici_mesh_shape, self.dcn_mesh_shape))
+
+  def _get_physical_tpu_mesh(devices: Sequence[Any]) -> np.ndarray:
+    r"""Rearrange TPU devices in a slice into a physical mesh."""    
+    device_attributes = pjrt.global_device_attributes()
+    device_coords = [d['coords'] for d in device_attributes]
+    dims = tuple(d + 1 for d in max(device_coords))
+    out = np.empty(dims, dtype=object)
+    for coords, d in zip(device_coords, self.device_ids):
+      out[coords[0], coords[1], coords[2]] = d
+    return out
+
+
+
+  def _create_device_mesh_for_nd_torus(physical_mesh: np.ndarray,
+      mesh_shape: Sequence[int]) -> Tuple[np.ndarray, List[Tuple[int,, ...]]]:
+    # Remaining physical axes to be assigned to logical axes.
+    assignable_physical_mesh = list(physical_mesh.shape)
+    # Map each logical axis to a subset of physical axes.
+    assignment: List[Tuple[int, ...]] = [() for _ in mesh_shape]
+    # Assign logical axes from highest network intensity to lowest.
+    # `mesh_shape` is assumed to ordered by lowest network intensity first, so
+    # reverse it first.
+    for logical_axis_index, logical_axis_size in reversed(
+      list(enumerate(mesh_shape))):
+      for num_axes in range(3, 0, -1):
+        axes = itertools.combinations(assignable_physical_mesh, num_axes)
+        indices = itertools.combinations(
+          range(len(assignable_physical_mesh)), num_axes)
+        for c_axes, c_indices in zip(axes, indices):
+          if np.product(c_axes) == logical_axis_size:
+          assignment[logical_axis_index] = c_indices
+          # Zero the assigned physical axes.
+          assignable_physical_mesh = [
+              0 if i in c_indices else v
+              for i, v in enumerate(assignable_physical_mesh)
+          ]
+          break
+        if assignment[logical_axis_index]:
+          # We already found an assignment from one candidate above.
+          break
+      else:
+        # If the num_axes for loop did not break, i.e. none of the candidates work
+        # goto here with this while-else construct.
+        if logical_axis_size > 1:
+          raise NotImplementedError(
+              'Failed to find assignment for logical_axis_index'
+              f' {logical_axis_index} of size {logical_axis_size} with remaining'
+              f' assignable mesh {assignable_physical_mesh}. The size of each'
+              ' axis in your logical mesh must be equal to the product of'
+              ' some subset of the physical mesh axis sizes. E.g logical mesh (4,'
+              ' 16) is compatible with physical mesh 4x4x4 since 4=4 and 16=4x4.'
+          )
+    # Flatten the assignment
+    transpose: List[int] = []
+    for x in assignment:
+      for y in x:
+        transpose.append(int(y))
+    return physical_mesh.transpose(transpose).reshape(mesh_shape), assignment
+
+
+  def create_device_mesh(mesh_shape: Sequence[int],
+    devices: Optional[Sequence[Any]] = None) -> np.ndarray:
+    devices = list_global_devices()
+    if np.prod(mesh_shape) != len(devices):
+      raise ValueError(f'Number of devices {len(devices)} must equal the product '
+                     f'of mesh_shape {mesh_shape}')
+    physical_mesh = _get_physical_tpu_mesh(devices)
+    device_mesh, assignment = _create_device_mesh_for_nd_torus(
+        physical_mesh, mesh_shape)
+    return device_mesh
+  
+
+  def create_hybrid_device_mesh(self):
+    pass
+
+
+  def get_logical_mesh(self):
+    pass
 
 @requires_pjrt
 def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
