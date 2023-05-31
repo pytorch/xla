@@ -93,7 +93,10 @@ cc_library(
     ":util",
     "@org_tensorflow//tensorflow/compiler/xla:literal_util",
     "@org_tensorflow//tensorflow/compiler/xla/client:xla_computation",
+    "@com_google_absl//absl/memory",
     "@com_google_absl//absl/strings",
+    "@com_google_absl//absl/types:optional",
+    "@com_google_absl//absl/types:span",
   ],
 )
 
@@ -121,6 +124,7 @@ cc_library(
     "@org_tensorflow//tensorflow/compiler/xla/pjrt:pjrt_c_api_client",
     "@org_tensorflow//tensorflow/tsl/profiler/lib:traceme",
     "@com_google_absl//absl/strings",
+    "@com_google_absl//absl/types:span",
   ],
 )
 

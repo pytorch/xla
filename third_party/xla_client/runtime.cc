@@ -12,7 +12,6 @@ std::atomic<ComputationClient*> g_computation_client(nullptr);
 std::once_flag g_computation_client_once;
 
 ComputationClient* CreateClient() {
-  // TODO: Does this belong here?
   if (sys_util::GetEnvBool("XLA_DUMP_FATAL_STACK", false)) {
     tsl::testing::InstallStacktraceHandler();
   }
