@@ -10,7 +10,8 @@ from torch_xla.experimental.xla_sharded_tensor import XLAShardedTensor
 from torch_xla.experimental.pjrt import requires_pjrt
 
 import numpy as np
-from typing import Tuple, Union, List
+import itertools
+from typing import Tuple, Union, List, Sequence, Any, Optional
 
 
 class Mesh:
@@ -92,13 +93,13 @@ class HybridMesh:
     assert all(d < self.size() for d in device_ids)
 
   def size(self):
-    return np.prod(ici_mesh_shape) * np.prod(dcn_mesh_shape)
+    return np.prod(self.ici_mesh_shape) * np.prod(self.dcn_mesh_shape)
 
   def shape(self):
     return OrderedDict(
         (name, ici_size * dcn_size) for name, ici_size, dcn_size in zip(self.axis_name, self.ici_mesh_shape, self.dcn_mesh_shape))
 
-  def _get_physical_tpu_mesh(devices: Sequence[Any]) -> np.ndarray:
+  def _get_physical_tpu_mesh(self,devices: Sequence[Any]) -> np.ndarray:
     r"""Rearrange TPU devices in a slice into a physical mesh."""    
     device_attributes = pjrt.global_device_attributes()
     device_coords = [d['coords'] for d in device_attributes]
@@ -110,8 +111,8 @@ class HybridMesh:
 
 
 
-  def _create_device_mesh_for_nd_torus(physical_mesh: np.ndarray,
-      mesh_shape: Sequence[int]) -> Tuple[np.ndarray, List[Tuple[int,, ...]]]:
+  def _create_device_mesh_for_nd_torus(self,physical_mesh: np.ndarray,
+      mesh_shape: Sequence[int]) -> Tuple[np.ndarray, List[Tuple[int, ...]]]:
     # Remaining physical axes to be assigned to logical axes.
     assignable_physical_mesh = list(physical_mesh.shape)
     # Map each logical axis to a subset of physical axes.
@@ -127,13 +128,13 @@ class HybridMesh:
           range(len(assignable_physical_mesh)), num_axes)
         for c_axes, c_indices in zip(axes, indices):
           if np.product(c_axes) == logical_axis_size:
-          assignment[logical_axis_index] = c_indices
-          # Zero the assigned physical axes.
-          assignable_physical_mesh = [
-              0 if i in c_indices else v
-              for i, v in enumerate(assignable_physical_mesh)
-          ]
-          break
+            assignment[logical_axis_index] = c_indices
+            # Zero the assigned physical axes.
+            assignable_physical_mesh = [
+                0 if i in c_indices else v
+                for i, v in enumerate(assignable_physical_mesh)
+            ]
+            break
         if assignment[logical_axis_index]:
           # We already found an assignment from one candidate above.
           break
@@ -157,14 +158,13 @@ class HybridMesh:
     return physical_mesh.transpose(transpose).reshape(mesh_shape), assignment
 
 
-  def create_device_mesh(mesh_shape: Sequence[int],
-    devices: Optional[Sequence[Any]] = None) -> np.ndarray:
-    devices = list_global_devices()
+  def create_device_mesh(self,mesh_shape: Sequence[int],
+    devices: Optional[Sequence[Any]]) -> np.ndarray:
     if np.prod(mesh_shape) != len(devices):
       raise ValueError(f'Number of devices {len(devices)} must equal the product '
                      f'of mesh_shape {mesh_shape}')
-    physical_mesh = _get_physical_tpu_mesh(devices)
-    device_mesh, assignment = _create_device_mesh_for_nd_torus(
+    physical_mesh = self._get_physical_tpu_mesh(devices)
+    device_mesh, assignment = self._create_device_mesh_for_nd_torus(
         physical_mesh, mesh_shape)
     return device_mesh
   
@@ -174,7 +174,7 @@ class HybridMesh:
 
 
   def get_logical_mesh(self):
-    pass
+    return self.create_device_mesh(self.ici_mesh_shape, self.device_ids)
 
 @requires_pjrt
 def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
