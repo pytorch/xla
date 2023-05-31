@@ -201,7 +201,6 @@ cc_library(
     "@org_tensorflow//tensorflow/core/protobuf/tpu:topology_proto_cc",
     "@org_tensorflow//tensorflow/compiler/xla/stream_executor:stream_executor_impl",
     "@org_tensorflow//tensorflow/tsl/profiler/rpc:profiler_server_impl",
-    "@org_tensorflow//tensorflow/tsl/profiler/rpc/client:profiler_client",
     "@com_google_absl//absl/numeric:int128",
     "@com_google_absl//absl/strings",
   ] + if_cuda_is_configured([
@@ -327,7 +326,7 @@ cc_library(
     srcs = ["profiler.cc"],
     hdrs = ["profiler.h"],
     deps = [
-        "@org_tensorflow//tensorflow/tsl/profiler/rpc:profiler_server_impl",
+      "@org_tensorflow//tensorflow/tsl/profiler/rpc:profiler_server_impl",
     ],
 )
 
@@ -541,9 +540,7 @@ tf_cc_shared_object(
         "@org_tensorflow//tensorflow/compiler/xla/client:xla_builder",
         "@org_tensorflow//tensorflow/compiler/xla/client:xla_computation",
         "@org_tensorflow//tensorflow/compiler/xla/client/lib:svd",
-        "@org_tensorflow//tensorflow/compiler/xla/rpc:grpc_stub",
         "@org_tensorflow//tensorflow/core:lib",
-        "@org_tensorflow//tensorflow/python/profiler/internal:profiler_pywrap_impl",
         "@org_tensorflow//tensorflow/tsl/platform/cloud:gcs_file_system",
     ],
 )
