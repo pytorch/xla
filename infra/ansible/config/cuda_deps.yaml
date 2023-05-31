@@ -1,0 +1,12 @@
+# Versions of cuda dependencies for given cuda versions.
+# Note: wrap version in quotes to ensure they're treated as strings.
+cuda_deps:
+  # List all libcudnn8 versions with `apt list -a libcudnn8`
+  libcudnn:
+    "11.8": libcudnn8=8.8.0.121-1+cuda11.8
+    "11.7": libcudnn8=8.5.0.96-1+cuda11.7
+    "11.2": libcudnn8=8.1.1.33-1+cuda11.2
+  libcudnn-dev:
+    "11.8": libcudnn8-dev=8.8.0.121-1+cuda11.8
+    "11.7": libcudnn8-dev=8.5.0.96-1+cuda11.7
+    "11.2": libcudnn8-dev=8.1.1.33-1+cuda11.2
