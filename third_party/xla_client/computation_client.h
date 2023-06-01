@@ -187,8 +187,6 @@ class ComputationClient {
     int64_t kb_total = 0;
   };
 
-  static std::unique_ptr<ComputationClient> Create();
-
   virtual ~ComputationClient() {}
 
   // Creates a Data object with no actual device handle in it. The device handle
@@ -353,18 +351,9 @@ class ComputationClient {
   std::vector<std::string> GetCompilationDevices(
       const std::string& device, absl::Span<const std::string> devices);
 
-  // Run the XRT local service, this will block the caller unitl the server
-  // being stopped.
-  static void RunLocalService(uint64_t service_port);
-
   // Retrieves the ordinal number out of a device string. This is the number
   // after the last ':' character of the device string.
   static int64_t GetDeviceOrdinal(const std::string& device);
-
-  // Returns the ComputationClient singleton.
-  static ComputationClient* Get();
-
-  static ComputationClient* GetIfInitialized();
 
  protected:
   // Metrics common to all client interfaces.

@@ -9,6 +9,7 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/types/optional.h"
 #include "third_party/xla_client/debug_macros.h"
+#include "third_party/xla_client/runtime.h"
 #include "third_party/xla_client/xla_util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/tensor_util.h"
@@ -268,13 +269,13 @@ std::string DumpUtil::ToHlo(c10::ArrayRef<torch::lazy::Value> values,
         static_cast<XlaDeviceType>(device.type()));
     std::vector<xla::ComputationClient::CompileInstance> instances;
     instances.push_back({std::move(computation), device.toString(),
-                         xla::ComputationClient::Get()->GetCompilationDevices(
+                         xla::GetComputationClient()->GetCompilationDevices(
                              device.toString(), {}),
-                         &shape, /*parameter_is_tupled_arguments=*/false,
-                         is_sharded});
+                         &shape,
+                         /*parameter_is_tupled_arguments=*/false, is_sharded});
     std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
         computations =
-            xla::ComputationClient::Get()->Compile(std::move(instances));
+            xla::GetComputationClient()->Compile(std::move(instances));
     return ConsumeValue(
         xla::util::GetComputationHloText(computations[0]->computation()));
   }
