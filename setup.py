@@ -69,6 +69,8 @@ import sys
 import tempfile
 import torch
 import zipfile
+import traceback
+import pdb
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -280,9 +282,9 @@ class BuildBazelExtension(command.build_ext.build_ext):
     if IS_WINDOWS:
       for library_dir in self.library_dirs:
         bazel_argv.append('--linkopt=/LIBPATH:' + library_dir)
-
+    print("303 bazel_build of BuildBazelExtension !!!!!!!!!!!!!!!!!!!!!!!!!!!")
     self.spawn(bazel_argv)
-
+    print("305 bazel_build of BuildBazelExtension !!!!!!!!!!!!!!!!!!!!!!!!!!!")
     ext_bazel_bin_path = os.path.join(self.build_temp, 'bazel-bin', ext.relpath,
                                       ext.target_name)
     ext_dest_path = self.get_ext_fullpath(ext.name)
