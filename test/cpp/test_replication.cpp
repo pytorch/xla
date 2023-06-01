@@ -46,7 +46,8 @@ void TestSingleReplication(
     instances.emplace_back(CreateCrsComputation(shape), device_str,
                            all_device_strings, &shape);
   }
-  auto compiled_computations = xla::GetClient()->Compile(std::move(instances));
+  auto compiled_computations =
+      xla::GetComputationClient()->Compile(std::move(instances));
 
   std::vector<at::Tensor> tensors;
   for (size_t i = 0; i < device_strings.size(); ++i) {
@@ -60,7 +61,7 @@ void TestSingleReplication(
   xla::ComputationClient::ExecuteComputationOptions exec_options;
   for (size_t i = 0; i < device_strings.size(); ++i) {
     auto executor = [&, i]() {
-      results[i] = xla::GetClient()->ExecuteComputation(
+      results[i] = xla::GetComputationClient()->ExecuteComputation(
           *compiled_computations[i], {UnwrapXlaData(tensors_data[i])},
           device_strings[i], exec_options);
     };
@@ -69,7 +70,7 @@ void TestSingleReplication(
   mwait.Wait();
 
   for (size_t i = 0; i < results.size(); ++i) {
-    auto literals = xla::GetClient()->TransferFromServer(results[i]);
+    auto literals = xla::GetComputationClient()->TransferFromServer(results[i]);
     ASSERT_EQ(literals.size(), 1);
 
     // The result must be the original tensor value, multiplied by the number of

@@ -224,13 +224,15 @@ void WithAllDevices(
   for (auto device_type : device_types) {
     std::vector<torch::lazy::BackendDevice> devices;
     std::vector<torch::lazy::BackendDevice> all_devices;
-    for (const auto& device_str : xla::GetClient()->GetLocalDevices()) {
+    for (const auto& device_str :
+         xla::GetComputationClient()->GetLocalDevices()) {
       torch::lazy::BackendDevice device = ParseDeviceString(device_str);
       if (device.type() == device_type.type) {
         devices.push_back(device);
       }
     }
-    for (const auto& device_str : xla::GetClient()->GetAllDevices()) {
+    for (const auto& device_str :
+         xla::GetComputationClient()->GetAllDevices()) {
       torch::lazy::BackendDevice device = ParseDeviceString(device_str);
       if (device.type() == device_type.type) {
         all_devices.push_back(device);
@@ -279,15 +281,16 @@ std::vector<xla::ComputationClient::DataPtr> Execute(
       program_shape.result(), static_cast<XlaDeviceType>(device.type()));
 
   std::vector<xla::ComputationClient::CompileInstance> instances;
-  instances.push_back(
-      {std::move(computation), device.toString(),
-       xla::GetClient()->GetCompilationDevices(device.toString(), {}), &shape});
+  instances.push_back({std::move(computation), device.toString(),
+                       xla::GetComputationClient()->GetCompilationDevices(
+                           device.toString(), {}),
+                       &shape});
 
   std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
-      computations = xla::GetClient()->Compile(std::move(instances));
+      computations = xla::GetComputationClient()->Compile(std::move(instances));
 
   xla::ComputationClient::ExecuteComputationOptions options;
-  return xla::GetClient()->ExecuteComputation(
+  return xla::GetComputationClient()->ExecuteComputation(
       *computations.front(), UnwrapXlaData(lowering_ctx.GetParametersData()),
       device.toString(), options);
 }
@@ -295,7 +298,7 @@ std::vector<xla::ComputationClient::DataPtr> Execute(
 std::vector<at::Tensor> Fetch(
     absl::Span<const xla::ComputationClient::DataPtr> device_data) {
   std::vector<xla::Literal> literals =
-      xla::GetClient()->TransferFromServer(device_data);
+      xla::GetComputationClient()->TransferFromServer(device_data);
   std::vector<at::Tensor> tensors;
   for (auto& literal : literals) {
     tensors.push_back(MakeTensorFromXlaLiteral(
