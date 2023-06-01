@@ -521,19 +521,29 @@ xla::Shape XlaHelpers::GetPromotedDynamicShape(const xla::Shape& shape1,
   for (const auto i : c10::irange(min_size)) {
     int64_t ubound1 = upper_bounds1[upper_bounds1.size() - min_size + i];
     int64_t ubound2 = upper_bounds2[upper_bounds2.size() - min_size + i];
-    bool ddim1 = dyn_dims1[dyn_dims1.size() - min_size + i];
-    bool ddim2 = dyn_dims2[dyn_dims2.size() - min_size + i];
-    XLA_CHECK((!ddim1 && !ddim2) || (ddim1 && !ddim2 && ubound2 == 1) ||
-              (ddim2 && !ddim1 && ubound1 == 1) ||
-              (ddim1 && ddim2 && ubound1 == ubound2))
-        << "At dimension " << i << ", operand1 has dimension size " << ubound1
-        << " isDynamic=" << ddim1 << " vs operand2 has dimension size "
-        << ubound2 << " isDynamic=" << ddim2;
+    bool is_dim1_dynamic = dyn_dims1[dyn_dims1.size() - min_size + i];
+    bool is_dim2_dynamic = dyn_dims2[dyn_dims2.size() - min_size + i];
+    if (!is_dim1_dynamic && !is_dim2_dynamic) {
+      XLA_CHECK(ubound1 == 1 || ubound2 == 1 || ubound1 == ubound2)
+          << "At dimension " << i
+          << ", both dimension are static with real size " << ubound1 << " and "
+          << ubound2;
+    } else {
+      // For now, if both dimension are dynamic and has the same upper bound, we
+      // regard this dimension to be broadcastable.
+      XLA_CHECK((is_dim1_dynamic && !is_dim2_dynamic && ubound2 == 1) ||
+                (is_dim2_dynamic && !is_dim1_dynamic && ubound1 == 1) ||
+                (is_dim1_dynamic && is_dim2_dynamic && ubound1 == ubound2))
+          << "At dimension " << i << ", operand1 has dimension size " << ubound1
+          << " isDynamic=" << is_dim1_dynamic
+          << " vs operand2 has dimension size " << ubound2
+          << " isDynamic=" << is_dim2_dynamic;
+    }
 
     int64_t ubound = std::max<int64_t>(ubound1, ubound2);
     upper_bounds.push_back(ubound);
-    bool ddim = ddim1 || ddim2;
-    dyn_dims.push_back(ddim);
+    bool is_dim_dynamic = is_dim1_dynamic || is_dim2_dynamic;
+    dyn_dims.push_back(is_dim_dynamic);
   }
   const xla::Shape& promoted_shape = xla::ShapeUtil::MakeShape(
       PromoteType(shape1.element_type(), shape2.element_type()), upper_bounds,
