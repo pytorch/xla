@@ -207,10 +207,10 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
 
   @staticmethod
   def _global_device_attributes():
-    return pjrt.global_device_attributes()
+    return xr.global_device_attributes()
 
   def test_global_device_attributes(self):
-    results = pjrt._run_multiprocess(self._global_device_attributes)
+    results = pjrt.run_multiprocess(self._global_device_attributes)
     for result in results.values():
       for device in result:
         self.assertCountEqual(['coords', 'core_on_chip'], list(device.keys()))

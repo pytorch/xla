@@ -9,6 +9,7 @@ aliases = [
     runtime.addressable_device_count,
     runtime.device_attributes,
     runtime.device_type,
+    runtime.global_device_attributes,
     runtime.global_device_count,
     runtime.global_ordinal,
     runtime.local_device_count,
