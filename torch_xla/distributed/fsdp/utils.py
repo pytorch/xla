@@ -134,11 +134,11 @@ def apply_xla_patch_to_nn_linear(module):
   computation, which may break the FSDP's full parameter freeing on it.
   """
 
-  def _try_patching_forward_method(m, foward_method_name="forward"):
+  def _try_patching_forward_method(m, forward_method_name="forward"):
     # Check if the module's forward signature is same as in `nn.Linear`
     # (if it has already been modified through other means, we will skip the
     # patch to its forward method here).
-    forward_method = getattr(m, foward_method_name, None)
+    forward_method = getattr(m, forward_method_name, None)
     if forward_method is None:
       return
     if getattr(forward_method, "__func__", None) != torch.nn.Linear.forward:
@@ -146,7 +146,7 @@ def apply_xla_patch_to_nn_linear(module):
 
     patched_forward_method = MethodType(_xla_patched_nn_linear_forward, m)
     m._nn_linear_forward_original = forward_method
-    setattr(m, foward_method_name, patched_forward_method)
+    setattr(m, forward_method_name, patched_forward_method)
 
   for m in module.modules():  # includes self
     if isinstance(m, torch.nn.Linear):

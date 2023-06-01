@@ -3,8 +3,8 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
 #include "absl/types/optional.h"
-#include "third_party/xla_client/computation_client.h"
 #include "third_party/xla_client/debug_macros.h"
+#include "third_party/xla_client/runtime.h"
 
 namespace torch_xla {
 namespace {
@@ -37,13 +37,13 @@ std::string DeviceType::toString() const {
 torch::lazy::BackendDevice ParseDeviceString(const std::string& device_spec) {
   if (device_spec.empty()) {
     std::string default_device_spec =
-        xla::ComputationClient::Get()->GetDefaultDevice();
+        xla::GetComputationClient()->GetDefaultDevice();
     XLA_CHECK(!default_device_spec.empty());
     return ParseDeviceString(default_device_spec);
   }
   if (device_spec[0] == ':') {
     std::string default_device_spec =
-        xla::ComputationClient::Get()->GetDefaultDevice();
+        xla::GetComputationClient()->GetDefaultDevice();
     auto pos = default_device_spec.find(':');
     XLA_CHECK_NE(pos, std::string::npos) << default_device_spec;
     return ParseDeviceString(default_device_spec.substr(0, pos) + device_spec);

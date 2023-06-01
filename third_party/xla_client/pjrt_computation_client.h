@@ -198,11 +198,13 @@ class PjRtComputationClient : public ComputationClient {
     }
 
     bool HasValue() const override {
-      if (!shards.empty()) {
-        for (auto& shard : shards) {
-          if (!shard->HasValue()) {
-            return false;
-          }
+      if (shards.empty()) {
+        return false;
+      }
+
+      for (auto& shard : shards) {
+        if (!shard->HasValue()) {
+          return false;
         }
       }
       return true;
@@ -227,4 +229,4 @@ class PjRtComputationClient : public ComputationClient {
 };
 
 }  // namespace xla
-#endif  // XLA_CLIENT_XRT_COMPUTATION_CLIENT_H_
+#endif  // XLA_CLIENT_PJRT_COMPUTATION_CLIENT_H_

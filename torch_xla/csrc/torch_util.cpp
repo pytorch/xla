@@ -3,10 +3,28 @@
 #include "third_party/xla_client/debug_macros.h"
 #include "third_party/xla_client/xla_util.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/ir_builder.h"
 #include "torch_xla/csrc/ops/constant.h"
 #include "torch_xla/csrc/tensor.h"
 
 namespace torch_xla {
+
+SymIntElements::SymIntElements(torch::lazy::Value ir) {
+  XLAIrBuilder a = XLAIrBuilder();
+  xla::Shape shape = GetXlaShape(ir);
+  for (int i = 0; i < shape.dimensions().size(); i++) {
+    if (shape.is_dynamic_dimension(i)) {
+      torch::lazy::NodePtr size_node = a.MakeSizeNode(ir, i);
+      size_nodes_.push_back(size_node);
+      upper_bounds_.push_back(shape.dimensions(i));
+      dynamic_dims_.push_back(true);
+    } else {
+      size_nodes_.push_back(nullptr);
+      upper_bounds_.push_back(shape.dimensions(i));
+      dynamic_dims_.push_back(false);
+    }
+  }
+}
 
 void SymIntElements::AddSymIntNodeElements(c10::SymInt& size) {
   if (auto s = size.maybe_as_int()) {

@@ -58,7 +58,7 @@ def _maybe_select_default_device():
 
 
 def device_type() -> Optional[str]:
-  """Returns the currrent PjRt device type.
+  """Returns the current PjRt device type.
 
   Selects a default device if none has been configured
   """
@@ -187,6 +187,11 @@ def process_count() -> int:
 @requires_pjrt
 def device_attributes(device: str) -> Dict[str, object]:
   return torch_xla._XLAC._xla_get_device_attributes(device)
+
+
+@requires_pjrt
+def global_device_attributes() -> List[Dict[str, object]]:
+  return torch_xla._XLAC._xla_get_all_device_attributes()
 
 
 def _merge_replica_results(
@@ -430,10 +435,12 @@ def rendezvous(tag: str, payload: bytes,
   logging.info(f"Joining rendezvous '{tag}'...")
   sizes = xm.all_gather(size)
 
-  # Pad data to at least length 1, otherwise we can't split the result
-  max_size = torch.max(
-      torch.tensor(1, device=device, dtype=torch.int), torch.max(sizes))
+  max_size = torch.max(sizes)
   xm.mark_step()
+
+  # If all payloads are empty, return immediately to avoid more CPU transfers
+  if max_size.item() < 1:
+    return [b'' for _ in range(sizes.size()[0])]
 
   padded_data = torch.nn.functional.pad(data, (
       0,
@@ -442,7 +449,7 @@ def rendezvous(tag: str, payload: bytes,
   raw_data = xm.all_gather(padded_data)
   data_list = torch.split(raw_data, max_size)
 
-  payloads = [d[:sz] for d, sz in zip(data_list, sizes)]
+  payloads = [d[:sz] for d, sz in zip(data_list, sizes.cpu())]
   xm.mark_step()
 
   return [bytes(p.cpu().tolist()) for p in payloads]

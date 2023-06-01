@@ -19,10 +19,6 @@
 #include <stdexcept>
 #include <unordered_set>
 
-#include "absl/container/flat_hash_map.h"
-#include "absl/memory/memory.h"
-#include "absl/strings/str_join.h"
-#include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/tsl/platform/errors.h"
 #include "tensorflow/tsl/profiler/lib/traceme.h"
@@ -36,7 +32,6 @@
 #include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/helpers.h"
-#include "torch_xla/csrc/ir_dump_util.h"
 #include "torch_xla/csrc/layout_manager.h"
 #include "torch_xla/csrc/op_by_op_executor.h"
 #include "torch_xla/csrc/ops/arithmetic_ir_ops.h"
@@ -497,10 +492,9 @@ void XLATensor::SetTensor(at::Tensor tensor) {
 }
 
 void XLATensor::UpdateFromTensor(at::Tensor tensor, bool sync) {
-  torch::lazy::BackendDevice device =
-      xla::sys_util::GetEnvBool("XLA_USE_SPMD", false)
-          ? ParseDeviceString("SPMD:0")
-          : GetDevice();
+  torch::lazy::BackendDevice device = ShardingUtil::UseVirtualDevice()
+                                          ? ParseDeviceString("SPMD:0")
+                                          : GetDevice();
   if (sync) {
     at::Tensor typed_tensor =
         torch::lazy::CopyTensor(tensor, dtype(), /*copy=*/false);

@@ -56,11 +56,10 @@ module "nightly_builds" {
   ansible_vars = merge(each.value, {
     package_version = var.nightly_package_version
     nightly_release = true
-    pytorch_git_rev = "HEAD"
-    xla_git_rev     = "HEAD"
+    pytorch_git_rev = "main"
+    xla_git_rev     = "$COMMIT_SHA"
   })
 
-  ansible_branch      = "master"
   trigger_on_schedule = { schedule = "0 0 * * *", branch = "master" }
 
   trigger_name = "nightly-${replace(each.key, "/[_.]/", "-")}"
@@ -105,7 +104,9 @@ module "versioned_builds" {
     xla_git_rev     = each.value.git_tag
   })
 
-  ansible_branch  = "master"
+  # Use Ansible setup from master branch for versioned release, because source
+  # code at older version doesn't contain Ansible setup.
+  ansible_git_rev = "origin/master"
   trigger_on_push = { tag = each.value.git_tag }
 
   trigger_name = replace(each.key, "/[_.]/", "-")

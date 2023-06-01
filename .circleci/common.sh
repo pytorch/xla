@@ -164,7 +164,7 @@ function run_torch_xla_tests() {
 	    EXTRA_ARGS="$EXTRA_ARGS -R"
     fi
     if [ -x "$(command -v nvidia-smi)" ]; then
-      PJRT_DEVICE=GPU test/cpp/run_tests.sh $EXTRA_ARGS
+      PJRT_DEVICE=GPU test/cpp/run_tests.sh $EXTRA_ARGS -L""
       if [ "$USE_COVERAGE" != "0" ]; then
         cp $XLA_DIR/bazel-out/_coverage/_coverage_report.dat /tmp/cov1.dat
       fi
@@ -174,7 +174,7 @@ function run_torch_xla_tests() {
         lcov --add-tracefile /tmp/cov1.dat -a /tmp/cov2.dat -o /tmp/merged.dat
       fi
     else
-      PJRT_DEVICE=CPU test/cpp/run_tests.sh $EXTRA_ARGS
+      PJRT_DEVICE=CPU test/cpp/run_tests.sh $EXTRA_ARGS -L""
       if [ "$USE_COVERAGE" != "0" ]; then
         cp $XLA_DIR/bazel-out/_coverage/_coverage_report.dat /tmp/merged.dat
       fi

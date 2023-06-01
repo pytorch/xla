@@ -32,7 +32,7 @@ locals {
     {
       id   = "git_checkout"
       name = "gcr.io/cloud-builders/git"
-      args = ["checkout", "origin/${var.ansible_branch}"]
+      args = ["checkout", "${var.ansible_git_rev}"]
     },
   ]
 

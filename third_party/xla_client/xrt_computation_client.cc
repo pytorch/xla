@@ -17,9 +17,10 @@
 #include "tensorflow/compiler/xla/util.h"
 #include "tensorflow/compiler/xrt/xrt_util.h"
 #include "tensorflow/tsl/framework/allocator.h"
+#include "tensorflow/tsl/lib/math/math_util.h"
+#include "tensorflow/tsl/platform/net.h"
 #include "tensorflow/tsl/profiler/lib/traceme.h"
 #include "tensorflow/tsl/util/device_name_utils.h"
-#include "tensorflow/tsl/lib/math/math_util.h"
 #include "third_party/xla_client/env_vars.h"
 #include "third_party/xla_client/multi_wait.h"
 #include "third_party/xla_client/sys_util.h"
@@ -233,6 +234,235 @@ int64_t GetMaxTensorsPartitionSize() {
   return max_partition_size;
 }
 
+struct DeviceCountDefaults {
+  int num_tpus = 0;
+  int num_gpus = 0;
+  int num_cpus = 1;
+};
+
+std::string MakeGrpcEndPoint(const std::string& server) {
+  return server.compare(0, 7, "grpc://") == 0 ? server
+                                              : absl::StrCat("grpc://", server);
+}
+
+std::string GetXrtDevicePath(const std::string& worker, int task_no,
+                             const std::string& device_type, int ordinal) {
+  return absl::StrCat("/job:", worker, "/replica:0/task:", task_no,
+                      "/device:", device_type, ":", ordinal);
+}
+
+std::string BuildTaskDeviceKey(int task_no, const std::string& kind) {
+  return absl::StrCat(task_no, ":", kind);
+}
+
+tensorflow::DeviceNameUtils::ParsedName ParseXrtDevice(
+    const std::string& device) {
+  tensorflow::DeviceNameUtils::ParsedName parsed_device;
+  XLA_CHECK(
+      tensorflow::DeviceNameUtils::ParseFullName(device, &parsed_device) &&
+      parsed_device.has_job && parsed_device.has_task && parsed_device.has_id &&
+      parsed_device.has_type)
+      << device;
+  return parsed_device;
+}
+
+bool IsLocalDevice(const XrtComputationClient::Worker& worker,
+                   const tensorflow::DeviceNameUtils::ParsedName& parsed_device,
+                   const std::map<std::string, int>& dev_task_map) {
+  if (worker.name != parsed_device.job ||
+      worker.task_no != parsed_device.task) {
+    return false;
+  }
+  std::string mp_device = XrtComputationClient::GetMultiProcessingDevice();
+  if (mp_device.empty()) {
+    return true;
+  }
+  XrtComputationClient::Device device(mp_device);
+  std::string task_device_key =
+      BuildTaskDeviceKey(parsed_device.task, device.kind);
+  auto it = dev_task_map.find(task_device_key);
+  return it != dev_task_map.end()
+             ? (device.ordinal == it->second + parsed_device.id)
+             : false;
+}
+
+std::map<std::string, int> BuildDeviceTaskMap(
+    const XrtComputationClient::Options& options) {
+  // Builds a map from "TASK:DEV_KIND" (ie, "0:TPU") keys to the minimum global
+  // device ordinal assigned for that task+devkind couple.
+  std::map<std::string, int> dev_task_map;
+  for (auto& device_xrt_device : options.global_device_map) {
+    XrtComputationClient::Device global_device(device_xrt_device.first);
+    tensorflow::DeviceNameUtils::ParsedName parsed_device =
+        ParseXrtDevice(device_xrt_device.second);
+    std::string task_device_key =
+        BuildTaskDeviceKey(parsed_device.task, global_device.kind);
+    util::InsertCombined(&dev_task_map, task_device_key, global_device.ordinal,
+                         [](int a, int b) { return std::min(a, b); });
+  }
+  return dev_task_map;
+}
+
+void PopulateLocalDevices(XrtComputationClient::Options* options) {
+  std::string local_worker = sys_util::GetEnvString(env::kEnvLocalWorker, "");
+  XrtComputationClient::Worker worker("", -1);
+  if (!local_worker.empty()) {
+    worker = XrtComputationClient::ParseWorker(local_worker);
+  }
+  auto dev_task_map = BuildDeviceTaskMap(*options);
+  std::map<std::string, int> min_ordinals;
+  for (auto& device_xrt_device : options->global_device_map) {
+    if (worker.task_no >= 0) {
+      tensorflow::DeviceNameUtils::ParsedName parsed_device =
+          ParseXrtDevice(device_xrt_device.second);
+      if (!IsLocalDevice(worker, parsed_device, dev_task_map)) {
+        continue;
+      }
+    }
+    options->devices.insert(device_xrt_device.first);
+
+    XrtComputationClient::Device global_device(device_xrt_device.first);
+    util::InsertCombined(&min_ordinals, global_device.kind,
+                         global_device.ordinal,
+                         [](int a, int b) { return std::min(a, b); });
+  }
+  for (auto kind : {"TPU", "GPU", "CPU"}) {
+    auto it = min_ordinals.find(kind);
+    if (it != min_ordinals.end()) {
+      options->default_device = absl::StrCat(kind, ":", it->second);
+      break;
+    }
+  }
+}
+
+void AddXrtHostDevices(const std::string& worker_name, int task_no,
+                       const std::string& server,
+                       const DeviceCountDefaults& device_counts,
+                       std::map<std::string, int>* device_ordinals,
+                       XrtComputationClient::Options* options) {
+  struct Devices {
+    const char* name;
+    const char* tf_name;
+    int64_t count;
+  } const devices[] = {
+      {"TPU", "TPU",
+       sys_util::GetEnvInt(env::kEnvNumTpu, device_counts.num_tpus)},
+      {"GPU", "XLA_GPU",
+       sys_util::GetEnvInt(env::kEnvNumGpu, device_counts.num_gpus)},
+      {"CPU", "XLA_CPU", device_counts.num_cpus},
+  };
+  options->workers_map.emplace(
+      XrtComputationClient::Worker(worker_name, task_no),
+      MakeGrpcEndPoint(server));
+  for (auto& device : devices) {
+    int& device_ordinal = (*device_ordinals)[device.name];
+    for (int j = 0; j < device.count; ++j, ++device_ordinal) {
+      std::string device_name = absl::StrCat(device.name, ":", device_ordinal);
+      std::string xrt_device_name =
+          GetXrtDevicePath(worker_name, task_no, device.tf_name, j);
+      options->global_device_map.emplace(device_name, xrt_device_name);
+    }
+  }
+}
+
+bool ParseEnvBasedTpuClusterConfig(XrtComputationClient::Options* options) {
+  std::string tpu_config = sys_util::GetEnvString(env::kEnvTpuConfig, "");
+  if (tpu_config.empty()) {
+    return false;
+  }
+  std::map<std::string, int> device_ordinals;
+  std::vector<std::string> spec_parts = absl::StrSplit(tpu_config, '|');
+  XLA_CHECK(!spec_parts.empty()) << tpu_config;
+  DeviceCountDefaults device_counts;
+  device_counts.num_tpus = 8;
+  for (const auto& spec : spec_parts) {
+    std::vector<std::string> host_parts = absl::StrSplit(spec, ';');
+    XLA_CHECK_EQ(host_parts.size(), 3) << spec;
+    AddXrtHostDevices(host_parts[0], std::stoi(host_parts[1]), host_parts[2],
+                      device_counts, &device_ordinals, options);
+  }
+  return true;
+}
+
+bool ParseMeshConfig(
+    XrtComputationClient::Options* options,
+    std::unique_ptr<tensorflow::tpu::TopologyProto>* topology_proto) {
+  service::MeshClient* client = service::MeshClient::Get();
+  if (client == nullptr) {
+    return false;
+  }
+  std::string local_worker_env =
+      sys_util::GetEnvString(env::kEnvLocalWorker, "");
+  XLA_CHECK(!local_worker_env.empty())
+      << "In a mesh client setup the XRT_LOCAL_WORKER must be specified";
+
+  XrtComputationClient::Worker local_worker =
+      XrtComputationClient::ParseWorker(local_worker_env);
+  int host_ordinal = sys_util::GetEnvInt(env::kEnvHostOrdinal, 0);
+
+  TF_LOG(INFO) << "Fetching mesh configuration for worker " << local_worker.name
+               << " (host_ordinal=" << host_ordinal
+               << "):" << local_worker.task_no << " from mesh service at "
+               << client->address();
+  service::grpc::Config config = client->GetConfig(host_ordinal);
+  TF_VLOG(3) << "Mesh Config: " << config.DebugString();
+
+  std::string mp_device = XrtComputationClient::GetMultiProcessingDevice();
+  for (auto& config_worker : config.workers()) {
+    XrtComputationClient::Worker worker(config_worker.name(),
+                                        config_worker.task_no());
+    options->workers_map.emplace(worker, config_worker.address());
+
+    for (auto& device : config_worker.devices()) {
+      XrtComputationClient::Device local_device(device.local_name());
+      options->global_device_map.emplace(
+          device.global_name(),
+          GetXrtDevicePath(worker.name, worker.task_no, local_device.kind,
+                           local_device.ordinal));
+      if (local_worker == worker &&
+          (mp_device.empty() || device.global_name() == mp_device)) {
+        options->devices.insert(device.global_name());
+      }
+    }
+  }
+  (*topology_proto) = absl::make_unique<tensorflow::tpu::TopologyProto>(
+      std::move(*config.mutable_proto()));
+  return true;
+}
+
+bool ParseEnvDeviceCounts(XrtComputationClient::Options* options) {
+  DeviceCountDefaults device_counts;
+  device_counts.num_tpus = sys_util::GetEnvInt(env::kEnvNumTpu, 0);
+  device_counts.num_gpus = sys_util::GetEnvInt(env::kEnvNumGpu, 0);
+  if (device_counts.num_tpus > 0 || device_counts.num_gpus > 0) {
+    std::map<std::string, int> device_ordinals;
+    std::string host_port =
+        absl::StrCat("localhost:", tsl::internal::PickUnusedPortOrDie());
+    AddXrtHostDevices("localservice", 0, host_port, device_counts,
+                      &device_ordinals, options);
+  }
+  return !options->global_device_map.empty();
+}
+
+bool ParseEnvDevices(XrtComputationClient::Options* options) {
+  std::string device_spec = sys_util::GetEnvString(env::kEnvDeviceMap, "");
+  std::string workers_spec = sys_util::GetEnvString(env::kEnvWorkers, "");
+  if (!device_spec.empty() && !workers_spec.empty()) {
+    for (const auto& device_target : absl::StrSplit(device_spec, '|')) {
+      std::vector<std::string> parts = absl::StrSplit(device_target, ';');
+      XLA_CHECK_EQ(parts.size(), 2) << device_target;
+      options->global_device_map.emplace(parts[0], parts[1]);
+    }
+    for (const auto& name_target : absl::StrSplit(workers_spec, '|')) {
+      std::vector<std::string> parts = absl::StrSplit(name_target, ';');
+      XLA_CHECK_EQ(parts.size(), 2) << name_target;
+      options->workers_map.emplace(XrtComputationClient::ParseWorker(parts[0]),
+                                   MakeGrpcEndPoint(parts[1]));
+    }
+  }
+  return !options->global_device_map.empty();
+}
+
 }  // namespace
 
 const int64_t DataHandleLocker::dummy_handle = -151235;
@@ -251,12 +481,18 @@ void XrtComputationClient::XrtData::Assign(const Data& data) {
   }
 }
 
-XrtComputationClient::XrtComputationClient(
-    Options options,
-    std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto)
-    : options_(std::move(options)),
-      compilation_cache_(sys_util::GetEnvInt("XLA_COMPILATION_CACHE_SIZE", 64)),
+XrtComputationClient::XrtComputationClient()
+    : compilation_cache_(sys_util::GetEnvInt("XLA_COMPILATION_CACHE_SIZE", 64)),
       rng_seed_(0x5a2d296e9) {
+  // XrtComputationClient::Options options;
+  std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto;
+  if (!ParseEnvBasedTpuClusterConfig(&options_) &&
+      !ParseEnvDeviceCounts(&options_) && !ParseEnvDevices(&options_) &&
+      !ParseMeshConfig(&options_, &topology_proto)) {
+    XLA_ERROR() << "Missing XLA configuration";
+  }
+  PopulateLocalDevices(&options_);
+
   tensorflow::ConfigProto config = CreateConfigProto(options_);
   std::string local_target = GetLocalTarget(options_);
   session_cache_ = absl::make_unique<XrtSessionCache>(
@@ -406,8 +642,8 @@ std::vector<ComputationClient::DataPtr>
 XrtComputationClient::TransferToServerInternal(
     absl::Span<const TensorSource> tensors, absl::Span<const DataPtr> datas) {
   metrics::TimedSection timed(TransferToServerMetric());
-  tsl::profiler::TraceMe activity(
-      "TransferToServerInternal", tsl::profiler::TraceMeLevel::kInfo);
+  tsl::profiler::TraceMe activity("TransferToServerInternal",
+                                  tsl::profiler::TraceMeLevel::kInfo);
 
   // If datas are passed in, don't create new datas but modify the passed in
   // datas.
@@ -418,8 +654,8 @@ XrtComputationClient::TransferToServerInternal(
   auto mwait = std::make_shared<util::MultiWait>(tensors.size());
   std::map<XrtSession*, SessionWork> session_work_map;
   {
-    tsl::profiler::TraceMe activity(
-        "TransferToServerTransform", tsl::profiler::TraceMeLevel::kInfo);
+    tsl::profiler::TraceMe activity("TransferToServerTransform",
+                                    tsl::profiler::TraceMeLevel::kInfo);
     metrics::TimedSection timed(TransferToServerTransformMetric());
 
     for (size_t i = 0; i < tensors.size(); ++i) {
@@ -505,8 +741,8 @@ XrtComputationClient::TransferToServerInternal(
 std::vector<Literal> XrtComputationClient::TransferFromServer(
     absl::Span<const DataPtr> handles) {
   metrics::TimedSection timed(TransferFromServerMetric());
-  tsl::profiler::TraceMe activity(
-      "TransferFromServer", tsl::profiler::TraceMeLevel::kInfo);
+  tsl::profiler::TraceMe activity("TransferFromServer",
+                                  tsl::profiler::TraceMeLevel::kInfo);
 
   int64_t max_partition_size = GetMaxTensorsPartitionSize();
   std::list<XrtSessionCache::SessionMap> session_maps;
@@ -573,8 +809,8 @@ std::vector<Literal> XrtComputationClient::TransferFromServer(
 std::vector<ComputationClient::ComputationPtr> XrtComputationClient::Compile(
     std::vector<CompileInstance> instances) {
   metrics::TimedSection timed(CompileMetric());
-  tsl::profiler::TraceMe activity(
-      "Compile", tsl::profiler::TraceMeLevel::kInfo);
+  tsl::profiler::TraceMe activity("Compile",
+                                  tsl::profiler::TraceMeLevel::kInfo);
 
   std::mutex lock;
   auto mwait = std::make_shared<util::MultiWait>(instances.size());
@@ -680,8 +916,8 @@ XrtComputationClient::ExecuteComputation(
     const Computation& computation, absl::Span<const DataPtr> arguments,
     const std::string& device, const ExecuteComputationOptions& options) {
   metrics::TimedSection timed(ExecuteMetric());
-  tsl::profiler::TraceMe activity(
-      "ExecuteComputation", tsl::profiler::TraceMeLevel::kInfo);
+  tsl::profiler::TraceMe activity("ExecuteComputation",
+                                  tsl::profiler::TraceMeLevel::kInfo);
 
   XrtSessionCache::SessionMap session_map;
   tensorflow::ClientSession::FeedType feed_inputs;
@@ -709,8 +945,8 @@ XrtComputationClient::ExecuteReplicated(
     absl::Span<const std::string> devices,
     const ExecuteReplicatedOptions& options) {
   metrics::TimedSection timed(ExecuteReplicatedMetric());
-  tsl::profiler::TraceMe activity(
-      "ExecuteReplicated", tsl::profiler::TraceMeLevel::kInfo);
+  tsl::profiler::TraceMe activity("ExecuteReplicated",
+                                  tsl::profiler::TraceMeLevel::kInfo);
 
   XrtSessionCache::SessionMap session_map;
   tensorflow::ClientSession::FeedType feed_inputs;
@@ -731,8 +967,8 @@ XrtComputationClient::RunComputations(
     absl::Span<const Computation* const> computations,
     absl::Span<const std::string> devices,
     const tensorflow::ClientSession::FeedType& feed_inputs) {
-  tsl::profiler::TraceMe activity(
-      "RunComputations", tsl::profiler::TraceMeLevel::kInfo);
+  tsl::profiler::TraceMe activity("RunComputations",
+                                  tsl::profiler::TraceMeLevel::kInfo);
   // In the PyTorch/XRT interface we keep a map (options_.workers_map) from a
   // worker+taskno, to the GRPC server which is the entry point for that worker.
   // Since XRT could re-distribute ops internally, if we have N hosts
@@ -797,8 +1033,8 @@ XrtComputationClient::ExecuteParallel(
     absl::Span<const std::string> devices,
     const ExecuteParallelOptions& options) {
   metrics::TimedSection timed(ExecuteParallelMetric());
-  tsl::profiler::TraceMe activity(
-      "ExecuteParallel", tsl::profiler::TraceMeLevel::kInfo);
+  tsl::profiler::TraceMe activity("ExecuteParallel",
+                                  tsl::profiler::TraceMeLevel::kInfo);
 
   XrtSessionCache::SessionMap session_map;
   tensorflow::ClientSession::FeedType feed_inputs;
@@ -832,8 +1068,8 @@ void XrtComputationClient::SetupExecConfig(const Device& device,
 
 std::vector<ComputationClient::DataPtr> XrtComputationClient::ExecuteChained(
     absl::Span<const ExecuteChainedOp> ops, const std::string& device) {
-  tsl::profiler::TraceMe activity(
-      "ExecuteChained", tsl::profiler::TraceMeLevel::kInfo);
+  tsl::profiler::TraceMe activity("ExecuteChained",
+                                  tsl::profiler::TraceMeLevel::kInfo);
   static int64_t split_mode = sys_util::GetEnvInt("XRT_SPLIT_CHAINED_EXEC", 0);
   return split_mode ? ExecuteChainedSplit(ops, device)
                     : ExecuteChainedXrt(ops, device);
@@ -1203,8 +1439,8 @@ void XrtComputationClient::ReleaseHandles(
         XrtSession*, const tensorflow::Scope&, const std::string&)>&
         op_generator,
     metrics::Metric* timed_metric, metrics::Counter* destroy_counter) {
-  tsl::profiler::TraceMe activity(
-      "ReleaseHandles", tsl::profiler::TraceMeLevel::kInfo);
+  tsl::profiler::TraceMe activity("ReleaseHandles",
+                                  tsl::profiler::TraceMeLevel::kInfo);
   std::vector<DeviceHandle> released_handles;
   {
     std::lock_guard<std::mutex> lock(lock_);
@@ -1713,7 +1949,7 @@ void XrtComputationClient::InitSession(XrtSession* session) const {
   struct InitNode {
     int count;
     const XrtSession::CachedNode& (XrtComputationClient::*node_ctor)(
-        XrtSession*, const tensorflow::Scope&, const std::string&) const;
+        XrtSession*, const tensorflow::Scope&, const std::string&)const;
   } const init_nodes[] = {
       {16, &XrtComputationClient::GetCompileNode},
       {16, &XrtComputationClient::GetExecuteNode},

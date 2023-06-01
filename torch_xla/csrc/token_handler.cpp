@@ -5,12 +5,13 @@
 #include "third_party/xla_client/sys_util.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/shape_helper.h"
 
 namespace torch_xla {
 namespace {
 
 xla::XlaOp SliceOneToken(xla::XlaOp input) {
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   int64_t input_rank = input_shape.rank();
   if (input_rank > 0) {
     xla::GatherDimensionNumbers dim_numbers;
@@ -40,7 +41,7 @@ xla::XlaOp TokenHandler::GetInput(xla::XlaOp input,
   }
 
   if (input_shape == nullptr) {
-    input_shape = &XlaHelpers::ShapeOfXlaOp(input);
+    input_shape = &ShapeHelper::ShapeOfXlaOp(input);
   }
   // Token is always a numeric zero, so adding to input does not change input.
   return input + MaybeConvertTo(token_, input_shape->element_type());

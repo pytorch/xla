@@ -23,7 +23,6 @@
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir.h"
-#include "torch_xla/csrc/ir_util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/torch_util.h"
@@ -88,6 +87,9 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
       const at::Scalar& value, const xla::Shape& shape,
       c10::optional<at::ScalarType> logical_element_type,
       const torch::lazy::BackendDevice& device);
+  torch::lazy::Value GetIrValueForScalar(
+      const at::Scalar& value, SymIntElements size_elements,
+      xla::PrimitiveType type, const torch::lazy::BackendDevice& device);
 
   // Override to use our own DeviceContextArena.
   torch::lazy::Value GetRngSeed(const torch::lazy::BackendDevice& device) final;
@@ -245,7 +247,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
       const std::vector<XLATensorPtr>& tensors,
       const SyncTensorsConfig& config);
 
-  // Waits for this SyncTensorCollection's device barrier and acuire the lock.
+  // Waits for this SyncTensorCollection's device barrier and acquire the lock.
   // Override to enable SPMD.
   void TensorCollectionBarrier(SyncTensorCollection* coll) final;
 
@@ -273,9 +275,6 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   std::vector<torch::lazy::Value> CollectRoots(
       const std::vector<XLATensorPtr>& tensors,
       absl::Span<const size_t> indices);
-
-  std::vector<XLATensor::ShardingSpecPtr> CollectShardingSpecs(
-      std::vector<XLATensorPtr>* tensors, absl::Span<const size_t> indices);
 
   // TODO(alanwaketan): Reuse the upstream one once Functionalization is done.
   std::vector<torch::lazy::BackendDataPtr> SetTensorData(

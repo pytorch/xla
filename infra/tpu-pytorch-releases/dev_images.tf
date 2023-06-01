@@ -28,7 +28,6 @@ module "dev_images" {
   # Replace `.` and `_` with `-` as they're not allowed in trigger name.
   trigger_name = "dev-${replace(each.key, "/[_.]/", "-")}"
 
-  ansible_branch = "master"
   trigger_on_push = {
     branch         = "master"
     included_files = ["infra/**"]
@@ -44,7 +43,7 @@ module "dev_images" {
   dockerfile = "development.Dockerfile"
   description = join(" ", [
     "Builds development:${each.key} image.",
-    "Trigger managed by Terraform setup in infra/tpu-pytorch/cloud_builds.tf.",
+    "Trigger managed by Terraform setup in infra/tpu-pytorch-releases/dev_images.tf.",
   ])
 
   build_args = {
@@ -65,5 +64,4 @@ module "dev_images" {
   docker_repo_url = module.docker_registry.url
   worker_pool_id  = module.worker_pool.id
   timeout_minutes = 60
-  location        = "global"
 }

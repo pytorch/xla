@@ -29,8 +29,8 @@ def _is_xla_config():
   return False
 
 
-# TODO: Some usages of this function are to caculate the number of hosts (a TPU concept),
-# and some are to caculate the number of processes within a world (which can span multiple hosts).
+# TODO: Some usages of this function are to calculate the number of hosts (a TPU concept),
+# and some are to calculate the number of processes within a world (which can span multiple hosts).
 # The latter should really be what this function is supposed to do. It's so confusing. We
 # should improve it.
 def _get_world_size():
@@ -130,9 +130,9 @@ def _setup_world_size(pf_cfg):
   world_size = host_world_size * pf_cfg.num_devices
   os.environ[xenv.WORLD_SIZE] = str(world_size)
   if pf_cfg.dev_kind == 'CPU':
-    # Since XLA CPU does not support across device reduces, and suport only one
-    # device per process, we make each CPU device look like if it was a single
-    # process host, and use torch.distributed for inter-host reductions.
+    # Since XLA CPU does not support across device reduces, and support only
+    # one device per process, we make each CPU device look like if it was a
+    # single process host, and use torch.distributed for inter-host reductions.
     os.environ[xenv.HOST_WORLD_SIZE] = str(world_size)
   else:
     os.environ[xenv.HOST_WORLD_SIZE] = str(host_world_size)

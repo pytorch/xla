@@ -71,6 +71,10 @@ build:short_logs --output_filter=DONT_MATCH_ANYTHING
 #build:tpu --@org_tensorflow//tensorflow/compiler/xla/python:enable_tpu=true
 build:tpu --define=with_tpu_support=true
 
+# Run tests serially with TPU and GPU (only 1 device is available).
+test:tpu --local_test_jobs=1
+test:cuda --local_test_jobs=1
+
 #########################################################################
 # RBE config options below.
 # Flag to enable remote config
@@ -150,6 +154,8 @@ build:linux --define=LIBDIR=$(PREFIX)/lib
 build:linux --define=INCLUDEDIR=$(PREFIX)/include
 build:linux --define=PROTOBUF_INCLUDE_PATH=$(PREFIX)/include
 
+build:linux --define=build_with_onednn_v2=true
+
 # On linux, we dynamically link small amount of kernels
 build:linux --config=dynamic_kernels
 
@@ -214,6 +220,6 @@ build:linux --copt="-Werror=switch"
 # Required for building with clang
 build:linux --copt="-Wno-error=unused-but-set-variable"
 
-# Only include debug info for files in this repository, excluding external deps.
+# Only include debug info for files not under tensorflow.
 build:dbg -c dbg
-build:dbg --per_file_copt=+external/.*@-g0,-DNDEBUG
+build:dbg --per_file_copt=external/org_tensorflow/.*@-g0,-DNDEBUG

@@ -463,7 +463,7 @@ def all_reduce(reduce_type, inputs, scale=1.0, groups=None, pin_layout=True):
     pin_layout (bool, optional): whether to pin the layout for this communication op.
       Layout pining can prevent potential data corruption when each process that
       participate in the communication has slightly different program, but it might
-      cause some xla compiation to fail. Unpin the layout when you see error message
+      cause some xla compilation to fail. Unpin the layout when you see error message
       like "HloModule has a mix of layout constrained".
 
   Returns:
@@ -511,7 +511,7 @@ def _all_gather_using_all_reduce(value, dim=0, groups=None, pin_layout=True):
     pin_layout (bool, optional): whether to pin the layout for this communication op.
       Layout pining can prevent potential data corruption when each process that
       participate in the communication has slightly different program, but it might
-      cause some xla compiation to fail. Unpin the layout when you see error message
+      cause some xla compilation to fail. Unpin the layout when you see error message
       like "HloModule has a mix of layout constrained".
 
   Returns:
@@ -553,7 +553,7 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
     pin_layout (bool, optional): whether to pin the layout for this communication op.
       Layout pining can prevent potential data corruption when each process that
       participate in the communication has slightly different program, but it might
-      cause some xla compiation to fail. Unpin the layout when you see error message
+      cause some xla compilation to fail. Unpin the layout when you see error message
       like "HloModule has a mix of layout constrained".
 
   Returns:
@@ -612,7 +612,7 @@ def all_to_all(value,
     pin_layout (bool, optional): whether to pin the layout for this communication op.
       Layout pining can prevent potential data corruption when each process that
       participate in the communication has slightly different program, but it might
-      cause some xla compiation to fail. Unpin the layout when you see error message
+      cause some xla compilation to fail. Unpin the layout when you see error message
       like "HloModule has a mix of layout constrained".
 
   Returns:
@@ -668,7 +668,7 @@ def collective_broadcast(tensors: List[torch.Tensor],
     pin_layout (bool, optional): whether to pin the layout for this communication op.
       Layout pining can prevent potential data corruption when each process that
       participate in the communication has slightly different program, but it might
-      cause some xla compiation to fail. Unpin the layout when you see error message
+      cause some xla compilation to fail. Unpin the layout when you see error message
       like "HloModule has a mix of layout constrained".
   """
   with torch.no_grad():
@@ -745,11 +745,11 @@ def reduce_scatter(reduce_type,
     pin_layout (bool, optional): whether to pin the layout for this communication op.
       Layout pining can prevent potential data corruption when each process that
       participate in the communication has slightly different program, but it might
-      cause some xla compiation to fail. Unpin the layout when you see error message
+      cause some xla compilation to fail. Unpin the layout when you see error message
       like "HloModule has a mix of layout constrained".
 
   Returns:
-    A `torch.Tensor` with all the values reduced accross replicas. Each process
+    A `torch.Tensor` with all the values reduced across replicas. Each process
     gets a shard split along the `scatter_dim`. All other dimensions are
     the same as the input.
   """
@@ -967,11 +967,11 @@ def send_cpu_data_to_device(data, device, input_sharding=None):
 
   def convert_fn(tensors):
     devices = [str(device)] * len(tensors)
-    xtensors = torch_xla._XLAC._xla_tensors_from_aten(tensors, devices)
+    shardings = None
     if input_sharding:
-      for xtensor in xtensors:
-        if input_sharding.can_apply(xtensor):
-          input_sharding.apply(xtensor)
+      shardings = [input_sharding.xla_spec(t) for t in tensors]
+    xtensors = torch_xla._XLAC._xla_tensors_from_aten(tensors, devices,
+                                                      shardings)
     return xtensors
 
   def select_fn(v):

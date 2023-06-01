@@ -43,6 +43,7 @@
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
+#include "torch_xla/csrc/xla_sharding_util.h"
 
 // [Implementation Guidelines]
 // - If you want to call a at::func which doesn't have a kernel registered
@@ -466,7 +467,7 @@ at::Tensor XLANativeFunctions::_copy_from(const at::Tensor& self,
   if (!self_tensor) {
     static bool sync_update =
         xla::sys_util::GetEnvBool("XLA_TENSOR_UPDATE_SYNC", true) &&
-        !xla::sys_util::GetEnvBool("XLA_USE_SPMD", false);
+        !ShardingUtil::UseVirtualDevice();
     XLA_CHECK(dst_tensor);
     dst_tensor->UpdateFromTensor(self, /*sync=*/sync_update);
   } else if (!dst_tensor) {

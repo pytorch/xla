@@ -8,8 +8,8 @@
 #include <vector>
 
 #include "absl/strings/str_cat.h"
-#include "third_party/xla_client/computation_client.h"
 #include "third_party/xla_client/debug_macros.h"
+#include "third_party/xla_client/runtime.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/tensor_impl.h"
 #include "torch_xla/csrc/torch_util.h"
@@ -39,7 +39,7 @@ class AtenXlaDeviceMapper {
 
  private:
   AtenXlaDeviceMapper() {
-    for (auto& device_str : xla::ComputationClient::Get()->GetLocalDevices()) {
+    for (auto& device_str : xla::GetComputationClient()->GetLocalDevices()) {
       devices_.emplace_back(ParseDeviceString(device_str));
       devices_ordinals_[devices_.back()] = devices_.size() - 1;
     }
@@ -305,6 +305,11 @@ torch::lazy::BackendDevice AtenDeviceToXlaDevice(const c10::Device& device) {
 }
 
 c10::Device XlaDeviceToAtenDevice(const torch::lazy::BackendDevice& device) {
+  // TODO(yeounoh) until we expose SPMD virtual device to the frontend, this
+  // will just be `XLA:0`.
+  if (device.type() == (int8_t)XlaDeviceType::SPMD) {
+    return c10::Device(at::kXLA, (size_t)0);
+  }
   return c10::Device(at::kXLA,
                      AtenXlaDeviceMapper::Get()->GetDeviceOrdinal(device));
 }
