@@ -9,11 +9,8 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/types/optional.h"
 #include "third_party/xla_client/debug_macros.h"
-<<<<<<< HEAD
 #include "third_party/xla_client/runtime.h"
-=======
 #include "third_party/xla_client/stablehlo_helper.h"
->>>>>>> 0f98d62b... enable stablehlo dump
 #include "third_party/xla_client/xla_util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/tensor_util.h"
