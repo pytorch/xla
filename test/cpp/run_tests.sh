@@ -58,7 +58,7 @@ fi
 
 # Match CXX_ABI flags with XLAC.so build
 if [[ -n "${CXX_ABI}" ]]; then
-  EXTRA_FLAGS="${EXTRA_FLAGS} -cxxopt=-D_GLIBCXX_USE_CXX11_ABI=${CXX_ABI}"
+  EXTRA_FLAGS="${EXTRA_FLAGS} --cxxopt=-D_GLIBCXX_USE_CXX11_ABI=${CXX_ABI}"
 fi
 
 # Handle remote builds and remote cache. Use a CI-private cache silo to avoid cache pollution.
