@@ -24,6 +24,11 @@ exports_files([
     "tf_exported_symbols.lds",
 ])
 
+config_setting(
+  name = "pjrt_only",
+  define_values = {"pjrt_only": "true"},
+)
+
 tf_proto_library_cc(
     name = "mesh_service_proto",
     srcs = ["mesh_service.proto"],
@@ -63,14 +68,22 @@ cc_library(
   hdrs = [
     "runtime.h",
   ],
+  local_defines = select({
+    ":pjrt_only": ["PJRT_ONLY"],
+    "//conditions:default": [],
+  }),
   deps = [
     ":computation_client",
     ":env_vars",
     ":pjrt_computation_client",
-    ":xrt_computation_client",
-    ":xrt_local_service",
     "@org_tensorflow//tensorflow/tsl/platform:stacktrace",
-  ],
+  ] + select({
+    ":pjrt_only": [],
+    "//conditions:default": [
+      ":xrt_computation_client",
+      ":xrt_local_service",
+    ],
+  }),
 )
 
 cc_library(

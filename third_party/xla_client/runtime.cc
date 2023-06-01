@@ -2,8 +2,11 @@
 #include "third_party/xla_client/computation_client.h"
 #include "third_party/xla_client/env_vars.h"
 #include "third_party/xla_client/pjrt_computation_client.h"
+
+#ifndef PJRT_ONLY
 #include "third_party/xla_client/xrt_computation_client.h"
 #include "third_party/xla_client/xrt_local_service.h"
+#endif
 
 namespace xla {
 namespace {
@@ -21,7 +24,11 @@ ComputationClient* CreateClient() {
   if (sys_util::GetEnvString(env::kEnvPjRtDevice, "") != "") {
     client = new PjRtComputationClient();
   } else {
+    #ifndef PJRT_ONLY
     client = new XrtComputationClient();
+    #else
+    XLA_ERROR() << "$PJRT_DEVICE is not set." << std::endl;
+    #endif
   }
 
   XLA_CHECK(client != nullptr);
@@ -42,6 +49,7 @@ ComputationClient* GetComputationClientIfInitialized() {
 }
 
 void RunLocalService(uint64_t service_port) {
+  #ifndef PJRT_ONLY
   try {
     XrtLocalService* service = new XrtLocalService(
         "localservice|localhost:" + std::to_string(service_port),
@@ -56,6 +64,9 @@ void RunLocalService(uint64_t service_port) {
       throw;
     }
   }
+  #else
+  XLA_ERROR() << "PyTorch/XLA was not built with XRT support." << std::endl;
+  #endif
 }
 
 }  // namespace xla
