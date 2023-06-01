@@ -16,9 +16,9 @@ static void hlo_mhlo_helper(const HloModuleProto* proto,
                             mlir::ModuleOp* mlir_module) {
   auto status = ConvertHloToMlirHlo(*mlir_module, proto,
                                     /*import_all_computations*/ false);
-  XLA_CHECK(status.ok()) << "error in HLO -> MHLO conversion.";
+  XLA_CHECK(status.ok()) << "HLO -> MHLO conversion failed.";
   XLA_CHECK(mlir::verify(*mlir_module).succeeded())
-      << "mhlo from hlo2mhlo verify not ok.";
+      << "MHLO from HLO->MHLO is not leagal.";
 }
 
 static void mhlo_stablehlo_helper(mlir::ModuleOp* mlir_module,
@@ -26,7 +26,7 @@ static void mhlo_stablehlo_helper(mlir::ModuleOp* mlir_module,
   mlir::PassManager pm(context);
   pm.addPass(mlir::mhlo::createHloLegalizeToStablehloPass());
   XLA_CHECK(mlir::succeeded(pm.run(*mlir_module)))
-      << "mhlo to stablehlo not ok";
+      << "MHLO -> StableHLO conversion failed.";
 }
 
 std::string hlo_to_stablehlo_str(const HloModuleProto* proto) {

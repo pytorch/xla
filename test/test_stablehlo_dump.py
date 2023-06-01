@@ -1,7 +1,6 @@
 import torch_xla
 import torch_xla.core.xla_model as xm
 import torch
-
 '''
 The following MLIR module should be dump in this test
 module @IrToHlo.9 attributes {mhlo.cross_program_prefetches = [], mhlo.dynamic_parameter_bindings = [], mhlo.is_dynamic = false, mhlo.use_auto_spmd_partitioning = false} {

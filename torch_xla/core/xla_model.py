@@ -840,12 +840,15 @@ def mark_step(wait=False):
   devctx = _run_step_closures()
   torch_xla._XLAC._set_all_reduce_token(devctx.device, None)
 
+
 def get_xla_tensors_stablehlostep(tensors):
   return torch_xla._XLAC._get_xla_tensors_stablehlo(tensors)
 
+
 def xla_get_stablehlo():
   return torch_xla._XLAC._xla_get_stablehlo(
-            torch_xla._XLAC._xla_get_default_device(), [])
+      torch_xla._XLAC._xla_get_default_device(), [])
+
 
 def wait_device_ops(devices=[]):
   """Waits for all the async operations on the given devices to complete.

@@ -55,8 +55,8 @@ DebugUtil::GraphFormat DebugUtil::GetDefaultGraphFormat() {
 }
 
 std::string DebugUtil::GetTensorsGraphHlo(
-    absl::Span<const XLATensorPtr> tensors,
-    const std::vector<size_t>* indices) {
+    absl::Span<const XLATensorPtr> tensors, const std::vector<size_t>* indices,
+    bool dump_stablehlo) {
   std::vector<torch::lazy::Value> root_values;
   xla::util::Unique<torch::lazy::BackendDevice> unique_device;
   if (indices != nullptr) {
@@ -79,7 +79,7 @@ std::string DebugUtil::GetTensorsGraphHlo(
   }
   return DumpUtil::ToHlo(root_values,
                          unique_device ? *unique_device : GetCurrentDevice(),
-                         /* to_stablehlo */ true);
+                         /* to_stablehlo */ dump_stablehlo);
 }
 
 std::string DebugUtil::GetTensorsGraphInfo(
