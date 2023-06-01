@@ -1,5 +1,8 @@
 #include "third_party/xla_client/profiler.h"
 
+#include "absl/container/flat_hash_map.h"
+#include "tensorflow/tsl/platform/status.h"
+#include "tensorflow/tsl/profiler/rpc/client/capture_profile.h"
 #include "tensorflow/tsl/profiler/rpc/profiler_server.h"
 
 namespace xla {
@@ -19,5 +22,12 @@ void ProfilerServer::Start(int port) {
 
 ProfilerServer::~ProfilerServer() {}
 
+tsl::Status Trace(const char* service_addr, const char* logdir, int duration_ms, int num_tracing_attempts,
+    const absl::flat_hash_map<std::string, std::variant<int, std::string>>& options) {
+  return tsl::profiler::CaptureRemoteTrace(
+            service_addr, logdir, /*worker_list=*/"",
+            /*include_dataset_ops=*/false, duration_ms,
+            num_tracing_attempts, options);
+}
 }  // namespace profiler
 }  // namespace xla

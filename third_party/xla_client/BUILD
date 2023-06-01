@@ -159,7 +159,6 @@ cc_library(
     ":metrics_reader",
     ":metrics",
     ":multi_wait",
-    ":profiler",
     ":record_reader",
     ":sys_util",
     ":tf_logging",
@@ -341,8 +340,11 @@ cc_library(
     srcs = ["profiler.cc"],
     hdrs = ["profiler.h"],
     deps = [
+      "@org_tensorflow//tensorflow/tsl/platform:status",
       "@org_tensorflow//tensorflow/tsl/profiler/rpc:profiler_server_impl",
       "@org_tensorflow//tensorflow/tsl/profiler/rpc/client:profiler_client",
+      "@org_tensorflow//tensorflow/tsl/profiler/rpc/client:capture_profile",
+      "@com_google_absl//absl/container:flat_hash_map",
     ],
 )
 

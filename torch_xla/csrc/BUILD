@@ -285,7 +285,6 @@ ptxla_cc_library(
         "@org_tensorflow//tensorflow/core:protos_all_cc",
         "@org_tensorflow//tensorflow/core/platform:env",
         "@org_tensorflow//tensorflow/core/profiler/lib:traceme",
-        "@org_tensorflow//tensorflow/python/profiler/internal:profiler_pywrap_impl",
     ],
 )
 

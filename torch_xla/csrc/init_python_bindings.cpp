@@ -30,7 +30,6 @@
 #include "tensorflow/compiler/xla/service/hlo_parser.h"
 #include "tensorflow/core/example/example.pb.h"
 #include "tensorflow/core/example/feature.pb.h"
-#include "tensorflow/python/profiler/internal/profiler_pywrap_impl.h"
 #include "tensorflow/tsl/platform/env.h"
 #include "tensorflow/tsl/profiler/lib/traceme.h"
 #include "third_party/xla_client/mesh_service.h"
@@ -834,9 +833,8 @@ void BuildProfilerSubmodule(py::module* m) {
         {
           NoGilSection nogil;
           for (int i = 0; i <= timeout_s / interval_s; i++) {
-            status = tensorflow::profiler::pywrap::Trace(
-                service_addr, logdir, /*worker_list=*/"",
-                /*include_dataset_ops=*/false, duration_ms,
+            status = xla::profiler::Trace(
+                service_addr, logdir, duration_ms,
                 num_tracing_attempts, opts);
             if (status.ok()) {
               return;
