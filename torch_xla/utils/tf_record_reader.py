@@ -35,18 +35,6 @@ class TfRecordReader(object):
     """
     return torch_xla._XLAC._xla_tfrecord_read(self._reader)
 
-  def read_example(self):
-    """Reads a TfExample.
-
-    Returns:
-      In case of EOD returns ``None``, otherwise a dictionary whose keys
-      are the feature names, and values the tensors containing their
-      data.
-    """
-    ex = torch_xla._XLAC._xla_tfexample_read(self._reader)
-    if self._transforms is None or ex is None:
-      return ex
-    return self._transform_example(ex)
 
   def _transform_example(self, ex):
     for lbl, data in ex.items():
