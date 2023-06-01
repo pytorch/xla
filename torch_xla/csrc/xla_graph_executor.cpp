@@ -598,19 +598,6 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
       << ". Maybe the entry get "
          "kicked out of the LRU cache";
 
-  // std::vector<XLATensor::ShardingSpecPtr> sharding_specs(coll->indices.size(),
-  //                                                        nullptr);
-  // auto tensors = GetLiveTensors(device);
-
-
-  // // Extract sharding specs for the results and prepare the sharded data
-  // // placeholders if the computation is sharded.
-  // if (cachedComputation->is_sharded) {
-  //   ShardingUtil::PrepareOutputShardingPropagation(
-  //       tensors, coll->indices, cachedComputation->computation, &tensors_data,
-  //       &sharding_specs);
-  // }
-
   // Create DataPlaceHolder that will get filled in async executions.
   std::vector<xla::Shape>* output_shapes =
       DeviceContextArena::Get()->GetOutputShapesByHash(hash);
@@ -659,26 +646,29 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
     }
   }
 
-  // TODO: verify is this the right place to call PrepareOutputShardingPropagation?
-  std::vector<XLATensor::ShardingSpecPtr> sharding_specs(coll->indices.size(),
-                                                         nullptr);
-  auto tensors = GetLiveTensors(device);
-  
+  // Update placeholders by calling PrepareOutputShardingPropagation 
+  std::vector<XLATensor::ShardingSpecPtr> sharding_specs(placeholders.size());
+  std::vector<XLATensorPtr> tensors = GetLiveTensors(&device);
+  std::cout << "WONJOO: before" << std::endl;
+  std::cout << "WONJOO: placeholders.size()=" << placeholders.size() << std::endl;
+
 
   // Extract sharding specs for the results and prepare the sharded data
   // placeholders if the computation is sharded.
   if (cachedComputation->is_sharded) {
     ShardingUtil::PrepareOutputShardingPropagation(
-        tensors, coll->indices, cachedComputation->computation, &tensors_data,
+        &tensors, coll.indices, cachedComputation->computation, &placeholders,
         &sharding_specs);
   }
+
+  std::cout << "WONJOO: after" << std::endl;
+  std::cout << "WONJOO: placeholders.size()=" << placeholders.size() << std::endl;
 
   std::shared_ptr<XLAGraphExecutor::Async> async = std::make_shared<Async>(
       &coll, std::move(arguments), placeholders, std::move(cachedComputation));
 
   // TODO(yeounoh) supply proper sharding specs for sharded results.
   // std::vector<XLATensor::ShardingSpecPtr> sharding_specs(placeholders.size());
-  sharding_specs = placeholders.size();
 
   auto syncfn = [async, hash, sharding_specs]() {
     try {
