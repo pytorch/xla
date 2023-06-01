@@ -620,9 +620,11 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
     placeholders.push_back(handle);
   }
 
+  std::vector<XLATensorPtr> tensors = GetLiveTensors(&device);
   SyncTensorCollection coll;
   coll.device = device;
   coll.unlocker = DeviceLockerArena::Get()->LockDevices({device});
+  coll.indices.reserve(tensors.size());
   std::vector<torch::lazy::BackendDataPtr> arguments;
   {
     // GetXlaData must be called within a lock region, otherwise it might
@@ -641,17 +643,17 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
         dataptr = torch_xla::TensorToXlaData(ivalue.toTensor(), device);
       }
 
+      coll.indices.push_back(idx);
       ++idx;
       arguments.push_back(dataptr);
     }
   }
 
-  // Update placeholders by calling PrepareOutputShardingPropagation 
+  // Update placeholders by calling PrepareOutputShardingPropagation
   std::vector<XLATensor::ShardingSpecPtr> sharding_specs(placeholders.size());
-  std::vector<XLATensorPtr> tensors = GetLiveTensors(&device);
   std::cout << "WONJOO: before" << std::endl;
-  std::cout << "WONJOO: placeholders.size()=" << placeholders.size() << std::endl;
-
+  std::cout << "WONJOO: placeholders.size()=" << placeholders.size()
+            << std::endl;
 
   // Extract sharding specs for the results and prepare the sharded data
   // placeholders if the computation is sharded.
@@ -662,13 +664,15 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
   }
 
   std::cout << "WONJOO: after" << std::endl;
-  std::cout << "WONJOO: placeholders.size()=" << placeholders.size() << std::endl;
+  std::cout << "WONJOO: placeholders.size()=" << placeholders.size()
+            << std::endl;
 
   std::shared_ptr<XLAGraphExecutor::Async> async = std::make_shared<Async>(
       &coll, std::move(arguments), placeholders, std::move(cachedComputation));
 
   // TODO(yeounoh) supply proper sharding specs for sharded results.
-  // std::vector<XLATensor::ShardingSpecPtr> sharding_specs(placeholders.size());
+  // std::vector<XLATensor::ShardingSpecPtr>
+  // sharding_specs(placeholders.size());
 
   auto syncfn = [async, hash, sharding_specs]() {
     try {
