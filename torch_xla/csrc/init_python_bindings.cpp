@@ -91,7 +91,7 @@ torch::lazy::BackendDevice GetDeviceOrCurrent(const std::string& device_str) {
 }
 
 void PrepareToExit() {
-  xla::ComputationClient* client = xla::GetClientIfInitialized();
+  xla::ComputationClient* client = xla::GetComputationClientIfInitialized();
   if (client != nullptr) {
     XLAGraphExecutor::Get()->WaitDeviceOps({});
     client->PrepareToExit();
@@ -331,8 +331,8 @@ void StepMarker(const std::string& device_str,
   XLAGraphExecutor::Get()->MarkStep(device);
   bool debug_mode = xla::sys_util::GetEnvBool("PT_XLA_DEBUG", false);
   if (TF_PREDICT_FALSE(debug_mode)) {
-    std::string report =
-        xla::metrics::CreatePerformanceReport(xla::GetClient()->GetMetrics());
+    std::string report = xla::metrics::CreatePerformanceReport(
+        xla::GetComputationClient()->GetMetrics());
     if (!report.empty()) {
       std::string fout = xla::sys_util::GetEnvString("PT_XLA_DEBUG_FILE", "");
       if (TF_PREDICT_FALSE(!fout.empty())) {
@@ -723,7 +723,7 @@ py::dict GetMemoryInfo(const std::string& device_str) {
   {
     NoGilSection nogil;
     torch::lazy::BackendDevice device = GetDeviceOrCurrent(device_str);
-    mem_info = xla::GetClient()->GetMemoryInfo(device.toString());
+    mem_info = xla::GetComputationClient()->GetMemoryInfo(device.toString());
   }
   auto py_dict = py::dict();
   py_dict["kb_free"] = mem_info.kb_free;
@@ -966,10 +966,11 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_xla_get_tensor_id",
         [](const at::Tensor& tensor) { return GetTensorId(tensor); });
   m.def("_xla_get_devices",
-        []() { return xla::GetClient()->GetLocalDevices(); });
-  m.def("_xla_num_devices", []() { return xla::GetClient()->GetNumDevices(); });
+        []() { return xla::GetComputationClient()->GetLocalDevices(); });
+  m.def("_xla_num_devices",
+        []() { return xla::GetComputationClient()->GetNumDevices(); });
   m.def("_xla_get_all_devices",
-        []() { return xla::GetClient()->GetAllDevices(); });
+        []() { return xla::GetComputationClient()->GetAllDevices(); });
   m.def("_xla_real_devices", [](const std::vector<std::string>& devices) {
     std::vector<std::string> xla_devices;
     {
@@ -978,20 +979,22 @@ void InitXlaModuleBindings(py::module m) {
     }
     return xla_devices;
   });
-  m.def(
-      "_xla_set_replication_devices",
-      [](const std::vector<std::string>& devices) {
-        auto replication_devices =
-            std::make_shared<std::vector<std::string>>(devices);
-        xla::GetClient()->SetReplicationDevices(std::move(replication_devices));
-      });
+  m.def("_xla_set_replication_devices",
+        [](const std::vector<std::string>& devices) {
+          auto replication_devices =
+              std::make_shared<std::vector<std::string>>(devices);
+          xla::GetComputationClient()->SetReplicationDevices(
+              std::move(replication_devices));
+        });
   m.def("_xla_get_replication_devices", []() {
-    auto replication_devices = xla::GetClient()->GetReplicationDevices();
+    auto replication_devices =
+        xla::GetComputationClient()->GetReplicationDevices();
     return replication_devices != nullptr ? *replication_devices
                                           : std::vector<std::string>();
   });
   m.def("_xla_get_replication_devices_count", []() {
-    auto replication_devices = xla::GetClient()->GetReplicationDevices();
+    auto replication_devices =
+        xla::GetComputationClient()->GetReplicationDevices();
     return replication_devices != nullptr ? replication_devices->size() : 0;
   });
   m.def("_xla_rendezvous",
@@ -1186,16 +1189,16 @@ void InitXlaModuleBindings(py::module m) {
     return device.ordinal();
   });
   m.def("_xla_get_process_index",
-        []() { return xla::GetClient()->GetProcessIndex(); });
+        []() { return xla::GetComputationClient()->GetProcessIndex(); });
   m.def("_xla_get_num_processes",
-        []() { return xla::GetClient()->GetNumProcesses(); });
+        []() { return xla::GetComputationClient()->GetNumProcesses(); });
   m.def("_xla_get_device_ordinal", [](const std::string& device_str) {
     return bridge::AtenDeviceToXlaDevice(device_str).ordinal();
   });
   m.def("_xla_get_device_attributes", [](const std::string& device_str) {
     const absl::flat_hash_map<
         std::string, xla::ComputationClient::DeviceAttribute>& attributes =
-        xla::GetClient()->GetDeviceAttributes(
+        xla::GetComputationClient()->GetDeviceAttributes(
             bridge::AtenDeviceToXlaDevice(device_str).toString());
 
     py::dict dict;
@@ -1249,9 +1252,9 @@ void InitXlaModuleBindings(py::module m) {
           XLAGraphExecutor::Get()->WaitDeviceOps(devices);
           if (ShardingUtil::UseVirtualDevice()) {
             std::vector<std::string> spmd_device = {"SPMD:0"};
-            xla::GetClient()->WaitDeviceOps(spmd_device);
+            xla::GetComputationClient()->WaitDeviceOps(spmd_device);
           } else {
-            xla::GetClient()->WaitDeviceOps(devices);
+            xla::GetComputationClient()->WaitDeviceOps(devices);
           }
         },
         py::arg("devices"));
@@ -1294,7 +1297,7 @@ void InitXlaModuleBindings(py::module m) {
     // library.
     return torch::lazy::CreateMetricReport() +
            xla::metrics_reader::CreateMetricReport(
-               xla::GetClient()->GetMetrics());
+               xla::GetComputationClient()->GetMetrics());
   });
   m.def("_short_xla_metrics_report", [](const py::list& counter_names,
                                         const py::list& metric_names) {
@@ -1581,7 +1584,8 @@ void InitXlaModuleBindings(py::module m) {
           XLA_CHECK(ShardingUtil::UseVirtualDevice())
               << "Virtual device must be enabled to use _get_local_shards";
           auto handle = UnwrapXlaData(xtensor->GetXlaData());
-          auto shard_handles = xla::GetClient()->GetDataShards(handle);
+          auto shard_handles =
+              xla::GetComputationClient()->GetDataShards(handle);
           std::vector<at::Tensor> shards;
           for (auto& shard_handle : shard_handles) {
             auto xshard = XLATensor::Create(WrapXlaData(shard_handle));

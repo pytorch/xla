@@ -76,7 +76,7 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
       const torch::lazy::BackendDevice& device,
       const torch::lazy::Shape& shape) const override {
     xla::Shape xla_shape = MakeXlaShapeFromLazyShape(shape, device);
-    return WrapXlaData(xla::GetClient()->CreateDataPlaceholder(
+    return WrapXlaData(xla::GetComputationClient()->CreateDataPlaceholder(
         device.toString(), std::move(xla_shape)));
   }
 
@@ -118,7 +118,7 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
   std::vector<std::string> GetCompilationDevices(
       const std::string& device,
       c10::ArrayRef<std::string> devices) const override {
-    return xla::GetClient()->GetCompilationDevices(device, devices);
+    return xla::GetComputationClient()->GetCompilationDevices(device, devices);
   }
 
   std::vector<torch::lazy::ComputationPtr> Compile(
@@ -152,7 +152,7 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
     }
     std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
         client_computations =
-            xla::GetClient()->Compile(std::move(compile_instances));
+            xla::GetComputationClient()->Compile(std::move(compile_instances));
     return WrapClientComputation(client_computations);
   }
 
@@ -161,7 +161,7 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
       c10::ArrayRef<torch::lazy::BackendDataPtr> arguments,
       const torch::lazy::BackendDevice& device) const override {
     std::vector<xla::ComputationClient::DataPtr> results =
-        xla::GetClient()->ExecuteComputation(
+        xla::GetComputationClient()->ExecuteComputation(
             *(UnwrapClientComputation(computation).get()),
             UnwrapXlaData(arguments), device.toString());
     return WrapXlaData(results);

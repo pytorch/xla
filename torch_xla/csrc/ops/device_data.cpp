@@ -14,7 +14,7 @@ DeviceData::DeviceData(std::shared_ptr<torch::lazy::BackendData> data)
               /*hash_seed=*/(uint32_t)101),
       data_(std::move(data)) {
   std::optional<xla::OpSharding> op_sharding =
-      xla::GetClient()->GetDataSharding(UnwrapXlaData(data_));
+      xla::GetComputationClient()->GetDataSharding(UnwrapXlaData(data_));
   if (op_sharding.has_value()) {
     SetSharding(op_sharding.value());
   }

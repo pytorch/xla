@@ -268,12 +268,14 @@ std::string DumpUtil::ToHlo(c10::ArrayRef<torch::lazy::Value> values,
         ConsumeValue(computation.GetProgramShape()).result(),
         static_cast<XlaDeviceType>(device.type()));
     std::vector<xla::ComputationClient::CompileInstance> instances;
-    instances.push_back(
-        {std::move(computation), device.toString(),
-         xla::GetClient()->GetCompilationDevices(device.toString(), {}), &shape,
-         /*parameter_is_tupled_arguments=*/false, is_sharded});
+    instances.push_back({std::move(computation), device.toString(),
+                         xla::GetComputationClient()->GetCompilationDevices(
+                             device.toString(), {}),
+                         &shape,
+                         /*parameter_is_tupled_arguments=*/false, is_sharded});
     std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
-        computations = xla::GetClient()->Compile(std::move(instances));
+        computations =
+            xla::GetComputationClient()->Compile(std::move(instances));
     return ConsumeValue(
         xla::util::GetComputationHloText(computations[0]->computation()));
   }

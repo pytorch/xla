@@ -105,7 +105,7 @@ std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
   }
 
   auto compilation_devices =
-      xla::GetClient()->GetCompilationDevices(device, devices);
+      xla::GetComputationClient()->GetCompilationDevices(device, devices);
   torch::lazy::hash_t nodes_key_seed =
       GetNodesKeySeed(device, compilation_devices);
   torch::lazy::BackendDevice exec_device = ParseDeviceString(device);
@@ -187,7 +187,7 @@ std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
     TF_VLOG(3) << "Compiling " << compile_instances.size()
                << " computations on device " << device;
     auto computation_ptrs =
-        xla::GetClient()->Compile(std::move(compile_instances));
+        xla::GetComputationClient()->Compile(std::move(compile_instances));
     TF_VLOG(3) << "Compiling " << computation_ptrs.size()
                << " computations on device " << device << " done!";
     for (size_t i = 0; i < computation_ptrs.size(); ++i) {
@@ -205,7 +205,7 @@ std::vector<torch::lazy::BackendDataPtr> OpByOpExecutor::Execute(
     absl::Span<const std::string> devices) {
   auto chained_exec_ops = BuildOps(roots, device, devices);
   return WrapXlaData(
-      xla::GetClient()->ExecuteChained(chained_exec_ops, device));
+      xla::GetComputationClient()->ExecuteChained(chained_exec_ops, device));
 }
 
 OpByOpExecutor::AsyncTask OpByOpExecutor::ExecuteAsync(

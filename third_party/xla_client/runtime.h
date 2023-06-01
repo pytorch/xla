@@ -6,9 +6,9 @@
 namespace xla {
 
 // Returns the ComputationClient singleton.
-ComputationClient* GetClient();
+ComputationClient* GetComputationClient();
 
-ComputationClient* GetClientIfInitialized();
+ComputationClient* GetComputationClientIfInitialized();
 
 // Run the XRT local service, this will block the caller unitl the server
 // being stopped.

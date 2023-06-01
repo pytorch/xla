@@ -31,13 +31,13 @@ ComputationClient* CreateClient() {
 
 }  // namespace
 
-ComputationClient* GetClient() {
+ComputationClient* GetComputationClient() {
   std::call_once(g_computation_client_once,
                  [&]() { g_computation_client = std::move(CreateClient()); });
   return g_computation_client.load();
 }
 
-ComputationClient* GetClientIfInitialized() {
+ComputationClient* GetComputationClientIfInitialized() {
   return g_computation_client.load();
 }
 

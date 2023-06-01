@@ -216,7 +216,8 @@ ShardingUtil::InputHandler(
   auto device_index = build_index_map(devices);
 
   for (int64_t argument_i = 0; argument_i < arguments.size(); ++argument_i) {
-    auto shards = xla::GetClient()->GetDataShards(arguments[argument_i]);
+    auto shards =
+        xla::GetComputationClient()->GetDataShards(arguments[argument_i]);
     // With SPMD execution, all input is distributed across addressable devices,
     // either by sharding or replication.
     for (auto shard : shards) {
@@ -264,7 +265,7 @@ std::vector<xla::ComputationClient::DataPtr> ShardingUtil::OutputHandler(
             xla::HloSharding::Replicate().ToProto(),
             sharded_results[0][i]->shape());
       }
-      outputs.push_back(xla::GetClient()->WrapDataShards(
+      outputs.push_back(xla::GetComputationClient()->WrapDataShards(
           shards, GetVirtualDevice().toString(), sharding->shape.value(),
           sharding->sharding));
     }
@@ -450,10 +451,11 @@ void ShardingUtil::PrepareOutputShardingPropagation(
     // Create sharded data placeholder, this will be used to
     // hold the corresponding computation results for both sharding &
     // replication.
-    auto sharded_data_placeholder = WrapXlaData(
-        xla::GetClient()->WrapDataShards({}, GetVirtualDevice().toString(),
-                                         (*sharding_specs)[i]->shape.value(),
-                                         (*sharding_specs)[i]->sharding));
+    auto sharded_data_placeholder =
+        WrapXlaData(xla::GetComputationClient()->WrapDataShards(
+            {}, GetVirtualDevice().toString(),
+            (*sharding_specs)[i]->shape.value(),
+            (*sharding_specs)[i]->sharding));
 
     // Register the sharded data placeholder to the tensor and its node.
     (*data_placeholders)[i] = sharded_data_placeholder;
