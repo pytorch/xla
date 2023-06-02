@@ -24,7 +24,14 @@
 namespace torch_xla {
 namespace {
 
+using tsl::ERROR;
+using tsl::INFO;
 using xla::internal::XlaBuilderFriend;
+
+// Return py::obj type as string.
+std::string GetPyType(const py::object& elem) {
+  return elem.attr("__class__").attr("__name__").cast<std::string>();
+}
 
 // Extract dimensions of the nested input array/list. For instance, an input 2D
 // list, [[1, 2, 3], [4, 5, 6]] has [2, 3] dimensions with 2 rows and 3 columns.
@@ -36,7 +43,7 @@ std::vector<int64_t> TileAssignmentDimensions(
     XLA_CHECK(r.size() > 0)
         << "Invalid argument: empty list is not a valid element type.";
     dims.push_back(r.size());
-    auto type = r[0].attr("__class__").attr("__name__").cast<std::string>();
+    std::string type = GetPyType(r[0]);
     if (type == "list") {
       r = r[0];
     } else if ((type != "int") && (type != "float")) {
@@ -60,6 +67,31 @@ static std::unordered_map<int, int> build_index_map(
     device_index[global_ordinal] = i;
   }
   return device_index;
+}
+
+// Extract a list view of device IDs as group members per replication group.
+std::vector<std::vector<int64_t>> ExtractGroupMembers(
+    const py::list& replication_groups) {
+  std::vector<std::vector<int64_t>> groups;
+  groups.reserve(replication_groups.size());
+  for (int i = 0; i < replication_groups.size(); ++i) {
+    std::string type = GetPyType(replication_groups[i]);
+    XLA_CHECK(type == "list")
+        << "Invalid replication group type: list is expected, got " << type;
+    const py::list& group = replication_groups[i];
+    std::vector<int64_t> group_members;
+    group_members.reserve(group.size());
+    for (int j = 0; j < group.size(); ++j) {
+      try {
+        group_members.push_back(group[j].cast<int64_t>());
+      } catch (py::error_already_set& e) {
+        TF_LOG(ERROR) << "Invalid arguments: element type "
+                      << GetPyType(group[j]);
+      }
+    }
+    groups.push_back(group_members);
+  }
+  return groups;
 }
 
 }  // namespace
@@ -97,63 +129,56 @@ bool ShardingUtil::EqualShardingSpecs(const XLATensor::ShardingSpec& a,
   return xla::protobuf_util::ProtobufEquals(a.sharding, b.sharding);
 }
 
-xla::OpSharding ShardingUtil::CreateOpSharding(const py::list& tile_assignment,
-                                               bool replicated, bool manual) {
-  XLA_CHECK(!(replicated && manual))
-      << "Invalid arguments: replicated=" << replicated
-      << ", manual=" << manual;
-
+xla::OpSharding ShardingUtil::CreateOpSharding(
+    const py::list& tile_assignment, const py::list& group_assignment,
+    const py::list& replication_groups, ShardingType sharding_type) {
   xla::OpSharding sharding;
-  if (replicated) {
-    sharding = xla::HloSharding::Replicate().ToProto();
-  } else if (manual) {
-    sharding = xla::HloSharding::Manual().ToProto();
-  } else {
-    // Sharding type is tiled
-    auto dims = TileAssignmentDimensions(tile_assignment);
-    xla::Array<int64_t> tile_array(dims);
-    switch (dims.size()) {
-      case 1:
-        tile_array.Each([&](absl::Span<const int64_t> indices, int64_t* v) {
-          *v = tile_assignment[indices[0]].cast<int64_t>();
-        });
-        break;
-      case 2:
-        tile_array.Each([&](absl::Span<const int64_t> indices, int64_t* v) {
-          auto r = tile_assignment[indices[0]].cast<py::list>();
-          *v = r[indices[1]].cast<int64_t>();
-        });
-        break;
-      case 3:
-        tile_array.Each([&](absl::Span<const int64_t> indices, int64_t* v) {
-          auto r = tile_assignment[indices[0]].cast<py::list>();
-          r = r[indices[1]].cast<py::list>();
-          *v = r[indices[2]].cast<int64_t>();
-        });
-        break;
-      case 4:
-        tile_array.Each([&](absl::Span<const int64_t> indices, int64_t* v) {
-          auto r = tile_assignment[indices[0]].cast<py::list>();
-          r = r[indices[1]].cast<py::list>();
-          r = r[indices[2]].cast<py::list>();
-          *v = r[indices[3]].cast<int64_t>();
-        });
-        break;
-      case 5:
-        tile_array.Each([&](absl::Span<const int64_t> indices, int64_t* v) {
-          auto r = tile_assignment[indices[0]].cast<py::list>();
-          r = r[indices[1]].cast<py::list>();
-          r = r[indices[2]].cast<py::list>();
-          r = r[indices[3]].cast<py::list>();
-          *v = r[indices[4]].cast<int64_t>();
-        });
-        break;
-      default:
-        TF_LOG(ERROR) << "Invalid arguments: tile_assignment ranks > 5";
+  switch (sharding_type) {
+    case ShardingType::MANUAL: {
+      TF_LOG(ERROR) << "Invalid arguments: sharding_type (MANUAL) is "
+                    << "currently not supported";
+      break;
     }
-    xla::HloSharding hlo_sharding = xla::HloSharding::Tile(tile_array);
-    sharding = hlo_sharding.ToProto();
+    case ShardingType::TUPLE: {
+      TF_LOG(ERROR) << "Invalid arguments: sharding_type (TUPLE) is "
+                    << "currently not supported";
+      break;
+    }
+    // REPLICATED reduces to MAXIMAL in case of a single device.
+    case ShardingType::MAXIMAL:
+    case ShardingType::REPLICATED: {
+      sharding = xla::HloSharding::Replicate().ToProto();
+      break;
+    }
+    case ShardingType::TILED: {
+      xla::Array<int64_t> tile_array = TileListToArray(tile_assignment);
+      sharding = xla::HloSharding::Tile(tile_array).ToProto();
+      break;
+    }
+    case ShardingType::PARTIAL: {
+      XLA_CHECK(replication_groups.size() > 0)
+          << "ShardingType.PARTIAL requires non-empty replication groups.";
+      xla::Array<int64_t> group_tiling = TileListToArray(group_assignment);
+      auto group_members = ExtractGroupMembers(replication_groups);
+      std::vector<absl::Span<const int64_t>> group_members_view;
+      group_members_view.reserve(group_members.size());
+      for (auto& group : group_members) {
+        auto group_view = absl::MakeConstSpan(group);
+        group_members_view.push_back(group_view);
+      }
+      XLA_CHECK(group_tiling.num_elements() == group_members_view.size());
+
+      sharding = xla::HloSharding::PartialTile(group_tiling, group_members_view)
+                     .ToProto();
+      break;
+    }
+    default: {
+      TF_LOG(ERROR) << "Invalid arguments: sharding_type " << sharding_type;
+    }
   }
+
+  TF_VLOG(INFO) << "OpSharding (ShardingType: " << sharding_type
+                << "):" << sharding.DebugString();
   return sharding;
 }
 

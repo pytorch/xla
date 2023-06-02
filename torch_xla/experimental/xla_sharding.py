@@ -11,6 +11,7 @@ from torch_xla.experimental.pjrt import requires_pjrt
 
 import numpy as np
 from typing import Tuple, Union, List
+from enum import IntEnum
 
 
 class Mesh:
@@ -71,6 +72,16 @@ class Mesh:
     return self.device_ids.reshape(self.mesh_shape)
 
 
+class ShardingType(IntEnum):
+  # ShardingType enum ID maps to OpSharidng.Type if applicable.
+  REPLICATED = 0
+  MAXIMAL = 1
+  TUPLE = 2
+  TILED = 3
+  MANUAL = 4
+  PARTIAL = 5
+
+
 @requires_pjrt
 def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
                   partition_spec: Tuple[Union[int, None]]) -> XLAShardedTensor:
@@ -110,28 +121,57 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
     f"{mesh.mesh_shape} is not mappable over {num_devices} devices."
   assert all((d >= 0 and d < len(mesh.mesh_shape)) for d in partition_spec if d), \
     f"partition_spec ({partition_spec}) contains out of bound index into mesh_shape."
-  # TODO(yeounoh) allow unspecified ranks (len(partition_spec) <= len(t.shape)),
-  # for replication. For now, all input rank sharding should be specified.
-  assert len(t.shape) == len(partition_spec), \
-    f"Partition spec length ({len(partition_spec)}) is not equal to the input rank ({len(t.shape)})."
-  dims = [d for d in partition_spec if d]
-  assert len(dims) == len(np.unique(dims)), \
+  assert len(t.shape) >= len(partition_spec), \
+    f"Partition spec length ({len(partition_spec)}) is greater than input rank ({len(t.shape)})."
+  specs = [d for d in partition_spec if d]
+  assert len(specs) == len(np.unique(specs)), \
     f"Each device mesh dimension should appear at most once in partition_spec {partition_spec}."
 
+  # Unspecified dimensions are replicated.
+  _partition_spec = [None] * len(t.shape)
+  for i in range(len(partition_spec)):
+    _partition_spec[i] = partition_spec[i]
+  partition_spec = _partition_spec
+
   tile_assignment = mesh.get_logical_mesh().tolist()
-  manual, replicated, partial = False, False, False
-  if all(d is None for d in partition_spec):
-    replicated = True
+
+  sharding_type = ShardingType.TILED
+  if num_devices == 1:
+    sharding_type = ShardingType.MAXIMAL
+  elif all(d is None for d in partition_spec):
+    sharding_type = ShardingType.REPLICATED
   elif any(d is None for d in partition_spec):
-    partial = True
-  # TODO(yeounoh) support partially replicated sharding.
-  assert not partial, "Partial replication is currently not supported."
+    sharding_type = ShardingType.PARTIAL
+
+  group_assignment = list()
+  replication_groups = list()
+  if sharding_type is ShardingType.PARTIAL:
+    # Shard across groups and replicate within subgroups; replicated dims
+    # will be used to group replication devices.
+    tile_dims = [d for d in partition_spec if d is not None]
+    replicated_dims = set(range(len(mesh.mesh_shape))) - set(tile_dims)
+
+    group_list = [np.array(tile_assignment)]
+    for d in tile_dims:
+      _group_list = list()
+      for group_members in group_list:
+        _group_list += np.split(group_members, mesh.mesh_shape[d], d)
+      group_list = _group_list
+    replication_groups = [group.flatten().tolist() for group in group_list]
+
+    group_tile_shape = list(mesh.mesh_shape)
+    for d in replicated_dims:
+      group_tile_shape[d] = 1
+    group_assignment = np.arange(len(replication_groups)).reshape(
+        tuple(group_tile_shape)).tolist()
 
   if isinstance(t, XLAShardedTensor):
     torch_xla._XLAC._xla_mark_sharding(t.global_tensor, tile_assignment,
-                                       replicated, manual)
+                                       group_assignment, replication_groups,
+                                       int(sharding_type))
     return t
-  torch_xla._XLAC._xla_mark_sharding(t, tile_assignment, replicated, manual)
+  torch_xla._XLAC._xla_mark_sharding(t, tile_assignment, group_assignment,
+                                     replication_groups, int(sharding_type))
   return XLAShardedTensor(t)
 
 
