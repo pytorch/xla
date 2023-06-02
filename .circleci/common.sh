@@ -114,6 +114,7 @@ function run_torch_xla_tests() {
     export GPU_NUM_DEVICES=2
   fi
   export PYTORCH_TESTING_DEVICE_ONLY_FOR="xla"
+  export CXX_ABI=$(python -c "import torch;print(int(torch._C._GLIBCXX_USE_CXX11_ABI))")
 
   pushd $XLA_DIR
     echo "Running Python Tests"
