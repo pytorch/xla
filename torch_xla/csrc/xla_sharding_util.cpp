@@ -48,6 +48,20 @@ std::vector<int64_t> TileAssignmentDimensions(
   return dims;
 }
 
+// Builds a map from the device's global ordinal to its index in the `devices`
+// array. This is used by `ShardTensor` and `InputHandler` to ensure the
+// order of the output corresponds to the order of the `devices`, which can be
+// arbitrarily set by the caller.
+static std::unordered_map<int, int> build_index_map(
+    const std::vector<std::string>& devices) {
+  std::unordered_map<int, int> device_index;
+  for (int i = 0; i < devices.size(); ++i) {
+    int global_ordinal = ParseDeviceString(devices[i]).ordinal();
+    device_index[global_ordinal] = i;
+  }
+  return device_index;
+}
+
 }  // namespace
 
 bool ShouldUseVirtualDevice() {
@@ -192,20 +206,6 @@ xla::HloModuleProto ShardingUtil::SpmdPartitioningPass(
   return module.get()->ToProto();
 }
 
-// Builds a map from the device's global ordinal to its index in the `devices`
-// array. This is used by `ShardTensor` and `InputHandler` to ensure the
-// order of the output corresponds to the order of the `devices`, which can be
-// arbitrarily set by the caller.
-static std::unordered_map<int, int> build_index_map(
-    const std::vector<std::string>& devices) {
-  std::unordered_map<int, int> device_index;
-  for (int i = 0; i < devices.size(); ++i) {
-    int global_ordinal = ParseDeviceString(devices[i]).ordinal();
-    device_index[global_ordinal] = i;
-  }
-  return device_index;
-}
-
 std::vector<std::vector<xla::ComputationClient::DataPtr>>
 ShardingUtil::InputHandler(
     std::vector<xla::ComputationClient::DataPtr> arguments,
@@ -213,6 +213,8 @@ ShardingUtil::InputHandler(
   std::vector<std::vector<xla::ComputationClient::DataPtr>> arguments_by_device(
       devices.size(),
       std::vector<xla::ComputationClient::DataPtr>(arguments.size()));
+  // This assumes that the (local) devices are sorted, in order to associate
+  // the first local index with the first global device ordinal.
   auto device_index = build_index_map(devices);
 
   for (int64_t argument_i = 0; argument_i < arguments.size(); ++argument_i) {
