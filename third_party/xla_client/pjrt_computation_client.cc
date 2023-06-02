@@ -55,7 +55,7 @@ MaybeInitializeDistributedRuntimeClient(int local_rank,
 
 // Builds a map from the device's global ordinal to its index in the `devices`
 // array.
-static std::unordered_map<int, int> build_index_map(
+std::unordered_map<int, int> build_index_map(
     const std::vector<std::string>& devices) {
   std::unordered_map<int, int> device_index;
   for (int i = 0; i < devices.size(); ++i) {
@@ -332,7 +332,8 @@ ComputationClient::DataPtr PjRtComputationClient::ReplicateShardedData(
 
     std::vector<std::vector<ComputationClient::DataPtr>> arguments_by_device(
         GetLocalDevices().size(), std::vector<ComputationClient::DataPtr>(1));
-    for (auto shard : shards) {
+    for (int i = 0; i < shards.size(); ++i) {
+      auto shard = shards[i];
       std::vector<std::string> device_spec =
           absl::StrSplit(shard->device(), ':');
       XLA_CHECK_EQ(device_spec.size(), 2)

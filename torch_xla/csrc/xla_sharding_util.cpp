@@ -59,7 +59,7 @@ std::vector<int64_t> TileAssignmentDimensions(
 // array. This is used by `ShardTensor` and `InputHandler` to ensure the
 // order of the output corresponds to the order of the `devices`, which can be
 // arbitrarily set by the caller.
-static std::unordered_map<int, int> build_index_map(
+std::unordered_map<int, int> build_index_map(
     const std::vector<std::string>& devices) {
   std::unordered_map<int, int> device_index;
   for (int i = 0; i < devices.size(); ++i) {
@@ -67,6 +67,51 @@ static std::unordered_map<int, int> build_index_map(
     device_index[global_ordinal] = i;
   }
   return device_index;
+}
+
+xla::Array<int64_t> TileListToArray(const py::list& tile_assignment) {
+  auto dims = TileAssignmentDimensions(tile_assignment);
+  xla::Array<int64_t> tile_array(dims);
+  switch (dims.size()) {
+    case 1:
+      tile_array.Each([&](absl::Span<const int64_t> indices, int64_t* v) {
+        *v = tile_assignment[indices[0]].cast<int64_t>();
+      });
+      break;
+    case 2:
+      tile_array.Each([&](absl::Span<const int64_t> indices, int64_t* v) {
+        auto r = tile_assignment[indices[0]].cast<py::list>();
+        *v = r[indices[1]].cast<int64_t>();
+      });
+      break;
+    case 3:
+      tile_array.Each([&](absl::Span<const int64_t> indices, int64_t* v) {
+        auto r = tile_assignment[indices[0]].cast<py::list>();
+        r = r[indices[1]].cast<py::list>();
+        *v = r[indices[2]].cast<int64_t>();
+      });
+      break;
+    case 4:
+      tile_array.Each([&](absl::Span<const int64_t> indices, int64_t* v) {
+        auto r = tile_assignment[indices[0]].cast<py::list>();
+        r = r[indices[1]].cast<py::list>();
+        r = r[indices[2]].cast<py::list>();
+        *v = r[indices[3]].cast<int64_t>();
+      });
+      break;
+    case 5:
+      tile_array.Each([&](absl::Span<const int64_t> indices, int64_t* v) {
+        auto r = tile_assignment[indices[0]].cast<py::list>();
+        r = r[indices[1]].cast<py::list>();
+        r = r[indices[2]].cast<py::list>();
+        r = r[indices[3]].cast<py::list>();
+        *v = r[indices[4]].cast<int64_t>();
+      });
+      break;
+    default:
+      TF_LOG(ERROR) << "Invalid arguments: tile_assignment ranks > 5";
+  }
+  return tile_array;
 }
 
 // Extract a list view of device IDs as group members per replication group.
@@ -152,7 +197,8 @@ xla::OpSharding ShardingUtil::CreateOpSharding(
     }
     case ShardingType::TILED: {
       xla::Array<int64_t> tile_array = TileListToArray(tile_assignment);
-      sharding = xla::HloSharding::Tile(tile_array).ToProto();
+      xla::HloSharding hlo_sharding = xla::HloSharding::Tile(tile_array);
+      sharding = hlo_sharding.ToProto();
       break;
     }
     case ShardingType::PARTIAL: {
@@ -176,7 +222,6 @@ xla::OpSharding ShardingUtil::CreateOpSharding(
       TF_LOG(ERROR) << "Invalid arguments: sharding_type " << sharding_type;
     }
   }
-
   TF_VLOG(INFO) << "OpSharding (ShardingType: " << sharding_type
                 << "):" << sharding.DebugString();
   return sharding;

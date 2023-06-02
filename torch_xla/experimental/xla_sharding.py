@@ -82,6 +82,43 @@ class ShardingType(IntEnum):
   PARTIAL = 5
 
 
+def _get_sharding_type(partition_spec: Tuple[Union[int, None]], num_devices: int) -> ShardingType:
+  sharding_type = ShardingType.TILED
+  if num_devices == 1:
+    sharding_type = ShardingType.MAXIMAL
+  elif all(d is None for d in partition_spec):
+    sharding_type = ShardingType.REPLICATED
+  elif any(d is None for d in partition_spec):
+    sharding_type = ShardingType.PARTIAL
+  return sharding_type
+
+def _get_tile_assignment(mesh: Mesh) -> List[int]:
+  return mesh.get_logical_mesh().tolist()
+
+def _get_group_assignment(sharding_type: ShardingType, mesh: Mesh, partition_spec: Tuple[Union[int, None]]) -> Tuple[List, List]:
+  group_assignment = list()
+  replication_groups = list()
+  if sharding_type is ShardingType.PARTIAL:
+    # Shard across groups and replicate within subgroups; replicated dims
+    # will be used to group replication devices.
+    tile_dims = [d for d in partition_spec if d is not None]
+    replicated_dims = set(range(len(mesh.mesh_shape))) - set(tile_dims)
+
+    group_list = [np.array(mesh.get_logical_mesh().tolist())]
+    for d in tile_dims:
+      _group_list = list()
+      for group_members in group_list:
+        _group_list += np.split(group_members, mesh.mesh_shape[d], d)
+      group_list = _group_list
+    replication_groups = [group.flatten().tolist() for group in group_list]
+
+    group_tile_shape = list(mesh.mesh_shape)
+    for d in replicated_dims:
+      group_tile_shape[d] = 1
+    group_assignment = np.arange(len(replication_groups)).reshape(
+        tuple(group_tile_shape)).tolist()
+  return group_assignment, replication_groups
+
 @requires_pjrt
 def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
                   partition_spec: Tuple[Union[int, None]]) -> XLAShardedTensor:
@@ -121,49 +158,19 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
     f"{mesh.mesh_shape} is not mappable over {num_devices} devices."
   assert all((d >= 0 and d < len(mesh.mesh_shape)) for d in partition_spec if d), \
     f"partition_spec ({partition_spec}) contains out of bound index into mesh_shape."
-  assert len(t.shape) >= len(partition_spec), \
-    f"Partition spec length ({len(partition_spec)}) is greater than input rank ({len(t.shape)})."
+  # We only allow fully specified `partition_spec` to be applicable, as opposed
+  # to filling in the unspecified replicated dims. Fully specified `partiion_spec`
+  # should be of the same rank as `t`. This is to support partial replication
+  # where the group assignment may vary with different input ranks.
+  assert len(t.shape) == len(partition_spec), \
+    f"Partition spec length ({len(partition_spec)}) should be equal to the input rank ({len(t.shape)})."
   specs = [d for d in partition_spec if d]
   assert len(specs) == len(np.unique(specs)), \
     f"Each device mesh dimension should appear at most once in partition_spec {partition_spec}."
 
-  # Unspecified dimensions are replicated.
-  _partition_spec = [None] * len(t.shape)
-  for i in range(len(partition_spec)):
-    _partition_spec[i] = partition_spec[i]
-  partition_spec = _partition_spec
-
-  tile_assignment = mesh.get_logical_mesh().tolist()
-
-  sharding_type = ShardingType.TILED
-  if num_devices == 1:
-    sharding_type = ShardingType.MAXIMAL
-  elif all(d is None for d in partition_spec):
-    sharding_type = ShardingType.REPLICATED
-  elif any(d is None for d in partition_spec):
-    sharding_type = ShardingType.PARTIAL
-
-  group_assignment = list()
-  replication_groups = list()
-  if sharding_type is ShardingType.PARTIAL:
-    # Shard across groups and replicate within subgroups; replicated dims
-    # will be used to group replication devices.
-    tile_dims = [d for d in partition_spec if d is not None]
-    replicated_dims = set(range(len(mesh.mesh_shape))) - set(tile_dims)
-
-    group_list = [np.array(tile_assignment)]
-    for d in tile_dims:
-      _group_list = list()
-      for group_members in group_list:
-        _group_list += np.split(group_members, mesh.mesh_shape[d], d)
-      group_list = _group_list
-    replication_groups = [group.flatten().tolist() for group in group_list]
-
-    group_tile_shape = list(mesh.mesh_shape)
-    for d in replicated_dims:
-      group_tile_shape[d] = 1
-    group_assignment = np.arange(len(replication_groups)).reshape(
-        tuple(group_tile_shape)).tolist()
+  tile_assignment = _get_tile_assignment(mesh)
+  sharding_type = _get_sharding_type(partition_spec, num_devices)
+  group_assignment, replication_groups = _get_group_assignment(sharding_type, mesh, partition_spec)
 
   if isinstance(t, XLAShardedTensor):
     torch_xla._XLAC._xla_mark_sharding(t.global_tensor, tile_assignment,
@@ -190,16 +197,16 @@ class ShardingSpec:
 
   # Derived fields
   _tile_assignment: List[int] = field(init=False)
-  _replicated: bool = field(init=False)
-  _partial: bool = field(init=False)
+  _group_assignment: List[int] = field(init=False)
+  _replication_groups: List[int] = field(init=False)
+  _sharding_type: ShardingType = field(init=False)
 
+  @requires_pjrt
   def __post_init__(self):
-    self._tile_assignment = self.mesh.get_logical_mesh().tolist()
-    self._replicated = all(d is None for d in self.partition_spec)
-    self._partial = not self._replicated and any(
-        d is None for d in self.partition_spec)
-    # TODO(yeounoh) support partially replicated sharding.
-    assert not self._partial, "Partial replication is currently not supported"
+    partition_spec, mesh = self.partition_spec, self.mesh
+    self._tile_assignment = _get_tile_assignment(mesh)
+    self._sharding_type = _get_sharding_type(partition_spec, pjrt.global_device_count())
+    self._group_assignment, self._replication_groups = _get_group_assignment(self._sharding_type, mesh, partition_spec)
 
   def xla_spec(self, t: torch.Tensor) -> Union['XlaShardingSpec', None]:
     """
@@ -209,13 +216,15 @@ class ShardingSpec:
     if not self.can_apply(t):
       return None
     return torch_xla._XLAC.XlaShardingSpec(t, self._tile_assignment,
-                                           self._replicated, False)
+                                           self._group_assignment,
+                                           self._replication_groups,
+                                           int(self._sharding_type))
 
   def can_apply(self, t: torch.Tensor) -> bool:
     """
     Test whether the ShardingSpec is compatible with the given torch.Tensor.
     """
-    return len(self.partition_spec) == len(t.shape)
+    return len(t.shape) == len(self.partition_spec)
 
   def apply(self, t: torch.Tensor):
     # TODO(yeounoh) use virtual device interface when available.
