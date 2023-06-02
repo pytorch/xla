@@ -841,13 +841,23 @@ def mark_step(wait=False):
   torch_xla._XLAC._set_all_reduce_token(devctx.device, None)
 
 
-def get_xla_tensors_stablehlostep(tensors):
-  return torch_xla._XLAC._get_xla_tensors_stablehlo(tensors)
+def xla_get_stablehlo(tensors=[]):
+  """Get StableHLO dump for the computation graph in string format.
 
+  If tensors is not empty, the graph containing the provided tensors will be dump.
+  If tensors is empty, the whole graph will be dump.
 
-def xla_get_stablehlo():
-  return torch_xla._XLAC._xla_get_stablehlo(
-      torch_xla._XLAC._xla_get_default_device(), [])
+  Args:
+    tensors (list[torch.Tensor], optional): The tensors contained in the StableHLO graph.
+
+  Returns:
+    StableHLO in string format.
+  """
+  if len(tensors) == 0:
+    return torch_xla._XLAC._xla_get_stablehlo(
+        torch_xla._XLAC._xla_get_default_device(), [])
+  else:
+    return torch_xla._XLAC._get_xla_tensors_stablehlo(tensors)
 
 
 def wait_device_ops(devices=[]):

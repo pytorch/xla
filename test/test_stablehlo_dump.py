@@ -20,8 +20,8 @@ y = torch.tensor([3], device=xm.xla_device())
 z = x + y
 
 # Example usage of dumping StableHLO given output tensors
-stablehlo = xm.get_xla_tensors_stablehlostep([z])
-print(stablehlo)
+stablehlo = xm.xla_get_stablehlo([z])
+# print(stablehlo)
 # Example usage of dump StableHLO of the entire graph
 stablehlo = xm.xla_get_stablehlo()
-print(stablehlo)
+# print(stablehlo)
