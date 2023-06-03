@@ -6,6 +6,9 @@ MAX_GRAPH_SIZE=500
 GRAPH_CHECK_FREQUENCY=100
 VERBOSITY=2
 
+BAZEL_REMOTE_CACHE="0"
+BAZEL_VERB="test"
+
 # Note [Keep Going]
 #
 # Set the `CONTINUE_ON_ERROR` flag to `true` to make the CircleCI tests continue on error.
@@ -31,16 +34,26 @@ do
     V)
       VERBOSITY=$OPTARG
       ;;
+    R)
+      BAZEL_REMOTE_CACHE="1"
+      ;;
+    C)
+      BAZEL_VERB="coverage"
+      ;;
   esac
 done
 shift $(($OPTIND - 1))
+
+if [ "${USE_COVERAGE:-0}" != "0" ]; then
+  BAZEL_VERB="coverage"
+fi
 
 export TRIM_GRAPH_SIZE=$MAX_GRAPH_SIZE
 export TRIM_GRAPH_CHECK_FREQUENCY=$GRAPH_CHECK_FREQUENCY
 export TORCH_TEST_DEVICES="$CDIR/pytorch_test_base.py"
 export PYTORCH_TEST_WITH_SLOW=1
 export XLA_DUMP_FATAL_STACK=1
-export CPU_NUM_DEVICES=4
+#export CPU_NUM_DEVICES=4
 
 TORCH_XLA_DIR=$(cd ~; dirname "$(python -c 'import torch_xla; print(torch_xla.__file__)')")
 COVERAGE_FILE="$CDIR/../.coverage"
@@ -50,6 +63,14 @@ function run_coverage {
     coverage run --source="$TORCH_XLA_DIR" -p "$@"
   else
     python3 "$@"
+  fi
+}
+
+function set_accelerator {
+  if [ -x "$(command -v nvidia-smi)" ] && [ "$XLA_CUDA" != "0" ]; then
+    BAZEL_TAG="py_gpu"
+  else
+    BAZEL_TAG="py_cpu"
   fi
 }
 
@@ -159,40 +180,29 @@ function run_torch_op_tests {
   run_dynamic "$CDIR/../../test/test_type_promotion.py" "$@" -v TestTypePromotionXLA
 }
 
+function set_bazel_caching() {
+  EXTRA_FLAGS=""
+  if [[ "$BAZEL_REMOTE_CACHE" == "1" ]]; then
+    EXTRA_FLAGS="$EXTRA_FLAGS --config=remote_cache"
+    if [[ ! -z "$GCLOUD_SERVICE_KEY_FILE" ]]; then
+      EXTRA_FLAGS="$EXTRA_FLAGS --google_credentials=$GCLOUD_SERVICE_KEY_FILE"
+    fi
+    if [[ ! -z "$SILO_NAME" ]]; then
+      EXTRA_FLAGS="$EXTRA_FLAGS --remote_default_exec_properties=cache-silo-key=$SILO_NAME"
+    fi
+  fi
+  if [[ "$XLA_CUDA" == "1" ]]; then
+    EXTRA_FLAGS="$EXTRA_FLAGS --config=cuda"
+  fi
+  if [[ "$BAZEL_VERB" == "coverage" ]]; then
+    EXTRA_FLAGS="$EXTRA_FLAGS --remote_download_outputs=all" # for lcov symlink
+  fi
+}
+
 function run_xla_op_tests {
-  run_dynamic "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
-  run_dynamic "$CDIR/ds/test_dynamic_shapes.py"
-  run_dynamic "$CDIR/ds/test_dynamic_shape_models.py" "$@" --verbosity=$VERBOSITY
-  run_eager_debug  "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
-  run_test "$CDIR/test_grad_checkpoint.py"
-  run_test "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
-  run_test_without_functionalization "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
-  run_test "$CDIR/test_async_closures.py"
-  run_test "$CDIR/test_xla_dist.py"
-  run_test "$CDIR/test_profiler.py"
-  run_test "$CDIR/test_ops.py"
-  run_test "$CDIR/test_metrics.py"
-  run_test "$CDIR/test_zero1.py"
-  run_test "$CDIR/dynamo/test_dynamo_integrations_util.py"
-  run_test "$CDIR/dynamo/test_dynamo.py"
-  run_test "$CDIR/dynamo/test_bridge.py"
-  run_test "$CDIR/dynamo/test_num_output.py"
-  run_save_tensor_file "$CDIR/dynamo/test_dynamo_graph_dump.py"
-  run_downcast_bf16 "$CDIR/test_data_type.py"
-  run_use_bf16 "$CDIR/test_data_type.py"
-  run_xla_ir_debug "$CDIR/test_env_var_mapper.py"
-  run_xla_hlo_debug "$CDIR/test_env_var_mapper.py"
-  run_test "$CDIR/pjrt/test_experimental_pjrt.py"
-  run_test "$CDIR/pjrt/test_experimental_tpu.py"
-  run_test "$CDIR/pjrt/test_ddp.py"
-  run_test "$CDIR/pjrt/test_mesh_service.py"
-  run_test "$CDIR/spmd/test_xla_sharding.py"
-  run_test "$CDIR/spmd/test_xla_virtual_device.py"
-  # TODO(yeounoh) SPMD output sharding is blocking Dynamo integration.
-  #run_test "$CDIR/spmd/test_dynamo_spmd.py"
-  run_test "$CDIR/test_operations_hlo.py" "$@" --verbosity=$VERBOSITY
-  run_test "$CDIR/test_input_output_aliases.py"
-  run_test "$CDIR/test_torch_distributed_xla_backend.py"
+  set_accelerator
+  set_bazel_caching
+  bazel $BAZEL_VERB $EXTRA_FLAGS --test_tag_filters="$BAZEL_TAG,-mp" --build_tag_filters=$BAZEL_TAG //test/... 
 }
 
 function run_op_tests {
@@ -201,22 +211,9 @@ function run_op_tests {
 }
 
 function run_mp_op_tests {
-  run_test "$CDIR/test_mp_replication.py"
-  run_test "$CDIR/test_mp_all_to_all.py"
-  run_test "$CDIR/test_mp_collective_permute.py"
-  run_test "$CDIR/test_mp_all_gather.py"
-  run_test "$CDIR/test_mp_reduce_scatter.py"
-  run_test "$CDIR/test_mp_distributed_mm.py"
-  run_test "$CDIR/test_mp_save.py"
-  run_test "$CDIR/test_mp_mesh_reduce.py"
-  run_test "$CDIR/test_mp_sync_batch_norm.py"
-  run_xla_backend_mp "$CDIR/test_torch_distributed_all_gather_xla_backend.py"
-  run_xla_backend_mp "$CDIR/test_torch_distributed_all_reduce_xla_backend.py"
-  run_xla_backend_mp "$CDIR/test_torch_distributed_multi_all_reduce_xla_backend.py"
-  run_xla_backend_mp "$CDIR/test_torch_distributed_reduce_scatter_xla_backend.py"
-  run_xla_backend_mp "$CDIR/test_ddp.py"
-  run_xla_backend_mp "$CDIR/test_fsdp_auto_wrap.py"
-  run_xla_backend_mp "$CDIR/test_torch_distributed_fsdp_meta.py"
+  set_accelerator
+  set_bazel_caching
+  bazel $BAZEL_VERB $EXTRA_FLAGS --test_tag_filters="$BAZEL_TAG,-xla_op" --build_tag_filters=$BAZEL_TAG //test/... 
 }
 
 function run_tests {
