@@ -82,7 +82,8 @@ class ShardingType(IntEnum):
   PARTIAL = 5
 
 
-def _get_sharding_type(partition_spec: Tuple[Union[int, None]], num_devices: int) -> ShardingType:
+def _get_sharding_type(partition_spec: Tuple[Union[int, None]],
+                       num_devices: int) -> ShardingType:
   sharding_type = ShardingType.TILED
   if num_devices == 1:
     sharding_type = ShardingType.MAXIMAL
@@ -92,10 +93,14 @@ def _get_sharding_type(partition_spec: Tuple[Union[int, None]], num_devices: int
     sharding_type = ShardingType.PARTIAL
   return sharding_type
 
+
 def _get_tile_assignment(mesh: Mesh) -> List[int]:
   return mesh.get_logical_mesh().tolist()
 
-def _get_group_assignment(sharding_type: ShardingType, mesh: Mesh, partition_spec: Tuple[Union[int, None]]) -> Tuple[List, List]:
+
+def _get_group_assignment(
+    sharding_type: ShardingType, mesh: Mesh,
+    partition_spec: Tuple[Union[int, None]]) -> Tuple[List, List]:
   group_assignment = list()
   replication_groups = list()
   if sharding_type is ShardingType.PARTIAL:
@@ -118,6 +123,7 @@ def _get_group_assignment(sharding_type: ShardingType, mesh: Mesh, partition_spe
     group_assignment = np.arange(len(replication_groups)).reshape(
         tuple(group_tile_shape)).tolist()
   return group_assignment, replication_groups
+
 
 @requires_pjrt
 def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
@@ -170,7 +176,8 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
 
   tile_assignment = _get_tile_assignment(mesh)
   sharding_type = _get_sharding_type(partition_spec, num_devices)
-  group_assignment, replication_groups = _get_group_assignment(sharding_type, mesh, partition_spec)
+  group_assignment, replication_groups = _get_group_assignment(
+      sharding_type, mesh, partition_spec)
 
   if isinstance(t, XLAShardedTensor):
     torch_xla._XLAC._xla_mark_sharding(t.global_tensor, tile_assignment,
@@ -205,8 +212,10 @@ class ShardingSpec:
   def __post_init__(self):
     partition_spec, mesh = self.partition_spec, self.mesh
     self._tile_assignment = _get_tile_assignment(mesh)
-    self._sharding_type = _get_sharding_type(partition_spec, pjrt.global_device_count())
-    self._group_assignment, self._replication_groups = _get_group_assignment(self._sharding_type, mesh, partition_spec)
+    self._sharding_type = _get_sharding_type(partition_spec,
+                                             pjrt.global_device_count())
+    self._group_assignment, self._replication_groups = _get_group_assignment(
+        self._sharding_type, mesh, partition_spec)
 
   def xla_spec(self, t: torch.Tensor) -> Union['XlaShardingSpec', None]:
     """
