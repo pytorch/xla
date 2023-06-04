@@ -222,8 +222,8 @@ xla::OpSharding ShardingUtil::CreateOpSharding(
       TF_LOG(ERROR) << "Invalid arguments: sharding_type " << sharding_type;
     }
   }
-  TF_VLOG(INFO) << "OpSharding (ShardingType: " << sharding_type
-                << "):" << sharding.DebugString();
+  TF_VLOG(INFO) << "OpSharding (ShardingType: " << sharding_type << "):\n"
+                << sharding.DebugString();
   return sharding;
 }
 
@@ -355,6 +355,9 @@ std::vector<int64_t> ShardingUtil::GetShardShape(
     // `shard_shape[j]` is the size of dimension `j` in the resulting shard.
     std::vector<int64_t> shard_shape;
     for (int j = 0; j < tile_shape.size(); j++) {
+      if (sharding.replicate_on_last_tile_dim() && j == tile_shape.size() - 1) {
+        continue;
+      }
       shard_shape.push_back(tensor.sizes()[j] / tile_shape[j] +
                             (tensor.sizes()[j] % tile_shape[j] != 0));
     }
@@ -402,6 +405,13 @@ ShardingUtil::GetShardIndicesForDevices(
       int offset = i;
       std::vector<at::indexing::TensorIndex> indices;
       for (int j = tile_shape.size() - 1; j >= 0; j--) {
+        if (sharding.replicate_on_last_tile_dim() &&
+            j == tile_shape.size() - 1) {
+          // the last tile assignment dimension is replicated, which implies
+          // that the consecutive `tile_shape[j]` devices hold the replicated.
+          offset /= tile_shape[j];
+          continue;
+        }
         int64_t n_j = offset % tile_shape[j];
         int start = n_j * shard_shape[j];
         // Clamp the end of the slice to the tensor shape to accurately reflect
