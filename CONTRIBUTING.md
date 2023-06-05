@@ -8,7 +8,15 @@ Sending a PR without discussion might end up resulting in a rejected PR, because
 
 ## Building Manually
 
-To build from source:
+We recommend you to use our prebuilt Docker image to start your development work. If you want to use VSCode with docker, please refer to this [config](https://github.com/pytorch/xla/tree/master/.devcontainer/tpu-contributor).
+
+* Setup Development Docker Image
+
+  ```shell
+  docker pull us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:tpu
+  docker run --privileged --name ptxla -it -d -e "TERM=xterm-256color" us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:tpu
+  docker exec --privileged -it ptxla /bin/bash
+  ```
 
 * Clone the _PyTorch_ repo as per [instructions](https://github.com/pytorch/pytorch#from-source).
 
@@ -23,70 +31,15 @@ To build from source:
   git clone --recursive https://github.com/pytorch/xla.git
   ```
 
-### Building Docker Image
-
-* We provide a Dockerfile in `docker/` that you can use to build images as the
-  following command:
-
+* Build PyTorch
+  ```Shell
+  cd /pytorch/
+  python setup.pyt install
+  ```
+* Build PyTorch/XLA
   ```Shell
   cd xla/
-  docker build -t torch-xla -f docker/Dockerfile .
-  ```
-
-### Building With Script
-
-* To build and install `torch` and `torch_xla`:
-
-  ```Shell
-  xla/scripts/build_torch_wheels.sh
-  ```
-
-### Build From Source
-
-* Apply PyTorch patches:
-
-  ```Shell
-  xla/scripts/apply_patches.sh
-  ```
-
-* Install the Lark parser used for automatic code generation:
-
-  ```Shell
-  pip install lark-parser
-  ```
-
-* Currently _PyTorch_ does not build with _GCC_ 6.x, 7.x, and 8.x (various kind of ICEs). _CLANG_ 7, 8, 9 and 10 are known to be working, so install that in your VM:
-
-  ```Shell
-  sudo apt-get install clang-8 clang++-8
-  export CC=clang-8 CXX=clang++-8
-  ```
-
-  You may need to add the following line to your _/etc/apt/sources.list_ file:
-
-  ```Shell
-  deb http://deb.debian.org/debian/ testing main
-  ```
-
-  And run the following command before trying again to install _CLANG_:
-
-  ```Shell
-  sudo apt-get update
-  ```
-
-* Build _PyTorch_ from source following the regular [instructions](https://github.com/pytorch/pytorch#from-source).
-
-  ```Shell
-  python setup.py install
-  ```
-
-* Install Bazelisk following the [instructions](https://github.com/bazelbuild/bazelisk#requirements). Bazelisk automatically picks a good version of Bazel for PyTorch/XLA build.
-
-* Build the _PyTorch/XLA_ source:
-
-  ```Shell
-  cd xla/
-  python setup.py install
+  python setup.pyt install
   ```
 
 ## Before Submitting A Pull Request:
