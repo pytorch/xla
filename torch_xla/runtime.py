@@ -34,10 +34,10 @@ def _maybe_select_default_device():
     return
 
   logging.warning(
-      'XRT configuration not detected. Defaulting to preview PJRT '
-      'runtime. To silence this warning and continue using PJRT, '
-      'explicitly set PJRT_DEVICE to a supported device or configure XRT. To '
-      'disable default device selection, set PJRT_SELECT_DEFAULT_DEVICE=0')
+      'XRT configuration not detected. Defaulting to PJRT runtime. To silence '
+      'this warning and continue using PJRT, explicitly set PJRT_DEVICE to a '
+      'supported device or configure XRT. To disable default device selection, '
+      'set PJRT_SELECT_DEFAULT_DEVICE=0')
   # TODO: Update this link in the release branch
   logging.warning('For more information about the status of PJRT, see '
                   'https://github.com/pytorch/xla/blob/master/docs/xr.md')
