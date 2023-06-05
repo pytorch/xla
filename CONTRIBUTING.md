@@ -34,12 +34,12 @@ We recommend you to use our prebuilt Docker image to start your development work
 * Build PyTorch
   ```Shell
   cd /pytorch/
-  python setup.pyt install
+  python setup.py install
   ```
 * Build PyTorch/XLA
   ```Shell
   cd xla/
-  python setup.pyt install
+  python setup.py install
   ```
 
 ## Before Submitting A Pull Request:
