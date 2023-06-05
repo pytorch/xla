@@ -217,9 +217,9 @@ class BazelExtension(Extension):
   def __init__(self, bazel_target):
     self.bazel_target = bazel_target
     self.relpath, self.target_name = (
-      posixpath.relpath(bazel_target, '//').split(':'))
+        posixpath.relpath(bazel_target, '//').split(':'))
     ext_name = os.path.join(
-      self.relpath.replace(posixpath.sep, os.path.sep), self.target_name)
+        self.relpath.replace(posixpath.sep, os.path.sep), self.target_name)
     if ext_name.endswith('.so'):
       ext_name = ext_name[:-3]
     Extension.__init__(self, ext_name, sources=[])
@@ -231,16 +231,16 @@ class BuildBazelExtension(command.build_ext.build_ext):
   def run(self):
     for ext in self.extensions:
       self.bazel_build(ext)
-
     command.build_ext.build_ext.run(self)
 
   def bazel_build(self, ext):
     if not os.path.exists(self.build_temp):
       os.makedirs(self.build_temp)
+
     bazel_argv = [
-      'bazel', 'build', ext.bazel_target,
-      f"--symlink_prefix={os.path.join(self.build_temp, 'bazel-')}",
-      '\n'.join(['--cxxopt=%s' % opt for opt in extra_compile_args])
+        'bazel', 'build', ext.bazel_target,
+        f"--symlink_prefix={os.path.join(self.build_temp, 'bazel-')}",
+        '\n'.join(['--cxxopt=%s' % opt for opt in extra_compile_args])
     ]
 
     # Debug build.
