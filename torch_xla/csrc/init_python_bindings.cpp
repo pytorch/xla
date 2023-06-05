@@ -833,9 +833,8 @@ void BuildProfilerSubmodule(py::module* m) {
         {
           NoGilSection nogil;
           for (int i = 0; i <= timeout_s / interval_s; i++) {
-            status = xla::profiler::Trace(
-                service_addr, logdir, duration_ms,
-                num_tracing_attempts, opts);
+            status = xla::profiler::Trace(service_addr, logdir, duration_ms,
+                                          num_tracing_attempts, opts);
             if (status.ok()) {
               return;
             }

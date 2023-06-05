@@ -24,11 +24,11 @@ ComputationClient* CreateClient() {
   if (sys_util::GetEnvString(env::kEnvPjRtDevice, "") != "") {
     client = new PjRtComputationClient();
   } else {
-    #ifndef PJRT_ONLY
+#ifndef PJRT_ONLY
     client = new XrtComputationClient();
-    #else
+#else
     XLA_ERROR() << "$PJRT_DEVICE is not set." << std::endl;
-    #endif
+#endif
   }
 
   XLA_CHECK(client != nullptr);
@@ -49,7 +49,7 @@ ComputationClient* GetComputationClientIfInitialized() {
 }
 
 void RunLocalService(uint64_t service_port) {
-  #ifndef PJRT_ONLY
+#ifndef PJRT_ONLY
   try {
     XrtLocalService* service = new XrtLocalService(
         "localservice|localhost:" + std::to_string(service_port),
@@ -64,9 +64,9 @@ void RunLocalService(uint64_t service_port) {
       throw;
     }
   }
-  #else
+#else
   XLA_ERROR() << "PyTorch/XLA was not built with XRT support." << std::endl;
-  #endif
+#endif
 }
 
 }  // namespace xla

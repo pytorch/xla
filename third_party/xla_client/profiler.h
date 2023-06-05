@@ -21,8 +21,11 @@ class ProfilerServer {
   std::unique_ptr<Impl> impl_;
 };
 
-tsl::Status Trace(const char* service_addr, const char* logdir, int duration_ms, int num_tracing_attempts,
-    const absl::flat_hash_map<std::string, std::variant<int, std::string>>& options);
+tsl::Status Trace(
+    const char* service_addr, const char* logdir, int duration_ms,
+    int num_tracing_attempts,
+    const absl::flat_hash_map<std::string, std::variant<int, std::string>>&
+        options);
 
 }  // namespace profiler
 }  // namespace xla
