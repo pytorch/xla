@@ -330,7 +330,8 @@ cc_library(
       "@org_tensorflow//tensorflow/tsl/profiler/rpc/client:capture_profile",
       "@com_google_absl//absl/container:flat_hash_map",
 
-      # TODO: Why do we need these?
+      # TODO: We get missing symbol errors without these deps. Why aren't they
+      # included transitively from TensorFlow/TSL?
       "@org_tensorflow//tensorflow/tsl/profiler/protobuf:profiler_analysis_proto_cc_impl",
       "@org_tensorflow//tensorflow/tsl/profiler/protobuf:profiler_options_proto_cc_impl",
       "@org_tensorflow//tensorflow/tsl/profiler/protobuf:profiler_service_proto_cc_impl",

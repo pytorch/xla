@@ -41,7 +41,7 @@
 #     whether to build for TPU
 #
 #   PJRT_ONLY=1
-#     whether to build for TPU
+#     whether to build for PJRT
 #
 #   SILO_NAME=""
 #     name of the remote build cache silo
