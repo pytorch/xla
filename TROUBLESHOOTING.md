@@ -33,7 +33,7 @@ import torch_xla.debug.metrics as met
 # For short report that only contains a few key metrics.
 print(met.short_metrics_report())
 # For full report that includes all metrics.
-print(met.short_metrics_report())
+print(met.metrics_report())
 ```
 
 ## Understand The Metrics Report

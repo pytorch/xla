@@ -21,6 +21,7 @@ variable "description" {
 
 variable "ansible_git_rev" {
   # Checkout Ansible setup (/infra/ansible) at current Cloud Build commit.
+  # Use `origin/<branch>` for branches.
   default = "$COMMIT_SHA"
 }
 

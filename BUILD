@@ -8,7 +8,6 @@ tf_cc_shared_object(
     copts = [
         "-DTORCH_API_INCLUDE_EXTENSION_H",
         "-DTORCH_EXTENSION_NAME=_XLAC",
-        "-DC10_USING_CUSTOM_GENERATED_MACROS",
         "-fopenmp",
         "-fPIC",
         "-fwrapv",
@@ -18,7 +17,7 @@ tf_cc_shared_object(
     ],
     visibility = ["//visibility:public"],
     deps = [
-        "//third_party/xla_client:computation_client",
+        "//third_party/xla_client:runtime",
         "//third_party/xla_client:mesh_service",
         "//third_party/xla_client:metrics",
         "//third_party/xla_client:metrics_analysis",

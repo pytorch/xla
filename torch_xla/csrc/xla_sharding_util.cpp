@@ -14,6 +14,7 @@
 #include "tensorflow/compiler/xla/service/sharding_propagation.h"
 #include "tensorflow/compiler/xla/service/spmd/spmd_partitioner.h"
 #include "tensorflow/compiler/xla/xla.pb.h"
+#include "third_party/xla_client/runtime.h"
 #include "torch/csrc/lazy/core/ir_util.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ops/device_data.h"
@@ -45,6 +46,20 @@ std::vector<int64_t> TileAssignmentDimensions(
     }
   }
   return dims;
+}
+
+// Builds a map from the device's global ordinal to its index in the `devices`
+// array. This is used by `ShardTensor` and `InputHandler` to ensure the
+// order of the output corresponds to the order of the `devices`, which can be
+// arbitrarily set by the caller.
+static std::unordered_map<int, int> build_index_map(
+    const std::vector<std::string>& devices) {
+  std::unordered_map<int, int> device_index;
+  for (int i = 0; i < devices.size(); ++i) {
+    int global_ordinal = ParseDeviceString(devices[i]).ordinal();
+    device_index[global_ordinal] = i;
+  }
+  return device_index;
 }
 
 }  // namespace
@@ -191,20 +206,6 @@ xla::HloModuleProto ShardingUtil::SpmdPartitioningPass(
   return module.get()->ToProto();
 }
 
-// Builds a map from the device's global ordinal to its index in the `devices`
-// array. This is used by `ShardTensor` and `InputHandler` to ensure the
-// order of the output corresponds to the order of the `devices`, which can be
-// arbitrarily set by the caller.
-static std::unordered_map<int, int> build_index_map(
-    const std::vector<std::string>& devices) {
-  std::unordered_map<int, int> device_index;
-  for (int i = 0; i < devices.size(); ++i) {
-    int global_ordinal = ParseDeviceString(devices[i]).ordinal();
-    device_index[global_ordinal] = i;
-  }
-  return device_index;
-}
-
 std::vector<std::vector<xla::ComputationClient::DataPtr>>
 ShardingUtil::InputHandler(
     std::vector<xla::ComputationClient::DataPtr> arguments,
@@ -212,11 +213,13 @@ ShardingUtil::InputHandler(
   std::vector<std::vector<xla::ComputationClient::DataPtr>> arguments_by_device(
       devices.size(),
       std::vector<xla::ComputationClient::DataPtr>(arguments.size()));
+  // This assumes that the (local) devices are sorted, in order to associate
+  // the first local index with the first global device ordinal.
   auto device_index = build_index_map(devices);
 
   for (int64_t argument_i = 0; argument_i < arguments.size(); ++argument_i) {
     auto shards =
-        xla::ComputationClient::Get()->GetDataShards(arguments[argument_i]);
+        xla::GetComputationClient()->GetDataShards(arguments[argument_i]);
     // With SPMD execution, all input is distributed across addressable devices,
     // either by sharding or replication.
     for (auto shard : shards) {
@@ -264,7 +267,7 @@ std::vector<xla::ComputationClient::DataPtr> ShardingUtil::OutputHandler(
             xla::HloSharding::Replicate().ToProto(),
             sharded_results[0][i]->shape());
       }
-      outputs.push_back(xla::ComputationClient::Get()->WrapDataShards(
+      outputs.push_back(xla::GetComputationClient()->WrapDataShards(
           shards, GetVirtualDevice().toString(), sharding->shape.value(),
           sharding->sharding));
     }
@@ -451,7 +454,7 @@ void ShardingUtil::PrepareOutputShardingPropagation(
     // hold the corresponding computation results for both sharding &
     // replication.
     auto sharded_data_placeholder =
-        WrapXlaData(xla::ComputationClient::Get()->WrapDataShards(
+        WrapXlaData(xla::GetComputationClient()->WrapDataShards(
             {}, GetVirtualDevice().toString(),
             (*sharding_specs)[i]->shape.value(),
             (*sharding_specs)[i]->sharding));

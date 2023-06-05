@@ -14,6 +14,7 @@
 #include "third_party/xla_client/tf_logging.h"
 #include "third_party/xla_client/util.h"
 #include "torch_xla/csrc/convert_ops.h"
+#include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
@@ -97,7 +98,7 @@ XlaHelpers::DynamicSize XlaHelpers::GetDimensionsSize(
   xla::XlaOp size;
   int64_t size_scalar = 1;
   for (auto& input : inputs) {
-    const xla::Shape& shape = ShapeOfXlaOp(input);
+    const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(input);
     for (auto dim : dimensions) {
       if (size_scalar >= 0) {
         if (!shape.is_dynamic_dimension(dim)) {
@@ -223,24 +224,19 @@ xla::XlaComputation XlaHelpers::CreateOrComputation(xla::PrimitiveType type) {
       [&](xla::XlaOp x, xla::XlaOp y) { return xla::Or(x, y); });
 }
 
-const xla::Shape& XlaHelpers::ShapeOfXlaOp(xla::XlaOp op) {
-  const xla::Shape* shape = ConsumeValue(op.builder()->GetShapePtr(op));
-  return *shape;
-}
-
 std::vector<int64_t> XlaHelpers::SizesOfXlaOp(xla::XlaOp op) {
-  const xla::Shape& op_shape = ShapeOfXlaOp(op);
+  const xla::Shape& op_shape = ShapeHelper::ShapeOfXlaOp(op);
   return std::vector<int64_t>(op_shape.dimensions().begin(),
                               op_shape.dimensions().end());
 }
 
 xla::PrimitiveType XlaHelpers::TypeOfXlaOp(xla::XlaOp op) {
-  return ShapeOfXlaOp(op).element_type();
+  return ShapeHelper::ShapeOfXlaOp(op).element_type();
 }
 
 xla::XlaOp XlaHelpers::ReshapeToRank(xla::XlaOp input, int64_t expected_rank,
                                      int64_t offset) {
-  const xla::Shape& shape = ShapeOfXlaOp(input);
+  const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(input);
   XLA_CHECK_LE(offset + shape.rank(), expected_rank);
   if (shape.rank() == expected_rank) {
     return input;
@@ -300,7 +296,7 @@ xla::Shape XlaHelpers::GetDynamicReshape(
 
 xla::XlaOp XlaHelpers::DynamicReshape(xla::XlaOp input,
                                       absl::Span<const int64_t> output_sizes) {
-  const xla::Shape& input_shape = ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   if (output_sizes == input_shape.dimensions()) {
     return input;
   }
@@ -314,7 +310,7 @@ xla::XlaOp XlaHelpers::DynamicReshape(xla::XlaOp input,
 
 xla::XlaOp XlaHelpers::DynamicReshapeAs(xla::XlaOp input,
                                         const xla::Shape& shape) {
-  const xla::Shape& input_shape = ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   int64_t dynamic_dimension = GetDynamicDimension(shape);
   if (dynamic_dimension >= 0) {
     return xla::ReshapeWithInferredDimension(input, shape.dimensions(),
@@ -333,7 +329,7 @@ bool XlaHelpers::SameStaticDimensions(const xla::Shape& shape1,
 
 xla::XlaOp XlaHelpers::Flatten(xla::XlaOp input, xla::Shape* input_shape) {
   xla::util::MaybePtr<xla::Shape> input_shape_tmp(input_shape);
-  *input_shape_tmp = ShapeOfXlaOp(input);
+  *input_shape_tmp = ShapeHelper::ShapeOfXlaOp(input);
   if (input_shape_tmp->rank() == 1) {
     return input;
   }
@@ -344,7 +340,7 @@ xla::XlaOp XlaHelpers::Flatten(xla::XlaOp input, xla::Shape* input_shape) {
 xla::XlaOp XlaHelpers::FlattenDimRange(xla::XlaOp input, int64_t start,
                                        int64_t range, xla::Shape* input_shape) {
   xla::util::MaybePtr<xla::Shape> input_shape_tmp(input_shape);
-  *input_shape_tmp = ShapeOfXlaOp(input);
+  *input_shape_tmp = ShapeHelper::ShapeOfXlaOp(input);
 
   std::vector<int64_t> sizes;
   int64_t flat_size = -1;
@@ -368,7 +364,7 @@ xla::XlaOp XlaHelpers::FlattenDimRange(xla::XlaOp input, int64_t start,
 
 xla::XlaOp XlaHelpers::LinearInterpolation(xla::XlaOp value0, xla::XlaOp value1,
                                            double alpha) {
-  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(value0);
+  const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(value0);
   xla::XlaOp one = xla::One(value0.builder(), shape.element_type());
   xla::XlaOp alpha_value =
       ScalarValue(alpha, shape.element_type(), value0.builder());
@@ -490,8 +486,8 @@ xla::Shape XlaHelpers::GetPromotedBinaryOpShape(const xla::Shape& shape1,
 
 std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteShapes(xla::XlaOp op1,
                                                             xla::XlaOp op2) {
-  const xla::Shape& shape1 = ShapeOfXlaOp(op1);
-  const xla::Shape& shape2 = ShapeOfXlaOp(op2);
+  const xla::Shape& shape1 = ShapeHelper::ShapeOfXlaOp(op1);
+  const xla::Shape& shape2 = ShapeHelper::ShapeOfXlaOp(op2);
   if (xla::ShapeUtil::Compatible(shape1, shape2)) {
     // Fast path shortcut if the shapes already matches in dimensions.
     return std::pair<xla::XlaOp, xla::XlaOp>(op1, op2);

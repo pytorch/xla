@@ -7,9 +7,9 @@
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "test/cpp/cpp_test_util.h"
 #include "test/cpp/torch_xla_test.h"
-#include "third_party/xla_client/computation_client.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "third_party/xla_client/multi_wait.h"
+#include "third_party/xla_client/runtime.h"
 #include "third_party/xla_client/thread_pool.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/helpers.h"
@@ -47,7 +47,7 @@ void TestSingleReplication(
                            all_device_strings, &shape);
   }
   auto compiled_computations =
-      xla::ComputationClient::Get()->Compile(std::move(instances));
+      xla::GetComputationClient()->Compile(std::move(instances));
 
   std::vector<at::Tensor> tensors;
   for (size_t i = 0; i < device_strings.size(); ++i) {
@@ -61,7 +61,7 @@ void TestSingleReplication(
   xla::ComputationClient::ExecuteComputationOptions exec_options;
   for (size_t i = 0; i < device_strings.size(); ++i) {
     auto executor = [&, i]() {
-      results[i] = xla::ComputationClient::Get()->ExecuteComputation(
+      results[i] = xla::GetComputationClient()->ExecuteComputation(
           *compiled_computations[i], {UnwrapXlaData(tensors_data[i])},
           device_strings[i], exec_options);
     };
@@ -70,8 +70,7 @@ void TestSingleReplication(
   mwait.Wait();
 
   for (size_t i = 0; i < results.size(); ++i) {
-    auto literals =
-        xla::ComputationClient::Get()->TransferFromServer(results[i]);
+    auto literals = xla::GetComputationClient()->TransferFromServer(results[i]);
     ASSERT_EQ(literals.size(), 1);
 
     // The result must be the original tensor value, multiplied by the number of

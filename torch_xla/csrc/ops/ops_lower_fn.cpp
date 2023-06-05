@@ -6,9 +6,11 @@
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/elementwise.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/matrix.h"
 #include "torch_xla/csrc/pooling.h"
 #include "torch_xla/csrc/reduction.h"
+#include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/xla_lower_util.h"
 
 namespace torch_xla {
@@ -74,7 +76,7 @@ torch_xla::XlaOpVector Addcmul::Lower(LoweringContext* loctx) const {
 torch_xla::XlaOpVector All::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   std::vector<int64_t> dimensions =
-      torch::lazy::Iota<int64_t>(XlaHelpers::ShapeOfXlaOp(input).rank());
+      torch::lazy::Iota<int64_t>(ShapeHelper::ShapeOfXlaOp(input).rank());
   return ReturnOp(BuildAll(input, dimensions, false), loctx);
 }
 
@@ -96,7 +98,7 @@ torch_xla::XlaOpVector Amin::Lower(LoweringContext* loctx) const {
 torch_xla::XlaOpVector Any::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   std::vector<int64_t> dimensions =
-      torch::lazy::Iota<int64_t>(XlaHelpers::ShapeOfXlaOp(input).rank());
+      torch::lazy::Iota<int64_t>(ShapeHelper::ShapeOfXlaOp(input).rank());
   return ReturnOp(BuildAny(input, dimensions, false), loctx);
 }
 

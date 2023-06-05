@@ -210,7 +210,7 @@ extra_compile_args = []
 cxx_abi = os.getenv(
     'CXX_ABI', default='') or getattr(torch._C, '_GLIBCXX_USE_CXX11_ABI', None)
 if cxx_abi is not None:
-  extra_compile_args += ['-D_GLIBCXX_USE_CXX11_ABI={}'.format(int(cxx_abi))]
+  extra_compile_args.append(f'-D_GLIBCXX_USE_CXX11_ABI={int(cxx_abi)}')
 
 
 class BazelExtension(Extension):

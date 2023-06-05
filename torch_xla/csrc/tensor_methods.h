@@ -1,6 +1,8 @@
 #ifndef XLA_TORCH_XLA_CSRC_TENSOR_METHODS_H_
 #define XLA_TORCH_XLA_CSRC_TENSOR_METHODS_H_
 
+#include "torch_xla/csrc/computation.h"
+#include "torch_xla/csrc/cross_replica_reduces.h"
 #include "torch_xla/csrc/tensor.h"
 
 namespace torch_xla {
