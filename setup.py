@@ -69,8 +69,6 @@ import sys
 import tempfile
 import torch
 import zipfile
-import traceback
-import pdb
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -291,7 +289,6 @@ class BuildBazelExtension(command.build_ext.build_ext):
     ext_dest_dir = os.path.dirname(ext_dest_path)
     if not os.path.exists(ext_dest_dir):
       os.makedirs(ext_dest_dir)
-
     shutil.copyfile(ext_bazel_bin_path, ext_dest_path)
 
 
