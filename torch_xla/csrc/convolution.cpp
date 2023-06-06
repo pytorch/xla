@@ -156,7 +156,8 @@ ConvOpAttrs MakeConvOpAttrs(
     conv_op_attrs.explicit_paddings.push_back(spatial_padding[spatial_dim]);
     conv_op_attrs.explicit_paddings.push_back(spatial_padding[spatial_dim]);
   }
-  conv_op_attrs.data_format = XLATensorFormat::FORMAT_NCHW;
+  conv_op_attrs.data_format = MakeConvolutionDimensionNumbers(
+      torch_xla::XLATensorFormat::FORMAT_NCHW, num_spatial_dims);
   return conv_op_attrs;
 }
 
