@@ -700,7 +700,7 @@ Status ConvBackpropComputeDimensions(
 StatusOr<xla::XlaOp> MakeXlaForwardConvOp(absl::string_view /*type_string*/,
                                           xla::XlaOp conv_input, xla::XlaOp filter,
                                           const ConvOpAttrs& attrs,
-                                          const PrecisionConfig* precision_config) {
+                                          const xla::PrecisionConfig* precision_config) {
   TF_RETURN_IF_ERROR(CheckConvAttrs(attrs));
 
   auto* builder = conv_input.builder();
@@ -778,7 +778,7 @@ StatusOr<xla::XlaOp> MakeXlaForwardConvOp(absl::string_view /*type_string*/,
 StatusOr<xla::XlaOp> MakeXlaBackpropInputConvOp(
     absl::string_view type_string, const Shape& input_shape, xla::XlaOp filter,
     xla::XlaOp out_backprop, const ConvOpAttrs& attrs,
-    const PrecisionConfig* precision_config) {
+    const xla::PrecisionConfig* precision_config) {
   TF_RETURN_IF_ERROR(CheckConvAttrs(attrs));
 
   int batch_dim = attrs.data_format.input_batch_dimension();
@@ -859,7 +859,7 @@ StatusOr<xla::XlaOp> MakeXlaBackpropInputConvOp(
 StatusOr<xla::XlaOp> MakeXlaBackpropFilterConvOp(
     absl::string_view type_string, xla::XlaOp activations, const Shape& filter_shape,
     xla::XlaOp out_backprop, const ConvOpAttrs& attrs,
-    const PrecisionConfig* precision_config) {
+    const xla::PrecisionConfig* precision_config) {
   TF_RETURN_IF_ERROR(CheckConvAttrs(attrs));
 
   auto* builder = activations.builder();
