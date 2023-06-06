@@ -15,6 +15,23 @@
 
 namespace torch_xla {
 namespace {
+// Converts the tensor data format to the one required by the XLA convolution
+// library.
+xla::ConvolutionDimensionNumbers MakeConvolutionDimensionNumbers(
+    xla::XLATensorFormat data_format, int num_spatial_dims) {
+  int num_dims = num_spatial_dims + 2;
+  int batch_dimension = xla::GetTensorBatchDimIndex(num_dims, data_format);
+  int feature_dimension = xla::GetTensorFeatureDimIndex(num_dims, data_format);
+  xla::ConvolutionDimensionNumbers conv_dim_numbers;
+  for (int spatial_dim = 0; spatial_dim < num_spatial_dims; ++spatial_dim) {
+    conv_dim_numbers.add_input_spatial_dimensions(
+        GetTensorSpatialDimIndex(num_dims, data_format, spatial_dim));
+  }
+  conv_dim_numbers.set_input_batch_dimension(batch_dimension);
+  conv_dim_numbers.set_input_feature_dimension(feature_dimension);
+  return conv_dim_numbers;
+}  
+
 // clang-format off
 /* Lower PyTorch Conv & its backward to XLA
  * This file covers lowerings of both forward and backward of conv op.
