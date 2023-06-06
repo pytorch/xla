@@ -174,19 +174,19 @@ struct ConvOpAttrs {
 // Computes the convolution with the given input, filter and attributes. Errors
 // returned by this function and the ones below are tagged with "type_string",
 // which is the name of the TensorFlow operator using them.
-StatusOr<XlaOp> MakeXlaForwardConvOp(
+tsl::StatusOr<XlaOp> MakeXlaForwardConvOp(
     absl::string_view type_string, XlaOp conv_input, XlaOp filter,
     const ConvOpAttrs& attrs,
     const PrecisionConfig* precision_config = nullptr);
 // Computes the gradient with respect to the input, given the output gradient
 // and the filter.
-StatusOr<XlaOp> MakeXlaBackpropInputConvOp(
+tsl::StatusOr<XlaOp> MakeXlaBackpropInputConvOp(
     absl::string_view type_string, const Shape& input_shape, XlaOp filter,
     XlaOp out_backprop, const ConvOpAttrs& attrs,
     const PrecisionConfig* precision_config = nullptr);
 // Computes the gradient with respect to the filter, given the output gradient
 // and the activations.
-StatusOr<XlaOp> MakeXlaBackpropFilterConvOp(
+tsl::StatusOr<XlaOp> MakeXlaBackpropFilterConvOp(
     absl::string_view type_string, XlaOp activations, const Shape& filter_shape,
     XlaOp out_backprop, const ConvOpAttrs& attrs,
     const PrecisionConfig* precision_config = nullptr);    
