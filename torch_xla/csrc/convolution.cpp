@@ -228,7 +228,7 @@ xla::XlaOp BuildConvBackwardInput(xla::XlaOp grad_output, xla::XlaOp kernel,
       MakeConvOpAttrs(spatial_stride, spatial_padding, spatial_dilation, false);
   xla::XlaOp kernel_transposed =
       xla::Transpose(kernel, FilterTransposePermutation(input_shape.rank()));
-  return ConsumeValue(tensorflow::MakeXlaBackpropInputConvOp(
+  return ConsumeValue(MakeXlaBackpropInputConvOp(
       "conv_backward_input", input_shape, kernel_transposed, grad_output,
       conv_op_attrs));
 }
