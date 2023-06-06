@@ -168,7 +168,7 @@ struct ConvOpAttrs {
   std::vector<tsl::int32> strides;
   ThreePadding padding;
   std::vector<tsl::int64> explicit_paddings;
-  ConvolutionDimensionNumbers data_format; // ConvolutionDimensionNumbers
+  xla::ConvolutionDimensionNumbers data_format; // ConvolutionDimensionNumbers
 };
 
 // Computes the convolution with the given input, filter and attributes. Errors
