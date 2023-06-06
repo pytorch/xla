@@ -1,27 +1,34 @@
 import torch_xla
 import torch_xla.core.xla_model as xm
 import torch
-'''
-The following MLIR module should be dump in this test
-module @IrToHlo.9 attributes {mhlo.cross_program_prefetches = [], mhlo.dynamic_parameter_bindings = [], mhlo.is_dynamic = false, mhlo.use_auto_spmd_partitioning = false} {
-  func.func @main(%arg0: tensor<1xi64>, %arg1: tensor<1xi64>) -> tuple<tensor<1xi64>, tensor<1xi64>, tensor<1xi64>> {
-    %0 = stablehlo.constant dense<1> : tensor<i64>
-    %1 = stablehlo.constant dense<1> : tensor<1xi64>
-    %2 = stablehlo.multiply %arg1, %1 : tensor<1xi64>
-    %3 = stablehlo.add %arg0, %2 : tensor<1xi64>
-    %4 = stablehlo.tuple %arg0, %arg1, %3 {xla_shape = "(s64[1]{0}, s64[1]{0}, s64[1]{0})"} : tuple<tensor<1xi64>, tensor<1xi64>, tensor<1xi64>>
-    return %4 : tuple<tensor<1xi64>, tensor<1xi64>, tensor<1xi64>>
-  }
-}
-'''
+import torchvision
+import unittest
 
-x = torch.tensor([3], device=xm.xla_device())
-y = torch.tensor([3], device=xm.xla_device())
-z = x + y
 
-# Example usage of dumping StableHLO given output tensors
-stablehlo = xm.get_stablehlo([z])
-# print(stablehlo)
-# Example usage of dump StableHLO of the entire graph
-stablehlo = xm.get_stablehlo()
-# print(stablehlo)
+class StableHloDumpTest(unittest.TestCase):
+
+  def test_simple(self):
+    device = xm.xla_device()
+    x = torch.tensor([3], device=device)
+    y = torch.tensor([3], device=device)
+    z = x + y
+    # Example usage of dumping StableHLO given output tensors
+    stablehlo = xm.get_stablehlo([z])
+    self.assertEqual(stablehlo.count("stablehlo.multiply"), 1)
+    self.assertEqual(stablehlo.count("stablehlo.add"), 1)
+
+  def test_resnet18(self):
+    device = xm.xla_device()
+    xla_resnet18 = torchvision.models.resnet18()
+    xla_resnet18.eval()
+    xla_resnet18 = xla_resnet18.to(device)
+    data = torch.randn(4, 3, 224, 224, device=device)
+    output = xla_resnet18(data)
+    stablehlo = xm.get_stablehlo()
+    self.assertEqual(stablehlo.count("convolution"), 20)
+    print(stablehlo)
+
+
+if __name__ == '__main__':
+  test = unittest.main()
+  sys.exit(0 if test.result.wasSuccessful() else 1)
