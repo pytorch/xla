@@ -43,6 +43,7 @@
 #include "torch_xla/csrc/ops/constant_pad_nd.h"
 #include "torch_xla/csrc/ops/convolution_backward_overrideable.h"
 #include "torch_xla/csrc/ops/convolution_overrideable.h"
+#include "torch_xla/csrc/ops/count_nonzero.h"
 #include "torch_xla/csrc/ops/cumprod.h"
 #include "torch_xla/csrc/ops/cumsum.h"
 #include "torch_xla/csrc/ops/device_data.h"
@@ -969,6 +970,14 @@ convolution_backward_overrideable(
       out_backprop->CreateFrom(torch::lazy::Value(node, 2));
   return std::make_tuple(std::move(grad_input), std::move(grad_weight),
                          std::move(grad_bias));
+}
+
+XLATensorPtr count_nonzero(const XLATensorPtr& input, c10::optional<int64_t> dim) {
+  // xw32: continue from here.
+  torch::lazy::NodePtr ir_value =
+      torch::lazy::MakeNode<CountNonzero>(
+          input->GetIrValue(), dim);
+  return input->CreateFrom(ir_value);
 }
 
 XLATensorPtr cross(const XLATensorPtr& input, const XLATensorPtr& other,

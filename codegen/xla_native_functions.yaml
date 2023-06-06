@@ -161,6 +161,7 @@ supported:
   - convolution_overrideable
   - copy
   - copy_
+  - count_nonzero
   - cross
   - cumprod
   - cumsum

@@ -273,6 +273,8 @@ XLATensorPtr convolution_overrideable(
     std::vector<int64_t> dilation, bool transposed,
     std::vector<int64_t> output_padding, int64_t groups);
 
+XLATensorPtr count_nonzero(const XLATensorPtr& input, c10::optional<int64_t> dim);
+
 // Returns the cross product of the two input tensors in the given dimension.
 // If the dimension is not given, it defaults to the first dimension found
 // with the size 3.

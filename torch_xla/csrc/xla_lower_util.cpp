@@ -41,15 +41,19 @@ ConditionMaskData CreateConditionMaskData(xla::XlaOp condition) {
   static const xla::PrimitiveType kConditionType = xla::PrimitiveType::S32;
   xla::Shape iota_shape = ShapeHelper::ShapeOfXlaOp(condition);
   iota_shape.set_element_type(GetShapeDimensionType(/*device=*/nullptr));
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": iota_shape=" << iota_shape << std::endl;
 
   int64_t flattened_size = xla::ShapeUtil::ElementsIn(iota_shape);
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": flattened_size=" << flattened_size << std::endl;
   xla::XlaOp r1_condition =
       XlaHelpers::DynamicReshape(condition, {flattened_size});
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": XlaHelpers::ShapeOfXlaOp(r1_condition)=" << XlaHelpers::ShapeOfXlaOp(r1_condition) << std::endl;
   xla::XlaOp r1_condition_int =
       xla::ConvertElementType(r1_condition, kConditionType);
   xla::XlaOp zeros = xla::ZerosLike(r1_condition_int);
   xla::XlaOp compared =
       xla::ConvertElementType(xla::Gt(r1_condition_int, zeros), kConditionType);
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": XlaHelpers::ShapeOfXlaOp(compared)=" << XlaHelpers::ShapeOfXlaOp(compared) << std::endl;
   xla::XlaOp length = xla::ReduceAll(
       compared, xla::Zero(condition.builder(), kConditionType),
       xla::CreateScalarAddComputation(kConditionType, condition.builder()));
@@ -273,11 +277,13 @@ std::vector<xla::XlaOp> BuildConditionIndices(xla::XlaOp condition) {
   std::vector<xla::XlaOp> to_sort = {cmd.r1_condition_int};
   std::vector<xla::PrimitiveType> types_to_sort = {cmd.condition_int_type};
   for (int64_t axis = 0; axis < cmd.iota_shape.rank(); ++axis) {
+    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": cmd.iota_shape=" << cmd.iota_shape << ", cmd.flattened_size=" << cmd.flattened_size << std::endl;    
     xla::XlaOp iota = xla::Iota(condition.builder(), cmd.iota_shape, axis);
     xla::XlaOp reshaped = xla::Reshape(iota, {cmd.flattened_size});
     to_sort.push_back(reshaped);
     types_to_sort.push_back(cmd.iota_shape.element_type());
   }
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": types_to_sort=" << types_to_sort << cmd.flattened_size << std::endl;    
 
   xla::XlaOp sorted = xla::Sort(
       to_sort,
@@ -755,6 +761,13 @@ xla::XlaOp BuildLinspace(const torch::lazy::BackendDevice& device,
   xla::XlaOp res = (indices * step_val) + start;
 
   return CreatePut(device, res, last_index, end, /*accumulate=*/false);
+}
+
+xla::XlaOp BuildCountNonzero(xla::XlaOp input, c10::optional<int64_t> dim) {
+  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  xla::XlaOp ne = xla::Ne(input, xla::Zero(input.builder(), input_shape.element_type()));
+  ConditionMaskData cmd = CreateConditionMaskData(ne);
+  return cmd.length;
 }
 
 std::vector<xla::XlaOp> BuildNonZero(xla::XlaOp input) {

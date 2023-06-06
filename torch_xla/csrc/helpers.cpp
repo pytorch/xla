@@ -300,11 +300,13 @@ xla::XlaOp XlaHelpers::DynamicReshape(xla::XlaOp input,
   if (output_sizes == input_shape.dimensions()) {
     return input;
   }
-  auto info = GetDynamicReshapeInfo(input_shape, output_sizes);
+  absl::optional<XlaHelpers::DynamicReshapeInfo> info = GetDynamicReshapeInfo(input_shape, output_sizes);
   if (info) {
+    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ <<  std::endl;
     return xla::ReshapeWithInferredDimension(input, output_sizes,
                                              info->dynamic_dimension);
   }
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ <<  std::endl;
   return xla::Reshape(input, output_sizes);
 }
 

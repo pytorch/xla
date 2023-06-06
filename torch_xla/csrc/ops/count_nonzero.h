@@ -21,7 +21,7 @@ class CountNonzero : public XlaNode {
   c10::optional<int64_t> dim() const { return dim_; }
 
  private:
-  int64_t dim_;
+  c10::optional<int64_t> dim_;
 };
 
 }  // namespace torch_xla

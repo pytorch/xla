@@ -538,6 +538,23 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     # Without the code change, met.metric_data('CompileTime')[0] returns 1.
     self.assertIsNone(met.metric_data('CompileTime'))
 
+  def test_test_nodim(self):
+    met.clear_all()
+    t1 = torch.tensor([[0, 1, 1], [0, 0, 0], [0, 0, 1]], device=dev)
+    t2 = torch.count_nonzero(t1)
+    print(t2.shape)
+    print(t2)
+    # t2 = torch.nonzero(t1)
+    # dyn_size = t2.shape[0]
+    # self.assertEqual(dyn_size, 2)
+
+  def test_test_hasdim(self):
+    met.clear_all()
+    t1 = torch.tensor([[1, 0, 0], [0, 1, 0], [0, 0, 0]], device=dev)
+    t2 = torch.count_nonzero(t1, dim=0)
+    print(t2.shape)
+    print(t2)
+
 
 if __name__ == '__main__':
   assert os.environ['XLA_EXPERIMENTAL'] != ''
