@@ -177,19 +177,19 @@ struct ConvOpAttrs {
 tsl::StatusOr<xla::XlaOp> MakeXlaForwardConvOp(
     absl::string_view type_string, xla::XlaOp conv_input, xla::XlaOp filter,
     const ConvOpAttrs& attrs,
-    const PrecisionConfig* precision_config = nullptr);
+    const xla::PrecisionConfig* precision_config = nullptr);
 // Computes the gradient with respect to the input, given the output gradient
 // and the filter.
 tsl::StatusOr<xla::XlaOp> MakeXlaBackpropInputConvOp(
     absl::string_view type_string, const Shape& input_shape, xla::XlaOp filter,
     xla::XlaOp out_backprop, const ConvOpAttrs& attrs,
-    const PrecisionConfig* precision_config = nullptr);
+    const xla::PrecisionConfig* precision_config = nullptr);
 // Computes the gradient with respect to the filter, given the output gradient
 // and the activations.
 tsl::StatusOr<xla::XlaOp> MakeXlaBackpropFilterConvOp(
     absl::string_view type_string, xla::XlaOp activations, const Shape& filter_shape,
     xla::XlaOp out_backprop, const ConvOpAttrs& attrs,
-    const PrecisionConfig* precision_config = nullptr);    
+    const xla::PrecisionConfig* precision_config = nullptr);    
 
 // Computes the convolution of the given input and kernel with the given
 // precision, with the given stride and padding.
