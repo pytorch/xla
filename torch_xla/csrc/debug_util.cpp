@@ -79,7 +79,7 @@ std::string DebugUtil::GetTensorsGraphHlo(
   }
   return DumpUtil::ToHlo(root_values,
                          unique_device ? *unique_device : GetCurrentDevice(),
-                         /*to_stablehlo=*/ dump_stablehlo);
+                         /*to_stablehlo=*/dump_stablehlo);
 }
 
 std::string DebugUtil::GetTensorsGraphInfo(
