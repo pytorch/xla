@@ -206,7 +206,7 @@ class ShardingSpec:
   _replication_groups: List[int] = field(init=False)
   _sharding_type: ShardingType = field(init=False)
 
-  @requires_pjrt
+  @xr.requires_pjrt
   def __post_init__(self):
     partition_spec, mesh = self.partition_spec, self.mesh
     self._tile_assignment = _get_tile_assignment(mesh)
