@@ -156,7 +156,7 @@ ConvOpAttrs MakeConvOpAttrs(
     conv_op_attrs.explicit_paddings.push_back(spatial_padding[spatial_dim]);
     conv_op_attrs.explicit_paddings.push_back(spatial_padding[spatial_dim]);
   }
-  conv_op_attrs.data_format = tensorflow::TensorFormat::FORMAT_NCHW;
+  conv_op_attrs.data_format = XLATensorFormat::FORMAT_NCHW;
   return conv_op_attrs;
 }
 
