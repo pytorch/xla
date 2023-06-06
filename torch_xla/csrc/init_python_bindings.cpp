@@ -345,16 +345,6 @@ void StepMarker(const std::string& device_str,
   }
 }
 
-std::string SyncLiveTensorGetHlo(const std::string& device_str,
-                                 const std::vector<std::string>& devices) {
-  tsl::profiler::TraceMe activity("SyncLiveTensorGetHlo",
-                                  tsl::profiler::TraceMeLevel::kInfo);
-  torch::lazy::BackendDevice device = GetDeviceOrCurrent(device_str);
-  auto tensors = XLAGraphExecutor::Get()->GetLiveTensors(&device);
-  return XLAGraphExecutor::Get()->SyncTensorsGraphDumpHlo(
-      &tensors, devices, /*sync_ltc_data=*/true);
-}
-
 void SetRngSeed(uint64_t seed, const std::string& device_str) {
   torch::lazy::BackendDevice device = GetDeviceOrCurrent(device_str);
   XLAGraphExecutor::Get()->SetRngSeed(device, seed);
@@ -400,6 +390,16 @@ std::string GetLiveTensorsReport(size_t nodes_threshold,
     }
   }
   return ss.str();
+}
+
+static std::string GetLiveTensorsStableHLO(
+    const std::string& device_str, const std::vector<std::string>& devices) {
+  tsl::profiler::TraceMe activity("GetLiveTensorsStableHLO",
+                                  tsl::profiler::TraceMeLevel::kInfo);
+  torch::lazy::BackendDevice device = GetDeviceOrCurrent(device_str);
+  auto tensors = XLAGraphExecutor::Get()->GetLiveTensors(&device);
+  return XLAGraphExecutor::Get()->SyncTensorsGraphDumpHlo(
+      &tensors, devices, /*sync_ltc_data=*/true);
 }
 
 void ClearPendingIrs(const std::string& device_str) {
@@ -1276,16 +1276,14 @@ void InitXlaModuleBindings(py::module m) {
         [](const std::string& device, const std::vector<std::string>& devices,
            bool wait) {
           NoGilSection nogil;
-          // StepMarker(device, devices, wait);
-          std::cout << "in step marker";
-          std::cout << SyncLiveTensorGetHlo(device, devices);
+          StepMarker(device, devices, wait);
         },
         py::arg("device") = "", py::arg("devices"), py::arg("wait") = true);
   m.def("_xla_get_stablehlo",
         [](const std::string& device,
            const std::vector<std::string>& devices) -> std::string {
           NoGilSection nogil;
-          return SyncLiveTensorGetHlo(device, devices);
+          return GetLiveTensorsStableHLO(device, devices);
         },
         py::arg("device") = "", py::arg("devices"));
   m.def("_xla_wait_device_ops",

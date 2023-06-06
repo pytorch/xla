@@ -281,7 +281,7 @@ std::string DumpUtil::ToHlo(c10::ArrayRef<torch::lazy::Value> values,
     computation = std::move(computations[0]->move_computation());
   }
   if (to_stable_hlo) {
-    return hlo_to_stablehlo_str(&computation.proto());
+    return hloToStablehloStr(&computation.proto());
   } else {
     return ConsumeValue(xla::util::GetComputationHloText(computation));
   }
