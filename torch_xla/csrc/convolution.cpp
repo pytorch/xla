@@ -488,7 +488,7 @@ xla::XlaOp CreateExpandedFilterMask(const xla::Shape& filter_shape, xla::XlaBuil
   // [0 0 1 1 2 2] ... in the example in the function comment.
   expanded_feature_iota = Div(
       expanded_feature_iota,
-      ConstantR0WithType(builder, PrimitiveType::S32, depthwise_multiplier));
+      ConstantR0WithType(builder, xla::PrimitiveType::S32, depthwise_multiplier));
 
   // Compare 'input_feature_iota' with 'expanded_feature_iota' to create a
   // diagonal predicate.
