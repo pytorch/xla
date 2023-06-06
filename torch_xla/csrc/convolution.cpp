@@ -363,10 +363,10 @@ namespace {
 
 // Returns the expanded size of a filter used for depthwise convolution.
 // If `shape` is [H, W, ..., M, N] returns [H, W, ..., M, M*N].
-Shape ExpandedFilterShapeForDepthwiseConvolution(const Shape& shape) {
+xla::Shape ExpandedFilterShapeForDepthwiseConvolution(const xla::Shape& shape) {
   int num_dims = shape.dimensions_size();
   CHECK_GE(num_dims, 2);  // Crash OK
-  Shape expanded_shape = shape;
+  xla::Shape expanded_shape = shape;
   expanded_shape.set_dimensions(
       num_dims - 1,
       shape.dimensions(num_dims - 2) * shape.dimensions(num_dims - 1));
@@ -375,14 +375,14 @@ Shape ExpandedFilterShapeForDepthwiseConvolution(const Shape& shape) {
 
 // Returns the transposed filter for use in BackpropInput of group convolution.
 xla::XlaOp TransposeFilterForGroupConvolutionBackpropInput(const xla::XlaOp& filter,
-                                                           const Shape& filter_shape,
+                                                           const xla::Shape& filter_shape,
                                                            tsl::int64 num_groups,
                                                            int num_spatial_dims) {
   // 1. Reshape from [H, W, ..., filter_in_depth, out_depth] to [H, W, ...,
   // filter_in_depth, G, out_depth / G]
   int num_dims = filter_shape.dimensions_size();
   CHECK_GE(num_dims, 2);  // Crash OK
-  Shape new_shape = filter_shape;
+  xla::Shape new_shape = filter_shape;
   new_shape.set_dimensions(num_dims - 1, num_groups);
   new_shape.add_dimensions(filter_shape.dimensions(num_dims - 1) / num_groups);
   xla::XlaOp result = Reshape(filter, new_shape.dimensions());
@@ -467,8 +467,8 @@ xla::XlaOp TransposeFilterForGroupConvolutionBackpropInput(const xla::XlaOp& fil
 //
 // Finally compare A and B and return the result at the beginning of the
 // comment.
-xla::XlaOp CreateExpandedFilterMask(const Shape& filter_shape, XlaBuilder* builder) {
-  Shape expanded_filter_shape =
+xla::XlaOp CreateExpandedFilterMask(const xla::Shape& filter_shape, XlaBuilder* builder) {
+  xla::Shape expanded_filter_shape =
       ExpandedFilterShapeForDepthwiseConvolution(filter_shape);
   tsl::int64 depthwise_multiplier =
       filter_shape.dimensions(filter_shape.dimensions_size() - 1);
@@ -478,7 +478,7 @@ xla::XlaOp CreateExpandedFilterMask(const Shape& filter_shape, XlaBuilder* build
   // with the iota dimension chosen as the expanded output feature dimension.
   std::vector<tsl::int64> iota_dimensions(expanded_filter_shape.dimensions().begin(),
                                      expanded_filter_shape.dimensions().end());
-  Shape iota_shape = ShapeUtil::MakeShape(S32, iota_dimensions);
+  xla::Shape iota_shape = ShapeUtil::MakeShape(S32, iota_dimensions);
   xla::XlaOp input_feature_iota =
       Iota(builder, iota_shape, /*iota_dimension=*/iota_dimensions.size() - 2);
   xla::XlaOp expanded_feature_iota =
@@ -497,7 +497,7 @@ xla::XlaOp CreateExpandedFilterMask(const Shape& filter_shape, XlaBuilder* build
 
 // Reshapes a filter of shape [H, W, ..., M, N] to [H, W, ..., 1, M*N]. Used to
 // build a depthwise convolution.
-xla::XlaOp ReshapeFilterForDepthwiseConvolution(const Shape& filter_shape,
+xla::XlaOp ReshapeFilterForDepthwiseConvolution(const xla::Shape& filter_shape,
                                                 const xla::XlaOp& filter) {
   tsl::int64 input_feature_dim = filter_shape.dimensions_size() - 2;
   tsl::int64 output_feature_dim = filter_shape.dimensions_size() - 1;
@@ -505,7 +505,7 @@ xla::XlaOp ReshapeFilterForDepthwiseConvolution(const Shape& filter_shape,
   tsl::int64 input_feature = filter_shape.dimensions(input_feature_dim);
 
   // Create a [H, W, ..., 1, N*M] reshape of the filter.
-  Shape implicit_broadcast_filter_shape = filter_shape;
+  xla::Shape implicit_broadcast_filter_shape = filter_shape;
   implicit_broadcast_filter_shape.set_dimensions(input_feature_dim, 1);
   implicit_broadcast_filter_shape.set_dimensions(
       output_feature_dim, depthwise_multiplier * input_feature);
@@ -515,7 +515,7 @@ xla::XlaOp ReshapeFilterForDepthwiseConvolution(const Shape& filter_shape,
 
 // Reduces the results of the convolution with an expanded filter to the
 // non-expanded filter.
-xla::XlaOp ContractFilterForDepthwiseBackprop(const Shape& filter_shape,
+xla::XlaOp ContractFilterForDepthwiseBackprop(const xla::Shape& filter_shape,
                                               const xla::XlaOp& filter_backprop,
                                               XlaBuilder* builder) {
   auto masked_expanded_filter =
@@ -704,9 +704,9 @@ StatusOr<xla::XlaOp> MakeXlaForwardConvOp(absl::string_view /*type_string*/,
   TF_RETURN_IF_ERROR(CheckConvAttrs(attrs));
 
   auto* builder = conv_input.builder();
-  TF_ASSIGN_OR_RETURN(Shape input_shape, builder->GetShape(conv_input));
+  TF_ASSIGN_OR_RETURN(xla::Shape input_shape, builder->GetShape(conv_input));
   // Filter has the form [filter_rows, filter_cols, ..., in_depth, out_depth]
-  TF_ASSIGN_OR_RETURN(Shape filter_shape, builder->GetShape(filter));
+  TF_ASSIGN_OR_RETURN(xla::Shape filter_shape, builder->GetShape(filter));
 
   // For 2D convolution, there should be 4 dimensions.
   int num_dims = attrs.num_spatial_dims + 2;
@@ -776,7 +776,7 @@ StatusOr<xla::XlaOp> MakeXlaForwardConvOp(absl::string_view /*type_string*/,
 }
 
 StatusOr<xla::XlaOp> MakeXlaBackpropInputConvOp(
-    absl::string_view type_string, const Shape& input_shape, xla::XlaOp filter,
+    absl::string_view type_string, const xla::Shape& input_shape, xla::XlaOp filter,
     xla::XlaOp out_backprop, const ConvOpAttrs& attrs,
     const xla::PrecisionConfig* precision_config) {
   TF_RETURN_IF_ERROR(CheckConvAttrs(attrs));
@@ -785,15 +785,15 @@ StatusOr<xla::XlaOp> MakeXlaBackpropInputConvOp(
   int feature_dim = attrs.data_format.input_feature_dimension();
 
   auto* builder = filter.builder();
-  TF_ASSIGN_OR_RETURN(Shape filter_shape, builder->GetShape(filter));
-  TF_ASSIGN_OR_RETURN(Shape out_backprop_shape,
+  TF_ASSIGN_OR_RETURN(xla::Shape filter_shape, builder->GetShape(filter));
+  TF_ASSIGN_OR_RETURN(xla::Shape out_backprop_shape,
                       builder->GetShape(out_backprop));
 
   tsl::int64 in_depth = input_shape.dimensions(feature_dim),
         filter_in_depth = filter_shape.dimensions(attrs.num_spatial_dims),
         feature_group_count = in_depth / filter_in_depth;
 
-  Shape expanded_filter_shape =
+  xla::Shape expanded_filter_shape =
       attrs.depthwise ? ExpandedFilterShapeForDepthwiseConvolution(filter_shape)
                       : filter_shape;
   // Reuse dimension computation logic from conv_grad_ops.cc.
@@ -857,21 +857,21 @@ StatusOr<xla::XlaOp> MakeXlaBackpropInputConvOp(
 }
 
 StatusOr<xla::XlaOp> MakeXlaBackpropFilterConvOp(
-    absl::string_view type_string, xla::XlaOp activations, const Shape& filter_shape,
+    absl::string_view type_string, xla::XlaOp activations, const xla::Shape& filter_shape,
     xla::XlaOp out_backprop, const ConvOpAttrs& attrs,
     const xla::PrecisionConfig* precision_config) {
   TF_RETURN_IF_ERROR(CheckConvAttrs(attrs));
 
   auto* builder = activations.builder();
-  TF_ASSIGN_OR_RETURN(Shape activations_shape, builder->GetShape(activations));
-  TF_ASSIGN_OR_RETURN(Shape out_backprop_shape,
+  TF_ASSIGN_OR_RETURN(xla::Shape activations_shape, builder->GetShape(activations));
+  TF_ASSIGN_OR_RETURN(xla::Shape out_backprop_shape,
                       builder->GetShape(out_backprop));
   xla::XlaOp filter_backprop;
 
-  Shape input_shape = activations_shape;
-  Shape output_shape = out_backprop_shape;
+  xla::Shape input_shape = activations_shape;
+  xla::Shape output_shape = out_backprop_shape;
 
-  const Shape expanded_filter_shape =
+  const xla::Shape expanded_filter_shape =
       attrs.depthwise ? ExpandedFilterShapeForDepthwiseConvolution(filter_shape)
                       : filter_shape;
   // Reuse dimension computation logic from conv_grad_ops.cc.
