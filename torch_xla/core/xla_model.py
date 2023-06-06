@@ -844,8 +844,8 @@ def mark_step(wait=False):
 def get_stablehlo(tensors=[]):
   """Get StableHLO for the computation graph in string format.
 
-  If tensors is empty, the whole computation graph will be dump.
-  If tensors is not empty, the graph containing the provided tensors will be dump.
+  If `tensors` is empty, the whole computation graph will be dump.
+  If `tensors` is not empty, the graph containing the provided tensors will be dump.
 
   Args:
     tensors (list[torch.Tensor], optional): The tensors contained in the StableHLO graph.
