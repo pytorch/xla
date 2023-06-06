@@ -1309,6 +1309,8 @@ void InitXlaModuleBindings(py::module m) {
         return py::bytes(record.data(), record.size());
       });
   // m.def("_xla_tfexample_read",
+  //       [](const std::shared_ptr<xla::util::RecordReader>& reader) {
+  //       return RecordReadExample(reader);
   //       });
 
   py::class_<tsl::RandomAccessFile>(m, "TfRdFile");
