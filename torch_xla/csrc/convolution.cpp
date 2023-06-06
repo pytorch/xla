@@ -557,29 +557,29 @@ xla::XlaOp ContractFilterForDepthwiseBackprop(const xla::Shape& filter_shape,
 tsl::Status CheckConvAttrs(const ConvOpAttrs& attrs) {
   const int num_dims = attrs.num_spatial_dims + 2;
   if (attrs.strides.size() != num_dims) {
-    return InvalidArgument(
+    return tsl::errors::InvalidArgument(
         "Sliding window strides field must specify %d dimensions", num_dims);
   }
   int batch_dim = attrs.data_format.input_batch_dimension();
   int feature_dim = attrs.data_format.input_feature_dimension();
   if (attrs.strides[batch_dim] != 1 || attrs.strides[feature_dim] != 1) {
-    return Unimplemented(
+    return tsl::errors::Unimplemented(
         "Current implementation does not yet support strides in the batch and "
         "depth dimensions.");
   }
   if (attrs.dilations.size() != num_dims) {
-    return InvalidArgument("Dilations field must specify %d dimensions",
+    return tsl::errors::InvalidArgument("Dilations field must specify %d dimensions",
                            num_dims);
   }
   if (attrs.dilations[batch_dim] != 1 || attrs.dilations[feature_dim] != 1) {
-    return Unimplemented(
+    return tsl::errors::Unimplemented(
         "Current implementation does not support dilations in the batch and "
         "depth dimensions.");
   }
   for (int i = 0; i < attrs.num_spatial_dims; ++i) {
     int input_dim = attrs.data_format.input_spatial_dimensions(i);
     if (attrs.dilations[input_dim] < 1) {
-      return Unimplemented(
+      return tsl::errors::Unimplemented(
           "Dilation values must be positive; %dth spatial dimension had "
           "dilation %d",
           i, attrs.dilations[input_dim]);
@@ -629,7 +629,7 @@ tsl::Status ConvBackpropExtractAndVerifyDimension(
                     effective_filter_size + dim->stride) /
                    dim->stride;
   if (dim->output_size != out_size) {
-    return InvalidArgument(
+    return tsl::errors::InvalidArgument(
         "ConvBackpropExtractAndVerifyDimension: Size of out_backprop doesn't "
         "match computed: actual = %ld, "
         "computed = %ld, spatial_dim: %d, input: %ld, filter: %ld, output: "
@@ -661,25 +661,25 @@ tsl::Status ConvBackpropComputeDimensions(
     absl::Span<const tsl::int64> out_backprop_shape,
     absl::Span<const tsl::int32> dilations, const std::vector<tsl::int32>& strides,
     absl::Span<const tsl::int64> explicit_paddings,
-    const ConvolutionDimensionNumbers& data_format,
+    const xla::ConvolutionDimensionNumbers& data_format,
     ConvBackpropDimensions* dims) {
   // The + 2 in the following line is for the batch and feature dimensions.
   const int num_dims = num_spatial_dims + 2;
   if (input_shape.size() != num_dims) {
-    return InvalidArgument("%s: input must be %d-dimensional", label, num_dims);
+    return tsl::errors::InvalidArgument("%s: input must be %d-dimensional", label, num_dims);
   }
   if (filter_shape.size() != num_dims) {
-    return InvalidArgument("%s: filter must be %d-dimensional", label,
+    return tsl::errors::InvalidArgument("%s: filter must be %d-dimensional", label,
                            num_dims);
   }
   if (out_backprop_shape.size() != num_dims) {
-    return InvalidArgument("%s: out_backprop must be %d-dimensional", label,
+    return tsl::errors::InvalidArgument("%s: out_backprop must be %d-dimensional", label,
                            num_dims);
   }
   int batch_dim = data_format.input_batch_dimension();
   dims->batch_size = input_shape.at(batch_dim);
   if (dims->batch_size != out_backprop_shape.at(batch_dim)) {
-    return InvalidArgument(
+    return tsl::errors::InvalidArgument(
         "%s: input and out_backprop must have the same batch size, input "
         "batch: %ld outbackprop batch: %ld batch_dim: %d",
         label, dims->batch_size, out_backprop_shape.at(batch_dim), batch_dim);
@@ -692,12 +692,12 @@ tsl::Status ConvBackpropComputeDimensions(
   VLOG(2) << "input vs filter_in depth " << dims->in_depth << " "
           << filter_shape.at(num_dims - 2);
   if (dims->in_depth % filter_shape.at(num_dims - 2)) {
-    return InvalidArgument(
+    return tsl::errors::InvalidArgument(
         "%s: input depth must be evenly divisible by filter depth", label);
   }
   dims->out_depth = filter_shape.at(num_dims - 1);
   if (dims->out_depth != out_backprop_shape.at(feature_dim)) {
-    return InvalidArgument(
+    return tsl::errors::InvalidArgument(
         "%s: filter and out_backprop must have the same out_depth", label);
   }
   dims->spatial_dims.resize(num_spatial_dims);
@@ -729,11 +729,11 @@ tsl::StatusOr<xla::XlaOp> MakeXlaForwardConvOp(absl::string_view /*type_string*/
   // For 2D convolution, there should be 4 dimensions.
   int num_dims = attrs.num_spatial_dims + 2;
   if (input_shape.dimensions_size() != num_dims) {
-    return InvalidArgument("input must be %d-dimensional: %s", num_dims,
+    return tsl::errors::InvalidArgument("input must be %d-dimensional: %s", num_dims,
                            input_shape.DebugString());
   }
   if (filter_shape.dimensions_size() != num_dims) {
-    return InvalidArgument("filter must be %d-dimensional: %s", num_dims,
+    return tsl::errors::InvalidArgument("filter must be %d-dimensional: %s", num_dims,
                            filter_shape.DebugString());
   }
 
@@ -747,13 +747,13 @@ tsl::StatusOr<xla::XlaOp> MakeXlaForwardConvOp(absl::string_view /*type_string*/
   // The 'C' dimension for input is in_depth.
   // It must be a multiple of the filter's in_depth.
   if (in_depth % filter_in_depth != 0) {
-    return InvalidArgument(
+    return tsl::errors::InvalidArgument(
         "Depth of input must be a multiple of depth of filter: %d vs %d",
         in_depth, filter_in_depth);
   }
   tsl::int64 feature_group_count = in_depth / filter_in_depth;
   if (out_depth % feature_group_count != 0) {
-    return InvalidArgument(
+    return tsl::errors::InvalidArgument(
         "Depth of output must be a multiple of the number of groups: %d vs %d",
         out_depth, feature_group_count);
   }
@@ -762,7 +762,7 @@ tsl::StatusOr<xla::XlaOp> MakeXlaForwardConvOp(absl::string_view /*type_string*/
     filter = ReshapeFilterForDepthwiseConvolution(filter_shape, filter);
   }
 
-  ConvolutionDimensionNumbers dims;
+  xla::ConvolutionDimensionNumbers dims;
   std::vector<tsl::int64> window_strides(attrs.num_spatial_dims);
   std::vector<tsl::int64> lhs_dilation(attrs.num_spatial_dims, 1);
   std::vector<tsl::int64> rhs_dilation(attrs.num_spatial_dims);
@@ -826,7 +826,7 @@ tsl::StatusOr<xla::XlaOp> MakeXlaBackpropInputConvOp(
   // gradients and the filter, with some appropriate padding. See the
   // comment at the top of conv_grad_ops.h for details.
 
-  ConvolutionDimensionNumbers dnums;
+  xla::ConvolutionDimensionNumbers dnums;
   dnums.set_input_batch_dimension(batch_dim);
   dnums.set_output_batch_dimension(batch_dim);
   dnums.set_input_feature_dimension(feature_dim);
@@ -897,7 +897,7 @@ tsl::StatusOr<xla::XlaOp> MakeXlaBackpropFilterConvOp(
   // The filter gradients are computed by a convolution of the input
   // activations and the output gradients, with some appropriate padding.
   // See the comment at the top of conv_grad_ops.h for details.
-  ConvolutionDimensionNumbers dnums;
+  xla::ConvolutionDimensionNumbers dnums;
 
   TF_RETURN_IF_ERROR(ConvBackpropComputeDimensions(
       type_string, attrs.num_spatial_dims, activations_shape.dimensions(),
