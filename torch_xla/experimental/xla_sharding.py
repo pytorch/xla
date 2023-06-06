@@ -211,7 +211,7 @@ class ShardingSpec:
     partition_spec, mesh = self.partition_spec, self.mesh
     self._tile_assignment = _get_tile_assignment(mesh)
     self._sharding_type = _get_sharding_type(partition_spec,
-                                             pjrt.global_device_count())
+                                             xr.global_device_count())
     self._group_assignment, self._replication_groups = _get_group_assignment(
         self._sharding_type, mesh, partition_spec)
 
