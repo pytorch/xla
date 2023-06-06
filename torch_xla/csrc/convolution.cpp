@@ -2,7 +2,6 @@
 
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
-#include "tensorflow/compiler/tf2xla/kernels/conv_op_helpers.h"
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/client/lib/arithmetic.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
