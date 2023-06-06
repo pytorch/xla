@@ -247,7 +247,7 @@ xla::XlaOp BuildConvBackwardWeight(xla::XlaOp grad_output, xla::XlaOp input,
       xla::InversePermutation(transpose_permutation);
   xla::Shape transposed_weight_shape =
       xla::ShapeUtil::PermuteDimensions(transpose_permutation, kernel_shape);
-  xla::XlaOp conv = ConsumeValue(tensorflow::MakeXlaBackpropFilterConvOp(
+  xla::XlaOp conv = ConsumeValue(MakeXlaBackpropFilterConvOp(
       "conv_backward_weight", input, transposed_weight_shape, grad_output,
       conv_op_attrs));
 
