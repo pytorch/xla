@@ -25,7 +25,9 @@ class StableHloDumpTest(unittest.TestCase):
     data = torch.randn(4, 3, 224, 224, device=device)
     output = xla_resnet18(data)
     stablehlo = xm.get_stablehlo([output])
-    self.assertEqual(stablehlo.count("convolution"), 20)
+    self.assertEqual(stablehlo.count("stablehlo.convolution"), 20)
+    stablehlo = xm.get_stablehlo()
+    self.assertEqual(stablehlo.count("stablehlo.convolution"), 20)
 
 
 if __name__ == '__main__':

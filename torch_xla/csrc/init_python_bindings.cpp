@@ -399,7 +399,7 @@ static std::string GetLiveTensorsStableHLO(
   torch::lazy::BackendDevice device = GetDeviceOrCurrent(device_str);
   auto tensors = XLAGraphExecutor::Get()->GetLiveTensors(&device);
   return XLAGraphExecutor::Get()->SyncTensorsGraphDumpHlo(
-      &tensors, devices, /*sync_ltc_data=*/true);
+      &tensors, devices);
 }
 
 void ClearPendingIrs(const std::string& device_str) {
@@ -930,7 +930,7 @@ void InitXlaModuleBindings(py::module m) {
         });
   m.def("_get_xla_tensors_stablehlo",
         [](const std::vector<at::Tensor>& tensors) -> std::string {
-          return GetTensorsHloGraph(tensors, true);
+          return GetTensorsHloGraph(tensors, /*get_stable_hlo=*/true);
         });
   py::class_<XLATensor::ShardingSpec, XLATensor::ShardingSpecPtr>(
       m, "XlaShardingSpec")

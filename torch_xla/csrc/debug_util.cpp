@@ -139,7 +139,7 @@ std::string DebugUtil::GetTensorsGraphInfo(
   } else if (format == GraphFormat::kStableHlo) {
     graph_str = DumpUtil::ToHlo(
         root_values, unique_device ? *unique_device : GetCurrentDevice(),
-        /* to_stablehlo */ true);
+        /*to_stablehlo=*/true);
   } else {
     XLA_ERROR() << "Invalid graph format: " << format;
   }

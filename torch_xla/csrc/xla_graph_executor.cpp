@@ -360,12 +360,10 @@ void XLAGraphExecutor::SyncTensorsGraph(std::vector<XLATensorPtr>* tensors,
 }
 
 std::string XLAGraphExecutor::SyncTensorsGraphDumpHlo(
-    std::vector<XLATensorPtr>* tensors, absl::Span<const std::string> devices,
-    bool sync_ltc_data) {
+    std::vector<XLATensorPtr>* tensors, absl::Span<const std::string> devices) {
   tsl::profiler::TraceMe activity("SyncTensorsGraphDumpHlo",
                                   tsl::profiler::TraceMeLevel::kInfo);
   SyncTensorsConfig config;
-  config.sync_ltc_data = sync_ltc_data;
   SyncTensorCollection coll = CollectSyncTensors(*tensors, config);
   if (coll.indices.empty()) {
     /* Enure previous execution is complete before exiting this
