@@ -1279,7 +1279,7 @@ void InitXlaModuleBindings(py::module m) {
           StepMarker(device, devices, wait);
         },
         py::arg("device") = "", py::arg("devices"), py::arg("wait") = true);
-  m.def("_xla_get_stablehlo",
+  m.def("_get_stablehlo",
         [](const std::string& device,
            const std::vector<std::string>& devices) -> std::string {
           NoGilSection nogil;
