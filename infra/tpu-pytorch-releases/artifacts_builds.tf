@@ -106,7 +106,7 @@ module "versioned_builds" {
 
   # Use Ansible setup from master branch for versioned release, because source
   # code at older version doesn't contain Ansible setup.
-  ansible_git_rev = "master"
+  ansible_git_rev = "origin/master"
   trigger_on_push = { tag = each.value.git_tag }
 
   trigger_name = replace(each.key, "/[_.]/", "-")

@@ -6,6 +6,7 @@
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/client/xla_computation.h"
 #include "tensorflow/compiler/xla/service/hlo.pb.h"
+#include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/tensor.h"
@@ -14,6 +15,17 @@ namespace torch_xla {
 
 class ShardingUtil {
  public:
+
+  // This maps to `torch_xla.experimental.xla_sharding.ShardingType` enum type.
+  enum ShardingType {
+    REPLICATED = 0,
+    MAXIMAL = 1,
+    TUPLE = 2,
+    TILED = 3,
+    MANUAL = 4,
+    PARTIAL = 5
+  };
+
   // Test whether the XLA_USE_SPMD environment variable is set to enable the
   // virtual device optimization.
   static bool UseVirtualDevice();
@@ -28,10 +40,12 @@ class ShardingUtil {
   static bool EqualShardingSpecs(const XLATensor::ShardingSpec& a,
                                  const XLATensor::ShardingSpec& b);
 
-  // Creates an xla::OpSharding from `tile_assignment` (ndarray).
+  // Creates an xla::OpSharding. `tile_assignmnent` is required for TILED
+  // `sharding_type` and `replication_groups` for `PARTIAL`.
   static xla::OpSharding CreateOpSharding(const py::list& tile_assignment,
-                                          bool replicated = false,
-                                          bool manual = false);
+                                          const py::list& group_assignment,
+                                          const py::list& replication_groups,
+                                          ShardingType sharding_type);
 
   // This is a debugging tool for partitioned HLO generation with different
   // options and sharding propagation.

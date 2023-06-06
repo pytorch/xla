@@ -114,6 +114,7 @@ function run_torch_xla_tests() {
     export GPU_NUM_DEVICES=2
   fi
   export PYTORCH_TESTING_DEVICE_ONLY_FOR="xla"
+  export CXX_ABI=$(python -c "import torch;print(int(torch._C._GLIBCXX_USE_CXX11_ABI))")
 
   pushd $XLA_DIR
     echo "Running Python Tests"
@@ -166,7 +167,7 @@ function run_torch_xla_tests() {
 	    EXTRA_ARGS="$EXTRA_ARGS -R"
     fi
     if [ -x "$(command -v nvidia-smi)" ]; then
-      PJRT_DEVICE=GPU test/cpp/run_tests.sh $EXTRA_ARGS
+      PJRT_DEVICE=GPU test/cpp/run_tests.sh $EXTRA_ARGS -L""
       if [ "$USE_COVERAGE" != "0" ]; then
         cp $XLA_DIR/bazel-out/_coverage/_coverage_report.dat /tmp/cov1.dat
       fi
@@ -176,7 +177,7 @@ function run_torch_xla_tests() {
         lcov --add-tracefile /tmp/cov1.dat -a /tmp/cov2.dat -o /tmp/merged.dat
       fi
     else
-      PJRT_DEVICE=CPU test/cpp/run_tests.sh $EXTRA_ARGS
+      PJRT_DEVICE=CPU test/cpp/run_tests.sh $EXTRA_ARGS -L""
       if [ "$USE_COVERAGE" != "0" ]; then
         cp $XLA_DIR/bazel-out/_coverage/_coverage_report.dat /tmp/merged.dat
       fi

@@ -189,6 +189,11 @@ def device_attributes(device: str) -> Dict[str, object]:
   return torch_xla._XLAC._xla_get_device_attributes(device)
 
 
+@requires_pjrt
+def global_device_attributes() -> List[Dict[str, object]]:
+  return torch_xla._XLAC._xla_get_all_device_attributes()
+
+
 def _merge_replica_results(
     replica_results: List[Tuple[int, R]]) -> Dict[int, R]:
   """Merges list of results from multiple replicas

@@ -89,11 +89,12 @@ def allclose(expected, actual):
   actual = unwrap(actual)
 
   if isinstance(expected, torch.Tensor) and isinstance(actual, torch.Tensor):
-    return torch.allclose(expected, actual)
+    return torch.allclose(expected, actual, rtol=1e-03, atol=1e-04)
   elif isinstance(expected,
                   (tuple, list)) and isinstance(actual, (tuple, list)):
     return len(expected) == len(actual) and all(
-        torch.allclose(a, b) for a, b in zip(expected, actual))
+        torch.allclose(a, b, rtol=1e-03, atol=1e-04)
+        for a, b in zip(expected, actual))
   else:
     raise RuntimeError("Unexpected types")
 

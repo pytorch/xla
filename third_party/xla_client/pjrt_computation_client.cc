@@ -4,6 +4,7 @@
 #include <unordered_set>
 #include <vector>
 
+// TODO: fix absl headers
 #include "absl/strings/ascii.h"
 #include "absl/types/span.h"
 #include "pjrt_computation_client.h"
@@ -50,6 +51,21 @@ MaybeInitializeDistributedRuntimeClient(int local_rank,
         << "Failed to initialize distributed runtime client";
   }
   return std::move(client);
+}
+
+// Builds a map from the device's global ordinal to its index in the `devices`
+// array.
+std::unordered_map<int, int> build_index_map(
+    const std::vector<std::string>& devices) {
+  std::unordered_map<int, int> device_index;
+  for (int i = 0; i < devices.size(); ++i) {
+    std::vector<std::string> device_spec = absl::StrSplit(devices[i], ':');
+    XLA_CHECK_EQ(device_spec.size(), 2)
+        << "Invalid device specification: " << devices[i];
+    int global_ordinal = std::stoi(device_spec[1]);
+    device_index[global_ordinal] = i;
+  }
+  return device_index;
 }
 
 }  // namespace
@@ -312,6 +328,8 @@ ComputationClient::DataPtr PjRtComputationClient::ReplicateShardedData(
 
     auto shards = sharded_data->shards;
     XLA_CHECK_EQ(shards.size(), GetLocalDevices().size());
+    auto device_index = build_index_map(GetLocalDevices());
+
     std::vector<std::vector<ComputationClient::DataPtr>> arguments_by_device(
         GetLocalDevices().size(), std::vector<ComputationClient::DataPtr>(1));
     for (auto shard : shards) {
@@ -319,12 +337,21 @@ ComputationClient::DataPtr PjRtComputationClient::ReplicateShardedData(
           absl::StrSplit(shard->device(), ':');
       XLA_CHECK_EQ(device_spec.size(), 2)
           << "Invalid device specification: " << shard->device();
-      int device_i = std::stoi(device_spec[1]);
+      int device_i = device_index[std::stoi(device_spec[1])];
+      TF_VLOG(3) << shard->device() << " is mapped to local device index "
+                 << device_i;
       arguments_by_device[device_i][0] = shard;
     }
     xla::ComputationClient::ExecuteReplicatedOptions execute_options;
-    return ExecuteReplicated(*computations.front(), arguments_by_device,
-                             GetLocalDevices(), execute_options)[0][0];
+    auto sharded_results =
+        ExecuteReplicated(*computations.front(), arguments_by_device,
+                          GetLocalDevices(), execute_options);
+    XLA_CHECK(sharded_results.size() > 0)
+        << "empty ExecuteReplicated results returned.";
+    XLA_CHECK(sharded_results[0].size() == 1)
+        << "Wrong number of outputs, expected: 1, actual: "
+        << sharded_results[0].size();
+    return sharded_results[0][0];
   }
   return handle;
 }
@@ -495,6 +522,8 @@ PjRtComputationClient::ExecuteComputation(
                << " Done";
     // Signal that `ExecuteSharded` has completed for the ExecuteTime
     // metric. Copies the `timed` shared pointer into the lambda.
+    XLA_CHECK(returned_future.IsValid())
+        << "returned_future in ExecuteComputation is empty";
     returned_future.OnReady(
         [timed, lock = std::move(lock)](Status unused) mutable {
           timed.reset();
@@ -586,8 +615,7 @@ PjRtComputationClient::ExecuteReplicated(
   }
 
   auto mwait = std::make_shared<util::MultiWait>(1);
-  auto lockfn = [&, this, spmd_device_str,
-                 returned_futures = std::move(*returned_futures),
+  auto lockfn = [&, this, returned_futures = std::move(*returned_futures),
                  timed]() mutable {
     // Grab the shared lock and block the `WaitDeviceOps` until buffer is
     // ready. Since this is the SPMD code path. There is no points to grab
@@ -602,6 +630,8 @@ PjRtComputationClient::ExecuteReplicated(
     // will finish execution roughly at the same time, hence only use one of
     // the returned_futures. Copies the `timed` shared pointer into the
     // lambda.
+    XLA_CHECK(returned_futures[0].IsValid())
+        << "returned_future in ExecuteReplicated is empty";
     returned_futures[0].OnReady(
         [timed, lock = std::move(lock)](Status unused) mutable {
           timed.reset();

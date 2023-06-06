@@ -236,9 +236,7 @@ class XrtComputationClient : public ComputationClient {
     std::map<Worker, std::string> workers_map;
   };
 
-  XrtComputationClient(
-      Options options,
-      std::unique_ptr<tensorflow::tpu::TopologyProto> topology_proto);
+  XrtComputationClient();
 
   DataPtr CreateDataPlaceholder(std::string device, Shape shape) override;
 

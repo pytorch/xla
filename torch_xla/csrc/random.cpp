@@ -10,6 +10,7 @@
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/shape_helper.h"
 
 namespace torch_xla {
 namespace {
@@ -48,7 +49,7 @@ xla::BitGeneratorTy GetBitGenerator() {
 }
 
 xla::XlaOp MakeSeed(xla::XlaOp seed) {
-  const xla::Shape& rng_shape = XlaHelpers::ShapeOfXlaOp(seed);
+  const xla::Shape& rng_shape = ShapeHelper::ShapeOfXlaOp(seed);
   if (rng_shape.element_type() == xla::PrimitiveType::U64) {
     return seed;
   }
