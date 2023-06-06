@@ -550,4 +550,29 @@ void ShardingUtil::PrepareOutputShardingPropagation(
     }
   }
 }
+
+xla::ComputationClient::DataPtr ShardingUtil::CreateShardedData(
+    std::vector<at::Tensor>& local_shards, std::vector<std::string>& devices,
+    xla::Shape global_shape, xla::OpSharding sharding) {
+  XLA_CHECK(local_shards.size() == devices.size())
+      << "A device must be speficied for each shard";
+  std::vector<xla::ComputationClient::TensorSource> source_tensors;
+  for (int64_t j = 0; j < devices.size(); ++j) {
+    auto shard_device = ParseDeviceString(devices[j]);
+    auto shard_shape =
+        CreateComputationShapeFromTensor(local_shards[j], &shard_device);
+    auto populate_fn =
+        [&, j, shard_device](
+            const xla::ComputationClient::TensorSource& source_tensor,
+            void* dest_buffer, size_t dest_buffer_size) {
+          PopulateTensorBuffer(local_shards[j], source_tensor.shape,
+                               dest_buffer, dest_buffer_size, shard_device);
+        };
+    source_tensors.emplace_back(shard_shape, devices[j],
+                                std::move(populate_fn));
+  }
+  return xla::GetComputationClient()->TransferShardsToServer(
+      source_tensors, GetVirtualDevice().toString(), global_shape, sharding);
+}
+
 }  // namespace torch_xla

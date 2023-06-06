@@ -1654,6 +1654,32 @@ void InitXlaModuleBindings(py::module m) {
           }
           return result;
         });
+  // Load a list of local shards into an explicitly-sharded tensor. A shard must
+  // be provided for each device.
+  m.def("_load_local_shards", [](const at::Tensor& tensor,
+                                 std::vector<at::Tensor>& shards,
+                                 std::vector<std::string>& devices) {
+    XLATensorPtr xtensor = bridge::GetXlaTensor(tensor);
+    XLA_CHECK(xtensor->sharding_spec() != nullptr)
+        << "Cannot load local shards into a non sharded tensor";
+    XLA_CHECK(devices.size() ==
+              xla::GetComputationClient()->GetLocalDevices().size())
+        << "Shards must be provided for all local devices";
+    auto sharding = xtensor->sharding_spec()->sharding;
+    XLA_CHECK(sharding.type() != xla::OpSharding::REPLICATED)
+        << "Replicated tensor should not be loaded from _load_local_shards - "
+           "use copy_";
+    auto shard_shape = ShardingUtil::GetShardShape(tensor, sharding);
+    for (auto shard : shards) {
+      XLA_CHECK(shard.sizes() == shard_shape)
+          << "Input shard shape must include padding: " << shard.sizes()
+          << " vs " << shard_shape;
+    }
+    auto xla_devices = GetXlaDevices(devices);
+    auto xla_data = ShardingUtil::CreateShardedData(shards, xla_devices,
+                                                    xtensor->shape(), sharding);
+    xtensor->SetXlaData(WrapXlaData(xla_data));
+  });
   // This is useful for debugging and generating a partitioned HLO separately
   // outside the actual compilation & execution. This allows testing with
   // different partitioning configurations.
