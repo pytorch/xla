@@ -131,6 +131,7 @@ cc_library(
     "@org_tensorflow//tensorflow/compiler/xla/client:xla_computation",
     "@org_tensorflow//tensorflow/compiler/xla/pjrt/distributed",
     "@org_tensorflow//tensorflow/compiler/xla/pjrt/gpu:se_gpu_pjrt_client",
+    "@org_tensorflow//tensorflow/compiler/xla/service:gpu_plugin",
     "@org_tensorflow//tensorflow/compiler/xla/pjrt:tpu_client",
     "@org_tensorflow//tensorflow/compiler/xla/pjrt:pjrt_client",
     "@org_tensorflow//tensorflow/compiler/xla/pjrt:tfrt_cpu_pjrt_client",
