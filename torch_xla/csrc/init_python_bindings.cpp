@@ -1528,6 +1528,9 @@ void InitXlaModuleBindings(py::module m) {
           XLA_CHECK(ShardingUtil::UseVirtualDevice())
               << "Please set `XLA_USE_SPMD=1`";
           XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+          // We should not call mark_sharding on tensors with a pending
+          // computation
+          XLA_CHECK(!check_materialization_helper({xtensor})[0]);
           xla::OpSharding sharding = ShardingUtil::CreateOpSharding(
               tile_assignment, group_assignment, replication_groups,
               ShardingUtil::ShardingType(sharding_type));
