@@ -536,7 +536,7 @@ xla::XlaOp ContractFilterForDepthwiseBackprop(const xla::Shape& filter_shape,
 
 // Performs some basic checks on ConvOpAttrs that are true for all kinds of XLA
 // convolutions (as currently implemented).
-Status CheckConvAttrs(const ConvOpAttrs& attrs) {
+tsl::Status CheckConvAttrs(const ConvOpAttrs& attrs) {
   const int num_dims = attrs.num_spatial_dims + 2;
   if (attrs.strides.size() != num_dims) {
     return InvalidArgument(
@@ -567,7 +567,7 @@ Status CheckConvAttrs(const ConvOpAttrs& attrs) {
           i, attrs.dilations[input_dim]);
     }
   }
-  return OkStatus();
+  return tsl::OkStatus();
 }
 
 // Information about a single spatial dimension for a convolution
@@ -595,7 +595,7 @@ struct ConvBackpropDimensions {
   tsl::int64 in_depth, out_depth;
 };
 
-Status ConvBackpropExtractAndVerifyDimension(
+tsl::Status ConvBackpropExtractAndVerifyDimension(
     absl::Span<const tsl::int64> input_shape, absl::Span<const tsl::int64> filter_shape,
     absl::Span<const tsl::int64> output_shape, absl::Span<const tsl::int32> dilations,
     const std::vector<tsl::int32>& strides, tsl::int64 padding_before,
@@ -632,12 +632,12 @@ Status ConvBackpropExtractAndVerifyDimension(
           << ", pad_before = " << dim->pad_before
           << ", pad_after = " << dim->pad_after
           << ", dilation = " << dim->dilation << ", strides = " << dim->stride;
-  return OkStatus();
+  return tsl::OkStatus();
 }
 
 // Verifies that the dimensions all match, and computes sizes/padding for the
 // spatial dimensions.
-Status ConvBackpropComputeDimensions(
+tsl::Status ConvBackpropComputeDimensions(
     absl::string_view label, int num_spatial_dims,
     absl::Span<const tsl::int64> input_shape, absl::Span<const tsl::int64> filter_shape,
     absl::Span<const tsl::int64> out_backprop_shape,
@@ -692,12 +692,12 @@ Status ConvBackpropComputeDimensions(
         input_shape, filter_shape, out_backprop_shape, dilations, strides,
         padding_before, padding_after, image_dim, i, &dims->spatial_dims[i]));
   }
-  return OkStatus();
+  return tsl::OkStatus();
 }
 
 }  // anonymous namespace
 
-StatusOr<xla::XlaOp> MakeXlaForwardConvOp(absl::string_view /*type_string*/,
+tsl::StatusOr<xla::XlaOp> MakeXlaForwardConvOp(absl::string_view /*type_string*/,
                                           xla::XlaOp conv_input, xla::XlaOp filter,
                                           const ConvOpAttrs& attrs,
                                           const xla::PrecisionConfig* precision_config) {
@@ -775,7 +775,7 @@ StatusOr<xla::XlaOp> MakeXlaForwardConvOp(absl::string_view /*type_string*/,
       /*batch_group_count=*/1, precision_config);
 }
 
-StatusOr<xla::XlaOp> MakeXlaBackpropInputConvOp(
+tsl::StatusOr<xla::XlaOp> MakeXlaBackpropInputConvOp(
     absl::string_view type_string, const xla::Shape& input_shape, xla::XlaOp filter,
     xla::XlaOp out_backprop, const ConvOpAttrs& attrs,
     const xla::PrecisionConfig* precision_config) {
@@ -856,7 +856,7 @@ StatusOr<xla::XlaOp> MakeXlaBackpropInputConvOp(
       /*batch_group_count=*/1, precision_config);
 }
 
-StatusOr<xla::XlaOp> MakeXlaBackpropFilterConvOp(
+tsl::StatusOr<xla::XlaOp> MakeXlaBackpropFilterConvOp(
     absl::string_view type_string, xla::XlaOp activations, const xla::Shape& filter_shape,
     xla::XlaOp out_backprop, const ConvOpAttrs& attrs,
     const xla::PrecisionConfig* precision_config) {
