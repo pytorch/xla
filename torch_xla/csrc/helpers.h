@@ -273,6 +273,9 @@ class XlaHelpers {
   static xla::Shape GetPromotedShape(const xla::Shape& shape1,
                                      const xla::Shape& shape2);
 
+  static xla::Shape GetPromotedDynamicShape(const xla::Shape& shape1,
+                                            const xla::Shape& shape2);
+
   // TODO @wonjoo - Migrate to torch::lazy after Shape is migrated
   static xla::Shape GetPromotedBinaryOpShape(const xla::Shape& shape1,
                                              const xla::Shape& shape2);
