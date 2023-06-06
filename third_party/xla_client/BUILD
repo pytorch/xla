@@ -330,6 +330,9 @@ cc_library(
       "@org_tensorflow//tensorflow/tsl/profiler/rpc/client:capture_profile",
       "@com_google_absl//absl/container:flat_hash_map",
 
+      # Profiler silently fails unless we include this
+      "@org_tensorflow//tensorflow/compiler/xla/backends/profiler:profiler_backends",
+
       # TODO: We get missing symbol errors without these deps. Why aren't they
       # included transitively from TensorFlow/TSL?
       "@org_tensorflow//tensorflow/tsl/profiler/protobuf:profiler_analysis_proto_cc_impl",
