@@ -467,7 +467,7 @@ xla::XlaOp TransposeFilterForGroupConvolutionBackpropInput(const xla::XlaOp& fil
 //
 // Finally compare A and B and return the result at the beginning of the
 // comment.
-xla::XlaOp CreateExpandedFilterMask(const xla::Shape& filter_shape, XlaBuilder* builder) {
+xla::XlaOp CreateExpandedFilterMask(const xla::Shape& filter_shape, xla::XlaBuilder* builder) {
   xla::Shape expanded_filter_shape =
       ExpandedFilterShapeForDepthwiseConvolution(filter_shape);
   tsl::int64 depthwise_multiplier =
@@ -517,7 +517,7 @@ xla::XlaOp ReshapeFilterForDepthwiseConvolution(const xla::Shape& filter_shape,
 // non-expanded filter.
 xla::XlaOp ContractFilterForDepthwiseBackprop(const xla::Shape& filter_shape,
                                               const xla::XlaOp& filter_backprop,
-                                              XlaBuilder* builder) {
+                                              xla::XlaBuilder* builder) {
   auto masked_expanded_filter =
       Select(CreateExpandedFilterMask(filter_shape, builder), filter_backprop,
              ZerosLike(filter_backprop));
