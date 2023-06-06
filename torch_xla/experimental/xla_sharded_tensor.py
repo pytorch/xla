@@ -121,11 +121,6 @@ class XLAShardedTensor(torch.Tensor):
   def sharding_spec(self):
     return torch_xla._XLAC._get_xla_sharding_spec(self.global_tensor)
 
-  @property
-  def shards(self):
-    # Return a list of local shards
-    return NotImplemented
-
   def __repr__(self):
     return f"XLAShardedTensor({self.global_tensor})"
 
