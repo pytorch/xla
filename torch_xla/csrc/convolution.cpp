@@ -478,7 +478,7 @@ xla::XlaOp CreateExpandedFilterMask(const xla::Shape& filter_shape, xla::XlaBuil
   // with the iota dimension chosen as the expanded output feature dimension.
   std::vector<tsl::int64> iota_dimensions(expanded_filter_shape.dimensions().begin(),
                                      expanded_filter_shape.dimensions().end());
-  xla::Shape iota_shape = ShapeUtil::MakeShape(S32, iota_dimensions);
+  xla::Shape iota_shape = xla::ShapeUtil::MakeShape(S32, iota_dimensions);
   xla::XlaOp input_feature_iota =
       Iota(builder, iota_shape, /*iota_dimension=*/iota_dimensions.size() - 2);
   xla::XlaOp expanded_feature_iota =
