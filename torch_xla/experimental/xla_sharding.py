@@ -4,10 +4,8 @@ from dataclasses import dataclass, field
 import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
-import torch_xla.utils.utils as xu
-import torch_xla.experimental.pjrt as pjrt
 from torch_xla.experimental.xla_sharded_tensor import XLAShardedTensor
-from torch_xla.experimental.pjrt import requires_pjrt
+import torch_xla.runtime as xr
 
 import numpy as np
 from typing import Tuple, Union, List
@@ -125,7 +123,7 @@ def _get_group_assignment(
   return group_assignment, replication_groups
 
 
-@requires_pjrt
+@xr.requires_pjrt
 def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
                   partition_spec: Tuple[Union[int, None]]) -> XLAShardedTensor:
   """
@@ -146,7 +144,7 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
     Examples
     —------------------------------
     mesh_shape = (4, 2)
-    num_devices = pjrt.global_device_count()
+    num_devices = xr.global_device_count()
     device_ids = np.array(range(num_devices))
     mesh = Mesh(device_ids, mesh_shape, ('x', 'y'))
 
@@ -158,7 +156,7 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
     linear = nn.Linear(32, 10).to(xm.xla_device())
     xs.mark_sharding(linear.weight, mesh, (None, 1))
   """
-  num_devices = pjrt.global_device_count()
+  num_devices = xr.global_device_count()
   assert num_devices > 0, "This requires XLA supported device(s)."
   assert mesh.size() == num_devices, \
     f"{mesh.mesh_shape} is not mappable over {num_devices} devices."
@@ -208,12 +206,12 @@ class ShardingSpec:
   _replication_groups: List[int] = field(init=False)
   _sharding_type: ShardingType = field(init=False)
 
-  @requires_pjrt
+  @xr.requires_pjrt
   def __post_init__(self):
     partition_spec, mesh = self.partition_spec, self.mesh
     self._tile_assignment = _get_tile_assignment(mesh)
     self._sharding_type = _get_sharding_type(partition_spec,
-                                             pjrt.global_device_count())
+                                             xr.global_device_count())
     self._group_assignment, self._replication_groups = _get_group_assignment(
         self._sharding_type, mesh, partition_spec)
 

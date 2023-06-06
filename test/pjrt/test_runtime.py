@@ -8,25 +8,25 @@ import torch_xla
 from absl.testing import absltest, parameterized
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.core.xla_model as xm
-from torch_xla.experimental import pjrt
+from torch_xla import runtime as xr
 
 
 class TestExperimentalPjrt(parameterized.TestCase):
 
   def setUp(self):
-    pjrt.set_device_type('CPU')
+    xr.set_device_type('CPU')
 
   @parameterized.parameters(('CPU', 'CPU'), ('GPU', 'GPU'), ('TPU', 'TPU'),
                             ('TPU_C_API', 'TPU'), ('TPU_LEGACY', 'TPU'))
   def test_device_type(self, pjrt_device, expected):
     with mock.patch.dict(os.environ, {'PJRT_DEVICE': pjrt_device}, clear=True):
-      self.assertEqual(pjrt.device_type(), expected)
+      self.assertEqual(xr.device_type(), expected)
 
   def test_requires_pjrt(self):
     with mock.patch.dict(
         os.environ, {'PJRT_SELECT_DEFAULT_DEVICE': '0'}, clear=True):
       with self.assertRaises(NotImplementedError):
-        pjrt.xla_device()
+        xr.xla_device()
 
   def test_default_ordinals(self):
     global_ordinal = xm.get_ordinal()
@@ -37,14 +37,14 @@ class TestExperimentalPjrt(parameterized.TestCase):
 
   def test_num_local_devices(self):
     self.assertLen(xm.get_xla_supported_devices(),
-                   pjrt.addressable_device_count())
+                   xr.addressable_device_count())
 
   def test_num_global_devices(self):
     self.assertLen(torch_xla._XLAC._xla_get_all_devices(),
-                   pjrt.global_device_count())
+                   xr.global_device_count())
 
   def test_world_size(self):
-    self.assertEqual(xm.xrt_world_size(), pjrt.world_size())
+    self.assertEqual(xm.xrt_world_size(), xr.world_size())
 
   def test_xla_device_error(self):
     with self.assertRaises(IndexError):
@@ -78,12 +78,12 @@ class TestExperimentalPjrt(parameterized.TestCase):
 
       with logs_context:
         # Configure default device
-        pjrt.using_pjrt()
+        xr.using_pjrt()
 
       if expect_using_pjrt:
-        self.assertIn(pjrt.device_type(), ['CPU', 'GPU', 'TPU'])
+        self.assertIn(xr.device_type(), ['CPU', 'GPU', 'TPU'])
       else:
-        self.assertIsNone(pjrt.device_type())
+        self.assertIsNone(xr.device_type())
 
 
 if __name__ == '__main__':
