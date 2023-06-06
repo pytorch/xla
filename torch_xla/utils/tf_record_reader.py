@@ -34,4 +34,3 @@ class TfRecordReader(object):
       The raw bytes of the record, or ``None`` in case of EOF.
     """
     return torch_xla._XLAC._xla_tfrecord_read(self._reader)
-
