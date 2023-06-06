@@ -55,13 +55,13 @@ ConditionMaskData CreateConditionMaskData(xla::XlaOp condition, c10::optional<st
       xla::ConvertElementType(xla::Gt(r1_condition_int, zeros), kConditionType);
   std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": XlaHelpers::ShapeOfXlaOp(compared)=" << XlaHelpers::ShapeOfXlaOp(compared) << std::endl;
   xla::XlaOp length;
-  if (!dims) {
+  if (!dims || dims.value().empty()) {
     length = xla::ReduceAll(
       compared, xla::Zero(condition.builder(), kConditionType),
       xla::CreateScalarAddComputation(kConditionType, condition.builder()));
   } else {
     length = xla::Reduce(compared, xla::Zero(condition.builder(), kConditionType),
-      xla::CreateScalarAddComputation(kConditionType, condition.builder()), *dims);
+      xla::CreateScalarAddComputation(kConditionType, condition.builder()), dims.value());
   }
   return {std::move(iota_shape), flattened_size, r1_condition_int,
           kConditionType, length};

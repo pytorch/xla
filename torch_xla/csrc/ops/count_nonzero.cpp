@@ -9,12 +9,12 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input,
                            c10::optional<std::vector<int64_t>> dims) {
   xla::Shape input_shape = GetXlaShape(input);
   std::vector<int64_t> dimensions;
-  if (dims) {
-    std::unordered_set<int64_t> dims_set(dims->begin(), dims->end());
-    for (int64_t i=0; i<input_shape.rank(); i++) {
-      if (dims_set.find(i) == dims_set.end()) {
-        dimensions.push_back(i);
-      }
+  if (!dims || dims.value().empty()) return xla::ShapeUtil::MakeShape(input_shape.element_type(), dimensions);
+
+  std::unordered_set<int64_t> dims_set(dims->begin(), dims->end());
+  for (int64_t i=0; i<input_shape.rank(); i++) {
+    if (dims_set.find(i) == dims_set.end()) {
+      dimensions.push_back(i);
     }
   }
   std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": dimensions=" << dimensions << std::endl;
