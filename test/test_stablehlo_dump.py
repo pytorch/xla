@@ -26,7 +26,6 @@ class StableHloDumpTest(unittest.TestCase):
     output = xla_resnet18(data)
     stablehlo = xm.get_stablehlo()
     self.assertEqual(stablehlo.count("convolution"), 20)
-    print(stablehlo)
 
 
 if __name__ == '__main__':
