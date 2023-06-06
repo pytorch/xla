@@ -129,14 +129,14 @@ xla::XlaOp PadInputFromOutputSize(xla::XlaOp input,
 
 // Create a TF convolution metadata structure out of PyTorch convolution
 // attributes.
-tensorflow::ConvOpAttrs MakeConvOpAttrs(
+ConvOpAttrs MakeConvOpAttrs(
     absl::Span<const int64_t> spatial_stride,
     absl::Span<const int64_t> spatial_padding,
     absl::Span<const int64_t> spatial_dilation, bool depthwise) {
   int num_spatial_dims = spatial_stride.size();
   XLA_CHECK_EQ(spatial_padding.size(), num_spatial_dims);
   XLA_CHECK_EQ(spatial_dilation.size(), num_spatial_dims);
-  tensorflow::ConvOpAttrs conv_op_attrs;
+  ConvOpAttrs conv_op_attrs;
   conv_op_attrs.depthwise = depthwise;
   conv_op_attrs.num_spatial_dims = num_spatial_dims;
   // Stride, dilation and padding must be set for the batch and feature in the
@@ -224,7 +224,7 @@ xla::XlaOp BuildConvBackwardInput(xla::XlaOp grad_output, xla::XlaOp kernel,
                                   absl::Span<const int64_t> spatial_padding,
                                   absl::Span<const int64_t> spatial_dilation,
                                   int64_t groups) {
-  tensorflow::ConvOpAttrs conv_op_attrs =
+  ConvOpAttrs conv_op_attrs =
       MakeConvOpAttrs(spatial_stride, spatial_padding, spatial_dilation, false);
   xla::XlaOp kernel_transposed =
       xla::Transpose(kernel, FilterTransposePermutation(input_shape.rank()));
@@ -240,7 +240,7 @@ xla::XlaOp BuildConvBackwardWeight(xla::XlaOp grad_output, xla::XlaOp input,
                                    absl::Span<const int64_t> spatial_padding,
                                    absl::Span<const int64_t> spatial_dilation,
                                    int64_t groups) {
-  tensorflow::ConvOpAttrs conv_op_attrs =
+  ConvOpAttrs conv_op_attrs =
       MakeConvOpAttrs(spatial_stride, spatial_padding, spatial_dilation, false);
   auto transpose_permutation = FilterTransposePermutation(kernel_shape.rank());
   auto inv_transpose_permutation =
