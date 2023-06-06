@@ -374,10 +374,10 @@ Shape ExpandedFilterShapeForDepthwiseConvolution(const Shape& shape) {
 }
 
 // Returns the transposed filter for use in BackpropInput of group convolution.
-XlaOp TransposeFilterForGroupConvolutionBackpropInput(const XlaOp& filter,
-                                                      const Shape& filter_shape,
-                                                      tsl::int64 num_groups,
-                                                      int num_spatial_dims) {
+xla::XlaOp TransposeFilterForGroupConvolutionBackpropInput(const xla::XlaOp& filter,
+                                                           const Shape& filter_shape,
+                                                           tsl::int64 num_groups,
+                                                           int num_spatial_dims) {
   // 1. Reshape from [H, W, ..., filter_in_depth, out_depth] to [H, W, ...,
   // filter_in_depth, G, out_depth / G]
   int num_dims = filter_shape.dimensions_size();
@@ -385,7 +385,7 @@ XlaOp TransposeFilterForGroupConvolutionBackpropInput(const XlaOp& filter,
   Shape new_shape = filter_shape;
   new_shape.set_dimensions(num_dims - 1, num_groups);
   new_shape.add_dimensions(filter_shape.dimensions(num_dims - 1) / num_groups);
-  XlaOp result = Reshape(filter, new_shape.dimensions());
+  xla::XlaOp result = Reshape(filter, new_shape.dimensions());
 
   // 2. Transpose to [H, W, ..., G, filter_in_depth, out_depth / G]
   std::vector<tsl::int64> transpose_dims(num_dims + 1);
@@ -697,10 +697,10 @@ Status ConvBackpropComputeDimensions(
 
 }  // anonymous namespace
 
-StatusOr<XlaOp> MakeXlaForwardConvOp(absl::string_view /*type_string*/,
-                                     XlaOp conv_input, XlaOp filter,
-                                     const ConvOpAttrs& attrs,
-                                     const PrecisionConfig* precision_config) {
+StatusOr<xla::XlaOp> MakeXlaForwardConvOp(absl::string_view /*type_string*/,
+                                          xla::XlaOp conv_input, xla::XlaOp filter,
+                                          const ConvOpAttrs& attrs,
+                                          const PrecisionConfig* precision_config) {
   TF_RETURN_IF_ERROR(CheckConvAttrs(attrs));
 
   auto* builder = conv_input.builder();
@@ -775,9 +775,9 @@ StatusOr<XlaOp> MakeXlaForwardConvOp(absl::string_view /*type_string*/,
       /*batch_group_count=*/1, precision_config);
 }
 
-StatusOr<XlaOp> MakeXlaBackpropInputConvOp(
-    absl::string_view type_string, const Shape& input_shape, XlaOp filter,
-    XlaOp out_backprop, const ConvOpAttrs& attrs,
+StatusOr<xla::XlaOp> MakeXlaBackpropInputConvOp(
+    absl::string_view type_string, const Shape& input_shape, xla::XlaOp filter,
+    xla::XlaOp out_backprop, const ConvOpAttrs& attrs,
     const PrecisionConfig* precision_config) {
   TF_RETURN_IF_ERROR(CheckConvAttrs(attrs));
 
