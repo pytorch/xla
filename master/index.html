@@ -788,7 +788,7 @@ given device.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><p><strong>defval</strong> (<em>python:int</em><em>, </em><em>optional</em>) – The default value to be returned in case there is no
-replication information available. Ignored for PjRt.
+replication information available. Ignored for runtime.
 Default: 0</p>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -805,7 +805,7 @@ Default: 0</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><p><strong>defval</strong> (<em>python:int</em><em>, </em><em>optional</em>) – The default value to be returned in case there is no
-replication information available. Ignored for PjRt.
+replication information available. Ignored for runtime.
 Default: 0</p>
 </dd>
 <dt class="field-even">Returns</dt>
@@ -1066,6 +1066,8 @@ will hang.</p></li>
 <dt id="torch_xla.core.xla_model.rendezvous">
 <code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">rendezvous</code><span class="sig-paren">(</span><em class="sig-param">tag</em>, <em class="sig-param">payload=b''</em>, <em class="sig-param">replicas=[]</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#rendezvous"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.rendezvous" title="Permalink to this definition">¶</a></dt>
 <dd><p>Waits for all the mesh clients to reach the named rendezvous.</p>
+<p>Note: PJRT does not support the XRT mesh server, so this is effectively an
+alias to <cite>xla_rendezvous</cite>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">

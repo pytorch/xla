@@ -309,6 +309,8 @@
               
   <h1>Source code for torch_xla.core.xla_model</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">io</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">import</span> <span class="nn">logging</span>
 <span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">import</span> <span class="nn">re</span>
 <span class="kn">import</span> <span class="nn">threading</span>
@@ -318,8 +320,7 @@
 <span class="kn">import</span> <span class="nn">torch.distributed._functional_collectives</span>
 <span class="kn">import</span> <span class="nn">torch.nn.functional</span> <span class="k">as</span> <span class="nn">F</span>
 <span class="kn">import</span> <span class="nn">torch_xla</span>
-<span class="kn">from</span> <span class="nn">torch_xla.experimental</span> <span class="kn">import</span> <span class="n">pjrt</span>
-<span class="kn">from</span> <span class="nn">torch_xla.experimental</span> <span class="kn">import</span> <span class="n">tpu</span>
+<span class="kn">from</span> <span class="nn">torch_xla</span> <span class="kn">import</span> <span class="n">runtime</span>
 <span class="kn">import</span> <span class="nn">torch_xla.core.xla_env_vars</span> <span class="k">as</span> <span class="nn">xenv</span>
 <span class="kn">import</span> <span class="nn">torch_xla.debug.metrics_saver</span> <span class="k">as</span> <span class="nn">ms</span>
 <span class="kn">import</span> <span class="nn">torch_xla.utils.utils</span> <span class="k">as</span> <span class="nn">xu</span>
@@ -347,8 +348,8 @@
 <span class="k">def</span> <span class="nf">_init_world_size_ordinal</span><span class="p">():</span>
   <span class="k">global</span> <span class="n">_WORLD_SIZE</span><span class="p">,</span> <span class="n">_ORDINAL</span>
 
-  <span class="c1"># Dynamo doesn&#39;t support XRT or multithreaded PJRT. See Note [V3-8 Threading]</span>
-  <span class="k">if</span> <span class="ow">not</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">using_pjrt</span><span class="p">()</span> <span class="ow">or</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">addressable_device_count</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+  <span class="c1"># Dynamo doesn&#39;t support XRT or multithreaded runtime. See Note [V3-8 Threading]</span>
+  <span class="k">if</span> <span class="ow">not</span> <span class="n">runtime</span><span class="o">.</span><span class="n">using_pjrt</span><span class="p">()</span> <span class="ow">or</span> <span class="n">runtime</span><span class="o">.</span><span class="n">addressable_device_count</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
     <span class="k">return</span>
 
   <span class="k">if</span> <span class="n">_WORLD_SIZE</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -423,8 +424,8 @@
   <span class="k">if</span> <span class="n">_WORLD_SIZE</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
     <span class="k">return</span> <span class="n">_WORLD_SIZE</span>
 
-  <span class="k">if</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">using_pjrt</span><span class="p">():</span>
-    <span class="k">return</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">world_size</span><span class="p">()</span>
+  <span class="k">if</span> <span class="n">runtime</span><span class="o">.</span><span class="n">using_pjrt</span><span class="p">():</span>
+    <span class="k">return</span> <span class="n">runtime</span><span class="o">.</span><span class="n">world_size</span><span class="p">()</span>
 
   <span class="k">return</span> <span class="n">xu</span><span class="o">.</span><span class="n">getenv_as</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">WORLD_SIZE</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="n">defval</span><span class="o">=</span><span class="n">defval</span><span class="p">)</span></div>
 
@@ -436,7 +437,7 @@
 
 <span class="sd">  Args:</span>
 <span class="sd">    defval (int, optional): The default value to be returned in case there is no</span>
-<span class="sd">      replication information available. Ignored for PjRt.</span>
+<span class="sd">      replication information available. Ignored for runtime.</span>
 <span class="sd">      Default: 0</span>
 
 <span class="sd">  Returns:</span>
@@ -446,8 +447,8 @@
   <span class="k">if</span> <span class="n">_ORDINAL</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
     <span class="k">return</span> <span class="n">_ORDINAL</span>
 
-  <span class="k">if</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">using_pjrt</span><span class="p">():</span>
-    <span class="k">return</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">global_ordinal</span><span class="p">()</span>
+  <span class="k">if</span> <span class="n">runtime</span><span class="o">.</span><span class="n">using_pjrt</span><span class="p">():</span>
+    <span class="k">return</span> <span class="n">runtime</span><span class="o">.</span><span class="n">global_ordinal</span><span class="p">()</span>
 
   <span class="k">return</span> <span class="n">xu</span><span class="o">.</span><span class="n">getenv_as</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">ORDINAL</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="n">defval</span><span class="o">=</span><span class="n">defval</span><span class="p">)</span></div>
 
@@ -459,14 +460,14 @@
 
 <span class="sd">  Args:</span>
 <span class="sd">    defval (int, optional): The default value to be returned in case there is no</span>
-<span class="sd">      replication information available. Ignored for PjRt.</span>
+<span class="sd">      replication information available. Ignored for runtime.</span>
 <span class="sd">      Default: 0</span>
 
 <span class="sd">  Returns:</span>
 <span class="sd">    The replication local ordinal of the current thread.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
-  <span class="k">if</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">using_pjrt</span><span class="p">():</span>
-    <span class="k">return</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">local_ordinal</span><span class="p">()</span>
+  <span class="k">if</span> <span class="n">runtime</span><span class="o">.</span><span class="n">using_pjrt</span><span class="p">():</span>
+    <span class="k">return</span> <span class="n">runtime</span><span class="o">.</span><span class="n">local_ordinal</span><span class="p">()</span>
 
   <span class="n">ordinal</span> <span class="o">=</span> <span class="n">xu</span><span class="o">.</span><span class="n">getenv_as</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">LOCAL_ORDINAL</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="n">defval</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
   <span class="k">if</span> <span class="n">ordinal</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
@@ -514,8 +515,8 @@
     <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_set_default_device</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
 
-  <span class="k">if</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">using_pjrt</span><span class="p">():</span>
-    <span class="k">return</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">xla_device</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">devkind</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">runtime</span><span class="o">.</span><span class="n">using_pjrt</span><span class="p">():</span>
+    <span class="k">return</span> <span class="n">runtime</span><span class="o">.</span><span class="n">xla_device</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">devkind</span><span class="p">)</span>
 
   <span class="k">if</span> <span class="n">n</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
     <span class="n">devices</span> <span class="o">=</span> <span class="n">get_xla_supported_devices</span><span class="p">(</span><span class="n">devkind</span><span class="o">=</span><span class="n">devkind</span><span class="p">)</span>
@@ -1290,8 +1291,67 @@
   <span class="k">return</span> <span class="n">ToXlaTensorArena</span><span class="p">(</span><span class="n">convert_fn</span><span class="p">,</span> <span class="n">select_fn</span><span class="p">)</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 
 
+<span class="k">def</span> <span class="nf">xla_rendezvous</span><span class="p">(</span><span class="n">payload</span><span class="p">:</span> <span class="nb">bytes</span> <span class="o">=</span> <span class="sa">b</span><span class="s1">&#39;&#39;</span><span class="p">,</span>
+                   <span class="n">ordinals</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+                   <span class="n">tag</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">bytes</span><span class="p">]:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Share `payload` with all replicas in `ordinals`.</span>
+
+<span class="sd">  `tag` is ignored except for logging.</span>
+
+<span class="sd">  Uses XLA collective communication to communicate between replicas, so this</span>
+<span class="sd">  will sync the graph (`xm.mark_step`).</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    tag: Name of this rendezvous operation.</span>
+<span class="sd">    payload: Payload to share with other replicas.</span>
+<span class="sd">    ordinals: List of replicas participating in rendezvous.</span>
+<span class="sd">  Returns:</span>
+<span class="sd">    List of bytes from other replicas.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">if</span> <span class="n">ordinals</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">ordinals</span><span class="p">)</span> <span class="o">!=</span> <span class="n">runtime</span><span class="o">.</span><span class="n">global_device_count</span><span class="p">():</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Only global rendezvous is supported&#39;</span><span class="p">)</span>
+
+  <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">):</span>
+    <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;`payload` must be bytes, not </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">payload</span><span class="p">)))</span>
+
+  <span class="c1"># Finish all execution of previous graphs to avoid recompilation</span>
+  <span class="n">mark_step</span><span class="p">()</span>
+
+  <span class="n">device</span> <span class="o">=</span> <span class="n">xla_device</span><span class="p">()</span>
+
+  <span class="n">data</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">payload</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
+  <span class="n">size</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">int</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+
+  <span class="k">if</span> <span class="n">tag</span><span class="p">:</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Joining rendezvous &#39;</span><span class="si">{</span><span class="n">tag</span><span class="si">}</span><span class="s2">&#39;...&quot;</span><span class="p">)</span>
+
+  <span class="n">sizes</span> <span class="o">=</span> <span class="n">all_gather</span><span class="p">(</span><span class="n">size</span><span class="p">)</span>
+
+  <span class="n">max_size</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">sizes</span><span class="p">)</span>
+  <span class="n">mark_step</span><span class="p">()</span>
+
+  <span class="c1"># If all payloads are empty, return immediately to avoid more CPU transfers</span>
+  <span class="k">if</span> <span class="n">max_size</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+    <span class="k">return</span> <span class="p">[</span><span class="sa">b</span><span class="s1">&#39;&#39;</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">sizes</span><span class="o">.</span><span class="n">size</span><span class="p">()[</span><span class="mi">0</span><span class="p">])]</span>
+
+  <span class="n">padded_data</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">functional</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">(</span>
+      <span class="mi">0</span><span class="p">,</span>
+      <span class="n">max_size</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="o">-</span> <span class="n">size</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span>
+  <span class="p">))</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">xla_device</span><span class="p">())</span>
+  <span class="n">raw_data</span> <span class="o">=</span> <span class="n">all_gather</span><span class="p">(</span><span class="n">padded_data</span><span class="p">)</span>
+  <span class="n">data_list</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">raw_data</span><span class="p">,</span> <span class="n">max_size</span><span class="p">)</span>
+
+  <span class="n">payloads</span> <span class="o">=</span> <span class="p">[</span><span class="n">d</span><span class="p">[:</span><span class="n">sz</span><span class="p">]</span> <span class="k">for</span> <span class="n">d</span><span class="p">,</span> <span class="n">sz</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">data_list</span><span class="p">,</span> <span class="n">sizes</span><span class="o">.</span><span class="n">cpu</span><span class="p">())]</span>
+  <span class="n">mark_step</span><span class="p">()</span>
+
+  <span class="k">return</span> <span class="p">[</span><span class="nb">bytes</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">payloads</span><span class="p">]</span>
+
+
 <div class="viewcode-block" id="rendezvous"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.rendezvous">[docs]</a><span class="k">def</span> <span class="nf">rendezvous</span><span class="p">(</span><span class="n">tag</span><span class="p">,</span> <span class="n">payload</span><span class="o">=</span><span class="sa">b</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">replicas</span><span class="o">=</span><span class="p">[]):</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Waits for all the mesh clients to reach the named rendezvous.</span>
+
+<span class="sd">  Note: PJRT does not support the XRT mesh server, so this is effectively an</span>
+<span class="sd">  alias to `xla_rendezvous`.</span>
 
 <span class="sd">  Args:</span>
 <span class="sd">    tag (string): The name of the rendezvous to join.</span>
@@ -1304,8 +1364,8 @@
 <span class="sd">    The payloads exchanged by all the other cores, with the payload of core</span>
 <span class="sd">    ordinal `i` at position `i` in the returned tuple.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
-  <span class="k">if</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">using_pjrt</span><span class="p">():</span>
-    <span class="k">return</span> <span class="n">pjrt</span><span class="o">.</span><span class="n">rendezvous</span><span class="p">(</span><span class="n">tag</span><span class="p">,</span> <span class="n">payload</span><span class="p">,</span> <span class="n">replicas</span> <span class="ow">or</span> <span class="kc">None</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">runtime</span><span class="o">.</span><span class="n">using_pjrt</span><span class="p">():</span>
+    <span class="k">return</span> <span class="n">xla_rendezvous</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">replicas</span> <span class="ow">or</span> <span class="kc">None</span><span class="p">,</span> <span class="n">tag</span><span class="o">=</span><span class="n">tag</span><span class="p">)</span>
 
   <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_rendezvous</span><span class="p">(</span><span class="n">get_ordinal</span><span class="p">(),</span> <span class="n">tag</span><span class="p">,</span> <span class="n">payload</span><span class="p">,</span> <span class="n">replicas</span><span class="p">)</span></div>
 
@@ -1413,6 +1473,16 @@
 <span class="sd">    tensors (List[torch.Tensor]): List of `torch.Tensor` to add barrier to.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_optimization_barrier_</span><span class="p">(</span><span class="n">tensors</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">broadcast_master_param</span><span class="p">(</span><span class="n">model</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">  Broadcast the model parameters from master process to other processes</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="n">parameters_and_buffers</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
+      <span class="n">itertools</span><span class="o">.</span><span class="n">chain</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">model</span><span class="o">.</span><span class="n">buffers</span><span class="p">()))</span>
+  <span class="n">collective_broadcast</span><span class="p">(</span><span class="n">parameters_and_buffers</span><span class="p">)</span>
+  <span class="n">mark_step</span><span class="p">()</span>
 </pre></div>
 
              </article>
