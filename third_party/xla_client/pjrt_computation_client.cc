@@ -55,7 +55,7 @@ MaybeInitializeDistributedRuntimeClient(int local_rank,
 
 // Builds a map from the device's global ordinal to its index in the `devices`
 // array.
-static std::unordered_map<int, int> build_index_map(
+std::unordered_map<int, int> build_index_map(
     const std::vector<std::string>& devices) {
   std::unordered_map<int, int> device_index;
   for (int i = 0; i < devices.size(); ++i) {

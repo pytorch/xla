@@ -24,7 +24,14 @@
 namespace torch_xla {
 namespace {
 
+using tsl::ERROR;
+using tsl::INFO;
 using xla::internal::XlaBuilderFriend;
+
+// Return py::obj type as string.
+std::string GetPyType(const py::object& elem) {
+  return elem.attr("__class__").attr("__name__").cast<std::string>();
+}
 
 // Extract dimensions of the nested input array/list. For instance, an input 2D
 // list, [[1, 2, 3], [4, 5, 6]] has [2, 3] dimensions with 2 rows and 3 columns.
@@ -36,7 +43,7 @@ std::vector<int64_t> TileAssignmentDimensions(
     XLA_CHECK(r.size() > 0)
         << "Invalid argument: empty list is not a valid element type.";
     dims.push_back(r.size());
-    auto type = r[0].attr("__class__").attr("__name__").cast<std::string>();
+    std::string type = GetPyType(r[0]);
     if (type == "list") {
       r = r[0];
     } else if ((type != "int") && (type != "float")) {
@@ -52,7 +59,7 @@ std::vector<int64_t> TileAssignmentDimensions(
 // array. This is used by `ShardTensor` and `InputHandler` to ensure the
 // order of the output corresponds to the order of the `devices`, which can be
 // arbitrarily set by the caller.
-static std::unordered_map<int, int> build_index_map(
+std::unordered_map<int, int> build_index_map(
     const std::vector<std::string>& devices) {
   std::unordered_map<int, int> device_index;
   for (int i = 0; i < devices.size(); ++i) {
@@ -60,6 +67,76 @@ static std::unordered_map<int, int> build_index_map(
     device_index[global_ordinal] = i;
   }
   return device_index;
+}
+
+xla::Array<int64_t> TileListToArray(const py::list& tile_assignment) {
+  auto dims = TileAssignmentDimensions(tile_assignment);
+  xla::Array<int64_t> tile_array(dims);
+  switch (dims.size()) {
+    case 1:
+      tile_array.Each([&](absl::Span<const int64_t> indices, int64_t* v) {
+        *v = tile_assignment[indices[0]].cast<int64_t>();
+      });
+      break;
+    case 2:
+      tile_array.Each([&](absl::Span<const int64_t> indices, int64_t* v) {
+        auto r = tile_assignment[indices[0]].cast<py::list>();
+        *v = r[indices[1]].cast<int64_t>();
+      });
+      break;
+    case 3:
+      tile_array.Each([&](absl::Span<const int64_t> indices, int64_t* v) {
+        auto r = tile_assignment[indices[0]].cast<py::list>();
+        r = r[indices[1]].cast<py::list>();
+        *v = r[indices[2]].cast<int64_t>();
+      });
+      break;
+    case 4:
+      tile_array.Each([&](absl::Span<const int64_t> indices, int64_t* v) {
+        auto r = tile_assignment[indices[0]].cast<py::list>();
+        r = r[indices[1]].cast<py::list>();
+        r = r[indices[2]].cast<py::list>();
+        *v = r[indices[3]].cast<int64_t>();
+      });
+      break;
+    case 5:
+      tile_array.Each([&](absl::Span<const int64_t> indices, int64_t* v) {
+        auto r = tile_assignment[indices[0]].cast<py::list>();
+        r = r[indices[1]].cast<py::list>();
+        r = r[indices[2]].cast<py::list>();
+        r = r[indices[3]].cast<py::list>();
+        *v = r[indices[4]].cast<int64_t>();
+      });
+      break;
+    default:
+      TF_LOG(ERROR) << "Invalid arguments: tile_assignment ranks > 5";
+  }
+  return tile_array;
+}
+
+// Extract a list view of device IDs as group members per replication group.
+std::vector<std::vector<int64_t>> ExtractGroupMembers(
+    const py::list& replication_groups) {
+  std::vector<std::vector<int64_t>> groups;
+  groups.reserve(replication_groups.size());
+  for (int i = 0; i < replication_groups.size(); ++i) {
+    std::string type = GetPyType(replication_groups[i]);
+    XLA_CHECK(type == "list")
+        << "Invalid replication group type: list is expected, got " << type;
+    const py::list& group = replication_groups[i];
+    std::vector<int64_t> group_members;
+    group_members.reserve(group.size());
+    for (int j = 0; j < group.size(); ++j) {
+      try {
+        group_members.push_back(group[j].cast<int64_t>());
+      } catch (py::error_already_set& e) {
+        TF_LOG(ERROR) << "Invalid arguments: element type "
+                      << GetPyType(group[j]);
+      }
+    }
+    groups.push_back(group_members);
+  }
+  return groups;
 }
 
 }  // namespace
@@ -97,63 +174,56 @@ bool ShardingUtil::EqualShardingSpecs(const XLATensor::ShardingSpec& a,
   return xla::protobuf_util::ProtobufEquals(a.sharding, b.sharding);
 }
 
-xla::OpSharding ShardingUtil::CreateOpSharding(const py::list& tile_assignment,
-                                               bool replicated, bool manual) {
-  XLA_CHECK(!(replicated && manual))
-      << "Invalid arguments: replicated=" << replicated
-      << ", manual=" << manual;
-
+xla::OpSharding ShardingUtil::CreateOpSharding(
+    const py::list& tile_assignment, const py::list& group_assignment,
+    const py::list& replication_groups, ShardingType sharding_type) {
   xla::OpSharding sharding;
-  if (replicated) {
-    sharding = xla::HloSharding::Replicate().ToProto();
-  } else if (manual) {
-    sharding = xla::HloSharding::Manual().ToProto();
-  } else {
-    // Sharding type is tiled
-    auto dims = TileAssignmentDimensions(tile_assignment);
-    xla::Array<int64_t> tile_array(dims);
-    switch (dims.size()) {
-      case 1:
-        tile_array.Each([&](absl::Span<const int64_t> indices, int64_t* v) {
-          *v = tile_assignment[indices[0]].cast<int64_t>();
-        });
-        break;
-      case 2:
-        tile_array.Each([&](absl::Span<const int64_t> indices, int64_t* v) {
-          auto r = tile_assignment[indices[0]].cast<py::list>();
-          *v = r[indices[1]].cast<int64_t>();
-        });
-        break;
-      case 3:
-        tile_array.Each([&](absl::Span<const int64_t> indices, int64_t* v) {
-          auto r = tile_assignment[indices[0]].cast<py::list>();
-          r = r[indices[1]].cast<py::list>();
-          *v = r[indices[2]].cast<int64_t>();
-        });
-        break;
-      case 4:
-        tile_array.Each([&](absl::Span<const int64_t> indices, int64_t* v) {
-          auto r = tile_assignment[indices[0]].cast<py::list>();
-          r = r[indices[1]].cast<py::list>();
-          r = r[indices[2]].cast<py::list>();
-          *v = r[indices[3]].cast<int64_t>();
-        });
-        break;
-      case 5:
-        tile_array.Each([&](absl::Span<const int64_t> indices, int64_t* v) {
-          auto r = tile_assignment[indices[0]].cast<py::list>();
-          r = r[indices[1]].cast<py::list>();
-          r = r[indices[2]].cast<py::list>();
-          r = r[indices[3]].cast<py::list>();
-          *v = r[indices[4]].cast<int64_t>();
-        });
-        break;
-      default:
-        TF_LOG(ERROR) << "Invalid arguments: tile_assignment ranks > 5";
+  switch (sharding_type) {
+    case ShardingType::MANUAL: {
+      TF_LOG(ERROR) << "Invalid arguments: sharding_type (MANUAL) is "
+                    << "currently not supported";
+      break;
     }
-    xla::HloSharding hlo_sharding = xla::HloSharding::Tile(tile_array);
-    sharding = hlo_sharding.ToProto();
+    case ShardingType::TUPLE: {
+      TF_LOG(ERROR) << "Invalid arguments: sharding_type (TUPLE) is "
+                    << "currently not supported";
+      break;
+    }
+    // REPLICATED reduces to MAXIMAL in case of a single device.
+    case ShardingType::MAXIMAL:
+    case ShardingType::REPLICATED: {
+      sharding = xla::HloSharding::Replicate().ToProto();
+      break;
+    }
+    case ShardingType::TILED: {
+      xla::Array<int64_t> tile_array = TileListToArray(tile_assignment);
+      xla::HloSharding hlo_sharding = xla::HloSharding::Tile(tile_array);
+      sharding = hlo_sharding.ToProto();
+      break;
+    }
+    case ShardingType::PARTIAL: {
+      XLA_CHECK(replication_groups.size() > 0)
+          << "ShardingType.PARTIAL requires non-empty replication groups.";
+      xla::Array<int64_t> group_tiling = TileListToArray(group_assignment);
+      auto group_members = ExtractGroupMembers(replication_groups);
+      std::vector<absl::Span<const int64_t>> group_members_view;
+      group_members_view.reserve(group_members.size());
+      for (auto& group : group_members) {
+        auto group_view = absl::MakeConstSpan(group);
+        group_members_view.push_back(group_view);
+      }
+      XLA_CHECK(group_tiling.num_elements() == group_members_view.size());
+
+      sharding = xla::HloSharding::PartialTile(group_tiling, group_members_view)
+                     .ToProto();
+      break;
+    }
+    default: {
+      TF_LOG(ERROR) << "Invalid arguments: sharding_type " << sharding_type;
+    }
   }
+  TF_VLOG(INFO) << "OpSharding (ShardingType: " << sharding_type << "):\n"
+                << sharding.DebugString();
   return sharding;
 }
 
@@ -285,6 +355,9 @@ std::vector<int64_t> ShardingUtil::GetShardShape(
     // `shard_shape[j]` is the size of dimension `j` in the resulting shard.
     std::vector<int64_t> shard_shape;
     for (int j = 0; j < tile_shape.size(); j++) {
+      if (sharding.replicate_on_last_tile_dim() && j == tile_shape.size() - 1) {
+        continue;
+      }
       shard_shape.push_back(tensor.sizes()[j] / tile_shape[j] +
                             (tensor.sizes()[j] % tile_shape[j] != 0));
     }
@@ -332,6 +405,13 @@ ShardingUtil::GetShardIndicesForDevices(
       int offset = i;
       std::vector<at::indexing::TensorIndex> indices;
       for (int j = tile_shape.size() - 1; j >= 0; j--) {
+        if (sharding.replicate_on_last_tile_dim() &&
+            j == tile_shape.size() - 1) {
+          // the last tile assignment dimension is replicated, which implies
+          // that the consecutive `tile_shape[j]` devices hold the replicated.
+          offset /= tile_shape[j];
+          continue;
+        }
         int64_t n_j = offset % tile_shape[j];
         int start = n_j * shard_shape[j];
         // Clamp the end of the slice to the tensor shape to accurately reflect
@@ -470,4 +550,29 @@ void ShardingUtil::PrepareOutputShardingPropagation(
     }
   }
 }
+
+xla::ComputationClient::DataPtr ShardingUtil::CreateShardedData(
+    std::vector<at::Tensor>& local_shards, std::vector<std::string>& devices,
+    xla::Shape global_shape, xla::OpSharding sharding) {
+  XLA_CHECK(local_shards.size() == devices.size())
+      << "A device must be speficied for each shard";
+  std::vector<xla::ComputationClient::TensorSource> source_tensors;
+  for (int64_t j = 0; j < devices.size(); ++j) {
+    auto shard_device = ParseDeviceString(devices[j]);
+    auto shard_shape =
+        CreateComputationShapeFromTensor(local_shards[j], &shard_device);
+    auto populate_fn =
+        [&, j, shard_device](
+            const xla::ComputationClient::TensorSource& source_tensor,
+            void* dest_buffer, size_t dest_buffer_size) {
+          PopulateTensorBuffer(local_shards[j], source_tensor.shape,
+                               dest_buffer, dest_buffer_size, shard_device);
+        };
+    source_tensors.emplace_back(shard_shape, devices[j],
+                                std::move(populate_fn));
+  }
+  return xla::GetComputationClient()->TransferShardsToServer(
+      source_tensors, GetVirtualDevice().toString(), global_shape, sharding);
+}
+
 }  // namespace torch_xla
