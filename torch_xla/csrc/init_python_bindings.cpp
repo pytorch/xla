@@ -813,6 +813,7 @@ void BuildProfilerSubmodule(py::module* m) {
   py::class_<xla::profiler::ProfilerServer,
              std::unique_ptr<xla::profiler::ProfilerServer>>
       profiler_server_class(profiler, "ProfilerServer");
+// profiler.start_server
   profiler.def("start_server",
                [](int port) -> std::unique_ptr<xla::profiler::ProfilerServer> {
                  auto server =
@@ -821,40 +822,90 @@ void BuildProfilerSubmodule(py::module* m) {
                  return server;
                },
                py::arg("port"));
+// // profiler.trace
+//   profiler.def(
+//       "trace",
+//       [](const char* service_addr, const char* logdir, int duration_ms,
+//          int num_tracing_attempts, int timeout_s, int interval_s,
+//          py::dict options) {
+//         absl::flat_hash_map<std::string, std::variant<int, std::string>> opts =
+//             ConvertDictToMap(options);
+//         std::chrono::seconds sleep_s(interval_s);
+//         tsl::Status status;
+//         {
+//           NoGilSection nogil;
+//           for (int i = 0; i <= timeout_s / interval_s; i++) {
+//             status = tensorflow::profiler::pywrap::Trace(
+//                 service_addr, logdir, /*worker_list=*/"",
+//                 /*include_dataset_ops=*/false, duration_ms,
+//                 num_tracing_attempts, opts);
+//             if (status.ok()) {
+//               return;
+//             }
+//             std::this_thread::sleep_for(sleep_s);
+//           }
+//         }
+//         if (!status.ok()) {
+//           PyErr_SetString(PyExc_RuntimeError, std::string(status.message()));
+//           throw py::error_already_set();
+//         }
+//       },
+//       py::arg("service_addr"), py::arg("logdir"), py::arg("duration_ms") = 1000,
+//       py::arg("num_tracing_attempts") = 3, py::arg("timeout_s") = 120,
+//       py::arg("interval_s") = 5, py::arg("options"));
 
-  profiler.def(
-      "trace",
-      [](const char* service_addr, const char* logdir, int duration_ms,
-         int num_tracing_attempts, int timeout_s, int interval_s,
-         py::dict options) {
-        absl::flat_hash_map<std::string, std::variant<int, std::string>> opts =
-            ConvertDictToMap(options);
-        std::chrono::seconds sleep_s(interval_s);
-        tsl::Status status;
-        {
-          NoGilSection nogil;
-          for (int i = 0; i <= timeout_s / interval_s; i++) {
-            status = tensorflow::profiler::pywrap::Trace(
-                service_addr, logdir, /*worker_list=*/"",
-                /*include_dataset_ops=*/false, duration_ms,
-                num_tracing_attempts, opts);
-            if (status.ok()) {
-              return;
-            }
-            std::this_thread::sleep_for(sleep_s);
-          }
-        }
-        if (!status.ok()) {
-          PyErr_SetString(PyExc_RuntimeError, std::string(status.message()));
-          throw py::error_already_set();
-        }
-      },
-      py::arg("service_addr"), py::arg("logdir"), py::arg("duration_ms") = 1000,
-      py::arg("num_tracing_attempts") = 3, py::arg("timeout_s") = 120,
-      py::arg("interval_s") = 5, py::arg("options"));
+// ProfilerSession
+  py::class_<tsl::ProfilerSession> profiler_session_class(profiler,
+                                                          "ProfilerSession");
+  profiler_session_class
+      .def(py::init([]() {
+        return tsl::ProfilerSession::Create(xla::DefaultPythonProfileOptions());
+      }))
+      .def(py::init([](const tensorflow::ProfileOptions& options) {
+        return tsl::ProfilerSession::Create(options);
+      }))
+      .def("stop_and_export",
+           [](tsl::ProfilerSession* sess,
+              const std::string& tensorboard_dir) -> void {
+             tensorflow::profiler::XSpace xspace;
+             // Disables the ProfilerSession
+             xla::ThrowIfError(sess->CollectData(&xspace));
+             xla::ThrowIfError(tsl::profiler::ExportToTensorBoard(
+                 xspace, tensorboard_dir, /* also_export_trace_json= */ true));
+           });
 
+  py::class_<tensorflow::ProfileOptions> profile_options_class(
+      profiler, "ProfileOptions");
+  profile_options_class.def(py::init(&xla::DefaultPythonProfileOptions))
+      .def_property("include_dataset_ops",
+                    &tensorflow::ProfileOptions::include_dataset_ops,
+                    &tensorflow::ProfileOptions::set_include_dataset_ops)
+      .def_property("host_tracer_level",
+                    &tensorflow::ProfileOptions::host_tracer_level,
+                    &tensorflow::ProfileOptions::set_host_tracer_level)
+      .def_property("python_tracer_level",
+                    &tensorflow::ProfileOptions::python_tracer_level,
+                    &tensorflow::ProfileOptions::set_python_tracer_level)
+      .def_property("enable_hlo_proto",
+                    &tensorflow::ProfileOptions::enable_hlo_proto,
+                    &tensorflow::ProfileOptions::set_enable_hlo_proto)
+      .def_property("start_timestamp_ns",
+                    &tensorflow::ProfileOptions::start_timestamp_ns,
+                    &tensorflow::ProfileOptions::set_start_timestamp_ns)
+      .def_property("duration_ms", &tensorflow::ProfileOptions::duration_ms,
+                    &tensorflow::ProfileOptions::set_duration_ms)
+      .def_property(
+          "repository_path", &tensorflow::ProfileOptions::repository_path,
+          [](tensorflow::ProfileOptions* options, const std::string& path) {
+            options->set_repository_path(path);
+          });
+// traceme_class.profiler.TraceMe
   py::class_<xla::profiler::TraceMeWrapper> traceme_class(profiler, "TraceMe",
                                                           py::module_local());
+// traceme_class.profiler.TraceMe.__enter__
+// traceme_class.profiler.TraceMe.__exit__
+// traceme_class.profiler.TraceMe.set_metadata
+// traceme_class.profiler.TraceMe.is_enabled
   traceme_class.def(py::init<py::str, py::kwargs>())
       .def("__enter__", [](py::object self) -> py::object { return self; })
       .def("__exit__",
@@ -867,14 +918,16 @@ void BuildProfilerSubmodule(py::module* m) {
       .def("set_metadata", &xla::profiler::TraceMeWrapper::SetMetadata)
       .def_static("is_enabled", &xla::profiler::TraceMeWrapper::IsEnabled);
 
-  py::class_<torch::lazy::ScopePusher,
-             std::unique_ptr<torch::lazy::ScopePusher>>
-      scope_pusher_class(profiler, "ScopePusher");
-  profiler.def(
-      "scope_pusher",
-      [](const std::string& name) -> std::unique_ptr<torch::lazy::ScopePusher> {
-        return absl::make_unique<torch::lazy::ScopePusher>(name);
-      });
+// // scope_pusher_class.profiler.ScopePusher
+//   py::class_<torch::lazy::ScopePusher,
+//              std::unique_ptr<torch::lazy::ScopePusher>>
+//       scope_pusher_class(profiler, "ScopePusher");
+// // scope_pusher_class.profiler.ScopePusher.scope_pusher
+//   profiler.def(
+//       "scope_pusher",
+//       [](const std::string& name) -> std::unique_ptr<torch::lazy::ScopePusher> {
+//         return absl::make_unique<torch::lazy::ScopePusher>(name);
+//       });
 }
 
 void InitXlaModuleBindings(py::module m) {

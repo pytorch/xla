@@ -1,0 +1,12 @@
+Building torch_xla version: 2.1.0
+XLA Commit ID: fd8bc53b49834f27b96d8f95b55a5e5f8723a5bc
+PyTorch Commit ID: 1ab112cfab5e9e5b3ec2521f0b4e6b93b6ff90d9
+Found pre-installed libtpu at  /root/anaconda3/envs/pytorch/lib/python3.8/site-packages/libtpu
+Traceback (most recent call last):
+  File "setup.py", line 197, in <module>
+    maybe_bundle_libtpu(base_dir)
+  File "setup.py", line 145, in maybe_bundle_libtpu
+    shutil.copyfile(os.path.join(module_path, 'libtpu.so'), libtpu_path)
+  File "/root/anaconda3/envs/pytorch/lib/python3.8/shutil.py", line 264, in copyfile
+    with open(src, 'rb') as fsrc, open(dst, 'wb') as fdst:
+FileNotFoundError: [Errno 2] No such file or directory: '/pytorch/xlaprofilemay11/torch_xla/lib/libtpu.so'
