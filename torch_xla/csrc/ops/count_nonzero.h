@@ -10,7 +10,7 @@ namespace torch_xla {
 
 class CountNonzero : public XlaNode {
  public:
-  CountNonzero(const torch::lazy::Value& input, c10::optional<int64_t> dim);
+  CountNonzero(const torch::lazy::Value& input, c10::optional<std::vector<int64_t>> dims);
 
   std::string ToString() const override;
 
@@ -18,10 +18,10 @@ class CountNonzero : public XlaNode {
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 
-  c10::optional<int64_t> dim() const { return dim_; }
+  c10::optional<std::vector<int64_t>> dims() const { return dims_; }
 
  private:
-  c10::optional<int64_t> dim_;
+  c10::optional<std::vector<int64_t>> dims_;
 };
 
 }  // namespace torch_xla

@@ -3465,8 +3465,12 @@ at::Tensor XLANativeFunctions::count_nonzero(const at::Tensor & self, c10::optio
   TORCH_LAZY_FN_COUNTER("xla::");
   XLATensorPtr xla_tensor = bridge::GetXlaTensor(self);
   std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": XLANativeFunctions::count_nonzero is called. xla_tensor->shape()=" << xla_tensor->shape() << std::endl;
+  std::vector<int64_t> dims;
+  if (dim) {
+    dims = {dim.value()};
+  }
   return bridge::AtenFromXlaTensor(tensor_methods::count_nonzero(
-      xla_tensor, dim));
+      xla_tensor, dims));
 }
 
 at::Tensor XLANativeFunctions::diag_embed(const at::Tensor& self,

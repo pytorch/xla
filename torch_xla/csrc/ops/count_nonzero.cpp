@@ -6,37 +6,46 @@ namespace torch_xla {
 namespace {
 
 xla::Shape NodeOutputShape(const torch::lazy::Value& input,
-                           c10::optional<int64_t> dim) {
-  std::vector<int64_t> dimensions;
-
+                           c10::optional<std::vector<int64_t>> dims) {
   xla::Shape input_shape = GetXlaShape(input);
+  std::vector<int64_t> dimensions;
+  if (dims) {
+    std::unordered_set<int64_t> dims_set(dims->begin(), dims->end());
+    for (int64_t i=0; i<input_shape.rank(); i++) {
+      if (dims_set.find(i) == dims_set.end()) {
+        dimensions.push_back(i);
+      }
+    }
+  }
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": dimensions=" << dimensions << std::endl;
+
   return xla::ShapeUtil::MakeShape(input_shape.element_type(), dimensions);
 }
 
 }  // namespace
 
 CountNonzero::CountNonzero(const torch::lazy::Value& input,
-                 c10::optional<int64_t> dim)
+                 c10::optional<std::vector<int64_t>> dims)
     : XlaNode(torch::lazy::OpKind(at::aten::count_nonzero), {input},
-              [&]() { return NodeOutputShape(input, dim); },
+              [&]() { return NodeOutputShape(input, dims); },
               /*num_outputs=*/1,
-              torch::lazy::MHash(dim)),
-      dim_(dim){}
+              torch::lazy::MHash(dims)),
+      dims_(dims){}
 
 torch::lazy::NodePtr CountNonzero::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<CountNonzero>(operands.at(0), dim_);
+  return torch::lazy::MakeNode<CountNonzero>(operands.at(0), dims_);
 }
 
 XlaOpVector CountNonzero::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
-  return ReturnOp(BuildCountNonzero(input, dim_), loctx);
+  return ReturnOp(BuildCountNonzero(input, dims_), loctx);
 }
 
 std::string CountNonzero::ToString() const {
   std::stringstream ss;
   ss << XlaNode::ToString();
-  if (dim_) {
-    ss << ", dim=" << *dim_;
+  if (dims_) {
+    ss << ", dims=" << *dims_;
   }
   return ss.str();
 }
