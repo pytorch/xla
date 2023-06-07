@@ -555,6 +555,16 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     #print(t2.shape)
     print(t2)
 
+  def test_test_hasdims(self):
+    met.clear_all()
+    t1 = torch.zeros([3,3,4], device=dev)
+    t1[0][1][0] = 1.0
+    t1[0][2][1] = 1.0
+    t1[2][2][2] = 1.0
+    t2 = torch.count_nonzero(t1, dim=(0, 2))
+    #print(t2.shape)
+    print(t2)
+
 
 if __name__ == '__main__':
   assert os.environ['XLA_EXPERIMENTAL'] != ''

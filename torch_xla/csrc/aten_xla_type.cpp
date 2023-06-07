@@ -3473,6 +3473,13 @@ at::Tensor XLANativeFunctions::count_nonzero(const at::Tensor & self, c10::optio
       xla_tensor, dims));
 }
 
+at::Tensor XLANativeFunctions::count_nonzero(const at::Tensor & self, at::IntArrayRef dim) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+  XLATensorPtr xla_tensor = bridge::GetXlaTensor(self);
+  return bridge::AtenFromXlaTensor(tensor_methods::count_nonzero(
+      xla_tensor, XlaHelpers::I64List(dim)));
+}
+
 at::Tensor XLANativeFunctions::diag_embed(const at::Tensor& self,
                                           int64_t offset, int64_t dim1,
                                           int64_t dim2) {
