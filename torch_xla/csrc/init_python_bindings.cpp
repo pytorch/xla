@@ -28,8 +28,6 @@
 #include "tensorflow/compiler/xla/pjrt/distributed/distributed.h"
 #include "tensorflow/compiler/xla/python/profiler/internal/traceme_wrapper.h"
 #include "tensorflow/compiler/xla/service/hlo_parser.h"
-#include "tensorflow/core/example/example.pb.h"
-#include "tensorflow/core/example/feature.pb.h"
 #include "tensorflow/tsl/platform/env.h"
 #include "tensorflow/tsl/profiler/lib/traceme.h"
 #include "third_party/xla_client/mesh_service.h"
@@ -491,81 +489,6 @@ std::vector<py::bytes> Rendezvous(int ordinal, const std::string& tag,
     XLA_CHECK(replicas.empty() || (replicas.size() == 1 && replicas[0] == 0));
   }
   return payloads;
-}
-
-std::shared_ptr<xla::util::RecordReader> CreateRecordReader(
-    std::string path, const std::string& compression, int64_t buffer_size) {
-  return std::make_shared<xla::util::RecordReader>(std::move(path), compression,
-                                                   buffer_size);
-}
-
-bool RecordRead(const std::shared_ptr<xla::util::RecordReader>& reader,
-                xla::util::RecordReader::Data* value) {
-  NoGilSection nogil;
-  return reader->Read(value);
-}
-
-py::object RecordReadExample(
-    const std::shared_ptr<xla::util::RecordReader>& reader) {
-  auto make_r1_size = [](int64_t size) -> std::vector<int64_t> {
-    return std::vector<int64_t>({size});
-  };
-
-  xla::util::RecordReader::Data value;
-  if (!RecordRead(reader, &value)) {
-    return py::none();
-  }
-  tensorflow::Example exmsg;
-  if (!exmsg.ParseFromArray(value.data(), value.size())) {
-    XLA_ERROR() << "Unable to parse TF example from " << reader->path();
-  }
-  auto example = py::dict();
-  for (auto& name_feat : exmsg.features().feature()) {
-    switch (name_feat.second.kind_case()) {
-      case tensorflow::Feature::kBytesList: {
-        const tensorflow::BytesList& bvalue = name_feat.second.bytes_list();
-        if (bvalue.value_size() == 1) {
-          const std::string& svalue = bvalue.value(0);
-          at::Tensor data = at::empty(make_r1_size(svalue.size()),
-                                      at::TensorOptions(at::kChar));
-          std::memcpy(data.data_ptr<int8_t>(), svalue.data(), svalue.size());
-          example[py::str(name_feat.first)] =
-              torch::autograd::make_variable(data);
-        } else {
-          auto tlist = py::list(bvalue.value_size());
-          for (int i = 0; i < bvalue.value_size(); ++i) {
-            const std::string& svalue = bvalue.value(i);
-            at::Tensor data = at::empty(make_r1_size(svalue.size()),
-                                        at::TensorOptions(at::kChar));
-            std::memcpy(data.data_ptr<int8_t>(), svalue.data(), svalue.size());
-            tlist[i] = torch::autograd::make_variable(data);
-          }
-          example[py::str(name_feat.first)] = tlist;
-        }
-      } break;
-      case tensorflow::Feature::kFloatList: {
-        const tensorflow::FloatList& fvalue = name_feat.second.float_list();
-        at::Tensor data = at::empty(make_r1_size(fvalue.value_size()),
-                                    at::TensorOptions(at::kFloat));
-        std::memcpy(data.data_ptr<float>(), fvalue.value().data(),
-                    fvalue.value_size() * sizeof(float));
-        example[py::str(name_feat.first)] =
-            torch::autograd::make_variable(data);
-      } break;
-      case tensorflow::Feature::kInt64List: {
-        const tensorflow::Int64List& ivalue = name_feat.second.int64_list();
-        at::Tensor data = at::empty(make_r1_size(ivalue.value_size()),
-                                    at::TensorOptions(at::kLong));
-        std::memcpy(data.data_ptr<int64_t>(), ivalue.value().data(),
-                    ivalue.value_size() * sizeof(int64_t));
-        example[py::str(name_feat.first)] =
-            torch::autograd::make_variable(data);
-      } break;
-      default:
-        XLA_ERROR() << "Unknown data type from " << reader->path();
-    }
-  }
-  return example;
 }
 
 std::unique_ptr<tsl::RandomAccessFile> OpenTfFile(const std::string& path) {
@@ -1352,30 +1275,6 @@ void InitXlaModuleBindings(py::module m) {
                                          : xla::PrecisionConfig::DEFAULT);
         },
         py::arg("use_full_mat_mul_precision") = true);
-
-  py::class_<xla::util::RecordReader, std::shared_ptr<xla::util::RecordReader>>(
-      m, "RecordReader");
-  m.def("_xla_create_tfrecord_reader",
-        [](const std::string& path, const std::string& compression,
-           int64_t buffer_size) {
-          NoGilSection nogil;
-          return CreateRecordReader(path, compression, buffer_size);
-        },
-        py::arg("path"), py::arg("compression") = "",
-        py::arg("buffer_size") = 16 * 1024 * 1024);
-  m.def(
-      "_xla_tfrecord_read",
-      [](const std::shared_ptr<xla::util::RecordReader>& reader) -> py::object {
-        xla::util::RecordReader::Data record;
-        if (!RecordRead(reader, &record)) {
-          return py::none();
-        }
-        return py::bytes(record.data(), record.size());
-      });
-  m.def("_xla_tfexample_read",
-        [](const std::shared_ptr<xla::util::RecordReader>& reader) {
-          return RecordReadExample(reader);
-        });
 
   py::class_<tsl::RandomAccessFile>(m, "TfRdFile");
   m.def("_xla_tffile_open", [](const std::string& path) {
