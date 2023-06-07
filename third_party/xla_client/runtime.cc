@@ -25,7 +25,7 @@ ComputationClient* CreateClient() {
     client = new PjRtComputationClient();
   } else {
 #ifndef PJRT_ONLY
-    client = new XrtComputationClient();
+    // client = new XrtComputationClient();
 #else
     XLA_ERROR() << "$PJRT_DEVICE is not set." << std::endl;
 #endif
@@ -50,20 +50,20 @@ ComputationClient* GetComputationClientIfInitialized() {
 
 void RunLocalService(uint64_t service_port) {
 #ifndef PJRT_ONLY
-  try {
-    XrtLocalService* service = new XrtLocalService(
-        "localservice|localhost:" + std::to_string(service_port),
-        "localservice", 0);
-    service->Start();
-    service->Join();
-  } catch (const std::runtime_error& error) {
-    if (std::string(error.what()).find("Couldn't open device: /dev/accel0") !=
-        std::string::npos) {
-      TF_LOG(INFO) << "Local service has been created by other process, return";
-    } else {
-      throw;
-    }
-  }
+  // try {
+  //   XrtLocalService* service = new XrtLocalService(
+  //       "localservice|localhost:" + std::to_string(service_port),
+  //       "localservice", 0);
+  //   service->Start();
+  //   service->Join();
+  // } catch (const std::runtime_error& error) {
+  //   if (std::string(error.what()).find("Couldn't open device: /dev/accel0") !=
+  //       std::string::npos) {
+  //     TF_LOG(INFO) << "Local service has been created by other process, return";
+  //   } else {
+  //     throw;
+  //   }
+  // }
 #else
   XLA_ERROR() << "PyTorch/XLA was not built with XRT support." << std::endl;
 #endif
