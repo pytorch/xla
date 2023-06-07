@@ -10,6 +10,7 @@ torch_xla/csrc/version.cpp
 *.pyc
 *.so
 
+# BEGIN NOT-CLEAN-FILES (setup.py handles this marker. Do not change.)
 # FILES (setup.py handles this marker. Do not change.)
 #
 # Below files are not deleted by "setup.py clean".
