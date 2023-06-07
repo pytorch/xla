@@ -29,7 +29,7 @@ xla::XlaOp BuildMatMulWithMultiplier(xla::XlaOp lhs, xla::XlaOp rhs,
                                      xla::XlaOp bias_multiplier);
 
 xla::XlaOp BuildCountNonzero(xla::XlaOp input,
-                             c10::optional<std::vector<int64_t>> dim);
+                             std::vector<int64_t> dim);
 
 xla::XlaOp BuildDot(xla::XlaOp lhs, xla::XlaOp rhs);
 
