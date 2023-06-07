@@ -4,7 +4,7 @@ import textwrap
 
 from absl.testing import absltest, parameterized
 import torch_xla.core.xla_env_vars as xenv
-from torch_xla.experimental import tpu
+from torch_xla._internal import tpu
 
 from unittest import mock
 

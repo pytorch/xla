@@ -99,6 +99,40 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
       self.assertTrue(torch.allclose(shard.data, t[shard.indices]))
       self.assertTrue(torch.allclose(shard.data, shard.unpadded_data))
 
+  def test_load_local_shards(self):
+    num_element = self.n_devices
+    mesh = self._get_mesh((self.n_devices,))
+    t = torch.arange(num_element, dtype=torch.float32) + 1
+    xt = xs.mark_sharding(t.to(xm.xla_device()), mesh, (0,))
+    local_shards = xt.local_shards
+    self.assertTrue(len(local_shards) == self.n_devices)
+
+    # More than one device is required for sharding to not be REPLICATED
+    if self.n_devices > 1:
+      for shard in local_shards:
+        # Update the shard's data on CPU
+        self.assertEqual(shard.data.device, torch.device('cpu'))
+        shard.data *= -1
+      # Loading a complete list of shards should succeed
+      xt.load_local_shards_(local_shards)
+      self.assertTrue(torch.allclose(xt.cpu(), -t))
+
+    # Loading an incomplete list of shards should fail
+    with self.assertRaises(RuntimeError):
+      xt.load_local_shards_(local_shards[:-1])
+
+    # Loading incompatible shapes should fail
+    for local_shard in local_shards:
+      local_shard.data = torch.randn(*(2 * local_shard.data.shape))
+    with self.assertRaises(RuntimeError):
+      xt.load_local_shards_(local_shards)
+
+    # Replicated shards should fail
+    rt = xs.mark_sharding(t.to(xm.xla_device()), mesh, (None,))
+    local_shards = rt.local_shards
+    with self.assertRaises(RuntimeError):
+      rt.load_local_shards_(local_shards)
+
   def test_custom_tile_assignment(self):
     xt = torch.randn(10, 20).to(device=xm.xla_device())
     mesh_shape = (1, self.n_devices)
