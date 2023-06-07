@@ -46,7 +46,7 @@ namespace {
   return status.ok()
              ? ::grpc::Status::OK
              : ::grpc::Status(static_cast<::grpc::StatusCode>(status.code()),
-                              std::string(status.message()));
+                              status.error_message());
 }
 
 std::ostream& operator<<(std::ostream& ostrm, const ::grpc::Status& status) {
