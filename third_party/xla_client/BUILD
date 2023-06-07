@@ -104,7 +104,7 @@ cc_library(
     "@com_google_absl//absl/strings",
     "@com_google_absl//absl/types:optional",
     "@com_google_absl//absl/types:span",
-    "@tsl//tsl/platform/stacktrace_handler",
+    "@tsl//tsl/platform:stacktrace_handler",
   ],
 )
 
