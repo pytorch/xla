@@ -6,11 +6,11 @@
 #include <shared_mutex>
 
 #include "absl/types/span.h"
-#include "tensorflow/compiler/xla/client/xla_computation.h"
-#include "tensorflow/compiler/xla/literal.h"
-#include "tensorflow/compiler/xla/pjrt/pjrt_client.h"
-#include "tensorflow/compiler/xla/pjrt/pjrt_executable.h"
-#include "tensorflow/compiler/xla/shape.h"
+#include "xla/client/xla_computation.h"
+#include "xla/literal.h"
+#include "xla/pjrt/pjrt_client.h"
+#include "xla/pjrt/pjrt_executable.h"
+#include "xla/shape.h"
 #include "third_party/xla_client/computation_client.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "third_party/xla_client/util.h"

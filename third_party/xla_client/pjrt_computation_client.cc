@@ -8,20 +8,20 @@
 #include "absl/strings/ascii.h"
 #include "absl/types/span.h"
 #include "pjrt_computation_client.h"
-#include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "tensorflow/compiler/xla/client/xla_computation.h"
-#include "tensorflow/compiler/xla/layout_util.h"
-#include "tensorflow/compiler/xla/literal.h"
-#include "tensorflow/compiler/xla/pjrt/distributed/distributed.h"
-#include "tensorflow/compiler/xla/pjrt/gpu/se_gpu_pjrt_client.h"
-#include "tensorflow/compiler/xla/pjrt/pjrt_api.h"
-#include "tensorflow/compiler/xla/pjrt/pjrt_c_api_client.h"
-#include "tensorflow/compiler/xla/pjrt/pjrt_client.h"
-#include "tensorflow/compiler/xla/pjrt/pjrt_executable.h"
-#include "tensorflow/compiler/xla/pjrt/tfrt_cpu_pjrt_client.h"
-#include "tensorflow/compiler/xla/pjrt/tpu_client.h"
-#include "tensorflow/compiler/xla/shape.h"
-#include "tensorflow/tsl/profiler/lib/traceme.h"
+#include "xla/client/xla_builder.h"
+#include "xla/client/xla_computation.h"
+#include "xla/layout_util.h"
+#include "xla/literal.h"
+#include "xla/pjrt/distributed/distributed.h"
+#include "xla/pjrt/gpu/se_gpu_pjrt_client.h"
+#include "xla/pjrt/pjrt_api.h"
+#include "xla/pjrt/pjrt_c_api_client.h"
+#include "xla/pjrt/pjrt_client.h"
+#include "xla/pjrt/pjrt_executable.h"
+#include "xla/pjrt/tfrt_cpu_pjrt_client.h"
+#include "xla/pjrt/tpu_client.h"
+#include "xla/shape.h"
+#include "tsl/profiler/lib/traceme.h"
 #include "third_party/xla_client/computation_client.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "third_party/xla_client/env_vars.h"
@@ -489,7 +489,7 @@ PjRtComputationClient::ExecuteComputation(
   execute_options.strict_shape_checking = false;
 
   // Required as of cl/518733871
-  execute_options.use_major_to_minor_data_layout_for_callbacks = true;
+  // execute_options.use_major_to_minor_data_layout_for_callbacks = true;
 
   std::optional<PjRtFuture<Status>> returned_future;
   std::vector<std::unique_ptr<xla::PjRtBuffer>> results =
@@ -580,7 +580,7 @@ PjRtComputationClient::ExecuteReplicated(
   execute_options.multi_slice_config = nullptr;
 
   // Required as of cl/518733871
-  execute_options.use_major_to_minor_data_layout_for_callbacks = true;
+  // execute_options.use_major_to_minor_data_layout_for_callbacks = true;
 
   std::optional<std::vector<PjRtFuture<Status>>> returned_futures(
       devices.size());

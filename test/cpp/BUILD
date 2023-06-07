@@ -64,7 +64,7 @@ ptxla_cc_test(
         ":torch_xla_test",
         "//torch_xla/csrc:tensor",
         "@com_google_googletest//:gtest_main",
-        "@org_tensorflow//tensorflow/compiler/xla:shape_util",
+        "@xla//xla:shape_util",
     ],
 )
 
@@ -90,8 +90,8 @@ ptxla_cc_test(
         "//third_party/xla_client:thread_pool",
         "//torch_xla/csrc:tensor",
         "@com_google_googletest//:gtest_main",
-        "@org_tensorflow//tensorflow/compiler/xla:shape_util",
-        "@org_tensorflow//tensorflow/compiler/xla/client:xla_builder",
+        "@xla//xla:shape_util",
+        "@xla//xla/client:xla_builder",
     ],
 )
 
@@ -129,7 +129,7 @@ ptxla_cc_test(
         "//third_party/xla_client:sys_util",
         "//torch_xla/csrc:tensor",
         "@com_google_googletest//:gtest_main",
-        "@org_tensorflow//tensorflow/compiler/xla:xla_data_proto_cc",
+        "@xla//xla:xla_data_proto_cc",
     ],
 )
 
@@ -146,7 +146,7 @@ ptxla_cc_test(
             "//third_party/xla_client:metrics",
             "//torch_xla/csrc:tensor",
             "@com_google_googletest//:gtest_main",
-            "@org_tensorflow//tensorflow/compiler/xla:permutation_util",
+            "@xla//xla:permutation_util",
         ],
     )
     for test in glob(["test_aten_xla_tensor*cpp"])

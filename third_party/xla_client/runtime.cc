@@ -1,4 +1,4 @@
-#include "tensorflow/tsl/platform/stacktrace_handler.h"
+#include "tsl/platform/stacktrace_handler.h"
 #include "third_party/xla_client/computation_client.h"
 #include "third_party/xla_client/env_vars.h"
 #include "third_party/xla_client/pjrt_computation_client.h"

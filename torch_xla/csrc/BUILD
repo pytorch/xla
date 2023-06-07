@@ -128,23 +128,23 @@ ptxla_cc_library(
         "@com_google_absl//absl/types:optional",
         "@com_google_absl//absl/types:span",
         "@org_tensorflow//tensorflow/compiler/tf2xla/kernels:conv_op_helpers",
-        "@org_tensorflow//tensorflow/compiler/xla:comparison_util",
-        "@org_tensorflow//tensorflow/compiler/xla:literal_util",
-        "@org_tensorflow//tensorflow/compiler/xla:permutation_util",
-        "@org_tensorflow//tensorflow/compiler/xla:shape_util",
-        "@org_tensorflow//tensorflow/compiler/xla:types",
-        "@org_tensorflow//tensorflow/compiler/xla/client:xla_builder",
-        "@org_tensorflow//tensorflow/compiler/xla/client/lib:arithmetic",
-        "@org_tensorflow//tensorflow/compiler/xla/client/lib:comparators",
-        "@org_tensorflow//tensorflow/compiler/xla/client/lib:constants",
-        "@org_tensorflow//tensorflow/compiler/xla/client/lib:logdet",
-        "@org_tensorflow//tensorflow/compiler/xla/client/lib:math",
-        "@org_tensorflow//tensorflow/compiler/xla/client/lib:pooling",
-        "@org_tensorflow//tensorflow/compiler/xla/client/lib:self_adjoint_eig",
-        "@org_tensorflow//tensorflow/compiler/xla/client/lib:slicing",
-        "@org_tensorflow//tensorflow/compiler/xla/client/lib:sorting",
-        "@org_tensorflow//tensorflow/compiler/xla/client/lib:svd",
-        "@org_tensorflow//tensorflow/compiler/xla/stream_executor:dnn",
+        "@xla//xla:comparison_util",
+        "@xla//xla:literal_util",
+        "@xla//xla:permutation_util",
+        "@xla//xla:shape_util",
+        "@xla//xla:types",
+        "@xla//xla/client:xla_builder",
+        "@xla//xla/client/lib:arithmetic",
+        "@xla//xla/client/lib:comparators",
+        "@xla//xla/client/lib:constants",
+        "@xla//xla/client/lib:logdet",
+        "@xla//xla/client/lib:math",
+        "@xla//xla/client/lib:pooling",
+        "@xla//xla/client/lib:self_adjoint_eig",
+        "@xla//xla/client/lib:slicing",
+        "@xla//xla/client/lib:sorting",
+        "@xla//xla/client/lib:svd",
+        "@xla//xla/stream_executor:dnn",
         "@org_tensorflow//tensorflow/core:lib",
         "@org_tensorflow//tensorflow/core/framework:tensor_shape",
         "@org_tensorflow//tensorflow/core/lib/core:errors",
@@ -164,7 +164,7 @@ ptxla_cc_library(
         "//third_party/xla_client:util",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:optional",
-        "@org_tensorflow//tensorflow/compiler/xla/client:xla_builder",
+        "@xla//xla/client:xla_builder",
     ],
 )
 
@@ -174,8 +174,8 @@ ptxla_cc_library(
     hdrs = ["computation.h"],
     deps = [
         "//third_party/xla_client:runtime",
-        "@org_tensorflow//tensorflow/compiler/xla/client:xla_builder",
-        "@org_tensorflow//tensorflow/compiler/xla/client:xla_computation",
+        "@xla//xla/client:xla_builder",
+        "@xla//xla/client:xla_computation",
     ],
 )
 
@@ -190,7 +190,7 @@ ptxla_cc_library(
         "//third_party/xla_client:tf_logging",
         "//third_party/xla_client:util",
         "@com_google_absl//absl/strings",
-        "@org_tensorflow//tensorflow/compiler/xla:shape_util",
+        "@xla//xla:shape_util",
         "@org_tensorflow//tensorflow/core/framework:tensor_shape",
     ],
 )
@@ -231,7 +231,7 @@ ptxla_cc_library(
     hdrs = ["ir_builder.h"],
     deps = [
         "@com_google_absl//absl/types:span",
-        "@org_tensorflow//tensorflow/compiler/xla/client:xla_builder",
+        "@xla//xla/client:xla_builder",
     ],
 )
 
@@ -241,8 +241,8 @@ ptxla_cc_library(
     hdrs = ["shape_builder.h"],
     deps = [
         "@com_google_absl//absl/types:span",
-        "@org_tensorflow//tensorflow/compiler/xla:shape_util",
-        "@org_tensorflow//tensorflow/compiler/xla:types",
+        "@xla//xla:shape_util",
+        "@xla//xla:types",
     ],
 )
 
@@ -275,12 +275,12 @@ ptxla_cc_library(
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:variant",
-        "@org_tensorflow//tensorflow/compiler/xla/python/profiler/internal:traceme_wrapper",
-        "@org_tensorflow//tensorflow/compiler/xla/service:hlo_parser",
-        "@org_tensorflow//tensorflow/compiler/xla/service:hlo_pass_pipeline",
-        "@org_tensorflow//tensorflow/compiler/xla/service:hlo_verifier",
-        "@org_tensorflow//tensorflow/compiler/xla/service:sharding_propagation",
-        "@org_tensorflow//tensorflow/compiler/xla/service/spmd:spmd_partitioner",
+        "@xla//xla/python/profiler/internal:traceme_wrapper",
+        "@xla//xla/service:hlo_parser",
+        "@xla//xla/service:hlo_pass_pipeline",
+        "@xla//xla/service:hlo_verifier",
+        "@xla//xla/service:sharding_propagation",
+        "@xla//xla/service/spmd:spmd_partitioner",
         "@org_tensorflow//tensorflow/core",
         "@org_tensorflow//tensorflow/core:protos_all_cc",
         "@org_tensorflow//tensorflow/core/platform:env",
@@ -317,7 +317,7 @@ cc_library(
     hdrs = ["shape_helper.h"],
     deps = [
         "//third_party/xla_client:debug_macros",
-        "@org_tensorflow//tensorflow/compiler/xla/client:xla_builder",
+        "@xla//xla/client:xla_builder",
     ],
 )
 
