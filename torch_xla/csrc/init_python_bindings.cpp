@@ -927,10 +927,6 @@ void InitXlaModuleBindings(py::module m) {
         [](const std::vector<at::Tensor>& tensors) -> std::string {
           return GetTensorsHloGraph(tensors);
         });
-  m.def("_get_xla_tensors_stablehlo",
-        [](const std::vector<at::Tensor>& tensors) -> std::string {
-          return GetTensorsHloGraph(tensors, /*get_stable_hlo=*/true);
-        });
   py::class_<XLATensor::ShardingSpec, XLATensor::ShardingSpecPtr>(
       m, "XlaShardingSpec")
       .def(py::init([](at::Tensor tensor, const py::list& tile_assignment,
@@ -1279,12 +1275,16 @@ void InitXlaModuleBindings(py::module m) {
         },
         py::arg("device") = "", py::arg("devices"), py::arg("wait") = true);
   m.def("_get_stablehlo",
-        [](const std::string& device,
+        [](const std::vector<at::Tensor>& tensors,
+           const std::string& device,
            const std::vector<std::string>& devices) -> std::string {
           NoGilSection nogil;
-          return GetLiveTensorsStableHLO(device, devices);
-        },
-        py::arg("device") = "", py::arg("devices"));
+          if (tensors.empty()) {
+            return GetLiveTensorsStableHLO(device, devices);
+          } else {
+            return GetTensorsHloGraph(tensors, /*get_stable_hlo=*/true);
+          }
+        });
   m.def("_xla_wait_device_ops",
         [](const std::vector<std::string>& devices) {
           NoGilSection nogil;

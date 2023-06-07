@@ -858,11 +858,8 @@ def get_stablehlo(tensors=[]):
   Returns:
     StableHLO Module in string format.
   """
-  if len(tensors) == 0:
-    return torch_xla._XLAC._get_stablehlo(
-        torch_xla._XLAC._xla_get_default_device(), [])
-  else:
-    return torch_xla._XLAC._get_xla_tensors_stablehlo(tensors)
+  return torch_xla._XLAC._get_stablehlo(
+      tensors, torch_xla._XLAC._xla_get_default_device(), [])
 
 
 def wait_device_ops(devices=[]):
