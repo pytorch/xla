@@ -15,6 +15,17 @@ namespace torch_xla {
 
 class ShardingUtil {
  public:
+
+  // This maps to `torch_xla.experimental.xla_sharding.ShardingType` enum type.
+  enum ShardingType {
+    REPLICATED = 0,
+    MAXIMAL = 1,
+    TUPLE = 2,
+    TILED = 3,
+    MANUAL = 4,
+    PARTIAL = 5
+  };
+
   // Test whether the XLA_USE_SPMD environment variable is set to enable the
   // virtual device optimization.
   static bool UseVirtualDevice();
@@ -29,10 +40,12 @@ class ShardingUtil {
   static bool EqualShardingSpecs(const XLATensor::ShardingSpec& a,
                                  const XLATensor::ShardingSpec& b);
 
-  // Creates an xla::OpSharding from `tile_assignment` (ndarray).
+  // Creates an xla::OpSharding. `tile_assignmnent` is required for TILED
+  // `sharding_type` and `replication_groups` for `PARTIAL`.
   static xla::OpSharding CreateOpSharding(const py::list& tile_assignment,
-                                          bool replicated = false,
-                                          bool manual = false);
+                                          const py::list& group_assignment,
+                                          const py::list& replication_groups,
+                                          ShardingType sharding_type);
 
   // This is a debugging tool for partitioned HLO generation with different
   // options and sharding propagation.
@@ -108,6 +121,12 @@ class ShardingUtil {
       ComputationPtr computation,
       std::vector<torch::lazy::BackendDataPtr>* data_placeholders,
       std::vector<XLATensor::ShardingSpecPtr>* sharding_specs);
+
+  // Transfers the individual shards to the devices and returns a DataPtr for
+  // the PjRtShardedData wrapping the shards.
+  static xla::ComputationClient::DataPtr CreateShardedData(
+      std::vector<at::Tensor>& shards, std::vector<std::string>& devices,
+      xla::Shape global_shape, xla::OpSharding sharding);
 };
 
 }  // namespace torch_xla

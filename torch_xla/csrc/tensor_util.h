@@ -80,6 +80,12 @@ std::vector<xla::Shape> GetComponentShapes(const xla::Shape& shape);
 xla::Shape MakeShapeWithDeviceLayout(const xla::Shape& shape,
                                      XlaDeviceType hw_type);
 
+// Copy the tensor's data into the destination buffer.
+void PopulateTensorBuffer(const at::Tensor& tensor,
+                          const xla::Shape& dest_shape, void* dest_buffer,
+                          size_t dest_buffer_size,
+                          const torch::lazy::BackendDevice& device);
+
 // Create the XLA shape to be used within a lowered XLA computation, to
 // represent a given tensor data.
 xla::Shape CreateComputationShapeFromTensor(

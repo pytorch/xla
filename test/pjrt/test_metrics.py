@@ -4,7 +4,7 @@ import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
 import torch_xla.debug.metrics_compare_utils as mcu
 from absl.testing import absltest
-from torch_xla.experimental import pjrt
+from torch_xla import runtime as xr
 
 EXPECTED_COMPUTATION_CLIENT_METRICS = [
     "CompileTime",
@@ -21,7 +21,7 @@ EXPECTED_COMPUTATION_CLIENT_METRICS = [
 class TestPjRtRuntimeMetrics(absltest.TestCase):
 
   def setUp(self):
-    pjrt.set_device_type('CPU')
+    xr.set_device_type('CPU')
 
   def test_metrics_report(self):
     self.assertEmpty(met.metrics_report())
