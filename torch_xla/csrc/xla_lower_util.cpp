@@ -37,8 +37,7 @@ struct ConditionMaskData {
   xla::XlaOp length;
 };
 
-ConditionMaskData CreateConditionMaskData(
-    xla::XlaOp condition, c10::optional<std::vector<int64_t>> dims) {
+ConditionMaskData CreateConditionMaskData(xla::XlaOp condition) {
   static const xla::PrimitiveType kConditionType = xla::PrimitiveType::S32;
   xla::Shape iota_shape = ShapeHelper::ShapeOfXlaOp(condition);
   iota_shape.set_element_type(GetShapeDimensionType(/*device=*/nullptr));
@@ -51,17 +50,9 @@ ConditionMaskData CreateConditionMaskData(
   xla::XlaOp zeros = xla::ZerosLike(r1_condition_int);
   xla::XlaOp compared =
       xla::ConvertElementType(xla::Gt(r1_condition_int, zeros), kConditionType);
-  xla::XlaOp length;
-  if (!dims || dims.value().empty()) {
-    length = xla::ReduceAll(
-        compared, xla::Zero(condition.builder(), kConditionType),
-        xla::CreateScalarAddComputation(kConditionType, condition.builder()));
-  } else {
-    length = xla::Reduce(
-        compared, xla::Zero(condition.builder(), kConditionType),
-        xla::CreateScalarAddComputation(kConditionType, condition.builder()),
-        dims.value());
-  }
+  xla::XlaOp length = xla::ReduceAll(
+      compared, xla::Zero(condition.builder(), kConditionType),
+      xla::CreateScalarAddComputation(kConditionType, condition.builder()));
   return {std::move(iota_shape), flattened_size, r1_condition_int,
           kConditionType, length};
 }
@@ -278,7 +269,7 @@ xla::XlaOp XlaDenseScatter(xla::XlaOp input, xla::XlaOp index, xla::XlaOp src,
 }
 
 std::vector<xla::XlaOp> BuildConditionIndices(xla::XlaOp condition) {
-  ConditionMaskData cmd = CreateConditionMaskData(condition, c10::nullopt);
+  ConditionMaskData cmd = CreateConditionMaskData(condition);
   std::vector<xla::XlaOp> to_sort = {cmd.r1_condition_int};
   std::vector<xla::PrimitiveType> types_to_sort = {cmd.condition_int_type};
   for (int64_t axis = 0; axis < cmd.iota_shape.rank(); ++axis) {
@@ -766,8 +757,7 @@ xla::XlaOp BuildLinspace(const torch::lazy::BackendDevice& device,
   return CreatePut(device, res, last_index, end, /*accumulate=*/false);
 }
 
-xla::XlaOp BuildCountNonzero(xla::XlaOp input,
-                             c10::optional<std::vector<int64_t>> dims) {
+xla::XlaOp BuildCountNonzero(xla::XlaOp input, std::vector<int64_t> dims) {
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   xla::XlaOp ne =
       xla::Ne(input, xla::Zero(input.builder(), input_shape.element_type()));
@@ -777,18 +767,14 @@ xla::XlaOp BuildCountNonzero(xla::XlaOp input,
   xla::XlaOp zeros = xla::ZerosLike(ne_int);
   xla::XlaOp compared =
       xla::ConvertElementType(xla::Gt(ne_int, zeros), kConditionType);
-  xla::XlaOp length;
-  if (!dims || dims.value().empty()) {
-    length = xla::ReduceAll(
+  if (dims.empty()) {
+    return xla::ReduceAll(
         compared, xla::Zero(ne.builder(), kConditionType),
         xla::CreateScalarAddComputation(kConditionType, ne.builder()));
-  } else {
-    length = xla::Reduce(
-        compared, xla::Zero(ne.builder(), kConditionType),
-        xla::CreateScalarAddComputation(kConditionType, ne.builder()),
-        dims.value());
   }
-  return length;
+  return xla::Reduce(
+      compared, xla::Zero(ne.builder(), kConditionType),
+      xla::CreateScalarAddComputation(kConditionType, ne.builder()), dims);
 }
 
 std::vector<xla::XlaOp> BuildNonZero(xla::XlaOp input) {
@@ -801,7 +787,7 @@ std::vector<xla::XlaOp> BuildMaskedSelect(xla::XlaOp input, xla::XlaOp mask) {
   xla::Shape input_shape;
   xla::XlaOp r1_input = XlaHelpers::Flatten(input, &input_shape);
   xla::XlaOp r1_bcast_mask = GetPromotedR1Mask(mask, input_shape);
-  ConditionMaskData cmd = CreateConditionMaskData(r1_bcast_mask, c10::nullopt);
+  ConditionMaskData cmd = CreateConditionMaskData(r1_bcast_mask);
   std::vector<xla::XlaOp> to_sort = {cmd.r1_condition_int, r1_input};
   std::vector<xla::PrimitiveType> types_to_sort = {cmd.condition_int_type,
                                                    input_shape.element_type()};

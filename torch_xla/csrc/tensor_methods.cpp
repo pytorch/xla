@@ -973,7 +973,7 @@ convolution_backward_overrideable(
 }
 
 XLATensorPtr count_nonzero(const XLATensorPtr& input,
-                           c10::optional<std::vector<int64_t>> dims) {
+                           std::vector<int64_t> dims) {
   torch::lazy::NodePtr ir_value =
       torch::lazy::MakeNode<CountNonzero>(input->GetIrValue(), dims);
   return input->CreateFrom(ir_value);

@@ -7,26 +7,26 @@ namespace torch_xla {
 namespace {
 
 xla::Shape NodeOutputShape(const torch::lazy::Value& input,
-                           c10::optional<std::vector<int64_t>> dims) {
+                           std::vector<int64_t> dims) {
   xla::Shape input_shape = GetXlaShape(input);
   std::vector<int64_t> dimensions;
-  if (!dims || dims.value().empty())
+  if (dims.empty()) {
     return xla::ShapeUtil::MakeShape(input_shape.element_type(), dimensions);
+  }
 
-  std::unordered_set<int64_t> dims_set(dims->begin(), dims->end());
+  std::unordered_set<int64_t> dims_set(dims.begin(), dims.end());
   for (int64_t i = 0; i < input_shape.rank(); i++) {
     if (dims_set.find(i) != dims_set.end()) {
       dimensions.push_back(i);
     }
   }
-
   return xla::ShapeUtil::MakeShape(input_shape.element_type(), dimensions);
 }
 
 }  // namespace
 
 CountNonzero::CountNonzero(const torch::lazy::Value& input,
-                           c10::optional<std::vector<int64_t>> dims)
+                           std::vector<int64_t> dims)
     : XlaNode(torch::lazy::OpKind(at::aten::count_nonzero), {input},
               [&]() { return NodeOutputShape(input, dims); },
               /*num_outputs=*/1, torch::lazy::MHash(dims)),
@@ -43,10 +43,7 @@ XlaOpVector CountNonzero::Lower(LoweringContext* loctx) const {
 
 std::string CountNonzero::ToString() const {
   std::stringstream ss;
-  ss << XlaNode::ToString();
-  if (dims_) {
-    ss << ", dims=" << *dims_;
-  }
+  ss << XlaNode::ToString() << ", dims=" << dims_;
   return ss.str();
 }
 
