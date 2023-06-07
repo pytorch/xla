@@ -3,12 +3,12 @@
 #include <map>
 
 #include "absl/types/optional.h"
-#include "tensorflow/compiler/xla/client/lib/logdet.h"
-#include "tensorflow/compiler/xla/client/lib/math.h"
-#include "tensorflow/compiler/xla/client/lib/matrix.h"
-#include "tensorflow/compiler/xla/client/lib/pooling.h"
-#include "tensorflow/compiler/xla/primitive_util.h"
-#include "tensorflow/compiler/xla/shape_util.h"
+#include "xla/client/lib/logdet.h"
+#include "xla/client/lib/math.h"
+#include "xla/client/lib/matrix.h"
+#include "xla/client/lib/pooling.h"
+#include "xla/primitive_util.h"
+#include "xla/shape_util.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/convert_ops.h"
