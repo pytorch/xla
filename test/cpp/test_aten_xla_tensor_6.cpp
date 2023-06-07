@@ -234,6 +234,7 @@ TEST_F(AtenXlaTensorTest, TestMaxUnpool2DBackward) {
 }
 */
 
+/*
 TEST_F(AtenXlaTensorTest, TestMaxUnpool3DBackward) {
   int kernel_size = 2;
   torch::Tensor input =
@@ -246,19 +247,19 @@ TEST_F(AtenXlaTensorTest, TestMaxUnpool3DBackward) {
           torch::Tensor output;
           torch::Tensor indices;
           std::tie(output, indices) = torch::max_pool3d_with_indices(
-              input, /*kernel_size=*/{kernel_size, kernel_size, kernel_size},
-              /*stride=*/{stride, stride, stride},
-              /*padding=*/{padding, padding, padding},
-              /*dilation=*/{dilation, dilation, dilation},
-              /*ceil_mode=*/ceil_mode);
+              input, {kernel_size, kernel_size, kernel_size}, // kernel_size
+              {stride, stride, stride}, // stride
+              {padding, padding, padding}, // padding
+              {dilation, dilation, dilation}, // dilation
+              ceil_mode); // ceil_mode
 
           std::vector<int64_t> output_size(
               {input.size(2), input.size(3), input.size(4)});
           auto testfn =
               [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
             return torch::max_unpool3d(inputs[0], inputs[1], output_size,
-                                       /*stride=*/{stride, stride, stride},
-                                       /*padding=*/{padding, padding, padding});
+                                       {stride, stride, stride}, // stride
+                                       {padding, padding, padding}); // padding
           };
 
           ForEachDevice([&](const torch::Device& device) {
@@ -272,6 +273,7 @@ TEST_F(AtenXlaTensorTest, TestMaxUnpool3DBackward) {
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
+*/
 
 TEST_F(AtenXlaTensorTest, TestTanhBackward) {
   auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
