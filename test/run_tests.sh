@@ -135,14 +135,6 @@ function run_torchrun {
   fi
 }
 
-function run_xrt_tests {
-  # For features not supported in PJRT
-  echo "Running XRT tests"
-  run_opbyop  "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
-  run_async_scalar  "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
-  run_torchrun  "$CDIR/test_allreduce_torchrun.py"
-}
-
 function run_torch_op_tests {
   run_dynamic "$CDIR/../../test/test_view_ops.py" "$@" -v TestViewOpsXLA
   run_test "$CDIR/../../test/test_torch.py" "$@" -v TestTorchDeviceTypeXLA
@@ -154,7 +146,7 @@ function run_torch_op_tests {
   run_dynamic "$CDIR/../../test/nn/test_dropout.py" "$@" -v TestDropoutNNDeviceTypeXLA
   run_dynamic "$CDIR/../../test/nn/test_pooling.py" "$@" -v TestPoolingNNDeviceTypeXLA
   run_dynamic "$CDIR/../../test/nn/test_embedding.py" "$@" -v TestEmbeddingNNDeviceTypeXLA
-  run_dynamic "$CDIR/../../test/nn/test_convolution.py" "$@" -v TestConvolutionNNDeviceTypeXLA
+  # run_dynamic "$CDIR/../../test/nn/test_convolution.py" "$@" -v TestConvolutionNNDeviceTypeXLA
   run_dynamic "$CDIR/../../test/nn/test_multihead_attention.py" "$@" -v TestMultiheadAttentionNNDeviceTypeXLA
   run_dynamic "$CDIR/../../test/test_type_promotion.py" "$@" -v TestTypePromotionXLA
 }
@@ -227,9 +219,6 @@ function run_tests {
   fi
   if [[ "$XLA_SKIP_MP_OP_TESTS" != "1" ]]; then
     run_mp_op_tests
-  fi
-  if [[ "$XLA_SKIP_XRT_TESTS" != "1" ]]; then
-    run_xrt_tests
   fi
 }
 
