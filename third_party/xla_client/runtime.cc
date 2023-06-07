@@ -4,8 +4,8 @@
 #include "third_party/xla_client/pjrt_computation_client.h"
 
 #ifndef PJRT_ONLY
-#include "third_party/xla_client/xrt_computation_client.h"
-#include "third_party/xla_client/xrt_local_service.h"
+// #include "third_party/xla_client/xrt_computation_client.h"
+// #include "third_party/xla_client/xrt_local_service.h"
 #endif
 
 namespace xla {
