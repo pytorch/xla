@@ -398,7 +398,8 @@ static std::string GetLiveTensorsStableHLO(
                                   tsl::profiler::TraceMeLevel::kInfo);
   torch::lazy::BackendDevice device = GetDeviceOrCurrent(device_str);
   auto tensors = XLAGraphExecutor::Get()->GetLiveTensors(&device);
-  return XLAGraphExecutor::Get()->SyncTensorsGraphDumpHlo(&tensors, devices);
+  return XLAGraphExecutor::Get()->DumpHloComputation(tensors,
+                                                     /*to_stablehlo=*/true);
 }
 
 void ClearPendingIrs(const std::string& device_str) {
