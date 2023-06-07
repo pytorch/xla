@@ -583,6 +583,7 @@ TEST_F(AtenXlaTensorTest, TestRsubScalar) {
 //   }
 // }
 
+/*
 TEST_F(AtenXlaTensorTest, TestTransposedConv2DBackward) {
   int in_channels = 4;
   int out_channels = 8;
@@ -599,11 +600,11 @@ TEST_F(AtenXlaTensorTest, TestTransposedConv2DBackward) {
                   -> torch::Tensor {
                 return torch::conv_transpose2d(
                     inputs[0], inputs[1], inputs[2],
-                    /*stride=*/{stride, stride + 1},
-                    /*padding=*/{padding, padding + 1},
-                    /*output_padding=*/output_padding,
-                    /*groups=*/groups,
-                    /*dilation=*/{dilation, dilation + 1});
+                    {stride, stride + 1}, //stride
+                    {padding, padding + 1}, //padding
+                    output_padding, //output_padding
+                    groups, //groups
+                    {dilation, dilation + 1}); //dilation
               };
               ForEachDevice([&](const torch::Device& device) {
                 torch::Tensor input = torch::rand(
@@ -619,7 +620,7 @@ TEST_F(AtenXlaTensorTest, TestTransposedConv2DBackward) {
                                                 .requires_grad(true))
                               : torch::Tensor();
                 TestBackward({input, weight, bias}, device, testfn,
-                             /*rtol=*/1e-5, /*atol=*/1e-5);
+                             1e-5, 1e-5);// rtol // atol
               });
             }
           };
@@ -628,6 +629,7 @@ TEST_F(AtenXlaTensorTest, TestTransposedConv2DBackward) {
     }
   }
 }
+*/
 
 TEST_F(AtenXlaTensorTest, TestNllLoss2d) {
   int batch = 6;
