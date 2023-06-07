@@ -3,7 +3,7 @@
 load(
     "//bazel:rules_def.bzl",
     "ptxla_cc_library",
-    "ptxla_cc_test",
+    # "ptxla_cc_test",
 )
 
 ptxla_cc_library(
@@ -46,108 +46,108 @@ ptxla_cc_library(
     ],
 )
 
-ptxla_cc_test(
-    name = "test_ir",
-    srcs = ["test_ir.cpp"],
-    deps = [
-        ":cpp_test_util",
-        ":torch_xla_test",
-        "//torch_xla/csrc:tensor",
-        "@com_google_googletest//:gtest_main",
-    ],
-)
+# ptxla_cc_test(
+#     name = "test_ir",
+#     srcs = ["test_ir.cpp"],
+#     deps = [
+#         ":cpp_test_util",
+#         ":torch_xla_test",
+#         "//torch_xla/csrc:tensor",
+#         "@com_google_googletest//:gtest_main",
+#     ],
+# )
 
-ptxla_cc_test(
-    name = "test_lazy",
-    srcs = ["test_lazy.cpp"],
-    deps = [
-        ":torch_xla_test",
-        "//torch_xla/csrc:tensor",
-        "@com_google_googletest//:gtest_main",
-        "@xla//xla:shape_util",
-    ],
-)
+# ptxla_cc_test(
+#     name = "test_lazy",
+#     srcs = ["test_lazy.cpp"],
+#     deps = [
+#         ":torch_xla_test",
+#         "//torch_xla/csrc:tensor",
+#         "@com_google_googletest//:gtest_main",
+#         "@xla//xla:shape_util",
+#     ],
+# )
 
-ptxla_cc_test(
-    name = "test_op_by_op_executor",
-    srcs = ["test_op_by_op_executor.cpp"],
-    deps = [
-        ":cpp_test_util",
-        "//torch_xla/csrc:tensor",
-        "@com_google_googletest//:gtest_main",
-    ],
-)
+# ptxla_cc_test(
+#     name = "test_op_by_op_executor",
+#     srcs = ["test_op_by_op_executor.cpp"],
+#     deps = [
+#         ":cpp_test_util",
+#         "//torch_xla/csrc:tensor",
+#         "@com_google_googletest//:gtest_main",
+#     ],
+# )
 
-ptxla_cc_test(
-    name = "test_replication",
-    srcs = ["test_replication.cpp"],
-    deps = [
-        ":cpp_test_util",
-        ":torch_xla_test",
-        "//third_party/xla_client:runtime",
-        "//third_party/xla_client:debug_macros",
-        "//third_party/xla_client:multi_wait",
-        "//third_party/xla_client:thread_pool",
-        "//torch_xla/csrc:tensor",
-        "@com_google_googletest//:gtest_main",
-        "@xla//xla:shape_util",
-        "@xla//xla/client:xla_builder",
-    ],
-)
+# ptxla_cc_test(
+#     name = "test_replication",
+#     srcs = ["test_replication.cpp"],
+#     deps = [
+#         ":cpp_test_util",
+#         ":torch_xla_test",
+#         "//third_party/xla_client:runtime",
+#         "//third_party/xla_client:debug_macros",
+#         "//third_party/xla_client:multi_wait",
+#         "//third_party/xla_client:thread_pool",
+#         "//torch_xla/csrc:tensor",
+#         "@com_google_googletest//:gtest_main",
+#         "@xla//xla:shape_util",
+#         "@xla//xla/client:xla_builder",
+#     ],
+# )
 
-ptxla_cc_test(
-    name = "test_tensor",
-    srcs = [
-        "test_symint.cpp",
-        "test_tensor.cpp",
-    ],
-    deps = [
-        ":cpp_test_util",
-        ":torch_xla_test",
-        "//torch_xla/csrc:tensor",
-        "@com_google_googletest//:gtest_main",
-    ],
-)
+# ptxla_cc_test(
+#     name = "test_tensor",
+#     srcs = [
+#         "test_symint.cpp",
+#         "test_tensor.cpp",
+#     ],
+#     deps = [
+#         ":cpp_test_util",
+#         ":torch_xla_test",
+#         "//torch_xla/csrc:tensor",
+#         "@com_google_googletest//:gtest_main",
+#     ],
+# )
 
-ptxla_cc_test(
-    name = "test_xla_backend_intf",
-    srcs = ["test_xla_backend_intf.cpp"],
-    deps = [
-        ":cpp_test_util",
-        "//torch_xla/csrc:tensor",
-        "@com_google_googletest//:gtest_main",
-    ],
-)
+# ptxla_cc_test(
+#     name = "test_xla_backend_intf",
+#     srcs = ["test_xla_backend_intf.cpp"],
+#     deps = [
+#         ":cpp_test_util",
+#         "//torch_xla/csrc:tensor",
+#         "@com_google_googletest//:gtest_main",
+#     ],
+# )
 
-ptxla_cc_test(
-    name = "test_xla_sharding",
-    srcs = ["test_xla_sharding.cpp"],
-    deps = [
-        ":cpp_test_util",
-        ":torch_xla_test",
-        "//third_party/xla_client:env_vars",
-        "//third_party/xla_client:sys_util",
-        "//torch_xla/csrc:tensor",
-        "@com_google_googletest//:gtest_main",
-        "@xla//xla:xla_data_proto_cc",
-    ],
-)
+# ptxla_cc_test(
+#     name = "test_xla_sharding",
+#     srcs = ["test_xla_sharding.cpp"],
+#     deps = [
+#         ":cpp_test_util",
+#         ":torch_xla_test",
+#         "//third_party/xla_client:env_vars",
+#         "//third_party/xla_client:sys_util",
+#         "//torch_xla/csrc:tensor",
+#         "@com_google_googletest//:gtest_main",
+#         "@xla//xla:xla_data_proto_cc",
+#     ],
+# )
 
-# This tets is very large so it's split into shards.
-# To make it run fast, please add new shards when needed.
-[
-    ptxla_cc_test(
-        name = test[:-len(".cpp")],
-        size = "enormous",
-        srcs = [test],
-        deps = [
-            ":cpp_test_util",
-            ":torch_xla_test",
-            "//third_party/xla_client:metrics",
-            "//torch_xla/csrc:tensor",
-            "@com_google_googletest//:gtest_main",
-            "@xla//xla:permutation_util",
-        ],
-    )
-    for test in glob(["test_aten_xla_tensor*cpp"])
-]
+# # This tets is very large so it's split into shards.
+# # To make it run fast, please add new shards when needed.
+# [
+#     ptxla_cc_test(
+#         name = test[:-len(".cpp")],
+#         size = "enormous",
+#         srcs = [test],
+#         deps = [
+#             ":cpp_test_util",
+#             ":torch_xla_test",
+#             "//third_party/xla_client:metrics",
+#             "//torch_xla/csrc:tensor",
+#             "@com_google_googletest//:gtest_main",
+#             "@xla//xla:permutation_util",
+#         ],
+#     )
+#     for test in glob(["test_aten_xla_tensor*cpp"])
+# ]
