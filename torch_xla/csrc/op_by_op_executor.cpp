@@ -7,7 +7,7 @@
 #include <unordered_map>
 
 #include "absl/strings/str_cat.h"
-#include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "xla/client/xla_builder.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "third_party/xla_client/metrics.h"
 #include "third_party/xla_client/runtime.h"
