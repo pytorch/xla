@@ -190,8 +190,7 @@ function run_xla_op_tests {
   run_test "$CDIR/pjrt/test_mesh_service.py"
   run_test "$CDIR/spmd/test_xla_sharding.py"
   run_test "$CDIR/spmd/test_xla_virtual_device.py"
-  # TODO(yeounoh) SPMD output sharding is blocking Dynamo integration.
-  #run_test "$CDIR/spmd/test_dynamo_spmd.py"
+  run_test "$CDIR/spmd/test_dynamo_spmd.py"
   run_test "$CDIR/test_operations_hlo.py" "$@" --verbosity=$VERBOSITY
   run_test "$CDIR/test_input_output_aliases.py"
   run_test "$CDIR/test_torch_distributed_xla_backend.py"
