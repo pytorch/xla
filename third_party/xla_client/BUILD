@@ -97,7 +97,6 @@ cc_library(
   deps = [
     ":debug_macros",
     ":env_vars",
-    ":mesh_service",
     ":metrics_analysis",
     ":metrics_reader",
     ":metrics",
