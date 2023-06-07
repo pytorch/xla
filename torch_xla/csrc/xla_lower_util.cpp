@@ -60,6 +60,7 @@ ConditionMaskData CreateConditionMaskData(xla::XlaOp condition, c10::optional<st
       compared, xla::Zero(condition.builder(), kConditionType),
       xla::CreateScalarAddComputation(kConditionType, condition.builder()));
   } else {
+    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": dims.value()=" << dims.value() << std::endl;
     length = xla::Reduce(compared, xla::Zero(condition.builder(), kConditionType),
       xla::CreateScalarAddComputation(kConditionType, condition.builder()), dims.value());
   }
@@ -772,8 +773,31 @@ xla::XlaOp BuildLinspace(const torch::lazy::BackendDevice& device,
 xla::XlaOp BuildCountNonzero(xla::XlaOp input, c10::optional<std::vector<int64_t>> dims) {
   const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
   xla::XlaOp ne = xla::Ne(input, xla::Zero(input.builder(), input_shape.element_type()));
-  ConditionMaskData cmd = CreateConditionMaskData(ne, dims);
-  return cmd.length;
+
+
+  // if (dims) {
+  // std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": dims=" << dims.value() << std::endl;
+  // }
+  // ConditionMaskData cmd = CreateConditionMaskData(ne, dims);
+  // return cmd.length;
+
+  static const xla::PrimitiveType kConditionType = xla::PrimitiveType::S32;
+  xla::XlaOp ne_int =
+      xla::ConvertElementType(ne, kConditionType);
+  xla::XlaOp zeros = xla::ZerosLike(ne_int);
+  xla::XlaOp compared =
+      xla::ConvertElementType(xla::Gt(ne_int, zeros), kConditionType);
+  xla::XlaOp length;
+  if (!dims || dims.value().empty()) {
+    length = xla::ReduceAll(
+      compared, xla::Zero(ne.builder(), kConditionType),
+      xla::CreateScalarAddComputation(kConditionType, ne.builder()));
+  } else {
+    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": dims.value()=" << dims.value() << std::endl;
+    length = xla::Reduce(compared, xla::Zero(ne.builder(), kConditionType),
+      xla::CreateScalarAddComputation(kConditionType, ne.builder()), dims.value());
+  }
+  return length;
 }
 
 std::vector<xla::XlaOp> BuildNonZero(xla::XlaOp input) {

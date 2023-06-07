@@ -13,7 +13,7 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input,
 
   std::unordered_set<int64_t> dims_set(dims->begin(), dims->end());
   for (int64_t i=0; i<input_shape.rank(); i++) {
-    if (dims_set.find(i) == dims_set.end()) {
+    if (dims_set.find(i) != dims_set.end()) {
       dimensions.push_back(i);
     }
   }

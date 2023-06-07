@@ -550,9 +550,9 @@ class TestDynamicShapes(test_utils.XlaTestCase):
 
   def test_test_hasdim(self):
     met.clear_all()
-    t1 = torch.tensor([[1, 0, 0], [0, 1, 0], [0, 0, 0]], device=dev)
+    t1 = torch.tensor([[0, 1, 1], [0, 0, 0], [0, 0, 1]], device=dev)
     t2 = torch.count_nonzero(t1, dim=0)
-    print(t2.shape)
+    #print(t2.shape)
     print(t2)
 
 
