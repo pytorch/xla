@@ -35,6 +35,13 @@ class XLAShard:
       unpadded_indices = [slice(0, s.stop - s.start) for s in self.indices]
     return self.data[unpadded_indices]
 
+  @unpadded_data.setter
+  def unpadded_data(self, t: torch.Tensor):
+    unpadded_indices = self.indices
+    if self.indices != Ellipsis:
+      unpadded_indices = [slice(0, s.stop - s.start) for s in self.indices]
+    self.data[unpadded_indices] = t
+
 
 @contextlib.contextmanager
 def no_dispatch() -> Iterator[None]:
@@ -104,8 +111,7 @@ class XLAShardedTensor(torch.Tensor):
   def local_shards(self) -> List[XLAShard]:
     shards = torch_xla._XLAC._get_local_shards(self.global_tensor)
     devices = [str(shard.device) for shard in shards]
-    indices = torch_xla._XLAC._get_local_shard_indices(self.global_tensor,
-                                                       devices)
+    indices = torch_xla._XLAC._get_local_shard_indices(self.global_tensor)
     return [
         XLAShard(s.cpu(), i, d) for s, i, d in zip(shards, indices, devices)
     ]
@@ -120,6 +126,12 @@ class XLAShardedTensor(torch.Tensor):
   @property
   def sharding_spec(self):
     return torch_xla._XLAC._get_xla_sharding_spec(self.global_tensor)
+
+  @property
+  def sharding_type(self) -> 'ShardingType':
+    from torch_xla.experimental.xla_sharding import ShardingType
+    sharding_type = torch_xla._XLAC._get_xla_sharding_type(self.global_tensor)
+    return ShardingType(sharding_type)
 
   def __repr__(self):
     return f"XLAShardedTensor({self.global_tensor})"

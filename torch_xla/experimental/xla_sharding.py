@@ -4,11 +4,11 @@ from dataclasses import dataclass, field
 import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
-from torch_xla.experimental.xla_sharded_tensor import XLAShardedTensor
+from torch_xla.experimental.xla_sharded_tensor import XLAShardedTensor, XLAShard
 import torch_xla.runtime as xr
 
 import numpy as np
-from typing import Tuple, Union, List
+from typing import Tuple, Union, List, Any
 from enum import IntEnum
 
 
@@ -193,6 +193,17 @@ def clear_sharding(t: Union[torch.Tensor, XLAShardedTensor]) -> torch.Tensor:
   if isinstance(t, XLAShardedTensor):
     return t.global_tensor
   return t
+
+
+def wrap_if_sharded(x: Any) -> Any:
+  """
+  If the input is a sharded tensor, return an XLAShardedTensor wrapping it.
+  Otherwise, returns the input.
+  """
+  if (isinstance(x, torch.Tensor) and not isinstance(x, XLAShardedTensor) and
+      torch_xla._XLAC._get_xla_sharding_type(x) is not None):
+    return XLAShardedTensor(x)
+  return x
 
 
 @dataclass
