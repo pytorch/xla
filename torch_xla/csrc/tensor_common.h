@@ -3,7 +3,7 @@
 
 #include <memory>
 
-#include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "xla/client/xla_builder.h"
 
 namespace torch_xla {
 
