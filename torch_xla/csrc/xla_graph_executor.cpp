@@ -365,13 +365,6 @@ std::string XLAGraphExecutor::SyncTensorsGraphDumpHlo(
                                   tsl::profiler::TraceMeLevel::kInfo);
   SyncTensorsConfig config;
   SyncTensorCollection coll = CollectSyncTensors(*tensors, config);
-  if (!coll.indices.empty()) {
-    /* Enure previous execution is complete before exiting this
-     * function */
-    TensorCollectionBarrier(&coll);
-  } else {
-    return "";
-  }
   return DebugUtil::GetTensorsGraphHlo(*tensors, &coll.indices);
 }
 
