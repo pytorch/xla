@@ -36,7 +36,7 @@
 #include "third_party/xla_client/metrics_analysis.h"
 #include "third_party/xla_client/metrics_reader.h"
 #include "third_party/xla_client/multi_wait.h"
-#include "third_party/xla_client/profiler.h"
+#include "xla/xla_client/profiler.h"
 #include "third_party/xla_client/record_reader.h"
 #include "third_party/xla_client/runtime.h"
 #include "third_party/xla_client/sys_util.h"
