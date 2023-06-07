@@ -107,7 +107,13 @@ jobs:
         id: upload-docker-image
         shell: bash
         run: |
-          export COMMIT_DOCKER_IMAGE="${ECR_DOCKER_IMAGE_BASE}:latest-${GITHUB_SHA}"
+          if [[ $DISABLE_XRT == 1 ]]; then
+            image_tag_base="latest"
+          else
+            image_tag_base="latest-xrt"
+          fi
+
+          export COMMIT_DOCKER_IMAGE="${ECR_DOCKER_IMAGE_BASE}:${image_tag}-${GITHUB_SHA}"
           time docker commit "${pid}" "${COMMIT_DOCKER_IMAGE}"
           time docker push "${COMMIT_DOCKER_IMAGE}"
           echo "docker-image=${COMMIT_DOCKER_IMAGE}" >> "${GITHUB_OUTPUT}"
