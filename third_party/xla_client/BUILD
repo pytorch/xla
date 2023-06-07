@@ -24,6 +24,11 @@ exports_files([
     "tf_exported_symbols.lds",
 ])
 
+config_setting(
+  name = "pjrt_only",
+  define_values = {"pjrt_only": "true"},
+)
+
 tf_proto_library_cc(
     name = "mesh_service_proto",
     srcs = ["mesh_service.proto"],
@@ -63,14 +68,22 @@ cc_library(
   hdrs = [
     "runtime.h",
   ],
+  local_defines = select({
+    ":pjrt_only": ["PJRT_ONLY"],
+    "//conditions:default": [],
+  }),
   deps = [
     ":computation_client",
     ":env_vars",
     ":pjrt_computation_client",
-    ":xrt_computation_client",
-    ":xrt_local_service",
     "@org_tensorflow//tensorflow/tsl/platform:stacktrace",
-  ],
+  ] + select({
+    ":pjrt_only": [],
+    "//conditions:default": [
+      ":xrt_computation_client",
+      ":xrt_local_service",
+    ],
+  }),
 )
 
 cc_library(
@@ -118,6 +131,7 @@ cc_library(
     "@org_tensorflow//tensorflow/compiler/xla/client:xla_computation",
     "@org_tensorflow//tensorflow/compiler/xla/pjrt/distributed",
     "@org_tensorflow//tensorflow/compiler/xla/pjrt/gpu:se_gpu_pjrt_client",
+    "@org_tensorflow//tensorflow/compiler/xla/service:gpu_plugin",
     "@org_tensorflow//tensorflow/compiler/xla/pjrt:tpu_client",
     "@org_tensorflow//tensorflow/compiler/xla/pjrt:pjrt_client",
     "@org_tensorflow//tensorflow/compiler/xla/pjrt:tfrt_cpu_pjrt_client",
@@ -142,14 +156,8 @@ cc_library(
     ":debug_macros",
     ":env_vars",
     ":mesh_service",
-    ":metrics_analysis",
-    ":metrics_reader",
-    ":metrics",
     ":multi_wait",
-    ":profiler",
-    ":record_reader",
     ":sys_util",
-    ":tf_logging",
     ":thread_pool",
     ":triggered_task",
     ":types",
@@ -169,18 +177,6 @@ cc_library(
     "@org_tensorflow//tensorflow/compiler/xla:shape_util",
     "@org_tensorflow//tensorflow/compiler/xla:xla_proto_cc",
     "@org_tensorflow//tensorflow/compiler/xla/client",
-    "@org_tensorflow//tensorflow/compiler/xla/client/lib:arithmetic",
-    "@org_tensorflow//tensorflow/compiler/xla/client/lib:comparators",
-    "@org_tensorflow//tensorflow/compiler/xla/client/lib:constants",
-    "@org_tensorflow//tensorflow/compiler/xla/client/lib:logdet",
-    "@org_tensorflow//tensorflow/compiler/xla/client/lib:math",
-    "@org_tensorflow//tensorflow/compiler/xla/client/lib:matrix",
-    "@org_tensorflow//tensorflow/compiler/xla/client/lib:pooling",
-    "@org_tensorflow//tensorflow/compiler/xla/client/lib:qr",
-    "@org_tensorflow//tensorflow/compiler/xla/client/lib:slicing",
-    "@org_tensorflow//tensorflow/compiler/xla/client/lib:sorting",
-    "@org_tensorflow//tensorflow/compiler/xla/client/lib:svd",
-    "@org_tensorflow//tensorflow/compiler/xla/client/lib:tridiagonal",
     "@org_tensorflow//tensorflow/compiler/xla/client:global_data",
     "@org_tensorflow//tensorflow/compiler/xla/client:xla_computation",
     "@org_tensorflow//tensorflow/compiler/xla/rpc:grpc_stub",
@@ -205,6 +201,8 @@ cc_library(
     "@org_tensorflow//tensorflow/compiler/xla/stream_executor:stream_executor_impl",
     "@com_google_absl//absl/numeric:int128",
     "@com_google_absl//absl/strings",
+    "@com_google_absl//absl/memory",
+    "@com_google_absl//absl/types:optional",
   ] + if_cuda_is_configured([
     "@org_tensorflow//tensorflow/compiler/jit:xla_gpu_device",
     "@org_tensorflow//tensorflow/compiler/xla/stream_executor:cuda_platform",
@@ -328,7 +326,20 @@ cc_library(
     srcs = ["profiler.cc"],
     hdrs = ["profiler.h"],
     deps = [
+      "@org_tensorflow//tensorflow/tsl/platform:status",
       "@org_tensorflow//tensorflow/tsl/profiler/rpc:profiler_server_impl",
+      "@org_tensorflow//tensorflow/tsl/profiler/rpc/client:capture_profile",
+      "@com_google_absl//absl/container:flat_hash_map",
+
+      # Profiler silently fails unless we include this
+      "@org_tensorflow//tensorflow/compiler/xla/backends/profiler:profiler_backends",
+
+      # TODO: We get missing symbol errors without these deps. Why aren't they
+      # included transitively from TensorFlow/TSL?
+      "@org_tensorflow//tensorflow/tsl/profiler/protobuf:profiler_analysis_proto_cc_impl",
+      "@org_tensorflow//tensorflow/tsl/profiler/protobuf:profiler_options_proto_cc_impl",
+      "@org_tensorflow//tensorflow/tsl/profiler/protobuf:profiler_service_proto_cc_impl",
+      "@org_tensorflow//tensorflow/tsl/profiler/protobuf:profiler_service_monitor_result_proto_cc_impl",
       "@org_tensorflow//tensorflow/tsl/profiler/rpc/client:profiler_client",
     ],
 )

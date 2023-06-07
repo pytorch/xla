@@ -40,6 +40,9 @@
 #   TPUVM_MODE=0
 #     whether to build for TPU
 #
+#   PJRT_ONLY=0
+#     whether to exclude XRT from the build
+#
 #   SILO_NAME=""
 #     name of the remote build cache silo
 #
@@ -249,6 +252,9 @@ class BuildBazelExtension(command.build_ext.build_ext):
 
     if _check_env_flag('TPUVM_MODE'):
       bazel_argv.append('--config=tpu')
+
+    if _check_env_flag('PJRT_ONLY'):
+      bazel_argv.append('--config=pjrt_only')
 
     # Remote cache authentication.
     if _check_env_flag('BAZEL_REMOTE_CACHE'):

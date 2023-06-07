@@ -275,6 +275,7 @@ ptxla_cc_library(
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:variant",
+        "@org_tensorflow//tensorflow/tsl/profiler/lib:traceme",
         "@org_tensorflow//tensorflow/compiler/xla/python/profiler/internal:traceme_wrapper",
         "@org_tensorflow//tensorflow/compiler/xla/service:hlo_parser",
         "@org_tensorflow//tensorflow/compiler/xla/service:hlo_pass_pipeline",
@@ -285,7 +286,6 @@ ptxla_cc_library(
         "@org_tensorflow//tensorflow/core:protos_all_cc",
         "@org_tensorflow//tensorflow/core/platform:env",
         "@org_tensorflow//tensorflow/core/profiler/lib:traceme",
-        "@org_tensorflow//tensorflow/python/profiler/internal:profiler_pywrap_impl",
     ],
 )
 
