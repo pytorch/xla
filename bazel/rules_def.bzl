@@ -22,9 +22,8 @@ def ptxla_cc_test(
         deps,
         copts = [],
         **kwargs):
-    tf_cc_test(
-        linkstatic = True,
-        extra_copts = copts + [
+    cc_test(
+        copts = tf_copts() + copts + [
             "-isystemexternal/torch",  # Required for system includes.
             "-fexceptions",  # Required for testing crashes.
         ],
@@ -35,6 +34,11 @@ def ptxla_cc_test(
             "@torch//:libtorch",
             "@torch//:libtorch_cpu",
             "@torch//:libtorch_python",
-        ],
+        ] + tf_binary_dynamic_kernel_deps([]) + if_mkl_ml(
+            [
+                clean_dep("//third_party/mkl:intel_binary_blob"),
+            ],
+        ),
+        linkstatic = True,
         **kwargs
     )
