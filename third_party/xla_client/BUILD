@@ -29,12 +29,24 @@ config_setting(
   define_values = {"pjrt_only": "true"},
 )
 
+tf_proto_library(
+    name = "topology_proto",
+    srcs = [
+        "topology.proto",
+    ],
+    cc_api_version = 2,
+    visibility = ["//visibility:public"],
+)
+
 tf_proto_library_cc(
     name = "mesh_service_proto",
     srcs = ["mesh_service.proto"],
     has_services = 1,
     cc_api_version = 2,
     cc_grpc_version = 1,
+    protodeps = [
+        ":topology_proto",
+    ],
 )
 
 cc_library(
