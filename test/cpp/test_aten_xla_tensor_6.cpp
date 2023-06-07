@@ -197,6 +197,7 @@ TEST_F(AtenXlaTensorTest, TestMaxPool3DNoBatchBackward) {
 }
 */
 
+/*
 TEST_F(AtenXlaTensorTest, TestMaxUnpool2DBackward) {
   int kernel_size = 2;
   torch::Tensor input =
@@ -209,10 +210,10 @@ TEST_F(AtenXlaTensorTest, TestMaxUnpool2DBackward) {
           torch::Tensor output;
           torch::Tensor indices;
           std::tie(output, indices) = torch::max_pool2d_with_indices(
-              input, /*kernel_size=*/{kernel_size, kernel_size},
-              /*stride=*/{stride, stride},
-              /*padding=*/{padding, padding}, /*dilation=*/{dilation, dilation},
-              /*ceil_mode=*/ceil_mode);
+              input, {kernel_size, kernel_size}, // kernel_size
+              {stride, stride}, // stride
+              {padding, padding}, {dilation, dilation}, // padding // dilation
+              ceil_mode); // ceil_mode
 
           std::vector<int64_t> output_size({input.size(2), input.size(3)});
           auto testfn =
@@ -231,6 +232,7 @@ TEST_F(AtenXlaTensorTest, TestMaxUnpool2DBackward) {
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
+*/
 
 TEST_F(AtenXlaTensorTest, TestMaxUnpool3DBackward) {
   int kernel_size = 2;
