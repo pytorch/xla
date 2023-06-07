@@ -3,8 +3,8 @@
 
 #include <iostream>
 
-#include "tensorflow/compiler/xla/permutation_util.h"
-#include "tensorflow/compiler/xla/util.h"
+#include "xla/permutation_util.h"
+#include "xla/util.h"
 #include "test/cpp/cpp_test_util.h"
 #include "test/cpp/torch_xla_test.h"
 #include "third_party/xla_client/metrics.h"
