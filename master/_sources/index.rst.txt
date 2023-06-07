@@ -58,7 +58,6 @@ utils
 .. autofunction:: metrics_report
   
 .. automodule:: torch_xla.utils.tf_record_reader
-.. autoclass:: TfRecordReader
 
 .. automodule:: torch_xla.utils.utils
 .. autoclass:: SampleGenerator

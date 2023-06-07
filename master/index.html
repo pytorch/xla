@@ -262,7 +262,7 @@
 <li><a class="reference internal" href="#pytorch-xla-api">PyTorch/XLA API</a><ul>
 <li><a class="reference internal" href="#module-torch_xla.core.xla_model">xla_model</a></li>
 <li><a class="reference internal" href="#module-torch_xla.distributed.parallel_loader">distributed</a></li>
-<li><a class="reference internal" href="#module-torch_xla.utils.tf_record_reader">utils</a></li>
+<li><a class="reference internal" href="#module-torch_xla.utils.utils">utils</a></li>
 <li><a class="reference internal" href="#test">test</a></li>
 </ul>
 </li>
@@ -1413,32 +1413,9 @@ memory during the process.</p>
 </dd></dl>
 
 </div>
-<div class="section" id="module-torch_xla.utils.tf_record_reader">
-<span id="utils"></span><h2>utils<a class="headerlink" href="#module-torch_xla.utils.tf_record_reader" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-torch_xla.utils.utils">
+<span id="utils"></span><h2>utils<a class="headerlink" href="#module-torch_xla.utils.utils" title="Permalink to this headline">¶</a></h2>
 <dl class="class">
-<dt id="torch_xla.utils.tf_record_reader.TfRecordReader">
-<em class="property">class </em><code class="sig-prename descclassname">torch_xla.utils.tf_record_reader.</code><code class="sig-name descname">TfRecordReader</code><span class="sig-paren">(</span><em class="sig-param">path</em>, <em class="sig-param">compression=''</em>, <em class="sig-param">buffer_size=16777216</em>, <em class="sig-param">transforms=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/utils/tf_record_reader.html#TfRecordReader"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.utils.tf_record_reader.TfRecordReader" title="Permalink to this definition">¶</a></dt>
-<dd><p>Reads TfRecords or TfExamples.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>path</strong> (<em>string</em>) – The path to the file containing TfRecords.</p></li>
-<li><p><strong>compression</strong> (<em>string</em><em>, </em><em>optional</em>) – The compression type. The empty string for
-no compression, otherwise <code class="docutils literal notranslate"><span class="pre">ZLIB</span></code> or <code class="docutils literal notranslate"><span class="pre">GZIP</span></code>.
-Default: No compression.</p></li>
-<li><p><strong>buffer_size</strong> (<em>python:int</em><em>, </em><em>optional</em>) – The size of the buffer to be used to read
-TfRecords.
-Default: 16 * 1024 * 1024</p></li>
-<li><p><strong>transforms</strong> (<em>dict</em><em>, </em><em>optional</em>) – A dictionary with the key matching the
-TfExample label name, and value which is either a callable which will be
-called to tranform the matching tensor data, or <code class="docutils literal notranslate"><span class="pre">STR</span></code> for string
-conversion.</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
-
-<span class="target" id="module-torch_xla.utils.utils"></span><dl class="class">
 <dt id="torch_xla.utils.utils.SampleGenerator">
 <em class="property">class </em><code class="sig-prename descclassname">torch_xla.utils.utils.</code><code class="sig-name descname">SampleGenerator</code><span class="sig-paren">(</span><em class="sig-param">data</em>, <em class="sig-param">sample_count</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/utils/utils.html#SampleGenerator"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.utils.utils.SampleGenerator" title="Permalink to this definition">¶</a></dt>
 <dd><p>Iterator which returns multiple samples of a given input data.</p>
@@ -3035,7 +3012,7 @@ sudo docker exec -it $(sudo docker ps | awk &#39;NR==2 { print $1 }&#39;) /bin/b
 <li><a class="reference internal" href="#pytorch-xla-api">PyTorch/XLA API</a><ul>
 <li><a class="reference internal" href="#module-torch_xla.core.xla_model">xla_model</a></li>
 <li><a class="reference internal" href="#module-torch_xla.distributed.parallel_loader">distributed</a></li>
-<li><a class="reference internal" href="#module-torch_xla.utils.tf_record_reader">utils</a></li>
+<li><a class="reference internal" href="#module-torch_xla.utils.utils">utils</a></li>
 <li><a class="reference internal" href="#test">test</a></li>
 </ul>
 </li>
