@@ -2205,7 +2205,6 @@ TEST_F(AtenXlaTensorTest, TestCount_Nonzero_nodim) {
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_a = CopyToDevice(a, device);
     torch::Tensor xla_b = torch::count_nonzero(xla_a);
-    // AllClose(b, xla_b);
     AllClose(b, torch::_cast_Long(xla_b));
 
     ExpectCounterChanged("xla::count_nonzero", cpp_test::GetIgnoredCounters());

@@ -768,7 +768,7 @@ xla::XlaOp BuildLinspace(const torch::lazy::BackendDevice& device,
 
 xla::XlaOp BuildCountNonzero(xla::XlaOp input,
                              c10::optional<std::vector<int64_t>> dims) {
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   xla::XlaOp ne =
       xla::Ne(input, xla::Zero(input.builder(), input_shape.element_type()));
 
