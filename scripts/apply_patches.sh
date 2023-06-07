@@ -39,8 +39,8 @@ python $CDIR/cond_patch.py \
   $PTDIR
 
 # Apply TF patches only if requested, since bazel handles that normally.
-if [[ -n "${APPLY_TF_PATCHES}" ]]; then
+if [[ -n "${APPLY_OPENXLA_PATCHES}" ]]; then
   python $CDIR/cond_patch.py \
-    $XDIR/tf_patches \
+    $XDIR/openxla_patches \
     $TFDIR
 fi
