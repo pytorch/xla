@@ -5537,7 +5537,8 @@ TEST_F(AtenXlaTensorTest, TestCount_Nonzero_with_single_dim) {
 }
 
 TEST_F(AtenXlaTensorTest, TestCount_Nonzero_with_multiple_dims) {
-  torch::Tensor a = torch::zeros({3, 3, 4}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor a =
+      torch::zeros({3, 3, 4}, torch::TensorOptions(torch::kFloat));
   a[0][1][0] = 1.0;
   a[0][2][1] = 1.0;
   a[2][2][2] = 1.0;

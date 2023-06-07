@@ -10,7 +10,8 @@ namespace torch_xla {
 
 class CountNonzero : public XlaNode {
  public:
-  CountNonzero(const torch::lazy::Value& input, c10::optional<std::vector<int64_t>> dims);
+  CountNonzero(const torch::lazy::Value& input,
+               c10::optional<std::vector<int64_t>> dims);
 
   std::string ToString() const override;
 

@@ -3461,23 +3461,24 @@ XLANativeFunctions::convolution_backward(
           std::get<2>(results)));
 }
 
-at::Tensor XLANativeFunctions::count_nonzero(const at::Tensor & self, c10::optional<int64_t> dim) {
+at::Tensor XLANativeFunctions::count_nonzero(const at::Tensor& self,
+                                             c10::optional<int64_t> dim) {
   TORCH_LAZY_FN_COUNTER("xla::");
   XLATensorPtr xla_tensor = bridge::GetXlaTensor(self);
-  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": XLANativeFunctions::count_nonzero is called. xla_tensor->shape()=" << xla_tensor->shape() << std::endl;
   std::vector<int64_t> dims;
   if (dim) {
     dims = {dim.value()};
   }
-  return bridge::AtenFromXlaTensor(tensor_methods::count_nonzero(
-      xla_tensor, dims));
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::count_nonzero(xla_tensor, dims));
 }
 
-at::Tensor XLANativeFunctions::count_nonzero(const at::Tensor & self, at::IntArrayRef dim) {
+at::Tensor XLANativeFunctions::count_nonzero(const at::Tensor& self,
+                                             at::IntArrayRef dim) {
   TORCH_LAZY_FN_COUNTER("xla::");
   XLATensorPtr xla_tensor = bridge::GetXlaTensor(self);
-  return bridge::AtenFromXlaTensor(tensor_methods::count_nonzero(
-      xla_tensor, XlaHelpers::I64List(dim)));
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::count_nonzero(xla_tensor, XlaHelpers::I64List(dim)));
 }
 
 at::Tensor XLANativeFunctions::diag_embed(const at::Tensor& self,
