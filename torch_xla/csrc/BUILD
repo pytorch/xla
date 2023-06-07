@@ -127,7 +127,6 @@ ptxla_cc_library(
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:optional",
         "@com_google_absl//absl/types:span",
-        "@org_tensorflow//tensorflow/compiler/tf2xla/kernels:conv_op_helpers",
         "@xla//xla:comparison_util",
         "@xla//xla:literal_util",
         "@xla//xla:permutation_util",
@@ -145,12 +144,10 @@ ptxla_cc_library(
         "@xla//xla/client/lib:sorting",
         "@xla//xla/client/lib:svd",
         "@xla//xla/stream_executor:dnn",
-        "@org_tensorflow//tensorflow/core:lib",
-        "@org_tensorflow//tensorflow/core/framework:tensor_shape",
-        "@org_tensorflow//tensorflow/core/lib/core:errors",
-        "@org_tensorflow//tensorflow/core/lib/gtl:inlined_vector",
-        "@org_tensorflow//tensorflow/core/profiler/lib:traceme",
-        "@org_tensorflow//third_party/python_runtime:headers",
+        "@tsl//tsl/platform:errors",
+        "@com_google_absl//absl/container:inlined_vector",
+        "@tsl//tsl/profiler/lib:traceme",
+        "@local_config_python//:python_headers",
         "@pybind11//:pybind11_embed",  # libpyton
     ],
 )
@@ -191,7 +188,6 @@ ptxla_cc_library(
         "//third_party/xla_client:util",
         "@com_google_absl//absl/strings",
         "@xla//xla:shape_util",
-        "@org_tensorflow//tensorflow/core/framework:tensor_shape",
     ],
 )
 
@@ -222,7 +218,7 @@ ptxla_cc_library(
     deps = [
         "//third_party/xla_client:sys_util",
         "@com_google_absl//absl/strings",
-        "@org_tensorflow//tensorflow/core/platform:stacktrace",
+        "@tsl//tsl/platform:stacktrace",
     ],
 )
 
@@ -281,11 +277,8 @@ ptxla_cc_library(
         "@xla//xla/service:hlo_verifier",
         "@xla//xla/service:sharding_propagation",
         "@xla//xla/service/spmd:spmd_partitioner",
-        "@org_tensorflow//tensorflow/core",
-        "@org_tensorflow//tensorflow/core:protos_all_cc",
-        "@org_tensorflow//tensorflow/core/platform:env",
-        "@org_tensorflow//tensorflow/core/profiler/lib:traceme",
-        "@org_tensorflow//tensorflow/python/profiler/internal:profiler_pywrap_impl",
+        "@tsl//tsl/platform:env",
+        "@tsl//tsl/profiler/lib:traceme",
     ],
 )
 

@@ -1,9 +1,6 @@
-load(
-    "@org_tensorflow//tensorflow:tensorflow.bzl",
-    "tf_cc_shared_object",
-)
+load("@tsl//tsl/platform:rules_cc.bzl", "cc_library")
 
-tf_cc_shared_object(
+cc_library(
     name = "_XLAC.so",
     copts = [
         "-DTORCH_API_INCLUDE_EXTENSION_H",
@@ -43,11 +40,7 @@ tf_cc_shared_object(
         "@xla//xla/service:hlo_verifier",
         "@xla//xla/service:sharding_propagation",
         "@xla//xla/service/spmd:spmd_partitioner",
-        "@org_tensorflow//tensorflow/core",
-        "@org_tensorflow//tensorflow/core:protos_all_cc",
-        "@org_tensorflow//tensorflow/core/platform:env",
-        "@org_tensorflow//tensorflow/core/profiler/lib:traceme",
-        "@org_tensorflow//tensorflow/python/profiler/internal:profiler_pywrap_impl",
+        "@tsl//tsl/profiler/lib:traceme",
         "@torch//:headers",
         "@torch//:libc10",
         "@torch//:libtorch",
