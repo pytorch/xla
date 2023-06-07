@@ -650,24 +650,26 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
   coll.indices.reserve(tensors.size());
   std::unordered_set<int64_t> tensor_ids;
   for (size_t i = 0; i < tensors.size(); ++i) {
-    // std::cout << "[WONJOO] i=" << i << std::endl;
-    // if (tensor_ids.insert(tensors[i]->GetUniqueId()).second &&
-    //     // A tensor's xla_data might not be up to date if there is a view
-    //     // associated with it. Make sure to sync those tensors here too.
-    //     (tensors[i]->CurrentDataHandle() == nullptr ||
-    //      (tensors[i]->data()->view != nullptr &&
-    //       !tensors[i]->data()->view->IsUpToDate()))) {
-    //   torch::lazy::Value ir_value = tensors[i]->CurrentIrValue();
-    //   std::cout << "[WONJOO]   in if 1" << i << std::endl;
-    //   if (ir_value) {
-    //     if (ShouldSyncIrValue(ir_value)) {
-    //       std::cout << "[WONJOO]   in if 2" << i << std::endl;
-    //       // Add only tensors which need to be synced.
-    //       coll.indices.push_back(i);
-    //     }
-    //   }
-    // }
-    coll.indices.push_back(i);
+    std::cout << "[WONJOO] i=" << i << std::endl;
+    if (tensor_ids.insert(tensors[i]->GetUniqueId()).second &&
+        // A tensor's xla_data might not be up to date if there is a view
+        // associated with it. Make sure to sync those tensors here too.
+        (tensors[i]->CurrentDataHandle() == nullptr ||
+         (tensors[i]->data()->view != nullptr &&
+          !tensors[i]->data()->view->IsUpToDate()))) {
+      torch::lazy::Value ir_value = tensors[i]->CurrentIrValue();
+      std::cout << "[WONJOO]   in if 1" << i << std::endl;
+      if (ir_value) {
+        if (ShouldSyncIrValue(ir_value)) {
+          std::cout << "[WONJOO]   in if 2" << i << std::endl;
+          // Add only tensors which need to be synced.
+          coll.indices.push_back(i);
+        }
+      }
+    }
+
+    // is this necessary?
+    // coll.indices.push_back(i);
   }
 
   std::cout << "WONJOO: tensors=" << tensors << std::endl;
