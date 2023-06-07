@@ -76,10 +76,7 @@ cc_library(
     "@tsl//tsl/platform:stacktrace",
   ] + select({
     ":pjrt_only": [],
-    "//conditions:default": [
-      ":xrt_computation_client",
-      ":xrt_local_service",
-    ],
+    "//conditions:default": [],
   }),
 )
 
@@ -263,7 +260,6 @@ cc_library(
       "@tsl//tsl/profiler/protobuf:profiler_options_proto_cc_impl",
       "@tsl//tsl/profiler/protobuf:profiler_service_proto_cc_impl",
       "@tsl//tsl/profiler/protobuf:profiler_service_monitor_result_proto_cc_impl",
-      "@tsl//tsl/profiler/rpc/client:profiler_client",
     ],
 )
 
