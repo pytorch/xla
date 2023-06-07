@@ -1,10 +1,5 @@
 """Rules that simplify deps and compiler configuration for PyTorch/XLA."""
 
-load(
-    "@tsl//tsl/platform/default:rules_cc.bzl",
-    "cc_test",
-)
-
 def ptxla_cc_library(
         deps = [],
         copts = [],
