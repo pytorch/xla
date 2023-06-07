@@ -26,8 +26,8 @@ static std::string getMlirModuleStr(mlir::ModuleOp& mlir_module) {
 
 static absl::Status hloToMhloHelper(const HloModuleProto* proto,
                                     mlir::ModuleOp* mlir_module) {
-  auto status = ConvertHloToMlirHlo(*mlir_module, proto,
-                                    /*import_all_computations=*/false);
+  auto status = xla::ConvertHloToMlirHlo(*mlir_module, proto,
+                                         /*import_all_computations=*/false);
   if (!status.ok()) {
     return status;
   }
