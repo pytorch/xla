@@ -10,7 +10,7 @@
 #include <torch/csrc/lazy/core/tensor.h>
 #include <torch/csrc/lazy/core/util.h>
 
-#include "tensorflow/compiler/xla/shape.h"
+#include "xla/shape.h"
 #include "third_party/xla_client/debug_macros.h"
 
 namespace torch_xla {
