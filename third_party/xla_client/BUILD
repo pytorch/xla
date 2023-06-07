@@ -24,6 +24,11 @@ exports_files([
     "openxla_exported_symbols.lds",
 ])
 
+config_setting(
+  name = "pjrt_only",
+  define_values = {"pjrt_only": "true"},
+)
+
 tf_proto_library_cc(
     name = "mesh_service_proto",
     srcs = ["mesh_service.proto"],
@@ -60,12 +65,22 @@ cc_library(
   hdrs = [
     "runtime.h",
   ],
+  local_defines = select({
+    ":pjrt_only": ["PJRT_ONLY"],
+    "//conditions:default": [],
+  }),
   deps = [
     ":computation_client",
     ":env_vars",
     ":pjrt_computation_client",
     "@tsl//tsl/platform:stacktrace",
-  ],
+  ] + select({
+    ":pjrt_only": [],
+    "//conditions:default": [
+      ":xrt_computation_client",
+      ":xrt_local_service",
+    ],
+  }),
 )
 
 cc_library(
@@ -118,6 +133,7 @@ cc_library(
     "@xla//xla/pjrt:tfrt_cpu_pjrt_client",
     "@xla//xla/pjrt:pjrt_c_api_client",
     "@tsl//tsl/profiler/lib:traceme",
+    "@xla//xla/service:gpu_plugin",
     "@com_google_absl//absl/strings",
     "@com_google_absl//absl/types:span",
   ],
@@ -238,6 +254,15 @@ cc_library(
     hdrs = ["profiler.h"],
     deps = [
       "@tsl//tsl/profiler/rpc:profiler_server_impl",
+      "@tsl//tsl/profiler/rpc/client:profiler_client",
+      "@tsl//tsl/platform:status",
+      "@tsl//tsl/profiler/rpc/client:capture_profile",
+      "@com_google_absl//absl/container:flat_hash_map",
+      "@xla//xla/backends/profiler:profiler_backends",
+      "@tsl//tsl/profiler/protobuf:profiler_analysis_proto_cc_impl",
+      "@tsl//tsl/profiler/protobuf:profiler_options_proto_cc_impl",
+      "@tsl//tsl/profiler/protobuf:profiler_service_proto_cc_impl",
+      "@tsl//tsl/profiler/protobuf:profiler_service_monitor_result_proto_cc_impl",
       "@tsl//tsl/profiler/rpc/client:profiler_client",
     ],
 )
