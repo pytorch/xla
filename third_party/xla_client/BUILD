@@ -258,23 +258,23 @@ cc_library(
     ]),
 )
 
-cc_library(
-    name = "profiler",
-    srcs = ["profiler.cc"],
-    hdrs = ["profiler.h"],
-    deps = [
-      "@tsl//tsl/profiler/rpc:profiler_server_impl",
-      "@tsl//tsl/profiler/rpc/client:profiler_client",
-      "@tsl//tsl/platform:status",
-      "@tsl//tsl/profiler/rpc/client:capture_profile",
-      "@com_google_absl//absl/container:flat_hash_map",
-      "@xla//xla/backends/profiler:profiler_backends",
-      "@tsl//tsl/profiler/protobuf:profiler_analysis_proto_cc_impl",
-      "@tsl//tsl/profiler/protobuf:profiler_options_proto_cc_impl",
-      "@tsl//tsl/profiler/protobuf:profiler_service_proto_cc_impl",
-      "@tsl//tsl/profiler/protobuf:profiler_service_monitor_result_proto_cc_impl",
-    ],
-)
+# cc_library(
+#     name = "profiler",
+#     srcs = ["profiler.cc"],
+#     hdrs = ["profiler.h"],
+#     deps = [
+#       "@tsl//tsl/profiler/rpc:profiler_server_impl",
+#       "@tsl//tsl/profiler/rpc/client:profiler_client",
+#       "@tsl//tsl/platform:status",
+#       "@tsl//tsl/profiler/rpc/client:capture_profile",
+#       "@com_google_absl//absl/container:flat_hash_map",
+#       "@xla//xla/backends/profiler:profiler_backends",
+#       "@tsl//tsl/profiler/protobuf:profiler_analysis_proto_cc_impl",
+#       "@tsl//tsl/profiler/protobuf:profiler_options_proto_cc_impl",
+#       "@tsl//tsl/profiler/protobuf:profiler_service_proto_cc_impl",
+#       "@tsl//tsl/profiler/protobuf:profiler_service_monitor_result_proto_cc_impl",
+#     ],
+# )
 
 cc_library(
     name = "record_reader",
