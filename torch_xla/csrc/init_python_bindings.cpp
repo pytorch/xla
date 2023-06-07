@@ -28,7 +28,6 @@
 #include "tensorflow/compiler/xla/pjrt/distributed/distributed.h"
 #include "tensorflow/compiler/xla/python/profiler/internal/traceme_wrapper.h"
 #include "tensorflow/compiler/xla/service/hlo_parser.h"
-#include "tensorflow/python/profiler/internal/profiler_pywrap_impl.h"
 #include "tensorflow/tsl/platform/env.h"
 #include "tensorflow/tsl/profiler/lib/traceme.h"
 #include "third_party/xla_client/mesh_service.h"
