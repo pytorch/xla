@@ -1,9 +1,9 @@
 #include "third_party/xla_client/profiler.h"
 
-#include "tsl/profiler/rpc/profiler_server.h"
 #include "absl/container/flat_hash_map.h"
 #include "tsl/platform/status.h"
 #include "tsl/profiler/rpc/client/capture_profile.h"
+#include "tsl/profiler/rpc/profiler_server.h"
 
 namespace xla {
 namespace profiler {
