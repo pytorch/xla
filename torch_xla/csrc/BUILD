@@ -270,7 +270,6 @@ ptxla_cc_library(
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:variant",
-        "@xla//xla/xla_client:profiler",
         "@xla//xla/python/profiler/internal:traceme_wrapper",
         "@xla//xla/service:hlo_parser",
         "@xla//xla/service:hlo_pass_pipeline",
