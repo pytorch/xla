@@ -138,6 +138,7 @@ function run_torchrun {
 function run_xrt_tests {
   # For features not supported in PJRT
   echo "Running XRT tests"
+  run_xrt "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_opbyop  "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_async_scalar  "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_torchrun  "$CDIR/test_allreduce_torchrun.py"
