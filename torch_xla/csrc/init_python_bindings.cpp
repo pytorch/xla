@@ -1275,8 +1275,7 @@ void InitXlaModuleBindings(py::module m) {
         },
         py::arg("device") = "", py::arg("devices"), py::arg("wait") = true);
   m.def("_get_stablehlo",
-        [](const std::vector<at::Tensor>& tensors,
-           const std::string& device,
+        [](const std::vector<at::Tensor>& tensors, const std::string& device,
            const std::vector<std::string>& devices) -> std::string {
           NoGilSection nogil;
           if (tensors.empty()) {
