@@ -332,8 +332,7 @@ ComputationClient::DataPtr PjRtComputationClient::ReplicateShardedData(
 
     std::vector<std::vector<ComputationClient::DataPtr>> arguments_by_device(
         GetLocalDevices().size(), std::vector<ComputationClient::DataPtr>(1));
-    for (int i = 0; i < shards.size(); ++i) {
-      auto shard = shards[i];
+    for (auto shard : shards) {
       std::vector<std::string> device_spec =
           absl::StrSplit(shard->device(), ':');
       XLA_CHECK_EQ(device_spec.size(), 2)
