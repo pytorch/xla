@@ -125,6 +125,8 @@ cc_library(
     ":debug_macros",
     ":env_vars",
     ":tf_logging",
+    ":thread_pool",
+    ":multi_wait",
     "@org_tensorflow//tensorflow/compiler/xla:literal",
     "@org_tensorflow//tensorflow/compiler/xla:shape_util",
     "@org_tensorflow//tensorflow/compiler/xla/client:xla_computation",
