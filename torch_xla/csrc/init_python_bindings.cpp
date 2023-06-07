@@ -492,18 +492,6 @@ std::vector<py::bytes> Rendezvous(int ordinal, const std::string& tag,
   return payloads;
 }
 
-std::shared_ptr<xla::util::RecordReader> CreateRecordReader(
-    std::string path, const std::string& compression, int64_t buffer_size) {
-  return std::make_shared<xla::util::RecordReader>(std::move(path), compression,
-                                                   buffer_size);
-}
-
-bool RecordRead(const std::shared_ptr<xla::util::RecordReader>& reader,
-                xla::util::RecordReader::Data* value) {
-  NoGilSection nogil;
-  return reader->Read(value);
-}
-
 std::unique_ptr<tsl::RandomAccessFile> OpenTfFile(const std::string& path) {
   tsl::Env* env = tsl::Env::Default();
   std::unique_ptr<tsl::RandomAccessFile> file;
@@ -1288,26 +1276,6 @@ void InitXlaModuleBindings(py::module m) {
                                          : xla::PrecisionConfig::DEFAULT);
         },
         py::arg("use_full_mat_mul_precision") = true);
-
-  py::class_<xla::util::RecordReader, std::shared_ptr<xla::util::RecordReader>>(
-      m, "RecordReader");
-  m.def("_xla_create_tfrecord_reader",
-        [](const std::string& path, const std::string& compression,
-           int64_t buffer_size) {
-          NoGilSection nogil;
-          return CreateRecordReader(path, compression, buffer_size);
-        },
-        py::arg("path"), py::arg("compression") = "",
-        py::arg("buffer_size") = 16 * 1024 * 1024);
-  m.def(
-      "_xla_tfrecord_read",
-      [](const std::shared_ptr<xla::util::RecordReader>& reader) -> py::object {
-        xla::util::RecordReader::Data record;
-        if (!RecordRead(reader, &record)) {
-          return py::none();
-        }
-        return py::bytes(record.data(), record.size());
-      });
 
   py::class_<tsl::RandomAccessFile>(m, "TfRdFile");
   m.def("_xla_tffile_open", [](const std::string& path) {
