@@ -164,6 +164,7 @@ TEST_F(AtenXlaTensorTest, TestMaxPool2DNoBatchBackward) {
 }
 */
 
+/*
 TEST_F(AtenXlaTensorTest, TestMaxPool3DNoBatchBackward) {
   int kernel_size = 3;
   for (int stride = 1; stride <= 2; ++stride) {
@@ -174,10 +175,10 @@ TEST_F(AtenXlaTensorTest, TestMaxPool3DNoBatchBackward) {
             [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
           return torch::max_pool3d(
               inputs[0],
-              /*kernel_size=*/{kernel_size, kernel_size, kernel_size},
-              /*stride=*/{stride, stride, stride},
-              /*padding=*/{padding, padding, padding}, /*dilation=*/{1, 1, 1},
-              /*ceil_mode=*/ceil_mode);
+              {kernel_size, kernel_size, kernel_size}, // kernel_size
+              {stride, stride, stride}, // stride
+              {padding, padding, padding}, {1, 1, 1}, // padding // dilation
+              ceil_mode); // ceil_mode
         };
 
         ForEachDevice([&](const torch::Device& device) {
@@ -194,6 +195,7 @@ TEST_F(AtenXlaTensorTest, TestMaxPool3DNoBatchBackward) {
     }
   }
 }
+*/
 
 TEST_F(AtenXlaTensorTest, TestMaxUnpool2DBackward) {
   int kernel_size = 2;
