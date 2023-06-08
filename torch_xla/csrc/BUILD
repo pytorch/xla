@@ -34,7 +34,7 @@ ptxla_cc_library(
         "aten_autograd_ops.cpp",
         "aten_xla_bridge.cpp",
         "aten_xla_type.cpp",
-        "autocast_mode.cpp",
+        -- "autocast_mode.cpp",
         "batch_norm.cpp",
         "convert_ops.cpp",
         "convolution.cpp",
