@@ -82,7 +82,7 @@ nightly python 3.10 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xl
 nightly python 3.8 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_tpuvm` |
 nightly python 3.10(>= 2023/04/25) | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.10_tpuvm_YYYYMMDD` |
 nightly python 3.8(>= 2023/04/25) | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_tpuvm_YYYYMMDD` |
-nightly at date(< 2023/04/25) | `gcr.io/tpu-pytorch/xla:nightly_3.8_YYYYMMDD` |
+nightly at date(< 2023/04/25) | `gcr.io/tpu-pytorch/xla:nightly_3.8_tpuvm_YYYYMMDD` |
 
 <br/>
 
