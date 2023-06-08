@@ -32,6 +32,11 @@ on:
         type: string
         default: 0
         description: Whether to disable XRT tests
+      test-script:
+        required: false
+        type: string
+        default: test.sh
+        description: Which test script to run
 
     secrets:
       gcloud-service-key:
@@ -88,7 +93,7 @@ jobs:
           echo "pid=${pid}" >> "${GITHUB_ENV}"
       - name: Test
         shell: bash
-        run: docker exec -u jenkins "${pid}" bash -c '. ~/.bashrc && .circleci/test.sh'
+        run: docker exec -u jenkins "${pid}" bash -c '. ~/.bashrc && .circleci/${{ inputs.test-script }}'
       - name: Upload coverage results
         if: ${{ inputs.collect-coverage }}
         shell: bash

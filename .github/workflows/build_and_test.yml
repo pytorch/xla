@@ -67,6 +67,7 @@ jobs:
       timeout-minutes: 90
       disable-xrt: 0
       disable-pjrt: 1
+      test-script: 'test_xrt.sh'
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
