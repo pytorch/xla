@@ -359,15 +359,6 @@ void XLAGraphExecutor::SyncTensorsGraph(std::vector<XLATensorPtr>* tensors,
   }
 }
 
-std::string XLAGraphExecutor::SyncTensorsGraphDumpHlo(
-    std::vector<XLATensorPtr>* tensors, absl::Span<const std::string> devices) {
-  tsl::profiler::TraceMe activity("SyncTensorsGraphDumpHlo",
-                                  tsl::profiler::TraceMeLevel::kInfo);
-  SyncTensorsConfig config;
-  SyncTensorCollection coll = CollectSyncTensors(*tensors, config);
-  return DebugUtil::GetTensorsGraphHlo(*tensors, &coll.indices);
-}
-
 void XLAGraphExecutor::SyncLiveTensorsGraph(
     const torch::lazy::BackendDevice* device,
     c10::ArrayRef<std::string> devices, bool wait) {
