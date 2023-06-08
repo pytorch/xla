@@ -87,6 +87,22 @@ cc_library(
 )
 
 cc_library(
+    name = "conv_op_helpers",
+    srcs = ["conv_op_helpers.cc"],
+    hdrs = ["conv_op_helpers.h"],
+    deps = [
+        "@xla//xla/client/lib:arithmetic",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/types:span",
+        "@xla//xla:literal_util",
+        "@xla//xla:statusor",
+        "@xla//xla/client:xla_builder",
+        "@xla//xla/stream_executor:dnn",
+        "@xla//xla:xla_data_proto_cc",
+    ],
+)
+
+cc_library(
   name = "computation_client",
   srcs = [
     "computation_client.cc",
@@ -104,6 +120,7 @@ cc_library(
     ":sys_util",
     ":types",
     ":util",
+    ":conv_op_helpers",
     "@org_tensorflow//tensorflow/compiler/xla:literal_util",
     "@org_tensorflow//tensorflow/compiler/xla/client:xla_computation",
     "@com_google_absl//absl/memory",
@@ -126,6 +143,7 @@ cc_library(
     ":debug_macros",
     ":env_vars",
     ":tf_logging",
+    ":conv_op_helpers",
     "@org_tensorflow//tensorflow/compiler/xla:literal",
     "@org_tensorflow//tensorflow/compiler/xla:shape_util",
     "@org_tensorflow//tensorflow/compiler/xla/client:xla_computation",
@@ -546,6 +564,7 @@ tf_cc_shared_object(
         ":computation_client",
         ":tf_exported_symbols.lds",
         ":tf_version_script.lds",
+        ":conv_op_helpers",
         "@com_google_absl//absl/strings",
         "@org_tensorflow//tensorflow/compiler/xla:literal_util",
         "@org_tensorflow//tensorflow/compiler/xla/client",
