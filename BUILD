@@ -1,6 +1,6 @@
-load("@tsl//tsl/platform:rules_cc.bzl", "cc_library")
+load("@tsl//tsl/platform/default:rules_cc.bzl", "cc_binary")
 
-cc_library(
+cc_binary(
     name = "_XLAC.so",
     copts = [
         "-DTORCH_API_INCLUDE_EXTENSION_H",
