@@ -42,6 +42,7 @@
 #include "third_party/xla_client/thread_pool.h"
 #include "third_party/xla_client/util.h"
 #include "third_party/xla_client/xla_util.h"
+#include "third_party/xla_client/conv_op_helpers.h"
 #include "torch_xla/csrc/XLANativeFunctions.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/computation.h"
