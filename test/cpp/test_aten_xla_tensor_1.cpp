@@ -2206,11 +2206,9 @@ TEST_F(AtenXlaTensorTest, TestCount_Nonzero_nodim) {
     torch::Tensor xla_a = CopyToDevice(a, device);
     torch::Tensor xla_b = torch::count_nonzero(xla_a);
     AllClose(b, torch::_cast_Long(xla_b));
-
-    ExpectCounterChanged("xla::count_nonzero", cpp_test::GetIgnoredCounters());
-    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-    ResetCounters();
   });
+  ExpectCounterChanged("xla::count_nonzero", cpp_test::GetIgnoredCounters());
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestCount_Nonzero_with_single_dim) {
@@ -2224,11 +2222,9 @@ TEST_F(AtenXlaTensorTest, TestCount_Nonzero_with_single_dim) {
     torch::Tensor xla_a = CopyToDevice(a, device);
     torch::Tensor xla_b = torch::count_nonzero(xla_a, dim);
     AllClose(b, torch::_cast_Long(xla_b));
-
-    ExpectCounterChanged("xla::count_nonzero", cpp_test::GetIgnoredCounters());
-    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-    ResetCounters();
   });
+  ExpectCounterChanged("xla::count_nonzero", cpp_test::GetIgnoredCounters());
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestCount_Nonzero_with_multiple_dims) {
@@ -2243,11 +2239,9 @@ TEST_F(AtenXlaTensorTest, TestCount_Nonzero_with_multiple_dims) {
     torch::Tensor xla_a = CopyToDevice(a, device);
     torch::Tensor xla_b = torch::count_nonzero(xla_a, dims);
     AllClose(b, torch::_cast_Long(xla_b));
-
-    ExpectCounterChanged("xla::count_nonzero", cpp_test::GetIgnoredCounters());
-    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-    ResetCounters();
   });
+  ExpectCounterChanged("xla::count_nonzero", cpp_test::GetIgnoredCounters());
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestNonzero) {
