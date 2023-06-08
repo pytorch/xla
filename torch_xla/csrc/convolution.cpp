@@ -1,6 +1,6 @@
 #include "torch_xla/csrc/convolution.h"
 
-#include "tensorflow/compiler/tf2xla/kernels/conv_op_helpers.h"
+#include "third_party/xla_client/conv_op_helpers.h"
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "torch_xla/csrc/helpers.h"
