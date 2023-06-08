@@ -16,11 +16,11 @@ limitations under the License.
 
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
-#include "xla/client/lib/arithmetic.h"
-#include "xla/client/lib/constants.h"
-#include "xla/client/xla_builder.h"
-#include "xla/literal_util.h"
-#include "xla/stream_executor/dnn.h"
+#include "tensorflow/compiler/xla/client/lib/arithmetic.h"
+#include "tensorflow/compiler/xla/client/lib/constants.h"
+#include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "tensorflow/compiler/xla/literal_util.h"
+#include "tensorflow/compiler/xla/stream_executor/dnn.h"
 
 namespace xla {
 
