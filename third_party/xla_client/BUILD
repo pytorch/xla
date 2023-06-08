@@ -91,14 +91,14 @@ cc_library(
     srcs = ["conv_op_helpers.cc"],
     hdrs = ["conv_op_helpers.h"],
     deps = [
-        "@xla//xla/client/lib:arithmetic",
+        "@org_tensorflow//tensorflow/compiler/xla/client/lib:arithmetic",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:span",
-        "@xla//xla:literal_util",
-        "@xla//xla:statusor",
-        "@xla//xla/client:xla_builder",
-        "@xla//xla/stream_executor:dnn",
-        "@xla//xla:xla_data_proto_cc",
+        "@org_tensorflow//tensorflow/compiler/xla:literal_util",
+        "@org_tensorflow//tensorflow/compiler/xla:statusor",
+        "@org_tensorflow//tensorflow/compiler/xla/client:xla_builder",
+        "@org_tensorflow//tensorflow/compiler/xla/stream_executor:dnn",
+        "@org_tensorflow//tensorflow/compiler/xla:xla_data_proto_cc",
     ],
 )
 
