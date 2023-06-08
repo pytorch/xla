@@ -25,8 +25,8 @@ exports_files([
 ])
 
 config_setting(
-  name = "pjrt_only",
-  define_values = {"pjrt_only": "true"},
+  name = "disable_xrt",
+  define_values = {"disable_xrt": "true"},
 )
 
 tf_proto_library(
@@ -78,7 +78,7 @@ cc_library(
     "runtime.h",
   ],
   local_defines = select({
-    ":pjrt_only": ["PJRT_ONLY"],
+    ":disable_xrt": ["DISABLE_XRT"],
     "//conditions:default": [],
   }),
   deps = [
@@ -87,7 +87,7 @@ cc_library(
     ":pjrt_computation_client",
     "@tsl//tsl/platform:stacktrace",
   ] + select({
-    ":pjrt_only": [],
+    ":disable_xrt": [],
     "//conditions:default": [],
   }),
 )

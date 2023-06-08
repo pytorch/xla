@@ -76,7 +76,7 @@ test:tpu --local_test_jobs=1
 test:cuda --local_test_jobs=1
 
 # Exclude XRT from the build
-build:pjrt_only --define=pjrt_only=true
+build:disable_xrt --define=disable_xrt=true
 
 #########################################################################
 # RBE config options below.
