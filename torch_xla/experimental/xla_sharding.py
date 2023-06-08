@@ -1,5 +1,5 @@
 import os
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from dataclasses import dataclass, field
 import torch
 import torch_xla
@@ -8,7 +8,8 @@ from torch_xla.experimental.xla_sharded_tensor import XLAShardedTensor
 import torch_xla.runtime as xr
 
 import numpy as np
-from typing import Tuple, Union, List
+import itertools
+from typing import Tuple, Union, List, Sequence, Any, Optional
 from enum import IntEnum
 
 
@@ -68,6 +69,129 @@ class Mesh:
 
   def get_logical_mesh(self):
     return self.device_ids.reshape(self.mesh_shape)
+
+
+class HybridMesh(Mesh):
+  device_ids: np.ndarray
+  ici_mesh_shape: Tuple[int, ...]
+  dcn_mesh_shape: Tuple[int, ...]
+  axis_names: Tuple[str, ...]
+
+  def __init__(self,
+               device_ids: Union[np.ndarray, List],
+               ici_mesh_shape: Tuple[int, ...],
+               dcn_mesh_shape: Tuple[int, ...] = None,
+               axis_names: Tuple[str, ...] = None):
+    if dcn_mesh_shape == None:
+      dcn_mesh_shape = tuple([1] * len(ici_mesh_shape))
+    mesh_shape = tuple([x * y for x, y in zip(ici_mesh_shape, dcn_mesh_shape)])
+    assert len(ici_mesh_shape) == len(dcn_mesh_shape)
+    super().__init__(device_ids, mesh_shape, axis_names)
+    self.device_attributes = pjrt.global_device_attributes()
+    if 'slice_index' in self.device_attributes[0] and np.prod(
+        dcn_mesh_shape) == 1:
+      raise ValueError('Provide dcn_mesh_shape to create a mesh for multislice')
+    self.device_ids = device_ids
+    self.ici_mesh_shape = ici_mesh_shape
+    self.dcn_mesh_shape = dcn_mesh_shape
+    self.axis_names = axis_names
+
+  def _get_physical_tpu_mesh(self, devices: Sequence[Any]) -> np.ndarray:
+    r"""Rearrange TPU devices in a slice into a physical mesh."""
+    device_coords = [self.device_attributes[d]['coords'] for d in devices]
+    dims = tuple(d + 1 for d in max(device_coords))
+    out = np.empty(dims, dtype=object)
+    for coords, d in zip(device_coords, devices):
+      out[coords[0], coords[1], coords[2]] = d
+    return out
+
+  def _create_device_mesh_for_nd_torus(
+      self, physical_mesh: np.ndarray,
+      mesh_shape: Sequence[int]) -> Tuple[np.ndarray, List[Tuple[int, ...]]]:
+    # Remaining physical axes to be assigned to logical axes.
+    assignable_physical_mesh = list(physical_mesh.shape)
+    # Map each logical axis to a subset of physical axes.
+    assignment: List[Tuple[int, ...]] = [() for _ in mesh_shape]
+    # Assign logical axes from highest network intensity to lowest.
+    # `mesh_shape` is assumed to ordered by lowest network intensity first, so
+    # reverse it first.
+    for logical_axis_index, logical_axis_size in reversed(
+        list(enumerate(mesh_shape))):
+      for num_axes in range(3, 0, -1):
+        axes = itertools.combinations(assignable_physical_mesh, num_axes)
+        indices = itertools.combinations(
+            range(len(assignable_physical_mesh)), num_axes)
+        for c_axes, c_indices in zip(axes, indices):
+          if np.product(c_axes) == logical_axis_size:
+            assignment[logical_axis_index] = c_indices
+            # Zero the assigned physical axes.
+            assignable_physical_mesh = [
+                0 if i in c_indices else v
+                for i, v in enumerate(assignable_physical_mesh)
+            ]
+            break
+        if assignment[logical_axis_index]:
+          # We already found an assignment from one candidate above.
+          break
+      else:
+        # If the num_axes for loop did not break, i.e. none of the candidates work
+        # goto here with this while-else construct.
+        if logical_axis_size > 1:
+          raise NotImplementedError(
+              'Failed to find assignment for logical_axis_index'
+              f' {logical_axis_index} of size {logical_axis_size} with remaining'
+              f' assignable mesh {assignable_physical_mesh}. The size of each'
+              ' axis in your logical mesh must be equal to the product of'
+              ' some subset of the physical mesh axis sizes. E.g logical mesh (4,'
+              ' 16) is compatible with physical mesh 4x4x4 since 4=4 and 16=4x4.'
+          )
+    # Flatten the assignment
+    transpose: List[int] = []
+    for x in assignment:
+      for y in x:
+        transpose.append(int(y))
+    return physical_mesh.transpose(transpose).reshape(mesh_shape), assignment
+
+  def _create_device_mesh(self, mesh_shape: Sequence[int],
+                          devices: Sequence[Any]) -> np.ndarray:
+    if np.prod(mesh_shape) != len(devices):
+      raise ValueError(
+          f'Number of devices {len(devices)} must equal the product '
+          f'of mesh_shape {mesh_shape}')
+    physical_mesh = self._get_physical_tpu_mesh(devices)
+    device_mesh, assignment = self._create_device_mesh_for_nd_torus(
+        physical_mesh, mesh_shape)
+    return device_mesh
+
+  def _create_hybrid_device_mesh(self, mesh_shape: Sequence[int],
+                                 dcn_mesh_shape: Sequence[int],
+                                 devices: Sequence[Any]) -> np.ndarray:
+    granule_dict = defaultdict(list)
+    slice_index_attr = [d['slice_index'] for d in self.device_attributes]
+    for d, dev in enumerate(self.device_attributes):
+      granule_dict[dev['slice_index']].append(d)
+    granules = list(granule_dict[key] for key in sorted(granule_dict.keys()))
+    if np.prod(dcn_mesh_shape) != len(granules):
+      raise ValueError(
+          f'Number of slices {len(granules)} must equal the product of '
+          f'dcn_mesh_shape {dcn_mesh_shape}')
+    per_granule_meshes = [
+        self._create_device_mesh(mesh_shape, granule) for granule in granules
+    ]
+    granule_mesh = np.arange(len(granules)).reshape(dcn_mesh_shape)
+    blocks = np.vectorize(
+        lambda i: per_granule_meshes[i], otypes=[object])(
+            granule_mesh)
+    device_mesh = np.block(blocks.tolist())
+    return device_mesh
+
+  def get_logical_mesh(self):
+    if np.prod(self.dcn_mesh_shape) > 1:  # multislice
+      return self._create_hybrid_device_mesh(self.ici_mesh_shape,
+                                             self.dcn_mesh_shape,
+                                             self.device_ids)
+    # single slice
+    return self._create_device_mesh(self.ici_mesh_shape, self.device_ids)
 
 
 class ShardingType(IntEnum):
