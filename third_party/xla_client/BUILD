@@ -103,7 +103,6 @@ cc_library(
   deps = [
     ":debug_macros",
     ":env_vars",
-    ":mesh_service",
     ":metrics_analysis",
     ":metrics_reader",
     ":metrics",
@@ -144,6 +143,8 @@ cc_library(
     "@xla//xla/pjrt:pjrt_c_api_client",
     "@tsl//tsl/profiler/lib:traceme",
     "@xla//xla/service:gpu_plugin",
+    ":thread_pool",
+    ":multi_wait",
     "@com_google_absl//absl/strings",
     "@com_google_absl//absl/types:span",
   ],

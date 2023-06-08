@@ -14,7 +14,6 @@
 #include "tsl/platform/stacktrace_handler.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "third_party/xla_client/env_vars.h"
-#include "third_party/xla_client/mesh_service.h"
 #include "third_party/xla_client/sys_util.h"
 
 namespace xla {
