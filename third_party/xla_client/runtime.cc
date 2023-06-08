@@ -3,7 +3,7 @@
 #include "third_party/xla_client/env_vars.h"
 #include "third_party/xla_client/pjrt_computation_client.h"
 
-#ifndef PJRT_ONLY
+#ifndef DISABLE_XRT
 #include "third_party/xla_client/xrt_computation_client.h"
 #include "third_party/xla_client/xrt_local_service.h"
 #endif
@@ -24,7 +24,7 @@ ComputationClient* CreateClient() {
   if (sys_util::GetEnvString(env::kEnvPjRtDevice, "") != "") {
     client = new PjRtComputationClient();
   } else {
-#ifndef PJRT_ONLY
+#ifndef DISABLE_XRT
     client = new XrtComputationClient();
 #else
     XLA_ERROR() << "$PJRT_DEVICE is not set." << std::endl;
@@ -49,7 +49,7 @@ ComputationClient* GetComputationClientIfInitialized() {
 }
 
 void RunLocalService(uint64_t service_port) {
-#ifndef PJRT_ONLY
+#ifndef DISABLE_XRT
   try {
     XrtLocalService* service = new XrtLocalService(
         "localservice|localhost:" + std::to_string(service_port),
