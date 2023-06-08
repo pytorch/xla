@@ -196,14 +196,14 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     if self.n_devices > 1:
       # xt1 is sharded `z_dim`-way, replicated `n_devices/z_dim`-way.
       self.assertTrue('last_tile_dim_replicate' in
-                      torch_xla._XLAC._get_xla_sharding_spec(xt1))
+                      torch_xla._XLAC._get_xla_sharding_spec(t1))
       self.assertTrue('[%d,1,%d]' %
                       (z_dim, self.n_devices //
-                       z_dim) in torch_xla._XLAC._get_xla_sharding_spec(xt1))
+                       z_dim) in torch_xla._XLAC._get_xla_sharding_spec(t1))
     # replicated group should share the same data content.
     if (self.n_devices // z_dim) > 1:
       shards = xt1.local_shards
-      self.assertTrue(torch.allclose(shards[0].data == shards[1].data))
+      self.assertTrue(torch.allclose(shards[0].data, shards[1].data))
     actual = (xt1 @ t2).cpu()
     self.assertTrue(torch.allclose(expected, actual))
 

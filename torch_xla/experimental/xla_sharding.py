@@ -71,7 +71,7 @@ class Mesh:
 
 
 class ShardingType(IntEnum):
-  # ShardingType enum ID maps to OpSharidng.Type if applicable.
+  # ShardingType enum ID maps to OpSharidng.Type (https://shorturl.at/pvAJX)
   REPLICATED = 0
   MAXIMAL = 1
   TUPLE = 2
