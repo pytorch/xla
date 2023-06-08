@@ -21,8 +21,6 @@
           pattern: ^(aarch64|amd64)$
         - name: accelerator
           pattern: ^(tpu|cuda)$
-        - name: disable_xrt
-          pattern: ^(0|1)$
 
     - name: "Include vars from config files"
       ansible.builtin.include_vars:
