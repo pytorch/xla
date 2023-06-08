@@ -1,5 +1,5 @@
 import os
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from dataclasses import dataclass, field
 import torch
 import torch_xla
@@ -71,7 +71,7 @@ class Mesh:
   def get_logical_mesh(self):
     return self.device_ids.reshape(self.mesh_shape)
 
-class HybridMesh:
+class HybridMesh(Mesh):
   device_ids: np.ndarray
   ici_mesh_shape: Tuple[int, ...]
   dcn_mesh_shape: Tuple[int, ...]
@@ -79,36 +79,30 @@ class HybridMesh:
 
   def __init__(self, device_ids: Union[np.ndarray, List],
               ici_mesh_shape: Tuple[int, ...],
-              dcn_mesh_shape: Tuple[int, ...],
+              dcn_mesh_shape: Tuple[int, ...] = None,
               axis_names: Tuple[str, ...] = None):
-    if not isinstance(device_ids, np.ndarray):
-      device_ids = np.array(device_ids)
-    assert (axis_names is None) or ((len(ici_mesh_shape) == len(axis_names)) and (len(dcn_mesh_shape) == len(axis_names)))
-    assert (len(device_ids) == np.prod(ici_mesh_shape) * np.prod(dcn_mesh_shape))
-    assert len(device_ids) == len(np.unique(device_ids))
+    if dcn_mesh_shape == None:
+      dcn_mesh_shape = tuple([1] * len(ici_mesh_shape))
+    mesh_shape = tuple([x * y for x, y in zip(ici_mesh_shape, dcn_mesh_shape)])
+    assert len(ici_mesh_shape) == len(dcn_mesh_shape)
+    super().__init__(device_ids, mesh_shape, axis_names)
+    self.device_attributes = pjrt.global_device_attributes()
+    if 'slice_index' in self.device_attributes[0] and np.prod(dcn_mesh_shape) == 1:
+      raise ValueError('Provide dcn_mesh_shape to create a mesh for multislice')
     self.device_ids = device_ids
     self.ici_mesh_shape = ici_mesh_shape
     self.dcn_mesh_shape = dcn_mesh_shape
     self.axis_names = axis_names
-    assert all(d < self.size() for d in device_ids)
 
-  def size(self):
-    return np.prod(self.ici_mesh_shape) * np.prod(self.dcn_mesh_shape)
 
-  def shape(self):
-    return OrderedDict(
-        (name, ici_size * dcn_size) for name, ici_size, dcn_size in zip(self.axis_name, self.ici_mesh_shape, self.dcn_mesh_shape))
-
-  def _get_physical_tpu_mesh(self,devices: Sequence[Any]) -> np.ndarray:
+  def _get_physical_tpu_mesh(self, devices: Sequence[Any]) -> np.ndarray:
     r"""Rearrange TPU devices in a slice into a physical mesh."""    
-    device_attributes = pjrt.global_device_attributes()
-    device_coords = [d['coords'] for d in device_attributes]
+    device_coords = [self.device_attributes[d]['coords'] for d in devices]
     dims = tuple(d + 1 for d in max(device_coords))
     out = np.empty(dims, dtype=object)
-    for coords, d in zip(device_coords, self.device_ids):
+    for coords, d in zip(device_coords, devices):
       out[coords[0], coords[1], coords[2]] = d
     return out
-
 
 
   def _create_device_mesh_for_nd_torus(self,physical_mesh: np.ndarray,
@@ -158,8 +152,8 @@ class HybridMesh:
     return physical_mesh.transpose(transpose).reshape(mesh_shape), assignment
 
 
-  def create_device_mesh(self,mesh_shape: Sequence[int],
-    devices: Optional[Sequence[Any]]) -> np.ndarray:
+  def _create_device_mesh(self,mesh_shape: Sequence[int],
+    devices: Sequence[Any]) -> np.ndarray:
     if np.prod(mesh_shape) != len(devices):
       raise ValueError(f'Number of devices {len(devices)} must equal the product '
                      f'of mesh_shape {mesh_shape}')
@@ -169,12 +163,31 @@ class HybridMesh:
     return device_mesh
   
 
-  def create_hybrid_device_mesh(self):
-    pass
+  def _create_hybrid_device_mesh(self, mesh_shape: Sequence[int],
+                              dcn_mesh_shape: Sequence[int],
+                              devices: Sequence[Any]) -> np.ndarray:
+    granule_dict = defaultdict(list)
+    slice_index_attr = [d['slice_index'] for d in self.device_attributes]
+    for d, dev in enumerate(self.device_attributes):
+      granule_dict[dev['slice_index']].append(d)
+    granules = list(granule_dict[key] for key in sorted(granule_dict.keys()))
+    if np.prod(dcn_mesh_shape) != len(granules):
+      raise ValueError(
+          f'Number of slices {len(granules)} must equal the product of '
+          f'dcn_mesh_shape {dcn_mesh_shape}')
+    per_granule_meshes = [self._create_device_mesh(mesh_shape, granule) for granule in granules]
+    granule_mesh = np.arange(len(granules)).reshape(dcn_mesh_shape)
+    blocks = np.vectorize(lambda i: per_granule_meshes[i], otypes=[object])(granule_mesh)
+    device_mesh = np.block(blocks.tolist())
+    return device_mesh
 
 
   def get_logical_mesh(self):
-    return self.create_device_mesh(self.ici_mesh_shape, self.device_ids)
+    if np.prod(self.dcn_mesh_shape) > 1: # multislice
+      return self._create_hybrid_device_mesh(self.ici_mesh_shape, self.dcn_mesh_shape, self.device_ids)
+    # single slice
+    return self._create_device_mesh(self.ici_mesh_shape, self.device_ids)
+
 
 @requires_pjrt
 def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
