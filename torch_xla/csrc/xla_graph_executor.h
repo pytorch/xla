@@ -122,12 +122,6 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
                         absl::Span<const std::string> devices, bool wait,
                         bool sync_ltc_data, bool warm_up_cache_only = false);
 
-  // An early-return version of SyncTensorsGraph, the function returns after the
-  // tensors are synced. The graph won't be compiled and executed. This workflow
-  // is created for HLO/StableHLO dump.
-  std::string SyncTensorsGraphDumpHlo(std::vector<XLATensorPtr>* tensors,
-                                      absl::Span<const std::string> devices);
-
   // Makes sure that any outstanding IR operation accumulated over live tensors,
   // gets turned into device data. If wait is true, the sync operation will be
   // run synchronously. The devices argument, if not empty, tells the devices
