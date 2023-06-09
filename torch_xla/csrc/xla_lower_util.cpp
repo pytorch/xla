@@ -771,10 +771,11 @@ xla::XlaOp BuildCountNonzero(xla::XlaOp input, std::vector<int64_t> dims) {
     return xla::ReduceAll(
         compared, xla::Zero(ne.builder(), kConditionType),
         xla::CreateScalarAddComputation(kConditionType, ne.builder()));
+  } else {
+    return xla::Reduce(
+        compared, xla::Zero(ne.builder(), kConditionType),
+        xla::CreateScalarAddComputation(kConditionType, ne.builder()), dims);
   }
-  return xla::Reduce(
-      compared, xla::Zero(ne.builder(), kConditionType),
-      xla::CreateScalarAddComputation(kConditionType, ne.builder()), dims);
 }
 
 std::vector<xla::XlaOp> BuildNonZero(xla::XlaOp input) {

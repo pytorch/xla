@@ -15,7 +15,6 @@ namespace torch_xla {
 
 class ShardingUtil {
  public:
-
   // This maps to `torch_xla.experimental.xla_sharding.ShardingType` enum type.
   enum ShardingType {
     REPLICATED = 0,
