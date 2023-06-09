@@ -717,7 +717,7 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
                     *async->cached_computation->computation
                          ->client_computation(),
                     device_arguments, devices, execute_options),
-                sharding_specs, /*replicated_output=*/false);
+                sharding_specs);
         results = WrapXlaData(outputs);
         TF_VLOG(3) << "Executing Dynamo IR sharded graph hash "
                    << torch::lazy::HashToString(hash) << " on devices "
