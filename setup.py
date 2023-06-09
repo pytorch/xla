@@ -207,7 +207,10 @@ GCLOUD_KEY_FILE = os.getenv('GCLOUD_SERVICE_KEY_FILE', default='')
 CACHE_SILO_NAME = os.getenv('SILO_NAME', default='dev')
 BAZEL_JOBS = os.getenv('BAZEL_JOBS', default='')
 
-extra_compile_args = []
+extra_compile_args = [
+  "-DTORCH_API_INCLUDE_EXTENSION_H",
+  "-DTORCH_EXTENSION_NAME=_XLAC",
+  "-fopenmp", "-fPIC", "-fwrapv",]
 cxx_abi = os.getenv(
     'CXX_ABI', default='') or getattr(torch._C, '_GLIBCXX_USE_CXX11_ABI', None)
 if cxx_abi is not None:
