@@ -25,6 +25,9 @@ class ShardingUtil {
     PARTIAL = 5
   };
 
+  // Determine the ShardingType of the given xla::OpSharding.
+  static ShardingType GetShardingType(xla::OpSharding& sharding);
+
   // Test whether the XLA_USE_SPMD environment variable is set to enable the
   // virtual device optimization.
   static bool UseVirtualDevice();

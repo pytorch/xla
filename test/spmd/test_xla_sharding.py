@@ -69,7 +69,8 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
       self.assertEqual(shard.data.device, torch.device('cpu'))
       self.assertEqual(shard.data.shape, (shard_len,))
       # Tensor shards will be zero-padded
-      start, end = i * shard_len, min((i + 1) * shard_len, t.shape[0])
+      start, end = min(i * shard_len, t.shape[0]), min((i + 1) * shard_len,
+                                                       t.shape[0])
       if start < num_element:
         expected = torch.arange(start, end, dtype=torch.float32)
         pad_len = shard_len - expected.shape[0]
@@ -132,6 +133,29 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     local_shards = rt.local_shards
     with self.assertRaises(RuntimeError):
       rt.load_local_shards_(local_shards)
+
+  def test_xla_sharding_type(self):
+    t = torch.randn(10, 20).to(xm.xla_device())
+    self.assertEqual(torch_xla._XLAC._get_xla_sharding_type(t), None)
+
+    x_dim = 2 if self.n_devices % 4 == 0 else 1
+    mesh = self._get_mesh((x_dim, self.n_devices // x_dim))
+    xt = xs.mark_sharding(t, mesh, (0, 1))
+    if self.n_devices > 1:
+      self.assertEqual(xt.sharding_type, xs.ShardingType.TILED)
+    else:
+      self.assertEqual(xt.sharding_type, xs.ShardingType.REPLICATED)
+
+    xs.clear_sharding(t)
+    xt = xs.mark_sharding(t, mesh, (None, None))
+    self.assertEqual(xt.sharding_type, xs.ShardingType.REPLICATED)
+
+    xs.clear_sharding(t)
+    xt = xs.mark_sharding(t, mesh, (None, 1))
+    if self.n_devices > 1:
+      self.assertEqual(xt.sharding_type, xs.ShardingType.PARTIAL)
+    else:
+      self.assertEqual(xt.sharding_type, xs.ShardingType.REPLICATED)
 
   def test_custom_tile_assignment(self):
     xt = torch.randn(10, 20).to(device=xm.xla_device())
