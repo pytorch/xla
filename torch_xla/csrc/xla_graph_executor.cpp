@@ -635,12 +635,14 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
     }
   }
 
-  // Mimic the `PrepareOutputShardingPropagation` function at xla_sharding_util.cpp.
-  // One subtle difference is that in this path, we don't have explicit `tensors`.
-  // However, we already have `output_shapes` and `device` which were what the `tensors`
-  // were used for in the original `PrepareOutputShardingPropagation` function.
+  // Mimic the `PrepareOutputShardingPropagation` function at
+  // xla_sharding_util.cpp. One subtle difference is that in this path, we don't
+  // have explicit `tensors`. However, we already have `output_shapes` and
+  // `device` which were what the `tensors` were used for in the original
+  // `PrepareOutputShardingPropagation` function.
   std::vector<XLATensor::ShardingSpecPtr> sharding_specs(placeholders.size());
-  auto computation_proto = cachedComputation->computation->computation().proto();
+  auto computation_proto =
+      cachedComputation->computation->computation().proto();
   std::vector<xla::OpSharding> output_shardings;
   if (computation_proto.has_spmd_output_sharding()) {
     if (computation_proto.spmd_output_sharding().tuple_shardings().size() > 0) {
@@ -665,18 +667,16 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
       // Tensor sharding annotation type is non-zero (sharded).
       sharding_specs[i] = std::make_shared<XLATensor::ShardingSpec>(
           output_shardings[i],
-          MakeShapeWithDeviceLayout(
-              (*output_shapes)[i],
-              static_cast<XlaDeviceType>(device.type())));
+          MakeShapeWithDeviceLayout((*output_shapes)[i],
+                                    static_cast<XlaDeviceType>(device.type())));
     } else {
       // Clear sharding if the output parameter is no longer sharded, this
       // assumes that the output is implicitly replicated and wrapped inside
       // PjRtShardedData.
       sharding_specs[i] = std::make_shared<XLATensor::ShardingSpec>(
           xla::HloSharding::Replicate().ToProto(),
-          MakeShapeWithDeviceLayout(
-              (*output_shapes)[i],
-              static_cast<XlaDeviceType>(device.type())));
+          MakeShapeWithDeviceLayout((*output_shapes)[i],
+                                    static_cast<XlaDeviceType>(device.type())));
     }
 
     // Create sharded data placeholder, this will be used to
@@ -684,8 +684,7 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
     // replication.
     auto sharded_data_placeholder =
         WrapXlaData(xla::GetComputationClient()->WrapDataShards(
-            {}, GetVirtualDevice().toString(),
-            sharding_specs[i]->shape.value(),
+            {}, GetVirtualDevice().toString(), sharding_specs[i]->shape.value(),
             sharding_specs[i]->sharding));
 
     // Register the sharded data placeholder to the tensor and its node.
