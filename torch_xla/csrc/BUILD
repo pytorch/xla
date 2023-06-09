@@ -276,7 +276,7 @@ ptxla_cc_library(
         "@xla//xla/service:hlo_parser",
         "@xla//xla/service:hlo_pass_pipeline",
         "@xla//xla/service:hlo_verifier",
-        "@xla//xla/service:hlo_proto_impl",
+        "@xla//xla/service:hlo_proto_cc_impl",
         "@xla//xla/service:hlo_proto_cc",
         "@xla//xla/service:hlo_proto_util",
         "@xla//xla/service:sharding_propagation",
