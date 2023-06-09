@@ -3,7 +3,9 @@ load(
     "tf_cc_shared_object",
 )
 
-tf_cc_shared_object(
+load("@tsl//tsl/platform/default:rules_cc.bzl", "cc_binary")
+
+cc_binary(
     name = "_XLAC.so",
     copts = [
         "-DTORCH_API_INCLUDE_EXTENSION_H",
