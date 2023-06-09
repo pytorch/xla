@@ -257,10 +257,13 @@ torch::lazy::NodePtr IndexCopyOp(const torch::lazy::Value& buffer, int64_t dim,
 CanonicalIndexInfo GetCanonicalIndexInfo(
     const at::Tensor& base,
     const c10::List<c10::optional<at::Tensor>>& orig_indices) {
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": orig_indices.size()=" << orig_indices.size() << std::endl;
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": orig_indices[0].size()=" << orig_indices[0]->sizes() << std::endl;
   CheckIndexTensorTypes(orig_indices);
   // First expand ByteTensor (boolean masks) into 1 or more LongTensors, then
   // broadcast all index tensors together.
-  auto indices = xla_expand_outplace(ExpandByteTensors(base, orig_indices));
+  std::vector<at::Tensor> expand_byte_tensor = ExpandByteTensors(base, orig_indices);
+  auto indices = xla_expand_outplace(expand_byte_tensor);
   // If the non-null indices are not all adjacent, transpose base and indices
   // together so that they're adjacent at the front.
   CanonicalIndexInfo canonical_index_info = TransposeToFront(base, indices);

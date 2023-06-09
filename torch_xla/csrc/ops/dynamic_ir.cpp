@@ -7,6 +7,7 @@
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
+#include <torch/csrc/profiler/combined_traceback.h>
 
 namespace torch_xla {
 
@@ -43,6 +44,16 @@ int64_t SizeNode::getDynamicValue() const {
     TORCH_LAZY_COUNTER("CachedSizeNodeValue", 1);
     return runtime_size_;
   }
+
+  // TODO: delete
+  // std::shared_ptr<torch::CapturedTraceback> tb0 = 
+  // torch::CapturedTraceback::gather(/*python=*/true, /*script=*/true, /*cpp=*/true);
+  // torch::SymbolizedTracebacks r = torch::symbolize({tb0.get()});
+  // std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": Callstack=" << std::endl;
+  // for (int i=0; i<r.all_frames.size(); i++) {
+  //   std::cout << "line=" << __LINE__ << ": filename=" << r.all_frames[i].filename << ", funcname=" << r.all_frames[i].funcname << ", lineno=" << r.all_frames[i].lineno << std::endl;
+  // }
+  
   torch::lazy::NodePtr cloned =
       torch::lazy::MakeNode<SizeNode>(operands_[0], dim_);
   // Wrap the IR of SizeNode into a dummy tensor and execute/fetch the value
