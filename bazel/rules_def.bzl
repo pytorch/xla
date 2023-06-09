@@ -6,6 +6,11 @@ load(
 )
 
 load(
+    "//tensorflow/tsl:tsl.bzl",
+    "clean_dep",
+)
+
+load(
     "//tensorflow/core/platform:build_config_root.default.bzl",
     "if_dynamic_kernels"
 )
