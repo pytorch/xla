@@ -5,7 +5,7 @@ load(
 
 load("@org_tensorflow//tensorflow/tsl/platform/default:rules_cc.bzl", "cc_binary")
 
-cc_binary(
+tf_cc_shared_object(
     name = "_XLAC.so",
     linkopts = [
         "-Wl,-rpath,$$ORIGIN/torch_xla/lib",  # for libtpu
