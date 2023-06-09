@@ -607,16 +607,6 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
     torch::lazy::BackendDataPtr handle =
         WrapXlaData(runtime::GetComputationClient()->CreateDataPlaceholder(
             device.toString(), std::move(shape)));
-    // If SPMD is enabled, we assume all output will be sharded or replicated
-    // and wrapped inside PjRtShardedData handle.
-    // if (ShardingUtil::UseVirtualDevice()) {
-    //   XLATensor::ShardingSpecPtr sharding =
-    //       std::make_shared<XLATensor::ShardingSpec>(
-    //           xla::HloSharding::Replicate().ToProto(), shape);
-    //   handle = WrapXlaData(xla::GetComputationClient()->WrapDataShards(
-    //       {UnwrapXlaData(handle)}, GetVirtualDevice().toString(),
-    //       sharding->shape.value(), sharding->sharding));
-    // }
     placeholders.push_back(handle);
   }
 
@@ -645,63 +635,65 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
     }
   }
 
-  // populate tensor indices
-  std::vector<XLATensorPtr> tensors = GetLiveTensors(&device);
-  coll.indices.reserve(tensors.size());
-  std::unordered_set<int64_t> tensor_ids;
-  for (size_t i = 0; i < tensors.size(); ++i) {
-    std::cout << "[WONJOO] i=" << i << std::endl;
-    if (tensor_ids.insert(tensors[i]->GetUniqueId()).second &&
-        // A tensor's xla_data might not be up to date if there is a view
-        // associated with it. Make sure to sync those tensors here too.
-        (tensors[i]->CurrentDataHandle() == nullptr ||
-         (tensors[i]->data()->view != nullptr &&
-          !tensors[i]->data()->view->IsUpToDate()))) {
-      torch::lazy::Value ir_value = tensors[i]->CurrentIrValue();
-      std::cout << "[WONJOO]   in if 1" << i << std::endl;
-      if (ir_value) {
-        if (ShouldSyncIrValue(ir_value)) {
-          std::cout << "[WONJOO]   in if 2" << i << std::endl;
-          // Add only tensors which need to be synced.
-          coll.indices.push_back(i);
-        }
-      }
+  // Mimic the `PrepareOutputShardingPropagation` function at xla_sharding_util.cpp.
+  // One subtle difference is that in this path, we don't have explicit `tensors`.
+  // However, we already have `output_shapes` and `device` which were what the `tensors`
+  // were used for in the original `PrepareOutputShardingPropagation` function.
+  std::vector<XLATensor::ShardingSpecPtr> sharding_specs(placeholders.size());
+  auto computation_proto = cachedComputation->computation->computation().proto();
+  std::vector<xla::OpSharding> output_shardings;
+  if (computation_proto.has_spmd_output_sharding()) {
+    if (computation_proto.spmd_output_sharding().tuple_shardings().size() > 0) {
+      auto tuple_shardings =
+          computation_proto.spmd_output_sharding().tuple_shardings();
+      output_shardings = std::vector<xla::OpSharding>(tuple_shardings.begin(),
+                                                      tuple_shardings.end());
+    } else {
+      output_shardings = std::vector<xla::OpSharding>{
+          computation_proto.spmd_output_sharding()};
+    }
+  }
+
+  // Output parameter sharding annotations, defaults to REPLICATED(0) if unset.
+  if (output_shardings.empty()) {
+    // Initializes with default sharding type, REPLCIATED.
+    output_shardings.resize(placeholders.size());
+  }
+
+  for (int i = 0; i < placeholders.size(); ++i) {
+    if (output_shardings[i].type()) {
+      // Tensor sharding annotation type is non-zero (sharded).
+      sharding_specs[i] = std::make_shared<XLATensor::ShardingSpec>(
+          output_shardings[i],
+          MakeShapeWithDeviceLayout(
+              (*output_shapes)[i],
+              static_cast<XlaDeviceType>(device.type())));
+    } else {
+      // Clear sharding if the output parameter is no longer sharded, this
+      // assumes that the output is implicitly replicated and wrapped inside
+      // PjRtShardedData.
+      sharding_specs[i] = std::make_shared<XLATensor::ShardingSpec>(
+          xla::HloSharding::Replicate().ToProto(),
+          MakeShapeWithDeviceLayout(
+              (*output_shapes)[i],
+              static_cast<XlaDeviceType>(device.type())));
     }
 
-    // is this necessary?
-    // coll.indices.push_back(i);
+    // Create sharded data placeholder, this will be used to
+    // hold the corresponding computation results for both sharding &
+    // replication.
+    auto sharded_data_placeholder =
+        WrapXlaData(xla::GetComputationClient()->WrapDataShards(
+            {}, GetVirtualDevice().toString(),
+            sharding_specs[i]->shape.value(),
+            sharding_specs[i]->sharding));
+
+    // Register the sharded data placeholder to the tensor and its node.
+    placeholders[i] = sharded_data_placeholder;
   }
-
-  std::cout << "WONJOO: tensors=" << tensors << std::endl;
-  for (auto tensor : tensors) {
-    std::cout << "  tensor=" << (tensor.get()) << std::endl;
-  }
-  std::cout << "WONJOO: coll.indices=" << coll.indices << std::endl;
-
-  // Update placeholders by calling PrepareOutputShardingPropagation
-  std::vector<XLATensor::ShardingSpecPtr> sharding_specs(placeholders.size());
-  std::cout << "WONJOO: before" << std::endl;
-  std::cout << "WONJOO: placeholders.size()=" << placeholders.size()
-            << std::endl;
-
-  // Extract sharding specs for the results and prepare the sharded data
-  // placeholders if the computation is sharded.
-  if (cachedComputation->is_sharded) {
-    ShardingUtil::PrepareOutputShardingPropagation(
-        &tensors, coll.indices, cachedComputation->computation, &placeholders,
-        &sharding_specs);
-  }
-
-  std::cout << "WONJOO: after" << std::endl;
-  std::cout << "WONJOO: placeholders.size()=" << placeholders.size()
-            << std::endl;
 
   std::shared_ptr<XLAGraphExecutor::Async> async = std::make_shared<Async>(
       &coll, std::move(arguments), placeholders, std::move(cachedComputation));
-
-  // TODO(yeounoh) supply proper sharding specs for sharded results.
-  // std::vector<XLATensor::ShardingSpecPtr>
-  // sharding_specs(placeholders.size());
 
   auto syncfn = [async, hash, sharding_specs]() {
     try {
