@@ -2,7 +2,6 @@
 
 #include <c10/core/ScalarType.h>
 #include <c10/core/impl/DeviceGuardImplInterface.h>
-#include <c10/core/impl/LocalDispatchKeySet.h>
 #include <c10/macros/Macros.h>
 #include <torch/csrc/lazy/backend/backend_interface.h>
 #include <torch/csrc/lazy/core/tensor.h>
@@ -63,15 +62,6 @@ XLATensorImpl::XLATensorImpl(XLATensor&& tensor)
                       GetTypeMeta(tensor),
                       bridge::XlaDeviceToAtenDevice(tensor.GetDevice())),
       tensor_(c10::make_intrusive<XLATensor>(std::move(tensor))) {
-  // Update the Autocast key based off the backend device.
-  // Upstream TensorImpl cannot differentiate between XLA:TPU and XLA:GPU
-  // so we must manually update Autocast to AutocastCUDA on XLA:GPU.
-  torch::lazy::BackendDevice current_device = GetCurrentDevice();
-  if (static_cast<XlaDeviceType>(current_device.type()) == XlaDeviceType::GPU) {
-    auto autocast_cuda_ks = c10::DispatchKeySet(c10::DispatchKey::AutocastCUDA);
-    auto autocast_xla_ks = c10::DispatchKeySet(c10::DispatchKey::AutocastXLA);
-    key_set_ = (key_set_ - autocast_xla_ks) | autocast_cuda_ks;
-  }
   is_non_overlapping_and_dense_ = false;
   set_custom_sizes_strides(SizesStridesPolicy::CustomSizes);
 }
