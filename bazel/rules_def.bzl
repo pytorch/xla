@@ -15,6 +15,12 @@ load(
     "if_dynamic_kernels"
 )
 
+def if_dynamic_kernels(extra_deps, otherwise = []):
+    return select({
+        str(Label("//tensorflow:dynamic_loaded_kernels")): extra_deps,
+        "//conditions:default": otherwise,
+    })
+
 def ptxla_cc_library(
         deps = [],
         copts = [],
