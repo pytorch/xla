@@ -300,6 +300,9 @@ cc_library(
         "@xla//xla/translate/hlo_to_mhlo:hlo_to_mlir_hlo",
         "@xla//xla/translate/mhlo_to_hlo:mlir_hlo_to_hlo",
         "@xla//xla/mlir_hlo:all_passes",
+        "@xla//xla/service:hlo_proto_cc_impl",
+        "@xla//xla/service:hlo_proto_cc",
+        "@xla//xla/service:hlo_proto_util",
     ],
 )
 
