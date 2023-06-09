@@ -120,6 +120,7 @@ ptxla_cc_library(
         ":shape_helper",
         "//third_party/xla_client:async_task",
         "//third_party/xla_client:runtime",
+        "//third_party/xla_client:stablehlo_helper",
         "//third_party/xla_client:unique",
         "//third_party/xla_client:xla_util",
         "@com_google_absl//absl/hash",

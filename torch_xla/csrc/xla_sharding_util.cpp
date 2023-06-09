@@ -169,6 +169,26 @@ bool ShardingUtil::SetHloSharding(LoweringContext* lowering_ctx) {
   return is_sharded;
 }
 
+ShardingUtil::ShardingType ShardingUtil::GetShardingType(
+    xla::OpSharding& sharding) {
+  switch (sharding.type()) {
+    case xla::OpSharding::REPLICATED:
+      return ShardingType::REPLICATED;
+    case xla::OpSharding::MAXIMAL:
+      return ShardingType::MAXIMAL;
+    case xla::OpSharding::TUPLE:
+      return ShardingType::TUPLE;
+    case xla::OpSharding::OTHER:
+      // OTHER sharding can indicate either PARTIAL or TILED sharding.
+      return sharding.replicate_on_last_tile_dim() ? ShardingType::PARTIAL
+                                                   : ShardingType::TILED;
+    case xla::OpSharding::MANUAL:
+      return ShardingType::MANUAL;
+    default:
+      TF_LOG(ERROR) << "Unsupported sharding type: " << sharding.type();
+  }
+}
+
 bool ShardingUtil::EqualShardingSpecs(const XLATensor::ShardingSpec& a,
                                       const XLATensor::ShardingSpec& b) {
   return xla::protobuf_util::ProtobufEquals(a.sharding, b.sharding);
@@ -413,9 +433,9 @@ ShardingUtil::GetShardIndicesForDevices(
           continue;
         }
         int64_t n_j = offset % tile_shape[j];
-        int start = n_j * shard_shape[j];
-        // Clamp the end of the slice to the tensor shape to accurately reflect
+        // Clamp the slice bounds to the tensor shape to accurately reflect
         // the shard size without padding.
+        int start = std::min(n_j * shard_shape[j], tensor_shape[j]);
         int end = std::min((n_j + 1) * shard_shape[j], tensor_shape[j]);
         auto slice = at::indexing::Slice(start, end);
         indices.push_back(at::indexing::TensorIndex(slice));
