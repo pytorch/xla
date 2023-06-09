@@ -9,16 +9,7 @@ namespace {
 xla::Shape NodeOutputShape(const torch::lazy::Value& input,
                            std::vector<int64_t> dims) {
   xla::Shape input_shape = GetXlaShape(input);
-  std::vector<int64_t> dimensions;
-  if (!dims.empty()) {
-    std::unordered_set<int64_t> dims_set(dims.begin(), dims.end());
-    for (int64_t i = 0; i < input_shape.rank(); i++) {
-      if (dims_set.find(i) != dims_set.end()) {
-        dimensions.push_back(i);
-      }
-    }
-  }
-  return xla::ShapeUtil::MakeShape(input_shape.element_type(), dimensions);
+  return xla::ShapeUtil::MakeShape(input_shape.element_type(), dims);
 }
 
 }  // namespace
