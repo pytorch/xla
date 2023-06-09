@@ -297,9 +297,9 @@ cc_library(
     deps = [
         ":types",
         ":xla_util",
-        "@org_tensorflow//tensorflow/compiler/xla/translate/hlo_to_mhlo:hlo_to_mlir_hlo",
-        "@org_tensorflow//tensorflow/compiler/xla/translate/mhlo_to_hlo:mlir_hlo_to_hlo",
-        "@org_tensorflow//tensorflow/compiler/xla/mlir_hlo:all_passes",
+        "@xla//xla/translate/hlo_to_mhlo:hlo_to_mlir_hlo",
+        "@xla//xla/translate/mhlo_to_hlo:mlir_hlo_to_hlo",
+        "@xla//xla/mlir_hlo:all_passes",
     ],
 )
 
