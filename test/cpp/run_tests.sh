@@ -10,7 +10,7 @@ BAZEL_REMOTE_CACHE="0"
 BAZEL_VERB="test"
 
 # See Note [Keep Going]
-CONTINUE_ON_ERROR=false
+CONTINUE_ON_ERROR=true
 if [[ "$CONTINUE_ON_ERROR" == "1" ]]; then
   set +e
 fi
