@@ -19,6 +19,7 @@ cc_binary(
         "@xla//xla/service:hlo_parser",
         "@xla//xla/service:hlo_pass_pipeline",
         "@xla//xla/service:hlo_verifier",
+        "@xla//xla/service:hlo_proto",
         "@xla//xla/service:sharding_propagation",
         "@xla//xla/service/spmd:spmd_partitioner",
         "@tsl//tsl/profiler/lib:traceme",
