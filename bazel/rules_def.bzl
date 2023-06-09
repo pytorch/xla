@@ -6,7 +6,7 @@ load(
 )
 
 load(
-    "//tensorflow/tsl:tsl.bzl",
+    "//:tensorflow/tsl/tsl.bzl",
     "clean_dep",
 )
 
