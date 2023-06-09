@@ -385,6 +385,25 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     self.assertRaises(RuntimeError, lambda: torch.add(t2, t4))
     self.assertRaises(RuntimeError, lambda: torch.add(t4, t2))
 
+  def test_add_two_dynamic_tensors(self):
+    t1 = torch.tensor([[1, 0, 3, 5, 0, 6]], device=dev)
+    t2 = torch.nonzero(t1)
+    t3 = torch.tensor([[1]], device=dev)
+    t4 = torch.nonzero(t3)
+
+    # t2.shape=torch.Size([<=6, 2]) with real size [4, 2]
+    # t4.shape=torch.Size([<=1, 2]) with real size [1, 2]
+    self.assertRaises(RuntimeError, lambda: torch.add(t2, t4))
+    self.assertRaises(RuntimeError, lambda: torch.add(t4, t2))
+
+    # For now, we disallow if both operands have the same upper bound and real size.
+    # This is consistent with PyTorch's behavior.
+    # t2.shape=torch.Size([<=6, 2]) with real size [4, 2]
+    # t6.shape=torch.Size([<=6, 2]) with real size [4, 2]
+    t5 = torch.tensor([[1, 0, 3, 5, 0, 6]], device=dev)
+    t6 = torch.nonzero(t5)
+    self.assertRaises(RuntimeError, lambda: torch.add(t2, t6))
+
   def test_clone(self):
     t1 = torch.tensor([1, 0, 3, 5, 0, 6], device=dev)
     # t2.shape=torch.Size([<=6, 1]) with real size [4, 1]
