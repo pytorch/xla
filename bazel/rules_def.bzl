@@ -23,7 +23,7 @@ def ptxla_cc_test(
         copts = [],
         **kwargs):
     cc_test(
-        copts = tf_copts() + copts + [
+        copts = copts + [
             "-isystemexternal/torch",  # Required for system includes.
             "-fexceptions",  # Required for testing crashes.
         ],
