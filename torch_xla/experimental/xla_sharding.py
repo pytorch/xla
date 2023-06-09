@@ -72,10 +72,8 @@ class Mesh:
 
 
 class HybridMesh(Mesh):
-  device_ids: np.ndarray
   ici_mesh_shape: Tuple[int, ...]
   dcn_mesh_shape: Tuple[int, ...]
-  axis_names: Tuple[str, ...]
 
   def __init__(self,
                device_ids: Union[np.ndarray, List],
@@ -91,10 +89,8 @@ class HybridMesh(Mesh):
     if 'slice_index' in self.device_attributes[0] and np.prod(
         dcn_mesh_shape) == 1:
       raise ValueError('Provide dcn_mesh_shape to create a mesh for multislice')
-    self.device_ids = device_ids
     self.ici_mesh_shape = ici_mesh_shape
     self.dcn_mesh_shape = dcn_mesh_shape
-    self.axis_names = axis_names
     if np.prod(dcn_mesh_shape) > 1:  # multislice
       self.mesh = self._create_hybrid_device_mesh(self.ici_mesh_shape,
                                                   self.dcn_mesh_shape)
