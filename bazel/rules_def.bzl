@@ -1,8 +1,8 @@
 """Rules that simplify deps and compiler configuration for PyTorch/XLA."""
 
 load(
-    "@org_tensorflow//tensorflow:tensorflow.bzl",
-    "tf_cc_test",
+    "//tensorflow/core/platform:rules_cc.bzl",
+    "cc_test",
 )
 
 load(
