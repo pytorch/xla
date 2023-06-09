@@ -5,6 +5,11 @@ load(
     "tf_cc_test",
 )
 
+load(
+    "//tensorflow/core/platform:build_config_root.default.bzl",
+    "if_dynamic_kernels"
+)
+
 def ptxla_cc_library(
         deps = [],
         copts = [],
@@ -17,6 +22,31 @@ def ptxla_cc_library(
         ],
         **kwargs
     )
+
+# Helper functions to add kernel dependencies to tf binaries when using static
+# kernel linking.
+def tf_binary_dynamic_kernel_deps(kernels):
+    return if_dynamic_kernels(
+        extra_deps = [],
+        otherwise = kernels,
+    )
+
+def if_mkl_ml(if_true, if_false = []):
+    """Shorthand for select()'ing on whether we're building with MKL-ML.
+
+    Args:
+      if_true: expression to evaluate if building with MKL-ML.
+      if_false: expression to evaluate if building without MKL-ML
+        (i.e. without MKL at all, or with MKL-DNN only).
+
+    Returns:
+      a select evaluating to either if_true or if_false as appropriate.
+    """
+    return select({
+        "@org_tensorflow//third_party/mkl_dnn:build_with_mkl_opensource": if_false,
+        "@org_tensorflow//tensorflow/tsl/mkl:build_with_mkl": if_true,
+        "//conditions:default": if_false,
+    })
 
 def ptxla_cc_test(
         deps,
