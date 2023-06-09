@@ -10,6 +10,7 @@
 #include "absl/types/optional.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "third_party/xla_client/runtime.h"
+#include "third_party/xla_client/stablehlo_helper.h"
 #include "third_party/xla_client/xla_util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/tensor_util.h"
@@ -252,7 +253,8 @@ std::string DumpUtil::PostOrderToText(
 }
 
 std::string DumpUtil::ToHlo(c10::ArrayRef<torch::lazy::Value> values,
-                            const torch::lazy::BackendDevice& device) {
+                            const torch::lazy::BackendDevice& device,
+                            bool to_stable_hlo) {
   LoweringContext lowering_ctx("IrToHlo", device);
   for (auto& ir_value : values) {
     lowering_ctx.AddResult(
@@ -276,10 +278,13 @@ std::string DumpUtil::ToHlo(c10::ArrayRef<torch::lazy::Value> values,
     std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
         computations =
             xla::GetComputationClient()->Compile(std::move(instances));
-    return ConsumeValue(
-        xla::util::GetComputationHloText(computations[0]->computation()));
+    computation = std::move(computations[0]->move_computation());
   }
-  return ConsumeValue(xla::util::GetComputationHloText(computation));
+  if (to_stable_hlo) {
+    return hloToStablehloStr(&computation.proto());
+  } else {
+    return ConsumeValue(xla::util::GetComputationHloText(computation));
+  }
 }
 
 }  // namespace torch_xla

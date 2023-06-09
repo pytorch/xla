@@ -352,10 +352,11 @@ uint64_t GetRngSeed(const std::string& device_str) {
       GetDeviceOrCurrent(device_str));
 }
 
-std::string GetTensorsHloGraph(const std::vector<at::Tensor>& tensors) {
+std::string GetTensorsHloGraph(const std::vector<at::Tensor>& tensors,
+                               bool get_stable_hlo = false) {
   std::vector<XLATensorPtr> xtensors =
       GetXlaTensors(tensors, /*want_all=*/false);
-  return XLAGraphExecutor::Get()->DumpHloComputation(xtensors);
+  return XLAGraphExecutor::Get()->DumpHloComputation(xtensors, get_stable_hlo);
 }
 
 std::string GetLiveTensorsReport(size_t nodes_threshold,
@@ -386,6 +387,16 @@ std::string GetLiveTensorsReport(size_t nodes_threshold,
     }
   }
   return ss.str();
+}
+
+static std::string GetLiveTensorsStableHLO(
+    const std::string& device_str, const std::vector<std::string>& devices) {
+  tsl::profiler::TraceMe activity("GetLiveTensorsStableHLO",
+                                  tsl::profiler::TraceMeLevel::kInfo);
+  torch::lazy::BackendDevice device = GetDeviceOrCurrent(device_str);
+  auto tensors = XLAGraphExecutor::Get()->GetLiveTensors(&device);
+  return XLAGraphExecutor::Get()->DumpHloComputation(tensors,
+                                                     /*to_stablehlo=*/true);
 }
 
 void ClearPendingIrs(const std::string& device_str) {
@@ -1184,6 +1195,16 @@ void InitXlaModuleBindings(py::module m) {
           StepMarker(device, devices, wait);
         },
         py::arg("device") = "", py::arg("devices"), py::arg("wait") = true);
+  m.def("_get_stablehlo",
+        [](const std::vector<at::Tensor>& tensors, const std::string& device,
+           const std::vector<std::string>& devices) -> std::string {
+          NoGilSection nogil;
+          if (tensors.empty()) {
+            return GetLiveTensorsStableHLO(device, devices);
+          } else {
+            return GetTensorsHloGraph(tensors, /*get_stable_hlo=*/true);
+          }
+        });
   m.def("_xla_wait_device_ops",
         [](const std::vector<std::string>& devices) {
           NoGilSection nogil;
