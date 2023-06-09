@@ -95,9 +95,15 @@ class HybridMesh(Mesh):
     self.ici_mesh_shape = ici_mesh_shape
     self.dcn_mesh_shape = dcn_mesh_shape
     self.axis_names = axis_names
+    if np.prod(dcn_mesh_shape) > 1:  # multislice
+      self.mesh = self._create_hybrid_device_mesh(self.ici_mesh_shape,
+                                                  self.dcn_mesh_shape)
+    else:
+      self.mesh = self._create_device_mesh(self.ici_mesh_shape)
 
   def _get_physical_tpu_mesh(self, devices: Sequence[Any]) -> np.ndarray:
     r"""Rearrange TPU devices in a slice into a physical mesh."""
+    assert xm.xla_device_hw() == 'TPU'
     device_coords = [self.device_attributes[d]['coords'] for d in devices]
     dims = tuple(d + 1 for d in max(device_coords))
     out = np.empty(dims, dtype=object)
@@ -152,8 +158,11 @@ class HybridMesh(Mesh):
         transpose.append(int(y))
     return physical_mesh.transpose(transpose).reshape(mesh_shape), assignment
 
-  def _create_device_mesh(self, mesh_shape: Sequence[int],
-                          devices: Sequence[Any]) -> np.ndarray:
+  def _create_device_mesh(self,
+                          mesh_shape: Sequence[int],
+                          devices: Sequence[Any] = None) -> np.ndarray:
+    if devices is None:
+      devices = self.device_ids
     if np.prod(mesh_shape) != len(devices):
       raise ValueError(
           f'Number of devices {len(devices)} must equal the product '
@@ -164,8 +173,7 @@ class HybridMesh(Mesh):
     return device_mesh
 
   def _create_hybrid_device_mesh(self, mesh_shape: Sequence[int],
-                                 dcn_mesh_shape: Sequence[int],
-                                 devices: Sequence[Any]) -> np.ndarray:
+                                 dcn_mesh_shape: Sequence[int]) -> np.ndarray:
     granule_dict = defaultdict(list)
     slice_index_attr = [d['slice_index'] for d in self.device_attributes]
     for d, dev in enumerate(self.device_attributes):
@@ -186,12 +194,7 @@ class HybridMesh(Mesh):
     return device_mesh
 
   def get_logical_mesh(self):
-    if np.prod(self.dcn_mesh_shape) > 1:  # multislice
-      return self._create_hybrid_device_mesh(self.ici_mesh_shape,
-                                             self.dcn_mesh_shape,
-                                             self.device_ids)
-    # single slice
-    return self._create_device_mesh(self.ici_mesh_shape, self.device_ids)
+    return self.mesh
 
 
 class ShardingType(IntEnum):
