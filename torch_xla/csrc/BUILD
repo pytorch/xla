@@ -187,6 +187,7 @@ ptxla_cc_library(
         "//third_party/xla_client:tf_logging",
         "//third_party/xla_client:util",
         "@com_google_absl//absl/strings",
+        "@xla//xla/service:hlo_proto_util",
         "@xla//xla:shape_util",
     ],
 )
