@@ -10,11 +10,6 @@ load(
     "clean_dep",
 )
 
-load(
-    "//tensorflow/core/platform:build_config_root.default.bzl",
-    "if_dynamic_kernels"
-)
-
 def if_dynamic_kernels(extra_deps, otherwise = []):
     return select({
         str(Label("//tensorflow:dynamic_loaded_kernels")): extra_deps,
