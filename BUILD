@@ -7,13 +7,6 @@ load("@org_tensorflow//tensorflow/tsl/platform/default:rules_cc.bzl", "cc_binary
 
 cc_binary(
     name = "_XLAC.so",
-    copts = [
-        "-DTORCH_API_INCLUDE_EXTENSION_H",
-        "-DTORCH_EXTENSION_NAME=_XLAC",
-        "-fopenmp",
-        "-fPIC",
-        "-fwrapv",
-    ],
     linkopts = [
         "-Wl,-rpath,$$ORIGIN/torch_xla/lib",  # for libtpu
     ],
