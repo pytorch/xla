@@ -492,10 +492,10 @@ void XLATensor::SetTensor(at::Tensor tensor) {
 }
 
 void XLATensor::UpdateFromTensor(at::Tensor tensor, bool sync) {
-  torch::lazy::BackendDevice device = ShardingUtil::UseVirtualDevice()
-                                          ? ParseDeviceString("SPMD:0")
-                                          : GetDevice();
   if (sync) {
+    torch::lazy::BackendDevice device = ShardingUtil::UseVirtualDevice()
+                                            ? ParseDeviceString("SPMD:0")
+                                            : GetDevice();
     at::Tensor typed_tensor =
         torch::lazy::CopyTensor(tensor, dtype(), /*copy=*/false);
     SetIrValue(GetIrValueForTensor(typed_tensor, device),
@@ -506,7 +506,8 @@ void XLATensor::UpdateFromTensor(at::Tensor tensor, bool sync) {
     data()->handle = nullptr;
     AssignIrValue(torch::lazy::Value());
     if (data()->view != nullptr) {
-      torch::lazy::Value ir_value = GetIrValueForTensor(coyped_tensor, device);
+      torch::lazy::Value ir_value =
+          GetIrValueForTensor(coyped_tensor, GetDevice());
       data()->view = UpdateView(data()->view, std::move(ir_value));
     }
   }

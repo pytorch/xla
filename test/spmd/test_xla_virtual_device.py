@@ -77,6 +77,15 @@ class VirtualDeviceTest(test_xla_sharding_base.XlaShardingTest):
     self.assertLess(outbound_with_virtual_device,
                     2 * xt1.nelement() * xt1.element_size())
 
+  def test_view_assign(self):
+    t = torch.randn(4, 4)
+    xt = t.to(xm.xla_device())
+    s = xt.narrow(0, 0, 2)
+    s.copy_(torch.ones(2, 4))
+    self.assertTrue(torch.allclose(s.cpu(), torch.ones(2, 4)))
+    self.assertTrue(torch.allclose(xt[:2], s))
+    self.assertTrue(torch.allclose(xt[2:].cpu(), t[2:]))
+
 
 if __name__ == '__main__':
   test = unittest.main()
