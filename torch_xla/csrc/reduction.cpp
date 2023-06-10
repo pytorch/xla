@@ -11,6 +11,7 @@
 #include "xla/client/lib/constants.h"
 #include "xla/client/lib/matrix.h"
 #include "xla/literal_util.h"
+#include "xla/xla_data.pb.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"

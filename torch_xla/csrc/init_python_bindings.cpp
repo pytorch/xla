@@ -29,6 +29,7 @@
 #include "xla/python/profiler/internal/traceme_wrapper.h"
 #include "xla/service/hlo_parser.h"
 #include "xla/service/hlo.pb.h"
+#include "xla/xla_data.pb.h"
 // #include "tensorflow/python/profiler/internal/profiler_pywrap_impl.h"
 #include "tsl/platform/env.h"
 #include "tsl/profiler/lib/traceme.h"

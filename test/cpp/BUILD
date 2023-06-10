@@ -24,6 +24,8 @@ ptxla_cc_library(
     hdrs = ["torch_xla_test.h"],
     deps = [
         ":metrics_snapshot",
+        "@xla//xla:xla_data_proto_cc_impl",
+        "@xla//xla:xla_data_proto_cc",
         "//third_party/xla_client:sys_util",
         "//third_party/xla_client:tf_logging",
         "//torch_xla/csrc:tensor",

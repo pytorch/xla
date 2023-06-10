@@ -16,6 +16,7 @@
 #include "xla/literal_util.h"
 #include "xla/permutation_util.h"
 #include "xla/types.h"
+#include "xla/xla_data.pb.h"
 #include "tsl/platform/bfloat16.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "third_party/xla_client/util.h"

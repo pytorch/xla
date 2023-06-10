@@ -9,6 +9,7 @@
 #include "xla/client/lib/pooling.h"
 #include "xla/primitive_util.h"
 #include "xla/shape_util.h"
+#include "xla/xla_data.pb.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/convert_ops.h"

@@ -7,6 +7,7 @@
 #include "xla/client/xla_builder.h"
 #include "xla/literal_util.h"
 #include "xla/stream_executor/dnn.h"
+#include "xla/xla_data.pb.h"
 #include "third_party/xla_client/debug_macros.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/shape_helper.h"
