@@ -454,7 +454,7 @@ cc_test(
         "@xla//xla/client:xla_computation",
         "@tsl//tsl/lib/core:status_test_util",
         "@tsl//tsl/platform:errors",
-        "@tsl//tsl/protobuf:error_codes_proto_impl"
+        "@tsl//tsl/protobuf:error_codes_proto_impl",
         "@tsl//tsl/platform:status_matchers",
     ],
 )
