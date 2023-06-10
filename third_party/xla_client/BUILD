@@ -25,8 +25,8 @@ exports_files([
 ])
 
 config_setting(
-  name = "pjrt_only",
-  define_values = {"pjrt_only": "true"},
+  name = "disable_xrt",
+  define_values = {"disable_xrt": "true"},
 )
 
 tf_proto_library_cc(
@@ -69,7 +69,7 @@ cc_library(
     "runtime.h",
   ],
   local_defines = select({
-    ":pjrt_only": ["PJRT_ONLY"],
+    ":disable_xrt": ["DISABLE_XRT"],
     "//conditions:default": [],
   }),
   deps = [
@@ -78,7 +78,7 @@ cc_library(
     ":pjrt_computation_client",
     "@org_tensorflow//tensorflow/tsl/platform:stacktrace",
   ] + select({
-    ":pjrt_only": [],
+    ":disable_xrt": [],
     "//conditions:default": [
       ":xrt_computation_client",
       ":xrt_local_service",
@@ -354,6 +354,19 @@ cc_library(
         "@org_tensorflow//tensorflow/tsl/lib/io:record_reader",
         "@org_tensorflow//tensorflow/tsl/platform:errors",
         "@org_tensorflow//tensorflow/tsl/platform:strcat",
+    ],
+)
+
+cc_library(
+    name = "stablehlo_helper",
+    srcs = ["stablehlo_helper.cc"],
+    hdrs = ["stablehlo_helper.h"],
+    deps = [
+        ":types",
+        ":xla_util",
+        "@org_tensorflow//tensorflow/compiler/xla/translate/hlo_to_mhlo:hlo_to_mlir_hlo",
+        "@org_tensorflow//tensorflow/compiler/xla/translate/mhlo_to_hlo:mlir_hlo_to_hlo",
+        "@org_tensorflow//tensorflow/compiler/xla/mlir_hlo:all_passes",
     ],
 )
 

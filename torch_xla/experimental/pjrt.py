@@ -1,6 +1,6 @@
 from torch_xla import runtime
 from torch_xla._internal import pjrt
-from torch_xla.experimental.deprecation import register_deprecated
+from torch_xla.experimental.deprecation import deprecated, register_deprecated
 import torch_xla.core.xla_model as xm
 
 from . import pjrt as this_module
@@ -17,7 +17,6 @@ aliases = [
     runtime.local_process_count,
     runtime.process_count,
     runtime.process_index,
-    runtime.rendezvous,
     runtime.set_device_type,
     runtime.using_pjrt,
     runtime.world_size,
@@ -27,6 +26,8 @@ aliases = [
     pjrt.run_multiprocess,
     xm.broadcast_master_param,
 ]
+
+rendezvous = deprecated(this_module, xm.xla_rendezvous)
 
 for alias in aliases:
   register_deprecated(this_module, alias)
