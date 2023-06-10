@@ -116,6 +116,8 @@ cc_library(
     "@com_google_absl//absl/types:optional",
     "@com_google_absl//absl/types:span",
     "@tsl//tsl/platform:stacktrace_handler",
+    "@tsl//tsl/protobuf:autotuning_proto_cc",
+    "@tsl//tsl/protobuf:dnn_proto_cc",
   ],
 )
 
@@ -384,6 +386,8 @@ cc_library(
         "@xla//xla/client:xla_builder",
         "@xla//xla/stream_executor:dnn",
         "@xla//xla:xla_data_proto_cc",
+        "@tsl//tsl/protobuf:autotuning_proto_cc",
+        "@tsl//tsl/protobuf:dnn_proto_cc",
     ],
 )
 
@@ -450,6 +454,7 @@ cc_test(
         "@xla//xla/client:xla_computation",
         "@tsl//tsl/lib/core:status_test_util",
         "@tsl//tsl/platform:errors",
+        "@tsl//tsl/protobuf:error_codes_proto_impl"
         "@tsl//tsl/platform:status_matchers",
     ],
 )
@@ -493,6 +498,8 @@ cc_binary(
         "@tsl//tsl/profiler/rpc/client:profiler_client_impl",
         "@tsl//tsl/profiler/rpc/client:save_profile",
         "@tsl//tsl/protobuf:bfc_memory_map_proto_cc_impl",
+        "@tsl//tsl/protobuf:autotuning_proto_cc",
+        "@tsl//tsl/protobuf:dnn_proto_cc",
         "@xla//xla:xla_data_cc_grpc_proto",
         "@xla//xla:xla_data_proto_cc_impl",
         "@xla//xla:xla_proto_cc_impl",
