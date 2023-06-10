@@ -1,14 +1,15 @@
 """Rules that simplify deps and compiler configuration for PyTorch/XLA."""
 
-load(
-    "//tensorflow/tsl/platform/default:rules_cc.bzl",
-    "cc_test",
-)
+def clean_dep(target):
+    """Returns string to 'target' in @org_tensorflow repository.
 
-load(
-    "//:tensorflow/tsl/tsl.bzl",
-    "clean_dep",
-)
+    Use this function when referring to targets in the @org_tensorflow
+    repository from macros that may be called from external repositories.
+    """
+
+    # A repo-relative label is resolved relative to the file in which the
+    # Label() call appears, i.e. @org_tensorflow.
+    return str(Label(target))
 
 def if_dynamic_kernels(extra_deps, otherwise = []):
     return select({
@@ -72,7 +73,7 @@ def ptxla_cc_test(
             "@torch//:libtorch_python",
         ] + tf_binary_dynamic_kernel_deps([]) + if_mkl_ml(
             [
-                clean_dep("//third_party/mkl:intel_binary_blob"),
+                clean_dep("//third_party/mkl:intel_binary_blob"), # maybe no clean_dep func?
             ],
         ),
         linkstatic = True,
