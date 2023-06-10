@@ -292,6 +292,8 @@ ptxla_cc_library(
         "@xla//xla/service:hlo_proto_util",
         "@xla//xla/service:sharding_propagation",
         "@xla//xla/service/spmd:spmd_partitioner",
+        "@tsl//tsl/protobuf:autotuning_proto_cc",
+        "@tsl//tsl/protobuf:dnn_proto_cc",
         "@tsl//tsl/platform:env",
         "@tsl//tsl/profiler/lib:traceme",
     ],
