@@ -8,9 +8,11 @@ load(
 def ptxla_cc_library(
         deps = [],
         copts = [],
+        linkopts = [],
         **kwargs):
     native.cc_library(
-        copts = copts + ["-isystemexternal/torch"],  # Required for system includes.
+        copts = copts + ["-g", "-O0", "-isystemexternal/torch"],  # Required for system includes.
+        linkopts = linkopts + ["-g"],
         deps = deps + [
             "@torch//:headers",
             "@torch//:runtime_headers",
