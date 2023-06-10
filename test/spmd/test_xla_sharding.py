@@ -424,6 +424,12 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     t3_expected = [9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0]
     self.assertEqual(t3.tolist()[0], t3_expected)
 
+  def test_hybrid_mesh(self):
+    mesh = self._get_mesh((1, self.n_devices))
+    hybrid_mesh = self._get_hybrid_mesh((1, self.n_devices))
+    # Check if shape of hybrid mesh matches mesh
+    self.assertEqual(mesh.shape, hybrid_mesh.shape)
+
 
 if __name__ == '__main__':
   test = unittest.main()

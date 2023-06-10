@@ -75,31 +75,34 @@ class HybridMesh(Mesh):
   ici_mesh_shape: Tuple[int, ...]
   dcn_mesh_shape: Tuple[int, ...]
 
-  def __init__(self,
-               device_ids: Union[np.ndarray, List],
+  def __init__(self, *,
                ici_mesh_shape: Tuple[int, ...],
                dcn_mesh_shape: Tuple[int, ...] = None,
                axis_names: Tuple[str, ...] = None):
     if dcn_mesh_shape == None:
       dcn_mesh_shape = tuple([1] * len(ici_mesh_shape))
-    mesh_shape = tuple([x * y for x, y in zip(ici_mesh_shape, dcn_mesh_shape)])
     assert len(ici_mesh_shape) == len(dcn_mesh_shape)
-    super().__init__(device_ids, mesh_shape, axis_names)
-    self.device_attributes = pjrt.global_device_attributes()
+    mesh_shape = tuple([x * y for x, y in zip(ici_mesh_shape, dcn_mesh_shape)])
+    self.device_attributes = xr.global_device_attributes()
     if 'slice_index' in self.device_attributes[0] and np.prod(
         dcn_mesh_shape) == 1:
       raise ValueError('Provide dcn_mesh_shape to create a mesh for multislice')
+    if 'slice_index' not in self.device_attributes[0] and np.prod(dcn_mesh_shape) > 1:
+      raise ValueError('Invalid dcn_mesh_shape for single slice mesh')
     self.ici_mesh_shape = ici_mesh_shape
     self.dcn_mesh_shape = dcn_mesh_shape
-    if np.prod(dcn_mesh_shape) > 1:  # multislice
-      self.mesh = self._create_hybrid_device_mesh(self.ici_mesh_shape,
+    if np.prod(dcn_mesh_shape) > 1 and 'slice_index' in self.device_attributes[0]:  # multislice
+      mesh = self._create_hybrid_device_mesh(self.ici_mesh_shape,
                                                   self.dcn_mesh_shape)
     else:
-      self.mesh = self._create_device_mesh(self.ici_mesh_shape)
+      mesh = self._create_device_mesh(self.ici_mesh_shape)
+    device_ids = mesh.flatten()
+    print(device_ids, mesh, mesh_shape)
+    super().__init__(device_ids, mesh_shape, axis_names)
 
   def _get_physical_tpu_mesh(self, devices: Sequence[Any]) -> np.ndarray:
     r"""Rearrange TPU devices in a slice into a physical mesh."""
-    assert xm.xla_device_hw() == 'TPU'
+    assert xm.xla_device_hw(xm.xla_device()) == 'TPU'
     device_coords = [self.device_attributes[d]['coords'] for d in devices]
     dims = tuple(d + 1 for d in max(device_coords))
     out = np.empty(dims, dtype=object)
@@ -158,7 +161,7 @@ class HybridMesh(Mesh):
                           mesh_shape: Sequence[int],
                           devices: Sequence[Any] = None) -> np.ndarray:
     if devices is None:
-      devices = self.device_ids
+      devices = np.arange(xr.global_device_count())
     if np.prod(mesh_shape) != len(devices):
       raise ValueError(
           f'Number of devices {len(devices)} must equal the product '
@@ -168,19 +171,22 @@ class HybridMesh(Mesh):
         physical_mesh, mesh_shape)
     return device_mesh
 
-  def _create_hybrid_device_mesh(self, mesh_shape: Sequence[int],
+  def _create_hybrid_device_mesh(self, ici_mesh_shape: Sequence[int],
                                  dcn_mesh_shape: Sequence[int]) -> np.ndarray:
+    """Creates a device mesh based on ici and dcn mesh shape.
+    """
     granule_dict = defaultdict(list)
-    slice_index_attr = [d['slice_index'] for d in self.device_attributes]
     for d, dev in enumerate(self.device_attributes):
       granule_dict[dev['slice_index']].append(d)
+    # sorts devices based on slice_index.
     granules = list(granule_dict[key] for key in sorted(granule_dict.keys()))
     if np.prod(dcn_mesh_shape) != len(granules):
       raise ValueError(
           f'Number of slices {len(granules)} must equal the product of '
           f'dcn_mesh_shape {dcn_mesh_shape}')
+    # creates a seperate internal mesh for each slice.
     per_granule_meshes = [
-        self._create_device_mesh(mesh_shape, granule) for granule in granules
+        self._create_device_mesh(ici_mesh_shape, granule) for granule in granules
     ]
     granule_mesh = np.arange(len(granules)).reshape(dcn_mesh_shape)
     blocks = np.vectorize(
@@ -188,9 +194,6 @@ class HybridMesh(Mesh):
             granule_mesh)
     device_mesh = np.block(blocks.tolist())
     return device_mesh
-
-  def get_logical_mesh(self):
-    return self.mesh
 
 
 class ShardingType(IntEnum):
