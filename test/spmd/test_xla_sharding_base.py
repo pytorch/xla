@@ -39,4 +39,4 @@ class XlaShardingTest(unittest.TestCase):
     return xs.Mesh(device_ids, mesh_shape)
 
   def _get_hybrid_mesh(self, ici_mesh_shape):
-    return xs.HybridMesh(ici_mesh_shape = ici_mesh_shape)
+    return xs.HybridMesh(ici_mesh_shape=ici_mesh_shape)

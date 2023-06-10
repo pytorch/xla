@@ -75,7 +75,8 @@ class HybridMesh(Mesh):
   ici_mesh_shape: Tuple[int, ...]
   dcn_mesh_shape: Tuple[int, ...]
 
-  def __init__(self, *,
+  def __init__(self,
+               *,
                ici_mesh_shape: Tuple[int, ...],
                dcn_mesh_shape: Tuple[int, ...] = None,
                axis_names: Tuple[str, ...] = None):
@@ -87,13 +88,15 @@ class HybridMesh(Mesh):
     if 'slice_index' in self.device_attributes[0] and np.prod(
         dcn_mesh_shape) == 1:
       raise ValueError('Provide dcn_mesh_shape to create a mesh for multislice')
-    if 'slice_index' not in self.device_attributes[0] and np.prod(dcn_mesh_shape) > 1:
+    if 'slice_index' not in self.device_attributes[0] and np.prod(
+        dcn_mesh_shape) > 1:
       raise ValueError('Invalid dcn_mesh_shape for single slice mesh')
     self.ici_mesh_shape = ici_mesh_shape
     self.dcn_mesh_shape = dcn_mesh_shape
-    if np.prod(dcn_mesh_shape) > 1 and 'slice_index' in self.device_attributes[0]:  # multislice
+    if np.prod(dcn_mesh_shape) > 1 and 'slice_index' in self.device_attributes[
+        0]:  # multislice
       mesh = self._create_hybrid_device_mesh(self.ici_mesh_shape,
-                                                  self.dcn_mesh_shape)
+                                             self.dcn_mesh_shape)
     else:
       mesh = self._create_device_mesh(self.ici_mesh_shape)
     device_ids = mesh.flatten()
@@ -186,7 +189,8 @@ class HybridMesh(Mesh):
           f'dcn_mesh_shape {dcn_mesh_shape}')
     # creates a seperate internal mesh for each slice.
     per_granule_meshes = [
-        self._create_device_mesh(ici_mesh_shape, granule) for granule in granules
+        self._create_device_mesh(ici_mesh_shape, granule)
+        for granule in granules
     ]
     granule_mesh = np.arange(len(granules)).reshape(dcn_mesh_shape)
     blocks = np.vectorize(
