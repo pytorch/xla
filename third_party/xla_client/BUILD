@@ -428,6 +428,8 @@ cc_library(
         "@xla//xla:shape_util",
         "@xla//xla:status_macros",
         "@xla//xla:types",
+        "@xla//xla:xla_proto_cc_impl",
+        "@xla//xla:xla_proto_cc",
         "@xla//xla/client:xla_computation",
         "@xla//xla/service:hlo_proto_cc",
         "@xla//xla/service:platform_util",
