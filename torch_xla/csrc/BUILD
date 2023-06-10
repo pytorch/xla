@@ -153,6 +153,8 @@ ptxla_cc_library(
         "@xla//xla/service:hlo_proto_util",
         "@xla//xla/stream_executor:dnn",
         "@tsl//tsl/platform:errors",
+        "@tsl//tsl/protobuf:autotuning_proto",
+        "@tsl//tsl/protobuf:dnn_proto",
         "@com_google_absl//absl/container:inlined_vector",
         "@tsl//tsl/profiler/lib:traceme",
         "@local_config_python//:python_headers",
