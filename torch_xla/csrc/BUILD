@@ -133,6 +133,8 @@ ptxla_cc_library(
         "@xla//xla:permutation_util",
         "@xla//xla:shape_util",
         "@xla//xla:types",
+        "@xla//xla:xla_proto_cc_impl",
+        "@xla//xla:xla_proto_cc",
         "@xla//xla/client:xla_builder",
         "@xla//xla/client/lib:arithmetic",
         "@xla//xla/client/lib:comparators",
