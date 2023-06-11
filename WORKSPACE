@@ -51,10 +51,10 @@ http_archive(
     #     "//tf_patches:triton_filesystem.diff",
     #     "//tf_patches:xplane.diff",
     # ],
-    sha256 = "07fec112d2e1586d90200e3dc2948663d952d8ff3136aa530c427a9547c673a9",
-    strip_prefix = "xla-712e0f9166de9e12c082f536e6716a00ad1bd4d2",
+    sha256 = "4dc9d5b188b57f9ae1f4480b6f09deda752309d01c6ab27fb77d40ce418b3a7b",
+    strip_prefix = "xla-add800e5265b88d660bafc309937486c7d2c06b5",
     urls = [
-        "https://github.com/openxla/xla/archive/712e0f9166de9e12c082f536e6716a00ad1bd4d2.tar.gz",
+        "https://github.com/openxla/xla/archive/add800e5265b88d660bafc309937486c7d2c06b5.tar.gz",
     ],
 )
 
