@@ -354,12 +354,6 @@ cc_library(
         "@xla//xla/stream_executor/gpu:gpu_types_header",
     ] + if_cuda_is_configured([
         "@local_config_nccl//:nccl",
-        "@xla//xla/stream_executor/gpu:gpu_executor_header",
-        "@xla//xla/stream_executor/gpu:gpu_activation_header",
-        "@xla//xla/stream_executor/gpu:gpu_helpers_header",
-        "@xla//xla/stream_executor/gpu:gpu_stream_header",
-        "@xla//xla/stream_executor/gpu:gpu_timer_header",
-        "@xla//xla/stream_executor/gpu:gpu_types_header",
     ]),
 )
 
@@ -578,12 +572,6 @@ cc_library(
         "@tsl//tsl/protobuf:autotuning_proto_cc_impl",
         "@tsl//tsl/protobuf:dnn_proto_cc",
         "@tsl//tsl/protobuf:dnn_proto_cc_impl",
-        "@xla//xla/stream_executor/gpu:gpu_executor_header",
-        "@xla//xla/stream_executor/gpu:gpu_activation_header",
-        "@xla//xla/stream_executor/gpu:gpu_helpers_header",
-        "@xla//xla/stream_executor/gpu:gpu_stream_header",
-        "@xla//xla/stream_executor/gpu:gpu_timer_header",
-        "@xla//xla/stream_executor/gpu:gpu_types_header",
     ],
 )
 
