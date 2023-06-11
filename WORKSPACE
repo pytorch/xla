@@ -51,7 +51,7 @@ http_archive(
     #     "//tf_patches:triton_filesystem.diff",
     #     "//tf_patches:xplane.diff",
     # ],
-    sha256 = "a497d11591b0145915f374f02f844783a849f0d6aa7a19faf5b2c4d84eb1c480",
+    sha256 = "e3d0c9fe4a566b620699ddcbc1b96763c2e996833778e102f326009d56d927e3",
     strip_prefix = "xla-d5e43371a0fa6e185354a839e49da3960ed3dfa2",
     urls = [
         "https://github.com/openxla/xla/archive/d5e43371a0fa6e185354a839e49da3960ed3dfa2.tar.gz",
