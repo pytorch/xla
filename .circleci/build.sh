@@ -41,6 +41,9 @@ apply_patches
 
 python -c "import fcntl; fcntl.fcntl(1, fcntl.F_SETFL, 0)"
 
+python -c 'print("check curl version!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")'
+python -c "curl --version"
+
 python setup.py install
 
 sccache --show-stats
