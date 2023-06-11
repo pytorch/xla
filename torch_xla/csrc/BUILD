@@ -180,6 +180,12 @@ ptxla_cc_library(
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:optional",
         "@xla//xla/client:xla_builder",
+        "@xla//xla/stream_executor/gpu:gpu_executor_header",
+        "@xla//xla/stream_executor/gpu:gpu_activation_header",
+        "@xla//xla/stream_executor/gpu:gpu_helpers_header",
+        "@xla//xla/stream_executor/gpu:gpu_stream_header",
+        "@xla//xla/stream_executor/gpu:gpu_timer_header",
+        "@xla//xla/stream_executor/gpu:gpu_types_header",
     ],
 )
 
@@ -191,6 +197,12 @@ ptxla_cc_library(
         "//third_party/xla_client:runtime",
         "@xla//xla/client:xla_builder",
         "@xla//xla/client:xla_computation",
+        "@xla//xla/stream_executor/gpu:gpu_executor_header",
+        "@xla//xla/stream_executor/gpu:gpu_activation_header",
+        "@xla//xla/stream_executor/gpu:gpu_helpers_header",
+        "@xla//xla/stream_executor/gpu:gpu_stream_header",
+        "@xla//xla/stream_executor/gpu:gpu_timer_header",
+        "@xla//xla/stream_executor/gpu:gpu_types_header",
     ],
 )
 
@@ -207,6 +219,12 @@ ptxla_cc_library(
         "@com_google_absl//absl/strings",
         "@xla//xla/service:hlo_proto_util",
         "@xla//xla:shape_util",
+        "@xla//xla/stream_executor/gpu:gpu_executor_header",
+        "@xla//xla/stream_executor/gpu:gpu_activation_header",
+        "@xla//xla/stream_executor/gpu:gpu_helpers_header",
+        "@xla//xla/stream_executor/gpu:gpu_stream_header",
+        "@xla//xla/stream_executor/gpu:gpu_timer_header",
+        "@xla//xla/stream_executor/gpu:gpu_types_header",
     ],
 )
 
@@ -215,6 +233,12 @@ cc_library(
     hdrs = ["ops/einsum_utilities.h"],
     deps = [
         "//third_party/xla_client:debug_macros",
+        "@xla//xla/stream_executor/gpu:gpu_executor_header",
+        "@xla//xla/stream_executor/gpu:gpu_activation_header",
+        "@xla//xla/stream_executor/gpu:gpu_helpers_header",
+        "@xla//xla/stream_executor/gpu:gpu_stream_header",
+        "@xla//xla/stream_executor/gpu:gpu_timer_header",
+        "@xla//xla/stream_executor/gpu:gpu_types_header",
     ],
 )
 
@@ -227,6 +251,12 @@ ptxla_cc_library(
         "//third_party/xla_client:debug_macros",
         "//third_party/xla_client:metrics",
         "//third_party/xla_client:tf_logging",
+        "@xla//xla/stream_executor/gpu:gpu_executor_header",
+        "@xla//xla/stream_executor/gpu:gpu_activation_header",
+        "@xla//xla/stream_executor/gpu:gpu_helpers_header",
+        "@xla//xla/stream_executor/gpu:gpu_stream_header",
+        "@xla//xla/stream_executor/gpu:gpu_timer_header",
+        "@xla//xla/stream_executor/gpu:gpu_types_header",
     ],
 )
 
@@ -238,6 +268,12 @@ ptxla_cc_library(
         "//third_party/xla_client:sys_util",
         "@com_google_absl//absl/strings",
         "@tsl//tsl/platform:stacktrace",
+        "@xla//xla/stream_executor/gpu:gpu_executor_header",
+        "@xla//xla/stream_executor/gpu:gpu_activation_header",
+        "@xla//xla/stream_executor/gpu:gpu_helpers_header",
+        "@xla//xla/stream_executor/gpu:gpu_stream_header",
+        "@xla//xla/stream_executor/gpu:gpu_timer_header",
+        "@xla//xla/stream_executor/gpu:gpu_types_header",
     ],
 )
 
@@ -247,6 +283,12 @@ ptxla_cc_library(
     deps = [
         "@com_google_absl//absl/types:span",
         "@xla//xla/client:xla_builder",
+        "@xla//xla/stream_executor/gpu:gpu_executor_header",
+        "@xla//xla/stream_executor/gpu:gpu_activation_header",
+        "@xla//xla/stream_executor/gpu:gpu_helpers_header",
+        "@xla//xla/stream_executor/gpu:gpu_stream_header",
+        "@xla//xla/stream_executor/gpu:gpu_timer_header",
+        "@xla//xla/stream_executor/gpu:gpu_types_header",
     ],
 )
 
@@ -258,6 +300,12 @@ ptxla_cc_library(
         "@com_google_absl//absl/types:span",
         "@xla//xla:shape_util",
         "@xla//xla:types",
+        "@xla//xla/stream_executor/gpu:gpu_executor_header",
+        "@xla//xla/stream_executor/gpu:gpu_activation_header",
+        "@xla//xla/stream_executor/gpu:gpu_helpers_header",
+        "@xla//xla/stream_executor/gpu:gpu_stream_header",
+        "@xla//xla/stream_executor/gpu:gpu_timer_header",
+        "@xla//xla/stream_executor/gpu:gpu_types_header",
     ],
 )
 
@@ -265,6 +313,14 @@ cc_library(
     name = "version",
     srcs = ["version.cpp"],
     hdrs = ["version.h"],
+    deps = [
+        "@xla//xla/stream_executor/gpu:gpu_executor_header",
+        "@xla//xla/stream_executor/gpu:gpu_activation_header",
+        "@xla//xla/stream_executor/gpu:gpu_helpers_header",
+        "@xla//xla/stream_executor/gpu:gpu_stream_header",
+        "@xla//xla/stream_executor/gpu:gpu_timer_header",
+        "@xla//xla/stream_executor/gpu:gpu_types_header",
+    ],
 )
 
 ptxla_cc_library(
@@ -334,6 +390,12 @@ ptxla_cc_library(
         "//third_party/xla_client:cache",
         "//third_party/xla_client:computation_client",
         "@com_google_absl//absl/types:span",
+        "@xla//xla/stream_executor/gpu:gpu_executor_header",
+        "@xla//xla/stream_executor/gpu:gpu_activation_header",
+        "@xla//xla/stream_executor/gpu:gpu_helpers_header",
+        "@xla//xla/stream_executor/gpu:gpu_stream_header",
+        "@xla//xla/stream_executor/gpu:gpu_timer_header",
+        "@xla//xla/stream_executor/gpu:gpu_types_header",
     ],
 )
 
@@ -344,6 +406,12 @@ cc_library(
     deps = [
         "//third_party/xla_client:debug_macros",
         "@xla//xla/client:xla_builder",
+        "@xla//xla/stream_executor/gpu:gpu_executor_header",
+        "@xla//xla/stream_executor/gpu:gpu_activation_header",
+        "@xla//xla/stream_executor/gpu:gpu_helpers_header",
+        "@xla//xla/stream_executor/gpu:gpu_stream_header",
+        "@xla//xla/stream_executor/gpu:gpu_timer_header",
+        "@xla//xla/stream_executor/gpu:gpu_types_header",
     ],
 )
 
@@ -354,6 +422,12 @@ ptxla_cc_library(
     deps = [
         ":device",
         "//third_party/xla_client:computation_client",
+        "@xla//xla/stream_executor/gpu:gpu_executor_header",
+        "@xla//xla/stream_executor/gpu:gpu_activation_header",
+        "@xla//xla/stream_executor/gpu:gpu_helpers_header",
+        "@xla//xla/stream_executor/gpu:gpu_stream_header",
+        "@xla//xla/stream_executor/gpu:gpu_timer_header",
+        "@xla//xla/stream_executor/gpu:gpu_types_header",
     ],
 )
 
@@ -365,5 +439,11 @@ ptxla_cc_library(
         ":xla_data",
         "//third_party/xla_client:computation_client",
         "@com_google_absl//absl/types:span",
+        "@xla//xla/stream_executor/gpu:gpu_executor_header",
+        "@xla//xla/stream_executor/gpu:gpu_activation_header",
+        "@xla//xla/stream_executor/gpu:gpu_helpers_header",
+        "@xla//xla/stream_executor/gpu:gpu_stream_header",
+        "@xla//xla/stream_executor/gpu:gpu_timer_header",
+        "@xla//xla/stream_executor/gpu:gpu_types_header",
     ],
 )
