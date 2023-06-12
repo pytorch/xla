@@ -27,6 +27,7 @@
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/view.h"
+#include "torch_xla/csrc/ir_dump_util.h"
 
 namespace torch_xla {
 
@@ -105,7 +106,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   // attached the tensors.
   // We don't use upstream DumpBackendComputation given we have our own format.
   std::string DumpHloComputation(const std::vector<XLATensorPtr>& tensors,
-                                 bool dump_stablehlo = false);
+                                 EmitMode mode = EmitMode::kHloReadable);
 
   // Retrieves the set of XLA tensors which are currently live in the system,
   // for the given device. If device is nullptr, the live tensors for all
