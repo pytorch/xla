@@ -356,12 +356,3 @@ index 8338aad7e..310bb474d 100644
 +   if (self->index >= total_size) {
 +     PyErr_Format(PyExc_ValueError,
 +                  "UnknownField does not exist. "
-diff --git a/third_party/pybind11_protobuf/BUILD b/third_party/pybind11_protobuf/BUILD
-deleted file mode 100644
-index 3b946e563d4..00000000000
---- a/third_party/pybind11_protobuf/BUILD
-+++ /dev/null
-@@ -1,3 +0,0 @@
--# Necessary for bazel to recognize this as a package.
--
--# copybara:uncomment package(default_applicable_licenses = ["//tensorflow:license"])
