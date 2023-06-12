@@ -642,8 +642,6 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
   // `PrepareOutputShardingPropagation` function.
   std::vector<XLATensor::ShardingSpecPtr> sharding_specs(placeholders.size());
   if (ShardingUtil::UseVirtualDevice()) {
-    // std::vector<XLATensor::ShardingSpecPtr>
-    // sharding_specs(placeholders.size());
     auto computation_proto =
         cachedComputation->computation->computation().proto();
     std::vector<xla::OpSharding> output_shardings;
