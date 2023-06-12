@@ -15,6 +15,8 @@
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/tsl/platform/bfloat16.h"
+#include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/layout_manager.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/multi_wait.h"
@@ -23,8 +25,6 @@
 #include "torch_xla/csrc/runtime/tf_logging.h"
 #include "torch_xla/csrc/runtime/thread_pool.h"
 #include "torch_xla/csrc/runtime/util.h"
-#include "torch_xla/csrc/helpers.h"
-#include "torch_xla/csrc/layout_manager.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/xla_backend_impl.h"
 #include "torch_xla/csrc/xla_sharding_util.h"
@@ -55,7 +55,8 @@ bool ShouldUseF16() {
 }
 
 bool ShouldDowncastToBF16() {
-  bool downcast_bf16 = runtime::sys_util::GetEnvBool("XLA_DOWNCAST_BF16", false);
+  bool downcast_bf16 =
+      runtime::sys_util::GetEnvBool("XLA_DOWNCAST_BF16", false);
   if (downcast_bf16) {
     TF_LOG(INFO) << "Downcasting floating point values, F64->F32, F32->BF16";
   }
@@ -63,7 +64,8 @@ bool ShouldDowncastToBF16() {
 }
 
 bool ShouldDowncastToF16() {
-  bool downcast_fp16 = runtime::sys_util::GetEnvBool("XLA_DOWNCAST_FP16", false);
+  bool downcast_fp16 =
+      runtime::sys_util::GetEnvBool("XLA_DOWNCAST_FP16", false);
   if (downcast_fp16) {
     TF_LOG(INFO) << "Downcasting floating point values, F64->F32, F32->FP16";
   }
@@ -71,7 +73,8 @@ bool ShouldDowncastToF16() {
 }
 
 bool ShouldUse32BitLong() {
-  bool use_32bit_long = runtime::sys_util::GetEnvBool("XLA_USE_32BIT_LONG", false);
+  bool use_32bit_long =
+      runtime::sys_util::GetEnvBool("XLA_USE_32BIT_LONG", false);
   if (use_32bit_long) {
     TF_LOG(INFO) << "Using 32bit integers for kLong values";
   }
@@ -571,7 +574,7 @@ void TransferToServerAsync(std::shared_ptr<DataAsync> async,
   auto update_data = [async, async_xla_datas]() {
     try {
       runtime::GetComputationClient()->TransferToServer(async->source_tensors,
-                                                    async_xla_datas);
+                                                        async_xla_datas);
     } catch (...) {
       // There are two paths of discovery of an exception happening on an
       // asynchronous task. One happens if the creator of the asynchronous task
@@ -604,8 +607,8 @@ torch::lazy::BackendDataPtr TensorToXlaData(
       // here and simply return a placeholder for the backend data ptr.
       // Data will only be transferred via CreateTensorsData, when users
       // call the mark_sharding API.
-      return WrapXlaData(
-          runtime::GetComputationClient()->CreateDataPlaceholder("SPMD:0", shape));
+      return WrapXlaData(runtime::GetComputationClient()->CreateDataPlaceholder(
+          "SPMD:0", shape));
     }
 
     // The tensor is bypassing the virtual device, so it should be replicated
@@ -930,7 +933,7 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
     xla::Shape shape = CreateComputationShapeFromTensor(tensors[i], &device);
 
     std::vector<runtime::ComputationClient::TensorSource> source_tensors;  // in
-    std::vector<runtime::ComputationClient::DataPtr> new_handles;          // out
+    std::vector<runtime::ComputationClient::DataPtr> new_handles;  // out
     if (ShardingUtil::UseVirtualDevice()) {
       // GetLocalDevices returns the list of local devices specified by their
       // global ordinals (e.g. ["TPU:4", "TPU:5", "TPU:6", "TPU:7"]).
@@ -990,7 +993,8 @@ std::vector<at::Tensor> XlaDataToTensors(
     absl::Span<const torch::lazy::BackendDataPtr> xla_data,
     at::ScalarType dest_element_type) {
   std::vector<xla::Literal> literals =
-      runtime::GetComputationClient()->TransferFromServer(UnwrapXlaData(xla_data));
+      runtime::GetComputationClient()->TransferFromServer(
+          UnwrapXlaData(xla_data));
   std::vector<at::Tensor> tensors;
   tensors.reserve(literals.size());
   for (auto& literal : literals) {

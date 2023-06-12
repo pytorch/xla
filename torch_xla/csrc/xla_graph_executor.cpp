@@ -27,14 +27,6 @@
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/tsl/platform/errors.h"
 #include "tensorflow/tsl/profiler/lib/traceme.h"
-#include "torch_xla/csrc/runtime/cache.h"
-#include "torch_xla/csrc/runtime/debug_macros.h"
-#include "torch_xla/csrc/runtime/env_vars.h"
-#include "torch_xla/csrc/runtime/runtime.h"
-#include "torch_xla/csrc/runtime/sys_util.h"
-#include "torch_xla/csrc/runtime/thread_pool.h"
-#include "torch_xla/csrc/runtime/unique.h"
-#include "torch_xla/csrc/runtime/xla_util.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/helpers.h"
@@ -50,6 +42,14 @@
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/ops/view.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
+#include "torch_xla/csrc/runtime/cache.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/env_vars.h"
+#include "torch_xla/csrc/runtime/runtime.h"
+#include "torch_xla/csrc/runtime/sys_util.h"
+#include "torch_xla/csrc/runtime/thread_pool.h"
+#include "torch_xla/csrc/runtime/unique.h"
+#include "torch_xla/csrc/runtime/xla_util.h"
 #include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
@@ -138,7 +138,7 @@ void XLAGraphExecutor::DeviceContextArena::SaveGraphAsString(
     const std::vector<size_t>* indices, DebugUtil::GraphFormat format) {
   static bool should_save_graph =
       runtime::sys_util::GetEnvOrdinalPath("XLA_SAVE_TENSORS_FILE", "",
-                                       GetCurrentDevice().ordinal()) != "";
+                                           GetCurrentDevice().ordinal()) != "";
   if (should_save_graph &&
       hash_to_graph_map.find(hash) == hash_to_graph_map.end()) {
     hash_to_graph_map[hash] =
@@ -372,8 +372,9 @@ void XLAGraphExecutor::SyncLiveTensorsGraph(
 
 void XLAGraphExecutor::MarkStep(const torch::lazy::BackendDevice& device) {
   // TODO(jwtan): Replace this with TORCH_LAZY_COUNTER. We need MarkStep to
-  // remain as XLA_COUNTER to support runtime::metrics::CreatePerformanceReport().
-  // For more information, see NOTE: [TORCH_LAZY_COUNTER v.s. XLA_COUNTER].
+  // remain as XLA_COUNTER to support
+  // runtime::metrics::CreatePerformanceReport(). For more information, see
+  // NOTE: [TORCH_LAZY_COUNTER v.s. XLA_COUNTER].
   XLA_COUNTER("MarkStep", 1);
   DeviceContextArena::Get()->MarkStep(device);
   torch::lazy::ScopePusher::ResetScopes();
@@ -387,7 +388,8 @@ void XLAGraphExecutor::WaitDeviceOps(absl::Span<const std::string> devices) {
       wait_devices.insert(ParseDeviceString(device_str));
     }
   } else {
-    for (auto& device_str : runtime::GetComputationClient()->GetLocalDevices()) {
+    for (auto& device_str :
+         runtime::GetComputationClient()->GetLocalDevices()) {
       wait_devices.insert(ParseDeviceString(device_str));
     }
   }
@@ -437,8 +439,9 @@ torch::lazy::hash_t XLAGraphExecutor::GetGraphHash(
 
 void XLAGraphExecutor::MaybeDumpGraph(std::string name,
                                       torch::lazy::hash_t hash) {
-  thread_local const std::string save_file = runtime::sys_util::GetEnvOrdinalPath(
-      "XLA_SAVE_TENSORS_FILE", "", GetCurrentDevice().ordinal());
+  thread_local const std::string save_file =
+      runtime::sys_util::GetEnvOrdinalPath("XLA_SAVE_TENSORS_FILE", "",
+                                           GetCurrentDevice().ordinal());
   if (!save_file.empty()) {
     std::string graph = DeviceContextArena::Get()->GetGraphByHash(hash);
     if (graph.size() == 0) {
@@ -473,8 +476,8 @@ void XLAGraphExecutor::ClearPendingIrs(
         } else {
           xla::Shape shape = MakeShapeWithDeviceLayout(
               tensors[i]->shape(), static_cast<XlaDeviceType>(device.type()));
-          torch::lazy::BackendDataPtr handle =
-              WrapXlaData(runtime::GetComputationClient()->CreateDataPlaceholder(
+          torch::lazy::BackendDataPtr handle = WrapXlaData(
+              runtime::GetComputationClient()->CreateDataPlaceholder(
                   device.toString(), std::move(shape)));
           tensors[i]->data()->handle = handle;
         }
@@ -548,8 +551,8 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
   // Mix the hash with the resource domain hashes as compile handles are only
   // valid within a domain (usually a single host).
   coll.hash = torch::lazy::MHash(
-      coll.hash,
-      runtime::GetComputationClient()->GetResourceDomain(coll.device.toString()));
+      coll.hash, runtime::GetComputationClient()->GetResourceDomain(
+                     coll.device.toString()));
   if (!at_tensors.empty()) {
     TORCH_LAZY_COUNTER("SyncTensorsToData", at_tensors.size());
     // Create data handles with shardings. If a tensor has a
@@ -1264,7 +1267,8 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
              << torch::lazy::HashToString(coll.hash) << " on device "
              << coll.device << " ...";
   std::vector<std::shared_ptr<runtime::ComputationClient::Computation>>
-      computations = runtime::GetComputationClient()->Compile(std::move(instances));
+      computations =
+          runtime::GetComputationClient()->Compile(std::move(instances));
   TF_VLOG(3) << "Compiling IR graph hash "
              << torch::lazy::HashToString(coll.hash) << " on device "
              << coll.device << " done!";

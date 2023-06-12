@@ -149,16 +149,16 @@ class XrtComputationClient : public ComputationClient {
     XrtData(std::string device, xla::Shape device_shape)
         : Data(std::move(device), std::move(device_shape)),
           handle_ptr(nullptr) {}
-    XrtData(XrtComputationClient* self, std::string device, xla::Shape device_shape,
-            int64_t handle)
+    XrtData(XrtComputationClient* self, std::string device,
+            xla::Shape device_shape, int64_t handle)
         : Data(std::move(device), std::move(device_shape)),
           handle_ptr(std::make_shared<XrtHandle>(
               handle, [self, device = this->device()](int64_t handle) {
                 self->ReleaseXrtData(device, handle);
               })) {}
 
-    XrtData(XrtComputationClient* self, std::string device, xla::Shape device_shape,
-            XrtHandlePtr handle)
+    XrtData(XrtComputationClient* self, std::string device,
+            xla::Shape device_shape, XrtHandlePtr handle)
         : Data(std::move(device), std::move(device_shape)),
           handle_ptr(handle) {}
 
@@ -178,8 +178,9 @@ class XrtComputationClient : public ComputationClient {
 
   struct XrtComputation : public Computation {
     XrtComputation(XrtComputationClient* self, xla::XlaComputation computation,
-                   xla::ProgramShape program_shape, std::vector<std::string> devices,
-                   int64_t handle, std::string compilation_device)
+                   xla::ProgramShape program_shape,
+                   std::vector<std::string> devices, int64_t handle,
+                   std::string compilation_device)
         : Computation(std::move(computation), std::move(program_shape),
                       std::move(devices)),
           handle_ptr(std::make_shared<XrtHandle>(
@@ -322,8 +323,8 @@ class XrtComputationClient : public ComputationClient {
     XLA_ERROR() << __FUNCTION__ << " not implemented";
   }
 
-  const absl::flat_hash_map<std::string,
-                            torch_xla::runtime::ComputationClient::DeviceAttribute>&
+  const absl::flat_hash_map<
+      std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>&
   GetDeviceAttributes(const std::string& device) override {
     XLA_ERROR() << __FUNCTION__ << " not implemented";
   }
@@ -405,7 +406,8 @@ class XrtComputationClient : public ComputationClient {
   void SetupExecConfig(const Device& device, T* exec_config) const;
 
   std::unique_ptr<xrt::XLAComputation> CreateXrtComputation(
-      const xla::XlaComputation& computation, absl::Span<const std::string> devices,
+      const xla::XlaComputation& computation,
+      absl::Span<const std::string> devices,
       const xla::Shape* output_shape) const;
 
   tensorflow::Tensor GetArgumentsInputs(absl::Span<const DataPtr> arguments,
@@ -622,7 +624,8 @@ class XrtComputationClient : public ComputationClient {
   // Converts an XLA data type to a tensorflow data type.
   static tensorflow::DataType XlaTypeToDataType(xla::PrimitiveType dtype);
 
-  static tensorflow::TensorShape MakeEquivalentTensorShape(const xla::Shape& shape);
+  static tensorflow::TensorShape MakeEquivalentTensorShape(
+      const xla::Shape& shape);
 
   // Builds an argument vector usable in a replicated context, out of a single
   // replica argument vector. Essentially turns a [N] into a [1][N].
@@ -632,8 +635,8 @@ class XrtComputationClient : public ComputationClient {
   static std::vector<size_t> PartitionTransferToServer(
       absl::Span<const TensorSource> tensors);
 
-  // Extracts the xla::XlaComputation pointers out of Computation ones. Used to be
-  // passed to xrt_util::CheckComputationStatus() for its error reporting.
+  // Extracts the xla::XlaComputation pointers out of Computation ones. Used to
+  // be passed to xrt_util::CheckComputationStatus() for its error reporting.
   static std::vector<const xla::XlaComputation*> GetXlaComputations(
       absl::Span<const Computation* const> computations);
 

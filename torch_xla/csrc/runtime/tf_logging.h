@@ -47,7 +47,7 @@ class ErrorGenerator {
   int line_ = 0;
 };
 
-#define TF_ERROR_STREAM()                               \
+#define TF_ERROR_STREAM()                                              \
   ::torch_xla::runtime::internal::ErrorGenerator(__FILE__, __LINE__) & \
       ::torch_xla::runtime::internal::ErrorSink()
 

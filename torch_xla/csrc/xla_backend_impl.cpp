@@ -2,14 +2,14 @@
 
 #include <ATen/ScalarOps.h>
 
-#include "torch_xla/csrc/runtime/debug_macros.h"
-#include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir_builder.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/device_data.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/runtime.h"
 
 namespace at {
 // This function is defined in the codegenerated RegisterDispatchKey.cpp file.
@@ -118,7 +118,8 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
   std::vector<std::string> GetCompilationDevices(
       const std::string& device,
       c10::ArrayRef<std::string> devices) const override {
-    return runtime::GetComputationClient()->GetCompilationDevices(device, devices);
+    return runtime::GetComputationClient()->GetCompilationDevices(device,
+                                                                  devices);
   }
 
   std::vector<torch::lazy::ComputationPtr> Compile(
@@ -151,8 +152,8 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
           {current_device.toString()}, &output_shapes.back()));
     }
     std::vector<std::shared_ptr<runtime::ComputationClient::Computation>>
-        client_computations =
-            runtime::GetComputationClient()->Compile(std::move(compile_instances));
+        client_computations = runtime::GetComputationClient()->Compile(
+            std::move(compile_instances));
     return WrapClientComputation(client_computations);
   }
 

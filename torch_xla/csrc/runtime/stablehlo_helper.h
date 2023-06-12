@@ -8,7 +8,7 @@ namespace runtime {
 
 std::string hloToStablehloStr(const xla::HloModuleProto* proto);
 
-}  // namespace torch_xla
 }  // namespace runtime
+}  // namespace torch_xla
 
 #endif

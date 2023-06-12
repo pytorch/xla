@@ -6,11 +6,11 @@
 
 #include "absl/types/span.h"
 #include "tensorflow/compiler/xla/types.h"
+#include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/runtime/async_task.h"
 #include "torch_xla/csrc/runtime/cache.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/util.h"
-#include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {
 
@@ -39,8 +39,9 @@ class OpByOpExecutor {
 
  private:
   using CompileCache =
-      runtime::util::Cache<torch::lazy::hash_t, runtime::ComputationClient::Computation,
-                       torch::lazy::HashReducer>;
+      runtime::util::Cache<torch::lazy::hash_t,
+                           runtime::ComputationClient::Computation,
+                           torch::lazy::HashReducer>;
 
   explicit OpByOpExecutor(size_t compile_cache_size);
 

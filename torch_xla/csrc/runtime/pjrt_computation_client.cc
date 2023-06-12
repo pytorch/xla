@@ -219,8 +219,8 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
     auto literal = std::make_shared<xla::Literal>(tensor.shape);
     tensor.populate_fn(tensor, literal->untyped_data(), literal->size_bytes());
     std::vector<int64_t> byte_strides(literal->shape().dimensions_size());
-    XLA_CHECK_OK(
-        xla::ShapeUtil::ByteStrides(literal->shape(), absl::MakeSpan(byte_strides)));
+    XLA_CHECK_OK(xla::ShapeUtil::ByteStrides(literal->shape(),
+                                             absl::MakeSpan(byte_strides)));
     total_size += literal->size_bytes();
 
     // Avoid use-after-free on `literal` due to unsequenced move and use.
@@ -319,12 +319,14 @@ ComputationClient::DataPtr PjRtComputationClient::ReplicateShardedData(
         ConsumeValue(computation.GetProgramShape());
 
     std::string device = GetDefaultDevice();
-    std::vector<torch_xla::runtime::ComputationClient::CompileInstance> instances;
+    std::vector<torch_xla::runtime::ComputationClient::CompileInstance>
+        instances;
     instances.push_back({std::move(computation), device,
                          GetCompilationDevices(device, {}), &shape,
                          /*should_wrap_parameter=*/false,
                          /*is_sharded=*/true});
-    std::vector<std::shared_ptr<torch_xla::runtime::ComputationClient::Computation>>
+    std::vector<
+        std::shared_ptr<torch_xla::runtime::ComputationClient::Computation>>
         computations = Compile(std::move(instances));
 
     auto shards = sharded_data->shards;
@@ -343,7 +345,8 @@ ComputationClient::DataPtr PjRtComputationClient::ReplicateShardedData(
                  << device_i;
       arguments_by_device[device_i][0] = shard;
     }
-    torch_xla::runtime::ComputationClient::ExecuteReplicatedOptions execute_options;
+    torch_xla::runtime::ComputationClient::ExecuteReplicatedOptions
+        execute_options;
     auto sharded_results =
         ExecuteReplicated(*computations.front(), arguments_by_device,
                           GetLocalDevices(), execute_options);
@@ -434,7 +437,8 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
           device_assignment);
     }
 
-    xla::PjRtDevice* pjrt_device = StringToPjRtDevice(instance.compilation_device);
+    xla::PjRtDevice* pjrt_device =
+        StringToPjRtDevice(instance.compilation_device);
     std::unique_ptr<xla::PjRtLoadedExecutable> executable =
         ConsumeValue(client_->Compile(instance.computation, compile_options));
 
@@ -671,7 +675,8 @@ int PjRtComputationClient::GetNumProcesses() const {
   return max_process_index + 1;
 };
 
-const absl::flat_hash_map<std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>&
+const absl::flat_hash_map<
+    std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>&
 PjRtComputationClient::GetDeviceAttributes(const std::string& device) {
   return PjRtComputationClient::StringToPjRtDevice(device)->Attributes();
 }

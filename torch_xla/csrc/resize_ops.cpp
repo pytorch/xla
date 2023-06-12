@@ -4,10 +4,10 @@
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/util.h"
-#include "torch_xla/csrc/runtime/debug_macros.h"
-#include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/shape_builder.h"
 #include "torch_xla/csrc/shape_helper.h"
 
@@ -289,7 +289,8 @@ xla::XlaOp LowerBackward2d(const std::string& target, xla::XlaOp input,
                            const xla::Shape& output_shape, bool align_corners,
                            bool half_pixel_centers) {
   static double resiple_split_factor =
-      torch_xla::runtime::sys_util::GetEnvDouble("XLA_RESIZE_SPLIT_FACTOR", 3.0);
+      torch_xla::runtime::sys_util::GetEnvDouble("XLA_RESIZE_SPLIT_FACTOR",
+                                                 3.0);
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   if (input_shape.dimensions(2) == output_shape.dimensions(2) &&
       input_shape.dimensions(3) == output_shape.dimensions(3)) {

@@ -72,8 +72,8 @@ class PjRtComputationClient : public ComputationClient {
 
   int GetNumProcesses() const override;
 
-  const absl::flat_hash_map<std::string,
-                            torch_xla::runtime::ComputationClient::DeviceAttribute>&
+  const absl::flat_hash_map<
+      std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>&
   GetDeviceAttributes(const std::string& device) override;
 
   void SetReplicationDevices(
@@ -218,7 +218,8 @@ class PjRtComputationClient : public ComputationClient {
   };
 
   struct PjRtComputation : public Computation {
-    PjRtComputation(xla::XlaComputation computation, xla::ProgramShape program_shape,
+    PjRtComputation(xla::XlaComputation computation,
+                    xla::ProgramShape program_shape,
                     std::vector<std::string> devices,
                     std::unique_ptr<xla::PjRtLoadedExecutable> executable)
         : Computation(std::move(computation), std::move(program_shape),

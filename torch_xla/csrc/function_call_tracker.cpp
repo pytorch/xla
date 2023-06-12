@@ -35,9 +35,10 @@ TrackerContext* LoadTrackerContext() {
     tctx = new TrackerContext(
         std::move(fntracker_file),
         runtime::sys_util::GetEnvInt("XLA_FNTRACKER_LEVEL",
-                                 std::numeric_limits<int>::max()));
+                                     std::numeric_limits<int>::max()));
 
-    std::string fn_list = runtime::sys_util::GetEnvString("XLA_FNTRACKER_LIST", "");
+    std::string fn_list =
+        runtime::sys_util::GetEnvString("XLA_FNTRACKER_LIST", "");
     for (auto& fn : absl::StrSplit(fn_list, ':')) {
       if (!fn.empty()) {
         tctx->tags.insert(std::string(fn));

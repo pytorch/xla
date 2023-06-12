@@ -20,16 +20,19 @@ xla::StatusOr<std::unique_ptr<xla::HloModule>> CreateModuleFromProto(
     const xla::DebugOptions& debug_options = xla::DebugOptions());
 
 // Returns a textual representation of the input XLA computation.
-xla::StatusOr<std::string> GetComputationHloText(const xla::XlaComputation& computation);
+xla::StatusOr<std::string> GetComputationHloText(
+    const xla::XlaComputation& computation);
 
 void ReportComputationError(
-    const xla::Status& status, absl::Span<const xla::XlaComputation* const> computations,
+    const xla::Status& status,
+    absl::Span<const xla::XlaComputation* const> computations,
     absl::Span<const xla::Shape* const> output_shapes);
 
 // Checks whether an action on the given computation generated an error, and if
 // that was the case, emit error and computations HLO text.
 void CheckComputationStatus(
-    const xla::Status& status, absl::Span<const xla::XlaComputation* const> computations,
+    const xla::Status& status,
+    absl::Span<const xla::XlaComputation* const> computations,
     absl::Span<const xla::Shape* const> output_shapes);
 
 hash_t ShapeHash(const xla::Shape& shape);

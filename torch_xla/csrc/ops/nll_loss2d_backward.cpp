@@ -2,11 +2,11 @@
 
 #include <torch/csrc/lazy/core/util.h>
 
-#include "torch_xla/csrc/runtime/debug_macros.h"
-#include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/nll_loss.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/util.h"
 
 namespace torch_xla {
 namespace {
@@ -31,7 +31,8 @@ xla::Shape NodeOutputShape(
                                 total_weight, ignore_index, reduction);
   };
   std::vector<xla::Shape> shapes;
-  for (auto& input : torch_xla::runtime::util::GetValuesVector<torch::lazy::Value>(
+  for (auto& input :
+       torch_xla::runtime::util::GetValuesVector<torch::lazy::Value>(
            {grad_output, logits, labels}, {&weight, &total_weight})) {
     shapes.push_back(GetXlaShape(input));
   }

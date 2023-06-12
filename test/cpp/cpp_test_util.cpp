@@ -3,9 +3,6 @@
 #include <iostream>
 #include <string>
 
-#include "torch_xla/csrc/runtime/debug_macros.h"
-#include "torch_xla/csrc/runtime/runtime.h"
-#include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/ir_dump_util.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -14,6 +11,9 @@
 #include "torch_xla/csrc/ops/nonzero.h"
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/ops/update_slice.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/runtime.h"
+#include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/tensor_impl.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
@@ -23,8 +23,8 @@ namespace cpp_test {
 namespace {
 
 void DumpDifferences(const at::Tensor& tensor1, const at::Tensor& tensor2) {
-  static bool dump_differences =
-      torch_xla::runtime::sys_util::GetEnvBool("XLA_TEST_DUMP_DIFFERENCES", true);
+  static bool dump_differences = torch_xla::runtime::sys_util::GetEnvBool(
+      "XLA_TEST_DUMP_DIFFERENCES", true);
   static bool dump_tensors =
       torch_xla::runtime::sys_util::GetEnvBool("XLA_TEST_DUMP_TENSORS", false);
   at::Tensor dtensor1 = tensor1;
@@ -281,13 +281,15 @@ std::vector<xla::ComputationClient::DataPtr> Execute(
       program_shape.result(), static_cast<XlaDeviceType>(device.type()));
 
   std::vector<xla::ComputationClient::CompileInstance> instances;
-  instances.push_back({std::move(computation), device.toString(),
-                       torch_xla::runtime::GetComputationClient()->GetCompilationDevices(
-                           device.toString(), {}),
-                       &shape});
+  instances.push_back(
+      {std::move(computation), device.toString(),
+       torch_xla::runtime::GetComputationClient()->GetCompilationDevices(
+           device.toString(), {}),
+       &shape});
 
   std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
-      computations = torch_xla::runtime::GetComputationClient()->Compile(std::move(instances));
+      computations = torch_xla::runtime::GetComputationClient()->Compile(
+          std::move(instances));
 
   xla::ComputationClient::ExecuteComputationOptions options;
   return torch_xla::runtime::GetComputationClient()->ExecuteComputation(
@@ -298,7 +300,8 @@ std::vector<xla::ComputationClient::DataPtr> Execute(
 std::vector<at::Tensor> Fetch(
     absl::Span<const xla::ComputationClient::DataPtr> device_data) {
   std::vector<xla::Literal> literals =
-      torch_xla::runtime::GetComputationClient()->TransferFromServer(device_data);
+      torch_xla::runtime::GetComputationClient()->TransferFromServer(
+          device_data);
   std::vector<at::Tensor> tensors;
   for (auto& literal : literals) {
     tensors.push_back(MakeTensorFromXlaLiteral(
@@ -440,7 +443,9 @@ bool UsingPjRt() {
 
 bool UsingTpu() {
   static bool using_tpu =
-      absl::StartsWith(torch_xla::runtime::sys_util::GetEnvString("PJRT_DEVICE", ""), "TPU") ||
+      absl::StartsWith(
+          torch_xla::runtime::sys_util::GetEnvString("PJRT_DEVICE", ""),
+          "TPU") ||
       !torch_xla::runtime::sys_util::GetEnvString("XRT_TPU_CONFIG", "").empty();
   return using_tpu;
 }

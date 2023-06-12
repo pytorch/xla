@@ -181,20 +181,21 @@ class Counter {
 // XLA_COUNTER should only be used within xla_client. Please use
 // TORCH_LAZY_COUNTER in pytorch/xla. For more information, see
 // NOTE: [TORCH_LAZY_COUNTER v.s. XLA_COUNTER].
-#define XLA_COUNTER(name, value)                \
-  do {                                          \
+#define XLA_COUNTER(name, value)                               \
+  do {                                                         \
     static ::torch_xla::runtime::metrics::Counter* __counter = \
         new ::torch_xla::runtime::metrics::Counter(name);      \
-    __counter->AddValue(value);                 \
+    __counter->AddValue(value);                                \
   } while (0)
 
 // Please use this within xla_client. Fore more information,
 // see the above comment.
-#define XLA_VALUE_METRIC(name, value)                                    \
-  do {                                                                   \
-    static ::torch_xla::runtime::metrics::Metric* __metric =                            \
-        new ::torch_xla::runtime::metrics::Metric(name, ::torch_xla::runtime::metrics::MetricFnValue); \
-    __metric->AddSample(value);                                          \
+#define XLA_VALUE_METRIC(name, value)                            \
+  do {                                                           \
+    static ::torch_xla::runtime::metrics::Metric* __metric =     \
+        new ::torch_xla::runtime::metrics::Metric(               \
+            name, ::torch_xla::runtime::metrics::MetricFnValue); \
+    __metric->AddSample(value);                                  \
   } while (0)
 
 // Creates a report with the current metrics statistics.
@@ -250,9 +251,10 @@ class TimedSection {
 // XLA_TIMED should only be used within xla_client. Please use
 // TORCH_LAZY_TIMED in pytorch/xla. For more information, see
 // NOTE: [TORCH_LAZY_COUNTER v.s. XLA_COUNTER].
-#define XLA_TIMED(name)                                           \
-  static torch_xla::runtime::metrics::Metric* timed_metric =                     \
-      new torch_xla::runtime::metrics::Metric(name, torch_xla::runtime::metrics::MetricFnTime); \
+#define XLA_TIMED(name)                                      \
+  static torch_xla::runtime::metrics::Metric* timed_metric = \
+      new torch_xla::runtime::metrics::Metric(               \
+          name, torch_xla::runtime::metrics::MetricFnTime);  \
   torch_xla::runtime::metrics::TimedSection timed_section(timed_metric)
 
 }  // namespace metrics

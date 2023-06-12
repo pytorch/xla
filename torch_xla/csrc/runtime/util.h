@@ -39,9 +39,7 @@ size_t HashReduce(const hash_t& a);
 std::string HexHash(const hash_t& a);
 
 struct HashReducer {
-  size_t operator()(const hash_t& value) const {
-    return HashReduce(value);
-  }
+  size_t operator()(const hash_t& value) const { return HashReduce(value); }
 };
 
 template <typename F>

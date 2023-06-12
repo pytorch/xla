@@ -7,12 +7,12 @@
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "test/cpp/cpp_test_util.h"
 #include "test/cpp/torch_xla_test.h"
+#include "torch_xla/csrc/aten_xla_bridge.h"
+#include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/multi_wait.h"
 #include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/runtime/thread_pool.h"
-#include "torch_xla/csrc/aten_xla_bridge.h"
-#include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
 
@@ -61,16 +61,19 @@ void TestSingleReplication(
   xla::ComputationClient::ExecuteComputationOptions exec_options;
   for (size_t i = 0; i < device_strings.size(); ++i) {
     auto executor = [&, i]() {
-      results[i] = torch_xla::runtime::GetComputationClient()->ExecuteComputation(
-          *compiled_computations[i], {UnwrapXlaData(tensors_data[i])},
-          device_strings[i], exec_options);
+      results[i] =
+          torch_xla::runtime::GetComputationClient()->ExecuteComputation(
+              *compiled_computations[i], {UnwrapXlaData(tensors_data[i])},
+              device_strings[i], exec_options);
     };
     xla::env::ScheduleIoClosure(mwait.Completer(std::move(executor)));
   }
   mwait.Wait();
 
   for (size_t i = 0; i < results.size(); ++i) {
-    auto literals = torch_xla::runtime::GetComputationClient()->TransferFromServer(results[i]);
+    auto literals =
+        torch_xla::runtime::GetComputationClient()->TransferFromServer(
+            results[i]);
     ASSERT_EQ(literals.size(), 1);
 
     // The result must be the original tensor value, multiplied by the number of

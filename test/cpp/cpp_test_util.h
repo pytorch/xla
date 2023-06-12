@@ -10,10 +10,10 @@
 #include <unordered_set>
 
 #include "absl/types/span.h"
-#include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir.h"
+#include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/tensor.h"
 
 #define XLA_CPP_TEST_ENABLED(name)                          \

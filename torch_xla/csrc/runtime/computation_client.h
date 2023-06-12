@@ -60,7 +60,8 @@ class ComputationClient {
 
   class Computation {
    public:
-    Computation(xla::XlaComputation computation, xla::ProgramShape program_shape,
+    Computation(xla::XlaComputation computation,
+                xla::ProgramShape program_shape,
                 std::vector<std::string> devices)
         : computation_(std::move(computation)),
           program_shape_(std::move(program_shape)),
@@ -71,7 +72,8 @@ class ComputationClient {
       program_shape_ = ConsumeValue(computation_.GetProgramShape());
     }
 
-    Computation(xla::XlaComputation computation, std::vector<std::string> devices)
+    Computation(xla::XlaComputation computation,
+                std::vector<std::string> devices)
         : computation_(std::move(computation)), devices_(std::move(devices)) {
       program_shape_ = ConsumeValue(computation_.GetProgramShape());
     }
@@ -131,8 +133,10 @@ class ComputationClient {
 
   struct CompileInstance {
     CompileInstance() = default;
-    CompileInstance(xla::XlaComputation computation, std::string compilation_device,
-                    std::vector<std::string> devices, const xla::Shape* output_shape,
+    CompileInstance(xla::XlaComputation computation,
+                    std::string compilation_device,
+                    std::vector<std::string> devices,
+                    const xla::Shape* output_shape,
                     bool parameter_is_tupled_arguments = false,
                     bool is_sharded = false)
         : computation(std::move(computation)),
@@ -192,7 +196,8 @@ class ComputationClient {
 
   // Creates a Data object with no actual device handle in it. The device handle
   // will be populated in an asynchrounous fashion.
-  virtual DataPtr CreateDataPlaceholder(std::string device, xla::Shape shape) = 0;
+  virtual DataPtr CreateDataPlaceholder(std::string device,
+                                        xla::Shape shape) = 0;
 
   // Create DataPtr that only has dummy information which can be filled in
   // later.
@@ -200,8 +205,8 @@ class ComputationClient {
       absl::Span<const TensorSource> tensors) = 0;
 
   // Lock the DataPtr
-  virtual std::vector<torch_xla::runtime::util::ExceptionCleanup> LockAsyncDatas(
-      absl::Span<const DataPtr> datas) = 0;
+  virtual std::vector<torch_xla::runtime::util::ExceptionCleanup>
+  LockAsyncDatas(absl::Span<const DataPtr> datas) = 0;
 
   // Returns data shards. We expect this to be called on PjRtShardedData to
   // retrieve the shards. If other data type is passed, it returns the input
@@ -317,8 +322,8 @@ class ComputationClient {
   using DeviceAttribute =
       std::variant<std::string, int64_t, std::vector<int64_t>, float>;
 
-  virtual const absl::flat_hash_map<std::string,
-                                    torch_xla::runtime::ComputationClient::DeviceAttribute>&
+  virtual const absl::flat_hash_map<
+      std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>&
   GetDeviceAttributes(const std::string& device) = 0;
 
   virtual void SetReplicationDevices(

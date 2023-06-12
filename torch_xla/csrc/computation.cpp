@@ -24,7 +24,8 @@ Computation::Computation(std::string name, xla::XlaComputation computation,
 }
 
 Computation::Computation(
-    std::shared_ptr<runtime::ComputationClient::Computation> xla_client_computation)
+    std::shared_ptr<runtime::ComputationClient::Computation>
+        xla_client_computation)
     : name_(""), hash_(0) {
   xla_client_computation_ = std::move(xla_client_computation);
 }
@@ -40,8 +41,8 @@ std::vector<torch::lazy::ComputationPtr> WrapClientComputation(
   return res;
 }
 
-std::shared_ptr<runtime::ComputationClient::Computation> UnwrapClientComputation(
-    torch::lazy::ComputationPtr computation) {
+std::shared_ptr<runtime::ComputationClient::Computation>
+UnwrapClientComputation(torch::lazy::ComputationPtr computation) {
   return dynamic_cast<Computation*>(computation.get())->client_computation();
 }
 

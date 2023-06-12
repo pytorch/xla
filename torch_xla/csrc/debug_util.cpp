@@ -10,12 +10,12 @@
 
 #include "absl/memory/memory.h"
 #include "absl/strings/str_split.h"
-#include "torch_xla/csrc/runtime/debug_macros.h"
-#include "torch_xla/csrc/runtime/sys_util.h"
-#include "torch_xla/csrc/runtime/unique.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ir_dump_util.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/sys_util.h"
+#include "torch_xla/csrc/runtime/unique.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
 
 namespace torch_xla {
@@ -39,7 +39,8 @@ DebugUtil::GraphFormat DefaultGraphFormat() {
 std::unordered_set<std::string>* LoadExperiments() {
   std::unique_ptr<std::unordered_set<std::string>> xset =
       absl::make_unique<std::unordered_set<std::string>>();
-  std::string experiments = runtime::sys_util::GetEnvString("XLA_EXPERIMENTAL", "");
+  std::string experiments =
+      runtime::sys_util::GetEnvString("XLA_EXPERIMENTAL", "");
   std::vector<std::string> experiment_list = absl::StrSplit(experiments, ':');
   for (auto& name : experiment_list) {
     xset->insert(name);
@@ -151,8 +152,9 @@ void DebugUtil::SaveTensorsGraphInfo(const char* name,
                                      absl::Span<const XLATensorPtr> tensors,
                                      const std::vector<size_t>* indices,
                                      GraphFormat format) {
-  thread_local const std::string save_file = runtime::sys_util::GetEnvOrdinalPath(
-      "XLA_SAVE_TENSORS_FILE", "", GetCurrentDevice().ordinal());
+  thread_local const std::string save_file =
+      runtime::sys_util::GetEnvOrdinalPath("XLA_SAVE_TENSORS_FILE", "",
+                                           GetCurrentDevice().ordinal());
   if (!save_file.empty()) {
     static std::mutex lock;
     if ((format == DebugUtil::GraphFormat::kHlo ||

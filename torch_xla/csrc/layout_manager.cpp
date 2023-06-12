@@ -62,7 +62,8 @@ class LayoutManager {
     // Layouts: SHAPE=LAYOUT;...
     // SHAPE: INT,...
     // LAYOUT: INT,...
-    std::string layouts_env = runtime::sys_util::GetEnvString("XLA_LAYOUTS", "");
+    std::string layouts_env =
+        runtime::sys_util::GetEnvString("XLA_LAYOUTS", "");
     if (!layouts_env.empty()) {
       std::vector<std::string> layouts = absl::StrSplit(layouts_env, ';');
       for (const auto& layout_str : layouts) {

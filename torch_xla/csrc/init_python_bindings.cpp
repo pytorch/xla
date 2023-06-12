@@ -30,6 +30,14 @@
 #include "tensorflow/compiler/xla/service/hlo_parser.h"
 #include "tensorflow/tsl/platform/env.h"
 #include "tensorflow/tsl/profiler/lib/traceme.h"
+#include "torch_xla/csrc/XLANativeFunctions.h"
+#include "torch_xla/csrc/aten_xla_bridge.h"
+#include "torch_xla/csrc/computation.h"
+#include "torch_xla/csrc/device.h"
+#include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/ir.h"
+#include "torch_xla/csrc/ir_dump_util.h"
+#include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/runtime/mesh_service.h"
 #include "torch_xla/csrc/runtime/metrics.h"
 #include "torch_xla/csrc/runtime/metrics_analysis.h"
@@ -42,14 +50,6 @@
 #include "torch_xla/csrc/runtime/thread_pool.h"
 #include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/runtime/xla_util.h"
-#include "torch_xla/csrc/XLANativeFunctions.h"
-#include "torch_xla/csrc/aten_xla_bridge.h"
-#include "torch_xla/csrc/computation.h"
-#include "torch_xla/csrc/device.h"
-#include "torch_xla/csrc/helpers.h"
-#include "torch_xla/csrc/ir.h"
-#include "torch_xla/csrc/ir_dump_util.h"
-#include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/tensor_impl.h"
 #include "torch_xla/csrc/tensor_methods.h"
@@ -88,7 +88,8 @@ torch::lazy::BackendDevice GetDeviceOrCurrent(const std::string& device_str) {
 }
 
 void PrepareToExit() {
-  runtime::ComputationClient* client = runtime::GetComputationClientIfInitialized();
+  runtime::ComputationClient* client =
+      runtime::GetComputationClientIfInitialized();
   if (client != nullptr) {
     XLAGraphExecutor::Get()->WaitDeviceOps({});
     client->PrepareToExit();
@@ -331,7 +332,8 @@ void StepMarker(const std::string& device_str,
     std::string report = runtime::metrics::CreatePerformanceReport(
         runtime::GetComputationClient()->GetMetrics());
     if (!report.empty()) {
-      std::string fout = runtime::sys_util::GetEnvString("PT_XLA_DEBUG_FILE", "");
+      std::string fout =
+          runtime::sys_util::GetEnvString("PT_XLA_DEBUG_FILE", "");
       if (TF_PREDICT_FALSE(!fout.empty())) {
         std::ofstream out_file(fout, std::ios_base::app);
         out_file << report;
@@ -488,7 +490,8 @@ py::object GetRevisions() {
 std::vector<py::bytes> Rendezvous(int ordinal, const std::string& tag,
                                   const std::string& payload,
                                   const std::vector<int64_t>& replicas) {
-  runtime::service::MeshClient* mesh_client = runtime::service::MeshClient::Get();
+  runtime::service::MeshClient* mesh_client =
+      runtime::service::MeshClient::Get();
   std::vector<py::bytes> payloads;
   if (mesh_client != nullptr) {
     auto rendezvous_payloads =
@@ -656,7 +659,8 @@ py::dict GetMemoryInfo(const std::string& device_str) {
   {
     NoGilSection nogil;
     torch::lazy::BackendDevice device = GetDeviceOrCurrent(device_str);
-    mem_info = runtime::GetComputationClient()->GetMemoryInfo(device.toString());
+    mem_info =
+        runtime::GetComputationClient()->GetMemoryInfo(device.toString());
   }
   auto py_dict = py::dict();
   py_dict["kb_free"] = mem_info.kb_free;
@@ -688,8 +692,9 @@ ConvertDictToMap(const py::dict& dictionary) {
 // Maps PT/XLA env vars to upstream torch::lazy env vars.
 // Upstream lazy env vars defined in torch/csrc/lazy/core/config.h.
 void MapXlaEnvVarsToLazy() {
-  static bool wants_frames = runtime::sys_util::GetEnvBool("XLA_IR_DEBUG", false) |
-                             runtime::sys_util::GetEnvBool("XLA_HLO_DEBUG", false);
+  static bool wants_frames =
+      runtime::sys_util::GetEnvBool("XLA_IR_DEBUG", false) |
+      runtime::sys_util::GetEnvBool("XLA_HLO_DEBUG", false);
   FLAGS_torch_lazy_ir_debug = wants_frames;
   static bool no_scalars =
       runtime::sys_util::GetEnvBool("XLA_NO_SPECIAL_SCALARS", false);
@@ -746,14 +751,14 @@ void BuildProfilerSubmodule(py::module* m) {
   py::class_<runtime::profiler::ProfilerServer,
              std::unique_ptr<runtime::profiler::ProfilerServer>>
       profiler_server_class(profiler, "ProfilerServer");
-  profiler.def("start_server",
-               [](int port) -> std::unique_ptr<runtime::profiler::ProfilerServer> {
-                 auto server =
-                     absl::make_unique<runtime::profiler::ProfilerServer>();
-                 server->Start(port);
-                 return server;
-               },
-               py::arg("port"));
+  profiler.def(
+      "start_server",
+      [](int port) -> std::unique_ptr<runtime::profiler::ProfilerServer> {
+        auto server = absl::make_unique<runtime::profiler::ProfilerServer>();
+        server->Start(port);
+        return server;
+      },
+      py::arg("port"));
 
   profiler.def(
       "trace",
@@ -768,7 +773,7 @@ void BuildProfilerSubmodule(py::module* m) {
           NoGilSection nogil;
           for (int i = 0; i <= timeout_s / interval_s; i++) {
             status = runtime::profiler::Trace(service_addr, logdir, duration_ms,
-                                          num_tracing_attempts, opts);
+                                              num_tracing_attempts, opts);
             if (status.ok()) {
               return;
             }
@@ -1145,9 +1150,10 @@ void InitXlaModuleBindings(py::module m) {
         runtime::GetComputationClient()->GetAllDevices();
     std::vector<py::dict> list;
     for (auto const& device : global_devices) {
-      const absl::flat_hash_map<
-          std::string, runtime::ComputationClient::DeviceAttribute>& attributes =
-          runtime::GetComputationClient()->GetDeviceAttributes(device);
+      const absl::flat_hash_map<std::string,
+                                runtime::ComputationClient::DeviceAttribute>&
+          attributes =
+              runtime::GetComputationClient()->GetDeviceAttributes(device);
       py::dict dict;
       for (auto const& [name, value] : attributes) {
         dict[py::str(name)] = py::cast(value);
@@ -1271,7 +1277,7 @@ void InitXlaModuleBindings(py::module m) {
     // See NOTE: [TORCH_LAZY_COUNTER v.s. XLA_COUNTER].
     return torch::lazy::CreateMetricReport(counter_name_vec, metric_name_vec) +
            runtime::metrics_reader::CreateMetricReport(counter_name_vec,
-                                                   metric_name_vec);
+                                                       metric_name_vec);
   });
   m.def("_clear_xla_counters", []() {
     torch::lazy::MetricsArena::Get()->ResetCounters();

@@ -74,11 +74,12 @@ class MetricTime : public Analyzer {
     if (max_metric_time > threshold_nsec_) {
       return {
           Analysis::Symptom::kMetricTooSlow,
-          absl::StrFormat("%s: %s too slow: longest instance took %s. "
-                          "Please open a GitHub issue with the graph dump for "
-                          "our team to optimize.",
-                          kAnalysisPrefix, metric_name_,
-                          torch_xla::runtime::metrics::MetricFnTime(max_metric_time)),
+          absl::StrFormat(
+              "%s: %s too slow: longest instance took %s. "
+              "Please open a GitHub issue with the graph dump for "
+              "our team to optimize.",
+              kAnalysisPrefix, metric_name_,
+              torch_xla::runtime::metrics::MetricFnTime(max_metric_time)),
       };
     }
     return {Analysis::Symptom::kNormal};
@@ -101,7 +102,8 @@ class XrtMetricFrequency : public Analyzer {
     LOG(FATAL) << "For XrtMetricFrequency, use the metrics overload";
   }
 
-  Analysis Run(const std::map<std::string, torch_xla::runtime::Metric>& xrt_metrics) override {
+  Analysis Run(const std::map<std::string, torch_xla::runtime::Metric>&
+                   xrt_metrics) override {
     // XRT GetMetrics call is relatively expensive.
     if (counter_++ != run_every_n_) {
       return {Analysis::Symptom::kNormal};

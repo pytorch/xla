@@ -42,7 +42,8 @@ class Analyzer {
   virtual ~Analyzer() = default;
 
   virtual Analysis Run() = 0;
-  virtual Analysis Run(const std::map<std::string, torch_xla::runtime::Metric>& metrics) {
+  virtual Analysis Run(
+      const std::map<std::string, torch_xla::runtime::Metric>& metrics) {
     return Run();
   }
 };

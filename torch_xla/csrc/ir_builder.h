@@ -4,7 +4,6 @@
 #include <torch/csrc/lazy/core/ir.h>
 #include <torch/csrc/lazy/core/ir_builder.h>
 
-#include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ops/as_strided.h"
 #include "torch_xla/csrc/ops/cast.h"
@@ -14,6 +13,7 @@
 #include "torch_xla/csrc/ops/expand.h"
 #include "torch_xla/csrc/ops/generic.h"
 #include "torch_xla/csrc/ops/ops.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {

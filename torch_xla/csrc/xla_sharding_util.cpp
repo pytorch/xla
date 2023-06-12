@@ -14,10 +14,10 @@
 #include "tensorflow/compiler/xla/service/sharding_propagation.h"
 #include "tensorflow/compiler/xla/service/spmd/spmd_partitioner.h"
 #include "tensorflow/compiler/xla/xla.pb.h"
-#include "torch_xla/csrc/runtime/runtime.h"
 #include "torch/csrc/lazy/core/ir_util.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ops/device_data.h"
+#include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/tensor_util.h"
 
@@ -142,7 +142,8 @@ std::vector<std::vector<int64_t>> ExtractGroupMembers(
 }  // namespace
 
 bool ShouldUseVirtualDevice() {
-  bool use_virtual_device = runtime::sys_util::GetEnvBool("XLA_USE_SPMD", false);
+  bool use_virtual_device =
+      runtime::sys_util::GetEnvBool("XLA_USE_SPMD", false);
   if (use_virtual_device) {
     TF_LOG(INFO) << "Using SPMD virtual device optimization";
   }
@@ -300,9 +301,10 @@ std::vector<std::vector<runtime::ComputationClient::DataPtr>>
 ShardingUtil::InputHandler(
     std::vector<runtime::ComputationClient::DataPtr> arguments,
     std::vector<std::string> devices) {
-  std::vector<std::vector<runtime::ComputationClient::DataPtr>> arguments_by_device(
-      devices.size(),
-      std::vector<runtime::ComputationClient::DataPtr>(arguments.size()));
+  std::vector<std::vector<runtime::ComputationClient::DataPtr>>
+      arguments_by_device(
+          devices.size(),
+          std::vector<runtime::ComputationClient::DataPtr>(arguments.size()));
   // This assumes that the (local) devices are sorted, in order to associate
   // the first local index with the first global device ordinal.
   auto device_index = build_index_map(devices);
@@ -323,7 +325,8 @@ ShardingUtil::InputHandler(
 }
 
 std::vector<runtime::ComputationClient::DataPtr> ShardingUtil::OutputHandler(
-    std::vector<std::vector<runtime::ComputationClient::DataPtr>> sharded_results,
+    std::vector<std::vector<runtime::ComputationClient::DataPtr>>
+        sharded_results,
     std::vector<XLATensor::ShardingSpecPtr> sharding_specs,
     bool replicated_output) {
   std::vector<runtime::ComputationClient::DataPtr> outputs;

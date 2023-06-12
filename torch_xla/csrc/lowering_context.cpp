@@ -9,10 +9,10 @@
 #include "absl/strings/str_join.h"
 #include "absl/strings/str_replace.h"
 #include "absl/strings/string_view.h"
-#include "torch_xla/csrc/runtime/debug_macros.h"
-#include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/ir.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/unwrap_data.h"
 
@@ -36,7 +36,8 @@ class HloMetadataSetter {
 
  private:
   static bool ShouldPopulateXlaOpMetadata() {
-    static bool op_metadata = runtime::sys_util::GetEnvBool("XLA_HLO_DEBUG", false);
+    static bool op_metadata =
+        runtime::sys_util::GetEnvBool("XLA_HLO_DEBUG", false);
     return op_metadata;
   }
 

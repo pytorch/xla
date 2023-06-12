@@ -1,10 +1,10 @@
 #include "torch_xla/csrc/torch_util.h"
 
-#include "torch_xla/csrc/runtime/debug_macros.h"
-#include "torch_xla/csrc/runtime/xla_util.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir_builder.h"
 #include "torch_xla/csrc/ops/constant.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/xla_util.h"
 #include "torch_xla/csrc/tensor.h"
 
 namespace torch_xla {

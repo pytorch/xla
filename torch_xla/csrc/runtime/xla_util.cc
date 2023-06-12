@@ -71,14 +71,16 @@ xla::StatusOr<std::unique_ptr<xla::HloModule>> CreateModuleFromProto(
   return xla::HloModule::CreateFromProto(proto, hlo_module_config);
 }
 
-xla::StatusOr<std::string> GetComputationHloText(const xla::XlaComputation& computation) {
+xla::StatusOr<std::string> GetComputationHloText(
+    const xla::XlaComputation& computation) {
   TF_ASSIGN_OR_RETURN(auto hlo_module,
                       CreateModuleFromProto(computation.proto()));
   return hlo_module->ToString();
 }
 
 void ReportComputationError(
-    const xla::Status& status, absl::Span<const xla::XlaComputation* const> computations,
+    const xla::Status& status,
+    absl::Span<const xla::XlaComputation* const> computations,
     absl::Span<const xla::Shape* const> output_shapes) {
   std::stringstream ss;
   for (size_t i = 0; i < computations.size(); ++i) {
@@ -93,7 +95,8 @@ void ReportComputationError(
 }
 
 void CheckComputationStatus(
-    const xla::Status& status, absl::Span<const xla::XlaComputation* const> computations,
+    const xla::Status& status,
+    absl::Span<const xla::XlaComputation* const> computations,
     absl::Span<const xla::Shape* const> output_shapes) {
   if (!status.ok()) {
     ReportComputationError(status, computations, output_shapes);
@@ -102,10 +105,10 @@ void CheckComputationStatus(
 
 hash_t ShapeHash(const xla::Shape& shape) {
   hash_t hash = 0xa5d2d6916;
-  xla::ShapeUtil::ForEachSubshape(shape,
-                             [&](const xla::Shape& subshape, const xla::ShapeIndex&) {
-                               hash = SingleShapeHash(subshape, hash);
-                             });
+  xla::ShapeUtil::ForEachSubshape(
+      shape, [&](const xla::Shape& subshape, const xla::ShapeIndex&) {
+        hash = SingleShapeHash(subshape, hash);
+      });
   return hash;
 }
 

@@ -537,7 +537,8 @@ ComputationClient::DataPtr XrtComputationClient::CreateDataPlaceholder(
 
 std::vector<torch_xla::runtime::ComputationClient::DataPtr>
 XrtComputationClient::CreateAsyncDatas(absl::Span<const TensorSource> tensors) {
-  std::vector<torch_xla::runtime::ComputationClient::DataPtr> results(tensors.size());
+  std::vector<torch_xla::runtime::ComputationClient::DataPtr> results(
+      tensors.size());
   for (size_t i = 0; i < tensors.size(); ++i) {
     // Create a XrtHandle with dummy handle, releasr needs to take the
     // real handle upon destructon.
@@ -554,7 +555,8 @@ XrtComputationClient::CreateAsyncDatas(absl::Span<const TensorSource> tensors) {
   return results;
 }
 
-std::vector<torch_xla::runtime::util::ExceptionCleanup> XrtComputationClient::LockAsyncDatas(
+std::vector<torch_xla::runtime::util::ExceptionCleanup>
+XrtComputationClient::LockAsyncDatas(
     absl::Span<const torch_xla::runtime::ComputationClient::DataPtr> datas) {
   std::vector<torch_xla::runtime::util::ExceptionCleanup> unlcoker;
   unlcoker.reserve(datas.size());
@@ -790,7 +792,8 @@ std::vector<xla::Literal> XrtComputationClient::TransferFromServer(
       for (size_t i = 0; i < outputs.size(); ++i) {
         size_t li = session_work->index_mapping[i];
         xla::LiteralProto response = ParseProto<xla::LiteralProto>(outputs[i]);
-        results[li] = std::move(xla::Literal::CreateFromProto(response).value());
+        results[li] =
+            std::move(xla::Literal::CreateFromProto(response).value());
         total_size += results[li].size_bytes();
       }
     };
@@ -1126,7 +1129,8 @@ std::vector<ComputationClient::DataPtr> XrtComputationClient::ExecuteChainedXrt(
       if (output.output_index) {
         plan_output->set_output_index(*output.output_index + 1);
         result_shapes[output.result_index] =
-            xla::ShapeUtil::GetTupleElementShape(*op_shape, *output.output_index);
+            xla::ShapeUtil::GetTupleElementShape(*op_shape,
+                                                 *output.output_index);
       } else {
         result_shapes[output.result_index] = *op_shape;
       }
@@ -1310,7 +1314,8 @@ const std::string& XrtComputationClient::TorchDeviceToXrtDevice(
 }
 
 std::unique_ptr<xrt::XLAComputation> XrtComputationClient::CreateXrtComputation(
-    const xla::XlaComputation& computation, absl::Span<const std::string> devices,
+    const xla::XlaComputation& computation,
+    absl::Span<const std::string> devices,
     const xla::Shape* output_shape) const {
   std::unique_ptr<xrt::XLAComputation> xrt_computation(
       new xrt::XLAComputation());

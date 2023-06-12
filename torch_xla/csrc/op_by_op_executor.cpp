@@ -8,14 +8,14 @@
 
 #include "absl/strings/str_cat.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "torch_xla/csrc/device.h"
+#include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/metrics.h"
 #include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/xla_util.h"
-#include "torch_xla/csrc/device.h"
-#include "torch_xla/csrc/lowering_context.h"
-#include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
 
@@ -86,9 +86,10 @@ torch::lazy::hash_t GetNodesKeySeed(const std::string& device,
 OpByOpExecutor::OpByOpExecutor(size_t compile_cache_size)
     : compile_cache_(compile_cache_size) {}
 
-std::vector<runtime::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
-    c10::ArrayRef<torch::lazy::Value> roots, const std::string& device,
-    absl::Span<const std::string> devices) {
+std::vector<runtime::ComputationClient::ExecuteChainedOp>
+OpByOpExecutor::BuildOps(c10::ArrayRef<torch::lazy::Value> roots,
+                         const std::string& device,
+                         absl::Span<const std::string> devices) {
   std::vector<const torch::lazy::Node*> root_nodes;
   root_nodes.reserve(roots.size());
   for (auto& root : roots) {
@@ -204,8 +205,8 @@ std::vector<torch::lazy::BackendDataPtr> OpByOpExecutor::Execute(
     c10::ArrayRef<torch::lazy::Value> roots, const std::string& device,
     absl::Span<const std::string> devices) {
   auto chained_exec_ops = BuildOps(roots, device, devices);
-  return WrapXlaData(
-      runtime::GetComputationClient()->ExecuteChained(chained_exec_ops, device));
+  return WrapXlaData(runtime::GetComputationClient()->ExecuteChained(
+      chained_exec_ops, device));
 }
 
 OpByOpExecutor::AsyncTask OpByOpExecutor::ExecuteAsync(

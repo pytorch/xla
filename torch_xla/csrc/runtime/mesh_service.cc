@@ -138,8 +138,8 @@ class MeshServiceImpl : public grpc::MeshService::Service {
 };
 
 ::grpc::Status MeshServiceImpl::RendezvousData::Wait() {
-  ::grpc::Status status =
-      ToGrpcStatus(torch_xla::runtime::util::CheckedCall([&]() { mwait_.Wait(); }));
+  ::grpc::Status status = ToGrpcStatus(
+      torch_xla::runtime::util::CheckedCall([&]() { mwait_.Wait(); }));
   if (status.ok()) {
     std::lock_guard<std::mutex> lock(lock_);
     status = status_;

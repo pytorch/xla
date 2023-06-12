@@ -28,8 +28,8 @@ namespace torch_xla {
 // xla compiler.
 // 5. xla::XrtComputationClient::XrtComputation and
 // xla::PjRtComputationClient::PjRtComputation which inherits from
-// runtime::ComputationClient::Computation and contains a handle to represent the
-// compiled program.
+// runtime::ComputationClient::Computation and contains a handle to represent
+// the compiled program.
 
 // torch_xla::Computation is being used for 3 different purpose.
 // 1. To represent a xla computation build by xla_op_builder, in which case we
@@ -115,7 +115,8 @@ class Computation : public torch::lazy::Computation {
 
  private:
   std::string name_;
-  std::shared_ptr<runtime::ComputationClient::Computation> xla_client_computation_;
+  std::shared_ptr<runtime::ComputationClient::Computation>
+      xla_client_computation_;
   torch::lazy::hash_t hash_;
   torch::lazy::Shape res_shape_;
   std::vector<torch::lazy::Shape> parameter_shapes_;
@@ -127,8 +128,8 @@ std::vector<torch::lazy::ComputationPtr> WrapClientComputation(
     std::vector<std::shared_ptr<runtime::ComputationClient::Computation>>
         computations);
 
-std::shared_ptr<runtime::ComputationClient::Computation> UnwrapClientComputation(
-    torch::lazy::ComputationPtr computation);
+std::shared_ptr<runtime::ComputationClient::Computation>
+UnwrapClientComputation(torch::lazy::ComputationPtr computation);
 
 }  // namespace torch_xla
 
