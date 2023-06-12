@@ -24,7 +24,7 @@ void XlaTest::SetUp() {
 
 void XlaTest::TearDown() {
   static bool dump_metrics =
-      xla::sys_util::GetEnvBool("XLA_TEST_DUMP_METRICS", false);
+      torch_xla::runtime::sys_util::GetEnvBool("XLA_TEST_DUMP_METRICS", false);
   if (dump_metrics) {
     MakeEndSnapshot();
 

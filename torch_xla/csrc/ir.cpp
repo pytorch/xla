@@ -22,7 +22,7 @@ using ShapeCache =
 
 ShapeCache* GetShapeCache() {
   static int64_t shape_cache_size =
-      xla::sys_util::GetEnvInt("XLA_IR_SHAPE_CACHE_SIZE", 12288);
+      torch_xla::runtime::sys_util::GetEnvInt("XLA_IR_SHAPE_CACHE_SIZE", 12288);
   static ShapeCache* cache = new ShapeCache(shape_cache_size);
   return cache;
 }

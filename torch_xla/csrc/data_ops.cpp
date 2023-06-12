@@ -33,7 +33,7 @@ bool IsSparseGather(const xla::Shape& input_shape,
     // XLA_DENSE_GATHER_FACTOR can be used to finely control the
     // sparsity check.
     static int dense_gather_factor =
-        xla::sys_util::GetEnvInt("XLA_DENSE_GATHER_FACTOR", 8192);
+        torch_xla::runtime::sys_util::GetEnvInt("XLA_DENSE_GATHER_FACTOR", 8192);
     int64_t input_elements = input_shape.dimensions()[dim];
     // Use a very conservative check so that we run dense gather
     // most of the time on TPU.

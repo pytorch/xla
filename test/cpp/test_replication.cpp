@@ -47,7 +47,7 @@ void TestSingleReplication(
                            all_device_strings, &shape);
   }
   auto compiled_computations =
-      xla::GetComputationClient()->Compile(std::move(instances));
+      torch_xla::runtime::GetComputationClient()->Compile(std::move(instances));
 
   std::vector<at::Tensor> tensors;
   for (size_t i = 0; i < device_strings.size(); ++i) {
@@ -61,7 +61,7 @@ void TestSingleReplication(
   xla::ComputationClient::ExecuteComputationOptions exec_options;
   for (size_t i = 0; i < device_strings.size(); ++i) {
     auto executor = [&, i]() {
-      results[i] = xla::GetComputationClient()->ExecuteComputation(
+      results[i] = torch_xla::runtime::GetComputationClient()->ExecuteComputation(
           *compiled_computations[i], {UnwrapXlaData(tensors_data[i])},
           device_strings[i], exec_options);
     };
@@ -70,7 +70,7 @@ void TestSingleReplication(
   mwait.Wait();
 
   for (size_t i = 0; i < results.size(); ++i) {
-    auto literals = xla::GetComputationClient()->TransferFromServer(results[i]);
+    auto literals = torch_xla::runtime::GetComputationClient()->TransferFromServer(results[i]);
     ASSERT_EQ(literals.size(), 1);
 
     // The result must be the original tensor value, multiplied by the number of

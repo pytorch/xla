@@ -72,7 +72,7 @@ bool ShouldUseDenseScatter(const torch::lazy::BackendDevice& device,
                            const xla::Shape& input_shape,
                            const xla::Shape& index_shape) {
   static int dense_scatter_factor =
-      xla::sys_util::GetEnvInt("XLA_DENSE_SCATTER_FACTOR", 100);
+      torch_xla::runtime::sys_util::GetEnvInt("XLA_DENSE_SCATTER_FACTOR", 100);
   XlaDeviceType hw_type = static_cast<XlaDeviceType>(device.type());
   if (hw_type == XlaDeviceType::TPU) {
     int64_t input_elements = xla::ShapeUtil::ElementsIn(input_shape);

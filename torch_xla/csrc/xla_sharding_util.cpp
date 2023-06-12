@@ -26,7 +26,7 @@ namespace {
 
 using tsl::ERROR;
 using tsl::INFO;
-using torch_xla::runtime::internal::XlaBuilderFriend;
+using xla::internal::XlaBuilderFriend;
 
 // Return py::obj type as string.
 std::string GetPyType(const py::object& elem) {
@@ -142,7 +142,7 @@ std::vector<std::vector<int64_t>> ExtractGroupMembers(
 }  // namespace
 
 bool ShouldUseVirtualDevice() {
-  bool use_virtual_device = xla::sys_util::GetEnvBool("XLA_USE_SPMD", false);
+  bool use_virtual_device = torch_xla::runtime::sys_util::GetEnvBool("XLA_USE_SPMD", false);
   if (use_virtual_device) {
     TF_LOG(INFO) << "Using SPMD virtual device optimization";
   }
@@ -309,7 +309,7 @@ ShardingUtil::InputHandler(
 
   for (int64_t argument_i = 0; argument_i < arguments.size(); ++argument_i) {
     auto shards =
-        xla::GetComputationClient()->GetDataShards(arguments[argument_i]);
+        torch_xla::runtime::GetComputationClient()->GetDataShards(arguments[argument_i]);
     // With SPMD execution, all input is distributed across addressable devices,
     // either by sharding or replication.
     for (auto shard : shards) {
@@ -357,7 +357,7 @@ std::vector<torch_xla::runtime::ComputationClient::DataPtr> ShardingUtil::Output
             xla::HloSharding::Replicate().ToProto(),
             sharded_results[0][i]->shape());
       }
-      outputs.push_back(xla::GetComputationClient()->WrapDataShards(
+      outputs.push_back(torch_xla::runtime::GetComputationClient()->WrapDataShards(
           shards, GetVirtualDevice().toString(), sharding->shape.value(),
           sharding->sharding));
     }
@@ -554,7 +554,7 @@ void ShardingUtil::PrepareOutputShardingPropagation(
     // hold the corresponding computation results for both sharding &
     // replication.
     auto sharded_data_placeholder =
-        WrapXlaData(xla::GetComputationClient()->WrapDataShards(
+        WrapXlaData(torch_xla::runtime::GetComputationClient()->WrapDataShards(
             {}, GetVirtualDevice().toString(),
             (*sharding_specs)[i]->shape.value(),
             (*sharding_specs)[i]->sharding));
@@ -591,7 +591,7 @@ torch_xla::runtime::ComputationClient::DataPtr ShardingUtil::CreateShardedData(
     source_tensors.emplace_back(shard_shape, devices[j],
                                 std::move(populate_fn));
   }
-  return xla::GetComputationClient()->TransferShardsToServer(
+  return torch_xla::runtime::GetComputationClient()->TransferShardsToServer(
       source_tensors, GetVirtualDevice().toString(), global_shape, sharding);
 }
 

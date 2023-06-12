@@ -36,7 +36,7 @@ class HloMetadataSetter {
 
  private:
   static bool ShouldPopulateXlaOpMetadata() {
-    static bool op_metadata = xla::sys_util::GetEnvBool("XLA_HLO_DEBUG", false);
+    static bool op_metadata = torch_xla::runtime::sys_util::GetEnvBool("XLA_HLO_DEBUG", false);
     return op_metadata;
   }
 

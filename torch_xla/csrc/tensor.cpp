@@ -598,7 +598,7 @@ void XLATensor::ApplyPendingGraph() {
 
 bool XLATensor::UseEagerDebugMode() {
   static const bool use_eager_debug_mode =
-      xla::sys_util::GetEnvBool("XLA_USE_EAGER_DEBUG_MODE", false);
+      torch_xla::runtime::sys_util::GetEnvBool("XLA_USE_EAGER_DEBUG_MODE", false);
   return use_eager_debug_mode;
 }
 

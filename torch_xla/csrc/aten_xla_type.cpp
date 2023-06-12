@@ -474,7 +474,7 @@ at::Tensor XLANativeFunctions::_copy_from(const at::Tensor& self,
   auto self_tensor = bridge::TryGetXlaTensor(self);
   if (!self_tensor) {
     static bool sync_update =
-        xla::sys_util::GetEnvBool("XLA_TENSOR_UPDATE_SYNC", true) &&
+        torch_xla::runtime::sys_util::GetEnvBool("XLA_TENSOR_UPDATE_SYNC", true) &&
         !ShardingUtil::UseVirtualDevice();
     XLA_CHECK(dst_tensor);
     dst_tensor->UpdateFromTensor(self, /*sync=*/sync_update);
@@ -3392,13 +3392,13 @@ at::Tensor XLANativeFunctions::_cdist_forward(
 at::Tensor XLANativeFunctions::affine_grid_generator(const at::Tensor& theta,
                                                      at::IntArrayRef size,
                                                      bool align_corners) {
-  XLA_CHECK(!xla::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false));
+  XLA_CHECK(!torch_xla::runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false));
   return at::functionalization::functionalize_aten_op<ATEN_OP(
       affine_grid_generator)>::call(theta, size, align_corners);
 }
 
 at::Tensor XLANativeFunctions::block_diag(at::TensorList tensors) {
-  XLA_CHECK(!xla::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false));
+  XLA_CHECK(!torch_xla::runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false));
   return at::functionalization::functionalize_aten_op<ATEN_OP(
       block_diag)>::call(tensors);
 }
@@ -3410,7 +3410,7 @@ at::Tensor XLANativeFunctions::_convolution(
     at::IntArrayRef output_padding, int64_t groups, bool benchmark,
     bool deterministic, bool cudnn_enabled, bool allow_tf32) {
   // See Note: [Disabling functionalization]
-  if (xla::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
+  if (torch_xla::runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
     return at::native::_convolution(input, weight, bias, stride, padding,
                                     dilation, transposed, output_padding,
                                     groups, benchmark, deterministic,
@@ -3430,7 +3430,7 @@ XLANativeFunctions::convolution_backward(
     bool transposed, at::IntArrayRef output_padding, int64_t groups,
     ::std::array<bool, 3> output_mask) {
   // See Note: [Disabling functionalization]
-  if (xla::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
+  if (torch_xla::runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
     return at::native::convolution_backward(
         grad_output, input, weight, bias_sizes, stride, padding, dilation,
         transposed, output_padding, groups, output_mask);
@@ -3464,7 +3464,7 @@ XLANativeFunctions::convolution_backward(
 at::Tensor XLANativeFunctions::diag_embed(const at::Tensor& self,
                                           int64_t offset, int64_t dim1,
                                           int64_t dim2) {
-  XLA_CHECK(!xla::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false));
+  XLA_CHECK(!torch_xla::runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false));
   return at::functionalization::functionalize_aten_op<ATEN_OP(
       diag_embed)>::call(self, offset, dim1, dim2);
 }
@@ -3475,7 +3475,7 @@ at::Tensor XLANativeFunctions::embedding_symint(const at::Tensor& weight,
                                                 bool scale_grad_by_freq,
                                                 bool sparse) {
   // See Note: [Disabling functionalization]
-  if (xla::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
+  if (torch_xla::runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
     return at::native::embedding_symint(weight, indices, padding_idx,
                                         scale_grad_by_freq, sparse);
   }
@@ -3488,7 +3488,7 @@ at::Tensor XLANativeFunctions::embedding_symint(const at::Tensor& weight,
 
 at::Tensor XLANativeFunctions::_euclidean_dist(const at::Tensor& x1,
                                                const at::Tensor& x2) {
-  XLA_CHECK(!xla::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false));
+  XLA_CHECK(!torch_xla::runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false));
   return at::functionalization::functionalize_aten_op<ATEN_OP(
       _euclidean_dist)>::call(x1, x2);
 }
@@ -3498,7 +3498,7 @@ at::Tensor XLANativeFunctions::new_empty_strided_symint(
     c10::optional<at::ScalarType> dtype, c10::optional<at::Layout> layout,
     c10::optional<at::Device> device, c10::optional<bool> pin_memory) {
   // See Note: [Disabling functionalization]
-  if (xla::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
+  if (torch_xla::runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
     return at::native::new_empty_strided_symint(self, size, stride, dtype,
                                                 layout, device, pin_memory);
   }
@@ -3511,21 +3511,21 @@ at::Tensor XLANativeFunctions::narrow_copy_symint(const at::Tensor& self,
                                                   int64_t dim,
                                                   c10::SymInt start,
                                                   c10::SymInt length) {
-  XLA_CHECK(!xla::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false));
+  XLA_CHECK(!torch_xla::runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false));
   return at::functionalization::functionalize_aten_op_symint<ATEN_OP(
       narrow_copy)>::call(self, dim, start, length);
 }
 
 at::Tensor XLANativeFunctions::pixel_shuffle(const at::Tensor& self,
                                              int64_t upscale_factor) {
-  XLA_CHECK(!xla::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false));
+  XLA_CHECK(!torch_xla::runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false));
   return at::functionalization::functionalize_aten_op<ATEN_OP(
       pixel_shuffle)>::call(self, upscale_factor);
 }
 
 at::Tensor XLANativeFunctions::pixel_unshuffle(const at::Tensor& self,
                                                int64_t downscale_factor) {
-  XLA_CHECK(!xla::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false));
+  XLA_CHECK(!torch_xla::runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false));
   return at::functionalization::functionalize_aten_op<ATEN_OP(
       pixel_unshuffle)>::call(self, downscale_factor);
 }
@@ -3533,7 +3533,7 @@ at::Tensor XLANativeFunctions::pixel_unshuffle(const at::Tensor& self,
 at::Tensor XLANativeFunctions::reshape_symint(const at::Tensor& self,
                                               c10::SymIntArrayRef shape) {
   // See Note: [Disabling functionalization]
-  if (xla::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
+  if (torch_xla::runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
     return at::native::reshape_symint(self, shape);
   }
   return at::functionalization::functionalize_aten_op_symint<ATEN_OP(
@@ -3544,7 +3544,7 @@ at::Tensor XLANativeFunctions::select_backward_symint(
     const at::Tensor& grad_output, c10::SymIntArrayRef input_sizes, int64_t dim,
     c10::SymInt index) {
   // See Note: [Disabling functionalization]
-  if (xla::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
+  if (torch_xla::runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
     return at::native::select_backward_symint(grad_output, input_sizes, dim,
                                               index);
   }
@@ -3555,7 +3555,7 @@ at::Tensor XLANativeFunctions::select_backward_symint(
 at::Tensor XLANativeFunctions::select_symint(const at::Tensor& self,
                                              int64_t dim, c10::SymInt index) {
   // See Note: [Disabling functionalization]
-  if (xla::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
+  if (torch_xla::runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
     return select_copy(self, dim, index.expect_int());
   }
   return at::functionalization::functionalize_aten_op_symint<ATEN_OP2(
@@ -3566,7 +3566,7 @@ at::Tensor XLANativeFunctions::slice(const at::Tensor& self, int64_t dim,
                                      c10::optional<int64_t> start,
                                      c10::optional<int64_t> end, int64_t step) {
   // See Note: [Disabling functionalization]
-  if (xla::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
+  if (torch_xla::runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
     return slice_copy(self, dim, start, end, step);
   }
   return at::functionalization::functionalize_aten_op<ATEN_OP2(
@@ -3575,7 +3575,7 @@ at::Tensor XLANativeFunctions::slice(const at::Tensor& self, int64_t dim,
 
 at::Tensor XLANativeFunctions::t(const at::Tensor& self) {
   // See Note: [Disabling functionalization]
-  if (xla::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
+  if (torch_xla::runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
     return transpose_copy(self, 0, 1);
   }
   return at::functionalization::functionalize_aten_op<ATEN_OP(t)>::call(self);
@@ -3585,7 +3585,7 @@ at::Tensor XLANativeFunctions::_trilinear(
     const at::Tensor& i1, const at::Tensor& i2, const at::Tensor& i3,
     at::IntArrayRef expand1, at::IntArrayRef expand2, at::IntArrayRef expand3,
     at::IntArrayRef sumdim, int64_t unroll_dim) {
-  XLA_CHECK(!xla::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false));
+  XLA_CHECK(!torch_xla::runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false));
   return at::functionalization::functionalize_aten_op<ATEN_OP(
       _trilinear)>::call(i1, i2, i3, expand1, expand2, expand3, sumdim,
                          unroll_dim);
@@ -3594,13 +3594,13 @@ at::Tensor XLANativeFunctions::_trilinear(
 at::Tensor XLANativeFunctions::linalg_pinv(
     const at::Tensor& self, const c10::optional<at::Tensor>& atol,
     const c10::optional<at::Tensor>& rtol, bool hermitian) {
-  XLA_CHECK(!xla::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false));
+  XLA_CHECK(!torch_xla::runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false));
   return at::functionalization::functionalize_aten_op<ATEN_OP2(
       linalg_pinv, atol_rtol_tensor)>::call(self, atol, rtol, hermitian);
 }
 
 at::Tensor XLANativeFunctions::mvlgamma(const at::Tensor& self, int64_t p) {
-  XLA_CHECK(!xla::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false));
+  XLA_CHECK(!torch_xla::runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false));
   return at::functionalization::functionalize_aten_op<ATEN_OP(mvlgamma)>::call(
       self, p);
 }
@@ -3622,7 +3622,7 @@ at::Tensor XLANativeFunctions::linalg_vector_norm(
 at::Tensor XLANativeFunctions::diagonal_backward_symint(
     const at::Tensor& grad_output, at::SymIntArrayRef input_sizes,
     int64_t offset, int64_t dim1, int64_t dim2) {
-  XLA_CHECK(!xla::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false));
+  XLA_CHECK(!torch_xla::runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false));
   return at::functionalization::functionalize_aten_op_symint<ATEN_OP(
       diagonal_backward)>::call(grad_output, input_sizes, offset, dim1, dim2);
 }
@@ -3632,7 +3632,7 @@ at::Tensor XLANativeFunctions::slice_backward(const at::Tensor& grad_output,
                                               int64_t dim, int64_t start,
                                               int64_t end, int64_t step) {
   // See Note: [Disabling functionalization]
-  if (xla::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
+  if (torch_xla::runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
     return at::native::slice_backward(grad_output, input_sizes, dim, start, end,
                                       step);
   }
@@ -3643,7 +3643,7 @@ at::Tensor XLANativeFunctions::slice_backward(const at::Tensor& grad_output,
 at::Tensor XLANativeFunctions::permute(const at::Tensor& self,
                                        at::IntArrayRef dims) {
   // See Note: [Disabling functionalization]
-  if (xla::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
+  if (torch_xla::runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
     return permute_copy(self, dims);
   }
   return at::functionalization::functionalize_aten_op<ATEN_OP(permute)>::call(

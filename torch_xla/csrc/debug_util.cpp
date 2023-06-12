@@ -23,7 +23,7 @@ namespace {
 
 DebugUtil::GraphFormat DefaultGraphFormat() {
   std::string fmt_str =
-      xla::sys_util::GetEnvString("XLA_SAVE_TENSORS_FMT", "text");
+      torch_xla::runtime::sys_util::GetEnvString("XLA_SAVE_TENSORS_FMT", "text");
   if (fmt_str == "text") {
     return DebugUtil::GraphFormat::kText;
   } else if (fmt_str == "hlo") {
@@ -39,7 +39,7 @@ DebugUtil::GraphFormat DefaultGraphFormat() {
 std::unordered_set<std::string>* LoadExperiments() {
   std::unique_ptr<std::unordered_set<std::string>> xset =
       absl::make_unique<std::unordered_set<std::string>>();
-  std::string experiments = xla::sys_util::GetEnvString("XLA_EXPERIMENTAL", "");
+  std::string experiments = torch_xla::runtime::sys_util::GetEnvString("XLA_EXPERIMENTAL", "");
   std::vector<std::string> experiment_list = absl::StrSplit(experiments, ':');
   for (auto& name : experiment_list) {
     xset->insert(name);
@@ -151,7 +151,7 @@ void DebugUtil::SaveTensorsGraphInfo(const char* name,
                                      absl::Span<const XLATensorPtr> tensors,
                                      const std::vector<size_t>* indices,
                                      GraphFormat format) {
-  thread_local const std::string save_file = xla::sys_util::GetEnvOrdinalPath(
+  thread_local const std::string save_file = torch_xla::runtime::sys_util::GetEnvOrdinalPath(
       "XLA_SAVE_TENSORS_FILE", "", GetCurrentDevice().ordinal());
   if (!save_file.empty()) {
     static std::mutex lock;

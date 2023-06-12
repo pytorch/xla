@@ -24,9 +24,9 @@ namespace {
 
 void DumpDifferences(const at::Tensor& tensor1, const at::Tensor& tensor2) {
   static bool dump_differences =
-      xla::sys_util::GetEnvBool("XLA_TEST_DUMP_DIFFERENCES", true);
+      torch_xla::runtime::sys_util::GetEnvBool("XLA_TEST_DUMP_DIFFERENCES", true);
   static bool dump_tensors =
-      xla::sys_util::GetEnvBool("XLA_TEST_DUMP_TENSORS", false);
+      torch_xla::runtime::sys_util::GetEnvBool("XLA_TEST_DUMP_TENSORS", false);
   at::Tensor dtensor1 = tensor1;
   at::Tensor dtensor2 = tensor2;
   if (tensor1.dtype() == at::kBool) {
@@ -48,7 +48,7 @@ void DumpDifferences(const at::Tensor& tensor1, const at::Tensor& tensor2) {
 
 void MaybeDumpGraph(const at::Tensor& tensor) {
   static std::string dump_graph =
-      xla::sys_util::GetEnvString("XLA_TEST_DUMP_GRAPHS", "");
+      torch_xla::runtime::sys_util::GetEnvString("XLA_TEST_DUMP_GRAPHS", "");
   if (!dump_graph.empty() && bridge::IsXlaTensor(tensor)) {
     std::string graph_str;
     if (dump_graph == "text") {
@@ -225,14 +225,14 @@ void WithAllDevices(
     std::vector<torch::lazy::BackendDevice> devices;
     std::vector<torch::lazy::BackendDevice> all_devices;
     for (const auto& device_str :
-         xla::GetComputationClient()->GetLocalDevices()) {
+         torch_xla::runtime::GetComputationClient()->GetLocalDevices()) {
       torch::lazy::BackendDevice device = ParseDeviceString(device_str);
       if (device.type() == device_type.type) {
         devices.push_back(device);
       }
     }
     for (const auto& device_str :
-         xla::GetComputationClient()->GetAllDevices()) {
+         torch_xla::runtime::GetComputationClient()->GetAllDevices()) {
       torch::lazy::BackendDevice device = ParseDeviceString(device_str);
       if (device.type() == device_type.type) {
         all_devices.push_back(device);
@@ -282,15 +282,15 @@ std::vector<xla::ComputationClient::DataPtr> Execute(
 
   std::vector<xla::ComputationClient::CompileInstance> instances;
   instances.push_back({std::move(computation), device.toString(),
-                       xla::GetComputationClient()->GetCompilationDevices(
+                       torch_xla::runtime::GetComputationClient()->GetCompilationDevices(
                            device.toString(), {}),
                        &shape});
 
   std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
-      computations = xla::GetComputationClient()->Compile(std::move(instances));
+      computations = torch_xla::runtime::GetComputationClient()->Compile(std::move(instances));
 
   xla::ComputationClient::ExecuteComputationOptions options;
-  return xla::GetComputationClient()->ExecuteComputation(
+  return torch_xla::runtime::GetComputationClient()->ExecuteComputation(
       *computations.front(), UnwrapXlaData(lowering_ctx.GetParametersData()),
       device.toString(), options);
 }
@@ -298,7 +298,7 @@ std::vector<xla::ComputationClient::DataPtr> Execute(
 std::vector<at::Tensor> Fetch(
     absl::Span<const xla::ComputationClient::DataPtr> device_data) {
   std::vector<xla::Literal> literals =
-      xla::GetComputationClient()->TransferFromServer(device_data);
+      torch_xla::runtime::GetComputationClient()->TransferFromServer(device_data);
   std::vector<at::Tensor> tensors;
   for (auto& literal : literals) {
     tensors.push_back(MakeTensorFromXlaLiteral(
@@ -434,14 +434,14 @@ torch::lazy::NodePtr CreateNonZeroNode2d(int64_t num_non_zero_element,
 
 bool UsingPjRt() {
   static bool using_pjrt =
-      !xla::sys_util::GetEnvString("PJRT_DEVICE", "").empty();
+      !torch_xla::runtime::sys_util::GetEnvString("PJRT_DEVICE", "").empty();
   return using_pjrt;
 }
 
 bool UsingTpu() {
   static bool using_tpu =
-      absl::StartsWith(xla::sys_util::GetEnvString("PJRT_DEVICE", ""), "TPU") ||
-      !xla::sys_util::GetEnvString("XRT_TPU_CONFIG", "").empty();
+      absl::StartsWith(torch_xla::runtime::sys_util::GetEnvString("PJRT_DEVICE", ""), "TPU") ||
+      !torch_xla::runtime::sys_util::GetEnvString("XRT_TPU_CONFIG", "").empty();
   return using_tpu;
 }
 

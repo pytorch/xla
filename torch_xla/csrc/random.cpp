@@ -27,7 +27,7 @@ std::string GetDefaultGitGeneratorName() {
 
 xla::BitGeneratorTy GetBitGenerator() {
   static const std::string* bit_generator =
-      new std::string(xla::sys_util::GetEnvString(
+      new std::string(torch_xla::runtime::sys_util::GetEnvString(
           "XLA_RNG_BIT_GENERATOR", GetDefaultGitGeneratorName()));
   if (*bit_generator == "default") {
     return [](xla::XlaOp key, xla::XlaOp state, const xla::Shape& shape) {
