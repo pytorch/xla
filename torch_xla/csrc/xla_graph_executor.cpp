@@ -319,7 +319,7 @@ torch::lazy::BackendDataPtr XLAGraphExecutor::GetBaseSeedData(
 }
 
 std::string XLAGraphExecutor::DumpHloComputation(
-    const std::vector<XLATensorPtr>& tensors, bool dump_stablehlo) {
+    const std::vector<XLATensorPtr>& tensors, EmitMode mode) {
   std::vector<torch::lazy::Value> ir_values;
   for (auto& tensor : tensors) {
     torch::lazy::Value ir_value = tensor->CurrentIrValue();
@@ -328,7 +328,7 @@ std::string XLAGraphExecutor::DumpHloComputation(
     }
   }
   return !ir_values.empty()
-             ? DumpUtil::ToHlo(ir_values, GetCurrentDevice(), dump_stablehlo)
+             ? DumpUtil::ToHlo(ir_values, GetCurrentDevice(), mode)
              : std::string();
 }
 
