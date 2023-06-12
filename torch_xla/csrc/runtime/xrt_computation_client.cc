@@ -29,7 +29,8 @@
 #include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/runtime/xla_util.h"
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 namespace {
 
 static const char* const kLocalService = "localservice";
@@ -195,7 +196,7 @@ tensorflow::DeviceNameUtils::ParsedName ParseFullXrtDevice(
 }
 
 void MaybeSaveLongCompileHlo(double compile_time,
-                             const XlaComputation& computation) {
+                             const xla::XlaComputation& computation) {
   static double compile_time_threshold = sys_util::GetEnvDouble(
       "XLA_COMPILE_TIME_THRESHOLD", std::numeric_limits<double>::max());
   static const std::string* hlo_folder = new std::string(
@@ -530,13 +531,13 @@ XrtComputationClient::XrtComputationClient()
 }
 
 ComputationClient::DataPtr XrtComputationClient::CreateDataPlaceholder(
-    std::string device, Shape shape) {
+    std::string device, xla::Shape shape) {
   return std::make_shared<XrtData>(std::move(device), std::move(shape));
 }
 
-std::vector<xla::ComputationClient::DataPtr>
+std::vector<torch_xla::runtime::ComputationClient::DataPtr>
 XrtComputationClient::CreateAsyncDatas(absl::Span<const TensorSource> tensors) {
-  std::vector<xla::ComputationClient::DataPtr> results(tensors.size());
+  std::vector<torch_xla::runtime::ComputationClient::DataPtr> results(tensors.size());
   for (size_t i = 0; i < tensors.size(); ++i) {
     // Create a XrtHandle with dummy handle, releasr needs to take the
     // real handle upon destructon.
@@ -553,9 +554,9 @@ XrtComputationClient::CreateAsyncDatas(absl::Span<const TensorSource> tensors) {
   return results;
 }
 
-std::vector<xla::util::ExceptionCleanup> XrtComputationClient::LockAsyncDatas(
-    absl::Span<const xla::ComputationClient::DataPtr> datas) {
-  std::vector<xla::util::ExceptionCleanup> unlcoker;
+std::vector<torch_xla::runtime::util::ExceptionCleanup> XrtComputationClient::LockAsyncDatas(
+    absl::Span<const torch_xla::runtime::ComputationClient::DataPtr> datas) {
+  std::vector<torch_xla::runtime::util::ExceptionCleanup> unlcoker;
   unlcoker.reserve(datas.size());
   for (int i = 0; i < datas.size(); i++) {
     unlcoker.emplace_back(
@@ -570,7 +571,7 @@ std::vector<size_t> XrtComputationClient::PartitionTransferToServer(
   uint64_t current_size = 0;
   std::vector<size_t> partitions;
   for (size_t i = 0; i < tensors.size(); ++i) {
-    int64_t tensor_size = ShapeUtil::ByteSizeOfElements(tensors[i].shape);
+    int64_t tensor_size = xla::ShapeUtil::ByteSizeOfElements(tensors[i].shape);
     if (current_size + tensor_size > max_partition_size) {
       if (partitions.empty() && i > 0) {
         partitions.push_back(0);
@@ -738,7 +739,7 @@ XrtComputationClient::TransferToServerInternal(
   return results;
 }
 
-std::vector<Literal> XrtComputationClient::TransferFromServer(
+std::vector<xla::Literal> XrtComputationClient::TransferFromServer(
     absl::Span<const DataPtr> handles) {
   metrics::TimedSection timed(TransferFromServerMetric());
   tsl::profiler::TraceMe activity("TransferFromServer",
@@ -752,7 +753,7 @@ std::vector<Literal> XrtComputationClient::TransferFromServer(
   for (size_t i = 0; i < handles.size(); ++i) {
     const XrtData& xrt_data = dynamic_cast<const XrtData&>(*handles[i]);
 
-    int64_t shape_size = ShapeUtil::ByteSizeOfElements(xrt_data.shape());
+    int64_t shape_size = xla::ShapeUtil::ByteSizeOfElements(xrt_data.shape());
     if (current_size + shape_size >= max_partition_size) {
       session_maps.emplace_back();
       current_size = 0;
@@ -775,7 +776,7 @@ std::vector<Literal> XrtComputationClient::TransferFromServer(
   auto mwait = std::make_shared<util::MultiWait>(session_work_map.size());
   std::atomic<int64_t> total_size(0);
   std::atomic<int64_t> num_tensors(0);
-  std::vector<Literal> results(handles.size());
+  std::vector<xla::Literal> results(handles.size());
   for (auto& session_session_work : session_work_map) {
     XrtSession* session = session_session_work.first;
     SessionWork* session_work = &session_session_work.second;
@@ -788,8 +789,8 @@ std::vector<Literal> XrtComputationClient::TransferFromServer(
 
       for (size_t i = 0; i < outputs.size(); ++i) {
         size_t li = session_work->index_mapping[i];
-        LiteralProto response = ParseProto<LiteralProto>(outputs[i]);
-        results[li] = std::move(Literal::CreateFromProto(response).value());
+        xla::LiteralProto response = ParseProto<xla::LiteralProto>(outputs[i]);
+        results[li] = std::move(xla::Literal::CreateFromProto(response).value());
         total_size += results[li].size_bytes();
       }
     };
@@ -814,7 +815,7 @@ std::vector<ComputationClient::ComputationPtr> XrtComputationClient::Compile(
 
   std::mutex lock;
   auto mwait = std::make_shared<util::MultiWait>(instances.size());
-  std::vector<ProgramShape> program_shapes(instances.size());
+  std::vector<xla::ProgramShape> program_shapes(instances.size());
   std::vector<ComputationPtr> results(instances.size());
   std::vector<CompilationCacheKey> cache_keys(instances.size());
   XrtSessionCache::SessionMap session_map;
@@ -835,7 +836,7 @@ std::vector<ComputationClient::ComputationPtr> XrtComputationClient::Compile(
       if (computation_ptr == nullptr) {
         cache_keys[i] = std::move(cache_key);
         program_shapes[i] =
-            ProgramShape(xrt_computation->config().program_shape());
+            xla::ProgramShape(xrt_computation->config().program_shape());
 
         const std::string& xrt_device =
             TorchDeviceToXrtDevice(instance.compilation_device);
@@ -898,11 +899,11 @@ std::vector<ComputationClient::ComputationPtr> XrtComputationClient::Compile(
 }
 
 void XrtComputationClient::CheckCompileStatus(
-    const Status& status, const std::vector<CompileInstance>& instances,
+    const xla::Status& status, const std::vector<CompileInstance>& instances,
     const SessionWork& session_work) {
   if (!status.ok()) {
-    std::vector<const XlaComputation*> computations;
-    std::vector<const Shape*> output_shapes;
+    std::vector<const xla::XlaComputation*> computations;
+    std::vector<const xla::Shape*> output_shapes;
     for (auto li : session_work.index_mapping) {
       computations.push_back(&instances[li].computation);
       output_shapes.push_back(instances[li].output_shape);
@@ -998,8 +999,8 @@ XrtComputationClient::RunComputations(
 
     auto session_runner = [&, this, session]() {
       std::vector<tensorflow::Output> exec_nodes;
-      std::vector<const XlaComputation*> xla_computations;
-      std::vector<const Shape*> output_shapes;
+      std::vector<const xla::XlaComputation*> xla_computations;
+      std::vector<const xla::Shape*> output_shapes;
       for (auto replica : replicas) {
         exec_nodes.push_back(exec_ops[replica]);
         xla_computations.push_back(&computations[replica]->computation());
@@ -1125,7 +1126,7 @@ std::vector<ComputationClient::DataPtr> XrtComputationClient::ExecuteChainedXrt(
       if (output.output_index) {
         plan_output->set_output_index(*output.output_index + 1);
         result_shapes[output.result_index] =
-            ShapeUtil::GetTupleElementShape(*op_shape, *output.output_index);
+            xla::ShapeUtil::GetTupleElementShape(*op_shape, *output.output_index);
       } else {
         result_shapes[output.result_index] = *op_shape;
       }
@@ -1240,7 +1241,7 @@ XrtComputationClient::DeconstructTuple(absl::Span<const DataPtr> tuples) {
 
     tensorflow::Scope device_scope =
         session->root()->WithDevice(TorchDeviceToXrtDevice(xrt_data.device()));
-    int64_t count = ShapeUtil::TupleElementCount(xrt_data.shape());
+    int64_t count = xla::ShapeUtil::TupleElementCount(xrt_data.shape());
     tuple_elements_count[i] = count;
     for (int64_t j = 0; j < count; ++j) {
       const XrtSession::CachedNode& cached_node =
@@ -1270,7 +1271,7 @@ XrtComputationClient::DeconstructTuple(absl::Span<const DataPtr> tuples) {
       for (size_t i = 0; i < tuple_elements_count[li]; ++i, ++output_index) {
         tuple_results.push_back(std::make_shared<XrtData>(
             this, xrt_data.device(),
-            ShapeUtil::GetTupleElementShape(xrt_data.shape(), i),
+            xla::ShapeUtil::GetTupleElementShape(xrt_data.shape(), i),
             outputs[output_index].scalar<int64_t>()()));
       }
       results[li] = std::move(tuple_results);
@@ -1309,8 +1310,8 @@ const std::string& XrtComputationClient::TorchDeviceToXrtDevice(
 }
 
 std::unique_ptr<xrt::XLAComputation> XrtComputationClient::CreateXrtComputation(
-    const XlaComputation& computation, absl::Span<const std::string> devices,
-    const Shape* output_shape) const {
+    const xla::XlaComputation& computation, absl::Span<const std::string> devices,
+    const xla::Shape* output_shape) const {
   std::unique_ptr<xrt::XLAComputation> xrt_computation(
       new xrt::XLAComputation());
   auto config = xrt_computation->mutable_config();
@@ -1738,14 +1739,14 @@ void XrtComputationClient::CreateMeshService(
 
 std::vector<ComputationClient::DataPtr>
 XrtComputationClient::GetComputationResults(
-    const tensorflow::Tensor& xrt_result, const Shape& result_shape,
+    const tensorflow::Tensor& xrt_result, const xla::Shape& result_shape,
     const std::string& device) {
   std::vector<DataPtr> results;
   if (xrt_result.dims() == 1) {
     auto handles_vec = xrt_result.vec<int64_t>();
     for (int64_t i = 0; i < handles_vec.size(); ++i) {
       results.push_back(std::make_shared<XrtData>(
-          this, device, ShapeUtil::GetTupleElementShape(result_shape, i),
+          this, device, xla::ShapeUtil::GetTupleElementShape(result_shape, i),
           handles_vec(i)));
     }
   } else {
@@ -2054,7 +2055,7 @@ const XrtSession::CachedNode& XrtComputationClient::GetReadNode(
 
 const XrtSession::CachedNode& XrtComputationClient::GetAllocateNode(
     XrtSession* session, const tensorflow::Scope& scope,
-    const std::string& device, const Shape& shape) const {
+    const std::string& device, const xla::Shape& shape) const {
   // Create the proper key for the allocation node. Since the node has shape and
   // layouts attributes, these need to be included within the key.
   std::stringstream ss;
@@ -2152,37 +2153,37 @@ const XrtSession::CachedNode& XrtComputationClient::GetMemoryInfoNode(
 }
 
 tensorflow::DataType XrtComputationClient::XlaTypeToDataType(
-    PrimitiveType dtype) {
+    xla::PrimitiveType dtype) {
   switch (dtype) {
-    case PrimitiveType::PRED:
+    case xla::PrimitiveType::PRED:
       return tensorflow::DT_BOOL;
-    case PrimitiveType::S8:
+    case xla::PrimitiveType::S8:
       return tensorflow::DT_INT8;
-    case PrimitiveType::U8:
+    case xla::PrimitiveType::U8:
       return tensorflow::DT_UINT8;
-    case PrimitiveType::S16:
+    case xla::PrimitiveType::S16:
       return tensorflow::DT_INT16;
-    case PrimitiveType::U16:
+    case xla::PrimitiveType::U16:
       return tensorflow::DT_UINT16;
-    case PrimitiveType::S32:
+    case xla::PrimitiveType::S32:
       return tensorflow::DT_INT32;
-    case PrimitiveType::U32:
+    case xla::PrimitiveType::U32:
       return tensorflow::DT_UINT32;
-    case PrimitiveType::S64:
+    case xla::PrimitiveType::S64:
       return tensorflow::DT_INT64;
-    case PrimitiveType::U64:
+    case xla::PrimitiveType::U64:
       return tensorflow::DT_UINT64;
-    case PrimitiveType::F32:
+    case xla::PrimitiveType::F32:
       return tensorflow::DT_FLOAT;
-    case PrimitiveType::F64:
+    case xla::PrimitiveType::F64:
       return tensorflow::DT_DOUBLE;
-    case PrimitiveType::BF16:
+    case xla::PrimitiveType::BF16:
       return tensorflow::DT_BFLOAT16;
-    case PrimitiveType::F16:
+    case xla::PrimitiveType::F16:
       return tensorflow::DT_HALF;
-    case PrimitiveType::C64:
+    case xla::PrimitiveType::C64:
       return tensorflow::DT_COMPLEX64;
-    case PrimitiveType::C128:
+    case xla::PrimitiveType::C128:
       return tensorflow::DT_COMPLEX128;
     default:
       break;
@@ -2192,9 +2193,9 @@ tensorflow::DataType XrtComputationClient::XlaTypeToDataType(
 }
 
 tensorflow::TensorShape XrtComputationClient::MakeEquivalentTensorShape(
-    const Shape& shape) {
-  Shape eqiv_shape =
-      ShapeUtil::MakeShapeWithDescendingLayoutAndSamePhysicalLayout(shape);
+    const xla::Shape& shape) {
+  xla::Shape eqiv_shape =
+      xla::ShapeUtil::MakeShapeWithDescendingLayoutAndSamePhysicalLayout(shape);
   return tensorflow::TensorShape(eqiv_shape.dimensions());
 }
 
@@ -2292,4 +2293,5 @@ std::string XrtComputationClient::GetMultiProcessingDevice() {
   return sys_util::GetEnvString(env::kEnvMpDevice, "");
 }
 
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla

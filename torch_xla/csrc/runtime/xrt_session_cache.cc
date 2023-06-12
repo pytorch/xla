@@ -3,7 +3,8 @@
 #include "torch_xla/csrc/runtime/metrics.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 
 XrtSessionCache::XrtSessionCache(tensorflow::ConfigProto config,
                                  std::function<void(XrtSession*)> initfn,
@@ -69,4 +70,5 @@ std::shared_ptr<XrtSession> XrtSessionCache::CreateSession(
   return session;
 }
 
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla

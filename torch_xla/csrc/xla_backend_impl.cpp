@@ -124,7 +124,7 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
   std::vector<torch::lazy::ComputationPtr> Compile(
       std::vector<torch::lazy::ComputationPtr> instances) const override {
     std::vector<torch::lazy::ComputationPtr> res;
-    std::vector<xla::ComputationClient::CompileInstance> compile_instances;
+    std::vector<torch_xla::runtime::ComputationClient::CompileInstance> compile_instances;
     torch::lazy::BackendDevice current_device = GetCurrentDevice();
     std::vector<xla::Shape> output_shapes;
 
@@ -145,12 +145,12 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
       // torch_xla_computation->computation_ becomes invalid due to std::move.
       // TODO(JackCaoG): Verify this with GPU, we might only have 1 process with
       // multiple GPU as replica.
-      compile_instances.push_back(xla::ComputationClient::CompileInstance(
+      compile_instances.push_back(torch_xla::runtime::ComputationClient::CompileInstance(
           torch_xla_computation->move_computation(),
           torch_xla_computation->get_device_string(),
           {current_device.toString()}, &output_shapes.back()));
     }
-    std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
+    std::vector<std::shared_ptr<torch_xla::runtime::ComputationClient::Computation>>
         client_computations =
             xla::GetComputationClient()->Compile(std::move(compile_instances));
     return WrapClientComputation(client_computations);
@@ -160,7 +160,7 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
       torch::lazy::ComputationPtr computation,
       c10::ArrayRef<torch::lazy::BackendDataPtr> arguments,
       const torch::lazy::BackendDevice& device) const override {
-    std::vector<xla::ComputationClient::DataPtr> results =
+    std::vector<torch_xla::runtime::ComputationClient::DataPtr> results =
         xla::GetComputationClient()->ExecuteComputation(
             *(UnwrapClientComputation(computation).get()),
             UnwrapXlaData(arguments), device.toString());

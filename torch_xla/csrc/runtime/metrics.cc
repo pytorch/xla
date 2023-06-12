@@ -10,7 +10,8 @@
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/util.h"
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 namespace metrics {
 namespace {
 
@@ -93,7 +94,7 @@ void MetricsArena::RegisterMetric(const std::string& name, MetricReprFn repr_fn,
                                   std::shared_ptr<MetricData>* data) {
   std::lock_guard<std::mutex> lock(lock_);
   if (*data == nullptr) {
-    *data = xla::util::MapInsert(&metrics_, name, [&]() {
+    *data = torch_xla::runtime::util::MapInsert(&metrics_, name, [&]() {
       return std::make_shared<MetricData>(std::move(repr_fn), max_samples);
     });
   }
@@ -103,7 +104,7 @@ void MetricsArena::RegisterCounter(const std::string& name,
                                    std::shared_ptr<CounterData>* data) {
   std::lock_guard<std::mutex> lock(lock_);
   if (*data == nullptr) {
-    *data = xla::util::MapInsert(
+    *data = torch_xla::runtime::util::MapInsert(
         &counters_, name, []() { return std::make_shared<CounterData>(); });
   }
 }
@@ -393,4 +394,5 @@ void ClearCounters() { MetricsArena::Get()->ClearCounters(); }
 void ClearMetrics() { MetricsArena::Get()->ClearMetrics(); }
 
 }  // namespace metrics
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla

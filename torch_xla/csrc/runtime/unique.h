@@ -7,7 +7,8 @@
 #include "absl/types/optional.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 namespace util {
 
 // Helper class to allow tracking zero or more things, which should be forcibly
@@ -43,6 +44,7 @@ class Unique {
 };
 
 }  // namespace util
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla
 
 #endif  // XLA_CLIENT_UNIQUE_H_

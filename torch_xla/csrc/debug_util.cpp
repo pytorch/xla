@@ -58,7 +58,7 @@ std::string DebugUtil::GetTensorsGraphHlo(
     absl::Span<const XLATensorPtr> tensors, const std::vector<size_t>* indices,
     bool dump_stablehlo) {
   std::vector<torch::lazy::Value> root_values;
-  xla::util::Unique<torch::lazy::BackendDevice> unique_device;
+  torch_xla::runtime::util::Unique<torch::lazy::BackendDevice> unique_device;
   if (indices != nullptr) {
     for (auto index : *indices) {
       const XLATensorPtr& tensor = tensors[index];
@@ -88,7 +88,7 @@ std::string DebugUtil::GetTensorsGraphInfo(
   std::vector<const torch::lazy::Node*> root_nodes;
   std::vector<torch::lazy::Value> root_values;
   std::vector<torch::lazy::hash_t> root_hashes;
-  xla::util::Unique<torch::lazy::BackendDevice> unique_device;
+  torch_xla::runtime::util::Unique<torch::lazy::BackendDevice> unique_device;
   if (indices != nullptr) {
     for (auto index : *indices) {
       const XLATensorPtr& tensor = tensors[index];

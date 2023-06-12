@@ -7,7 +7,8 @@
 #include "torch_xla/csrc/runtime/tf_logging.h"
 #include "torch_xla/csrc/runtime/types.h"
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 namespace metrics {
 
 namespace {
@@ -77,7 +78,7 @@ class MetricTime : public Analyzer {
                           "Please open a GitHub issue with the graph dump for "
                           "our team to optimize.",
                           kAnalysisPrefix, metric_name_,
-                          xla::metrics::MetricFnTime(max_metric_time)),
+                          torch_xla::runtime::metrics::MetricFnTime(max_metric_time)),
       };
     }
     return {Analysis::Symptom::kNormal};
@@ -100,7 +101,7 @@ class XrtMetricFrequency : public Analyzer {
     LOG(FATAL) << "For XrtMetricFrequency, use the metrics overload";
   }
 
-  Analysis Run(const std::map<std::string, xla::Metric>& xrt_metrics) override {
+  Analysis Run(const std::map<std::string, torch_xla::runtime::Metric>& xrt_metrics) override {
     // XRT GetMetrics call is relatively expensive.
     if (counter_++ != run_every_n_) {
       return {Analysis::Symptom::kNormal};
@@ -118,7 +119,7 @@ class XrtMetricFrequency : public Analyzer {
       if (it == xrt_metrics.end()) {
         continue;
       }
-      xla::Metric xrt_metric = it->second;
+      torch_xla::runtime::Metric xrt_metric = it->second;
       std::ldiv_t res;
       if (xrt_metric.int64_value) {
         int64_t metric_count = *xrt_metric.int64_value;
@@ -198,7 +199,7 @@ std::vector<Analyzer*>* GetAnalyzers() {
 }  // namespace
 
 std::string CreatePerformanceReport(
-    const std::map<std::string, xla::Metric>& xrt_metrics) {
+    const std::map<std::string, torch_xla::runtime::Metric>& xrt_metrics) {
   std::stringstream ss;
   std::vector<Analyzer*>* analyzers = GetAnalyzers();
   for (auto const& analyzer : *analyzers) {
@@ -211,4 +212,5 @@ std::string CreatePerformanceReport(
 }
 
 }  // namespace metrics
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla

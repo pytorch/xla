@@ -15,13 +15,14 @@
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/util.h"
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 
 class PjRtComputationClient : public ComputationClient {
  public:
   PjRtComputationClient();
 
-  DataPtr CreateDataPlaceholder(std::string device, Shape shape) override;
+  DataPtr CreateDataPlaceholder(std::string device, xla::Shape shape) override;
 
   std::vector<DataPtr> GetDataShards(DataPtr data) override;
 
@@ -36,7 +37,7 @@ class PjRtComputationClient : public ComputationClient {
   // Use XLA replication to re-assemble the sharded data.
   DataPtr ReplicateShardedData(const DataPtr& handle);
 
-  std::vector<Literal> TransferFromServer(
+  std::vector<xla::Literal> TransferFromServer(
       absl::Span<const DataPtr> handles) override;
 
   DataPtr TransferShardsToServer(absl::Span<const TensorSource> tensor_shards,
@@ -72,7 +73,7 @@ class PjRtComputationClient : public ComputationClient {
   int GetNumProcesses() const override;
 
   const absl::flat_hash_map<std::string,
-                            xla::ComputationClient::DeviceAttribute>&
+                            torch_xla::runtime::ComputationClient::DeviceAttribute>&
   GetDeviceAttributes(const std::string& device) override;
 
   void SetReplicationDevices(
@@ -96,7 +97,7 @@ class PjRtComputationClient : public ComputationClient {
     XLA_ERROR() << __FUNCTION__ << " not implemented";
   };
 
-  std::vector<xla::util::ExceptionCleanup> LockAsyncDatas(
+  std::vector<torch_xla::runtime::util::ExceptionCleanup> LockAsyncDatas(
       absl::Span<const DataPtr> datas) override {
     XLA_ERROR() << __FUNCTION__ << " not implemented";
   };
@@ -135,7 +136,7 @@ class PjRtComputationClient : public ComputationClient {
   };
 
  private:
-  std::shared_ptr<PjRtClient> client_;
+  std::shared_ptr<xla::PjRtClient> client_;
   // global_ordinals_ tracks a map from PjRtDeviceId to the device's
   // dense global ordinal.
   std::unordered_map<int, int> global_ordinals_;
@@ -149,16 +150,16 @@ class PjRtComputationClient : public ComputationClient {
       const std::string& device);
   std::unique_lock<std::shared_mutex> lock_device(const std::string& device);
 
-  std::string PjRtDeviceToString(PjRtDevice* const device) const;
+  std::string PjRtDeviceToString(xla::PjRtDevice* const device) const;
   std::vector<std::string> PjRtDevicesToString(
-      absl::Span<PjRtDevice* const> devices) const;
+      absl::Span<xla::PjRtDevice* const> devices) const;
 
   struct PjRtData : public Data {
-    PjRtData(std::string device, Shape device_shape)
+    PjRtData(std::string device, xla::Shape device_shape)
         : Data(std::move(device), std::move(device_shape)) {}
 
-    PjRtData(std::string device, Shape device_shape,
-             std::shared_ptr<PjRtBuffer> buffer)
+    PjRtData(std::string device, xla::Shape device_shape,
+             std::shared_ptr<xla::PjRtBuffer> buffer)
         : Data(std::move(device), std::move(device_shape)), buffer(buffer) {}
 
     OpaqueHandle GetOpaqueHandle() override {
@@ -171,13 +172,13 @@ class PjRtComputationClient : public ComputationClient {
       return buffer != nullptr && !buffer->IsDeleted();
     };
 
-    std::shared_ptr<PjRtBuffer> buffer;
+    std::shared_ptr<xla::PjRtBuffer> buffer;
   };
 
   struct PjRtShardedData : public Data {
-    PjRtShardedData(std::string device, Shape shape) = delete;
+    PjRtShardedData(std::string device, xla::Shape shape) = delete;
 
-    PjRtShardedData(std::string device, Shape shape,
+    PjRtShardedData(std::string device, xla::Shape shape,
                     std::vector<std::shared_ptr<PjRtData>> shards,
                     xla::OpSharding sharding)
         : Data(std::move(device), std::move(shape)),
@@ -217,7 +218,7 @@ class PjRtComputationClient : public ComputationClient {
   };
 
   struct PjRtComputation : public Computation {
-    PjRtComputation(XlaComputation computation, ProgramShape program_shape,
+    PjRtComputation(xla::XlaComputation computation, xla::ProgramShape program_shape,
                     std::vector<std::string> devices,
                     std::unique_ptr<xla::PjRtLoadedExecutable> executable)
         : Computation(std::move(computation), std::move(program_shape),
@@ -228,5 +229,6 @@ class PjRtComputationClient : public ComputationClient {
   };
 };
 
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla
 #endif  // XLA_CLIENT_PJRT_COMPUTATION_CLIENT_H_

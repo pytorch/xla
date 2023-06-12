@@ -9,7 +9,8 @@
 #include "tensorflow/compiler/xla/types.h"
 #include "torch_xla/csrc/runtime/mesh_service.pb.h"
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 namespace service {
 
 class MeshService {
@@ -53,6 +54,7 @@ class MeshClient {
 };
 
 }  // namespace service
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla
 
 #endif  // XLA_CLIENT_XRT_MESH_SERVICE_H_

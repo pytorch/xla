@@ -339,7 +339,7 @@ xla::XlaOp BuildMaxInDims(xla::XlaOp input,
   XlaHelpers::MinMax min_max = XlaHelpers::MinMaxValues(shape.element_type());
   std::vector<int64_t> canonical_dimensions =
       torch::lazy::GetCanonicalDimensionIndices(
-          xla::util::ToVector<int64_t>(dimensions), shape.rank());
+          torch_xla::runtime::util::ToVector<int64_t>(dimensions), shape.rank());
   xla::XlaOp init_value = XlaHelpers::ScalarValue(
       min_max.min, shape.element_type(), input.builder());
   ReductionInfo rinfo = GetReductionInfo(input, shape, canonical_dimensions,
@@ -370,7 +370,7 @@ xla::XlaOp BuildMinInDims(xla::XlaOp input,
 
   std::vector<int64_t> canonical_dimensions =
       torch::lazy::GetCanonicalDimensionIndices(
-          xla::util::ToVector<int64_t>(dimensions), shape.rank());
+          torch_xla::runtime::util::ToVector<int64_t>(dimensions), shape.rank());
 
   xla::XlaOp init_value = XlaHelpers::ScalarValue(
       min_max.max, shape.element_type(), input.builder());
@@ -434,7 +434,7 @@ xla::XlaOp BuildAll(xla::XlaOp input, absl::Span<const int64_t> dimensions,
   const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(input);
   std::vector<int64_t> canonical_dimensions =
       torch::lazy::GetCanonicalDimensionIndices(
-          xla::util::ToVector<int64_t>(dimensions), shape.rank());
+          torch_xla::runtime::util::ToVector<int64_t>(dimensions), shape.rank());
   ReductionInfo rinfo = GetReductionInfo(input, shape, canonical_dimensions,
                                          keep_reduced_dimensions);
   xla::XlaOp init_value = xla::ConstantLiteral(
@@ -459,7 +459,7 @@ xla::XlaOp BuildAny(xla::XlaOp input, absl::Span<const int64_t> dimensions,
   const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(input);
   std::vector<int64_t> canonical_dimensions =
       torch::lazy::GetCanonicalDimensionIndices(
-          xla::util::ToVector<int64_t>(dimensions), shape.rank());
+          torch_xla::runtime::util::ToVector<int64_t>(dimensions), shape.rank());
   ReductionInfo rinfo = GetReductionInfo(input, shape, canonical_dimensions,
                                          keep_reduced_dimensions);
   xla::XlaOp init_value = xla::ConstantLiteral(

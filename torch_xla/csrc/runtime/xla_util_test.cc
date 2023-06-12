@@ -17,7 +17,8 @@
 #include "tensorflow/tsl/protobuf/error_codes.pb.h"
 #include "xla_util.h"
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 namespace util {
 
 using ::testing::AllOf;
@@ -32,7 +33,7 @@ TEST(XlaUtilTest, ShapeHash) {
 }
 
 template <typename MessageType>
-StatusOr<MessageType> ParseTextProto(const std::string& text_proto) {
+xla::StatusOr<MessageType> ParseTextProto(const std::string& text_proto) {
   tsl::protobuf::TextFormat::Parser parser;
   MessageType parsed_proto;
   tsl::protobuf::io::ArrayInputStream input_stream(text_proto.data(),
@@ -46,8 +47,8 @@ StatusOr<MessageType> ParseTextProto(const std::string& text_proto) {
 
 TEST(XlaUtilrest, CreateModule) {
   TF_ASSERT_OK_AND_ASSIGN(
-      HloModuleProto hlo_module_proto,
-      ParseTextProto<HloModuleProto>(
+      xla::HloModuleProto hlo_module_proto,
+      ParseTextProto<xla::HloModuleProto>(
           R"pb(
             name: "myname"
             id: 7
@@ -93,7 +94,7 @@ TEST(XlaUtilrest, CreateModule) {
             host_program_shape: { result: { element_type: 4 } }
           )pb"));
 
-  HloModule m("cool_module", {});
+  xla::HloModule m("cool_module", {});
   auto got = CreateModuleFromProto(hlo_module_proto);
   EXPECT_THAT(got, IsOk());
   EXPECT_EQ((*got)->name(), "myname");
@@ -115,4 +116,5 @@ TEST(XlaUtilrest, XlaToHlo) {
 }
 
 }  // namespace util
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla

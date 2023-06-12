@@ -6,7 +6,8 @@
 #include "absl/container/flat_hash_map.h"
 #include "tensorflow/tsl/platform/status.h"
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 namespace profiler {
 
 class ProfilerServer {
@@ -28,6 +29,7 @@ tsl::Status Trace(
         options);
 
 }  // namespace profiler
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla
 
 #endif  // XLA_CLIENT_PROFILER_H_

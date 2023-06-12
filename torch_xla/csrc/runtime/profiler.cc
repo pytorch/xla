@@ -5,7 +5,8 @@
 #include "tensorflow/tsl/profiler/rpc/client/capture_profile.h"
 #include "tensorflow/tsl/profiler/rpc/profiler_server.h"
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 namespace profiler {
 
 struct ProfilerServer::Impl {
@@ -33,4 +34,5 @@ tsl::Status Trace(
       options);
 }
 }  // namespace profiler
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla

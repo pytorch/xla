@@ -8,7 +8,8 @@
 #include "torch_xla/csrc/runtime/xrt_local_service.h"
 #endif
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 namespace {
 
 std::atomic<ComputationClient*> g_computation_client(nullptr);
@@ -69,4 +70,5 @@ void RunLocalService(uint64_t service_port) {
 #endif
 }
 
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla

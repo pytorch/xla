@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/runtime/triggered_task.h"
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 namespace util {
 
 TriggeredTask::TriggeredTask(std::function<void()> function, size_t num_threads)
@@ -69,4 +70,5 @@ void TriggeredTask::Runner() {
 }
 
 }  // namespace util
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla

@@ -86,7 +86,7 @@ torch::lazy::hash_t GetNodesKeySeed(const std::string& device,
 OpByOpExecutor::OpByOpExecutor(size_t compile_cache_size)
     : compile_cache_(compile_cache_size) {}
 
-std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
+std::vector<torch_xla::runtime::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
     c10::ArrayRef<torch::lazy::Value> roots, const std::string& device,
     absl::Span<const std::string> devices) {
   std::vector<const torch::lazy::Node*> root_nodes;
@@ -118,12 +118,12 @@ std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
   std::list<xla::Shape> compile_shapes;
   std::vector<bool> device_data_ops(post_order.size());
   std::vector<const xla::Shape*> ops_shapes(post_order.size());
-  std::vector<xla::ComputationClient::CompileInstance> compile_instances;
-  std::vector<xla::ComputationClient::ExecuteChainedOp> chained_exec_ops(
+  std::vector<torch_xla::runtime::ComputationClient::CompileInstance> compile_instances;
+  std::vector<torch_xla::runtime::ComputationClient::ExecuteChainedOp> chained_exec_ops(
       post_order.size());
   for (size_t i = 0; i < post_order.size(); ++i) {
     const torch::lazy::Node* node = post_order[i];
-    xla::ComputationClient::ExecuteChainedOp& cxop = chained_exec_ops[i];
+    torch_xla::runtime::ComputationClient::ExecuteChainedOp& cxop = chained_exec_ops[i];
     const auto backend_data =
         torch::lazy::getBackend()->GetComputationDataFromNode(node);
     if (backend_data != nullptr) {

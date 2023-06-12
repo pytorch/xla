@@ -3,10 +3,12 @@
 
 #include "tensorflow/compiler/xla/client/xla_computation.h"
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 
-std::string hloToStablehloStr(const HloModuleProto* proto);
+std::string hloToStablehloStr(const xla::HloModuleProto* proto);
 
-}
+}  // namespace torch_xla
+}  // namespace runtime
 
 #endif

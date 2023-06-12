@@ -5,7 +5,8 @@
 #include <memory>
 #include <thread>
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 namespace env {
 
 class Completion {
@@ -32,6 +33,7 @@ void ScheduleIoClosure(std::function<void()> closure);
 Completion ScheduleIoClosureWithCompletion(std::function<void()> closure);
 
 }  // namespace env
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla
 
 #endif  // XLA_CLIENT_THREAD_POOL_H_

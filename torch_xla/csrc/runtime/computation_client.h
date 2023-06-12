@@ -19,7 +19,8 @@
 #include "torch_xla/csrc/runtime/types.h"
 #include "torch_xla/csrc/runtime/util.h"
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 
 // Somehow the compiler doesn't allow type that has default member being
 // used as a default parameter in a method defined in the same scope.
@@ -35,14 +36,14 @@ class ComputationClient {
    public:
     using OpaqueHandle = int64_t;
 
-    Data(std::string device, Shape shape)
+    Data(std::string device, xla::Shape shape)
         : device_(std::move(device)), shape_(std::move(shape)) {}
 
     virtual ~Data() {}
 
     const std::string& device() const { return device_; }
 
-    const Shape& shape() const { return shape_; }
+    const xla::Shape& shape() const { return shape_; }
 
     virtual OpaqueHandle GetOpaqueHandle() = 0;
 
@@ -52,32 +53,32 @@ class ComputationClient {
 
    private:
     std::string device_;
-    Shape shape_;
+    xla::Shape shape_;
   };
 
   using DataPtr = std::shared_ptr<Data>;
 
   class Computation {
    public:
-    Computation(XlaComputation computation, ProgramShape program_shape,
+    Computation(xla::XlaComputation computation, xla::ProgramShape program_shape,
                 std::vector<std::string> devices)
         : computation_(std::move(computation)),
           program_shape_(std::move(program_shape)),
           devices_(std::move(devices)) {}
 
-    Computation(XlaComputation computation)
+    Computation(xla::XlaComputation computation)
         : computation_(std::move(computation)) {
       program_shape_ = ConsumeValue(computation_.GetProgramShape());
     }
 
-    Computation(XlaComputation computation, std::vector<std::string> devices)
+    Computation(xla::XlaComputation computation, std::vector<std::string> devices)
         : computation_(std::move(computation)), devices_(std::move(devices)) {
       program_shape_ = ConsumeValue(computation_.GetProgramShape());
     }
 
     virtual ~Computation() {}
 
-    const XlaComputation& computation() const {
+    const xla::XlaComputation& computation() const {
       if (computation_moved_) {
         XLA_ERROR() << "Compuation has been moved\n";
       }
@@ -96,13 +97,13 @@ class ComputationClient {
       return std::move(const_cast<Computation*>(this)->computation_);
     }
 
-    const ProgramShape& program_shape() const { return program_shape_; }
+    const xla::ProgramShape& program_shape() const { return program_shape_; }
 
     const std::vector<std::string>& devices() const { return devices_; }
 
    private:
-    XlaComputation computation_;
-    ProgramShape program_shape_;
+    xla::XlaComputation computation_;
+    xla::ProgramShape program_shape_;
     std::vector<std::string> devices_;
     bool computation_moved_ = false;
   };
@@ -118,20 +119,20 @@ class ComputationClient {
     using PopulateFn = std::function<void(const TensorSource&, void*, size_t)>;
 
     TensorSource() = default;
-    TensorSource(Shape shape, std::string device, PopulateFn populate_fn)
+    TensorSource(xla::Shape shape, std::string device, PopulateFn populate_fn)
         : shape(std::move(shape)),
           device(std::move(device)),
           populate_fn(std::move(populate_fn)) {}
 
-    Shape shape;
+    xla::Shape shape;
     std::string device;
     PopulateFn populate_fn;
   };
 
   struct CompileInstance {
     CompileInstance() = default;
-    CompileInstance(XlaComputation computation, std::string compilation_device,
-                    std::vector<std::string> devices, const Shape* output_shape,
+    CompileInstance(xla::XlaComputation computation, std::string compilation_device,
+                    std::vector<std::string> devices, const xla::Shape* output_shape,
                     bool parameter_is_tupled_arguments = false,
                     bool is_sharded = false)
         : computation(std::move(computation)),
@@ -141,10 +142,10 @@ class ComputationClient {
           parameter_is_tupled_arguments(parameter_is_tupled_arguments),
           is_sharded(is_sharded) {}
 
-    XlaComputation computation;
+    xla::XlaComputation computation;
     std::string compilation_device;
     std::vector<std::string> devices;
-    const Shape* output_shape = nullptr;
+    const xla::Shape* output_shape = nullptr;
     bool parameter_is_tupled_arguments;
     bool is_sharded;
   };
@@ -191,7 +192,7 @@ class ComputationClient {
 
   // Creates a Data object with no actual device handle in it. The device handle
   // will be populated in an asynchrounous fashion.
-  virtual DataPtr CreateDataPlaceholder(std::string device, Shape shape) = 0;
+  virtual DataPtr CreateDataPlaceholder(std::string device, xla::Shape shape) = 0;
 
   // Create DataPtr that only has dummy information which can be filled in
   // later.
@@ -199,7 +200,7 @@ class ComputationClient {
       absl::Span<const TensorSource> tensors) = 0;
 
   // Lock the DataPtr
-  virtual std::vector<xla::util::ExceptionCleanup> LockAsyncDatas(
+  virtual std::vector<torch_xla::runtime::util::ExceptionCleanup> LockAsyncDatas(
       absl::Span<const DataPtr> datas) = 0;
 
   // Returns data shards. We expect this to be called on PjRtShardedData to
@@ -237,7 +238,7 @@ class ComputationClient {
 
   // Reads the tensor literal values stored at TPU server sites, behind the
   // supplied handles.
-  virtual std::vector<Literal> TransferFromServer(
+  virtual std::vector<xla::Literal> TransferFromServer(
       absl::Span<const DataPtr> handles) = 0;
 
   // Compiles a set of computations.
@@ -317,7 +318,7 @@ class ComputationClient {
       std::variant<std::string, int64_t, std::vector<int64_t>, float>;
 
   virtual const absl::flat_hash_map<std::string,
-                                    xla::ComputationClient::DeviceAttribute>&
+                                    torch_xla::runtime::ComputationClient::DeviceAttribute>&
   GetDeviceAttributes(const std::string& device) = 0;
 
   virtual void SetReplicationDevices(
@@ -339,10 +340,10 @@ class ComputationClient {
 
   // Utility API around the vector based Compile() API to compile a single
   // computation.
-  ComputationPtr Compile(XlaComputation computation,
+  ComputationPtr Compile(xla::XlaComputation computation,
                          std::string compilation_device,
                          std::vector<std::string> devices,
-                         const Shape* output_shape);
+                         const xla::Shape* output_shape);
 
   // Retrieves the set of devices to be passed to the computation client
   // Compile() API. If the devices array is empty, a vector with the single
@@ -379,6 +380,7 @@ class ComputationClient {
   static metrics::Metric* OutboundDataMetric();
 };
 
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla
 
 #endif  // XLA_CLIENT_COMPUTATION_CLIENT_H_

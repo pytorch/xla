@@ -12,7 +12,8 @@
 #include "tensorflow/compiler/xla/types.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 namespace metrics {
 
 struct Sample {
@@ -182,8 +183,8 @@ class Counter {
 // NOTE: [TORCH_LAZY_COUNTER v.s. XLA_COUNTER].
 #define XLA_COUNTER(name, value)                \
   do {                                          \
-    static ::xla::metrics::Counter* __counter = \
-        new ::xla::metrics::Counter(name);      \
+    static ::torch_xla::runtime::metrics::Counter* __counter = \
+        new ::torch_xla::runtime::metrics::Counter(name);      \
     __counter->AddValue(value);                 \
   } while (0)
 
@@ -191,8 +192,8 @@ class Counter {
 // see the above comment.
 #define XLA_VALUE_METRIC(name, value)                                    \
   do {                                                                   \
-    static ::xla::metrics::Metric* __metric =                            \
-        new ::xla::metrics::Metric(name, ::xla::metrics::MetricFnValue); \
+    static ::torch_xla::runtime::metrics::Metric* __metric =                            \
+        new ::torch_xla::runtime::metrics::Metric(name, ::torch_xla::runtime::metrics::MetricFnValue); \
     __metric->AddSample(value);                                          \
   } while (0)
 
@@ -250,11 +251,12 @@ class TimedSection {
 // TORCH_LAZY_TIMED in pytorch/xla. For more information, see
 // NOTE: [TORCH_LAZY_COUNTER v.s. XLA_COUNTER].
 #define XLA_TIMED(name)                                           \
-  static xla::metrics::Metric* timed_metric =                     \
-      new xla::metrics::Metric(name, xla::metrics::MetricFnTime); \
-  xla::metrics::TimedSection timed_section(timed_metric)
+  static torch_xla::runtime::metrics::Metric* timed_metric =                     \
+      new torch_xla::runtime::metrics::Metric(name, torch_xla::runtime::metrics::MetricFnTime); \
+  torch_xla::runtime::metrics::TimedSection timed_section(timed_metric)
 
 }  // namespace metrics
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla
 
 #endif  // XLA_CLIENT_METRICS_H_

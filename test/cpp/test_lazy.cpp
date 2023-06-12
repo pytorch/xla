@@ -23,11 +23,11 @@ TEST_F(LazyTest, TestXlaShapeToLazyWithF64) {
 
   torch::lazy::Shape lazy_shape = XlaHelpers::ConvertXlaShapeToLazy(xla_shape);
   std::vector<int64_t> lazy_dimensions =
-      xla::util::ToVector<int64_t>(lazy_shape.sizes());
+      torch_xla::runtime::util::ToVector<int64_t>(lazy_shape.sizes());
   const c10::optional<std::vector<bool>>& lazy_dynamic_dimensions =
       lazy_shape.is_symbolic();
   EXPECT_EQ(lazy_shape.scalar_type(), at::ScalarType::Double);
-  EXPECT_EQ(lazy_dimensions, xla::util::ToVector<int64_t>(xla_dimensions));
+  EXPECT_EQ(lazy_dimensions, torch_xla::runtime::util::ToVector<int64_t>(xla_dimensions));
   EXPECT_EQ(lazy_dynamic_dimensions.has_value(), false);
 }
 
@@ -44,11 +44,11 @@ TEST_F(LazyTest, TestXlaShapeToLazyWithPred) {
 
   torch::lazy::Shape lazy_shape = XlaHelpers::ConvertXlaShapeToLazy(xla_shape);
   std::vector<int64_t> lazy_dimensions =
-      xla::util::ToVector<int64_t>(lazy_shape.sizes());
+      torch_xla::runtime::util::ToVector<int64_t>(lazy_shape.sizes());
   const c10::optional<std::vector<bool>>& lazy_dynamic_dimensions =
       lazy_shape.is_symbolic();
   EXPECT_EQ(lazy_shape.scalar_type(), at::ScalarType::Bool);
-  EXPECT_EQ(lazy_dimensions, xla::util::ToVector<int64_t>(xla_dimensions));
+  EXPECT_EQ(lazy_dimensions, torch_xla::runtime::util::ToVector<int64_t>(xla_dimensions));
   EXPECT_EQ(lazy_dynamic_dimensions.has_value(), false);
 }
 
@@ -65,11 +65,11 @@ TEST_F(LazyTest, TestXlaShapeToLazyWithU64) {
 
   torch::lazy::Shape lazy_shape = XlaHelpers::ConvertXlaShapeToLazy(xla_shape);
   std::vector<int64_t> lazy_dimensions =
-      xla::util::ToVector<int64_t>(lazy_shape.sizes());
+      torch_xla::runtime::util::ToVector<int64_t>(lazy_shape.sizes());
   const c10::optional<std::vector<bool>>& lazy_dynamic_dimensions =
       lazy_shape.is_symbolic();
   EXPECT_EQ(lazy_shape.scalar_type(), at::ScalarType::Long);
-  EXPECT_EQ(lazy_dimensions, xla::util::ToVector<int64_t>(xla_dimensions));
+  EXPECT_EQ(lazy_dimensions, torch_xla::runtime::util::ToVector<int64_t>(xla_dimensions));
   EXPECT_EQ(lazy_dynamic_dimensions.has_value(), false);
 }
 
@@ -86,11 +86,11 @@ TEST_F(LazyTest, TestXlaShapeToLazyWithMultipleDimensions) {
 
   torch::lazy::Shape lazy_shape = XlaHelpers::ConvertXlaShapeToLazy(xla_shape);
   std::vector<int64_t> lazy_dimensions =
-      xla::util::ToVector<int64_t>(lazy_shape.sizes());
+      torch_xla::runtime::util::ToVector<int64_t>(lazy_shape.sizes());
   const c10::optional<std::vector<bool>>& lazy_dynamic_dimensions =
       lazy_shape.is_symbolic();
   EXPECT_EQ(lazy_shape.scalar_type(), at::ScalarType::Double);
-  EXPECT_EQ(lazy_dimensions, xla::util::ToVector<int64_t>(xla_dimensions));
+  EXPECT_EQ(lazy_dimensions, torch_xla::runtime::util::ToVector<int64_t>(xla_dimensions));
   EXPECT_EQ(lazy_dynamic_dimensions.has_value(), false);
 }
 
@@ -107,11 +107,11 @@ TEST_F(LazyTest, TestXlaShapeToLazyWithDynamicDimensions) {
 
   torch::lazy::Shape lazy_shape = XlaHelpers::ConvertXlaShapeToLazy(xla_shape);
   std::vector<int64_t> lazy_dimensions =
-      xla::util::ToVector<int64_t>(lazy_shape.sizes());
+      torch_xla::runtime::util::ToVector<int64_t>(lazy_shape.sizes());
   const c10::optional<std::vector<bool>>& lazy_dynamic_dimensions =
       lazy_shape.is_symbolic();
   EXPECT_EQ(lazy_shape.scalar_type(), at::ScalarType::Double);
-  EXPECT_EQ(lazy_dimensions, xla::util::ToVector<int64_t>(xla_dimensions));
+  EXPECT_EQ(lazy_dimensions, torch_xla::runtime::util::ToVector<int64_t>(xla_dimensions));
   EXPECT_EQ(lazy_dynamic_dimensions.has_value(), true);
   EXPECT_EQ(lazy_dynamic_dimensions.value(),
             std::vector<bool>(std::begin(dynamic_dimensions),

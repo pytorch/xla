@@ -26,7 +26,7 @@ namespace {
 
 using tsl::ERROR;
 using tsl::INFO;
-using xla::internal::XlaBuilderFriend;
+using torch_xla::runtime::internal::XlaBuilderFriend;
 
 // Return py::obj type as string.
 std::string GetPyType(const py::object& elem) {
@@ -296,13 +296,13 @@ xla::HloModuleProto ShardingUtil::SpmdPartitioningPass(
   return module.get()->ToProto();
 }
 
-std::vector<std::vector<xla::ComputationClient::DataPtr>>
+std::vector<std::vector<torch_xla::runtime::ComputationClient::DataPtr>>
 ShardingUtil::InputHandler(
-    std::vector<xla::ComputationClient::DataPtr> arguments,
+    std::vector<torch_xla::runtime::ComputationClient::DataPtr> arguments,
     std::vector<std::string> devices) {
-  std::vector<std::vector<xla::ComputationClient::DataPtr>> arguments_by_device(
+  std::vector<std::vector<torch_xla::runtime::ComputationClient::DataPtr>> arguments_by_device(
       devices.size(),
-      std::vector<xla::ComputationClient::DataPtr>(arguments.size()));
+      std::vector<torch_xla::runtime::ComputationClient::DataPtr>(arguments.size()));
   // This assumes that the (local) devices are sorted, in order to associate
   // the first local index with the first global device ordinal.
   auto device_index = build_index_map(devices);
@@ -322,11 +322,11 @@ ShardingUtil::InputHandler(
   return arguments_by_device;
 }
 
-std::vector<xla::ComputationClient::DataPtr> ShardingUtil::OutputHandler(
-    std::vector<std::vector<xla::ComputationClient::DataPtr>> sharded_results,
+std::vector<torch_xla::runtime::ComputationClient::DataPtr> ShardingUtil::OutputHandler(
+    std::vector<std::vector<torch_xla::runtime::ComputationClient::DataPtr>> sharded_results,
     std::vector<XLATensor::ShardingSpecPtr> sharding_specs,
     bool replicated_output) {
-  std::vector<xla::ComputationClient::DataPtr> outputs;
+  std::vector<torch_xla::runtime::ComputationClient::DataPtr> outputs;
   outputs.reserve(sharding_specs.size());
   for (int i = 0; i < sharding_specs.size(); ++i) {
     XLATensor::ShardingSpecPtr sharding = sharding_specs[i];
@@ -344,7 +344,7 @@ std::vector<xla::ComputationClient::DataPtr> ShardingUtil::OutputHandler(
           std::vector<std::string>{GetVirtualDevice().toString()})[0]));
     } else {
       // The output is sharded or replicated.
-      std::vector<xla::ComputationClient::DataPtr> shards;
+      std::vector<torch_xla::runtime::ComputationClient::DataPtr> shards;
       shards.reserve(sharded_results.size());
       for (int j = 0; j < sharded_results.size(); ++j) {
         XLA_CHECK(sharded_results[j][i]->HasValue());
@@ -571,19 +571,19 @@ void ShardingUtil::PrepareOutputShardingPropagation(
   }
 }
 
-xla::ComputationClient::DataPtr ShardingUtil::CreateShardedData(
+torch_xla::runtime::ComputationClient::DataPtr ShardingUtil::CreateShardedData(
     std::vector<at::Tensor>& local_shards, std::vector<std::string>& devices,
     xla::Shape global_shape, xla::OpSharding sharding) {
   XLA_CHECK(local_shards.size() == devices.size())
       << "A device must be speficied for each shard";
-  std::vector<xla::ComputationClient::TensorSource> source_tensors;
+  std::vector<torch_xla::runtime::ComputationClient::TensorSource> source_tensors;
   for (int64_t j = 0; j < devices.size(); ++j) {
     auto shard_device = ParseDeviceString(devices[j]);
     auto shard_shape =
         CreateComputationShapeFromTensor(local_shards[j], &shard_device);
     auto populate_fn =
         [&, j, shard_device](
-            const xla::ComputationClient::TensorSource& source_tensor,
+            const torch_xla::runtime::ComputationClient::TensorSource& source_tensor,
             void* dest_buffer, size_t dest_buffer_size) {
           PopulateTensorBuffer(local_shards[j], source_tensor.shape,
                                dest_buffer, dest_buffer_size, shard_device);

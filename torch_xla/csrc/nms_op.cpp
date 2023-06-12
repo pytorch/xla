@@ -92,7 +92,7 @@ xla::XlaOp NmsGather(xla::XlaOp input, absl::Span<const int64_t> input_sizes,
                      xla::XlaOp indices,
                      absl::Span<const int64_t> indices_sizes, int64_t axis) {
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
-  int64_t num_indices = xla::util::Multiply<int64_t>(indices_sizes);
+  int64_t num_indices = torch_xla::runtime::util::Multiply<int64_t>(indices_sizes);
   if (num_indices == 0) {
     std::vector<int64_t> output_sizes =
         torch::lazy::ToVector<int64_t>(input_sizes);

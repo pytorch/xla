@@ -32,7 +32,8 @@
 #include "torch_xla/csrc/runtime/xrt_session.h"
 #include "torch_xla/csrc/runtime/xrt_session_cache.h"
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 
 class XrtLocker {
  public:
@@ -109,12 +110,12 @@ class XrtComputationClient : public ComputationClient {
     // handle_ value. This function will return an ExceptionCleanup object which
     // will rethrow the exception if there is one and unlock the XrtHandle upon
     // destruction.
-    xla::util::ExceptionCleanup LockHandle() {
+    torch_xla::runtime::util::ExceptionCleanup LockHandle() {
       std::shared_ptr<DataHandleLocker> locker_copy = this->locker;
       locker_copy->Lock();
-      return xla::util::ExceptionCleanup(
+      return torch_xla::runtime::util::ExceptionCleanup(
           [locker_copy = std::move(locker_copy)](
-              xla::util::ExceptionCleanup::StatusType status) {
+              torch_xla::runtime::util::ExceptionCleanup::StatusType status) {
             locker_copy->Unlock(std::move(status));
           });
     }
@@ -145,10 +146,10 @@ class XrtComputationClient : public ComputationClient {
   using XrtHandlePtr = std::shared_ptr<XrtHandle>;
 
   struct XrtData : public Data {
-    XrtData(std::string device, Shape device_shape)
+    XrtData(std::string device, xla::Shape device_shape)
         : Data(std::move(device), std::move(device_shape)),
           handle_ptr(nullptr) {}
-    XrtData(XrtComputationClient* self, std::string device, Shape device_shape,
+    XrtData(XrtComputationClient* self, std::string device, xla::Shape device_shape,
             int64_t handle)
         : Data(std::move(device), std::move(device_shape)),
           handle_ptr(std::make_shared<XrtHandle>(
@@ -156,7 +157,7 @@ class XrtComputationClient : public ComputationClient {
                 self->ReleaseXrtData(device, handle);
               })) {}
 
-    XrtData(XrtComputationClient* self, std::string device, Shape device_shape,
+    XrtData(XrtComputationClient* self, std::string device, xla::Shape device_shape,
             XrtHandlePtr handle)
         : Data(std::move(device), std::move(device_shape)),
           handle_ptr(handle) {}
@@ -176,8 +177,8 @@ class XrtComputationClient : public ComputationClient {
   };
 
   struct XrtComputation : public Computation {
-    XrtComputation(XrtComputationClient* self, XlaComputation computation,
-                   ProgramShape program_shape, std::vector<std::string> devices,
+    XrtComputation(XrtComputationClient* self, xla::XlaComputation computation,
+                   xla::ProgramShape program_shape, std::vector<std::string> devices,
                    int64_t handle, std::string compilation_device)
         : Computation(std::move(computation), std::move(program_shape),
                       std::move(devices)),
@@ -238,12 +239,12 @@ class XrtComputationClient : public ComputationClient {
 
   XrtComputationClient();
 
-  DataPtr CreateDataPlaceholder(std::string device, Shape shape) override;
+  DataPtr CreateDataPlaceholder(std::string device, xla::Shape shape) override;
 
   std::vector<DataPtr> CreateAsyncDatas(
       absl::Span<const TensorSource> tensors) override;
 
-  std::vector<xla::util::ExceptionCleanup> LockAsyncDatas(
+  std::vector<torch_xla::runtime::util::ExceptionCleanup> LockAsyncDatas(
       absl::Span<const DataPtr> datas) override;
 
   std::vector<DataPtr> GetDataShards(DataPtr data) override { return {data}; }
@@ -274,7 +275,7 @@ class XrtComputationClient : public ComputationClient {
     XLA_ERROR() << __FUNCTION__ << " not implemented";
   }
 
-  std::vector<Literal> TransferFromServer(
+  std::vector<xla::Literal> TransferFromServer(
       absl::Span<const DataPtr> handles) override;
 
   std::vector<ComputationPtr> Compile(
@@ -322,7 +323,7 @@ class XrtComputationClient : public ComputationClient {
   }
 
   const absl::flat_hash_map<std::string,
-                            xla::ComputationClient::DeviceAttribute>&
+                            torch_xla::runtime::ComputationClient::DeviceAttribute>&
   GetDeviceAttributes(const std::string& device) override {
     XLA_ERROR() << __FUNCTION__ << " not implemented";
   }
@@ -404,8 +405,8 @@ class XrtComputationClient : public ComputationClient {
   void SetupExecConfig(const Device& device, T* exec_config) const;
 
   std::unique_ptr<xrt::XLAComputation> CreateXrtComputation(
-      const XlaComputation& computation, absl::Span<const std::string> devices,
-      const Shape* output_shape) const;
+      const xla::XlaComputation& computation, absl::Span<const std::string> devices,
+      const xla::Shape* output_shape) const;
 
   tensorflow::Tensor GetArgumentsInputs(absl::Span<const DataPtr> arguments,
                                         const std::string& device);
@@ -485,7 +486,7 @@ class XrtComputationClient : public ComputationClient {
   void SetupGpuRuntime();
 
   std::vector<DataPtr> GetComputationResults(
-      const tensorflow::Tensor& xrt_result, const Shape& result_shape,
+      const tensorflow::Tensor& xrt_result, const xla::Shape& result_shape,
       const std::string& device);
 
   void InitSession(XrtSession* session) const;
@@ -565,7 +566,7 @@ class XrtComputationClient : public ComputationClient {
   const XrtSession::CachedNode& GetAllocateNode(XrtSession* session,
                                                 const tensorflow::Scope& scope,
                                                 const std::string& device,
-                                                const Shape& shape) const;
+                                                const xla::Shape& shape) const;
 
   // Creates an XRTReleaseAllocationHandle node:
   //
@@ -614,14 +615,14 @@ class XrtComputationClient : public ComputationClient {
 
   // Checks the result of a compile operation, and dumps the XLA computation
   // graphs in case of error.
-  static void CheckCompileStatus(const Status& status,
+  static void CheckCompileStatus(const xla::Status& status,
                                  const std::vector<CompileInstance>& instances,
                                  const SessionWork& session_work);
 
   // Converts an XLA data type to a tensorflow data type.
-  static tensorflow::DataType XlaTypeToDataType(PrimitiveType dtype);
+  static tensorflow::DataType XlaTypeToDataType(xla::PrimitiveType dtype);
 
-  static tensorflow::TensorShape MakeEquivalentTensorShape(const Shape& shape);
+  static tensorflow::TensorShape MakeEquivalentTensorShape(const xla::Shape& shape);
 
   // Builds an argument vector usable in a replicated context, out of a single
   // replica argument vector. Essentially turns a [N] into a [1][N].
@@ -631,9 +632,9 @@ class XrtComputationClient : public ComputationClient {
   static std::vector<size_t> PartitionTransferToServer(
       absl::Span<const TensorSource> tensors);
 
-  // Extracts the XlaComputation pointers out of Computation ones. Used to be
+  // Extracts the xla::XlaComputation pointers out of Computation ones. Used to be
   // passed to xrt_util::CheckComputationStatus() for its error reporting.
-  static std::vector<const XlaComputation*> GetXlaComputations(
+  static std::vector<const xla::XlaComputation*> GetXlaComputations(
       absl::Span<const Computation* const> computations);
 
   static tensorflow::ConfigProto CreateConfigProto(const Options& options);
@@ -667,6 +668,7 @@ class XrtComputationClient : public ComputationClient {
   std::shared_ptr<std::vector<std::string>> replication_devices_;
 };
 
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla
 
 #endif  // XLA_CLIENT_XRT_COMPUTATION_CLIENT_H_

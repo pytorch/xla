@@ -4,12 +4,13 @@
 
 #include <stdexcept>
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 
 TEST(AsyncTaskTest, BaseTest) {
   auto taskfn = []() -> int { return 17; };
 
-  xla::util::AsyncTask<int> async(std::move(taskfn));
+  torch_xla::runtime::util::AsyncTask<int> async(std::move(taskfn));
   async.Schedule();
   async.Wait();
   EXPECT_EQ(async.GetValue(), 17);
@@ -18,7 +19,7 @@ TEST(AsyncTaskTest, BaseTest) {
 TEST(AsyncTaskTest, ExceptionTest) {
   auto taskfn = []() -> int { throw std::runtime_error("Task Exception"); };
 
-  xla::util::AsyncTask<int> async(std::move(taskfn));
+  torch_xla::runtime::util::AsyncTask<int> async(std::move(taskfn));
   async.Schedule();
   bool got_exception = false;
   try {
@@ -51,7 +52,7 @@ TEST(AsyncTaskTest, NoResultCopyTest) {
   int copy_counter = 0;
   auto taskfn = [&]() -> Result { return Result(&copy_counter); };
 
-  xla::util::AsyncTask<Result> async(std::move(taskfn));
+  torch_xla::runtime::util::AsyncTask<Result> async(std::move(taskfn));
   async.Schedule();
   async.Wait();
 
@@ -60,4 +61,5 @@ TEST(AsyncTaskTest, NoResultCopyTest) {
   EXPECT_EQ(result.counter, &copy_counter);
 }
 
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla

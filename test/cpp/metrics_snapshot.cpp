@@ -10,15 +10,15 @@ namespace torch_xla {
 namespace cpp_test {
 
 MetricsSnapshot::MetricsSnapshot() {
-  for (auto& name : xla::metrics::GetMetricNames()) {
-    xla::metrics::MetricData* metric = xla::metrics::GetMetric(name);
+  for (auto& name : torch_xla::runtime::metrics::GetMetricNames()) {
+    torch_xla::runtime::metrics::MetricData* metric = torch_xla::runtime::metrics::GetMetric(name);
     MetricSamples msamples;
     msamples.samples =
         metric->Samples(&msamples.accumulator, &msamples.total_samples);
     metrics_map_.emplace(name, std::move(msamples));
   }
-  for (auto& name : xla::metrics::GetCounterNames()) {
-    xla::metrics::CounterData* counter = xla::metrics::GetCounter(name);
+  for (auto& name : torch_xla::runtime::metrics::GetCounterNames()) {
+    torch_xla::runtime::metrics::CounterData* counter = torch_xla::runtime::metrics::GetCounter(name);
     counters_map_.emplace(name, counter->Value());
   }
 
@@ -39,7 +39,7 @@ std::vector<MetricsSnapshot::ChangedCounter> MetricsSnapshot::CounterChanged(
     if ((ignore_set == nullptr || ignore_set->count(name_counter.first) == 0) &&
         std::regex_match(name_counter.first, match, cregex)) {
       int64_t start_value =
-          xla::util::FindOr(counters_map_, name_counter.first, 0);
+          torch_xla::runtime::util::FindOr(counters_map_, name_counter.first, 0);
       if (name_counter.second != start_value) {
         changed.push_back(
             {name_counter.first, start_value, name_counter.second});
@@ -56,7 +56,7 @@ std::string MetricsSnapshot::DumpDifferences(
   for (auto& name_counter : after.counters_map_) {
     if (ignore_set == nullptr || ignore_set->count(name_counter.first) == 0) {
       int64_t start_value =
-          xla::util::FindOr(counters_map_, name_counter.first, 0);
+          torch_xla::runtime::util::FindOr(counters_map_, name_counter.first, 0);
       if (name_counter.second != start_value) {
         ss << "Counter '" << name_counter.first << "' changed from "
            << start_value << " to " << name_counter.second << "\n";

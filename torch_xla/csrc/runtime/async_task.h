@@ -11,7 +11,8 @@
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/thread_pool.h"
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 namespace util {
 
 template <typename T>
@@ -67,7 +68,7 @@ class AsyncTask {
       XLA_CHECK(!data_->scheduled);
       data_->scheduled = true;
     }
-    xla::env::ScheduleIoClosure(std::move(completer));
+    torch_xla::runtime::env::ScheduleIoClosure(std::move(completer));
     return *this;
   }
 
@@ -86,6 +87,7 @@ class AsyncTask {
 };
 
 }  // namespace util
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla
 
 #endif  // XLA_CLIENT_ASYNC_TASK_H_

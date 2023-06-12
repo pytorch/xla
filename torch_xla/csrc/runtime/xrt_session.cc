@@ -2,7 +2,8 @@
 
 #include "absl/strings/str_cat.h"
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 
 XrtSession::XrtSession(const tensorflow::SessionOptions& session_options)
     : target_(session_options.target),
@@ -20,4 +21,5 @@ std::string XrtSession::GetCacheKey(const std::string& op_name,
   return absl::StrCat(op_name, ";", device);
 }
 
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla

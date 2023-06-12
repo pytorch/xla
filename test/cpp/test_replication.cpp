@@ -57,7 +57,7 @@ void TestSingleReplication(
 
   std::vector<std::vector<xla::ComputationClient::DataPtr>> results(
       device_strings.size());
-  xla::util::MultiWait mwait(device_strings.size());
+  torch_xla::runtime::util::MultiWait mwait(device_strings.size());
   xla::ComputationClient::ExecuteComputationOptions exec_options;
   for (size_t i = 0; i < device_strings.size(); ++i) {
     auto executor = [&, i]() {

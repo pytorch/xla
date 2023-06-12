@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/runtime/env_vars.h"
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 namespace env {
 
 const char* const kEnvNumTpu = "TPU_NUM_DEVICES";
@@ -28,4 +29,5 @@ const char* const kEnvPjrtDistServiceAddr = "PJRT_DIST_SERVICE_ADDR";
 const char* const kEnvPjRtLocalRank = "PJRT_LOCAL_PROCESS_RANK";
 
 }  // namespace env
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla

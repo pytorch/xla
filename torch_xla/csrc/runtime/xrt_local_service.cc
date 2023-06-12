@@ -11,7 +11,8 @@
 #include "tensorflow/tsl/platform/errors.h"
 #include "tensorflow/tsl/platform/status.h"
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 namespace {
 
 void FillServerDef(const std::string& cluster_spec, const std::string& job_name,
@@ -62,4 +63,5 @@ void XrtLocalService::Start() { TF_CHECK_OK(server_->Start()); }
 
 void XrtLocalService::Join() { TF_CHECK_OK(server_->Join()); }
 
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla

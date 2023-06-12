@@ -9,7 +9,8 @@
 
 #include "absl/types/span.h"
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 namespace util {
 
 using ::testing::ElementsAre;
@@ -105,7 +106,7 @@ TEST(UtilTest, Hash) {
 }
 
 TEST(UtilTest, MaybeRef) {
-  using StringRef = xla::util::MaybeRef<std::string>;
+  using StringRef = torch_xla::runtime::util::MaybeRef<std::string>;
   std::string storage("String storage");
   StringRef ref_storage(storage);
   EXPECT_FALSE(ref_storage.is_stored());
@@ -117,4 +118,5 @@ TEST(UtilTest, MaybeRef) {
 }
 
 }  // namespace util
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla

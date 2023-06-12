@@ -2,7 +2,8 @@
 
 #include <sstream>
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 namespace util {
 namespace {
 
@@ -78,4 +79,5 @@ std::string HexHash(const hash_t& a) {
 }
 
 }  // namespace util
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla

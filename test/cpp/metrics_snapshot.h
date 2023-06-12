@@ -33,7 +33,7 @@ class MetricsSnapshot {
 
  private:
   struct MetricSamples {
-    std::vector<xla::metrics::Sample> samples;
+    std::vector<torch_xla::runtime::metrics::Sample> samples;
     double accumulator = 0.0;
     size_t total_samples = 0;
   };

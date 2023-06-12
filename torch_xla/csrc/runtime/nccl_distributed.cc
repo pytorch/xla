@@ -9,7 +9,8 @@
 #include "third_party/nccl/nccl.h"
 #endif
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 namespace nccl_detail {
 
 #if XLA_CUDA
@@ -66,4 +67,5 @@ std::string GetNcclUniqueUid(absl::Span<const int64_t> replicas) {
 #endif  // XLA_CUDA
 
 }  // namespace nccl_detail
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla

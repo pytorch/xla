@@ -8,7 +8,8 @@
 #include <thread>
 #include <vector>
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 namespace util {
 
 // Wraps a function which should be run many times upon user activations.
@@ -50,6 +51,7 @@ class TriggeredTask {
 };
 
 }  // namespace util
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla
 
 #endif  // XLA_CLIENT_TRIGGERED_TASK_H_

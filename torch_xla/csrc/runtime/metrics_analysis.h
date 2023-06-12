@@ -9,7 +9,8 @@
 
 #include "torch_xla/csrc/runtime/types.h"
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 namespace metrics {
 
 // Performance degradation symptoms detected:
@@ -41,15 +42,16 @@ class Analyzer {
   virtual ~Analyzer() = default;
 
   virtual Analysis Run() = 0;
-  virtual Analysis Run(const std::map<std::string, xla::Metric>& metrics) {
+  virtual Analysis Run(const std::map<std::string, torch_xla::runtime::Metric>& metrics) {
     return Run();
   }
 };
 
 std::string CreatePerformanceReport(
-    const std::map<std::string, xla::Metric>& metrics);
+    const std::map<std::string, torch_xla::runtime::Metric>& metrics);
 
 }  // namespace metrics
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla
 
 #endif  // XLA_CLIENT_METRICS_ANALYSIS_H_

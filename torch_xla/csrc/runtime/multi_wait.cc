@@ -3,7 +3,8 @@
 #include <chrono>
 #include <exception>
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 namespace util {
 
 void MultiWait::Done() {
@@ -68,4 +69,5 @@ void MultiWait::Complete(const std::function<void()>& func) {
 }
 
 }  // namespace util
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla

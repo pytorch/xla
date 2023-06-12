@@ -6,12 +6,13 @@
 #include <memory>
 #include <string>
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 namespace util {
 
 TEST(UtilTest, XlaUtilCacheTest) {
   static const int kMaxSize = 64;
-  xla::util::Cache<int, std::string> cache(kMaxSize);
+  torch_xla::runtime::util::Cache<int, std::string> cache(kMaxSize);
 
   for (int i = 0; i < 2 * kMaxSize; ++i) {
     std::string istr = std::to_string(i);
@@ -37,4 +38,5 @@ TEST(UtilTest, XlaUtilCacheTest) {
 }
 
 }  // namespace util
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla

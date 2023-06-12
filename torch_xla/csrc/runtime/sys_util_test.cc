@@ -2,7 +2,8 @@
 
 #include <gtest/gtest.h>
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 namespace sys_util {
 
 TEST(SysUtilTest, Env) {
@@ -30,4 +31,5 @@ TEST(SysUtilTest, Env) {
 }
 
 }  // namespace sys_util
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla

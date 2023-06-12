@@ -30,7 +30,8 @@
 #include "torch_xla/csrc/runtime/thread_pool.h"
 #include "torch_xla/csrc/runtime/util.h"
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 namespace service {
 namespace {
 
@@ -42,7 +43,7 @@ namespace {
     }                         \
   } while (0)
 
-::grpc::Status ToGrpcStatus(const Status& status) {
+::grpc::Status ToGrpcStatus(const xla::Status& status) {
   return status.ok()
              ? ::grpc::Status::OK
              : ::grpc::Status(static_cast<::grpc::StatusCode>(status.code()),
@@ -138,7 +139,7 @@ class MeshServiceImpl : public grpc::MeshService::Service {
 
 ::grpc::Status MeshServiceImpl::RendezvousData::Wait() {
   ::grpc::Status status =
-      ToGrpcStatus(xla::util::CheckedCall([&]() { mwait_.Wait(); }));
+      ToGrpcStatus(torch_xla::runtime::util::CheckedCall([&]() { mwait_.Wait(); }));
   if (status.ok()) {
     std::lock_guard<std::mutex> lock(lock_);
     status = status_;
@@ -406,4 +407,5 @@ std::string MeshClient::GetNcclUniqueUid(
 }
 
 }  // namespace service
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla

@@ -19,7 +19,8 @@
 #include "tensorflow/tsl/platform/test.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 
 tsl::StatusOr<xla::XlaComputation> MakeComputation() {
   xla::Shape input_shape =
@@ -86,4 +87,5 @@ TEST(PjRtComputationClientTest, Init) {
       result_literals[0]));
 }
 
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla

@@ -5,7 +5,8 @@
 #include "tensorflow/tsl/platform/strcat.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 namespace util {
 
 RecordReader::RecordReader(std::string path, const std::string& compression,
@@ -30,4 +31,5 @@ bool RecordReader::Read(Data* value) {
 }
 
 }  // namespace util
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla

@@ -8,7 +8,8 @@
 #include "torch_xla/csrc/runtime/metrics.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 namespace env {
 namespace {
 
@@ -178,4 +179,5 @@ Completion ScheduleIoClosureWithCompletion(std::function<void()> closure) {
 }
 
 }  // namespace env
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla

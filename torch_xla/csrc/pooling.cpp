@@ -515,7 +515,7 @@ xla::XlaOp BuildMaxUnpoolNd(const torch::lazy::BackendDevice& device,
   xla::Shape zeros_shape = xla::ShapeUtil::MakeShape(
       input_shape.element_type(),
       {input_shape.dimensions(0), input_shape.dimensions(1),
-       xla::util::Multiply<int64_t>(output_size)});
+       torch_xla::runtime::util::Multiply<int64_t>(output_size)});
   xla::XlaOp zeros = xla::Zeros(input.builder(), zeros_shape);
   xla::XlaOp init_value =
       xla::Broadcast(xla::MinValue(input.builder(), input_shape.element_type()),

@@ -156,7 +156,7 @@ c10::optional<at::ScalarType> XLATensor::dtype_optional() const {
   return data()->logical_element_type;
 }
 
-xla::util::MaybeRef<xla::Shape> XLATensor::shape() const {
+torch_xla::runtime::util::MaybeRef<xla::Shape> XLATensor::shape() const {
   if (data()->view != nullptr) {
     return data()->view->shape();
   }
@@ -387,8 +387,8 @@ std::shared_ptr<View> XLATensor::UpdateView(std::shared_ptr<View> view,
                                             torch::lazy::Value ir_value) const {
   if (GetXlaShape(ir_value).dimensions() != view->shape().dimensions()) {
     XLA_CHECK_EQ(
-        xla::util::Multiply<int64_t>(GetXlaShape(ir_value).dimensions()),
-        xla::util::Multiply<int64_t>(view->shape().dimensions()));
+        torch_xla::runtime::util::Multiply<int64_t>(GetXlaShape(ir_value).dimensions()),
+        torch_xla::runtime::util::Multiply<int64_t>(view->shape().dimensions()));
 
     ViewInfo view_info(ViewInfo::Type::kReshape, GetXlaShape(ir_value),
                        view->shape());

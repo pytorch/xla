@@ -6,7 +6,8 @@
 
 #include "absl/strings/str_cat.h"
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 namespace sys_util {
 
 std::string GetEnvString(const char* name, const std::string& defval) {
@@ -62,4 +63,5 @@ int64_t NowNs() {
 }
 
 }  // namespace sys_util
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla

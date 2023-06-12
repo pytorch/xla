@@ -1,7 +1,8 @@
 #ifndef XLA_CLIENT_ENV_VARS_H_
 #define XLA_CLIENT_ENV_VARS_H_
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 namespace env {
 
 extern const char* const kEnvNumTpu;
@@ -28,6 +29,7 @@ extern const char* const kEnvPjrtDistServiceAddr;
 extern const char* const kEnvPjRtLocalRank;
 
 }  // namespace env
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla
 
 #endif  // XLA_CLIENT_ENV_VARS_H_

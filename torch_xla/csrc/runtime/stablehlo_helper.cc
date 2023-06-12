@@ -10,10 +10,11 @@
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/xla_util.h"
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 
-static std::string getHloModuleStr(const HloModuleProto* proto) {
-  auto hlo_module = xla::util::CreateModuleFromProto(*proto);
+static std::string getHloModuleStr(const xla::HloModuleProto* proto) {
+  auto hlo_module = torch_xla::runtime::util::CreateModuleFromProto(*proto);
   return hlo_module.value()->ToString();
 }
 
@@ -24,7 +25,7 @@ static std::string getMlirModuleStr(mlir::ModuleOp& mlir_module) {
   return txt_mlir_module;
 }
 
-static absl::Status hloToMhloHelper(const HloModuleProto* proto,
+static absl::Status hloToMhloHelper(const xla::HloModuleProto* proto,
                                     mlir::ModuleOp* mlir_module) {
   auto status = xla::ConvertHloToMlirHlo(*mlir_module, proto,
                                          /*import_all_computations=*/false);
@@ -52,7 +53,7 @@ static absl::Status mhloToStablehloHelper(mlir::ModuleOp* mlir_module,
   ;
 }
 
-std::string hloToStablehloStr(const HloModuleProto* proto) {
+std::string hloToStablehloStr(const xla::HloModuleProto* proto) {
   mlir::MLIRContext context;
   mlir::ModuleOp mlir_module =
       mlir::ModuleOp::create(mlir::UnknownLoc::get(&context));
@@ -69,4 +70,5 @@ std::string hloToStablehloStr(const HloModuleProto* proto) {
   return getMlirModuleStr(mlir_module);
 }
 
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla

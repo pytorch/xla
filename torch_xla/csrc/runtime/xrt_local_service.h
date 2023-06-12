@@ -8,7 +8,8 @@
 #include "tensorflow/core/distributed_runtime/server_lib.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 
 // A TF server running on a local interface.
 class XrtLocalService {
@@ -38,6 +39,7 @@ class XrtLocalService {
   std::unique_ptr<tensorflow::ServerInterface> server_;
 };
 
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla
 
 #endif  // XLA_CLIENT_XRT_LOCAL_SERVICE_H_

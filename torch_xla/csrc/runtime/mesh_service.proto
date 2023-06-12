@@ -2,7 +2,7 @@ syntax = "proto2";
 
 import "tensorflow/core/protobuf/tpu/topology.proto";
 
-package xla.service.grpc;
+package torch_xla.runtime.service.grpc;
 
 message Device {
   required string local_name = 1;

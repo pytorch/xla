@@ -5,7 +5,8 @@
 
 #include "tensorflow/compiler/xla/types.h"
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 namespace sys_util {
 
 // Gets the string environmental variable by `name`, or `defval` if unset.
@@ -31,6 +32,7 @@ bool GetEnvBool(const char* name, bool defval);
 int64_t NowNs();
 
 }  // namespace sys_util
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla
 
 #endif  // XLA_CLIENT_SYS_UTIL_H_

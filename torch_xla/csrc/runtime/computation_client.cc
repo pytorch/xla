@@ -16,11 +16,12 @@
 #include "torch_xla/csrc/runtime/env_vars.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 
 std::shared_ptr<ComputationClient::Computation> ComputationClient::Compile(
-    XlaComputation computation, std::string compilation_device,
-    std::vector<std::string> devices, const Shape* output_shape) {
+    xla::XlaComputation computation, std::string compilation_device,
+    std::vector<std::string> devices, const xla::Shape* output_shape) {
   std::vector<CompileInstance> instances;
   instances.emplace_back(std::move(computation), std::move(compilation_device),
                          std::move(devices), output_shape);
@@ -176,4 +177,5 @@ metrics::Metric* ComputationClient::OutboundDataMetric() {
   return metric;
 }
 
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla

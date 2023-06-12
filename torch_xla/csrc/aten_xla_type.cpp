@@ -2735,7 +2735,7 @@ at::Tensor XLANativeFunctions::select_scatter(const at::Tensor& base,
 
   std::vector<int64_t> indices(base_tensor_shape.get().rank(), 0);
   indices[dim] = torch::lazy::GetCanonicalPosition(
-      xla::util::ToVector<int64_t>(base_tensor_shape.get().dimensions()), dim,
+      torch_xla::runtime::util::ToVector<int64_t>(base_tensor_shape.get().dimensions()), dim,
       index);
   return bridge::AtenFromXlaTensor(
       base_tensor->CreateFrom(torch::lazy::MakeNode<UpdateSlice>(
@@ -2795,10 +2795,10 @@ at::Tensor XLANativeFunctions::slice_scatter(
   auto input_shape = base_->shape();
   dim = torch::lazy::GetCanonicalDimensionIndex(dim, input_shape.get().rank());
   start_val = torch::lazy::GetCanonicalPosition(
-      xla::util::ToVector<int64_t>(input_shape.get().dimensions()), dim,
+      torch_xla::runtime::util::ToVector<int64_t>(input_shape.get().dimensions()), dim,
       start_val);
   end_val = torch::lazy::GetCanonicalPosition(
-      xla::util::ToVector<int64_t>(input_shape.get().dimensions()), dim,
+      torch_xla::runtime::util::ToVector<int64_t>(input_shape.get().dimensions()), dim,
       end_val);
   // PyTorch allows tensor[-1:0] to return a 0-dim tensor.
   if (start_val > end_val) {

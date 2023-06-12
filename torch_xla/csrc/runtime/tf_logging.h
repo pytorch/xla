@@ -7,7 +7,8 @@
 #include "tensorflow/tsl/platform/logging.h"
 #include "tensorflow/tsl/platform/status.h"
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 namespace internal {
 
 // It happens that Caffe defined the same exact Google macros, hiding the TF
@@ -47,8 +48,8 @@ class ErrorGenerator {
 };
 
 #define TF_ERROR_STREAM()                               \
-  ::xla::internal::ErrorGenerator(__FILE__, __LINE__) & \
-      ::xla::internal::ErrorSink()
+  ::torch_xla::runtime::internal::ErrorGenerator(__FILE__, __LINE__) & \
+      ::torch_xla::runtime::internal::ErrorSink()
 
 #define TF_CHECK(condition)              \
   while (TF_PREDICT_FALSE(!(condition))) \
@@ -75,6 +76,7 @@ class ErrorGenerator {
 #define TF_CHECK_NOTNULL(val) TF_CHECK(val != nullptr)
 
 }  // namespace internal
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla
 
 #endif  // XLA_CLIENT_TF_LOGGING_H_

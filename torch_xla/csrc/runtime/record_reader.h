@@ -8,7 +8,8 @@
 #include "tensorflow/compiler/xla/types.h"
 #include "tensorflow/tsl/lib/io/record_reader.h"
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 namespace util {
 
 class RecordReader {
@@ -31,6 +32,7 @@ class RecordReader {
 };
 
 }  // namespace util
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla
 
 #endif  // XLA_CLIENT_RECORD_READER_H_

@@ -486,6 +486,7 @@ cc_library(
 
 cc_test(
     name = "xla_util_test",
+    size = "small",
     srcs = ["xla_util_test.cc"],
     deps = [
         ":xla_util",

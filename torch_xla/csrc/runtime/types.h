@@ -8,7 +8,8 @@
 #include "absl/types/optional.h"
 #include "tensorflow/compiler/xla/types.h"
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 
 using hash_t = absl::uint128;
 
@@ -41,6 +42,7 @@ struct Metric {
   absl::optional<int64_t> int64_value;
 };
 
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla
 
 #endif  // XLA_CLIENT_TYPES_H_

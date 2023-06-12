@@ -15,7 +15,8 @@
 #include "tensorflow/compiler/xla/types.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 
 // Encapsulates an XRT session and its associated node cache. XrtSession are not
 // thread safe, but are always accessed by one thread at a time. The
@@ -95,6 +96,7 @@ class XrtSession {
   std::map<std::string, NodeCache> node_cache_;
 };
 
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla
 
 #endif  // XLA_CLIENT_XRT_SESSION_H_

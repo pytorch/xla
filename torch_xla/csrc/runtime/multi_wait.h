@@ -8,7 +8,8 @@
 
 #include "tensorflow/compiler/xla/types.h"
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 namespace util {
 
 // Support waiting for a number of tasks to complete.
@@ -53,6 +54,7 @@ class MultiWait {
 };
 
 }  // namespace util
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla
 
 #endif  // XLA_CLIENT_MULTI_WAIT_H_

@@ -12,7 +12,8 @@
 #include "tensorflow/compiler/xla/types.h"
 #include "torch_xla/csrc/runtime/xrt_session.h"
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 
 // Caches XrtSession objects. The XrtSession objects handed out by this class
 // will be at exclusive use of the caller.
@@ -94,6 +95,7 @@ class XrtSessionCache {
   std::map<std::string, std::deque<std::shared_ptr<XrtSession>>> session_map_;
 };
 
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla
 
 #endif  // XLA_CLIENT_XRT_SESSION_CACHE_H_

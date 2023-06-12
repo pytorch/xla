@@ -3,7 +3,8 @@
 
 #include "torch_xla/csrc/runtime/computation_client.h"
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 
 // Returns the ComputationClient singleton.
 ComputationClient* GetComputationClient();
@@ -14,6 +15,7 @@ ComputationClient* GetComputationClientIfInitialized();
 // being stopped.
 void RunLocalService(uint64_t service_port);
 
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla
 
 #endif

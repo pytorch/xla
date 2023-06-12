@@ -65,10 +65,10 @@ std::vector<int64_t> GetCompleteShape(absl::Span<const int64_t> output_sizes,
       incomplete_element_count *= dim_size;
     }
   }
-  int64_t total_element_count = xla::util::Multiply<int64_t>(input_sizes);
+  int64_t total_element_count = torch_xla::runtime::util::Multiply<int64_t>(input_sizes);
   if (!incomplete_dim) {
     XLA_CHECK_EQ(total_element_count,
-                 xla::util::Multiply<int64_t>(output_sizes))
+                 torch_xla::runtime::util::Multiply<int64_t>(output_sizes))
         << "(" << absl::StrJoin(output_sizes, ", ") << ") vs. ("
         << absl::StrJoin(input_sizes, ", ") << ")";
     return torch::lazy::ToVector<int64_t>(output_sizes);
@@ -297,7 +297,7 @@ xla::XlaOp BuildResize(xla::XlaOp input, absl::Span<const int64_t> size) {
   xla::Shape input_shape;
   xla::XlaOp r1_input = XlaHelpers::Flatten(input, &input_shape);
   int64_t num_elements = xla::ShapeUtil::ElementsIn(input_shape);
-  int64_t new_num_elements = xla::util::Multiply<int64_t>(size);
+  int64_t new_num_elements = torch_xla::runtime::util::Multiply<int64_t>(size);
   xla::XlaOp resized_input = input;
   if (num_elements > new_num_elements) {
     resized_input = xla::SliceInDim(r1_input, 0, new_num_elements, 1, 0);

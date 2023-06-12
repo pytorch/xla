@@ -20,7 +20,8 @@
 #include "tensorflow/tsl/platform/hash.h"
 #include "torch_xla/csrc/runtime/types.h"
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 namespace util {
 
 hash_t HashBlock(const void* data, size_t n, const hash_t& seed);
@@ -38,19 +39,19 @@ size_t HashReduce(const hash_t& a);
 std::string HexHash(const hash_t& a);
 
 struct HashReducer {
-  size_t operator()(const xla::hash_t& value) const {
+  size_t operator()(const hash_t& value) const {
     return HashReduce(value);
   }
 };
 
 template <typename F>
-Status CheckedCall(const F& fn) {
+xla::Status CheckedCall(const F& fn) {
   try {
     fn();
   } catch (const std::exception& ex) {
     return tsl::errors::Internal(ex.what());
   }
-  return OkStatus();
+  return xla::Status();
 }
 
 template <typename T>
@@ -332,6 +333,7 @@ hash_t MHash(T value, Targs... Fargs) {
 }
 
 }  // namespace util
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla
 
 #endif  // XLA_CLIENT_UTIL_H_

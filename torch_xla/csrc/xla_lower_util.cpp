@@ -344,7 +344,7 @@ std::vector<xla::XlaOp> CreateKthValue(xla::XlaOp input, int64_t k, int64_t dim,
                                   start_indices, limit_indices, strides);
   if (!keepdim) {
     auto reshape_sizes = torch::lazy::DropDimensions(
-        xla::util::ToVector<int64_t>(shape.dimensions()),
+        torch_xla::runtime::util::ToVector<int64_t>(shape.dimensions()),
         std::vector<int64_t>({dim}));
     values = XlaHelpers::DynamicReshape(values, reshape_sizes);
     indices = XlaHelpers::DynamicReshape(indices, reshape_sizes);

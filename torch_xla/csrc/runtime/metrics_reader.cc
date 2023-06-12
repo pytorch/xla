@@ -6,7 +6,8 @@
 #include "torch_xla/csrc/runtime/metrics.h"
 #include "torch_xla/csrc/runtime/util.h"
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 namespace metrics_reader {
 namespace {
 
@@ -80,4 +81,5 @@ std::string CreateMetricReport(const std::vector<std::string>& counter_names,
 }
 
 }  // namespace metrics_reader
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla

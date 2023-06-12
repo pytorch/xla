@@ -19,7 +19,7 @@
 namespace torch_xla {
 namespace {
 
-using xla::internal::XlaBuilderFriend;
+using torch_xla::runtime::internal::XlaBuilderFriend;
 using NodeIdMap = std::unordered_map<const torch::lazy::Node*, size_t>;
 
 struct AttrTag {
@@ -269,13 +269,13 @@ std::string DumpUtil::ToHlo(c10::ArrayRef<torch::lazy::Value> values,
     xla::Shape shape = MakeShapeWithDeviceLayout(
         ConsumeValue(computation.GetProgramShape()).result(),
         static_cast<XlaDeviceType>(device.type()));
-    std::vector<xla::ComputationClient::CompileInstance> instances;
+    std::vector<torch_xla::runtime::ComputationClient::CompileInstance> instances;
     instances.push_back({std::move(computation), device.toString(),
                          xla::GetComputationClient()->GetCompilationDevices(
                              device.toString(), {}),
                          &shape,
                          /*parameter_is_tupled_arguments=*/false, is_sharded});
-    std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
+    std::vector<std::shared_ptr<torch_xla::runtime::ComputationClient::Computation>>
         computations =
             xla::GetComputationClient()->Compile(std::move(instances));
     computation = std::move(computations[0]->move_computation());
@@ -283,7 +283,7 @@ std::string DumpUtil::ToHlo(c10::ArrayRef<torch::lazy::Value> values,
   if (to_stable_hlo) {
     return hloToStablehloStr(&computation.proto());
   } else {
-    return ConsumeValue(xla::util::GetComputationHloText(computation));
+    return ConsumeValue(torch_xla::runtime::util::GetComputationHloText(computation));
   }
 }
 

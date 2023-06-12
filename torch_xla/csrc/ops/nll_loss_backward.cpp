@@ -31,7 +31,7 @@ xla::Shape NodeOutputShape(
                                 total_weight, ignore_index, reduction);
   };
   std::vector<xla::Shape> shapes;
-  for (auto& input : xla::util::GetValuesVector<torch::lazy::Value>(
+  for (auto& input : torch_xla::runtime::util::GetValuesVector<torch::lazy::Value>(
            {grad_output, logits, labels}, {&weight, &total_weight})) {
     shapes.push_back(GetXlaShape(input));
   }
@@ -47,7 +47,7 @@ NllLossBackward::NllLossBackward(
     const absl::optional<torch::lazy::Value>& total_weight,
     ReductionMode reduction, int ignore_index)
     : XlaNode(torch::lazy::OpKind(at::aten::nll_loss_backward),
-              xla::util::GetValuesVector<torch::lazy::Value>(
+              torch_xla::runtime::util::GetValuesVector<torch::lazy::Value>(
                   {grad_output, logits, labels}, {&weight, &total_weight}),
               [&]() {
                 return NodeOutputShape(grad_output, logits, labels, weight,

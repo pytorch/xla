@@ -8,7 +8,8 @@
 #include <unordered_map>
 #include <utility>
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 namespace util {
 
 // Generic key and object cache with LRU expiration policy. The objects of type
@@ -106,6 +107,7 @@ class Cache {
 };
 
 }  // namespace util
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla
 
 #endif  // XLA_CLIENT_CACHE_H_

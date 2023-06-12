@@ -2,7 +2,8 @@
 
 #include <stdexcept>
 
-namespace xla {
+namespace torch_xla {
+namespace runtime {
 namespace internal {
 
 void ErrorGenerator::operator&(const std::basic_ostream<char>& oss) const {
@@ -16,4 +17,5 @@ void ErrorGenerator::operator&(const std::basic_ostream<char>& oss) const {
 }
 
 }  // namespace internal
-}  // namespace xla
+}  // namespace runtime
+}  // namespace torch_xla

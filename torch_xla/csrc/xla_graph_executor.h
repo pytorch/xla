@@ -163,7 +163,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   };
 
   using ComputationCache =
-      xla::util::Cache<torch::lazy::hash_t, CachedComputation,
+      torch_xla::runtime::util::Cache<torch::lazy::hash_t, CachedComputation,
                        torch::lazy::HashReducer>;
 
   ComputationCache* GetComputationCache();
@@ -259,7 +259,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   std::vector<at::Tensor> GetTensorsFused(std::vector<XLATensorPtr>* tensors);
 
   // Runs an asynchronous syn operation using the op-by-op executor.
-  using OpByOpAsync = xla::util::AsyncTask<int>;
+  using OpByOpAsync = torch_xla::runtime::util::AsyncTask<int>;
   OpByOpAsync SyncTensorsGraphOpByOp(std::vector<XLATensorPtr>* tensors,
                                      absl::Span<const std::string> devices,
                                      const SyncTensorsConfig& config);
