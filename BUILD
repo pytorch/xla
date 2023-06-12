@@ -1,10 +1,3 @@
-load(
-    "@org_tensorflow//tensorflow:tensorflow.bzl",
-    "tf_cc_shared_object",
-)
-
-load("@org_tensorflow//tensorflow/tsl/platform/default:rules_cc.bzl", "cc_binary")
-
 cc_binary(
     name = "_XLAC.so",
     linkopts = [
