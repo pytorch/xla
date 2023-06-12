@@ -367,45 +367,6 @@ index 5ec647c3e..f1fcea11d 100644
  
  #include "absl/base/attributes.h"
  #include "absl/status/status.h"
-diff --git a/third_party/tsl/tsl/platform/random.cc b/third_party/tsl/tsl/platform/random.cc
-index d7b05ab1e..dd7491970 100644
---- a/third_party/tsl/tsl/platform/random.cc
-+++ b/third_party/tsl/tsl/platform/random.cc
-@@ -15,7 +15,6 @@ limitations under the License.
- 
- #include "tsl/platform/random.h"
- 
--#include <memory>
- #include <random>
- 
- #include "tsl/platform/mutex.h"
-@@ -40,12 +39,6 @@ uint64 New64() {
-   return (*rng)();
- }
- 
--uint64 ThreadLocalNew64() {
--  static thread_local std::unique_ptr<std::mt19937_64> rng =
--      std::unique_ptr<std::mt19937_64>(InitRngWithRandomSeed());
--  return (*rng)();
--}
--
- uint64 New64DefaultSeed() {
-   static std::mt19937_64 rng = InitRngWithDefaultSeed();
-   static mutex mu(LINKER_INITIALIZED);
-diff --git a/third_party/tsl/tsl/platform/random.h b/third_party/tsl/tsl/platform/random.h
-index 7e385387c..21eacd34e 100644
---- a/third_party/tsl/tsl/platform/random.h
-+++ b/third_party/tsl/tsl/platform/random.h
-@@ -25,9 +25,6 @@ namespace random {
- // in different processes.
- uint64 New64();
- 
--// Same as previous method, but uses a different RNG for each thread.
--uint64 ThreadLocalNew64();
--
- // Return a 64-bit random value. Uses
- // std::mersenne_twister_engine::default_seed as seed value.
- uint64 New64DefaultSeed();
 diff --git a/third_party/tsl/tsl/platform/status_matchers_test.cc b/third_party/tsl/tsl/platform/status_matchers_test.cc
 index 70fc61911..09f288108 100644
 --- a/third_party/tsl/tsl/platform/status_matchers_test.cc
@@ -855,18 +816,6 @@ index b73fb6ab5..b734d3f82 100644
 +        "@com_google_absl//absl/container:flat_hash_map",
 +    ],
 +)
-diff --git a/third_party/tsl/tsl/protobuf/BUILD b/third_party/tsl/tsl/protobuf/BUILD
-index 812cdb525..5d5e103c6 100644
---- a/third_party/tsl/tsl/protobuf/BUILD
-+++ b/third_party/tsl/tsl/protobuf/BUILD
-@@ -35,7 +35,6 @@ tf_proto_library(
- tf_proto_library(
-     name = "dnn_proto",
-     srcs = ["dnn.proto"],
--    make_default_target_header_only = True,
- )
- 
- tf_proto_library(
 diff --git a/third_party/tsl/workspace2.bzl b/third_party/tsl/workspace2.bzl
 index 8338aad7e..310bb474d 100644
 --- a/third_party/tsl/workspace2.bzl
@@ -1189,24 +1138,6 @@ index 65148218f..423835913 100644
  }  // namespace gpu
  }  // namespace xla
 
-diff --git a/xla/stream_executor/BUILD b/xla/stream_executor/BUILD
-index c54bffc06..57fdddc20 100644
---- a/xla/stream_executor/BUILD
-+++ b/xla/stream_executor/BUILD
-@@ -214,10 +214,12 @@ cc_library(
-     ],
- )
- 
-+# We need to remove make_default_target_header_only so that
-+# we can build PyTorch/XLA. Otherwise, we won't have the
-+# required objects linked at build time.
- tf_proto_library(
-     name = "dnn_proto",
-     srcs = ["dnn.proto"],
--    make_default_target_header_only = True,
-     protodeps = ["@tsl//tsl/protobuf:dnn_proto"],
-     exports = ["@tsl//tsl/protobuf:dnn_proto"],
- )
 diff --git a/xla/stream_executor/cuda/cuda_graph.cc b/xla/stream_executor/cuda/cuda_graph.cc
 index 2e6a1cdff..ed055a6b5 100644
 --- a/xla/stream_executor/cuda/cuda_graph.cc
