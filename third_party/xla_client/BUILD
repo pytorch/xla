@@ -1,8 +1,4 @@
 load(
-    "@org_tensorflow//tensorflow:tensorflow.bzl",
-    "tf_cc_shared_object",
-)
-load(
     "@org_tensorflow//tensorflow/tsl/platform/default:build_config.bzl",
     "tf_proto_library_cc",
 )
@@ -532,7 +528,7 @@ cc_library(
     ],
 )
 
-tf_cc_shared_object(
+cc_binary(
     name = "libxla_computation_client.so",
     linkopts = select({
         "@org_tensorflow//tensorflow:windows": [],
@@ -540,8 +536,10 @@ tf_cc_shared_object(
             "-z defs",
             "-Wl,--version-script",  #  This line must be directly followed by the version_script.lds file
             "$(location :tf_version_script.lds)",
+            "-Wl,-soname,libxla_computation_client.so",
         ],
     }),
+    linkshared = 1,
     visibility = ["//visibility:public"],
     deps = [
         ":computation_client",
