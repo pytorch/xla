@@ -5,7 +5,7 @@
 #include <torch/csrc/lazy/backend/backend_device.h>
 #include <torch/csrc/lazy/core/shape.h>
 
-#include "third_party/xla_client/computation_client.h"
+#include "torch_xla/csrc/runtime/computation_client.h"
 
 namespace torch_xla {
 

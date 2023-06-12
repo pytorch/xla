@@ -6,7 +6,7 @@
 #include <iostream>
 #include <string>
 
-#include "third_party/xla_client/computation_client.h"
+#include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/device.h"
 
 namespace torch_xla {

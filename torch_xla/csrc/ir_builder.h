@@ -4,7 +4,7 @@
 #include <torch/csrc/lazy/core/ir.h>
 #include <torch/csrc/lazy/core/ir_builder.h>
 
-#include "third_party/xla_client/debug_macros.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ops/as_strided.h"
 #include "torch_xla/csrc/ops/cast.h"

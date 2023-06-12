@@ -1,7 +1,7 @@
 #include "torch_xla/csrc/torch_util.h"
 
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/xla_util.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/xla_util.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir_builder.h"
 #include "torch_xla/csrc/ops/constant.h"

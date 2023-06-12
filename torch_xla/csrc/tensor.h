@@ -8,7 +8,7 @@
 #include <memory>
 #include <string>
 
-#include "third_party/xla_client/util.h"
+#include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/view.h"
 
 namespace torch_xla {

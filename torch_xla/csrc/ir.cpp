@@ -9,9 +9,9 @@
 #include <sstream>
 
 #include "absl/strings/str_cat.h"
-#include "third_party/xla_client/cache.h"
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/sys_util.h"
+#include "torch_xla/csrc/runtime/cache.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/lowering_context.h"
 
 namespace torch_xla {

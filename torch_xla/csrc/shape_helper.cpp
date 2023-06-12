@@ -1,7 +1,7 @@
 #include "torch_xla/csrc/shape_helper.h"
 
 #include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "third_party/xla_client/debug_macros.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
 
 namespace torch_xla {
 

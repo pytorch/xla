@@ -11,7 +11,7 @@
 
 #include "absl/strings/str_split.h"
 #include "tensorflow/tsl/platform/stacktrace.h"
-#include "third_party/xla_client/sys_util.h"
+#include "torch_xla/csrc/runtime/sys_util.h"
 
 namespace torch_xla {
 namespace fn_tracker {

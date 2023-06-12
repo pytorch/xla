@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "absl/types/span.h"
-#include "third_party/xla_client/computation_client.h"
+#include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/xla_data.h"
 
 namespace torch_xla {

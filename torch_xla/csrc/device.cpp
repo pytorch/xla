@@ -3,8 +3,8 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
 #include "absl/types/optional.h"
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/runtime.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/runtime.h"
 
 namespace torch_xla {
 namespace {

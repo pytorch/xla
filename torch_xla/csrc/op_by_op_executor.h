@@ -6,10 +6,10 @@
 
 #include "absl/types/span.h"
 #include "tensorflow/compiler/xla/types.h"
-#include "third_party/xla_client/async_task.h"
-#include "third_party/xla_client/cache.h"
-#include "third_party/xla_client/computation_client.h"
-#include "third_party/xla_client/util.h"
+#include "torch_xla/csrc/runtime/async_task.h"
+#include "torch_xla/csrc/runtime/cache.h"
+#include "torch_xla/csrc/runtime/computation_client.h"
+#include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {

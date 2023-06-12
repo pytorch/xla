@@ -17,8 +17,8 @@
 #include "tensorflow/compiler/xla/permutation_util.h"
 #include "tensorflow/compiler/xla/types.h"
 #include "tensorflow/tsl/platform/bfloat16.h"
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/util.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/util.h"
 
 namespace torch_xla {
 

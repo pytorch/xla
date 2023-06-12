@@ -2,9 +2,9 @@
 
 #include <unordered_map>
 
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/metrics.h"
-#include "third_party/xla_client/tf_logging.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/metrics.h"
+#include "torch_xla/csrc/runtime/tf_logging.h"
 #include "torch_xla/csrc/function_call_tracker.h"
 
 namespace torch_xla {

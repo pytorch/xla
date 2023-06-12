@@ -3,9 +3,9 @@
 #include <iostream>
 #include <string>
 
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/runtime.h"
-#include "third_party/xla_client/sys_util.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/runtime.h"
+#include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/ir_dump_util.h"
 #include "torch_xla/csrc/lowering_context.h"

@@ -14,7 +14,7 @@
 #include "tensorflow/compiler/xla/service/sharding_propagation.h"
 #include "tensorflow/compiler/xla/service/spmd/spmd_partitioner.h"
 #include "tensorflow/compiler/xla/xla.pb.h"
-#include "third_party/xla_client/runtime.h"
+#include "torch_xla/csrc/runtime/runtime.h"
 #include "torch/csrc/lazy/core/ir_util.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ops/device_data.h"

@@ -10,8 +10,8 @@
 #include "tensorflow/compiler/xla/client/lib/loops.h"
 #include "tensorflow/compiler/xla/client/lib/sorting.h"
 #include "tensorflow/compiler/xla/util.h"
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/util.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/shape_helper.h"
 

@@ -6,8 +6,8 @@
 #include <torch/csrc/lazy/core/util.h>
 
 #include "tensorflow/compiler/xla/permutation_util.h"
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/util.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"

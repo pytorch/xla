@@ -10,9 +10,9 @@
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/client/xla_computation.h"
 #include "tensorflow/compiler/xla/hlo/ir/hlo_module.h"
-#include "third_party/xla_client/computation_client.h"
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/types.h"
+#include "torch_xla/csrc/runtime/computation_client.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/types.h"
 
 namespace torch_xla {
 

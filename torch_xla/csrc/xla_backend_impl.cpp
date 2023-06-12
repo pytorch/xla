@@ -2,8 +2,8 @@
 
 #include <ATen/ScalarOps.h>
 
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/runtime.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/device.h"

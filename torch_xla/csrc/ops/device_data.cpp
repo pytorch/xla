@@ -2,7 +2,7 @@
 
 #include <sstream>
 
-#include "third_party/xla_client/runtime.h"
+#include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
 #include "torch_xla/csrc/tensor_util.h"

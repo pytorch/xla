@@ -3,7 +3,7 @@
 
 #include <torch/csrc/lazy/backend/backend_data.h>
 
-#include "third_party/xla_client/computation_client.h"
+#include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/ir.h"
 
 namespace torch_xla {

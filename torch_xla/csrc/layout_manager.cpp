@@ -12,10 +12,10 @@
 
 #include "absl/strings/str_split.h"
 #include "tensorflow/compiler/xla/shape_util.h"
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/sys_util.h"
-#include "third_party/xla_client/tf_logging.h"
-#include "third_party/xla_client/util.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/sys_util.h"
+#include "torch_xla/csrc/runtime/tf_logging.h"
+#include "torch_xla/csrc/runtime/util.h"
 
 namespace torch_xla {
 namespace {
