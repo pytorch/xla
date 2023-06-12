@@ -354,10 +354,10 @@ uint64_t GetRngSeed(const std::string& device_str) {
 }
 
 std::string GetTensorsHloGraph(const std::vector<at::Tensor>& tensors,
-                               bool get_stable_hlo = false) {
+                               EmitMode mode) {
   std::vector<XLATensorPtr> xtensors =
       GetXlaTensors(tensors, /*want_all=*/false);
-  return XLAGraphExecutor::Get()->DumpHloComputation(xtensors, get_stable_hlo);
+  return XLAGraphExecutor::Get()->DumpHloComputation(xtensors, mode);
 }
 
 std::string GetXLATensorDebugInfo(const at::Tensor& tensor) {
@@ -429,16 +429,6 @@ std::string GetLiveTensorsReport(size_t nodes_threshold,
     }
   }
   return ss.str();
-}
-
-static std::string GetLiveTensorsStableHLO(
-    const std::string& device_str, const std::vector<std::string>& devices) {
-  tsl::profiler::TraceMe activity("GetLiveTensorsStableHLO",
-                                  tsl::profiler::TraceMeLevel::kInfo);
-  torch::lazy::BackendDevice device = GetDeviceOrCurrent(device_str);
-  auto tensors = XLAGraphExecutor::Get()->GetLiveTensors(&device);
-  return XLAGraphExecutor::Get()->DumpHloComputation(tensors,
-                                                     /*to_stablehlo=*/true);
 }
 
 void ClearPendingIrs(const std::string& device_str) {
@@ -891,7 +881,7 @@ void InitXlaModuleBindings(py::module m) {
         });
   m.def("_get_xla_tensors_hlo",
         [](const std::vector<at::Tensor>& tensors) -> std::string {
-          return GetTensorsHloGraph(tensors);
+          return GetTensorsHloGraph(tensors, EmitMode::kHloReadable);
         });
   m.def("_get_xla_tensor_debug_info",
         [](const at::Tensor& tensor) -> std::string {
@@ -1243,13 +1233,21 @@ void InitXlaModuleBindings(py::module m) {
         py::arg("device") = "", py::arg("devices"), py::arg("wait") = true);
   m.def("_get_stablehlo",
         [](const std::vector<at::Tensor>& tensors, const std::string& device,
-           const std::vector<std::string>& devices) -> std::string {
+           const std::vector<std::string>& devices,
+           bool emit_bytecode) -> py::bytes {
           NoGilSection nogil;
+          EmitMode mode = emit_bytecode ? EmitMode::kStableHloBytecode
+                                        : EmitMode::kStableHloReadable;
+          std::vector<XLATensorPtr> xtensors;
           if (tensors.empty()) {
-            return GetLiveTensorsStableHLO(device, devices);
+            torch::lazy::BackendDevice backend_device =
+                GetDeviceOrCurrent(device);
+            xtensors = XLAGraphExecutor::Get()->GetLiveTensors(&backend_device);
           } else {
-            return GetTensorsHloGraph(tensors, /*get_stable_hlo=*/true);
+            xtensors = GetXlaTensors(tensors, /*want_all=*/false);
           }
+          return py::bytes(
+              XLAGraphExecutor::Get()->DumpHloComputation(xtensors, mode));
         });
   m.def("_xla_wait_device_ops",
         [](const std::vector<std::string>& devices) {
@@ -1672,7 +1670,8 @@ void InitXlaModuleBindings(py::module m) {
           config.set_replica_count(num_replicas);
           config.set_num_partitions(num_devices);
 
-          std::string hlo_text = GetTensorsHloGraph(tensors);
+          std::string hlo_text =
+              GetTensorsHloGraph(tensors, EmitMode::kHloReadable);
           auto hlo_module_error =
               xla::ParseAndReturnUnverifiedModule(hlo_text, config);
           XLA_CHECK_OK(hlo_module_error.status())
