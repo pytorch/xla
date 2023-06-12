@@ -46,19 +46,6 @@ index 7f744c721..8f429d78e 100644
      )
  
      # Load the raw llvm-project.  llvm does not have build rules set up by default,
-diff --git a/third_party/pprof.BUILD b/third_party/pprof.BUILD
-index b7d33118665..dd38a09cd0c 100644
---- a/third_party/pprof.BUILD
-+++ b/third_party/pprof.BUILD
-@@ -4,7 +4,7 @@ package(
- 
- licenses(["notice"])  # MIT
- 
--load("@org_tensorflow//tsl/platform/default:build_config.bzl", "py_proto_library")
-+load("@com_google_protobuf//:protobuf.bzl", "py_proto_library")
- 
- exports_files(["pprof/LICENSE"])
- 
 diff --git a/third_party/protobuf/protobuf.patch b/third_party/protobuf/protobuf.patch
 index 9d928ba17..b22ec55df 100644
 --- a/third_party/protobuf/protobuf.patch
