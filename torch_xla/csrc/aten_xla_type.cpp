@@ -638,6 +638,11 @@ at::Tensor XLANativeFunctions::add(const at::Tensor& self,
                                    const at::Tensor& other,
                                    const at::Scalar& alpha) {
   TORCH_LAZY_FN_COUNTER("xla::");
+  XLA_CHECK(!(tensor_has_dym_dim(self) && tensor_has_dym_dim(other)))
+      << "Both operands of torch.add cannot have dynamic dimensions at the "
+         "same time. This is not "
+         "supported in PyTorch/XLA.";
+
   at::native::alpha_check(at::result_type(self, other), alpha);
   return DoBinaryOp(self, other,
                     [&](const XLATensorPtr& xself, const XLATensorPtr& xother,
