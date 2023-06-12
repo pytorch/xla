@@ -1,0 +1,1245 @@
+diff --git a/third_party/llvm/workspace.bzl b/third_party/llvm/workspace.bzl
+index a4574d75d..c45283a4e 100644
+--- a/third_party/llvm/workspace.bzl
++++ b/third_party/llvm/workspace.bzl
+@@ -13,7 +13,9 @@ def repo(name):
+         strip_prefix = "llvm-project-{commit}".format(commit = LLVM_COMMIT),
+         urls = [
+             "https://storage.googleapis.com/mirror.tensorflow.org/github.com/llvm/llvm-project/archive/{commit}.tar.gz".format(commit = LLVM_COMMIT),
+-            "https://github.com/llvm/llvm-project/archive/{commit}.tar.gz".format(commit = LLVM_COMMIT),
++            "https://storage.googleapis.com/tpu-pytorch/llvm-raw/{commit}.tar.gz".format(commit = LLVM_COMMIT),
++           "https://github.com/llvm/llvm-project/archive/{commit}.tar.gz".format(commit = LLVM_COMMIT),
++           "https://storage.googleapis.com/tpu-pytorch/llvm-raw/{commit}.tar.gz".format(commit = LLVM_COMMIT),
+         ],
+         build_file = "//third_party/llvm:llvm.BUILD",
+         patch_file = [
+diff --git a/third_party/protobuf/protobuf.patch b/third_party/protobuf/protobuf.patch
+index 9d928ba17..b22ec55df 100644
+--- a/third_party/protobuf/protobuf.patch
++++ b/third_party/protobuf/protobuf.patch
+@@ -1,7 +1,25 @@
+-diff --git a/BUILD.bazel b/BUILD.bazel
+---- a/BUILD.bazel      (revision 90b73ac3f0b10320315c2ca0d03a5a9b095d2f66)
+-+++ b/BUILD.bazel      (date 1670471682469)
+-@@ -68,6 +68,7 @@
++diff --git a/BUILD b/BUILD
++index dbae719ff..4e276c854 100644
++--- a/BUILD
+++++ b/BUILD
++@@ -23,7 +23,7 @@ config_setting(
++ # ZLIB configuration
++ ################################################################################
++
++-ZLIB_DEPS = ["@zlib//:zlib"]
+++ZLIB_DEPS = ["@zlib"]
++
++ ################################################################################
++ # Protobuf Runtime Library
++@@ -100,6 +100,7 @@ LINK_OPTS = select({
++
++ load(
++     ":protobuf.bzl",
+++    "adapt_proto_library",
++     "cc_proto_library",
++     "py_proto_library",
++     "internal_copied_filegroup",
++@@ -143,6 +144,7 @@ cc_library(
+      copts = COPTS,
+      includes = ["src/"],
+      linkopts = LINK_OPTS,
+@@ -9,21 +27,154 @@ diff --git a/BUILD.bazel b/BUILD.bazel
+      visibility = ["//visibility:public"],
+  )
+ 
+-@@ -135,6 +136,7 @@
++@@ -213,6 +215,7 @@ cc_library(
+      copts = COPTS,
+      includes = ["src/"],
+      linkopts = LINK_OPTS,
+ +    alwayslink = 1,
+      visibility = ["//visibility:public"],
+-     deps = [":protobuf_lite"] + select({
+-         "//build_defs:config_msvc": [],
++     deps = [":protobuf_lite"] + PROTOBUF_DEPS,
++ )
++@@ -255,13 +258,15 @@ filegroup(
++     visibility = ["//visibility:public"],
++ )
++
++-cc_proto_library(
+++adapt_proto_library(
+++    name = "cc_wkt_protos_genproto",
+++    deps = [proto + "_proto" for proto in WELL_KNOWN_PROTO_MAP.keys()],
+++    visibility = ["//visibility:public"],
+++)
++
+++cc_library(
++     name = "cc_wkt_protos",
++-    srcs = WELL_KNOWN_PROTOS,
++-    include = "src",
++-    default_runtime = ":protobuf",
++-    internal_bootstrap_hack = 1,
++-    protoc = ":protoc",
+++    deprecation = "Only for backward compatibility. Do not use.",
++     visibility = ["//visibility:public"],
++ )
++
++@@ -978,10 +983,10 @@ cc_library(
++
++ proto_lang_toolchain(
++     name = "cc_toolchain",
+++    blacklisted_protos = [proto + "_proto" for proto in WELL_KNOWN_PROTO_MAP.keys()],
++     command_line = "--cpp_out=$(OUT)",
++     runtime = ":protobuf",
++     visibility = ["//visibility:public"],
++-    blacklisted_protos = [":_internal_wkt_protos_genrule"],
++ )
++
++ proto_lang_toolchain(
++diff --git a/protobuf.bzl b/protobuf.bzl
++index e0653321f..4156a1275 100644
++--- a/protobuf.bzl
+++++ b/protobuf.bzl
++@@ -1,4 +1,5 @@
++ load("@bazel_skylib//lib:versions.bzl", "versions")
+++load("@rules_proto//proto:defs.bzl", "ProtoInfo")
++
++ def _GetPath(ctx, path):
++     if ctx.label.workspace_root:
++@@ -85,6 +86,8 @@ def _proto_gen_impl(ctx):
++     for dep in ctx.attr.deps:
++         import_flags += dep.proto.import_flags
++         deps += dep.proto.deps
+++    import_flags = depset(import_flags).to_list()
+++    deps = depset(deps).to_list()
++
++     if not ctx.attr.gen_cc and not ctx.attr.gen_py and not ctx.executable.plugin:
++         return struct(
++@@ -222,6 +225,29 @@ Args:
++   outs: a list of labels of the expected outputs from the protocol compiler.
++ """
++
+++def _adapt_proto_library_impl(ctx):
+++    deps = [dep[ProtoInfo] for dep in ctx.attr.deps]
+++
+++    srcs = [src for dep in deps for src in dep.direct_sources]
+++    return struct(
+++        proto = struct(
+++            srcs = srcs,
+++            import_flags = ["-I{}".format(path) for dep in deps for path in dep.transitive_proto_path.to_list()],
+++            deps = srcs,
+++        ),
+++    )
+++
+++adapt_proto_library = rule(
+++    implementation = _adapt_proto_library_impl,
+++    attrs = {
+++        "deps": attr.label_list(
+++            mandatory = True,
+++            providers = [ProtoInfo],
+++        ),
+++    },
+++    doc = "Adapts `proto_library` from `@rules_proto` to be used with `{cc,py}_proto_library` from this file.",
+++)
+++
++ def cc_proto_library(
++         name,
++         srcs = [],
++@@ -229,7 +255,6 @@ def cc_proto_library(
++         cc_libs = [],
++         include = None,
++         protoc = "@com_google_protobuf//:protoc",
++-        internal_bootstrap_hack = False,
++         use_grpc_plugin = False,
++         default_runtime = "@com_google_protobuf//:protobuf",
++         **kargs):
++@@ -247,41 +272,17 @@ def cc_proto_library(
++           cc_library.
++       include: a string indicating the include path of the .proto files.
++       protoc: the label of the protocol compiler to generate the sources.
++-      internal_bootstrap_hack: a flag indicate the cc_proto_library is used only
++-          for bootstraping. When it is set to True, no files will be generated.
++-          The rule will simply be a provider for .proto files, so that other
++-          cc_proto_library can depend on it.
++       use_grpc_plugin: a flag to indicate whether to call the grpc C++ plugin
++           when processing the proto files.
++       default_runtime: the implicitly default runtime which will be depended on by
++           the generated cc_library target.
++       **kargs: other keyword arguments that are passed to cc_library.
++-
++     """
++
++     includes = []
++     if include != None:
++         includes = [include]
++
++-    if internal_bootstrap_hack:
++-        # For pre-checked-in generated files, we add the internal_bootstrap_hack
++-        # which will skip the codegen action.
++-        proto_gen(
++-            name = name + "_genproto",
++-            srcs = srcs,
++-            deps = [s + "_genproto" for s in deps],
++-            includes = includes,
++-            protoc = protoc,
++-            visibility = ["//visibility:public"],
++-        )
++-
++-        # An empty cc_library to make rule dependency consistent.
++-        native.cc_library(
++-            name = name,
++-            **kargs
++-        )
++-        return
++-
++     grpc_cpp_plugin = None
++     if use_grpc_plugin:
++         grpc_cpp_plugin = "//external:grpc_cpp_plugin"
+ diff --git a/python/google/protobuf/pyext/descriptor.cc b/python/google/protobuf/pyext/descriptor.cc
+-index 162531226..e93ec4809 100644
++index 1637f83a3..cb0033278 100644
+ --- a/python/google/protobuf/pyext/descriptor.cc
+ +++ b/python/google/protobuf/pyext/descriptor.cc
+-@@ -58,6 +58,37 @@
+-               : 0)                                               \
+-        : PyBytes_AsStringAndSize(ob, (charpp), (sizep)))
++@@ -63,6 +63,37 @@
++                        : PyBytes_AsStringAndSize(ob, (charpp), (sizep)))
++ #endif
+  
+ +#if PY_VERSION_HEX < 0x030900B1 && !defined(PYPY_VERSION)
+ +static PyCodeObject* PyFrame_GetCode(PyFrameObject *frame)
+@@ -59,7 +210,7 @@ index 162531226..e93ec4809 100644
+  namespace google {
+  namespace protobuf {
+  namespace python {
+-@@ -96,48 +127,66 @@ bool _CalledFromGeneratedFile(int stacklevel) {
++@@ -101,48 +132,65 @@ bool _CalledFromGeneratedFile(int stacklevel) {
+    // This check is not critical and is somewhat difficult to implement correctly
+    // in PyPy.
+    PyFrameObject* frame = PyEval_GetFrame();
+@@ -68,7 +219,7 @@ index 162531226..e93ec4809 100644
+ +  PyObject* frame_locals = nullptr;
+ +  bool result = false;
+ +
+-   if (frame == nullptr) {
++   if (frame == NULL) {
+ -    return false;
+ +    goto exit;
+    }
+@@ -78,16 +229,16 @@ index 162531226..e93ec4809 100644
+ +    PyFrameObject* next_frame = PyFrame_GetBack(frame);
+ +    Py_DECREF(frame);
+ +    frame = next_frame;
+-     if (frame == nullptr) {
++     if (frame == NULL) {
+ -      return false;
+ +      goto exit;
+      }
+    }
+- 
+--  if (frame->f_code->co_filename == nullptr) {
++-
++-  if (frame->f_code->co_filename == NULL) { 
+ -    return false;
+ +  frame_code = PyFrame_GetCode(frame);
+-+  if (frame_code->co_filename == nullptr) {
+++  if (frame_code->co_filename == NULL) {
+ +    goto exit;
+    }
+    char* filename;
+@@ -137,5 +288,35 @@ index 162531226..e93ec4809 100644
+ +  Py_XDECREF(frame);
+ +  return result;
+  }
+- 
+- // If the calling code is not a _pb2.py file, raise AttributeError.
+\ No newline at end of file
++
++ // If the calling code is not a _pb2.py file, raise AttributeError.
++diff --git a/python/google/protobuf/pyext/message.cc b/python/google/protobuf/pyext/message.cc
++index 3530a9b37..c31fa8fcc 100644
++--- a/python/google/protobuf/pyext/message.cc
+++++ b/python/google/protobuf/pyext/message.cc
++@@ -2991,8 +2991,12 @@ bool InitProto2MessageModule(PyObject *m) {
++         reinterpret_cast<PyObject*>(
++             &RepeatedCompositeContainer_Type));
++-    // Register them as collections.Sequence
+++    // Register them as MutableSequence.
+++#if PY_MAJOR_VERSION >= 3
+++    ScopedPyObjectPtr collections(PyImport_ImportModule("collections.abc"));
+++#else
++     ScopedPyObjectPtr collections(PyImport_ImportModule("collections"));
+++#endif
++     if (collections == NULL) {
++       return false;
++     }
++diff --git a/python/google/protobuf/pyext/unknown_fields.cc b/python/google/protobuf/pyext/unknown_fields.cc
++index c3679c0d3..e80a1d97a 100755
++--- a/python/google/protobuf/pyext/unknown_fields.cc
+++++ b/python/google/protobuf/pyext/unknown_fields.cc
++@@ -221,7 +221,7 @@ const UnknownField* GetUnknownField(PyUnknownFieldRef* self) {
++                  "The parent message might be cleared.");
++     return NULL;
++   }
++-  ssize_t total_size = fields->field_count();
+++  Py_ssize_t total_size = fields->field_count();
++   if (self->index >= total_size) {
++     PyErr_Format(PyExc_ValueError,
++                  "UnknownField does not exist. "
+diff --git a/third_party/tsl/tsl/platform/BUILD b/third_party/tsl/tsl/platform/BUILD
+index f261322c8..a6e70c652 100644
+--- a/third_party/tsl/tsl/platform/BUILD
++++ b/third_party/tsl/tsl/platform/BUILD
+@@ -311,6 +311,10 @@ cc_library(
+ 
+ cc_library(
+     name = "statusor",
++    srcs = [
++        "statusor.cc",
++        "statusor_internals.h",
++    ],
+     hdrs = ["statusor.h"],
+     deps = [
+         ":errors",
+@@ -318,7 +322,6 @@ cc_library(
+         ":macros",
+         ":status",
+         "@com_google_absl//absl/base:core_headers",
+-        "@com_google_absl//absl/status:statusor",
+         "@com_google_absl//absl/strings",
+         "@com_google_absl//absl/strings:str_format",
+         "@com_google_absl//absl/types:span",
+@@ -549,7 +552,9 @@ filegroup(
+         "stacktrace.h",
+         "status.cc",
+         "status.h",
++        "statusor.cc",
+         "statusor.h",
++        "statusor_internals.h",
+         "str_util.cc",
+         "str_util.h",
+         "strcat.cc",
+@@ -1365,7 +1370,6 @@ tsl_cc_test(
+         ":test",
+         ":test_benchmark",
+         ":test_main",
+-        "@com_google_absl//absl/base:config",
+     ],
+ )
+ 
+diff --git a/third_party/tsl/tsl/platform/default/build_config.bzl b/third_party/tsl/tsl/platform/default/build_config.bzl
+index 3ab00f064..a421b5af7 100644
+--- a/third_party/tsl/tsl/platform/default/build_config.bzl
++++ b/third_party/tsl/tsl/platform/default/build_config.bzl
+@@ -401,13 +401,6 @@ def py_proto_library(
+         # is not explicitly listed in py_libs. Instead, host system is assumed to
+         # have grpc installed.
+ 
+-    genproto_deps = []
+-    for dep in deps:
+-        if dep != "@com_google_protobuf//:protobuf_python":
+-            genproto_deps.append(dep + "_genproto")
+-        else:
+-            genproto_deps.append("@com_google_protobuf//:well_known_types_py_pb2_genproto")
+-
+     proto_gen(
+         name = name + "_genproto",
+         srcs = srcs,
+@@ -418,7 +411,7 @@ def py_proto_library(
+         plugin_language = "grpc",
+         protoc = protoc,
+         visibility = ["//visibility:public"],
+-        deps = genproto_deps,
++       deps = [s + "_genproto" for s in deps],
+     )
+ 
+     if default_runtime and not default_runtime in py_libs + deps:
+diff --git a/third_party/tsl/tsl/platform/errors.h b/third_party/tsl/tsl/platform/errors.h
+index 5ec647c3e..f1fcea11d 100644
+--- a/third_party/tsl/tsl/platform/errors.h
++++ b/third_party/tsl/tsl/platform/errors.h
+@@ -21,7 +21,6 @@ limitations under the License.
+ #include <type_traits>
+ #include <unordered_map>
+ #include <utility>
+-#include <vector>
+ 
+ #include "absl/base/attributes.h"
+ #include "absl/status/status.h"
+diff --git a/third_party/tsl/tsl/platform/random.cc b/third_party/tsl/tsl/platform/random.cc
+index d7b05ab1e..dd7491970 100644
+--- a/third_party/tsl/tsl/platform/random.cc
++++ b/third_party/tsl/tsl/platform/random.cc
+@@ -15,7 +15,6 @@ limitations under the License.
+ 
+ #include "tsl/platform/random.h"
+ 
+-#include <memory>
+ #include <random>
+ 
+ #include "tsl/platform/mutex.h"
+@@ -40,12 +39,6 @@ uint64 New64() {
+   return (*rng)();
+ }
+ 
+-uint64 ThreadLocalNew64() {
+-  static thread_local std::unique_ptr<std::mt19937_64> rng =
+-      std::unique_ptr<std::mt19937_64>(InitRngWithRandomSeed());
+-  return (*rng)();
+-}
+-
+ uint64 New64DefaultSeed() {
+   static std::mt19937_64 rng = InitRngWithDefaultSeed();
+   static mutex mu(LINKER_INITIALIZED);
+diff --git a/third_party/tsl/tsl/platform/random.h b/third_party/tsl/tsl/platform/random.h
+index 7e385387c..21eacd34e 100644
+--- a/third_party/tsl/tsl/platform/random.h
++++ b/third_party/tsl/tsl/platform/random.h
+@@ -25,9 +25,6 @@ namespace random {
+ // in different processes.
+ uint64 New64();
+ 
+-// Same as previous method, but uses a different RNG for each thread.
+-uint64 ThreadLocalNew64();
+-
+ // Return a 64-bit random value. Uses
+ // std::mersenne_twister_engine::default_seed as seed value.
+ uint64 New64DefaultSeed();
+diff --git a/third_party/tsl/tsl/platform/status_matchers_test.cc b/third_party/tsl/tsl/platform/status_matchers_test.cc
+index 70fc61911..09f288108 100644
+--- a/third_party/tsl/tsl/platform/status_matchers_test.cc
++++ b/third_party/tsl/tsl/platform/status_matchers_test.cc
+@@ -118,8 +118,8 @@ TEST(IsOkAndHoldsTest, DescribeExpectedValue) {
+ TEST(IsOkAndHoldsTest, ExplainNotMatchingStatus) {
+   Matcher<StatusOr<int>> is_ok_and_less_than = IsOkAndHolds(LessThan(100));
+   StatusOr<int> status = errors::Unknown("Unknown");
+-  EXPECT_THAT(ExplainMatch(is_ok_and_less_than, status),
+-              HasSubstr("which has status UNKNOWN: Unknown"));
++  EXPECT_EQ(ExplainMatch(is_ok_and_less_than, status),
++            "which has status " + PrintToString(status));
+ }
+ 
+ TEST(IsOkAndHoldsTest, ExplainNotMatchingValue) {
+diff --git a/third_party/tsl/tsl/platform/statusor.h b/third_party/tsl/tsl/platform/statusor.h
+index b627208e3..8b53b92e6 100644
+--- a/third_party/tsl/tsl/platform/statusor.h
++++ b/third_party/tsl/tsl/platform/statusor.h
+@@ -69,14 +69,312 @@ limitations under the License.
+ #define TENSORFLOW_TSL_PLATFORM_STATUSOR_H_
+ 
+ #include "absl/base/attributes.h"
+-#include "absl/status/statusor.h"
+ #include "tsl/platform/errors.h"
+ #include "tsl/platform/macros.h"
+ #include "tsl/platform/status.h"
++#include "tsl/platform/statusor_internals.h"
+ 
+ namespace tsl {
+ 
+-using absl::StatusOr;
++#if TF_HAS_CPP_ATTRIBUTE(nodiscard)
++template <typename T>
++class [[nodiscard]] StatusOr;
++#endif
++
++template <typename T>
++class StatusOr : private internal_statusor::StatusOrData<T>,
++                 private internal_statusor::TraitsBase<
++                     std::is_copy_constructible<T>::value,
++                     std::is_move_constructible<T>::value> {
++  template <typename U>
++  friend class StatusOr;
++
++  typedef internal_statusor::StatusOrData<T> Base;
++
++ public:
++  typedef T element_type;  // DEPRECATED: use `value_type`.
++  typedef T value_type;
++
++  // Constructs a new StatusOr with Status::UNKNOWN status.  This is marked
++  // 'explicit' to try to catch cases like 'return {};', where people think
++  // StatusOr<std::vector<int>> will be initialized with an empty vector,
++  // instead of a Status::UNKNOWN status.
++  explicit StatusOr();
++
++  // StatusOr<T> will be copy constructible/assignable if T is copy
++  // constructible.
++  StatusOr(const StatusOr&) = default;
++  StatusOr& operator=(const StatusOr&) = default;
++
++  // StatusOr<T> will be move constructible/assignable if T is move
++  // constructible.
++  StatusOr(StatusOr&&) = default;
++  StatusOr& operator=(StatusOr&&) = default;
++
++  // Conversion copy/move constructor, T must be convertible from U.
++  template <typename U, typename std::enable_if<
++                            std::is_convertible<U, T>::value>::type* = nullptr>
++  StatusOr(const StatusOr<U>& other);
++  template <typename U, typename std::enable_if<
++                            std::is_convertible<U, T>::value>::type* = nullptr>
++  StatusOr(StatusOr<U>&& other);
++
++  // Conversion copy/move assignment operator, T must be convertible from U.
++  template <typename U, typename std::enable_if<
++                            std::is_convertible<U, T>::value>::type* = nullptr>
++  StatusOr& operator=(const StatusOr<U>& other);
++  template <typename U, typename std::enable_if<
++                            std::is_convertible<U, T>::value>::type* = nullptr>
++  StatusOr& operator=(StatusOr<U>&& other);
++
++  // Constructs the inner value `T` in-place using the provided args, using the
++  // `T(args...)` constructor.
++  template <typename... Args>
++  explicit StatusOr(absl::in_place_t, Args&&... args);
++
++  // Constructs a new StatusOr with the given value. After calling this
++  // constructor, calls to value() will succeed, and calls to status() will
++  // return OK.
++  //
++  // NOTE: Not explicit - we want to use StatusOr<T> as a return type
++  // so it is convenient and sensible to be able to do 'return T()'
++  // when the return type is StatusOr<T>.
++  //
++  // REQUIRES: T is copy constructible.
++  StatusOr(const T& value);
++
++  // Constructs a new StatusOr with the given non-ok status. After calling
++  // this constructor, calls to value() will CHECK-fail.
++  //
++  // NOTE: Not explicit - we want to use StatusOr<T> as a return
++  // value, so it is convenient and sensible to be able to do 'return
++  // Status()' when the return type is StatusOr<T>.
++  //
++  // REQUIRES: !status.ok(). This requirement is DCHECKed.
++  // In optimized builds, passing OkStatus() here will have the effect
++  // of passing tsl::error::INTERNAL as a fallback.
++  StatusOr(const Status& status);
++  StatusOr& operator=(const Status& status);
++
++  // TODO(b/62186997): Add operator=(T) overloads.
++
++  // Similar to the `const T&` overload.
++  //
++  // REQUIRES: T is move constructible.
++  StatusOr(T&& value);
++
++  // RValue versions of the operations declared above.
++  StatusOr(Status&& status);
++  StatusOr& operator=(Status&& status);
++
++  // Returns this->status().ok()
++  bool ok() const { return this->status_.ok(); }
++
++  // Returns a reference to our status. If this contains a T, then
++  // returns OkStatus().
++  const Status& status() const&;
++  Status status() &&;
++
++  // Returns a reference to our current value, or CHECK-fails if !this->ok().
++  //
++  // DEPRECATED: Prefer accessing the value using `operator*` or `operator->`
++  // after testing that the StatusOr is OK. If program termination is desired in
++  // the case of an error status, consider `CHECK_OK(status_or);`.
++  // Note: for value types that are cheap to copy, prefer simple code:
++  //
++  //   T value = statusor.value();
++  //
++  // Otherwise, if the value type is expensive to copy, but can be left
++  // in the StatusOr, simply assign to a reference:
++  //
++  //   T& value = statusor.value();  // or `const T&`
++  //
++  // Otherwise, if the value type supports an efficient move, it can be
++  // used as follows:
++  //
++  //   T value = std::move(statusor).value();
++  //
++  // The std::move on statusor instead of on the whole expression enables
++  // warnings about possible uses of the statusor object after the move.
++  // C++ style guide waiver for ref-qualified overloads granted in cl/143176389
++  // See go/ref-qualifiers for more details on such overloads.
++  const T& value() const&;
++  T& value() &;
++  const T&& value() const&&;
++  T&& value() &&;
++
++  // Returns a reference to the current value.
++  //
++  // REQUIRES: this->ok() == true, otherwise the behavior is undefined.
++  //
++  // Use this->ok() or `operator bool()` to verify that there is a current
++  // value. Alternatively, see value() for a similar API that guarantees
++  // CHECK-failing if there is no current value.
++  const T& operator*() const&;
++  T& operator*() &;
++  const T&& operator*() const&&;
++  T&& operator*() &&;
++
++  // Returns a pointer to the current value.
++  //
++  // REQUIRES: this->ok() == true, otherwise the behavior is undefined.
++  //
++  // Use this->ok() or `operator bool()` to verify that there is a current
++  // value.
++  const T* operator->() const;
++  T* operator->();
++
++  // Ignores any errors. This method does nothing except potentially suppress
++  // complaints from any tools that are checking that errors are not dropped on
++  // the floor.
++  void IgnoreError() const;
++};
++
++////////////////////////////////////////////////////////////////////////////////
++// Implementation details for StatusOr<T>
++
++template <typename T>
++StatusOr<T>::StatusOr() : Base(Status(absl::StatusCode::kUnknown, "")) {}
++
++template <typename T>
++StatusOr<T>::StatusOr(const T& value) : Base(value) {}
++
++template <typename T>
++StatusOr<T>::StatusOr(const Status& status) : Base(status) {}
++
++template <typename T>
++StatusOr<T>& StatusOr<T>::operator=(const Status& status) {
++  this->Assign(status);
++  return *this;
++
++
++template <typename T>
++StatusOr<T>::StatusOr(T&& value) : Base(std::move(value)) {}
++
++template <typename T>
++template <typename... Args>
++StatusOr<T>::StatusOr(absl::in_place_t, Args&&... args)
++    : Base(absl::in_place, std::forward<Args>(args)...) {}
++
++template <typename T>
++StatusOr<T>::StatusOr(Status&& status) : Base(std::move(status)) {}
++
++template <typename T>
++StatusOr<T>& StatusOr<T>::operator=(Status&& status) {
++  this->Assign(std::move(status));
++  return *this;
++}
++
++template <typename T>
++template <typename U,
++          typename std::enable_if<std::is_convertible<U, T>::value>::type*>
++inline StatusOr<T>::StatusOr(const StatusOr<U>& other)
++    : Base(static_cast<const typename StatusOr<U>::Base&>(other)) {}
++
++template <typename T>
++template <typename U,
++          typename std::enable_if<std::is_convertible<U, T>::value>::type*>
++inline StatusOr<T>& StatusOr<T>::operator=(const StatusOr<U>& other) {
++  if (other.ok())
++    this->Assign(other.value());
++  else
++    this->Assign(other.status());
++  return *this;
++}
++
++template <typename T>
++template <typename U,
++          typename std::enable_if<std::is_convertible<U, T>::value>::type*>
++inline StatusOr<T>::StatusOr(StatusOr<U>&& other)
++    : Base(static_cast<typename StatusOr<U>::Base&&>(other)) {}
++
++template <typename T>
++template <typename U,
++          typename std::enable_if<std::is_convertible<U, T>::value>::type*>
++inline StatusOr<T>& StatusOr<T>::operator=(StatusOr<U>&& other) {
++  if (other.ok()) {
++    this->Assign(std::move(other).value());
++  } else {
++    this->Assign(std::move(other).status());
++  }
++  return *this;
++}
++
++template <typename T>
++const Status& StatusOr<T>::status() const& {
++  return this->status_;
++}
++template <typename T>
++Status StatusOr<T>::status() && {
++  // Note that we copy instead of moving the status here so that
++  // ~StatusOrData() can call ok() without invoking UB.
++  return ok() ? OkStatus() : this->status_;
++}
++
++template <typename T>
++const T& StatusOr<T>::value() const& {
++  this->EnsureOk();
++  return this->data_;
++}
++
++template <typename T>
++T& StatusOr<T>::value() & {
++  this->EnsureOk();
++  return this->data_;
++}
++
++template <typename T>
++const T&& StatusOr<T>::value() const&& {
++  this->EnsureOk();
++  return std::move(this->data_);
++}
++
++template <typename T>
++T&& StatusOr<T>::value() && {
++  this->EnsureOk();
++  return std::move(this->data_);
++}
++
++template <typename T>
++const T* StatusOr<T>::operator->() const {
++  this->EnsureOk();
++  return &this->data_;
++}
++
++template <typename T>
++T* StatusOr<T>::operator->() {
++  this->EnsureOk();
++  return &this->data_;
++}
++
++template <typename T>
++const T& StatusOr<T>::operator*() const& {
++  this->EnsureOk();
++  return this->data_;
++}
++
++template <typename T>
++T& StatusOr<T>::operator*() & {
++  this->EnsureOk();
++  return this->data_;
++}
++
++template <typename T>
++const T&& StatusOr<T>::operator*() const&& {
++  this->EnsureOk();
++  return std::move(this->data_);
++}
++
++template <typename T>
++T&& StatusOr<T>::operator*() && {
++  this->EnsureOk();
++  return std::move(this->data_);
++}
++
++template <typename T>
++void StatusOr<T>::IgnoreError() const {
++  // no-op
++}
+ 
+ #define TF_ASSERT_OK_AND_ASSIGN(lhs, rexpr)                             \
+   TF_ASSERT_OK_AND_ASSIGN_IMPL(                                         \
+diff --git a/third_party/tsl/tsl/profiler/rpc/client/BUILD b/third_party/tsl/tsl/profiler/rpc/client/BUILD
+index 32b38ec3a..e30c6ce52 100644
+--- a/third_party/tsl/tsl/profiler/rpc/client/BUILD
++++ b/third_party/tsl/tsl/profiler/rpc/client/BUILD
+@@ -44,7 +44,9 @@ cc_library(
+         "//tsl/profiler/protobuf:profiler_options_proto_cc",
+         "//tsl/profiler/protobuf:profiler_service_proto_cc",
+         "//tsl/profiler/protobuf:xplane_proto_cc",
+-        "@com_google_absl//absl/strings",
++        "//tsl/profiler/utils:session_manager",
++        "@com_google_absl//absl/container:flat_hash_map",
++       "@com_google_absl//absl/strings",
+         "@com_google_absl//absl/time",
+     ],
+ )
+diff --git a/third_party/tsl/tsl/profiler/rpc/client/capture_profile.cc b/third_party/tsl/tsl/profiler/rpc/client/capture_profile.cc
+index 5c5cc818e..d1848d8f8 100644
+--- a/third_party/tsl/tsl/profiler/rpc/client/capture_profile.cc
++++ b/third_party/tsl/tsl/profiler/rpc/client/capture_profile.cc
+@@ -17,8 +17,10 @@ limitations under the License.
+ #include <iostream>
+ #include <limits>
+ #include <memory>
++#include <variant>
+ #include <vector>
+ 
++#include "absl/container/flat_hash_map.h"
+ #include "absl/strings/str_cat.h"
+ #include "absl/strings/str_join.h"
+ #include "absl/strings/str_split.h"
+@@ -36,6 +38,7 @@ limitations under the License.
+ #include "tsl/profiler/rpc/client/profiler_client.h"
+ #include "tsl/profiler/rpc/client/remote_profiler_session_manager.h"
+ #include "tsl/profiler/rpc/client/save_profile.h"
++#include "tsl/profiler/utils/session_manager.h"
+ 
+ namespace tsl {
+ namespace profiler {
+@@ -263,5 +266,26 @@ Status ExportToTensorBoard(const XSpace& xspace, const std::string& logdir,
+   return OkStatus();
+ }
+ 
++Status CaptureRemoteTrace(
++    const char* service_addr, const char* logdir, const char* worker_list,
++    bool include_dataset_ops, int duration_ms, int num_tracing_attempts,
++    const absl::flat_hash_map<std::string, std::variant<int, std::string>>&
++        options) {
++  // TPU capture is true if the user sets worker_list.
++  bool is_cloud_tpu_session = false;
++  RemoteProfilerSessionManagerOptions opts =
++      GetRemoteSessionManagerOptionsLocked(service_addr, logdir, worker_list,
++                                           include_dataset_ops, duration_ms,
++                                           options, &is_cloud_tpu_session);
++  TF_RETURN_IF_ERROR(ValidateRemoteProfilerSessionManagerOptions(opts));
++
++  {
++    TF_RETURN_IF_ERROR(CaptureRemoteTrace(logdir, num_tracing_attempts, opts,
++                                          is_cloud_tpu_session));
++  }
++  return OkStatus();
++}
++
++
+ }  // namespace profiler
+ }  // namespace tsl
+diff --git a/third_party/tsl/tsl/profiler/rpc/client/capture_profile.h b/third_party/tsl/tsl/profiler/rpc/client/capture_profile.h
+index 252131d39..844db46c0 100644
+--- a/third_party/tsl/tsl/profiler/rpc/client/capture_profile.h
++++ b/third_party/tsl/tsl/profiler/rpc/client/capture_profile.h
+@@ -18,7 +18,9 @@ limitations under the License.
+ #define TENSORFLOW_TSL_PROFILER_RPC_CLIENT_CAPTURE_PROFILE_H_
+ 
+ #include <string>
++#include <variant>
+ 
++#include "absl/container/flat_hash_map.h"
+ #include "tsl/platform/status.h"
+ #include "tsl/profiler/protobuf/profiler_options.pb.h"
+ #include "tsl/profiler/protobuf/profiler_service.pb.h"
+@@ -45,6 +47,14 @@ Status CaptureRemoteTrace(const std::string& logdir, int num_tracing_attempts,
+                           tensorflow::RemoteProfilerSessionManagerOptions& opts,
+                           bool is_cloud_tpu_session);
+ 
++// Generates RemoteProfilerSessionManagerOptions from inputs and calls
++// CaptureRemoteTrace.
++Status CaptureRemoteTrace(
++    const char* service_addr, const char* logdir, const char* worker_list,
++    bool include_dataset_ops, int duration_ms, int num_tracing_attempts,
++    const absl::flat_hash_map<std::string, std::variant<int, std::string>>&
++        options);
++
+ }  // namespace profiler
+ }  // namespace tsl
+ 
+diff --git a/third_party/tsl/tsl/profiler/utils/BUILD b/third_party/tsl/tsl/profiler/utils/BUILD
+index b73fb6ab5..b734d3f82 100644
+--- a/third_party/tsl/tsl/profiler/utils/BUILD
++++ b/third_party/tsl/tsl/profiler/utils/BUILD
+@@ -444,3 +444,16 @@ tsl_cc_test(
+         "@com_google_absl//absl/hash",
+     ],
+ )
++
++cc_library(
++    name = "session_manager",
++    srcs = ["session_manager.cc"],
++    hdrs = ["session_manager.h"],
++    deps = [
++        "//tsl/platform:errors",
++        "//tsl/platform:status",
++        "//tsl/profiler/lib:profiler_session",
++        "//tsl/profiler/protobuf:profiler_options_proto_cc",
++        "@com_google_absl//absl/container:flat_hash_map",
++    ],
++)
+diff --git a/third_party/tsl/tsl/protobuf/BUILD b/third_party/tsl/tsl/protobuf/BUILD
+index 812cdb525..5d5e103c6 100644
+--- a/third_party/tsl/tsl/protobuf/BUILD
++++ b/third_party/tsl/tsl/protobuf/BUILD
+@@ -35,7 +35,6 @@ tf_proto_library(
+ tf_proto_library(
+     name = "dnn_proto",
+     srcs = ["dnn.proto"],
+-    make_default_target_header_only = True,
+ )
+ 
+ tf_proto_library(
+diff --git a/third_party/tsl/workspace2.bzl b/third_party/tsl/workspace2.bzl
+index 8338aad7e..310bb474d 100644
+--- a/third_party/tsl/workspace2.bzl
++++ b/third_party/tsl/workspace2.bzl
+@@ -296,14 +296,14 @@ def _tf_repositories():
+     tf_http_archive(
+         name = "com_google_protobuf",
+         patch_file = ["//third_party/protobuf:protobuf.patch"],
+-        sha256 = "f66073dee0bc159157b0bd7f502d7d1ee0bc76b3c1eac9836927511bdc4b3fc1",
+-        strip_prefix = "protobuf-3.21.9",
+-        system_build_file = "//third_party/systemlibs:protobuf.BUILD",
++        sha256 = "cfcba2df10feec52a84208693937c17a4b5df7775e1635c1e3baffc487b24c9b",
++        strip_prefix = "protobuf-3.9.2",
++       system_build_file = "//third_party/systemlibs:protobuf.BUILD",
+         system_link_files = {
+             "//third_party/systemlibs:protobuf.bzl": "protobuf.bzl",
+             "//third_party/systemlibs:protobuf_deps.bzl": "protobuf_deps.bzl",
+         },
+-        urls = tf_mirror_urls("https://github.com/protocolbuffers/protobuf/archive/v3.21.9.zip"),
++        urls = tf_mirror_urls("https://github.com/protocolbuffers/protobuf/archive/v3.9.2.zip"),
+     )
+ 
+     tf_http_archive(
+@@ -324,9 +324,9 @@ def _tf_repositories():
+ 
+     tf_http_archive(
+         name = "com_google_fuzztest",
+-        sha256 = "c75f224b34c3c62ee901381fb743f6326f7b91caae0ceb8fe62f3fd36f187627",
+-        strip_prefix = "fuzztest-58b4e7065924f1a284952b84ea827ce35a87e4dc",
+-        urls = tf_mirror_urls("https://github.com/google/fuzztest/archive/58b4e7065924f1a284952b84ea827ce35a87e4dc.zip"),
++        sha256 = "3fe79ede8e860ba7331987b2c1f84d3eeaf5bea00fd76398d6ff0006635586c6",
++        strip_prefix = "fuzztest-6d79ceb1dc2398e02a39efc23ce40d68baa16a42",
++        urls = tf_mirror_urls("https://github.com/google/fuzztest/archive/6d79ceb1dc2398e02a39efc23ce40d68baa16a42.zip"),
+     )
+ 
+     tf_http_archive(
+diff --git a/workspace3.bzl b/workspace3.bzl
+index 7f744c721..8f429d78e 100644
+--- a/workspace3.bzl
++++ b/workspace3.bzl
+@@ -42,12 +42,12 @@ def workspace():
+     )
+ 
+     # Maven dependencies.
+-    RULES_JVM_EXTERNAL_TAG = "4.3"
++    RULES_JVM_EXTERNAL_TAG = "3.2"
+     http_archive(
+         name = "rules_jvm_external",
+         strip_prefix = "rules_jvm_external-%s" % RULES_JVM_EXTERNAL_TAG,
+-        sha256 = "6274687f6fc5783b589f56a2f1ed60de3ce1f99bc4e8f9edef3de43bdf7c6e74",
+-        url = "https://github.com/bazelbuild/rules_jvm_external/archive/%s.zip" % RULES_JVM_EXTERNAL_TAG,
++        sha256 = "82262ff4223c5fda6fb7ff8bd63db8131b51b413d26eb49e3131037e79e324af",
++       url = "https://github.com/bazelbuild/rules_jvm_external/archive/%s.zip" % RULES_JVM_EXTERNAL_TAG,
+     )
+ 
+     # Load the raw llvm-project.  llvm does not have build rules set up by default,
+diff --git a/xla/BUILD b/xla/BUILD
+index ee654c2a1..3939e8b5c 100644
+--- a/xla/BUILD
++++ b/xla/BUILD
+@@ -773,7 +773,6 @@ cc_library(
+     visibility = ["//visibility:public"],
+     deps = [
+         "@com_google_absl//absl/container:flat_hash_map",
+-        "@com_google_absl//absl/status:statusor",
+     ],
+ )
+ 
+diff --git a/xla/executable_run_options.h b/xla/executable_run_options.h
+index 31ba23bf3..a24c6a0e3 100644
+--- a/xla/executable_run_options.h
++++ b/xla/executable_run_options.h
+@@ -22,7 +22,6 @@ limitations under the License.
+ #include <string>
+ 
+ #include "absl/container/flat_hash_map.h"
+-#include "absl/status/statusor.h"
+ 
+ // These classes are forward declared so that ExecutableRunOptions can be linked
+ // into an XLA-compiled binary without having to link all of the pointed-to
+@@ -42,11 +41,15 @@ struct ThreadPoolDevice;
+ 
+ namespace tsl {
+ template <typename T>
++class StatusOr;
++template <typename T>
+ class AsyncValueRef;
+ }  // namespace tsl
+ 
+ namespace xla {
+ 
++using ::tsl::StatusOr;  // TENSORFLOW_STATUS_OK
++
+ class DeviceAssignment;
+ class ExecutionProfile;
+ class Shape;
+@@ -96,7 +99,7 @@ using ThenExecuteFunction =
+ // copied from the `src` memory. `frontend_attrs` contains frontend specific
+ // attributes for the send.
+ using SendDeviceMemoryFunction =
+-    std::function<absl::StatusOr<tsl::AsyncValueRef<stream_executor::Event>>(
++    std::function<StatusOr<tsl::AsyncValueRef<stream_executor::Event>>(
+         int64_t channel_id, stream_executor::Stream* stream, const Shape& shape,
+         const stream_executor::DeviceMemoryBase& src,
+         const absl::flat_hash_map<std::string, std::string>& frontend_attrs)>;
+@@ -106,7 +109,7 @@ using SendDeviceMemoryFunction =
+ // copied into the `dst` memory. `frontend_attrs` contains frontend specific
+ // attributes for the receive.
+ using RecvDeviceMemoryFunction =
+-    std::function<absl::StatusOr<tsl::AsyncValueRef<stream_executor::Event>>(
++    std::function<StatusOr<tsl::AsyncValueRef<stream_executor::Event>>(
+         int64_t channel_id, stream_executor::Stream* stream, const Shape& shape,
+         stream_executor::DeviceMemoryBase* dst,
+         const absl::flat_hash_map<std::string, std::string>& frontend_attrs)>;
+diff --git a/xla/mlir_hlo/WORKSPACE b/xla/mlir_hlo/WORKSPACE
+index cc9eeb64f..b290eb455 100644
+--- a/xla/mlir_hlo/WORKSPACE
++++ b/xla/mlir_hlo/WORKSPACE
+@@ -35,7 +35,10 @@ http_archive(
+     build_file_content = "# empty",
+     sha256 = LLVM_SHA256,
+     strip_prefix = "llvm-project-" + LLVM_COMMIT,
+-    urls = ["https://github.com/llvm/llvm-project/archive/{commit}.tar.gz".format(commit = LLVM_COMMIT)],
++    urls = [
++        "https://github.com/llvm/llvm-project/archive/{commit}.tar.gz".format(commit = LLVM_COMMIT),
++        "https://storage.googleapis.com/tpu-pytorch/llvm-raw/{commit}.tar.gz".format(commit = LLVM_COMMIT),
++    ],
+ )
+ 
+ load("@llvm-raw//utils/bazel:configure.bzl", "llvm_configure", "llvm_disable_optional_support_deps")
+diff --git a/xla/service/cpu/runtime_fp16.h b/xla/service/cpu/runtime_fp16.h
+index 3f7af5197..ce4491c5d 100644
+--- a/xla/service/cpu/runtime_fp16.h
++++ b/xla/service/cpu/runtime_fp16.h
+@@ -18,12 +18,7 @@ limitations under the License.
+ 
+ #include <stdint.h>
+ 
+-// _Float16 always gets us the correct ABI type, so use that if available.
+-// AArch64 GCC defines __FLT16_MANT_DIG__ even when _Float16 is not available.
+-#if defined(__FLT16_MANT_DIG__) && \
+-    (defined(__clang__) || !(defined(__GNUC__) && defined(__aarch64__)))
+-using XlaF16ABIType = _Float16;
+-#elif defined(__x86_64__)
++#if defined(__x86_64__)
+ // Older versions of Clang don't have _Float16. Since both float and _Float16
+ // are passed in the same register we can use the wider type and careful casting
+ // to conform to x86_64 psABI. This only works with the assumption that we're
+diff --git a/xla/service/gpu/gpu_executable.cc b/xla/service/gpu/gpu_executable.cc
+index 242961dd1..69196ea70 100644
+--- a/xla/service/gpu/gpu_executable.cc
++++ b/xla/service/gpu/gpu_executable.cc
+@@ -563,9 +563,7 @@ StatusOr<ExecutionOutput> GpuExecutable::ExecuteAsyncOnStreamImpl(
+   }
+ 
+   // Force synchronous execution if the allocator requires it.
+-  const bool block_host_until_done =
+-      !memory_allocator->AllowsAsynchronousDeallocation();
+-
++  const bool block_host_until_done = true;
+ 
+   // Lock the GPU with a shared lock so that we don't interfere with autotuning
+   // that may be running during JIT compilation while allowing multiple XLA
+diff --git a/xla/service/gpu/runtime/BUILD b/xla/service/gpu/runtime/BUILD
+index 328a19690..e70b39c16 100644
+--- a/xla/service/gpu/runtime/BUILD
++++ b/xla/service/gpu/runtime/BUILD
+@@ -375,9 +375,7 @@ cc_library(
+         "//xla/stream_executor",
+         "@com_google_absl//absl/container:node_hash_map",
+         "@com_google_absl//absl/synchronization",
+-    ] + if_cuda_is_configured([
+-        "//xla/stream_executor/cuda:cuda_graph",
+-    ]),
++    ],
+ )
+ 
+ cc_library(
+diff --git a/xla/service/gpu/runtime/executable.cc b/xla/service/gpu/runtime/executable.cc
+index a0919e1cf..75966a044 100644
+--- a/xla/service/gpu/runtime/executable.cc
++++ b/xla/service/gpu/runtime/executable.cc
+@@ -371,6 +371,7 @@ Status GpuRuntimeExecutable::Execute(
+       graph_instances_(executor)->snapshot();
+   CapturedFunctionExecutionCount::Snapshot execution_count =
+       captured_function_counts_(executor)->snapshot();
++  CapturingCudaGraph capturing_cuda_graph(false);
+ #endif  // GOOGLE_CUDA
+ 
+   // Kernels in concurrent regions should be launched on borrowed stream, so
+@@ -398,7 +399,7 @@ Status GpuRuntimeExecutable::Execute(
+       &collectives_, &fft_plans, &send_recv_events, &gpu_lock,
+ #if GOOGLE_CUDA
+       // Auxiliary data that is available only if compiled with CUDA support.
+-      &matmul_plans, &graph_instances, &execution_count,
++      &matmul_plans, &graph_instances, &execution_count, &capturing_cuda_graph,
+ #endif  // GOOGLE_CUDA
+       &concurrent_region_status,
+       // Null pointer will be interpreted as an absence of async collectives
+diff --git a/xla/service/gpu/runtime/graph_launch.cc b/xla/service/gpu/runtime/graph_launch.cc
+index b54b9447f..1d60085e8 100644
+--- a/xla/service/gpu/runtime/graph_launch.cc
++++ b/xla/service/gpu/runtime/graph_launch.cc
+@@ -279,11 +279,18 @@ static absl::Status LaunchGraph(
+   // Compute the hash of the buffer arguments.
+   size_t ptrs_hash = absl::HashOf(RemainingArgsPtrs{fwd_args, temp_buffer});
+ 
++  CapturingCudaGraph not_capturing(false);
++  CapturingCudaGraph capturing(true);
+   // Forwards user data required for launching kernels.
+-  auto user_data = [&] {
++  auto user_data_no_capture = [&] {
+     return CustomCall::UserData(run_options, debug_options, ptx, cubin,
+                                 temp_buffer, kernels, convs, executable,
+-                                gemm_config, gpu_lock);
++                                gemm_config, gpu_lock, &not_capturing);
++  };
++  auto user_data_capture = [&] {
++    return CustomCall::UserData(run_options, debug_options, ptx, cubin,
++                                temp_buffer, kernels, convs, executable,
++                                gemm_config, gpu_lock, &capturing);
+   };
+ 
+   absl::StatusOr<std::unique_ptr<std::atomic<uint64_t>>*> get_count =
+@@ -298,15 +305,16 @@ static absl::Status LaunchGraph(
+       debug_options->xla_gpu_cuda_graph_instantiation_threshold();
+   if (count < instantiation_threshold) {
+     // Run captured graph directly.
+-    absl::Status result = RunGraphWithoutCapture(run_options, function_ref,
+-                                                 fwd_args, user_data());
++    absl::Status result = RunGraphWithoutCapture(
++        run_options, function_ref, fwd_args, user_data_no_capture());
+     if (!result.ok()) return result;
+     return absl::OkStatus();
+   }
+ 
+   absl::StatusOr<GraphInstance*> instance = instances->GetOrCreate(
+       capture.ordinal, [&]() -> absl::StatusOr<GraphInstance> {
+-        auto g = CaptureGraph(run_options, function_ref, fwd_args, user_data());
++        auto g = CaptureGraph(run_options, function_ref, fwd_args,
++                              user_data_capture());
+         if (!g.ok()) return g.status();
+ 
+         auto e = se::gpu::InstantiateCudaGraph(std::move(*g));
+@@ -330,7 +338,8 @@ static absl::Status LaunchGraph(
+   VLOG(3) << "Update cached graph instance";
+ 
+   // Capture CUDA graph by running capture function.
+-  auto g = CaptureGraph(run_options, function_ref, fwd_args, user_data());
++  auto g =
++      CaptureGraph(run_options, function_ref, fwd_args, user_data_capture());
+   if (!g.ok()) return g.status();
+ 
+   // Update captured graph executable.
+diff --git a/xla/service/gpu/runtime/kernel_launch.cc b/xla/service/gpu/runtime/kernel_launch.cc
+index a498df8f5..04a24cfaa 100644
+--- a/xla/service/gpu/runtime/kernel_launch.cc
++++ b/xla/service/gpu/runtime/kernel_launch.cc
+@@ -30,10 +30,6 @@ limitations under the License.
+ #include "xla/service/service_executable_run_options.h"
+ #include "xla/stream_executor/kernel.h"
+ 
+-#if GOOGLE_CUDA
+-#include "xla/stream_executor/cuda/cuda_graph.h"
+-#endif  // #if GOOGLE_CUDA
+-
+ namespace xla {
+ namespace gpu {
+ 
+@@ -54,6 +50,9 @@ StreamExecutorKernels* GpuExecutableKernels::operator()(
+ static absl::Status LaunchImpl(
+     const ServiceExecutableRunOptions* run_options, const std::string* ptx,
+     const std::vector<uint8_t>* cubin, se::DeviceMemoryBase* temp_buffer,
++#if GOOGLE_CUDA
++    CapturingCudaGraph* capturing_cuda_graph,
++#endif
+     State<std::unique_ptr<se::KernelBase>> device_kernel,
+     int32_t shared_memory_bytes, int32_t grid_size_x, int32_t grid_size_y,
+     int32_t grid_size_z, int32_t block_size_x, int32_t block_size_y,
+@@ -79,9 +78,7 @@ static absl::Status LaunchImpl(
+   assert((**kernel)->name() == name && "unexpected loaded kernel");
+ 
+ #if GOOGLE_CUDA
+-  absl::StatusOr<bool> is_capturing = se::gpu::IsStreamCapturing(stream);
+-  if (!is_capturing.ok()) return is_capturing.status();
+-  if (is_capturing.value()) {
++  if (capturing_cuda_graph->capturing()) {
+     VLOG(3) << "Launching " << (**kernel)->name()
+             << "during CUDA graph capture";
+   } else {
+@@ -127,7 +124,10 @@ XLA_RUNTIME_DEFINE_CUSTOM_CALL(
+         .UserData<const std::string*>()
+         .UserData<const std::vector<uint8_t>*>()
+         .UserData<se::DeviceMemoryBase*>()
+-        .State<std::unique_ptr<se::KernelBase>>("uid")
++#if GOOGLE_CUDA
++        .UserData<CapturingCudaGraph*>()
++#endif
++       .State<std::unique_ptr<se::KernelBase>>("uid")
+         .Arg<int32_t>()   // shared_memory_bytes
+         .Arg<int32_t>()   // grid_size_x
+         .Arg<int32_t>()   // grid_size_y
+diff --git a/xla/service/gpu/runtime/support.h b/xla/service/gpu/runtime/support.h
+index 65148218f..423835913 100644
+--- a/xla/service/gpu/runtime/support.h
++++ b/xla/service/gpu/runtime/support.h
+@@ -116,6 +116,15 @@ inline void PopulateDotDimsAttrEncoding(
+           .Add("rhs_contract", &DotDimsAttr::getRhsContractingDimensions));
+ }
+ 
++class CapturingCudaGraph {
++ public:
++  explicit CapturingCudaGraph(bool capturing) : capturing_(capturing) {}
++  bool capturing() { return capturing_; }
++
++ private:
++  bool capturing_ = false;
++};
++
+ }  // namespace gpu
+ }  // namespace xla
+
+diff --git a/xla/stream_executor/BUILD b/xla/stream_executor/BUILD
+index c54bffc06..57fdddc20 100644
+--- a/xla/stream_executor/BUILD
++++ b/xla/stream_executor/BUILD
+@@ -214,10 +214,12 @@ cc_library(
+     ],
+ )
+ 
++# We need to remove make_default_target_header_only so that
++# we can build PyTorch/XLA. Otherwise, we won't have the
++# required objects linked at build time.
+ tf_proto_library(
+     name = "dnn_proto",
+     srcs = ["dnn.proto"],
+-    make_default_target_header_only = True,
+     protodeps = ["@tsl//tsl/protobuf:dnn_proto"],
+     exports = ["@tsl//tsl/protobuf:dnn_proto"],
+ )
+diff --git a/xla/stream_executor/cuda/cuda_graph.cc b/xla/stream_executor/cuda/cuda_graph.cc
+index 2e6a1cdff..ed055a6b5 100644
+--- a/xla/stream_executor/cuda/cuda_graph.cc
++++ b/xla/stream_executor/cuda/cuda_graph.cc
+@@ -175,17 +175,5 @@ tsl::StatusOr<OwnedCudaGraphExec> InstantiateCudaGraph(OwnedCudaGraph graph) {
+   return OwnedCudaGraphExec(exec);
+ }
+ 
+-tsl::StatusOr<bool> IsStreamCapturing(stream_executor::Stream* stream) {
+-  cudaStreamCaptureStatus capture_status;
+-  cudaError_t err = cudaStreamIsCapturing(
+-      stream_executor::gpu::AsGpuStreamValue(stream), &capture_status);
+-  if (err != cudaSuccess) {
+-    return InternalError("Failed to get stream's capture status: %s",
+-                         cudaGetErrorString(err));
+-  }
+-
+-  return capture_status == cudaStreamCaptureStatusActive;
+-}
+-
+ }  // namespace gpu
+ }  // namespace stream_executor
+diff --git a/xla/stream_executor/cuda/cuda_graph.h b/xla/stream_executor/cuda/cuda_graph.h
+index cfe51436f..581f895cf 100644
+--- a/xla/stream_executor/cuda/cuda_graph.h
++++ b/xla/stream_executor/cuda/cuda_graph.h
+@@ -85,9 +85,6 @@ tsl::StatusOr<OwnedCudaGraph> CaptureCudaGraph(
+ // Instantiates a captured cuda graph instance into a cuda graph executable.
+ tsl::StatusOr<OwnedCudaGraphExec> InstantiateCudaGraph(OwnedCudaGraph graph);
+ 
+-// Returns true if the stream is in graph capture mode
+-tsl::StatusOr<bool> IsStreamCapturing(stream_executor ::Stream* stream);
+-
+ }  // namespace gpu
+ }  // namespace stream_executor
+ 

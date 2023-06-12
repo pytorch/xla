@@ -5,7 +5,8 @@ set -ex
 CDIR="$(cd "$(dirname "$0")" ; pwd -P)"
 XDIR=$CDIR/..
 PTDIR=$XDIR/..
-TFDIR=$XDIR/third_party/tensorflow
+OPENXLADIR=$XDIR/third_party/xla
+# TFDIR=$XDIR/third_party/tensorflow
 
 TORCH_PIN="$XDIR/torch_patches/.torch_pin"
 if [ -f "$TORCH_PIN" ]; then
@@ -38,9 +39,9 @@ python $CDIR/cond_patch.py \
   $XDIR/torch_patches \
   $PTDIR
 
-# Apply TF patches only if requested, since bazel handles that normally.
+# Apply OpenXLA patches only if requested, since bazel handles that normally.
 if [[ -n "${APPLY_OPENXLA_PATCHES}" ]]; then
   python $CDIR/cond_patch.py \
     $XDIR/openxla_patches \
-    $TFDIR
+    $OPENXLADIR
 fi

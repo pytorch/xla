@@ -1,64 +1,8 @@
 # Tensorflow's patch to update the protobuf will regress the XRT runtime.
-diff --git a/tensorflow/tools/ci_build/release/requirements_common.txt b/tensorflow/tools/ci_build/release/requirements_common.txt
-index 051387bf64e..be3f16a4edb 100644
---- a/tensorflow/tools/ci_build/release/requirements_common.txt
-+++ b/tensorflow/tools/ci_build/release/requirements_common.txt
-@@ -11,7 +11,7 @@ h5py ~= 3.8.0  # Earliest version for Python 3.11
- numpy ~= 1.22.0; python_version < '3.11'
- numpy ~= 1.23.2; python_version >= '3.11' # Earliest version for Python 3.11
- opt_einsum ~= 3.3.0
--protobuf ~= 3.20.3  # NOTE: Earliest version for Python 3.10
-+protobuf ~= 3.19.3  # NOTE: Earliest version for Python 3.10
- six ~= 1.16.0
- termcolor ~= 2.1.1
- typing_extensions ~= 3.10.0.0
-diff --git a/tensorflow/tools/pip_package/setup.py b/tensorflow/tools/pip_package/setup.py
-index 300232e8e40..fc4279580d5 100644
---- a/tensorflow/tools/pip_package/setup.py
-+++ b/tensorflow/tools/pip_package/setup.py
-@@ -97,7 +97,7 @@ REQUIRED_PACKAGES = [
-     'numpy >= 1.22, <1.24',
-     'opt_einsum >= 2.3.2',
-     'packaging',
--    'protobuf>=3.20.3,<5.0.0dev,!=4.21.0,!=4.21.1,!=4.21.2,!=4.21.3,!=4.21.4,!=4.21.5',
-+    'protobuf >= 3.9.2, < 3.20',
-     'setuptools',
-     'six >= 1.12.0',
-     'termcolor >= 1.1.0',
-diff --git a/tensorflow/tools/proto_text/gen_proto_text_functions_lib.cc b/tensorflow/tools/proto_text/gen_proto_text_functions_lib.cc
-index 25b1d57cc3b..21c9bdde36b 100644
---- a/tensorflow/tools/proto_text/gen_proto_text_functions_lib.cc
-+++ b/tensorflow/tools/proto_text/gen_proto_text_functions_lib.cc
-@@ -250,14 +250,7 @@ string GetHeaderGuard(const FileDescriptor& fd, bool impl) {
- void Generator::AppendFieldValueAppend(const FieldDescriptor& field,
-                                        const bool omit_default,
-                                        const string& field_expr) {
--  // This does not emit code with proper presence semantics (e.g. it doesn't
--  // check 'has' fields on non-messages).
--  CHECK(!field.has_presence() || field.containing_oneof() != nullptr ||
--        field.cpp_type() == FieldDescriptor::CPPTYPE_MESSAGE)
--      << field.file()->name();
--
-   SetOutput(&cc_);
--
-   switch (field.cpp_type()) {
-     case FieldDescriptor::CPPTYPE_INT32:
-     case FieldDescriptor::CPPTYPE_INT64:
-@@ -768,6 +761,10 @@ void GetAllFileDescriptorsFromFile(const FileDescriptor* fd,
- }
- 
- void Generator::Generate(const FileDescriptor& fd) {
-+  // This does not emit code with proper proto2 semantics (e.g. it doesn't check
-+  // 'has' fields on non-messages), so check that only proto3 is passed.
-+  CHECK_EQ(fd.syntax(), FileDescriptor::SYNTAX_PROTO3) << fd.name();
-+
-   const string package = fd.package();
-   std::set<const FileDescriptor*> all_fd;
-   std::set<const Descriptor*> all_d;
-diff --git a/tsl/platform/default/build_config.bzl b/tsl/platform/default/build_config.bzl
-index a325340067d..3fc976efd98 100644
---- a/tsl/platform/default/build_config.bzl
-+++ b/tsl/platform/default/build_config.bzl
+diff --git a/third_party/tsl/tsl/platform/default/build_config.bzl b/third_party/tsl/tsl/platform/default/build_config.bzl
+index 3ab00f064..a421b5af7 100644
+--- a/third_party/tsl/tsl/platform/default/build_config.bzl
++++ b/third_party/tsl/tsl/platform/default/build_config.bzl
 @@ -401,13 +401,6 @@ def py_proto_library(
          # is not explicitly listed in py_libs. Instead, host system is assumed to
          # have grpc installed.
@@ -78,23 +22,24 @@ index a325340067d..3fc976efd98 100644
          protoc = protoc,
          visibility = ["//visibility:public"],
 -        deps = genproto_deps,
-+        deps = [s + "_genproto" for s in deps],
++       deps = [s + "_genproto" for s in deps],
      )
  
      if default_runtime and not default_runtime in py_libs + deps:
-diff --git a/tensorflow/workspace2.bzl b/tensorflow/workspace2.bzl
-index 3d1534d3803..4de954cc19b 100644
---- a/tensorflow/workspace2.bzl
-+++ b/tensorflow/workspace2.bzl
-@@ -463,14 +463,14 @@ def _tf_repositories():
+diff --git a/third_party/tsl/workspace2.bzl b/third_party/tsl/workspace2.bzl
+index 8338aad7e..310bb474d 100644
+--- a/third_party/tsl/workspace2.bzl
++++ b/third_party/tsl/workspace2.bzl
+@@ -296,14 +296,14 @@ def _tf_repositories():
      tf_http_archive(
          name = "com_google_protobuf",
          patch_file = ["//third_party/protobuf:protobuf.patch"],
 -        sha256 = "f66073dee0bc159157b0bd7f502d7d1ee0bc76b3c1eac9836927511bdc4b3fc1",
 -        strip_prefix = "protobuf-3.21.9",
+-        system_build_file = "//third_party/systemlibs:protobuf.BUILD",
 +        sha256 = "cfcba2df10feec52a84208693937c17a4b5df7775e1635c1e3baffc487b24c9b",
 +        strip_prefix = "protobuf-3.9.2",
-         system_build_file = "//third_party/systemlibs:protobuf.BUILD",
++       system_build_file = "//third_party/systemlibs:protobuf.BUILD",
          system_link_files = {
              "//third_party/systemlibs:protobuf.bzl": "protobuf.bzl",
              "//third_party/systemlibs:protobuf_deps.bzl": "protobuf_deps.bzl",
@@ -104,7 +49,7 @@ index 3d1534d3803..4de954cc19b 100644
      )
  
      tf_http_archive(
-@@ -491,9 +491,9 @@ def _tf_repositories():
+@@ -324,9 +324,9 @@ def _tf_repositories():
  
      tf_http_archive(
          name = "com_google_fuzztest",
@@ -117,11 +62,11 @@ index 3d1534d3803..4de954cc19b 100644
      )
  
      tf_http_archive(
-diff --git a/tensorflow/workspace3.bzl b/tensorflow/workspace3.bzl
-index 91871db22c8..5cfa0553579 100644
---- a/tensorflow/workspace3.bzl
-+++ b/tensorflow/workspace3.bzl
-@@ -37,11 +37,11 @@ def workspace():
+diff --git a/workspace3.bzl b/workspace3.bzl
+index 7f744c721..8f429d78e 100644
+--- a/workspace3.bzl
++++ b/workspace3.bzl
+@@ -42,12 +42,12 @@ def workspace():
      )
  
      # Maven dependencies.
@@ -131,10 +76,12 @@ index 91871db22c8..5cfa0553579 100644
          name = "rules_jvm_external",
          strip_prefix = "rules_jvm_external-%s" % RULES_JVM_EXTERNAL_TAG,
 -        sha256 = "6274687f6fc5783b589f56a2f1ed60de3ce1f99bc4e8f9edef3de43bdf7c6e74",
+-        url = "https://github.com/bazelbuild/rules_jvm_external/archive/%s.zip" % RULES_JVM_EXTERNAL_TAG,
 +        sha256 = "82262ff4223c5fda6fb7ff8bd63db8131b51b413d26eb49e3131037e79e324af",
-         url = "https://github.com/bazelbuild/rules_jvm_external/archive/%s.zip" % RULES_JVM_EXTERNAL_TAG,
++       url = "https://github.com/bazelbuild/rules_jvm_external/archive/%s.zip" % RULES_JVM_EXTERNAL_TAG,
      )
  
+     # Load the raw llvm-project.  llvm does not have build rules set up by default,
 diff --git a/third_party/pprof.BUILD b/third_party/pprof.BUILD
 index b7d33118665..dd38a09cd0c 100644
 --- a/third_party/pprof.BUILD
@@ -149,13 +96,13 @@ index b7d33118665..dd38a09cd0c 100644
  exports_files(["pprof/LICENSE"])
  
 diff --git a/third_party/protobuf/protobuf.patch b/third_party/protobuf/protobuf.patch
-index 9d928ba175f..9f0cf0aa771 100644
+index 9d928ba17..b22ec55df 100644
 --- a/third_party/protobuf/protobuf.patch
 +++ b/third_party/protobuf/protobuf.patch
 @@ -1,7 +1,25 @@
 -diff --git a/BUILD.bazel b/BUILD.bazel
----- a/BUILD.bazel	(revision 90b73ac3f0b10320315c2ca0d03a5a9b095d2f66)
--+++ b/BUILD.bazel	(date 1670471682469)
+---- a/BUILD.bazel      (revision 90b73ac3f0b10320315c2ca0d03a5a9b095d2f66)
+-+++ b/BUILD.bazel      (date 1670471682469)
 -@@ -68,6 +68,7 @@
 +diff --git a/BUILD b/BUILD
 +index dbae719ff..4e276c854 100644
@@ -182,7 +129,7 @@ index 9d928ba175f..9f0cf0aa771 100644
       copts = COPTS,
       includes = ["src/"],
       linkopts = LINK_OPTS,
-@@ -9,22 +27,155 @@ diff --git a/BUILD.bazel b/BUILD.bazel
+@@ -9,21 +27,154 @@ diff --git a/BUILD.bazel b/BUILD.bazel
       visibility = ["//visibility:public"],
   )
  
@@ -207,7 +154,7 @@ index 9d928ba175f..9f0cf0aa771 100644
 ++    deps = [proto + "_proto" for proto in WELL_KNOWN_PROTO_MAP.keys()],
 ++    visibility = ["//visibility:public"],
 ++)
-++
++
 ++cc_library(
 +     name = "cc_wkt_protos",
 +-    srcs = WELL_KNOWN_PROTOS,
@@ -338,14 +285,12 @@ index 9d928ba175f..9f0cf0aa771 100644
 -@@ -58,6 +58,37 @@
 -               : 0)                                               \
 -        : PyBytes_AsStringAndSize(ob, (charpp), (sizep)))
-- 
 +@@ -63,6 +63,37 @@
 +                        : PyBytes_AsStringAndSize(ob, (charpp), (sizep)))
 + #endif
-+
+  
  +#if PY_VERSION_HEX < 0x030900B1 && !defined(PYPY_VERSION)
  +static PyCodeObject* PyFrame_GetCode(PyFrameObject *frame)
- +{
 @@ -59,7 +210,7 @@ index 162531226..e93ec4809 100644
   namespace google {
   namespace protobuf {
@@ -377,7 +322,7 @@ index 9d928ba175f..9f0cf0aa771 100644
 - 
 --  if (frame->f_code->co_filename == nullptr) {
 +-
-+-  if (frame->f_code->co_filename == NULL) {
++-  if (frame->f_code->co_filename == NULL) { 
  -    return false;
  +  frame_code = PyFrame_GetCode(frame);
 -+  if (frame_code->co_filename == nullptr) {
@@ -385,19 +330,13 @@ index 9d928ba175f..9f0cf0aa771 100644
  +    goto exit;
     }
     char* filename;
-@@ -118,7 +269,7 @@ index 162531226..e93ec4809 100644
- -    return false;
- +    goto exit;
-    }
-- 
-+
- -  if (frame->f_globals != frame->f_locals) {
- +  frame_globals = PyFrame_GetGlobals(frame);
- +  frame_locals = PyFrame_GetLocals(frame);
-@@ -137,5 +288,36 @@ index 162531226..e93ec4809 100644
+@@ -137,5 +288,35 @@ index 162531226..e93ec4809 100644
  +  Py_XDECREF(frame);
  +  return result;
   }
+- 
+- // If the calling code is not a _pb2.py file, raise AttributeError.
+\ No newline at end of file
 +
 + // If the calling code is not a _pb2.py file, raise AttributeError.
 +diff --git a/python/google/protobuf/pyext/message.cc b/python/google/protobuf/pyext/message.cc
@@ -407,9 +346,6 @@ index 9d928ba175f..9f0cf0aa771 100644
 +@@ -2991,8 +2991,12 @@ bool InitProto2MessageModule(PyObject *m) {
 +         reinterpret_cast<PyObject*>(
 +             &RepeatedCompositeContainer_Type));
-  
-- // If the calling code is not a _pb2.py file, raise AttributeError.
-\ No newline at end of file
 +-    // Register them as collections.Sequence
 ++    // Register them as MutableSequence.
 ++#if PY_MAJOR_VERSION >= 3
@@ -433,7 +369,6 @@ index 9d928ba175f..9f0cf0aa771 100644
 +   if (self->index >= total_size) {
 +     PyErr_Format(PyExc_ValueError,
 +                  "UnknownField does not exist. "
-\ No newline at end of file
 diff --git a/third_party/pybind11_protobuf/BUILD b/third_party/pybind11_protobuf/BUILD
 deleted file mode 100644
 index 3b946e563d4..00000000000

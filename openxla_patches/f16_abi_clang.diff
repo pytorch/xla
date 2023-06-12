@@ -1,6 +1,6 @@
 upstream CI will fail without this
 diff --git a/xla/service/cpu/runtime_fp16.h b/xla/service/cpu/runtime_fp16.h
-index 9fe020d5937..32774c2f3c0 100644
+index 3f7af5197..ce4491c5d 100644
 --- a/xla/service/cpu/runtime_fp16.h
 +++ b/xla/service/cpu/runtime_fp16.h
 @@ -18,12 +18,7 @@ limitations under the License.

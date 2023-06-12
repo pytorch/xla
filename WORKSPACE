@@ -51,17 +51,17 @@ http_archive(
     #     "//tf_patches:triton_filesystem.diff",
     #     "//tf_patches:xplane.diff",
     # ],
-    sha256 = "e3d0c9fe4a566b620699ddcbc1b96763c2e996833778e102f326009d56d927e3",
-    strip_prefix = "xla-d5e43371a0fa6e185354a839e49da3960ed3dfa2",
+    sha256 = "7c333ca3bd4d2770e7fa89569aa4dd95de60990b85506592e90af2217854af44",
+    strip_prefix = "xla-ce3949f58d8a3a791c36741b248bea52954b1648",
     urls = [
-        "https://github.com/openxla/xla/archive/d5e43371a0fa6e185354a839e49da3960ed3dfa2.tar.gz",
+        "https://github.com/openxla/xla/archive/ce3949f58d8a3a791c36741b248bea52954b1648.tar.gz",
     ],
 )
 
-# For development, one often wants to make changes to the TF repository as well
+# For development, one often wants to make changes to the OpenXLA repository as well
 # as the PyTorch/XLA repository. You can override the pinned repository above with a
 # local checkout by either:
-# a) overriding the TF repository on the build.py command line by passing a flag
+# a) overriding the OpenXLA repository on the build.py command line by passing a flag
 #    like:
 #    bazel --override_repository=xla=/path/to/xla
 #    or

@@ -1,6 +1,6 @@
 This diff tries to fix a compilation error that std::filesystem cannot be found.
 diff --git a/third_party/triton/cl526173620.patch b/third_party/triton/cl526173620.patch
-index b1addd9b585..8516a725680 100644
+index b1addd9b5..8516a7256 100644
 --- a/third_party/triton/cl526173620.patch
 +++ b/third_party/triton/cl526173620.patch
 @@ -79,3 +79,82 @@
