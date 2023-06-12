@@ -109,6 +109,7 @@ cc_library(
     "@com_google_absl//absl/strings",
     "@com_google_absl//absl/types:optional",
     "@com_google_absl//absl/types:span",
+    "@org_tensorflow//tensorflow/tsl/platform:stacktrace_handler",
   ],
 )
 
@@ -446,7 +447,7 @@ cc_library(
         "@com_google_absl//absl/types:span",
         "@org_tensorflow//tensorflow/compiler/xla:statusor",
         "@org_tensorflow//tensorflow/compiler/xla:types",
-        "@org_tensorflow//tensorflow/core:lib",
+        "@org_tensorflow//tensorflow/tsl/platform:hash",
     ],
 )
 
@@ -567,7 +568,6 @@ tf_cc_shared_object(
         "@org_tensorflow//tensorflow/compiler/xla/client:xla_builder",
         "@org_tensorflow//tensorflow/compiler/xla/client:xla_computation",
         "@org_tensorflow//tensorflow/compiler/xla/client/lib:svd",
-        "@org_tensorflow//tensorflow/core:lib",
         "@org_tensorflow//tensorflow/tsl/platform/cloud:gcs_file_system",
     ],
 )
