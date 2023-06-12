@@ -47,7 +47,6 @@
 #include "torch_xla/csrc/xla_graph_executor.h"
 #include "torch_xla/csrc/xla_sharding_util.h"
 
-
 namespace torch_xla {
 
 XLATensor::Data::~Data() { XLAGraphExecutor::Get()->UnregisterTensor(this); }
@@ -876,4 +875,3 @@ int64_t XLATensor::GetOpaqueHandle() const {
 }
 
 }  // namespace torch_xla
-
