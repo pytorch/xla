@@ -3466,6 +3466,38 @@ XLANativeFunctions::convolution_backward(
           std::get<2>(results)));
 }
 
+at::Tensor XLANativeFunctions::count_nonzero(const at::Tensor& self,
+                                             c10::optional<int64_t> dim) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+  XLATensorPtr xla_tensor = bridge::GetXlaTensor(self);
+  std::vector<int64_t> dims;
+  if (dim) {
+    dims = torch::lazy::GetCanonicalDimensionIndices(
+        {dim.value()}, xla_tensor->shape().get().rank());
+  }
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::count_nonzero(xla_tensor, dims));
+}
+
+at::Tensor XLANativeFunctions::count_nonzero(const at::Tensor& self,
+                                             at::IntArrayRef dim) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+  XLATensorPtr xla_tensor = bridge::GetXlaTensor(self);
+
+  std::vector<int64_t> canonical_dims =
+      torch::lazy::GetCanonicalDimensionIndices(
+          dim, xla_tensor->shape().get().rank());
+  std::unordered_set<int64_t> dims_set;
+  for (int dim : canonical_dims) {
+    XLA_CHECK(dims_set.find(dim) == dims_set.end())
+        << "dim " << dim << " appears multiple times in the list of dims";
+    dims_set.insert(dim);
+  }
+
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::count_nonzero(xla_tensor, XlaHelpers::I64List(dim)));
+}
+
 at::Tensor XLANativeFunctions::diag_embed(const at::Tensor& self,
                                           int64_t offset, int64_t dim1,
                                           int64_t dim2) {

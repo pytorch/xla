@@ -757,6 +757,27 @@ xla::XlaOp BuildLinspace(const torch::lazy::BackendDevice& device,
   return CreatePut(device, res, last_index, end, /*accumulate=*/false);
 }
 
+xla::XlaOp BuildCountNonzero(xla::XlaOp input, std::vector<int64_t> dims) {
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  xla::XlaOp ne =
+      xla::Ne(input, xla::Zero(input.builder(), input_shape.element_type()));
+
+  static const xla::PrimitiveType kConditionType = xla::PrimitiveType::S32;
+  xla::XlaOp ne_int = xla::ConvertElementType(ne, kConditionType);
+  xla::XlaOp zeros = xla::ZerosLike(ne_int);
+  xla::XlaOp compared =
+      xla::ConvertElementType(xla::Gt(ne_int, zeros), kConditionType);
+  if (dims.empty()) {
+    return xla::ReduceAll(
+        compared, xla::Zero(ne.builder(), kConditionType),
+        xla::CreateScalarAddComputation(kConditionType, ne.builder()));
+  } else {
+    return xla::Reduce(
+        compared, xla::Zero(ne.builder(), kConditionType),
+        xla::CreateScalarAddComputation(kConditionType, ne.builder()), dims);
+  }
+}
+
 std::vector<xla::XlaOp> BuildNonZero(xla::XlaOp input) {
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   return BuildConditionIndices(
