@@ -88,7 +88,7 @@ torch::lazy::BackendDevice GetDeviceOrCurrent(const std::string& device_str) {
 }
 
 void PrepareToExit() {
-  torch_xla::runtime::ComputationClient* client = torch_xla::runtime::GetComputationClientIfInitialized();
+  runtime::ComputationClient* client = runtime::GetComputationClientIfInitialized();
   if (client != nullptr) {
     XLAGraphExecutor::Get()->WaitDeviceOps({});
     client->PrepareToExit();
@@ -326,12 +326,12 @@ void StepMarker(const std::string& device_str,
   torch::lazy::BackendDevice device = GetDeviceOrCurrent(device_str);
   XLAGraphExecutor::Get()->SyncLiveTensorsGraph(&device, devices, wait);
   XLAGraphExecutor::Get()->MarkStep(device);
-  bool debug_mode = torch_xla::runtime::sys_util::GetEnvBool("PT_XLA_DEBUG", false);
+  bool debug_mode = runtime::sys_util::GetEnvBool("PT_XLA_DEBUG", false);
   if (TF_PREDICT_FALSE(debug_mode)) {
-    std::string report = torch_xla::runtime::metrics::CreatePerformanceReport(
-        torch_xla::runtime::GetComputationClient()->GetMetrics());
+    std::string report = runtime::metrics::CreatePerformanceReport(
+        runtime::GetComputationClient()->GetMetrics());
     if (!report.empty()) {
-      std::string fout = torch_xla::runtime::sys_util::GetEnvString("PT_XLA_DEBUG_FILE", "");
+      std::string fout = runtime::sys_util::GetEnvString("PT_XLA_DEBUG_FILE", "");
       if (TF_PREDICT_FALSE(!fout.empty())) {
         std::ofstream out_file(fout, std::ios_base::app);
         out_file << report;
@@ -472,8 +472,8 @@ py::object GetMetricData(const std::string& name) {
   if (auto* data = torch::lazy::GetMetric(name)) {
     return GetMetricData<torch::lazy::MetricData>(data);
   }
-  if (auto* data = torch_xla::runtime::metrics::GetMetric(name)) {
-    return GetMetricData<torch_xla::runtime::metrics::MetricData>(data);
+  if (auto* data = runtime::metrics::GetMetric(name)) {
+    return GetMetricData<runtime::metrics::MetricData>(data);
   }
   return py::none();
 }
@@ -488,7 +488,7 @@ py::object GetRevisions() {
 std::vector<py::bytes> Rendezvous(int ordinal, const std::string& tag,
                                   const std::string& payload,
                                   const std::vector<int64_t>& replicas) {
-  torch_xla::runtime::service::MeshClient* mesh_client = torch_xla::runtime::service::MeshClient::Get();
+  runtime::service::MeshClient* mesh_client = runtime::service::MeshClient::Get();
   std::vector<py::bytes> payloads;
   if (mesh_client != nullptr) {
     auto rendezvous_payloads =
@@ -536,7 +536,7 @@ py::bytes ReadTfFile(tsl::RandomAccessFile* file, uint64_t offset,
         std::min<size_t>(num_threads, std::thread::hardware_concurrency());
     size_t block_size = size / num_threads;
 
-    auto mwait = std::make_shared<torch_xla::runtime::util::MultiWait>(num_threads);
+    auto mwait = std::make_shared<runtime::util::MultiWait>(num_threads);
     for (size_t i = 0; i < num_threads; ++i) {
       auto reader = [&, i]() {
         uint64_t base = static_cast<uint64_t>(i) * block_size;
@@ -547,8 +547,8 @@ py::bytes ReadTfFile(tsl::RandomAccessFile* file, uint64_t offset,
         XLA_CHECK_OK(
             file->Read(offset + base, tsize, &result, buffer.get() + base));
       };
-      torch_xla::runtime::env::ScheduleIoClosure(
-          torch_xla::runtime::util::MultiWait::Completer(mwait, std::move(reader)));
+      runtime::env::ScheduleIoClosure(
+          runtime::util::MultiWait::Completer(mwait, std::move(reader)));
     }
     mwait->Wait();
   }
@@ -652,11 +652,11 @@ xla::Shape GetTensorShape(const at::Tensor& tensor,
 }
 
 py::dict GetMemoryInfo(const std::string& device_str) {
-  torch_xla::runtime::ComputationClient::MemoryInfo mem_info;
+  runtime::ComputationClient::MemoryInfo mem_info;
   {
     NoGilSection nogil;
     torch::lazy::BackendDevice device = GetDeviceOrCurrent(device_str);
-    mem_info = torch_xla::runtime::GetComputationClient()->GetMemoryInfo(device.toString());
+    mem_info = runtime::GetComputationClient()->GetMemoryInfo(device.toString());
   }
   auto py_dict = py::dict();
   py_dict["kb_free"] = mem_info.kb_free;
@@ -688,20 +688,20 @@ ConvertDictToMap(const py::dict& dictionary) {
 // Maps PT/XLA env vars to upstream torch::lazy env vars.
 // Upstream lazy env vars defined in torch/csrc/lazy/core/config.h.
 void MapXlaEnvVarsToLazy() {
-  static bool wants_frames = torch_xla::runtime::sys_util::GetEnvBool("XLA_IR_DEBUG", false) |
-                             torch_xla::runtime::sys_util::GetEnvBool("XLA_HLO_DEBUG", false);
+  static bool wants_frames = runtime::sys_util::GetEnvBool("XLA_IR_DEBUG", false) |
+                             runtime::sys_util::GetEnvBool("XLA_HLO_DEBUG", false);
   FLAGS_torch_lazy_ir_debug = wants_frames;
   static bool no_scalars =
-      torch_xla::runtime::sys_util::GetEnvBool("XLA_NO_SPECIAL_SCALARS", false);
+      runtime::sys_util::GetEnvBool("XLA_NO_SPECIAL_SCALARS", false);
   FLAGS_torch_lazy_handle_special_scalars = !no_scalars;
   FLAGS_torch_lazy_metrics_samples =
-      torch_xla::runtime::sys_util::GetEnvInt("XLA_METRICS_SAMPLES", 1024);
-  FLAGS_torch_lazy_metrics_percentiles = torch_xla::runtime::sys_util::GetEnvString(
+      runtime::sys_util::GetEnvInt("XLA_METRICS_SAMPLES", 1024);
+  FLAGS_torch_lazy_metrics_percentiles = runtime::sys_util::GetEnvString(
       "XLA_METRICS_PERCENTILES", "0.01:0.05:0.1:0.2:0.5:0.8:0.9:0.95:0.99");
   FLAGS_torch_lazy_trim_graph_check_frequency =
-      torch_xla::runtime::sys_util::GetEnvInt("XLA_TRIM_GRAPH_CHECK_FREQUENCY", 5000);
+      runtime::sys_util::GetEnvInt("XLA_TRIM_GRAPH_CHECK_FREQUENCY", 5000);
   FLAGS_torch_lazy_trim_graph_size =
-      torch_xla::runtime::sys_util::GetEnvInt("XLA_TRIM_GRAPH_SIZE", 100000);
+      runtime::sys_util::GetEnvInt("XLA_TRIM_GRAPH_SIZE", 100000);
 }
 
 std::string GetPyTypeString(py::handle obj) {
@@ -743,13 +743,13 @@ std::vector<bool> check_materialization_helper(
 
 void BuildProfilerSubmodule(py::module* m) {
   py::module profiler = m->def_submodule("profiler", "Profiler integration");
-  py::class_<torch_xla::runtime::profiler::ProfilerServer,
-             std::unique_ptr<torch_xla::runtime::profiler::ProfilerServer>>
+  py::class_<runtime::profiler::ProfilerServer,
+             std::unique_ptr<runtime::profiler::ProfilerServer>>
       profiler_server_class(profiler, "ProfilerServer");
   profiler.def("start_server",
-               [](int port) -> std::unique_ptr<torch_xla::runtime::profiler::ProfilerServer> {
+               [](int port) -> std::unique_ptr<runtime::profiler::ProfilerServer> {
                  auto server =
-                     absl::make_unique<torch_xla::runtime::profiler::ProfilerServer>();
+                     absl::make_unique<runtime::profiler::ProfilerServer>();
                  server->Start(port);
                  return server;
                },
@@ -767,7 +767,7 @@ void BuildProfilerSubmodule(py::module* m) {
         {
           NoGilSection nogil;
           for (int i = 0; i <= timeout_s / interval_s; i++) {
-            status = torch_xla::runtime::profiler::Trace(service_addr, logdir, duration_ms,
+            status = runtime::profiler::Trace(service_addr, logdir, duration_ms,
                                           num_tracing_attempts, opts);
             if (status.ok()) {
               return;
@@ -899,11 +899,11 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_xla_get_tensor_id",
         [](const at::Tensor& tensor) { return GetTensorId(tensor); });
   m.def("_xla_get_devices",
-        []() { return torch_xla::runtime::GetComputationClient()->GetLocalDevices(); });
+        []() { return runtime::GetComputationClient()->GetLocalDevices(); });
   m.def("_xla_num_devices",
-        []() { return torch_xla::runtime::GetComputationClient()->GetNumDevices(); });
+        []() { return runtime::GetComputationClient()->GetNumDevices(); });
   m.def("_xla_get_all_devices",
-        []() { return torch_xla::runtime::GetComputationClient()->GetAllDevices(); });
+        []() { return runtime::GetComputationClient()->GetAllDevices(); });
   m.def("_xla_real_devices", [](const std::vector<std::string>& devices) {
     std::vector<std::string> xla_devices;
     {
@@ -916,18 +916,18 @@ void InitXlaModuleBindings(py::module m) {
         [](const std::vector<std::string>& devices) {
           auto replication_devices =
               std::make_shared<std::vector<std::string>>(devices);
-          torch_xla::runtime::GetComputationClient()->SetReplicationDevices(
+          runtime::GetComputationClient()->SetReplicationDevices(
               std::move(replication_devices));
         });
   m.def("_xla_get_replication_devices", []() {
     auto replication_devices =
-        torch_xla::runtime::GetComputationClient()->GetReplicationDevices();
+        runtime::GetComputationClient()->GetReplicationDevices();
     return replication_devices != nullptr ? *replication_devices
                                           : std::vector<std::string>();
   });
   m.def("_xla_get_replication_devices_count", []() {
     auto replication_devices =
-        torch_xla::runtime::GetComputationClient()->GetReplicationDevices();
+        runtime::GetComputationClient()->GetReplicationDevices();
     return replication_devices != nullptr ? replication_devices->size() : 0;
   });
   m.def("_xla_rendezvous",
@@ -1122,16 +1122,16 @@ void InitXlaModuleBindings(py::module m) {
     return device.ordinal();
   });
   m.def("_xla_get_process_index",
-        []() { return torch_xla::runtime::GetComputationClient()->GetProcessIndex(); });
+        []() { return runtime::GetComputationClient()->GetProcessIndex(); });
   m.def("_xla_get_num_processes",
-        []() { return torch_xla::runtime::GetComputationClient()->GetNumProcesses(); });
+        []() { return runtime::GetComputationClient()->GetNumProcesses(); });
   m.def("_xla_get_device_ordinal", [](const std::string& device_str) {
     return bridge::AtenDeviceToXlaDevice(device_str).ordinal();
   });
   m.def("_xla_get_device_attributes", [](const std::string& device_str) {
     const absl::flat_hash_map<
-        std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>& attributes =
-        torch_xla::runtime::GetComputationClient()->GetDeviceAttributes(
+        std::string, runtime::ComputationClient::DeviceAttribute>& attributes =
+        runtime::GetComputationClient()->GetDeviceAttributes(
             bridge::AtenDeviceToXlaDevice(device_str).toString());
 
     py::dict dict;
@@ -1142,12 +1142,12 @@ void InitXlaModuleBindings(py::module m) {
   });
   m.def("_xla_get_all_device_attributes", []() {
     std::vector<std::string> global_devices =
-        torch_xla::runtime::GetComputationClient()->GetAllDevices();
+        runtime::GetComputationClient()->GetAllDevices();
     std::vector<py::dict> list;
     for (auto const& device : global_devices) {
       const absl::flat_hash_map<
-          std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>& attributes =
-          torch_xla::runtime::GetComputationClient()->GetDeviceAttributes(device);
+          std::string, runtime::ComputationClient::DeviceAttribute>& attributes =
+          runtime::GetComputationClient()->GetDeviceAttributes(device);
       py::dict dict;
       for (auto const& [name, value] : attributes) {
         dict[py::str(name)] = py::cast(value);
@@ -1211,15 +1211,15 @@ void InitXlaModuleBindings(py::module m) {
           XLAGraphExecutor::Get()->WaitDeviceOps(devices);
           if (ShardingUtil::UseVirtualDevice()) {
             std::vector<std::string> spmd_device = {"SPMD:0"};
-            torch_xla::runtime::GetComputationClient()->WaitDeviceOps(spmd_device);
+            runtime::GetComputationClient()->WaitDeviceOps(spmd_device);
           } else {
-            torch_xla::runtime::GetComputationClient()->WaitDeviceOps(devices);
+            runtime::GetComputationClient()->WaitDeviceOps(devices);
           }
         },
         py::arg("devices"));
   m.def("_xla_counter_names", []() {
     auto counter_names = torch::lazy::GetCounterNames();
-    auto xla_counter_names = torch_xla::runtime::metrics::GetCounterNames();
+    auto xla_counter_names = runtime::metrics::GetCounterNames();
     counter_names.insert(counter_names.end(), xla_counter_names.begin(),
                          xla_counter_names.end());
     return counter_names;
@@ -1230,13 +1230,13 @@ void InitXlaModuleBindings(py::module m) {
       return py::cast<int64_t>(data->Value());
     }
 
-    auto* xla_data = torch_xla::runtime::metrics::GetCounter(name);
+    auto* xla_data = runtime::metrics::GetCounter(name);
     return xla_data != nullptr ? py::cast<int64_t>(xla_data->Value())
                                : py::none();
   });
   m.def("_xla_metric_names", []() {
     auto metric_names = torch::lazy::GetMetricNames();
-    auto xla_metric_names = torch_xla::runtime::metrics::GetMetricNames();
+    auto xla_metric_names = runtime::metrics::GetMetricNames();
     metric_names.insert(metric_names.end(), xla_metric_names.begin(),
                         xla_metric_names.end());
     return metric_names;
@@ -1255,8 +1255,8 @@ void InitXlaModuleBindings(py::module m) {
     // TODO(jwtan): Unify them once ComputationClient becomes a standalone
     // library.
     return torch::lazy::CreateMetricReport() +
-           torch_xla::runtime::metrics_reader::CreateMetricReport(
-               torch_xla::runtime::GetComputationClient()->GetMetrics());
+           runtime::metrics_reader::CreateMetricReport(
+               runtime::GetComputationClient()->GetMetrics());
   });
   m.def("_short_xla_metrics_report", [](const py::list& counter_names,
                                         const py::list& metric_names) {
@@ -1270,16 +1270,16 @@ void InitXlaModuleBindings(py::module m) {
     }
     // See NOTE: [TORCH_LAZY_COUNTER v.s. XLA_COUNTER].
     return torch::lazy::CreateMetricReport(counter_name_vec, metric_name_vec) +
-           torch_xla::runtime::metrics_reader::CreateMetricReport(counter_name_vec,
+           runtime::metrics_reader::CreateMetricReport(counter_name_vec,
                                                    metric_name_vec);
   });
   m.def("_clear_xla_counters", []() {
     torch::lazy::MetricsArena::Get()->ResetCounters();
-    torch_xla::runtime::metrics::ClearCounters();
+    runtime::metrics::ClearCounters();
   });
   m.def("_clear_xla_metrics", []() {
     torch::lazy::MetricsArena::Get()->ResetMetrics();
-    torch_xla::runtime::metrics::ClearMetrics();
+    runtime::metrics::ClearMetrics();
   });
   m.def("_xla_tensors_report",
         [](size_t nodes_threshold, const std::string& device) {
@@ -1382,7 +1382,7 @@ void InitXlaModuleBindings(py::module m) {
     {
       NoGilSection nogil;
       hlo_text = ConsumeValue(
-          torch_xla::runtime::util::GetComputationHloText(computation->computation()));
+          runtime::util::GetComputationHloText(computation->computation()));
     }
     return hlo_text;
   });
@@ -1397,7 +1397,7 @@ void InitXlaModuleBindings(py::module m) {
           return op_builder::CreateOp(builder, opname, operands, args);
         });
   m.def("_run_xrt_local_service",
-        [](uint64_t service_port) { torch_xla::runtime::RunLocalService(service_port); });
+        [](uint64_t service_port) { runtime::RunLocalService(service_port); });
   m.def("_xla_sgd_optimizer_step_",
         [](const at::Tensor& found_inf, at::Tensor& step, at::Tensor& param,
            at::Tensor& buf, const at::Tensor& d_p, double weight_decay,
@@ -1532,7 +1532,7 @@ void InitXlaModuleBindings(py::module m) {
               << "Virtual device must be enabled to use _get_local_shards";
           auto handle = UnwrapXlaData(xtensor->GetXlaData());
           auto shard_handles =
-              torch_xla::runtime::GetComputationClient()->GetDataShards(handle);
+              runtime::GetComputationClient()->GetDataShards(handle);
           std::vector<at::Tensor> shards;
           for (auto& shard_handle : shard_handles) {
             auto xshard = XLATensor::Create(WrapXlaData(shard_handle));
@@ -1551,7 +1551,7 @@ void InitXlaModuleBindings(py::module m) {
           XLA_CHECK(xtensor->sharding_spec() != nullptr)
               << "Tensor is not sharded";
           auto handle = UnwrapXlaData(xtensor->GetXlaData());
-          auto shards = torch_xla::runtime::GetComputationClient()->GetDataShards(handle);
+          auto shards = runtime::GetComputationClient()->GetDataShards(handle);
           std::vector<std::string> shard_devices;
           for (auto& shard : shards) {
             shard_devices.push_back(shard->device());
@@ -1595,7 +1595,7 @@ void InitXlaModuleBindings(py::module m) {
     XLA_CHECK(xtensor->sharding_spec() != nullptr)
         << "Cannot load local shards into a non sharded tensor";
     XLA_CHECK(devices.size() ==
-              torch_xla::runtime::GetComputationClient()->GetLocalDevices().size())
+              runtime::GetComputationClient()->GetLocalDevices().size())
         << "Shards must be provided for all local devices";
     auto sharding = xtensor->sharding_spec()->sharding;
     XLA_CHECK(sharding.type() != xla::OpSharding::REPLICATED)
@@ -1671,7 +1671,7 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_xla_get_distributed_runtime_service",
         [](int num_nodes) -> std::unique_ptr<xla::DistributedRuntimeService> {
           std::string dist_service_addr =
-              torch_xla::runtime::sys_util::GetEnvString("PJRT_DIST_SERVICE_ADDR", "");
+              runtime::sys_util::GetEnvString("PJRT_DIST_SERVICE_ADDR", "");
           XLA_CHECK(!dist_service_addr.empty())
               << "Must set PJRT_DIST_SERVICE_ADDR environment variable to use "
                  "distributed runtime";
@@ -1716,7 +1716,7 @@ void InitXlaModuleBindings(py::module m) {
             }
           }
           auto post_order = torch::lazy::Util::ComputePostOrder(roots);
-          std::unordered_set<torch_xla::runtime::ComputationClient::Data::OpaqueHandle>
+          std::unordered_set<runtime::ComputationClient::Data::OpaqueHandle>
               data_handles;
 
           for (const torch::lazy::Node* nodeptr : post_order) {
@@ -1727,7 +1727,7 @@ void InitXlaModuleBindings(py::module m) {
             }
 
             // Dedup by handle
-            torch_xla::runtime::ComputationClient::Data::OpaqueHandle handle =
+            runtime::ComputationClient::Data::OpaqueHandle handle =
                 backend_data->GetHandle();
             if (!data_handles.insert(handle).second) {
               continue;

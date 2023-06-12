@@ -41,7 +41,7 @@ class LayoutManager {
 
   struct DimensionsHasher {
     size_t operator()(const absl::Span<const int64_t>& dimensions) const {
-      return torch_xla::runtime::util::HashReduce(torch_xla::runtime::util::MHash(dimensions));
+      return runtime::util::HashReduce(runtime::util::MHash(dimensions));
     }
   };
 
@@ -62,7 +62,7 @@ class LayoutManager {
     // Layouts: SHAPE=LAYOUT;...
     // SHAPE: INT,...
     // LAYOUT: INT,...
-    std::string layouts_env = torch_xla::runtime::sys_util::GetEnvString("XLA_LAYOUTS", "");
+    std::string layouts_env = runtime::sys_util::GetEnvString("XLA_LAYOUTS", "");
     if (!layouts_env.empty()) {
       std::vector<std::string> layouts = absl::StrSplit(layouts_env, ';');
       for (const auto& layout_str : layouts) {
@@ -139,7 +139,7 @@ xla::Shape MakeTpuShape(absl::Span<const int64_t> dimensions,
                         absl::Span<const bool> dynamic_dimensions,
                         xla::PrimitiveType type) {
   static double max_padding_factor =
-      torch_xla::runtime::sys_util::GetEnvDouble("XLA_MAX_PADDING_FACTOR", 1.25);
+      runtime::sys_util::GetEnvDouble("XLA_MAX_PADDING_FACTOR", 1.25);
   xla::Shape shape;
   if (PaddingFactor(dimensions[dimensions.size() - 1], 128) *
           PaddingFactor(dimensions[dimensions.size() - 2], 8) <

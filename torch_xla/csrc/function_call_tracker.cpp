@@ -29,15 +29,15 @@ struct TrackerContext {
 
 TrackerContext* LoadTrackerContext() {
   std::string fntracker_file =
-      torch_xla::runtime::sys_util::GetEnvString("XLA_FNTRACKER_FILE", "");
+      runtime::sys_util::GetEnvString("XLA_FNTRACKER_FILE", "");
   TrackerContext* tctx = nullptr;
   if (!fntracker_file.empty()) {
     tctx = new TrackerContext(
         std::move(fntracker_file),
-        torch_xla::runtime::sys_util::GetEnvInt("XLA_FNTRACKER_LEVEL",
+        runtime::sys_util::GetEnvInt("XLA_FNTRACKER_LEVEL",
                                  std::numeric_limits<int>::max()));
 
-    std::string fn_list = torch_xla::runtime::sys_util::GetEnvString("XLA_FNTRACKER_LIST", "");
+    std::string fn_list = runtime::sys_util::GetEnvString("XLA_FNTRACKER_LIST", "");
     for (auto& fn : absl::StrSplit(fn_list, ':')) {
       if (!fn.empty()) {
         tctx->tags.insert(std::string(fn));

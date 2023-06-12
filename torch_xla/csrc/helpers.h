@@ -324,7 +324,7 @@ class XlaHelpers {
 
   template <typename T>
   static xla::Literal Range(T start, T end, T step) {
-    return xla::LiteralUtil::CreateR1<T>(torch_xla::runtime::util::Range<T>(start, end, step));
+    return xla::LiteralUtil::CreateR1<T>(runtime::util::Range<T>(start, end, step));
   }
 
   static xla::PrecisionConfig::Precision mat_mul_precision() {

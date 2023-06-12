@@ -23,7 +23,7 @@ namespace {
 
 DebugUtil::GraphFormat DefaultGraphFormat() {
   std::string fmt_str =
-      torch_xla::runtime::sys_util::GetEnvString("XLA_SAVE_TENSORS_FMT", "text");
+      runtime::sys_util::GetEnvString("XLA_SAVE_TENSORS_FMT", "text");
   if (fmt_str == "text") {
     return DebugUtil::GraphFormat::kText;
   } else if (fmt_str == "hlo") {
@@ -39,7 +39,7 @@ DebugUtil::GraphFormat DefaultGraphFormat() {
 std::unordered_set<std::string>* LoadExperiments() {
   std::unique_ptr<std::unordered_set<std::string>> xset =
       absl::make_unique<std::unordered_set<std::string>>();
-  std::string experiments = torch_xla::runtime::sys_util::GetEnvString("XLA_EXPERIMENTAL", "");
+  std::string experiments = runtime::sys_util::GetEnvString("XLA_EXPERIMENTAL", "");
   std::vector<std::string> experiment_list = absl::StrSplit(experiments, ':');
   for (auto& name : experiment_list) {
     xset->insert(name);
@@ -58,7 +58,7 @@ std::string DebugUtil::GetTensorsGraphHlo(
     absl::Span<const XLATensorPtr> tensors, const std::vector<size_t>* indices,
     bool dump_stablehlo) {
   std::vector<torch::lazy::Value> root_values;
-  torch_xla::runtime::util::Unique<torch::lazy::BackendDevice> unique_device;
+  runtime::util::Unique<torch::lazy::BackendDevice> unique_device;
   if (indices != nullptr) {
     for (auto index : *indices) {
       const XLATensorPtr& tensor = tensors[index];
@@ -88,7 +88,7 @@ std::string DebugUtil::GetTensorsGraphInfo(
   std::vector<const torch::lazy::Node*> root_nodes;
   std::vector<torch::lazy::Value> root_values;
   std::vector<torch::lazy::hash_t> root_hashes;
-  torch_xla::runtime::util::Unique<torch::lazy::BackendDevice> unique_device;
+  runtime::util::Unique<torch::lazy::BackendDevice> unique_device;
   if (indices != nullptr) {
     for (auto index : *indices) {
       const XLATensorPtr& tensor = tensors[index];
@@ -151,7 +151,7 @@ void DebugUtil::SaveTensorsGraphInfo(const char* name,
                                      absl::Span<const XLATensorPtr> tensors,
                                      const std::vector<size_t>* indices,
                                      GraphFormat format) {
-  thread_local const std::string save_file = torch_xla::runtime::sys_util::GetEnvOrdinalPath(
+  thread_local const std::string save_file = runtime::sys_util::GetEnvOrdinalPath(
       "XLA_SAVE_TENSORS_FILE", "", GetCurrentDevice().ordinal());
   if (!save_file.empty()) {
     static std::mutex lock;

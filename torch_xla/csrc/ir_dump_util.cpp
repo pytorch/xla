@@ -269,21 +269,21 @@ std::string DumpUtil::ToHlo(c10::ArrayRef<torch::lazy::Value> values,
     xla::Shape shape = MakeShapeWithDeviceLayout(
         ConsumeValue(computation.GetProgramShape()).result(),
         static_cast<XlaDeviceType>(device.type()));
-    std::vector<torch_xla::runtime::ComputationClient::CompileInstance> instances;
+    std::vector<runtime::ComputationClient::CompileInstance> instances;
     instances.push_back({std::move(computation), device.toString(),
-                         torch_xla::runtime::GetComputationClient()->GetCompilationDevices(
+                         runtime::GetComputationClient()->GetCompilationDevices(
                              device.toString(), {}),
                          &shape,
                          /*parameter_is_tupled_arguments=*/false, is_sharded});
-    std::vector<std::shared_ptr<torch_xla::runtime::ComputationClient::Computation>>
+    std::vector<std::shared_ptr<runtime::ComputationClient::Computation>>
         computations =
-            torch_xla::runtime::GetComputationClient()->Compile(std::move(instances));
+            runtime::GetComputationClient()->Compile(std::move(instances));
     computation = std::move(computations[0]->move_computation());
   }
   if (to_stable_hlo) {
-    return torch_xla::runtime::hloToStablehloStr(&computation.proto());
+    return runtime::hloToStablehloStr(&computation.proto());
   } else {
-    return ConsumeValue(torch_xla::runtime::util::GetComputationHloText(computation));
+    return ConsumeValue(runtime::util::GetComputationHloText(computation));
   }
 }
 

@@ -48,7 +48,7 @@ struct XLAGuardImpl : public c10::impl::DeviceGuardImplInterface {
   }
 
   c10::DeviceIndex deviceCount() const noexcept override {
-    return torch_xla::runtime::GetComputationClient()->GetNumDevices();
+    return runtime::GetComputationClient()->GetNumDevices();
   }
 };
 

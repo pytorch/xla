@@ -21,11 +21,11 @@ namespace torch_xla {
 class OpByOpExecutor {
  public:
   using AsyncResult = std::vector<torch::lazy::BackendDataPtr>;
-  using AsyncTask = torch_xla::runtime::util::AsyncTask<AsyncResult>;
+  using AsyncTask = runtime::util::AsyncTask<AsyncResult>;
 
   static OpByOpExecutor* Get();
 
-  std::vector<torch_xla::runtime::ComputationClient::ExecuteChainedOp> BuildOps(
+  std::vector<runtime::ComputationClient::ExecuteChainedOp> BuildOps(
       c10::ArrayRef<torch::lazy::Value> roots, const std::string& device,
       absl::Span<const std::string> devices);
 
@@ -39,7 +39,7 @@ class OpByOpExecutor {
 
  private:
   using CompileCache =
-      torch_xla::runtime::util::Cache<torch::lazy::hash_t, torch_xla::runtime::ComputationClient::Computation,
+      runtime::util::Cache<torch::lazy::hash_t, runtime::ComputationClient::Computation,
                        torch::lazy::HashReducer>;
 
   explicit OpByOpExecutor(size_t compile_cache_size);

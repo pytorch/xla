@@ -202,7 +202,7 @@ class XLATensor : public torch::lazy::LazyTensor {
   void SetScalarType(c10::optional<at::ScalarType> logical_element_type);
 
   // We don't use the upstream shape to provide xla::shape.
-  torch_xla::runtime::util::MaybeRef<xla::Shape> shape() const;
+  runtime::util::MaybeRef<xla::Shape> shape() const;
 
   // Retrieves an opaque ID of the alias object upon which the tensor's view is
   // rooted, or 0 if this tensor is not a view.

@@ -18,11 +18,11 @@ namespace torch_xla {
 namespace {
 
 using ShapeCache =
-    torch_xla::runtime::util::Cache<torch::lazy::hash_t, xla::Shape, torch::lazy::HashReducer>;
+    runtime::util::Cache<torch::lazy::hash_t, xla::Shape, torch::lazy::HashReducer>;
 
 ShapeCache* GetShapeCache() {
   static int64_t shape_cache_size =
-      torch_xla::runtime::sys_util::GetEnvInt("XLA_IR_SHAPE_CACHE_SIZE", 12288);
+      runtime::sys_util::GetEnvInt("XLA_IR_SHAPE_CACHE_SIZE", 12288);
   static ShapeCache* cache = new ShapeCache(shape_cache_size);
   return cache;
 }

@@ -66,7 +66,7 @@ at::Tensor UnwrapNumber(const at::Tensor& tensor, at::ScalarType dtype) {
 
 at::Tensor MaybeWrapTensorToFunctional(const at::Tensor& tensor) {
   bool disable_functionalization =
-      torch_xla::runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false);
+      runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false);
   if (disable_functionalization) {
     return tensor;
   }

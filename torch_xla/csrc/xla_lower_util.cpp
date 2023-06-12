@@ -72,7 +72,7 @@ bool ShouldUseDenseScatter(const torch::lazy::BackendDevice& device,
                            const xla::Shape& input_shape,
                            const xla::Shape& index_shape) {
   static int dense_scatter_factor =
-      torch_xla::runtime::sys_util::GetEnvInt("XLA_DENSE_SCATTER_FACTOR", 100);
+      runtime::sys_util::GetEnvInt("XLA_DENSE_SCATTER_FACTOR", 100);
   XlaDeviceType hw_type = static_cast<XlaDeviceType>(device.type());
   if (hw_type == XlaDeviceType::TPU) {
     int64_t input_elements = xla::ShapeUtil::ElementsIn(input_shape);
@@ -344,7 +344,7 @@ std::vector<xla::XlaOp> CreateKthValue(xla::XlaOp input, int64_t k, int64_t dim,
                                   start_indices, limit_indices, strides);
   if (!keepdim) {
     auto reshape_sizes = torch::lazy::DropDimensions(
-        torch_xla::runtime::util::ToVector<int64_t>(shape.dimensions()),
+        runtime::util::ToVector<int64_t>(shape.dimensions()),
         std::vector<int64_t>({dim}));
     values = XlaHelpers::DynamicReshape(values, reshape_sizes);
     indices = XlaHelpers::DynamicReshape(indices, reshape_sizes);

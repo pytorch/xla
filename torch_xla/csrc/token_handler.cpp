@@ -35,7 +35,7 @@ xla::XlaOp SliceOneToken(xla::XlaOp input) {
 xla::XlaOp TokenHandler::GetInput(xla::XlaOp input,
                                   const xla::Shape* input_shape) {
   static bool disable_numeric_token =
-      torch_xla::runtime::sys_util::GetEnvBool("DISABLE_NUMERIC_CC_TOKEN", false);
+      runtime::sys_util::GetEnvBool("DISABLE_NUMERIC_CC_TOKEN", false);
   if (disable_numeric_token) {
     return input;
   }
@@ -49,7 +49,7 @@ xla::XlaOp TokenHandler::GetInput(xla::XlaOp input,
 
 xla::XlaOp TokenHandler::GetNewToken(xla::XlaOp result) {
   static bool disable_numeric_token =
-      torch_xla::runtime::sys_util::GetEnvBool("DISABLE_NUMERIC_CC_TOKEN", false);
+      runtime::sys_util::GetEnvBool("DISABLE_NUMERIC_CC_TOKEN", false);
   if (disable_numeric_token) {
     return token_;
   }
