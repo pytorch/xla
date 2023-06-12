@@ -63,6 +63,8 @@ XLATensorImpl::XLATensorImpl(XLATensor&& tensor)
                       bridge::XlaDeviceToAtenDevice(tensor.GetDevice())),
       tensor_(c10::make_intrusive<XLATensor>(std::move(tensor))) {
   is_non_overlapping_and_dense_ = false;
+  const_cast<XLATensorImpl*>(this)->SetupSizeProperties();
+  set_sizes_and_strides(c10::SymIntArrayRef(sym_sizes_.data(), sym_sizes_.size()), c10::fromIntArrayRefSlow(strides_default()));
   set_custom_sizes_strides(SizesStridesPolicy::CustomSizes);
 }
 
