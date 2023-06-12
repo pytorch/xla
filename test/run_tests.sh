@@ -138,6 +138,7 @@ function run_torchrun {
 function run_xrt_tests {
   # For features not supported in PJRT
   echo "Running XRT tests"
+  run_xrt "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_opbyop  "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_async_scalar  "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_torchrun  "$CDIR/test_allreduce_torchrun.py"
@@ -183,8 +184,9 @@ function run_xla_op_tests {
   run_use_bf16 "$CDIR/test_data_type.py"
   run_xla_ir_debug "$CDIR/test_env_var_mapper.py"
   run_xla_hlo_debug "$CDIR/test_env_var_mapper.py"
-  run_test "$CDIR/pjrt/test_experimental_pjrt.py"
-  run_test "$CDIR/pjrt/test_experimental_tpu.py"
+  run_test "$CDIR/pjrt/test_runtime.py"
+  run_test "$CDIR/pjrt/test_runtime_multi_cpu.py"
+  run_test "$CDIR/pjrt/test_internal_tpu.py"
   run_test "$CDIR/pjrt/test_ddp.py"
   run_test "$CDIR/pjrt/test_mesh_service.py"
   run_test "$CDIR/spmd/test_xla_sharding.py"
@@ -194,6 +196,7 @@ function run_xla_op_tests {
   run_test "$CDIR/test_operations_hlo.py" "$@" --verbosity=$VERBOSITY
   run_test "$CDIR/test_input_output_aliases.py"
   run_test "$CDIR/test_torch_distributed_xla_backend.py"
+  run_test "$CDIR/test_autocast.py"
 }
 
 function run_op_tests {

@@ -28,9 +28,6 @@
 #include "tensorflow/compiler/xla/pjrt/distributed/distributed.h"
 #include "tensorflow/compiler/xla/python/profiler/internal/traceme_wrapper.h"
 #include "tensorflow/compiler/xla/service/hlo_parser.h"
-#include "tensorflow/core/example/example.pb.h"
-#include "tensorflow/core/example/feature.pb.h"
-#include "tensorflow/python/profiler/internal/profiler_pywrap_impl.h"
 #include "tensorflow/tsl/platform/env.h"
 #include "tensorflow/tsl/profiler/lib/traceme.h"
 #include "third_party/xla_client/mesh_service.h"
@@ -355,10 +352,11 @@ uint64_t GetRngSeed(const std::string& device_str) {
       GetDeviceOrCurrent(device_str));
 }
 
-std::string GetTensorsHloGraph(const std::vector<at::Tensor>& tensors) {
+std::string GetTensorsHloGraph(const std::vector<at::Tensor>& tensors,
+                               bool get_stable_hlo = false) {
   std::vector<XLATensorPtr> xtensors =
       GetXlaTensors(tensors, /*want_all=*/false);
-  return XLAGraphExecutor::Get()->DumpHloComputation(xtensors);
+  return XLAGraphExecutor::Get()->DumpHloComputation(xtensors, get_stable_hlo);
 }
 
 std::string GetLiveTensorsReport(size_t nodes_threshold,
@@ -389,6 +387,16 @@ std::string GetLiveTensorsReport(size_t nodes_threshold,
     }
   }
   return ss.str();
+}
+
+static std::string GetLiveTensorsStableHLO(
+    const std::string& device_str, const std::vector<std::string>& devices) {
+  tsl::profiler::TraceMe activity("GetLiveTensorsStableHLO",
+                                  tsl::profiler::TraceMeLevel::kInfo);
+  torch::lazy::BackendDevice device = GetDeviceOrCurrent(device_str);
+  auto tensors = XLAGraphExecutor::Get()->GetLiveTensors(&device);
+  return XLAGraphExecutor::Get()->DumpHloComputation(tensors,
+                                                     /*to_stablehlo=*/true);
 }
 
 void ClearPendingIrs(const std::string& device_str) {
@@ -492,81 +500,6 @@ std::vector<py::bytes> Rendezvous(int ordinal, const std::string& tag,
     XLA_CHECK(replicas.empty() || (replicas.size() == 1 && replicas[0] == 0));
   }
   return payloads;
-}
-
-std::shared_ptr<xla::util::RecordReader> CreateRecordReader(
-    std::string path, const std::string& compression, int64_t buffer_size) {
-  return std::make_shared<xla::util::RecordReader>(std::move(path), compression,
-                                                   buffer_size);
-}
-
-bool RecordRead(const std::shared_ptr<xla::util::RecordReader>& reader,
-                xla::util::RecordReader::Data* value) {
-  NoGilSection nogil;
-  return reader->Read(value);
-}
-
-py::object RecordReadExample(
-    const std::shared_ptr<xla::util::RecordReader>& reader) {
-  auto make_r1_size = [](int64_t size) -> std::vector<int64_t> {
-    return std::vector<int64_t>({size});
-  };
-
-  xla::util::RecordReader::Data value;
-  if (!RecordRead(reader, &value)) {
-    return py::none();
-  }
-  tensorflow::Example exmsg;
-  if (!exmsg.ParseFromArray(value.data(), value.size())) {
-    XLA_ERROR() << "Unable to parse TF example from " << reader->path();
-  }
-  auto example = py::dict();
-  for (auto& name_feat : exmsg.features().feature()) {
-    switch (name_feat.second.kind_case()) {
-      case tensorflow::Feature::kBytesList: {
-        const tensorflow::BytesList& bvalue = name_feat.second.bytes_list();
-        if (bvalue.value_size() == 1) {
-          const std::string& svalue = bvalue.value(0);
-          at::Tensor data = at::empty(make_r1_size(svalue.size()),
-                                      at::TensorOptions(at::kChar));
-          std::memcpy(data.data_ptr<int8_t>(), svalue.data(), svalue.size());
-          example[py::str(name_feat.first)] =
-              torch::autograd::make_variable(data);
-        } else {
-          auto tlist = py::list(bvalue.value_size());
-          for (int i = 0; i < bvalue.value_size(); ++i) {
-            const std::string& svalue = bvalue.value(i);
-            at::Tensor data = at::empty(make_r1_size(svalue.size()),
-                                        at::TensorOptions(at::kChar));
-            std::memcpy(data.data_ptr<int8_t>(), svalue.data(), svalue.size());
-            tlist[i] = torch::autograd::make_variable(data);
-          }
-          example[py::str(name_feat.first)] = tlist;
-        }
-      } break;
-      case tensorflow::Feature::kFloatList: {
-        const tensorflow::FloatList& fvalue = name_feat.second.float_list();
-        at::Tensor data = at::empty(make_r1_size(fvalue.value_size()),
-                                    at::TensorOptions(at::kFloat));
-        std::memcpy(data.data_ptr<float>(), fvalue.value().data(),
-                    fvalue.value_size() * sizeof(float));
-        example[py::str(name_feat.first)] =
-            torch::autograd::make_variable(data);
-      } break;
-      case tensorflow::Feature::kInt64List: {
-        const tensorflow::Int64List& ivalue = name_feat.second.int64_list();
-        at::Tensor data = at::empty(make_r1_size(ivalue.value_size()),
-                                    at::TensorOptions(at::kLong));
-        std::memcpy(data.data_ptr<int64_t>(), ivalue.value().data(),
-                    ivalue.value_size() * sizeof(int64_t));
-        example[py::str(name_feat.first)] =
-            torch::autograd::make_variable(data);
-      } break;
-      default:
-        XLA_ERROR() << "Unknown data type from " << reader->path();
-    }
-  }
-  return example;
 }
 
 std::unique_ptr<tsl::RandomAccessFile> OpenTfFile(const std::string& path) {
@@ -834,10 +767,8 @@ void BuildProfilerSubmodule(py::module* m) {
         {
           NoGilSection nogil;
           for (int i = 0; i <= timeout_s / interval_s; i++) {
-            status = tensorflow::profiler::pywrap::Trace(
-                service_addr, logdir, /*worker_list=*/"",
-                /*include_dataset_ops=*/false, duration_ms,
-                num_tracing_attempts, opts);
+            status = xla::profiler::Trace(service_addr, logdir, duration_ms,
+                                          num_tracing_attempts, opts);
             if (status.ok()) {
               return;
             }
@@ -1264,6 +1195,16 @@ void InitXlaModuleBindings(py::module m) {
           StepMarker(device, devices, wait);
         },
         py::arg("device") = "", py::arg("devices"), py::arg("wait") = true);
+  m.def("_get_stablehlo",
+        [](const std::vector<at::Tensor>& tensors, const std::string& device,
+           const std::vector<std::string>& devices) -> std::string {
+          NoGilSection nogil;
+          if (tensors.empty()) {
+            return GetLiveTensorsStableHLO(device, devices);
+          } else {
+            return GetTensorsHloGraph(tensors, /*get_stable_hlo=*/true);
+          }
+        });
   m.def("_xla_wait_device_ops",
         [](const std::vector<std::string>& devices) {
           NoGilSection nogil;
@@ -1355,30 +1296,6 @@ void InitXlaModuleBindings(py::module m) {
                                          : xla::PrecisionConfig::DEFAULT);
         },
         py::arg("use_full_mat_mul_precision") = true);
-
-  py::class_<xla::util::RecordReader, std::shared_ptr<xla::util::RecordReader>>(
-      m, "RecordReader");
-  m.def("_xla_create_tfrecord_reader",
-        [](const std::string& path, const std::string& compression,
-           int64_t buffer_size) {
-          NoGilSection nogil;
-          return CreateRecordReader(path, compression, buffer_size);
-        },
-        py::arg("path"), py::arg("compression") = "",
-        py::arg("buffer_size") = 16 * 1024 * 1024);
-  m.def(
-      "_xla_tfrecord_read",
-      [](const std::shared_ptr<xla::util::RecordReader>& reader) -> py::object {
-        xla::util::RecordReader::Data record;
-        if (!RecordRead(reader, &record)) {
-          return py::none();
-        }
-        return py::bytes(record.data(), record.size());
-      });
-  m.def("_xla_tfexample_read",
-        [](const std::shared_ptr<xla::util::RecordReader>& reader) {
-          return RecordReadExample(reader);
-        });
 
   py::class_<tsl::RandomAccessFile>(m, "TfRdFile");
   m.def("_xla_tffile_open", [](const std::string& path) {
@@ -1590,6 +1507,15 @@ void InitXlaModuleBindings(py::module m) {
     }
     return std::string();
   });
+  m.def("_get_xla_sharding_type",
+        [](const at::Tensor& input) -> std::optional<int> {
+          XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+          auto sharding_spec = xtensor->sharding_spec();
+          if (sharding_spec != nullptr) {
+            return ShardingUtil::GetShardingType(sharding_spec->sharding);
+          }
+          return std::nullopt;
+        });
   // Returns the local shards of the tensor, with values taken from the
   // underlying ComputationClient::GetDataShards. As such, the shards will
   // contain any padding that was applied to ensure they all have the same
@@ -1617,22 +1543,28 @@ void InitXlaModuleBindings(py::module m) {
   // Returns the indices of the shards into the global tensor as either
   // a Python list of slices for each dimension or a Python Ellipsis object
   // indicating that the tensor is replicated. These indices will not reflect
-  // any padding that has been applied to the shards.
+  // any padding that has been applied to the shards. The order of the returned
+  // indices matches the order of the shards returned from `_get_local_shards`.
   m.def("_get_local_shard_indices",
-        [](const at::Tensor& input,
-           const std::vector<std::string>& devices) -> std::vector<py::object> {
+        [](const at::Tensor& input) -> std::vector<py::object> {
           XLATensorPtr xtensor = bridge::GetXlaTensor(input);
           XLA_CHECK(xtensor->sharding_spec() != nullptr)
               << "Tensor is not sharded";
+          auto handle = UnwrapXlaData(xtensor->GetXlaData());
+          auto shards = xla::GetComputationClient()->GetDataShards(handle);
+          std::vector<std::string> shard_devices;
+          for (auto& shard : shards) {
+            shard_devices.push_back(shard->device());
+          }
+
           auto sharding = xtensor->sharding_spec()->sharding;
           auto shard_shape = ShardingUtil::GetShardShape(input, sharding);
-          auto xla_devices = GetXlaDevices(devices);
           auto indices = ShardingUtil::GetShardIndicesForDevices(
-              shard_shape, input.sizes().vec(), sharding, xla_devices);
+              shard_shape, input.sizes().vec(), sharding, shard_devices);
 
           // Convert each vector<TensorIndex> to List[py::slice] or py::ellipsis
           std::vector<py::object> result;
-          result.reserve(xla_devices.size());
+          result.reserve(shard_devices.size());
           for (auto& device_indices : indices) {
             XLA_CHECK(device_indices.size() > 0)
                 << "Unexpected empty shard indices for tensor " << input;

@@ -121,6 +121,7 @@ ptxla_cc_library(
         ":shape_helper",
         "//third_party/xla_client:async_task",
         "//third_party/xla_client:runtime",
+        "//third_party/xla_client:stablehlo_helper",
         "//third_party/xla_client:unique",
         "//third_party/xla_client:xla_util",
         "@com_google_absl//absl/hash",
@@ -276,6 +277,7 @@ ptxla_cc_library(
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:variant",
+        "@org_tensorflow//tensorflow/tsl/profiler/lib:traceme",
         "@org_tensorflow//tensorflow/compiler/xla/python/profiler/internal:traceme_wrapper",
         "@org_tensorflow//tensorflow/compiler/xla/service:hlo_parser",
         "@org_tensorflow//tensorflow/compiler/xla/service:hlo_pass_pipeline",
@@ -283,10 +285,8 @@ ptxla_cc_library(
         "@org_tensorflow//tensorflow/compiler/xla/service:sharding_propagation",
         "@org_tensorflow//tensorflow/compiler/xla/service/spmd:spmd_partitioner",
         "@org_tensorflow//tensorflow/core",
-        "@org_tensorflow//tensorflow/core:protos_all_cc",
         "@org_tensorflow//tensorflow/core/platform:env",
         "@org_tensorflow//tensorflow/core/profiler/lib:traceme",
-        "@org_tensorflow//tensorflow/python/profiler/internal:profiler_pywrap_impl",
     ],
 )
 

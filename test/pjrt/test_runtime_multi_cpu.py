@@ -7,13 +7,14 @@ import torch
 import torch_xla.core.xla_model as xm
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.distributed.xla_multiprocessing as xmp
-from torch_xla.experimental import pjrt
+from torch_xla import runtime as xr
+from torch_xla._internal import pjrt
 
 
 class TestExperimentalPjrtMultiCpu(parameterized.TestCase):
 
   def setUp(self):
-    pjrt.set_device_type('CPU')
+    xr.set_device_type('CPU')
 
     os.environ.update({
         xenv.PJRT_CPU_ASYNC_CLIENT: 'true',
@@ -25,7 +26,7 @@ class TestExperimentalPjrtMultiCpu(parameterized.TestCase):
     os.environ.pop(xenv.PJRT_CPU_ASYNC_CLIENT, None)
 
     expected = {0: torch.device('xla:0')}
-    devices_per_process = pjrt._run_multiprocess(xm.xla_device)
+    devices_per_process = pjrt.run_multiprocess(xm.xla_device)
     self.assertDictEqual(devices_per_process, expected)
 
   def test_multi_cpu_devices(self):
@@ -36,20 +37,20 @@ class TestExperimentalPjrtMultiCpu(parameterized.TestCase):
         3: torch.device('xla:3'),
     }
 
-    devices_per_process = pjrt._run_multiprocess(xm.xla_device)
+    devices_per_process = pjrt.run_multiprocess(xm.xla_device)
     self.assertDictEqual(devices_per_process, expected)
 
   @parameterized.named_parameters(('xla_model', xm.get_ordinal),
-                                  ('pjrt', pjrt.global_ordinal))
+                                  ('pjrt', xr.global_ordinal))
   def test_global_ordinal(self, ordinal_func):
-    results = pjrt._run_multiprocess(ordinal_func)
+    results = pjrt.run_multiprocess(ordinal_func)
     self.assertListEqual(sorted(results.values()), [0, 1, 2, 3])
 
   @parameterized.named_parameters(('xla_model', xm.get_local_ordinal),
-                                  ('pjrt', pjrt.local_ordinal))
+                                  ('pjrt', xr.local_ordinal))
   def test_local_ordinal(self, ordinal_func):
     # TODO(wcromar): add multiprocess tests
-    results = pjrt._run_multiprocess(ordinal_func)
+    results = pjrt.run_multiprocess(ordinal_func)
     self.assertListEqual(sorted(results.values()), [0, 1, 2, 3])
 
   @staticmethod
@@ -91,7 +92,7 @@ class TestExperimentalPjrtMultiCpu(parameterized.TestCase):
             'device': f'xla:{i}'
         } for i in range(4)
     }
-    results = pjrt._run_multiprocess(self._multi_cpu_backwards)
+    results = pjrt.run_multiprocess(self._multi_cpu_backwards)
 
     self.assertDictEqual(results, expected)
 
@@ -119,7 +120,7 @@ class TestExperimentalPjrtMultiCpu(parameterized.TestCase):
 
   def test_hlo_dump(self):
     tmpdir = self.create_tempdir().full_path
-    pjrt._run_multiprocess(self._hlo_dump, tmpdir)
+    pjrt.run_multiprocess(self._hlo_dump, tmpdir)
 
     files = os.listdir(tmpdir)
     for i in range(4):
