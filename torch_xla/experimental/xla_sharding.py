@@ -100,7 +100,6 @@ class HybridMesh(Mesh):
     else:
       mesh = self._create_device_mesh(self.ici_mesh_shape)
     device_ids = mesh.flatten()
-    print(device_ids, mesh, mesh_shape)
     super().__init__(device_ids, mesh_shape, axis_names)
 
   def _get_physical_tpu_mesh(self, devices: Sequence[Any]) -> np.ndarray:
