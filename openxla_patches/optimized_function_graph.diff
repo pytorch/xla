@@ -1,0 +1,16 @@
+diff --git a/tensorflow/core/framework/optimized_function_graph.proto b/tensorflow/core/framework/optimized_function_graph.proto
+index 25008f0ead2..f359f375767 100644
+--- a/tensorflow/core/framework/optimized_function_graph.proto
++++ b/tensorflow/core/framework/optimized_function_graph.proto
+@@ -40,9 +40,9 @@ message OptimizedFunctionGraph {
+   }
+ 
+   // Indicates the source environment where this proto is generated.
+-  optional OptimizationSource source = 7;
++  OptimizationSource source = 7;
+ 
+   // Time (in microseconds) spent on running the graph optimization passes for
+   // this function.
+-  optional uint64 optimization_time_usecs = 8;
++  uint64 optimization_time_usecs = 8;
+ }

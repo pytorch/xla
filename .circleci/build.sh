@@ -39,10 +39,10 @@ fi
 
 apply_patches
 
-python -c "import fcntl; fcntl.fcntl(1, fcntl.F_SETFL, 0)"
-
 python -c 'print("check curl version!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")'
-python -c "curl --version"
+curl --version
+
+python -c "import fcntl; fcntl.fcntl(1, fcntl.F_SETFL, 0)"
 
 python setup.py install
 
