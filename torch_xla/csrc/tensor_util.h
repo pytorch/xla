@@ -141,6 +141,11 @@ xla_expand_outplace(const at::Tensor& to_expand1, const at::Tensor& to_expand2,
                              at::expand_copy(to_expand3, expanded_size)));
 }
 
+inline bool tensor_has_dym_dim(at::Tensor t) {
+  c10::SymIntArrayRef sym_sizes = t.sym_sizes();
+  return !c10::asIntArrayRefSlowOpt(sym_sizes).has_value();
+}
+
 inline std::vector<at::Tensor> xla_expand_outplace(at::TensorList to_expand) {
   // expands a list of Tensors; ignores undefined (null) tensors
   bool first = true;
