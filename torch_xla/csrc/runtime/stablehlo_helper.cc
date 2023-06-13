@@ -4,6 +4,7 @@
 
 #include "mlir/IR/Verifier.h"       // from @llvm-project
 #include "mlir/Pass/PassManager.h"  // from @llvm-project
+#include "mlir/Transforms/Passes.h"
 #include "tensorflow/compiler/xla/mlir_hlo/mhlo/transforms/passes.h"
 #include "tensorflow/compiler/xla/translate/hlo_to_mhlo/hlo_to_mlir_hlo.h"
 #include "tensorflow/compiler/xla/translate/mhlo_to_hlo/mlir_hlo_to_hlo.h"
@@ -43,6 +44,11 @@ static absl::Status hloToMhloHelper(const xla::HloModuleProto* proto,
 static absl::Status mhloToStablehloHelper(mlir::ModuleOp* mlir_module,
                                           mlir::MLIRContext* context) {
   mlir::PassManager pm(context);
+  // Apply pass to remove HLO tuple output, as MHLO/StableHLO supports multiple
+  // outputs.
+  pm.addPass(mlir::mhlo::createExpandHloTuplesPass());
+  // Canonicalization after tuple flatten, to remove unused tuple op.
+  pm.addNestedPass<mlir::func::FuncOp>(mlir::createCanonicalizerPass());
   pm.addPass(mlir::mhlo::createHloLegalizeToStablehloPass());
   if (!mlir::succeeded(pm.run(*mlir_module))) {
     return absl::Status(

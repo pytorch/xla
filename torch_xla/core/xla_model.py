@@ -841,7 +841,7 @@ def mark_step(wait=False):
   torch_xla._XLAC._set_all_reduce_token(devctx.device, None)
 
 
-def get_stablehlo(tensors=[]):
+def get_stablehlo(tensors=None):
   """Get StableHLO for the computation graph in string format.
 
   If `tensors` is not empty, the graph with `tensors` as outputs will be dump.
@@ -858,6 +858,8 @@ def get_stablehlo(tensors=[]):
   Returns:
     StableHLO Module in string format.
   """
+  if tensors is None:
+    tensors = []
   return torch_xla._XLAC._get_stablehlo(
       tensors, torch_xla._XLAC._xla_get_default_device(), [])
 
