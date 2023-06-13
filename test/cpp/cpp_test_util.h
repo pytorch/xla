@@ -89,12 +89,12 @@ std::string GetTensorHloGraph(at::Tensor tensor);
 torch::lazy::Value GetTensorIrValue(const at::Tensor& tensor,
                                     const torch::lazy::BackendDevice& device);
 
-std::vector<xla::ComputationClient::DataPtr> Execute(
+std::vector<torch_xla::runtime::ComputationClient::DataPtr> Execute(
     absl::Span<const torch::lazy::Value> roots,
     const torch::lazy::BackendDevice& device);
 
 std::vector<at::Tensor> Fetch(
-    absl::Span<const xla::ComputationClient::DataPtr> device_data);
+    absl::Span<const torch_xla::runtime::ComputationClient::DataPtr> device_data);
 
 std::vector<at::Tensor> ExecuteAndFetch(
     absl::Span<const torch::lazy::Value> roots,

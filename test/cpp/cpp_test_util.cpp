@@ -265,7 +265,7 @@ torch::lazy::Value GetTensorIrValue(const at::Tensor& tensor,
   return torch::lazy::MakeNode<DeviceData>(std::move(data));
 }
 
-std::vector<xla::ComputationClient::DataPtr> Execute(
+std::vector<torch_xla::runtime::ComputationClient::DataPtr> Execute(
     absl::Span<const torch::lazy::Value> roots,
     const torch::lazy::BackendDevice& device) {
   LoweringContext lowering_ctx("Execute", device);
@@ -280,25 +280,25 @@ std::vector<xla::ComputationClient::DataPtr> Execute(
   xla::Shape shape = MakeShapeWithDeviceLayout(
       program_shape.result(), static_cast<XlaDeviceType>(device.type()));
 
-  std::vector<xla::ComputationClient::CompileInstance> instances;
+  std::vector<torch_xla::runtime::ComputationClient::CompileInstance> instances;
   instances.push_back(
       {std::move(computation), device.toString(),
        torch_xla::runtime::GetComputationClient()->GetCompilationDevices(
            device.toString(), {}),
        &shape});
 
-  std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
+  std::vector<std::shared_ptr<torch_xla::runtime::ComputationClient::Computation>>
       computations = torch_xla::runtime::GetComputationClient()->Compile(
           std::move(instances));
 
-  xla::ComputationClient::ExecuteComputationOptions options;
+  torch_xla::runtime::ComputationClient::ExecuteComputationOptions options;
   return torch_xla::runtime::GetComputationClient()->ExecuteComputation(
       *computations.front(), UnwrapXlaData(lowering_ctx.GetParametersData()),
       device.toString(), options);
 }
 
 std::vector<at::Tensor> Fetch(
-    absl::Span<const xla::ComputationClient::DataPtr> device_data) {
+    absl::Span<const torch_xla::runtime::ComputationClient::DataPtr> device_data) {
   std::vector<xla::Literal> literals =
       torch_xla::runtime::GetComputationClient()->TransferFromServer(
           device_data);
