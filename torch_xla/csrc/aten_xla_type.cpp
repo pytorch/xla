@@ -1241,6 +1241,9 @@ at::Tensor XLANativeFunctions::empty_symint(
       sym_size, 0, GetXlaDeviceOrCurrent(device), at::dtype_or_default(dtype)));
 }
 
+// When the test `TestDynamicShapes.test_fill_` is called, `torch.fill_` calls
+// into this function. sym_size is dynamic with value [<=6, 1], stride is static
+// with value [1, 1].
 at::Tensor XLANativeFunctions::empty_strided_symint(
     at::SymIntArrayRef sym_size, at::SymIntArrayRef sym_stride,
     c10::optional<at::ScalarType> dtype, c10::optional<at::Layout> layout,
