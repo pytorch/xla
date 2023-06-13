@@ -28,6 +28,8 @@ xla::XlaOp BuildMatMulWithMultiplier(xla::XlaOp lhs, xla::XlaOp rhs,
                                      xla::XlaOp product_multiplier,
                                      xla::XlaOp bias_multiplier);
 
+xla::XlaOp BuildCountNonzero(xla::XlaOp input, std::vector<int64_t> dim);
+
 xla::XlaOp BuildDot(xla::XlaOp lhs, xla::XlaOp rhs);
 
 xla::XlaOp BuildBernoulli(xla::XlaOp probability, xla::XlaOp seed,

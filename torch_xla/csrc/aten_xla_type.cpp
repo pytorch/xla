@@ -638,6 +638,11 @@ at::Tensor XLANativeFunctions::add(const at::Tensor& self,
                                    const at::Tensor& other,
                                    const at::Scalar& alpha) {
   TORCH_LAZY_FN_COUNTER("xla::");
+  XLA_CHECK(!(tensor_has_dym_dim(self) && tensor_has_dym_dim(other)))
+      << "Both operands of torch.add cannot have dynamic dimensions at the "
+         "same time. This is not "
+         "supported in PyTorch/XLA.";
+
   at::native::alpha_check(at::result_type(self, other), alpha);
   return DoBinaryOp(self, other,
                     [&](const XLATensorPtr& xself, const XLATensorPtr& xother,
@@ -3459,6 +3464,38 @@ XLANativeFunctions::convolution_backward(
       at::functionalization::impl::from_functional_tensor(std::get<1>(results)),
       at::functionalization::impl::from_functional_tensor(
           std::get<2>(results)));
+}
+
+at::Tensor XLANativeFunctions::count_nonzero(const at::Tensor& self,
+                                             c10::optional<int64_t> dim) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+  XLATensorPtr xla_tensor = bridge::GetXlaTensor(self);
+  std::vector<int64_t> dims;
+  if (dim) {
+    dims = torch::lazy::GetCanonicalDimensionIndices(
+        {dim.value()}, xla_tensor->shape().get().rank());
+  }
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::count_nonzero(xla_tensor, dims));
+}
+
+at::Tensor XLANativeFunctions::count_nonzero(const at::Tensor& self,
+                                             at::IntArrayRef dim) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+  XLATensorPtr xla_tensor = bridge::GetXlaTensor(self);
+
+  std::vector<int64_t> canonical_dims =
+      torch::lazy::GetCanonicalDimensionIndices(
+          dim, xla_tensor->shape().get().rank());
+  std::unordered_set<int64_t> dims_set;
+  for (int dim : canonical_dims) {
+    XLA_CHECK(dims_set.find(dim) == dims_set.end())
+        << "dim " << dim << " appears multiple times in the list of dims";
+    dims_set.insert(dim);
+  }
+
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::count_nonzero(xla_tensor, XlaHelpers::I64List(dim)));
 }
 
 at::Tensor XLANativeFunctions::diag_embed(const at::Tensor& self,

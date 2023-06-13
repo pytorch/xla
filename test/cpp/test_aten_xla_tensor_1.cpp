@@ -2196,6 +2196,73 @@ TEST_F(AtenXlaTensorTest, TestOneIndexTransfer) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestCount_Nonzero_nodim) {
+  torch::Tensor a = torch::zeros({3, 3}, torch::TensorOptions(torch::kFloat));
+  a[0][1] = 1.0;
+  a[0][2] = 1.0;
+  a[2][2] = 1.0;
+  torch::Tensor b = torch::count_nonzero(a);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = torch::count_nonzero(xla_a);
+    AllClose(b, torch::_cast_Long(xla_b));
+  });
+  ExpectCounterChanged("xla::count_nonzero", cpp_test::GetIgnoredCounters());
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestCount_Nonzero_with_single_dim) {
+  torch::Tensor a = torch::zeros({3, 3}, torch::TensorOptions(torch::kFloat));
+  a[0][1] = 1.0;
+  a[0][2] = 1.0;
+  a[2][2] = 1.0;
+  std::vector<c10::optional<long int>> dims = {0, -1};
+  for (int i = 0; i < dims.size(); i++) {
+    torch::Tensor b = torch::count_nonzero(a, dims[i]);
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_a = CopyToDevice(a, device);
+      torch::Tensor xla_b = torch::count_nonzero(xla_a, dims[i]);
+      AllClose(b, torch::_cast_Long(xla_b));
+    });
+  }
+  ExpectCounterChanged("xla::count_nonzero", cpp_test::GetIgnoredCounters());
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestCount_Nonzero_with_multiple_dims) {
+  torch::Tensor a =
+      torch::zeros({3, 3, 4}, torch::TensorOptions(torch::kFloat));
+  a[0][1][0] = 1.0;
+  a[0][2][1] = 1.0;
+  a[2][2][2] = 1.0;
+  std::vector<long int> dims = {0, 2};
+  torch::Tensor b = torch::count_nonzero(a, dims);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = torch::count_nonzero(xla_a, dims);
+    AllClose(b, torch::_cast_Long(xla_b));
+  });
+  ExpectCounterChanged("xla::count_nonzero", cpp_test::GetIgnoredCounters());
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestCount_Nonzero_error_case) {
+  torch::Tensor a =
+      torch::zeros({3, 3, 4}, torch::TensorOptions(torch::kFloat));
+  a[0][1][0] = 1.0;
+  a[0][2][1] = 1.0;
+  a[2][2][2] = 1.0;
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+
+    std::vector<long int> dims = {0, 0};
+    EXPECT_THROW(torch::count_nonzero(xla_a, dims), std::runtime_error);
+
+    dims = {10};
+    EXPECT_THROW(torch::count_nonzero(xla_a, dims), c10::Error);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestNonzero) {
   torch::Tensor a = torch::zeros({4, 2}, torch::TensorOptions(torch::kFloat));
   a[0][1] = 1.0;

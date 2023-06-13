@@ -1,5 +1,3 @@
-load("@tsl//tsl/platform/default:rules_cc.bzl", "cc_binary")
-
 cc_binary(
     name = "_XLAC.so",
     linkopts = [

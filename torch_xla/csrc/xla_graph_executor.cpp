@@ -1300,8 +1300,18 @@ XLAGraphExecutor::SyncTensorsGraphInternal(
                                   tsl::profiler::TraceMeLevel::kInfo);
   SyncTensorCollection coll = CollectSyncTensors(*tensors, config);
   if (coll.indices.empty()) {
-    /* Enure previous execution is complete before exiting this
-     * function */
+    // Enure previous execution is complete before exiting this
+    // function. Caller of `SyncTensorsGraphInternal` might want to call
+    // wait() on the result of this function before accesing the value of
+    // XLAData. If nullptr is returned here caller will assume there is no need
+    // to wait. However in the cases of `SyncTensorsGraphInternal` being called
+    // twice in a row, the first one will create placeholders then return,
+    // second `SyncTensorsGraphInternal` will find there is nothing to sync and
+    // return. It is possible that by the time second `SyncTensorsGraphInternal`
+    // returned, first computation is still running. If user trying to call
+    // `TransferFromServer` on placeholder XLAData, runtime will segfault. Force
+    // the `SyncTensorsGraphInternal` to block until previous computation either
+    // here or in `ScheduleSyncTensorsGraph` will solve this issue.
     TensorCollectionBarrier(&coll);
     return nullptr;
   }
