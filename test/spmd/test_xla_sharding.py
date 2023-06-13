@@ -464,13 +464,12 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertEqual(mesh.get_logical_mesh().shape,
                      hybrid_mesh.get_logical_mesh().shape)
 
-  @unittest.skipUnless(
-      xm.get_xla_supported_devices("TPU"),
-      f"Requires PJRT_DEVICE set to `TPU`.")
   @patch('torch_xla.runtime.global_device_attributes')
-  def test_hybrid_mesh(self, device_attributes_mock):
+  @patch('torch_xla.core.xla_model.xla_device_hw')
+  def test_hybrid_mesh(self, xla_device_mock, device_attributes_mock):
     # mock device attributes for 2 slices of v4-8
     num_slices = 2
+    xla_device_mock.return_value = "TPU"
     device_attributes_mock.return_value = [{
         'coords': [0, 0, 0],
         'core_on_chip': 0,
@@ -505,7 +504,7 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
         'slice_index': 1
     }]
     hybrid_mesh = xs.HybridMesh(
-        ici_mesh_shape=(1, self.n_devices), dcn_mesh_shape=(num_slices, 1))
+        ici_mesh_shape=(1, 4), dcn_mesh_shape=(num_slices, 1))
     print(hybrid_mesh.get_logical_mesh())
     self.assertEqual(hybrid_mesh.get_logical_mesh().tolist(),
                      [[0, 2, 1, 3], [4, 6, 5, 7]])
