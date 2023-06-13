@@ -1,6 +1,7 @@
 import copy
 
 import unittest
+from unittest.mock import patch
 import math
 import numpy as np
 import os
@@ -10,6 +11,7 @@ from torch import nn
 import torch.nn.functional as F
 import torch.optim as optim
 import torch_xla
+import torch_xla.runtime as xr
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
 import torch_xla.experimental.xla_sharding as xs
@@ -455,12 +457,55 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
   @unittest.skipUnless(
       xm.get_xla_supported_devices("TPU"),
       f"Requires PJRT_DEVICE set to `TPU`.")
-  def test_hybrid_mesh(self):
+  def test_hybrid_mesh_shape(self):
     mesh = self._get_mesh((1, self.n_devices))
     hybrid_mesh = self._get_hybrid_mesh((1, self.n_devices))
     # Check if shape of hybrid mesh matches mesh
     self.assertEqual(mesh.get_logical_mesh().shape,
                      hybrid_mesh.get_logical_mesh().shape)
+
+  @patch('torch_xla.runtime.global_device_attributes')
+  def test_hybrid_mesh(self, device_attributes_mock):
+    # mock device attributes for 2 slices of v4-8
+    num_slices = 2
+    device_attributes_mock.return_value = [{
+        'coords': [0, 0, 0],
+        'core_on_chip': 0,
+        'slice_index': 0
+    }, {
+        'core_on_chip': 0,
+        'coords': [1, 0, 0],
+        'slice_index': 0
+    }, {
+        'slice_index': 0,
+        'core_on_chip': 0,
+        'coords': [0, 1, 0]
+    }, {
+        'coords': [1, 1, 0],
+        'core_on_chip': 0,
+        'slice_index': 0
+    }, {
+        'coords': [0, 0, 0],
+        'slice_index': 1,
+        'core_on_chip': 0
+    }, {
+        'coords': [1, 0, 0],
+        'slice_index': 1,
+        'core_on_chip': 0
+    }, {
+        'coords': [0, 1, 0],
+        'slice_index': 1,
+        'core_on_chip': 0
+    }, {
+        'core_on_chip': 0,
+        'coords': [1, 1, 0],
+        'slice_index': 1
+    }]
+    hybrid_mesh = xs.HybridMesh(
+        ici_mesh_shape=(1, self.n_devices), dcn_mesh_shape=(num_slices, 1))
+    print(hybrid_mesh.get_logical_mesh())
+    self.assertEqual(hybrid_mesh.get_logical_mesh().tolist(),
+                     [[0, 2, 1, 3], [4, 6, 5, 7]])
 
 
 if __name__ == '__main__':

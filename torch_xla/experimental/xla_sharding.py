@@ -65,13 +65,31 @@ class Mesh:
 
   def shape(self):
     return OrderedDict(
-        (name, size) for name, size in zip(self.axis_name, self.mesh_shape))
+        (name, size) for name, size in zip(self.axis_names, self.mesh_shape))
 
   def get_logical_mesh(self):
     return self.device_ids.reshape(self.mesh_shape)
 
 
 class HybridMesh(Mesh):
+  """Creates a hybrid device mesh of devices connected with ICI and DCN networks.
+    The shape of logical mesh should be ordered by increasing network-intensity
+    e.g. [replica, data, model] where mdl has the most network communication
+    requirements. 
+
+  Args:
+    ici_mesh_shape: shape of the logical mesh for inner connected devices.
+    dcn_mesh_shape: shape of logical mesh for outer connected devices.
+
+  Example:
+    # This example is assuming 2 slices of v4-8.
+    ici_mesh_shape = (1, 4, 1) # (data, fsdp, tensor)
+    dcn_mesh_shape = (2, 1, 1)
+    
+    mesh = HybridMesh(ici_mesh_shape, dcn_mesh_shape, ('data','fsdp','tensor'))
+    print(mesh.shape())
+    >> OrderedDict([('data', 2), ('fsdp', 4), ('tensor', 1)])
+  """
   ici_mesh_shape: Tuple[int, ...]
   dcn_mesh_shape: Tuple[int, ...]
 
@@ -105,6 +123,7 @@ class HybridMesh(Mesh):
   def _get_physical_tpu_mesh(self, devices: Sequence[Any]) -> np.ndarray:
     r"""Rearrange TPU devices in a slice into a physical mesh."""
     assert xm.xla_device_hw(xm.xla_device()) == 'TPU'
+    # coords is a 3-dims tuple representing the device in physical mesh
     device_coords = [self.device_attributes[d]['coords'] for d in devices]
     dims = tuple(d + 1 for d in max(device_coords))
     out = np.empty(dims, dtype=object)
