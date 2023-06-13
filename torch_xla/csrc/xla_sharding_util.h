@@ -64,9 +64,9 @@ class ShardingUtil {
   // vector, so the `i`th result will belong on the `i`th device.
   // TODO(yeounoh) avoiding pre-loading of the unpartitioned input arguments
   // might improve the performance and save the bandwidth.
-  static std::vector<std::vector<xla::ComputationClient::DataPtr>> InputHandler(
-      std::vector<xla::ComputationClient::DataPtr> arguments,
-      std::vector<std::string> devices);
+  static std::vector<std::vector<runtime::ComputationClient::DataPtr>>
+  InputHandler(std::vector<runtime::ComputationClient::DataPtr> arguments,
+               std::vector<std::string> devices);
 
   // Processes replicated execution results, where `sharded_results` contains
   // `PjRtData` handles and spans the number of devices (outer) and the number
@@ -78,8 +78,9 @@ class ShardingUtil {
   // the compiler's default behavior and allow the execution to return sharded
   // results and wrap sharded arguments into `PjRtShardedData`. This returns a
   // vector of size that is equal to the number of arguments.
-  static std::vector<xla::ComputationClient::DataPtr> OutputHandler(
-      std::vector<std::vector<xla::ComputationClient::DataPtr>> sharded_results,
+  static std::vector<runtime::ComputationClient::DataPtr> OutputHandler(
+      std::vector<std::vector<runtime::ComputationClient::DataPtr>>
+          sharded_results,
       std::vector<XLATensor::ShardingSpecPtr> sharding_specs,
       bool replicated_output = false);
 
@@ -125,7 +126,7 @@ class ShardingUtil {
 
   // Transfers the individual shards to the devices and returns a DataPtr for
   // the PjRtShardedData wrapping the shards.
-  static xla::ComputationClient::DataPtr CreateShardedData(
+  static runtime::ComputationClient::DataPtr CreateShardedData(
       std::vector<at::Tensor>& shards, std::vector<std::string>& devices,
       xla::Shape global_shape, xla::OpSharding sharding);
 };

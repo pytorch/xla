@@ -38,7 +38,8 @@ TEST(XLABackendTest, TestPlaceholder) {
   ForEachDevice([&](const torch::lazy::BackendDevice& device) {
     torch::lazy::BackendDataPtr data =
         impl->CreateDataPlaceholder(device, shape);
-    xla::ComputationClient::DataPtr computation_data = UnwrapXlaData(data);
+    torch_xla::runtime::ComputationClient::DataPtr computation_data =
+        UnwrapXlaData(data);
     EXPECT_EQ(computation_data->device(), device.toString());
     EXPECT_EQ(computation_data->shape(),
               MakeXlaShapeFromLazyShape(shape, device));

@@ -9,20 +9,20 @@
 #include <sstream>
 
 #include "absl/strings/str_cat.h"
-#include "third_party/xla_client/cache.h"
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/sys_util.h"
 #include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/runtime/cache.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/sys_util.h"
 
 namespace torch_xla {
 namespace {
 
-using ShapeCache =
-    xla::util::Cache<torch::lazy::hash_t, xla::Shape, torch::lazy::HashReducer>;
+using ShapeCache = runtime::util::Cache<torch::lazy::hash_t, xla::Shape,
+                                        torch::lazy::HashReducer>;
 
 ShapeCache* GetShapeCache() {
   static int64_t shape_cache_size =
-      xla::sys_util::GetEnvInt("XLA_IR_SHAPE_CACHE_SIZE", 12288);
+      runtime::sys_util::GetEnvInt("XLA_IR_SHAPE_CACHE_SIZE", 12288);
   static ShapeCache* cache = new ShapeCache(shape_cache_size);
   return cache;
 }

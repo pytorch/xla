@@ -1,10 +1,10 @@
 #include "torch_xla/csrc/torch_util.h"
 
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/xla_util.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir_builder.h"
 #include "torch_xla/csrc/ops/constant.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/xla_util.h"
 #include "torch_xla/csrc/tensor.h"
 
 namespace torch_xla {
@@ -66,7 +66,7 @@ at::Tensor UnwrapNumber(const at::Tensor& tensor, at::ScalarType dtype) {
 
 at::Tensor MaybeWrapTensorToFunctional(const at::Tensor& tensor) {
   bool disable_functionalization =
-      xla::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false);
+      runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false);
   if (disable_functionalization) {
     return tensor;
   }
@@ -78,7 +78,7 @@ at::Tensor MaybeWrapTensorToFunctional(const at::Tensor& tensor) {
 namespace torch {
 namespace lazy {
 torch::lazy::hash_t Hash(const xla::Shape& shape) {
-  auto shape_hash = xla::util::ShapeHash(shape);
+  auto shape_hash = torch_xla::runtime::util::ShapeHash(shape);
   return c10::uint128(absl::Uint128High64(shape_hash),
                       absl::Uint128Low64(shape_hash));
 }

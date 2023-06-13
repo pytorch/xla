@@ -8,11 +8,11 @@
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/types/optional.h"
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/runtime.h"
-#include "third_party/xla_client/stablehlo_helper.h"
-#include "third_party/xla_client/xla_util.h"
 #include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/runtime.h"
+#include "torch_xla/csrc/runtime/stablehlo_helper.h"
+#include "torch_xla/csrc/runtime/xla_util.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/xla_sharding_util.h"
 
@@ -269,21 +269,21 @@ std::string DumpUtil::ToHlo(c10::ArrayRef<torch::lazy::Value> values,
     xla::Shape shape = MakeShapeWithDeviceLayout(
         ConsumeValue(computation.GetProgramShape()).result(),
         static_cast<XlaDeviceType>(device.type()));
-    std::vector<xla::ComputationClient::CompileInstance> instances;
+    std::vector<runtime::ComputationClient::CompileInstance> instances;
     instances.push_back({std::move(computation), device.toString(),
-                         xla::GetComputationClient()->GetCompilationDevices(
+                         runtime::GetComputationClient()->GetCompilationDevices(
                              device.toString(), {}),
                          &shape,
                          /*parameter_is_tupled_arguments=*/false, is_sharded});
-    std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
+    std::vector<std::shared_ptr<runtime::ComputationClient::Computation>>
         computations =
-            xla::GetComputationClient()->Compile(std::move(instances));
+            runtime::GetComputationClient()->Compile(std::move(instances));
     computation = std::move(computations[0]->move_computation());
   }
   if (to_stable_hlo) {
-    return hloToStablehloStr(&computation.proto());
+    return runtime::hloToStablehloStr(&computation.proto());
   } else {
-    return ConsumeValue(xla::util::GetComputationHloText(computation));
+    return ConsumeValue(runtime::util::GetComputationHloText(computation));
   }
 }
 

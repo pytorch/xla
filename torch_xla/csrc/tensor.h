@@ -8,7 +8,7 @@
 #include <memory>
 #include <string>
 
-#include "third_party/xla_client/util.h"
+#include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/view.h"
 
 namespace torch_xla {
@@ -202,7 +202,7 @@ class XLATensor : public torch::lazy::LazyTensor {
   void SetScalarType(c10::optional<at::ScalarType> logical_element_type);
 
   // We don't use the upstream shape to provide xla::shape.
-  xla::util::MaybeRef<xla::Shape> shape() const;
+  runtime::util::MaybeRef<xla::Shape> shape() const;
 
   // Retrieves an opaque ID of the alias object upon which the tensor's view is
   // rooted, or 0 if this tensor is not a view.

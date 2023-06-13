@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-#include "third_party/xla_client/debug_macros.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
 
 namespace torch_xla {
 

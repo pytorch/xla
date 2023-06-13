@@ -8,10 +8,10 @@
 #include "tensorflow/compiler/xla/client/lib/loops.h"
 #include "tensorflow/compiler/xla/client/lib/pooling.h"
 #include "tensorflow/compiler/xla/client/lib/slicing.h"
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/util.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/xla_lower_util.h"
@@ -515,7 +515,7 @@ xla::XlaOp BuildMaxUnpoolNd(const torch::lazy::BackendDevice& device,
   xla::Shape zeros_shape = xla::ShapeUtil::MakeShape(
       input_shape.element_type(),
       {input_shape.dimensions(0), input_shape.dimensions(1),
-       xla::util::Multiply<int64_t>(output_size)});
+       runtime::util::Multiply<int64_t>(output_size)});
   xla::XlaOp zeros = xla::Zeros(input.builder(), zeros_shape);
   xla::XlaOp init_value =
       xla::Broadcast(xla::MinValue(input.builder(), input_shape.element_type()),

@@ -13,17 +13,17 @@
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/status.h"
 #include "tensorflow/compiler/xla/types.h"
-#include "third_party/xla_client/async_task.h"
-#include "third_party/xla_client/cache.h"
-#include "third_party/xla_client/computation_client.h"
-#include "third_party/xla_client/multi_wait.h"
-#include "third_party/xla_client/util.h"
 #include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/cross_replica_reduces.h"
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/runtime/async_task.h"
+#include "torch_xla/csrc/runtime/cache.h"
+#include "torch_xla/csrc/runtime/computation_client.h"
+#include "torch_xla/csrc/runtime/multi_wait.h"
+#include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/view.h"
@@ -163,8 +163,8 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   };
 
   using ComputationCache =
-      xla::util::Cache<torch::lazy::hash_t, CachedComputation,
-                       torch::lazy::HashReducer>;
+      runtime::util::Cache<torch::lazy::hash_t, CachedComputation,
+                           torch::lazy::HashReducer>;
 
   ComputationCache* GetComputationCache();
 
@@ -259,7 +259,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   std::vector<at::Tensor> GetTensorsFused(std::vector<XLATensorPtr>* tensors);
 
   // Runs an asynchronous syn operation using the op-by-op executor.
-  using OpByOpAsync = xla::util::AsyncTask<int>;
+  using OpByOpAsync = runtime::util::AsyncTask<int>;
   OpByOpAsync SyncTensorsGraphOpByOp(std::vector<XLATensorPtr>* tensors,
                                      absl::Span<const std::string> devices,
                                      const SyncTensorsConfig& config);

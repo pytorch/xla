@@ -3,10 +3,10 @@
 #include <ATen/core/Reduction.h>
 #include <torch/csrc/lazy/core/util.h>
 
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/util.h"
 
 namespace torch_xla {
 namespace {

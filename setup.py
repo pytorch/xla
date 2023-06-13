@@ -270,7 +270,7 @@ class BuildBazelExtension(command.build_ext.build_ext):
 
     if _check_env_flag('BUILD_CPP_TESTS', default='0'):
       bazel_argv.append('//test/cpp:all')
-      bazel_argv.append('//third_party/xla_client:all')
+      bazel_argv.append('//torch_xla/csrc/runtime:all')
 
     if BAZEL_JOBS:
       bazel_argv.append('--jobs=%s' % BAZEL_JOBS)

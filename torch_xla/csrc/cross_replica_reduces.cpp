@@ -5,14 +5,14 @@
 #include <map>
 
 #include "tensorflow/compiler/xla/shape_util.h"
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/util.h"
 #include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/layout_manager.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/tensor_methods.h"
 #include "torch_xla/csrc/token_handler.h"

@@ -118,11 +118,11 @@ ptxla_cc_library(
         ":layout_manager",
         ":shape_builder",
         ":shape_helper",
-        "//third_party/xla_client:async_task",
-        "//third_party/xla_client:runtime",
-        "//third_party/xla_client:stablehlo_helper",
-        "//third_party/xla_client:unique",
-        "//third_party/xla_client:xla_util",
+        "//torch_xla/csrc/runtime:async_task",
+        "//torch_xla/csrc/runtime",
+        "//torch_xla/csrc/runtime:stablehlo_helper",
+        "//torch_xla/csrc/runtime:unique",
+        "//torch_xla/csrc/runtime:xla_util",
         "@com_google_absl//absl/hash",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/strings",
@@ -161,8 +161,8 @@ ptxla_cc_library(
     srcs = ["device.cpp"],
     hdrs = ["device.h"],
     deps = [
-        "//third_party/xla_client:runtime",
-        "//third_party/xla_client:util",
+        "//torch_xla/csrc/runtime",
+        "//torch_xla/csrc/runtime:util",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:optional",
         "@org_tensorflow//tensorflow/compiler/xla/client:xla_builder",
@@ -174,7 +174,7 @@ ptxla_cc_library(
     srcs = ["computation.cpp"],
     hdrs = ["computation.h"],
     deps = [
-        "//third_party/xla_client:runtime",
+        "//torch_xla/csrc/runtime",
         "@org_tensorflow//tensorflow/compiler/xla/client:xla_builder",
         "@org_tensorflow//tensorflow/compiler/xla/client:xla_computation",
     ],
@@ -186,10 +186,10 @@ ptxla_cc_library(
     hdrs = ["layout_manager.h"],
     deps = [
         ":device",
-        "//third_party/xla_client:debug_macros",
-        "//third_party/xla_client:sys_util",
-        "//third_party/xla_client:tf_logging",
-        "//third_party/xla_client:util",
+        "//torch_xla/csrc/runtime:debug_macros",
+        "//torch_xla/csrc/runtime:sys_util",
+        "//torch_xla/csrc/runtime:tf_logging",
+        "//torch_xla/csrc/runtime:util",
         "@com_google_absl//absl/strings",
         "@org_tensorflow//tensorflow/compiler/xla:shape_util",
         "@org_tensorflow//tensorflow/core/framework:tensor_shape",
@@ -200,7 +200,7 @@ cc_library(
     name = "einsum_utilities",
     hdrs = ["ops/einsum_utilities.h"],
     deps = [
-        "//third_party/xla_client:debug_macros",
+        "//torch_xla/csrc/runtime:debug_macros",
     ],
 )
 
@@ -210,9 +210,9 @@ ptxla_cc_library(
     hdrs = ["aten_cpu_fallback.h"],
     deps = [
         ":function_call_tracker",
-        "//third_party/xla_client:debug_macros",
-        "//third_party/xla_client:metrics",
-        "//third_party/xla_client:tf_logging",
+        "//torch_xla/csrc/runtime:debug_macros",
+        "//torch_xla/csrc/runtime:metrics",
+        "//torch_xla/csrc/runtime:tf_logging",
     ],
 )
 
@@ -221,7 +221,7 @@ ptxla_cc_library(
     srcs = ["function_call_tracker.cpp"],
     hdrs = ["function_call_tracker.h"],
     deps = [
-        "//third_party/xla_client:sys_util",
+        "//torch_xla/csrc/runtime:sys_util",
         "@com_google_absl//absl/strings",
         "@org_tensorflow//tensorflow/core/platform:stacktrace",
     ],
@@ -261,18 +261,18 @@ ptxla_cc_library(
         ":device",
         ":tensor",
         ":version",
-        "//third_party/xla_client:runtime",
-        "//third_party/xla_client:mesh_service",
-        "//third_party/xla_client:metrics",
-        "//third_party/xla_client:metrics_analysis",
-        "//third_party/xla_client:metrics_reader",
-        "//third_party/xla_client:multi_wait",
-        "//third_party/xla_client:profiler",
-        "//third_party/xla_client:record_reader",
-        "//third_party/xla_client:sys_util",
-        "//third_party/xla_client:thread_pool",
-        "//third_party/xla_client:util",
-        "//third_party/xla_client:xla_util",
+        "//torch_xla/csrc/runtime",
+        "//torch_xla/csrc/runtime:mesh_service",
+        "//torch_xla/csrc/runtime:metrics",
+        "//torch_xla/csrc/runtime:metrics_analysis",
+        "//torch_xla/csrc/runtime:metrics_reader",
+        "//torch_xla/csrc/runtime:multi_wait",
+        "//torch_xla/csrc/runtime:profiler",
+        "//torch_xla/csrc/runtime:record_reader",
+        "//torch_xla/csrc/runtime:sys_util",
+        "//torch_xla/csrc/runtime:thread_pool",
+        "//torch_xla/csrc/runtime:util",
+        "//torch_xla/csrc/runtime:xla_util",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:variant",
@@ -305,8 +305,8 @@ ptxla_cc_library(
         ":shape_helper",
         ":unwrap_data",
         ":xla_data",
-        "//third_party/xla_client:cache",
-        "//third_party/xla_client:computation_client",
+        "//torch_xla/csrc/runtime:cache",
+        "//torch_xla/csrc/runtime:computation_client",
         "@com_google_absl//absl/types:span",
     ],
 )
@@ -316,7 +316,7 @@ cc_library(
     srcs = ["shape_helper.cpp"],
     hdrs = ["shape_helper.h"],
     deps = [
-        "//third_party/xla_client:debug_macros",
+        "//torch_xla/csrc/runtime:debug_macros",
         "@org_tensorflow//tensorflow/compiler/xla/client:xla_builder",
     ],
 )
@@ -327,7 +327,7 @@ ptxla_cc_library(
     hdrs = ["xla_data.h"],
     deps = [
         ":device",
-        "//third_party/xla_client:computation_client",
+        "//torch_xla/csrc/runtime:computation_client",
     ],
 )
 
@@ -337,7 +337,7 @@ ptxla_cc_library(
     hdrs = ["unwrap_data.h"],
     deps = [
         ":xla_data",
-        "//third_party/xla_client:computation_client",
+        "//torch_xla/csrc/runtime:computation_client",
         "@com_google_absl//absl/types:span",
     ],
 )
