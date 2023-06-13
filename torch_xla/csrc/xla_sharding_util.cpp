@@ -621,7 +621,7 @@ void ShardingUtil::PrepareOutputShardingPropagation(
     // hold the corresponding computation results for both sharding &
     // replication.
     auto sharded_data_placeholder =
-        WrapXlaData(xla::GetComputationClient()->WrapDataShards(
+        WrapXlaData(runtime::GetComputationClient()->WrapDataShards(
             {}, GetVirtualDevice().toString(), sharding_specs[i]->shape.value(),
             sharding_specs[i]->sharding));
 
