@@ -74,6 +74,9 @@ class SPMDLoadPlanner(LoadPlanner):
 
   The input state_dict should already be sharded and on the XLA device, and
   tensors and shards will be loaded in-place.
+
+  This implementation is based on the DefaultLoadPlanner from
+  https://github.com/pytorch/pytorch/blob/main/torch/distributed/checkpoint/default_planner.py
   """
 
   def __init__(self):
@@ -128,7 +131,7 @@ class SPMDLoadPlanner(LoadPlanner):
         k: v for k, v in state_dict.items() if _is_sharded_tensor(v)
     }
     unsharded = dict(state_dict.items() - self.sharded_state_dict.items())
-    self.unsharded_state_dict = tree_map(_unwrap_sharded_tensor, unsharded)
+    self.unsharded_state_dict = tree_map(_unwrap_xla_sharded_tensor, unsharded)
 
   def create_local_plan(self) -> LoadPlan:
     # Create the load plan for unsharded data
@@ -182,6 +185,12 @@ class SPMDLoadPlanner(LoadPlanner):
     return xla_shard.data
 
   def transform_tensor(self, read_item: ReadItem, tensor: torch.Tensor):
+    """
+    The storage layer requires that the shape of tensors returned by
+    `resolve_tensor` matches the `lengths` of the ReadItem. This function
+    will return a narrowed view of the tensor that matches the ReadItem's
+    lengths and offsets into the global tensor.
+    """
     offsets = read_item.dest_offsets
     index = read_item.dest_index
     if index.fqn in self.sharded_state_dict:
@@ -235,7 +244,7 @@ def _is_sharded_tensor(x: Any) -> bool:
       x, XLAShardedTensor) and x.sharding_type != ShardingType.REPLICATED
 
 
-def _unwrap_sharded_tensor(x: Any) -> Any:
+def _unwrap_xla_sharded_tensor(x: Any) -> Any:
   if isinstance(x, XLAShardedTensor):
     return x.global_tensor
   return x

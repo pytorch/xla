@@ -123,7 +123,7 @@ class SPMDLoadPlannerTest(DistributedCheckpointTestBase):
     if self.n_devices > 1:
       # When the model is sharded across devices, fc1.weight will result in
       # self.n_devices ReadItems while all other tensors result in a single
-      # ReadItem.
+      # ReadItem because the checkpoint metadata is unsharded.
       sharded_read_items = [
           ri for ri in plan.items if ri.dest_index.fqn == 'fc1.weight'
       ]
