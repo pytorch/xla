@@ -287,7 +287,8 @@ std::vector<torch_xla::runtime::ComputationClient::DataPtr> Execute(
            device.toString(), {}),
        &shape});
 
-  std::vector<std::shared_ptr<torch_xla::runtime::ComputationClient::Computation>>
+  std::vector<
+      std::shared_ptr<torch_xla::runtime::ComputationClient::Computation>>
       computations = torch_xla::runtime::GetComputationClient()->Compile(
           std::move(instances));
 
@@ -298,7 +299,8 @@ std::vector<torch_xla::runtime::ComputationClient::DataPtr> Execute(
 }
 
 std::vector<at::Tensor> Fetch(
-    absl::Span<const torch_xla::runtime::ComputationClient::DataPtr> device_data) {
+    absl::Span<const torch_xla::runtime::ComputationClient::DataPtr>
+        device_data) {
   std::vector<xla::Literal> literals =
       torch_xla::runtime::GetComputationClient()->TransferFromServer(
           device_data);

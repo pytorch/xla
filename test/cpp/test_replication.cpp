@@ -55,8 +55,8 @@ void TestSingleReplication(
   }
   auto tensors_data = CreateTensorsData(tensors, device_strings);
 
-  std::vector<std::vector<torch_xla::runtime::ComputationClient::DataPtr>> results(
-      device_strings.size());
+  std::vector<std::vector<torch_xla::runtime::ComputationClient::DataPtr>>
+      results(device_strings.size());
   torch_xla::runtime::util::MultiWait mwait(device_strings.size());
   torch_xla::runtime::ComputationClient::ExecuteComputationOptions exec_options;
   for (size_t i = 0; i < device_strings.size(); ++i) {
@@ -66,7 +66,8 @@ void TestSingleReplication(
               *compiled_computations[i], {UnwrapXlaData(tensors_data[i])},
               device_strings[i], exec_options);
     };
-    torch_xla::runtime::env::ScheduleIoClosure(mwait.Completer(std::move(executor)));
+    torch_xla::runtime::env::ScheduleIoClosure(
+        mwait.Completer(std::move(executor)));
   }
   mwait.Wait();
 

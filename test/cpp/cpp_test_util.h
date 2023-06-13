@@ -94,7 +94,8 @@ std::vector<torch_xla::runtime::ComputationClient::DataPtr> Execute(
     const torch::lazy::BackendDevice& device);
 
 std::vector<at::Tensor> Fetch(
-    absl::Span<const torch_xla::runtime::ComputationClient::DataPtr> device_data);
+    absl::Span<const torch_xla::runtime::ComputationClient::DataPtr>
+        device_data);
 
 std::vector<at::Tensor> ExecuteAndFetch(
     absl::Span<const torch::lazy::Value> roots,

@@ -232,8 +232,8 @@ TEST_F(XLAShardingTest, EqualShardingSpecs) {
 }
 
 TEST_F(XLAShardingTest, CreateTensorsData) {
-  if (torch_xla::runtime::sys_util::GetEnvString(torch_xla::runtime::env::kEnvPjRtDevice,
-                                                 "") == "") {
+  if (torch_xla::runtime::sys_util::GetEnvString(
+          torch_xla::runtime::env::kEnvPjRtDevice, "") == "") {
     GTEST_SKIP() << "`PJRT_DEVICE` is not set.";
   }
 
@@ -275,8 +275,8 @@ TEST_F(XLAShardingTest, CreateTensorsData) {
 }
 
 TEST_F(XLAShardingTest, InputHandler) {
-  if ((torch_xla::runtime::sys_util::GetEnvString(torch_xla::runtime::env::kEnvPjRtDevice,
-                                                  "") == "") ||
+  if ((torch_xla::runtime::sys_util::GetEnvString(
+           torch_xla::runtime::env::kEnvPjRtDevice, "") == "") ||
       (torch_xla::runtime::GetComputationClient()->GetLocalDevices().size() <
        2)) {
     GTEST_SKIP()
@@ -311,8 +311,8 @@ TEST_F(XLAShardingTest, InputHandler) {
 }
 
 TEST_F(XLAShardingTest, OutputHandler) {
-  if ((torch_xla::runtime::sys_util::GetEnvString(torch_xla::runtime::env::kEnvPjRtDevice,
-                                                  "") == "") ||
+  if ((torch_xla::runtime::sys_util::GetEnvString(
+           torch_xla::runtime::env::kEnvPjRtDevice, "") == "") ||
       (torch_xla::runtime::GetComputationClient()->GetLocalDevices().size() <
        2)) {
     GTEST_SKIP()
@@ -325,7 +325,8 @@ TEST_F(XLAShardingTest, OutputHandler) {
       torch_xla::runtime::GetComputationClient()->GetLocalDevices();
 
   // Prepare an input vecotr `outputs` with 2 arguments per device.
-  std::vector<std::vector<torch_xla::runtime::ComputationClient::DataPtr>> outputs;
+  std::vector<std::vector<torch_xla::runtime::ComputationClient::DataPtr>>
+      outputs;
   outputs.reserve(devices.size());
   at::Tensor tensor = at::ones({8}, at::TensorOptions(at::kFloat));
   for (auto device : devices) {
@@ -391,7 +392,8 @@ TEST_F(XLAShardingTest, PrepareOutputShardingPropagation) {
                        /*should_wrap_parameter=*/false,
                        /*is_sharded=*/true});
 
-  std::vector<std::shared_ptr<torch_xla::runtime::ComputationClient::Computation>>
+  std::vector<
+      std::shared_ptr<torch_xla::runtime::ComputationClient::Computation>>
       computations = torch_xla::runtime::GetComputationClient()->Compile(
           std::move(instances));
   ComputationPtr computation = std::make_shared<Computation>(
