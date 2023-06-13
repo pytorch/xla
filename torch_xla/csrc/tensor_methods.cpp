@@ -721,7 +721,6 @@ XLATensorPtr argmin(const XLATensorPtr& input, int64_t dim, bool keepdim) {
 }
 
 XLATensorPtr argmin(const XLATensorPtr& input) {
-  std::cout << "tensor_methods.cpp argmin(input)" << std::endl;
   return input->CreateFrom(
       torch::lazy::MakeNode<ArgMin>(input->GetIrValue(), -1, false),
       at::ScalarType::Long);
