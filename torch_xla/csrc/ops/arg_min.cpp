@@ -31,7 +31,13 @@ torch::lazy::NodePtr ArgMin::Clone(torch::lazy::OpList operands) const {
 
 XlaOpVector ArgMin::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
-  return ReturnOp(BuildArgMin(input, dim_, keepdim_), loctx);
+  
+  std::string call_target_name = "argmin_custom";
+  std::vector<xla::XlaOp> operands = {input};
+  xla::Shape shape = xla::ShapeUtil::MakeShape(xla::S32, {1});
+  xla::XlaOp out = xla::CustomCall(input.builder(), call_target_name, operands, shape);
+  return ReturnOp(out, loctx);
+  // return ReturnOp(BuildArgMin(input, dim_, keepdim_), loctx);
 }
 
 std::string ArgMin::ToString() const {
