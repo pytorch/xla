@@ -441,9 +441,11 @@ cc_library(
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:optional",
         "@com_google_absl//absl/types:span",
+        "@org_tensorflow//tensorflow/compiler/xla:status",
         "@org_tensorflow//tensorflow/compiler/xla:statusor",
         "@org_tensorflow//tensorflow/compiler/xla:types",
         "@org_tensorflow//tensorflow/tsl/platform:hash",
+        "@org_tensorflow//tensorflow/tsl/platform:errors",
     ],
 )
 
