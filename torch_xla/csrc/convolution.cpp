@@ -395,7 +395,7 @@ tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropInputConvOp(tsl::StringPiece type_
       if (attrs.padding == tensorflow::VALID) {
         padding_type = xla::PaddingType::PADDING_VALID;
       }
-      if (attrs.padding == SAME) {
+      if (attrs.padding == tensorflow::SAME) {
         padding_type = xla::PaddingType::PADDING_SAME;
       }
     }
