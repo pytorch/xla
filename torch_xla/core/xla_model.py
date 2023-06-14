@@ -841,6 +841,29 @@ def mark_step(wait=False):
   torch_xla._XLAC._set_all_reduce_token(devctx.device, None)
 
 
+def get_stablehlo(tensors=None):
+  """Get StableHLO for the computation graph in string format.
+
+  If `tensors` is not empty, the graph with `tensors` as outputs will be dump.
+  If `tensors` is empty, the whole computation graph will be dump.
+  TODO(lsy323): When `tensors` is empty, the some intermediate tensors will also be
+  dump as outputs. Need further investigation.
+
+  For inference graph, it is recommended to pass the model outputs to `tensors`.
+  For training graph, it is not straightforward to identify the "outputs". Using empty `tensors` is recommended.
+
+  Args:
+    tensors (list[torch.Tensor], optional): The tensors contained in the StableHLO graph.
+
+  Returns:
+    StableHLO Module in string format.
+  """
+  if tensors is None:
+    tensors = []
+  return torch_xla._XLAC._get_stablehlo(
+      tensors, torch_xla._XLAC._xla_get_default_device(), [])
+
+
 def wait_device_ops(devices=[]):
   """Waits for all the async operations on the given devices to complete.
 

@@ -5,7 +5,7 @@
 #include <torch/csrc/lazy/backend/backend_device.h>
 #include <torch/csrc/lazy/core/shape.h>
 
-#include "third_party/xla_client/computation_client.h"
+#include "torch_xla/csrc/runtime/computation_client.h"
 
 namespace torch_xla {
 
@@ -17,18 +17,18 @@ class XLAData : public torch::lazy::BackendData {
  public:
   XLAData(const torch::lazy::Shape& shape,
           const torch::lazy::BackendDevice& device,
-          xla::ComputationClient::DataPtr xla_data);
+          runtime::ComputationClient::DataPtr xla_data);
 
-  XLAData(xla::ComputationClient::DataPtr xla_data);
+  XLAData(runtime::ComputationClient::DataPtr xla_data);
 
   Handle GetHandle() override;
   void Assign(const torch::lazy::BackendData& data) override;
   bool HasValue() const override;
-  xla::ComputationClient::DataPtr xla_data();
+  runtime::ComputationClient::DataPtr xla_data();
 
  private:
   // TODO: Do we really need a Share_Ptr here?
-  xla::ComputationClient::DataPtr xla_data_;
+  runtime::ComputationClient::DataPtr xla_data_;
 };
 
 }  // namespace torch_xla

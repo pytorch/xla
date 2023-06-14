@@ -15,14 +15,14 @@
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/stream_executor/dnn.h"
 #include "tensorflow/compiler/xla/util.h"
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/util.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/elementwise.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/random.h"
 #include "torch_xla/csrc/reduction.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/tensor_util.h"
 
@@ -72,7 +72,7 @@ bool ShouldUseDenseScatter(const torch::lazy::BackendDevice& device,
                            const xla::Shape& input_shape,
                            const xla::Shape& index_shape) {
   static int dense_scatter_factor =
-      xla::sys_util::GetEnvInt("XLA_DENSE_SCATTER_FACTOR", 100);
+      runtime::sys_util::GetEnvInt("XLA_DENSE_SCATTER_FACTOR", 100);
   XlaDeviceType hw_type = static_cast<XlaDeviceType>(device.type());
   if (hw_type == XlaDeviceType::TPU) {
     int64_t input_elements = xla::ShapeUtil::ElementsIn(input_shape);
@@ -344,7 +344,7 @@ std::vector<xla::XlaOp> CreateKthValue(xla::XlaOp input, int64_t k, int64_t dim,
                                   start_indices, limit_indices, strides);
   if (!keepdim) {
     auto reshape_sizes = torch::lazy::DropDimensions(
-        xla::util::ToVector<int64_t>(shape.dimensions()),
+        runtime::util::ToVector<int64_t>(shape.dimensions()),
         std::vector<int64_t>({dim}));
     values = XlaHelpers::DynamicReshape(values, reshape_sizes);
     indices = XlaHelpers::DynamicReshape(indices, reshape_sizes);
@@ -755,6 +755,27 @@ xla::XlaOp BuildLinspace(const torch::lazy::BackendDevice& device,
   xla::XlaOp res = (indices * step_val) + start;
 
   return CreatePut(device, res, last_index, end, /*accumulate=*/false);
+}
+
+xla::XlaOp BuildCountNonzero(xla::XlaOp input, std::vector<int64_t> dims) {
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  xla::XlaOp ne =
+      xla::Ne(input, xla::Zero(input.builder(), input_shape.element_type()));
+
+  static const xla::PrimitiveType kConditionType = xla::PrimitiveType::S32;
+  xla::XlaOp ne_int = xla::ConvertElementType(ne, kConditionType);
+  xla::XlaOp zeros = xla::ZerosLike(ne_int);
+  xla::XlaOp compared =
+      xla::ConvertElementType(xla::Gt(ne_int, zeros), kConditionType);
+  if (dims.empty()) {
+    return xla::ReduceAll(
+        compared, xla::Zero(ne.builder(), kConditionType),
+        xla::CreateScalarAddComputation(kConditionType, ne.builder()));
+  } else {
+    return xla::Reduce(
+        compared, xla::Zero(ne.builder(), kConditionType),
+        xla::CreateScalarAddComputation(kConditionType, ne.builder()), dims);
+  }
 }
 
 std::vector<xla::XlaOp> BuildNonZero(xla::XlaOp input) {

@@ -17,8 +17,8 @@
 #include "tensorflow/compiler/xla/permutation_util.h"
 #include "tensorflow/compiler/xla/types.h"
 #include "tensorflow/tsl/platform/bfloat16.h"
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/util.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/util.h"
 
 namespace torch_xla {
 
@@ -324,7 +324,8 @@ class XlaHelpers {
 
   template <typename T>
   static xla::Literal Range(T start, T end, T step) {
-    return xla::LiteralUtil::CreateR1<T>(xla::util::Range<T>(start, end, step));
+    return xla::LiteralUtil::CreateR1<T>(
+        runtime::util::Range<T>(start, end, step));
   }
 
   static xla::PrecisionConfig::Precision mat_mul_precision() {

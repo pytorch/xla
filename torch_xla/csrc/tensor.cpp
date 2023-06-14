@@ -22,13 +22,6 @@
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/tsl/platform/errors.h"
 #include "tensorflow/tsl/profiler/lib/traceme.h"
-#include "third_party/xla_client/cache.h"
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/env_vars.h"
-#include "third_party/xla_client/sys_util.h"
-#include "third_party/xla_client/thread_pool.h"
-#include "third_party/xla_client/unique.h"
-#include "third_party/xla_client/xla_util.h"
 #include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/helpers.h"
@@ -42,6 +35,13 @@
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/ops/view.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
+#include "torch_xla/csrc/runtime/cache.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/env_vars.h"
+#include "torch_xla/csrc/runtime/sys_util.h"
+#include "torch_xla/csrc/runtime/thread_pool.h"
+#include "torch_xla/csrc/runtime/unique.h"
+#include "torch_xla/csrc/runtime/xla_util.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
@@ -156,7 +156,7 @@ c10::optional<at::ScalarType> XLATensor::dtype_optional() const {
   return data()->logical_element_type;
 }
 
-xla::util::MaybeRef<xla::Shape> XLATensor::shape() const {
+runtime::util::MaybeRef<xla::Shape> XLATensor::shape() const {
   if (data()->view != nullptr) {
     return data()->view->shape();
   }
@@ -387,8 +387,8 @@ std::shared_ptr<View> XLATensor::UpdateView(std::shared_ptr<View> view,
                                             torch::lazy::Value ir_value) const {
   if (GetXlaShape(ir_value).dimensions() != view->shape().dimensions()) {
     XLA_CHECK_EQ(
-        xla::util::Multiply<int64_t>(GetXlaShape(ir_value).dimensions()),
-        xla::util::Multiply<int64_t>(view->shape().dimensions()));
+        runtime::util::Multiply<int64_t>(GetXlaShape(ir_value).dimensions()),
+        runtime::util::Multiply<int64_t>(view->shape().dimensions()));
 
     ViewInfo view_info(ViewInfo::Type::kReshape, GetXlaShape(ir_value),
                        view->shape());
@@ -598,7 +598,7 @@ void XLATensor::ApplyPendingGraph() {
 
 bool XLATensor::UseEagerDebugMode() {
   static const bool use_eager_debug_mode =
-      xla::sys_util::GetEnvBool("XLA_USE_EAGER_DEBUG_MODE", false);
+      runtime::sys_util::GetEnvBool("XLA_USE_EAGER_DEBUG_MODE", false);
   return use_eager_debug_mode;
 }
 

@@ -10,12 +10,12 @@
 
 #include "absl/memory/memory.h"
 #include "absl/strings/str_split.h"
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/sys_util.h"
-#include "third_party/xla_client/unique.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ir_dump_util.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/sys_util.h"
+#include "torch_xla/csrc/runtime/unique.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
 
 namespace torch_xla {
@@ -23,13 +23,15 @@ namespace {
 
 DebugUtil::GraphFormat DefaultGraphFormat() {
   std::string fmt_str =
-      xla::sys_util::GetEnvString("XLA_SAVE_TENSORS_FMT", "text");
+      runtime::sys_util::GetEnvString("XLA_SAVE_TENSORS_FMT", "text");
   if (fmt_str == "text") {
     return DebugUtil::GraphFormat::kText;
   } else if (fmt_str == "hlo") {
     return DebugUtil::GraphFormat::kHlo;
   } else if (fmt_str == "dot") {
     return DebugUtil::GraphFormat::kDot;
+  } else if (fmt_str == "stablehlo") {
+    return DebugUtil::GraphFormat::kStableHlo;
   }
   XLA_ERROR() << "Invalid save graph format: " << fmt_str;
 }
@@ -37,7 +39,8 @@ DebugUtil::GraphFormat DefaultGraphFormat() {
 std::unordered_set<std::string>* LoadExperiments() {
   std::unique_ptr<std::unordered_set<std::string>> xset =
       absl::make_unique<std::unordered_set<std::string>>();
-  std::string experiments = xla::sys_util::GetEnvString("XLA_EXPERIMENTAL", "");
+  std::string experiments =
+      runtime::sys_util::GetEnvString("XLA_EXPERIMENTAL", "");
   std::vector<std::string> experiment_list = absl::StrSplit(experiments, ':');
   for (auto& name : experiment_list) {
     xset->insert(name);
@@ -52,13 +55,41 @@ DebugUtil::GraphFormat DebugUtil::GetDefaultGraphFormat() {
   return format;
 }
 
+std::string DebugUtil::GetTensorsGraphHlo(
+    absl::Span<const XLATensorPtr> tensors, const std::vector<size_t>* indices,
+    bool dump_stablehlo) {
+  std::vector<torch::lazy::Value> root_values;
+  runtime::util::Unique<torch::lazy::BackendDevice> unique_device;
+  if (indices != nullptr) {
+    for (auto index : *indices) {
+      const XLATensorPtr& tensor = tensors[index];
+      torch::lazy::Value ir_value = tensor->CurrentIrValue();
+      if (ir_value) {
+        root_values.push_back(std::move(ir_value));
+        unique_device.set(tensor->GetDevice());
+      }
+    }
+  } else {
+    for (auto& tensor : tensors) {
+      torch::lazy::Value ir_value = tensor->CurrentIrValue();
+      if (ir_value) {
+        root_values.push_back(std::move(ir_value));
+        unique_device.set(tensor->GetDevice());
+      }
+    }
+  }
+  return DumpUtil::ToHlo(root_values,
+                         unique_device ? *unique_device : GetCurrentDevice(),
+                         /*to_stablehlo=*/dump_stablehlo);
+}
+
 std::string DebugUtil::GetTensorsGraphInfo(
     absl::Span<const XLATensorPtr> tensors, const std::vector<size_t>* indices,
     GraphFormat format) {
   std::vector<const torch::lazy::Node*> root_nodes;
   std::vector<torch::lazy::Value> root_values;
   std::vector<torch::lazy::hash_t> root_hashes;
-  xla::util::Unique<torch::lazy::BackendDevice> unique_device;
+  runtime::util::Unique<torch::lazy::BackendDevice> unique_device;
   if (indices != nullptr) {
     for (auto index : *indices) {
       const XLATensorPtr& tensor = tensors[index];
@@ -106,6 +137,10 @@ std::string DebugUtil::GetTensorsGraphInfo(
   } else if (format == GraphFormat::kHlo) {
     graph_str = DumpUtil::ToHlo(
         root_values, unique_device ? *unique_device : GetCurrentDevice());
+  } else if (format == GraphFormat::kStableHlo) {
+    graph_str = DumpUtil::ToHlo(
+        root_values, unique_device ? *unique_device : GetCurrentDevice(),
+        /*to_stablehlo=*/true);
   } else {
     XLA_ERROR() << "Invalid graph format: " << format;
   }
@@ -117,11 +152,14 @@ void DebugUtil::SaveTensorsGraphInfo(const char* name,
                                      absl::Span<const XLATensorPtr> tensors,
                                      const std::vector<size_t>* indices,
                                      GraphFormat format) {
-  thread_local const std::string save_file = xla::sys_util::GetEnvOrdinalPath(
-      "XLA_SAVE_TENSORS_FILE", "", GetCurrentDevice().ordinal());
+  thread_local const std::string save_file =
+      runtime::sys_util::GetEnvOrdinalPath("XLA_SAVE_TENSORS_FILE", "",
+                                           GetCurrentDevice().ordinal());
   if (!save_file.empty()) {
     static std::mutex lock;
-    if (format == DebugUtil::GraphFormat::kHlo && indices->size() > 0) {
+    if ((format == DebugUtil::GraphFormat::kHlo ||
+         format == DebugUtil::GraphFormat::kStableHlo) &&
+        indices->size() > 0) {
       // Dumping the HLO might access the placeholder data created during
       // previous execution. We need to wait for last execution to finish before
       // proceeding.

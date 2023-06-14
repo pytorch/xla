@@ -9,11 +9,11 @@
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "tensorflow/compiler/xla/primitive_util.h"
 #include "tensorflow/compiler/xla/shape_util.h"
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/sys_util.h"
-#include "third_party/xla_client/tf_logging.h"
-#include "third_party/xla_client/util.h"
 #include "torch_xla/csrc/convert_ops.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/sys_util.h"
+#include "torch_xla/csrc/runtime/tf_logging.h"
+#include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/tensor_util.h"
 
@@ -328,7 +328,7 @@ bool XlaHelpers::SameStaticDimensions(const xla::Shape& shape1,
 }
 
 xla::XlaOp XlaHelpers::Flatten(xla::XlaOp input, xla::Shape* input_shape) {
-  xla::util::MaybePtr<xla::Shape> input_shape_tmp(input_shape);
+  runtime::util::MaybePtr<xla::Shape> input_shape_tmp(input_shape);
   *input_shape_tmp = ShapeHelper::ShapeOfXlaOp(input);
   if (input_shape_tmp->rank() == 1) {
     return input;
@@ -339,7 +339,7 @@ xla::XlaOp XlaHelpers::Flatten(xla::XlaOp input, xla::Shape* input_shape) {
 
 xla::XlaOp XlaHelpers::FlattenDimRange(xla::XlaOp input, int64_t start,
                                        int64_t range, xla::Shape* input_shape) {
-  xla::util::MaybePtr<xla::Shape> input_shape_tmp(input_shape);
+  runtime::util::MaybePtr<xla::Shape> input_shape_tmp(input_shape);
   *input_shape_tmp = ShapeHelper::ShapeOfXlaOp(input);
 
   std::vector<int64_t> sizes;
@@ -471,8 +471,8 @@ xla::Shape XlaHelpers::GetPromotedShape(const xla::Shape& shape1,
   return xla::ShapeUtil::MakeShape(
       shape1.element_type(),
       torch::lazy::GetPromotedShape(
-          xla::util::ToVector<int64_t>(shape1.dimensions()),
-          xla::util::ToVector<int64_t>(shape2.dimensions())));
+          runtime::util::ToVector<int64_t>(shape1.dimensions()),
+          runtime::util::ToVector<int64_t>(shape2.dimensions())));
 }
 
 xla::Shape XlaHelpers::GetPromotedBinaryOpShape(const xla::Shape& shape1,
@@ -481,8 +481,8 @@ xla::Shape XlaHelpers::GetPromotedBinaryOpShape(const xla::Shape& shape1,
     return xla::ShapeUtil::MakeShape(
         PromoteType(shape1.element_type(), shape2.element_type()),
         torch::lazy::GetPromotedShape(
-            xla::util::ToVector<int64_t>(shape1.dimensions()),
-            xla::util::ToVector<int64_t>(shape2.dimensions())));
+            runtime::util::ToVector<int64_t>(shape1.dimensions()),
+            runtime::util::ToVector<int64_t>(shape2.dimensions())));
   }
   return GetPromotedDynamicShape(shape1, shape2);
 }
@@ -490,9 +490,9 @@ xla::Shape XlaHelpers::GetPromotedBinaryOpShape(const xla::Shape& shape1,
 xla::Shape XlaHelpers::GetPromotedDynamicShape(const xla::Shape& shape1,
                                                const xla::Shape& shape2) {
   std::vector<int64_t> upper_bounds1 =
-      xla::util::ToVector<int64_t>(shape1.dimensions());
+      runtime::util::ToVector<int64_t>(shape1.dimensions());
   std::vector<int64_t> upper_bounds2 =
-      xla::util::ToVector<int64_t>(shape2.dimensions());
+      runtime::util::ToVector<int64_t>(shape2.dimensions());
   absl::Span<const bool> dyn_dims1 = shape1.dynamic_dimensions();
   absl::Span<const bool> dyn_dims2 = shape2.dynamic_dimensions();
   std::vector<int64_t> upper_bounds;
@@ -685,13 +685,13 @@ torch::lazy::Shape XlaHelpers::ConvertXlaShapeToLazy(const xla::Shape& shape) {
   c10::optional<std::vector<bool>> is_symbolic = c10::nullopt;
   if (shape.is_dynamic()) {
     std::vector<bool> xla_dynamic_dimensions =
-        xla::util::ToVector<bool>(shape.dynamic_dimensions());
+        runtime::util::ToVector<bool>(shape.dynamic_dimensions());
     is_symbolic = c10::make_optional(xla_dynamic_dimensions);
   }
 
-  return torch::lazy::Shape(scalar_type,
-                            xla::util::ToVector<int64_t>(shape.dimensions()),
-                            std::move(is_symbolic));
+  return torch::lazy::Shape(
+      scalar_type, runtime::util::ToVector<int64_t>(shape.dimensions()),
+      std::move(is_symbolic));
 }
 
 }  // namespace torch_xla

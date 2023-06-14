@@ -15,7 +15,6 @@ namespace torch_xla {
 
 class ShardingUtil {
  public:
-
   // This maps to `torch_xla.experimental.xla_sharding.ShardingType` enum type.
   enum ShardingType {
     REPLICATED = 0,
@@ -25,6 +24,9 @@ class ShardingUtil {
     MANUAL = 4,
     PARTIAL = 5
   };
+
+  // Determine the ShardingType of the given xla::OpSharding.
+  static ShardingType GetShardingType(xla::OpSharding& sharding);
 
   // Test whether the XLA_USE_SPMD environment variable is set to enable the
   // virtual device optimization.
@@ -62,25 +64,25 @@ class ShardingUtil {
   // vector, so the `i`th result will belong on the `i`th device.
   // TODO(yeounoh) avoiding pre-loading of the unpartitioned input arguments
   // might improve the performance and save the bandwidth.
-  static std::vector<std::vector<xla::ComputationClient::DataPtr>> InputHandler(
-      std::vector<xla::ComputationClient::DataPtr> arguments,
-      std::vector<std::string> devices);
+  static std::vector<std::vector<runtime::ComputationClient::DataPtr>>
+  InputHandler(std::vector<runtime::ComputationClient::DataPtr> arguments,
+               std::vector<std::string> devices);
 
   // Processes replicated execution results, where `sharded_results` contains
   // `PjRtData` handles and spans the number of devices (outer) and the number
   // of arguments (innner). This requires `sharding_specs` of the same size as
   // the number of arguments. `sharding_specs` can contain `nullptr` if the
   // corresponding result argument is not sharded. The replicated execution
-  // leaves the results in replicated states, which is aligned with the default
-  // exepctation `replicated_output=true`. However, if we override the
-  // compiler's default behavior and allow the execution to return sharded
-  // results, then we should set `replicated_output=false` and wrap sharded
-  // arguments into `PjRtShardedData`. This returns a vector of size that is
-  // equal to the number of arguments.
-  static std::vector<xla::ComputationClient::DataPtr> OutputHandler(
-      std::vector<std::vector<xla::ComputationClient::DataPtr>> sharded_results,
+  // `replicated_output=true` leaves the results in replicated states, which is
+  // aligned with the default exepctation of XLA compiler. However, we override
+  // the compiler's default behavior and allow the execution to return sharded
+  // results and wrap sharded arguments into `PjRtShardedData`. This returns a
+  // vector of size that is equal to the number of arguments.
+  static std::vector<runtime::ComputationClient::DataPtr> OutputHandler(
+      std::vector<std::vector<runtime::ComputationClient::DataPtr>>
+          sharded_results,
       std::vector<XLATensor::ShardingSpecPtr> sharding_specs,
-      bool replicated_output = true);
+      bool replicated_output = false);
 
   // Returns the shape of the resulting shards of `tensor` after applying
   // `sharding`. This assumes the shards will be padded to ensure they all
@@ -124,7 +126,7 @@ class ShardingUtil {
 
   // Transfers the individual shards to the devices and returns a DataPtr for
   // the PjRtShardedData wrapping the shards.
-  static xla::ComputationClient::DataPtr CreateShardedData(
+  static runtime::ComputationClient::DataPtr CreateShardedData(
       std::vector<at::Tensor>& shards, std::vector<std::string>& devices,
       xla::Shape global_shape, xla::OpSharding sharding);
 };

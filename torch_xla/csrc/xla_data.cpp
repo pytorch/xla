@@ -4,19 +4,19 @@
 #include <torch/csrc/lazy/backend/backend_device.h>
 #include <torch/csrc/lazy/core/shape.h>
 
-#include "third_party/xla_client/computation_client.h"
 #include "torch/csrc/lazy/backend/backend_data.h"
 #include "torch_xla/csrc/device.h"
+#include "torch_xla/csrc/runtime/computation_client.h"
 
 namespace torch_xla {
 
 XLAData::XLAData(const torch::lazy::Shape& shape,
                  const torch::lazy::BackendDevice& device,
-                 xla::ComputationClient::DataPtr xla_data)
+                 runtime::ComputationClient::DataPtr xla_data)
     : torch::lazy::BackendData(device, shape), xla_data_(xla_data) {}
 
 // TODO set Device and torch::lazy_shape correctly
-XLAData::XLAData(xla::ComputationClient::DataPtr xla_data)
+XLAData::XLAData(runtime::ComputationClient::DataPtr xla_data)
     : torch::lazy::BackendData(ParseDeviceString(xla_data->device()),
                                torch::lazy::Shape()),
       xla_data_(xla_data) {}
@@ -34,6 +34,6 @@ void XLAData::Assign(const torch::lazy::BackendData& data) {
 
 bool XLAData::HasValue() const { return xla_data_->HasValue(); }
 
-xla::ComputationClient::DataPtr XLAData::xla_data() { return xla_data_; }
+runtime::ComputationClient::DataPtr XLAData::xla_data() { return xla_data_; }
 
 }  // namespace torch_xla

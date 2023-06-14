@@ -14,10 +14,10 @@
 #include "tensorflow/compiler/xla/service/sharding_propagation.h"
 #include "tensorflow/compiler/xla/service/spmd/spmd_partitioner.h"
 #include "tensorflow/compiler/xla/xla.pb.h"
-#include "third_party/xla_client/runtime.h"
 #include "torch/csrc/lazy/core/ir_util.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ops/device_data.h"
+#include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/tensor_util.h"
 
@@ -142,7 +142,8 @@ std::vector<std::vector<int64_t>> ExtractGroupMembers(
 }  // namespace
 
 bool ShouldUseVirtualDevice() {
-  bool use_virtual_device = xla::sys_util::GetEnvBool("XLA_USE_SPMD", false);
+  bool use_virtual_device =
+      runtime::sys_util::GetEnvBool("XLA_USE_SPMD", false);
   if (use_virtual_device) {
     TF_LOG(INFO) << "Using SPMD virtual device optimization";
   }
@@ -167,6 +168,26 @@ bool ShardingUtil::SetHloSharding(LoweringContext* lowering_ctx) {
     }
   }
   return is_sharded;
+}
+
+ShardingUtil::ShardingType ShardingUtil::GetShardingType(
+    xla::OpSharding& sharding) {
+  switch (sharding.type()) {
+    case xla::OpSharding::REPLICATED:
+      return ShardingType::REPLICATED;
+    case xla::OpSharding::MAXIMAL:
+      return ShardingType::MAXIMAL;
+    case xla::OpSharding::TUPLE:
+      return ShardingType::TUPLE;
+    case xla::OpSharding::OTHER:
+      // OTHER sharding can indicate either PARTIAL or TILED sharding.
+      return sharding.replicate_on_last_tile_dim() ? ShardingType::PARTIAL
+                                                   : ShardingType::TILED;
+    case xla::OpSharding::MANUAL:
+      return ShardingType::MANUAL;
+    default:
+      TF_LOG(ERROR) << "Unsupported sharding type: " << sharding.type();
+  }
 }
 
 bool ShardingUtil::EqualShardingSpecs(const XLATensor::ShardingSpec& a,
@@ -276,20 +297,21 @@ xla::HloModuleProto ShardingUtil::SpmdPartitioningPass(
   return module.get()->ToProto();
 }
 
-std::vector<std::vector<xla::ComputationClient::DataPtr>>
+std::vector<std::vector<runtime::ComputationClient::DataPtr>>
 ShardingUtil::InputHandler(
-    std::vector<xla::ComputationClient::DataPtr> arguments,
+    std::vector<runtime::ComputationClient::DataPtr> arguments,
     std::vector<std::string> devices) {
-  std::vector<std::vector<xla::ComputationClient::DataPtr>> arguments_by_device(
-      devices.size(),
-      std::vector<xla::ComputationClient::DataPtr>(arguments.size()));
+  std::vector<std::vector<runtime::ComputationClient::DataPtr>>
+      arguments_by_device(
+          devices.size(),
+          std::vector<runtime::ComputationClient::DataPtr>(arguments.size()));
   // This assumes that the (local) devices are sorted, in order to associate
   // the first local index with the first global device ordinal.
   auto device_index = build_index_map(devices);
 
   for (int64_t argument_i = 0; argument_i < arguments.size(); ++argument_i) {
     auto shards =
-        xla::GetComputationClient()->GetDataShards(arguments[argument_i]);
+        runtime::GetComputationClient()->GetDataShards(arguments[argument_i]);
     // With SPMD execution, all input is distributed across addressable devices,
     // either by sharding or replication.
     for (auto shard : shards) {
@@ -302,11 +324,12 @@ ShardingUtil::InputHandler(
   return arguments_by_device;
 }
 
-std::vector<xla::ComputationClient::DataPtr> ShardingUtil::OutputHandler(
-    std::vector<std::vector<xla::ComputationClient::DataPtr>> sharded_results,
+std::vector<runtime::ComputationClient::DataPtr> ShardingUtil::OutputHandler(
+    std::vector<std::vector<runtime::ComputationClient::DataPtr>>
+        sharded_results,
     std::vector<XLATensor::ShardingSpecPtr> sharding_specs,
     bool replicated_output) {
-  std::vector<xla::ComputationClient::DataPtr> outputs;
+  std::vector<runtime::ComputationClient::DataPtr> outputs;
   outputs.reserve(sharding_specs.size());
   for (int i = 0; i < sharding_specs.size(); ++i) {
     XLATensor::ShardingSpecPtr sharding = sharding_specs[i];
@@ -324,7 +347,7 @@ std::vector<xla::ComputationClient::DataPtr> ShardingUtil::OutputHandler(
           std::vector<std::string>{GetVirtualDevice().toString()})[0]));
     } else {
       // The output is sharded or replicated.
-      std::vector<xla::ComputationClient::DataPtr> shards;
+      std::vector<runtime::ComputationClient::DataPtr> shards;
       shards.reserve(sharded_results.size());
       for (int j = 0; j < sharded_results.size(); ++j) {
         XLA_CHECK(sharded_results[j][i]->HasValue());
@@ -337,7 +360,7 @@ std::vector<xla::ComputationClient::DataPtr> ShardingUtil::OutputHandler(
             xla::HloSharding::Replicate().ToProto(),
             sharded_results[0][i]->shape());
       }
-      outputs.push_back(xla::GetComputationClient()->WrapDataShards(
+      outputs.push_back(runtime::GetComputationClient()->WrapDataShards(
           shards, GetVirtualDevice().toString(), sharding->shape.value(),
           sharding->sharding));
     }
@@ -413,9 +436,9 @@ ShardingUtil::GetShardIndicesForDevices(
           continue;
         }
         int64_t n_j = offset % tile_shape[j];
-        int start = n_j * shard_shape[j];
-        // Clamp the end of the slice to the tensor shape to accurately reflect
+        // Clamp the slice bounds to the tensor shape to accurately reflect
         // the shard size without padding.
+        int start = std::min(n_j * shard_shape[j], tensor_shape[j]);
         int end = std::min((n_j + 1) * shard_shape[j], tensor_shape[j]);
         auto slice = at::indexing::Slice(start, end);
         indices.push_back(at::indexing::TensorIndex(slice));
@@ -534,7 +557,7 @@ void ShardingUtil::PrepareOutputShardingPropagation(
     // hold the corresponding computation results for both sharding &
     // replication.
     auto sharded_data_placeholder =
-        WrapXlaData(xla::GetComputationClient()->WrapDataShards(
+        WrapXlaData(runtime::GetComputationClient()->WrapDataShards(
             {}, GetVirtualDevice().toString(),
             (*sharding_specs)[i]->shape.value(),
             (*sharding_specs)[i]->sharding));
@@ -551,19 +574,19 @@ void ShardingUtil::PrepareOutputShardingPropagation(
   }
 }
 
-xla::ComputationClient::DataPtr ShardingUtil::CreateShardedData(
+runtime::ComputationClient::DataPtr ShardingUtil::CreateShardedData(
     std::vector<at::Tensor>& local_shards, std::vector<std::string>& devices,
     xla::Shape global_shape, xla::OpSharding sharding) {
   XLA_CHECK(local_shards.size() == devices.size())
       << "A device must be speficied for each shard";
-  std::vector<xla::ComputationClient::TensorSource> source_tensors;
+  std::vector<runtime::ComputationClient::TensorSource> source_tensors;
   for (int64_t j = 0; j < devices.size(); ++j) {
     auto shard_device = ParseDeviceString(devices[j]);
     auto shard_shape =
         CreateComputationShapeFromTensor(local_shards[j], &shard_device);
     auto populate_fn =
         [&, j, shard_device](
-            const xla::ComputationClient::TensorSource& source_tensor,
+            const runtime::ComputationClient::TensorSource& source_tensor,
             void* dest_buffer, size_t dest_buffer_size) {
           PopulateTensorBuffer(local_shards[j], source_tensor.shape,
                                dest_buffer, dest_buffer_size, shard_device);
@@ -571,7 +594,7 @@ xla::ComputationClient::DataPtr ShardingUtil::CreateShardedData(
     source_tensors.emplace_back(shard_shape, devices[j],
                                 std::move(populate_fn));
   }
-  return xla::GetComputationClient()->TransferShardsToServer(
+  return runtime::GetComputationClient()->TransferShardsToServer(
       source_tensors, GetVirtualDevice().toString(), global_shape, sharding);
 }
 

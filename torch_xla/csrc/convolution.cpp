@@ -8,8 +8,9 @@
 #include "tensorflow/compiler/xla/literal_util.h"
 #include "tensorflow/compiler/xla/stream_executor/dnn.h"
 #include "tensorflow/core/framework/tensor_shape.h"
-#include "third_party/xla_client/debug_macros.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/xla_lower_util.h"
 

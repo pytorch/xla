@@ -12,12 +12,12 @@
 #include "tensorflow/compiler/xla/client/lib/slicing.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/util.h"
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/sys_util.h"
-#include "third_party/xla_client/util.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/reduction.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/sys_util.h"
+#include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/tensor_util.h"
 
@@ -33,7 +33,7 @@ bool IsSparseGather(const xla::Shape& input_shape,
     // XLA_DENSE_GATHER_FACTOR can be used to finely control the
     // sparsity check.
     static int dense_gather_factor =
-        xla::sys_util::GetEnvInt("XLA_DENSE_GATHER_FACTOR", 8192);
+        runtime::sys_util::GetEnvInt("XLA_DENSE_GATHER_FACTOR", 8192);
     int64_t input_elements = input_shape.dimensions()[dim];
     // Use a very conservative check so that we run dense gather
     // most of the time on TPU.
@@ -65,10 +65,10 @@ std::vector<int64_t> GetCompleteShape(absl::Span<const int64_t> output_sizes,
       incomplete_element_count *= dim_size;
     }
   }
-  int64_t total_element_count = xla::util::Multiply<int64_t>(input_sizes);
+  int64_t total_element_count = runtime::util::Multiply<int64_t>(input_sizes);
   if (!incomplete_dim) {
     XLA_CHECK_EQ(total_element_count,
-                 xla::util::Multiply<int64_t>(output_sizes))
+                 runtime::util::Multiply<int64_t>(output_sizes))
         << "(" << absl::StrJoin(output_sizes, ", ") << ") vs. ("
         << absl::StrJoin(input_sizes, ", ") << ")";
     return torch::lazy::ToVector<int64_t>(output_sizes);
@@ -297,7 +297,7 @@ xla::XlaOp BuildResize(xla::XlaOp input, absl::Span<const int64_t> size) {
   xla::Shape input_shape;
   xla::XlaOp r1_input = XlaHelpers::Flatten(input, &input_shape);
   int64_t num_elements = xla::ShapeUtil::ElementsIn(input_shape);
-  int64_t new_num_elements = xla::util::Multiply<int64_t>(size);
+  int64_t new_num_elements = runtime::util::Multiply<int64_t>(size);
   xla::XlaOp resized_input = input;
   if (num_elements > new_num_elements) {
     resized_input = xla::SliceInDim(r1_input, 0, new_num_elements, 1, 0);

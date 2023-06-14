@@ -8,10 +8,11 @@
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/types/optional.h"
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/runtime.h"
-#include "third_party/xla_client/xla_util.h"
 #include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/runtime.h"
+#include "torch_xla/csrc/runtime/stablehlo_helper.h"
+#include "torch_xla/csrc/runtime/xla_util.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/xla_sharding_util.h"
 
@@ -252,7 +253,8 @@ std::string DumpUtil::PostOrderToText(
 }
 
 std::string DumpUtil::ToHlo(c10::ArrayRef<torch::lazy::Value> values,
-                            const torch::lazy::BackendDevice& device) {
+                            const torch::lazy::BackendDevice& device,
+                            bool to_stable_hlo) {
   LoweringContext lowering_ctx("IrToHlo", device);
   for (auto& ir_value : values) {
     lowering_ctx.AddResult(
@@ -267,19 +269,22 @@ std::string DumpUtil::ToHlo(c10::ArrayRef<torch::lazy::Value> values,
     xla::Shape shape = MakeShapeWithDeviceLayout(
         ConsumeValue(computation.GetProgramShape()).result(),
         static_cast<XlaDeviceType>(device.type()));
-    std::vector<xla::ComputationClient::CompileInstance> instances;
+    std::vector<runtime::ComputationClient::CompileInstance> instances;
     instances.push_back({std::move(computation), device.toString(),
-                         xla::GetComputationClient()->GetCompilationDevices(
+                         runtime::GetComputationClient()->GetCompilationDevices(
                              device.toString(), {}),
                          &shape,
                          /*parameter_is_tupled_arguments=*/false, is_sharded});
-    std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
+    std::vector<std::shared_ptr<runtime::ComputationClient::Computation>>
         computations =
-            xla::GetComputationClient()->Compile(std::move(instances));
-    return ConsumeValue(
-        xla::util::GetComputationHloText(computations[0]->computation()));
+            runtime::GetComputationClient()->Compile(std::move(instances));
+    computation = std::move(computations[0]->move_computation());
   }
-  return ConsumeValue(xla::util::GetComputationHloText(computation));
+  if (to_stable_hlo) {
+    return runtime::hloToStablehloStr(&computation.proto());
+  } else {
+    return ConsumeValue(runtime::util::GetComputationHloText(computation));
+  }
 }
 
 }  // namespace torch_xla

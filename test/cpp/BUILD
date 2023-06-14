@@ -11,10 +11,10 @@ ptxla_cc_library(
     srcs = ["metrics_snapshot.cpp"],
     hdrs = ["metrics_snapshot.h"],
     deps = [
-        "//third_party/xla_client:metrics",
-        "//third_party/xla_client:sys_util",
-        "//third_party/xla_client:tf_logging",
-        "//third_party/xla_client:util",
+        "//torch_xla/csrc/runtime:metrics",
+        "//torch_xla/csrc/runtime:sys_util",
+        "//torch_xla/csrc/runtime:tf_logging",
+        "//torch_xla/csrc/runtime:util",
     ],
 )
 
@@ -24,8 +24,8 @@ ptxla_cc_library(
     hdrs = ["torch_xla_test.h"],
     deps = [
         ":metrics_snapshot",
-        "//third_party/xla_client:sys_util",
-        "//third_party/xla_client:tf_logging",
+        "//torch_xla/csrc/runtime:sys_util",
+        "//torch_xla/csrc/runtime:tf_logging",
         "//torch_xla/csrc:tensor",
         "@com_google_absl//absl/memory",
         "@com_google_googletest//:gtest",
@@ -37,9 +37,9 @@ ptxla_cc_library(
     srcs = ["cpp_test_util.cpp"],
     hdrs = ["cpp_test_util.h"],
     deps = [
-        "//third_party/xla_client:runtime",
-        "//third_party/xla_client:debug_macros",
-        "//third_party/xla_client:sys_util",
+        "//torch_xla/csrc/runtime:runtime",
+        "//torch_xla/csrc/runtime:debug_macros",
+        "//torch_xla/csrc/runtime:sys_util",
         "//torch_xla/csrc:tensor",
         "@com_google_absl//absl/types:span",
         "@com_google_googletest//:gtest",
@@ -84,10 +84,10 @@ ptxla_cc_test(
     deps = [
         ":cpp_test_util",
         ":torch_xla_test",
-        "//third_party/xla_client:runtime",
-        "//third_party/xla_client:debug_macros",
-        "//third_party/xla_client:multi_wait",
-        "//third_party/xla_client:thread_pool",
+        "//torch_xla/csrc/runtime:runtime",
+        "//torch_xla/csrc/runtime:debug_macros",
+        "//torch_xla/csrc/runtime:multi_wait",
+        "//torch_xla/csrc/runtime:thread_pool",
         "//torch_xla/csrc:tensor",
         "@com_google_googletest//:gtest_main",
         "@org_tensorflow//tensorflow/compiler/xla:shape_util",
@@ -125,8 +125,8 @@ ptxla_cc_test(
     deps = [
         ":cpp_test_util",
         ":torch_xla_test",
-        "//third_party/xla_client:env_vars",
-        "//third_party/xla_client:sys_util",
+        "//torch_xla/csrc/runtime:env_vars",
+        "//torch_xla/csrc/runtime:sys_util",
         "//torch_xla/csrc:tensor",
         "@com_google_googletest//:gtest_main",
         "@org_tensorflow//tensorflow/compiler/xla:xla_data_proto_cc",
@@ -143,7 +143,7 @@ ptxla_cc_test(
         deps = [
             ":cpp_test_util",
             ":torch_xla_test",
-            "//third_party/xla_client:metrics",
+            "//torch_xla/csrc/runtime:metrics",
             "//torch_xla/csrc:tensor",
             "@com_google_googletest//:gtest_main",
             "@org_tensorflow//tensorflow/compiler/xla:permutation_util",
