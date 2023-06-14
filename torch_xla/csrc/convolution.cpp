@@ -712,7 +712,7 @@ tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropFilterConvOp(tsl::StringPiece type
   xla::Shape input_shape = activations_shape;
   xla::Shape output_shape = out_backprop_shape;
 
-  tensorflow::sTensorShape input_tensor_shape, filter_tensor_shape, output_tensor_shape;
+  tensorflow::TensorShape input_tensor_shape, filter_tensor_shape, output_tensor_shape;
   TF_RETURN_IF_ERROR(tensorflow::XLAShapeToTensorShape(filter_shape, &filter_tensor_shape));
   TF_RETURN_IF_ERROR(tensorflow::XLAShapeToTensorShape(input_shape, &input_tensor_shape));
   TF_RETURN_IF_ERROR(tensorflow::XLAShapeToTensorShape(output_shape, &output_tensor_shape));
