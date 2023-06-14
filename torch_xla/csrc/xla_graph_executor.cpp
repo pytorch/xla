@@ -607,16 +607,6 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
     torch::lazy::BackendDataPtr handle =
         WrapXlaData(runtime::GetComputationClient()->CreateDataPlaceholder(
             device.toString(), std::move(shape)));
-    // If SPMD is enabled, we assume all output will be sharded or replicated
-    // and wrapped inside PjRtShardedData handle.
-    if (ShardingUtil::UseVirtualDevice()) {
-      XLATensor::ShardingSpecPtr sharding =
-          std::make_shared<XLATensor::ShardingSpec>(
-              xla::HloSharding::Replicate().ToProto(), shape);
-      handle = WrapXlaData(runtime::GetComputationClient()->WrapDataShards(
-          {UnwrapXlaData(handle)}, GetVirtualDevice().toString(),
-          sharding->shape.value(), sharding->sharding));
-    }
     placeholders.push_back(handle);
   }
 
@@ -640,17 +630,20 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
                "(XLATensor).";
         dataptr = torch_xla::TensorToXlaData(ivalue.toTensor(), device);
       }
-
       ++idx;
       arguments.push_back(dataptr);
     }
   }
 
+  std::vector<XLATensor::ShardingSpecPtr> sharding_specs(placeholders.size());
+  if (ShardingUtil::UseVirtualDevice()) {
+    ShardingUtil::PrepareOutputShardingPropagation(
+        placeholders, sharding_specs, output_shapes,
+        cachedComputation->computation, device);
+  }
+
   std::shared_ptr<XLAGraphExecutor::Async> async = std::make_shared<Async>(
       &coll, std::move(arguments), placeholders, std::move(cachedComputation));
-
-  // TODO(yeounoh) supply proper sharding specs for sharded results.
-  std::vector<XLATensor::ShardingSpecPtr> sharding_specs(placeholders.size());
 
   auto syncfn = [async, hash, sharding_specs]() {
     try {
