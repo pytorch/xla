@@ -1,6 +1,6 @@
 #include "torch_xla/csrc/convolution.h"
 
-#include "tensorflow/compiler/tf2xla/kernels/conv_op_helpers.h" // CheckConvAttrs // MakeXlaBackpropInputConvOp // ConvAttrs
+// #include "tensorflow/compiler/tf2xla/kernels/conv_op_helpers.h" // (done)CheckConvAttrs // (done)MakeXlaBackpropInputConvOp // (whoisit)ConvAttrs
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
