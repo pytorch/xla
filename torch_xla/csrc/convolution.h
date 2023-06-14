@@ -19,10 +19,9 @@
 
 namespace torch_xla {
 
-tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropInputConvOp(
-    tsl::StringPiece type_string, const xla::Shape& input_shape, xla::XlaOp filter,
-    xla::XlaOp out_backprop, const tensorflow::ConvOpAttrs& attrs,
-    const xla::PrecisionConfig* precision_config = nullptr,
+StatusOr<xla::XlaOp> MakeXlaBackpropInputConvOp(
+    StringPiece type_string, const xla::Shape& input_shape, xla::XlaOp filter,
+    xla::XlaOp out_backprop, const ConvOpAttrs& attrs,
     xla::XlaOp* input_sizes = nullptr);
 
 // Computes the convolution of the given input and kernel with the given
