@@ -7,6 +7,7 @@
 #include "tensorflow/compiler/xla/shape.h"
 #include "tensorflow/core/framework/op_kernel.h"
 #include "tensorflow/tsl/lib/gtl/inlined_vector.h"
+// #include "tensorflow/core/lib/gtl/inlined_vector.h"
 
 namespace torch_xla {
 // PTXLAPadding: the padding we apply to the input tensor along the rows and columns
@@ -73,15 +74,15 @@ enum PTXLATensorFormat {
 // convolution.
 struct PTXLAConvOpAttrs {
   // Constructs a PTXLAConvOpAttrs, reading most of the attributes from `ctx`.
-  static StatusOr<PTXLAConvOpAttrs> Create(int num_spatial_dims, bool depthwise,
+  static tsl::StatusOr<PTXLAConvOpAttrs> Create(int num_spatial_dims, bool depthwise,
                                       tensorflow::OpKernelConstruction* ctx);
 
   bool depthwise;
   int num_spatial_dims;
-  std::vector<int32> dilations;
-  std::vector<int32> strides;
+  std::vector<tsl::int32> dilations;
+  std::vector<tsl::int32> strides;
   PTXLAPadding padding;
-  std::vector<int64_t> explicit_paddings;
+  std::vector<int64_t> explicit_paddings; // try tsl::int64
   PTXLATensorFormat data_format;
 };
 
@@ -105,7 +106,7 @@ struct PTXLAConvBackpropSpatialDimension {
 // Computed dimensions for a backwards convolution.
 struct PTXLAConvBackpropDimensions {
   // Information about each spatial dimension.
-  gtl::InlinedVector<PTXLAConvBackpropSpatialDimension, 3> spatial_dims;
+  ::tsl::gtl::InlinedVector<PTXLAConvBackpropSpatialDimension, 3> spatial_dims;
 
   // Batch size.
   int64_t batch_size;
@@ -121,7 +122,7 @@ struct PTXLAConvBackpropDimensions {
   int64_t dilation(int dim) const { return spatial_dims[dim].dilation; }
 
   // Compute padding for the given spatial dimension.
-  int SpatialPadding(const Padding& padding, int dim) const;
+  int SpatialPadding(const PTXLAPadding& padding, int dim) const;
 };
 
 // Returns the index of the batch dimension.
@@ -182,6 +183,27 @@ inline int PTXLAGetTensorSpatialDims(int num_dims, PTXLATensorFormat format) {
   }
 }
 
+// Convert a tensor format into string.
+std::string PTXLAToString(PTXLATensorFormat format) {
+  switch (format) {
+    case FORMAT_NHWC:
+      return "NHWC";
+    case FORMAT_NCHW:
+      return "NCHW";
+    case FORMAT_NCHW_VECT_C:
+      return "NCHW_VECT_C";
+    case FORMAT_NHWC_VECT_W:
+      return "NHWC_VECT_W";
+    case FORMAT_HWNC:
+      return "HWNC";
+    case FORMAT_HWCN:
+      return "HWCN";
+    default:
+      LOG(FATAL) << "Invalid Format: " << static_cast<tsl::int32>(format);
+      return "INVALID_FORMAT";
+  }
+}
+
 // Returns the dimension index of the specified 'spatial_dim' within an
 // activation tensor. If format is NHWC_VECT_W and spatial_dim is 1, returns
 // the index of the outer width dimension (i.e. dimension 2, whose size would
@@ -190,7 +212,7 @@ inline int PTXLAGetTensorSpatialDimIndex(int num_dims, PTXLATensorFormat format,
                                     int spatial_dim) {
   CHECK(spatial_dim >= 0 &&
         spatial_dim < PTXLAGetTensorSpatialDims(num_dims, format))
-      << spatial_dim << " " << num_dims << " " << ToString(format);
+      << spatial_dim << " " << num_dims << " " << PTXLAToString(format);
   switch (format) {
     case FORMAT_NHWC:
     case FORMAT_NHWC_VECT_W:
@@ -208,11 +230,11 @@ inline int PTXLAGetTensorSpatialDimIndex(int num_dims, PTXLATensorFormat format,
 }
 
 tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropInputConvOp(
-    StringPiece type_string, const xla::Shape& input_shape, xla::XlaOp filter,
+    tsl::StringPiece type_string, const xla::Shape& input_shape, xla::XlaOp filter,
     xla::XlaOp out_backprop, const PTXLAConvOpAttrs& attrs,
     xla::XlaOp* input_sizes = nullptr);
 
-tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropFilterConvOp(StringPiece type_string,
+tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropFilterConvOp(tsl::StringPiece type_string,
                                                  xla::XlaOp activations,
                                                  const xla::Shape& filter_shape,
                                                  xla::XlaOp gradients,

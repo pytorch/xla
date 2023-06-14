@@ -381,7 +381,7 @@ xla::Shape PTXLAGroupedFilterShapeForDepthwiseConvolution(
 // Wrapper around ConvBackpropComputeDimensions that converts from XLA shapes
 // to TensorShapes.
 Status PTXLAConvBackpropComputeDimensionsV2XlaShapes(
-    StringPiece label, int num_spatial_dims, const xla::Shape& input_shape,
+    tsl::StringPiece label, int num_spatial_dims, const xla::Shape& input_shape,
     const xla::Shape& filter_shape, const xla::Shape& out_backprop_shape,
     absl::Span<const int32> dilations, const std::vector<int32>& strides,
     PTXLAPadding padding, PTXLATensorFormat data_format, PTXLAConvBackpropDimensions* dims,
@@ -398,7 +398,7 @@ Status PTXLAConvBackpropComputeDimensionsV2XlaShapes(
       data_format, dims);
 }
 
-tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropInputConvOp(StringPiece type_string,
+tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropInputConvOp(tsl::StringPiece type_string,
                                                 const xla::Shape& input_shape,
                                                 xla::XlaOp filter,
                                                 xla::XlaOp out_backprop,
@@ -499,7 +499,7 @@ tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropInputConvOp(StringPiece type_strin
                                  /*batch_group_count=*/1, &precision_config);
 }
 
-tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropFilterConvOp(StringPiece type_string,
+tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropFilterConvOp(tsl::StringPiece type_string,
                                                  xla::XlaOp activations,
                                                  const xla::Shape& filter_shape,
                                                  xla::XlaOp gradients,
