@@ -1841,15 +1841,15 @@ XLATensorPtr narrow(const XLATensorPtr& input, int64_t dim, int64_t start,
   if (runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
     ViewInfo::Type view_type = (xla::ShapeUtil::ElementsIn(input_shape) ==
                                 xla::ShapeUtil::ElementsIn(narrow_shape))
-                                  ? ViewInfo::Type::kReshape
-                                  : ViewInfo::Type::kNarrow;
+                                   ? ViewInfo::Type::kReshape
+                                   : ViewInfo::Type::kNarrow;
     ViewInfo view_info(view_type, std::move(narrow_shape), input_shape);
     view_info.indices[dim] = indices[dim];
     return input->CreateViewTensor(std::move(view_info));
   }
 
-  return input->CreateFrom(torch::lazy::MakeNode<GenericSlice>(input->GetIrValue(), std::move(indices),
-                                                 narrow_shape.dimensions()));
+  return input->CreateFrom(torch::lazy::MakeNode<GenericSlice>(
+      input->GetIrValue(), std::move(indices), narrow_shape.dimensions()));
 }
 
 std::tuple<XLATensorPtr, XLATensorPtr, XLATensorPtr> native_batch_norm(
