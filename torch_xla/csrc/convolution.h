@@ -4,6 +4,7 @@
 #include "absl/types/span.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/tsl/platform/stringpiece.h" // StringPiece
+#include "tensorflow/compiler/tf2xla/kernels/conv_op_helpers.h" // ConvOpAttrs
 
 namespace torch_xla {
 
