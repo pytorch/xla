@@ -3,8 +3,15 @@
 
 #include "absl/types/span.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "tensorflow/tsl/platform/stringpiece.h" // StringPiece
 
 namespace torch_xla {
+
+tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropInputConvOp(
+    tsl::StringPiece type_string, const xla::Shape& input_shape, xla::XlaOp filter,
+    xla::XlaOp out_backprop, const tensorflow::ConvOpAttrs& attrs,
+    const xla::PrecisionConfig* precision_config = nullptr,
+    xla::XlaOp* input_sizes = nullptr);
 
 // Computes the convolution of the given input and kernel with the given
 // precision, with the given stride and padding.
