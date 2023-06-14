@@ -109,6 +109,12 @@ tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropInputConvOp(
     xla::XlaOp out_backprop, const PTXLAConvOpAttrs& attrs,
     xla::XlaOp* input_sizes = nullptr);
 
+tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropFilterConvOp(tsl::StringPiece type_string,
+                                                 xla::XlaOp activations,
+                                                 const xla::Shape& filter_shape,
+                                                 xla::XlaOp gradients,
+                                                 const PTXLAConvOpAttrs& attrs);
+
 // Computes the convolution of the given input and kernel with the given
 // precision, with the given stride and padding.
 xla::XlaOp BuildConvolutionOverrideable(
