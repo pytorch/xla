@@ -136,14 +136,14 @@ xla::XlaOp PadInputFromOutputSize(xla::XlaOp input,
 
 // Create a TF convolution metadata structure out of PyTorch convolution
 // attributes.
-tensorflow::ConvOpAttrs MakeConvOpAttrs(
+PTXLAConvOpAttrs MakeConvOpAttrs(
     absl::Span<const int64_t> spatial_stride,
     absl::Span<const int64_t> spatial_padding,
     absl::Span<const int64_t> spatial_dilation, bool depthwise) {
   int num_spatial_dims = spatial_stride.size();
   XLA_CHECK_EQ(spatial_padding.size(), num_spatial_dims);
   XLA_CHECK_EQ(spatial_dilation.size(), num_spatial_dims);
-  tensorflow::ConvOpAttrs conv_op_attrs;
+  PTXLAConvOpAttrs conv_op_attrs;
   conv_op_attrs.depthwise = depthwise;
   conv_op_attrs.num_spatial_dims = num_spatial_dims;
   // Stride, dilation and padding must be set for the batch and feature in the
@@ -224,9 +224,9 @@ std::vector<std::pair<int64_t, int64_t>> MakePadding(
   return dims_padding;
 }
 
-// Performs some basic checks on ConvOpAttrs that are true for all kinds of XLA
+// Performs some basic checks on PTXLAConvOpAttrs that are true for all kinds of XLA
 // convolutions (as currently implemented).
-tsl::Status PTXLACheckConvAttrs(const tensorflow::ConvOpAttrs& attrs) {
+tsl::Status PTXLACheckConvAttrs(const PTXLAConvOpAttrs& attrs) {
   const int num_dims = attrs.num_spatial_dims + 2;
   const int attrs_strides_size = attrs.strides.size();
   if (attrs_strides_size != num_dims) {
@@ -340,7 +340,7 @@ tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropInputConvOp(tsl::StringPiece type_
                                                 const xla::Shape& input_shape,
                                                 xla::XlaOp filter,
                                                 xla::XlaOp out_backprop,
-                                                const tensorflow::ConvOpAttrs& attrs,
+                                                const PTXLAConvOpAttrs& attrs,
                                                 xla::XlaOp* input_sizes = nullptr) {
   TF_RETURN_IF_ERROR(PTXLACheckConvAttrs(attrs));
 
@@ -444,7 +444,7 @@ xla::XlaOp BuildConvBackwardInput(xla::XlaOp grad_output, xla::XlaOp kernel,
                                   absl::Span<const int64_t> spatial_padding,
                                   absl::Span<const int64_t> spatial_dilation,
                                   int64_t groups) {
-  tensorflow::ConvOpAttrs conv_op_attrs =
+  PTXLAConvOpAttrs conv_op_attrs =
       MakeConvOpAttrs(spatial_stride, spatial_padding, spatial_dilation, false);
   xla::XlaOp kernel_transposed =
       xla::Transpose(kernel, FilterTransposePermutation(input_shape.rank()));
@@ -460,7 +460,7 @@ xla::XlaOp BuildConvBackwardWeight(xla::XlaOp grad_output, xla::XlaOp input,
                                    absl::Span<const int64_t> spatial_padding,
                                    absl::Span<const int64_t> spatial_dilation,
                                    int64_t groups) {
-  tensorflow::ConvOpAttrs conv_op_attrs =
+  PTXLAConvOpAttrs conv_op_attrs =
       MakeConvOpAttrs(spatial_stride, spatial_padding, spatial_dilation, false);
   auto transpose_permutation = FilterTransposePermutation(kernel_shape.rank());
   auto inv_transpose_permutation =

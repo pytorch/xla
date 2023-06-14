@@ -38,9 +38,25 @@ enum PTXLAPadding {
   EXPLICIT = 3,  // PTXLAPadding is explicitly specified
 };
 
+// ConvOpAttrs contains all of the metadata necessary to specify a TF or XLA
+// convolution.
+struct PTXLAConvOpAttrs {
+  // Constructs a ConvOpAttrs, reading most of the attributes from `ctx`.
+  // static StatusOr<PTXLAConvOpAttrs> Create(int num_spatial_dims, bool depthwise,
+  //                                     OpKernelConstruction* ctx);
+
+  bool depthwise;
+  int num_spatial_dims;
+  std::vector<int32> dilations;
+  std::vector<int32> strides;
+  PTXLAPadding padding;
+  std::vector<int64_t> explicit_paddings;
+  tensorflow::TensorFormat data_format;
+};
+
 tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropInputConvOp(
     tsl::StringPiece type_string, const xla::Shape& input_shape, xla::XlaOp filter,
-    xla::XlaOp out_backprop, const tensorflow::ConvOpAttrs& attrs,
+    xla::XlaOp out_backprop, const PTXLAConvOpAttrs& attrs,
     xla::XlaOp* input_sizes = nullptr);
 
 // Computes the convolution of the given input and kernel with the given
