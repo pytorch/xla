@@ -279,6 +279,46 @@ xla::Shape PTXLAGroupedFilterShapeForDepthwiseConvolution(
   return grouped_filter_shape;
 }
 
+tsl::Status PTXLAConvBackpropExtractAndVerifyDimension(
+    tsl::StringPiece label, const tensorflow::TensorShape& input_shape,
+    const tensorflow::TensorShape& filter_shape, const tensorflow::TensorShape& output_shape,
+    const tensorflow::gtl::ArraySlice<tsl::int32> dilations, const std::vector<tsl::int32>& strides,
+    PTXLAPadding padding, int64_t padding_before, int64_t padding_after,
+    int spatial_dim, int filter_spatial_dim,
+    PTXLAConvBackpropSpatialDimension* dim) {
+  dim->input_size = input_shape.dim_size(spatial_dim);
+  dim->filter_size = filter_shape.dim_size(filter_spatial_dim);
+  dim->output_size = output_shape.dim_size(spatial_dim);
+  dim->stride = strides[spatial_dim];
+  dim->dilation = dilations[spatial_dim];
+  int64_t out_size = 0;
+  TF_RETURN_IF_ERROR(tensorflow::GetWindowedOutputSizeVerboseV2(
+      dim->input_size, dim->filter_size, dim->dilation, dim->stride, padding,
+      &out_size, &padding_before, &padding_after));
+  if (dim->output_size != out_size) {
+    return tsl::errors::InvalidArgument(
+        label, ": Size of out_backprop doesn't match computed: ", "actual = ",
+        dim->output_size, ", computed = ", out_size,
+        " spatial_dim: ", spatial_dim, " input: ", dim->input_size,
+        " filter: ", dim->filter_size, " output: ", dim->output_size,
+        " stride: ", dim->stride, " dilation: ", dim->dilation);
+  }
+
+  int64_t effective_filter_size = (dim->filter_size - 1) * dim->dilation + 1;
+  dim->expanded_output_size = (dim->output_size - 1) * dim->stride + 1;
+  const auto padded_out_size = dim->input_size + effective_filter_size - 1;
+  dim->pad_before = effective_filter_size - 1 - padding_before;
+  dim->pad_after =
+      padded_out_size - dim->expanded_output_size - dim->pad_before;
+  VLOG(2) << label << ": expanded_out = " << dim->expanded_output_size
+          << ", effective_filter_size = " << effective_filter_size
+          << ", padded_out = " << padded_out_size
+          << ", pad_before = " << dim->pad_before
+          << ", pad_after = " << dim->pad_after
+          << ", dilation = " << dim->dilation << ", strides = " << dim->stride;
+  return tsl::OkStatus();
+}
+
 tsl::Status PTXLAConvBackpropComputeDimensionsV2(
     tsl::StringPiece label, int num_spatial_dims, const tensorflow::TensorShape& input_shape,
     const tensorflow::TensorShape& filter_shape, const tensorflow::TensorShape& out_backprop_shape,
@@ -400,46 +440,6 @@ xla::XlaOp PTXLATransposeFilterForGroupConvolutionBackpropInput(
   // 3. Reshape to [H, W, ..., in_depth, out_depth / G]
   result = xla::Collapse(result, {num_spatial_dims, num_spatial_dims + 1}); // TODO
   return result;
-}
-
-tsl::Status PTXLAConvBackpropExtractAndVerifyDimension(
-    tsl::StringPiece label, const tensorflow::TensorShape& input_shape,
-    const tensorflow::TensorShape& filter_shape, const tensorflow::TensorShape& output_shape,
-    const tensorflow::gtl::ArraySlice<tsl::int32> dilations, const std::vector<tsl::int32>& strides,
-    PTXLAPadding padding, int64_t padding_before, int64_t padding_after,
-    int spatial_dim, int filter_spatial_dim,
-    PTXLAConvBackpropSpatialDimension* dim) {
-  dim->input_size = input_shape.dim_size(spatial_dim);
-  dim->filter_size = filter_shape.dim_size(filter_spatial_dim);
-  dim->output_size = output_shape.dim_size(spatial_dim);
-  dim->stride = strides[spatial_dim];
-  dim->dilation = dilations[spatial_dim];
-  int64_t out_size = 0;
-  TF_RETURN_IF_ERROR(tensorflow::GetWindowedOutputSizeVerboseV2(
-      dim->input_size, dim->filter_size, dim->dilation, dim->stride, padding,
-      &out_size, &padding_before, &padding_after));
-  if (dim->output_size != out_size) {
-    return tsl::errors::InvalidArgument(
-        label, ": Size of out_backprop doesn't match computed: ", "actual = ",
-        dim->output_size, ", computed = ", out_size,
-        " spatial_dim: ", spatial_dim, " input: ", dim->input_size,
-        " filter: ", dim->filter_size, " output: ", dim->output_size,
-        " stride: ", dim->stride, " dilation: ", dim->dilation);
-  }
-
-  int64_t effective_filter_size = (dim->filter_size - 1) * dim->dilation + 1;
-  dim->expanded_output_size = (dim->output_size - 1) * dim->stride + 1;
-  const auto padded_out_size = dim->input_size + effective_filter_size - 1;
-  dim->pad_before = effective_filter_size - 1 - padding_before;
-  dim->pad_after =
-      padded_out_size - dim->expanded_output_size - dim->pad_before;
-  VLOG(2) << label << ": expanded_out = " << dim->expanded_output_size
-          << ", effective_filter_size = " << effective_filter_size
-          << ", padded_out = " << padded_out_size
-          << ", pad_before = " << dim->pad_before
-          << ", pad_after = " << dim->pad_after
-          << ", dilation = " << dim->dilation << ", strides = " << dim->stride;
-  return tsl::OkStatus();
 }
 
 tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropInputConvOp(tsl::StringPiece type_string,
