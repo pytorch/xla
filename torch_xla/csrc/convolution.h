@@ -13,6 +13,7 @@
 #include "tensorflow/core/framework/tensor_shape.h" // TensorShape
 #include "tensorflow/compiler/tf2xla/shape_util.h" // XLAShapeToTensorShape
 
+#include "tensorflow/tsl/lib/gtl/inlined_vector.h" // #include "tensorflow/core/lib/gtl/inlined_vector.h" // gtl::InlinedVector
 #include "tensorflow/compiler/xla/xla_data.pb.h" // (done)ConvolutionDimensionNumbers // (done)PaddingType // (done)PrecisionConfig
 #include "tensorflow/compiler/xla/client/xla_builder.h" // (done)DynamicConvInputGrad // (done)ConvGeneralDilated
 #include "tensorflow/tsl/platform/stringpiece.h" // (done)StringPiece
@@ -20,6 +21,29 @@
 
 
 namespace torch_xla {
+
+// Computed dimensions for a backwards convolution.
+struct PTXLAConvBackpropDimensions {
+  // Information about each spatial dimension.
+  ::tsl::gtl::InlinedVector<PTXLAConvBackpropSpatialDimension, 3> spatial_dims;
+
+  // Batch size.
+  int64_t batch_size;
+
+  // Input and output feature depth.
+  int64_t in_depth, out_depth;
+
+  // Convenience access methods for spatial dimensions properties.
+  int64_t input_size(int dim) const { return spatial_dims[dim].input_size; }
+  int64_t filter_size(int dim) const { return spatial_dims[dim].filter_size; }
+  int64_t output_size(int dim) const { return spatial_dims[dim].output_size; }
+  int64_t stride(int dim) const { return spatial_dims[dim].stride; }
+  int64_t dilation(int dim) const { return spatial_dims[dim].dilation; }
+
+  // Compute padding for the given spatial dimension.
+  int SpatialPadding(const Padding& padding, int dim) const;
+};
+
 
 // PTXLAPadding: the padding we apply to the input tensor along the rows and columns
 // dimensions. This is usually used to make sure that the spatial dimensions do
@@ -79,7 +103,7 @@ tsl::Status PTXLAConvBackpropComputeDimensionsV2(
     const tensorflow::TensorShape& filter_shape, const tensorflow::TensorShape& out_backprop_shape,
     const tensorflow::gtl::ArraySlice<tsl::int32>& dilations, const std::vector<tsl::int32>& strides,
     PTXLAPadding padding, absl::Span<const int64_t> explicit_paddings,
-    tensorflow::TensorFormat data_format, tensorflow::ConvBackpropDimensions* dims);
+    tensorflow::TensorFormat data_format, PTXLAConvBackpropDimensions* dims);
 
 tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropInputConvOp(
     tsl::StringPiece type_string, const xla::Shape& input_shape, xla::XlaOp filter,

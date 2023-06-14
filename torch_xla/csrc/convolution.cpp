@@ -371,7 +371,7 @@ tsl::Status PTXLAConvBackpropComputeDimensionsV2(
     const tensorflow::TensorShape& filter_shape, const tensorflow::TensorShape& out_backprop_shape,
     const tensorflow::gtl::ArraySlice<tsl::int32>& dilations, const std::vector<tsl::int32>& strides,
     PTXLAPadding padding, absl::Span<const int64_t> explicit_paddings,
-    tensorflow::TensorFormat data_format, tensorflow::ConvBackpropDimensions* dims) {
+    tensorflow::TensorFormat data_format, PTXLAConvBackpropDimensions* dims) {
   // The + 2 in the following line is for the batch and feature dimensions.
   const int num_dims = num_spatial_dims + 2;
   if (input_shape.dims() != num_dims) {
@@ -437,7 +437,7 @@ tsl::Status PTXLAConvBackpropComputeDimensionsV2XlaShapes(
     tsl::StringPiece label, int num_spatial_dims, const xla::Shape& input_shape,
     const xla::Shape& filter_shape, const xla::Shape& out_backprop_shape,
     absl::Span<const tsl::int32> dilations, const std::vector<tsl::int32>& strides,
-    PTXLAPadding padding, tensorflow::TensorFormat data_format, tensorflow::ConvBackpropDimensions* dims,
+    PTXLAPadding padding, tensorflow::TensorFormat data_format, PTXLAConvBackpropDimensions* dims,
     absl::Span<const int64_t> explicit_paddings) {
   tensorflow::TensorShape input_tensor_shape, filter_tensor_shape,
       out_backprop_tensor_shape;
@@ -515,7 +515,7 @@ tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropInputConvOp(tsl::StringPiece type_
       attrs.depthwise ? PTXLAGroupedFilterShapeForDepthwiseConvolution(filter_shape)
                       : filter_shape;
   // Reuse dimension computation logic from conv_grad_shape_utils.cc.
-  tensorflow::ConvBackpropDimensions dims;
+  PTXLAConvBackpropDimensions dims;
   TF_RETURN_IF_ERROR(PTXLAConvBackpropComputeDimensionsV2XlaShapes(
       type_string, attrs.num_spatial_dims, input_shape, grouped_filter_shape,
       out_backprop_shape, attrs.dilations, attrs.strides, attrs.padding,
