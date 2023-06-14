@@ -8,10 +8,9 @@
 #include "torch_xla/csrc/xla_lower_util.h"
 
 // #include "tensorflow/core/lib/gtl/array_slice.h" // tensorflow::gtl::ArraySlice -> absl::Span<const T>
-#include "tensorflow/core/util/tensor_format.h" // GetTensorBatchDimIndex // GetTensorFeatureDimIndex // GetTensorSpatialDimIndex
-#include "tensorflow/core/kernels/conv_grad_shape_utils.h" // ConvBackpropComputeDimensionsV2// ConvBackpropDimensions // (done)ConvBackpropExtractAndVerifyDimension->PTXLAConvBackpropExtractAndVerifyDimension
+#include "tensorflow/core/util/tensor_format.h" // TensorFormat // GetTensorBatchDimIndex // GetTensorFeatureDimIndex // GetTensorSpatialDimIndex
+// #include "tensorflow/core/kernels/conv_grad_shape_utils.h" // (done)ConvBackpropComputeDimensionsV2 -> PTXLAConvBackpropComputeDimensionsV2 // (done)ConvBackpropDimensions -> PTXLAConvBackpropDimensions // (done)ConvBackpropExtractAndVerifyDimension->PTXLAConvBackpropExtractAndVerifyDimension
 // #include "tensorflow/core/util/padding.h" // tensorflow::Padding // 
-#include "tensorflow/core/util/tensor_format.h" // TensorFormat
 #include "tensorflow/core/framework/tensor_shape.h" // TensorShape
 #include "tensorflow/compiler/tf2xla/shape_util.h" // XLAShapeToTensorShape
 // #include "tensorflow/core/framework/kernel_shape_util.h" // (done)GetWindowedOutputSizeVerboseV2-> PTXLAGetWindowedOutputSizeVerboseV2
