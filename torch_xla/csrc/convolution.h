@@ -5,6 +5,17 @@
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/tsl/platform/stringpiece.h" // StringPiece
 #include "tensorflow/compiler/tf2xla/kernels/conv_op_helpers.h" // ConvOpAttrs
+#include "tensorflow/core/util/tensor_format.h" // GetTensorBatchDimIndex // GetTensorFeatureDimIndex // GetTensorSpatialDimIndex
+#include "tensorflow/tsl/platform/errors.h" // tsl::errors::InvalidArgument // 
+#include "tensorflow/core/kernels/conv_grad_shape_utils.h" // ConvBackpropDimensions // 
+#include "tensorflow/core/util/padding.h" // tensorflow::Padding // 
+#include "tensorflow/core/util/tensor_format.h" // TensorFormat
+#include "tensorflow/core/framework/tensor_shape.h" // TensorShape
+#include "tensorflow/compiler/tf2xla/shape_util.h" // XLAShapeToTensorShape
+#include "tensorflow/core/kernels/conv_grad_shape_utils.h" // ConvBackpropComputeDimensionsV2
+#include "tensorflow/compiler/xla/xla_data.pb.h" // ConvolutionDimensionNumbers // PaddingType // PrecisionConfig
+#include "tensorflow/compiler/xla/client/xla_builder.h" // DynamicConvInputGrad // ConvGeneralDilated
+
 
 namespace torch_xla {
 
