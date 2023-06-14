@@ -21,6 +21,11 @@
 
 namespace torch_xla {
 
+// Convert an XLA Shape into the equivalent TensorFlow shape. May fail since
+// not all XLA shapes can be represented as TensorShapes.
+tsl::Status PTXLAXLAShapeToTensorShape(const xla::Shape& shape,
+                             tensorflow::TensorShape* tensor_shape);
+
 // Information about a single spatial dimension for a convolution
 // backpropagation.
 struct PTXLAConvBackpropSpatialDimension {

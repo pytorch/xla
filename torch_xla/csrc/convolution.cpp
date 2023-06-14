@@ -19,6 +19,7 @@
 #include "tensorflow/compiler/xla/client/xla_builder.h" // (done)DynamicConvInputGrad // (done)ConvGeneralDilated
 #include "tensorflow/tsl/platform/tensor_float_32_utils.h" // (done)tensor_float_32_execution_enabled
 #include "tensorflow/tsl/platform/errors.h" // (done)tsl::errors::InvalidArgument // 
+#include "tensorflow/compiler/xla/shape_util.h" // xla::ShapeUtil::HumanString
 
 namespace torch_xla {
 namespace {
@@ -329,6 +330,21 @@ ConvGrads BuildTransposedConvolutionBackward(
 
 }  // namespace
 
+// Convert an XLA Shape into the equivalent TensorFlow shape.
+tsl::Status PTXLAXLAShapeToTensorShape(const xla::Shape& shape,
+                             tensorflow::TensorShape* tensor_shape) {
+  if (shape.IsTuple()) {
+    return tsl::errors::InvalidArgument("XLA shape ",
+                                   xla::ShapeUtil::HumanString(shape),
+                                   " cannot be converted to a TensorShape");
+  }
+  *tensor_shape = tensorflow::TensorShape();
+  for (int i = 0; i < shape.rank(); ++i) {
+    TF_RETURN_IF_ERROR(tensor_shape->AddDimWithStatus(shape.dimensions(i)));
+  }
+  return tsl::OkStatus();
+}
+
 // Performs some basic checks on PTXLAConvOpAttrs that are true for all kinds of XLA
 // convolutions (as currently implemented).
 tsl::Status PTXLACheckConvAttrs(const PTXLAConvOpAttrs& attrs) {
@@ -545,10 +561,10 @@ tsl::Status PTXLAConvBackpropComputeDimensionsV2XlaShapes(
     absl::Span<const int64_t> explicit_paddings) {
   tensorflow::TensorShape input_tensor_shape, filter_tensor_shape,
       out_backprop_tensor_shape;
-  TF_RETURN_IF_ERROR(tensorflow::XLAShapeToTensorShape(input_shape, &input_tensor_shape));
-  TF_RETURN_IF_ERROR(tensorflow::XLAShapeToTensorShape(filter_shape, &filter_tensor_shape));
+  TF_RETURN_IF_ERROR(PTXLAXLAShapeToTensorShape(input_shape, &input_tensor_shape));
+  TF_RETURN_IF_ERROR(PTXLAXLAShapeToTensorShape(filter_shape, &filter_tensor_shape));
   TF_RETURN_IF_ERROR(
-      tensorflow::XLAShapeToTensorShape(out_backprop_shape, &out_backprop_tensor_shape));
+      PTXLAXLAShapeToTensorShape(out_backprop_shape, &out_backprop_tensor_shape));
   return PTXLAConvBackpropComputeDimensionsV2(
       label, num_spatial_dims, input_tensor_shape, filter_tensor_shape,
       out_backprop_tensor_shape, dilations, strides, padding, explicit_paddings,
@@ -712,9 +728,9 @@ tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropFilterConvOp(tsl::StringPiece type
   xla::Shape output_shape = out_backprop_shape;
 
   tensorflow::TensorShape input_tensor_shape, filter_tensor_shape, output_tensor_shape;
-  TF_RETURN_IF_ERROR(tensorflow::XLAShapeToTensorShape(filter_shape, &filter_tensor_shape));
-  TF_RETURN_IF_ERROR(tensorflow::XLAShapeToTensorShape(input_shape, &input_tensor_shape));
-  TF_RETURN_IF_ERROR(tensorflow::XLAShapeToTensorShape(output_shape, &output_tensor_shape));
+  TF_RETURN_IF_ERROR(PTXLAXLAShapeToTensorShape(filter_shape, &filter_tensor_shape));
+  TF_RETURN_IF_ERROR(PTXLAXLAShapeToTensorShape(input_shape, &input_tensor_shape));
+  TF_RETURN_IF_ERROR(PTXLAXLAShapeToTensorShape(output_shape, &output_tensor_shape));
 
   const xla::Shape grouped_filter_shape =
       attrs.depthwise ? PTXLAGroupedFilterShapeForDepthwiseConvolution(filter_shape)
