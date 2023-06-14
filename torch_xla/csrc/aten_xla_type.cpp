@@ -1399,7 +1399,7 @@ at::Tensor XLANativeFunctions::index(
   XLA_CHECK(bridge::IsXlaTensor(self) && indices_on_cpu_or_xla)
       << "indices should be either on cpu or on the same"
       << " device as the indexed tensor (XLA)."
-      << " When using XLA, the indexed tensor must be an XLA tensor.";
+      << " When using XLA, the indexed tensor must be an XLA tensor. Is index tensor on XLA device: " << bridge::IsXlaTensor(self) << ". Are the indices on CPU or XLA: " << indices_on_cpu_or_xla;
   CanonicalIndexInfo canonical_index_info =
       GetCanonicalIndexInfo(self, indices);
   c10::optional<torch::lazy::BackendDevice> device =
@@ -1468,7 +1468,7 @@ at::Tensor& XLANativeFunctions::index_put_(
   XLA_CHECK(bridge::IsXlaTensor(self) && indices_on_cpu_or_xla)
       << "indices should be either on cpu or on the same"
       << " device as the indexed tensor (XLA)."
-      << " When using XLA, the indexed tensor must be an XLA tensor.";
+      << " When using XLA, the indexed tensor must be an XLA tensor. Is index tensor on XLA device: " << bridge::IsXlaTensor(self) << ". Are the indices on CPU or XLA: " << indices_on_cpu_or_xla;
   XLA_CHECK(self.scalar_type() == values.scalar_type());
   CanonicalIndexInfo canonical_index_info =
       GetCanonicalIndexInfo(self, indices);
