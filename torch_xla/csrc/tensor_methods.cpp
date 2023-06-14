@@ -53,6 +53,7 @@
 #include "torch_xla/csrc/ops/flip.h"
 #include "torch_xla/csrc/ops/gather.h"
 #include "torch_xla/csrc/ops/generic.h"
+#include "torch_xla/csrc/ops/generic_slice.h"
 #include "torch_xla/csrc/ops/get_dimensions_size.h"
 #include "torch_xla/csrc/ops/hardtanh_backward.h"
 #include "torch_xla/csrc/ops/index_ops.h"
@@ -1832,19 +1833,29 @@ XLATensorPtr narrow(const XLATensorPtr& input, int64_t dim, int64_t start,
                     int64_t length) {
   auto input_shape = input->shape();
   dim = torch::lazy::GetCanonicalDimensionIndex(dim, input_shape.get().rank());
+
   xla::Shape narrow_shape = input_shape;
   narrow_shape.set_dimensions(dim, length);
 
-  ViewInfo::Type view_type = (xla::ShapeUtil::ElementsIn(input_shape) ==
-                              xla::ShapeUtil::ElementsIn(narrow_shape))
-                                 ? ViewInfo::Type::kReshape
-                                 : ViewInfo::Type::kNarrow;
-  ViewInfo view_info(view_type, std::move(narrow_shape), input_shape);
-  view_info.indices[dim] = torch::lazy::GetCanonicalPosition(
+  std::vector<int64_t> indices(input_shape.get().rank(), 0);
+  indices[dim] = torch::lazy::GetCanonicalPosition(
       torch_xla::runtime::util::ToVector<int64_t>(
           input_shape.get().dimensions()),
       dim, start);
-  return input->CreateViewTensor(std::move(view_info));
+
+  // See Note: [Disabling functionalization]
+  if (runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
+    ViewInfo::Type view_type = (xla::ShapeUtil::ElementsIn(input_shape) ==
+                                xla::ShapeUtil::ElementsIn(narrow_shape))
+                                   ? ViewInfo::Type::kReshape
+                                   : ViewInfo::Type::kNarrow;
+    ViewInfo view_info(view_type, std::move(narrow_shape), input_shape);
+    view_info.indices[dim] = indices[dim];
+    return input->CreateViewTensor(std::move(view_info));
+  }
+
+  return input->CreateFrom(torch::lazy::MakeNode<GenericSlice>(
+      input->GetIrValue(), std::move(indices), narrow_shape.dimensions()));
 }
 
 std::tuple<XLATensorPtr, XLATensorPtr, XLATensorPtr> native_batch_norm(
