@@ -14,7 +14,7 @@
 #include "tensorflow/core/util/tensor_format.h" // TensorFormat
 #include "tensorflow/core/framework/tensor_shape.h" // TensorShape
 #include "tensorflow/compiler/tf2xla/shape_util.h" // XLAShapeToTensorShape
-#include "tensorflow/core/framework/kernel_shape_util.cc" // (done)GetWindowedOutputSizeVerboseV2-> PTXLAGetWindowedOutputSizeVerboseV2
+// #include "tensorflow/core/framework/kernel_shape_util.h" // (done)GetWindowedOutputSizeVerboseV2-> PTXLAGetWindowedOutputSizeVerboseV2
 
 #include "tensorflow/compiler/xla/xla_data.pb.h" // (done)ConvolutionDimensionNumbers // (done)PaddingType // (done)PrecisionConfig
 #include "tensorflow/compiler/xla/client/xla_builder.h" // (done)DynamicConvInputGrad // (done)ConvGeneralDilated
