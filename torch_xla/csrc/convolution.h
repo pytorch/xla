@@ -47,8 +47,8 @@ struct PTXLAConvOpAttrs {
 
   bool depthwise;
   int num_spatial_dims;
-  std::vector<int32> dilations;
-  std::vector<int32> strides;
+  std::vector<tsl::int32> dilations;
+  std::vector<tsl::int32> strides;
   PTXLAPadding padding;
   std::vector<int64_t> explicit_paddings;
   tensorflow::TensorFormat data_format;
