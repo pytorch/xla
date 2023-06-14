@@ -19,7 +19,7 @@
 
 namespace torch_xla {
 
-StatusOr<xla::XlaOp> MakeXlaBackpropInputConvOp(
+StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropInputConvOp(
     StringPiece type_string, const xla::Shape& input_shape, xla::XlaOp filter,
     xla::XlaOp out_backprop, const ConvOpAttrs& attrs,
     xla::XlaOp* input_sizes = nullptr);
