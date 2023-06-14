@@ -241,166 +241,6 @@ xla::XlaOp BuildConvBackwardInput(xla::XlaOp grad_output, xla::XlaOp kernel,
       conv_op_attrs));
 }
 
-tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropFilterConvOp(tsl::StringPiece type_string,
-                                                 xla::XlaOp activations,
-                                                 const xla::Shape& filter_shape,
-                                                 xla::XlaOp gradients,
-                                                 const PTXLAConvOpAttrs& attrs) {
-  TF_RETURN_IF_ERROR(PTXLACheckConvAttrs(attrs));
-
-  auto* builder = activations.builder();
-  TF_ASSIGN_OR_RETURN(xla::Shape activations_shape,
-                      builder->GetShape(activations));
-  TF_ASSIGN_OR_RETURN(xla::Shape out_backprop_shape,
-                      builder->GetShape(gradients));
-  xla::XlaOp filter_backprop;
-
-  xla::Shape input_shape = activations_shape;
-  xla::Shape output_shape = out_backprop_shape;
-
-  tensorflow::sTensorShape input_tensor_shape, filter_tensor_shape, output_tensor_shape;
-  TF_RETURN_IF_ERROR(tensorflow::XLAShapeToTensorShape(filter_shape, &filter_tensor_shape));
-  TF_RETURN_IF_ERROR(tensorflow::XLAShapeToTensorShape(input_shape, &input_tensor_shape));
-  TF_RETURN_IF_ERROR(tensorflow::XLAShapeToTensorShape(output_shape, &output_tensor_shape));
-
-  const xla::Shape grouped_filter_shape =
-      attrs.depthwise ? PTXLAGroupedFilterShapeForDepthwiseConvolution(filter_shape)
-                      : filter_shape;
-  // Reuse dimension computation logic from conv_grad_shape_utils.cc.
-  PTXLAConvBackpropDimensions dims;
-  // The filter gradients are computed by a convolution of the input
-  // activations and the output gradients, with some appropriate padding.
-  // See the comment at the top of conv_grad_shape_utils.h for details.
-  xla::ConvolutionDimensionNumbers dnums;
-
-  TF_RETURN_IF_ERROR(PTXLAConvBackpropComputeDimensionsV2XlaShapes(
-      type_string, attrs.num_spatial_dims, activations_shape,
-      grouped_filter_shape, out_backprop_shape, attrs.dilations, attrs.strides,
-      attrs.padding, attrs.data_format, &dims, attrs.explicit_paddings));
-
-  // Obtain some useful dimensions:
-  // The last two dimensions of the filter are the input and output shapes.
-  int num_dims = attrs.num_spatial_dims + 2;
-  int n_dim = tensorflow::GetTensorBatchDimIndex(num_dims, attrs.data_format);
-  int c_dim = tensorflow::GetTensorFeatureDimIndex(num_dims, attrs.data_format);
-  int64_t in_depth = input_shape.dimensions(c_dim),
-          filter_in_depth = filter_shape.dimensions(attrs.num_spatial_dims),
-          batch_group_count =
-              attrs.depthwise ? filter_in_depth : in_depth / filter_in_depth;
-
-  std::vector<std::pair<int64_t, int64_t>> padding(attrs.num_spatial_dims);
-  std::vector<int64_t> rhs_dilation(attrs.num_spatial_dims);
-  std::vector<int64_t> window_strides(attrs.num_spatial_dims);
-  std::vector<int64_t> ones(attrs.num_spatial_dims, 1);
-
-  // Swap n_dim and c_dim in the activations.
-  dnums.set_input_batch_dimension(c_dim);
-  dnums.set_input_feature_dimension(n_dim);
-
-  // The gradients become the RHS of the convolution.
-  // The gradients have shape [batch, out_rows, out_cols, ..., out_depth]
-  // where the batch becomes the input feature for the convolution.
-  dnums.set_kernel_input_feature_dimension(n_dim);
-  dnums.set_kernel_output_feature_dimension(c_dim);
-
-  dnums.set_output_batch_dimension(attrs.num_spatial_dims);
-  dnums.set_output_feature_dimension(attrs.num_spatial_dims + 1);
-
-  // Tensorflow filter shape is [ H, W, ..., inC, outC ].
-  for (int i = 0; i < attrs.num_spatial_dims; ++i) {
-    dnums.add_output_spatial_dimensions(i);
-  }
-  xla::PaddingType padding_type = xla::PaddingType::PADDING_INVALID;
-  for (int64_t i = 0; i < attrs.num_spatial_dims; ++i) {
-    int64_t dim = tensorflow::GetTensorSpatialDimIndex(num_dims, attrs.data_format, i);
-    if (activations_shape.is_dynamic_dimension(dim)) {
-      TF_RET_CHECK(attrs.padding == PTXLAPadding::VALID || attrs.padding == PTXLAPadding::SAME)
-          << "Dynamic convolution only supports valid and same padding";
-      if (attrs.padding == PTXLAPadding::VALID) {
-        padding_type = xla::PaddingType::PADDING_VALID;
-      }
-      if (attrs.padding == PTXLAPadding::SAME) {
-        padding_type = xla::PaddingType::PADDING_SAME;
-      }
-    }
-    dnums.add_input_spatial_dimensions(dim);
-    dnums.add_kernel_spatial_dimensions(dim);
-    rhs_dilation[i] = dims.spatial_dims[i].stride;
-    window_strides[i] = attrs.dilations[dim];
-
-    // We will also need to pad the input with zeros such that after the
-    // convolution, we get the right size for the filter.
-    // The padded_in_rows should be such that when we convolve this with the
-    // expanded_out_rows as a filter, we should get filter_rows back.
-
-    const int64_t padded_in_size =
-        dims.spatial_dims[i].expanded_output_size +
-        (dims.spatial_dims[i].filter_size - 1) * attrs.dilations[dim];
-
-    // However it can be smaller than input_rows: in this
-    // case it means some of the inputs are not used.
-    //
-    // An example is to have input_cols = 3, filter_cols = 2 and stride = 2:
-    //
-    // INPUT =  [ A  B  C ]
-    //
-    // FILTER = [ x y ]
-    //
-    // and the output will only have one column: a = A * x + B * y
-    //
-    // and input "C" is not used at all.
-    //
-    // We apply negative padding in this case.
-    const int64_t pad_total = padded_in_size - dims.spatial_dims[i].input_size;
-
-    // + For the EXPLICIT padding, we pad the top/left side with the explicit
-    //   padding and pad the bottom/right side with the remaining space.
-    // + For the VALID padding, we don't pad anything on the top/left side
-    //   and pad the bottom/right side with the remaining space.
-    // + For the SAME padding, we pad top/left side the same as bottom/right
-    //   side.
-    //
-    // In addition, if the padded input size is smaller than the input size,
-    // we need to ignore some training elements of the input. We do this by
-    // applying negative padding on the right/bottom.
-    const int64_t pad_before =
-        attrs.padding == PTXLAPadding::EXPLICIT ? attrs.explicit_paddings[2 * dim]
-        : attrs.padding == PTXLAPadding::SAME   ? std::max<int64_t>(pad_total / 2, 0)
-                                           : 0;
-    padding[i] = {pad_before, pad_total - pad_before};
-  }
-  xla::PrecisionConfig precision_config = PTXLAGetPrecisionConfig();
-
-  // Besides padding the input, we will also expand output_rows to
-  //    expanded_out_rows = (output_rows - 1) * stride + 1
-  // with zeros in between:
-  //
-  //      a . . . b . . . c . . . d . . . e
-  //
-  // This is done by specifying the window dilation factors in the
-  // convolution HLO below.
-  if (padding_type != xla::PaddingType::PADDING_INVALID) {
-    filter_backprop = xla::DynamicConvKernelGrad(
-        activations, gradients, window_strides, padding, /*lhs_dilation=*/ones,
-        rhs_dilation, dnums,
-        /*feature_group_count=*/1,
-        /*batch_group_count=*/batch_group_count, &precision_config,
-        padding_type);
-  } else {
-    filter_backprop = xla::ConvGeneralDilated(
-        activations, gradients, window_strides, padding, /*lhs_dilation=*/ones,
-        rhs_dilation, dnums,
-        /*feature_group_count=*/1,
-        /*batch_group_count=*/batch_group_count, &precision_config);
-  }
-
-  if (attrs.depthwise) {
-    filter_backprop = xla::Reshape(filter_backprop, filter_shape.dimensions());
-  }
-
-  return filter_backprop;
-}
-
 // Computes the kernel gradient for a convolution.
 xla::XlaOp BuildConvBackwardWeight(xla::XlaOp grad_output, xla::XlaOp input,
                                    const xla::Shape& kernel_shape,
@@ -853,6 +693,166 @@ tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropInputConvOp(tsl::StringPiece type_
                                  /*feature_group_count=*/
                                  feature_group_count,
                                  /*batch_group_count=*/1, &precision_config);
+}
+
+tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropFilterConvOp(tsl::StringPiece type_string,
+                                                 xla::XlaOp activations,
+                                                 const xla::Shape& filter_shape,
+                                                 xla::XlaOp gradients,
+                                                 const PTXLAConvOpAttrs& attrs) {
+  TF_RETURN_IF_ERROR(PTXLACheckConvAttrs(attrs));
+
+  auto* builder = activations.builder();
+  TF_ASSIGN_OR_RETURN(xla::Shape activations_shape,
+                      builder->GetShape(activations));
+  TF_ASSIGN_OR_RETURN(xla::Shape out_backprop_shape,
+                      builder->GetShape(gradients));
+  xla::XlaOp filter_backprop;
+
+  xla::Shape input_shape = activations_shape;
+  xla::Shape output_shape = out_backprop_shape;
+
+  tensorflow::sTensorShape input_tensor_shape, filter_tensor_shape, output_tensor_shape;
+  TF_RETURN_IF_ERROR(tensorflow::XLAShapeToTensorShape(filter_shape, &filter_tensor_shape));
+  TF_RETURN_IF_ERROR(tensorflow::XLAShapeToTensorShape(input_shape, &input_tensor_shape));
+  TF_RETURN_IF_ERROR(tensorflow::XLAShapeToTensorShape(output_shape, &output_tensor_shape));
+
+  const xla::Shape grouped_filter_shape =
+      attrs.depthwise ? PTXLAGroupedFilterShapeForDepthwiseConvolution(filter_shape)
+                      : filter_shape;
+  // Reuse dimension computation logic from conv_grad_shape_utils.cc.
+  PTXLAConvBackpropDimensions dims;
+  // The filter gradients are computed by a convolution of the input
+  // activations and the output gradients, with some appropriate padding.
+  // See the comment at the top of conv_grad_shape_utils.h for details.
+  xla::ConvolutionDimensionNumbers dnums;
+
+  TF_RETURN_IF_ERROR(PTXLAConvBackpropComputeDimensionsV2XlaShapes(
+      type_string, attrs.num_spatial_dims, activations_shape,
+      grouped_filter_shape, out_backprop_shape, attrs.dilations, attrs.strides,
+      attrs.padding, attrs.data_format, &dims, attrs.explicit_paddings));
+
+  // Obtain some useful dimensions:
+  // The last two dimensions of the filter are the input and output shapes.
+  int num_dims = attrs.num_spatial_dims + 2;
+  int n_dim = tensorflow::GetTensorBatchDimIndex(num_dims, attrs.data_format);
+  int c_dim = tensorflow::GetTensorFeatureDimIndex(num_dims, attrs.data_format);
+  int64_t in_depth = input_shape.dimensions(c_dim),
+          filter_in_depth = filter_shape.dimensions(attrs.num_spatial_dims),
+          batch_group_count =
+              attrs.depthwise ? filter_in_depth : in_depth / filter_in_depth;
+
+  std::vector<std::pair<int64_t, int64_t>> padding(attrs.num_spatial_dims);
+  std::vector<int64_t> rhs_dilation(attrs.num_spatial_dims);
+  std::vector<int64_t> window_strides(attrs.num_spatial_dims);
+  std::vector<int64_t> ones(attrs.num_spatial_dims, 1);
+
+  // Swap n_dim and c_dim in the activations.
+  dnums.set_input_batch_dimension(c_dim);
+  dnums.set_input_feature_dimension(n_dim);
+
+  // The gradients become the RHS of the convolution.
+  // The gradients have shape [batch, out_rows, out_cols, ..., out_depth]
+  // where the batch becomes the input feature for the convolution.
+  dnums.set_kernel_input_feature_dimension(n_dim);
+  dnums.set_kernel_output_feature_dimension(c_dim);
+
+  dnums.set_output_batch_dimension(attrs.num_spatial_dims);
+  dnums.set_output_feature_dimension(attrs.num_spatial_dims + 1);
+
+  // Tensorflow filter shape is [ H, W, ..., inC, outC ].
+  for (int i = 0; i < attrs.num_spatial_dims; ++i) {
+    dnums.add_output_spatial_dimensions(i);
+  }
+  xla::PaddingType padding_type = xla::PaddingType::PADDING_INVALID;
+  for (int64_t i = 0; i < attrs.num_spatial_dims; ++i) {
+    int64_t dim = tensorflow::GetTensorSpatialDimIndex(num_dims, attrs.data_format, i);
+    if (activations_shape.is_dynamic_dimension(dim)) {
+      TF_RET_CHECK(attrs.padding == PTXLAPadding::VALID || attrs.padding == PTXLAPadding::SAME)
+          << "Dynamic convolution only supports valid and same padding";
+      if (attrs.padding == PTXLAPadding::VALID) {
+        padding_type = xla::PaddingType::PADDING_VALID;
+      }
+      if (attrs.padding == PTXLAPadding::SAME) {
+        padding_type = xla::PaddingType::PADDING_SAME;
+      }
+    }
+    dnums.add_input_spatial_dimensions(dim);
+    dnums.add_kernel_spatial_dimensions(dim);
+    rhs_dilation[i] = dims.spatial_dims[i].stride;
+    window_strides[i] = attrs.dilations[dim];
+
+    // We will also need to pad the input with zeros such that after the
+    // convolution, we get the right size for the filter.
+    // The padded_in_rows should be such that when we convolve this with the
+    // expanded_out_rows as a filter, we should get filter_rows back.
+
+    const int64_t padded_in_size =
+        dims.spatial_dims[i].expanded_output_size +
+        (dims.spatial_dims[i].filter_size - 1) * attrs.dilations[dim];
+
+    // However it can be smaller than input_rows: in this
+    // case it means some of the inputs are not used.
+    //
+    // An example is to have input_cols = 3, filter_cols = 2 and stride = 2:
+    //
+    // INPUT =  [ A  B  C ]
+    //
+    // FILTER = [ x y ]
+    //
+    // and the output will only have one column: a = A * x + B * y
+    //
+    // and input "C" is not used at all.
+    //
+    // We apply negative padding in this case.
+    const int64_t pad_total = padded_in_size - dims.spatial_dims[i].input_size;
+
+    // + For the EXPLICIT padding, we pad the top/left side with the explicit
+    //   padding and pad the bottom/right side with the remaining space.
+    // + For the VALID padding, we don't pad anything on the top/left side
+    //   and pad the bottom/right side with the remaining space.
+    // + For the SAME padding, we pad top/left side the same as bottom/right
+    //   side.
+    //
+    // In addition, if the padded input size is smaller than the input size,
+    // we need to ignore some training elements of the input. We do this by
+    // applying negative padding on the right/bottom.
+    const int64_t pad_before =
+        attrs.padding == PTXLAPadding::EXPLICIT ? attrs.explicit_paddings[2 * dim]
+        : attrs.padding == PTXLAPadding::SAME   ? std::max<int64_t>(pad_total / 2, 0)
+                                           : 0;
+    padding[i] = {pad_before, pad_total - pad_before};
+  }
+  xla::PrecisionConfig precision_config = PTXLAGetPrecisionConfig();
+
+  // Besides padding the input, we will also expand output_rows to
+  //    expanded_out_rows = (output_rows - 1) * stride + 1
+  // with zeros in between:
+  //
+  //      a . . . b . . . c . . . d . . . e
+  //
+  // This is done by specifying the window dilation factors in the
+  // convolution HLO below.
+  if (padding_type != xla::PaddingType::PADDING_INVALID) {
+    filter_backprop = xla::DynamicConvKernelGrad(
+        activations, gradients, window_strides, padding, /*lhs_dilation=*/ones,
+        rhs_dilation, dnums,
+        /*feature_group_count=*/1,
+        /*batch_group_count=*/batch_group_count, &precision_config,
+        padding_type);
+  } else {
+    filter_backprop = xla::ConvGeneralDilated(
+        activations, gradients, window_strides, padding, /*lhs_dilation=*/ones,
+        rhs_dilation, dnums,
+        /*feature_group_count=*/1,
+        /*batch_group_count=*/batch_group_count, &precision_config);
+  }
+
+  if (attrs.depthwise) {
+    filter_backprop = xla::Reshape(filter_backprop, filter_shape.dimensions());
+  }
+
+  return filter_backprop;
 }
 
 xla::XlaOp BuildConvolutionOverrideable(
