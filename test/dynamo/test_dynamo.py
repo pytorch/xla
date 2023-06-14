@@ -75,14 +75,14 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     xla_y = torch.randn(5, 5).to(device)
     xla_z = torch.randn(10, 10).to(device)
     self.fn_simple_dynamo(xla_x, xla_x)
-    compiel_count = met.metric_data('CompileTime')[0]
+    compile_count = met.metric_data('CompileTime')[0]
     # Execute with input with same shape should not trigger additional compilation
     self.fn_simple_dynamo(xla_y, xla_y)
-    self.assertEqual(met.metric_data('CompileTime')[0], compiel_count)
+    self.assertEqual(met.metric_data('CompileTime')[0], compile_count)
     # Give `fn_simple_dynamo` an input with different shappe, we expect
     # dynamo to recognize this is a different graph and let XLA to retrace/recompile
     res_xla_dynamo_3 = self.fn_simple_dynamo(xla_z, xla_z)
-    self.assertEqual(met.metric_data('CompileTime')[0], compiel_count + 1)
+    self.assertEqual(met.metric_data('CompileTime')[0], compile_count + 1)
     self.assertTrue(
         torch.allclose(res_xla_dynamo_3.cpu(),
                        self.fn_simple(xla_z.cpu(), xla_z.cpu())))
