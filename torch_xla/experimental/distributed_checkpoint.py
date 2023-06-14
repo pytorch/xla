@@ -75,7 +75,8 @@ class SPMDSavePlanner(SavePlanner):
     # Upon the first `resolve_data` call for a WriteItem associated with a
     # sharded tensor, all local shards are moved to CPU via
     # `XLAShardedTensor::local_shards` and are tracked in `_local_shards` until
-    # the shard's data is resolved.
+    # the shard's data is resolved. This allows only transferring the shards
+    # to CPU once.
     self._local_shards: Dict[str, List[XLAShard]] = {}
 
   def set_up_planner(self, state_dict: STATE_DICT_TYPE,
