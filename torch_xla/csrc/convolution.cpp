@@ -390,9 +390,9 @@ tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropInputConvOp(tsl::StringPiece type_
   for (int i = 0; i < attrs.num_spatial_dims; ++i) {
     int64_t dim = tensorflow::GetTensorSpatialDimIndex(num_dims, attrs.data_format, i);
     if (out_backprop_shape.is_dynamic_dimension(dim)) {
-      TF_RET_CHECK(attrs.padding == VALID || attrs.padding == SAME)
+      TF_RET_CHECK(attrs.padding == tensorflow::VALID || attrs.padding == tensorflow::SAME)
           << "Dynamic convolution only supports valid and same padding";
-      if (attrs.padding == VALID) {
+      if (attrs.padding == tensorflow::VALID) {
         padding_type = xla::PaddingType::PADDING_VALID;
       }
       if (attrs.padding == SAME) {
