@@ -14,7 +14,7 @@
 #include "tensorflow/core/util/tensor_format.h" // TensorFormat
 #include "tensorflow/core/framework/tensor_shape.h" // TensorShape
 #include "tensorflow/compiler/tf2xla/shape_util.h" // XLAShapeToTensorShape
-#include "tensorflow/core/framework/kernel_shape_util.cc" // GetWindowedOutputSizeVerboseV2
+#include "tensorflow/core/framework/kernel_shape_util.cc" // (done)GetWindowedOutputSizeVerboseV2-> PTXLAGetWindowedOutputSizeVerboseV2
 
 #include "tensorflow/compiler/xla/xla_data.pb.h" // (done)ConvolutionDimensionNumbers // (done)PaddingType // (done)PrecisionConfig
 #include "tensorflow/compiler/xla/client/xla_builder.h" // (done)DynamicConvInputGrad // (done)ConvGeneralDilated
@@ -279,6 +279,53 @@ xla::Shape PTXLAGroupedFilterShapeForDepthwiseConvolution(
   return grouped_filter_shape;
 }
 
+tsl::Status PTXLAGetWindowedOutputSizeVerboseV2(int64_t input_size, int64_t filter_size,
+                                      int64_t dilation_rate, int64_t stride,
+                                      PTXLAPadding padding_type,
+                                      int64_t* output_size,
+                                      int64_t* padding_before,
+                                      int64_t* padding_after) {
+  if (stride <= 0) {
+    return tsl::errors::InvalidArgument("Stride must be > 0, but got ", stride);
+  }
+  if (dilation_rate < 1) {
+    return tsl::errors::InvalidArgument("Dilation rate must be >= 1, but got ",
+                                   dilation_rate);
+  }
+
+  // See also the parallel implementation in GetWindowedOutputSizeFromDimsV2.
+  int64_t effective_filter_size = (filter_size - 1) * dilation_rate + 1;
+  switch (padding_type) {
+    case PTXLAPadding::VALID:
+      *output_size = (input_size - effective_filter_size + stride) / stride;
+      *padding_before = *padding_after = 0;
+      break;
+    case PTXLAPadding::EXPLICIT:
+      *output_size = (input_size + *padding_before + *padding_after -
+                      effective_filter_size + stride) /
+                     stride;
+      break;
+    case PTXLAPadding::SAME:
+      *output_size = (input_size + stride - 1) / stride;
+      const int64_t padding_needed =
+          std::max(int64_t{0}, (*output_size - 1) * stride +
+                                   effective_filter_size - input_size);
+      // For odd values of total padding, add more padding at the 'right'
+      // side of the given dimension.
+      *padding_before = padding_needed / 2;
+      *padding_after = padding_needed - *padding_before;
+      break;
+  }
+  if (*output_size < 0) {
+    return tsl::errors::InvalidArgument(
+        "Computed output size would be negative: ", *output_size,
+        " [input_size: ", input_size,
+        ", effective_filter_size: ", effective_filter_size,
+        ", stride: ", stride, "]");
+  }
+  return tsl::OkStatus();
+}
+
 tsl::Status PTXLAConvBackpropExtractAndVerifyDimension(
     tsl::StringPiece label, const tensorflow::TensorShape& input_shape,
     const tensorflow::TensorShape& filter_shape, const tensorflow::TensorShape& output_shape,
@@ -292,7 +339,7 @@ tsl::Status PTXLAConvBackpropExtractAndVerifyDimension(
   dim->stride = strides[spatial_dim];
   dim->dilation = dilations[spatial_dim];
   int64_t out_size = 0;
-  TF_RETURN_IF_ERROR(tensorflow::GetWindowedOutputSizeVerboseV2(
+  TF_RETURN_IF_ERROR(PTXLAGetWindowedOutputSizeVerboseV2(
       dim->input_size, dim->filter_size, dim->dilation, dim->stride, padding,
       &out_size, &padding_before, &padding_after));
   if (dim->output_size != out_size) {
