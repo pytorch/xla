@@ -378,9 +378,23 @@ xla::Shape PTXLAGroupedFilterShapeForDepthwiseConvolution(
   return grouped_filter_shape;
 }
 
+xla::PrecisionConfig GetPrecisionConfig() {
+  xla::PrecisionConfig::Precision precision =
+      tsl::tensor_float_32_execution_enabled() ? xla::PrecisionConfig::DEFAULT
+                                               : xla::PrecisionConfig::HIGHEST;
+  xla::PrecisionConfig config;
+  const int num_inputs = 2;
+  config.mutable_operand_precision()->Reserve(num_inputs);
+  for (int i = 0; i < num_inputs; ++i) {
+    config.add_operand_precision(precision);
+  }
+  return config;
+}
+
+
 // Wrapper around ConvBackpropComputeDimensions that converts from XLA shapes
 // to TensorShapes.
-Status PTXLAConvBackpropComputeDimensionsV2XlaShapes(
+tsl::Status PTXLAConvBackpropComputeDimensionsV2XlaShapes(
     tsl::StringPiece label, int num_spatial_dims, const xla::Shape& input_shape,
     const xla::Shape& filter_shape, const xla::Shape& out_backprop_shape,
     absl::Span<const int32> dilations, const std::vector<int32>& strides,
