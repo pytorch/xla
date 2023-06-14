@@ -146,7 +146,6 @@ ptxla_cc_library(
         "@org_tensorflow//tensorflow/compiler/xla/client/lib:sorting",
         "@org_tensorflow//tensorflow/compiler/xla/client/lib:svd",
         "@org_tensorflow//tensorflow/compiler/xla/stream_executor:dnn",
-        "@org_tensorflow//tensorflow/core:lib",
         "@org_tensorflow//tensorflow/core/framework:tensor_shape",
         "@org_tensorflow//tensorflow/core/lib/core:errors",
         "@org_tensorflow//tensorflow/core/lib/gtl:inlined_vector",
