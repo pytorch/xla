@@ -1,7 +1,8 @@
 #ifndef XLA_TORCH_XLA_CSRC_CONVOLUTION_H_
 #define XLA_TORCH_XLA_CSRC_CONVOLUTION_H_
 
-#include "absl/types/span.h" // gtl::ArraySlice 
+#include "absl/types/span.h"
+#include "tensorflow/core/lib/gtl/array_slice.h" // gtl::ArraySlice 
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 
 #include "tensorflow/compiler/tf2xla/kernels/conv_op_helpers.h" // ConvOpAttrs
