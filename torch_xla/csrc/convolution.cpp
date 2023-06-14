@@ -1,22 +1,24 @@
 #include "torch_xla/csrc/convolution.h"
 
-// #include "tensorflow/compiler/tf2xla/kernels/conv_op_helpers.h" // (done)CheckConvAttrs // (done)MakeXlaBackpropInputConvOp // (whoisit)ConvAttrs
+// #include "tensorflow/compiler/tf2xla/kernels/conv_op_helpers.h" // (done)CheckConvAttrs->PTXLACheckConvAttrs  // (done)MakeXlaBackpropInputConvOp->PTXLAMakeXlaBackpropInputConvOp // (whoisit)ConvAttrs
 #include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/xla_lower_util.h"
+
 #include "tensorflow/core/util/tensor_format.h" // GetTensorBatchDimIndex // GetTensorFeatureDimIndex // GetTensorSpatialDimIndex
-#include "tensorflow/tsl/platform/errors.h" // tsl::errors::InvalidArgument // 
 #include "tensorflow/core/kernels/conv_grad_shape_utils.h" // ConvBackpropDimensions // 
-#include "tensorflow/core/util/padding.h" // tensorflow::Padding // 
+// #include "tensorflow/core/util/padding.h" // tensorflow::Padding // 
 #include "tensorflow/core/util/tensor_format.h" // TensorFormat
 #include "tensorflow/core/framework/tensor_shape.h" // TensorShape
 #include "tensorflow/compiler/tf2xla/shape_util.h" // XLAShapeToTensorShape
 #include "tensorflow/core/kernels/conv_grad_shape_utils.h" // ConvBackpropComputeDimensionsV2
-#include "tensorflow/compiler/xla/xla_data.pb.h" // ConvolutionDimensionNumbers // PaddingType // PrecisionConfig
-#include "tensorflow/compiler/xla/client/xla_builder.h" // DynamicConvInputGrad // ConvGeneralDilated
-#include "tensorflow/tsl/platform/tensor_float_32_utils.h" // tensor_float_32_execution_enabled
+
+#include "tensorflow/compiler/xla/xla_data.pb.h" // (done)ConvolutionDimensionNumbers // (done)PaddingType // (done)PrecisionConfig
+#include "tensorflow/compiler/xla/client/xla_builder.h" // (done)DynamicConvInputGrad // (done)ConvGeneralDilated
+#include "tensorflow/tsl/platform/tensor_float_32_utils.h" // (done)tensor_float_32_execution_enabled
+#include "tensorflow/tsl/platform/errors.h" // (done)tsl::errors::InvalidArgument // 
 
 namespace torch_xla {
 namespace {
@@ -153,7 +155,7 @@ tensorflow::ConvOpAttrs MakeConvOpAttrs(
   conv_op_attrs.strides = {1, 1};
   std::copy(spatial_stride.begin(), spatial_stride.end(),
             std::back_inserter(conv_op_attrs.strides));
-  conv_op_attrs.padding = tensorflow::Padding::EXPLICIT;
+  conv_op_attrs.padding = PTXLAPadding::EXPLICIT;
   // https://github.com/tensorflow/tensorflow/blob/ec81825aaf7e848d9f8ddffdf1e0d20aebe9172c/tensorflow/core/util/padding.cc#L40
   // explicit_padding requires to have (spatial_dims + 2) * 2 elements
   conv_op_attrs.explicit_paddings.resize(4);
@@ -282,7 +284,7 @@ tsl::Status PTXLAConvBackpropComputeDimensionsV2XlaShapes(
     tsl::StringPiece label, int num_spatial_dims, const xla::Shape& input_shape,
     const xla::Shape& filter_shape, const xla::Shape& out_backprop_shape,
     absl::Span<const tsl::int32> dilations, const std::vector<tsl::int32>& strides,
-    tensorflow::Padding padding, tensorflow::TensorFormat data_format, tensorflow::ConvBackpropDimensions* dims,
+    PTXLAPadding padding, tensorflow::TensorFormat data_format, tensorflow::ConvBackpropDimensions* dims,
     absl::Span<const int64_t> explicit_paddings) {
   tensorflow::TensorShape input_tensor_shape, filter_tensor_shape,
       out_backprop_tensor_shape;

@@ -3,21 +3,40 @@
 
 #include "absl/types/span.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "tensorflow/tsl/platform/stringpiece.h" // StringPiece
+
 #include "tensorflow/compiler/tf2xla/kernels/conv_op_helpers.h" // ConvOpAttrs
 #include "tensorflow/core/util/tensor_format.h" // GetTensorBatchDimIndex // GetTensorFeatureDimIndex // GetTensorSpatialDimIndex
-#include "tensorflow/tsl/platform/errors.h" // tsl::errors::InvalidArgument // 
 #include "tensorflow/core/kernels/conv_grad_shape_utils.h" // ConvBackpropDimensions // 
-#include "tensorflow/core/util/padding.h" // tensorflow::Padding // 
+// #include "tensorflow/core/util/padding.h" // tensorflow::Padding // 
 #include "tensorflow/core/util/tensor_format.h" // TensorFormat
 #include "tensorflow/core/framework/tensor_shape.h" // TensorShape
 #include "tensorflow/compiler/tf2xla/shape_util.h" // XLAShapeToTensorShape
 #include "tensorflow/core/kernels/conv_grad_shape_utils.h" // ConvBackpropComputeDimensionsV2
-#include "tensorflow/compiler/xla/xla_data.pb.h" // ConvolutionDimensionNumbers // PaddingType // PrecisionConfig
-#include "tensorflow/compiler/xla/client/xla_builder.h" // DynamicConvInputGrad // ConvGeneralDilated
+
+#include "tensorflow/compiler/xla/xla_data.pb.h" // (done)ConvolutionDimensionNumbers // (done)PaddingType // (done)PrecisionConfig
+#include "tensorflow/compiler/xla/client/xla_builder.h" // (done)DynamicConvInputGrad // (done)ConvGeneralDilated
+#include "tensorflow/tsl/platform/stringpiece.h" // (done)StringPiece
+#include "tensorflow/tsl/platform/errors.h" // (done)tsl::errors::InvalidArgument // 
 
 
 namespace torch_xla {
+
+// PTXLAPadding: the padding we apply to the input tensor along the rows and columns
+// dimensions. This is usually used to make sure that the spatial dimensions do
+// not shrink when we progress with convolutions. Three types of padding are
+// supported:
+//   VALID: No padding is carried out.
+//   SAME: The pad value is computed so that the output will have the same
+//         dimensions as the input.
+//   EXPLICIT: The user specifies the pad values in the explicit_paddings
+//             attribute.
+// The padded area is typically zero-filled. For pooling ops, the padded area is
+// instead ignored. For max pool, this is equivalent to padding with -infinity.
+enum PTXLAPadding {
+  VALID = 1,     // No padding.
+  SAME = 2,      // Input and output layers have the same size.
+  EXPLICIT = 3,  // PTXLAPadding is explicitly specified
+};
 
 tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropInputConvOp(
     tsl::StringPiece type_string, const xla::Shape& input_shape, xla::XlaOp filter,
