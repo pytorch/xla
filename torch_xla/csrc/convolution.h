@@ -77,7 +77,7 @@ struct PTXLAConvBackpropSpatialDimension {
 tsl::Status PTXLAConvBackpropComputeDimensionsV2(
     tsl::StringPiece label, int num_spatial_dims, const tensorflow::TensorShape& input_shape,
     const tensorflow::TensorShape& filter_shape, const tensorflow::TensorShape& out_backprop_shape,
-    const gtl::ArraySlice<tsl::int32>& dilations, const std::vector<tsl::int32>& strides,
+    const tensorflow::gtl::ArraySlice<tsl::int32>& dilations, const std::vector<tsl::int32>& strides,
     PTXLAPadding padding, absl::Span<const int64_t> explicit_paddings,
     tensorflow::TensorFormat data_format, tensorflow::ConvBackpropDimensions* dims);
 
