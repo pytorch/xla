@@ -1,7 +1,7 @@
 #ifndef XLA_TORCH_XLA_CSRC_CONVOLUTION_H_
 #define XLA_TORCH_XLA_CSRC_CONVOLUTION_H_
 
-#include "absl/types/span.h"
+#include "absl/types/span.h" // gtl::ArraySlice 
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 
 #include "tensorflow/compiler/tf2xla/kernels/conv_op_helpers.h" // ConvOpAttrs
@@ -73,7 +73,7 @@ struct PTXLAConvBackpropSpatialDimension {
 // The V2 version computes the same outputs with arbitrary dilation rate and
 // supports explicit padding.
 // TODO(b/67112639): Merge V2 versions and the original versions eventually.
-Status PTXLAConvBackpropComputeDimensionsV2(
+tsl::Status PTXLAConvBackpropComputeDimensionsV2(
     StringPiece label, int num_spatial_dims, const TensorShape& input_shape,
     const TensorShape& filter_shape, const TensorShape& out_backprop_shape,
     const gtl::ArraySlice<int32>& dilations, const std::vector<int32>& strides,

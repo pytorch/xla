@@ -278,6 +278,71 @@ xla::Shape PTXLAGroupedFilterShapeForDepthwiseConvolution(
   return grouped_filter_shape;
 }
 
+tsl::Status PTXLAConvBackpropComputeDimensionsV2(
+    tsl::StringPiece label, int num_spatial_dims, const tensorflow::TensorShape& input_shape,
+    const tensorflow::TensorShape& filter_shape, const tensorflow::TensorShape& out_backprop_shape,
+    const gtl::ArraySlice<int32>& dilations, const std::vector<int32>& strides,
+    PTXLAPadding padding, absl::Span<const int64_t> explicit_paddings,
+    tensorflow::TensorFormat data_format, tensorflow::ConvBackpropDimensions* dims) {
+  // The + 2 in the following line is for the batch and feature dimensions.
+  const int num_dims = num_spatial_dims + 2;
+  if (input_shape.dims() != num_dims) {
+    return tsl::errors::InvalidArgument(label, ": input must be ", num_dims,
+                                   "-dimensional");
+  }
+  if (filter_shape.dims() != num_dims) {
+    return tsl::errors::InvalidArgument(label, ": filter must be ", num_dims,
+                                   "-dimensional");
+  }
+  if (out_backprop_shape.dims() != num_dims) {
+    return tsl::errors::InvalidArgument(label, ": out_backprop must be ", num_dims,
+                                   "-dimensional");
+  }
+  int batch_dim = tensorflow::GetTensorBatchDimIndex(num_dims, data_format);
+  dims->batch_size = input_shape.dim_size(batch_dim);
+  if (dims->batch_size != out_backprop_shape.dim_size(batch_dim)) {
+    return tsl::errors::InvalidArgument(
+        label, ": input and out_backprop must have the same batch size.",
+        " Input batch: ", dims->batch_size,
+        ", outbackprop batch: ", out_backprop_shape.dim_size(batch_dim),
+        ", batch_dim: ", batch_dim);
+  }
+
+  int feature_dim = tensorflow::GetTensorFeatureDimIndex(num_dims, data_format);
+  dims->in_depth = input_shape.dim_size(feature_dim);
+  // The input and output feature dimensions are the second last and last
+  // dimensions of the filter Tensor.
+  VLOG(2) << "input vs filter_in depth " << dims->in_depth << " "
+          << filter_shape.dim_size(num_dims - 2);
+  if (filter_shape.dim_size(num_dims - 2) <= 0) {
+    return tsl::errors ::InvalidArgument(
+        label, ": filter depth must be strictly greated than zero");
+  }
+  if (dims->in_depth % filter_shape.dim_size(num_dims - 2)) {
+    return tsl::errors::InvalidArgument(
+        label, ": input depth must be evenly divisible by filter depth");
+  }
+  dims->out_depth = filter_shape.dim_size(num_dims - 1);
+  if (dims->out_depth != out_backprop_shape.dim_size(feature_dim)) {
+    return tsl::errors::InvalidArgument(
+        label, ": filter and out_backprop must have the same out_depth");
+  }
+  dims->spatial_dims.resize(num_spatial_dims);
+  for (int i = 0; i < num_spatial_dims; ++i) {
+    int image_dim = tensorflow::GetTensorSpatialDimIndex(num_dims, data_format, i);
+    int64_t padding_before = -1, padding_after = -1;
+    if (padding == PTXLAPadding::EXPLICIT) {
+      padding_before = explicit_paddings[2 * image_dim];
+      padding_after = explicit_paddings[2 * image_dim + 1];
+    }
+    TF_RETURN_IF_ERROR(PTXLAConvBackpropExtractAndVerifyDimension(
+        label, input_shape, filter_shape, out_backprop_shape, dilations,
+        strides, padding, padding_before, padding_after, image_dim, i,
+        &dims->spatial_dims[i]));
+  }
+  return tsl::OkStatus();
+}
+
 // Wrapper around ConvBackpropComputeDimensions that converts from XLA shapes
 // to TensorShapes.
 tsl::Status PTXLAConvBackpropComputeDimensionsV2XlaShapes(
@@ -376,71 +441,6 @@ tsl::Status PTXLAConvBackpropExtractAndVerifyDimension(
   return tsl::OkStatus();
 }
 
-tsl::Status PTXLAConvBackpropComputeDimensionsV2(
-    tsl::StringPiece label, int num_spatial_dims, const tensorflow::TensorShape& input_shape,
-    const tensorflow::TensorShape& filter_shape, const tensorflow::TensorShape& out_backprop_shape,
-    const gtl::ArraySlice<int32>& dilations, const std::vector<int32>& strides,
-    PTXLAPadding padding, absl::Span<const int64_t> explicit_paddings,
-    tensorflow::TensorFormat data_format, tensorflow::ConvBackpropDimensions* dims) {
-  // The + 2 in the following line is for the batch and feature dimensions.
-  const int num_dims = num_spatial_dims + 2;
-  if (input_shape.dims() != num_dims) {
-    return tsl::errors::InvalidArgument(label, ": input must be ", num_dims,
-                                   "-dimensional");
-  }
-  if (filter_shape.dims() != num_dims) {
-    return tsl::errors::InvalidArgument(label, ": filter must be ", num_dims,
-                                   "-dimensional");
-  }
-  if (out_backprop_shape.dims() != num_dims) {
-    return tsl::errors::InvalidArgument(label, ": out_backprop must be ", num_dims,
-                                   "-dimensional");
-  }
-  int batch_dim = tensorflow::GetTensorBatchDimIndex(num_dims, data_format);
-  dims->batch_size = input_shape.dim_size(batch_dim);
-  if (dims->batch_size != out_backprop_shape.dim_size(batch_dim)) {
-    return tsl::errors::InvalidArgument(
-        label, ": input and out_backprop must have the same batch size.",
-        " Input batch: ", dims->batch_size,
-        ", outbackprop batch: ", out_backprop_shape.dim_size(batch_dim),
-        ", batch_dim: ", batch_dim);
-  }
-
-  int feature_dim = tensorflow::GetTensorFeatureDimIndex(num_dims, data_format);
-  dims->in_depth = input_shape.dim_size(feature_dim);
-  // The input and output feature dimensions are the second last and last
-  // dimensions of the filter Tensor.
-  VLOG(2) << "input vs filter_in depth " << dims->in_depth << " "
-          << filter_shape.dim_size(num_dims - 2);
-  if (filter_shape.dim_size(num_dims - 2) <= 0) {
-    return tsl::errors ::InvalidArgument(
-        label, ": filter depth must be strictly greated than zero");
-  }
-  if (dims->in_depth % filter_shape.dim_size(num_dims - 2)) {
-    return tsl::errors::InvalidArgument(
-        label, ": input depth must be evenly divisible by filter depth");
-  }
-  dims->out_depth = filter_shape.dim_size(num_dims - 1);
-  if (dims->out_depth != out_backprop_shape.dim_size(feature_dim)) {
-    return tsl::errors::InvalidArgument(
-        label, ": filter and out_backprop must have the same out_depth");
-  }
-  dims->spatial_dims.resize(num_spatial_dims);
-  for (int i = 0; i < num_spatial_dims; ++i) {
-    int image_dim = tensorflow::GetTensorSpatialDimIndex(num_dims, data_format, i);
-    int64_t padding_before = -1, padding_after = -1;
-    if (padding == PTXLAPadding::EXPLICIT) {
-      padding_before = explicit_paddings[2 * image_dim];
-      padding_after = explicit_paddings[2 * image_dim + 1];
-    }
-    TF_RETURN_IF_ERROR(PTXLAConvBackpropExtractAndVerifyDimension(
-        label, input_shape, filter_shape, out_backprop_shape, dilations,
-        strides, padding, padding_before, padding_after, image_dim, i,
-        &dims->spatial_dims[i]));
-  }
-  return tsl::OkStatus();
-}
-
 tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropInputConvOp(tsl::StringPiece type_string,
                                                 const xla::Shape& input_shape,
                                                 xla::XlaOp filter,
@@ -497,12 +497,12 @@ tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropInputConvOp(tsl::StringPiece type_
   for (int i = 0; i < attrs.num_spatial_dims; ++i) {
     int64_t dim = tensorflow::GetTensorSpatialDimIndex(num_dims, attrs.data_format, i);
     if (out_backprop_shape.is_dynamic_dimension(dim)) {
-      TF_RET_CHECK(attrs.padding == tensorflow::VALID || attrs.padding == tensorflow::SAME)
+      TF_RET_CHECK(attrs.padding == PTXLAPadding::VALID || attrs.padding == PTXLAPadding::SAME)
           << "Dynamic convolution only supports valid and same padding";
-      if (attrs.padding == tensorflow::VALID) {
+      if (attrs.padding == PTXLAPadding::VALID) {
         padding_type = xla::PaddingType::PADDING_VALID;
       }
-      if (attrs.padding == tensorflow::SAME) {
+      if (attrs.padding == PTXLAPadding::SAME) {
         padding_type = xla::PaddingType::PADDING_SAME;
       }
     }
