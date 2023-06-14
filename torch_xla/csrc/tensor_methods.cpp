@@ -1838,6 +1838,10 @@ XLATensorPtr narrow(const XLATensorPtr& input, int64_t dim, int64_t start,
           input_shape.get().dimensions()),
       dim, start);
   return input->CreateViewTensor(std::move(view_info));
+
+
+  torch::lazy::MakeNode<GenericSlice>(ir_value, view_info.indices,
+                                                 view_info.shape.dimensions());
 }
 
 std::tuple<XLATensorPtr, XLATensorPtr, XLATensorPtr> native_batch_norm(
