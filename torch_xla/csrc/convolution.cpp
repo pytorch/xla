@@ -339,7 +339,7 @@ tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropInputConvOp(tsl::StringPiece type_
                                                 xla::XlaOp filter,
                                                 xla::XlaOp out_backprop,
                                                 const tensorflow::ConvOpAttrs& attrs,
-                                                xla::XlaOp* input_sizes) {
+                                                xla::XlaOp* input_sizes = nullptr) {
   TF_RETURN_IF_ERROR(PTXLACheckConvAttrs(attrs));
 
   int num_dims = attrs.num_spatial_dims + 2;
