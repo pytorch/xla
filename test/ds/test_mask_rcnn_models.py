@@ -101,6 +101,12 @@ class Model():
     self.model.train()
     for _batch_id, (images, targets) in zip(
         range(self.NUM_OF_BATCHES), self.data_loader):
+      # images is a list. targets is a list of dict.
+      # images[0] is a torch.tensor.
+      # targets[0] is a dict with str key and torch.tensor value.
+      # both images[i] and targets[i].value is on xla device.
+      # sample_target_sample_key = list(targets[0].keys())[0]
+      # print('next(self.model.parameters()).device=', next(self.model.parameters()).device) # prints xla:0.
       loss_dict = self.model(images, targets)
       losses = sum(loss for loss in loss_dict.values())
       self.optimizer.zero_grad()
