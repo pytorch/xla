@@ -39,6 +39,23 @@ struct PTXLAConvBackpropSpatialDimension {
   int64_t pad_before, pad_after;
 };
 
+// PTXLAPadding: the padding we apply to the input tensor along the rows and columns
+// dimensions. This is usually used to make sure that the spatial dimensions do
+// not shrink when we progress with convolutions. Three types of padding are
+// supported:
+//   VALID: No padding is carried out.
+//   SAME: The pad value is computed so that the output will have the same
+//         dimensions as the input.
+//   EXPLICIT: The user specifies the pad values in the explicit_paddings
+//             attribute.
+// The padded area is typically zero-filled. For pooling ops, the padded area is
+// instead ignored. For max pool, this is equivalent to padding with -infinity.
+enum PTXLAPadding {
+  VALID = 1,     // No padding.
+  SAME = 2,      // Input and output layers have the same size.
+  EXPLICIT = 3,  // PTXLAPadding is explicitly specified
+};
+
 // Computed dimensions for a backwards convolution.
 struct PTXLAConvBackpropDimensions {
   // Information about each spatial dimension.
@@ -58,25 +75,7 @@ struct PTXLAConvBackpropDimensions {
   int64_t dilation(int dim) const { return spatial_dims[dim].dilation; }
 
   // Compute padding for the given spatial dimension.
-  int SpatialPadding(const Padding& padding, int dim) const;
-};
-
-
-// PTXLAPadding: the padding we apply to the input tensor along the rows and columns
-// dimensions. This is usually used to make sure that the spatial dimensions do
-// not shrink when we progress with convolutions. Three types of padding are
-// supported:
-//   VALID: No padding is carried out.
-//   SAME: The pad value is computed so that the output will have the same
-//         dimensions as the input.
-//   EXPLICIT: The user specifies the pad values in the explicit_paddings
-//             attribute.
-// The padded area is typically zero-filled. For pooling ops, the padded area is
-// instead ignored. For max pool, this is equivalent to padding with -infinity.
-enum PTXLAPadding {
-  VALID = 1,     // No padding.
-  SAME = 2,      // Input and output layers have the same size.
-  EXPLICIT = 3,  // PTXLAPadding is explicitly specified
+  int SpatialPadding(const PTXLAPadding& padding, int dim) const;
 };
 
 // ConvOpAttrs contains all of the metadata necessary to specify a TF or XLA
