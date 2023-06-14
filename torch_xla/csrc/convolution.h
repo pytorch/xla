@@ -5,7 +5,7 @@
 // #include "tensorflow/core/lib/gtl/array_slice.h" // gtl::ArraySlice  // tensorflow::gtl::ArraySlice -> absl::Span<const T>
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 
-#include "tensorflow/compiler/tf2xla/kernels/conv_op_helpers.h" // ConvOpAttrs
+// #include "tensorflow/compiler/tf2xla/kernels/conv_op_helpers.h" // ConvOpAttrs
 #include "tensorflow/core/util/tensor_format.h" // GetTensorBatchDimIndex // GetTensorFeatureDimIndex // GetTensorSpatialDimIndex
 #include "tensorflow/core/kernels/conv_grad_shape_utils.h" // ConvBackpropDimensions // ConvBackpropComputeDimensionsV2
 // #include "tensorflow/core/util/padding.h" // tensorflow::Padding // 
