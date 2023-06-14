@@ -74,11 +74,11 @@ struct PTXLAConvBackpropSpatialDimension {
 // supports explicit padding.
 // TODO(b/67112639): Merge V2 versions and the original versions eventually.
 tsl::Status PTXLAConvBackpropComputeDimensionsV2(
-    StringPiece label, int num_spatial_dims, const TensorShape& input_shape,
-    const TensorShape& filter_shape, const TensorShape& out_backprop_shape,
-    const gtl::ArraySlice<int32>& dilations, const std::vector<int32>& strides,
-    Padding padding, absl::Span<const int64_t> explicit_paddings,
-    TensorFormat data_format, tensorflow::ConvBackpropDimensions* dims);
+    tsl::StringPiece label, int num_spatial_dims, const tensorflow::TensorShape& input_shape,
+    const tensorflow::TensorShape& filter_shape, const tensorflow::TensorShape& out_backprop_shape,
+    const gtl::ArraySlice<tsl::int32>& dilations, const std::vector<tsl::int32>& strides,
+    PTXLAPadding padding, absl::Span<const int64_t> explicit_paddings,
+    tensorflow::TensorFormat data_format, tensorflow::ConvBackpropDimensions* dims);
 
 tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropInputConvOp(
     tsl::StringPiece type_string, const xla::Shape& input_shape, xla::XlaOp filter,
