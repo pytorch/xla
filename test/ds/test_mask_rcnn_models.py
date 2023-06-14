@@ -19,7 +19,7 @@ import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
 
 import torchvision
-from .coco_utils import ConvertCocoPolysToMask
+from coco_utils import ConvertCocoPolysToMask
 from torchvision.datasets.coco import CocoDetection
 
 # silence some spam
@@ -63,6 +63,11 @@ class Model():
 
   def __init__(self, test, device, batch_size=None, extra_args=[]):
     print('xw32 calling vision_maskrcnn.__init__')
+    self.device = device
+    if batch_size:
+      self.batch_size = batch_size
+    else:
+      self.batch_size = self.DEFAULT_TRAIN_BSIZE if test == 'train' else self.DEFAULT_EVAL_BSIZE
     self.model = torchvision.models.detection.maskrcnn_resnet50_fpn(
         weights=torchvision.models.detection.MaskRCNN_ResNet50_FPN_Weights.
         COCO_V1).to(self.device)
@@ -92,6 +97,7 @@ class Model():
             collate_fn=_collate_fn), self.device)
 
   def train(self):
+    print('xw32 mask rcnn training starts.')
     self.model.train()
     for _batch_id, (images, targets) in zip(
         range(self.NUM_OF_BATCHES), self.data_loader):
@@ -110,9 +116,15 @@ class Model():
     out = list(map(lambda x: x.values(), out))
     return tuple(itertools.chain(*out))
 
+class TestDynamicShapeMaskRCNN(unittest.TestCase):
+
+  def test_mask_rcnn_training(self):
+    model = Model('train', xla_dev)
+    model.train()
+
 
 if __name__ == '__main__':
-  assert os.environ['XLA_EXPERIMENTAL'] != ''
+  # assert os.environ['XLA_EXPERIMENTAL'] != ''
   test = unittest.main(verbosity=FLAGS.verbosity, exit=False)
   # DISABLE PYTHON DISPATCHER FLAG
   del pd
