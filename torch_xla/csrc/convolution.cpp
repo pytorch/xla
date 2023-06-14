@@ -282,7 +282,7 @@ xla::Shape PTXLAGroupedFilterShapeForDepthwiseConvolution(
 tsl::Status PTXLAConvBackpropComputeDimensionsV2(
     tsl::StringPiece label, int num_spatial_dims, const tensorflow::TensorShape& input_shape,
     const tensorflow::TensorShape& filter_shape, const tensorflow::TensorShape& out_backprop_shape,
-    const tensorflow::gtl::ArraySlice<int32>& dilations, const std::vector<int32>& strides,
+    const tensorflow::gtl::ArraySlice<tsl::int32>& dilations, const std::vector<tsl::int32>& strides,
     PTXLAPadding padding, absl::Span<const int64_t> explicit_paddings,
     tensorflow::TensorFormat data_format, tensorflow::ConvBackpropDimensions* dims) {
   // The + 2 in the following line is for the batch and feature dimensions.
@@ -405,7 +405,7 @@ xla::XlaOp PTXLATransposeFilterForGroupConvolutionBackpropInput(
 tsl::Status PTXLAConvBackpropExtractAndVerifyDimension(
     tsl::StringPiece label, const tensorflow::TensorShape& input_shape,
     const tensorflow::TensorShape& filter_shape, const tensorflow::TensorShape& output_shape,
-    const tensorflow::gtl::ArraySlice<int32> dilations, const std::vector<int32>& strides,
+    const tensorflow::gtl::ArraySlice<tsl::int32> dilations, const std::vector<tsl::int32>& strides,
     PTXLAPadding padding, int64_t padding_before, int64_t padding_after,
     int spatial_dim, int filter_spatial_dim,
     PTXLAConvBackpropSpatialDimension* dim) {
