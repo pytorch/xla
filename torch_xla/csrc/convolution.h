@@ -10,7 +10,7 @@
 // #include "tensorflow/core/kernels/conv_grad_shape_utils.h" // (done)ConvBackpropDimensions -> PTXLAConvBackpropDimensions // (done)ConvBackpropComputeDimensionsV2 -> PTXLAConvBackpropComputeDimensionsV2
 // #include "tensorflow/core/util/padding.h" // tensorflow::Padding // 
 #include "tensorflow/core/framework/tensor_shape.h" // TensorShape
-#include "tensorflow/compiler/tf2xla/shape_util.h" // XLAShapeToTensorShape
+// #include "tensorflow/compiler/tf2xla/shape_util.h" // XLAShapeToTensorShape
 
 #include "tensorflow/tsl/lib/gtl/inlined_vector.h" // #include "tensorflow/core/lib/gtl/inlined_vector.h" // gtl::InlinedVector
 #include "tensorflow/compiler/xla/xla_data.pb.h" // (done)ConvolutionDimensionNumbers // (done)PaddingType // (done)PrecisionConfig
