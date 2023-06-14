@@ -18,7 +18,7 @@ namespace {
 // Converts the tensor data format to the one required by the XLA convolution
 // library.
 xla::ConvolutionDimensionNumbers MakeConvolutionDimensionNumbers(
-    torch_xla::XLATensorFormat data_format, int num_spatial_dims) {
+    XLATensorFormat data_format, int num_spatial_dims) {
   int num_dims = num_spatial_dims + 2;
   int batch_dimension = GetTensorBatchDimIndex(num_dims, data_format);
   int feature_dimension = GetTensorFeatureDimIndex(num_dims, data_format);
