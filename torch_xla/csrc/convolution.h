@@ -22,6 +22,23 @@
 
 namespace torch_xla {
 
+// Information about a single spatial dimension for a convolution
+// backpropagation.
+struct PTXLAConvBackpropSpatialDimension {
+  int64_t input_size;
+  int64_t filter_size;
+  int64_t output_size;
+  int64_t stride;
+  int64_t dilation;
+
+  // Output size after scaling by the stride.
+  int64_t expanded_output_size;
+
+  // Number of padding elements to be added before/after this dimension of
+  // the input when computing Conv?DBackpropInput.
+  int64_t pad_before, pad_after;
+};
+
 // Computed dimensions for a backwards convolution.
 struct PTXLAConvBackpropDimensions {
   // Information about each spatial dimension.
@@ -76,23 +93,6 @@ struct PTXLAConvOpAttrs {
   PTXLAPadding padding;
   std::vector<int64_t> explicit_paddings;
   tensorflow::TensorFormat data_format;
-};
-
-// Information about a single spatial dimension for a convolution
-// backpropagation.
-struct PTXLAConvBackpropSpatialDimension {
-  int64_t input_size;
-  int64_t filter_size;
-  int64_t output_size;
-  int64_t stride;
-  int64_t dilation;
-
-  // Output size after scaling by the stride.
-  int64_t expanded_output_size;
-
-  // Number of padding elements to be added before/after this dimension of
-  // the input when computing Conv?DBackpropInput.
-  int64_t pad_before, pad_after;
 };
 
 // The V2 version computes the same outputs with arbitrary dilation rate and
