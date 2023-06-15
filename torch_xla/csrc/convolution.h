@@ -6,7 +6,7 @@
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 
 // #include "tensorflow/compiler/tf2xla/kernels/conv_op_helpers.h" // ConvOpAttrss
-#include "tensorflow/core/util/tensor_format.h" // TensorFormat // GetTensorBatchDimIndex // GetTensorFeatureDimIndex // (done)GetTensorSpatialDimIndex->PTXLAGetTensorSpatialDimIndex
+#include "tensorflow/core/util/tensor_format.h" // TensorFormat // GetTensorBatchDimIndex // (done)GetTensorFeatureDimIndex -> PTXLAGetTensorFeatureDimIndex // (done)GetTensorSpatialDimIndex->PTXLAGetTensorSpatialDimIndex
 // #include "tensorflow/core/kernels/conv_grad_shape_utils.h" // (done)ConvBackpropDimensions -> PTXLAConvBackpropDimensions // (done)ConvBackpropComputeDimensionsV2 -> PTXLAConvBackpropComputeDimensionsV2
 // #include "tensorflow/core/util/padding.h" // tensorflow::Padding // 
 // #include "tensorflow/core/framework/tensor_shape.h" // TensorShape
@@ -21,6 +21,44 @@
 
 
 namespace torch_xla {
+
+// Returns the index of the batch dimension.
+inline int PTXLAGetTensorBatchDimIndex(int num_dims, tensorflow::TensorFormat format) {
+  switch (format) {
+    case tensorflow::FORMAT_NHWC:
+    case tensorflow::FORMAT_NCHW:
+    case tensorflow::FORMAT_NCHW_VECT_C:
+    case tensorflow::FORMAT_NHWC_VECT_W:
+      return 0;
+    case tensorflow::FORMAT_HWNC:
+      return num_dims - 2;
+    case tensorflow::FORMAT_HWCN:
+      return num_dims - 1;
+    default:
+      LOG(FATAL) << "Unknown format " << format;
+      return -1;  // Avoid compiler warning about missing return value
+  }
+}
+
+// Returns the index of the feature dimension. If format is NCHW_VECT_C, returns
+// the index of the outer feature dimension (i.e. dimension 1, whose size would
+// be num_features / 4 in this case).
+inline int PTXLAGetTensorFeatureDimIndex(int num_dims, tensorflow::TensorFormat format) {
+  switch (format) {
+    case tensorflow::FORMAT_NHWC:
+    case tensorflow::FORMAT_HWNC:
+      return num_dims - 1;
+    case tensorflow::FORMAT_NHWC_VECT_W:
+    case tensorflow::FORMAT_HWCN:
+      return num_dims - 2;
+    case tensorflow::FORMAT_NCHW:
+    case tensorflow::FORMAT_NCHW_VECT_C:
+      return 1;
+    default:
+      LOG(FATAL) << "Unknown format " << format;
+      return -1;  // Avoid compiler warning about missing return value
+  }
+}
 
 // Returns the number of spatial dims of a tensor of rank 'num_dims' and tensor
 // format 'format'.

@@ -8,7 +8,7 @@
 #include "torch_xla/csrc/xla_lower_util.h"
 
 // #include "tensorflow/core/lib/gtl/array_slice.h" // tensorflow::gtl::ArraySlice -> absl::Span<const T>
-#include "tensorflow/core/util/tensor_format.h" // TensorFormat // GetTensorBatchDimIndex // GetTensorFeatureDimIndex // (done)GetTensorSpatialDimIndex -> PTXLAGetTensorSpatialDimIndex
+#include "tensorflow/core/util/tensor_format.h" // TensorFormat // (done)GetTensorBatchDimIndex -> PTXLAGetTensorBatchDimIndexs // (done)GetTensorFeatureDimIndex -> PTXLAGetTensorFeatureDimIndex // (done)GetTensorSpatialDimIndex -> PTXLAGetTensorSpatialDimIndex
 // #include "tensorflow/core/kernels/conv_grad_shape_utils.h" // (done)ConvBackpropComputeDimensionsV2 -> PTXLAConvBackpropComputeDimensionsV2 // (done)ConvBackpropDimensions -> PTXLAConvBackpropDimensions // (done)ConvBackpropExtractAndVerifyDimension->PTXLAConvBackpropExtractAndVerifyDimension
 // #include "tensorflow/core/util/padding.h" // tensorflow::Padding // 
 // #include "tensorflow/core/framework/tensor_shape.h" // TensorShape
@@ -354,8 +354,8 @@ tsl::Status PTXLACheckConvAttrs(const PTXLAConvOpAttrs& attrs) {
     return tsl::errors::InvalidArgument("Sliding window strides field must specify ",
                                    num_dims, " dimensions");
   }
-  int batch_dim = tensorflow::GetTensorBatchDimIndex(num_dims, attrs.data_format);
-  int feature_dim = tensorflow::GetTensorFeatureDimIndex(num_dims, attrs.data_format);
+  int batch_dim = PTXLAGetTensorBatchDimIndex(num_dims, attrs.data_format);
+  int feature_dim = PTXLAGetTensorFeatureDimIndex(num_dims, attrs.data_format);
   if (attrs.strides[batch_dim] != 1 || attrs.strides[feature_dim] != 1) {
     return tsl::errors::Unimplemented(
         "Current implementation does not yet support strides in the batch and "
@@ -508,7 +508,7 @@ tsl::Status PTXLAConvBackpropComputeDimensionsV2(
     return tsl::errors::InvalidArgument(label, ": out_backprop must be ", num_dims,
                                    "-dimensional");
   }
-  int batch_dim = tensorflow::GetTensorBatchDimIndex(num_dims, data_format);
+  int batch_dim = PTXLAGetTensorBatchDimIndex(num_dims, data_format);
   dims->batch_size = input_shape.dimensions(batch_dim);
   if (dims->batch_size != out_backprop_shape.dimensions(batch_dim)) {
     return tsl::errors::InvalidArgument(
@@ -518,7 +518,7 @@ tsl::Status PTXLAConvBackpropComputeDimensionsV2(
         ", batch_dim: ", batch_dim);
   }
 
-  int feature_dim = tensorflow::GetTensorFeatureDimIndex(num_dims, data_format);
+  int feature_dim = PTXLAGetTensorFeatureDimIndex(num_dims, data_format);
   dims->in_depth = input_shape.dimensions(feature_dim);
   // The input and output feature dimensions are the second last and last
   // dimensions of the filter Tensor.
@@ -623,8 +623,8 @@ tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropInputConvOp(tsl::StringPiece type_
   TF_RETURN_IF_ERROR(PTXLACheckConvAttrs(attrs));
 
   int num_dims = attrs.num_spatial_dims + 2;
-  int batch_dim = tensorflow::GetTensorBatchDimIndex(num_dims, attrs.data_format);
-  int feature_dim = tensorflow::GetTensorFeatureDimIndex(num_dims, attrs.data_format);
+  int batch_dim = PTXLAGetTensorBatchDimIndex(num_dims, attrs.data_format);
+  int feature_dim = PTXLAGetTensorFeatureDimIndex(num_dims, attrs.data_format);
 
   auto* builder = filter.builder();
   TF_ASSIGN_OR_RETURN(xla::Shape filter_shape, builder->GetShape(filter));
@@ -766,8 +766,8 @@ tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropFilterConvOp(tsl::StringPiece type
   // Obtain some useful dimensions:
   // The last two dimensions of the filter are the input and output shapes.
   int num_dims = attrs.num_spatial_dims + 2;
-  int n_dim = tensorflow::GetTensorBatchDimIndex(num_dims, attrs.data_format);
-  int c_dim = tensorflow::GetTensorFeatureDimIndex(num_dims, attrs.data_format);
+  int n_dim = PTXLAGetTensorBatchDimIndex(num_dims, attrs.data_format);
+  int c_dim = PTXLAGetTensorFeatureDimIndex(num_dims, attrs.data_format);
   int64_t in_depth = input_shape.dimensions(c_dim),
           filter_in_depth = filter_shape.dimensions(attrs.num_spatial_dims),
           batch_group_count =
