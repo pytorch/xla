@@ -440,7 +440,7 @@ tsl::Status PTXLAGetWindowedOutputSizeVerboseV2(
   return tsl::OkStatus();
 }
 
-// PTXLAConvBackpropExtractAndVerifyDimension do check, return status
+// check dimension
 tsl::Status PTXLAConvBackpropExtractAndVerifyDimension(
     tsl::StringPiece label, const xla::Shape& input_shape,
     const xla::Shape& filter_shape, const xla::Shape& output_shape,
@@ -481,7 +481,7 @@ tsl::Status PTXLAConvBackpropExtractAndVerifyDimension(
   return tsl::OkStatus();
 }
 
-// PTXLAConvBackpropComputeDimensionsV2 do things using TensorShape
+// check dimension
 tsl::Status PTXLAConvBackpropComputeDimensionsV2(
     tsl::StringPiece label, int num_spatial_dims, const xla::Shape& input_shape,
     const xla::Shape& filter_shape, const xla::Shape& out_backprop_shape,
