@@ -124,7 +124,7 @@ inline int PTXLAGetTensorSpatialDims(int num_dims, PTXLATensorFormat format) {
   }
 }
 
-stdin::string PTXLAToString(PTXLATensorFormat format) {
+std::string PTXLAToString(PTXLATensorFormat format) {
   switch (format) {
     case FORMAT_NHWC:
       return "NHWC";
