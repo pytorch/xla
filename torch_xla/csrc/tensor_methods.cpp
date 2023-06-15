@@ -2473,8 +2473,22 @@ std::tuple<XLATensorPtr, XLATensorPtr> std_mean(const XLATensorPtr& input,
 XLATensorPtr sub(const XLATensorPtr& input, const XLATensorPtr& other,
                  const at::Scalar& alpha,
                  c10::optional<at::ScalarType> logical_element_type) {
-  torch::lazy::Value constant = XLAGraphExecutor::Get()->GetIrValueForScalar(
-      alpha, other->shape(), logical_element_type, other->GetDevice());
+  xla::Shape input_shape = input->shape().get();
+  xla::Shape other_shape = other->shape().get();
+  torch::lazy::Value constant;
+  if (!input_shape.is_dynamic() && !other_shape.is_dynamic()) {
+    constant = XLAGraphExecutor::Get()->GetIrValueForScalar(
+        alpha, other->shape(), logical_element_type, input->GetDevice());
+  } else {
+    SymIntElements sym_int_elements(other->GetIrValue());
+    xla::PrimitiveType primitive_type =
+        logical_element_type
+            ? MakeXlaPrimitiveType(*logical_element_type, &(input->GetDevice()))
+            : other->shape().get().element_type();
+    constant = XLAGraphExecutor::Get()->GetIrValueForScalar(
+        alpha, sym_int_elements, primitive_type, input->GetDevice());
+  }
+
   return input->CreateFrom(input->GetIrValue() - other->GetIrValue() * constant,
                            logical_element_type);
 }
