@@ -8,7 +8,7 @@
 #include "torch_xla/csrc/xla_lower_util.h"
 
 // #include "tensorflow/core/lib/gtl/array_slice.h" // tensorflow::gtl::ArraySlice -> absl::Span<const T>
-#include "tensorflow/core/util/tensor_format.h" // TensorFormat // (done)GetTensorBatchDimIndex -> PTXLAGetTensorBatchDimIndexs // (done)GetTensorFeatureDimIndex -> PTXLAGetTensorFeatureDimIndex // (done)GetTensorSpatialDimIndex -> PTXLAGetTensorSpatialDimIndex
+#include "tensorflow/core/util/tensor_format.h" // (done)TensorFormat -> PTXLATensorFormat // (done)GetTensorBatchDimIndex -> PTXLAGetTensorBatchDimIndexs // (done)GetTensorFeatureDimIndex -> PTXLAGetTensorFeatureDimIndex // (done)GetTensorSpatialDimIndex -> PTXLAGetTensorSpatialDimIndex
 // #include "tensorflow/core/kernels/conv_grad_shape_utils.h" // (done)ConvBackpropComputeDimensionsV2 -> PTXLAConvBackpropComputeDimensionsV2 // (done)ConvBackpropDimensions -> PTXLAConvBackpropDimensions // (done)ConvBackpropExtractAndVerifyDimension->PTXLAConvBackpropExtractAndVerifyDimension
 // #include "tensorflow/core/util/padding.h" // tensorflow::Padding // 
 // #include "tensorflow/core/framework/tensor_shape.h" // TensorShape
@@ -164,7 +164,7 @@ PTXLAConvOpAttrs MakeConvOpAttrs(
     conv_op_attrs.explicit_paddings.push_back(spatial_padding[spatial_dim]);
     conv_op_attrs.explicit_paddings.push_back(spatial_padding[spatial_dim]);
   }
-  conv_op_attrs.data_format = tensorflow::TensorFormat::FORMAT_NCHW;
+  conv_op_attrs.data_format = PTXLATensorFormat::FORMAT_NCHW;
   return conv_op_attrs;
 }
 
@@ -492,7 +492,7 @@ tsl::Status PTXLAConvBackpropComputeDimensionsV2(
     tsl::StringPiece label, int num_spatial_dims, const xla::Shape& input_shape,
     const xla::Shape& filter_shape, const xla::Shape& out_backprop_shape,
     /*const*/absl::Span<const tsl::int32> dilations, const std::vector<tsl::int32>& strides,
-    PTXLAPadding padding, tensorflow::TensorFormat data_format, PTXLAConvBackpropDimensions* dims,
+    PTXLAPadding padding, PTXLATensorFormat data_format, PTXLAConvBackpropDimensions* dims,
     absl::Span<const int64_t> explicit_paddings) {
   // The + 2 in the following line is for the batch and feature dimensions.
   const int num_dims = num_spatial_dims + 2;
