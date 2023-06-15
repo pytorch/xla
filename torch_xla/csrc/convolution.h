@@ -130,7 +130,7 @@ inline int PTXLAGetTensorSpatialDimIndex(int num_dims, PTXLATensorFormat format,
                                     int spatial_dim) {
   CHECK(spatial_dim >= 0 &&
         spatial_dim < PTXLAGetTensorSpatialDims(num_dims, format))
-      << spatial_dim << " " << num_dims << " " << ToString(format);
+      << spatial_dim << " " << num_dims << " " << tensorflow::ToString(format);
   switch (format) {
     case FORMAT_NHWC:
     case FORMAT_NHWC_VECT_W:
