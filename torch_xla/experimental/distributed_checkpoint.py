@@ -31,17 +31,17 @@ from torch.distributed.checkpoint.metadata import (
     Metadata,
     STATE_DICT_TYPE,
 )
-from torch.distributed.checkpoint._nested_dict import (
-    FLATTEN_MAPPING,
-    flatten_state_dict,
-)
 from torch.distributed.checkpoint.utils import find_state_dict_object
-from torch.distributed.checkpoint._dedup_tensors import dedup_tensors
-from torch.distributed.checkpoint._traverse import set_element
 from torch.distributed._shard._utils import narrow_tensor_by_index
 from torch.utils._pytree import tree_map
 from torch_xla.experimental.xla_sharding import (XLAShardedTensor, XLAShard,
                                                  ShardingType)
+from torch_xla.experimental._distributed_checkpoint_helpers import (
+    FLATTEN_MAPPING,
+    flatten_state_dict,
+    dedup_tensors,
+    set_element,
+)
 from typing import Any, Dict, List, Tuple, Union
 
 __all__ = [
