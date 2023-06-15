@@ -139,7 +139,7 @@ std::string PTXLAToString(PTXLATensorFormat format) {
     case FORMAT_HWCN:
       return "HWCN";
     default:
-      LOG(FATAL) << "Invalid Format: " << static_cast<int32>(format);
+      LOG(FATAL) << "Invalid Format: " << static_cast<tsl::int32>(format);
       return "INVALID_FORMAT";
   }
 }
