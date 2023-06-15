@@ -5,8 +5,8 @@
 // #include "tensorflow/core/lib/gtl/array_slice.h" // gtl::ArraySlice  // tensorflow::gtl::ArraySlice -> absl::Span<const T>
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 
-// #include "tensorflow/compiler/tf2xla/kernels/conv_op_helpers.h" // ConvOpAttrs
-#include "tensorflow/core/util/tensor_format.h" // TensorFormat // GetTensorBatchDimIndex // GetTensorFeatureDimIndex // GetTensorSpatialDimIndex
+// #include "tensorflow/compiler/tf2xla/kernels/conv_op_helpers.h" // ConvOpAttrss
+#include "tensorflow/core/util/tensor_format.h" // TensorFormat // GetTensorBatchDimIndex // GetTensorFeatureDimIndex // (done)GetTensorSpatialDimIndex->PTXLAGetTensorSpatialDimIndex
 // #include "tensorflow/core/kernels/conv_grad_shape_utils.h" // (done)ConvBackpropDimensions -> PTXLAConvBackpropDimensions // (done)ConvBackpropComputeDimensionsV2 -> PTXLAConvBackpropComputeDimensionsV2
 // #include "tensorflow/core/util/padding.h" // tensorflow::Padding // 
 // #include "tensorflow/core/framework/tensor_shape.h" // TensorShape
@@ -21,6 +21,52 @@
 
 
 namespace torch_xla {
+
+// Returns the number of spatial dims of a tensor of rank 'num_dims' and tensor
+// format 'format'.
+inline int PTXLAGetTensorSpatialDims(int num_dims, TensorFormat format) {
+  switch (format) {
+    case FORMAT_NHWC:
+    case FORMAT_NCHW:
+    case FORMAT_HWNC:
+    case FORMAT_HWCN:
+      return num_dims - 2;  // Exclude N,C.
+    case FORMAT_NCHW_VECT_C:
+    case FORMAT_NHWC_VECT_W:
+      // Note: the VECT_W is not counted as an independent spatial dim here,
+      // since it just a component of the width dimension.
+      return num_dims - 3;  // Exclude N,C,VectDim.
+    default:
+      LOG(FATAL) << "Unknown format " << format;
+      return -1;  // Avoid compiler warning about missing return value
+  }
+}
+
+// Returns the dimension index of the specified 'spatial_dim' within an
+// activation tensor. If format is NHWC_VECT_W and spatial_dim is 1, returns
+// the index of the outer width dimension (i.e. dimension 2, whose size would
+// be width / 4 in this case).
+inline int PTXLAGetTensorSpatialDimIndex(int num_dims, tensorflow::TensorFormat format,
+                                    int spatial_dim) {
+  CHECK(spatial_dim >= 0 &&
+        spatial_dim < PTXLAGetTensorSpatialDims(num_dims, format))
+      << spatial_dim << " " << num_dims << " " << ToString(format);
+  switch (format) {
+    case FORMAT_NHWC:
+    case FORMAT_NHWC_VECT_W:
+      return spatial_dim + 1;
+    case FORMAT_NCHW:
+    case FORMAT_NCHW_VECT_C:
+      return spatial_dim + 2;
+    case FORMAT_HWNC:
+    case FORMAT_HWCN:
+      return spatial_dim;
+    default:
+      LOG(FATAL) << "Unknown format " << format;
+      return -1;  // Avoid compiler warning about missing return value
+  }
+}
+
 
 // // Convert an XLA Shape into the equivalent TensorFlow shape. May fail since
 // // not all XLA shapes can be represented as TensorShapes.

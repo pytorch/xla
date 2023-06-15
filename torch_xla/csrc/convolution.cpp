@@ -8,7 +8,7 @@
 #include "torch_xla/csrc/xla_lower_util.h"
 
 // #include "tensorflow/core/lib/gtl/array_slice.h" // tensorflow::gtl::ArraySlice -> absl::Span<const T>
-#include "tensorflow/core/util/tensor_format.h" // TensorFormat // GetTensorBatchDimIndex // GetTensorFeatureDimIndex // GetTensorSpatialDimIndex
+#include "tensorflow/core/util/tensor_format.h" // TensorFormat // GetTensorBatchDimIndex // GetTensorFeatureDimIndex // (done)GetTensorSpatialDimIndex -> PTXLAGetTensorSpatialDimIndex
 // #include "tensorflow/core/kernels/conv_grad_shape_utils.h" // (done)ConvBackpropComputeDimensionsV2 -> PTXLAConvBackpropComputeDimensionsV2 // (done)ConvBackpropDimensions -> PTXLAConvBackpropDimensions // (done)ConvBackpropExtractAndVerifyDimension->PTXLAConvBackpropExtractAndVerifyDimension
 // #include "tensorflow/core/util/padding.h" // tensorflow::Padding // 
 // #include "tensorflow/core/framework/tensor_shape.h" // TensorShape
@@ -372,7 +372,7 @@ tsl::Status PTXLACheckConvAttrs(const PTXLAConvOpAttrs& attrs) {
         "depth dimensions.");
   }
   for (int i = 0; i < attrs.num_spatial_dims; ++i) {
-    int input_dim = tensorflow::GetTensorSpatialDimIndex(num_dims, attrs.data_format, i);
+    int input_dim = PTXLAGetTensorSpatialDimIndex(num_dims, attrs.data_format, i);
     if (attrs.dilations[input_dim] < 1) {
       return tsl::errors::Unimplemented("Dilation values must be positive; ", i,
                                    "th spatial dimension had dilation ",
@@ -539,7 +539,7 @@ tsl::Status PTXLAConvBackpropComputeDimensionsV2(
   }
   dims->spatial_dims.resize(num_spatial_dims);
   for (int i = 0; i < num_spatial_dims; ++i) {
-    int image_dim = tensorflow::GetTensorSpatialDimIndex(num_dims, data_format, i);
+    int image_dim = PTXLAGetTensorSpatialDimIndex(num_dims, data_format, i);
     int64_t padding_before = -1, padding_after = -1;
     if (padding == PTXLAPadding::EXPLICIT) {
       padding_before = explicit_paddings[2 * image_dim];
@@ -672,7 +672,7 @@ tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropInputConvOp(tsl::StringPiece type_
   std::vector<int64_t> ones(attrs.num_spatial_dims, 1);
   xla::PaddingType padding_type = xla::PaddingType::PADDING_INVALID;
   for (int i = 0; i < attrs.num_spatial_dims; ++i) {
-    int64_t dim = tensorflow::GetTensorSpatialDimIndex(num_dims, attrs.data_format, i);
+    int64_t dim = PTXLAGetTensorSpatialDimIndex(num_dims, attrs.data_format, i);
     if (out_backprop_shape.is_dynamic_dimension(dim)) {
       TF_RET_CHECK(attrs.padding == PTXLAPadding::VALID || attrs.padding == PTXLAPadding::SAME)
           << "Dynamic convolution only supports valid and same padding";
@@ -797,7 +797,7 @@ tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropFilterConvOp(tsl::StringPiece type
   }
   xla::PaddingType padding_type = xla::PaddingType::PADDING_INVALID;
   for (int64_t i = 0; i < attrs.num_spatial_dims; ++i) {
-    int64_t dim = tensorflow::GetTensorSpatialDimIndex(num_dims, attrs.data_format, i);
+    int64_t dim = PTXLAGetTensorSpatialDimIndex(num_dims, attrs.data_format, i);
     if (activations_shape.is_dynamic_dimension(dim)) {
       TF_RET_CHECK(attrs.padding == PTXLAPadding::VALID || attrs.padding == PTXLAPadding::SAME)
           << "Dynamic convolution only supports valid and same padding";
