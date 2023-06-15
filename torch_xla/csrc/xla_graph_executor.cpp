@@ -20,6 +20,8 @@
 #include <stdexcept>
 #include <unordered_set>
 
+#include <iostream>
+
 #include "absl/container/flat_hash_map.h"
 #include "absl/memory/memory.h"
 #include "absl/strings/str_join.h"
@@ -70,8 +72,7 @@ torch::lazy::Value IrValueFromScalar(const at::Scalar& value,
 bool ShouldSyncIrValue(const torch::lazy::Value& ir_value) {
   // We don't need to sync device datas since the value of them are already
   // known.
-  return ir_value->op() != xla_not_supported &&
-         torch_xla::DeviceData::Cast(ir_value.node.get()) == nullptr;
+  return ir_value->op() != xla_not_supported;
 }
 
 }  // namespace
@@ -526,17 +527,31 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
       torch::lazy::Value ir_value = tensors[i]->CurrentIrValue();
       if (ir_value) {
         if (ShouldSyncIrValue(ir_value)) {
-          // Add only tensors which need to be synced.
-          coll.hash = torch::lazy::HashCombine(coll.hash, ir_value.hash());
-          coll.indices.push_back(i);
-
           // `sharding_spec()` checks sharding equality. If IR node has no
-          // sharding, then sync XLATensor sharding to the IR node. XLATensor's
-          // sharding takes the precedence as the source of the truth.
+          // sharding, then sync XLATensor sharding to the IR node.
+          // XLATensor's sharding takes the precedence as the source of the
+          // truth.
           XLATensor::ShardingSpecPtr sharding = tensors[i]->sharding_spec();
           if (sharding) {
             dynamic_cast<XlaNode*>(ir_value.node.get())
                 ->SetSharding(sharding->sharding);
+          }
+          if (!sharding &&
+              torch_xla::DeviceData::Cast(ir_value.node.get()) != nullptr) {
+            // If the IR is a device data, we don't need to add it as a output
+            // of the graph. We can assign the XLAData to Tensor directly.
+            // The exception is that if current tensor is sharded, becasue
+            // 1. Compiler might assign a new sharding spec after execution so
+            // we should mark it as part of output.
+            // 2. We need to reflect the input's sharding spec in the graph
+            // hash otherwise we will mistakenly think `a(replicated) + 1` and
+            // `a(sharded) + 1` will generate the same graph.
+            tensors[i]->data()->handle =
+                torch_xla::DeviceData::Cast(ir_value.node.get())->data();
+          } else {
+            std::cerr << "ir value hash = " << ir_value.hash() << "\n\n";
+            coll.hash = torch::lazy::HashCombine(coll.hash, ir_value.hash());
+            coll.indices.push_back(i);
           }
         }
       } else if (config.force_ltc_data) {

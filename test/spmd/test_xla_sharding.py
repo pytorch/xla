@@ -382,8 +382,11 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertTrue(torch.allclose(xt1 + 0, xt2 + 0))
 
     # Check that hashes are different for the sharded and non-sharded tensors
-    hash1 = torch_xla._XLAC._get_graph_hash([xt1])
-    hash2 = torch_xla._XLAC._get_graph_hash([xt2])
+    import pdb; pdb.set_trace()
+    res_sharded = xt1 + 100
+    res_unsharded = xt2 + 100
+    hash1 = torch_xla._XLAC._get_graph_hash([res_sharded])
+    hash2 = torch_xla._XLAC._get_graph_hash([res_unsharded])
     self.assertNotEqual(hash1, hash2)
 
   def test_transfer_sharded_data_to_host(self):
