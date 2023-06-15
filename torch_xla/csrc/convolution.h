@@ -24,7 +24,7 @@ namespace torch_xla {
 
 // Returns the number of spatial dims of a tensor of rank 'num_dims' and tensor
 // format 'format'.
-inline int PTXLAGetTensorSpatialDims(int num_dims, TensorFormat format) {
+inline int PTXLAGetTensorSpatialDims(int num_dims, tensorflow::TensorFormat format) {
   switch (format) {
     case FORMAT_NHWC:
     case FORMAT_NCHW:
