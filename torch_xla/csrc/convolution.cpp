@@ -11,7 +11,7 @@
 #include "tensorflow/core/util/tensor_format.h" // TensorFormat // GetTensorBatchDimIndex // GetTensorFeatureDimIndex // GetTensorSpatialDimIndex
 // #include "tensorflow/core/kernels/conv_grad_shape_utils.h" // (done)ConvBackpropComputeDimensionsV2 -> PTXLAConvBackpropComputeDimensionsV2 // (done)ConvBackpropDimensions -> PTXLAConvBackpropDimensions // (done)ConvBackpropExtractAndVerifyDimension->PTXLAConvBackpropExtractAndVerifyDimension
 // #include "tensorflow/core/util/padding.h" // tensorflow::Padding // 
-#include "tensorflow/core/framework/tensor_shape.h" // TensorShape
+// #include "tensorflow/core/framework/tensor_shape.h" // TensorShape
 // #include "tensorflow/compiler/tf2xla/shape_util.h" // XLAShapeToTensorShape
 // #include "tensorflow/core/framework/kernel_shape_util.h" // (done)GetWindowedOutputSizeVerboseV2-> PTXLAGetWindowedOutputSizeVerboseV2
 
@@ -330,20 +330,20 @@ ConvGrads BuildTransposedConvolutionBackward(
 
 }  // namespace
 
-// Convert an XLA Shape into the equivalent TensorFlow shape.
-tsl::Status PTXLAXLAShapeToTensorShape(const xla::Shape& shape,
-                             tensorflow::TensorShape* tensor_shape) {
-  if (shape.IsTuple()) {
-    return tsl::errors::InvalidArgument("XLA shape ",
-                                   xla::ShapeUtil::HumanString(shape),
-                                   " cannot be converted to a TensorShape");
-  }
-  *tensor_shape = tensorflow::TensorShape();
-  for (int i = 0; i < shape.rank(); ++i) {
-    TF_RETURN_IF_ERROR(tensor_shape->AddDimWithStatus(shape.dimensions(i)));
-  }
-  return tsl::OkStatus();
-}
+// // Convert an XLA Shape into the equivalent TensorFlow shape.
+// tsl::Status PTXLAXLAShapeToTensorShape(const xla::Shape& shape,
+//                              tensorflow::TensorShape* tensor_shape) {
+//   if (shape.IsTuple()) {
+//     return tsl::errors::InvalidArgument("XLA shape ",
+//                                    xla::ShapeUtil::HumanString(shape),
+//                                    " cannot be converted to a TensorShape");
+//   }
+//   *tensor_shape = tensorflow::TensorShape();
+//   for (int i = 0; i < shape.rank(); ++i) {
+//     TF_RETURN_IF_ERROR(tensor_shape->AddDimWithStatus(shape.dimensions(i)));
+//   }
+//   return tsl::OkStatus();
+// }
 
 // Performs some basic checks on PTXLAConvOpAttrs that are true for all kinds of XLA
 // convolutions (as currently implemented).
