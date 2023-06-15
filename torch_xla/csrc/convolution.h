@@ -122,6 +122,26 @@ inline int PTXLAGetTensorSpatialDims(int num_dims, PTXLATensorFormat format) {
   }
 }
 
+string PTXLAToString(PTXLATensorFormat format) {
+  switch (format) {
+    case FORMAT_NHWC:
+      return "NHWC";
+    case FORMAT_NCHW:
+      return "NCHW";
+    case FORMAT_NCHW_VECT_C:
+      return "NCHW_VECT_C";
+    case FORMAT_NHWC_VECT_W:
+      return "NHWC_VECT_W";
+    case FORMAT_HWNC:
+      return "HWNC";
+    case FORMAT_HWCN:
+      return "HWCN";
+    default:
+      LOG(FATAL) << "Invalid Format: " << static_cast<int32>(format);
+      return "INVALID_FORMAT";
+  }
+}
+
 // Returns the dimension index of the specified 'spatial_dim' within an
 // activation tensor. If format is NHWC_VECT_W and spatial_dim is 1, returns
 // the index of the outer width dimension (i.e. dimension 2, whose size would
@@ -130,7 +150,7 @@ inline int PTXLAGetTensorSpatialDimIndex(int num_dims, PTXLATensorFormat format,
                                     int spatial_dim) {
   CHECK(spatial_dim >= 0 &&
         spatial_dim < PTXLAGetTensorSpatialDims(num_dims, format))
-      << spatial_dim << " " << num_dims << " " << tensorflow::ToString(format);
+      << spatial_dim << " " << num_dims << " " << PTXLAToString(format);
   switch (format) {
     case FORMAT_NHWC:
     case FORMAT_NHWC_VECT_W:
