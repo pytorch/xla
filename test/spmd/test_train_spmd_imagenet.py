@@ -32,9 +32,6 @@ MODEL_OPTS = {
         'nargs': '+',
         'default': [],
     },
-    '--use_virtual_device': {
-        'action': 'store_true',
-    },
     '--use_gradient_checkpointing': {
         'action': 'store_true',
     }
@@ -67,6 +64,7 @@ import torch_xla.distributed.parallel_loader as pl
 from torch_xla.distributed.fsdp.wrap import (recursive_wrap,
                                              transformer_auto_wrap_policy)
 from torch_xla.distributed.fsdp.utils import checkpoint_module
+from torch_xla import runtime as xr
 import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.profiler as xp
