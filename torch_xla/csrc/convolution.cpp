@@ -37,19 +37,19 @@ namespace {
  *   - grad_input: conv(grad_output, weight^T) (with padding etc)
  *   - grad_weight: conv(input^T, grad_output)
  *
- * XLA provides the following wrappers instead of calling into raw
- * ConvGeneralDilated.
+ * PyTorch creates the following wrappers instead of calling into raw
+ * ConvGeneralDilated. And this code inspired from TF:
  * https://github.com/tensorflow/tensorflow/blob/master/tensorflow/compiler/tf2xla/kernels/conv_op_helpers.cc
- *   - MakeXlaForwardConvOp (not used in our lowering, see below)
- *   - MakeXlaBackpropInputConvOp
- *   - MakeXlaBackpropFilterConvOp
+ *   - MakeXlaForwardConvOp (not implemented/used in our lowering, see below)
+ *   - PTXLAMakeXlaBackpropInputConvOp
+ *   - PTXLAMakeXlaBackpropFilterConvOp
  *
  * Lowering for non group convolution is straightforward, in this note
  * we focus on grouped conv and depthwise conv which need a bit special handling.
  * Shapes in the section below use format in XLA implementation [N, H, W, C]
  * instead of PyTorch convention [N, C, H, W].
  * Here are the shapes that feed into ConvGeneralDilated ops, note these
- * are different from input of wrappers like MakeXlaBackpropInputConvOp.
+ * are different from input of wrappers like PTXLAMakeXlaBackpropInputConvOp.
  * We try to use these shapes to explain what happens from a PyTorch tensor
  * to call into conv op.
  *
@@ -78,10 +78,9 @@ namespace {
  * depthwise convolution, there's no need to do additional reshapes to match to
  * XLA expected format. This is also why we use raw ConvGeneralDilated instead
  * of MakeXlaForwardConvOp in forward graph. For code simplicity we still want
- * to use the MakeXlaBackpropInputConvOp and MakeXlaBackpropFilterConvOp given
- * they have many useful steps that we don't want to duplicate here, we simply
- * enforce depthwise = false inside those functions, so that we skip the reshape
- * steps XLA has with a [Hker, Wker, Cin, M] input.
+ * to use the PTXLAMakeXlaBackpropInputConvOp and PTXLAMakeXlaBackpropFilterConvOp,
+ * we simply enforce depthwise = false inside those functions, so that we skip the
+ * reshape steps XLA has with a [Hker, Wker, Cin, M] input.
  *
  * forward: (conv with groups = G)
  *   - input: [N, Hin, Win, Cin]
@@ -125,8 +124,7 @@ xla::XlaOp PadInputFromOutputSize(xla::XlaOp input,
   return PadToSize(input, expected_input_sizes);
 }
 
-// Create a TF convolution metadata structure out of PyTorch convolution
-// attributes.
+// Create PTXLAConvOpAttrs
 PTXLAConvOpAttrs MakeConvOpAttrs(absl::Span<const int64_t> spatial_stride,
                                  absl::Span<const int64_t> spatial_padding,
                                  absl::Span<const int64_t> spatial_dilation,
@@ -320,6 +318,8 @@ ConvGrads BuildTransposedConvolutionBackward(
 
 }  // namespace
 
+// Convert a PTXLATensorFormat into string. And this code copied/inspired from TF:
+// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/core/util/tensor_format.cc#L40
 std::string PTXLAToString(PTXLATensorFormat format) {
   switch (format) {
     case FORMAT_NHWC:
@@ -341,7 +341,8 @@ std::string PTXLAToString(PTXLATensorFormat format) {
 }
 
 // Performs some basic checks on PTXLAConvOpAttrs that are true for all kinds of
-// XLA convolutions (as currently implemented).
+// XLA convolutions (as currently implemented). And this code copied/inspired from TF:
+// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/compiler/tf2xla/kernels/conv_op_helpers.cc#L118
 tsl::Status PTXLACheckConvAttrs(const PTXLAConvOpAttrs& attrs) {
   const int num_dims = attrs.num_spatial_dims + 2;
   const int attrs_strides_size = attrs.strides.size();
@@ -380,6 +381,8 @@ tsl::Status PTXLACheckConvAttrs(const PTXLAConvOpAttrs& attrs) {
 
 // Returns the expanded size of a filter used for depthwise convolution.
 // If `shape` is [H, W, ..., M, N] returns [H, W, ..., 1, M*N].
+// This code copied/inspired from TF:
+// https://github.com/tensorflow/tensorflow/blob/56c2225936001b65894466e4699a3dc3d00cb179/tensorflow/compiler/tf2xla/kernels/conv_op_helpers.cc#L67
 xla::Shape PTXLAGroupedFilterShapeForDepthwiseConvolution(
     const xla::Shape& filter_shape) {
   int64_t input_feature_dim = filter_shape.dimensions_size() - 2;
@@ -395,6 +398,8 @@ xla::Shape PTXLAGroupedFilterShapeForDepthwiseConvolution(
   return grouped_filter_shape;
 }
 
+// This code copied/inspired from TF:
+// https://github.com/tensorflow/tensorflow/blob/7f39a389d5b82d6aca13240c21f2647c3ebdb765/tensorflow/core/framework/kernel_shape_util.cc#L20
 tsl::Status PTXLAGetWindowedOutputSizeVerboseV2(
     int64_t input_size, int64_t filter_size, int64_t dilation_rate,
     int64_t stride, PTXLAPadding padding_type, int64_t* output_size,
@@ -440,7 +445,8 @@ tsl::Status PTXLAGetWindowedOutputSizeVerboseV2(
   return tsl::OkStatus();
 }
 
-// check dimension
+// Check dimension and this code copied/inspired form TF:
+// https://github.com/tensorflow/tensorflow/blob/7f39a389d5b82d6aca13240c21f2647c3ebdb765/tensorflow/core/kernels/conv_grad_shape_utils.cc#L53
 tsl::Status PTXLAConvBackpropExtractAndVerifyDimension(
     tsl::StringPiece label, const xla::Shape& input_shape,
     const xla::Shape& filter_shape, const xla::Shape& output_shape,
@@ -481,7 +487,8 @@ tsl::Status PTXLAConvBackpropExtractAndVerifyDimension(
   return tsl::OkStatus();
 }
 
-// check dimension
+// Check dimension and this code copied/inspired from TF:
+// https://github.com/tensorflow/tensorflow/blob/7f39a389d5b82d6aca13240c21f2647c3ebdb765/tensorflow/core/kernels/conv_grad_shape_utils.cc#L95
 tsl::Status PTXLAConvBackpropComputeDimensionsV2(
     tsl::StringPiece label, int num_spatial_dims, const xla::Shape& input_shape,
     const xla::Shape& filter_shape, const xla::Shape& out_backprop_shape,
@@ -548,6 +555,8 @@ tsl::Status PTXLAConvBackpropComputeDimensionsV2(
   return tsl::OkStatus();
 }
 
+// This code copied/inspired from TF:
+// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/compiler/tf2xla/kernels/conv_op_helpers.cc#L52
 xla::PrecisionConfig PTXLAGetPrecisionConfig() {
   xla::PrecisionConfig::Precision precision =
       tsl::tensor_float_32_execution_enabled() ? xla::PrecisionConfig::DEFAULT
@@ -586,7 +595,8 @@ xla::XlaOp PTXLATransposeFilterForGroupConvolutionBackpropInput(
   return result;
 }
 
-// Wrapper for ConvGeneralDilated and check dim
+// Wrapper for ConvGeneralDilated and check dim. And this code inspired from TF:
+// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/compiler/tf2xla/kernels/conv_op_helpers.cc#L83
 tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropInputConvOp(
     tsl::StringPiece type_string, const xla::Shape& input_shape,
     xla::XlaOp filter, xla::XlaOp out_backprop, const PTXLAConvOpAttrs& attrs,
@@ -621,7 +631,7 @@ tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropInputConvOp(
 
   // The input gradients are computed by a convolution of the output
   // gradients and the filter, with some appropriate padding. See the
-  // comment at the top of conv_grad_shape_utils.h for details.
+  // comment at the top of conv_grad_shape_utils.h(TF) for details.
   xla::ConvolutionDimensionNumbers dnums;
   dnums.set_input_batch_dimension(batch_dim);
   dnums.set_output_batch_dimension(batch_dim);
@@ -688,7 +698,8 @@ tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropInputConvOp(
                                  /*batch_group_count=*/1, &precision_config);
 }
 
-// Wrapper for ConvGeneralDilated and check dim
+// Wrapper for ConvGeneralDilated and check dim. And this code inspired from TF:
+// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/compiler/tf2xla/kernels/conv_op_helpers.cc#L419
 tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropFilterConvOp(
     tsl::StringPiece type_string, xla::XlaOp activations,
     const xla::Shape& filter_shape, xla::XlaOp gradients,
@@ -713,7 +724,7 @@ tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropFilterConvOp(
   PTXLAConvBackpropDimensions dims;
   // The filter gradients are computed by a convolution of the input
   // activations and the output gradients, with some appropriate padding.
-  // See the comment at the top of conv_grad_shape_utils.h for details.
+  // See the comment at the top of conv_grad_shape_utils.h(TF) for details.
   xla::ConvolutionDimensionNumbers dnums;
 
   // Dimension check
