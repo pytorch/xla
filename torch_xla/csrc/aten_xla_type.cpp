@@ -638,6 +638,8 @@ at::Tensor XLANativeFunctions::add(const at::Tensor& self,
                                    const at::Tensor& other,
                                    const at::Scalar& alpha) {
   TORCH_LAZY_FN_COUNTER("xla::");
+  // Currently, we disallow the case when both operands contain dynamic
+  // dimensions. This is consistent with PyTorch's behavior.
   XLA_CHECK(!(tensor_has_dym_dim(self) && tensor_has_dym_dim(other)))
       << "Both operands of torch.add cannot have dynamic dimensions at the "
          "same time. This is not "
@@ -2969,6 +2971,8 @@ at::Tensor XLANativeFunctions::sub(const at::Tensor& self,
                                    const at::Tensor& other,
                                    const at::Scalar& alpha) {
   TORCH_LAZY_FN_COUNTER("xla::");
+  // Currently, we disallow the case when both operands contain dynamic
+  // dimensions. This is consistent with PyTorch's behavior.
   XLA_CHECK(!(tensor_has_dym_dim(self) && tensor_has_dym_dim(other)))
       << "Both operands of torch.add cannot have dynamic dimensions at the "
          "same time. This is not "
