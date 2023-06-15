@@ -124,25 +124,8 @@ inline int PTXLAGetTensorSpatialDims(int num_dims, PTXLATensorFormat format) {
   }
 }
 
-std::string PTXLAToString(PTXLATensorFormat format) {
-  switch (format) {
-    case FORMAT_NHWC:
-      return "NHWC";
-    case FORMAT_NCHW:
-      return "NCHW";
-    case FORMAT_NCHW_VECT_C:
-      return "NCHW_VECT_C";
-    case FORMAT_NHWC_VECT_W:
-      return "NHWC_VECT_W";
-    case FORMAT_HWNC:
-      return "HWNC";
-    case FORMAT_HWCN:
-      return "HWCN";
-    default:
-      LOG(FATAL) << "Invalid Format: " << static_cast<tsl::int32>(format);
-      return "INVALID_FORMAT";
-  }
-}
+// Convert a tensor format into string.
+std::string PTXLAToString(PTXLATensorFormat format);
 
 // Returns the dimension index of the specified 'spatial_dim' within an
 // activation tensor. If format is NHWC_VECT_W and spatial_dim is 1, returns

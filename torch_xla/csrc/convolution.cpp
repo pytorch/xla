@@ -345,6 +345,26 @@ ConvGrads BuildTransposedConvolutionBackward(
 //   return tsl::OkStatus();
 // }
 
+std::string PTXLAToString(PTXLATensorFormat format) {
+  switch (format) {
+    case FORMAT_NHWC:
+      return "NHWC";
+    case FORMAT_NCHW:
+      return "NCHW";
+    case FORMAT_NCHW_VECT_C:
+      return "NCHW_VECT_C";
+    case FORMAT_NHWC_VECT_W:
+      return "NHWC_VECT_W";
+    case FORMAT_HWNC:
+      return "HWNC";
+    case FORMAT_HWCN:
+      return "HWCN";
+    default:
+      LOG(FATAL) << "Invalid Format: " << static_cast<tsl::int32>(format);
+      return "INVALID_FORMAT";
+  }
+}
+
 // Performs some basic checks on PTXLAConvOpAttrs that are true for all kinds of XLA
 // convolutions (as currently implemented).
 tsl::Status PTXLACheckConvAttrs(const PTXLAConvOpAttrs& attrs) {
