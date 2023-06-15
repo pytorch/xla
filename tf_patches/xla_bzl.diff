@@ -1,4 +1,5 @@
-This patch is for openxla/xla@6d8b5c0, will delete this patch after pin updated to date after May09
+# Backport of https://github.com/openxla/xla/commit/6d8b5c0d98aad645debbaddcb9f332ff22c19581 after PyTorch/XLA has migrated to OpenXLA
+# Enable PyTorch/XLA could use macro from `xla_cc_test`. Remove in next TF pin update.
 diff --git a/tensorflow/compiler/xla/xla.bzl b/tensorflow/compiler/xla/xla.bzl
 index 721318c2a64..a65b42643b0 100644
 --- a/tensorflow/compiler/xla/xla.bzl
