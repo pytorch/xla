@@ -4,23 +4,12 @@
 #include <string>
 
 #include "absl/types/span.h"
-// #include "tensorflow/core/lib/gtl/array_slice.h" // gtl::ArraySlice  // tensorflow::gtl::ArraySlice -> absl::Span<const T>
 #include "tensorflow/compiler/xla/client/xla_builder.h"
-
-// #include "tensorflow/compiler/tf2xla/kernels/conv_op_helpers.h" // ConvOpAttrss
-// #include "tensorflow/core/util/tensor_format.h" // (done)TensorFormat -> PTXLATensorFormat // GetTensorBatchDimIndex // (done)GetTensorFeatureDimIndex -> PTXLAGetTensorFeatureDimIndex // (done)GetTensorSpatialDimIndex->PTXLAGetTensorSpatialDimIndex
-// #include "tensorflow/core/kernels/conv_grad_shape_utils.h" // (done)ConvBackpropDimensions -> PTXLAConvBackpropDimensions // (done)ConvBackpropComputeDimensionsV2 -> PTXLAConvBackpropComputeDimensionsV2
-// #include "tensorflow/core/util/padding.h" // tensorflow::Padding // 
-// #include "tensorflow/core/framework/tensor_shape.h" // TensorShape
-// #include "tensorflow/core/framework/tensor_shape.pb.h" // TensorShapeProto
-// #include "tensorflow/compiler/tf2xla/shape_util.h" // XLAShapeToTensorShape
-
-#include "tensorflow/tsl/lib/gtl/inlined_vector.h" // #include "tensorflow/core/lib/gtl/inlined_vector.h" // gtl::InlinedVector
-#include "tensorflow/compiler/xla/xla_data.pb.h" // (done)ConvolutionDimensionNumbers // (done)PaddingType // (done)PrecisionConfig
-#include "tensorflow/compiler/xla/client/xla_builder.h" // (done)DynamicConvInputGrad // (done)ConvGeneralDilated
-#include "tensorflow/tsl/platform/stringpiece.h" // (done)StringPiece
-#include "tensorflow/tsl/platform/errors.h" // (done)tsl::errors::InvalidArgument // 
-
+#include "tensorflow/compiler/xla/xla_data.pb.h"
+#include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "tensorflow/tsl/lib/gtl/inlined_vector.h"
+#include "tensorflow/tsl/platform/stringpiece.h"
+#include "tensorflow/tsl/platform/errors.h"
 
 namespace torch_xla {
 

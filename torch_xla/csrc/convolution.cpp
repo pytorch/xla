@@ -1,25 +1,14 @@
 #include "torch_xla/csrc/convolution.h"
-
-// #include "tensorflow/compiler/tf2xla/kernels/conv_op_helpers.h" // (done)CheckConvAttrs->PTXLACheckConvAttrs  // (done)MakeXlaBackpropInputConvOp->PTXLAMakeXlaBackpropInputConvOp // (whoisit)ConvAttrs
-#include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/xla_lower_util.h"
-
-// #include "tensorflow/core/lib/gtl/array_slice.h" // tensorflow::gtl::ArraySlice -> absl::Span<const T>
-// #include "tensorflow/core/util/tensor_format.h" // (done)TensorFormat -> PTXLATensorFormat // (done)GetTensorBatchDimIndex -> PTXLAGetTensorBatchDimIndexs // (done)GetTensorFeatureDimIndex -> PTXLAGetTensorFeatureDimIndex // (done)GetTensorSpatialDimIndex -> PTXLAGetTensorSpatialDimIndex
-// #include "tensorflow/core/kernels/conv_grad_shape_utils.h" // (done)ConvBackpropComputeDimensionsV2 -> PTXLAConvBackpropComputeDimensionsV2 // (done)ConvBackpropDimensions -> PTXLAConvBackpropDimensions // (done)ConvBackpropExtractAndVerifyDimension->PTXLAConvBackpropExtractAndVerifyDimension
-// #include "tensorflow/core/util/padding.h" // tensorflow::Padding // 
-// #include "tensorflow/core/framework/tensor_shape.h" // TensorShape
-// #include "tensorflow/compiler/tf2xla/shape_util.h" // XLAShapeToTensorShape
-// #include "tensorflow/core/framework/kernel_shape_util.h" // (done)GetWindowedOutputSizeVerboseV2-> PTXLAGetWindowedOutputSizeVerboseV2
-
-#include "tensorflow/compiler/xla/xla_data.pb.h" // (done)ConvolutionDimensionNumbers // (done)PaddingType // (done)PrecisionConfig
-#include "tensorflow/compiler/xla/client/xla_builder.h" // (done)DynamicConvInputGrad // (done)ConvGeneralDilated
-#include "tensorflow/tsl/platform/tensor_float_32_utils.h" // (done)tensor_float_32_execution_enabled
-#include "tensorflow/tsl/platform/errors.h" // (done)tsl::errors::InvalidArgument // 
-#include "tensorflow/compiler/xla/shape_util.h" // xla::ShapeUtil::HumanString
+#include "tensorflow/compiler/xla/xla_data.pb.h"
+#include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "tensorflow/compiler/xla/shape_util.h"
+#include "tensorflow/compiler/xla/client/lib/constants.h"
+#include "tensorflow/tsl/platform/tensor_float_32_utils.h"
+#include "tensorflow/tsl/platform/errors.h"
 
 namespace torch_xla {
 namespace {
