@@ -26,13 +26,13 @@ namespace torch_xla {
 // format 'format'.
 inline int PTXLAGetTensorSpatialDims(int num_dims, tensorflow::TensorFormat format) {
   switch (format) {
-    case FORMAT_NHWC:
-    case FORMAT_NCHW:
-    case FORMAT_HWNC:
-    case FORMAT_HWCN:
+    case tensorflow::FORMAT_NHWC:
+    case tensorflow::FORMAT_NCHW:
+    case tensorflow::FORMAT_HWNC:
+    case tensorflow::FORMAT_HWCN:
       return num_dims - 2;  // Exclude N,C.
-    case FORMAT_NCHW_VECT_C:
-    case FORMAT_NHWC_VECT_W:
+    case tensorflow::FORMAT_NCHW_VECT_C:
+    case tensorflow::FORMAT_NHWC_VECT_W:
       // Note: the VECT_W is not counted as an independent spatial dim here,
       // since it just a component of the width dimension.
       return num_dims - 3;  // Exclude N,C,VectDim.
@@ -52,14 +52,14 @@ inline int PTXLAGetTensorSpatialDimIndex(int num_dims, tensorflow::TensorFormat 
         spatial_dim < PTXLAGetTensorSpatialDims(num_dims, format))
       << spatial_dim << " " << num_dims << " " << ToString(format);
   switch (format) {
-    case FORMAT_NHWC:
-    case FORMAT_NHWC_VECT_W:
+    case tensorflow::FORMAT_NHWC:
+    case tensorflow::FORMAT_NHWC_VECT_W:
       return spatial_dim + 1;
-    case FORMAT_NCHW:
-    case FORMAT_NCHW_VECT_C:
+    case tensorflow::FORMAT_NCHW:
+    case tensorflow::FORMAT_NCHW_VECT_C:
       return spatial_dim + 2;
-    case FORMAT_HWNC:
-    case FORMAT_HWCN:
+    case tensorflow::FORMAT_HWNC:
+    case tensorflow::FORMAT_HWCN:
       return spatial_dim;
     default:
       LOG(FATAL) << "Unknown format " << format;
