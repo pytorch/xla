@@ -107,7 +107,7 @@ tsl::Status PTXLAConvBackpropComputeDimensionsV2(
     const xla::Shape& filter_shape, const xla::Shape& out_backprop_shape,
     absl::Span<const tsl::int32> dilations, const std::vector<tsl::int32>& strides,
     PTXLAPadding padding, tensorflow::TensorFormat data_format, PTXLAConvBackpropDimensions* dims,
-    absl::Span<const int64_t> explicit_paddings) {
+    absl::Span<const int64_t> explicit_paddings);
 
 tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropInputConvOp(
     tsl::StringPiece type_string, const xla::Shape& input_shape, xla::XlaOp filter,
