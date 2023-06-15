@@ -449,7 +449,7 @@ tsl::Status PTXLAGetWindowedOutputSizeVerboseV2(int64_t input_size, int64_t filt
 // PTXLAConvBackpropExtractAndVerifyDimension do check, return status
 tsl::Status PTXLAConvBackpropExtractAndVerifyDimension(
     tsl::StringPiece label, const xla::Shape& input_shape,
-    const xla::Shape& filter_shape, const xla::Shape& out_shape,
+    const xla::Shape& filter_shape, const xla::Shape& output_shape,
     const absl::Span<const tsl::int32> dilations, const std::vector<tsl::int32>& strides,
     PTXLAPadding padding, int64_t padding_before, int64_t padding_after,
     int spatial_dim, int filter_spatial_dim,
