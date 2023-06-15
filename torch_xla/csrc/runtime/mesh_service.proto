@@ -1,7 +1,5 @@
 syntax = "proto2";
 
-import "tensorflow/core/protobuf/tpu/topology.proto";
-
 package torch_xla.runtime.service.grpc;
 
 message Device {
@@ -17,7 +15,6 @@ message Worker {
 }
 
 message Config {
-  optional tensorflow.tpu.TopologyProto proto = 1;
   repeated Worker workers = 2;
   required int64 mesh_size = 3;
 }
