@@ -20,7 +20,7 @@ namespace torch_xla {
 // This code copyied from TF: 
 // https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/core/util/tensor_format.h#L38
 enum PTXLATensorFormat {
-  // FORMAT_NHWC is the default format in TensorFlow.
+  // FORMAT_NHWC is the default format.
   FORMAT_NHWC = 0,
 
   // FORMAT_NCHW often improves performance on GPUs.
@@ -94,8 +94,8 @@ inline int PTXLAGetTensorFeatureDimIndex(int num_dims, PTXLATensorFormat format)
   }
 }
 
-// Returns the number of spatial dims of a shape of rank 'num_dims' and PTXLATensorFormat
-// 'format'. And this code copied/inspired from TF:
+// Returns the number of spatial dims of a tensor of rank 'num_dims' and tensor
+// format 'format'. And this code copied/inspired from TF:
 // https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/core/util/tensor_format.h#L117
 inline int PTXLAGetTensorSpatialDims(int num_dims, PTXLATensorFormat format) {
   switch (format) {
@@ -120,7 +120,7 @@ inline int PTXLAGetTensorSpatialDims(int num_dims, PTXLATensorFormat format) {
 std::string PTXLAToString(PTXLATensorFormat format);
 
 // Returns the dimension index of the specified 'spatial_dim' within an
-// activation shape. If format is NHWC_VECT_W and spatial_dim is 1, returns
+// activation tensor. If format is NHWC_VECT_W and spatial_dim is 1, returns
 // the index of the outer width dimension (i.e. dimension 2, whose size would
 // be width / 4 in this case). And this code copied/inspired from TF:
 // https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/core/util/tensor_format.h#L227
@@ -163,7 +163,7 @@ struct PTXLAConvBackpropSpatialDimension {
   int64_t pad_before, pad_after;
 };
 
-// PTXLAPadding: the padding we apply to the input shape along the rows and columns
+// PTXLAPadding: the padding we apply to the input tensor along the rows and columns
 // dimensions. This is usually used to make sure that the spatial dimensions do
 // not shrink when we progress with convolutions. Three types of padding are
 // supported:

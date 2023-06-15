@@ -318,7 +318,8 @@ ConvGrads BuildTransposedConvolutionBackward(
 
 }  // namespace
 
-// Convert a PTXLATensorFormat into string. And this code copied/inspired from TF:
+// Convert a PTXLATensorFormat into string. And this code copied/inspired from
+// TF:
 // https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/core/util/tensor_format.cc#L40
 std::string PTXLAToString(PTXLATensorFormat format) {
   switch (format) {
@@ -341,7 +342,8 @@ std::string PTXLAToString(PTXLATensorFormat format) {
 }
 
 // Performs some basic checks on PTXLAConvOpAttrs that are true for all kinds of
-// XLA convolutions (as currently implemented). And this code copied/inspired from TF:
+// XLA convolutions (as currently implemented). And this code copied/inspired from
+// TF:
 // https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/compiler/tf2xla/kernels/conv_op_helpers.cc#L118
 tsl::Status PTXLACheckConvAttrs(const PTXLAConvOpAttrs& attrs) {
   const int num_dims = attrs.num_spatial_dims + 2;
