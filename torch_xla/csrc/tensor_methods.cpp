@@ -1033,13 +1033,19 @@ XLATensorPtr diagonal(const XLATensorPtr& input, int64_t offset, int64_t dim1,
       dim1, input->shape().get().rank());
   int64_t canonical_dim2 = torch::lazy::GetCanonicalDimensionIndex(
       dim2, input->shape().get().rank());
-  DiagonalInfo diagonal_info;
-  diagonal_info.offset = offset;
-  diagonal_info.dim1 = canonical_dim1;
-  diagonal_info.dim2 = canonical_dim2;
-  ViewInfo view_info(ViewInfo::Type::kDiagonal, input_shape,
-                     std::move(diagonal_info));
-  return input->CreateViewTensor(std::move(view_info));
+  // See Note: [Disabling functionalization]
+  if (runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
+    DiagonalInfo diagonal_info;
+    diagonal_info.offset = offset;
+    diagonal_info.dim1 = canonical_dim1;
+    diagonal_info.dim2 = canonical_dim2;
+    ViewInfo view_info(ViewInfo::Type::kDiagonal, input_shape,
+                       std::move(diagonal_info));
+    return input->CreateViewTensor(std::move(view_info));
+  }
+
+  return input->CreateFrom(torch::lazy::MakeNode<Diagonal>(
+      input->GetIrValue(), offset, canonical_dim1, canonical_dim2));
 }
 
 XLATensorPtr div(const XLATensorPtr& input, const XLATensorPtr& other,

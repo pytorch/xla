@@ -86,6 +86,8 @@ TEST_F(AtenXlaTensorTest, TestDiagonal) {
       AllClose(output, xla_output);
     });
   }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::diagonal", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestDiagonalNonSquare) {
