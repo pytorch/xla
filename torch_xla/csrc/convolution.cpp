@@ -810,7 +810,7 @@ tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropFilterConvOp(
     // applying negative padding on the right/bottom.
     const int64_t pad_before = attrs.padding == PTXLAPadding::EXPLICIT
                                    ? attrs.explicit_paddings[2 * dim]
-                                   : attrs.padding == PTXLAPadding::SAME 
+                                   : attrs.padding == PTXLAPadding::SAME
                                          ? std::max<int64_t>(pad_total / 2, 0)
                                          : 0;
     padding[i] = {pad_before, pad_total - pad_before};
