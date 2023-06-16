@@ -167,7 +167,7 @@ build:linux --config=dynamic_kernels
 # the monolitih build because otherwise there are missing dependencies and
 # linking fails.
 build --define framework_shared_object=false
-build --define tsl_protobuf_header_only=false
+build --define tsl_protobuf_header_only=true
 
 build --define=use_fast_cpp_protos=true
 build --define=allow_oversize_protos=true
