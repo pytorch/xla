@@ -99,6 +99,7 @@ cc_library(
     ":sys_util",
     ":types",
     ":util",
+    "@org_tensorflow//tensorflow/tsl/platform:stacktrace_handler",
     "@org_tensorflow//tensorflow/compiler/xla:literal_util",
     "@org_tensorflow//tensorflow/compiler/xla/client:xla_computation",
     "@com_google_absl//absl/memory",
