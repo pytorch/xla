@@ -13,13 +13,27 @@
 
 namespace torch_xla {
 
+// -------------Convolution Helper Data Structures and Functions Start------------------------- 
+// Convolution helper functions below are copied/inspired from TF2XLA bridge in
+// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/core/util/tensor_format.h#L38
+// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/core/util/tensor_format.h#L174
+// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/core/util/tensor_format.h#L194
+// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/core/util/tensor_format.h#L117
+// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/core/util/tensor_format.h#L110
+// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/core/util/tensor_format.h#L227
+// https://github.com/tensorflow/tensorflow/blob/31c35582c544e21c4b21b38ccc8e7299cfd08d6e/tensorflow/core/kernels/conv_grad_shape_utils.h#L29
+// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/core/util/padding.h#L43
+// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/core/kernels/conv_grad_shape_utils.h#L45
+// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/compiler/tf2xla/kernels/conv_op_helpers.h#L45
+// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/core/kernels/conv_grad_shape_utils.h#L80
+// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/compiler/tf2xla/kernels/conv_op_helpers.h#LL65C22-L65C48
+// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/compiler/tf2xla/kernels/conv_op_helpers.h#L69
+
 // Tensor format for input/output activations used in convolution operations.
 // The mnemonics specify the meaning of each tensor dimension sorted from
 // largest to smallest memory stride.
 // N = Batch, H = Image Height, W = Image Width, C = Number of Channels.
-// This code copyied from TF: 
-// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/core/util/tensor_format.h#L38
-enum PTXLATensorFormat {
+enum TensorFormat {
   // FORMAT_NHWC is the default format.
   FORMAT_NHWC = 0,
 
@@ -54,9 +68,8 @@ enum PTXLATensorFormat {
   FORMAT_HWCN = 5,
 };
 
-// Returns the index of the batch dimension. And this code copied/inspired from TF:
-// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/core/util/tensor_format.h#L174
-inline int PTXLAGetTensorBatchDimIndex(int num_dims, PTXLATensorFormat format) {
+// Returns the index of the batch dimension.
+inline int GetTensorBatchDimIndex(int num_dims, TensorFormat format) {
   switch (format) {
     case FORMAT_NHWC:
     case FORMAT_NCHW:
@@ -75,9 +88,8 @@ inline int PTXLAGetTensorBatchDimIndex(int num_dims, PTXLATensorFormat format) {
 
 // Returns the index of the feature dimension. If format is NCHW_VECT_C, returns
 // the index of the outer feature dimension (i.e. dimension 1, whose size would
-// be num_features / 4 in this case). And this code copied/inspired from TF:
-// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/core/util/tensor_format.h#L194
-inline int PTXLAGetTensorFeatureDimIndex(int num_dims, PTXLATensorFormat format) {
+// be num_features / 4 in this case).
+inline int GetTensorFeatureDimIndex(int num_dims, TensorFormat format) {
   switch (format) {
     case FORMAT_NHWC:
     case FORMAT_HWNC:
@@ -95,9 +107,8 @@ inline int PTXLAGetTensorFeatureDimIndex(int num_dims, PTXLATensorFormat format)
 }
 
 // Returns the number of spatial dims of a tensor of rank 'num_dims' and tensor
-// format 'format'. And this code copied/inspired from TF:
-// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/core/util/tensor_format.h#L117
-inline int PTXLAGetTensorSpatialDims(int num_dims, PTXLATensorFormat format) {
+// format 'format'.
+inline int GetTensorSpatialDims(int num_dims, TensorFormat format) {
   switch (format) {
     case FORMAT_NHWC:
     case FORMAT_NCHW:
@@ -115,20 +126,18 @@ inline int PTXLAGetTensorSpatialDims(int num_dims, PTXLATensorFormat format) {
   }
 }
 
-// Convert a PTXLATensorFormat into string. And this code copied/inspired from TF:
-// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/core/util/tensor_format.h#L110
-std::string PTXLAToString(PTXLATensorFormat format);
+// Convert a TensorFormat into string.
+std::string ToString(TensorFormat format);
 
 // Returns the dimension index of the specified 'spatial_dim' within an
 // activation tensor. If format is NHWC_VECT_W and spatial_dim is 1, returns
 // the index of the outer width dimension (i.e. dimension 2, whose size would
-// be width / 4 in this case). And this code copied/inspired from TF:
-// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/core/util/tensor_format.h#L227
-inline int PTXLAGetTensorSpatialDimIndex(int num_dims, PTXLATensorFormat format,
+// be width / 4 in this case).
+inline int GetTensorSpatialDimIndex(int num_dims, TensorFormat format,
                                     int spatial_dim) {
   CHECK(spatial_dim >= 0 &&
-        spatial_dim < PTXLAGetTensorSpatialDims(num_dims, format))
-      << spatial_dim << " " << num_dims << " " << PTXLAToString(format);
+        spatial_dim < GetTensorSpatialDims(num_dims, format))
+      << spatial_dim << " " << num_dims << " " << ToString(format);
   switch (format) {
     case FORMAT_NHWC:
     case FORMAT_NHWC_VECT_W:
@@ -146,9 +155,8 @@ inline int PTXLAGetTensorSpatialDimIndex(int num_dims, PTXLATensorFormat format,
 }
 
 // Information about a single spatial dimension for a convolution
-// backpropagation. And this code copied from TF:
-// https://github.com/tensorflow/tensorflow/blob/31c35582c544e21c4b21b38ccc8e7299cfd08d6e/tensorflow/core/kernels/conv_grad_shape_utils.h#L29
-struct PTXLAConvBackpropSpatialDimension {
+// backpropagation.
+struct ConvBackpropSpatialDimension {
   int64_t input_size;
   int64_t filter_size;
   int64_t output_size;
@@ -163,7 +171,7 @@ struct PTXLAConvBackpropSpatialDimension {
   int64_t pad_before, pad_after;
 };
 
-// PTXLAPadding: the padding we apply to the input tensor along the rows and columns
+// Padding: the padding we apply to the input tensor along the rows and columns
 // dimensions. This is usually used to make sure that the spatial dimensions do
 // not shrink when we progress with convolutions. Three types of padding are
 // supported:
@@ -174,19 +182,16 @@ struct PTXLAConvBackpropSpatialDimension {
 //             attribute.
 // The padded area is typically zero-filled. For pooling ops, the padded area is
 // instead ignored. For max pool, this is equivalent to padding with -infinity.
-// This code copied from TF:
-// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/core/util/padding.h#L43
-enum PTXLAPadding {
+enum Padding {
   VALID = 1,     // No padding.
   SAME = 2,      // Input and output layers have the same size.
-  EXPLICIT = 3,  // PTXLAPadding is explicitly specified
+  EXPLICIT = 3,  // Padding is explicitly specified
 };
 
-// Computed dimensions for a backwards convolution. And this code copied/inspired from TF:
-// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/core/kernels/conv_grad_shape_utils.h#L45
-struct PTXLAConvBackpropDimensions {
+// Computed dimensions for a backwards convolution.
+struct ConvBackpropDimensions {
   // Information about each spatial dimension.
-  ::tsl::gtl::InlinedVector<PTXLAConvBackpropSpatialDimension, 3> spatial_dims;
+  ::tsl::gtl::InlinedVector<ConvBackpropSpatialDimension, 3> spatial_dims;
 
   // Batch size.
   int64_t batch_size;
@@ -202,50 +207,48 @@ struct PTXLAConvBackpropDimensions {
   int64_t dilation(int dim) const { return spatial_dims[dim].dilation; }
 
   // Compute padding for the given spatial dimension.
-  int SpatialPadding(const PTXLAPadding& padding, int dim) const;
+  int SpatialPadding(const Padding& padding, int dim) const;
 };
 
-// PTXLAConvOpAttrs contains all of the metadata necessary to specify a TF or XLA
-// convolution. This code copied/inspired from TF:
-// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/compiler/tf2xla/kernels/conv_op_helpers.h#L45
-struct PTXLAConvOpAttrs {
+// ConvOpAttrs contains all of the metadata necessary to specify a TF or XLA
+// convolution.
+struct ConvOpAttrs {
   // Constructs a ConvOpAttrs, reading most of the attributes from `ctx`.
-  // static StatusOr<PTXLAConvOpAttrs> Create(int num_spatial_dims, bool depthwise,
+  // static StatusOr<ConvOpAttrs> Create(int num_spatial_dims, bool depthwise,
   //                                     OpKernelConstruction* ctx);
 
   bool depthwise;
   int num_spatial_dims;
   std::vector<tsl::int32> dilations;
   std::vector<tsl::int32> strides;
-  PTXLAPadding padding;
+  Padding padding;
   std::vector<int64_t> explicit_paddings;
-  PTXLATensorFormat data_format;
+  TensorFormat data_format;
 };
 
 // The V2 version computes the same outputs with arbitrary dilation rate and
-// supports explicit padding. And this code copied/inspired from TF:
-// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/core/kernels/conv_grad_shape_utils.h#L80
-tsl::Status PTXLAConvBackpropComputeDimensionsV2(
+// supports explicit padding.
+tsl::Status ConvBackpropComputeDimensionsV2(
     tsl::StringPiece label, int num_spatial_dims, const xla::Shape& input_shape,
     const xla::Shape& filter_shape, const xla::Shape& out_backprop_shape,
     absl::Span<const tsl::int32> dilations, const std::vector<tsl::int32>& strides,
-    PTXLAPadding padding, PTXLATensorFormat data_format, PTXLAConvBackpropDimensions* dims,
+    Padding padding, TensorFormat data_format, ConvBackpropDimensions* dims,
     absl::Span<const int64_t> explicit_paddings);
 
-// Wrapper for ConvGeneralDilated with checking dims. And this code copied/inspired from TF:
-// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/compiler/tf2xla/kernels/conv_op_helpers.h#LL65C22-L65C48
-tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropInputConvOp(
+// Wrapper for ConvGeneralDilated with checking dims.
+tsl::StatusOr<xla::XlaOp> MakeXlaBackpropInputConvOp(
     tsl::StringPiece type_string, const xla::Shape& input_shape, xla::XlaOp filter,
-    xla::XlaOp out_backprop, const PTXLAConvOpAttrs& attrs,
+    xla::XlaOp out_backprop, const ConvOpAttrs& attrs,
     xla::XlaOp* input_sizes = nullptr);
 
-// Wrapper for ConvGeneralDilated with checking dims. And this code copied/inspired from TF:
-// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/compiler/tf2xla/kernels/conv_op_helpers.h#L69
-tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropFilterConvOp(tsl::StringPiece type_string,
+// Wrapper for ConvGeneralDilated with checking dims.
+tsl::StatusOr<xla::XlaOp> MakeXlaBackpropFilterConvOp(tsl::StringPiece type_string,
                                                  xla::XlaOp activations,
                                                  const xla::Shape& filter_shape,
                                                  xla::XlaOp gradients,
-                                                 const PTXLAConvOpAttrs& attrs);
+                                                 const ConvOpAttrs& attrs);
+
+// -------------Convolution Helper Data Structures and Functions End------------------------- 
 
 // Computes the convolution of the given input and kernel with the given
 // precision, with the given stride and padding.

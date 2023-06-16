@@ -37,19 +37,17 @@ namespace {
  *   - grad_input: conv(grad_output, weight^T) (with padding etc)
  *   - grad_weight: conv(input^T, grad_output)
  *
- * PyTorch creates the following wrappers instead of calling into raw
- * ConvGeneralDilated. And this code inspired from TF:
+ * Below helpers are inspired by TF2XLA implementation of the Convolution
  * https://github.com/tensorflow/tensorflow/blob/master/tensorflow/compiler/tf2xla/kernels/conv_op_helpers.cc
- *   - MakeXlaForwardConvOp (not implemented/used in our lowering, see below)
- *   - PTXLAMakeXlaBackpropInputConvOp
- *   - PTXLAMakeXlaBackpropFilterConvOp
+ *   - MakeXlaBackpropInputConvOp
+ *   - MakeXlaBackpropFilterConvOp
  *
  * Lowering for non group convolution is straightforward, in this note
  * we focus on grouped conv and depthwise conv which need a bit special handling.
  * Shapes in the section below use format in XLA implementation [N, H, W, C]
  * instead of PyTorch convention [N, C, H, W].
  * Here are the shapes that feed into ConvGeneralDilated ops, note these
- * are different from input of wrappers like PTXLAMakeXlaBackpropInputConvOp.
+ * are different from input of wrappers like MakeXlaBackpropInputConvOp.
  * We try to use these shapes to explain what happens from a PyTorch tensor
  * to call into conv op.
  *
@@ -78,7 +76,7 @@ namespace {
  * depthwise convolution, there's no need to do additional reshapes to match to
  * XLA expected format. This is also why we use raw ConvGeneralDilated instead
  * of MakeXlaForwardConvOp in forward graph. For code simplicity we still want
- * to use the PTXLAMakeXlaBackpropInputConvOp and PTXLAMakeXlaBackpropFilterConvOp,
+ * to use the MakeXlaBackpropInputConvOp and MakeXlaBackpropFilterConvOp,
  * we simply enforce depthwise = false inside those functions, so that we skip the
  * reshape steps XLA has with a [Hker, Wker, Cin, M] input.
  *
@@ -124,15 +122,15 @@ xla::XlaOp PadInputFromOutputSize(xla::XlaOp input,
   return PadToSize(input, expected_input_sizes);
 }
 
-// Create PTXLAConvOpAttrs
-PTXLAConvOpAttrs MakeConvOpAttrs(absl::Span<const int64_t> spatial_stride,
+// Create ConvOpAttrs
+ConvOpAttrs MakeConvOpAttrs(absl::Span<const int64_t> spatial_stride,
                                  absl::Span<const int64_t> spatial_padding,
                                  absl::Span<const int64_t> spatial_dilation,
                                  bool depthwise) {
   int num_spatial_dims = spatial_stride.size();
   XLA_CHECK_EQ(spatial_padding.size(), num_spatial_dims);
   XLA_CHECK_EQ(spatial_dilation.size(), num_spatial_dims);
-  PTXLAConvOpAttrs conv_op_attrs;
+  ConvOpAttrs conv_op_attrs;
   conv_op_attrs.depthwise = depthwise;
   conv_op_attrs.num_spatial_dims = num_spatial_dims;
   // Stride, dilation and padding must be set for the batch and feature in the
@@ -144,7 +142,7 @@ PTXLAConvOpAttrs MakeConvOpAttrs(absl::Span<const int64_t> spatial_stride,
   conv_op_attrs.strides = {1, 1};
   std::copy(spatial_stride.begin(), spatial_stride.end(),
             std::back_inserter(conv_op_attrs.strides));
-  conv_op_attrs.padding = PTXLAPadding::EXPLICIT;
+  conv_op_attrs.padding = Padding::EXPLICIT;
   // https://github.com/tensorflow/tensorflow/blob/ec81825aaf7e848d9f8ddffdf1e0d20aebe9172c/tensorflow/core/util/padding.cc#L40
   // explicit_padding requires to have (spatial_dims + 2) * 2 elements
   conv_op_attrs.explicit_paddings.resize(4);
@@ -152,7 +150,7 @@ PTXLAConvOpAttrs MakeConvOpAttrs(absl::Span<const int64_t> spatial_stride,
     conv_op_attrs.explicit_paddings.push_back(spatial_padding[spatial_dim]);
     conv_op_attrs.explicit_paddings.push_back(spatial_padding[spatial_dim]);
   }
-  conv_op_attrs.data_format = PTXLATensorFormat::FORMAT_NCHW;
+  conv_op_attrs.data_format = TensorFormat::FORMAT_NCHW;
   return conv_op_attrs;
 }
 
@@ -220,11 +218,11 @@ xla::XlaOp BuildConvBackwardInput(xla::XlaOp grad_output, xla::XlaOp kernel,
                                   absl::Span<const int64_t> spatial_padding,
                                   absl::Span<const int64_t> spatial_dilation,
                                   int64_t groups) {
-  PTXLAConvOpAttrs conv_op_attrs =
+  ConvOpAttrs conv_op_attrs =
       MakeConvOpAttrs(spatial_stride, spatial_padding, spatial_dilation, false);
   xla::XlaOp kernel_transposed =
       xla::Transpose(kernel, FilterTransposePermutation(input_shape.rank()));
-  return ConsumeValue(PTXLAMakeXlaBackpropInputConvOp(
+  return ConsumeValue(MakeXlaBackpropInputConvOp(
       "conv_backward_input", input_shape, kernel_transposed, grad_output,
       conv_op_attrs));
 }
@@ -236,14 +234,14 @@ xla::XlaOp BuildConvBackwardWeight(xla::XlaOp grad_output, xla::XlaOp input,
                                    absl::Span<const int64_t> spatial_padding,
                                    absl::Span<const int64_t> spatial_dilation,
                                    int64_t groups) {
-  PTXLAConvOpAttrs conv_op_attrs =
+  ConvOpAttrs conv_op_attrs =
       MakeConvOpAttrs(spatial_stride, spatial_padding, spatial_dilation, false);
   auto transpose_permutation = FilterTransposePermutation(kernel_shape.rank());
   auto inv_transpose_permutation =
       xla::InversePermutation(transpose_permutation);
   xla::Shape transposed_weight_shape =
       xla::ShapeUtil::PermuteDimensions(transpose_permutation, kernel_shape);
-  xla::XlaOp conv = ConsumeValue(PTXLAMakeXlaBackpropFilterConvOp(
+  xla::XlaOp conv = ConsumeValue(MakeXlaBackpropFilterConvOp(
       "conv_backward_weight", input, transposed_weight_shape, grad_output,
       conv_op_attrs));
 
@@ -318,10 +316,20 @@ ConvGrads BuildTransposedConvolutionBackward(
 
 }  // namespace
 
-// Convert a PTXLATensorFormat into string. And this code copied/inspired from
-// TF:
+// -------------Convolution Helper Function Start------------------------- 
+// Convolution helper functions below are copied/inspired from TF2XLA bridge in 
 // https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/core/util/tensor_format.cc#L40
-std::string PTXLAToString(PTXLATensorFormat format) {
+// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/compiler/tf2xla/kernels/conv_op_helpers.cc#L118
+// https://github.com/tensorflow/tensorflow/blob/56c2225936001b65894466e4699a3dc3d00cb179/tensorflow/compiler/tf2xla/kernels/conv_op_helpers.cc#L67
+// https://github.com/tensorflow/tensorflow/blob/7f39a389d5b82d6aca13240c21f2647c3ebdb765/tensorflow/core/framework/kernel_shape_util.cc#L20
+// https://github.com/tensorflow/tensorflow/blob/7f39a389d5b82d6aca13240c21f2647c3ebdb765/tensorflow/core/kernels/conv_grad_shape_utils.cc#L53
+// https://github.com/tensorflow/tensorflow/blob/7f39a389d5b82d6aca13240c21f2647c3ebdb765/tensorflow/core/kernels/conv_grad_shape_utils.cc#L95
+// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/compiler/tf2xla/kernels/conv_op_helpers.cc#L52
+// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/compiler/tf2xla/kernels/conv_op_helpers.cc#L83
+// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/compiler/tf2xla/kernels/conv_op_helpers.cc#L419
+
+// Convert a TensorFormat into string.
+std::string ToString(TensorFormat format) {
   switch (format) {
     case FORMAT_NHWC:
       return "NHWC";
@@ -341,19 +349,17 @@ std::string PTXLAToString(PTXLATensorFormat format) {
   }
 }
 
-// Performs some basic checks on PTXLAConvOpAttrs that are true for all kinds of
-// XLA convolutions (as currently implemented). And this code copied/inspired
-// from TF:
-// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/compiler/tf2xla/kernels/conv_op_helpers.cc#L118
-tsl::Status PTXLACheckConvAttrs(const PTXLAConvOpAttrs& attrs) {
+// Performs some basic checks on ConvOpAttrs that are true for all kinds of
+// XLA convolutions (as currently implemented).
+tsl::Status CheckConvAttrs(const ConvOpAttrs& attrs) {
   const int num_dims = attrs.num_spatial_dims + 2;
   const int attrs_strides_size = attrs.strides.size();
   if (attrs_strides_size != num_dims) {
     return tsl::errors::InvalidArgument(
         "Sliding window strides field must specify ", num_dims, " dimensions");
   }
-  int batch_dim = PTXLAGetTensorBatchDimIndex(num_dims, attrs.data_format);
-  int feature_dim = PTXLAGetTensorFeatureDimIndex(num_dims, attrs.data_format);
+  int batch_dim = GetTensorBatchDimIndex(num_dims, attrs.data_format);
+  int feature_dim = GetTensorFeatureDimIndex(num_dims, attrs.data_format);
   if (attrs.strides[batch_dim] != 1 || attrs.strides[feature_dim] != 1) {
     return tsl::errors::Unimplemented(
         "Current implementation does not yet support strides in the batch and "
@@ -371,7 +377,7 @@ tsl::Status PTXLACheckConvAttrs(const PTXLAConvOpAttrs& attrs) {
   }
   for (int i = 0; i < attrs.num_spatial_dims; ++i) {
     int input_dim =
-        PTXLAGetTensorSpatialDimIndex(num_dims, attrs.data_format, i);
+        GetTensorSpatialDimIndex(num_dims, attrs.data_format, i);
     if (attrs.dilations[input_dim] < 1) {
       return tsl::errors::Unimplemented("Dilation values must be positive; ", i,
                                         "th spatial dimension had dilation ",
@@ -383,9 +389,7 @@ tsl::Status PTXLACheckConvAttrs(const PTXLAConvOpAttrs& attrs) {
 
 // Returns the expanded size of a filter used for depthwise convolution.
 // If `shape` is [H, W, ..., M, N] returns [H, W, ..., 1, M*N].
-// This code copied/inspired from TF:
-// https://github.com/tensorflow/tensorflow/blob/56c2225936001b65894466e4699a3dc3d00cb179/tensorflow/compiler/tf2xla/kernels/conv_op_helpers.cc#L67
-xla::Shape PTXLAGroupedFilterShapeForDepthwiseConvolution(
+xla::Shape GroupedFilterShapeForDepthwiseConvolution(
     const xla::Shape& filter_shape) {
   int64_t input_feature_dim = filter_shape.dimensions_size() - 2;
   int64_t output_feature_dim = filter_shape.dimensions_size() - 1;
@@ -400,11 +404,9 @@ xla::Shape PTXLAGroupedFilterShapeForDepthwiseConvolution(
   return grouped_filter_shape;
 }
 
-// This code copied/inspired from TF:
-// https://github.com/tensorflow/tensorflow/blob/7f39a389d5b82d6aca13240c21f2647c3ebdb765/tensorflow/core/framework/kernel_shape_util.cc#L20
-tsl::Status PTXLAGetWindowedOutputSizeVerboseV2(
+tsl::Status GetWindowedOutputSizeVerboseV2(
     int64_t input_size, int64_t filter_size, int64_t dilation_rate,
-    int64_t stride, PTXLAPadding padding_type, int64_t* output_size,
+    int64_t stride, Padding padding_type, int64_t* output_size,
     int64_t* padding_before, int64_t* padding_after) {
   if (stride <= 0) {
     return tsl::errors::InvalidArgument("Stride must be > 0, but got ", stride);
@@ -417,16 +419,16 @@ tsl::Status PTXLAGetWindowedOutputSizeVerboseV2(
   // See also the parallel implementation in GetWindowedOutputSizeFromDimsV2.
   int64_t effective_filter_size = (filter_size - 1) * dilation_rate + 1;
   switch (padding_type) {
-    case PTXLAPadding::VALID:
+    case Padding::VALID:
       *output_size = (input_size - effective_filter_size + stride) / stride;
       *padding_before = *padding_after = 0;
       break;
-    case PTXLAPadding::EXPLICIT:
+    case Padding::EXPLICIT:
       *output_size = (input_size + *padding_before + *padding_after -
                       effective_filter_size + stride) /
                      stride;
       break;
-    case PTXLAPadding::SAME:
+    case Padding::SAME:
       *output_size = (input_size + stride - 1) / stride;
       const int64_t padding_needed =
           std::max(int64_t{0}, (*output_size - 1) * stride +
@@ -447,22 +449,21 @@ tsl::Status PTXLAGetWindowedOutputSizeVerboseV2(
   return tsl::OkStatus();
 }
 
-// Check dimension and this code copied/inspired form TF:
-// https://github.com/tensorflow/tensorflow/blob/7f39a389d5b82d6aca13240c21f2647c3ebdb765/tensorflow/core/kernels/conv_grad_shape_utils.cc#L53
-tsl::Status PTXLAConvBackpropExtractAndVerifyDimension(
+// Check dimension
+tsl::Status ConvBackpropExtractAndVerifyDimension(
     tsl::StringPiece label, const xla::Shape& input_shape,
     const xla::Shape& filter_shape, const xla::Shape& output_shape,
     const absl::Span<const tsl::int32> dilations,
-    const std::vector<tsl::int32>& strides, PTXLAPadding padding,
+    const std::vector<tsl::int32>& strides, Padding padding,
     int64_t padding_before, int64_t padding_after, int spatial_dim,
-    int filter_spatial_dim, PTXLAConvBackpropSpatialDimension* dim) {
+    int filter_spatial_dim, ConvBackpropSpatialDimension* dim) {
   dim->input_size = input_shape.dimensions(spatial_dim);
   dim->filter_size = filter_shape.dimensions(filter_spatial_dim);
   dim->output_size = output_shape.dimensions(spatial_dim);
   dim->stride = strides[spatial_dim];
   dim->dilation = dilations[spatial_dim];
   int64_t out_size = 0;
-  TF_RETURN_IF_ERROR(PTXLAGetWindowedOutputSizeVerboseV2(
+  TF_RETURN_IF_ERROR(GetWindowedOutputSizeVerboseV2(
       dim->input_size, dim->filter_size, dim->dilation, dim->stride, padding,
       &out_size, &padding_before, &padding_after));
   if (dim->output_size != out_size) {
@@ -489,14 +490,13 @@ tsl::Status PTXLAConvBackpropExtractAndVerifyDimension(
   return tsl::OkStatus();
 }
 
-// Check dimension and this code copied/inspired from TF:
-// https://github.com/tensorflow/tensorflow/blob/7f39a389d5b82d6aca13240c21f2647c3ebdb765/tensorflow/core/kernels/conv_grad_shape_utils.cc#L95
-tsl::Status PTXLAConvBackpropComputeDimensionsV2(
+// Check dimension
+tsl::Status ConvBackpropComputeDimensionsV2(
     tsl::StringPiece label, int num_spatial_dims, const xla::Shape& input_shape,
     const xla::Shape& filter_shape, const xla::Shape& out_backprop_shape,
     absl::Span<const tsl::int32> dilations,
-    const std::vector<tsl::int32>& strides, PTXLAPadding padding,
-    PTXLATensorFormat data_format, PTXLAConvBackpropDimensions* dims,
+    const std::vector<tsl::int32>& strides, Padding padding,
+    TensorFormat data_format, ConvBackpropDimensions* dims,
     absl::Span<const int64_t> explicit_paddings) {
   // The + 2 in the following line is for the batch and feature dimensions.
   const int num_dims = num_spatial_dims + 2;
@@ -512,7 +512,7 @@ tsl::Status PTXLAConvBackpropComputeDimensionsV2(
     return tsl::errors::InvalidArgument(label, ": out_backprop must be ",
                                         num_dims, "-dimensional");
   }
-  int batch_dim = PTXLAGetTensorBatchDimIndex(num_dims, data_format);
+  int batch_dim = GetTensorBatchDimIndex(num_dims, data_format);
   dims->batch_size = input_shape.dimensions(batch_dim);
   if (dims->batch_size != out_backprop_shape.dimensions(batch_dim)) {
     return tsl::errors::InvalidArgument(
@@ -522,7 +522,7 @@ tsl::Status PTXLAConvBackpropComputeDimensionsV2(
         ", batch_dim: ", batch_dim);
   }
 
-  int feature_dim = PTXLAGetTensorFeatureDimIndex(num_dims, data_format);
+  int feature_dim = GetTensorFeatureDimIndex(num_dims, data_format);
   dims->in_depth = input_shape.dimensions(feature_dim);
   // The input and output feature dimensions are the second last and last
   // dimensions of the filter Tensor.
@@ -543,13 +543,13 @@ tsl::Status PTXLAConvBackpropComputeDimensionsV2(
   }
   dims->spatial_dims.resize(num_spatial_dims);
   for (int i = 0; i < num_spatial_dims; ++i) {
-    int image_dim = PTXLAGetTensorSpatialDimIndex(num_dims, data_format, i);
+    int image_dim = GetTensorSpatialDimIndex(num_dims, data_format, i);
     int64_t padding_before = -1, padding_after = -1;
-    if (padding == PTXLAPadding::EXPLICIT) {
+    if (padding == Padding::EXPLICIT) {
       padding_before = explicit_paddings[2 * image_dim];
       padding_after = explicit_paddings[2 * image_dim + 1];
     }
-    TF_RETURN_IF_ERROR(PTXLAConvBackpropExtractAndVerifyDimension(
+    TF_RETURN_IF_ERROR(ConvBackpropExtractAndVerifyDimension(
         label, input_shape, filter_shape, out_backprop_shape, dilations,
         strides, padding, padding_before, padding_after, image_dim, i,
         &dims->spatial_dims[i]));
@@ -557,9 +557,7 @@ tsl::Status PTXLAConvBackpropComputeDimensionsV2(
   return tsl::OkStatus();
 }
 
-// This code copied/inspired from TF:
-// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/compiler/tf2xla/kernels/conv_op_helpers.cc#L52
-xla::PrecisionConfig PTXLAGetPrecisionConfig() {
+xla::PrecisionConfig GetPrecisionConfig() {
   xla::PrecisionConfig::Precision precision =
       tsl::tensor_float_32_execution_enabled() ? xla::PrecisionConfig::DEFAULT
                                                : xla::PrecisionConfig::HIGHEST;
@@ -573,7 +571,7 @@ xla::PrecisionConfig PTXLAGetPrecisionConfig() {
 }
 
 // Returns the transposed filter for use in BackpropInput of group convolution.
-xla::XlaOp PTXLATransposeFilterForGroupConvolutionBackpropInput(
+xla::XlaOp TransposeFilterForGroupConvolutionBackpropInput(
     xla::XlaOp filter, const xla::Shape& filter_shape, int64_t num_groups,
     int num_spatial_dims) {
   // 1. Reshape from [H, W, ..., filter_in_depth, out_depth] to [H, W, ...,
@@ -597,17 +595,16 @@ xla::XlaOp PTXLATransposeFilterForGroupConvolutionBackpropInput(
   return result;
 }
 
-// Wrapper for ConvGeneralDilated and check dim. And this code inspired from TF:
-// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/compiler/tf2xla/kernels/conv_op_helpers.cc#L83
-tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropInputConvOp(
+// Wrapper for ConvGeneralDilated and check dim.
+tsl::StatusOr<xla::XlaOp> MakeXlaBackpropInputConvOp(
     tsl::StringPiece type_string, const xla::Shape& input_shape,
-    xla::XlaOp filter, xla::XlaOp out_backprop, const PTXLAConvOpAttrs& attrs,
+    xla::XlaOp filter, xla::XlaOp out_backprop, const ConvOpAttrs& attrs,
     xla::XlaOp* input_sizes) {
-  TF_RETURN_IF_ERROR(PTXLACheckConvAttrs(attrs));
+  TF_RETURN_IF_ERROR(CheckConvAttrs(attrs));
 
   int num_dims = attrs.num_spatial_dims + 2;
-  int batch_dim = PTXLAGetTensorBatchDimIndex(num_dims, attrs.data_format);
-  int feature_dim = PTXLAGetTensorFeatureDimIndex(num_dims, attrs.data_format);
+  int batch_dim = GetTensorBatchDimIndex(num_dims, attrs.data_format);
+  int feature_dim = GetTensorFeatureDimIndex(num_dims, attrs.data_format);
 
   auto* builder = filter.builder();
   TF_ASSIGN_OR_RETURN(xla::Shape filter_shape, builder->GetShape(filter));
@@ -621,12 +618,12 @@ tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropInputConvOp(
 
   xla::Shape grouped_filter_shape =
       attrs.depthwise
-          ? PTXLAGroupedFilterShapeForDepthwiseConvolution(filter_shape)
+          ? GroupedFilterShapeForDepthwiseConvolution(filter_shape)
           : filter_shape;
 
   // Dimension check
-  PTXLAConvBackpropDimensions dims;
-  TF_RETURN_IF_ERROR(PTXLAConvBackpropComputeDimensionsV2(
+  ConvBackpropDimensions dims;
+  TF_RETURN_IF_ERROR(ConvBackpropComputeDimensionsV2(
       type_string, attrs.num_spatial_dims, input_shape, grouped_filter_shape,
       out_backprop_shape, attrs.dilations, attrs.strides, attrs.padding,
       attrs.data_format, &dims, attrs.explicit_paddings));
@@ -652,15 +649,15 @@ tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropInputConvOp(
   std::vector<int64_t> ones(attrs.num_spatial_dims, 1);
   xla::PaddingType padding_type = xla::PaddingType::PADDING_INVALID;
   for (int i = 0; i < attrs.num_spatial_dims; ++i) {
-    int64_t dim = PTXLAGetTensorSpatialDimIndex(num_dims, attrs.data_format, i);
+    int64_t dim = GetTensorSpatialDimIndex(num_dims, attrs.data_format, i);
     if (out_backprop_shape.is_dynamic_dimension(dim)) {
-      TF_RET_CHECK(attrs.padding == PTXLAPadding::VALID ||
-                   attrs.padding == PTXLAPadding::SAME)
+      TF_RET_CHECK(attrs.padding == Padding::VALID ||
+                   attrs.padding == Padding::SAME)
           << "Dynamic convolution only supports valid and same padding";
-      if (attrs.padding == PTXLAPadding::VALID) {
+      if (attrs.padding == Padding::VALID) {
         padding_type = xla::PaddingType::PADDING_VALID;
       }
-      if (attrs.padding == PTXLAPadding::SAME) {
+      if (attrs.padding == Padding::SAME) {
         padding_type = xla::PaddingType::PADDING_SAME;
       }
     }
@@ -674,10 +671,10 @@ tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropInputConvOp(
     lhs_dilation[i] = dims.spatial_dims[i].stride;
     rhs_dilation[i] = attrs.dilations[dim];
   }
-  xla::PrecisionConfig precision_config = PTXLAGetPrecisionConfig();
+  xla::PrecisionConfig precision_config = GetPrecisionConfig();
 
   if (feature_group_count != 1 && !attrs.depthwise) {
-    filter = PTXLATransposeFilterForGroupConvolutionBackpropInput(
+    filter = TransposeFilterForGroupConvolutionBackpropInput(
         filter, filter_shape, feature_group_count, attrs.num_spatial_dims);
   }
   // Mirror the filter in the spatial dimensions.
@@ -700,13 +697,12 @@ tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropInputConvOp(
                                  /*batch_group_count=*/1, &precision_config);
 }
 
-// Wrapper for ConvGeneralDilated and check dim. And this code inspired from TF:
-// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/compiler/tf2xla/kernels/conv_op_helpers.cc#L419
-tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropFilterConvOp(
+// Wrapper for ConvGeneralDilated and check dim.
+tsl::StatusOr<xla::XlaOp> MakeXlaBackpropFilterConvOp(
     tsl::StringPiece type_string, xla::XlaOp activations,
     const xla::Shape& filter_shape, xla::XlaOp gradients,
-    const PTXLAConvOpAttrs& attrs) {
-  TF_RETURN_IF_ERROR(PTXLACheckConvAttrs(attrs));
+    const ConvOpAttrs& attrs) {
+  TF_RETURN_IF_ERROR(CheckConvAttrs(attrs));
 
   auto* builder = activations.builder();
   TF_ASSIGN_OR_RETURN(xla::Shape activations_shape,
@@ -720,17 +716,17 @@ tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropFilterConvOp(
 
   const xla::Shape grouped_filter_shape =
       attrs.depthwise
-          ? PTXLAGroupedFilterShapeForDepthwiseConvolution(filter_shape)
+          ? GroupedFilterShapeForDepthwiseConvolution(filter_shape)
           : filter_shape;
   // Reuse dimension computation logic from conv_grad_shape_utils.cc.
-  PTXLAConvBackpropDimensions dims;
+  ConvBackpropDimensions dims;
   // The filter gradients are computed by a convolution of the input
   // activations and the output gradients, with some appropriate padding.
   // See the comment at the top of conv_grad_shape_utils.h(TF) for details.
   xla::ConvolutionDimensionNumbers dnums;
 
   // Dimension check
-  TF_RETURN_IF_ERROR(PTXLAConvBackpropComputeDimensionsV2(
+  TF_RETURN_IF_ERROR(ConvBackpropComputeDimensionsV2(
       type_string, attrs.num_spatial_dims, activations_shape,
       grouped_filter_shape, out_backprop_shape, attrs.dilations, attrs.strides,
       attrs.padding, attrs.data_format, &dims, attrs.explicit_paddings));
@@ -738,8 +734,8 @@ tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropFilterConvOp(
   // Obtain some useful dimensions:
   // The last two dimensions of the filter are the input and output shapes.
   int num_dims = attrs.num_spatial_dims + 2;
-  int n_dim = PTXLAGetTensorBatchDimIndex(num_dims, attrs.data_format);
-  int c_dim = PTXLAGetTensorFeatureDimIndex(num_dims, attrs.data_format);
+  int n_dim = GetTensorBatchDimIndex(num_dims, attrs.data_format);
+  int c_dim = GetTensorFeatureDimIndex(num_dims, attrs.data_format);
   int64_t in_depth = input_shape.dimensions(c_dim),
           filter_in_depth = filter_shape.dimensions(attrs.num_spatial_dims),
           batch_group_count =
@@ -769,15 +765,15 @@ tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropFilterConvOp(
   }
   xla::PaddingType padding_type = xla::PaddingType::PADDING_INVALID;
   for (int64_t i = 0; i < attrs.num_spatial_dims; ++i) {
-    int64_t dim = PTXLAGetTensorSpatialDimIndex(num_dims, attrs.data_format, i);
+    int64_t dim = GetTensorSpatialDimIndex(num_dims, attrs.data_format, i);
     if (activations_shape.is_dynamic_dimension(dim)) {
-      TF_RET_CHECK(attrs.padding == PTXLAPadding::VALID ||
-                   attrs.padding == PTXLAPadding::SAME)
+      TF_RET_CHECK(attrs.padding == Padding::VALID ||
+                   attrs.padding == Padding::SAME)
           << "Dynamic convolution only supports valid and same padding";
-      if (attrs.padding == PTXLAPadding::VALID) {
+      if (attrs.padding == Padding::VALID) {
         padding_type = xla::PaddingType::PADDING_VALID;
       }
-      if (attrs.padding == PTXLAPadding::SAME) {
+      if (attrs.padding == Padding::SAME) {
         padding_type = xla::PaddingType::PADDING_SAME;
       }
     }
@@ -821,14 +817,14 @@ tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropFilterConvOp(
     // In addition, if the padded input size is smaller than the input size,
     // we need to ignore some training elements of the input. We do this by
     // applying negative padding on the right/bottom.
-    const int64_t pad_before = attrs.padding == PTXLAPadding::EXPLICIT
+    const int64_t pad_before = attrs.padding == Padding::EXPLICIT
                                    ? attrs.explicit_paddings[2 * dim]
-                                   : attrs.padding == PTXLAPadding::SAME
+                                   : attrs.padding == Padding::SAME
                                          ? std::max<int64_t>(pad_total / 2, 0)
                                          : 0;
     padding[i] = {pad_before, pad_total - pad_before};
   }
-  xla::PrecisionConfig precision_config = PTXLAGetPrecisionConfig();
+  xla::PrecisionConfig precision_config = GetPrecisionConfig();
 
   // Besides padding the input, we will also expand output_rows to
   //    expanded_out_rows = (output_rows - 1) * stride + 1
@@ -859,6 +855,8 @@ tsl::StatusOr<xla::XlaOp> PTXLAMakeXlaBackpropFilterConvOp(
 
   return filter_backprop;
 }
+
+// -------------Convolution Helper Function End--------------------------
 
 xla::XlaOp BuildConvolutionOverrideable(
     xla::XlaOp input, xla::XlaOp kernel, absl::Span<const int64_t> stride,
