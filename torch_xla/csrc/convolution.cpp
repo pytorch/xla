@@ -119,9 +119,9 @@ xla::XlaOp PadInputFromOutputSize(xla::XlaOp input,
 
 // Create ConvOpAttrs
 ConvOpAttrs MakeConvOpAttrs(absl::Span<const int64_t> spatial_stride,
-                                 absl::Span<const int64_t> spatial_padding,
-                                 absl::Span<const int64_t> spatial_dilation,
-                                 bool depthwise) {
+                            absl::Span<const int64_t> spatial_padding,
+                            absl::Span<const int64_t> spatial_dilation,
+                            bool depthwise) {
   int num_spatial_dims = spatial_stride.size();
   XLA_CHECK_EQ(spatial_padding.size(), num_spatial_dims);
   XLA_CHECK_EQ(spatial_dilation.size(), num_spatial_dims);
@@ -217,9 +217,9 @@ xla::XlaOp BuildConvBackwardInput(xla::XlaOp grad_output, xla::XlaOp kernel,
       MakeConvOpAttrs(spatial_stride, spatial_padding, spatial_dilation, false);
   xla::XlaOp kernel_transposed =
       xla::Transpose(kernel, FilterTransposePermutation(input_shape.rank()));
-  return ConsumeValue(MakeXlaBackpropInputConvOp(
-      "conv_backward_input", input_shape, kernel_transposed, grad_output,
-      conv_op_attrs));
+  return ConsumeValue(MakeXlaBackpropInputConvOp("conv_backward_input",
+                                                 input_shape, kernel_transposed,
+                                                 grad_output, conv_op_attrs));
 }
 
 // Computes the kernel gradient for a convolution.

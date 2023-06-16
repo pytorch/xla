@@ -1,4 +1,4 @@
-#include "torch_xla/csrc/convolution.h"
+#include "torch_xla/csrc/convolution_helper.h"
 
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/shape_util.h"
@@ -64,8 +64,7 @@ tsl::Status CheckConvAttrs(const ConvOpAttrs& attrs) {
         "depth dimensions.");
   }
   for (int i = 0; i < attrs.num_spatial_dims; ++i) {
-    int input_dim =
-        GetTensorSpatialDimIndex(num_dims, attrs.data_format, i);
+    int input_dim = GetTensorSpatialDimIndex(num_dims, attrs.data_format, i);
     if (attrs.dilations[input_dim] < 1) {
       return tsl::errors::Unimplemented("Dilation values must be positive; ", i,
                                         "th spatial dimension had dilation ",
@@ -314,9 +313,8 @@ tsl::StatusOr<xla::XlaOp> MakeXlaBackpropInputConvOp(
               attrs.depthwise ? filter_in_depth : in_depth / filter_in_depth;
 
   xla::Shape grouped_filter_shape =
-      attrs.depthwise
-          ? GroupedFilterShapeForDepthwiseConvolution(filter_shape)
-          : filter_shape;
+      attrs.depthwise ? GroupedFilterShapeForDepthwiseConvolution(filter_shape)
+                      : filter_shape;
 
   // Dimension check
   ConvBackpropDimensions dims;
@@ -412,9 +410,8 @@ tsl::StatusOr<xla::XlaOp> MakeXlaBackpropFilterConvOp(
   xla::Shape output_shape = out_backprop_shape;
 
   const xla::Shape grouped_filter_shape =
-      attrs.depthwise
-          ? GroupedFilterShapeForDepthwiseConvolution(filter_shape)
-          : filter_shape;
+      attrs.depthwise ? GroupedFilterShapeForDepthwiseConvolution(filter_shape)
+                      : filter_shape;
   // Reuse dimension computation logic from conv_grad_shape_utils.cc.
   ConvBackpropDimensions dims;
   // The filter gradients are computed by a convolution of the input
