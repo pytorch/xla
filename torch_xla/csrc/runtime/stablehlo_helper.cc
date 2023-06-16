@@ -22,7 +22,9 @@ static std::string getHloModuleStr(const xla::HloModuleProto* proto) {
 static std::string getMlirModuleStr(mlir::ModuleOp& mlir_module) {
   std::string txt_mlir_module;
   llvm::raw_string_ostream os{txt_mlir_module};
-  mlir_module.print(os);
+  // Enable Debug Info to include source line info in the StableHLO dump.
+  mlir_module.print(
+      os, mlir::OpPrintingFlags().enableDebugInfo().printGenericOpForm());
   return txt_mlir_module;
 }
 
