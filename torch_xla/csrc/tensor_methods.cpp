@@ -2717,10 +2717,10 @@ XLATensorPtr upsample_nearest2d_backward(const XLATensorPtr& grad_output,
 
 XLATensorPtr alias(const XLATensorPtr& input) {
   torch::lazy::Value ir_value = input->GetIrValue();
-    // See Note: [Disabling functionalization]
+  // See Note: [Disabling functionalization]
   if (runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
     ViewInfo view_info(ViewInfo::Type::kNoOp, GetXlaShape(ir_value),
-                     GetXlaShape(ir_value));
+                       GetXlaShape(ir_value));
     return input->CreateViewTensor(std::move(view_info));
   }
   return input->CreateFrom(ir_value);
