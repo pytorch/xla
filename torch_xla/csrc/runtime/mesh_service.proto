@@ -15,6 +15,7 @@ message Worker {
 }
 
 message Config {
+  optional int64 placeholder = 1;
   repeated Worker workers = 2;
   required int64 mesh_size = 3;
 }
