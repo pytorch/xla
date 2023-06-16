@@ -23,39 +23,39 @@ python_configure(
     name = "local_config_python",
     python_version = "3",  # required to use `python3-config`
 )
-############################# TensorFlow Setup ###############################
+############################# OpenXLA Setup ###############################
 
-# To update TensorFlow to a new revision,
+# To update OpenXLA to a new revision,
 # a) update URL and strip_prefix to the new git commit hash
 # b) get the sha256 hash of the commit by running:
 #    curl -L https://github.com/tensorflow/tensorflow/archive/<git hash>.tar.gz | sha256sum
 #    and update the sha256 with the result.
 http_archive(
-    name = "org_tensorflow",
+    name = "xla",
     patch_args = [
         "-l",
         "-p1",
     ],
     patch_tool = "patch",
     patches = [
-        "//tf_patches:absl_statusor.diff",
-        "//tf_patches:cache_urls.diff",
-        "//tf_patches:cuda_graph.diff",
-        "//tf_patches:f16_abi_clang.diff",
-        "//tf_patches:gpu_race_condition.diff",
-        "//tf_patches:grpc_version.diff",
-        "//tf_patches:optimized_function_graph.diff",
-        "//tf_patches:profiler_trace.diff",
-        "//tf_patches:stream_executor.diff",
-        "//tf_patches:thread_local_random.diff",
-        "//tf_patches:topk_rewriter.diff",
-        "//tf_patches:triton_filesystem.diff",
-        "//tf_patches:xla_bzl.diff",
-        "//tf_patches:xplane.diff",
+        "//openxla_patches:absl_statusor.diff",
+        "//openxla_patches:cache_urls.diff",
+        "//openxla_patches:cuda_graph.diff",
+        "//openxla_patches:f16_abi_clang.diff",
+        "//openxla_patches:gpu_race_condition.diff",
+        "//openxla_patches:grpc_version.diff",
+        "//openxla_patches:optimized_function_graph.diff",
+        "//openxla_patches:profiler_trace.diff",
+        "//openxla_patches:stream_executor.diff",
+        "//openxla_patches:thread_local_random.diff",
+        "//openxla_patches:topk_rewriter.diff",
+        "//openxla_patches:triton_filesystem.diff",
+        "//openxla_patches:xla_bzl.diff",
+        "//openxla_patches:xplane.diff",
     ],
-    strip_prefix = "tensorflow-d577af9cac504776a2d0ddbb0a445ba311aa1fea",
+    strip_prefix = "xla-ce3949f58d8a3a791c36741b248bea52954b1648",
     urls = [
-        "https://github.com/tensorflow/tensorflow/archive/d577af9cac504776a2d0ddbb0a445ba311aa1fea.tar.gz",
+        "https://github.com/openxla/xla/archive/ce3949f58d8a3a791c36741b248bea52954b1648.tar.gz",
     ],
 )
 

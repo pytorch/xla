@@ -64,9 +64,9 @@ ptxla_cc_test(
         ":torch_xla_test",
         "//torch_xla/csrc:tensor",
         "@com_google_googletest//:gtest_main",
-        "@org_tensorflow//tensorflow/compiler/xla:shape_util",
-        "@org_tensorflow//tensorflow/tsl/util:stats_calculator_test",
-        "@org_tensorflow//tensorflow/tsl/util:device_name_utils_test",
+        "@xla//xla:shape_util",
+        "@tsl//tsl/util:stats_calculator_test",
+        "@tsl//tsl/util:device_name_utils_test",
     ],
 )
 
@@ -82,8 +82,8 @@ ptxla_cc_test(
         "//torch_xla/csrc/runtime:thread_pool",
         "//torch_xla/csrc:tensor",
         "@com_google_googletest//:gtest_main",
-        "@org_tensorflow//tensorflow/compiler/xla:shape_util",
-        "@org_tensorflow//tensorflow/compiler/xla/client:xla_builder",
+        "@xla//xla:shape_util",
+        "@xla//xla/client:xla_builder",
     ],
 )
 
@@ -121,8 +121,8 @@ ptxla_cc_test(
         "//torch_xla/csrc/runtime:sys_util",
         "//torch_xla/csrc:tensor",
         "@com_google_googletest//:gtest_main",
-        "@org_tensorflow//tensorflow/compiler/xla:xla_data_proto_cc",
-        "@org_tensorflow//tensorflow/tsl/profiler/utils:session_manager",
+        "@xla//xla:xla_data_proto_cc",
+        "@tsl//tsl/profiler/utils:session_manager",
     ],
 )
 
@@ -139,7 +139,7 @@ ptxla_cc_test(
             "//torch_xla/csrc/runtime:metrics",
             "//torch_xla/csrc:tensor",
             "@com_google_googletest//:gtest_main",
-            "@org_tensorflow//tensorflow/compiler/xla:permutation_util",
+            "@xla//xla:permutation_util",
         ],
     )
     for test in glob(["test_aten_xla_tensor*cpp"])
