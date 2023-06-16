@@ -50,6 +50,7 @@ http_archive(
         "//tf_patches:thread_local_random.diff",
         "//tf_patches:topk_rewriter.diff",
         "//tf_patches:triton_filesystem.diff",
+        "//tf_patches:xla_bzl.diff",
         "//tf_patches:xplane.diff",
     ],
     strip_prefix = "tensorflow-d577af9cac504776a2d0ddbb0a445ba311aa1fea",
