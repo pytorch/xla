@@ -6,7 +6,7 @@
 
 #include "absl/memory/memory.h"
 #include "absl/strings/str_split.h"
-#include "tensorflow/tsl/platform/macros.h"
+#include "tsl/platform/macros.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/util.h"
 

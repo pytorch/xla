@@ -13,8 +13,8 @@ http_archive(
     patch_args = [ "-l", "-p1"],
     patch_tool = "patch",
     patches = [
-        "//tf_patches:thread_local_random.diff",
-        "//tf_patches:xplane.diff",
+        "//openxla_patches:thread_local_random.diff",
+        "//openxla_patches:xplane.diff",
         ...
     ],
     strip_prefix = "tensorflow-f7759359f8420d3ca7b9fd19493f2a01bd47b4ef",

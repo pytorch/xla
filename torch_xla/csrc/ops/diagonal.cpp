@@ -2,7 +2,7 @@
 
 #include <cmath>
 
-#include "tensorflow/compiler/xla/shape_util.h"
+#include "xla/shape_util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/matrix.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"

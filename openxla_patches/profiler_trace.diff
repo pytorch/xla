@@ -18,9 +18,9 @@ index 5c6f480d2fa..1e8b2ea94d5 100644
 +++ b/tensorflow/python/profiler/internal/profiler_pywrap_impl.cc
 @@ -38,200 +38,24 @@ limitations under the License.
  #include "tensorflow/core/profiler/rpc/profiler_server.h"
- #include "tensorflow/tsl/profiler/convert/xplane_to_trace_events.h"
- #include "tensorflow/tsl/profiler/rpc/client/capture_profile.h"
-+#include "tensorflow/tsl/profiler/utils/session_manager.h"
+ #include "tsl/profiler/convert/xplane_to_trace_events.h"
+ #include "tsl/profiler/rpc/client/capture_profile.h"
++#include "tsl/profiler/utils/session_manager.h"
 
  namespace tensorflow {
  namespace profiler {
@@ -261,10 +261,10 @@ index 8e7b7833422..a475fff27f3 100644
  #include "absl/strings/str_join.h"
  #include "absl/strings/str_split.h"
 @@ -36,6 +38,7 @@ limitations under the License.
- #include "tensorflow/tsl/profiler/rpc/client/profiler_client.h"
- #include "tensorflow/tsl/profiler/rpc/client/remote_profiler_session_manager.h"
- #include "tensorflow/tsl/profiler/rpc/client/save_profile.h"
-+#include "tensorflow/tsl/profiler/utils/session_manager.h"
+ #include "tsl/profiler/rpc/client/profiler_client.h"
+ #include "tsl/profiler/rpc/client/remote_profiler_session_manager.h"
+ #include "tsl/profiler/rpc/client/save_profile.h"
++#include "tsl/profiler/utils/session_manager.h"
 
  namespace tsl {
  namespace profiler {
@@ -305,9 +305,9 @@ index f941ac960ad..80899f1d97f 100644
 +#include <variant>
 
 +#include "absl/container/flat_hash_map.h"
- #include "tensorflow/tsl/platform/status.h"
- #include "tensorflow/tsl/profiler/protobuf/profiler_options.pb.h"
- #include "tensorflow/tsl/profiler/protobuf/profiler_service.pb.h"
+ #include "tsl/platform/status.h"
+ #include "tsl/profiler/protobuf/profiler_options.pb.h"
+ #include "tsl/profiler/protobuf/profiler_service.pb.h"
 @@ -45,6 +47,14 @@ Status CaptureRemoteTrace(const std::string& logdir, int num_tracing_attempts,
                            tensorflow::RemoteProfilerSessionManagerOptions& opts,
                            bool is_cloud_tpu_session);
@@ -365,16 +365,16 @@ index 00000000000..9d7d2de2fc6
 +limitations under the License.
 +==============================================================================*/
 +
-+#include "tensorflow/tsl/profiler/utils/session_manager.h"
++#include "tsl/profiler/utils/session_manager.h"
 +
 +#include <algorithm>
 +#include <string>
 +#include <variant>
 +#include <vector>
 +
-+#include "tensorflow/tsl/platform/errors.h"
-+#include "tensorflow/tsl/profiler/lib/profiler_session.h"
-+#include "tensorflow/tsl/profiler/protobuf/profiler_options.pb.h"
++#include "tsl/platform/errors.h"
++#include "tsl/profiler/lib/profiler_session.h"
++#include "tsl/profiler/protobuf/profiler_options.pb.h"
 +
 +namespace tsl {
 +namespace profiler {
@@ -578,8 +578,8 @@ index 00000000000..d4ecddb703e
 +#include <variant>
 +
 +#include "absl/container/flat_hash_map.h"
-+#include "tensorflow/tsl/platform/status.h"
-+#include "tensorflow/tsl/profiler/protobuf/profiler_options.pb.h"
++#include "tsl/platform/status.h"
++#include "tsl/profiler/protobuf/profiler_options.pb.h"
 +
 +namespace tsl {
 +namespace profiler {
