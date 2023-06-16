@@ -2640,18 +2640,33 @@ XLATensorPtr trace(const XLATensorPtr& input) {
 
 XLATensorPtr transpose(const XLATensorPtr& input, int64_t dim0, int64_t dim1) {
   torch_xla::runtime::util::MaybeRef<xla::Shape> input_shape = input->shape();
-  ViewInfo view_info;
-  if (input_shape.get().rank() <= 1) {
-    // return a view of self if input rank <=1
-    torch::lazy::Value ir_value = input->GetIrValue();
-    view_info = ViewInfo(ViewInfo::Type::kNoOp, GetXlaShape(ir_value),
-                         GetXlaShape(ir_value));
-  } else {
-    std::vector<int64_t> permute_dims = torch::lazy::MakeTransposePermutation(
-        /*dim0=*/dim0, /*dim1=*/dim1, /*rank=*/input_shape.get().rank());
-    view_info = ViewInfo(ViewInfo::Type::kPermute, input_shape, permute_dims);
+  std::vector<int64_t> permute_dims = torch::lazy::MakeTransposePermutation(
+      /*dim0=*/dim0, /*dim1=*/dim1, /*rank=*/input_shape.get().rank());
+
+  // See Note: [Disabling functionalization]
+  if (runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
+    ViewInfo view_info;
+    if (input_shape.get().rank() <= 1) {
+      // return a view of self if input rank <=1
+      torch::lazy::Value ir_value = input->GetIrValue();
+      view_info = ViewInfo(ViewInfo::Type::kNoOp, GetXlaShape(ir_value),
+                           GetXlaShape(ir_value));
+    } else {
+      view_info = ViewInfo(ViewInfo::Type::kPermute, input_shape, permute_dims);
+    }
+    return input->CreateViewTensor(std::move(view_info));
   }
-  return input->CreateViewTensor(std::move(view_info));
+
+  XLATensorPtr result;
+  if (input_shape.get().rank() <= 1) {
+    // kNoOp
+    result = input;
+  } else {
+    // kPermute
+    result = input->CreateFrom(torch::lazy::MakeNode<Permute>(
+        input->GetIrValue(), xla::InversePermutation(permute_dims)));
+  }
+  return result;
 }
 
 std::tuple<XLATensorPtr, XLATensorPtr> triangular_solve(
