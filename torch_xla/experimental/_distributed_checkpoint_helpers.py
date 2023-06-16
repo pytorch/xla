@@ -12,6 +12,7 @@ from typing import (
     List,
     Mapping,
     MutableMapping,
+    Sequence,
     Tuple,
     TypeVar,
     Union,
@@ -168,3 +169,21 @@ def dedup_tensors(all_plans: List[SavePlan]) -> List[SavePlan]:
         all_plans[plan_idx], items=new_items)
 
   return all_plans
+
+
+# TODO(jonbolin): Take a dependency on the upstream implementation when the APIs
+# are stable
+# https://github.com/pytorch/pytorch/blob/d1cecd9c32ba700c27f2b0716bf2cbef41469495/torch/distributed/_shard/_utils.py#L7
+def narrow_tensor_by_index(tensor: torch.Tensor, offsets: Sequence[int],
+                           sizes: Sequence[int]) -> torch.Tensor:
+  """
+    Narrow the tensor according to `offsets` and `sizes`.
+    """
+  narrowed_tensor = tensor
+  for idx, (offset, size) in enumerate(zip(offsets, sizes)):
+    if size < tensor.size(idx):
+      # Reshape to get shard for this rank and we don't want autograd
+      # recording here for the narrow op and 'local_shard' should be a
+      # leaf variable in the autograd graph.
+      narrowed_tensor = narrowed_tensor.narrow(idx, offset, size)
+  return narrowed_tensor

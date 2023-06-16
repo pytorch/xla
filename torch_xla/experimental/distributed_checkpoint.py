@@ -32,7 +32,6 @@ from torch.distributed.checkpoint.metadata import (
     STATE_DICT_TYPE,
 )
 from torch.distributed.checkpoint.utils import find_state_dict_object
-from torch.distributed._shard._utils import narrow_tensor_by_index
 from torch.utils._pytree import tree_map
 from torch_xla.experimental.xla_sharding import (XLAShardedTensor, XLAShard,
                                                  ShardingType)
@@ -41,6 +40,7 @@ from torch_xla.experimental._distributed_checkpoint_helpers import (
     flatten_state_dict,
     dedup_tensors,
     set_element,
+    narrow_tensor_by_index,
 )
 from typing import Any, Dict, List, Tuple, Union
 
