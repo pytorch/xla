@@ -309,9 +309,15 @@ ShardingUtil::InputHandler(
   // the first local index with the first global device ordinal.
   auto device_index = build_index_map(devices);
 
+  int total_sharded = 0;
   for (int64_t argument_i = 0; argument_i < arguments.size(); ++argument_i) {
     auto shards =
         runtime::GetComputationClient()->GetDataShards(arguments[argument_i]);
+    auto sharding = 
+        runtime::GetComputationClient()->GetDataSharding(arguments[argument_i]);
+    if (sharding->type() != xla::OpSharding::REPLICATED) {
+      ++total_sharded;
+    }
     // With SPMD execution, all input is distributed across addressable devices,
     // either by sharding or replication.
     for (auto shard : shards) {
@@ -320,6 +326,8 @@ ShardingUtil::InputHandler(
       arguments_by_device[device_i][argument_i] = shard;
     }
   }
+
+  std::cerr << "InputHandler: total sharded data = " << total_sharded << " out of " << arguments.size() << std::endl;
 
   return arguments_by_device;
 }
@@ -651,7 +659,8 @@ runtime::ComputationClient::DataPtr ShardingUtil::CreateShardedData(
                                 std::move(populate_fn));
   }
   return runtime::GetComputationClient()->TransferShardsToServer(
-      source_tensors, GetVirtualDevice().toString(), global_shape, sharding);
+      // TODO(jonbolin): Using TPU device for PjRtShardedData
+      source_tensors, devices[0], global_shape, sharding);
 }
 
 }  // namespace torch_xla

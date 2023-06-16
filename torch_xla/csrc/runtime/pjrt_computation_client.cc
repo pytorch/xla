@@ -390,6 +390,7 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromServer(
 std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
     std::vector<ComputationClient::CompileInstance> instances) {
   metrics::TimedSection timed(CompileMetric());
+  std::cerr << "Compilation triggered" << std::endl;
   tsl::profiler::TraceMe activity("PjRtComputationClient::Compile",
                                   tsl::profiler::TraceMeLevel::kInfo);
   std::vector<ComputationClient::ComputationPtr> computations;
@@ -397,6 +398,7 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
   for (auto& instance : instances) {
     xla::CompileOptions compile_options;
     if (instance.is_sharded) {
+      std::cerr << "Sharded compilation" << std::endl;
       // TODO(yeounoh) multi-host, multi-slice configurations
       compile_options.executable_build_options.set_use_spmd_partitioning(true);
       // We can override the compiler's default behavior to replicate the
@@ -420,6 +422,7 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
       compile_options.executable_build_options.set_device_assignment(
           device_assignment);
     } else {
+      std::cerr << "Unsharded compilation" << std::endl;
       // TODO(wcromar): set compile_options.argument_layouts, enable strict
       // shapes
       compile_options.executable_build_options.set_num_partitions(1);
