@@ -10,7 +10,7 @@
 #include <unordered_set>
 
 #include "absl/strings/str_split.h"
-#include "tensorflow/tsl/platform/stacktrace.h"
+#include "tsl/platform/stacktrace.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 
 namespace torch_xla {

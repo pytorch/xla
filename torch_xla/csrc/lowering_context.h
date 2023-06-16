@@ -12,9 +12,9 @@
 #include <vector>
 
 #include "absl/types/span.h"
-#include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "tensorflow/compiler/xla/types.h"
-#include "tensorflow/tsl/platform/macros.h"
+#include "xla/client/xla_builder.h"
+#include "xla/types.h"
+#include "tsl/platform/macros.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
