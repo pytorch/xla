@@ -2061,11 +2061,18 @@ void optimization_barrier_(std::vector<XLATensorPtr>& tensors) {
 XLATensorPtr permute(const XLATensorPtr& input,
                      absl::Span<const int64_t> dims) {
   auto input_shape = input->shape();
-  ViewInfo view_info(ViewInfo::Type::kPermute, input_shape,
-                     torch::lazy::GetCanonicalDimensionIndices(
-                         torch_xla::runtime::util::ToVector<int64_t>(dims),
-                         input_shape.get().rank()));
-  return input->CreateViewTensor(std::move(view_info));
+  std::vector<int64_t> dimensions = torch::lazy::GetCanonicalDimensionIndices(
+      torch_xla::runtime::util::ToVector<int64_t>(dims),
+      input_shape.get().rank());
+
+  // See Note: [Disabling functionalization]
+  if (runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
+    ViewInfo view_info(ViewInfo::Type::kPermute, input_shape, dimensions);
+    return input->CreateViewTensor(std::move(view_info));
+  }
+
+  return input->CreateFrom(torch::lazy::MakeNode<Permute>(
+      input->GetIrValue(), xla::InversePermutation(dimensions)));
 }
 
 XLATensorPtr pow(const XLATensorPtr& input, const at::Scalar& exponent) {
