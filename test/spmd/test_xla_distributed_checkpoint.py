@@ -13,7 +13,7 @@ from torch.distributed.checkpoint.default_planner import (
     create_default_local_save_plan,
     create_default_global_save_plan,
 )
-from torch_xla.experimental.distributed_checkpoint import SPMDLoadPlanner
+from torch_xla.experimental.distributed_checkpoint import SPMDLoadPlanner, SPMDSavePlanner
 
 
 class DistributedCheckpointTestBase(test_xla_sharding_base.XlaShardingTest):
@@ -89,6 +89,27 @@ class ReshardingTest(DistributedCheckpointTestBase):
     sharded_model = self._get_sharded_model()
     self._save_and_restore(model, sharded_model, load_planner=SPMDLoadPlanner())
 
+  # TODO(jonbolin): Enable tests for resharding into coarser meshes
+  @unittest.skip("View assignment with virtual device is not yet supported")
+  def test_sharded_to_unsharded(self):
+    model = self.SimpleLinear().to(xm.xla_device())
+    sharded_model = self._get_sharded_model()
+    self._save_and_restore(sharded_model, model, save_planner=SPMDSavePlanner())
+
+  # TODO(jonbolin): Enable tests for resharding into coarser meshes
+  @unittest.skip("View assignment with virtual device is not yet supported")
+  @unittest.skipIf(xr.global_device_count() == 1,
+                   "Multiple devices needed to change mesh")
+  def test_different_device_mesh(self):
+    dim = self.n_devices // 2
+    model1 = self._get_sharded_model(mesh_shape=(dim, self.n_devices // dim))
+    model2 = self._get_sharded_model(mesh_shape=(self.n_devices, 1))
+    self._save_and_restore(
+        model1,
+        model2,
+        save_planner=SPMDSavePlanner(),
+        load_planner=SPMDLoadPlanner())
+
 
 class SPMDLoadPlannerTest(DistributedCheckpointTestBase):
 
@@ -158,6 +179,69 @@ class SPMDLoadPlannerTest(DistributedCheckpointTestBase):
     # After all ReadItems are processed, the local_shards should reflect the new
     # values
     self.assertFalse(self._same_shard_data(xtensor.local_shards, old_shards))
+
+
+class SPMDSavePlannerTest(DistributedCheckpointTestBase):
+
+  def _get_save_planner(self, model):
+    # Create an SPMDSavePlanner for the given model.
+    planner = SPMDSavePlanner()
+    planner.set_up_planner(model.state_dict(), True)
+    return planner
+
+  def test_state_dict_separation(self):
+    model = self._get_sharded_model()
+    planner = self._get_save_planner(model)
+    if self.n_devices > 1:
+      # The state_dict should be flattened and separated
+      self.assertCountEqual(planner.sharded_state_dict, ['fc1.weight'])
+      # `fc2.weight` should be in the unsharded_state_dict despite having
+      # an explicit mark_sharding call because it is replicated.
+      self.assertCountEqual(planner.unsharded_state_dict,
+                            ['fc1.bias', 'fc2.weight', 'fc2.bias'])
+    else:
+      # With a single device, no tensors are sharded.
+      self.assertCountEqual(
+          planner.unsharded_state_dict,
+          ['fc1.weight', 'fc1.bias', 'fc2.weight', 'fc2.bias'])
+
+  def test_local_save_plan(self):
+    model = self._get_sharded_model()
+    planner = self._get_save_planner(model)
+    plan = planner.create_local_plan()
+    parameter_count = len(list(model.parameters()))
+    if self.n_devices > 1:
+      # When the model is sharded across devices, fc1.weight will result in
+      # self.n_devices WriteItems while all other tensors result in a single
+      # WriteItem.
+      sharded_write_items = [
+          wi for wi in plan.items if wi.index.fqn == 'fc1.weight'
+      ]
+      self.assertEqual(self.n_devices, len(sharded_write_items))
+      # Every other parameter should have a single WriteItem
+      unsharded_write_items = [
+          x for x in plan.items if x not in sharded_write_items
+      ]
+      self.assertEqual(parameter_count - 1, len(unsharded_write_items))
+    else:
+      # If unsharded, there should be a single WriteItem per model parameter
+      self.assertEqual(parameter_count, len(plan.items))
+
+  @unittest.skipIf(xr.global_device_count() == 1,
+                   "Multiple devices required to shard tensors")
+  def test_resolve_shard_data(self):
+    model = self._get_sharded_model()
+    planner = self._get_save_planner(model)
+    plan = planner.create_local_plan()
+
+    shards = xs.wrap_if_sharded(model.fc1.weight).local_shards
+    sharded_write_items = [
+        wi for wi in plan.items if wi.index.fqn == 'fc1.weight'
+    ]
+    for write_item in sharded_write_items:
+      shard = shards[write_item.index.index]
+      resolved_data = planner.resolve_data(write_item)
+      self.assertTrue(torch.allclose(shard.data, resolved_data))
 
 
 if __name__ == '__main__':
