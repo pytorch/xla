@@ -3,10 +3,10 @@
 
 #include <string>
 
-#include "tensorflow/compiler/xla/xla_data.pb.h"
-#include "tensorflow/tsl/lib/gtl/inlined_vector.h"
-#include "tensorflow/tsl/platform/stringpiece.h"
-#include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "xla/xla_data.pb.h"
+#include "tsl/lib/gtl/inlined_vector.h"
+#include "tsl/platform/stringpiece.h"
+#include "xla/client/xla_builder.h"
 
 namespace torch_xla {
 

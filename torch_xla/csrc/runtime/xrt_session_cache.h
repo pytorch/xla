@@ -9,7 +9,7 @@
 #include <string>
 #include <utility>
 
-#include "tensorflow/compiler/xla/types.h"
+#include "xla/types.h"
 #include "torch_xla/csrc/runtime/xrt_session.h"
 
 namespace torch_xla {

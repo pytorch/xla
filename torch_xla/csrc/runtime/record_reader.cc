@@ -1,8 +1,8 @@
 #include "torch_xla/csrc/runtime/record_reader.h"
 
-#include "tensorflow/tsl/platform/env.h"
-#include "tensorflow/tsl/platform/errors.h"
-#include "tensorflow/tsl/platform/strcat.h"
+#include "tsl/platform/env.h"
+#include "tsl/platform/errors.h"
+#include "tsl/platform/strcat.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 
 namespace torch_xla {

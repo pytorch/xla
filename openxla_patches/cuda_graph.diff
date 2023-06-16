@@ -95,11 +95,11 @@ index ceef00ae284..3f7606bebdc 100644
 --- a/tensorflow/compiler/xla/service/gpu/runtime/kernel_launch.cc
 +++ b/tensorflow/compiler/xla/service/gpu/runtime/kernel_launch.cc
 @@ -30,10 +30,6 @@ limitations under the License.
- #include "tensorflow/compiler/xla/service/service_executable_run_options.h"
- #include "tensorflow/compiler/xla/stream_executor/kernel.h"
+ #include "xla/service/service_executable_run_options.h"
+ #include "xla/stream_executor/kernel.h"
  
 -#if GOOGLE_CUDA
--#include "tensorflow/compiler/xla/stream_executor/cuda/cuda_graph.h"
+-#include "xla/stream_executor/cuda/cuda_graph.h"
 -#endif  // #if GOOGLE_CUDA
 -
  namespace xla {

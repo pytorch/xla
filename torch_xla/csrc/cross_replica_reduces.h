@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "absl/types/span.h"
-#include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "xla/client/xla_builder.h"
 #include "torch/csrc/lazy/core/ir.h"
 #include "torch_xla/csrc/device.h"
 

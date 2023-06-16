@@ -7,7 +7,7 @@ load(
     "if_cuda_is_configured",
 )
 load(
-    "//bazel:tensorflow.bzl",
+    "//bazel:openxla.bzl",
     "if_with_tpu_support",
 )
 
@@ -16,8 +16,8 @@ licenses(["notice"])  # Apache 2.0
 package(default_visibility = ["//visibility:public"])
 
 exports_files([
-    "tf_version_script.lds",
-    "tf_exported_symbols.lds",
+    "openxla_version_script.lds",
+    "openxla_exported_symbols.lds",
 ])
 
 config_setting(
@@ -550,7 +550,7 @@ cc_binary(
         "//conditions:default": [
             "-z defs",
             "-Wl,--version-script",  #  This line must be directly followed by the version_script.lds file
-            "$(location :tf_version_script.lds)",
+            "$(location :openxla_version_script.lds)",
             "-Wl,-soname,libxla_computation_client.so",
         ],
     }),
@@ -558,8 +558,8 @@ cc_binary(
     visibility = ["//visibility:public"],
     deps = [
         ":computation_client",
-        ":tf_exported_symbols.lds",
-        ":tf_version_script.lds",
+        ":openxla_exported_symbols.lds",
+        ":openxla_version_script.lds",
         "@com_google_absl//absl/strings",
         "@xla//xla:literal_util",
         "@xla//xla/client",

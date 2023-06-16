@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "absl/types/span.h"
-#include "tensorflow/compiler/xla/types.h"
+#include "xla/types.h"
 #include "torch_xla/csrc/runtime/mesh_service.pb.h"
 
 namespace torch_xla {
