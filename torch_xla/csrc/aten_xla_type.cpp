@@ -2974,7 +2974,7 @@ at::Tensor XLANativeFunctions::sub(const at::Tensor& self,
   // Currently, we disallow the case when both operands contain dynamic
   // dimensions. This is consistent with PyTorch's behavior.
   XLA_CHECK(!(tensor_has_dym_dim(self) && tensor_has_dym_dim(other)))
-      << "Both operands of torch.add cannot have dynamic dimensions at the "
+      << "Both operands of torch.sub cannot have dynamic dimensions at the "
          "same time. This is not "
          "supported in PyTorch/XLA.";
 

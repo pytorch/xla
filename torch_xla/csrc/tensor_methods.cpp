@@ -659,12 +659,9 @@ XLATensorPtr add(const XLATensorPtr& input, const XLATensorPtr& other,
         alpha, other->shape(), logical_element_type, input->GetDevice());
   } else {
     SymIntElements sym_int_elements(other->GetIrValue());
-    xla::PrimitiveType primitive_type =
-        logical_element_type
-            ? MakeXlaPrimitiveType(*logical_element_type, &(input->GetDevice()))
-            : other->shape().get().element_type();
     constant = XLAGraphExecutor::Get()->GetIrValueForScalar(
-        alpha, sym_int_elements, primitive_type, input->GetDevice());
+        alpha, other->shape(), sym_int_elements, logical_element_type,
+        input->GetDevice());
   }
 
   return input->CreateFrom(input->GetIrValue() + other->GetIrValue() * constant,
@@ -1202,7 +1199,7 @@ void fill_(XLATensorPtr& input, const at::Scalar& value) {
   // dynamic dimension hence we need to create a sym_int_elements here.
   SymIntElements sym_int_elements(input->GetIrValue());
   torch::lazy::Value constant = XLAGraphExecutor::Get()->GetIrValueForScalar(
-      value, sym_int_elements, input->shape().get().element_type(),
+      value, input->shape(), sym_int_elements, c10::nullopt,
       input->GetDevice());
   input->SetInPlaceIrValue(std::move(constant));
 }
@@ -2481,12 +2478,9 @@ XLATensorPtr sub(const XLATensorPtr& input, const XLATensorPtr& other,
         alpha, other->shape(), logical_element_type, input->GetDevice());
   } else {
     SymIntElements sym_int_elements(other->GetIrValue());
-    xla::PrimitiveType primitive_type =
-        logical_element_type
-            ? MakeXlaPrimitiveType(*logical_element_type, &(input->GetDevice()))
-            : other->shape().get().element_type();
     constant = XLAGraphExecutor::Get()->GetIrValueForScalar(
-        alpha, sym_int_elements, primitive_type, input->GetDevice());
+        alpha, other->shape(), sym_int_elements, logical_element_type,
+        input->GetDevice());
   }
 
   return input->CreateFrom(input->GetIrValue() - other->GetIrValue() * constant,
