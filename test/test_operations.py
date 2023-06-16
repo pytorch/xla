@@ -1323,6 +1323,9 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
         ), dtype=torch.int64)
     self.runAtenTest([token_type_ids, cat_ids], test_fn)
 
+  @unittest.skipIf(
+      os.environ.get('XLA_DISABLE_FUNCTIONALIZATION') == '0',
+      'When functionalization is enabled, views do not exist.')
   def test_save_view_alias_check(self):
 
     class Nested(object):
