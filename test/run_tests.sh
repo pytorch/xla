@@ -146,6 +146,7 @@ function run_xrt_tests {
 
 function run_torch_op_tests {
   run_dynamic "$CDIR/../../test/test_view_ops.py" "$@" -v TestViewOpsXLA
+  run_test_without_functionalization "$CDIR/../../test/test_view_ops.py" "$@" -v TestViewOpsXLA
   run_test "$CDIR/../../test/test_torch.py" "$@" -v TestTorchDeviceTypeXLA
   run_dynamic "$CDIR/../../test/test_torch.py" "$@" -v TestDevicePrecisionXLA
   run_test "$CDIR/../../test/test_torch.py" "$@" -v TestTensorDeviceOpsXLA
