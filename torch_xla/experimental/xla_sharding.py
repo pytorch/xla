@@ -232,22 +232,19 @@ class HybridMesh(Mesh):
         transpose.append(int(y))
     return physical_mesh.transpose(transpose).reshape(mesh_shape), assignment
 
-  # This is imported from JAX: https://github.com/google/jax/blob/main/jax/experimental/mesh_utils.py#L231
   def _create_device_mesh(self,
                           mesh_shape: Sequence[int],
                           devices: Sequence[Any] = None) -> np.ndarray:
-    """Creates a performant device mesh for jax.sharding.Mesh.
+    """Creates a performant device mesh.
 
       Args:
         mesh_shape: shape of logical mesh, ordered by increasing network-intensity
           e.g. [replica, data, mdl] where mdl has the most network communication
           requirements.
-        devices: optionally, the devices to construct a mesh for. Defaults to
-          jax.devices().
+        devices: optionally, the devices to construct a mesh for.
 
       Returns:
-        A np.ndarray of JAX devices with mesh_shape as its shape that can be fed
-        into jax.sharding.Mesh with good collective performance.
+        A np.ndarray of devices with mesh_shape as its shape.
     """
 
     if devices is None:
