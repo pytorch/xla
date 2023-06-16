@@ -4,7 +4,7 @@
 #include <memory>
 
 #include "absl/container/flat_hash_map.h"
-#include "tensorflow/tsl/platform/status.h"
+#include "tsl/platform/status.h"
 
 namespace torch_xla {
 namespace runtime {

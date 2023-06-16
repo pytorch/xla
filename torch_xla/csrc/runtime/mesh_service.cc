@@ -21,7 +21,7 @@
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_join.h"
-#include "tensorflow/compiler/xla/status.h"
+#include "xla/status.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/mesh_service.grpc.pb.h"
 #include "torch_xla/csrc/runtime/multi_wait.h"

@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "absl/types/span.h"
-#include "tensorflow/compiler/xla/types.h"
+#include "xla/types.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/runtime/async_task.h"
 #include "torch_xla/csrc/runtime/cache.h"

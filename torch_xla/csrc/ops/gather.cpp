@@ -1,6 +1,6 @@
 #include "torch_xla/csrc/ops/gather.h"
 
-#include "tensorflow/compiler/xla/client/lib/slicing.h"
+#include "xla/client/lib/slicing.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"

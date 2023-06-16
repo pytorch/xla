@@ -1,7 +1,7 @@
 #ifndef XLA_TORCH_XLA_SHAPE_HELPER_H_
 #define XLA_TORCH_XLA_SHAPE_HELPER_H_
 
-#include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "xla/client/xla_builder.h"
 
 namespace torch_xla {
 

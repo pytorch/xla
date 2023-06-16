@@ -3,11 +3,11 @@
 #include <torch/csrc/lazy/core/tensor_util.h>
 #include <torch/csrc/lazy/core/util.h>
 
-#include "tensorflow/compiler/xla/client/lib/arithmetic.h"
-#include "tensorflow/compiler/xla/client/lib/constants.h"
-#include "tensorflow/compiler/xla/client/lib/loops.h"
-#include "tensorflow/compiler/xla/client/lib/pooling.h"
-#include "tensorflow/compiler/xla/client/lib/slicing.h"
+#include "xla/client/lib/arithmetic.h"
+#include "xla/client/lib/constants.h"
+#include "xla/client/lib/loops.h"
+#include "xla/client/lib/pooling.h"
+#include "xla/client/lib/slicing.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
