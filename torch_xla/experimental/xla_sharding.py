@@ -71,6 +71,9 @@ class Mesh:
     return self.device_ids.reshape(self.mesh_shape)
 
 
+# HybridDevice class has been inspired from jax's mesh_utils: https://github.com/google/jax/blob/fc5960f2b8b7a0ef74dbae4e27c5c08ff1564cff/jax/experimental/mesh_utils.py#L4
+
+
 class HybridMesh(Mesh):
   """Creates a hybrid device mesh of devices connected with ICI and DCN networks.
     The shape of logical mesh should be ordered by increasing network-intensity
@@ -134,6 +137,45 @@ class HybridMesh(Mesh):
   def _create_device_mesh_for_nd_torus(
       self, physical_mesh: np.ndarray,
       mesh_shape: Sequence[int]) -> Tuple[np.ndarray, List[Tuple[int, ...]]]:
+    """Assigns logical parallelism axes to physical axes of an N-D torus network.
+
+      Given logical parallelism axes with sizes in `mesh_shape` and devices in an
+      N-dimensional torus network represented by `physical_mesh`, maps each logical
+      axis to one or more physical axes. Prefer to map more-performance-sensitive
+      logical axes to larger numbers of physical axes to maximize the bandwidth
+      available to them. Also prefer to assign logical axes to multiple physical
+      axes of the same size (e.g., a 2D square) rather than multiple physical axes
+      of different sizes when possible.
+
+      Note that this routine will never split a physical axis over more than one
+      logical axis (which would reduce total usable bandwidth but may sometimes be
+      desired anyway). As a result, it will error out in cases where this is
+      necessary to produce a valid mapping.
+
+      Let's use a concrete example to explain the concepts and considerations.
+
+      As an example, suppose the logical mesh is [data, model], for data and model
+      parallelism respectively. Also suppose that data parallelism is less
+      performance sensitive than model parallelism. Consider a 3D TPU pod slice of
+      shape 4x4x16, represented by a physical mesh of shape (4, 4, 16).
+
+      A TPU pod slice has equal bandwidth along all axes with wraparound links, but
+      a 2D plane of size 4x4 may have faster XLA collective implementations than a
+      non-square plane or a 1D subgroup. If the mesh_shape is [16, 16], we may want
+      the more performance sensitive `model` axis to be mapped to the 4x4 XY plane.
+
+      Args:
+        physical_mesh: a np.ndarray of devices in the shape of the N-D torus
+          physical topology.
+        mesh_shape: shape of the logical mesh (size of the various logical
+          parallelism axes), with axes ordered by increasing network intensity.
+
+      Returns:
+        An np.ndarray of devices in the shape of the logical mesh (mesh_shape), with
+          each logical parallelism axis mapped to one or more physical mesh axes.
+        The axis assignment (a list of length num_logical_axes, whose elements
+          are tuples representing physical axis indices).
+    """
     # Remaining physical axes to be assigned to logical axes.
     assignable_physical_mesh = list(physical_mesh.shape)
     # Map each logical axis to a subset of physical axes.
@@ -141,9 +183,11 @@ class HybridMesh(Mesh):
     # Assign logical axes from highest network intensity to lowest.
     # `mesh_shape` is assumed to ordered by lowest network intensity first, so
     # reverse it first.
+    # Assigns devices to 2D or 3D logical mesh.
     for logical_axis_index, logical_axis_size in reversed(
         list(enumerate(mesh_shape))):
       for num_axes in range(3, 0, -1):
+        # map a combination of devices in physical axes to the logical axis.
         axes = itertools.combinations(assignable_physical_mesh, num_axes)
         indices = itertools.combinations(
             range(len(assignable_physical_mesh)), num_axes)

@@ -504,10 +504,10 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
         'slice_index': 1
     }]
     hybrid_mesh = xs.HybridMesh(
-        ici_mesh_shape=(1, 4), dcn_mesh_shape=(num_slices, 1))
+        ici_mesh_shape=(2, 2), dcn_mesh_shape=(num_slices, 1))
     print(hybrid_mesh.get_logical_mesh())
     self.assertEqual(hybrid_mesh.get_logical_mesh().tolist(),
-                     [[0, 2, 1, 3], [4, 6, 5, 7]])
+                     [[0, 1], [2, 3], [4, 5], [6, 7]])
 
 
 if __name__ == '__main__':
