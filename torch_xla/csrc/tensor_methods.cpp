@@ -106,6 +106,7 @@
 #include "torch_xla/csrc/ops/scatter.h"
 #include "torch_xla/csrc/ops/scatter_add.h"
 #include "torch_xla/csrc/ops/scatter_reduce.h"
+#include "torch_xla/csrc/ops/select.h"
 #include "torch_xla/csrc/ops/send.h"
 #include "torch_xla/csrc/ops/sgd_optimizer_step.h"
 #include "torch_xla/csrc/ops/softmax.h"
@@ -2354,9 +2355,14 @@ XLATensorPtr slice(const XLATensorPtr& input, int64_t dim, int64_t start,
   }
   step = std::min(step, end - start);
 
-  SelectInfo select = {dim, start, end, step};
-  ViewInfo view_info(ViewInfo::Type::kSelect, input_shape, std::move(select));
-  return input->CreateViewTensor(std::move(view_info));
+  // See Note: [Disabling functionalization]
+  if (runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
+    SelectInfo select = {dim, start, end, step};
+    ViewInfo view_info(ViewInfo::Type::kSelect, input_shape, std::move(select));
+    return input->CreateViewTensor(std::move(view_info));
+  }
+  return input->CreateFrom(torch::lazy::MakeNode<Select>(
+      input->GetIrValue(), dim, start, end, step));
 }
 
 std::tuple<XLATensorPtr, XLATensorPtr> slogdet(const XLATensorPtr& input) {
