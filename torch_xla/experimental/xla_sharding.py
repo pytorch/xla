@@ -123,8 +123,17 @@ class HybridMesh(Mesh):
     device_ids = mesh.flatten()
     super().__init__(device_ids, mesh_shape, axis_names)
 
+  # This is imported from JAX: https://github.com/google/jax/blob/main/jax/experimental/mesh_utils.py#L172
   def _get_physical_tpu_mesh(self, devices: Sequence[Any]) -> np.ndarray:
-    r"""Rearrange TPU devices in a slice into a physical mesh."""
+    r"""Rearrange TPU devices in a slice into a physical mesh.
+
+      Args:
+        devices: A list of device logical ordinals in a TPU slice.
+
+      Returns:
+        A np.ndarray of device logical ordinals with shape [global_x, global_y, global_z]. On
+          v2 and v3, global_z is instead cores_per_chip (i.e., 2).
+    """
     assert xm.xla_device_hw(xm.xla_device()) == 'TPU'
     # coords is a 3-dims tuple representing the device in physical mesh
     device_coords = [self.device_attributes[d]['coords'] for d in devices]
@@ -134,6 +143,7 @@ class HybridMesh(Mesh):
       out[coords[0], coords[1], coords[2]] = d
     return out
 
+  # This is imported from JAX: https://github.com/google/jax/blob/main/jax/experimental/mesh_utils.py#L64.
   def _create_device_mesh_for_nd_torus(
       self, physical_mesh: np.ndarray,
       mesh_shape: Sequence[int]) -> Tuple[np.ndarray, List[Tuple[int, ...]]]:
@@ -222,9 +232,24 @@ class HybridMesh(Mesh):
         transpose.append(int(y))
     return physical_mesh.transpose(transpose).reshape(mesh_shape), assignment
 
+  # This is imported from JAX: https://github.com/google/jax/blob/main/jax/experimental/mesh_utils.py#L231
   def _create_device_mesh(self,
                           mesh_shape: Sequence[int],
                           devices: Sequence[Any] = None) -> np.ndarray:
+    """Creates a performant device mesh for jax.sharding.Mesh.
+
+      Args:
+        mesh_shape: shape of logical mesh, ordered by increasing network-intensity
+          e.g. [replica, data, mdl] where mdl has the most network communication
+          requirements.
+        devices: optionally, the devices to construct a mesh for. Defaults to
+          jax.devices().
+
+      Returns:
+        A np.ndarray of JAX devices with mesh_shape as its shape that can be fed
+        into jax.sharding.Mesh with good collective performance.
+    """
+
     if devices is None:
       devices = np.arange(xr.global_device_count())
     if np.prod(mesh_shape) != len(devices):
@@ -236,9 +261,21 @@ class HybridMesh(Mesh):
         physical_mesh, mesh_shape)
     return device_mesh
 
+  # This is imported from JAX: https://github.com/google/jax/blob/main/jax/experimental/mesh_utils.py#L288.
   def _create_hybrid_device_mesh(self, ici_mesh_shape: Sequence[int],
                                  dcn_mesh_shape: Sequence[int]) -> np.ndarray:
-    """Creates a device mesh based on ici and dcn mesh shape.
+    """Creates a device mesh for hybrid (e.g., ICI and DCN) parallelism.
+
+      Args:
+        ici_mesh_shape: shape of the logical mesh for the faster/inner network, ordered
+          by increasing network intensity, e.g. [replica, data, mdl] where mdl has
+          the most network communication requirements.
+        dcn_mesh_shape: shape of the logical mesh for the slower/outer network,
+          in the same order as mesh_shape.
+
+      Returns:
+        A np.ndarray of device logical ordinal with ici_mesh_shape * dcn_mesh_shape as its shape
+        that can be fed into HybridMesh for hybrid parallelism.
     """
     granule_dict = defaultdict(list)
     for d, dev in enumerate(self.device_attributes):
