@@ -8,7 +8,7 @@
 #include "tensorflow/tsl/lib/gtl/inlined_vector.h"
 #include "tensorflow/tsl/platform/stringpiece.h"
 #include "tensorflow/tsl/platform/errors.h"
-#include "tensorflow/tsl/platform/status.h
+#include "tensorflow/tsl/platform/status.h"
 
 namespace torch_xla {
 
