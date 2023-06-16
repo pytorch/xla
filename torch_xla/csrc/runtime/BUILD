@@ -195,7 +195,6 @@ cc_library(
     "@org_tensorflow//tensorflow/core/distributed_runtime/rpc:grpc_runtime",
     "@org_tensorflow//tensorflow/core/protobuf/tpu:topology_proto_cc",
     "@org_tensorflow//tensorflow/compiler/xla/stream_executor:stream_executor_impl",
-    "@org_tensorflow//tensorflow/tsl/framework:allocator",
     "@com_google_absl//absl/numeric:int128",
     "@com_google_absl//absl/strings",
     "@com_google_absl//absl/memory",

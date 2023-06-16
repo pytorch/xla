@@ -147,7 +147,6 @@ ptxla_cc_test(
             "//torch_xla/csrc:tensor",
             "@com_google_googletest//:gtest_main",
             "@org_tensorflow//tensorflow/compiler/xla:permutation_util",
-            "@org_tensorflow//tensorflow/compiler/xla/stream_executor:cuda_platform",
         ],
     )
     for test in glob(["test_aten_xla_tensor*cpp"])
