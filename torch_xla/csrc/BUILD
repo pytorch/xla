@@ -128,7 +128,6 @@ ptxla_cc_library(
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:optional",
         "@com_google_absl//absl/types:span",
-        "@org_tensorflow//tensorflow/compiler/tf2xla/kernels:conv_op_helpers",
         "@org_tensorflow//tensorflow/compiler/xla:comparison_util",
         "@org_tensorflow//tensorflow/compiler/xla:literal_util",
         "@org_tensorflow//tensorflow/compiler/xla:permutation_util",
