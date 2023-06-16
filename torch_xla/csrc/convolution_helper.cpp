@@ -1,15 +1,5 @@
 #include "torch_xla/csrc/convolution.h"
 
-// #include "tensorflow/compiler/xla/client/lib/constants.h"
-// #include "tensorflow/compiler/xla/client/xla_builder.h"
-// #include "tensorflow/compiler/xla/shape_util.h"
-// #include "tensorflow/compiler/xla/xla_data.pb.h"
-// #include "tensorflow/tsl/platform/errors.h"
-// #include "tensorflow/tsl/platform/tensor_float_32_utils.h"
-// #include "torch_xla/csrc/helpers.h"
-// #include "torch_xla/csrc/runtime/debug_macros.h"
-// #include "torch_xla/csrc/shape_helper.h"
-// #include "torch_xla/csrc/xla_lower_util.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/shape_util.h"
 #include "tensorflow/compiler/xla/xla_data.pb.h"
@@ -21,7 +11,8 @@ namespace torch_xla {
 // -------------Convolution Helper Function Start-------------------------
 // Convolution helper functions below are copied/inspired from TF2XLA bridge
 // This part of helpers are origionally from
-// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/core/util/tensor_format.cc#L40
+// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/core/util/tensor_format.cc
+
 // Convert a TensorFormat into string.
 std::string ToString(TensorFormat format) {
   switch (format) {
@@ -44,7 +35,8 @@ std::string ToString(TensorFormat format) {
 }
 
 // This part of helpers are origionally from
-// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/compiler/tf2xla/kernels/conv_op_helpers.cc#L118
+// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/compiler/tf2xla/kernels/conv_op_helpers.cc
+
 // Performs some basic checks on ConvOpAttrs that are true for all kinds of
 // XLA convolutions (as currently implemented).
 tsl::Status CheckConvAttrs(const ConvOpAttrs& attrs) {
@@ -83,8 +75,6 @@ tsl::Status CheckConvAttrs(const ConvOpAttrs& attrs) {
   return tsl::OkStatus();
 }
 
-// This part of helpers are origionally from
-// https://github.com/tensorflow/tensorflow/blob/56c2225936001b65894466e4699a3dc3d00cb179/tensorflow/compiler/tf2xla/kernels/conv_op_helpers.cc#L67
 // Returns the expanded size of a filter used for depthwise convolution.
 // If `shape` is [H, W, ..., M, N] returns [H, W, ..., 1, M*N].
 xla::Shape GroupedFilterShapeForDepthwiseConvolution(
@@ -103,7 +93,8 @@ xla::Shape GroupedFilterShapeForDepthwiseConvolution(
 }
 
 // This part of helpers are origionally from
-// https://github.com/tensorflow/tensorflow/blob/7f39a389d5b82d6aca13240c21f2647c3ebdb765/tensorflow/core/framework/kernel_shape_util.cc#L20
+// https://github.com/tensorflow/tensorflow/blob/7f39a389d5b82d6aca13240c21f2647c3ebdb765/tensorflow/core/framework/kernel_shape_util.cc
+
 tsl::Status GetWindowedOutputSizeVerboseV2(
     int64_t input_size, int64_t filter_size, int64_t dilation_rate,
     int64_t stride, Padding padding_type, int64_t* output_size,
@@ -150,7 +141,8 @@ tsl::Status GetWindowedOutputSizeVerboseV2(
 }
 
 // This part of helpers are origionally from
-// https://github.com/tensorflow/tensorflow/blob/7f39a389d5b82d6aca13240c21f2647c3ebdb765/tensorflow/core/kernels/conv_grad_shape_utils.cc#L53
+// https://github.com/tensorflow/tensorflow/blob/7f39a389d5b82d6aca13240c21f2647c3ebdb765/tensorflow/core/kernels/conv_grad_shape_utils.cc
+
 // Check dimension
 tsl::Status ConvBackpropExtractAndVerifyDimension(
     tsl::StringPiece label, const xla::Shape& input_shape,
@@ -192,8 +184,6 @@ tsl::Status ConvBackpropExtractAndVerifyDimension(
   return tsl::OkStatus();
 }
 
-// This part of helpers are origionally from
-// https://github.com/tensorflow/tensorflow/blob/7f39a389d5b82d6aca13240c21f2647c3ebdb765/tensorflow/core/kernels/conv_grad_shape_utils.cc#L95
 // Check dimension
 tsl::Status ConvBackpropComputeDimensionsV2(
     tsl::StringPiece label, int num_spatial_dims, const xla::Shape& input_shape,
@@ -262,7 +252,8 @@ tsl::Status ConvBackpropComputeDimensionsV2(
 }
 
 // This part of helpers are origionally from
-// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/compiler/tf2xla/kernels/conv_op_helpers.cc#L52
+// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/compiler/tf2xla/kernels/conv_op_helpers.cc
+
 xla::PrecisionConfig GetPrecisionConfig() {
   xla::PrecisionConfig::Precision precision =
       tsl::tensor_float_32_execution_enabled() ? xla::PrecisionConfig::DEFAULT
@@ -276,8 +267,6 @@ xla::PrecisionConfig GetPrecisionConfig() {
   return config;
 }
 
-// This part of helpers are origionally from
-// https://github.com/tensorflow/tensorflow/blob/bb921eddddd2f95710d76266615b9d25df957c0d/tensorflow/compiler/tf2xla/kernels/conv_op_helpers.cc#L83
 // Returns the transposed filter for use in BackpropInput of group convolution.
 xla::XlaOp TransposeFilterForGroupConvolutionBackpropInput(
     xla::XlaOp filter, const xla::Shape& filter_shape, int64_t num_groups,
@@ -303,8 +292,6 @@ xla::XlaOp TransposeFilterForGroupConvolutionBackpropInput(
   return result;
 }
 
-// This part of helpers are origionally from
-// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/compiler/tf2xla/kernels/conv_op_helpers.cc#L83
 // Wrapper for ConvGeneralDilated and check dim.
 tsl::StatusOr<xla::XlaOp> MakeXlaBackpropInputConvOp(
     tsl::StringPiece type_string, const xla::Shape& input_shape,
@@ -407,8 +394,6 @@ tsl::StatusOr<xla::XlaOp> MakeXlaBackpropInputConvOp(
                                  /*batch_group_count=*/1, &precision_config);
 }
 
-// This part of helpers are origionally from
-// https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/compiler/tf2xla/kernels/conv_op_helpers.cc#L419
 // Wrapper for ConvGeneralDilated and check dim.
 tsl::StatusOr<xla::XlaOp> MakeXlaBackpropFilterConvOp(
     tsl::StringPiece type_string, xla::XlaOp activations,
