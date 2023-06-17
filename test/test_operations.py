@@ -1346,6 +1346,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
       d = a
       xm.check_view_sharing([a, d])
 
+    print("xw32 debug os.environ.get('XLA_DISABLE_FUNCTIONALIZATION')=", os.environ.get('XLA_DISABLE_FUNCTIONALIZATION'))
     check(xm.xla_device())
     check(torch.device('cpu'))
 
