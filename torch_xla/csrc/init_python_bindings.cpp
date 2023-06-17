@@ -361,6 +361,47 @@ std::string GetTensorsHloGraph(const std::vector<at::Tensor>& tensors,
   return XLAGraphExecutor::Get()->DumpHloComputation(xtensors, get_stable_hlo);
 }
 
+std::string GetXLATensorsDebugInfo(const at::Tensor& tensor) {
+  auto xtensor = bridge::TryGetXlaTensor(tensor);
+  if (!xtensor) {
+    return "Not a XLATensor\n";
+  }
+  std::stringstream ss;
+  ss << "XLATensor {\n";
+  ss << "Device: " << xtensor->GetDevice() << "\n";
+  ss << "Shape: " << xtensor->shape().get().ToString() << "\n";
+
+  torch::lazy::Value ir_value = xtensor->CurrentIrValue();
+  ss << "IR: ";
+  if (ir_value) {
+    ss << ir_value.node->ToString() << "\n";
+  } else {
+    ss << "None\n";
+  }
+
+  torch::lazy::BackendDataPtr handle = xtensor->CurrentDataHandle();
+  ss << "XLAData: ";
+  if (handle) {
+    auto data = UnwrapXlaData(handle);
+    ss << "XLAData:\n";
+    ss << "  Device: " << data->device() << "\n";
+    ss << "  Shape: " << data->shape().ToString() << "\n";
+  } else {
+    ss << "None\n";
+  }
+
+  auto at_tensor = xtensor->CurrentTensorData();
+  ss << "Tensor on host: ";
+  if (at_tensor) {
+    ss << " with size " << at_tensor->sizes() << "\n";
+  } else {
+    ss << "None\n";
+  }
+
+  ss << "}\n";
+  return ss.str();
+}
+
 std::string GetLiveTensorsReport(size_t nodes_threshold,
                                  const std::string& device_str) {
   auto opt_device = GetOptionalDevice(device_str);
@@ -852,6 +893,10 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_get_xla_tensors_hlo",
         [](const std::vector<at::Tensor>& tensors) -> std::string {
           return GetTensorsHloGraph(tensors);
+        });
+  m.def("_get_xla_tensors_debug_info",
+        [](const at::Tensor& tensor) -> std::string {
+          return GetXLATensorsDebugInfo(tensor);
         });
   py::class_<XLATensor::ShardingSpec, XLATensor::ShardingSpecPtr>(
       m, "XlaShardingSpec")
