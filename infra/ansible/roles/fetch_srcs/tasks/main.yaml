@@ -26,7 +26,7 @@
     pattern: "*.diff"
   register: openxla_patches
 
-- name: Apply patches to Tensorflow
+- name: Apply patches to OpenXLA
   ansible.posix.patch:
     src: "{{ item }}"
     # Use source file on the target machine instead of the one where
@@ -35,7 +35,7 @@
     remote_src: true
     strip: 1
     ignore_whitespace: true
-    basedir: "{{ (src_root, 'pytorch/xla/third_party/tensorflow') | path_join }}"
+    basedir: "{{ (src_root, 'pytorch/xla/third_party/xla') | path_join }}"
   loop: "{{ openxla_patches.files | map(attribute='path') }}"
   ignore_errors: true
 

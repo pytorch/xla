@@ -148,11 +148,12 @@ ptxla_cc_library(
         "@xla//xla/client/lib:sorting",
         "@xla//xla/client/lib:svd",
         "@xla//xla/stream_executor:dnn",
-        "@org_tensorflow//tensorflow/core/framework:tensor_shape",
-        "@org_tensorflow//tensorflow/core/lib/core:errors",
-        "@org_tensorflow//tensorflow/core/lib/gtl:inlined_vector",
-        "@org_tensorflow//tensorflow/core/profiler/lib:traceme",
-        "@org_tensorflow//third_party/python_runtime:headers",
+        "@tsl//tsl/platform:errors",
+        "@tsl//tsl/lib/gtl:inlined_vector",
+        "@com_google_absl//absl/container:inlined_vector",
+        "@tsl//tsl/profiler/lib:traceme",
+        "@tsl//tsl/profiler/lib:traceme_encode",
+        "@local_config_python//:python_headers",
         "@pybind11//:pybind11_embed",  # libpyton
     ],
 )
@@ -193,7 +194,6 @@ ptxla_cc_library(
         "//torch_xla/csrc/runtime:util",
         "@com_google_absl//absl/strings",
         "@xla//xla:shape_util",
-        "@org_tensorflow//tensorflow/core/framework:tensor_shape",
     ],
 )
 
@@ -224,7 +224,7 @@ ptxla_cc_library(
     deps = [
         "//torch_xla/csrc/runtime:sys_util",
         "@com_google_absl//absl/strings",
-        "@org_tensorflow//tensorflow/core/platform:stacktrace",
+        "@tsl//tsl/platform:stacktrace",
     ],
 )
 
@@ -282,9 +282,8 @@ ptxla_cc_library(
         "@xla//xla/service:hlo_verifier",
         "@xla//xla/service:sharding_propagation",
         "@xla//xla/service/spmd:spmd_partitioner",
-        "@org_tensorflow//tensorflow/core",
-        "@org_tensorflow//tensorflow/core/platform:env",
-        "@org_tensorflow//tensorflow/core/profiler/lib:traceme",
+        "@tsl//tsl/profiler/lib:traceme",
+        "@tsl//tsl/profiler/lib:traceme_encode",
     ],
 )
 
