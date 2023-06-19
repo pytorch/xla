@@ -25,6 +25,21 @@ variables:
         - Max inflight computations that the PJRT client can handle for TPU.
       type: int
       default_value: 32
+    RT_SHARD_LOCAL_ORDINAL:
+      description:
+        - Ordinal to be appended to the paths used by this thread of the xla
+          client.
+      type: int
+    RT_SHARD_ORDINAL:
+      description:
+        - Sets the shard ordinal for the XRT computation client.
+      type: int
+      default_value: -1
+    RT_WORKERS:
+      description:
+        - Addresses for the RT workers to be used by the RT client, for
+          example localservice:0;grpc://localhost:51011
+      type: string
   build_variables:
     DEBUG:
       description:
