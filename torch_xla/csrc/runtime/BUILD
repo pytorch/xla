@@ -424,7 +424,6 @@ cc_test(
 cc_binary(
     name = "libxla_computation_client.so",
     linkopts = select({
-        "@org_tensorflow//tensorflow:windows": [],
         "//conditions:default": [
             "-z defs",
             "-Wl,--version-script",  #  This line must be directly followed by the version_script.lds file
