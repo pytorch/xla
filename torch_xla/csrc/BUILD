@@ -130,6 +130,7 @@ ptxla_cc_library(
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:optional",
         "@com_google_absl//absl/types:span",
+        "@com_google_absl//absl/container:inlined_vector",
         "@xla//xla:comparison_util",
         "@xla//xla:literal_util",
         "@xla//xla:permutation_util",
@@ -149,9 +150,9 @@ ptxla_cc_library(
         "@xla//xla/stream_executor:dnn",
         "@tsl//tsl/platform:errors",
         "@tsl//tsl/lib/gtl:inlined_vector",
-        "@com_google_absl//absl/container:inlined_vector",
         "@tsl//tsl/profiler/lib:traceme",
         "@tsl//tsl/profiler/lib:traceme_encode",
+        "@tsl//tsl/platform:tensor_float_32_utils",
         "@local_config_python//:python_headers",
         "@pybind11//:pybind11_embed",  # libpyton
     ],
