@@ -12,7 +12,6 @@ exports_files([
     "openxla_exported_symbols.lds",
 ])
 
-
 cc_library(
     name = "async_task",
     hdrs = ["async_task.h"],
