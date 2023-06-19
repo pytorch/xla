@@ -276,14 +276,13 @@ ptxla_cc_library(
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:variant",
         "@tsl//tsl/profiler/lib:traceme",
+        "@tsl//tsl/profiler/lib:traceme_encode",
         "@xla//xla/python/profiler/internal:traceme_wrapper",
         "@xla//xla/service:hlo_parser",
         "@xla//xla/service:hlo_pass_pipeline",
         "@xla//xla/service:hlo_verifier",
         "@xla//xla/service:sharding_propagation",
         "@xla//xla/service/spmd:spmd_partitioner",
-        "@tsl//tsl/profiler/lib:traceme",
-        "@tsl//tsl/profiler/lib:traceme_encode",
     ],
 )
 
