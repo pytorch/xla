@@ -1,20 +1,20 @@
 # Backport of https://github.com/openxla/xla/commit/6d8b5c0d98aad645debbaddcb9f332ff22c19581 after PyTorch/XLA has migrated to OpenXLA
 # Enable PyTorch/XLA could use macro from `xla_cc_test`. Remove in next TF pin update.
-diff --git a/tensorflow/compiler/xla/xla.bzl b/tensorflow/compiler/xla/xla.bzl
-index 721318c2a64..a65b42643b0 100644
---- a/tensorflow/compiler/xla/xla.bzl
-+++ b/tensorflow/compiler/xla/xla.bzl
+diff --git a/xla/xla.bzl b/xla/xla.bzl
+index 2628eb4b0..4af148bd2 100644
+--- a/xla/xla.bzl
++++ b/xla/xla.bzl
 @@ -2,9 +2,9 @@
  
  load(
-     "//tensorflow/tsl:tsl.bzl",
+     "@tsl//tsl:tsl.bzl",
 -    "clean_dep",
      "if_tsl_link_protobuf",
      "tsl_copts",
 +    _tsl_clean_dep = "clean_dep",
  )
  load(
-     "//tensorflow/tsl/platform/default:cuda_build_defs.bzl",
+     "@tsl//tsl/platform/default:cuda_build_defs.bzl",
 @@ -22,6 +22,17 @@ load(
  def register_extension_info(**kwargs):
      pass
@@ -27,7 +27,7 @@ index 721318c2a64..a65b42643b0 100644
 +    """
 +
 +    # A repo-relative label is resolved relative to the file in which the
-+    # Label() call appears, i.e. @org_tensorflow.
++    # Label() call appears, i.e. @xla.
 +    return str(Label(target))
 +
  def xla_py_proto_library(**kwargs):
@@ -39,9 +39,9 @@ index 721318c2a64..a65b42643b0 100644
      deps += [
 -        clean_dep("@com_google_protobuf//:protobuf"),
 +        _tsl_clean_dep("@com_google_protobuf//:protobuf"),
-         "//tensorflow/compiler/xla:xla_proto_cc_impl",
-         "//tensorflow/compiler/xla:xla_data_proto_cc_impl",
-         "//tensorflow/compiler/xla/service:hlo_proto_cc_impl",
+         "//xla:xla_proto_cc_impl",
+         "//xla:xla_data_proto_cc_impl",
+         "//xla/service:hlo_proto_cc_impl",
 @@ -76,39 +87,39 @@ def xla_cc_test(
          deps = deps + if_tsl_link_protobuf(
                     [],
@@ -49,63 +49,70 @@ index 721318c2a64..a65b42643b0 100644
 -                       clean_dep("@com_google_protobuf//:protobuf"),
 +                       _tsl_clean_dep("@com_google_protobuf//:protobuf"),
                         # TODO(zacmustin): remove these in favor of more granular dependencies in each test.
--                       "//tensorflow/compiler/xla:xla_proto_cc_impl",
--                       "//tensorflow/compiler/xla:xla_data_proto_cc_impl",
--                       "//tensorflow/compiler/xla/service:hlo_proto_cc_impl",
--                       "//tensorflow/compiler/xla/service:memory_space_assignment_proto_cc_impl",
--                       "//tensorflow/compiler/xla/service/gpu:backend_configs_cc_impl",
--                       "//tensorflow/compiler/xla/stream_executor:dnn_proto_cc_impl",
--                       "//tensorflow/compiler/xla/stream_executor:stream_executor_impl",
--                       "//tensorflow/compiler/xla/stream_executor:device_id_utils",
--                       "//tensorflow/compiler/xla/stream_executor/gpu:gpu_cudamallocasync_allocator",
--                       "//tensorflow/compiler/xla/stream_executor/gpu:gpu_init_impl",
--                       "//tensorflow/tsl/profiler/utils:time_utils_impl",
--                       "//tensorflow/tsl/profiler/backends/cpu:annotation_stack_impl",
--                       "//tensorflow/tsl/profiler/backends/cpu:traceme_recorder_impl",
--                       "//tensorflow/tsl/protobuf:autotuning_proto_cc_impl",
--                       "//tensorflow/tsl/protobuf:dnn_proto_cc_impl",
--                       "//tensorflow/tsl/protobuf:protos_all_cc_impl",
--                       "//tensorflow/tsl/platform:env_impl",
--                       "//tensorflow/tsl/framework:allocator",
--                       "//tensorflow/tsl/framework:allocator_registry_impl",
--                       "//tensorflow/tsl/util:determinism",
-+                       clean_dep("//tensorflow/compiler/xla:xla_proto_cc_impl"),
-+                       clean_dep("//tensorflow/compiler/xla:xla_data_proto_cc_impl"),
-+                       clean_dep("//tensorflow/compiler/xla/service:hlo_proto_cc_impl"),
-+                       clean_dep("//tensorflow/compiler/xla/service:memory_space_assignment_proto_cc_impl"),
-+                       clean_dep("//tensorflow/compiler/xla/service/gpu:backend_configs_cc_impl"),
-+                       clean_dep("//tensorflow/compiler/xla/stream_executor:dnn_proto_cc_impl"),
-+                       clean_dep("//tensorflow/compiler/xla/stream_executor:stream_executor_impl"),
-+                       clean_dep("//tensorflow/compiler/xla/stream_executor:device_id_utils"),
-+                       clean_dep("//tensorflow/compiler/xla/stream_executor/gpu:gpu_cudamallocasync_allocator"),
-+                       clean_dep("//tensorflow/compiler/xla/stream_executor/gpu:gpu_init_impl"),
-+                       clean_dep("//tensorflow/tsl/profiler/utils:time_utils_impl"),
-+                       clean_dep("//tensorflow/tsl/profiler/backends/cpu:annotation_stack_impl"),
-+                       clean_dep("//tensorflow/tsl/profiler/backends/cpu:traceme_recorder_impl"),
-+                       clean_dep("//tensorflow/tsl/protobuf:autotuning_proto_cc_impl"),
-+                       clean_dep("//tensorflow/tsl/protobuf:dnn_proto_cc_impl"),
-+                       clean_dep("//tensorflow/tsl/protobuf:protos_all_cc_impl"),
-+                       clean_dep("//tensorflow/tsl/platform:env_impl"),
-+                       clean_dep("//tensorflow/tsl/framework:allocator"),
-+                       clean_dep("//tensorflow/tsl/framework:allocator_registry_impl"),
-+                       clean_dep("//tensorflow/tsl/util:determinism"),
+-                       "//xla:xla_proto_cc_impl",
+-                       "//xla:xla_data_proto_cc_impl",
+-                       "//xla/service:hlo_proto_cc_impl",
+-                       "//xla/service:memory_space_assignment_proto_cc_impl",
+-                       "//xla/service/gpu:backend_configs_cc_impl",
+-                       "//xla/stream_executor:dnn_proto_cc_impl",
+-                       "//xla/stream_executor:stream_executor_impl",
+-                       "//xla/stream_executor:device_id_utils",
+-                       "//xla/stream_executor/gpu:gpu_cudamallocasync_allocator",
+-                       "//xla/stream_executor/gpu:gpu_init_impl",
+-                       "@tsl//tsl/profiler/utils:time_utils_impl",
+-                       "@tsl//tsl/profiler/backends/cpu:annotation_stack_impl",
+-                       "@tsl//tsl/profiler/backends/cpu:traceme_recorder_impl",
+-                       "@tsl//tsl/protobuf:autotuning_proto_cc_impl",
+-                       "@tsl//tsl/protobuf:dnn_proto_cc_impl",
+-                       "@tsl//tsl/protobuf:protos_all_cc_impl",
+-                       "@tsl//tsl/platform:env_impl",
+-                       "@tsl//tsl/framework:allocator",
+-                       "@tsl//tsl/framework:allocator_registry_impl",
+-                       "@tsl//tsl/util:determinism",
++                       clean_dep("//xla:xla_proto_cc_impl"),
++                       clean_dep("//xla:xla_data_proto_cc_impl"),
++                       clean_dep("//xla/service:hlo_proto_cc_impl"),
++                       clean_dep("//xla/service:memory_space_assignment_proto_cc_impl"),
++                       clean_dep("//xla/service/gpu:backend_configs_cc_impl"),
++                       clean_dep("//xla/stream_executor:dnn_proto_cc_impl"),
++                       clean_dep("//xla/stream_executor:stream_executor_impl"),
++                       clean_dep("//xla/stream_executor:device_id_utils"),
++                       clean_dep("//xla/stream_executor/gpu:gpu_cudamallocasync_allocator"),
++                       clean_dep("//xla/stream_executor/gpu:gpu_init_impl"),
++                       clean_dep("@tsl//tsl/profiler/utils:time_utils_impl"),
++                       clean_dep("@tsl//tsl/profiler/backends/cpu:annotation_stack_impl"),
++                       clean_dep("@tsl//tsl/profiler/backends/cpu:traceme_recorder_impl"),
++                       clean_dep("@tsl//tsl/protobuf:autotuning_proto_cc_impl"),
++                       clean_dep("@tsl//tsl/protobuf:dnn_proto_cc_impl"),
++                       clean_dep("@tsl//tsl/protobuf:protos_all_cc_impl"),
++                       clean_dep("@tsl//tsl/platform:env_impl"),
++                       clean_dep("@tsl//tsl/framework:allocator"),
++                       clean_dep("@tsl//tsl/framework:allocator_registry_impl"),
++                       clean_dep("@tsl//tsl/util:determinism"),
                     ],
                 ) +
                 if_cuda_is_configured([
--                   "//tensorflow/compiler/xla/stream_executor/cuda:cuda_stream",
--                   "//tensorflow/compiler/xla/stream_executor/cuda:all_runtime",
--                   "//tensorflow/compiler/xla/stream_executor/cuda:stream_executor_cuda",
-+                   clean_dep("//tensorflow/compiler/xla/stream_executor/cuda:cuda_stream"),
-+                   clean_dep("//tensorflow/compiler/xla/stream_executor/cuda:all_runtime"),
-+                   clean_dep("//tensorflow/compiler/xla/stream_executor/cuda:stream_executor_cuda"),
+-                   "//xla/stream_executor/cuda:cuda_stream",
+-                   "//xla/stream_executor/cuda:all_runtime",
+-                   "//xla/stream_executor/cuda:stream_executor_cuda",
++                   clean_dep("//xla/stream_executor/cuda:cuda_stream"),
++                   clean_dep("//xla/stream_executor/cuda:all_runtime"),
++                   clean_dep("//xla/stream_executor/cuda:stream_executor_cuda"),
                 ]) +
                 if_rocm_is_configured([
--                   "//tensorflow/compiler/xla/stream_executor/gpu:gpu_stream",
--                   "//tensorflow/compiler/xla/stream_executor/rocm:all_runtime",
--                   "//tensorflow/compiler/xla/stream_executor/rocm:stream_executor_rocm",
-+                   clean_dep("//tensorflow/compiler/xla/stream_executor/gpu:gpu_stream"),
-+                   clean_dep("//tensorflow/compiler/xla/stream_executor/rocm:all_runtime"),
-+                   clean_dep("//tensorflow/compiler/xla/stream_executor/rocm:stream_executor_rocm"),
+-                   "//xla/stream_executor/gpu:gpu_stream",
+-                   "//xla/stream_executor/rocm:all_runtime",
+-                   "//xla/stream_executor/rocm:stream_executor_rocm",
++                   clean_dep("//xla/stream_executor/gpu:gpu_stream"),
++                   clean_dep("//xla/stream_executor/rocm:all_runtime"),
++                   clean_dep("//xla/stream_executor/rocm:stream_executor_rocm"),
                 ]),
          exec_properties = tf_exec_properties(kwargs),
          **kwargs
+@@ -117,4 +128,4 @@ def xla_cc_test(
+ register_extension_info(
+     extension = xla_cc_test,
+     label_regex_for_dep = "{extension_name}",
+-)
++)
+\ No newline at end of file
