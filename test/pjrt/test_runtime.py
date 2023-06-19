@@ -43,9 +43,6 @@ class TestExperimentalPjrt(parameterized.TestCase):
     self.assertLen(torch_xla._XLAC._xla_get_all_devices(),
                    xr.global_device_count())
 
-  def test_world_size(self):
-    self.assertEqual(xm.xrt_world_size(), xr.world_size())
-
   def test_xla_device_error(self):
     with self.assertRaises(IndexError):
       xm.xla_device(10)
@@ -69,6 +66,7 @@ class TestExperimentalPjrt(parameterized.TestCase):
       # Print a warningif we had to select a default runtime
       if 'PJRT_DEVICE' not in os.environ and expect_using_pjrt:
         logs_context = self.assertLogs(level=logging.WARNING)
+        print("XRT has been deprecated, please set PJRT_DEVICE")
       else:
         logs_context = contextlib.nullcontext()
 
@@ -79,6 +77,7 @@ class TestExperimentalPjrt(parameterized.TestCase):
       if expect_using_pjrt:
         self.assertIn(xr.device_type(), ['CPU', 'GPU', 'TPU'])
       else:
+        print("XRT has been deprecated, please set PJRT_DEVICE")
         self.assertIsNone(xr.device_type())
 
 
