@@ -25,6 +25,15 @@ config_setting(
   define_values = {"disable_xrt": "true"},
 )
 
+tf_proto_library(
+    name = "topology_proto",
+    srcs = [
+        "topology.proto",
+    ],
+    cc_api_version = 2,
+    visibility = ["//visibility:public"],
+)
+
 tf_proto_library_cc(
     name = "mesh_service_proto",
     srcs = ["mesh_service.proto"],
@@ -32,7 +41,7 @@ tf_proto_library_cc(
     cc_api_version = 2,
     cc_grpc_version = 1,
     protodeps = [
-        "@org_tensorflow//tensorflow/core/protobuf/tpu:topology_proto",
+        ":topology_proto",
     ],
 )
 
