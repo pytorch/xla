@@ -3,7 +3,7 @@
 
 #include <iostream>
 
-#include "xla
+#include "xla/client/xla_builder.h"
 #include "xla/shape_util.h"
 #include "test/cpp/cpp_test_util.h"
 #include "test/cpp/torch_xla_test.h"
