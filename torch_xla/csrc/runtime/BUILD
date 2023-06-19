@@ -25,7 +25,7 @@ config_setting(
   define_values = {"disable_xrt": "true"},
 )
 
-tf_proto_library(
+tf_proto_library_cc(
     name = "topology_proto",
     srcs = [
         "topology.proto",
