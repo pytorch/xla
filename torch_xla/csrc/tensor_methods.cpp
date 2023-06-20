@@ -354,7 +354,8 @@ torch::lazy::Value all_reduce(const std::vector<XLATensorPtr>& inputs,
     input_values.push_back(input->GetIrValue());
   }
   torch::lazy::NodePtr node = torch::lazy::MakeNode<AllReduce>(
-      reduce_type, input_values, GetAllReduceToken(inputs.front()->GetDevice()), scale, std::move(groups), pin_layout);
+      reduce_type, input_values, GetAllReduceToken(inputs.front()->GetDevice()),
+      scale, std::move(groups), pin_layout);
   for (size_t i = 0; i < inputs.size(); ++i) {
     inputs[i]->SetInPlaceIrValue(torch::lazy::Value(node, i));
   }
