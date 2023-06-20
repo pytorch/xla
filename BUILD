@@ -20,5 +20,6 @@ cc_binary(
         "@torch//:libtorch",
         "@torch//:libtorch_cpu",
         "@torch//:libtorch_python",
+        "@xla//xla/stream_executor:cuda_platform",
     ],
 )
