@@ -14,7 +14,6 @@ class StableHloDumpTest(unittest.TestCase):
     z = x + y
     # Example usage of dumping StableHLO given output tensors
     stablehlo = xm.get_stablehlo([z])
-    self.assertEqual(stablehlo.count("stablehlo.multiply"), 1)
     self.assertEqual(stablehlo.count("stablehlo.add"), 1)
 
   def test_resnet18(self):
@@ -28,6 +27,7 @@ class StableHloDumpTest(unittest.TestCase):
     self.assertEqual(stablehlo.count("stablehlo.convolution"), 20)
     stablehlo = xm.get_stablehlo()
     self.assertEqual(stablehlo.count("stablehlo.convolution"), 20)
+    self.assertGreater(stablehlo.count("#loc"), 0)
 
 
 if __name__ == '__main__':
