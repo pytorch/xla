@@ -124,7 +124,7 @@ class HybridMesh(Mesh):
     super().__init__(device_ids, mesh_shape, axis_names)
 
   # This is imported from JAX: https://github.com/google/jax/blob/main/jax/experimental/mesh_utils.py#L172
-  def _get_physical_tpu_mesh(self, devices: Sequence[Any]) -> np.ndarray:
+  def _get_physical_tpu_mesh(self, devices: Sequence[int]) -> np.ndarray:
     r"""Rearrange TPU devices in a slice into a physical mesh.
 
       Args:
@@ -138,7 +138,7 @@ class HybridMesh(Mesh):
     # coords is a 3-dims tuple representing the device in physical mesh
     device_coords = [self.device_attributes[d]['coords'] for d in devices]
     dims = tuple(d + 1 for d in max(device_coords))
-    out = np.empty(dims, dtype=object)
+    out = np.empty(dims, dtype=int)
     for coords, d in zip(device_coords, devices):
       out[coords[0], coords[1], coords[2]] = d
     return out
@@ -234,7 +234,7 @@ class HybridMesh(Mesh):
 
   def _create_device_mesh(self,
                           mesh_shape: Sequence[int],
-                          devices: Sequence[Any] = None) -> np.ndarray:
+                          devices: Sequence[Any] = None) -> Sequence[int]:
     """Creates a performant device mesh.
 
       Args:
@@ -260,7 +260,7 @@ class HybridMesh(Mesh):
 
   # This is imported from JAX: https://github.com/google/jax/blob/main/jax/experimental/mesh_utils.py#L288.
   def _create_hybrid_device_mesh(self, ici_mesh_shape: Sequence[int],
-                                 dcn_mesh_shape: Sequence[int]) -> np.ndarray:
+                                 dcn_mesh_shape: Sequence[int]) -> Sequence[int]:
     """Creates a device mesh for hybrid (e.g., ICI and DCN) parallelism.
 
       Args:
@@ -399,6 +399,14 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
     f"Each device mesh dimension should appear at most once in partition_spec {partition_spec}."
 
   tile_assignment = _get_tile_assignment(mesh)
+  # check for sharding 2D tensor on a 3D mesh
+  original_shape = tuple(t.shape)
+  tensor_expand = 0
+  # if len(mesh.shape()) - len(partition_spec) >= 1:
+  while tensor_expand < len(mesh.shape()) - len(partition_spec):
+    partition_spec =  (None,) + partition_spec
+    t = t.expand(1, *original_shape)
+    tensor_expand += 1
   sharding_type = _get_sharding_type(partition_spec, num_devices)
   group_assignment, replication_groups = _get_group_assignment(
       sharding_type, mesh, partition_spec)
@@ -407,9 +415,15 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
     torch_xla._XLAC._xla_mark_sharding(t.global_tensor, tile_assignment,
                                        group_assignment, replication_groups,
                                        int(sharding_type))
+    while tensor_expand:
+      t = torch.squeeze(t, dim = 0)
+      tensor_expand -= 1
     return t
   torch_xla._XLAC._xla_mark_sharding(t, tile_assignment, group_assignment,
                                      replication_groups, int(sharding_type))
+  while tensor_expand:
+    t = torch.squeeze(t, dim = 0)
+    tensor_expand -= 1
   return XLAShardedTensor(t)
 
 
