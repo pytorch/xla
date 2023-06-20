@@ -1,10 +1,10 @@
 #include "torch_xla/csrc/ops/symeig.h"
 
+#include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/shape_helper.h"
 #include "xla/client/lib/constants.h"
 #include "xla/client/lib/matrix.h"
 #include "xla/client/lib/self_adjoint_eig.h"
-#include "torch_xla/csrc/lowering_context.h"
-#include "torch_xla/csrc/shape_helper.h"
 
 namespace torch_xla {
 namespace {
