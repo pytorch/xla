@@ -361,15 +361,16 @@ std::string GetTensorsHloGraph(const std::vector<at::Tensor>& tensors,
   return XLAGraphExecutor::Get()->DumpHloComputation(xtensors, get_stable_hlo);
 }
 
-std::string GetXLATensorsDebugInfo(const at::Tensor& tensor) {
+std::string GetXLATensorDebugInfo(const at::Tensor& tensor) {
   auto xtensor = bridge::TryGetXlaTensor(tensor);
   if (!xtensor) {
     return "Not a XLATensor\n";
   }
   std::stringstream ss;
   ss << "XLATensor {\n";
+  ss << "TensorID: " << xtensor->GetUniqueId() << "\n";
   ss << "Device: " << xtensor->GetDevice() << "\n";
-  ss << "Shape: " << xtensor->shape().get().ToString() << "\n";
+  ss << "XLA Shape: " << xtensor->shape().get().ToString() << "\n";
 
   torch::lazy::Value ir_value = xtensor->CurrentIrValue();
   ss << "IR: ";
@@ -380,12 +381,11 @@ std::string GetXLATensorsDebugInfo(const at::Tensor& tensor) {
   }
 
   torch::lazy::BackendDataPtr handle = xtensor->CurrentDataHandle();
-  ss << "XLAData: ";
+  ss << "XLAData: \n";
   if (handle) {
     auto data = UnwrapXlaData(handle);
-    ss << "XLAData:\n";
-    ss << "  Device: " << data->device() << "\n";
-    ss << "  Shape: " << data->shape().ToString() << "\n";
+    ss << "  Data Device: " << data->device() << "\n";
+    ss << "  Data Shape: " << data->shape().ToString() << "\n";
   } else {
     ss << "None\n";
   }
@@ -894,9 +894,9 @@ void InitXlaModuleBindings(py::module m) {
         [](const std::vector<at::Tensor>& tensors) -> std::string {
           return GetTensorsHloGraph(tensors);
         });
-  m.def("_get_xla_tensors_debug_info",
+  m.def("_get_xla_tensor_debug_info",
         [](const at::Tensor& tensor) -> std::string {
-          return GetXLATensorsDebugInfo(tensor);
+          return GetXLATensorDebugInfo(tensor);
         });
   py::class_<XLATensor::ShardingSpec, XLATensor::ShardingSpecPtr>(
       m, "XlaShardingSpec")
