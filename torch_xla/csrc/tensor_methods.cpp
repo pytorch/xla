@@ -2071,8 +2071,8 @@ XLATensorPtr permute(const XLATensorPtr& input,
     return input->CreateViewTensor(std::move(view_info));
   }
 
-  return input->CreateFrom(torch::lazy::MakeNode<Permute>(
-      input->GetIrValue(), dimensions));
+  return input->CreateFrom(
+      torch::lazy::MakeNode<Permute>(input->GetIrValue(), dimensions));
 }
 
 XLATensorPtr pow(const XLATensorPtr& input, const at::Scalar& exponent) {
