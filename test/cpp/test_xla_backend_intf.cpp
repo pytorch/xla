@@ -1,7 +1,9 @@
 #include <vector>
 
 #include "test/cpp/cpp_test_util.h"
+#include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/tensor_util.h"
+#include "torch_xla/csrc/xla_backend_impl.h"
 
 namespace torch_xla {
 namespace cpp_test {
@@ -36,7 +38,8 @@ TEST(XLABackendTest, TestPlaceholder) {
   ForEachDevice([&](const torch::lazy::BackendDevice& device) {
     torch::lazy::BackendDataPtr data =
         impl->CreateDataPlaceholder(device, shape);
-    xla::ComputationClient::DataPtr computation_data = UnwrapXlaData(data);
+    torch_xla::runtime::ComputationClient::DataPtr computation_data =
+        UnwrapXlaData(data);
     EXPECT_EQ(computation_data->device(), device.toString());
     EXPECT_EQ(computation_data->shape(),
               MakeXlaShapeFromLazyShape(shape, device));

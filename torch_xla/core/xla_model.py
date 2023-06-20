@@ -1,4 +1,6 @@
 import io
+import itertools
+import logging
 import sys
 import re
 import threading
@@ -8,8 +10,7 @@ import torch
 import torch.distributed._functional_collectives
 import torch.nn.functional as F
 import torch_xla
-from torch_xla.experimental import pjrt
-from torch_xla.experimental import tpu
+from torch_xla import runtime
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.debug.metrics_saver as ms
 import torch_xla.utils.utils as xu
@@ -37,8 +38,8 @@ _ORDINAL = None
 def _init_world_size_ordinal():
   global _WORLD_SIZE, _ORDINAL
 
-  # Dynamo doesn't support XRT or multithreaded PJRT. See Note [V3-8 Threading]
-  if not pjrt.using_pjrt() or pjrt.addressable_device_count() > 1:
+  # Dynamo doesn't support XRT or multithreaded runtime. See Note [V3-8 Threading]
+  if not runtime.using_pjrt() or runtime.addressable_device_count() > 1:
     return
 
   if _WORLD_SIZE is None:
@@ -113,8 +114,8 @@ def xrt_world_size(defval=1):
   if _WORLD_SIZE is not None:
     return _WORLD_SIZE
 
-  if pjrt.using_pjrt():
-    return pjrt.world_size()
+  if runtime.using_pjrt():
+    return runtime.world_size()
 
   return xu.getenv_as(xenv.WORLD_SIZE, int, defval=defval)
 
@@ -126,7 +127,7 @@ def get_ordinal(defval=0):
 
   Args:
     defval (int, optional): The default value to be returned in case there is no
-      replication information available. Ignored for PjRt.
+      replication information available. Ignored for runtime.
       Default: 0
 
   Returns:
@@ -136,8 +137,8 @@ def get_ordinal(defval=0):
   if _ORDINAL is not None:
     return _ORDINAL
 
-  if pjrt.using_pjrt():
-    return pjrt.global_ordinal()
+  if runtime.using_pjrt():
+    return runtime.global_ordinal()
 
   return xu.getenv_as(xenv.ORDINAL, int, defval=defval)
 
@@ -149,14 +150,14 @@ def get_local_ordinal(defval=0):
 
   Args:
     defval (int, optional): The default value to be returned in case there is no
-      replication information available. Ignored for PjRt.
+      replication information available. Ignored for runtime.
       Default: 0
 
   Returns:
     The replication local ordinal of the current thread.
   """
-  if pjrt.using_pjrt():
-    return pjrt.local_ordinal()
+  if runtime.using_pjrt():
+    return runtime.local_ordinal()
 
   ordinal = xu.getenv_as(xenv.LOCAL_ORDINAL, int, defval=-1)
   if ordinal >= 0:
@@ -204,8 +205,8 @@ def xla_device(n=None, devkind=None):
     torch_xla._XLAC._xla_set_default_device(device)
     return torch.device(device)
 
-  if pjrt.using_pjrt():
-    return pjrt.xla_device(n, devkind)
+  if runtime.using_pjrt():
+    return runtime.xla_device(n, devkind)
 
   if n is None:
     devices = get_xla_supported_devices(devkind=devkind)
@@ -840,6 +841,29 @@ def mark_step(wait=False):
   torch_xla._XLAC._set_all_reduce_token(devctx.device, None)
 
 
+def get_stablehlo(tensors=None):
+  """Get StableHLO for the computation graph in string format.
+
+  If `tensors` is not empty, the graph with `tensors` as outputs will be dump.
+  If `tensors` is empty, the whole computation graph will be dump.
+  TODO(lsy323): When `tensors` is empty, the some intermediate tensors will also be
+  dump as outputs. Need further investigation.
+
+  For inference graph, it is recommended to pass the model outputs to `tensors`.
+  For training graph, it is not straightforward to identify the "outputs". Using empty `tensors` is recommended.
+
+  Args:
+    tensors (list[torch.Tensor], optional): The tensors contained in the StableHLO graph.
+
+  Returns:
+    StableHLO Module in string format.
+  """
+  if tensors is None:
+    tensors = []
+  return torch_xla._XLAC._get_stablehlo(
+      tensors, torch_xla._XLAC._xla_get_default_device(), [])
+
+
 def wait_device_ops(devices=[]):
   """Waits for all the async operations on the given devices to complete.
 
@@ -980,8 +1004,67 @@ def send_cpu_data_to_device(data, device, input_sharding=None):
   return ToXlaTensorArena(convert_fn, select_fn).transform(data)
 
 
+def xla_rendezvous(payload: bytes = b'',
+                   ordinals: Optional[List[int]] = None,
+                   tag: Optional[str] = None) -> List[bytes]:
+  """Share `payload` with all replicas in `ordinals`.
+
+  `tag` is ignored except for logging.
+
+  Uses XLA collective communication to communicate between replicas, so this
+  will sync the graph (`xm.mark_step`).
+
+  Args:
+    tag: Name of this rendezvous operation.
+    payload: Payload to share with other replicas.
+    ordinals: List of replicas participating in rendezvous.
+  Returns:
+    List of bytes from other replicas.
+  """
+  if ordinals and len(ordinals) != runtime.global_device_count():
+    raise ValueError('Only global rendezvous is supported')
+
+  if not isinstance(payload, bytes):
+    raise TypeError('`payload` must be bytes, not {}'.format(type(payload)))
+
+  # Finish all execution of previous graphs to avoid recompilation
+  mark_step()
+
+  device = xla_device()
+
+  data = torch.tensor(list(payload), dtype=torch.uint8)
+  size = torch.tensor([data.shape[0]], dtype=torch.int, device=device)
+
+  if tag:
+    logging.info(f"Joining rendezvous '{tag}'...")
+
+  sizes = all_gather(size)
+
+  max_size = torch.max(sizes)
+  mark_step()
+
+  # If all payloads are empty, return immediately to avoid more CPU transfers
+  if max_size.item() < 1:
+    return [b'' for _ in range(sizes.size()[0])]
+
+  padded_data = torch.nn.functional.pad(data, (
+      0,
+      max_size.item() - size.item(),
+  )).to(xla_device())
+  raw_data = all_gather(padded_data)
+  data_list = torch.split(raw_data, max_size)
+
+  payloads = [d[:sz] for d, sz in zip(data_list, sizes.cpu())]
+  mark_step()
+
+  return [bytes(p.cpu().tolist()) for p in payloads]
+
+
 def rendezvous(tag, payload=b'', replicas=[]):
   """Waits for all the mesh clients to reach the named rendezvous.
+
+  Note: PJRT does not support the XRT mesh server, so this is effectively an
+  alias to `xla_rendezvous`.
 
   Args:
     tag (string): The name of the rendezvous to join.
@@ -994,8 +1077,8 @@ def rendezvous(tag, payload=b'', replicas=[]):
     The payloads exchanged by all the other cores, with the payload of core
     ordinal `i` at position `i` in the returned tuple.
   """
-  if pjrt.using_pjrt():
-    return pjrt.rendezvous(tag, payload, replicas or None)
+  if runtime.using_pjrt():
+    return xla_rendezvous(payload, replicas or None, tag=tag)
 
   return torch_xla._XLAC._xla_rendezvous(get_ordinal(), tag, payload, replicas)
 
@@ -1103,3 +1186,13 @@ def optimization_barrier_(tensors):
     tensors (List[torch.Tensor]): List of `torch.Tensor` to add barrier to.
   """
   torch_xla._XLAC._xla_optimization_barrier_(tensors)
+
+
+def broadcast_master_param(model: torch.nn.Module) -> None:
+  """
+  Broadcast the model parameters from master process to other processes
+  """
+  parameters_and_buffers = list(
+      itertools.chain(model.parameters(), model.buffers()))
+  collective_broadcast(parameters_and_buffers)
+  mark_step()

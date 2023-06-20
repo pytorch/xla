@@ -11,8 +11,6 @@
 #include "tensorflow/compiler/xla/client/lib/matrix.h"
 #include "tensorflow/compiler/xla/client/lib/slicing.h"
 #include "tensorflow/compiler/xla/shape_util.h"
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/util.h"
 #include "torch_xla/csrc/LazyIr.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/data_ops.h"
@@ -31,6 +29,9 @@
 #include "torch_xla/csrc/ops/sum.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
 #include "torch_xla/csrc/pooling.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/util.h"
+#include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/tensor_methods.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
@@ -663,7 +664,7 @@ torch::lazy::NodePtr MaxUnary(const torch::lazy::Value& input) {
   auto lower_fn = [](const XlaNode& node,
                      LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(xla_input);
+    const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(xla_input);
     xla::PrimitiveType element_type = input_shape.element_type();
     XlaHelpers::MinMax min_max = XlaHelpers::MinMaxValues(element_type);
     xla::XlaOp init_value =
@@ -684,7 +685,7 @@ torch::lazy::NodePtr MinUnary(const torch::lazy::Value& input) {
   auto lower_fn = [](const XlaNode& node,
                      LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(xla_input);
+    const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(xla_input);
     xla::PrimitiveType element_type = input_shape.element_type();
     XlaHelpers::MinMax min_max = XlaHelpers::MinMaxValues(element_type);
     xla::XlaOp init_value =
@@ -851,7 +852,7 @@ torch::lazy::NodePtr ViewAsComplexCopy(const torch::lazy::Value& input) {
   auto lower_fn = [](const XlaNode& node,
                      LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(xla_input);
+    const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(xla_input);
     xla::XlaOp zero = xla::Zero(xla_input.builder(), xla::PrimitiveType::S32);
     xla::XlaOp one = xla::One(xla_input.builder(), xla::PrimitiveType::S32);
     xla::XlaOp zero_dim =
@@ -872,7 +873,7 @@ torch::lazy::NodePtr ViewAsRealCopy(const torch::lazy::Value& input) {
   auto lower_fn = [](const XlaNode& node,
                      LoweringContext* loctx) -> XlaOpVector {
     xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
-    const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(xla_input);
+    const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(xla_input);
     xla::XlaOp real = xla::Real(xla_input);
     xla::XlaOp imag = xla::Imag(xla_input);
     return node.ReturnOp(BuildStack({real, imag}, input_shape.rank()), loctx);

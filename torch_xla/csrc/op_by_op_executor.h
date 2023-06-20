@@ -6,11 +6,11 @@
 
 #include "absl/types/span.h"
 #include "tensorflow/compiler/xla/types.h"
-#include "third_party/xla_client/async_task.h"
-#include "third_party/xla_client/cache.h"
-#include "third_party/xla_client/computation_client.h"
-#include "third_party/xla_client/util.h"
 #include "torch_xla/csrc/ir.h"
+#include "torch_xla/csrc/runtime/async_task.h"
+#include "torch_xla/csrc/runtime/cache.h"
+#include "torch_xla/csrc/runtime/computation_client.h"
+#include "torch_xla/csrc/runtime/util.h"
 
 namespace torch_xla {
 
@@ -21,11 +21,11 @@ namespace torch_xla {
 class OpByOpExecutor {
  public:
   using AsyncResult = std::vector<torch::lazy::BackendDataPtr>;
-  using AsyncTask = xla::util::AsyncTask<AsyncResult>;
+  using AsyncTask = runtime::util::AsyncTask<AsyncResult>;
 
   static OpByOpExecutor* Get();
 
-  std::vector<xla::ComputationClient::ExecuteChainedOp> BuildOps(
+  std::vector<runtime::ComputationClient::ExecuteChainedOp> BuildOps(
       c10::ArrayRef<torch::lazy::Value> roots, const std::string& device,
       absl::Span<const std::string> devices);
 
@@ -39,8 +39,9 @@ class OpByOpExecutor {
 
  private:
   using CompileCache =
-      xla::util::Cache<torch::lazy::hash_t, xla::ComputationClient::Computation,
-                       torch::lazy::HashReducer>;
+      runtime::util::Cache<torch::lazy::hash_t,
+                           runtime::ComputationClient::Computation,
+                           torch::lazy::HashReducer>;
 
   explicit OpByOpExecutor(size_t compile_cache_size);
 

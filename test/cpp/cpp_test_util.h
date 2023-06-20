@@ -10,10 +10,10 @@
 #include <unordered_set>
 
 #include "absl/types/span.h"
-#include "third_party/xla_client/computation_client.h"
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir.h"
+#include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/tensor.h"
 
 #define XLA_CPP_TEST_ENABLED(name)                          \
@@ -89,12 +89,13 @@ std::string GetTensorHloGraph(at::Tensor tensor);
 torch::lazy::Value GetTensorIrValue(const at::Tensor& tensor,
                                     const torch::lazy::BackendDevice& device);
 
-std::vector<xla::ComputationClient::DataPtr> Execute(
+std::vector<torch_xla::runtime::ComputationClient::DataPtr> Execute(
     absl::Span<const torch::lazy::Value> roots,
     const torch::lazy::BackendDevice& device);
 
 std::vector<at::Tensor> Fetch(
-    absl::Span<const xla::ComputationClient::DataPtr> device_data);
+    absl::Span<const torch_xla::runtime::ComputationClient::DataPtr>
+        device_data);
 
 std::vector<at::Tensor> ExecuteAndFetch(
     absl::Span<const torch::lazy::Value> roots,

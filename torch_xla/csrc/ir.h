@@ -12,7 +12,6 @@
 #include <set>
 #include <string>
 #include <unordered_map>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -20,7 +19,7 @@
 #include "absl/types/span.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/tsl/lib/gtl/inlined_vector.h"
-#include "third_party/xla_client/types.h"
+#include "torch_xla/csrc/runtime/types.h"
 
 namespace torch_xla {
 

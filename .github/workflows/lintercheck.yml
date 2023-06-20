@@ -21,7 +21,7 @@ jobs:
       - run: pip install yapf==0.30.0
 
       - name: Check no TORCH_PIN
-        if: github.event_name == 'push' && github.event.ref == 'master'
+        if: github.event_name == 'push' && github.event.ref == 'refs/heads/master'
         shell: bash
         run: |
           TORCH_PIN=./torch_patches/.torch_pin

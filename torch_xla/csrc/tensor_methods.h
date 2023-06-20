@@ -1,6 +1,8 @@
 #ifndef XLA_TORCH_XLA_CSRC_TENSOR_METHODS_H_
 #define XLA_TORCH_XLA_CSRC_TENSOR_METHODS_H_
 
+#include "torch_xla/csrc/computation.h"
+#include "torch_xla/csrc/cross_replica_reduces.h"
 #include "torch_xla/csrc/tensor.h"
 
 namespace torch_xla {
@@ -270,6 +272,9 @@ XLATensorPtr convolution_overrideable(
     std::vector<int64_t> stride, std::vector<int64_t> padding,
     std::vector<int64_t> dilation, bool transposed,
     std::vector<int64_t> output_padding, int64_t groups);
+
+XLATensorPtr count_nonzero(const XLATensorPtr& input,
+                           std::vector<int64_t> dims);
 
 // Returns the cross product of the two input tensors in the given dimension.
 // If the dimension is not given, it defaults to the first dimension found

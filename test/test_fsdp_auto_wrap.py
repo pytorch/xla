@@ -7,7 +7,7 @@ import test_utils
 
 from torch_xla.distributed.fsdp import XlaFullyShardedDataParallel
 from torch_xla.distributed.fsdp.wrap import always_wrap_policy
-from torch_xla.experimental import pjrt
+from torch_xla import runtime as xr
 
 import sys
 import unittest
@@ -32,7 +32,7 @@ class TestNoBackwardModule(test_utils.XlaTestCase):
       return hidden1, hidden2
 
   @unittest.skipIf(
-      pjrt.device_type() == 'GPU',
+      xr.device_type() == 'GPU',
       "This test fails only on GPU with 03/30 TF-pin update (https://github.com/pytorch/xla/pull/4840)"
   )
   def test(self):

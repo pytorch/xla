@@ -1,6 +1,7 @@
 #ifndef XLA_TORCH_XLA_CSRC_TENSOR_UTIL_H_
 #define XLA_TORCH_XLA_CSRC_TENSOR_UTIL_H_
 
+#include <ATen/ExpandUtils.h>
 #include <torch/csrc/autograd/variable.h>
 #include <torch/csrc/lazy/core/hash.h>
 
@@ -11,25 +12,23 @@
 #include "tensorflow/compiler/xla/literal.h"
 #include "tensorflow/compiler/xla/shape.h"
 #include "tensorflow/compiler/xla/types.h"
-#include "third_party/xla_client/computation_client.h"
 #include "torch_xla/csrc/device.h"
+#include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/tensor.h"
-#include "torch_xla/csrc/xla_backend_impl.h"
-#include "torch_xla/csrc/xla_sharding_util.h"
 
 namespace torch_xla {
 
-xla::ComputationClient::DataPtr UnwrapXlaData(
+runtime::ComputationClient::DataPtr UnwrapXlaData(
     const torch::lazy::BackendDataPtr& data);
 
-std::vector<xla::ComputationClient::DataPtr> UnwrapXlaData(
+std::vector<runtime::ComputationClient::DataPtr> UnwrapXlaData(
     absl::Span<const torch::lazy::BackendDataPtr> datas);
 
 torch::lazy::BackendDataPtr WrapXlaData(
-    const xla::ComputationClient::DataPtr& xla_data);
+    const runtime::ComputationClient::DataPtr& xla_data);
 
 std::vector<torch::lazy::BackendDataPtr> WrapXlaData(
-    absl::Span<const xla::ComputationClient::DataPtr> xla_datas);
+    absl::Span<const runtime::ComputationClient::DataPtr> xla_datas);
 
 std::vector<int64_t> ComputeShapeStrides(const xla::Shape& shape);
 
@@ -80,6 +79,12 @@ std::vector<xla::Shape> GetComponentShapes(const xla::Shape& shape);
 // Create a shape with "device_type" compatible layout from the given "shape".
 xla::Shape MakeShapeWithDeviceLayout(const xla::Shape& shape,
                                      XlaDeviceType hw_type);
+
+// Copy the tensor's data into the destination buffer.
+void PopulateTensorBuffer(const at::Tensor& tensor,
+                          const xla::Shape& dest_shape, void* dest_buffer,
+                          size_t dest_buffer_size,
+                          const torch::lazy::BackendDevice& device);
 
 // Create the XLA shape to be used within a lowered XLA computation, to
 // represent a given tensor data.
@@ -134,6 +139,11 @@ xla_expand_outplace(const at::Tensor& to_expand1, const at::Tensor& to_expand2,
                              at::expand_copy(to_expand2, expanded_size)),
                          c10::MaybeOwned<at::Tensor>::owned(
                              at::expand_copy(to_expand3, expanded_size)));
+}
+
+inline bool tensor_has_dym_dim(at::Tensor t) {
+  c10::SymIntArrayRef sym_sizes = t.sym_sizes();
+  return !c10::asIntArrayRefSlowOpt(sym_sizes).has_value();
 }
 
 inline std::vector<at::Tensor> xla_expand_outplace(at::TensorList to_expand) {

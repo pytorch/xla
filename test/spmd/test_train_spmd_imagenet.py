@@ -32,9 +32,6 @@ MODEL_OPTS = {
         'nargs': '+',
         'default': [],
     },
-    '--use_virtual_device': {
-        'action': 'store_true',
-    },
     '--use_gradient_checkpointing': {
         'action': 'store_true',
     }
@@ -67,13 +64,12 @@ import torch_xla.distributed.parallel_loader as pl
 from torch_xla.distributed.fsdp.wrap import (recursive_wrap,
                                              transformer_auto_wrap_policy)
 from torch_xla.distributed.fsdp.utils import checkpoint_module
+from torch_xla import runtime as xr
 import torch_xla.utils.utils as xu
-import torch_xla.utils.checkpoint as checkpoint
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.profiler as xp
 import torch_xla.test.test_utils as test_utils
 import torch_xla.experimental.xla_sharding as xs
-import torch_xla.experimental.pjrt as pjrt
 
 DEFAULT_KWARGS = dict(
     batch_size=128,
@@ -201,7 +197,7 @@ def train_imagenet():
 
   input_mesh = None
   if FLAGS.sharding:
-    num_devices = pjrt.global_device_count()
+    num_devices = xr.global_device_count()
     device_ids = np.arange(num_devices)
     # Model sharding
     if 'conv' in FLAGS.sharding:

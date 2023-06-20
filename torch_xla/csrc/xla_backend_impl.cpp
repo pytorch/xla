@@ -2,15 +2,14 @@
 
 #include <ATen/ScalarOps.h>
 
-#include "third_party/xla_client/debug_macros.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir_builder.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/device_data.h"
-#include "torch_xla/csrc/tensor.h"
-#include "torch_xla/csrc/tensor_util.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/runtime.h"
 
 namespace at {
 // This function is defined in the codegenerated RegisterDispatchKey.cpp file.
@@ -77,7 +76,7 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
       const torch::lazy::BackendDevice& device,
       const torch::lazy::Shape& shape) const override {
     xla::Shape xla_shape = MakeXlaShapeFromLazyShape(shape, device);
-    return WrapXlaData(xla::ComputationClient::Get()->CreateDataPlaceholder(
+    return WrapXlaData(runtime::GetComputationClient()->CreateDataPlaceholder(
         device.toString(), std::move(xla_shape)));
   }
 
@@ -119,14 +118,14 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
   std::vector<std::string> GetCompilationDevices(
       const std::string& device,
       c10::ArrayRef<std::string> devices) const override {
-    return xla::ComputationClient::Get()->GetCompilationDevices(device,
-                                                                devices);
+    return runtime::GetComputationClient()->GetCompilationDevices(device,
+                                                                  devices);
   }
 
   std::vector<torch::lazy::ComputationPtr> Compile(
       std::vector<torch::lazy::ComputationPtr> instances) const override {
     std::vector<torch::lazy::ComputationPtr> res;
-    std::vector<xla::ComputationClient::CompileInstance> compile_instances;
+    std::vector<runtime::ComputationClient::CompileInstance> compile_instances;
     torch::lazy::BackendDevice current_device = GetCurrentDevice();
     std::vector<xla::Shape> output_shapes;
 
@@ -147,13 +146,13 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
       // torch_xla_computation->computation_ becomes invalid due to std::move.
       // TODO(JackCaoG): Verify this with GPU, we might only have 1 process with
       // multiple GPU as replica.
-      compile_instances.push_back(xla::ComputationClient::CompileInstance(
+      compile_instances.push_back(runtime::ComputationClient::CompileInstance(
           torch_xla_computation->move_computation(),
           torch_xla_computation->get_device_string(),
           {current_device.toString()}, &output_shapes.back()));
     }
-    std::vector<std::shared_ptr<xla::ComputationClient::Computation>>
-        client_computations = xla::ComputationClient::Get()->Compile(
+    std::vector<std::shared_ptr<runtime::ComputationClient::Computation>>
+        client_computations = runtime::GetComputationClient()->Compile(
             std::move(compile_instances));
     return WrapClientComputation(client_computations);
   }
@@ -162,8 +161,8 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
       torch::lazy::ComputationPtr computation,
       c10::ArrayRef<torch::lazy::BackendDataPtr> arguments,
       const torch::lazy::BackendDevice& device) const override {
-    std::vector<xla::ComputationClient::DataPtr> results =
-        xla::ComputationClient::Get()->ExecuteComputation(
+    std::vector<runtime::ComputationClient::DataPtr> results =
+        runtime::GetComputationClient()->ExecuteComputation(
             *(UnwrapClientComputation(computation).get()),
             UnwrapXlaData(arguments), device.toString());
     return WrapXlaData(results);

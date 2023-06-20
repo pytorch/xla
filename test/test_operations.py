@@ -35,7 +35,7 @@ import torch_xla.distributed.data_parallel as dp
 import torch_xla.debug.metrics as met
 import torch_xla.debug.model_comparator as mc
 import torch_xla.distributed.parallel_loader as pl
-from torch_xla.experimental import pjrt
+from torch_xla import runtime as xr
 import torch_xla.test.test_utils as xtu
 import torch_xla.utils.utils as xu
 import torch_xla.utils.serialization as xser
@@ -50,7 +50,7 @@ DeviceSupport = collections.namedtuple('DeviceSupport', ['num_devices'])
 
 
 def _is_on_tpu():
-  return 'XRT_TPU_CONFIG' in os.environ or pjrt.device_type() == 'TPU'
+  return 'XRT_TPU_CONFIG' in os.environ or xr.device_type() == 'TPU'
 
 
 skipOnTpu = unittest.skipIf(_is_on_tpu(), 'Not supported on TPU')
@@ -1542,7 +1542,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
       return t
 
     # This test is for PjRT only
-    if pjrt.using_pjrt():
+    if xr.using_pjrt():
       self.runAtenTest([torch.tensor(20.0)], test_fn)
 
   def test_view_and_copy_(self):

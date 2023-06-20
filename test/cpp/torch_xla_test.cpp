@@ -3,10 +3,10 @@
 #include <ATen/ATen.h>
 
 #include "absl/memory/memory.h"
-#include "third_party/xla_client/sys_util.h"
-#include "third_party/xla_client/tf_logging.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/runtime/sys_util.h"
+#include "torch_xla/csrc/runtime/tf_logging.h"
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/xla_backend_impl.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
@@ -24,7 +24,7 @@ void XlaTest::SetUp() {
 
 void XlaTest::TearDown() {
   static bool dump_metrics =
-      xla::sys_util::GetEnvBool("XLA_TEST_DUMP_METRICS", false);
+      torch_xla::runtime::sys_util::GetEnvBool("XLA_TEST_DUMP_METRICS", false);
   if (dump_metrics) {
     MakeEndSnapshot();
 

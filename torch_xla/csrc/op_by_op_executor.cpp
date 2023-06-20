@@ -8,14 +8,14 @@
 
 #include "absl/strings/str_cat.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/metrics.h"
-#include "third_party/xla_client/sys_util.h"
-#include "third_party/xla_client/xla_util.h"
 #include "torch_xla/csrc/device.h"
-#include "torch_xla/csrc/ir_util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/device_data.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/metrics.h"
+#include "torch_xla/csrc/runtime/runtime.h"
+#include "torch_xla/csrc/runtime/sys_util.h"
+#include "torch_xla/csrc/runtime/xla_util.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
 
@@ -86,9 +86,10 @@ torch::lazy::hash_t GetNodesKeySeed(const std::string& device,
 OpByOpExecutor::OpByOpExecutor(size_t compile_cache_size)
     : compile_cache_(compile_cache_size) {}
 
-std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
-    c10::ArrayRef<torch::lazy::Value> roots, const std::string& device,
-    absl::Span<const std::string> devices) {
+std::vector<runtime::ComputationClient::ExecuteChainedOp>
+OpByOpExecutor::BuildOps(c10::ArrayRef<torch::lazy::Value> roots,
+                         const std::string& device,
+                         absl::Span<const std::string> devices) {
   std::vector<const torch::lazy::Node*> root_nodes;
   root_nodes.reserve(roots.size());
   for (auto& root : roots) {
@@ -105,7 +106,7 @@ std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
   }
 
   auto compilation_devices =
-      xla::ComputationClient::Get()->GetCompilationDevices(device, devices);
+      runtime::GetComputationClient()->GetCompilationDevices(device, devices);
   torch::lazy::hash_t nodes_key_seed =
       GetNodesKeySeed(device, compilation_devices);
   torch::lazy::BackendDevice exec_device = ParseDeviceString(device);
@@ -118,12 +119,12 @@ std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
   std::list<xla::Shape> compile_shapes;
   std::vector<bool> device_data_ops(post_order.size());
   std::vector<const xla::Shape*> ops_shapes(post_order.size());
-  std::vector<xla::ComputationClient::CompileInstance> compile_instances;
-  std::vector<xla::ComputationClient::ExecuteChainedOp> chained_exec_ops(
+  std::vector<runtime::ComputationClient::CompileInstance> compile_instances;
+  std::vector<runtime::ComputationClient::ExecuteChainedOp> chained_exec_ops(
       post_order.size());
   for (size_t i = 0; i < post_order.size(); ++i) {
     const torch::lazy::Node* node = post_order[i];
-    xla::ComputationClient::ExecuteChainedOp& cxop = chained_exec_ops[i];
+    runtime::ComputationClient::ExecuteChainedOp& cxop = chained_exec_ops[i];
     const auto backend_data =
         torch::lazy::getBackend()->GetComputationDataFromNode(node);
     if (backend_data != nullptr) {
@@ -187,7 +188,7 @@ std::vector<xla::ComputationClient::ExecuteChainedOp> OpByOpExecutor::BuildOps(
     TF_VLOG(3) << "Compiling " << compile_instances.size()
                << " computations on device " << device;
     auto computation_ptrs =
-        xla::ComputationClient::Get()->Compile(std::move(compile_instances));
+        runtime::GetComputationClient()->Compile(std::move(compile_instances));
     TF_VLOG(3) << "Compiling " << computation_ptrs.size()
                << " computations on device " << device << " done!";
     for (size_t i = 0; i < computation_ptrs.size(); ++i) {
@@ -204,8 +205,8 @@ std::vector<torch::lazy::BackendDataPtr> OpByOpExecutor::Execute(
     c10::ArrayRef<torch::lazy::Value> roots, const std::string& device,
     absl::Span<const std::string> devices) {
   auto chained_exec_ops = BuildOps(roots, device, devices);
-  return WrapXlaData(
-      xla::ComputationClient::Get()->ExecuteChained(chained_exec_ops, device));
+  return WrapXlaData(runtime::GetComputationClient()->ExecuteChained(
+      chained_exec_ops, device));
 }
 
 OpByOpExecutor::AsyncTask OpByOpExecutor::ExecuteAsync(
@@ -224,7 +225,7 @@ OpByOpExecutor::AsyncTask OpByOpExecutor::ExecuteAsync(
 
 OpByOpExecutor* OpByOpExecutor::Get() {
   static const int64_t compile_cache_size =
-      xla::sys_util::GetEnvInt("SPLIT_EXECUTOR_CACHE_SIZE", 2048);
+      runtime::sys_util::GetEnvInt("SPLIT_EXECUTOR_CACHE_SIZE", 2048);
   static OpByOpExecutor* split_executor =
       new OpByOpExecutor(compile_cache_size);
   return split_executor;

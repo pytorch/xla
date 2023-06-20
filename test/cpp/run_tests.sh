@@ -56,7 +56,12 @@ if [[ "$TPUVM_MODE" == "1" ]]; then
   EXTRA_FLAGS="$EXTRA_FLAGS --config=tpu"
 fi
 
-# Handle remote builds and remote cache. Use a CI-private cache silo to avoid cachce polution.
+# Match CXX_ABI flags with XLAC.so build
+if [[ -n "${CXX_ABI}" ]]; then
+  EXTRA_FLAGS="${EXTRA_FLAGS} --cxxopt=-D_GLIBCXX_USE_CXX11_ABI=${CXX_ABI}"
+fi
+
+# Handle remote builds and remote cache. Use a CI-private cache silo to avoid cache pollution.
 if [[ "$BAZEL_REMOTE_CACHE" == "1" ]]; then
   EXTRA_FLAGS="$EXTRA_FLAGS --config=remote_cache"
   if [[ ! -z "$GCLOUD_SERVICE_KEY_FILE" ]]; then
@@ -75,7 +80,7 @@ fi
 
 
 if [ "$LOGFILE" != "" ]; then
-  bazel $BAZEL_VERB $EXTRA_FLAGS //third_party/xla_client:all //test/cpp:all ${FILTER:+"$FILTER"} 2> $LOGFILE
+  bazel $BAZEL_VERB $EXTRA_FLAGS //torch_xla/csrc/runtime:all //test/cpp:all ${FILTER:+"$FILTER"} 2> $LOGFILE
 else
-  bazel $BAZEL_VERB $EXTRA_FLAGS //third_party/xla_client:all //test/cpp:all ${FILTER:+"$FILTER"}
+  bazel $BAZEL_VERB $EXTRA_FLAGS //torch_xla/csrc/runtime:all //test/cpp:all ${FILTER:+"$FILTER"}
 fi

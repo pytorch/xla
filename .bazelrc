@@ -71,6 +71,13 @@ build:short_logs --output_filter=DONT_MATCH_ANYTHING
 #build:tpu --@org_tensorflow//tensorflow/compiler/xla/python:enable_tpu=true
 build:tpu --define=with_tpu_support=true
 
+# Run tests serially with TPU and GPU (only 1 device is available).
+test:tpu --local_test_jobs=1
+test:cuda --local_test_jobs=1
+
+# Exclude XRT from the build
+build:disable_xrt --define=disable_xrt=true
+
 #########################################################################
 # RBE config options below.
 # Flag to enable remote config
@@ -160,7 +167,7 @@ build:linux --config=dynamic_kernels
 # the monolitih build because otherwise there are missing dependencies and
 # linking fails.
 build --define framework_shared_object=false
-build --define tsl_protobuf_header_only=true
+build --define tsl_protobuf_header_only=false
 
 build --define=use_fast_cpp_protos=true
 build --define=allow_oversize_protos=true

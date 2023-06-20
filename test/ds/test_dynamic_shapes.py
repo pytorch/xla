@@ -342,6 +342,57 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     t9_aten = t8_aten.view(t4_aten.shape[0])
     self.assertEqual(t9.cpu(), t9_aten.cpu())
 
+  def test_add_dyn_with_static_broadcastable(self):
+    t1 = torch.tensor([[1, 0, 3, 5, 0, 6]], device=dev)
+    t2 = torch.nonzero(t1)
+    t3 = torch.tensor([[1, 1]], device=dev)
+
+    # t2.shape=torch.Size([<=6, 2]) with real size [4, 2]
+    # t3.shape=torch.Size([1, 2]) with real size [1, 2]
+    t4 = torch.add(t2, t3)
+    self.assertIsInstance(t4.shape[0], torch.SymInt)
+    self.assertEqual(str(t4.shape[0]), '<=6')
+    self.assertEqual(t4.shape[0], 4)
+    self.assertIsInstance(t4.shape[1], int)
+    self.assertEqual(str(t4.shape[1]), '2')
+    self.assertEqual(t4.shape[1], 2)
+
+    # test for correctness
+    t1_aten = torch.tensor([[1, 0, 3, 5, 0, 6]])
+    t2_aten = torch.nonzero(t1_aten)
+    t3_aten = torch.tensor([[1, 1]])
+    t4_aten = torch.add(t2_aten, t3_aten)
+    self.assertEqual(t4.cpu(), t4_aten.cpu())
+
+  def test_add_dyn_with_static_not_broadcastable(self):
+    t1 = torch.tensor([[1, 0, 3, 5, 0, 6]], device=dev)
+    t2 = torch.nonzero(t1)
+    t3 = torch.tensor([[1, 1], [1, 1]], device=dev)
+
+    # t2.shape=torch.Size([<=6, 2]) with real size [4, 2]
+    # t3.shape=torch.Size([2, 2]) with real size [2, 2]
+    self.assertRaises(RuntimeError, lambda: torch.add(t2, t3))
+    self.assertRaises(RuntimeError, lambda: torch.add(t3, t2))
+
+  def test_add_two_dynamic_tensors(self):
+    t1 = torch.tensor([[1, 0, 3, 5, 0, 6]], device=dev)
+    t2 = torch.nonzero(t1)
+    t3 = torch.tensor([[1]], device=dev)
+    t4 = torch.nonzero(t3)
+
+    # t2.shape=torch.Size([<=6, 2]) with real size [4, 2]
+    # t4.shape=torch.Size([<=1, 2]) with real size [1, 2]
+    self.assertRaises(RuntimeError, lambda: torch.add(t2, t4))
+    self.assertRaises(RuntimeError, lambda: torch.add(t4, t2))
+
+    # For now, we disallow if both operands have the same upper bound and real size.
+    # This is consistent with PyTorch's behavior.
+    # t2.shape=torch.Size([<=6, 2]) with real size [4, 2]
+    # t6.shape=torch.Size([<=6, 2]) with real size [4, 2]
+    t5 = torch.tensor([[1, 0, 3, 5, 0, 6]], device=dev)
+    t6 = torch.nonzero(t5)
+    self.assertRaises(RuntimeError, lambda: torch.add(t2, t6))
+
   def test_clone(self):
     t1 = torch.tensor([1, 0, 3, 5, 0, 6], device=dev)
     # t2.shape=torch.Size([<=6, 1]) with real size [4, 1]

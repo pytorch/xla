@@ -5,26 +5,10 @@
 #include <torch/csrc/autograd/variable.h>
 #include <torch/csrc/lazy/core/ir_util.h>
 
-#include <iostream>
 #include <memory>
 #include <string>
-#include <unordered_map>
 
-#include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "tensorflow/compiler/xla/status.h"
-#include "tensorflow/compiler/xla/types.h"
-#include "third_party/xla_client/async_task.h"
-#include "third_party/xla_client/cache.h"
-#include "third_party/xla_client/computation_client.h"
-#include "third_party/xla_client/multi_wait.h"
-#include "third_party/xla_client/util.h"
-#include "torch_xla/csrc/computation.h"
-#include "torch_xla/csrc/cross_replica_reduces.h"
-#include "torch_xla/csrc/device.h"
-#include "torch_xla/csrc/ir.h"
-#include "torch_xla/csrc/ir_util.h"
-#include "torch_xla/csrc/lowering_context.h"
-#include "torch_xla/csrc/torch_util.h"
+#include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/view.h"
 
 namespace torch_xla {
@@ -218,7 +202,7 @@ class XLATensor : public torch::lazy::LazyTensor {
   void SetScalarType(c10::optional<at::ScalarType> logical_element_type);
 
   // We don't use the upstream shape to provide xla::shape.
-  xla::util::MaybeRef<xla::Shape> shape() const;
+  runtime::util::MaybeRef<xla::Shape> shape() const;
 
   // Retrieves an opaque ID of the alias object upon which the tensor's view is
   // rooted, or 0 if this tensor is not a view.

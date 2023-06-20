@@ -40,6 +40,9 @@
 #   TPUVM_MODE=0
 #     whether to build for TPU
 #
+#   DISABLE_XRT=0
+#     whether to exclude XRT from the build
+#
 #   SILO_NAME=""
 #     name of the remote build cache silo
 #
@@ -208,7 +211,7 @@ extra_compile_args = []
 cxx_abi = os.getenv(
     'CXX_ABI', default='') or getattr(torch._C, '_GLIBCXX_USE_CXX11_ABI', None)
 if cxx_abi is not None:
-  extra_compile_args += ['-D_GLIBCXX_USE_CXX11_ABI={}'.format(int(cxx_abi))]
+  extra_compile_args.append(f'-D_GLIBCXX_USE_CXX11_ABI={int(cxx_abi)}')
 
 
 class BazelExtension(Extension):
@@ -250,6 +253,9 @@ class BuildBazelExtension(command.build_ext.build_ext):
     if _check_env_flag('TPUVM_MODE'):
       bazel_argv.append('--config=tpu')
 
+    if _check_env_flag('DISABLE_XRT'):
+      bazel_argv.append('--config=disable_xrt')
+
     # Remote cache authentication.
     if _check_env_flag('BAZEL_REMOTE_CACHE'):
       bazel_argv.append('--config=remote_cache')
@@ -264,7 +270,7 @@ class BuildBazelExtension(command.build_ext.build_ext):
 
     if _check_env_flag('BUILD_CPP_TESTS', default='0'):
       bazel_argv.append('//test/cpp:all')
-      bazel_argv.append('//third_party/xla_client:all')
+      bazel_argv.append('//torch_xla/csrc/runtime:all')
 
     if BAZEL_JOBS:
       bazel_argv.append('--jobs=%s' % BAZEL_JOBS)

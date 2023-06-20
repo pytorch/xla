@@ -6,8 +6,6 @@
 #include <torch/csrc/lazy/core/util.h>
 
 #include "tensorflow/compiler/xla/permutation_util.h"
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/util.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -19,6 +17,8 @@
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/ops/permute.h"
 #include "torch_xla/csrc/ops/scalar.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/tensor_methods.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
@@ -62,7 +62,7 @@ std::vector<at::Tensor> ExpandByteTensors(
             << self.sizes() << " at index " << src_idx;
       }
       // Replace with nonzeros.
-      auto nonzero = index->nonzero();
+      at::Tensor nonzero = index->nonzero();
       for (int64_t j = 0; j < index->dim(); j++) {
         // There is no tensor.select_copy. So at::select_copy is used.
         result.emplace_back(at::select_copy(nonzero, 1, j));
@@ -148,11 +148,26 @@ std::vector<XLATensorPtr> WrapIndicesOnce(
   for (size_t dim_idx = 0; dim_idx < indices.size(); ++dim_idx) {
     const XLATensorPtr& dim_index = indices[dim_idx];
     int64_t dim_size = base_shape_ref.get().dimensions(dim_idx + start_dim);
-    XLATensorPtr wrapped_dim_index = XLATensor::Create(
-        dim_index->GetIrValue() +
-            XLAGraphExecutor::Get()->GetIrValueForScalar(
-                dim_size, dim_index->shape(), base->GetDevice()),
-        base->GetDevice());
+
+    XLATensorPtr wrapped_dim_index;
+    if (!dim_index->shape().get().is_dynamic()) {
+      wrapped_dim_index = XLATensor::Create(
+          dim_index->GetIrValue() +
+              XLAGraphExecutor::Get()->GetIrValueForScalar(
+                  dim_size, dim_index->shape(), base->GetDevice()),
+          base->GetDevice());
+    } else {
+      SymIntElements sym_int_elements(dim_index->GetIrValue());
+      xla::PrimitiveType primitive_type =
+          dim_index->shape().get().element_type();
+      wrapped_dim_index =
+          XLATensor::Create(dim_index->GetIrValue() +
+                                XLAGraphExecutor::Get()->GetIrValueForScalar(
+                                    dim_size, sym_int_elements, primitive_type,
+                                    base->GetDevice()),
+                            base->GetDevice());
+    }
+
     XLATensorPtr wrap_cond =
         tensor_methods::lt(indices[dim_idx], at::Scalar(int64_t(0)));
     canonical_indices.push_back(

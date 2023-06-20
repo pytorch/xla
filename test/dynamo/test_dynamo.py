@@ -68,6 +68,25 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     res_cpu_3 = self.fn_simple(x + y, y * 3)
     self.assertTrue(torch.allclose(res_cpu_3, res_xla_dynamo_3.cpu()))
 
+  def test_simple_model_with_different_input_shape(self):
+    met.clear_counters()
+    device = xm.xla_device()
+    xla_x = torch.randn(5, 5).to(device)
+    xla_y = torch.randn(5, 5).to(device)
+    xla_z = torch.randn(10, 10).to(device)
+    self.fn_simple_dynamo(xla_x, xla_x)
+    compile_count = met.metric_data('CompileTime')[0]
+    # Execute with input with same shape should not trigger additional compilation
+    self.fn_simple_dynamo(xla_y, xla_y)
+    self.assertEqual(met.metric_data('CompileTime')[0], compile_count)
+    # Give `fn_simple_dynamo` an input with different shappe, we expect
+    # dynamo to recognize this is a different graph and let XLA to retrace/recompile
+    res_xla_dynamo_3 = self.fn_simple_dynamo(xla_z, xla_z)
+    self.assertEqual(met.metric_data('CompileTime')[0], compile_count + 1)
+    self.assertTrue(
+        torch.allclose(res_xla_dynamo_3.cpu(),
+                       self.fn_simple(xla_z.cpu(), xla_z.cpu())))
+
   def test_resnet18(self):
     device = xm.xla_device()
     batch_size = xu.getenv_as('BATCH_SIZE', int, defval=4)
@@ -100,6 +119,82 @@ class DynamoInferenceBasicTest(unittest.TestCase):
         met.metric_data('RunCachedGraphInputData')[0], sample_count)
     self.assertEqual(
         met.metric_data('RunCachedGraphOutputData')[0], sample_count)
+
+
+class DynamoCpuFallbackTest(unittest.TestCase):
+
+  def test_operator_fallback(self):
+
+    def fn_fallback(t):
+      # As of 05/18/2023, torch.median is not lowered by PyTorch/XLA
+      return torch.median(t)
+
+    torch._dynamo.reset()
+    met.clear_counters()
+    met.clear_all()
+    device = xm.xla_device()
+
+    # Initial tracing
+    dynamo_fn = torch.compile(fn_fallback, backend="torchxla_trace_once")
+    t = torch.randn(5)
+    t_xla = t.to(device)
+    cpu_res = fn_fallback(t)
+    xla_dynamo_res = dynamo_fn(t_xla)
+    self.assertTrue(torch.allclose(cpu_res, xla_dynamo_res.cpu()))
+    self.assertEqual(met.metric_data('CompileTime')[0], 2)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 2)
+
+    # Second tracing
+    met.clear_counters()
+    xla_dynamo_res_2 = dynamo_fn(t_xla)
+    self.assertTrue(torch.allclose(cpu_res, xla_dynamo_res_2.cpu()))
+    self.assertEqual(met.metric_data('CompileTime')[0], 2)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 2)
+
+    # Verify that dynamo can handle different inputs
+    xla_dynamo_res_3 = dynamo_fn(t_xla * 3)
+    cpu_res_3 = fn_fallback(t * 3)
+    self.assertTrue(torch.allclose(cpu_res_3, xla_dynamo_res_3.cpu()))
+    self.assertEqual(met.metric_data('CompileTime')[0], 3)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 3)
+
+  def test_fallback_multiple_submodules(self):
+
+    def fn_fallback(t):
+      t_2 = torch.mul(t, 2)
+      # As of 05/18/2023, torch.median is not lowered by PyTorch/XLA
+      t_3 = torch.median(t_2)
+      t_4 = torch.mul(t_3, 2)
+      return t_4
+
+    torch._dynamo.reset()
+    met.clear_counters()
+    met.clear_all()
+    device = xm.xla_device()
+
+    # Initial tracing
+    dynamo_fn = torch.compile(fn_fallback, backend="torchxla_trace_once")
+    t = torch.randn(7)
+    t_xla = t.to(device)
+    cpu_res = fn_fallback(t)
+    xla_dynamo_res = dynamo_fn(t_xla)
+    self.assertTrue(torch.allclose(cpu_res, xla_dynamo_res.cpu()))
+    self.assertEqual(met.metric_data('CompileTime')[0], 4)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 6)
+
+    # Second tracing
+    met.clear_counters()
+    xla_dynamo_res_2 = dynamo_fn(t_xla)
+    self.assertTrue(torch.allclose(cpu_res, xla_dynamo_res_2.cpu()))
+    self.assertEqual(met.metric_data('CompileTime')[0], 4)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 8)
+
+    # Verify that dynamo can handle different inputs
+    xla_dynamo_res_3 = dynamo_fn(t_xla * 3)
+    cpu_res_3 = fn_fallback(t * 3)
+    self.assertTrue(torch.allclose(cpu_res_3, xla_dynamo_res_3.cpu()))
+    self.assertEqual(met.metric_data('CompileTime')[0], 5)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 10)
 
 
 class DynamoTrainingBasicTest(unittest.TestCase):
@@ -193,7 +288,7 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     # Graph 3: sync input for backward
     # Graph 4: sync input for backward (TODO(JackCaoG) understand why there are two graphs)
     self.assertEqual(met.metric_data('CompileTime')[0], 4)
-    # We execute 3 grphs per step.
+    # We execute 3 graphs per step.
     self.assertEqual(met.metric_data('ExecuteTime')[0], sample_count * 3)
     # one for each forward and one for each backward
     self.assertEqual(
@@ -299,7 +394,7 @@ class DynamoTrainingOptimizerTest(unittest.TestCase):
     # Graph 4: sync input for backward
     # Graph 5: sync input for backward (TODO(JackCaoG) understand why there are two graphs)
     self.assertEqual(met.metric_data('CompileTime')[0], 5)
-    # We execute 4 grphs per step when optimizer is enabled.
+    # We execute 4 graphs per step when optimizer is enabled.
     self.assertEqual(met.metric_data('ExecuteTime')[0], sample_count * 4)
     # one for each forward, backward and optimizer
     self.assertEqual(

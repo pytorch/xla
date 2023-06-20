@@ -1,15 +1,13 @@
 import unittest
 import numpy as np
 
-import torch
 from torch import nn
-import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.experimental.xla_sharding as xs
-from torch_xla.experimental.pjrt import using_pjrt
+import torch_xla.runtime as xr
 
 
-@unittest.skipIf(not using_pjrt() or xm.get_xla_supported_devices("GPU"),
+@unittest.skipIf(not xr.using_pjrt() or xm.get_xla_supported_devices("GPU"),
                  f"Requires PJRT_DEVICE set to `TPU` or `CPU`.")
 class XlaShardingTest(unittest.TestCase):
 
@@ -39,3 +37,6 @@ class XlaShardingTest(unittest.TestCase):
       device_ids = self.device_ids
     assert len(device_ids) == self.n_devices
     return xs.Mesh(device_ids, mesh_shape)
+
+  def _get_hybrid_mesh(self, ici_mesh_shape):
+    return xs.HybridMesh(ici_mesh_shape=ici_mesh_shape)

@@ -9,11 +9,12 @@
 #include "absl/strings/str_join.h"
 #include "absl/strings/str_replace.h"
 #include "absl/strings/string_view.h"
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/sys_util.h"
 #include "torch_xla/csrc/computation.h"
-#include "torch_xla/csrc/helpers.h"
-#include "torch_xla/csrc/tensor_util.h"
+#include "torch_xla/csrc/ir.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/sys_util.h"
+#include "torch_xla/csrc/shape_helper.h"
+#include "torch_xla/csrc/unwrap_data.h"
 
 namespace torch_xla {
 namespace {
@@ -35,7 +36,8 @@ class HloMetadataSetter {
 
  private:
   static bool ShouldPopulateXlaOpMetadata() {
-    static bool op_metadata = xla::sys_util::GetEnvBool("XLA_HLO_DEBUG", false);
+    static bool op_metadata =
+        runtime::sys_util::GetEnvBool("XLA_HLO_DEBUG", false);
     return op_metadata;
   }
 
@@ -205,7 +207,7 @@ void LoweringContext::SetUpAlias(const std::vector<int64_t>& output_index,
 bool LoweringContext::CheckResultShape(
     const torch::lazy::BackendDataPtr& parameter_data, size_t result_idx) {
   xla::XlaOp root = GetResult(result_idx);
-  const xla::Shape& root_shape = XlaHelpers::ShapeOfXlaOp(root);
+  const xla::Shape& root_shape = ShapeHelper::ShapeOfXlaOp(root);
   return UnwrapXlaData(parameter_data)->shape() == root_shape;
 }
 

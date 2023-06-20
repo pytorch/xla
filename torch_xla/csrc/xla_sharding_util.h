@@ -6,6 +6,7 @@
 #include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/client/xla_computation.h"
 #include "tensorflow/compiler/xla/service/hlo.pb.h"
+#include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/tensor.h"
@@ -14,6 +15,19 @@ namespace torch_xla {
 
 class ShardingUtil {
  public:
+  // This maps to `torch_xla.experimental.xla_sharding.ShardingType` enum type.
+  enum ShardingType {
+    REPLICATED = 0,
+    MAXIMAL = 1,
+    TUPLE = 2,
+    TILED = 3,
+    MANUAL = 4,
+    PARTIAL = 5
+  };
+
+  // Determine the ShardingType of the given xla::OpSharding.
+  static ShardingType GetShardingType(xla::OpSharding& sharding);
+
   // Test whether the XLA_USE_SPMD environment variable is set to enable the
   // virtual device optimization.
   static bool UseVirtualDevice();
@@ -28,10 +42,12 @@ class ShardingUtil {
   static bool EqualShardingSpecs(const XLATensor::ShardingSpec& a,
                                  const XLATensor::ShardingSpec& b);
 
-  // Creates an xla::OpSharding from `tile_assignment` (ndarray).
+  // Creates an xla::OpSharding. `tile_assignmnent` is required for TILED
+  // `sharding_type` and `replication_groups` for `PARTIAL`.
   static xla::OpSharding CreateOpSharding(const py::list& tile_assignment,
-                                          bool replicated = false,
-                                          bool manual = false);
+                                          const py::list& group_assignment,
+                                          const py::list& replication_groups,
+                                          ShardingType sharding_type);
 
   // This is a debugging tool for partitioned HLO generation with different
   // options and sharding propagation.
@@ -48,25 +64,25 @@ class ShardingUtil {
   // vector, so the `i`th result will belong on the `i`th device.
   // TODO(yeounoh) avoiding pre-loading of the unpartitioned input arguments
   // might improve the performance and save the bandwidth.
-  static std::vector<std::vector<xla::ComputationClient::DataPtr>> InputHandler(
-      std::vector<xla::ComputationClient::DataPtr> arguments,
-      std::vector<std::string> devices);
+  static std::vector<std::vector<runtime::ComputationClient::DataPtr>>
+  InputHandler(std::vector<runtime::ComputationClient::DataPtr> arguments,
+               std::vector<std::string> devices);
 
   // Processes replicated execution results, where `sharded_results` contains
   // `PjRtData` handles and spans the number of devices (outer) and the number
   // of arguments (innner). This requires `sharding_specs` of the same size as
   // the number of arguments. `sharding_specs` can contain `nullptr` if the
   // corresponding result argument is not sharded. The replicated execution
-  // leaves the results in replicated states, which is aligned with the default
-  // exepctation `replicated_output=true`. However, if we override the
-  // compiler's default behavior and allow the execution to return sharded
-  // results, then we should set `replicated_output=false` and wrap sharded
-  // arguments into `PjRtShardedData`. This returns a vector of size that is
-  // equal to the number of arguments.
-  static std::vector<xla::ComputationClient::DataPtr> OutputHandler(
-      std::vector<std::vector<xla::ComputationClient::DataPtr>> sharded_results,
+  // `replicated_output=true` leaves the results in replicated states, which is
+  // aligned with the default exepctation of XLA compiler. However, we override
+  // the compiler's default behavior and allow the execution to return sharded
+  // results and wrap sharded arguments into `PjRtShardedData`. This returns a
+  // vector of size that is equal to the number of arguments.
+  static std::vector<runtime::ComputationClient::DataPtr> OutputHandler(
+      std::vector<std::vector<runtime::ComputationClient::DataPtr>>
+          sharded_results,
       std::vector<XLATensor::ShardingSpecPtr> sharding_specs,
-      bool replicated_output = true);
+      bool replicated_output = false);
 
   // Returns the shape of the resulting shards of `tensor` after applying
   // `sharding`. This assumes the shards will be padded to ensure they all
@@ -107,6 +123,23 @@ class ShardingUtil {
       ComputationPtr computation,
       std::vector<torch::lazy::BackendDataPtr>* data_placeholders,
       std::vector<XLATensor::ShardingSpecPtr>* sharding_specs);
+
+  // Mimic the function above, but for dynamo code path.
+  // One subtle difference is that in dynamo code path, we don't
+  // have explicit `tensors`. However, we have `output_shapes` and
+  // `device` which were what the `tensors` were used for in the original
+  // `PrepareOutputShardingPropagation` function.
+  static void PrepareOutputShardingPropagation(
+      std::vector<torch::lazy::BackendDataPtr>& placeholders,
+      std::vector<XLATensor::ShardingSpecPtr>& sharding_specs,
+      std::vector<xla::Shape>* output_shapes, ComputationPtr cachedComputation,
+      const torch::lazy::BackendDevice& device);
+
+  // Transfers the individual shards to the devices and returns a DataPtr for
+  // the PjRtShardedData wrapping the shards.
+  static runtime::ComputationClient::DataPtr CreateShardedData(
+      std::vector<at::Tensor>& shards, std::vector<std::string>& devices,
+      xla::Shape global_shape, xla::OpSharding sharding);
 };
 
 }  // namespace torch_xla
