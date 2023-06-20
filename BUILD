@@ -1,3 +1,8 @@
+load(
+    "@tsl//tsl/platform/default:cuda_build_defs.bzl",
+    "if_cuda_is_configured",
+)
+
 cc_binary(
     name = "_XLAC.so",
     copts = [
