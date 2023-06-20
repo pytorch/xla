@@ -62,6 +62,7 @@ ptxla_cc_library(
         "view.cpp",
         "xla_backend_impl.cpp",
         "xla_custom_call.cpp",
+	"xla_custom_call.cu",
         "xla_graph_executor.cpp",
         "xla_lower_util.cpp",
         "xla_op_builder.cpp",

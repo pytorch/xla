@@ -2,7 +2,7 @@
 #define XLA_TORCH_XLA_CSRC_XLA_CUSTOM_CALL_H_
 
 #include "tensorflow/compiler/xla/service/custom_call_target_registry.h"
-
+#include <cuda_runtime.h>
 #include <cuda.h>
 
 void argmin_custom(void* out, const void** in);
