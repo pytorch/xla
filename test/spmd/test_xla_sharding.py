@@ -454,6 +454,7 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     t3_expected = [9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0]
     self.assertEqual(t3.tolist()[0], t3_expected)
 
+  @unittest.skipIf(xr.device_type() == 'TPU', "Crash on TPU v2")
   @unittest.skipUnless(
       xm.get_xla_supported_devices("TPU"),
       f"Requires PJRT_DEVICE set to `TPU`.")
