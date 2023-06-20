@@ -2729,8 +2729,14 @@ XLATensorPtr view(const XLATensorPtr& input,
       GetCompleteShape(output_size, input_shape.get().dimensions());
   xla::Shape shape =
       XlaHelpers::GetDynamicReshape(input_shape, complete_dimensions);
-  ViewInfo view_info(ViewInfo::Type::kReshape, std::move(shape), input_shape);
-  return input->CreateViewTensor(std::move(view_info));
+
+  // See Note: [Disabling functionalization]
+  if (runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
+    ViewInfo view_info(ViewInfo::Type::kReshape, std::move(shape), input_shape);
+    return input->CreateViewTensor(std::move(view_info));
+  }
+  return input->CreateFrom(torch::lazy::MakeNode<ViewOp>(
+      input->GetIrValue(), torch::lazy::ToVector<int64_t>(shape.dimensions())));
 }
 
 XLATensorPtr view_symint(const XLATensorPtr& input,
