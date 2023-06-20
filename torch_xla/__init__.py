@@ -7,6 +7,7 @@ import subprocess
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 
+
 def _setup_grpc():
   # Setup GRPC options to correctly talk to TPU backends.
   options = [
