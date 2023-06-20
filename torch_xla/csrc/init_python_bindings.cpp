@@ -25,11 +25,6 @@
 #include "pybind11/pybind11.h"
 #include "pybind11/pytypes.h"
 #include "pybind11/stl_bind.h"
-#include "xla/pjrt/distributed/distributed.h"
-#include "xla/python/profiler/internal/traceme_wrapper.h"
-#include "xla/service/hlo_parser.h"
-#include "tsl/platform/env.h"
-#include "tsl/profiler/lib/traceme.h"
 #include "torch_xla/csrc/XLANativeFunctions.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/computation.h"
@@ -60,6 +55,11 @@
 #include "torch_xla/csrc/xla_graph_executor.h"
 #include "torch_xla/csrc/xla_op_builder.h"
 #include "torch_xla/csrc/xla_sharding_util.h"
+#include "tsl/platform/env.h"
+#include "tsl/profiler/lib/traceme.h"
+#include "xla/pjrt/distributed/distributed.h"
+#include "xla/python/profiler/internal/traceme_wrapper.h"
+#include "xla/service/hlo_parser.h"
 
 namespace torch_xla {
 namespace {

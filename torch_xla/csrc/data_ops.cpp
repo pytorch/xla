@@ -8,10 +8,6 @@
 #include <numeric>
 
 #include "absl/strings/str_join.h"
-#include "xla/client/lib/constants.h"
-#include "xla/client/lib/slicing.h"
-#include "xla/shape_util.h"
-#include "xla/util.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/reduction.h"
@@ -20,6 +16,10 @@
 #include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/tensor_util.h"
+#include "xla/client/lib/constants.h"
+#include "xla/client/lib/slicing.h"
+#include "xla/shape_util.h"
+#include "xla/util.h"
 
 namespace torch_xla {
 namespace {

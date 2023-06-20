@@ -5,6 +5,12 @@
 #include <cmath>
 #include <unordered_map>
 
+#include "torch/csrc/lazy/core/ir_util.h"
+#include "torch_xla/csrc/device.h"
+#include "torch_xla/csrc/ops/device_data.h"
+#include "torch_xla/csrc/runtime/runtime.h"
+#include "torch_xla/csrc/tensor.h"
+#include "torch_xla/csrc/tensor_util.h"
 #include "xla/execution_options_util.h"
 #include "xla/hlo/ir/hlo_module.h"
 #include "xla/protobuf_util.h"
@@ -14,12 +20,6 @@
 #include "xla/service/sharding_propagation.h"
 #include "xla/service/spmd/spmd_partitioner.h"
 #include "xla/xla.pb.h"
-#include "torch/csrc/lazy/core/ir_util.h"
-#include "torch_xla/csrc/device.h"
-#include "torch_xla/csrc/ops/device_data.h"
-#include "torch_xla/csrc/runtime/runtime.h"
-#include "torch_xla/csrc/tensor.h"
-#include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
 namespace {
