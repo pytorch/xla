@@ -158,14 +158,12 @@ std::vector<XLATensorPtr> WrapIndicesOnce(
           base->GetDevice());
     } else {
       SymIntElements sym_int_elements(dim_index->GetIrValue());
-      xla::PrimitiveType primitive_type =
-          dim_index->shape().get().element_type();
-      wrapped_dim_index =
-          XLATensor::Create(dim_index->GetIrValue() +
-                                XLAGraphExecutor::Get()->GetIrValueForScalar(
-                                    dim_size, sym_int_elements, primitive_type,
-                                    base->GetDevice()),
-                            base->GetDevice());
+      wrapped_dim_index = XLATensor::Create(
+          dim_index->GetIrValue() +
+              XLAGraphExecutor::Get()->GetIrValueForScalar(
+                  dim_size, dim_index->shape(), sym_int_elements, c10::nullopt,
+                  base->GetDevice()),
+          base->GetDevice());
     }
 
     XLATensorPtr wrap_cond =
