@@ -1760,6 +1760,35 @@ class TestWaitDeviceOps(test_utils.XlaTestCase):
                     "ExecuteChainedTime" in met.metric_names())
 
 
+class TestDebuggingUtil(test_utils.XlaTestCase):
+
+  def test_get_xla_tensor_debug_info(self):
+    if xu.getenv_as('XLA_USE_EAGER_DEBUG_MODE', str, '1'):
+      # ignore this test for eager debug mode since it will
+      # mess up the IR.
+      return
+    device = xm.xla_device()
+    # test non xla tensor
+    cpu_t1 = torch.randn(5)
+    cpu_t1_info = torch_xla._XLAC._get_xla_tensor_debug_info(cpu_t1)
+    self.assertIn('Not a XLATensor', cpu_t1_info)
+
+    # test a tensor with IR
+    t1 = cpu_t1.to(device)
+    t2 = t1 + 5
+    t2_info = torch_xla._XLAC._get_xla_tensor_debug_info(t2)
+    self.assertIn('XLA Shape: f32[5]', t2_info)
+    self.assertIn('aten::add', t2_info)
+    self.assertIn('XLAData: None', t2_info)
+
+    # after makr_step XLAData should present
+    xm.mark_step()
+    t2_info_new = torch_xla._XLAC._get_xla_tensor_debug_info(t2)
+    self.assertNotIn('XLAData: None', t2_info_new)
+    self.assertIn('Data Shape: f32[5]', t2_info_new)
+    self.assertIn('IR: None', t2_info_new)
+
+
 class TestOpBuilder(test_utils.XlaTestCase):
 
   def runOpBuilderTest(self,
