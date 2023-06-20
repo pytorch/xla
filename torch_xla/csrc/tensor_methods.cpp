@@ -2640,8 +2640,6 @@ XLATensorPtr trace(const XLATensorPtr& input) {
 
 XLATensorPtr transpose(const XLATensorPtr& input, int64_t dim0, int64_t dim1) {
   torch_xla::runtime::util::MaybeRef<xla::Shape> input_shape = input->shape();
-  std::vector<int64_t> permute_dims = torch::lazy::MakeTransposePermutation(
-      /*dim0=*/dim0, /*dim1=*/dim1, /*rank=*/input_shape.get().rank());
 
   // See Note: [Disabling functionalization]
   if (runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
@@ -2652,6 +2650,8 @@ XLATensorPtr transpose(const XLATensorPtr& input, int64_t dim0, int64_t dim1) {
       view_info = ViewInfo(ViewInfo::Type::kNoOp, GetXlaShape(ir_value),
                            GetXlaShape(ir_value));
     } else {
+      std::vector<int64_t> permute_dims = torch::lazy::MakeTransposePermutation(
+          /*dim0=*/dim0, /*dim1=*/dim1, /*rank=*/input_shape.get().rank());
       view_info = ViewInfo(ViewInfo::Type::kPermute, input_shape, permute_dims);
     }
     return input->CreateViewTensor(std::move(view_info));
@@ -2663,9 +2663,12 @@ XLATensorPtr transpose(const XLATensorPtr& input, int64_t dim0, int64_t dim1) {
     result = input;
   } else {
     // kPermute
+    std::vector<int64_t> permute_dims = torch::lazy::MakeTransposePermutation(
+        /*dim0=*/dim0, /*dim1=*/dim1, /*rank=*/input_shape.get().rank());
     result = input->CreateFrom(torch::lazy::MakeNode<Permute>(
         input->GetIrValue(), xla::InversePermutation(permute_dims)));
   }
+
   return result;
 }
 
