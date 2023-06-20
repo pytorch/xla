@@ -6,8 +6,6 @@
 #include <functional>
 #include <numeric>
 
-#include "xla/shape_util.h"
-#include "xla/util.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ops/as_strided.h"
 #include "torch_xla/csrc/ops/as_strided_view_update.h"
@@ -23,6 +21,8 @@
 #include "torch_xla/csrc/ops/view.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/util.h"
+#include "xla/shape_util.h"
+#include "xla/util.h"
 
 namespace torch_xla {
 namespace {

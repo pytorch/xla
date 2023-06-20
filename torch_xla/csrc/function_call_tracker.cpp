@@ -10,8 +10,8 @@
 #include <unordered_set>
 
 #include "absl/strings/str_split.h"
-#include "tsl/platform/stacktrace.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
+#include "tsl/platform/stacktrace.h"
 
 namespace torch_xla {
 namespace fn_tracker {
