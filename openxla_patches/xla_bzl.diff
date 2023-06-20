@@ -1,7 +1,7 @@
 # Backport of https://github.com/openxla/xla/commit/6d8b5c0d98aad645debbaddcb9f332ff22c19581 after PyTorch/XLA has migrated to OpenXLA
 # Enable PyTorch/XLA could use macro from `xla_cc_test`. Remove in next TF pin update.
 diff --git a/xla/xla.bzl b/xla/xla.bzl
-index 2628eb4b0..da3aefe00 100644
+index 2628eb4b0..3ac04b1bd 100644
 --- a/xla/xla.bzl
 +++ b/xla/xla.bzl
 @@ -2,9 +2,9 @@
@@ -42,7 +42,7 @@ index 2628eb4b0..da3aefe00 100644
          "//xla:xla_proto_cc_impl",
          "//xla:xla_data_proto_cc_impl",
          "//xla/service:hlo_proto_cc_impl",
-@@ -76,39 +87,43 @@ def xla_cc_test(
+@@ -76,39 +87,42 @@ def xla_cc_test(
          deps = deps + if_tsl_link_protobuf(
                     [],
                     [
@@ -96,7 +96,6 @@ index 2628eb4b0..da3aefe00 100644
 -                   "//xla/stream_executor/cuda:all_runtime",
 -                   "//xla/stream_executor/cuda:stream_executor_cuda",
 +                   clean_dep("//xla/stream_executor/gpu:gpu_init"),
-+                   clean_dep("//xla/service:gpu_plugin"),
 +                   clean_dep("//xla/stream_executor:stream_executor_bundle"),
 +                   clean_dep("//xla/stream_executor:stream_executor_headers"),
 +                   clean_dep("//xla/stream_executor/gpu:gpu_stream"),
@@ -113,7 +112,7 @@ index 2628eb4b0..da3aefe00 100644
                 ]),
          exec_properties = tf_exec_properties(kwargs),
          **kwargs
-@@ -117,4 +132,4 @@ def xla_cc_test(
+@@ -117,4 +131,4 @@ def xla_cc_test(
  register_extension_info(
      extension = xla_cc_test,
      label_regex_for_dep = "{extension_name}",
