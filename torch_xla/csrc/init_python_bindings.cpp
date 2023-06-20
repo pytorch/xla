@@ -381,10 +381,10 @@ std::string GetXLATensorDebugInfo(const at::Tensor& tensor) {
   }
 
   torch::lazy::BackendDataPtr handle = xtensor->CurrentDataHandle();
-  ss << "XLAData: \n";
+  ss << "XLAData: ";
   if (handle) {
     auto data = UnwrapXlaData(handle);
-    ss << "  Data Device: " << data->device() << "\n";
+    ss << "\n  Data Device: " << data->device() << "\n";
     ss << "  Data Shape: " << data->shape().ToString() << "\n";
   } else {
     ss << "None\n";

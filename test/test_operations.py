@@ -1772,12 +1772,12 @@ class TestDebuggingUtil(test_utils.XlaTestCase):
     t2_info = torch_xla._XLAC._get_xla_tensor_debug_info(t2)
     self.assertIn('XLA Shape: f32[5]', t2_info)
     self.assertIn('aten::add', t2_info)
-    self.assertIn('XLAData: \nNone', t2_info)
+    self.assertIn('XLAData: None', t2_info)
 
     # after makr_step XLAData should present
     xm.mark_step()
     t2_info_new = torch_xla._XLAC._get_xla_tensor_debug_info(t2)
-    self.assertNotIn('XLAData: \nNone', t2_info_new)
+    self.assertNotIn('XLAData: None', t2_info_new)
     self.assertIn('Data Shape: f32[5]', t2_info_new)
     self.assertIn('IR: None', t2_info_new)
 
