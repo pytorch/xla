@@ -344,34 +344,21 @@ XLATensorPtr all_reduce(const XLATensorPtr& input, AllReduceType reduce_type,
   return input->CreateFrom(torch::lazy::Value(node, 0));
 }
 
-torch::lazy::Value all_reduce_(XLATensorPtr& input,
-                               const torch::lazy::Value& token,
-                               AllReduceType reduce_type, double scale,
-                               std::vector<std::vector<int64_t>> groups,
-                               bool pin_layout) {
-  std::vector<torch::lazy::Value> input_values({input->GetIrValue()});
-  torch::lazy::NodePtr node = torch::lazy::MakeNode<AllReduce>(
-      reduce_type, input_values, token, scale, std::move(groups), pin_layout);
-  input->SetInPlaceIrValue(torch::lazy::Value(node, 0));
-  return torch::lazy::Value(node, 1);
-}
-
-torch::lazy::Value all_reduce(std::vector<XLATensorPtr>* inputs,
-                              const torch::lazy::Value& token,
+torch::lazy::Value all_reduce(const std::vector<XLATensorPtr>& inputs,
                               AllReduceType reduce_type, double scale,
                               std::vector<std::vector<int64_t>> groups,
                               bool pin_layout) {
   std::vector<torch::lazy::Value> input_values;
-  input_values.reserve(inputs->size());
-  for (auto& input : *inputs) {
+  input_values.reserve(inputs.size());
+  for (auto& input : inputs) {
     input_values.push_back(input->GetIrValue());
   }
   torch::lazy::NodePtr node = torch::lazy::MakeNode<AllReduce>(
-      reduce_type, input_values, token, scale, std::move(groups), pin_layout);
-  for (size_t i = 0; i < inputs->size(); ++i) {
-    (*inputs)[i]->SetInPlaceIrValue(torch::lazy::Value(node, i));
+      reduce_type, input_values, GetAllReduceToken(inputs.front()->GetDevice()), scale, std::move(groups), pin_layout);
+  for (size_t i = 0; i < inputs.size(); ++i) {
+    inputs[i]->SetInPlaceIrValue(torch::lazy::Value(node, i));
   }
-  return torch::lazy::Value(node, inputs->size());
+  return torch::lazy::Value(node, inputs.size());
 }
 
 std::pair<XLATensorPtr, torch::lazy::Value> reduce_scatter(
