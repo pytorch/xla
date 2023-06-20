@@ -464,7 +464,6 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertEqual(mesh.get_logical_mesh().shape,
                      hybrid_mesh.get_logical_mesh().shape)
 
-  @unittest.skipIf(xr.device_type() == 'TPU', "Crash on TPU v2")
   @patch('torch_xla.runtime.global_device_attributes')
   @patch('torch_xla.core.xla_model.xla_device_hw')
   def test_hybrid_mesh(self, xla_device_mock, device_attributes_mock):
