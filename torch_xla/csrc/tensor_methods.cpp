@@ -10,7 +10,6 @@
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
-#include "xla/literal_util.h"
 #include "torch_xla/csrc/LazyIr.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/data_ops.h"
@@ -141,6 +140,7 @@
 #include "torch_xla/csrc/tensor_ops.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
+#include "xla/literal_util.h"
 
 namespace torch_xla {
 namespace tensor_methods {
