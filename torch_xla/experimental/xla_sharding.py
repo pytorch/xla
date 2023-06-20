@@ -402,8 +402,11 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
   sharding_type = _get_sharding_type(partition_spec, num_devices)
   group_assignment, replication_groups = _get_group_assignment(
       sharding_type, mesh, partition_spec)
-
+  print(sharding_type)
+  print(group_assignment)
+  print(replication_groups)
   if isinstance(t, XLAShardedTensor):
+    
     torch_xla._XLAC._xla_mark_sharding(t.global_tensor, tile_assignment,
                                        group_assignment, replication_groups,
                                        int(sharding_type))
