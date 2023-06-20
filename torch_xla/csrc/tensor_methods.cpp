@@ -2072,7 +2072,7 @@ XLATensorPtr permute(const XLATensorPtr& input,
   }
 
   return input->CreateFrom(torch::lazy::MakeNode<Permute>(
-      input->GetIrValue(), xla::InversePermutation(dimensions)));
+      input->GetIrValue(), dimensions));
 }
 
 XLATensorPtr pow(const XLATensorPtr& input, const at::Scalar& exponent) {
