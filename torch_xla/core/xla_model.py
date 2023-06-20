@@ -486,8 +486,8 @@ def all_reduce(reduce_type, inputs, scale=1.0, groups=None, pin_layout=True):
                                                groups, pin_layout)
     results = [result]
   else:
-    torch_xla._XLAC._xla_all_reduce_inplace(reduce_type, inputs,
-                                                scale, groups, pin_layout)
+    torch_xla._XLAC._xla_all_reduce_inplace(reduce_type, inputs, scale, groups,
+                                            pin_layout)
     results = inputs
 
   return results[0] if isinstance(inputs, torch.Tensor) else results
