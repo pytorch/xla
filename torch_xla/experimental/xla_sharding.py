@@ -138,7 +138,7 @@ class HybridMesh(Mesh):
     # coords is a 3-dims tuple representing the device in physical mesh
     device_coords = [self.device_attributes[d]['coords'] for d in devices]
     dims = tuple(d + 1 for d in max(device_coords))
-    out = np.empty(dims, dtype=object)
+    out = np.empty(dims, dtype=int)
     for coords, d in zip(device_coords, devices):
       out[coords[0], coords[1], coords[2]] = d
     return out
@@ -399,6 +399,13 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
     f"Each device mesh dimension should appear at most once in partition_spec {partition_spec}."
 
   tile_assignment = _get_tile_assignment(mesh)
+  # check for sharding 2D tensor on a 3D mesh
+  original_shape = tuple(t.shape)
+  tensor_expand = False
+  if len(mesh.shape()) - len(partition_spec) >= 1:
+    partition_spec =  (None,) + partition_spec
+    t = t.expand(1, *original_shape)
+    tensor_expand = True
   sharding_type = _get_sharding_type(partition_spec, num_devices)
   group_assignment, replication_groups = _get_group_assignment(
       sharding_type, mesh, partition_spec)
@@ -407,9 +414,13 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
     torch_xla._XLAC._xla_mark_sharding(t.global_tensor, tile_assignment,
                                        group_assignment, replication_groups,
                                        int(sharding_type))
+    if tensor_expand:
+      t = torch.squeeze(t, dim = 0)
     return t
   torch_xla._XLAC._xla_mark_sharding(t, tile_assignment, group_assignment,
                                      replication_groups, int(sharding_type))
+  if tensor_expand:
+    t = torch.squeeze(t, dim = 0)
   return XLAShardedTensor(t)
 
 
