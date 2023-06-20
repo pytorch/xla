@@ -48,6 +48,8 @@ import test_utils
 
 DeviceSupport = collections.namedtuple('DeviceSupport', ['num_devices'])
 
+XLA_DISABLE_FUNCTIONALIZATION = bool(
+    os.environ.get('XLA_DISABLE_FUNCTIONALIZATION', False))
 
 def _is_on_tpu():
   return 'XRT_TPU_CONFIG' in os.environ or xr.device_type() == 'TPU'
@@ -966,7 +968,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.runAtenTest((a, b), func)
 
   @unittest.skipIf(
-      os.environ.get('XLA_DISABLE_FUNCTIONALIZATION'),
+      XLA_DISABLE_FUNCTIONALIZATION,
       'Metrics differ when functionalization is disabled.')
   def test_set(self):
     met.clear_all()
@@ -986,7 +988,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertTrue(torch.allclose(t2.cpu(), torch.zeros(10)))
 
   @unittest.skipIf(
-      os.environ.get('XLA_DISABLE_FUNCTIONALIZATION'),
+      XLA_DISABLE_FUNCTIONALIZATION,
       'Metrics differ when functionalization is disabled.')
   def test_replace_xla_tensor(self):
     met.clear_all()
@@ -1324,7 +1326,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.runAtenTest([token_type_ids, cat_ids], test_fn)
 
   @unittest.skipIf(
-      os.environ.get('XLA_DISABLE_FUNCTIONALIZATION') == '0',
+      not XLA_DISABLE_FUNCTIONALIZATION,
       'When functionalization is enabled, views do not exist.')
   def test_save_view_alias_check(self):
 
@@ -1346,7 +1348,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
       d = a
       xm.check_view_sharing([a, d])
 
-    print("xw32 debug os.environ.get('XLA_DISABLE_FUNCTIONALIZATION')=", os.environ.get('XLA_DISABLE_FUNCTIONALIZATION'))
+    print("xw32 debug os.environ.get('XLA_DISABLE_FUNCTIONALIZATION')=", os.environ.get('XLA_DISABLE_FUNCTIONALIZATION'), ', XLA_DISABLE_FUNCTIONALIZATION=', XLA_DISABLE_FUNCTIONALIZATION)
     check(xm.xla_device())
     check(torch.device('cpu'))
 
