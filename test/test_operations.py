@@ -1760,6 +1760,10 @@ class TestWaitDeviceOps(test_utils.XlaTestCase):
 class TestDebuggingUtil(test_utils.XlaTestCase):
 
   def test_get_xla_tensor_debug_info(self):
+    if xu.getenv_as('XLA_USE_EAGER_DEBUG_MODE', str, '1'):
+      # ignore this test for eager debug mode since it will
+      # mess up the IR.
+      return
     device = xm.xla_device()
     # test non xla tensor
     cpu_t1 = torch.randn(5)
