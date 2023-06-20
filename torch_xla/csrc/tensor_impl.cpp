@@ -49,7 +49,7 @@ struct XLAGuardImpl : public c10::impl::DeviceGuardImplInterface {
   }
 
   c10::DeviceIndex deviceCount() const noexcept override {
-    auto* client = runtime::GetIfInitialized();
+    auto* client = runtime::GetComputationClientIfInitialized();
 
     if (client == nullptr) {
       TF_VLOG(5) << "XLA client uninitialized. Returning 0 devices.";
