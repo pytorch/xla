@@ -1,4 +1,4 @@
-// Shared library containing the plugin.
+# Shared library containing the plugin.
 
 cc_binary(
     name = "_XLAC.so",
