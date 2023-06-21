@@ -177,13 +177,12 @@ std::vector<std::pair<int64_t, int64_t>> CreateSourceTargetPairs(
 
 std::shared_ptr<torch::lazy::Value> AllReduceInPlace(
     const std::string& reduce_type, const std::vector<at::Tensor>& tensors,
-    const std::shared_ptr<torch::lazy::Value>& token, double scale,
-    const std::vector<std::vector<int64_t>>& replica_groups, bool pin_layout) {
+    double scale, const std::vector<std::vector<int64_t>>& replica_groups,
+    bool pin_layout) {
   std::vector<XLATensorPtr> xtensors =
       GetXlaTensors(tensors, /*want_all=*/true);
-  return std::make_shared<torch::lazy::Value>(
-      tensor_methods::all_reduce(&xtensors, *token, GetReduceType(reduce_type),
-                                 scale, replica_groups, pin_layout));
+  return std::make_shared<torch::lazy::Value>(tensor_methods::all_reduce(
+      xtensors, GetReduceType(reduce_type), scale, replica_groups, pin_layout));
 }
 
 at::Tensor AllReduce(const std::string& reduce_type, const at::Tensor& input,
@@ -988,21 +987,17 @@ void InitXlaModuleBindings(py::module m) {
 
   py::class_<torch::lazy::Value, std::shared_ptr<torch::lazy::Value>>(
       m, "IrValue");
-  m.def(
-      "_xla_all_reduce_inplace",
-      [](const std::string& reduce_type, const std::vector<at::Tensor>& tensors,
-         const std::shared_ptr<torch::lazy::Value>& token, double scale,
-         const py::list& groups, bool pin_layout) {
-        std::vector<std::vector<int64_t>> replica_groups =
-            CreateReduceGroups(groups);
-        std::shared_ptr<torch::lazy::Value> new_token;
-        {
-          NoGilSection nogil;
-          new_token = AllReduceInPlace(reduce_type, tensors, token, scale,
-                                       replica_groups, pin_layout);
-        }
-        return new_token;
-      });
+  m.def("_xla_all_reduce_inplace", [](const std::string& reduce_type,
+                                      const std::vector<at::Tensor>& tensors,
+                                      double scale, const py::list& groups,
+                                      bool pin_layout) {
+    std::vector<std::vector<int64_t>> replica_groups =
+        CreateReduceGroups(groups);
+    {
+      NoGilSection nogil;
+      AllReduceInPlace(reduce_type, tensors, scale, replica_groups, pin_layout);
+    }
+  });
   m.def("_xla_all_reduce", [](const std::string& reduce_type,
                               const at::Tensor& input, double scale,
                               const py::list& groups, bool pin_layout) {
