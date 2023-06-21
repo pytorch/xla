@@ -2665,8 +2665,8 @@ XLATensorPtr transpose(const XLATensorPtr& input, int64_t dim0, int64_t dim1) {
     // kPermute
     std::vector<int64_t> permute_dims = torch::lazy::MakeTransposePermutation(
         /*dim0=*/dim0, /*dim1=*/dim1, /*rank=*/input_shape.get().rank());
-    result = input->CreateFrom(torch::lazy::MakeNode<Permute>(
-        input->GetIrValue(), xla::InversePermutation(permute_dims)));
+    result = input->CreateFrom(
+        torch::lazy::MakeNode<Permute>(input->GetIrValue(), permute_dims));
   }
 
   return result;
