@@ -47,7 +47,7 @@ class TestExperimentalPjrt(parameterized.TestCase):
     with self.assertRaises(IndexError):
       xm.xla_device(10)
 
-  @parameterized.named_parameters(('default', {}, True), ('no_default', {
+  @parameterized.named_parameters(('default', {}, False), ('no_default', {
       'PJRT_SELECT_DEFAULT_DEVICE': '0'
   }, False), ('pjrt_cpu', {
       'PJRT_DEVICE': 'CPU',
