@@ -8,25 +8,25 @@ import torch_xla
 from absl.testing import absltest, parameterized
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.core.xla_model as xm
-from torch_xla import runtime as xr
+from torch_xla import runtime as rt
 
 
 class TestExperimentalPjrt(parameterized.TestCase):
 
   def setUp(self):
-    xr.set_device_type('CPU')
+    rt.set_device_type('CPU')
 
   @parameterized.parameters(('CPU', 'CPU'), ('GPU', 'GPU'), ('TPU', 'TPU'),
                             ('TPU_C_API', 'TPU'), ('TPU_LEGACY', 'TPU'))
   def test_device_type(self, pjrt_device, expected):
     with mock.patch.dict(os.environ, {'PJRT_DEVICE': pjrt_device}, clear=True):
-      self.assertEqual(xr.device_type(), expected)
+      self.assertEqual(rt.device_type(), expected)
 
   def test_requires_pjrt(self):
     with mock.patch.dict(
         os.environ, {'PJRT_SELECT_DEFAULT_DEVICE': '0'}, clear=True):
       with self.assertRaises(NotImplementedError):
-        xr.xla_device()
+        rt.xla_device()
 
   def test_default_ordinals(self):
     global_ordinal = xm.get_ordinal()
@@ -37,11 +37,11 @@ class TestExperimentalPjrt(parameterized.TestCase):
 
   def test_num_local_devices(self):
     self.assertLen(xm.get_xla_supported_devices(),
-                   xr.addressable_device_count())
+                   rt.addressable_device_count())
 
   def test_num_global_devices(self):
     self.assertLen(torch_xla._XLAC._xla_get_all_devices(),
-                   xr.global_device_count())
+                   rt.global_device_count())
 
   def test_xla_device_error(self):
     with self.assertRaises(IndexError):
@@ -66,19 +66,19 @@ class TestExperimentalPjrt(parameterized.TestCase):
       # Print a warningif we had to select a default runtime
       if 'PJRT_DEVICE' not in os.environ and expect_using_pjrt:
         logs_context = self.assertLogs(level=logging.WARNING)
-        print("XRT has been deprecated, please set PJRT_DEVICE")
+        raise Exception('PJRT is the only runtime now, please set PJRT_DEVICE')
       else:
         logs_context = contextlib.nullcontext()
 
       with logs_context:
         # Configure default device
-        xr.using_pjrt()
+        rt.using_pjrt()
 
       if expect_using_pjrt:
-        self.assertIn(xr.device_type(), ['CPU', 'GPU', 'TPU'])
+        self.assertIn(rt.device_type(), ['CPU', 'GPU', 'TPU'])
       else:
         print("XRT has been deprecated, please set PJRT_DEVICE")
-        self.assertIsNone(xr.device_type())
+        self.assertIsNone(rt.device_type())
 
 
 if __name__ == '__main__':
