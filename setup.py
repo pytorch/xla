@@ -288,7 +288,7 @@ class BuildBazelExtension(command.build_ext.build_ext):
         bazel_argv.append('--linkopt=/LIBPATH:' + library_dir)
 
     self.spawn(bazel_argv)
-    self.spawn(["cat", os.popen("bazel info system_log").read())
+    self.spawn(["cat", os.popen("bazel info system_log").read()])
 
     ext_bazel_bin_path = os.path.join(self.build_temp, 'bazel-bin', ext.relpath,
                                       ext.target_name)
