@@ -15,6 +15,7 @@
 #include "torch_xla/csrc/ops/dynamic_ir.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/runtime.h"
+#include "torch_xla/csrc/runtime/tf_logging.h"
 #include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
@@ -48,7 +49,14 @@ struct XLAGuardImpl : public c10::impl::DeviceGuardImplInterface {
   }
 
   c10::DeviceIndex deviceCount() const noexcept override {
-    return runtime::GetComputationClient()->GetNumDevices();
+    auto* client = runtime::GetComputationClientIfInitialized();
+
+    if (client == nullptr) {
+      TF_VLOG(5) << "XLA client uninitialized. Returning 0 devices.";
+      return 0;
+    }
+
+    return client->GetNumDevices();
   }
 };
 
