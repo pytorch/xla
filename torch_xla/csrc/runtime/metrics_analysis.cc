@@ -127,11 +127,11 @@ std::vector<Analyzer*>* GetAnalyzers() {
 }  // namespace
 
 std::string CreatePerformanceReport(
-    const std::map<std::string, torch_xla::runtime::Metric>& rt_metrics) {
+    const std::map<std::string, torch_xla::runtime::Metric>& metrics) {
   std::stringstream ss;
   std::vector<Analyzer*>* analyzers = GetAnalyzers();
   for (auto const& analyzer : *analyzers) {
-    Analysis result = analyzer->Run(rt_metrics);
+    Analysis result = analyzer->Run(metrics);
     if (result.symptom != Analysis::Symptom::kNormal) {
       ss << result.repr << std::endl;
     }
