@@ -290,7 +290,7 @@ class BuildBazelExtension(command.build_ext.build_ext):
     try:
       self.spawn(bazel_argv)
     except:
-      self.spawn(["cat", os.popen("bazel info server_log").read()])
+      self.spawn(["cat", os.popen("bazel info server_log").read().replace('\n', '')])
       return
 
     ext_bazel_bin_path = os.path.join(self.build_temp, 'bazel-bin', ext.relpath,
