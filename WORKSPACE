@@ -43,7 +43,6 @@ http_archive(
         "//openxla_patches:cuda_graph.diff",
         "//openxla_patches:f16_abi_clang.diff",
         "//openxla_patches:gpu_race_condition.diff",
-        "//openxla_patches:grpc_version.diff",
         "//openxla_patches:profiler_trace.diff",
         "//openxla_patches:stream_executor.diff",
         "//openxla_patches:topk_rewriter.diff",
