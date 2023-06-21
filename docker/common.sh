@@ -1,7 +1,7 @@
 #!/bin/bash
 
 function run_deployment_tests() {
-  export PJRT_DEVICE=TPU
+  export PJRT_DEVICE=CPU
   export CC=clang-8 CXX=clang++-8
 
   # We don't need to load libtpu since test is being done on CPU.
