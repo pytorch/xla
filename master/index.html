@@ -1184,6 +1184,27 @@ memory in KB) keys.</p>
 </dl>
 </dd></dl>
 
+<dl class="function">
+<dt id="torch_xla.core.xla_model.get_stablehlo">
+<code class="sig-prename descclassname">torch_xla.core.xla_model.</code><code class="sig-name descname">get_stablehlo</code><span class="sig-paren">(</span><em class="sig-param">tensors=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/xla_model.html#get_stablehlo"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.xla_model.get_stablehlo" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get StableHLO for the computation graph in string format.</p>
+<p>If <cite>tensors</cite> is not empty, the graph with <cite>tensors</cite> as outputs will be dump.
+If <cite>tensors</cite> is empty, the whole computation graph will be dump.
+TODO(lsy323): When <cite>tensors</cite> is empty, the some intermediate tensors will also be
+dump as outputs. Need further investigation.</p>
+<p>For inference graph, it is recommended to pass the model outputs to <cite>tensors</cite>.
+For training graph, it is not straightforward to identify the “outputs”. Using empty <cite>tensors</cite> is recommended.</p>
+<p>To enable source line info in StableHLO, please set env var XLA_HLO_DEBUG=1.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>tensors</strong> (<em>list</em><em>[</em><em>torch.Tensor</em><em>]</em><em>, </em><em>optional</em>) – The tensors contained in the StableHLO graph.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>StableHLO Module in string format.</p>
+</dd>
+</dl>
+</dd></dl>
+
 <span class="target" id="module-torch_xla.core.functions"></span><dl class="function">
 <dt id="torch_xla.core.functions.all_reduce">
 <code class="sig-prename descclassname">torch_xla.core.functions.</code><code class="sig-name descname">all_reduce</code><span class="sig-paren">(</span><em class="sig-param">reduce_type</em>, <em class="sig-param">value</em>, <em class="sig-param">scale=1.0</em>, <em class="sig-param">groups=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/torch_xla/core/functions.html#all_reduce"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#torch_xla.core.functions.all_reduce" title="Permalink to this definition">¶</a></dt>

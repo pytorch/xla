@@ -1156,7 +1156,7 @@
   <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_set_all_reduce_token</span><span class="p">(</span><span class="n">devctx</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
 
 
-<span class="k">def</span> <span class="nf">get_stablehlo</span><span class="p">(</span><span class="n">tensors</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<div class="viewcode-block" id="get_stablehlo"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.get_stablehlo">[docs]</a><span class="k">def</span> <span class="nf">get_stablehlo</span><span class="p">(</span><span class="n">tensors</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Get StableHLO for the computation graph in string format.</span>
 
 <span class="sd">  If `tensors` is not empty, the graph with `tensors` as outputs will be dump.</span>
@@ -1167,6 +1167,8 @@
 <span class="sd">  For inference graph, it is recommended to pass the model outputs to `tensors`.</span>
 <span class="sd">  For training graph, it is not straightforward to identify the &quot;outputs&quot;. Using empty `tensors` is recommended.</span>
 
+<span class="sd">  To enable source line info in StableHLO, please set env var XLA_HLO_DEBUG=1.</span>
+
 <span class="sd">  Args:</span>
 <span class="sd">    tensors (list[torch.Tensor], optional): The tensors contained in the StableHLO graph.</span>
 
@@ -1176,7 +1178,7 @@
   <span class="k">if</span> <span class="n">tensors</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
     <span class="n">tensors</span> <span class="o">=</span> <span class="p">[]</span>
   <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_get_stablehlo</span><span class="p">(</span>
-      <span class="n">tensors</span><span class="p">,</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_default_device</span><span class="p">(),</span> <span class="p">[])</span>
+      <span class="n">tensors</span><span class="p">,</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_default_device</span><span class="p">(),</span> <span class="p">[])</span></div>
 
 
 <div class="viewcode-block" id="wait_device_ops"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.wait_device_ops">[docs]</a><span class="k">def</span> <span class="nf">wait_device_ops</span><span class="p">(</span><span class="n">devices</span><span class="o">=</span><span class="p">[]):</span>
