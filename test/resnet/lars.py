@@ -2,125 +2,205 @@ import torch
 from torch.optim.optimizer import Optimizer
 from typing import Dict, Iterable, Optional, Callable, Tuple
 from torch import nn
-import torch_xla.core.xla_model as xm
-import torch_xla.debug.profiler as xp
 
-
-def create_optimizer_lars(model, lr, momentum, weight_decay, bn_bias_separately, epsilon, nesterov = False):
+def create_optimizer_lars(model, lr, momentum, weight_decay, eeta, epsilon, bn_bias_separately):
     if bn_bias_separately:
-        optimizer = Lars([
+        optimizer = LARS([
             dict(params=get_common_parameters(model, exclude_func=get_norm_bias_parameters)),
             dict(params=get_norm_bias_parameters(model), weight_decay=0, lars=False)],
             lr=lr,
             momentum=momentum,
             weight_decay=weight_decay,
-            epsilon=epsilon,
-            nesterov=nesterov)
+            eeta=eeta,
+            epsilon=epsilon)
     else:
-        optimizer = Lars(model.parameters(),
+        optimizer = LARS(model.parameters(),
                          lr=lr,
                          momentum=momentum,
                          weight_decay=weight_decay,
-                         epsilon=epsilon,
-                         nesterov = nesterov)
+                         eeta=eeta,
+                         epsilon=epsilon)
     return optimizer
 
 
-class Lars(Optimizer):
-    r"""Implements the LARS optimizer from `"Large batch training of convolutional networks"
-    <https://arxiv.org/pdf/1708.03888.pdf>`_.
+import torch
+from torch import Tensor
+from torch.optim.optimizer import (Optimizer, required, _use_grad_for_differentiable, _default_to_fused_or_foreach,
+                        _differentiable_doc, _foreach_doc, _maximize_doc)
+from typing import List, Optional
+from torch.utils._foreach_utils import _group_tensors_by_device_and_dtype
 
-    Args:
-        params (iterable): iterable of parameters to optimize or dicts defining
-            parameter groups
-        lr (float, optional): learning rate
-        momentum (float, optional): momentum factor (default: 0)
-        eeta (float, optional): LARS coefficient as used in the paper (default: 1e-3)
-        weight_decay (float, optional): weight decay (L2 penalty) (default: 0)
-    """
 
-    def __init__(
-            self,
-            params: Iterable[torch.nn.Parameter],
-            lr=1e-3,
-            momentum=0,
-            eeta=1e-3,
-            weight_decay=0,
-            epsilon=0.0,
-            nesterov=False
-    ) -> None:
-        if not isinstance(lr, float) or lr < 0.0:
+
+class LARS(Optimizer):
+    def __init__(self, params, lr=required, momentum=0, dampening=0,
+                 weight_decay=0, lars=True, eeta=1e-3, epsilon=0.0, nesterov=False, *, maximize: bool = False, foreach: Optional[bool] = None,
+                 differentiable: bool = False):
+        if lr is not required and lr < 0.0:
             raise ValueError("Invalid learning rate: {}".format(lr))
         if momentum < 0.0:
             raise ValueError("Invalid momentum value: {}".format(momentum))
         if weight_decay < 0.0:
             raise ValueError("Invalid weight_decay value: {}".format(weight_decay))
-        if eeta <= 0 or eeta > 1:
-            raise ValueError("Invalid eeta value: {}".format(eeta))
-        if epsilon < 0:
-            raise ValueError("Invalid epsilon value: {}".format(epsilon))
-        defaults = dict(lr=lr, momentum=momentum,
-                        weight_decay=weight_decay, eeta=eeta, epsilon=epsilon, lars=True, nesterov = nesterov)
 
+        defaults = dict(lr=lr, momentum=momentum, dampening=dampening,
+                        weight_decay=weight_decay, lars=lars, eeta=eeta, epsilon = epsilon, nesterov=nesterov,
+                        maximize=maximize, foreach=foreach,
+                        differentiable=differentiable)
+        if nesterov and (momentum <= 0 or dampening != 0):
+            raise ValueError("Nesterov momentum requires a momentum and zero dampening")
         super().__init__(params, defaults)
 
-    @torch.no_grad()
+    def __setstate__(self, state):
+        super().__setstate__(state)
+        for group in self.param_groups:
+            group.setdefault('nesterov', False)
+            group.setdefault('maximize', False)
+            group.setdefault('foreach', None)
+            group.setdefault('differentiable', False)
+
+
+    def _init_group(self, group, params_with_grad, d_p_list, momentum_buffer_list):
+        has_sparse_grad = False
+
+        for p in group['params']:
+            if p.grad is not None:
+                params_with_grad.append(p)
+                d_p_list.append(p.grad)
+                if p.grad.is_sparse:
+                    has_sparse_grad = True
+
+                state = self.state[p]
+                if 'momentum_buffer' not in state:
+                    momentum_buffer_list.append(None)
+                else:
+                    momentum_buffer_list.append(state['momentum_buffer'])
+
+        return has_sparse_grad
+
+    @_use_grad_for_differentiable
     def step(self, closure=None):
         """Performs a single optimization step.
-        Arguments:
-            closure (callable, optional): A closure that reevaluates the model
+
+        Args:
+            closure (Callable, optional): A closure that reevaluates the model
                 and returns the loss.
         """
-        with xp.Trace('LARS step'):
-            loss = None
-            if closure is not None:
-                with torch.enable_grad():
-                    loss = closure()
+        loss = None
+        if closure is not None:
+            with torch.enable_grad():
+                loss = closure()
 
-            for group in self.param_groups:
-                weight_decay = group['weight_decay']
-                momentum = group['momentum']
-                eeta = group['eeta']
-                lr = group['lr']
-                lars = group['lars']
-                eps = group['epsilon']
-                nesterov = group['nesterov']
-                for p in group['params']:
-                    if p.grad is None:
-                        continue
-                    decayed_grad = p.grad
-                    scaled_lr = lr
-                    if lars:
-                        w_norm = torch.norm(p)
-                        g_norm = torch.norm(p.grad)
-                        x = w_norm/(g_norm +weight_decay*w_norm + eps)
-                        x *= eeta
-                        trust_ratio = 1.0
-                        flag = False
-                        if w_norm > 0:
-                            flag = True
-                        if flag:
-                            trust_ratio = x
-                        #trust_ratio.clamp_(0.0, 50)
-                        scaled_lr *= trust_ratio.item()
-                        if weight_decay != 0:
-                            decayed_grad = decayed_grad.add(p, alpha=weight_decay)
-                    decayed_grad = torch.clamp(decayed_grad, -10.0, 10.0)
-                    # https://github.com/mlcommons/training/blob/ebe9a7e7400f85abce88c4962fa573ff40676870/image_classification/tensorflow2/lars_optimizer.py#L179 
-                    param_state = self.state[p]
-                    if 'momentum_buffer' not in param_state:
-                        mom_t = param_state['momentum_buffer'] = torch.clone(
-                            decayed_grad).detach()
-                    else:
-                        mom = param_state['momentum_buffer']
-                        mom_t = mom.mul_(momentum).add_(decayed_grad, alpha=-scaled_lr)
-                    param_state['momentum_buffer'] = mom_t.clone() 
-                    if nesterov:
-                        p.add_(mom_t, alpha=momentum).add_(decayed_grad, alpha=-scaled_lr)
-                    else:
-                        p.add_(mom_t)
+        for group in self.param_groups:
+            params_with_grad = []
+            d_p_list = []
+            momentum_buffer_list = []
+            has_sparse_grad = self._init_group(group, params_with_grad, d_p_list, momentum_buffer_list)
+            lars_fn(params_with_grad,
+                d_p_list,
+                momentum_buffer_list,
+                weight_decay=group['weight_decay'],
+                momentum=group['momentum'],
+                lr=group['lr'],
+                lars=group['lars'],
+                epsilon=group['epsilon'],
+                eeta=group['eeta'],
+                dampening=group['dampening'],
+                nesterov=group['nesterov'],
+                maximize=group['maximize'],
+                has_sparse_grad=has_sparse_grad,
+                foreach=group['foreach'])
 
-            return loss
+            # update momentum_buffers in state
+            for p, momentum_buffer in zip(params_with_grad, momentum_buffer_list):
+                state = self.state[p]
+                state['momentum_buffer'] = momentum_buffer
+
+        return loss
+
+
+def lars_fn(params: List[Tensor],
+        d_p_list: List[Tensor],
+        momentum_buffer_list: List[Optional[Tensor]],
+        # kwonly args with defaults are not supported by functions compiled with torchscript issue #70627
+        # setting this as kwarg for now as functional API is compiled by torch/distributed/optim
+        has_sparse_grad: bool = None,
+        foreach: Optional[bool] = None,
+        *,
+        weight_decay: float,
+        momentum: float,
+        lr: float,
+        lars: bool,
+        epsilon: float,
+        eeta: float,
+        dampening: float,
+        nesterov: bool,
+        maximize: bool):
+    r"""Functional API that performs SGD algorithm computation.
+
+    See :class:`~torch.optim.SGD` for details.
+    """
+    _single_tensor_sgd(params,
+         d_p_list,
+         momentum_buffer_list,
+         weight_decay=weight_decay,
+         momentum=momentum,
+         lr=lr,
+         lars=lars,
+         epsilon=epsilon,
+         eeta=eeta,
+         dampening=dampening,
+         nesterov=nesterov,
+         has_sparse_grad=has_sparse_grad,
+         maximize=maximize)
+
+def _single_tensor_sgd(params: List[Tensor],
+                       d_p_list: List[Tensor],
+                       momentum_buffer_list: List[Optional[Tensor]],
+                       *,
+                       weight_decay: float,
+                       momentum: float,
+                       lr: float,
+                       lars: bool,
+                       epsilon: float,
+                       eeta: float,
+                       dampening: float,
+                       nesterov: bool,
+                       maximize: bool,
+                       has_sparse_grad: bool):
+    
+    for i, param in enumerate(params):
+        d_p = d_p_list[i] if not maximize else -d_p_list[i]
+      
+        if lars:
+          weight_norm = param.norm()
+          grad_norm = d_p.norm()
+          trust_ratio = torch.where(torch.gt(weight_norm,0), 
+                                    torch.where(torch.gt(grad_norm,0), 
+                                                eeta * weight_norm / (grad_norm + weight_decay * weight_norm + epsilon),
+                                                torch.ones_like(weight_norm)),torch.ones_like(weight_norm))
+          scaled_lr = lr * trust_ratio
+        else:
+          scaled_lr = lr
+
+        if weight_decay != 0:
+            d_p = d_p.add(param, alpha=weight_decay)
+
+        if momentum != 0:
+            buf = momentum_buffer_list[i]
+
+            if buf is None:
+                buf = torch.clone(d_p).detach()
+                momentum_buffer_list[i] = buf
+            else:
+                buf.mul_(momentum).add_(d_p, alpha=1 - dampening)
+
+            if nesterov:
+                d_p = d_p.add(buf, alpha=momentum)
+            else:
+                d_p = buf
+
+        param.add_(d_p * -scaled_lr)
 
 
 """
