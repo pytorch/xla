@@ -8,11 +8,9 @@ parser.add_argument('--verbosity', type=int, default=2)
 FLAGS, leftovers = parser.parse_known_args()
 sys.argv = [sys.argv[0]] + leftovers
 
-import math
 import numpy as np
 import unittest
 import torch
-import torchvision
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
 import torchvision
@@ -132,83 +130,6 @@ class TestDynamicShapeModels(unittest.TestCase):
       xm.mark_step()
     print('Test passed.')
 
-  def test_roialign_forward(self):
-    device = xla_dev
-    aligned = True
-    # contiguous = True
-    dtype = torch.float64
-    x_dtype, rois_dtype = dtype, dtype
-    pool_size = 5
-    # n_channels % (pool_size ** 2) == 0 required for PS operations.
-    n_channels = 2 * (pool_size**2)
-    x = torch.rand(2, n_channels, 10, 10, dtype=x_dtype, device=device)
-    rois = torch.tensor(
-        [[0, 0, 0, 9, 9], [0, 0, 5, 4, 9], [0, 5, 5, 9, 9]
-        ],  # format is (xyxy)
-        dtype=rois_dtype,
-        device=device,
-    )
-
-    pool_h, pool_w = pool_size, pool_size
-    spatial_scale, sampling_ratio = 1, -1
-    y = torchvision.ops.RoIAlign((pool_h, pool_w),
-                                 spatial_scale=spatial_scale,
-                                 sampling_ratio=sampling_ratio,
-                                 aligned=aligned).to(device)(x, rois)
-    xm.mark_step()
-
-    x_aten = torch.rand(2, n_channels, 10, 10, dtype=x_dtype, device='cpu')
-    rois_aten = torch.tensor(
-        [[0, 0, 0, 9, 9], [0, 0, 5, 4, 9], [0, 5, 5, 9, 9]
-        ],  # format is (xyxy)
-        dtype=rois_dtype,
-        device='cpu',
-    )
-    y_aten = torchvision.ops.RoIAlign((pool_h, pool_w),
-                                 spatial_scale=spatial_scale,
-                                 sampling_ratio=sampling_ratio,
-                                 aligned=aligned)(x_aten, rois_aten)
-    tol = 1e-3 if (x_dtype is torch.half or rois_dtype is torch.half) else 1e-5
-    torch.testing.assert_close(y.to(y_aten), y_aten, rtol=tol, atol=tol)
-    print('test passes')
-    print(met.metrics_report())
-
-  def test_roialign_backward(self):
-    seed = 1
-    #device = 'cpu'
-    device = xla_dev
-    contiguous = True
-    pool_size = 2
-    dtype = torch.float64
-    x = torch.rand(
-        1,
-        2 * (pool_size**2),
-        5,
-        5,
-        dtype=dtype,
-        device=device,
-        requires_grad=True)
-    rois = torch.tensor(
-        [[0, 0, 0, 4, 4], [0, 0, 2, 3, 4], [0, 2, 2, 4, 4]],
-        dtype=dtype,
-        device=device  # format is (xyxy)
-    )
-
-    def func(z):
-      return torchvision.ops.RoIAlign((pool_size, pool_size),
-                                      spatial_scale=1,
-                                      sampling_ratio=-1,
-                                      aligned=False).to(device)(z, rois)
-
-    def script_func(x):
-      scripted = torch.jit.script(torchvision.ops.roi_align)
-      return scripted(x, rois, pool_size)
-
-    gradcheck(func, (x,))
-    gradcheck(script_func, (x,))
-    print('test passes')
-    print(met.metrics_report())
-
   def create_dynamic_test_data(self,
                                num_test_samples,
                                num_features,
@@ -315,38 +236,6 @@ class TestDynamicShapeModels(unittest.TestCase):
     gradcheck(script_func, (x,))
     print('test passes')
     print(met.metrics_report())
-
-def bilinear_interpolate(data, y, x, snap_border=False):
-  height, width = data.shape
-
-  if snap_border:
-    if -1 < y <= 0:
-      y = 0
-    elif height - 1 <= y < height:
-      y = height - 1
-
-    if -1 < x <= 0:
-      x = 0
-    elif width - 1 <= x < width:
-      x = width - 1
-
-  y_low = int(math.floor(y))
-  x_low = int(math.floor(x))
-  y_high = y_low + 1
-  x_high = x_low + 1
-
-  wy_h = y - y_low
-  wx_h = x - x_low
-  wy_l = 1 - wy_h
-  wx_l = 1 - wx_h
-
-  val = 0
-  for wx, xp in zip((wx_l, wx_h), (x_low, x_high)):
-    for wy, yp in zip((wy_l, wy_h), (y_low, y_high)):
-      if 0 <= yp < height and 0 <= xp < width:
-        val += wx * wy * data[yp, xp]
-  return val
-
 
 def bilinear_interpolate(data, y, x, snap_border=False):
   height, width = data.shape
