@@ -9,6 +9,7 @@
 #include "xla/translate/hlo_to_mhlo/hlo_to_mlir_hlo.h"
 #include "xla/translate/mhlo_to_hlo/mlir_hlo_to_hlo.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/xla_util.h"
 
 namespace torch_xla {
@@ -22,7 +23,14 @@ static std::string getHloModuleStr(const xla::HloModuleProto* proto) {
 static std::string getMlirModuleStr(mlir::ModuleOp& mlir_module) {
   std::string txt_mlir_module;
   llvm::raw_string_ostream os{txt_mlir_module};
-  mlir_module.print(os);
+  // Enable Debug Info to include source line info in the StableHLO dump.
+  mlir::OpPrintingFlags flags;
+  static bool withSrcLineInfo =
+      runtime::sys_util::GetEnvBool("XLA_HLO_DEBUG", false);
+  if (withSrcLineInfo) {
+    flags.enableDebugInfo(/*enable=*/true, /*prettyForm=*/true);
+  }
+  mlir_module.print(os, flags);
   return txt_mlir_module;
 }
 
