@@ -849,6 +849,8 @@ def get_stablehlo(tensors=None):
   For inference graph, it is recommended to pass the model outputs to `tensors`.
   For training graph, it is not straightforward to identify the "outputs". Using empty `tensors` is recommended.
 
+  To enable source line info in StableHLO, please set env var XLA_HLO_DEBUG=1.
+
   Args:
     tensors (list[torch.Tensor], optional): The tensors contained in the StableHLO graph.
 

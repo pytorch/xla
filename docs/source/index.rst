@@ -27,6 +27,7 @@ xla_model
 .. autofunction:: set_rng_state
 .. autofunction:: get_rng_state
 .. autofunction:: get_memory_info
+.. autofunction:: get_stablehlo
 
 .. automodule:: torch_xla.core.functions
 .. autofunction:: all_reduce
