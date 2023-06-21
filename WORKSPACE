@@ -46,7 +46,6 @@ http_archive(
         "//openxla_patches:grpc_version.diff",
         "//openxla_patches:profiler_trace.diff",
         "//openxla_patches:stream_executor.diff",
-        "//openxla_patches:thread_local_random.diff",
         "//openxla_patches:topk_rewriter.diff",
         "//openxla_patches:triton_filesystem.diff",
         "//openxla_patches:xla_bzl.diff",
