@@ -853,7 +853,7 @@ def get_stablehlo(tensors=None) -> str:
   To enable source line info in StableHLO, please set env var XLA_HLO_DEBUG=1.
 
   Args:
-    tensors (list[torch.Tensor], optional): The tensors contained in the StableHLO graph.
+    tensors (list[torch.Tensor], optional): Tensors that represent the output/root of the StableHLO graph.
 
   Returns:
     StableHLO Module in string format.
@@ -877,7 +877,7 @@ def get_stablehlo_bytecode(tensors=None) -> bytes:
   For training graph, it is not straightforward to identify the "outputs". Using empty `tensors` is recommended.
 
   Args:
-    tensors (list[torch.Tensor], optional): The tensors contained in the StableHLO graph.
+    tensors (list[torch.Tensor], optional): Tensors that represent the output/root of the StableHLO graph.
 
   Returns:
     StableHLO Module in bytecode format.
