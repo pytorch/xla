@@ -381,6 +381,7 @@ class ComputationClient {
   static metrics::Counter* ReleaseCompileHandlesCounter();
   static metrics::Counter* DestroyCompileHandlesCounter();
   static metrics::Metric* ReleaseCompileHandlesTimeMetric();
+  static metrics::Counter* StableHloCompileCounter();
   static metrics::Metric* InboundDataMetric();
   static metrics::Metric* OutboundDataMetric();
 };
