@@ -41,7 +41,7 @@ apply_patches
 
 python -c "import fcntl; fcntl.fcntl(1, fcntl.F_SETFL, 0)"
 
-python setup.py install
+#python setup.py install
 
 sccache --show-stats
 
