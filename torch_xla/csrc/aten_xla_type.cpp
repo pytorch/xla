@@ -1245,8 +1245,10 @@ at::Tensor XLANativeFunctions::empty_strided_symint(
     c10::optional<at::ScalarType> dtype, c10::optional<at::Layout> layout,
     c10::optional<at::Device> device, c10::optional<bool> pin_memory) {
   TORCH_LAZY_FN_COUNTER("xla::");
-  auto size = C10_AS_INTARRAYREF_SLOW(sym_size);
-  auto stride = C10_AS_INTARRAYREF_SLOW(sym_stride);
+  // auto size = C10_AS_INTARRAYREF_SLOW(sym_size);
+  // auto stride = C10_AS_INTARRAYREF_SLOW(sym_stride);
+  at::IntArrayRef size = c10::asIntArrayRefUnchecked(sym_size);
+  at::IntArrayRef stride = c10::asIntArrayRefUnchecked(sym_stride);
   at::Tensor t =
       empty_symint(sym_size, dtype, layout, device, pin_memory, c10::nullopt);
   return torch_xla::XLANativeFunctions::as_strided_copy(t, size, stride,
