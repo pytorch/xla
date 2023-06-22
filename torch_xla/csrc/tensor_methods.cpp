@@ -2788,11 +2788,12 @@ XLATensorPtr view_symint(const XLATensorPtr& input,
   // See Note: [Disabling functionalization]
   if (runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
     ViewInfo view_info(ViewInfo::Type::kReshape, std::move(result_shape),
-                      input_shape);
+                       input_shape);
     return input->CreateViewTensor(std::move(view_info));
   }
   return input->CreateFrom(torch::lazy::MakeNode<ViewOp>(
-      input->GetIrValue(), torch::lazy::ToVector<int64_t>(result_shape.dimensions())));
+      input->GetIrValue(),
+      torch::lazy::ToVector<int64_t>(result_shape.dimensions())));
 }
 
 XLATensorPtr view_as_complex_copy(const XLATensorPtr& input) {
