@@ -63,7 +63,7 @@ jobs:
         uses: actions/checkout@v3
       - name: Download docker image from GCR
         shell: bash
-        run: docker pull "${GCR_DOCKER_IMAGE}"
+        run: docker pull us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:tpu
       - name: Stage image to ECR
         shell: bash
         run: |
@@ -73,30 +73,24 @@ jobs:
             # if image layers are not present in the repo.
             # Note: disable the following 2 lines while testing a new image, so we do not
             # push to the upstream.
-            docker tag "${GCR_DOCKER_IMAGE}" "${ECR_DOCKER_IMAGE_BASE}:v1.0" >/dev/null
-            docker push "${ECR_DOCKER_IMAGE_BASE}:v1.0" >/dev/null
+            # docker tag "${GCR_DOCKER_IMAGE}" "${ECR_DOCKER_IMAGE_BASE}:v1.0" >/dev/null
+            # docker push "${ECR_DOCKER_IMAGE_BASE}:v1.0" >/dev/null
       - name: Start the container
         shell: bash
         run: |
-          pid=$(docker run -t -d -w "$WORKDIR" "${GCR_DOCKER_IMAGE}")
-          docker exec -u jenkins "${pid}" sudo chown -R jenkins "${WORKDIR}"
+          pid=$(docker run -t -d -w "$WORKDIR" -e SCCACHE_BUCKET=${SCCACHE_BUCKET} -e DISABLE_XRT=${DISABLE_XRT} -e XLA_CUDA=${XLA_CUDA} -e BAZEL_REMOTE_CACHE=1 us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:tpu)
           docker cp "${GITHUB_WORKSPACE}/." "$pid:$WORKDIR"
           echo "pid=${pid}" >> "${GITHUB_ENV}"
 
       - name: Prepare build env
         shell: bash
         run: |
-          echo "declare -x SCCACHE_BUCKET=${SCCACHE_BUCKET}" | docker exec -i "${pid}" sh -c "cat >> env"
-          echo "declare -x CC=clang-8 CXX=clang++-8" | docker exec -i "${pid}" sh -c "cat >> xla_env"
-          echo "declare -x DISABLE_XRT=${DISABLE_XRT}" | docker exec -i "${pid}" sh -c "cat >> xla_env"
-          echo "declare -x XLA_CUDA=${XLA_CUDA}" | docker exec -i "${pid}" sh -c "cat >> xla_env"
-          echo "declare -x BAZEL_REMOTE_CACHE=1" | docker exec -i "${pid}" sh -c "cat >> xla_env"
           echo "${GCLOUD_SERVICE_KEY}" | docker exec -i "${pid}" sh -c "cat >> default_credentials.json"
 
       - name: Build
         shell: bash
         run: |
-          docker exec -u jenkins "${pid}" bash -c ". ~/.bashrc && .circleci/build.sh"
+          docker exec "${pid}" bash -c ". ~/.bashrc && .circleci/build.sh"
 
       - name: Cleanup build env
         shell: bash
