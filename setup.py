@@ -289,19 +289,17 @@ class BuildBazelExtension(command.build_ext.build_ext):
       for library_dir in self.library_dirs:
         bazel_argv.append('--linkopt=/LIBPATH:' + library_dir)
 
+    log_file = ''
     try:
-      self.spawn(["git", "status"])
-      self.spawn(["ls", "-la"])
-      self.spawn(["find", "."])
-      self.spawn(["git", "show"])
-      self.spawn(["echo", "krecem"])
       self.spawn(["bazel", "query", "//:_XLAC.so"])
       self.spawn(["echo", "query done"])
+      log_file = os.popen().read().replace('\n', '')
       self.spawn(bazel_argv)
       self.spawn(["echo", "bazel done"])
     except Exception as err:
       print(err)
-      self.spawn(["cat", os.popen("bazel info server_log").read().replace('\n', '')])
+      if log_file:
+        self.spawn(["cat", log_file])
       raise err
 
     ext_bazel_bin_path = os.path.join(self.build_temp, 'bazel-bin', ext.relpath,
