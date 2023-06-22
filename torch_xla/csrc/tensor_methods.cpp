@@ -345,7 +345,7 @@ XLATensorPtr all_reduce(const XLATensorPtr& input, AllReduceType reduce_type,
   return input->CreateFrom(torch::lazy::Value(node, 0));
 }
 
-torch::lazy::Value all_reduce(const std::vector<XLATensorPtr>& inputs,
+void all_reduce(const std::vector<XLATensorPtr>& inputs,
                               AllReduceType reduce_type, double scale,
                               std::vector<std::vector<int64_t>> groups,
                               bool pin_layout) {
@@ -360,7 +360,8 @@ torch::lazy::Value all_reduce(const std::vector<XLATensorPtr>& inputs,
   for (size_t i = 0; i < inputs.size(); ++i) {
     inputs[i]->SetInPlaceIrValue(torch::lazy::Value(node, i));
   }
-  return torch::lazy::Value(node, inputs.size());
+  SetAllReduceToken(inputs.front()->GetDevice(),
+                    std::make_shared<torch::lazy::Value>(node, inputs.size()));
 }
 
 std::pair<XLATensorPtr, torch::lazy::Value> reduce_scatter(
@@ -400,28 +401,16 @@ std::pair<XLATensorPtr, torch::lazy::Value> all_to_all(
           torch::lazy::Value(node, 1)};
 }
 
-std::pair<XLATensorPtr, torch::lazy::Value> all_gather(
-    const XLATensorPtr& input, const torch::lazy::Value& token, int64_t dim,
+XLATensorPtr all_gather(
+    const XLATensorPtr& input, int64_t dim,
     int64_t shard_count, std::vector<std::vector<int64_t>> groups,
     bool pin_layout) {
   torch::lazy::NodePtr node = torch::lazy::MakeNode<AllGather>(
-      input->GetIrValue(), token, dim, shard_count, std::move(groups),
+      input->GetIrValue(), GetAllReduceToken(input->GetDevice()), dim, shard_count, std::move(groups),
       pin_layout);
-  return {input->CreateFrom(torch::lazy::Value(node, 0)),
-          torch::lazy::Value(node, 1)};
-}
-
-torch::lazy::Value all_gather_out(XLATensorPtr& output,
-                                  const XLATensorPtr& input,
-                                  const torch::lazy::Value& token, int64_t dim,
-                                  int64_t shard_count,
-                                  std::vector<std::vector<int64_t>> groups,
-                                  bool pin_layout) {
-  torch::lazy::NodePtr node = torch::lazy::MakeNode<AllGather>(
-      input->GetIrValue(), token, dim, shard_count, std::move(groups),
-      pin_layout);
-  output->SetIrValue(torch::lazy::Value(node, 0));
-  return torch::lazy::Value(node, 1);
+  SetAllReduceToken(input->GetDevice(),
+                    std::make_shared<torch::lazy::Value>(node, 1));
+  return input->CreateFrom(torch::lazy::Value(node, 0));
 }
 
 std::pair<XLATensorPtr, torch::lazy::Value> collective_permute(
