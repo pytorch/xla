@@ -173,14 +173,14 @@ std::vector<std::pair<int64_t, int64_t>> CreateSourceTargetPairs(
   return source_target_pairs;
 }
 
-void AllReduceInPlace(
-    const std::string& reduce_type, const std::vector<at::Tensor>& tensors,
-    double scale, const std::vector<std::vector<int64_t>>& replica_groups,
-    bool pin_layout) {
+void AllReduceInPlace(const std::string& reduce_type,
+                      const std::vector<at::Tensor>& tensors, double scale,
+                      const std::vector<std::vector<int64_t>>& replica_groups,
+                      bool pin_layout) {
   std::vector<XLATensorPtr> xtensors =
       GetXlaTensors(tensors, /*want_all=*/true);
-  tensor_methods::all_reduce(
-      xtensors, GetReduceType(reduce_type), scale, replica_groups, pin_layout);
+  tensor_methods::all_reduce(xtensors, GetReduceType(reduce_type), scale,
+                             replica_groups, pin_layout);
 }
 
 at::Tensor AllReduce(const std::string& reduce_type, const at::Tensor& input,
@@ -221,12 +221,12 @@ std::shared_ptr<torch::lazy::Value> ReduceScatterOut(
   return std::make_shared<torch::lazy::Value>(new_token);
 }
 
-at::Tensor AllGather(
-    const at::Tensor& input,
-    int64_t dim, int64_t shard_count,
-    const std::vector<std::vector<int64_t>>& replica_groups, bool pin_layout) {
-  auto result = tensor_methods::all_gather(bridge::GetXlaTensor(input), dim,
-                                                   shard_count, replica_groups, pin_layout);
+at::Tensor AllGather(const at::Tensor& input, int64_t dim, int64_t shard_count,
+                     const std::vector<std::vector<int64_t>>& replica_groups,
+                     bool pin_layout) {
+  auto result =
+      tensor_methods::all_gather(bridge::GetXlaTensor(input), dim, shard_count,
+                                 replica_groups, pin_layout);
   return bridge::AtenFromXlaTensor(std::move(result));
 }
 
@@ -888,16 +888,15 @@ void InitXlaModuleBindings(py::module m) {
           result_tuple[1] = new_token;
           return result_tuple;
         });
-  m.def("_xla_all_gather", [](const at::Tensor& input,
-                              int64_t dim, int64_t shard_count,
-                              const py::list& groups, bool pin_layout) {
+  m.def("_xla_all_gather", [](const at::Tensor& input, int64_t dim,
+                              int64_t shard_count, const py::list& groups,
+                              bool pin_layout) {
     std::vector<std::vector<int64_t>> replica_groups =
         CreateReduceGroups(groups);
     at::Tensor result;
     {
       NoGilSection nogil;
-      result =
-          AllGather(input, dim, shard_count, replica_groups, pin_layout);
+      result = AllGather(input, dim, shard_count, replica_groups, pin_layout);
     }
     return result;
   });
