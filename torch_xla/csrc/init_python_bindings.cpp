@@ -44,7 +44,6 @@
 #include "torch_xla/csrc/runtime/metrics_reader.h"
 #include "torch_xla/csrc/runtime/multi_wait.h"
 #include "torch_xla/csrc/runtime/profiler.h"
-#include "torch_xla/csrc/runtime/record_reader.h"
 #include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/thread_pool.h"
@@ -543,95 +542,6 @@ std::vector<py::bytes> Rendezvous(int ordinal, const std::string& tag,
     XLA_CHECK(replicas.empty() || (replicas.size() == 1 && replicas[0] == 0));
   }
   return payloads;
-}
-
-std::unique_ptr<tsl::RandomAccessFile> OpenTfFile(const std::string& path) {
-  tsl::Env* env = tsl::Env::Default();
-  std::unique_ptr<tsl::RandomAccessFile> file;
-  XLA_CHECK_OK(env->NewRandomAccessFile(path, &file));
-  return file;
-}
-
-py::object StatTfFile(const std::string& path) {
-  tsl::Env* env = tsl::Env::Default();
-  tsl::FileStatistics stat;
-  {
-    NoGilSection nogil;
-    XLA_CHECK_OK(env->Stat(path, &stat));
-  }
-  auto py_stat = py::dict();
-  py_stat["length"] = py::cast(stat.length);
-  py_stat["mtime_nsec"] = py::cast(stat.mtime_nsec);
-  py_stat["is_directory"] = py::cast(stat.is_directory);
-  return py_stat;
-}
-
-py::bytes ReadTfFile(tsl::RandomAccessFile* file, uint64_t offset,
-                     size_t size) {
-  static const size_t kMinReadSize = 1024 * 1024;
-  std::unique_ptr<char[]> buffer;
-  {
-    NoGilSection nogil;
-    buffer.reset(new char[size]);
-
-    size_t num_threads = std::max<size_t>(size / kMinReadSize, 1);
-    num_threads =
-        std::min<size_t>(num_threads, std::thread::hardware_concurrency());
-    size_t block_size = size / num_threads;
-
-    auto mwait = std::make_shared<runtime::util::MultiWait>(num_threads);
-    for (size_t i = 0; i < num_threads; ++i) {
-      auto reader = [&, i]() {
-        uint64_t base = static_cast<uint64_t>(i) * block_size;
-        size_t tsize =
-            (i + 1 < num_threads) ? block_size : (size - i * block_size);
-
-        tsl::StringPiece result;
-        XLA_CHECK_OK(
-            file->Read(offset + base, tsize, &result, buffer.get() + base));
-      };
-      runtime::env::ScheduleIoClosure(
-          runtime::util::MultiWait::Completer(mwait, std::move(reader)));
-    }
-    mwait->Wait();
-  }
-  return py::bytes(buffer.get(), size);
-}
-
-std::unique_ptr<tsl::WritableFile> CreateTfFile(const std::string& path) {
-  tsl::Env* env = tsl::Env::Default();
-  std::unique_ptr<tsl::WritableFile> file;
-  XLA_CHECK_OK(env->NewWritableFile(path, &file));
-  return file;
-}
-
-void WriteTfFile(tsl::WritableFile* file, const std::string& data) {
-  XLA_CHECK_OK(file->Append(tsl::StringPiece(data.data(), data.size())));
-}
-
-void FlushTfFile(tsl::WritableFile* file) {
-  XLA_CHECK_OK(file->Flush());
-  XLA_CHECK_OK(file->Sync());
-}
-
-py::object ListTfFs(const std::string& pattern) {
-  std::vector<std::string> files;
-  {
-    NoGilSection nogil;
-    tsl::Env* env = tsl::Env::Default();
-    XLA_CHECK_OK(env->GetMatchingPaths(pattern, &files));
-  }
-
-  auto py_files = py::tuple(files.size());
-  for (size_t i = 0; i < files.size(); ++i) {
-    py_files[i] = files[i];
-  }
-  return py_files;
-}
-
-void RemoveTfFile(const std::string& path) {
-  tsl::Env* env = tsl::Env::Default();
-  XLA_CHECK_OK(env->DeleteFile(path));
 }
 
 py::object XlaNms(const at::Tensor& boxes, const at::Tensor& scores,
@@ -1342,50 +1252,6 @@ void InitXlaModuleBindings(py::module m) {
                                          : xla::PrecisionConfig::DEFAULT);
         },
         py::arg("use_full_mat_mul_precision") = true);
-
-  py::class_<tsl::RandomAccessFile>(m, "TfRdFile");
-  m.def("_xla_tffile_open", [](const std::string& path) {
-    std::unique_ptr<tsl::RandomAccessFile> file;
-    {
-      NoGilSection nogil;
-      file = OpenTfFile(path);
-    }
-    return py::cast(file.release(),
-                    pybind11::return_value_policy::take_ownership);
-  });
-  m.def("_xla_tffile_stat",
-        [](const std::string& path) { return StatTfFile(path); });
-  m.def("_xla_tffile_read",
-        [](tsl::RandomAccessFile* file, uint64_t offset, size_t size) {
-          return ReadTfFile(file, offset, size);
-        });
-
-  py::class_<tsl::WritableFile>(m, "TfWrFile");
-  m.def("_xla_tffile_create", [](const std::string& path) {
-    std::unique_ptr<tsl::WritableFile> file;
-    {
-      NoGilSection nogil;
-      file = CreateTfFile(path);
-    }
-    return py::cast(file.release(),
-                    pybind11::return_value_policy::take_ownership);
-  });
-  m.def("_xla_tffile_write",
-        [](tsl::WritableFile* file, const std::string& data) {
-          NoGilSection nogil;
-          WriteTfFile(file, data);
-        });
-  m.def("_xla_tffile_flush", [](tsl::WritableFile* file) {
-    NoGilSection nogil;
-    FlushTfFile(file);
-  });
-
-  m.def("_xla_tffs_list",
-        [](const std::string& pattern) { return ListTfFs(pattern); });
-  m.def("_xla_tffs_remove", [](const std::string& path) {
-    NoGilSection nogil;
-    RemoveTfFile(path);
-  });
 
   py::class_<xla::XlaBuilder, op_builder::BuilderPtr>(m, "XlaBuilder");
   py::class_<op_builder::Op, op_builder::OpPtr>(m, "XlaOp");
