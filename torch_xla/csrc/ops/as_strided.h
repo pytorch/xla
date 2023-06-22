@@ -26,9 +26,7 @@ class AsStrided : public XlaNode {
   int64_t storage_offset() const { return storage_offset_; }
 
   static bool StrideIsSupported(const xla::Shape& input_shape,
-                                absl::Span<const int64_t> size,
-                                absl::Span<const int64_t> stride,
-                                int64_t storage_offset);
+                                absl::Span<const int64_t> stride);
 
   static std::vector<int64_t> GetArrayStridePermutation(
       absl::Span<const int64_t> stride, absl::Span<const int64_t> size);

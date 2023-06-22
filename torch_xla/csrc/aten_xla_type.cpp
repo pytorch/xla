@@ -717,22 +717,39 @@ at::Tensor XLANativeFunctions::argmin(const at::Tensor& self,
                    tensor_methods::argmin(bridge::GetXlaTensor(self)));
 }
 
-at::Tensor XLANativeFunctions::as_strided_copy(
-    const at::Tensor& self, at::IntArrayRef size, at::IntArrayRef stride,
-    c10::optional<int64_t> storage_offset) {
+at::Tensor XLANativeFunctions::as_strided_copy_symint(
+    const at::Tensor& self, c10::SymIntArrayRef size, c10::SymIntArrayRef stride,
+    c10::optional<c10::SymInt> storage_offset) {
   TORCH_LAZY_FN_COUNTER("xla::");
+  c10::optional<at::IntArrayRef> int_stride =
+      c10::asIntArrayRefSlowOpt(stride);
+  bool is_stride_static = int_stride.has_value();
+  XLA_CHECK(is_stride_static) << "Input parameter stride is dynamic in XLANativeFunctions::as_strided_copy_symint. This is not supported today.";
+
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
-  auto xsize = XlaHelpers::I64List(size);
-  auto xstride = XlaHelpers::I64List(stride);
-  if (!AsStrided::StrideIsSupported(self_tensor->shape(), xsize, xstride,
-                                    storage_offset.value_or(0))) {
-    return at::native::call_fallback_fn<
+  auto xstride = XlaHelpers::I64List(int_stride.value());
+  if (!AsStrided::StrideIsSupported(self_tensor->shape(), xstride)) {
+    return at::native::call_fallback_fn_symint<
         &xla_cpu_fallback, ATEN_OP(as_strided)>::call(self, size, stride,
                                                       storage_offset);
   }
-  return bridge::AtenFromXlaTensor(tensor_methods::as_strided(
-      self_tensor, std::move(xsize), std::move(xstride),
-      XlaHelpers::I64Optional(storage_offset)));
+
+  c10::optional<int64_t> int_storage_offset;
+  if (storage_offset.has_value()) {
+    c10::SymInt storage_offset_val = storage_offset.value();
+    int_storage_offset = storage_offset_val.maybe_as_int();
+    XLA_CHECK(int_storage_offset.has_value()) << "Input parameter storage_offset is dynamic in XLANativeFunctions::as_strided_copy_symint. This is not supported today.";
+  }
+
+  c10::optional<at::IntArrayRef> int_size =
+      c10::asIntArrayRefSlowOpt(size);
+  bool is_size_static = int_size.has_value();
+  if (is_size_static) {
+    auto xsize = XlaHelpers::I64List(int_size.value());
+    return bridge::AtenFromXlaTensor(tensor_methods::as_strided(
+        self_tensor, std::move(xsize), std::move(xstride),
+        XlaHelpers::I64Optional(int_storage_offset)));
+  }
 }
 
 at::Tensor XLANativeFunctions::as_strided_scatter(
@@ -743,8 +760,7 @@ at::Tensor XLANativeFunctions::as_strided_scatter(
   auto base_ = bridge::GetXlaTensor(base);
   auto xsize = XlaHelpers::I64List(size);
   auto xstride = XlaHelpers::I64List(stride);
-  if (!AsStrided::StrideIsSupported(base_->shape(), xsize, xstride,
-                                    storage_offset.value_or(0))) {
+  if (!AsStrided::StrideIsSupported(base_->shape(), xstride)) {
     return at::native::call_fallback_fn<
         &xla_cpu_fallback, ATEN_OP(as_strided_scatter)>::call(base,
                                                               mutated_view,
@@ -1251,7 +1267,7 @@ at::Tensor XLANativeFunctions::empty_strided_symint(
   at::IntArrayRef stride = c10::asIntArrayRefUnchecked(sym_stride);
   at::Tensor t =
       empty_symint(sym_size, dtype, layout, device, pin_memory, c10::nullopt);
-  return torch_xla::XLANativeFunctions::as_strided_copy(t, size, stride,
+  return torch_xla::XLANativeFunctions::as_strided_copy_symint(t, sym_size, sym_stride,
                                                         /*storage_offset=*/0);
 }
 
@@ -3714,8 +3730,7 @@ at::Tensor XLANativeFunctions::as_strided(
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   auto xsize = XlaHelpers::I64List(size);
   auto xstride = XlaHelpers::I64List(stride);
-  if (!AsStrided::StrideIsSupported(self_tensor->shape(), xsize, xstride,
-                                    storage_offset.value_or(0))) {
+  if (!AsStrided::StrideIsSupported(self_tensor->shape(), xstride)) {
     return at::native::call_fallback_fn<
         &xla_cpu_fallback, ATEN_OP(as_strided)>::call(self, size, stride,
                                                       storage_offset);
@@ -3732,8 +3747,7 @@ const at::Tensor& XLANativeFunctions::as_strided_(
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
   auto xsize = XlaHelpers::I64List(size);
   auto xstride = XlaHelpers::I64List(stride);
-  if (!AsStrided::StrideIsSupported(self_tensor->shape(), xsize, xstride,
-                                    storage_offset.value_or(0))) {
+  if (!AsStrided::StrideIsSupported(self_tensor->shape(), xstride)) {
     return at::native::call_fallback_fn<
         &xla_cpu_fallback, ATEN_OP(as_strided_)>::call(self, size, stride,
                                                        storage_offset);

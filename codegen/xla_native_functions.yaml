@@ -388,6 +388,7 @@ supported:
   - expand
   - view
 symint:
+  - as_strided_copy
   - embedding
   - empty.memory_format
   - empty_strided
