@@ -8,7 +8,7 @@ import tempfile
 import unittest
 
 
-class StableHLOTest(unittest.TestCase):
+class StableHLOInferenceTest(unittest.TestCase):
 
   def test_resnet18_inference(self):
     resnet18 = torchvision.models.resnet18()
@@ -16,8 +16,10 @@ class StableHLOTest(unittest.TestCase):
     output = resnet18(data)
     output_np = output.detach().numpy()
 
-    exported = export_torch_model(resnet18, (data,), output_np.shape,
-                                  output_np.dtype)
+    exported = export_torch_model(
+        resnet18,
+        (data,),
+    )
     output2 = torch.tensor(exported(data.detach().numpy()).numpy())
 
     self.assertTrue(torch.allclose(output, output2, atol=1e-5))
@@ -29,8 +31,10 @@ class StableHLOTest(unittest.TestCase):
     output = resnet18(data)
     output_np = output.detach().numpy()
 
-    exported = export_torch_model(resnet18, (data,), output_np.shape,
-                                  output_np.dtype)
+    exported = export_torch_model(
+        resnet18,
+        (data,),
+    )
     tf_m = tf.Module()
     tf_m.f = tf.function(
         exported,
