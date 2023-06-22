@@ -549,8 +549,8 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
     # All replicas belong to a single group
     shard_count = xrt_world_size()
 
-  result = torch_xla._XLAC._xla_all_gather(value, dim, shard_count,
-                                           groups or [], pin_layout)
+  result = torch_xla._XLAC._xla_all_gather(value, dim, shard_count, groups or
+                                           [], pin_layout)
   if output != None:
     output = result
   return result
