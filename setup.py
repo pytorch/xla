@@ -291,6 +291,8 @@ class BuildBazelExtension(command.build_ext.build_ext):
 
     log_file = ''
     try:
+      self.spawn(["pwd"])
+      self.spawn(["ls", "-la", "/tmp/pytorch/xla/"])
       self.spawn(["bazel", "query", "//:_XLAC.so"])
       self.spawn(["echo", "query done"])
       log_file = os.popen("bazel info server_log").read().replace('\n', '')
