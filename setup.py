@@ -290,6 +290,10 @@ class BuildBazelExtension(command.build_ext.build_ext):
         bazel_argv.append('--linkopt=/LIBPATH:' + library_dir)
 
     try:
+      self.spawn(["git", "status"])
+      self.spawn(["ls", "-la"])
+      self.spawn(["find", "."])
+      self.spawn(["git", "show"])
       self.spawn(["echo", "krecem"])
       self.spawn(["bazel", "query", "//:_XLAC.so"])
       self.spawn(["echo", "query done"])
