@@ -242,7 +242,7 @@ class BuildBazelExtension(command.build_ext.build_ext):
       os.makedirs(self.build_temp)
 
     bazel_argv = [
-        'bazel', 'build', ext.bazel_target,
+        'bazel', 'build', "//torch_xla/...",
       '--verbose_failures', '--verbose_explanations',
         f"--symlink_prefix={os.path.join(self.build_temp, 'bazel-')}",
         '\n'.join(['--cxxopt=%s' % opt for opt in extra_compile_args])
