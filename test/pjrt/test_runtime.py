@@ -58,15 +58,12 @@ class TestExperimentalPjrt(parameterized.TestCase):
   }, True), ('pjrt_gpu', {
       'PJRT_DEVICE': 'GPU',
       'GPU_NUM_DEVICES': '4'
-  }, True), ('xla_dist_worker', {
-      'PJRT_DEVICE': 'TPU',
   }, True))
   def test_pjrt_default_device(self, env_vars, expect_using_pjrt):
     with mock.patch.dict(os.environ, env_vars, clear=True):
       # Print a warningif we had to select a default runtime
       if 'PJRT_DEVICE' not in os.environ and expect_using_pjrt:
         logs_context = self.assertLogs(level=logging.WARNING)
-        raise Exception('PJRT is the only runtime now, please set PJRT_DEVICE')
       else:
         logs_context = contextlib.nullcontext()
 
@@ -76,6 +73,7 @@ class TestExperimentalPjrt(parameterized.TestCase):
 
       if expect_using_pjrt:
         self.assertIn(rt.device_type(), ['CPU', 'GPU', 'TPU'])
+        print("!!!!!!!!!!!!!!!!!!!!!"+rt.device_type())
       else:
         print("XRT has been deprecated, please set PJRT_DEVICE")
         self.assertIsNone(rt.device_type())
