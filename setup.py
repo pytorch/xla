@@ -290,7 +290,8 @@ class BuildBazelExtension(command.build_ext.build_ext):
         bazel_argv.append('--linkopt=/LIBPATH:' + library_dir)
 
     try:
-      self.spawn(bazel_argv)
+      self.spawn(["bazel", "query", "//:_XLAC.so"])
+      #self.spawn(bazel_argv)
       p = Popen(" ".join(bazel_argv), shell=True, stdout=PIPE, stderr=PIPE)
       stdout, stderr = p.communicate()
       print("stdout: '%s'" % stdout)
