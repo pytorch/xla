@@ -342,19 +342,6 @@ cc_library(
 )
 
 cc_library(
-    name = "record_reader",
-    srcs = ["record_reader.cc"],
-    hdrs = ["record_reader.h"],
-    deps = [
-        ":debug_macros",
-        "@org_tensorflow//tensorflow/compiler/xla:types",
-        "@org_tensorflow//tensorflow/tsl/lib/io:record_reader",
-        "@org_tensorflow//tensorflow/tsl/platform:errors",
-        "@org_tensorflow//tensorflow/tsl/platform:strcat",
-    ],
-)
-
-cc_library(
     name = "stablehlo_helper",
     srcs = ["stablehlo_helper.cc"],
     hdrs = ["stablehlo_helper.h"],

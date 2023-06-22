@@ -33,7 +33,7 @@ xla_model
 .. autofunction:: all_reduce
 .. autofunction:: all_gather
 .. autofunction:: nms
-		
+
 distributed
 ----------------------------------
 
@@ -57,8 +57,6 @@ utils
 .. autofunction:: metric_names
 .. autofunction:: metric_data
 .. autofunction:: metrics_report
-  
-.. automodule:: torch_xla.utils.tf_record_reader
 
 .. automodule:: torch_xla.utils.utils
 .. autoclass:: SampleGenerator
@@ -67,22 +65,6 @@ utils
 .. automodule:: torch_xla.utils.serialization
 .. autofunction:: save
 .. autofunction:: load
-
-.. automodule:: torch_xla.utils.gcsfs
-.. autofunction:: open
-.. autofunction:: list
-.. autofunction:: stat
-.. autofunction:: remove
-.. autofunction:: rmtree
-.. autofunction:: read
-.. autofunction:: write
-.. autofunction:: generic_open
-.. autofunction:: generic_read
-.. autofunction:: generic_write
-.. autofunction:: is_gcs_path
-
-.. automodule:: torch_xla.utils.cached_dataset
-.. autoclass:: CachedDataset
 
 
 test

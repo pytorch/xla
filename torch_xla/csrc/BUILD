@@ -268,7 +268,6 @@ ptxla_cc_library(
         "//torch_xla/csrc/runtime:metrics_reader",
         "//torch_xla/csrc/runtime:multi_wait",
         "//torch_xla/csrc/runtime:profiler",
-        "//torch_xla/csrc/runtime:record_reader",
         "//torch_xla/csrc/runtime:sys_util",
         "//torch_xla/csrc/runtime:thread_pool",
         "//torch_xla/csrc/runtime:util",
