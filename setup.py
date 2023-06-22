@@ -290,12 +290,11 @@ class BuildBazelExtension(command.build_ext.build_ext):
         bazel_argv.append('--linkopt=/LIBPATH:' + library_dir)
 
     try:
+      self.spawn(["echo", "krecem"])
       self.spawn(["bazel", "query", "//:_XLAC.so"])
-      #self.spawn(bazel_argv)
-      p = Popen(" ".join(bazel_argv), shell=True, stdout=PIPE, stderr=PIPE)
-      stdout, stderr = p.communicate()
-      print("stdout: '%s'" % stdout)
-      print("stderr: '%s'" % stderr)
+      self.spawn(["echo", "query done"])
+      self.spawn(bazel_argv)
+      self.spawn(["echo", "bazel done"])
     except Exception as err:
       print(err)
       self.spawn(["cat", os.popen("bazel info server_log").read().replace('\n', '')])
