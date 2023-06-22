@@ -51,7 +51,11 @@ cc_library(
   hdrs = [
     "computation_client.h",
   ],
+  copts = [
+    "-isystemexternal/torch",
+  ],
   deps = [
+    ":compat_logging",
     ":debug_macros",
     ":env_vars",
     ":metrics_analysis",
@@ -63,10 +67,13 @@ cc_library(
     "@tsl//tsl/platform:stacktrace_handler",
     "@xla//xla:literal_util",
     "@xla//xla/client:xla_computation",
+    "@xla//xla/hlo/ir:hlo",
     "@com_google_absl//absl/memory",
     "@com_google_absl//absl/strings",
     "@com_google_absl//absl/types:optional",
     "@com_google_absl//absl/types:span",
+    "@torch//:headers",
+    "@torch//:runtime_headers",
   ],
 )
 
@@ -249,6 +256,15 @@ cc_test(
     deps = [
         ":sys_util",
         "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_library(
+    name = "compat_logging",
+    hdrs = ["compat_logging.h"],
+    deps = [
+        ":tf_logging",
+        "@torch//:headers",
     ],
 )
 

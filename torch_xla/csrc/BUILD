@@ -180,6 +180,7 @@ ptxla_cc_library(
         "//torch_xla/csrc/runtime",
         "@xla//xla/client:xla_builder",
         "@xla//xla/client:xla_computation",
+        "//torch_xla/csrc/runtime:computation_client",
     ],
 )
 

@@ -132,7 +132,7 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
     for (const torch::lazy::ComputationPtr instance : instances) {
       // TODO(JackCaoG): device is missing in instance, use CurrentDevice for
       // now
-      const Computation* torch_xla_computation =
+      Computation* torch_xla_computation =
           dynamic_cast<Computation*>(instance.get());
       output_shapes.push_back(MakeShapeWithDeviceLayout(
           torch_xla_computation->program_shape().result(),
