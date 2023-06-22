@@ -79,19 +79,25 @@ jobs:
         shell: bash
         run: |
           docker build . -t xlabuild -f docker/Dockerfile
-          pid=$(docker run -t -d -w "$WORKDIR" -e SCCACHE_BUCKET=${SCCACHE_BUCKET} -e DISABLE_XRT=${DISABLE_XRT} -e XLA_CUDA=${XLA_CUDA} -e BAZEL_REMOTE_CACHE=1 xlabuild)
+          pid=$(docker run -t -d -w "$WORKDIR" xlabuild)
+          docker exec -u jenkins "${pid}" sudo chown -R jenkins "${WORKDIR}"
           docker cp "${GITHUB_WORKSPACE}/." "$pid:$WORKDIR"
           echo "pid=${pid}" >> "${GITHUB_ENV}"
 
       - name: Prepare build env
         shell: bash
         run: |
+          echo "declare -x SCCACHE_BUCKET=${SCCACHE_BUCKET}" | docker exec -i "${pid}" sh -c "cat >> env"
+          echo "declare -x CC=clang-8 CXX=clang++-8" | docker exec -i "${pid}" sh -c "cat >> xla_env"
+          echo "declare -x DISABLE_XRT=${DISABLE_XRT}" | docker exec -i "${pid}" sh -c "cat >> xla_env"
+          echo "declare -x XLA_CUDA=${XLA_CUDA}" | docker exec -i "${pid}" sh -c "cat >> xla_env"
+          echo "declare -x BAZEL_REMOTE_CACHE=1" | docker exec -i "${pid}" sh -c "cat >> xla_env"
           echo "${GCLOUD_SERVICE_KEY}" | docker exec -i "${pid}" sh -c "cat >> default_credentials.json"
 
       - name: Build
         shell: bash
         run: |
-          docker exec "${pid}" bash -c ". ~/.bashrc && .circleci/build.sh"
+          docker exec -u jenkins "${pid}" bash -c ". ~/.bashrc && .circleci/build.sh"
 
       - name: Cleanup build env
         shell: bash
