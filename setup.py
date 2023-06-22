@@ -72,6 +72,7 @@ import sys
 import tempfile
 import torch
 import zipfile
+from subprocess import PIPE, Popen
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -242,7 +243,7 @@ class BuildBazelExtension(command.build_ext.build_ext):
 
     bazel_argv = [
         'bazel', 'build', ext.bazel_target,
-      '--verbose_failures', '--verbose_explanations', '--explain=/tmp/explain', '-s',
+      '--verbose_failures', '--verbose_explanations',
         f"--symlink_prefix={os.path.join(self.build_temp, 'bazel-')}",
         '\n'.join(['--cxxopt=%s' % opt for opt in extra_compile_args])
     ]
@@ -290,9 +291,12 @@ class BuildBazelExtension(command.build_ext.build_ext):
 
     try:
       self.spawn(bazel_argv)
+      p = Popen(" ".join(bazel_argv), shell=True, stdout=PIPE, stderr=PIPE)
+      stdout, stderr = p.communicate()
+      print("stdout: '%s'" % stdout)
+      print("stderr: '%s'" % stderr)
     except Exception as err:
       print(err)
-      self.spawn(["cat", "/tmp/explain"])
       self.spawn(["cat", os.popen("bazel info server_log").read().replace('\n', '')])
       raise err
 
