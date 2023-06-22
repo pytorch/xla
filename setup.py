@@ -242,6 +242,7 @@ class BuildBazelExtension(command.build_ext.build_ext):
 
     bazel_argv = [
         'bazel', 'build', ext.bazel_target,
+      '--verbose_failures', '--verbose_explanations', '--explain', '-s',
         f"--symlink_prefix={os.path.join(self.build_temp, 'bazel-')}",
         '\n'.join(['--cxxopt=%s' % opt for opt in extra_compile_args])
     ]
