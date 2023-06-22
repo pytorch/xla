@@ -63,7 +63,7 @@ jobs:
         uses: actions/checkout@v3
       - name: Download docker image from GCR
         shell: bash
-        run: docker pull us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:tpu
+        run: docker pull us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.8_cuda_11.8
       - name: Stage image to ECR
         shell: bash
         run: |
@@ -78,7 +78,8 @@ jobs:
       - name: Start the container
         shell: bash
         run: |
-          pid=$(docker run -t -d -w "$WORKDIR" -e SCCACHE_BUCKET=${SCCACHE_BUCKET} -e DISABLE_XRT=${DISABLE_XRT} -e XLA_CUDA=${XLA_CUDA} -e BAZEL_REMOTE_CACHE=1 us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:tpu)
+          docker build . -t xlabuild -f docker/Dockerfile
+          pid=$(docker run -t -d -w "$WORKDIR" -e SCCACHE_BUCKET=${SCCACHE_BUCKET} -e DISABLE_XRT=${DISABLE_XRT} -e XLA_CUDA=${XLA_CUDA} -e BAZEL_REMOTE_CACHE=1 xlabuild)
           docker cp "${GITHUB_WORKSPACE}/." "$pid:$WORKDIR"
           echo "pid=${pid}" >> "${GITHUB_ENV}"
 
