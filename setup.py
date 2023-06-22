@@ -244,7 +244,7 @@ class BuildBazelExtension(command.build_ext.build_ext):
     bazel_argv = [
         'bazel', 'build', "//torch_xla/...",
       '--verbose_failures', '--verbose_explanations',
-        f"--symlink_prefix={os.path.join(self.build_temp, 'bazel-')}",
+      #  f"--symlink_prefix={os.path.join(self.build_temp, 'bazel-')}",
         '\n'.join(['--cxxopt=%s' % opt for opt in extra_compile_args])
     ]
 
@@ -293,7 +293,7 @@ class BuildBazelExtension(command.build_ext.build_ext):
     try:
       self.spawn(["bazel", "query", "//:_XLAC.so"])
       self.spawn(["echo", "query done"])
-      log_file = os.popen().read().replace('\n', '')
+      log_file = os.popen("bazel info server_log").read().replace('\n', '')
       self.spawn(bazel_argv)
       self.spawn(["echo", "bazel done"])
     except Exception as err:
