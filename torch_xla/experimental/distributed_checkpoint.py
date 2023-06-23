@@ -41,6 +41,7 @@ from torch_xla.experimental._distributed_checkpoint_helpers import (
     dedup_tensors,
     set_element,
     narrow_tensor_by_index,
+    _sharded_cpu_state_dict, 
 )
 from typing import Any, Dict, List, Tuple, Union
 
@@ -69,7 +70,7 @@ class SPMDSavePlanner(SavePlanner):
     # Flattened state_dict tracking all sharded tensors to be checkpointed
     self.sharded_state_dict: Dict[str, XLAShardedTensor] = None
 
-    # Flattend state_dict tracking all other state_dict items
+    # Flattened state_dict tracking all other state_dict items
     self.unsharded_state_dict: Dict[str, Any] = None
 
     # Upon the first `resolve_data` call for a WriteItem associated with a
@@ -87,7 +88,7 @@ class SPMDSavePlanner(SavePlanner):
     # types that can be handled by the default planner, and ensure all sharded
     # tensors are wrapped in XLAShardedTensor
     state_dict, self.mappings = flatten_state_dict(state_dict)
-    state_dict = tree_map(xs.wrap_if_sharded, state_dict)
+    state_dict = _sharded_cpu_state_dict(state_dict)
 
     # Select only XLAShardedTensors which are not replicated, since the
     # default planner can handle everything else.
@@ -186,7 +187,7 @@ class SPMDLoadPlanner(LoadPlanner):
     # Flattened state_dict tracking all sharded tensors to be restored
     self.sharded_state_dict: Dict[str, XLAShardedTensor] = None
 
-    # Flattend state_dict tracking all other state_dict items
+    # Flattened state_dict tracking all other state_dict items
     self.unsharded_state_dict: Dict[str, Any] = None
 
     # Upon the first `resolve_tensor` call for a ReadItem associated with a
@@ -214,7 +215,7 @@ class SPMDLoadPlanner(LoadPlanner):
     # types that can be handled by the default planner, and ensure all sharded
     # tensors are wrapped in XLAShardedTensor
     state_dict, self.mappings = flatten_state_dict(state_dict)
-    state_dict = tree_map(xs.wrap_if_sharded, state_dict)
+    state_dict = _sharded_cpu_state_dict(state_dict)
 
     # Select only XLAShardedTensors which are not replicated, since the
     # default planner can handle everything else.
@@ -297,7 +298,7 @@ class SPMDLoadPlanner(LoadPlanner):
 
     self._pending_elements[fqn] -= np.prod(read_item.lengths)
     assert self._pending_elements[
-        fqn] >= 0, f"Too many writes for tensor {index.fqn}"
+        fqn] >= 0, f"Too many writes for tensor {fqn}"
     if self._pending_elements[fqn] == 0:
       # Load local shards into the XLAShardedTensor and release the shards
       # from CPU
