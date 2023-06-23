@@ -5,6 +5,7 @@
 #include "mlir/IR/Verifier.h"       // from @llvm-project
 #include "mlir/Pass/PassManager.h"  // from @llvm-project
 #include "mlir/Transforms/Passes.h"
+#include "stablehlo/dialect/Serialization.h"  // from @stablehlo
 #include "tensorflow/compiler/xla/mlir_hlo/mhlo/transforms/passes.h"
 #include "tensorflow/compiler/xla/translate/hlo_to_mhlo/hlo_to_mlir_hlo.h"
 #include "tensorflow/compiler/xla/translate/mhlo_to_hlo/mlir_hlo_to_hlo.h"
@@ -31,6 +32,15 @@ static std::string getMlirModuleStr(mlir::ModuleOp& mlir_module) {
     flags.enableDebugInfo(/*enable=*/true, /*prettyForm=*/true);
   }
   mlir_module.print(os, flags);
+  return txt_mlir_module;
+}
+
+static std::string getMlirModuleBytecode(const mlir::ModuleOp& mlir_module) {
+  std::string txt_mlir_module;
+  llvm::raw_string_ostream os{txt_mlir_module};
+  // TODO(qihqi): pass in version
+  auto result = mlir::stablehlo::serializePortableArtifact(mlir_module, /* target_version = */"current", os);
+  XLA_CHECK(result.succeeded()) << "Serializing StableHLO Failed";
   return txt_mlir_module;
 }
 
@@ -67,7 +77,7 @@ static absl::Status mhloToStablehloHelper(mlir::ModuleOp* mlir_module,
   ;
 }
 
-std::string hloToStablehloStr(const xla::HloModuleProto* proto) {
+std::string hloToStablehlo(const xla::HloModuleProto* proto, bool emit_bytecode) {
   mlir::MLIRContext context;
   mlir::ModuleOp mlir_module =
       mlir::ModuleOp::create(mlir::UnknownLoc::get(&context));
@@ -81,8 +91,13 @@ std::string hloToStablehloStr(const xla::HloModuleProto* proto) {
   XLA_CHECK(status.ok()) << "MHLO -> StableHLO conversion failed.\n"
                          << status.message() << err_msg
                          << getHloModuleStr(proto);
-  return getMlirModuleStr(mlir_module);
+  if (emit_bytecode) {
+    return getMlirModuleBytecode(mlir_module);
+  } else {
+    return getMlirModuleStr(mlir_module);
+  }
 }
+
 
 }  // namespace runtime
 }  // namespace torch_xla
