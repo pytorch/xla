@@ -44,6 +44,7 @@ http_archive(
         "//openxla_patches:f16_abi_clang.diff",
         "//openxla_patches:gpu_race_condition.diff",
         "//openxla_patches:grpc_version.diff",
+        "//openxla_patches:openxla_workspace.diff",
         "//openxla_patches:optimized_function_graph.diff",
         "//openxla_patches:profiler_trace.diff",
         "//openxla_patches:stream_executor.diff",
