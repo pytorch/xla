@@ -3,6 +3,7 @@ from torch_xla import runtime as xr
 from torch_xla._internal import pjrt
 
 
+@xr.requires_pjrt
 def spawn(fn,
           args=(),
           nprocs=None,
@@ -34,7 +35,6 @@ def spawn(fn,
     `nprocs` is 1 the `fn` function will be called directly, and the API will
     return None.
   """
-  assert xr.using_pjrt(), 'PJRT_DEVICE must be set.'
   return pjrt.spawn(fn, nprocs, start_method, args)
 
 
