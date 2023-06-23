@@ -1,6 +1,8 @@
 name: Build & Test XRT branch
 on:
   pull_request:
+    branches:
+      - xrt
   push:
     branches:
       - xrt
