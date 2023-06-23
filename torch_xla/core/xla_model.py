@@ -98,6 +98,7 @@ def get_xla_supported_devices(devkind=None, max_devices=None):
     if kind_devices:
       return kind_devices[:max_devices] if max_devices else kind_devices
 
+
 @runtime.requires_pjrt
 def xrt_world_size(defval=1):
   """Retrieves the number of devices which is taking part of the replication.
@@ -137,6 +138,7 @@ def get_ordinal(defval=0):
 
   return runtime.global_ordinal()
 
+
 @runtime.requires_pjrt
 def get_local_ordinal(defval=0):
   """Retrieves the replication local ordinal of the current thread.
@@ -173,6 +175,7 @@ def is_master_ordinal(local=True):
 def master_print(*args, fd=sys.stdout, local=False, flush=False):
   if is_master_ordinal(local=local):
     print(*args, file=fd, flush=flush)
+
 
 @runtime.requires_pjrt
 def xla_device(n=None, devkind=None):
