@@ -50,30 +50,6 @@ jobs:
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
-  build-xrt:
-    name: "Build XLA with XRT"
-    uses: ./.github/workflows/_build.yml
-    with:
-      ecr-docker-image-base: 308535385114.dkr.ecr.us-east-1.amazonaws.com/pytorch/xla_base
-      gcr-docker-image: gcr.io/tpu-pytorch/xla_base:latest
-      disable_xrt: 0
-      cuda: 0
-    secrets:
-      gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
-
-  test-xrt-cpu:
-    name: "Test XRT with CPU"
-    uses: ./.github/workflows/_test.yml
-    needs: build-xrt
-    with:
-      docker-image: ${{ needs.build-xrt.outputs.docker-image }}
-      timeout-minutes: 90
-      disable-xrt: 0
-      disable-pjrt: 1
-      test-script: 'test_xrt.sh'
-    secrets:
-      gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
-
   test-cpu-coverage:
     name: "Collect CPU test coverage"
     if: github.event_name == 'push' && github.event.ref == 'refs/heads/master'
