@@ -2,7 +2,11 @@
 # stable. Once the upstream makes these stable, we should take a dependency on
 # their APIs.
 
+import dataclasses
+
 import torch
+import torch_xla
+import torch_xla.experimental.xla_sharding as xs
 
 from torch.distributed.checkpoint.planner import SavePlan
 from typing import (
@@ -14,12 +18,12 @@ from typing import (
     MutableMapping,
     Sequence,
     Tuple,
-    TypeVar,
     Union,
     cast,
 )
 from torch.distributed.checkpoint.metadata import (
-    STATE_DICT_TYPE,)
+    MetadataIndex, STATE_DICT_TYPE)
+from torch.utils._pytree import tree_map
 
 PATH_ITEM = Union[str, int]
 OBJ_PATH = Tuple[PATH_ITEM, ...]
@@ -187,3 +191,21 @@ def narrow_tensor_by_index(tensor: torch.Tensor, offsets: Sequence[int],
       # leaf variable in the autograd graph.
       narrowed_tensor = narrowed_tensor.narrow(idx, offset, size)
   return narrowed_tensor
+
+
+@dataclasses.dataclass
+class _CpuShards:
+  shards: List[xs.XLAShard]
+  global_shape: torch.Shape
+  
+
+def _sharded_cpu_state_dict(state_dict: STATE_DICT_TYPE) -> STATE_DICT_TYPE:
+  """
+  Converts a state_dict on XLA device to a sharded state_dict on CPU.
+  """
+
+  def move_state_dict_to_cpu(v):
+    v = xs.wrap_if_sharded(v)
+    return _CpuShards(shards=v.local_shards, 
+                      global_shape=v.global_tensor.shape)
+  return tree_map(move_state_dict_to_cpu, state_dict)

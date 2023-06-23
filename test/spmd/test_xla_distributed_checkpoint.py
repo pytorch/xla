@@ -1,4 +1,5 @@
 import os
+import sys
 import tempfile
 import unittest
 import test_xla_sharding_base
@@ -14,7 +15,10 @@ from torch.distributed.checkpoint.default_planner import (
     create_default_global_save_plan,
 )
 from torch_xla.experimental.distributed_checkpoint import SPMDLoadPlanner, SPMDSavePlanner
-
+from torch_xla.experimental._distributed_checkpoint_helpers import (
+  _sharded_cpu_state_dict, 
+  _CpuShards
+)
 
 class DistributedCheckpointTestBase(test_xla_sharding_base.XlaShardingTest):
 
@@ -243,6 +247,16 @@ class SPMDSavePlannerTest(DistributedCheckpointTestBase):
       resolved_data = planner.resolve_data(write_item)
       self.assertTrue(torch.allclose(shard.data, resolved_data))
 
+class DistributedCheckpointHelpersTest(DistributedCheckpointTestBase):
+  
+  def test_sharded_cpu_state_dict(self):
+    model = self.SimpleLinear().to(xm.xla_device())
+    state_dict = model.state_dict()
+    sharded_cpu_state_dict = _sharded_cpu_state_dict(state_dict)
+    self.assertCountEqual(sharded_cpu_state_dict,
+                          ['fc1.weight', 'fc1.bias', 'fc2.weight', 'fc2.bias'])
+    self.assertTrue(
+      isinstance(sharded_cpu_state_dict['fc1.weight'], _CpuShards))
 
 if __name__ == '__main__':
   test = unittest.main()
