@@ -99,7 +99,6 @@ def get_xla_supported_devices(devkind=None, max_devices=None):
       return kind_devices[:max_devices] if max_devices else kind_devices
 
 
-@runtime.requires_pjrt
 def xrt_world_size(defval=1):
   """Retrieves the number of devices which is taking part of the replication.
 
@@ -118,7 +117,6 @@ def xrt_world_size(defval=1):
   return runtime.world_size()
 
 
-@runtime.requires_pjrt
 def get_ordinal(defval=0):
   """Retrieves the replication ordinal of the current thread.
 
@@ -139,7 +137,6 @@ def get_ordinal(defval=0):
   return runtime.global_ordinal()
 
 
-@runtime.requires_pjrt
 def get_local_ordinal(defval=0):
   """Retrieves the replication local ordinal of the current thread.
 
@@ -177,7 +174,6 @@ def master_print(*args, fd=sys.stdout, local=False, flush=False):
     print(*args, file=fd, flush=flush)
 
 
-@runtime.requires_pjrt
 def xla_device(n=None, devkind=None):
   """Returns a given instance of an XLA device.
 
@@ -1062,7 +1058,6 @@ def xla_rendezvous(payload: bytes = b'',
   return [bytes(p.cpu().tolist()) for p in payloads]
 
 
-@runtime.requires_pjrt
 def rendezvous(tag, payload=b'', replicas=[]):
   """Waits for all the mesh clients to reach the named rendezvous.
 
