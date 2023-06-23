@@ -1,0 +1,37 @@
+# to fix `Cycle in the workspace file detected`
+diff --git a/workspace0.bzl b/workspace0.bzl
+index 73245fd6d..28c80f796 100644
+--- a/workspace0.bzl
++++ b/workspace0.bzl
+@@ -1,7 +1,6 @@
+ """TensorFlow workspace initialization. Consult the WORKSPACE on how to use it."""
+ 
+ load("@tsl//:workspace0.bzl", "tsl_workspace0")
+-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+ load("@bazel_toolchains//repositories:repositories.bzl", bazel_toolchains_repositories = "repositories")
+ load("@build_bazel_rules_apple//apple:repositories.bzl", "apple_rules_dependencies")
+ load("@build_bazel_rules_swift//swift:repositories.bzl", "swift_rules_dependencies")
+diff --git a/workspace1.bzl b/workspace1.bzl
+index 63883bada..9b37a5afb 100644
+--- a/workspace1.bzl
++++ b/workspace1.bzl
+@@ -1,7 +1,6 @@
+ """TensorFlow workspace initialization. Consult the WORKSPACE on how to use it."""
+ 
+ load("@tsl//:workspace1.bzl", "tsl_workspace1")
+-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+ load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
+ load("@io_bazel_rules_closure//closure:defs.bzl", "closure_repositories")
+ load("@rules_pkg//:deps.bzl", "rules_pkg_dependencies")
+diff --git a/workspace3.bzl b/workspace3.bzl
+index 6cf698559..810314eaa 100644
+--- a/workspace3.bzl
++++ b/workspace3.bzl
+@@ -1,7 +1,6 @@
+ """TensorFlow workspace initialization. Consult the WORKSPACE on how to use it."""
+ 
+ load("@tsl//:workspace3.bzl", "tsl_workspace3")
+-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+ load("//third_party:tf_runtime/workspace.bzl", tf_runtime = "repo")
+ load("//third_party/llvm:workspace.bzl", llvm = "repo")
+ 
