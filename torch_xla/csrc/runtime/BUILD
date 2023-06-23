@@ -1,14 +1,6 @@
 load(
-    "@org_tensorflow//tensorflow/tsl/platform/default:build_config.bzl",
-    "tf_proto_library_cc",
-)
-load(
     "@org_tensorflow//tensorflow/tsl/platform/default:cuda_build_defs.bzl",
     "if_cuda_is_configured",
-)
-load(
-    "//bazel:tensorflow.bzl",
-    "if_with_tpu_support",
 )
 
 licenses(["notice"])  # Apache 2.0
@@ -20,16 +12,6 @@ exports_files([
     "tf_exported_symbols.lds",
 ])
 
-tf_proto_library_cc(
-    name = "mesh_service_proto",
-    srcs = ["mesh_service.proto"],
-    has_services = 1,
-    cc_api_version = 2,
-    cc_grpc_version = 1,
-    protodeps = [
-        "@org_tensorflow//tensorflow/core/protobuf/tpu:topology_proto",
-    ],
-)
 
 cc_library(
     name = "async_task",
@@ -154,23 +136,6 @@ cc_library(
     name = "env_vars",
     srcs = ["env_vars.cc"],
     hdrs = ["env_vars.h"],
-)
-
-cc_library(
-    name = "mesh_service",
-    srcs = ["mesh_service.cc"],
-    hdrs = ["mesh_service.h"],
-    deps = [
-        "nccl_distributed",
-        ":debug_macros",
-        ":mesh_service_proto_cc",
-        ":multi_wait",
-        ":sys_util",
-        ":thread_pool",
-        ":util",
-        "@com_google_absl//absl/strings",
-        "@org_tensorflow//tensorflow/compiler/xla:statusor",
-    ],
 )
 
 cc_library(

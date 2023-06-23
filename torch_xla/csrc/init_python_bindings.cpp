@@ -38,7 +38,6 @@
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ir_dump_util.h"
 #include "torch_xla/csrc/ops/device_data.h"
-#include "torch_xla/csrc/runtime/mesh_service.h"
 #include "torch_xla/csrc/runtime/metrics.h"
 #include "torch_xla/csrc/runtime/metrics_analysis.h"
 #include "torch_xla/csrc/runtime/metrics_reader.h"
@@ -516,24 +515,6 @@ py::object GetRevisions() {
   return py_dict;
 }
 
-std::vector<py::bytes> Rendezvous(int ordinal, const std::string& tag,
-                                  const std::string& payload,
-                                  const std::vector<int64_t>& replicas) {
-  runtime::service::MeshClient* mesh_client =
-      runtime::service::MeshClient::Get();
-  std::vector<py::bytes> payloads;
-  if (mesh_client != nullptr) {
-    auto rendezvous_payloads =
-        mesh_client->Rendezvous(ordinal, tag, payload, replicas);
-    for (auto& rendezvous_payload : rendezvous_payloads) {
-      payloads.push_back(rendezvous_payload);
-    }
-  } else {
-    XLA_CHECK(replicas.empty() || (replicas.size() == 1 && replicas[0] == 0));
-  }
-  return payloads;
-}
-
 py::object XlaNms(const at::Tensor& boxes, const at::Tensor& scores,
                   const at::Tensor& score_threshold,
                   const at::Tensor& iou_threshold, int64_t output_size) {
@@ -879,11 +860,6 @@ void InitXlaModuleBindings(py::module m) {
         runtime::GetComputationClient()->GetReplicationDevices();
     return replication_devices != nullptr ? replication_devices->size() : 0;
   });
-  m.def("_xla_rendezvous",
-        [](int ordinal, const std::string& tag, const std::string& payload,
-           const std::vector<int64_t>& replicas) {
-          return Rendezvous(ordinal, tag, payload, replicas);
-        });
 
   py::class_<torch::lazy::Value, std::shared_ptr<torch::lazy::Value>>(
       m, "IrValue");
