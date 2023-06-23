@@ -254,7 +254,7 @@ std::string DumpUtil::PostOrderToText(
 
 std::string DumpUtil::ToHlo(c10::ArrayRef<torch::lazy::Value> values,
                             const torch::lazy::BackendDevice& device,
-                            bool to_stable_hlo) {
+                            EmitMode mode) {
   LoweringContext lowering_ctx("IrToHlo", device);
   for (auto& ir_value : values) {
     lowering_ctx.AddResult(
@@ -280,10 +280,15 @@ std::string DumpUtil::ToHlo(c10::ArrayRef<torch::lazy::Value> values,
             runtime::GetComputationClient()->Compile(std::move(instances));
     computation = std::move(computations[0]->move_computation());
   }
-  if (to_stable_hlo) {
-    return runtime::hloToStablehloStr(&computation.proto());
-  } else {
-    return ConsumeValue(runtime::util::GetComputationHloText(computation));
+  switch (mode) {
+    case EmitMode::kHloReadable:
+      return ConsumeValue(runtime::util::GetComputationHloText(computation));
+    case EmitMode::kStableHloReadable:
+      return runtime::hloToStablehlo(&computation.proto(),
+                                     /* emit_bytecode = */ false);
+    case EmitMode::kStableHloBytecode:
+      return runtime::hloToStablehlo(&computation.proto(),
+                                     /* emit_bytecode = */ true);
   }
 }
 
