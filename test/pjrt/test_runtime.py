@@ -55,14 +55,12 @@ class TestExperimentalPjrt(parameterized.TestCase):
   }, False), ('pjrt_cpu', {
       'PJRT_DEVICE': 'CPU',
       'PJRT_SELECT_DEFAULT_DEVICE': '0'
-  }, True), ('xrt_tpu', {
-      'XRT_TPU_CONFIG': 'localservice;0;localhost:51011'
-  }, False), ('pjrt_tpu_precedence', {
+  }, True), ('pjrt_tpu_precedence', {
       'PJRT_DEVICE': 'TPU',
       'XRT_TPU_CONFIG': 'localservice;0;localhost:51011',
-  }, True), ('xrt_gpu', {
+  }, True), ('gpu_num_devives', {
       'GPU_NUM_DEVICES': '4'
-  }, False), ('pjrt_gpu', {
+  }, True), ('pjrt_gpu', {
       'PJRT_DEVICE': 'GPU',
       'GPU_NUM_DEVICES': '4'
   }, True), ('xla_dist_worker', {
