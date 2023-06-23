@@ -63,9 +63,7 @@ class TestExperimentalPjrt(parameterized.TestCase):
   }, True), ('pjrt_gpu', {
       'PJRT_DEVICE': 'GPU',
       'GPU_NUM_DEVICES': '4'
-  }, True), ('xla_dist_worker', {
-      'XRT_LOCAL_WORKER': 'c_localservice:2'
-  }, False))
+  }, True))
   def test_pjrt_default_device(self, env_vars, expect_using_pjrt):
     with mock.patch.dict(os.environ, env_vars, clear=True):
       # Print a warningif we had to select a default runtime
