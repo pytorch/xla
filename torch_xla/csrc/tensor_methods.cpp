@@ -2791,8 +2791,8 @@ XLATensorPtr view_symint(const XLATensorPtr& input,
                        input_shape);
     return input->CreateViewTensor(std::move(view_info));
   }
-  return input->CreateFrom(torch::lazy::MakeNode<ViewOp>(
-      input->GetIrValue(), result_shape));
+  return input->CreateFrom(
+      torch::lazy::MakeNode<ViewOp>(input->GetIrValue(), result_shape));
 }
 
 XLATensorPtr view_as_complex_copy(const XLATensorPtr& input) {
