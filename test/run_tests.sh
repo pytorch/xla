@@ -108,14 +108,6 @@ function run_xla_backend_mp {
   MASTER_ADDR=localhost MASTER_PORT=6000 run_test "$@"
 }
 
-function run_xrt {
-  if [ -x "$(command -v nvidia-smi)" ] && [ "$XLA_CUDA" != "0" ]; then
-    GPU_NUM_DEVICES=2 run_coverage "$@"
-  else
-    XRT_DEVICE_MAP="CPU:0;/job:localservice/replica:0/task:0/device:XLA_CPU:0" XRT_WORKERS="localservice:0;grpc://localhost:$(shuf -i 40701-40999 -n 1)" run_coverage "$@"
-  fi
-}
-
 function run_torch_op_tests {
   run_dynamic "$CDIR/../../test/test_view_ops.py" "$@" -v TestViewOpsXLA
   run_test_without_functionalization "$CDIR/../../test/test_view_ops.py" "$@" -v TestViewOpsXLA
