@@ -248,6 +248,8 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     t5 = torch.tensor([1, 1, 3, 5, 1, 6], device=dev)
     t6 = torch.nonzero(t5)
     t7 = torch.ones((2, 3), device=dev)
+    # t6.shape=torch.Size([<=6, 1]) with real size [6, 1]
+    # t6 = [[0], [1], [2], [3], [4], [5]]
     t8 = t7.view(t6.shape[0])
     self.assertIsInstance(t8.shape[0], torch.SymInt)
     self.assertEqual(str(t8.shape[0]), '<=6')
