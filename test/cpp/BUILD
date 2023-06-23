@@ -71,16 +71,6 @@ ptxla_cc_test(
 )
 
 ptxla_cc_test(
-    name = "test_op_by_op_executor",
-    srcs = ["test_op_by_op_executor.cpp"],
-    deps = [
-        ":cpp_test_util",
-        "//torch_xla/csrc:tensor",
-        "@com_google_googletest//:gtest_main",
-    ],
-)
-
-ptxla_cc_test(
     name = "test_replication",
     srcs = ["test_replication.cpp"],
     deps = [

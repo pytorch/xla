@@ -40,9 +40,6 @@
 #   TPUVM_MODE=0
 #     whether to build for TPU
 #
-#   DISABLE_XRT=0
-#     whether to exclude XRT from the build
-#
 #   SILO_NAME=""
 #     name of the remote build cache silo
 #

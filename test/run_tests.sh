@@ -116,34 +116,6 @@ function run_xrt {
   fi
 }
 
-function run_opbyop {
-  echo "Running in OpByOp mode: $@"
-  XLA_GET_TENSORS_OPBYOP=1 XLA_SYNC_TENSORS_OPBYOP=1 run_xrt "$@"
-}
-
-function run_async_scalar {
-  echo "Running in Async Scalar Upload mode: $@"
-  XLA_TRANSFER_SCALAR_ASYNC=1 run_xrt "$@"
-}
-
-function run_torchrun {
-  echo "Running tests spawned by torchrun"
-  if [ -x "$(command -v nvidia-smi)" ]; then
-    run_xrt "$@"
-  else
-    echo "the tests need atleast two XLA workers to validate"
-  fi
-}
-
-function run_xrt_tests {
-  # For features not supported in PJRT
-  echo "Running XRT tests"
-  run_xrt "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
-  run_opbyop  "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
-  run_async_scalar  "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
-  run_torchrun  "$CDIR/test_allreduce_torchrun.py"
-}
-
 function run_torch_op_tests {
   run_dynamic "$CDIR/../../test/test_view_ops.py" "$@" -v TestViewOpsXLA
   run_test_without_functionalization "$CDIR/../../test/test_view_ops.py" "$@" -v TestViewOpsXLA
@@ -234,9 +206,6 @@ function run_tests {
   fi
   if [[ "$XLA_SKIP_MP_OP_TESTS" != "1" ]]; then
     run_mp_op_tests
-  fi
-  if [[ "$XLA_SKIP_XRT_TESTS" != "1" ]]; then
-    run_xrt_tests
   fi
 }
 
