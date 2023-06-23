@@ -2,9 +2,7 @@ import torch
 import torch.distributed as dist
 import torch_xla.core.xla_model as xm
 import logging
-from torch._C._distributed_c10d import (
-    ProcessGroup,
-)
+from torch._C._distributed_c10d import ProcessGroup
 
 
 def _create_xla_process_group(prefix_store, rank, size, timeout):
