@@ -246,7 +246,8 @@ class ZeroRedundancyOptimizer(Optimizer):
       self._clip_grad_norm(max_norm=self.max_norm)
 
     # Step the wrapped optimizer
-    loss = self.base_optimizer.step(closure=closure, **kwargs)
+    # Closure already executed, pass none here
+    self.base_optimizer.step(closure=None, **kwargs)
     # Remove shards' grads
     self.base_optimizer.zero_grad(set_to_none=True)
 
