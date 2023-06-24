@@ -1,7 +1,6 @@
 import argparse
 import os
 import sys
-import math
 
 parser = argparse.ArgumentParser(add_help=False)
 parser.add_argument('--verbosity', type=int, default=2)
@@ -13,8 +12,6 @@ import unittest
 import torch
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
-import torchvision
-from torch.autograd import gradcheck
 
 # It enables us to run python implementations of CompositeAutogradImplicit ops.
 # CompositeAutogradImplicit means we don't have an explicit backward formula for an op instead an op is composed of a bunch of ops that do have backward formulas and combines this formulas is equivalent to differentiating the op explicitly.
@@ -52,7 +49,6 @@ class Feedforward(torch.nn.Module):
 )
 class TestDynamicShapeModels(unittest.TestCase):
 
-  @unittest.skip("Broke by functionalization")
   def test_forward_pass_dynamic_input_correctness(self):
     losses = []
     for _ in range(2):
@@ -74,7 +70,6 @@ class TestDynamicShapeModels(unittest.TestCase):
     np.testing.assert_allclose(losses[0], losses[1], rtol=1e-2, atol=1e-2)
     print('Test passed.')
 
-  @unittest.skip("Broke by functionalization")
   def test_forward_pass_dynamic_input_compile_once(self):
     met.clear_metrics()
     num_compilation_recorded = False
@@ -159,114 +154,35 @@ class TestDynamicShapeModels(unittest.TestCase):
     y_test_xla = y_test.to(device)
     y_test_nonzero_dev = torch.nonzero(y_test_xla.int()).float().squeeze()
     return x_test_nonzero_dev, y_test_nonzero_dev
-  
-  def test_roialign_forward(self):
-    device = xla_dev
-    aligned = True
-    # contiguous = True
-    dtype = torch.float64
-    x_dtype, rois_dtype = dtype, dtype
-    pool_size = 5
-    # n_channels % (pool_size ** 2) == 0 required for PS operations.
-    n_channels = 2 * (pool_size**2)
-    x = torch.rand(2, n_channels, 10, 10, dtype=x_dtype, device=device)
-    rois = torch.tensor(
-        [[0, 0, 0, 9, 9], [0, 0, 5, 4, 9], [0, 5, 5, 9, 9]
-        ],  # format is (xyxy)
-        dtype=rois_dtype,
-        device=device,
-    )
 
-    pool_h, pool_w = pool_size, pool_size
-    spatial_scale, sampling_ratio = 1, -1
-    y = torchvision.ops.RoIAlign((pool_h, pool_w),
-                                 spatial_scale=spatial_scale,
-                                 sampling_ratio=sampling_ratio,
-                                 aligned=aligned).to(device)(x, rois)
-    xm.mark_step()
+  def test_roialign(self):
+    # For a python implementation of RoIAlign, refer to https://dev-discuss.pytorch.org/t/a-pure-python-implementation-of-roi-align-that-looks-just-like-its-cuda-kernel/1266
+    # specifically https://gist.github.com/ezyang/813e86ff5b46ae9e41fc1920790e51fc.
+    # Create a feature map with size (1, 256, 16, 16).
+    # This could be an output from a convolutional layer of a CNN
+    features = torch.randn(1, 256, 16, 16, device=xla_dev)
 
-    x_aten = torch.rand(2, n_channels, 10, 10, dtype=x_dtype, device='cpu')
-    rois_aten = torch.tensor(
-        [[0, 0, 0, 9, 9], [0, 0, 5, 4, 9], [0, 5, 5, 9, 9]
-        ],  # format is (xyxy)
-        dtype=rois_dtype,
-        device='cpu',
-    )
-    y_aten = torchvision.ops.RoIAlign((pool_h, pool_w),
-                                 spatial_scale=spatial_scale,
-                                 sampling_ratio=sampling_ratio,
-                                 aligned=aligned)(x_aten, rois_aten)
-    tol = 1e-3 if (x_dtype is torch.half or rois_dtype is torch.half) else 1e-5
-    torch.testing.assert_close(y.to(y_aten), y_aten, rtol=tol, atol=tol)
-    print('test passes')
-    print(met.metrics_report())
+    # Create regions of interest
+    # Each RoI is defined by a tuple (idx, x1, y1, x2, y2)
+    # idx is the index into features indicating which image the RoI belongs to
+    # (x1, y1) and (x2, y2) are the coordinates of the top-left and bottom-right corners of the RoI respectively
+    rois = torch.tensor([[0, 60, 60, 100, 100], [0, 120, 120, 160, 160]],
+                        dtype=torch.float,
+                        device=xla_dev)
 
-  def test_roialign_backward(self):
-    seed = 1
-    #device = 'cpu'
-    device = xla_dev
-    contiguous = True
-    pool_size = 2
-    dtype = torch.float64
-    x = torch.rand(
-        1,
-        2 * (pool_size**2),
-        5,
-        5,
-        dtype=dtype,
-        device=device,
-        requires_grad=True)
-    rois = torch.tensor(
-        [[0, 0, 0, 4, 4], [0, 0, 2, 3, 4], [0, 2, 2, 4, 4]],
-        dtype=dtype,
-        device=device  # format is (xyxy)
-    )
+    # Set output size and spatial scale
+    output_size = (7, 7)
+    spatial_scale = 1.0 / 16.0
 
-    def func(z):
-      return torchvision.ops.RoIAlign((pool_size, pool_size),
-                                      spatial_scale=1,
-                                      sampling_ratio=-1,
-                                      aligned=False).to(device)(z, rois)
+    from torchvision.ops import roi_align as roi_align_torchvision
+    print(
+        roi_align_torchvision(features, rois, output_size, spatial_scale).sum())
 
-    def script_func(x):
-      scripted = torch.jit.script(torchvision.ops.roi_align)
-      return scripted(x, rois, pool_size)
-
-    gradcheck(func, (x,))
-    gradcheck(script_func, (x,))
-    print('test passes')
-    print(met.metrics_report())
-
-def bilinear_interpolate(data, y, x, snap_border=False):
-  height, width = data.shape
-
-  if snap_border:
-    if -1 < y <= 0:
-      y = 0
-    elif height - 1 <= y < height:
-      y = height - 1
-
-    if -1 < x <= 0:
-      x = 0
-    elif width - 1 <= x < width:
-      x = width - 1
-
-  y_low = int(math.floor(y))
-  x_low = int(math.floor(x))
-  y_high = y_low + 1
-  x_high = x_low + 1
-
-  wy_h = y - y_low
-  wx_h = x - x_low
-  wy_l = 1 - wy_h
-  wx_l = 1 - wx_h
-
-  val = 0
-  for wx, xp in zip((wx_l, wx_h), (x_low, x_high)):
-    for wy, yp in zip((wy_l, wy_h), (y_low, y_high)):
-      if 0 <= yp < height and 0 <= xp < width:
-        val += wx * wy * data[yp, xp]
-  return val
+    features = torch.randn(1, 256, 16, 16)
+    rois = torch.tensor([[0, 60, 60, 100, 100], [0, 120, 120, 160, 160]],
+                        dtype=torch.float)
+    print(
+        roi_align_torchvision(features, rois, output_size, spatial_scale).sum())
 
 
 if __name__ == '__main__':
