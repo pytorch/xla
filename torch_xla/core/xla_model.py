@@ -114,10 +114,7 @@ def xrt_world_size(defval=1):
   if _WORLD_SIZE is not None:
     return _WORLD_SIZE
 
-  if runtime.using_pjrt():
-    return runtime.world_size()
-
-  return xu.getenv_as(xenv.WORLD_SIZE, int, defval=defval)
+  return runtime.world_size()
 
 
 def get_ordinal(defval=0):
@@ -137,10 +134,7 @@ def get_ordinal(defval=0):
   if _ORDINAL is not None:
     return _ORDINAL
 
-  if runtime.using_pjrt():
-    return runtime.global_ordinal()
-
-  return xu.getenv_as(xenv.ORDINAL, int, defval=defval)
+  return runtime.global_ordinal()
 
 
 def get_local_ordinal(defval=0):
@@ -156,13 +150,7 @@ def get_local_ordinal(defval=0):
   Returns:
     The replication local ordinal of the current thread.
   """
-  if runtime.using_pjrt():
-    return runtime.local_ordinal()
-
-  ordinal = xu.getenv_as(xenv.LOCAL_ORDINAL, int, defval=-1)
-  if ordinal >= 0:
-    return ordinal
-  return getattr(_get_device_context(), 'device_index', defval)
+  return runtime.local_ordinal()
 
 
 def is_master_ordinal(local=True):
@@ -205,20 +193,7 @@ def xla_device(n=None, devkind=None):
     torch_xla._XLAC._xla_set_default_device(device)
     return torch.device(device)
 
-  if runtime.using_pjrt():
-    return runtime.xla_device(n, devkind)
-
-  if n is None:
-    devices = get_xla_supported_devices(devkind=devkind)
-    assert devices, 'No devices of {} kind'.format(devkind or 'ANY')
-    # This is a utility API mainly called from tests or simple code which wants
-    # to just have a single device to run on. Set the default device so that
-    # the tensor barrier can work correctly and avoid growing graphs surprises.
-    device = devices[0]
-  else:
-    device = 'xla:{}'.format(n)
-  torch_xla._XLAC._xla_set_default_device(device)
-  return torch.device(device)
+  return runtime.xla_device(n, devkind)
 
 
 def _xla_real_device(device):
@@ -1100,10 +1075,7 @@ def rendezvous(tag, payload=b'', replicas=[]):
     The payloads exchanged by all the other cores, with the payload of core
     ordinal `i` at position `i` in the returned tuple.
   """
-  if runtime.using_pjrt():
-    return xla_rendezvous(payload, replicas or None, tag=tag)
-
-  return torch_xla._XLAC._xla_rendezvous(get_ordinal(), tag, payload, replicas)
+  return xla_rendezvous(payload, replicas or None, tag=tag)
 
 
 def do_on_ordinals(target, data=(), ordinals=(0,)):
