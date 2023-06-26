@@ -40,15 +40,5 @@ ComputationClient* GetComputationClientIfInitialized() {
   return g_computation_client.load();
 }
 
-<<<<<<< HEAD
-=======
-void RunLocalService(uint64_t service_port) {
-#ifndef DISABLE_XRT
-#else
-  XLA_ERROR() << "PyTorch/XLA was not built with XRT support." << std::endl;
-#endif
-}
-
->>>>>>> no xrt
 }  // namespace runtime
 }  // namespace torch_xla
