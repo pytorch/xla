@@ -61,8 +61,6 @@ ptxla_cc_library(
         "torch_util.cpp",
         "view.cpp",
         "xla_backend_impl.cpp",
-        "xla_custom_call.cpp",
-	"xla_custom_call.cu",
         "xla_graph_executor.cpp",
         "xla_lower_util.cpp",
         "xla_op_builder.cpp",
@@ -343,4 +341,10 @@ ptxla_cc_library(
         "//third_party/xla_client:computation_client",
         "@com_google_absl//absl/types:span",
     ],
+)
+
+ptxla_cc_library(
+    name="custom_call",
+    srcs = ["xla_custom_call.cpp"],
+    hdrs = ["xla_custom_call.h"],
 )

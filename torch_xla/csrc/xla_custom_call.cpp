@@ -19,4 +19,3 @@ void argmin_custom(void* out, const void** in) {
   out_buf[0] = min_idx;
 }
 
-
