@@ -6,7 +6,8 @@
 namespace torch_xla {
 namespace runtime {
 
-std::string hloToStablehlo(const xla::HloModuleProto* proto, bool emit_bytecode);
+std::string hloToStablehlo(const xla::HloModuleProto* proto,
+                           bool emit_bytecode);
 
 }  // namespace runtime
 }  // namespace torch_xla
