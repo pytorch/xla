@@ -432,10 +432,7 @@
   <span class="k">if</span> <span class="n">_WORLD_SIZE</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
     <span class="k">return</span> <span class="n">_WORLD_SIZE</span>
 
-  <span class="k">if</span> <span class="n">runtime</span><span class="o">.</span><span class="n">using_pjrt</span><span class="p">():</span>
-    <span class="k">return</span> <span class="n">runtime</span><span class="o">.</span><span class="n">world_size</span><span class="p">()</span>
-
-  <span class="k">return</span> <span class="n">xu</span><span class="o">.</span><span class="n">getenv_as</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">WORLD_SIZE</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="n">defval</span><span class="o">=</span><span class="n">defval</span><span class="p">)</span></div>
+  <span class="k">return</span> <span class="n">runtime</span><span class="o">.</span><span class="n">world_size</span><span class="p">()</span></div>
 
 
 <div class="viewcode-block" id="get_ordinal"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.get_ordinal">[docs]</a><span class="k">def</span> <span class="nf">get_ordinal</span><span class="p">(</span><span class="n">defval</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
@@ -455,10 +452,7 @@
   <span class="k">if</span> <span class="n">_ORDINAL</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
     <span class="k">return</span> <span class="n">_ORDINAL</span>
 
-  <span class="k">if</span> <span class="n">runtime</span><span class="o">.</span><span class="n">using_pjrt</span><span class="p">():</span>
-    <span class="k">return</span> <span class="n">runtime</span><span class="o">.</span><span class="n">global_ordinal</span><span class="p">()</span>
-
-  <span class="k">return</span> <span class="n">xu</span><span class="o">.</span><span class="n">getenv_as</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">ORDINAL</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="n">defval</span><span class="o">=</span><span class="n">defval</span><span class="p">)</span></div>
+  <span class="k">return</span> <span class="n">runtime</span><span class="o">.</span><span class="n">global_ordinal</span><span class="p">()</span></div>
 
 
 <div class="viewcode-block" id="get_local_ordinal"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.get_local_ordinal">[docs]</a><span class="k">def</span> <span class="nf">get_local_ordinal</span><span class="p">(</span><span class="n">defval</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
@@ -474,13 +468,7 @@
 <span class="sd">  Returns:</span>
 <span class="sd">    The replication local ordinal of the current thread.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
-  <span class="k">if</span> <span class="n">runtime</span><span class="o">.</span><span class="n">using_pjrt</span><span class="p">():</span>
-    <span class="k">return</span> <span class="n">runtime</span><span class="o">.</span><span class="n">local_ordinal</span><span class="p">()</span>
-
-  <span class="n">ordinal</span> <span class="o">=</span> <span class="n">xu</span><span class="o">.</span><span class="n">getenv_as</span><span class="p">(</span><span class="n">xenv</span><span class="o">.</span><span class="n">LOCAL_ORDINAL</span><span class="p">,</span> <span class="nb">int</span><span class="p">,</span> <span class="n">defval</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
-  <span class="k">if</span> <span class="n">ordinal</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
-    <span class="k">return</span> <span class="n">ordinal</span>
-  <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">_get_device_context</span><span class="p">(),</span> <span class="s1">&#39;device_index&#39;</span><span class="p">,</span> <span class="n">defval</span><span class="p">)</span></div>
+  <span class="k">return</span> <span class="n">runtime</span><span class="o">.</span><span class="n">local_ordinal</span><span class="p">()</span></div>
 
 
 <div class="viewcode-block" id="is_master_ordinal"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.is_master_ordinal">[docs]</a><span class="k">def</span> <span class="nf">is_master_ordinal</span><span class="p">(</span><span class="n">local</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
@@ -523,20 +511,7 @@
     <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_set_default_device</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
 
-  <span class="k">if</span> <span class="n">runtime</span><span class="o">.</span><span class="n">using_pjrt</span><span class="p">():</span>
-    <span class="k">return</span> <span class="n">runtime</span><span class="o">.</span><span class="n">xla_device</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">devkind</span><span class="p">)</span>
-
-  <span class="k">if</span> <span class="n">n</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="n">devices</span> <span class="o">=</span> <span class="n">get_xla_supported_devices</span><span class="p">(</span><span class="n">devkind</span><span class="o">=</span><span class="n">devkind</span><span class="p">)</span>
-    <span class="k">assert</span> <span class="n">devices</span><span class="p">,</span> <span class="s1">&#39;No devices of </span><span class="si">{}</span><span class="s1"> kind&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">devkind</span> <span class="ow">or</span> <span class="s1">&#39;ANY&#39;</span><span class="p">)</span>
-    <span class="c1"># This is a utility API mainly called from tests or simple code which wants</span>
-    <span class="c1"># to just have a single device to run on. Set the default device so that</span>
-    <span class="c1"># the tensor barrier can work correctly and avoid growing graphs surprises.</span>
-    <span class="n">device</span> <span class="o">=</span> <span class="n">devices</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-  <span class="k">else</span><span class="p">:</span>
-    <span class="n">device</span> <span class="o">=</span> <span class="s1">&#39;xla:</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
-  <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_set_default_device</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
-  <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="n">device</span><span class="p">)</span></div>
+  <span class="k">return</span> <span class="n">runtime</span><span class="o">.</span><span class="n">xla_device</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">devkind</span><span class="p">)</span></div>
 
 
 <span class="k">def</span> <span class="nf">_xla_real_device</span><span class="p">(</span><span class="n">device</span><span class="p">):</span>
@@ -1418,10 +1393,7 @@
 <span class="sd">    The payloads exchanged by all the other cores, with the payload of core</span>
 <span class="sd">    ordinal `i` at position `i` in the returned tuple.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
-  <span class="k">if</span> <span class="n">runtime</span><span class="o">.</span><span class="n">using_pjrt</span><span class="p">():</span>
-    <span class="k">return</span> <span class="n">xla_rendezvous</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">replicas</span> <span class="ow">or</span> <span class="kc">None</span><span class="p">,</span> <span class="n">tag</span><span class="o">=</span><span class="n">tag</span><span class="p">)</span>
-
-  <span class="k">return</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_rendezvous</span><span class="p">(</span><span class="n">get_ordinal</span><span class="p">(),</span> <span class="n">tag</span><span class="p">,</span> <span class="n">payload</span><span class="p">,</span> <span class="n">replicas</span><span class="p">)</span></div>
+  <span class="k">return</span> <span class="n">xla_rendezvous</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">replicas</span> <span class="ow">or</span> <span class="kc">None</span><span class="p">,</span> <span class="n">tag</span><span class="o">=</span><span class="n">tag</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="do_on_ordinals"><a class="viewcode-back" href="../../../index.html#torch_xla.core.xla_model.do_on_ordinals">[docs]</a><span class="k">def</span> <span class="nf">do_on_ordinals</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="p">(),</span> <span class="n">ordinals</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,)):</span>
