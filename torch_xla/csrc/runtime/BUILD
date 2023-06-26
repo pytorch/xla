@@ -45,6 +45,7 @@ cc_library(
     ":env_vars",
     ":pjrt_computation_client",
     "@tsl//tsl/platform:stacktrace",
+  ],
 )
 
 cc_library(
