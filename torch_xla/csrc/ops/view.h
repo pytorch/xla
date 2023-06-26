@@ -10,6 +10,7 @@ namespace torch_xla {
 class ViewOp : public XlaNode {
  public:
   ViewOp(const torch::lazy::Value& input, std::vector<int64_t> output_size);
+  ViewOp(const torch::lazy::Value& input, xla::Shape output_shape);
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

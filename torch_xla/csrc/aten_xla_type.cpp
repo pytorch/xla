@@ -3758,7 +3758,9 @@ at::Tensor XLANativeFunctions::expand_symint(const at::Tensor& self,
 
 at::Tensor XLANativeFunctions::view_symint(const at::Tensor& self,
                                            at::SymIntArrayRef sym_size) {
-  // TODO: support symbolic sizes
+  // Dynamic shape is only supported when the functionalization is enabled.
+  // So only the functionalization version of this function view_copy_symint
+  // support dynamic shape.
   auto size = C10_AS_INTARRAYREF_SLOW(sym_size);
   TORCH_LAZY_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(tensor_methods::view(

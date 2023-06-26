@@ -3,10 +3,10 @@
 
 #include <string>
 
+#include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "tensorflow/compiler/xla/xla_data.pb.h"
 #include "tensorflow/tsl/lib/gtl/inlined_vector.h"
 #include "tensorflow/tsl/platform/stringpiece.h"
-#include "tensorflow/compiler/xla/client/xla_builder.h"
 
 namespace torch_xla {
 
@@ -137,8 +137,8 @@ struct ConvOpAttrs {
 
 // -------------Convolution Helper Data Structure End-------------------------
 
-// -------------Convolution Helper Function Start------------------------- 
-// Convolution helper functions below are copied from TF2XLA bridge 
+// -------------Convolution Helper Function Start-------------------------
+// Convolution helper functions below are copied from TF2XLA bridge
 // This part of helpers are origionally from
 // https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/core/util/tensor_format.h
 
@@ -236,8 +236,9 @@ inline int GetTensorSpatialDimIndex(int num_dims, TensorFormat format,
 tsl::Status ConvBackpropComputeDimensionsV2(
     tsl::StringPiece label, int num_spatial_dims, const xla::Shape& input_shape,
     const xla::Shape& filter_shape, const xla::Shape& out_backprop_shape,
-    absl::Span<const tsl::int32> dilations, const std::vector<tsl::int32>& strides,
-    Padding padding, TensorFormat data_format, ConvBackpropDimensions* dims,
+    absl::Span<const tsl::int32> dilations,
+    const std::vector<tsl::int32>& strides, Padding padding,
+    TensorFormat data_format, ConvBackpropDimensions* dims,
     absl::Span<const int64_t> explicit_paddings);
 
 // This part of helpers are origionally from
@@ -245,18 +246,17 @@ tsl::Status ConvBackpropComputeDimensionsV2(
 
 // Wrapper for ConvGeneralDilated with checking dims.
 tsl::StatusOr<xla::XlaOp> MakeXlaBackpropInputConvOp(
-    tsl::StringPiece type_string, const xla::Shape& input_shape, xla::XlaOp filter,
-    xla::XlaOp out_backprop, const ConvOpAttrs& attrs,
+    tsl::StringPiece type_string, const xla::Shape& input_shape,
+    xla::XlaOp filter, xla::XlaOp out_backprop, const ConvOpAttrs& attrs,
     xla::XlaOp* input_sizes = nullptr);
 
 // Wrapper for ConvGeneralDilated with checking dims.
-tsl::StatusOr<xla::XlaOp> MakeXlaBackpropFilterConvOp(tsl::StringPiece type_string,
-                                                 xla::XlaOp activations,
-                                                 const xla::Shape& filter_shape,
-                                                 xla::XlaOp gradients,
-                                                 const ConvOpAttrs& attrs);
+tsl::StatusOr<xla::XlaOp> MakeXlaBackpropFilterConvOp(
+    tsl::StringPiece type_string, xla::XlaOp activations,
+    const xla::Shape& filter_shape, xla::XlaOp gradients,
+    const ConvOpAttrs& attrs);
 
-// -------------Convolution Helper Function End------------------------- 
+// -------------Convolution Helper Function End-------------------------
 
 }  // namespace torch_xla
 

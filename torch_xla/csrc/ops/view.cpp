@@ -31,6 +31,15 @@ ViewOp::ViewOp(const torch::lazy::Value& input,
               /*num_outputs=*/1, torch::lazy::MHash(output_size)),
       output_size_(std::move(output_size)) {}
 
+ViewOp::ViewOp(const torch::lazy::Value& input, xla::Shape output_shape)
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::view), {input}, output_shape,
+          /*num_outputs=*/1,
+          torch::lazy::MHash(
+              torch::lazy::ToVector<int64_t>(output_shape.dimensions()),
+              torch::lazy::ToVector<bool>(output_shape.dynamic_dimensions()))),
+      output_size_(torch::lazy::ToVector<int64_t>(output_shape.dimensions())) {}
+
 XlaOpVector ViewOp::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp output = BuildView(input, output_size_);
