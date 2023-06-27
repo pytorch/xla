@@ -252,7 +252,7 @@ class BuildBazelExtension(command.build_ext.build_ext):
 
     # Remote cache authentication.
     print("check GCLOUD_KEY_FILE: {}".format(GCLOUD_KEY_FILE))
-    if not GCLOUD_KEY_FILE:
+    if GCLOUD_KEY_FILE:
       if _check_env_flag('BAZEL_REMOTE_CACHE'):
         bazel_argv.append('--config=remote_cache')
 
