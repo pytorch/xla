@@ -1,10 +1,9 @@
-- name: Retrieve status of setup.py files in PyTorch, torchvision, and XLA repos
+- name: Retrieve status of setup.py files in XLA and PyTorch repos
   ansible.builtin.stat:
     path: "{{ item }}"
   register: _res
   loop:
     - "{{ (src_root, 'pytorch/setup.py') | path_join }}"
-    - "{{ (src_root, 'pytorch/vision/setup.py') | path_join }}"
     - "{{ (src_root, 'pytorch/xla/setup.py') | path_join }}"
 
 - name: Assert that setup.py files exist

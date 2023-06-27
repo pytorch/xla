@@ -17,24 +17,6 @@
     name: "{{ pytorch_wheels.files | map(attribute='path') }}"
     state: "forcereinstall"
 
-- name: Build torchvision
-  ansible.builtin.command:
-    cmd: python setup.py bdist_wheel
-    chdir: "{{ (src_root, 'pytorch/vision') | path_join }}"
-    creates: "{{ (src_root, 'pytorch/vision/dist/*.whl') | path_join }}"
-  environment: "{{ env_vars }}"
-
-- name: Find torchvision *.whl files in pytorch/vision/dist
-  ansible.builtin.find:
-    path: "{{ (src_root, 'pytorch/vision/dist') | path_join }}"
-    pattern: "*.whl"
-  register: torchvision_wheels
-
-- name: Install torchvision wheels
-  ansible.builtin.pip:
-    name: "{{ torchvision_wheels.files | map(attribute='path') }}"
-    state: "forcereinstall"
-
 - name: Check if build_torch_xla_libs.sh script exists
   stat:
     path: "{{ (src_root, 'pytorch/xla/build_torch_xla_libs.sh') | path_join }}"
@@ -90,7 +72,6 @@
     chdir: "{{ item.dir }}"
   loop:
     - { dir: "{{ (src_root, 'pytorch/dist') | path_join }}", prefix: "torch" }
-    - { dir: "{{ (src_root, 'pytorch/vision/dist') | path_join }}", prefix: "torchvision" }
     - { dir: "{{ (src_root, 'pytorch/xla/dist') | path_join }}", prefix: "torch_xla" }
   when: nightly_release
 
@@ -100,7 +81,6 @@
     executable: /bin/bash
   loop:
     - "{{ (src_root, 'pytorch/dist') | path_join }}"
-    - "{{ (src_root, 'pytorch/vision/dist') | path_join }}"
     - "{{ (src_root, 'pytorch/xla/dist') | path_join }}"
 
 - name: Delete temp directory
