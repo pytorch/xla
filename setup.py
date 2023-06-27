@@ -254,6 +254,9 @@ class BuildBazelExtension(command.build_ext.build_ext):
     gclout_key_file_size = os.path.getsize(GCLOUD_KEY_FILE)
     # Temporary workaround to allow PRs from forked repo to run CI. See details at (#5259).
     # TODO: Remove the check once self-hosted GHA workers are avaialble to CPU/GPU CI.
+    print("check GCLOUD_KEY_FILE: {}".format(GCLOUD_KEY_FILE))
+    print("check if file exists: {}".format(os.path.exists(GCLOUD_KEY_FILE)))
+    print("check size: {}".format(os.path.getsize(GCLOUD_KEY_FILE)))
     if gclout_key_file_size > 1:
       if _check_env_flag('BAZEL_REMOTE_CACHE'):
         bazel_argv.append('--config=remote_cache')
