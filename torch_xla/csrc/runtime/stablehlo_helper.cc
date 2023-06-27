@@ -39,7 +39,8 @@ static std::string getMlirModuleBytecode(const mlir::ModuleOp& mlir_module) {
   std::string txt_mlir_module;
   llvm::raw_string_ostream os{txt_mlir_module};
   // TODO(qihqi): pass in version
-  auto result = mlir::stablehlo::serializePortableArtifact(mlir_module, /* target_version = */"current", os);
+  auto result = mlir::stablehlo::serializePortableArtifact(
+      mlir_module, /* target_version = */ "current", os);
   XLA_CHECK(result.succeeded()) << "Serializing StableHLO Failed";
   return txt_mlir_module;
 }
@@ -77,7 +78,8 @@ static absl::Status mhloToStablehloHelper(mlir::ModuleOp* mlir_module,
   ;
 }
 
-std::string hloToStablehlo(const xla::HloModuleProto* proto, bool emit_bytecode) {
+std::string hloToStablehlo(const xla::HloModuleProto* proto,
+                           bool emit_bytecode) {
   mlir::MLIRContext context;
   mlir::ModuleOp mlir_module =
       mlir::ModuleOp::create(mlir::UnknownLoc::get(&context));
@@ -97,7 +99,6 @@ std::string hloToStablehlo(const xla::HloModuleProto* proto, bool emit_bytecode)
     return getMlirModuleStr(mlir_module);
   }
 }
-
 
 }  // namespace runtime
 }  // namespace torch_xla

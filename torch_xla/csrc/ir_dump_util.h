@@ -11,11 +11,10 @@
 namespace torch_xla {
 
 enum class EmitMode {
-    kHloReadable,
-    kStableHloReadable,
-    kStableHloBytecode,
+  kHloReadable,
+  kStableHloReadable,
+  kStableHloBytecode,
 };
-
 
 class DumpUtil {
  public:
