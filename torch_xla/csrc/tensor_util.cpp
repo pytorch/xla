@@ -601,7 +601,8 @@ torch::lazy::BackendDataPtr TensorToXlaData(
     const torch::lazy::BackendDevice& device) {
   TORCH_LAZY_TIMED("TensorToData");
   if (ShardingUtil::UseVirtualDevice()) {
-    if (device.type() == (int8_t)XlaDeviceType::SPMD) {
+    // Scalar value will be replicated, no need to delay the transfer here.
+    if (device.type() == (int8_t)XlaDeviceType::SPMD && shape.rank() > 0) {
       // When SPMD is enabled, we want to delay the data transfer for XLA
       // tensors until the data is sharded. So, we skip the data transfer
       // here and simply return a placeholder for the backend data ptr.
