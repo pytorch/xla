@@ -437,8 +437,6 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
           device_assignment);
     }
 
-    xla::PjRtDevice* pjrt_device =
-        StringToPjRtDevice(instance.compilation_device);
     std::unique_ptr<xla::PjRtLoadedExecutable> executable =
         ConsumeValue(client_->Compile(instance.computation, compile_options));
 
