@@ -1244,6 +1244,12 @@ at::Tensor XLANativeFunctions::empty_strided_symint(
   at::Tensor t =
       empty_symint(sym_size, dtype, layout, device, pin_memory, c10::nullopt);
   if (is_size_dynamic || is_stride_dynamic) {
+    // As XLATensor doesn't have a storage, it should not care about the memory
+    // format or how to jump to the next element (strides). So the term stride
+    // does not mean much to us. The size of the tensor has been set by the
+    // above `empty_symint` so we feel it is ok to return here. The reason why
+    // we only do it for dynamic size/stride is to limit the change and preserve
+    // the old behavior.
     return t;
   } else {
     return torch_xla::XLANativeFunctions::as_strided_copy(t, size.value(),
