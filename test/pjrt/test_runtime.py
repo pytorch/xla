@@ -43,6 +43,9 @@ class TestExperimentalPjrt(parameterized.TestCase):
     self.assertLen(torch_xla._XLAC._xla_get_all_devices(),
                    xr.global_device_count())
 
+  def test_world_size(self):
+    self.assertEqual(xm.xrt_world_size(), xr.world_size())
+
   def test_xla_device_error(self):
     with self.assertRaises(IndexError):
       xm.xla_device(10)
