@@ -81,6 +81,10 @@ XLATensorImpl::XLATensorImpl(XLATensor&& tensor)
     key_set_ = (key_set_ - autocast_xla_ks) | autocast_cuda_ks;
   }
   is_non_overlapping_and_dense_ = false;
+  const_cast<XLATensorImpl*>(this)->SetupSizeProperties();
+  set_sizes_and_strides(
+      c10::SymIntArrayRef(sym_sizes_.data(), sym_sizes_.size()),
+      c10::fromIntArrayRefSlow(strides_default()));
   set_custom_sizes_strides(SizesStridesPolicy::CustomSizes);
 }
 
