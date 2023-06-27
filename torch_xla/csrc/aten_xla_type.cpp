@@ -1237,12 +1237,25 @@ at::Tensor XLANativeFunctions::empty_strided_symint(
     c10::optional<at::ScalarType> dtype, c10::optional<at::Layout> layout,
     c10::optional<at::Device> device, c10::optional<bool> pin_memory) {
   TORCH_LAZY_FN_COUNTER("xla::");
-  auto size = C10_AS_INTARRAYREF_SLOW(sym_size);
-  auto stride = C10_AS_INTARRAYREF_SLOW(sym_stride);
+  c10::optional<at::IntArrayRef> size = c10::asIntArrayRefSlowOpt(sym_size);
+  bool is_size_dynamic = !size.has_value();
+  c10::optional<at::IntArrayRef> stride = c10::asIntArrayRefSlowOpt(sym_stride);
+  bool is_stride_dynamic = !stride.has_value();
   at::Tensor t =
       empty_symint(sym_size, dtype, layout, device, pin_memory, c10::nullopt);
-  return torch_xla::XLANativeFunctions::as_strided_copy(t, size, stride,
-                                                        /*storage_offset=*/0);
+  if (is_size_dynamic || is_stride_dynamic) {
+    // As XLATensor doesn't have a storage, it should not care about the memory
+    // format or how to jump to the next element (strides). So the term stride
+    // does not mean much to us. The size of the tensor has been set by the
+    // above `empty_symint` so we feel it is ok to return here. The reason why
+    // we only do it for dynamic size/stride is to limit the change and preserve
+    // the old behavior.
+    return t;
+  } else {
+    return torch_xla::XLANativeFunctions::as_strided_copy(t, size.value(),
+                                                          stride.value(),
+                                                          /*storage_offset=*/0);
+  }
 }
 
 at::Tensor XLANativeFunctions::expand_copy_symint(const at::Tensor& self,
