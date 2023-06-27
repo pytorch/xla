@@ -251,6 +251,8 @@ class BuildBazelExtension(command.build_ext.build_ext):
       bazel_argv.append('--config=tpu')
 
     # Remote cache authentication.
+    if not GCLOUD_KEY_FILE:
+      os.environ['BAZEL_REMOTE_CACHE'] = 0
     if _check_env_flag('BAZEL_REMOTE_CACHE'):
       bazel_argv.append('--config=remote_cache')
 
