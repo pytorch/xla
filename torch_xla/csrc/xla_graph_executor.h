@@ -18,6 +18,7 @@
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir.h"
+#include "torch_xla/csrc/ir_dump_util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/runtime/async_task.h"
 #include "torch_xla/csrc/runtime/cache.h"
@@ -27,7 +28,6 @@
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/view.h"
-#include "torch_xla/csrc/ir_dump_util.h"
 
 namespace torch_xla {
 
