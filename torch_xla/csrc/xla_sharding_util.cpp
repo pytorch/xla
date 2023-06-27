@@ -162,7 +162,8 @@ bool ShardingUtil::SetHloSharding(LoweringContext* lowering_ctx) {
     const torch::lazy::Node* node = elem.first.node;
     const XlaNode* xla_node = dynamic_cast<const XlaNode*>(node);
     auto instruction = XlaBuilderFriend::GetInstruction(elem.second);
-    if (xla_node->GetSharding() != nullptr && xla_node->xla_shape().rank() > 0) {
+    if (xla_node->GetSharding() != nullptr &&
+        xla_node->xla_shape().rank() > 0) {
       *instruction->mutable_sharding() = *xla_node->GetSharding();
       is_sharded = true;
     }
