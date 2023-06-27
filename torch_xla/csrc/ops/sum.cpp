@@ -56,7 +56,7 @@ torch::lazy::NodePtr Sum::Clone(torch::lazy::OpList operands) const {
 
 XlaOpVector Sum::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
-
+  std::cout << "Calling custom sum" << std::endl;
   std::string call_target_name = "do_custom_gpu_call";
   std::vector<xla::XlaOp> operands = {input, input};
   xla::Shape shape = xla::ShapeUtil::MakeShape(xla::F32, {2048});

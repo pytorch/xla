@@ -1,4 +1,12 @@
 load(
+    "@org_tensorflow//tensorflow/tsl/platform/default:cuda_build_defs.bzl",
+    "if_cuda_is_configured",
+)
+
+load("@rules_cuda//cuda:defs.bzl", "cuda_library")
+
+
+load(
     "//bazel:rules_def.bzl",
     "ptxla_cc_library",
 )
@@ -100,7 +108,6 @@ ptxla_cc_library(
         "torch_util.h",
         "view.h",
         "xla_backend_impl.h",
-        "xla_custom_call.h",
         "xla_graph_executor.h",
         "xla_lower_util.h",
         "xla_op_builder.h",
@@ -112,6 +119,7 @@ ptxla_cc_library(
     deps = [
         ":aten_cpu_fallback",
         ":computation",
+        ":cpu_custom",
         ":device",
         ":einsum_utilities",
         ":ir",
@@ -154,7 +162,7 @@ ptxla_cc_library(
         "@org_tensorflow//tensorflow/core/profiler/lib:traceme",
         "@org_tensorflow//third_party/python_runtime:headers",
         "@pybind11//:pybind11_embed",  # libpyton
-    ],
+    ]
 )
 
 ptxla_cc_library(
@@ -167,6 +175,23 @@ ptxla_cc_library(
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:optional",
         "@org_tensorflow//tensorflow/compiler/xla/client:xla_builder",
+    ],
+)
+
+ptxla_cc_library(
+    name = "cpu_custom",
+    srcs = ["xla_custom_call.cpp"],
+    hdrs = ["xla_custom_call.h"],
+    deps = [
+        "@org_tensorflow//tensorflow/compiler/xla/service:custom_call_target_registry",
+    ],
+)
+
+cuda_library(
+    name = "gpu_custom",
+    srcs = ["xla_custom_gpu_call.cu.cc"], 
+    deps = ["@org_tensorflow//tensorflow/compiler/jit:xla_gpu_device",
+        "@org_tensorflow//tensorflow/compiler/xla/stream_executor:cuda_platform",
     ],
 )
 
@@ -343,8 +368,3 @@ ptxla_cc_library(
     ],
 )
 
-ptxla_cc_library(
-    name="custom_call",
-    srcs = ["xla_custom_call.cpp"],
-    hdrs = ["xla_custom_call.h"],
-)
