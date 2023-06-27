@@ -6,13 +6,13 @@
 #include <stdexcept>
 #include <thread>
 
-#include "xla/shape_util.h"
-#include "xla/util.h"
-#include "tsl/platform/errors.h"
-#include "tsl/platform/stacktrace.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
 #include "torch_xla/csrc/runtime/util.h"
+#include "tsl/platform/errors.h"
+#include "tsl/platform/stacktrace.h"
+#include "xla/shape_util.h"
+#include "xla/util.h"
 
 namespace torch_xla {
 namespace runtime {

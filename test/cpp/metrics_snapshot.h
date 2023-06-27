@@ -7,8 +7,8 @@
 #include <unordered_set>
 #include <vector>
 
-#include "xla/types.h"
 #include "torch_xla/csrc/runtime/metrics.h"
+#include "xla/types.h"
 
 namespace torch_xla {
 namespace cpp_test {

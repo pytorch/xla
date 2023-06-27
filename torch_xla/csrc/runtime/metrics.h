@@ -9,8 +9,8 @@
 #include <vector>
 
 #include "absl/strings/str_cat.h"
-#include "xla/types.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
+#include "xla/types.h"
 
 namespace torch_xla {
 namespace runtime {

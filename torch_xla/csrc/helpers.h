@@ -12,13 +12,13 @@
 
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/util.h"
+#include "tsl/platform/bfloat16.h"
 #include "xla/client/xla_builder.h"
 #include "xla/literal_util.h"
 #include "xla/permutation_util.h"
 #include "xla/types.h"
-#include "tsl/platform/bfloat16.h"
-#include "torch_xla/csrc/runtime/debug_macros.h"
-#include "torch_xla/csrc/runtime/util.h"
 
 namespace torch_xla {
 

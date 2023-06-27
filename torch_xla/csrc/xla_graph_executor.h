@@ -10,9 +10,6 @@
 #include <string>
 #include <unordered_map>
 
-#include "xla/client/xla_builder.h"
-#include "xla/status.h"
-#include "xla/types.h"
 #include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/cross_replica_reduces.h"
 #include "torch_xla/csrc/debug_util.h"
@@ -28,6 +25,9 @@
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/view.h"
+#include "xla/client/xla_builder.h"
+#include "xla/status.h"
+#include "xla/types.h"
 
 namespace torch_xla {
 

@@ -11,13 +11,13 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
-#include "xla/client/xla_computation.h"
-#include "xla/literal_util.h"
-#include "xla/types.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/metrics.h"
 #include "torch_xla/csrc/runtime/types.h"
 #include "torch_xla/csrc/runtime/util.h"
+#include "xla/client/xla_computation.h"
+#include "xla/literal_util.h"
+#include "xla/types.h"
 
 namespace torch_xla {
 namespace runtime {

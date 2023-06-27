@@ -8,6 +8,13 @@
 #include "absl/strings/ascii.h"
 #include "absl/types/span.h"
 #include "pjrt_computation_client.h"
+#include "torch_xla/csrc/runtime/computation_client.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/env_vars.h"
+#include "torch_xla/csrc/runtime/multi_wait.h"
+#include "torch_xla/csrc/runtime/tf_logging.h"
+#include "torch_xla/csrc/runtime/thread_pool.h"
+#include "tsl/profiler/lib/traceme.h"
 #include "xla/client/xla_builder.h"
 #include "xla/client/xla_computation.h"
 #include "xla/layout_util.h"
@@ -21,13 +28,6 @@
 #include "xla/pjrt/tfrt_cpu_pjrt_client.h"
 #include "xla/pjrt/tpu_client.h"
 #include "xla/shape.h"
-#include "tsl/profiler/lib/traceme.h"
-#include "torch_xla/csrc/runtime/computation_client.h"
-#include "torch_xla/csrc/runtime/debug_macros.h"
-#include "torch_xla/csrc/runtime/env_vars.h"
-#include "torch_xla/csrc/runtime/multi_wait.h"
-#include "torch_xla/csrc/runtime/tf_logging.h"
-#include "torch_xla/csrc/runtime/thread_pool.h"
 
 namespace torch_xla {
 namespace runtime {

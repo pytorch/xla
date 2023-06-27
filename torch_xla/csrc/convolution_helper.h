@@ -3,10 +3,10 @@
 
 #include <string>
 
-#include "xla/xla_data.pb.h"
 #include "tsl/lib/gtl/inlined_vector.h"
 #include "tsl/platform/stringpiece.h"
 #include "xla/client/xla_builder.h"
+#include "xla/xla_data.pb.h"
 
 namespace torch_xla {
 

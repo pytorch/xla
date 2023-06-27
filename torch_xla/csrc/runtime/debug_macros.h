@@ -1,9 +1,9 @@
 #ifndef XLA_CLIENT_DEBUG_MACROS_H_
 #define XLA_CLIENT_DEBUG_MACROS_H_
 
-#include "xla/statusor.h"
-#include "tsl/platform/stacktrace.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
+#include "tsl/platform/stacktrace.h"
+#include "xla/statusor.h"
 
 #define XLA_ERROR() TF_ERROR_STREAM()
 #define XLA_CHECK(c) TF_CHECK(c) << "\n" << tsl::CurrentStackTrace()

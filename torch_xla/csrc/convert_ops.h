@@ -4,9 +4,9 @@
 #include <c10/core/ScalarType.h>
 #include <c10/util/Optional.h>
 
+#include "torch_xla/csrc/device.h"
 #include "xla/client/xla_builder.h"
 #include "xla/types.h"
-#include "torch_xla/csrc/device.h"
 
 namespace torch_xla {
 
