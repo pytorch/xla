@@ -33,7 +33,6 @@ xrt_nightly_builds = [
   },
 ]
 
-
 # Built on push to specific tag.
 versioned_builds = [
   {
