@@ -251,18 +251,18 @@ class BuildBazelExtension(command.build_ext.build_ext):
       bazel_argv.append('--config=tpu')
 
     # Remote cache authentication.
-    # if not GCLOUD_KEY_FILE:
-    #   os.environ['BAZEL_REMOTE_CACHE'] = 0
-    # if _check_env_flag('BAZEL_REMOTE_CACHE'):
-    #   bazel_argv.append('--config=remote_cache')
+    print("check GCLOUD_KEY_FILE: {}".format(GCLOUD_KEY_FILE))
+    if not GCLOUD_KEY_FILE:
+      if _check_env_flag('BAZEL_REMOTE_CACHE'):
+        bazel_argv.append('--config=remote_cache')
 
-    # if GCLOUD_KEY_FILE:
-    #   bazel_argv.append('--google_credentials=%s' % GCLOUD_KEY_FILE)
-    #   if not _check_env_flag('BAZEL_REMOTE_CACHE'):
-    #     bazel_argv.append('--config=remote_cache')
-    # if CACHE_SILO_NAME:
-    #   bazel_argv.append('--remote_default_exec_properties=cache-silo-key=%s' %
-    #                     CACHE_SILO_NAME)
+      if GCLOUD_KEY_FILE:
+        bazel_argv.append('--google_credentials=%s' % GCLOUD_KEY_FILE)
+        if not _check_env_flag('BAZEL_REMOTE_CACHE'):
+          bazel_argv.append('--config=remote_cache')
+      if CACHE_SILO_NAME:
+        bazel_argv.append('--remote_default_exec_properties=cache-silo-key=%s' %
+                          CACHE_SILO_NAME)
 
     if _check_env_flag('BUILD_CPP_TESTS', default='0'):
       bazel_argv.append('//test/cpp:all')
