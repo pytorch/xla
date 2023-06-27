@@ -43,6 +43,13 @@ XLATensorPtr all_gather(const XLATensorPtr& input, int64_t dim,
                         std::vector<std::vector<int64_t>> groups,
                         bool pin_layout);
 
+torch::lazy::Value all_gather_out(XLATensorPtr& output,
+                                  const XLATensorPtr& input,
+                                  const torch::lazy::Value& token, int64_t dim,
+                                  int64_t shard_count,
+                                  std::vector<std::vector<int64_t>> groups,
+                                  bool pin_layout);
+
 std::pair<XLATensorPtr, torch::lazy::Value> collective_permute(
     const XLATensorPtr& input, const torch::lazy::Value& token,
     std::vector<std::pair<int64_t, int64_t>> source_target_pairs);
