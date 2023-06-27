@@ -77,6 +77,16 @@ class VirtualDeviceTest(test_xla_sharding_base.XlaShardingTest):
     self.assertLess(outbound_with_virtual_device,
                     2 * xt1.nelement() * xt1.element_size())
 
+  def test_non_tensor_scalar(self):
+    sharding_spec = xs.ShardingSpec(self._get_mesh((1, self.n_devices)), (0, 1))
+    # tensor will have device as `SPMD:0` in c++
+    xt1 = xm.send_cpu_data_to_device([torch.randn(3, 3)],
+                                     xm.xla_device(),
+                                     input_sharding=sharding_spec)[0]
+    print(torch_xla._XLAC._get_xla_tensor_debug_info(xt1))
+    xt2 = xt1 / 0.5
+    torch.allclose(xt2.cpu(), xt1.cpu() / 0.5)
+
 
 if __name__ == '__main__':
   test = unittest.main()
