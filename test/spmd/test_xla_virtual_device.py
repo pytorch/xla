@@ -83,7 +83,8 @@ class VirtualDeviceTest(test_xla_sharding_base.XlaShardingTest):
     xt1 = xm.send_cpu_data_to_device([torch.randn(3, 3)],
                                      xm.xla_device(),
                                      input_sharding=sharding_spec)[0]
-    print(torch_xla._XLAC._get_xla_tensor_debug_info(xt1))
+    # we will transfer 0.5 as a device_data to the 'SPMD:0' device, need to make sure
+    # that virtual device can handle this case.
     xt2 = xt1 / 0.5
     torch.allclose(xt2.cpu(), xt1.cpu() / 0.5)
 
