@@ -164,7 +164,8 @@ class PjRtComputationClient : public ComputationClient {
 
     OpaqueHandle GetOpaqueHandle() override {
       XLA_CHECK(HasValue())
-          << (buffer == nullptr ? "buffer is null" : "buffer is deleted");
+          << "buffer with shape " << shape().ToString() << " on device "
+          << device() << (buffer == nullptr ? " is null" : " is deleted");
       return reinterpret_cast<std::uintptr_t>(buffer.get());
     };
     void Assign(const Data& data) override;
