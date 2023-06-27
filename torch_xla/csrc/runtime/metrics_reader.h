@@ -14,7 +14,7 @@ namespace metrics_reader {
 
 // Creates a report with the current metrics statistics.
 std::string CreateMetricReport(
-    const std::map<std::string, torch_xla::runtime::Metric>& metrics);
+    const std::map<std::string, torch_xla::runtime::Metric>& xrt_metrics);
 
 // Creates a report with the selected metrics statistics.
 std::string CreateMetricReport(const std::vector<std::string>& counter_names,
