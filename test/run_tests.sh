@@ -103,6 +103,11 @@ function run_save_tensor_file {
   XLA_SAVE_TENSORS_FILE="/tmp/xla_test_save_ir.txt" run_test "$@"
 }
 
+function run_stablehlo_compile {
+  echo "Running in StableHlo Compile mode: $@"
+  XLA_STABLEHLO_COMPILE=1 run_test "$@"
+}
+
 function run_xla_backend_mp {
   echo "Running XLA backend multiprocessing test: $@"
   MASTER_ADDR=localhost MASTER_PORT=6000 run_test "$@"
@@ -152,6 +157,7 @@ function run_xla_op_tests {
   # TODO(qihqi): this test require tensorflow to run. need to setup separate
   #     CI with tf.
   # run_xla_hlo_debug "$CDIR/stablehlo/test_stablehlo_inference.py"
+  run_stablehlo_compile "$CDIR/stablehlo/test_stablehlo_compile.py"
   run_test "$CDIR/pjrt/test_runtime.py"
   run_test "$CDIR/pjrt/test_runtime_multi_cpu.py"
   run_test "$CDIR/pjrt/test_internal_tpu.py"
