@@ -1639,7 +1639,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     self.runAtenTest([
         torch.randint(0, 1, size=(10,), dtype=dtype)
-        for dtype in (torch.bool,)
+        for dtype in (torch.long, torch.int32, torch.bool)
     ], test_fn)
 
   def test_conv2d_backward(self):

@@ -261,8 +261,6 @@ CanonicalIndexInfo GetCanonicalIndexInfo(
   // First expand ByteTensor (boolean masks) into 1 or more LongTensors, then
   // broadcast all index tensors together.
   std::vector<at::Tensor> expand_byte_tensors = ExpandByteTensors(base, orig_indices);
-  // std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": expand_byte_tensor.size()=" << expand_byte_tensors.size() << ", expand_byte_tensors[0]=" << expand_byte_tensors[0] << std::endl;
-  // Doing the line above would crash with error "Non-OK-status: pjrt_data.buffer->ToLiteralSync(&literal) status: INTERNAL: Error converting to literal: Can't slice buffer of length 1536 with start_offset=1024 length=0"
   std::vector<at::Tensor> indices = xla_expand_outplace(expand_byte_tensors);
   // If the non-null indices are not all adjacent, transpose base and indices
   // together so that they're adjacent at the front.
