@@ -11,7 +11,7 @@ namespace torch_xla {
 namespace runtime {
 
 std::string hloToStablehlo(const xla::HloModuleProto* proto,
-                           bool emit_bytecode);;
+                           bool emit_bytecode);
 
 void ConvertHloToStableHlo(const xla::HloModuleProto* proto,
                            mlir::ModuleOp* mlir_module);
