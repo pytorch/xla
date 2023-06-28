@@ -173,6 +173,20 @@ class PjRtComputationClient : public ComputationClient {
       return buffer != nullptr && !buffer->IsDeleted();
     };
 
+    std::string ToString() const override {
+      std::stringstream ss;
+      ss << "XLAData: \n";
+      ss << "  Data Device: " << device() << "\n";
+      ss << "  Data Shape: " << shape().ToString() << "\n";
+      ss << "  Data Handle: ";
+      if (HasValue()) {
+        ss << reinterpret_cast<std::uintptr_t>(buffer.get()) << "\n";
+      } else {
+        ss << "None\n";
+      }
+      return ss.str();
+    }
+
     std::shared_ptr<xla::PjRtBuffer> buffer;
   };
 
@@ -210,6 +224,16 @@ class PjRtComputationClient : public ComputationClient {
         }
       }
       return true;
+    }
+
+    std::string ToString() const override {
+      std::stringstream ss;
+      ss << "XLAShardedData: \n";
+      ss << "  Data Device: " << device() << "\n";
+      ss << "  Data Shape: " << shape().ToString() << "\n";
+      ss << "  OpSharding: " << sharding.type() << "\n";
+      ss << "  NumShards: " << shards.size() << "\n";
+      return ss.str();
     }
 
     xla::OpSharding GetSharding() { return sharding; }
