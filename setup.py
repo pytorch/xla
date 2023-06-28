@@ -251,23 +251,19 @@ class BuildBazelExtension(command.build_ext.build_ext):
       bazel_argv.append('--config=tpu')
 
     # Remote cache authentication.
-    gclout_key_file_size = os.path.getsize(GCLOUD_KEY_FILE)
-    # Temporary workaround to allow PRs from forked repo to run CI. See details at (#5259).
-    # TODO: Remove the check once self-hosted GHA workers are avaialble to CPU/GPU CI.
-    print("check GCLOUD_KEY_FILE: {}".format(GCLOUD_KEY_FILE))
-    print("check if file exists: {}".format(os.path.exists(GCLOUD_KEY_FILE)))
-    print("check size: {}".format(os.path.getsize(GCLOUD_KEY_FILE)))
-    if gclout_key_file_size > 1:
+    if GCLOUD_KEY_FILE:
+      # Temporary workaround to allow PRs from forked repo to run CI. See details at (#5259).
+      # TODO: Remove the check once self-hosted GHA workers are avaialble to CPU/GPU CI.
+      gclout_key_file_size = os.path.getsize(GCLOUD_KEY_FILE)
+      if gclout_key_file_size > 1:
+        bazel_argv.append('--google_credentials=%s' % GCLOUD_KEY_FILE)
+        bazel_argv.append('--config=remote_cache')
+    else:
       if _check_env_flag('BAZEL_REMOTE_CACHE'):
         bazel_argv.append('--config=remote_cache')
-
-      if GCLOUD_KEY_FILE:
-        bazel_argv.append('--google_credentials=%s' % GCLOUD_KEY_FILE)
-        if not _check_env_flag('BAZEL_REMOTE_CACHE'):
-          bazel_argv.append('--config=remote_cache')
-      if CACHE_SILO_NAME:
-        bazel_argv.append('--remote_default_exec_properties=cache-silo-key=%s' %
-                          CACHE_SILO_NAME)
+    if CACHE_SILO_NAME:
+      bazel_argv.append('--remote_default_exec_properties=cache-silo-key=%s' %
+                        CACHE_SILO_NAME)
 
     if _check_env_flag('BUILD_CPP_TESTS', default='0'):
       bazel_argv.append('//test/cpp:all')
