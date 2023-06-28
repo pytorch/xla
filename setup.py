@@ -46,7 +46,6 @@
 #   CXX_ABI=""
 #     value for cxx_abi flag; if empty, it is infered from `torch._C`.
 #
-# add another commit so the branch pr commit is different from fork pr
 from __future__ import print_function
 
 from setuptools import setup, find_packages, distutils, Extension, command
