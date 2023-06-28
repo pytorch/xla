@@ -19,9 +19,6 @@
 #include <stdexcept>
 #include <unordered_set>
 
-#include "tensorflow/compiler/xla/shape_util.h"
-#include "tensorflow/tsl/platform/errors.h"
-#include "tensorflow/tsl/profiler/lib/traceme.h"
 #include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/helpers.h"
@@ -46,6 +43,9 @@
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
 #include "torch_xla/csrc/xla_sharding_util.h"
+#include "tsl/platform/errors.h"
+#include "tsl/profiler/lib/traceme.h"
+#include "xla/shape_util.h"
 
 namespace torch_xla {
 

@@ -23,71 +23,71 @@ python_configure(
     name = "local_config_python",
     python_version = "3",  # required to use `python3-config`
 )
-############################# TensorFlow Setup ###############################
+############################# OpenXLA Setup ###############################
 
-# To update TensorFlow to a new revision,
+# To update OpenXLA to a new revision,
 # a) update URL and strip_prefix to the new git commit hash
 # b) get the sha256 hash of the commit by running:
-#    curl -L https://github.com/tensorflow/tensorflow/archive/<git hash>.tar.gz | sha256sum
+#    curl -L https://github.com/openxla/xla/archive/<git hash>.tar.gz | sha256sum
 #    and update the sha256 with the result.
 http_archive(
-    name = "org_tensorflow",
+    name = "xla",
     patch_args = [
         "-l",
         "-p1",
     ],
     patch_tool = "patch",
     patches = [
-        "//tf_patches:absl_statusor.diff",
-        "//tf_patches:cache_urls.diff",
-        "//tf_patches:cuda_graph.diff",
-        "//tf_patches:f16_abi_clang.diff",
-        "//tf_patches:gpu_race_condition.diff",
-        "//tf_patches:grpc_version.diff",
-        "//tf_patches:optimized_function_graph.diff",
-        "//tf_patches:profiler_trace.diff",
-        "//tf_patches:stream_executor.diff",
-        "//tf_patches:thread_local_random.diff",
-        "//tf_patches:topk_rewriter.diff",
-        "//tf_patches:triton_filesystem.diff",
-        "//tf_patches:xla_bzl.diff",
-        "//tf_patches:xplane.diff",
+        "//openxla_patches:absl_statusor.diff",
+        "//openxla_patches:cache_urls.diff",
+        "//openxla_patches:cuda_graph.diff",
+        "//openxla_patches:f16_abi_clang.diff",
+        "//openxla_patches:gpu_race_condition.diff",
+        "//openxla_patches:profiler_trace.diff",
+        "//openxla_patches:stream_executor.diff",
+        "//openxla_patches:topk_rewriter.diff",
+        "//openxla_patches:triton_filesystem.diff",
+        "//openxla_patches:xla_bzl.diff",
     ],
-    strip_prefix = "tensorflow-d577af9cac504776a2d0ddbb0a445ba311aa1fea",
+    strip_prefix = "xla-ce3949f58d8a3a791c36741b248bea52954b1648",
     urls = [
-        "https://github.com/tensorflow/tensorflow/archive/d577af9cac504776a2d0ddbb0a445ba311aa1fea.tar.gz",
+        "https://github.com/openxla/xla/archive/ce3949f58d8a3a791c36741b248bea52954b1648.tar.gz",
     ],
 )
 
-# For development, one often wants to make changes to the TF repository as well
+# For development, one often wants to make changes to the OpenXLA repository as well
 # as the PyTorch/XLA repository. You can override the pinned repository above with a
 # local checkout by either:
-# a) overriding the TF repository on the build.py command line by passing a flag
+# a) overriding the OpenXLA repository on the build.py command line by passing a flag
 #    like:
-#    bazel --override_repository=org_tensorflow=/path/to/tensorflow
+#    bazel --override_repository=xla=/path/to/openxla
 #    or
 # b) by commenting out the http_archive above and uncommenting the following:
 # local_repository(
-#    name = "org_tensorflow",
-#    path = "/path/to/tensorflow",
+#    name = "xla",
+#    path = "/path/to/openxla",
 # )
 
-# Initialize TensorFlow's external dependencies.
-load("@org_tensorflow//tensorflow:workspace3.bzl", "tf_workspace3")
+# Initialize OpenXLA's external dependencies.
+load("@xla//:workspace4.bzl", "xla_workspace4")
 
-tf_workspace3()
+xla_workspace4()
 
-load("@org_tensorflow//tensorflow:workspace2.bzl", "tf_workspace2")
+load("@xla//:workspace3.bzl", "xla_workspace3")
 
-tf_workspace2()
+xla_workspace3()
 
-load("@org_tensorflow//tensorflow:workspace1.bzl", "tf_workspace1")
+load("@xla//:workspace2.bzl", "xla_workspace2")
 
-tf_workspace1()
+xla_workspace2()
 
-load("@org_tensorflow//tensorflow:workspace0.bzl", "tf_workspace0")
+load("@xla//:workspace1.bzl", "xla_workspace1")
 
-tf_workspace0()
+xla_workspace1()
+
+load("@xla//:workspace0.bzl", "xla_workspace0")
+
+xla_workspace0()
 
 ################################ PyTorch Setup ################################
 

@@ -5,8 +5,8 @@
 
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
-#include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "torch_xla/csrc/device.h"
+#include "xla/client/xla_builder.h"
 
 namespace torch_xla {
 
