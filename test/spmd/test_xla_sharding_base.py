@@ -38,5 +38,5 @@ class XlaShardingTest(unittest.TestCase):
     assert len(device_ids) == self.n_devices
     return xs.Mesh(device_ids, mesh_shape)
 
-  def _get_hybrid_mesh(self, ici_mesh_shape):
-    return xs.HybridMesh(ici_mesh_shape=ici_mesh_shape)
+  def _get_hybrid_mesh(self, ici_mesh_shape, axis_names=None):
+    return xs.HybridMesh(ici_mesh_shape=ici_mesh_shape, axis_names=axis_names)

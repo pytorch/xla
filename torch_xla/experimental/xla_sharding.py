@@ -259,8 +259,9 @@ class HybridMesh(Mesh):
     return device_mesh
 
   # This is imported from JAX: https://github.com/google/jax/blob/main/jax/experimental/mesh_utils.py#L288.
-  def _create_hybrid_device_mesh(self, ici_mesh_shape: Sequence[int],
-                                 dcn_mesh_shape: Sequence[int]) -> Sequence[int]:
+  def _create_hybrid_device_mesh(
+      self, ici_mesh_shape: Sequence[int],
+      dcn_mesh_shape: Sequence[int]) -> Sequence[int]:
     """Creates a device mesh for hybrid (e.g., ICI and DCN) parallelism.
 
       Args:
@@ -404,7 +405,7 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
   tensor_expand = 0
   # if len(mesh.shape()) - len(partition_spec) >= 1:
   while tensor_expand < len(mesh.shape()) - len(partition_spec):
-    partition_spec =  (None,) + partition_spec
+    partition_spec = (None,) + partition_spec
     t = t.expand(1, *original_shape)
     tensor_expand += 1
   sharding_type = _get_sharding_type(partition_spec, num_devices)
@@ -416,13 +417,13 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
                                        group_assignment, replication_groups,
                                        int(sharding_type))
     while tensor_expand:
-      t = torch.squeeze(t, dim = 0)
+      t = torch.squeeze(t, dim=0)
       tensor_expand -= 1
     return t
   torch_xla._XLAC._xla_mark_sharding(t, tile_assignment, group_assignment,
                                      replication_groups, int(sharding_type))
   while tensor_expand:
-    t = torch.squeeze(t, dim = 0)
+    t = torch.squeeze(t, dim=0)
     tensor_expand -= 1
   return XLAShardedTensor(t)
 
