@@ -468,6 +468,19 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     t3_expected = [9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0]
     self.assertEqual(t3.tolist()[0], t3_expected)
 
+  def test_xla_sharded_hlo_dump(self):
+    partition_spec = (0, 1)
+    xt1 = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
+                       dtype=torch.float,
+                       device=xm.xla_device())
+    xst1 = xs.mark_sharding(xt1, self._get_mesh((1, self.n_devices)),
+                            partition_spec)
+    xst2 = xst1 + 5
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo([xst2.global_tensor])
+    self.assertIn('%p1.4 = f32[1,8]{1,0} parameter(1), sharding', hlo)
+    # scalar 5 should be replicated
+    self.assertIn('%p0.2 = f32[] parameter(0), sharding={replicated}', hlo)
+
   @unittest.skipIf(xr.device_type() == 'TPU', "Crash on TPU v2")
   @unittest.skipUnless(
       xm.get_xla_supported_devices("TPU"),
