@@ -9,11 +9,13 @@ namespace {
 
 xla::Shape NodeOutputShape(const torch::lazy::Value& input, int64_t dim,
                            bool keepdim) {
-  auto lower_for_shape_fn =
-      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    return BuildArgMin(operands[0], dim, keepdim);
-  };
-  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
+  std::cout << "argmin::NodeOutputShape" << std::endl;
+  return xla::ShapeUtil::MakeShape(xla::S32, {1});
+  // auto lower_for_shape_fn =
+  //     [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+  //   return BuildArgMin(operands[0], dim, keepdim);
+  // };
+  // return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
 }
 
 }  // namespace
@@ -31,7 +33,13 @@ torch::lazy::NodePtr ArgMin::Clone(torch::lazy::OpList operands) const {
 
 XlaOpVector ArgMin::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
-  return ReturnOp(BuildArgMin(input, dim_, keepdim_), loctx);
+  std::cout << "input " << input << std::endl;
+  std::string call_target_name = "argmin_custom";
+  std::vector<xla::XlaOp> operands = {input};
+  xla::Shape shape = xla::ShapeUtil::MakeShape(xla::S32, {1});
+  xla::XlaOp out = xla::CustomCall(input.builder(), call_target_name, operands, shape);
+  return ReturnOp(out, loctx);
+  // return ReturnOp(BuildArgMin(input, dim_, keepdim_), loctx);
 }
 
 std::string ArgMin::ToString() const {

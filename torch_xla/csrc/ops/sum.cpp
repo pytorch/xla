@@ -14,22 +14,23 @@
 namespace torch_xla {
 namespace {
 
-xla::XlaOp LowerSum(xla::XlaOp input, absl::Span<const int64_t> dimensions,
-                    bool keep_reduced_dimensions,
-                    c10::optional<at::ScalarType> dtype) {
-  return BuildSum(CastToScalarType(input, dtype), dimensions,
-                  keep_reduced_dimensions);
-}
+// xla::XlaOp LowerSum(xla::XlaOp input, absl::Span<const int64_t> dimensions,
+//                     bool keep_reduced_dimensions,
+//                     c10::optional<at::ScalarType> dtype) {
+//   return BuildSum(CastToScalarType(input, dtype), dimensions,
+//                   keep_reduced_dimensions);
+// }
 
 xla::Shape NodeOutputShape(const torch::lazy::Value& input,
                            absl::Span<const int64_t> dimensions,
                            bool keep_reduced_dimensions,
                            c10::optional<at::ScalarType> dtype) {
-  auto lower_for_shape_fn =
-      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    return LowerSum(operands[0], dimensions, keep_reduced_dimensions, dtype);
-  };
-  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
+  // auto lower_for_shape_fn =
+  //     [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+  //   return LowerSum(operands[0], dimensions, keep_reduced_dimensions, dtype);
+  // };
+  // return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
+  return xla::ShapeUtil::MakeShape(xla::F32, {2048});
 }
 
 }  // namespace
@@ -55,8 +56,16 @@ torch::lazy::NodePtr Sum::Clone(torch::lazy::OpList operands) const {
 
 XlaOpVector Sum::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
-  return ReturnOp(
-      LowerSum(input, dimensions_, keep_reduced_dimensions_, dtype_), loctx);
+
+  std::string call_target_name = "do_custom_gpu_call";
+  std::vector<xla::XlaOp> operands = {input, input};
+  xla::Shape shape = xla::ShapeUtil::MakeShape(xla::F32, {2048});
+  std::string opaque = "...";
+  xla::XlaOp out = xla::CustomCall(input.builder(), call_target_name, operands, shape, opaque);
+
+  // xla::XlaOp out = BuildSum(CastToScalarType(input, dtype_), dimensions_,
+  //                   keep_reduced_dimensions_);
+  return ReturnOp(out, loctx);
 }
 
 std::string Sum::ToString() const {

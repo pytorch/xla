@@ -703,6 +703,7 @@ at::Tensor XLANativeFunctions::argmin(const at::Tensor& self,
                                       c10::optional<int64_t> dim,
                                       bool keepdim) {
   TORCH_LAZY_FN_COUNTER("xla::");
+  std::cout << "aten_xla_type.cpp argmin" << std::endl;
   return dim ? bridge::AtenFromXlaTensor(tensor_methods::argmin(
                    bridge::GetXlaTensor(self), *dim, keepdim))
              : bridge::AtenFromXlaTensor(
