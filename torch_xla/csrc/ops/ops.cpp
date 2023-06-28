@@ -5,12 +5,6 @@
 
 #include <cmath>
 
-#include "tensorflow/compiler/xla/client/lib/constants.h"
-#include "tensorflow/compiler/xla/client/lib/logdet.h"
-#include "tensorflow/compiler/xla/client/lib/math.h"
-#include "tensorflow/compiler/xla/client/lib/matrix.h"
-#include "tensorflow/compiler/xla/client/lib/slicing.h"
-#include "tensorflow/compiler/xla/shape_util.h"
 #include "torch_xla/csrc/LazyIr.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/data_ops.h"
@@ -36,6 +30,12 @@
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/xla_lower_util.h"
+#include "xla/client/lib/constants.h"
+#include "xla/client/lib/logdet.h"
+#include "xla/client/lib/math.h"
+#include "xla/client/lib/matrix.h"
+#include "xla/client/lib/slicing.h"
+#include "xla/shape_util.h"
 
 namespace torch_xla {
 

@@ -3,8 +3,8 @@
 
 #include <vector>
 
-#include "tensorflow/compiler/xla/types.h"
 #include "torch_xla/csrc/ir.h"
+#include "xla/types.h"
 
 namespace torch_xla {
 

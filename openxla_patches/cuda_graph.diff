@@ -1,23 +1,23 @@
 Revert 8aa20d47ea5c863b9edeb072489ffb7c38b6e8eb
-diff --git a/tensorflow/compiler/xla/service/gpu/runtime/BUILD b/tensorflow/compiler/xla/service/gpu/runtime/BUILD
-index c37013f4b5c..f9fb8e17b42 100644
---- a/tensorflow/compiler/xla/service/gpu/runtime/BUILD
-+++ b/tensorflow/compiler/xla/service/gpu/runtime/BUILD
+diff --git a/xla/service/gpu/runtime/BUILD b/xla/service/gpu/runtime/BUILD
+index 328a19690..e70b39c16 100644
+--- a/xla/service/gpu/runtime/BUILD
++++ b/xla/service/gpu/runtime/BUILD
 @@ -375,9 +375,7 @@ cc_library(
-         "//tensorflow/compiler/xla/stream_executor",
+         "//xla/stream_executor",
          "@com_google_absl//absl/container:node_hash_map",
          "@com_google_absl//absl/synchronization",
 -    ] + if_cuda_is_configured([
--        "//tensorflow/compiler/xla/stream_executor/cuda:cuda_graph",
+-        "//xla/stream_executor/cuda:cuda_graph",
 -    ]),
 +    ],
  )
  
  cc_library(
-diff --git a/tensorflow/compiler/xla/service/gpu/runtime/executable.cc b/tensorflow/compiler/xla/service/gpu/runtime/executable.cc
-index 3cc546f7d5e..f8f7018b859 100644
---- a/tensorflow/compiler/xla/service/gpu/runtime/executable.cc
-+++ b/tensorflow/compiler/xla/service/gpu/runtime/executable.cc
+diff --git a/xla/service/gpu/runtime/executable.cc b/xla/service/gpu/runtime/executable.cc
+index a0919e1cf..75966a044 100644
+--- a/xla/service/gpu/runtime/executable.cc
++++ b/xla/service/gpu/runtime/executable.cc
 @@ -371,6 +371,7 @@ Status GpuRuntimeExecutable::Execute(
        graph_instances_(executor)->snapshot();
    CapturedFunctionExecutionCount::Snapshot execution_count =
@@ -35,10 +35,10 @@ index 3cc546f7d5e..f8f7018b859 100644
  #endif  // GOOGLE_CUDA
        &concurrent_region_status,
        // Null pointer will be interpreted as an absence of async collectives
-diff --git a/tensorflow/compiler/xla/service/gpu/runtime/graph_launch.cc b/tensorflow/compiler/xla/service/gpu/runtime/graph_launch.cc
-index c70e39a5a91..0391a41b6ba 100644
---- a/tensorflow/compiler/xla/service/gpu/runtime/graph_launch.cc
-+++ b/tensorflow/compiler/xla/service/gpu/runtime/graph_launch.cc
+diff --git a/xla/service/gpu/runtime/graph_launch.cc b/xla/service/gpu/runtime/graph_launch.cc
+index b54b9447f..1d60085e8 100644
+--- a/xla/service/gpu/runtime/graph_launch.cc
++++ b/xla/service/gpu/runtime/graph_launch.cc
 @@ -279,11 +279,18 @@ static absl::Status LaunchGraph(
    // Compute the hash of the buffer arguments.
    size_t ptrs_hash = absl::HashOf(RemainingArgsPtrs{fwd_args, temp_buffer});
@@ -90,16 +90,16 @@ index c70e39a5a91..0391a41b6ba 100644
    if (!g.ok()) return g.status();
  
    // Update captured graph executable.
-diff --git a/tensorflow/compiler/xla/service/gpu/runtime/kernel_launch.cc b/tensorflow/compiler/xla/service/gpu/runtime/kernel_launch.cc
-index ceef00ae284..3f7606bebdc 100644
---- a/tensorflow/compiler/xla/service/gpu/runtime/kernel_launch.cc
-+++ b/tensorflow/compiler/xla/service/gpu/runtime/kernel_launch.cc
+diff --git a/xla/service/gpu/runtime/kernel_launch.cc b/xla/service/gpu/runtime/kernel_launch.cc
+index a498df8f5..3bc18912a 100644
+--- a/xla/service/gpu/runtime/kernel_launch.cc
++++ b/xla/service/gpu/runtime/kernel_launch.cc
 @@ -30,10 +30,6 @@ limitations under the License.
- #include "tensorflow/compiler/xla/service/service_executable_run_options.h"
- #include "tensorflow/compiler/xla/stream_executor/kernel.h"
+ #include "xla/service/service_executable_run_options.h"
+ #include "xla/stream_executor/kernel.h"
  
 -#if GOOGLE_CUDA
--#include "tensorflow/compiler/xla/stream_executor/cuda/cuda_graph.h"
+-#include "xla/stream_executor/cuda/cuda_graph.h"
 -#endif  // #if GOOGLE_CUDA
 -
  namespace xla {
@@ -136,10 +136,10 @@ index ceef00ae284..3f7606bebdc 100644
          .State<std::unique_ptr<se::KernelBase>>("uid")
          .Arg<int32_t>()   // shared_memory_bytes
          .Arg<int32_t>()   // grid_size_x
-diff --git a/tensorflow/compiler/xla/service/gpu/runtime/support.h b/tensorflow/compiler/xla/service/gpu/runtime/support.h
-index 4f5c722db9e..b5026b95837 100644
---- a/tensorflow/compiler/xla/service/gpu/runtime/support.h
-+++ b/tensorflow/compiler/xla/service/gpu/runtime/support.h
+diff --git a/xla/service/gpu/runtime/support.h b/xla/service/gpu/runtime/support.h
+index 65148218f..423835913 100644
+--- a/xla/service/gpu/runtime/support.h
++++ b/xla/service/gpu/runtime/support.h
 @@ -116,6 +116,15 @@ inline void PopulateDotDimsAttrEncoding(
            .Add("rhs_contract", &DotDimsAttr::getRhsContractingDimensions));
  }
@@ -156,10 +156,10 @@ index 4f5c722db9e..b5026b95837 100644
  }  // namespace gpu
  }  // namespace xla
  
-diff --git a/tensorflow/compiler/xla/stream_executor/cuda/cuda_graph.cc b/tensorflow/compiler/xla/stream_executor/cuda/cuda_graph.cc
-index 5a0b9e099ea..282e89d30bf 100644
---- a/tensorflow/compiler/xla/stream_executor/cuda/cuda_graph.cc
-+++ b/tensorflow/compiler/xla/stream_executor/cuda/cuda_graph.cc
+diff --git a/xla/stream_executor/cuda/cuda_graph.cc b/xla/stream_executor/cuda/cuda_graph.cc
+index 2e6a1cdff..ed055a6b5 100644
+--- a/xla/stream_executor/cuda/cuda_graph.cc
++++ b/xla/stream_executor/cuda/cuda_graph.cc
 @@ -175,17 +175,5 @@ tsl::StatusOr<OwnedCudaGraphExec> InstantiateCudaGraph(OwnedCudaGraph graph) {
    return OwnedCudaGraphExec(exec);
  }
@@ -178,10 +178,10 @@ index 5a0b9e099ea..282e89d30bf 100644
 -
  }  // namespace gpu
  }  // namespace stream_executor
-diff --git a/tensorflow/compiler/xla/stream_executor/cuda/cuda_graph.h b/tensorflow/compiler/xla/stream_executor/cuda/cuda_graph.h
-index 3480e96c095..f790b1cff3b 100644
---- a/tensorflow/compiler/xla/stream_executor/cuda/cuda_graph.h
-+++ b/tensorflow/compiler/xla/stream_executor/cuda/cuda_graph.h
+diff --git a/xla/stream_executor/cuda/cuda_graph.h b/xla/stream_executor/cuda/cuda_graph.h
+index cfe51436f..581f895cf 100644
+--- a/xla/stream_executor/cuda/cuda_graph.h
++++ b/xla/stream_executor/cuda/cuda_graph.h
 @@ -85,9 +85,6 @@ tsl::StatusOr<OwnedCudaGraph> CaptureCudaGraph(
  // Instantiates a captured cuda graph instance into a cuda graph executable.
  tsl::StatusOr<OwnedCudaGraphExec> InstantiateCudaGraph(OwnedCudaGraph graph);

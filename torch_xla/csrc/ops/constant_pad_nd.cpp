@@ -1,13 +1,13 @@
 #include "torch_xla/csrc/ops/constant_pad_nd.h"
 
 #include "absl/strings/str_join.h"
-#include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/ops/scalar.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/shape_helper.h"
+#include "xla/client/lib/constants.h"
 
 namespace torch_xla {
 namespace {

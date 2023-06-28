@@ -23,10 +23,6 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/memory/memory.h"
 #include "absl/strings/str_join.h"
-#include "tensorflow/compiler/xla/literal_util.h"
-#include "tensorflow/compiler/xla/shape_util.h"
-#include "tensorflow/tsl/platform/errors.h"
-#include "tensorflow/tsl/profiler/lib/traceme.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/helpers.h"
@@ -55,6 +51,10 @@
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/xla_backend_impl.h"
 #include "torch_xla/csrc/xla_sharding_util.h"
+#include "tsl/platform/errors.h"
+#include "tsl/profiler/lib/traceme.h"
+#include "xla/literal_util.h"
+#include "xla/shape_util.h"
 
 namespace torch_xla {
 namespace {
