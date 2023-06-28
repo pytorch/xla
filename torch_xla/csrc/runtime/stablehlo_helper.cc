@@ -92,8 +92,8 @@ void ConvertHloToStableHlo(const xla::HloModuleProto* proto,
                          << getHloModuleStr(proto);
 }
 
-std::string hloToStablehloStr(const xla::HloModuleProto* proto,
-                              bool emit_bytecode) {
+std::string hloToStablehlo(const xla::HloModuleProto* proto,
+                           bool emit_bytecode) {
   mlir::MLIRContext context;
   mlir::ModuleOp mlir_module =
       mlir::ModuleOp::create(mlir::UnknownLoc::get(&context));
