@@ -51,6 +51,8 @@ class ComputationClient {
 
     virtual bool HasValue() const = 0;
 
+    virtual std::string ToString() const = 0;
+
    private:
     std::string device_;
     xla::Shape shape_;
