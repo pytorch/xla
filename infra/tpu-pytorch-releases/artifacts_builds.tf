@@ -15,6 +15,20 @@ variable "nightly_builds" {
   default = []
 }
 
+// TODO: Remove this after the 2.1 release
+variable "xrt_nightly_builds" {
+  type = list(
+    object({
+      accelerator    = string
+      cuda_version   = optional(string, "11.8")
+      python_version = optional(string, "3.8")
+      arch           = optional(string, "amd64")
+    })
+  )
+
+  default = []
+}
+
 variable "versioned_builds" {
   type = list(
     object({
@@ -33,6 +47,15 @@ variable "versioned_builds" {
 locals {
   nightly_builds_dict = {
     for b in var.nightly_builds :
+    format("%s_%s",
+      b.python_version,
+      b.accelerator == "tpu" ? "tpuvm" : format("cuda_%s", b.cuda_version)
+    ) => b
+  }
+
+  // TODO: Remove this after the 2.1 release
+  xrt_nightly_builds_dict = {
+    for b in var.xrt_nightly_builds :
     format("%s_%s",
       b.python_version,
       b.accelerator == "tpu" ? "tpuvm" : format("cuda_%s", b.cuda_version)
@@ -81,6 +104,53 @@ module "nightly_builds" {
   ])
 
   wheels_dest = "${module.releases_storage_bucket.url}/wheels/${
+    each.value.accelerator == "tpu"
+    ? "tpuvm"
+    : "cuda/${each.value.cuda_version}"
+  }"
+  wheels_srcs = ["/dist/*.whl"]
+  build_args = {
+    python_version = each.value.python_version
+  }
+
+  scheduler_account_email = module.scheduler_account.email
+  worker_pool_id          = module.worker_pool.id
+  docker_repo_url         = module.docker_registry.url
+}
+
+// TODO: Remove this after the 2.1 release
+module "xrt_nightly_builds" {
+  source   = "../terraform_modules/xla_docker_build"
+  for_each = local.xrt_nightly_builds_dict
+
+  ansible_vars = merge(each.value, {
+    package_version = var.nightly_package_version
+    nightly_release = true
+    pytorch_git_rev = "main"
+    xla_git_rev     = "$COMMIT_SHA"
+  })
+
+  trigger_on_schedule = { schedule = "0 0 * * *", branch = "xrt" }
+
+  trigger_name = "nightly-xrt-${replace(each.key, "/[_.]/", "-")}"
+  image_name   = "xla"
+  image_tags = [
+    "nightly_xrt_${each.key}",
+    # Append _YYYYMMDD suffix to nightly image name.
+    "nightly_xrt_${each.key}_$(date +%Y%m%d)",
+  ]
+
+  description = join(" ", [
+    "Builds nightly xla:nightly_${each.key}' ${
+      each.value.accelerator == "tpu"
+      ? "TPU"
+      : format("CUDA %s", each.value.cuda_version)
+    } docker image and corresponding wheels for PyTorch/XLA.",
+    "Trigger managed by Terraform setup in",
+    "infra/tpu-pytorch-releases/artifacts_builds.tf."
+  ])
+
+  wheels_dest = "${module.releases_storage_bucket.url}/wheels/xrt/${
     each.value.accelerator == "tpu"
     ? "tpuvm"
     : "cuda/${each.value.cuda_version}"

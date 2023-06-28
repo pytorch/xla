@@ -1,6 +1,5 @@
-tensorflow {
+xla {
   global:
-    *tensorflow*;
     *tsl*;
     *absl*;
     *protobuf*;

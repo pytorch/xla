@@ -7,7 +7,6 @@
 #include <unordered_map>
 
 #include "absl/strings/str_cat.h"
-#include "tensorflow/compiler/xla/client/xla_builder.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/device_data.h"
@@ -18,6 +17,7 @@
 #include "torch_xla/csrc/runtime/xla_util.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
+#include "xla/client/xla_builder.h"
 
 namespace torch_xla {
 namespace {

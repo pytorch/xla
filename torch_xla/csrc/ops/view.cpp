@@ -1,10 +1,10 @@
 #include "torch_xla/csrc/ops/view.h"
 
 #include "absl/strings/str_join.h"
-#include "tensorflow/compiler/xla/shape_util.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
+#include "xla/shape_util.h"
 
 namespace torch_xla {
 namespace {

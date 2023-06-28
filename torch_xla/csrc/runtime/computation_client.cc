@@ -10,11 +10,11 @@
 #include "absl/memory/memory.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
-#include "tensorflow/compiler/xla/status_macros.h"
-#include "tensorflow/tsl/platform/stacktrace_handler.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/env_vars.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
+#include "tsl/platform/stacktrace_handler.h"
+#include "xla/status_macros.h"
 
 namespace torch_xla {
 namespace runtime {

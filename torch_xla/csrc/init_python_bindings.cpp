@@ -25,11 +25,6 @@
 #include "pybind11/pybind11.h"
 #include "pybind11/pytypes.h"
 #include "pybind11/stl_bind.h"
-#include "tensorflow/compiler/xla/pjrt/distributed/distributed.h"
-#include "tensorflow/compiler/xla/python/profiler/internal/traceme_wrapper.h"
-#include "tensorflow/compiler/xla/service/hlo_parser.h"
-#include "tensorflow/tsl/platform/env.h"
-#include "tensorflow/tsl/profiler/lib/traceme.h"
 #include "torch_xla/csrc/XLANativeFunctions.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/computation.h"
@@ -58,6 +53,11 @@
 #include "torch_xla/csrc/xla_graph_executor.h"
 #include "torch_xla/csrc/xla_op_builder.h"
 #include "torch_xla/csrc/xla_sharding_util.h"
+#include "tsl/platform/env.h"
+#include "tsl/profiler/lib/traceme.h"
+#include "xla/pjrt/distributed/distributed.h"
+#include "xla/python/profiler/internal/traceme_wrapper.h"
+#include "xla/service/hlo_parser.h"
 
 namespace torch_xla {
 namespace {
@@ -378,13 +378,11 @@ std::string GetXLATensorDebugInfo(const at::Tensor& tensor) {
   }
 
   torch::lazy::BackendDataPtr handle = xtensor->CurrentDataHandle();
-  ss << "XLAData: ";
   if (handle) {
     auto data = UnwrapXlaData(handle);
-    ss << "\n  Data Device: " << data->device() << "\n";
-    ss << "  Data Shape: " << data->shape().ToString() << "\n";
+    ss << data->ToString();
   } else {
-    ss << "None\n";
+    ss << "XLAData: None\n";
   }
 
   auto at_tensor = xtensor->CurrentTensorData();

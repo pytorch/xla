@@ -11,13 +11,13 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
-#include "tensorflow/compiler/xla/client/xla_computation.h"
-#include "tensorflow/compiler/xla/literal_util.h"
-#include "tensorflow/compiler/xla/types.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/metrics.h"
 #include "torch_xla/csrc/runtime/types.h"
 #include "torch_xla/csrc/runtime/util.h"
+#include "xla/client/xla_computation.h"
+#include "xla/literal_util.h"
+#include "xla/types.h"
 
 namespace torch_xla {
 namespace runtime {
@@ -50,6 +50,8 @@ class ComputationClient {
     virtual void Assign(const Data& data) = 0;
 
     virtual bool HasValue() const = 0;
+
+    virtual std::string ToString() const = 0;
 
    private:
     std::string device_;

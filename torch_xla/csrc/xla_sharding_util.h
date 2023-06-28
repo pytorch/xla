@@ -3,13 +3,13 @@
 
 #include <torch/csrc/jit/python/pybind.h>
 
-#include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "tensorflow/compiler/xla/client/xla_computation.h"
-#include "tensorflow/compiler/xla/service/hlo.pb.h"
 #include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/tensor.h"
+#include "xla/client/xla_builder.h"
+#include "xla/client/xla_computation.h"
+#include "xla/service/hlo.pb.h"
 
 namespace torch_xla {
 

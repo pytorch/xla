@@ -1,9 +1,9 @@
 #include "torch_xla/csrc/runtime/profiler.h"
 
 #include "absl/container/flat_hash_map.h"
-#include "tensorflow/tsl/platform/status.h"
-#include "tensorflow/tsl/profiler/rpc/client/capture_profile.h"
-#include "tensorflow/tsl/profiler/rpc/profiler_server.h"
+#include "tsl/platform/status.h"
+#include "tsl/profiler/rpc/client/capture_profile.h"
+#include "tsl/profiler/rpc/profiler_server.h"
 
 namespace torch_xla {
 namespace runtime {
