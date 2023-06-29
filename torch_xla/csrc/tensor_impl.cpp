@@ -81,8 +81,8 @@ XLATensorImpl::XLATensorImpl(XLATensor&& tensor)
     key_set_ = (key_set_ - autocast_xla_ks) | autocast_cuda_ks;
   }
   is_non_overlapping_and_dense_ = false;
-  const_cast<XLATensorImpl*>(this)->SetupSizeProperties();
-  set_sizes_and_strides(c10::SymIntArrayRef(sym_sizes_.data(), sym_sizes_.size()), c10::fromIntArrayRefSlow(strides_default()));
+  // const_cast<XLATensorImpl*>(this)->SetupSizeProperties();
+  // set_sizes_and_strides(sym_sizes_, sizes_and_strides_.strides_arrayref());
   set_custom_sizes_strides(SizesStridesPolicy::CustomSizes);
 }
 
@@ -209,6 +209,7 @@ void XLATensorImpl::SetupSymSizeProperties() {
   XLAIrBuilder a = XLAIrBuilder();
   for (auto i : c10::irange(rank)) {
     if (shape.get().is_dynamic_dimension(i)) {
+      has_symbolic_sizes_strides_ = true;
       auto dim_node = a.MakeSizeNode(tensor_->GetIrValue(), i);
       auto symint_node =
           c10::make_intrusive<XLASymNodeImpl>(dim_node, PyType::INT);
