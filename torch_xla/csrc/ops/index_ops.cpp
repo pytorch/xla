@@ -257,6 +257,7 @@ torch::lazy::NodePtr IndexCopyOp(const torch::lazy::Value& buffer, int64_t dim,
 CanonicalIndexInfo GetCanonicalIndexInfo(
     const at::Tensor& base,
     const c10::List<c10::optional<at::Tensor>>& orig_indices) {
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   CheckIndexTensorTypes(orig_indices);
   // First expand ByteTensor (boolean masks) into 1 or more LongTensors, then
   // broadcast all index tensors together.
