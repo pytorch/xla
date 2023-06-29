@@ -1,6 +1,7 @@
 load(
     "@org_tensorflow//tensorflow:tensorflow.bzl",
     "tf_cc_shared_object",
+    "tf_kernel_library",
 )
 
 tf_cc_shared_object(
@@ -23,5 +24,6 @@ tf_cc_shared_object(
         "@torch//:libtorch",
         "@torch//:libtorch_cpu",
         "@torch//:libtorch_python",
+        "//torch_xla/csrc:gpu_custom",
     ],
 )

@@ -219,6 +219,7 @@ class BazelExtension(Extension):
 
   def __init__(self, bazel_target):
     self.bazel_target = bazel_target
+    print("The bazel target is:", bazel_target)
     self.relpath, self.target_name = (
         posixpath.relpath(bazel_target, '//').split(':'))
     ext_name = os.path.join(
@@ -287,6 +288,7 @@ class BuildBazelExtension(command.build_ext.build_ext):
       for library_dir in self.library_dirs:
         bazel_argv.append('--linkopt=/LIBPATH:' + library_dir)
 
+    print("bazel_argv", bazel_argv)
     self.spawn(bazel_argv)
 
     ext_bazel_bin_path = os.path.join(self.build_temp, 'bazel-bin', ext.relpath,

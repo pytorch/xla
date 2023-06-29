@@ -3,8 +3,14 @@ load(
     "if_cuda_is_configured",
 )
 
-load("@rules_cuda//cuda:defs.bzl", "cuda_library")
+load(
+    "@org_tensorflow//tensorflow:tensorflow.bzl",
+    "tf_kernel_library",
+)
 
+load("@rules_cuda//cuda:defs.bzl", 
+     "cuda_library",
+)
 
 load(
     "//bazel:rules_def.bzl",
@@ -119,7 +125,6 @@ ptxla_cc_library(
     deps = [
         ":aten_cpu_fallback",
         ":computation",
-        ":cpu_custom",
         ":device",
         ":einsum_utilities",
         ":ir",
@@ -187,11 +192,12 @@ ptxla_cc_library(
     ],
 )
 
-cuda_library(
+tf_kernel_library(
     name = "gpu_custom",
-    srcs = ["xla_custom_gpu_call.cu.cc"], 
+    gpu_srcs = ["xla_custom_gpu_call.cu.cc"], 
     deps = ["@org_tensorflow//tensorflow/compiler/jit:xla_gpu_device",
         "@org_tensorflow//tensorflow/compiler/xla/stream_executor:cuda_platform",
+        "@org_tensorflow//tensorflow/compiler/xla/service:custom_call_target_registry",
     ],
 )
 
@@ -287,6 +293,7 @@ ptxla_cc_library(
         ":device",
         ":tensor",
         ":version",
+        ":cpu_custom",
         "//third_party/xla_client:runtime",
         "//third_party/xla_client:mesh_service",
         "//third_party/xla_client:metrics",

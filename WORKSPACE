@@ -38,9 +38,7 @@ http_archive(
     ],
     patch_tool = "patch",
     patches = [
-        "//tf_patches:absl_statusor.diff",
         "//tf_patches:cache_urls.diff",
-        "//tf_patches:cuda_graph.diff",
         "//tf_patches:f16_abi_clang.diff",
         "//tf_patches:gpu_race_condition.diff",
         "//tf_patches:grpc_version.diff",

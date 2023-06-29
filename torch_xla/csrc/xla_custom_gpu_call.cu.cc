@@ -3,7 +3,7 @@
 #include <cuda.h>
 #include <iostream> 
 
-__global__ custom_gpu_kernel(const float* in0, const float* in1, float* out) {
+__global__ void custom_gpu_kernel(const float* in0, const float* in1, float* out) {
   size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
   out[idx] = in0[idx % 128] + in1[idx];
 }
