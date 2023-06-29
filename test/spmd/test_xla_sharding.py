@@ -507,7 +507,7 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     t2 = ct2.to(xm.xla_device())
     mesh = self._get_hybrid_mesh((1, self.n_devices, 1),
                                  axis_names=('data', 'fsdp', 'tensor'))
-    t1 = xs.mark_sharding(t1, mesh, partition_spec=(0, 1))
+    t1 = xs.mark_sharding(t1, mesh, partition_spec=(1, 2))
     if self.n_devices > 1:
       hlo = torch_xla._XLAC._get_xla_tensors_hlo([t1.global_tensor])
       sharding_annotation = '{devices=[1,%d,1]%s}' % (self.n_devices, ','.join(
