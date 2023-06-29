@@ -415,7 +415,8 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
       sharding_type, mesh, partition_spec)
 
   def tensor_squeeze(t, tensor_expand):
-    t = torch.squeeze(t, dim=tuple(range(tensor_expand)))
+    if tensor_expand:
+      t = torch.squeeze(t, dim=tuple(range(tensor_expand)))
     return t
 
   if isinstance(t, XLAShardedTensor):

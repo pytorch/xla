@@ -510,8 +510,10 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     t1 = xs.mark_sharding(t1, mesh, partition_spec=(1, 2))
     if self.n_devices > 1:
       hlo = torch_xla._XLAC._get_xla_tensors_hlo([t1.global_tensor])
-      sharding_annotation = '{devices=[1,%d,1]%s}' % (self.n_devices, ','.join(
-          [str(d) for d in mesh.get_logical_mesh().flatten()]))
+      # expected string in hlo %param = f32[1,4,16]{2,1,0:T(4,128)} parameter(0), sharding={devices=[1,4,1]0,2,1,3}
+      sharding_annotation = 'sharding={devices=[1,%d,1]%s}' % (
+          self.n_devices, ','.join(
+              [str(d) for d in mesh.get_logical_mesh().flatten()]))
       self.assertIn(sharding_annotation, hlo)
     actual = (t1 + t2).cpu()
     self.assertTrue(torch.allclose(expected, actual))
