@@ -163,7 +163,6 @@ class Clean(distutils.command.clean.clean):
   def bazel_clean_(self):
     self.spawn(['bazel', 'clean', '--expunge'])
 
-
   def run(self):
     import glob
     import re
