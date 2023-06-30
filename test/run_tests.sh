@@ -5,7 +5,6 @@ LOGFILE=/tmp/pytorch_py_test.log
 MAX_GRAPH_SIZE=500
 GRAPH_CHECK_FREQUENCY=100
 VERBOSITY=2
-CONTINUE_ON_ERROR=true
 
 # Note [Keep Going]
 #

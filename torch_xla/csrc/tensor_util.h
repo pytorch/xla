@@ -155,7 +155,8 @@ inline bool tensors_has_dym_dim(at::TensorList tensors) {
   return false;
 }
 
-inline std::vector<at::Tensor> xla_expand_outplace_symint(at::TensorList to_expand) {
+inline std::vector<at::Tensor> xla_expand_outplace_symint(
+    at::TensorList to_expand) {
   // expands a list of Tensors; ignores undefined (null) tensors
   bool first = true;
   at::SymDimVector sym_sizes;
@@ -166,7 +167,8 @@ inline std::vector<at::Tensor> xla_expand_outplace_symint(at::TensorList to_expa
       sym_sizes = to_expand[i].sym_sizes();
       first = false;
     } else {
-      sym_sizes = at::infer_size_symdimvector(sym_sizes, to_expand[i].sym_sizes());
+      sym_sizes =
+          at::infer_size_symdimvector(sym_sizes, to_expand[i].sym_sizes());
     }
   }
 
@@ -182,7 +184,6 @@ inline std::vector<at::Tensor> xla_expand_outplace_symint(at::TensorList to_expa
   }
   return result;
 }
-
 
 inline std::vector<at::Tensor> xla_expand_outplace(at::TensorList to_expand) {
   // expands a list of Tensors; ignores undefined (null) tensors

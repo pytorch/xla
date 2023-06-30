@@ -1244,8 +1244,9 @@ at::Tensor XLANativeFunctions::empty_strided_symint(
   // As XLATensor doesn't have a storage, it should not care about the memory
   // format or how to jump to the next element (strides). So the term stride
   // does not mean much to us. The size of the tensor has been set by the
-  // above `empty_symint` so we feel it is ok to return here. 
-  return empty_symint(sym_size, dtype, layout, device, pin_memory, c10::nullopt);
+  // above `empty_symint` so we feel it is ok to return here.
+  return empty_symint(sym_size, dtype, layout, device, pin_memory,
+                      c10::nullopt);
 }
 
 at::Tensor XLANativeFunctions::expand_copy_symint(const at::Tensor& self,
