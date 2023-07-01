@@ -163,6 +163,9 @@ def maybe_bundle_libtpu(base_dir):
 
 class Clean(distutils.command.clean.clean):
 
+  def bazel_clean_(self):
+    self.spawn(['bazel', 'clean', '--expunge'])
+
   def run(self):
     import glob
     import re
@@ -182,6 +185,8 @@ class Clean(distutils.command.clean.clean):
               os.remove(filename)
             except OSError:
               shutil.rmtree(filename, ignore_errors=True)
+
+    self.execute(self.bazel_clean_, (), msg="Cleaning bazel outputs")
 
     # It's an old-style class in Python 2.7...
     distutils.command.clean.clean.run(self)
