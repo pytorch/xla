@@ -1,6 +1,6 @@
 # PyTorch/XLA
 
-<b>Current CI status:</b>  [![CircleCI](https://circleci.com/gh/pytorch/xla.svg?style=svg)](https://circleci.com/gh/pytorch/xla)
+<b>Current CI status:</b>  [![CircleCI](https://circleci.com/gh/pytorch/xla.svg?style=svg)](https://circleci.com/gh/pytorch/xla1)
 
 PyTorch/XLA is a Python package that uses the
 [XLA deep learning compiler](https://www.tensorflow.org/xla)
