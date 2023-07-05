@@ -185,7 +185,8 @@ inline std::vector<at::Tensor> xla_expand_outplace_symint_helper(
   return result;
 }
 
-inline std::vector<at::Tensor> xla_expand_outplace_helper(at::TensorList to_expand) {
+inline std::vector<at::Tensor> xla_expand_outplace_helper(
+    at::TensorList to_expand) {
   bool first = true;
   at::DimVector sizes;
   for (const auto i : c10::irange(to_expand.size())) {
