@@ -13,8 +13,6 @@ import tensorflow as tf
 import torchvision
 import torch._dynamo as torchdynamo
 
-from tensorflow.compiler.tf2xla.python import xla as tfxla
-
 from typing import Tuple, Type, Callable
 
 import sys
@@ -25,10 +23,10 @@ def _get_numpy_dtype(dtype):
       torch.double: np.double,
       torch.float32: np.float32,
       torch.half: np.half,
-      torch.long: int,
+      torch.long: np.int64,
       torch.int32: np.int32,
       torch.int16: np.int16,
-      torch.bool: bool,
+      torch.bool: np.bool_,
   }.get(dtype)
 
 
@@ -45,7 +43,8 @@ class SHLOModel:
     self.sout = (tuple(output_shape),)
 
   def __call__(self, *args):
-
+    # TODO(qihqi): remove this
+    from tensorflow.compiler.tf2xla.python import xla as tfxla
     call_args = []
     for i in range(self._total_number):
       if i in self.pos_to_orig_pos:
@@ -98,11 +97,14 @@ def export_torch_model(model: torch.nn.Module,
   sample_inputs = copy.deepcopy(sample_inputs)
 
   device = xm.xla_device()
-  model.to(device=device)
-  sample_inputs_lazy = tuple(map(lambda x: x.to(device=device), sample_inputs))
+  model = model.to(device=device)
+  sample_inputs_lazy = tuple(
+      x.to(device=device) if isinstance(x, torch.Tensor) else x
+      for x in sample_inputs)
   input_ids = {
       torch_xla._XLAC._xla_get_tensor_id(tensor): i
       for i, tensor in enumerate(sample_inputs_lazy)
+      if isinstance(tensor, torch.Tensor)
   }
   output = model(*sample_inputs_lazy)
   if fallback_ops := dynamo_bridge.get_fallback_ops():
