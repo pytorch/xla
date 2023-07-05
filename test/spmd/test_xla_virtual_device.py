@@ -88,6 +88,22 @@ class VirtualDeviceTest(test_xla_sharding_base.XlaShardingTest):
     xt2 = xt1 / 0.5
     torch.allclose(xt2.cpu(), xt1.cpu() / 0.5)
 
+  def test_mark_step_on_virtual_device(self):
+    xm.mark_step()
+    sharding_spec = xs.ShardingSpec(self._get_mesh((1, self.n_devices)), (0, 1))
+    # TODO(JackCaoG)currently, execution will only happen if there is at least on
+    # tensor on non-spmd:0 device.
+    t1 = torch.randn(3, 3, device=xm.xla_device())
+    # tensor will have device as `SPMD:0` in c++
+    xt1 = xm.send_cpu_data_to_device([torch.randn(3, 3)],
+                                     xm.xla_device(),
+                                     input_sharding=sharding_spec)[0]
+    xt2 = xt1 / 0.5
+    xm.mark_step()
+    # after mark_step, xt2 should be materalized
+    self.assertNotIn('aten::div',
+                     torch_xla._XLAC._get_xla_tensor_debug_info(xt2))
+
 
 if __name__ == '__main__':
   test = unittest.main()
