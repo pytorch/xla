@@ -147,7 +147,7 @@ inline bool tensor_has_dym_dim(at::Tensor t) {
 }
 
 inline bool tensors_has_dym_dim(at::TensorList tensors) {
-  for (const at::Tensor t : tensors) {
+  for (const at::Tensor& t : tensors) {
     if (tensor_has_dym_dim(t)) {
       return true;
     }
@@ -155,7 +155,7 @@ inline bool tensors_has_dym_dim(at::TensorList tensors) {
   return false;
 }
 
-inline std::vector<at::Tensor> xla_expand_outplace_symint(
+inline std::vector<at::Tensor> xla_expand_outplace_symint_helper(
     at::TensorList to_expand) {
   // expands a list of Tensors; ignores undefined (null) tensors
   bool first = true;
@@ -185,11 +185,7 @@ inline std::vector<at::Tensor> xla_expand_outplace_symint(
   return result;
 }
 
-inline std::vector<at::Tensor> xla_expand_outplace(at::TensorList to_expand) {
-  // expands a list of Tensors; ignores undefined (null) tensors
-  if (tensors_has_dym_dim(to_expand)) {
-    return xla_expand_outplace_symint(to_expand);
-  }
+inline std::vector<at::Tensor> xla_expand_outplace_helper(at::TensorList to_expand) {
   bool first = true;
   at::DimVector sizes;
   for (const auto i : c10::irange(to_expand.size())) {
@@ -214,6 +210,15 @@ inline std::vector<at::Tensor> xla_expand_outplace(at::TensorList to_expand) {
     }
   }
   return result;
+}
+
+inline std::vector<at::Tensor> xla_expand_outplace(at::TensorList to_expand) {
+  // expands a list of Tensors; ignores undefined (null) tensors
+  if (tensors_has_dym_dim(to_expand)) {
+    return xla_expand_outplace_symint_helper(to_expand);
+  } else {
+    return xla_expand_outplace_helper(to_expand);
+  }
 }
 
 }  // namespace torch_xla
