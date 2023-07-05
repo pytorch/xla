@@ -13,7 +13,7 @@ parser.add_argument(
     '--batch_size', type=int, default=131072, help="Per device Batch size.")
 parser.add_argument('--embedding_dimension', type=int, default=2048)
 parser.add_argument('--num_layers', type=int, default=4)
-parser.add_argument('--profile', type=bool, default=False)
+parser.add_argument('--profile', action='store_true')
 parser.add_argument(
     '--dcn_data_parallelism',
     type=int,
@@ -56,7 +56,7 @@ def profile():
   import sys
   import shutil
   tmpdir = tempfile.mkdtemp()
-  cmd = f"/usr/local/bin/python /workspaces/work/pytorch/xla/scripts/capture_profile.py --service_addr 127.0.0.1:9012 --logdir {tmpdir} --duration_ms 12000"
+  cmd = f"/usr/local/bin/python /workspaces/work/pytorch/xla/scripts/capture_profile.py --service_addr 127.0.0.1:9012 --logdir {tmpdir} --duration_ms 1000"
   # cmd = f"/usr/bin/python /home/mohitkhatwani/pytorch/xla/scripts/capture_profile.py --service_addr 127.0.0.1:9012 --logdir {tmpdir} --duration_ms 10000"
   Popen(cmd.split()).communicate()
   label = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
@@ -72,7 +72,7 @@ def profile():
   os.makedirs(autoprof_dir, exist_ok=True)
   for profile in profiles:
     shutil.move(f'{profile_dir}/{profile}', f'{autoprof_dir}/{label}_{profile}')
-    cmd = f'/usr/bin/gsutil cp -r {autoprof_dir}/{label}_{profile} gs://mohitkhatwani-pytorch-logs/plugins/profile/{label}'
+    cmd = f'/usr/bin/gsutil cp -r {autoprof_dir}/{label}_{profile} gs://jwtan/plugins/profile/{label}'
     # cmd = f'/snap/bin/gsutil cp -r {autoprof_dir}/{label}_{profile} gs://mohitkhatwani-pytorch-logs/plugins/profile/{label}'
     print(cmd)
     os.system(cmd)
@@ -168,7 +168,7 @@ def my_loss(inputs):
 
 def training_step(data):
   model.train()
-  with xp.StepTrace('train_sharding'):
+  with xp.Trace('train_sharding'):
     with xp.Trace('build_graph'):
       optimizer.zero_grad()
       output = model(data)
@@ -192,8 +192,8 @@ d_ff = 4 * d_emb
 
 import threading
 
-data = gen_data(global_batch_size, args.embedding_dimension).to(device)
-xs.mark_sharding(data, data_mesh, data_sharding)
+data = gen_data(global_batch_size, args.embedding_dimension)
+data = xm.send_cpu_data_to_device(data, device, input_sharding=xs.ShardingSpec(data_mesh, data_sharding))[0]
 
 model = Model(args.num_layers).to(device)
 for name, layer in model.named_modules():
@@ -230,3 +230,6 @@ time = sum(outcomes) / len(outcomes)
 print(
     f"time is {time} seconds, TFLOP is {TFLOPs_per_device}, TFLOP/s is {TFLOPs_per_device/time}",
     flush=True)
+
+# import torch_xla.debug.metrics as met
+# print(met.metrics_report())
