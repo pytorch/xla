@@ -52,6 +52,7 @@
 from __future__ import print_function
 
 from setuptools import setup, find_packages, distutils, Extension, command
+from setuptools.command import develop
 from torch.utils.cpp_extension import BuildExtension
 import posixpath
 import contextlib
@@ -305,6 +306,13 @@ class BuildBazelExtension(command.build_ext.build_ext):
     shutil.copyfile(ext_bazel_bin_path, ext_dest_path)
 
 
+class Develop(develop.develop):
+
+  def run(self):
+    self.run_command("build_ext")
+    super().run()
+
+
 setup(
     name=os.environ.get('TORCH_XLA_PACKAGE_NAME', 'torch_xla'),
     version=version,
@@ -336,4 +344,5 @@ setup(
     cmdclass={
         'build_ext': BuildBazelExtension,
         'clean': Clean,
+        'develop': Develop,
     })
