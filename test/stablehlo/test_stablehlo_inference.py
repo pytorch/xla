@@ -47,6 +47,25 @@ class StableHLOInferenceTest(unittest.TestCase):
       output2 = torch.tensor(res.numpy())
       self.assertTrue(torch.allclose(output, output2, atol=1e-5))
 
+  def test_add_float(self):
+
+    class AddFloat(torch.nn.Module):
+
+      def __init__(self) -> None:
+        super().__init__()
+
+      # def forward(self, tensors, dim=0):
+      def forward(self, x, y):
+        return x + y
+
+    m = AddFloat()
+    data = (torch.randn(100, 100), 4.4)
+    output = m(*data)
+    exported = export_torch_model(m, data)
+    output2 = torch.tensor(exported(data[0].detach().numpy(), data[1]).numpy())
+
+    self.assertTrue(torch.allclose(output, output2, atol=1e-5))
+
 
 if __name__ == '__main__':
   test = unittest.main()
