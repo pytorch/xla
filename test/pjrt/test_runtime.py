@@ -81,6 +81,9 @@ class TestExperimentalPjrt(parameterized.TestCase):
       else:
         self.assertIsNone(xr.device_type())
 
+  def test_host_index(self):
+    self.assertEqual(xr.host_index(), 0)
+
 
 if __name__ == '__main__':
   absltest.main()

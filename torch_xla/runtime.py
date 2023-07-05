@@ -182,3 +182,12 @@ def device_attributes(device: str) -> Dict[str, object]:
 @requires_pjrt
 def global_device_attributes() -> List[Dict[str, object]]:
   return torch_xla._XLAC._xla_get_all_device_attributes()
+
+
+@requires_pjrt
+def host_index() -> int:
+  if device_type() == 'TPU':
+    return tpu.worker_id()
+
+  # TODO: Update this when we support multi-host GPU
+  return 0
