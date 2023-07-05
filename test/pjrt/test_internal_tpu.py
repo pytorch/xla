@@ -84,6 +84,14 @@ class TestExperimentalTpu(parameterized.TestCase):
 
     self.assertEqual(i, expected)
 
+  @parameterized.parameters(('0', 0), ('1', 1), ('15', 15))
+  def test_worker_id(self, worker_id, expected):
+    with mock.patch.object(
+        tpu, 'get_tpu_env', return_value={xenv.WORKER_ID: worker_id}):
+      i = tpu.worker_id()
+
+    self.assertEqual(i, expected)
+
   @parameterized.named_parameters(
       ('v4',
        textwrap.dedent("""
