@@ -193,7 +193,7 @@ d_ff = 4 * d_emb
 import threading
 
 data = gen_data(global_batch_size, args.embedding_dimension)
-data = xm.send_cpu_data_to_device(data, device, input_sharding=xs.ShardingSpec(data_mesh, data_sharding))[0]
+data = xm.send_cpu_data_to_device([data], device, input_sharding=xs.ShardingSpec(data_mesh, data_sharding))[0]
 
 model = Model(args.num_layers).to(device)
 for name, layer in model.named_modules():
