@@ -12,9 +12,18 @@ class DeviceData : public XlaNode {
  public:
   DeviceData(std::shared_ptr<torch::lazy::BackendData> data);
 
+  DeviceData(std::shared_ptr<torch::lazy::BackendData> data,
+             torch::lazy::OpList ops, xla::Shape xla_shape,
+             xla::OpSharding sharding);
+
   std::string ToString() const override;
 
+  torch::lazy::NodePtr Clone() const override;
+
   torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
+
+  torch::lazy::NodePtr CloneWithSharding(
+      xla::OpSharding sharding) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
 

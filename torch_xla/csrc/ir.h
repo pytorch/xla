@@ -51,6 +51,11 @@ class XlaNode : public torch::lazy::Node {
           torch::lazy::hash_t hash_seed = default_hash_seed);
 
   XlaNode(torch::lazy::OpKind op, torch::lazy::OpList operands,
+          std::vector<torch::lazy::Shape>&& shapes, xla::Shape xla_shape,
+          xla::OpSharding sharding, size_t num_outputs = 1,
+          torch::lazy::hash_t hash_seed = default_hash_seed);
+
+  XlaNode(torch::lazy::OpKind op, torch::lazy::OpList operands,
           std::vector<torch::lazy::Shape>&& shapes,
           const std::function<xla::Shape()>& xla_shape_fn,
           size_t num_outputs = 1,
@@ -99,7 +104,13 @@ class XlaNode : public torch::lazy::Node {
   // multi-output node, output_index must be zero.
   const xla::Shape& xla_shape(size_t output_index) const;
 
+  virtual torch::lazy::NodePtr Clone() const;
+
+  // TODO(https://github.com/pytorch/xla/issues/4567) Remove this clone method
   virtual torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const;
+
+  virtual torch::lazy::NodePtr CloneWithSharding(
+      xla::OpSharding sharding) const;
 
   virtual XlaOpVector Lower(LoweringContext* loctx) const;
 
@@ -110,16 +121,9 @@ class XlaNode : public torch::lazy::Node {
 
   torch::lazy::hash_t node_hash() const { return node_hash_; }
 
-  torch::lazy::hash_t hash() const override {
-    if (sharding_hash_ != 0) {
-      return torch::lazy::HashCombine(dag_hash_, sharding_hash_);
-    }
-    return dag_hash_;
-  }
+  torch::lazy::hash_t hash() const override { return dag_hash_; }
 
   torch::lazy::hash_t shapeHash() const override { return dag_hash_; }
-
-  torch::lazy::hash_t shardingHash() const { return sharding_hash_; }
 
   // The node's outputs get assigned the same HLO sharding
   // TODO: test multi-output example.
@@ -127,14 +131,10 @@ class XlaNode : public torch::lazy::Node {
     return output_sharding_;
   }
 
-  void SetSharding(const xla::OpSharding& sharding);
-
-  void ClearSharding() {
-    output_sharding_ = nullptr;
-    sharding_hash_ = 0;
-  }
-
   std::string ToString() const override;
+
+ protected:
+  std::optional<torch::lazy::OpList> oplist() const { return oplist_; }
 
  private:
   xla::Shape GetOpShape(const std::function<xla::Shape()>& shape_fn) const;
@@ -151,11 +151,12 @@ class XlaNode : public torch::lazy::Node {
   xla::Shape xla_shape_;
   torch::lazy::hash_t node_hash_ = 0;
   torch::lazy::hash_t dag_hash_;
-  torch::lazy::hash_t sharding_hash_ = 0;
 
   // Experimental sharding annotation attached to the IR node.
   // TODO(yeounoh): make sure that view update doesn't reset this.
   std::shared_ptr<xla::OpSharding> output_sharding_ = nullptr;
+
+  std::optional<torch::lazy::OpList> oplist_;
 };
 
 inline std::ostream& operator<<(std::ostream& stream, const XlaNode& node) {

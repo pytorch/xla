@@ -21,14 +21,32 @@ DeviceData::DeviceData(std::shared_ptr<torch::lazy::BackendData> data)
   }
 }
 
+DeviceData::DeviceData(std::shared_ptr<torch::lazy::BackendData> data,
+                       torch::lazy::OpList ops, xla::Shape xla_shape,
+                       xla::OpSharding sharding)
+    : XlaNode(xla_device_data, ops, {data->shape()}, xla_shape, sharding,
+              /*num_outputs=*/1,
+              /*hash_seed=*/(uint32_t)101),
+      data_(std::move(data)) {}
+
 std::string DeviceData::ToString() const {
   std::stringstream ss;
   ss << XlaNode::ToString() << ", device=" << data_->device();
   return ss.str();
 }
 
+torch::lazy::NodePtr DeviceData::Clone() const { return Clone({}); }
+
 torch::lazy::NodePtr DeviceData::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<DeviceData>(data_);
+}
+
+torch::lazy::NodePtr DeviceData::CloneWithSharding(
+    xla::OpSharding sharding) const {
+  // TODO(steventk) Ideally, we are either passing the actual oplist, or we
+  // don't pass ops at all and use another XlaNode constructor
+  torch::lazy::OpList ops = {};
+  return torch::lazy::MakeNode<DeviceData>(data_, ops, xla_shape(), sharding);
 }
 
 XlaOpVector DeviceData::Lower(LoweringContext* loctx) const {

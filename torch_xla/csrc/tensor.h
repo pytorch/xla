@@ -277,6 +277,10 @@ class XLATensor : public torch::lazy::LazyTensor {
   // Override to enable SPMD.
   void AssignIrValue(torch::lazy::Value ir_value) const final;
 
+  // Creates a sharded IR node based on the current IR node and the given
+  // sharding.
+  void CreateShardedIrValue(const ShardingSpecPtr sharding_spec);
+
  private:
   XLATensor(const at::Tensor& tensor, const torch::lazy::BackendDevice& device);
   XLATensor(torch::lazy::BackendDataPtr handle,
@@ -315,6 +319,8 @@ class XLATensor : public torch::lazy::LazyTensor {
   static bool UseEagerDebugMode();
 
   bool ShouldSyncIrNode();
+
+  void CreateUnshardedIrValue();
 
   // We store two shared_ptr of Data in a XLATensor.
   // One in the LazyTensor class as the LazyTensor::Data type
