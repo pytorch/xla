@@ -1137,7 +1137,7 @@ void InitXlaModuleBindings(py::module m) {
         [](const std::vector<std::string>& devices) {
           NoGilSection nogil;
           XLAGraphExecutor::Get()->WaitDeviceOps(devices);
-          if (ShardingUtil::UseVirtualDevice()) {
+          if (UseVirtualDevice()) {
             std::vector<std::string> spmd_device = {"SPMD:0"};
             runtime::GetComputationClient()->WaitDeviceOps(spmd_device);
           } else {
@@ -1324,8 +1324,7 @@ void InitXlaModuleBindings(py::module m) {
            const py::list& group_assignment, const py::list& replication_groups,
            int sharding_type) {
           TORCH_LAZY_COUNTER("XlaMarkSharding", 1);
-          XLA_CHECK(ShardingUtil::UseVirtualDevice())
-              << "Please set `XLA_USE_SPMD=1`";
+          XLA_CHECK(UseVirtualDevice()) << "Please set `XLA_USE_SPMD=1`";
           XLATensorPtr xtensor = bridge::GetXlaTensor(input);
           xla::OpSharding sharding = ShardingUtil::CreateOpSharding(
               tile_assignment, group_assignment, replication_groups,
@@ -1404,23 +1403,33 @@ void InitXlaModuleBindings(py::module m) {
   // shape. Note that this padding is _not_ included in the global indices
   // returned by `_get_local_shard_indices`.
   m.def("_get_local_shards",
-        [](const at::Tensor& input) -> std::vector<at::Tensor> {
+        [](const at::Tensor& input)
+            -> std::tuple<std::vector<at::Tensor>, std::vector<std::string>> {
           XLATensorPtr xtensor = bridge::GetXlaTensor(input);
           XLA_CHECK(xtensor->GetXlaData() != nullptr)
               << "Shard data is not available";
           XLA_CHECK(xtensor->sharding_spec() != nullptr)
               << "Tensor is not sharded";
-          XLA_CHECK(ShardingUtil::UseVirtualDevice())
+          XLA_CHECK(UseVirtualDevice())
               << "Virtual device must be enabled to use _get_local_shards";
           auto handle = UnwrapXlaData(xtensor->GetXlaData());
-          auto shard_handles =
+          std::vector<runtime::ComputationClient::DataPtr> shard_handles =
               runtime::GetComputationClient()->GetDataShards(handle);
           std::vector<at::Tensor> shards;
-          for (auto& shard_handle : shard_handles) {
-            auto xshard = XLATensor::Create(WrapXlaData(shard_handle));
-            shards.push_back(bridge::AtenFromXlaTensor(std::move(xshard)));
+          std::vector<std::string> str_devices;
+          shards.reserve(shard_handles.size());
+          str_devices.reserve(shard_handles.size());
+          // Tansfer shards from the device and create cpu tensors.
+          for (const runtime::ComputationClient::DataPtr shard_handle :
+               shard_handles) {
+            shards.push_back(
+                XlaDataToTensors(
+                    {WrapXlaData(shard_handle)},
+                    TensorTypeFromXlaType(shard_handle->shape().element_type()))
+                    .front());
+            str_devices.push_back(shard_handle->device());
           }
-          return shards;
+          return std::make_tuple(shards, str_devices);
         });
   // Returns the indices of the shards into the global tensor as either
   // a Python list of slices for each dimension or a Python Ellipsis object
@@ -1688,8 +1697,8 @@ void InitXlaModuleBindings(py::module m) {
           torch::lazy::hash_t hash = *(torch::lazy::hash_t*)(hash_str.c_str());
           // Device will be Virtual device if SPMD is enabled.
           torch::lazy::BackendDevice device =
-              ShardingUtil::UseVirtualDevice() ? ParseDeviceString("SPMD:0")
-                                               : torch_xla::GetCurrentDevice();
+              UseVirtualDevice() ? ParseDeviceString("SPMD:0")
+                                 : torch_xla::GetCurrentDevice();
           auto results = XLAGraphExecutor::Get()->ExecuteComputationWithBarrier(
               hash, graph_inputs, device);
           std::vector<at::Tensor> retlist;
