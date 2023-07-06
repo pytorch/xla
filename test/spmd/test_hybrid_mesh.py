@@ -6,6 +6,7 @@ import datetime
 import torch_xla.core.xla_model as xm
 import torch_xla.runtime as xr
 import torch_xla.experimental.xla_sharding as xs
+import torch_xla.debug.metrics as met
 import torch_xla.debug.profiler as xp
 
 parser = argparse.ArgumentParser(add_help=False)
@@ -220,16 +221,22 @@ outcomes = []
 for _ in range(10):
   simple_timeit(lambda: training_step(data))
 
+xm.wait_device_ops()
+start_time = met.metric_data('ExecuteReplicatedTime')
+
 if args.profile:
   threading.Thread(target=profile).start()
 for _ in range(tries):
   outcomes.append(simple_timeit(lambda: training_step(data)))
 print(f"Timings {outcomes}")
-time = sum(outcomes) / len(outcomes)
+# time = sum(outcomes) / len(outcomes)
+
+xm.wait_device_ops()
+end_time = met.metric_data('ExecuteReplicatedTime')
+time = (end_time[1] - start_time[1]) / (end_time[0] - start_time[0]) / 10**9
 
 print(
     f"time is {time} seconds, TFLOP is {TFLOPs_per_device}, TFLOP/s is {TFLOPs_per_device/time}",
     flush=True)
 
-# import torch_xla.debug.metrics as met
 # print(met.metrics_report())
