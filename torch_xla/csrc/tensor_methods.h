@@ -785,6 +785,9 @@ XLATensorPtr squeeze(const XLATensorPtr& input);
 // unchanged input otherwise.
 XLATensorPtr squeeze(const XLATensorPtr& input, int64_t dim);
 
+// Same as above, but with a tuple of dims.
+XLATensorPtr squeeze(const XLATensorPtr& input, std::vector<int64_t> dims);
+
 // In-place versions of the methods above.
 void squeeze_(XLATensorPtr& input);
 void squeeze_(XLATensorPtr& input, int64_t dim);

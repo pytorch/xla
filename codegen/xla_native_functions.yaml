@@ -311,6 +311,7 @@ supported:
   - sqrt
   - squeeze_copy
   - squeeze_copy.dim
+  - squeeze_copy.dims
   - stack
   - std
   - std.correction
