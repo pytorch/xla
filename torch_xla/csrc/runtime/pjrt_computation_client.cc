@@ -30,6 +30,9 @@
 #include "xla/pjrt/tpu_client.h"
 #include "xla/shape.h"
 
+#include "xla/service/jellyfish/tpu_compilation_environment.h"
+#include "xla/service/jellyfish/flag_types.h"
+
 namespace torch_xla {
 namespace runtime {
 
@@ -421,6 +424,11 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
       }
       compile_options.executable_build_options.set_device_assignment(
           device_assignment);
+
+      std::cerr << "has_comp_envs: " << compile_options.executable_build_options.has_comp_envs() << std::endl;
+      auto env = compile_options.executable_build_options.mutable_comp_envs();
+      env->GetMutableEnv<xla::jellyfish::TpuCompilationEnvironment>().set_xla_memory_scheduler(MemoryScheduler::kBrkga);
+      env->GetMutableEnv<xla::jellyfish::TpuCompilationEnvironment>().set_xla_tpu_spmd_threshold_for_allgather_cse(0);
     } else {
       std::cerr << "Unsharded compilation" << std::endl;
       // TODO(wcromar): set compile_options.argument_layouts, enable strict
