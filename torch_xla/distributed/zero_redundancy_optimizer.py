@@ -30,6 +30,15 @@ class ZeroRedundancyOptimizer(Optimizer):
         pin_layout (bool, Optional): if ``True``, then pin the layout in the
             collective ops (all_gather and reduce_scatter). See `xm.all_reduce`
             for details on pinning layout. Default: True
+        sharding_groups (list, Optional):
+          If specified, ZeRO-1 will use this ``sharding_groups`` for all-gather
+          and reduce-scatter ops in full parameter construction and gradient
+          sharding. This can be useful for mixing ZeRO-1 with model parallelism
+          such as Megatron.
+        grad_norm_groups (list, Optional):
+          If specified, ZeRO-1 will use this ``grad_norm_groups`` for the
+          EXTRA all-reduce op in grad norm calculation. This can be model parallel
+          groups when mixing ZeRO-1 with model parallelism such as Megatron.
         **defaults: any trailing arguments, which are forwarded to the local
             optimizer.
 
@@ -47,7 +56,8 @@ class ZeroRedundancyOptimizer(Optimizer):
       grad_clipping: bool = True,
       max_norm: Optional[float] = None,
       pin_layout: bool = True,
-      cc_op_groups: Optional[Any] = None,
+      sharding_groups: Optional[Any] = None,
+      grad_norm_groups: Optional[Any] = None,
       lazy_init: bool = False,
       **defaults: Any,
   ):
@@ -55,8 +65,9 @@ class ZeroRedundancyOptimizer(Optimizer):
 
     self.global_world_size = xm.xrt_world_size()
     self.global_rank = xm.get_ordinal()
-    self._cc_op_groups = [list(range(self.global_world_size))
-                         ] if cc_op_groups is None else cc_op_groups
+    self._sharding_groups = [list(range(self.global_world_size))
+                            ] if sharding_groups is None else sharding_groups
+    self._grad_norm_groups = grad_norm_groups
 
     self.optimizer_class = optimizer_class
     self.defaults = defaults
@@ -70,8 +81,8 @@ class ZeroRedundancyOptimizer(Optimizer):
       self.init_zero()
 
   def init_zero(self):
-    self.local_world_size = len(self.cc_op_groups[0])
-    self.local_rank = self.global_rank // len(self.cc_op_groups)
+    self.local_world_size = len(self.sharding_groups[0])
+    self.local_rank = self.global_rank // len(self.sharding_groups)
     # Shard parameters for use in optimizer
     sharded_param_groups = self._shard_parameters()
     # Optimizer initialization
@@ -81,13 +92,13 @@ class ZeroRedundancyOptimizer(Optimizer):
     self.inited = True
 
   @property
-  def cc_op_groups(self):
-    return self._cc_op_groups
+  def sharding_groups(self):
+    return self._sharding_groups
 
-  @cc_op_groups.setter
-  def cc_op_groups(self, new_cc_op_groups):
-    assert not self.inited, "already inited, cannot change cc_op_groups"
-    self._cc_op_groups = new_cc_op_groups
+  @sharding_groups.setter
+  def sharding_groups(self, new_sharding_groups):
+    assert not self.inited, "already inited, cannot change sharding_groups"
+    self._sharding_groups = new_sharding_groups
 
   @staticmethod
   def _sync_param_groups(
@@ -171,12 +182,17 @@ class ZeroRedundancyOptimizer(Optimizer):
     for grad in grads_for_norm:
       grad_norm = (grad * grad).sum()
       total_norm += grad_norm
-    # across all ranks as no pipeline parallel
-    total_norm = xm.all_reduce(
-        xm.REDUCE_SUM,
-        total_norm,
-        groups=[list(range(self.global_world_size))],
+    # All-reduce across data parallel groups
+    xm.all_reduce(
+        xm.REDUCE_SUM, [total_norm],
+        groups=self._sharding_groups,
         pin_layout=self.pin_layout)
+    # All-reduce across other parallel groups, usually model parallel groups
+    if self._grad_norm_groups is not None:
+      xm.all_reduce(
+          xm.REDUCE_SUM, [total_norm],
+          groups=self._grad_norm_groups,
+          pin_layout=self.pin_layout)
     total_norm = torch.pow(total_norm, 1.0 / norm_type)
     return total_norm
 
@@ -234,7 +250,7 @@ class ZeroRedundancyOptimizer(Optimizer):
               scatter_dim=0,
               shard_count=self.local_world_size,
               pin_layout=self.pin_layout,
-              groups=self.cc_op_groups,
+              groups=self.sharding_groups,
           )
 
           if grad_shard.dtype != self.optimizer_dtype:
@@ -265,7 +281,7 @@ class ZeroRedundancyOptimizer(Optimizer):
               dim=0,
               output=param.data,
               pin_layout=self.pin_layout,
-              groups=self.cc_op_groups,
+              groups=self.sharding_groups,
           )
 
     # sync back
