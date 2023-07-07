@@ -255,8 +255,12 @@ class DistributedCheckpointHelpersTest(DistributedCheckpointTestBase):
     sharded_cpu_state_dict = _sharded_cpu_state_dict(state_dict)
     self.assertCountEqual(sharded_cpu_state_dict,
                           ['fc1.weight', 'fc1.bias', 'fc2.weight', 'fc2.bias'])
-    self.assertTrue(
-        isinstance(sharded_cpu_state_dict['fc1.weight'], _CpuShards))
+    for name, param in sharded_cpu_state_dict.items():
+      if name == 'fc1.weight':
+        self.assertTrue(isinstance(param, _CpuShards))
+      else:
+        self.assertTrue(isinstance(param, torch.tensor))
+        self.assertTrue(param.device == torch.device("cpu"))
 
 
 if __name__ == '__main__':

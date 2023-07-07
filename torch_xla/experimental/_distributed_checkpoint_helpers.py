@@ -5,11 +5,11 @@
 import dataclasses
 
 import torch
-import torch_xla
 import torch_xla.experimental.xla_sharding as xs
 
 from torch.distributed.checkpoint.planner import SavePlan
 from typing import (
+    Any,
     Callable,
     Collection,
     Dict,
@@ -23,6 +23,7 @@ from typing import (
 )
 from torch.distributed.checkpoint.metadata import (MetadataIndex,
                                                    STATE_DICT_TYPE)
+from torch_xla.experimental.xla_sharding import XLAShardedTensor, ShardingType
 from torch.utils._pytree import tree_map
 
 PATH_ITEM = Union[str, int]
@@ -193,6 +194,12 @@ def narrow_tensor_by_index(tensor: torch.Tensor, offsets: Sequence[int],
   return narrowed_tensor
 
 
+def _is_sharded_tensor(x: Any) -> bool:
+  """Return true if the tensor's data is sharded across multiple devices"""
+  return isinstance(
+      x, XLAShardedTensor) and x.sharding_type != ShardingType.REPLICATED
+
+
 @dataclasses.dataclass
 class _CpuShards:
   shards: List[xs.XLAShard]
@@ -205,7 +212,7 @@ def _sharded_cpu_state_dict(state_dict: STATE_DICT_TYPE) -> STATE_DICT_TYPE:
   """
 
   def move_state_dict_to_cpu(v):
-    v = xs.wrap_if_sharded(v)
+    v = xs.wrap_if_sharded(v) if _is_sharded_tensor(v) else v
     return _CpuShards(shards=v.local_shards, global_shape=v.global_tensor.shape)
 
   return tree_map(move_state_dict_to_cpu, state_dict)
