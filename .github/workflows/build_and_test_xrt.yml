@@ -19,7 +19,7 @@ jobs:
     with:
       # ecr-docker-image-base: 308535385114.dkr.ecr.us-east-1.amazonaws.com/pytorch/xla_base
       # gcr-docker-image: gcr.io/tpu-pytorch/xla_base:latest
-      gcr-docker-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:tpu
+      gcr-docker-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:cuda
       disable_xrt: 0
       cuda: 1
     secrets:
