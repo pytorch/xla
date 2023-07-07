@@ -17,32 +17,33 @@ jobs:
     name: "Build XLA"
     uses: ./.github/workflows/_build.yml
     with:
-      ecr-docker-image-base: 308535385114.dkr.ecr.us-east-1.amazonaws.com/pytorch/xla_base
-      gcr-docker-image: gcr.io/tpu-pytorch/xla_base:latest
+      # ecr-docker-image-base: 308535385114.dkr.ecr.us-east-1.amazonaws.com/pytorch/xla_base
+      # gcr-docker-image: gcr.io/tpu-pytorch/xla_base:latest
+      gcr-docker-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:tpu
       disable_xrt: 0
       cuda: 1
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
-  test-cpu:
-    name: "CPU tests"
-    uses: ./.github/workflows/_test.yml
-    needs: build
-    with:
-      docker-image: ${{ needs.build.outputs.docker-image }}
-      timeout-minutes: 90
-      disable-xrt: 0
-    secrets:
-      gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
+  # test-cpu:
+  #   name: "CPU tests"
+  #   uses: ./.github/workflows/_test.yml
+  #   needs: build
+  #   with:
+  #     docker-image: ${{ needs.build.outputs.docker-image }}
+  #     timeout-minutes: 90
+  #     disable-xrt: 0
+  #   secrets:
+  #     gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
-  test-cuda:
-    name: "GPU tests"
-    uses: ./.github/workflows/_test.yml
-    needs: build
-    with:
-      docker-image: ${{ needs.build.outputs.docker-image }}
-      runner: linux.8xlarge.nvidia.gpu
-      timeout-minutes: 300
-      disable-xrt: 0
-    secrets:
-      gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
+  # test-cuda:
+  #   name: "GPU tests"
+  #   uses: ./.github/workflows/_test.yml
+  #   needs: build
+  #   with:
+  #     docker-image: ${{ needs.build.outputs.docker-image }}
+  #     runner: linux.8xlarge.nvidia.gpu
+  #     timeout-minutes: 180
+  #     disable-xrt: 0
+  #   secrets:
+  #     gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}

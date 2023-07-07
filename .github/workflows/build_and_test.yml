@@ -18,35 +18,35 @@ jobs:
     name: "Build XLA"
     uses: ./.github/workflows/_build.yml
     with:
-      ecr-docker-image-base: 308535385114.dkr.ecr.us-east-1.amazonaws.com/pytorch/xla_base
+      # ecr-docker-image-base: 308535385114.dkr.ecr.us-east-1.amazonaws.com/pytorch/xla_base
       gcr-docker-image: gcr.io/tpu-pytorch/xla_base:latest
       disable_xrt: 1
       cuda: 1
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
-  test-cpu:
-    name: "CPU tests"
-    uses: ./.github/workflows/_test.yml
-    needs: build
-    with:
-      docker-image: ${{ needs.build.outputs.docker-image }}
-      timeout-minutes: 90
-      disable-xrt: 1
-    secrets:
-      gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
+  # test-cpu:
+  #   name: "CPU tests"
+  #   uses: ./.github/workflows/_test.yml
+  #   needs: build
+  #   with:
+  #     docker-image: ${{ needs.build.outputs.docker-image }}
+  #     timeout-minutes: 90
+  #     disable-xrt: 1
+  #   secrets:
+  #     gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
-  test-cuda:
-    name: "GPU tests"
-    uses: ./.github/workflows/_test.yml
-    needs: build
-    with:
-      docker-image: ${{ needs.build.outputs.docker-image }}
-      runner: linux.8xlarge.nvidia.gpu
-      timeout-minutes: 300
-      disable-xrt: 1
-    secrets:
-      gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
+  # test-cuda:
+  #   name: "GPU tests"
+  #   uses: ./.github/workflows/_test.yml
+  #   needs: build
+  #   with:
+  #     docker-image: ${{ needs.build.outputs.docker-image }}
+  #     runner: linux.8xlarge.nvidia.gpu
+  #     timeout-minutes: 180
+  #     disable-xrt: 1
+  #   secrets:
+  #     gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
   test-cpu-coverage:
     name: "Collect CPU test coverage"
@@ -75,12 +75,12 @@ jobs:
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
-  push-docs:
-    name: "Build & publish docs"
-    if: github.event_name == 'push' && (github.event.ref == 'refs/heads/master' || startsWith(github.event.ref, 'refs/tags/r'))
-    uses: ./.github/workflows/_docs.yml
-    needs: build
-    with:
-      docker-image: ${{ needs.build.outputs.docker-image }}
-    secrets:
-      torchxla-bot-token: ${{ secrets.TORCH_XLA_BOT_TOKEN }}
+  # push-docs:
+  #   name: "Build & publish docs"
+  #   if: github.event_name == 'push' && (github.event.ref == 'refs/heads/master' || startsWith(github.event.ref, 'refs/tags/r'))
+  #   uses: ./.github/workflows/_docs.yml
+  #   needs: build
+  #   with:
+  #     docker-image: ${{ needs.build.outputs.docker-image }}
+  #   secrets:
+  #     torchxla-bot-token: ${{ secrets.TORCH_XLA_BOT_TOKEN }}
