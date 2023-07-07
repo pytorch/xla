@@ -21,8 +21,8 @@ from typing import (
     Union,
     cast,
 )
-from torch.distributed.checkpoint.metadata import (
-    MetadataIndex, STATE_DICT_TYPE)
+from torch.distributed.checkpoint.metadata import (MetadataIndex,
+                                                   STATE_DICT_TYPE)
 from torch.utils._pytree import tree_map
 
 PATH_ITEM = Union[str, int]
@@ -197,7 +197,7 @@ def narrow_tensor_by_index(tensor: torch.Tensor, offsets: Sequence[int],
 class _CpuShards:
   shards: List[xs.XLAShard]
   global_shape: torch.Shape
-  
+
 
 def _sharded_cpu_state_dict(state_dict: STATE_DICT_TYPE) -> STATE_DICT_TYPE:
   """
@@ -206,6 +206,6 @@ def _sharded_cpu_state_dict(state_dict: STATE_DICT_TYPE) -> STATE_DICT_TYPE:
 
   def move_state_dict_to_cpu(v):
     v = xs.wrap_if_sharded(v)
-    return _CpuShards(shards=v.local_shards, 
-                      global_shape=v.global_tensor.shape)
+    return _CpuShards(shards=v.local_shards, global_shape=v.global_tensor.shape)
+
   return tree_map(move_state_dict_to_cpu, state_dict)
