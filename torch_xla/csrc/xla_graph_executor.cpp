@@ -81,7 +81,6 @@ auto XLAGraphExecutor::DeviceContextArena::Get() -> DeviceContextArena* {
 std::vector<XLATensorPtr> XLAGraphExecutor::DeviceContextArena::GetLiveTensors(
     const torch::lazy::BackendDevice* device) {
   std::vector<XLATensorPtr> tensors;
-  torch::lazy::BackendDevice virtual_device = GetVirtualDevice();
   auto fn = [&](DeviceContext* devctx) {
     std::lock_guard<std::mutex> lock(devctx->lock);
     for (auto& uid_wptr : devctx->tensors_data) {
@@ -93,8 +92,6 @@ std::vector<XLATensorPtr> XLAGraphExecutor::DeviceContextArena::GetLiveTensors(
     }
   };
   ForAllDeviceContexts(fn, device);
-  // TODO(JackCaoG): all tensors should be on spmd:0 in SPMD mode.
-  ForAllDeviceContexts(fn, &virtual_device);
   return tensors;
 }
 
@@ -505,10 +502,7 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
                                   tsl::profiler::TraceMeLevel::kInfo);
   runtime::util::Unique<torch::lazy::BackendDevice> unique_device;
   for (size_t i = 0; i < tensors.size(); ++i) {
-    // TODO(JackCaoG): all tensors should be on spmd:0 in SPMD mode.
-    if (tensors[i]->GetDevice().toString() != "SPMD:0") {
-      unique_device.set(tensors[i]->GetDevice());
-    }
+    unique_device.set(tensors[i]->GetDevice());
   }
   SyncTensorCollection coll;
   if (!unique_device) {

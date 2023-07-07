@@ -338,6 +338,7 @@ torch::lazy::Value XLATensor::GetIrValue() const {
   c10::optional<at::Tensor> tensor_data = CurrentTensorData();
   XLA_CHECK(tensor_data);
   AssignIrValue(GetIrValueForTensor(*tensor_data, GetDevice()));
+  data()->tensor_data = c10::nullopt;
   return data()->ir_value;
 }
 
