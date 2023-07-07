@@ -507,7 +507,7 @@ void ShardingUtil::PrepareOutputShardingPropagation(
   data_placeholders->resize(indices.size());
   sharding_specs->resize(indices.size());
 
-  auto computation_proto = computation->computation().proto();
+  const auto& computation_proto = computation->computation().proto();
 
   std::vector<xla::OpSharding> output_shardings;
   if (computation_proto.has_spmd_output_sharding()) {
@@ -579,7 +579,7 @@ void ShardingUtil::PrepareOutputShardingPropagation(
     std::vector<XLATensor::ShardingSpecPtr>& sharding_specs,
     std::vector<xla::Shape>* output_shapes, ComputationPtr computation,
     const torch::lazy::BackendDevice& device) {
-  auto computation_proto = computation->computation().proto();
+  const auto& computation_proto = computation->computation().proto();
   std::vector<xla::OpSharding> output_shardings;
   if (computation_proto.has_spmd_output_sharding()) {
     if (computation_proto.spmd_output_sharding().tuple_shardings().size() > 0) {
