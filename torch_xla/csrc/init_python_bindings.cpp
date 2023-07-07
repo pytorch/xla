@@ -173,14 +173,14 @@ std::vector<std::pair<int64_t, int64_t>> CreateSourceTargetPairs(
   return source_target_pairs;
 }
 
-std::shared_ptr<torch::lazy::Value> AllReduceInPlace(
-    const std::string& reduce_type, const std::vector<at::Tensor>& tensors,
-    double scale, const std::vector<std::vector<int64_t>>& replica_groups,
-    bool pin_layout) {
+void AllReduceInPlace(const std::string& reduce_type,
+                      const std::vector<at::Tensor>& tensors, double scale,
+                      const std::vector<std::vector<int64_t>>& replica_groups,
+                      bool pin_layout) {
   std::vector<XLATensorPtr> xtensors =
       GetXlaTensors(tensors, /*want_all=*/true);
-  return std::make_shared<torch::lazy::Value>(tensor_methods::all_reduce(
-      xtensors, GetReduceType(reduce_type), scale, replica_groups, pin_layout));
+  tensor_methods::all_reduce(xtensors, GetReduceType(reduce_type), scale,
+                             replica_groups, pin_layout);
 }
 
 at::Tensor AllReduce(const std::string& reduce_type, const at::Tensor& input,
@@ -221,17 +221,13 @@ std::shared_ptr<torch::lazy::Value> ReduceScatterOut(
   return std::make_shared<torch::lazy::Value>(new_token);
 }
 
-std::pair<at::Tensor, std::shared_ptr<torch::lazy::Value>> AllGather(
-    const at::Tensor& input, const std::shared_ptr<torch::lazy::Value>& token,
-    int64_t dim, int64_t shard_count,
-    const std::vector<std::vector<int64_t>>& replica_groups, bool pin_layout) {
-  XLATensorPtr result;
-  torch::lazy::Value new_token;
-  std::tie(result, new_token) =
-      tensor_methods::all_gather(bridge::GetXlaTensor(input), *token, dim,
-                                 shard_count, replica_groups, pin_layout);
-  return {bridge::AtenFromXlaTensor(std::move(result)),
-          std::make_shared<torch::lazy::Value>(new_token)};
+at::Tensor AllGather(const at::Tensor& input, int64_t dim, int64_t shard_count,
+                     const std::vector<std::vector<int64_t>>& replica_groups,
+                     bool pin_layout) {
+  auto result =
+      tensor_methods::all_gather(bridge::GetXlaTensor(input), dim, shard_count,
+                                 replica_groups, pin_layout);
+  return bridge::AtenFromXlaTensor(std::move(result));
 }
 
 std::shared_ptr<torch::lazy::Value> AllGatherOut(
@@ -905,24 +901,17 @@ void InitXlaModuleBindings(py::module m) {
           result_tuple[1] = new_token;
           return result_tuple;
         });
-  m.def("_xla_all_gather", [](const at::Tensor& input,
-                              const std::shared_ptr<torch::lazy::Value>& token,
-                              int64_t dim, int64_t shard_count,
-                              const py::list& groups, bool pin_layout) {
+  m.def("_xla_all_gather", [](const at::Tensor& input, int64_t dim,
+                              int64_t shard_count, const py::list& groups,
+                              bool pin_layout) {
     std::vector<std::vector<int64_t>> replica_groups =
         CreateReduceGroups(groups);
     at::Tensor result;
-    std::shared_ptr<torch::lazy::Value> new_token;
     {
       NoGilSection nogil;
-      std::tie(result, new_token) =
-          AllGather(input, token, dim, shard_count, replica_groups, pin_layout);
+      result = AllGather(input, dim, shard_count, replica_groups, pin_layout);
     }
-    auto result_tuple = py::tuple(2);
-    result_tuple[0] = torch::autograd::make_variable(
-        result, /*requires_grad=*/input.requires_grad());
-    result_tuple[1] = new_token;
-    return result_tuple;
+    return result;
   });
   m.def("_xla_all_gather_out",
         [](at::Tensor& output, const at::Tensor& input,
