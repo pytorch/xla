@@ -2475,6 +2475,22 @@ XLATensorPtr squeeze(const XLATensorPtr& input, int64_t dim) {
   return view(input, output_dimensions);
 }
 
+XLATensorPtr squeeze(const XLATensorPtr& input, std::vector<int64_t> dims) {
+  auto input_shape = input->shape();
+  std::vector<int64_t> input_dimensions =
+      torch_xla::runtime::util::ToVector<int64_t>(
+          input_shape.get().dimensions());
+  std::vector<int64_t> output_dimensions;
+  for (int64_t dim : dims) {
+    if (dim >= input_dimensions.size()) continue;
+    int64_t squeeze_dim =
+        torch::lazy::GetCanonicalDimensionIndex(dim, input_dimensions.size());
+    output_dimensions = BuildSqueezedDimensions(input_dimensions, squeeze_dim);
+    input_dimensions = output_dimensions;
+  }
+  return view(input, output_dimensions);
+}
+
 XLATensorPtr stack(absl::Span<const XLATensorPtr> tensors, int64_t dim) {
   XLA_CHECK_GT(tensors.size(), 0);
   std::vector<torch::lazy::Value> values;
