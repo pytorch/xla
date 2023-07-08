@@ -394,8 +394,7 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
 
     # Adding 0 to the tensor force graph compilation, which would catch IR hash
     # collisions
-    # TODO(JackCaoG): invesgate why `torch.allclose(xt1, xt2))` will crash
-    self.assertTrue(torch.allclose((xt1 + 0).cpu(), (xt2 + 0).cpu()))
+    self.assertTrue(torch.allclose(xt1 + 0, xt2 + 0))
 
     # Check that hashes are different for the sharded and non-sharded tensors
     hash1 = torch_xla._XLAC._get_graph_hash([xt1])
