@@ -2,7 +2,8 @@
 
 set -ex
 
-source ./env
+# Only used in sccache
+# source ./env
 source .circleci/common.sh
 PYTORCH_DIR=/tmp/pytorch
 XLA_DIR=$PYTORCH_DIR/xla
