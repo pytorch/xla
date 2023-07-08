@@ -79,9 +79,6 @@ class VirtualDeviceTest(test_xla_sharding_base.XlaShardingTest):
 
   def test_non_tensor_scalar(self):
     sharding_spec = xs.ShardingSpec(self._get_mesh((1, self.n_devices)), (0, 1))
-    # TODO(JackCaoG)currently, execution will only happen if there is at least one
-    # tensor on non-spmd:0 device.
-    t1 = torch.randn(3, 3, device=xm.xla_device())
     # tensor will have device as `SPMD:0` in c++
     xt1 = xm.send_cpu_data_to_device([torch.randn(3, 3)],
                                      xm.xla_device(),
@@ -95,9 +92,6 @@ class VirtualDeviceTest(test_xla_sharding_base.XlaShardingTest):
   def test_mark_step_on_virtual_device(self):
     xm.mark_step()
     sharding_spec = xs.ShardingSpec(self._get_mesh((1, self.n_devices)), (0, 1))
-    # TODO(JackCaoG)currently, execution will only happen if there is at least one
-    # tensor on non-spmd:0 device.
-    t1 = torch.randn(3, 3, device=xm.xla_device())
     # tensor will have device as `SPMD:0` in c++
     xt1 = xm.send_cpu_data_to_device([torch.randn(3, 3)],
                                      xm.xla_device(),
