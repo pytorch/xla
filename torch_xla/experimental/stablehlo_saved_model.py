@@ -1,4 +1,5 @@
 import copy
+from dataclasses import dataclass
 import shutil
 import os
 import re
@@ -137,3 +138,66 @@ def export_torch_model(model: torch.nn.Module,
   # mistakenlly update the input tensors.
   torch_xla._XLAC._clear_pending_irs(str(xm.xla_device()))
   return stablehlo_model
+
+
+
+
+class VariableType(enum.Enum):
+  INPUT_ARG = 'input_arg'
+  OUTPUT = 'output'
+  PARAMETER = 'parameter'
+
+@dataclass
+class VariableSignature:  # either argument or parameters  
+  shape: Tuple[int]
+  dtype: np.dtype
+  type_: VariableType
+
+@dataclass
+class StableHLOBundle:
+  stablehlo_version: int
+  input_signature: List[VariableSignature]
+  output_signature: List[VariableSignature]
+  stablehlo_content: Mapping[str, bytes]
+
+@dataclass
+class StableHLOExportOptions:
+  pass
+
+def _exported_program_to_stablehlo_bundle(exported_model, args):
+
+  xm.mark_step()
+  metrics.clear_counters()
+
+  device = xm.xla_device()
+
+  if exported_model.call_spec.in_spec is not None:
+    args = fx_pytree.tree_flatten_spec(args, exported_model.call_spec.in_spec)
+  else:
+    args = copy.deepcopy(args)
+
+  args = [
+    x.to(device=device) if isinstance(x, torch.Tensor) else x
+    for x in args
+  ]
+
+  # NOTE call convention: (parameters, buffers, user_inputs)
+  param_and_buffer_keys = exported_model.graph_signature.parameters + exported_model.graph_signature.buffers
+  param_buffer_values = tuple(
+    state[key].to(device=device) if isinstance(state[key], torch.Tensor) else state[key]
+    for key in param_and_buffer_keys
+  ) 
+  with torch.no_grad():
+    res = torch.fx.Interpreter(model).run(*param_buffer_values, *args, enable_io_processing=False)
+
+  graph = xm.get_stablehlo(res)
+  print(graph)
+  torch_xla._XLAC._clear_pending_irs(str(xm.xla_device()))
+
+
+def save_as_stablehlo(
+  exported_model: 'ExportedProgram', 
+  args: Tuple[Any],
+  stablehlo_dir: os.PathLike, 
+  options: Optional[StableHLOExportOptions] = None):
+  pass
