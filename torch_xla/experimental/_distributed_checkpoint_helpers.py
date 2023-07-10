@@ -218,9 +218,9 @@ def _sharded_cpu_state_dict(state_dict: STATE_DICT_TYPE) -> STATE_DICT_TYPE:
   """
 
   def move_state_dict_to_cpu(v):
+    v = xs.wrap_if_sharded(v)
     if not _is_sharded_tensor(v):
       return _unwrap_xla_sharded_tensor(v).cpu()
-    v = xs.wrap_if_sharded(v)
     return _CpuShards(shards=v.local_shards, global_shape=v.global_tensor.shape)
 
   return tree_map(move_state_dict_to_cpu, state_dict)
