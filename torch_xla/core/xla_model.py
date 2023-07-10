@@ -538,9 +538,9 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
     # all_reduce based all_gather for this purpose.
     return _all_gather_using_all_reduce(
         value, dim=dim, groups=groups, pin_layout=True)
+
   if dim < 0:
     dim = value.dim() + dim
-  token, devctx = _get_all_reduce_token()
   if groups:
     shard_count = len(groups[0])
     assert all(len(group) == shard_count for group in groups), \
@@ -548,6 +548,8 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
   else:
     # All replicas belong to a single group
     shard_count = xrt_world_size()
+
+  token, devctx = _get_all_reduce_token()
   if output != None:
     # Call the out of place version of the all_gather
     new_token = torch_xla._XLAC._xla_all_gather_out(output, value, token, dim,
@@ -556,10 +558,9 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
     torch_xla._XLAC._set_all_reduce_token(devctx.device, new_token)
     return output
 
-  result = torch_xla._XLAC._xla_all_gather(value, token, dim, shard_count,
-                                           groups or [], pin_layout)
-  torch_xla._XLAC._set_all_reduce_token(devctx.device, result[1])
-  return result[0]
+  result = torch_xla._XLAC._xla_all_gather(value, dim, shard_count, groups or
+                                           [], pin_layout)
+  return result
 
 
 def all_to_all(value,

@@ -2906,6 +2906,13 @@ at::Tensor XLANativeFunctions::squeeze_copy(const at::Tensor& self,
       tensor_methods::squeeze(bridge::GetXlaTensor(self), dim));
 }
 
+at::Tensor XLANativeFunctions::squeeze_copy(const at::Tensor& self,
+                                            at::IntArrayRef dim) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(tensor_methods::squeeze(
+      bridge::GetXlaTensor(self), torch::lazy::ToVector<int64_t>(dim)));
+}
+
 at::Tensor XLANativeFunctions::stack(at::TensorList tensors, int64_t dim) {
   TORCH_LAZY_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
