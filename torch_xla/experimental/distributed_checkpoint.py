@@ -41,6 +41,7 @@ from torch_xla.experimental._distributed_checkpoint_helpers import (
     _is_sharded_tensor,
     set_element,
     narrow_tensor_by_index,
+    _unwrap_xla_sharded_tensor,
 )
 from typing import Any, Dict, List, Tuple, Union
 
@@ -373,9 +374,3 @@ def _create_xla_read_items(sharded_state_dict: STATE_DICT_TYPE,
     chunks = [_create_chunk_from_shard_index(index) for index in shard_indices]
     items.extend(create_read_items_for_chunk_list(fqn, md, chunks))
   return items
-
-
-def _unwrap_xla_sharded_tensor(x: Any) -> Any:
-  if isinstance(x, XLAShardedTensor):
-    return x.global_tensor
-  return x

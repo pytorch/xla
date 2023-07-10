@@ -199,11 +199,16 @@ def _is_sharded_tensor(x: Any) -> bool:
   return isinstance(
       x, XLAShardedTensor) and x.sharding_type != ShardingType.REPLICATED
 
+def _unwrap_xla_sharded_tensor(x: Any) -> Any:
+  if isinstance(x, XLAShardedTensor):
+    return x.global_tensor
+  return x
+
 
 @dataclasses.dataclass
 class _CpuShards:
   shards: List[xs.XLAShard]
-  global_shape: torch.Shape
+  global_shape: torch.Size
 
 
 def _sharded_cpu_state_dict(state_dict: STATE_DICT_TYPE) -> STATE_DICT_TYPE:
@@ -212,7 +217,9 @@ def _sharded_cpu_state_dict(state_dict: STATE_DICT_TYPE) -> STATE_DICT_TYPE:
   """
 
   def move_state_dict_to_cpu(v):
-    v = xs.wrap_if_sharded(v) if _is_sharded_tensor(v) else v
+    if not _is_sharded_tensor(v):
+     return _unwrap_xla_sharded_tensor(v).cpu()
+    v = xs.wrap_if_sharded(v)
     return _CpuShards(shards=v.local_shards, global_shape=v.global_tensor.shape)
 
   return tree_map(move_state_dict_to_cpu, state_dict)
