@@ -112,7 +112,7 @@ class XLAShardedTensor(torch.Tensor):
     shards, devices = torch_xla._XLAC._get_local_shards(self.global_tensor)
     indices = torch_xla._XLAC._get_local_shard_indices(self.global_tensor)
     return [
-        XLAShard(s.cpu(), i, d) for s, i, d in zip(shards, indices, devices)
+        XLAShard(s, i, d) for s, i, d in zip(shards, indices, devices)
     ]
 
   # Load the given list of local shards into the underlying tensor's data

@@ -108,7 +108,7 @@ bool Use32BitLong() {
 
 bool IsTpuDevice(XlaDeviceType hw_type) {
   // TODO(JackCaoG): We can't assume all SPMD device are TPU deivce.
-  return hw_type == XlaDeviceType::TPU && hw_type == XlaDeviceType::SPMD;
+  return hw_type == XlaDeviceType::TPU || hw_type == XlaDeviceType::SPMD;
 }
 
 xla::PrimitiveType XlaTypeFromTensorType(
