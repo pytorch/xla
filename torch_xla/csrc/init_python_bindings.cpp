@@ -388,7 +388,7 @@ std::string GetXLATensorDebugInfo(const at::Tensor& tensor) {
   auto at_tensor = xtensor->CurrentTensorData();
   ss << "Tensor on host: ";
   if (at_tensor) {
-    ss << " with size " << at_tensor->sizes() << "\n";
+    ss << "with size " << at_tensor->sizes() << "\n";
   } else {
     ss << "None\n";
   }
