@@ -103,7 +103,7 @@ class VirtualDeviceTest(test_xla_sharding_base.XlaShardingTest):
                      torch_xla._XLAC._get_xla_tensor_debug_info(xt2))
 
   def test_virtual_device_no_upload(self):
-    met.clear_counters()
+    met.clear_all()
     device = xm.xla_device()
     t1 = torch.randn(5, 5).to(device)
     t1_debug_info = torch_xla._XLAC._get_xla_tensor_debug_info(t1)
@@ -116,7 +116,7 @@ class VirtualDeviceTest(test_xla_sharding_base.XlaShardingTest):
     self.assertIn("XLAData: None", t1_debug_info)
 
   def test_virtual_device_upload_after_mark_sharding(self):
-    met.clear_counters()
+    met.clear_all()
     partition_spec = (0, 1)
     device = xm.xla_device()
     t1 = torch.randn(8, 8).to(device)
@@ -131,15 +131,13 @@ class VirtualDeviceTest(test_xla_sharding_base.XlaShardingTest):
     self.assertIn("TransferToServerTime", met.metric_names())
 
   def test_virtual_device_upload_after_tracing(self):
-    met.clear_counters()
+    met.clear_all()
     device = xm.xla_device()
     t1 = torch.randn(8, 8).to(device)
     t1_debug_info = torch_xla._XLAC._get_xla_tensor_debug_info(t1)
     self.assertIn("Tensor on host: with size [8, 8]", t1_debug_info)
     t2 = t1 + t1
     t1_debug_info_new = torch_xla._XLAC._get_xla_tensor_debug_info(t1)
-    import pdb
-    pdb.set_trace()
     # tensor should be uploaded to device after being used as input to other op.
     self.assertIn("Tensor on host: None", t1_debug_info_new)
     self.assertIn("xla::device_data", t1_debug_info_new)
