@@ -25,25 +25,25 @@ jobs:
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
-  # test-cpu:
-  #   name: "CPU tests"
-  #   uses: ./.github/workflows/_test.yml
-  #   needs: build
-  #   with:
-  #     docker-image: ${{ needs.build.outputs.docker-image }}
-  #     timeout-minutes: 90
-  #     disable-xrt: 0
-  #   secrets:
-  #     gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
+  test-cpu:
+    name: "CPU tests"
+    uses: ./.github/workflows/_test.yml
+    needs: build
+    with:
+      docker-image: ${{ needs.build.outputs.docker-image }}
+      timeout-minutes: 90
+      disable-xrt: 0
+    secrets:
+      gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
-  # test-cuda:
-  #   name: "GPU tests"
-  #   uses: ./.github/workflows/_test.yml
-  #   needs: build
-  #   with:
-  #     docker-image: ${{ needs.build.outputs.docker-image }}
-  #     runner: linux.8xlarge.nvidia.gpu
-  #     timeout-minutes: 180
-  #     disable-xrt: 0
-  #   secrets:
-  #     gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
+  test-cuda:
+    name: "GPU tests"
+    uses: ./.github/workflows/_test.yml
+    needs: build
+    with:
+      docker-image: ${{ needs.build.outputs.docker-image }}
+      runner: linux.8xlarge.nvidia.gpu
+      timeout-minutes: 180
+      disable-xrt: 0
+    secrets:
+      gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
