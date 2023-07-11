@@ -481,23 +481,7 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     # scalar 5 should be replicated
     self.assertIn('%p0.2 = f32[] parameter(0), sharding={replicated}', hlo)
 
-  @patch('torch_xla.runtime.global_device_attributes')
-  @patch('torch_xla.core.xla_model.xla_device_hw')
-  def test_2d_tensor_3d_mesh(self, xla_device_mock, device_attributes_mock):
-    xla_device_mock.return_value = "TPU"
-    device_attributes_mock.return_value = [{
-        'coords': [0, 0, 0],
-        'core_on_chip': 0
-    }, {
-        'coords': [1, 0, 0],
-        'core_on_chip': 0
-    }, {
-        'coords': [0, 1, 0],
-        'core_on_chip': 0
-    }, {
-        'coords': [1, 1, 0],
-        'core_on_chip': 0
-    }]
+  def test_2d_tensor_3d_mesh(self):
     ct1 = torch.randn(16, 16, device='cpu')
     ct2 = torch.randn(16, 16, device='cpu')
     expected = ct1 + ct2
