@@ -80,7 +80,7 @@ jobs:
         shell: bash
         run: |
           # pid=$(docker run -t -d -w "$WORKDIR" "${GCR_DOCKER_IMAGE}")
-          pid=$(docker run --privileged -t -d -w "$WORKDIR" -e "TERM=xterm-256color" "${GCR_DOCKER_IMAGE}")
+          pid=$(docker run --gpus all --privileged -t -d -w "$WORKDIR" -e "TERM=xterm-256color" "${GCR_DOCKER_IMAGE}")
           # docker exec -u jenkins "${pid}" sudo chown -R jenkins "${WORKDIR}"
           docker exec --privileged "${pid}" /bin/bash
           docker cp "${GITHUB_WORKSPACE}/." "$pid:$WORKDIR"
