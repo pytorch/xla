@@ -257,7 +257,10 @@ class DistributedCheckpointHelpersTest(DistributedCheckpointTestBase):
                           ['fc1.weight', 'fc1.bias', 'fc2.weight', 'fc2.bias'])
     for name, param in sharded_cpu_state_dict.items():
       if name == 'fc1.weight':
-        self.assertTrue(isinstance(param, _CpuShards))
+        # _sharded_cpu_state_dict moves tensor to cpu if it is not sharded
+        # across multiple device and returns it.
+        if param.device != torch.device("cpu"):
+          self.assertTrue(isinstance(param, _CpuShards))
       else:
         self.assertTrue(isinstance(param, torch.tensor))
         self.assertTrue(param.device == torch.device("cpu"))
