@@ -81,7 +81,6 @@ auto XLAGraphExecutor::DeviceContextArena::Get() -> DeviceContextArena* {
 std::vector<XLATensorPtr> XLAGraphExecutor::DeviceContextArena::GetLiveTensors(
     const torch::lazy::BackendDevice* device) {
   std::vector<XLATensorPtr> tensors;
-  torch::lazy::BackendDevice virtual_device = GetVirtualDevice();
   auto fn = [&](DeviceContext* devctx) {
     std::lock_guard<std::mutex> lock(devctx->lock);
     for (auto& uid_wptr : devctx->tensors_data) {
@@ -93,8 +92,6 @@ std::vector<XLATensorPtr> XLAGraphExecutor::DeviceContextArena::GetLiveTensors(
     }
   };
   ForAllDeviceContexts(fn, device);
-  // TODO(JackCaoG): all tensors should be on spmd:0 in SPMD mode.
-  ForAllDeviceContexts(fn, &virtual_device);
   return tensors;
 }
 
@@ -398,15 +395,20 @@ void XLAGraphExecutor::WaitDeviceOps(absl::Span<const std::string> devices) {
       wait_devices.insert(ParseDeviceString(device_str));
     }
   } else {
-    for (auto& device_str :
-         runtime::GetComputationClient()->GetLocalDevices()) {
-      wait_devices.insert(ParseDeviceString(device_str));
+    if (UseVirtualDevice()) {
+      wait_devices.insert(ParseDeviceString("SPMD:0"));
+    } else {
+      for (auto& device_str :
+           runtime::GetComputationClient()->GetLocalDevices()) {
+        wait_devices.insert(ParseDeviceString(device_str));
+      }
     }
   }
   // The DeviceLockerArena::Get()->LockDevices() API returns a vector of
   // torch::lazy::ExceptionCleanup object, which is going to be freed
   // immediately, turning this operation into a lock barrier.
   DeviceLockerArena::Get()->LockDevices(wait_devices);
+  TF_VLOG(4) << "XLAGraphExecutor::WaitDeviceOps completed";
 }
 
 std::vector<at::Tensor> XLAGraphExecutor::GetTensors(
@@ -505,10 +507,7 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
                                   tsl::profiler::TraceMeLevel::kInfo);
   runtime::util::Unique<torch::lazy::BackendDevice> unique_device;
   for (size_t i = 0; i < tensors.size(); ++i) {
-    // TODO(JackCaoG): all tensors should be on spmd:0 in SPMD mode.
-    if (tensors[i]->GetDevice().toString() != "SPMD:0") {
-      unique_device.set(tensors[i]->GetDevice());
-    }
+    unique_device.set(tensors[i]->GetDevice());
   }
   SyncTensorCollection coll;
   if (!unique_device) {
@@ -649,7 +648,7 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
   }
 
   std::vector<XLATensor::ShardingSpecPtr> sharding_specs(placeholders.size());
-  if (ShardingUtil::UseVirtualDevice()) {
+  if (UseVirtualDevice()) {
     ShardingUtil::PrepareOutputShardingPropagation(
         placeholders, sharding_specs, output_shapes,
         cachedComputation->computation, device);
