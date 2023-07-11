@@ -481,7 +481,6 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     # scalar 5 should be replicated
     self.assertIn('%p0.2 = f32[] parameter(0), sharding={replicated}', hlo)
 
-  @unittest.skipIf(xr.device_type() == 'TPU', "Crash on TPU v2")
   @patch('torch_xla.runtime.global_device_attributes')
   @patch('torch_xla.core.xla_model.xla_device_hw')
   def test_2d_tensor_3d_mesh(self, xla_device_mock, device_attributes_mock):
@@ -505,8 +504,7 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
 
     t1 = ct1.to(xm.xla_device())
     t2 = ct2.to(xm.xla_device())
-    mesh = self._get_hybrid_mesh((1, self.n_devices, 1),
-                                 axis_names=('data', 'fsdp', 'tensor'))
+    mesh = self._get_mesh((1, self.n_devices, 1))
     t1 = xs.mark_sharding(t1, mesh, partition_spec=(1, 2))
     if self.n_devices > 1:
       hlo = torch_xla._XLAC._get_xla_tensors_hlo([t1.global_tensor])
