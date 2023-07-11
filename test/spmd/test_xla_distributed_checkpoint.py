@@ -261,7 +261,7 @@ class DistributedCheckpointHelpersTest(DistributedCheckpointTestBase):
         if _is_sharded_tensor(param):
           self.assertTrue(isinstance(param, _CpuShards))
       else:
-        self.assertTrue(isinstance(param, torch.tensor))
+        self.assertTrue(isinstance(param, torch.Tensor))
         self.assertTrue(param.device == torch.device("cpu"))
 
 
