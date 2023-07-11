@@ -2482,7 +2482,9 @@ XLATensorPtr squeeze(const XLATensorPtr& input, std::vector<int64_t> dims) {
           input_shape.get().dimensions());
   std::vector<int64_t> output_dimensions;
   for (int64_t dim : dims) {
-    if (dim >= input_dimensions.size()) continue;
+    if (dim >= input_dimensions.size()) {
+      continue;
+    }
     int64_t squeeze_dim =
         torch::lazy::GetCanonicalDimensionIndex(dim, input_dimensions.size());
     output_dimensions = BuildSqueezedDimensions(input_dimensions, squeeze_dim);
