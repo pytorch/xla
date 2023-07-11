@@ -118,8 +118,8 @@ jobs:
             image_tag_base=latest-xrt
           fi
 
-          # export COMMIT_DOCKER_IMAGE="${ECR_DOCKER_IMAGE_BASE}:${image_tag_base}-${GITHUB_SHA}"
-          export COMMIT_DOCKER_IMAGE="${GCR_DOCKER_IMAGE_BASE}:${image_tag_base}-${GITHUB_SHA}"
+          export COMMIT_DOCKER_IMAGE="${ECR_DOCKER_IMAGE_BASE}:${image_tag_base}-${GITHUB_SHA}"
+          # export COMMIT_DOCKER_IMAGE="${GCR_DOCKER_IMAGE_BASE}:${image_tag_base}-${GITHUB_SHA}"
           time docker commit "${pid}" "${COMMIT_DOCKER_IMAGE}"
           time docker push "${COMMIT_DOCKER_IMAGE}"
           echo "docker-image=${COMMIT_DOCKER_IMAGE}" >> "${GITHUB_OUTPUT}"
