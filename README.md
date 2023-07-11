@@ -122,13 +122,13 @@ To run on [compute instances with GPUs](https://cloud.google.com/compute/docs/gp
 ### Wheel
 | Version | Cloud TPU VMs Wheel |
 | --- | ----------- |
-| 2.0 | `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-2.0-cp38-cp38-linux_x86_64.whl` |
-| 1.13 | `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.13-cp38-cp38-linux_x86_64.whl` |
-| 1.12 | `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.12-cp38-cp38-linux_x86_64.whl` |
-| 1.11 | `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.11-cp38-cp38-linux_x86_64.whl` |
-| 1.10 | `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.10-cp38-cp38-linux_x86_64.whl` |
-| nightly <= 2023/04/25 |  `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-nightly-cp38-cp38-linux_x86_64.whl` |
-| nightly >= 2023/04/25| `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-nightly-cp38-cp38-linux_x86_64.whl` |
+| 2.0 | `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-2.0-cp310-cp310-linux_x86_64.whl` |
+| 1.13 | `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.13-cp310-cp310-linux_x86_64.whl` |
+| 1.12 | `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.12-cp310-cp310-linux_x86_64.whl` |
+| 1.11 | `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.11-cp310-cp310-linux_x86_64.whl` |
+| 1.10 | `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.10-cp310-cp310-linux_x86_64.whl` |
+| nightly <= 2023/04/25 |  `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-nightly-cp310-cp310-linux_x86_64.whl` |
+| nightly >= 2023/04/25| `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-nightly-cp310-cp310-linux_x86_64.whl` |
 
 <br/>
 
