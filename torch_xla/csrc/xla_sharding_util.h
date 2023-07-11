@@ -28,10 +28,6 @@ class ShardingUtil {
   // Determine the ShardingType of the given xla::OpSharding.
   static ShardingType GetShardingType(xla::OpSharding& sharding);
 
-  // Test whether the XLA_USE_SPMD environment variable is set to enable the
-  // virtual device optimization.
-  static bool UseVirtualDevice();
-
   // Annotates HLO instructions in the lowered computation and returns true if
   // the computation needs to be compiled with SPMD partitioning. For this call
   // to be effective, this needs to be called after the lowering and before

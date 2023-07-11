@@ -533,6 +533,10 @@ PjRtComputationClient::ExecuteComputation(
                << device;
     // Grab the shared lock and block the `WaitDeviceOps` until buffer is
     // ready.
+    // TODO(JackCaoG): This lock should acquired outside of the lockfn and
+    // passed in. It is possible that lockfn started after ExecuteComputation
+    // released the xla_graph_executor lock, which will create a short windows
+    // where device is unlcoked while execution is still running.
     auto lock = lock_device_shared(device);
     TF_VLOG(5) << "ExecuteComputation acquiring PJRT device lock for " << device
                << " Done";

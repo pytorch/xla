@@ -39,10 +39,15 @@ class AtenXlaDeviceMapper {
 
  private:
   AtenXlaDeviceMapper() {
-    for (auto& device_str :
-         torch_xla::runtime::GetComputationClient()->GetLocalDevices()) {
-      devices_.emplace_back(ParseDeviceString(device_str));
-      devices_ordinals_[devices_.back()] = devices_.size() - 1;
+    if (UseVirtualDevice()) {
+      devices_.emplace_back(ParseDeviceString("SPMD:0"));
+      devices_ordinals_[devices_.back()] = 0;
+    } else {
+      for (auto& device_str :
+           torch_xla::runtime::GetComputationClient()->GetLocalDevices()) {
+        devices_.emplace_back(ParseDeviceString(device_str));
+        devices_ordinals_[devices_.back()] = devices_.size() - 1;
+      }
     }
   }
 
