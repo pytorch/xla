@@ -109,10 +109,11 @@ Our comprehensive user guides are available at:
 [Documentation for master branch](https://pytorch.org/xla/master)
 
 
-## Running PyTorch/XLA on Cloud TPU and GPU
+## PyTorch/XLA tutorials
 
 * [Cloud TPU VM quickstart](https://cloud.google.com/tpu/docs/run-calculation-pytorch)
 * [Cloud TPU Pod slice quickstart](https://cloud.google.com/tpu/docs/pytorch-pods)
+* [Profiling on TPU VM](https://cloud.google.com/tpu/docs/pytorch-xla-performance-profiling-tpu-vm)
 * [GPU guide](docs/gpu.md)
 
 ## Available docker images and wheels
