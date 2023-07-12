@@ -94,8 +94,6 @@ function install_deps_pytorch_xla() {
 
   # Install gcc-11
   sudo apt-get update
-  sudo apt remove -y gcc-7
-  sudo apt remove -y g++-7
   # Update ppa for GCC
   sudo apt-get install -y software-properties-common
   sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
