@@ -2684,13 +2684,14 @@ native xla data parallel approach, here is the
 </div>
 <div class="section" id="how-to-run-with-pytorch-xla-gpu">
 <h1>How to run with PyTorch/XLA:GPU<a class="headerlink" href="#how-to-run-with-pytorch-xla-gpu" title="Permalink to this headline">¶</a></h1>
-<p>PyTorch/XLA enables PyTorch users to utilize the XLA compiler which supports accelerators including TPU, GPU, CPU and … This doc will go over the basic steps to run PyTorch/XLA on a nvidia gpu instance</p>
+<p>PyTorch/XLA enables PyTorch users to utilize the XLA compiler which supports accelerators including TPU, GPU, and CPU This doc will go over the basic steps to run PyTorch/XLA on a nvidia gpu instance</p>
 <div class="section" id="create-a-gpu-instance">
 <h2>Create a GPU instance<a class="headerlink" href="#create-a-gpu-instance" title="Permalink to this headline">¶</a></h2>
 <p>Pytorch/XLA currently publish prebuilt docker images and wheels with cuda11.7/8 and python 3.8. We recommend users to create a GPU instance with corresponding config. For a full list of docker images and wheels, please refer to <a class="reference external" href="https://github.com/pytorch/xla/tree/jackcao/gpu_doc#-available-images-and-wheels">this doc</a>.</p>
 </div>
 <div class="section" id="environment-setup">
 <h2>Environment Setup<a class="headerlink" href="#environment-setup" title="Permalink to this headline">¶</a></h2>
+<p>To create a GPU VM in Google Compute Engine, follow the <a class="reference external" href="https://cloud.google.com/compute/docs/gpus/create-vm-with-gpus">Google Cloud documentation</a>.</p>
 <div class="section" id="id8">
 <h3>Docker<a class="headerlink" href="#id8" title="Permalink to this headline">¶</a></h3>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>sudo docker pull us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_cuda_11.7
