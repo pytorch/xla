@@ -92,19 +92,20 @@ function install_deps_pytorch_xla() {
 
   sudo ln -s "$(command -v bazelisk)" /usr/bin/bazel
 
-  # Install gcc-9
+  # Install gcc-11
   sudo apt-get update
-  sudo apt remove gcc-7
-  sudo apt remove g++-7
-  sudo apt autoremove
+  sudo apt remove -y gcc-7
+  sudo apt remove -y g++-7
   # Update ppa for GCC
   sudo apt-get install -y software-properties-common
   sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-  sudo apt update
-  sudo apt install -y gcc-9
-  sudo apt install -y g++-9
-  sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 100
-  sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-9 100
+  sudo apt update -y
+  sudo apt install -y gcc-11
+  sudo apt install -y g++-11
+  sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100
+  sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 100
+
+  export NVCC_PREPEND_FLAGS='-ccbin /usr/bin/g++-11'
 
   # Symnlink the missing cuda headers if exists
   CUBLAS_PATTERN="/usr/include/cublas*"
