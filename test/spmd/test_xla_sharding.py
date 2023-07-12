@@ -37,6 +37,20 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     # TODO(244003536) add more tests for XLAShardedTensror.
     self.assertTrue(isinstance(xst1, XLAShardedTensor))
 
+  def test_sharded_tensor_debug_info(self):
+    partition_spec = (0, 1)
+    xt1 = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
+                       dtype=torch.float,
+                       device=xm.xla_device())
+    xst1 = xs.mark_sharding(xt1, self._get_mesh((1, self.n_devices)),
+                            partition_spec)
+
+    debug_info = torch_xla._XLAC._get_xla_tensor_debug_info(xst1.global_tensor)
+    self.assertIn('XLAShardedData', debug_info)
+    self.assertIn('Data Device: SPMD:0', debug_info)
+    self.assertIn('OpSharding:', debug_info)
+    self.assertIn('NumShards: %s' % (self.n_devices), debug_info)
+
   def test_xla_shards(self):
     num_element = self.n_devices
     mesh = self._get_mesh((self.n_devices,))
@@ -453,6 +467,56 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     t3 = t1 + t2
     t3_expected = [9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0]
     self.assertEqual(t3.tolist()[0], t3_expected)
+
+  def test_xla_sharded_hlo_dump(self):
+    partition_spec = (0, 1)
+    xt1 = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
+                       dtype=torch.float,
+                       device=xm.xla_device())
+    xst1 = xs.mark_sharding(xt1, self._get_mesh((1, self.n_devices)),
+                            partition_spec)
+    xst2 = xst1 + 5
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo([xst2.global_tensor])
+    self.assertIn('%p1.4 = f32[1,8]{1,0} parameter(1), sharding', hlo)
+    # scalar 5 should be replicated
+    self.assertIn('%p0.2 = f32[] parameter(0), sharding={replicated}', hlo)
+
+  @unittest.skipIf(xr.device_type() == 'TPU', "Crash on TPU v2")
+  @patch('torch_xla.runtime.global_device_attributes')
+  @patch('torch_xla.core.xla_model.xla_device_hw')
+  def test_2d_tensor_3d_mesh(self, xla_device_mock, device_attributes_mock):
+    xla_device_mock.return_value = "TPU"
+    device_attributes_mock.return_value = [{
+        'coords': [0, 0, 0],
+        'core_on_chip': 0
+    }, {
+        'coords': [1, 0, 0],
+        'core_on_chip': 0
+    }, {
+        'coords': [0, 1, 0],
+        'core_on_chip': 0
+    }, {
+        'coords': [1, 1, 0],
+        'core_on_chip': 0
+    }]
+    ct1 = torch.randn(16, 16, device='cpu')
+    ct2 = torch.randn(16, 16, device='cpu')
+    expected = ct1 + ct2
+
+    t1 = ct1.to(xm.xla_device())
+    t2 = ct2.to(xm.xla_device())
+    mesh = self._get_hybrid_mesh((1, self.n_devices, 1),
+                                 axis_names=('data', 'fsdp', 'tensor'))
+    t1 = xs.mark_sharding(t1, mesh, partition_spec=(1, 2))
+    if self.n_devices > 1:
+      hlo = torch_xla._XLAC._get_xla_tensors_hlo([t1.global_tensor])
+      # expected string in hlo %param = f32[1,4,16]{2,1,0:T(4,128)} parameter(0), sharding={devices=[1,4,1]0,2,1,3}
+      sharding_annotation = 'sharding={devices=[1,%d,1]%s}' % (
+          self.n_devices, ','.join(
+              [str(d) for d in mesh.get_logical_mesh().flatten()]))
+      self.assertIn(sharding_annotation, hlo)
+    actual = (t1 + t2).cpu()
+    self.assertTrue(torch.allclose(expected, actual))
 
   @unittest.skipIf(xr.device_type() == 'TPU', "Crash on TPU v2")
   @unittest.skipUnless(

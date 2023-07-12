@@ -47,10 +47,10 @@ _TPU_PCI_DEVICE_IDS = [
 
 
 class TpuEnv(TypedDict):
-  accelerator_type: str
-  tpu_process_bounds: str
-  tpu_chips_per_process_bound: str
-  worker_id: int
+  ACCELERATOR_TYPE: str
+  TPU_PROCESS_BOUNDS: str
+  TPU_CHIPS_PER_HOST_BOUNDS: str
+  WORKER_ID: int
 
 
 class MeshShape(NamedTuple):
@@ -131,6 +131,12 @@ def num_local_processes() -> int:
 def task_id() -> Optional[int]:
   """Returns index of this process within all TPU worker processes, if any."""
   return xu.getenv_as(xenv.CLOUD_TPU_TASK_ID, int)
+
+
+def worker_id() -> int:
+  """Returns the ID of the current TPU worker."""
+  env = get_tpu_env()
+  return int(env[xenv.WORKER_ID])
 
 
 def _using_env_vars() -> bool:

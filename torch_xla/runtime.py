@@ -42,7 +42,7 @@ def _maybe_select_default_device():
   logging.warning('For more information about the status of PJRT, see '
                   'https://github.com/pytorch/xla/blob/master/docs/xr.md')
   # Check for libtpu _and_ the TPU device
-  if torch_xla._found_libtpu and os.path.exists('/dev/accel0'):
+  if torch_xla._found_libtpu and tpu.num_available_chips() > 0:
     logging.warning('libtpu.so and TPU device found. Setting PJRT_DEVICE=TPU.')
     os.environ[xenv.PJRT_DEVICE] = 'TPU'
   else:
@@ -186,3 +186,12 @@ def device_attributes(device: str) -> Dict[str, object]:
 @requires_pjrt
 def global_device_attributes() -> List[Dict[str, object]]:
   return torch_xla._XLAC._xla_get_all_device_attributes()
+
+
+@requires_pjrt
+def host_index() -> int:
+  if device_type() == 'TPU':
+    return tpu.worker_id()
+
+  # TODO: Update this when we support multi-host GPU
+  return 0

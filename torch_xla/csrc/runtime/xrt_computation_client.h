@@ -167,6 +167,8 @@ class XrtComputationClient : public ComputationClient {
       return handle_ptr->handle();
     }
 
+    std::string ToString() const override { return "not implemented by XRT"; }
+
     OpaqueHandle GetOpaqueHandle() override { return get_handle(); }
 
     void Assign(const Data& data) override;
