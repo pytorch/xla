@@ -48,6 +48,7 @@ sccache --show-stats
 source $XLA_DIR/xla_env
 export GCLOUD_SERVICE_KEY_FILE="$XLA_DIR/default_credentials.json"
 export SILO_NAME='cache-silo-ci'  # cache bucket for CI
+bazel clean --expunge # https://stackoverflow.com/questions/48155976/bazel-undeclared-inclusions-errors-after-updating-gcc
 build_torch_xla $XLA_DIR
 
 popd
