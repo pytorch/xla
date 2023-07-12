@@ -223,10 +223,13 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
 
   def test_mark_sharding_partial(self):
     device = xm.xla_device()
-    t1 = torch.randn(4, 4).to(xm.xla_device())
-    t2 = torch.randn(4, 4).to(xm.xla_device())
-    expected = (t1 @ t2).cpu()
+    t1 = torch.randn(4, 4)
+    t2 = torch.randn(4, 4)
+    # Somehow the eager cpu result is different from the xla result.
+    expected = (t1.to(device) @ t2.to(device)).cpu()
 
+    t1 = t1.to(device)
+    t2 = t2.to(device)
     # Shard along two axes if four or more devices are available
     z_dim = 2 if self.n_devices >= 4 else 1
     mesh = self._get_mesh((z_dim, self.n_devices // z_dim))
@@ -252,11 +255,16 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     z_dim = 2 if self.n_devices >= 4 else 1
     mesh = self._get_mesh((z_dim, self.n_devices // z_dim))
 
-    xx = torch.randn(16, 128).to(device)
-    xw = torch.randn(128, 256).to(device)
-    xb = torch.randn(16, 256).to(device)
-    expected = (xx @ xw + xb).cpu()
+    xx = torch.randn(16, 128)
+    xw = torch.randn(128, 256)
+    xb = torch.randn(16, 256)
 
+    # Somehow the eager cpu result is different from the xla result.
+    expected = (xx.to(device) @ xw.to(device) + xb.to(device)).cpu()
+
+    xx = xx.to(device)
+    xw = xw.to(device)
+    xb = xb.to(device)
     xs.mark_sharding(xx, mesh, (0, None))
     xs.mark_sharding(xw, mesh, (None, 1))
 
