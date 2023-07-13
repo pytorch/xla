@@ -592,7 +592,8 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
 
     t3 = t1 @ t2
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([t3])
-    self.assertIn('all-reduce', hlo)
+    if self.n_devices > 1:
+      self.assertIn('all-reduce', hlo)
 
 
 if __name__ == '__main__':
