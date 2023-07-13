@@ -258,6 +258,8 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     print(left - righttwo)
     print(left <= righttwo)
     print(left > righttwo)
+    print("------------run: numpy.allclose(input.grad, xla_input.grad.cpu()) --------------")
+    print(numpy.allclose(input.grad, xla_input.grad.cpu()))
     print("------------run: torch.allclose(input.grad, xla_input.grad.cpu())) --------------")
     print(torch.allclose(input.grad, xla_input.grad.cpu()))
     print("------------checked !!!!!!!!!!!!!!!!---------------")
