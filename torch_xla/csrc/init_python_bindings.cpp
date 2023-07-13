@@ -1324,6 +1324,16 @@ void InitXlaModuleBindings(py::module m) {
                   xtensor->shape(),
                   static_cast<XlaDeviceType>(xtensor->GetDevice().type())));
 
+          // For IR values, we directly attach the sharding spec to the xtensor.
+          if (xtensor->CurrentIrValue()) {
+            // TODO(alanwaketan): Do we want to check if there is any existing
+            // sharding spec? It seems okay to directly overwrite it.
+            xtensor->SetShardingSpec(*new_sharding_spec);
+            return;
+          }
+
+          // For data, we need to deal with the data transfers between
+          // host and device.
           at::Tensor cpu_tensor;
           if (xtensor->CurrentTensorData().has_value()) {
             TORCH_LAZY_COUNTER("VirtualDeviceUsage", 1);

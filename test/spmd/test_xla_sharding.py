@@ -490,7 +490,6 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     # scalar 5 should be replicated
     self.assertIn('%p0.2 = f32[] parameter(0), sharding={replicated}', hlo)
 
-  @unittest.skip("TODO(alanwaketan): Implement IR sharding to re-enable this.")
   def test_2d_tensor_3d_mesh(self):
     ct1 = torch.randn(16, 16, device='cpu')
     ct2 = torch.randn(16, 16, device='cpu')
@@ -566,6 +565,24 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     print(hybrid_mesh.get_logical_mesh())
     self.assertEqual(hybrid_mesh.get_logical_mesh().tolist(),
                      [[0, 1], [2, 3], [4, 5], [6, 7]])
+
+  def test_mark_sharding_ir(self):
+    t1 = torch.randn(1, 128, device='cpu')
+    t2 = torch.randn(1, 128, device='cpu')
+    expected = t1 + t2
+
+    xt1 = t1.to(xm.xla_device())
+    xt2 = t2.to(xm.xla_device())
+    actual = xt1 + xt2
+    xs.mark_sharding(actual, self._get_mesh((1, self.n_devices)), (0, 1))
+
+    if self.n_devices > 1:
+      annotation = '{devices=[1,%d]%s}' % (self.n_devices, ','.join(
+          [str(i) for i in range(self.n_devices)]))
+      self.assertEqual(annotation,
+                       torch_xla._XLAC._get_xla_sharding_spec(actual))
+
+    self.assertTrue(torch.allclose(expected, actual.cpu()))
 
 
 if __name__ == '__main__':
