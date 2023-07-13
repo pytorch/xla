@@ -39,13 +39,11 @@ http_archive(
     patch_tool = "patch",
     patches = [
         "//openxla_patches:cache_urls.diff",
-        "//openxla_patches:cuda_graph.diff",
         "//openxla_patches:f16_abi_clang.diff",
         "//openxla_patches:gpu_race_condition.diff",
         "//openxla_patches:profiler_trace.diff",
         "//openxla_patches:stream_executor.diff",
         "//openxla_patches:topk_rewriter.diff",
-        "//openxla_patches:triton_filesystem.diff",
         "//openxla_patches:xla_bzl.diff",
     ],
     strip_prefix = "xla-ce3949f58d8a3a791c36741b248bea52954b1648",
