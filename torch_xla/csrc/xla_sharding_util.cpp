@@ -221,8 +221,7 @@ xla::OpSharding ShardingUtil::CreateOpSharding(
       }
       XLA_CHECK(group_tiling.num_elements() == group_members_view.size());
 
-      sharding = xla::HloSharding::PartialTile(group_tiling, group_members_view)
-                     .ToProto();
+      sharding = xla::HloSharding::PartialTile(group_tiling).ToProto();
       break;
     }
     default: {
