@@ -267,9 +267,6 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     xm.wait_device_ops()
     expected = expected.cpu()
 
-    # Somehow the eager cpu result is different from the xla result.
-    expected = (xx.to(device) @ xw.to(device) + xb.to(device)).cpu()
-
     xs.mark_sharding(xx, mesh, (0, None))
     xs.mark_sharding(xw, mesh, (None, 1))
 
