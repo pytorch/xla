@@ -580,7 +580,8 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     if self.n_devices > 1:
       annotation = '{devices=[1,%d]%s}' % (self.n_devices, ','.join(
           [str(i) for i in range(self.n_devices)]))
-      self.assertEqual(annotation, torch_xla._XLAC._get_xla_sharding_spec(actual))
+      self.assertEqual(annotation,
+                       torch_xla._XLAC._get_xla_sharding_spec(actual))
 
     self.assertTrue(torch.allclose(expected, actual.cpu()))
 
