@@ -234,7 +234,7 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     print("------------input.grad--------------")
     print(input.grad)
     print("------------input.grad type--------------")
-    print(tyepe(input.grad))
+    print(type(input.grad))
     print("------------xla_input.grad.cpu()---------------")
     print(xla_input.grad.cpu())
     print("------------xla_input.grad.cpu() type-----------")
