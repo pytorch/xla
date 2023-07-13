@@ -319,8 +319,28 @@ def _get_sharding_type(partition_spec: Tuple[Union[int, None]],
   return sharding_type
 
 
-def _get_tile_assignment(mesh: Mesh) -> List[int]:
-  return mesh.get_logical_mesh().tolist()
+def _get_tile_assignment(mesh: Mesh,
+                         partition_spec: Tuple[Union[int, None]]) -> List[int]:
+  # Use Torch.tensor here to make use of the torch.transpose_
+  mesh_list_tensor = torch.tensor(mesh.get_logical_mesh().tolist())
+  # This is 2d tensor 3d mesh case, tile_assigniment will be ignore in favor of
+  # group_assignment and replication_groups.
+  if (mesh_list_tensor.dim() != len(partition_spec)):
+    return mesh_list_tensor.tolist()
+  dim_to_current_dim = {}
+  for i in range(len(partition_spec)):
+    dim_to_current_dim[i] = i
+  for i in range(len(partition_spec)):
+    # we need transpose the mesh to match the partition_spec
+    if partition_spec[i] != None and partition_spec[i] != dim_to_current_dim[i]:
+      # need to find where the target dimension to transpose to
+      target_dim = dim_to_current_dim[partition_spec[i]]
+      mesh_list_tensor.transpose_(i, target_dim)
+      # now update the mapping by swapping the current and target dim_to_current_dim
+      # since transposed happened
+      dim_to_current_dim[partition_spec[i]] = dim_to_current_dim[i]
+      dim_to_current_dim[i] = target_dim
+  return mesh_list_tensor.tolist()
 
 
 def _get_group_assignment(
@@ -399,7 +419,7 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
   assert len(specs) == len(np.unique(specs)), \
     f"Each device mesh dimension should appear at most once in partition_spec {partition_spec}."
 
-  tile_assignment = _get_tile_assignment(mesh)
+  tile_assignment = _get_tile_assignment(mesh, partition_spec)
   # check for sharding 2D tensor on a 3D mesh
   original_shape = tuple(t.shape)
   # number of dims to expand on tensor
@@ -464,7 +484,7 @@ class ShardingSpec:
   @xr.requires_pjrt
   def __post_init__(self):
     partition_spec, mesh = self.partition_spec, self.mesh
-    self._tile_assignment = _get_tile_assignment(mesh)
+    self._tile_assignment = _get_tile_assignment(mesh, partition_spec)
     self._sharding_type = _get_sharding_type(partition_spec,
                                              xr.global_device_count())
     self._group_assignment, self._replication_groups = _get_group_assignment(
