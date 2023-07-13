@@ -231,6 +231,17 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     res_xla_dynamo = self.fn_simple_dynamo(xla_input)
     self.assertIn('xla::nll_loss_backward', met.counter_names())
     self.assertTrue(torch.allclose(res_cpu, res_xla_dynamo.cpu()))
+    print("------------input.grad--------------")
+    print(input.grad)
+    print("------------input.grad type--------------")
+    print(tyepe(input.grad))
+    print("------------xla_input.grad.cpu()---------------")
+    print(xla_input.grad.cpu())
+    print("------------xla_input.grad.cpu() type-----------")
+    print(type(xla_input.grad.cpu()))
+    print("------------dump difference---------------")
+    print(input.grad - xla_input.grad.cpu())
+    print("------------checked !!!!!!!!!!!!!!!!---------------")
     self.assertTrue(torch.allclose(input.grad, xla_input.grad.cpu()))
     # verifiy that tracing is skipped in following runs
     xla_input.grad = None
