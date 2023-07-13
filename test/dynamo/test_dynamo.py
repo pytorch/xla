@@ -241,6 +241,22 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     print(type(xla_input.grad.cpu()))
     print("------------dump difference---------------")
     print(input.grad - xla_input.grad.cpu())
+    print("------------calculate like definition--------------")
+    print("------------calculate like definition: left--------------")
+    print(left = torch.norm(input.grad-xla_input.grad.cpu()))
+    testatol=1e-08
+    testrtol=1e-05
+    print("------------calculate like definition: right--------------")
+    print(rightone = torch.mul(testrtol, torch.norm(xla_input.grad.cpu())))
+    print(roghttwo = testatol + rightone)
+    print("------------calculate like definition: all: left--------------")
+    print(left)
+    print("------------calculate like definition: all: right--------------")
+    print(right)
+    print("------------calculate like definition: all all--------------")
+    print(left - right)
+    print(left <= right)
+    print(left > right)
     print("------------checked !!!!!!!!!!!!!!!!---------------")
     self.assertTrue(torch.allclose(input.grad, xla_input.grad.cpu()))
     # verifiy that tracing is skipped in following runs
