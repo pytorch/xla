@@ -123,8 +123,8 @@ PjRtComputationClient::PjRtComputationClient() {
     client_ =
         std::move(xla::GetStreamExecutorGpuClient(
                       /*asynchronous=*/async, xla::GpuAllocatorConfig{},
-                      /*distributed_client=*/distributed_client,
-                      /*node_id=*/local_rank, allowed_devices = allowed_devices)
+                      // /*distributed_client=*/distributed_client,
+                      /*node_id=*/local_rank, /*TODO:Feed real value*//*num_nodes=*/2, allowed_devices = allowed_devices)
                       .value());
   } else if (device_type == "XPU") {
     TF_VLOG(1) << "Initializing PjRt XPU client...";
