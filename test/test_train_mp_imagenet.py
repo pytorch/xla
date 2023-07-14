@@ -225,6 +225,7 @@ def train_imagenet():
         ]))
 
     train_sampler, test_sampler = None, None
+    print('xw32 train_imagenet(), line228, xm.xrt_world_size()=', xm.xrt_world_size(), ', FLAGS.num_workers=', FLAGS.num_workers, ', FLAGS.persistent_workers=', FLAGS.persistent_workers)
     if xm.xrt_world_size() > 1:
       train_sampler = torch.utils.data.distributed.DistributedSampler(
           train_dataset,
@@ -364,6 +365,7 @@ def train_imagenet():
 
 
 def _mp_fn(index, flags):
+  print('xw32 _mp_fn(), line 368, index=', index)
   global FLAGS
   FLAGS = flags
   torch.set_default_tensor_type('torch.FloatTensor')
