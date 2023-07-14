@@ -33,14 +33,15 @@ from torch.distributed.checkpoint.metadata import (
 )
 from torch.distributed.checkpoint.utils import find_state_dict_object
 from torch.utils._pytree import tree_map
-from torch_xla.experimental.xla_sharding import (XLAShardedTensor, XLAShard,
-                                                 ShardingType)
+from torch_xla.experimental.xla_sharding import XLAShardedTensor, XLAShard
 from torch_xla.experimental._distributed_checkpoint_helpers import (
     FLATTEN_MAPPING,
     flatten_state_dict,
     dedup_tensors,
+    _is_sharded_tensor,
     set_element,
     narrow_tensor_by_index,
+    _unwrap_xla_sharded_tensor,
 )
 from typing import Any, Dict, List, Tuple, Union
 
@@ -373,15 +374,3 @@ def _create_xla_read_items(sharded_state_dict: STATE_DICT_TYPE,
     chunks = [_create_chunk_from_shard_index(index) for index in shard_indices]
     items.extend(create_read_items_for_chunk_list(fqn, md, chunks))
   return items
-
-
-def _is_sharded_tensor(x: Any) -> bool:
-  """Return true if the tensor's data is sharded across multiple devices"""
-  return isinstance(
-      x, XLAShardedTensor) and x.sharding_type != ShardingType.REPLICATED
-
-
-def _unwrap_xla_sharded_tensor(x: Any) -> Any:
-  if isinstance(x, XLAShardedTensor):
-    return x.global_tensor
-  return x
