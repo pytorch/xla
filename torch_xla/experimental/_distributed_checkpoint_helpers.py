@@ -2,10 +2,14 @@
 # stable. Once the upstream makes these stable, we should take a dependency on
 # their APIs.
 
+import dataclasses
+
 import torch
+import torch_xla.experimental.xla_sharding as xs
 
 from torch.distributed.checkpoint.planner import SavePlan
 from typing import (
+    Any,
     Callable,
     Collection,
     Dict,
@@ -14,12 +18,13 @@ from typing import (
     MutableMapping,
     Sequence,
     Tuple,
-    TypeVar,
     Union,
     cast,
 )
-from torch.distributed.checkpoint.metadata import (
-    STATE_DICT_TYPE,)
+from torch.distributed.checkpoint.metadata import (MetadataIndex,
+                                                   STATE_DICT_TYPE)
+from torch_xla.experimental.xla_sharding import XLAShardedTensor, ShardingType
+from torch.utils._pytree import tree_map
 
 PATH_ITEM = Union[str, int]
 OBJ_PATH = Tuple[PATH_ITEM, ...]
@@ -187,3 +192,36 @@ def narrow_tensor_by_index(tensor: torch.Tensor, offsets: Sequence[int],
       # leaf variable in the autograd graph.
       narrowed_tensor = narrowed_tensor.narrow(idx, offset, size)
   return narrowed_tensor
+
+
+def _is_sharded_tensor(x: Any) -> bool:
+  """Return true if the tensor's data is sharded across multiple devices"""
+  return isinstance(
+      x, XLAShardedTensor) and x.sharding_type != ShardingType.REPLICATED
+
+
+def _unwrap_xla_sharded_tensor(x: Any) -> Any:
+  if isinstance(x, XLAShardedTensor):
+    return x.global_tensor
+  return x
+
+
+@dataclasses.dataclass
+class _CpuShards:
+  shards: List[xs.XLAShard]
+  global_shape: torch.Size
+
+
+def _sharded_cpu_state_dict(state_dict: STATE_DICT_TYPE) -> STATE_DICT_TYPE:
+  """
+  Converts a state_dict on XLA device to a sharded state_dict on CPU.
+  """
+
+  def move_state_dict_to_cpu(v):
+    v = xs.wrap_if_sharded(v)
+    if not _is_sharded_tensor(v):
+      v = _unwrap_xla_sharded_tensor(v)
+      return v.cpu() if isinstance(v, torch.Tensor) else v
+    return _CpuShards(shards=v.local_shards, global_shape=v.global_tensor.shape)
+
+  return tree_map(move_state_dict_to_cpu, state_dict)
