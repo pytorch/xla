@@ -444,11 +444,11 @@ std::vector<at::Tensor> GetXlaTensorsFromAten(
     const std::vector<at::Tensor>& aten_tensors,
     const std::vector<std::string>& devices,
     const std::optional<std::vector<XLATensor::ShardingSpecPtr>>
-        sharding_specs) {
+        sharding_specs, bool sharded_tensor) {
   std::vector<std::shared_ptr<torch::lazy::BackendData>> data_handles;
   if (sharding_specs.has_value()) {
     data_handles = CreateTensorsData(aten_tensors, sharding_specs.value(),
-                                     GetXlaDevices(devices));
+                                     GetXlaDevices(devices), sharded_tensor);
   } else {
     data_handles = CreateTensorsData(aten_tensors, GetXlaDevices(devices));
   }
@@ -787,12 +787,12 @@ void InitXlaModuleBindings(py::module m) {
         [](const std::vector<at::Tensor>& tensors,
            const std::vector<std::string>& devices,
            const std::optional<std::vector<XLATensor::ShardingSpecPtr>>&
-               shardings) {
+               shardings,bool sharded_tensor) {
           std::vector<at::Tensor> result;
           {
             NoGilSection nogil;
             std::vector<at::Tensor> xla_tensors =
-                GetXlaTensorsFromAten(tensors, devices, shardings);
+                GetXlaTensorsFromAten(tensors, devices, shardings, sharded_tensor);
             result.reserve(xla_tensors.size());
             for (size_t i = 0; i < xla_tensors.size(); ++i) {
               result.push_back(torch::autograd::make_variable(

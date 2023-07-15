@@ -441,10 +441,10 @@ ShardingUtil::GetShardIndicesForDevices(
 
 std::vector<at::Tensor> ShardingUtil::ShardTensor(
     const at::Tensor& tensor, const xla::OpSharding sharding,
-    const std::vector<std::string>& devices, bool padded) {
+    const std::vector<std::string>& devices, bool padded, bool sharded_tensor) {
   TF_LOG(INFO) << "ShardTensor with sharding type(" << sharding.type() << ")..."
                << std::endl;
-  auto device_index = build_index_map(devices);
+  // auto device_index = build_index_map(devices);
   std::vector<at::Tensor> shards(devices.size());
   if (sharding.type() == xla::OpSharding::REPLICATED) {
     std::fill_n(shards.begin(), shards.size(), tensor);

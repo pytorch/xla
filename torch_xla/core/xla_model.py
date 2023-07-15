@@ -986,7 +986,7 @@ def _maybe_convert_to_cpu(data, convert=True):
   return ToXlaTensorArena(convert_fn, select_fn).transform(data)
 
 
-def send_cpu_data_to_device(data, device, input_sharding=None):
+def send_cpu_data_to_device(data, device, input_sharding=None, sharded_tensor = False):
 
   def convert_fn(tensors):
     devices = [str(device)] * len(tensors)

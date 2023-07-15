@@ -919,7 +919,7 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
 std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
     const std::vector<at::Tensor>& tensors,
     const std::vector<XLATensor::ShardingSpecPtr>& shardings,
-    const std::vector<std::string>& devices) {
+    const std::vector<std::string>& devices, bool sharded_tensor) {
   TORCH_LAZY_TIMED("TensorToData");
   XLA_CHECK_EQ(tensors.size(), shardings.size());
   XLA_CHECK_EQ(tensors.size(), devices.size());
@@ -948,7 +948,7 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
       // The execution requires consistent shard sizes, and the zero-padded
       // values should be ignored.
       std::vector<at::Tensor> local_shards = ShardingUtil::ShardTensor(
-          tensors[i], sharding, local_devices, /*padded=*/true);
+          tensors[i], sharding, local_devices, /*padded=*/true, /*sharded_tensor=*/sharded_tensor);
       new_handles.push_back(ShardingUtil::CreateShardedData(
           local_shards, local_devices, shape, sharding));
     } else {
