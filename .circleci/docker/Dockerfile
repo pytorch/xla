@@ -1,6 +1,6 @@
 # This requires cuda & cudnn packages pre-installed in the base image.
 # Other available cuda images are listed at https://hub.docker.com/r/nvidia/cuda
-ARG base_image="nvidia/cuda:11.7.0-cudnn8-devel-ubuntu18.04"
+ARG base_image="nvidia/cuda:11.7.1-cudnn8-devel-ubuntu20.04"
 FROM "${base_image}"
 
 ARG python_version="3.8"
