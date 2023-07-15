@@ -23,7 +23,7 @@ options:
     substitution_option: 'ALLOW_LOOSE'
 substitutions:
     _CUDA: '1'
-    _CUDA_TAG: '11.7.0-cudnn8-devel-ubuntu18.04'
-    _PYTHON_VERSION: '3.7'
-    _TAG_NAME: '${_PYTHON_VERSION}-${_CUDA_TAG}-mini'
+    _CUDA_TAG: '11.7.1-cudnn8-devel-ubuntu20.04'
+    _PYTHON_VERSION: '3.8'
+    _TAG_NAME: '${_PYTHON_VERSION}-${_CUDA_TAG}-lsiyuan-test'
 timeout: 3000s
