@@ -105,6 +105,9 @@ function install_deps_pytorch_xla() {
 
   export NVCC_PREPEND_FLAGS='-ccbin /usr/bin/g++-11'
 
+  # Hack similar to https://github.com/pytorch/pytorch/pull/105227/files#diff-9e59213240d3b55d2ddc53c8c096db9eece0665d64f46473454f9dc0c10fd804
+  sudo rm /opt/conda/lib/libstdc++.so.6
+
   # Symnlink the missing cuda headers if exists
   CUBLAS_PATTERN="/usr/include/cublas*"
   if ls $CUBLAS_PATTERN 1> /dev/null 2>&1; then
