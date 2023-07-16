@@ -25,6 +25,9 @@ function install_torchvision() {
 
 install_torchvision
 
+# Hack similar to https://github.com/pytorch/pytorch/pull/105227/files#diff-9e59213240d3b55d2ddc53c8c096db9eece0665d64f46473454f9dc0c10fd804
+sudo rm /opt/conda/lib/libstdc++.so.6
+
 export GCLOUD_SERVICE_KEY_FILE="$XLA_DIR/default_credentials.json"
 export SILO_NAME='cache-silo-ci-gcc-11'  # cache bucket for CI
 run_torch_xla_tests $PYTORCH_DIR $XLA_DIR $USE_COVERAGE
