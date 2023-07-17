@@ -9,12 +9,28 @@ nightly_builds = [
   },
   {
     accelerator  = "cuda"
+    cuda_version = "12.0"
+  },
+  {
+    accelerator  = "cuda"
     cuda_version = "11.8"
   },
   {
     accelerator  = "cuda"
     cuda_version = "11.7"
   }
+]
+
+# TODO: Remove this after the 2.1 release
+xrt_nightly_builds = [
+  {
+    accelerator  = "tpu"
+    python_version = "3.10"
+  },
+  {
+    accelerator  = "cuda"
+    cuda_version = "12.0"
+  },
 ]
 
 # Built on push to specific tag.

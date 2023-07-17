@@ -80,7 +80,7 @@ std::string DebugUtil::GetTensorsGraphHlo(
   }
   return DumpUtil::ToHlo(root_values,
                          unique_device ? *unique_device : GetCurrentDevice(),
-                         /*to_stablehlo=*/dump_stablehlo);
+                         EmitMode::kStableHloReadable);
 }
 
 std::string DebugUtil::GetTensorsGraphInfo(
@@ -140,7 +140,7 @@ std::string DebugUtil::GetTensorsGraphInfo(
   } else if (format == GraphFormat::kStableHlo) {
     graph_str = DumpUtil::ToHlo(
         root_values, unique_device ? *unique_device : GetCurrentDevice(),
-        /*to_stablehlo=*/true);
+        EmitMode::kStableHloReadable);
   } else {
     XLA_ERROR() << "Invalid graph format: " << format;
   }

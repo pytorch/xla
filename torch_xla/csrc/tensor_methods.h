@@ -15,10 +15,9 @@ XLATensorPtr all_reduce(const XLATensorPtr& input, AllReduceType reduce_type,
                         double scale, std::vector<std::vector<int64_t>> groups,
                         bool pin_layout);
 
-torch::lazy::Value all_reduce(const std::vector<XLATensorPtr>& inputs,
-                              AllReduceType reduce_type, double scale,
-                              std::vector<std::vector<int64_t>> groups,
-                              bool pin_layout);
+void all_reduce(const std::vector<XLATensorPtr>& inputs,
+                AllReduceType reduce_type, double scale,
+                std::vector<std::vector<int64_t>> groups, bool pin_layout);
 
 std::pair<XLATensorPtr, torch::lazy::Value> reduce_scatter(
     const XLATensorPtr& input, const torch::lazy::Value& token,
@@ -39,10 +38,10 @@ std::pair<XLATensorPtr, torch::lazy::Value> all_to_all(
     int64_t split_dimension, int64_t concat_dimension, int64_t split_count,
     std::vector<std::vector<int64_t>> groups, bool pin_layout);
 
-std::pair<XLATensorPtr, torch::lazy::Value> all_gather(
-    const XLATensorPtr& input, const torch::lazy::Value& token, int64_t dim,
-    int64_t shard_count, std::vector<std::vector<int64_t>> groups,
-    bool pin_layout);
+XLATensorPtr all_gather(const XLATensorPtr& input, int64_t dim,
+                        int64_t shard_count,
+                        std::vector<std::vector<int64_t>> groups,
+                        bool pin_layout);
 
 torch::lazy::Value all_gather_out(XLATensorPtr& output,
                                   const XLATensorPtr& input,
@@ -784,6 +783,9 @@ XLATensorPtr squeeze(const XLATensorPtr& input);
 // Squeeze out the specified dimension index, if trivial (size 1). Returns
 // unchanged input otherwise.
 XLATensorPtr squeeze(const XLATensorPtr& input, int64_t dim);
+
+// Same as above, but with a tuple of dims.
+XLATensorPtr squeeze(const XLATensorPtr& input, std::vector<int64_t> dims);
 
 // In-place versions of the methods above.
 void squeeze_(XLATensorPtr& input);

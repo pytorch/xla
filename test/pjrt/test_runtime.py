@@ -55,19 +55,15 @@ class TestExperimentalPjrt(parameterized.TestCase):
   }, False), ('pjrt_cpu', {
       'PJRT_DEVICE': 'CPU',
       'PJRT_SELECT_DEFAULT_DEVICE': '0'
-  }, True), ('xrt_tpu', {
-      'XRT_TPU_CONFIG': 'localservice;0;localhost:51011'
-  }, False), ('pjrt_tpu_precedence', {
+  }, True), ('pjrt_tpu_precedence', {
       'PJRT_DEVICE': 'TPU',
       'XRT_TPU_CONFIG': 'localservice;0;localhost:51011',
-  }, True), ('xrt_gpu', {
+  }, True), ('gpu_num_devives', {
       'GPU_NUM_DEVICES': '4'
-  }, False), ('pjrt_gpu', {
+  }, True), ('pjrt_gpu', {
       'PJRT_DEVICE': 'GPU',
       'GPU_NUM_DEVICES': '4'
-  }, True), ('xla_dist_worker', {
-      'XRT_LOCAL_WORKER': 'c_localservice:2'
-  }, False))
+  }, True))
   def test_pjrt_default_device(self, env_vars, expect_using_pjrt):
     with mock.patch.dict(os.environ, env_vars, clear=True):
       # Print a warningif we had to select a default runtime
@@ -84,6 +80,9 @@ class TestExperimentalPjrt(parameterized.TestCase):
         self.assertIn(xr.device_type(), ['CPU', 'GPU', 'TPU'])
       else:
         self.assertIsNone(xr.device_type())
+
+  def test_host_index(self):
+    self.assertEqual(xr.host_index(), 0)
 
 
 if __name__ == '__main__':

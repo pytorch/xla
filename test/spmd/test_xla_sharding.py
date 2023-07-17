@@ -37,6 +37,20 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     # TODO(244003536) add more tests for XLAShardedTensror.
     self.assertTrue(isinstance(xst1, XLAShardedTensor))
 
+  def test_sharded_tensor_debug_info(self):
+    partition_spec = (0, 1)
+    xt1 = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
+                       dtype=torch.float,
+                       device=xm.xla_device())
+    xst1 = xs.mark_sharding(xt1, self._get_mesh((1, self.n_devices)),
+                            partition_spec)
+
+    debug_info = torch_xla._XLAC._get_xla_tensor_debug_info(xst1.global_tensor)
+    self.assertIn('XLAShardedData', debug_info)
+    self.assertIn('Data Device: SPMD:0', debug_info)
+    self.assertIn('OpSharding:', debug_info)
+    self.assertIn('NumShards: %s' % (self.n_devices), debug_info)
+
   def test_xla_shards(self):
     num_element = self.n_devices
     mesh = self._get_mesh((self.n_devices,))
@@ -207,11 +221,65 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     actual = (xt + xt).cpu()
     self.assertTrue(torch.allclose(expected, actual))
 
+  def test_mark_sharding_not_ordered_sharding_spec_2d(self):
+    device = xm.xla_device()
+    t1 = torch.randn(8, 16, device='cpu')
+    expected = t1 + t1
+
+    xt1 = t1.to(device)
+    # Shard along first dimension
+    xt1 = xs.mark_sharding(xt1, self._get_mesh((1, self.n_devices)), (1, 0))
+    for local_shard in xt1.local_shards:
+      self.assertEqual(local_shard.data.size()[0], 8 / self.n_devices)
+      self.assertEqual(local_shard.data.size()[1], 16)
+    self.assertTrue(torch.allclose(expected, (xt1 + xt1).cpu()))
+
+  def test_mark_sharding_not_ordered_sharding_spec_3d(self):
+    device = xm.xla_device()
+    t1 = torch.randn(4, 8, 16, device='cpu')
+    expected = t1 + t1
+
+    xt1 = t1.to(device)
+    z_dim = 2 if self.n_devices >= 4 else 1
+    # Expect local shard size to be [4, 8 / (self.n_devices / z_dim), 16 / z_dim]
+    xt1 = xs.mark_sharding(xt1,
+                           self._get_mesh((z_dim, 1, self.n_devices // z_dim)),
+                           (1, 2, 0))
+    for local_shard in xt1.local_shards:
+      self.assertEqual(local_shard.data.size()[0], 4)
+      self.assertEqual(local_shard.data.size()[1], 8 / (self.n_devices / z_dim))
+      self.assertEqual(local_shard.data.size()[2], 16 / z_dim)
+    self.assertTrue(torch.allclose(expected, (xt1 + xt1).cpu()))
+
+  def test_mark_sharding_not_ordered_sharding_spec_4d(self):
+    device = xm.xla_device()
+    t1 = torch.randn(32, 4, 8, 16, device='cpu')
+    expected = t1 + t1
+
+    xt1 = t1.to(device)
+    z_dim = 2 if self.n_devices >= 4 else 1
+    # Expect local shard size to be [32 / (self.n_devices / z_dim), 4, 8 , 16 / z_dim]
+    xt1 = xs.mark_sharding(
+        xt1, self._get_mesh((z_dim, 1, 1, self.n_devices // z_dim)),
+        (3, 1, 2, 0))
+    for local_shard in xt1.local_shards:
+      self.assertEqual(local_shard.data.size()[0],
+                       32 / (self.n_devices / z_dim))
+      self.assertEqual(local_shard.data.size()[1], 4)
+      self.assertEqual(local_shard.data.size()[2], 8)
+      self.assertEqual(local_shard.data.size()[3], 16 / z_dim)
+    self.assertTrue(torch.allclose(expected, (xt1 + xt1).cpu()))
+
   def test_mark_sharding_partial(self):
     device = xm.xla_device()
-    t1 = torch.randn(4, 4).to(xm.xla_device())
-    t2 = torch.randn(4, 4).to(xm.xla_device())
-    expected = (t1 @ t2).cpu()
+    t1 = torch.randn(4, 4).to(device)
+    t2 = torch.randn(4, 4).to(device)
+    # Somehow the eager cpu result is different from the xla result.
+    expected = t1 @ t2
+    # To re-materialize t1 and t2.
+    xm.mark_step()
+    xm.wait_device_ops()
+    expected = expected.cpu()
 
     # Shard along two axes if four or more devices are available
     z_dim = 2 if self.n_devices >= 4 else 1
@@ -241,7 +309,12 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     xx = torch.randn(16, 128).to(device)
     xw = torch.randn(128, 256).to(device)
     xb = torch.randn(16, 256).to(device)
-    expected = (xx @ xw + xb).cpu()
+
+    # Somehow the eager cpu result is different from the xla result.
+    expected = xx @ xw + xb
+    xm.mark_step()  # To re-materialize xx, xw, and xb.
+    xm.wait_device_ops()
+    expected = expected.cpu()
 
     xs.mark_sharding(xx, mesh, (0, None))
     xs.mark_sharding(xw, mesh, (None, 1))
@@ -300,7 +373,6 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     xt = torch.ones(2, 2).to(xm.xla_device())
     xs.mark_sharding(xt, self._get_mesh((1, self.n_devices)), (0, 1))
     xt += 2
-    sharding_spec = torch_xla._XLAC._get_xla_sharding_spec(xt)
     xm.mark_step()
     xm.wait_device_ops()
     self.assertEqual(met.metric_data('ExecuteReplicatedTime')[0], 1)
@@ -454,6 +526,38 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     t3_expected = [9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0]
     self.assertEqual(t3.tolist()[0], t3_expected)
 
+  def test_xla_sharded_hlo_dump(self):
+    partition_spec = (0, 1)
+    xt1 = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
+                       dtype=torch.float,
+                       device=xm.xla_device())
+    xst1 = xs.mark_sharding(xt1, self._get_mesh((1, self.n_devices)),
+                            partition_spec)
+    xst2 = xst1 + 5
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo([xst2.global_tensor])
+    self.assertIn('%p1.4 = f32[1,8]{1,0} parameter(1), sharding', hlo)
+    # scalar 5 should be replicated
+    self.assertIn('%p0.2 = f32[] parameter(0), sharding={replicated}', hlo)
+
+  def test_2d_tensor_3d_mesh(self):
+    ct1 = torch.randn(16, 16, device='cpu')
+    ct2 = torch.randn(16, 16, device='cpu')
+    expected = ct1 + ct2
+
+    t1 = ct1.to(xm.xla_device())
+    t2 = ct2.to(xm.xla_device())
+    mesh = self._get_mesh((1, self.n_devices, 1))
+    t1 = xs.mark_sharding(t1, mesh, partition_spec=(1, 2))
+    if self.n_devices > 1:
+      hlo = torch_xla._XLAC._get_xla_tensors_hlo([t1.global_tensor])
+      # expected string in hlo %param = f32[1,4,16]{2,1,0:T(4,128)} parameter(0), sharding={devices=[1,4,1]0,2,1,3}
+      sharding_annotation = 'sharding={devices=[1,%d,1]%s}' % (
+          self.n_devices, ','.join(
+              [str(d) for d in mesh.get_logical_mesh().flatten()]))
+      self.assertIn(sharding_annotation, hlo)
+    actual = (t1 + t2).cpu()
+    self.assertTrue(torch.allclose(expected, actual))
+
   @unittest.skipIf(xr.device_type() == 'TPU', "Crash on TPU v2")
   @unittest.skipUnless(
       xm.get_xla_supported_devices("TPU"),
@@ -510,6 +614,35 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     print(hybrid_mesh.get_logical_mesh())
     self.assertEqual(hybrid_mesh.get_logical_mesh().tolist(),
                      [[0, 1], [2, 3], [4, 5], [6, 7]])
+
+  def test_mark_sharding_ir(self):
+    t1 = torch.randn(1, 128, device='cpu')
+    t2 = torch.randn(1, 128, device='cpu')
+    expected = t1 + t2
+
+    xt1 = t1.to(xm.xla_device())
+    xt2 = t2.to(xm.xla_device())
+    actual = xt1 + xt2
+    xs.mark_sharding(actual, self._get_mesh((1, self.n_devices)), (0, 1))
+
+    if self.n_devices > 1:
+      annotation = '{devices=[1,%d]%s}' % (self.n_devices, ','.join(
+          [str(i) for i in range(self.n_devices)]))
+      self.assertEqual(annotation,
+                       torch_xla._XLAC._get_xla_sharding_spec(actual))
+
+    self.assertTrue(torch.allclose(expected, actual.cpu()))
+
+  @patch.dict(os.environ, {"XLA_DUMP_POST_OPTIMIZATIONS": "1"})
+  def test_xla_sharded_hlo_dump_post_optimizations(self):
+    t1 = torch.randn(1, 128).to(xm.xla_device())
+    t2 = torch.randn(128, 1).to(xm.xla_device())
+    xs.mark_sharding(t1, self._get_mesh((1, self.n_devices)), (0, 1))
+
+    t3 = t1 @ t2
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo([t3])
+    if self.n_devices > 1:
+      self.assertIn('all-reduce', hlo)
 
 
 if __name__ == '__main__':

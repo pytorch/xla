@@ -19,9 +19,6 @@
 #include <stdexcept>
 #include <unordered_set>
 
-#include "tensorflow/compiler/xla/shape_util.h"
-#include "tensorflow/tsl/platform/errors.h"
-#include "tensorflow/tsl/profiler/lib/traceme.h"
 #include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/helpers.h"
@@ -46,6 +43,9 @@
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
 #include "torch_xla/csrc/xla_sharding_util.h"
+#include "tsl/platform/errors.h"
+#include "tsl/profiler/lib/traceme.h"
+#include "xla/shape_util.h"
 
 namespace torch_xla {
 
@@ -338,6 +338,7 @@ torch::lazy::Value XLATensor::GetIrValue() const {
   c10::optional<at::Tensor> tensor_data = CurrentTensorData();
   XLA_CHECK(tensor_data);
   AssignIrValue(GetIrValueForTensor(*tensor_data, GetDevice()));
+  data()->tensor_data = c10::nullopt;
   return data()->ir_value;
 }
 
@@ -492,9 +493,8 @@ void XLATensor::SetTensor(at::Tensor tensor) {
 }
 
 void XLATensor::UpdateFromTensor(at::Tensor tensor, bool sync) {
-  torch::lazy::BackendDevice device = ShardingUtil::UseVirtualDevice()
-                                          ? ParseDeviceString("SPMD:0")
-                                          : GetDevice();
+  torch::lazy::BackendDevice device =
+      UseVirtualDevice() ? ParseDeviceString("SPMD:0") : GetDevice();
   if (sync) {
     at::Tensor typed_tensor =
         torch::lazy::CopyTensor(tensor, dtype(), /*copy=*/false);

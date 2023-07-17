@@ -5,21 +5,21 @@
 #include <cmath>
 #include <unordered_map>
 
-#include "tensorflow/compiler/xla/execution_options_util.h"
-#include "tensorflow/compiler/xla/hlo/ir/hlo_module.h"
-#include "tensorflow/compiler/xla/protobuf_util.h"
-#include "tensorflow/compiler/xla/service/hlo_parser.h"
-#include "tensorflow/compiler/xla/service/hlo_pass_pipeline.h"
-#include "tensorflow/compiler/xla/service/hlo_verifier.h"
-#include "tensorflow/compiler/xla/service/sharding_propagation.h"
-#include "tensorflow/compiler/xla/service/spmd/spmd_partitioner.h"
-#include "tensorflow/compiler/xla/xla.pb.h"
 #include "torch/csrc/lazy/core/ir_util.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/tensor_util.h"
+#include "xla/execution_options_util.h"
+#include "xla/hlo/ir/hlo_module.h"
+#include "xla/protobuf_util.h"
+#include "xla/service/hlo_parser.h"
+#include "xla/service/hlo_pass_pipeline.h"
+#include "xla/service/hlo_verifier.h"
+#include "xla/service/sharding_propagation.h"
+#include "xla/service/spmd/spmd_partitioner.h"
+#include "xla/xla.pb.h"
 
 namespace torch_xla {
 namespace {
@@ -140,20 +140,6 @@ std::vector<std::vector<int64_t>> ExtractGroupMembers(
 }
 
 }  // namespace
-
-bool ShouldUseVirtualDevice() {
-  bool use_virtual_device =
-      runtime::sys_util::GetEnvBool("XLA_USE_SPMD", false);
-  if (use_virtual_device) {
-    TF_LOG(INFO) << "Using SPMD virtual device optimization";
-  }
-  return use_virtual_device;
-}
-
-bool ShardingUtil::UseVirtualDevice() {
-  static bool use_virtual_device = ShouldUseVirtualDevice();
-  return use_virtual_device;
-}
 
 bool ShardingUtil::SetHloSharding(LoweringContext* lowering_ctx) {
   bool is_sharded = false;
@@ -507,7 +493,7 @@ void ShardingUtil::PrepareOutputShardingPropagation(
   data_placeholders->resize(indices.size());
   sharding_specs->resize(indices.size());
 
-  auto computation_proto = computation->computation().proto();
+  const auto& computation_proto = computation->computation().proto();
 
   std::vector<xla::OpSharding> output_shardings;
   if (computation_proto.has_spmd_output_sharding()) {
@@ -579,7 +565,7 @@ void ShardingUtil::PrepareOutputShardingPropagation(
     std::vector<XLATensor::ShardingSpecPtr>& sharding_specs,
     std::vector<xla::Shape>* output_shapes, ComputationPtr computation,
     const torch::lazy::BackendDevice& device) {
-  auto computation_proto = computation->computation().proto();
+  const auto& computation_proto = computation->computation().proto();
   std::vector<xla::OpSharding> output_shardings;
   if (computation_proto.has_spmd_output_sharding()) {
     if (computation_proto.spmd_output_sharding().tuple_shardings().size() > 0) {

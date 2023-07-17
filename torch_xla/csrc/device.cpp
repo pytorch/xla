@@ -37,7 +37,9 @@ std::string DeviceType::toString() const {
 torch::lazy::BackendDevice ParseDeviceString(const std::string& device_spec) {
   if (device_spec.empty()) {
     std::string default_device_spec =
-        runtime::GetComputationClient()->GetDefaultDevice();
+        UseVirtualDevice()
+            ? "SPMD:0"
+            : runtime::GetComputationClient()->GetDefaultDevice();
     XLA_CHECK(!default_device_spec.empty());
     return ParseDeviceString(default_device_spec);
   }
@@ -99,6 +101,20 @@ torch::lazy::BackendDevice SetCurrentDevice(
   g_current_device = device;
   TF_VLOG(2) << "New current device: " << device;
   return current;
+}
+
+bool ShouldUseVirtualDevice() {
+  bool use_virtual_device =
+      runtime::sys_util::GetEnvBool("XLA_USE_SPMD", false);
+  if (use_virtual_device) {
+    TF_LOG(INFO) << "Using SPMD virtual device optimization";
+  }
+  return use_virtual_device;
+}
+
+bool UseVirtualDevice() {
+  static bool use_virtual_device = ShouldUseVirtualDevice();
+  return use_virtual_device;
 }
 
 }  // namespace torch_xla

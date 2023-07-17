@@ -3,8 +3,6 @@
 
 #include <iostream>
 
-#include "tensorflow/compiler/xla/permutation_util.h"
-#include "tensorflow/compiler/xla/util.h"
 #include "test/cpp/cpp_test_util.h"
 #include "test/cpp/torch_xla_test.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
@@ -14,6 +12,8 @@
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/runtime/metrics.h"
 #include "torch_xla/csrc/torch_util.h"
+#include "xla/permutation_util.h"
+#include "xla/util.h"
 
 namespace torch_xla {
 namespace cpp_test {
@@ -297,6 +297,18 @@ TEST_F(AtenXlaTensorTest, TestSymSizes) {
     ASSERT_TRUE(snode);
     ASSERT_EQ(snode->getStaticValue(), 4);
     ASSERT_EQ(snode->getDynamicValue(), 1);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestGettingSizeOnDynamicTensor) {
+  // Make sure doing tensor.size() in c++ on dynamic tensor should fail.
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor b = torch::tensor({{0.0, 1.0}, {0.0, 0.0}},
+                                    torch::TensorOptions(torch::kFloat));
+    torch::Tensor xla_b = CopyToDevice(b, device);
+    torch::Tensor xla_nonzero = torch::nonzero(xla_b);
+    EXPECT_THROW(xla_nonzero.sizes(), std::runtime_error);
+    EXPECT_NO_THROW(xla_nonzero.sym_sizes());
   });
 }
 
@@ -930,6 +942,18 @@ TEST_F(AtenXlaTensorTest, TestSqueezeOne) {
       AllClose(output, xla_output);
     });
   }
+}
+
+TEST_F(AtenXlaTensorTest, TestSqueezeMultipleDims) {
+  torch::Tensor input =
+      torch::rand({2, 1, 3, 1}, torch::TensorOptions(torch::kFloat));
+  std::vector<int64_t> dims = {1, 2, 3};
+  torch::Tensor output = torch::squeeze(input, dims);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_input = CopyToDevice(input, device);
+    torch::Tensor xla_output = torch::squeeze(xla_input, dims);
+    AllClose(output, xla_output);
+  });
 }
 
 TEST_F(AtenXlaTensorTest, TestSqueezeOneInPlace) {

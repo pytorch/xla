@@ -10,14 +10,12 @@
 #include <string>
 #include <unordered_map>
 
-#include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "tensorflow/compiler/xla/status.h"
-#include "tensorflow/compiler/xla/types.h"
 #include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/cross_replica_reduces.h"
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir.h"
+#include "torch_xla/csrc/ir_dump_util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/runtime/async_task.h"
 #include "torch_xla/csrc/runtime/cache.h"
@@ -27,6 +25,9 @@
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/view.h"
+#include "xla/client/xla_builder.h"
+#include "xla/status.h"
+#include "xla/types.h"
 
 namespace torch_xla {
 
@@ -105,7 +106,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   // attached the tensors.
   // We don't use upstream DumpBackendComputation given we have our own format.
   std::string DumpHloComputation(const std::vector<XLATensorPtr>& tensors,
-                                 bool dump_stablehlo = false);
+                                 EmitMode mode = EmitMode::kHloReadable);
 
   // Retrieves the set of XLA tensors which are currently live in the system,
   // for the given device. If device is nullptr, the live tensors for all

@@ -9,6 +9,7 @@ import torch_xla.core.xla_env_vars as xenv
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_backend
 import torch_xla.utils.utils as xu
+import torch_xla._internal.tpu as tpu
 
 R = TypeVar('R')
 FN = TypeVar('FN')
@@ -26,29 +27,24 @@ def set_device_type(pjrt_device: str) -> None:
 
 
 def _maybe_select_default_device():
-  # Skip if runtime is already configured
-  if xu.getenv_as(
-      xenv.PJRT_SELECT_DEFAULT_DEVICE, str, '1'
-  ) == '0' or xenv.PJRT_DEVICE in os.environ or xenv.GPU_NUM_DEVICES in os.environ or any(
-      env.startswith('XRT_') for env in os.environ):
+  if xu.getenv_as(xenv.PJRT_SELECT_DEFAULT_DEVICE, str,
+                  '1') == '0' or xenv.PJRT_DEVICE in os.environ:
     return
 
-  logging.warning(
-      'XRT configuration not detected. Defaulting to PJRT runtime. To silence '
-      'this warning and continue using PJRT, explicitly set PJRT_DEVICE to a '
-      'supported device or configure XRT. To disable default device selection, '
-      'set PJRT_SELECT_DEFAULT_DEVICE=0')
   # TODO: Update this link in the release branch
-  logging.warning('For more information about the status of PJRT, see '
-                  'https://github.com/pytorch/xla/blob/master/docs/xr.md')
+  logging.warning('PJRT is now the default runtime. For more information, see '
+                  'https://github.com/pytorch/xla/blob/master/docs/pjrt.md')
   # Check for libtpu _and_ the TPU device
-  if torch_xla._found_libtpu and os.path.exists('/dev/accel0'):
+  if torch_xla._found_libtpu and tpu.num_available_chips() > 0:
     logging.warning('libtpu.so and TPU device found. Setting PJRT_DEVICE=TPU.')
     os.environ[xenv.PJRT_DEVICE] = 'TPU'
+  # TODO(wcromar): Detect GPU device
+  elif xu.getenv_as(xenv.GPU_NUM_DEVICES, int, 0) > 0:
+    logging.warning('GPU_NUM_DEVICES is set. Setting PJRT_DEVICE=GPU')
+    os.environ[xenv.PJRT_DEVICE] = 'GPU'
   else:
     logging.warning('Defaulting to PJRT_DEVICE=CPU')
     os.environ[xenv.PJRT_DEVICE] = 'CPU'
-  # TODO(wcromar): Detect GPU device too
 
 
 def device_type() -> Optional[str]:
@@ -186,3 +182,12 @@ def device_attributes(device: str) -> Dict[str, object]:
 @requires_pjrt
 def global_device_attributes() -> List[Dict[str, object]]:
   return torch_xla._XLAC._xla_get_all_device_attributes()
+
+
+@requires_pjrt
+def host_index() -> int:
+  if device_type() == 'TPU':
+    return tpu.worker_id()
+
+  # TODO: Update this when we support multi-host GPU
+  return 0

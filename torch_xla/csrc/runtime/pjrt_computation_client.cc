@@ -8,26 +8,27 @@
 #include "absl/strings/ascii.h"
 #include "absl/types/span.h"
 #include "pjrt_computation_client.h"
-#include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "tensorflow/compiler/xla/client/xla_computation.h"
-#include "tensorflow/compiler/xla/layout_util.h"
-#include "tensorflow/compiler/xla/literal.h"
-#include "tensorflow/compiler/xla/pjrt/distributed/distributed.h"
-#include "tensorflow/compiler/xla/pjrt/gpu/se_gpu_pjrt_client.h"
-#include "tensorflow/compiler/xla/pjrt/pjrt_api.h"
-#include "tensorflow/compiler/xla/pjrt/pjrt_c_api_client.h"
-#include "tensorflow/compiler/xla/pjrt/pjrt_client.h"
-#include "tensorflow/compiler/xla/pjrt/pjrt_executable.h"
-#include "tensorflow/compiler/xla/pjrt/tfrt_cpu_pjrt_client.h"
-#include "tensorflow/compiler/xla/pjrt/tpu_client.h"
-#include "tensorflow/compiler/xla/shape.h"
-#include "tensorflow/tsl/profiler/lib/traceme.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/env_vars.h"
 #include "torch_xla/csrc/runtime/multi_wait.h"
+#include "torch_xla/csrc/runtime/stablehlo_helper.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
 #include "torch_xla/csrc/runtime/thread_pool.h"
+#include "tsl/profiler/lib/traceme.h"
+#include "xla/client/xla_builder.h"
+#include "xla/client/xla_computation.h"
+#include "xla/layout_util.h"
+#include "xla/literal.h"
+#include "xla/pjrt/distributed/distributed.h"
+#include "xla/pjrt/gpu/se_gpu_pjrt_client.h"
+#include "xla/pjrt/pjrt_api.h"
+#include "xla/pjrt/pjrt_c_api_client.h"
+#include "xla/pjrt/pjrt_client.h"
+#include "xla/pjrt/pjrt_executable.h"
+#include "xla/pjrt/tfrt_cpu_pjrt_client.h"
+#include "xla/pjrt/tpu_client.h"
+#include "xla/shape.h"
 
 namespace torch_xla {
 namespace runtime {
@@ -437,10 +438,20 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
           device_assignment);
     }
 
-    xla::PjRtDevice* pjrt_device =
-        StringToPjRtDevice(instance.compilation_device);
-    std::unique_ptr<xla::PjRtLoadedExecutable> executable =
-        ConsumeValue(client_->Compile(instance.computation, compile_options));
+    std::unique_ptr<xla::PjRtLoadedExecutable> executable;
+    if (runtime::sys_util::GetEnvBool("XLA_STABLEHLO_COMPILE", false)) {
+      // Convert HLO to StableHLO for PjRt client compilation.
+      mlir::MLIRContext context;
+      mlir::ModuleOp mlir_module =
+          mlir::ModuleOp::create(mlir::UnknownLoc::get(&context));
+      torch_xla::runtime::ConvertHloToStableHlo(
+          instance.computation.mutable_proto(), &mlir_module);
+      executable = ConsumeValue(client_->Compile(mlir_module, compile_options));
+      StableHloCompileCounter()->AddValue(1);
+    } else {
+      executable =
+          ConsumeValue(client_->Compile(instance.computation, compile_options));
+    }
 
     const auto& hlo_modules = ConsumeValue(executable->GetHloModules());
     xla::HloComputation* hlo_computation = hlo_modules[0]->entry_computation();
@@ -522,6 +533,10 @@ PjRtComputationClient::ExecuteComputation(
                << device;
     // Grab the shared lock and block the `WaitDeviceOps` until buffer is
     // ready.
+    // TODO(JackCaoG): This lock should acquired outside of the lockfn and
+    // passed in. It is possible that lockfn started after ExecuteComputation
+    // released the xla_graph_executor lock, which will create a short windows
+    // where device is unlcoked while execution is still running.
     auto lock = lock_device_shared(device);
     TF_VLOG(5) << "ExecuteComputation acquiring PJRT device lock for " << device
                << " Done";

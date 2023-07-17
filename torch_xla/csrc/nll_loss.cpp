@@ -1,12 +1,12 @@
 #include "torch_xla/csrc/nll_loss.h"
 
 #include "absl/types/span.h"
-#include "tensorflow/compiler/xla/client/lib/constants.h"
-#include "tensorflow/compiler/xla/client/lib/math.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/tensor_util.h"
+#include "xla/client/lib/constants.h"
+#include "xla/client/lib/math.h"
 
 namespace torch_xla {
 namespace {

@@ -437,10 +437,6 @@ void XLANativeFunctions::_amp_foreach_non_finite_check_and_unscale_(
     at::TensorList self, at::Tensor& found_inf, const at::Tensor& inv_scale) {
   TORCH_LAZY_FN_COUNTER("xla::");
   XLATensorPtr found_inf_tensor = bridge::GetXlaTensor(found_inf);
-  XlaDeviceType hw_type =
-      static_cast<XlaDeviceType>(found_inf_tensor->GetDevice().type());
-  XLA_CHECK(hw_type == XlaDeviceType::GPU || hw_type == XlaDeviceType::CPU)
-      << "AMP should be used with XLA:GPU";
   tensor_methods::_amp_foreach_non_finite_check_and_unscale_(
       bridge::GetXlaTensors(self), found_inf_tensor,
       bridge::GetXlaTensor(inv_scale));
@@ -455,10 +451,6 @@ at::Tensor& XLANativeFunctions::_amp_update_scale_(at::Tensor& current_scale,
   TORCH_LAZY_FN_COUNTER("xla::");
   XLATensorPtr growth_tracker_tensor = bridge::GetXlaTensor(growth_tracker);
   XLATensorPtr current_scale_tensor = bridge::GetXlaTensor(current_scale);
-  XlaDeviceType hw_type =
-      static_cast<XlaDeviceType>(growth_tracker_tensor->GetDevice().type());
-  XLA_CHECK(hw_type == XlaDeviceType::GPU || hw_type == XlaDeviceType::CPU)
-      << "AMP should be used with XLA:GPU";
   tensor_methods::_amp_update_scale_(
       growth_tracker_tensor, current_scale_tensor,
       bridge::GetXlaTensor(found_inf), scale_growth_factor,
@@ -475,7 +467,7 @@ at::Tensor XLANativeFunctions::_copy_from(const at::Tensor& self,
   if (!self_tensor) {
     static bool sync_update =
         runtime::sys_util::GetEnvBool("XLA_TENSOR_UPDATE_SYNC", true) &&
-        !ShardingUtil::UseVirtualDevice();
+        !UseVirtualDevice();
     XLA_CHECK(dst_tensor);
     dst_tensor->UpdateFromTensor(self, /*sync=*/sync_update);
   } else if (!dst_tensor) {
@@ -1245,12 +1237,16 @@ at::Tensor XLANativeFunctions::empty_strided_symint(
     c10::optional<at::ScalarType> dtype, c10::optional<at::Layout> layout,
     c10::optional<at::Device> device, c10::optional<bool> pin_memory) {
   TORCH_LAZY_FN_COUNTER("xla::");
-  auto size = C10_AS_INTARRAYREF_SLOW(sym_size);
-  auto stride = C10_AS_INTARRAYREF_SLOW(sym_stride);
-  at::Tensor t =
-      empty_symint(sym_size, dtype, layout, device, pin_memory, c10::nullopt);
-  return torch_xla::XLANativeFunctions::as_strided_copy(t, size, stride,
-                                                        /*storage_offset=*/0);
+  c10::optional<at::IntArrayRef> size = c10::asIntArrayRefSlowOpt(sym_size);
+  bool is_size_dynamic = !size.has_value();
+  c10::optional<at::IntArrayRef> stride = c10::asIntArrayRefSlowOpt(sym_stride);
+  bool is_stride_dynamic = !stride.has_value();
+  // As XLATensor doesn't have a storage, it should not care about the memory
+  // format or how to jump to the next element (strides). So the term stride
+  // does not mean much to us. The size of the tensor has been set by the
+  // above `empty_symint` so we feel it is ok to return here.
+  return empty_symint(sym_size, dtype, layout, device, pin_memory,
+                      c10::nullopt);
 }
 
 at::Tensor XLANativeFunctions::expand_copy_symint(const at::Tensor& self,
@@ -2910,6 +2906,13 @@ at::Tensor XLANativeFunctions::squeeze_copy(const at::Tensor& self,
       tensor_methods::squeeze(bridge::GetXlaTensor(self), dim));
 }
 
+at::Tensor XLANativeFunctions::squeeze_copy(const at::Tensor& self,
+                                            at::IntArrayRef dim) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(tensor_methods::squeeze(
+      bridge::GetXlaTensor(self), torch::lazy::ToVector<int64_t>(dim)));
+}
+
 at::Tensor XLANativeFunctions::stack(at::TensorList tensors, int64_t dim) {
   TORCH_LAZY_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
@@ -3766,7 +3769,9 @@ at::Tensor XLANativeFunctions::expand_symint(const at::Tensor& self,
 
 at::Tensor XLANativeFunctions::view_symint(const at::Tensor& self,
                                            at::SymIntArrayRef sym_size) {
-  // TODO: support symbolic sizes
+  // Dynamic shape is only supported when the functionalization is enabled.
+  // So only the functionalization version of this function view_copy_symint
+  // support dynamic shape.
   auto size = C10_AS_INTARRAYREF_SLOW(sym_size);
   TORCH_LAZY_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(tensor_methods::view(

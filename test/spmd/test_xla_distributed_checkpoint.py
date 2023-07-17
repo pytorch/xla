@@ -16,9 +16,8 @@ from torch.distributed.checkpoint.default_planner import (
 )
 from torch_xla.experimental.distributed_checkpoint import SPMDLoadPlanner, SPMDSavePlanner
 from torch_xla.experimental._distributed_checkpoint_helpers import (
-  _sharded_cpu_state_dict, 
-  _CpuShards
-)
+    _sharded_cpu_state_dict, _CpuShards, _is_sharded_tensor)
+
 
 class DistributedCheckpointTestBase(test_xla_sharding_base.XlaShardingTest):
 
@@ -257,6 +256,24 @@ class DistributedCheckpointHelpersTest(DistributedCheckpointTestBase):
                           ['fc1.weight', 'fc1.bias', 'fc2.weight', 'fc2.bias'])
     self.assertTrue(
       isinstance(sharded_cpu_state_dict['fc1.weight'], _CpuShards))
+
+class DistributedCheckpointHelpersTest(DistributedCheckpointTestBase):
+
+  def test_sharded_cpu_state_dict(self):
+    model = self.SimpleLinear().to(xm.xla_device())
+    state_dict = model.state_dict()
+    sharded_cpu_state_dict = _sharded_cpu_state_dict(state_dict)
+    self.assertCountEqual(sharded_cpu_state_dict,
+                          ['fc1.weight', 'fc1.bias', 'fc2.weight', 'fc2.bias'])
+    for name, param in sharded_cpu_state_dict.items():
+      if name == 'fc1.weight':
+        # _sharded_cpu_state_dict returns _CpuShards only for sharded tensors
+        if _is_sharded_tensor(param):
+          self.assertTrue(isinstance(param, _CpuShards))
+      else:
+        self.assertTrue(isinstance(param, torch.Tensor))
+        self.assertTrue(param.device == torch.device("cpu"))
+
 
 if __name__ == '__main__':
   test = unittest.main()

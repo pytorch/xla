@@ -1,11 +1,14 @@
 # How to run with PyTorch/XLA:GPU
 
-PyTorch/XLA enables PyTorch users to utilize the XLA compiler which supports accelerators including TPU, GPU, CPU and … This doc will go over the basic steps to run PyTorch/XLA on a nvidia gpu instance
+PyTorch/XLA enables PyTorch users to utilize the XLA compiler which supports accelerators including TPU, GPU, and CPU This doc will go over the basic steps to run PyTorch/XLA on a nvidia gpu instance
 
 ## Create a GPU instance
 Pytorch/XLA currently publish prebuilt docker images and wheels with cuda11.7/8 and python 3.8. We recommend users to create a GPU instance with corresponding config. For a full list of docker images and wheels, please refer to [this doc](https://github.com/pytorch/xla/tree/jackcao/gpu_doc#-available-images-and-wheels).
 
 ## Environment Setup
+
+To create a GPU VM in Google Compute Engine, follow the [Google Cloud documentation](https://cloud.google.com/compute/docs/gpus/create-vm-with-gpus).
+
 ### Docker
 ```
 sudo docker pull us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_cuda_11.7
@@ -23,7 +26,7 @@ Note that you need to restart the docker to make gpu devices visible in the dock
 
 ```
 (pytorch) root@20ab2c7a2d06:/# nvidia-smi
-Thu Dec  8 06:24:29 2022       
+Thu Dec  8 06:24:29 2022
 +-----------------------------------------------------------------------------+
 | NVIDIA-SMI 510.47.03    Driver Version: 510.47.03    CUDA Version: 11.6     |
 |-------------------------------+----------------------+----------------------+
@@ -35,7 +38,7 @@ Thu Dec  8 06:24:29 2022
 | N/A   36C    P0    38W / 300W |      0MiB / 16384MiB |      1%      Default |
 |                               |                      |                  N/A |
 +-------------------------------+----------------------+----------------------+
-                                                                               
+
 +-----------------------------------------------------------------------------+
 | Processes:                                                                  |
 |  GPU   GI   CI        PID   Type   Process name                  GPU Memory |

@@ -114,10 +114,7 @@ def xrt_world_size(defval=1):
   if _WORLD_SIZE is not None:
     return _WORLD_SIZE
 
-  if runtime.using_pjrt():
-    return runtime.world_size()
-
-  return xu.getenv_as(xenv.WORLD_SIZE, int, defval=defval)
+  return runtime.world_size()
 
 
 def get_ordinal(defval=0):
@@ -137,10 +134,7 @@ def get_ordinal(defval=0):
   if _ORDINAL is not None:
     return _ORDINAL
 
-  if runtime.using_pjrt():
-    return runtime.global_ordinal()
-
-  return xu.getenv_as(xenv.ORDINAL, int, defval=defval)
+  return runtime.global_ordinal()
 
 
 def get_local_ordinal(defval=0):
@@ -156,13 +150,7 @@ def get_local_ordinal(defval=0):
   Returns:
     The replication local ordinal of the current thread.
   """
-  if runtime.using_pjrt():
-    return runtime.local_ordinal()
-
-  ordinal = xu.getenv_as(xenv.LOCAL_ORDINAL, int, defval=-1)
-  if ordinal >= 0:
-    return ordinal
-  return getattr(_get_device_context(), 'device_index', defval)
+  return runtime.local_ordinal()
 
 
 def is_master_ordinal(local=True):
@@ -205,20 +193,7 @@ def xla_device(n=None, devkind=None):
     torch_xla._XLAC._xla_set_default_device(device)
     return torch.device(device)
 
-  if runtime.using_pjrt():
-    return runtime.xla_device(n, devkind)
-
-  if n is None:
-    devices = get_xla_supported_devices(devkind=devkind)
-    assert devices, 'No devices of {} kind'.format(devkind or 'ANY')
-    # This is a utility API mainly called from tests or simple code which wants
-    # to just have a single device to run on. Set the default device so that
-    # the tensor barrier can work correctly and avoid growing graphs surprises.
-    device = devices[0]
-  else:
-    device = 'xla:{}'.format(n)
-  torch_xla._XLAC._xla_set_default_device(device)
-  return torch.device(device)
+  return runtime.xla_device(n, devkind)
 
 
 def _xla_real_device(device):
@@ -563,9 +538,9 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
     # all_reduce based all_gather for this purpose.
     return _all_gather_using_all_reduce(
         value, dim=dim, groups=groups, pin_layout=True)
+
   if dim < 0:
     dim = value.dim() + dim
-  token, devctx = _get_all_reduce_token()
   if groups:
     shard_count = len(groups[0])
     assert all(len(group) == shard_count for group in groups), \
@@ -573,6 +548,8 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
   else:
     # All replicas belong to a single group
     shard_count = xrt_world_size()
+
+  token, devctx = _get_all_reduce_token()
   if output != None:
     # Call the out of place version of the all_gather
     new_token = torch_xla._XLAC._xla_all_gather_out(output, value, token, dim,
@@ -581,10 +558,9 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
     torch_xla._XLAC._set_all_reduce_token(devctx.device, new_token)
     return output
 
-  result = torch_xla._XLAC._xla_all_gather(value, token, dim, shard_count,
-                                           groups or [], pin_layout)
-  torch_xla._XLAC._set_all_reduce_token(devctx.device, result[1])
-  return result[0]
+  result = torch_xla._XLAC._xla_all_gather(value, dim, shard_count, groups or
+                                           [], pin_layout)
+  return result
 
 
 def all_to_all(value,
@@ -838,7 +814,7 @@ def mark_step(wait=False):
   torch_xla._XLAC._set_all_reduce_token(devctx.device, None)
 
 
-def get_stablehlo(tensors=None):
+def get_stablehlo(tensors=None) -> str:
   """Get StableHLO for the computation graph in string format.
 
   If `tensors` is not empty, the graph with `tensors` as outputs will be dump.
@@ -852,7 +828,7 @@ def get_stablehlo(tensors=None):
   To enable source line info in StableHLO, please set env var XLA_HLO_DEBUG=1.
 
   Args:
-    tensors (list[torch.Tensor], optional): The tensors contained in the StableHLO graph.
+    tensors (list[torch.Tensor], optional): Tensors that represent the output/root of the StableHLO graph.
 
   Returns:
     StableHLO Module in string format.
@@ -860,7 +836,31 @@ def get_stablehlo(tensors=None):
   if tensors is None:
     tensors = []
   return torch_xla._XLAC._get_stablehlo(
-      tensors, torch_xla._XLAC._xla_get_default_device(), [])
+      tensors, torch_xla._XLAC._xla_get_default_device(), [],
+      False).decode('utf-8')
+
+
+def get_stablehlo_bytecode(tensors=None) -> bytes:
+  """Get StableHLO for the computation graph in bytecode format.
+
+  If `tensors` is not empty, the graph with `tensors` as outputs will be dump.
+  If `tensors` is empty, the whole computation graph will be dump.
+  TODO(lsy323): When `tensors` is empty, the some intermediate tensors will also be
+  dump as outputs. Need further investigation.
+
+  For inference graph, it is recommended to pass the model outputs to `tensors`.
+  For training graph, it is not straightforward to identify the "outputs". Using empty `tensors` is recommended.
+
+  Args:
+    tensors (list[torch.Tensor], optional): Tensors that represent the output/root of the StableHLO graph.
+
+  Returns:
+    StableHLO Module in bytecode format.
+  """
+  if tensors is None:
+    tensors = []
+  return torch_xla._XLAC._get_stablehlo(
+      tensors, torch_xla._XLAC._xla_get_default_device(), [], True)
 
 
 def wait_device_ops(devices=[]):
@@ -1076,10 +1076,7 @@ def rendezvous(tag, payload=b'', replicas=[]):
     The payloads exchanged by all the other cores, with the payload of core
     ordinal `i` at position `i` in the returned tuple.
   """
-  if runtime.using_pjrt():
-    return xla_rendezvous(payload, replicas or None, tag=tag)
-
-  return torch_xla._XLAC._xla_rendezvous(get_ordinal(), tag, payload, replicas)
+  return xla_rendezvous(payload, replicas or None, tag=tag)
 
 
 def do_on_ordinals(target, data=(), ordinals=(0,)):

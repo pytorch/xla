@@ -5,7 +5,6 @@
 #include <ATen/ops/select_copy.h>
 #include <torch/csrc/lazy/core/util.h>
 
-#include "tensorflow/compiler/xla/permutation_util.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -23,6 +22,7 @@
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
 #include "torch_xla/csrc/xla_lower_util.h"
+#include "xla/permutation_util.h"
 
 namespace torch_xla {
 namespace {
@@ -260,7 +260,9 @@ CanonicalIndexInfo GetCanonicalIndexInfo(
   CheckIndexTensorTypes(orig_indices);
   // First expand ByteTensor (boolean masks) into 1 or more LongTensors, then
   // broadcast all index tensors together.
-  auto indices = xla_expand_outplace(ExpandByteTensors(base, orig_indices));
+  std::vector<at::Tensor> expand_byte_tensors =
+      ExpandByteTensors(base, orig_indices);
+  std::vector<at::Tensor> indices = xla_expand_outplace(expand_byte_tensors);
   // If the non-null indices are not all adjacent, transpose base and indices
   // together so that they're adjacent at the front.
   CanonicalIndexInfo canonical_index_info = TransposeToFront(base, indices);

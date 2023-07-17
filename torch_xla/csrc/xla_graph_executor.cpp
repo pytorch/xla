@@ -23,10 +23,6 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/memory/memory.h"
 #include "absl/strings/str_join.h"
-#include "tensorflow/compiler/xla/literal_util.h"
-#include "tensorflow/compiler/xla/shape_util.h"
-#include "tensorflow/tsl/platform/errors.h"
-#include "tensorflow/tsl/profiler/lib/traceme.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/helpers.h"
@@ -55,6 +51,10 @@
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/xla_backend_impl.h"
 #include "torch_xla/csrc/xla_sharding_util.h"
+#include "tsl/platform/errors.h"
+#include "tsl/profiler/lib/traceme.h"
+#include "xla/literal_util.h"
+#include "xla/shape_util.h"
 
 namespace torch_xla {
 namespace {
@@ -319,7 +319,7 @@ torch::lazy::BackendDataPtr XLAGraphExecutor::GetBaseSeedData(
 }
 
 std::string XLAGraphExecutor::DumpHloComputation(
-    const std::vector<XLATensorPtr>& tensors, bool dump_stablehlo) {
+    const std::vector<XLATensorPtr>& tensors, EmitMode mode) {
   std::vector<torch::lazy::Value> ir_values;
   for (auto& tensor : tensors) {
     torch::lazy::Value ir_value = tensor->CurrentIrValue();
@@ -328,7 +328,7 @@ std::string XLAGraphExecutor::DumpHloComputation(
     }
   }
   return !ir_values.empty()
-             ? DumpUtil::ToHlo(ir_values, GetCurrentDevice(), dump_stablehlo)
+             ? DumpUtil::ToHlo(ir_values, GetCurrentDevice(), mode)
              : std::string();
 }
 
@@ -395,15 +395,20 @@ void XLAGraphExecutor::WaitDeviceOps(absl::Span<const std::string> devices) {
       wait_devices.insert(ParseDeviceString(device_str));
     }
   } else {
-    for (auto& device_str :
-         runtime::GetComputationClient()->GetLocalDevices()) {
-      wait_devices.insert(ParseDeviceString(device_str));
+    if (UseVirtualDevice()) {
+      wait_devices.insert(ParseDeviceString("SPMD:0"));
+    } else {
+      for (auto& device_str :
+           runtime::GetComputationClient()->GetLocalDevices()) {
+        wait_devices.insert(ParseDeviceString(device_str));
+      }
     }
   }
   // The DeviceLockerArena::Get()->LockDevices() API returns a vector of
   // torch::lazy::ExceptionCleanup object, which is going to be freed
   // immediately, turning this operation into a lock barrier.
   DeviceLockerArena::Get()->LockDevices(wait_devices);
+  TF_VLOG(4) << "XLAGraphExecutor::WaitDeviceOps completed";
 }
 
 std::vector<at::Tensor> XLAGraphExecutor::GetTensors(
@@ -643,7 +648,7 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
   }
 
   std::vector<XLATensor::ShardingSpecPtr> sharding_specs(placeholders.size());
-  if (ShardingUtil::UseVirtualDevice()) {
+  if (UseVirtualDevice()) {
     ShardingUtil::PrepareOutputShardingPropagation(
         placeholders, sharding_specs, output_shapes,
         cachedComputation->computation, device);

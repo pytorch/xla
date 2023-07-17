@@ -5,12 +5,13 @@
 #include "mlir/IR/Verifier.h"       // from @llvm-project
 #include "mlir/Pass/PassManager.h"  // from @llvm-project
 #include "mlir/Transforms/Passes.h"
-#include "tensorflow/compiler/xla/mlir_hlo/mhlo/transforms/passes.h"
-#include "tensorflow/compiler/xla/translate/hlo_to_mhlo/hlo_to_mlir_hlo.h"
-#include "tensorflow/compiler/xla/translate/mhlo_to_hlo/mlir_hlo_to_hlo.h"
+#include "stablehlo/dialect/Serialization.h"  // from @stablehlo
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/xla_util.h"
+#include "xla/mlir_hlo/mhlo/transforms/passes.h"
+#include "xla/translate/hlo_to_mhlo/hlo_to_mlir_hlo.h"
+#include "xla/translate/mhlo_to_hlo/mlir_hlo_to_hlo.h"
 
 namespace torch_xla {
 namespace runtime {
@@ -31,6 +32,16 @@ static std::string getMlirModuleStr(mlir::ModuleOp& mlir_module) {
     flags.enableDebugInfo(/*enable=*/true, /*prettyForm=*/true);
   }
   mlir_module.print(os, flags);
+  return txt_mlir_module;
+}
+
+static std::string getMlirModuleBytecode(const mlir::ModuleOp& mlir_module) {
+  std::string txt_mlir_module;
+  llvm::raw_string_ostream os{txt_mlir_module};
+  // TODO(qihqi): pass in version
+  auto result = mlir::stablehlo::serializePortableArtifact(
+      mlir_module, /* target_version = */ "current", os);
+  XLA_CHECK(result.succeeded()) << "Serializing StableHLO Failed";
   return txt_mlir_module;
 }
 
@@ -67,21 +78,31 @@ static absl::Status mhloToStablehloHelper(mlir::ModuleOp* mlir_module,
   ;
 }
 
-std::string hloToStablehloStr(const xla::HloModuleProto* proto) {
-  mlir::MLIRContext context;
-  mlir::ModuleOp mlir_module =
-      mlir::ModuleOp::create(mlir::UnknownLoc::get(&context));
+void ConvertHloToStableHlo(const xla::HloModuleProto* proto,
+                           mlir::ModuleOp* mlir_module) {
   static const std::string err_msg =
       "Please open a github issue to PyTorch/XLA.\nOriginal HLO dump:\n";
-  auto status = hloToMhloHelper(proto, &mlir_module);
+  auto status = hloToMhloHelper(proto, mlir_module);
   XLA_CHECK(status.ok()) << "HLO -> MHLO conversion failed.\n"
                          << status.message() << err_msg
                          << getHloModuleStr(proto);
-  status = mhloToStablehloHelper(&mlir_module, &context);
+  status = mhloToStablehloHelper(mlir_module, mlir_module->getContext());
   XLA_CHECK(status.ok()) << "MHLO -> StableHLO conversion failed.\n"
                          << status.message() << err_msg
                          << getHloModuleStr(proto);
-  return getMlirModuleStr(mlir_module);
+}
+
+std::string hloToStablehlo(const xla::HloModuleProto* proto,
+                           bool emit_bytecode) {
+  mlir::MLIRContext context;
+  mlir::ModuleOp mlir_module =
+      mlir::ModuleOp::create(mlir::UnknownLoc::get(&context));
+  ConvertHloToStableHlo(proto, &mlir_module);
+  if (emit_bytecode) {
+    return getMlirModuleBytecode(mlir_module);
+  } else {
+    return getMlirModuleStr(mlir_module);
+  }
 }
 
 }  // namespace runtime
