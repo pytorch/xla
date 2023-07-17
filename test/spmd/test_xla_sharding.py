@@ -253,17 +253,18 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
 
   def test_mark_sharding_not_ordered_sharding_spec_4d(self):
     device = xm.xla_device()
-    t1 = torch.randn(2, 4, 8, 16, device='cpu')
+    t1 = torch.randn(32, 4, 8, 16, device='cpu')
     expected = t1 + t1
 
     xt1 = t1.to(device)
     z_dim = 2 if self.n_devices >= 4 else 1
-    # Expect local shard size to be [2 / (self.n_devices / z_dim), 4, 8 , 16 / z_dim]
+    # Expect local shard size to be [32 / (self.n_devices / z_dim), 4, 8 , 16 / z_dim]
     xt1 = xs.mark_sharding(
         xt1, self._get_mesh((z_dim, 1, 1, self.n_devices // z_dim)),
         (3, 1, 2, 0))
     for local_shard in xt1.local_shards:
-      self.assertEqual(local_shard.data.size()[0], 2 / (self.n_devices / z_dim))
+      self.assertEqual(local_shard.data.size()[0],
+                       32 / (self.n_devices / z_dim))
       self.assertEqual(local_shard.data.size()[1], 4)
       self.assertEqual(local_shard.data.size()[2], 8)
       self.assertEqual(local_shard.data.size()[3], 16 / z_dim)
