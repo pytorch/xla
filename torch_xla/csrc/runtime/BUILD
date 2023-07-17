@@ -7,11 +7,6 @@ licenses(["notice"])  # Apache 2.0
 
 package(default_visibility = ["//visibility:public"])
 
-exports_files([
-    "openxla_version_script.lds",
-    "openxla_exported_symbols.lds",
-])
-
 cc_library(
     name = "async_task",
     hdrs = ["async_task.h"],
@@ -87,9 +82,10 @@ cc_library(
     ":computation_client",
     ":debug_macros",
     ":env_vars",
+    ":multi_wait",
+    ":stablehlo_helper",
     ":tf_logging",
     ":thread_pool",
-    ":multi_wait",
     "@xla//xla:literal",
     "@xla//xla:shape_util",
     "@xla//xla/client:xla_computation",
@@ -356,33 +352,6 @@ cc_test(
         "@tsl//tsl/lib/core:status_test_util",
         "@tsl//tsl/platform:errors",
         "@tsl//tsl/platform:status_matchers",
-    ],
-)
-
-cc_binary(
-    name = "libxla_computation_client.so",
-    linkopts = select({
-        "//conditions:default": [
-            "-z defs",
-            "-Wl,--version-script",  #  This line must be directly followed by the version_script.lds file
-            "$(location :openxla_version_script.lds)",
-            "-Wl,-soname,libxla_computation_client.so",
-        ],
-    }),
-    linkshared = 1,
-    visibility = ["//visibility:public"],
-    deps = [
-        ":computation_client",
-        ":openxla_exported_symbols.lds",
-        ":openxla_version_script.lds",
-        "@com_google_absl//absl/strings",
-        "@xla//xla:literal_util",
-        "@xla//xla/client",
-        "@xla//xla/client:global_data",
-        "@xla//xla/client:xla_builder",
-        "@xla//xla/client:xla_computation",
-        "@xla//xla/client/lib:svd",
-        "@tsl//tsl/platform/cloud:gcs_file_system",
     ],
 )
 

@@ -146,8 +146,47 @@ inline bool tensor_has_dym_dim(at::Tensor t) {
   return !c10::asIntArrayRefSlowOpt(sym_sizes).has_value();
 }
 
-inline std::vector<at::Tensor> xla_expand_outplace(at::TensorList to_expand) {
+inline bool tensors_has_dym_dim(at::TensorList tensors) {
+  for (const at::Tensor& t : tensors) {
+    if (tensor_has_dym_dim(t)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+inline std::vector<at::Tensor> xla_expand_outplace_symint_helper(
+    at::TensorList to_expand) {
   // expands a list of Tensors; ignores undefined (null) tensors
+  bool first = true;
+  at::SymDimVector sym_sizes;
+  for (const auto i : c10::irange(to_expand.size())) {
+    if (!to_expand[i].defined()) {
+      continue;
+    } else if (first) {
+      sym_sizes = to_expand[i].sym_sizes();
+      first = false;
+    } else {
+      sym_sizes =
+          at::infer_size_symdimvector(sym_sizes, to_expand[i].sym_sizes());
+    }
+  }
+
+  std::vector<at::Tensor> result(to_expand.size());
+  for (const auto i : c10::irange(to_expand.size())) {
+    if (!to_expand[i].defined()) {
+      continue;
+    } else if (to_expand[i].sym_sizes().equals(sym_sizes)) {
+      result[i] = to_expand[i];
+    } else {
+      result[i] = at::expand_copy_symint(to_expand[i], sym_sizes);
+    }
+  }
+  return result;
+}
+
+inline std::vector<at::Tensor> xla_expand_outplace_helper(
+    at::TensorList to_expand) {
   bool first = true;
   at::DimVector sizes;
   for (const auto i : c10::irange(to_expand.size())) {
@@ -172,6 +211,15 @@ inline std::vector<at::Tensor> xla_expand_outplace(at::TensorList to_expand) {
     }
   }
   return result;
+}
+
+inline std::vector<at::Tensor> xla_expand_outplace(at::TensorList to_expand) {
+  // expands a list of Tensors; ignores undefined (null) tensors
+  if (tensors_has_dym_dim(to_expand)) {
+    return xla_expand_outplace_symint_helper(to_expand);
+  } else {
+    return xla_expand_outplace_helper(to_expand);
+  }
 }
 
 }  // namespace torch_xla

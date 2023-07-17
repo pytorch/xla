@@ -46,10 +46,10 @@
 #   CXX_ABI=""
 #     value for cxx_abi flag; if empty, it is infered from `torch._C`.
 #
-
 from __future__ import print_function
 
 from setuptools import setup, find_packages, distutils, Extension, command
+from setuptools.command import develop
 from torch.utils.cpp_extension import BuildExtension
 import posixpath
 import contextlib
@@ -161,6 +161,9 @@ def maybe_bundle_libtpu(base_dir):
 
 class Clean(distutils.command.clean.clean):
 
+  def bazel_clean_(self):
+    self.spawn(['bazel', 'clean', '--expunge'])
+
   def run(self):
     import glob
     import re
@@ -180,6 +183,8 @@ class Clean(distutils.command.clean.clean):
               os.remove(filename)
             except OSError:
               shutil.rmtree(filename, ignore_errors=True)
+
+    self.execute(self.bazel_clean_, (), msg="Cleaning bazel outputs")
 
     # It's an old-style class in Python 2.7...
     distutils.command.clean.clean.run(self)
@@ -251,12 +256,15 @@ class BuildBazelExtension(command.build_ext.build_ext):
       bazel_argv.append('--config=tpu')
 
     # Remote cache authentication.
-    if _check_env_flag('BAZEL_REMOTE_CACHE'):
-      bazel_argv.append('--config=remote_cache')
-
     if GCLOUD_KEY_FILE:
-      bazel_argv.append('--google_credentials=%s' % GCLOUD_KEY_FILE)
-      if not _check_env_flag('BAZEL_REMOTE_CACHE'):
+      # Temporary workaround to allow PRs from forked repo to run CI. See details at (#5259).
+      # TODO: Remove the check once self-hosted GHA workers are avaialble to CPU/GPU CI.
+      gclout_key_file_size = os.path.getsize(GCLOUD_KEY_FILE)
+      if gclout_key_file_size > 1:
+        bazel_argv.append('--google_credentials=%s' % GCLOUD_KEY_FILE)
+        bazel_argv.append('--config=remote_cache')
+    else:
+      if _check_env_flag('BAZEL_REMOTE_CACHE'):
         bazel_argv.append('--config=remote_cache')
     if CACHE_SILO_NAME:
       bazel_argv.append('--remote_default_exec_properties=cache-silo-key=%s' %
@@ -292,6 +300,13 @@ class BuildBazelExtension(command.build_ext.build_ext):
     shutil.copyfile(ext_bazel_bin_path, ext_dest_path)
 
 
+class Develop(develop.develop):
+
+  def run(self):
+    self.run_command("build_ext")
+    super().run()
+
+
 setup(
     name=os.environ.get('TORCH_XLA_PACKAGE_NAME', 'torch_xla'),
     version=version,
@@ -323,4 +338,5 @@ setup(
     cmdclass={
         'build_ext': BuildBazelExtension,
         'clean': Clean,
+        'develop': Develop,
     })

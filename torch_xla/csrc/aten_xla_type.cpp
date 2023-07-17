@@ -467,7 +467,7 @@ at::Tensor XLANativeFunctions::_copy_from(const at::Tensor& self,
   if (!self_tensor) {
     static bool sync_update =
         runtime::sys_util::GetEnvBool("XLA_TENSOR_UPDATE_SYNC", true) &&
-        !ShardingUtil::UseVirtualDevice();
+        !UseVirtualDevice();
     XLA_CHECK(dst_tensor);
     dst_tensor->UpdateFromTensor(self, /*sync=*/sync_update);
   } else if (!dst_tensor) {
@@ -1241,21 +1241,12 @@ at::Tensor XLANativeFunctions::empty_strided_symint(
   bool is_size_dynamic = !size.has_value();
   c10::optional<at::IntArrayRef> stride = c10::asIntArrayRefSlowOpt(sym_stride);
   bool is_stride_dynamic = !stride.has_value();
-  at::Tensor t =
-      empty_symint(sym_size, dtype, layout, device, pin_memory, c10::nullopt);
-  if (is_size_dynamic || is_stride_dynamic) {
-    // As XLATensor doesn't have a storage, it should not care about the memory
-    // format or how to jump to the next element (strides). So the term stride
-    // does not mean much to us. The size of the tensor has been set by the
-    // above `empty_symint` so we feel it is ok to return here. The reason why
-    // we only do it for dynamic size/stride is to limit the change and preserve
-    // the old behavior.
-    return t;
-  } else {
-    return torch_xla::XLANativeFunctions::as_strided_copy(t, size.value(),
-                                                          stride.value(),
-                                                          /*storage_offset=*/0);
-  }
+  // As XLATensor doesn't have a storage, it should not care about the memory
+  // format or how to jump to the next element (strides). So the term stride
+  // does not mean much to us. The size of the tensor has been set by the
+  // above `empty_symint` so we feel it is ok to return here.
+  return empty_symint(sym_size, dtype, layout, device, pin_memory,
+                      c10::nullopt);
 }
 
 at::Tensor XLANativeFunctions::expand_copy_symint(const at::Tensor& self,
@@ -2913,6 +2904,13 @@ at::Tensor XLANativeFunctions::squeeze_copy(const at::Tensor& self,
   TORCH_LAZY_FN_COUNTER("xla::");
   return bridge::AtenFromXlaTensor(
       tensor_methods::squeeze(bridge::GetXlaTensor(self), dim));
+}
+
+at::Tensor XLANativeFunctions::squeeze_copy(const at::Tensor& self,
+                                            at::IntArrayRef dim) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(tensor_methods::squeeze(
+      bridge::GetXlaTensor(self), torch::lazy::ToVector<int64_t>(dim)));
 }
 
 at::Tensor XLANativeFunctions::stack(at::TensorList tensors, int64_t dim) {

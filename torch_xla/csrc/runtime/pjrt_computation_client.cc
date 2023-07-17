@@ -12,6 +12,7 @@
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/env_vars.h"
 #include "torch_xla/csrc/runtime/multi_wait.h"
+#include "torch_xla/csrc/runtime/stablehlo_helper.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
 #include "torch_xla/csrc/runtime/thread_pool.h"
 #include "tsl/profiler/lib/traceme.h"
@@ -437,8 +438,20 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
           device_assignment);
     }
 
-    std::unique_ptr<xla::PjRtLoadedExecutable> executable =
-        ConsumeValue(client_->Compile(instance.computation, compile_options));
+    std::unique_ptr<xla::PjRtLoadedExecutable> executable;
+    if (runtime::sys_util::GetEnvBool("XLA_STABLEHLO_COMPILE", false)) {
+      // Convert HLO to StableHLO for PjRt client compilation.
+      mlir::MLIRContext context;
+      mlir::ModuleOp mlir_module =
+          mlir::ModuleOp::create(mlir::UnknownLoc::get(&context));
+      torch_xla::runtime::ConvertHloToStableHlo(
+          instance.computation.mutable_proto(), &mlir_module);
+      executable = ConsumeValue(client_->Compile(mlir_module, compile_options));
+      StableHloCompileCounter()->AddValue(1);
+    } else {
+      executable =
+          ConsumeValue(client_->Compile(instance.computation, compile_options));
+    }
 
     const auto& hlo_modules = ConsumeValue(executable->GetHloModules());
     xla::HloComputation* hlo_computation = hlo_modules[0]->entry_computation();
@@ -520,6 +533,10 @@ PjRtComputationClient::ExecuteComputation(
                << device;
     // Grab the shared lock and block the `WaitDeviceOps` until buffer is
     // ready.
+    // TODO(JackCaoG): This lock should acquired outside of the lockfn and
+    // passed in. It is possible that lockfn started after ExecuteComputation
+    // released the xla_graph_executor lock, which will create a short windows
+    // where device is unlcoked while execution is still running.
     auto lock = lock_device_shared(device);
     TF_VLOG(5) << "ExecuteComputation acquiring PJRT device lock for " << device
                << " Done";

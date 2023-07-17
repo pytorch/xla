@@ -39,10 +39,15 @@ class AtenXlaDeviceMapper {
 
  private:
   AtenXlaDeviceMapper() {
-    for (auto& device_str :
-         torch_xla::runtime::GetComputationClient()->GetLocalDevices()) {
-      devices_.emplace_back(ParseDeviceString(device_str));
-      devices_ordinals_[devices_.back()] = devices_.size() - 1;
+    if (UseVirtualDevice()) {
+      devices_.emplace_back(ParseDeviceString("SPMD:0"));
+      devices_ordinals_[devices_.back()] = 0;
+    } else {
+      for (auto& device_str :
+           torch_xla::runtime::GetComputationClient()->GetLocalDevices()) {
+        devices_.emplace_back(ParseDeviceString(device_str));
+        devices_ordinals_[devices_.back()] = devices_.size() - 1;
+      }
     }
   }
 
@@ -150,9 +155,13 @@ std::vector<at::Tensor> XlaCreateTensorList(const at::ITensorListRef& tensors) {
   std::vector<bool> to_translate(tensors.size());
   size_t ix = 0;
   for (const auto& tensor : tensors) {
-    if (!tensor.defined()) continue;
+    if (!tensor.defined()) {
+      continue;
+    }
     auto inner_tensor = torch::lazy::maybe_unwrap_functional(tensor);
-    if (!inner_tensor.defined()) continue;
+    if (!inner_tensor.defined()) {
+      continue;
+    }
 
     auto xtensor = TryGetXlaTensor(tensor);
     if (xtensor) {

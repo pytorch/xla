@@ -86,7 +86,78 @@ class VirtualDeviceTest(test_xla_sharding_base.XlaShardingTest):
     # we will transfer 0.5 as a device_data to the 'SPMD:0' device, need to make sure
     # that virtual device can handle this case.
     xt2 = xt1 / 0.5
+    xm.mark_step(wait=True)
     torch.allclose(xt2.cpu(), xt1.cpu() / 0.5)
+
+  def test_mark_step_on_virtual_device(self):
+    xm.mark_step()
+    sharding_spec = xs.ShardingSpec(self._get_mesh((1, self.n_devices)), (0, 1))
+    # tensor will have device as `SPMD:0` in c++
+    xt1 = xm.send_cpu_data_to_device([torch.randn(3, 3)],
+                                     xm.xla_device(),
+                                     input_sharding=sharding_spec)[0]
+    xt2 = xt1 / 0.5
+    xm.mark_step(wait=True)
+    # after mark_step, xt2 should be materalized
+    self.assertNotIn('aten::div',
+                     torch_xla._XLAC._get_xla_tensor_debug_info(xt2))
+
+  def test_virtual_device_no_upload(self):
+    met.clear_all()
+    device = xm.xla_device()
+    t1 = torch.randn(5, 5).to(device)
+    t1_debug_info = torch_xla._XLAC._get_xla_tensor_debug_info(t1)
+    # t1's upload to device should be deferred
+    self.assertIn("Tensor on host: with size [5, 5]", t1_debug_info)
+    self.assertNotIn("TransferToServerTime", met.metric_names())
+    # t1 should be on SPMD device under spmd context
+    self.assertIn("Device: SPMD:0", t1_debug_info)
+    self.assertIn("IR: None", t1_debug_info)
+    self.assertIn("XLAData: None", t1_debug_info)
+
+  def test_virtual_device_upload_after_mark_sharding(self):
+    met.clear_all()
+    partition_spec = (0, 1)
+    device = xm.xla_device()
+    t1 = torch.randn(8, 8).to(device)
+    t1_debug_info = torch_xla._XLAC._get_xla_tensor_debug_info(t1)
+    self.assertIn("Tensor on host: with size [8, 8]", t1_debug_info)
+    xs.mark_sharding(t1, self._get_mesh((1, self.n_devices)), partition_spec)
+    t1_debug_info_new = torch_xla._XLAC._get_xla_tensor_debug_info(t1)
+    # tensor should be uploaded to device after mark_sharding
+    self.assertIn("Tensor on host: None", t1_debug_info_new)
+    self.assertIn("xla::device_data", t1_debug_info_new)
+    self.assertIn("XLAShardedData", t1_debug_info_new)
+    self.assertIn("TransferToServerTime", met.metric_names())
+
+  def test_virtual_device_upload_after_tracing(self):
+    met.clear_all()
+    device = xm.xla_device()
+    t1 = torch.randn(8, 8).to(device)
+    t1_debug_info = torch_xla._XLAC._get_xla_tensor_debug_info(t1)
+    self.assertIn("Tensor on host: with size [8, 8]", t1_debug_info)
+    t2 = t1 + t1
+    t1_debug_info_new = torch_xla._XLAC._get_xla_tensor_debug_info(t1)
+    # tensor should be uploaded to device after being used as input to other op.
+    self.assertIn("Tensor on host: None", t1_debug_info_new)
+    self.assertIn("xla::device_data", t1_debug_info_new)
+    self.assertIn("TransferToServerTime", met.metric_names())
+
+  def test_virtual_device_upload_for_sharded_dataloader(self):
+    met.clear_counters()
+    device = xm.xla_device()
+    sharding_spec = xs.ShardingSpec(self._get_mesh((1, self.n_devices)), (0, 1))
+    # tensor will have device as `SPMD:0` in c++
+    t1 = xm.send_cpu_data_to_device([torch.randn(8, 8)],
+                                    device,
+                                    input_sharding=sharding_spec)[0]
+    t1_debug_info = torch_xla._XLAC._get_xla_tensor_debug_info(t1)
+    self.assertIn("Device: SPMD:0", t1_debug_info)
+    # tensor should be uploaded to device after send_cpu_data_to_device + sharding_spec
+    self.assertIn("Tensor on host: None", t1_debug_info)
+    self.assertIn("xla::device_data", t1_debug_info)
+    self.assertIn("XLAShardedData", t1_debug_info)
+    self.assertIn("TransferToServerTime", met.metric_names())
 
 
 if __name__ == '__main__':

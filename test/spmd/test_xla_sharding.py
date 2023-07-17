@@ -223,9 +223,14 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
 
   def test_mark_sharding_partial(self):
     device = xm.xla_device()
-    t1 = torch.randn(4, 4).to(xm.xla_device())
-    t2 = torch.randn(4, 4).to(xm.xla_device())
-    expected = (t1 @ t2).cpu()
+    t1 = torch.randn(4, 4).to(device)
+    t2 = torch.randn(4, 4).to(device)
+    # Somehow the eager cpu result is different from the xla result.
+    expected = t1 @ t2
+    # To re-materialize t1 and t2.
+    xm.mark_step()
+    xm.wait_device_ops()
+    expected = expected.cpu()
 
     # Shard along two axes if four or more devices are available
     z_dim = 2 if self.n_devices >= 4 else 1
@@ -255,7 +260,12 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     xx = torch.randn(16, 128).to(device)
     xw = torch.randn(128, 256).to(device)
     xb = torch.randn(16, 256).to(device)
-    expected = (xx @ xw + xb).cpu()
+
+    # Somehow the eager cpu result is different from the xla result.
+    expected = xx @ xw + xb
+    xm.mark_step()  # To re-materialize xx, xw, and xb.
+    xm.wait_device_ops()
+    expected = expected.cpu()
 
     xs.mark_sharding(xx, mesh, (0, None))
     xs.mark_sharding(xw, mesh, (None, 1))
@@ -314,7 +324,6 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     xt = torch.ones(2, 2).to(xm.xla_device())
     xs.mark_sharding(xt, self._get_mesh((1, self.n_devices)), (0, 1))
     xt += 2
-    sharding_spec = torch_xla._XLAC._get_xla_sharding_spec(xt)
     xm.mark_step()
     xm.wait_device_ops()
     self.assertEqual(met.metric_data('ExecuteReplicatedTime')[0], 1)
@@ -481,6 +490,25 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     # scalar 5 should be replicated
     self.assertIn('%p0.2 = f32[] parameter(0), sharding={replicated}', hlo)
 
+  def test_2d_tensor_3d_mesh(self):
+    ct1 = torch.randn(16, 16, device='cpu')
+    ct2 = torch.randn(16, 16, device='cpu')
+    expected = ct1 + ct2
+
+    t1 = ct1.to(xm.xla_device())
+    t2 = ct2.to(xm.xla_device())
+    mesh = self._get_mesh((1, self.n_devices, 1))
+    t1 = xs.mark_sharding(t1, mesh, partition_spec=(1, 2))
+    if self.n_devices > 1:
+      hlo = torch_xla._XLAC._get_xla_tensors_hlo([t1.global_tensor])
+      # expected string in hlo %param = f32[1,4,16]{2,1,0:T(4,128)} parameter(0), sharding={devices=[1,4,1]0,2,1,3}
+      sharding_annotation = 'sharding={devices=[1,%d,1]%s}' % (
+          self.n_devices, ','.join(
+              [str(d) for d in mesh.get_logical_mesh().flatten()]))
+      self.assertIn(sharding_annotation, hlo)
+    actual = (t1 + t2).cpu()
+    self.assertTrue(torch.allclose(expected, actual))
+
   @unittest.skipIf(xr.device_type() == 'TPU', "Crash on TPU v2")
   @unittest.skipUnless(
       xm.get_xla_supported_devices("TPU"),
@@ -537,6 +565,35 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     print(hybrid_mesh.get_logical_mesh())
     self.assertEqual(hybrid_mesh.get_logical_mesh().tolist(),
                      [[0, 1], [2, 3], [4, 5], [6, 7]])
+
+  def test_mark_sharding_ir(self):
+    t1 = torch.randn(1, 128, device='cpu')
+    t2 = torch.randn(1, 128, device='cpu')
+    expected = t1 + t2
+
+    xt1 = t1.to(xm.xla_device())
+    xt2 = t2.to(xm.xla_device())
+    actual = xt1 + xt2
+    xs.mark_sharding(actual, self._get_mesh((1, self.n_devices)), (0, 1))
+
+    if self.n_devices > 1:
+      annotation = '{devices=[1,%d]%s}' % (self.n_devices, ','.join(
+          [str(i) for i in range(self.n_devices)]))
+      self.assertEqual(annotation,
+                       torch_xla._XLAC._get_xla_sharding_spec(actual))
+
+    self.assertTrue(torch.allclose(expected, actual.cpu()))
+
+  @patch.dict(os.environ, {"XLA_DUMP_POST_OPTIMIZATIONS": "1"})
+  def test_xla_sharded_hlo_dump_post_optimizations(self):
+    t1 = torch.randn(1, 128).to(xm.xla_device())
+    t2 = torch.randn(128, 1).to(xm.xla_device())
+    xs.mark_sharding(t1, self._get_mesh((1, self.n_devices)), (0, 1))
+
+    t3 = t1 @ t2
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo([t3])
+    if self.n_devices > 1:
+      self.assertIn('all-reduce', hlo)
 
 
 if __name__ == '__main__':
