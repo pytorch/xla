@@ -346,8 +346,7 @@ def _get_group_assignment(
   replication_groups = list()
   # TODO(JackCaoG): 3d mesh on 2d tensor
   tile_assignment = _get_tile_assignment(mesh, partition_spec)
-  mesh_shape_list = list(
-      torch.tensor(tile_assignment).size())
+  mesh_shape_list = list(torch.tensor(tile_assignment).size())
   if sharding_type is ShardingType.PARTIAL:
     # Shard across groups and replicate within subgroups; replicated dims
     # will be used to group replication devices.

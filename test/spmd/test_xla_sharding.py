@@ -335,6 +335,42 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     actual = (xt1 + t2).cpu()
     self.assertTrue(torch.allclose(expected, actual))
 
+  def test_mark_sharding_not_ordered_partial_4d(self):
+    device = xm.xla_device()
+    t1 = torch.randn(8, 16, 32, 64).to(device)
+    t2 = torch.randn(8, 16, 32, 64).to(device)
+    # Somehow the eager cpu result is different from the xla result.
+    expected = t1 + t2
+    # To re-materialize t1 and t2.
+    xm.mark_step()
+    xm.wait_device_ops()
+    expected = expected.cpu()
+
+    # Shard along two axes if four or more devices are available
+    z_dim = 2 if self.n_devices >= 4 else 1
+    mesh = self._get_mesh((z_dim, 1, 1, self.n_devices // z_dim))
+
+    # Expect local shard size to be [8, 16, 32 / z_dim, 64]
+    xt1 = xs.mark_sharding(t1, mesh, (2, None, 0, None))
+
+    for local_shard in xt1.local_shards:
+      self.assertEqual(local_shard.data.size()[0], 8)
+      self.assertEqual(local_shard.data.size()[1], 16)
+      self.assertEqual(local_shard.data.size()[2], 32 / z_dim)
+      self.assertEqual(local_shard.data.size()[3], 64)
+
+    # partial replication requires >1 devices; otherwise, it's replicated.
+    if self.n_devices > 1:
+      # xt1 is sharded `z_dim`-way, replicated `n_devices/z_dim`-way.
+      self.assertTrue('last_tile_dim_replicate' in
+                      torch_xla._XLAC._get_xla_sharding_spec(t1))
+      self.assertTrue('[1,1,%d,1,%d]' %
+                      (z_dim,
+                       (self.n_devices //
+                        z_dim)) in torch_xla._XLAC._get_xla_sharding_spec(t1))
+    actual = (xt1 + t2).cpu()
+    self.assertTrue(torch.allclose(expected, actual))
+
   def test_partial_replication_addmm(self):
     device = xm.xla_device()
     z_dim = 2 if self.n_devices >= 4 else 1
