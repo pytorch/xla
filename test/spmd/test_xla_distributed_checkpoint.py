@@ -246,6 +246,7 @@ class SPMDSavePlannerTest(DistributedCheckpointTestBase):
       resolved_data = planner.resolve_data(write_item)
       self.assertTrue(torch.allclose(shard.data, resolved_data))
 
+
 class DistributedCheckpointHelpersTest(DistributedCheckpointTestBase):
 
   def test_sharded_cpu_state_dict(self):

@@ -297,8 +297,7 @@ class SPMDLoadPlanner(LoadPlanner):
       return
 
     self._pending_elements[fqn] -= np.prod(read_item.lengths)
-    assert self._pending_elements[
-        fqn] >= 0, f"Too many writes for tensor {fqn}"
+    assert self._pending_elements[fqn] >= 0, f"Too many writes for tensor {fqn}"
     if self._pending_elements[fqn] == 0:
       # Load local shards into the XLAShardedTensor and release the shards
       # from CPU
