@@ -106,7 +106,7 @@ class ShardingUtil {
   // vector, so the `i`th result will belong on the `i`th device.
   static std::vector<at::Tensor> ShardTensor(
       const at::Tensor& tensor, const xla::OpSharding sharding,
-      const std::vector<std::string>& devices, bool padded = true);
+      const std::vector<std::string>& devices, bool padded = true, bool sharded_tensor = false);
 
   // Prepares output sharding propagation by extracting output parameter
   // ShardingSpec into `sharding_specs` from the SPMD compiled `computation` and

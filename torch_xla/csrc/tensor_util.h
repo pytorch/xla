@@ -63,7 +63,7 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
 std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
     const std::vector<at::Tensor>& tensors,
     const std::vector<XLATensor::ShardingSpecPtr>& sharding_specs,
-    const std::vector<std::string>& devices);
+    const std::vector<std::string>& devices, bool sharded_tensor = false);
 
 // Creates an XLA literal out of an ATEN tensor. If shape is specified, that
 // shape+layout will be used, otherwise one will be generated out of the ATEN

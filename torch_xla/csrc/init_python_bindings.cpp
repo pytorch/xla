@@ -444,7 +444,7 @@ std::vector<at::Tensor> GetXlaTensorsFromAten(
     const std::vector<at::Tensor>& aten_tensors,
     const std::vector<std::string>& devices,
     const std::optional<std::vector<XLATensor::ShardingSpecPtr>>
-        sharding_specs, bool sharded_tensor) {
+        sharding_specs, std::optional<bool> sharded_tensor = false) {
   std::vector<std::shared_ptr<torch::lazy::BackendData>> data_handles;
   if (sharding_specs.has_value()) {
     data_handles = CreateTensorsData(aten_tensors, sharding_specs.value(),
@@ -787,7 +787,7 @@ void InitXlaModuleBindings(py::module m) {
         [](const std::vector<at::Tensor>& tensors,
            const std::vector<std::string>& devices,
            const std::optional<std::vector<XLATensor::ShardingSpecPtr>>&
-               shardings,bool sharded_tensor) {
+               shardings, std::optional<bool> sharded_tensor = false) {
           std::vector<at::Tensor> result;
           {
             NoGilSection nogil;
