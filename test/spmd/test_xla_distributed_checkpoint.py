@@ -247,17 +247,6 @@ class SPMDSavePlannerTest(DistributedCheckpointTestBase):
       self.assertTrue(torch.allclose(shard.data, resolved_data))
 
 class DistributedCheckpointHelpersTest(DistributedCheckpointTestBase):
-  
-  def test_sharded_cpu_state_dict(self):
-    model = self.SimpleLinear().to(xm.xla_device())
-    state_dict = model.state_dict()
-    sharded_cpu_state_dict = _sharded_cpu_state_dict(state_dict)
-    self.assertCountEqual(sharded_cpu_state_dict,
-                          ['fc1.weight', 'fc1.bias', 'fc2.weight', 'fc2.bias'])
-    self.assertTrue(
-      isinstance(sharded_cpu_state_dict['fc1.weight'], _CpuShards))
-
-class DistributedCheckpointHelpersTest(DistributedCheckpointTestBase):
 
   def test_sharded_cpu_state_dict(self):
     model = self.SimpleLinear().to(xm.xla_device())
