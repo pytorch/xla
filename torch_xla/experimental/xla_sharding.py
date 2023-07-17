@@ -319,8 +319,24 @@ def _get_sharding_type(partition_spec: Tuple[Union[int, None]],
   return sharding_type
 
 
-def _get_tile_assignment(mesh: Mesh) -> List[int]:
-  return mesh.get_logical_mesh().tolist()
+def _get_tile_assignment(mesh: Mesh,
+                         partition_spec: Tuple[Union[int, None]]) -> List[int]:
+  # Use Torch.tensor here to make use of the torch.transpose_
+  mesh_list_tensor = torch.tensor(mesh.get_logical_mesh().tolist())
+  # This is partial sharding case, tile_assigniment will be ignore in favor of
+  # group_assignment and replication_groups.
+  if (mesh_list_tensor.dim() != len(partition_spec)):
+    return mesh_list_tensor.tolist()
+  partition_spec_list = list(partition_spec)
+  for i in range(len(partition_spec_list)):
+    if partition_spec_list[i] == None:
+      partition_spec_list[i] = i
+  # We currently do not support partition_spec like [0, None, 1, 3]. The None at partition_spec[1]
+  # suggested that we want to replicate on Mesh[1], hence we can't use Mesh[1] in
+  # partition_spec[2]
+  assert torch.unique(
+      torch.tensor(partition_spec_list)).size()[0] == len(partition_spec_list)
+  return mesh_list_tensor.permute(partition_spec_list).tolist()
 
 
 def _get_group_assignment(
@@ -399,7 +415,7 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
   assert len(specs) == len(np.unique(specs)), \
     f"Each device mesh dimension should appear at most once in partition_spec {partition_spec}."
 
-  tile_assignment = _get_tile_assignment(mesh)
+  tile_assignment = _get_tile_assignment(mesh, partition_spec)
   # check for sharding 2D tensor on a 3D mesh
   original_shape = tuple(t.shape)
   # number of dims to expand on tensor
@@ -464,7 +480,7 @@ class ShardingSpec:
   @xr.requires_pjrt
   def __post_init__(self):
     partition_spec, mesh = self.partition_spec, self.mesh
-    self._tile_assignment = _get_tile_assignment(mesh)
+    self._tile_assignment = _get_tile_assignment(mesh, partition_spec)
     self._sharding_type = _get_sharding_type(partition_spec,
                                              xr.global_device_count())
     self._group_assignment, self._replication_groups = _get_group_assignment(
