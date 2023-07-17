@@ -35,14 +35,9 @@ from torch.distributed.checkpoint.utils import find_state_dict_object
 from torch.utils._pytree import tree_map
 from torch_xla.experimental.xla_sharding import XLAShardedTensor, XLAShard
 from torch_xla.experimental._distributed_checkpoint_helpers import (
-    FLATTEN_MAPPING,
-    flatten_state_dict,
-    dedup_tensors,
-    _is_sharded_tensor,
-    set_element,
-    narrow_tensor_by_index,
-    _unwrap_xla_sharded_tensor,
-)
+    FLATTEN_MAPPING, flatten_state_dict, dedup_tensors, _is_sharded_tensor,
+    set_element, narrow_tensor_by_index, _unwrap_xla_sharded_tensor,
+    _sharded_cpu_state_dict, _CpuShards)
 from typing import Any, Dict, List, Tuple, Union
 
 __all__ = [
@@ -70,7 +65,7 @@ class SPMDSavePlanner(SavePlanner):
     # Flattened state_dict tracking all sharded tensors to be checkpointed
     self.sharded_state_dict: Dict[str, XLAShardedTensor] = None
 
-    # Flattend state_dict tracking all other state_dict items
+    # Flattened state_dict tracking all other state_dict items
     self.unsharded_state_dict: Dict[str, Any] = None
 
     # Upon the first `resolve_data` call for a WriteItem associated with a
@@ -90,10 +85,12 @@ class SPMDSavePlanner(SavePlanner):
     state_dict, self.mappings = flatten_state_dict(state_dict)
     state_dict = tree_map(xs.wrap_if_sharded, state_dict)
 
-    # Select only XLAShardedTensors which are not replicated, since the
-    # default planner can handle everything else.
+    # Select only XLAShardedTensors which are not replicated or _CpuShards,
+    # since the default planner can handle everything else.
     self.sharded_state_dict = {
-        k: v for k, v in state_dict.items() if _is_sharded_tensor(v)
+        k: v
+        for k, v in state_dict.items()
+        if _is_sharded_tensor(v) or isinstance(v, _CpuShards)
     }
     unsharded = dict(state_dict.items() - self.sharded_state_dict.items())
     self.unsharded_state_dict = tree_map(_unwrap_xla_sharded_tensor, unsharded)
@@ -187,7 +184,7 @@ class SPMDLoadPlanner(LoadPlanner):
     # Flattened state_dict tracking all sharded tensors to be restored
     self.sharded_state_dict: Dict[str, XLAShardedTensor] = None
 
-    # Flattend state_dict tracking all other state_dict items
+    # Flattened state_dict tracking all other state_dict items
     self.unsharded_state_dict: Dict[str, Any] = None
 
     # Upon the first `resolve_tensor` call for a ReadItem associated with a
@@ -217,10 +214,12 @@ class SPMDLoadPlanner(LoadPlanner):
     state_dict, self.mappings = flatten_state_dict(state_dict)
     state_dict = tree_map(xs.wrap_if_sharded, state_dict)
 
-    # Select only XLAShardedTensors which are not replicated, since the
-    # default planner can handle everything else.
+    # Select only XLAShardedTensors which are not replicated or _CpuShards,
+    # since the default planner can handle everything else.
     self.sharded_state_dict = {
-        k: v for k, v in state_dict.items() if _is_sharded_tensor(v)
+        k: v
+        for k, v in state_dict.items()
+        if _is_sharded_tensor(v) or isinstance(v, _CpuShards)
     }
     unsharded = dict(state_dict.items() - self.sharded_state_dict.items())
     self.unsharded_state_dict = tree_map(_unwrap_xla_sharded_tensor, unsharded)
@@ -297,8 +296,7 @@ class SPMDLoadPlanner(LoadPlanner):
       return
 
     self._pending_elements[fqn] -= np.prod(read_item.lengths)
-    assert self._pending_elements[
-        fqn] >= 0, f"Too many writes for tensor {index.fqn}"
+    assert self._pending_elements[fqn] >= 0, f"Too many writes for tensor {fqn}"
     if self._pending_elements[fqn] == 0:
       # Load local shards into the XLAShardedTensor and release the shards
       # from CPU
@@ -340,15 +338,33 @@ def _create_write_items_for_xla_sharded_tensor(
   return items
 
 
+def _create_write_items_for_cpu_shards(
+    fqn: str, cpu_shards: _CpuShards) -> List[WriteItem]:
+  items = []
+  # Since local shards are currently moved to CPU on creation, we need to get
+  # the shard indices indirectly to avoid unnecessarily consuming host memory.
+  for xla_shard in cpu_shards.shards:
+    prop = TensorProperties.create_from_tensor(xla_shard.data)
+    for shard_ind, indices in enumerate(xla_shard.indices):
+      write_item = _create_write_item_from_indices(fqn, shard_ind, indices,
+                                                   xla_shard.data.size(), prop)
+      items.append(write_item)
+  return items
+
+
 def _create_xla_write_items(state_dict: STATE_DICT_TYPE) -> List[WriteItem]:
   """
   Iterate through the state_dict and return WriteItems for all local shards
   """
   items = []
+  state_dict = _sharded_cpu_state_dict(state_dict)
   for fqn, v in state_dict.items():
-    assert isinstance(v, XLAShardedTensor
-                     ), '_create_xla_write_items only accepts XLAShardedTensor'
-    items.extend(_create_write_items_for_xla_sharded_tensor(fqn, v))
+    if isinstance(v, _CpuShards):
+      items += _create_write_items_for_cpu_shards(fqn, v)
+    else:
+      raise TypeError(
+          "_create_xla_write_items accepts state_dict with only _CpuShards as value type."
+      )
   return items
 
 
