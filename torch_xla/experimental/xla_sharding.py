@@ -323,10 +323,6 @@ def _get_tile_assignment(mesh: Mesh,
                          partition_spec: Tuple[Union[int, None]]) -> List[int]:
   # Use Torch.tensor here to make use of the torch.transpose_
   mesh_list_tensor = torch.tensor(mesh.get_logical_mesh().tolist())
-  # This is partial sharding case, tile_assigniment will be ignore in favor of
-  # group_assignment and replication_groups.
-  if (mesh_list_tensor.dim() != len(partition_spec)):
-    return mesh_list_tensor.tolist()
   partition_spec_list = list(partition_spec)
   for i in range(len(partition_spec_list)):
     if partition_spec_list[i] == None:
@@ -418,7 +414,6 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
   assert len(specs) == len(np.unique(specs)), \
     f"Each device mesh dimension should appear at most once in partition_spec {partition_spec}."
 
-  tile_assignment = _get_tile_assignment(mesh, partition_spec)
   # check for sharding 2D tensor on a 3D mesh
   original_shape = tuple(t.shape)
   # number of dims to expand on tensor
@@ -429,6 +424,7 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
     shape = (1,) * tensor_expand + (*original_shape,)
     t = t.expand(shape)
 
+  tile_assignment = _get_tile_assignment(mesh, partition_spec)
   sharding_type = _get_sharding_type(partition_spec, num_devices)
   group_assignment, replication_groups = _get_group_assignment(
       sharding_type, mesh, partition_spec)

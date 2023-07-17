@@ -371,6 +371,25 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     actual = (xt1 + t2).cpu()
     self.assertTrue(torch.allclose(expected, actual))
 
+  def test_mark_sharding_not_ordered_2d_tensor_3d_mesh(self):
+    ct1 = torch.randn(16, 16, device='cpu')
+    ct2 = torch.randn(16, 16, device='cpu')
+    expected = ct1 + ct2
+
+    t1 = ct1.to(xm.xla_device())
+    t2 = ct2.to(xm.xla_device())
+    mesh = self._get_mesh((1, self.n_devices, 1))
+    # sharding spec here is not ordered.
+    xt1 = xs.mark_sharding(t1, mesh, partition_spec=(2, 1))
+    if self.n_devices > 1:
+      hlo = torch_xla._XLAC._get_xla_tensors_hlo([xt1.global_tensor])
+      sharding_annotation = 'sharding={devices=[1,1,%d]%s}' % (
+          self.n_devices, ','.join(
+              [str(d) for d in mesh.get_logical_mesh().flatten()]))
+      self.assertIn(sharding_annotation, hlo)
+    actual = (xt1 + t2).cpu()
+    self.assertTrue(torch.allclose(expected, actual))
+
   def test_partial_replication_addmm(self):
     device = xm.xla_device()
     z_dim = 2 if self.n_devices >= 4 else 1
