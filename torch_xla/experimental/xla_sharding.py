@@ -344,21 +344,25 @@ def _get_group_assignment(
     partition_spec: Tuple[Union[int, None]]) -> Tuple[List, List]:
   group_assignment = list()
   replication_groups = list()
+  # TODO(JackCaoG): 3d mesh on 2d tensor
+  tile_assignment = _get_tile_assignment(mesh, partition_spec)
+  mesh_shape_list = list(
+      torch.tensor(tile_assignment).size())
   if sharding_type is ShardingType.PARTIAL:
     # Shard across groups and replicate within subgroups; replicated dims
     # will be used to group replication devices.
     tile_dims = [d for d in partition_spec if d is not None]
-    replicated_dims = set(range(len(mesh.mesh_shape))) - set(tile_dims)
+    replicated_dims = set(range(len(mesh_shape_list))) - set(tile_dims)
 
-    group_list = [np.array(mesh.get_logical_mesh().tolist())]
+    group_list = [np.array(tile_assignment)]
     for d in tile_dims:
       _group_list = list()
       for group_members in group_list:
-        _group_list += np.split(group_members, mesh.mesh_shape[d], d)
+        _group_list += np.split(group_members, mesh_shape_list[d], d)
       group_list = _group_list
     replication_groups = [group.flatten().tolist() for group in group_list]
 
-    group_tile_shape = list(mesh.mesh_shape)
+    group_tile_shape = mesh_shape_list
     for d in replicated_dims:
       group_tile_shape[d] = 1
     group_assignment = np.arange(len(replication_groups)).reshape(
