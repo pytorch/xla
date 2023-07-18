@@ -335,12 +335,11 @@ def _get_tile_assignment(mesh: Mesh,
   return mesh_list_tensor.permute(partition_spec_list).tolist()
 
 
-def _get_group_assignment(sharding_type: ShardingType, mesh: Mesh,
+def _get_group_assignment(sharding_type: ShardingType,
                           partition_spec: Tuple[Union[int, None]],
                           tile_assignment: List) -> Tuple[List, List]:
   group_assignment = list()
   replication_groups = list()
-  # TODO(JackCaoG): 3d mesh on 2d tensor
   mesh_shape_list = list(torch.tensor(tile_assignment).size())
   if sharding_type is ShardingType.PARTIAL:
     # Shard across groups and replicate within subgroups; replicated dims
@@ -426,7 +425,7 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
   tile_assignment = _get_tile_assignment(mesh, partition_spec)
   sharding_type = _get_sharding_type(partition_spec, num_devices)
   group_assignment, replication_groups = _get_group_assignment(
-      sharding_type, mesh, partition_spec, tile_assignment)
+      sharding_type, partition_spec, tile_assignment)
 
   def tensor_squeeze(t, tensor_expand):
     if tensor_expand:
@@ -482,7 +481,7 @@ class ShardingSpec:
     self._sharding_type = _get_sharding_type(partition_spec,
                                              xr.global_device_count())
     self._group_assignment, self._replication_groups = _get_group_assignment(
-        self._sharding_type, mesh, partition_spec, self._tile_assignment)
+        self._sharding_type, partition_spec, self._tile_assignment)
 
   def xla_spec(self, t: torch.Tensor) -> Union['XlaShardingSpec', None]:
     """
