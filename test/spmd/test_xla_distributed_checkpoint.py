@@ -210,9 +210,7 @@ class SPMDSavePlannerTest(DistributedCheckpointTestBase):
 
   def test_save_state_dict_with_cpu_shards(self):
     model = self._get_sharded_model()
-    planner = SPMDSavePlanner()
-    sharded_cpu_state_dict = _sharded_cpu_state_dict(model.state_dict())
-    planner.set_up_planner(sharded_cpu_state_dict, True)
+    planner = self._get_save_planner(model)
     if self.n_devices > 1:
       # The state_dict should be flattened and separated
       self.assertCountEqual(planner.sharded_state_dict, ['fc1.weight'])
