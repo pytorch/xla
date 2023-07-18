@@ -106,8 +106,11 @@ class ReshardingTest(DistributedCheckpointTestBase):
     model = self.SimpleLinear().to(xm.xla_device())
     sharded_model = self._get_sharded_model()
     self._save_and_restore(sharded_model, model, save_planner=SPMDSavePlanner())
-    self._save_and_restore(sharded_model, model, save_planner=SPMDSavePlanner(),
-                           is_sharded_cpu_state_dict=True)
+    self._save_and_restore(
+        sharded_model,
+        model,
+        save_planner=SPMDSavePlanner(),
+        is_sharded_cpu_state_dict=True)
 
   # TODO(jonbolin): Enable tests for resharding into coarser meshes
   @unittest.skip("View assignment with virtual device is not yet supported")
@@ -204,7 +207,7 @@ class SPMDSavePlannerTest(DistributedCheckpointTestBase):
     else:
       planner.set_up_planner(_sharded_cpu_state_dict(model.state_dict()), True)
     return planner
-  
+
   def _planner_assertions(self, planner):
     if self.n_devices > 1:
       # The state_dict should be flattened and separated
@@ -233,7 +236,7 @@ class SPMDSavePlannerTest(DistributedCheckpointTestBase):
           isinstance(planner.sharded_state_dict['fc1.weight'], _CpuShards))
 
   def test_local_save_plan(self):
-    
+
     def write_item_assertions(plan, n_devices):
       if n_devices > 1:
         # When the model is sharded across devices, fc1.weight will result in
@@ -249,9 +252,8 @@ class SPMDSavePlannerTest(DistributedCheckpointTestBase):
         ]
         return len(unsharded_write_items)
       return None
-        # If unsharded, there should be a single WriteItem per model parameter
-        
-      
+      # If unsharded, there should be a single WriteItem per model parameter
+
     for is_sharded_cpu_state_dict in [True, False]:
       model = self._get_sharded_model()
       planner = self._get_save_planner(model, is_sharded_cpu_state_dict)
