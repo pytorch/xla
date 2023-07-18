@@ -83,7 +83,7 @@ class SPMDSavePlanner(SavePlanner):
     # types that can be handled by the default planner, and ensure all sharded
     # tensors are wrapped in XLAShardedTensor
     state_dict, self.mappings = flatten_state_dict(state_dict)
-    state_dict = _sharded_cpu_state_dict(state_dict)
+    state_dict = tree_map(xs.wrap_if_sharded, state_dict)
 
     # Select only XLAShardedTensors which are not replicated or _CpuShards,
     # since the default planner can handle everything else.

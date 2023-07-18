@@ -210,22 +210,18 @@ class SPMDSavePlannerTest(DistributedCheckpointTestBase):
 
   def test_save_state_dict_with_cpu_shards(self):
     model = self._get_sharded_model()
-    planner = self._get_save_planner(model)
-    if self.n_devices > 1:
-      # The state_dict should be flattened and separated
-      self.assertCountEqual(planner.sharded_state_dict, ['fc1.weight'])
-      if _is_sharded_tensor(planner.sharded_state_dict['fc1.weight']):
-        self.assertTrue(
-            isinstance(planner.sharded_state_dict['fc1.weight'], _CpuShards))
-      # `fc2.weight` should be in the unsharded_state_dict despite having
-      # an explicit mark_sharding call because it is replicated.
-      self.assertCountEqual(planner.unsharded_state_dict,
-                            ['fc1.bias', 'fc2.weight', 'fc2.bias'])
-    else:
-      # With a single device, no tensors are sharded.
-      self.assertCountEqual(
-          planner.unsharded_state_dict,
-          ['fc1.weight', 'fc1.bias', 'fc2.weight', 'fc2.bias'])
+    sharded_state_dict = _sharded_cpu_state_dict(model.state_dict())
+    planner = SPMDSavePlanner()
+    planner.set_up_planner(sharded_state_dict, True)
+    # The state_dict should be flattened and separated
+    self.assertCountEqual(planner.sharded_state_dict, ['fc1.weight'])
+    if _is_sharded_tensor(planner.sharded_state_dict['fc1.weight']):
+      self.assertTrue(
+          isinstance(planner.sharded_state_dict['fc1.weight'], _CpuShards))
+    # `fc2.weight` should be in the unsharded_state_dict despite having
+    # an explicit mark_sharding call because it is replicated.
+    self.assertCountEqual(planner.unsharded_state_dict,
+                          ['fc1.bias', 'fc2.weight', 'fc2.bias'])
 
   def test_local_save_plan(self):
     model = self._get_sharded_model()
