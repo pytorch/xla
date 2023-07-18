@@ -1000,6 +1000,8 @@ def send_cpu_data_to_device(data, device, input_sharding=None):
   def select_fn(v):
     return type(v) == torch.Tensor and v.device.type == 'cpu'
 
+  if type(data) is torch.Tensor:
+    data = [data]
   return ToXlaTensorArena(convert_fn, select_fn).transform(data)
 
 
