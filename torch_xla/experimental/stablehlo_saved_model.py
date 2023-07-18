@@ -181,7 +181,7 @@ class StableHLOFunctionMeta:
   # name of the callable.
   name: str
   # version.
-  stablehlo_version: int
+  stablehlo_version: str
   # order is the order accepted by the stablehlo
   input_signature: List[VariableSignature]
   output_signature: List[VariableSignature]
@@ -313,7 +313,8 @@ def _exported_program_to_stablehlo_bundle(exported_model, args):
 
   meta = StableHLOFunctionMeta(
       name='forward',
-      stablehlo_version=5,
+      # TODO(qihqi) populate version from runtime
+      stablehlo_version="0.0.0",
       input_signature=input_signatures,
       output_signature=output_signature,
       input_locations=input_locations,
