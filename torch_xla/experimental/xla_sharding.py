@@ -461,8 +461,8 @@ def wrap_if_sharded(x: Any) -> Any:
   Otherwise, returns the input.
   """
   if (isinstance(x, torch.Tensor) and not isinstance(x, XLAShardedTensor) and
-      torch_xla._XLAC._get_xla_sharding_type(x) is not None and
-      x.device.type == 'xla'):
+      x.device.type == 'xla' and
+      torch_xla._XLAC._get_xla_sharding_type(x) is not None):
     return XLAShardedTensor(x)
   return x
 
