@@ -217,9 +217,7 @@ class SPMDLoadPlanner(LoadPlanner):
     # Select only XLAShardedTensors which are not replicated or _CpuShards,
     # since the default planner can handle everything else.
     self.sharded_state_dict = {
-        k: v
-        for k, v in state_dict.items()
-        if _is_sharded_tensor(v) or isinstance(v, _CpuShards)
+        k: v for k, v in state_dict.items() if _is_sharded_tensor(v)
     }
     unsharded = dict(state_dict.items() - self.sharded_state_dict.items())
     self.unsharded_state_dict = tree_map(_unwrap_xla_sharded_tensor, unsharded)
@@ -341,13 +339,12 @@ def _create_write_items_for_xla_sharded_tensor(
 def _create_write_items_for_cpu_shards(
     fqn: str, cpu_shards: _CpuShards) -> List[WriteItem]:
   items = []
-  # Since local shards are currently moved to CPU on creation, we need to get
-  # the shard indices indirectly to avoid unnecessarily consuming host memory.
   for xla_shard in cpu_shards.shards:
     prop = TensorProperties.create_from_tensor(xla_shard.data)
     for shard_ind, indices in enumerate(xla_shard.indices):
       write_item = _create_write_item_from_indices(fqn, shard_ind, indices,
-                                                   xla_shard.data.size(), prop)
+                                                   cpu_shards.global_shape,
+                                                   prop)
       items.append(write_item)
   return items
 
@@ -357,13 +354,14 @@ def _create_xla_write_items(state_dict: STATE_DICT_TYPE) -> List[WriteItem]:
   Iterate through the state_dict and return WriteItems for all local shards
   """
   items = []
-  state_dict = _sharded_cpu_state_dict(state_dict)
   for fqn, v in state_dict.items():
-    if isinstance(v, _CpuShards):
-      items += _create_write_items_for_cpu_shards(fqn, v)
+    if isinstance(v, XLAShardedTensor):
+      items.extend(_create_write_items_for_xla_sharded_tensor(fqn, v))
+    elif isinstance(v, _CpuShards):
+      items.extend(_create_write_items_for_cpu_shards(fqn, v))
     else:
       raise TypeError(
-          "_create_xla_write_items accepts state_dict with only _CpuShards as value type."
+          "_create_xla_write_items accepts either XLAShardedTensor or _CpuShards as value type."
       )
   return items
 
