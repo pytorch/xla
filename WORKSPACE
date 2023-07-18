@@ -38,7 +38,6 @@ http_archive(
     ],
     patch_tool = "patch",
     patches = [
-        "//openxla_patches:absl_statusor.diff",
         "//openxla_patches:cache_urls.diff",
         "//openxla_patches:cuda_graph.diff",
         "//openxla_patches:f16_abi_clang.diff",
