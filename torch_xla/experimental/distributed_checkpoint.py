@@ -102,7 +102,7 @@ class SPMDSavePlanner(SavePlanner):
     # Track the flattened mappings in the plan metadata
     plan = dataclasses.replace(plan, planner_data=self.mappings)
 
-    # Extend the plan for sharded tensor data
+    # Extend the plan for sharded tensor data and _CpuShards.
     xla_write_items = _create_xla_write_items(self.sharded_state_dict)
     plan.items.extend(xla_write_items)
     return plan
@@ -214,8 +214,8 @@ class SPMDLoadPlanner(LoadPlanner):
     state_dict, self.mappings = flatten_state_dict(state_dict)
     state_dict = tree_map(xs.wrap_if_sharded, state_dict)
 
-    # Select only XLAShardedTensors which are not replicated or _CpuShards,
-    # since the default planner can handle everything else.
+    # Select only XLAShardedTensors which are not replicated, since the
+    # default planner can handle everything else.
     self.sharded_state_dict = {
         k: v for k, v in state_dict.items() if _is_sharded_tensor(v)
     }
