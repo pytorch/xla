@@ -1,3 +1,4 @@
+from copy import copy
 import dataclasses
 import io
 import numpy as np
@@ -134,9 +135,10 @@ class SPMDSavePlanner(SavePlanner):
 
     if index.fqn not in self._local_shards:
       xtensor = self.sharded_state_dict[index.fqn]
-      assert isinstance(xtensor,
-                        XLAShardedTensor), f"Unsupported object type: {xtensor}"
-      self._local_shards[index.fqn] = xtensor.local_shards
+      if isinstance(xtensor, XLAShardedTensor):
+        self._local_shards[index.fqn] = xtensor.local_shards
+      elif isinstance(xtensor, _CpuShards):
+        self._local_shards[index.fqn] = copy(xtensor.shards)
 
     shard = self._local_shards[index.fqn][index.index]
     assert shard is not None, f"WriteItem has already been processed: {index}"
