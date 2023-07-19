@@ -121,11 +121,13 @@ PjRtComputationClient::PjRtComputationClient() {
     auto allowed_devices =
         std::make_optional<std::set<int>>(std::set{local_rank});
     client_ = std::move(xla::GetStreamExecutorGpuClient(
-                            /*asynchronous=*/async, xla::GpuAllocatorConfig{},
-                            /*node_id=*/local_rank,
-                            /*num_nodes=*/GetNumProcesses(),
-                            /*allowed_devices=*/allowed_devices)
-                            .value());
+                      /*asynchronous=*/async, xla::GpuAllocatorConfig{},
+                      /*node_id=*/local_rank,
+                      /*num_nodes=*/sys_util::GetEnvInt(env::kEnvNumGpu, 1),
+                      /*allowed_devices=*/allowed_devices,
+                      /*platform_name*/std::nullopt,
+                      /*should_stage_host_to_device_transfers*/true)
+                      .value());
   } else if (device_type == "XPU") {
     TF_VLOG(1) << "Initializing PjRt XPU client...";
     XLA_CHECK_OK(pjrt::LoadPjrtPlugin(
