@@ -263,8 +263,27 @@ std::string DumpUtil::ToHlo(c10::ArrayRef<torch::lazy::Value> values,
 
   // Annotate HLO sharding selectively in the compuation.
   // This is no-op if an instruction doesn't have any sharding annotation.
-  ShardingUtil::SetHloSharding(&lowering_ctx);
+  auto is_sharded = ShardingUtil::SetHloSharding(&lowering_ctx);
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
+
+  static bool dump_post_optimizations =
+      runtime::sys_util::GetEnvBool("XLA_DUMP_POST_OPTIMIZATIONS", false);
+  if (dump_post_optimizations) {
+    xla::Shape shape = MakeShapeWithDeviceLayout(
+        ConsumeValue(computation.GetProgramShape()).result(),
+        static_cast<XlaDeviceType>(device.type()));
+    std::vector<runtime::ComputationClient::CompileInstance> instances;
+    instances.push_back({std::move(computation), device.toString(),
+                         runtime::GetComputationClient()->GetCompilationDevices(
+                             device.toString(), {}),
+                         &shape,
+                         /*parameter_is_tupled_arguments=*/false, is_sharded});
+    std::vector<std::shared_ptr<runtime::ComputationClient::Computation>>
+        computations =
+            runtime::GetComputationClient()->Compile(std::move(instances));
+    computation = std::move(computations[0]->move_computation());
+  }
+
   switch (mode) {
     case EmitMode::kHloReadable:
       return ConsumeValue(runtime::util::GetComputationHloText(computation));

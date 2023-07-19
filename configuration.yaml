@@ -420,3 +420,9 @@ variables:
           StableHLO workflow is mature.
       type: bool
       default_value: false
+    XLA_DUMP_POST_OPTIMIZATIONS:
+      descripton:
+        - Dump the HLO graph after optimizations. You need to use it together
+          with XLA_SAVE_TENSORS_FMT='hlo' and XLA_SAVE_TENSORS_FILE='your/location'.
+      type: bool
+      default_value: false

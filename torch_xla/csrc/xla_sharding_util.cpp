@@ -141,20 +141,6 @@ std::vector<std::vector<int64_t>> ExtractGroupMembers(
 
 }  // namespace
 
-bool ShouldUseVirtualDevice() {
-  bool use_virtual_device =
-      runtime::sys_util::GetEnvBool("XLA_USE_SPMD", false);
-  if (use_virtual_device) {
-    TF_LOG(INFO) << "Using SPMD virtual device optimization";
-  }
-  return use_virtual_device;
-}
-
-bool ShardingUtil::UseVirtualDevice() {
-  static bool use_virtual_device = ShouldUseVirtualDevice();
-  return use_virtual_device;
-}
-
 bool ShardingUtil::SetHloSharding(LoweringContext* lowering_ctx) {
   bool is_sharded = false;
   for (std::pair<torch::lazy::Output, xla::XlaOp> elem :
@@ -528,7 +514,7 @@ void ShardingUtil::PrepareOutputShardingPropagation(
   data_placeholders->resize(indices.size());
   sharding_specs->resize(indices.size());
 
-  auto computation_proto = computation->computation().proto();
+  const auto& computation_proto = computation->computation().proto();
 
   std::vector<xla::OpSharding> output_shardings;
   if (computation_proto.has_spmd_output_sharding()) {
@@ -600,7 +586,7 @@ void ShardingUtil::PrepareOutputShardingPropagation(
     std::vector<XLATensor::ShardingSpecPtr>& sharding_specs,
     std::vector<xla::Shape>* output_shapes, ComputationPtr computation,
     const torch::lazy::BackendDevice& device) {
-  auto computation_proto = computation->computation().proto();
+  const auto& computation_proto = computation->computation().proto();
   std::vector<xla::OpSharding> output_shardings;
   if (computation_proto.has_spmd_output_sharding()) {
     if (computation_proto.spmd_output_sharding().tuple_shardings().size() > 0) {
