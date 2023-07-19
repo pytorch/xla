@@ -250,7 +250,7 @@ class SPMDSavePlannerTest(DistributedCheckpointTestBase):
         ]
         self.assertEqual(parameter_count - 1, len(unsharded_write_items))
       else:
-         self.assertEqual(parameter_count, len(plan.items))
+        self.assertEqual(parameter_count, len(plan.items))
       # If unsharded, there should be a single WriteItem per model parameter
 
     for chkpt_on_cpu in [True, False]:
@@ -260,7 +260,6 @@ class SPMDSavePlannerTest(DistributedCheckpointTestBase):
         plan = planner.create_local_plan()
         parameter_count = len(list(model.parameters()))
         _write_item_assertions(plan, self.n_devices, parameter_count)
-          
 
   @unittest.skipIf(xr.global_device_count() == 1,
                    "Multiple devices required to shard tensors")
