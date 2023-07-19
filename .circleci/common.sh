@@ -25,8 +25,8 @@ function clone_pytorch() {
 }
 
 function apply_patches() {
-  XLA_DIR=$1
-  pushd $XLA_DIR
+  PYTORCH_DIR=$1
+  pushd $PYTORCH_DIR
   ./xla/scripts/apply_patches.sh
   popd
 }

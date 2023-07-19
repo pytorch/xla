@@ -40,7 +40,7 @@ if ! install_deps_pytorch_xla $XLA_DIR $USE_CACHE; then
   exit 1
 fi
 
-apply_patches $XLA_DIR
+apply_patches $PYTORCH_DIR
 
 python -c "import fcntl; fcntl.fcntl(1, fcntl.F_SETFL, 0)"
 
