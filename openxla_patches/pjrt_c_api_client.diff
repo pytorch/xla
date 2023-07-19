@@ -1,0 +1,138 @@
+# Revert https://github.com/openxla/xla/commit/9409679b2945862e33c55dc7fee960caba50accd
+# which causes TPU Init failure.
+# TF is also broken by this commit, possible to remove the patch after
+# applying some change on PyTorch/XLA side. more context in cl/532777603
+diff --git a/xla/pjrt/BUILD b/xla/pjrt/BUILD
+index 8ba12af6a..38570af37 100644
+--- a/xla/pjrt/BUILD
++++ b/xla/pjrt/BUILD
+@@ -720,6 +720,7 @@ cc_library(
+         "//xla/pjrt/c:pjrt_c_api_hdrs",
+         "//xla/pjrt/c:pjrt_c_api_helpers",
+         "//xla/service:hlo_proto_cc",
++        "//xla/stream_executor/tpu:tpu_initializer_helper",
+         "@com_google_absl//absl/cleanup",
+         "@com_google_absl//absl/strings",
+         "@llvm-project//mlir:BytecodeWriter",
+diff --git a/xla/pjrt/pjrt_c_api_client.cc b/xla/pjrt/pjrt_c_api_client.cc
+index 3d73378ec..5395572d0 100644
+--- a/xla/pjrt/pjrt_c_api_client.cc
++++ b/xla/pjrt/pjrt_c_api_client.cc
+@@ -35,6 +35,7 @@ limitations under the License.
+ #include "xla/service/hlo.pb.h"
+ #include "xla/shape.h"
+ #include "xla/shape_util.h"
++#include "xla/stream_executor/tpu/tpu_initializer_helper.h"  // NOLINT(unused-includes): required for tensorflow::tpu::FindAndLoadTpuLibrary
+ #include "xla/util.h"
+ #include "xla/xla_data.pb.h"
+ #include "tsl/platform/status.h"
+@@ -1708,6 +1709,12 @@ StatusOr<std::unique_ptr<PjRtClient>> GetCApiClient(
+     const absl::flat_hash_map<std::string, PjRtValueType>& create_options,
+     PjRtClient::KeyValueGetCallback kv_get,
+     PjRtClient::KeyValuePutCallback kv_put) {
++#if !defined(PLATFORM_GOOGLE) || defined(LIBTPU_STATIC)
++  if (absl::AsciiStrToLower(device_type) == "tpu") {
++    // TODO(b/261484192): handle device specific initialization.
++    TF_RETURN_IF_ERROR(tensorflow::tpu::FindAndLoadTpuLibrary());
++  }
++#endif
+   TF_ASSIGN_OR_RETURN(const PJRT_Api* c_api, pjrt::PjrtApi(device_type));
+   if (c_api == nullptr) {
+     return InternalError("PJRT C API is nullptr for %s", device_type);
+diff --git a/xla/python/BUILD b/xla/python/BUILD
+index e027fd760..f89e3403f 100644
+--- a/xla/python/BUILD
++++ b/xla/python/BUILD
+@@ -1025,7 +1025,6 @@ tsl_pybind_extension(
+         "//xla/pjrt:interpreter_device",
+         "//xla/pjrt:mlir_to_hlo",
+         "//xla/pjrt:pjrt_api",
+-        "//xla/pjrt:pjrt_c_api_client",
+         "//xla/pjrt:pjrt_client",
+         "//xla/pjrt:pjrt_compiler",
+         "//xla/pjrt:tfrt_cpu_pjrt_client",
+@@ -1054,8 +1053,8 @@ tsl_pybind_extension(
+         "//conditions:default": [],
+     }) + select({
+         ":tpu_enabled": [
++            "//xla/pjrt:pjrt_c_api_client",
+             "//xla/pjrt:tpu_client",
+-            "//xla/stream_executor/tpu:tpu_initializer_helper",
+         ],
+         "//conditions:default": [],
+     }),
+diff --git a/xla/python/xla.cc b/xla/python/xla.cc
+index 396efb658..37649e3fc 100644
+--- a/xla/python/xla.cc
++++ b/xla/python/xla.cc
+@@ -31,8 +31,8 @@ limitations under the License.
+ #include "tsl/python/lib/core/numpy.h"  //NOLINT
+ // clang-format on
+ 
+-#include "absl/strings/ascii.h"
+ #include "absl/strings/str_format.h"
++#include "absl/strings/str_join.h"
+ #include "absl/types/span.h"
+ #include "pybind11/attr.h"  // from @pybind11
+ #include "pybind11/cast.h"  // from @pybind11
+@@ -51,13 +51,21 @@ limitations under the License.
+ #include "xla/pjrt/gpu/se_gpu_pjrt_client.h"
+ #endif  // XLA_PYTHON_ENABLE_GPU
+ #include "xla/pjrt/interpreter_device.h"
++<<<<<<< HEAD
+ #include "xla/pjrt/pjrt_c_api_client.h"
+ #include "xla/pjrt/pjrt_client.h"
++=======
++#include "xla/pjrt/pjrt_client.h"
++#include "xla/python/pjrt_ifrt/pjrt_client.h"
++#ifdef XLA_PYTHON_ENABLE_PLUGIN_DEVICE
++#include "xla/pjrt/pjrt_plugin_device_client.h"
++#endif  // XLA_PYTHON_ENABLE_PLUGIN_DEVICE
++>>>>>>> parent of 9409679b2... [XLA:Python] [PJRT] Remove TPU initialization code from pjrt_c_api_client.
+ #include "xla/pjrt/tfrt_cpu_pjrt_client.h"
+ #include "xla/python/pjrt_ifrt/pjrt_client.h"
+ #ifdef XLA_PYTHON_ENABLE_TPU
++#include "xla/pjrt/pjrt_c_api_client.h"
+ #include "xla/pjrt/tpu_client.h"
+-#include "xla/stream_executor/tpu/tpu_initializer_helper.h"  // NOLINT(unused-includes): required for tensorflow::tpu::FindAndLoadTpuLibrary
+ #endif  // XLA_PYTHON_ENABLE_TPU
+ #include "xla/pjrt/pjrt_api.h"
+ #include "xla/python/custom_call_sharding.h"
+@@ -482,8 +490,8 @@ PYBIND11_MODULE(xla_extension, m) {
+             ifrt::PjRtClient::Create(std::move(client)));
+       },
+       py::arg("max_inflight_computations") = 32);
+-#endif  // XLA_PYTHON_ENABLE_TPU
+-
++  // TODO(b/262050449): move out from `#ifdef XLA_PYTHON_ENABLE_TPU` when
++  // GetCApiClient does not depend on TPU.
+   m.def(
+       "get_c_api_client",
+       [](std::string platform_name,
+@@ -491,6 +499,7 @@ PYBIND11_MODULE(xla_extension, m) {
+          std::shared_ptr<DistributedRuntimeClient> distributed_client)
+           -> std::shared_ptr<PyClient> {
+         py::gil_scoped_release gil_release;
++<<<<<<< HEAD
+ #ifdef XLA_PYTHON_ENABLE_TPU
+     // TODO(b/262050449): use a common plugin discovery mechanism, rather than
+     // having TPU-specific code here.
+@@ -517,6 +526,10 @@ PYBIND11_MODULE(xla_extension, m) {
+         }
+         std::unique_ptr<PjRtClient> c_api_client = xla::ValueOrThrow(
+             GetCApiClient(platform_name, options, kv_get, kv_put));
++=======
++        std::unique_ptr<PjRtClient> c_api_client =
++            xla::ValueOrThrow(GetCApiClient(platform_name, options));
++>>>>>>> parent of 9409679b2... [XLA:Python] [PJRT] Remove TPU initialization code from pjrt_c_api_client.
+         return std::make_shared<PyClient>(
+             ifrt::PjRtClient::Create(std::move(c_api_client)));
+       },
+@@ -532,6 +545,7 @@ PYBIND11_MODULE(xla_extension, m) {
+           return xla::ValueOrThrow(
+               GetCApiTopology(platform_name, topology_name, options));
+         });
++#endif  // XLA_PYTHON_ENABLE_TPU
+ 
+   TF_CHECK_OK(PyArray::RegisterTypes(m));
+   jax::RegisterSharding(m);
