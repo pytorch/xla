@@ -734,6 +734,18 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     if self.n_devices > 1:
       self.assertIn('all-reduce', hlo)
 
+  def test_sharded_tensor_aliasing(self):
+    met.clear_all()
+    partition_spec = (0, 1)
+    xt1 = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
+                       dtype=torch.float,
+                       device=xm.xla_device())
+    xst1 = xs.mark_sharding(xt1, self._get_mesh((1, self.n_devices)),
+                            partition_spec)
+    xst1 += 1
+    xm.mark_step()
+    self.assertEqual(met.metric_data("InputOutputAliasCount")[0], 1)
+
 
 if __name__ == '__main__':
   test = unittest.main()
