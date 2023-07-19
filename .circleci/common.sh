@@ -25,8 +25,10 @@ function clone_pytorch() {
 }
 
 function apply_patches() {
-  # assumes inside pytorch dir
+  XLA_DIR=$1
+  pushd $XLA_DIR
   ./xla/scripts/apply_patches.sh
+  popd
 }
 
 function rebase_pull_request_on_target_branch() {

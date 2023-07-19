@@ -2,6 +2,9 @@
 
 set -ex
 
+pwd
+ls
+
 source ./env
 source .circleci/common.sh
 PYTORCH_DIR=/tmp/pytorch
@@ -37,7 +40,7 @@ if ! install_deps_pytorch_xla $XLA_DIR $USE_CACHE; then
   exit 1
 fi
 
-apply_patches
+apply_patches $XLA_DIR
 
 python -c "import fcntl; fcntl.fcntl(1, fcntl.F_SETFL, 0)"
 
