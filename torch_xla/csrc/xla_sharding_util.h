@@ -38,6 +38,10 @@ class ShardingUtil {
   static bool EqualShardingSpecs(const XLATensor::ShardingSpec& a,
                                  const XLATensor::ShardingSpec& b);
 
+  // Returns true if two OpShardings are the same.
+  static bool EqualOpShardings(const xla::OpSharding& a,
+                               const xla::OpSharding& b);
+
   // Creates an xla::OpSharding. `tile_assignmnent` is required for TILED
   // `sharding_type` and `replication_groups` for `PARTIAL`.
   static xla::OpSharding CreateOpSharding(const py::list& tile_assignment,

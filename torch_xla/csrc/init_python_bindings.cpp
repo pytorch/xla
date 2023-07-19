@@ -355,6 +355,15 @@ std::string GetTensorsHloGraph(const std::vector<at::Tensor>& tensors,
   return XLAGraphExecutor::Get()->DumpHloComputation(xtensors, mode);
 }
 
+std::string GetXLAShardingSpec(const XLATensorPtr xtensor) {
+  auto sharding_spec = xtensor->sharding_spec();
+  if (sharding_spec != nullptr) {
+    auto hlo_sharding = xla::HloSharding::FromProto(sharding_spec->sharding);
+    return hlo_sharding->ToString();
+  }
+  return std::string();
+}
+
 std::string GetXLATensorDebugInfo(const at::Tensor& tensor) {
   auto xtensor = bridge::TryGetXlaTensor(tensor);
   if (!xtensor) {
@@ -365,6 +374,11 @@ std::string GetXLATensorDebugInfo(const at::Tensor& tensor) {
   ss << "TensorID: " << xtensor->GetUniqueId() << "\n";
   ss << "Device: " << xtensor->GetDevice() << "\n";
   ss << "XLA Shape: " << xtensor->shape().get().ToString() << "\n";
+
+  std::string sharding_spec_str = GetXLAShardingSpec(xtensor);
+  ss << "ShardingSpec: "
+     << ((sharding_spec_str.size() > 0) ? sharding_spec_str : "None");
+  ss << "\n";
 
   torch::lazy::Value ir_value = xtensor->CurrentIrValue();
   ss << "IR: ";
@@ -1406,12 +1420,7 @@ void InitXlaModuleBindings(py::module m) {
   });
   m.def("_get_xla_sharding_spec", [](const at::Tensor& input) -> std::string {
     XLATensorPtr xtensor = bridge::GetXlaTensor(input);
-    auto sharding_spec = xtensor->sharding_spec();
-    if (sharding_spec != nullptr) {
-      auto hlo_sharding = xla::HloSharding::FromProto(sharding_spec->sharding);
-      return hlo_sharding->ToString();
-    }
-    return std::string();
+    return GetXLAShardingSpec(xtensor);
   });
   m.def("_get_xla_sharding_type",
         [](const at::Tensor& input) -> std::optional<int> {
