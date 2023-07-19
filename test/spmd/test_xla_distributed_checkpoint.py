@@ -67,9 +67,9 @@ class ReshardingTest(DistributedCheckpointTestBase):
     tmpdir = tempfile.mkdtemp()
 
     # Save an unsharded model using the provided save planner
-    model_in_state_dict = model_in.state_dict(
-    ) if not is_sharded_cpu_state_dict else _sharded_cpu_state_dict(
-        model_in.state_dict())
+    model_in_state_dict = model_in.state_dict()
+    if is_sharded_cpu_state_dict:
+      model_in_state_dict = _sharded_cpu_state_dict(model_in_state_dict)
     model_out_state_dict = model_out.state_dict()
     dist_cp.save_state_dict(
         state_dict=model_in_state_dict,
@@ -100,15 +100,15 @@ class ReshardingTest(DistributedCheckpointTestBase):
   # TODO(jonbolin): Enable tests for resharding into coarser meshes
   @unittest.skip("View assignment with virtual device is not yet supported")
   def test_sharded_to_unsharded(self):
-    for i in [True, False]:
-      with self.subTest(f"Using sharded_cpu_state_dict: {i}", i=i):
+    for chkpt_on_cpu in [True, False]:
+      with self.subTest(chkpt_on_cpu):
         model = self.SimpleLinear().to(xm.xla_device())
         sharded_model = self._get_sharded_model()
         self._save_and_restore(
             sharded_model,
             model,
             save_planner=SPMDSavePlanner(),
-            is_sharded_cpu_state_dict=i)
+            is_sharded_cpu_state_dict=chkpt_on_cpu)
 
   # TODO(jonbolin): Enable tests for resharding into coarser meshes
   @unittest.skip("View assignment with virtual device is not yet supported")
@@ -235,7 +235,7 @@ class SPMDSavePlannerTest(DistributedCheckpointTestBase):
 
   def test_local_save_plan(self):
 
-    def write_item_assertions(plan, n_devices):
+    def _write_item_assertions(plan, n_devices, parameter_count):
       if n_devices > 1:
         # When the model is sharded across devices, fc1.weight will result in
         # self.n_devices WriteItems while all other tensors result in a single
@@ -248,21 +248,19 @@ class SPMDSavePlannerTest(DistributedCheckpointTestBase):
         unsharded_write_items = [
             x for x in plan.items if x not in sharded_write_items
         ]
-        return len(unsharded_write_items)
-      return None
+        self.assertEqual(parameter_count - 1, len(unsharded_write_items))
+      else:
+         self.assertEqual(parameter_count, len(plan.items))
       # If unsharded, there should be a single WriteItem per model parameter
 
-    for i in [True, False]:
-      with self.subTest(f"Using sharded_cpu_state_dict: {i}", i=i):
+    for chkpt_on_cpu in [True, False]:
+      with self.subTest(chkpt_on_cpu):
         model = self._get_sharded_model()
-        planner = self._get_save_planner(model, i)
+        planner = self._get_save_planner(model, chkpt_on_cpu)
         plan = planner.create_local_plan()
         parameter_count = len(list(model.parameters()))
-        len_unsharded_write_items = write_item_assertions(plan, self.n_devices)
-        if len_unsharded_write_items:
-          self.assertEqual(parameter_count - 1, len_unsharded_write_items)
-        else:
-          self.assertEqual(parameter_count, len(plan.items))
+        _write_item_assertions(plan, self.n_devices, parameter_count)
+          
 
   @unittest.skipIf(xr.global_device_count() == 1,
                    "Multiple devices required to shard tensors")
