@@ -653,7 +653,7 @@ def collective_broadcast(tensors: List[torch.Tensor],
           1 if get_ordinal() == root_ordinal else 0, dtype=tensor.dtype)
       # Transfer scale tensor as device data instead of constant 1 or 0.
       xscale = send_cpu_data_to_device(scale, tensor.device)
-      tensor.mul_(xscale)
+      tensor.mul_(xscale[0])
 
   all_reduce(REDUCE_SUM, tensors, groups=groups, pin_layout=pin_layout)
 
@@ -986,7 +986,7 @@ def _maybe_convert_to_cpu(data, convert=True):
   return ToXlaTensorArena(convert_fn, select_fn).transform(data)
 
 
-def send_cpu_data_to_device(data, device, input_sharding=None):
+def send_cpu_data_to_device(datas, device, input_sharding=None):
 
   def convert_fn(tensors):
     devices = [str(device)] * len(tensors)
@@ -1000,9 +1000,9 @@ def send_cpu_data_to_device(data, device, input_sharding=None):
   def select_fn(v):
     return type(v) == torch.Tensor and v.device.type == 'cpu'
 
-  if type(data) is torch.Tensor:
-    data = [data]
-  return ToXlaTensorArena(convert_fn, select_fn).transform(data)
+  if type(datas) is torch.Tensor:
+    datas = [datas]
+  return ToXlaTensorArena(convert_fn, select_fn).transform(datas)
 
 
 def xla_rendezvous(payload: bytes = b'',
