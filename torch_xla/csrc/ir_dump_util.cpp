@@ -266,6 +266,8 @@ std::string DumpUtil::ToHlo(c10::ArrayRef<torch::lazy::Value> values,
   auto is_sharded = ShardingUtil::SetHloSharding(&lowering_ctx);
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
 
+  // TODO(alanwaketan): Somehow this is not working for all TPU versions.
+  // Let's investigate why.
   static bool dump_post_optimizations =
       runtime::sys_util::GetEnvBool("XLA_DUMP_POST_OPTIMIZATIONS", false);
   if (dump_post_optimizations) {

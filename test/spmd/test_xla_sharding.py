@@ -731,8 +731,10 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
 
     t3 = t1 @ t2
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([t3])
+    # Optimized graphs will have _spmd as suffix,
+    # e.g. ENTRY %IrToHlo.5_spmd
     if self.n_devices > 1:
-      self.assertIn('all-reduce', hlo)
+      self.assertIn('spmd', hlo)
 
   def test_sharded_tensor_aliasing(self):
     met.clear_all()
