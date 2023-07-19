@@ -1,6 +1,9 @@
+import tempfile
 import torch_xla
 import torch_xla.core.xla_model as xm
+from torch_xla.experimental import stablehlo_saved_model
 import torch
+import torch._export
 import torchvision
 import unittest
 from torch import nn
@@ -83,6 +86,18 @@ class SimpleExportTest(unittest.TestCase):
     stablehlo = self.export_stable_hlo(model, inputs, kwargs)
     # FIXME: Currently the dim=1 is hard coded
     self.assertTrue('dim = 1' in stablehlo)
+
+  def test_save_load(self):
+    model = ElementwiseAdd()
+    inputs = model.get_random_inputs()
+    exported = torch._export.export(model, inputs)
+    bundle = stablehlo_saved_model._exported_program_to_stablehlo_bundle(
+        exported, inputs)
+    with tempfile.TemporaryDirectory() as tempdir:
+      stablehlo_saved_model._save_program_bundle(bundle, tempdir)
+      bundle2 = stablehlo_saved_model._load_program_bundle(tempdir)
+
+    self.assertEqual(bundle.stablehlo_funcs, bundle2.stablehlo_funcs)
 
 
 if __name__ == '__main__':
