@@ -181,6 +181,11 @@ bool ShardingUtil::EqualShardingSpecs(const XLATensor::ShardingSpec& a,
   return xla::protobuf_util::ProtobufEquals(a.sharding, b.sharding);
 }
 
+bool ShardingUtil::EqualOpShardings(const xla::OpSharding& a,
+                                    const xla::OpSharding& b) {
+  return xla::protobuf_util::ProtobufEquals(a, b);
+}
+
 xla::OpSharding ShardingUtil::CreateOpSharding(
     const py::list& tile_assignment, const py::list& group_assignment,
     const py::list& replication_groups, ShardingType sharding_type) {
