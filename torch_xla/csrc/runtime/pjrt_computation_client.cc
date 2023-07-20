@@ -120,25 +120,30 @@ PjRtComputationClient::PjRtComputationClient() {
         MaybeInitializeDistributedRuntimeClient(local_rank, dist_service_addr);
     auto allowed_devices =
         std::make_optional<std::set<int>>(std::set{local_rank});
-    xla::PjRtClient::KeyValueGetCallback kv_get = [distributed_client](
-                                                      const std::string& k,
-                                                      absl::Duration timeout) {
-      return distributed_client->BlockingKeyValueGet(absl::StrCat(k), timeout);
-    };
-    xla::PjRtClient::KeyValuePutCallback kv_put =
-        [distributed_client](const std::string& k, const std::string& v) {
-          return distributed_client->KeyValueSet(absl::StrCat(k), v);
-        };
+    xla::PjRtClient::KeyValueGetCallback kv_get = nullptr;
+    xla::PjRtClient::KeyValuePutCallback kv_put = nullptr;
+    if (distributed_client != nullptr) {
+      std::string key_prefix = "gpu:";
+      kv_get = [distributed_client, key_prefix](const std::string& k,
+                                                absl::Duration timeout) {
+        return distributed_client->BlockingKeyValueGet(
+            absl::StrCat(key_prefix, k), timeout);
+      };
+      kv_put = [distributed_client, key_prefix](const std::string& k,
+                                                const std::string& v) {
+        return distributed_client->KeyValueSet(absl::StrCat(key_prefix, k), v);
+      };
+    }
     client_ =
         std::move(xla::GetStreamExecutorGpuClient(
                       /*asynchronous=*/async, xla::GpuAllocatorConfig{},
                       /*node_id=*/local_rank,
                       /*num_nodes=*/sys_util::GetEnvInt(env::kEnvNumGpu, 1),
                       /*allowed_devices=*/allowed_devices,
-                      /*platform_name*/std::nullopt,
-                      /*should_stage_host_to_device_transfers*/true,
-                      /*kv_get*/kv_get,
-                      /*kv_put*/kv_put)
+                      /*platform_name*/ std::nullopt,
+                      /*should_stage_host_to_device_transfers*/ true,
+                      /*kv_get*/ kv_get,
+                      /*kv_put*/ kv_put)
                       .value());
   } else if (device_type == "XPU") {
     TF_VLOG(1) << "Initializing PjRt XPU client...";
