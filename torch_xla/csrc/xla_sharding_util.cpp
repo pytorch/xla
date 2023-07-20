@@ -211,7 +211,8 @@ xla::OpSharding ShardingUtil::CreateOpSharding(
     case ShardingType::PARTIAL: {
       XLA_CHECK(replication_groups.size() > 0)
           << "ShardingType.PARTIAL requires non-empty replication groups.";
-      xla::Array<int64_t> group_tile_assignment = TileListToArray(group_assignment);
+      xla::Array<int64_t> group_tile_assignment =
+          TileListToArray(group_assignment);
       auto group_members = ExtractGroupMembers(replication_groups);
       std::vector<absl::Span<const int64_t>> group_members_view;
       group_members_view.reserve(group_members.size());
@@ -219,9 +220,11 @@ xla::OpSharding ShardingUtil::CreateOpSharding(
         auto group_view = absl::MakeConstSpan(group);
         group_members_view.push_back(group_view);
       }
-      XLA_CHECK(group_tile_assignment.num_elements() == group_members_view.size());
-      std::vector<int64_t> new_tile_dims(group_tile_assignment.dimensions().begin(),
-                                         group_tile_assignment.dimensions().end());
+      XLA_CHECK(group_tile_assignment.num_elements() ==
+                group_members_view.size());
+      std::vector<int64_t> new_tile_dims(
+          group_tile_assignment.dimensions().begin(),
+          group_tile_assignment.dimensions().end());
       new_tile_dims.push_back(group_members_view[0].size());
       auto new_tile_assignment = xla::Array<int64_t>(new_tile_dims);
       new_tile_assignment.Each(
@@ -406,16 +409,14 @@ ShardingUtil::GetShardIndicesForDevices(
   } else if (sharding.type() == xla::OpSharding::OTHER) {
     auto device_index = build_index_map(devices);
     std::vector<int64_t> tile_assignment_devices(
-      sharding.tile_assignment_devices().begin(),
-      sharding.tile_assignment_devices().end());
+        sharding.tile_assignment_devices().begin(),
+        sharding.tile_assignment_devices().end());
     if (!sharding.iota_reshape_dims().empty()) {
       auto tileAssignment = xla::TileAssignment(
-        sharding.tile_assignment_dimensions(),
-        sharding.iota_reshape_dims(),
-        sharding.iota_transpose_perm());
+          sharding.tile_assignment_dimensions(), sharding.iota_reshape_dims(),
+          sharding.iota_transpose_perm());
       tile_assignment_devices = std::vector<int64_t>(
-        tileAssignment.array().begin(),
-        tileAssignment.array().end());
+          tileAssignment.array().begin(), tileAssignment.array().end());
     }
     for (size_t i = 0; i < tile_assignment_devices.size(); i++) {
       int64_t core = tile_assignment_devices[i];
