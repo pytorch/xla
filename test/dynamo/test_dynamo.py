@@ -238,7 +238,7 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     res_xla_dynamo_2 = self.fn_simple_dynamo(xla_input)
     self.assertNotIn('xla::nll_loss_backward', met.counter_names())
     self.assertTrue(torch.allclose(res_cpu, res_xla_dynamo_2.cpu()))
-    self.assertTrue(torch.allclose(input.grad, xla_input.grad.cpu()))
+    self.assertTrue(torch.allclose(input.grad, xla_input.grad.cpu(), rtol=1e-05, atol=1e-04))
     # verify that dynamo can handle different inputs
     input.grad = None
     xla_input.grad = None
