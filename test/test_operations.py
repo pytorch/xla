@@ -1970,6 +1970,13 @@ class TestGeneric(test_utils.XlaTestCase):
     dt = xm.send_cpu_data_to_device([t], xla_device)
     self.assertTrue(dt[0].requires_grad)
 
+  def test_send_to_device_single(self):
+    xla_device = xm.xla_device()
+    t = _gen_tensor(2, 2)
+    dt = xm.send_cpu_data_to_device(t, xla_device)
+    self.assertEqual(dt[0].device, xla_device)
+    self.assertTrue(torch.all(torch.eq(dt[0].cpu(), t)))
+
   def test_nms(self):
     BOXES = (
         (0, 0, 3, 2),
