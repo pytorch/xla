@@ -131,6 +131,7 @@ function run_torch_xla_tests() {
   fi
   export PYTORCH_TESTING_DEVICE_ONLY_FOR="xla"
   export CXX_ABI=$(python -c "import torch;print(int(torch._C._GLIBCXX_USE_CXX11_ABI))")
+  env
 
   pushd $XLA_DIR
     echo "Running Python Tests"
