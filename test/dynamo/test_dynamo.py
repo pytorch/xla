@@ -7,6 +7,7 @@ import torch_xla.core.xla_model as xm
 import torch_xla.utils.utils as xu
 import torch_xla.debug.metrics as met
 import torch.optim as optim
+import torch.nn as nn
 import torch._dynamo as dynamo
 import torchvision
 import unittest
@@ -48,18 +49,6 @@ class DynamoInferenceBasicTest(unittest.TestCase):
   def fn_simple_dynamo(self, x, y):
     return self.fn_simple(x, y)
 
-  def fn_simple_with_in_place_ops(self, input_tensor, self_tensor, index,
-                                  copy_tensor):
-    self_tensor.index_copy_(0, index, copy_tensor)
-    output = input_tensor + self_tensor
-    return output
-
-  @torch.compile(backend='torchxla_trace_once')
-  def fn_simple_with_in_place_ops_dynamo(self, input_tensor, self_tensor, index,
-                                         copy_tensor):
-    return self.fn_simple_with_in_place_ops(input_tensor, self_tensor, index,
-                                            copy_tensor)
-
   def test_simple_model(self):
     device = xm.xla_device()
     x = torch.tensor(100.0)
@@ -81,20 +70,34 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     self.assertTrue(torch.allclose(res_cpu_3, res_xla_dynamo_3.cpu()))
 
   def test_simple_model_with_in_place_ops(self):
+
+    class TestModel(nn.Module):
+
+      def __init__(self, device=None):
+        super().__init__()
+        self.self_tensor = torch.zeros((5, 3), device=device)
+
+      def forward(self, index, copy_tensor, input_tensor):
+        self.self_tensor.index_copy_(0, index, copy_tensor)
+        output = input_tensor + self.self_tensor
+        return output
+
     device = xm.xla_device()
-    input_tensor = torch.randn(2, 5, 3)
-    self_tensor = torch.zeros(5, 3)
+    input_tensor = torch.ones(3)
     copy_tensor = torch.tensor([[1, 2, 3], [4, 5, 6], [7, 8, 9]],
                                dtype=torch.float)
     index = torch.tensor([0, 4, 2])
     xla_input_tensor = input_tensor.to(device)
-    xla_self_tensor = self_tensor.to(device)
     xla_copy_tensor = copy_tensor.to(device)
     xla_index = index.to(device)
-    res_cpu = self.fn_simple_with_in_place_ops(input_tensor, self_tensor, index,
-                                               copy_tensor)
-    res_xla_dynamo = self.fn_simple_with_in_place_ops_dynamo(
-        xla_input_tensor, xla_self_tensor, xla_index, xla_copy_tensor)
+
+    cpu_model = TestModel()
+    res_cpu = cpu_model.forward(index, copy_tensor, input_tensor)
+
+    xla_model = TestModel(device).to(device)
+    res_xla_dynamo = xla_model.forward(xla_index, xla_copy_tensor,
+                                       xla_input_tensor)
+
     self.assertIn('xla::index_copy', met.counter_names())
     self.assertTrue(torch.allclose(res_cpu, res_xla_dynamo.cpu()))
 

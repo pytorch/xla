@@ -391,16 +391,22 @@ def extract_compiled_graph(xla_model, xla_args):
   # This call is critical to make sure xla_args' tensor id show up in graph_input_tensor_ids
   xm.mark_step()
 
+  self_tensors = []
+  for name, buffer in xla_model.named_buffers():
+    if "self" in name:
+      self_tensors.append(buffer)
+  self_tensors = tuple(self_tensors)
+
   # This logic, needed for supporting in-place operations, is a duplicate of
   # the one in the main `extract_internal` function above. We need to do this
   # check for fetching fallback ops as well.
   # TODO (@wonjoo): Make this duplicate code a bit cleaner.
   xla_args_need_update_bool = torch_xla._XLAC._check_tensor_need_materialization(
-      xla_args)
+      xla_args + self_tensors)
 
   cloned_xla_args = [
       torch.clone(xla_arg) if isinstance(xla_arg, torch.Tensor) else xla_arg
-      for xla_arg in xla_args
+      for xla_arg in xla_args + self_tensors
   ]
 
   # execute model once to collect fallback ops
@@ -417,10 +423,14 @@ def extract_compiled_graph(xla_model, xla_args):
 
   # partition the model and exectue to collect inputs
   supported_ops = XlaOperatorSupport()
-  partitioner = CapabilityBasedPartitioner(xla_model, supported_ops)
+  partitioner = CapabilityBasedPartitioner(
+      xla_model, supported_ops, allows_single_node_partition=True)
   partitions = partitioner.propose_partitions()
   partitioned_graph = partitioner.fuse_partitions(partitions)
   InputCollector(partitioned_graph).run(*xla_args)
+
+  # TODO (@wonjoo) Add some comment
+  torch_xla._XLAC._xla_sync_multi(self_tensors, devices=[], wait=True)
 
   # Again, same logic in the `extract_internal` above to support in-place operations.
   # TODO (@wonjoo): Make this duplicate code a bit cleaner.
