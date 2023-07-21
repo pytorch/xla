@@ -147,8 +147,7 @@ class XlaNode : public torch::lazy::Node {
 
   static std::vector<torch::lazy::SourceLocation> GetFrameInfo();
 
-  static torch::lazy::hash_t CreateShardingHash(
-      std::shared_ptr<xla::OpSharding> sharding, torch::lazy::hash_t hash_seed);
+  void UpdateShardingHash();
 
   xla::Shape xla_shape_;
   torch::lazy::hash_t node_hash_ = 0;
