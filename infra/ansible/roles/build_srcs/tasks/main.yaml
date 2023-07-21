@@ -24,7 +24,7 @@
 
 - name: Build XLA computation client library
   ansible.builtin.command:
-    cmd: bash build_torch_xla_libs.sh -O -D_GLIBCXX_USE_CXX11_ABI=1
+    cmd: bash build_torch_xla_libs.sh
     chdir: "{{ (src_root, 'pytorch/xla') | path_join }}"
   environment: "{{ env_vars }}"
   when: build_torch_xla_libs_result.stat.exists
