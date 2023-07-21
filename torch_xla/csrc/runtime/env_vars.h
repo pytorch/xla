@@ -26,6 +26,7 @@ extern const char* const kEnvPjrtAsyncGpuClient;
 extern const char* const kEnvTpuLibraryPath;
 extern const char* const kEnvXpuLibraryPath;
 extern const char* const kEnvPjrtDistServiceAddr;
+extern const char* const kEnvPjRtLocalProcessCount;
 extern const char* const kEnvPjRtLocalRank;
 
 }  // namespace env
