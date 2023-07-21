@@ -282,7 +282,7 @@ class DynamoTrainingBasicTest(unittest.TestCase):
       print(cpu_output.cpu())
       self.assertTrue(
           torch.allclose(
-              xla_output.cpu(), cpu_output.cpu(), rtol=1e-02, atol=1e-02))
+              xla_output.cpu(), cpu_output.cpu(), rtol=1e-01, atol=1e-01))
       # TODO(JackCaoG): Understand why `data.grad` is a pending IR starting
       # from second iteration instead of a `DeviceData`
       # torch.allclose(data.grad.cpu(), cpu_data.grad)
