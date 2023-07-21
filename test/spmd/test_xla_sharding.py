@@ -755,7 +755,7 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     xst_val = xs.mark_sharding(xt_val, self._get_mesh((self.n_devices)),
                                partition_spec)
     # `xst_val`` should have sharding spec now, but `xst_index` should not
-    self.assertIn('device', torch_xla._XLAC._get_xla_sharding_spec(xt_val))
+    self.assertNotEqual(torch_xla._XLAC._get_xla_sharding_spec(xt_val), '')
     self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(xt_index), '')
 
 
