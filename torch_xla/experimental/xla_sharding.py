@@ -468,6 +468,7 @@ def wrap_if_sharded(x: Any) -> Any:
 class ShardingSpec:
   mesh: Mesh
   partition_spec: Tuple[Union[int, None]]
+  minibatch: Optional[bool] = False
 
   # Derived fields
   _tile_assignment: List[int] = field(init=False)
@@ -494,7 +495,8 @@ class ShardingSpec:
     return torch_xla._XLAC.XlaShardingSpec(t, self._tile_assignment,
                                            self._group_assignment,
                                            self._replication_groups,
-                                           int(self._sharding_type))
+                                           int(self._sharding_type),
+                                           self.minibatch)
 
   def can_apply(self, t: torch.Tensor) -> bool:
     """

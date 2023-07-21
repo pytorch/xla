@@ -256,10 +256,15 @@ class XLATensor : public torch::lazy::LazyTensor {
     ShardingSpec(const xla::OpSharding& sharding) : sharding(sharding) {}
     ShardingSpec(const xla::OpSharding& sharding, const xla::Shape& shape)
         : sharding(sharding), shape(shape) {}
+    ShardingSpec(const xla::OpSharding& sharding, const xla::Shape& shape,
+                 const bool& minibatch)
+        : sharding(sharding), shape(shape), minibatch(minibatch) {}
 
     xla::OpSharding sharding;
     // Optional source tensor shape unpartitioned.
     std::optional<xla::Shape> shape;
+    // Parameter for represent input batch in sharded along batch axes
+    bool minibatch = false;
   };
 
   // Annotate the IR value with ShardingSpec.
