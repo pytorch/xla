@@ -757,6 +757,9 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     # `xst_val`` should have sharding spec now, but `xst_index` should not
     self.assertNotEqual(torch_xla._XLAC._get_xla_sharding_spec(xt_val), '')
     self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(xt_index), '')
+    # xst_index's HLO should not have any sharding
+    self.assertNotIn('convert(s32[8]{0} %get-tuple-element.25), sharding',
+                     torch_xla._XLAC._get_xla_tensors_hlo([xt_index]))
 
 
 if __name__ == '__main__':
