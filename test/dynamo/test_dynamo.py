@@ -277,9 +277,6 @@ class DynamoTrainingBasicTest(unittest.TestCase):
       cpu_data.requires_grad = True
       cpu_target = target.detach().cpu()
       cpu_output = self.train_model(resnet18, cpu_data, cpu_target)
-      print("----------------------------------280--------------------------")
-      print(xla_output.cpu())
-      print(cpu_output.cpu())
       self.assertTrue(
           torch.allclose(
               xla_output.cpu(), cpu_output.cpu(), rtol=1e-01, atol=1e-01))
