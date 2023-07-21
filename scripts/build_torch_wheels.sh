@@ -190,6 +190,7 @@ function install_and_setup_conda() {
   if [ -z "$PYTHON_VERSION" ]; then
     PYTHON_VERSION=$DEFAULT_PYTHON_VERSION
   fi
+  echo "xiowei"
   conda config --remove channels conda-forge
   if [[ $(uname -m) == "x86_64" ]]; then
     conda create -y --name "$ENVNAME" python=${PYTHON_VERSION} anaconda
