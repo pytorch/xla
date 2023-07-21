@@ -971,7 +971,7 @@
           <span class="mi">1</span> <span class="k">if</span> <span class="n">get_ordinal</span><span class="p">()</span> <span class="o">==</span> <span class="n">root_ordinal</span> <span class="k">else</span> <span class="mi">0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">tensor</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
       <span class="c1"># Transfer scale tensor as device data instead of constant 1 or 0.</span>
       <span class="n">xscale</span> <span class="o">=</span> <span class="n">send_cpu_data_to_device</span><span class="p">(</span><span class="n">scale</span><span class="p">,</span> <span class="n">tensor</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
-      <span class="n">tensor</span><span class="o">.</span><span class="n">mul_</span><span class="p">(</span><span class="n">xscale</span><span class="p">)</span>
+      <span class="n">tensor</span><span class="o">.</span><span class="n">mul_</span><span class="p">(</span><span class="n">xscale</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
 
   <span class="n">all_reduce</span><span class="p">(</span><span class="n">REDUCE_SUM</span><span class="p">,</span> <span class="n">tensors</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="n">groups</span><span class="p">,</span> <span class="n">pin_layout</span><span class="o">=</span><span class="n">pin_layout</span><span class="p">)</span>
 
@@ -1304,7 +1304,7 @@
   <span class="k">return</span> <span class="n">ToXlaTensorArena</span><span class="p">(</span><span class="n">convert_fn</span><span class="p">,</span> <span class="n">select_fn</span><span class="p">)</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 
 
-<span class="k">def</span> <span class="nf">send_cpu_data_to_device</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="n">input_sharding</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">send_cpu_data_to_device</span><span class="p">(</span><span class="n">datas</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="n">input_sharding</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 
   <span class="k">def</span> <span class="nf">convert_fn</span><span class="p">(</span><span class="n">tensors</span><span class="p">):</span>
     <span class="n">devices</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">device</span><span class="p">)]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">tensors</span><span class="p">)</span>
@@ -1318,7 +1318,9 @@
   <span class="k">def</span> <span class="nf">select_fn</span><span class="p">(</span><span class="n">v</span><span class="p">):</span>
     <span class="k">return</span> <span class="nb">type</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">==</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="ow">and</span> <span class="n">v</span><span class="o">.</span><span class="n">device</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;cpu&#39;</span>
 
-  <span class="k">return</span> <span class="n">ToXlaTensorArena</span><span class="p">(</span><span class="n">convert_fn</span><span class="p">,</span> <span class="n">select_fn</span><span class="p">)</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+  <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">datas</span><span class="p">)</span> <span class="ow">is</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+    <span class="n">datas</span> <span class="o">=</span> <span class="p">[</span><span class="n">datas</span><span class="p">]</span>
+  <span class="k">return</span> <span class="n">ToXlaTensorArena</span><span class="p">(</span><span class="n">convert_fn</span><span class="p">,</span> <span class="n">select_fn</span><span class="p">)</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">datas</span><span class="p">)</span>
 
 
 <span class="k">def</span> <span class="nf">xla_rendezvous</span><span class="p">(</span><span class="n">payload</span><span class="p">:</span> <span class="nb">bytes</span> <span class="o">=</span> <span class="sa">b</span><span class="s1">&#39;&#39;</span><span class="p">,</span>
