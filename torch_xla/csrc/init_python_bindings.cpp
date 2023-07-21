@@ -790,12 +790,13 @@ void InitXlaModuleBindings(py::module m) {
       m, "XlaShardingSpec")
       .def(py::init([](at::Tensor tensor, const py::list& tile_assignment,
                        const py::list& group_assignment,
-                       const py::list& replication_groups, int sharding_type) {
+                       const py::list& replication_groups, int sharding_type,
+                       bool minibatch) {
         return std::make_shared<XLATensor::ShardingSpec>(
             ShardingUtil::CreateOpSharding(
                 tile_assignment, group_assignment, replication_groups,
                 ShardingUtil::ShardingType(sharding_type)),
-            CreateComputationShapeFromTensor(tensor, nullptr));
+            CreateComputationShapeFromTensor(tensor, nullptr), minibatch);
       }));
   m.def("_xla_tensors_from_aten",
         [](const std::vector<at::Tensor>& tensors,
@@ -1492,7 +1493,8 @@ void InitXlaModuleBindings(py::module m) {
           }
 
           auto sharding = xtensor->sharding_spec()->sharding;
-          auto shard_shape = ShardingUtil::GetShardShape(input, sharding);
+          auto shard_shape =
+              ShardingUtil::GetShardShape(input.sizes().vec(), sharding);
           auto indices = ShardingUtil::GetShardIndicesForDevices(
               shard_shape, input.sizes().vec(), sharding, shard_devices);
 
@@ -1535,7 +1537,8 @@ void InitXlaModuleBindings(py::module m) {
     XLA_CHECK(sharding.type() != xla::OpSharding::REPLICATED)
         << "Replicated tensor should not be loaded from _load_local_shards - "
            "use copy_";
-    auto shard_shape = ShardingUtil::GetShardShape(tensor, sharding);
+    auto shard_shape =
+        ShardingUtil::GetShardShape(tensor.sizes().vec(), sharding);
     for (auto shard : shards) {
       XLA_CHECK(shard.sizes() == shard_shape)
           << "Input shard shape must include padding: " << shard.sizes()

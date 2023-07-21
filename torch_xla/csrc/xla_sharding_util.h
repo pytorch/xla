@@ -87,8 +87,8 @@ class ShardingUtil {
   // Returns the shape of the resulting shards of `tensor` after applying
   // `sharding`. This assumes the shards will be padded to ensure they all
   // have the same shape.
-  static std::vector<int64_t> GetShardShape(const at::Tensor& tensor,
-                                            const xla::OpSharding sharding);
+  static std::vector<int64_t> GetShardShape(
+      const std::vector<int64_t>& tensor_shape, const xla::OpSharding sharding);
 
   // Uses the provided `sharding` spec and expected shard shape to determine the
   // index slices for the shards which belong on `devices`. Only supports
@@ -97,7 +97,8 @@ class ShardingUtil {
   GetShardIndicesForDevices(const std::vector<int64_t>& shard_shape,
                             const std::vector<int64_t>& tensor_shape,
                             const xla::OpSharding sharding,
-                            const std::vector<std::string>& devices);
+                            const std::vector<std::string>& devices,
+                            const bool minibatch = false);
 
   // Shards a tensor and returns the sharded tensors which belong on `devices`
   // based on the `sharding` spec. REPLICATED sharding should result in shards
@@ -110,7 +111,8 @@ class ShardingUtil {
   // vector, so the `i`th result will belong on the `i`th device.
   static std::vector<at::Tensor> ShardTensor(
       const at::Tensor& tensor, const xla::OpSharding sharding,
-      const std::vector<std::string>& devices, bool padded = true);
+      const std::vector<std::string>& devices, bool padded = true,
+      bool minibatch = false);
 
   // Prepares output sharding propagation by extracting output parameter
   // ShardingSpec into `sharding_specs` from the SPMD compiled `computation` and

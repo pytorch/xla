@@ -942,8 +942,10 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
       std::vector<std::string> local_devices =
           runtime::GetComputationClient()->GetLocalDevices();
       xla::OpSharding sharding;
+      bool minibatch;
       if (shardings[i] != nullptr) {
         sharding = shardings[i]->sharding;
+        minibatch = shardings[i]->minibatch;
       } else {
         // If using SPMD and no sharding is attached to the tensor, implicitly
         // replicate to all local devices.
@@ -952,8 +954,13 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
       // Shards the input tensors with padding, to split evenly.
       // The execution requires consistent shard sizes, and the zero-padded
       // values should be ignored.
-      std::vector<at::Tensor> local_shards = ShardingUtil::ShardTensor(
-          tensors[i], sharding, local_devices, /*padded=*/true);
+      std::vector<at::Tensor> local_shards =
+          ShardingUtil::ShardTensor(tensors[i], sharding, local_devices,
+                                    /*padded=*/true, /*minibatch=*/minibatch);
+      if (minibatch) {  // change global shape as tensor is already sharded
+                        // accross batch dimesion.
+        continue;
+      }
       new_handles.push_back(ShardingUtil::CreateShardedData(
           local_shards, local_devices, shape, sharding));
     } else {
