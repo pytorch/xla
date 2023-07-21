@@ -112,9 +112,10 @@ XLATensor::XLATensor(torch::lazy::Value ir_value,
   // Preserve sharding if a new tensor is created from a sharded IR node.
   if (CurrentIrValue()) {
     auto* xla_node = dynamic_cast<XlaNode*>(CurrentIrValue().node.get());
-    if (xla_node->GetSharding()) {
+    if (xla_node->GetSharding(CurrentIrValue().index)) {
       ShardingSpec sharding =
-          ShardingSpec{*xla_node->GetSharding(), xla_node->xla_shape()};
+          ShardingSpec{*xla_node->GetSharding(CurrentIrValue().index),
+                       xla_node->xla_shape()};
       SetShardingSpec(sharding);
     }
   }
@@ -239,7 +240,7 @@ void XLATensor::SetShardingSpec(const ShardingSpec& sharding) {
         << sharding.sharding.DebugString();
   }
   dynamic_cast<XlaNode*>(GetIrValue().node.get())
-      ->SetSharding(sharding_spec()->sharding);
+      ->SetSharding(sharding_spec()->sharding, GetIrValue().index);
 }
 void XLATensor::ClearShardingSpec() {
   data()->sharding = nullptr;
@@ -256,10 +257,10 @@ XLATensor::ShardingSpecPtr XLATensor::sharding_spec() const {
   if (sharding && ir_value) {
     // The copy of sharding annotation on the IR node should be the same.
     auto* xla_node = dynamic_cast<XlaNode*>(ir_value.node.get());
-    if (xla_node->GetSharding()) {
+    if (xla_node->GetSharding(ir_value.index)) {
       XLA_CHECK(ShardingUtil::EqualShardingSpecs(
-          *sharding,
-          ShardingSpec{*xla_node->GetSharding(), xla_node->xla_shape()}));
+          *sharding, ShardingSpec{*xla_node->GetSharding(ir_value.index),
+                                  xla_node->xla_shape()}));
     }
   }
   return sharding;

@@ -545,7 +545,7 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
           XLATensor::ShardingSpecPtr sharding = tensors[i]->sharding_spec();
           if (sharding) {
             dynamic_cast<XlaNode*>(ir_value.node.get())
-                ->SetSharding(sharding->sharding);
+                ->SetSharding(sharding->sharding, ir_value.index);
           }
         }
       } else if (config.force_ltc_data) {

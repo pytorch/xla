@@ -151,9 +151,14 @@ torch::lazy::hash_t XlaNode::GetOpHash(torch::lazy::OpKind op,
   return torch::lazy::HashCombine(h, hash_seed);
 }
 
-void XlaNode::SetSharding(const xla::OpSharding& sharding) {
-  output_sharding_ = std::make_shared<xla::OpSharding>(sharding);
-  sharding_hash_ = CreateShardingHash(output_sharding_, node_hash_);
+void XlaNode::SetSharding(const xla::OpSharding& sharding, size_t index) {
+  if (output_shardings_.size() == 0) {
+    output_shardings_ =
+        std::vector<std::shared_ptr<xla::OpSharding>>(num_outputs());
+  }
+  output_shardings_[index] = std::make_shared<xla::OpSharding>(sharding);
+  // TODO(JackCaoG): fix this hashing
+  sharding_hash_ = CreateShardingHash(output_shardings_[index], node_hash_);
 }
 
 xla::Shape XlaNode::GetOpShape(
