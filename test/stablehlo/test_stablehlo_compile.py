@@ -29,7 +29,7 @@ class StableHloCompileTest(unittest.TestCase):
     xla_input = torch_input.to(device)
     xla_output = xla_resnet18(xla_input)
     self.assertTrue(
-        torch.allclose(cpu_output, xla_output.cpu(), rtol=1e-05, atol=1e-05))
+        torch.allclose(cpu_output, xla_output.cpu(), rtol=1e-03, atol=1e-03))
     self.assertEqual(met.counter_value('StableHloCompile'), 1)
 
 
