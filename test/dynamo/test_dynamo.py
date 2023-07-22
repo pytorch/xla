@@ -82,6 +82,9 @@ class DynamoInferenceBasicTest(unittest.TestCase):
         output = input_tensor + self.self_tensor
         return output
 
+    torch._dynamo.reset()
+    met.clear_counters()
+    met.clear_all()
     device = xm.xla_device()
     input_tensor = torch.ones(3)
     copy_tensor = torch.tensor([[1, 2, 3], [4, 5, 6], [7, 8, 9]],
@@ -95,8 +98,9 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     res_cpu = cpu_model.forward(index, copy_tensor, input_tensor)
 
     xla_model = TestModel(device).to(device)
-    res_xla_dynamo = xla_model.forward(xla_index, xla_copy_tensor,
-                                       xla_input_tensor)
+    compiled_model = torch.compile(xla_model, backend='torchxla_trace_once')
+    res_xla_dynamo = compiled_model.forward(xla_index, xla_copy_tensor,
+                                            xla_input_tensor)
 
     self.assertIn('xla::index_copy', met.counter_names())
     self.assertTrue(torch.allclose(res_cpu, res_xla_dynamo.cpu()))
@@ -213,21 +217,21 @@ class DynamoCpuFallbackTest(unittest.TestCase):
     xla_dynamo_res = dynamo_fn(t_xla)
     self.assertTrue(torch.allclose(cpu_res, xla_dynamo_res.cpu()))
     self.assertEqual(met.metric_data('CompileTime')[0], 4)
-    self.assertEqual(met.metric_data('ExecuteTime')[0], 6)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 7)
 
     # Second tracing
     met.clear_counters()
     xla_dynamo_res_2 = dynamo_fn(t_xla)
     self.assertTrue(torch.allclose(cpu_res, xla_dynamo_res_2.cpu()))
     self.assertEqual(met.metric_data('CompileTime')[0], 4)
-    self.assertEqual(met.metric_data('ExecuteTime')[0], 8)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 9)
 
     # Verify that dynamo can handle different inputs
     xla_dynamo_res_3 = dynamo_fn(t_xla * 3)
     cpu_res_3 = fn_fallback(t * 3)
     self.assertTrue(torch.allclose(cpu_res_3, xla_dynamo_res_3.cpu()))
     self.assertEqual(met.metric_data('CompileTime')[0], 5)
-    self.assertEqual(met.metric_data('ExecuteTime')[0], 10)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 12)
 
 
 class DynamoTrainingBasicTest(unittest.TestCase):
