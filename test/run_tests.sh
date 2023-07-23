@@ -161,7 +161,7 @@ function run_xla_op_tests {
   run_test "$CDIR/pjrt/test_runtime.py"
   run_test "$CDIR/pjrt/test_runtime_multi_cpu.py"
   run_test "$CDIR/pjrt/test_internal_tpu.py"
-  # run_test "$CDIR/pjrt/test_ddp.py"
+  run_test "$CDIR/pjrt/test_ddp.py"
   run_test "$CDIR/pjrt/test_mesh_service.py"
   run_test "$CDIR/spmd/test_xla_sharding.py"
   run_test "$CDIR/spmd/test_xla_virtual_device.py"
@@ -191,7 +191,7 @@ function run_mp_op_tests {
   run_xla_backend_mp "$CDIR/test_torch_distributed_all_reduce_xla_backend.py"
   run_xla_backend_mp "$CDIR/test_torch_distributed_multi_all_reduce_xla_backend.py"
   run_xla_backend_mp "$CDIR/test_torch_distributed_reduce_scatter_xla_backend.py"
-  # run_xla_backend_mp "$CDIR/test_ddp.py"
+  run_xla_backend_mp "$CDIR/test_ddp.py"
   run_xla_backend_mp "$CDIR/test_fsdp_auto_wrap.py"
   run_xla_backend_mp "$CDIR/test_torch_distributed_fsdp_meta.py"
 }
