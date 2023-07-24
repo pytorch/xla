@@ -792,11 +792,24 @@ void InitXlaModuleBindings(py::module m) {
                        const py::list& group_assignment,
                        const py::list& replication_groups, int sharding_type,
                        bool minibatch) {
+        xla::Shape tensor_shape =
+            CreateComputationShapeFromTensor(tensor, nullptr);
+        int num_local_devices =
+            runtime::GetComputationClient()->GetLocalDevices().size();
+        int num_global_devices =
+            runtime::GetComputationClient()->GetAllDevices().size();
+        if (minibatch) {
+          XLA_CHECK(tile_assignment.size() == num_global_devices)
+              << "Sharding of input is only supported along batch dimension";
+        }
+        int batch_dim_shape =
+            tensor.sizes()[0] * num_global_devices / num_local_devices;
+        tensor_shape.set_dimensions(0, batch_dim_shape);
         return std::make_shared<XLATensor::ShardingSpec>(
             ShardingUtil::CreateOpSharding(
                 tile_assignment, group_assignment, replication_groups,
                 ShardingUtil::ShardingType(sharding_type)),
-            CreateComputationShapeFromTensor(tensor, nullptr), minibatch);
+            tensor_shape, minibatch);
       }));
   m.def("_xla_tensors_from_aten",
         [](const std::vector<at::Tensor>& tensors,
