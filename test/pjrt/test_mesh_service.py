@@ -71,13 +71,18 @@ class PjRtMeshServiceTest(parameterized.TestCase):
 
   @staticmethod
   def _mesh_reduce():
+    print("start _mesh_reduce")
     return xm.mesh_reduce('test mesh reduce', xm.get_ordinal(), sum)
 
   def test_mesh_reduce(self):
+    print("start to run test_mesh_reduce")
     results = pjrt.run_multiprocess(self._mesh_reduce)
+    print("after get results")
     values = list(results.values())
 
+    print("after get values")
     expected = sum(range(len(values)))
+    print("after get expected")
     for v in values:
       self.assertEqual(v, expected)
 
