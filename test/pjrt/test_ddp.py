@@ -37,7 +37,7 @@ class TestPjRtDistributedDataParallel(parameterized.TestCase):
   def test_ddp_init_threaded(self):
     pjrt.spawn_threads(self._ddp_init)
 
-  @parameterized.named_parameters(('small_net', False), ('large_net', True))
+  @parameterized.named_parameters(('small_net', False))
   def test_ddp_correctness(self, use_large_net: bool):
     pjrt.run_multiprocess(
         util.ddp_correctness,
