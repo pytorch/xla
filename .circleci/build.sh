@@ -7,7 +7,7 @@ ls
 
 source ./env
 source .circleci/common.sh
-PYTORCH_DIR=/tmp/pytorch
+PYTORCH_DIR=/workspace/pytorch
 XLA_DIR=$PYTORCH_DIR/xla
 clone_pytorch $PYTORCH_DIR $XLA_DIR
 
