@@ -1048,16 +1048,28 @@ def xla_rendezvous(payload: bytes = b'',
   if max_size.item() < 1:
     return [b'' for _ in range(sizes.size()[0])]
 
+  print("in xla_rendezvous !!!!!!!!!!!!!!!!!!!!!!!!!!")
+  print("data!!!")
+  print(data)
   padded_data = torch.nn.functional.pad(data, (
       0,
       max_size.item() - size.item(),
   )).to(xla_device())
+  print("padded_data!!!")
+  print(padded_data)
   raw_data = all_gather(padded_data)
+  print("raw_data!!!")
+  print(raw_data)
   data_list = torch.split(raw_data, max_size)
+  print("data_list!!!")
+  print(data_list)
 
   payloads = [d[:sz] for d, sz in zip(data_list, sizes.cpu())]
+  print("payloads!!!")
+  print(payloads)
   mark_step()
 
+  print("before return of xla_rendezvous !!!")
   return [bytes(p.cpu().tolist()) for p in payloads]
 
 
@@ -1123,14 +1135,38 @@ def mesh_reduce(tag, data, reduce_fn):
   Returns:
     The reduced value.
   """
+  print("data")
+  print(data)
   cpu_data = _maybe_convert_to_cpu(data)
+  print("cpu_data")
+  print(cpu_data)
   bio = io.BytesIO()
+  print("bio")
+  print(bio)
   torch.save(cpu_data, bio)
+  print("bio saved")
+  print(bio)
   xdata = rendezvous(tag, bio.getvalue())
+  print("xdata")
+  print(xdata)
+  print("bio getvalue")
+  print(bio.getvalue())
   xldata = []
+  print("xldata")
+  print(xldata)
   for xd in xdata:
+    print("xd")
+    print(xd)
     xbio = io.BytesIO(xd)
+    print("xbio")
+    print(xbio)
     xldata.append(torch.load(xbio))
+    print("xldata")
+    print(xldata)
+    print("xbio saved")
+    print(torch.load(xbio))
+  print("xldata all")
+  print(xldata))
   return reduce_fn(xldata) if xldata else cpu_data
 
 
