@@ -7,9 +7,7 @@ from . import pjrt as this_module
 
 aliases = [
     runtime.addressable_device_count,
-    runtime.device_attributes,
     runtime.device_type,
-    runtime.global_device_attributes,
     runtime.global_device_count,
     runtime.global_ordinal,
     runtime.local_device_count,
@@ -28,6 +26,9 @@ aliases = [
 ]
 
 rendezvous = deprecated(this_module, xm.xla_rendezvous)
+device_attributes = deprecated(this_module, runtime.runtime_device_attributes)
+global_device_attributes = deprecated(this_module,
+                                      runtime.global_runtime_device_attributes)
 
 for alias in aliases:
   register_deprecated(this_module, alias)
