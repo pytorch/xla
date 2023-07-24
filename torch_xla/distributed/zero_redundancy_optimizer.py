@@ -3,6 +3,7 @@ from typing import (Any, Iterator, Optional, Type, Union, List, Dict)
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch import Tensor
 from torch.optim import Optimizer
 
@@ -127,12 +128,19 @@ class ZeroRedundancyOptimizer(Optimizer):
       for attr in filter(lambda x: x != "params", src_param_group.keys()):
         dst_param_group[attr] = src_param_group[attr]
 
+  def _pad_to_world_size(self, tensor: torch.Tensor,
+                         world_size: int) -> torch.Tensor:
+    """Pad a tensor to a given world size (for reduce-scatter)."""
+    if tensor.size(0) % world_size != 0:
+      pad_size = world_size - tensor.size(0) % world_size
+      tensor = F.pad(tensor, [0, 0] * (tensor.dim() - 1) + [0, pad_size])
+    return tensor
+
   def _shard_tensor(self, tensor: torch.Tensor):
     """
     Get the shard of the input tensor.
     """
-    assert tensor.shape[
-        0] % self.local_world_size == 0, "Not support padding now."
+    tensor = self._pad_to_world_size(tensor, self.local_world_size)
     tensor = tensor.chunk(self.local_world_size)[self.local_rank]
     return tensor
 
@@ -243,9 +251,11 @@ class ZeroRedundancyOptimizer(Optimizer):
       for param, shard in zip(param_group['params'],
                               sharded_param_group['params']):
         if param.grad is not None:
+          padded_grad = self._pad_to_world_size(param.grad,
+                                                self.local_world_size)
           grad_shard = xm.reduce_scatter(
               xm.REDUCE_SUM,
-              param.grad,
+              padded_grad,
               scale=1.0 / self.local_world_size,
               scatter_dim=0,
               shard_count=self.local_world_size,
@@ -276,13 +286,13 @@ class ZeroRedundancyOptimizer(Optimizer):
           shard_data = shard.data
           if param.dtype != self.optimizer_dtype:
             shard_data = shard_data.to(dtype=param.dtype)
-          xm.all_gather(
+          padded_param = xm.all_gather(
               shard_data,
               dim=0,
-              output=param.data,
               pin_layout=self.pin_layout,
               groups=self.sharding_groups,
           )
+          param.data.copy_(padded_param.data[:param.size(0)])
 
     # sync back
     self._sync_param_groups(self.base_optimizer.param_groups, self.param_groups)
