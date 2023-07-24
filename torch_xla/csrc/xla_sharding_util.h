@@ -97,8 +97,15 @@ class ShardingUtil {
   GetShardIndicesForDevices(const std::vector<int64_t>& shard_shape,
                             const std::vector<int64_t>& tensor_shape,
                             const xla::OpSharding sharding,
-                            const std::vector<std::string>& devices,
-                            const bool minibatch = false);
+                            const std::vector<std::string>& devices);
+
+  // Returns the indices for the shards. Supports `OTHER` sharding types and
+  // called when input is sharded along the batch axis.
+  static std::vector<std::vector<at::indexing::TensorIndex>>
+  GetShardIndicesForBatchShardedTensor(const std::vector<int64_t>& shard_shape,
+                                       const std::vector<int64_t>& tensor_shape,
+                                       const xla::OpSharding sharding,
+                                       const std::vector<std::string>& devices);
 
   // Shards a tensor and returns the sharded tensors which belong on `devices`
   // based on the `sharding` spec. REPLICATED sharding should result in shards

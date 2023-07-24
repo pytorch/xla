@@ -937,7 +937,7 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
       std::vector<std::string> local_devices =
           runtime::GetComputationClient()->GetLocalDevices();
       xla::OpSharding sharding;
-      bool minibatch;
+      bool minibatch = false;
       if (shardings[i] != nullptr) {
         sharding = shardings[i]->sharding;
         minibatch = shardings[i]->minibatch;
@@ -954,7 +954,7 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
                                     /*padded=*/true, /*minibatch=*/minibatch);
       if (minibatch) {  // change global shape as tensor is already sharded
                         // accross batch dimesion.
-        continue;
+        shape = shardings[i]->shape.value();
       }
       new_handles.push_back(ShardingUtil::CreateShardedData(
           local_shards, local_devices, shape, sharding));
