@@ -1166,7 +1166,7 @@ def mesh_reduce(tag, data, reduce_fn):
     print("xbio saved")
     print(torch.load(xbio))
   print("xldata all")
-  print(xldata))
+  print(xldata)
   return reduce_fn(xldata) if xldata else cpu_data
 
 
