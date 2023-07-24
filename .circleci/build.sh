@@ -49,8 +49,8 @@ python setup.py install
 sccache --show-stats
 
 source $XLA_DIR/xla_env
-export GCLOUD_SERVICE_KEY_FILE="$XLA_DIR/default_credentials.json"
-export SILO_NAME='cache-silo-ci-gcc-11'  # cache bucket for CI
+export GCLOUD_SERVICE_KEY_FILE=~/.config/gcloud/application_default_credentials.json
+export SILO_NAME='cache-silo-ci-gcc-11-manfei-gpu-8'  # cache bucket for CI
 build_torch_xla $XLA_DIR
 
 popd
