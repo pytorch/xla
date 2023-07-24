@@ -1,4 +1,5 @@
 import os
+import sys
 import tempfile
 import unittest
 import test_xla_sharding_base
@@ -14,6 +15,8 @@ from torch.distributed.checkpoint.default_planner import (
     create_default_global_save_plan,
 )
 from torch_xla.experimental.distributed_checkpoint import SPMDLoadPlanner, SPMDSavePlanner
+from torch_xla.experimental._distributed_checkpoint_helpers import (
+    _sharded_cpu_state_dict, _CpuShards, _is_sharded_tensor)
 
 
 class DistributedCheckpointTestBase(test_xla_sharding_base.XlaShardingTest):
@@ -54,7 +57,8 @@ class ReshardingTest(DistributedCheckpointTestBase):
                         model_in,
                         model_out,
                         save_planner=None,
-                        load_planner=None):
+                        load_planner=None,
+                        is_sharded_cpu_state_dict=False):
     """
     Checkpoint model_in using the provided save_planner and load into model_out
     using the provided load_planner, and assert model_out equals model_in after
@@ -63,18 +67,22 @@ class ReshardingTest(DistributedCheckpointTestBase):
     tmpdir = tempfile.mkdtemp()
 
     # Save an unsharded model using the provided save planner
+    model_in_state_dict = model_in.state_dict()
+    if is_sharded_cpu_state_dict:
+      model_in_state_dict = _sharded_cpu_state_dict(model_in_state_dict)
+    model_out_state_dict = model_out.state_dict()
     dist_cp.save_state_dict(
-        state_dict=model_in.state_dict(),
+        state_dict=model_in_state_dict,
         storage_writer=dist_cp.FileSystemWriter(tmpdir),
         planner=save_planner,
         no_dist=True,  # Single-host checkpoint doesn't require a process group
     )
-
     # Load the checkpoint using the provided load planner
     for p1, p2 in zip(model_in.parameters(), model_out.parameters()):
       self.assertFalse(torch.allclose(p1, p2))
+
     dist_cp.load_state_dict(
-        state_dict=model_out.state_dict(),
+        state_dict=model_out_state_dict,
         storage_reader=dist_cp.FileSystemReader(tmpdir),
         planner=load_planner,
         no_dist=True,  # Single-host checkpoint doesn't require a process group
@@ -92,9 +100,15 @@ class ReshardingTest(DistributedCheckpointTestBase):
   # TODO(jonbolin): Enable tests for resharding into coarser meshes
   @unittest.skip("View assignment with virtual device is not yet supported")
   def test_sharded_to_unsharded(self):
-    model = self.SimpleLinear().to(xm.xla_device())
-    sharded_model = self._get_sharded_model()
-    self._save_and_restore(sharded_model, model, save_planner=SPMDSavePlanner())
+    for chkpt_on_cpu in [True, False]:
+      with self.subTest(chkpt_on_cpu):
+        model = self.SimpleLinear().to(xm.xla_device())
+        sharded_model = self._get_sharded_model()
+        self._save_and_restore(
+            sharded_model,
+            model,
+            save_planner=SPMDSavePlanner(),
+            is_sharded_cpu_state_dict=chkpt_on_cpu)
 
   # TODO(jonbolin): Enable tests for resharding into coarser meshes
   @unittest.skip("View assignment with virtual device is not yet supported")
@@ -183,15 +197,16 @@ class SPMDLoadPlannerTest(DistributedCheckpointTestBase):
 
 class SPMDSavePlannerTest(DistributedCheckpointTestBase):
 
-  def _get_save_planner(self, model):
+  def _get_save_planner(self, model, is_sharded_cpu_state_dict=False):
     # Create an SPMDSavePlanner for the given model.
     planner = SPMDSavePlanner()
-    planner.set_up_planner(model.state_dict(), True)
+    if not is_sharded_cpu_state_dict:
+      planner.set_up_planner(model.state_dict(), True)
+    else:
+      planner.set_up_planner(_sharded_cpu_state_dict(model.state_dict()), True)
     return planner
 
-  def test_state_dict_separation(self):
-    model = self._get_sharded_model()
-    planner = self._get_save_planner(model)
+  def _planner_assertions(self, planner):
     if self.n_devices > 1:
       # The state_dict should be flattened and separated
       self.assertCountEqual(planner.sharded_state_dict, ['fc1.weight'])
@@ -205,27 +220,46 @@ class SPMDSavePlannerTest(DistributedCheckpointTestBase):
           planner.unsharded_state_dict,
           ['fc1.weight', 'fc1.bias', 'fc2.weight', 'fc2.bias'])
 
-  def test_local_save_plan(self):
+  def test_state_dict_separation(self):
     model = self._get_sharded_model()
     planner = self._get_save_planner(model)
-    plan = planner.create_local_plan()
-    parameter_count = len(list(model.parameters()))
+    self._planner_assertions(planner)
+
+  def test_save_state_dict_with_cpu_shards(self):
+    model = self._get_sharded_model()
+    planner = self._get_save_planner(model, is_sharded_cpu_state_dict=True)
+    self._planner_assertions(planner)
     if self.n_devices > 1:
-      # When the model is sharded across devices, fc1.weight will result in
-      # self.n_devices WriteItems while all other tensors result in a single
-      # WriteItem.
-      sharded_write_items = [
-          wi for wi in plan.items if wi.index.fqn == 'fc1.weight'
-      ]
-      self.assertEqual(self.n_devices, len(sharded_write_items))
-      # Every other parameter should have a single WriteItem
-      unsharded_write_items = [
-          x for x in plan.items if x not in sharded_write_items
-      ]
-      self.assertEqual(parameter_count - 1, len(unsharded_write_items))
-    else:
+      self.assertTrue(
+          isinstance(planner.sharded_state_dict['fc1.weight'], _CpuShards))
+
+  def test_local_save_plan(self):
+
+    def _write_item_assertions(plan, n_devices, parameter_count):
+      if n_devices > 1:
+        # When the model is sharded across devices, fc1.weight will result in
+        # self.n_devices WriteItems while all other tensors result in a single
+        # WriteItem.
+        sharded_write_items = [
+            wi for wi in plan.items if wi.index.fqn == 'fc1.weight'
+        ]
+        self.assertEqual(self.n_devices, len(sharded_write_items))
+        # Every other parameter should have a single WriteItem
+        unsharded_write_items = [
+            x for x in plan.items if x not in sharded_write_items
+        ]
+        self.assertEqual(parameter_count - 1, len(unsharded_write_items))
+      else:
+        self.assertEqual(parameter_count, len(plan.items))
       # If unsharded, there should be a single WriteItem per model parameter
-      self.assertEqual(parameter_count, len(plan.items))
+
+    for chkpt_on_cpu in [True, False]:
+      with self.subTest(chkpt_on_cpu):
+        model = self._get_sharded_model()
+        planner = self._get_save_planner(model, chkpt_on_cpu)
+        plan = planner.create_local_plan()
+        parameter_count = len(list(model.parameters()))
+        _write_item_assertions(plan, self.n_devices, parameter_count)
 
   @unittest.skipIf(xr.global_device_count() == 1,
                    "Multiple devices required to shard tensors")
@@ -242,6 +276,24 @@ class SPMDSavePlannerTest(DistributedCheckpointTestBase):
       shard = shards[write_item.index.index]
       resolved_data = planner.resolve_data(write_item)
       self.assertTrue(torch.allclose(shard.data, resolved_data))
+
+
+class DistributedCheckpointHelpersTest(DistributedCheckpointTestBase):
+
+  def test_sharded_cpu_state_dict(self):
+    model = self.SimpleLinear().to(xm.xla_device())
+    state_dict = model.state_dict()
+    sharded_cpu_state_dict = _sharded_cpu_state_dict(state_dict)
+    self.assertCountEqual(sharded_cpu_state_dict,
+                          ['fc1.weight', 'fc1.bias', 'fc2.weight', 'fc2.bias'])
+    for name, param in sharded_cpu_state_dict.items():
+      if name == 'fc1.weight':
+        # _sharded_cpu_state_dict returns _CpuShards only for sharded tensors
+        if _is_sharded_tensor(param):
+          self.assertTrue(isinstance(param, _CpuShards))
+      else:
+        self.assertTrue(isinstance(param, torch.Tensor))
+        self.assertTrue(param.device == torch.device("cpu"))
 
 
 if __name__ == '__main__':

@@ -81,7 +81,6 @@ auto XLAGraphExecutor::DeviceContextArena::Get() -> DeviceContextArena* {
 std::vector<XLATensorPtr> XLAGraphExecutor::DeviceContextArena::GetLiveTensors(
     const torch::lazy::BackendDevice* device) {
   std::vector<XLATensorPtr> tensors;
-  torch::lazy::BackendDevice virtual_device = GetVirtualDevice();
   auto fn = [&](DeviceContext* devctx) {
     std::lock_guard<std::mutex> lock(devctx->lock);
     for (auto& uid_wptr : devctx->tensors_data) {
@@ -93,8 +92,6 @@ std::vector<XLATensorPtr> XLAGraphExecutor::DeviceContextArena::GetLiveTensors(
     }
   };
   ForAllDeviceContexts(fn, device);
-  // TODO(JackCaoG): all tensors should be on spmd:0 in SPMD mode.
-  ForAllDeviceContexts(fn, &virtual_device);
   return tensors;
 }
 
@@ -398,15 +395,20 @@ void XLAGraphExecutor::WaitDeviceOps(absl::Span<const std::string> devices) {
       wait_devices.insert(ParseDeviceString(device_str));
     }
   } else {
-    for (auto& device_str :
-         runtime::GetComputationClient()->GetLocalDevices()) {
-      wait_devices.insert(ParseDeviceString(device_str));
+    if (UseVirtualDevice()) {
+      wait_devices.insert(ParseDeviceString("SPMD:0"));
+    } else {
+      for (auto& device_str :
+           runtime::GetComputationClient()->GetLocalDevices()) {
+        wait_devices.insert(ParseDeviceString(device_str));
+      }
     }
   }
   // The DeviceLockerArena::Get()->LockDevices() API returns a vector of
   // torch::lazy::ExceptionCleanup object, which is going to be freed
   // immediately, turning this operation into a lock barrier.
   DeviceLockerArena::Get()->LockDevices(wait_devices);
+  TF_VLOG(4) << "XLAGraphExecutor::WaitDeviceOps completed";
 }
 
 std::vector<at::Tensor> XLAGraphExecutor::GetTensors(
@@ -505,10 +507,7 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
                                   tsl::profiler::TraceMeLevel::kInfo);
   runtime::util::Unique<torch::lazy::BackendDevice> unique_device;
   for (size_t i = 0; i < tensors.size(); ++i) {
-    // TODO(JackCaoG): all tensors should be on spmd:0 in SPMD mode.
-    if (tensors[i]->GetDevice().toString() != "SPMD:0") {
-      unique_device.set(tensors[i]->GetDevice());
-    }
+    unique_device.set(tensors[i]->GetDevice());
   }
   SyncTensorCollection coll;
   if (!unique_device) {
@@ -649,7 +648,7 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
   }
 
   std::vector<XLATensor::ShardingSpecPtr> sharding_specs(placeholders.size());
-  if (ShardingUtil::UseVirtualDevice()) {
+  if (UseVirtualDevice()) {
     ShardingUtil::PrepareOutputShardingPropagation(
         placeholders, sharding_specs, output_shapes,
         cachedComputation->computation, device);
@@ -1165,7 +1164,32 @@ XLAGraphExecutor::BuildInputOutputAliases(
         // Need to check whether existing buffer and the new value has the same
         // shape and the existing buffer has not been aliased before aliasing
         // the existing and new buffer.
-        if (parameter_data_shape == root_shape && alias_map[output_index] < 0) {
+
+        bool equal_sharding;
+        // get sharding for the parameter data
+        std::optional<xla::OpSharding> parameter_sharding =
+            torch_xla::runtime::GetComputationClient()->GetDataSharding(
+                UnwrapXlaData(parameters_data[i]));
+        // get sharding for output tensor
+        size_t output_tensor_index = indices[output_index];
+        XLATensor::ShardingSpecPtr output_sharding =
+            tensors[output_tensor_index]->sharding_spec();
+        if (!parameter_sharding && !output_sharding) {
+          // Both parameter and output does not have sharding.
+          // TODO(JackCaoG): It is possible that output might get a sharding
+          // after sharding propagation. Consier not aliased here(if under SPMD
+          // mode).
+          equal_sharding = true;
+        } else if (parameter_sharding && output_sharding) {
+          equal_sharding = ShardingUtil::EqualOpShardings(
+              *parameter_sharding, output_sharding->sharding);
+        } else {
+          // one of the parameter and output does not have sharding.
+          equal_sharding = false;
+        }
+
+        if (parameter_data_shape == root_shape && alias_map[output_index] < 0 &&
+            equal_sharding) {
           // parameter is not a tuple so param_index will always be {}
           lowering_ctx->builder()->SetUpAlias(
               {/*output_index=*/static_cast<int64_t>(output_index)},
@@ -1217,7 +1241,7 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
   // since the current aliasing compares the unpartitioned input and output
   // shapes which can lead to an incorrect aliasing pairs if sharded.
   if (enable_aliasing && coll.config.sync_ltc_data &&
-      coll.config.force_ltc_data && !is_sharded) {
+      coll.config.force_ltc_data) {
     // We can only alias at the step barrier, when force_ltc_data is true.
     // Consider the case:
     //   1. Tensor A(DEVICE_DATA)

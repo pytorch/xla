@@ -42,6 +42,10 @@ static inline torch::lazy::BackendDevice GetDeviceOrCurrent(
   return device != nullptr ? *device : GetCurrentDevice();
 }
 
+// Test whether the XLA_USE_SPMD environment variable is set to enable the
+// virtual device optimization.
+bool UseVirtualDevice();
+
 }  // namespace torch_xla
 
 #endif  // XLA_TORCH_XLA_CSRC_DEVICE_H_

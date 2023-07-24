@@ -141,20 +141,6 @@ std::vector<std::vector<int64_t>> ExtractGroupMembers(
 
 }  // namespace
 
-bool ShouldUseVirtualDevice() {
-  bool use_virtual_device =
-      runtime::sys_util::GetEnvBool("XLA_USE_SPMD", false);
-  if (use_virtual_device) {
-    TF_LOG(INFO) << "Using SPMD virtual device optimization";
-  }
-  return use_virtual_device;
-}
-
-bool ShardingUtil::UseVirtualDevice() {
-  static bool use_virtual_device = ShouldUseVirtualDevice();
-  return use_virtual_device;
-}
-
 bool ShardingUtil::SetHloSharding(LoweringContext* lowering_ctx) {
   bool is_sharded = false;
   for (std::pair<torch::lazy::Output, xla::XlaOp> elem :
@@ -193,6 +179,11 @@ ShardingUtil::ShardingType ShardingUtil::GetShardingType(
 bool ShardingUtil::EqualShardingSpecs(const XLATensor::ShardingSpec& a,
                                       const XLATensor::ShardingSpec& b) {
   return xla::protobuf_util::ProtobufEquals(a.sharding, b.sharding);
+}
+
+bool ShardingUtil::EqualOpShardings(const xla::OpSharding& a,
+                                    const xla::OpSharding& b) {
+  return xla::protobuf_util::ProtobufEquals(a, b);
 }
 
 xla::OpSharding ShardingUtil::CreateOpSharding(

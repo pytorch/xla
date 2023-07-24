@@ -106,13 +106,20 @@ bool Use32BitLong() {
   return use_32bit_long;
 }
 
+bool IsTpuDevice(XlaDeviceType hw_type) {
+  static bool spmd_device_is_tpu =
+      (hw_type == XlaDeviceType::SPMD) &&
+      runtime::GetComputationClient()->GetDefaultDevice().find("TPU") == 0;
+  return (hw_type == XlaDeviceType::TPU) || spmd_device_is_tpu;
+}
+
 xla::PrimitiveType XlaTypeFromTensorType(
     at::ScalarType scalar_type, const torch::lazy::BackendDevice& device) {
   XlaDeviceType hw_type = static_cast<XlaDeviceType>(device.type());
   switch (scalar_type) {
     case at::ScalarType::Double:
-      return hw_type != XlaDeviceType::TPU ? xla::PrimitiveType::F64
-                                           : xla::PrimitiveType::F32;
+      return !IsTpuDevice(hw_type) ? xla::PrimitiveType::F64
+                                   : xla::PrimitiveType::F32;
     case at::ScalarType::Float:
       return xla::PrimitiveType::F32;
     case at::ScalarType::BFloat16:
@@ -600,19 +607,7 @@ torch::lazy::BackendDataPtr TensorToXlaData(
     const at::Tensor& tensor, const xla::Shape& shape,
     const torch::lazy::BackendDevice& device) {
   TORCH_LAZY_TIMED("TensorToData");
-  if (ShardingUtil::UseVirtualDevice()) {
-    // Scalar value will be replicated, no need to delay the transfer here.
-    // TODO(JackCaoG): fix this for more general cases.
-    if (device.type() == (int8_t)XlaDeviceType::SPMD && shape.rank() > 0) {
-      // When SPMD is enabled, we want to delay the data transfer for XLA
-      // tensors until the data is sharded. So, we skip the data transfer
-      // here and simply return a placeholder for the backend data ptr.
-      // Data will only be transferred via CreateTensorsData, when users
-      // call the mark_sharding API.
-      return WrapXlaData(runtime::GetComputationClient()->CreateDataPlaceholder(
-          "SPMD:0", shape));
-    }
-
+  if (UseVirtualDevice()) {
     // The tensor is bypassing the virtual device, so it should be replicated
     // to all devices.
     std::vector<std::string> local_devices =
@@ -856,7 +851,7 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
   TORCH_LAZY_TIMED("TensorToData");
   XLA_CHECK_EQ(tensors.size(), devices.size());
 
-  if (ShardingUtil::UseVirtualDevice()) {
+  if (UseVirtualDevice()) {
     // When running in SPMD mode, tensors here in the unsharded
     // CreateTensorsData should be implicitly replicated to all devices.
     // This case should always apply when using SPMD regardless
@@ -936,7 +931,7 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
 
     std::vector<runtime::ComputationClient::TensorSource> source_tensors;  // in
     std::vector<runtime::ComputationClient::DataPtr> new_handles;  // out
-    if (ShardingUtil::UseVirtualDevice()) {
+    if (UseVirtualDevice()) {
       // GetLocalDevices returns the list of local devices specified by their
       // global ordinals (e.g. ["TPU:4", "TPU:5", "TPU:6", "TPU:7"]).
       std::vector<std::string> local_devices =
@@ -1160,8 +1155,8 @@ xla::PrimitiveType GetDevicePrimitiveType(
       if (DowncastBF16() || DowncastF16()) {
         return xla::PrimitiveType::F32;
       }
-      return hw_type != XlaDeviceType::TPU ? xla::PrimitiveType::F64
-                                           : xla::PrimitiveType::F32;
+      return !IsTpuDevice(hw_type) ? xla::PrimitiveType::F64
+                                   : xla::PrimitiveType::F32;
     case xla::PrimitiveType::F32:
       if (UseF16() || DowncastF16()) {
         return xla::PrimitiveType::F16;
@@ -1169,18 +1164,18 @@ xla::PrimitiveType GetDevicePrimitiveType(
       return UseBF16() || DowncastBF16() ? xla::PrimitiveType::BF16
                                          : xla::PrimitiveType::F32;
     case xla::PrimitiveType::U16:
-      return hw_type != XlaDeviceType::TPU ? xla::PrimitiveType::U16
-                                           : xla::PrimitiveType::U32;
+      return !IsTpuDevice(hw_type) ? xla::PrimitiveType::U16
+                                   : xla::PrimitiveType::U32;
     case xla::PrimitiveType::S16:
-      return hw_type != XlaDeviceType::TPU ? xla::PrimitiveType::S16
-                                           : xla::PrimitiveType::S32;
+      return !IsTpuDevice(hw_type) ? xla::PrimitiveType::S16
+                                   : xla::PrimitiveType::S32;
     case xla::PrimitiveType::S64:
       return Use32BitLong() ? xla::PrimitiveType::S32 : xla::PrimitiveType::S64;
     case xla::PrimitiveType::U64:
       return Use32BitLong() ? xla::PrimitiveType::U32 : xla::PrimitiveType::U64;
     case xla::PrimitiveType::C128:
-      return hw_type != XlaDeviceType::TPU ? xla::PrimitiveType::C128
-                                           : xla::PrimitiveType::C64;
+      return !IsTpuDevice(hw_type) ? xla::PrimitiveType::C128
+                                   : xla::PrimitiveType::C64;
     default:
       return type;
   }

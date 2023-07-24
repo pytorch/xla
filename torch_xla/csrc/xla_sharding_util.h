@@ -28,10 +28,6 @@ class ShardingUtil {
   // Determine the ShardingType of the given xla::OpSharding.
   static ShardingType GetShardingType(xla::OpSharding& sharding);
 
-  // Test whether the XLA_USE_SPMD environment variable is set to enable the
-  // virtual device optimization.
-  static bool UseVirtualDevice();
-
   // Annotates HLO instructions in the lowered computation and returns true if
   // the computation needs to be compiled with SPMD partitioning. For this call
   // to be effective, this needs to be called after the lowering and before
@@ -41,6 +37,10 @@ class ShardingUtil {
   // Returns true if two sharding specs are the same.
   static bool EqualShardingSpecs(const XLATensor::ShardingSpec& a,
                                  const XLATensor::ShardingSpec& b);
+
+  // Returns true if two OpShardings are the same.
+  static bool EqualOpShardings(const xla::OpSharding& a,
+                               const xla::OpSharding& b);
 
   // Creates an xla::OpSharding. `tile_assignmnent` is required for TILED
   // `sharding_type` and `replication_groups` for `PARTIAL`.
