@@ -19,7 +19,7 @@ class autocast(torch.amp.autocast_mode.autocast):
       super().__init__(
           "cuda",
           enabled=enabled,
-          dtype=torch.float16,
+          dtype=dtype,
           cache_enabled=cache_enabled)
     elif xm.xla_device_hw(device) == 'TPU':
       super().__init__(
