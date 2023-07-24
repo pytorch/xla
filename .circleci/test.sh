@@ -5,7 +5,7 @@ set -ex
 source ./xla_env
 source .circleci/common.sh
 
-PYTORCH_DIR=/tmp/pytorch
+PYTORCH_DIR=/workspace/pytorch
 XLA_DIR=$PYTORCH_DIR/xla
 USE_COVERAGE="${USE_COVERAGE:-0}"
 
@@ -25,6 +25,6 @@ function install_torchvision() {
 
 install_torchvision
 
-export GCLOUD_SERVICE_KEY_FILE="$XLA_DIR/default_credentials.json"
-export SILO_NAME='cache-silo-ci-gcc-11'  # cache bucket for CI
+export GCLOUD_SERVICE_KEY_FILE=~/.config/gcloud/application_default_credentials.json
+export SILO_NAME='cache-silo-ci-gcc-11-manfei-gpu-8'  # cache bucket for CI
 run_torch_xla_tests $PYTORCH_DIR $XLA_DIR $USE_COVERAGE
