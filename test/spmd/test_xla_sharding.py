@@ -745,6 +745,21 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     xm.mark_step()
     self.assertEqual(met.metric_data("InputOutputAliasCount")[0], 1)
 
+  def test_mark_sharding_ir_with_multiple_output(self):
+    partition_spec = (0,)
+    xt1 = torch.randn(8, 8).to(xm.xla_device())
+    # max return 2 tensors `value` and `indices`. They are the output
+    # of the same IR Node `MaxInDim`
+    (xt_val, xt_index) = torch.max(xt1, 1)
+    xst_val = xs.mark_sharding(xt_val, self._get_mesh((self.n_devices)),
+                               partition_spec)
+    # `xst_val`` should have sharding spec now, but `xst_index` should not
+    self.assertNotEqual(torch_xla._XLAC._get_xla_sharding_spec(xt_val), '')
+    self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(xt_index), '')
+    # xst_index's HLO should not have any sharding
+    self.assertNotIn('convert(s32[8]{0} %get-tuple-element.25), sharding',
+                     torch_xla._XLAC._get_xla_tensors_hlo([xt_index]))
+
 
 if __name__ == '__main__':
   test = unittest.main()

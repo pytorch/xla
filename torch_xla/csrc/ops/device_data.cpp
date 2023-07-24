@@ -17,7 +17,8 @@ DeviceData::DeviceData(std::shared_ptr<torch::lazy::BackendData> data)
       torch_xla::runtime::GetComputationClient()->GetDataSharding(
           UnwrapXlaData(data_));
   if (op_sharding.has_value()) {
-    SetSharding(op_sharding.value());
+    // DeviceData Node only has 1 output.
+    SetSharding(op_sharding.value(), 0);
   }
 }
 
