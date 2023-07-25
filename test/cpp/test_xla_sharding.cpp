@@ -41,12 +41,13 @@ TEST_F(XLAShardingTest, GetShardShape) {
       {2, 3},
   });
   auto sharding = xla::HloSharding::Tile(mesh).ToProto();
-  auto shard_shape = ShardingUtil::GetShardShape(tensor, sharding);
+  auto shard_shape =
+      ShardingUtil::GetShardShape(tensor.sizes().vec(), sharding);
   // For tiled sharding, each dimension should be halved
   EXPECT_EQ(shard_shape, std::vector<int64_t>({4, 4}));
 
   sharding = xla::HloSharding::Replicate().ToProto();
-  shard_shape = ShardingUtil::GetShardShape(tensor, sharding);
+  shard_shape = ShardingUtil::GetShardShape(tensor.sizes().vec(), sharding);
   // For replicated sharding, each dimension should be preserved
   EXPECT_EQ(shard_shape, std::vector<int64_t>({8, 7}));
 }
@@ -60,7 +61,8 @@ TEST_F(XLAShardingTest, GetShardIndicesForDevices) {
       {2, 3},
   });
   auto sharding = xla::HloSharding::Tile(mesh).ToProto();
-  auto shard_shape = ShardingUtil::GetShardShape(tensor, sharding);
+  auto shard_shape =
+      ShardingUtil::GetShardShape(tensor.sizes().vec(), sharding);
   auto shard_indices = ShardingUtil::GetShardIndicesForDevices(
       shard_shape, tensor.sizes().vec(), sharding, devices);
   EXPECT_EQ(shard_indices.size(), devices.size());
@@ -84,7 +86,7 @@ TEST_F(XLAShardingTest, GetShardIndicesForDevices) {
   }
 
   sharding = xla::HloSharding::Replicate().ToProto();
-  shard_shape = ShardingUtil::GetShardShape(tensor, sharding);
+  shard_shape = ShardingUtil::GetShardShape(tensor.sizes().vec(), sharding);
   shard_indices = ShardingUtil::GetShardIndicesForDevices(
       shard_shape, tensor.sizes().vec(), sharding, devices);
   EXPECT_EQ(shard_indices.size(), devices.size());
