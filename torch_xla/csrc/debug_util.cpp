@@ -178,7 +178,9 @@ void DebugUtil::SaveOutputShardingInfo(std::vector<XLATensorPtr>* tensors,
   thread_local const std::string save_file =
       runtime::sys_util::GetEnvOrdinalPath("XLA_SAVE_TENSORS_FILE", "",
                                            GetCurrentDevice().ordinal());
-  if (save_file.empty()) {
+  std::string fmt_str =
+      runtime::sys_util::GetEnvString("XLA_SAVE_TENSORS_FMT", "text");
+  if (save_file.empty() || fmt_str != 'hlo') {
     return;
   }
   std::stringstream ss;
