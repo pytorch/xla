@@ -301,11 +301,18 @@ class ZeroRedundancyOptimizer(Optimizer):
 
   def state_dict(self):
     state_dict = super().state_dict()
-    state_dict['base'] = self.base_optimizer.state_dict()
+    base_state = self.base_optimizer.state_dict()['state']
+    state_dict['base_state'] = base_state
     return state_dict
 
   def load_state_dict(self, state_dict):
     state_dict = copy.deepcopy(state_dict)
-    base = state_dict.pop('base')
+    base_state = state_dict.pop('base_state')
     super().load_state_dict(state_dict)
-    self.base_optimizer.load_state_dict(base)
+
+    # re-init base optimizer to make sure we have right shards
+    self.init_zero()
+
+    tmp = self.base_optimizer.state_dict()
+    tmp['state'] = base_state
+    self.base_optimizer.load_state_dict(tmp)
