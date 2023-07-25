@@ -211,8 +211,7 @@ xla::OpSharding ShardingUtil::CreateOpSharding(
     case ShardingType::PARTIAL: {
       XLA_CHECK(replication_groups.size() > 0)
           << "ShardingType.PARTIAL requires non-empty replication groups.";
-      xla::Array<int64_t> group_tile_assignment =
-          TileListToArray(group_assignment);
+      xla::Array<int64_t> group_tile = TileListToArray(group_assignment);
       auto group_members = ExtractGroupMembers(replication_groups);
       std::vector<absl::Span<const int64_t>> group_members_view;
       group_members_view.reserve(group_members.size());
@@ -220,18 +219,19 @@ xla::OpSharding ShardingUtil::CreateOpSharding(
         auto group_view = absl::MakeConstSpan(group);
         group_members_view.push_back(group_view);
       }
-      XLA_CHECK(group_tile_assignment.num_elements() ==
-                group_members_view.size());
-      std::vector<int64_t> new_tile_dims(
-          group_tile_assignment.dimensions().begin(),
-          group_tile_assignment.dimensions().end());
+      XLA_CHECK(group_tile.num_elements() == group_members_view.size());
+      // The original PartialTile API is deleted in
+      // https://github.com/openxla/xla/commit/728e13fb733dba2e633bdac3af6d133aa419d545.
+      // Port the logic in deleted API here.
+      std::vector<int64_t> new_tile_dims(group_tile.dimensions().begin(),
+                                         group_tile.dimensions().end());
       new_tile_dims.push_back(group_members_view[0].size());
       auto new_tile_assignment = xla::Array<int64_t>(new_tile_dims);
       new_tile_assignment.Each(
           [&](absl::Span<const int64_t> indices, int64_t* device) {
             std::vector<int64_t> group_index(indices.begin(), indices.end());
             group_index.pop_back();
-            int64_t group = group_tile_assignment(group_index);
+            int64_t group = group_tile(group_index);
             *device = group_members_view[group][indices.back()];
           });
       sharding = xla::HloSharding::PartialTile(new_tile_assignment).ToProto();

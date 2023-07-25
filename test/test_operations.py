@@ -1205,7 +1205,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.runAtenTest(torch.zeros([4, 4]), test_fn)
 
   @unittest.skipIf(xr.device_type() == 'GPU',
-                   "Failed with 0705 pin update.")
+                   "This test fails only on GPU with 07/05 XLA pin update.")
   def test_stack_pred(self):
 
     def test_fn(a):
