@@ -217,7 +217,7 @@ xla::OpSharding ShardingUtil::CreateOpSharding(
     case ShardingType::PARTIAL: {
       XLA_CHECK(replication_groups.size() > 0)
           << "ShardingType.PARTIAL requires non-empty replication groups.";
-      xla::Array<int64_t> group_tiling = TileListToArray(group_assignment);
+      xla::Array<int64_t> group_tile = TileListToArray(group_assignment);
       auto group_members = ExtractGroupMembers(replication_groups);
       std::vector<absl::Span<const int64_t>> group_members_view;
       group_members_view.reserve(group_members.size());
@@ -225,10 +225,22 @@ xla::OpSharding ShardingUtil::CreateOpSharding(
         auto group_view = absl::MakeConstSpan(group);
         group_members_view.push_back(group_view);
       }
-      XLA_CHECK(group_tiling.num_elements() == group_members_view.size());
-
-      sharding = xla::HloSharding::PartialTile(group_tiling, group_members_view)
-                     .ToProto();
+      XLA_CHECK(group_tile.num_elements() == group_members_view.size());
+      // The original PartialTile API is deleted in
+      // https://github.com/openxla/xla/commit/728e13fb733dba2e633bdac3af6d133aa419d545.
+      // Port the logic in deleted API here.
+      std::vector<int64_t> new_tile_dims(group_tile.dimensions().begin(),
+                                         group_tile.dimensions().end());
+      new_tile_dims.push_back(group_members_view[0].size());
+      auto new_tile_assignment = xla::Array<int64_t>(new_tile_dims);
+      new_tile_assignment.Each(
+          [&](absl::Span<const int64_t> indices, int64_t* device) {
+            std::vector<int64_t> group_index(indices.begin(), indices.end());
+            group_index.pop_back();
+            int64_t group = group_tile(group_index);
+            *device = group_members_view[group][indices.back()];
+          });
+      sharding = xla::HloSharding::PartialTile(new_tile_assignment).ToProto();
       break;
     }
     default: {
@@ -402,8 +414,18 @@ ShardingUtil::GetShardIndicesForDevices(
     std::fill_n(shard_indices.begin(), shard_indices.size(), indices);
   } else if (sharding.type() == xla::OpSharding::OTHER) {
     auto device_index = build_index_map(devices);
-    for (size_t i = 0; i < sharding.tile_assignment_devices().size(); i++) {
-      int64_t core = sharding.tile_assignment_devices()[i];
+    std::vector<int64_t> tile_assignment_devices(
+        sharding.tile_assignment_devices().begin(),
+        sharding.tile_assignment_devices().end());
+    if (!sharding.iota_reshape_dims().empty()) {
+      auto tileAssignment = xla::TileAssignment(
+          sharding.tile_assignment_dimensions(), sharding.iota_reshape_dims(),
+          sharding.iota_transpose_perm());
+      tile_assignment_devices = std::vector<int64_t>(
+          tileAssignment.array().begin(), tileAssignment.array().end());
+    }
+    for (size_t i = 0; i < tile_assignment_devices.size(); i++) {
+      int64_t core = tile_assignment_devices[i];
       if (device_index.find(core) == device_index.end()) {
         // Skip any shards whose device is not part of the `devices` list.
         continue;

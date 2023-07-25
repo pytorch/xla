@@ -38,9 +38,9 @@ static std::string getMlirModuleStr(mlir::ModuleOp& mlir_module) {
 static std::string getMlirModuleBytecode(const mlir::ModuleOp& mlir_module) {
   std::string txt_mlir_module;
   llvm::raw_string_ostream os{txt_mlir_module};
-  // TODO(qihqi): pass in version
+  // TODO(lsiyuan): get the highest StableHLO version from runtime.
   auto result = mlir::stablehlo::serializePortableArtifact(
-      mlir_module, /* target_version = */ "current", os);
+      mlir_module, /* target_version = */ "0.14.1", os);
   XLA_CHECK(result.succeeded()) << "Serializing StableHLO Failed";
   return txt_mlir_module;
 }

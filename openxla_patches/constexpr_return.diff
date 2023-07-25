@@ -1,0 +1,12 @@
+diff --git a/xla/primitive_util.h b/xla/primitive_util.h
+index 696147844..dfea15a4d 100644
+--- a/xla/primitive_util.h
++++ b/xla/primitive_util.h
+@@ -748,6 +748,7 @@ inline bool FitsInIntegralType(int64_t x, PrimitiveType ty) {
+                  std::numeric_limits<NativeT>::max() >= x;
+         }
+         LOG(FATAL) << "Invalid primitive type " << PrimitiveType_Name(ty);
++	return false;
+       },
+       ty);
+ }
