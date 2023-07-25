@@ -42,6 +42,9 @@ class DebugUtil {
       const std::vector<size_t>* indices,
       GraphFormat format = GetDefaultGraphFormat());
 
+  static void SaveOutputShardingInfo(std::vector<XLATensorPtr>* tensors,
+                                     absl::Span<const size_t> indices);
+
   static bool ExperimentEnabled(const std::string& name);
 };
 
