@@ -451,7 +451,8 @@ def all_reduce(reduce_type, inputs, scale=1.0, groups=None, pin_layout=True):
   groups = groups or []
 
   # No-op if there is only one device
-  if xrt_world_size() == 1:
+  if xrt_world_size() == 1 and not xu.getenv_as('XLA_ALWAYS_ALLREDUCE', bool,
+                                                False):
     if isinstance(inputs, torch.Tensor):
       return inputs.clone()
     else:
