@@ -112,7 +112,7 @@ class ReshardingTest(DistributedCheckpointTestBase):
 
   # TODO(jonbolin): Enable tests for resharding into coarser meshes
   @unittest.skip("View assignment with virtual device is not yet supported")
-  @unittest.skipIf(xr.global_device_count() == 1,
+  @unittest.skipIf(xr.global_runtime_device_count() == 1,
                    "Multiple devices needed to change mesh")
   def test_different_device_mesh(self):
     dim = self.n_devices // 2
@@ -170,7 +170,7 @@ class SPMDLoadPlannerTest(DistributedCheckpointTestBase):
       # If unsharded, there should be a single ReadItem per model parameter
       self.assertEqual(parameter_count, len(plan.items))
 
-  @unittest.skipIf(xr.global_device_count() == 1,
+  @unittest.skipIf(xr.global_runtime_device_count() == 1,
                    "Multiple devices required to shard tensors")
   def test_resolve_and_commit_sharded_tensor(self):
     model = self._get_sharded_model()
@@ -261,7 +261,7 @@ class SPMDSavePlannerTest(DistributedCheckpointTestBase):
         parameter_count = len(list(model.parameters()))
         _write_item_assertions(plan, self.n_devices, parameter_count)
 
-  @unittest.skipIf(xr.global_device_count() == 1,
+  @unittest.skipIf(xr.global_runtime_device_count() == 1,
                    "Multiple devices required to shard tensors")
   def test_resolve_shard_data(self):
     model = self._get_sharded_model()

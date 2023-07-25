@@ -4,6 +4,7 @@ import torch
 from torch import nn
 import torch_xla
 import torch_xla.core.xla_model as xm
+import torch_xla.runtime as xr
 import torch_xla.debug.profiler as xp
 import torch_xla.distributed.parallel_loader as pl
 import torch_xla.experimental.xla_sharding as xs
@@ -66,7 +67,7 @@ def train():
   torch.manual_seed(42)
   model = SimpleLinear().to(device)
 
-  num_devices = len(xm.get_xla_supported_devices())
+  num_devices = xr.global_runtime_device_count()
   print(f'num_devices: {num_devices}')
   # Define a mesh with all devices along one axis
   mesh_shape = (num_devices, 1)
