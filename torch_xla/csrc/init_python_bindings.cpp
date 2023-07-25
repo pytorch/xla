@@ -855,12 +855,47 @@ void InitXlaModuleBindings(py::module m) {
         [](const at::Tensor& tensor) { return GetTensorViewAliasId(tensor); });
   m.def("_xla_get_tensor_id",
         [](const at::Tensor& tensor) { return GetTensorId(tensor); });
-  m.def("_xla_get_devices",
+  m.def("_xla_get_devices", []() {
+    if (UseVirtualDevice()) {
+      // Under SPMD context, there is only one virtual devices from user
+      // perspective.
+      std::vector<std::string> all_devices =
+          runtime::GetComputationClient()->GetAllDevices();
+      all_devices.resize(1);
+      return all_devices;
+    } else {
+      return runtime::GetComputationClient()->GetLocalDevices();
+    }
+  });
+  m.def("_xla_num_devices", []() -> int64_t {
+    if (UseVirtualDevice()) {
+      return 1;
+    } else {
+      return runtime::GetComputationClient()->GetNumDevices();
+    }
+  });
+  m.def("_xla_get_all_devices", []() {
+    std::vector<std::string> all_devices =
+        runtime::GetComputationClient()->GetAllDevices();
+    if (UseVirtualDevice()) {
+      // Under SPMD context, there is only one virtual devices from user
+      // perspective.
+      std::vector<std::string> devices = {all_devices[0]};
+      return devices;
+    } else {
+      return all_devices;
+    }
+  });
+  m.def("_xla_get_runtime_devices",
         []() { return runtime::GetComputationClient()->GetLocalDevices(); });
-  m.def("_xla_num_devices",
-        []() { return runtime::GetComputationClient()->GetNumDevices(); });
-  m.def("_xla_get_all_devices",
-        []() { return runtime::GetComputationClient()->GetAllDevices(); });
+  m.def("_xla_num_runtime_devices", []() -> int64_t {
+    return runtime::GetComputationClient()->GetNumDevices();
+  });
+  m.def("_xla_get_all_runtime_devices", []() {
+    std::vector<std::string> all_devices =
+        runtime::GetComputationClient()->GetAllDevices();
+    return all_devices;
+  });
   m.def("_xla_real_devices", [](const std::vector<std::string>& devices) {
     std::vector<std::string> xla_devices;
     {

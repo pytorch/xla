@@ -188,22 +188,22 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
           {i: torch.device(f'xla:{i}') for i in range(self.num_devices)})
 
   @staticmethod
-  def _device_attributes():
-    return xr.device_attributes(str(xm.xla_device()))
+  def _runtime_device_attributes():
+    return xr.runtime_device_attributes(str(xm.xla_device()))
 
-  def test_device_attributes(self):
-    result = pjrt.run_multiprocess(self._device_attributes)
+  def test_runtime_device_attributes(self):
+    result = pjrt.run_multiprocess(self._runtime_device_attributes)
     for device in result.values():
       self.assertCountEqual(['coords', 'core_on_chip'], list(device.keys()))
       self.assertIsInstance(device['coords'], list)
       self.assertIsInstance(device['core_on_chip'], int)
 
   @staticmethod
-  def _global_device_attributes():
-    return xr.global_device_attributes()
+  def _global_runtime_device_attributes():
+    return xr.global_runtime_device_attributes()
 
-  def test_global_device_attributes(self):
-    results = pjrt.run_multiprocess(self._global_device_attributes)
+  def test_global_runtime_device_attributes(self):
+    results = pjrt.run_multiprocess(self._global_runtime_device_attributes)
     for result in results.values():
       for device in result:
         self.assertCountEqual(['coords', 'core_on_chip'], list(device.keys()))

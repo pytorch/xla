@@ -105,7 +105,7 @@ class HybridMesh(Mesh):
       dcn_mesh_shape = tuple([1] * len(ici_mesh_shape))
     assert len(ici_mesh_shape) == len(dcn_mesh_shape)
     mesh_shape = tuple([x * y for x, y in zip(ici_mesh_shape, dcn_mesh_shape)])
-    self.device_attributes = xr.global_device_attributes()
+    self.device_attributes = xr.global_runtime_device_attributes()
     if 'slice_index' in self.device_attributes[0] and np.prod(
         dcn_mesh_shape) == 1:
       raise ValueError('Provide dcn_mesh_shape to create a mesh for multislice')
@@ -248,7 +248,7 @@ class HybridMesh(Mesh):
     """
 
     if devices is None:
-      devices = np.arange(xr.global_device_count())
+      devices = np.arange(xr.global_runtime_device_count())
     if np.prod(mesh_shape) != len(devices):
       raise ValueError(
           f'Number of devices {len(devices)} must equal the product '
@@ -384,7 +384,7 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
     Examples
     —------------------------------
     mesh_shape = (4, 2)
-    num_devices = xr.global_device_count()
+    num_devices = xr.global_runtime_device_count()
     device_ids = np.array(range(num_devices))
     mesh = Mesh(device_ids, mesh_shape, ('x', 'y'))
 
@@ -396,7 +396,7 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
     linear = nn.Linear(32, 10).to(xm.xla_device())
     xs.mark_sharding(linear.weight, mesh, (None, 1))
   """
-  num_devices = xr.global_device_count()
+  num_devices = xr.global_runtime_device_count()
   assert num_devices > 0, "This requires XLA supported device(s)."
   assert mesh.size() == num_devices, \
     f"{mesh.mesh_shape} is not mappable over {num_devices} devices."
@@ -480,7 +480,7 @@ class ShardingSpec:
     partition_spec, mesh = self.partition_spec, self.mesh
     self._tile_assignment = _get_tile_assignment(mesh, partition_spec)
     self._sharding_type = _get_sharding_type(partition_spec,
-                                             xr.global_device_count())
+                                             xr.global_runtime_device_count())
     self._group_assignment, self._replication_groups = _get_group_assignment(
         self._sharding_type, partition_spec, self._tile_assignment)
 

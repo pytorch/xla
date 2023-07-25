@@ -18,6 +18,9 @@ import torch_xla.experimental.xla_sharding as xs
 from torch_xla.experimental.xla_sharded_tensor import XLAShardedTensor
 import test_xla_sharding_base
 
+import torch_xla.core.xla_env_vars as xenv
+import torch_xla.utils.utils as xu
+
 
 class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
 
@@ -649,7 +652,7 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
 
   @unittest.skipIf(xr.device_type() == 'TPU', "Crash on TPU v2")
   @unittest.skipUnless(
-      xm.get_xla_supported_devices("TPU"),
+      xu.getenv_as(xenv.PJRT_DEVICE, str) == "TPU",
       f"Requires PJRT_DEVICE set to `TPU`.")
   def test_hybrid_mesh_shape(self):
     mesh = self._get_mesh((1, self.n_devices))
@@ -659,7 +662,7 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
                      hybrid_mesh.get_logical_mesh().shape)
 
   @unittest.skipIf(xr.device_type() == 'TPU', "Crash on TPU v2")
-  @patch('torch_xla.runtime.global_device_attributes')
+  @patch('torch_xla.runtime.global_runtime_device_attributes')
   @patch('torch_xla.core.xla_model.xla_device_hw')
   def test_hybrid_mesh(self, xla_device_mock, device_attributes_mock):
     # mock device attributes for 2 slices of v4-8

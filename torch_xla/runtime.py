@@ -179,19 +179,32 @@ def process_count() -> int:
 
 
 @requires_pjrt
-def device_attributes(device: str) -> Dict[str, object]:
-  return torch_xla._XLAC._xla_get_device_attributes(device)
-
-
-@requires_pjrt
-def global_device_attributes() -> List[Dict[str, object]]:
-  return torch_xla._XLAC._xla_get_all_device_attributes()
-
-
-@requires_pjrt
 def host_index() -> int:
   if device_type() == 'TPU':
     return tpu.worker_id()
 
   # TODO: Update this when we support multi-host GPU
   return 0
+
+
+# API below will be used to query physcial device attribute.
+@requires_pjrt
+def runtime_device_attributes(device: str) -> Dict[str, object]:
+  return torch_xla._XLAC._xla_get_device_attributes(device)
+
+
+@requires_pjrt
+def global_runtime_device_attributes() -> List[Dict[str, object]]:
+  return torch_xla._XLAC._xla_get_all_device_attributes()
+
+
+@requires_pjrt
+def global_runtime_device_count() -> int:
+  """Returns the total number of runtime devices across all processes/hosts."""
+  return len(torch_xla._XLAC._xla_get_all_runtime_devices())
+
+
+@requires_pjrt
+def addressable_runtime_device_count() -> int:
+  """Returns the number of devices visible to this process."""
+  return torch_xla._XLAC._xla_num_runtime_devices()
