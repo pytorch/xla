@@ -98,9 +98,14 @@ function run_eager_debug {
   XLA_USE_EAGER_DEBUG_MODE=1 run_test "$@"
 }
 
-function run_save_tensor_file {
+function run_save_tensor_ir {
   echo "Running in save tensor file mode: $@"
-  XLA_SAVE_TENSORS_FILE="/tmp/xla_test_save_ir.txt" run_test "$@"
+  XLA_SAVE_TENSORS_FILE="/tmp/xla_test_save_ir.txt" XLA_SAVE_TENSORS_FMT="text" run_test "$@"
+}
+
+function run_save_tensor_hlo {
+  echo "Running in save tensor file mode: $@"
+  XLA_SAVE_TENSORS_FILE="/tmp/xla_test_save_ir.txt" XLA_SAVE_TENSORS_FMT="hlo" run_test "$@"
 }
 
 function run_xla_backend_mp {
@@ -180,7 +185,7 @@ function run_xla_op_tests {
   run_test "$CDIR/dynamo/test_dynamo.py"
   run_test "$CDIR/dynamo/test_bridge.py"
   run_test "$CDIR/dynamo/test_num_output.py"
-  run_save_tensor_file "$CDIR/dynamo/test_dynamo_graph_dump.py"
+  run_save_tensor_ir "$CDIR/dynamo/test_dynamo_graph_dump.py"
   run_downcast_bf16 "$CDIR/test_data_type.py"
   run_use_bf16 "$CDIR/test_data_type.py"
   run_xla_ir_debug "$CDIR/test_env_var_mapper.py"
@@ -198,6 +203,8 @@ function run_xla_op_tests {
   run_test "$CDIR/spmd/test_xla_virtual_device.py"
   run_test "$CDIR/spmd/test_dynamo_spmd.py"
   run_test "$CDIR/spmd/test_xla_distributed_checkpoint.py"
+  run_save_tensor_ir "$CDIR/spmd/test_spmd_graph_dump.py"
+  run_save_tensor_hlo "$CDIR/spmd/test_spmd_graph_dump.py"
   run_test "$CDIR/test_operations_hlo.py" "$@" --verbosity=$VERBOSITY
   run_test "$CDIR/test_input_output_aliases.py"
   run_test "$CDIR/test_torch_distributed_xla_backend.py"

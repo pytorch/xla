@@ -1081,6 +1081,7 @@ XLAGraphExecutor::ScheduleSyncTensorsGraph(
     ShardingUtil::PrepareOutputShardingPropagation(
         tensors, coll->indices, cached_computation->computation, &tensors_data,
         &sharding_specs);
+    DebugUtil::SaveOutputShardingInfo(tensors, coll->indices);
   }
 
   return ScheduleSyncTensorsGraph(
