@@ -502,8 +502,8 @@ std::vector<at::Tensor> ShardingUtil::ShardTensor(
     const std::vector<std::string>& devices, bool padded) {
   auto sharding = shardings->sharding;
   bool minibatch = shardings->minibatch;
-  TF_LOG(INFO) << "ShardTensor with sharding type(" << sharding.type() << ")... and minibatch = " << minibatch
-               << std::endl;
+  TF_LOG(INFO) << "ShardTensor with sharding type(" << sharding.type()
+               << ")... and minibatch = " << minibatch << std::endl;
   auto device_index = build_index_map(devices);
   std::vector<at::Tensor> shards(devices.size());
   if (sharding.type() == xla::OpSharding::REPLICATED) {
