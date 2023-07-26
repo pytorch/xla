@@ -1,5 +1,6 @@
 import contextlib
 import functools
+import os
 import re
 from unittest import mock
 
@@ -39,6 +40,8 @@ class XlaBackendTest(parameterized.TestCase):
 
   @classmethod
   def setUpClass(cls):
+    # Add no-op all-reduce ops to HLO
+    os.environ['XLA_ALWAYS_ALLREDUCE'] = '1'
     dist.init_process_group('xla', init_method='pjrt://')
 
   def tearDown(self) -> None:
