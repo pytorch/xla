@@ -173,6 +173,34 @@ void DebugUtil::SaveTensorsGraphInfo(const char* name,
   }
 }
 
+void DebugUtil::SaveOutputShardingInfo(std::vector<XLATensorPtr>* tensors,
+                                       absl::Span<const size_t> indices) {
+  thread_local const std::string save_file =
+      runtime::sys_util::GetEnvOrdinalPath("XLA_SAVE_TENSORS_FILE", "",
+                                           GetCurrentDevice().ordinal());
+  std::string fmt_str =
+      runtime::sys_util::GetEnvString("XLA_SAVE_TENSORS_FMT", "text");
+  if (save_file.empty() || fmt_str != "hlo") {
+    return;
+  }
+  std::stringstream ss;
+  for (int i = 0; i < indices.size(); ++i) {
+    auto xtensor = (*tensors)[indices[i]];
+    ss << xtensor->shape().get().ToString() << " ";
+    if (xtensor->sharding_spec()) {
+      ss << xla::HloSharding::FromProto(xtensor->sharding_spec()->sharding)
+                ->ToString();
+    } else {
+      ss << xla::HloSharding::FromProto(xla::HloSharding::Replicate().ToProto())
+                ->ToString();
+    }
+    ss << "\n";
+  }
+  std::ofstream graph_file(save_file, std::ios_base::app);
+  graph_file << "\n#OUTPUT_SHARDING_BEGIN\n\n"
+             << ss.str() << "\n#OUTPUT_SHARDING_END\n\n";
+}
+
 bool DebugUtil::ExperimentEnabled(const std::string& name) {
   static const std::unordered_set<std::string>* xset = LoadExperiments();
   return xset->find(name) != xset->end();
