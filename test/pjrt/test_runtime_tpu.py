@@ -319,6 +319,7 @@ class TestTpuCollectiveOps(parameterized.TestCase):
     ).to(device)
     xm.mark_step()
 
+    print("before xm.all_to_all in _all_to_all")
     out = xm.all_to_all(
         tensor,
         split_dimension=0,
@@ -326,12 +327,17 @@ class TestTpuCollectiveOps(parameterized.TestCase):
         split_count=world_size,
         pin_layout=pin_layout,
     )
+    print("after xm.all_to_all in _all_to_all")
 
+    print("out")
+    print(out)
     return out.cpu().numpy()
 
   @parameterized.named_parameters(('pinned', True), ('unpinned', False))
   def test_all_to_all(self, pin_layout):
+    print("before results = pjrt.run_multiprocess(self._all_to_all, pin_layout)")
     results = pjrt.run_multiprocess(self._all_to_all, pin_layout)
+    print("after results = pjrt.run_multiprocess(self._all_to_all, pin_layout)")
 
     for ordinal, value in results.items():
       np.testing.assert_array_equal(value, [[[-ordinal] * len(results),
