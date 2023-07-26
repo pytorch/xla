@@ -767,6 +767,15 @@
 <span class="sd">    returns the list/tuple itself.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="n">groups</span> <span class="o">=</span> <span class="n">groups</span> <span class="ow">or</span> <span class="p">[]</span>
+
+  <span class="c1"># No-op if there is only one device</span>
+  <span class="k">if</span> <span class="n">xrt_world_size</span><span class="p">()</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">xu</span><span class="o">.</span><span class="n">getenv_as</span><span class="p">(</span><span class="s1">&#39;XLA_ALWAYS_ALLREDUCE&#39;</span><span class="p">,</span> <span class="nb">bool</span><span class="p">,</span>
+                                                <span class="kc">False</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+      <span class="k">return</span> <span class="n">inputs</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">return</span> <span class="n">inputs</span>
+
   <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
     <span class="n">result</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="k">if</span> <span class="n">scale</span> <span class="o">==</span> <span class="mf">1.0</span> <span class="ow">and</span> <span class="n">groups</span> <span class="o">==</span> <span class="p">[]</span> <span class="ow">and</span> <span class="n">pin_layout</span><span class="p">:</span>
