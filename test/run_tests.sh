@@ -55,6 +55,7 @@ function run_coverage {
 
 function run_test {
   echo "Running in PjRt runtime: $@"
+  nvidia-smi
   if [ -x "$(command -v nvidia-smi)" ] && [ "$XLA_CUDA" != "0" ]; then
     PJRT_DEVICE=GPU run_coverage "$@"
   else
