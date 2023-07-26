@@ -13,15 +13,19 @@ class autocast(torch.amp.autocast_mode.autocast):
   def __init__(self,
                device,
                enabled: bool = True,
-               dtype: torch.dtype = torch.bfloat16,
+               dtype: torch.dtype = None,
                cache_enabled: bool = True):
     if xm.xla_device_hw(device) == 'GPU':
+      if dtype is None:
+        dtype = torch.float16
       super().__init__(
           "cuda",
           enabled=enabled,
           dtype=dtype,
           cache_enabled=cache_enabled)
     elif xm.xla_device_hw(device) == 'TPU':
+      if dtype is None:
+        dtype = torch.bfloat16
       super().__init__(
           "xla", enabled=enabled, dtype=dtype, cache_enabled=cache_enabled)
     else:
