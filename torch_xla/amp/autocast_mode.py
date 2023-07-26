@@ -19,10 +19,7 @@ class autocast(torch.amp.autocast_mode.autocast):
       if dtype is None:
         dtype = torch.float16
       super().__init__(
-          "cuda",
-          enabled=enabled,
-          dtype=dtype,
-          cache_enabled=cache_enabled)
+          "cuda", enabled=enabled, dtype=dtype, cache_enabled=cache_enabled)
     elif xm.xla_device_hw(device) == 'TPU':
       if dtype is None:
         dtype = torch.bfloat16
