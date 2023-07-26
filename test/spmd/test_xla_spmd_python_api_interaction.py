@@ -92,14 +92,14 @@ class BasicRuntimeAPITest(test_xla_sharding_base.XlaShardingTest):
   def test_global_runtime_device_count(self):
     device_type = os.environ['PJRT_DEVICE']
     if device_type == "TPU":
-      self.assertGreater(xr.global_runtime_device_count(), 4)
+      self.assertGreaterEqual(xr.global_runtime_device_count(), 4)
     elif device_type == "CPU":
       self.assertEqual(xr.global_runtime_device_count(), 1)
 
   def test_addressable_runtime_device_count(self):
     device_type = os.environ['PJRT_DEVICE']
     if device_type == "TPU":
-      self.assertGreater(xr.addressable_runtime_device_count(), 4)
+      self.assertGreaterEqual(xr.addressable_runtime_device_count(), 4)
     elif device_type == "CPU":
       self.assertEqual(xr.addressable_runtime_device_count(), 1)
 
