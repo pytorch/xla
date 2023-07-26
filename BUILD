@@ -15,6 +15,7 @@ cc_binary(
     linkopts = [
         "-Wl,-rpath,$$ORIGIN/torch_xla/lib",  # for libtpu
         "-Wl,-soname,_XLAC.so",
+        "-lstdc++fs",  # For std::filesystem
     ],
     linkshared = 1,
     visibility = ["//visibility:public"],
