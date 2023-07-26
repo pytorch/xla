@@ -96,6 +96,21 @@ TEST_F(XLAShardingTest, GetShardIndicesForDevices) {
   }
 }
 
+// TEST_F(XLAShardingTest, GetShardIndicesForBatchShardedTensor) {
+//     std::vector<std::string> devices = {"TPU:0", "TPU:1", "TPU:2", "TPU:3"};
+
+//     auto tensor = at::ones({8, 7}, at::TensorOptions(at::kFloat));
+//     xla::Array2D<int64_t> mesh({
+//       {0},
+//       {1},
+//       {2},
+//       {3},
+//     });
+//     auto sharding = xla::HloSharding::Tile(mesh).ToProto();
+//     auto shard_shape =
+//       ShardingUtil::GetShardShape(tensor.sizes().vec(), sharding);
+// }
+
 TEST_F(XLAShardingTest, ShardTensor) {
   std::vector<std::string> devices = {"TPU:0", "TPU:1", "TPU:2", "TPU:3",
                                       "TPU:4", "TPU:5", "TPU:6", "TPU:7"};

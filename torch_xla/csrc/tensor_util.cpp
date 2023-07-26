@@ -955,11 +955,11 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
       // The execution requires consistent shard sizes, and the zero-padded
       // values should be ignored.
       std::vector<at::Tensor> local_shards =
-          ShardingUtil::ShardTensor(tensors[i], sharding, local_devices,
-                                    /*padded=*/true, /*minibatch=*/minibatch);
+          ShardingUtil::ShardTensor(tensors[i], shardings[i], local_devices,
+                                    /*padded=*/true);
       if (minibatch) {  // change global shape as tensor is already sharded
                         // accross batch dimesion.
-        shape = shardings[i]->shape.value();
+        shape = shardings[i]->shape;
       }
       new_handles.push_back(ShardingUtil::CreateShardedData(
           local_shards, local_devices, shape, sharding));

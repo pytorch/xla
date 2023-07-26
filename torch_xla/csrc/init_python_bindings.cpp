@@ -794,13 +794,14 @@ void InitXlaModuleBindings(py::module m) {
                        bool minibatch) {
         xla::Shape tensor_shape =
             CreateComputationShapeFromTensor(tensor, nullptr);
-        int num_local_devices =
-            runtime::GetComputationClient()->GetLocalDevices().size();
-        int num_global_devices =
-            runtime::GetComputationClient()->GetAllDevices().size();
         if (minibatch) {
+          int num_local_devices =
+              runtime::GetComputationClient()->GetLocalDevices().size();
+          int num_global_devices =
+              runtime::GetComputationClient()->GetAllDevices().size();
           XLA_CHECK(tile_assignment.size() == num_global_devices)
-              << "Sharding of input is only supported along batch dimension";
+              << "Minibatch sharding only supports sharding along the batch "
+                 "dimension";
           int batch_dim_shape =
               tensor.sizes()[0] * num_global_devices / num_local_devices;
           tensor_shape.set_dimensions(0, batch_dim_shape);
@@ -1504,10 +1505,9 @@ void InitXlaModuleBindings(py::module m) {
           for (auto& shard : shards) {
             shard_devices.push_back(shard->device());
           }
-
+          auto sharding_spec = xtensor->sharding_spec();
           auto sharding = xtensor->sharding_spec()->sharding;
-          auto shard_shape =
-              ShardingUtil::GetShardShape(input.sizes().vec(), sharding);
+          auto shard_shape = ShardingUtil::GetShardShape(sharding_spec);
           auto indices = ShardingUtil::GetShardIndicesForDevices(
               shard_shape, input.sizes().vec(), sharding, shard_devices);
 
@@ -1547,11 +1547,11 @@ void InitXlaModuleBindings(py::module m) {
               runtime::GetComputationClient()->GetLocalDevices().size())
         << "Shards must be provided for all local devices";
     auto sharding = xtensor->sharding_spec()->sharding;
+    auto sharding_spec = xtensor->sharding_spec();
     XLA_CHECK(sharding.type() != xla::OpSharding::REPLICATED)
         << "Replicated tensor should not be loaded from _load_local_shards - "
            "use copy_";
-    auto shard_shape =
-        ShardingUtil::GetShardShape(tensor.sizes().vec(), sharding);
+    auto shard_shape = ShardingUtil::GetShardShape(sharding_spec);
     for (auto shard : shards) {
       XLA_CHECK(shard.sizes() == shard_shape)
           << "Input shard shape must include padding: " << shard.sizes()
