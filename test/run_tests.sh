@@ -172,6 +172,7 @@ function run_xla_op_tests {
   run_test "$CDIR/spmd/test_xla_virtual_device.py"
   run_test "$CDIR/spmd/test_dynamo_spmd.py"
   run_test "$CDIR/spmd/test_xla_distributed_checkpoint.py"
+  run_test "$CDIR/spmd/test_xla_spmd_python_api_interaction.py"
   run_save_tensor_ir "$CDIR/spmd/test_spmd_graph_dump.py"
   run_save_tensor_hlo "$CDIR/spmd/test_spmd_graph_dump.py"
   run_test "$CDIR/test_operations_hlo.py" "$@" --verbosity=$VERBOSITY
