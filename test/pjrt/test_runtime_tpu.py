@@ -307,6 +307,7 @@ class TestTpuCollectiveOps(parameterized.TestCase):
 
   @staticmethod
   def _all_to_all(pin_layout):
+    print("start _all_to_all of xm._all_to_all")
     device = xm.xla_device()
     world_size = xm.xrt_world_size()
 
@@ -317,6 +318,7 @@ class TestTpuCollectiveOps(parameterized.TestCase):
         ],
         dim=1,
     ).to(device)
+    print(pin_layout)
     xm.mark_step()
 
     print("before xm.all_to_all in _all_to_all")
