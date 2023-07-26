@@ -376,10 +376,11 @@ std::vector<runtime::ComputationClient::DataPtr> ShardingUtil::OutputHandler(
 std::vector<int64_t> ShardingUtil::GetShardShape(
     const XLATensor::ShardingSpecPtr shardings) {
   auto sharding = shardings->sharding;
-  auto global_shape = XlaHelpers::GetAllDimensions(shardings->shape);
-  TF_LOG(ERROR) << "Print global shape" << global_shape;
+  auto global_shape = shardings->shape.dimensions();
   if (sharding.type() == xla::OpSharding::REPLICATED) {
-    return global_shape;
+    std::vector<int64_t> globalShape;
+    globalShape.assign(global_shape.begin(), global_shape.end());
+    return globalShape;
   } else if (sharding.type() == xla::OpSharding::OTHER) {
     auto tile_shape = sharding.tile_assignment_dimensions();
 
@@ -501,7 +502,7 @@ std::vector<at::Tensor> ShardingUtil::ShardTensor(
     const std::vector<std::string>& devices, bool padded) {
   auto sharding = shardings->sharding;
   bool minibatch = shardings->minibatch;
-  TF_LOG(INFO) << "ShardTensor with sharding type(" << sharding.type() << ")..."
+  TF_LOG(INFO) << "ShardTensor with sharding type(" << sharding.type() << ")... and minibatch = " << minibatch
                << std::endl;
   auto device_index = build_index_map(devices);
   std::vector<at::Tensor> shards(devices.size());
@@ -512,9 +513,7 @@ std::vector<at::Tensor> ShardingUtil::ShardTensor(
     XLA_CHECK(tensor.sizes().size() >= sharding.tile_shape().dimensions_size());
 
     auto shard_shape = GetShardShape(shardings);
-    // if (minibatch) {
-    //   shard_shape[0] = tensor.sizes().vec()[0] / devices.size();
-    // }
+
     std::vector<std::vector<at::indexing::TensorIndex>> shard_indices;
     if (minibatch) {
       shard_indices = GetShardIndicesForMinibatchTensor(
