@@ -88,7 +88,7 @@ class ShardingUtil {
   // `sharding`. This assumes the shards will be padded to ensure they all
   // have the same shape.
   static std::vector<int64_t> GetShardShape(
-      const std::vector<int64_t>& tensor_shape, const xla::OpSharding sharding);
+      const XLATensor::ShardingSpecPtr shardings);
 
   // Uses the provided `sharding` spec and expected shard shape to determine the
   // index slices for the shards which belong on `devices`. Only supports
@@ -102,10 +102,10 @@ class ShardingUtil {
   // Returns the indices for the shards. Supports `OTHER` sharding types and
   // called when input is sharded along the batch axis.
   static std::vector<std::vector<at::indexing::TensorIndex>>
-  GetShardIndicesForBatchShardedTensor(const std::vector<int64_t>& shard_shape,
-                                       const std::vector<int64_t>& tensor_shape,
-                                       const xla::OpSharding sharding,
-                                       const std::vector<std::string>& devices);
+  GetShardIndicesForMinibatchTensor(const std::vector<int64_t>& shard_shape,
+                                    const std::vector<int64_t>& tensor_shape,
+                                    const xla::OpSharding sharding,
+                                    const std::vector<std::string>& devices);
 
   // Shards a tensor and returns the sharded tensors which belong on `devices`
   // based on the `sharding` spec. REPLICATED sharding should result in shards
@@ -117,9 +117,8 @@ class ShardingUtil {
   // The the returned tensors will be in 1:1 correspondence with the `devices`
   // vector, so the `i`th result will belong on the `i`th device.
   static std::vector<at::Tensor> ShardTensor(
-      const at::Tensor& tensor, const xla::OpSharding sharding,
-      const std::vector<std::string>& devices, bool padded = true,
-      bool minibatch = false);
+      const at::Tensor& tensor, const XLATensor::ShardingSpecPtr shardings,
+      const std::vector<std::string>& devices, bool padded = true);
 
   // Prepares output sharding propagation by extracting output parameter
   // ShardingSpec into `sharding_specs` from the SPMD compiled `computation` and

@@ -7,6 +7,7 @@
 
 #include "torch/csrc/lazy/core/ir_util.h"
 #include "torch_xla/csrc/device.h"
+#include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/tensor.h"
@@ -326,13 +327,13 @@ std::vector<runtime::ComputationClient::DataPtr> ShardingUtil::OutputHandler(
     XLATensor::ShardingSpecPtr sharding = sharding_specs[i];
     if (replicated_output && sharding &&
         (sharding->sharding.type() != xla::OpSharding::REPLICATED)) {
-      XLA_CHECK(sharding->shape.has_value())
-          << "Sharding or Wrapping data shards in OutputHandler requires "
-             "unpartitioned tensor shape.";
+      // XLA_CHECK(sharding->shape.has_value())
+      //     << "Sharding or Wrapping data shards in OutputHandler requires "
+      //        "unpartitioned tensor shape.";
       // Reshards replicated output if `sharding` is present.
       std::vector<at::Tensor> tensors = XlaDataToTensors(
           {WrapXlaData(sharded_results[0][i])},
-          TensorTypeFromXlaType(sharding->shape.value().element_type()));
+          TensorTypeFromXlaType(sharding->shape.element_type()));
       outputs.push_back(UnwrapXlaData(CreateTensorsData(
           tensors, {sharding},
           std::vector<std::string>{GetVirtualDevice().toString()})[0]));
@@ -352,7 +353,7 @@ std::vector<runtime::ComputationClient::DataPtr> ShardingUtil::OutputHandler(
             sharded_results[0][i]->shape());
       }
       outputs.push_back(runtime::GetComputationClient()->WrapDataShards(
-          shards, GetVirtualDevice().toString(), sharding->shape.value(),
+          shards, GetVirtualDevice().toString(), sharding->shape,
           sharding->sharding));
     }
   }
@@ -360,7 +361,10 @@ std::vector<runtime::ComputationClient::DataPtr> ShardingUtil::OutputHandler(
 }
 
 std::vector<int64_t> ShardingUtil::GetShardShape(
-    const std::vector<int64_t>& global_shape, const xla::OpSharding sharding) {
+    const XLATensor::ShardingSpecPtr shardings) {
+  auto sharding = shardings->sharding;
+  auto global_shape = XlaHelpers::GetAllDimensions(shardings->shape);
+  TF_LOG(ERROR) << "Print global shape" << global_shape;
   if (sharding.type() == xla::OpSharding::REPLICATED) {
     return global_shape;
   } else if (sharding.type() == xla::OpSharding::OTHER) {
@@ -383,7 +387,7 @@ std::vector<int64_t> ShardingUtil::GetShardShape(
 }
 
 std::vector<std::vector<at::indexing::TensorIndex>>
-ShardingUtil::GetShardIndicesForBatchShardedTensor(
+ShardingUtil::GetShardIndicesForMinibatchTensor(
     const std::vector<int64_t>& shard_shape,
     const std::vector<int64_t>& tensor_shape, const xla::OpSharding sharding,
     const std::vector<std::string>& devices) {
@@ -470,8 +474,10 @@ ShardingUtil::GetShardIndicesForDevices(
 }
 
 std::vector<at::Tensor> ShardingUtil::ShardTensor(
-    const at::Tensor& tensor, const xla::OpSharding sharding,
-    const std::vector<std::string>& devices, bool padded, bool minibatch) {
+    const at::Tensor& tensor, const XLATensor::ShardingSpecPtr shardings,
+    const std::vector<std::string>& devices, bool padded) {
+  auto sharding = shardings->sharding;
+  bool minibatch = shardings->minibatch;
   TF_LOG(INFO) << "ShardTensor with sharding type(" << sharding.type() << ")..."
                << std::endl;
   auto device_index = build_index_map(devices);
@@ -482,13 +488,13 @@ std::vector<at::Tensor> ShardingUtil::ShardTensor(
     XLA_CHECK(sharding.tile_shape().dimensions_size() <= 2);
     XLA_CHECK(tensor.sizes().size() >= sharding.tile_shape().dimensions_size());
 
-    auto shard_shape = GetShardShape(tensor.sizes().vec(), sharding);
-    if (minibatch) {
-      shard_shape[0] = tensor.sizes().vec()[0] / devices.size();
-    }
+    auto shard_shape = GetShardShape(shardings);
+    // if (minibatch) {
+    //   shard_shape[0] = tensor.sizes().vec()[0] / devices.size();
+    // }
     std::vector<std::vector<at::indexing::TensorIndex>> shard_indices;
     if (minibatch) {
-      shard_indices = GetShardIndicesForBatchShardedTensor(
+      shard_indices = GetShardIndicesForMinibatchTensor(
           shard_shape, tensor.sizes().vec(), sharding, devices);
     } else {
       shard_indices = GetShardIndicesForDevices(
@@ -583,8 +589,7 @@ void ShardingUtil::PrepareOutputShardingPropagation(
     // replication.
     auto sharded_data_placeholder =
         WrapXlaData(runtime::GetComputationClient()->WrapDataShards(
-            {}, GetVirtualDevice().toString(),
-            (*sharding_specs)[i]->shape.value(),
+            {}, GetVirtualDevice().toString(), (*sharding_specs)[i]->shape,
             (*sharding_specs)[i]->sharding));
 
     // Register the sharded data placeholder to the tensor and its node.
@@ -647,7 +652,7 @@ void ShardingUtil::PrepareOutputShardingPropagation(
     // replication.
     auto sharded_data_placeholder =
         WrapXlaData(runtime::GetComputationClient()->WrapDataShards(
-            {}, GetVirtualDevice().toString(), sharding_specs[i]->shape.value(),
+            {}, GetVirtualDevice().toString(), sharding_specs[i]->shape,
             sharding_specs[i]->sharding));
 
     // Register the sharded data placeholder to the tensor and its node.
