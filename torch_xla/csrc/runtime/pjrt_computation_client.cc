@@ -119,6 +119,7 @@ PjRtComputationClient::PjRtComputationClient() {
     int local_rank = sys_util::GetEnvInt(env::kEnvPjRtLocalRank, 0);
     std::string dist_service_addr =
         sys_util::GetEnvString(env::kEnvPjrtDistServiceAddr, "");
+    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": Initializing PjRt GPU client for GPU. local_rank=" << local_rank << ", dist_service_addr=" << dist_service_addr << std::endl;
     auto distributed_client =
         MaybeInitializeDistributedRuntimeClient(local_rank, dist_service_addr);
     auto allowed_devices =

@@ -132,11 +132,14 @@ def run_multiprocess(fn: Callable[..., R],
     Dict of the form {device_ordinal: return_value}, where
     return_value is the result of calling `fn`.
   """
+  print('xw32 begin pjrt.py run_multiprocess.')
   if runtime.device_type() == 'TPU':
     num_processes = tpu.num_local_processes()
   elif runtime.device_type() == 'GPU':
+    print('xw32 begin pjrt.py run_multiprocess. Begin to run gpu.initialize_distributed_runtime.')
     num_processes = gpu.num_local_processes()
     gpu.initialize_distributed_runtime(num_processes)
+    print('xw32 begin pjrt.py run_multiprocess. End runing gpu.initialize_distributed_runtime.')
   else:
     num_processes = 1
 
