@@ -87,14 +87,14 @@ class ShardingUtil {
   // Returns the shape of the resulting shards of `tensor` after applying
   // `sharding`. This assumes the shards will be padded to ensure they all
   // have the same shape.
-  static std::vector<int64_t> GetShardShape(
+  static absl::Span<const int64_t> GetShardShape(
       const XLATensor::ShardingSpecPtr shardings);
 
   // Uses the provided `sharding` spec and expected shard shape to determine the
   // index slices for the shards which belong on `devices`. Only supports
   // `REPLICATED` and `OTHER` sharding types.
   static std::vector<std::vector<at::indexing::TensorIndex>>
-  GetShardIndicesForDevices(const std::vector<int64_t>& shard_shape,
+  GetShardIndicesForDevices(const absl::Span<const int64_t>& shard_shape,
                             const std::vector<int64_t>& tensor_shape,
                             const xla::OpSharding sharding,
                             const std::vector<std::string>& devices);
@@ -102,7 +102,7 @@ class ShardingUtil {
   // Returns the indices for the shards. Supports `OTHER` sharding types and
   // called when input is sharded along the batch axis.
   static std::vector<std::vector<at::indexing::TensorIndex>>
-  GetShardIndicesForMinibatchTensor(const std::vector<int64_t>& shard_shape,
+  GetShardIndicesForMinibatchTensor(const absl::Span<const int64_t>& shard_shape,
                                     const std::vector<int64_t>& tensor_shape,
                                     const xla::OpSharding sharding,
                                     const std::vector<std::string>& devices);

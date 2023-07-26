@@ -1519,8 +1519,8 @@ void InitXlaModuleBindings(py::module m) {
     auto shard_shape = ShardingUtil::GetShardShape(sharding_spec);
     for (auto shard : shards) {
       XLA_CHECK(shard.sizes() == shard_shape)
-          << "Input shard shape must include padding: " << shard.sizes()
-          << " vs " << shard_shape;
+          << "Input shard shape must include padding: " << shard.sizes();
+          // << " vs " << shard_shape;
     }
     auto xla_data = ShardingUtil::CreateShardedData(shards, devices,
                                                     xtensor->shape(), sharding);
