@@ -272,7 +272,7 @@ class DynamoTrainingBasicTest(unittest.TestCase):
 
     for data, target in loader:
       dynamo_train_model = torch.compile(
-        self.train_model, backend='aot_torchxla_trace_once')
+        xla_resnet18, backend='aot_torchxla_trace_once')
       
       data_xla = data.detach().to(device)
       data_xla.requires_grad = True
@@ -280,7 +280,7 @@ class DynamoTrainingBasicTest(unittest.TestCase):
       # output_cpu = resnet18(data)
       target_xla = target.detach().to(device)
       
-      xla_output = dynamo_train_model(xla_resnet18, data_xla, target_xla)
+      xla_output = dynamo_train_model(data_xla, target_xla)
       
       # data_xla = data.detach().to(device)
       # data_xla.requires_grad = True 
@@ -294,7 +294,7 @@ class DynamoTrainingBasicTest(unittest.TestCase):
       # cpu_data = data.detach().cpu()
       # cpu_data.requires_grad = True
       # cpu_target = target.detach().cpu()
-      cpu_output = self.train_model(resnet18, data, target)
+      cpu_output = resnet18(data, target)
       print("data")                            
       print(data)
       print("target")
