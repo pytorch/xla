@@ -92,8 +92,8 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     batch_size = xu.getenv_as('BATCH_SIZE', int, defval=4)
     sample_count = xu.getenv_as('SAMPLE_COUNT', int, defval=10)
     loader = xu.SampleGenerator(
-        data=(torch.randn(batch_size, 3, 224, 224, device=device),
-              torch.zeros(batch_size, dtype=torch.int64, device=device)),
+        data=(torch.randn(batch_size, 3, 224, 224),
+              torch.zeros(batch_size, dtype=torch.int64)),
         sample_count=sample_count)
     resnet18 = torchvision.models.resnet18()
     resnet18.eval()
@@ -108,8 +108,10 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     for data, _ in loader:
       dynamo_resnet18 = torch.compile(
           xla_resnet18, backend='torchxla_trace_once')
-      output = dynamo_resnet18(data)
-      output_cpu = resnet18(data.cpu())
+      data_xla = data.detach().to(device)
+      output_cpu = resnet18(data.cpu())	      data_xla.requires_grad = True 
+      output = dynamo_resnet18(data_xla)
+      output_cpu = resnet18(data)
       self.assertTrue(
           torch.allclose(output_cpu, output.cpu(), rtol=1e-05, atol=1e-05))
     # We only expect one graph for the resnet18 inference.
