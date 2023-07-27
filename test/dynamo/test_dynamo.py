@@ -237,6 +237,10 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     print(xla_input)
     print("xla_input.cpu()")
     print(xla_input.cpu())
+    print("xla_input.grad")
+    print(xla_input.grad)
+    print("xla_input.grad.cpu()")
+    print(xla_input.grad.cpu())
     # self.assertTrue(torch.allclose(input.grad, xla_input.grad.cpu()))
     # verifiy that tracing is skipped in following runs
     xla_input.grad = None
