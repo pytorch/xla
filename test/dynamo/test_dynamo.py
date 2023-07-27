@@ -108,7 +108,7 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     for data, _ in loader:
       dynamo_resnet18 = torch.compile(
           xla_resnet18, backend='torchxla_trace_once')
-      data_xla = data.detach()to(device)
+      data_xla = data.detach().to(device)
       print("data_xla")
       print(data_xla)
       print("data")
