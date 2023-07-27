@@ -33,20 +33,20 @@ class XlaZeRO1Test(unittest.TestCase):
 
     opt1.step()
     opt2.step()
-    self.assertEquals(opt1.state_dict(), opt2.state_dict()['base'])
+    assert str(opt1.state_dict()) == str(opt2.state_dict()['base'])
 
     s1 = opt1.state_dict()
     s2 = opt2.state_dict()
     opt1.load_state_dict(s1)
     opt2.load_state_dict(s2)
-    self.assertEquals(opt1.state_dict(), opt2.state_dict()['base'])
+    assert str(opt1.state_dict()) == str(opt2.state_dict()['base'])
 
     # step still runnable
     opt1.step()
     opt2.step()
     opt1.load_state_dict(s1)
     opt2.load_state_dict(s2)
-    self.assertEquals(opt1.state_dict(), opt2.state_dict()['base'])
+    assert str(opt1.state_dict()) == str(opt2.state_dict()['base'])
 
     # step still runnable
     opt1.step()
