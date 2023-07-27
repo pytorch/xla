@@ -494,8 +494,7 @@ void XLATensor::SetTensor(at::Tensor tensor) {
 }
 
 void XLATensor::UpdateFromTensor(at::Tensor tensor, bool sync) {
-  torch::lazy::BackendDevice device =
-      UseVirtualDevice() ? ParseDeviceString("SPMD:0") : GetDevice();
+  torch::lazy::BackendDevice device = GetDevice();
   if (sync) {
     at::Tensor typed_tensor =
         torch::lazy::CopyTensor(tensor, dtype(), /*copy=*/false);
