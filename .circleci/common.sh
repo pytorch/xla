@@ -108,6 +108,11 @@ function install_deps_pytorch_xla() {
   # Hack similar to https://github.com/pytorch/pytorch/pull/105227/files#diff-9e59213240d3b55d2ddc53c8c096db9eece0665d64f46473454f9dc0c10fd804
   sudo rm /opt/conda/lib/libstdc++.so*
 
+  # Update gcov for test coverage
+  sudo update-alternatives --install /usr/bin/gcov gcov /usr/bin/gcov-11 100
+  sudo update-alternatives --install /usr/bin/gcov-dump gcov-dump /usr/bin/gcov-dump-11 100
+  sudo update-alternatives --install /usr/bin/gcov-tool gcov-tool /usr/bin/gcov-tool-11 100
+
   # Symnlink the missing cuda headers if exists
   CUBLAS_PATTERN="/usr/include/cublas*"
   if ls $CUBLAS_PATTERN 1> /dev/null 2>&1; then
