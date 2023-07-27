@@ -400,7 +400,7 @@ class DynamoTrainingOptimizerTest(unittest.TestCase):
     # Graph 3: optimizer
     # Graph 4: sync input for backward
     # Graph 5: sync input for backward (TODO(JackCaoG) understand why there are two graphs)
-    self.assertEqual(met.metric_data('CompileTime')[0], 5)
+    self.assertEqual(met.metric_data('CompileTime')[0], 4)
     # We execute 4 graphs per step when optimizer is enabled.
     self.assertEqual(met.metric_data('ExecuteTime')[0], sample_count * 4)
     # one for each forward, backward and optimizer
