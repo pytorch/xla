@@ -261,7 +261,7 @@ class DynamoTrainingBasicTest(unittest.TestCase):
         torch.allclose(
             input.grad, xla_input.grad.cpu(), rtol=1e-05, atol=1e-04))
 
-  @skipOnTpu
+  
   def test_resnet18(self):
     torch._dynamo.reset()
     met.clear_counters()
