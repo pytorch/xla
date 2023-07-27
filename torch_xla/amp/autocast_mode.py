@@ -6,8 +6,9 @@ from typing import Any
 class autocast(torch.amp.autocast_mode.autocast):
   r"""
     See :class:`torch.autocast`.
-    ``torch_xla.amp.autocast(device, args...)`` is equivalent to ``torch.autocast("xla", args...)`` for TPUs
-    ``torch.autocast("cuda", args...)`` for GPUs.
+    ``torch_xla.amp.autocast(device, **kwargs)`` is equivalent to 
+    ``torch.autocast("xla", **kwargs)`` for TPUs
+    ``torch.autocast("cuda", **kwargs)`` for GPUs.
     """
 
   def __init__(self,
