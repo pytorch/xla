@@ -28,9 +28,9 @@ function install_environments() {
   chmod +x /usr/local/bin/bazel
 
   pip install mkl mkl-include setuptools typing_extensions cmake requests
-  sudo ln -s /usr/local/lib/libmkl_intel_lp64.so.2 /usr/local/lib/libmkl_intel_lp64.so.1
-  sudo ln -s /usr/local/lib/libmkl_intel_thread.so.2 /usr/local/lib/libmkl_intel_thread.so.1
-  sudo ln -s /usr/local/lib/libmkl_core.so.2 /usr/local/lib/libmkl_core.so.1
+  sudo ln -sf /usr/local/lib/libmkl_intel_lp64.so.2 /usr/local/lib/libmkl_intel_lp64.so.1
+  sudo ln -sf /usr/local/lib/libmkl_intel_thread.so.2 /usr/local/lib/libmkl_intel_thread.so.1
+  sudo ln -sf /usr/local/lib/libmkl_core.so.2 /usr/local/lib/libmkl_core.so.1
   export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/
 
   echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" >> /etc/apt/sources.list.d/google-cloud-sdk.list

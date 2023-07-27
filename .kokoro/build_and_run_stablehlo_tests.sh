@@ -14,16 +14,17 @@ TORCHVISION_COMMIT="$(cat $PYTORCH_DIR/.github/ci_commit_pins/vision.txt)"
 
 install_environments
 
-pip install --user https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch-nightly-cp38-cp38-linux_x86_64.whl \
-  https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torchvision-nightly-cp38-cp38-linux_x86_64.whl \
-  https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-nightly-cp38-cp38-linux_x86_64.whl
-
 set +e
+# build pytorch
+pushd $PYTORCH_DIR
+pip install --user .
+popd
 build_torch_xla $XLA_DIR
 pushd $XLA_DIR
 LOGFILE=/tmp/pytorch_py_test.log
-for FILE in $(ls tests/stablehlo); do
-    python tests/stablehlo/$FILE | tee $LOGFILE
+TEST_DIR=test/stablehlo
+for FILE in $(ls $TEST_DIR); do
+    python $TEST_DIR/$FILE | tee $LOGFILE
 done
 
 
