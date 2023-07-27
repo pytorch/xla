@@ -18,10 +18,13 @@ sys.path.append(xla_test_folder)
 
 import test_utils
 
+
 def _is_on_tpu():
   return 'XRT_TPU_CONFIG' in os.environ or xr.device_type() == 'TPU'
 
+
 skipOnTpu = unittest.skipIf(_is_on_tpu(), 'Not supported on TPU')
+
 
 class DynamoInPlaceTest(unittest.TestCase):
 
