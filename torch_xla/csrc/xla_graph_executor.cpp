@@ -648,7 +648,7 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
   }
 
   std::vector<XLATensor::ShardingSpecPtr> sharding_specs(placeholders.size());
-  if (UseVirtualDevice()) {
+  if (static_cast<XlaDeviceType>(device.type()) == XlaDeviceType::SPMD) {
     ShardingUtil::PrepareOutputShardingPropagation(
         placeholders, sharding_specs, output_shapes,
         cachedComputation->computation, device);

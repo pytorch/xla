@@ -607,7 +607,7 @@ torch::lazy::BackendDataPtr TensorToXlaData(
     const at::Tensor& tensor, const xla::Shape& shape,
     const torch::lazy::BackendDevice& device) {
   TORCH_LAZY_TIMED("TensorToData");
-  if (UseVirtualDevice()) {
+  if (static_cast<XlaDeviceType>(device.type()) == XlaDeviceType::SPMD) {
     // The tensor is bypassing the virtual device, so it should be replicated
     // to all devices.
     std::vector<std::string> local_devices =
@@ -851,7 +851,12 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
   TORCH_LAZY_TIMED("TensorToData");
   XLA_CHECK_EQ(tensors.size(), devices.size());
 
-  if (UseVirtualDevice()) {
+  if (devices.size() == 0) {
+    return {};
+  }
+
+  // We assume that caller can't mix virtual device and real device.
+  if (devices[0] == "SPMD:0") {
     // When running in SPMD mode, tensors here in the unsharded
     // CreateTensorsData should be implicitly replicated to all devices.
     // This case should always apply when using SPMD regardless
@@ -931,7 +936,7 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
 
     std::vector<runtime::ComputationClient::TensorSource> source_tensors;  // in
     std::vector<runtime::ComputationClient::DataPtr> new_handles;  // out
-    if (UseVirtualDevice()) {
+    if (static_cast<XlaDeviceType>(device.type()) == XlaDeviceType::SPMD) {
       // GetLocalDevices returns the list of local devices specified by their
       // global ordinals (e.g. ["TPU:4", "TPU:5", "TPU:6", "TPU:7"]).
       std::vector<std::string> local_devices =
