@@ -51,32 +51,32 @@ jobs:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
   # break by gcc version update https://github.com/pytorch/xla/commit/e7e189961bd669c33939e269c248b391fe156d38
-  # test-cpu-coverage:
-  #   name: "Collect CPU test coverage"
-  #   if: github.event_name == 'push' && github.event.ref == 'refs/heads/master'
-  #   uses: ./.github/workflows/_test.yml
-  #   needs: build
-  #   with:
-  #     docker-image: ${{ needs.build.outputs.docker-image }}
-  #     collect-coverage: true
-  #     timeout-minutes: 120
-  #     disable-xrt: 1
-  #   secrets:
-  #     gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
+  test-cpu-coverage:
+    name: "Collect CPU test coverage"
+    # if: github.event_name == 'push' && github.event.ref == 'refs/heads/master'
+    uses: ./.github/workflows/_test.yml
+    needs: build
+    with:
+      docker-image: ${{ needs.build.outputs.docker-image }}
+      collect-coverage: true
+      timeout-minutes: 120
+      disable-xrt: 1
+    secrets:
+      gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
-  # test-gpu-coverage:
-  #   name: "Collect GPU test coverage"
-  #   if: github.event_name == 'push' && github.event.ref == 'refs/heads/master'
-  #   uses: ./.github/workflows/_test.yml
-  #   needs: build
-  #   with:
-  #     docker-image: ${{ needs.build.outputs.docker-image }}
-  #     runner: linux.8xlarge.nvidia.gpu
-  #     timeout-minutes: 210
-  #     collect-coverage: true
-  #     disable-xrt: 1
-  #   secrets:
-  #     gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
+  test-gpu-coverage:
+    name: "Collect GPU test coverage"
+    # if: github.event_name == 'push' && github.event.ref == 'refs/heads/master'
+    uses: ./.github/workflows/_test.yml
+    needs: build
+    with:
+      docker-image: ${{ needs.build.outputs.docker-image }}
+      runner: linux.8xlarge.nvidia.gpu
+      timeout-minutes: 210
+      collect-coverage: true
+      disable-xrt: 1
+    secrets:
+      gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
   push-docs:
     name: "Build & publish docs"
