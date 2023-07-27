@@ -111,7 +111,7 @@ class DynamoInferenceBasicTest(unittest.TestCase):
       data_xla = data.detach()
       data_xla.requires_grad = True
       output = dynamo_resnet18(data_xla.to(device))
-      output_cpu = resnet18(data)
+      output_cpu = resnet18(data.cpu())
       # output = dynamo_resnet18(data)
       # output_cpu = resnet18(data.detach().cpu())
       self.assertTrue(
