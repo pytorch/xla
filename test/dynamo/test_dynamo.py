@@ -113,7 +113,7 @@ class DynamoInferenceBasicTest(unittest.TestCase):
       print("data.cpu()")
       print(data.cpu())
       output = dynamo_resnet18(data)
-      output_cpu = resnet18(data.cpu())
+      output_cpu = resnet18(data.detach().cpu())
       self.assertTrue(
           torch.allclose(output_cpu, output.cpu(), rtol=1e-05, atol=1e-05))
     # We only expect one graph for the resnet18 inference.
