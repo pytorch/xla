@@ -6,6 +6,7 @@ import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.utils.utils as xu
 import torch_xla.debug.metrics as met
+from torch_xla import runtime as xr
 import torch.optim as optim
 import torch._dynamo as dynamo
 import torchvision
@@ -17,6 +18,10 @@ sys.path.append(xla_test_folder)
 
 import test_utils
 
+def _is_on_tpu():
+  return 'XRT_TPU_CONFIG' in os.environ or xr.device_type() == 'TPU'
+
+skipOnTpu = unittest.skipIf(_is_on_tpu(), 'Not supported on TPU')
 
 class DynamoInPlaceTest(unittest.TestCase):
 
@@ -247,6 +252,7 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     self.assertTrue(torch.allclose(res_cpu_3, res_xla_dynamo_3.cpu()))
     self.assertTrue(torch.allclose(input.grad, xla_input.grad.cpu()))
 
+  @skipOnTpu
   def test_resnet18(self):
     torch._dynamo.reset()
     met.clear_counters()
@@ -277,10 +283,9 @@ class DynamoTrainingBasicTest(unittest.TestCase):
       cpu_data.requires_grad = True
       cpu_target = target.detach().cpu()
       cpu_output = self.train_model(resnet18, cpu_data, cpu_target)
-      # Disable the accuracy check here due to training is experimental.
-      # self.assertTrue(
-      #     torch.allclose(
-      #         xla_output.cpu(), cpu_output.cpu(), rtol=1e-05, atol=1e-05))
+      self.assertTrue(
+          torch.allclose(
+              xla_output.cpu(), cpu_output.cpu(), rtol=1e-05, atol=1e-05))
 
       # TODO(JackCaoG): Understand why `data.grad` is a pending IR starting
       # from second iteration instead of a `DeviceData`
