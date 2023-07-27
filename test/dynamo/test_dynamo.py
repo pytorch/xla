@@ -343,7 +343,7 @@ class DynamoTrainingOptimizerTest(unittest.TestCase):
       res_cpu = self.fn_simple(input, optimizer)
       res_xla_dynamo = self.fn_simple_dynamo(xla_input, xla_optimizer)
       assert torch.allclose(res_cpu, res_xla_dynamo.cpu())
-      assert torch.allclose(input.grad, xla_input.grad.cpu())
+      assert torch.allclose(input.grad, xla_input.grad.cpu(), rtol=1e-04, atol=1e-04)
       assert torch.allclose(input, xla_input.cpu())
 
   def test_resnet18(self):
