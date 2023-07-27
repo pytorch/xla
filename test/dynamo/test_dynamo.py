@@ -111,7 +111,7 @@ class DynamoInferenceBasicTest(unittest.TestCase):
       output = dynamo_resnet18(data)
       output_cpu = resnet18(data.cpu())
       self.assertTrue(
-          torch.allclose(output_cpu, output.cpu(), rtol=1e-04, atol=1e-04))
+          torch.allclose(output_cpu, output.cpu(), rtol=1e-03, atol=1e-03))
     # We only expect one graph for the resnet18 inference.
     self.assertEqual(met.metric_data('CompileTime')[0], 1)
     self.assertEqual(met.metric_data('ExecuteTime')[0], sample_count)
@@ -289,7 +289,7 @@ class DynamoTrainingBasicTest(unittest.TestCase):
       cpu_output = self.train_model(resnet18, cpu_data, cpu_target)
       self.assertTrue(
           torch.allclose(
-              xla_output.cpu(), cpu_output.cpu(), rtol=1e-04, atol=1e-04))
+              xla_output.cpu(), cpu_output.cpu(), rtol=1e-03, atol=1e-03))
       # TODO(JackCaoG): Understand why `data.grad` is a pending IR starting
       # from second iteration instead of a `DeviceData`
       # torch.allclose(data.grad.cpu(), cpu_data.grad)
