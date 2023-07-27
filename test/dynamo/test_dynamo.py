@@ -129,7 +129,7 @@ class DynamoInferenceBasicTest(unittest.TestCase):
         met.metric_data('RunCachedGraphInputData')[0], sample_count)
     self.assertEqual(
         met.metric_data('RunCachedGraphOutputData')[0], sample_count)
-  
+
   @skipOnTpu
   def test_resnet18(self):
     device = xm.xla_device()
