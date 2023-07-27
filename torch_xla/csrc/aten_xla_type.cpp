@@ -465,11 +465,11 @@ at::Tensor XLANativeFunctions::_copy_from(const at::Tensor& self,
   auto dst_tensor = bridge::TryGetXlaTensor(dst);
   auto self_tensor = bridge::TryGetXlaTensor(self);
   if (!self_tensor) {
-    XLA_CHECK(dst_tensor);
     static bool sync_update =
         runtime::sys_util::GetEnvBool("XLA_TENSOR_UPDATE_SYNC", true) &&
         !UseVirtualDevice();
     dst_tensor->UpdateFromTensor(self, /*sync=*/sync_update);
+    XLA_CHECK(dst_tensor);
   } else if (!dst_tensor) {
     at::Tensor tensor = self_tensor->ToTensor(/*detached=*/true);
     at::Tensor typed_tensor =
