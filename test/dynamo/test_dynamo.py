@@ -283,7 +283,15 @@ class DynamoTrainingBasicTest(unittest.TestCase):
       # cpu_data = data.detach().cpu()
       # cpu_data.requires_grad = True
       # cpu_target = target.detach().cpu()
-      cpu_output = self.train_model(resnet18, data, target)
+      cpu_output = self.train_model(resnet18, data, target
+      print("data")                            
+      print(data)
+      print("target")
+      print(target)
+      print("data_xla")
+      print(data_xla)
+      print("target_xla")
+      print(target_xla)
       print("xla_output.cpu()")
       print(xla_output.cpu())
       print("cpu_output.cpu()")
