@@ -267,8 +267,8 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     sample_count = xu.getenv_as('SAMPLE_COUNT', int, defval=10)
     loader = xu.SampleGenerator(
         data=(torch.randn(
-            batch_size, 3, 224, 224, device=device, requires_grad=True),
-              torch.zeros(batch_size, dtype=torch.int64, device=device)),
+            batch_size, 3, 224, 224, requires_grad=True),
+              torch.zeros(batch_size, dtype=torch.int64)),
         sample_count=sample_count)
     resnet18 = torchvision.models.resnet18()
     resnet18.train()
@@ -284,11 +284,17 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     dynamo_train_model = torch.compile(
         self.train_model, backend='aot_torchxla_trace_once')
     for data, target in loader:
-      xla_output = dynamo_train_model(xla_resnet18, data, target)
-      cpu_data = data.detach().cpu()
-      cpu_data.requires_grad = True
-      cpu_target = target.detach().cpu()
-      cpu_output = self.train_model(resnet18, cpu_data, cpu_target)
+      data_xla = data.detach().to(device)
+      data_xla.requires_grad = True 
+      # output = dynamo_resnet18(data_xla)
+      # output_cpu = resnet18(data)
+      target_xla = target.detach().cpu()
+
+      xla_output = dynamo_train_model(xla_resnet18, data_xla, target_xla)
+      # cpu_data = data.detach().cpu()
+      # cpu_data.requires_grad = True
+      # cpu_target = target.detach().cpu()
+      cpu_output = self.train_model(resnet18, data, target)
       self.assertTrue(
           torch.allclose(
               xla_output.cpu(), cpu_output.cpu(), rtol=1e-03, atol=1e-03))
