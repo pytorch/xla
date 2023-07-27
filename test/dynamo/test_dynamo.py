@@ -289,6 +289,7 @@ class DynamoTrainingBasicTest(unittest.TestCase):
       # output = dynamo_resnet18(data_xla)
       # output_cpu = resnet18(data)
       target_xla = target.detach().cpu()
+      target_xla.requires_grad = True
 
       xla_output = dynamo_train_model(xla_resnet18, data_xla, target_xla)
       # cpu_data = data.detach().cpu()
