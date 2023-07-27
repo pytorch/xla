@@ -52,6 +52,7 @@ spec:
       XLA_EXPERIMENTAL=nonzero:masked_select python3 /src/pytorch/xla/test/ds/test_dynamic_shape_models.py -v
       XLA_EXPERIMENTAL=nonzero:masked_select python3 /src/pytorch/xla/test/ds/test_dynamic_shapes.py -v
       python3 /src/pytorch/xla/test/test_autocast.py
+      python3 xla/test/dynamo/test_dynamo.py
     volumeMounts:
     - mountPath: /dev/shm
       name: dshm
