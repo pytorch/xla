@@ -856,9 +856,7 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
   }
 
   // We assume that caller can't mix virtual device and real device.
-  bool should_use_virtual_device = (devices[0] == "SPMD:0");
-
-  if (should_use_virtual_device) {
+  if (devices[0] == "SPMD:0") {
     // When running in SPMD mode, tensors here in the unsharded
     // CreateTensorsData should be implicitly replicated to all devices.
     // This case should always apply when using SPMD regardless
