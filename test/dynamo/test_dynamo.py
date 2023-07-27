@@ -266,8 +266,7 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     batch_size = xu.getenv_as('BATCH_SIZE', int, defval=4)
     sample_count = xu.getenv_as('SAMPLE_COUNT', int, defval=10)
     loader = xu.SampleGenerator(
-        data=(torch.randn(
-            batch_size, 3, 224, 224, requires_grad=True),
+        data=(torch.randn(batch_size, 3, 224, 224),
               torch.zeros(batch_size, dtype=torch.int64)),
         sample_count=sample_count)
     resnet18 = torchvision.models.resnet18()
