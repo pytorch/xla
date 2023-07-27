@@ -109,6 +109,8 @@ class DynamoInferenceBasicTest(unittest.TestCase):
       dynamo_resnet18 = torch.compile(
           xla_resnet18, backend='torchxla_trace_once')
       data_xla = data.detach()
+      print("data_xla")
+      print(data_xla)
       data_xla.requires_grad = True
       output = dynamo_resnet18(data_xla.to(device))
       output_cpu = resnet18(data.cpu())
