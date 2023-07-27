@@ -6,6 +6,7 @@ import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.utils.utils as xu
 import torch_xla.debug.metrics as met
+from torch_xla import runtime as xr
 import torch.optim as optim
 import torch._dynamo as dynamo
 import torchvision
@@ -16,6 +17,14 @@ xla_test_folder = os.path.dirname(os.path.dirname(os.path.abspath(sys.argv[0])))
 sys.path.append(xla_test_folder)
 
 import test_utils
+
+
+def _is_on_tpu():
+  return 'XRT_TPU_CONFIG' in os.environ or xr.device_type() == 'TPU'
+
+
+skipOnTpu = unittest.skipIf(_is_on_tpu(), 'Not supported on TPU')
+skipUnlessTpu = unittest.skipUnless(_is_on_tpu(), 'only supported on TPU')
 
 
 class DynamoInPlaceTest(unittest.TestCase):
@@ -87,6 +96,41 @@ class DynamoInferenceBasicTest(unittest.TestCase):
         torch.allclose(res_xla_dynamo_3.cpu(),
                        self.fn_simple(xla_z.cpu(), xla_z.cpu())))
 
+  @skipUnlessTpu
+  def test_resnet18(self):
+    device = xm.xla_device()
+    batch_size = xu.getenv_as('BATCH_SIZE', int, defval=4)
+    sample_count = xu.getenv_as('SAMPLE_COUNT', int, defval=10)
+    loader = xu.SampleGenerator(
+        data=(torch.randn(batch_size, 3, 224, 224, device=device),
+              torch.zeros(batch_size, dtype=torch.int64, device=device)),
+        sample_count=sample_count)
+    resnet18 = torchvision.models.resnet18()
+    resnet18.eval()
+    xla_resnet18 = torchvision.models.resnet18()
+    xla_resnet18.load_state_dict(resnet18.state_dict())
+    xla_resnet18.to(device)
+    xla_resnet18.eval()
+    # materalize the fake data for test purpose
+    xm.mark_step()
+    xm.wait_device_ops()
+    met.clear_all()
+    for data, _ in loader:
+      dynamo_resnet18 = torch.compile(
+          xla_resnet18, backend='torchxla_trace_once')
+      output = dynamo_resnet18(data)
+      output_cpu = resnet18(data.cpu())
+      self.assertTrue(
+          torch.allclose(output_cpu, output.cpu(), rtol=1e-05, atol=1e-05))
+    # We only expect one graph for the resnet18 inference.
+    self.assertEqual(met.metric_data('CompileTime')[0], 1)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], sample_count)
+    self.assertEqual(
+        met.metric_data('RunCachedGraphInputData')[0], sample_count)
+    self.assertEqual(
+        met.metric_data('RunCachedGraphOutputData')[0], sample_count)
+  
+  @skipOnTpu
   def test_resnet18(self):
     device = xm.xla_device()
     batch_size = xu.getenv_as('BATCH_SIZE', int, defval=4)
