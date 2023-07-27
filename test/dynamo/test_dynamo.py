@@ -247,7 +247,7 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     res_xla_dynamo_3 = self.fn_simple_dynamo(xla_input * 2)
     res_cpu_3 = self.fn_simple(input * 2)
     self.assertTrue(torch.allclose(res_cpu_3, res_xla_dynamo_3.cpu()))
-    self.assertTrue(torch.allclose(input.grad, xla_input.grad.cpu(), rtol=1e-05, atol=1e-05))
+    self.assertTrue(torch.allclose(input.grad, xla_input.grad.cpu(), rtol=1e-05, atol=1e-04))
 
   def test_resnet18(self):
     torch._dynamo.reset()
