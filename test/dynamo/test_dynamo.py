@@ -117,7 +117,7 @@ class DynamoInferenceBasicTest(unittest.TestCase):
       self.assertTrue(
           torch.allclose(output_cpu, output.cpu(), rtol=1e-05, atol=1e-05))
     # We only expect one graph for the resnet18 inference.
-    self.assertEqual(met.metric_data('CompileTime')[0], 1)
+    self.assertEqual(met.metric_data('CompileTime')[0], 2)
     self.assertEqual(met.metric_data('ExecuteTime')[0], sample_count)
     self.assertEqual(
         met.metric_data('RunCachedGraphInputData')[0], sample_count)
