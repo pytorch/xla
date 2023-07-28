@@ -94,7 +94,7 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     self.assertTrue(
         torch.allclose(
             res_xla_dynamo_3.cpu(),
-            self.fn_simple(xla_z.cpu(), xla_z.cpu()), 
+            self.fn_simple(xla_z.cpu(), xla_z.cpu()),
             rtol=1e-05, 
             atol=1e-05))
 
