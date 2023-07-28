@@ -92,7 +92,9 @@ class SPMDSavePlanner(SavePlanner):
         for k, v in state_dict.items()
         if _is_sharded_tensor(v) or isinstance(v, _CpuShards)
     }
-    unsharded = dict(state_dict.items() - self.sharded_state_dict.items())
+    unsharded = {
+        k: v for k, v in state_dict.items() if k not in self.sharded_state_dict
+    }
     self.unsharded_state_dict = tree_map(_unwrap_xla_sharded_tensor, unsharded)
 
   def create_local_plan(self) -> SavePlan:
@@ -112,7 +114,8 @@ class SPMDSavePlanner(SavePlanner):
     # Deduplicate write items across plans
     all_plans = dedup_tensors(all_plans)
 
-    global_plan, metadata = create_default_global_save_plan(all_plans)
+    global_plan, metadata = create_default_global_save_plan(
+        all_plans, rewrite_index_hints=False)
 
     # Combine mappings from all plans
     planner_data_dict = [p.planner_data for p in global_plan]
@@ -220,7 +223,9 @@ class SPMDLoadPlanner(LoadPlanner):
     self.sharded_state_dict = {
         k: v for k, v in state_dict.items() if _is_sharded_tensor(v)
     }
-    unsharded = dict(state_dict.items() - self.sharded_state_dict.items())
+    unsharded = {
+        k: v for k, v in state_dict.items() if k not in self.sharded_state_dict
+    }
     self.unsharded_state_dict = tree_map(_unwrap_xla_sharded_tensor, unsharded)
 
   def create_local_plan(self) -> LoadPlan:
@@ -340,13 +345,12 @@ def _create_write_items_for_xla_sharded_tensor(
 def _create_write_items_for_cpu_shards(
     fqn: str, cpu_shards: _CpuShards) -> List[WriteItem]:
   items = []
-  for xla_shard in cpu_shards.shards:
+  for shard_ind, xla_shard in enumerate(cpu_shards.shards):
     prop = TensorProperties.create_from_tensor(xla_shard.data)
-    for shard_ind, indices in enumerate(xla_shard.indices):
-      write_item = _create_write_item_from_indices(fqn, shard_ind, indices,
-                                                   cpu_shards.global_shape,
-                                                   prop)
-      items.append(write_item)
+    write_item = _create_write_item_from_indices(fqn, shard_ind,
+                                                 xla_shard.indices,
+                                                 cpu_shards.global_shape, prop)
+    items.append(write_item)
   return items
 
 
