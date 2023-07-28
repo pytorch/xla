@@ -91,10 +91,6 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     # dynamo to recognize this is a different graph and let XLA to retrace/recompile
     res_xla_dynamo_3 = self.fn_simple_dynamo(xla_z, xla_z)
     self.assertEqual(met.metric_data('CompileTime')[0], compile_count + 1)
-    print("res_xla_dynamo_3.cpu()")
-    print(res_xla_dynamo_3.cpu())
-    print("self.fn_simple(xla_z.cpu(), xla_z.cpu())")
-    print(self.fn_simple(xla_z.cpu(), xla_z.cpu()))
     self.assertTrue(
         torch.allclose(res_xla_dynamo_3.cpu(),
                        self.fn_simple(xla_z.cpu(), xla_z.cpu()), rtol=1e-05, atol=1e-05))
