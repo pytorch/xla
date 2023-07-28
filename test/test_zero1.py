@@ -34,16 +34,12 @@ class XlaZeRO1Test(TestCase):
 
     opt1.step()
     opt2.step()
-    print('A: opt1', opt1.state_dict())
-    print('A: opt2', opt2.state_dict())
     self.assertEqual(opt1.state_dict(), opt2.state_dict()['base'])
 
     s1 = opt1.state_dict()
     s2 = opt2.state_dict()
     opt1.load_state_dict(s1)
     opt2.load_state_dict(s2)
-    print('B: opt1', opt1.state_dict())
-    print('B: opt2', opt2.state_dict())
     self.assertEqual(opt1.state_dict(), opt2.state_dict()['base'])
 
     # step still runnable
@@ -51,8 +47,6 @@ class XlaZeRO1Test(TestCase):
     opt2.step()
     opt1.load_state_dict(s1)
     opt2.load_state_dict(s2)
-    print('C: opt1', opt1.state_dict())
-    print('C: opt2', opt2.state_dict())
     self.assertEqual(opt1.state_dict(), opt2.state_dict()['base'])
 
     # step still runnable
