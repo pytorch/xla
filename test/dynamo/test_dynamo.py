@@ -92,8 +92,11 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     res_xla_dynamo_3 = self.fn_simple_dynamo(xla_z, xla_z)
     self.assertEqual(met.metric_data('CompileTime')[0], compile_count + 1)
     self.assertTrue(
-        torch.allclose(res_xla_dynamo_3.cpu(),
-                       self.fn_simple(xla_z.cpu(), xla_z.cpu()), rtol=1e-05, atol=1e-05))
+        torch.allclose(
+            res_xla_dynamo_3.cpu(),
+            self.fn_simple(xla_z.cpu(), xla_z.cpu()), 
+            rtol=1e-05, 
+            atol=1e-05))
 
   @skipOnTpu
   def test_resnet18(self):
