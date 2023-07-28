@@ -179,6 +179,7 @@ def host_index() -> int:
   if device_type() == 'TPU':
     return tpu.worker_id()
 
+  # TODO: xw32: change here.
   # TODO: Update this when we support multi-host GPU
   return 0
 

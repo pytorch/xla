@@ -31,10 +31,6 @@ class TestNoBackwardModule(test_utils.XlaTestCase):
       hidden2 = self.fc2(x)
       return hidden1, hidden2
 
-  @unittest.skipIf(
-      xr.device_type() == 'GPU',
-      "This test fails only on GPU with 03/30 TF-pin update (https://github.com/pytorch/xla/pull/4840)"
-  )
   def test(self):
     dev = xm.xla_device()
     input = torch.zeros([16, 16], device=dev)
