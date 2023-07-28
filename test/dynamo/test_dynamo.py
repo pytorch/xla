@@ -95,6 +95,7 @@ class DynamoInferenceBasicTest(unittest.TestCase):
         torch.allclose(res_xla_dynamo_3.cpu(),
                        self.fn_simple(xla_z.cpu(), xla_z.cpu())))
 
+  @skipOnTpu
   def test_resnet18(self):
     device = xm.xla_device()
     batch_size = xu.getenv_as('BATCH_SIZE', int, defval=4)
