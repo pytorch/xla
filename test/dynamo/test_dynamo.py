@@ -81,7 +81,8 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     device = xm.xla_device()
     xla_x = torch.randn(5, 5).to(device)
     xla_y = torch.randn(5, 5).to(device)
-    xla_z = torch.randn(10, 10).to(device)
+    z = torch.randn(10, 10)
+    xla_z = z.detach().to(device)
     self.fn_simple_dynamo(xla_x, xla_x)
     compile_count = met.metric_data('CompileTime')[0]
     # Execute with input with same shape should not trigger additional compilation
@@ -93,7 +94,7 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     self.assertEqual(met.metric_data('CompileTime')[0], compile_count + 1)
     self.assertTrue(
         torch.allclose(res_xla_dynamo_3.cpu(),
-                       self.fn_simple(xla_z.cpu(), xla_z.cpu())))
+                       self.fn_simple(z, z)))
 
   @skipOnTpu
   def test_resnet18(self):
