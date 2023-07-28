@@ -5,6 +5,7 @@ import unittest
 import test_xla_sharding_base
 
 import torch
+import torch.distributed as dist
 import torch.distributed.checkpoint as dist_cp
 import torch_xla.core.xla_model as xm
 import torch_xla.runtime as xr
@@ -51,20 +52,22 @@ class DistributedCheckpointTestBase(test_xla_sharding_base.XlaShardingTest):
     return True
 
 
-class ReshardingTest(DistributedCheckpointTestBase):
+class EndToEndCheckpointTest(DistributedCheckpointTestBase):
 
   def _save_and_restore(self,
                         model_in,
                         model_out,
                         save_planner=None,
                         load_planner=None,
-                        is_sharded_cpu_state_dict=False):
+                        is_sharded_cpu_state_dict=False,
+                        no_dist=True,
+                        chkpt_path=None):
     """
     Checkpoint model_in using the provided save_planner and load into model_out
     using the provided load_planner, and assert model_out equals model_in after
     the load. If either planner is not specified, the DefaultPlanner is used.
     """
-    tmpdir = tempfile.mkdtemp()
+    chkpt_path = chkpt_path or tempfile.mkdtemp()
 
     # Save an unsharded model using the provided save planner
     model_in_state_dict = model_in.state_dict()
@@ -73,9 +76,9 @@ class ReshardingTest(DistributedCheckpointTestBase):
     model_out_state_dict = model_out.state_dict()
     dist_cp.save_state_dict(
         state_dict=model_in_state_dict,
-        storage_writer=dist_cp.FileSystemWriter(tmpdir),
+        storage_writer=dist_cp.FileSystemWriter(chkpt_path),
         planner=save_planner,
-        no_dist=True,  # Single-host checkpoint doesn't require a process group
+        no_dist=no_dist,
     )
     # Load the checkpoint using the provided load planner
     for p1, p2 in zip(model_in.parameters(), model_out.parameters()):
@@ -83,23 +86,21 @@ class ReshardingTest(DistributedCheckpointTestBase):
 
     dist_cp.load_state_dict(
         state_dict=model_out_state_dict,
-        storage_reader=dist_cp.FileSystemReader(tmpdir),
+        storage_reader=dist_cp.FileSystemReader(chkpt_path),
         planner=load_planner,
-        no_dist=True,  # Single-host checkpoint doesn't require a process group
+        no_dist=no_dist,
     )
     for p1, p2 in zip(model_in.parameters(), model_out.parameters()):
       self.assertTrue(torch.allclose(p1, p2))
 
-  def test_unsharded_to_sharded(self):
+  def test_resharding_unsharded_to_sharded(self):
     # Save an unsharded model using the DefaultSavePlanner and load into a
     # sharded model using the SPMDLoadPlanner
     model = self.SimpleLinear().to(xm.xla_device())
     sharded_model = self._get_sharded_model()
     self._save_and_restore(model, sharded_model, load_planner=SPMDLoadPlanner())
 
-  # TODO(jonbolin): Enable tests for resharding into coarser meshes
-  @unittest.skip("View assignment with virtual device is not yet supported")
-  def test_sharded_to_unsharded(self):
+  def test_resharding_sharded_to_unsharded(self):
     for chkpt_on_cpu in [True, False]:
       with self.subTest(chkpt_on_cpu):
         model = self.SimpleLinear().to(xm.xla_device())
@@ -110,11 +111,9 @@ class ReshardingTest(DistributedCheckpointTestBase):
             save_planner=SPMDSavePlanner(),
             is_sharded_cpu_state_dict=chkpt_on_cpu)
 
-  # TODO(jonbolin): Enable tests for resharding into coarser meshes
-  @unittest.skip("View assignment with virtual device is not yet supported")
   @unittest.skipIf(xr.global_runtime_device_count() == 1,
                    "Multiple devices needed to change mesh")
-  def test_different_device_mesh(self):
+  def test_resharding_different_device_mesh(self):
     dim = self.n_devices // 2
     model1 = self._get_sharded_model(mesh_shape=(dim, self.n_devices // dim))
     model2 = self._get_sharded_model(mesh_shape=(self.n_devices, 1))
@@ -123,6 +122,28 @@ class ReshardingTest(DistributedCheckpointTestBase):
         model2,
         save_planner=SPMDSavePlanner(),
         load_planner=SPMDLoadPlanner())
+
+  @unittest.skipUnless(
+      {'CHKPT_PATH', 'MASTER_ADDR', 'MASTER_PORT', 'RANK', 'WORLD_SIZE'
+      } <= os.environ.keys(),
+      'CHKPT_PATH and distributed config must be set for multihost checkpoint')
+  def test_multihost_checkpoint(self):
+    # Initialize the default CPU process group from the environment.
+    dist.init_process_group()
+
+    model1 = self._get_sharded_model(mesh_shape=(1, self.n_devices))
+    model2 = self._get_sharded_model(mesh_shape=(self.n_devices, 1))
+    # Take the checkpoint, writing to the path configured in the environment.
+    self._save_and_restore(
+        model1,
+        model2,
+        save_planner=SPMDSavePlanner(),
+        load_planner=SPMDLoadPlanner(),
+        no_dist=False,
+        chkpt_path=os.environ['CHKPT_PATH'])
+
+    # Destroy the CPU process group after the test
+    dist.destroy_process_group()
 
 
 class SPMDLoadPlannerTest(DistributedCheckpointTestBase):
