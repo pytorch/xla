@@ -147,7 +147,7 @@ class ShardingUtil {
   // the PjRtShardedData wrapping the shards.
   static runtime::ComputationClient::DataPtr CreateShardedData(
       std::vector<at::Tensor>& shards, std::vector<std::string>& devices,
-      xla::Shape global_shape, xla::OpSharding sharding);
+      const XLATensor::ShardingSpecPtr& sharding_spec);
 };
 
 }  // namespace torch_xla

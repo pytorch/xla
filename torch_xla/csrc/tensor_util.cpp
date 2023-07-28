@@ -614,9 +614,10 @@ torch::lazy::BackendDataPtr TensorToXlaData(
         runtime::GetComputationClient()->GetLocalDevices();
     auto replicated_data =
         std::vector<at::Tensor>(local_devices.size(), tensor);
+    auto sharding_spec = std::make_shared<XLATensor::ShardingSpec>(
+        xla::HloSharding::Replicate().ToProto(), shape);
     return WrapXlaData(ShardingUtil::CreateShardedData(
-        replicated_data, local_devices, shape,
-        xla::HloSharding::Replicate().ToProto()));
+        replicated_data, local_devices, sharding_spec));
   }
 
   static const bool transfer_async =
@@ -870,9 +871,10 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
       auto shape = CreateComputationShapeFromTensor(tensors[i], &device);
       auto replicated_data =
           std::vector<at::Tensor>(local_devices.size(), tensors[i]);
+      auto sharding_spec = std::make_shared<XLATensor::ShardingSpec>(
+          xla::HloSharding::Replicate().ToProto(), shape);
       handles.push_back(ShardingUtil::CreateShardedData(
-          replicated_data, local_devices, shape,
-          xla::HloSharding::Replicate().ToProto()));
+          replicated_data, local_devices, sharding_spec));
     }
     return WrapXlaData(handles);
   }
@@ -941,28 +943,14 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
       // global ordinals (e.g. ["TPU:4", "TPU:5", "TPU:6", "TPU:7"]).
       std::vector<std::string> local_devices =
           runtime::GetComputationClient()->GetLocalDevices();
-      xla::OpSharding sharding;
-      bool minibatch = false;
-      if (shardings[i] != nullptr) {
-        sharding = shardings[i]->sharding;
-        minibatch = shardings[i]->minibatch;
-      } else {
-        // If using SPMD and no sharding is attached to the tensor, implicitly
-        // replicate to all local devices.
-        sharding = xla::HloSharding::Replicate().ToProto();
-      }
       // Shards the input tensors with padding, to split evenly.
       // The execution requires consistent shard sizes, and the zero-padded
       // values should be ignored.
       std::vector<at::Tensor> local_shards =
           ShardingUtil::ShardTensor(tensors[i], shardings[i], local_devices,
                                     /*padded=*/true);
-      if (minibatch) {  // change global shape as tensor is already sharded
-                        // accross batch dimesion.
-        shape = shardings[i]->shape;
-      }
       new_handles.push_back(ShardingUtil::CreateShardedData(
-          local_shards, local_devices, shape, sharding));
+          local_shards, local_devices, shardings[i]));
     } else {
       auto populate_fn =
           [&, i, device](
