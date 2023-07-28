@@ -4,11 +4,12 @@ import torch_xla
 import torch_xla.core.xla_model as xm
 from torch_xla.distributed.zero_redundancy_optimizer import ZeroRedundancyOptimizer
 from torch_xla import runtime as xr
+from torch.testing._internal.common_utils import TestCase
 
 import unittest
 
 
-class XlaZeRO1Test(unittest.TestCase):
+class XlaZeRO1Test(TestCase):
 
   @unittest.skipIf(xr.device_type() == 'TPU', "Crash on TPU")
   @unittest.skipIf(xr.device_type() == 'GPU',
@@ -33,20 +34,20 @@ class XlaZeRO1Test(unittest.TestCase):
 
     opt1.step()
     opt2.step()
-    assert str(opt1.state_dict()) == str(opt2.state_dict()['base'])
+    self.assertEqual(opt1.state_dict(), opt2.state_dict()['base'])
 
     s1 = opt1.state_dict()
     s2 = opt2.state_dict()
     opt1.load_state_dict(s1)
     opt2.load_state_dict(s2)
-    assert str(opt1.state_dict()) == str(opt2.state_dict()['base'])
+    self.assertEqual(opt1.state_dict(), opt2.state_dict()['base'])
 
     # step still runnable
     opt1.step()
     opt2.step()
     opt1.load_state_dict(s1)
     opt2.load_state_dict(s2)
-    assert str(opt1.state_dict()) == str(opt2.state_dict()['base'])
+    self.assertEqual(opt1.state_dict(), opt2.state_dict()['base'])
 
     # step still runnable
     opt1.step()
