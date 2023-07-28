@@ -118,6 +118,10 @@ class DynamoInferenceBasicTest(unittest.TestCase):
           xla_resnet18, backend='torchxla_trace_once')
       output = dynamo_resnet18(data)
       output_cpu = resnet18(data.cpu())
+      print("output_cpu")
+      print(output_cpu)
+      print("output.cpu()")
+      print(output.cpu())
       self.assertTrue(
           torch.allclose(output_cpu, output.cpu(), rtol=1e-05, atol=1e-05))
     # We only expect one graph for the resnet18 inference.
