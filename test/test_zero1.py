@@ -44,8 +44,10 @@ class XlaZeRO1Test(TestCase):
     print("opt2.state_dict()[base]", s2['base'])
     self.assertEqual(s1, s2['base'])
 
-    # s1_clone = deepcopy(s1)
-    # s2_clone = deepcopy(s2)
+    # deepcopy s1 to load later because pytorch optimizers do not guarantee the input 
+    # state_dict will not be modified
+    s1_clone = deepcopy(s1)
+
     opt1.load_state_dict(s1)
     opt2.load_state_dict(s2)
     print("AFTER LOADING THE STATE_DICTs, should be same as before")
@@ -63,7 +65,7 @@ class XlaZeRO1Test(TestCase):
     print("opt1.state_dict()", opt1.state_dict())
     print("opt2.state", opt2.state['base'])
     print("opt2.state_dict()[base]", opt2.state_dict()['base'])
-    opt1.load_state_dict(s1)
+    opt1.load_state_dict(s1_clone)
     opt2.load_state_dict(s2)
     print("AFTER LOADING THE STATE_DICTs, should be same as before")
     print("opt1.state", opt1.state)
