@@ -23,7 +23,7 @@ def eval_model(loader):
 ```
 > **NOTE:** inference backend name `torchxla_trace_once` is subject to change.
 
-With the `torch.compile` you will see that PyTorch/XLA only traces the resent18 model once during the init time and executes the compiled binary every time `dynamo_resnet18` is invoked, instead of tracing the model every time. Note that currently Dynamo does not support fallback so if there is an op that can not be traced by XLA, it will error out. Feel free to open a github issue and we We prioritize adding the lowering. We will add the fallback support for dynamo in the upcoming 2.1 release. Here is a inference speed analysis to compare Dynamo and Lazy using torch bench on Cloud TPU v4-8
+With the `torch.compile` you will see that PyTorch/XLA only traces the resent18 model once during the init time and executes the compiled binary every time `dynamo_resnet18` is invoked, instead of tracing the model every time. Here is a inference speed analysis to compare Dynamo and Lazy using torch bench on Cloud TPU v4-8
 
 | model | Speed up |
 | --- | ----------- |
