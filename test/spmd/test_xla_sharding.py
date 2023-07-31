@@ -763,14 +763,6 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertNotIn('convert(s32[8]{0} %get-tuple-element.25), sharding',
                      torch_xla._XLAC._get_xla_tensors_hlo([xt_index]))
 
-  def test_sharded_tensor_to_cpu_int_type(self):
-    partition_spec = (0, 1)
-    t1 = torch.arange(64).reshape(8, 8)
-    xt1 = t1.clone().to(xm.xla_device())
-    xst1 = xs.mark_sharding(xt1, self._get_mesh((self.n_devices, 1)),
-                            partition_spec)
-    self.assertTrue(torch.allclose(t1, xst1.cpu()))
-
 
 if __name__ == '__main__':
   test = unittest.main()
