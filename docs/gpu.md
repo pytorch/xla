@@ -77,7 +77,7 @@ AMP is very useful on GPU training and PyTorch/XLA reuse Cuda's AMP rule. You ca
 
 ## Develop PyTorch/XLA on a GPU instance (build PyTorch/XLA from source with GPU support)
 
-1. Inside a GPU VM, create a docker container from the development docker image. For example:
+1. Inside a GPU VM, create a docker container from a development docker image. For example:
 ```
 sudo docker pull us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.8_cuda_11.8
 sudo apt-get install -y apt-transport-https ca-certificates curl gnupg-agent    software-properties-common
