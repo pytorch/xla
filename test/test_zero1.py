@@ -39,7 +39,7 @@ class XlaZeRO1Test(TestCase):
     s2 = opt2.state_dict()
     self.assertEqual(s1, s2['base'])
 
-    # deepcopy s1 to load later because pytorch optimizers do not guarantee the input 
+    # deepcopy s1 to load later because pytorch optimizers do not guarantee the input
     # state_dict will not be modified. on the other hand, s2 has this guarantee.
     s1_clone = deepcopy(s1)
 
