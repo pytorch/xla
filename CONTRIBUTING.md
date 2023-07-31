@@ -43,6 +43,10 @@ We recommend you to use our prebuilt Docker image to start your development work
   python setup.py install
   ```
 
+### Build PyTorch/XLA from source with GPU support
+
+Please refer to this [guide](https://github.com/pytorch/xla/blob/master/docs/gpu.md#develop-pytorchxla-on-a-gpu-instance-build-pytorchxla-from-source-with-gpu-support).
+
 ## Before Submitting A Pull Request:
 
 In `pytorch/xla` repo we enforce coding style for both C++ and Python files. Please try to format
