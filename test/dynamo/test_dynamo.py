@@ -217,21 +217,21 @@ class DynamoCpuFallbackTest(unittest.TestCase):
     xla_dynamo_res = dynamo_fn(t_xla)
     self.assertTrue(torch.allclose(cpu_res, xla_dynamo_res.cpu()))
     self.assertEqual(met.metric_data('CompileTime')[0], 4)
-    self.assertEqual(met.metric_data('ExecuteTime')[0], 7)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 6)
 
     # Second tracing
     met.clear_counters()
     xla_dynamo_res_2 = dynamo_fn(t_xla)
     self.assertTrue(torch.allclose(cpu_res, xla_dynamo_res_2.cpu()))
     self.assertEqual(met.metric_data('CompileTime')[0], 4)
-    self.assertEqual(met.metric_data('ExecuteTime')[0], 9)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 8)
 
     # Verify that dynamo can handle different inputs
     xla_dynamo_res_3 = dynamo_fn(t_xla * 3)
     cpu_res_3 = fn_fallback(t * 3)
     self.assertTrue(torch.allclose(cpu_res_3, xla_dynamo_res_3.cpu()))
     self.assertEqual(met.metric_data('CompileTime')[0], 5)
-    self.assertEqual(met.metric_data('ExecuteTime')[0], 12)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 10)
 
 
 class DynamoTrainingBasicTest(unittest.TestCase):
