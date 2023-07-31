@@ -75,24 +75,25 @@ yapf --recursive -i *.py test/ scripts/ torch_xla/
 
 To run the tests, follow __one__ of the options below:
 
-* Run on local CPU using the XRT client:
+* Run on local CPU:
 
   ```Shell
-  export XRT_DEVICE_MAP="CPU:0;/job:localservice/replica:0/task:0/device:XLA_CPU:0"
-  export XRT_WORKERS="localservice:0;grpc://localhost:40934"
+  export PJRT_DEVICE=CPU
   ```
 
-  Select any free TCP port you prefer instead of 40934 (totally arbitrary).
-
-* Run on Cloud TPU using the XRT client, set the XRT_TPU_CONFIG environment variable:
+* Run on Cloud TPU:
 
   ```Shell
-  export XRT_TPU_CONFIG="localservice;0;localhost:51011"
+  export PJRT_DEVICE=TPU
   ```
 
-Note that the IP of the TPU node can change if the TPU node is reset. If _PyTorch_
-seem to hang at startup, verify that the IP of your TPU node is still the same of
-the one you have configured.
+* Run on GPU:
+
+  ```Shell
+  export PJRT_DEVICE=GPU GPU_NUM_DEVICES=${NUM_GPU}
+  ```
+
+For more detial on configuring the runtime, please refer to [this doc](https://github.com/pytorch/xla/blob/master/docs/pjrt.md#quickstart)
 
 If you are planning to be building from source and hence using the latest _PyTorch/TPU_ code base,
 it is suggested for you to select the _Nightly_ builds when you create a Cloud TPU instance.
