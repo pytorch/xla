@@ -5,6 +5,7 @@ import torch_xla.core.xla_model as xm
 from torch_xla.distributed.zero_redundancy_optimizer import ZeroRedundancyOptimizer
 from torch_xla import runtime as xr
 from torch.testing._internal.common_utils import TestCase
+from copy import deepcopy
 
 import unittest
 
@@ -34,10 +35,14 @@ class XlaZeRO1Test(TestCase):
 
     opt1.step()
     opt2.step()
-    self.assertEqual(opt1.state_dict(), opt2.state_dict()['base'])
-
     s1 = opt1.state_dict()
     s2 = opt2.state_dict()
+    self.assertEqual(s1, s2['base'])
+
+    # deepcopy s1 to load later because pytorch optimizers do not guarantee the input
+    # state_dict will not be modified. on the other hand, s2 has this guarantee.
+    s1_clone = deepcopy(s1)
+
     opt1.load_state_dict(s1)
     opt2.load_state_dict(s2)
     self.assertEqual(opt1.state_dict(), opt2.state_dict()['base'])
@@ -45,7 +50,7 @@ class XlaZeRO1Test(TestCase):
     # step still runnable
     opt1.step()
     opt2.step()
-    opt1.load_state_dict(s1)
+    opt1.load_state_dict(s1_clone)
     opt2.load_state_dict(s2)
     self.assertEqual(opt1.state_dict(), opt2.state_dict()['base'])
 
