@@ -3,8 +3,8 @@
 PyTorch/XLA enables PyTorch users to utilize the XLA compiler which supports accelerators including TPU, GPU, and CPU. This doc will go over the basic steps to run PyTorch/XLA on a nvidia GPU instances.
 
 ## Create a GPU instance
-To create a GPU VM in Google Compute Engine, follow the [Google Cloud documentation](https://cloud.google.com/compute/docs/gpus/create-vm-with-gpus).
 
+You can either use a local machine with GPU attached or a GPU VM on the cloud. For example in Google Cloud you can follow this [doc](https://cloud.google.com/compute/docs/gpus/create-vm-with-gpus) to create the GPU VM.
 
 ## Environment Setup
 
