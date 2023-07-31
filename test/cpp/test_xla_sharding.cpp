@@ -245,9 +245,9 @@ TEST_F(XLAShardingTest, ShardTensorMiniBatch) {
   std::vector<std::string> devices = {"TPU:4", "TPU:5", "TPU:6", "TPU:7"};
   at::Tensor minibatch_tensor =
       at::ones({8, 7, 4}, at::TensorOptions(at::kFloat));
-  xla::Shape tensor_shape =
+  xla::Shape global_shape =
       CreateComputationShapeFromTensor(minibatch_tensor, GetDefaultDevice());
-  tensor_shape.set_dimensions(
+  global_shape.set_dimensions(
       0, minibatch_tensor.sizes()[0] * 2);  // Assuming 2 hosts
   xla::Array3D<int64_t> mesh({
       {{0}},
@@ -262,7 +262,7 @@ TEST_F(XLAShardingTest, ShardTensorMiniBatch) {
 
   auto sharding = xla::HloSharding::Tile(mesh).ToProto();
   auto sharding_spec = std::make_shared<XLATensor::ShardingSpec>(
-      sharding, tensor_shape, /*minibatch=*/true);
+      sharding, global_shape, /*minibatch=*/true);
   auto shards = ShardingUtil::ShardTensor(minibatch_tensor, sharding_spec,
                                           devices, /*padded=*/true);
   EXPECT_EQ(shards.size(), 4);

@@ -399,22 +399,21 @@ std::vector<int64_t> ShardingUtil::GetShardShape(
 std::vector<std::vector<at::indexing::TensorIndex>>
 ShardingUtil::GetShardIndicesForMinibatchTensor(
     const std::vector<int64_t>& shard_shape,
-    const std::vector<int64_t>& tensor_shape, const xla::OpSharding sharding,
     const std::vector<std::string>& devices) {
   std::vector<std::vector<at::indexing::TensorIndex>> shard_indices(
       devices.size());
-  if (sharding.type() == xla::OpSharding::OTHER) {
-    for (int i = 0; i < devices.size(); i++) {
-      std::vector<at::indexing::TensorIndex> indices;
-      for (int j = 0; j < tensor_shape.size(); j++) {
-        indices.push_back(at::indexing::Slice(0, tensor_shape[j]));
-      }
-      indices[0] =
-          at::indexing::Slice(i * shard_shape[0], (i + 1) * shard_shape[0]);
-      shard_indices[i] = indices;
+  for (int i = 0; i < devices.size(); i++) {
+    std::vector<at::indexing::TensorIndex> indices;
+    // For batch dimension sharding we just change shard indices on first axis
+    // and copy all indices for all remaining axes.
+    for (int j = 0; j < shard_shape.size(); j++) {
+      indices.push_back(at::indexing::Slice(0, shard_shape[j]));
     }
-  } else {
-    TF_LOG(ERROR) << "Unsupported OpSharding type " << sharding.type();
+    // As the tensor is batch sharded we just care about the first dimension
+    // to calculate shard indices.
+    indices[0] =
+        at::indexing::Slice(i * shard_shape[0], (i + 1) * shard_shape[0]);
+    shard_indices[i] = indices;
   }
   return shard_indices;
 }
@@ -515,8 +514,7 @@ std::vector<at::Tensor> ShardingUtil::ShardTensor(
 
     std::vector<std::vector<at::indexing::TensorIndex>> shard_indices;
     if (minibatch) {
-      shard_indices = GetShardIndicesForMinibatchTensor(
-          shard_shape, tensor.sizes().vec(), sharding, devices);
+      shard_indices = GetShardIndicesForMinibatchTensor(shard_shape, devices);
     } else {
       shard_indices = GetShardIndicesForDevices(
           shard_shape, tensor.sizes().vec(), sharding, devices);

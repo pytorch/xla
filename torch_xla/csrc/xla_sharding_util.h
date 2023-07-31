@@ -103,8 +103,6 @@ class ShardingUtil {
   // called when input is sharded along the batch axis.
   static std::vector<std::vector<at::indexing::TensorIndex>>
   GetShardIndicesForMinibatchTensor(const std::vector<int64_t>& shard_shape,
-                                    const std::vector<int64_t>& tensor_shape,
-                                    const xla::OpSharding sharding,
                                     const std::vector<std::string>& devices);
 
   // Shards a tensor and returns the sharded tensors which belong on `devices`
