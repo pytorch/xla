@@ -18,7 +18,5 @@ def triton_call(*args: Union[jax.Array, bool, int, float],
 
     # Run output shape function over the inputs to get the output shape
 
-    # Create triton op -> this needs to be c++ code...
-    xc.register_custom_call_target(
-      call_name, triton_kernel_call_lib.get_custom_call(), platform="CUDA"
+    
   )
