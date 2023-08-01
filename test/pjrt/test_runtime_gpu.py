@@ -17,7 +17,7 @@ from torch_xla._internal import pjrt
 from absl.testing import absltest, parameterized
 
 
-@unittest.skipIf(not xm.get_xla_supported_devices("GPU"),
+@unittest.skipIf(xr.device_type() != 'GPU',
                  f"GPU tests should only run on GPU devices.")
 class TestExperimentalPjrtGpu(parameterized.TestCase):
 
