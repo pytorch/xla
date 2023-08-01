@@ -19,7 +19,7 @@ started:
 * [Distributed PyTorch/XLA
   Basics](https://github.com/pytorch/xla/blob/master/contrib/kaggle/distributed-pytorch-xla-basics-with-pjrt.ipynb)
 
-## Getting Started
+## Getting Started 
 
 To install PyTorch/XLA a new VM:
 
