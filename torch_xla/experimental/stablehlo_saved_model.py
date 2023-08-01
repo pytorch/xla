@@ -38,35 +38,38 @@ def _get_numpy_dtype(dtype):
 
 class SHLOModel:
 
-  def __init__(self, model_bytecode, pos_to_orig_pos, pos_to_param,
-               output_shape, output_dtype):
-    self.model_bytecode = model_bytecode
-    self.pos_to_orig_pos = pos_to_orig_pos
-    self.pos_to_param = pos_to_param
-    self._total_number = len(pos_to_orig_pos) + len(pos_to_param)
+  def __init__(self, bundle, default_method_name='forward'):
+    self._bundle = bundle
+    self._name_to_stablehlo = {
+        meta.name: (meta, stablehlo)
+        for meta, stablehlo in bundle.stablehlo_funcs
+    }
+    self._default_method = default_method_name
 
-    self.tout = (_get_numpy_dtype(output_dtype),)
-    self.sout = (tuple(output_shape),)
-
-  def __call__(self, *args):
-    # TODO(qihqi): remove this
+  def evaluate(self, method_name, args):
     from tensorflow.compiler.tf2xla.python import xla as tfxla
+    meta, stablehlo = self._name_to_stablehlo[method_name]
     call_args = []
-    for i in range(self._total_number):
-      if i in self.pos_to_orig_pos:
-        call_args.append(args[self.pos_to_orig_pos[i]])
+    for loc in meta.input_locations:
+      if loc.type_ == VariableType.PARAMETER:
+        call_args.append(self._bundle.state_dict[loc.name])
+      elif loc.type_ == VariableType.CONSTANT:
+        call_args.append(self._bundle.additional_constants[loc.position])
       else:
-        call_args.append(self.pos_to_param[i])
-
+        call_args.append(args[loc.position])
+    output_sig = meta.output_signature[0]
     return tfxla.call_module(
         tuple(call_args),
         version=5,
-        Tout=self.tout,  # dtype information
-        Sout=self.sout,  # Shape information
+        Tout=[output_sig.dtype],  # dtype information
+        Sout=[output_sig.shape],  # Shape information
         function_list=[],
         platforms=('CPU',),
-        module=self.model_bytecode,
-    )[0]
+        module=stablehlo,
+    )
+
+  def __call__(self, *args):
+    return self.evaluate(self._default_method, args)
 
 
 def export_torch_model(model: torch.nn.Module,
@@ -95,53 +98,15 @@ def export_torch_model(model: torch.nn.Module,
 
   """
 
-  # Materialize the computation before this call to make sure that StableHLO
-  # captured below only reflect the model passed in
-  xm.mark_step()
-  metrics.clear_counters()
-  model = copy.deepcopy(model)
-  sample_inputs = copy.deepcopy(sample_inputs)
-
   device = xm.xla_device()
-  model = model.to(device=device)
-  sample_inputs_lazy = tuple(
-      x.to(device=device) if isinstance(x, torch.Tensor) else x
-      for x in sample_inputs)
-  input_ids = {
-      torch_xla._XLAC._xla_get_tensor_id(tensor): i
-      for i, tensor in enumerate(sample_inputs_lazy)
-      if isinstance(tensor, torch.Tensor)
-  }
-  output = model(*sample_inputs_lazy)
-  if fallback_ops := dynamo_bridge.get_fallback_ops():
-    message = "This model contains ops not capturable by Pytorch/XLA: {}".format(
-        "\n".join(fallback_ops))
-    raise RuntimeError(message)
-  stablehlo_bytecode = xm.get_stablehlo_bytecode([output])
-
-  (
-      graph_input_tensor_ids,
-      graph_input_xla_values,
-  ) = torch_xla._XLAC._get_tensors_xla_device_data_node([output])
-
-  pos_to_orig_pos = {}
-  pos_to_param = {}
-  for hlo_input_pos, tensor_id in enumerate(graph_input_tensor_ids):
-    if tensor_id in input_ids:  # this is input
-      pos_to_orig_pos[hlo_input_pos] = input_ids[tensor_id]
-    else:
-      pos_to_param[hlo_input_pos] = graph_input_xla_values[
-          hlo_input_pos].detach().cpu().numpy()
-
-  stablehlo_model = SHLOModel(stablehlo_bytecode, pos_to_orig_pos, pos_to_param,
-                              output.shape, output.dtype)
-  # Remove all of the pending IR from all live tensors. The assumptions are
-  # 1. With the  `xm.mark_step` in the beginning of this call, every XLATensor
-  # should be materialized
-  # 2. All of the pending IRs are result of the one inference
-  # should be removed to avoid extra computation executed and in place updates op
-  # mistakenlly update the input tensors.
-  torch_xla._XLAC._clear_pending_irs(str(xm.xla_device()))
+  args = tuple(
+      val.to(device=device) if isinstance(val, torch.Tensor) else val
+      for val in sample_inputs)
+  orig_state_dict = copy.copy(model.state_dict())
+  model = model.to(device)
+  bundle = _callable_to_stablehlo_bundle(model, args, model.state_dict())
+  bundle.state_dict = orig_state_dict
+  stablehlo_model = SHLOModel(bundle)
   return stablehlo_model
 
 
@@ -240,35 +205,13 @@ class StableHLOExportOptions:
   pass
 
 
-def _exported_program_to_stablehlo_bundle(exported_model, args):
+def _callable_to_stablehlo_bundle(func, input_args, state_dict):
   xm.mark_step()
   metrics.clear_counters()
   device = xm.xla_device()
-
-  if exported_model.call_spec.in_spec is not None:
-    args = fx_pytree.tree_flatten_spec(args, exported_model.call_spec.in_spec)
-  else:
-    args = copy.deepcopy(args)
-
-  args = [
-      x.to(device=device) if isinstance(x, torch.Tensor) else x for x in args
-  ]
-
-  input_ids = {
-      torch_xla._XLAC._xla_get_tensor_id(tensor): i
-      for i, tensor in enumerate(args)
-      if isinstance(tensor, torch.Tensor)
-  }
-  # NOTE call convention: (parameters, buffers, user_inputs)
-  param_and_buffer_keys = exported_model.graph_signature.parameters + exported_model.graph_signature.buffers
-  state = exported_model.state_dict
-  param_buffer_values = tuple(state[key].to(
-      device=device) if isinstance(state[key], torch.Tensor) else state[key]
-                              for key in param_and_buffer_keys)
-
-  with torch.no_grad():
-    res = torch.fx.Interpreter(exported_model.graph_module).run(
-        *param_buffer_values, *args, enable_io_processing=False)
+  res = func(*input_args)
+  if isinstance(res, torch.Tensor):
+    res = (res,)
 
   (
       graph_input_tensor_ids,
@@ -277,9 +220,10 @@ def _exported_program_to_stablehlo_bundle(exported_model, args):
 
   tensor_id_to_state_name = {
       torch_xla._XLAC._xla_get_tensor_id(value): name
-      for name, value in zip(param_and_buffer_keys, param_buffer_values)
+      for name, value in state_dict.items()
       if isinstance(value, torch.Tensor)
   }
+
   stablehlo_content = xm.get_stablehlo_bytecode(res)
 
   pos_to_orig_pos = {}
@@ -287,6 +231,11 @@ def _exported_program_to_stablehlo_bundle(exported_model, args):
   input_locations = []
   input_signatures = []
   additional_constants = []
+  input_ids = {
+      torch_xla._XLAC._xla_get_tensor_id(tensor): pos
+      for pos, tensor in enumerate(input_args)
+      if isinstance(tensor, torch.Tensor)
+  }
   for hlo_input_pos, (tensor_id, tensor_value) in enumerate(
       zip(graph_input_tensor_ids, graph_input_xla_values)):
     if tensor_id in input_ids:  # this is input
@@ -296,7 +245,7 @@ def _exported_program_to_stablehlo_bundle(exported_model, args):
           name=tensor_id_to_state_name[tensor_id])
     else:  # additional constants that WE created
       location = InputLocation.constant(position=len(additional_constants))
-      additional_constants.append(tensor_value)
+      additional_constants.append(tensor_value.detach().cpu().numpy())
     input_locations.append(location)
     input_signatures.append(
         VariableSignature(
@@ -309,7 +258,7 @@ def _exported_program_to_stablehlo_bundle(exported_model, args):
           dtype=str(tensor_value.dtype).replace('torch.', '')) for tensor in res
   ]
 
-  torch_xla._XLAC._clear_pending_irs(str(xm.xla_device()))
+  torch_xla._XLAC._clear_pending_irs(str(device))
 
   meta = StableHLOFunctionMeta(
       name='forward',
@@ -322,9 +271,48 @@ def _exported_program_to_stablehlo_bundle(exported_model, args):
 
   return StableHLOModelBundle(
       stablehlo_funcs=[(meta, stablehlo_content)],
-      state_dict=exported_model.state_dict,
+      state_dict={},
       additional_constants=additional_constants,
   )
+
+
+def _exported_program_to_stablehlo_bundle(exported_model,
+                                          args) -> StableHLOModelBundle:
+  device = xm.xla_device()
+
+  if exported_model.call_spec.in_spec is not None:
+    args = fx_pytree.tree_flatten_spec(args, exported_model.call_spec.in_spec)
+  else:
+    args = copy.deepcopy(args)
+
+  args = tuple(
+      x.to(device=device) if isinstance(x, torch.Tensor) else x for x in args)
+
+  # NOTE call convention: (parameters, buffers, user_inputs)
+  param_and_buffer_keys = exported_model.graph_signature.parameters + exported_model.graph_signature.buffers
+  state = {
+      name: val.to(device=device)
+      for name, val in exported_model.state_dict.items()
+      if isinstance(x, torch.Tensor)
+  }
+  param_buffer_values = tuple(state[key].to(
+      device=device) if isinstance(state[key], torch.Tensor) else state[key]
+                              for key in param_and_buffer_keys)
+
+  final_args = param_buffer_values + args
+
+  def forward(*args):
+    with torch.no_grad():
+      res = torch.fx.Interpreter(exported_model.graph_module).run(
+          *args, enable_io_processing=False)
+      return res
+
+  bundle = _callable_to_stablehlo_bundle(forward, final_args, state)
+  bundle.state_dict = {
+      key: val.detach().cpu().numpy() if isinstance(val, torch.Tensor) else val
+      for key, val in exported_model.state_dict.items()
+  }
+  return bundle
 
 
 class StableHLOExportOptions:
