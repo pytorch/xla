@@ -1,6 +1,8 @@
 #!/bin/bash
 set -ex
+# current repo
 RUNDIR="$(cd "$(dirname "$0")" ; pwd -P)"
+# bazel build type, `dbg`=debug, `opt`=build with optimization without debug
 BUILDTYPE="opt"
 VERB=
 FILTER=
