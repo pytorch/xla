@@ -387,20 +387,29 @@ class InputCollector(torch.fx.Interpreter):
     return super().call_module(target, args, kwargs)
 
 
-def extract_compiled_graph(xla_model, xla_args):
+def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
   # This call is critical to make sure xla_args' tensor id show up in graph_input_tensor_ids
   xm.mark_step()
+
+  # If a model's `forward` function has an in-place op that acts on its `self.tensor`, the
+  # `self.tensor` is not included as a part of the `xla_args` and does not get materialized.
+  # This explicitly fetches the `self.tensor`s if they exist.
+  self_args = []
+  for name, buffer in xla_model.named_buffers():
+    if "self" in name:
+      self_args.append(buffer)
+  all_xla_args = list(xla_args) + self_args
 
   # This logic, needed for supporting in-place operations, is a duplicate of
   # the one in the main `extract_internal` function above. We need to do this
   # check for fetching fallback ops as well.
   # TODO (@wonjoo): Make this duplicate code a bit cleaner.
-  xla_args_need_update_bool = torch_xla._XLAC._check_tensor_need_materialization(
-      xla_args)
+  args_need_update_bool = torch_xla._XLAC._check_tensor_need_materialization(
+      all_xla_args)
 
-  cloned_xla_args = [
+  cloned_args = [
       torch.clone(xla_arg) if isinstance(xla_arg, torch.Tensor) else xla_arg
-      for xla_arg in xla_args
+      for xla_arg in all_xla_args
   ]
 
   # execute model once to collect fallback ops
@@ -424,10 +433,10 @@ def extract_compiled_graph(xla_model, xla_args):
 
   # Again, same logic in the `extract_internal` above to support in-place operations.
   # TODO (@wonjoo): Make this duplicate code a bit cleaner.
-  if xla_args_need_update_bool:
-    for xla_arg, cloned_xla_arg in zip(xla_args, cloned_xla_args):
-      if isinstance(xla_arg, torch.Tensor):
-        xla_arg.copy_(cloned_xla_arg)
+  if args_need_update_bool:
+    for arg, cloned_arg in zip(all_xla_args, cloned_args):
+      if isinstance(arg, torch.Tensor):
+        arg.copy_(cloned_arg)
 
   torch_xla._XLAC._clear_pending_irs(str(xm.xla_device()))
 

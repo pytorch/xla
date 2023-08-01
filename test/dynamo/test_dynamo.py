@@ -8,6 +8,7 @@ import torch_xla.utils.utils as xu
 import torch_xla.debug.metrics as met
 from torch_xla import runtime as xr
 import torch.optim as optim
+import torch.nn as nn
 import torch._dynamo as dynamo
 import torchvision
 import unittest
@@ -75,6 +76,42 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     res_xla_dynamo_3 = self.fn_simple_dynamo(xla_x + xla_y, xla_y * 3)
     res_cpu_3 = self.fn_simple(x + y, y * 3)
     self.assertTrue(torch.allclose(res_cpu_3, res_xla_dynamo_3.cpu()))
+
+  def test_simple_model_with_in_place_ops(self):
+
+    class TestModel(nn.Module):
+
+      def __init__(self, device=None):
+        super().__init__()
+        self.self_tensor = torch.zeros((5, 3), device=device)
+
+      def forward(self, index, copy_tensor, input_tensor):
+        self.self_tensor.index_copy_(0, index, copy_tensor)
+        output = input_tensor + self.self_tensor
+        return output
+
+    torch._dynamo.reset()
+    met.clear_counters()
+    met.clear_all()
+    device = xm.xla_device()
+    input_tensor = torch.ones(3)
+    copy_tensor = torch.tensor([[1, 2, 3], [4, 5, 6], [7, 8, 9]],
+                               dtype=torch.float)
+    index = torch.tensor([0, 4, 2])
+    xla_input_tensor = input_tensor.to(device)
+    xla_copy_tensor = copy_tensor.to(device)
+    xla_index = index.to(device)
+
+    cpu_model = TestModel()
+    res_cpu = cpu_model.forward(index, copy_tensor, input_tensor)
+
+    xla_model = TestModel(device).to(device)
+    compiled_model = torch.compile(xla_model, backend='torchxla_trace_once')
+    res_xla_dynamo = compiled_model.forward(xla_index, xla_copy_tensor,
+                                            xla_input_tensor)
+
+    self.assertIn('xla::index_copy', met.counter_names())
+    self.assertTrue(torch.allclose(res_cpu, res_xla_dynamo.cpu()))
 
   def test_simple_model_with_different_input_shape(self):
     met.clear_counters()
