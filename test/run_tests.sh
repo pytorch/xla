@@ -164,6 +164,7 @@ function run_xla_op_tests {
   # run_xla_hlo_debug "$CDIR/stablehlo/test_stablehlo_inference.py"
   run_stablehlo_compile "$CDIR/stablehlo/test_stablehlo_compile.py"
   run_test "$CDIR/pjrt/test_runtime.py"
+  run_test "$CDIR/pjrt/test_runtime_gpu.py"
   run_test "$CDIR/pjrt/test_runtime_multi_cpu.py"
   run_test "$CDIR/pjrt/test_internal_tpu.py"
   run_test "$CDIR/pjrt/test_ddp.py"

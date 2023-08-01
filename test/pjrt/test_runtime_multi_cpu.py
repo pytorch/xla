@@ -22,7 +22,7 @@ class TestExperimentalPjrtMultiCpu(parameterized.TestCase):
         xenv.CPU_NUM_DEVICES: '4',
     })
 
-  def test_default_cpu_device(self):
+  def test_default_cpu_device(self)
     os.environ.pop(xenv.CPU_NUM_DEVICES, None)
     os.environ.pop(xenv.PJRT_CPU_ASYNC_CLIENT, None)
 
