@@ -1,6 +1,7 @@
 import copy
 from dataclasses import dataclass
 import enum
+import itertools
 import json
 import shutil
 import os
@@ -18,6 +19,7 @@ from torch_xla.core import dynamo_bridge
 from torch_xla.debug import metrics
 import torchvision
 import torch._dynamo as torchdynamo
+from torch.utils._pytree import tree_map_only
 
 from typing import Tuple, Type, Callable
 
@@ -100,8 +102,7 @@ def export_torch_model(model: torch.nn.Module,
 
   device = xm.xla_device()
   args = tuple(
-      val.to(device=device) if isinstance(val, torch.Tensor) else val
-      for val in sample_inputs)
+      tree_map_only(torch.Tensor, lambda x: x.to(device=device), sample_inputs))
   orig_state_dict = copy.copy(model.state_dict())
   model = model.to(device)
   bundle = _callable_to_stablehlo_bundle(model, args, model.state_dict())
@@ -207,6 +208,7 @@ class StableHLOExportOptions:
 
 def _callable_to_stablehlo_bundle(func, input_args, state_dict):
   xm.mark_step()
+  xm.wait_device_ops()
   metrics.clear_counters()
   device = xm.xla_device()
   res = func(*input_args)
@@ -276,6 +278,24 @@ def _callable_to_stablehlo_bundle(func, input_args, state_dict):
   )
 
 
+class XLAExportInterpreter(torch.fx.Interpreter):
+
+  def __init__(self, module, device):
+    self._device = device
+    super().__init__(module)
+
+  def call_function(self, target, args: Tuple, kwargs: Dict) -> Any:
+    # NOTE(qihqi): We need to do this because there are some operators
+    # that creates new tensor. And those operators would create it on CPU.
+    # this bit of code basically move it to XLA device, otherwise we would
+    # get an error saying we cannot do math between a XLA tensor and a CPU
+    # tensor.
+    new_kwargs = dict(kwargs)
+    if 'device' in kwargs:
+      new_kwargs['device'] = self._device
+    return super().call_function(target, args, new_kwargs)
+
+
 def _exported_program_to_stablehlo_bundle(exported_model,
                                           args) -> StableHLOModelBundle:
   device = xm.xla_device()
@@ -285,33 +305,25 @@ def _exported_program_to_stablehlo_bundle(exported_model,
   else:
     args = copy.deepcopy(args)
 
-  args = tuple(
-      x.to(device=device) if isinstance(x, torch.Tensor) else x for x in args)
+  args = tree_map_only(torch.Tensor, lambda x: x.to(device=device), args)
 
   # NOTE call convention: (parameters, buffers, user_inputs)
   param_and_buffer_keys = exported_model.graph_signature.parameters + exported_model.graph_signature.buffers
-  state = {
-      name: val.to(device=device)
-      for name, val in exported_model.state_dict.items()
-      if isinstance(x, torch.Tensor)
-  }
-  param_buffer_values = tuple(state[key].to(
-      device=device) if isinstance(state[key], torch.Tensor) else state[key]
-                              for key in param_and_buffer_keys)
-
-  final_args = param_buffer_values + args
+  state = tree_map_only(torch.Tensor, lambda x: x.to(device=device),
+                        exported_model.state_dict)
+  param_buffer_values = (state[key] for key in param_and_buffer_keys)
+  final_args = tuple(itertools.chain(param_buffer_values, args))
 
   def forward(*args):
     with torch.no_grad():
-      res = torch.fx.Interpreter(exported_model.graph_module).run(
+      res = XLAExportInterpreter(exported_model.graph_module, device).run(
           *args, enable_io_processing=False)
       return res
 
   bundle = _callable_to_stablehlo_bundle(forward, final_args, state)
-  bundle.state_dict = {
-      key: val.detach().cpu().numpy() if isinstance(val, torch.Tensor) else val
-      for key, val in exported_model.state_dict.items()
-  }
+  bundle.state_dict = tree_map_only(torch.Tensor,
+                                    lambda x: x.detach().cpu().numpy(),
+                                    exported_model.state_dict)
   return bundle
 
 
