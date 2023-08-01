@@ -1755,6 +1755,8 @@ void InitXlaModuleBindings(py::module m) {
     // Use with caution. Those tensor whole ir was cleared with be replaced
     // with a placeholder XLAData and SHOULD NOT be accessed.
     ClearPendingIrs(device);
+    auto xla_device = GetDeviceOrCurrent(device);
+    SetAllReduceToken(xla_device, nullptr);
   });
 
   m.def("_run_cached_graph",
