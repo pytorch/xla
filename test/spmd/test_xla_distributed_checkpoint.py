@@ -82,7 +82,7 @@ class EndToEndCheckpointTest(DistributedCheckpointTestBase):
     )
     # Load the checkpoint using the provided load planner
     for p1, p2 in zip(model_in.parameters(), model_out.parameters()):
-      self.assertFalse(torch.allclose(p1, p2))
+      self.assertFalse(torch.allclose(p1.cpu(), p2.cpu()))
 
     dist_cp.load_state_dict(
         state_dict=model_out_state_dict,
@@ -91,7 +91,7 @@ class EndToEndCheckpointTest(DistributedCheckpointTestBase):
         no_dist=no_dist,
     )
     for p1, p2 in zip(model_in.parameters(), model_out.parameters()):
-      self.assertTrue(torch.allclose(p1, p2))
+      self.assertTrue(torch.allclose(p1.cpu(), p2.cpu()))
 
   def test_resharding_unsharded_to_sharded(self):
     # Save an unsharded model using the DefaultSavePlanner and load into a
@@ -128,6 +128,8 @@ class EndToEndCheckpointTest(DistributedCheckpointTestBase):
       } <= os.environ.keys(),
       'CHKPT_PATH and distributed config must be set for multihost checkpoint')
   def test_multihost_checkpoint(self):
+    torch.manual_seed(42)
+
     # Initialize the default CPU process group from the environment.
     dist.init_process_group()
 
