@@ -3,13 +3,8 @@
 PyTorch/XLA enables PyTorch users to utilize the XLA compiler which supports accelerators including TPU, GPU, and CPU. This doc will go over the basic steps to run PyTorch/XLA on a nvidia GPU instances.
 
 ## Create a GPU instance
-<<<<<<< HEAD
 
 You can either use a local machine with GPU attached or a GPU VM on the cloud. For example in Google Cloud you can follow this [doc](https://cloud.google.com/compute/docs/gpus/create-vm-with-gpus) to create the GPU VM.
-=======
-To create a GPU VM in Google Compute Engine, follow the [Google Cloud documentation](https://cloud.google.com/compute/docs/gpus/create-vm-with-gpus).
-
->>>>>>> Add gpu doc for how to build PyTorch/XLA from source with GPU support.
 
 ## Environment Setup
 
@@ -82,12 +77,8 @@ AMP is very useful on GPU training and PyTorch/XLA reuse Cuda's AMP rule. You ca
 
 ## Develop PyTorch/XLA on a GPU instance (build PyTorch/XLA from source with GPU support)
 
-<<<<<<< HEAD
 1. Inside a GPU VM, create a docker container from a development docker image. For example:
 
-=======
-1. Inside a GPU VM, create a docker container from the development docker image. For example:
->>>>>>> Add gpu doc for how to build PyTorch/XLA from source with GPU support.
 ```
 sudo docker pull us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.8_cuda_11.8
 sudo apt-get install -y apt-transport-https ca-certificates curl gnupg-agent    software-properties-common
@@ -101,10 +92,7 @@ sudo docker exec -it $(sudo docker ps | awk 'NR==2 { print $1 }') /bin/bash
 ```
 
 2. Build PyTorch and PyTorch/XLA from source.
-<<<<<<< HEAD
 
-=======
->>>>>>> Add gpu doc for how to build PyTorch/XLA from source with GPU support.
 ```
 git clone https://github.com/pytorch/pytorch.git
 cd pytorch
@@ -112,18 +100,11 @@ USE_CUDA=0 python setup.py install
 
 git clone https://github.com/pytorch/xla.git
 cd xla
-<<<<<<< HEAD
 XLA_CUDA=1 python setup.py install
 ```
 
 3. Verify if PyTorch and PyTorch/XLA have been installed successfully.
 
-=======
-BAZEL_REMOTE_CACHE=0 XLA_CUDA=1 python setup.py install
-```
-
-3. Verify if PyTorch and PyTorch/XLA have been installed successfully.
->>>>>>> Add gpu doc for how to build PyTorch/XLA from source with GPU support.
 If you can run the test in the section
 [Run a simple model](#run-a-simple-model) successfully, then PyTorch and
 PyTorch/XLA should have been installed successfully.
