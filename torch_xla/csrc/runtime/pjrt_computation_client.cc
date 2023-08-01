@@ -46,6 +46,7 @@ MaybeInitializeDistributedRuntimeClient(int local_rank,
   if (!dist_service_addr.empty()) {
     xla::DistributedRuntimeClient::Options options;
     /* TODO(jonbolin): Use global rank for multi-host setup */
+    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": local_rank=" << local_rank << std::endl;
     options.node_id = local_rank;
     client =
         xla::GetDistributedRuntimeClient(dist_service_addr, options,

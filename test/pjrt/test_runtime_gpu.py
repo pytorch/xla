@@ -27,16 +27,20 @@ class TestExperimentalPjrtGpu(parameterized.TestCase):
 
   def test_default_gpu_device(self):
     os.environ.pop(xenv.PJRT_GPU_ASYNC_CLIENT, None)
+    print('xw32: PJRT_GPU_ASYNC_CLIENT=', os.environ.get(xenv.PJRT_GPU_ASYNC_CLIENT, ''))
 
     num_devices = int(os.environ[xenv.GPU_NUM_DEVICES])
     expected = {i: torch.device(f'xla:0') for i in range(num_devices)}
+    print('xw32 expected=', expected)
     devices_per_process = pjrt.run_multiprocess(xm.xla_device)
     self.assertDictEqual(devices_per_process, expected)
 
   def test_multi_gpu_devices(self):
+    print('xw32: PJRT_GPU_ASYNC_CLIENT=', os.environ.get(xenv.PJRT_GPU_ASYNC_CLIENT, ''))
     num_devices = int(os.environ[xenv.GPU_NUM_DEVICES])
     expected = {i: torch.device(f'xla:0') for i in range(num_devices)}
 
+    print('xw32 expected=', expected)
     devices_per_process = pjrt.run_multiprocess(xm.xla_device)
     self.assertDictEqual(devices_per_process, expected)
 

@@ -1614,6 +1614,7 @@ void InitXlaModuleBindings(py::module m) {
 
           xla::DistributedRuntimeServiceImpl::Options options;
           options.num_nodes = num_nodes;
+          std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": creating a distributed runtime service with num_nodes=" << num_nodes << std::endl;
           return std::move(xla::GetDistributedRuntimeService(
                                dist_service_addr, options,
                                /*use_coordination_service=*/false)
