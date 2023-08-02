@@ -175,8 +175,8 @@ class DynamoCpuFallbackTest(unittest.TestCase):
   def test_operator_fallback(self):
 
     def fn_fallback(t):
-      # As of 05/18/2023, torch.median is not lowered by PyTorch/XLA
-      return torch.median(t)
+      # aten::_foobar is aux function that's used for testing purposes only
+      return torch._foobar(t)
 
     torch._dynamo.reset()
     met.clear_counters()
@@ -211,8 +211,8 @@ class DynamoCpuFallbackTest(unittest.TestCase):
 
     def fn_fallback(t):
       t_2 = torch.mul(t, 2)
-      # As of 05/18/2023, torch.median is not lowered by PyTorch/XLA
-      t_3 = torch.median(t_2)
+      # aten::_foobar is aux function that's used for testing purposes only
+      t_3 = torch._foobar(t_2)
       t_4 = torch.mul(t_3, 2)
       return t_4
 
