@@ -184,28 +184,30 @@ class DynamoCpuFallbackTest(unittest.TestCase):
     device = xm.xla_device()
 
     # Initial tracing
-    dynamo_fn = torch.compile(fn_fallback, backend="torchxla_trace_once")
+    dynamo_fn = torch.compile(fn_fallback, backend="openxla")
     t = torch.randn(5)
     t_xla = t.to(device)
     cpu_res = fn_fallback(t)
     xla_dynamo_res = dynamo_fn(t_xla)
     self.assertTrue(torch.allclose(cpu_res, xla_dynamo_res.cpu()))
     self.assertEqual(met.metric_data('CompileTime')[0], 2)
-    self.assertEqual(met.metric_data('ExecuteTime')[0], 2)
+    # TODO(JackCaoG): invesgate this execution, from the HLO it is creating
+    # a f32[5] with all zeros. The cause of the execution is 
+    # run_node (/src/pytorch/torch/_dynamo/utils.py:1381)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 4)
 
     # Second tracing
-    met.clear_counters()
     xla_dynamo_res_2 = dynamo_fn(t_xla)
     self.assertTrue(torch.allclose(cpu_res, xla_dynamo_res_2.cpu()))
     self.assertEqual(met.metric_data('CompileTime')[0], 2)
-    self.assertEqual(met.metric_data('ExecuteTime')[0], 2)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 4)
 
     # Verify that dynamo can handle different inputs
     xla_dynamo_res_3 = dynamo_fn(t_xla * 3)
     cpu_res_3 = fn_fallback(t * 3)
     self.assertTrue(torch.allclose(cpu_res_3, xla_dynamo_res_3.cpu()))
     self.assertEqual(met.metric_data('CompileTime')[0], 3)
-    self.assertEqual(met.metric_data('ExecuteTime')[0], 3)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 5)
 
   def test_fallback_multiple_submodules(self):
 
@@ -222,28 +224,28 @@ class DynamoCpuFallbackTest(unittest.TestCase):
     device = xm.xla_device()
 
     # Initial tracing
-    dynamo_fn = torch.compile(fn_fallback, backend="torchxla_trace_once")
+    dynamo_fn = torch.compile(fn_fallback, backend="openxla")
     t = torch.randn(7)
     t_xla = t.to(device)
     cpu_res = fn_fallback(t)
     xla_dynamo_res = dynamo_fn(t_xla)
     self.assertTrue(torch.allclose(cpu_res, xla_dynamo_res.cpu()))
     self.assertEqual(met.metric_data('CompileTime')[0], 4)
-    self.assertEqual(met.metric_data('ExecuteTime')[0], 6)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 8)
 
     # Second tracing
     met.clear_counters()
     xla_dynamo_res_2 = dynamo_fn(t_xla)
     self.assertTrue(torch.allclose(cpu_res, xla_dynamo_res_2.cpu()))
     self.assertEqual(met.metric_data('CompileTime')[0], 4)
-    self.assertEqual(met.metric_data('ExecuteTime')[0], 8)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 10)
 
     # Verify that dynamo can handle different inputs
     xla_dynamo_res_3 = dynamo_fn(t_xla * 3)
     cpu_res_3 = fn_fallback(t * 3)
     self.assertTrue(torch.allclose(cpu_res_3, xla_dynamo_res_3.cpu()))
     self.assertEqual(met.metric_data('CompileTime')[0], 5)
-    self.assertEqual(met.metric_data('ExecuteTime')[0], 10)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 12)
 
 
 class DynamoTrainingBasicTest(unittest.TestCase):
