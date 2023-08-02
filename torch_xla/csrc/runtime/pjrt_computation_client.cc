@@ -231,7 +231,8 @@ std::optional<xla::OpSharding> PjRtComputationClient::GetDataSharding(
 
 std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
     absl::Span<const TensorSource> tensors) {
-  auto timed = std::make_shared<metrics::TimedSection>(TransferToServerMetric());
+  auto timed =
+      std::make_shared<metrics::TimedSection>(TransferToServerMetric());
   tsl::profiler::TraceMe activity("PjRtComputationClient::TransferToServer",
                                   tsl::profiler::TraceMeLevel::kInfo);
   std::vector<ComputationClient::DataPtr> datas;
@@ -249,17 +250,18 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
 
     // Avoid use-after-free on `literal` due to unsequenced move and use.
     xla::Literal* literal_pointer = literal.get();
-    std::shared_ptr<xla::PjRtBuffer> buffer = std::move(
-        client_
-            ->BufferFromHostBuffer(
-                literal_pointer->untyped_data(),
-                literal_pointer->shape().element_type(),
-                literal_pointer->shape().dimensions(), byte_strides,
-                xla::PjRtClient::HostBufferSemantics::
-                    kImmutableUntilTransferCompletes,
-                [literal{std::move(literal)}, timed]() { /* frees literal & timed */ },
-                pjrt_device)
-            .value());
+    std::shared_ptr<xla::PjRtBuffer> buffer =
+        std::move(client_
+                      ->BufferFromHostBuffer(
+                          literal_pointer->untyped_data(),
+                          literal_pointer->shape().element_type(),
+                          literal_pointer->shape().dimensions(), byte_strides,
+                          xla::PjRtClient::HostBufferSemantics::
+                              kImmutableUntilTransferCompletes,
+                          [literal{std::move(literal)},
+                           timed]() { /* frees literal & timed */ },
+                          pjrt_device)
+                      .value());
 
     ComputationClient::DataPtr data =
         std::make_shared<PjRtData>(tensor.device, tensor.shape, buffer);
