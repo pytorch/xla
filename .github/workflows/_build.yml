@@ -106,6 +106,7 @@ jobs:
       - name: Push built docker image to ECR
         id: upload-docker-image
         shell: bash
+        if: false
         run: |
           if [[ ${DISABLE_XRT} == 1 ]]; then
             image_tag_base=latest
