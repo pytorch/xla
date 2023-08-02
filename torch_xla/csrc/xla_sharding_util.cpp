@@ -496,10 +496,11 @@ std::vector<at::Tensor> ShardingUtil::ShardTensor(
     const at::Tensor& tensor, const XLATensor::ShardingSpecPtr shardings,
     const std::vector<std::string>& devices, bool padded) {
   xla::OpSharding sharding;
+  bool minibatch = false;
   if (shardings != nullptr) {
     sharding = shardings->sharding;
+    minibatch = shardings->minibatch;
   }
-  bool minibatch = shardings->minibatch;
   TF_LOG(INFO) << "ShardTensor with sharding type(" << sharding.type()
                << ")... and minibatch = " << minibatch << std::endl;
   auto device_index = build_index_map(devices);
@@ -684,8 +685,18 @@ runtime::ComputationClient::DataPtr ShardingUtil::CreateShardedData(
   XLA_CHECK(local_shards.size() == devices.size())
       << "A device must be speficied for each shard";
   std::vector<runtime::ComputationClient::TensorSource> source_tensors;
-  auto global_shape = sharding_spec->shape;
-  auto sharding = sharding_spec->sharding;
+  xla::Shape global_shape;
+  xla::OpSharding sharding;
+  if (sharding_spec == nullptr) {
+    // if sharding.type is replicated, global_shape is shape of the tensor.
+    auto first_device = ParseDeviceString(devices[0]);
+    global_shape =
+        CreateComputationShapeFromTensor(local_shards[0], &first_device);
+    sharding = xla::HloSharding::Replicate().ToProto();
+  } else {
+    global_shape = sharding_spec->shape;
+    sharding = sharding_spec->sharding;
+  }
   for (int64_t j = 0; j < devices.size(); ++j) {
     auto shard_device = ParseDeviceString(devices[j]);
     auto shard_shape =
