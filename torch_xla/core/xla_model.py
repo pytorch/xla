@@ -1001,7 +1001,14 @@ def send_cpu_data_to_device(datas, device, input_sharding=None):
     devices = [str(device)] * len(tensors)
     shardings = None
     if input_sharding:
-      shardings = [input_sharding.xla_spec(t) for t in tensors]
+      shardings = []
+      for t in tensors:
+        for sharding in input_sharding:
+          if sharding.can_apply(t):
+            shardings.append(sharding.xla_spec(t))
+            break
+        else:
+          sharding.append(None)
     xtensors = torch_xla._XLAC._xla_tensors_from_aten(tensors, devices,
                                                       shardings)
     return xtensors
