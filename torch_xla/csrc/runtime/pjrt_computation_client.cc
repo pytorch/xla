@@ -143,8 +143,7 @@ PjRtComputationClient::PjRtComputationClient() {
         std::move(xla::GetStreamExecutorGpuClient(
                       /*asynchronous=*/async, xla::GpuAllocatorConfig{},
                       /*node_id=*/local_rank,
-                      /*num_nodes=*/
-                      sys_util::GetEnvInt(env::kEnvPjRtLocalProcessCount, 1),
+                      /*num_nodes=*/4, 
                       /*allowed_devices=*/allowed_devices,
                       /*platform_name*/ "gpu",
                       /*should_stage_host_to_device_transfers*/ true,
