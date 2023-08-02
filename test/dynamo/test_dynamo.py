@@ -259,7 +259,7 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     loss.backward()
     return loss
 
-  @torch.compile(backend='aot_torchxla_trace_once')
+  @torch.compile(backend='openxla')
   def fn_simple_dynamo(self, input):
     return self.fn_simple(input)
 
@@ -326,7 +326,7 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     met.clear_all()
 
     dynamo_train_model = torch.compile(
-        self.train_model, backend='aot_torchxla_trace_once')
+        self.train_model, backend='openxla')
     for data, target in loader:
       xla_output = dynamo_train_model(xla_resnet18, data, target)
       cpu_data = data.detach().cpu()
@@ -370,7 +370,7 @@ class DynamoTrainingOptimizerTest(unittest.TestCase):
     optimizer.step()
     return loss
 
-  @torch.compile(backend='aot_torchxla_trace_once')
+  @torch.compile(backend='openxla')
   def fn_simple_dynamo(self, input, optimizer):
     return self.fn_simple(input, optimizer)
 
@@ -431,7 +431,7 @@ class DynamoTrainingOptimizerTest(unittest.TestCase):
     met.clear_all()
 
     dynamo_train_model = torch.compile(
-        self.train_model, backend='aot_torchxla_trace_once')
+        self.train_model, backend='openxla')
     for data, target in loader:
       xla_output = dynamo_train_model(xla_resnet18, data, target, xla_optimizer)
       cpu_data = data.detach().cpu()
