@@ -196,3 +196,5 @@ class MetricsTest(unittest.TestCase):
     self.assertGreater(transfer_time_ns, wall_time_ns)
 
 if __name__ == '__main__':
+  test = unittest.main()
+  sys.exit(0 if test.result.wasSuccessful() else 1)
