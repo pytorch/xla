@@ -35,7 +35,7 @@ class DynamoInPlaceTest(unittest.TestCase):
 
   def test_inplace_update_correctness(self):
     dynamo_inplace = torch.compile(
-        self.inplace_update, backend="torchxla_trace_once", fullgraph=True)
+        self.inplace_update, backend="openxla", fullgraph=True)
     t = torch.tensor([0, 1, 2], device=xm.xla_device())
     for i in range(10):
       t = dynamo_inplace(t)
@@ -53,7 +53,7 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     b = torch.sin(y)
     return a + b
 
-  @torch.compile(backend='torchxla_trace_once')
+  @torch.compile(backend='openxla')
   def fn_simple_dynamo(self, x, y):
     return self.fn_simple(x, y)
 
@@ -106,7 +106,7 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     res_cpu = cpu_model.forward(index, copy_tensor, input_tensor)
 
     xla_model = TestModel(device).to(device)
-    compiled_model = torch.compile(xla_model, backend='torchxla_trace_once')
+    compiled_model = torch.compile(xla_model, backend='openxla')
     res_xla_dynamo = compiled_model.forward(xla_index, xla_copy_tensor,
                                             xla_input_tensor)
 
@@ -156,7 +156,7 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     met.clear_all()
     for data, _ in loader:
       dynamo_resnet18 = torch.compile(
-          xla_resnet18, backend='torchxla_trace_once')
+          xla_resnet18, backend='openxla')
       output = dynamo_resnet18(data)
       output_cpu = resnet18(data.cpu())
       self.assertTrue(
