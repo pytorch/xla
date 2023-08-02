@@ -66,6 +66,7 @@ jobs:
         run: docker pull "${GCR_DOCKER_IMAGE}"
       - name: Stage image to ECR
         shell: bash
+        if: false
         run: |
             # This is to stage PyTorch/XLA base image for use in the upstream.
             # To allow the upstream workflow to access PyTorch/XLA build images, we
@@ -106,7 +107,6 @@ jobs:
       - name: Push built docker image to ECR
         id: upload-docker-image
         shell: bash
-        if: false
         run: |
           if [[ ${DISABLE_XRT} == 1 ]]; then
             image_tag_base=latest
