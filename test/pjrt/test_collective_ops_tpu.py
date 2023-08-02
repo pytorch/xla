@@ -5,8 +5,10 @@ from absl.testing import absltest, parameterized
 import torch_xla.core.xla_model as xm
 from torch_xla._internal import pjrt, tpu
 
+
 def _is_single_host():
   return len(tpu.get_worker_ips())
+
 
 class TestCollectiveOpsTpu(parameterized.TestCase):
 
@@ -107,6 +109,7 @@ class TestCollectiveOpsTpu(parameterized.TestCase):
     for ordinal, value in results.items():
       np.testing.assert_array_equal(value, [[[-ordinal] * len(results),
                                              list(range(len(results)))]])
+
 
 if __name__ == '__main__':
   absltest.main()
