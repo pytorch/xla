@@ -136,7 +136,7 @@ def run_multiprocess(fn: Callable[..., R],
     num_processes = tpu.num_local_processes()
   elif runtime.device_type() == 'GPU':
     num_processes = gpu.num_local_processes()
-    gpu.initialize_distributed_runtime(num_processes)
+    # gpu.initialize_distributed_runtime(num_processes) # xw32
   else:
     num_processes = 1
 
@@ -154,8 +154,9 @@ def run_multiprocess(fn: Callable[..., R],
         itertools.chain.from_iterable(
             result.items() for result in process_results))
 
-  if runtime.device_type() == 'GPU':
-    gpu.shutdown_distributed_runtime()
+  # xw32
+  # if runtime.device_type() == 'GPU':
+  #   gpu.shutdown_distributed_runtime()
 
   return _merge_replica_results(replica_results)
 

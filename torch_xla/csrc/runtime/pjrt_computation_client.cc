@@ -46,6 +46,7 @@ MaybeInitializeDistributedRuntimeClient(int local_rank,
   if (!dist_service_addr.empty()) {
     xla::DistributedRuntimeClient::Options options;
     /* TODO(jonbolin): Use global rank for multi-host setup */
+    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": local_rank=" << local_rank << std::endl;
     options.node_id = local_rank;
     client =
         xla::GetDistributedRuntimeClient(dist_service_addr, options,
@@ -117,8 +118,11 @@ PjRtComputationClient::PjRtComputationClient() {
     TF_VLOG(1) << "Initializing PjRt GPU client...";
     bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncGpuClient, true);
     int local_rank = sys_util::GetEnvInt(env::kEnvPjRtLocalRank, 0);
-    std::string dist_service_addr =
-        sys_util::GetEnvString(env::kEnvPjrtDistServiceAddr, "");
+    // xw32
+    local_rank += 2;
+    // std::string dist_service_addr =
+    //    sys_util::GetEnvString(env::kEnvPjrtDistServiceAddr, "");
+    std::string dist_service_addr = "172.17.0.2:8547";
     auto distributed_client =
         MaybeInitializeDistributedRuntimeClient(local_rank, dist_service_addr);
     auto allowed_devices =
@@ -141,8 +145,7 @@ PjRtComputationClient::PjRtComputationClient() {
         std::move(xla::GetStreamExecutorGpuClient(
                       /*asynchronous=*/async, xla::GpuAllocatorConfig{},
                       /*node_id=*/local_rank,
-                      /*num_nodes=*/
-                      sys_util::GetEnvInt(env::kEnvPjRtLocalProcessCount, 1),
+                      /*num_nodes=*/4, // xw32
                       /*allowed_devices=*/allowed_devices,
                       /*platform_name*/ "gpu",
                       /*should_stage_host_to_device_transfers*/ true,
