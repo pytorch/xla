@@ -185,7 +185,14 @@ class MetricsTest(unittest.TestCase):
     # of `ExecuteComputation`, but the actual async time.
     self.assertGreater(execute_time_ns, .5 * wall_time_ns)
 
+  def test_transfer_to_server_time(self):
+    device = xm.xla_device()
+    tensor = torch.ones(128, 3, 224, 224)
+    begin = time.perf_counter_ns()
+    tensor = xm.send_cpu_data_to_device(tensor, device)
+    wall_time_ns = time.perf_counter_ns() - begin
+    transfer_time_ns = met.metric_data('TransferToServerTime')[1]
+    self.assertIn("TransferToServerTime", met.metric_names())
+    self.assertGreater(transfer_time_ns, wall_time_ns)
 
 if __name__ == '__main__':
-  test = unittest.main()
-  sys.exit(0 if test.result.wasSuccessful() else 1)
