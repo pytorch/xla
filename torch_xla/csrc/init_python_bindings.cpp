@@ -53,6 +53,7 @@
 #include "torch_xla/csrc/xla_graph_executor.h"
 #include "torch_xla/csrc/xla_op_builder.h"
 #include "torch_xla/csrc/xla_sharding_util.h"
+#include "torch_xla/csrc/ops/expand.h"
 #include "tsl/platform/env.h"
 #include "tsl/profiler/lib/traceme.h"
 #include "xla/pjrt/distributed/distributed.h"
@@ -1373,8 +1374,12 @@ void InitXlaModuleBindings(py::module m) {
                   xtensor->shape(),
                   static_cast<XlaDeviceType>(xtensor->GetDevice().type())));
 
+          auto node = xtensor->CurrentIrValue().node;
+          bool expanded = node && dynamic_cast<torch_xla::Expand*>(node.get());
+          std::cerr << "Node: " << (node != nullptr) << " Expanded? " << expanded << std::endl;
+
           // For IR values, we directly attach the sharding spec to the xtensor.
-          if (xtensor->CurrentIrValue()) {
+          if (!expanded && xtensor->CurrentIrValue()) {
             // TODO(alanwaketan): Do we want to check if there is any existing
             // sharding spec? It seems okay to directly overwrite it.
             xtensor->SetShardingSpec(*new_sharding_spec);
@@ -1407,8 +1412,8 @@ void InitXlaModuleBindings(py::module m) {
             // If the at::Tensor data is not present, we need to re-download the
             // tensor from the physical device to CPU. In that case, the value
             // must be present on the backend device.
-            XLA_CHECK(xtensor->CurrentDataHandle() &&
-                      xtensor->CurrentDataHandle()->HasValue())
+            XLA_CHECK(expanded || (xtensor->CurrentDataHandle() &&
+                      xtensor->CurrentDataHandle()->HasValue()))
                 << "Cannot shard tensor. Data does not present on any device.";
             std::vector<XLATensorPtr> xla_tensors{xtensor};
             cpu_tensor = XLAGraphExecutor::Get()->GetTensors(&xla_tensors)[0];

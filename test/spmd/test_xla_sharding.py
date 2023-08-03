@@ -639,9 +639,13 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     t1 = ct1.to(xm.xla_device())
     t2 = ct2.to(xm.xla_device())
     mesh = self._get_mesh((1, self.n_devices, 1))
-    t1 = xs.mark_sharding(t1, mesh, partition_spec=(1, 2))
+    xt1 = xs.mark_sharding(t1, mesh, partition_spec=(1, 2))
+    print('xt1.global_tensor')
+    print(torch_xla._XLAC._get_xla_tensors_hlo([xt1.global_tensor]))
+    print('t1')
+    print(torch_xla._XLAC._get_xla_tensors_hlo([t1]))
     if self.n_devices > 1:
-      hlo = torch_xla._XLAC._get_xla_tensors_hlo([t1.global_tensor])
+      hlo = torch_xla._XLAC._get_xla_tensors_hlo([t1])
       # expected string in hlo %param = f32[1,4,16]{2,1,0:T(4,128)} parameter(0), sharding={devices=[1,4,1]0,2,1,3}
       sharding_annotation = 'sharding={devices=[1,%d,1]%s}' % (
           self.n_devices, ','.join(
