@@ -155,8 +155,7 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     xm.wait_device_ops()
     met.clear_all()
     for data, _ in loader:
-      dynamo_resnet18 = torch.compile(
-          xla_resnet18, backend='openxla')
+      dynamo_resnet18 = torch.compile(xla_resnet18, backend='openxla')
       output = dynamo_resnet18(data)
       output_cpu = resnet18(data.cpu())
       self.assertTrue(
@@ -192,7 +191,7 @@ class DynamoCpuFallbackTest(unittest.TestCase):
     self.assertTrue(torch.allclose(cpu_res, xla_dynamo_res.cpu()))
     self.assertEqual(met.metric_data('CompileTime')[0], 2)
     # TODO(JackCaoG): invesgate this execution, from the HLO it is creating
-    # a f32[5] with all zeros. The cause of the execution is 
+    # a f32[5] with all zeros. The cause of the execution is
     # run_node (/src/pytorch/torch/_dynamo/utils.py:1381)
     self.assertEqual(met.metric_data('ExecuteTime')[0], 4)
 
@@ -327,8 +326,7 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     xm.wait_device_ops()
     met.clear_all()
 
-    dynamo_train_model = torch.compile(
-        self.train_model, backend='openxla')
+    dynamo_train_model = torch.compile(self.train_model, backend='openxla')
     for data, target in loader:
       xla_output = dynamo_train_model(xla_resnet18, data, target)
       cpu_data = data.detach().cpu()
@@ -432,8 +430,7 @@ class DynamoTrainingOptimizerTest(unittest.TestCase):
     xm.wait_device_ops()
     met.clear_all()
 
-    dynamo_train_model = torch.compile(
-        self.train_model, backend='openxla')
+    dynamo_train_model = torch.compile(self.train_model, backend='openxla')
     for data, target in loader:
       xla_output = dynamo_train_model(xla_resnet18, data, target, xla_optimizer)
       cpu_data = data.detach().cpu()
