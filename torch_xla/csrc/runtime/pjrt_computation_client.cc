@@ -31,6 +31,8 @@
 #include "xla/shape.h"
 #include "xla/stream_executor/tpu/tpu_initializer_helper.h"
 
+using xla::internal::XlaBuilderFriend;
+
 namespace torch_xla {
 namespace runtime {
 
@@ -324,21 +326,22 @@ ComputationClient::DataPtr PjRtComputationClient::ReplicateShardedData(
       // Data is replicated, return the first shard
       return sharded_data->shards[0];
     }
-    xla::XlaBuilder b("ReplicateShardedData");
+    xla::XlaBuilder builder("ReplicateShardedData");
     xla::Shape shape = sharded_data->shape();
-    b.SetSharding(sharded_data->GetSharding());
+    builder.SetSharding(sharded_data->GetSharding());
 
     // perform a simple identity calculation to reassemble the input as
     // replicated output.
-    auto x = xla::Parameter(&b, 0, shape, "p0");
-    b.SetSharding(xla::HloSharding::Replicate().ToProto());
-    xla::XlaOp scalar_two_op =
-        xla::ConvertElementType(xla::ConstantR0(&b, 2), shape.element_type());
-    auto y = xla::Div(x, scalar_two_op);
-    auto z = xla::Add(y, y);
+    xla::XlaOp x = xla::Parameter(&builder, 0, shape, "p0");
+    builder.SetSharding(xla::HloSharding::Replicate().ToProto());
+    xla::XlaOp scalar_zero_op = xla::ConvertElementType(
+        xla::ConstantR0(&builder, 0), shape.element_type());
+    xla::XlaOp y = xla::Add(x, scalar_zero_op);
+    auto instruction = XlaBuilderFriend::GetInstruction(y);
+    *instruction->mutable_sharding() = xla::HloSharding::Replicate().ToProto();
 
     xla::XlaComputation computation =
-        ConsumeValue(b.Build(/*remove_dynamic_dimensions=*/false));
+        ConsumeValue(builder.Build(/*remove_dynamic_dimensions=*/false));
     xla::ProgramShape program_shape =
         ConsumeValue(computation.GetProgramShape());
 
@@ -348,7 +351,8 @@ ComputationClient::DataPtr PjRtComputationClient::ReplicateShardedData(
     instances.push_back({std::move(computation), device,
                          GetCompilationDevices(device, {}), &shape,
                          /*should_wrap_parameter=*/false,
-                         /*is_sharded=*/true});
+                         /*is_sharded=*/true,
+                         /*allow_spmd_sharding_propagation_to_output=*/false});
     std::vector<
         std::shared_ptr<torch_xla::runtime::ComputationClient::Computation>>
         computations = Compile(std::move(instances));
@@ -426,7 +430,8 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
       // outputs. Setting this to true would wrapping the sharded outputs in
       // PjRtShardedData.
       compile_options.executable_build_options
-          .set_allow_spmd_sharding_propagation_to_output({true});
+          .set_allow_spmd_sharding_propagation_to_output(
+              {instance.allow_spmd_sharding_propagation_to_output});
       compile_options.executable_build_options.set_num_partitions(
           client_->device_count());
       compile_options.executable_build_options.set_num_replicas(1);
