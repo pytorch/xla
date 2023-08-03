@@ -17,11 +17,11 @@ def eval_model(loader):
   xla_resnet18 = torchvision.models.resnet18().to(device)
   xla_resnet18.eval()
   dynamo_resnet18 = torch.compile(
-      xla_resnet18, backend='torchxla_trace_once')
+      xla_resnet18, backend='openxla')
   for data, _ in loader:
     output = dynamo_resnet18(data)
 ```
-> **NOTE:** inference backend name `torchxla_trace_once` is subject to change.
+> **NOTE:** inference backend name `openxla` is subject to change.
 
 With the `torch.compile` you will see that PyTorch/XLA only traces the resent18 model once during the init time and executes the compiled binary every time `dynamo_resnet18` is invoked, instead of tracing the model every time. Here is a inference speed analysis to compare Dynamo and Lazy using torch bench on Cloud TPU v4-8
 
@@ -59,12 +59,10 @@ def train_model_main(loader):
   xla_resnet18 = torchvision.models.resnet18().to(device)
   xla_resnet18.train()
   dynamo_train_model = torch.compile(
-        train_model, backend='aot_torchxla_trace_once')
+        train_model, backend='openxla')
   for data, target in loader:
     output = dynamo_train_model(xla_resnet18, data, target)
 ```
-
-> **NOTE:** Backend we used here is `aot_torchxla_trace_once`(subject to change) instead of `torchxla_trace_once`
 
 We expect to extract and execute 3 graphs per training step instead of one training step if you use the Lazy tensor. Here is a training speed analysis to compare Dynamo and Lazy using a torch bench on Cloud TPU v4-8.
 

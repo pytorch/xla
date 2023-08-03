@@ -18,7 +18,7 @@ class DynamoGraphDumpTest(unittest.TestCase):
     b = torch.sin(y)
     return a + b
 
-  @dynamo.optimize('torchxla_trace_once')
+  @dynamo.optimize('openxla')
   def fn_simple_dynamo(self, x, y):
     return self.fn_simple(x, y)
 
