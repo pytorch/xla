@@ -212,6 +212,14 @@ def _callable_to_stablehlo_bundle(func, input_args, state_dict):
   metrics.clear_counters()
   device = xm.xla_device()
   res = func(*input_args)
+
+  # If there are any fallback ops, this means that in torch/XLA side,
+  # not all ops are lowerable to HLO.
+  if fallback_ops := dynamo_bridge.get_fallback_ops():
+    message = "This model contains ops not capturable by Pytorch/XLA: {}".format(
+        "\n".join(fallback_ops))
+    raise RuntimeError(message)
+
   if isinstance(res, torch.Tensor):
     res = (res,)
 
@@ -338,7 +346,7 @@ def _save_program_bundle(bundle: StableHLOModelBundle,
   os.makedirs(data_dir, exist_ok=True)
   for key, val in bundle.state_dict.items():
     with open(os.path.join(stablehlo_dir, 'data', key), 'wb') as f:
-      np.save(f, val.cpu().detach().numpy())
+      np.save(f, val)
 
   # save metadata and stablehlo bytecode
   func_dir = os.path.join(stablehlo_dir, 'functions')
@@ -353,7 +361,7 @@ def _save_program_bundle(bundle: StableHLOModelBundle,
   os.makedirs(const_dir, exist_ok=True)
   for i, constant in enumerate(bundle.additional_constants):
     with open(os.path.join(const_dir, str(i)), 'wb') as f:
-      np.save(f, constant.cpu().detach().numpy())
+      np.save(f, constant)
 
 
 def _iter_dir(path: os.PathLike):
