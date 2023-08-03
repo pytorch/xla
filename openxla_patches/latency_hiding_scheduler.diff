@@ -1,0 +1,21 @@
+diff --git a/xla/service/latency_hiding_scheduler.cc b/xla/service/latency_hiding_scheduler.cc
+index 413930147..83818d0eb 100644
+--- a/xla/service/latency_hiding_scheduler.cc
++++ b/xla/service/latency_hiding_scheduler.cc
+@@ -699,6 +699,16 @@ class ReadySetLt {
+               b, "kMemoryPeakOverLimit")) {
+         return *value;
+       }
++      if (sched_state_.memory_pressure_tracker->memory_usage() >
++            (sched_state_.config.memory_limit * 90 / 100)) {
++        if (sched_state_.sched_graph.OriginalInstructionPosition(
++                &a.node->GetInstr()) >
++            sched_state_.sched_graph.OriginalInstructionPosition(
++                &b.node->GetInstr())) {
++          return {a, "kOriginalOrder"};
++        }
++        return {b, "kOriginalOrder"};
++      }
+     }
+     // Some heuristic that try to prioritize unlocking "done" instructions
+     // so that we can perform overlap. More fancy heuristics can be used by
