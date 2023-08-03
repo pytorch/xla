@@ -5,6 +5,7 @@
 
 namespace mlir {
 class ModuleOp;
+class MLIRContext;
 }  // namespace mlir
 
 namespace torch_xla {
@@ -15,6 +16,15 @@ std::string hloToStablehlo(const xla::HloModuleProto* proto,
 
 void ConvertHloToStableHlo(const xla::HloModuleProto* proto,
                            mlir::ModuleOp* mlir_module);
+
+mlir::ModuleOp DeserializeStableHLO(const std::string& bytecode,
+                                    mlir::MLIRContext* context);
+
+void convertStableHLOToHLO(mlir::ModuleOp* mlir_module,
+                           mlir::MLIRContext* context,
+                           xla::HloProto* hlo_proto);
+
+void printHloModuleProto(const xla::HloModuleProto* proto);
 
 }  // namespace runtime
 }  // namespace torch_xla

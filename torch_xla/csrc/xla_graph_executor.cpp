@@ -25,6 +25,7 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/memory/memory.h"
 #include "absl/strings/str_join.h"
+#include "stablehlo/dialect/Serialization.h"  // from @stablehlo
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/helpers.h"
@@ -44,6 +45,7 @@
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/env_vars.h"
 #include "torch_xla/csrc/runtime/runtime.h"
+#include "torch_xla/csrc/runtime/stablehlo_helper.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/thread_pool.h"
 #include "torch_xla/csrc/runtime/unique.h"
@@ -752,6 +754,81 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
 
   runtime::env::ScheduleIoClosure(async->mwait.Completer(std::move(syncfn)));
 
+  return placeholders;
+}
+
+std::vector<torch::lazy::BackendDataPtr> XLAGraphExecutor::ExecuteStablehlo(
+    std::string bytecode, const std::vector<at::IValue>& graph_inputs,
+    const torch::lazy::BackendDevice& device) {
+  mlir::MLIRContext context;
+  // mlir::ModuleOp mlir_module =
+  //   runtime::DeserializeStableHLO(bytecode, &context);
+  auto module =
+      mlir::stablehlo::deserializePortableArtifact(bytecode, &context);
+  mlir::ModuleOp mlir_module = *module;
+
+  xla::HloProto hlo_proto;
+  runtime::convertStableHLOToHLO(&mlir_module, &context, &hlo_proto);
+  xla::HloModuleProto* hlo_module_proto = hlo_proto.mutable_hlo_module();
+  runtime::printHloModuleProto(hlo_module_proto);
+  xla::XlaComputation computation(*hlo_module_proto);
+
+  // Create PJRT computation client
+  // auto client = std::make_unique<PjRtComputationClient>();
+  // std::string device = runtime::GetComputationClient()->GetDefaultDevice();
+  xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
+  // output shape
+  xla::Shape shape = MakeShapeWithDeviceLayout(
+      program_shape.result(),
+      XlaDeviceType::CPU);  // TODO: fill in real device type
+
+  std::vector<runtime::ComputationClient::CompileInstance> instances;
+  instances.push_back({std::move(computation), device.toString(),
+                       runtime::GetComputationClient()->GetCompilationDevices(
+                           device.toString(),
+                           runtime::GetComputationClient()->GetLocalDevices()),
+                       &shape});
+  std::vector<std::shared_ptr<runtime::ComputationClient::Computation>>
+      computations =
+          runtime::GetComputationClient()->Compile(std::move(instances));
+
+  std::vector<torch::lazy::BackendDataPtr> placeholders;
+  // placeholders.reserve(output_shapes->size());
+  // assume 1 output now
+  torch::lazy::BackendDataPtr handle =
+      WrapXlaData(runtime::GetComputationClient()->CreateDataPlaceholder(
+          device.toString(), std::move(shape)));
+  placeholders.push_back(handle);
+
+  std::vector<torch::lazy::BackendDataPtr> arguments;
+  {
+    // GetXlaData must be called within a lock region, otherwise it might
+    // extract the placeholder inserted by previous execution.
+    // setup the arguments
+    int idx = 0;
+    for (auto& ivalue : graph_inputs) {
+      torch::lazy::BackendDataPtr dataptr;
+      if (auto xla_tensor_ptr = bridge::TryGetXlaTensor(ivalue.toTensor())) {
+        dataptr = xla_tensor_ptr->GetXlaData();
+      } else {
+        // XLA_CHECK(device.type() != (int8_t)XlaDeviceType::SPMD)
+        //     << "SPMD device data should already be on the XLA backend "
+        //        "(XLATensor).";
+        dataptr = torch_xla::TensorToXlaData(ivalue.toTensor(), device);
+      }
+      ++idx;
+      arguments.push_back(dataptr);
+    }
+  }
+
+  std::vector<runtime::ComputationClient::DataPtr> results =
+      runtime::GetComputationClient()->ExecuteComputation(
+          *computations[0], UnwrapXlaData(arguments), device.toString());
+
+  for (size_t i = 0; i < results.size(); ++i) {
+    XLA_CHECK(placeholders[i] != nullptr);
+    placeholders[i]->Assign(*WrapXlaData(results[i]));
+  }
   return placeholders;
 }
 

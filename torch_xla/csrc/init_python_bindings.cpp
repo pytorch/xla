@@ -1184,8 +1184,28 @@ void InitXlaModuleBindings(py::module m) {
           } else {
             xtensors = GetXlaTensors(tensors, /*want_all=*/false);
           }
+
           return py::bytes(
               XLAGraphExecutor::Get()->DumpHloComputation(xtensors, mode));
+        });
+  m.def("_run_stablehlo",
+        [](const std::string& bytecode,
+           const std::vector<at::IValue>& graph_inputs)
+            -> std::vector<at::Tensor> {
+          torch::lazy::BackendDevice device = torch_xla::GetCurrentDevice();
+          auto results = XLAGraphExecutor::Get()->ExecuteStablehlo(
+              bytecode, graph_inputs, device);
+          std::vector<at::Tensor> retlist;
+          {
+            // Convert result back to at::tensor
+            int i = 0;
+            for (auto& data : results) {
+              XLATensorPtr xla_tensor = torch_xla::XLATensor::Create(data);
+              retlist.push_back(bridge::AtenFromXlaTensor(xla_tensor));
+              ++i;
+            }
+          }
+          return retlist;
         });
   m.def("_xla_wait_device_ops",
         [](const std::vector<std::string>& devices) {
