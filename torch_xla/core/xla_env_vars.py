@@ -1,3 +1,5 @@
+import torch_xla.utils.utils as xu
+
 TPUVM_MODE = 'TPUVM_MODE'
 TPU_NUM_DEVICES = 'TPU_NUM_DEVICES'
 GPU_NUM_DEVICES = 'GPU_NUM_DEVICES'
@@ -26,3 +28,38 @@ PJRT_CPU_ASYNC_CLIENT = 'PJRT_CPU_ASYNC_CLIENT'
 PJRT_GPU_ASYNC_CLIENT = 'PJRT_GPU_ASYNC_CLIENT'
 PJRT_DIST_SERVICE_ADDR = 'PJRT_DIST_SERVICE_ADDR'
 LOCAL_RANK = 'LOCAL_RANK'
+
+# def print_all_env_vars():
+#   print('xw32: <<<')
+#   print(f"xw32 TPUVM_MODE: {xu.getenv_as(TPUVM_MODE, str, '')}")
+#   print(f"xw32 TPU_NUM_DEVICES: {xu.getenv_as(TPU_NUM_DEVICES, str, '')}")
+#   print(f"xw32 GPU_NUM_DEVICES: {xu.getenv_as(GPU_NUM_DEVICES, str, '')}")
+#   print(f"xw32 CPU_NUM_DEVICES: {xu.getenv_as(CPU_NUM_DEVICES, str, '')}")
+#   print(f"xw32 CLOUD_TPU_TASK_ID: {xu.getenv_as(CLOUD_TPU_TASK_ID, str, '')}")
+#   print(f"xw32 ACCELERATOR_TYPE: {xu.getenv_as(ACCELERATOR_TYPE, str, '')}")
+#   print(f"xw32 WORKER_ID: {xu.getenv_as(WORKER_ID, str, '')}")
+#   print(f"xw32 TPU_SKIP_MDS_QUERY: {xu.getenv_as(TPU_SKIP_MDS_QUERY, str, '')}")
+#   print(f"xw32 TPU_ACCELERATOR_TYPE: {xu.getenv_as(TPU_ACCELERATOR_TYPE, str, '')}")
+#   print(f"xw32 TPU_WORKER_ID: {xu.getenv_as(TPU_WORKER_ID, str, '')}")
+#   print(f"xw32 TPU_WORKER_HOSTNAMES: {xu.getenv_as(TPU_WORKER_HOSTNAMES, str, '')}")
+#   print(f"xw32 TPU_HOST_BOUNDS: {xu.getenv_as(TPU_HOST_BOUNDS, str, '')}")
+#   print(f"xw32 TPU_CHIPS_PER_HOST_BOUNDS: {xu.getenv_as(TPU_CHIPS_PER_HOST_BOUNDS, str, '')}")
+#   print(f"xw32 TPU_MESH_CTLER_ADDR: {xu.getenv_as(TPU_MESH_CTLER_ADDR, str, '')}")
+#   print(f"xw32 TPU_MESH_CTLER_PORT: {xu.getenv_as(TPU_MESH_CTLER_PORT, str, '')}")
+#   print(f"xw32 PJRT_DEVICE: {xu.getenv_as(PJRT_DEVICE, str, '')}")
+#   print(f"xw32 PJRT_SELECT_DEFAULT_DEVICE: {xu.getenv_as(PJRT_SELECT_DEFAULT_DEVICE, str, '')}")
+#   print(f"xw32 PJRT_LOCAL_PROCESS_RANK: {xu.getenv_as(PJRT_LOCAL_PROCESS_RANK, str, '')}")
+#   print(f"xw32 PJRT_LOCAL_PROCESS_COUNT: {xu.getenv_as(PJRT_LOCAL_PROCESS_COUNT, str, '')}")
+#   print(f"xw32 TPU_CHIPS_PER_PROCESS_BOUNDS: {xu.getenv_as(TPU_CHIPS_PER_PROCESS_BOUNDS, str, '')}")
+#   print(f"xw32 TPU_PROCESS_BOUNDS: {xu.getenv_as(TPU_PROCESS_BOUNDS, str, '')}")
+#   print(f"xw32 TPU_PROCESS_ADDRESSES: {xu.getenv_as(TPU_PROCESS_ADDRESSES, str, '')}")
+#   print(f"xw32 TPU_VISIBLE_CHIPS: {xu.getenv_as(TPU_VISIBLE_CHIPS, str, '')}")
+#   print(f"xw32 TPU_PROCESS_PORT: {xu.getenv_as(TPU_PROCESS_PORT, str, '')}")
+#   print(f"xw32 PJRT_CPU_ASYNC_CLIENT: {xu.getenv_as(PJRT_CPU_ASYNC_CLIENT, str, '')}")
+#   print(f"xw32 PJRT_GPU_ASYNC_CLIENT: {xu.getenv_as(PJRT_GPU_ASYNC_CLIENT, str, '')}")
+#   print(f"xw32 PJRT_DIST_SERVICE_ADDR: {xu.getenv_as(PJRT_DIST_SERVICE_ADDR, str, '')}")
+#   print(f"xw32 LOCAL_RANK: {xu.getenv_as(LOCAL_RANK, str, '')}")
+#   print('xw32: >>>')
+
+
+

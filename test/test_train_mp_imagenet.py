@@ -1,5 +1,6 @@
 from torch_xla import runtime as xr
 import args_parse
+import torch_xla.core.xla_env_vars as xenv
 
 SUPPORTED_MODELS = [
     'alexnet', 'densenet121', 'densenet161', 'densenet169', 'densenet201',
@@ -107,6 +108,38 @@ DEFAULT_KWARGS = dict(
     host_to_device_transfer_threads=1,
 )
 
+def print_all_env_vars():
+  print('xw32: <<<')
+  print(f"xw32 TPUVM_MODE: {xu.getenv_as(xenv.TPUVM_MODE, str, '')}")
+  print(f"xw32 TPU_NUM_DEVICES: {xu.getenv_as(xenv.TPU_NUM_DEVICES, str, '')}")
+  print(f"xw32 GPU_NUM_DEVICES: {xu.getenv_as(xenv.GPU_NUM_DEVICES, str, '')}")
+  print(f"xw32 CPU_NUM_DEVICES: {xu.getenv_as(xenv.CPU_NUM_DEVICES, str, '')}")
+  print(f"xw32 CLOUD_TPU_TASK_ID: {xu.getenv_as(xenv.CLOUD_TPU_TASK_ID, str, '')}")
+  print(f"xw32 ACCELERATOR_TYPE: {xu.getenv_as(xenv.ACCELERATOR_TYPE, str, '')}")
+  print(f"xw32 WORKER_ID: {xu.getenv_as(xenv.WORKER_ID, str, '')}")
+  print(f"xw32 TPU_SKIP_MDS_QUERY: {xu.getenv_as(xenv.TPU_SKIP_MDS_QUERY, str, '')}")
+  print(f"xw32 TPU_ACCELERATOR_TYPE: {xu.getenv_as(xenv.TPU_ACCELERATOR_TYPE, str, '')}")
+  print(f"xw32 TPU_WORKER_ID: {xu.getenv_as(xenv.TPU_WORKER_ID, str, '')}")
+  print(f"xw32 TPU_WORKER_HOSTNAMES: {xu.getenv_as(xenv.TPU_WORKER_HOSTNAMES, str, '')}")
+  print(f"xw32 TPU_HOST_BOUNDS: {xu.getenv_as(xenv.TPU_HOST_BOUNDS, str, '')}")
+  print(f"xw32 TPU_CHIPS_PER_HOST_BOUNDS: {xu.getenv_as(xenv.TPU_CHIPS_PER_HOST_BOUNDS, str, '')}")
+  print(f"xw32 TPU_MESH_CTLER_ADDR: {xu.getenv_as(xenv.TPU_MESH_CTLER_ADDR, str, '')}")
+  print(f"xw32 TPU_MESH_CTLER_PORT: {xu.getenv_as(xenv.TPU_MESH_CTLER_PORT, str, '')}")
+  print(f"xw32 PJRT_DEVICE: {xu.getenv_as(xenv.PJRT_DEVICE, str, '')}")
+  print(f"xw32 PJRT_SELECT_DEFAULT_DEVICE: {xu.getenv_as(xenv.PJRT_SELECT_DEFAULT_DEVICE, str, '')}")
+  print(f"xw32 PJRT_LOCAL_PROCESS_RANK: {xu.getenv_as(xenv.PJRT_LOCAL_PROCESS_RANK, str, '')}")
+  print(f"xw32 PJRT_LOCAL_PROCESS_COUNT: {xu.getenv_as(xenv.PJRT_LOCAL_PROCESS_COUNT, str, '')}")
+  print(f"xw32 TPU_CHIPS_PER_PROCESS_BOUNDS: {xu.getenv_as(xenv.TPU_CHIPS_PER_PROCESS_BOUNDS, str, '')}")
+  print(f"xw32 TPU_PROCESS_BOUNDS: {xu.getenv_as(xenv.TPU_PROCESS_BOUNDS, str, '')}")
+  print(f"xw32 TPU_PROCESS_ADDRESSES: {xu.getenv_as(xenv.TPU_PROCESS_ADDRESSES, str, '')}")
+  print(f"xw32 TPU_VISIBLE_CHIPS: {xu.getenv_as(xenv.TPU_VISIBLE_CHIPS, str, '')}")
+  print(f"xw32 TPU_PROCESS_PORT: {xu.getenv_as(xenv.TPU_PROCESS_PORT, str, '')}")
+  print(f"xw32 PJRT_CPU_ASYNC_CLIENT: {xu.getenv_as(xenv.PJRT_CPU_ASYNC_CLIENT, str, '')}")
+  print(f"xw32 PJRT_GPU_ASYNC_CLIENT: {xu.getenv_as(xenv.PJRT_GPU_ASYNC_CLIENT, str, '')}")
+  print(f"xw32 PJRT_DIST_SERVICE_ADDR: {xu.getenv_as(xenv.PJRT_DIST_SERVICE_ADDR, str, '')}")
+  print(f"xw32 LOCAL_RANK: {xu.getenv_as(xenv.LOCAL_RANK, str, '')}")
+  print('xw32: >>>')
+
 #  Best config to achieve peak performance based on TPU version
 #    1. It is recommended to use this config in conjuntion with XLA_USE_BF16=1 Flag.
 #    2. Hyperparameters can be tuned to further improve the accuracy.
@@ -179,6 +212,8 @@ def _train_update(device, step, loss, tracker, epoch, writer):
 
 
 def train_imagenet():
+  print(f'xw32 xm.xrt_world_size()={xm.xrt_world_size()}, xm.get_ordinal()={xm.get_ordinal()}')
+  print_all_env_vars()
   if FLAGS.pjrt_distributed:
     import torch_xla.experimental.pjrt_backend
     dist.init_process_group('xla', init_method='pjrt://')
@@ -195,6 +230,7 @@ def train_imagenet():
               torch.zeros(FLAGS.batch_size, dtype=torch.int64)),
         sample_count=train_dataset_len // FLAGS.batch_size //
         xm.xrt_world_size())
+    
     test_loader = xu.SampleGenerator(
         data=(torch.zeros(FLAGS.test_set_batch_size, 3, img_dim, img_dim),
               torch.zeros(FLAGS.test_set_batch_size, dtype=torch.int64)),
@@ -258,6 +294,7 @@ def train_imagenet():
   torch.manual_seed(42)
 
   device = xm.xla_device()
+  print('xw32 device=', device)
   model = get_model_property('model_fn')().to(device)
 
   # Initialization is nondeterministic with multiple threads in PjRt.
@@ -364,6 +401,7 @@ def train_imagenet():
 
 
 def _mp_fn(index, flags):
+  print(f'xw32: test_train_mp_imagenet.py:_mp_fn: global ordinal index={index}', ', flags=', flags)
   global FLAGS
   FLAGS = flags
   torch.set_default_tensor_type('torch.FloatTensor')
@@ -375,4 +413,6 @@ def _mp_fn(index, flags):
 
 
 if __name__ == '__main__':
+  print(f'xw32: test_train_mp_imagenet.py:main: FLAGS.num_cores={FLAGS.num_cores}, FLAGS.pjrt_distributed={FLAGS.pjrt_distributed}')
+  print_all_env_vars()
   xmp.spawn(_mp_fn, args=(FLAGS,), nprocs=FLAGS.num_cores)
