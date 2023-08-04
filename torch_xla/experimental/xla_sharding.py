@@ -412,35 +412,27 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
   assert len(specs) == len(np.unique(specs)), \
     f"Each device mesh dimension should appear at most once in partition_spec {partition_spec}."
 
-  # check for sharding 2D tensor on a 3D mesh
-  original_shape = tuple(t.shape)
-  # number of dims to expand on tensor
-  tensor_expand = 0
-  if tensor_expand < len(mesh.get_logical_mesh().shape) - len(partition_spec):
-    tensor_expand = len(mesh.get_logical_mesh().shape) - len(partition_spec)
-    partition_spec = (None,) * tensor_expand + partition_spec
-    shape = (1,) * tensor_expand + (*original_shape,)
-    t = t.expand(shape)
-
-  tile_assignment = _get_tile_assignment(mesh, partition_spec)
+  tensor_rank_less_than_mesh = False
+  if len(t.shape) < len(mesh.get_logical_mesh().shape):
+    assert len(mesh.get_logical_mesh().shape) == len(
+        t.shape) + 1, 'Tensor rank must be equal to or one less than mesh rank'
+    tensor_rank_less_than_mesh = True
+    tile_assignment = _get_tile_assignment(mesh, partition_spec + (None,))
+  else:
+    tile_assignment = _get_tile_assignment(mesh, partition_spec)
   sharding_type = _get_sharding_type(partition_spec, num_devices)
   group_assignment, replication_groups = _get_group_assignment(
       sharding_type, partition_spec, tile_assignment)
 
-  def tensor_squeeze(t, tensor_expand):
-    if tensor_expand:
-      t = torch.squeeze(t, dim=tuple(range(tensor_expand)))
-    return t
-
   if isinstance(t, XLAShardedTensor):
     torch_xla._XLAC._xla_mark_sharding(t.global_tensor, tile_assignment,
                                        group_assignment, replication_groups,
-                                       int(sharding_type))
-    t = tensor_squeeze(t, tensor_expand)
+                                       int(sharding_type),
+                                       tensor_rank_less_than_mesh)
     return t
   torch_xla._XLAC._xla_mark_sharding(t, tile_assignment, group_assignment,
-                                     replication_groups, int(sharding_type))
-  t = tensor_squeeze(t, tensor_expand)
+                                     replication_groups, int(sharding_type),
+                                     tensor_rank_less_than_mesh)
   return XLAShardedTensor(t)
 
 
