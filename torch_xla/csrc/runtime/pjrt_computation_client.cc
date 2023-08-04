@@ -122,7 +122,8 @@ PjRtComputationClient::PjRtComputationClient() {
     local_rank += 2;
     // std::string dist_service_addr =
     //    sys_util::GetEnvString(env::kEnvPjrtDistServiceAddr, "");
-    std::string dist_service_addr = "172.17.0.2:8547";
+    // std::string dist_service_addr = "172.17.0.2:8547";
+    std::string dist_service_addr = "10.164.15.210:8547";
     auto distributed_client =
         MaybeInitializeDistributedRuntimeClient(local_rank, dist_service_addr);
     auto allowed_devices =
