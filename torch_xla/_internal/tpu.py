@@ -119,6 +119,15 @@ def num_available_devices() -> int:
   return num_available_chips() * num_logical_cores_per_chip()
 
 
+def num_expected_global_devices() -> int:
+  """Returns the number of expected runtime devices in this TPU slice.
+
+  May differ from the actual number of runtime devices if TPU topology settings
+  are changed.
+  """
+  return num_available_devices() * num_tpu_workers()
+
+
 def num_local_processes() -> int:
   """Returns number of processes to create on this host."""
   local_chips = num_available_chips()
@@ -186,6 +195,11 @@ def get_worker_ips() -> List[str]:
     workers = hostnames_string.split(',')
     hostnames = [worker.split(':')[2] for worker in workers]
   return hostnames if len(hostnames) > 1 else ['localhost']
+
+
+def num_tpu_workers() -> int:
+  """Returns the number of configured TPU workers."""
+  return len(get_worker_ips())
 
 
 def configure_one_chip_topology() -> None:
