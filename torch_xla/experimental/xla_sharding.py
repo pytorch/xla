@@ -319,24 +319,11 @@ def _get_sharding_type(partition_spec: Tuple[Union[int, None]],
   return sharding_type
 
 
-def _get_tile_assignment(mesh: Mesh,
-                         partition_spec: Tuple[Union[int, None]]) -> List[int]:
-  # Use Torch.tensor here to make use of the torch.transpose_
-  mesh_list_tensor = torch.tensor(mesh.get_logical_mesh().tolist())
-  # This is partial sharding case, tile_assigniment will be ignore in favor of
-  # group_assignment and replication_groups.
-  if (mesh_list_tensor.dim() != len(partition_spec)):
-    return mesh_list_tensor.tolist()
-  partition_spec_list = list(partition_spec)
-  for i in range(len(partition_spec_list)):
-    if partition_spec_list[i] == None:
-      partition_spec_list[i] = i
-  # We currently do not support partition_spec like [0, None, 1, 3]. The None at partition_spec[1]
-  # suggested that we want to replicate on Mesh[1], hence we can't use Mesh[1] in
-  # partition_spec[2]
-  assert torch.unique(
-      torch.tensor(partition_spec_list)).size()[0] == len(partition_spec_list)
-  return mesh_list_tensor.permute(partition_spec_list).tolist()
+def _get_tile_assignment(mesh: Mesh, partition_spec: Tuple[Union[int, None]]) -> List[int]:
+  if (None not in partition_spec) and (len(mesh.mesh_shape) == len(partition_spec)):
+    return mesh.get_logical_mesh().transpose(partition_spec).tolist()
+  # Tile permutation is not necessary for partial replication.
+  return mesh.get_logical_mesh().tolist()
 
 
 def _get_group_assignment(
@@ -358,9 +345,7 @@ def _get_group_assignment(
       group_list = _group_list
     replication_groups = [group.flatten().tolist() for group in group_list]
 
-    group_tile_shape = list(mesh.mesh_shape)
-    for d in replicated_dims:
-      group_tile_shape[d] = 1
+    group_tile_shape = [mesh.mesh_shape[d] if d is not None else 1 for d in partition_spec]
     group_assignment = np.arange(len(replication_groups)).reshape(
         tuple(group_tile_shape)).tolist()
   return group_assignment, replication_groups

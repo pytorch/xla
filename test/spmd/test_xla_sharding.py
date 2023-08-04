@@ -304,6 +304,37 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     actual = (xt1 @ t2).cpu()
     self.assertTrue(torch.allclose(expected, actual))
 
+  def test_mark_sharding_partial_unordered(self):
+    device = xm.xla_device()
+    t1 = torch.randn(4, 3, 4).to(device)
+    t2 = torch.randn(4, 3, 4).to(device)
+    expected = t1 + t2
+    # To re-materialize t1 and t2.
+    xm.mark_step()
+    xm.wait_device_ops()
+    expected = expected.cpu()
+
+    # Shard along two axes if four or more devices are available
+    z_dim = 2 if self.n_devices >= 4 else 1
+    mesh = self._get_mesh((z_dim, 1, self.n_devices // z_dim))
+    xt1 = xs.mark_sharding(t1, mesh, (1, None, 0))
+
+    # partial replication requires >1 devices; otherwise, it's replicated.
+    if self.n_devices > 1:
+      # xt1 is sharded `z_dim`-way, replicated `n_devices/z_dim`-way.
+      self.assertTrue('last_tile_dim_replicate' in
+                      torch_xla._XLAC._get_xla_sharding_spec(t1))
+      self.assertTrue('[%d,1,1,%d]' %
+                      (z_dim, self.n_devices //
+                       z_dim) in torch_xla._XLAC._get_xla_sharding_spec(t1))
+    # replicated group should share the same data content.
+    if (self.n_devices // z_dim) > 1:
+      shards = xt1.local_shards
+      self.assertTrue(torch.allclose(shards[0].data, shards[1].data))
+      self.assertEqual(shards[0].data.shape, (4 // z_dim, 3, 4 // (self.n_devices // z_dim)))
+    actual = (xt1 + t2).cpu()
+    self.assertTrue(torch.allclose(expected, actual))
+
   def test_partial_replication_addmm(self):
     device = xm.xla_device()
     z_dim = 2 if self.n_devices >= 4 else 1
@@ -550,9 +581,9 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     t1 = ct1.to(xm.xla_device())
     t2 = ct2.to(xm.xla_device())
     mesh = self._get_mesh((1, self.n_devices, 1))
-    t1 = xs.mark_sharding(t1, mesh, partition_spec=(1, 2))
+    xs.mark_sharding(t1, mesh, partition_spec=(1, 2))
     if self.n_devices > 1:
-      hlo = torch_xla._XLAC._get_xla_tensors_hlo([t1.global_tensor])
+      hlo = torch_xla._XLAC._get_xla_tensors_hlo([t1])
       # expected string in hlo %param = f32[1,4,16]{2,1,0:T(4,128)} parameter(0), sharding={devices=[1,4,1]0,2,1,3}
       sharding_annotation = 'sharding={devices=[1,%d,1]%s}' % (
           self.n_devices, ','.join(
