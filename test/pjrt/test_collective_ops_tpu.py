@@ -6,10 +6,6 @@ import torch_xla.core.xla_model as xm
 from torch_xla._internal import pjrt, tpu
 
 
-def _is_single_host():
-  return len(tpu.get_worker_ips())
-
-
 class TestCollectiveOpsTpu(parameterized.TestCase):
 
   @staticmethod
@@ -23,7 +19,8 @@ class TestCollectiveOpsTpu(parameterized.TestCase):
     xm.mark_step()
     return next(model.parameters()).detach().cpu().numpy()
 
-  @absltest.skipUnless(_is_single_host, "Only implemented for single host.")
+  @absltest.skipUnless(tpu.num_tpu_workers() == 1,
+                       "Only implemented for single host.")
   @parameterized.named_parameters(('synchronized_parameters', True),
                                   ('unsynchronized_parameters', False))
   def test_broadcast_master_param(self, sync):
@@ -35,6 +32,25 @@ class TestCollectiveOpsTpu(parameterized.TestCase):
       elif ordinal != 0:
         np.testing.assert_raises(AssertionError, np.testing.assert_array_equal,
                                  master_params, worker_params)
+
+  @staticmethod
+  def _all_reduce(pin_layout):
+    device = xm.xla_device()
+    # Prevent 0 and 1 from being converted to constants
+    ordinal = xm.send_cpu_data_to_device(
+        torch.tensor(xm.get_ordinal()), device=device)
+    out = xm.all_reduce(xm.REDUCE_SUM, ordinal, pin_layout=pin_layout)[0]
+    xm.mark_step()
+
+    return out.cpu().numpy()
+
+  @parameterized.named_parameters(('pinned', True), ('unpinned', False))
+  def test_all_reduce(self, pin_layout):
+    results = pjrt.run_multiprocess(self._all_reduce, pin_layout)
+
+    expected = sum(range(tpu.num_expected_global_devices()))
+    for v in results.values():
+      np.testing.assert_array_equal(v, expected)
 
   @staticmethod
   def _all_gather(pin_layout):
@@ -49,7 +65,7 @@ class TestCollectiveOpsTpu(parameterized.TestCase):
   def test_all_gather(self, pin_layout):
     results = pjrt.run_multiprocess(self._all_gather, pin_layout)
 
-    expected = list(range(len(results)))
+    expected = list(range(tpu.num_expected_global_devices()))
     for v in results.values():
       np.testing.assert_array_equal(v, expected)
 
@@ -106,9 +122,10 @@ class TestCollectiveOpsTpu(parameterized.TestCase):
   def test_all_to_all(self, pin_layout):
     results = pjrt.run_multiprocess(self._all_to_all, pin_layout)
 
+    world_size = tpu.num_expected_global_devices()
     for ordinal, value in results.items():
-      np.testing.assert_array_equal(value, [[[-ordinal] * len(results),
-                                             list(range(len(results)))]])
+      np.testing.assert_array_equal(value, [[[-ordinal] * world_size,
+                                             list(range(world_size))]])
 
 
 if __name__ == '__main__':
