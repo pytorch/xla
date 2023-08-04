@@ -324,14 +324,14 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
       # xt1 is sharded `z_dim`-way, replicated `n_devices/z_dim`-way.
       self.assertTrue('last_tile_dim_replicate' in
                       torch_xla._XLAC._get_xla_sharding_spec(t1))
-      self.assertTrue('[%d,1,1,%d]' %
+      self.assertTrue('[1,1,%d,%d]' %
                       (z_dim, self.n_devices //
                        z_dim) in torch_xla._XLAC._get_xla_sharding_spec(t1))
     # replicated group should share the same data content.
     if (self.n_devices // z_dim) > 1:
       shards = xt1.local_shards
       self.assertTrue(torch.allclose(shards[0].data, shards[1].data))
-      self.assertEqual(shards[0].data.shape, (4 // z_dim, 3, 4 // (self.n_devices // z_dim)))
+      self.assertEqual(shards[0].data.shape, (4, 3, 4 // z_dim))
     actual = (xt1 + t2).cpu()
     self.assertTrue(torch.allclose(expected, actual))
 
@@ -580,14 +580,12 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
 
     t1 = ct1.to(xm.xla_device())
     t2 = ct2.to(xm.xla_device())
-    mesh = self._get_mesh((1, self.n_devices, 1))
-    xs.mark_sharding(t1, mesh, partition_spec=(1, 2))
+    mesh = self._get_mesh((2, self.n_devices // 2, 1))
+    xs.mark_sharding(t1, mesh, partition_spec=(2, 1))
     if self.n_devices > 1:
       hlo = torch_xla._XLAC._get_xla_tensors_hlo([t1])
-      # expected string in hlo %param = f32[1,4,16]{2,1,0:T(4,128)} parameter(0), sharding={devices=[1,4,1]0,2,1,3}
-      sharding_annotation = 'sharding={devices=[1,%d,1]%s}' % (
-          self.n_devices, ','.join(
-              [str(d) for d in mesh.get_logical_mesh().flatten()]))
+      sharding_annotation = 'sharding={devices=[1,%d,2]' % (
+          self.n_devices // 2)
       self.assertIn(sharding_annotation, hlo)
     actual = (t1 + t2).cpu()
     self.assertTrue(torch.allclose(expected, actual))
