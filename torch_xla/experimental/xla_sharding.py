@@ -78,7 +78,7 @@ class HybridMesh(Mesh):
   """Creates a hybrid device mesh of devices connected with ICI and DCN networks.
     The shape of logical mesh should be ordered by increasing network-intensity
     e.g. [replica, data, model] where mdl has the most network communication
-    requirements. 
+    requirements.
 
   Args:
     ici_mesh_shape: shape of the logical mesh for inner connected devices.
@@ -88,7 +88,7 @@ class HybridMesh(Mesh):
     # This example is assuming 2 slices of v4-8.
     ici_mesh_shape = (1, 4, 1) # (data, fsdp, tensor)
     dcn_mesh_shape = (2, 1, 1)
-    
+
     mesh = HybridMesh(ici_mesh_shape, dcn_mesh_shape, ('data','fsdp','tensor'))
     print(mesh.shape())
     >> OrderedDict([('data', 2), ('fsdp', 4), ('tensor', 1)])
@@ -323,6 +323,10 @@ def _get_tile_assignment(mesh: Mesh,
                          partition_spec: Tuple[Union[int, None]]) -> List[int]:
   # Use Torch.tensor here to make use of the torch.transpose_
   mesh_list_tensor = torch.tensor(mesh.get_logical_mesh().tolist())
+  # This is partial sharding case, tile_assigniment will be ignore in favor of
+  # group_assignment and replication_groups.
+  if (mesh_list_tensor.dim() != len(partition_spec)):
+    return mesh_list_tensor.tolist()
   partition_spec_list = list(partition_spec)
   for i in range(len(partition_spec_list)):
     if partition_spec_list[i] == None:
@@ -335,27 +339,26 @@ def _get_tile_assignment(mesh: Mesh,
   return mesh_list_tensor.permute(partition_spec_list).tolist()
 
 
-def _get_group_assignment(sharding_type: ShardingType,
-                          partition_spec: Tuple[Union[int, None]],
-                          tile_assignment: List) -> Tuple[List, List]:
+def _get_group_assignment(
+    sharding_type: ShardingType, mesh: Mesh,
+    partition_spec: Tuple[Union[int, None]]) -> Tuple[List, List]:
   group_assignment = list()
   replication_groups = list()
-  mesh_shape_list = list(torch.tensor(tile_assignment).size())
   if sharding_type is ShardingType.PARTIAL:
     # Shard across groups and replicate within subgroups; replicated dims
     # will be used to group replication devices.
     tile_dims = [d for d in partition_spec if d is not None]
-    replicated_dims = set(range(len(mesh_shape_list))) - set(tile_dims)
+    replicated_dims = set(range(len(mesh.mesh_shape))) - set(tile_dims)
 
-    group_list = [np.array(tile_assignment)]
+    group_list = [np.array(mesh.get_logical_mesh().tolist())]
     for d in tile_dims:
       _group_list = list()
       for group_members in group_list:
-        _group_list += np.split(group_members, mesh_shape_list[d], d)
+        _group_list += np.split(group_members, mesh.mesh_shape[d], d)
       group_list = _group_list
     replication_groups = [group.flatten().tolist() for group in group_list]
 
-    group_tile_shape = mesh_shape_list
+    group_tile_shape = list(mesh.mesh_shape)
     for d in replicated_dims:
       group_tile_shape[d] = 1
     group_assignment = np.arange(len(replication_groups)).reshape(
@@ -412,6 +415,7 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
   assert len(specs) == len(np.unique(specs)), \
     f"Each device mesh dimension should appear at most once in partition_spec {partition_spec}."
 
+  tile_assignment = _get_tile_assignment(mesh, partition_spec)
   # check for sharding 2D tensor on a 3D mesh
   original_shape = tuple(t.shape)
   # number of dims to expand on tensor
@@ -422,10 +426,9 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
     shape = (1,) * tensor_expand + (*original_shape,)
     t = t.expand(shape)
 
-  tile_assignment = _get_tile_assignment(mesh, partition_spec)
   sharding_type = _get_sharding_type(partition_spec, num_devices)
   group_assignment, replication_groups = _get_group_assignment(
-      sharding_type, partition_spec, tile_assignment)
+      sharding_type, mesh, partition_spec)
 
   def tensor_squeeze(t, tensor_expand):
     if tensor_expand:
@@ -483,7 +486,7 @@ class ShardingSpec:
     self._sharding_type = _get_sharding_type(partition_spec,
                                              xr.global_runtime_device_count())
     self._group_assignment, self._replication_groups = _get_group_assignment(
-        self._sharding_type, partition_spec, self._tile_assignment)
+        self._sharding_type, mesh, partition_spec)
 
   def xla_spec(self, t: torch.Tensor) -> Union['XlaShardingSpec', None]:
     """
