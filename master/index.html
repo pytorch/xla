@@ -2215,13 +2215,13 @@ comparison.</p>
   <span class="n">xla_resnet18</span> <span class="o">=</span> <span class="n">torchvision</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">resnet18</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
   <span class="n">xla_resnet18</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
   <span class="n">dynamo_resnet18</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span>
-      <span class="n">xla_resnet18</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s1">&#39;torchxla_trace_once&#39;</span><span class="p">)</span>
+      <span class="n">xla_resnet18</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s1">&#39;openxla&#39;</span><span class="p">)</span>
   <span class="k">for</span> <span class="n">data</span><span class="p">,</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">loader</span><span class="p">:</span>
     <span class="n">output</span> <span class="o">=</span> <span class="n">dynamo_resnet18</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 </pre></div>
 </div>
 <blockquote>
-<div><p><strong>NOTE:</strong> inference backend name <code class="docutils literal notranslate"><span class="pre">torchxla_trace_once</span></code> is subject to change.</p>
+<div><p><strong>NOTE:</strong> inference backend name <code class="docutils literal notranslate"><span class="pre">openxla</span></code> is subject to change.</p>
 </div></blockquote>
 <p>With the <code class="docutils literal notranslate"><span class="pre">torch.compile</span></code> you will see that PyTorch/XLA only traces the resent18 model once during the init time and executes the compiled binary every time <code class="docutils literal notranslate"><span class="pre">dynamo_resnet18</span></code> is invoked, instead of tracing the model every time. Here is a inference speed analysis to compare Dynamo and Lazy using torch bench on Cloud TPU v4-8</p>
 <p>resnet18 | 1.768
@@ -2255,14 +2255,11 @@ average | 1.9139</p>
   <span class="n">xla_resnet18</span> <span class="o">=</span> <span class="n">torchvision</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">resnet18</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
   <span class="n">xla_resnet18</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
   <span class="n">dynamo_train_model</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span>
-        <span class="n">train_model</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s1">&#39;aot_torchxla_trace_once&#39;</span><span class="p">)</span>
+        <span class="n">train_model</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="s1">&#39;openxla&#39;</span><span class="p">)</span>
   <span class="k">for</span> <span class="n">data</span><span class="p">,</span> <span class="n">target</span> <span class="ow">in</span> <span class="n">loader</span><span class="p">:</span>
     <span class="n">output</span> <span class="o">=</span> <span class="n">dynamo_train_model</span><span class="p">(</span><span class="n">xla_resnet18</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
 </pre></div>
 </div>
-<blockquote>
-<div><p><strong>NOTE:</strong> Backend we used here is <code class="docutils literal notranslate"><span class="pre">aot_torchxla_trace_once</span></code>(subject to change) instead of <code class="docutils literal notranslate"><span class="pre">torchxla_trace_once</span></code></p>
-</div></blockquote>
 <p>We expect to extract and execute 3 graphs per training step instead of one training step if you use the Lazy tensor. Here is a training speed analysis to compare Dynamo and Lazy using a torch bench on Cloud TPU v4-8.</p>
 <p>resnet50 | 0.937
 resnet18 | 1.003
