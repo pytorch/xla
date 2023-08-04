@@ -19,7 +19,8 @@ class TestCollectiveOpsTpu(parameterized.TestCase):
     xm.mark_step()
     return next(model.parameters()).detach().cpu().numpy()
 
-  @absltest.skipUnless(tpu.num_tpu_workers() == 1, "Only implemented for single host.")
+  @absltest.skipUnless(tpu.num_tpu_workers() == 1,
+                       "Only implemented for single host.")
   @parameterized.named_parameters(('synchronized_parameters', True),
                                   ('unsynchronized_parameters', False))
   def test_broadcast_master_param(self, sync):
