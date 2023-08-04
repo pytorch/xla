@@ -412,11 +412,10 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
   assert len(specs) == len(np.unique(specs)), \
     f"Each device mesh dimension should appear at most once in partition_spec {partition_spec}."
 
-  tensor_rank_less_than_mesh = False
-  if len(t.shape) < len(mesh.get_logical_mesh().shape):
+  tensor_rank_less_than_mesh = len(t.shape) < len(mesh.get_logical_mesh().shape)
+  if tensor_rank_less_than_mesh:
     assert len(mesh.get_logical_mesh().shape) == len(
         t.shape) + 1, 'Tensor rank must be equal to or one less than mesh rank'
-    tensor_rank_less_than_mesh = True
     tile_assignment = _get_tile_assignment(mesh, partition_spec + (None,))
   else:
     tile_assignment = _get_tile_assignment(mesh, partition_spec)

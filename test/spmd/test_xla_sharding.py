@@ -644,8 +644,10 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     xs.mark_sharding(t1, mesh, partition_spec=(0, 1))
     if self.n_devices > 1:
       sharding_spec = torch_xla._XLAC._get_xla_sharding_spec(t1)
-      self.assertEqual(sharding_spec,
-                       '{devices=[1,2,2]0,1,2,3 last_tile_dim_replicate}')
+      devices = f'[1,{self.n_devices // 2},2]' + ','.join(
+          str(x) for x in range(self.n_devices))
+      expected_spec = f'{{devices={devices} last_tile_dim_replicate}}'
+      self.assertEqual(sharding_spec, expected_spec)
     actual = (t1 + t2).cpu()
     self.assertTrue(torch.allclose(expected, actual))
 
