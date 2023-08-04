@@ -809,12 +809,27 @@ void InitXlaModuleBindings(py::module m) {
       m, "XlaShardingSpec")
       .def(py::init([](at::Tensor tensor, const py::list& tile_assignment,
                        const py::list& group_assignment,
-                       const py::list& replication_groups, int sharding_type) {
+                       const py::list& replication_groups, int sharding_type,
+                       bool minibatch) {
+        xla::Shape global_shape =
+            CreateComputationShapeFromTensor(tensor, nullptr);
+        if (minibatch) {
+          int num_local_devices =
+              runtime::GetComputationClient()->GetLocalDevices().size();
+          int num_global_devices =
+              runtime::GetComputationClient()->GetAllDevices().size();
+          XLA_CHECK(tile_assignment.size() == num_global_devices)
+              << "Minibatch sharding only supports sharding along the batch "
+                 "dimension";
+          int batch_dim_shape =
+              tensor.sizes()[0] * num_global_devices / num_local_devices;
+          global_shape.set_dimensions(0, batch_dim_shape);
+        }
         return std::make_shared<XLATensor::ShardingSpec>(
             ShardingUtil::CreateOpSharding(
                 tile_assignment, group_assignment, replication_groups,
                 ShardingUtil::ShardingType(sharding_type)),
-            CreateComputationShapeFromTensor(tensor, nullptr));
+            global_shape, minibatch);
       }));
   m.def("_xla_tensors_from_aten",
         [](const std::vector<at::Tensor>& tensors,
@@ -1516,9 +1531,9 @@ void InitXlaModuleBindings(py::module m) {
           for (auto& shard : shards) {
             shard_devices.push_back(shard->device());
           }
-
+          auto sharding_spec = xtensor->sharding_spec();
           auto sharding = xtensor->sharding_spec()->sharding;
-          auto shard_shape = ShardingUtil::GetShardShape(input, sharding);
+          auto shard_shape = ShardingUtil::GetShardShape(sharding_spec);
           auto indices = ShardingUtil::GetShardIndicesForDevices(
               shard_shape, input.sizes().vec(), sharding, shard_devices);
 
@@ -1558,17 +1573,18 @@ void InitXlaModuleBindings(py::module m) {
               runtime::GetComputationClient()->GetLocalDevices().size())
         << "Shards must be provided for all local devices";
     auto sharding = xtensor->sharding_spec()->sharding;
+    auto sharding_spec = xtensor->sharding_spec();
     XLA_CHECK(sharding.type() != xla::OpSharding::REPLICATED)
         << "Replicated tensor should not be loaded from _load_local_shards - "
            "use copy_";
-    auto shard_shape = ShardingUtil::GetShardShape(tensor, sharding);
+    auto shard_shape = ShardingUtil::GetShardShape(sharding_spec);
     for (auto shard : shards) {
       XLA_CHECK(shard.sizes() == shard_shape)
           << "Input shard shape must include padding: " << shard.sizes()
           << " vs " << shard_shape;
     }
-    auto xla_data = ShardingUtil::CreateShardedData(shards, devices,
-                                                    xtensor->shape(), sharding);
+    auto xla_data =
+        ShardingUtil::CreateShardedData(shards, devices, sharding_spec);
     xtensor->SetXlaData(WrapXlaData(xla_data));
   });
   // This is useful for debugging and generating a partitioned HLO separately
