@@ -374,7 +374,8 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     actual = (xt1 + t2).cpu()
     self.assertTrue(torch.allclose(expected, actual))
 
-  @unittest.skipUnless(xr.global_runtime_device_count() >= 4, 'At least 4 devices required')
+  @unittest.skipUnless(xr.global_runtime_device_count() >= 4,
+                       'At least 4 devices required')
   def test_mark_sharding_not_ordered_2d_tensor_3d_mesh(self):
     ct1 = torch.randn(16, 16, device='cpu')
     ct2 = torch.randn(16, 16, device='cpu')
