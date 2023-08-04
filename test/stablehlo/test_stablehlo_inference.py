@@ -20,7 +20,7 @@ class StableHLOInferenceTest(unittest.TestCase):
         resnet18,
         (data,),
     )
-    output2 = torch.tensor(exported(data.detach().numpy()).numpy())
+    output2 = torch.tensor(exported(data.detach().numpy())[0].numpy())
 
     self.assertTrue(torch.allclose(output, output2, atol=1e-5))
 
@@ -43,7 +43,7 @@ class StableHLOInferenceTest(unittest.TestCase):
     with tempfile.TemporaryDirectory() as tempdir:
       tf.saved_model.save(tf_m, tempdir)
       loaded_m = tf.saved_model.load(tempdir)
-      res = loaded_m.f(data.detach().numpy())
+      res = loaded_m.f(data.detach().numpy())[0]
       output2 = torch.tensor(res.numpy())
       self.assertTrue(torch.allclose(output, output2, atol=1e-5))
 
@@ -62,7 +62,8 @@ class StableHLOInferenceTest(unittest.TestCase):
     data = (torch.randn(100, 100), 4.4)
     output = m(*data)
     exported = export_torch_model(m, data)
-    output2 = torch.tensor(exported(data[0].detach().numpy(), data[1]).numpy())
+    output2 = torch.tensor(
+        exported(data[0].detach().numpy(), data[1])[0].numpy())
 
     self.assertTrue(torch.allclose(output, output2, atol=1e-5))
 

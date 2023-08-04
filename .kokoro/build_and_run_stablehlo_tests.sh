@@ -24,7 +24,7 @@ pushd $XLA_DIR
 LOGFILE=/tmp/pytorch_py_test.log
 TEST_DIR=test/stablehlo
 for FILE in $(ls $TEST_DIR); do
-    python $TEST_DIR/$FILE | tee $LOGFILE
+    XLA_STABLEHLO_COMPILE=1 python $TEST_DIR/$FILE | tee $LOGFILE
 done
 
 
