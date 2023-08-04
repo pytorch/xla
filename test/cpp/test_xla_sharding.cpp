@@ -36,17 +36,22 @@ class XLAShardingTest : public AtenXlaTensorTestBase {};
 
 TEST_F(XLAShardingTest, GetShardShape) {
   auto tensor = at::ones({8, 7}, at::TensorOptions(at::kFloat));
+  xla::Shape tensor_shape =
+      CreateComputationShapeFromTensor(tensor, GetDefaultDevice());
   xla::Array2D<int64_t> mesh({
       {0, 1},
       {2, 3},
   });
   auto sharding = xla::HloSharding::Tile(mesh).ToProto();
-  auto shard_shape = ShardingUtil::GetShardShape(tensor, sharding);
+  auto sharding_spec =
+      std::make_shared<XLATensor::ShardingSpec>(sharding, tensor_shape);
+
+  auto shard_shape = ShardingUtil::GetShardShape(sharding_spec);
   // For tiled sharding, each dimension should be halved
   EXPECT_EQ(shard_shape, std::vector<int64_t>({4, 4}));
 
-  sharding = xla::HloSharding::Replicate().ToProto();
-  shard_shape = ShardingUtil::GetShardShape(tensor, sharding);
+  sharding_spec->sharding = xla::HloSharding::Replicate().ToProto();
+  shard_shape = ShardingUtil::GetShardShape(sharding_spec);
   // For replicated sharding, each dimension should be preserved
   EXPECT_EQ(shard_shape, std::vector<int64_t>({8, 7}));
 }
@@ -55,12 +60,16 @@ TEST_F(XLAShardingTest, GetShardIndicesForDevices) {
   std::vector<std::string> devices = {"TPU:0", "TPU:1", "TPU:2", "TPU:3"};
 
   auto tensor = at::ones({8, 7}, at::TensorOptions(at::kFloat));
+  xla::Shape tensor_shape =
+      CreateComputationShapeFromTensor(tensor, GetDefaultDevice());
   xla::Array2D<int64_t> mesh({
       {0, 1},
       {2, 3},
   });
   auto sharding = xla::HloSharding::Tile(mesh).ToProto();
-  auto shard_shape = ShardingUtil::GetShardShape(tensor, sharding);
+  auto sharding_spec =
+      std::make_shared<XLATensor::ShardingSpec>(sharding, tensor_shape);
+  auto shard_shape = ShardingUtil::GetShardShape(sharding_spec);
   auto shard_indices = ShardingUtil::GetShardIndicesForDevices(
       shard_shape, tensor.sizes().vec(), sharding, devices);
   EXPECT_EQ(shard_indices.size(), devices.size());
@@ -82,9 +91,9 @@ TEST_F(XLAShardingTest, GetShardIndicesForDevices) {
       EXPECT_EQ(slice.step(), 1);
     }
   }
-
   sharding = xla::HloSharding::Replicate().ToProto();
-  shard_shape = ShardingUtil::GetShardShape(tensor, sharding);
+  sharding_spec->sharding = sharding;
+  shard_shape = ShardingUtil::GetShardShape(sharding_spec);
   shard_indices = ShardingUtil::GetShardIndicesForDevices(
       shard_shape, tensor.sizes().vec(), sharding, devices);
   EXPECT_EQ(shard_indices.size(), devices.size());
@@ -100,13 +109,17 @@ TEST_F(XLAShardingTest, ShardTensor) {
 
   // 1D tiled
   at::Tensor tensor = at::ones({8}, at::TensorOptions(at::kFloat));
+  xla::Shape tensor_shape =
+      CreateComputationShapeFromTensor(tensor, GetDefaultDevice());
   xla::OpSharding sharding =
       xla::HloSharding::Tile1D(
           CreateComputationShapeFromTensor(tensor, GetDefaultDevice()),
           devices.size())
           .ToProto();
-  auto shards =
-      ShardingUtil::ShardTensor(tensor, sharding, devices, /*padded=*/false);
+  auto sharding_spec =
+      std::make_shared<XLATensor::ShardingSpec>(sharding, tensor_shape);
+  auto shards = ShardingUtil::ShardTensor(tensor, sharding_spec, devices,
+                                          /*padded=*/false);
   EXPECT_EQ(shards.size(), 8);
   EXPECT_EQ(shards[0].sizes(), c10::ArrayRef<long>({1}));
   EXPECT_EQ(shards[1].sizes(), c10::ArrayRef<long>({1}));
@@ -114,13 +127,16 @@ TEST_F(XLAShardingTest, ShardTensor) {
   // 2D tiled, The first dim is halved and the last replicated. The last shard
   // size should be smaller in dim=1 because it's not evenly divisible.
   tensor = at::ones({8, 7, 4}, at::TensorOptions(at::kFloat));
+  tensor_shape = CreateComputationShapeFromTensor(tensor, GetDefaultDevice());
   xla::Array2D<int64_t> mesh({
       {0, 1, 2, 3},
       {4, 5, 6, 7},
   });
   sharding = xla::HloSharding::Tile(mesh).ToProto();
-  shards =
-      ShardingUtil::ShardTensor(tensor, sharding, devices, /*padded=*/false);
+  sharding_spec =
+      std::make_shared<XLATensor::ShardingSpec>(sharding, tensor_shape);
+  shards = ShardingUtil::ShardTensor(tensor, sharding_spec, devices,
+                                     /*padded=*/false);
   EXPECT_EQ(shards.size(), 8);
   EXPECT_EQ(shards[0].sizes(), c10::ArrayRef<long>({4, 2, 4}));
   EXPECT_EQ(shards[7].sizes(), c10::ArrayRef<long>({4, 1, 4}));
@@ -128,17 +144,17 @@ TEST_F(XLAShardingTest, ShardTensor) {
   // 3D tiled, the first dim is replicated and the last halved. The last shard
   // size should be smaller in dim=1 because it's not evenly divisible.
   xla::Array3D<int64_t> cube({{{0, 1}, {2, 3}, {4, 5}, {6, 7}}});
-  sharding = xla::HloSharding::Tile(cube).ToProto();
-  shards =
-      ShardingUtil::ShardTensor(tensor, sharding, devices, /*padded=*/false);
+  sharding_spec->sharding = xla::HloSharding::Tile(cube).ToProto();
+  shards = ShardingUtil::ShardTensor(tensor, sharding_spec, devices,
+                                     /*padded=*/false);
   EXPECT_EQ(shards.size(), 8);
   EXPECT_EQ(shards[0].sizes(), c10::ArrayRef<long>({8, 2, 2}));
   EXPECT_EQ(shards[7].sizes(), c10::ArrayRef<long>({8, 1, 2}));
 
   // Replicated, all shards should be identical.
-  sharding = xla::HloSharding::Replicate().ToProto();
-  shards =
-      ShardingUtil::ShardTensor(tensor, sharding, devices, /*padded=*/false);
+  sharding_spec->sharding = xla::HloSharding::Replicate().ToProto();
+  shards = ShardingUtil::ShardTensor(tensor, sharding_spec, devices,
+                                     /*padded=*/false);
   EXPECT_EQ(shards.size(), 8);
   EXPECT_EQ(shards[0].sizes(), c10::ArrayRef<long>({8, 7, 4}));
   EXPECT_EQ(shards[7].sizes(), c10::ArrayRef<long>({8, 7, 4}));
@@ -147,17 +163,20 @@ TEST_F(XLAShardingTest, ShardTensor) {
   // last shard size should be smaller in dim=2 because it's not evenly
   // divisible.
   tensor = at::ones({1, 8, 7, 4}, at::TensorOptions(at::kFloat));
+  tensor_shape = CreateComputationShapeFromTensor(tensor, GetDefaultDevice());
   xla::Array4D<int64_t> tesseract({{{{0, 1}, {2, 3}, {4, 5}, {6, 7}}}});
   sharding = xla::HloSharding::Tile(tesseract).ToProto();
-  shards =
-      ShardingUtil::ShardTensor(tensor, sharding, devices, /*padded=*/false);
+  sharding_spec =
+      std::make_shared<XLATensor::ShardingSpec>(sharding, tensor_shape);
+  shards = ShardingUtil::ShardTensor(tensor, sharding_spec, devices,
+                                     /*padded=*/false);
   EXPECT_EQ(shards.size(), 8);
   EXPECT_EQ(shards[0].sizes(), c10::ArrayRef<long>({1, 8, 2, 2}));
   EXPECT_EQ(shards[7].sizes(), c10::ArrayRef<long>({1, 8, 1, 2}));
 
   // 4D tiled and padded, all shard sizes should be idential.
-  shards =
-      ShardingUtil::ShardTensor(tensor, sharding, devices, /*padded=*/true);
+  shards = ShardingUtil::ShardTensor(tensor, sharding_spec, devices,
+                                     /*padded=*/true);
   EXPECT_EQ(shards.size(), 8);
   EXPECT_EQ(shards[0].sizes(), c10::ArrayRef<long>({1, 8, 2, 2}));
   EXPECT_EQ(shards[7].sizes(), c10::ArrayRef<long>({1, 8, 2, 2}));
@@ -166,18 +185,21 @@ TEST_F(XLAShardingTest, ShardTensor) {
   // last shard size should be smaller in dim=2 because it's not evenly
   // divisible.
   tensor = at::ones({10, 1, 8, 7, 4}, at::TensorOptions(at::kFloat));
+  tensor_shape = CreateComputationShapeFromTensor(tensor, GetDefaultDevice());
   xla::Array<int64_t> hypercube(std::vector<int64_t>{1, 1, 2, 2, 2});
   hypercube.FillIota(0);
   sharding = xla::HloSharding::Tile(hypercube).ToProto();
-  shards =
-      ShardingUtil::ShardTensor(tensor, sharding, devices, /*padded=*/false);
+  sharding_spec =
+      std::make_shared<XLATensor::ShardingSpec>(sharding, tensor_shape);
+  shards = ShardingUtil::ShardTensor(tensor, sharding_spec, devices,
+                                     /*padded=*/false);
   EXPECT_EQ(shards.size(), 8);
   EXPECT_EQ(shards[0].sizes(), c10::ArrayRef<long>({10, 1, 4, 4, 2}));
   EXPECT_EQ(shards[7].sizes(), c10::ArrayRef<long>({10, 1, 4, 3, 2}));
 
   // 5D tiled and padded, all shard sizes should be identical.
-  shards =
-      ShardingUtil::ShardTensor(tensor, sharding, devices, /*padded=*/true);
+  shards = ShardingUtil::ShardTensor(tensor, sharding_spec, devices,
+                                     /*padded=*/true);
   EXPECT_EQ(shards.size(), 8);
   EXPECT_EQ(shards[0].sizes(), c10::ArrayRef<long>({10, 1, 4, 4, 2}));
   EXPECT_EQ(shards[7].sizes(), c10::ArrayRef<long>({10, 1, 4, 4, 2}));
@@ -188,16 +210,19 @@ TEST_F(XLAShardingTest, ShardTensorMultiHost) {
 
   // 2D tiled, The first dim is halved and the last replicated.
   at::Tensor tensor = at::ones({8, 7, 4}, at::TensorOptions(at::kFloat));
+  xla::Shape tensor_shape =
+      CreateComputationShapeFromTensor(tensor, GetDefaultDevice());
   xla::Array2D<int64_t> mesh({
       {4, 5, 0, 1},
       {6, 7, 2, 3},
   });
   auto sharding = xla::HloSharding::Tile(mesh).ToProto();
-
+  auto sharding_spec =
+      std::make_shared<XLATensor::ShardingSpec>(sharding, tensor_shape);
   // For devices at the start of the mesh, all shards should have the same
   // unpadded shape.
-  auto shards =
-      ShardingUtil::ShardTensor(tensor, sharding, devices, /*padded=*/false);
+  auto shards = ShardingUtil::ShardTensor(tensor, sharding_spec, devices,
+                                          /*padded=*/false);
   EXPECT_EQ(shards.size(), 4);
   EXPECT_EQ(shards[0].sizes(), c10::ArrayRef<long>({4, 2, 4}));
   EXPECT_EQ(shards[3].sizes(), c10::ArrayRef<long>({4, 2, 4}));
@@ -208,23 +233,58 @@ TEST_F(XLAShardingTest, ShardTensorMultiHost) {
       {0, 1, 4, 5},
       {2, 3, 6, 7},
   });
-  sharding = xla::HloSharding::Tile(mesh).ToProto();
-  shards =
-      ShardingUtil::ShardTensor(tensor, sharding, devices, /*padded=*/false);
+  sharding_spec->sharding = xla::HloSharding::Tile(mesh).ToProto();
+  shards = ShardingUtil::ShardTensor(tensor, sharding_spec, devices,
+                                     /*padded=*/false);
   EXPECT_EQ(shards.size(), 4);
   EXPECT_EQ(shards[0].sizes(), c10::ArrayRef<long>({4, 2, 4}));
   EXPECT_EQ(shards[3].sizes(), c10::ArrayRef<long>({4, 1, 4}));
 }
 
+TEST_F(XLAShardingTest, ShardTensorMiniBatch) {
+  std::vector<std::string> devices = {"TPU:4", "TPU:5", "TPU:6", "TPU:7"};
+  at::Tensor minibatch_tensor =
+      at::ones({8, 7, 4}, at::TensorOptions(at::kFloat));
+  xla::Shape global_shape =
+      CreateComputationShapeFromTensor(minibatch_tensor, GetDefaultDevice());
+  global_shape.set_dimensions(
+      0, minibatch_tensor.sizes()[0] * 2);  // Assuming 2 hosts
+  xla::Array3D<int64_t> mesh({
+      {{0}},
+      {{1}},
+      {{2}},
+      {{3}},
+      {{4}},
+      {{5}},
+      {{6}},
+      {{7}},
+  });
+
+  auto sharding = xla::HloSharding::Tile(mesh).ToProto();
+  auto sharding_spec = std::make_shared<XLATensor::ShardingSpec>(
+      sharding, global_shape, /*minibatch=*/true);
+  auto shards = ShardingUtil::ShardTensor(minibatch_tensor, sharding_spec,
+                                          devices, /*padded=*/true);
+  EXPECT_EQ(shards.size(), 4);
+  EXPECT_EQ(shards[0].sizes(), c10::ArrayRef<long>({2, 7, 4}));
+  EXPECT_EQ(shards[3].sizes(), c10::ArrayRef<long>({2, 7, 4}));
+}
+
 TEST_F(XLAShardingTest, EqualShardingSpecs) {
+  auto tensor = at::ones({8, 7}, at::TensorOptions(at::kFloat));
+  xla::Shape tensor_shape =
+      CreateComputationShapeFromTensor(tensor, GetDefaultDevice());
   XLATensor::ShardingSpec tiled_2d(xla::HloSharding::Tile({
                                                               {0, 1, 2, 3},
                                                               {4, 5, 6, 7},
                                                           })
-                                       .ToProto());
+                                       .ToProto(),
+                                   tensor_shape);
   XLATensor::ShardingSpec tiled_3d(
-      xla::HloSharding::Tile({{{0, 1}, {2, 3}, {4, 5}, {6, 7}}}).ToProto());
-  XLATensor::ShardingSpec replicated(xla::HloSharding::Replicate().ToProto());
+      xla::HloSharding::Tile({{{0, 1}, {2, 3}, {4, 5}, {6, 7}}}).ToProto(),
+      tensor_shape);
+  XLATensor::ShardingSpec replicated(xla::HloSharding::Replicate().ToProto(),
+                                     tensor_shape);
   EXPECT_TRUE(ShardingUtil::EqualShardingSpecs(tiled_2d, tiled_2d));
   EXPECT_FALSE(ShardingUtil::EqualShardingSpecs(tiled_2d, tiled_3d));
   EXPECT_TRUE(ShardingUtil::EqualShardingSpecs(replicated, replicated));
@@ -238,13 +298,15 @@ TEST_F(XLAShardingTest, CreateTensorsData) {
   }
 
   std::vector<at::Tensor> tensors(2);
-  std::fill_n(tensors.begin(), tensors.size(),
-              at::ones({8, 8}, at::TensorOptions(at::kFloat)));
+  auto tensor = at::ones({8, 8}, at::TensorOptions(at::kFloat));
+  xla::Shape tensor_shape =
+      CreateComputationShapeFromTensor(tensor, GetDefaultDevice());
+  std::fill_n(tensors.begin(), tensors.size(), tensor);
   std::vector<std::string> devices(2);
   std::fill_n(devices.begin(), devices.size(), GetDefaultDevice()->toString());
   std::vector<XLATensor::ShardingSpecPtr> shardings = {
       nullptr, std::make_shared<XLATensor::ShardingSpec>(
-                   xla::HloSharding::Replicate().ToProto())};
+                   xla::HloSharding::Replicate().ToProto(), tensor_shape)};
   std::vector<torch::lazy::BackendDataPtr> tensors_data =
       CreateTensorsData(tensors, shardings, devices);
 
@@ -286,12 +348,14 @@ TEST_F(XLAShardingTest, InputHandler) {
   }
 
   std::vector<at::Tensor> tensors(2);
-  std::fill_n(tensors.begin(), tensors.size(),
-              at::ones({8, 8}, at::TensorOptions(at::kFloat)));
+  auto tensor = at::ones({8, 8}, at::TensorOptions(at::kFloat));
+  xla::Shape tensor_shape =
+      CreateComputationShapeFromTensor(tensor, GetDefaultDevice());
+  std::fill_n(tensors.begin(), tensors.size(), tensor);
   std::vector<std::string> devices = {"TPU:0", "TPU:1"};
   std::vector<XLATensor::ShardingSpecPtr> shardings = {
       nullptr, std::make_shared<XLATensor::ShardingSpec>(
-                   xla::HloSharding::Replicate().ToProto())};
+                   xla::HloSharding::Replicate().ToProto(), tensor_shape)};
   std::vector<torch::lazy::BackendDataPtr> tensors_data =
       CreateTensorsData(tensors, shardings, devices);
 

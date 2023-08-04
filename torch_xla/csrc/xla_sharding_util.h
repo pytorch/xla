@@ -87,8 +87,8 @@ class ShardingUtil {
   // Returns the shape of the resulting shards of `tensor` after applying
   // `sharding`. This assumes the shards will be padded to ensure they all
   // have the same shape.
-  static std::vector<int64_t> GetShardShape(const at::Tensor& tensor,
-                                            const xla::OpSharding sharding);
+  static std::vector<int64_t> GetShardShape(
+      const XLATensor::ShardingSpecPtr shardings);
 
   // Uses the provided `sharding` spec and expected shard shape to determine the
   // index slices for the shards which belong on `devices`. Only supports
@@ -98,6 +98,12 @@ class ShardingUtil {
                             const std::vector<int64_t>& tensor_shape,
                             const xla::OpSharding sharding,
                             const std::vector<std::string>& devices);
+
+  // Returns the indices for the shards. Supports `OTHER` sharding types and
+  // called when input is sharded along the batch axis.
+  static std::vector<std::vector<at::indexing::TensorIndex>>
+  GetShardIndicesForMinibatchTensor(const std::vector<int64_t>& shard_shape,
+                                    const std::vector<std::string>& devices);
 
   // Shards a tensor and returns the sharded tensors which belong on `devices`
   // based on the `sharding` spec. REPLICATED sharding should result in shards
@@ -109,7 +115,7 @@ class ShardingUtil {
   // The the returned tensors will be in 1:1 correspondence with the `devices`
   // vector, so the `i`th result will belong on the `i`th device.
   static std::vector<at::Tensor> ShardTensor(
-      const at::Tensor& tensor, const xla::OpSharding sharding,
+      const at::Tensor& tensor, const XLATensor::ShardingSpecPtr shardings,
       const std::vector<std::string>& devices, bool padded = true);
 
   // Prepares output sharding propagation by extracting output parameter
@@ -139,7 +145,7 @@ class ShardingUtil {
   // the PjRtShardedData wrapping the shards.
   static runtime::ComputationClient::DataPtr CreateShardedData(
       std::vector<at::Tensor>& shards, std::vector<std::string>& devices,
-      xla::Shape global_shape, xla::OpSharding sharding);
+      const XLATensor::ShardingSpecPtr& sharding_spec);
 };
 
 }  // namespace torch_xla
