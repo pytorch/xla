@@ -320,9 +320,7 @@ def _get_sharding_type(partition_spec: Tuple[Union[int, None]],
 
 
 def _get_tile_assignment(mesh: Mesh, partition_spec: Tuple[Union[int, None]]) -> List[int]:
-  mesh_size = 1 if type(mesh.mesh_shape) == int else len(mesh.mesh_shape)
-  spec_size = 1 if type(partition_spec) == int else len(partition_spec)
-  if (None not in partition_spec) and (mesh_size == spec_size):
+  if (None not in partition_spec) and (len(mesh.mesh_shape) == len(partition_spec)):
     return mesh.get_logical_mesh().transpose(partition_spec).tolist()
   # Tile permutation is not necessary for partial replication.
   return mesh.get_logical_mesh().tolist()
@@ -407,9 +405,7 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
     f"Each device mesh dimension should appear at most once in partition_spec {partition_spec}."
 
   tile_assignment = _get_tile_assignment(mesh, partition_spec)
-  mesh_size = 1 if type(mesh.mesh_shape) == int else len(mesh.mesh_shape)
-  spec_size = 1 if type(partition_spec) == int else len(partition_spec)
-  if mesh_size > spec_size:
+  if len(mesh.mesh_shape) > len(partition_spec):
     # Use partial replication for sharding a tensor over a higher-rank mesh
     sharding_type = ShardingType.PARTIAL
   else:
