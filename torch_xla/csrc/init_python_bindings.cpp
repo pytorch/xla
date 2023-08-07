@@ -1401,17 +1401,13 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_xla_mark_sharding",
         [](const at::Tensor& input, const py::list& tile_assignment,
            const py::list& group_assignment, const py::list& replication_groups,
-           int sharding_type, bool tensor_rank_less_than_mesh) {
+           int sharding_type) {
           TORCH_LAZY_COUNTER("XlaMarkSharding", 1);
           XLA_CHECK(UseVirtualDevice()) << "Please set `XLA_USE_SPMD=1`";
           XLATensorPtr xtensor = bridge::GetXlaTensor(input);
           xla::OpSharding sharding = ShardingUtil::CreateOpSharding(
               tile_assignment, group_assignment, replication_groups,
               ShardingUtil::ShardingType(sharding_type));
-          if (tensor_rank_less_than_mesh) {
-            // Replicate the lower-rank tensor along the last mesh dimension.
-            sharding.set_replicate_on_last_tile_dim(true);
-          }
           auto new_sharding_spec = std::make_shared<XLATensor::ShardingSpec>(
               sharding,
               MakeShapeWithDeviceLayout(

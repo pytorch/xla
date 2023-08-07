@@ -374,8 +374,6 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     actual = (xt1 + t2).cpu()
     self.assertTrue(torch.allclose(expected, actual))
 
-  @unittest.skipUnless(xr.global_runtime_device_count() >= 4,
-                       'At least 4 devices required')
   def test_mark_sharding_not_ordered_2d_tensor_3d_mesh(self):
     ct1 = torch.randn(16, 16, device='cpu')
     ct2 = torch.randn(16, 16, device='cpu')
@@ -384,16 +382,15 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     t1 = ct1.to(xm.xla_device())
     t2 = ct2.to(xm.xla_device())
     mesh = self._get_mesh((1, self.n_devices, 1))
-    mesh = self._get_mesh((1, self.n_devices // 2, 2))
     # sharding spec here is not ordered.
-    xs.mark_sharding(t1, mesh, partition_spec=(1, 0))
-    sharding_spec = torch_xla._XLAC._get_xla_sharding_spec(t1)
-    devices = f'[{self.n_devices // 2},1,2]' + ','.join(
-        str(x) for x in range(self.n_devices))
-    expected_spec = f'{{devices={devices} last_tile_dim_replicate}}'
-    self.assertEqual(sharding_spec, expected_spec)
-
-    actual = (t1 + t2).cpu()
+    xt1 = xs.mark_sharding(t1, mesh, partition_spec=(2, 1))
+    if self.n_devices > 1:
+      hlo = torch_xla._XLAC._get_xla_tensors_hlo([xt1.global_tensor])
+      sharding_annotation = 'sharding={devices=[1,1,%d]%s}' % (
+          self.n_devices, ','.join(
+              [str(d) for d in mesh.get_logical_mesh().flatten()]))
+      self.assertIn(sharding_annotation, hlo)
+    actual = (xt1 + t2).cpu()
     self.assertTrue(torch.allclose(expected, actual))
 
   def test_partial_replication_addmm(self):
@@ -634,24 +631,22 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     # scalar 5 should be replicated
     self.assertIn('%p0.2 = f32[] parameter(0), sharding={replicated}', hlo)
 
-  @unittest.skipUnless(xr.global_runtime_device_count() >= 4,
-                       'At least 4 devices required')
   def test_2d_tensor_3d_mesh(self):
-    ct1 = torch.randn(16, 16)
-    ct2 = torch.randn(16, 16)
+    ct1 = torch.randn(16, 16, device='cpu')
+    ct2 = torch.randn(16, 16, device='cpu')
     expected = ct1 + ct2
 
     t1 = ct1.to(xm.xla_device())
     t2 = ct2.to(xm.xla_device())
-    mesh = self._get_mesh((1, self.n_devices // 2, 2))
-    xs.mark_sharding(t1, mesh, partition_spec=(0, 1))
-
-    sharding_spec = torch_xla._XLAC._get_xla_sharding_spec(t1)
-    devices = f'[1,{self.n_devices // 2},2]' + ','.join(
-        str(x) for x in range(self.n_devices))
-    expected_spec = f'{{devices={devices} last_tile_dim_replicate}}'
-    self.assertEqual(sharding_spec, expected_spec)
-
+    mesh = self._get_mesh((1, self.n_devices, 1))
+    t1 = xs.mark_sharding(t1, mesh, partition_spec=(1, 2))
+    if self.n_devices > 1:
+      hlo = torch_xla._XLAC._get_xla_tensors_hlo([t1.global_tensor])
+      # expected string in hlo %param = f32[1,4,16]{2,1,0:T(4,128)} parameter(0), sharding={devices=[1,4,1]0,2,1,3}
+      sharding_annotation = 'sharding={devices=[1,%d,1]%s}' % (
+          self.n_devices, ','.join(
+              [str(d) for d in mesh.get_logical_mesh().flatten()]))
+      self.assertIn(sharding_annotation, hlo)
     actual = (t1 + t2).cpu()
     self.assertTrue(torch.allclose(expected, actual))
 
