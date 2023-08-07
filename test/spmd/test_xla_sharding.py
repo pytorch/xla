@@ -580,13 +580,20 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
 
     t1 = ct1.to(xm.xla_device())
     t2 = ct2.to(xm.xla_device())
-    mesh = self._get_mesh((2, self.n_devices // 2, 1))
-    xs.mark_sharding(t1, mesh, partition_spec=(2, 1))
+
+    # Meaningful test for higher-order mesh with extra replication
+    # requires multiple devices. Otherwise, this should defaults back to
+    # full replication.
     if self.n_devices > 1:
-      hlo = torch_xla._XLAC._get_xla_tensors_hlo([t1])
+      mesh = self._get_mesh((2, self.n_devices // 2, 1))
+      xs.mark_sharding(t1, mesh, partition_spec=(2, 1))
       sharding_annotation = 'sharding={devices=[1,%d,2]' % (
           self.n_devices // 2)
-      self.assertIn(sharding_annotation, hlo)
+    else:
+      mesh = self._get_mesh((1, 1, 1))
+      xs.mark_sharding(t1, mesh, partition_spec=(2, 1))
+      sharding_annotation = "sharding={replicated}"
+    self.assertIn(sharding_annotation, torch_xla._XLAC._get_xla_tensors_hlo([t1]))
     actual = (t1 + t2).cpu()
     self.assertTrue(torch.allclose(expected, actual))
 
@@ -643,7 +650,6 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     }]
     hybrid_mesh = xs.HybridMesh(
         ici_mesh_shape=(2, 2), dcn_mesh_shape=(num_slices, 1))
-    print(hybrid_mesh.get_logical_mesh())
     self.assertEqual(hybrid_mesh.get_logical_mesh().tolist(),
                      [[0, 1], [2, 3], [4, 5], [6, 7]])
 

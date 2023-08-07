@@ -337,7 +337,6 @@ def _get_group_assignment(
     # Shard across groups and replicate within subgroups; replicated dims
     # will be used to group replication devices.
     tile_dims = [d for d in partition_spec if d is not None]
-    replicated_dims = set(range(len(mesh.mesh_shape))) - set(tile_dims)
 
     group_list = [np.array(mesh.get_logical_mesh().tolist())]
     for d in tile_dims:
