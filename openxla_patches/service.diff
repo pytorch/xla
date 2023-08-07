@@ -1,0 +1,15 @@
+diff --git a/xla/service/layout_assignment.cc b/xla/service/layout_assignment.cc
+index bced87235..ff87dbb3d 100644
+--- a/xla/service/layout_assignment.cc
++++ b/xla/service/layout_assignment.cc
+@@ -153,8 +153,8 @@ OperandLayoutConstraint::OperandLayoutConstraint(
+       instruction_(instruction),
+       operand_no_(operand_no) {
+   CHECK(shape_layout.LayoutIsSet());
+-  CHECK(ShapeUtil::CompatibleIgnoringElementType(
+-      shape_layout.shape(), instruction->operand(operand_no)->shape()))
++  CHECK(ShapeUtil::SameRank(shape_layout.shape(),
++                           instruction->operand(operand_no)->shape()))
+       << shape_layout.shape() << " is not compatible with "
+       << instruction->operand(operand_no)->shape() << " (for operand "
+       << operand_no << " of instruction " << instruction->ToString() << ")";
