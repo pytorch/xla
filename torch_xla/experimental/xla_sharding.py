@@ -328,6 +328,11 @@ def _get_tile_assignment(mesh: Mesh, partition_spec: Tuple[Union[int, None]]) ->
   return mesh.get_logical_mesh().tolist()
 
 
+# Produce group assignment for partial replication. Partial replication tiles
+# groups (a.k.a. sub-groups) where the shards are fully replicated within each
+# sub-group. `replication_groups` is a list of groups as lists, where each group
+# contains the participating device IDs. `group_assignment` describes the group
+# placement and the overall mesh, where each element is the group ID.
 def _get_group_assignment(
     sharding_type: ShardingType, mesh: Mesh,
     partition_spec: Tuple[Union[int, None]]) -> Tuple[List, List]:
