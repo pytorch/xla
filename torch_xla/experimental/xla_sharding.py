@@ -319,8 +319,10 @@ def _get_sharding_type(partition_spec: Tuple[Union[int, None]],
   return sharding_type
 
 
-def _get_tile_assignment(mesh: Mesh, partition_spec: Tuple[Union[int, None]]) -> List[int]:
-  if (None not in partition_spec) and (len(mesh.mesh_shape) == len(partition_spec)):
+def _get_tile_assignment(mesh: Mesh,
+                         partition_spec: Tuple[Union[int, None]]) -> List[int]:
+  if (None not in partition_spec) and (len(mesh.mesh_shape)
+                                       == len(partition_spec)):
     return mesh.get_logical_mesh().transpose(partition_spec).tolist()
   # Tile permutation is not necessary for partial replication.
   return mesh.get_logical_mesh().tolist()
@@ -349,7 +351,9 @@ def _get_group_assignment(
       group_list = _group_list
     replication_groups = [group.flatten().tolist() for group in group_list]
 
-    group_tile_shape = [mesh.mesh_shape[d] if d is not None else 1 for d in partition_spec]
+    group_tile_shape = [
+        mesh.mesh_shape[d] if d is not None else 1 for d in partition_spec
+    ]
     group_assignment = np.arange(len(replication_groups)).reshape(
         tuple(group_tile_shape)).tolist()
   return group_assignment, replication_groups

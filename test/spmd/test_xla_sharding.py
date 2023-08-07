@@ -587,13 +587,13 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     if self.n_devices > 1:
       mesh = self._get_mesh((2, self.n_devices // 2, 1))
       xs.mark_sharding(t1, mesh, partition_spec=(2, 1))
-      sharding_annotation = 'sharding={devices=[1,%d,2]' % (
-          self.n_devices // 2)
+      sharding_annotation = 'sharding={devices=[1,%d,2]' % (self.n_devices // 2)
     else:
       mesh = self._get_mesh((1, 1, 1))
       xs.mark_sharding(t1, mesh, partition_spec=(2, 1))
       sharding_annotation = "sharding={replicated}"
-    self.assertIn(sharding_annotation, torch_xla._XLAC._get_xla_tensors_hlo([t1]))
+    self.assertIn(sharding_annotation,
+                  torch_xla._XLAC._get_xla_tensors_hlo([t1]))
     actual = (t1 + t2).cpu()
     self.assertTrue(torch.allclose(expected, actual))
 
