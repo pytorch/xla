@@ -7,6 +7,6 @@ cuda_deps:
     "11.7": libcudnn8=8.5.0.96-1+cuda11.7
     "11.2": libcudnn8=8.1.1.33-1+cuda11.2
   libcudnn-dev:
-    "11.8": libcudnn8-dev=8.8.0.121-1+cuda11.8
+    "11.8": libcudnn8-dev=8.7.0.121-1+cuda11.8
     "11.7": libcudnn8-dev=8.5.0.96-1+cuda11.7
     "11.2": libcudnn8-dev=8.1.1.33-1+cuda11.2
