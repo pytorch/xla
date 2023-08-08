@@ -1125,6 +1125,7 @@ void InitXlaModuleBindings(py::module m) {
       for (auto const& [name, value] : attributes) {
         dict[py::str(name)] = py::cast(value);
       }
+      dict[py::str("name")] = device;
       list.push_back(dict);
     }
     return list;
