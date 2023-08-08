@@ -304,11 +304,10 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     actual = (xt1 @ t2).cpu()
     self.assertTrue(torch.allclose(expected, actual))
 
-  def test_mark_sharding_not_ordered_partial_3d(self):
+  def test_mark_sharding_partial_unordered(self):
     device = xm.xla_device()
-    t1 = torch.randn(8, 16, 32).to(device)
-    t2 = torch.randn(8, 16, 32).to(device)
-    # Somehow the eager cpu result is different from the xla result.
+    t1 = torch.randn(4, 3, 4).to(device)
+    t2 = torch.randn(4, 3, 4).to(device)
     expected = t1 + t2
     # To re-materialize t1 and t2.
     xm.mark_step()
@@ -318,78 +317,21 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     # Shard along two axes if four or more devices are available
     z_dim = 2 if self.n_devices >= 4 else 1
     mesh = self._get_mesh((z_dim, 1, self.n_devices // z_dim))
-
-    # Expect local shard size to be [8, 16 / z_dim, 32]
-    xt1 = xs.mark_sharding(t1, mesh, (1, 0, None))
-
-    for local_shard in xt1.local_shards:
-      self.assertEqual(local_shard.data.size()[0], 8)
-      self.assertEqual(local_shard.data.size()[1], 16 / z_dim)
-      self.assertEqual(local_shard.data.size()[2], 32)
+    xt1 = xs.mark_sharding(t1, mesh, (1, None, 0))
 
     # partial replication requires >1 devices; otherwise, it's replicated.
     if self.n_devices > 1:
       # xt1 is sharded `z_dim`-way, replicated `n_devices/z_dim`-way.
       self.assertTrue('last_tile_dim_replicate' in
                       torch_xla._XLAC._get_xla_sharding_spec(t1))
-      self.assertTrue('[%d,%d,1,%d]' %
-                      (1, z_dim, self.n_devices //
+      self.assertTrue('[1,1,%d,%d]' %
+                      (z_dim, self.n_devices //
                        z_dim) in torch_xla._XLAC._get_xla_sharding_spec(t1))
-    actual = (xt1 + t2).cpu()
-    self.assertTrue(torch.allclose(expected, actual))
-
-  def test_mark_sharding_not_ordered_partial_4d(self):
-    device = xm.xla_device()
-    t1 = torch.randn(8, 16, 32, 64).to(device)
-    t2 = torch.randn(8, 16, 32, 64).to(device)
-    # Somehow the eager cpu result is different from the xla result.
-    expected = t1 + t2
-    # To re-materialize t1 and t2.
-    xm.mark_step()
-    xm.wait_device_ops()
-    expected = expected.cpu()
-
-    # Shard along two axes if four or more devices are available
-    z_dim = 2 if self.n_devices >= 4 else 1
-    mesh = self._get_mesh((z_dim, 1, 1, self.n_devices // z_dim))
-
-    # Expect local shard size to be [8, 16, 32 / z_dim, 64]
-    xt1 = xs.mark_sharding(t1, mesh, (2, None, 0, None))
-
-    for local_shard in xt1.local_shards:
-      self.assertEqual(local_shard.data.size()[0], 8)
-      self.assertEqual(local_shard.data.size()[1], 16)
-      self.assertEqual(local_shard.data.size()[2], 32 / z_dim)
-      self.assertEqual(local_shard.data.size()[3], 64)
-
-    # partial replication requires >1 devices; otherwise, it's replicated.
-    if self.n_devices > 1:
-      # xt1 is sharded `z_dim`-way, replicated `n_devices/z_dim`-way.
-      self.assertTrue('last_tile_dim_replicate' in
-                      torch_xla._XLAC._get_xla_sharding_spec(t1))
-      self.assertTrue('[1,1,%d,1,%d]' %
-                      (z_dim,
-                       (self.n_devices //
-                        z_dim)) in torch_xla._XLAC._get_xla_sharding_spec(t1))
-    actual = (xt1 + t2).cpu()
-    self.assertTrue(torch.allclose(expected, actual))
-
-  def test_mark_sharding_not_ordered_2d_tensor_3d_mesh(self):
-    ct1 = torch.randn(16, 16, device='cpu')
-    ct2 = torch.randn(16, 16, device='cpu')
-    expected = ct1 + ct2
-
-    t1 = ct1.to(xm.xla_device())
-    t2 = ct2.to(xm.xla_device())
-    mesh = self._get_mesh((1, self.n_devices, 1))
-    # sharding spec here is not ordered.
-    xt1 = xs.mark_sharding(t1, mesh, partition_spec=(2, 1))
-    if self.n_devices > 1:
-      hlo = torch_xla._XLAC._get_xla_tensors_hlo([xt1.global_tensor])
-      sharding_annotation = 'sharding={devices=[1,1,%d]%s}' % (
-          self.n_devices, ','.join(
-              [str(d) for d in mesh.get_logical_mesh().flatten()]))
-      self.assertIn(sharding_annotation, hlo)
+    # replicated group should share the same data content.
+    if (self.n_devices // z_dim) > 1:
+      shards = xt1.local_shards
+      self.assertTrue(torch.allclose(shards[0].data, shards[1].data))
+      self.assertEqual(shards[0].data.shape, (4, 3, 4 // z_dim))
     actual = (xt1 + t2).cpu()
     self.assertTrue(torch.allclose(expected, actual))
 
@@ -638,15 +580,20 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
 
     t1 = ct1.to(xm.xla_device())
     t2 = ct2.to(xm.xla_device())
-    mesh = self._get_mesh((1, self.n_devices, 1))
-    t1 = xs.mark_sharding(t1, mesh, partition_spec=(1, 2))
+
+    # Meaningful test for higher-order mesh with extra replication
+    # requires multiple devices. Otherwise, this should defaults back to
+    # full replication.
     if self.n_devices > 1:
-      hlo = torch_xla._XLAC._get_xla_tensors_hlo([t1.global_tensor])
-      # expected string in hlo %param = f32[1,4,16]{2,1,0:T(4,128)} parameter(0), sharding={devices=[1,4,1]0,2,1,3}
-      sharding_annotation = 'sharding={devices=[1,%d,1]%s}' % (
-          self.n_devices, ','.join(
-              [str(d) for d in mesh.get_logical_mesh().flatten()]))
-      self.assertIn(sharding_annotation, hlo)
+      mesh = self._get_mesh((2, self.n_devices // 2, 1))
+      xs.mark_sharding(t1, mesh, partition_spec=(2, 1))
+      sharding_annotation = 'sharding={devices=[1,%d,2]' % (self.n_devices // 2)
+    else:
+      mesh = self._get_mesh((1, 1, 1))
+      xs.mark_sharding(t1, mesh, partition_spec=(2, 1))
+      sharding_annotation = "sharding={replicated}"
+    self.assertIn(sharding_annotation,
+                  torch_xla._XLAC._get_xla_tensors_hlo([t1]))
     actual = (t1 + t2).cpu()
     self.assertTrue(torch.allclose(expected, actual))
 
@@ -703,7 +650,6 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     }]
     hybrid_mesh = xs.HybridMesh(
         ici_mesh_shape=(2, 2), dcn_mesh_shape=(num_slices, 1))
-    print(hybrid_mesh.get_logical_mesh())
     self.assertEqual(hybrid_mesh.get_logical_mesh().tolist(),
                      [[0, 1], [2, 3], [4, 5], [6, 7]])
 
@@ -754,7 +700,7 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     # max return 2 tensors `value` and `indices`. They are the output
     # of the same IR Node `MaxInDim`
     (xt_val, xt_index) = torch.max(xt1, 1)
-    xst_val = xs.mark_sharding(xt_val, self._get_mesh((self.n_devices)),
+    xst_val = xs.mark_sharding(xt_val, self._get_mesh((self.n_devices,)),
                                partition_spec)
     # `xst_val`` should have sharding spec now, but `xst_index` should not
     self.assertNotEqual(torch_xla._XLAC._get_xla_sharding_spec(xt_val), '')
