@@ -17,6 +17,10 @@ import torch_xla.distributed.xla_multiprocessing as xmp
 
 assert tpu.num_available_chips() > 0, 'Must be run on a TPU!'
 
+def _is_on_tpu():
+  return 'XRT_TPU_CONFIG' in os.environ or xr.device_type() == 'TPU'
+
+skipOnTpu = unittest.skipIf(_is_on_tpu(), 'Not supported on TPU')
 
 def _ordinal_to_device(processes=None,
                        cores_per_process=None) -> Dict[int, torch.device]:
@@ -92,6 +96,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
     devices_per_process = pjrt.run_multiprocess(xm.xla_device)
     self.assertDictEqual(devices_per_process, expected)
 
+  @skipOnTpu
   def test_xla_devices_single_process_all_chips(self):
     expected = _ordinal_to_device(
         processes=1, cores_per_process=tpu.num_available_devices())
