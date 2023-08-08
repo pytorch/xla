@@ -17,6 +17,7 @@ import torch_xla.distributed.xla_multiprocessing as xmp
 
 assert tpu.num_available_chips() > 0, 'Must be run on a TPU!'
 
+
 def _ordinal_to_device(processes=None,
                        cores_per_process=None) -> Dict[int, torch.device]:
   """Returns a dict of global ordinals and their expected `torch.device` value.
