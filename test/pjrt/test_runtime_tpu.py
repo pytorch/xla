@@ -101,7 +101,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
     expected = _ordinal_to_device(
         processes=1, cores_per_process=tpu.num_available_devices())
     print("cores_per_process")
-    print(cores_per_process)
+    print(tpu.num_available_devices())
     print("expected")
     print(expected)
 
