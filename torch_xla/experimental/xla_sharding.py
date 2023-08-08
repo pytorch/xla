@@ -53,6 +53,7 @@ class Mesh:
     if not isinstance(device_ids, np.ndarray):
       device_ids = np.array(device_ids)
     assert (axis_names is None) or (len(mesh_shape) == len(axis_names))
+    assert axis_names is None or (len(set(axis_names)) == len(axis_names))
     assert (len(device_ids) == np.prod(mesh_shape))
     assert len(device_ids) == len(np.unique(device_ids))
     self.device_ids = device_ids
@@ -64,11 +65,18 @@ class Mesh:
     return np.prod(self.mesh_shape)
 
   def shape(self):
+    if self.axis_names is None:
+      return OrderedDict((dim, size) for dim, size in enumerate(self.mesh_shape))
     return OrderedDict(
         (name, size) for name, size in zip(self.axis_names, self.mesh_shape))
 
   def get_logical_mesh(self):
     return self.device_ids.reshape(self.mesh_shape)
+
+  def get_axis_name_idx(self, name: str) -> int:
+    if name not in self.axis_names:
+      return None
+    return self.axis_names.index(name)
 
 
 # HybridDevice class has been inspired from jax's mesh_utils: https://github.com/google/jax/blob/fc5960f2b8b7a0ef74dbae4e27c5c08ff1564cff/jax/experimental/mesh_utils.py#L4
@@ -359,6 +367,21 @@ def _get_group_assignment(
   return group_assignment, replication_groups
 
 
+def _translate_named_partition_spec(mesh: Mesh, partition_spec: Tuple):
+  _partition_spec = list()
+  for p in partition_spec:
+    if (p is None) or (type(p) is int):
+      _partition_spec.append(p)
+    elif type(p) is str:
+      idx = mesh.get_axis_name_idx(p)
+      if idx is None:
+        raise ValueError(f"Axis name {p} is not defined in the given mesh")
+      _partition_spec.append(idx)
+    else:
+      raise ValueError(f"Spec type {type(p)} is not supported in partition spec")
+  return _partition_spec
+
+
 @xr.requires_pjrt
 def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
                   partition_spec: Tuple[Union[int, None]]) -> XLAShardedTensor:
@@ -396,6 +419,7 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
   assert num_devices > 0, "This requires XLA supported device(s)."
   assert mesh.size() == num_devices, \
     f"{mesh.mesh_shape} is not mappable over {num_devices} devices."
+  partition_spec = _translate_named_partition_spec(mesh, partition_spec)
   assert all((d >= 0 and d < len(mesh.mesh_shape)) for d in partition_spec if d), \
     f"partition_spec ({partition_spec}) contains out of bound index into mesh_shape."
   # We only allow fully specified `partition_spec` to be applicable, as opposed
