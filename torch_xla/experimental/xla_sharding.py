@@ -78,7 +78,7 @@ class HybridMesh(Mesh):
   """Creates a hybrid device mesh of devices connected with ICI and DCN networks.
     The shape of logical mesh should be ordered by increasing network-intensity
     e.g. [replica, data, model] where mdl has the most network communication
-    requirements. 
+    requirements.
 
   Args:
     ici_mesh_shape: shape of the logical mesh for inner connected devices.
@@ -88,7 +88,7 @@ class HybridMesh(Mesh):
     # This example is assuming 2 slices of v4-8.
     ici_mesh_shape = (1, 4, 1) # (data, fsdp, tensor)
     dcn_mesh_shape = (2, 1, 1)
-    
+
     mesh = HybridMesh(ici_mesh_shape, dcn_mesh_shape, ('data','fsdp','tensor'))
     print(mesh.shape())
     >> OrderedDict([('data', 2), ('fsdp', 4), ('tensor', 1)])
@@ -321,43 +321,39 @@ def _get_sharding_type(partition_spec: Tuple[Union[int, None]],
 
 def _get_tile_assignment(mesh: Mesh,
                          partition_spec: Tuple[Union[int, None]]) -> List[int]:
-  # Use Torch.tensor here to make use of the torch.transpose_
-  mesh_list_tensor = torch.tensor(mesh.get_logical_mesh().tolist())
-  partition_spec_list = list(partition_spec)
-  for i in range(len(partition_spec_list)):
-    if partition_spec_list[i] == None:
-      partition_spec_list[i] = i
-  # We currently do not support partition_spec like [0, None, 1, 3]. The None at partition_spec[1]
-  # suggested that we want to replicate on Mesh[1], hence we can't use Mesh[1] in
-  # partition_spec[2]
-  assert torch.unique(
-      torch.tensor(partition_spec_list)).size()[0] == len(partition_spec_list)
-  return mesh_list_tensor.permute(partition_spec_list).tolist()
+  if (None not in partition_spec) and (len(mesh.mesh_shape)
+                                       == len(partition_spec)):
+    return mesh.get_logical_mesh().transpose(partition_spec).tolist()
+  # Tile permutation is not necessary for partial replication.
+  return mesh.get_logical_mesh().tolist()
 
 
-def _get_group_assignment(sharding_type: ShardingType,
-                          partition_spec: Tuple[Union[int, None]],
-                          tile_assignment: List) -> Tuple[List, List]:
+# Produce group assignment for partial replication. Partial replication tiles
+# groups (a.k.a. sub-groups) where the shards are fully replicated within each
+# sub-group. `replication_groups` is a list of groups as lists, where each group
+# contains the participating device IDs. `group_assignment` describes the group
+# placement and the overall mesh, where each element is the group ID.
+def _get_group_assignment(
+    sharding_type: ShardingType, mesh: Mesh,
+    partition_spec: Tuple[Union[int, None]]) -> Tuple[List, List]:
   group_assignment = list()
   replication_groups = list()
-  mesh_shape_list = list(torch.tensor(tile_assignment).size())
   if sharding_type is ShardingType.PARTIAL:
     # Shard across groups and replicate within subgroups; replicated dims
     # will be used to group replication devices.
     tile_dims = [d for d in partition_spec if d is not None]
-    replicated_dims = set(range(len(mesh_shape_list))) - set(tile_dims)
 
-    group_list = [np.array(tile_assignment)]
+    group_list = [np.array(mesh.get_logical_mesh().tolist())]
     for d in tile_dims:
       _group_list = list()
       for group_members in group_list:
-        _group_list += np.split(group_members, mesh_shape_list[d], d)
+        _group_list += np.split(group_members, mesh.mesh_shape[d], d)
       group_list = _group_list
     replication_groups = [group.flatten().tolist() for group in group_list]
 
-    group_tile_shape = mesh_shape_list
-    for d in replicated_dims:
-      group_tile_shape[d] = 1
+    group_tile_shape = [
+        mesh.mesh_shape[d] if d is not None else 1 for d in partition_spec
+    ]
     group_assignment = np.arange(len(replication_groups)).reshape(
         tuple(group_tile_shape)).tolist()
   return group_assignment, replication_groups
@@ -412,35 +408,22 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
   assert len(specs) == len(np.unique(specs)), \
     f"Each device mesh dimension should appear at most once in partition_spec {partition_spec}."
 
-  # check for sharding 2D tensor on a 3D mesh
-  original_shape = tuple(t.shape)
-  # number of dims to expand on tensor
-  tensor_expand = 0
-  if tensor_expand < len(mesh.get_logical_mesh().shape) - len(partition_spec):
-    tensor_expand = len(mesh.get_logical_mesh().shape) - len(partition_spec)
-    partition_spec = (None,) * tensor_expand + partition_spec
-    shape = (1,) * tensor_expand + (*original_shape,)
-    t = t.expand(shape)
-
   tile_assignment = _get_tile_assignment(mesh, partition_spec)
-  sharding_type = _get_sharding_type(partition_spec, num_devices)
+  if len(mesh.mesh_shape) > len(partition_spec):
+    # Use partial replication for sharding a tensor over a higher-rank mesh
+    sharding_type = ShardingType.PARTIAL
+  else:
+    sharding_type = _get_sharding_type(partition_spec, num_devices)
   group_assignment, replication_groups = _get_group_assignment(
-      sharding_type, partition_spec, tile_assignment)
-
-  def tensor_squeeze(t, tensor_expand):
-    if tensor_expand:
-      t = torch.squeeze(t, dim=tuple(range(tensor_expand)))
-    return t
+      sharding_type, mesh, partition_spec)
 
   if isinstance(t, XLAShardedTensor):
     torch_xla._XLAC._xla_mark_sharding(t.global_tensor, tile_assignment,
                                        group_assignment, replication_groups,
                                        int(sharding_type))
-    t = tensor_squeeze(t, tensor_expand)
     return t
   torch_xla._XLAC._xla_mark_sharding(t, tile_assignment, group_assignment,
                                      replication_groups, int(sharding_type))
-  t = tensor_squeeze(t, tensor_expand)
   return XLAShardedTensor(t)
 
 
@@ -483,7 +466,7 @@ class ShardingSpec:
     self._sharding_type = _get_sharding_type(partition_spec,
                                              xr.global_runtime_device_count())
     self._group_assignment, self._replication_groups = _get_group_assignment(
-        self._sharding_type, partition_spec, self._tile_assignment)
+        self._sharding_type, mesh, partition_spec)
 
   def xla_spec(self, t: torch.Tensor) -> Union['XlaShardingSpec', None]:
     """

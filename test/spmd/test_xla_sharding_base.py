@@ -36,6 +36,7 @@ class XlaShardingTest(unittest.TestCase):
     cls.device_ids = np.array(range(cls.n_devices))
 
   def _get_mesh(self, mesh_shape, device_ids=None):
+    assert type(mesh_shape) is tuple, 'mesh_shape must be Tuple[int]'
     if device_ids is None:
       device_ids = self.device_ids
     assert len(device_ids) == self.n_devices
