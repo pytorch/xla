@@ -8,13 +8,11 @@ import torch_xla.distributed.xla_backend
 import torch.distributed as dist
 
 
-def _mp_fn(index):
+def _test_reduce_scatter():
   device = xm.xla_device()
   if xm.xla_device_hw(device) in ('TPU', 'GPU'):
     world_size = xm.xrt_world_size()
     rank = xm.get_ordinal()
-
-    dist.init_process_group('xla', world_size=world_size, rank=rank)
 
     input_size = (32, 3)
     inputs = torch.ones(input_size).split(input_size[0] // world_size)
@@ -28,6 +26,36 @@ def _mp_fn(index):
     print(
         'Default device {} is not a TPU or GPU device'.format(device),
         file=sys.stderr)
+
+
+def _test__reduce_scatter_base():
+  device = xm.xla_device()
+  if xm.xla_device_hw(device) in ('TPU', 'GPU'):
+    world_size = xm.xrt_world_size()
+    rank = xm.get_ordinal()
+
+    input_size = (32, 3)
+    input = torch.ones(input_size)
+    output = torch.zeros((input_size[0] // world_size, input_size[1]))
+    xinput = input.to(device)
+    xoutput = output.to(device)
+    dist._reduce_scatter_base(xoutput, xinput)
+    expected = torch.ones_like(output) * world_size
+    assert torch.all(xoutput.cpu() == expected), f'{xoutput} != {expected}'
+  else:
+    print(
+        'Default device {} is not a TPU or GPU device'.format(device),
+        file=sys.stderr)
+
+
+def _mp_fn(index):
+  device = xm.xla_device()
+  if xm.xla_device_hw(device) in ('TPU', 'GPU'):
+    world_size = xm.xrt_world_size()
+    rank = xm.get_ordinal()
+    dist.init_process_group('xla', world_size=world_size, rank=rank)
+  _test_reduce_scatter()
+  _test__reduce_scatter_base()
 
 
 if __name__ == '__main__':
