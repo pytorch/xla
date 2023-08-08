@@ -14,6 +14,7 @@ from torch_xla import runtime as xr
 from torch_xla._internal import pjrt
 from torch_xla._internal import tpu
 import torch_xla.distributed.xla_multiprocessing as xmp
+import unittest
 
 assert tpu.num_available_chips() > 0, 'Must be run on a TPU!'
 
