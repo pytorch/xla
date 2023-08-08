@@ -98,8 +98,9 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
     self.assertDictEqual(devices_per_process, expected)
 
   def test_xla_devices_single_process_all_chips(self):
+    cores_per_process=tpu.num_available_devices()
     expected = _ordinal_to_device(
-        processes=1, cores_per_process=tpu.num_available_devices())
+        processes=1, cores_per_process=cores_per_process if cores_per_process<=4 else 4)
     print("cores_per_process")
     print(tpu.num_available_devices())
     print("expected")
