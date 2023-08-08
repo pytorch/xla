@@ -97,15 +97,20 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
     devices_per_process = pjrt.run_multiprocess(xm.xla_device)
     self.assertDictEqual(devices_per_process, expected)
 
-  @skipOnTpu
   def test_xla_devices_single_process_all_chips(self):
     expected = _ordinal_to_device(
         processes=1, cores_per_process=tpu.num_available_devices())
+    print("cores_per_process")
+    print(cores_per_process)
+    print("expected")
+    print(expected)
 
     os.environ[xenv.TPU_VISIBLE_CHIPS] = '0,1,2,3'
     os.environ[xenv.TPU_PROCESS_BOUNDS] = '1,1,1'
 
     devices = pjrt.run_multiprocess(xm.xla_device)
+    print("deivices")
+    print(devices)
     self.assertDictEqual(devices, expected)
 
   def test_xla_devices_single_process_one_chip(self):
