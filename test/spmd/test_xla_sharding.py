@@ -720,8 +720,8 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
 
   def test_named_partition_spec(self):
     xt1 = torch.arange(64).reshape(8, 8).to(xm.xla_device())
-    mesh = xs.Mesh(list(range(self.n_devices)), (1, self.n_devices),
-                   ('data', 'model'))
+    mesh = xs.Mesh(
+        list(range(self.n_devices)), (1, self.n_devices), ('data', 'model'))
     partition_spec = ('model', 'data')
     xs.mark_sharding(xt1, mesh, partition_spec)
     sharding_spec = torch_xla._XLAC._get_xla_sharding_spec(xt1)

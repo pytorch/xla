@@ -66,7 +66,8 @@ class Mesh:
 
   def shape(self):
     if self.axis_names is None:
-      return OrderedDict((dim, size) for dim, size in enumerate(self.mesh_shape))
+      return OrderedDict(
+          (dim, size) for dim, size in enumerate(self.mesh_shape))
     return OrderedDict(
         (name, size) for name, size in zip(self.axis_names, self.mesh_shape))
 
@@ -378,13 +379,15 @@ def _translate_named_partition_spec(mesh: Mesh, partition_spec: Tuple):
         raise ValueError(f"Axis name {p} is not defined in the given mesh")
       _partition_spec.append(idx)
     else:
-      raise ValueError(f"Spec type {type(p)} is not supported in partition spec")
+      raise ValueError(
+          f"Spec type {type(p)} is not supported in partition spec")
   return _partition_spec
 
 
 @xr.requires_pjrt
-def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
-                  partition_spec: Tuple[Union[int, None]]) -> XLAShardedTensor:
+def mark_sharding(
+    t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
+    partition_spec: Tuple[Union[int, str, None]]) -> XLAShardedTensor:
   """
     Annotates the tensor provided with XLA partition spec. Internally,
     it annotates the corresponding XLATensor as sharded for the XLA SpmdPartitioner pass.
@@ -393,7 +396,7 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
 
         mesh (Mesh): describes the logical XLA device topology and the underlying device IDs.
 
-        partition_spec (Tuple[int, None]): A tuple of device_mesh dimension index or `None`.
+        partition_spec (Tuple[int, str, None]): A tuple of device_mesh dimension index or `None`. Each index is an int or str if the mesh axis is named.
         This specifies how each input rank is sharded (index to mesh_shape) or replicated (None).
         For example, we can shard an 8x10 tensor 4-way row-wise, and replicate column-wise.
         >> input = torch.randn(8, 10)
