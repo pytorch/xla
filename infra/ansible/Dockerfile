@@ -5,7 +5,6 @@ FROM python:${python_version}-${debian_version} AS build
 
 WORKDIR /ansible
 RUN pip install ansible
-RUN apt list -a libcudnn8
 COPY . /ansible
 
 ARG ansible_vars
