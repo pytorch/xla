@@ -1628,12 +1628,11 @@ void InitXlaModuleBindings(py::module m) {
           XLA_CHECK(num_nodes > 0)
               << "num_nodes must be positive: " << num_nodes;
 
-          xla::DistributedRuntimeServiceImpl::Options options;
+          xla::CoordinationServiceImpl::Options options;
           options.num_nodes = num_nodes;
-          return std::move(xla::GetDistributedRuntimeService(
-                               dist_service_addr, options,
-                               /*use_coordination_service=*/false)
-                               .value());
+          return std::move(
+              xla::GetDistributedRuntimeService(dist_service_addr, options)
+                  .value());
         });
 
   BuildProfilerSubmodule(&m);

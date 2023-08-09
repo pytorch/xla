@@ -29,7 +29,7 @@
 #include "xla/pjrt/tfrt_cpu_pjrt_client.h"
 #include "xla/pjrt/tpu_client.h"
 #include "xla/shape.h"
-#include "xla/stream_executor/tpu/tpu_initializer_helper.h"
+#include "xla/stream_executor/tpu/tpu_initializer_framework_helper.h"
 
 using xla::internal::XlaBuilderFriend;
 
@@ -49,9 +49,7 @@ MaybeInitializeDistributedRuntimeClient(int local_rank,
     xla::DistributedRuntimeClient::Options options;
     /* TODO(jonbolin): Use global rank for multi-host setup */
     options.node_id = local_rank;
-    client =
-        xla::GetDistributedRuntimeClient(dist_service_addr, options,
-                                         /*use_coordination_service=*/false);
+    client = xla::GetDistributedRuntimeClient(dist_service_addr, options);
     XLA_CHECK(client->Connect().ok())
         << "Failed to initialize distributed runtime client";
   }
