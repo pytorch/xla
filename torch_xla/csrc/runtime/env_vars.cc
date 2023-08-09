@@ -15,6 +15,7 @@ const char* const kEnvPjrtAsyncCpuClient = "PJRT_CPU_ASYNC_CLIENT";
 const char* const kEnvPjrtAsyncGpuClient = "PJRT_GPU_ASYNC_CLIENT";
 const char* const kEnvTpuLibraryPath = "TPU_LIBRARY_PATH";
 const char* const kEnvXpuLibraryPath = "XPU_LIBRARY_PATH";
+const char* const kEnvNeuronLibraryPath = "NEURON_LIBRARY_PATH";
 const char* const kEnvPjrtDistServiceAddr = "PJRT_DIST_SERVICE_ADDR";
 const char* const kEnvPjRtLocalProcessCount = "PJRT_LOCAL_PROCESS_COUNT";
 const char* const kEnvPjRtLocalRank = "PJRT_LOCAL_PROCESS_RANK";

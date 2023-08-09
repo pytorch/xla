@@ -118,8 +118,9 @@ xla::PrimitiveType XlaTypeFromTensorType(
   XlaDeviceType hw_type = static_cast<XlaDeviceType>(device.type());
   switch (scalar_type) {
     case at::ScalarType::Double:
-      return !IsTpuDevice(hw_type) ? xla::PrimitiveType::F64
-                                   : xla::PrimitiveType::F32;
+      return !IsTpuDevice(hw_type) && hw_type != XlaDeviceType::NEURON
+                 ? xla::PrimitiveType::F64
+                 : xla::PrimitiveType::F32;
     case at::ScalarType::Float:
       return xla::PrimitiveType::F32;
     case at::ScalarType::BFloat16:
@@ -1155,8 +1156,9 @@ xla::PrimitiveType GetDevicePrimitiveType(
       if (DowncastBF16() || DowncastF16()) {
         return xla::PrimitiveType::F32;
       }
-      return !IsTpuDevice(hw_type) ? xla::PrimitiveType::F64
-                                   : xla::PrimitiveType::F32;
+      return !IsTpuDevice(hw_type) && hw_type != XlaDeviceType::NEURON
+                 ? xla::PrimitiveType::F64
+                 : xla::PrimitiveType::F32;
     case xla::PrimitiveType::F32:
       if (UseF16() || DowncastF16()) {
         return xla::PrimitiveType::F16;
@@ -1164,11 +1166,13 @@ xla::PrimitiveType GetDevicePrimitiveType(
       return UseBF16() || DowncastBF16() ? xla::PrimitiveType::BF16
                                          : xla::PrimitiveType::F32;
     case xla::PrimitiveType::U16:
-      return !IsTpuDevice(hw_type) ? xla::PrimitiveType::U16
-                                   : xla::PrimitiveType::U32;
+      return !IsTpuDevice(hw_type) && hw_type != XlaDeviceType::NEURON
+                 ? xla::PrimitiveType::U16
+                 : xla::PrimitiveType::U32;
     case xla::PrimitiveType::S16:
-      return !IsTpuDevice(hw_type) ? xla::PrimitiveType::S16
-                                   : xla::PrimitiveType::S32;
+      return !IsTpuDevice(hw_type) && hw_type != XlaDeviceType::NEURON
+                 ? xla::PrimitiveType::S16
+                 : xla::PrimitiveType::S32;
     case xla::PrimitiveType::S64:
       return Use32BitLong() ? xla::PrimitiveType::S32 : xla::PrimitiveType::S64;
     case xla::PrimitiveType::U64:
