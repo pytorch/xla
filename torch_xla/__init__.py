@@ -60,6 +60,27 @@ def _summarize_fn_tracker():
   os.remove(_tmp_fname)
 
 
+def _tpu_vm_init():
+  try:
+    import libtpu
+    libtpu.configure_library_path()
+  except ImportError:
+    return
+
+
+def _aws_ec2_inf_trn_init():
+  try:
+    from torch_neuronx import xla
+  except ImportError:
+    return
+  else:
+    xla.init()
+
+# Setup Neuron library for AWS EC2 inf/trn instances.
+# It needs to be called before _XLAC is loaded so that _XLAC can pick up environment variables
+_aws_ec2_inf_trn_init()
+
+
 def _setup_tpu_vm_library_path() -> bool:
   """Returns true if $TPU_LIBRARY is set or can be inferred.
 
