@@ -22,7 +22,7 @@ def _pjrt_rendezvous_handler(url: str,
     ) == 'TPU' else 'localhost'
   # Workaround for Neuron to prevent socket in use error with torchrun
   # MASTER_PORT is set by torchrun and will clash with the port here
-  if dist.is_torchelastic_launched() and pjrt.device_type() == 'NEURON':
+  if dist.is_torchelastic_launched() and xr.device_type() == 'NEURON':
     master_port = xu.getenv_as('NEURON_PJRT_MASTER_PORT', int, 12355)
     # In the case of torchrun pjrt.world_size() is not yet initialized
     # until after the process group is initialized so we use the
