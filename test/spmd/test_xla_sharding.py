@@ -718,6 +718,18 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
                             partition_spec)
     self.assertTrue(torch.allclose(t1, xst1.cpu()))
 
+  def test_named_partition_spec(self):
+    xt1 = torch.arange(64).reshape(8, 8).to(xm.xla_device())
+    mesh = xs.Mesh(
+        list(range(self.n_devices)), (1, self.n_devices), ('data', 'model'))
+    partition_spec = ('model', 'data')
+    xs.mark_sharding(xt1, mesh, partition_spec)
+    sharding_spec = torch_xla._XLAC._get_xla_sharding_spec(xt1)
+    if self.n_devices > 1:
+      self.assertTrue(f"devices=[{self.n_devices},1]" in sharding_spec)
+    else:
+      self.assertTrue("replicated" in sharding_spec)
+
 
 if __name__ == '__main__':
   test = unittest.main()
