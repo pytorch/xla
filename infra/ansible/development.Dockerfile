@@ -7,6 +7,7 @@ ARG debian_version=buster
 FROM python:${python_version}-${debian_version}
 
 RUN pip install ansible
+RUN apt list -a libcudnn8
 
 COPY . /ansible
 WORKDIR /ansible
