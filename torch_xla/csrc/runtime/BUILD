@@ -97,6 +97,7 @@ cc_library(
     "@xla//xla/pjrt:tfrt_cpu_pjrt_client",
     "@xla//xla/pjrt:pjrt_c_api_client",
     "@tsl//tsl/profiler/lib:traceme",
+    "@tsl//tsl/platform/cloud:gcs_file_system",
     "@com_google_absl//absl/strings",
     "@com_google_absl//absl/types:span",
   ],
