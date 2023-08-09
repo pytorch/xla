@@ -60,14 +60,6 @@ def _summarize_fn_tracker():
   os.remove(_tmp_fname)
 
 
-def _tpu_vm_init():
-  try:
-    import libtpu
-    libtpu.configure_library_path()
-  except ImportError:
-    return
-
-
 def _aws_ec2_inf_trn_init():
   try:
     from torch_neuronx import xla
