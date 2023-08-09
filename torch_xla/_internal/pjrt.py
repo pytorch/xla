@@ -53,7 +53,7 @@ def _run_thread_per_device(
     Dict of the form {thread_rank: return_value}, where return_value is the
     result of calling `fn`.
   """
-  if runtime.device_type() == "NEURON":
+  if runtime.device_type() == 'NEURON':
     neuron.intialize_env(local_rank)
 
   initializer_fn(local_rank, local_world_size)
