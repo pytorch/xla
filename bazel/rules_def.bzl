@@ -24,7 +24,7 @@ def ptxla_cc_test(
         **kwargs):
     xla_cc_test(
         linkstatic = True,
-        extra_copts = copts + [
+        copts = copts + [
             "-isystemexternal/torch",  # Required for system includes.
             "-fexceptions",  # Required for testing crashes.
         ],
