@@ -438,9 +438,10 @@ std::pair<XLATensorPtr, torch::lazy::Value> collective_permute(
 XLATensorPtr custom_sharding(
     const XLATensorPtr& input,
     const std::shared_ptr<XLATensor::ShardingSpec>& sharding_spec) {
-  return input->CreateFrom(torch::lazy::MakeNode<CustomSharding>(
-      input->GetIrValue(),
-      *xla::HloSharding::FromProto(sharding_spec->sharding)));
+  auto output = input->CreateFrom(
+      torch::lazy::MakeNode<CustomSharding>(input->GetIrValue()));
+  output->SetShardingSpec(*sharding_spec);
+  return output;
 }
 
 XLATensorPtr get_dimensions_size(const XLATensorPtr& input,

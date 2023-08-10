@@ -6,25 +6,23 @@
 
 namespace torch_xla {
 
-CustomSharding::CustomSharding(const torch::lazy::Value& input,
-                               const xla::HloSharding& spec)
+CustomSharding::CustomSharding(const torch::lazy::Value& input)
     : XlaNode(xla_custom_sharding, {input}, GetXlaShape(input),
-              /*num_outputs=*/1, torch::lazy::MHash(spec.ToString())),
-      spec_(spec) {}
+              /*num_outputs=*/1, torch::lazy::MHash(std::string("Sharding"))) {}
 
 torch::lazy::NodePtr CustomSharding::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<CustomSharding>(operands.at(0), spec_);
+  return torch::lazy::MakeNode<CustomSharding>(operands.at(0));
 }
 
 XlaOpVector CustomSharding::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
-  xla::XlaOp output = BuildCustomSharding(input, spec_);
+  xla::XlaOp output = BuildCustomSharding(input);
   return ReturnOp(output, loctx);
 }
 
 std::string CustomSharding::ToString() const {
   std::stringstream ss;
-  ss << XlaNode::ToString() << ", spec_=" << spec_.ToString();
+  ss << XlaNode::ToString() << ", Sharding";
   return ss.str();
 }
 
