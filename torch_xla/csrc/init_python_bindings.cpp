@@ -1688,8 +1688,12 @@ void InitXlaModuleBindings(py::module m) {
         [](const std::string& device_str) -> at::IValue {
           torch::lazy::BackendDevice device =
               bridge::AtenDeviceToXlaDevice(c10::Device(device_str));
-          return bridge::AtenFromXlaTensor(torch_xla::XLATensor::Create(
-              XLAGraphExecutor::Get()->GetBaseSeedData(device)));
+          at::IValue seed =
+              bridge::AtenFromXlaTensor(torch_xla::XLATensor::Create(
+                  XLAGraphExecutor::Get()->GetBaseSeedData(device)));
+          // This will update the base seed
+          XLAGraphExecutor::Get()->MarkStep(device);
+          return seed;
         });
 
   // Return true if value of the tensor requires a computation.

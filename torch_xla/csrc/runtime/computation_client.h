@@ -215,6 +215,9 @@ class ComputationClient {
   // wrapped inside a vector.
   virtual std::vector<DataPtr> GetDataShards(DataPtr data) = 0;
 
+  // Returns data shard at a given index.
+  virtual DataPtr GetDataShard(DataPtr data, size_t index) = 0;
+
   // Returns wrapped data shards as PjRtShardedData.
   virtual DataPtr WrapDataShards(const std::vector<DataPtr>& shards,
                                  std::string device, xla::Shape shape,

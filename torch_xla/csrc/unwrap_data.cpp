@@ -10,6 +10,7 @@
 #include "absl/types/span.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/xla_data.h"
+#include "tsl/profiler/lib/traceme.h"
 
 namespace torch_xla {
 
@@ -38,6 +39,8 @@ torch::lazy::BackendDataPtr WrapXlaData(
 
 std::vector<torch::lazy::BackendDataPtr> WrapXlaData(
     absl::Span<const runtime::ComputationClient::DataPtr> xla_datas) {
+  tsl::profiler::TraceMe activity("WrapXlaData",
+                                  tsl::profiler::TraceMeLevel::kInfo);
   TORCH_LAZY_TIMED("WrapXlaData");
   std::vector<torch::lazy::BackendDataPtr> datas;
   datas.reserve(xla_datas.size());
