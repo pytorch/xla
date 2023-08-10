@@ -2,6 +2,7 @@ import torch
 import torch.distributed as dist
 import torch_xla.core.xla_model as xm
 import logging
+import os
 from torch._C._distributed_c10d import ProcessGroup
 
 
@@ -35,8 +36,8 @@ class ProcessGroupXla(ProcessGroup):
     self.prefix_store = prefix_store  # reserved for future use.
     self.timeout = timeout
     self._mesh = []
-    if os.getenv('PJRT_DEVICE',
-                 None) == 'NEURON' and os.getenv('XLA_USE_SPMD') != '1':
+    if os.getenv('PJRT_DEVICE', None) == 'NEURON' and os.getenv(
+                'XLA_USE_SPMD') != '1' and dist.is_torchelastic_launched():
       dev = xm.xla_device()
       xm.set_replication(dev, [dev])
 
