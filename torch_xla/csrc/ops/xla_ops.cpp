@@ -29,5 +29,6 @@ const OpKindWrapper xla_sgd_optimizer_step("xla::sgd_optimizer_step");
 const OpKindWrapper xla_tensor_data("xla::tensor_data");
 const OpKindWrapper xla_unselect("xla::unselect");
 const OpKindWrapper xla_update_slice("xla::update_slice");
+const OpKindWrapper xla_custom_sharding("xla::custom_sharding");
 
 }  // namespace torch_xla
