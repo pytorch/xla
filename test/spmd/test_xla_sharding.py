@@ -476,6 +476,8 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     sharding_spec = torch_xla._XLAC._get_xla_sharding_spec(xt)
     xt.add_(1)  # inplace update should preserve the sharding
     self.assertEqual(sharding_spec, torch_xla._XLAC._get_xla_sharding_spec(xt))
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo([xt])
+    self.assertIn('%custom-call.7 = f32[2,2]{1,0} custom-call(f32[2,2]{1,0} %add.6), custom_call_target="Sharding", sharding=', hlo)
 
   def test_shard_hashing(self):
     xt1 = torch.ones(2, 2).to(xm.xla_device())

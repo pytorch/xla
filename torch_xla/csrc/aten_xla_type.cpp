@@ -114,10 +114,9 @@ void CheckSubOperandTypes(at::ScalarType type1, at::ScalarType type2) {
 
 c10::optional<at::ScalarType> PromoteIntegralType(
     at::ScalarType src_dtype, const c10::optional<at::ScalarType>& opt_dtype) {
-  return opt_dtype.has_value()
-             ? opt_dtype.value()
-             : at::isIntegralType(src_dtype, /*includeBool=*/true) ? at::kLong
-                                                                   : opt_dtype;
+  return opt_dtype.has_value() ? opt_dtype.value()
+         : at::isIntegralType(src_dtype, /*includeBool=*/true) ? at::kLong
+                                                               : opt_dtype;
 }
 
 bool IsTypeWithLargerRangeThanLong(torch::ScalarType dtype) {
@@ -2400,7 +2399,8 @@ void XLANativeFunctions::_propagate_xla_data(const at::Tensor& input,
 
   // 2) Aid SPMD.
   if (input_tensor->sharding_spec()) {
-    output_tensor->SetShardingSpec(*(input_tensor->sharding_spec()));
+    tensor_methods::custom_sharding(output_tensor,
+                                    input_tensor->sharding_spec());
   }
 }
 
