@@ -1200,4 +1200,12 @@ xla::XlaOp BuildMultinomial(xla::XlaOp input, int64_t num_samples,
   return output;
 }
 
+xla::XlaOp BuildCustomSharding(const xla::XlaOp& input,
+                               const xla::HloSharding& sharding) {
+  return xla::CustomCall(input.builder(), /*call_target_name=*/"Sharding",
+                         {input}, ShapeHelper::ShapeOfXlaOp(input),
+                         /*opaque=*/
+                         sharding.ToString());
+}
+
 }  // namespace torch_xla
