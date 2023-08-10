@@ -41,6 +41,7 @@
 #include "torch_xla/csrc/runtime/cache.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/env_vars.h"
+#include "torch_xla/csrc/runtime/multi_wait.h"
 #include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/thread_pool.h"
@@ -631,18 +632,60 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
 
   SyncTensorCollection coll;
   coll.device = device;
+
+  std::vector<XLATensor::ShardingSpecPtr> sharding_specs(placeholders.size());
+  if (static_cast<XlaDeviceType>(device.type()) == XlaDeviceType::SPMD) {
+    ShardingUtil::PrepareOutputShardingPropagation(
+        placeholders, sharding_specs, output_shapes,
+        cachedComputation->computation, device);
+  }
+
+  // init this before the lock to save some time.
+  // std::vector<torch::lazy::BackendDataPtr> arguments(graph_inputs.size());
+  std::vector<torch::lazy::BackendDataPtr> arguments;
+  arguments.reserve(graph_inputs.size());
+
   {
+    tsl::profiler::TraceMe activity("DeviceBarrier",
+                                    tsl::profiler::TraceMeLevel::kInfo);
     TF_VLOG(5) << "Lock device " << device.toString() << "...";
     coll.unlocker = DeviceLockerArena::Get()->LockDevices({device});
     TF_VLOG(5) << "Locking device " << device.toString() << " Done!";
   }
-  std::vector<torch::lazy::BackendDataPtr> arguments;
+
   {
     // GetXlaData must be called within a lock region, otherwise it might
     // extract the placeholder inserted by previous execution.
     TORCH_LAZY_TIMED("RunCachedGraphInputData");
+    //   size_t per_thread_work = 200;
+    //   size_t num_parallel_thread = graph_inputs.size() / per_thread_work + 1;
+    //   auto mwait_argument =
+    //       std::make_shared<runtime::util::MultiWait>(num_parallel_thread);
+    //   for (int i = 0; i < num_parallel_thread; i++) {
+    //     size_t index_start = i * per_thread_work;
+    //     size_t index_end =
+    //         std::min(index_start + per_thread_work, graph_inputs.size());
+
+    //     auto argument_getter = [&, index_start, index_end]() {
+    //       for (int j = index_start; j < index_end; j++)
+    //         if (auto xla_tensor_ptr =
+    //                 bridge::TryGetXlaTensor(graph_inputs[j].toTensor())) {
+    //           arguments[j] = xla_tensor_ptr->GetXlaData();
+    //         } else {
+    //           XLA_CHECK(device.type() != (int8_t)XlaDeviceType::SPMD)
+    //               << "SPMD device data should already be on the XLA backend "
+    //                  "(XLATensor).";
+    //           arguments[j] =
+    //               torch_xla::TensorToXlaData(graph_inputs[j].toTensor(),
+    //               device);
+    //         }
+    //     };
+    //     runtime::env::ScheduleIoClosure(runtime::util::MultiWait::Completer(
+    //         mwait_argument, std::move(argument_getter)));
+    //   }
+    //   mwait_argument->Wait();
+    // }
     // setup the arguments
-    int idx = 0;
     for (auto& ivalue : graph_inputs) {
       torch::lazy::BackendDataPtr dataptr;
       if (auto xla_tensor_ptr = bridge::TryGetXlaTensor(ivalue.toTensor())) {
@@ -653,16 +696,8 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
                "(XLATensor).";
         dataptr = torch_xla::TensorToXlaData(ivalue.toTensor(), device);
       }
-      ++idx;
       arguments.push_back(dataptr);
     }
-  }
-
-  std::vector<XLATensor::ShardingSpecPtr> sharding_specs(placeholders.size());
-  if (static_cast<XlaDeviceType>(device.type()) == XlaDeviceType::SPMD) {
-    ShardingUtil::PrepareOutputShardingPropagation(
-        placeholders, sharding_specs, output_shapes,
-        cachedComputation->computation, device);
   }
 
   std::shared_ptr<XLAGraphExecutor::Async> async = std::make_shared<Async>(
