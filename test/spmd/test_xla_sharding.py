@@ -699,7 +699,6 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     xm.mark_step()
     self.assertEqual(met.metric_data("InputOutputAliasCount")[0], 1)
 
-  @unittest.skip("Irrelevant, maybe the whole PR can be rollback.")
   def test_mark_sharding_ir_with_multiple_output(self):
     partition_spec = (0,)
     xt1 = torch.randn(8, 8).to(xm.xla_device())
