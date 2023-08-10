@@ -1402,9 +1402,8 @@ void InitXlaModuleBindings(py::module m) {
           // For IR values, we create a new tensor with custom sharding op.
           // This new tensor will also have the sharding spec attached.
           if (xtensor->CurrentIrValue()) {
-            auto output =
-                tensor_methods::custom_sharding(xtensor, new_sharding_spec);
-            return bridge::AtenFromXlaTensor(output);
+            tensor_methods::custom_sharding(xtensor, new_sharding_spec);
+            return input;
           }
 
           // For data, we need to deal with the data transfers between
