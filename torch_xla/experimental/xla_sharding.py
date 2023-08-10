@@ -446,9 +446,14 @@ def mark_sharding(
   group_assignment, replication_groups = _get_group_assignment(
       sharding_type, mesh, partition_spec)
 
-  t = torch_xla._XLAC._xla_mark_sharding(t, tile_assignment, group_assignment,
-                                     replication_groups, int(sharding_type))
-  return t
+  if isinstance(t, XLAShardedTensor):
+    torch_xla._XLAC._xla_mark_sharding(t.global_tensor, tile_assignment,
+                                        group_assignment, replication_groups,
+                                        int(sharding_type))
+    return t
+  torch_xla._XLAC._xla_mark_sharding(t, tile_assignment, group_assignment,
+                                      replication_groups, int(sharding_type))
+  return XLAShardedTensor(t)
 
 
 def clear_sharding(t: Union[torch.Tensor, XLAShardedTensor]) -> torch.Tensor:
