@@ -68,10 +68,6 @@ def _aws_ec2_inf_trn_init():
   else:
     xla.init()
 
-# Setup Neuron library for AWS EC2 inf/trn instances.
-# It needs to be called before _XLAC is loaded so that _XLAC can pick up environment variables
-_aws_ec2_inf_trn_init()
-
 
 def _setup_tpu_vm_library_path() -> bool:
   """Returns true if $TPU_LIBRARY is set or can be inferred.
@@ -122,6 +118,9 @@ import _XLAC
 del os.environ['TPU_LOAD_LIBRARY']
 
 _found_libtpu = _setup_tpu_vm_library_path()
+
+# Setup Neuron library for AWS EC2 inf/trn instances.
+_aws_ec2_inf_trn_init()
 
 
 def _prepare_to_exit():
