@@ -14,6 +14,7 @@
 #include <cmath>
 #include <condition_variable>
 #include <exception>
+#include <fstream>
 #include <functional>
 #include <mutex>
 #include <set>
