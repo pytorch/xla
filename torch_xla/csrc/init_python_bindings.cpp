@@ -1612,6 +1612,13 @@ void InitXlaModuleBindings(py::module m) {
           return bridge::AtenFromXlaTensor(
               tensor_methods::matmul(input_tensor, tensor_methods::transpose(weight_tensor, 0, 1)));
         });
+  m.def("_xla_matmul",
+      [](const at::Tensor& input, const at::Tensor& weight) -> at::Tensor {
+        XLATensorPtr input_tensor = bridge::GetXlaTensor(input);
+        XLATensorPtr weight_tensor = bridge::GetXlaTensor(weight);
+        return bridge::AtenFromXlaTensor(
+            tensor_methods::matmul(input_tensor, weight_tensor));
+      });
   m.def("_replace_xla_tensor",
         [](at::Tensor& self, const at::Tensor& source) -> at::Tensor& {
           return XLANativeFunctions::set_(self, source);
