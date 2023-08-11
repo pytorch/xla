@@ -1605,6 +1605,13 @@ void InitXlaModuleBindings(py::module m) {
     MapXlaEnvVarsToLazy();
     InitXlaBackend();
   });
+  m.def("_xla_linear",
+        [](const at::Tensor& input, const at::Tensor& weight, const c10::optional<at::Tensor>& bias) -> at::Tensor {
+          XLATensorPtr input_tensor = bridge::GetXlaTensor(input);
+          XLATensorPtr weight_tensor = bridge::GetXlaTensor(weight);
+          return bridge::AtenFromXlaTensor(
+              tensor_methods::matmul(input_tensor, tensor_methods::transpose(weight_tensor, 0, 1)));
+        });
   m.def("_replace_xla_tensor",
         [](at::Tensor& self, const at::Tensor& source) -> at::Tensor& {
           return XLANativeFunctions::set_(self, source);

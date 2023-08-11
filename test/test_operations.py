@@ -42,7 +42,7 @@ import torch_xla.utils.serialization as xser
 import torch_xla.core.xla_model as xm
 import torch_xla.core.functions as xf
 import torch_xla.debug.profiler as xp
-import torchvision
+# import torchvision
 import unittest
 import test_utils
 
@@ -1655,6 +1655,17 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     loss.backward()
     self.assertTrue(
         torch.allclose(conv.weight.grad.cpu(), torch.tensor([[[[2077.0]]]])))
+
+  def test_patched_linear(self):
+    linear = nn.Linear(2, 4, bias=False).to('xla')
+    from torch_xla.distributed.fsdp.utils import apply_xla_patch_to_nn_linear
+    module = apply_xla_patch_to_nn_linear(linear)
+    input = torch.randn(4, 3, 2).to('xla')
+    # output = linear(input)
+    output = torch_xla._XLAC._xla_linear(input, linear.weight, linear.bias)
+
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo([output])
+    print(hlo)
 
 
 class MNISTComparator(nn.Module):

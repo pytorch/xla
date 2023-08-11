@@ -1,6 +1,7 @@
 from types import MethodType
 
 import torch
+import torch_xla
 import torch_xla.core.xla_model as xm
 from torch_xla.utils.checkpoint import checkpoint
 
@@ -89,7 +90,7 @@ class XLAPatchedLinear(torch.autograd.Function):
     # bias is an optional argument
     ctx.save_for_backward(input, weight, bias)
     with torch.no_grad():
-      return torch._C._nn.linear(input, weight, bias)
+      return torch_xla._XLAC._xla_linear(input, weight, bias)
 
   @staticmethod
   def backward(ctx, grad_output):
