@@ -55,9 +55,7 @@ def _run_thread_per_device(
   """
   initializer_fn(local_rank, local_world_size)
 
-  devices = xm.get_xla_supported_devices()
-  xm.set_replication(xm.xla_device(), devices)
-  num_threads = len(devices)
+  num_threads = len(xm.get_xla_supported_devices())
 
   @functools.wraps(fn)
   def _thread_fn(device: torch.device):
@@ -104,12 +102,15 @@ def _run_singleprocess(fn: Callable[..., R], *args, **kwargs) -> Dict[int, R]:
 
 
 @runtime.requires_pjrt
-def _initialize_multiprocess(local_rank: int, local_world_size: int):
+def initialize_multiprocess(local_rank: int, local_world_size: int):
   os.environ.setdefault(xenv.PJRT_LOCAL_PROCESS_RANK, str(local_rank))
   os.environ.setdefault(xenv.PJRT_LOCAL_PROCESS_COUNT, str(local_world_size))
 
   if runtime.device_type() == 'TPU':
     tpu.configure_topology(local_rank, local_world_size)
+
+  devices = xm.get_xla_supported_devices()
+  xm.set_replication(xm.xla_device(), devices)
 
 
 @runtime.requires_pjrt
@@ -148,7 +149,7 @@ def run_multiprocess(fn: Callable[..., R],
         _run_thread_per_device,
         local_world_size=num_processes,
         fn=functools.partial(fn, *args, **kwargs),
-        initializer_fn=_initialize_multiprocess)
+        initializer_fn=initialize_multiprocess)
     process_results = executor.map(mp_fn, range(num_processes))
     replica_results = list(
         itertools.chain.from_iterable(
