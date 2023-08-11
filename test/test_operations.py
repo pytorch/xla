@@ -1669,8 +1669,8 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
   def test_patched_matmul(self):
     # gradcheck modifications to views
-    input = torch.randn(4, 3)
-    weight = torch.randn(3, 2, requires_grad=True)
+    input = torch.randn(4, 3, 3, 3)
+    weight = torch.randn(3, 3, 2, requires_grad=True)
 
     def test_fn(input, weight, matmul):
       weight.retain_grad()
