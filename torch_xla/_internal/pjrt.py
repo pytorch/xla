@@ -55,7 +55,8 @@ def _run_thread_per_device(
   """
   initializer_fn(local_rank, local_world_size)
 
-  num_threads = len(xm.get_xla_supported_devices())
+  devices = xm.get_xla_supported_devices()
+  num_threads = len(devices)
 
   @functools.wraps(fn)
   def _thread_fn(device: torch.device):
