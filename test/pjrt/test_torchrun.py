@@ -1,6 +1,5 @@
-import logging
-
 from absl.testing import absltest
+from absl import logging
 import torch
 import torch.distributed as dist
 import torch_xla.core.xla_model as xm
@@ -33,6 +32,7 @@ class TestTorchrun(absltest.TestCase):
 
 if __name__ == '__main__':
   if not dist.is_torchelastic_launched():
-    logging.fatal('Test must be launched with torchrun!')
+    logging.error('Test must be launched with torchrun!')
+    exit(1)
 
   absltest.main()
