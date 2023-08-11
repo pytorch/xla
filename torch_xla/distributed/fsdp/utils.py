@@ -120,7 +120,7 @@ class XLAPatchedLinear(torch.autograd.Function):
 
 
 def _xla_patched_nn_linear_forward(m, input):
-  return XLAPatchedLinear.apply(input, m.weight, m.bias)
+  return XLAPatchedMatmul.apply(input, m.weight.t())
 
 
 def apply_xla_patch_to_nn_linear(module):
