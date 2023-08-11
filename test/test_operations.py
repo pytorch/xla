@@ -1661,8 +1661,8 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     from torch_xla.distributed.fsdp.utils import apply_xla_patch_to_nn_linear
     module = apply_xla_patch_to_nn_linear(linear)
     input = torch.randn(4, 3, 2).to('xla')
-    # output = linear(input)
-    output = torch_xla._XLAC._xla_linear(input, linear.weight, linear.bias)
+    output = linear(input)
+    # output = torch_xla._XLAC._xla_linear(input, linear.weight, linear.bias)
 
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([output])
     print(hlo)
