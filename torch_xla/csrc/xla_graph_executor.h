@@ -332,9 +332,9 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
       PostOrderData* po_data,
       const std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec);
 
-  std::vector<std::pair<int64_t, int64_t>> BuildInputOutputAliases(
-      const std::vector<XLATensorPtr>& tensors,
-      absl::Span<const size_t> indices, LoweringContext* lowering_ctx);
+  std::vector<size_t> SetBufferDonors(const std::vector<XLATensorPtr>& tensors,
+                                      absl::Span<const size_t> indices,
+                                      LoweringContext* lowering_ctx);
 
   // We don't use upstream Compile to have BuildInputOutputAliases.
   CompilationResult Compile(const std::vector<XLATensorPtr>& tensors,

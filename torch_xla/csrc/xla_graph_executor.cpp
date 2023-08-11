@@ -1132,19 +1132,18 @@ std::shared_ptr<XLAGraphExecutor::Async> XLAGraphExecutor::TryRunCachedSync(
       coll->device.toString(), std::move(cached_computation), tensor_data_vec);
 }
 
-std::vector<std::pair<int64_t, int64_t>>
-XLAGraphExecutor::BuildInputOutputAliases(
+std::vector<size_t> XLAGraphExecutor::SetBufferDonors(
     const std::vector<XLATensorPtr>& tensors, absl::Span<const size_t> indices,
     LoweringContext* lowering_ctx) {
-  std::unordered_map<int64_t, size_t> output_tensor_id_map;
-  std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
+  std::unordered_set<int64_t> output_tensor_ids;
+  std::vector<size_t> buffer_donor_indexs;
   // tensors[indices] represent all tensors that needs to be updated after
   // the execution. We can only alias the current buffer of these tensors since
   // those buffers are no longer needed after execution.
   for (size_t i = 0; i < indices.size(); ++i) {
     size_t tensor_index = indices[i];
     int64_t tensor_id = tensors[tensor_index]->data()->alias_id;
-    output_tensor_id_map[tensor_id] = i;
+    output_tensor_ids.insert(tensor_id);
   }
   const auto& parameters_data = lowering_ctx->GetParametersData();
   std::vector<ssize_t> alias_map(indices.size(), -1);
@@ -1153,60 +1152,19 @@ XLAGraphExecutor::BuildInputOutputAliases(
         static_cast<torch::lazy::LazyGraphExecutor::DeviceDataInfo*>(
             parameters_data[i]->info());
     if (data_info != nullptr && !data_info->read_only) {
-      auto it = output_tensor_id_map.find(data_info->tensor_id);
+      auto it = output_tensor_ids.find(data_info->tensor_id);
       // Parameter buffer's TensorId in output_tensor_id_map means
       // this buffer is not needed after execution since XLATensor will get a
       // new buffer.
-      if (it != output_tensor_id_map.end()) {
-        size_t output_index = it->second;
-        xla::XlaOp root = lowering_ctx->GetResult(output_index);
-        const xla::Shape& root_shape = ShapeHelper::ShapeOfXlaOp(root);
-        auto parameter_data_shape = UnwrapXlaData(parameters_data[i])->shape();
-        // Need to check whether existing buffer and the new value has the same
-        // shape and the existing buffer has not been aliased before aliasing
-        // the existing and new buffer.
-
-        bool equal_sharding;
-        // get sharding for the parameter data
-        std::optional<xla::OpSharding> parameter_sharding =
-            torch_xla::runtime::GetComputationClient()->GetDataSharding(
-                UnwrapXlaData(parameters_data[i]));
-        // get sharding for output tensor
-        size_t output_tensor_index = indices[output_index];
-        XLATensor::ShardingSpecPtr output_sharding =
-            tensors[output_tensor_index]->sharding_spec();
-        if (!parameter_sharding && !output_sharding) {
-          // Both parameter and output does not have sharding.
-          // TODO(JackCaoG): It is possible that output might get a sharding
-          // after sharding propagation. Consier not aliased here(if under SPMD
-          // mode).
-          equal_sharding = true;
-        } else if (parameter_sharding && output_sharding) {
-          equal_sharding = ShardingUtil::EqualOpShardings(
-              *parameter_sharding, output_sharding->sharding);
-        } else {
-          // one of the parameter and output does not have sharding.
-          equal_sharding = false;
-        }
-
-        if (parameter_data_shape == root_shape && alias_map[output_index] < 0 &&
-            equal_sharding) {
-          // parameter is not a tuple so param_index will always be {}
-          lowering_ctx->builder()->SetUpAlias(
-              {/*output_index=*/static_cast<int64_t>(output_index)},
-              /*param_number=*/i, /*param_index=*/{});
-          alias_map[output_index] = i;
-          input_output_alias_pair.push_back(std::make_pair(i, output_index));
-
-          TF_VLOG(6) << "Aliased paramter " << i << " with output "
-                     << output_index << ": " << parameter_data_shape;
-        }
+      if (it != output_tensor_ids.end()) {
+        buffer_donor_indexs.push_back(i);
+        lowering_ctx->builder()->AddBufferDonor(/*param_number=*/i,
+                                                /*param_index=*/{});
       }
     }
   }
-  TORCH_LAZY_VALUE_METRIC("InputOutputAliasCount",
-                          input_output_alias_pair.size());
-  return input_output_alias_pair;
+  TORCH_LAZY_VALUE_METRIC("InputOutputAliasCount", buffer_donor_indexs.size());
+  return buffer_donor_indexs;
 }
 
 XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
@@ -1237,7 +1195,7 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
   // Annotate HLO sharding selectively in the compuation.
   bool is_sharded = ShardingUtil::SetHloSharding(&lowering_ctx);
 
-  std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
+  std::vector<size_t> buffer_donor_indices;
   // TODO(yeounoh) aliasing is disabled for partitioned computation,
   // since the current aliasing compares the unpartitioned input and output
   // shapes which can lead to an incorrect aliasing pairs if sharded.
@@ -1267,8 +1225,8 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
     // will later fetch the new value of A, which is incorrect.
     // But, when we issue a step barrier (force_ltc_data == true) we have to
     // turn everything into DEVICE_DATA, so we can activate aliasing.
-    input_output_alias_pair =
-        BuildInputOutputAliases(tensors, coll.indices, &lowering_ctx);
+    buffer_donor_indices =
+        SetBufferDonors(tensors, coll.indices, &lowering_ctx);
   }
 
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
@@ -1282,7 +1240,7 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
                << " parameters. Threadshold = "
                << parameter_wrapping_threadshold;
     computation = ConsumeValue(XlaHelpers::WrapXlaComputation(
-        computation, program_shape.parameters(), input_output_alias_pair));
+        computation, program_shape.parameters(), buffer_donor_indices));
     program_shape = ConsumeValue(computation.GetProgramShape());
   }
   xla::Shape shape = MakeShapeWithDeviceLayout(
@@ -1325,7 +1283,7 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
           std::make_shared<Computation>(std::move(computations.front())),
           /*parameters_data=*/std::move(po_data->parameters_data),
           /*is_sharded=*/is_sharded};
-}
+}  // namespace torch_xla
 
 std::shared_ptr<XLAGraphExecutor::Async>
 XLAGraphExecutor::SyncTensorsGraphInternal(
