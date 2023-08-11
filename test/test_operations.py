@@ -1667,6 +1667,27 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([output])
     print(hlo)
 
+  def test_patched_matmul(self):
+    # gradcheck modifications to views
+    input = torch.randn(4, 3)
+    weight = torch.randn(3, 2, requires_grad=True)
+
+    def test_fn(input, weight, matmul):
+      weight.retain_grad()
+      c = matmul(input, weight)
+      loss = c.sum()
+      loss.backward()
+      return weight.grad
+
+    output = test_fn(input, weight, torch.matmul)
+    print(output)
+
+    def _xla_patched_matmul_forward(self, other):
+      from torch_xla.distributed.fsdp.utils import XLAPatchedMatmul
+      return XLAPatchedMatmul.apply(self, other)
+    output_xla = test_fn(input.to('xla'), weight.to('xla'), _xla_patched_matmul_forward)
+    print(output_xla.cpu())
+
 
 class MNISTComparator(nn.Module):
 

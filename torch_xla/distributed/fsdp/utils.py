@@ -156,3 +156,31 @@ def apply_xla_patch_to_nn_linear(module):
       _try_patching_forward_method(m, "_xla_checkpointed_forward_original")
 
   return module
+
+
+class XLAPatchedMatmul(torch.autograd.Function):
+  """
+  A patched version of `torch.nn.functional.linear` with explicitly-defined backward
+  as a workaround to https://github.com/pytorch/xla/issues/3811.
+
+  Modified from https://pytorch.org/docs/stable/notes/extending.html#example
+  """
+
+  @staticmethod
+  def forward(ctx, self, other):
+    # bias is an optional argument
+    ctx.save_for_backward(self, other)
+    with torch.no_grad():
+      return torch_xla._XLAC._xla_matmul(self, other)
+
+  @staticmethod
+  def backward(ctx, grad):
+    self, other = ctx.saved_tensors
+    grad_self = grad_other = None
+
+    if self.requires_grad:
+      grad_self = torch_xla._XLAC._xla_matmul(grad, other.transpose(-1, -2))
+    if other.requires_grad:
+      grad_other =torch_xla._XLAC._xla_matmul(self.transpose(-1, -2), grad)
+
+    return grad_self, grad_other
