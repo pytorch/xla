@@ -178,9 +178,9 @@ class XLAPatchedMatmul(torch.autograd.Function):
     self, other = ctx.saved_tensors
     grad_self = grad_other = None
 
-    if self.requires_grad:
+    if ctx.needs_input_grad[0]:
       grad_self = torch_xla._XLAC._xla_matmul(grad, other.transpose(-1, -2))
-    if other.requires_grad:
+    if ctx.needs_input_grad[1]:
       grad_other =torch_xla._XLAC._xla_matmul(self.transpose(-1, -2), grad)
 
     return grad_self, grad_other
