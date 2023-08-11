@@ -135,8 +135,15 @@ class ShardingUtil {
       std::vector<xla::Shape>* output_shapes, ComputationPtr cachedComputation,
       const torch::lazy::BackendDevice& device);
 
-  // Transfers the individual shards to the devices and returns a DataPtr for
-  // the PjRtShardedData wrapping the shards.
+  static std::vector<XLATensor::ShardingSpecPtr> GetOutputSharding(
+      std::vector<xla::Shape>* output_shapes, ComputationPtr computation,
+      const torch::lazy::BackendDevice& device, uint64_t num_outputs);
+
+  static std::vector<torch::lazy::BackendDataPtr> CreateShardedPlaceholder(
+      const std::vector<XLATensor::ShardingSpecPtr>& sharding_specs);
+
+  // Transfers the individual shards to the devices and returns a DataPtr
+  // for the PjRtShardedData wrapping the shards.
   static runtime::ComputationClient::DataPtr CreateShardedData(
       std::vector<at::Tensor>& shards, std::vector<std::string>& devices,
       xla::Shape global_shape, xla::OpSharding sharding);

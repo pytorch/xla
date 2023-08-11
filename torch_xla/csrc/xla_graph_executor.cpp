@@ -18,6 +18,7 @@
 #include <mutex>
 #include <set>
 #include <stdexcept>
+#include <unordered_map>
 #include <unordered_set>
 
 #include "absl/container/flat_hash_map.h"
@@ -618,26 +619,37 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
       << ". Maybe the entry get "
          "kicked out of the LRU cache";
 
+  SyncTensorCollection coll;
+  coll.device = device;
+
   // Create DataPlaceHolder that will get filled in async executions.
   std::vector<xla::Shape>* output_shapes =
       DeviceContextArena::Get()->GetOutputShapesByHash(hash);
   std::vector<torch::lazy::BackendDataPtr> placeholders;
-  placeholders.reserve(output_shapes->size());
-  for (const xla::Shape& shape : *output_shapes) {
-    torch::lazy::BackendDataPtr handle =
-        WrapXlaData(runtime::GetComputationClient()->CreateDataPlaceholder(
-            device.toString(), std::move(shape)));
-    placeholders.push_back(handle);
-  }
+  std::vector<XLATensor::ShardingSpecPtr> sharding_specs;
 
-  SyncTensorCollection coll;
-  coll.device = device;
-
-  std::vector<XLATensor::ShardingSpecPtr> sharding_specs(placeholders.size());
   if (static_cast<XlaDeviceType>(device.type()) == XlaDeviceType::SPMD) {
-    ShardingUtil::PrepareOutputShardingPropagation(
-        placeholders, sharding_specs, output_shapes,
-        cachedComputation->computation, device);
+    sharding_specs =
+        std::vector<XLATensor::ShardingSpecPtr>(output_shapes->size());
+    static std::unordered_map<torch::lazy::hash_t,
+                              std::vector<XLATensor::ShardingSpecPtr>,
+                              torch::lazy::HashReducer>
+        output_sharding_hash;
+    if (output_sharding_hash.find(hash) == output_sharding_hash.end()) {
+      output_sharding_hash[hash] = ShardingUtil::GetOutputSharding(
+          output_shapes, cachedComputation->computation, device,
+          output_shapes->size());
+    }
+    placeholders =
+        ShardingUtil::CreateShardedPlaceholder(output_sharding_hash[hash]);
+  } else {
+    placeholders.reserve(output_shapes->size());
+    for (const xla::Shape& shape : *output_shapes) {
+      torch::lazy::BackendDataPtr handle =
+          WrapXlaData(runtime::GetComputationClient()->CreateDataPlaceholder(
+              device.toString(), std::move(shape)));
+      placeholders.push_back(handle);
+    }
   }
 
   // init this before the lock to save some time.
