@@ -144,7 +144,7 @@ def apply_xla_patch_to_nn_linear(module):
       return
     if getattr(forward_method, "__func__", None) != torch.nn.Linear.forward:
       m_cls = m.__class__
-      if issubclass(m_cls, torch.nn.Linear):
+      if m_cls is not torch.nn.Linear and issubclass(m_cls, torch.nn.Linear):
         logging.warning(
           f"`{m_cls.__module__}.{m_cls.__name__}` is a subclass of `torch.nn.Linear`. PyTorch XLA needs to monkeypatch"
           " `torch.nn.Linear` so that the backward pass will explicitly use the weight parameter to resolve"
