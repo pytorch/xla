@@ -124,17 +124,6 @@ class ShardingUtil {
       std::vector<torch::lazy::BackendDataPtr>* data_placeholders,
       std::vector<XLATensor::ShardingSpecPtr>* sharding_specs);
 
-  // Mimic the function above, but for dynamo code path.
-  // One subtle difference is that in dynamo code path, we don't
-  // have explicit `tensors`. However, we have `output_shapes` and
-  // `device` which were what the `tensors` were used for in the original
-  // `PrepareOutputShardingPropagation` function.
-  static void PrepareOutputShardingPropagation(
-      std::vector<torch::lazy::BackendDataPtr>& placeholders,
-      std::vector<XLATensor::ShardingSpecPtr>& sharding_specs,
-      std::vector<xla::Shape>* output_shapes, ComputationPtr cachedComputation,
-      const torch::lazy::BackendDevice& device);
-
   static std::vector<XLATensor::ShardingSpecPtr> GetOutputSharding(
       std::vector<xla::Shape>* output_shapes, ComputationPtr computation,
       const torch::lazy::BackendDevice& device, uint64_t num_outputs);
