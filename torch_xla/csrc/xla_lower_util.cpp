@@ -408,14 +408,24 @@ xla::XlaOp CreateMatMul(xla::XlaOp lhs, xla::XlaOp rhs) {
     xla::XlaOp reshaped_lhs = lhs;
     xla::XlaOp reshaped_rhs = rhs;
     if (lhs_shape.rank() > rhs_shape.rank()) {
-      reshaped_rhs = DotExpand(reshaped_rhs, rhs_shape, lhs_shape);
-      rhs_shape = ShapeHelper::ShapeOfXlaOp(reshaped_rhs);
+      // reshaped_rhs = DotExpand(reshaped_rhs, rhs_shape, lhs_shape);
+      // rhs_shape = ShapeHelper::ShapeOfXlaOp(reshaped_rhs);
+      std::vector<int64_t> sizes(lhs_shape.rank() - rhs_shape.rank());
+      for (int i = 0; i < sizes.size(); i++) {
+        sizes[i] = lhs_shape.dimensions(i);
+      }
+      reshaped_rhs = xla::Broadcast(rhs, sizes);
     } else if (rhs_shape.rank() > lhs_shape.rank()) {
-      reshaped_lhs = DotExpand(reshaped_lhs, lhs_shape, rhs_shape);
-      lhs_shape = ShapeHelper::ShapeOfXlaOp(reshaped_lhs);
+      // reshaped_lhs = DotExpand(reshaped_lhs, lhs_shape, rhs_shape);
+      // lhs_shape = ShapeHelper::ShapeOfXlaOp(reshaped_lhs);
+      std::vector<int64_t> sizes(rhs_shape.rank() - lhs_shape.rank());
+      for (int i = 0; i < sizes.size(); i++) {
+        sizes[i] = rhs_shape.dimensions(i);
+      }
+      reshaped_lhs = xla::Broadcast(lhs, sizes);
     }
-    std::tie(reshaped_lhs, reshaped_rhs) =
-        DotBroadcast(reshaped_lhs, lhs_shape, reshaped_rhs, rhs_shape);
+    // std::tie(reshaped_lhs, reshaped_rhs) =
+    //     DotBroadcast(reshaped_lhs, lhs_shape, reshaped_rhs, rhs_shape);
 
     // At this point lhs and rhs ranks are the same, use left rank in code
     // below.

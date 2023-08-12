@@ -1688,6 +1688,13 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     output_xla = test_fn(input.to('xla'), weight.to('xla'), _xla_patched_matmul_forward)
     print(output_xla.cpu())
 
+  def test_xla_matmul(self):
+    input = torch.randn(4, 3, 2).to('xla')
+    other = torch.randn(2, 3).to('xla')
+    output = torch_xla._XLAC._xla_matmul(input, other)
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo([output])
+    print(hlo)
+
 
 class MNISTComparator(nn.Module):
 
