@@ -1403,6 +1403,7 @@ void InitXlaModuleBindings(py::module m) {
           // This new tensor will also have the sharding spec attached.
           if (xtensor->CurrentIrValue()) {
             tensor_methods::custom_sharding(xtensor, new_sharding_spec);
+            // xtensor->SetShardingSpec(*new_sharding_spec);
             return;
           }
 
