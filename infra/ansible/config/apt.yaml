@@ -13,7 +13,7 @@ apt:
       - rename
       - vim
       - wget
-      - clang-format-7
+      - clang-format
       - lcov
       - less
 

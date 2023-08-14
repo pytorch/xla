@@ -1,7 +1,11 @@
 ARG python_version=3.8
-ARG debian_version=buster
+ARG debian_version=bullseye
 
 FROM python:${python_version}-${debian_version} AS build
+
+# install gcc10
+RUN apt-get update
+RUN apt-get install -y gcc-10
 
 WORKDIR /ansible
 RUN pip install ansible
