@@ -345,6 +345,8 @@ std::vector<runtime::ComputationClient::DataPtr> ShardingUtil::OutputHandler(
         sharded_results,
     std::vector<XLATensor::ShardingSpecPtr> sharding_specs,
     bool replicated_output) {
+  tsl::profiler::TraceMe activity("OutputHandler",
+                                  tsl::profiler::TraceMeLevel::kInfo);
   std::vector<runtime::ComputationClient::DataPtr> outputs;
   outputs.reserve(sharding_specs.size());
   for (int i = 0; i < sharding_specs.size(); ++i) {
