@@ -146,9 +146,9 @@ def apply_xla_patch_to_nn_linear(module):
       m_cls = m.__class__
       if m_cls is not torch.nn.Linear and issubclass(m_cls, torch.nn.Linear):
         logging.warning(
-          f"`{m_cls.__module__}.{m_cls.__name__}` is a subclass of `torch.nn.Linear`. PyTorch XLA needs to monkeypatch"
-          " `torch.nn.Linear` so that the backward pass will explicitly use the weight parameter to resolve"
-          " https://github.com/pytorch/xla/issues/3811. This might result in increased memory usage."
+            f"`{m_cls.__module__}.{m_cls.__name__}` is a subclass of `torch.nn.Linear`. PyTorch XLA needs to monkeypatch"
+            " `torch.nn.Linear` so that the backward pass will explicitly use the weight parameter to resolve"
+            " https://github.com/pytorch/xla/issues/3811. This might result in increased memory usage."
         )
       return
 
