@@ -320,15 +320,16 @@ def _exported_program_to_stablehlo_bundle(exported_model,
   state = tree_map_only(torch.Tensor, lambda x: x.to(device=device),
                         exported_model.state_dict)
   param_buffer_values = (state[key] for key in param_and_buffer_keys)
-  final_args = tuple(itertools.chain(param_buffer_values, args))
+
+  num_mutations = len(exported_model.graph_signature.buffers_to_mutate)
 
   def forward(*args):
     with torch.no_grad():
       res = XLAExportInterpreter(exported_model.graph_module, device).run(
-          *args, enable_io_processing=False)
-      return res
+          *param_buffer_values, *args, enable_io_processing=False)
+      return res[num_mutations:]
 
-  bundle = _callable_to_stablehlo_bundle(forward, final_args, state)
+  bundle = _callable_to_stablehlo_bundle(forward, args, state)
   bundle.state_dict = tree_map_only(torch.Tensor,
                                     lambda x: x.detach().cpu().numpy(),
                                     exported_model.state_dict)
