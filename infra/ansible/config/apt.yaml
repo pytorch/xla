@@ -4,6 +4,8 @@ apt:
     build_common:
       - ccache
       - curl
+      - gcc-10
+      - g++-10
       - git
       - gnupg
       - libopenblas-dev
@@ -13,7 +15,7 @@ apt:
       - rename
       - vim
       - wget
-      - clang-format-7
+      - clang-format
       - lcov
       - less
 
@@ -29,8 +31,6 @@ apt:
 
     build_aarch64:
       - scons
-      - gcc-10
-      - g++-10
 
     release_common:
       - curl
