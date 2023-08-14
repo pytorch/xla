@@ -49,7 +49,8 @@ def _pjrt_rendezvous_handler(url: str,
 if tpu.num_available_chips() > 0 and tpu.version() <= 3:
   from torch.testing._internal.distributed import multi_threaded_pg
   logging.warning('Patching torch.distributed state to support multithreading.')
-  logging.warning('torch.distributed support on TPU v2 and v3 is experimental.')
+  logging.warning('torch.distributed support on TPU v2 and v3 is experimental '
+                  'and does not support torchrun.')
   multi_threaded_pg._install_threaded_pg()
 
 dist.register_rendezvous_handler('pjrt', _pjrt_rendezvous_handler)
