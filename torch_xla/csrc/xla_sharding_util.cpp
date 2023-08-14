@@ -9,9 +9,12 @@
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ops/device_data.h"
+#include "torch_xla/csrc/runtime/multi_wait.h"
 #include "torch_xla/csrc/runtime/runtime.h"
+#include "torch_xla/csrc/runtime/thread_pool.h"
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/tensor_util.h"
+#include "tsl/profiler/lib/traceme.h"
 #include "xla/execution_options_util.h"
 #include "xla/hlo/ir/hlo_module.h"
 #include "xla/protobuf_util.h"
@@ -306,6 +309,8 @@ std::vector<std::vector<runtime::ComputationClient::DataPtr>>
 ShardingUtil::InputHandler(
     std::vector<runtime::ComputationClient::DataPtr> arguments,
     std::vector<std::string> devices) {
+  tsl::profiler::TraceMe activity("InputHandler",
+                                  tsl::profiler::TraceMeLevel::kInfo);
   std::vector<std::vector<runtime::ComputationClient::DataPtr>>
       arguments_by_device(
           devices.size(),
@@ -314,18 +319,24 @@ ShardingUtil::InputHandler(
   // the first local index with the first global device ordinal.
   auto device_index = build_index_map(devices);
 
-  for (int64_t argument_i = 0; argument_i < arguments.size(); ++argument_i) {
-    auto shards =
-        runtime::GetComputationClient()->GetDataShards(arguments[argument_i]);
-    // With SPMD execution, all input is distributed across addressable devices,
-    // either by sharding or replication.
-    for (auto shard : shards) {
-      int global_ordinal = ParseDeviceString(shard->device()).ordinal();
-      int device_i = device_index[global_ordinal];
-      arguments_by_device[device_i][argument_i] = shard;
-    }
-  }
+  auto mwait = std::make_shared<runtime::util::MultiWait>(devices.size());
 
+  for (int i = 0; i < devices.size(); i++) {
+    auto argument_setter = [&, i]() {
+      for (int64_t argument_i = 0; argument_i < arguments.size();
+           ++argument_i) {
+        runtime::ComputationClient::DataPtr shard =
+            runtime::GetComputationClient()->GetDataShard(arguments[argument_i],
+                                                          i);
+        int global_ordinal = ParseDeviceString(shard->device()).ordinal();
+        int device_i = device_index[global_ordinal];
+        arguments_by_device[device_i][argument_i] = shard;
+      }
+    };
+    runtime::env::ScheduleIoClosure(
+        runtime::util::MultiWait::Completer(mwait, std::move(argument_setter)));
+  }
+  mwait->Wait();
   return arguments_by_device;
 }
 
