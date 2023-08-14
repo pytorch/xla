@@ -632,6 +632,7 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
     // one output sharding. We can cache this sharding here to avoid retrive
     // the sharding from the computation every time.
     if (output_sharding_hash.find(hash) == output_sharding_hash.end()) {
+      TORCH_LAZY_COUNTER("UncachedOutputSharding", 1);
       output_sharding_hash[hash] = ShardingUtil::GetOutputSharding(
           output_shapes, cachedComputation->computation, device);
     }
