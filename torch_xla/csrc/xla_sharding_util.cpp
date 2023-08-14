@@ -550,8 +550,9 @@ std::vector<at::Tensor> ShardingUtil::ShardTensor(
 
 std::vector<XLATensor::ShardingSpecPtr> ShardingUtil::GetOutputSharding(
     std::vector<xla::Shape>* output_shapes, ComputationPtr computation,
-    const torch::lazy::BackendDevice& device, uint64_t num_outputs) {
+    const torch::lazy::BackendDevice& device) {
   const auto& computation_proto = computation->computation().proto();
+  uint64_t num_outputs = output_shapes->size();
   std::vector<xla::OpSharding> output_shardings;
   std::vector<XLATensor::ShardingSpecPtr> sharding_specs(num_outputs);
   if (computation_proto.has_spmd_output_sharding()) {

@@ -118,10 +118,13 @@ class ShardingUtil {
       const at::Tensor& tensor, const XLATensor::ShardingSpecPtr shardings,
       const std::vector<std::string>& devices, bool padded = true);
 
+  // Retrieve output sharding of a given XLA computation.
   static std::vector<XLATensor::ShardingSpecPtr> GetOutputSharding(
       std::vector<xla::Shape>* output_shapes, ComputationPtr computation,
-      const torch::lazy::BackendDevice& device, uint64_t num_outputs);
+      const torch::lazy::BackendDevice& device);
 
+  // Create sharded data placeholders, each corresponding to the individual
+  // sharding spec from the input list
   static std::vector<torch::lazy::BackendDataPtr> CreateShardedPlaceholder(
       const std::vector<XLATensor::ShardingSpecPtr>& sharding_specs);
 

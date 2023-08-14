@@ -623,14 +623,17 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
   if (static_cast<XlaDeviceType>(device.type()) == XlaDeviceType::SPMD) {
     sharding_specs =
         std::vector<XLATensor::ShardingSpecPtr>(output_shapes->size());
+    // TODO(JackCaoG): Use LRU cache and add same cache to non-dynamo path.
     static std::unordered_map<torch::lazy::hash_t,
                               std::vector<XLATensor::ShardingSpecPtr>,
                               torch::lazy::HashReducer>
         output_sharding_hash;
+    // For any given graph(each hash correspodning to one graph) there is only
+    // one output sharding. We can cache this sharding here to avoid retrive
+    // the sharding from the computation every time.
     if (output_sharding_hash.find(hash) == output_sharding_hash.end()) {
       output_sharding_hash[hash] = ShardingUtil::GetOutputSharding(
-          output_shapes, cachedComputation->computation, device,
-          output_shapes->size());
+          output_shapes, cachedComputation->computation, device);
     }
     placeholders =
         ShardingUtil::CreateShardedPlaceholder(output_sharding_hash[hash]);
