@@ -47,7 +47,8 @@ sccache --show-stats
 
 source $XLA_DIR/xla_env
 export GCLOUD_SERVICE_KEY_FILE="$XLA_DIR/default_credentials.json"
-export SILO_NAME='cache-silo-ci'  # cache bucket for CI
+export SILO_NAME='cache-silo-ci-gcc-11'  # cache bucket for CI
+export BUILD_CPP_TESTS='1'
 build_torch_xla $XLA_DIR
 
 popd
