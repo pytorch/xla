@@ -3,6 +3,10 @@ ARG debian_version=buster
 
 FROM python:${python_version}-${debian_version} AS build
 
+RUN echo 'deb http://deb.debian.org/debian bullseye main' >> /etc/apt/sources.list
+RUN apt-get update
+RUN apt-get install -y gcc-10
+
 WORKDIR /ansible
 RUN pip install ansible
 COPY . /ansible
