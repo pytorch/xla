@@ -37,7 +37,6 @@ class ProcessGroupXla(ProcessGroup):
     self.timeout = timeout
     self._mesh = []
 
-
   def getBackendName(self):
     return 'xla'
 
