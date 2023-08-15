@@ -52,6 +52,23 @@ class DynamoSpmdInferenceTest(test_xla_sharding_base.XlaShardingTest):
     # TODO(JackCaoG): add counter checks after ExecuteReplicated also creates
     # a ExecuteMetric.
 
+  def test_dynamo_spmd_output_sharding_cache(self):
+    met.clear_all()
+    device = xm.xla_device()
+    linear = SimpleLinear().to(device)
+    linear.eval()
+    xla_x = torch.randn(1, 128, device=device)
+    xla_y = torch.randn(1, 128, device=device)
+    xs.mark_sharding(linear.fc2.weight, self._get_mesh((1, self.n_devices)),
+                     (1, 0))
+    dynamo_linear = torch.compile(linear, backend="openxla")
+    dynamo_res = dynamo_linear(xla_x)
+    xm.wait_device_ops()
+    self.assertIn('UncachedOutputSharding', met.counter_names())
+    self.assertEqual(met.counter_value('UncachedOutputSharding'), 1)
+    dynamo_res = dynamo_linear(xla_y)
+    self.assertEqual(met.counter_value('UncachedOutputSharding'), 1)
+
 
 if __name__ == '__main__':
   test = unittest.main()
