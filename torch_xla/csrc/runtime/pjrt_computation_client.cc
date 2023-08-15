@@ -171,6 +171,8 @@ ComputationClient::DataPtr PjRtComputationClient::CreateDataPlaceholder(
 
 std::vector<ComputationClient::DataPtr> PjRtComputationClient::GetDataShards(
     ComputationClient::DataPtr data) {
+  tsl::profiler::TraceMe activity("PjRtComputationClient::GetDataShards",
+                                  tsl::profiler::TraceMeLevel::kInfo);
   std::vector<ComputationClient::DataPtr> shards;
   if (PjRtShardedData* sharded_data =
           dynamic_cast<PjRtShardedData*>(data.get())) {
@@ -182,6 +184,23 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::GetDataShards(
     shards.push_back(data);
   }
   return shards;
+}
+
+ComputationClient::DataPtr PjRtComputationClient::GetDataShard(
+    ComputationClient::DataPtr data, size_t index) {
+  tsl::profiler::TraceMe activity("PjRtComputationClient::GetDataShard",
+                                  tsl::profiler::TraceMeLevel::kInfo);
+  if (PjRtShardedData* sharded_data =
+          dynamic_cast<PjRtShardedData*>(data.get())) {
+    XLA_CHECK_LE(index, sharded_data->shards.size())
+        << "GetDataShard out of range with index: " << index
+        << " and num of shard: " << sharded_data->shards.size();
+    std::shared_ptr<PjRtData> shard = sharded_data->shards[index];
+    return std::make_shared<PjRtData>(shard->device(), shard->shape(),
+                                      shard->buffer);
+  } else {
+    return data;
+  }
 }
 
 ComputationClient::DataPtr PjRtComputationClient::WrapDataShards(
@@ -567,22 +586,32 @@ PjRtComputationClient::ExecuteReplicated(
   XLA_CHECK(devices.size() == arguments.size())
       << "ExecuteReplicated over " << devices.size() << " devices, but "
       << arguments.size() << " arguments devices.";
+  auto mwait_argument = std::make_shared<util::MultiWait>(devices.size());
+  std::vector<std::vector<xla::PjRtBuffer*>> argument_handles(devices.size());
+  {
+    tsl::profiler::TraceMe activity(
+        "PjRtComputationClient::ExecuteReplicated_argument_handle",
+        tsl::profiler::TraceMeLevel::kInfo);
+    for (int32_t i = 0; i < devices.size(); ++i) {
+      auto buffer_converter = [&, i]() {
+        xla::PjRtDevice* pjrt_device = StringToPjRtDevice(devices[i]);
+        XLA_CHECK(pjrt_device->IsAddressable()) << pjrt_device->DebugString();
 
-  std::vector<std::vector<xla::PjRtBuffer*>> argument_handles;
-  for (int32_t i = 0; i < devices.size(); ++i) {
-    xla::PjRtDevice* pjrt_device = StringToPjRtDevice(devices[i]);
-    XLA_CHECK(pjrt_device->IsAddressable()) << pjrt_device->DebugString();
+        std::vector<xla::PjRtBuffer*> buffers;
+        for (auto& argument : arguments[i]) {
+          const PjRtData* pjrt_data = dynamic_cast<PjRtData*>(argument.get());
 
-    std::vector<xla::PjRtBuffer*> buffers;
-    for (auto& argument : arguments[i]) {
-      const PjRtData* pjrt_data = dynamic_cast<PjRtData*>(argument.get());
-
-      XLA_CHECK(pjrt_device == pjrt_data->buffer->device())
-          << pjrt_device->DebugString() << " vs "
-          << pjrt_data->buffer->device()->DebugString();
-      buffers.push_back(pjrt_data->buffer.get());
+          XLA_CHECK(pjrt_device == pjrt_data->buffer->device())
+              << pjrt_device->DebugString() << " vs "
+              << pjrt_data->buffer->device()->DebugString();
+          buffers.push_back(pjrt_data->buffer.get());
+        }
+        argument_handles[i] = std::move(buffers);
+      };
+      env::ScheduleIoClosure(util::MultiWait::Completer(
+          mwait_argument, std::move(buffer_converter)));
     }
-    argument_handles.push_back(buffers);
+    mwait_argument->Wait();
   }
 
   xla::ExecuteOptions execute_options;
@@ -596,34 +625,45 @@ PjRtComputationClient::ExecuteReplicated(
 
   std::optional<std::vector<xla::PjRtFuture<xla::Status>>> returned_futures(
       devices.size());
-  std::vector<std::vector<std::unique_ptr<xla::PjRtBuffer>>> results =
-      pjrt_computation.executable
-          ->Execute(argument_handles, execute_options, returned_futures)
-          .value();
+  std::vector<std::vector<std::unique_ptr<xla::PjRtBuffer>>> results;
+  {
+    tsl::profiler::TraceMe activity(
+        "PjRtComputationClient::ExecuteReplicated_execute",
+        tsl::profiler::TraceMeLevel::kInfo);
+    results = pjrt_computation.executable
+                  ->Execute(std::move(argument_handles), execute_options,
+                            returned_futures)
+                  .value();
+  }
 
   std::vector<std::vector<ComputationClient::DataPtr>> data_handles;
   data_handles.reserve(results.size());
   std::vector<size_t> dims(results.size());
 
-  for (int32_t i = 0; i < results.size(); ++i) {
-    xla::PjRtDevice* pjrt_device = StringToPjRtDevice(devices[i]);
-    XLA_CHECK(pjrt_device->IsAddressable())
-        << pjrt_device->DebugString() << " is not addressable.";
+  {
+    tsl::profiler::TraceMe activity(
+        "PjRtComputationClient::ExecuteReplicated_result_handle",
+        tsl::profiler::TraceMeLevel::kInfo);
+    for (int32_t i = 0; i < results.size(); ++i) {
+      xla::PjRtDevice* pjrt_device = StringToPjRtDevice(devices[i]);
+      XLA_CHECK(pjrt_device->IsAddressable())
+          << pjrt_device->DebugString() << " is not addressable.";
 
-    std::vector<ComputationClient::DataPtr> datas;
-    datas.reserve(results[i].size());
-    dims[i] = results[i].size();
-    for (int32_t j = 0; j < results[i].size(); ++j) {
-      std::unique_ptr<xla::PjRtBuffer> buffer = std::move(results[i][j]);
-      XLA_CHECK(pjrt_device == buffer->device())
-          << "Exepcted device: " << pjrt_device->DebugString()
-          << " vs. actual device: " << buffer->device()->DebugString();
+      std::vector<ComputationClient::DataPtr> datas;
+      datas.reserve(results[i].size());
+      dims[i] = results[i].size();
+      for (int32_t j = 0; j < results[i].size(); ++j) {
+        std::unique_ptr<xla::PjRtBuffer> buffer = std::move(results[i][j]);
+        XLA_CHECK(pjrt_device == buffer->device())
+            << "Exepcted device: " << pjrt_device->DebugString()
+            << " vs. actual device: " << buffer->device()->DebugString();
 
-      std::shared_ptr<PjRtData> data = std::make_shared<PjRtData>(
-          devices[i], buffer->on_device_shape(), std::move(buffer));
-      datas.push_back(data);
+        std::shared_ptr<PjRtData> data = std::make_shared<PjRtData>(
+            devices[i], buffer->on_device_shape(), std::move(buffer));
+        datas.push_back(data);
+      }
+      data_handles.push_back(datas);
     }
-    data_handles.push_back(datas);
   }
 
   auto mwait = std::make_shared<util::MultiWait>(1);
