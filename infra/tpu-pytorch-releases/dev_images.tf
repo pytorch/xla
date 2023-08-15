@@ -48,7 +48,6 @@ module "dev_images" {
 
   build_args = {
     python_version = each.value.python_version
-    debian_version = "buster"
   }
 
   ansible_vars = {
