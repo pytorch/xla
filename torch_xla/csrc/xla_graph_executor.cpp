@@ -618,8 +618,6 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
       << ". Maybe the entry get "
          "kicked out of the LRU cache";
 
-  SyncTensorCollection coll;
-  coll.device = device;
 
   // Create DataPlaceHolder that will get filled in async executions.
   std::vector<xla::Shape>* output_shapes =
