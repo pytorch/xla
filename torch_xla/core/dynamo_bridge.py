@@ -47,8 +47,13 @@ class GraphInputMatcher:
       # Instead of use trace time base seed, use the runtime
       # base seed here.
       if tensor_id == torch_xla._XLAC._get_seed_info_id():
-        inp = torch_xla._XLAC._get_base_seed_as_tensor(
-            str(traced_xla_value.device))
+        str_device = str(traced_xla_value.device)
+        inp = torch_xla._XLAC._get_base_seed_as_tensor(str_device)
+        # update random seed here to avoid random operations always return
+        # the same result. The seed update logic is the same as `mark_step` in
+        # https://github.com/pytorch/pytorch/blob/6af6b8f728426fb7551630e28148c0017fa501bc/torch/csrc/lazy/core/lazy_graph_executor.cpp#L144C18-L144C51
+        xm.set_rng_state(
+            (1012031 + inp.item() * 7012063) % 18446744073709551615, str_device)
       elif arg_idx is None:
         inp = traced_xla_value
       else:

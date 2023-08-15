@@ -589,15 +589,22 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
 }
 
 void XLAGraphExecutor::TensorCollectionBarrier(SyncTensorCollection* coll) {
+  tsl::profiler::TraceMe activity("TensorCollectionBarrier",
+                                  tsl::profiler::TraceMeLevel::kInfo);
+  TF_VLOG(4) << "waiting barrier for device " << coll->device.toString()
+             << " start";
   torch::lazy::LazyGraphExecutor::TensorCollectionBarrier(coll);
   // TODO(yeounoh) lock SPMD device
-  TF_VLOG(4) << "waiting barrier for device " << coll->device.toString();
+  TF_VLOG(4) << "waiting barrier for device " << coll->device.toString()
+             << " done";
 }
 
 std::vector<torch::lazy::BackendDataPtr>
 XLAGraphExecutor::ExecuteComputationWithBarrier(
     torch::lazy::hash_t hash, const std::vector<at::IValue>& graph_inputs,
     const torch::lazy::BackendDevice& device) {
+  tsl::profiler::TraceMe activity("ExecuteComputationWithBarrier",
+                                  tsl::profiler::TraceMeLevel::kInfo);
   MaybeDumpGraph("dynamo", hash);
   auto cachedComputation =
       XLAGraphExecutor::Get()->GetComputationCache()->Get(hash);
@@ -647,7 +654,16 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
     }
   }
 
-  coll.unlocker = DeviceLockerArena::Get()->LockDevices({device});
+  SyncTensorCollection coll;
+  coll.device = device;
+  {
+    tsl::profiler::TraceMe activity("DeviceBarrier",
+                                    tsl::profiler::TraceMeLevel::kInfo);
+    TF_VLOG(5) << "Lock device " << device.toString() << "...";
+    coll.unlocker = DeviceLockerArena::Get()->LockDevices({device});
+    TF_VLOG(5) << "Locking device " << device.toString() << " Done!";
+  }
+
   std::vector<torch::lazy::BackendDataPtr> arguments;
   {
     // GetXlaData must be called within a lock region, otherwise it might
@@ -673,6 +689,8 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
 
   auto syncfn = [async, hash, sharding_specs]() {
     try {
+      tsl::profiler::TraceMe activity("ExecuteComputationWithBarrier_syncfn",
+                                      tsl::profiler::TraceMeLevel::kInfo);
       TF_VLOG(3) << "Executing Dynamo IR graph hash "
                  << torch::lazy::HashToString(hash) << " on device "
                  << async->device << " ...";
@@ -709,9 +727,13 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
       }
 
       // Updating placeholder with actual output handle.
-      for (size_t i = 0; i < results.size(); ++i) {
-        XLA_CHECK(async->tensors_data[i] != nullptr);
-        async->tensors_data[i]->Assign(*results[i]);
+      {
+        tsl::profiler::TraceMe activity("update_placeholder",
+                                        tsl::profiler::TraceMeLevel::kInfo);
+        for (size_t i = 0; i < results.size(); ++i) {
+          XLA_CHECK(async->tensors_data[i] != nullptr);
+          async->tensors_data[i]->Assign(*results[i]);
+        }
       }
     } catch (...) {
       // There are two paths of discovery of an exception happening on an
