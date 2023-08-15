@@ -768,9 +768,9 @@ std::vector<torch::lazy::BackendDataPtr> XLAGraphExecutor::ExecuteStablehlo(
   mlir::ModuleOp mlir_module = *module;
 
   xla::HloProto hlo_proto;
-  runtime::convertStableHLOToHLO(&mlir_module, &context, &hlo_proto);
+  runtime::ConvertStableHloToHlo(&mlir_module, &context, &hlo_proto);
   xla::HloModuleProto* hlo_module_proto = hlo_proto.mutable_hlo_module();
-  runtime::printHloModuleProto(hlo_module_proto);
+  runtime::PrintHloModuleProto(hlo_module_proto);
   xla::XlaComputation computation(*hlo_module_proto);
 
   // Create PJRT computation client
