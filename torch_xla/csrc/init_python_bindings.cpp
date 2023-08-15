@@ -1386,7 +1386,7 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_xla_mark_sharding",
         [](const at::Tensor& input, const py::list& tile_assignment,
            const py::list& group_assignment, const py::list& replication_groups,
-           int sharding_type) {
+           int sharding_type, bool custom_sharding = true) {
           TORCH_LAZY_COUNTER("XlaMarkSharding", 1);
           XLA_CHECK(UseVirtualDevice()) << "Please set `XLA_USE_SPMD=1`";
           XLATensorPtr xtensor = bridge::GetXlaTensor(input);
@@ -1402,8 +1402,11 @@ void InitXlaModuleBindings(py::module m) {
           // For IR values, we create a new tensor with custom sharding op.
           // This new tensor will also have the sharding spec attached.
           if (xtensor->CurrentIrValue()) {
-            tensor_methods::custom_sharding(xtensor, new_sharding_spec);
-            // xtensor->SetShardingSpec(*new_sharding_spec);
+            if (custom_sharding) {
+              tensor_methods::custom_sharding(xtensor, new_sharding_spec);
+            } else {
+              xtensor->SetShardingSpec(*new_sharding_spec);
+            }
             return;
           }
 
@@ -1449,6 +1452,13 @@ void InitXlaModuleBindings(py::module m) {
           // Register sharded tensor data.
           XLAGraphExecutor::Get()->RegisterTensor(xtensor->data());
         });
+  m.def("_xla_replicate_sharding", [](const at::Tensor& input) {
+    XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+    auto sharding_spec = std::make_shared<XLATensor::ShardingSpec>(
+        xla::HloSharding::Replicate().ToProto(), xtensor->shape());
+    xtensor->SetShardingSpec(*sharding_spec);
+    return;
+  });
   m.def("_xla_clear_sharding", [](const at::Tensor& input) {
     XLATensorPtr xtensor = bridge::GetXlaTensor(input);
     xtensor->ClearShardingSpec();

@@ -389,7 +389,7 @@ def _translate_named_partition_spec(mesh: Mesh, partition_spec: Tuple):
 @xr.requires_pjrt
 def mark_sharding(
     t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
-    partition_spec: Tuple[Union[int, str, None]]) -> XLAShardedTensor:
+    partition_spec: Tuple[Union[int, str, None]], custom_sharding = True) -> XLAShardedTensor:
   """
     Annotates the tensor provided with XLA partition spec. Internally,
     it annotates the corresponding XLATensor as sharded for the XLA SpmdPartitioner pass.
@@ -449,10 +449,10 @@ def mark_sharding(
   if isinstance(t, XLAShardedTensor):
     torch_xla._XLAC._xla_mark_sharding(t.global_tensor, tile_assignment,
                                         group_assignment, replication_groups,
-                                        int(sharding_type))
+                                        int(sharding_type), custom_sharding)
     return t
   torch_xla._XLAC._xla_mark_sharding(t, tile_assignment, group_assignment,
-                                      replication_groups, int(sharding_type))
+                                      replication_groups, int(sharding_type), custom_sharding)
   return XLAShardedTensor(t)
 
 
