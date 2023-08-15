@@ -92,6 +92,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
     devices_per_process = pjrt.run_multiprocess(xm.xla_device)
     self.assertDictEqual(devices_per_process, expected)
 
+  @absltest.skipIf(tpu.num_available_chips() != 4, "Not implemented")
   def test_xla_devices_single_process_all_chips(self):
     expected = _ordinal_to_device(
         processes=1, cores_per_process=tpu.num_available_devices())

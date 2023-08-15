@@ -42,6 +42,22 @@ class DynamoInPlaceTest(unittest.TestCase):
     self.assertTrue(torch.all(torch.eq(t.cpu(), torch.tensor([10, 11, 12]))))
 
 
+class DynamRandomOpTest(unittest.TestCase):
+
+  def random_op(self, a):
+    return torch.randn(5, 5, device=a.device) + a
+
+  def test_random_op_different_result_each_run(self):
+    dynamo_random_op = torch.compile(
+        self.random_op, backend="openxla", fullgraph=True)
+    t = torch.randn(5, 5).to(xm.xla_device())
+    dynamo_res_1 = dynamo_random_op(t)
+    dynamo_res_2 = dynamo_random_op(t)
+    dynamo_res_3 = dynamo_random_op(t)
+    self.assertFalse(torch.allclose(dynamo_res_1, dynamo_res_2))
+    self.assertFalse(torch.allclose(dynamo_res_2, dynamo_res_3))
+
+
 class DynamoInferenceBasicTest(unittest.TestCase):
 
   @classmethod
