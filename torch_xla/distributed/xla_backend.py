@@ -36,10 +36,7 @@ class ProcessGroupXla(ProcessGroup):
     self.prefix_store = prefix_store  # reserved for future use.
     self.timeout = timeout
     self._mesh = []
-    if os.getenv('PJRT_DEVICE', None) == 'NEURON' and os.getenv(
-                'XLA_USE_SPMD') != '1' and dist.is_torchelastic_launched():
-      dev = xm.xla_device()
-      xm.set_replication(dev, [dev])
+
 
   def getBackendName(self):
     return 'xla'
