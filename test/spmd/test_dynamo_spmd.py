@@ -63,6 +63,7 @@ class DynamoSpmdInferenceTest(test_xla_sharding_base.XlaShardingTest):
                      (1, 0))
     dynamo_linear = torch.compile(linear, backend="openxla")
     dynamo_res = dynamo_linear(xla_x)
+    xm.wait_device_ops()
     self.assertIn('UncachedOutputSharding', met.counter_names())
     self.assertEqual(met.counter_value('UncachedOutputSharding'), 1)
     dynamo_res = dynamo_linear(xla_y)
