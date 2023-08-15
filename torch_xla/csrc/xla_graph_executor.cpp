@@ -18,6 +18,7 @@
 #include <mutex>
 #include <set>
 #include <stdexcept>
+#include <unordered_map>
 #include <unordered_set>
 
 #include "absl/container/flat_hash_map.h"
@@ -588,15 +589,22 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
 }
 
 void XLAGraphExecutor::TensorCollectionBarrier(SyncTensorCollection* coll) {
+  tsl::profiler::TraceMe activity("TensorCollectionBarrier",
+                                  tsl::profiler::TraceMeLevel::kInfo);
+  TF_VLOG(4) << "waiting barrier for device " << coll->device.toString()
+             << " start";
   torch::lazy::LazyGraphExecutor::TensorCollectionBarrier(coll);
   // TODO(yeounoh) lock SPMD device
-  TF_VLOG(4) << "waiting barrier for device " << coll->device.toString();
+  TF_VLOG(4) << "waiting barrier for device " << coll->device.toString()
+             << " done";
 }
 
 std::vector<torch::lazy::BackendDataPtr>
 XLAGraphExecutor::ExecuteComputationWithBarrier(
     torch::lazy::hash_t hash, const std::vector<at::IValue>& graph_inputs,
     const torch::lazy::BackendDevice& device) {
+  tsl::profiler::TraceMe activity("ExecuteComputationWithBarrier",
+                                  tsl::profiler::TraceMeLevel::kInfo);
   MaybeDumpGraph("dynamo", hash);
   auto cachedComputation =
       XLAGraphExecutor::Get()->GetComputationCache()->Get(hash);
@@ -614,24 +622,51 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
   std::vector<xla::Shape>* output_shapes =
       DeviceContextArena::Get()->GetOutputShapesByHash(hash);
   std::vector<torch::lazy::BackendDataPtr> placeholders;
-  placeholders.reserve(output_shapes->size());
-  for (const xla::Shape& shape : *output_shapes) {
-    torch::lazy::BackendDataPtr handle =
-        WrapXlaData(runtime::GetComputationClient()->CreateDataPlaceholder(
-            device.toString(), std::move(shape)));
-    placeholders.push_back(handle);
+
+  std::vector<XLATensor::ShardingSpecPtr> sharding_specs;
+  if (static_cast<XlaDeviceType>(device.type()) == XlaDeviceType::SPMD) {
+    sharding_specs =
+        std::vector<XLATensor::ShardingSpecPtr>(output_shapes->size());
+    // TODO(JackCaoG): Use LRU cache and add same cache to non-dynamo path.
+    static std::unordered_map<torch::lazy::hash_t,
+                              std::vector<XLATensor::ShardingSpecPtr>,
+                              torch::lazy::HashReducer>
+        output_sharding_hash;
+    // For any given graph(each hash correspodning to one graph) there is only
+    // one output sharding. We can cache this sharding here to avoid retrive
+    // the sharding from the computation every time.
+    if (output_sharding_hash.find(hash) == output_sharding_hash.end()) {
+      TORCH_LAZY_COUNTER("UncachedOutputSharding", 1);
+      output_sharding_hash[hash] = ShardingUtil::GetOutputSharding(
+          output_shapes, cachedComputation->computation, device);
+    }
+    placeholders =
+        ShardingUtil::CreateShardedPlaceholder(output_sharding_hash[hash]);
+  } else {
+    for (const xla::Shape& shape : *output_shapes) {
+      torch::lazy::BackendDataPtr handle =
+          WrapXlaData(runtime::GetComputationClient()->CreateDataPlaceholder(
+              device.toString(), std::move(shape)));
+      placeholders.push_back(handle);
+    }
   }
 
   SyncTensorCollection coll;
   coll.device = device;
-  coll.unlocker = DeviceLockerArena::Get()->LockDevices({device});
+  {
+    tsl::profiler::TraceMe activity("DeviceBarrier",
+                                    tsl::profiler::TraceMeLevel::kInfo);
+    TF_VLOG(5) << "Lock device " << device.toString() << "...";
+    coll.unlocker = DeviceLockerArena::Get()->LockDevices({device});
+    TF_VLOG(5) << "Locking device " << device.toString() << " Done!";
+  }
+
   std::vector<torch::lazy::BackendDataPtr> arguments;
   {
     // GetXlaData must be called within a lock region, otherwise it might
     // extract the placeholder inserted by previous execution.
     TORCH_LAZY_TIMED("RunCachedGraphInputData");
     // setup the arguments
-    int idx = 0;
     for (auto& ivalue : graph_inputs) {
       torch::lazy::BackendDataPtr dataptr;
       if (auto xla_tensor_ptr = bridge::TryGetXlaTensor(ivalue.toTensor())) {
@@ -642,16 +677,8 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
                "(XLATensor).";
         dataptr = torch_xla::TensorToXlaData(ivalue.toTensor(), device);
       }
-      ++idx;
       arguments.push_back(dataptr);
     }
-  }
-
-  std::vector<XLATensor::ShardingSpecPtr> sharding_specs(placeholders.size());
-  if (static_cast<XlaDeviceType>(device.type()) == XlaDeviceType::SPMD) {
-    ShardingUtil::PrepareOutputShardingPropagation(
-        placeholders, sharding_specs, output_shapes,
-        cachedComputation->computation, device);
   }
 
   std::shared_ptr<XLAGraphExecutor::Async> async = std::make_shared<Async>(
@@ -659,6 +686,8 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
 
   auto syncfn = [async, hash, sharding_specs]() {
     try {
+      tsl::profiler::TraceMe activity("ExecuteComputationWithBarrier_syncfn",
+                                      tsl::profiler::TraceMeLevel::kInfo);
       TF_VLOG(3) << "Executing Dynamo IR graph hash "
                  << torch::lazy::HashToString(hash) << " on device "
                  << async->device << " ...";
@@ -695,9 +724,13 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
       }
 
       // Updating placeholder with actual output handle.
-      for (size_t i = 0; i < results.size(); ++i) {
-        XLA_CHECK(async->tensors_data[i] != nullptr);
-        async->tensors_data[i]->Assign(*results[i]);
+      {
+        tsl::profiler::TraceMe activity("update_placeholder",
+                                        tsl::profiler::TraceMeLevel::kInfo);
+        for (size_t i = 0; i < results.size(); ++i) {
+          XLA_CHECK(async->tensors_data[i] != nullptr);
+          async->tensors_data[i]->Assign(*results[i]);
+        }
       }
     } catch (...) {
       // There are two paths of discovery of an exception happening on an

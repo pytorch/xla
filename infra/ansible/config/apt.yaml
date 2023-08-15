@@ -13,7 +13,9 @@ apt:
       - rename
       - vim
       - wget
-      - clang-format-7
+      - clang-format
+      - gcc-10
+      - g++-10
       - lcov
       - less
 
@@ -24,13 +26,8 @@ apt:
       - "{{ cuda_deps['libcudnn'][cuda_version] }}"
       - "{{ cuda_deps['libcudnn-dev'][cuda_version] }}"
 
-    build_amd64:
-      - "clang-{{ clang_version }}"
-
     build_aarch64:
       - scons
-      - gcc-10
-      - g++-10
 
     release_common:
       - curl

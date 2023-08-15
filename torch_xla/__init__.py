@@ -101,12 +101,7 @@ import torch
 from ._patched_functions import _apply_patches
 from .version import __version__
 
-logger.info(
-    'Letting libtpu.so load fail during _XLAC import. libtpu.so will be loaded '
-    'from `libtpu` Python package when the ComputationClient is created.')
-os.environ['TPU_LOAD_LIBRARY'] = '0'
 import _XLAC
-del os.environ['TPU_LOAD_LIBRARY']
 
 _found_libtpu = _setup_tpu_vm_library_path()
 
