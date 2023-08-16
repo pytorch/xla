@@ -18,6 +18,7 @@
 #include "tsl/platform/macros.h"
 #include "xla/client/xla_builder.h"
 #include "xla/types.h"
+#include "xla/hlo/ir/hlo_sharding.h"
 
 namespace torch_xla {
 
@@ -108,6 +109,7 @@ class LoweringContext : public torch::lazy::LoweringContext {
   std::unordered_map<torch::lazy::BackendData::Handle, Parameter>
       parameters_map_;
   std::vector<xla::XlaOp> root_tuple_;
+  std::vector<xla::HloSharding> root_shardings_;
   OutputMap<xla::XlaOp> emitted_outputs_;
 };  // namespace torch_xla
 

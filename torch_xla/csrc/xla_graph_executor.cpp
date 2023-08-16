@@ -1230,9 +1230,7 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
                                po_data->post_order,
                                std::move(po_data->emission_map));
   for (auto ir_value : ir_values) {
-    xla::XlaOp root = lowering_ctx.GetOutputOp(
-        torch::lazy::Output(ir_value.node.get(), ir_value.index));
-    lowering_ctx.AddResult(root);
+    lowering_ctx.AddResult(torch::lazy::Output(ir_value.node.get(), ir_value.index));
   }
   // Annotate HLO sharding selectively in the compuation.
   bool is_sharded = ShardingUtil::SetHloSharding(&lowering_ctx);

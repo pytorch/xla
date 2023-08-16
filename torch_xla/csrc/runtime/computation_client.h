@@ -141,7 +141,7 @@ class ComputationClient {
                     const xla::Shape* output_shape,
                     bool parameter_is_tupled_arguments = false,
                     bool is_sharded = false,
-                    bool allow_spmd_sharding_propagation_to_output = true)
+                    bool allow_spmd_sharding_propagation_to_output = false)
         : computation(std::move(computation)),
           compilation_device(std::move(compilation_device)),
           devices(std::move(devices)),

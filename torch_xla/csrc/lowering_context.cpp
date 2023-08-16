@@ -19,6 +19,8 @@
 namespace torch_xla {
 namespace {
 
+using xla::internal::XlaBuilderFriend;
+
 class HloMetadataSetter {
  public:
   HloMetadataSetter(LoweringContext* loctx, const torch::lazy::Node* node) {
@@ -127,8 +129,14 @@ void LoweringContext::SetResult(size_t index, xla::XlaOp op) {
 }
 
 xla::StatusOr<xla::XlaComputation> LoweringContext::BuildXla() {
+  std::cerr << "BuildXla" << std::endl;
   if (!root_tuple_.empty()) {
+    std::cerr << "root_tuple_" << std::endl;
     xla::XlaOp root = xla::Tuple(builder(), root_tuple_);
+
+    auto shape = ShapeHelper::ShapeOfXlaOp(root);
+    auto instruction = XlaBuilderFriend::GetInstruction(root);
+    *instruction->mutable_sharding() = xla::HloSharding::Tuple(shape, root_shardings_).ToProto();
     return builder()->Build(root);
   }
   return builder()->Build();
@@ -213,10 +221,12 @@ bool LoweringContext::CheckResultShape(
 
 size_t LoweringContext::AddResult(const torch::lazy::Output& output) {
   root_tuple_.push_back(GetOutputOp(output));
+  root_shardings_.push_back(*xla::HloSharding::FromProto(*(dynamic_cast<const XlaNode*>(output.node)->GetSharding(output.index))));
   return root_tuple_.size() - 1;
 }
 
 size_t LoweringContext::AddResult(xla::XlaOp op) {
+  XLA_CHECK(false) << "Should not reach";
   root_tuple_.push_back(op);
   return root_tuple_.size() - 1;
 }

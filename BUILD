@@ -11,11 +11,14 @@ cc_binary(
         "-fopenmp",
         "-fPIC",
         "-fwrapv",
+        "-O0",
+        "-g"
     ],
     linkopts = [
         "-Wl,-rpath,$$ORIGIN/torch_xla/lib",  # for libtpu
         "-Wl,-soname,_XLAC.so",
         "-lstdc++fs",  # For std::filesystem
+        "-g",
     ],
     linkshared = 1,
     visibility = ["//visibility:public"],

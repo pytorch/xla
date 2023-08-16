@@ -285,7 +285,7 @@ xla::HloModuleProto ShardingUtil::SpmdPartitioningPass(
   pass.AddPass<xla::ShardingPropagation>(
       /*is_spmd=*/true, /*propagate_metadata=*/false,
       /*allow_spmd_sharding_propagation_to_output=*/
-      absl::MakeConstSpan({true}));
+      absl::MakeConstSpan({false}));
   pass.AddPass<xla::spmd::SpmdPartitioner>(
       /*num_partitions=*/num_partitions,
       /*num_replicas=*/num_replicas, options,
@@ -631,6 +631,7 @@ void ShardingUtil::PrepareOutputShardingPropagation(
   const auto& computation_proto = computation->computation().proto();
   std::vector<xla::OpSharding> output_shardings;
   if (computation_proto.has_spmd_output_sharding()) {
+    std::cerr << "has_spmd_output_sharding" << std::endl;
     if (computation_proto.spmd_output_sharding().tuple_shardings().size() > 0) {
       auto tuple_shardings =
           computation_proto.spmd_output_sharding().tuple_shardings();
@@ -642,6 +643,7 @@ void ShardingUtil::PrepareOutputShardingPropagation(
     }
   }
 
+  std::cerr << "has_spmd_output_sharding" << std::endl;
   // Output parameter sharding annotations, defaults to REPLICATED(0) if
   // unset.
   if (output_shardings.empty()) {
