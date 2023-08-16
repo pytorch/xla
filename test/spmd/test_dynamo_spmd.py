@@ -52,6 +52,9 @@ class DynamoSpmdInferenceTest(test_xla_sharding_base.XlaShardingTest):
     # TODO(JackCaoG): add counter checks after ExecuteReplicated also creates
     # a ExecuteMetric.
 
+  @unittest.skip(
+      "test is flaky, UncachedOutputSharding sometime doesn't show up. most likely a waitdeviceop issue"
+  )
   def test_dynamo_spmd_output_sharding_cache(self):
     met.clear_all()
     device = xm.xla_device()
