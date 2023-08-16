@@ -129,9 +129,7 @@ void LoweringContext::SetResult(size_t index, xla::XlaOp op) {
 }
 
 xla::StatusOr<xla::XlaComputation> LoweringContext::BuildXla() {
-  std::cerr << "BuildXla" << std::endl;
   if (!root_tuple_.empty()) {
-    std::cerr << "root_tuple_" << std::endl;
     xla::XlaOp root = xla::Tuple(builder(), root_tuple_);
 
     auto shape = ShapeHelper::ShapeOfXlaOp(root);
@@ -221,7 +219,11 @@ bool LoweringContext::CheckResultShape(
 
 size_t LoweringContext::AddResult(const torch::lazy::Output& output) {
   root_tuple_.push_back(GetOutputOp(output));
-  root_shardings_.push_back(*xla::HloSharding::FromProto(*(dynamic_cast<const XlaNode*>(output.node)->GetSharding(output.index))));
+  if (auto sharding = dynamic_cast<const XlaNode*>(output.node)->GetSharding(output.index)) {
+    root_shardings_.push_back(*xla::HloSharding::FromProto(*(sharding)));
+  } else {
+    root_shardings_.push_back(xla::HloSharding::Replicate());
+  }
   return root_tuple_.size() - 1;
 }
 
