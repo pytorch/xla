@@ -19,6 +19,16 @@ We recommend you to use our prebuilt Docker image to start your development work
   ```
   All of the code below will be assumed to be run within the docker.
 
+* Update gcc version if it is < gcc 10 (only necessary with an old docker image)
+
+  ```shell
+  gcc --version
+  # if it is < 10
+  echo 'deb http://deb.debian.org/debian bullseye main' >> /etc/apt/sources.list
+  apt update
+  apt install gcc-10
+  ```
+
 * Clone the _PyTorch_ repo as per [instructions](https://github.com/pytorch/pytorch#from-source).
 
   ```Shell
