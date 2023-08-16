@@ -90,7 +90,9 @@ class XLAPatchedLinear(torch.autograd.Function):
     # bias is an optional argument
     ctx.save_for_backward(input, weight, bias)
     with torch.no_grad():
-      return torch_xla._XLAC._xla_linear(input, weight, bias)
+      # return torch_xla._XLAC._xla_linear(input, weight, bias)
+      assert bias is None
+      return torch.einsum('bln,mn->blm', input, weight)
 
   @staticmethod
   def backward(ctx, grad_output):
@@ -98,22 +100,26 @@ class XLAPatchedLinear(torch.autograd.Function):
     grad_input = grad_weight = grad_bias = None
 
     input_dim = input.dim()
-    if input_dim > 2:
-      input_flat = input.flatten(start_dim=0, end_dim=-2)
-      grad_output_flat = grad_output.flatten(start_dim=0, end_dim=-2)
-    else:
-      input_flat = input
-      grad_output_flat = grad_output
+    # if input_dim > 2:
+    #   input_flat = input.flatten(start_dim=0, end_dim=-2)
+    #   grad_output_flat = grad_output.flatten(start_dim=0, end_dim=-2)
+    # else:
+    #   input_flat = input
+    #   grad_output_flat = grad_output
 
     if ctx.needs_input_grad[0]:
-      grad_input_flat = grad_output_flat.mm(weight)
-      if input_dim > 2:
-        grad_input = grad_input_flat.view(*input.size())
-      else:
-        grad_input = grad_input_flat
+      # grad_input_flat = grad_output_flat.mm(weight)
+      # if input_dim > 2:
+      #   grad_input = grad_input_flat.view(*input.size())
+      # else:
+      #   grad_input = grad_input_flat
+      grad_input = torch.einsum('blm,mn->bln', grad_output, weight)
     if ctx.needs_input_grad[1]:
-      grad_weight = grad_output_flat.t().mm(input_flat)
+      # grad_weight = grad_output_flat.t().mm(input_flat)
+      grad_weight = torch.einsum('blm,bln->mn', grad_output, input)
+
     if bias is not None and ctx.needs_input_grad[2]:
+      assert False
       grad_bias = grad_output_flat.sum(0)
 
     return grad_input, grad_weight, grad_bias
