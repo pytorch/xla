@@ -1459,6 +1459,12 @@ void InitXlaModuleBindings(py::module m) {
     xtensor->SetShardingSpec(*sharding_spec);
     return;
   });
+  m.def("_xla_copy_sharding_spec", [](const at::Tensor& self, const at::Tensor& other) {
+    XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
+    XLATensorPtr other_tensor = bridge::GetXlaTensor(other);
+    tensor_methods::custom_sharding(self_tensor, other_tensor->sharding_spec());
+    return;
+  });
   m.def("_xla_clear_sharding", [](const at::Tensor& input) {
     XLATensorPtr xtensor = bridge::GetXlaTensor(input);
     xtensor->ClearShardingSpec();
