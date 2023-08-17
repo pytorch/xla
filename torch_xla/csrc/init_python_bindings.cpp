@@ -9,6 +9,7 @@
 #include <torch/csrc/lazy/core/lazy_graph_executor.h>
 
 #include <cstring>
+#include <fstream>
 #include <sstream>
 #include <string>
 #include <thread>
