@@ -170,9 +170,10 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     xm.mark_step()
     xm.wait_device_ops()
     met.clear_all()
+    dynamo_resnet18 = torch.compile(xla_resnet18, backend='openxla')
     for data, _ in loader:
-      dynamo_resnet18 = torch.compile(xla_resnet18, backend='openxla')
-      output = dynamo_resnet18(data)
+      with torch.no_grad():
+        output = dynamo_resnet18(data)
       output_cpu = resnet18(data.cpu())
       self.assertTrue(
           torch.allclose(output_cpu, output.cpu(), rtol=1e-05, atol=1e-05))
