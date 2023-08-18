@@ -2080,10 +2080,8 @@ XLATensorPtr pow(const at::Scalar& input, const XLATensorPtr& exponent) {
   torch::lazy::NodePtr pow_node = Pow(input_node, exponent->GetIrValue());
   at::ScalarType input_dtype = GetScalarType(input);
   at::ScalarType exp_dtype = exponent->dtype();
-  at::ScalarType promoted_dtype =
-    TensorTypeFromXlaType(
-      XlaHelpers::PromoteType(TensorTypeToRawXlaType(input_dtype),
-                TensorTypeToRawXlaType(exp_dtype)));
+  at::ScalarType promoted_dtype = TensorTypeFromXlaType(XlaHelpers::PromoteType(
+      TensorTypeToRawXlaType(input_dtype), TensorTypeToRawXlaType(exp_dtype)));
   return exponent->CreateFrom(pow_node, promoted_dtype);
 }
 
