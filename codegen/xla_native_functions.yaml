@@ -38,6 +38,7 @@ full_codegen:
   - frac
   - ge.Scalar
   - ge.Tensor
+  - glu
   - gt.Scalar
   - gt.Tensor
   - hardshrink
