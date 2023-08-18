@@ -351,7 +351,7 @@ torch_xla::XlaOpVector Glu::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
 
   // Calculate half input shape on target dim - since input must be sliced in 2
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(xla_input);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(xla_input);
   int64_t ldim = dim;
   if (ldim < 0) ldim += input_shape.rank();
   absl::Span<const int64_t> inp_dimensions = input_shape.dimensions();
