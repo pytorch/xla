@@ -161,6 +161,11 @@ at::IntArrayRef XLATensorImpl::strides_custom() const {
   return strides_default();
 }
 
+c10::SymIntArrayRef XLATensorImpl::sym_strides_custom() const {
+  const_cast<XLATensorImpl*>(this)->SetupSizeProperties();
+  return c10::SymIntArrayRef(sym_strides_.data(), sym_strides_.size());
+}
+
 int64_t XLATensorImpl::dim_custom() const {
   const_cast<XLATensorImpl*>(this)->SetupSizeProperties();
   return dim_default();
@@ -205,6 +210,8 @@ void XLATensorImpl::SetupSymSizeProperties() {
   auto rank = shape.get().rank();
   std::vector<c10::SymInt> sym_sizes;
   sym_sizes.reserve(rank);
+  std::vector<c10::SymInt> sym_strides(rank);
+  size_t index = rank;
 
   XLAIrBuilder a = XLAIrBuilder();
   for (auto i : c10::irange(rank)) {
@@ -219,6 +226,16 @@ void XLATensorImpl::SetupSymSizeProperties() {
     }
   }
   sym_sizes_ = sym_sizes;
+
+  c10::SymInt prod{1};
+ 
+  while( index > 0 ) {
+    --index; 
+    sym_strides[index] = prod;
+    prod *= sym_sizes[index];
+  }
+ 
+  sym_strides_ = sym_strides;
 }
 
 caffe2::TypeMeta XLATensorImpl::GetTypeMeta(const XLATensor& tensor) {

@@ -46,6 +46,7 @@ class XLATensorImpl : public c10::TensorImpl {
   c10::SymIntArrayRef sym_sizes_custom() const override;
   c10::SymInt sym_numel_custom() const override;
   at::IntArrayRef strides_custom() const override;
+  c10::SymIntArrayRef sym_strides_custom() const override;
 
   int64_t dim_custom() const override;
 
@@ -67,6 +68,7 @@ class XLATensorImpl : public c10::TensorImpl {
 
   XLATensorPtr tensor_;
   std::vector<c10::SymInt> sym_sizes_;
+  std::vector<c10::SymInt> sym_strides_;
   size_t generation_ = 0;
 };
 
