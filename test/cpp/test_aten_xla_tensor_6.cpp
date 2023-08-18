@@ -1330,7 +1330,7 @@ TEST_F(AtenXlaTensorTest, TestGlu) {
     torch::Tensor input =
         torch::rand(*size_it, torch::TensorOptions(torch::kFloat));
     torch::Tensor output = torch::glu(input, *dim_it);
-    ForEachDevice([&](const torch::Device &device) {
+    ForEachDevice([&](const torch::Device& device) {
       torch::Tensor xla_input = CopyToDevice(input, device);
       torch::Tensor xla_output = torch::glu(xla_input, *dim_it);
       AllClose(output, xla_output);
