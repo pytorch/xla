@@ -237,6 +237,8 @@ def extract_internal(xla_model: torch.fx.GraphModule):
       tensor_id: i for i, tensor_id in enumerate(args_tensor_ids)
   }
 
+  xla_args_sharding_spec = torch_xla._XLAC._get_xla_sharding_specs(xla_args)
+
   xla_out = xla_model(*xla_args)
   if not isinstance(xla_out, (tuple, list)):
     xla_out = (xla_out,)
@@ -309,6 +311,18 @@ def extract_internal(xla_model: torch.fx.GraphModule):
   torch_xla._XLAC._clear_pending_irs(str(xm.xla_device()))
 
   def optimized_mod(*args):
+    nonlocal xla_args_sharding_spec
+    print(xla_args_sharding_spec)
+    current_arg_sharding_spec = torch_xla._XLAC._get_xla_sharding_specs(args)
+    import pdb
+    pdb.set_trace()
+    if current_arg_sharding_spec != xla_args_sharding_spec:
+      xla_args_sharding_spec = current_arg_sharding_spec
+      print(xla_model)
+      import pdb
+      pdb.set_trace()
+      # now we need to retrace and get hash
+
     # mark_step needs to be blocking since we want to access args's XLADatas
     # and they can't be placeholder.
     if any(torch_xla._XLAC._check_tensor_need_materialization(args)):

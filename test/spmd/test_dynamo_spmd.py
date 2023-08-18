@@ -72,6 +72,46 @@ class DynamoSpmdInferenceTest(test_xla_sharding_base.XlaShardingTest):
     dynamo_res = dynamo_linear(xla_y)
     self.assertEqual(met.counter_value('UncachedOutputSharding'), 1)
 
+  def test_dynamo_model_weight_sharding_changed(self):
+    device = xm.xla_device()
+    linear = SimpleLinear().to(device)
+    linear.eval()
+    xla_x = torch.randn(1, 128, device=device)
+    xs.mark_sharding(linear.fc2.weight, self._get_mesh((1, self.n_devices)),
+                     (1, 0))
+    xla_res = linear(xla_x)
+    xm.mark_step()
+
+    dynamo_linear = torch.compile(linear, backend="openxla")
+    dynamo_res = dynamo_linear(xla_x)
+    torch.allclose(xla_res.cpu(), dynamo_res.cpu())
+    xs.clear_sharding(linear.fc2.weight)
+    # TODO(JackCaoG): this is a bug, update of sharding spec is being ignored, need to look into it.
+    xs.mark_sharding(dynamo_linear.fc2.weight,
+                     self._get_mesh((1, self.n_devices)), (0, 1))
+    dynamo_res = dynamo_linear(xla_x)
+    torch.allclose(xla_res.cpu(), dynamo_res.cpu())
+
+  def test_dynamo_input_sharding_changed(self):
+    device = xm.xla_device()
+    linear = SimpleLinear().to(device)
+    linear.eval()
+    xla_x = torch.randn(8, 128, device=device)
+    xs.mark_sharding(xla_x, self._get_mesh((1, self.n_devices)), (1, 0))
+    xla_res = linear(xla_x)
+    xm.mark_step()
+
+    dynamo_linear = torch.compile(linear, backend="openxla")
+    dynamo_res = dynamo_linear(xla_x)
+    torch.allclose(xla_res.cpu(), dynamo_res.cpu())
+    xs.clear_sharding(linear.fc2.weight)
+
+    import pdb
+    pdb.set_trace()
+    xs.mark_sharding(xla_x, self._get_mesh((1, self.n_devices)), (0, 1))
+    dynamo_res = dynamo_linear(xla_x)
+    torch.allclose(xla_res.cpu(), dynamo_res.cpu())
+
 
 if __name__ == '__main__':
   test = unittest.main()
