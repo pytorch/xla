@@ -228,8 +228,8 @@ void XLATensorImpl::SetupSymSizeProperties() {
   sym_sizes_ = sym_sizes;
 
   c10::SymInt prod{1};
- 
-  while (index > 0 ) {
+
+  while (index > 0) {
     --index;
     sym_strides[index] = prod;
     prod *= sym_sizes[index];
