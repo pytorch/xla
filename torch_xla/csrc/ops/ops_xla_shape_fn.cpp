@@ -429,7 +429,7 @@ xla::Shape GluOutputShape(const torch::lazy::Value& input, int64_t dim) {
   absl::Span<const int64_t> inp_dimensions = input_shape.dimensions();
   std::vector<int64_t> output_sizes(std::begin(inp_dimensions),
                                     std::end(inp_dimensions));
-                                    
+
   // Output shape is always half the input shape on the specified dimension
   output_sizes[dim] = inp_dimensions[dim] / 2;
 
