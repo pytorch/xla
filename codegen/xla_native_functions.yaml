@@ -162,6 +162,8 @@ supported:
   - convolution_overrideable
   - copy
   - copy_
+  - count_nonzero
+  - count_nonzero.dim_IntList
   - cross
   - cumprod
   - cumsum
