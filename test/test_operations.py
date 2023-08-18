@@ -1657,15 +1657,21 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
         torch.allclose(conv.weight.grad.cpu(), torch.tensor([[[[2077.0]]]])))
 
   def test_patched_linear(self):
-    linear = nn.Linear(2, 4, bias=False).to('xla')
+    linear_cpu = nn.Linear(2, 4, bias=False)
+    input_cpu = torch.randn(4, 3, 2)
+    output_cpu = linear_cpu(input_cpu)
+    print(output_cpu)
+
+    linear = linear_cpu.to('xla')
     from torch_xla.distributed.fsdp.utils import apply_xla_patch_to_nn_linear
     module = apply_xla_patch_to_nn_linear(linear)
-    input = torch.randn(4, 3, 2).to('xla')
+    input = input_cpu.to('xla')
     output = linear(input)
+    print(output)
     # output = torch_xla._XLAC._xla_linear(input, linear.weight, linear.bias)
 
-    hlo = torch_xla._XLAC._get_xla_tensors_hlo([output])
-    print(hlo)
+    # hlo = torch_xla._XLAC._get_xla_tensors_hlo([output])
+    # print(hlo)
 
   def test_patched_matmul(self):
     # gradcheck modifications to views
