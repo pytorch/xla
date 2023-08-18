@@ -137,12 +137,13 @@ PjRtComputationClient::PjRtComputationClient() {
         return distributed_client->KeyValueSet(absl::StrCat(key_prefix, k), v);
       };
     }
+    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": sys_util::GetEnvInt(env::kEnvNumGpu, 1)=" << sys_util::GetEnvInt(env::kEnvNumGpu, 1) << ", sys_util::GetEnvInt(env::kEnvPjRtLocalProcessCount, 1)=" << sys_util::GetEnvInt(env::kEnvPjRtLocalProcessCount, 1) << std::endl;
     client_ =
         std::move(xla::GetStreamExecutorGpuClient(
                       /*asynchronous=*/async, xla::GpuAllocatorConfig{},
                       /*node_id=*/local_rank,
                       /*num_nodes=*/
-                      sys_util::GetEnvInt(env::kEnvPjRtLocalProcessCount, 1),
+                      sys_util::GetEnvInt(env::kEnvNumGpu, 1),
                       /*allowed_devices=*/allowed_devices,
                       /*platform_name*/ "gpu",
                       /*should_stage_host_to_device_transfers*/ true,
