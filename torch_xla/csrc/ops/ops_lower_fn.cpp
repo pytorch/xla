@@ -356,11 +356,11 @@ torch_xla::XlaOpVector Glu::Lower(LoweringContext* loctx) const {
   if (ldim < 0) ldim += input_shape.rank();
   absl::Span<const int64_t> inp_dimensions = input_shape.dimensions();
   int64_t split_size = inp_dimensions[ldim] / 2;
- 
+  
   // Split the input tensor into two parts, take sigmoid of RHS and multiple 
   // element-wise
   xla::XlaOp a = xla::SliceInDim(xla_input, 0, split_size, 1, ldim);
-  xla::XlaOp b = 
+  xla::XlaOp b =
       xla::SliceInDim(xla_input, split_size, split_size + split_size, 1, ldim);
   xla::XlaOp result = a * BuildSigmoid(b);
   
