@@ -2074,9 +2074,15 @@ XLATensorPtr pow(const XLATensorPtr& input, const XLATensorPtr& exponent) {
 }
 
 XLATensorPtr pow(const at::Scalar& input, const XLATensorPtr& exponent) {
+  const torch::lazy::BackendDevice& device = exponent->GetDevice();
   torch::lazy::Value input_node = XLAGraphExecutor::Get()->GetIrValueForScalar(
-      input, exponent->shape(), exponent->GetDevice());
-  return exponent->CreateFrom(Pow(input_node, exponent->GetIrValue()));
+      input, MakeXlaPrimitiveType(GetScalarType(input), &device), device);
+  torch::lazy::NodePtr pow_node = Pow(input_node, exponent->GetIrValue());
+  at::ScalarType input_dtype = GetScalarType(input);
+  at::ScalarType exp_dtype = exponent->dtype();
+  at::ScalarType promoted_dtype = TensorTypeFromXlaType(XlaHelpers::PromoteType(
+      TensorTypeToRawXlaType(input_dtype), TensorTypeToRawXlaType(exp_dtype)));
+  return exponent->CreateFrom(pow_node, promoted_dtype);
 }
 
 XLATensorPtr prelu(const XLATensorPtr& input, const XLATensorPtr& weight) {
