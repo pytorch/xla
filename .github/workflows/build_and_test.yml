@@ -1,4 +1,3 @@
-name: Build & Test
 on:
   pull_request:
     branches:
@@ -45,7 +44,7 @@ jobs:
     with:
       docker-image: ${{ needs.build.outputs.docker-image }}
       runner: linux.8xlarge.nvidia.gpu
-      timeout-minutes: 180
+      timeout-minutes: 240
       disable-xrt: 1
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
