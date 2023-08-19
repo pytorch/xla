@@ -1,0 +1,33 @@
+(torch310) hanq@hanq-compile-2:/mnt/hanq/git/qihqi/pytorch/xla$ LD_LIBRARY_PATH=/mnt/hanq/miniconda3/envs/torch310/lib/:/usr/lib/x86_64-linux-gnu/ PJRT_DEVICE=CPU XLA_STABLEHLO_COMPILE=1 python test.py
+/mnt/hanq/miniconda3/envs/torch310/lib/python3.10/site-packages/torchvision-0.16.0a0+463cdea-py3.10-linux-x86_64.egg/torchvision/io/image.py:13: UserWarning: Failed to load image Python extension: ''If you don't plan on using image functionality from `torchvision.io`, you can ignore this warning. Otherwise, there might be something wrong with your environment. Did you have `libjpeg` or `libpng` installed before building `torchvision` from source?
+  warn(
+ I am called 0
+ I am called 0
+hanq: lowering: [UNKNOWN_SCALAR[]] prim::Constant, location=<module>@test.py:15, xla_shape=s64[], dynamic_dims: , tags: , value=1
+hanq: size is 0
+hanq: lowering: [] aten::expand, location=<module>@test.py:15, xla_shape=s64[2,2]{1,0}, dynamic_dims: , tags: , size=(2, 2)
+hanq: size is 2
+hanq: lowering: [UNKNOWN_SCALAR[]] xla::device_data, location=<module>@test.py:12, xla_shape=s64[2,2]{1,0}, dynamic_dims: 0, tags: , device=CPU:0
+hanq: size is 2
+hanq: lowering: [] aten::mul, location=<module>@test.py:15, xla_shape=s64[2,2]{1,0}, dynamic_dims: , tags:
+hanq: size is 2
+hanq: lowering: [UNKNOWN_SCALAR[]] xla::device_data, location=<module>@test.py:9, xla_shape=s64[2,2]{1,0}, dynamic_dims: 0, tags: tag_of_b, device=CPU:0
+hanq: size is 2
+hanq: lowering: [] aten::add, location=<module>@test.py:15, xla_shape=s64[2,2]{1,0}, dynamic_dims: , tags:
+hanq: size is 2
+#loc = [unknown]
+module @IrToHlo.11 attributes {mhlo.cross_program_prefetches = [], mhlo.dynamic_parameter_bindings = [], mhlo.is_dynamic = false, mhlo.use_auto_spmd_partitioning = false} {
+  func.func @main(%arg0: tensor<?x2xi64, #stablehlo.bounds<2, ?>> [unknown], %arg1: tensor<?x2xi64, #stablehlo.bounds<2, ?>> [unknown]) -> tensor<2x2xi64> {
+    %0 = stablehlo.constant dense<1> : tensor<2x2xi64> [#loc1, #loc2]
+    %1 = stablehlo.multiply %arg0, %0 : (tensor<?x2xi64, #stablehlo.bounds<2, ?>>, tensor<2x2xi64>) -> tensor<2x2xi64> [#loc3, #loc2]
+    %2 = stablehlo.add %arg1, %1 : (tensor<?x2xi64, #stablehlo.bounds<2, ?>>, tensor<2x2xi64>) -> tensor<2x2xi64> [#loc4, #loc2]
+    return %2 : tensor<2x2xi64> [unknown]
+  } [unknown]
+} [unknown]
+#loc1 = "aten__expand"
+#loc2 = <module>@test.py:15:0
+#loc3 = "aten__mul"
+#loc4 = "aten__add"
+#loc5 = [#loc1, #loc2]
+#loc6 = [#loc3, #loc2]
+#loc7 = [#loc4, #loc2]

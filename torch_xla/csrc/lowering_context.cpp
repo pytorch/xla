@@ -2,6 +2,7 @@
 
 #include <torch/csrc/lazy/core/ir_metadata.h>
 
+#include <iostream>
 #include <sstream>
 #include <stdexcept>
 
@@ -58,6 +59,9 @@ class HloMetadataSetter {
           absl::StrCat(absl::StrReplaceAll(nmeta.scope, {{":", "_"}}), "/");
     }
     metadata.set_op_name(absl::StrCat(op_name_prefix, op_type));
+
+    const XlaNode* xlanode = dynamic_cast<const XlaNode*>(node);
+    metadata.set_op_type(xlanode->experimental_tag());
 
     if (!nmeta.frame_info.empty()) {
       const torch::lazy::SourceLocation& frame = nmeta.frame_info.front();
@@ -167,7 +171,24 @@ XlaOpVector LoweringContext::LowerNode(const torch::lazy::Node* node) {
     HloMetadataSetter meta_setter(this, node);
 
     const XlaNode* casted = dynamic_cast<const XlaNode*>(node);
+    std::cout << "hanq: lowering: " << casted->ToString() << std::endl;
     result_ops = casted->Lower(this);
+    xla::internal::XlaBuilderFriend builder_friend;
+    auto* inst = builder_friend.GetInstruction(result_ops[0]);
+    std::cout <<"hanq: size is "<< inst->mutable_shape()->is_dynamic_dimension().size() << std::endl;
+    auto* mutable_dynamic = inst->mutable_shape()->mutable_is_dynamic_dimension();
+    if (mutable_dynamic->empty()) {
+      for (int i = 0; i < inst->dimensions_size(); i++) {
+        mutable_dynamic->Add(false);
+      }
+    }
+
+    auto* mutable_dims = inst->mutable_shape()->mutable_dimensions();
+    for (const auto dim : casted->dynamic_dims()) {
+      mutable_dynamic->Set(dim, true);
+      // mutable_dims->Set(dim, 0);
+    }
+
   } catch (const std::exception& ex) {
     ReportBuilderError(node, ex.what());
   }

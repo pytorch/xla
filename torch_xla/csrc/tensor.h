@@ -201,6 +201,10 @@ class XLATensor : public torch::lazy::LazyTensor {
   // Set logical_element_type which is visible to upstream PyTorch.
   void SetScalarType(c10::optional<at::ScalarType> logical_element_type);
 
+
+
+  void MarkDynamicDimension(uint32_t dim);
+  void SetTag(const std::string& tag);
   // We don't use the upstream shape to provide xla::shape.
   runtime::util::MaybeRef<xla::Shape> shape() const;
 

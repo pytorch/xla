@@ -138,6 +138,14 @@ class XlaNode : public torch::lazy::Node {
 
   std::string ToString() const override;
 
+  void MarkDynamicDimension(uint32_t dim) { 
+    std::cout << " I am called " << dim << std::endl;
+    dynamic_dims_.push_back(dim);
+  }
+  void SetTag(const std::string& tag) { experimental_tag_ = tag; }
+  const std::string& experimental_tag() const { return experimental_tag_; }
+  const std::vector<uint32_t>& dynamic_dims() const { return dynamic_dims_; }
+
  private:
   xla::Shape GetOpShape(const std::function<xla::Shape()>& shape_fn) const;
 
@@ -153,6 +161,9 @@ class XlaNode : public torch::lazy::Node {
   torch::lazy::hash_t node_hash_ = 0;
   torch::lazy::hash_t dag_hash_;
   torch::lazy::hash_t sharding_hash_ = 0;
+
+  std::string experimental_tag_;
+  std::vector<uint32_t> dynamic_dims_;
 
   // Experimental sharding annotations attached to the IR node.
   std::vector<std::shared_ptr<xla::OpSharding>> output_shardings_;
