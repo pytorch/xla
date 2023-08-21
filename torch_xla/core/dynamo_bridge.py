@@ -10,6 +10,7 @@ from typing import Any, Dict, List
 
 import torch
 from torch.fx.passes.infra.partitioner import CapabilityBasedPartitioner
+from torch.fx.passes.utils.fuser_utils import topo_sort
 import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as metrics
@@ -421,10 +422,16 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
           "call_function", "call_module", "call_method"
       ] and (node not in fallback_ops or node.target == operator.getitem)
 
-  # partition the model and exectue to collect inputs
+  # partition the model
   supported_ops = XlaOperatorSupport()
-  partitioner = CapabilityBasedPartitioner(xla_model, supported_ops)
+  partitioner = CapabilityBasedPartitioner(xla_model, supported_ops, allows_single_node_partition=True)
   partitions = partitioner.propose_partitions()
+
+  # propose_partitions() does not guarantee topolgical order, so sort it manually
+  for partition in partitions:
+    partition.nodes = topo_sort(partition.nodes)
+
+  # fuse partitions and exectue to collect inputs
   partitioned_graph = partitioner.fuse_partitions(partitions)
   InputCollector(partitioned_graph).run(*xla_args)
 
