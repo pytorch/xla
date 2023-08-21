@@ -852,6 +852,7 @@ void InitXlaModuleBindings(py::module m) {
         [](const at::Tensor& tensor) { return GetTensorViewAliasId(tensor); });
   m.def("_xla_get_tensor_id",
         [](const at::Tensor& tensor) { return GetTensorId(tensor); });
+  m.def("_xla_get_lock_spmd_config", []() { return lock_spmd_config; });
   m.def("_xla_get_devices", []() {
     if (UseVirtualDevice()) {
       // Under SPMD context, there is only one virtual devices from user
@@ -1373,21 +1374,22 @@ void InitXlaModuleBindings(py::module m) {
                 weight_decay, eps, amsgrad, maximize, use_adamw);
           }
         });
-  m.def("_xla_mark_sharding", [](const at::Tensor& input,
-                                 const py::list& tile_assignment,
-                                 const py::list& group_assignment,
-                                 const py::list& replication_groups,
-                                 int sharding_type) {
-    TORCH_LAZY_COUNTER("XlaMarkSharding", 1);
-    XLA_CHECK(UseVirtualDevice()) << "Please set `XLA_USE_SPMD=1`";
-    XLATensorPtr xtensor = bridge::GetXlaTensor(input);
-    xla::OpSharding sharding = ShardingUtil::CreateOpSharding(
-        tile_assignment, group_assignment, replication_groups,
-        ShardingUtil::ShardingType(sharding_type));
-    auto new_sharding_spec = std::make_shared<XLATensor::ShardingSpec>(
-        sharding, MakeShapeWithDeviceLayout(
-                      xtensor->shape(),
-                      static_cast<XlaDeviceType>(xtensor->GetDevice().type())));
+  m.def("_xla_mark_sharding",
+        [](const at::Tensor& input, const py::list& tile_assignment,
+           const py::list& group_assignment, const py::list& replication_groups,
+           int sharding_type) {
+          TORCH_LAZY_COUNTER("XlaMarkSharding", 1);
+          XLA_CHECK(UseVirtualDevice())
+              << "Please enable SPMD via `torch_xla.runtime.use_spmd()`";
+          XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+          xla::OpSharding sharding = ShardingUtil::CreateOpSharding(
+              tile_assignment, group_assignment, replication_groups,
+              ShardingUtil::ShardingType(sharding_type));
+          auto new_sharding_spec = std::make_shared<XLATensor::ShardingSpec>(
+              sharding,
+              MakeShapeWithDeviceLayout(
+                  xtensor->shape(),
+                  static_cast<XlaDeviceType>(xtensor->GetDevice().type())));
 
     // For Non DeviceData IR values, we directly attach the sharding spec
     // to the xtensor.

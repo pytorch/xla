@@ -1,6 +1,7 @@
 import functools
 import logging
 import os
+import warnings
 from typing import Dict, List, Optional, TypeVar
 
 import torch
@@ -204,3 +205,21 @@ def global_runtime_device_count() -> int:
 def addressable_runtime_device_count() -> int:
   """Returns the number of devices visible to this process."""
   return torch_xla._XLAC._xla_num_runtime_devices()
+
+
+# API to enable SPMD mode. This is a recommended way to enable SPMD.
+# TODO(yeounoh) this does not block users from using XLA_USE_SPMD flag, yet.
+# we will enforce `set_use_spmd()` once the flag is fully deprecated.
+@requires_pjrt
+def set_use_spmd():
+  if os.environ.get("XLA_USE_SPMD") is not None:
+    warnings.warn("XLA_USE_SPMD is being deprecated. "
+                  "Use torch_xla.runtime.set_use_spmd() "
+                  "without setting XLA_USE_SPMD env-var.")
+
+  if torch_xla._XLAC._xla_get_lock_spmd_config():
+    raise RuntimeError("Please set SPMD mode before initializting non-virtual XLA device. "
+                       "Call set_use_spmd() in the beginning of the program.")
+
+  # TODO(yeounoh) replace this when we fully deprecate the flag.
+  os.environ["XLA_USE_SPMD"] = "1"
