@@ -692,11 +692,9 @@ void ShardingUtil::PrepareOutputShardingPropagation(
     // Register the sharded data placeholder to the tensor and its node.
     (*data_placeholders)[i] = sharded_data_placeholder;
     xtensor->data()->handle = (*data_placeholders)[i];
-    if (auto ir_value = xtensor->CurrentIrValue()) {
-      if (DeviceData* device_data_node =
-              DeviceData::Cast(ir_value.node.get())) {
-        device_data_node->Assign(xtensor->data()->handle);
-      }
+    // TODO(JackCaoG): Invesgate why output tensor has IR value here.
+    if (xtensor->CurrentIrValue()) {
+      xtensor->AssignIrValue(torch::lazy::Value());
     }
   }
 }
