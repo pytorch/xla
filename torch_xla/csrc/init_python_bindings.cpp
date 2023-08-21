@@ -1389,12 +1389,15 @@ void InitXlaModuleBindings(py::module m) {
                   xtensor->shape(),
                   static_cast<XlaDeviceType>(xtensor->GetDevice().type())));
 
-          // For IR values, we directly attach the sharding spec to the xtensor.
+          // For Non DeviceData IR values, we directly attach the sharding spec
+          // to the xtensor.
           if (xtensor->CurrentIrValue()) {
-            // TODO(alanwaketan): Do we want to check if there is any existing
-            // sharding spec? It seems okay to directly overwrite it.
-            xtensor->SetShardingSpec(*new_sharding_spec);
-            return;
+            const DeviceData* device_data_node =
+                DeviceData::Cast(xtensor->CurrentIrValue().node.get());
+            if (!device_data_node) {
+              xtensor->SetShardingSpec(*new_sharding_spec);
+              return;
+            }
           }
 
           // For data, we need to deal with the data transfers between

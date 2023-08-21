@@ -730,6 +730,19 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     else:
       self.assertTrue("replicated" in sharding_spec)
 
+  def test_shard_device_data_ir(self):
+    device = xm.xla_device()
+    xla_x = torch.randn(8, 128, device=device)
+    # xla_x now becomes a device data IR
+    xla_y = xla_x * 5
+
+    self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(xla_x), '')
+    xs.mark_sharding(xla_x, self._get_mesh((1, self.n_devices)), (1, 0))
+    self.assertNotEqual(torch_xla._XLAC._get_xla_sharding_spec(xla_x), '')
+    xm.mark_step()
+    self.assertTrue(torch.allclose(xla_y.cpu(), xla_x.cpu() * 5))
+    # check that xla_x is being sharded
+
 
 if __name__ == '__main__':
   test = unittest.main()
