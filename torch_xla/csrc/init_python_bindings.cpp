@@ -1428,7 +1428,7 @@ void InitXlaModuleBindings(py::module m) {
       // must be present on the backend device.
       XLA_CHECK((xtensor->CurrentDataHandle() &&
                  xtensor->CurrentDataHandle()->HasValue()) ||
-                    device_data_node = nullptr)
+                device_data_node != nullptr)
           << "Cannot shard tensor. Data does not present on any device.";
       std::vector<XLATensorPtr> xla_tensors{xtensor};
       cpu_tensor = XLAGraphExecutor::Get()->GetTensors(&xla_tensors)[0];
