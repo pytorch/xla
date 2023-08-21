@@ -49,26 +49,19 @@ class SHLOModel:
     self._default_method = default_method_name
 
   def evaluate(self, method_name, args):
-    from tensorflow.compiler.tf2xla.python import xla as tfxla
     meta, stablehlo = self._name_to_stablehlo[method_name]
     call_args = []
     for loc in meta.input_locations:
       if loc.type_ == VariableType.PARAMETER:
-        call_args.append(self._bundle.state_dict[loc.name])
+        call_args.append(
+          torch.tensor(self._bundle.state_dict[loc.name]))
       elif loc.type_ == VariableType.CONSTANT:
-        call_args.append(self._bundle.additional_constants[loc.position])
+        call_args.append(
+          torch.tensor(self._bundle.additional_constants[loc.position]))
       else:
         call_args.append(args[loc.position])
     output_sig = meta.output_signature[0]
-    return tfxla.call_module(
-        tuple(call_args),
-        version=5,
-        Tout=[output_sig.dtype],  # dtype information
-        Sout=[output_sig.shape],  # Shape information
-        function_list=[],
-        platforms=('CPU',),
-        module=stablehlo,
-    )
+    return torch_xla._XLAC._run_stablehlo(stablehlo, call_args)
 
   def __call__(self, *args):
     return self.evaluate(self._default_method, args)

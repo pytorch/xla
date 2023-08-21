@@ -14,13 +14,12 @@ class StableHLOInferenceTest(unittest.TestCase):
     resnet18 = torchvision.models.resnet18()
     data = torch.randn(4, 3, 224, 224)
     output = resnet18(data)
-    output_np = output.detach().numpy()
 
     exported = export_torch_model(
         resnet18,
         (data,),
     )
-    output2 = torch.tensor(exported(data.detach().numpy())[0].numpy())
+    output2 = exported(data)[0].cpu()
 
     self.assertTrue(torch.allclose(output, output2, atol=1e-5))
 
@@ -59,11 +58,10 @@ class StableHLOInferenceTest(unittest.TestCase):
         return x + y
 
     m = AddFloat()
-    data = (torch.randn(100, 100), 4.4)
+    data = (torch.randn(100, 100), torch.tensor(4.4))
     output = m(*data)
     exported = export_torch_model(m, data)
-    output2 = torch.tensor(
-        exported(data[0].detach().numpy(), data[1])[0].numpy())
+    output2 = exported(*data)[0].cpu()
 
     self.assertTrue(torch.allclose(output, output2, atol=1e-5))
 
