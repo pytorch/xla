@@ -424,7 +424,8 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
 
   # partition the model
   supported_ops = XlaOperatorSupport()
-  partitioner = CapabilityBasedPartitioner(xla_model, supported_ops, allows_single_node_partition=True)
+  partitioner = CapabilityBasedPartitioner(
+      xla_model, supported_ops, allows_single_node_partition=True)
   partitions = partitioner.propose_partitions()
 
   # propose_partitions() does not guarantee topolgical order, so sort it manually
