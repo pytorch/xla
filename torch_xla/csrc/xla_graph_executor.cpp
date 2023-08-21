@@ -760,27 +760,31 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
 std::vector<torch::lazy::BackendDataPtr> XLAGraphExecutor::ExecuteStablehlo(
     std::string bytecode, const std::vector<at::IValue>& graph_inputs,
     const torch::lazy::BackendDevice& device) {
+  // Convert StableHLO to HLO for XLA compilation.
+  // TODO(lsy323): Pass StableHLO to PjrtComputationClient for compilation
+  // after StableHLO compilation API is added in ComputationClient.
   mlir::MLIRContext context;
-  // mlir::ModuleOp mlir_module =
-  //   runtime::DeserializeStableHLO(bytecode, &context);
-  auto module =
+  mlir::OwningOpRef<mlir::ModuleOp> module =
       mlir::stablehlo::deserializePortableArtifact(bytecode, &context);
   mlir::ModuleOp mlir_module = *module;
-
   xla::HloProto hlo_proto;
   runtime::ConvertStableHloToHlo(&mlir_module, &context, &hlo_proto);
   xla::HloModuleProto* hlo_module_proto = hlo_proto.mutable_hlo_module();
-  runtime::PrintHloModuleProto(hlo_module_proto);
   xla::XlaComputation computation(*hlo_module_proto);
 
-  // Create PJRT computation client
-  // auto client = std::make_unique<PjRtComputationClient>();
-  // std::string device = runtime::GetComputationClient()->GetDefaultDevice();
+  // Get program output shape.
+  // TODO(lsy323): Get shape info from MLIR Module.
   xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
-  // output shape
   xla::Shape shape = MakeShapeWithDeviceLayout(
       program_shape.result(),
-      XlaDeviceType::CPU);  // TODO: fill in real device type
+      static_cast<XlaDeviceType>(device.type()));
+  std::vector<xla::Shape> flatten_shapes;
+  if (shape.IsTuple()) {
+    // The output shape is a Tuple if graph has multiple outputs.
+    flatten_shapes = std::move(shape.tuple_shapes());
+  } else {
+    flatten_shapes.push_back(std::move(shape));
+  }
 
   std::vector<runtime::ComputationClient::CompileInstance> instances;
   instances.push_back({std::move(computation), device.toString(),
@@ -792,31 +796,27 @@ std::vector<torch::lazy::BackendDataPtr> XLAGraphExecutor::ExecuteStablehlo(
       computations =
           runtime::GetComputationClient()->Compile(std::move(instances));
 
+  // Placeholder for computation outputs.
   std::vector<torch::lazy::BackendDataPtr> placeholders;
-  // placeholders.reserve(output_shapes->size());
-  // assume 1 output now
-  torch::lazy::BackendDataPtr handle =
+  for (const auto& s : flatten_shapes) {
+    torch::lazy::BackendDataPtr handle =
       WrapXlaData(runtime::GetComputationClient()->CreateDataPlaceholder(
-          device.toString(), std::move(shape)));
-  placeholders.push_back(handle);
+        device.toString(), std::move(s)));
+    placeholders.push_back(handle);
+  }
 
   std::vector<torch::lazy::BackendDataPtr> arguments;
   {
     // GetXlaData must be called within a lock region, otherwise it might
     // extract the placeholder inserted by previous execution.
     // setup the arguments
-    int idx = 0;
     for (auto& ivalue : graph_inputs) {
       torch::lazy::BackendDataPtr dataptr;
       if (auto xla_tensor_ptr = bridge::TryGetXlaTensor(ivalue.toTensor())) {
         dataptr = xla_tensor_ptr->GetXlaData();
       } else {
-        // XLA_CHECK(device.type() != (int8_t)XlaDeviceType::SPMD)
-        //     << "SPMD device data should already be on the XLA backend "
-        //        "(XLATensor).";
         dataptr = torch_xla::TensorToXlaData(ivalue.toTensor(), device);
       }
-      ++idx;
       arguments.push_back(dataptr);
     }
   }

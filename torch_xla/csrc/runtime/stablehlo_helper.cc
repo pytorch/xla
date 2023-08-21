@@ -106,10 +106,9 @@ std::string hloToStablehlo(const xla::HloModuleProto* proto,
   }
 }
 
-void PrintHloModuleProto(const xla::HloModuleProto* proto) {
+std::string GetHloModuleStr(const xla::HloModuleProto* proto) {
   auto hlo_module = runtime::util::CreateModuleFromProto(*proto);
-  std::cout << "check hlo dump \n"
-            << hlo_module.value()->ToString() << std::endl;
+  return hlo_module.value()->ToString();
 }
 
 static absl::Status stablehloToMhloHelper(mlir::ModuleOp* mlir_module,

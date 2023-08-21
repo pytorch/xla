@@ -40,42 +40,53 @@ def _get_numpy_dtype(dtype):
 
 class SHLOModel:
 
-  def __init__(self, bundle, default_method_name='forward'):
+  def __init__(self, bundle, to_tf=False, default_method_name='forward'):
     self._bundle = bundle
     self._name_to_stablehlo = {
         meta.name: (meta, stablehlo)
         for meta, stablehlo in bundle.stablehlo_funcs
     }
     self._default_method = default_method_name
+    self._to_tf = to_tf
 
   def evaluate(self, method_name, args):
     meta, stablehlo = self._name_to_stablehlo[method_name]
     call_args = []
     for loc in meta.input_locations:
       if loc.type_ == VariableType.PARAMETER:
-        call_args.append(
-          torch.tensor(self._bundle.state_dict[loc.name]))
+        call_args.append(torch.from_numpy(self._bundle.state_dict[loc.name]))
       elif loc.type_ == VariableType.CONSTANT:
-        call_args.append(
-          torch.tensor(self._bundle.additional_constants[loc.position]))
+        call_args.append(self._bundle.additional_constants[loc.position])
       else:
         call_args.append(args[loc.position])
-    output_sig = meta.output_signature[0]
-    return torch_xla._XLAC._run_stablehlo(stablehlo, call_args)
+    if not self._to_tf:
+      return torch_xla._XLAC._run_stablehlo(stablehlo, call_args)
+    else:
+      from tensorflow.compiler.tf2xla.python import xla as tfxla
+      output_sig = meta.output_signature[0]
+      return tfxla.call_module(
+        tuple(call_args),
+        version=5,
+        Tout=[output_sig.dtype],  # dtype information
+        Sout=[output_sig.shape],  # Shape information
+        function_list=[],
+        platforms=('CPU',),
+        module=stablehlo,
+    )
 
   def __call__(self, *args):
     return self.evaluate(self._default_method, args)
 
 
 def export_torch_model(model: torch.nn.Module,
-                       sample_inputs: Tuple[torch.Tensor]):
+                       sample_inputs: Tuple[torch.Tensor],
+                       to_tf: bool = False):
   """Convert model into a callable backed by StableHLO.
 
   Args:
       model: torch.nn.Module - a pytorch model
       sample_inputs: Tuple[torch.Tensor] - The input to this model
-      output_shape: Tuple[int] - Shape of the output
-      output_dtype: dtype - numpy dtype for the output
+      to_tf: bool - If export a callable that is compatible with tf.saved_model
 
   This function will return a callable backed by StableHLO such that,
 
@@ -97,10 +108,11 @@ def export_torch_model(model: torch.nn.Module,
   args = tuple(
       tree_map_only(torch.Tensor, lambda x: x.to(device=device), sample_inputs))
   orig_state_dict = copy.copy(model.state_dict())
+  orig_state_dict = tree_map_only(torch.Tensor, lambda x: x.numpy(), orig_state_dict)
   model = model.to(device)
   bundle = _callable_to_stablehlo_bundle(model, args, model.state_dict())
   bundle.state_dict = orig_state_dict
-  stablehlo_model = SHLOModel(bundle)
+  stablehlo_model = SHLOModel(bundle, to_tf)
   return stablehlo_model
 
 

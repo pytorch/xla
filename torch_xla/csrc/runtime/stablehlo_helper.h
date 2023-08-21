@@ -24,7 +24,7 @@ void ConvertStableHloToHlo(mlir::ModuleOp* mlir_module,
                            mlir::MLIRContext* context,
                            xla::HloProto* hlo_proto);
 
-void PrintHloModuleProto(const xla::HloModuleProto* proto);
+std::string GetHloModuleStr(const xla::HloModuleProto* proto);
 
 }  // namespace runtime
 }  // namespace torch_xla

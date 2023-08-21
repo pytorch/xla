@@ -1202,7 +1202,6 @@ void InitXlaModuleBindings(py::module m) {
             for (auto& data : results) {
               XLATensorPtr xla_tensor = torch_xla::XLATensor::Create(data);
               retlist.push_back(bridge::AtenFromXlaTensor(xla_tensor));
-              ++i;
             }
           }
           return retlist;
