@@ -3,11 +3,6 @@ load(
     "if_cuda_is_configured",
 )
 
-load(
-    "@xla//xla:xla.bzl",
-    "xla_cc_test",
-)
-
 licenses(["notice"])  # Apache 2.0
 
 package(default_visibility = ["//visibility:public"])
@@ -362,27 +357,24 @@ cc_test(
 )
 
 # TODO(goranpetrovic): reenable when `xla_cc_test` is fixed upstream.
-xla_cc_test(
-    name = "pjrt_computation_client_test",
-    size = "small",
-    srcs = ["pjrt_computation_client_test.cc"],
-    deps = [
-        ":computation_client",
-        ":pjrt_computation_client",
-        "@xla//xla:literal",
-        "@xla//xla:literal_util",
-        "@xla//xla:shape_util",
-        "@xla//xla:status",
-        "@xla//xla:statusor",
-        "@xla//xla/client:xla_builder",
-        "@xla//xla/client:xla_computation",
-        "@xla//xla/tests:literal_test_util",
-        "@xla//xla/tools:hlo_module_loader",
-        # "@org_tensorflow//tensorflow/core/platform:logging",
-        "@tsl//tsl/lib/core:status_test_util",
-        "@tsl//tsl/platform:env",
-        "@tsl//tsl/platform:test",
-        "@tsl//tsl/platform:test_main",
-        "@xla//xla/pjrt:tfrt_cpu_pjrt_client",
-    ],
-)
+# xla_cc_test(
+#     name = "pjrt_computation_client_test",
+#     srcs = ["pjrt_computation_client_test.cc"],
+#     deps = [
+#         ":computation_client",
+#         "@xla//xla:literal",
+#         "@xla//xla:literal_util",
+#         "@xla//xla:shape_util",
+#         "@xla//xla:status",
+#         "@xla//xla:statusor",
+#         "@xla//xla/client:xla_builder",
+#         "@xla//xla/client:xla_computation",
+#         "@xla//xla/tests:literal_test_util",
+#         "@xla//xla/tools:hlo_module_loader",
+#         "@org_tensorflow//tensorflow/core/platform:logging",
+#         "@tsl//tsl/lib/core:status_test_util",
+#         "@tsl//tsl/platform:env",
+#         "@tsl//tsl/platform:test",
+#         "@tsl//tsl/platform:test_main",
+#     ],
+# )
