@@ -741,7 +741,17 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertNotEqual(torch_xla._XLAC._get_xla_sharding_spec(xla_x), '')
     xm.mark_step()
     self.assertTrue(torch.allclose(xla_y.cpu(), xla_x.cpu() * 5))
-    # check that xla_x is being sharded
+
+  def test_shard_device_data_ir_after_mark_step(self):
+    device = xm.xla_device()
+    xla_x = torch.randn(8, 128, device=device)
+    x = xla_x.cpu()
+    # xla_x now becomes a device data IR without XLAData
+    xm.mark_step()
+
+    xs.mark_sharding(xla_x, self._get_mesh((1, self.n_devices)), (1, 0))
+    self.assertNotEqual(torch_xla._XLAC._get_xla_sharding_spec(xla_x), '')
+    self.assertTrue(torch.allclose(xla_x.cpu(), x))
 
 
 if __name__ == '__main__':

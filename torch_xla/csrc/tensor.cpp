@@ -263,7 +263,7 @@ XLATensor::ShardingSpecPtr XLATensor::sharding_spec() const {
                                   xla_node->xla_shape()}))
           << "Sharding on tensor: "
           << xla::HloSharding::FromProto(sharding->sharding)->ToString()
-          << "sharding on IR: "
+          << ", sharding on IR: "
           << xla::HloSharding::FromProto(*xla_node->GetSharding(ir_value.index))
                  ->ToString();
     }
