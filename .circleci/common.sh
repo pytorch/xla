@@ -155,9 +155,9 @@ function run_torch_xla_tests() {
 
       # GPU tests
       if [ -x "$(command -v nvidia-smi)" ]; then
-        XLA_FLAGS="--xla_gpu_copy_insertion_use_region_analysis=false" PJRT_DEVICE=GPU GPU_NUM_DEVICES=2 python test/test_train_mp_imagenet_fsdp.py --fake_data --use_nested_fsdp --use_small_fake_sample --num_epochs=1
-        XLA_FLAGS="--xla_gpu_copy_insertion_use_region_analysis=false" PJRT_DEVICE=GPU GPU_NUM_DEVICES=2 python test/test_train_mp_imagenet_fsdp.py --fake_data --auto_wrap_policy type_based --use_small_fake_sample --num_epochs=1
-        XLA_FLAGS="--xla_gpu_copy_insertion_use_region_analysis=false" XLA_DISABLE_FUNCTIONALIZATION=1 PJRT_DEVICE=GPU GPU_NUM_DEVICES=2 python test/test_train_mp_imagenet_fsdp.py --fake_data --use_nested_fsdp --use_small_fake_sample --num_epochs=1
+        XLA_FLAGS='--xla_gpu_copy_insertion_use_region_analysis=false --xla_gpu_simplify_all_fp_conversions=false --xla_gpu_force_compilation_parallelism=8' PJRT_DEVICE=GPU GPU_NUM_DEVICES=2 python test/test_train_mp_imagenet_fsdp.py --fake_data --use_nested_fsdp --use_small_fake_sample --num_epochs=1
+        XLA_FLAGS='--xla_gpu_copy_insertion_use_region_analysis=false --xla_gpu_simplify_all_fp_conversions=false --xla_gpu_force_compilation_parallelism=8' PJRT_DEVICE=GPU GPU_NUM_DEVICES=2 python test/test_train_mp_imagenet_fsdp.py --fake_data --auto_wrap_policy type_based --use_small_fake_sample --num_epochs=1
+        XLA_FLAGS='--xla_gpu_copy_insertion_use_region_analysis=false --xla_gpu_simplify_all_fp_conversions=false --xla_gpu_force_compilation_parallelism=8' XLA_DISABLE_FUNCTIONALIZATION=1 PJRT_DEVICE=GPU GPU_NUM_DEVICES=2 python test/test_train_mp_imagenet_fsdp.py --fake_data --use_nested_fsdp --use_small_fake_sample --num_epochs=1
         # Syncfree SGD optimizer tests
         if [ -d ./torch_xla/amp/syncfree ]; then
           echo "Running Syncfree Optimizer Test"
