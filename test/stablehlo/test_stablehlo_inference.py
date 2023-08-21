@@ -30,11 +30,7 @@ class StableHLOInferenceTest(unittest.TestCase):
     output = resnet18(data)
     output_np = output.detach().numpy()
 
-    exported = export_torch_model(
-        resnet18,
-        (data,),
-        to_tf=True
-    )
+    exported = export_torch_model(resnet18, (data,), to_tf=True)
     tf_m = tf.Module()
     tf_m.f = tf.function(
         exported,

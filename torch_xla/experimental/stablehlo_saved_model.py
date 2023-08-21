@@ -65,14 +65,14 @@ class SHLOModel:
       from tensorflow.compiler.tf2xla.python import xla as tfxla
       output_sig = meta.output_signature[0]
       return tfxla.call_module(
-        tuple(call_args),
-        version=5,
-        Tout=[output_sig.dtype],  # dtype information
-        Sout=[output_sig.shape],  # Shape information
-        function_list=[],
-        platforms=('CPU',),
-        module=stablehlo,
-    )
+          tuple(call_args),
+          version=5,
+          Tout=[output_sig.dtype],  # dtype information
+          Sout=[output_sig.shape],  # Shape information
+          function_list=[],
+          platforms=('CPU',),
+          module=stablehlo,
+      )
 
   def __call__(self, *args):
     return self.evaluate(self._default_method, args)
@@ -108,7 +108,8 @@ def export_torch_model(model: torch.nn.Module,
   args = tuple(
       tree_map_only(torch.Tensor, lambda x: x.to(device=device), sample_inputs))
   orig_state_dict = copy.copy(model.state_dict())
-  orig_state_dict = tree_map_only(torch.Tensor, lambda x: x.numpy(), orig_state_dict)
+  orig_state_dict = tree_map_only(torch.Tensor, lambda x: x.numpy(),
+                                  orig_state_dict)
   model = model.to(device)
   bundle = _callable_to_stablehlo_bundle(model, args, model.state_dict())
   bundle.state_dict = orig_state_dict

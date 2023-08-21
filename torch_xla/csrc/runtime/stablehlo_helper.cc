@@ -112,7 +112,7 @@ std::string GetHloModuleStr(const xla::HloModuleProto* proto) {
 }
 
 static absl::Status stablehloToMhloHelper(mlir::ModuleOp* mlir_module,
-                           mlir::MLIRContext* context) {
+                                          mlir::MLIRContext* context) {
   mlir::PassManager pm(context);
   pm.addPass(mlir::mhlo::createStablehloLegalizeToHloPass());
   if (!mlir::succeeded(pm.run(*mlir_module))) {
@@ -124,12 +124,12 @@ static absl::Status stablehloToMhloHelper(mlir::ModuleOp* mlir_module,
 }
 
 static absl::Status MhloToHloHelper(const mlir::ModuleOp* mlir_module,
-                     xla::HloProto* hlo_proto) {
+                                    xla::HloProto* hlo_proto) {
   mlir::MlirToHloConversionOptions options;
   options.propagate_layouts = true;
   auto status = mlir::ConvertMlirHloToHlo(*mlir_module, hlo_proto,
-                                           /*use_tuple_args=*/false,
-                                           /*return_tuple=*/false, options);
+                                          /*use_tuple_args=*/false,
+                                          /*return_tuple=*/false, options);
   if (!status.ok()) {
     return status;
   }

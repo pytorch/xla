@@ -776,8 +776,7 @@ std::vector<torch::lazy::BackendDataPtr> XLAGraphExecutor::ExecuteStablehlo(
   // TODO(lsy323): Get shape info from MLIR Module.
   xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
   xla::Shape shape = MakeShapeWithDeviceLayout(
-      program_shape.result(),
-      static_cast<XlaDeviceType>(device.type()));
+      program_shape.result(), static_cast<XlaDeviceType>(device.type()));
   std::vector<xla::Shape> flatten_shapes;
   if (shape.IsTuple()) {
     // The output shape is a Tuple if graph has multiple outputs.
@@ -800,8 +799,8 @@ std::vector<torch::lazy::BackendDataPtr> XLAGraphExecutor::ExecuteStablehlo(
   std::vector<torch::lazy::BackendDataPtr> placeholders;
   for (const auto& s : flatten_shapes) {
     torch::lazy::BackendDataPtr handle =
-      WrapXlaData(runtime::GetComputationClient()->CreateDataPlaceholder(
-        device.toString(), std::move(s)));
+        WrapXlaData(runtime::GetComputationClient()->CreateDataPlaceholder(
+            device.toString(), std::move(s)));
     placeholders.push_back(handle);
   }
 
