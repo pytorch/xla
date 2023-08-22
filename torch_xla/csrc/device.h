@@ -47,9 +47,9 @@ static inline torch::lazy::BackendDevice GetDeviceOrCurrent(
 // and sets `lock_spmd_config` to block switching the SPMD mode.
 bool UseVirtualDevice();
 
-// This is set when any device is initialized, so to prevent using non-virtual
-// device and virtual device together.
-static bool lock_spmd_config = false;
+// Return true if SPMD config can be switches. That is, no device has been
+// initialized, yet.
+bool GetLockSpmdConfig();
 
 }  // namespace torch_xla
 

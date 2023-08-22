@@ -27,6 +27,10 @@ std::string XlaDeviceTypeToString(XlaDeviceType hw_type) {
   XLA_ERROR() << "Invalid device type";
 }
 
+// This is set when any device is initialized, so to prevent using non-virtual
+// device and virtual device together.
+static bool lock_spmd_config = false;
+
 }  // namespace
 
 std::string DeviceType::toString() const {
@@ -113,9 +117,11 @@ bool ShouldUseVirtualDevice() {
 }
 
 bool UseVirtualDevice() {
-  lock_spmd_config = true;
+  use_virtual_device = true;
   static bool use_virtual_device = ShouldUseVirtualDevice();
   return use_virtual_device;
 }
+
+bool GetLockSpmdConfig() { return lock_spmd_config; }
 
 }  // namespace torch_xla

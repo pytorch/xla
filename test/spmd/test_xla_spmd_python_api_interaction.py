@@ -13,7 +13,7 @@ class BasicXMAPITest(test_xla_sharding_base.XlaShardingTest):
 
   @classmethod
   def setUpClass(cls):
-    os.environ["XLA_USE_SPMD"] = "1"
+    xr.set_use_spmd()
     super().setUpClass()
 
   def test_get_xla_supported_devices(self):
