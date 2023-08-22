@@ -852,7 +852,7 @@ void InitXlaModuleBindings(py::module m) {
         [](const at::Tensor& tensor) { return GetTensorViewAliasId(tensor); });
   m.def("_xla_get_tensor_id",
         [](const at::Tensor& tensor) { return GetTensorId(tensor); });
-  m.def("_xla_get_lock_spmd_config", []() { return GetLockSpmdConfig(); });
+  m.def("_xla_get_spmd_config_is_locked", []() { return GetLockSpmdConfig(); });
   m.def("_xla_get_devices", []() {
     if (UseVirtualDevice()) {
       // Under SPMD context, there is only one virtual devices from user

@@ -29,7 +29,7 @@ std::string XlaDeviceTypeToString(XlaDeviceType hw_type) {
 
 // This is set when any device is initialized, so to prevent using non-virtual
 // device and virtual device together.
-static bool lock_spmd_config = false;
+static bool spmd_config_is_locked = false;
 
 }  // namespace
 
@@ -117,11 +117,11 @@ bool ShouldUseVirtualDevice() {
 }
 
 bool UseVirtualDevice() {
-  lock_spmd_config = true;
+  spmd_config_is_locked = true;
   static bool use_virtual_device = ShouldUseVirtualDevice();
   return use_virtual_device;
 }
 
-bool GetLockSpmdConfig() { return lock_spmd_config; }
+bool GetLockSpmdConfig() { return spmd_config_is_locked; }
 
 }  // namespace torch_xla

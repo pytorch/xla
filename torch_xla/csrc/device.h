@@ -44,7 +44,7 @@ static inline torch::lazy::BackendDevice GetDeviceOrCurrent(
 
 // Test whether the XLA_USE_SPMD environment variable is set to enable the
 // virtual device optimization. This API is called before every device init,
-// and sets `lock_spmd_config` to block switching the SPMD mode.
+// and sets `spmd_config_is_locked` to block switching the SPMD mode.
 bool UseVirtualDevice();
 
 // Return true if SPMD config can be switches. That is, no device has been
