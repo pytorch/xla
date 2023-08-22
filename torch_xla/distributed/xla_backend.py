@@ -2,6 +2,7 @@ import torch
 import torch.distributed as dist
 import torch_xla.core.xla_model as xm
 import logging
+import os
 from torch._C._distributed_c10d import ProcessGroup
 
 

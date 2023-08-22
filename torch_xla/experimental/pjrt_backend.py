@@ -28,6 +28,7 @@ def _pjrt_rendezvous_handler(url: str,
     ) == 'TPU' else 'localhost'
 
   master_port = xu.getenv_as('MASTER_PORT', int, 12355)
+  world_size = xr.world_size()
   with _store_lock:
     global _store
     if not _store:
@@ -43,7 +44,7 @@ def _pjrt_rendezvous_handler(url: str,
             xr.process_count(),
             is_master=xr.process_index() == 0)
 
-  yield (_store, xr.global_ordinal(), xr.world_size())
+  yield (_store, xr.global_ordinal(), world_size)
 
 
 if tpu.num_available_chips() > 0 and tpu.version() <= 3:
