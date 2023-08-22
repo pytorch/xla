@@ -217,13 +217,15 @@ def use_spmd():
                   "Use torch_xla.runtime.use_spmd() "
                   "without setting XLA_USE_SPMD env-var.")
 
-  if torch_xla._XLAC._xla_get_lock_spmd_config() and not xu.check_env_flag("XLA_USE_SPMD"):
+  if torch_xla._XLAC._xla_get_lock_spmd_config(
+  ) and not xu.check_env_flag("XLA_USE_SPMD"):
     raise RuntimeError(
         "Please set SPMD mode before initializting non-virtual XLA device. "
         "Call use_spmd() in the beginning of the program.")
 
   # TODO(yeounoh) replace this when we fully deprecate the flag.
   os.environ["XLA_USE_SPMD"] = "1"
+
 
 @requires_pjrt
 def is_spmd():
