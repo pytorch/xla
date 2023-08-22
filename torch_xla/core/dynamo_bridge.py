@@ -321,6 +321,7 @@ def extract_internal(xla_model: torch.fx.GraphModule):
    dumb_return_handler, xla_args_need_update) = extract_graph_helper(xla_model)
 
   def optimized_mod(*args):
+    nonlocal xla_model
     nonlocal xla_args_sharding_spec
     nonlocal args_and_out
     nonlocal graph_hash
@@ -331,16 +332,20 @@ def extract_internal(xla_model: torch.fx.GraphModule):
     nonlocal xla_args_need_update
     print(xla_args_sharding_spec)
     current_arg_sharding_spec = torch_xla._XLAC._get_xla_sharding_specs(args)
-    if current_arg_sharding_spec != xla_args_sharding_spec:
-      (xla_args_sharding_spec, args_and_out, graph_hash,
-       arg_index_to_need_update_index, none_remover, graph_input_matcher,
-       dumb_return_handler,
-       xla_args_need_update) = extract_graph_helper(xla_model)
 
     # mark_step needs to be blocking since we want to access args's XLADatas
     # and they can't be placeholder.
     if any(torch_xla._XLAC._check_tensor_need_materialization(args)):
       xm.mark_step(wait=True)
+
+    if current_arg_sharding_spec != xla_args_sharding_spec:
+      # update the xla_args with the input with new sharding and retrace
+      xla_model.xla_args = args
+      (xla_args_sharding_spec, args_and_out, graph_hash,
+       arg_index_to_need_update_index, none_remover, graph_input_matcher,
+       dumb_return_handler,
+       xla_args_need_update) = extract_graph_helper(xla_model)
+
     enter_ts = time.time()
     if len(args_and_out) == 0:
       return ()
