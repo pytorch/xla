@@ -17,9 +17,6 @@ std::string hloToStablehlo(const xla::HloModuleProto* proto,
 void ConvertHloToStableHlo(const xla::HloModuleProto* proto,
                            mlir::ModuleOp* mlir_module);
 
-mlir::ModuleOp DeserializeStableHLO(const std::string& bytecode,
-                                    mlir::MLIRContext* context);
-
 void ConvertStableHloToHlo(mlir::ModuleOp* mlir_module,
                            mlir::MLIRContext* context,
                            xla::HloProto* hlo_proto);

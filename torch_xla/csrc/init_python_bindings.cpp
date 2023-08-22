@@ -1184,7 +1184,6 @@ void InitXlaModuleBindings(py::module m) {
           } else {
             xtensors = GetXlaTensors(tensors, /*want_all=*/false);
           }
-
           return py::bytes(
               XLAGraphExecutor::Get()->DumpHloComputation(xtensors, mode));
         });
@@ -1198,7 +1197,6 @@ void InitXlaModuleBindings(py::module m) {
           std::vector<at::Tensor> retlist;
           {
             // Convert result back to at::tensor
-            int i = 0;
             for (auto& data : results) {
               XLATensorPtr xla_tensor = torch_xla::XLATensor::Create(data);
               retlist.push_back(bridge::AtenFromXlaTensor(xla_tensor));
