@@ -477,7 +477,9 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     xt.add_(1)  # inplace update should preserve the sharding
     self.assertEqual(sharding_spec, torch_xla._XLAC._get_xla_sharding_spec(xt))
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([xt])
-    self.assertIn('%custom-call.7 = f32[2,2]{1,0} custom-call(f32[2,2]{1,0} %add.6), custom_call_target="Sharding", sharding=', hlo)
+    self.assertIn(
+        '%custom-call.7 = f32[2,2]{1,0} custom-call(f32[2,2]{1,0} %add.6), custom_call_target="Sharding", sharding=',
+        hlo)
 
   def test_shard_hashing(self):
     xt1 = torch.ones(2, 2).to(xm.xla_device())
@@ -671,13 +673,18 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     xt1 = t1.to(xm.xla_device())
     xt2 = t2.to(xm.xla_device())
     actual = xt1 + xt2
-    actual = xs.mark_sharding(actual, self._get_mesh((1, self.n_devices)), (0, 1))
+    actual = xs.mark_sharding(actual, self._get_mesh((1, self.n_devices)),
+                              (0, 1))
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([actual.global_tensor])
-    self.assertIn('%custom-call.10 = f32[1,128]{1,0} custom-call(f32[1,128]{1,0} %add.9), custom_call_target="Sharding", sharding=', hlo)
+    self.assertIn(
+        '%custom-call.10 = f32[1,128]{1,0} custom-call(f32[1,128]{1,0} %add.9), custom_call_target="Sharding", sharding=',
+        hlo)
 
     actual += 0
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([actual.global_tensor])
-    self.assertIn('%add.15 = f32[1,128]{1,0} add(f32[1,128]{1,0} %custom-call.13, f32[1,128]{1,0} %broadcast.14)', hlo)
+    self.assertIn(
+        '%add.15 = f32[1,128]{1,0} add(f32[1,128]{1,0} %custom-call.13, f32[1,128]{1,0} %broadcast.14)',
+        hlo)
 
     self.assertTrue(torch.allclose(expected, actual.cpu()))
 

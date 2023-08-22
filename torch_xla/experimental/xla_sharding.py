@@ -449,11 +449,11 @@ def mark_sharding(
 
   if isinstance(t, XLAShardedTensor):
     torch_xla._XLAC._xla_mark_sharding(t.global_tensor, tile_assignment,
-                                        group_assignment, replication_groups,
-                                        int(sharding_type))
+                                       group_assignment, replication_groups,
+                                       int(sharding_type))
     return t
   torch_xla._XLAC._xla_mark_sharding(t, tile_assignment, group_assignment,
-                                      replication_groups, int(sharding_type))
+                                     replication_groups, int(sharding_type))
   return XLAShardedTensor(t)
 
 
