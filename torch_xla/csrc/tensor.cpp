@@ -260,7 +260,12 @@ XLATensor::ShardingSpecPtr XLATensor::sharding_spec() const {
     if (xla_node->GetSharding(ir_value.index)) {
       XLA_CHECK(ShardingUtil::EqualShardingSpecs(
           *sharding, ShardingSpec{*xla_node->GetSharding(ir_value.index),
-                                  xla_node->xla_shape()}));
+                                  xla_node->xla_shape()}))
+          << "Sharding on tensor: "
+          << xla::HloSharding::FromProto(sharding->sharding)->ToString()
+          << ", sharding on IR: "
+          << xla::HloSharding::FromProto(*xla_node->GetSharding(ir_value.index))
+                 ->ToString();
     }
   }
   return sharding;
