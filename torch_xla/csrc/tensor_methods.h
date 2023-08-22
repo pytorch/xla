@@ -54,7 +54,7 @@ std::pair<XLATensorPtr, torch::lazy::Value> collective_permute(
     const XLATensorPtr& input, const torch::lazy::Value& token,
     std::vector<std::pair<int64_t, int64_t>> source_target_pairs);
 
-void custom_sharding(const XLATensorPtr& input,
+void custom_sharding_(const XLATensorPtr& input,
                      const std::shared_ptr<XLATensor::ShardingSpec>& spec);
 
 XLATensorPtr get_dimensions_size(const XLATensorPtr& input,

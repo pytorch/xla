@@ -2400,7 +2400,7 @@ void XLANativeFunctions::_propagate_xla_data(const at::Tensor& input,
 
   // 2) Aid SPMD.
   if (input_tensor->sharding_spec()) {
-    tensor_methods::custom_sharding(output_tensor,
+    tensor_methods::custom_sharding_(output_tensor,
                                     input_tensor->sharding_spec());
   }
 }
