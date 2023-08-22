@@ -133,6 +133,12 @@ PjRtComputationClient::PjRtComputationClient() {
         "xpu", sys_util::GetEnvString(env::kEnvXpuLibraryPath, "libxpu.so")));
     client_ = std::move(xla::GetCApiClient("XPU").value());
 
+  } else if (device_type == "NEURON") {
+    TF_VLOG(1) << "Initializing PjRt NEURON client...";
+    XLA_CHECK_OK(pjrt::LoadPjrtPlugin(
+        "NEURON", sys_util::GetEnvString(env::kEnvNeuronLibraryPath,
+                                         "libneuronpjrt.so")));
+    client_ = std::move(xla::GetCApiClient("NEURON").value());
   } else {
     XLA_ERROR() << absl::StrFormat("Unknown %s '%s'", env::kEnvPjRtDevice,
                                    device_type);
