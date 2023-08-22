@@ -14,6 +14,7 @@ from torch.fx.passes.utils.fuser_utils import topo_sort
 import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as metrics
+import torch_xla.runtime as xr
 
 debug = os.environ.get("TORCH_XLA_DEBUG") == "1"
 
@@ -238,7 +239,10 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule):
       tensor_id: i for i, tensor_id in enumerate(args_tensor_ids)
   }
 
-  xla_args_sharding_spec = torch_xla._XLAC._get_xla_sharding_specs(xla_args)
+  if xr.is_spmd():
+    xla_args_sharding_spec = torch_xla._XLAC._get_xla_sharding_specs(xla_args)
+  else:
+    xla_args_sharding_spec = ()
 
   xla_out = xla_model(*xla_args)
   if not isinstance(xla_out, (tuple, list)):
@@ -337,7 +341,10 @@ def extract_internal(xla_model: torch.fx.GraphModule):
     if any(torch_xla._XLAC._check_tensor_need_materialization(args)):
       xm.mark_step(wait=True)
 
-    if current_arg_sharding_spec != xla_args_sharding_spec:
+    # input sharding has changed from the previous program. Dynamo current can
+    # not detect this hence mistakenly believe the program is the same. We need
+    # to retrace it here.
+    if xr.is_spmd() and current_arg_sharding_spec != xla_args_sharding_spec:
       # update the xla_args with the input with new sharding and retrace
       xla_model.xla_args = args
       (xla_args_sharding_spec, args_and_out, graph_hash,
