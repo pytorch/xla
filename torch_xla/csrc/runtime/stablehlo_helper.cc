@@ -47,7 +47,7 @@ static std::string getMlirModuleBytecode(const mlir::ModuleOp& mlir_module) {
   return txt_mlir_module;
 }
 
-static absl::Status hloToMhloHelper(const xla::HloModuleProto* proto,
+static absl::Status ConvertHloToMhlo(const xla::HloModuleProto* proto,
                                     mlir::ModuleOp* mlir_module) {
   auto status = xla::ConvertHloToMlirHlo(*mlir_module, proto,
                                          /*import_all_computations=*/false);
@@ -83,7 +83,7 @@ void ConvertHloToStableHlo(const xla::HloModuleProto* proto,
                            mlir::ModuleOp* mlir_module) {
   static const std::string err_msg =
       "Please open a github issue to PyTorch/XLA.\nOriginal HLO dump:\n";
-  auto status = hloToMhloHelper(proto, mlir_module);
+  auto status = ConvertHloToMhlo(proto, mlir_module);
   XLA_CHECK(status.ok()) << "HLO -> MHLO conversion failed.\n"
                          << status.message() << err_msg
                          << getHloModuleStr(proto);
@@ -111,7 +111,7 @@ std::string GetHloModuleStr(const xla::HloModuleProto* proto) {
   return hlo_module.value()->ToString();
 }
 
-static absl::Status stablehloToMhloHelper(mlir::ModuleOp* mlir_module,
+static absl::Status ConvertStablehloToMhlo(mlir::ModuleOp* mlir_module,
                                           mlir::MLIRContext* context) {
   mlir::PassManager pm(context);
   pm.addPass(mlir::mhlo::createStablehloLegalizeToHloPass());
@@ -141,7 +141,7 @@ void ConvertStableHloToHlo(mlir::ModuleOp* mlir_module,
                            xla::HloProto* hlo_proto) {
   static const std::string err_msg =
       "Please open a github issue to PyTorch/XLA.\nOriginal StableHLO dump:\n";
-  auto status = stablehloToMhloHelper(mlir_module, context);
+  auto status = ConvertStablehloToMhlo(mlir_module, context);
   XLA_CHECK(status.ok()) << "StableHLO -> MHLO conversion failed.\n"
                          << status.message() << err_msg
                          << getMlirModuleStr(*mlir_module);

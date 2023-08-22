@@ -1197,7 +1197,7 @@ void InitXlaModuleBindings(py::module m) {
           std::vector<at::Tensor> retlist;
           {
             // Convert result back to at::tensor
-            for (auto& data : results) {
+            for (const auto& data : results) {
               XLATensorPtr xla_tensor = torch_xla::XLATensor::Create(data);
               retlist.push_back(bridge::AtenFromXlaTensor(xla_tensor));
             }
@@ -1780,11 +1780,9 @@ void InitXlaModuleBindings(py::module m) {
           {
             TORCH_LAZY_TIMED("RunCachedGraphOutputData");
             // Convert result back to at::tensor
-            int i = 0;
-            for (auto& data : results) {
+            for (const auto& data : results) {
               XLATensorPtr xla_tensor = torch_xla::XLATensor::Create(data);
               retlist.push_back(bridge::AtenFromXlaTensor(xla_tensor));
-              ++i;
             }
           }
 
