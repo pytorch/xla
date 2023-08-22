@@ -1600,6 +1600,12 @@ void InitXlaModuleBindings(py::module m) {
     MapXlaEnvVarsToLazy();
     InitXlaBackend();
   });
+  m.def("_set_ir_debug", [] (bool ir_debug) {
+    FLAGS_torch_lazy_ir_debug = ir_debug;
+  });
+  m.def("_get_ir_debug", [] () {
+    return FLAGS_torch_lazy_ir_debug;
+  });  
   m.def("_replace_xla_tensor",
         [](at::Tensor& self, const at::Tensor& source) -> at::Tensor& {
           return XLANativeFunctions::set_(self, source);
