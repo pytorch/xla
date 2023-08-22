@@ -85,6 +85,33 @@ class DynamoSpmdInferenceTest(test_xla_sharding_base.XlaShardingTest):
     dynamo_res = dynamo_linear(xla_y)
     self.assertEqual(met.counter_value('UncachedOutputSharding'), 1)
 
+  def test_dynamo_sharded_input(self):
+    device = xm.xla_device()
+    linear = SimpleLinear().to(device)
+    linear.eval()
+    xla_x = torch.randn(8, 128, device=device)
+    xs.mark_sharding(xla_x, self._get_mesh((1, self.n_devices)), (1, 0))
+    xla_res = linear(xla_x)
+    xm.mark_step()
+
+    dynamo_linear = torch.compile(linear, backend="openxla")
+    dynamo_res = dynamo_linear(xla_x)
+    torch.allclose(xla_res.cpu(), dynamo_res.cpu())
+
+  def test_dynamo_input_sharding_changed(self):
+    device = xm.xla_device()
+    linear = SimpleLinear().to(device)
+    linear.eval()
+    xla_x = torch.randn(8, 128, device=device)
+    xm.mark_step()
+
+    dynamo_linear = torch.compile(linear, backend="openxla")
+    dynamo_res = dynamo_linear(xla_x)
+
+    xs.mark_sharding(xla_x, self._get_mesh((1, self.n_devices)), (1, 0))
+    dynamo_res_sharded = dynamo_linear(xla_x)
+    torch.allclose(dynamo_res.cpu(), dynamo_res_sharded.cpu())
+
 
 if __name__ == '__main__':
   test = unittest.main()

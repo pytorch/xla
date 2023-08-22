@@ -202,7 +202,7 @@ def is_xla_tensor(tensor: torch.Tensor) -> bool:
   return tensor.device.type == "xla"
 
 
-def extract_internal(xla_model: torch.fx.GraphModule):
+def extract_graph_helper(xla_model: torch.fx.GraphModule):
   xla_args = xla_model.xla_args
   assert all(
       map(
@@ -237,6 +237,8 @@ def extract_internal(xla_model: torch.fx.GraphModule):
   tensor_id_to_arg_idx = {
       tensor_id: i for i, tensor_id in enumerate(args_tensor_ids)
   }
+
+  xla_args_sharding_spec = torch_xla._XLAC._get_xla_sharding_specs(xla_args)
 
   xla_out = xla_model(*xla_args)
   if not isinstance(xla_out, (tuple, list)):
@@ -308,8 +310,32 @@ def extract_internal(xla_model: torch.fx.GraphModule):
   # should be removed to avoid extra computation executed and in place updates op
   # mistakenlly update the input tensors.
   torch_xla._XLAC._clear_pending_irs(str(xm.xla_device()))
+  return (xla_args_sharding_spec, args_and_out, graph_hash,
+          arg_index_to_need_update_index, none_remover, graph_input_matcher,
+          dumb_return_handler, xla_args_need_update)
+
+
+def extract_internal(xla_model: torch.fx.GraphModule):
+  (xla_args_sharding_spec, args_and_out, graph_hash,
+   arg_index_to_need_update_index, none_remover, graph_input_matcher,
+   dumb_return_handler, xla_args_need_update) = extract_graph_helper(xla_model)
 
   def optimized_mod(*args):
+    nonlocal xla_args_sharding_spec
+    nonlocal args_and_out
+    nonlocal graph_hash
+    nonlocal arg_index_to_need_update_index
+    nonlocal none_remover
+    nonlocal graph_input_matcher
+    nonlocal dumb_return_handler
+    nonlocal xla_args_need_update
+    print(xla_args_sharding_spec)
+    current_arg_sharding_spec = torch_xla._XLAC._get_xla_sharding_specs(args)
+    if current_arg_sharding_spec != xla_args_sharding_spec:
+      (xla_args_sharding_spec, args_and_out, graph_hash,
+      arg_index_to_need_update_index, none_remover, graph_input_matcher,
+      dumb_return_handler, xla_args_need_update) = extract_graph_helper(xla_model)
+
     # mark_step needs to be blocking since we want to access args's XLADatas
     # and they can't be placeholder.
     if any(torch_xla._XLAC._check_tensor_need_materialization(args)):
