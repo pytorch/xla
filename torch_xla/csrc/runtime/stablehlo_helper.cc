@@ -48,7 +48,7 @@ static std::string getMlirModuleBytecode(const mlir::ModuleOp& mlir_module) {
 }
 
 static absl::Status ConvertHloToMhlo(const xla::HloModuleProto* proto,
-                                    mlir::ModuleOp* mlir_module) {
+                                     mlir::ModuleOp* mlir_module) {
   auto status = xla::ConvertHloToMlirHlo(*mlir_module, proto,
                                          /*import_all_computations=*/false);
   if (!status.ok()) {
@@ -112,7 +112,7 @@ std::string GetHloModuleStr(const xla::HloModuleProto* proto) {
 }
 
 static absl::Status ConvertStablehloToMhlo(mlir::ModuleOp* mlir_module,
-                                          mlir::MLIRContext* context) {
+                                           mlir::MLIRContext* context) {
   mlir::PassManager pm(context);
   pm.addPass(mlir::mhlo::createStablehloLegalizeToHloPass());
   if (!mlir::succeeded(pm.run(*mlir_module))) {

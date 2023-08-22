@@ -777,32 +777,17 @@ std::vector<torch::lazy::BackendDataPtr> XLAGraphExecutor::ExecuteStablehlo(
   xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
   xla::Shape shape = MakeShapeWithDeviceLayout(
       program_shape.result(), static_cast<XlaDeviceType>(device.type()));
-  std::vector<xla::Shape> flatten_shapes;
-  if (shape.IsTuple()) {
-    // The output shape is a Tuple if graph has multiple outputs.
-    flatten_shapes = std::move(shape.tuple_shapes());
-  } else {
-    flatten_shapes.push_back(std::move(shape));
-  }
 
   std::vector<runtime::ComputationClient::CompileInstance> instances;
-  instances.push_back({std::move(computation), device.toString(),
-                       runtime::GetComputationClient()->GetCompilationDevices(
-                           device.toString(),
-                           runtime::GetComputationClient()->GetLocalDevices()),
-                       &shape});
+  instances.emplace_back(
+      std::move(computation), device.toString(),
+      runtime::GetComputationClient()->GetCompilationDevices(
+          device.toString(),
+          runtime::GetComputationClient()->GetLocalDevices()),
+      &shape);
   std::vector<std::shared_ptr<runtime::ComputationClient::Computation>>
       computations =
           runtime::GetComputationClient()->Compile(std::move(instances));
-
-  // Placeholder for computation outputs.
-  std::vector<torch::lazy::BackendDataPtr> placeholders;
-  for (const auto& s : flatten_shapes) {
-    torch::lazy::BackendDataPtr handle =
-        WrapXlaData(runtime::GetComputationClient()->CreateDataPlaceholder(
-            device.toString(), std::move(s)));
-    placeholders.push_back(handle);
-  }
 
   std::vector<torch::lazy::BackendDataPtr> arguments;
   {
@@ -824,9 +809,9 @@ std::vector<torch::lazy::BackendDataPtr> XLAGraphExecutor::ExecuteStablehlo(
       runtime::GetComputationClient()->ExecuteComputation(
           *computations[0], UnwrapXlaData(arguments), device.toString());
 
+  std::vector<torch::lazy::BackendDataPtr> placeholders;
   for (size_t i = 0; i < results.size(); ++i) {
-    XLA_CHECK(placeholders[i] != nullptr);
-    placeholders[i]->Assign(*WrapXlaData(results[i]));
+    placeholders.push_back(WrapXlaData(results[i]));
   }
   return placeholders;
 }
