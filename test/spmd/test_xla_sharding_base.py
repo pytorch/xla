@@ -9,9 +9,9 @@ import torch_xla.core.xla_env_vars as xenv
 import torch_xla.utils.utils as xu
 
 
-@unittest.skipIf(not xr.using_pjrt() or
-                 xu.getenv_as(xenv.PJRT_DEVICE, str) == "GPU",
-                 f"Requires PJRT_DEVICE set to `TPU` or `CPU`.")
+@unittest.skipIf(
+    not xr.using_pjrt() or xu.getenv_as(xenv.PJRT_DEVICE, str) == "GPU",
+    f"Requires PJRT_DEVICE set to `TPU` or `CPU`.")
 class XlaShardingTest(unittest.TestCase):
 
   class SimpleLinear(nn.Module):
