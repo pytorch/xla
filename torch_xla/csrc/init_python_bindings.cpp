@@ -1473,6 +1473,9 @@ void InitXlaModuleBindings(py::module m) {
   });
   m.def("_get_xla_sharding_specs",
         [](const std::vector<at::Tensor>& tensors) -> std::vector<std::string> {
+          tsl::profiler::TraceMe activity("_get_xla_sharding_specs",
+                                          tsl::profiler::TraceMeLevel::kInfo);
+          TORCH_LAZY_TIMED("_get_xla_sharding_specs");
           std::vector<std::string> sharding_specs;
           sharding_specs.reserve(sharding_specs.size());
           for (const at::Tensor& tensor : tensors) {

@@ -330,7 +330,6 @@ def extract_internal(xla_model: torch.fx.GraphModule):
     nonlocal graph_input_matcher
     nonlocal dumb_return_handler
     nonlocal xla_args_need_update
-    print(xla_args_sharding_spec)
     current_arg_sharding_spec = torch_xla._XLAC._get_xla_sharding_specs(args)
 
     # mark_step needs to be blocking since we want to access args's XLADatas
