@@ -54,7 +54,6 @@ def _materialize_module(
   is_torchdistX_deferred_init = (
       not is_meta_module and _TORCHDISTX_AVAIL and
       any(fake.is_fake(param) for param in managed_params))
-  materialization_device = xm.xla_device()
   if (is_meta_module or
       is_torchdistX_deferred_init) and param_init_fn is not None:
     if not callable(param_init_fn):
@@ -65,7 +64,7 @@ def _materialize_module(
     return True
   elif is_meta_module:
     # Run default meta device initialization
-    module.to_empty(device=materialization_device)
+    module.to_empty(device="cpu")
     try:
       with torch.no_grad():
         module.reset_parameters()  # type: ignore[operator]
@@ -78,7 +77,6 @@ def _materialize_module(
   elif is_torchdistX_deferred_init:
     # Run default torchdistX initialization
     deferred_init.materialize_module(module, check_fn=deferred_init_check_fn)
-    module.to(materialization_device)
     return True
   return False
 
