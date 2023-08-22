@@ -13,7 +13,7 @@ class BasicXMAPITest(test_xla_sharding_base.XlaShardingTest):
 
   @classmethod
   def setUpClass(cls):
-    xr.set_use_spmd()
+    xr.use_spmd()
     super().setUpClass()
 
   def test_get_xla_supported_devices(self):
@@ -59,7 +59,7 @@ class BasicRuntimeAPITest(test_xla_sharding_base.XlaShardingTest):
 
   @classmethod
   def setUpClass(cls):
-    xr.set_use_spmd()
+    xr.use_spmd()
     super().setUpClass()
 
   def test_local_process_count(self):

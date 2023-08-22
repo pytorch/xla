@@ -117,7 +117,7 @@ bool ShouldUseVirtualDevice() {
 }
 
 bool UseVirtualDevice() {
-  use_virtual_device = true;
+  lock_spmd_config = true;
   static bool use_virtual_device = ShouldUseVirtualDevice();
   return use_virtual_device;
 }

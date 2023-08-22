@@ -18,7 +18,7 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
 
   @classmethod
   def setUpClass(cls):
-    xr.set_use_spmd()
+    xr.use_spmd()
     super().setUpClass()
 
   def test_dump_with_output_sharding(self):
