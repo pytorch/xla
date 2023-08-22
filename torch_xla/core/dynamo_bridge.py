@@ -333,8 +333,9 @@ def extract_internal(xla_model: torch.fx.GraphModule):
     current_arg_sharding_spec = torch_xla._XLAC._get_xla_sharding_specs(args)
     if current_arg_sharding_spec != xla_args_sharding_spec:
       (xla_args_sharding_spec, args_and_out, graph_hash,
-      arg_index_to_need_update_index, none_remover, graph_input_matcher,
-      dumb_return_handler, xla_args_need_update) = extract_graph_helper(xla_model)
+       arg_index_to_need_update_index, none_remover, graph_input_matcher,
+       dumb_return_handler,
+       xla_args_need_update) = extract_graph_helper(xla_model)
 
     # mark_step needs to be blocking since we want to access args's XLADatas
     # and they can't be placeholder.
