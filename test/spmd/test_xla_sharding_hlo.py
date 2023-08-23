@@ -13,6 +13,7 @@ import torch_xla.experimental.xla_sharding as xs
 
 import test_xla_sharding_base
 
+
 class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
 
   @classmethod
@@ -30,6 +31,7 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([t3])
     if self.n_devices > 1:
       self.assertIn('all-reduce', hlo)
+
 
 if __name__ == '__main__':
   test = unittest.main()
