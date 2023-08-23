@@ -757,7 +757,8 @@ class PyLoweringContext {
   // given Module/function.
   void Build(std::vector<at::Tensor> tensors) {
     // Get the backing XLA tensors from the output torch tensor handles
-    std::vector<XLATensorPtr> xtensors = GetXlaTensors(tensors, /*want_all=*/true);
+    std::vector<XLATensorPtr> xtensors = 
+        GetXlaTensors(tensors, /*want_all=*/true);
 
     // Get the lazy IR value from the output XLA tensors
     std::vector<torch::lazy::Value> ir_values;
@@ -787,7 +788,8 @@ class PyLoweringContext {
 
     // Fetch this parameter data
     std::vector<xla::Literal> literals =
-        xla::ComputationClient::Get()->TransferFromServer(UnwrapXlaData(device_data));
+        xla::ComputationClient::Get()->TransferFromServer(
+            UnwrapXlaData(device_data));
 
     // Create a mapping from paramater id to the tensor data
     std::unordered_map<int64_t, at::Tensor> results;
@@ -816,8 +818,7 @@ class PyLoweringContext {
     }
 
     // Convert lazy node data into opaque handle id
-    torch::lazy::BackendDataPtr data =
-        DeviceData::Cast(node)->data();
+    torch::lazy::BackendDataPtr data = DeviceData::Cast(node)->data();
     torch::lazy::BackendData::Handle handle = data->GetHandle();
 
     // Linearly search parameters and compare opaque handles
@@ -1854,7 +1855,7 @@ void InitXlaModuleBindings(py::module m) {
 
   BuildProfilerSubmodule(&m);
   BuildLoweringContextSubmodule(&m);
-  
+
   m.def("_get_tensors_handle",
         [](const std::vector<at::Tensor>& tensors) -> std::vector<int64_t> {
           std::vector<int64_t> handles;
