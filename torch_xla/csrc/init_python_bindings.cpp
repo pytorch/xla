@@ -757,7 +757,7 @@ class PyLoweringContext {
   // given Module/function.
   void Build(std::vector<at::Tensor> tensors) {
     // Get the backing XLA tensors from the output torch tensor handles
-    std::vector<XLATensorPtr> xtensors = 
+    std::vector<XLATensorPtr> xtensors =
         GetXlaTensors(tensors, /*want_all=*/true);
 
     // Get the lazy IR value from the output XLA tensors
