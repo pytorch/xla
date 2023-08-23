@@ -1,6 +1,6 @@
 import torch_xla
 import torch_xla.core.xla_model as xm
-from torch_xla.experimental.stablehlo_saved_model import save_as_stablehlo
+from torch_xla.stablehlo import save_as_stablehlo, StableHLOExportOptions
 import torch
 import torch._export
 import torchvision
@@ -26,22 +26,23 @@ class ExportTest(unittest.TestCase):
 
     gen = llama_model.GenLoop(model).eval()
     arg = (torch.randint(0, 1000, (1, 10)),)
-    print(gen(*arg).shape)
     arg[0].requires_grad = False
+    options = StableHLOExportOptions()
+    options.override_tracing_arguments = arg
     with torch.no_grad():
       exported2 = torch._export.export(gen, arg)
-    print(exported2.graph_module.code)
     with tempfile.TemporaryDirectory() as tempdir:
-      save_as_stablehlo(exported2, arg, tempdir)
+      save_as_stablehlo(exported2, tempdir, options)
 
   def test_llama_export(self):
     options = llama_model.ModelArgs()
     model = llama_model2.Transformer(options)
     arg = (torch.randint(0, 1000, (8, 100)), torch.arange(0, 100), None)
-    print('val', model(*arg))
+    options = StableHLOExportOptions()
+    options.override_tracing_arguments = arg
     exported = torch._export.export(model, arg)
     with tempfile.TemporaryDirectory() as tempdir:
-      save_as_stablehlo(exported, arg, tempdir)
+      save_as_stablehlo(exported, tempdir, options)
 
 
 if __name__ == '__main__':

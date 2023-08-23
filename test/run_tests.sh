@@ -158,10 +158,10 @@ function run_xla_op_tests {
   run_use_bf16 "$CDIR/test_data_type.py"
   run_xla_ir_debug "$CDIR/test_env_var_mapper.py"
   run_xla_hlo_debug "$CDIR/test_env_var_mapper.py"
-  run_xla_hlo_debug "$CDIR/stablehlo/test_stablehlo_dump.py"
+  run_xla_hlo_debug "$CDIR/stablehlo/test_stablehlo_save_load.py"
   # TODO(qihqi): this test require tensorflow to run. need to setup separate
   #     CI with tf.
-  # run_xla_hlo_debug "$CDIR/stablehlo/test_stablehlo_inference.py"
+  run_xla_hlo_debug "$CDIR/stablehlo/test_stablehlo_inference.py"
   run_stablehlo_compile "$CDIR/stablehlo/test_stablehlo_compile.py"
   run_test "$CDIR/pjrt/test_runtime.py"
   run_test "$CDIR/pjrt/test_runtime_gpu.py"
