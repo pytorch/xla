@@ -41,6 +41,12 @@ versioned_builds = [
     accelerator     = "tpu"
   },
   {
+    git_tag         = "v2.1.0"
+    package_version = "2.1"
+    accelerator     = "tpu"
+    python_version = "3.10"
+  },
+  {
     git_tag         = "v2.0.0"
     package_version = "2.0"
     accelerator     = "tpu"
