@@ -266,7 +266,7 @@ std::string DumpUtil::ToHlo(c10::ArrayRef<torch::lazy::Value> values,
   auto is_sharded = ShardingUtil::SetHloSharding(&lowering_ctx);
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
 
-  static bool dump_post_optimizations =
+  bool dump_post_optimizations =
       runtime::sys_util::GetEnvBool("XLA_DUMP_POST_OPTIMIZATIONS", false);
   if (dump_post_optimizations) {
     xla::Shape shape = MakeShapeWithDeviceLayout(

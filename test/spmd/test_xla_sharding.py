@@ -682,7 +682,6 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
 
     self.assertTrue(torch.allclose(expected, actual.cpu()))
 
-  @unittest.skipIf(xr.device_type() == 'TPU', "Does not work on TPU v2")
   @patch.dict(os.environ, {"XLA_DUMP_POST_OPTIMIZATIONS": "1"})
   def test_xla_sharded_hlo_dump_post_optimizations(self):
     t1 = torch.randn(1, 128).to(xm.xla_device())
