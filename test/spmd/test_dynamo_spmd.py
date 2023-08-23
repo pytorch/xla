@@ -4,6 +4,7 @@ import sys
 import torch
 import torch.nn as nn
 import torch_xla
+import torch_xla.runtime as xr
 import torch_xla.core.xla_model as xm
 import torch_xla.experimental.xla_sharding as xs
 import torch_xla.debug.metrics as met
@@ -33,7 +34,7 @@ class DynamoSpmdInferenceTest(test_xla_sharding_base.XlaShardingTest):
 
   @classmethod
   def setUpClass(cls):
-    os.environ["XLA_USE_SPMD"] = "1"
+    xr.use_spmd()
     super().setUpClass()
 
   def test_dynamo_spmd_basic(self):

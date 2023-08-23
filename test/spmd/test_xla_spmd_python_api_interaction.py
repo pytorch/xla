@@ -6,6 +6,7 @@ import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
 from torch_xla import runtime as xr
+
 import test_xla_sharding_base
 
 
@@ -13,7 +14,7 @@ class BasicXMAPITest(test_xla_sharding_base.XlaShardingTest):
 
   @classmethod
   def setUpClass(cls):
-    os.environ["XLA_USE_SPMD"] = "1"
+    xr.use_spmd()
     super().setUpClass()
 
   def test_get_xla_supported_devices(self):
@@ -59,7 +60,7 @@ class BasicRuntimeAPITest(test_xla_sharding_base.XlaShardingTest):
 
   @classmethod
   def setUpClass(cls):
-    os.environ["XLA_USE_SPMD"] = "1"
+    xr.use_spmd()
     super().setUpClass()
 
   def test_local_process_count(self):
@@ -102,6 +103,13 @@ class BasicRuntimeAPITest(test_xla_sharding_base.XlaShardingTest):
       self.assertGreaterEqual(xr.addressable_runtime_device_count(), 4)
     elif device_type == "CPU":
       self.assertEqual(xr.addressable_runtime_device_count(), 1)
+
+  def test_runtime_spmd_api(self):
+    self.assertTrue(xr.is_spmd())
+    del os.environ["XLA_USE_SPMD"]
+    self.assertFalse(xr.is_spmd())
+    # reset for other test cases
+    os.environ["XLA_USE_SPMD"] = "1"
 
 
 if __name__ == '__main__':

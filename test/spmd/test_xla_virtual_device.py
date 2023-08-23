@@ -6,6 +6,7 @@ import unittest
 import torch
 from torch import nn
 import torch_xla
+import torch_xla.runtime as xr
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
 import torch_xla.experimental.xla_sharding as xs
@@ -16,7 +17,7 @@ class VirtualDeviceTest(test_xla_sharding_base.XlaShardingTest):
 
   @classmethod
   def setUpClass(cls):
-    os.environ["XLA_USE_SPMD"] = "1"
+    xr.use_spmd()
     super().setUpClass()
 
   def test_mark_sharding(self):

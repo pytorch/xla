@@ -248,7 +248,8 @@ variables:
       default_value: false
     XLA_USE_SPMD:
       description:
-        - Whether or not to use the SPMD virtual device optimization.
+        - Deprecated. Whether or not to use the SPMD virtual device optimization.
+          Use `torch_xla.runtime.use_spmd()` instead.
       type: bool
       default_value: false
     SPLIT_EXECUTOR_CACHE_SIZE:
