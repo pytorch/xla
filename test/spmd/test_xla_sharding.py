@@ -5,6 +5,7 @@ from unittest.mock import patch
 import math
 import numpy as np
 import os
+import sys
 
 import torch
 from torch import nn
@@ -764,6 +765,37 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertNotEqual(torch_xla._XLAC._get_xla_sharding_spec(xla_x), '')
     self.assertTrue(torch.allclose(xla_x.cpu(), x))
 
+  def test_patched_linear_3D(self):
+    linear_cpu = nn.Linear(2, 4, bias=False)
+    input_cpu = torch.randn(4, 3, 2, requires_grad=True)
+    input_cpu.retain_grad()
+    output_cpu = linear_cpu(input_cpu)
+
+    # It looks like nn.Module.to is in-place.
+    linear = copy.deepcopy(linear_cpu).to('xla')
+    from torch_xla.distributed.fsdp.utils import apply_xla_patch_to_nn_linear
+    apply_xla_patch_to_nn_linear(linear, xs.xla_patched_nn_linear_forward)
+    input = copy.deepcopy(input_cpu).to('xla')
+    input.retain_grad()
+    output = linear(input)
+
+    # Make sure that we don't have any reshapes in the patched linear.
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo([output])
+    self.assertNotIn("reshape", hlo)
+
+    # Make sure the forward result is correct.
+    self.assertTrue(torch.allclose(output.cpu(), output_cpu))
+
+    # Now work on the backward.
+    linear_cpu.weight.retain_grad()
+    loss_cpu = output_cpu.sum()
+    loss_cpu.backward()
+
+    loss =output.sum()
+    loss.backward()
+
+    self.assertTrue(torch.allclose(linear.weight.grad.cpu(), linear_cpu.weight.grad))
+    self.assertTrue(torch.allclose(input.grad.cpu(), input_cpu.grad))
 
 if __name__ == '__main__':
   test = unittest.main()

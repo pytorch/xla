@@ -521,3 +521,40 @@ class ShardingSpec:
     # TODO(yeounoh) use virtual device interface when available.
     assert (t.device == xm.xla_device())
     mark_sharding(t, self.mesh, self.partition_spec)
+
+
+class XLAPatchedLinear(torch.autograd.Function):
+  """
+  A patched version of `torch.nn.functional.linear` that uses einsum instead
+  of torch.matmul which will flatten the tensors to 2D and collide the sharded
+  dimensions. The torch.matmul default behavior makes it very hard for XLA compiler
+  to propogate the sharding annotation.
+
+  TODO (alanwaketan): Let's patch it on the dispatcher level.
+  """
+
+  @staticmethod
+  def forward(ctx, input, weight, bias=None):
+    # bias is an optional argument
+    ctx.save_for_backward(input, weight, bias)
+    with torch.no_grad():
+      assert bias is None
+      return torch.einsum('bln,mn->blm', input, weight)
+
+  @staticmethod
+  def backward(ctx, grad_output):
+    input, weight, bias = ctx.saved_tensors
+    grad_input = grad_weight = grad_bias = None
+
+    if ctx.needs_input_grad[0]:
+      grad_input = torch.einsum('blm,mn->bln', grad_output, weight)
+    if ctx.needs_input_grad[1]:
+      grad_weight = torch.einsum('blm,bln->mn', grad_output, input)
+    if bias is not None and ctx.needs_input_grad[2]:
+      grad_output_flat = grad_output.flatten(start_dim=0, end_dim=-2)
+      grad_bias = grad_output_flat.sum(0)
+
+    return grad_input, grad_weight, grad_bias
+
+def xla_patched_nn_linear_forward(m, input):
+  return XLAPatchedLinear.apply(input, m.weight, m.bias)
