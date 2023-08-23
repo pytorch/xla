@@ -52,6 +52,12 @@ versioned_builds = [
   },
   {
     git_tag         = "v2.1.0"
+    package_version = "2.1",
+    accelerator     = "cuda"
+    cuda_version    = "12.0"
+  },
+  {
+    git_tag         = "v2.1.0"
     package_version = "2.1"
     accelerator     = "cuda"
     cuda_version    = "11.8"
@@ -62,12 +68,6 @@ versioned_builds = [
     accelerator     = "cuda"
     cuda_version    = "11.8"
     python_version  = "3.10"
-  },
-  {
-    git_tag         = "v2.1.0"
-    package_version = "2.1",
-    accelerator     = "cuda"
-    cuda_version    = "11.7"
   },
   {
     git_tag         = "v2.0.0"
