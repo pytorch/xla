@@ -337,6 +337,16 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     actual = (xt1 + t2).cpu()
     self.assertTrue(torch.allclose(expected, actual))
 
+  @unittest.skipUnless(xr.global_runtime_device_count() > 1,
+                       "Multiple devices required for tupled partition spec")
+  def test_tupled_partition_spec(self):
+    mesh = self._get_mesh((2, self.n_devices // 2))
+    t = torch.randn(16).to(xm.xla_device())
+    xs.mark_sharding(t, mesh, ((0, 1),))
+    self.assertEqual(
+        torch_xla._XLAC._get_xla_sharding_spec(t), "{devices=[%d]%s}" %
+        (self.n_devices, ','.join(str(x) for x in range(self.n_devices))))
+
   def test_partial_replication_addmm(self):
     device = xm.xla_device()
     z_dim = 2 if self.n_devices >= 4 else 1
