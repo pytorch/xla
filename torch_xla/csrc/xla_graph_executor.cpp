@@ -805,15 +805,15 @@ std::vector<torch::lazy::BackendDataPtr> XLAGraphExecutor::ExecuteStablehlo(
     }
   }
 
-  std::vector<runtime::ComputationClient::DataPtr> results =
+  std::vector<runtime::ComputationClient::DataPtr> result_data =
       runtime::GetComputationClient()->ExecuteComputation(
           *computations[0], UnwrapXlaData(arguments), device.toString());
 
-  std::vector<torch::lazy::BackendDataPtr> placeholders;
-  for (size_t i = 0; i < results.size(); ++i) {
-    placeholders.push_back(WrapXlaData(results[i]));
+  std::vector<torch::lazy::BackendDataPtr> result_backend_data;
+  for (const auto data : result_data) {
+    result_backend_data.push_back(WrapXlaData(data));
   }
-  return placeholders;
+  return result_backend_data;
 }
 
 std::vector<at::Tensor> XLAGraphExecutor::GetTensorsOpByOp(
