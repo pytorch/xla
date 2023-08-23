@@ -682,18 +682,6 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
 
     self.assertTrue(torch.allclose(expected, actual.cpu()))
 
-  @unittest.skipIf(xr.device_type() == 'TPU', "Does not work on TPU v2")
-  @patch.dict(os.environ, {"XLA_DUMP_POST_OPTIMIZATIONS": "1"})
-  def test_xla_sharded_hlo_dump_post_optimizations(self):
-    t1 = torch.randn(1, 128).to(xm.xla_device())
-    t2 = torch.randn(128, 1).to(xm.xla_device())
-    xs.mark_sharding(t1, self._get_mesh((1, self.n_devices)), (0, 1))
-
-    t3 = t1 @ t2
-    hlo = torch_xla._XLAC._get_xla_tensors_hlo([t3])
-    if self.n_devices > 1:
-      self.assertIn('all-reduce', hlo)
-
   def test_sharded_tensor_aliasing(self):
     met.clear_all()
     partition_spec = (0, 1)

@@ -170,6 +170,7 @@ function run_xla_op_tests {
   run_test "$CDIR/pjrt/test_ddp.py"
   run_test "$CDIR/pjrt/test_mesh_service.py"
   run_test "$CDIR/spmd/test_xla_sharding.py"
+  run_test "$CDIR/spmd/test_xla_sharding_hlo.py"
   run_test "$CDIR/spmd/test_xla_virtual_device.py"
   run_test "$CDIR/spmd/test_dynamo_spmd.py"
   run_test "$CDIR/spmd/test_xla_distributed_checkpoint.py"
