@@ -323,6 +323,7 @@ def extract_internal(xla_model: torch.fx.GraphModule):
   (xla_args_sharding_spec, args_and_out, graph_hash,
    arg_index_to_need_update_index, none_remover, graph_input_matcher,
    dumb_return_handler, xla_args_need_update) = extract_graph_helper(xla_model)
+  skip_checking_input_sharding_threashold = 5
 
   def optimized_mod(*args):
     nonlocal xla_model
@@ -334,23 +335,30 @@ def extract_internal(xla_model: torch.fx.GraphModule):
     nonlocal graph_input_matcher
     nonlocal dumb_return_handler
     nonlocal xla_args_need_update
-    current_arg_sharding_spec = torch_xla._XLAC._get_xla_sharding_specs(args)
+    nonlocal skip_checking_input_sharding_threashold
 
     # mark_step needs to be blocking since we want to access args's XLADatas
     # and they can't be placeholder.
     if any(torch_xla._XLAC._check_tensor_need_materialization(args)):
       xm.mark_step(wait=True)
 
-    # input sharding has changed from the previous program. Dynamo current can
-    # not detect this hence mistakenly believe the program is the same. We need
+    # If input sharding has changed from the previous program, dynamo current can
+    # not detect this. It will mistakenly believe the program is the same. We need
     # to retrace it here.
-    if xr.is_spmd() and current_arg_sharding_spec != xla_args_sharding_spec:
-      # update the xla_args with the input with new sharding and retrace
-      xla_model.xla_args = args
-      (xla_args_sharding_spec, args_and_out, graph_hash,
-       arg_index_to_need_update_index, none_remover, graph_input_matcher,
-       dumb_return_handler,
-       xla_args_need_update) = extract_graph_helper(xla_model)
+    if xr.is_spmd():
+      # if the input sharding was the same for skip_checking_input_sharding_threashold times
+      # we will skip checking the input sharding since it can be expensive.
+      if skip_checking_input_sharding_threashold > 0:
+        if torch_xla._XLAC._get_xla_sharding_specs(
+            args) != xla_args_sharding_spec:
+          # update the xla_args with the input with new sharding and retrace
+          xla_model.xla_args = args
+          (xla_args_sharding_spec, args_and_ou_copy, graph_hash,
+           arg_index_to_need_update_index, none_remover, graph_input_matcher,
+           dumb_return_handler,
+           xla_args_need_update) = extract_graph_helper(xla_model)
+
+        skip_checking_input_sharding_threashold -= 1
 
     enter_ts = time.time()
     if len(args_and_out) == 0:
