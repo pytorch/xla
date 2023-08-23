@@ -618,40 +618,48 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     device_attributes_mock.return_value = [{
         'coords': [0, 0, 0],
         'core_on_chip': 0,
-        'slice_index': 0
+        'slice_index': 0,
+        'name': 'TPU:2'
     }, {
         'core_on_chip': 0,
         'coords': [1, 0, 0],
-        'slice_index': 0
+        'slice_index': 0,
+        'name': 'TPU:1'
     }, {
         'slice_index': 0,
         'core_on_chip': 0,
-        'coords': [0, 1, 0]
+        'coords': [0, 1, 0],
+        'name': 'TPU:0'
     }, {
         'coords': [1, 1, 0],
         'core_on_chip': 0,
-        'slice_index': 0
+        'slice_index': 0,
+        'name': 'TPU:3'
     }, {
         'coords': [0, 0, 0],
         'slice_index': 1,
-        'core_on_chip': 0
+        'core_on_chip': 0,
+        'name': 'TPU:4'
     }, {
         'coords': [1, 0, 0],
         'slice_index': 1,
-        'core_on_chip': 0
+        'core_on_chip': 0,
+        'name': 'TPU:7'
     }, {
         'coords': [0, 1, 0],
         'slice_index': 1,
-        'core_on_chip': 0
+        'core_on_chip': 0,
+        'name': 'TPU:6'
     }, {
         'core_on_chip': 0,
         'coords': [1, 1, 0],
-        'slice_index': 1
+        'slice_index': 1,
+        'name': 'TPU:5'
     }]
     hybrid_mesh = xs.HybridMesh(
         ici_mesh_shape=(2, 2), dcn_mesh_shape=(num_slices, 1))
     self.assertEqual(hybrid_mesh.get_logical_mesh().tolist(),
-                     [[0, 1], [2, 3], [4, 5], [6, 7]])
+                     [[2, 1], [0, 3], [4, 7], [6, 5]])
 
   def test_mark_sharding_ir(self):
     t1 = torch.randn(1, 128, device='cpu')
