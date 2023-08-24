@@ -347,16 +347,18 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertEqual(
         torch_xla._XLAC._get_xla_sharding_spec(t), "{devices=[%d]%s}" %
         (self.n_devices, ','.join(str(x) for x in range(self.n_devices))))
-  
+
   @unittest.skipUnless(xr.global_runtime_device_count() >= 4,
                        "Multiple devices required for tupled partition spec")
   def test_named_partial_tupled_partition_spec(self):
-    mesh = xs.Mesh(range(self.n_devices), (1, 2, self.n_devices // 2), ('r', 'b', 'm'))
+    mesh = xs.Mesh(
+        range(self.n_devices), (1, 2, self.n_devices // 2), ('r', 'b', 'm'))
     # Shard the first dimension on `r` and `b`, replicate the second dimension
     t = torch.randn(16, 16).to(xm.xla_device())
     xs.mark_sharding(t, mesh, (('r', 'b'), None))
     self.assertEqual(
-        torch_xla._XLAC._get_xla_sharding_spec(t), "{devices=[2,1,%d]%s last_tile_dim_replicate}" %
+        torch_xla._XLAC._get_xla_sharding_spec(t),
+        "{devices=[2,1,%d]%s last_tile_dim_replicate}" %
         (self.n_devices // 2, ','.join(str(x) for x in range(self.n_devices))))
 
     # Replicate the first dimension, shard the second on `b` and `m`
@@ -369,15 +371,18 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     # Replicate the first dimension, shard the second on `r` and `m`
     v = torch.randn(16, 16).to(xm.xla_device())
     xs.mark_sharding(v, mesh, (None, ('r', 'm')))
-    device_order = chain(range(0, self.n_devices, 2), range(1, self.n_devices, 2))
+    device_order = chain(
+        range(0, self.n_devices, 2), range(1, self.n_devices, 2))
     self.assertEqual(
-        torch_xla._XLAC._get_xla_sharding_spec(v), "{devices=[1,%d,2]%s last_tile_dim_replicate}" %
+        torch_xla._XLAC._get_xla_sharding_spec(v),
+        "{devices=[1,%d,2]%s last_tile_dim_replicate}" %
         (self.n_devices // 2, ','.join(str(x) for x in device_order)))
 
     # Replicate the first dimension, shard the second on `m` and `b`
     v = torch.randn(16, 16).to(xm.xla_device())
     xs.mark_sharding(v, mesh, (None, ('m', 'b')))
-    device_order = chain(range(0, self.n_devices, 2), range(1, self.n_devices, 2))
+    device_order = chain(
+        range(0, self.n_devices, 2), range(1, self.n_devices, 2))
     self.assertEqual(
         torch_xla._XLAC._get_xla_sharding_spec(v), "{devices=[1,%d]%s}" %
         (self.n_devices, ','.join(str(x) for x in device_order)))
