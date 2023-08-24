@@ -1319,5 +1319,26 @@ TEST_F(AtenXlaTensorTest, TestCdistForward) {
   ExpectCounterChanged("xla::_cdist_forward", cpp_test::GetIgnoredCounters());
 }
 
+TEST_F(AtenXlaTensorTest, TestGlu) {
+  std::vector<std::vector<int64_t>> sizes{
+      {3, 8}, {3, 5, 6}, {3, 8, 5}, {3, 8, 8, 16}};
+  std::vector<int64_t> dims{-1, -1, 1, 3};
+
+  auto size_it = sizes.begin();
+  auto dim_it = dims.begin();
+  for (; size_it != sizes.end() && dim_it != dims.end(); ++size_it, ++dim_it) {
+    torch::Tensor input =
+        torch::rand(*size_it, torch::TensorOptions(torch::kFloat));
+    torch::Tensor output = torch::glu(input, *dim_it);
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_input = CopyToDevice(input, device);
+      torch::Tensor xla_output = torch::glu(xla_input, *dim_it);
+      AllClose(output, xla_output);
+    });
+  }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::glu", cpp_test::GetIgnoredCounters());
+}
+
 }  // namespace cpp_test
 }  // namespace torch_xla
