@@ -528,7 +528,7 @@ class XLAPatchedLinear(torch.autograd.Function):
   A patched version of `torch.nn.functional.linear` that uses einsum instead
   of torch.matmul which will flatten the tensors to 2D and collide the sharded
   dimensions. The torch.matmul default behavior makes it very hard for XLA compiler
-  to propogate the sharding annotation.
+  to propagate the sharding annotation.
 
   TODO (alanwaketan): Let's patch it on the dispatcher level.
   """
