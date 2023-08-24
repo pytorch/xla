@@ -538,8 +538,10 @@ class XLAPatchedLinear(torch.autograd.Function):
     # bias is an optional argument
     ctx.save_for_backward(input, weight, bias)
     with torch.no_grad():
-      assert bias is None
-      return torch.einsum('bln,mn->blm', input, weight)
+      product = torch.einsum('bln,mn->blm', input, weight)
+      if bias is None:
+        return product
+      return product + bias
 
   @staticmethod
   def backward(ctx, grad_output):
@@ -551,8 +553,7 @@ class XLAPatchedLinear(torch.autograd.Function):
     if ctx.needs_input_grad[1]:
       grad_weight = torch.einsum('blm,bln->mn', grad_output, input)
     if bias is not None and ctx.needs_input_grad[2]:
-      grad_output_flat = grad_output.flatten(start_dim=0, end_dim=-2)
-      grad_bias = grad_output_flat.sum(0)
+      grad_bias = torch.einsum('blm->m', grad_output)
 
     return grad_input, grad_weight, grad_bias
 
