@@ -350,23 +350,24 @@ def _get_tile_assignment(
   """
   # Flatten the partition spec and ensure that it is fully specified over the
   # mesh for permutation.
-  flat_spec = np.hstack(partition_spec).tolist()
-  missing_axes = sorted(set(range(len(mesh.shape()))) - set(flat_spec))
-  permutation = [d if d is not None else missing_axes.pop() for d in flat_spec]
+  tiled_dims = [x for x in partition_spec if x is not None]
+  permutation = np.hstack(tiled_dims).tolist() if tiled_dims else []
+  missing_axes = sorted(set(range(len(mesh.shape()))) - set(permutation))
   tile_assignment = mesh.get_logical_mesh().transpose(permutation +
                                                       missing_axes)
 
   # For any tuples in the partition_spec, the grouped axes will be adjacent
   # after the permutation. Combine these dimensions into a single axis.
-  for i, spec in reversed(list(enumerate(partition_spec))):
+  for i, spec in reversed(list(enumerate(tiled_dims))):
     if isinstance(spec, tuple):
       shape = tile_assignment.shape
       tile_assignment = tile_assignment.reshape(shape[:i] + (-1,) +
                                                 shape[i + len(spec):])
 
-  # After the transpose, the resulting partition spec becomes iota, with Nones
-  # preserved from the original spec for use in group assignment generation.
-  res_spec = tuple(d if d is None else i for i, d in enumerate(partition_spec))
+  # After the transpose, the resulting partition spec becomes iota over the
+  # tiled dimensions, with Nones preserved from the original spec.
+  tiled_axis = itertools.count()
+  res_spec = tuple(d if d is None else next(tiled_axis) for d in partition_spec)
   return tile_assignment, res_spec
 
 
