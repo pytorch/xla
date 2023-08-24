@@ -348,17 +348,6 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
         torch_xla._XLAC._get_xla_sharding_spec(t), "{devices=[%d]%s}" %
         (self.n_devices, ','.join(str(x) for x in range(self.n_devices))))
 
-  def test_foo(self):
-    mesh = xs.Mesh(
-        range(self.n_devices), (1, 2, self.n_devices // 2), ('r', 'b', 'm'))
-    # Replicate the first dimension, shard the second on `b` and `m`
-    u = torch.randn(16, 16).to(xm.xla_device())
-    xs.mark_sharding(u, mesh, (None, ('b', 'm')))
-    self.assertEqual(
-        torch_xla._XLAC._get_xla_sharding_spec(u), "{devices=[1,%d]%s}" %
-        (self.n_devices, ','.join(str(x) for x in range(self.n_devices))))
-
-
   @unittest.skipUnless(xr.global_runtime_device_count() >= 4,
                        "Multiple devices required for tupled partition spec")
   def test_named_partial_tupled_partition_spec(self):
@@ -398,12 +387,15 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
         torch_xla._XLAC._get_xla_sharding_spec(v), "{devices=[1,%d]%s}" %
         (self.n_devices, ','.join(str(x) for x in device_order)))
 
-  @unittest.skipUnless(xr.global_runtime_device_count() > 1, 'At least 2 devices needed for 2D mesh')
+  @unittest.skipUnless(xr.global_runtime_device_count() > 1,
+                       'At least 2 devices needed for 2D mesh')
   def test_3d_tensor_2d_mesh(self):
     mesh = self._get_mesh((2, self.n_devices // 2))
     t = torch.randn(16, 16, 16).to(xm.xla_device())
     xs.mark_sharding(t, mesh, (None, 0, 1))
-    self.assertEqual(torch_xla._XLAC._get_xla_sharding_spec(t), '{devices=[1,2,2]0,1,2,3}')
+    self.assertEqual(
+        torch_xla._XLAC._get_xla_sharding_spec(t), '{devices=[1,2,%d]%s}' %
+        (self.n_devices // 2, ','.join(str(x) for x in range(self.n_devices))))
 
   def test_partial_replication_addmm(self):
     device = xm.xla_device()
