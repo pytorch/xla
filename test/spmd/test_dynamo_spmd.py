@@ -135,6 +135,42 @@ class DynamoSpmdInferenceTest(test_xla_sharding_base.XlaShardingTest):
       self.assertEqual(met.metric_data('CompileTime')[0], 1)
     torch.allclose(linear(xla_y).cpu(), dynamo_res_sharded_2.cpu())
 
+  @unittest.skipIf(xr.global_runtime_device_count() == 1,
+                   "Multiple devices needed to test the mesh change")
+  def test_dynamo_input_sharding_threashold(self):
+    device = xm.xla_device()
+    linear = SimpleLinear().to(device)
+    linear.eval()
+    xla_x = torch.randn(8, 128, device=device)
+    xm.mark_step()
+
+    dynamo_linear = torch.compile(linear, backend="openxla")
+    if 'XLA_DYNAMO_INPUT_SHARDING_CHECK_THREASHOLD' in os.environ:
+      saved_var = os.environ['XLA_DYNAMO_INPUT_SHARDING_CHECK_THREASHOLD']
+    else:
+      saved_var = None
+    os.environ['XLA_DYNAMO_INPUT_SHARDING_CHECK_THREASHOLD'] = '2'
+
+    dynamo_res = dynamo_linear(xla_x)
+    xs.mark_sharding(xla_x, self._get_mesh((1, self.n_devices)), (1, 0))
+    dynamo_res = dynamo_linear(xla_x)
+    xs.clear_sharding(xla_x)
+    xs.mark_sharding(xla_x, self._get_mesh((1, self.n_devices)), (0, 1))
+    # crash will hapeen in a async execution thread, need to grab the lock again to
+    # surface that exception
+    dynamo_res = dynamo_linear(xla_x)
+    try:
+      print(dynamo_res)
+    except:
+      print('catch')
+    # it is hard to catch the C++ runtime error in python, instead we can check if
+    # after printing that dynamo_res is still a placeholder then it means C++ crashed.
+    self.assertTrue(torch_xla._XLAC._is_placecholder(dynamo_res))
+    if saved_var != None:
+      os.environ['XLA_DYNAMO_INPUT_SHARDING_CHECK_THREASHOLD'] = saved_var
+    else:
+      del os.environ['XLA_DYNAMO_INPUT_SHARDING_CHECK_THREASHOLD']
+
 
 if __name__ == '__main__':
   test = unittest.main()

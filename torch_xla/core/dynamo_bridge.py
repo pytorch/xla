@@ -15,6 +15,7 @@ import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as metrics
 import torch_xla.runtime as xr
+import torch_xla.utils.utils as xu
 
 debug = os.environ.get("TORCH_XLA_DEBUG") == "1"
 
@@ -323,7 +324,8 @@ def extract_internal(xla_model: torch.fx.GraphModule):
   (xla_args_sharding_spec, args_and_out, graph_hash,
    arg_index_to_need_update_index, none_remover, graph_input_matcher,
    dumb_return_handler, xla_args_need_update) = extract_graph_helper(xla_model)
-  skip_checking_input_sharding_threashold = 5
+  skip_checking_input_sharding_threashold = xu.getenv_as(
+      'XLA_DYNAMO_INPUT_SHARDING_CHECK_THREASHOLD', int, 5)
 
   def optimized_mod(*args):
     nonlocal xla_model

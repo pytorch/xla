@@ -1637,6 +1637,11 @@ void InitXlaModuleBindings(py::module m) {
               xla::HloModule::CreateFromProto(module_proto, config).value());
           return module->ToString();
         });
+  m.def("_is_placecholder", [](at::Tensor& input) {
+    XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+    return xtensor->CurrentDataHandle() &&
+           !xtensor->CurrentDataHandle()->HasValue();
+  });
   m.def("_init_xla_lazy_backend", []() {
     MapXlaEnvVarsToLazy();
     InitXlaBackend();
