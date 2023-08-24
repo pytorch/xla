@@ -1,3 +1,4 @@
+import sys
 import os
 from typing import List, Tuple, Any
 import copy
@@ -123,3 +124,42 @@ def save_torch_module_as_tf_saved_model(
   stablehlo_model = stablehlo.exported_program_to_stablehlo(exported, options)
   save_stablehlo_graph_as_tf(stablehlo_model, saved_model_dir, serving_key,
                              function_alias)
+
+
+def main():
+  import argparse
+  parser = argparse.ArgumentParser()
+  parser.add_argument(
+      'input_dir',
+      help='Directory with the output of torch_xla.save_as_stablehlo')
+  parser.add_argument(
+      'output_dir',
+      help='Empty Directory which we will create tf.saved_model in.')
+  parser.add_argument(
+      '-a',
+      '--function_alias',
+      help='Apply function alias to the serving function. This '
+      'is usually used by inference_converter or other tools.',
+      default='')
+  parser.add_argument(
+      '-k',
+      '--serving_key',
+      help='Apply serving key the serving function. This '
+      'is usually used by tf.serving model serving or other tools.'
+      'Default to "serving_default".',
+      default=tf.saved_model.DEFAULT_SERVING_SIGNATURE_DEF_KEY,
+  )
+  args = parser.parse_args()
+
+  shlo_program = stablehlo.StableHLOGraphModule.load(args.input_dir)
+  print('Loading {} into StableHLOGraphModule...'.format(args.input_dir))
+  shlo_program = stablehlo.StableHLOGraphModule.load(args.input_dir)
+  print('Saving as saved model to {} ...'.format(args.output_dir))
+  save_stablehlo_graph_as_tf(shlo_program, args.output_dir, args.serving_key,
+                             args.function_alias)
+  print('Done!')
+  return 0
+
+
+if __name__ == '__main__':
+  sys.exit(main())
