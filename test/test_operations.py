@@ -32,9 +32,11 @@ import torch_xla
 import torch_xla.core.xla_builder as xb
 import torch_xla.core.xla_op_registry as xor
 import torch_xla.distributed.data_parallel as dp
+from torch_xla.distributed.fsdp.utils import apply_xla_patch_to_nn_linear
 import torch_xla.debug.metrics as met
 import torch_xla.debug.model_comparator as mc
 import torch_xla.distributed.parallel_loader as pl
+import torch_xla.experimental.xla_sharding as xs
 from torch_xla import runtime as xr
 import torch_xla.test.test_utils as xtu
 import torch_xla.utils.utils as xu
@@ -1655,6 +1657,124 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     loss.backward()
     self.assertTrue(
         torch.allclose(conv.weight.grad.cpu(), torch.tensor([[[[2077.0]]]])))
+
+  def test_patched_linear_3D(self):
+    linear_cpu = nn.Linear(2, 4, bias=False)
+    input_cpu = torch.randn(4, 3, 2, requires_grad=True)
+    input_cpu.retain_grad()
+    output_cpu = linear_cpu(input_cpu)
+
+    # It looks like nn.Module.to is in-place.
+    linear = copy.deepcopy(linear_cpu).to('xla')
+    apply_xla_patch_to_nn_linear(linear, xs.xla_patched_nn_linear_forward)
+    input = copy.deepcopy(input_cpu).to('xla')
+    input.retain_grad()
+    output = linear(input)
+
+    # Make sure that we don't have any reshapes in the patched linear.
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo([output])
+    self.assertNotIn("reshape", hlo)
+
+    # Make sure the forward result is correct.
+    self.assertTrue(torch.allclose(output.cpu(), output_cpu))
+
+    # Now work on the backward.
+    linear_cpu.weight.retain_grad()
+    loss_cpu = output_cpu.sum()
+    loss_cpu.backward()
+
+    loss = output.sum()
+    loss.backward()
+
+    self.assertTrue(
+        torch.allclose(linear.weight.grad.cpu(), linear_cpu.weight.grad))
+    self.assertTrue(torch.allclose(input.grad.cpu(), input_cpu.grad))
+
+  def test_patched_linear_3D_bias(self):
+    linear_cpu = nn.Linear(2, 4)
+    input_cpu = torch.randn(4, 3, 2)
+    output_cpu = linear_cpu(input_cpu)
+
+    # It looks like nn.Module.to is in-place.
+    linear = copy.deepcopy(linear_cpu).to('xla')
+    apply_xla_patch_to_nn_linear(linear, xs.xla_patched_nn_linear_forward)
+    input = copy.deepcopy(input_cpu).to('xla')
+    output = linear(input)
+
+    # We will have some reshapes on the bias. So skip the check here.
+    # Make sure the forward result is correct.
+    self.assertTrue(torch.allclose(output.cpu(), output_cpu))
+
+    # Now work on the backward.
+    linear_cpu.weight.retain_grad()
+    loss_cpu = output_cpu.sum()
+    loss_cpu.backward()
+
+    loss = output.sum()
+    loss.backward()
+
+    self.assertTrue(
+        torch.allclose(linear.bias.grad.cpu(), linear_cpu.bias.grad))
+
+  def test_patched_linear_2D_bias(self):
+    linear_cpu = nn.Linear(2, 4)
+    input_cpu = torch.randn(4, 2, requires_grad=True)
+    input_cpu.retain_grad()
+    output_cpu = linear_cpu(input_cpu)
+
+    # It looks like nn.Module.to is in-place.
+    linear = copy.deepcopy(linear_cpu).to('xla')
+    apply_xla_patch_to_nn_linear(linear, xs.xla_patched_nn_linear_forward)
+    input = copy.deepcopy(input_cpu).to('xla')
+    input.retain_grad()
+    output = linear(input)
+
+    # Make sure the forward result is correct.
+    self.assertTrue(torch.allclose(output.cpu(), output_cpu))
+
+    # Now work on the backward.
+    linear_cpu.weight.retain_grad()
+    loss_cpu = output_cpu.sum()
+    loss_cpu.backward()
+
+    loss = output.sum()
+    loss.backward()
+
+    self.assertTrue(
+        torch.allclose(linear.weight.grad.cpu(), linear_cpu.weight.grad))
+    self.assertTrue(torch.allclose(input.grad.cpu(), input_cpu.grad))
+    self.assertTrue(
+        torch.allclose(linear.bias.grad.cpu(), linear_cpu.bias.grad))
+
+  def test_patched_linear_1D_bias(self):
+    linear_cpu = nn.Linear(2, 4)
+    input_cpu = torch.randn(2, requires_grad=True)
+    input_cpu.retain_grad()
+    output_cpu = linear_cpu(input_cpu)
+
+    # It looks like nn.Module.to is in-place.
+    linear = copy.deepcopy(linear_cpu).to('xla')
+    apply_xla_patch_to_nn_linear(linear, xs.xla_patched_nn_linear_forward)
+    input = copy.deepcopy(input_cpu).to('xla')
+    input.retain_grad()
+    output = linear(input)
+
+    # Make sure the forward result is correct.
+    self.assertTrue(torch.allclose(output.cpu(), output_cpu))
+
+    # Now work on the backward.
+    linear_cpu.weight.retain_grad()
+    loss_cpu = output_cpu.sum()
+    loss_cpu.backward()
+
+    loss = output.sum()
+    loss.backward()
+
+    self.assertTrue(
+        torch.allclose(linear.weight.grad.cpu(), linear_cpu.weight.grad))
+    self.assertTrue(torch.allclose(input.grad.cpu(), input_cpu.grad))
+    self.assertTrue(
+        torch.allclose(linear.bias.grad.cpu(), linear_cpu.bias.grad))
 
 
 class MNISTComparator(nn.Module):
