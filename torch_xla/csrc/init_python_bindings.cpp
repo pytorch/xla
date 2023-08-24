@@ -1441,7 +1441,7 @@ void InitXlaModuleBindings(py::module m) {
     if (xtensor->CurrentIrValue()) {
       device_data_node = DeviceData::Cast(xtensor->CurrentIrValue().node.get());
       if (!device_data_node) {
-        xtensor->SetShardingSpec(*new_sharding_spec);
+        tensor_methods::custom_sharding_(xtensor, new_sharding_spec);
         return;
       }
     }
