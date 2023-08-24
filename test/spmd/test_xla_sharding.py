@@ -765,6 +765,7 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertNotEqual(torch_xla._XLAC._get_xla_sharding_spec(xla_x), '')
     self.assertTrue(torch.allclose(xla_x.cpu(), x))
 
+
 if __name__ == '__main__':
   test = unittest.main()
   sys.exit(0 if test.result.wasSuccessful() else 1)

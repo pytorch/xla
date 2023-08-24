@@ -1683,10 +1683,11 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     loss_cpu = output_cpu.sum()
     loss_cpu.backward()
 
-    loss =output.sum()
+    loss = output.sum()
     loss.backward()
 
-    self.assertTrue(torch.allclose(linear.weight.grad.cpu(), linear_cpu.weight.grad))
+    self.assertTrue(
+        torch.allclose(linear.weight.grad.cpu(), linear_cpu.weight.grad))
     self.assertTrue(torch.allclose(input.grad.cpu(), input_cpu.grad))
 
   def test_patched_linear_3D_bias(self):
@@ -1709,10 +1710,11 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     loss_cpu = output_cpu.sum()
     loss_cpu.backward()
 
-    loss =output.sum()
+    loss = output.sum()
     loss.backward()
 
-    self.assertTrue(torch.allclose(linear.bias.grad.cpu(), linear_cpu.bias.grad))
+    self.assertTrue(
+        torch.allclose(linear.bias.grad.cpu(), linear_cpu.bias.grad))
 
   def test_patched_linear_2D_bias(self):
     linear_cpu = nn.Linear(2, 4)
@@ -1735,12 +1737,14 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     loss_cpu = output_cpu.sum()
     loss_cpu.backward()
 
-    loss =output.sum()
+    loss = output.sum()
     loss.backward()
 
-    self.assertTrue(torch.allclose(linear.weight.grad.cpu(), linear_cpu.weight.grad))
+    self.assertTrue(
+        torch.allclose(linear.weight.grad.cpu(), linear_cpu.weight.grad))
     self.assertTrue(torch.allclose(input.grad.cpu(), input_cpu.grad))
-    self.assertTrue(torch.allclose(linear.bias.grad.cpu(), linear_cpu.bias.grad))
+    self.assertTrue(
+        torch.allclose(linear.bias.grad.cpu(), linear_cpu.bias.grad))
 
   def test_patched_linear_1D_bias(self):
     linear_cpu = nn.Linear(2, 4)
@@ -1763,12 +1767,14 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     loss_cpu = output_cpu.sum()
     loss_cpu.backward()
 
-    loss =output.sum()
+    loss = output.sum()
     loss.backward()
 
-    self.assertTrue(torch.allclose(linear.weight.grad.cpu(), linear_cpu.weight.grad))
+    self.assertTrue(
+        torch.allclose(linear.weight.grad.cpu(), linear_cpu.weight.grad))
     self.assertTrue(torch.allclose(input.grad.cpu(), input_cpu.grad))
-    self.assertTrue(torch.allclose(linear.bias.grad.cpu(), linear_cpu.bias.grad))
+    self.assertTrue(
+        torch.allclose(linear.bias.grad.cpu(), linear_cpu.bias.grad))
 
 
 class MNISTComparator(nn.Module):

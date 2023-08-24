@@ -557,5 +557,6 @@ class XLAPatchedLinear(torch.autograd.Function):
 
     return grad_input, grad_weight, grad_bias
 
+
 def xla_patched_nn_linear_forward(m, input):
   return XLAPatchedLinear.apply(input, m.weight, m.bias)
