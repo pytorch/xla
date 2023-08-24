@@ -38,6 +38,7 @@
 #include "torch_xla/csrc/runtime/cache.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/env_vars.h"
+#include "torch_xla/csrc/runtime/pjrt_computation_client.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/thread_pool.h"
 #include "torch_xla/csrc/runtime/unique.h"
@@ -102,7 +103,14 @@ XLATensor::XLATensor(const at::Tensor& tensor,
 XLATensor::XLATensor(torch::lazy::BackendDataPtr handle,
                      c10::optional<at::ScalarType> logical_element_type)
     : XLATensor(std::make_shared<Data>(handle, handle->device(),
-                                       logical_element_type)) {}
+                                       logical_element_type)) {
+  // if data is sharded we need to carry the sharding spec over.
+  runtime::ComputationClient::DataPtr data = UnwrapXlaData(handle);
+  if (data->HasSharding()) {
+    ShardingSpec sharding_spec(data->GetSharding(), data->shape());
+    SetShardingSpec(sharding_spec);
+  }
+}
 
 XLATensor::XLATensor(torch::lazy::Value ir_value,
                      const torch::lazy::BackendDevice& device,
