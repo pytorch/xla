@@ -145,11 +145,11 @@ class DynamoSpmdInferenceTest(test_xla_sharding_base.XlaShardingTest):
     xm.mark_step()
 
     dynamo_linear = torch.compile(linear, backend="openxla")
-    if 'XLA_DYNAMO_INPUT_SHARDING_CHECK_THREASHOLD' in os.environ:
-      saved_var = os.environ['XLA_DYNAMO_INPUT_SHARDING_CHECK_THREASHOLD']
+    if 'XLA_DYNAMO_INPUT_SHARDING_CHECK_THRESHOLD' in os.environ:
+      saved_var = os.environ['XLA_DYNAMO_INPUT_SHARDING_CHECK_THRESHOLD']
     else:
       saved_var = None
-    os.environ['XLA_DYNAMO_INPUT_SHARDING_CHECK_THREASHOLD'] = '2'
+    os.environ['XLA_DYNAMO_INPUT_SHARDING_CHECK_THRESHOLD'] = '2'
 
     dynamo_res = dynamo_linear(xla_x)
     xs.mark_sharding(xla_x, self._get_mesh((1, self.n_devices)), (1, 0))
@@ -167,9 +167,9 @@ class DynamoSpmdInferenceTest(test_xla_sharding_base.XlaShardingTest):
     # after printing that dynamo_res is still a placeholder then it means C++ crashed.
     self.assertTrue(torch_xla._XLAC._is_placecholder(dynamo_res))
     if saved_var != None:
-      os.environ['XLA_DYNAMO_INPUT_SHARDING_CHECK_THREASHOLD'] = saved_var
+      os.environ['XLA_DYNAMO_INPUT_SHARDING_CHECK_THRESHOLD'] = saved_var
     else:
-      del os.environ['XLA_DYNAMO_INPUT_SHARDING_CHECK_THREASHOLD']
+      del os.environ['XLA_DYNAMO_INPUT_SHARDING_CHECK_THRESHOLD']
 
 
 if __name__ == '__main__':

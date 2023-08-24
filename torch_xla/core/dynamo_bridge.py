@@ -325,7 +325,7 @@ def extract_internal(xla_model: torch.fx.GraphModule):
    arg_index_to_need_update_index, none_remover, graph_input_matcher,
    dumb_return_handler, xla_args_need_update) = extract_graph_helper(xla_model)
   skip_checking_input_sharding_threashold = xu.getenv_as(
-      'XLA_DYNAMO_INPUT_SHARDING_CHECK_THREASHOLD', int, 5)
+      'XLA_DYNAMO_INPUT_SHARDING_CHECK_THRESHOLD', int, 5)
 
   def optimized_mod(*args):
     nonlocal xla_model
@@ -359,8 +359,10 @@ def extract_internal(xla_model: torch.fx.GraphModule):
            arg_index_to_need_update_index, none_remover, graph_input_matcher,
            dumb_return_handler,
            xla_args_need_update) = extract_graph_helper(xla_model)
-
-        skip_checking_input_sharding_threashold -= 1
+          skip_checking_input_sharding_threashold = xu.getenv_as(
+              'XLA_DYNAMO_INPUT_SHARDING_CHECK_THRESHOLD', int, 5)
+        else:
+          skip_checking_input_sharding_threashold -= 1
 
     enter_ts = time.time()
     if len(args_and_out) == 0:
