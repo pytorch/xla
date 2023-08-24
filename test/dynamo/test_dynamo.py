@@ -101,8 +101,17 @@ class DynamoInferenceBasicTest(unittest.TestCase):
         super().__init__()
         self.self_tensor = torch.zeros((5, 3), device=device)
 
-      def forward(self, index, copy_tensor, input_tensor):
+      def copy_(self, index, copy_tensor):
         self.self_tensor.index_copy_(0, index, copy_tensor)
+
+      def add_(self, index, other_tensor):
+        self.self_tensor.add_(other_tensor)
+
+      def abs_(self, index, other_tensor):
+        self.self_tensor.abs_()
+
+      def forward(self, index, copy_tensor, input_tensor, op_name):
+        getattr(self, op_name)(index, copy_tensor)
         output = input_tensor + self.self_tensor
         return output
 
@@ -110,24 +119,25 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     met.clear_counters()
     met.clear_all()
     device = xm.xla_device()
+
+    cpu_model = TestModel()
+    xla_model = TestModel(device).to(device)
+    compiled_model = torch.compile(xla_model, backend='openxla')
+
     input_tensor = torch.ones(3)
-    copy_tensor = torch.tensor([[1, 2, 3], [4, 5, 6], [7, 8, 9]],
-                               dtype=torch.float)
-    index = torch.tensor([0, 4, 2])
+    copy_tensor = torch.rand(5, 3)
+    index = torch.tensor([0, 4, 2, 1, 3])
     xla_input_tensor = input_tensor.to(device)
     xla_copy_tensor = copy_tensor.to(device)
     xla_index = index.to(device)
 
-    cpu_model = TestModel()
-    res_cpu = cpu_model.forward(index, copy_tensor, input_tensor)
-
-    xla_model = TestModel(device).to(device)
-    compiled_model = torch.compile(xla_model, backend='openxla')
-    res_xla_dynamo = compiled_model.forward(xla_index, xla_copy_tensor,
-                                            xla_input_tensor)
-
-    self.assertIn('xla::index_copy', met.counter_names())
-    self.assertTrue(torch.allclose(res_cpu, res_xla_dynamo.cpu()))
+    in_place_ops = ['copy_', 'add_', 'abs_']
+    for in_place_op in in_place_ops:
+      res_cpu = cpu_model.forward(
+          index, copy_tensor, input_tensor, op_name=in_place_op)
+      res_xla_dynamo = compiled_model.forward(
+          xla_index, xla_copy_tensor, xla_input_tensor, op_name=in_place_op)
+      self.assertTrue(torch.allclose(res_cpu, res_xla_dynamo.cpu()))
 
   def test_simple_model_with_different_input_shape(self):
     met.clear_counters()
@@ -245,22 +255,22 @@ class DynamoCpuFallbackTest(unittest.TestCase):
     cpu_res = fn_fallback(t)
     xla_dynamo_res = dynamo_fn(t_xla)
     self.assertTrue(torch.allclose(cpu_res, xla_dynamo_res.cpu()))
-    self.assertEqual(met.metric_data('CompileTime')[0], 4)
-    self.assertEqual(met.metric_data('ExecuteTime')[0], 8)
+    self.assertEqual(met.metric_data('CompileTime')[0], 3)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 10)
 
     # Second tracing
     met.clear_counters()
     xla_dynamo_res_2 = dynamo_fn(t_xla)
     self.assertTrue(torch.allclose(cpu_res, xla_dynamo_res_2.cpu()))
-    self.assertEqual(met.metric_data('CompileTime')[0], 4)
-    self.assertEqual(met.metric_data('ExecuteTime')[0], 10)
+    self.assertEqual(met.metric_data('CompileTime')[0], 3)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 12)
 
     # Verify that dynamo can handle different inputs
     xla_dynamo_res_3 = dynamo_fn(t_xla * 3)
     cpu_res_3 = fn_fallback(t * 3)
     self.assertTrue(torch.allclose(cpu_res_3, xla_dynamo_res_3.cpu()))
-    self.assertEqual(met.metric_data('CompileTime')[0], 5)
-    self.assertEqual(met.metric_data('ExecuteTime')[0], 12)
+    self.assertEqual(met.metric_data('CompileTime')[0], 4)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 15)
 
 
 class DynamoTrainingBasicTest(unittest.TestCase):
