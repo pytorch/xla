@@ -332,12 +332,12 @@ def _get_sharding_type(partition_spec: Tuple[Union[int, None]],
 
 
 def _get_tile_assignment(
-    mesh: Mesh, partition_spec: List[Union[List[int], int, None]]
-) -> Tuple[np.ndarray, List[Union[int, None]]]:
+    mesh: Mesh, partition_spec: Tuple[Union[Tuple[int], int, None]]
+) -> Tuple[np.ndarray, Tuple[Union[int, None]]]:
   """
   Permute the given mesh to create the tile assignment based on the partition
   spec. Returns the tiling assignment as a numpy ndarray and an updated
-  partition spec as List of int or None.
+  partition spec as Tuple of int or None.
 
   If the input partition_spec combines multiple logical mesh axes over a single
   tensor axis, the returned partition spec will be updated to remove the
@@ -359,15 +359,15 @@ def _get_tile_assignment(
   # For any tuples in the partition_spec, the grouped axes will be adjacent
   # after the permutation. Combine these dimensions into a single axis.
   for i, spec in reversed(list(enumerate(partition_spec))):
-    if isinstance(spec, list):
+    if isinstance(spec, tuple):
       shape = tile_assignment.shape
       tile_assignment = tile_assignment.reshape(shape[:i] + (-1,) +
                                                 shape[i + len(spec):])
 
-  # After the transpose, the resulting partition spec becomes iota, with None
+  # After the transpose, the resulting partition spec becomes iota, with Nones
   # preserved from the original spec for use in group assignment generation.
-  resulting_spec = [d if d is None else i for i, d in enumerate(partition_spec)]
-  return tile_assignment, resulting_spec
+  res_spec = tuple(d if d is None else i for i, d in enumerate(partition_spec))
+  return tile_assignment, res_spec
 
 
 # Produce group assignment for partial replication. Partial replication tiles
@@ -419,7 +419,7 @@ def _translate_named_partition_spec(mesh: Mesh, partition_spec: Tuple):
     else:
       raise ValueError(
           f"Spec type {type(p)} is not supported in partition spec")
-  return _partition_spec
+  return tuple(_partition_spec)
 
 
 @xr.requires_pjrt
@@ -474,8 +474,8 @@ def mark_sharding(
   assert len(specs) == len(np.unique(specs)), \
     f"Each device mesh dimension should appear at most once in partition_spec {partition_spec}."
 
-  # The partition spec is rewritten by _get_tile_assignment when multiple
-  # logical axes are specified to shard a single tensor axis.
+  # The partition spec is rewritten by _get_tile_assignment to reflect the axis
+  # order in the tiling.
   tile_assignment, partition_spec = _get_tile_assignment(mesh, partition_spec)
   if len(tile_assignment.shape) > len(partition_spec):
     # Use partial replication for sharding a tensor over a higher-rank mesh
