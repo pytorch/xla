@@ -58,6 +58,36 @@ class DynamRandomOpTest(unittest.TestCase):
     self.assertFalse(torch.allclose(dynamo_res_2, dynamo_res_3))
 
 
+class DynamErrorMessageTest(unittest.TestCase):
+
+  def test_cpu_tensor(self):
+    device = xm.xla_device()
+    input = torch.randn(4, 3, 224, 224)
+    input_xla = input.clone().to(device)
+    resnet18 = torchvision.models.resnet18()
+    resnet18.eval()
+    xla_resnet18 = torchvision.models.resnet18()
+    xla_resnet18.to(device)
+    xla_resnet18.eval()
+    dynamo_resnet18 = torch.compile(xla_resnet18, backend='openxla')
+    dynamo_resnet18_cpu = torch.compile(resnet18, backend='openxla')
+    # input on cpu and model weight on xla
+    with self.assertRaises(Exception) as context:
+      res = dynamo_resnet18(input)
+    self.assertTrue(
+        'found two different devices' in context.exception.__str__())
+    # input on xla and model weight on cpu
+    with self.assertRaises(Exception) as context:
+      res = dynamo_resnet18_cpu(input_xla)
+    self.assertTrue(
+        'found two different devices' in context.exception.__str__())
+    # input and model weight on cpu
+    with self.assertRaises(Exception) as context:
+      res = dynamo_resnet18_cpu(input)
+    self.assertTrue(
+        'please move all tensors to XLA device' in context.exception.__str__())
+
+
 class DynamoInferenceBasicTest(unittest.TestCase):
 
   @classmethod
