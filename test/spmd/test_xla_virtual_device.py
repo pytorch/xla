@@ -63,6 +63,13 @@ class VirtualDeviceTest(test_xla_sharding_base.XlaShardingTest):
     t3_expected = [9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0]
     self.assertEqual(t3.tolist()[0], t3_expected)
 
+  def test_no_sharding_1d(self):
+    t1 = torch.arange(9, dtype=torch.float, device=xm.xla_device())
+    t2 = torch.arange(9, dtype=torch.float, device=xm.xla_device())
+    t3 = t1 + t2
+    t3_expected = list(range(0, 18, 2))
+    self.assertEqual(t3.tolist(), t3_expected)
+
   def test_outbound_data_metrics(self):
     partition_spec = (0, 1)
 
