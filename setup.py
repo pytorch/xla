@@ -327,6 +327,11 @@ setup(
     package_data={
         'torch_xla': ['lib/*.so*',],
     },
+    entry_points={
+        'console_scripts': [
+            'stablehlo-to-saved-model = torch_xla.tf_saved_model_integration:main'
+        ]
+    },
     extras_require={
         # On Cloud TPU VM install with:
         # $ sudo pip3 install torch_xla[tpuvm] -f https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.11-cp38-cp38-linux_x86_64.whl
