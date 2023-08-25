@@ -9,7 +9,7 @@ import torch_xla.runtime as xr
 
 import numpy as np
 import itertools
-from typing import Tuple, Union, List, Sequence, Any, Optional
+from typing import Tuple, Union, List, Sequence, Any, Optional, Set
 from enum import IntEnum
 
 
@@ -332,21 +332,15 @@ def _get_sharding_type(partition_spec: Tuple[Union[int, None]],
 
 
 def _get_tile_assignment(
-    mesh: Mesh, partition_spec: Tuple[Union[Tuple[int], int, None]]
-) -> Tuple[np.ndarray, Tuple[Union[int, None]]]:
+    mesh: Mesh, partition_spec: Tuple[Union[Tuple[int], int,
+                                            None]]) -> np.ndarray:
   """
   Permute the given mesh to create the tile assignment based on the partition
-  spec. Returns the tiling assignment as a numpy ndarray and an updated
-  partition spec as Tuple of int or None.
+  spec. Returns the tiling assignment as a numpy ndarray.
 
   If the input partition_spec combines multiple logical mesh axes over a single
-  tensor axis, the returned partition spec will be updated to remove the
-  grouping, and its indices will refer to the updated tile shape. The resulting
-  tiling assignment will combine the specified axes into a single axis.
-
-  The resulting partition spec and tiling assignment should be used to generate
-  the group assignment and replica groups in the case of partial replication,
-  and the tiling assignment should be used to create the final sharding spec.
+  tensor axis, the resulting tiling assignment will combine the specified axes
+  into a single axis.
   """
   # Flatten the partition spec and ensure that it is fully specified over the
   # mesh for permutation.
@@ -358,17 +352,13 @@ def _get_tile_assignment(
 
   # For any tuples in the partition_spec, the grouped axes will be adjacent
   # after the permutation. Combine these dimensions into a single axis.
-  for i, spec in reversed(list(enumerate(tiled_dims))):
+  for i, spec in enumerate(tiled_dims):
     if isinstance(spec, tuple):
       shape = tile_assignment.shape
       tile_assignment = tile_assignment.reshape(shape[:i] + (-1,) +
                                                 shape[i + len(spec):])
 
-  # After the transpose, the resulting partition spec becomes iota over the
-  # tiled dimensions, with Nones preserved from the original spec.
-  tiled_axis = itertools.count()
-  res_spec = tuple(d if d is None else next(tiled_axis) for d in partition_spec)
-  return tile_assignment, res_spec
+  return tile_assignment
 
 
 # Produce group assignment for partial replication. Partial replication tiles
@@ -376,27 +366,33 @@ def _get_tile_assignment(
 # sub-group. `replication_groups` is a list of groups as lists, where each group
 # contains the participating device IDs. `group_assignment` describes the group
 # placement and the overall mesh, where each element is the group ID.
-def _get_group_assignment(
-    sharding_type: ShardingType, tile_assignment: np.ndarray,
-    partition_spec: Tuple[Union[int, None]]) -> Tuple[List, List]:
+# The tile_assignment should be the result of `_get_tile_assignment` so that all
+# tiled dimensions are in the first indices and replicated dimensions are in the
+# remaining indices.
+def _get_group_assignment(sharding_type: ShardingType,
+                          tile_assignment: np.ndarray, tensor_rank: int,
+                          replicate_dims: Set[int]) -> Tuple[List, List]:
   group_assignment = list()
   replication_groups = list()
   if sharding_type is ShardingType.PARTIAL:
     # Shard across groups and replicate within subgroups; replicated dims
     # will be used to group replication devices.
-    tile_dims = [d for d in partition_spec if d is not None]
-
-    logical_mesh = tile_assignment
-    group_list = [logical_mesh]
+    tile_shape = tile_assignment.shape
+    # When creating the tile assignment, the mesh is permuted so that the first
+    # few axes are used for tiling.
+    tile_dims = range(tensor_rank - len(replicate_dims))
+    group_list = [tile_assignment]
     for d in tile_dims:
       _group_list = list()
       for group_members in group_list:
-        _group_list += np.split(group_members, logical_mesh.shape[d], d)
+        _group_list += np.split(group_members, tile_shape[d], d)
       group_list = _group_list
     replication_groups = [group.flatten().tolist() for group in group_list]
 
+    mesh_axis = itertools.count()
     group_tile_shape = [
-        logical_mesh.shape[d] if d is not None else 1 for d in partition_spec
+        1 if d in replicate_dims else tile_shape[next(mesh_axis)]
+        for d in range(tensor_rank)
     ]
     group_assignment = np.arange(len(replication_groups)).reshape(
         tuple(group_tile_shape)).tolist()
@@ -475,16 +471,15 @@ def mark_sharding(
   assert len(specs) == len(np.unique(specs)), \
     f"Each device mesh dimension should appear at most once in partition_spec {partition_spec}."
 
-  # The partition spec is rewritten by _get_tile_assignment to reflect the axis
-  # order in the tiling.
-  tile_assignment, partition_spec = _get_tile_assignment(mesh, partition_spec)
+  tile_assignment = _get_tile_assignment(mesh, partition_spec)
   if len(tile_assignment.shape) > len(partition_spec):
     # Use partial replication for sharding a tensor over a higher-rank mesh
     sharding_type = ShardingType.PARTIAL
   else:
     sharding_type = _get_sharding_type(partition_spec, num_devices)
+  replicate_dims = {i for i, d in enumerate(partition_spec) if d is None}
   group_assignment, replication_groups = _get_group_assignment(
-      sharding_type, tile_assignment, partition_spec)
+      sharding_type, tile_assignment, len(partition_spec), replicate_dims)
 
   if isinstance(t, XLAShardedTensor):
     torch_xla._XLAC._xla_mark_sharding(t.global_tensor,
@@ -533,12 +528,14 @@ class ShardingSpec:
   @xr.requires_pjrt
   def __post_init__(self):
     partition_spec, mesh = self.partition_spec, self.mesh
-    tile_assignment, partition_spec = _get_tile_assignment(mesh, partition_spec)
+    tile_assignment = _get_tile_assignment(mesh, partition_spec)
     self._tile_assignment = tile_assignment.tolist()
     self._sharding_type = _get_sharding_type(partition_spec,
                                              xr.global_runtime_device_count())
+    replicate_dims = {i for i, d in enumerate(partition_spec) if d is None}
     self._group_assignment, self._replication_groups = _get_group_assignment(
-        self._sharding_type, tile_assignment, partition_spec)
+        self._sharding_type, tile_assignment, len(partition_spec),
+        replicate_dims)
 
   def xla_spec(self, t: torch.Tensor) -> Union['XlaShardingSpec', None]:
     """
