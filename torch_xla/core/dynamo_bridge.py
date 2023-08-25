@@ -455,6 +455,11 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
       self_args.append(buffer)
   all_xla_args = list(xla_args) + self_args
 
+  for xla_arg in xla_args:
+    if xla_arg.device.type != 'xla':
+      raise RuntimeError(
+          'For openxla dynamo backend, please move all tensors to XLA device')
+
   cloned_args = [
       torch.clone(xla_arg) if isinstance(xla_arg, torch.Tensor) else xla_arg
       for xla_arg in all_xla_args
