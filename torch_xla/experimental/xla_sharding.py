@@ -367,8 +367,8 @@ def _get_tile_assignment(
 # contains the participating device IDs. `group_assignment` describes the group
 # placement and the overall mesh, where each element is the group ID.
 # The tile_assignment should be the result of `_get_tile_assignment` so that all
-# tiled dimensions are in the first indices and replicated dimensions are in the
-# remaining indices.
+# tiled dimensions are in the first axes and replicated dimensions are in the
+# remaining axes.
 def _get_group_assignment(sharding_type: ShardingType,
                           tile_assignment: np.ndarray, tensor_rank: int,
                           replicate_dims: Set[int]) -> Tuple[List, List]:
@@ -431,8 +431,12 @@ def mark_sharding(
 
         mesh (Mesh): describes the logical XLA device topology and the underlying device IDs.
 
-        partition_spec (Tuple[int, str, None]): A tuple of device_mesh dimension index or `None`. Each index is an int or str if the mesh axis is named.
-        This specifies how each input rank is sharded (index to mesh_shape) or replicated (None).
+        partition_spec (Tuple[Tuple, int, str, None]): A tuple of device_mesh dimension index or
+          `None`. Each index is an int, str if the mesh axis is named, or tuple of int or str.
+          This specifies how each input rank is sharded (index to mesh_shape) or replicated (None).
+          When a tuple is specified, the input tensor will be sharded along all logical axes in the
+          tuple. Note that the order the mesh axes are specified in the tuple will impact the
+          resulting sharding.
         For example, we can shard an 8x10 tensor 4-way row-wise, and replicate column-wise.
         >> input = torch.randn(8, 10)
         >> mesh_shape = (4, 2)
