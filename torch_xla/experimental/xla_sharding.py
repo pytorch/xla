@@ -531,7 +531,8 @@ class ShardingSpec:
 
   @xr.requires_pjrt
   def __post_init__(self):
-    partition_spec, mesh = self.partition_spec, self.mesh
+    mesh = self.mesh
+    partition_spec = _translate_named_partition_spec(mesh, self.partition_spec)
     tile_assignment = _get_tile_assignment(mesh, partition_spec)
     self._tile_assignment = tile_assignment.tolist()
     self._sharding_type = _get_sharding_type(partition_spec,
