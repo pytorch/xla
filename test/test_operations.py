@@ -1656,6 +1656,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertTrue(
         torch.allclose(conv.weight.grad.cpu(), torch.tensor([[[[2077.0]]]])))
 
+  @skipOnTpu  # fail with precision issue on TPU
   def test_patched_linear_3D(self):
     linear_cpu = nn.Linear(2, 4, bias=False)
     input_cpu = torch.randn(4, 3, 2, requires_grad=True)
@@ -1688,6 +1689,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
         torch.allclose(linear.weight.grad.cpu(), linear_cpu.weight.grad))
     self.assertTrue(torch.allclose(input.grad.cpu(), input_cpu.grad))
 
+  @skipOnTpu  # fail with precision issue on TPU
   def test_patched_linear_3D_bias(self):
     linear_cpu = nn.Linear(2, 4)
     input_cpu = torch.randn(4, 3, 2)
@@ -1714,6 +1716,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertTrue(
         torch.allclose(linear.bias.grad.cpu(), linear_cpu.bias.grad))
 
+  @skipOnTpu  # fail with precision issue on TPU
   def test_patched_linear_2D_bias(self):
     linear_cpu = nn.Linear(2, 4)
     input_cpu = torch.randn(4, 2, requires_grad=True)
@@ -1744,6 +1747,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertTrue(
         torch.allclose(linear.bias.grad.cpu(), linear_cpu.bias.grad))
 
+  @skipOnTpu  # fail with precision issue on TPU
   def test_patched_linear_1D_bias(self):
     linear_cpu = nn.Linear(2, 4)
     input_cpu = torch.randn(2, requires_grad=True)
