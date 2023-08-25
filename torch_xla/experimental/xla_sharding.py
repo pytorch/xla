@@ -434,9 +434,9 @@ def mark_sharding(
         partition_spec (Tuple[Tuple, int, str, None]): A tuple of device_mesh dimension index or
           `None`. Each index is an int, str if the mesh axis is named, or tuple of int or str.
           This specifies how each input rank is sharded (index to mesh_shape) or replicated (None).
-          When a tuple is specified, the input tensor will be sharded along all logical axes in the
-          tuple. Note that the order the mesh axes are specified in the tuple will impact the
-          resulting sharding.
+          When a tuple is specified, the corresponding input tensor axis will be sharded along all
+          logical axes in the tuple. Note that the order the mesh axes are specified in the tuple
+          will impact the resulting sharding.
         For example, we can shard an 8x10 tensor 4-way row-wise, and replicate column-wise.
         >> input = torch.randn(8, 10)
         >> mesh_shape = (4, 2)
