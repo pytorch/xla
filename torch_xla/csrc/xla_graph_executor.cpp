@@ -1329,8 +1329,10 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
         torch::lazy::Output(ir_value.node.get(), ir_value.index));
     lowering_ctx.AddResult(root);
   }
+  // Always execute sharded when running in SPMD mode
+  bool is_sharded = (coll.device == GetVirtualDevice());
   // Annotate HLO sharding selectively in the compuation.
-  bool is_sharded = ShardingUtil::SetHloSharding(&lowering_ctx);
+  ShardingUtil::SetHloSharding(&lowering_ctx);
 
   std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
   // TODO(yeounoh) aliasing is disabled for partitioned computation,
