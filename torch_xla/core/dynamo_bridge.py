@@ -14,6 +14,8 @@ from torch.fx.passes.utils.fuser_utils import topo_sort
 import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as metrics
+import torch_xla.runtime as xr
+import torch_xla.utils.utils as xu
 
 debug = os.environ.get("TORCH_XLA_DEBUG") == "1"
 
@@ -202,7 +204,7 @@ def is_xla_tensor(tensor: torch.Tensor) -> bool:
   return tensor.device.type == "xla"
 
 
-def extract_internal(xla_model: torch.fx.GraphModule):
+def extract_graph_helper(xla_model: torch.fx.GraphModule):
   xla_args = xla_model.xla_args
   assert all(
       map(
@@ -237,6 +239,11 @@ def extract_internal(xla_model: torch.fx.GraphModule):
   tensor_id_to_arg_idx = {
       tensor_id: i for i, tensor_id in enumerate(args_tensor_ids)
   }
+
+  if xr.is_spmd():
+    xla_args_sharding_spec = torch_xla._XLAC._get_xla_sharding_specs(xla_args)
+  else:
+    xla_args_sharding_spec = ()
 
   xla_out = xla_model(*xla_args)
   if not isinstance(xla_out, (tuple, list)):
@@ -308,12 +315,55 @@ def extract_internal(xla_model: torch.fx.GraphModule):
   # should be removed to avoid extra computation executed and in place updates op
   # mistakenlly update the input tensors.
   torch_xla._XLAC._clear_pending_irs(str(xm.xla_device()))
+  return (xla_args_sharding_spec, args_and_out, graph_hash,
+          arg_index_to_need_update_index, none_remover, graph_input_matcher,
+          dumb_return_handler, xla_args_need_update)
+
+
+def extract_internal(xla_model: torch.fx.GraphModule):
+  (xla_args_sharding_spec, args_and_out, graph_hash,
+   arg_index_to_need_update_index, none_remover, graph_input_matcher,
+   dumb_return_handler, xla_args_need_update) = extract_graph_helper(xla_model)
+  skip_checking_input_sharding_threashold = xu.getenv_as(
+      'XLA_DYNAMO_INPUT_SHARDING_CHECK_THRESHOLD', int, 5)
 
   def optimized_mod(*args):
+    nonlocal xla_model
+    nonlocal xla_args_sharding_spec
+    nonlocal args_and_out
+    nonlocal graph_hash
+    nonlocal arg_index_to_need_update_index
+    nonlocal none_remover
+    nonlocal graph_input_matcher
+    nonlocal dumb_return_handler
+    nonlocal xla_args_need_update
+    nonlocal skip_checking_input_sharding_threashold
+
     # mark_step needs to be blocking since we want to access args's XLADatas
     # and they can't be placeholder.
     if any(torch_xla._XLAC._check_tensor_need_materialization(args)):
       xm.mark_step(wait=True)
+
+    # If input sharding has changed from the previous program, dynamo current can
+    # not detect this. It will mistakenly believe the program is the same. We need
+    # to retrace it here.
+    if xr.is_spmd():
+      # if the input sharding was the same for skip_checking_input_sharding_threashold times
+      # we will skip checking the input sharding since it can be expensive.
+      if skip_checking_input_sharding_threashold > 0:
+        if torch_xla._XLAC._get_xla_sharding_specs(
+            args) != xla_args_sharding_spec:
+          # update the xla_args with the input with new sharding and retrace
+          xla_model.xla_args = args
+          (xla_args_sharding_spec, args_and_ou_copy, graph_hash,
+           arg_index_to_need_update_index, none_remover, graph_input_matcher,
+           dumb_return_handler,
+           xla_args_need_update) = extract_graph_helper(xla_model)
+          skip_checking_input_sharding_threashold = xu.getenv_as(
+              'XLA_DYNAMO_INPUT_SHARDING_CHECK_THRESHOLD', int, 5)
+        else:
+          skip_checking_input_sharding_threashold -= 1
+
     enter_ts = time.time()
     if len(args_and_out) == 0:
       return ()

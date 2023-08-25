@@ -1471,6 +1471,27 @@ void InitXlaModuleBindings(py::module m) {
     XLATensorPtr xtensor = bridge::GetXlaTensor(input);
     return GetXLAShardingSpec(xtensor);
   });
+  m.def("_get_xla_sharding_specs",
+        [](const std::vector<at::Tensor>& tensors) -> std::vector<std::string> {
+          tsl::profiler::TraceMe activity("_get_xla_sharding_specs",
+                                          tsl::profiler::TraceMeLevel::kInfo);
+          TORCH_LAZY_TIMED("_get_xla_sharding_specs");
+          std::vector<std::string> sharding_specs;
+          sharding_specs.reserve(tensors.size());
+          for (const at::Tensor& tensor : tensors) {
+            XLATensorPtr xtensor = bridge::GetXlaTensor(tensor);
+            XLATensor::ShardingSpecPtr sharding_spec =
+                xtensor ? xtensor->sharding_spec() : nullptr;
+            if (sharding_spec != nullptr) {
+              sharding_specs.push_back(
+                  xla::HloSharding::FromProto(sharding_spec->sharding)
+                      ->ToString());
+            } else {
+              sharding_specs.push_back("");
+            }
+          }
+          return sharding_specs;
+        });
   m.def("_get_xla_sharding_type",
         [](const at::Tensor& input) -> std::optional<int> {
           XLATensorPtr xtensor = bridge::GetXlaTensor(input);
@@ -1616,6 +1637,11 @@ void InitXlaModuleBindings(py::module m) {
               xla::HloModule::CreateFromProto(module_proto, config).value());
           return module->ToString();
         });
+  m.def("_is_placecholder", [](at::Tensor& input) {
+    XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+    return xtensor->CurrentDataHandle() &&
+           !xtensor->CurrentDataHandle()->HasValue();
+  });
   m.def("_init_xla_lazy_backend", []() {
     MapXlaEnvVarsToLazy();
     InitXlaBackend();
