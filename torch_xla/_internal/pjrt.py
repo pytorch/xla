@@ -11,7 +11,7 @@ import torch_xla
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_backend
-from torch_xla._internal import tpu, gpu
+from torch_xla._internal import tpu, gpu, neuron
 from torch_xla import runtime
 
 R = TypeVar('R')
@@ -109,6 +109,8 @@ def initialize_multiprocess(local_rank: int, local_world_size: int):
 
   if runtime.device_type() == 'TPU':
     tpu.configure_topology(local_rank, local_world_size)
+  elif runtime.device_type() == 'NEURON':
+    neuron.initialize_env(local_rank)
 
   devices = xm.get_xla_supported_devices()
   xm.set_replication(xm.xla_device(), devices)
@@ -139,6 +141,8 @@ def run_multiprocess(fn: Callable[..., R],
   elif runtime.device_type() == 'GPU':
     num_processes = gpu.num_local_processes()
     gpu.initialize_distributed_runtime(num_processes)
+  elif runtime.device_type() == 'NEURON':
+    num_processes = neuron.num_local_devices()
   else:
     num_processes = 1
 

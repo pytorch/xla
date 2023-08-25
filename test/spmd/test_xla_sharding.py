@@ -1,10 +1,12 @@
 import copy
 
+from itertools import chain
 import unittest
 from unittest.mock import patch
 import math
 import numpy as np
 import os
+import sys
 
 import torch
 from torch import nn
@@ -20,13 +22,14 @@ import test_xla_sharding_base
 
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.utils.utils as xu
+from torch_xla._internal import tpu
 
 
 class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
 
   @classmethod
   def setUpClass(cls):
-    os.environ["XLA_USE_SPMD"] = "1"
+    xr.use_spmd()
     super().setUpClass()
 
   def test_xla_sharded_tensor(self):
@@ -335,6 +338,77 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     actual = (xt1 + t2).cpu()
     self.assertTrue(torch.allclose(expected, actual))
 
+  @unittest.skipUnless(xr.global_runtime_device_count() > 1,
+                       "Multiple devices required for tupled partition spec")
+  def test_tupled_partition_spec(self):
+    mesh = self._get_mesh((2, self.n_devices // 2))
+    t = torch.randn(16).to(xm.xla_device())
+    xs.mark_sharding(t, mesh, ((0, 1),))
+    self.assertEqual(
+        torch_xla._XLAC._get_xla_sharding_spec(t), "{devices=[%d]%s}" %
+        (self.n_devices, ','.join(str(x) for x in range(self.n_devices))))
+
+  @unittest.skipUnless(xr.global_runtime_device_count() >= 4,
+                       "Multiple devices required for tupled partition spec")
+  def test_named_partial_tupled_partition_spec(self):
+    mesh = xs.Mesh(
+        range(self.n_devices), (1, 2, self.n_devices // 2), ('r', 'b', 'm'))
+    # Shard the first dimension on `r` and `b`, replicate the second dimension
+    t = torch.randn(16, 16).to(xm.xla_device())
+    xs.mark_sharding(t, mesh, (('r', 'b'), None))
+    self.assertEqual(
+        torch_xla._XLAC._get_xla_sharding_spec(t),
+        "{devices=[2,1,%d]%s last_tile_dim_replicate}" %
+        (self.n_devices // 2, ','.join(str(x) for x in range(self.n_devices))))
+
+    # Replicate the first dimension, shard the second on `b` and `m`
+    u = torch.randn(16, 16).to(xm.xla_device())
+    xs.mark_sharding(u, mesh, (None, ('b', 'm')))
+    self.assertEqual(
+        torch_xla._XLAC._get_xla_sharding_spec(u), "{devices=[1,%d]%s}" %
+        (self.n_devices, ','.join(str(x) for x in range(self.n_devices))))
+
+    # Replicate the first dimension, shard the second on `r` and `m`
+    v = torch.randn(16, 16).to(xm.xla_device())
+    xs.mark_sharding(v, mesh, (None, ('r', 'm')))
+    device_order = chain(
+        range(0, self.n_devices, 2), range(1, self.n_devices, 2))
+    self.assertEqual(
+        torch_xla._XLAC._get_xla_sharding_spec(v),
+        "{devices=[1,%d,2]%s last_tile_dim_replicate}" %
+        (self.n_devices // 2, ','.join(str(x) for x in device_order)))
+
+    # Replicate the first dimension, shard the second on `m` and `b`
+    v = torch.randn(16, 16).to(xm.xla_device())
+    xs.mark_sharding(v, mesh, (None, ('m', 'b')))
+    device_order = chain(
+        range(0, self.n_devices, 2), range(1, self.n_devices, 2))
+    self.assertEqual(
+        torch_xla._XLAC._get_xla_sharding_spec(v), "{devices=[1,%d]%s}" %
+        (self.n_devices, ','.join(str(x) for x in device_order)))
+
+  @unittest.skipUnless(xr.global_runtime_device_count() > 1,
+                       'Multiple devices required for tupled partition spec')
+  def test_multiple_tuples_in_spec(self):
+    mesh = xs.Mesh(
+        range(self.n_devices), (1, 2, self.n_devices // 2, 1),
+        ('a', 'b', 'c', 'd'))
+    t = torch.randn(2, 2).to(xm.xla_device())
+    xs.mark_sharding(t, mesh, (('a', 'b'), ('c', 'd')))
+    self.assertEqual(
+        torch_xla._XLAC._get_xla_sharding_spec(t), "{devices=[2,%d]%s}" %
+        (self.n_devices // 2, ','.join(str(x) for x in range(self.n_devices))))
+
+  @unittest.skipUnless(xr.global_runtime_device_count() > 1,
+                       'At least 2 devices needed for 2D mesh')
+  def test_3d_tensor_2d_mesh(self):
+    mesh = self._get_mesh((2, self.n_devices // 2))
+    t = torch.randn(16, 16, 16).to(xm.xla_device())
+    xs.mark_sharding(t, mesh, (None, 0, 1))
+    self.assertEqual(
+        torch_xla._XLAC._get_xla_sharding_spec(t), '{devices=[1,2,%d]%s}' %
+        (self.n_devices // 2, ','.join(str(x) for x in range(self.n_devices))))
+
   def test_partial_replication_addmm(self):
     device = xm.xla_device()
     z_dim = 2 if self.n_devices >= 4 else 1
@@ -476,6 +550,10 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     sharding_spec = torch_xla._XLAC._get_xla_sharding_spec(xt)
     xt.add_(1)  # inplace update should preserve the sharding
     self.assertEqual(sharding_spec, torch_xla._XLAC._get_xla_sharding_spec(xt))
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo([xt])
+    self.assertIn(
+        '%custom-call.7 = f32[2,2]{1,0} custom-call(f32[2,2]{1,0} %add.6), custom_call_target="Sharding", sharding=',
+        hlo)
 
   def test_shard_hashing(self):
     xt1 = torch.ones(2, 2).to(xm.xla_device())
@@ -597,7 +675,8 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     actual = (t1 + t2).cpu()
     self.assertTrue(torch.allclose(expected, actual))
 
-  @unittest.skipIf(xr.device_type() == 'TPU', "Crash on TPU v2")
+  @unittest.skipIf(xr.device_type() == 'TPU' and tpu.version() < 3,
+                   "Crash on TPU v2")
   @unittest.skipUnless(
       xu.getenv_as(xenv.PJRT_DEVICE, str) == "TPU",
       f"Requires PJRT_DEVICE set to `TPU`.")
@@ -608,7 +687,8 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertEqual(mesh.get_logical_mesh().shape,
                      hybrid_mesh.get_logical_mesh().shape)
 
-  @unittest.skipIf(xr.device_type() == 'TPU', "Crash on TPU v2")
+  @unittest.skipIf(xr.device_type() == 'TPU' and tpu.version() < 3,
+                   "Crash on TPU v2")
   @patch('torch_xla.runtime.global_runtime_device_attributes')
   @patch('torch_xla.core.xla_model.xla_device_hw')
   def test_hybrid_mesh(self, xla_device_mock, device_attributes_mock):
@@ -618,40 +698,48 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     device_attributes_mock.return_value = [{
         'coords': [0, 0, 0],
         'core_on_chip': 0,
-        'slice_index': 0
+        'slice_index': 0,
+        'name': 'TPU:2'
     }, {
         'core_on_chip': 0,
         'coords': [1, 0, 0],
-        'slice_index': 0
+        'slice_index': 0,
+        'name': 'TPU:1'
     }, {
         'slice_index': 0,
         'core_on_chip': 0,
-        'coords': [0, 1, 0]
+        'coords': [0, 1, 0],
+        'name': 'TPU:0'
     }, {
         'coords': [1, 1, 0],
         'core_on_chip': 0,
-        'slice_index': 0
+        'slice_index': 0,
+        'name': 'TPU:3'
     }, {
         'coords': [0, 0, 0],
         'slice_index': 1,
-        'core_on_chip': 0
+        'core_on_chip': 0,
+        'name': 'TPU:4'
     }, {
         'coords': [1, 0, 0],
         'slice_index': 1,
-        'core_on_chip': 0
+        'core_on_chip': 0,
+        'name': 'TPU:7'
     }, {
         'coords': [0, 1, 0],
         'slice_index': 1,
-        'core_on_chip': 0
+        'core_on_chip': 0,
+        'name': 'TPU:6'
     }, {
         'core_on_chip': 0,
         'coords': [1, 1, 0],
-        'slice_index': 1
+        'slice_index': 1,
+        'name': 'TPU:5'
     }]
     hybrid_mesh = xs.HybridMesh(
         ici_mesh_shape=(2, 2), dcn_mesh_shape=(num_slices, 1))
     self.assertEqual(hybrid_mesh.get_logical_mesh().tolist(),
-                     [[0, 1], [2, 3], [4, 5], [6, 7]])
+                     [[2, 1], [0, 3], [4, 7], [6, 5]])
 
   def test_mark_sharding_ir(self):
     t1 = torch.randn(1, 128, device='cpu')
@@ -661,27 +749,20 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     xt1 = t1.to(xm.xla_device())
     xt2 = t2.to(xm.xla_device())
     actual = xt1 + xt2
-    xs.mark_sharding(actual, self._get_mesh((1, self.n_devices)), (0, 1))
+    actual = xs.mark_sharding(actual, self._get_mesh((1, self.n_devices)),
+                              (0, 1))
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo([actual.global_tensor])
+    self.assertIn(
+        '%custom-call.10 = f32[1,128]{1,0} custom-call(f32[1,128]{1,0} %add.9), custom_call_target="Sharding", sharding=',
+        hlo)
 
-    if self.n_devices > 1:
-      annotation = '{devices=[1,%d]%s}' % (self.n_devices, ','.join(
-          [str(i) for i in range(self.n_devices)]))
-      self.assertEqual(annotation,
-                       torch_xla._XLAC._get_xla_sharding_spec(actual))
+    actual += 0
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo([actual.global_tensor])
+    self.assertIn(
+        '%add.15 = f32[1,128]{1,0} add(f32[1,128]{1,0} %custom-call.13, f32[1,128]{1,0} %broadcast.14)',
+        hlo)
 
     self.assertTrue(torch.allclose(expected, actual.cpu()))
-
-  @unittest.skipIf(xr.device_type() == 'TPU', "Does not work on TPU v2")
-  @patch.dict(os.environ, {"XLA_DUMP_POST_OPTIMIZATIONS": "1"})
-  def test_xla_sharded_hlo_dump_post_optimizations(self):
-    t1 = torch.randn(1, 128).to(xm.xla_device())
-    t2 = torch.randn(128, 1).to(xm.xla_device())
-    xs.mark_sharding(t1, self._get_mesh((1, self.n_devices)), (0, 1))
-
-    t3 = t1 @ t2
-    hlo = torch_xla._XLAC._get_xla_tensors_hlo([t3])
-    if self.n_devices > 1:
-      self.assertIn('all-reduce', hlo)
 
   def test_sharded_tensor_aliasing(self):
     met.clear_all()
