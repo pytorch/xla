@@ -169,3 +169,5 @@ _init_xla_lazy_backend()
 # keep PyTorch/XLA CI healthy.
 # TODO @wonjoo come up with a long term fix in Dynamo.
 torch._dynamo.config.automatic_dynamic_shapes = False
+
+from .stablehlo import save_as_stablehlo, save_torch_model_as_stablehlo
