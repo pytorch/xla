@@ -17,7 +17,6 @@ import torch_xla
 from torch_xla.core import xla_model as xm
 from torch_xla.core import dynamo_bridge
 from torch_xla.debug import metrics
-import torchvision
 import torch._dynamo as torchdynamo
 from torch.utils import _pytree as pytree
 
