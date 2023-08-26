@@ -286,6 +286,9 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     xm.wait_device_ops()
     expected = expected.cpu()
 
+    # Clear sharding spec
+    xs.clear_sharding(t1)
+
     # Shard along two axes if four or more devices are available
     z_dim = 2 if self.n_devices >= 4 else 1
     mesh = self._get_mesh((z_dim, self.n_devices // z_dim))
@@ -315,6 +318,9 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     xm.mark_step()
     xm.wait_device_ops()
     expected = expected.cpu()
+
+    # Clear sharding spec
+    xs.clear_sharding(t1)
 
     # Shard along two axes if four or more devices are available
     z_dim = 2 if self.n_devices >= 4 else 1
@@ -421,6 +427,10 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     xm.wait_device_ops()
     expected = expected.cpu()
 
+    # Clear sharding spec
+    xs.clear_sharding(xx)
+    xs.clear_sharding(xw)
+
     xs.mark_sharding(xx, mesh, (0, None))
     xs.mark_sharding(xw, mesh, (None, 1))
 
@@ -513,14 +523,9 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
       xm.mark_step()
       # Sharding is persisted across mark_step calls, and test if the sharded computation
       # can repeat more than once without crashing.
-      if self.n_devices > 1:
-        self.assertEqual(
-            sharding_spec,
-            torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight))
-      else:
-        # single device execution defaults to implicit replication.
-        self.assertFalse(
-            torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight))
+      self.assertEqual(
+          sharding_spec,
+          torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight))
 
   def test_sharding_propagation(self):
     met.clear_all()
@@ -836,6 +841,9 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     x = xla_x.cpu()
     # xla_x now becomes a device data IR without XLAData
     xm.mark_step()
+
+    # Clear sharding spec
+    xs.clear_sharding(xla_x)
 
     xs.mark_sharding(xla_x, self._get_mesh((1, self.n_devices)), (1, 0))
     self.assertNotEqual(torch_xla._XLAC._get_xla_sharding_spec(xla_x), '')

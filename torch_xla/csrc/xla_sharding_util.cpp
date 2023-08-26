@@ -661,25 +661,12 @@ void ShardingUtil::PrepareOutputShardingPropagation(
 
   for (int i = 0; i < indices.size(); ++i) {
     auto xtensor = (*tensors)[indices[i]];
-    if (output_shardings[i].type()) {
-      // Tensor sharding annotation type is non-zero (sharded).
-      (*sharding_specs)[i] = std::make_shared<XLATensor::ShardingSpec>(
-          output_shardings[i],
-          MakeShapeWithDeviceLayout(
-              xtensor->shape().get(),
-              static_cast<XlaDeviceType>(xtensor->GetDevice().type())));
-      xtensor->SetShardingSpec(*(*sharding_specs)[i]);
-    } else {
-      // Clear sharding if the output parameter is no longer sharded, this
-      // assumes that the output is implicitly replicated and wrapped inside
-      // PjRtShardedData.
-      (*sharding_specs)[i] = std::make_shared<XLATensor::ShardingSpec>(
-          xla::HloSharding::Replicate().ToProto(),
-          MakeShapeWithDeviceLayout(
-              xtensor->shape().get(),
-              static_cast<XlaDeviceType>(xtensor->GetDevice().type())));
-      xtensor->ClearShardingSpec();
-    }
+    (*sharding_specs)[i] = std::make_shared<XLATensor::ShardingSpec>(
+        output_shardings[i],
+        MakeShapeWithDeviceLayout(
+            xtensor->shape().get(),
+            static_cast<XlaDeviceType>(xtensor->GetDevice().type())));
+    xtensor->SetShardingSpec(*(*sharding_specs)[i]);
 
     // Create sharded data placeholder, this will be used to
     // hold the corresponding computation results for both sharding &
