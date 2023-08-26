@@ -40,7 +40,7 @@ timm_vision_transformer | 3.138
 average | 1.9139
 
 Note 
-1. User will likely see better inference perfomrance by putting the inference execution in a `torch.no_grad` context. `openxla` is a `aot-autograd` backend of `torch.compile`. `Aot-autograd`` will attempt to save some states for potential backward. `torch.no_grad` will help `aot-autograd` understand that it is being executed in a inference context.
+1. User will likely see better inference perfomrance by putting the inference execution in a `torch.no_grad` context. `openxla` is a `aot-autograd` backend of `torch.compile`. `Aot-autograd` will attempt to save some states for potential backward. `torch.no_grad` will help `aot-autograd` understand that it is being executed in a inference context.
 2. User can also use the `openxla_eval` backend directly without `torch.no_grad`, since `openxla_eval` is not an `aot-autograd` backend and only works for inference. 
 
 ### Training
