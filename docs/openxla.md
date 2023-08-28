@@ -1,16 +1,9 @@
 # OpenXLA
 
-PyTorch/XLA is a Python package that uses the [XLA deep learning
-compiler](https://www.tensorflow.org/xla) to connect the [PyTorch deep learning
-framework](https://pytorch.org/) and [Cloud
-TPUs](https://cloud.google.com/tpu/). PyTorch/XLA now pull XLA from OpenXLA. 
-OpenXLA here means [open source machine learning compiler XLA for GPUs, CPUs, and ML accelerators](https://github.com/openxla/xla), 
-which belongs to the same-name community [OpenXLA Community](https://github.com/openxla) and this community also contain [StableHLO](https://github.com/openxla/stablehlo).
+As of ***Jun 28***, PyTorch/XLA now ***pulls*** XLA from OpenXLA. 
+OpenXLA ***is an*** [open source machine learning compiler XLA for GPUs, CPUs, and ML accelerators](https://github.com/openxla/xla). 
 
-PyTorch/XLA used to pull XLA from [TensorFlow](https://github.com/tensorflow/tensorflow/tree/master/tensorflow/compiler/xla) before https://github.com/pytorch/xla/pull/5202.
-After https://github.com/pytorch/xla/pull/5202, PyTorch/XLA has migrated from pull XLA from [TensorFlow](https://github.com/tensorflow/tensorflow/tree/master/tensorflow/compiler/xla)
-to pull XLA from [OpenXLA](https://github.com/openxla/xla).
-
+Previous to OpenXLA, PyTorch/XLA pulled XLA directly from [TensorFlow](https://github.com/tensorflow/tensorflow/tree/master/tensorflow/compiler/xla). With our [XLA to OpenXLA migration](https://github.com/pytorch/xla/pull/5202), PyTorch/XLA now pulls XLA from [OpenXLA](https://github.com/openxla/xla).
 
 # How to use OpenXLA
 
