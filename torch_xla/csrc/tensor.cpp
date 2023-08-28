@@ -237,7 +237,8 @@ void XLATensor::SetShardingSpec(const ShardingSpec& sharding) {
   // Existing annotation must be cleared explicitly. We do not clear and
   // overwrite the existing sharding on the user's behalf. This is a no-op if
   // the same sharding already applied.
-  if (!sharding_spec()) {
+  if (!sharding_spec() ||
+      (sharding_spec()->sharding.type() == xla::OpSharding::REPLICATED)) {
     TORCH_LAZY_COUNTER("SetShardingSpec", 1);
     data()->sharding = std::make_shared<ShardingSpec>(sharding);
   } else {
