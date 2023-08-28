@@ -219,7 +219,11 @@ def _exported_program_to_stablehlo_bundle(exported_model,
   if options.override_tracing_arguments is not None:
     args = options.override_tracing_arguments
   else:
-    args = getattr(exported_model, 'original_traced_arguments', None)
+    if hasattr(exported_model, 'example_inputs'):
+      args, _ = getattr(exported_model, 'example_inputs', None)
+    elif hasattr(exported_model, 'original_traced_arguments'):
+      args = getattr(exported_model, 'original_traced_arguments', None)
+
   if args is None:
     raise ValueError(
         'No argument is provided, please set tracing argument in options.override_tracing_arguments'
@@ -463,6 +467,8 @@ def exported_program_to_stablehlo(
     so it might specialize on the shapes of the sample input.
 
   """
+  if options is None:
+    options = StableHLOExportOptions()
   bundle = _exported_program_to_stablehlo_bundle(exported_model, options)
   return StableHLOGraphModule(bundle)
 
