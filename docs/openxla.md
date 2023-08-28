@@ -1,7 +1,7 @@
 # OpenXLA
 
-As of ***Jun 28***, PyTorch/XLA now ***pulls*** XLA from OpenXLA. 
-OpenXLA ***is an*** [open source machine learning compiler XLA for GPUs, CPUs, and ML accelerators](https://github.com/openxla/xla). 
+As of June 28th, 2023, PyTorch/XLA now pulls XLA from OpenXLA. 
+OpenXLA is an [open source machine learning compiler XLA for GPUs, CPUs, and ML accelerators](https://github.com/openxla/xla). 
 
 Previous to OpenXLA, PyTorch/XLA pulled XLA directly from [TensorFlow](https://github.com/tensorflow/tensorflow/tree/master/tensorflow/compiler/xla). With our [XLA to OpenXLA migration](https://github.com/pytorch/xla/pull/5202), PyTorch/XLA now pulls XLA from [OpenXLA](https://github.com/openxla/xla).
 
