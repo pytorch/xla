@@ -1,6 +1,5 @@
 import copy
 
-from itertools import chain
 import unittest
 from unittest.mock import patch
 import math
@@ -371,8 +370,7 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     # Replicate the first dimension, shard the second on `r` and `m`
     v = torch.randn(16, 16).to(xm.xla_device())
     xs.mark_sharding(v, mesh, (None, ('r', 'm')))
-    device_order = chain(
-        range(0, self.n_devices, 2), range(1, self.n_devices, 2))
+    device_order = mesh.get_logical_mesh().transpose((0, 2, 1)).flatten()
     self.assertEqual(
         torch_xla._XLAC._get_xla_sharding_spec(v),
         "{devices=[1,%d,2]%s last_tile_dim_replicate}" %
@@ -381,8 +379,7 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     # Replicate the first dimension, shard the second on `m` and `b`
     v = torch.randn(16, 16).to(xm.xla_device())
     xs.mark_sharding(v, mesh, (None, ('m', 'b')))
-    device_order = chain(
-        range(0, self.n_devices, 2), range(1, self.n_devices, 2))
+    device_order = mesh.get_logical_mesh().transpose((2, 1, 0)).flatten()
     self.assertEqual(
         torch_xla._XLAC._get_xla_sharding_spec(v), "{devices=[1,%d]%s}" %
         (self.n_devices, ','.join(str(x) for x in device_order)))
