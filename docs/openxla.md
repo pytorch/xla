@@ -21,5 +21,3 @@ For [PJRT runtime](https://github.com/pytorch/xla/blob/master/docs/pjrt.md) user
 # pin dependency sunset
 PyTorch/XLA pull XLA from OpenXLA via pin to a specific commit
 
-# other `OpenXLA` or `openxla` used in PyTorch or PyTorch/XLA
-
