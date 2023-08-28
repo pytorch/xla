@@ -18,9 +18,6 @@ For [PJRT runtime](https://github.com/pytorch/xla/blob/master/docs/pjrt.md) user
 there is no logic change before and after [Migrate PyTorch/XLA to pull XLA from OpenXLA](https://github.com/pytorch/xla/pull/5202).
 For XRT runtime user, because OpenXLA don't support XRT, user could use XRT from [XRT branch of PyTorch/XLA](https://github.com/pytorch/xla/tree/xrt).
 
-# Difference
-
-There is no change in user side. Before migrate to pull XLA from OpenXLA, PyTorch/XLA need to build with TensorFlow, but now build with OpenXLA
 
 # Performance
 ||Training Throughput on ResNet50|Training Throughput on ResNet50 |Training Throughput on ResNet50 |
