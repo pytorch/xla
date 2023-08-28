@@ -286,9 +286,6 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     xm.wait_device_ops()
     expected = expected.cpu()
 
-    # Clear sharding spec
-    xs.clear_sharding(t1)
-
     # Shard along two axes if four or more devices are available
     z_dim = 2 if self.n_devices >= 4 else 1
     mesh = self._get_mesh((z_dim, self.n_devices // z_dim))
@@ -309,6 +306,19 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     actual = (xt1 @ t2).cpu()
     self.assertTrue(torch.allclose(expected, actual))
 
+  def test_propagate_replicated_sharding(self):
+    device = xm.xla_device()
+    t1 = torch.randn(4, 4).to(device)
+    t2 = torch.randn(4, 4).to(device)
+    t3 = t1 @ t2
+
+    # To propagate replicated sharding
+    xm.mark_step()
+    xm.wait_device_ops()
+
+    self.assertIn("replicated", torch_xla._XLAC._get_xla_sharding_spec(t3))
+
+
   def test_mark_sharding_partial_unordered(self):
     device = xm.xla_device()
     t1 = torch.randn(4, 3, 4).to(device)
@@ -318,9 +328,6 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     xm.mark_step()
     xm.wait_device_ops()
     expected = expected.cpu()
-
-    # Clear sharding spec
-    xs.clear_sharding(t1)
 
     # Shard along two axes if four or more devices are available
     z_dim = 2 if self.n_devices >= 4 else 1
@@ -426,10 +433,6 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     xm.mark_step()  # To re-materialize xx, xw, and xb.
     xm.wait_device_ops()
     expected = expected.cpu()
-
-    # Clear sharding spec
-    xs.clear_sharding(xx)
-    xs.clear_sharding(xw)
 
     xs.mark_sharding(xx, mesh, (0, None))
     xs.mark_sharding(xw, mesh, (None, 1))
@@ -840,9 +843,6 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     x = xla_x.cpu()
     # xla_x now becomes a device data IR without XLAData
     xm.mark_step()
-
-    # Clear sharding spec
-    xs.clear_sharding(xla_x)
 
     xs.mark_sharding(xla_x, self._get_mesh((1, self.n_devices)), (1, 0))
     self.assertNotEqual(torch_xla._XLAC._get_xla_sharding_spec(xla_x), '')
