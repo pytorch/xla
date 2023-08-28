@@ -318,7 +318,6 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
 
     self.assertIn("replicated", torch_xla._XLAC._get_xla_sharding_spec(t3))
 
-
   def test_mark_sharding_partial_unordered(self):
     device = xm.xla_device()
     t1 = torch.randn(4, 3, 4).to(device)
