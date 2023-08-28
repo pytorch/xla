@@ -11,9 +11,10 @@ For [PJRT runtime](https://github.com/pytorch/xla/blob/master/docs/pjrt.md) user
 
 
 # Performance
-||Training Throughput on ResNet50|Training Throughput on ResNet50 |Training Throughput on ResNet50 |
+Below is a performance comparison for ResNet50 pre and post the migration on different TPU hardwares.
+
+| | resnet50-pjrt-v2-8 | resnet50-pjrt-v4-8 | resnet50-pjrt-v4-32 |
 | :------------  | :------------  | :------------  | :------------  |
-| model-pjrt-tpu  | resnet50-pjrt-v2-8 | resnet50-pjrt-v4-8 | resnet50-pjrt-v4-32 |
 | Pre Migration  | 18.59    | 20.06 | 27.92 |
 | Post Migration | 18.63    | 19.94 | 27.14 |
 
