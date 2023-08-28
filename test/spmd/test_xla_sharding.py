@@ -442,6 +442,16 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     xs.clear_sharding(xt)
     self.assertFalse(torch_xla._XLAC._get_xla_sharding_spec(xt))
 
+  def test_replication_with_no_clear_sharding(self):
+    xt = torch.randn(2, 4).to(xm.xla_device())
+    # replication
+    xs.mark_sharding(xt, self._get_mesh((1, self.n_devices)), (None, None))
+    # sharding annotation over an existing replication sharding is permitted.
+    xs.mark_sharding(xt, self._get_mesh((1, self.n_devices)), (0, 1))
+    if self.n_devices > 1:
+      self.assertFalse(
+          "replicated" in torch_xla._XLAC._get_xla_sharding_spec(xt))
+
   def test_deep_copy(self):
     xt = torch.randn(2, 4, 8, 16).to(xm.xla_device())
     xs.mark_sharding(xt, self._get_mesh((1, 1, 1, self.n_devices)),

@@ -1432,12 +1432,13 @@ void InitXlaModuleBindings(py::module m) {
       cpu_tensor = xtensor->CurrentTensorData().value();
     } else {
       // A new input tensor is not expected to be sharded. But sometimes,
-      // the same input is used sharding annotation, in which case we can
-      // skip if it's the same sharding; however, if it's the same input
-      // with a different sharding then we block & ask the user to clear
-      // the existing sharding first.
+      // the same input is called for sharding annotation over multiple steps,
+      // in which case we can skip if it's the same sharding; however, if it's
+      // the same input with a different sharding then we block & ask the user
+      // to clear the existing sharding first.
       auto current_sharding_spec = xtensor->sharding_spec();
-      if (current_sharding_spec) {
+      if (current_sharding_spec && (current_sharding_spec->sharding.type() !=
+                                    xla::OpSharding::REPLICATED)) {
         XLA_CHECK(ShardingUtil::EqualShardingSpecs(*new_sharding_spec,
                                                    *current_sharding_spec))
             << "Existing annotation must be cleared first.";
