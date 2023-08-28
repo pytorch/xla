@@ -23,11 +23,12 @@ For XRT runtime user, because OpenXLA don't support XRT, user could use XRT from
 There is no change in user side. Before migrate to pull XLA from OpenXLA, PyTorch/XLA need to build with TensorFlow, but now build with OpenXLA
 
 # Performance
-| Training Throughput on ResNet50 |
-|    | resnet50-pjrt-v2-8 | resnet50-pjrt-v4-8 | resnet50-pjrt-v4-32 |
-| -------- | ------- | ------- | ------- |
+||Training Throughput on ResNet50|Training Throughput on ResNet50 |Training Throughput on ResNet50 |
+| :------------  | :------------  | :------------  | :------------  |
+| model-pjrt-tpu  | resnet50-pjrt-v2-8 | resnet50-pjrt-v4-8 | resnet50-pjrt-v4-32 |
 | Pre Migration  | 18.59    | 20.06 | 27.92 |
 | Post Migration | 18.63    | 19.94 | 27.14 |
+
 
 # pin dependency sunset
 PyTorch/XLA pull XLA from OpenXLA via pin to a specific commit
