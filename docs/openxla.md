@@ -14,9 +14,7 @@ to pull XLA from [OpenXLA](https://github.com/openxla/xla).
 
 # How to use OpenXLA
 
-For [PJRT runtime](https://github.com/pytorch/xla/blob/master/docs/pjrt.md) user,
-there is no logic change before and after [Migrate PyTorch/XLA to pull XLA from OpenXLA](https://github.com/pytorch/xla/pull/5202).
-For XRT runtime user, because OpenXLA don't support XRT, user could use XRT from [XRT branch of PyTorch/XLA](https://github.com/pytorch/xla/tree/xrt).
+For [PJRT runtime](https://github.com/pytorch/xla/blob/master/docs/pjrt.md) users, there is no change with this migration. For XRT runtime users, there is a separate [XRT branch of PyTorch/XLA](https://github.com/pytorch/xla/tree/xrt) since OpenXLA doesn't support XRT, .
 
 
 # Performance
