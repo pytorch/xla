@@ -1,3 +1,4 @@
+delete this patch after openxla pin updated to date after or equal to 08/09
 diff --git a/xla/service/layout_assignment.cc b/xla/service/layout_assignment.cc
 index f69224f42..43feda2a0 100644
 --- a/xla/service/layout_assignment.cc
