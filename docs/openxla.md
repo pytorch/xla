@@ -17,8 +17,3 @@ Below is a performance comparison for ResNet50 pre and post the migration on dif
 | :------------  | :------------  | :------------  | :------------  |
 | Pre Migration  | 18.59    | 20.06 | 27.92 |
 | Post Migration | 18.63    | 19.94 | 27.14 |
-
-
-# pin dependency sunset
-PyTorch/XLA pull XLA from OpenXLA via pin to a specific commit
-
