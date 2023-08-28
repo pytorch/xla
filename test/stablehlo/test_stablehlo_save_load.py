@@ -109,6 +109,17 @@ class SimpleExportTest(unittest.TestCase):
       result = program2(*inputs).detach().cpu()
     self.assertTrue(torch.allclose(model(*inputs), result))
 
+  def test_save_load3(self):
+    model = ElementwiseAdd()
+    inputs = model.get_random_inputs()
+    exported = torch._export.export(model, inputs)
+    with tempfile.TemporaryDirectory() as tempdir:
+      # Shouldnt need specify options because exported has example_input inside
+      save_as_stablehlo(exported, tempdir)
+      program2 = StableHLOGraphModule.load(tempdir)
+    result = program2(*inputs).detach().cpu()
+    self.assertTrue(torch.allclose(model(*inputs), result))
+
 
 if __name__ == '__main__':
   test = unittest.main()
