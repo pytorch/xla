@@ -52,7 +52,7 @@ To update your existing training loop, make the following changes:
      loss.backward()
 -    optimizer.step()
 +
-+    # `xm.optimizer_step` combines gradients across replocas
++    # `xm.optimizer_step` combines gradients across replicas
 +    xm.optimizer_step()
 
  if __name__ == '__main__':
