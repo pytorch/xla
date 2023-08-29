@@ -1,13 +1,15 @@
-Commands:
-Notes: 
-export CC=clang-10 and CXX=clang++-10
+Notes: Code was only built on a GPU. 
 
 Build Pytorch/XLA:
+export CC=clang-10 and CXX=clang++-10
 XLA_CUDA=1 TF_CUDA_COMPUTE_CAPABILITIES="7.0,7.5,8.0" DEBUG=0 USE_CUDA=1 BUILD_CPP_TESTS=0 python setup.py install 
 
-
+Tests:
 Testing argmin on cpu
 PJRT_DEVICE=CPU python test/test_custom_cpu_call.py
 
 Testing sum on gpu
 PJRT_DEVICE=GPU python test/test_custom_gpu_call.py
+
+Testing naive pytorch/xla and triton call
+PJRT_DEVICE=GPU python test/test_naive_triton_integration.py
