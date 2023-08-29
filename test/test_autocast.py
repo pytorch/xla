@@ -403,6 +403,10 @@ class TestAutocastTPU(TestAutocastBase):
       self._run_autocast_outofplace(
           op, args, torch.float32, module=None, out_type=out_type)
 
+  def test_autocast_tpu_check_dtype(self):
+    with autocast(xm.xla_device(), dtype=torch.float16):
+      assert not torch.is_autocast_xla_enabled()
+
 
 if __name__ == "__main__":
   test = unittest.main(verbosity=FLAGS.verbosity, exit=False)
