@@ -306,6 +306,18 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     actual = (xt1 @ t2).cpu()
     self.assertTrue(torch.allclose(expected, actual))
 
+  def test_propagate_replicated_sharding(self):
+    device = xm.xla_device()
+    t1 = torch.randn(4, 4).to(device)
+    t2 = torch.randn(4, 4).to(device)
+    t3 = t1 @ t2
+
+    # To propagate replicated sharding
+    xm.mark_step()
+    xm.wait_device_ops()
+
+    self.assertIn("replicated", torch_xla._XLAC._get_xla_sharding_spec(t3))
+
   def test_mark_sharding_partial_unordered(self):
     device = xm.xla_device()
     t1 = torch.randn(4, 3, 4).to(device)
@@ -513,14 +525,8 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
       xm.mark_step()
       # Sharding is persisted across mark_step calls, and test if the sharded computation
       # can repeat more than once without crashing.
-      if self.n_devices > 1:
-        self.assertEqual(
-            sharding_spec,
-            torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight))
-      else:
-        # single device execution defaults to implicit replication.
-        self.assertFalse(
-            torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight))
+      self.assertEqual(sharding_spec,
+                       torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight))
 
   def test_sharding_propagation(self):
     met.clear_all()
