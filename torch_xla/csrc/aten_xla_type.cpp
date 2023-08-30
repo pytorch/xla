@@ -61,6 +61,45 @@
 namespace torch_xla {
 namespace {
 
+std::string GetXLATensorDebugInfo(const at::Tensor& tensor) {
+  auto xtensor = bridge::TryGetXlaTensor(tensor);
+  if (!xtensor) {
+    return "Not a XLATensor\n";
+  }
+  std::stringstream ss;
+  ss << "XLATensor {\n";
+  ss << "TensorID: " << xtensor->GetUniqueId() << "\n";
+  ss << "Device: " << xtensor->GetDevice() << "\n";
+  ss << "XLA Shape: " << xtensor->shape().get().ToString() << "\n";
+
+  torch::lazy::Value ir_value = xtensor->CurrentIrValue();
+  ss << "IR: ";
+  if (ir_value) {
+    ss << ir_value.node->ToString() << "\n";
+  } else {
+    ss << "None\n";
+  }
+
+  torch::lazy::BackendDataPtr handle = xtensor->CurrentDataHandle();
+  if (handle) {
+    auto data = UnwrapXlaData(handle);
+    ss << data->ToString();
+  } else {
+    ss << "XLAData: None\n";
+  }
+
+  auto at_tensor = xtensor->CurrentTensorData();
+  ss << "Tensor on host: ";
+  if (at_tensor) {
+    ss << "with size " << at_tensor->sizes() << "\n";
+  } else {
+    ss << "None\n";
+  }
+
+  ss << "}\n";
+  return ss.str();
+}
+
 at::Tensor to_meta(const at::Tensor& tensor) {
   // undefined tensors can't be converted to the meta device, since they don't
   // have sizes/strides
@@ -114,10 +153,9 @@ void CheckSubOperandTypes(at::ScalarType type1, at::ScalarType type2) {
 
 c10::optional<at::ScalarType> PromoteIntegralType(
     at::ScalarType src_dtype, const c10::optional<at::ScalarType>& opt_dtype) {
-  return opt_dtype.has_value()
-             ? opt_dtype.value()
-             : at::isIntegralType(src_dtype, /*includeBool=*/true) ? at::kLong
-                                                                   : opt_dtype;
+  return opt_dtype.has_value() ? opt_dtype.value()
+         : at::isIntegralType(src_dtype, /*includeBool=*/true) ? at::kLong
+                                                               : opt_dtype;
 }
 
 bool IsTypeWithLargerRangeThanLong(torch::ScalarType dtype) {
@@ -1170,7 +1208,28 @@ at::Tensor XLANativeFunctions::einsum(c10::string_view equation,
                      [](unsigned char x) { return std::isspace(x); }),
       cleansed_equation.end());
 
-  std::vector<XLATensorPtr> xla_tensors = bridge::GetXlaTensors(tensors);
+  std::vector<XLATensorPtr> xla_tensors;
+  xla_tensors.reserve(tensors.size());
+  for (auto& tensor : tensors) {
+    std::cout << "========= " << std::endl;
+    std::cout << "- input tensor: " << tensor.toString()
+              << ", device: " << tensor.device() << ", type: " << tensor.type()
+              << std::endl;
+    std::cout << "-- " << (tensor.device() == at::kXLA) << std::endl;
+    std::cout << "- device type: " << tensor.device().type() << std::endl;
+    std::cout << "-- " << (tensor.device().type() != at::kXLA) << std::endl;
+    std::cout << "-- " << (int8_t)at::kXLA << std::endl;
+    std::cout << "- debug xtensor: " << GetXLATensorDebugInfo(tensor)
+              << std::endl;
+    auto xtensor = bridge::TryGetXlaTensor(tensor);
+    if (xtensor == nullptr && tensor.device().type() == at::kXLA) {
+      xtensor = bridge::GetOrCreateXlaTensor(
+          tensor, GetXlaDeviceOrCurrent(tensor.device()));
+    }
+    xla_tensors.push_back(xtensor);
+  }
+
+  // std::vector<XLATensorPtr> xla_tensors = bridge::GetXlaTensors(tensors);
 
   TORCH_LAZY_FN_COUNTER("xla::");
   // Einsum operations with more than 2 operands, like bilinear operations, are
