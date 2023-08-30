@@ -29,7 +29,7 @@
 #include "xla/pjrt/tfrt_cpu_pjrt_client.h"
 #include "xla/pjrt/tpu_client.h"
 #include "xla/shape.h"
-#include "xla/stream_executor/tpu/tpu_initializer_framework_helper.h"
+// #include "xla/stream_executor/tpu/tpu_initializer_framework_helper.h"
 
 using xla::internal::XlaBuilderFriend;
 
