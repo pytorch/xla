@@ -325,8 +325,8 @@ def _exported_program_to_stablehlo_bundle(exported_model,
       input_signature=input_signatures,
       output_signature=output_signature,
       input_locations=input_locations,
-      input_pytree_spec=pytree.pytree_to_str(exported_model.call_spec.in_spec),
-      output_pytree_spec=pytree.pytree_to_str(
+      input_pytree_spec=pytree.treespec_dumps(exported_model.call_spec.in_spec),
+      output_pytree_spec=pytree.treespec_dumps(
           exported_model.call_spec.out_spec),
   )
   bundle = StableHLOModelBundle(
