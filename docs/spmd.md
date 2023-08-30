@@ -97,7 +97,7 @@ For a given cluster of devices, a physical mesh is a representation of the inter
 
 We derive a logical mesh based on this topology to create sub-groups of devices which can be used for partitioning different axes of tensors in a model.
 
-![alt_text](assets/mesh_spmd.png "image_tooltip")
+![alt_text](assets/mesh_spmd2.png "image_tooltip")
 
 We abstract logical mesh with [Mesh API](https://github.com/pytorch/xla/blob/028df4da388468fa9a41b1f98ea08bfce13b4c63/torch_xla/experimental/xla_sharding.py#L16). The axes of the logical Mesh can be named. Here is an example:
 
