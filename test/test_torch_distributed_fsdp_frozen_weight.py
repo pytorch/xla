@@ -1,7 +1,3 @@
-import os
-
-os.environ["XLA_DISABLE_FUNCTIONALIZATION"] = "1"
-
 import sys
 import torch
 import torch.nn as nn
