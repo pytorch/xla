@@ -354,6 +354,29 @@
 <li><a class="reference internal" href="#develop-pytorch-xla-on-a-gpu-instance-build-pytorch-xla-from-source-with-gpu-support">Develop PyTorch/XLA on a GPU instance (build PyTorch/XLA from source with GPU support)</a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#pytorch-xla-spmd-user-guide">PyTorch/XLA SPMD User Guide</a><ul>
+<li><a class="reference internal" href="#what-is-pytorch-xla-spmd">What is PyTorch/XLA SPMD?</a></li>
+<li><a class="reference internal" href="#pytorch-xla-spmd-design-overview">PyTorch/XLA SPMD Design Overview</a><ul>
+<li><a class="reference internal" href="#simple-eexample-sharding-aannotation-api">Simple Eexample &amp; Sharding Aannotation API</a></li>
+<li><a class="reference internal" href="#id14">Mesh</a></li>
+<li><a class="reference internal" href="#hybrid-mesh">Hybrid Mesh</a></li>
+<li><a class="reference internal" href="#id15">Partition Spec</a></li>
+<li><a class="reference internal" href="#xlashardedtensor">XLAShardedTensor</a></li>
+<li><a class="reference internal" href="#sharding-aware-host-to-device-data-loading">Sharding-Aware Host-to-Device Data Loading</a></li>
+<li><a class="reference internal" href="#distributed-checkpointing">Distributed Checkpointing</a></li>
+<li><a class="reference internal" href="#virtual-device-optimization">Virtual Device Optimization</a></li>
+<li><a class="reference internal" href="#number-of-processes">Number of processes</a></li>
+<li><a class="reference internal" href="#running-spmd-on-tpu-pod">Running SPMD on TPU Pod</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#reference-examples">Reference Examples</a><ul>
+<li><a class="reference internal" href="#use-spmd-to-express-data-parallel">Use SPMD to express Data Parallel</a></li>
+<li><a class="reference internal" href="#use-spmd-to-express-fsdp-fully-sharded-data-parallel">Use SPMD to express FSDP(Fully Sharded Data Parallel)</a></li>
+<li><a class="reference internal" href="#running-resnet50-example-with-spmd">Running Resnet50 example with SPMD</a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 </div>
             
@@ -2798,6 +2821,294 @@ sudo docker exec -it $(sudo docker ps | awk &#39;NR==2 { print $1 }&#39;) /bin/b
 PyTorch/XLA should have been installed successfully.</p>
 </div>
 </div>
+<div class="section" id="pytorch-xla-spmd-user-guide">
+<h1>PyTorch/XLA SPMD User Guide<a class="headerlink" href="#pytorch-xla-spmd-user-guide" title="Permalink to this headline">¶</a></h1>
+<p>In this user guide, we discuss how <a class="reference external" href="https://arxiv.org/abs/2105.04663">GSPMD</a> is integrated in PyTorch/XLA, and provide a design overview to illustrate how the SPMD sharding annotation API and its constructs work. And then, we provide a list of reference examples for users to try.</p>
+<div class="section" id="what-is-pytorch-xla-spmd">
+<h2>What is PyTorch/XLA SPMD?<a class="headerlink" href="#what-is-pytorch-xla-spmd" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference external" href="https://arxiv.org/abs/2105.04663">GSPMD</a> is an automatic parallelization system for common ML workloads. The XLA compiler will transform the single device program into a partitioned one with proper collectives, based on the user provided sharding hints. This feature allows developers to write PyTorch programs as if they are on a single large device without any custom sharded computation ops and/or collective communications to scale.</p>
+<a class="reference external image-reference" href="assets/spmd_mode.png"><img alt="alt_text" src="assets/spmd_mode.png" /></a>
+<p><a href="#id12"><span class="problematic" id="id13">*</span></a><span class="raw-html-m2r"><span style="text-decoration:underline;">Figure 1. Comparison of two different execution strategies, (a) for non-SPMD and (b) for SPMD.</span></span>*</p>
+<p>To support GSPMD in PyTorch/XLA, we are introducing a new execution mode. Before GSPMD, the execution mode in PyTorch/XLA assumed multiple model replicas, each with a single core (Figure 1.a). This mode of execution, as illustrated in the above  suits data parallelism frameworks, like the popular PyTorch <a class="reference external" href="https://pytorch.org/tutorials/intermediate/ddp_tutorial.html">Distributed Data Parallel (DDP)</a> or Fully Sharded Data Parallel (FSDP), but is also limited in that a replica can only reside on one device core for execution. PyTorch/XLA SPMD introduces a new execution mode that assumes a single replica with multiple cores (Figure 1.b), allowing a replica to run across multiple device cores. This shift unlocks more advanced parallelism strategies for better large model training performance.</p>
+<p>PyTorch/XLA SPMD is available on the new <a class="reference external" href="https://github.com/pytorch/xla/blob/master/docs/pjrt.md">PJRT</a> runtime. To enable PyTorch/XLA SPMD execution mode, the user must call <span class="raw-html-m2r"><code>[use_spmd() API](https://github.com/pytorch/xla/blob/b8b484515a97f74e013dcf38125c44d53a41f011/torch_xla/runtime.py#L214)</code></span>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.runtime</span> <span class="k">as</span> <span class="nn">xr</span>
+
+<span class="c1"># Enable PyTorch/XLA SPMD execution mode.</span>
+<span class="n">xr</span><span class="o">.</span><span class="n">use_spmd</span><span class="p">()</span>
+<span class="k">assert</span> <span class="n">xr</span><span class="o">.</span><span class="n">is_spmd</span><span class="p">()</span> <span class="o">==</span> <span class="kc">True</span>
+</pre></div>
+</div>
+<p>It is important to note that SPMD is a replacement for any existing parallel mechanisms, including DDP and FSDP. Users can not mix two different execution modes (SPMD and non-SPMD), and later in this guide we will go over how to use SPMD annotation to perform DDP and FSDP.</p>
+<p>Also, this version of the SPMD is currently only tested.optimized on Google Cloud TPU. GPU support and optimization will come in the 2.2 release.</p>
+</div>
+<div class="section" id="pytorch-xla-spmd-design-overview">
+<h2>PyTorch/XLA SPMD Design Overview<a class="headerlink" href="#pytorch-xla-spmd-design-overview" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="simple-eexample-sharding-aannotation-api">
+<h3>Simple Eexample &amp; Sharding Aannotation API<a class="headerlink" href="#simple-eexample-sharding-aannotation-api" title="Permalink to this headline">¶</a></h3>
+<p>Users can annotate native PyTorch tensors using the <code class="docutils literal notranslate"><span class="pre">mark_sharding</span></code> API (<a class="reference external" href="https://github.com/pytorch/xla/blob/9a5fdf3920c18275cf7dba785193636f1b39ced9/torch_xla/experimental/xla_sharding.py#L388">src</a>). This takes <code class="docutils literal notranslate"><span class="pre">torch.Tensor</span></code> as input and returns a <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code> as output.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">mark_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">XLAShardedTensor</span><span class="p">],</span> <span class="n">mesh</span><span class="p">:</span> <span class="n">Mesh</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="kc">None</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">XLAShardedTensor</span>
+</pre></div>
+</div>
+<p>Invoking <code class="docutils literal notranslate"><span class="pre">mark_sharding</span></code> API takes a user defined logical <a class="reference external" href="#mesh">mesh</a> and <a class="reference external" href="#partition-spec">partition_spec</a> and generates a sharding annotation for the XLA compiler. The sharding spec is attached to the XLATensor. Here is a simple usage example from the [<a class="reference external" href="https://github.com/pytorch/xla/issues/3871">RFC</a>, to illustrate how the sharding annotation API works:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
+<span class="kn">import</span> <span class="nn">torch_xla.runtime</span> <span class="k">as</span> <span class="nn">xr</span>
+<span class="kn">import</span> <span class="nn">torch_xla.experimental.xla_sharding</span> <span class="k">as</span> <span class="nn">xs</span>
+<span class="kn">from</span> <span class="nn">torch_xla.experimental.xla_sharding</span> <span class="kn">import</span> <span class="n">Mesh</span>
+
+<span class="c1"># Enable XLA SPMD execution mode.</span>
+<span class="n">xr</span><span class="o">.</span><span class="n">use_spmd</span><span class="p">()</span>
+
+<span class="c1"># Device mesh, this and partition spec as well as the input tensor shape define the individual shard shape.</span>
+<span class="n">mesh_shape</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+<span class="n">num_devices</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_count</span><span class="p">()</span>
+<span class="n">device_ids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">num_devices</span><span class="p">))</span>
+<span class="n">mesh</span> <span class="o">=</span> <span class="n">Mesh</span><span class="p">(</span><span class="n">device_ids</span><span class="p">,</span> <span class="n">mesh_shape</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">))</span>
+
+<span class="n">t</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">())</span>
+
+<span class="c1"># Mesh partitioning, each device holds 1/8-th of the input</span>
+<span class="n">partition_spec</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">m1_sharded</span> <span class="o">=</span> <span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">)</span>
+<span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">m1_sharded</span><span class="p">,</span> <span class="n">XLAShardedTensor</span><span class="p">)</span> <span class="o">==</span> <span class="kc">True</span>
+</pre></div>
+</div>
+<p>We can annotate different tensors in the PyTorch program to enable different parallelism techniques, as described in the comment below:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Sharding annotate the linear layer weights.</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">SimpleLinear</span><span class="p">()</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">())</span>
+<span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">fc1</span><span class="o">.</span><span class="n">weight</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">)</span>
+
+<span class="c1"># Training loop</span>
+<span class="n">model</span><span class="o">.</span><span class="n">train</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">step</span><span class="p">,</span> <span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">loader</span><span class="p">):</span>
+  <span class="c1"># Assumes `loader` returns data, target on XLA device</span>
+  <span class="n">optimizer</span><span class="o">.</span><span class="n">zero_grad</span><span class="p">()</span>
+  <span class="c1"># Sharding annotate input data, we can shard any input</span>
+  <span class="c1"># dimensions. Sharidng the batch dimension enables</span>
+  <span class="c1"># in data parallelism, sharding the feature dimension enables</span>
+  <span class="c1"># spatial partitioning.</span>
+  <span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">)</span>
+  <span class="n">ouput</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+  <span class="n">loss</span> <span class="o">=</span> <span class="n">loss_fn</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
+  <span class="n">optimizer</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+  <span class="n">xm</span><span class="o">.</span><span class="n">mark_step</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>More complete unit test cases and integration test examples are available in the PyTorch/XLA <a class="reference external" href="https://github.com/pytorch/xla/tree/r2.0/test/spmd">repo</a>.</p>
+</div>
+<div class="section" id="id14">
+<h3>Mesh<a class="headerlink" href="#id14" title="Permalink to this headline">¶</a></h3>
+<p>For a given cluster of devices, a physical mesh is a representation of the interconnect topology.</p>
+<p>We derive a logical mesh based on this topology to create sub-groups of devices which can be used for partitioning different axes of tensors in a model.</p>
+<a class="reference external image-reference" href="assets/mesh_spmd2.png"><img alt="alt_text" src="assets/mesh_spmd2.png" /></a>
+<p>We abstract logical mesh with <a class="reference external" href="https://github.com/pytorch/xla/blob/028df4da388468fa9a41b1f98ea08bfce13b4c63/torch_xla/experimental/xla_sharding.py#L16">Mesh API</a>. The axes of the logical Mesh can be named. Here is an example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.runtime</span> <span class="k">as</span> <span class="nn">xr</span>
+<span class="kn">from</span> <span class="nn">torch_xla.experimental.xla_sharding</span> <span class="kn">import</span> <span class="n">Mesh</span>
+
+<span class="c1"># Assuming you are running on a TPU host that has 8 devices attached</span>
+<span class="n">num_devices</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_count</span><span class="p">()</span>
+<span class="c1"># mesh shape will be (4,2) in this example</span>
+<span class="n">mesh_shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">num_devices</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="n">device_ids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">num_devices</span><span class="p">))</span>
+<span class="c1"># axis_names &#39;x&#39; nad &#39;y&#39; are optional</span>
+<span class="n">mesh</span> <span class="o">=</span> <span class="n">Mesh</span><span class="p">(</span><span class="n">device_ids</span><span class="p">,</span> <span class="n">mesh_shape</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">))</span>
+
+<span class="n">mesh</span><span class="o">.</span><span class="n">get_logical_mesh</span><span class="p">()</span>
+<span class="o">&gt;&gt;</span> <span class="n">array</span><span class="p">([[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+          <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span>
+          <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">],</span>
+          <span class="p">[</span><span class="mi">6</span><span class="p">,</span> <span class="mi">7</span><span class="p">]])</span>
+<span class="n">mesh</span><span class="o">.</span><span class="n">shape</span><span class="p">()</span>
+<span class="o">&gt;&gt;</span> <span class="n">OrderedDict</span><span class="p">([(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="mi">2</span><span class="p">)])</span>
+</pre></div>
+</div>
+<p>In general, SPMD programs should create a single mesh and reuse it for all sharding to ensure that the tiling assignment is consistent with the intended sharding strategy. The same mesh can be reused for tensors of different shapes and shardings by manipulating the partition spec, described further below.</p>
+</div>
+<div class="section" id="hybrid-mesh">
+<h3>Hybrid Mesh<a class="headerlink" href="#hybrid-mesh" title="Permalink to this headline">¶</a></h3>
+<p>Mesh nicely abstracts how the physical device mesh is constructed. Users can arrange devices in any shape and order using the logical mesh. However, one can define a more performant mesh based on the physical topology, especially when it involves Data Center Network (DCN) cross slice connections. HybridMesh creates a mesh which gives good performance out of the box for such multislice environments. It accepts ici_mesh_shape and dcn_mesh_shape which denote logical mesh shapes of inner and outer network.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torch_xla.experimental.xla_sharding</span> <span class="kn">import</span> <span class="n">HybridMesh</span>
+
+<span class="c1"># This example is assuming 2 slices of v4-8.</span>
+<span class="c1"># - ici_mesh_shape: shape of the logical mesh for inner connected devices.</span>
+<span class="c1"># - dcn_mesh_shape: shape of logical mesh for outer connected devices.</span>
+<span class="n">ici_mesh_shape</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="c1"># (data, fsdp, tensor)</span>
+<span class="n">dcn_mesh_shape</span> <span class="o">=</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+<span class="n">mesh</span> <span class="o">=</span> <span class="n">HybridMesh</span><span class="p">(</span><span class="n">ici_mesh_shape</span><span class="p">,</span> <span class="n">dcn_mesh_shape</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span><span class="s1">&#39;fsdp&#39;</span><span class="p">,</span><span class="s1">&#39;tensor&#39;</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">shape</span><span class="p">())</span>
+<span class="o">&gt;&gt;</span> <span class="n">OrderedDict</span><span class="p">([(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;fsdp&#39;</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;tensor&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)])</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="id15">
+<h3>Partition Spec<a class="headerlink" href="#id15" title="Permalink to this headline">¶</a></h3>
+<p>partition_spec has the same rank as the input tensor. Each dimension describes how the corresponding input tensor dimension is sharded across the device mesh (logically defined by mesh_shape). <code class="docutils literal notranslate"><span class="pre">partition_spec</span></code> is a tuple of <code class="docutils literal notranslate"><span class="pre">device_mesh</span></code> dimension <code class="docutils literal notranslate"><span class="pre">index</span></code> or None. The index can be an <code class="docutils literal notranslate"><span class="pre">int</span></code> or <code class="docutils literal notranslate"><span class="pre">str</span></code>, if the corresponding mesh dimension is named. This specifies how each input rank is sharded (<code class="docutils literal notranslate"><span class="pre">index</span></code> to <code class="docutils literal notranslate"><span class="pre">mesh_shape</span></code>) or replicated (<code class="docutils literal notranslate"><span class="pre">None</span></code>).</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Provide optional mesh axis names and use them in the partition spec</span>
+<span class="n">mesh</span> <span class="o">=</span> <span class="n">Mesh</span><span class="p">(</span><span class="n">device_ids</span><span class="p">,</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;model&#39;</span><span class="p">))</span>
+<span class="n">partition_spec</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;model&#39;</span><span class="p">,</span> <span class="s1">&#39;data&#39;</span><span class="p">)</span>
+<span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="n">input_tensor</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>We support all three types of sharding, described in the original <a class="reference external" href="https://arxiv.org/abs/2105.04663">GSPMD</a> paper. For instance, one can specify partial replication like this:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Provide optional mesh axis names and use them in the partition spec</span>
+<span class="n">mesh</span> <span class="o">=</span> <span class="n">Mesh</span><span class="p">(</span><span class="n">device_ids</span><span class="p">,</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="s1">&#39;z&#39;</span><span class="p">))</span>
+
+<span class="c1"># evenly shard across x and z and replicate among y</span>
+<span class="n">partition_spec</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">,</span> <span class="s1">&#39;z&#39;</span><span class="p">)</span>  <span class="c1"># equivalent to (&#39;x&#39;, None, &#39;z&#39;)</span>
+<span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="n">input_tensor</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The partition spec enables reuse of the same mesh for different tensor shapes and desired sharding strategies. The following example demonstrates this using a 3D mesh:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create a 3-D mesh of 8 devices with logical dimensions replica, fsdp, and</span>
+<span class="c1"># tensor</span>
+<span class="n">mesh</span> <span class="o">=</span> <span class="n">Mesh</span><span class="p">(</span><span class="n">device_ids</span><span class="p">,</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;replica&#39;</span><span class="p">,</span> <span class="s1">&#39;fsdp&#39;</span><span class="p">,</span> <span class="s1">&#39;tensor&#39;</span><span class="p">))</span>
+
+<span class="c1"># A 2D tensor can be sharded along the fsdp and tensor axes and replicated</span>
+<span class="c1"># along the replica axis by omitting `replica` from the partition spec.</span>
+<span class="n">two_d_partially_replicated</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla&#39;</span><span class="p">)</span>
+<span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="n">two_d_partially_replicated</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;fsdp&#39;</span><span class="p">,</span> <span class="s1">&#39;tensor&#39;</span><span class="p">))</span>
+
+<span class="c1"># A 2D tensor can be sharded across all dimensions by combining, for example,</span>
+<span class="c1"># the replica and fsdp mesh axes using a tuple</span>
+<span class="n">two_d_fully_sharded</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla&#39;</span><span class="p">)</span>
+<span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="n">two_d_fully_sharded</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="p">((</span><span class="s1">&#39;replica&#39;</span><span class="p">,</span> <span class="s1">&#39;fsdp&#39;</span><span class="p">),</span> <span class="s1">&#39;tensor&#39;</span><span class="p">))</span>
+
+<span class="c1"># A 4D tensor can be sharded along up to three of its axes using the 3D mesh</span>
+<span class="n">four_d</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s1">&#39;xla&#39;</span><span class="p">)</span>
+<span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="n">four_d</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;replica&#39;</span><span class="p">,</span> <span class="s1">&#39;fsdp&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;tensor&#39;</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="xlashardedtensor">
+<h3>XLAShardedTensor<a class="headerlink" href="#xlashardedtensor" title="Permalink to this headline">¶</a></h3>
+<p>The main use case for <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code> [<a class="reference external" href="https://github.com/pytorch/xla/issues/3871">RFC</a>] is to annotate a native <code class="docutils literal notranslate"><span class="pre">torch.tensor</span></code> (on a single device) with a sharding spec. The annotation takes place immediately, but the actual sharding of the tensor is delayed as the computation is carried out lazily, except for the input tensors which are sharded without delay. Once a tensor is annotated and wrapped inside a <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code>, it can be passed to existing PyTorch ops and <code class="docutils literal notranslate"><span class="pre">nn.Module</span></code> layers as <code class="docutils literal notranslate"><span class="pre">torch.Tensor</span></code>. This is important to ensure that the same PyTorch layers and tensor ops can be stacked together with <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code>. This means that the user does not need to rewrite the existing ops and model codes for sharded computation. Namely, <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code> will satisfy the following requirements:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code> is a <code class="docutils literal notranslate"><span class="pre">torch.Tensor</span></code> subclass and works directly with native torch ops and <code class="docutils literal notranslate"><span class="pre">module.layers</span></code>. We use <code class="docutils literal notranslate"><span class="pre">__torch_dispatch__</span></code> to send <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code> to the XLA backend. PyTorch/XLA retrieves attached sharding annotations to trace the graph and invokes XLA SPMDPartitioner.</p></li>
+<li><p>Internally, <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code> (and its global_tensor input) is backed by <code class="docutils literal notranslate"><span class="pre">XLATensor</span></code> with a special data structure holding references to the sharded device data.</p></li>
+<li><p>The sharded tensor after lazy execution may be gathered and materialized back to the host as global_tensor when requested on the host (e.g., printing the value of the global tensor.</p></li>
+<li><p>The handles to the local shards are materialized strictly after the lazy execution. <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code> exposes <a class="reference external" href="https://github.com/pytorch/xla/blob/909f28fa4c1a44efcd21051557b3bcf2d399620d/torch_xla/experimental/xla_sharded_tensor.py#L111">local_shards</a> to return the local shards on addressable devices as <span class="raw-html-m2r"><code>List[[XLAShard](https://github.com/pytorch/xla/blob/909f28fa4c1a44efcd21051557b3bcf2d399620d/torch_xla/experimental/xla_sharded_tensor.py#L12)]</code></span>.</p></li>
+</ul>
+<p>There is also an ongoing effort to integrate <span class="raw-html-m2r"><code>XLAShardedTensor</code></span> into <span class="raw-html-m2r"><code>DistributedTensor</code></span> API to support XLA backend [<a class="reference external" href="https://github.com/pytorch/pytorch/issues/92909">RFC</a>].</p>
+</div>
+<div class="section" id="sharding-aware-host-to-device-data-loading">
+<h3>Sharding-Aware Host-to-Device Data Loading<a class="headerlink" href="#sharding-aware-host-to-device-data-loading" title="Permalink to this headline">¶</a></h3>
+<p>PyTorch/XLA SPMD takes a single-device program, shards and executes it in parallel. The SPMD execution requires using the native PyTorch DataLoader, which transfers data synchronously from the host to XLA devices. This blocks the training during the input data transfer every step. To improve the native data loading performance, we made PyTorch/XLA ParallelLoader support input sharding directly (src), when passed the optional kwarg _input_sharding_:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># MpDeviceLoader returns ParallelLoader.per_device_loader as iterator</span>
+<span class="n">train_loader</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">MpDeviceLoader</span><span class="p">(</span>
+         <span class="n">train_loader</span><span class="p">,</span>  <span class="c1"># wraps PyTorch DataLoader</span>
+         <span class="n">device</span><span class="p">,</span>
+      <span class="c1"># optional input_sharding field</span>
+         <span class="n">input_sharding</span><span class="o">=</span><span class="n">xs</span><span class="o">.</span><span class="n">ShardingSpec</span><span class="p">(</span><span class="n">input_mesh</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)))</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="distributed-checkpointing">
+<h3>Distributed Checkpointing<a class="headerlink" href="#distributed-checkpointing" title="Permalink to this headline">¶</a></h3>
+<p>PyTorch/XLA SPMD is compatible with the <a class="reference external" href="https://pytorch.org/docs/stable/distributed.checkpoint.html">torch.distributed.checkpoint</a> library through a dedicated <code class="docutils literal notranslate"><span class="pre">Planner</span></code> instance. Users are able to synchronously save and load checkpoints through this common interface.</p>
+<p>The SPMDSavePlanner and SPMDLoadPlanner (<a class="reference external" href="https://github.com/pytorch/xla/blob/master/torch_xla/experimental/distributed_checkpoint.py">src</a>) classes enable the <code class="docutils literal notranslate"><span class="pre">save_state_dict</span></code> and <code class="docutils literal notranslate"><span class="pre">load_state_dict</span></code> functions to operate directly on the shards of an <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code>, enabling all of the benefits of distributed checkpointing in SPMD training.</p>
+<p>Here is a demonstration of the synchronous distributed checkpointing API:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch.distributed.checkpoint</span> <span class="k">as</span> <span class="nn">dist_cp</span>
+<span class="kn">import</span> <span class="nn">torch_xla.experimental.distributed_checkpoint</span> <span class="k">as</span> <span class="nn">xc</span>
+
+<span class="c1"># Saving a state_dict</span>
+<span class="n">state_dict</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;model&quot;</span><span class="p">:</span> <span class="n">model</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span>
+    <span class="s2">&quot;optim&quot;</span><span class="p">:</span> <span class="n">optim</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span>
+<span class="p">}</span>
+
+<span class="n">dist_cp</span><span class="o">.</span><span class="n">save_state_dict</span><span class="p">(</span>
+    <span class="n">state_dict</span><span class="o">=</span><span class="n">state_dict</span><span class="p">,</span>
+    <span class="n">storage_writer</span><span class="o">=</span><span class="n">dist_cp</span><span class="o">.</span><span class="n">FileSystemWriter</span><span class="p">(</span><span class="n">CHECKPOINT_DIR</span><span class="p">),</span>
+    <span class="n">planner</span><span class="o">=</span><span class="n">xc</span><span class="o">.</span><span class="n">SPMDSavePlanner</span><span class="p">(),</span>
+<span class="p">)</span>
+<span class="o">...</span>
+
+<span class="c1"># Loading the model&#39;s state_dict from the checkpoint. The model should</span>
+<span class="c1"># already be on the XLA device and have the desired sharding applied.</span>
+<span class="n">state_dict</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;model&quot;</span><span class="p">:</span> <span class="n">model</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span>
+<span class="p">}</span>
+
+<span class="n">dist_cp</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span>
+    <span class="n">state_dict</span><span class="o">=</span><span class="n">state_dict</span><span class="p">,</span>
+    <span class="n">storage_reader</span><span class="o">=</span><span class="n">dist_cp</span><span class="o">.</span><span class="n">FileSystemReader</span><span class="p">(</span><span class="n">CHECKPOINT_DIR</span><span class="p">),</span>
+    <span class="n">planner</span><span class="o">=</span><span class="n">xc</span><span class="o">.</span><span class="n">SPMDLoadPlanner</span><span class="p">(),</span>
+<span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">state_dict</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="virtual-device-optimization">
+<h3>Virtual Device Optimization<a class="headerlink" href="#virtual-device-optimization" title="Permalink to this headline">¶</a></h3>
+<p>PyTorch/XLA normally transfers tensor data asynchronously from host to device once the tensor is defined. This is to overlap the data transfer with the graph tracing time. However, because GSPMD allows the user to modify the tensor sharding _after _the tensor has been defined, we need an optimization to prevent unnecessary transfer of tensor data back and forth between host and device. We introduce Virtual Device Optimization, a technique to place the tensor data on a virtual device SPMD:0 first, before uploading to the physical devices when all the sharding decisions are finalized. Every tensor data in SPMD mode is placed on a virtual device, SPMD:0. The virtual device is exposed to the user as an XLA device XLA:0 with the actual shards on physical devices, like TPU:0, TPU:1, etc.</p>
+</div>
+<div class="section" id="number-of-processes">
+<h3>Number of processes<a class="headerlink" href="#number-of-processes" title="Permalink to this headline">¶</a></h3>
+<p>Unlike existing DDP and FSDP, under the SPMD mode, there is always a single process running on each accelerator host. This provides the benefit that PyTorch/XLA only need to compile each graph once which can be reused for all accelerators attached to this host.</p>
+</div>
+<div class="section" id="running-spmd-on-tpu-pod">
+<h3>Running SPMD on TPU Pod<a class="headerlink" href="#running-spmd-on-tpu-pod" title="Permalink to this headline">¶</a></h3>
+<p>There is no code change required to go from single TPU host to TPU Pod if you construct your mesh and partition spec based on the number of devices instead of some hardcode constant. To run the PyTorch/XLA workload on TPU Pod, please refer to the <a class="reference external" href="https://github.com/pytorch/xla/blob/master/docs/pjrt.md#pods">Pods section</a> of our PJRT guide.</p>
+</div>
+</div>
+<div class="section" id="reference-examples">
+<h2>Reference Examples<a class="headerlink" href="#reference-examples" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="use-spmd-to-express-data-parallel">
+<h3>Use SPMD to express Data Parallel<a class="headerlink" href="#use-spmd-to-express-data-parallel" title="Permalink to this headline">¶</a></h3>
+<p>The SPMD API is general enough to express both data parallelism and model parallelism.  One can implement data parallelism simply by annotating the input batch dimension for sharding. Here, we have shard the batch dimension across all available devices (N-way):There are 2 ways of using SPMD to express data parallel or batch sharding:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">num_devices</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_count</span><span class="p">()</span>
+
+<span class="c1"># Assume data is 4d and 0th dimension is the batch dimension</span>
+<span class="n">mesh_shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">num_devices</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">input_mesh</span> <span class="o">=</span> <span class="n">xs</span><span class="o">.</span><span class="n">Mesh</span><span class="p">(</span><span class="n">device_ids</span><span class="p">,</span> <span class="n">mesh_shape</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;B&#39;</span><span class="p">,</span> <span class="s1">&#39;C&#39;</span><span class="p">,</span> <span class="s1">&#39;W&#39;</span><span class="p">,</span> <span class="s1">&#39;H&#39;</span><span class="p">))</span>
+<span class="n">partition_spec</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_devices</span><span class="p">)</span>
+
+<span class="c1"># Shard the batch dimension</span>
+<span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="n">input_tensor</span><span class="p">,</span> <span class="n">input_mesh</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>PyTorch/XLA’s MpDeviceLoader supports input batch sharding, which also loads the batches to the devices in the background:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">num_devices</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_count</span><span class="p">()</span>
+
+<span class="c1"># Assume data is 4d and 0th dimension is the batch dimension</span>
+<span class="n">mesh_shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">num_devices</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">input_mesh</span> <span class="o">=</span> <span class="n">xs</span><span class="o">.</span><span class="n">Mesh</span><span class="p">(</span><span class="n">device_ids</span><span class="p">,</span> <span class="n">mesh_shape</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;B&#39;</span><span class="p">,</span> <span class="s1">&#39;C&#39;</span><span class="p">,</span> <span class="s1">&#39;W&#39;</span><span class="p">,</span> <span class="s1">&#39;H&#39;</span><span class="p">))</span>
+<span class="n">partition_spec</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_devices</span><span class="p">)</span>
+
+<span class="c1"># Use MpDeviceLoader to load data in background</span>
+<span class="n">train_loader</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">MpDeviceLoader</span><span class="p">(</span>
+     <span class="n">train_loader</span><span class="p">,</span>
+     <span class="n">device</span><span class="p">,</span>
+     <span class="n">input_sharding</span><span class="o">=</span><span class="n">xs</span><span class="o">.</span><span class="n">ShardingSpec</span><span class="p">(</span><span class="n">input_mesh</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>We highly recommend the second approach as it should yield a better training performance.</p>
+</div>
+<div class="section" id="use-spmd-to-express-fsdp-fully-sharded-data-parallel">
+<h3>Use SPMD to express FSDP(Fully Sharded Data Parallel)<a class="headerlink" href="#use-spmd-to-express-fsdp-fully-sharded-data-parallel" title="Permalink to this headline">¶</a></h3>
+<p>PyTorch’s FSDP is data parallel + sharded model parameters at 0th dimension. Users first need to use SPMD to express Data Parallels as suggested in the previous section.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">model</span><span class="o">.</span><span class="n">named_parameters</span><span class="p">():</span>
+    <span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">num_devices</span><span class="p">,)</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span><span class="p">,)</span> <span class="o">*</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">mesh</span> <span class="o">=</span> <span class="n">xs</span><span class="o">.</span><span class="n">Mesh</span><span class="p">(</span><span class="n">device_ids</span><span class="p">,</span> <span class="n">shape</span><span class="p">)</span>
+    <span class="n">xs</span><span class="o">.</span><span class="n">mark_sharding</span><span class="p">(</span><span class="n">param</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">param</span><span class="o">.</span><span class="n">shape</span><span class="p">)))</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="running-resnet50-example-with-spmd">
+<h3>Running Resnet50 example with SPMD<a class="headerlink" href="#running-resnet50-example-with-spmd" title="Permalink to this headline">¶</a></h3>
+<p>We provided a quick example of <a class="reference external" href="https://github.com/pytorch/xla/blob/master/test/spmd/test_train_spmd_imagenet.py">resnet50</a> with a couple different SPMD sharding strategies for you to play around with. You can first run it without SPMD using</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>test/spmd/test_train_spmd_imagenet.py<span class="w"> </span>--fake_data<span class="w"> </span>--batch_size<span class="w"> </span><span class="m">512</span>
+</pre></div>
+</div>
+<p>and check the throughput. After that you can enable the batch sharding with</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">XLA_USE_SPMD</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>python<span class="w"> </span>test/spmd/test_train_spmd_imagenet.py<span class="w"> </span>--fake_data<span class="w"> </span>--batch_size<span class="w"> </span><span class="m">2048</span><span class="w"> </span>--model<span class="o">=</span>resnet50<span class="w"> </span>--sharding<span class="o">=</span>batch
+</pre></div>
+</div>
+<p>Note that I used a batch size 4 times as large since I am running it on a TPU v4 which has 4 TPU devices attached to it. You should see the throughput becomes roughly 4x the non-spmd run.</p>
+</div>
+</div>
+</div>
 
 
              </article>
@@ -2942,6 +3253,29 @@ PyTorch/XLA should have been installed successfully.</p>
 <li><a class="reference internal" href="#run-a-simple-model">Run a simple model</a></li>
 <li><a class="reference internal" href="#amp-automatic-mixed-precision">AMP (AUTOMATIC MIXED PRECISION)</a></li>
 <li><a class="reference internal" href="#develop-pytorch-xla-on-a-gpu-instance-build-pytorch-xla-from-source-with-gpu-support">Develop PyTorch/XLA on a GPU instance (build PyTorch/XLA from source with GPU support)</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pytorch-xla-spmd-user-guide">PyTorch/XLA SPMD User Guide</a><ul>
+<li><a class="reference internal" href="#what-is-pytorch-xla-spmd">What is PyTorch/XLA SPMD?</a></li>
+<li><a class="reference internal" href="#pytorch-xla-spmd-design-overview">PyTorch/XLA SPMD Design Overview</a><ul>
+<li><a class="reference internal" href="#simple-eexample-sharding-aannotation-api">Simple Eexample &amp; Sharding Aannotation API</a></li>
+<li><a class="reference internal" href="#id14">Mesh</a></li>
+<li><a class="reference internal" href="#hybrid-mesh">Hybrid Mesh</a></li>
+<li><a class="reference internal" href="#id15">Partition Spec</a></li>
+<li><a class="reference internal" href="#xlashardedtensor">XLAShardedTensor</a></li>
+<li><a class="reference internal" href="#sharding-aware-host-to-device-data-loading">Sharding-Aware Host-to-Device Data Loading</a></li>
+<li><a class="reference internal" href="#distributed-checkpointing">Distributed Checkpointing</a></li>
+<li><a class="reference internal" href="#virtual-device-optimization">Virtual Device Optimization</a></li>
+<li><a class="reference internal" href="#number-of-processes">Number of processes</a></li>
+<li><a class="reference internal" href="#running-spmd-on-tpu-pod">Running SPMD on TPU Pod</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#reference-examples">Reference Examples</a><ul>
+<li><a class="reference internal" href="#use-spmd-to-express-data-parallel">Use SPMD to express Data Parallel</a></li>
+<li><a class="reference internal" href="#use-spmd-to-express-fsdp-fully-sharded-data-parallel">Use SPMD to express FSDP(Fully Sharded Data Parallel)</a></li>
+<li><a class="reference internal" href="#running-resnet50-example-with-spmd">Running Resnet50 example with SPMD</a></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
