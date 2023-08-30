@@ -40,6 +40,7 @@ def _setup_default_env():
   _set_missing_env('GRPC_VERBOSITY', 'ERROR')
   _set_missing_env('ALLOW_MULTIPLE_LIBTPU_LOAD', '1')
   _set_missing_env('TPU_ML_PLATFORM', 'PyTorch/XLA')
+  _set_missing_env('TPU_MEGACORE', 'megacore_dense')
 
 
 _fd, _tmp_fname = -1, ''
