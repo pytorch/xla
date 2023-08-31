@@ -1,4 +1,4 @@
-from torch_xla.experimental import pjrt
+from torch_xla import runtime as xr
 import args_parse
 
 SUPPORTED_MODELS = [
@@ -179,6 +179,10 @@ def _train_update(device, step, loss, tracker, epoch, writer):
 
 
 def train_imagenet():
+  print('xw32 train_imagenet begins.')
+  print('xw32 train_imagenet FLAGS.pjrt_distributed=', FLAGS.pjrt_distributed, ', FLAGS.ddp=', FLAGS.ddp)
+  print('xw32 train_imagenet xm.get_ordinal()=', xm.get_ordinal(), ', xm.xrt_world_size()=', xm.xrt_world_size())
+  return 100
   if FLAGS.pjrt_distributed:
     import torch_xla.experimental.pjrt_backend
     dist.init_process_group('xla', init_method='pjrt://')
@@ -195,6 +199,8 @@ def train_imagenet():
               torch.zeros(FLAGS.batch_size, dtype=torch.int64)),
         sample_count=train_dataset_len // FLAGS.batch_size //
         xm.xrt_world_size())
+    # xw32: what is xm.xrt_world_size(), is the total num xla devices?
+    # xw32: also what is xm.get_ordinal(), is it the global rank?
     test_loader = xu.SampleGenerator(
         data=(torch.zeros(FLAGS.test_set_batch_size, 3, img_dim, img_dim),
               torch.zeros(FLAGS.test_set_batch_size, dtype=torch.int64)),
@@ -262,8 +268,8 @@ def train_imagenet():
 
   # Initialization is nondeterministic with multiple threads in PjRt.
   # Synchronize model parameters across replicas manually.
-  if pjrt.using_pjrt():
-    pjrt.broadcast_master_param(model)
+  if xr.using_pjrt():
+    xm.broadcast_master_param(model)
 
   if FLAGS.ddp:
     model = DDP(model, gradient_as_bucket_view=True, broadcast_buffers=False)
@@ -301,16 +307,16 @@ def train_imagenet():
           output = model(data)
           loss = loss_fn(output, target)
           loss.backward()
-      if FLAGS.ddp:
-        optimizer.step()
-      else:
-        xm.optimizer_step(optimizer)
-      tracker.add(FLAGS.batch_size)
-      if lr_scheduler:
-        lr_scheduler.step()
-      if step % FLAGS.log_steps == 0:
-        xm.add_step_closure(
-            _train_update, args=(device, step, loss, tracker, epoch, writer))
+          if FLAGS.ddp:
+            optimizer.step()
+          else:
+            xm.optimizer_step(optimizer)
+            tracker.add(FLAGS.batch_size)
+          if lr_scheduler:
+            lr_scheduler.step()
+        if step % FLAGS.log_steps == 0:
+          xm.add_step_closure(
+              _train_update, args=(device, step, loss, tracker, epoch, writer))
 
   def test_loop_fn(loader, epoch):
     total_samples, correct = 0, 0
@@ -367,6 +373,7 @@ def _mp_fn(index, flags):
   global FLAGS
   FLAGS = flags
   torch.set_default_tensor_type('torch.FloatTensor')
+  print('xw32 index=', index)
   accuracy = train_imagenet()
   if accuracy < FLAGS.target_accuracy:
     print('Accuracy {} is below target {}'.format(accuracy,
