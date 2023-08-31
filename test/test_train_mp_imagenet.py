@@ -179,6 +179,10 @@ def _train_update(device, step, loss, tracker, epoch, writer):
 
 
 def train_imagenet():
+  print('xw32 train_imagenet begins.')
+  print('xw32 train_imagenet FLAGS.pjrt_distributed=', FLAGS.pjrt_distributed, ', FLAGS.ddp=', FLAGS.ddp)
+  print('xw32 train_imagenet xm.get_ordinal()=', xm.get_ordinal(), ', xm.xrt_world_size()=', xm.xrt_world_size())
+  return 100
   if FLAGS.pjrt_distributed:
     import torch_xla.experimental.pjrt_backend
     dist.init_process_group('xla', init_method='pjrt://')
@@ -367,6 +371,7 @@ def _mp_fn(index, flags):
   global FLAGS
   FLAGS = flags
   torch.set_default_tensor_type('torch.FloatTensor')
+  print('xw32 index=', index)
   accuracy = train_imagenet()
   if accuracy < FLAGS.target_accuracy:
     print('Accuracy {} is below target {}'.format(accuracy,
