@@ -37,11 +37,13 @@ xrt_nightly_builds = [
 versioned_builds = [
   {
     git_tag         = "v2.1.0"
+    pytorch_git_tag = "v2.1.0-rc2"
     package_version = "2.1"
     accelerator     = "tpu"
   },
   {
     git_tag         = "v2.1.0"
+    pytorch_git_tag = "v2.1.0-rc2"
     package_version = "2.1"
     accelerator     = "tpu"
     python_version = "3.10"
@@ -58,18 +60,21 @@ versioned_builds = [
   },
   {
     git_tag         = "v2.1.0"
+    pytorch_git_tag = "v2.1.0-rc2"
     package_version = "2.1",
     accelerator     = "cuda"
     cuda_version    = "12.0"
   },
   {
     git_tag         = "v2.1.0"
+    pytorch_git_tag = "v2.1.0-rc2"
     package_version = "2.1"
     accelerator     = "cuda"
     cuda_version    = "11.8"
   },
   {
     git_tag         = "v2.1.0"
+    pytorch_git_tag = "v2.1.0-rc2"
     package_version = "2.1"
     accelerator     = "cuda"
     cuda_version    = "11.8"
