@@ -43,7 +43,7 @@ class ComputationClient {
 
     const std::string& device() const { return device_; }
 
-    const xla::Shape& shape() const { return shape_; }
+    // const xla::Shape& shape() const { return shape_; }
 
     virtual OpaqueHandle GetOpaqueHandle() = 0;
 
