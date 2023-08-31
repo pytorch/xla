@@ -43,9 +43,9 @@ python_configure(
 #         "//openxla_patches:gpu_race_condition.diff",
 #         "//openxla_patches:constexpr_return.diff",
 #     ],
-#     strip_prefix = "xla-66ceee5d5967a6f0f24adde73be2e7cf0a0f67fd",
+#     strip_prefix = "xla-3b8a5398ea9e479311d5c0c34bb1ae255551f9d4",
 #     urls = [
-#         "https://github.com/openxla/xla/archive/66ceee5d5967a6f0f24adde73be2e7cf0a0f67fd.tar.gz",
+#         "https://github.com/openxla/xla/archive/3b8a5398ea9e479311d5c0c34bb1ae255551f9d4.tar.gz",
 #     ],
 # )
 
