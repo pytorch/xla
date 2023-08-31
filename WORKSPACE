@@ -30,24 +30,24 @@ python_configure(
 # b) get the sha256 hash of the commit by running:
 #    curl -L https://github.com/openxla/xla/archive/<git hash>.tar.gz | sha256sum
 #    and update the sha256 with the result.
-# http_archive(
-#     name = "xla",
-#     patch_args = [
-#         "-l",
-#         "-p1",
-#     ],
-#     patch_tool = "patch",
-#     patches = [
-#         "//openxla_patches:cache_urls.diff",
-#         "//openxla_patches:f16_abi_clang.diff",
-#         "//openxla_patches:gpu_race_condition.diff",
-#         "//openxla_patches:constexpr_return.diff",
-#     ],
-#     strip_prefix = "xla-3b8a5398ea9e479311d5c0c34bb1ae255551f9d4",
-#     urls = [
-#         "https://github.com/openxla/xla/archive/3b8a5398ea9e479311d5c0c34bb1ae255551f9d4.tar.gz",
-#     ],
-# )
+http_archive(
+    name = "xla",
+    patch_args = [
+        "-l",
+        "-p1",
+    ],
+    patch_tool = "patch",
+    patches = [
+        "//openxla_patches:cache_urls.diff",
+        "//openxla_patches:f16_abi_clang.diff",
+        "//openxla_patches:gpu_race_condition.diff",
+        "//openxla_patches:constexpr_return.diff",
+    ],
+    strip_prefix = "xla-3b8a5398ea9e479311d5c0c34bb1ae255551f9d4",
+    urls = [
+        "https://github.com/openxla/xla/archive/3b8a5398ea9e479311d5c0c34bb1ae255551f9d4.tar.gz",
+    ],
+)
 
 # For development, one often wants to make changes to the OpenXLA repository as well
 # as the PyTorch/XLA repository. You can override the pinned repository above with a
@@ -57,10 +57,10 @@ python_configure(
 #    bazel --override_repository=xla=/path/to/openxla
 #    or
 # b) by commenting out the http_archive above and uncommenting the following:
-local_repository(
-   name = "xla",
-   path = "/workspaces/work/xla",
-)
+# local_repository(
+#    name = "xla",
+#    path = "/path/to/openxla",
+# )
 
 # Initialize OpenXLA's external dependencies.
 load("@xla//:workspace4.bzl", "xla_workspace4")
