@@ -33,6 +33,7 @@ variable "versioned_builds" {
   type = list(
     object({
       git_tag         = string
+      pytorch_git_tag = string
       package_version = string
       accelerator     = string
       python_version  = optional(string, "3.8")
@@ -170,7 +171,7 @@ module "versioned_builds" {
   for_each = local.versioned_builds_dict
 
   ansible_vars = merge(each.value, {
-    pytorch_git_rev = each.value.git_tag
+    pytorch_git_rev = each.value.pytorch_git_tag
     xla_git_rev     = each.value.git_tag
   })
 
