@@ -98,13 +98,21 @@ LoweringContext::LoweringContext(
 }
 
 xla::XlaOp LoweringContext::GetParameter(
-    const std::shared_ptr<torch::lazy::BackendData>& data) {
+    const std::shared_ptr<torch::lazy::BackendData>& data, 
+    const std::vector<uint32_t>& dynamic_dims
+    ) {
   torch::lazy::BackendData::Handle handle = data->GetHandle();
   auto it = parameters_map_.find(handle);
   if (it == parameters_map_.end()) {
+    xla::Shape shape = UnwrapXlaData(data)->shape();
+    for (const int dim : dynamic_dims) {
+      shape.set_dynamic_dimension(dim, true);
+    }
+
     xla::XlaOp param = xla::Parameter(builder(), parameters_.size(),
-                                      UnwrapXlaData(data)->shape(),
+                                      shape,
                                       absl::StrCat("p", parameters_.size()));
+      
     it = parameters_map_.emplace(handle, Parameter{param, parameters_.size()})
              .first;
     parameters_.push_back(data);

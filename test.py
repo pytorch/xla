@@ -1,7 +1,6 @@
 import torch
 import torch_xla
 from torch_xla.core import xla_model as xm
-from torch_xla.experimental import stablehlo_saved_model as sm
 
 
 device = xm.xla_device()
