@@ -1228,9 +1228,9 @@ at::Tensor XLANativeFunctions::einsum(c10::string_view equation,
   //     xtensor = bridge::GetOrCreateXlaTensor(
   //         cpu_tensor, GetXlaDeviceOrCurrent(tensor.device()));
   //     cpu_tensor = bridge::AtenFromXlaTensor(xtensor);
+  //     cpu_tensor.unsafeGetTensorImpl()->mutable_data();
   //   }
   //   cpu_tensors.push_back(cpu_tensor);
-
   // }
 
   std::vector<XLATensorPtr> xla_tensors = bridge::GetXlaTensors(tensors);
