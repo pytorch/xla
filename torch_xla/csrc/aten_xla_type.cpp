@@ -1208,28 +1208,33 @@ at::Tensor XLANativeFunctions::einsum(c10::string_view equation,
                      [](unsigned char x) { return std::isspace(x); }),
       cleansed_equation.end());
 
-  std::vector<XLATensorPtr> xla_tensors;
-  xla_tensors.reserve(tensors.size());
-  for (auto& tensor : tensors) {
-    std::cout << "========= " << std::endl;
-    std::cout << "- input tensor: " << tensor.toString()
-              << ", device: " << tensor.device() << ", type: " << tensor.type()
-              << std::endl;
-    std::cout << "-- " << (tensor.device() == at::kXLA) << std::endl;
-    std::cout << "- device type: " << tensor.device().type() << std::endl;
-    std::cout << "-- " << (tensor.device().type() != at::kXLA) << std::endl;
-    std::cout << "-- " << (int8_t)at::kXLA << std::endl;
-    std::cout << "- debug xtensor: " << GetXLATensorDebugInfo(tensor)
-              << std::endl;
-    auto xtensor = bridge::TryGetXlaTensor(tensor);
-    if (xtensor == nullptr && tensor.device().type() == at::kXLA) {
-      xtensor = bridge::GetOrCreateXlaTensor(
-          tensor, GetXlaDeviceOrCurrent(tensor.device()));
-    }
-    xla_tensors.push_back(xtensor);
-  }
+  // std::vector<at::Tensor> cpu_tensors;
+  // cpu_tensors.reserve(tensors.size());
+  // for (auto& tensor : tensors) {
+  //   std::cout << "========= " << std::endl;
+  //   std::cout << "- input tensor: " << tensor.toString()
+  //             << ", device: " << tensor.device() << ", type: " <<
+  //             tensor.type()
+  //             << std::endl;
+  //   std::cout << "-- " << (tensor.device() == at::kXLA) << std::endl;
+  //   std::cout << "- device type: " << tensor.device().type() << std::endl;
+  //   std::cout << "-- " << (tensor.device().type() != at::kXLA) << std::endl;
+  //   std::cout << "-- " << (int8_t)at::kXLA << std::endl;
+  //   std::cout << "- debug xtensor: " << GetXLATensorDebugInfo(tensor)
+  //             << std::endl;
+  //   auto cpu_tensor = tensor.to(at::kCPU);
+  //   auto xtensor = bridge::TryGetXlaTensor(tensor);
+  //   if (xtensor == nullptr && tensor.device().type() == at::kXLA) {
+  //     xtensor = bridge::GetOrCreateXlaTensor(
+  //         cpu_tensor, GetXlaDeviceOrCurrent(tensor.device()));
+  //     cpu_tensor = bridge::AtenFromXlaTensor(xtensor);
+  //   }
+  //   cpu_tensors.push_back(cpu_tensor);
 
-  // std::vector<XLATensorPtr> xla_tensors = bridge::GetXlaTensors(tensors);
+  // }
+
+  std::vector<XLATensorPtr> xla_tensors = bridge::GetXlaTensors(tensors);
+  // std::vector<XLATensorPtr> xla_tensors = bridge::GetXlaTensors(cpu_tensors);
 
   TORCH_LAZY_FN_COUNTER("xla::");
   // Einsum operations with more than 2 operands, like bilinear operations, are
