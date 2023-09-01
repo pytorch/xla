@@ -14,6 +14,7 @@ from torch.export import export
 from torch_xla.stablehlo import exported_program_to_stablehlo
 import torch_xla.core.xla_model as xm
 import torchvision
+import torch
 
 xla_device = xm.xla_device()
 
