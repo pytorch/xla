@@ -105,11 +105,16 @@ def _run_singleprocess(fn: Callable[..., R], *args, **kwargs) -> Dict[int, R]:
 
 @runtime.requires_pjrt
 def _initialize_multiprocess(local_rank: int, local_world_size: int):
+  print('xw32 _initialize_multiprocess begins. Setting env var xenv.PJRT_LOCAL_PROCESS_RANK=', local_rank, ', xenv.PJRT_LOCAL_PROCESS_COUNT=', local_world_size)
   os.environ.setdefault(xenv.PJRT_LOCAL_PROCESS_RANK, str(local_rank))
+  # TODO(xiowei): change the line below to replace xenv.PJRT_LOCAL_PROCESS_COUNT with xenv.PJRT_GLOBAL_PROCESS_COUNT
   os.environ.setdefault(xenv.PJRT_LOCAL_PROCESS_COUNT, str(local_world_size))
 
   if runtime.device_type() == 'TPU':
     tpu.configure_topology(local_rank, local_world_size)
+  elif runtime.device_type() == 'GPU':
+    print('xw32 _initialize_multiprocess device=gpu, local_world_size=', local_world_size)
+    gpu.initialize_distributed_runtime(local_world_size, local_rank)
 
 
 @runtime.requires_pjrt
@@ -136,7 +141,7 @@ def run_multiprocess(fn: Callable[..., R],
     num_processes = tpu.num_local_processes()
   elif runtime.device_type() == 'GPU':
     num_processes = gpu.num_local_processes()
-    gpu.initialize_distributed_runtime(num_processes)
+    # gpu.initialize_distributed_runtime(num_processes)
   else:
     num_processes = 1
 

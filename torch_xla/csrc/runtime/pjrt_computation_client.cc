@@ -42,13 +42,13 @@ static std::string spmd_device_str = "SPMD:0";
 
 // Initializes a distributed runtime client if dist_service_addr is specified
 std::shared_ptr<xla::DistributedRuntimeClient>
-MaybeInitializeDistributedRuntimeClient(int local_rank,
+MaybeInitializeDistributedRuntimeClient(int global_rank,
                                         std::string dist_service_addr) {
   std::shared_ptr<xla::DistributedRuntimeClient> client;
   if (!dist_service_addr.empty()) {
     xla::DistributedRuntimeClient::Options options;
     /* TODO(jonbolin): Use global rank for multi-host setup */
-    options.node_id = local_rank;
+    options.node_id = global_rank;
     client =
         xla::GetDistributedRuntimeClient(dist_service_addr, options,
                                          /*use_coordination_service=*/false);
@@ -121,10 +121,13 @@ PjRtComputationClient::PjRtComputationClient() {
     int local_rank = sys_util::GetEnvInt(env::kEnvPjRtLocalRank, 0);
     std::string dist_service_addr =
         sys_util::GetEnvString(env::kEnvPjrtDistServiceAddr, "");
+    int host_rank = sys_util::GetEnvInt("HOST_RANK", 0);
+    int local_world_size = sys_util::GetEnvInt("GPU_NUM_DEVICES", 0);
+    int global_rank = host_rank * local_world_size + local_rank;
     auto distributed_client =
-        MaybeInitializeDistributedRuntimeClient(local_rank, dist_service_addr);
+        MaybeInitializeDistributedRuntimeClient(global_rank, dist_service_addr);
     auto allowed_devices =
-        std::make_optional<std::set<int>>(std::set{local_rank});
+        std::make_optional<std::set<int>>(std::set{global_rank});
     xla::PjRtClient::KeyValueGetCallback kv_get = nullptr;
     xla::PjRtClient::KeyValuePutCallback kv_put = nullptr;
     if (distributed_client != nullptr) {
@@ -139,12 +142,14 @@ PjRtComputationClient::PjRtComputationClient() {
         return distributed_client->KeyValueSet(absl::StrCat(key_prefix, k), v);
       };
     }
+    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": node_id=" << global_rank << ", num_nodes=" << global_world_size << std::endl;
+    int global_world_size = sys_util::GetEnvInt("GPU_NUM_DEVICES_GLOBAL", 0);
     client_ =
         std::move(xla::GetStreamExecutorGpuClient(
                       /*asynchronous=*/async, xla::GpuAllocatorConfig{},
-                      /*node_id=*/local_rank,
+                      /*node_id=*/global_rank,
                       /*num_nodes=*/
-                      sys_util::GetEnvInt(env::kEnvPjRtLocalProcessCount, 1),
+                      global_world_size,
                       /*allowed_devices=*/allowed_devices,
                       /*platform_name*/ "gpu",
                       /*should_stage_host_to_device_transfers*/ true,
