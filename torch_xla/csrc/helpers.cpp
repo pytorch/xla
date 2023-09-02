@@ -58,6 +58,7 @@ xla::PrecisionConfig XlaHelpers::BuildPrecisionConfig(
 xla::XlaOp XlaHelpers::BroadcastDimensions(xla::XlaOp input,
                                            absl::Span<const int64_t> dimensions,
                                            absl::Span<const int64_t> sizes) {
+  std::cout << "XlaHelpers::BroadcastDimensions\n";
   XLA_CHECK_EQ(dimensions.size(), sizes.size());
   std::vector<int64_t> bcast_sizes = SizesOfXlaOp(input);
   for (size_t i = 0; i < dimensions.size(); ++i) {
@@ -373,6 +374,7 @@ xla::XlaOp XlaHelpers::LinearInterpolation(xla::XlaOp value0, xla::XlaOp value1,
 
 xla::PrimitiveType XlaHelpers::PromoteType(xla::PrimitiveType type1,
                                            xla::PrimitiveType type2) {
+  std::cout << "XlaHelpers::PromoteType\n";
   if (type1 == type2) {
     return type1;
   }
@@ -426,6 +428,7 @@ xla::PrimitiveType XlaHelpers::PromoteType(xla::PrimitiveType type1,
 
 std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteValues(xla::XlaOp op1,
                                                             xla::XlaOp op2) {
+  std::cout << "XlaHelpers::PromoteValues\n";
   xla::PrimitiveType type1 = TypeOfXlaOp(op1);
   xla::PrimitiveType type2 = TypeOfXlaOp(op2);
   xla::PrimitiveType result_type = PromoteType(type1, type2);
@@ -468,6 +471,7 @@ std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteSecondValue(
 
 xla::Shape XlaHelpers::GetPromotedShape(const xla::Shape& shape1,
                                         const xla::Shape& shape2) {
+  std::cout << "XlaHelpers::GetPromotedShape\n";
   return xla::ShapeUtil::MakeShape(
       shape1.element_type(),
       torch::lazy::GetPromotedShape(
@@ -477,6 +481,7 @@ xla::Shape XlaHelpers::GetPromotedShape(const xla::Shape& shape1,
 
 xla::Shape XlaHelpers::GetPromotedBinaryOpShape(const xla::Shape& shape1,
                                                 const xla::Shape& shape2) {
+  std::cout << "XlaHelpers::GetPromotedBinaryOpShape\n";
   if (!shape1.is_dynamic() && !shape2.is_dynamic()) {
     return xla::ShapeUtil::MakeShape(
         PromoteType(shape1.element_type(), shape2.element_type()),
@@ -550,6 +555,7 @@ xla::Shape XlaHelpers::GetPromotedDynamicShape(const xla::Shape& shape1,
 
 std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteShapes(xla::XlaOp op1,
                                                             xla::XlaOp op2) {
+  std::cout << "XlaHelpers::PromoteShapes\n";
   const xla::Shape& shape1 = ShapeHelper::ShapeOfXlaOp(op1);
   const xla::Shape& shape2 = ShapeHelper::ShapeOfXlaOp(op2);
   if (xla::ShapeUtil::Compatible(shape1, shape2)) {
@@ -560,9 +566,23 @@ std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteShapes(xla::XlaOp op1,
       << shape1 << " and " << shape2;
 
   xla::Shape shape = GetPromotedShape(shape1, shape2);
-  return std::pair<xla::XlaOp, xla::XlaOp>(
-      ImplicitBroadcast(op1, shape1, shape),
-      ImplicitBroadcast(op2, shape2, shape));
+  std::cout << "Promoted Shape: " << xla::ShapeUtil::HumanString(shape) << "\n";
+
+  std::cout << "Implicit broadcasting for op1\n";
+  xla::XlaOp broadcasted_op1 =
+      !shape.is_unbounded_dynamic() && !shape1.is_unbounded_dynamic()
+          ? ImplicitBroadcast(op1, shape1, shape)
+          : ImplicitBroadcastWithUnboundedDynamicShapes(op1, shape1, op2,
+                                                        shape);
+
+  std::cout << "Implicit broadcasting for op2\n";
+  xla::XlaOp broadcasted_op2 =
+      !shape.is_unbounded_dynamic() && !shape2.is_unbounded_dynamic()
+          ? ImplicitBroadcast(op2, shape2, shape)
+          : ImplicitBroadcastWithUnboundedDynamicShapes(op2, shape2, op1,
+                                                        shape);
+
+  return std::pair<xla::XlaOp, xla::XlaOp>(broadcasted_op1, broadcasted_op2);
 }
 
 std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::Promote(xla::XlaOp op1,
@@ -577,9 +597,142 @@ std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteSecond(xla::XlaOp op1,
   return PromoteShapes(vops.first, vops.second);
 }
 
+// import xla::Shape.h to inlcude the following defintion.
+static constexpr int64_t kUnboundedSize = std::numeric_limits<int64_t>::min();
+
+xla::XlaOp XlaHelpers::ImplicitBroadcastWithUnboundedDynamicShapes(
+    xla::XlaOp op, const xla::Shape& op_shape, xla::XlaOp aux_op,
+    const xla::Shape& shape) {
+  std::cout << "XlaHelpers::ImplicitBroadcastWithUnboundedDynamicShapes\n";
+  XLA_CHECK(shape.is_unbounded_dynamic() || op_shape.is_unbounded_dynamic());
+
+  const xla::Shape& aux_shape = ShapeHelper::ShapeOfXlaOp(aux_op);
+  const auto& op_shape_dims = op_shape.dimensions();
+  const auto& aux_shape_dims = aux_shape.dimensions();
+  const auto& shape_dims = shape.dimensions();
+
+  XLA_CHECK_GE(shape_dims.size(), op_shape_dims.size())
+      << shape << " vs " << op_shape;
+
+  int64_t size_delta = shape_dims.size() - op_shape_dims.size();
+  xla::XlaOp new_op = op;
+  std::vector<xla::XlaOp> get_dim_ops;
+  std::vector<xla::XlaOp> reshaped_ops;
+
+  if (size_delta > 0) {
+    std::cout << "\t size_delta > 0\n";
+    std::vector<int64_t> broadcast_sizes(shape_dims.begin(),
+                                         shape_dims.begin() + size_delta);
+    for (int i = 0; i < size_delta; i++) {
+      if (broadcast_sizes[i] != kUnboundedSize) {
+        get_dim_ops.push_back(
+            ScalarValue<int64_t>(broadcast_sizes[i], op.builder()));
+
+        auto s = ShapeHelper::ShapeOfXlaOp(get_dim_ops.back());
+        std::cout << "implicitB shape: " << xla::ShapeUtil::HumanString(s)
+                  << " for size: " << broadcast_sizes[i] << "\n";
+      } else {
+        get_dim_ops.push_back(xla::GetDimensionSize(aux_op, i));
+
+        auto s = ShapeHelper::ShapeOfXlaOp(get_dim_ops.back());
+        std::cout << "implicitB shape: " << xla::ShapeUtil::HumanString(s)
+                  << " for size: ? of index: " << i << "\n";
+      }
+    }
+  }
+
+  if (size_delta == 0) {
+    std::cout << "\t size_delta == 0\n";
+    int sz = op_shape_dims.size() - aux_shape_dims.size();
+    std::vector<int64_t> broadcast_sizes(shape_dims.begin(),
+                                         shape_dims.begin() + sz);
+    for (int i = 0; i < sz; i++) {
+      if (broadcast_sizes[i] != kUnboundedSize) {
+        get_dim_ops.push_back(
+            ScalarValue<int64_t>(broadcast_sizes[i], op.builder()));
+
+        auto s = ShapeHelper::ShapeOfXlaOp(get_dim_ops.back());
+        std::cout << "implicitB shape: " << xla::ShapeUtil::HumanString(s)
+                  << " for size: " << broadcast_sizes[i] << "\n";
+      } else {
+        get_dim_ops.push_back(xla::GetDimensionSize(op, i));
+
+        auto s = ShapeHelper::ShapeOfXlaOp(get_dim_ops.back());
+        std::cout << "implicitB shape: " << xla::ShapeUtil::HumanString(s)
+                  << " for size: ? of index: " << i << "\n";
+      }
+    }
+  }
+
+  size_t min_size = std::min(op_shape_dims.size(), aux_shape_dims.size());
+  for (int i = 0; i < min_size; i++) {
+    int op_shape_index = op_shape_dims.size() - min_size + i;
+    int aux_op_shape_index = aux_shape_dims.size() - min_size + i;
+    int shape_index = shape_dims.size() - min_size + i;
+
+    int64_t op_shape_dim = op_shape_dims[op_shape_index];
+    int64_t aux_op_shape_dim = aux_shape_dims[aux_op_shape_index];
+    int64_t shape_dim = shape_dims[shape_index];
+
+    // op_shape   aux_op_shape   shape
+    //   1            X            X
+    //   X            1            X
+    //   X            X            X
+    //   1            ?            ? (from aux_op_shape)
+    //   ?            1            ? (from op_shape)
+    //   X            ?            X 
+    //   ?            X            X 
+    //   ?            ?            ? (from any, let's select op_shape)
+    // where X != kUnboundedSize && X != 1
+    if (shape_dim != kUnboundedSize) {
+      get_dim_ops.push_back(ScalarValue<int32_t>(shape_dim, op.builder()));
+
+      auto s = ShapeHelper::ShapeOfXlaOp(get_dim_ops.back());
+      std::cout << "implicitB shape: " << xla::ShapeUtil::HumanString(s)
+                << " for size: " << shape_dim << "\n";
+
+    } else if (op_shape_dim == 1 || aux_op_shape_dim == 1) {
+      if (op_shape_dim == 1) {
+        get_dim_ops.push_back(
+            xla::GetDimensionSize(aux_op, aux_op_shape_index));
+
+        auto s = ShapeHelper::ShapeOfXlaOp(get_dim_ops.back());
+        std::cout << "implicitB shape: " << xla::ShapeUtil::HumanString(s)
+                  << " for size: ? of index: " << aux_op_shape_index << "\n";
+
+      } else {
+        get_dim_ops.push_back(xla::GetDimensionSize(op, op_shape_index));
+
+        auto s = ShapeHelper::ShapeOfXlaOp(get_dim_ops.back());
+        std::cout << "implicitB shape: " << xla::ShapeUtil::HumanString(s)
+                  << " for size: ? of index: " << op_shape_index << "\n";
+      }
+    } else {
+      get_dim_ops.push_back(xla::GetDimensionSize(op, op_shape_index));
+
+      auto s = ShapeHelper::ShapeOfXlaOp(get_dim_ops.back());
+      std::cout << "implicitB shape: " << xla::ShapeUtil::HumanString(s)
+                << " for size: ? of index: " << op_shape_index << "\n";
+    }
+  }
+
+  // Create the reshape from scalar to 1-D vector
+  for (auto get_dim_op : get_dim_ops) {
+    reshaped_ops.push_back(xla::Reshape(get_dim_op, {1}));
+  }
+
+  // Create Concatenate op
+  auto concat_op = xla::ConcatInDim(op.builder(), reshaped_ops, {0});
+  new_op = xla::CustomCall(op.builder(), "DynBroadcastInDim", {op, concat_op},
+                           shape);
+
+  return new_op;
+}
+
 xla::XlaOp XlaHelpers::ImplicitBroadcast(xla::XlaOp op,
                                          const xla::Shape& op_shape,
                                          const xla::Shape& shape) {
+  std::cout << "XlaHelpers::ImplicitBroadcast\n";
   const auto& op_shape_dims = op_shape.dimensions();
   const auto& shape_dims = shape.dimensions();
   XLA_CHECK_GE(shape_dims.size(), op_shape_dims.size())
@@ -618,6 +771,7 @@ xla::XlaOp XlaHelpers::ImplicitBroadcast(xla::XlaOp op,
 xla::XlaOp XlaHelpers::PromotedBinaryOp(
     xla::XlaOp op1, xla::XlaOp op2,
     const std::function<xla::XlaOp(xla::XlaOp, xla::XlaOp)>& bin_op) {
+  std::cout << "XlaHelpers::PromotedBinaryOp\n";
   xla::XlaOp numeric_op1 = ConvertToNumeric(op1);
   xla::XlaOp numeric_op2 = ConvertToNumeric(op2);
   std::pair<xla::XlaOp, xla::XlaOp> vops = Promote(numeric_op1, numeric_op2);
