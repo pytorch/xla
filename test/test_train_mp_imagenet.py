@@ -179,6 +179,7 @@ def _train_update(device, step, loss, tracker, epoch, writer):
 
 
 def train_imagenet():
+  print('xw32 test_train_mp_imagenet.py train_imagenet begins. xm.xrt_world_size()=', xm.xrt_world_size(), ', xm.get_ordinal()=', xm.get_ordinal(), ', FLAGS.pjrt_distributed=', FLAGS.pjrt_distributed, ', FLAGS.ddp=', FLAGS.ddp)
   if FLAGS.pjrt_distributed:
     import torch_xla.experimental.pjrt_backend
     dist.init_process_group('xla', init_method='pjrt://')
