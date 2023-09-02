@@ -2,6 +2,7 @@
 
 #include <torch/csrc/lazy/core/ir_metadata.h>
 
+#include <iostream>
 #include <sstream>
 #include <stdexcept>
 
@@ -59,6 +60,9 @@ class HloMetadataSetter {
     }
     metadata.set_op_name(absl::StrCat(op_name_prefix, op_type));
 
+    const XlaNode* xlanode = dynamic_cast<const XlaNode*>(node);
+    metadata.set_op_type(xlanode->experimental_tag());
+
     if (!nmeta.frame_info.empty()) {
       const torch::lazy::SourceLocation& frame = nmeta.frame_info.front();
       std::string::size_type pos = frame.file.find_last_of('/');
@@ -92,15 +96,25 @@ LoweringContext::LoweringContext(
     LowerNode(node);
   }
 }
-
+// import xla::Shape.h to inlcude the following defintion.
+static constexpr int64_t kUnboundedSize = std::numeric_limits<int64_t>::min();
 xla::XlaOp LoweringContext::GetParameter(
-    const std::shared_ptr<torch::lazy::BackendData>& data) {
+    const std::shared_ptr<torch::lazy::BackendData>& data, 
+    const std::vector<uint32_t>& dynamic_dims
+    ) {
   torch::lazy::BackendData::Handle handle = data->GetHandle();
   auto it = parameters_map_.find(handle);
   if (it == parameters_map_.end()) {
+    xla::Shape shape = UnwrapXlaData(data)->shape();
+    for (const int dim : dynamic_dims) {
+      shape.set_dynamic_dimension(dim, true);
+      shape.set_dimensions(dim, kUnboundedSize);
+    }
+
     xla::XlaOp param = xla::Parameter(builder(), parameters_.size(),
-                                      UnwrapXlaData(data)->shape(),
+                                      shape,
                                       absl::StrCat("p", parameters_.size()));
+      
     it = parameters_map_.emplace(handle, Parameter{param, parameters_.size()})
              .first;
     parameters_.push_back(data);
@@ -161,13 +175,31 @@ xla::XlaOp LoweringContext::GetOutputOp(const torch::lazy::Output& output) {
   return it->second;
 }
 
+
 XlaOpVector LoweringContext::LowerNode(const torch::lazy::Node* node) {
   XlaOpVector result_ops;
   try {
     HloMetadataSetter meta_setter(this, node);
 
     const XlaNode* casted = dynamic_cast<const XlaNode*>(node);
+    std::cout << "hanq: lowering: " << casted->ToString() << std::endl;
     result_ops = casted->Lower(this);
+    xla::internal::XlaBuilderFriend builder_friend;
+    auto* inst = builder_friend.GetInstruction(result_ops[0]);
+    std::cout <<"hanq: size is "<< inst->mutable_shape()->is_dynamic_dimension().size() << std::endl;
+    auto* mutable_dynamic = inst->mutable_shape()->mutable_is_dynamic_dimension();
+    if (mutable_dynamic->empty()) {
+      for (int i = 0; i < inst->dimensions_size(); i++) {
+        mutable_dynamic->Add(false);
+      }
+    }
+
+    auto* mutable_dims = inst->mutable_shape()->mutable_dimensions();
+    for (const auto dim : casted->dynamic_dims()) {
+      mutable_dynamic->Set(dim, true);
+      mutable_dims->Set(dim, kUnboundedSize);
+    }
+
   } catch (const std::exception& ex) {
     ReportBuilderError(node, ex.what());
   }
