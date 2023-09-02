@@ -142,8 +142,8 @@ PjRtComputationClient::PjRtComputationClient() {
         return distributed_client->KeyValueSet(absl::StrCat(key_prefix, k), v);
       };
     }
-    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": node_id=" << global_rank << ", num_nodes=" << global_world_size << std::endl;
     int global_world_size = sys_util::GetEnvInt("GPU_NUM_DEVICES_GLOBAL", 0);
+    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": node_id=" << global_rank << ", num_nodes=" << global_world_size << std::endl;
     client_ =
         std::move(xla::GetStreamExecutorGpuClient(
                       /*asynchronous=*/async, xla::GpuAllocatorConfig{},
