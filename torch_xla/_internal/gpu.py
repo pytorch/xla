@@ -41,15 +41,21 @@ def initialize_distributed_runtime(local_world_size: int, local_rank: int) -> No
   # TODO(xiowei): for single host, users don't need to set MASTER_ADDR and the localhost should be used.
   assert 'GPU_NUM_DEVICES_GLOBAL' in os.environ, \
       "Must set `GPU_NUM_DEVICES_GLOBAL` environment variable to use the PjRt GPU client" 
-  global_world_size = int(os.environ['GPU_NUM_DEVICES_GLOBAL'])
-  assert 'HOST_RANK' in os.environ, \
-      "Must set `HOST_RANK` environment variable to use the PjRt GPU client" 
-  host_rank = int(os.environ['HOST_RANK'])
-  if (local_world_size > 1 and local_rank == 0) or (global_world_size > 1 and host_rank == 0 and local_rank == 0):
-    # TODO(jonbolin): For multi-host, this needs to be consistent across hosts
-    # TODO(xiowei): remove the below temperary check later.
+  if 'GPU_NUM_DEVICES_GLOBAL' in os.environ:
+    multi_host = True
+    global_world_size = int(os.environ['GPU_NUM_DEVICES_GLOBAL'])
+    assert 'HOST_RANK' in os.environ, \
+        "Must set `HOST_RANK` environment variable to use the PjRt GPU client" 
+    host_rank = int(os.environ['HOST_RANK'])
     assert xenv.PJRT_DIST_SERVICE_ADDR in os.environ, \
       "Must set `PJRT_DIST_SERVICE_ADDR` environment variable to use the PjRt GPU client" 
+  else:
+    multi_host = False
+    os.environ.setdefault(xenv.PJRT_DIST_SERVICE_ADDR, '127.0.0.1:8547')
+
+  if (not multi_host and local_world_size > 1 and local_rank == 0) or (multi_host and global_world_size > 1 and host_rank == 0 and local_rank == 0):
+    # TODO(jonbolin): For multi-host, this needs to be consistent across hosts
+    # TODO(xiowei): remove the below temperary check later.
     # os.environ.setdefault(xenv.PJRT_DIST_SERVICE_ADDR, '127.0.0.1:8547')
     print('xw32 gpu.py initialize_distributed_runtime: os.environ[xenv.PJRT_DIST_SERVICE_ADDR]=', os.environ[xenv.PJRT_DIST_SERVICE_ADDR])
     global distributed_service
