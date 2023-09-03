@@ -3,7 +3,7 @@
 function run_deployment_tests() {
   export XRT_DEVICE_MAP="CPU:0;/job:localservice/replica:0/task:0/device:XLA_CPU:0"
   export XRT_WORKERS="localservice:0;grpc://localhost:40934"
-  export CC=clang-8 CXX=clang++-8
+  export CC=clang-9 CXX=clang++-9
 
   # We don't need to load libtpu since test is being done on CPU.
   time TPU_LOAD_LIBRARY=0 python /pytorch/xla/test/test_train_mp_mnist.py --fake_data
