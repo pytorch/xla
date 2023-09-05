@@ -27,7 +27,7 @@ module "tpu_e2e_tests" {
     arch            = "amd64"
     accelerator     = "tpu"
     disable_xrt     = "1"
-    pytorch_git_rev = "v2.1.0-rc2"
+    pytorch_git_rev = "main"
     # The commit ID associated with the triggered build. Substituted when
     # Cloud Build is triggered.
     xla_git_rev = "$COMMIT_SHA"
