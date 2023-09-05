@@ -33,7 +33,6 @@ variable "versioned_builds" {
   type = list(
     object({
       git_tag         = string
-      pytorch_git_tag = string
       package_version = string
       accelerator     = string
       python_version  = optional(string, "3.8")
@@ -80,7 +79,7 @@ module "nightly_builds" {
   ansible_vars = merge(each.value, {
     package_version = var.nightly_package_version
     nightly_release = true
-    pytorch_git_rev = "v2.1.0-rc2"
+    pytorch_git_rev = "main"
     xla_git_rev     = "$COMMIT_SHA"
   })
 
@@ -127,7 +126,7 @@ module "xrt_nightly_builds" {
   ansible_vars = merge(each.value, {
     package_version = var.nightly_package_version
     nightly_release = true
-    pytorch_git_rev = "v2.1.0-rc2"
+    pytorch_git_rev = "main"
     xla_git_rev     = "$COMMIT_SHA"
   })
 
@@ -171,7 +170,7 @@ module "versioned_builds" {
   for_each = local.versioned_builds_dict
 
   ansible_vars = merge(each.value, {
-    pytorch_git_rev = each.value.pytorch_git_tag
+    pytorch_git_rev = each.value.git_tag
     xla_git_rev     = each.value.git_tag
   })
 
