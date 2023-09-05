@@ -31,7 +31,7 @@ Also, this version of the SPMD is currently only tested.optimized on Google Clou
 ## PyTorch/XLA SPMD Design Overview
 
 
-### Simple Eexample & Sharding Aannotation API
+### Simple Example & Sharding Aannotation API
 
 Users can annotate native PyTorch tensors using the `mark_sharding` API ([src](https://github.com/pytorch/xla/blob/9a5fdf3920c18275cf7dba785193636f1b39ced9/torch_xla/experimental/xla_sharding.py#L388)). This takes `torch.Tensor` as input and returns a `XLAShardedTensor` as output.
 
