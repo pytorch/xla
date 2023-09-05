@@ -10,5 +10,5 @@ package_version: 2.1.0
 nightly_release: false
 # Whether to disable XRT during build
 disable_xrt: 0
-# Whether to preinstall libtpu in the PyTorch/XLA wheel
+# Whether to preinstall libtpu in the PyTorch/XLA wheel. Ignored for GPU build.
 bundle_libtpu: 1
