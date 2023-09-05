@@ -44,7 +44,7 @@
 #     name of the remote build cache silo
 #
 #   CXX_ABI=""
-#     value for cxx_abi flag; if empty, it is infered from `torch._C`.
+#     value for cxx_abi flag; if empty, it is inferred from `torch._C`.
 #
 from __future__ import print_function
 
@@ -258,7 +258,7 @@ class BuildBazelExtension(command.build_ext.build_ext):
     # Remote cache authentication.
     if GCLOUD_KEY_FILE:
       # Temporary workaround to allow PRs from forked repo to run CI. See details at (#5259).
-      # TODO: Remove the check once self-hosted GHA workers are avaialble to CPU/GPU CI.
+      # TODO: Remove the check once self-hosted GHA workers are available to CPU/GPU CI.
       gclout_key_file_size = os.path.getsize(GCLOUD_KEY_FILE)
       if gclout_key_file_size > 1:
         bazel_argv.append('--google_credentials=%s' % GCLOUD_KEY_FILE)

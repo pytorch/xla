@@ -161,7 +161,7 @@ See the
 for more on training a network on multiple XLA devices with multi-processing.
 
 ### Running on TPU Pods
-Multi-host setup for different accelerators can be very different. This doc will talk about the device independent bits of multi-host training and will use the TPU + PJRT runtime(currently available on 1.13 and 2.x releases) as an example. 
+Multi-host setup for different accelerators can be very different. This doc will talk about the device independent bits of multi-host training and will use the TPU + PJRT runtime(currently available on 1.13 and 2.x releases) as an example.
 
 Before you being, please take a look at our user guide at [here](https://cloud.google.com/tpu/docs/run-calculation-pytorch) which will explain some Google Cloud basis like how to use `gcloud` command and how to setup your project. You can also check [here](https://cloud.google.com/tpu/docs/how-to) for all Cloud TPU Howto. This doc will focus on the PyTorch/XLA perspective of the Setup.
 
@@ -183,7 +183,7 @@ Above `gcloud ssh` command will ssh to all hosts in TPUVM Pod and run the same c
 
 > **NOTE:** You need to run run above `gcloud` command outside of the TPUVM vm.
 
-The model code and training scirpt is the same for the multi-process training and the multi-host training. PyTorch/XLA and the underlying infrastructure will make sure each device is aware of the global topology and each device's local and global ordinal. Cross-device communication will happen across all devices instead of local devices. 
+The model code and training script is the same for the multi-process training and the multi-host training. PyTorch/XLA and the underlying infrastructure will make sure each device is aware of the global topology and each device's local and global ordinal. Cross-device communication will happen across all devices instead of local devices.
 
 For more details regarding PJRT runtime and how to run it on pod, please refer to this [doc](https://github.com/pytorch/xla/blob/master/docs/pjrt.md#tpu). For more information about PyTorch/XLA and TPU pod and a complete guide to run a resnet50 with fakedata on TPU pod, please refer to this [guide](https://cloud.google.com/tpu/docs/pytorch-pods).
 
@@ -242,7 +242,7 @@ XLA tensors can be moved from the CPU to an XLA device and from an XLA device
 to the CPU. If a view is moved then the data its viewing is also copied to the
 other device and the view relationship is not preserved. Put another way,
 once data is copied to another device it has no relationship with its
-previous device or any tensors on it. Again, depending on how your code operates, 
+previous device or any tensors on it. Again, depending on how your code operates,
 appreciating and accommodating this transition can be important.
 
 ### Saving and Loading XLA Tensors
