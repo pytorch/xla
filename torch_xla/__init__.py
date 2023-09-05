@@ -65,6 +65,7 @@ def _setup_default_env():
   _set_missing_env('TPU_ML_PLATFORM', 'PyTorch/XLA')
   if server_is_alive():
     _set_missing_env('XRT_START_LOCAL_SERVER', '0')
+  _set_missing_env('TPU_MEGACORE', 'megacore_dense')
 
 
 _fd, _tmp_fname = -1, ''
