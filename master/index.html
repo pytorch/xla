@@ -627,7 +627,7 @@ for more on training a network on multiple XLA devices with multi-processing.</p
 <blockquote>
 <div><p><strong>NOTE:</strong> You need to run run above <code class="docutils literal notranslate"><span class="pre">gcloud</span></code> command outside of the TPUVM vm.</p>
 </div></blockquote>
-<p>The model code and training scirpt is the same for the multi-process training and the multi-host training. PyTorch/XLA and the underlying infrastructure will make sure each device is aware of the global topology and each device’s local and global ordinal. Cross-device communication will happen across all devices instead of local devices.</p>
+<p>The model code and training script is the same for the multi-process training and the multi-host training. PyTorch/XLA and the underlying infrastructure will make sure each device is aware of the global topology and each device’s local and global ordinal. Cross-device communication will happen across all devices instead of local devices.</p>
 <p>For more details regarding PJRT runtime and how to run it on pod, please refer to this <a class="reference external" href="https://github.com/pytorch/xla/blob/master/docs/pjrt.md#tpu">doc</a>. For more information about PyTorch/XLA and TPU pod and a complete guide to run a resnet50 with fakedata on TPU pod, please refer to this <a class="reference external" href="https://cloud.google.com/tpu/docs/pytorch-pods">guide</a>.</p>
 </div>
 </div>
@@ -1578,7 +1578,7 @@ report sent to us if you have it.</p>
 <span class="n">pt</span><span class="o">-</span><span class="n">xla</span><span class="o">-</span><span class="n">profiler</span><span class="p">:</span> <span class="n">TransferFromServerTime</span> <span class="n">too</span> <span class="n">frequent</span><span class="p">:</span> <span class="mi">12</span> <span class="n">counts</span> <span class="n">during</span> <span class="mi">12</span> <span class="n">steps</span>
 </pre></div>
 </div>
-<p>Following section will explain how to get and understand a more detial metrics report.</p>
+<p>Following section will explain how to get and understand a more detail metrics report.</p>
 </div>
 <div class="section" id="get-a-metrics-report">
 <h2>Get A Metrics Report<a class="headerlink" href="#get-a-metrics-report" title="Permalink to this headline">¶</a></h2>
@@ -1628,7 +1628,7 @@ lowering in PyTorch/XLA. Feel free to open a feature request for it on <a class=
 </div>
 <div class="section" id="clar-the-metrics-report">
 <h2>Clar The Metrics Report<a class="headerlink" href="#clar-the-metrics-report" title="Permalink to this headline">¶</a></h2>
-<p>If you want to clear the metrics between steps/epoches, you can use</p>
+<p>If you want to clear the metrics between steps/epochs, you can use</p>
 <div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.debug.metrics</span> <span class="k">as</span> <span class="nn">met</span>
 
 <span class="n">met</span><span class="o">.</span><span class="n">clear_all</span><span class="p">()</span>
@@ -1637,7 +1637,7 @@ lowering in PyTorch/XLA. Feel free to open a feature request for it on <a class=
 </div>
 <div class="section" id="performance-profiling">
 <h2>Performance Profiling<a class="headerlink" href="#performance-profiling" title="Permalink to this headline">¶</a></h2>
-<p>To profile your workload in depth to undertand bottlenecks please check the following resources:</p>
+<p>To profile your workload in depth to understand bottlenecks please check the following resources:</p>
 <ul class="simple">
 <li><p><a class="reference external" href="https://cloud.google.com/tpu/docs/pytorch-xla-performance-profiling-tpu-vm">Official tutorial</a></p></li>
 <li><p><a class="reference external" href="https://colab.research.google.com/github/pytorch/xla/blob/master/contrib/colab/pytorch-xla-profiling-colab.ipynb">Colab notebook</a></p></li>
@@ -1773,7 +1773,7 @@ operation (the operation used at the end of a step, to flush pending IR computat
 materialize them into <em>TPU</em> device data).</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">XLA_SYNC_WAIT</span></code>: Forces the XLA tensor sync operation to wait for its completion, before
 moving to the next step.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">XLA_USE_BF16</span></code>: If set to 1, tranforms all the <em>PyTorch</em> <em>Float</em> values into <em>BiFloat16</em>
+<li><p><code class="docutils literal notranslate"><span class="pre">XLA_USE_BF16</span></code>: If set to 1, transforms all the <em>PyTorch</em> <em>Float</em> values into <em>BiFloat16</em>
 when sending to the <em>TPU</em> device. Note that when using <code class="docutils literal notranslate"><span class="pre">XLA_USE_BF16=1</span></code> tensor arithmetic will
 be done in reduced precision and so tensors will not be accurate if accumulated over time.
 For example:</p>
