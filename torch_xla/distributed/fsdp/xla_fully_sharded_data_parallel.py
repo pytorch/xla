@@ -1299,13 +1299,19 @@ class XlaFullyShardedDataParallel(nn.Module):
     # A backward pass is done, clean up below.
     def _finalize_parameters(fsdp_module: XlaFullyShardedDataParallel) -> None:
       """Helper used below on all fsdp modules."""
+      frozen_params = []
       for p in fsdp_module.full_params:
         if not p.requires_grad:
-          continue
+          frozen_params.append(p)
         if hasattr(p, "_shard_bwd_hook"):
           assert len(p._shard_bwd_hook) == 2, len(p._shard_bwd_hook)
           p._shard_bwd_hook[1].remove()
           delattr(p, "_shard_bwd_hook")
+      # Free the full params with `requires_grad==False`
+      if frozen_params:
+        fsdp_module._free_full_params(
+            frozen_params,
+            apply_opt_barrier=self.optimization_barrier_in_backward)
 
     # Update root and nested FSDP's hooks and flags.
     for m in self.modules():  # includes self
