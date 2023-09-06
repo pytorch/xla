@@ -1616,7 +1616,7 @@ void InitXlaModuleBindings(py::module m) {
           options.num_nodes = num_nodes;
           return std::move(xla::GetDistributedRuntimeService(
                                dist_service_addr, options,
-                               /*use_coordination_service=*/false)
+                               /*use_coordination_service=*/true)
                                .value());
         });
 

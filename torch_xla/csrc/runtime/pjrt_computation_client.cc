@@ -51,7 +51,7 @@ MaybeInitializeDistributedRuntimeClient(int global_rank,
     options.node_id = global_rank;
     client =
         xla::GetDistributedRuntimeClient(dist_service_addr, options,
-                                         /*use_coordination_service=*/false);
+                                         /*use_coordination_service=*/true);
     XLA_CHECK(client->Connect().ok())
         << "Failed to initialize distributed runtime client";
   }
