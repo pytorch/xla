@@ -70,6 +70,29 @@ std::unordered_map<int, int> build_index_map(
   return device_index;
 }
 
+xla::Shape on_device_shape(xla::PjRtBuffer* buffer) {
+  auto dimensions = buffer->dimensions();
+  auto size = dimensions.size();
+  absl::InlinedVector<bool, 4> dynamic_dimensions(size);
+  if (buffer->has_dynamic_dimensions()) {
+    // TODO: use method when implemented
+    auto logical_dimensions = buffer->logical_dimensions().value();
+    for (int i = 0; i < size; ++i) {
+      dynamic_dimensions[i] = dimensions[i] != logical_dimensions[i];
+    }
+  }
+
+  return xla::Shape(buffer->element_type(), dimensions, dynamic_dimensions, {});
+}
+
+xla::Shape logical_on_device_shape(xla::PjRtBuffer* buffer) {
+  XLA_CHECK(!buffer->has_dynamic_dimensions());
+  auto dimensions = buffer->logical_dimensions().value();
+  absl::InlinedVector<bool, 4> dynamic_dimensions(dimensions.size());
+
+  return xla::Shape(buffer->element_type(), dimensions, dynamic_dimensions, {});
+}
+
 }  // namespace
 
 std::string PjRtComputationClient::PjRtDeviceToString(
@@ -424,9 +447,9 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromServer(
     auto new_handle = ReplicateShardedData(handle);
     const PjRtData& pjrt_data = dynamic_cast<const PjRtData&>(*new_handle);
 
-    xla::Shape target_shape = xla::ShapeUtil::DeviceShapeToHostShape(
-        pjrt_data.buffer->logical_on_device_shape().value());
-    auto& literal = literals.emplace_back(target_shape);
+    auto shape = logical_on_device_shape(pjrt_data.buffer.get());
+    *shape.mutable_layout() = pjrt_data.buffer->layout();
+    auto& literal = literals.emplace_back(xla::ShapeUtil::DeviceShapeToHostShape(shape));
     XLA_CHECK_OK(pjrt_data.buffer->ToLiteralSync(&literal));
 
     total_size += literal.size_bytes();
@@ -570,7 +593,7 @@ PjRtComputationClient::ExecuteComputation(
     std::unique_ptr<xla::PjRtBuffer> buffer = std::move(result);
 
     std::shared_ptr<PjRtData> data = std::make_shared<PjRtData>(
-        device, buffer->on_device_shape(), std::move(buffer));
+        device, on_device_shape(buffer.get()), std::move(buffer));
 
     datas.push_back(data);
   }
@@ -698,7 +721,7 @@ PjRtComputationClient::ExecuteReplicated(
             << " vs. actual device: " << buffer->device()->DebugString();
 
         std::shared_ptr<PjRtData> data = std::make_shared<PjRtData>(
-            devices[i], buffer->on_device_shape(), std::move(buffer));
+            devices[i], on_device_shape(buffer.get()), std::move(buffer));
         datas.push_back(data);
       }
       data_handles.push_back(datas);
