@@ -4,7 +4,7 @@ nightly_package_version = "2.1.0"
 nightly_builds = [
   { accelerator = "tpu" },
   {
-    accelerator  = "tpu"
+    accelerator    = "tpu"
     python_version = "3.10"
   },
   {
@@ -24,7 +24,7 @@ nightly_builds = [
 # TODO: Remove this after the 2.1 release
 xrt_nightly_builds = [
   {
-    accelerator  = "tpu"
+    accelerator    = "tpu"
     python_version = "3.10"
   },
   {
@@ -37,12 +37,14 @@ xrt_nightly_builds = [
 versioned_builds = [
   {
     git_tag         = "v2.1.0"
-    package_version = "2.1"
+    pytorch_git_rev = "v2.1.0-rc2"
+    package_version = "2.1.0rc2"
     accelerator     = "tpu"
   },
   {
     git_tag         = "v2.1.0"
-    package_version = "2.1"
+    pytorch_git_rev = "v2.1.0-rc2"
+    package_version = "2.1.0rc2"
     accelerator     = "tpu"
     python_version  = "3.10"
     bundle_libtpu   = "0"
@@ -59,19 +61,22 @@ versioned_builds = [
   },
   {
     git_tag         = "v2.1.0"
-    package_version = "2.1",
+    pytorch_git_rev = "v2.1.0-rc2"
+    package_version = "2.1.0rc2",
     accelerator     = "cuda"
     cuda_version    = "12.0"
   },
   {
     git_tag         = "v2.1.0"
-    package_version = "2.1"
+    pytorch_git_rev = "v2.1.0-rc2"
+    package_version = "2.1.0rc2"
     accelerator     = "cuda"
     cuda_version    = "11.8"
   },
   {
     git_tag         = "v2.1.0"
-    package_version = "2.1"
+    pytorch_git_rev = "v2.1.0-rc2"
+    package_version = "2.1.0rc2"
     accelerator     = "cuda"
     cuda_version    = "11.8"
     python_version  = "3.10"
