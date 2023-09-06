@@ -156,6 +156,7 @@ PjRtComputationClient::PjRtComputationClient() {
                       /*kv_get*/ kv_get,
                       /*kv_put*/ kv_put)
                       .value());
+    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": finished getting the stream executor gpu client." << std::endl;
   } else if (device_type == "XPU") {
     TF_VLOG(1) << "Initializing PjRt XPU client...";
     XLA_CHECK_OK(pjrt::LoadPjrtPlugin(

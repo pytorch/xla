@@ -160,7 +160,9 @@ def run_multiprocess(fn: Callable[..., R],
             result.items() for result in process_results))
 
   if runtime.device_type() == 'GPU':
+    print('xw32 for gpu, begin shutting down the distributed runtime.')
     gpu.shutdown_distributed_runtime()
+    print('xw32 for gpu, finished shutting down the distributed runtime.')
 
   return _merge_replica_results(replica_results)
 
