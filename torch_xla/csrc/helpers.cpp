@@ -44,6 +44,9 @@ xla::XlaComputation CreateComputation(
 
 }  // namespace
 
+// import xla::Shape.h to inlcude the following defintion.
+static constexpr int64_t kUnboundedSize = std::numeric_limits<int64_t>::min();
+
 xla::PrecisionConfig::Precision XlaHelpers::s_mat_mul_precision =
     xla::PrecisionConfig::DEFAULT;
 
@@ -63,6 +66,7 @@ xla::XlaOp XlaHelpers::BroadcastDimensions(xla::XlaOp input,
   std::vector<int64_t> bcast_sizes = SizesOfXlaOp(input);
   for (size_t i = 0; i < dimensions.size(); ++i) {
     bcast_sizes.at(dimensions[i]) = sizes[i];
+    XLA_CHECK(sizes[i] != kUnboundedSize);
   }
   return xla::BroadcastInDim(input, bcast_sizes,
                              GetAllDimensions(bcast_sizes.size()));
@@ -297,7 +301,12 @@ xla::Shape XlaHelpers::GetDynamicReshape(
 
 xla::XlaOp XlaHelpers::DynamicReshape(xla::XlaOp input,
                                       absl::Span<const int64_t> output_sizes) {
+  std::cout << "XlaHelpers::DynamicReshape\n";
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  std::cout << "\tshape: " << xla::ShapeUtil::HumanString(input_shape) << "\n";
+  std::cout << "\tout_shape: [";
+  for (auto a : output_sizes) std::cout << a << ", ";
+  std::cout << "]\n";
   if (output_sizes == input_shape.dimensions()) {
     return input;
   }
@@ -320,6 +329,71 @@ xla::XlaOp XlaHelpers::DynamicReshapeAs(xla::XlaOp input,
   return shape.dimensions() == input_shape.dimensions()
              ? input
              : xla::Reshape(input, shape.dimensions());
+}
+
+xla::XlaOp XlaHelpers::DynamicUnboundedReshape(
+    xla::XlaOp input, xla::XlaOp aux_input,
+    absl::Span<const int64_t> output_sizes) {
+  return input;
+}
+
+xla::XlaOp XlaHelpers::DynamicUnboundedBroadcast(
+    xla::XlaOp input, xla::XlaOp aux_input,
+    absl::Span<const int64_t> aux_input_dimensions) {
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  const xla::Shape& aux_input_shape = ShapeHelper::ShapeOfXlaOp(aux_input);
+  bool all_static = true;
+  std::vector<int64_t> output_dimensions;
+  std::vector<bool> output_dynamic;
+  for (auto dim : aux_input_dimensions) {
+    if (aux_input_shape.dimensions(dim) == kUnboundedSize) all_static = false;
+    output_dimensions.push_back(aux_input_shape.dimensions(dim));
+    output_dynamic.push_back(aux_input_shape.is_dynamic_dimension(dim));
+  }
+
+  if (all_static) {
+    return xla::Broadcast(input, output_dimensions);
+  }
+
+  std::vector<xla::XlaOp> get_dim_ops;
+  std::vector<xla::XlaOp> reshaped_ops;
+  for (auto dim : aux_input_dimensions) {
+    if (aux_input_shape.dimensions(dim) != kUnboundedSize) {
+      get_dim_ops.push_back(XlaHelpers::ScalarValue<int32_t>(
+          aux_input_shape.dimensions(dim), aux_input.builder()));
+    } else {
+      get_dim_ops.push_back(xla::GetDimensionSize(aux_input, dim));
+    }
+  }
+
+  for (int dim = 0; dim < input_shape.rank(); dim++) {
+    output_dimensions.push_back(aux_input_shape.dimensions(dim));
+    output_dynamic.push_back(aux_input_shape.is_dynamic_dimension(dim));
+    if (input_shape.dimensions(dim) != kUnboundedSize) {
+      get_dim_ops.push_back(XlaHelpers::ScalarValue<int32_t>(
+          input_shape.dimensions(dim), input.builder()));
+    } else {
+      get_dim_ops.push_back(xla::GetDimensionSize(input, dim));
+    }
+  }
+
+  // Create the reshape from scalar to 1-D vector
+  for (auto get_dim_op : get_dim_ops) {
+    reshaped_ops.push_back(xla::Reshape(get_dim_op, {1}));
+  }
+
+  // Create Concatenate op
+  auto concat_op = xla::ConcatInDim(input.builder(), reshaped_ops, {0});
+  return xla::CustomCall(
+      aux_input.builder(), "DynBroadcastInDim", {input, concat_op},
+      xla::ShapeUtil::MakeShape(input_shape.element_type(), output_dimensions,
+                                output_dynamic));
+}
+
+void XlaHelpers::PrintXlaOp(xla::XlaOp op, const std::string& msg) {
+  std::cout << "Handle: " << msg << ": " << op << "\n";
+  const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(op);
+  std::cout << xla::ShapeUtil::HumanString(shape);
 }
 
 bool XlaHelpers::SameStaticDimensions(const xla::Shape& shape1,
@@ -597,9 +671,6 @@ std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteSecond(xla::XlaOp op1,
   return PromoteShapes(vops.first, vops.second);
 }
 
-// import xla::Shape.h to inlcude the following defintion.
-static constexpr int64_t kUnboundedSize = std::numeric_limits<int64_t>::min();
-
 xla::XlaOp XlaHelpers::ImplicitBroadcastWithUnboundedDynamicShapes(
     xla::XlaOp op, const xla::Shape& op_shape, xla::XlaOp aux_op,
     const xla::Shape& shape) {
@@ -626,7 +697,7 @@ xla::XlaOp XlaHelpers::ImplicitBroadcastWithUnboundedDynamicShapes(
     for (int i = 0; i < size_delta; i++) {
       if (broadcast_sizes[i] != kUnboundedSize) {
         get_dim_ops.push_back(
-            ScalarValue<int64_t>(broadcast_sizes[i], op.builder()));
+            XlaHelpers::ScalarValue<int32_t>(broadcast_sizes[i], op.builder()));
 
         auto s = ShapeHelper::ShapeOfXlaOp(get_dim_ops.back());
         std::cout << "implicitB shape: " << xla::ShapeUtil::HumanString(s)
@@ -649,7 +720,7 @@ xla::XlaOp XlaHelpers::ImplicitBroadcastWithUnboundedDynamicShapes(
     for (int i = 0; i < sz; i++) {
       if (broadcast_sizes[i] != kUnboundedSize) {
         get_dim_ops.push_back(
-            ScalarValue<int64_t>(broadcast_sizes[i], op.builder()));
+            XlaHelpers::ScalarValue<int32_t>(broadcast_sizes[i], op.builder()));
 
         auto s = ShapeHelper::ShapeOfXlaOp(get_dim_ops.back());
         std::cout << "implicitB shape: " << xla::ShapeUtil::HumanString(s)
@@ -680,8 +751,8 @@ xla::XlaOp XlaHelpers::ImplicitBroadcastWithUnboundedDynamicShapes(
     //   X            X            X
     //   1            ?            ? (from aux_op_shape)
     //   ?            1            ? (from op_shape)
-    //   X            ?            X 
-    //   ?            X            X 
+    //   X            ?            X
+    //   ?            X            X
     //   ?            ?            ? (from any, let's select op_shape)
     // where X != kUnboundedSize && X != 1
     if (shape_dim != kUnboundedSize) {
