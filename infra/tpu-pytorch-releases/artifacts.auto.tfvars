@@ -17,6 +17,11 @@ nightly_builds = [
   },
   {
     accelerator  = "cuda"
+    cuda_version = "11.8"
+    python_version = "3.10"
+  },
+  {
+    accelerator  = "cuda"
     cuda_version = "11.7"
   }
 ]
