@@ -70,23 +70,6 @@ std::unordered_map<int, int> build_index_map(
   return device_index;
 }
 
-// TODO: Do we care about layout here?
-xla::Shape on_device_shape(xla::PjRtBuffer* buffer) {
-  auto dimensions = buffer->dimensions();
-  auto size = dimensions.size();
-  // TODO: use method when implemented
-  std::vector<bool> dynamic_dimensions(size);
-  if (buffer->has_dynamic_dimensions()) {
-    auto logical_dimensions = buffer->logical_dimensions().value();
-    for (int i = 0; i < size; ++i) {
-      dynamic_dimensions[i] = dimensions[i] != logical_dimensions[i];
-    }
-  }
-
-  return xla::ShapeUtil::MakeShape(buffer->element_type(), dimensions,
-                                   dynamic_dimensions);
-}
-
 // Builds the xla::Shape of the output xla::Literal on the host.
 xla::Shape host_output_shape(xla::PjRtBuffer* buffer) {
   xla::Shape shape = xla::ShapeUtil::MakeShape(
@@ -594,8 +577,8 @@ PjRtComputationClient::ExecuteComputation(
   for (auto& result : results) {
     std::unique_ptr<xla::PjRtBuffer> buffer = std::move(result);
 
-    std::shared_ptr<PjRtData> data = std::make_shared<PjRtData>(
-        device, on_device_shape(buffer.get()), std::move(buffer));
+    std::shared_ptr<PjRtData> data =
+        std::make_shared<PjRtData>(device, std::move(buffer));
 
     datas.push_back(data);
   }
@@ -722,8 +705,8 @@ PjRtComputationClient::ExecuteReplicated(
             << "Exepcted device: " << pjrt_device->DebugString()
             << " vs. actual device: " << buffer->device()->DebugString();
 
-        std::shared_ptr<PjRtData> data = std::make_shared<PjRtData>(
-            devices[i], on_device_shape(buffer.get()), std::move(buffer));
+        std::shared_ptr<PjRtData> data =
+            std::make_shared<PjRtData>(devices[i], std::move(buffer));
         datas.push_back(data);
       }
       data_handles.push_back(datas);

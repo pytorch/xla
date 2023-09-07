@@ -164,6 +164,12 @@ class PjRtComputationClient : public ComputationClient {
              std::shared_ptr<xla::PjRtBuffer> buffer)
         : Data(std::move(device), std::move(device_shape)), buffer(buffer) {}
 
+    PjRtData(std::string device, std::shared_ptr<xla::PjRtBuffer> buffer)
+        : Data(std::move(device),
+               xla::Shape(buffer->element_type(), buffer->dimensions(),
+                          buffer->is_dynamic_dimension(), {})),
+          buffer(buffer) {}
+
     OpaqueHandle GetOpaqueHandle() override {
       XLA_CHECK(HasValue())
           << "buffer with shape " << shape().ToString() << " on device "
