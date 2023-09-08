@@ -341,6 +341,7 @@ setup(
         BazelExtension('//:_XLAC.so'),
     ],
     install_requires=[
+        'torch~=2.1.0',
         'absl-py>=1.0.0',
         'cloud-tpu-client>=0.10.0',
         'pyyaml',
