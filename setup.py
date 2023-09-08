@@ -311,7 +311,6 @@ cwd = os.path.dirname(os.path.abspath(__file__))
 with open(os.path.join(cwd, "README.md"), encoding="utf-8") as f:
   long_description = f.read()
 
-
 setup(
     name=os.environ.get('TORCH_XLA_PACKAGE_NAME', 'torch_xla'),
     version=version,
