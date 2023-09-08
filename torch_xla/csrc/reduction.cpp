@@ -110,8 +110,10 @@ SummationResult CreateSummation(xla::XlaOp input,
         result.result, result.rinfo.element_count.size, shape.element_type());
   }
   if (keep_reduced_dimensions) {
-    result.result =
-        XlaHelpers::DynamicReshape(result.result, result.rinfo.new_dimensions);
+    // result.result =
+    //     XlaHelpers::DynamicReshape(result.result, result.rinfo.new_dimensions);
+    result.result = XlaHelpers::DynamicUnboundedReshape(result.result, input,
+                                        result.rinfo.new_dimensions);
   }
   return result;
 }

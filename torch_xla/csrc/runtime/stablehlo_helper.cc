@@ -2,6 +2,7 @@
 
 #include <iostream>
 
+#include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
 #include "mlir/IR/Verifier.h"       // from @llvm-project
 #include "mlir/Pass/PassManager.h"  // from @llvm-project
 #include "mlir/Transforms/Passes.h"
@@ -59,6 +60,7 @@ static absl::Status ConvertHloToMhlo(const xla::HloModuleProto* proto,
         absl::StatusCode::kInternal,
         "MHLO Module from HLO -> MHLO conversion is not legal.");
   }
+  mlir_module->dump();
   return absl::OkStatus();
 }
 
@@ -70,6 +72,11 @@ static absl::Status mhloToStablehloHelper(mlir::ModuleOp* mlir_module,
   pm.addPass(mlir::mhlo::createExpandHloTuplesPass());
   // Canonicalization after tuple flatten, to remove unused tuple op.
   pm.addNestedPass<mlir::func::FuncOp>(mlir::createCanonicalizerPass());
+  // pm.addNestedPass<mlir::func::FuncOp>(
+  //       mlir::mhlo::createChloLegalizeToHloPass(
+  //           /*legalizeBroadcasts=*/true, /*expandCompositions=*/true));
+  // pm.addNestedPass<mlir::func::FuncOp>(mlir::mhlo::createShapeLegalizeToHloPass());
+  // pm.addPass(mlir::createReconcileUnrealizedCastsPass());
   pm.addPass(mlir::mhlo::createHloLegalizeToStablehloPass());
   if (!mlir::succeeded(pm.run(*mlir_module))) {
     return absl::Status(

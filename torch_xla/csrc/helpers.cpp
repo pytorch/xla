@@ -302,16 +302,14 @@ xla::Shape XlaHelpers::GetDynamicReshape(
 xla::XlaOp XlaHelpers::DynamicReshape(xla::XlaOp input,
                                       absl::Span<const int64_t> output_sizes) {
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
-  bool is_unbounded_dynamic = false;
-  for (auto a : output_sizes) {
-    if (a == kUnboundedSize) is_unbounded_dynamic = true;
-  }
+  bool is_unbounded_dynamic =
+      std::any_of(output_sizes.begin(), output_sizes.end(),
+                  [](int64_t size) { return size == kUnboundedSize; });
   if (output_sizes == input_shape.dimensions()) {
     return input;
   }
 
-  if (std::none_of(output_sizes.begin(), output_sizes.end(),
-                   [](int64_t size) { return size == kUnboundedSize; })) {
+  if (!is_unbounded_dynamic) {
     return xla::Reshape(input, output_sizes);
   }
 
@@ -320,7 +318,7 @@ xla::XlaOp XlaHelpers::DynamicReshape(xla::XlaOp input,
     std::cout << "\tshape: " << xla::ShapeUtil::HumanString(input_shape)
               << "\n";
     return xla::CustomCall(
-        input.builder(), "DynamicReshapeUnresolved", {input},
+        input.builder(), "stablehlo.dynamic_reshape", {input},
         xla::ShapeUtil::MakeShape(input_shape.element_type(), output_sizes));
   }
   // TODO(sdasgup@): GetDynamicReshapeInfo has this implicit assumption that
@@ -350,6 +348,41 @@ xla::XlaOp XlaHelpers::DynamicReshapeAs(xla::XlaOp input,
 xla::XlaOp XlaHelpers::DynamicUnboundedReshape(
     xla::XlaOp input, xla::XlaOp aux_input,
     absl::Span<const int64_t> output_sizes) {
+  const xla::Shape& aux_input_shape = ShapeHelper::ShapeOfXlaOp(aux_input);
+  XLA_CHECK(output_sizes.size() == aux_input_shape.rank())
+      << "XlaHelpers::DynamicUnboundedReshape constrainled failed!";
+  std::vector<xla::XlaOp> get_dim_ops;
+  std::vector<xla::XlaOp> reshaped_ops;
+  bool all_static = true;
+  std::vector<bool> output_dynamic(output_sizes.size(), false);
+
+  for (int i = 0; i < output_sizes.size(); i++) {
+    if (output_sizes[i] == kUnboundedSize) {
+      output_dynamic[i] = true;
+      get_dim_ops.push_back(xla::GetDimensionSize(aux_input, i));
+      all_static = false;
+    } else {
+      get_dim_ops.push_back(XlaHelpers::ScalarValue<int32_t>(
+          output_sizes[i], aux_input.builder()));
+    }
+  }
+
+  if (all_static) {
+    return xla::Reshape(input, output_sizes);
+  }
+
+  // Create the reshape from scalar to 1-D vector
+  for (auto get_dim_op : get_dim_ops) {
+    reshaped_ops.push_back(xla::Reshape(get_dim_op, {1}));
+  }
+
+  // Create Concatenate op
+  auto concat_op = xla::ConcatInDim(input.builder(), reshaped_ops, {0});
+  return xla::CustomCall(
+      aux_input.builder(), "stablehlo.dynamic_reshape", {input, concat_op},
+      xla::ShapeUtil::MakeShape(aux_input_shape.element_type(), output_sizes,
+                                output_dynamic));
+
   return input;
 }
 
@@ -383,8 +416,8 @@ xla::XlaOp XlaHelpers::DynamicUnboundedBroadcast(
   }
 
   for (int dim = 0; dim < input_shape.rank(); dim++) {
-    output_dimensions.push_back(aux_input_shape.dimensions(dim));
-    output_dynamic.push_back(aux_input_shape.is_dynamic_dimension(dim));
+    output_dimensions.push_back(input_shape.dimensions(dim));
+    output_dynamic.push_back(input_shape.is_dynamic_dimension(dim));
     if (input_shape.dimensions(dim) != kUnboundedSize) {
       get_dim_ops.push_back(XlaHelpers::ScalarValue<int32_t>(
           input_shape.dimensions(dim), input.builder()));
@@ -401,7 +434,8 @@ xla::XlaOp XlaHelpers::DynamicUnboundedBroadcast(
   // Create Concatenate op
   auto concat_op = xla::ConcatInDim(input.builder(), reshaped_ops, {0});
   return xla::CustomCall(
-      aux_input.builder(), "DynamicBroadcastInDim", {input, concat_op},
+      aux_input.builder(), "stablehlo.dynamic_broadcast_in_dim",
+      {input, concat_op},
       xla::ShapeUtil::MakeShape(input_shape.element_type(), output_dimensions,
                                 output_dynamic));
 }
@@ -580,11 +614,14 @@ xla::Shape XlaHelpers::GetPromotedBinaryOpShape(const xla::Shape& shape1,
             runtime::util::ToVector<int64_t>(shape1.dimensions()),
             runtime::util::ToVector<int64_t>(shape2.dimensions())));
   }
+  XLA_CHECK(!shape1.is_unbounded_dynamic() && !shape2.is_unbounded_dynamic())
+      << "Unreachable for unbounded dynamic code\n";
   return GetPromotedDynamicShape(shape1, shape2);
 }
 
 xla::Shape XlaHelpers::GetPromotedDynamicShape(const xla::Shape& shape1,
                                                const xla::Shape& shape2) {
+  std::cout << "XlaHelpers::GetPromotedDynamicShape\n";
   std::vector<int64_t> upper_bounds1 =
       runtime::util::ToVector<int64_t>(shape1.dimensions());
   std::vector<int64_t> upper_bounds2 =
@@ -657,6 +694,12 @@ std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteShapes(xla::XlaOp op1,
       << shape1 << " and " << shape2;
 
   xla::Shape shape = GetPromotedShape(shape1, shape2);
+  for (int i = 0; i < shape.rank(); i++) {
+    if (shape.dimensions(i) == kUnboundedSize) {
+      shape.set_dynamic_dimension(i, true);
+    }
+  }
+
   std::cout << "Promoted Shape: " << xla::ShapeUtil::HumanString(shape) << "\n";
 
   std::cout << "Implicit broadcasting for op1\n";
@@ -811,7 +854,7 @@ xla::XlaOp XlaHelpers::ImplicitBroadcastWithUnboundedDynamicShapes(
 
   // Create Concatenate op
   auto concat_op = xla::ConcatInDim(op.builder(), reshaped_ops, {0});
-  new_op = xla::CustomCall(op.builder(), "DynamicBroadcastInDim",
+  new_op = xla::CustomCall(op.builder(), "stablehlo.dynamic_broadcast_in_dim",
                            {op, concat_op}, shape);
 
   return new_op;

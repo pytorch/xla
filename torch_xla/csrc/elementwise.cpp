@@ -67,12 +67,16 @@ xla::XlaOp BuildThreshold(xla::XlaOp input, xla::XlaOp output,
 xla::XlaOp BuildRelu(xla::XlaOp input) {
   std::cout << "xla::XlaOp BuildRelu\n";
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
-  std::cout << "\tinput Shape: " << xla::ShapeUtil::HumanString(input_shape) << "\n";
-  xla::XlaOp scalar =  XlaHelpers::ScalarValue<float>(
-                             0, input_shape.element_type(), input.builder());
+  std::cout << "\tinput Shape: " << xla::ShapeUtil::HumanString(input_shape)
+            << "\n";
+  xla::XlaOp scalar = XlaHelpers::ScalarValue<float>(
+      0, input_shape.element_type(), input.builder());
   auto promoted = XlaHelpers::Promote(input, scalar);
 
   return xla::Max(promoted.first, promoted.second);
+  // return xla::CustomCall(
+  //   input.builder(), "chlo.broadcast_maximum", {input, scalar},
+  //   ShapeHelper::ShapeOfXlaOp(promoted.first));
 }
 
 xla::XlaOp BuildHardshrink(xla::XlaOp input, xla::XlaOp lambda) {

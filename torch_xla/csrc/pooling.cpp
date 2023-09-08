@@ -316,8 +316,11 @@ xla::XlaOp ComputeMaxPoolIndices(
 
   size_t limit_id = 0;
   if (pool_elements == kUnboundedSize) {
+    auto shape_of_pool_result = xla::CustomCall(
+        padded_input.builder(), "shape.shape_of", {pool_result},
+        xla::ShapeUtil::MakeShape(kIndicesType, {pool_result_shape.rank()}));
     auto pool_elements_op = xla::CustomCall(
-        padded_input.builder(), "ElementsInShapeOf", {pool_result},
+        padded_input.builder(), "shape.num_elements", {shape_of_pool_result},
         xla::ShapeUtil::MakeShape(kIndicesType, {}));
     limit_id = initial_values.append(pool_elements_op);
   } else {
@@ -330,14 +333,22 @@ xla::XlaOp ComputeMaxPoolIndices(
   size_t iota_id = initial_values.append(padded_iota);
   size_t result_id = 0;
   if (pool_elements == kUnboundedSize) {
-    auto scalar_zero = xla::Zero(padded_input.builder(), kIndicesType);
+    auto shape_of_pool_result = xla::CustomCall(
+        padded_input.builder(), "shape.shape_of", {pool_result},
+        xla::ShapeUtil::MakeShape(kIndicesType, {pool_result_shape.rank()}));
     auto pool_elements_op = xla::CustomCall(
-        padded_input.builder(), "ElementsInShapeOf", {pool_result},
+        padded_input.builder(), "shape.num_elements", {shape_of_pool_result},
         xla::ShapeUtil::MakeShape(kIndicesType, {}));
+    auto scalar_zero = xla::Zero(padded_input.builder(), kIndicesType);
+    auto reshaped_pool_elements_op = xla::Reshape(pool_elements_op, {1});
+    // auto reshaped_pool_elements_op = xla::CustomCall(
+    //     padded_input.builder(), "stablehlo.dynamic_reshape",
+    //     {pool_elements_op, xla::One(padded_input.builder(), kIndicesType)},
+    //     xla::ShapeUtil::MakeShape(kIndicesType, {1}));
     auto broadcasted_zero_op = xla::CustomCall(
-        padded_input.builder(), "DynamicBroadcastInDim",
-        {scalar_zero, pool_elements_op},
-        xla::ShapeUtil::MakeShape(kIndicesType, {pool_elements}));
+        padded_input.builder(), "stablehlo.dynamic_broadcast_in_dim",
+        {scalar_zero, reshaped_pool_elements_op},
+        xla::ShapeUtil::MakeShape(kIndicesType, {pool_elements}, {true}));
     result_id = initial_values.append(broadcasted_zero_op);
   } else {
     result_id = initial_values.append(
@@ -412,11 +423,15 @@ xla::XlaOp ComputeMaxPoolIndices(
       xla::WhileLoopHelper(cond_fn, body_fn, initial_values.values,
                            "ComputeMaxPoolIndices", padded_input.builder()));
   if (pool_result_shape.is_unbounded_dynamic()) {
-    return xla::CustomCall(
-        padded_input.builder(), "DynamicReshape",
-        {results[result_id], pool_result},
-        xla::ShapeUtil::MakeShape(pool_result_shape.element_type(),
-                                  pool_result_shape.dimensions()));
+    // return xla::CustomCall(
+    //     padded_input.builder(), "stablehlo.dynamic_reshape",
+    //     {results[result_id], pool_result},
+    //     xla::ShapeUtil::MakeShape(pool_result_shape.element_type(),
+    //                               pool_result_shape.dimensions(),
+    //                               torch::lazy::ToVector<bool>(
+    //                                   pool_result_shape.dynamic_dimensions())));
+    return XlaHelpers::DynamicUnboundedReshape(results[result_id], pool_result,
+                                               pool_result_shape.dimensions());
   } else {
     return xla::Reshape(results[result_id], pool_result_shape.dimensions());
   }

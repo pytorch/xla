@@ -11,6 +11,7 @@ cc_binary(
         "-fopenmp",
         "-fPIC",
         "-fwrapv",
+        "-g",
     ],
     linkopts = [
         "-Wl,-rpath,$$ORIGIN/torch_xla/lib",  # for libtpu
