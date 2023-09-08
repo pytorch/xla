@@ -158,6 +158,16 @@ class XlaHelpers {
   static xla::XlaOp DynamicReshape(xla::XlaOp input,
                                    absl::Span<const int64_t> output_sizes);
 
+  static xla::XlaOp DynamicUnboundedReshape(
+      xla::XlaOp input, xla::XlaOp aux_input,
+      absl::Span<const int64_t> output_sizes);
+
+  static xla::XlaOp DynamicUnboundedBroadcast(
+      xla::XlaOp input, xla::XlaOp aux_input,
+      absl::Span<const int64_t> output_sizes);
+
+  static void PrintXlaOp(xla::XlaOp op, const std::string& msg);
+
   static xla::XlaOp DynamicReshapeAs(xla::XlaOp input, const xla::Shape& shape);
 
   static bool SameStaticDimensions(const xla::Shape& shape1,
@@ -293,10 +303,9 @@ class XlaHelpers {
   // operation, while shape should be one that op is broadcast-able to (usually
   // the result of a GetPromotedShape() call). If op_shape matches shape, the op
   // itself is returned.
-  static xla::XlaOp ImplicitBroadcastWithUnboundedDynamicShapes(xla::XlaOp op,
-                                      const xla::Shape& op_shape,
-                                      xla::XlaOp aux_op,
-                                      const xla::Shape& shape);
+  static xla::XlaOp ImplicitBroadcastWithUnboundedDynamicShapes(
+      xla::XlaOp op, const xla::Shape& op_shape, xla::XlaOp aux_op,
+      const xla::Shape& shape);
 
   // Performs the bin_op binary operation by promoting types and shapes of the
   // two input operands.

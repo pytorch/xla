@@ -301,15 +301,31 @@ xla::Shape XlaHelpers::GetDynamicReshape(
 
 xla::XlaOp XlaHelpers::DynamicReshape(xla::XlaOp input,
                                       absl::Span<const int64_t> output_sizes) {
-  std::cout << "XlaHelpers::DynamicReshape\n";
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
-  std::cout << "\tshape: " << xla::ShapeUtil::HumanString(input_shape) << "\n";
-  std::cout << "\tout_shape: [";
-  for (auto a : output_sizes) std::cout << a << ", ";
-  std::cout << "]\n";
+  bool is_unbounded_dynamic = false;
+  for (auto a : output_sizes) {
+    if (a == kUnboundedSize) is_unbounded_dynamic = true;
+  }
   if (output_sizes == input_shape.dimensions()) {
     return input;
   }
+
+  if (std::none_of(output_sizes.begin(), output_sizes.end(),
+                   [](int64_t size) { return size == kUnboundedSize; })) {
+    return xla::Reshape(input, output_sizes);
+  }
+
+  if (input_shape.is_unbounded_dynamic() || is_unbounded_dynamic) {
+    std::cout << "XlaHelpers::DynamicReshape\n";
+    std::cout << "\tshape: " << xla::ShapeUtil::HumanString(input_shape)
+              << "\n";
+    return xla::CustomCall(
+        input.builder(), "DynamicReshapeUnresolved", {input},
+        xla::ShapeUtil::MakeShape(input_shape.element_type(), output_sizes));
+  }
+  // TODO(sdasgup@): GetDynamicReshapeInfo has this implicit assumption that
+  // only one dimension can be bounded dynamic. For unbounded shapes this does
+  // not makes sense.
   auto info = GetDynamicReshapeInfo(input_shape, output_sizes);
   if (info) {
     return xla::ReshapeWithInferredDimension(input, output_sizes,
@@ -385,7 +401,7 @@ xla::XlaOp XlaHelpers::DynamicUnboundedBroadcast(
   // Create Concatenate op
   auto concat_op = xla::ConcatInDim(input.builder(), reshaped_ops, {0});
   return xla::CustomCall(
-      aux_input.builder(), "DynBroadcastInDim", {input, concat_op},
+      aux_input.builder(), "DynamicBroadcastInDim", {input, concat_op},
       xla::ShapeUtil::MakeShape(input_shape.element_type(), output_dimensions,
                                 output_dynamic));
 }
@@ -394,6 +410,7 @@ void XlaHelpers::PrintXlaOp(xla::XlaOp op, const std::string& msg) {
   std::cout << "Handle: " << msg << ": " << op << "\n";
   const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(op);
   std::cout << xla::ShapeUtil::HumanString(shape);
+  // std::cout << op.builder()->OpToString(op) << "\n";
 }
 
 bool XlaHelpers::SameStaticDimensions(const xla::Shape& shape1,
@@ -794,8 +811,8 @@ xla::XlaOp XlaHelpers::ImplicitBroadcastWithUnboundedDynamicShapes(
 
   // Create Concatenate op
   auto concat_op = xla::ConcatInDim(op.builder(), reshaped_ops, {0});
-  new_op = xla::CustomCall(op.builder(), "DynBroadcastInDim", {op, concat_op},
-                           shape);
+  new_op = xla::CustomCall(op.builder(), "DynamicBroadcastInDim",
+                           {op, concat_op}, shape);
 
   return new_op;
 }

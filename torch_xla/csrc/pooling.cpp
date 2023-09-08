@@ -278,6 +278,11 @@ xla::XlaOp ComputeMaxPoolIndices(
     const xla::PaddingConfig& padding_config,
     const PoolingOpAttributes& pooling_op_attributes) {
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  XlaHelpers::PrintXlaOp(input, "input");
+  XlaHelpers::PrintXlaOp(padded_input, "padded_input");
+  XlaHelpers::PrintXlaOp(pool_result, "pool_result");
+  std::cout << pooling_op_attributes.kernel_size << "\n";
+  std::cout << pooling_op_attributes.stride << "\n";
   if (!IsOverlapping(pooling_op_attributes)) {
     // The algorithm in ComputeNoOverlapMaxPoolIndices() only works if reduce
     // windows do not overlap. If they do, the reduce-window done on the indices
@@ -308,14 +313,37 @@ xla::XlaOp ComputeMaxPoolIndices(
   InitValues initial_values;
   size_t counter_id =
       initial_values.append(xla::Zero(padded_input.builder(), kIndicesType));
-  size_t limit_id = initial_values.append(XlaHelpers::ScalarValue(
-      pool_elements, kIndicesType, padded_input.builder()));
+
+  size_t limit_id = 0;
+  if (pool_elements == kUnboundedSize) {
+    auto pool_elements_op = xla::CustomCall(
+        padded_input.builder(), "ElementsInShapeOf", {pool_result},
+        xla::ShapeUtil::MakeShape(kIndicesType, {}));
+    limit_id = initial_values.append(pool_elements_op);
+  } else {
+    limit_id = initial_values.append(XlaHelpers::ScalarValue(
+        pool_elements, kIndicesType, padded_input.builder()));
+  }
+
   size_t input_id = initial_values.append(padded_input);
   size_t pool_result_id = initial_values.append(pool_result);
   size_t iota_id = initial_values.append(padded_iota);
-  size_t result_id = initial_values.append(
-      xla::Zeros(padded_input.builder(),
-                 xla::ShapeUtil::MakeShape(kIndicesType, {pool_elements})));
+  size_t result_id = 0;
+  if (pool_elements == kUnboundedSize) {
+    auto scalar_zero = xla::Zero(padded_input.builder(), kIndicesType);
+    auto pool_elements_op = xla::CustomCall(
+        padded_input.builder(), "ElementsInShapeOf", {pool_result},
+        xla::ShapeUtil::MakeShape(kIndicesType, {}));
+    auto broadcasted_zero_op = xla::CustomCall(
+        padded_input.builder(), "DynamicBroadcastInDim",
+        {scalar_zero, pool_elements_op},
+        xla::ShapeUtil::MakeShape(kIndicesType, {pool_elements}));
+    result_id = initial_values.append(broadcasted_zero_op);
+  } else {
+    result_id = initial_values.append(
+        xla::Zeros(padded_input.builder(),
+                   xla::ShapeUtil::MakeShape(kIndicesType, {pool_elements})));
+  }
 
   auto cond_fn = [&](absl::Span<const xla::XlaOp> init,
                      xla::XlaBuilder* builder) -> xla::StatusOr<xla::XlaOp> {
@@ -383,8 +411,15 @@ xla::XlaOp ComputeMaxPoolIndices(
   std::vector<xla::XlaOp> results = ConsumeValue(
       xla::WhileLoopHelper(cond_fn, body_fn, initial_values.values,
                            "ComputeMaxPoolIndices", padded_input.builder()));
-  std::cout << "End of @@\n";
-  return xla::Reshape(results[result_id], pool_result_shape.dimensions());
+  if (pool_result_shape.is_unbounded_dynamic()) {
+    return xla::CustomCall(
+        padded_input.builder(), "DynamicReshape",
+        {results[result_id], pool_result},
+        xla::ShapeUtil::MakeShape(pool_result_shape.element_type(),
+                                  pool_result_shape.dimensions()));
+  } else {
+    return xla::Reshape(results[result_id], pool_result_shape.dimensions());
+  }
 }
 
 }  // namespace

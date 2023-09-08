@@ -59,7 +59,7 @@ python_configure(
 # b) by commenting out the http_archive above and uncommenting the following:
 local_repository(
    name = "xla",
-   path = "/ansible/xla-github",
+   path = "/ptxla/openxla-xla",
 )
 
 # Initialize OpenXLA's external dependencies.

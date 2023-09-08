@@ -65,6 +65,7 @@ std::vector<int64_t> GetCompleteShape(absl::Span<const int64_t> output_sizes,
       incomplete_element_count *= dim_size;
     }
   }
+
   int64_t total_element_count = runtime::util::Multiply<int64_t>(input_sizes);
   if (!incomplete_dim) {
     XLA_CHECK_EQ(total_element_count,
@@ -87,8 +88,15 @@ std::vector<int64_t> GetCompleteShape(absl::Span<const int64_t> output_sizes,
   return complete_output_sizes;
 }
 
+// import xla::Shape.h to inlcude the following defintion.
+static constexpr int64_t kUnboundedSize = std::numeric_limits<int64_t>::min();
 xla::XlaOp BuildView(xla::XlaOp input, absl::Span<const int64_t> output_sizes) {
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  if (input_shape.is_unbounded_dynamic() ||
+      std::any_of(output_sizes.begin(), output_sizes.end(),
+                  [](int64_t size) { return size == kUnboundedSize; }))
+    return XlaHelpers::DynamicReshape(input, output_sizes);
+
   const auto complete_output_sizes =
       GetCompleteShape(output_sizes, input_shape.dimensions());
   return XlaHelpers::DynamicReshape(input, complete_output_sizes);
