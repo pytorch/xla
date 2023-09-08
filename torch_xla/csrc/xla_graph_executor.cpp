@@ -345,6 +345,7 @@ void XLAGraphExecutor::SyncTensorsGraph(std::vector<XLATensorPtr>* tensors,
                                         absl::Span<const std::string> devices,
                                         bool wait, bool sync_ltc_data,
                                         bool warm_up_cache_only) {
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   TF_VLOG(4) << "Trying to sync the value of " << tensors->size()
              << " tensor(s)";
   tsl::profiler::TraceMe activity("SyncTensorsGraph",
@@ -507,6 +508,7 @@ void XLAGraphExecutor::ClearPendingIrs(
 
 XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
     const std::vector<XLATensorPtr>& tensors, const SyncTensorsConfig& config) {
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   tsl::profiler::TraceMe activity("CollectSyncTensors",
                                   tsl::profiler::TraceMeLevel::kInfo);
   runtime::util::Unique<torch::lazy::BackendDevice> unique_device;
@@ -606,6 +608,7 @@ std::vector<torch::lazy::BackendDataPtr>
 XLAGraphExecutor::ExecuteComputationWithBarrier(
     torch::lazy::hash_t hash, const std::vector<at::IValue>& graph_inputs,
     const torch::lazy::BackendDevice& device) {
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   tsl::profiler::TraceMe activity("ExecuteComputationWithBarrier",
                                   tsl::profiler::TraceMeLevel::kInfo);
   MaybeDumpGraph("dynamo", hash);
@@ -1085,6 +1088,7 @@ XLAGraphExecutor::ScheduleSyncTensorsGraph(
     std::vector<torch::lazy::BackendDataPtr> tensors_data,
     std::vector<XLATensor::ShardingSpecPtr> sharding_specs,
     ComputationCache::TypePtr cached_computation) {
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   tsl::profiler::TraceMe activity("ScheduleSyncTensorsGraph",
                                   tsl::profiler::TraceMeLevel::kInfo);
   TensorCollectionBarrier(coll);
@@ -1165,6 +1169,7 @@ XLAGraphExecutor::ScheduleSyncTensorsGraph(
     std::vector<torch::lazy::BackendDataPtr> parameters_data,
     std::string device, ComputationCache::TypePtr cached_computation,
     const std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec) {
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   auto tensors_data =
       SetTensorData(tensors, coll->config, coll->indices, tensor_data_vec);
   std::vector<XLATensor::ShardingSpecPtr> sharding_specs(coll->indices.size(),
@@ -1308,6 +1313,7 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
     const std::vector<XLATensorPtr>& tensors,
     absl::Span<const std::string> devices, const SyncTensorCollection& coll,
     PostOrderData* po_data, const std::vector<torch::lazy::Value>& ir_values) {
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   tsl::profiler::TraceMe activity(
       [&] {
         return tsl::profiler::TraceMeEncode(
@@ -1428,6 +1434,7 @@ std::shared_ptr<XLAGraphExecutor::Async>
 XLAGraphExecutor::SyncTensorsGraphInternal(
     std::vector<XLATensorPtr>* tensors, absl::Span<const std::string> devices,
     const SyncTensorsConfig& config, bool warm_up_cache_only) {
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   tsl::profiler::TraceMe activity("SyncTensorsGraphInternal",
                                   tsl::profiler::TraceMeLevel::kInfo);
   SyncTensorCollection coll = CollectSyncTensors(*tensors, config);

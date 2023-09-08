@@ -807,6 +807,7 @@ def _run_step_closures():
 
 
 def mark_step(wait=False):
+  print('xw32 mark_step begins.')
   if xu.getenv_as('XLA_EMIT_STEPLOG', bool, False):
     print(
         'torch_xla.core.xla_model::mark_step\n',
@@ -880,6 +881,7 @@ def wait_device_ops(devices=[]):
     devices (string..., optional): The devices whose async ops need to be waited
       for. If empty, all the local devices will be waited for.
   """
+  print('xw32 xla_model.wait_device_ops begins.')
   torch_xla._XLAC._xla_wait_device_ops(devices=devices)
 
 
