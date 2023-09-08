@@ -307,15 +307,37 @@ class Develop(develop.develop):
     super().run()
 
 
+# Read in README.md for our long_description
+cwd = os.path.dirname(os.path.abspath(__file__))
+with open(os.path.join(cwd, "README.md"), encoding="utf-8") as f:
+  long_description = f.read()
+
 setup(
     name=os.environ.get('TORCH_XLA_PACKAGE_NAME', 'torch_xla'),
     version=version,
     description='XLA bridge for PyTorch',
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     url='https://github.com/pytorch/xla',
     author='PyTorch/XLA Dev Team',
     author_email='pytorch-xla@googlegroups.com',
-    # Exclude the build files.
-    packages=find_packages(exclude=['build']),
+    classifiers=[
+        "Development Status :: 5 - Production/Stable",
+        "Intended Audience :: Developers",
+        "Intended Audience :: Education",
+        "Intended Audience :: Science/Research",
+        "License :: OSI Approved :: BSD License",
+        "Topic :: Scientific/Engineering",
+        "Topic :: Scientific/Engineering :: Mathematics",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
+        "Topic :: Software Development",
+        "Topic :: Software Development :: Libraries",
+        "Topic :: Software Development :: Libraries :: Python Modules",
+        "Programming Language :: C++",
+        "Programming Language :: Python :: 3",
+    ],
+    python_requires=">=3.8.0",
+    packages=find_packages(include=['torch_xla*']),
     ext_modules=[
         BazelExtension('//:_XLAC.so'),
     ],
@@ -334,12 +356,12 @@ setup(
     },
     extras_require={
         # On Cloud TPU VM install with:
-        # $ sudo pip3 install torch_xla[tpuvm] -f https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.11-cp38-cp38-linux_x86_64.whl
+        # pip install torch_xla[tpu] -f https://storage.googleapis.com/libtpu-releases/libtpu_releases.html
+        'tpu': [f'libtpu-nightly=={_libtpu_version}'],
+        # On nightly, install libtpu with `pip install torch_xla[tpuvm]`
+        # Remove from release branches since this is not allowed by PyPI.
         'tpuvm': [f'libtpu-nightly @ {_libtpu_storage_path}'],
     },
-    data_files=[
-        'scripts/fixup_binary.py',
-    ],
     cmdclass={
         'build_ext': BuildBazelExtension,
         'clean': Clean,
