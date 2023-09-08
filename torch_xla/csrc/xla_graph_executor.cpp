@@ -1202,7 +1202,7 @@ XLAGraphExecutor::LookupCachedCompile(const torch::lazy::hash_t& hash) {
   ComputationCache::TypePtr cached_computation =
       GetComputationCache()->Get(hash);
   if (cached_computation != nullptr) {
-    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": found cached graph for hash=" << hash << std::endl;
+    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": found cached graph for hash=" << hash << ", torch::lazy::HashToString(hash)=" << torch::lazy::HashToString(hash) << std::endl;
   }
   if (cached_computation == nullptr) {
     TORCH_LAZY_COUNTER("UncachedCompile", 1);
