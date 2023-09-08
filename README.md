@@ -24,12 +24,12 @@ started:
 To install PyTorch/XLA a new VM:
 
 ```
-pip install torch~=2.0.0 https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-2.0-cp38-cp38-linux_x86_64.whl
+pip install torch~=2.1.0 torch_xla[tpu]~=2.1.0 -f https://storage.googleapis.com/libtpu-releases/libtpu_releases.html
 ```
 
 To update your existing training loop, make the following changes:
 
-```
+```diff
 -import torch.multiprocessing as mp
 +import torch_xla.core.xla_model as xm
 +import torch_xla.distributed.parallel_loader as pl
@@ -64,7 +64,7 @@ To update your existing training loop, make the following changes:
 If you're using `DistributedDataParallel`, make the following changes:
 
 
-```
+```diff
  import torch.distributed as dist
 -import torch.multiprocessing as mp
 +import torch_xla.core.xla_model as xm
