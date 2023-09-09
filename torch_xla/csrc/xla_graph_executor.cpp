@@ -496,6 +496,9 @@ void XLAGraphExecutor::ClearPendingIrs(
               runtime::GetComputationClient()->CreateDataPlaceholder(
                   device.toString(), std::move(shape)));
           tensors[i]->data()->handle = handle;
+          TF_VLOG(4) << "Replacing the IR " << ir_value.node.get()->ToString()
+                     << " of Tensor with ID " << tensors[i]->GetUniqueId()
+                     << " with placeholder";
         }
         tensors[i]->AssignIrValue(torch::lazy::Value());
         tensors[i]->data()->view = nullptr;
