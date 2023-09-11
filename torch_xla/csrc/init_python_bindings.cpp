@@ -752,9 +752,7 @@ class PyLoweringContext {
   PyLoweringContext(torch::lazy::BackendDevice device)
       : lowering_ctx("PyLoweringContext", device) {}
 
-  // Builds a HLO graph given a set of output tensors. It is assumed that the
-  // tensors passed to this function are the result of the forward pass of a
-  // given Module/function.
+  // Builds a HLO graph given a set of output tensors.
   void Build(std::vector<at::Tensor> tensors) {
     // Get the backing XLA tensors from the output torch tensor handles
     std::vector<XLATensorPtr> xtensors =
@@ -763,7 +761,7 @@ class PyLoweringContext {
     // Get the lazy IR value from the output XLA tensors
     std::vector<torch::lazy::Value> ir_values;
     for (auto& xtensor : xtensors) {
-      torch::lazy::Value value = xtensor->CurrentIrValue();
+      torch::lazy::Value value = xtensor->GetIrValue();
       ir_values.push_back(value);
     }
 
@@ -788,7 +786,7 @@ class PyLoweringContext {
 
     // Fetch this parameter data
     std::vector<xla::Literal> literals =
-        xla::ComputationClient::Get()->TransferFromServer(
+        runtime::GetComputationClient()->TransferFromServer(
             UnwrapXlaData(device_data));
 
     // Create a mapping from paramater id to the tensor data
@@ -811,7 +809,7 @@ class PyLoweringContext {
   int64_t GetTensorParameterId(at::Tensor tensor) {
     // Convert tensor into the backing lazy node
     XLATensorPtr xtensor = bridge::GetXlaTensor(tensor);
-    torch::lazy::Value value = xtensor->CurrentIrValue();
+    torch::lazy::Value value = xtensor->GetIrValue();
     const torch::lazy::Node* node = value.node.get();
     if (node->op() != xla_device_data) {
       return -1;
