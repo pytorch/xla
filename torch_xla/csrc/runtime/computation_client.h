@@ -154,9 +154,7 @@ class ComputationClient {
     }
 
     const std::vector<torch::lazy::Shape>& parameter_shapes() const override {
-      // TODO: convert the program_shape().parameters()
-      // back to torch::lazy::Shape
-      return parameter_shapes_;
+      XLA_ERROR() << "Unimplemented";
     }
 
     const std::vector<std::string>& parameter_names() const override {
@@ -164,7 +162,7 @@ class ComputationClient {
     }
 
     const torch::lazy::Shape& result_shape() const override {
-      return res_shape_;
+      XLA_ERROR() << "Unimplemented";
     }
 
     const std::vector<std::string>& devices() const { return devices_; }
@@ -184,8 +182,6 @@ class ComputationClient {
 
     torch::lazy::hash_t hash_;
     std::string name_;
-    torch::lazy::Shape res_shape_;
-    std::vector<torch::lazy::Shape> parameter_shapes_;
   };
 
   using ComputationPtr = std::shared_ptr<Computation>;
