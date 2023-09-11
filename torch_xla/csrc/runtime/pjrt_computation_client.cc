@@ -29,7 +29,6 @@
 #include "xla/pjrt/tfrt_cpu_pjrt_client.h"
 #include "xla/pjrt/tpu_client.h"
 #include "xla/shape.h"
-#include "xla/stream_executor/tpu/tpu_initializer_framework_helper.h"
 
 using xla::internal::XlaBuilderFriend;
 
@@ -105,7 +104,7 @@ PjRtComputationClient::PjRtComputationClient() {
     TF_VLOG(1) << "Initializing TFRT TPU client...";
     XLA_CHECK_OK(pjrt::LoadPjrtPlugin(
         "tpu", sys_util::GetEnvString(env::kEnvTpuLibraryPath, "libtpu.so")));
-    tsl::Status tpu_status = tensorflow::tpu::FindAndLoadTpuLibrary();
+    tsl::Status tpu_status = pjrt::InitializePjrtPlugin("tpu");
     XLA_CHECK(tpu_status.ok());
     client_ = std::move(xla::GetCApiClient("TPU").value());
   } else if (device_type == "TPU_LEGACY") {
