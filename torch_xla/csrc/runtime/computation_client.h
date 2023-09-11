@@ -8,8 +8,6 @@
 #include <string>
 #include <vector>
 
-#include "torch_xla/csrc/runtime/compat_logging.h"
-
 #include <torch/csrc/lazy/backend/lowering_context.h>
 #include <torch/csrc/lazy/core/hash.h>
 #include <torch/csrc/lazy/core/shape.h>

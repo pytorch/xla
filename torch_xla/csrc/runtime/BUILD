@@ -55,7 +55,6 @@ cc_library(
     "-isystemexternal/torch",
   ],
   deps = [
-    ":compat_logging",
     ":debug_macros",
     ":env_vars",
     ":metrics_analysis",
@@ -256,15 +255,6 @@ cc_test(
     deps = [
         ":sys_util",
         "@com_google_googletest//:gtest_main",
-    ],
-)
-
-cc_library(
-    name = "compat_logging",
-    hdrs = ["compat_logging.h"],
-    deps = [
-        ":tf_logging",
-        "@torch//:headers",
     ],
 )
 
