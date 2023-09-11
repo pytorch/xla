@@ -10,7 +10,6 @@
 #include <string>
 #include <unordered_map>
 
-#include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/cross_replica_reduces.h"
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/device.h"
@@ -158,10 +157,10 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   // We don't use the upstream CachedComputation type given all fields are
   // different.
   struct CachedComputation {
-    CachedComputation(ComputationPtr computation, bool is_sharded = false)
+    CachedComputation(runtime::ComputationClient::ComputationPtr computation, bool is_sharded = false)
         : computation(std::move(computation)), is_sharded(is_sharded) {}
 
-    ComputationPtr computation;
+    runtime::ComputationClient::ComputationPtr computation;
     bool is_sharded;
   };
 
@@ -189,7 +188,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   struct CompilationResult {
     torch::lazy::BackendDevice device;
     size_t emitted_nodes = 0;
-    ComputationPtr computation;
+    runtime::ComputationClient::ComputationPtr computation;
     std::vector<torch::lazy::BackendDataPtr> parameters_data;
     bool is_sharded = false;
   };

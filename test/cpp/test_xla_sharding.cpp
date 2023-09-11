@@ -18,6 +18,7 @@
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/xla_data.h"
 #include "torch_xla/csrc/xla_sharding_util.h"
+#include "torch_xla/csrc/runtime/computation_client.h"
 #include "xla/protobuf_util.h"
 #include "xla/xla_data.pb.h"
 
@@ -460,7 +461,7 @@ TEST_F(XLAShardingTest, PrepareOutputShardingPropagation) {
       std::shared_ptr<torch_xla::runtime::ComputationClient::Computation>>
       computations = torch_xla::runtime::GetComputationClient()->Compile(
           std::move(instances));
-  ComputationPtr computation = std::make_shared<Computation>(
+  torch_xla::runtime::ComputationClient::ComputationPtr computation = std::make_shared<Computation>(
       "add", std::move(computations[0]->move_computation()));
 
   // Prepare output sharding propagation, expect a sharded output placeholder.

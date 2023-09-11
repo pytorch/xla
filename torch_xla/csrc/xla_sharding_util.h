@@ -3,9 +3,9 @@
 
 #include <torch/csrc/jit/python/pybind.h>
 
-#include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/tensor.h"
 #include "xla/client/xla_builder.h"
 #include "xla/client/xla_computation.h"
@@ -120,7 +120,7 @@ class ShardingUtil {
 
   // Retrieve output sharding of a given XLA computation.
   static std::vector<XLATensor::ShardingSpecPtr> GetOutputSharding(
-      std::vector<xla::Shape>* output_shapes, ComputationPtr computation,
+      std::vector<xla::Shape>* output_shapes, runtime::ComputationClient::ComputationPtr computation,
       const torch::lazy::BackendDevice& device);
 
   // Create sharded data placeholders, each corresponding to the individual
@@ -136,7 +136,7 @@ class ShardingUtil {
   // outputs.
   static void PrepareOutputShardingPropagation(
       std::vector<XLATensorPtr>* tensors, absl::Span<const size_t> indices,
-      ComputationPtr computation,
+      runtime::ComputationClient::ComputationPtr computation,
       std::vector<torch::lazy::BackendDataPtr>* data_placeholders,
       std::vector<XLATensor::ShardingSpecPtr>* sharding_specs);
 

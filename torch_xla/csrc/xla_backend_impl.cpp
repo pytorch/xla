@@ -3,11 +3,11 @@
 #include <ATen/ScalarOps.h>
 
 #include "torch_xla/csrc/aten_xla_bridge.h"
-#include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir_builder.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/device_data.h"
+#include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/runtime.h"
 
@@ -132,8 +132,8 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
     for (const torch::lazy::ComputationPtr instance : instances) {
       // TODO(JackCaoG): device is missing in instance, use CurrentDevice for
       // now
-      Computation* torch_xla_computation =
-          dynamic_cast<Computation*>(instance.get());
+      auto torch_xla_computation =
+          dynamic_cast<runtime::ComputationClient::Computation*>(instance.get());
       output_shapes.push_back(MakeShapeWithDeviceLayout(
           torch_xla_computation->program_shape().result(),
           static_cast<XlaDeviceType>(current_device.type())));
@@ -210,7 +210,7 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
 
   std::string GetComputationBackendText(
       const torch::lazy::ComputationPtr computation) const override {
-    return dynamic_cast<torch_xla::Computation*>(computation.get())
+    return dynamic_cast<runtime::ComputationClient::Computation*>(computation.get())
         ->to_string();
   }
 

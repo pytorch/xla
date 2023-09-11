@@ -9,6 +9,7 @@
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ops/device_data.h"
+#include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/multi_wait.h"
 #include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/runtime/thread_pool.h"
@@ -562,7 +563,7 @@ std::vector<at::Tensor> ShardingUtil::ShardTensor(
 }
 
 std::vector<XLATensor::ShardingSpecPtr> ShardingUtil::GetOutputSharding(
-    std::vector<xla::Shape>* output_shapes, ComputationPtr computation,
+    std::vector<xla::Shape>* output_shapes, runtime::ComputationClient::ComputationPtr computation,
     const torch::lazy::BackendDevice& device) {
   const auto& computation_proto = computation->computation().proto();
   uint64_t num_outputs = output_shapes->size();
@@ -628,7 +629,7 @@ std::vector<torch::lazy::BackendDataPtr> ShardingUtil::CreateShardedPlaceholder(
 
 void ShardingUtil::PrepareOutputShardingPropagation(
     std::vector<XLATensorPtr>* tensors, absl::Span<const size_t> indices,
-    ComputationPtr computation,
+    runtime::ComputationClient::ComputationPtr computation,
     std::vector<torch::lazy::BackendDataPtr>* data_placeholders,
     std::vector<XLATensor::ShardingSpecPtr>* sharding_specs) {
   // Resizes the containers to `indices.size()`.
