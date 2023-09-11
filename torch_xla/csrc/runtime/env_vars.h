@@ -27,8 +27,11 @@ extern const char* const kEnvTpuLibraryPath;
 extern const char* const kEnvXpuLibraryPath;
 extern const char* const kEnvNeuronLibraryPath;
 extern const char* const kEnvPjrtDistServiceAddr;
-extern const char* const kEnvPjRtLocalProcessCount;
+extern const char* const kEnvPjRtLocalWorldSize;
 extern const char* const kEnvPjRtLocalRank;
+extern const char* const kEnvPjRtWorldSize;
+extern const char* const kEnvPjRtRank;
+extern const char* const kEnvPjRtGroupRank;
 
 }  // namespace env
 }  // namespace runtime

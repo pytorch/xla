@@ -1,5 +1,6 @@
 import datetime
 import logging
+import os
 import threading
 
 import torch.distributed as dist
@@ -7,6 +8,7 @@ from torch_xla.distributed import xla_backend
 from torch_xla import runtime as xr
 from torch_xla._internal import pjrt
 from torch_xla._internal import tpu
+import torch_xla.core.xla_env_vars as xenv
 import torch_xla.utils.utils as xu
 
 _store = None
@@ -18,9 +20,14 @@ def pjrt_rendezvous_handler(url: str,
                             **kwargs):
   # Assume `xmp.spawn` has not been called when using torchrun
   if dist.is_torchelastic_launched():
+    world_size = xu.getenv_as('WORLD_SIZE', int)
     local_world_size = xu.getenv_as('LOCAL_WORLD_SIZE', int)
     local_rank = xu.getenv_as('LOCAL_RANK', int)
-    pjrt.initialize_multiprocess(local_rank, local_world_size)
+    group_rank = xu.getenv_as('GROUP_RANK', int)
+    os.environ.setdefault(xenv.PJRT_DIST_SERVICE_ADDR,
+                          xenv.PJRT_DIST_SERVICE_ADDR_DEFAULT)
+    pjrt.initialize_multiprocess(local_rank, local_world_size, group_rank,
+                                 world_size)
 
   master_ip = xu.getenv_as('MASTER_ADDR', str)
   if not master_ip:

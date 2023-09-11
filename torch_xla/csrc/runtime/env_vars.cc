@@ -17,8 +17,11 @@ const char* const kEnvTpuLibraryPath = "TPU_LIBRARY_PATH";
 const char* const kEnvXpuLibraryPath = "XPU_LIBRARY_PATH";
 const char* const kEnvNeuronLibraryPath = "NEURON_LIBRARY_PATH";
 const char* const kEnvPjrtDistServiceAddr = "PJRT_DIST_SERVICE_ADDR";
-const char* const kEnvPjRtLocalProcessCount = "PJRT_LOCAL_PROCESS_COUNT";
-const char* const kEnvPjRtLocalRank = "PJRT_LOCAL_PROCESS_RANK";
+const char* const kEnvPjRtLocalWorldSize = "PJRT_LOCAL_WORLD_SIZE";
+const char* const kEnvPjRtLocalRank = "PJRT_LOCAL_RANK";
+const char* const kEnvPjRtWorldSize = "PJRT_WORLD_SIZE";
+const char* const kEnvPjRtRank = "PJRT_RANK";
+const char* const kEnvPjRtGroupRank = "PJRT_GROUP_RANK";
 
 }  // namespace env
 }  // namespace runtime

@@ -40,20 +40,24 @@ def _merge_replica_results(
 
 @runtime.requires_pjrt
 def _run_thread_per_device(
-    local_rank: int, local_world_size: int, fn: Callable[[], R],
-    initializer_fn: Callable[[int, int], None]) -> Dict[int, R]:
+    local_rank: int, group_rank: int, local_world_size: int, world_size: int,
+    fn: Callable[[], R], initializer_fn: Callable[[int, int],
+                                                  None]) -> Dict[int, R]:
   """Runs `fn` in a separate thread on each addressable device.
 
   Args:
     local_rank: rank of current process within this host
+    group_rank: The rank of the worker group. A number between 0 and max_nnodes.
+                When running a single worker group per node, this is the rank of the node.
     local_world_size: number of processes on this host
+    world_size (int): The world size (total number of workers in the job)
     fn: Function to run on all devices
 
   Returns:
     Dict of the form {thread_rank: return_value}, where return_value is the
     result of calling `fn`.
   """
-  initializer_fn(local_rank, local_world_size)
+  initializer_fn(local_rank, local_world_size, group_rank, world_size)
 
   devices = xm.get_xla_supported_devices()
   num_threads = len(devices)
@@ -92,7 +96,7 @@ def _run_singleprocess(fn: Callable[..., R], *args, **kwargs) -> Dict[int, R]:
   Returns:
     the result of calling `fn`.
   """
-  os.environ.setdefault(xenv.PJRT_LOCAL_PROCESS_COUNT, '1')
+  os.environ.setdefault(xenv.PJRT_LOCAL_WORLD_SIZE, '1')
 
   if runtime.device_type() == 'TPU':
     tpu.configure_one_chip_topology()
@@ -103,9 +107,26 @@ def _run_singleprocess(fn: Callable[..., R], *args, **kwargs) -> Dict[int, R]:
 
 
 @runtime.requires_pjrt
-def initialize_multiprocess(local_rank: int, local_world_size: int):
-  os.environ.setdefault(xenv.PJRT_LOCAL_PROCESS_RANK, str(local_rank))
-  os.environ.setdefault(xenv.PJRT_LOCAL_PROCESS_COUNT, str(local_world_size))
+def initialize_multiprocess(local_rank: int, group_rank: int,
+                            local_world_size: int, world_size: int):
+  """Run initialization of the distributed runtime client
+
+  Args:
+      local_rank (int): The Local Rank
+      group_rank (int): The rank of the worker group. A number between 0 and max_nnodes.
+                        When running a single worker group per node, this is the rank of
+                        the node.
+      local_world_size (int): The local world size (e.g. number of workers running locally);
+                              equals to --nproc-per-node specified on torchrun.
+      world_size (int): The world size (total number of workers in the job)
+  """
+  os.environ.setdefault(xenv.PJRT_LOCAL_RANK, str(local_rank))
+  os.environ.setdefault(xenv.PJRT_LOCAL_WORLD_SIZE, str(local_world_size))
+  os.environ.setdefault(xenv.PJRT_GROUP_RANK, str(group_rank))
+  os.environ.setdefault(xenv.PJRT_WORLD_SIZE, str(world_size))
+  os.environ.setdefault(xenv.PJRT_RANK,
+                        str(local_rank + group_rank * local_world_size))
+  torch_xla._XLAC._init_computation_client()
 
   if runtime.device_type() == 'TPU':
     tpu.configure_topology(local_rank, local_world_size)
@@ -136,11 +157,19 @@ def run_multiprocess(fn: Callable[..., R],
     Dict of the form {device_ordinal: return_value}, where
     return_value is the result of calling `fn`.
   """
+  group_rank = int(os.environ.setdefault(xenv.PJRT_GROUP_RANK, str(0)))
+
   if runtime.device_type() == 'TPU':
     num_processes = tpu.num_local_processes()
   elif runtime.device_type() == 'GPU':
-    num_processes = gpu.num_local_processes()
-    gpu.initialize_distributed_runtime(num_processes)
+    num_processes = int(
+        os.environ.setdefault(xenv.PJRT_LOCAL_WORLD_SIZE,
+                              str(gpu.num_local_processes())))
+    world_size = int(
+        os.environ.setdefault(xenv.PJRT_WORLD_SIZE, str(num_processes)))
+    os.environ.setdefault(xenv.PJRT_DIST_SERVICE_ADDR,
+                          xenv.PJRT_DIST_SERVICE_ADDR_DEFAULT)
+    gpu.initialize_distributed_runtime(world_size)
   elif runtime.device_type() == 'NEURON':
     num_processes = neuron.num_local_processes()
   else:
@@ -152,7 +181,9 @@ def run_multiprocess(fn: Callable[..., R],
 
     mp_fn = functools.partial(
         _run_thread_per_device,
+        group_rank=group_rank,
         local_world_size=num_processes,
+        world_size=num_processes,
         fn=functools.partial(fn, *args, **kwargs),
         initializer_fn=initialize_multiprocess)
     process_results = executor.map(mp_fn, range(num_processes))
@@ -175,7 +206,7 @@ class _SpawnFn:
     self.kwargs = kwargs
 
   def __call__(self) -> None:
-    self.fn(runtime.global_ordinal(), *self.args, **self.kwargs)
+    return self.fn(runtime.global_ordinal(), *self.args, **self.kwargs)
 
 
 def spawn(fn: Callable,
@@ -199,13 +230,18 @@ def spawn(fn: Callable,
   elif nprocs is not None:
     logging.warning('Unsupported nprocs (%d), ignoring...' % nprocs)
 
-  run_multiprocess(spawn_fn, start_method=start_method)
+  return run_multiprocess(spawn_fn, start_method=start_method)
 
 
 @runtime.requires_pjrt
-def _initialize_single_process(local_rank: int, local_world_size: int):
-  os.environ.setdefault(xenv.PJRT_LOCAL_PROCESS_RANK, str(local_rank))
-  os.environ.setdefault(xenv.PJRT_LOCAL_PROCESS_COUNT, str(local_world_size))
+def _initialize_single_process(local_rank: int, group_rank: int,
+                               local_world_size: int, world_size: int):
+  os.environ.setdefault(xenv.PJRT_LOCAL_RANK, str(local_rank))
+  os.environ.setdefault(xenv.PJRT_LOCAL_WORLD_SIZE, str(local_world_size))
+  os.environ.setdefault(xenv.PJRT_GROUP_RANK, str(group_rank))
+  os.environ.setdefault(xenv.PJRT_WORLD_SIZE, str(world_size))
+  os.environ.setdefault(xenv.PJRT_RANK,
+                        str(local_rank + group_rank * local_world_size))
 
 
 def spawn_threads(fn: Callable, args: Tuple = ()) -> None:
@@ -215,6 +251,8 @@ def spawn_threads(fn: Callable, args: Tuple = ()) -> None:
   spawn_fn = _SpawnFn(fn, *args)
   _run_thread_per_device(
       local_rank=0,
+      group_rank=0,
       local_world_size=1,
+      world_size=1,
       fn=spawn_fn,
       initializer_fn=_initialize_single_process)

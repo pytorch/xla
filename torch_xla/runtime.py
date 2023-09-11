@@ -110,9 +110,9 @@ def xla_device(n: Optional[int] = None,
 
 
 @requires_pjrt
-def local_process_count() -> int:
+def local_world_size() -> int:
   """Returns the number of processes running on this host."""
-  return xu.getenv_as(xenv.PJRT_LOCAL_PROCESS_COUNT, int, defval=1)
+  return xu.getenv_as(xenv.PJRT_LOCAL_WORLD_SIZE, int, defval=1)
 
 
 @requires_pjrt
@@ -135,7 +135,7 @@ def local_device_count() -> int:
 
   Assumes each process has the same number of addressable devices.
   """
-  return local_process_count() * addressable_device_count()
+  return local_world_size() * addressable_device_count()
 
 
 @requires_pjrt
@@ -159,7 +159,7 @@ def local_ordinal() -> int:
   """Returns local ordinal of this thread within this host.
 
   Local ordinal is in range [0, local_device_count)."""
-  local_rank = xu.getenv_as(xenv.PJRT_LOCAL_PROCESS_RANK, int, 0)
+  local_rank = xu.getenv_as(xenv.PJRT_LOCAL_RANK, int, 0)
   devices_per_process = addressable_device_count()
   return local_rank * devices_per_process + xla_device().index
 

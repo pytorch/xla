@@ -63,8 +63,8 @@ class BasicRuntimeAPITest(test_xla_sharding_base.XlaShardingTest):
     xr.use_spmd()
     super().setUpClass()
 
-  def test_local_process_count(self):
-    self.assertEqual(xr.local_process_count(), 1)
+  def test_local_world_size(self):
+    self.assertEqual(xr.local_world_size(), 1)
 
   def test_global_device_count(self):
     self.assertEqual(xr.global_device_count(), 1)

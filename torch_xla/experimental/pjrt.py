@@ -12,7 +12,7 @@ aliases = [
     runtime.global_ordinal,
     runtime.local_device_count,
     runtime.local_ordinal,
-    runtime.local_process_count,
+    runtime.local_world_size,
     runtime.process_count,
     runtime.process_index,
     runtime.set_device_type,

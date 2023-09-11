@@ -17,20 +17,19 @@ def num_local_processes() -> int:
   return int(os.environ[xenv.GPU_NUM_DEVICES])
 
 
-def initialize_distributed_runtime(global_world_size: int) -> None:
+def initialize_distributed_runtime(world_size: int) -> None:
   """Configures GPU distributed runtime parameters.
 
   Must be run before using any XLA devices.
 
   Args:
-    global_world_size: number of devices in the cluster.
+    world_size: number of devices in the cluster.
   """
-  if global_world_size > 1:
+  if world_size > 1:
     # TODO(jonbolin): For multi-host, this needs to be consistent across hosts
-    os.environ.setdefault(xenv.PJRT_DIST_SERVICE_ADDR, '127.0.0.1:8547')
     global distributed_service
     if distributed_service is None:
-      num_nodes = global_world_size
+      num_nodes = world_size
       distributed_service = torch_xla._XLAC._xla_get_distributed_runtime_service(
           num_nodes)
 
