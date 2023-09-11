@@ -87,10 +87,7 @@ class ComputationClient {
                 torch::lazy::BackendDevice device)
           : name_(name),
             computation_(std::move(computation)),
-            devices_({device.toString()}),
-            hash_(torch::lazy::MHash(
-              name,
-              computation.proto().SerializeAsString())) {
+            devices_({device.toString()}) {
       program_shape_ = ConsumeValue(computation_.GetProgramShape());
     }
 
