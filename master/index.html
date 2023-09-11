@@ -357,7 +357,7 @@
 <li><a class="reference internal" href="#pytorch-xla-spmd-user-guide">PyTorch/XLA SPMD User Guide</a><ul>
 <li><a class="reference internal" href="#what-is-pytorch-xla-spmd">What is PyTorch/XLA SPMD?</a></li>
 <li><a class="reference internal" href="#pytorch-xla-spmd-design-overview">PyTorch/XLA SPMD Design Overview</a><ul>
-<li><a class="reference internal" href="#simple-eexample-sharding-aannotation-api">Simple Eexample &amp; Sharding Aannotation API</a></li>
+<li><a class="reference internal" href="#simple-example-sharding-aannotation-api">Simple Example &amp; Sharding Aannotation API</a></li>
 <li><a class="reference internal" href="#id14">Mesh</a></li>
 <li><a class="reference internal" href="#hybrid-mesh">Hybrid Mesh</a></li>
 <li><a class="reference internal" href="#id15">Partition Spec</a></li>
@@ -2843,14 +2843,15 @@ PyTorch/XLA should have been installed successfully.</p>
 </div>
 <div class="section" id="pytorch-xla-spmd-design-overview">
 <h2>PyTorch/XLA SPMD Design Overview<a class="headerlink" href="#pytorch-xla-spmd-design-overview" title="Permalink to this headline">¶</a></h2>
-<div class="section" id="simple-eexample-sharding-aannotation-api">
-<h3>Simple Eexample &amp; Sharding Aannotation API<a class="headerlink" href="#simple-eexample-sharding-aannotation-api" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="simple-example-sharding-aannotation-api">
+<h3>Simple Example &amp; Sharding Aannotation API<a class="headerlink" href="#simple-example-sharding-aannotation-api" title="Permalink to this headline">¶</a></h3>
 <p>Users can annotate native PyTorch tensors using the <code class="docutils literal notranslate"><span class="pre">mark_sharding</span></code> API (<a class="reference external" href="https://github.com/pytorch/xla/blob/9a5fdf3920c18275cf7dba785193636f1b39ced9/torch_xla/experimental/xla_sharding.py#L388">src</a>). This takes <code class="docutils literal notranslate"><span class="pre">torch.Tensor</span></code> as input and returns a <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code> as output.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">mark_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">XLAShardedTensor</span><span class="p">],</span> <span class="n">mesh</span><span class="p">:</span> <span class="n">Mesh</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="kc">None</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">XLAShardedTensor</span>
 </pre></div>
 </div>
 <p>Invoking <code class="docutils literal notranslate"><span class="pre">mark_sharding</span></code> API takes a user defined logical <a class="reference external" href="#mesh">mesh</a> and <a class="reference external" href="#partition-spec">partition_spec</a> and generates a sharding annotation for the XLA compiler. The sharding spec is attached to the XLATensor. Here is a simple usage example from the [<a class="reference external" href="https://github.com/pytorch/xla/issues/3871">RFC</a>, to illustrate how the sharding annotation API works:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
 <span class="kn">import</span> <span class="nn">torch_xla.runtime</span> <span class="k">as</span> <span class="nn">xr</span>
 <span class="kn">import</span> <span class="nn">torch_xla.experimental.xla_sharding</span> <span class="k">as</span> <span class="nn">xs</span>
@@ -3258,7 +3259,7 @@ PyTorch/XLA should have been installed successfully.</p>
 <li><a class="reference internal" href="#pytorch-xla-spmd-user-guide">PyTorch/XLA SPMD User Guide</a><ul>
 <li><a class="reference internal" href="#what-is-pytorch-xla-spmd">What is PyTorch/XLA SPMD?</a></li>
 <li><a class="reference internal" href="#pytorch-xla-spmd-design-overview">PyTorch/XLA SPMD Design Overview</a><ul>
-<li><a class="reference internal" href="#simple-eexample-sharding-aannotation-api">Simple Eexample &amp; Sharding Aannotation API</a></li>
+<li><a class="reference internal" href="#simple-example-sharding-aannotation-api">Simple Example &amp; Sharding Aannotation API</a></li>
 <li><a class="reference internal" href="#id14">Mesh</a></li>
 <li><a class="reference internal" href="#hybrid-mesh">Hybrid Mesh</a></li>
 <li><a class="reference internal" href="#id15">Partition Spec</a></li>
