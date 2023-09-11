@@ -1,8 +1,8 @@
 diff --git a/xla/pjrt/pjrt_c_api_client.cc b/xla/pjrt/pjrt_c_api_client.cc
-index d45b9377c..92d244750 100644
+index ef0b6686c..c0341e81e 100644
 --- a/xla/pjrt/pjrt_c_api_client.cc
 +++ b/xla/pjrt/pjrt_c_api_client.cc
-@@ -1489,6 +1489,34 @@ bool PjRtCApiBuffer::has_dynamic_dimensions() const {
+@@ -1584,6 +1584,34 @@ bool PjRtCApiBuffer::has_dynamic_dimensions() const {
    return args.num_dynamic_dims > 0;
  }
  
@@ -38,18 +38,18 @@ index d45b9377c..92d244750 100644
    PJRT_Buffer_UnpaddedDimensions_Args args;
    args.struct_size = PJRT_Buffer_UnpaddedDimensions_Args_STRUCT_SIZE;
 diff --git a/xla/pjrt/pjrt_c_api_client.h b/xla/pjrt/pjrt_c_api_client.h
-index b9597f923..5101b09a9 100644
+index 9c460f246..279608e60 100644
 --- a/xla/pjrt/pjrt_c_api_client.h
 +++ b/xla/pjrt/pjrt_c_api_client.h
-@@ -23,6 +23,7 @@ limitations under the License.
- #include <utility>
+@@ -27,6 +27,7 @@ limitations under the License.
  #include <vector>
  
+ #include "absl/container/flat_hash_map.h"
 +#include "absl/container/inlined_vector.h"
- #include "xla/pjrt/c/pjrt_c_api.h"
- #include "xla/pjrt/c/pjrt_c_api_helpers.h"
- #include "xla/pjrt/pjrt_client.h"
-@@ -320,11 +321,7 @@ class PjRtCApiBuffer : public PjRtBuffer {
+ #include "absl/log/check.h"
+ #include "absl/log/log.h"
+ #include "absl/strings/string_view.h"
+@@ -369,11 +370,7 @@ class PjRtCApiBuffer : public PjRtBuffer {
  
    bool has_dynamic_dimensions() const override;
  
@@ -62,7 +62,7 @@ index b9597f923..5101b09a9 100644
  
    StatusOr<std::vector<int64_t>> logical_dimensions() override;
  
-@@ -407,6 +404,9 @@ class PjRtCApiBuffer : public PjRtBuffer {
+@@ -455,6 +452,9 @@ class PjRtCApiBuffer : public PjRtBuffer {
    std::shared_ptr<PjRtFuture<Status>::Promise> readiness_promise_;
    // Set and cached the first time layout() is called.
    mutable std::optional<xla::Layout> layout_;
