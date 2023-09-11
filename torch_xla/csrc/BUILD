@@ -174,7 +174,6 @@ ptxla_cc_library(
 
 ptxla_cc_library(
     name = "computation",
-    srcs = ["computation.cpp"],
     hdrs = ["computation.h"],
     deps = [
         "//torch_xla/csrc/runtime",

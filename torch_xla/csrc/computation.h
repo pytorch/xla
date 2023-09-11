@@ -42,13 +42,6 @@ namespace torch_xla {
 using Computation = runtime::ComputationClient::Computation;
 using ComputationPtr = std::shared_ptr<runtime::ComputationClient::Computation>;
 
-std::vector<torch::lazy::ComputationPtr> WrapClientComputation(
-    std::vector<std::shared_ptr<runtime::ComputationClient::Computation>>
-        computations);
-
-std::shared_ptr<runtime::ComputationClient::Computation>
-UnwrapClientComputation(torch::lazy::ComputationPtr computation);
-
 }  // namespace torch_xla
 
 #endif  // XLA_TORCH_XLA_CSRC_COMPUTATION_H_
