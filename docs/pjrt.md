@@ -1,18 +1,19 @@
-# PJRT Runtime (Beta)
+# PJRT Runtime
 
-_This document reflects the current state of PJRT support in current nightly
-builds_. See the [same document on the r2.0 branch](https://github.com/pytorch/xla/blob/r2.0/docs/pjrt.md)
-for the status in the latest stable release.
-
-The PyTorch/XLA team is currently migrating from the currently-supported XRT
-runtime to the [PJRT
+The PyTorch/XLA team has migrated XRT runtime to the [PJRT
 runtime](https://github.com/tensorflow/tensorflow/tree/master/tensorflow/compiler/xla/pjrt)
 used by [JAX](https://github.com/google/jax).
 
-PJRT is available for preview in PyTorch/XLA 2.0. **We are planning to make
-PJRT our officially supported runtime**, so we encourage all users to experiment
-with it. We aim to make PJRT stable in release 2.1, so if you encounter a bug
-with PJRT, please file an issue on GitHub with the `runtime` tag.
+If you encounter a bug with PJRT, please file an issue on GitHub with the
+`runtime` tag.
+
+_New features in PyTorch/XLA r2.1_:
+
+* PJRT is stable in PyTorch/XLA r2.1!
+* Public runtime APIs have moved from `torch_xla.experimental.pjrt` to
+  `torch_xla.runtime`.
+* `torchrun` is now supported when using `init_method='pjrt://'`.
+* New PJRT plugins for XPU and Neuron.
 
 _New features in PyTorch/XLA r2.0_:
 
@@ -29,7 +30,7 @@ _New features in PyTorch/XLA r2.0_:
 ## TL;DR
 
 * To use the PJRT preview runtime, set the `PJRT_DEVICE` environment variable to
-  `CPU`, `TPU, or `GPU`
+  `CPU`, `TPU`, or `GPU`
 * In XRT, all distributed workloads are multiprocess, with one process per
   device. On TPU v2 and v3 in PJRT, workloads are multiprocess and multithreaded
   (4 processes with 2 threads each), so your workload should be thread-safe. See
@@ -63,7 +64,7 @@ Sample diff from XRT to PJRT:
  import torch_xla.distributed.xla_backend
  import torch_xla.distributed.xla_multiprocessing as xmp
 +import torch_xla.experimental.pjrt_backend
-+import torch_xla.experimental.pjrt as pjrt
++import torch_xla.runtime as xr
 
 
  def _mp_fn(index):
@@ -75,7 +76,7 @@ Sample diff from XRT to PJRT:
    model = nn.Linear(128, 10).to(device)
 
 +  # Optional for TPU v4 and GPU
-+  pjrt.broadcast_master_param(model)
++  xm.broadcast_master_param(model)
    model = DDP(model, gradient_as_bucket_view=True)
 
    loss_fn = nn.MSELoss()
@@ -286,7 +287,7 @@ without altering the XLA graph and/or synchronizing a subset of workers),
 consider using
 [`torch.distributed.barrier`](https://pytorch.org/docs/stable/distributed.html#torch.distributed.barrier)
 or
-`[torch.distributed.all_gather_object](https://pytorch.org/docs/stable/distributed.html#torch.distributed.all_gather_object)`
+[`torch.distributed.all_gather_object`](https://pytorch.org/docs/stable/distributed.html#torch.distributed.all_gather_object)
 with a `gloo` process group. If you are also using the `xla` `torch.distributed`
 backend, you can use `torch.new_group` to create a `gloo` subgroup. See [this
 example](https://pytorch.org/docs/stable/distributed.html#monitored-barrier)
@@ -294,7 +295,7 @@ from the PyTorch documentation. Keep in mind these constraints:
 
 * `torch.distributed` is not fully supported on TPU v2/v3. Only a subset of
   operations with the `xla` backend are implemented, and `gloo` will likely not
-  work as expected in a multiprocessing context.
+  work as expected in a multithreaded context.
 * In our experiments, `gloo` does not scale well to thousands of TPU chips, so
   expect this alternative to be less reliable than using `xm.rendezvous` with
   PJRT at large scales.

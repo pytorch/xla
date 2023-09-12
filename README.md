@@ -3,6 +3,10 @@
 <b>Current CI status:</b>  ![GitHub Actions
 status](https://github.com/pytorch/xla/actions/workflows/build_and_test.yml/badge.svg)
 
+Note: PyTorch/XLA r2.1 will be the last release with XRT available as a legacy
+runtime. Our main release build will not include XRT, but it will be available
+in a separate package.
+
 PyTorch/XLA is a Python package that uses the [XLA deep learning
 compiler](https://www.tensorflow.org/xla) to connect the [PyTorch deep learning
 framework](https://pytorch.org/) and [Cloud
@@ -29,7 +33,7 @@ pip install torch~=2.0.0 https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm
 
 To update your existing training loop, make the following changes:
 
-```
+```diff
 -import torch.multiprocessing as mp
 +import torch_xla.core.xla_model as xm
 +import torch_xla.distributed.parallel_loader as pl
@@ -64,12 +68,13 @@ To update your existing training loop, make the following changes:
 If you're using `DistributedDataParallel`, make the following changes:
 
 
-```
+```diff
  import torch.distributed as dist
 -import torch.multiprocessing as mp
 +import torch_xla.core.xla_model as xm
 +import torch_xla.distributed.parallel_loader as pl
 +import torch_xla.distributed.xla_multiprocessing as xmp
++import torch_xla.experimental.pjrt_backend
 
  def _mp_fn(rank, world_size):
    ...
@@ -100,7 +105,6 @@ If you're using `DistributedDataParallel`, make the following changes:
 -  mp.spawn(_mp_fn, args=(), nprocs=world_size)
 +  xmp.spawn(_mp_fn, args=())
 ```
-
 
 Additional information on PyTorch/XLA, including a description of its semantics
 and functions, is available at [PyTorch.org](http://pytorch.org/xla/). See the
