@@ -2083,7 +2083,7 @@ class TestLoweringContext(test_utils.XlaTestCase):
     example = torch.tensor([1.0, 2.0, 3.0, 4.0], device=device)
 
     def network(x):
-        return x + 2.0
+      return x + 2.0
 
     result = network(example)
 
@@ -2099,6 +2099,7 @@ class TestLoweringContext(test_utils.XlaTestCase):
     input_parameter_id = ctx.tensor_parameter_id(example)
     # id 0 is the constant
     self.assertEqual(input_parameter_id, 1)
+
 
 class TestGeneric(test_utils.XlaTestCase):
 
