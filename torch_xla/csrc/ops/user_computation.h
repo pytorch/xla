@@ -17,7 +17,9 @@ class UserComputation : public XlaNode {
 
   std::string ToString() const override;
 
-  const runtime::ComputationClient::ComputationPtr& computation() const { return computation_; }
+  const runtime::ComputationClient::ComputationPtr& computation() const {
+    return computation_;
+  }
 
  private:
   runtime::ComputationClient::ComputationPtr computation_;

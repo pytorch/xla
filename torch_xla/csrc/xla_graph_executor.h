@@ -157,7 +157,8 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   // We don't use the upstream CachedComputation type given all fields are
   // different.
   struct CachedComputation {
-    CachedComputation(runtime::ComputationClient::ComputationPtr computation, bool is_sharded = false)
+    CachedComputation(runtime::ComputationClient::ComputationPtr computation,
+                      bool is_sharded = false)
         : computation(std::move(computation)), is_sharded(is_sharded) {}
 
     runtime::ComputationClient::ComputationPtr computation;

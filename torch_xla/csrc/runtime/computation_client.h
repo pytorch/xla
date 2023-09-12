@@ -1,17 +1,17 @@
 #ifndef XLA_CLIENT_COMPUTATION_CLIENT_H_
 #define XLA_CLIENT_COMPUTATION_CLIENT_H_
 
+#include <torch/csrc/lazy/backend/lowering_context.h>
+#include <torch/csrc/lazy/core/hash.h>
+#include <torch/csrc/lazy/core/shape.h>
+#include <torch/csrc/lazy/core/util.h>
+
 #include <algorithm>
 #include <cmath>
 #include <map>
 #include <memory>
 #include <string>
 #include <vector>
-
-#include <torch/csrc/lazy/backend/lowering_context.h>
-#include <torch/csrc/lazy/core/hash.h>
-#include <torch/csrc/lazy/core/shape.h>
-#include <torch/csrc/lazy/core/util.h>
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/types/optional.h"
@@ -21,9 +21,9 @@
 #include "torch_xla/csrc/runtime/types.h"
 #include "torch_xla/csrc/runtime/util.h"
 #include "xla/client/xla_computation.h"
+#include "xla/hlo/ir/hlo_module.h"
 #include "xla/literal_util.h"
 #include "xla/types.h"
-#include "xla/hlo/ir/hlo_module.h"
 
 namespace torch_xla {
 namespace runtime {
@@ -72,22 +72,18 @@ class ComputationClient {
 
   class Computation : public torch::lazy::Computation {
    public:
-    Computation(std::string name,
-                xla::XlaComputation computation)
-          : name_(name),
-            computation_(std::move(computation)) {
+    Computation(std::string name, xla::XlaComputation computation)
+        : name_(name), computation_(std::move(computation)) {
       program_shape_ = ConsumeValue(computation_.GetProgramShape());
-      hash_ = torch::lazy::MHash(
-          name,
-          computation_.proto().SerializeAsString());
+      hash_ =
+          torch::lazy::MHash(name, computation_.proto().SerializeAsString());
     }
-
 
     Computation(std::string name, xla::XlaComputation computation,
                 torch::lazy::BackendDevice device)
-          : name_(name),
-            computation_(std::move(computation)),
-            devices_({device.toString()}) {
+        : name_(name),
+          computation_(std::move(computation)),
+          devices_({device.toString()}) {
       program_shape_ = ConsumeValue(computation_.GetProgramShape());
     }
 

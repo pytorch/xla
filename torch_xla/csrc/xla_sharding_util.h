@@ -120,7 +120,8 @@ class ShardingUtil {
 
   // Retrieve output sharding of a given XLA computation.
   static std::vector<XLATensor::ShardingSpecPtr> GetOutputSharding(
-      std::vector<xla::Shape>* output_shapes, runtime::ComputationClient::ComputationPtr computation,
+      std::vector<xla::Shape>* output_shapes,
+      runtime::ComputationClient::ComputationPtr computation,
       const torch::lazy::BackendDevice& device);
 
   // Create sharded data placeholders, each corresponding to the individual

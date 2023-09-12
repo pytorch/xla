@@ -10,6 +10,7 @@
 #include "test/cpp/torch_xla_test.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/env_vars.h"
 #include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
@@ -18,7 +19,6 @@
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/xla_data.h"
 #include "torch_xla/csrc/xla_sharding_util.h"
-#include "torch_xla/csrc/runtime/computation_client.h"
 #include "xla/protobuf_util.h"
 #include "xla/xla_data.pb.h"
 
@@ -461,8 +461,9 @@ TEST_F(XLAShardingTest, PrepareOutputShardingPropagation) {
       std::shared_ptr<torch_xla::runtime::ComputationClient::Computation>>
       computations = torch_xla::runtime::GetComputationClient()->Compile(
           std::move(instances));
-  torch_xla::runtime::ComputationClient::ComputationPtr computation = std::make_shared<torch_xla::runtime::ComputationClient::Computation>(
-      "add", std::move(computations[0]->move_computation()));
+  torch_xla::runtime::ComputationClient::ComputationPtr computation =
+      std::make_shared<torch_xla::runtime::ComputationClient::Computation>(
+          "add", std::move(computations[0]->move_computation()));
 
   // Prepare output sharding propagation, expect a sharded output placeholder.
   std::vector<XLATensorPtr> tensors{XLATensor::Create(WrapXlaData(

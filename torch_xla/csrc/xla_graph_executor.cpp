@@ -712,8 +712,8 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
         std::vector<runtime::ComputationClient::DataPtr> outputs =
             ShardingUtil::OutputHandler(
                 runtime::GetComputationClient()->ExecuteReplicated(
-                    *async->cached_computation->computation,
-                    device_arguments, devices, execute_options),
+                    *async->cached_computation->computation, device_arguments,
+                    devices, execute_options),
                 sharding_specs);
         results = WrapXlaData(outputs);
         TF_VLOG(3) << "Executing Dynamo IR sharded graph hash "
@@ -1113,8 +1113,8 @@ XLAGraphExecutor::ScheduleSyncTensorsGraph(
         std::vector<runtime::ComputationClient::DataPtr> outputs =
             ShardingUtil::OutputHandler(
                 runtime::GetComputationClient()->ExecuteReplicated(
-                    *async->cached_computation->computation,
-                    device_arguments, devices, execute_options),
+                    *async->cached_computation->computation, device_arguments,
+                    devices, execute_options),
                 sharding_specs, /*replicated_output=*/false);
         results = WrapXlaData(outputs);
         TF_VLOG(3) << "Executing IR graph hash "

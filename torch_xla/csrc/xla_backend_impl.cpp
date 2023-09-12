@@ -133,7 +133,8 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
       // TODO(JackCaoG): device is missing in instance, use CurrentDevice for
       // now
       auto torch_xla_computation =
-          dynamic_cast<runtime::ComputationClient::Computation*>(instance.get());
+          dynamic_cast<runtime::ComputationClient::Computation*>(
+              instance.get());
       output_shapes.push_back(MakeShapeWithDeviceLayout(
           torch_xla_computation->program_shape().result(),
           static_cast<XlaDeviceType>(current_device.type())));
@@ -154,7 +155,7 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
     std::vector<std::shared_ptr<runtime::ComputationClient::Computation>>
         client_computations = runtime::GetComputationClient()->Compile(
             std::move(compile_instances));
-    return { client_computations.begin(), client_computations.end() };
+    return {client_computations.begin(), client_computations.end()};
   }
 
   std::vector<torch::lazy::BackendDataPtr> ExecuteComputation(
@@ -163,7 +164,8 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
       const torch::lazy::BackendDevice& device) const override {
     std::vector<runtime::ComputationClient::DataPtr> results =
         runtime::GetComputationClient()->ExecuteComputation(
-            *std::dynamic_pointer_cast<runtime::ComputationClient::Computation>(computation),
+            *std::dynamic_pointer_cast<runtime::ComputationClient::Computation>(
+                computation),
             UnwrapXlaData(arguments), device.toString());
     return WrapXlaData(results);
   }
@@ -210,7 +212,8 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
 
   std::string GetComputationBackendText(
       const torch::lazy::ComputationPtr computation) const override {
-    return dynamic_cast<runtime::ComputationClient::Computation*>(computation.get())
+    return dynamic_cast<runtime::ComputationClient::Computation*>(
+               computation.get())
         ->to_string();
   }
 

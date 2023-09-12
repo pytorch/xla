@@ -563,17 +563,20 @@ std::vector<at::Tensor> XlaUserComputation(
   return results;
 }
 
-runtime::ComputationClient::ComputationPtr CreateComputation(const std::string& name, xla::XlaOp root) {
+runtime::ComputationClient::ComputationPtr CreateComputation(
+    const std::string& name, xla::XlaOp root) {
   xla::XlaComputation computation = ConsumeValue(root.builder()->Build(root));
-  return std::make_shared<runtime::ComputationClient::Computation>(name, std::move(computation));
+  return std::make_shared<runtime::ComputationClient::Computation>(
+      name, std::move(computation));
 }
 
-runtime::ComputationClient::ComputationPtr CreateComputationFromProto(const std::string& name,
-                                          const std::string& module_proto) {
+runtime::ComputationClient::ComputationPtr CreateComputationFromProto(
+    const std::string& name, const std::string& module_proto) {
   xla::HloModuleProto proto;
   proto.ParseFromString(module_proto);
   xla::XlaComputation computation(std::move(proto));
-  return std::make_shared<runtime::ComputationClient::Computation>(name, std::move(computation));
+  return std::make_shared<runtime::ComputationClient::Computation>(
+      name, std::move(computation));
 }
 
 xla::Shape GetTensorShape(const at::Tensor& tensor,
@@ -1451,7 +1454,8 @@ void InitXlaModuleBindings(py::module m) {
 
   py::class_<xla::XlaBuilder, op_builder::BuilderPtr>(m, "XlaBuilder");
   py::class_<op_builder::Op, op_builder::OpPtr>(m, "XlaOp");
-  py::class_<runtime::ComputationClient::Computation, runtime::ComputationClient::ComputationPtr>(m, "XlaComputation");
+  py::class_<runtime::ComputationClient::Computation,
+             runtime::ComputationClient::ComputationPtr>(m, "XlaComputation");
   m.def("_xla_op_create_builder", [](const std::string& name) {
     return std::make_shared<xla::XlaBuilder>(name);
   });
@@ -1485,15 +1489,16 @@ void InitXlaModuleBindings(py::module m) {
           }
           return computation;
         });
-  m.def("_xla_computation_text", [](const runtime::ComputationClient::ComputationPtr& computation) {
-    std::string hlo_text;
-    {
-      NoGilSection nogil;
-      hlo_text = ConsumeValue(
-          runtime::util::GetComputationHloText(computation->computation()));
-    }
-    return hlo_text;
-  });
+  m.def("_xla_computation_text",
+        [](const runtime::ComputationClient::ComputationPtr& computation) {
+          std::string hlo_text;
+          {
+            NoGilSection nogil;
+            hlo_text = ConsumeValue(runtime::util::GetComputationHloText(
+                computation->computation()));
+          }
+          return hlo_text;
+        });
   m.def("_xla_op_shape", [](op_builder::OpPtr op) {
     const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(op->op);
     return op_builder::ShapeToPyShape(shape);
