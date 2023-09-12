@@ -505,13 +505,11 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
 
     const auto& hlo_modules = ConsumeValue(executable->GetHloModules());
     xla::HloComputation* hlo_computation = hlo_modules[0]->entry_computation();
-    xla::ProgramShape program_shape =
-        xla::ProgramShape(hlo_computation->ToProto().program_shape());
 
     std::shared_ptr<PjRtComputation> pjrt_computation =
         std::make_shared<PjRtComputation>(
             std::move(xla::XlaComputation(hlo_modules[0]->ToProto())),
-            program_shape, instance.devices, std::move(executable));
+            instance.devices, std::move(executable));
 
     computations.push_back(pjrt_computation);
 
