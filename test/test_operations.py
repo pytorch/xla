@@ -2076,6 +2076,30 @@ class RegisterXLAKeyTest(test_utils.XlaTestCase):
     self.assertEqual(met.counter_value("RegisterXLAFunctions"), 1)
 
 
+class TestLoweringContext(test_utils.XlaTestCase):
+
+  def test_api(self):
+    device = xm.xla_device()
+    example = torch.tensor([1.0, 2.0, 3.0, 4.0], device=device)
+
+    def network(x):
+        return x + 2.0
+
+    result = network(example)
+
+    ctx = torch_xla._XLAC.lowering.LoweringContext()
+    ctx.build([result])
+    hlo = ctx.hlo()
+    hlo_text = ctx.hlo_text()
+    self.assertTrue('opcode: "parameter"' in hlo_text)
+    self.assertTrue('opcode: "broadcast"' in hlo_text)
+    self.assertTrue('opcode: "add"' in hlo_text)
+    mapping = ctx.parameter_id_tensor_mapping()
+    self.assertEqual(len(mapping), 2)
+    input_parameter_id = ctx.tensor_parameter_id(example)
+    # id 0 is the constant
+    self.assertEqual(input_parameter_id, 1)
+
 class TestGeneric(test_utils.XlaTestCase):
 
   def test_zeros_like_patch(self):
