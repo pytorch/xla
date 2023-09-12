@@ -13,7 +13,7 @@ _New features in PyTorch/XLA r2.1_:
 * Public runtime APIs have moved from `torch_xla.experimental.pjrt` to
   `torch_xla.runtime`.
 * `torchrun` is now supported when using `init_method='pjrt://'`.
-* New PJRT plugins for XPU and Neuron.
+* New plugins for XPU and Neuron via the PJRT C API.
 
 _New features in PyTorch/XLA r2.0_:
 
