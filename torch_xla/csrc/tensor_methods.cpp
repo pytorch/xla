@@ -91,6 +91,7 @@
 #include "torch_xla/csrc/ops/prod.h"
 #include "torch_xla/csrc/ops/put.h"
 #include "torch_xla/csrc/ops/qr.h"
+#include "torch_xla/csrc/ops/quant_per_tensor.h"
 #include "torch_xla/csrc/ops/recv.h"
 #include "torch_xla/csrc/ops/reduce_scatter.h"
 #include "torch_xla/csrc/ops/reflection_pad2d.h"
@@ -2105,6 +2106,17 @@ std::tuple<XLATensorPtr, XLATensorPtr> qr(const XLATensorPtr& input,
       torch::lazy::MakeNode<QR>(input->GetIrValue(), some);
   return std::make_tuple(input->CreateFrom(torch::lazy::Value(node, 0)),
                          input->CreateFrom(torch::lazy::Value(node, 1)));
+}
+
+XLATensorPtr quantize_per_tensor(const XLATensorPtr& input,
+                                 const std::vector<float>& scale_list,
+                                 const std::vector<float>& zero_point_list,
+                                 int quant_min, int quant_max,
+                                 const std::string& dtype) {
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<QuantizePerTensor>(
+      input->GetIrValue(), scale_list, zero_point_list, quant_min, quant_max,
+      dtype);
+  return input->CreateFrom(torch::lazy::Value(node));
 }
 
 void random_(XLATensorPtr& input, int64_t from, int64_t to) {

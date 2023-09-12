@@ -199,6 +199,17 @@ at::Tensor AllReduce(const std::string& reduce_type, const at::Tensor& input,
   return bridge::AtenFromXlaTensor(std::move(result));
 }
 
+at::Tensor QuantizePerTensor(const at::Tensor& input,
+                             const std::vector<float>& scale_list,
+                             const std::vector<float>& zero_point_list,
+                             int quant_min, int quant_max,
+                             const std::string& dtype) {
+  auto result = tensor_methods::quantize_per_tensor(
+      bridge::GetXlaTensor(input), scale_list, zero_point_list, quant_min,
+      quant_max, dtype);
+  return bridge::AtenFromXlaTensor(std::move(result));
+}
+
 std::pair<at::Tensor, std::shared_ptr<torch::lazy::Value>> ReduceScatter(
     const std::string& reduce_type, const at::Tensor& input,
     const std::shared_ptr<torch::lazy::Value>& token, double scale,
@@ -1104,6 +1115,18 @@ void InitXlaModuleBindings(py::module m) {
     }
     return result;
   });
+  m.def("_xla_quantize_per_tensor",
+        [](const at::Tensor& input, const std::vector<float>& scale_list,
+           const std::vector<float>& zero_point_list, int quant_min,
+           int quant_max, const std::string& dtype) -> at::Tensor {
+          at::Tensor result;
+          {
+            NoGilSection nogil;
+            result = QuantizePerTensor(input, scale_list, zero_point_list,
+                                       quant_min, quant_max, dtype);
+          }
+          return result;
+        });
   m.def("_xla_all_to_all",
         [](const at::Tensor& input,
            const std::shared_ptr<torch::lazy::Value>& token,
@@ -1449,8 +1472,9 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_xla_memory_info", [](const std::string& device) -> py::object {
     return GetMemoryInfo(device);
   });
-  m.def("_xla_set_use_full_mat_mul_precision",
-        [](bool use_full_mat_mul_precision) {
+  m.def(
+      "_xla_set_use_full_mat_mul_precision",
+      [](bool use_full_mat_mul_precision) {
           XlaHelpers::set_mat_mul_precision(
               use_full_mat_mul_precision ? xla::PrecisionConfig::HIGHEST
                                          : xla::PrecisionConfig::DEFAULT);

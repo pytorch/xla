@@ -44,6 +44,7 @@ extern const OpKindWrapper xla_moving_average;
 extern const OpKindWrapper xla_nms;
 extern const OpKindWrapper xla_not_supported;
 extern const OpKindWrapper xla_optimization_barrier;
+extern const OpKindWrapper xla_quantize_per_tensor;
 extern const OpKindWrapper xla_recv;
 extern const OpKindWrapper xla_reduce_scatter;
 extern const OpKindWrapper xla_replication_pad;
