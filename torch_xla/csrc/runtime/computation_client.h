@@ -75,11 +75,11 @@ class ComputationClient {
     Computation(std::string name,
                 xla::XlaComputation computation)
           : name_(name),
-            hash_(torch::lazy::MHash(
-              name,
-              computation.proto().SerializeAsString())),
             computation_(std::move(computation)) {
       program_shape_ = ConsumeValue(computation_.GetProgramShape());
+      hash_ = torch::lazy::MHash(
+          name,
+          computation_.proto().SerializeAsString());
     }
 
 
@@ -125,7 +125,7 @@ class ComputationClient {
 
     const xla::XlaComputation& computation() const {
       if (computation_moved_) {
-        XLA_ERROR() << "Compuation has been moved\n";
+        XLA_ERROR() << "Computation has been moved\n";
       }
       return computation_;
     }
