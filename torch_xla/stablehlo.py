@@ -216,21 +216,20 @@ def _extract_input_args(exported_model, options):
     args = options.override_tracing_arguments
     kwargs = options.override_tracing_kwargs
   elif hasattr(exported_model, 'example_inputs'):
-      args, kwargs = exported_model.example_inputs
+    args, kwargs = exported_model.example_inputs
   else:
     raise ValueError(
         'No argument is provided, please make sure that ExportedProgram.example_inputs() has content'
     )
 
   if (in_spec := exported_model.call_spec.in_spec) is not None:
-    if (in_spec.type == tuple and
-        len(in_spec.children_specs) == 2 and
-        in_spec.children_specs[0].type == tuple and 
+    if (in_spec.type == tuple and len(in_spec.children_specs) == 2 and
+        in_spec.children_specs[0].type == tuple and
         in_spec.children_specs[1].type == dict):
-        # NOTE: this is the case where in_spec is for both args and kwargs
+      # NOTE: this is the case where in_spec is for both args and kwargs
       return fx_pytree.tree_flatten_spec((args, kwargs), in_spec)
     else:
-      return fx_pytree.tree_flatten_spec(args, in_spec) 
+      return fx_pytree.tree_flatten_spec(args, in_spec)
   else:
     return copy.deepcopy(args)
 
