@@ -6,7 +6,7 @@ import torch.distributed as dist
 import torch.nn as nn
 from torch.nn.parallel import DistributedDataParallel as DDP
 import torch_xla.core.xla_model as xm
-import torch_xla.experimental.pjrt_backend
+import torch_xla.distributed.xla_backend
 from torch_xla import runtime as xr
 from torch_xla._internal import pjrt, tpu
 
@@ -24,7 +24,7 @@ class TestPjRtDistributedDataParallel(parameterized.TestCase):
 
   @staticmethod
   def _ddp_init(index: int = ...):
-    dist.init_process_group('xla', init_method='pjrt://')
+    dist.init_process_group('xla', init_method='xla://')
     device = xm.xla_device()
     model = nn.Linear(10, 10).to(device)
     ddp_model = DDP(model)
@@ -41,7 +41,7 @@ class TestPjRtDistributedDataParallel(parameterized.TestCase):
   def test_ddp_correctness(self, use_large_net: bool):
     pjrt.run_multiprocess(
         util.ddp_correctness,
-        init_method='pjrt://',
+        init_method='xla://',
         use_large_net=use_large_net,
         debug=FLAGS.debug)
 
