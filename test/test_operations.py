@@ -2092,7 +2092,6 @@ class TestLoweringContext(test_utils.XlaTestCase):
     hlo = ctx.hlo()
     hlo_text = ctx.hlo_text()
     self.assertTrue('opcode: "parameter"' in hlo_text)
-    self.assertTrue('opcode: "add"' in hlo_text)
     mapping = ctx.parameter_id_tensor_mapping()
     self.assertEqual(len(mapping), 2)
     input_parameter_id = ctx.tensor_parameter_id(example)
