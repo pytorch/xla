@@ -69,7 +69,7 @@ locals {
   versioned_builds_dict = {
     for b in var.versioned_builds :
     format("r%s_%s_%s",
-      b.package_version,
+      replace(b.package_version, "+", "_"),
       b.python_version,
       b.accelerator == "tpu" ? "tpuvm" : format("cuda_%s", b.cuda_version)
     ) => b
