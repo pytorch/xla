@@ -2081,11 +2081,9 @@ class TestLoweringContext(test_utils.XlaTestCase):
   def test_api(self):
     device = xm.xla_device()
     example = torch.tensor([1.0, 2.0, 3.0, 4.0], device=device)
+    xm.mark_step()
 
-    def network(x):
-      return x + 2.0
-
-    result = network(example)
+    result = example + 2
 
     ctx = torch_xla._XLAC.lowering.LoweringContext()
     ctx.build([result])
