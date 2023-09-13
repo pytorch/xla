@@ -1,6 +1,6 @@
 # PJRT Runtime
 
-The PyTorch/XLA team has migrated XRT runtime to the [PJRT
+PyTorch/XLA has migrated from the TensorFlow-based XRT runtime to the [PJRT
 runtime](https://github.com/tensorflow/tensorflow/tree/master/tensorflow/compiler/xla/pjrt)
 used by [JAX](https://github.com/google/jax).
 
