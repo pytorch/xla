@@ -34,23 +34,7 @@ xla::BitGeneratorTy GetBitGenerator() {
       state = xla::ConcatScalars(key.builder(), {key, state});
       xla::XlaOp result =
           xla::RngBitGenerator(xla::RandomAlgorithm::RNG_DEFAULT, state, shape);
-      xla::XlaOp value = xla::GetTupleElement(result, 1);
-
-      auto dimensions = shape.dimensions();
-      const auto rank = dimensions.size();
-      if (rank > 1 && dimensions[rank - 1] == dimensions[rank - 2]) {
-        // Additional transpose of this random mask removes the extra copy
-        // imposed on the final output.
-        std::vector<int64_t> permutation;
-        permutation.reserve(rank);
-        for (int64_t i = 0; i < rank - 1; ++i) {
-          i == (rank - 2) ? permutation.push_back(i + 1)
-                          : permutation.push_back(i);
-        }
-        permutation.push_back(rank - 2);
-        value = xla::Transpose(value, permutation);
-      }
-      return xla::RngOutput{/*value=*/value,
+      return xla::RngOutput{/*value=*/xla::GetTupleElement(result, 1),
                             /*state=*/xla::GetTupleElement(result, 0)};
     };
   } else if (*bit_generator == "philox") {
