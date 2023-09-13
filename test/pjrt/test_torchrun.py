@@ -3,7 +3,7 @@ from absl import logging
 import torch
 import torch.distributed as dist
 import torch_xla.core.xla_model as xm
-import torch_xla.experimental.pjrt_backend
+import torch_xla.distributed.xla_backend
 import torch_xla.runtime as xr
 import torch_xla.utils.utils as xu
 
@@ -11,7 +11,7 @@ import torch_xla.utils.utils as xu
 class TestTorchrun(absltest.TestCase):
 
   def test_all_gather(self):
-    dist.init_process_group('xla', init_method='pjrt://')
+    dist.init_process_group('xla', init_method='xla://')
 
     dist_world_size = xu.getenv_as('WORLD_SIZE', int)
     devices_per_thread = xr.addressable_device_count()
