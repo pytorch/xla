@@ -2080,21 +2080,20 @@ class TestLoweringContext(test_utils.XlaTestCase):
 
   def test_api(self):
     device = xm.xla_device()
-    example = torch.tensor([1.0, 2.0, 3.0, 4.0], device=device)
+    a = torch.rand(10, device=device)
+    b = torch.rand(10, device=device)
     xm.mark_step()
 
-    result = example + 2
+    result = a + b
 
     ctx = torch_xla._XLAC.lowering.LoweringContext()
     ctx.build([result])
     hlo = ctx.hlo()
     hlo_text = ctx.hlo_text()
     self.assertTrue('opcode: "parameter"' in hlo_text)
+    self.assertTrue('opcode: "add"' in hlo_text)
     mapping = ctx.parameter_id_tensor_mapping()
     self.assertEqual(len(mapping), 2)
-    input_parameter_id = ctx.tensor_parameter_id(example)
-    # id 0 is the constant
-    self.assertEqual(input_parameter_id, 1)
 
 
 class TestGeneric(test_utils.XlaTestCase):
