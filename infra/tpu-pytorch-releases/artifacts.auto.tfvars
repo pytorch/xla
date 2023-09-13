@@ -61,6 +61,7 @@ versioned_builds = [
     package_version = "2.1.0rc2+libtpu"
     accelerator     = "tpu"
     python_version  = "3.10"
+    bundle_libtpu   = "1"
   },
   {
     git_tag         = "v2.0.0"
