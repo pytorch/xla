@@ -761,7 +761,7 @@ class PyLoweringContext {
     // Get the lazy IR value from the output XLA tensors
     std::vector<torch::lazy::Value> ir_values;
     for (auto& xtensor : xtensors) {
-      torch::lazy::Value value = xtensor->GetIrValue();
+      torch::lazy::Value value = xtensor->CurrentIrValue();
       ir_values.push_back(value);
     }
 
