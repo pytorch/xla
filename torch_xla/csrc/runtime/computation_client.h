@@ -81,26 +81,17 @@ class ComputationClient {
   // 4. xla::PjRtComputationClient::PjRtComputation which inherits from
   // runtime::ComputationClient::Computation and contains a handle to represent
   // the compiled program.
-
-  // TODO: clearly label constructors
-  // torch_xla::Computation is being used for 3 different purpose.
-  // 1. To represent a xla computation build by xla_op_builder, in which case we
-  // would need the name and hash. Computation would be a wrapper around a
-  // runtime::ComputationClient::Computation.
-  // runtime::ComputationClient::Computation::devices_ would be empty.
-  // TODO: is it incorrect to set hash and name anyway?
-  // 2. To represent a computation built by syncTensor and needs to be compiled.
-  // In this case hash_ and name_ are not required. Computation would be a
-  // wrapper around a runtime::ComputationClient::Computation.
-  // 3. To represent a computation that is already compiled. In this case name_
-  // and hash_ are not required. Computation will be a wrapper around
-  // xla::PjRtComputationClient::PjRtComputation.
-  // It is not ideal to use same class for 3 different purposes but this is the
-  // path took by upstream ltc.
   class Computation : public torch::lazy::Computation {
    public:
+    // Our Computation is being used for 3 different purpose.
+    // 1. To represent a xla computation build by xla_op_builder, in which case
+    //    we would need the name and hash. Computation would be a wrapper around
+    //    a runtime::ComputationClient::Computation.
+    //    runtime::ComputationClient::Computation::devices_ would be empty.
+    // 2. To represent a computation built by syncTensor and needs to be
+    //    compiled.
+    //    ...
     Computation(std::string name, xla::XlaComputation computation,
-                // TODO: does this vector need to be a vector?
                 std::vector<std::string> devices = {})
         : name_(name),
           computation_(std::move(computation)),
@@ -114,6 +105,12 @@ class ComputationClient {
                 torch::lazy::BackendDevice device)
         : Computation(name, std::move(computation), {device.toString()}) {}
 
+    // ...
+    // 3. To represent a computation that is already compiled. In this case
+    //    name_ and hash_ are not required. Computation will be a wrapper around
+    //    an executable, PjRtComputationClient::PjRtComputation in our case. It
+    //    is not ideal to use same class for 3 different purposes but this is
+    //    the path took by upstream ltc.
     Computation(xla::XlaComputation computation,
                 std::vector<std::string> devices)
         : Computation("", std::move(computation), std::move(devices)) {}
@@ -127,8 +124,6 @@ class ComputationClient {
 
     std::string get_device_string() const {
       // Assume that a xla_client_computation_ only contains one device for now.
-      // TODO: this comment seems wrong
-      // We need to update here when SPMD comes.
       XLA_CHECK_EQ(devices().size(), 1);
       return devices()[0];
     }
@@ -212,8 +207,8 @@ class ComputationClient {
     PopulateFn populate_fn;
   };
 
-  // TODO: Should CompileInstance still exist? Should it be a subclass of
-  // torch::lazy::Computation?
+  // TODO(wcromar): Should CompileInstance still exist? Should it be a subclass
+  // of torch::lazy::Computation?
   struct CompileInstance {
     CompileInstance() = default;
     CompileInstance(xla::XlaComputation computation,
