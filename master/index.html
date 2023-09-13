@@ -287,7 +287,7 @@
 <li><a class="reference internal" href="#common-issues">Common Issues</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#pjrt-runtime-beta">PJRT Runtime (Beta)</a><ul>
+<li><a class="reference internal" href="#pjrt-runtime">PJRT Runtime</a><ul>
 <li><a class="reference internal" href="#tl-dr">TL;DR</a></li>
 <li><a class="reference internal" href="#benefits">Benefits</a></li>
 <li><a class="reference internal" href="#quickstart">Quickstart</a><ul>
@@ -301,7 +301,7 @@
 </ul>
 </li>
 <li><a class="reference internal" href="#differences-from-xrt">Differences from XRT</a><ul>
-<li><a class="reference internal" href="#id6">Multithreading on TPU v2/v3</a></li>
+<li><a class="reference internal" href="#id7">Multithreading on TPU v2/v3</a></li>
 <li><a class="reference internal" href="#changes-to-xm-rendezvous">Changes to xm.rendezvous</a></li>
 <li><a class="reference internal" href="#pjrt-and-torch-distributed">PJRT and torch.distributed</a></li>
 </ul>
@@ -345,7 +345,7 @@
 <li><a class="reference internal" href="#how-to-run-with-pytorch-xla-gpu">How to run with PyTorch/XLA:GPU</a><ul>
 <li><a class="reference internal" href="#create-a-gpu-instance">Create a GPU instance</a></li>
 <li><a class="reference internal" href="#environment-setup">Environment Setup</a><ul>
-<li><a class="reference internal" href="#id9">Docker</a></li>
+<li><a class="reference internal" href="#id10">Docker</a></li>
 <li><a class="reference internal" href="#wheel">Wheel</a></li>
 </ul>
 </li>
@@ -358,9 +358,9 @@
 <li><a class="reference internal" href="#what-is-pytorch-xla-spmd">What is PyTorch/XLA SPMD?</a></li>
 <li><a class="reference internal" href="#pytorch-xla-spmd-design-overview">PyTorch/XLA SPMD Design Overview</a><ul>
 <li><a class="reference internal" href="#simple-example-sharding-aannotation-api">Simple Example &amp; Sharding Aannotation API</a></li>
-<li><a class="reference internal" href="#id14">Mesh</a></li>
+<li><a class="reference internal" href="#id15">Mesh</a></li>
 <li><a class="reference internal" href="#hybrid-mesh">Hybrid Mesh</a></li>
-<li><a class="reference internal" href="#id15">Partition Spec</a></li>
+<li><a class="reference internal" href="#id16">Partition Spec</a></li>
 <li><a class="reference internal" href="#xlashardedtensor">XLAShardedTensor</a></li>
 <li><a class="reference internal" href="#sharding-aware-host-to-device-data-loading">Sharding-Aware Host-to-Device Data Loading</a></li>
 <li><a class="reference internal" href="#distributed-checkpointing">Distributed Checkpointing</a></li>
@@ -1865,19 +1865,28 @@ Running in single-core mode is also strongly suggested when debugging execution 
 </ul>
 </div>
 </div>
-<div class="section" id="pjrt-runtime-beta">
-<h1>PJRT Runtime (Beta)<a class="headerlink" href="#pjrt-runtime-beta" title="Permalink to this headline">¶</a></h1>
-<p><em>This document reflects the current state of PJRT support in current nightly
-builds</em>. See the <a class="reference external" href="https://github.com/pytorch/xla/blob/r2.0/docs/pjrt.md">same document on the r2.0 branch</a>
-for the status in the latest stable release.</p>
-<p>The PyTorch/XLA team is currently migrating from the currently-supported XRT
-runtime to the <a class="reference external" href="https://github.com/tensorflow/tensorflow/tree/master/tensorflow/compiler/xla/pjrt">PJRT
+<div class="section" id="pjrt-runtime">
+<h1>PJRT Runtime<a class="headerlink" href="#pjrt-runtime" title="Permalink to this headline">¶</a></h1>
+<p>PyTorch/XLA has migrated from the TensorFlow-based XRT runtime to the <a class="reference external" href="https://github.com/tensorflow/tensorflow/tree/master/tensorflow/compiler/xla/pjrt">PJRT
 runtime</a>
 used by <a class="reference external" href="https://github.com/google/jax">JAX</a>.</p>
-<p>PJRT is available for preview in PyTorch/XLA 2.0. <strong>We are planning to make
-PJRT our officially supported runtime</strong>, so we encourage all users to experiment
-with it. We aim to make PJRT stable in release 2.1, so if you encounter a bug
-with PJRT, please file an issue on GitHub with the <code class="docutils literal notranslate"><span class="pre">runtime</span></code> tag.</p>
+<p>If you encounter a bug with PJRT, please file an issue on GitHub with the
+<code class="docutils literal notranslate"><span class="pre">runtime</span></code> tag.</p>
+<p><em>New features in PyTorch/XLA r2.1</em>:</p>
+<ul class="simple">
+<li><p>PJRT is stable in PyTorch/XLA r2.1!</p></li>
+<li><p>Public runtime APIs have moved from <code class="docutils literal notranslate"><span class="pre">torch_xla.experimental.pjrt</span></code> to
+<code class="docutils literal notranslate"><span class="pre">torch_xla.runtime</span></code>.</p>
+<ul>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">pjrt://</span></code> init method has been renamed to <code class="docutils literal notranslate"><span class="pre">xla://</span></code>, and it is registered
+by <code class="docutils literal notranslate"><span class="pre">torch_xla.distributed.xla_backend</span></code>.</p></li>
+<li><p>The previous <code class="docutils literal notranslate"><span class="pre">torch_xla.experimental.*</span></code> names are still available in this
+release for compatibility.</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">torchrun</span></code> is now supported when using <code class="docutils literal notranslate"><span class="pre">init_method='xla://'</span></code>.</p></li>
+<li><p>New plugins for XPU and Neuron via the PJRT C API.</p></li>
+</ul>
 <p><em>New features in PyTorch/XLA r2.0</em>:</p>
 <ul class="simple">
 <li><p>PJRT will be configured by default if you don’t pass in any other runtime
@@ -1894,7 +1903,7 @@ soon!</p></li>
 <h2>TL;DR<a class="headerlink" href="#tl-dr" title="Permalink to this headline">¶</a></h2>
 <ul class="simple">
 <li><p>To use the PJRT preview runtime, set the <code class="docutils literal notranslate"><span class="pre">PJRT_DEVICE</span></code> environment variable to
-<code class="docutils literal notranslate"><span class="pre">CPU</span></code>, <code class="docutils literal notranslate"><span class="pre">TPU,</span> <span class="pre">or</span></code>GPU`</p></li>
+<code class="docutils literal notranslate"><span class="pre">CPU</span></code>, <code class="docutils literal notranslate"><span class="pre">TPU</span></code>, or <code class="docutils literal notranslate"><span class="pre">GPU</span></code></p></li>
 <li><p>In XRT, all distributed workloads are multiprocess, with one process per
 device. On TPU v2 and v3 in PJRT, workloads are multiprocess and multithreaded
 (4 processes with 2 threads each), so your workload should be thread-safe. See
@@ -1911,7 +1920,7 @@ replica’s parameters from a common checkpoint.</p></li>
 The global <code class="docutils literal notranslate"><span class="pre">torch</span></code> RNG is <em>not</em> thread-safe, even if you set the same
 <code class="docutils literal notranslate"><span class="pre">torch.manual_seed</span></code> across replicas.</p></li>
 <li><p>To use <code class="docutils literal notranslate"><span class="pre">torch.distributed</span></code>, import <code class="docutils literal notranslate"><span class="pre">torch_xla.experimental.pjrt_backend</span></code> and
-use the <code class="docutils literal notranslate"><span class="pre">pjrt://</span></code> <code class="docutils literal notranslate"><span class="pre">init_method</span></code>.</p></li>
+use the <code class="docutils literal notranslate"><span class="pre">xla://</span></code> <code class="docutils literal notranslate"><span class="pre">init_method</span></code>.</p></li>
 <li><p>These steps are optional for GPU and TPU v4.</p></li>
 </ul>
 </li>
@@ -1928,20 +1937,19 @@ use the <code class="docutils literal notranslate"><span class="pre">pjrt://</sp
 <span class="w"> </span>import torch_xla.distributed.parallel_loader as pl
 <span class="w"> </span>import torch_xla.distributed.xla_backend
 <span class="w"> </span>import torch_xla.distributed.xla_multiprocessing as xmp
-<span class="gi">+import torch_xla.experimental.pjrt_backend</span>
-<span class="gi">+import torch_xla.experimental.pjrt as pjrt</span>
+<span class="gi">+import torch_xla.runtime as xr</span>
 
 
 <span class="w"> </span>def _mp_fn(index):
 <span class="w"> </span>  device = xm.xla_device()
 <span class="gd">-  dist.init_process_group(&#39;xla&#39;, rank=xm.get_ordinal(), world_size=xm.xrt_world_size())</span>
-<span class="gi">+  dist.init_process_group(&#39;xla&#39;, init_method=&#39;pjrt://&#39;)</span>
+<span class="gi">+  dist.init_process_group(&#39;xla&#39;, init_method=&#39;xla://&#39;)</span>
 
 <span class="w"> </span>  torch.manual_seed(42)
 <span class="w"> </span>  model = nn.Linear(128, 10).to(device)
 
 <span class="gi">+  # Optional for TPU v4 and GPU</span>
-<span class="gi">+  pjrt.broadcast_master_param(model)</span>
+<span class="gi">+  xm.broadcast_master_param(model)</span>
 <span class="w"> </span>  model = DDP(model, gradient_as_bucket_view=True)
 
 <span class="w"> </span>  loss_fn = nn.MSELoss()
@@ -2097,8 +2105,8 @@ and run the code on each host in parallel (e.g. <code class="docutils literal no
 communication to enhance stability on large TPU pods. See below for more
 details.</p></li>
 </ul>
-<div class="section" id="id6">
-<h3>Multithreading on TPU v2/v3<a class="headerlink" href="#id6" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id7">
+<h3>Multithreading on TPU v2/v3<a class="headerlink" href="#id7" title="Permalink to this headline">¶</a></h3>
 <p>On TPU v2 and v3, <strong>distributed workloads always run multithreaded</strong>, since each
 TPU core exposes two TPU cores as devices and only one process may open a TPU
 chip at a time. In its default configuration, <code class="docutils literal notranslate"><span class="pre">xmp.spawn</span></code> automatically spawns
@@ -2139,7 +2147,7 @@ without altering the XLA graph and/or synchronizing a subset of workers),
 consider using
 <cite>``torch.distributed.barrier`</cite> &lt;<a class="reference external" href="https://pytorch.org/docs/stable/distributed.html#torch.distributed.barrier">https://pytorch.org/docs/stable/distributed.html#torch.distributed.barrier</a>&gt;`_
 or
-<code class="docutils literal notranslate"><span class="pre">[torch.distributed.all_gather_object](https://pytorch.org/docs/stable/distributed.html#torch.distributed.all_gather_object)</span></code>
+<cite>``torch.distributed.all_gather_object`</cite> &lt;<a class="reference external" href="https://pytorch.org/docs/stable/distributed.html#torch.distributed.all_gather_object">https://pytorch.org/docs/stable/distributed.html#torch.distributed.all_gather_object</a>&gt;`_
 with a <code class="docutils literal notranslate"><span class="pre">gloo</span></code> process group. If you are also using the <code class="docutils literal notranslate"><span class="pre">xla</span></code> <code class="docutils literal notranslate"><span class="pre">torch.distributed</span></code>
 backend, you can use <code class="docutils literal notranslate"><span class="pre">torch.new_group</span></code> to create a <code class="docutils literal notranslate"><span class="pre">gloo</span></code> subgroup. See <a class="reference external" href="https://pytorch.org/docs/stable/distributed.html#monitored-barrier">this
 example</a>
@@ -2147,7 +2155,7 @@ from the PyTorch documentation. Keep in mind these constraints:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">torch.distributed</span></code> is not fully supported on TPU v2/v3. Only a subset of
 operations with the <code class="docutils literal notranslate"><span class="pre">xla</span></code> backend are implemented, and <code class="docutils literal notranslate"><span class="pre">gloo</span></code> will likely not
-work as expected in a multiprocessing context.</p></li>
+work as expected in a multithreaded context.</p></li>
 <li><p>In our experiments, <code class="docutils literal notranslate"><span class="pre">gloo</span></code> does not scale well to thousands of TPU chips, so
 expect this alternative to be less reliable than using <code class="docutils literal notranslate"><span class="pre">xm.rendezvous</span></code> with
 PJRT at large scales.</p></li>
@@ -2158,7 +2166,7 @@ PJRT at large scales.</p></li>
 <p><em>New in PyTorch/XLA r2.0</em></p>
 <p>When using PJRT with <code class="docutils literal notranslate"><span class="pre">torch.distributed</span></code> and
 <code class="docutils literal notranslate"><span class="pre">[torch.nn.parallel.DistributedDataParallel](https://github.com/pytorch/xla/blob/master/docs/ddp.md)</span></code>
-we strongly recommend using the new <code class="docutils literal notranslate"><span class="pre">pjrt://</span></code> <code class="docutils literal notranslate"><span class="pre">init_method</span></code>, which automatically
+we strongly recommend using the new <code class="docutils literal notranslate"><span class="pre">xla://</span></code> <code class="docutils literal notranslate"><span class="pre">init_method</span></code>, which automatically
 finds the replica IDs, world size, and master IP by querying the runtime. For
 example:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
@@ -2167,12 +2175,12 @@ example:</p>
 <span class="kn">import</span> <span class="nn">torch_xla.distributed.xla_multiprocessing</span> <span class="k">as</span> <span class="nn">xmp</span>
 <span class="kn">from</span> <span class="nn">torch_xla.experimental</span> <span class="kn">import</span> <span class="n">pjrt</span>
 
-<span class="c1"># Required for `pjrt://` init_method</span>
-<span class="kn">import</span> <span class="nn">torch_xla.experimental.pjrt_backend</span>
+<span class="c1"># Required for `xla://` init_method and `xla` backend</span>
+<span class="kn">import</span> <span class="nn">torch_xla.distributed.xla_backend</span>
 
 <span class="k">def</span> <span class="nf">_all_gather</span><span class="p">(</span><span class="n">index</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
   <span class="c1"># No need to pass in `rank` or `world_size`</span>
-  <span class="n">dist</span><span class="o">.</span><span class="n">init_process_group</span><span class="p">(</span><span class="s1">&#39;xla&#39;</span><span class="p">,</span> <span class="n">init_method</span><span class="o">=</span><span class="s1">&#39;pjrt://&#39;</span><span class="p">)</span>
+  <span class="n">dist</span><span class="o">.</span><span class="n">init_process_group</span><span class="p">(</span><span class="s1">&#39;xla&#39;</span><span class="p">,</span> <span class="n">init_method</span><span class="o">=</span><span class="s1">&#39;xla://&#39;</span><span class="p">)</span>
 
   <span class="n">t</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="n">index</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">int32</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">xm</span><span class="o">.</span><span class="n">xla_device</span><span class="p">())</span>
   <span class="n">output</span> <span class="o">=</span> <span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">dist</span><span class="o">.</span><span class="n">get_world_size</span><span class="p">())]</span>
@@ -2185,10 +2193,13 @@ example:</p>
   <span class="n">xmp</span><span class="o">.</span><span class="n">spawn</span><span class="p">(</span><span class="n">_all_gather</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Note: Although the <code class="docutils literal notranslate"><span class="pre">pjrt://</span></code> init_method is not required on TPU v4, it is still
+<p>Note: Although the <code class="docutils literal notranslate"><span class="pre">xla://</span></code> init_method is not required on TPU v4, it is still
 recommended. If you use <code class="docutils literal notranslate"><span class="pre">env://</span></code>, <code class="docutils literal notranslate"><span class="pre">MASTER_ADDR</span></code> must be set to IP host that has
-device 0, which is <em>not</em> always worker 0. The <code class="docutils literal notranslate"><span class="pre">pjrt://</span></code> init_method finds this
-IP automatically and supports TPU v2/v3.</p>
+device 0, which is <em>not</em> always worker 0. The <code class="docutils literal notranslate"><span class="pre">xla://</span></code> init_method finds this
+IP automatically.</p>
+<p>Note: For TPU v2/v3, you still need to import
+<code class="docutils literal notranslate"><span class="pre">torch_xla.experimental.pjrt_backend</span></code>, as TPU v2/v3 support in
+<code class="docutils literal notranslate"><span class="pre">torch.distributed</span></code> is still experimental.</p>
 <p>For more information about using <code class="docutils literal notranslate"><span class="pre">DistributedDataParallel</span></code> on PyTorch/XLA, see
 <cite>``ddp.md`</cite> &lt;./ddp.md&gt;`_ on TPU V4. For an example that uses DDP and PJRT together,
 run the following <a class="reference external" href="../test/test_train_mp_imagenet.py">example script</a> on a TPU:</p>
@@ -2716,8 +2727,8 @@ native xla data parallel approach, here is the
 </div>
 <div class="section" id="environment-setup">
 <h2>Environment Setup<a class="headerlink" href="#environment-setup" title="Permalink to this headline">¶</a></h2>
-<div class="section" id="id9">
-<h3>Docker<a class="headerlink" href="#id9" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id10">
+<h3>Docker<a class="headerlink" href="#id10" title="Permalink to this headline">¶</a></h3>
 <p>Pytorch/XLA currently publish prebuilt docker images and wheels with cuda11.7/8 and python 3.8. We recommend users to create a docker container with corresponding config. For a full list of docker images and wheels, please refer to <a class="reference external" href="https://github.com/pytorch/xla#available-docker-images-and-wheels">this doc</a>.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>sudo docker pull us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_cuda_11.7
 sudo apt-get install -y apt-transport-https ca-certificates curl gnupg-agent    software-properties-common
@@ -2828,7 +2839,7 @@ PyTorch/XLA should have been installed successfully.</p>
 <h2>What is PyTorch/XLA SPMD?<a class="headerlink" href="#what-is-pytorch-xla-spmd" title="Permalink to this headline">¶</a></h2>
 <p><a class="reference external" href="https://arxiv.org/abs/2105.04663">GSPMD</a> is an automatic parallelization system for common ML workloads. The XLA compiler will transform the single device program into a partitioned one with proper collectives, based on the user provided sharding hints. This feature allows developers to write PyTorch programs as if they are on a single large device without any custom sharded computation ops and/or collective communications to scale.</p>
 <a class="reference external image-reference" href="assets/spmd_mode.png"><img alt="alt_text" src="assets/spmd_mode.png" /></a>
-<p><a href="#id12"><span class="problematic" id="id13">*</span></a><span class="raw-html-m2r"><span style="text-decoration:underline;">Figure 1. Comparison of two different execution strategies, (a) for non-SPMD and (b) for SPMD.</span></span>*</p>
+<p><a href="#id13"><span class="problematic" id="id14">*</span></a><span class="raw-html-m2r"><span style="text-decoration:underline;">Figure 1. Comparison of two different execution strategies, (a) for non-SPMD and (b) for SPMD.</span></span>*</p>
 <p>To support GSPMD in PyTorch/XLA, we are introducing a new execution mode. Before GSPMD, the execution mode in PyTorch/XLA assumed multiple model replicas, each with a single core (Figure 1.a). This mode of execution, as illustrated in the above  suits data parallelism frameworks, like the popular PyTorch <a class="reference external" href="https://pytorch.org/tutorials/intermediate/ddp_tutorial.html">Distributed Data Parallel (DDP)</a> or Fully Sharded Data Parallel (FSDP), but is also limited in that a replica can only reside on one device core for execution. PyTorch/XLA SPMD introduces a new execution mode that assumes a single replica with multiple cores (Figure 1.b), allowing a replica to run across multiple device cores. This shift unlocks more advanced parallelism strategies for better large model training performance.</p>
 <p>PyTorch/XLA SPMD is available on the new <a class="reference external" href="https://github.com/pytorch/xla/blob/master/docs/pjrt.md">PJRT</a> runtime. To enable PyTorch/XLA SPMD execution mode, the user must call <span class="raw-html-m2r"><code>[use_spmd() API](https://github.com/pytorch/xla/blob/b8b484515a97f74e013dcf38125c44d53a41f011/torch_xla/runtime.py#L214)</code></span>.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.runtime</span> <span class="k">as</span> <span class="nn">xr</span>
@@ -2897,8 +2908,8 @@ PyTorch/XLA should have been installed successfully.</p>
 </div>
 <p>More complete unit test cases and integration test examples are available in the PyTorch/XLA <a class="reference external" href="https://github.com/pytorch/xla/tree/r2.0/test/spmd">repo</a>.</p>
 </div>
-<div class="section" id="id14">
-<h3>Mesh<a class="headerlink" href="#id14" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id15">
+<h3>Mesh<a class="headerlink" href="#id15" title="Permalink to this headline">¶</a></h3>
 <p>For a given cluster of devices, a physical mesh is a representation of the interconnect topology.</p>
 <p>We derive a logical mesh based on this topology to create sub-groups of devices which can be used for partitioning different axes of tensors in a model.</p>
 <a class="reference external image-reference" href="assets/mesh_spmd2.png"><img alt="alt_text" src="assets/mesh_spmd2.png" /></a>
@@ -2942,8 +2953,8 @@ PyTorch/XLA should have been installed successfully.</p>
 </pre></div>
 </div>
 </div>
-<div class="section" id="id15">
-<h3>Partition Spec<a class="headerlink" href="#id15" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id16">
+<h3>Partition Spec<a class="headerlink" href="#id16" title="Permalink to this headline">¶</a></h3>
 <p>partition_spec has the same rank as the input tensor. Each dimension describes how the corresponding input tensor dimension is sharded across the device mesh (logically defined by mesh_shape). <code class="docutils literal notranslate"><span class="pre">partition_spec</span></code> is a tuple of <code class="docutils literal notranslate"><span class="pre">device_mesh</span></code> dimension <code class="docutils literal notranslate"><span class="pre">index</span></code> or None. The index can be an <code class="docutils literal notranslate"><span class="pre">int</span></code> or <code class="docutils literal notranslate"><span class="pre">str</span></code>, if the corresponding mesh dimension is named. This specifies how each input rank is sharded (<code class="docutils literal notranslate"><span class="pre">index</span></code> to <code class="docutils literal notranslate"><span class="pre">mesh_shape</span></code>) or replicated (<code class="docutils literal notranslate"><span class="pre">None</span></code>).</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Provide optional mesh axis names and use them in the partition spec</span>
 <span class="n">mesh</span> <span class="o">=</span> <span class="n">Mesh</span><span class="p">(</span><span class="n">device_ids</span><span class="p">,</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;model&#39;</span><span class="p">))</span>
@@ -3189,7 +3200,7 @@ PyTorch/XLA should have been installed successfully.</p>
 <li><a class="reference internal" href="#common-issues">Common Issues</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#pjrt-runtime-beta">PJRT Runtime (Beta)</a><ul>
+<li><a class="reference internal" href="#pjrt-runtime">PJRT Runtime</a><ul>
 <li><a class="reference internal" href="#tl-dr">TL;DR</a></li>
 <li><a class="reference internal" href="#benefits">Benefits</a></li>
 <li><a class="reference internal" href="#quickstart">Quickstart</a><ul>
@@ -3203,7 +3214,7 @@ PyTorch/XLA should have been installed successfully.</p>
 </ul>
 </li>
 <li><a class="reference internal" href="#differences-from-xrt">Differences from XRT</a><ul>
-<li><a class="reference internal" href="#id6">Multithreading on TPU v2/v3</a></li>
+<li><a class="reference internal" href="#id7">Multithreading on TPU v2/v3</a></li>
 <li><a class="reference internal" href="#changes-to-xm-rendezvous">Changes to xm.rendezvous</a></li>
 <li><a class="reference internal" href="#pjrt-and-torch-distributed">PJRT and torch.distributed</a></li>
 </ul>
@@ -3247,7 +3258,7 @@ PyTorch/XLA should have been installed successfully.</p>
 <li><a class="reference internal" href="#how-to-run-with-pytorch-xla-gpu">How to run with PyTorch/XLA:GPU</a><ul>
 <li><a class="reference internal" href="#create-a-gpu-instance">Create a GPU instance</a></li>
 <li><a class="reference internal" href="#environment-setup">Environment Setup</a><ul>
-<li><a class="reference internal" href="#id9">Docker</a></li>
+<li><a class="reference internal" href="#id10">Docker</a></li>
 <li><a class="reference internal" href="#wheel">Wheel</a></li>
 </ul>
 </li>
@@ -3260,9 +3271,9 @@ PyTorch/XLA should have been installed successfully.</p>
 <li><a class="reference internal" href="#what-is-pytorch-xla-spmd">What is PyTorch/XLA SPMD?</a></li>
 <li><a class="reference internal" href="#pytorch-xla-spmd-design-overview">PyTorch/XLA SPMD Design Overview</a><ul>
 <li><a class="reference internal" href="#simple-example-sharding-aannotation-api">Simple Example &amp; Sharding Aannotation API</a></li>
-<li><a class="reference internal" href="#id14">Mesh</a></li>
+<li><a class="reference internal" href="#id15">Mesh</a></li>
 <li><a class="reference internal" href="#hybrid-mesh">Hybrid Mesh</a></li>
-<li><a class="reference internal" href="#id15">Partition Spec</a></li>
+<li><a class="reference internal" href="#id16">Partition Spec</a></li>
 <li><a class="reference internal" href="#xlashardedtensor">XLAShardedTensor</a></li>
 <li><a class="reference internal" href="#sharding-aware-host-to-device-data-loading">Sharding-Aware Host-to-Device Data Loading</a></li>
 <li><a class="reference internal" href="#distributed-checkpointing">Distributed Checkpointing</a></li>
