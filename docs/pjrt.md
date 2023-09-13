@@ -12,7 +12,11 @@ _New features in PyTorch/XLA r2.1_:
 * PJRT is stable in PyTorch/XLA r2.1!
 * Public runtime APIs have moved from `torch_xla.experimental.pjrt` to
   `torch_xla.runtime`.
-* `torchrun` is now supported when using `init_method='pjrt://'`.
+  * The `pjrt://` init method has been renamed to `xla://`, and it is registered
+    by `torch_xla.distributed.xla_backend`.
+  * The previous `torch_xla.experimental.*` names are still available in this
+    release for compatibility.
+* `torchrun` is now supported when using `init_method='xla://'`.
 * New plugins for XPU and Neuron via the PJRT C API.
 
 _New features in PyTorch/XLA r2.0_:
@@ -46,7 +50,7 @@ _New features in PyTorch/XLA r2.0_:
     The global `torch` RNG is _not_ thread-safe, even if you set the same
     `torch.manual_seed` across replicas.
   * To use `torch.distributed`, import `torch_xla.experimental.pjrt_backend` and
-    use the `pjrt://` `init_method`.
+    use the `xla://` `init_method`.
   * These steps are optional for GPU and TPU v4.
 
 Sample diff from XRT to PJRT:
@@ -63,14 +67,13 @@ Sample diff from XRT to PJRT:
  import torch_xla.distributed.parallel_loader as pl
  import torch_xla.distributed.xla_backend
  import torch_xla.distributed.xla_multiprocessing as xmp
-+import torch_xla.experimental.pjrt_backend
 +import torch_xla.runtime as xr
 
 
  def _mp_fn(index):
    device = xm.xla_device()
 -  dist.init_process_group('xla', rank=xm.get_ordinal(), world_size=xm.xrt_world_size())
-+  dist.init_process_group('xla', init_method='pjrt://')
++  dist.init_process_group('xla', init_method='xla://')
 
    torch.manual_seed(42)
    model = nn.Linear(128, 10).to(device)
@@ -306,7 +309,7 @@ _New in PyTorch/XLA r2.0_
 
 When using PJRT with `torch.distributed` and
 `[torch.nn.parallel.DistributedDataParallel](https://github.com/pytorch/xla/blob/master/docs/ddp.md)`
-we strongly recommend using the new `pjrt://` `init_method`, which automatically
+we strongly recommend using the new `xla://` `init_method`, which automatically
 finds the replica IDs, world size, and master IP by querying the runtime. For
 example:
 
@@ -317,12 +320,12 @@ import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
 from torch_xla.experimental import pjrt
 
-# Required for `pjrt://` init_method
-import torch_xla.experimental.pjrt_backend
+# Required for `xla://` init_method and `xla` backend
+import torch_xla.distributed.xla_backend
 
 def _all_gather(index: int):
   # No need to pass in `rank` or `world_size`
-  dist.init_process_group('xla', init_method='pjrt://')
+  dist.init_process_group('xla', init_method='xla://')
 
   t = torch.tensor([index], dtype=torch.int32, device=xm.xla_device())
   output = [torch.zeros_like(t) for _ in range(dist.get_world_size())]
@@ -335,10 +338,14 @@ if __name__ == '__main__':
   xmp.spawn(_all_gather)
 ```
 
-Note: Although the `pjrt://` init_method is not required on TPU v4, it is still
+Note: Although the `xla://` init_method is not required on TPU v4, it is still
 recommended. If you use `env://`, `MASTER_ADDR` must be set to IP host that has
-device 0, which is _not_ always worker 0. The `pjrt://` init_method finds this
-IP automatically and supports TPU v2/v3.
+device 0, which is _not_ always worker 0. The `xla://` init_method finds this
+IP automatically.
+
+Note: For TPU v2/v3, you still need to import
+`torch_xla.experimental.pjrt_backend`, as TPU v2/v3 support in
+`torch.distributed` is still experimental.
 
 For more information about using `DistributedDataParallel` on PyTorch/XLA, see
 [`ddp.md`](./ddp.md) on TPU V4. For an example that uses DDP and PJRT together,

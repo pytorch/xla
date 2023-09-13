@@ -74,7 +74,7 @@ If you're using `DistributedDataParallel`, make the following changes:
 +import torch_xla.core.xla_model as xm
 +import torch_xla.distributed.parallel_loader as pl
 +import torch_xla.distributed.xla_multiprocessing as xmp
-+import torch_xla.experimental.pjrt_backend
++import torch_xla.distributed.xla_backend
 
  def _mp_fn(rank, world_size):
    ...
@@ -83,7 +83,7 @@ If you're using `DistributedDataParallel`, make the following changes:
 -  os.environ['MASTER_PORT'] = '12355'
 -  dist.init_process_group("gloo", rank=rank, world_size=world_size)
 +  # Rank and world size are inferred from the XLA device runtime
-+  dist.init_process_group("xla", init_method='pjrt://')
++  dist.init_process_group("xla", init_method='xla://')
 +
 +  model.to(xm.xla_device())
 +  # `gradient_as_bucket_view=tpu` required for XLA
