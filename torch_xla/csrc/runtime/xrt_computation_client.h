@@ -175,9 +175,7 @@ class XrtComputationClient : public ComputationClient {
 
     bool HasValue() const override { return handle_ptr != nullptr; }
 
-    bool HasSharding() const override {
-      XLA_ERROR() << __FUNCTION__ << " not implemented";
-    }
+    bool HasSharding() const override { return false; }
 
     xla::OpSharding GetSharding() const override {
       XLA_ERROR() << __FUNCTION__ << " not implemented";
