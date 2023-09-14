@@ -33,6 +33,7 @@
 #include "torch_xla/csrc/ops/unselect.h"
 #include "torch_xla/csrc/ops/update_slice.h"
 #include "torch_xla/csrc/ops/view.h"
+#include "torch_xla/csrc/ops/xla_ops.h"
 #include "torch_xla/csrc/pooling.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/metrics.h"
