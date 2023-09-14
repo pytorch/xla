@@ -1,6 +1,7 @@
 #include <Python.h>
 #include <c10/core/Device.h>
 #include <c10/util/Optional.h>
+#include <google/protobuf/text_format.h>
 #include <torch/csrc/autograd/utils/wrap_outputs.h>
 #include <torch/csrc/autograd/variable.h>
 #include <torch/csrc/jit/python/pybind.h>
@@ -34,6 +35,7 @@
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ir_dump_util.h"
 #include "torch_xla/csrc/ops/device_data.h"
+#include "torch_xla/csrc/ops/xla_ops.h"
 #include "torch_xla/csrc/runtime/metrics.h"
 #include "torch_xla/csrc/runtime/metrics_analysis.h"
 #include "torch_xla/csrc/runtime/metrics_reader.h"
@@ -741,6 +743,154 @@ void BuildProfilerSubmodule(py::module* m) {
       [](const std::string& name) -> std::unique_ptr<torch::lazy::ScopePusher> {
         return absl::make_unique<torch::lazy::ScopePusher>(name);
       });
+}
+
+class PyLoweringContext {
+ public:
+  PyLoweringContext() : PyLoweringContext(GetCurrentDevice()) {}
+
+  PyLoweringContext(torch::lazy::BackendDevice device)
+      : lowering_ctx("PyLoweringContext", device) {}
+
+  // Builds a HLO graph given a set of output tensors.
+  void Build(std::vector<at::Tensor> tensors) {
+    // Get the backing XLA tensors from the output torch tensor handles
+    std::vector<XLATensorPtr> xtensors =
+        GetXlaTensors(tensors, /*want_all=*/true);
+
+    // Get the lazy IR value from the output XLA tensors
+    std::vector<torch::lazy::Value> ir_values;
+    for (auto& xtensor : xtensors) {
+      torch::lazy::Value value = xtensor->GetIrValue();
+      ir_values.push_back(value);
+    }
+
+    // Lower the graph using the output IR values
+    for (auto& ir_value : ir_values) {
+      xla::XlaOp root = lowering_ctx.GetOutputOp(
+          torch::lazy::Output(ir_value.node.get(), ir_value.index));
+      lowering_ctx.AddResult(root);
+    }
+    computation = ConsumeValue(lowering_ctx.BuildXla());
+  }
+
+  // Get a mapping from the HLO input parameters to the backing Tensor values.
+  // This allows the caller to get all parameter information regardless of
+  // how the parameter was allocated (inline tensor, nn.Parameter, constant,
+  // etc.)
+  std::unordered_map<int64_t, at::Tensor> GetParameterIdTensorMapping() {
+    // Find parameters in the lowering
+    const std::vector<size_t>& param_ids = lowering_ctx.GetParameterSequence();
+    const std::vector<torch::lazy::BackendDataPtr>& device_data =
+        lowering_ctx.GetParametersData();
+
+    // Fetch this parameter data
+    std::vector<xla::Literal> literals =
+        runtime::GetComputationClient()->TransferFromServer(
+            UnwrapXlaData(device_data));
+
+    // Create a mapping from paramater id to the tensor data
+    std::unordered_map<int64_t, at::Tensor> results;
+    for (int i = 0; i < device_data.size(); ++i) {
+      xla::Literal& literal = literals[i];
+      xla::XlaOp op = lowering_ctx.GetParameter(device_data[i]);
+      at::ScalarType dtype =
+          TensorTypeFromXlaType(literal.shape().element_type());
+      at::Tensor input = MakeTensorFromXlaLiteral(literal, dtype);
+      results[param_ids[i]] = input;
+    }
+    return results;
+  }
+
+  // Get the parameter identifier of a given tensor. If the tensor is not a
+  // parameter this will always return -1. This is useful in conjunction with
+  // GetParameterIdTensorMapping to identify which values can be baked into
+  // the graph and which values must remain parameters.
+  int64_t GetTensorParameterId(at::Tensor tensor) {
+    // Convert tensor into the backing lazy node
+    XLATensorPtr xtensor = bridge::GetXlaTensor(tensor);
+    torch::lazy::Value value = xtensor->GetIrValue();
+    const torch::lazy::Node* node = value.node.get();
+    if (node->op() != xla_device_data) {
+      return -1;
+    }
+
+    // Convert lazy node data into opaque handle id
+    torch::lazy::BackendDataPtr data = DeviceData::Cast(node)->data();
+    torch::lazy::BackendData::Handle handle = data->GetHandle();
+
+    // Linearly search parameters and compare opaque handles
+    const std::vector<size_t>& param_ids = lowering_ctx.GetParameterSequence();
+    const std::vector<torch::lazy::BackendDataPtr>& device_data =
+        lowering_ctx.GetParametersData();
+    for (int i = 0; i < device_data.size(); ++i) {
+      if (device_data[i]->GetHandle() == handle) {
+        return param_ids[i];
+      }
+    }
+    return -1;
+  }
+
+  // Create a serialized HloModule protobuf from a lowered graph
+  py::bytes GetHlo() {
+    const xla::HloModuleProto& proto = computation.proto();
+    std::string result;
+    proto.SerializeToString(&result);
+    return result;
+  }
+
+  // Create human-readable HloModule protobuf text from a lowered graph
+  std::string GetHloText() {
+    const xla::HloModuleProto& proto = computation.proto();
+    std::string result;
+    google::protobuf::TextFormat::PrintToString(proto, &result);
+    return result;
+  }
+
+ private:
+  LoweringContext lowering_ctx;
+  xla::XlaComputation computation;
+};
+
+// Add a submodule which exposes the LoweringContext to python.
+void BuildLoweringContextSubmodule(py::module* m) {
+  /**
+   * Example Python Usage:
+   *
+   *     import torch
+   *     import torch_xla
+   *     import torch_xla.core.xla_model as xm
+   *
+   *     device = xm.xla_device()
+   *     example = torch.tensor([1.0, 2.0, 3.0, 4.0], device=device)
+   *
+   *     def network(x):
+   *         return x + 2.0
+   *
+   *     result = network(example)
+   *
+   *     ctx = torch_xla._XLAC.lowering.LoweringContext()
+   *     ctx.build([result])
+   *     hlo = ctx.hlo()
+   *     hlo_text = ctx.hlo_text()
+   *     mapping = ctx.parameter_id_tensor_mapping()
+   *     input_parameter_id = ctx.tensor_parameter_id(example)
+   *
+   **/
+
+  py::module lowering =
+      m->def_submodule("lowering", "Lowering context and utilities");
+
+  py::class_<PyLoweringContext, std::unique_ptr<PyLoweringContext>>
+      lowering_context_class(lowering, "LoweringContext", py::module_local());
+
+  lowering_context_class.def(py::init<>())
+      .def("build", &PyLoweringContext::Build)
+      .def("hlo", &PyLoweringContext::GetHlo)
+      .def("hlo_text", &PyLoweringContext::GetHloText)
+      .def("parameter_id_tensor_mapping",
+           &PyLoweringContext::GetParameterIdTensorMapping)
+      .def("tensor_parameter_id", &PyLoweringContext::GetTensorParameterId);
 }
 
 void InitXlaModuleBindings(py::module m) {
@@ -1689,6 +1839,7 @@ void InitXlaModuleBindings(py::module m) {
         });
 
   BuildProfilerSubmodule(&m);
+  BuildLoweringContextSubmodule(&m);
 
   m.def("_get_tensors_handle",
         [](const std::vector<at::Tensor>& tensors) -> std::vector<int64_t> {
