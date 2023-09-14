@@ -35,6 +35,7 @@
 #include "torch_xla/csrc/runtime/cache.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/env_vars.h"
+#include "torch_xla/csrc/runtime/pjrt_computation_client.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/thread_pool.h"
 #include "torch_xla/csrc/runtime/unique.h"
@@ -102,7 +103,14 @@ XLATensor::XLATensor(const at::Tensor& tensor,
 XLATensor::XLATensor(torch::lazy::BackendDataPtr handle,
                      c10::optional<at::ScalarType> logical_element_type)
     : XLATensor(std::make_shared<Data>(handle, handle->device(),
-                                       logical_element_type)) {}
+                                       logical_element_type)) {
+  // if data is sharded we need to carry the sharding spec over.
+  runtime::ComputationClient::DataPtr data = UnwrapXlaData(handle);
+  if (data->HasSharding()) {
+    ShardingSpec sharding_spec(data->GetSharding(), data->shape());
+    SetShardingSpec(sharding_spec);
+  }
+}
 
 XLATensor::XLATensor(torch::lazy::Value ir_value,
                      const torch::lazy::BackendDevice& device,
@@ -229,7 +237,8 @@ void XLATensor::SetShardingSpec(const ShardingSpec& sharding) {
   // Existing annotation must be cleared explicitly. We do not clear and
   // overwrite the existing sharding on the user's behalf. This is a no-op if
   // the same sharding already applied.
-  if (!sharding_spec()) {
+  if (!sharding_spec() ||
+      (sharding_spec()->sharding.type() == xla::OpSharding::REPLICATED)) {
     TORCH_LAZY_COUNTER("SetShardingSpec", 1);
     data()->sharding = std::make_shared<ShardingSpec>(sharding);
   } else {

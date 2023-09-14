@@ -150,7 +150,7 @@ variables:
       default_value: false
     XLA_USE_F16:
       description:
-        - If set to true, tranforms all the PyTorch Float values into Float16
+        - If set to true, transforms all the PyTorch Float values into Float16
           (PyTorch Half type) when sending to devices which supports them.
       type: bool
       default_value: false
@@ -410,19 +410,19 @@ variables:
       type: string
       default_value: "0.01:0.05:0.1:0.2:0.5:0.8:0.9:0.95:0.99"
     XLA_RELEASE_GIL_DURING_TRANSFER:
-      descripton:
+      description:
         - Release Python's GIL when transferring data from the runtime.
       type: bool
       default_value: true
     XLA_STABLEHLO_COMPILE:
-      descripton:
-        - Pass StableHLO to XLA PjRt client for compilatoin. This compilation
+      description:
+        - Pass StableHLO to XLA PjRt client for compilation. This compilation
           flag is experimental. The default_value will be set to true when
           StableHLO workflow is mature.
       type: bool
       default_value: false
     XLA_DUMP_POST_OPTIMIZATIONS:
-      descripton:
+      description:
         - Dump the HLO graph after optimizations. You need to use it together
           with XLA_SAVE_TENSORS_FMT='hlo' and XLA_SAVE_TENSORS_FILE='your/location'.
       type: bool

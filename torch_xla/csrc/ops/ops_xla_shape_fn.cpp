@@ -421,6 +421,21 @@ xla::Shape GeTensorOutputShape(const torch::lazy::Value& self,
   return GeScalarOutputShape(self, other);
 }
 
+xla::Shape GluOutputShape(const torch::lazy::Value& input, int64_t dim) {
+  const xla::Shape& input_shape = GetXlaShape(input);
+
+  if (dim < 0) dim += input_shape.rank();
+
+  absl::Span<const int64_t> inp_dimensions = input_shape.dimensions();
+  std::vector<int64_t> output_sizes(std::begin(inp_dimensions),
+                                    std::end(inp_dimensions));
+
+  // Output shape is always half the input shape on the specified dimension
+  output_sizes[dim] = inp_dimensions[dim] / 2;
+
+  return xla::ShapeUtil::MakeShape(input_shape.element_type(), output_sizes);
+}
+
 xla::Shape GtScalarOutputShape(const torch::lazy::Value& self,
                                const torch::lazy::Value& other) {
   auto lower_for_shape_fn =

@@ -31,7 +31,7 @@ MODEL_OPTS = {
     '--ddp': {
         'action': 'store_true',
     },
-    # Use pjrt:// init_method instead of env:// for `torch.distributed`.
+    # Use xla:// init_method instead of env:// for `torch.distributed`.
     # Required for DDP on TPU v2/v3 when using PJRT.
     '--pjrt_distributed': {
         'action': 'store_true',
@@ -180,8 +180,7 @@ def _train_update(device, step, loss, tracker, epoch, writer):
 
 def train_imagenet():
   if FLAGS.pjrt_distributed:
-    import torch_xla.experimental.pjrt_backend
-    dist.init_process_group('xla', init_method='pjrt://')
+    dist.init_process_group('xla', init_method='xla://')
   elif FLAGS.ddp:
     dist.init_process_group(
         'xla', world_size=xm.xrt_world_size(), rank=xm.get_ordinal())

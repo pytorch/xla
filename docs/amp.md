@@ -25,7 +25,7 @@ for input, target in data:
     loss.backward()
     xm.optimizer_step.(optimizer)
 ```
-`autocast(xm.xla_device())` aliases `torch.amp.autocast('xla')` when the XLA Device is a TPU. Alternatively, if a script is only used with TPUs, then `torch.amp.autocast('xla')` can be directly used.
+`autocast(xm.xla_device())` aliases `torch.autocast('xla')` when the XLA Device is a TPU. Alternatively, if a script is only used with TPUs, then `torch.autocast('xla', dtype=torch.bfloat16)` can be directly used.
 
 Please file an issue or submit a pull request if there is an operator that should be autocasted that is not included.
 

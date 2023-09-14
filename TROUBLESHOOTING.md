@@ -21,7 +21,7 @@ pt-xla-profiler: CompileTime too frequent: 23 counts during 12 steps
 pt-xla-profiler: TransferFromServerTime too frequent: 12 counts during 12 steps
 ```
 
-Following section will explain how to get and understand a more detial metrics report.
+Following section will explain how to get and understand a more detail metrics report.
 
 ## Get A Metrics Report
 
@@ -77,7 +77,7 @@ If you see `aten::` ops other than `nonzero` and `_local_scalar_dense`, that usu
 lowering in PyTorch/XLA. Feel free to open a feature request for it on [GitHub issues](https://github.com/pytorch/xla/issues).
 
 ## Clar The Metrics Report
-If you want to clear the metrics between steps/epoches, you can use
+If you want to clear the metrics between steps/epochs, you can use
 ```Python
 import torch_xla.debug.metrics as met
 
@@ -85,7 +85,7 @@ met.clear_all()
 ```
 
 ## Performance Profiling
-To profile your workload in depth to undertand bottlenecks please check the following resources:
+To profile your workload in depth to understand bottlenecks please check the following resources:
 * [Official tutorial](https://cloud.google.com/tpu/docs/pytorch-xla-performance-profiling-tpu-vm)
 * [Colab notebook](https://colab.research.google.com/github/pytorch/xla/blob/master/contrib/colab/pytorch-xla-profiling-colab.ipynb)
 * [Sample MNIST training script with profiling](https://github.com/pytorch/xla/blob/master/test/test_profile_mp_mnist.py)
@@ -224,7 +224,7 @@ only be enabled for debugging.
 * ```XLA_SYNC_WAIT```: Forces the XLA tensor sync operation to wait for its completion, before
   moving to the next step.
 
-* ```XLA_USE_BF16```: If set to 1, tranforms all the _PyTorch_ _Float_ values into _BiFloat16_
+* ```XLA_USE_BF16```: If set to 1, transforms all the _PyTorch_ _Float_ values into _BiFloat16_
   when sending to the _TPU_ device. Note that when using `XLA_USE_BF16=1` tensor arithmetic will
   be done in reduced precision and so tensors will not be accurate if accumulated over time.
   For example:

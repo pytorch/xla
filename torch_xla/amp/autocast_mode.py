@@ -1,6 +1,7 @@
 import torch
 import torch_xla.core.xla_model as xm
 from typing import Any
+import warnings
 
 
 class autocast(torch.amp.autocast_mode.autocast):
@@ -24,6 +25,12 @@ class autocast(torch.amp.autocast_mode.autocast):
     elif xm.xla_device_hw(device) == 'TPU':
       if dtype is None:
         dtype = torch.bfloat16
+      if dtype != torch.bfloat16:
+        error_message = "In TPU autocast, but the target dtype is not supported. Disabling autocast.\n"
+        error_message += (
+            "TPU Autocast only supports dtype of torch.bfloat16 currently.")
+        warnings.warn(error_message)
+        enabled = False
       super().__init__(
           "xla", enabled=enabled, dtype=dtype, cache_enabled=cache_enabled)
     else:

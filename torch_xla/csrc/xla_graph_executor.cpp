@@ -25,6 +25,7 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/memory/memory.h"
 #include "absl/strings/str_join.h"
+#include "stablehlo/dialect/Serialization.h"  // from @stablehlo
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/helpers.h"
@@ -44,6 +45,7 @@
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/env_vars.h"
 #include "torch_xla/csrc/runtime/runtime.h"
+#include "torch_xla/csrc/runtime/stablehlo_helper.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/thread_pool.h"
 #include "torch_xla/csrc/runtime/unique.h"
@@ -755,6 +757,65 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
   return placeholders;
 }
 
+std::vector<torch::lazy::BackendDataPtr> XLAGraphExecutor::ExecuteStablehlo(
+    std::string bytecode, const std::vector<at::IValue>& graph_inputs,
+    const torch::lazy::BackendDevice& device) {
+  // Convert StableHLO to HLO for XLA compilation.
+  // TODO(lsy323): Pass StableHLO to PjrtComputationClient for compilation
+  // after StableHLO compilation API is added in ComputationClient.
+  mlir::MLIRContext context;
+  mlir::OwningOpRef<mlir::ModuleOp> module =
+      mlir::stablehlo::deserializePortableArtifact(bytecode, &context);
+  mlir::ModuleOp mlir_module = *module;
+  xla::HloProto hlo_proto;
+  runtime::ConvertStableHloToHlo(&mlir_module, &context, &hlo_proto);
+  xla::HloModuleProto* hlo_module_proto = hlo_proto.mutable_hlo_module();
+  xla::XlaComputation computation(*hlo_module_proto);
+
+  // Get program output shape.
+  // TODO(lsy323): Get shape info from MLIR Module.
+  xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
+  xla::Shape shape = MakeShapeWithDeviceLayout(
+      program_shape.result(), static_cast<XlaDeviceType>(device.type()));
+
+  std::vector<runtime::ComputationClient::CompileInstance> instances;
+  instances.emplace_back(
+      std::move(computation), device.toString(),
+      runtime::GetComputationClient()->GetCompilationDevices(
+          device.toString(),
+          runtime::GetComputationClient()->GetLocalDevices()),
+      &shape);
+  std::vector<std::shared_ptr<runtime::ComputationClient::Computation>>
+      computations =
+          runtime::GetComputationClient()->Compile(std::move(instances));
+
+  std::vector<torch::lazy::BackendDataPtr> arguments;
+  {
+    // GetXlaData must be called within a lock region, otherwise it might
+    // extract the placeholder inserted by previous execution.
+    // setup the arguments
+    for (auto& ivalue : graph_inputs) {
+      torch::lazy::BackendDataPtr dataptr;
+      if (auto xla_tensor_ptr = bridge::TryGetXlaTensor(ivalue.toTensor())) {
+        dataptr = xla_tensor_ptr->GetXlaData();
+      } else {
+        dataptr = torch_xla::TensorToXlaData(ivalue.toTensor(), device);
+      }
+      arguments.push_back(dataptr);
+    }
+  }
+
+  std::vector<runtime::ComputationClient::DataPtr> result_data =
+      runtime::GetComputationClient()->ExecuteComputation(
+          *computations[0], UnwrapXlaData(arguments), device.toString());
+
+  std::vector<torch::lazy::BackendDataPtr> result_backend_data;
+  for (const auto data : result_data) {
+    result_backend_data.push_back(WrapXlaData(data));
+  }
+  return result_backend_data;
+}
+
 std::vector<at::Tensor> XLAGraphExecutor::GetTensorsOpByOp(
     std::vector<XLATensorPtr>* tensors) {
   SyncTensorsConfig config;
@@ -1268,8 +1329,10 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
         torch::lazy::Output(ir_value.node.get(), ir_value.index));
     lowering_ctx.AddResult(root);
   }
+  // Always execute sharded when running in SPMD mode
+  bool is_sharded = (coll.device == GetVirtualDevice());
   // Annotate HLO sharding selectively in the compuation.
-  bool is_sharded = ShardingUtil::SetHloSharding(&lowering_ctx);
+  ShardingUtil::SetHloSharding(&lowering_ctx);
 
   std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
   // TODO(yeounoh) aliasing is disabled for partitioned computation,

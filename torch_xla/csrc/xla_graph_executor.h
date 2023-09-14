@@ -175,6 +175,11 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
       torch::lazy::hash_t hash, const std::vector<at::IValue>& graph_inputs,
       const torch::lazy::BackendDevice& device);
 
+  std::vector<torch::lazy::BackendDataPtr> ExecuteStablehlo(
+      std::string stablehlo_bytecode,
+      const std::vector<at::IValue>& graph_inputs,
+      const torch::lazy::BackendDevice& device);
+
   void ClearPendingIrs(std::vector<XLATensorPtr> tensors,
                        const torch::lazy::BackendDevice& device);
 

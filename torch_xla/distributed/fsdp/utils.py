@@ -122,7 +122,9 @@ def _xla_patched_nn_linear_forward(m, input):
   return XLAPatchedLinear.apply(input, m.weight, m.bias)
 
 
-def apply_xla_patch_to_nn_linear(module):
+def apply_xla_patch_to_nn_linear(module,
+                                 patched_function=_xla_patched_nn_linear_forward
+                                ):
   """
   Recursively apply a patch to the forward pass of `nn.Linear` layers
   to enable using `XLAPatchedLinear.apply` as `torch.nn.functional.linear`,
@@ -144,7 +146,7 @@ def apply_xla_patch_to_nn_linear(module):
     if getattr(forward_method, "__func__", None) != torch.nn.Linear.forward:
       return
 
-    patched_forward_method = MethodType(_xla_patched_nn_linear_forward, m)
+    patched_forward_method = MethodType(patched_function, m)
     m._nn_linear_forward_original = forward_method
     setattr(m, forward_method_name, patched_forward_method)
 

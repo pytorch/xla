@@ -9,6 +9,7 @@ variable "nightly_builds" {
       cuda_version   = optional(string, "11.8")
       python_version = optional(string, "3.8")
       arch           = optional(string, "amd64")
+      bundle_libtpu  = optional(string, "1")
     })
   )
 
@@ -35,9 +36,12 @@ variable "versioned_builds" {
       git_tag         = string
       package_version = string
       accelerator     = string
+      # Fetch PyTorch at a given revision (e.g. git tag), otherwise use git_tag.
+      pytorch_git_rev = optional(string, "")
       python_version  = optional(string, "3.8")
       cuda_version    = optional(string, "11.8")
       arch            = optional(string, "amd64")
+      bundle_libtpu   = optional(string, "1")
     })
   )
 
@@ -170,7 +174,9 @@ module "versioned_builds" {
   for_each = local.versioned_builds_dict
 
   ansible_vars = merge(each.value, {
-    pytorch_git_rev = each.value.git_tag
+    // Override `pytorch_git_rev` set in each value of `versioned_builds_dict`
+    // if it's left empty.
+    pytorch_git_rev = coalesce(each.value.pytorch_git_rev, each.value.git_tag)
     xla_git_rev     = each.value.git_tag
   })
 
@@ -198,7 +204,10 @@ module "versioned_builds" {
     : "cuda/${each.value.cuda_version}"
   }"
   wheels_srcs = ["/dist/*.whl"]
-  build_args  = each.value
+  # Pass docker build args to infra/ansible/Dockerfile, other than `ansible_vars`.
+  build_args = {
+    python_version = each.value.python_version
+  }
 
   worker_pool_id  = module.worker_pool.id
   docker_repo_url = module.docker_registry.url
