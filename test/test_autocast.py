@@ -337,10 +337,12 @@ class TestAutocastBase(unittest.TestCase):
     self.assertFalse(self.is_autocast_enabled())
 
 
-@unittest.skipIf(not xm.get_xla_supported_devices("GPU"), f"GPU autocast test.")
-class TestAutocastCuda(TestAutocastBase):
+@unittest.skipIf(not xm.get_xla_supported_devices("TPU")
+                 and not xm.get_xla_supported_devices("GPU"), f"XLA autocast test.")
+class TestAutocastXLA(TestAutocastBase):
 
   def setUp(self):
+<<<<<<< HEAD
     super(TestAutocastCuda, self).setUp()
     self.is_autocast_enabled = torch.is_autocast_xla_enabled
     self.autocast_lists = AutocastTestLists(torch.device(xm.xla_device()))
@@ -419,6 +421,9 @@ class TestAutocastTPU(TestAutocastBase):
 
   def setUp(self):
     super(TestAutocastTPU, self).setUp()
+=======
+    super(TestAutocastXLA, self).setUp()
+>>>>>>> ac04616eb (XLA autocast test for GPU and TPU)
     self.is_autocast_enabled = torch.is_autocast_xla_enabled
     self.autocast_lists = AutocastTPUTestLists(torch.device(xm.xla_device()))
 

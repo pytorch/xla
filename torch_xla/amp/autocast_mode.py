@@ -9,12 +9,7 @@ class autocast(torch.amp.autocast_mode.autocast):
   r"""
   `torch.autocast` for XLA backend devices. See :class:`torch.autocast`.
   ``torch_xla.amp.autocast(device, **kwargs)`` is equivalent to
-<<<<<<< HEAD
-  ``torch.autocast("xla", **kwargs)`` for XLA:GPU and XLA:TPU for dtype torch.bfloat16,
-  ``torch.autocast("cuda", **kwargs)`` for XLA:GPU and other dtypes.
-=======
   ``torch.autocast("xla", **kwargs)`` for XLA:TPU and XLA:GPU backends.
->>>>>>> 01834d7d6 (Enable autocast for XLA:GPU)
   """
 
   def __init__(self,
