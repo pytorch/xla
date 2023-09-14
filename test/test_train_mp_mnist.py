@@ -77,8 +77,7 @@ def _train_update(device, step, loss, tracker, epoch, writer):
 
 def train_mnist(flags, **kwargs):
   if flags.pjrt_distributed:
-    import torch_xla.experimental.pjrt_backend
-    dist.init_process_group('xla', init_method='pjrt://')
+    dist.init_process_group('xla', init_method='xla://')
   elif flags.ddp:
     dist.init_process_group(
         'xla', world_size=xm.xrt_world_size(), rank=xm.get_ordinal())

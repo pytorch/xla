@@ -4,6 +4,7 @@ import torch
 import torch.distributed as dist
 import torch_xla
 import torch_xla.core.xla_model as xm
+from torch_xla._internal import rendezvous
 import logging
 import os
 from torch._C._distributed_c10d import ProcessGroup
@@ -18,6 +19,8 @@ def _register_xla_backend():
 
 
 _register_xla_backend()
+
+dist.register_rendezvous_handler('xla', rendezvous.pjrt_rendezvous_handler)
 
 
 def _ret_work(ret):
