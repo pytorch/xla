@@ -83,6 +83,8 @@ std::vector<torch::lazy::BackendDevice> GetBackendDevices();
 
 torch::lazy::BackendDevice AtenDeviceToXlaDevice(const c10::Device& device);
 
+XlaDeviceType GetRunTimeDeviceType();
+
 c10::Device XlaDeviceToAtenDevice(const torch::lazy::BackendDevice& device);
 
 std::string ToXlaString(const c10::Device& device);

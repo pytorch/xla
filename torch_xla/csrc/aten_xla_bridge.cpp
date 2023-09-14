@@ -299,6 +299,13 @@ std::vector<torch::lazy::BackendDevice> GetBackendDevices() {
   return AtenXlaDeviceMapper::Get()->GetAllDevices();
 }
 
+XlaDeviceType GetRunTimeDeviceType() {
+    std::string device_str =
+        torch_xla::runtime::GetComputationClient()->GetAllDevices()[0];
+    torch::lazy::BackendDevice device = ParseDeviceString(device_str);
+    return static_cast<XlaDeviceType>(device.type());
+}
+
 torch::lazy::BackendDevice AtenDeviceToXlaDevice(const c10::Device& device) {
   XLA_CHECK_EQ(device.type(), at::kXLA) << device;
   int ordinal = device.has_index() ? device.index() : -1;
