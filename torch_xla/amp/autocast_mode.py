@@ -16,7 +16,8 @@ class autocast(torch.amp.autocast_mode.autocast):
                enabled: bool = True,
                dtype: torch.dtype = None,
                cache_enabled: bool = True):
-    assert 'xla' in device.__str__(), "torch_xla.autocast is available for XLA:TPU, XLA:GPU"
+    assert 'xla' in device.__str__(
+    ), "torch_xla.autocast is available for XLA:TPU, XLA:GPU"
     xla_device = xm.xla_device_hw(device)
     if xla_device in ['TPU', 'GPU']:
       if dtype is None:
@@ -24,7 +25,8 @@ class autocast(torch.amp.autocast_mode.autocast):
       if dtype != torch.bfloat16:
         error_message = "In torch_xla autocast, but the target dtype is not supported. Disabling autocast.\n"
         error_message += (
-            "torch_xla Autocast only supports dtype of torch.bfloat16 currently.")
+            "torch_xla Autocast only supports dtype of torch.bfloat16 currently."
+        )
         warnings.warn(error_message)
         enabled = False
       super().__init__(

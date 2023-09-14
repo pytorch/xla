@@ -301,7 +301,7 @@ class TestAutocastCuda(TestAutocastBase):
 
   def setUp(self):
     super(TestAutocastCuda, self).setUp()
-    self.is_autocast_enabled = torch.is_autocast_enabled
+    self.is_autocast_enabled = torch.is_autocast_xla_enabled
     self.autocast_lists = AutocastTestLists(torch.device(xm.xla_device()))
     self.autocast_unsupported_lists = AutocastCudaTestUnsupportedLists()
 
