@@ -300,10 +300,10 @@ std::vector<torch::lazy::BackendDevice> GetBackendDevices() {
 }
 
 XlaDeviceType GetRunTimeDeviceType() {
-    std::string device_str =
-        torch_xla::runtime::GetComputationClient()->GetAllDevices()[0];
-    torch::lazy::BackendDevice device = ParseDeviceString(device_str);
-    return static_cast<XlaDeviceType>(device.type());
+  std::string device_str =
+      torch_xla::runtime::GetComputationClient()->GetAllDevices()[0];
+  torch::lazy::BackendDevice device = ParseDeviceString(device_str);
+  return static_cast<XlaDeviceType>(device.type());
 }
 
 torch::lazy::BackendDevice AtenDeviceToXlaDevice(const c10::Device& device) {
