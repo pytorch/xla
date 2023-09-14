@@ -9,8 +9,12 @@ class autocast(torch.amp.autocast_mode.autocast):
   r"""
   `torch.autocast` for XLA backend devices. See :class:`torch.autocast`.
   ``torch_xla.amp.autocast(device, **kwargs)`` is equivalent to
+<<<<<<< HEAD
   ``torch.autocast("xla", **kwargs)`` for XLA:GPU and XLA:TPU for dtype torch.bfloat16,
   ``torch.autocast("cuda", **kwargs)`` for XLA:GPU and other dtypes.
+=======
+  ``torch.autocast("xla", **kwargs)`` for XLA:TPU and XLA:GPU backends.
+>>>>>>> 01834d7d6 (Enable autocast for XLA:GPU)
   """
 
   def __init__(self,
@@ -18,39 +22,15 @@ class autocast(torch.amp.autocast_mode.autocast):
                enabled: bool = True,
                dtype: torch.dtype = None,
                cache_enabled: bool = True):
-    # `torch_xla.amp.autocast` is intended for XLA backend, with AutocastXLA dispatch key.
-    assert 'xla' in device.__str__(
-    ), "torch_xla.autocast is available for XLA:TPU, XLA:GPU"
-
-    self._enabled = enabled
-    self._xla_device = xm.xla_device_hw(device)
-    if self._xla_device == 'GPU':
-      backend = 'cuda'
-      if dtype is None:
-        dtype = torch.float16
-      elif dtype == torch.bfloat16:
-        if xr.is_bf16_supported() and not torch.cuda.is_available():
-          # XLA:GPU with bfloat16 should run on `xla` backend
-          # unless torch.autocast is compiled with cuda.
-          backend = 'xla'
-        else:
-          # This has been the default behavior for unsupported bfloat16 dtype
-          dtype = torch.float16
-          error_message = "In XLA:GPU autocast, but bfloat16 is not supported on this HW.\n"
-          error_message += ("Using the default cuda autocast dtype float16.")
-      self._dtype = dtype
-      super().__init__(
-          backend,
-          enabled=enabled,
-          dtype=self._dtype,
-          cache_enabled=cache_enabled)
-    elif self._xla_device == 'TPU':
+    assert 'xla' in device.__str__(), "torch_xla.autocast is available for XLA:TPU, XLA:GPU"
+    xla_device = xm.xla_device_hw(device)
+    if xla_device in ['TPU', 'GPU']:
       if dtype is None:
         dtype = torch.bfloat16
       if dtype != torch.bfloat16:
-        error_message = "In XLA:TPU autocast, but the target dtype is not supported. Disabling autocast.\n"
+        error_message = "In torch_xla autocast, but the target dtype is not supported. Disabling autocast.\n"
         error_message += (
-            "TPU Autocast only supports dtype of torch.bfloat16 currently.")
+            "torch_xla Autocast only supports dtype of torch.bfloat16 currently.")
         warnings.warn(error_message)
         enabled = False
       self._dtype = dtype
