@@ -28,6 +28,7 @@ class InputOutputAliasesTest(unittest.TestCase):
     # check in place op aliasing.
     t3 = t1 + t2
     t1 *= 2.0
+    t1 *= 2.0
     t2 += 2.0
     xm.mark_step()
 

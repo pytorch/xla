@@ -2396,7 +2396,11 @@ void XLANativeFunctions::_propagate_xla_data(const at::Tensor& input,
   // 1) Aid XLA's InputOutputAlias.
   auto input_tensor = bridge::GetXlaTensor(input);
   auto output_tensor = bridge::GetXlaTensor(output);
-  output_tensor->data()->alias_id = input_tensor->GetUniqueId();
+  if (input_tensor->CurrentIrValue()->op() == xla_device_data) {
+    output_tensor->data()->alias_id = input_tensor->GetUniqueId();
+  } else {
+    output_tensor->data()->alias_id = input_tensor->data()->alias_id;
+  }
 
   // 2) Aid SPMD.
   if (input_tensor->sharding_spec()) {
