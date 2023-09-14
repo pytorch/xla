@@ -165,6 +165,41 @@ class DynamoInferenceBasicTest(unittest.TestCase):
             atol=1e-05))
 
   @skipOnTpu
+  def test_linear_relu(self):
+    device = xm.xla_device()
+    m =
+    m = torch.nn.Sequential(torch.nn.Linear(64, 64), torch.nn.ReLU())
+    m.to(device)
+    m.eval()
+
+    x = torch.randn(64, 64, device=device)
+    # materalize the fake data for test purpose
+    xm.mark_step()
+    xm.wait_device_ops()
+    met.clear_all()
+    dynamo_m = torch.compile(m, backend='openxla')
+    # make sure we can run it
+    output = dynamo_m(x)
+
+  @skipOnTpu
+  def test_batchnorm_relu(self):
+    device = xm.xla_device()
+    m =
+    m = torch.nn.Sequential(torch.nn.BatchNorm2d(4), torch.nn.ReLU())
+    m.to(device)
+    m.eval()
+
+    x = torch.randn(1, 4, 64, 64, device=device)
+    # materalize the fake data for test purpose
+    xm.mark_step()
+    xm.wait_device_ops()
+    met.clear_all()
+    dynamo_m = torch.compile(m, backend='openxla')
+    # make sure we can run it
+    output = dynamo_m(x)
+
+
+  @skipOnTpu
   def test_resnet18(self):
     device = xm.xla_device()
     batch_size = xu.getenv_as('BATCH_SIZE', int, defval=4)
