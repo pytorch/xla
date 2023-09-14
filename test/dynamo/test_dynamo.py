@@ -170,9 +170,9 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     m =
     m = torch.nn.Sequential(torch.nn.Linear(64, 64), torch.nn.ReLU())
     m.to(device)
-    m.eval()
+    m.train()
 
-    x = torch.randn(64, 64, device=device)
+    x = torch.randn(64, 64, device=device, requires_grad=True)
     # materalize the fake data for test purpose
     xm.mark_step()
     xm.wait_device_ops()
@@ -187,9 +187,9 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     m =
     m = torch.nn.Sequential(torch.nn.BatchNorm2d(4), torch.nn.ReLU())
     m.to(device)
-    m.eval()
+    m.train()
 
-    x = torch.randn(1, 4, 64, 64, device=device)
+    x = torch.randn(1, 4, 64, 64, device=device, requires_grad=True)
     # materalize the fake data for test purpose
     xm.mark_step()
     xm.wait_device_ops()
