@@ -296,8 +296,8 @@ class TestAutocastBase(unittest.TestCase):
     self.assertFalse(self.is_autocast_enabled())
 
 
-@unittest.skipIf(not xm.get_xla_supported_devices("TPU")
-                 and not xm.get_xla_supported_devices("GPU"), f"XLA autocast test.")
+@unittest.skipIf(not xm.get_xla_supported_devices("TPU") and
+                 not xm.get_xla_supported_devices("GPU"), f"XLA autocast test.")
 class TestAutocastXLA(TestAutocastBase):
 
   def setUp(self):
