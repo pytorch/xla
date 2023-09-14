@@ -1648,6 +1648,19 @@ void InitXlaModuleBindings(py::module m) {
     MapXlaEnvVarsToLazy();
     InitXlaBackend();
   });
+  m.def("_set_ir_debug",
+        [](bool ir_debug) { FLAGS_torch_lazy_ir_debug = ir_debug; });
+  m.def("_get_ir_debug", []() { return FLAGS_torch_lazy_ir_debug; });
+  m.def("_set_xla_handle_special_scalars", [](bool handle_special_scalars) {
+    FLAGS_torch_lazy_handle_special_scalars = handle_special_scalars;
+  });
+  m.def("_get_xla_handle_special_scalars",
+        []() { return FLAGS_torch_lazy_handle_special_scalars; });
+  m.def("_set_xla_enable_device_data_cache", [](bool enable_device_data_cache) {
+    FLAGS_torch_lazy_enable_device_data_cache = enable_device_data_cache;
+  });
+  m.def("_get_xla_enable_device_data_cache",
+        []() { return FLAGS_torch_lazy_enable_device_data_cache; });
   m.def("_replace_xla_tensor",
         [](at::Tensor& self, const at::Tensor& source) -> at::Tensor& {
           return XLANativeFunctions::set_(self, source);
