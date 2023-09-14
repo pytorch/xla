@@ -1438,6 +1438,9 @@ void InitXlaModuleBindings(py::module m) {
           return GetLiveTensorsReport(nodes_threshold, device);
         },
         py::arg("nodes_threshold") = 100, py::arg("device") = "");
+  m.def("_xla_tensor_count", []() {
+    return XLAGraphExecutor::Get()->GetLiveTensors(nullptr).size();
+  });
   m.def("_xla_memory_info", [](const std::string& device) -> py::object {
     return GetMemoryInfo(device);
   });
@@ -1551,6 +1554,45 @@ void InitXlaModuleBindings(py::module m) {
             tile_assignment, group_assignment, replication_groups,
             ShardingUtil::ShardingType(sharding_type));
       }));
+  m.def("_xla_spoof_sharding", [](const at::Tensor& input,
+                                 xla::OpSharding spoofed_sharding) {
+    /*
+    Spoof the sharding for the input tensor. The tensor must not already be sharded, and
+    its data will in truth be replicated across all devices but the global tensor will
+    be the amalgamation of the input tensor repeated according to the sharding spec.
+    */
+    XLA_CHECK(UseVirtualDevice())
+        << "Please enable SPMD via `torch_xla.runtime.use_spmd()`";
+    XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+    xla::Shape input_shape = MakeShapeWithDeviceLayout(
+                      xtensor->shape(),
+                      static_cast<XlaDeviceType>(xtensor->GetDevice().type()));
+    xla::Shape global_shape = input_shape;
+    // Scale each dimension by the tiling assignment shape on that dimension, so that the input tensor corresponds to just a single shard.
+    auto tile_shape = spoofed_sharding.tile_assignment_dimensions();
+    for (int i = 0; i < input.sizes().size(); i++) {
+      global_shape.set_dimensions(i, tile_shape[i] * global_shape.dimensions(i));
+    }
+
+    auto spoofed_sharding_spec = std::make_shared<XLATensor::ShardingSpec>(
+        spoofed_sharding, global_shape);
+    auto replicated_sharding_spec = std::make_shared<XLATensor::ShardingSpec>(xla::HloSharding::Replicate().ToProto(), input_shape);
+
+    // Transfer to the devices replicated
+    auto xla_data = CreateTensorsData(
+        std::vector<at::Tensor>{xtensor->CurrentTensorData().value()},
+        std::vector<XLATensor::ShardingSpecPtr>{replicated_sharding_spec},
+        std::vector<std::string>{GetVirtualDevice().toString()})[0];
+
+    // Replace the sharding on the PjRtShardedData
+    auto data_shards = runtime::GetComputationClient()->GetDataShards(UnwrapXlaData(xla_data));
+    xla_data = WrapXlaData(runtime::GetComputationClient()->WrapDataShards(data_shards, GetVirtualDevice().toString(), global_shape, spoofed_sharding));
+    xtensor->SetXlaData(xla_data);
+    xtensor->SetShardingSpec(*spoofed_sharding_spec);
+
+    // Register sharded tensor data.
+    XLAGraphExecutor::Get()->RegisterTensor(xtensor->data());
+  });
   m.def("_xla_mark_sharding", [](const at::Tensor& input,
                                  xla::OpSharding sharding) {
     TORCH_LAZY_COUNTER("XlaMarkSharding", 1);
