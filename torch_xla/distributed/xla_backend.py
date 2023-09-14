@@ -17,6 +17,7 @@ def _register_xla_backend():
 
 _register_xla_backend()
 
+print('xw32 xla_backend registering xla rendezvous handler')
 dist.register_rendezvous_handler('xla', rendezvous.pjrt_rendezvous_handler)
 
 
