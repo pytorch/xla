@@ -96,6 +96,20 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     res_cpu_3 = self.fn_simple(x + y, y * 3)
     self.assertTrue(torch.allclose(res_cpu_3, res_xla_dynamo_3.cpu()))
 
+  def test_fn_without_input(self):
+
+    def fn_without_input(device):
+      constant = 0.835
+      expanded = torch.full((4, 4), constant, device=device)
+      arange = torch.arange(16, device=device).reshape(4, 4)
+      return expanded + arange
+
+    device = xm.xla_device()
+    compiled_fn = torch.compile(fn_without_input, backend='openxla')
+    res_cpu = fn_without_input('cpu')
+    res_xla_dynamo = compiled_fn(device)
+    self.assertTrue(torch.allclose(res_cpu, res_xla_dynamo.cpu()))
+
   def test_simple_model_with_in_place_ops(self):
 
     class TestModel(nn.Module):
