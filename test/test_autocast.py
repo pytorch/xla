@@ -334,6 +334,14 @@ class TestAutocastCuda(TestAutocastBase):
       self._run_autocast_outofplace(
           op, args, torch.float32, add_kwargs=maybe_kwargs)
 
+  def test_autocast_torch_bf16(self):
+    for op_with_args in self.get_autocast_list('torch_bf16'):
+      op, args, maybe_kwargs = self.args_maybe_kwargs(op_with_args)
+      # TODO(yeounoh) update the tests when we support bfloat16 for XLA:GPU
+      self._run_autocast_outofplace(
+          op, args, torch.float16, add_kwargs=maybe_kwargs)
+
+
   def test_autocast_torch_need_autocast_promote(self):
     for op, args in self.get_autocast_list('torch_need_autocast_promote'):
       self._run_autocast_outofplace(op, args, torch.float32)
