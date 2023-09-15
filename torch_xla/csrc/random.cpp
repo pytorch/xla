@@ -56,23 +56,25 @@ xla::XlaOp MakeSeed(xla::XlaOp seed) {
   return xla::ConvertElementType(seed, xla::PrimitiveType::U64);
 }
 
-xla::XlaOp MakeUniformBoundaryValue(xla::XlaOp val) {
+xla::XlaOp MakeUniformBoundaryValue(xla::XlaOp val, bool downcast = false) {
   xla::PrimitiveType element_type = XlaHelpers::TypeOfXlaOp(val);
   if (element_type == xla::PrimitiveType::BF16 ||
       element_type == xla::PrimitiveType::F16) {
-    return xla::ConvertElementType(val, xla::PrimitiveType::F32);
+    auto dtype = downcast ? xla::PrimitiveType::F16 : xla::PrimitiveType::F32;
+    return xla::ConvertElementType(val, dtype);
   } else if (xla::primitive_util::IsComplexType(element_type)) {
     return xla::Real(val);
   }
   return val;
 }
 
-xla::Shape MakeRngShape(const xla::Shape& shape) {
+xla::Shape MakeRngShape(const xla::Shape& shape, bool downcast = false) {
   xla::PrimitiveType element_type = shape.element_type();
   xla::Shape rng_shape(shape);
   if (element_type == xla::PrimitiveType::BF16 ||
       element_type == xla::PrimitiveType::F16) {
-    rng_shape.set_element_type(xla::PrimitiveType::F32);
+    auto dtype = downcast ? xla::PrimitiveType::F16 : xla::PrimitiveType::F32;
+    rng_shape.set_element_type(dtype);
   } else if (xla::primitive_util::IsComplexType(element_type)) {
     rng_shape.set_element_type(
         xla::primitive_util::ComplexComponentType(element_type));
@@ -106,11 +108,11 @@ xla::XlaOp RngDiscreteUniform(xla::XlaOp seed, const xla::Shape& shape,
 }
 
 xla::XlaOp RngUniform(xla::XlaOp seed, const xla::Shape& shape,
-                      xla::XlaOp minval, xla::XlaOp maxval) {
+                      xla::XlaOp minval, xla::XlaOp maxval, bool downcast) {
   xla::XlaOp rng_seed = MakeSeed(seed);
-  xla::Shape rng_shape = MakeRngShape(shape);
-  xla::XlaOp rng_minval = MakeUniformBoundaryValue(minval);
-  xla::XlaOp rng_maxval = MakeUniformBoundaryValue(maxval);
+  xla::Shape rng_shape = MakeRngShape(shape, downcast);
+  xla::XlaOp rng_minval = MakeUniformBoundaryValue(minval, downcast);
+  xla::XlaOp rng_maxval = MakeUniformBoundaryValue(maxval, downcast);
   xla::XlaOp initial_state =
       xla::Zero(rng_seed.builder(), xla::PrimitiveType::U64);
   switch (shape.element_type()) {
