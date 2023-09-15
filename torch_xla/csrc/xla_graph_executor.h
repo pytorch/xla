@@ -183,13 +183,6 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   void ClearPendingIrs(std::vector<XLATensorPtr> tensors,
                        const torch::lazy::BackendDevice& device);
 
-  // We need to track if we want to use `xla` or `cuda` backend for autocast for
-  // GPU device. This extra bookkeeping is being done since AutocastCUDA is used
-  // for both GPU and XLA:GPU. This sets `use_autocast_xla` in the underlying
-  // device context.
-  bool GetUseAutocastXla();
-  void SetUseAutocastXla(bool enabled);
-
  private:
   // This is just to group results from compile(). Since our computation is
   // different, we don't reuse the upstream CompilationResult.
@@ -234,9 +227,6 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
     void SaveOutputShapes(torch::lazy::hash_t hash,
                           std::vector<xla::Shape> outptu_shapes);
 
-    bool GetUseAutocastXla() { return use_autocast_xla; }
-    void SetUseAutocastXla(bool enabled) { use_autocast_xla = enabled; }
-
     std::string GetGraphByHash(torch::lazy::hash_t hash);
 
     // Return shapes is a pointer to the saved vector. Caller should be careful
@@ -253,9 +243,6 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
     std::unordered_map<torch::lazy::hash_t, std::vector<xla::Shape>,
                        torch::lazy::HashReducer>
         hash_to_output_shape_map;
-    // To distinguish GPU and XLA:GPU devices in AutocastCUDA and redirect
-    // to AutocastXLA for XLA:GPU.
-    bool use_autocast_xla = false;
     // We override this to use TensorToXlaData().
     torch::lazy::Value IrValueFromScalar(
         const at::Scalar& value, at::ScalarType scalar_type,

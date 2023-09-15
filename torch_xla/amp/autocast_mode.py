@@ -1,5 +1,4 @@
 import torch
-import torch_xla
 import torch_xla.core.xla_model as xm
 from torch_xla import runtime as xr
 from typing import Any
@@ -27,7 +26,6 @@ class autocast(torch.amp.autocast_mode.autocast):
     self._xla_device = xm.xla_device_hw(device)
     if self._xla_device == 'GPU':
       backend = 'cuda'
-      self._autocast_xla = False
       if dtype is None:
         dtype = torch.float16
       elif dtype == torch.bfloat16:
@@ -35,7 +33,6 @@ class autocast(torch.amp.autocast_mode.autocast):
           # XLA:GPU with bfloat16 should run on `xla` backend
           # unless torch.autocast is compiled with cuda.
           backend = 'xla'
-          self._autocast_xla = True
         else:
           # This has been the default behavior for unsupported bfloat16 dtype
           dtype = torch.float16
@@ -74,10 +71,8 @@ class autocast(torch.amp.autocast_mode.autocast):
       self.prev = torch.is_autocast_xla_enabled()  # type: ignore[attr-defined]
       self.prev_dtype = torch.get_autocast_xla_dtype(
       )  # type: ignore[attr-defined]
-      self.prev_autocast_xla = torch_xla._XLAC._xla_get_use_autocast_xla()
       torch.set_autocast_xla_enabled(self._enabled)
       torch.set_autocast_xla_dtype(self._dtype)
-      torch_xla._XLAC._xla_set_use_autocast_xla(self._autocast_xla)
     return super().__enter__()
 
   def __exit__(self, exc_type: Any, exc_val: Any,
@@ -85,7 +80,6 @@ class autocast(torch.amp.autocast_mode.autocast):
     if self._xla_device == 'GPU':
       torch.set_autocast_xla_enabled(self.prev)
       torch.set_autocast_xla_dtype(self.prev_dtype)
-      torch_xla._XLAC._xla_set_use_autocast_xla(self.prev_autocast_xla)
     return super().__exit__(exc_type, exc_val, exc_tb)
 
   def __call__(self, func):
