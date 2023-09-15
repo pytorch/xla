@@ -13,6 +13,7 @@ import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_backend
 from torch_xla._internal import tpu, gpu, neuron
 from torch_xla import runtime
+import torch_xla.utils.utils as xu
 
 R = TypeVar('R')
 
@@ -112,6 +113,12 @@ def initialize_multiprocess(local_rank: int, local_world_size: int):
     tpu.configure_topology(local_rank, local_world_size)
   elif runtime.device_type() == 'NEURON':
     neuron.initialize_env(local_rank)
+  elif runtime.device_type() == 'GPU':
+    global_world_size = xu.getenv_as('WORLD_SIZE', int)
+    global_rank = xu.getenv_as('RANK', int)
+    print('xw32 pjrt_backend._pjrt_rendezvous_handler: global_world_size=', global_world_size, ', global_rank=', global_rank)
+    if global_rank == 0:
+      gpu.initialize_distributed_runtime(global_world_size)
 
   devices = xm.get_xla_supported_devices()
   print('xw32 pjrt.initialize_multiprocess. xm.xla_device()=', xm.xla_device(), ', devices=', devices)
