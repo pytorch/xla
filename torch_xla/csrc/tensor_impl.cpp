@@ -72,9 +72,8 @@ XLATensorImpl::XLATensorImpl(XLATensor&& tensor)
                       bridge::XlaDeviceToAtenDevice(tensor.GetDevice())),
       tensor_(c10::make_intrusive<XLATensor>(std::move(tensor))) {
   // AutocastCUDA is used for GPU, and AutocastXLA for XLA:TPU and XLA:GPU.
-  // When we didn't support autocast for XLA:GPU, we replaced AutocastXLA with
-  // AutocastCUDA and fell back to the torch autocast implementation for `cuda`
-  // device backend.
+  // AutocastXLA should be used with torch_xla.amp.autocast and it calls
+  // torch.autocast with proper device type, based on actual XLA HW type.
   const_cast<XLATensorImpl*>(this)->SetupSizeProperties();
   set_sizes_and_strides(sym_sizes_, c10::fromIntArrayRefSlow(
                                         sizes_and_strides_.strides_arrayref()));
