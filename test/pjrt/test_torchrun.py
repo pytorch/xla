@@ -6,11 +6,10 @@ import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_backend
 import torch_xla.runtime as xr
 import torch_xla.utils.utils as xu
+from torch_xla._internal import gpu
 
 
 class TestTorchrun(absltest.TestCase):
-  # TODO(xw32): for the moment, add a teardown to shutdown the 
-  # dist server. Need to find a better place tho.
 
   def test_all_gather(self):
     print('xw32 test_all_gather. Running dist.init_process_group.')
@@ -33,6 +32,12 @@ class TestTorchrun(absltest.TestCase):
 
     expected = torch.arange(0, expected_world_size, step=1, dtype=torch.float32)
     torch.testing.assert_close(result.cpu(), expected)
+
+    # TODO(xw32): for the moment, add a teardown to shutdown the 
+    # dist server. Need to find a better place to hide the dist server
+    # from the user.
+    if xr.device_type() == 'GPU':
+      gpu.shutdown_distributed_runtime()
 
 
 if __name__ == '__main__':

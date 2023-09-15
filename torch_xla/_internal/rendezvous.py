@@ -23,14 +23,6 @@ def pjrt_rendezvous_handler(url: str,
     local_world_size = xu.getenv_as('LOCAL_WORLD_SIZE', int)
     local_rank = xu.getenv_as('LOCAL_RANK', int)
     print('xw32 pjrt_backend._pjrt_rendezvous_handler calling pjrt.initialize_multiprocess')
-
-    # initialize dist server for GPU
-    global_world_size = xu.getenv_as('WORLD_SIZE', int)
-    global_rank = xu.getenv_as('RANK', int)
-    print('xw32 pjrt_backend._pjrt_rendezvous_handler: global_world_size=', global_world_size, ', global_rank=', global_rank)
-    if xr.device_type() == 'GPU' and global_rank == 0:
-      gpu.initialize_distributed_runtime(global_world_size)
-    # Need to create the dist server here.
     pjrt.initialize_multiprocess(local_rank, local_world_size)
 
   master_ip = xu.getenv_as('MASTER_ADDR', str)
