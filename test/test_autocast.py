@@ -296,12 +296,75 @@ class TestAutocastBase(unittest.TestCase):
     self.assertFalse(self.is_autocast_enabled())
 
 
-@unittest.skipIf(not xm.get_xla_supported_devices("TPU") and
-                 not xm.get_xla_supported_devices("GPU"), f"XLA autocast test.")
-class TestAutocastXLA(TestAutocastBase):
+@unittest.skipIf(not xm.get_xla_supported_devices("GPU"), f"GPU autocast test.")
+class TestAutocastCuda(TestAutocastBase):
 
   def setUp(self):
-    super(TestAutocastXLA, self).setUp()
+    super(TestAutocastCuda, self).setUp()
+    self.is_autocast_enabled = torch.is_autocast_xla_enabled
+    self.autocast_lists = AutocastTestLists(torch.device(xm.xla_device()))
+    self.autocast_unsupported_lists = AutocastCudaTestUnsupportedLists()
+
+  def test_autocast_nn_fp16(self):
+    with torch.backends.cudnn.flags(enabled=True, deterministic=True):
+      for op, args in self.get_autocast_list('nn_fp16'):
+        self._run_autocast_outofplace(
+            op, args, torch.float16, module=torch._C._nn)
+
+  def test_autocast_linalg_fp16(self):
+    with torch.backends.cudnn.flags(enabled=True, deterministic=True):
+      for op, args in self.get_autocast_list('linalg_fp16'):
+        self._run_autocast_outofplace(
+            op, args, torch.float16, module=torch._C._linalg)
+
+  def test_autocast_methods_fp16(self):
+    with torch.backends.cudnn.flags(enabled=True, deterministic=True):
+      for op, args in self.get_autocast_list('methods_fp16'):
+        self._run_autocast_outofplace(op, args, torch.float16, module=None)
+
+  def test_autocast_banned(self):
+    with torch.cuda.amp.autocast():
+      for op, args, module in self.get_autocast_list('banned'):
+        with self.assertRaises(RuntimeError):
+          getattr(module, op)(*args)
+
+  def test_autocast_torch_fp32(self):
+    for op_with_args in self.get_autocast_list('torch_fp32'):
+      op, args, maybe_kwargs = self.args_maybe_kwargs(op_with_args)
+      self._run_autocast_outofplace(
+          op, args, torch.float32, add_kwargs=maybe_kwargs)
+
+  def test_autocast_torch_need_autocast_promote(self):
+    for op, args in self.get_autocast_list('torch_need_autocast_promote'):
+      self._run_autocast_outofplace(op, args, torch.float32)
+
+  def test_autocast_torch_expect_builtin_promote(self):
+    for op, args, out_type in self.get_autocast_list(
+        'torch_expect_builtin_promote'):
+      self._run_autocast_outofplace(op, args, torch.float32, out_type=out_type)
+
+  def test_autocast_nn_fp32(self):
+    for op, args in self.get_autocast_list('nn_fp32'):
+      self._run_autocast_outofplace(
+          op, args, torch.float32, module=torch._C._nn)
+
+  def test_autocast_methods_fp32(self):
+    for op, args in self.get_autocast_list('methods_fp32'):
+      print("autocast fp32", op)
+      self._run_autocast_outofplace(op, args, torch.float32, module=None)
+
+  def test_autocast_methods_expect_builtin_promote(self):
+    for op, args, out_type in self.get_autocast_list(
+        'methods_expect_builtin_promote'):
+      self._run_autocast_outofplace(
+          op, args, torch.float32, module=None, out_type=out_type)
+
+
+@unittest.skipIf(not xm.get_xla_supported_devices("TPU"), f"TPU autocast test.")
+class TestAutocastTPU(TestAutocastBase):
+
+  def setUp(self):
+    super(TestAutocastTPU, self).setUp()
     self.is_autocast_enabled = torch.is_autocast_xla_enabled
     self.autocast_lists = AutocastTPUTestLists(torch.device(xm.xla_device()))
 
