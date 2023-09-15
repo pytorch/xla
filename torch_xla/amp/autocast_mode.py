@@ -9,7 +9,8 @@ class autocast(torch.amp.autocast_mode.autocast):
   r"""
   `torch.autocast` for XLA backend devices. See :class:`torch.autocast`.
   ``torch_xla.amp.autocast(device, **kwargs)`` is equivalent to
-  ``torch.autocast("xla", **kwargs)`` for XLA:TPU and XLA:GPU backends.
+  ``torch.autocast("xla", **kwargs)`` for XLA:GPU and XLA:TPU for dtype torch.bfloat16,
+  ``torch.autocast("cuda", **kwargs)`` for XLA:GPU and other dtypes.
   """
 
   def __init__(self,
@@ -28,7 +29,7 @@ class autocast(torch.amp.autocast_mode.autocast):
       if dtype is None:
         dtype = torch.float16
       elif dtype == torch.bfloat16:
-        if self._is_bf16_supported() and not torch.cuda.is_avaliable():
+        if xr.is_bf16_supported() and not torch.cuda.is_available():
           # XLA:GPU with bfloat16 should run on `xla` backend
           # unless torch.autocast is compiled with cuda.
           backend = 'xla'
@@ -83,10 +84,3 @@ class autocast(torch.amp.autocast_mode.autocast):
 
   def __call__(self, func):
     return super().__call__(func)
-
-  def _is_bf16_supported(self):
-    try:
-      torch.tensor([1.], dtype=torch.bfloat16, device=xm.xla_device())
-      return True
-    except Exception as e:
-      return False
