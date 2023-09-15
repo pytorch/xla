@@ -18,6 +18,7 @@
 #include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
 #include "torch_xla/csrc/tensor_util.h"
+#include "torch_xla/csrc/xla_graph_executor.h"
 
 namespace torch_xla {
 namespace {
@@ -75,7 +76,9 @@ XLATensorImpl::XLATensorImpl(XLATensor&& tensor)
   // Upstream TensorImpl cannot differentiate between XLA:TPU and XLA:GPU
   // so we must manually update Autocast to AutocastCUDA on XLA:GPU.
   torch::lazy::BackendDevice current_device = GetCurrentDevice();
-  if (static_cast<XlaDeviceType>(current_device.type()) == XlaDeviceType::GPU) {
+  if ((static_cast<XlaDeviceType>(current_device.type()) ==
+       XlaDeviceType::GPU) &&
+      (!XLAGraphExecutor::Get()->GetUseAutocastXla())) {
     auto autocast_cuda_ks = c10::DispatchKeySet(c10::DispatchKey::AutocastCUDA);
     auto autocast_xla_ks = c10::DispatchKeySet(c10::DispatchKey::AutocastXLA);
     key_set_ = (key_set_ - autocast_xla_ks) | autocast_cuda_ks;

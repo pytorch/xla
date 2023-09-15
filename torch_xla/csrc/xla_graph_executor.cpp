@@ -59,6 +59,7 @@
 #include "tsl/profiler/lib/traceme.h"
 #include "xla/literal_util.h"
 #include "xla/shape_util.h"
+#include "xla_graph_executor.h"
 
 namespace torch_xla {
 namespace {
@@ -506,6 +507,13 @@ void XLAGraphExecutor::ClearPendingIrs(
       }
     }
   }
+}
+
+bool XLAGraphExecutor::GetUseAutocastXla() {
+  return DeviceContextArena::Get()->GetUseAutocastXla();
+}
+void XLAGraphExecutor::SetUseAutocastXla(bool enabled) {
+  DeviceContextArena::Get()->SetUseAutocastXla(enabled);
 }
 
 XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(

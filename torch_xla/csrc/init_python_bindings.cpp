@@ -1543,6 +1543,11 @@ void InitXlaModuleBindings(py::module m) {
                 weight_decay, eps, amsgrad, maximize, use_adamw);
           }
         });
+  m.def("_xla_get_use_autocast_xla",
+        []() -> bool { return XLAGraphExecutor::Get()->GetUseAutocastXla(); });
+  m.def("_xla_set_use_autocast_xla", [](bool enabled) {
+    XLAGraphExecutor::Get()->SetUseAutocastXla(enabled);
+  });
   m.def("_xla_mark_sharding", [](const at::Tensor& input,
                                  const py::list& tile_assignment,
                                  const py::list& group_assignment,
