@@ -7,7 +7,6 @@ FLAGS, leftovers = parser.parse_known_args()
 sys.argv = [sys.argv[0]] + leftovers
 
 import torch
-import torch_xla
 import torch_xla.core.xla_model as xm
 import collections
 import unittest
@@ -150,6 +149,51 @@ class AutocastTPUTestLists:
     self.methods_fp32 = []
 
     self.methods_bf16 = [("__matmul__", mat0_bf16 + mat1_fp32)]
+
+
+class AutocastCudaTestExtraLists(object):
+
+  def __init__(self, dev):
+    super().__init__()
+    n = 8
+    dimsets = ((n, n, n), (n, n, n, n), (n, n, n, n, n))
+    conv_args_fp32 = [(torch.randn(dimset, dtype=torch.float32, device=dev),
+                       torch.randn(dimset, dtype=torch.float32, device=dev))
+                      for dimset in dimsets]
+
+    mat0_fp32 = (torch.randn((n, n), dtype=torch.float32, device=dev),)
+    mat1_fp32 = (torch.randn((n, n), dtype=torch.float32, device=dev),)
+    mat2_fp32 = (torch.randn((n, n), dtype=torch.float32, device=dev),)
+    mat3_fp32 = (torch.randn((n, n), dtype=torch.float32, device=dev),)
+
+    pointwise0_fp32 = (torch.randn(n, dtype=torch.float32, device=dev),)
+
+    element0_fp32 = (torch.randn(1, dtype=torch.float32, device=dev),)
+
+    # This is currently not part of AutocastTestLists and excludes `relu`
+    self.torch_bf16 = [
+        ("conv1d", conv_args_fp32[0]),
+        ("conv2d", conv_args_fp32[1]),
+        ("conv3d", conv_args_fp32[2]),
+        ("bmm", (torch.randn((n, n, n), device=dev, dtype=torch.float32),
+                 torch.randn((n, n, n), device=dev, dtype=torch.float32))),
+        ("mm", mat0_fp32 + mat1_fp32),
+        ("matmul", mat0_fp32 + mat1_fp32),
+        ("baddbmm", (torch.randn((n, n, n), device=dev, dtype=torch.float32),
+                     torch.randn((n, n, n), device=dev, dtype=torch.float32),
+                     torch.randn((n, n, n), device=dev, dtype=torch.float32))),
+        ("addmm", mat1_fp32 + mat2_fp32 + mat3_fp32),
+        ("addbmm",
+         mat0_fp32 + (torch.randn((n, n, n), device=dev, dtype=torch.float32),
+                      torch.randn((n, n, n), device=dev, dtype=torch.float32))),
+        ("conv_tbc", (torch.randn((10, 7, 3), device=dev, dtype=torch.float32),
+                      torch.randn((5, 3, 5), device=dev, dtype=torch.float32),
+                      torch.randn(5, device=dev, dtype=torch.float32), 0)),
+        ("conv_transpose1d", conv_args_fp32[0]),
+        ("conv_transpose2d", conv_args_fp32[1]),
+        ("conv_transpose3d", conv_args_fp32[2]),
+        ("prelu", pointwise0_fp32 + element0_fp32),
+    ]
 
 
 class AutocastCudaTestUnsupportedLists(object):
@@ -303,14 +347,9 @@ class TestAutocastCuda(TestAutocastBase):
     super(TestAutocastCuda, self).setUp()
     self.is_autocast_enabled = torch.is_autocast_xla_enabled
     self.autocast_lists = AutocastTestLists(torch.device(xm.xla_device()))
+    self.autocast_lists_extra = AutocastCudaTestExtraLists(
+        torch.device(xm.xla_device()))
     self.autocast_unsupported_lists = AutocastCudaTestUnsupportedLists()
-
-    try:
-      torch.tensor([1.], dtype=torch.bfloat16, device=xm.xla_device())
-      self.is_bf16_supported = True
-    except Exception as e:
-      self.is_bf16_supported = False
-
 
   def test_autocast_nn_fp16(self):
     with torch.backends.cudnn.flags(enabled=True, deterministic=True):
@@ -342,14 +381,15 @@ class TestAutocastCuda(TestAutocastBase):
           op, args, torch.float32, add_kwargs=maybe_kwargs)
 
   def test_autocast_torch_bf16(self):
-    for op_with_args in self.get_autocast_list('torch_bf16'):
+    bf16_test_list = [
+        tp for tp in getattr(self.autocast_lists_extra, 'torch_bf16')
+    ]
+    for op_with_args in bf16_test_list:
       op, args, maybe_kwargs = self.args_maybe_kwargs(op_with_args)
-      if self.is_bf16_supported:
-        self._run_autocast_outofplace(
-            op, args, torch.bfloat16, add_kwargs=maybe_kwargs)
-      else:
-        self._run_autocast_outofplace(
-            op, args, torch.float16, add_kwargs=maybe_kwargs)
+      # Expects float16, following the torch GPU autocast policy:
+      # https://github.com/pytorch/pytorch/blob/main/aten/src/ATen/autocast_mode.cpp
+      self._run_autocast_outofplace(
+          op, args, torch.float16, add_kwargs=maybe_kwargs)
 
   def test_autocast_torch_need_autocast_promote(self):
     for op, args in self.get_autocast_list('torch_need_autocast_promote'):
