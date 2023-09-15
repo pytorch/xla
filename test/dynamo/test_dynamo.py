@@ -273,21 +273,21 @@ class DynamoCpuFallbackTest(unittest.TestCase):
     xla_dynamo_res = dynamo_fn(t_xla)
     self.assertTrue(torch.allclose(cpu_res, xla_dynamo_res.cpu()))
     self.assertEqual(met.metric_data('CompileTime')[0], 3)
-    self.assertEqual(met.metric_data('ExecuteTime')[0], 10)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 11)
 
     # Second tracing
     met.clear_counters()
     xla_dynamo_res_2 = dynamo_fn(t_xla)
     self.assertTrue(torch.allclose(cpu_res, xla_dynamo_res_2.cpu()))
     self.assertEqual(met.metric_data('CompileTime')[0], 3)
-    self.assertEqual(met.metric_data('ExecuteTime')[0], 12)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 13)
 
     # Verify that dynamo can handle different inputs
     xla_dynamo_res_3 = dynamo_fn(t_xla * 3)
     cpu_res_3 = fn_fallback(t * 3)
     self.assertTrue(torch.allclose(cpu_res_3, xla_dynamo_res_3.cpu()))
     self.assertEqual(met.metric_data('CompileTime')[0], 4)
-    self.assertEqual(met.metric_data('ExecuteTime')[0], 15)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 16)
 
 
 class DynamoTrainingBasicTest(unittest.TestCase):
@@ -539,9 +539,10 @@ class DynamErrorMessageTest(unittest.TestCase):
       # there should be 18 paramters + 1 input
       self.assertGreater(len(w), 15)
       self.assertIn('Found tensor with shape torch.Size', str(w[0].message))
-    # no XLA operation should happens. Partitioner should offload all CPU
+    # no XLA operation should happens except a empty mark_step. Partitioner should offload all CPU
     # ops to CPU.
-    self.assertEqual(len(met.counter_names()), 0)
+    self.assertEqual(len(met.counter_names()), 1)
+    self.assertIn('MarkStep', met.counter_names())
 
 
 if __name__ == '__main__':
