@@ -137,6 +137,8 @@ xla::Shape GeScalarOutputShape(const torch::lazy::Value& self,
 xla::Shape GeTensorOutputShape(const torch::lazy::Value& self,
                                const torch::lazy::Value& other);
 
+xla::Shape GluOutputShape(const torch::lazy::Value& input, int64_t dim);
+
 xla::Shape GtScalarOutputShape(const torch::lazy::Value& self,
                                const torch::lazy::Value& other);
 

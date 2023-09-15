@@ -20,8 +20,7 @@ module "tpu_e2e_tests" {
   ])
 
   build_args = {
-    python_version = "3.8"
-    debian_version = "buster"
+    python_version = "3.10"
   }
 
   ansible_vars = {

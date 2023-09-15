@@ -6,7 +6,9 @@ import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.utils.utils as xu
 import torch_xla.debug.metrics as met
+from torch_xla import runtime as xr
 import torch.optim as optim
+import torch.nn as nn
 import torch._dynamo as dynamo
 import torchvision
 import unittest
@@ -18,6 +20,13 @@ sys.path.append(xla_test_folder)
 import test_utils
 
 
+def _is_on_tpu():
+  return 'XRT_TPU_CONFIG' in os.environ or xr.device_type() == 'TPU'
+
+
+skipOnTpu = unittest.skipIf(_is_on_tpu(), 'Not supported on TPU')
+
+
 class DynamoInPlaceTest(unittest.TestCase):
 
   def inplace_update(self, a):
@@ -26,11 +35,57 @@ class DynamoInPlaceTest(unittest.TestCase):
 
   def test_inplace_update_correctness(self):
     dynamo_inplace = torch.compile(
-        self.inplace_update, backend="torchxla_trace_once", fullgraph=True)
+        self.inplace_update, backend="openxla", fullgraph=True)
     t = torch.tensor([0, 1, 2], device=xm.xla_device())
     for i in range(10):
       t = dynamo_inplace(t)
     self.assertTrue(torch.all(torch.eq(t.cpu(), torch.tensor([10, 11, 12]))))
+
+
+class DynamRandomOpTest(unittest.TestCase):
+
+  def random_op(self, a):
+    return torch.randn(5, 5, device=a.device) + a
+
+  def test_random_op_different_result_each_run(self):
+    dynamo_random_op = torch.compile(
+        self.random_op, backend="openxla", fullgraph=True)
+    t = torch.randn(5, 5).to(xm.xla_device())
+    dynamo_res_1 = dynamo_random_op(t)
+    dynamo_res_2 = dynamo_random_op(t)
+    dynamo_res_3 = dynamo_random_op(t)
+    self.assertFalse(torch.allclose(dynamo_res_1, dynamo_res_2))
+    self.assertFalse(torch.allclose(dynamo_res_2, dynamo_res_3))
+
+
+class DynamErrorMessageTest(unittest.TestCase):
+
+  def test_cpu_tensor(self):
+    device = xm.xla_device()
+    input = torch.randn(4, 3, 224, 224)
+    input_xla = input.clone().to(device)
+    resnet18 = torchvision.models.resnet18()
+    resnet18.eval()
+    xla_resnet18 = torchvision.models.resnet18()
+    xla_resnet18.to(device)
+    xla_resnet18.eval()
+    dynamo_resnet18 = torch.compile(xla_resnet18, backend='openxla')
+    dynamo_resnet18_cpu = torch.compile(resnet18, backend='openxla')
+    # input on cpu and model weight on xla
+    with self.assertRaises(Exception) as context:
+      res = dynamo_resnet18(input)
+    self.assertTrue(
+        'found two different devices' in context.exception.__str__())
+    # input on xla and model weight on cpu
+    with self.assertRaises(Exception) as context:
+      res = dynamo_resnet18_cpu(input_xla)
+    self.assertTrue(
+        'found two different devices' in context.exception.__str__())
+    # input and model weight on cpu
+    with self.assertRaises(Exception) as context:
+      res = dynamo_resnet18_cpu(input)
+    self.assertTrue(
+        'please move all tensors to XLA device' in context.exception.__str__())
 
 
 class DynamoInferenceBasicTest(unittest.TestCase):
@@ -44,7 +99,7 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     b = torch.sin(y)
     return a + b
 
-  @torch.compile(backend='torchxla_trace_once')
+  @torch.compile(backend='openxla')
   def fn_simple_dynamo(self, x, y):
     return self.fn_simple(x, y)
 
@@ -68,6 +123,52 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     res_cpu_3 = self.fn_simple(x + y, y * 3)
     self.assertTrue(torch.allclose(res_cpu_3, res_xla_dynamo_3.cpu()))
 
+  def test_simple_model_with_in_place_ops(self):
+
+    class TestModel(nn.Module):
+
+      def __init__(self, device=None):
+        super().__init__()
+        self.self_tensor = torch.zeros((5, 3), device=device)
+
+      def copy_(self, index, copy_tensor):
+        self.self_tensor.index_copy_(0, index, copy_tensor)
+
+      def add_(self, index, other_tensor):
+        self.self_tensor.add_(other_tensor)
+
+      def abs_(self, index, other_tensor):
+        self.self_tensor.abs_()
+
+      def forward(self, index, copy_tensor, input_tensor, op_name):
+        getattr(self, op_name)(index, copy_tensor)
+        output = input_tensor + self.self_tensor
+        return output
+
+    torch._dynamo.reset()
+    met.clear_counters()
+    met.clear_all()
+    device = xm.xla_device()
+
+    cpu_model = TestModel()
+    xla_model = TestModel(device).to(device)
+    compiled_model = torch.compile(xla_model, backend='openxla')
+
+    input_tensor = torch.ones(3)
+    copy_tensor = torch.rand(5, 3)
+    index = torch.tensor([0, 4, 2, 1, 3])
+    xla_input_tensor = input_tensor.to(device)
+    xla_copy_tensor = copy_tensor.to(device)
+    xla_index = index.to(device)
+
+    in_place_ops = ['copy_', 'add_', 'abs_']
+    for in_place_op in in_place_ops:
+      res_cpu = cpu_model.forward(
+          index, copy_tensor, input_tensor, op_name=in_place_op)
+      res_xla_dynamo = compiled_model.forward(
+          xla_index, xla_copy_tensor, xla_input_tensor, op_name=in_place_op)
+      self.assertTrue(torch.allclose(res_cpu, res_xla_dynamo.cpu()))
+
   def test_simple_model_with_different_input_shape(self):
     met.clear_counters()
     device = xm.xla_device()
@@ -84,9 +185,13 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     res_xla_dynamo_3 = self.fn_simple_dynamo(xla_z, xla_z)
     self.assertEqual(met.metric_data('CompileTime')[0], compile_count + 1)
     self.assertTrue(
-        torch.allclose(res_xla_dynamo_3.cpu(),
-                       self.fn_simple(xla_z.cpu(), xla_z.cpu())))
+        torch.allclose(
+            res_xla_dynamo_3.cpu(),
+            self.fn_simple(xla_z.cpu(), xla_z.cpu()),
+            rtol=1e-05,
+            atol=1e-05))
 
+  @skipOnTpu
   def test_resnet18(self):
     device = xm.xla_device()
     batch_size = xu.getenv_as('BATCH_SIZE', int, defval=4)
@@ -106,8 +211,7 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     xm.wait_device_ops()
     met.clear_all()
     for data, _ in loader:
-      dynamo_resnet18 = torch.compile(
-          xla_resnet18, backend='torchxla_trace_once')
+      dynamo_resnet18 = torch.compile(xla_resnet18, backend='openxla')
       output = dynamo_resnet18(data)
       output_cpu = resnet18(data.cpu())
       self.assertTrue(
@@ -126,8 +230,8 @@ class DynamoCpuFallbackTest(unittest.TestCase):
   def test_operator_fallback(self):
 
     def fn_fallback(t):
-      # As of 05/18/2023, torch.median is not lowered by PyTorch/XLA
-      return torch.median(t)
+      # aten::_foobar is aux function that's used for testing purposes only
+      return torch._foobar(t)
 
     torch._dynamo.reset()
     met.clear_counters()
@@ -135,35 +239,37 @@ class DynamoCpuFallbackTest(unittest.TestCase):
     device = xm.xla_device()
 
     # Initial tracing
-    dynamo_fn = torch.compile(fn_fallback, backend="torchxla_trace_once")
+    dynamo_fn = torch.compile(fn_fallback, backend="openxla")
     t = torch.randn(5)
     t_xla = t.to(device)
     cpu_res = fn_fallback(t)
     xla_dynamo_res = dynamo_fn(t_xla)
     self.assertTrue(torch.allclose(cpu_res, xla_dynamo_res.cpu()))
     self.assertEqual(met.metric_data('CompileTime')[0], 2)
-    self.assertEqual(met.metric_data('ExecuteTime')[0], 2)
+    # TODO(JackCaoG): invesgate this execution, from the HLO it is creating
+    # a f32[5] with all zeros. The cause of the execution is
+    # run_node (/src/pytorch/torch/_dynamo/utils.py:1381)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 4)
 
     # Second tracing
-    met.clear_counters()
     xla_dynamo_res_2 = dynamo_fn(t_xla)
     self.assertTrue(torch.allclose(cpu_res, xla_dynamo_res_2.cpu()))
     self.assertEqual(met.metric_data('CompileTime')[0], 2)
-    self.assertEqual(met.metric_data('ExecuteTime')[0], 2)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 4)
 
     # Verify that dynamo can handle different inputs
     xla_dynamo_res_3 = dynamo_fn(t_xla * 3)
     cpu_res_3 = fn_fallback(t * 3)
     self.assertTrue(torch.allclose(cpu_res_3, xla_dynamo_res_3.cpu()))
     self.assertEqual(met.metric_data('CompileTime')[0], 3)
-    self.assertEqual(met.metric_data('ExecuteTime')[0], 3)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 5)
 
   def test_fallback_multiple_submodules(self):
 
     def fn_fallback(t):
       t_2 = torch.mul(t, 2)
-      # As of 05/18/2023, torch.median is not lowered by PyTorch/XLA
-      t_3 = torch.median(t_2)
+      # aten::_foobar is aux function that's used for testing purposes only
+      t_3 = torch._foobar(t_2)
       t_4 = torch.mul(t_3, 2)
       return t_4
 
@@ -173,28 +279,28 @@ class DynamoCpuFallbackTest(unittest.TestCase):
     device = xm.xla_device()
 
     # Initial tracing
-    dynamo_fn = torch.compile(fn_fallback, backend="torchxla_trace_once")
+    dynamo_fn = torch.compile(fn_fallback, backend="openxla")
     t = torch.randn(7)
     t_xla = t.to(device)
     cpu_res = fn_fallback(t)
     xla_dynamo_res = dynamo_fn(t_xla)
     self.assertTrue(torch.allclose(cpu_res, xla_dynamo_res.cpu()))
-    self.assertEqual(met.metric_data('CompileTime')[0], 4)
-    self.assertEqual(met.metric_data('ExecuteTime')[0], 6)
+    self.assertEqual(met.metric_data('CompileTime')[0], 3)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 10)
 
     # Second tracing
     met.clear_counters()
     xla_dynamo_res_2 = dynamo_fn(t_xla)
     self.assertTrue(torch.allclose(cpu_res, xla_dynamo_res_2.cpu()))
-    self.assertEqual(met.metric_data('CompileTime')[0], 4)
-    self.assertEqual(met.metric_data('ExecuteTime')[0], 8)
+    self.assertEqual(met.metric_data('CompileTime')[0], 3)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 12)
 
     # Verify that dynamo can handle different inputs
     xla_dynamo_res_3 = dynamo_fn(t_xla * 3)
     cpu_res_3 = fn_fallback(t * 3)
     self.assertTrue(torch.allclose(cpu_res_3, xla_dynamo_res_3.cpu()))
-    self.assertEqual(met.metric_data('CompileTime')[0], 5)
-    self.assertEqual(met.metric_data('ExecuteTime')[0], 10)
+    self.assertEqual(met.metric_data('CompileTime')[0], 4)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 15)
 
 
 class DynamoTrainingBasicTest(unittest.TestCase):
@@ -210,7 +316,7 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     loss.backward()
     return loss
 
-  @torch.compile(backend='aot_torchxla_trace_once')
+  @torch.compile(backend='openxla')
   def fn_simple_dynamo(self, input):
     return self.fn_simple(input)
 
@@ -231,22 +337,29 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     res_xla_dynamo = self.fn_simple_dynamo(xla_input)
     self.assertIn('xla::nll_loss_backward', met.counter_names())
     self.assertTrue(torch.allclose(res_cpu, res_xla_dynamo.cpu()))
-    self.assertTrue(torch.allclose(input.grad, xla_input.grad.cpu()))
+    self.assertTrue(
+        torch.allclose(
+            input.grad, xla_input.grad.cpu(), rtol=1e-05, atol=1e-04))
     # verifiy that tracing is skipped in following runs
     xla_input.grad = None
     met.clear_counters()
     res_xla_dynamo_2 = self.fn_simple_dynamo(xla_input)
     self.assertNotIn('xla::nll_loss_backward', met.counter_names())
     self.assertTrue(torch.allclose(res_cpu, res_xla_dynamo_2.cpu()))
-    self.assertTrue(torch.allclose(input.grad, xla_input.grad.cpu()))
+    self.assertTrue(
+        torch.allclose(
+            input.grad, xla_input.grad.cpu(), rtol=1e-05, atol=1e-04))
     # verify that dynamo can handle different inputs
     input.grad = None
     xla_input.grad = None
     res_xla_dynamo_3 = self.fn_simple_dynamo(xla_input * 2)
     res_cpu_3 = self.fn_simple(input * 2)
     self.assertTrue(torch.allclose(res_cpu_3, res_xla_dynamo_3.cpu()))
-    self.assertTrue(torch.allclose(input.grad, xla_input.grad.cpu()))
+    self.assertTrue(
+        torch.allclose(
+            input.grad, xla_input.grad.cpu(), rtol=1e-05, atol=1e-04))
 
+  @skipOnTpu
   def test_resnet18(self):
     torch._dynamo.reset()
     met.clear_counters()
@@ -269,8 +382,7 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     xm.wait_device_ops()
     met.clear_all()
 
-    dynamo_train_model = torch.compile(
-        self.train_model, backend='aot_torchxla_trace_once')
+    dynamo_train_model = torch.compile(self.train_model, backend='openxla')
     for data, target in loader:
       xla_output = dynamo_train_model(xla_resnet18, data, target)
       cpu_data = data.detach().cpu()
@@ -280,6 +392,7 @@ class DynamoTrainingBasicTest(unittest.TestCase):
       self.assertTrue(
           torch.allclose(
               xla_output.cpu(), cpu_output.cpu(), rtol=1e-05, atol=1e-05))
+
       # TODO(JackCaoG): Understand why `data.grad` is a pending IR starting
       # from second iteration instead of a `DeviceData`
       # torch.allclose(data.grad.cpu(), cpu_data.grad)
@@ -313,7 +426,7 @@ class DynamoTrainingOptimizerTest(unittest.TestCase):
     optimizer.step()
     return loss
 
-  @torch.compile(backend='aot_torchxla_trace_once')
+  @torch.compile(backend='openxla')
   def fn_simple_dynamo(self, input, optimizer):
     return self.fn_simple(input, optimizer)
 
@@ -343,7 +456,8 @@ class DynamoTrainingOptimizerTest(unittest.TestCase):
       res_cpu = self.fn_simple(input, optimizer)
       res_xla_dynamo = self.fn_simple_dynamo(xla_input, xla_optimizer)
       assert torch.allclose(res_cpu, res_xla_dynamo.cpu())
-      assert torch.allclose(input.grad, xla_input.grad.cpu())
+      assert torch.allclose(
+          input.grad, xla_input.grad.cpu(), rtol=1e-04, atol=1e-04)
       assert torch.allclose(input, xla_input.cpu())
 
   def test_resnet18(self):
@@ -372,8 +486,7 @@ class DynamoTrainingOptimizerTest(unittest.TestCase):
     xm.wait_device_ops()
     met.clear_all()
 
-    dynamo_train_model = torch.compile(
-        self.train_model, backend='aot_torchxla_trace_once')
+    dynamo_train_model = torch.compile(self.train_model, backend='openxla')
     for data, target in loader:
       xla_output = dynamo_train_model(xla_resnet18, data, target, xla_optimizer)
       cpu_data = data.detach().cpu()

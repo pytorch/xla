@@ -9,6 +9,7 @@ variable "nightly_builds" {
       cuda_version   = optional(string, "11.8")
       python_version = optional(string, "3.8")
       arch           = optional(string, "amd64")
+      bundle_libtpu  = optional(string, "1")
     })
   )
 
@@ -38,6 +39,7 @@ variable "versioned_builds" {
       python_version  = optional(string, "3.8")
       cuda_version    = optional(string, "11.8")
       arch            = optional(string, "amd64")
+      bundle_libtpu   = optional(string, "1")
     })
   )
 
@@ -176,7 +178,6 @@ module "versioned_builds" {
 
   # Use Ansible setup from master branch for versioned release, because source
   # code at older version doesn't contain Ansible setup.
-  ansible_git_rev = "origin/master"
   trigger_on_push = { tag = each.value.git_tag }
 
   trigger_name = replace(each.key, "/[_.]/", "-")

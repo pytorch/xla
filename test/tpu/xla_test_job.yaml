@@ -45,12 +45,16 @@ spec:
 
       python3 /src/pytorch/xla/test/test_operations.py -v
       python3 /src/pytorch/xla/test/pjrt/test_runtime_tpu.py
+      python3 /src/pytorch/xla/test/pjrt/test_collective_ops_tpu.py
       python3 /src/pytorch/xla/test/spmd/test_xla_sharding.py
       python3 /src/pytorch/xla/test/spmd/test_xla_virtual_device.py
+      python3 /src/pytorch/xla/test/spmd/test_xla_distributed_checkpoint.py
       python3 /src/pytorch/xla/test/spmd/test_train_spmd_linear_model.py
+      python3 /src/pytorch/xla/test/spmd/test_xla_spmd_python_api_interaction.py
       XLA_EXPERIMENTAL=nonzero:masked_select python3 /src/pytorch/xla/test/ds/test_dynamic_shape_models.py -v
       XLA_EXPERIMENTAL=nonzero:masked_select python3 /src/pytorch/xla/test/ds/test_dynamic_shapes.py -v
       python3 /src/pytorch/xla/test/test_autocast.py
+      python3 /src/pytorch/xla/test/dynamo/test_dynamo.py
     volumeMounts:
     - mountPath: /dev/shm
       name: dshm

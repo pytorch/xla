@@ -6,22 +6,24 @@ from typing import Any
 class autocast(torch.amp.autocast_mode.autocast):
   r"""
     See :class:`torch.autocast`.
-    ``torch_xla.amp.autocast(device, args...)`` is equivalent to ``torch.autocast("xla", args...)`` for TPUs
-    ``torch.autocast("cuda", args...)`` for GPUs.
+    ``torch_xla.amp.autocast(device, **kwargs)`` is equivalent to 
+    ``torch.autocast("xla", **kwargs)`` for TPUs
+    ``torch.autocast("cuda", **kwargs)`` for GPUs.
     """
 
   def __init__(self,
                device,
                enabled: bool = True,
-               dtype: torch.dtype = torch.bfloat16,
+               dtype: torch.dtype = None,
                cache_enabled: bool = True):
     if xm.xla_device_hw(device) == 'GPU':
+      if dtype is None:
+        dtype = torch.float16
       super().__init__(
-          "cuda",
-          enabled=enabled,
-          dtype=torch.float16,
-          cache_enabled=cache_enabled)
+          "cuda", enabled=enabled, dtype=dtype, cache_enabled=cache_enabled)
     elif xm.xla_device_hw(device) == 'TPU':
+      if dtype is None:
+        dtype = torch.bfloat16
       super().__init__(
           "xla", enabled=enabled, dtype=dtype, cache_enabled=cache_enabled)
     else:

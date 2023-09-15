@@ -5,9 +5,7 @@ from typing import Dict
 from unittest import mock
 import requests
 
-import numpy as np
 import torch
-import torch.nn as nn
 from absl.testing import absltest, parameterized
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.core.xla_model as xm
@@ -94,6 +92,7 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
     devices_per_process = pjrt.run_multiprocess(xm.xla_device)
     self.assertDictEqual(devices_per_process, expected)
 
+  @absltest.skipIf(tpu.num_available_chips() != 4, "Not implemented")
   def test_xla_devices_single_process_all_chips(self):
     expected = _ordinal_to_device(
         processes=1, cores_per_process=tpu.num_available_devices())
@@ -188,27 +187,29 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
           {i: torch.device(f'xla:{i}') for i in range(self.num_devices)})
 
   @staticmethod
-  def _device_attributes():
-    return xr.device_attributes(str(xm.xla_device()))
+  def _runtime_device_attributes():
+    return xr.runtime_device_attributes(str(xm.xla_device()))
 
-  def test_device_attributes(self):
-    result = pjrt.run_multiprocess(self._device_attributes)
+  def test_runtime_device_attributes(self):
+    result = pjrt.run_multiprocess(self._runtime_device_attributes)
     for device in result.values():
       self.assertCountEqual(['coords', 'core_on_chip'], list(device.keys()))
       self.assertIsInstance(device['coords'], list)
       self.assertIsInstance(device['core_on_chip'], int)
 
   @staticmethod
-  def _global_device_attributes():
-    return xr.global_device_attributes()
+  def _global_runtime_device_attributes():
+    return xr.global_runtime_device_attributes()
 
-  def test_global_device_attributes(self):
-    results = pjrt.run_multiprocess(self._global_device_attributes)
+  def test_global_runtime_device_attributes(self):
+    results = pjrt.run_multiprocess(self._global_runtime_device_attributes)
     for result in results.values():
       for device in result:
-        self.assertCountEqual(['coords', 'core_on_chip'], list(device.keys()))
+        self.assertCountEqual(['coords', 'core_on_chip', 'name'],
+                              list(device.keys()))
         self.assertIsInstance(device['coords'], list)
         self.assertIsInstance(device['core_on_chip'], int)
+        self.assertIsInstance(device['name'], str)
 
   @staticmethod
   def _execute_time_metric():
@@ -236,106 +237,6 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
           v, expected_time_seconds * 1e-9,
           f"Expected exectue time of {i} to take more than "
           f"{expected_time_seconds} seconds, got {v / 1e9} seconds")
-
-
-class TestTpuCollectiveOps(parameterized.TestCase):
-
-  @staticmethod
-  def _broadcast(sync):
-    torch.manual_seed(xm.get_ordinal())
-    device = xm.xla_device()
-    model = nn.Linear(5, 5).to(device)
-    if sync:
-      xm.broadcast_master_param(model)
-
-    xm.mark_step()
-    return next(model.parameters()).detach().cpu().numpy()
-
-  @parameterized.named_parameters(('synchronized_parameters', True),
-                                  ('unsynchronized_parameters', False))
-  def test_broadcast_master_param(self, sync):
-    results = pjrt.run_multiprocess(self._broadcast, sync)
-    master_params = results[0]
-    for ordinal, worker_params in results.items():
-      if sync:
-        np.testing.assert_array_equal(master_params, worker_params)
-      elif ordinal != 0:
-        np.testing.assert_raises(AssertionError, np.testing.assert_array_equal,
-                                 master_params, worker_params)
-
-  @staticmethod
-  def _all_gather(pin_layout):
-    device = xm.xla_device()
-    ordinal = torch.tensor([xm.get_ordinal()], device=device)
-    out = xm.all_gather(ordinal, pin_layout=pin_layout)
-    xm.mark_step()
-
-    return out.cpu().numpy()
-
-  @parameterized.named_parameters(('pinned', True), ('unpinned', False))
-  def test_all_gather(self, pin_layout):
-    results = pjrt.run_multiprocess(self._all_gather, pin_layout)
-
-    expected = list(range(len(results)))
-    for v in results.values():
-      np.testing.assert_array_equal(v, expected)
-
-  @staticmethod
-  def _reduce_scatter(pin_layout):
-    device = xm.xla_device()
-    world_size = xm.xrt_world_size()
-    tensor = -torch.arange(world_size, dtype=torch.float32).to(device)
-
-    out = xm.reduce_scatter(
-        xm.REDUCE_SUM,
-        tensor,
-        scale=1.0 / world_size,
-        scatter_dim=0,
-        shard_count=world_size,
-        pin_layout=pin_layout,
-    )
-    xm.mark_step()
-
-    return out.cpu().numpy()
-
-  @parameterized.named_parameters(('pinned', True), ('unpinned', False))
-  def test_reduce_scatter(self, pin_layout):
-    results = pjrt.run_multiprocess(self._reduce_scatter, pin_layout)
-
-    for ordinal, value in results.items():
-      np.testing.assert_array_equal(value, [-ordinal])
-
-  @staticmethod
-  def _all_to_all(pin_layout):
-    device = xm.xla_device()
-    world_size = xm.xrt_world_size()
-
-    tensor = torch.cat(
-        [
-            -torch.arange(world_size, dtype=torch.float32).view(-1, 1, 1),
-            torch.ones(world_size, 1, 1) * xm.get_ordinal(),
-        ],
-        dim=1,
-    ).to(device)
-    xm.mark_step()
-
-    out = xm.all_to_all(
-        tensor,
-        split_dimension=0,
-        concat_dimension=2,
-        split_count=world_size,
-        pin_layout=pin_layout,
-    )
-
-    return out.cpu().numpy()
-
-  @parameterized.named_parameters(('pinned', True), ('unpinned', False))
-  def test_all_to_all(self, pin_layout):
-    results = pjrt.run_multiprocess(self._all_to_all, pin_layout)
-
-    for ordinal, value in results.items():
-      np.testing.assert_array_equal(value, [[[-ordinal] * len(results),
-                                             list(range(len(results)))]])
 
 
 if __name__ == '__main__':

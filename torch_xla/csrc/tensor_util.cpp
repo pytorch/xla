@@ -118,8 +118,9 @@ xla::PrimitiveType XlaTypeFromTensorType(
   XlaDeviceType hw_type = static_cast<XlaDeviceType>(device.type());
   switch (scalar_type) {
     case at::ScalarType::Double:
-      return !IsTpuDevice(hw_type) ? xla::PrimitiveType::F64
-                                   : xla::PrimitiveType::F32;
+      return !IsTpuDevice(hw_type) && hw_type != XlaDeviceType::NEURON
+                 ? xla::PrimitiveType::F64
+                 : xla::PrimitiveType::F32;
     case at::ScalarType::Float:
       return xla::PrimitiveType::F32;
     case at::ScalarType::BFloat16:
@@ -607,16 +608,17 @@ torch::lazy::BackendDataPtr TensorToXlaData(
     const at::Tensor& tensor, const xla::Shape& shape,
     const torch::lazy::BackendDevice& device) {
   TORCH_LAZY_TIMED("TensorToData");
-  if (UseVirtualDevice()) {
+  if (static_cast<XlaDeviceType>(device.type()) == XlaDeviceType::SPMD) {
     // The tensor is bypassing the virtual device, so it should be replicated
     // to all devices.
     std::vector<std::string> local_devices =
         runtime::GetComputationClient()->GetLocalDevices();
     auto replicated_data =
         std::vector<at::Tensor>(local_devices.size(), tensor);
+    auto sharding_spec = std::make_shared<XLATensor::ShardingSpec>(
+        xla::HloSharding::Replicate().ToProto(), shape);
     return WrapXlaData(ShardingUtil::CreateShardedData(
-        replicated_data, local_devices, shape,
-        xla::HloSharding::Replicate().ToProto()));
+        replicated_data, local_devices, sharding_spec));
   }
 
   static const bool transfer_async =
@@ -851,7 +853,12 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
   TORCH_LAZY_TIMED("TensorToData");
   XLA_CHECK_EQ(tensors.size(), devices.size());
 
-  if (UseVirtualDevice()) {
+  if (devices.size() == 0) {
+    return {};
+  }
+
+  // We assume that caller can't mix virtual device and real device.
+  if (devices[0] == "SPMD:0") {
     // When running in SPMD mode, tensors here in the unsharded
     // CreateTensorsData should be implicitly replicated to all devices.
     // This case should always apply when using SPMD regardless
@@ -865,9 +872,10 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
       auto shape = CreateComputationShapeFromTensor(tensors[i], &device);
       auto replicated_data =
           std::vector<at::Tensor>(local_devices.size(), tensors[i]);
+      auto sharding_spec = std::make_shared<XLATensor::ShardingSpec>(
+          xla::HloSharding::Replicate().ToProto(), shape);
       handles.push_back(ShardingUtil::CreateShardedData(
-          replicated_data, local_devices, shape,
-          xla::HloSharding::Replicate().ToProto()));
+          replicated_data, local_devices, sharding_spec));
     }
     return WrapXlaData(handles);
   }
@@ -931,26 +939,19 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
 
     std::vector<runtime::ComputationClient::TensorSource> source_tensors;  // in
     std::vector<runtime::ComputationClient::DataPtr> new_handles;  // out
-    if (UseVirtualDevice()) {
+    if (static_cast<XlaDeviceType>(device.type()) == XlaDeviceType::SPMD) {
       // GetLocalDevices returns the list of local devices specified by their
       // global ordinals (e.g. ["TPU:4", "TPU:5", "TPU:6", "TPU:7"]).
       std::vector<std::string> local_devices =
           runtime::GetComputationClient()->GetLocalDevices();
-      xla::OpSharding sharding;
-      if (shardings[i] != nullptr) {
-        sharding = shardings[i]->sharding;
-      } else {
-        // If using SPMD and no sharding is attached to the tensor, implicitly
-        // replicate to all local devices.
-        sharding = xla::HloSharding::Replicate().ToProto();
-      }
       // Shards the input tensors with padding, to split evenly.
       // The execution requires consistent shard sizes, and the zero-padded
       // values should be ignored.
-      std::vector<at::Tensor> local_shards = ShardingUtil::ShardTensor(
-          tensors[i], sharding, local_devices, /*padded=*/true);
+      std::vector<at::Tensor> local_shards =
+          ShardingUtil::ShardTensor(tensors[i], shardings[i], local_devices,
+                                    /*padded=*/true);
       new_handles.push_back(ShardingUtil::CreateShardedData(
-          local_shards, local_devices, shape, sharding));
+          local_shards, local_devices, shardings[i]));
     } else {
       auto populate_fn =
           [&, i, device](
@@ -1155,8 +1156,9 @@ xla::PrimitiveType GetDevicePrimitiveType(
       if (DowncastBF16() || DowncastF16()) {
         return xla::PrimitiveType::F32;
       }
-      return !IsTpuDevice(hw_type) ? xla::PrimitiveType::F64
-                                   : xla::PrimitiveType::F32;
+      return !IsTpuDevice(hw_type) && hw_type != XlaDeviceType::NEURON
+                 ? xla::PrimitiveType::F64
+                 : xla::PrimitiveType::F32;
     case xla::PrimitiveType::F32:
       if (UseF16() || DowncastF16()) {
         return xla::PrimitiveType::F16;
@@ -1164,11 +1166,13 @@ xla::PrimitiveType GetDevicePrimitiveType(
       return UseBF16() || DowncastBF16() ? xla::PrimitiveType::BF16
                                          : xla::PrimitiveType::F32;
     case xla::PrimitiveType::U16:
-      return !IsTpuDevice(hw_type) ? xla::PrimitiveType::U16
-                                   : xla::PrimitiveType::U32;
+      return !IsTpuDevice(hw_type) && hw_type != XlaDeviceType::NEURON
+                 ? xla::PrimitiveType::U16
+                 : xla::PrimitiveType::U32;
     case xla::PrimitiveType::S16:
-      return !IsTpuDevice(hw_type) ? xla::PrimitiveType::S16
-                                   : xla::PrimitiveType::S32;
+      return !IsTpuDevice(hw_type) && hw_type != XlaDeviceType::NEURON
+                 ? xla::PrimitiveType::S16
+                 : xla::PrimitiveType::S32;
     case xla::PrimitiveType::S64:
       return Use32BitLong() ? xla::PrimitiveType::S32 : xla::PrimitiveType::S64;
     case xla::PrimitiveType::U64:

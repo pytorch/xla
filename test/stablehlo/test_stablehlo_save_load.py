@@ -1,7 +1,8 @@
 import tempfile
 import torch_xla
 import torch_xla.core.xla_model as xm
-from torch_xla.experimental import stablehlo_saved_model
+from torch_xla import save_torch_model_as_stablehlo, save_as_stablehlo
+from torch_xla.stablehlo import StableHLOExportOptions, StableHLOGraphModule
 import torch
 import torch._export
 import torchvision
@@ -91,13 +92,33 @@ class SimpleExportTest(unittest.TestCase):
     model = ElementwiseAdd()
     inputs = model.get_random_inputs()
     exported = torch._export.export(model, inputs)
-    bundle = stablehlo_saved_model._exported_program_to_stablehlo_bundle(
-        exported, inputs)
+    options = StableHLOExportOptions()
+    options.override_tracing_arguments = inputs
     with tempfile.TemporaryDirectory() as tempdir:
-      stablehlo_saved_model._save_program_bundle(bundle, tempdir)
-      bundle2 = stablehlo_saved_model._load_program_bundle(tempdir)
+      save_as_stablehlo(exported, tempdir, options)
+      program2 = StableHLOGraphModule.load(tempdir)
+    result = program2(*inputs).detach().cpu()
+    self.assertTrue(torch.allclose(model(*inputs), result))
 
-    self.assertEqual(bundle.stablehlo_funcs, bundle2.stablehlo_funcs)
+  def test_save_load2(self):
+    model = ElementwiseAdd()
+    inputs = model.get_random_inputs()
+    with tempfile.TemporaryDirectory() as tempdir:
+      save_torch_model_as_stablehlo(model, inputs, tempdir)
+      program2 = StableHLOGraphModule.load(tempdir)
+      result = program2(*inputs).detach().cpu()
+    self.assertTrue(torch.allclose(model(*inputs), result))
+
+  def test_save_load3(self):
+    model = ElementwiseAdd()
+    inputs = model.get_random_inputs()
+    exported = torch._export.export(model, inputs)
+    with tempfile.TemporaryDirectory() as tempdir:
+      # Shouldnt need specify options because exported has example_input inside
+      save_as_stablehlo(exported, tempdir)
+      program2 = StableHLOGraphModule.load(tempdir)
+    result = program2(*inputs).detach().cpu()
+    self.assertTrue(torch.allclose(model(*inputs), result))
 
 
 if __name__ == '__main__':

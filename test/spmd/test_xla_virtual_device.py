@@ -6,6 +6,7 @@ import unittest
 import torch
 from torch import nn
 import torch_xla
+import torch_xla.runtime as xr
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
 import torch_xla.experimental.xla_sharding as xs
@@ -16,7 +17,7 @@ class VirtualDeviceTest(test_xla_sharding_base.XlaShardingTest):
 
   @classmethod
   def setUpClass(cls):
-    os.environ["XLA_USE_SPMD"] = "1"
+    xr.use_spmd()
     super().setUpClass()
 
   def test_mark_sharding(self):
@@ -61,6 +62,13 @@ class VirtualDeviceTest(test_xla_sharding_base.XlaShardingTest):
     t3 = t1 + t2
     t3_expected = [9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0, 9.0]
     self.assertEqual(t3.tolist()[0], t3_expected)
+
+  def test_no_sharding_1d(self):
+    t1 = torch.arange(9, dtype=torch.float, device=xm.xla_device())
+    t2 = torch.arange(9, dtype=torch.float, device=xm.xla_device())
+    t3 = t1 + t2
+    t3_expected = list(range(0, 18, 2))
+    self.assertEqual(t3.tolist(), t3_expected)
 
   def test_outbound_data_metrics(self):
     partition_spec = (0, 1)

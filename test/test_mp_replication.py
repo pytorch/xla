@@ -29,7 +29,7 @@ def _mp_fn(index):
     xfours = xm.all_reduce(xm.REDUCE_SUM, xfours, scale=scale)
 
     compiled_all_reduce = torch.compile(
-        all_reduce, backend='torchxla_trace_once', fullgraph=True)
+        all_reduce, backend='openxla', fullgraph=True)
     xfives = compiled_all_reduce(xfives)
 
     if (not xones.cpu().allclose(ones * float(world_size)) or

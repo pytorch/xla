@@ -175,6 +175,12 @@ class XrtComputationClient : public ComputationClient {
 
     bool HasValue() const override { return handle_ptr != nullptr; }
 
+    bool HasSharding() const override { return false; }
+
+    xla::OpSharding GetSharding() const override {
+      XLA_ERROR() << __FUNCTION__ << " not implemented";
+    }
+
     XrtHandlePtr handle_ptr;
   };
 
@@ -251,6 +257,10 @@ class XrtComputationClient : public ComputationClient {
       absl::Span<const DataPtr> datas) override;
 
   std::vector<DataPtr> GetDataShards(DataPtr data) override { return {data}; }
+
+  DataPtr GetDataShard(DataPtr data, size_t index) override {
+    XLA_ERROR() << __FUNCTION__ << " not implemented";
+  }
 
   DataPtr WrapDataShards(const std::vector<DataPtr>& shards, std::string device,
                          xla::Shape shape, xla::OpSharding sharding) override {

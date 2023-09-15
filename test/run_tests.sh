@@ -98,9 +98,14 @@ function run_eager_debug {
   XLA_USE_EAGER_DEBUG_MODE=1 run_test "$@"
 }
 
-function run_save_tensor_file {
+function run_save_tensor_ir {
   echo "Running in save tensor file mode: $@"
-  XLA_SAVE_TENSORS_FILE="/tmp/xla_test_save_ir.txt" run_test "$@"
+  XLA_SAVE_TENSORS_FILE="/tmp/xla_test_save_ir.txt" XLA_SAVE_TENSORS_FMT="text" run_test "$@"
+}
+
+function run_save_tensor_hlo {
+  echo "Running in save tensor file mode: $@"
+  XLA_SAVE_TENSORS_FILE="/tmp/xla_test_save_ir.txt" XLA_SAVE_TENSORS_FMT="hlo" run_test "$@"
 }
 
 function run_xla_backend_mp {
@@ -180,24 +185,30 @@ function run_xla_op_tests {
   run_test "$CDIR/dynamo/test_dynamo.py"
   run_test "$CDIR/dynamo/test_bridge.py"
   run_test "$CDIR/dynamo/test_num_output.py"
-  run_save_tensor_file "$CDIR/dynamo/test_dynamo_graph_dump.py"
+  run_save_tensor_ir "$CDIR/dynamo/test_dynamo_graph_dump.py"
   run_downcast_bf16 "$CDIR/test_data_type.py"
   run_use_bf16 "$CDIR/test_data_type.py"
   run_xla_ir_debug "$CDIR/test_env_var_mapper.py"
   run_xla_hlo_debug "$CDIR/test_env_var_mapper.py"
-  run_xla_hlo_debug "$CDIR/stablehlo/test_stablehlo_dump.py"
+  run_xla_hlo_debug "$CDIR/stablehlo/test_stablehlo_save_load.py"
   # TODO(qihqi): this test require tensorflow to run. need to setup separate
   #     CI with tf.
-  # run_xla_hlo_debug "$CDIR/stablehlo/test_stablehlo_inference.py"
+  run_xla_hlo_debug "$CDIR/stablehlo/test_stablehlo_inference.py"
+  # run_stablehlo_compile "$CDIR/stablehlo/test_stablehlo_compile.py"
   run_test "$CDIR/pjrt/test_runtime.py"
+  run_test "$CDIR/pjrt/test_runtime_gpu.py"
   run_test "$CDIR/pjrt/test_runtime_multi_cpu.py"
   run_test "$CDIR/pjrt/test_internal_tpu.py"
   run_test "$CDIR/pjrt/test_ddp.py"
   run_test "$CDIR/pjrt/test_mesh_service.py"
   run_test "$CDIR/spmd/test_xla_sharding.py"
+  run_test "$CDIR/spmd/test_xla_sharding_hlo.py"
   run_test "$CDIR/spmd/test_xla_virtual_device.py"
   run_test "$CDIR/spmd/test_dynamo_spmd.py"
   run_test "$CDIR/spmd/test_xla_distributed_checkpoint.py"
+  run_test "$CDIR/spmd/test_xla_spmd_python_api_interaction.py"
+  run_save_tensor_ir "$CDIR/spmd/test_spmd_graph_dump.py"
+  run_save_tensor_hlo "$CDIR/spmd/test_spmd_graph_dump.py"
   run_test "$CDIR/test_operations_hlo.py" "$@" --verbosity=$VERBOSITY
   run_test "$CDIR/test_input_output_aliases.py"
   run_test "$CDIR/test_torch_distributed_xla_backend.py"

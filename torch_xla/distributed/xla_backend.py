@@ -4,12 +4,10 @@ import torch
 import torch.distributed as dist
 import torch_xla
 import torch_xla.core.xla_model as xm
+from torch_xla._internal import rendezvous
 import logging
-from torch._C._distributed_c10d import (
-    ProcessGroup,
-    Work,
-)
-from .xrt_init import init_xrt_context
+import os
+from torch._C._distributed_c10d import ProcessGroup
 
 
 def _create_xla_process_group(prefix_store, rank, size, timeout):
@@ -21,6 +19,8 @@ def _register_xla_backend():
 
 
 _register_xla_backend()
+
+dist.register_rendezvous_handler('xla', rendezvous.pjrt_rendezvous_handler)
 
 
 def _ret_work(ret):

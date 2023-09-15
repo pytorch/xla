@@ -6,6 +6,7 @@
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "tensorflow/compiler/xla/hlo/ir/hlo_sharding.h"
 #include "torch_xla/csrc/device.h"
 
 namespace torch_xla {
@@ -142,6 +143,8 @@ xla::XlaOp BuildAddcmul(xla::XlaOp input, xla::XlaOp t1, xla::XlaOp t2,
 
 xla::XlaOp BuildCdistForward(xla::XlaOp x1, xla::XlaOp x2, xla::XlaOp p,
                              bool use_hamming, bool use_chebyshev);
+
+xla::XlaOp BuildCustomSharding(const xla::XlaOp& input);
 
 }  // namespace torch_xla
 

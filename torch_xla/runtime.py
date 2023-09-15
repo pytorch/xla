@@ -1,13 +1,13 @@
 import functools
 import logging
 import os
+import warnings
 from typing import Dict, List, Optional, TypeVar
 
 import torch
 import torch_xla
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.core.xla_model as xm
-import torch_xla.distributed.xla_backend
 import torch_xla.utils.utils as xu
 
 R = TypeVar('R')
@@ -179,19 +179,59 @@ def process_count() -> int:
 
 
 @requires_pjrt
-def device_attributes(device: str) -> Dict[str, object]:
-  return torch_xla._XLAC._xla_get_device_attributes(device)
-
-
-@requires_pjrt
-def global_device_attributes() -> List[Dict[str, object]]:
-  return torch_xla._XLAC._xla_get_all_device_attributes()
-
-
-@requires_pjrt
 def host_index() -> int:
   if device_type() == 'TPU':
     return tpu.worker_id()
 
   # TODO: Update this when we support multi-host GPU
   return 0
+
+
+# API below will be used to query physcial device attribute.
+@requires_pjrt
+def runtime_device_attributes(device: str) -> Dict[str, object]:
+  return torch_xla._XLAC._xla_get_device_attributes(device)
+
+
+@requires_pjrt
+def global_runtime_device_attributes() -> List[Dict[str, object]]:
+  return torch_xla._XLAC._xla_get_all_device_attributes()
+
+
+@requires_pjrt
+def global_runtime_device_count() -> int:
+  """Returns the total number of runtime devices across all processes/hosts."""
+  return len(torch_xla._XLAC._xla_get_all_runtime_devices())
+
+
+@requires_pjrt
+def addressable_runtime_device_count() -> int:
+  """Returns the number of devices visible to this process."""
+  return torch_xla._XLAC._xla_num_runtime_devices()
+
+
+# API to enable SPMD mode. This is a recommended way to enable SPMD.
+# TODO(yeounoh) this does not block users from using XLA_USE_SPMD flag, yet.
+# we will enforce `use_spmd()` once the flag is fully deprecated.
+@requires_pjrt
+def use_spmd():
+  if os.environ.get("XLA_USE_SPMD") is not None:
+    warnings.warn("XLA_USE_SPMD is being deprecated. "
+                  "Use torch_xla.runtime.use_spmd() "
+                  "without setting XLA_USE_SPMD env-var.")
+
+  if torch_xla._XLAC._xla_get_spmd_config_is_locked(
+  ) and not xu.check_env_flag("XLA_USE_SPMD"):
+    raise RuntimeError(
+        "Please set SPMD mode before initializting non-virtual XLA device. "
+        "Call use_spmd() in the beginning of the program.")
+
+  # TODO(yeounoh) replace this when we fully deprecate the flag.
+  os.environ["XLA_USE_SPMD"] = "1"
+
+
+@requires_pjrt
+def is_spmd():
+  """Returns if SPMD is set for execution."""
+  # TODO(yeounoh) replace this when we fully deprecate the flag.
+  return xu.check_env_flag('XLA_USE_SPMD')

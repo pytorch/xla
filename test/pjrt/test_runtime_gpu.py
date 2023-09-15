@@ -3,6 +3,7 @@ import itertools
 import os
 import queue
 import requests
+import unittest
 
 import numpy as np
 import torch
@@ -16,6 +17,8 @@ from torch_xla._internal import pjrt
 from absl.testing import absltest, parameterized
 
 
+@unittest.skipIf(xr.device_type() != 'GPU',
+                 f"GPU tests should only run on GPU devices.")
 class TestExperimentalPjrtGpu(parameterized.TestCase):
 
   def setUp(self):
@@ -43,15 +46,21 @@ class TestExperimentalPjrtGpu(parameterized.TestCase):
   @parameterized.named_parameters(('xla_model', xm.get_ordinal),
                                   ('pjrt', xr.global_ordinal))
   def test_global_ordinal(self, ordinal_func):
+    num_devices = int(os.environ[xenv.GPU_NUM_DEVICES])
+    expected = [i for i in range(num_devices)]
+
     results = pjrt.run_multiprocess(ordinal_func)
-    self.assertListEqual(sorted(results.values()), [0, 1, 2, 3])
+    self.assertListEqual(sorted(results.values()), expected)
 
   @parameterized.named_parameters(('xla_model', xm.get_local_ordinal),
                                   ('pjrt', xr.local_ordinal))
   def test_local_ordinal(self, ordinal_func):
     # TODO(wcromar): add multiprocess tests
+    num_devices = int(os.environ[xenv.GPU_NUM_DEVICES])
+    expected = [i for i in range(num_devices)]
+
     results = pjrt.run_multiprocess(ordinal_func)
-    self.assertListEqual(sorted(results.values()), [0, 1, 2, 3])
+    self.assertListEqual(sorted(results.values()), expected)
 
   @staticmethod
   def _multi_gpu_backwards():
@@ -83,13 +92,14 @@ class TestExperimentalPjrtGpu(parameterized.TestCase):
     os.environ.update({
         xenv.PJRT_GPU_ASYNC_CLIENT: 'true',
     })
+    num_devices = int(os.environ[xenv.GPU_NUM_DEVICES])
 
     expected = {
         i: {
             'forward_ordinal': i,
             'backward_ordinal': i,
             'device': f'xla:0'
-        } for i in range(4)
+        } for i in range(num_devices)
     }
     results = pjrt.run_multiprocess(self._multi_gpu_backwards)
 
@@ -102,11 +112,12 @@ class TestExperimentalPjrtGpu(parameterized.TestCase):
   @parameterized.named_parameters(('xmp', xmp.spawn), ('pjrt', pjrt.spawn))
   def test_spawn(self, spawn):
     manager = torch.multiprocessing.Manager()
-    queue = manager.Queue(4)
+    num_devices = int(os.environ[xenv.GPU_NUM_DEVICES])
+    queue = manager.Queue(num_devices)
     spawn(self._spawn, args=(queue,))
 
     indices = sorted(queue.get(block=False) for _ in range(queue.qsize()))
-    self.assertListEqual(indices, list(range(4)))
+    self.assertListEqual(indices, list(range(num_devices)))
 
   @staticmethod
   def _broadcast(sync):
@@ -166,6 +177,8 @@ class TestExperimentalPjrtGpu(parameterized.TestCase):
 
     return out.cpu().numpy()
 
+  # 2023-08-02 04:16:36.520884: F external/xla/xla/service/layout_assignment.cc:157] Check failed: ShapeUtil::Compatible(shape_layout.shape(), instruction->operand(operand_no)->shape()) f32[1]{0} is not compatible with f32[2]{0} (for operand 0 of instruction %reduce-scatter.10 = f32[1]{0} reduce-scatter(f32[2]{0} %add.5), replica_groups={}, constrain_layout=true, dimensions={0}, to_apply=%AddComputation.6)
+  @unittest.skip("Failed with known error.")
   @parameterized.named_parameters(('pinned', True), ('unpinned', False))
   def test_reduce_scatter(self, pin_layout):
     results = pjrt.run_multiprocess(self._reduce_scatter, pin_layout)

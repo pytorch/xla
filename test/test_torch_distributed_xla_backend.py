@@ -1,5 +1,6 @@
 import contextlib
 import functools
+import os
 import re
 from unittest import mock
 
@@ -9,7 +10,6 @@ import torch.distributed as dist
 import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_backend
-import torch_xla.experimental.pjrt_backend
 from torch_xla import runtime as xr
 
 
@@ -39,7 +39,9 @@ class XlaBackendTest(parameterized.TestCase):
 
   @classmethod
   def setUpClass(cls):
-    dist.init_process_group('xla', init_method='pjrt://')
+    # Add no-op all-reduce ops to HLO
+    os.environ['XLA_ALWAYS_ALLREDUCE'] = '1'
+    dist.init_process_group('xla', init_method='xla://')
 
   def tearDown(self) -> None:
     # Purge all computations attached the device.

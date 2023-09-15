@@ -29,6 +29,8 @@
 #include "torch_xla/csrc/runtime/tf_logging.h"
 #include "torch_xla/csrc/runtime/thread_pool.h"
 
+using xla::internal::XlaBuilderFriend;
+
 namespace torch_xla {
 namespace runtime {
 
@@ -131,6 +133,12 @@ PjRtComputationClient::PjRtComputationClient() {
         "xpu", sys_util::GetEnvString(env::kEnvXpuLibraryPath, "libxpu.so")));
     client_ = std::move(xla::GetCApiClient("XPU").value());
 
+  } else if (device_type == "NEURON") {
+    TF_VLOG(1) << "Initializing PjRt NEURON client...";
+    XLA_CHECK_OK(pjrt::LoadPjrtPlugin(
+        "NEURON", sys_util::GetEnvString(env::kEnvNeuronLibraryPath,
+                                         "libneuronpjrt.so")));
+    client_ = std::move(xla::GetCApiClient("NEURON").value());
   } else {
     XLA_ERROR() << absl::StrFormat("Unknown %s '%s'", env::kEnvPjRtDevice,
                                    device_type);
@@ -169,6 +177,8 @@ ComputationClient::DataPtr PjRtComputationClient::CreateDataPlaceholder(
 
 std::vector<ComputationClient::DataPtr> PjRtComputationClient::GetDataShards(
     ComputationClient::DataPtr data) {
+  tsl::profiler::TraceMe activity("PjRtComputationClient::GetDataShards",
+                                  tsl::profiler::TraceMeLevel::kInfo);
   std::vector<ComputationClient::DataPtr> shards;
   if (PjRtShardedData* sharded_data =
           dynamic_cast<PjRtShardedData*>(data.get())) {
@@ -180,6 +190,23 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::GetDataShards(
     shards.push_back(data);
   }
   return shards;
+}
+
+ComputationClient::DataPtr PjRtComputationClient::GetDataShard(
+    ComputationClient::DataPtr data, size_t index) {
+  tsl::profiler::TraceMe activity("PjRtComputationClient::GetDataShard",
+                                  tsl::profiler::TraceMeLevel::kInfo);
+  if (PjRtShardedData* sharded_data =
+          dynamic_cast<PjRtShardedData*>(data.get())) {
+    XLA_CHECK_LE(index, sharded_data->shards.size())
+        << "GetDataShard out of range with index: " << index
+        << " and num of shard: " << sharded_data->shards.size();
+    std::shared_ptr<PjRtData> shard = sharded_data->shards[index];
+    return std::make_shared<PjRtData>(shard->device(), shard->shape(),
+                                      shard->buffer);
+  } else {
+    return data;
+  }
 }
 
 ComputationClient::DataPtr PjRtComputationClient::WrapDataShards(
@@ -300,21 +327,22 @@ ComputationClient::DataPtr PjRtComputationClient::ReplicateShardedData(
       // Data is replicated, return the first shard
       return sharded_data->shards[0];
     }
-    xla::XlaBuilder b("ReplicateShardedData");
+    xla::XlaBuilder builder("ReplicateShardedData");
     xla::Shape shape = sharded_data->shape();
-    b.SetSharding(sharded_data->GetSharding());
+    builder.SetSharding(sharded_data->GetSharding());
 
     // perform a simple identity calculation to reassemble the input as
     // replicated output.
-    auto x = xla::Parameter(&b, 0, shape, "p0");
-    b.SetSharding(xla::HloSharding::Replicate().ToProto());
-    xla::XlaOp scalar_two_op =
-        xla::ConvertElementType(xla::ConstantR0(&b, 2), shape.element_type());
-    auto y = xla::Div(x, scalar_two_op);
-    auto z = xla::Add(y, y);
+    xla::XlaOp x = xla::Parameter(&builder, 0, shape, "p0");
+    builder.SetSharding(xla::HloSharding::Replicate().ToProto());
+    xla::XlaOp scalar_zero_op = xla::ConvertElementType(
+        xla::ConstantR0(&builder, 0), shape.element_type());
+    xla::XlaOp y = xla::Add(x, scalar_zero_op);
+    auto instruction = XlaBuilderFriend::GetInstruction(y);
+    *instruction->mutable_sharding() = xla::HloSharding::Replicate().ToProto();
 
     xla::XlaComputation computation =
-        ConsumeValue(b.Build(/*remove_dynamic_dimensions=*/false));
+        ConsumeValue(builder.Build(/*remove_dynamic_dimensions=*/false));
     xla::ProgramShape program_shape =
         ConsumeValue(computation.GetProgramShape());
 
@@ -324,7 +352,8 @@ ComputationClient::DataPtr PjRtComputationClient::ReplicateShardedData(
     instances.push_back({std::move(computation), device,
                          GetCompilationDevices(device, {}), &shape,
                          /*should_wrap_parameter=*/false,
-                         /*is_sharded=*/true});
+                         /*is_sharded=*/true,
+                         /*allow_spmd_sharding_propagation_to_output=*/false});
     std::vector<
         std::shared_ptr<torch_xla::runtime::ComputationClient::Computation>>
         computations = Compile(std::move(instances));
@@ -402,7 +431,8 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
       // outputs. Setting this to true would wrapping the sharded outputs in
       // PjRtShardedData.
       compile_options.executable_build_options
-          .set_allow_spmd_sharding_propagation_to_output({true});
+          .set_allow_spmd_sharding_propagation_to_output(
+              {instance.allow_spmd_sharding_propagation_to_output});
       compile_options.executable_build_options.set_num_partitions(
           client_->device_count());
       compile_options.executable_build_options.set_num_replicas(1);
@@ -562,22 +592,32 @@ PjRtComputationClient::ExecuteReplicated(
   XLA_CHECK(devices.size() == arguments.size())
       << "ExecuteReplicated over " << devices.size() << " devices, but "
       << arguments.size() << " arguments devices.";
+  auto mwait_argument = std::make_shared<util::MultiWait>(devices.size());
+  std::vector<std::vector<xla::PjRtBuffer*>> argument_handles(devices.size());
+  {
+    tsl::profiler::TraceMe activity(
+        "PjRtComputationClient::ExecuteReplicated_argument_handle",
+        tsl::profiler::TraceMeLevel::kInfo);
+    for (int32_t i = 0; i < devices.size(); ++i) {
+      auto buffer_converter = [&, i]() {
+        xla::PjRtDevice* pjrt_device = StringToPjRtDevice(devices[i]);
+        XLA_CHECK(pjrt_device->IsAddressable()) << pjrt_device->DebugString();
 
-  std::vector<std::vector<xla::PjRtBuffer*>> argument_handles;
-  for (int32_t i = 0; i < devices.size(); ++i) {
-    xla::PjRtDevice* pjrt_device = StringToPjRtDevice(devices[i]);
-    XLA_CHECK(pjrt_device->IsAddressable()) << pjrt_device->DebugString();
+        std::vector<xla::PjRtBuffer*> buffers;
+        for (auto& argument : arguments[i]) {
+          const PjRtData* pjrt_data = dynamic_cast<PjRtData*>(argument.get());
 
-    std::vector<xla::PjRtBuffer*> buffers;
-    for (auto& argument : arguments[i]) {
-      const PjRtData* pjrt_data = dynamic_cast<PjRtData*>(argument.get());
-
-      XLA_CHECK(pjrt_device == pjrt_data->buffer->device())
-          << pjrt_device->DebugString() << " vs "
-          << pjrt_data->buffer->device()->DebugString();
-      buffers.push_back(pjrt_data->buffer.get());
+          XLA_CHECK(pjrt_device == pjrt_data->buffer->device())
+              << pjrt_device->DebugString() << " vs "
+              << pjrt_data->buffer->device()->DebugString();
+          buffers.push_back(pjrt_data->buffer.get());
+        }
+        argument_handles[i] = std::move(buffers);
+      };
+      env::ScheduleIoClosure(util::MultiWait::Completer(
+          mwait_argument, std::move(buffer_converter)));
     }
-    argument_handles.push_back(buffers);
+    mwait_argument->Wait();
   }
 
   xla::ExecuteOptions execute_options;
@@ -591,34 +631,45 @@ PjRtComputationClient::ExecuteReplicated(
 
   std::optional<std::vector<xla::PjRtFuture<xla::Status>>> returned_futures(
       devices.size());
-  std::vector<std::vector<std::unique_ptr<xla::PjRtBuffer>>> results =
-      pjrt_computation.executable
-          ->Execute(argument_handles, execute_options, returned_futures)
-          .value();
+  std::vector<std::vector<std::unique_ptr<xla::PjRtBuffer>>> results;
+  {
+    tsl::profiler::TraceMe activity(
+        "PjRtComputationClient::ExecuteReplicated_execute",
+        tsl::profiler::TraceMeLevel::kInfo);
+    results = pjrt_computation.executable
+                  ->Execute(std::move(argument_handles), execute_options,
+                            returned_futures)
+                  .value();
+  }
 
   std::vector<std::vector<ComputationClient::DataPtr>> data_handles;
   data_handles.reserve(results.size());
   std::vector<size_t> dims(results.size());
 
-  for (int32_t i = 0; i < results.size(); ++i) {
-    xla::PjRtDevice* pjrt_device = StringToPjRtDevice(devices[i]);
-    XLA_CHECK(pjrt_device->IsAddressable())
-        << pjrt_device->DebugString() << " is not addressable.";
+  {
+    tsl::profiler::TraceMe activity(
+        "PjRtComputationClient::ExecuteReplicated_result_handle",
+        tsl::profiler::TraceMeLevel::kInfo);
+    for (int32_t i = 0; i < results.size(); ++i) {
+      xla::PjRtDevice* pjrt_device = StringToPjRtDevice(devices[i]);
+      XLA_CHECK(pjrt_device->IsAddressable())
+          << pjrt_device->DebugString() << " is not addressable.";
 
-    std::vector<ComputationClient::DataPtr> datas;
-    datas.reserve(results[i].size());
-    dims[i] = results[i].size();
-    for (int32_t j = 0; j < results[i].size(); ++j) {
-      std::unique_ptr<xla::PjRtBuffer> buffer = std::move(results[i][j]);
-      XLA_CHECK(pjrt_device == buffer->device())
-          << "Exepcted device: " << pjrt_device->DebugString()
-          << " vs. actual device: " << buffer->device()->DebugString();
+      std::vector<ComputationClient::DataPtr> datas;
+      datas.reserve(results[i].size());
+      dims[i] = results[i].size();
+      for (int32_t j = 0; j < results[i].size(); ++j) {
+        std::unique_ptr<xla::PjRtBuffer> buffer = std::move(results[i][j]);
+        XLA_CHECK(pjrt_device == buffer->device())
+            << "Exepcted device: " << pjrt_device->DebugString()
+            << " vs. actual device: " << buffer->device()->DebugString();
 
-      std::shared_ptr<PjRtData> data = std::make_shared<PjRtData>(
-          devices[i], buffer->on_device_shape(), std::move(buffer));
-      datas.push_back(data);
+        std::shared_ptr<PjRtData> data = std::make_shared<PjRtData>(
+            devices[i], buffer->on_device_shape(), std::move(buffer));
+        datas.push_back(data);
+      }
+      data_handles.push_back(datas);
     }
-    data_handles.push_back(datas);
   }
 
   auto mwait = std::make_shared<util::MultiWait>(1);

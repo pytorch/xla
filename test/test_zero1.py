@@ -4,11 +4,13 @@ import torch_xla
 import torch_xla.core.xla_model as xm
 from torch_xla.distributed.zero_redundancy_optimizer import ZeroRedundancyOptimizer
 from torch_xla import runtime as xr
+from torch.testing._internal.common_utils import TestCase
+from copy import deepcopy
 
 import unittest
 
 
-class XlaZeRO1Test(unittest.TestCase):
+class XlaZeRO1Test(TestCase):
 
   @unittest.skipIf(xr.device_type() == 'TPU', "Crash on TPU")
   @unittest.skipIf(xr.device_type() == 'GPU',
@@ -33,20 +35,26 @@ class XlaZeRO1Test(unittest.TestCase):
 
     opt1.step()
     opt2.step()
-    assert str(opt1.state_dict()) == str(opt2.state_dict()['base'])
-
     s1 = opt1.state_dict()
     s2 = opt2.state_dict()
+    self.assertEqual(s1['state'], s2['base_state'])
+
+    # deepcopy s1 to load later because pytorch optimizers do not guarantee the input
+    # state_dict will not be modified. on the other hand, s2 has this guarantee.
+    s1_clone = deepcopy(s1)
+
     opt1.load_state_dict(s1)
     opt2.load_state_dict(s2)
-    assert str(opt1.state_dict()) == str(opt2.state_dict()['base'])
+    self.assertEqual(opt1.state_dict()['state'],
+                     opt2.state_dict()['base_state'])
 
     # step still runnable
     opt1.step()
     opt2.step()
-    opt1.load_state_dict(s1)
+    opt1.load_state_dict(s1_clone)
     opt2.load_state_dict(s2)
-    assert str(opt1.state_dict()) == str(opt2.state_dict()['base'])
+    self.assertEqual(opt1.state_dict()['state'],
+                     opt2.state_dict()['base_state'])
 
     # step still runnable
     opt1.step()

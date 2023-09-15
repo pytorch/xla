@@ -87,8 +87,8 @@ class ShardingUtil {
   // Returns the shape of the resulting shards of `tensor` after applying
   // `sharding`. This assumes the shards will be padded to ensure they all
   // have the same shape.
-  static std::vector<int64_t> GetShardShape(const at::Tensor& tensor,
-                                            const xla::OpSharding sharding);
+  static std::vector<int64_t> GetShardShape(
+      const XLATensor::ShardingSpecPtr shardings);
 
   // Uses the provided `sharding` spec and expected shard shape to determine the
   // index slices for the shards which belong on `devices`. Only supports
@@ -98,6 +98,12 @@ class ShardingUtil {
                             const std::vector<int64_t>& tensor_shape,
                             const xla::OpSharding sharding,
                             const std::vector<std::string>& devices);
+
+  // Returns the indices for the shards. Supports `OTHER` sharding types and
+  // called when input is sharded along the batch axis.
+  static std::vector<std::vector<at::indexing::TensorIndex>>
+  GetShardIndicesForMinibatchTensor(const std::vector<int64_t>& shard_shape,
+                                    const std::vector<std::string>& devices);
 
   // Shards a tensor and returns the sharded tensors which belong on `devices`
   // based on the `sharding` spec. REPLICATED sharding should result in shards
@@ -109,8 +115,18 @@ class ShardingUtil {
   // The the returned tensors will be in 1:1 correspondence with the `devices`
   // vector, so the `i`th result will belong on the `i`th device.
   static std::vector<at::Tensor> ShardTensor(
-      const at::Tensor& tensor, const xla::OpSharding sharding,
+      const at::Tensor& tensor, const XLATensor::ShardingSpecPtr shardings,
       const std::vector<std::string>& devices, bool padded = true);
+
+  // Retrieve output sharding of a given XLA computation.
+  static std::vector<XLATensor::ShardingSpecPtr> GetOutputSharding(
+      std::vector<xla::Shape>* output_shapes, ComputationPtr computation,
+      const torch::lazy::BackendDevice& device);
+
+  // Create sharded data placeholders, each corresponding to the individual
+  // sharding spec from the input list
+  static std::vector<torch::lazy::BackendDataPtr> CreateShardedPlaceholder(
+      const std::vector<XLATensor::ShardingSpecPtr>& sharding_specs);
 
   // Prepares output sharding propagation by extracting output parameter
   // ShardingSpec into `sharding_specs` from the SPMD compiled `computation` and
@@ -124,22 +140,11 @@ class ShardingUtil {
       std::vector<torch::lazy::BackendDataPtr>* data_placeholders,
       std::vector<XLATensor::ShardingSpecPtr>* sharding_specs);
 
-  // Mimic the function above, but for dynamo code path.
-  // One subtle difference is that in dynamo code path, we don't
-  // have explicit `tensors`. However, we have `output_shapes` and
-  // `device` which were what the `tensors` were used for in the original
-  // `PrepareOutputShardingPropagation` function.
-  static void PrepareOutputShardingPropagation(
-      std::vector<torch::lazy::BackendDataPtr>& placeholders,
-      std::vector<XLATensor::ShardingSpecPtr>& sharding_specs,
-      std::vector<xla::Shape>* output_shapes, ComputationPtr cachedComputation,
-      const torch::lazy::BackendDevice& device);
-
   // Transfers the individual shards to the devices and returns a DataPtr for
   // the PjRtShardedData wrapping the shards.
   static runtime::ComputationClient::DataPtr CreateShardedData(
       std::vector<at::Tensor>& shards, std::vector<std::string>& devices,
-      xla::Shape global_shape, xla::OpSharding sharding);
+      const XLATensor::ShardingSpecPtr& sharding_spec);
 };
 
 }  // namespace torch_xla

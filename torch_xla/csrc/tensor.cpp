@@ -38,6 +38,7 @@
 #include "torch_xla/csrc/runtime/cache.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/env_vars.h"
+#include "torch_xla/csrc/runtime/pjrt_computation_client.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/thread_pool.h"
 #include "torch_xla/csrc/runtime/unique.h"
@@ -102,7 +103,14 @@ XLATensor::XLATensor(const at::Tensor& tensor,
 XLATensor::XLATensor(torch::lazy::BackendDataPtr handle,
                      c10::optional<at::ScalarType> logical_element_type)
     : XLATensor(std::make_shared<Data>(handle, handle->device(),
-                                       logical_element_type)) {}
+                                       logical_element_type)) {
+  // if data is sharded we need to carry the sharding spec over.
+  runtime::ComputationClient::DataPtr data = UnwrapXlaData(handle);
+  if (data->HasSharding()) {
+    ShardingSpec sharding_spec(data->GetSharding(), data->shape());
+    SetShardingSpec(sharding_spec);
+  }
+}
 
 XLATensor::XLATensor(torch::lazy::Value ir_value,
                      const torch::lazy::BackendDevice& device,
@@ -112,9 +120,10 @@ XLATensor::XLATensor(torch::lazy::Value ir_value,
   // Preserve sharding if a new tensor is created from a sharded IR node.
   if (CurrentIrValue()) {
     auto* xla_node = dynamic_cast<XlaNode*>(CurrentIrValue().node.get());
-    if (xla_node->GetSharding()) {
+    if (xla_node->GetSharding(CurrentIrValue().index)) {
       ShardingSpec sharding =
-          ShardingSpec{*xla_node->GetSharding(), xla_node->xla_shape()};
+          ShardingSpec{*xla_node->GetSharding(CurrentIrValue().index),
+                       xla_node->xla_shape()};
       SetShardingSpec(sharding);
     }
   }
@@ -228,7 +237,8 @@ void XLATensor::SetShardingSpec(const ShardingSpec& sharding) {
   // Existing annotation must be cleared explicitly. We do not clear and
   // overwrite the existing sharding on the user's behalf. This is a no-op if
   // the same sharding already applied.
-  if (!sharding_spec()) {
+  if (!sharding_spec() ||
+      (sharding_spec()->sharding.type() == xla::OpSharding::REPLICATED)) {
     TORCH_LAZY_COUNTER("SetShardingSpec", 1);
     data()->sharding = std::make_shared<ShardingSpec>(sharding);
   } else {
@@ -239,7 +249,7 @@ void XLATensor::SetShardingSpec(const ShardingSpec& sharding) {
         << sharding.sharding.DebugString();
   }
   dynamic_cast<XlaNode*>(GetIrValue().node.get())
-      ->SetSharding(sharding_spec()->sharding);
+      ->SetSharding(sharding_spec()->sharding, GetIrValue().index);
 }
 void XLATensor::ClearShardingSpec() {
   data()->sharding = nullptr;
@@ -256,10 +266,15 @@ XLATensor::ShardingSpecPtr XLATensor::sharding_spec() const {
   if (sharding && ir_value) {
     // The copy of sharding annotation on the IR node should be the same.
     auto* xla_node = dynamic_cast<XlaNode*>(ir_value.node.get());
-    if (xla_node->GetSharding()) {
+    if (xla_node->GetSharding(ir_value.index)) {
       XLA_CHECK(ShardingUtil::EqualShardingSpecs(
-          *sharding,
-          ShardingSpec{*xla_node->GetSharding(), xla_node->xla_shape()}));
+          *sharding, ShardingSpec{*xla_node->GetSharding(ir_value.index),
+                                  xla_node->xla_shape()}))
+          << "Sharding on tensor: "
+          << xla::HloSharding::FromProto(sharding->sharding)->ToString()
+          << ", sharding on IR: "
+          << xla::HloSharding::FromProto(*xla_node->GetSharding(ir_value.index))
+                 ->ToString();
     }
   }
   return sharding;
@@ -493,8 +508,7 @@ void XLATensor::SetTensor(at::Tensor tensor) {
 }
 
 void XLATensor::UpdateFromTensor(at::Tensor tensor, bool sync) {
-  torch::lazy::BackendDevice device =
-      UseVirtualDevice() ? ParseDeviceString("SPMD:0") : GetDevice();
+  torch::lazy::BackendDevice device = GetDevice();
   if (sync) {
     at::Tensor typed_tensor =
         torch::lazy::CopyTensor(tensor, dtype(), /*copy=*/false);

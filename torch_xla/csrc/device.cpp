@@ -21,11 +21,17 @@ std::string XlaDeviceTypeToString(XlaDeviceType hw_type) {
       return "TPU";
     case XlaDeviceType::XPU:
       return "XPU";
+    case XlaDeviceType::NEURON:
+      return "NEURON";
     case XlaDeviceType::SPMD:
       return "SPMD";
   }
   XLA_ERROR() << "Invalid device type";
 }
+
+// This is set when any device is initialized, so to prevent using non-virtual
+// device and virtual device together.
+static bool spmd_config_is_locked = false;
 
 }  // namespace
 
@@ -71,6 +77,9 @@ torch::lazy::BackendDevice ParseDeviceString(const std::string& device_spec) {
   } else if (device_spec_parts[0] == "XPU") {
     device_type->type =
         static_cast<std::underlying_type_t<XlaDeviceType>>(XlaDeviceType::XPU);
+  } else if (device_spec_parts[0] == "NEURON") {
+    device_type->type = static_cast<std::underlying_type_t<XlaDeviceType>>(
+        XlaDeviceType::NEURON);
   } else {
     XLA_ERROR() << "Invalid device specification: " << device_spec;
   }
@@ -113,8 +122,11 @@ bool ShouldUseVirtualDevice() {
 }
 
 bool UseVirtualDevice() {
+  spmd_config_is_locked = true;
   static bool use_virtual_device = ShouldUseVirtualDevice();
   return use_virtual_device;
 }
+
+bool GetLockSpmdConfig() { return spmd_config_is_locked; }
 
 }  // namespace torch_xla

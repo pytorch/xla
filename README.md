@@ -3,6 +3,10 @@
 <b>Current CI status:</b>  ![GitHub Actions
 status](https://github.com/pytorch/xla/actions/workflows/build_and_test.yml/badge.svg)
 
+Note: PyTorch/XLA r2.1 will be the last release with XRT available as a legacy
+runtime. Our main release build will not include XRT, but it will be available
+in a separate package.
+
 PyTorch/XLA is a Python package that uses the [XLA deep learning
 compiler](https://www.tensorflow.org/xla) to connect the [PyTorch deep learning
 framework](https://pytorch.org/) and [Cloud
@@ -24,12 +28,12 @@ started:
 To install PyTorch/XLA a new VM:
 
 ```
-pip install torch~=2.0.0 https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-2.0-cp38-cp38-linux_x86_64.whl
+pip install torch~=2.1.0 torch_xla[tpu]~=2.1.0 -f https://storage.googleapis.com/libtpu-releases/libtpu_releases.html
 ```
 
 To update your existing training loop, make the following changes:
 
-```
+```diff
 -import torch.multiprocessing as mp
 +import torch_xla.core.xla_model as xm
 +import torch_xla.distributed.parallel_loader as pl
@@ -64,12 +68,13 @@ To update your existing training loop, make the following changes:
 If you're using `DistributedDataParallel`, make the following changes:
 
 
-```
+```diff
  import torch.distributed as dist
 -import torch.multiprocessing as mp
 +import torch_xla.core.xla_model as xm
 +import torch_xla.distributed.parallel_loader as pl
 +import torch_xla.distributed.xla_multiprocessing as xmp
++import torch_xla.distributed.xla_backend
 
  def _mp_fn(rank, world_size):
    ...
@@ -78,7 +83,7 @@ If you're using `DistributedDataParallel`, make the following changes:
 -  os.environ['MASTER_PORT'] = '12355'
 -  dist.init_process_group("gloo", rank=rank, world_size=world_size)
 +  # Rank and world size are inferred from the XLA device runtime
-+  dist.init_process_group("xla", init_method='pjrt://')
++  dist.init_process_group("xla", init_method='xla://')
 +
 +  model.to(xm.xla_device())
 +  # `gradient_as_bucket_view=tpu` required for XLA
@@ -100,7 +105,6 @@ If you're using `DistributedDataParallel`, make the following changes:
 -  mp.spawn(_mp_fn, args=(), nprocs=world_size)
 +  xmp.spawn(_mp_fn, args=())
 ```
-
 
 Additional information on PyTorch/XLA, including a description of its semantics
 and functions, is available at [PyTorch.org](http://pytorch.org/xla/). See the
@@ -130,13 +134,22 @@ Our comprehensive user guides are available at:
 
 | Version | Cloud TPU VMs Wheel |
 | --- | ----------- |
-| 2.0 | `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-2.0-cp38-cp38-linux_x86_64.whl` |
+| 2.0 (Python 3.8) | `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-2.0-cp38-cp38-linux_x86_64.whl` |
+| nightly >= 2023/04/25 (Python 3.8) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-nightly-cp38-cp38-linux_x86_64.whl` |
+| nightly >= 2023/04/25 (Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-nightly-cp310-cp310-linux_x86_64.whl` |
+
+<details>
+    <summary>older versions</summary>
+
+| Version | Cloud TPU VMs Wheel |
+|---------|-------------------|
 | 1.13 | `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.13-cp38-cp38-linux_x86_64.whl` |
 | 1.12 | `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.12-cp38-cp38-linux_x86_64.whl` |
 | 1.11 | `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.11-cp38-cp38-linux_x86_64.whl` |
 | 1.10 | `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.10-cp38-cp38-linux_x86_64.whl` |
 | nightly <= 2023/04/25 |  `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-nightly-cp38-cp38-linux_x86_64.whl` |
-| nightly >= 2023/04/25| `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-nightly-cp38-cp38-linux_x86_64.whl` |
+
+</details>
 
 <br/>
 
@@ -157,8 +170,7 @@ wheels for `torch`, `torchvision`, and `torch_xla` at
 | 2.0 + CUDA 11.8 | `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/118/torch_xla-2.0-cp38-cp38-linux_x86_64.whl` |
 | 2.0 + CUDA 11.7 | `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/117/torch_xla-2.0-cp38-cp38-linux_x86_64.whl` |
 | 1.13 | `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/112/torch_xla-1.13-cp38-cp38-linux_x86_64.whl` |
-| nightly + CUDA 11.7 <= 2023/04/25| `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/117/torch_xla-nightly-cp38-cp38-linux_x86_64.whl` |
-| nightly + CUDA 11.7 >= 2023/04/25| `https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/11.7/torch_xla-nightly-cp38-cp38-linux_x86_64.whl` |
+| nightly + CUDA 12.0 >= 2023/06/27| `https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.0/torch_xla-nightly-cp38-cp38-linux_x86_64.whl` |
 | nightly + CUDA 11.8 <= 2023/04/25| `https://storage.googleapis.com/tpu-pytorch/wheels/cuda/118/torch_xla-nightly-cp38-cp38-linux_x86_64.whl` |
 | nightly + CUDA 11.8 >= 2023/04/25| `https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/11.8/torch_xla-nightly-cp38-cp38-linux_x86_64.whl` |
 
@@ -206,6 +218,13 @@ nightly at date(< 2023/04/25) | `gcr.io/tpu-pytorch/xla:nightly_3.8_tpuvm_YYYYMM
 
 <br/>
 
+| Version | GPU CUDA 12.0 + Python 3.8 Docker |
+| --- | ----------- |
+| nightly | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_cuda_12.0` |
+| nightly at date(>=2023/06/27) | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_cuda_12.0_YYYYMMDD` |
+
+<br/>
+
 | Version | GPU CUDA 11.8 + Python 3.8 Docker |
 | --- | ----------- |
 | 2.0 | `gcr.io/tpu-pytorch/xla:r2.0_3.8_cuda_11.8` |
@@ -218,9 +237,6 @@ nightly at date(< 2023/04/25) | `gcr.io/tpu-pytorch/xla:nightly_3.8_tpuvm_YYYYMM
 | Version | GPU CUDA 11.7 + Python 3.8 Docker |
 | --- | ----------- |
 | 2.0 | `gcr.io/tpu-pytorch/xla:r2.0_3.8_cuda_11.7` |
-| nightly | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_cuda_11.7` |
-| nightly at date(>=2023/04/25) | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_cuda_11.7_YYYYMMDD` |
-| nightly at date(<2023/04/25) | `gcr.io/tpu-pytorch/xla:nightly_3.8_cuda_11.7_YYYYMMDD` |
 
 <br/>
 

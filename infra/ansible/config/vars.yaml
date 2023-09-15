@@ -1,12 +1,14 @@
 # Used for fetching cuda from the right repo, see apt.yaml.
-cuda_repo: ubuntu1804
+cuda_repo: debian11
 cuda_version: "11.8"
 # Used for fetching clang from the right repo, see apt.yaml.
-llvm_debian_repo: buster
-clang_version: 10
+llvm_debian_repo: bullseye
+clang_version: 17
 # PyTorch and PyTorch/XLA wheel versions.
 package_version: 2.1.0
 # If set to true, wheels will be renamed to $WHEEL_NAME-nightly-cp38-cp38-linux_x86_64.whl.
 nightly_release: false
 # Whether to disable XRT during build
 disable_xrt: 0
+# Whether to preinstall libtpu in the PyTorch/XLA wheel. Ignored for GPU build.
+bundle_libtpu: 1

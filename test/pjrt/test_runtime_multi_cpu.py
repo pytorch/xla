@@ -4,6 +4,7 @@ import queue
 from absl.testing import absltest, parameterized
 
 import torch
+import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.distributed.xla_multiprocessing as xmp
@@ -125,6 +126,23 @@ class TestExperimentalPjrtMultiCpu(parameterized.TestCase):
     files = os.listdir(tmpdir)
     for i in range(4):
       self.assertIn(f'save.hlo.{i}', files)
+
+  @staticmethod
+  def _all_reduce_hlo():
+    ones = torch.ones((3, 3), device=xm.xla_device())
+    xm.mark_step()
+    reduced = xm.all_reduce(xm.REDUCE_SUM, ones)
+
+    return torch_xla._XLAC._get_xla_tensors_hlo([reduced])
+
+  def test_all_reduce_no_op_with_one_replica(self):
+    # Check that this normally produces an all-reduce
+    results = pjrt.run_multiprocess(self._all_reduce_hlo)
+    self.assertIn('all-reduce', results[0])
+
+    os.environ['CPU_NUM_DEVICES'] = '1'
+    results = pjrt.run_multiprocess(self._all_reduce_hlo)
+    self.assertNotIn('all-reduce', results[0])
 
 
 if __name__ == '__main__':

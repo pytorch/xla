@@ -468,8 +468,8 @@ at::Tensor XLANativeFunctions::_copy_from(const at::Tensor& self,
     static bool sync_update =
         runtime::sys_util::GetEnvBool("XLA_TENSOR_UPDATE_SYNC", true) &&
         !UseVirtualDevice();
-    XLA_CHECK(dst_tensor);
     dst_tensor->UpdateFromTensor(self, /*sync=*/sync_update);
+    XLA_CHECK(dst_tensor);
   } else if (!dst_tensor) {
     at::Tensor tensor = self_tensor->ToTensor(/*detached=*/true);
     at::Tensor typed_tensor =
@@ -2400,7 +2400,8 @@ void XLANativeFunctions::_propagate_xla_data(const at::Tensor& input,
 
   // 2) Aid SPMD.
   if (input_tensor->sharding_spec()) {
-    output_tensor->SetShardingSpec(*(input_tensor->sharding_spec()));
+    tensor_methods::custom_sharding_(output_tensor,
+                                     input_tensor->sharding_spec());
   }
 }
 

@@ -26,7 +26,7 @@ def _mp_fn(index):
       sys.exit(1)
 
     compiled_all_gather = torch.compile(
-        all_gather, backend='torchxla_trace_once', fullgraph=True)
+        all_gather, backend='openxla', fullgraph=True)
     ordinal_tensor = torch.tensor([index], dtype=torch.float).to(device)
     result = compiled_all_gather(ordinal_tensor, dim=0)
 

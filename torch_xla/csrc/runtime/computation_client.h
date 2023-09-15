@@ -53,6 +53,10 @@ class ComputationClient {
 
     virtual std::string ToString() const = 0;
 
+    virtual bool HasSharding() const = 0;
+
+    virtual xla::OpSharding GetSharding() const = 0;
+
    private:
     std::string device_;
     xla::Shape shape_;
@@ -140,13 +144,16 @@ class ComputationClient {
                     std::vector<std::string> devices,
                     const xla::Shape* output_shape,
                     bool parameter_is_tupled_arguments = false,
-                    bool is_sharded = false)
+                    bool is_sharded = false,
+                    bool allow_spmd_sharding_propagation_to_output = true)
         : computation(std::move(computation)),
           compilation_device(std::move(compilation_device)),
           devices(std::move(devices)),
           output_shape(output_shape),
           parameter_is_tupled_arguments(parameter_is_tupled_arguments),
-          is_sharded(is_sharded) {}
+          is_sharded(is_sharded),
+          allow_spmd_sharding_propagation_to_output(
+              allow_spmd_sharding_propagation_to_output) {}
 
     xla::XlaComputation computation;
     std::string compilation_device;
@@ -154,6 +161,7 @@ class ComputationClient {
     const xla::Shape* output_shape = nullptr;
     bool parameter_is_tupled_arguments;
     bool is_sharded;
+    bool allow_spmd_sharding_propagation_to_output;
   };
 
   struct ExecuteComputationOptions : public ClientExecuteOptions {};
@@ -214,6 +222,9 @@ class ComputationClient {
   // retrieve the shards. If other data type is passed, it returns the input
   // wrapped inside a vector.
   virtual std::vector<DataPtr> GetDataShards(DataPtr data) = 0;
+
+  // Returns data shard at a given index.
+  virtual DataPtr GetDataShard(DataPtr data, size_t index) = 0;
 
   // Returns wrapped data shards as PjRtShardedData.
   virtual DataPtr WrapDataShards(const std::vector<DataPtr>& shards,

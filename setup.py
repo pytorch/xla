@@ -273,8 +273,9 @@ class BuildBazelExtension(command.build_ext.build_ext):
       if _check_env_flag('BAZEL_REMOTE_CACHE'):
         bazel_argv.append('--config=remote_cache')
     if CACHE_SILO_NAME:
-      bazel_argv.append('--remote_default_exec_properties=cache-silo-key=%s' %
-                        CACHE_SILO_NAME)
+      bazel_argv.append(
+          '--remote_default_exec_properties=cache-silo-key=%s-xrt' %
+          CACHE_SILO_NAME)
 
     if _check_env_flag('BUILD_CPP_TESTS', default='0'):
       bazel_argv.append('//test/cpp:all')
@@ -313,15 +314,37 @@ class Develop(develop.develop):
     super().run()
 
 
+# Read in README.md for our long_description
+cwd = os.path.dirname(os.path.abspath(__file__))
+with open(os.path.join(cwd, "README.md"), encoding="utf-8") as f:
+  long_description = f.read()
+
 setup(
     name=os.environ.get('TORCH_XLA_PACKAGE_NAME', 'torch_xla'),
     version=version,
     description='XLA bridge for PyTorch',
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     url='https://github.com/pytorch/xla',
     author='PyTorch/XLA Dev Team',
     author_email='pytorch-xla@googlegroups.com',
-    # Exclude the build files.
-    packages=find_packages(exclude=['build']),
+    classifiers=[
+        "Development Status :: 5 - Production/Stable",
+        "Intended Audience :: Developers",
+        "Intended Audience :: Education",
+        "Intended Audience :: Science/Research",
+        "License :: OSI Approved :: BSD License",
+        "Topic :: Scientific/Engineering",
+        "Topic :: Scientific/Engineering :: Mathematics",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
+        "Topic :: Software Development",
+        "Topic :: Software Development :: Libraries",
+        "Topic :: Software Development :: Libraries :: Python Modules",
+        "Programming Language :: C++",
+        "Programming Language :: Python :: 3",
+    ],
+    python_requires=">=3.8.0",
+    packages=find_packages(include=['torch_xla*']),
     ext_modules=[
         BazelExtension('//:_XLAC.so'),
     ],
@@ -333,14 +356,16 @@ setup(
     package_data={
         'torch_xla': ['lib/*.so*',],
     },
+    entry_points={
+        'console_scripts': [
+            'stablehlo-to-saved-model = torch_xla.tf_saved_model_integration:main'
+        ]
+    },
     extras_require={
         # On Cloud TPU VM install with:
         # $ sudo pip3 install torch_xla[tpuvm] -f https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.11-cp38-cp38-linux_x86_64.whl
         'tpuvm': [f'libtpu-nightly @ {_libtpu_storage_path}'],
     },
-    data_files=[
-        'scripts/fixup_binary.py',
-    ],
     cmdclass={
         'build_ext': BuildBazelExtension,
         'clean': Clean,

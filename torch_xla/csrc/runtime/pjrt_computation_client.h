@@ -26,6 +26,8 @@ class PjRtComputationClient : public ComputationClient {
 
   std::vector<DataPtr> GetDataShards(DataPtr data) override;
 
+  DataPtr GetDataShard(DataPtr data, size_t index) override;
+
   DataPtr WrapDataShards(const std::vector<DataPtr>& shards, std::string device,
                          xla::Shape shape, xla::OpSharding sharding) override;
 
@@ -173,6 +175,14 @@ class PjRtComputationClient : public ComputationClient {
       return buffer != nullptr && !buffer->IsDeleted();
     };
 
+    bool HasSharding() const override { return false; }
+
+    xla::OpSharding GetSharding() const override {
+      XLA_CHECK(false) << "GetSharding should not be called on PjRtData, check "
+                          "HasSharding first";
+      return xla::OpSharding();
+    }
+
     std::string ToString() const override {
       std::stringstream ss;
       ss << "XLAData: \n";
@@ -236,7 +246,9 @@ class PjRtComputationClient : public ComputationClient {
       return ss.str();
     }
 
-    xla::OpSharding GetSharding() { return sharding; }
+    bool HasSharding() const override { return true; }
+
+    xla::OpSharding GetSharding() const override { return sharding; }
 
     std::vector<std::shared_ptr<PjRtData>> shards;
     xla::OpSharding sharding;
