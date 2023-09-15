@@ -24,20 +24,22 @@ class autocast(torch.amp.autocast_mode.autocast):
     self._enabled = enabled
     self._xla_device = xm.xla_device_hw(device)
     if self._xla_device == 'GPU':
-      # TODO(yeounoh) support torch.bfloat16 in XLA:GPU for eligible HW
+      backend = 'cuda'
       if dtype is None:
         dtype = torch.float16
-      if dtype == torch.bfloat16 and not torch.cuda.is_available():
-        error_message = "In XLA:GPU autocast, bfloat16 is currently not supported.\n"
-        error_message += (
-            "It is treated as float16, which is the default cuda autocast dtype."
-        )
-        warnings.warn(error_message)
-        # This has been the default behavior for XLA:GPU, since r2.0
-        dtype = torch.float16
+      elif dtype == torch.bfloat16:
+        if self._is_bf16_supported() and not torch.cuda.is_avaliable():
+          # XLA:GPU with bfloat16 should run on `xla` backend
+          # unless torch.autocast is compiled with cuda.
+          backend = 'xla'
+        else:
+          # This has been the default behavior for unsupported bfloat16 dtype
+          dtype = torch.float16
+          error_message = "In XLA:GPU autocast, but bfloat16 is not supported on this HW.\n"
+          error_message += ("Using the default cuda autocast dtype float16.")
       self._dtype = dtype
       super().__init__(
-          "cuda",
+          backend,
           enabled=enabled,
           dtype=self._dtype,
           cache_enabled=cache_enabled)
@@ -81,3 +83,10 @@ class autocast(torch.amp.autocast_mode.autocast):
 
   def __call__(self, func):
     return super().__call__(func)
+
+  def _is_bf16_supported(self):
+    try:
+      torch.tensor([1.], dtype=torch.bfloat16, device=xm.xla_device())
+      return True
+    except Exception as e:
+      return False
