@@ -1,3 +1,5 @@
+# Partial backport of 6308dba2903e78961ac4122f361bc91b09f36891. Remove in next
+# pin update.
 diff --git a/xla/pjrt/pjrt_c_api_client.cc b/xla/pjrt/pjrt_c_api_client.cc
 index ef0b6686c..c0341e81e 100644
 --- a/xla/pjrt/pjrt_c_api_client.cc
