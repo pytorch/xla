@@ -6,6 +6,7 @@ import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
 from torch_xla import runtime as xr
+from torch_xla.amp import autocast
 
 import test_xla_sharding_base
 
@@ -110,6 +111,25 @@ class BasicRuntimeAPITest(test_xla_sharding_base.XlaShardingTest):
     self.assertFalse(xr.is_spmd())
     # reset for other test cases
     os.environ["XLA_USE_SPMD"] = "1"
+
+
+class BasicAutocastAPITest(test_xla_sharding_base.XlaShardingTest):
+
+  @classmethod
+  def setUpClass(cls):
+    xr.use_spmd()
+    super().setUpClass()
+
+  @unittest.skipIf(xr.device_type() not in ['GPU', 'TPU'],
+                   f"TPU/GPU autocast test.")
+  def test_xla_autocast_api(self):
+    device = xm.xla_device()
+    t1 = torch.ones([2, 3], device=device, dtype=torch.float32)
+    t2 = torch.ones([3, 2], device=device, dtype=torch.float32)
+    with autocast(device, dtype=torch.bfloat16):
+      t3 = torch.matmul(t1, t2)
+    expected_dtype = torch.bfloat16 if xr.is_bf16_supported() else torch.float16
+    self.assertTrue(t3.dtype == expected_dtype)
 
 
 if __name__ == '__main__':
