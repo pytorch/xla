@@ -44,7 +44,7 @@ jobs:
     with:
       docker-image: ${{ needs.build.outputs.docker-image }}
       runner: linux.8xlarge.nvidia.gpu
-      timeout-minutes: 240
+      timeout-minutes: 300
       disable-xrt: 1
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
