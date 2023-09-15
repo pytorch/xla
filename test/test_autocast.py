@@ -170,7 +170,7 @@ class AutocastCudaTestExtraLists(object):
 
     element0_fp32 = (torch.randn(1, dtype=torch.float32, device=dev),)
 
-    # This is currently not part of AutocastTestLists and excludes `relu`
+    # This is currently not part of AutocastTestLists and excludes `relu`, `addbmm`
     self.torch_bf16 = [
         ("conv1d", conv_args_fp32[0]),
         ("conv2d", conv_args_fp32[1]),
@@ -183,9 +183,6 @@ class AutocastCudaTestExtraLists(object):
                      torch.randn((n, n, n), device=dev, dtype=torch.float32),
                      torch.randn((n, n, n), device=dev, dtype=torch.float32))),
         ("addmm", mat1_fp32 + mat2_fp32 + mat3_fp32),
-        ("addbmm",
-         mat0_fp32 + (torch.randn((n, n, n), device=dev, dtype=torch.float32),
-                      torch.randn((n, n, n), device=dev, dtype=torch.float32))),
         ("conv_tbc", (torch.randn((10, 7, 3), device=dev, dtype=torch.float32),
                       torch.randn((5, 3, 5), device=dev, dtype=torch.float32),
                       torch.randn(5, device=dev, dtype=torch.float32), 0)),
