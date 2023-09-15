@@ -69,7 +69,7 @@ class StableHLOGraphModule:
     ]
     res = torch_xla._XLAC._run_stablehlo(func.bytecode, call_args)
     if func.meta.output_pytree_spec is not None:
-      out_spec = pytree.str_to_pytree(func.meta.output_pytree_spec)
+      out_spec = pytree.treespec_loads(func.meta.output_pytree_spec)
       res = pytree.tree_unflatten(res, out_spec)
     return res
 
@@ -211,32 +211,37 @@ class XLAExportInterpreter(torch.fx.Interpreter):
     return super().call_function(target, args, new_kwargs)
 
 
+def _extract_input_args(exported_model, options):
+  if options.override_tracing_arguments is not None:
+    args = options.override_tracing_arguments
+    kwargs = options.override_tracing_kwargs
+  elif hasattr(exported_model, 'example_inputs'):
+    args, kwargs = exported_model.example_inputs
+  else:
+    raise ValueError(
+        'No argument is provided, please make sure that ExportedProgram.example_inputs() has content'
+    )
+
+  if (in_spec := exported_model.call_spec.in_spec) is not None:
+    if (in_spec.type == tuple and len(in_spec.children_specs) == 2 and
+        in_spec.children_specs[0].type == tuple and
+        in_spec.children_specs[1].type == dict):
+      # NOTE: this is the case where in_spec is for both args and kwargs
+      return fx_pytree.tree_flatten_spec((args, kwargs), in_spec)
+    else:
+      return fx_pytree.tree_flatten_spec(args, in_spec)
+  else:
+    return copy.deepcopy(args)
+
+
 def _exported_program_to_stablehlo_bundle(exported_model,
                                           options) -> StableHLOModelBundle:
   if options is None:
     options = StableHLOExportOptions()
 
-  if options.override_tracing_arguments is not None:
-    args = options.override_tracing_arguments
-  else:
-    if hasattr(exported_model, 'example_inputs'):
-      args, _ = getattr(exported_model, 'example_inputs', None)
-    elif hasattr(exported_model, 'original_traced_arguments'):
-      args = getattr(exported_model, 'original_traced_arguments', None)
-
-  if args is None:
-    raise ValueError(
-        'No argument is provided, please set tracing argument in options.override_tracing_arguments'
-    )
+  input_args = _extract_input_args(exported_model, options)
 
   device = xm.xla_device()
-
-  if exported_model.call_spec.in_spec is not None:
-    input_args = fx_pytree.tree_flatten_spec(args,
-                                             exported_model.call_spec.in_spec)
-  else:
-    input_args = copy.deepcopy(args)
-
   input_args = pytree.tree_map_only(torch.Tensor, lambda x: x.to(device=device),
                                     input_args)
 
@@ -325,8 +330,8 @@ def _exported_program_to_stablehlo_bundle(exported_model,
       input_signature=input_signatures,
       output_signature=output_signature,
       input_locations=input_locations,
-      input_pytree_spec=pytree.pytree_to_str(exported_model.call_spec.in_spec),
-      output_pytree_spec=pytree.pytree_to_str(
+      input_pytree_spec=pytree.treespec_dumps(exported_model.call_spec.in_spec),
+      output_pytree_spec=pytree.treespec_dumps(
           exported_model.call_spec.out_spec),
   )
   bundle = StableHLOModelBundle(
@@ -412,6 +417,7 @@ def _load_program_bundle(stablehlo_dir: os.PathLike) -> StableHLOModelBundle:
 class StableHLOExportOptions:
   include_human_readable_text: bool = True
   override_tracing_arguments: Optional[Tuple[Any]] = None
+  override_tracing_kwargs: Optional[Mapping[str, Any]] = None
 
 
 def save_as_stablehlo(exported_model: 'ExportedProgram',
