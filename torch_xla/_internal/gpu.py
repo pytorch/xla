@@ -27,7 +27,7 @@ def initialize_distributed_runtime(global_world_size: int) -> None:
   """
   if global_world_size > 1:
     # TODO(jonbolin): For multi-host, this needs to be consistent across hosts
-    os.environ.setdefault(xenv.PJRT_DIST_SERVICE_ADDR, '127.0.0.1:8547')
+    # os.environ.setdefault(xenv.PJRT_DIST_SERVICE_ADDR, '127.0.0.1:8547')
     global distributed_service
     if distributed_service is None:
       num_nodes = global_world_size

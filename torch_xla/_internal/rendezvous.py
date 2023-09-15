@@ -1,12 +1,13 @@
 import datetime
 import logging
 import threading
+import os
 
 import torch.distributed as dist
 from torch_xla.distributed import xla_backend
 from torch_xla import runtime as xr
 from torch_xla._internal import pjrt
-from torch_xla._internal import tpu
+from torch_xla._internal import tpu, gpu
 import torch_xla.utils.utils as xu
 
 _store = None
@@ -21,6 +22,15 @@ def pjrt_rendezvous_handler(url: str,
   if dist.is_torchelastic_launched():
     local_world_size = xu.getenv_as('LOCAL_WORLD_SIZE', int)
     local_rank = xu.getenv_as('LOCAL_RANK', int)
+    print('xw32 pjrt_backend._pjrt_rendezvous_handler calling pjrt.initialize_multiprocess')
+
+    # initialize dist server for GPU
+    global_world_size = xu.getenv_as('WORLD_SIZE', int)
+    global_rank = xu.getenv_as('RANK', int)
+    print('xw32 pjrt_backend._pjrt_rendezvous_handler: global_world_size=', global_world_size, ', global_rank=', global_rank)
+    if xr.device_type() == 'GPU' and global_rank == 0:
+      gpu.initialize_distributed_runtime(global_world_size)
+    # Need to create the dist server here.
     pjrt.initialize_multiprocess(local_rank, local_world_size)
 
   master_ip = xu.getenv_as('MASTER_ADDR', str)
