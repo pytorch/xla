@@ -368,7 +368,6 @@ def extract_internal(xla_model: torch.fx.GraphModule):
     if len(args_and_out) == 0:
       return ()
 
-    assert len(args) > 0  # can not handle no args case for now
     graph_input = graph_input_matcher(args)
     start_ts = time.time()
     res = torch_xla._XLAC._run_cached_graph(graph_hash, graph_input)
