@@ -57,8 +57,8 @@ versioned_builds = [
   },
   {
     git_tag         = "v2.1.0"
-    pytorch_git_rev = "v2.1.0-rc2"
-    package_version = "2.1.0rc2+libtpu"
+    pytorch_git_rev = "v2.1.0-rc5"
+    package_version = "2.1.0rc5+libtpu"
     accelerator     = "tpu"
     python_version  = "3.10"
     bundle_libtpu   = "1"
