@@ -305,6 +305,13 @@ class TestAutocastCuda(TestAutocastBase):
     self.autocast_lists = AutocastTestLists(torch.device(xm.xla_device()))
     self.autocast_unsupported_lists = AutocastCudaTestUnsupportedLists()
 
+    try:
+      torch.tensor([1.], dtype=torch.bfloat16, device=xm.xla_device())
+      self.is_bf16_supported = True
+    except Exception as e:
+      self.is_bf16_supported = False
+
+
   def test_autocast_nn_fp16(self):
     with torch.backends.cudnn.flags(enabled=True, deterministic=True):
       for op, args in self.get_autocast_list('nn_fp16'):
@@ -337,10 +344,12 @@ class TestAutocastCuda(TestAutocastBase):
   def test_autocast_torch_bf16(self):
     for op_with_args in self.get_autocast_list('torch_bf16'):
       op, args, maybe_kwargs = self.args_maybe_kwargs(op_with_args)
-      # TODO(yeounoh) update the tests when we support bfloat16 for XLA:GPU
-      self._run_autocast_outofplace(
-          op, args, torch.float16, add_kwargs=maybe_kwargs)
-
+      if self.is_bf16_supported:
+        self._run_autocast_outofplace(
+            op, args, torch.bfloat16, add_kwargs=maybe_kwargs)
+      else:
+        self._run_autocast_outofplace(
+            op, args, torch.float16, add_kwargs=maybe_kwargs)
 
   def test_autocast_torch_need_autocast_promote(self):
     for op, args in self.get_autocast_list('torch_need_autocast_promote'):

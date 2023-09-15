@@ -112,6 +112,19 @@ class BasicRuntimeAPITest(test_xla_sharding_base.XlaShardingTest):
     # reset for other test cases
     os.environ["XLA_USE_SPMD"] = "1"
 
+
+class BasicAutocastAPITest(test_xla_sharding_base.XlaShardingTest):
+
+  @classmethod
+  def setUpClass(cls):
+    try:
+      torch.tensor([1.], dtype=torch.bfloat16, device=xm.xla_device())
+      cls.is_bf16_supported = True
+    except Exception as e:
+      cls.is_bf16_supported = False
+    xr.use_spmd()
+    super().setUpClass()
+
   @unittest.skipIf(xr.device_type() not in ['GPU', 'TPU'], f"TPU/GPU autocast test.")
   def test_xla_autocast_api(self):
     device = xm.xla_device()
@@ -119,12 +132,8 @@ class BasicRuntimeAPITest(test_xla_sharding_base.XlaShardingTest):
     t2 = torch.ones([3,2], device=device, dtype=torch.float32)
     with autocast(device, dtype=torch.bfloat16):
       t3 = torch.matmul(t1, t2)
-
-    if xm.get_xla_supported_devices("GPU"):
-      # TODO(yeounoh) update when we support bfloat16 for XLA:GPU
-      self.assertTrue(t3.dtype == torch.float16)
-    elif xm.get_xla_supported_devices("TPU"):
-      self.assertTrue(t3.dtype == torch.bfloat16)
+    expected_dtype = torch.bfloat16 if self.is_bf16_supported else torch.float16
+    self.assertTrue(t3.dtype == expected_dtype)
 
 
 if __name__ == '__main__':
