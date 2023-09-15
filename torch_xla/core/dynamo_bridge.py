@@ -1,6 +1,7 @@
 import copy
 import dataclasses
 import operator
+import warnings
 
 import functools
 import itertools
@@ -456,8 +457,10 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
 
   for xla_arg in xla_args:
     if xla_arg.device.type != 'xla':
-      raise RuntimeError(
-          'For openxla dynamo backend, please move all tensors to XLA device')
+      warnings.warn(
+          "Found tensor with shape " + str(xla_arg.size()) + " on " +
+          str(xla_arg.device) +
+          ". Please move all tensors to xla device to execute on XLA device.")
 
   cloned_args = [
       torch.clone(xla_arg) if isinstance(xla_arg, torch.Tensor) else xla_arg
