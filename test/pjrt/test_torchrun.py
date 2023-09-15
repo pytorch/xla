@@ -9,6 +9,8 @@ import torch_xla.utils.utils as xu
 
 
 class TestTorchrun(absltest.TestCase):
+  # TODO(xw32): for the moment, add a teardown to shutdown the 
+  # dist server. Need to find a better place tho.
 
   def test_all_gather(self):
     print('xw32 test_all_gather. Running dist.init_process_group.')
