@@ -273,7 +273,7 @@ class BuildBazelExtension(command.build_ext.build_ext):
       if _check_env_flag('BAZEL_REMOTE_CACHE'):
         bazel_argv.append('--config=remote_cache')
     if CACHE_SILO_NAME:
-      bazel_argv.append('--remote_default_exec_properties=cache-silo-key=%s' %
+      bazel_argv.append('--remote_default_exec_properties=cache-silo-key=%s-xrt' %
                         CACHE_SILO_NAME)
 
     if _check_env_flag('BUILD_CPP_TESTS', default='0'):
