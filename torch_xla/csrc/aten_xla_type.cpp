@@ -1171,10 +1171,10 @@ at::Tensor XLANativeFunctions::einsum(c10::string_view equation,
       cleansed_equation.end());
 
   std::vector<XLATensorPtr> xla_tensors = bridge::TryGetXlaTensors(tensors);
-  bool all_xla_tensor_is_valid = true;
+  bool all_xla_tensors_are_valid = true;
   for (const XLATensorPtr xla_tensor : xla_tensors) {
     if (!xla_tensor) {
-      all_xla_tensor_is_valid = false;
+      all_xla_tensors_are_valid = false;
       break;
     }
   }
@@ -1182,7 +1182,7 @@ at::Tensor XLANativeFunctions::einsum(c10::string_view equation,
   TORCH_LAZY_FN_COUNTER("xla::");
   // Einsum operations with more than 2 operands, like bilinear operations, are
   // not currently supported in XLA
-  if (tensors.size() < 1 || tensors.size() > 2 || !all_xla_tensor_is_valid ||
+  if (tensors.size() < 1 || tensors.size() > 2 || !all_xla_tensors_are_valid ||
       !EinsumUtilities::EquationIsValid(cleansed_equation) ||
       TensorsAreOfType(xla_tensors, at::ScalarType::Long)) {
     TORCH_LAZY_COUNTER("EinsumFallback", 1);
