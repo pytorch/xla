@@ -186,8 +186,10 @@ class AutocastCudaTestExtraLists(object):
         ("bmm", (torch.randn((n, n, n), device=dev, dtype=torch.float32),
                  torch.randn((n, n, n), device=dev, dtype=torch.float32))),
         ("mm", mat0_fp32 + mat1_fp32),
-        ("matmul", torch.matmul(torch.ones([2,3], device=dev, dtype=torch.float32),
-                                torch.ones([3,2], device=dev, dtype=torch.float32))),
+        ("matmul",
+         torch.matmul(
+             torch.ones([2, 3], device=dev, dtype=torch.float32),
+             torch.ones([3, 2], device=dev, dtype=torch.float32))),
         ("baddbmm", (torch.randn((n, n, n), device=dev, dtype=torch.float32),
                      torch.randn((n, n, n), device=dev, dtype=torch.float32),
                      torch.randn((n, n, n), device=dev, dtype=torch.float32))),
@@ -415,7 +417,11 @@ class TestAutocastCuda(TestAutocastBase):
     for op_with_args in bf16_test_list:
       op, args, maybe_kwargs = self.args_maybe_kwargs(op_with_args)
       self._run_autocast_outofplace(
-          op, args, torch.bfloat16, add_kwargs=maybe_kwargs, autocast_dtype=torch.bfloat16)
+          op,
+          args,
+          torch.bfloat16,
+          add_kwargs=maybe_kwargs,
+          autocast_dtype=torch.bfloat16)
 
 =======
 >>>>>>> 08f271d2e (Ensure that xla autocast is properly enabled for GPU and does not crash when torch cuda is not available.)
