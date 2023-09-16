@@ -156,6 +156,22 @@ class DynamoInferenceBasicTest(unittest.TestCase):
           xla_index, xla_copy_tensor, xla_input_tensor, op_name=in_place_op)
       self.assertTrue(torch.allclose(res_cpu, res_xla_dynamo.cpu()))
 
+  def test_einsum(self):
+    # einsum currently does not have meta function to compute the shape hence
+    # will fallback to XLA with FakeTensor as input to infer the output shape.
+    def einsum_mm(a, b):
+      return torch.einsum('ijkl,ijlm->ijkm', a, b)
+
+    device = xm.xla_device()
+    a = torch.randn(4, 4, 4, 4).to(xm.xla_device())
+    b = torch.randn(4, 4, 4, 4).to(xm.xla_device())
+    xm.mark_step()
+
+    dynamo_einsum_mm = torch.compile(einsum_mm, backend="openxla")
+    res_xla_dynamo = dynamo_einsum_mm(a, b)
+    res_cpu = einsum_mm(a.cpu(), b.cpu())
+    self.assertTrue(torch.allclose(res_cpu, res_xla_dynamo.cpu()))
+
   def test_simple_model_with_different_input_shape(self):
     met.clear_counters()
     device = xm.xla_device()
