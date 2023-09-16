@@ -74,23 +74,23 @@ class autocast(torch.amp.autocast_mode.autocast):
       self.prev = torch.is_autocast_xla_enabled()  # type: ignore[attr-defined]
       self.prev_dtype = torch.get_autocast_xla_dtype(
       )  # type: ignore[attr-defined]
-      torch.set_autocast_xla_enabled(self._enabled)
-      torch.set_autocast_xla_dtype(self._dtype)
-
       if self._cuda_bfloat16:
         torch.set_autocast_enabled(self._enabled)
         torch.set_autocast_gpu_dtype(self._dtype)
+      else:
+        torch.set_autocast_xla_enabled(self._enabled)
+        torch.set_autocast_xla_dtype(self._dtype)
     return super().__enter__()
 
   def __exit__(self, exc_type: Any, exc_val: Any,
                exc_tb: Any):  # type: ignore[override]
     if self._xla_device == 'GPU':
-      torch.set_autocast_xla_enabled(self.prev)
-      torch.set_autocast_xla_dtype(self.prev_dtype)
-
       if self._cuda_bfloat16:
         torch.set_autocast_enabled(self.prev)
         torch.set_autocast_gpu_dtype(self.prev_dtype)
+      else:
+        torch.set_autocast_xla_enabled(self.prev)
+        torch.set_autocast_xla_dtype(self.prev_dtype)
     return super().__exit__(exc_type, exc_val, exc_tb)
 
   def __call__(self, func):
