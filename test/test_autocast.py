@@ -170,15 +170,7 @@ class AutocastCudaTestExtraLists(object):
 
     element0_fp32 = (torch.randn(1, dtype=torch.float32, device=dev),)
 
-<<<<<<< HEAD
-<<<<<<< HEAD
     # This is currently not part of AutocastTestLists and excludes `relu`, `addbmm`
-=======
-    # This is currently not part of AutocastTestLists and excludes `relu`
->>>>>>> 4127fceb6 (linter fix)
-=======
-    # This is currently not part of AutocastTestLists and excludes `relu`, `addbmm`
->>>>>>> 9f18b2b01 (exclude unsupported test cases)
     self.torch_bf16 = [
         ("conv1d", conv_args_fp32[0]),
         ("conv2d", conv_args_fp32[1]),
@@ -194,15 +186,6 @@ class AutocastCudaTestExtraLists(object):
                      torch.randn((n, n, n), device=dev, dtype=torch.float32),
                      torch.randn((n, n, n), device=dev, dtype=torch.float32))),
         ("addmm", mat1_fp32 + mat2_fp32 + mat3_fp32),
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        ("addbmm",
-         mat0_fp32 + (torch.randn((n, n, n), device=dev, dtype=torch.float32),
-                      torch.randn((n, n, n), device=dev, dtype=torch.float32))),
->>>>>>> 4127fceb6 (linter fix)
-=======
->>>>>>> 9f18b2b01 (exclude unsupported test cases)
         ("conv_tbc", (torch.randn((10, 7, 3), device=dev, dtype=torch.float32),
                       torch.randn((5, 3, 5), device=dev, dtype=torch.float32),
                       torch.randn(5, device=dev, dtype=torch.float32), 0)),
@@ -362,21 +345,11 @@ class TestAutocastBase(unittest.TestCase):
 class TestAutocastCuda(TestAutocastBase):
 
   def setUp(self):
-<<<<<<< HEAD
-<<<<<<< HEAD
     super(TestAutocastCuda, self).setUp()
     self.is_autocast_enabled = torch.is_autocast_xla_enabled
     self.autocast_lists = AutocastTestLists(torch.device(xm.xla_device()))
     self.autocast_lists_extra = AutocastCudaTestExtraLists(
         torch.device(xm.xla_device()))
-<<<<<<< HEAD
-=======
-    super(TestAutocastCuda, self).setUp()
-    self.is_autocast_enabled = torch.is_autocast_xla_enabled
-    self.autocast_lists = AutocastTestLists(torch.device(xm.xla_device()))
->>>>>>> 08f271d2e (Ensure that xla autocast is properly enabled for GPU and does not crash when torch cuda is not available.)
-=======
->>>>>>> 4127fceb6 (linter fix)
     self.autocast_unsupported_lists = AutocastCudaTestUnsupportedLists()
 
   def test_autocast_nn_fp16(self):
@@ -408,8 +381,6 @@ class TestAutocastCuda(TestAutocastBase):
       self._run_autocast_outofplace(
           op, args, torch.float32, add_kwargs=maybe_kwargs)
 
-<<<<<<< HEAD
-<<<<<<< HEAD
   def test_autocast_torch_bf16(self):
     bf16_test_list = [
         tp for tp in getattr(self.autocast_lists_extra, 'torch_bf16')
@@ -423,21 +394,6 @@ class TestAutocastCuda(TestAutocastBase):
           add_kwargs=maybe_kwargs,
           autocast_dtype=torch.bfloat16)
 
-=======
->>>>>>> 08f271d2e (Ensure that xla autocast is properly enabled for GPU and does not crash when torch cuda is not available.)
-=======
-  def test_autocast_torch_bf16(self):
-    bf16_test_list = [
-        tp for tp in getattr(self.autocast_lists_extra, 'torch_bf16')
-    ]
-    for op_with_args in bf16_test_list:
-      op, args, maybe_kwargs = self.args_maybe_kwargs(op_with_args)
-      # Expects float16, following the torch GPU autocast policy:
-      # https://github.com/pytorch/pytorch/blob/main/aten/src/ATen/autocast_mode.cpp
-      self._run_autocast_outofplace(
-          op, args, torch.float16, add_kwargs=maybe_kwargs)
-
->>>>>>> 344644204 (Add tests)
   def test_autocast_torch_need_autocast_promote(self):
     for op, args in self.get_autocast_list('torch_need_autocast_promote'):
       self._run_autocast_outofplace(op, args, torch.float32)
@@ -469,12 +425,6 @@ class TestAutocastTPU(TestAutocastBase):
 
   def setUp(self):
     super(TestAutocastTPU, self).setUp()
-<<<<<<< HEAD
-=======
-    super(TestAutocastXLA, self).setUp()
->>>>>>> ac04616eb (XLA autocast test for GPU and TPU)
-=======
->>>>>>> 08f271d2e (Ensure that xla autocast is properly enabled for GPU and does not crash when torch cuda is not available.)
     self.is_autocast_enabled = torch.is_autocast_xla_enabled
     self.autocast_lists = AutocastTPUTestLists(torch.device(xm.xla_device()))
 
