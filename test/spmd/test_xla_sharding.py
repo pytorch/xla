@@ -53,7 +53,7 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     debug_info = torch_xla._XLAC._get_xla_tensor_debug_info(xst1.global_tensor)
     self.assertIn('XLAShardedData', debug_info)
     self.assertIn('Data Device: SPMD:0', debug_info)
-    self.assertIn('OpSharding:', debug_info)
+    self.assertIn('OpSharding: {:', debug_info)
     self.assertIn('NumShards: %s' % (self.n_devices), debug_info)
 
   def test_xla_shards(self):
