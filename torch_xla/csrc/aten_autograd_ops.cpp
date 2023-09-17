@@ -3,6 +3,7 @@
 #include <ATen/Operators.h>
 #include <ATen/RedispatchFunctions.h>
 #include <ATen/native/CPUFallback.h>
+#include <c10/core/impl/PythonDispatcherTLS.h>
 
 #include "torch_xla/csrc/aten_cpu_fallback.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
@@ -95,9 +96,16 @@ torch::Tensor MaxPool2dAutogradFunction::forward(
   auto mask = c10::DispatchKeySet({
       c10::DispatchKey::XLA,
       c10::DispatchKey::Python,
+      c10::DispatchKey::PythonTLSSnapshot,
       c10::DispatchKey::Functionalize,
   });
   auto ks = self_keyset & mask;
+  // If python dispatcher is enabled, we need to hit it.
+  // This is a bit hacky, we should probably come up with
+  // a better way to do this (maybe don't redispatch?)
+  if (c10::impl::PythonDispatcherTLS::get_state()) {
+    ks = ks.add(c10::DispatchKey::PythonDispatcher);
+  }
   static auto op =
       c10::Dispatcher::singleton()
           .findSchemaOrThrow("xla::max_pool2d_forward", "")
@@ -138,9 +146,16 @@ torch::autograd::variable_list MaxPool2dAutogradFunction::backward(
   auto mask = c10::DispatchKeySet({
       c10::DispatchKey::XLA,
       c10::DispatchKey::Python,
+      c10::DispatchKey::PythonTLSSnapshot,
       c10::DispatchKey::Functionalize,
   });
   auto ks = self_keyset & mask;
+  // If python dispatcher is enabled, we need to hit it.
+  // This is a bit hacky, we should probably come up with
+  // a better way to do this (maybe don't redispatch?)
+  if (c10::impl::PythonDispatcherTLS::get_state()) {
+    ks = ks.add(c10::DispatchKey::PythonDispatcher);
+  }
   grad = op.redispatch(ks, grad_output[0], self, kernel_size, stride, padding,
                        ceil_mode);
 
