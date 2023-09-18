@@ -27,14 +27,19 @@ nightly_builds = [
 ]
 
 # TODO: Remove this after the 2.1 release
-xrt_nightly_builds = [
+xrt_versioned_builds = [
   {
     accelerator    = "tpu"
     python_version = "3.10"
+    pytorch_git_rev = "v2.1.0-rc5"
+    package_version = "2.1.0rc5+xrt"
   },
   {
     accelerator  = "cuda"
+    python_version = "3.10"
     cuda_version = "12.0"
+    pytorch_git_rev = "v2.1.0-rc5"
+    package_version = "2.1.0rc5+xrt"
   },
 ]
 
