@@ -75,6 +75,8 @@ class autocast(torch.amp.autocast_mode.autocast):
       self.prev_dtype = torch.get_autocast_xla_dtype(
       )  # type: ignore[attr-defined]
       if self._xla_bfloat16:
+        # autocast_xla flags will be set by `torch.autocast` and we need to
+        # set autocast flags as we call into `torch.autocast` apis.
         torch.set_autocast_enabled(self._enabled)
         torch.set_autocast_gpu_dtype(self._dtype)
       else:
@@ -86,6 +88,8 @@ class autocast(torch.amp.autocast_mode.autocast):
                exc_tb: Any):  # type: ignore[override]
     if self._xla_device == 'GPU':
       if self._xla_bfloat16:
+        # autocast_xla flags will be set by `torch.autocast` and we need to
+        # set autocast flags as we call into `torch.autocast` apis.
         torch.set_autocast_enabled(self.prev)
         torch.set_autocast_gpu_dtype(self.prev_dtype)
       else:
