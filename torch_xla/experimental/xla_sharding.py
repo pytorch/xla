@@ -8,8 +8,9 @@ from torch_xla.experimental.xla_sharded_tensor import XLAShardedTensor, XLAShard
 import torch_xla.runtime as xr
 
 import numpy as np
+import functools
 import itertools
-from typing import Tuple, Union, List, Sequence, Any, Optional, Set, Dict
+from typing import Tuple, Union, List, Sequence, Any, Optional, Set
 from enum import IntEnum
 
 
@@ -45,7 +46,6 @@ class Mesh:
   device_ids: np.ndarray
   mesh_shape: Tuple[int, ...]
   axis_names: Tuple[str, ...]
-  _op_sharding_cache: Dict[Tuple, torch_xla._XLAC.OpSharding]
 
   def __init__(self,
                device_ids: Union[np.ndarray, List],
@@ -60,7 +60,6 @@ class Mesh:
     self.device_ids = device_ids
     self.mesh_shape = mesh_shape
     self.axis_names = axis_names
-    self._op_sharding_cache = {}
     assert all(d < self.size() for d in device_ids)
 
   def size(self):
@@ -81,26 +80,24 @@ class Mesh:
       return None
     return self.axis_names.index(name)
 
+  @functools.lru_cache(maxsize=None)
   def get_op_sharding(self,
                       partition_spec: Tuple) -> torch_xla._XLAC.OpSharding:
     """
     Return the OpSharding for the given partition spec. This is an expensive
     operation as the mesh grows, so the value is cached for reuse.
     """
-    if partition_spec not in self._op_sharding_cache:
-      tile_assignment = _get_tile_assignment(self, partition_spec)
-      if len(tile_assignment.shape) > len(partition_spec):
-        # Use partial replication for sharding a tensor over a higher-rank mesh
-        sharding_type = ShardingType.PARTIAL
-      else:
-        sharding_type = _get_sharding_type(partition_spec, self.size())
-      replicate_dims = {i for i, d in enumerate(partition_spec) if d is None}
-      group_assignment, replication_groups = _get_group_assignment(
-          sharding_type, tile_assignment, len(partition_spec), replicate_dims)
-      self._op_sharding_cache[partition_spec] = torch_xla._XLAC.OpSharding(
-          tile_assignment.tolist(), group_assignment, replication_groups,
-          int(sharding_type))
-    return self._op_sharding_cache[partition_spec]
+    tile_assignment = _get_tile_assignment(self, partition_spec)
+    if len(tile_assignment.shape) > len(partition_spec):
+      # Use partial replication for sharding a tensor over a higher-rank mesh
+      sharding_type = ShardingType.PARTIAL
+    else:
+      sharding_type = _get_sharding_type(partition_spec, self.size())
+    replicate_dims = {i for i, d in enumerate(partition_spec) if d is None}
+    group_assignment, replication_groups = _get_group_assignment(
+        sharding_type, tile_assignment, len(partition_spec), replicate_dims)
+    return torch_xla._XLAC.OpSharding(tile_assignment.tolist(), group_assignment,
+                                     replication_groups, int(sharding_type))
 
 
 # HybridDevice class has been inspired from jax's mesh_utils: https://github.com/google/jax/blob/fc5960f2b8b7a0ef74dbae4e27c5c08ff1564cff/jax/experimental/mesh_utils.py#L4
