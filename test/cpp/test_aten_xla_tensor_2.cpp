@@ -990,6 +990,44 @@ TEST_F(AtenXlaTensorTest, TestMeanInDimsKeepCast) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestStack) {
+  torch::Tensor a = torch::rand({4, 3, 4}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b = torch::rand({4, 3, 4}, torch::TensorOptions(torch::kFloat));
+  for (auto dim : {-3, -2, -1, 0, 1, 2}) {
+    torch::Tensor c = torch::stack({a, b}, dim);
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_a = CopyToDevice(a, device);
+      torch::Tensor xla_b = CopyToDevice(b, device);
+      torch::Tensor xla_c = torch::stack({xla_a, xla_b}, dim);
+      AllEqual(c, xla_c);
+    });
+  }
+}
+
+TEST_F(AtenXlaTensorTest, TestHstack) {
+  torch::Tensor a = torch::rand({4, 3, 4}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b = torch::rand({4, 3, 4}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor c = torch::hstack({a, b});
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = CopyToDevice(b, device);
+    torch::Tensor xla_c = torch::hstack({xla_a, xla_b});
+    AllEqual(c, xla_c);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestVstack) {
+  torch::Tensor a = torch::rand({4, 3, 4}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b = torch::rand({4, 3, 4}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor c = torch::vstack({a, b});
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = CopyToDevice(b, device);
+    torch::Tensor xla_c = torch::vstack({xla_a, xla_b});
+    AllEqual(c, xla_c);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestStd) {
   torch::Tensor a = torch::rand({4, 3, 4}, torch::TensorOptions(torch::kFloat));
   for (auto unbiased : {true, false}) {

@@ -1372,6 +1372,10 @@ at::Tensor XLANativeFunctions::hardtanh_backward(const at::Tensor& grad_output,
       max_val));
 }
 
+at::Tensor XLANativeFunctions::hstack(at::TensorList tensors) {
+  return stack(tensors, 0);
+}
+
 at::Tensor XLANativeFunctions::index(
     const at::Tensor& self,
     const c10::List<c10::optional<at::Tensor>>& indices) {
@@ -3291,6 +3295,10 @@ at::Tensor XLANativeFunctions::view_copy_symint(const at::Tensor& self,
          "supported, please file a feature request against PyTorch/XLA.";
   return bridge::AtenFromXlaTensor(
       tensor_methods::view_symint(xla_input, shape));
+}
+
+at::Tensor XLANativeFunctions::vstack(at::TensorList tensors) {
+  return stack(tensors, 0);
 }
 
 at::Tensor XLANativeFunctions::where(const at::Tensor& condition,
