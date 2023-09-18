@@ -1,4 +1,5 @@
 import torch
+import torch_xla
 import torch_xla.core.xla_model as xm
 from torch_xla import runtime as xr
 from typing import Any
@@ -26,13 +27,15 @@ class autocast(torch.amp.autocast_mode.autocast):
     self._xla_device = xm.xla_device_hw(device)
     if self._xla_device == 'GPU':
       backend = 'cuda'
+      self._xla_bfloat16 = False  # True if xla backend with bfloat16 dtype.
       if dtype is None:
         dtype = torch.float16
-      elif dtype == torch.bfloat16:
-        if xr.is_bf16_supported() and not torch.cuda.is_available():
+      elif dtype == torch.bfloat16 and not torch.cuda.is_available():
+        if xr.is_bf16_supported():
           # XLA:GPU with bfloat16 should run on `xla` backend
           # unless torch.autocast is compiled with cuda.
           backend = 'xla'
+          self._xla_bfloat16 = True
         else:
           # This has been the default behavior for unsupported bfloat16 dtype
           dtype = torch.float16
@@ -71,15 +74,27 @@ class autocast(torch.amp.autocast_mode.autocast):
       self.prev = torch.is_autocast_xla_enabled()  # type: ignore[attr-defined]
       self.prev_dtype = torch.get_autocast_xla_dtype(
       )  # type: ignore[attr-defined]
-      torch.set_autocast_xla_enabled(self._enabled)
-      torch.set_autocast_xla_dtype(self._dtype)
+      if self._xla_bfloat16:
+        # autocast_xla flags will be set by `torch.autocast` and we need to
+        # set autocast flags as we call into `torch.autocast` apis.
+        torch.set_autocast_enabled(self._enabled)
+        torch.set_autocast_gpu_dtype(self._dtype)
+      else:
+        torch.set_autocast_xla_enabled(self._enabled)
+        torch.set_autocast_xla_dtype(self._dtype)
     return super().__enter__()
 
   def __exit__(self, exc_type: Any, exc_val: Any,
                exc_tb: Any):  # type: ignore[override]
     if self._xla_device == 'GPU':
-      torch.set_autocast_xla_enabled(self.prev)
-      torch.set_autocast_xla_dtype(self.prev_dtype)
+      if self._xla_bfloat16:
+        # autocast_xla flags will be set by `torch.autocast` and we need to
+        # set autocast flags as we call into `torch.autocast` apis.
+        torch.set_autocast_enabled(self.prev)
+        torch.set_autocast_gpu_dtype(self.prev_dtype)
+      else:
+        torch.set_autocast_xla_enabled(self.prev)
+        torch.set_autocast_xla_dtype(self.prev_dtype)
     return super().__exit__(exc_type, exc_val, exc_tb)
 
   def __call__(self, func):

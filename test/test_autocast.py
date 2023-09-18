@@ -178,7 +178,10 @@ class AutocastCudaTestExtraLists(object):
         ("bmm", (torch.randn((n, n, n), device=dev, dtype=torch.float32),
                  torch.randn((n, n, n), device=dev, dtype=torch.float32))),
         ("mm", mat0_fp32 + mat1_fp32),
-        ("matmul", mat0_fp32 + mat1_fp32),
+        ("matmul",
+         torch.matmul(
+             torch.ones([2, 3], device=dev, dtype=torch.float32),
+             torch.ones([3, 2], device=dev, dtype=torch.float32))),
         ("baddbmm", (torch.randn((n, n, n), device=dev, dtype=torch.float32),
                      torch.randn((n, n, n), device=dev, dtype=torch.float32),
                      torch.randn((n, n, n), device=dev, dtype=torch.float32))),
@@ -257,7 +260,8 @@ class TestAutocastBase(unittest.TestCase):
                                run_as_type,
                                out_type=None,
                                module=torch,
-                               add_kwargs=None):
+                               add_kwargs=None,
+                               autocast_dtype=torch.float16):
     # helper to cast args
     def cast(val, to_type):
       if isinstance(val, torch.Tensor):
@@ -271,7 +275,7 @@ class TestAutocastBase(unittest.TestCase):
       add_kwargs = {}
 
     self.assertFalse(self.is_autocast_enabled())
-    with autocast(xm.xla_device()):
+    with autocast(xm.xla_device(), dtype=autocast_dtype):
       self.assertTrue(self.is_autocast_enabled())
 
       out_type = out_type if out_type is not None else run_as_type
@@ -383,10 +387,12 @@ class TestAutocastCuda(TestAutocastBase):
     ]
     for op_with_args in bf16_test_list:
       op, args, maybe_kwargs = self.args_maybe_kwargs(op_with_args)
-      # Expects float16, following the torch GPU autocast policy:
-      # https://github.com/pytorch/pytorch/blob/main/aten/src/ATen/autocast_mode.cpp
       self._run_autocast_outofplace(
-          op, args, torch.float16, add_kwargs=maybe_kwargs)
+          op,
+          args,
+          torch.bfloat16,
+          add_kwargs=maybe_kwargs,
+          autocast_dtype=torch.bfloat16)
 
   def test_autocast_torch_need_autocast_promote(self):
     for op, args in self.get_autocast_list('torch_need_autocast_promote'):
