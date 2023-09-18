@@ -241,7 +241,8 @@ class PjRtComputationClient : public ComputationClient {
       ss << "XLAShardedData: \n";
       ss << "  Data Device: " << device() << "\n";
       ss << "  Data Shape: " << shape().ToString() << "\n";
-      ss << "  OpSharding: " << sharding.type() << "\n";
+      ss << "  OpSharding: "
+         << xla::HloSharding::FromProto(sharding)->ToString() << "\n";
       ss << "  NumShards: " << shards.size() << "\n";
       return ss.str();
     }
