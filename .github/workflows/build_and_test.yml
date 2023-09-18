@@ -69,7 +69,7 @@ jobs:
     with:
       docker-image: ${{ needs.build.outputs.docker-image }}
       runner: linux.8xlarge.nvidia.gpu
-      timeout-minutes: 210
+      timeout-minutes: 300
       collect-coverage: true
       disable-xrt: 1
     secrets:
