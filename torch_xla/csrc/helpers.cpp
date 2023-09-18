@@ -646,7 +646,7 @@ xla::XlaOp XlaHelpers::PromotedLogicalUnaryOp(
 xla::StatusOr<xla::XlaComputation> XlaHelpers::WrapXlaComputation(
     const xla::XlaComputation& computation,
     const std::vector<xla::Shape>& parameter_shapes,
-    std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair) {
+    const std::vector<size_t>& buffer_donor_indices) {
   xla::XlaBuilder builder(computation.proto().name());
 
   // Construct a single tuple parameter.
@@ -669,12 +669,11 @@ xla::StatusOr<xla::XlaComputation> XlaHelpers::WrapXlaComputation(
   xla::XlaOp orig_result = xla::Call(&builder, computation, inner_params);
 
   // Rebuild aliasing.
-  for (const auto& [input_index, output_index] : input_output_alias_pair) {
+  for (size_t i : buffer_donor_indices) {
     // Both input and output will be a tuple so parameter_number will always be
     // 0
-    builder.SetUpAlias(/*output_index=*/xla::ShapeIndex({output_index}),
-                       /*param_number=*/0,
-                       /*param_index=*/xla::ShapeIndex({input_index}));
+    builder.AddBufferDonor(/*param_number=*/0,
+                           /*param_index=*/xla::ShapeIndex({i}));
   }
 
   return builder.Build(orig_result);
