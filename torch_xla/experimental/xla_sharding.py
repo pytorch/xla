@@ -96,8 +96,9 @@ class Mesh:
     replicate_dims = {i for i, d in enumerate(partition_spec) if d is None}
     group_assignment, replication_groups = _get_group_assignment(
         sharding_type, tile_assignment, len(partition_spec), replicate_dims)
-    return torch_xla._XLAC.OpSharding(tile_assignment.tolist(), group_assignment,
-                                     replication_groups, int(sharding_type))
+    return torch_xla._XLAC.OpSharding(tile_assignment.tolist(),
+                                      group_assignment, replication_groups,
+                                      int(sharding_type))
 
 
 # HybridDevice class has been inspired from jax's mesh_utils: https://github.com/google/jax/blob/fc5960f2b8b7a0ef74dbae4e27c5c08ff1564cff/jax/experimental/mesh_utils.py#L4
