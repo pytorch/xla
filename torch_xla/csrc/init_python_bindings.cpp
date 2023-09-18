@@ -1543,18 +1543,20 @@ void InitXlaModuleBindings(py::module m) {
                 weight_decay, eps, amsgrad, maximize, use_adamw);
           }
         });
+  py::class_<xla::OpSharding>(m, "OpSharding")
+      .def(py::init([](const py::list& tile_assignment,
+                       const py::list& group_assignment,
+                       const py::list& replication_groups, int sharding_type) {
+        return ShardingUtil::CreateOpSharding(
+            tile_assignment, group_assignment, replication_groups,
+            ShardingUtil::ShardingType(sharding_type));
+      }));
   m.def("_xla_mark_sharding", [](const at::Tensor& input,
-                                 const py::list& tile_assignment,
-                                 const py::list& group_assignment,
-                                 const py::list& replication_groups,
-                                 int sharding_type) {
+                                 xla::OpSharding sharding) {
     TORCH_LAZY_COUNTER("XlaMarkSharding", 1);
     XLA_CHECK(UseVirtualDevice())
         << "Please enable SPMD via `torch_xla.runtime.use_spmd()`";
     XLATensorPtr xtensor = bridge::GetXlaTensor(input);
-    xla::OpSharding sharding = ShardingUtil::CreateOpSharding(
-        tile_assignment, group_assignment, replication_groups,
-        ShardingUtil::ShardingType(sharding_type));
     auto new_sharding_spec = std::make_shared<XLATensor::ShardingSpec>(
         sharding, MakeShapeWithDeviceLayout(
                       xtensor->shape(),
