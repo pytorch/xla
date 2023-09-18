@@ -141,7 +141,7 @@ PjRtComputationClient::PjRtComputationClient() {
     auto distributed_client =
         MaybeInitializeDistributedRuntimeClient(global_rank, dist_service_addr);
     auto allowed_devices =
-        std::make_optional<std::set<int>>(std::set{global_rank});
+        std::make_optional<std::set<int>>(std::set{local_rank});
     xla::PjRtClient::KeyValueGetCallback kv_get = nullptr;
     xla::PjRtClient::KeyValuePutCallback kv_put = nullptr;
     if (distributed_client != nullptr) {
@@ -157,7 +157,7 @@ PjRtComputationClient::PjRtComputationClient() {
       };
     }
     int global_world_size = sys_util::GetEnvInt("WORLD_SIZE", -1);
-    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": global_rank=" << global_rank << ", global_world_size=" << global_world_size << std::endl;
+    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": global_rank=" << global_rank << ", global_world_size=" << global_world_size << ", local_rank=" << local_rank << std::endl;
     client_ =
         std::move(xla::GetStreamExecutorGpuClient(
                       /*asynchronous=*/async,
@@ -171,6 +171,7 @@ PjRtComputationClient::PjRtComputationClient() {
                       /*kv_get*/ kv_get,
                       /*kv_put*/ kv_put)
                       .value());
+    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": Finished running the getting. Have set client_" << std::endl;
   } else if (device_type == "XPU") {
     TF_VLOG(1) << "Initializing PjRt XPU client...";
     XLA_CHECK_OK(
