@@ -153,6 +153,7 @@ PjRtComputationClient::PjRtComputationClient() {
       };
     }
     int global_world_size = sys_util::GetEnvInt("WORLD_SIZE", -1);
+    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": global_rank=" << global_rank << ", global_world_size=" << global_world_size << std::endl;
     client_ =
         std::move(xla::GetStreamExecutorGpuClient(
                       /*asynchronous=*/async,
