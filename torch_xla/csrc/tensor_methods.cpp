@@ -23,8 +23,6 @@
 #include "torch_xla/csrc/ops/all_to_all.h"
 #include "torch_xla/csrc/ops/amp_foreach_non_finite_check_and_unscale.h"
 #include "torch_xla/csrc/ops/amp_update_scale.h"
-#include "torch_xla/csrc/ops/arg_max.h"
-#include "torch_xla/csrc/ops/arg_min.h"
 #include "torch_xla/csrc/ops/arithmetic_ir_ops.h"
 #include "torch_xla/csrc/ops/as_strided.h"
 #include "torch_xla/csrc/ops/avg_pool_nd.h"
