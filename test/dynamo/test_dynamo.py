@@ -166,8 +166,9 @@ class DynamoInferenceBasicTest(unittest.TestCase):
 
     dynamo_einsum_mm = torch.compile(einsum_mm, backend="openxla")
     res_xla_dynamo = dynamo_einsum_mm(a, b)
-    res_cpu = einsum_mm(a.cpu(), b.cpu())
-    self.assertTrue(torch.allclose(res_cpu, res_xla_dynamo.cpu()))
+    res_xla_non_dynamo = einsum_mm(a, b)
+    self.assertTrue(
+        torch.allclose(res_xla_non_dynamo.cpu(), res_xla_dynamo.cpu()))
 
   def test_simple_model_with_different_input_shape(self):
     met.clear_counters()
