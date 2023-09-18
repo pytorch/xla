@@ -163,12 +163,6 @@ void arange_out(XLATensorPtr& out, const at::Scalar& start,
                 const at::Scalar& end, const at::Scalar& step,
                 at::ScalarType scalar_type);
 
-XLATensorPtr argmax(const XLATensorPtr& input, int64_t dim, bool keepdim);
-XLATensorPtr argmax(const XLATensorPtr& input);
-
-XLATensorPtr argmin(const XLATensorPtr& input, int64_t dim, bool keepdim);
-XLATensorPtr argmin(const XLATensorPtr& input);
-
 // Takes a slice from the input as R1 at the specified offset and reshapes it
 // into the provided size.
 XLATensorPtr as_strided(const XLATensorPtr& input, std::vector<int64_t> size,

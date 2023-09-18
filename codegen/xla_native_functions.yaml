@@ -12,6 +12,8 @@ full_codegen:
   - amin
   - any
   - any.dim
+  - argmax
+  - argmin
   - asin
   - asinh
   - atan
@@ -132,8 +134,6 @@ supported:
   - addmm
   - alias_copy
   - arange.start_out
-  - argmax
-  - argmin
   - as_strided_copy
   - as_strided_scatter
   - atan2

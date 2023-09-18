@@ -697,34 +697,6 @@ void arange_out(XLATensorPtr& out, const at::Scalar& start,
   out->SetScalarType(scalar_type);
 }
 
-XLATensorPtr argmax(const XLATensorPtr& input, int64_t dim, bool keepdim) {
-  int64_t canonical_dim =
-      torch::lazy::GetCanonicalDimensionIndex(dim, input->shape().get().rank());
-  return input->CreateFrom(torch::lazy::MakeNode<ArgMax>(
-                               input->GetIrValue(), canonical_dim, keepdim),
-                           at::ScalarType::Long);
-}
-
-XLATensorPtr argmax(const XLATensorPtr& input) {
-  return input->CreateFrom(
-      torch::lazy::MakeNode<ArgMax>(input->GetIrValue(), -1, false),
-      at::ScalarType::Long);
-}
-
-XLATensorPtr argmin(const XLATensorPtr& input, int64_t dim, bool keepdim) {
-  int64_t canonical_dim =
-      torch::lazy::GetCanonicalDimensionIndex(dim, input->shape().get().rank());
-  return input->CreateFrom(torch::lazy::MakeNode<ArgMin>(
-                               input->GetIrValue(), canonical_dim, keepdim),
-                           at::ScalarType::Long);
-}
-
-XLATensorPtr argmin(const XLATensorPtr& input) {
-  return input->CreateFrom(
-      torch::lazy::MakeNode<ArgMin>(input->GetIrValue(), -1, false),
-      at::ScalarType::Long);
-}
-
 XLATensorPtr as_strided(const XLATensorPtr& input, std::vector<int64_t> size,
                         std::vector<int64_t> stride,
                         c10::optional<int64_t> storage_offset) {

@@ -1,3 +1,5 @@
+#include <torch/csrc/lazy/core/helpers.h>
+
 #include "torch_xla/csrc/LazyIr.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/data_ops.h"
@@ -105,6 +107,32 @@ torch_xla::XlaOpVector Any::Lower(LoweringContext* loctx) const {
 torch_xla::XlaOpVector AnyDim::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   return ReturnOp(BuildAny(input, {dim}, keepdim), loctx);
+}
+
+torch_xla::XlaOpVector Argmax::Lower(LoweringContext* loctx) const {
+  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  if (dim.has_value()) {
+    int64_t canonical_dim = torch::lazy::GetCanonicalDimensionIndex(
+        dim.value(), input_shape.rank());
+    return ReturnOp(torch_xla::BuildArgMax(input, canonical_dim, keepdim),
+                    loctx);
+  } else {
+    return ReturnOp(torch_xla::BuildArgMax(input, -1, false), loctx);
+  }
+}
+
+torch_xla::XlaOpVector Argmin::Lower(LoweringContext* loctx) const {
+  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  if (dim.has_value()) {
+    int64_t canonical_dim = torch::lazy::GetCanonicalDimensionIndex(
+        dim.value(), input_shape.rank());
+    return ReturnOp(torch_xla::BuildArgMin(input, canonical_dim, keepdim),
+                    loctx);
+  } else {
+    return ReturnOp(torch_xla::BuildArgMin(input, -1, false), loctx);
+  }
 }
 
 torch_xla::XlaOpVector Asin::Lower(LoweringContext* loctx) const {
