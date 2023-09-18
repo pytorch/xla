@@ -28,7 +28,7 @@ class autocast(torch.amp.autocast_mode.autocast):
       backend = 'cuda'
       if dtype is None:
         dtype = torch.float16
-      elif dtype == torch.bfloat16:
+      elif dtype == torch.bfloat16 or dtype == torch.float16:
         if xr.is_bf16_supported() and not torch.cuda.is_available():
           # XLA:GPU with bfloat16 should run on `xla` backend
           # unless torch.autocast is compiled with cuda.
