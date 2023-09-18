@@ -847,6 +847,25 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertNotEqual(torch_xla._XLAC._get_xla_sharding_spec(xla_x), '')
     self.assertTrue(torch.allclose(xla_x.cpu(), x))
 
+  def test_op_sharding_cache(self):
+    met.clear_all()
+    mesh = self._get_mesh((1, self.n_devices))
+
+    t = torch.randn(1, self.n_devices).to(xm.xla_device())
+    xs.mark_sharding(t, mesh, (0, 1))
+    self.assertIn("CreateOpSharding", met.counter_names())
+    self.assertEqual(met.counter_value("CreateOpSharding"), 1)
+
+    # Sharding with the same partition spec should not result in another call
+    u = torch.randn(1, self.n_devices).to(xm.xla_device())
+    xs.mark_sharding(u, mesh, (0, 1))
+    self.assertEqual(met.counter_value("CreateOpSharding"), 1)
+
+    # Changing the partition spec will result in another CreateOpSharding
+    v = torch.randn(1, self.n_devices).to(xm.xla_device())
+    xs.mark_sharding(v, mesh, (0, None))
+    self.assertEqual(met.counter_value("CreateOpSharding"), 2)
+
 
 if __name__ == '__main__':
   test = unittest.main()
