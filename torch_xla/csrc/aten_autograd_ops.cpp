@@ -96,7 +96,6 @@ torch::Tensor MaxPool2dAutogradFunction::forward(
   auto mask = c10::DispatchKeySet({
       c10::DispatchKey::XLA,
       c10::DispatchKey::Python,
-      c10::DispatchKey::PythonTLSSnapshot,
       c10::DispatchKey::Functionalize,
   });
   auto ks = self_keyset & mask;
@@ -105,6 +104,9 @@ torch::Tensor MaxPool2dAutogradFunction::forward(
   // a better way to do this (maybe don't redispatch?)
   if (c10::impl::PythonDispatcherTLS::get_state()) {
     ks = ks.add(c10::DispatchKey::PythonDispatcher);
+  }
+  if (ks.has(c10::DispatchKey::Python)) {
+    ks = ks.add(c10::DispatchKey::PythonTLSSnapshot);
   }
   static auto op =
       c10::Dispatcher::singleton()
@@ -146,7 +148,6 @@ torch::autograd::variable_list MaxPool2dAutogradFunction::backward(
   auto mask = c10::DispatchKeySet({
       c10::DispatchKey::XLA,
       c10::DispatchKey::Python,
-      c10::DispatchKey::PythonTLSSnapshot,
       c10::DispatchKey::Functionalize,
   });
   auto ks = self_keyset & mask;
@@ -155,6 +156,9 @@ torch::autograd::variable_list MaxPool2dAutogradFunction::backward(
   // a better way to do this (maybe don't redispatch?)
   if (c10::impl::PythonDispatcherTLS::get_state()) {
     ks = ks.add(c10::DispatchKey::PythonDispatcher);
+  }
+  if (ks.has(c10::DispatchKey::Python)) {
+    ks = ks.add(c10::DispatchKey::PythonTLSSnapshot);
   }
   grad = op.redispatch(ks, grad_output[0], self, kernel_size, stride, padding,
                        ceil_mode);
