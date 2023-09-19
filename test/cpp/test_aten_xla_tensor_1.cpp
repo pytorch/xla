@@ -1470,6 +1470,34 @@ TEST_F(AtenXlaTensorTest, TestStack) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestHstack) {
+  torch::Tensor a = torch::rand({2, 4, 3}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b = torch::rand({2, 4, 3}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor c = torch::rand({2, 4, 3}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor d = torch::hstack({a, b, c});
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = CopyToDevice(b, device);
+    torch::Tensor xla_c = CopyToDevice(c, device);
+    torch::Tensor xla_d = torch::hstack({xla_a, xla_b, xla_c});
+    AllClose(d, xla_d);
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestVstack) {
+  torch::Tensor a = torch::rand({2, 4, 3}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b = torch::rand({2, 4, 3}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor c = torch::rand({2, 4, 3}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor d = torch::vstack({a, b, c});
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = CopyToDevice(b, device);
+    torch::Tensor xla_c = CopyToDevice(c, device);
+    torch::Tensor xla_d = torch::vstack({xla_a, xla_b, xla_c});
+    AllClose(d, xla_d);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestCat) {
   torch::Tensor a = torch::rand({2, 1, 3}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = torch::rand({2, 2, 3}, torch::TensorOptions(torch::kFloat));

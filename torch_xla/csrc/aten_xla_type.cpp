@@ -1372,6 +1372,12 @@ at::Tensor XLANativeFunctions::hardtanh_backward(const at::Tensor& grad_output,
       max_val));
 }
 
+at::Tensor XLANativeFunctions::hstack(const at::TensorList tensors) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(tensor_methods::cat(
+      bridge::GetXlaTensors(tensors), 1, at::native::result_type(tensors)));
+}
+
 at::Tensor XLANativeFunctions::index(
     const at::Tensor& self,
     const c10::List<c10::optional<at::Tensor>>& indices) {
@@ -3291,6 +3297,12 @@ at::Tensor XLANativeFunctions::view_copy_symint(const at::Tensor& self,
          "supported, please file a feature request against PyTorch/XLA.";
   return bridge::AtenFromXlaTensor(
       tensor_methods::view_symint(xla_input, shape));
+}
+
+at::Tensor XLANativeFunctions::vstack(const at::TensorList tensors) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+  return bridge::AtenFromXlaTensor(tensor_methods::cat(
+      bridge::GetXlaTensors(tensors), 0, at::native::result_type(tensors)));
 }
 
 at::Tensor XLANativeFunctions::where(const at::Tensor& condition,
