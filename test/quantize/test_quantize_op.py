@@ -14,9 +14,13 @@ dtype = str(
 
 out = xla_quantize_per_tensor(input, scale, zero_point, quant_min, quant_max,
                               dtype)
+out = out * 2
 
 hlo = torch_xla._XLAC._get_xla_tensors_hlo([out])
 print(hlo)
+
+stablehlo = xm.get_stablehlo([out])
+print(stablehlo)
 
 # Generated HLO with custom call to StableHLO
 # ENTRY %IrToHlo.4 (p0.1: f32[10]) -> (f32[10]) {

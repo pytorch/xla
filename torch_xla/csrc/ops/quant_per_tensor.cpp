@@ -58,37 +58,61 @@ torch::lazy::NodePtr QuantizePerTensor::Clone(
 //   return ReturnOp(output, loctx);
 // }
 
-static std::string SeralizeFloatVector(const std::vector<float>& v) {
+static inline std::string MaybeAppendDecimalForInteger(float v) {
+  std::stringstream ss;
+  if (static_cast<int>(v) == v) {
+    ss << std::fixed << std::setprecision(2);
+  }
+  ss << v;
+  return ss.str();
+}
+
+static std::string SeralizeFloatVector(const std::vector<float>& v, bool append_decimal=false) {
   std::stringstream ss;
   ss << '[';
   for (size_t i = 0; i < v.size(); ++i) {
     if (i != 0) {
       ss << ',';
     }
-    ss << v.at(i);
+    if (append_decimal) {
+      ss << MaybeAppendDecimalForInteger(v.at(i));
+    } else{
+      ss << v.at(i);
+    }
   }
   ss << ']';
   return ss.str();
 }
 
+// TODO: add more types
+static std::unordered_map<std::string, std::string> _type_str_map {
+  {"torch.int8", "si8"}
+};
+
 XlaOpVector QuantizePerTensor::Lower(LoweringContext* loctx) const {
-  // torch.clamp(torch.round(input * inv_scale) + zero_point, quant_min,
-  // quant_max).to(dtype)
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::Shape input_shape = ShapeHelper::ShapeOfXlaOp(input);
 
   const std::string opname = "stablehlo.uniform_quantize";
   std::stringstream ss;
-  ss << "QuantizationStorageType: " << dtype_ << ',';
-  ss << "QuantizationScale: " << SeralizeFloatVector(scale_) << ',';
-  ss << "QuantizationZeroPoint: " << SeralizeFloatVector(zero_point_) << ',';
-  ss << "QuantizationStorageMin: " << quant_min_ << ',';
-  ss << "QuantizationStorageMax: " << quant_max_ << ',';
-  ss << "QuantizationExpressedType: \"float32\"" << ',';
-  ss << "IntegerType: " << dtype_;
+  ss << "{";
+  // ss << "quantization_dimension=0,";
+  ss << "scale=" << SeralizeFloatVector(scale_, true) << ',';
+  // ss << "scale=" << "[2]" << ',';
+  ss << "zero_point=" << SeralizeFloatVector(zero_point_) << ',';
+  ss << "storage_type=" << _type_str_map.at(dtype_) << ',';
+  ss << "expressed_type=" << "f32" << ','; /* should equal to the input scalar type*/
+  ss << "storage_min=" << quant_min_ << ',';
+  ss << "storage_max=" << quant_max_;
+  ss << '}';
+  // ss << "{quantization_dimension=0, scale=[1.0,2.0], zero_point = [1,1], storage_type=si8, expressed_type=f32, storage_min=-128, storage_max=127}";
 
   xla::XlaOp output =
-      xla::CustomCall(input.builder(), opname, {input}, input_shape, ss.str());
+      xla::CustomCall(input.builder(), opname, {input}, input_shape, ss.str(),
+/*has_side_effect=*/false,
+/*output_operand_aliasing=*/{}, /*literal=*/nullptr,
+/*schedule=*/xla::CustomCallSchedule::SCHEDULE_NONE,
+/*api_version=*/xla::CustomCallApiVersion::API_VERSION_TYPED_FFI);
   return ReturnOp(output, loctx);
 }
 
