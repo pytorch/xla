@@ -261,7 +261,7 @@ class TestAutocastBase(unittest.TestCase):
                                out_type=None,
                                module=torch,
                                add_kwargs=None,
-                               autocast_dtype=torch.float16):
+                               autocast_dtype=None):
     # helper to cast args
     def cast(val, to_type):
       if isinstance(val, torch.Tensor):
