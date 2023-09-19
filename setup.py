@@ -356,7 +356,7 @@ setup(
     },
     extras_require={
         # On Cloud TPU VM install with:
-        # pip install torch_xla[tpu] -f https://storage.googleapis.com/libtpu-releases/libtpu_releases.html
+        # pip install torch_xla[tpu] -f https://storage.googleapis.com/libtpu-releases/index.html
         'tpu': [f'libtpu-nightly=={_libtpu_version}'],
     },
     cmdclass={
