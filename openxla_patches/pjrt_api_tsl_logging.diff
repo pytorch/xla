@@ -1,0 +1,21 @@
+# Fixes log spam when loading libtpu. We should fix this upstream.
+diff --git a/xla/pjrt/pjrt_api.cc b/xla/pjrt/pjrt_api.cc
+index 132cfaff0..887e842e0 100644
+--- a/xla/pjrt/pjrt_api.cc
++++ b/xla/pjrt/pjrt_api.cc
+@@ -17,7 +17,6 @@ limitations under the License.
+
+ #include <utility>
+
+-#include "absl/log/log.h"
+ #include "absl/status/status.h"
+ #include "absl/strings/str_cat.h"
+ #include "xla/pjrt/c/pjrt_c_api.h"
+@@ -33,6 +32,7 @@ limitations under the License.
+ #include "xla/pjrt/c/pjrt_c_api_helpers.h"
+ #include "xla/status.h"
+ #include "xla/statusor.h"
++#include "tsl/platform/logging.h"
+ #include "tsl/platform/errors.h"
+
+ namespace pjrt {
