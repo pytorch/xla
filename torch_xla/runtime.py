@@ -88,6 +88,16 @@ def requires_pjrt(fn: FN) -> FN:
   return wrapper
 
 
+def is_bf16_supported():
+  """Returns whether torch.bfloat16 is supported on this environment.
+  """
+  try:
+    torch.tensor([1.], dtype=torch.bfloat16, device=xm.xla_device())
+    return True
+  except Exception as e:
+    return False
+
+
 @requires_pjrt
 def xla_device(n: Optional[int] = None,
                devkind: Optional[str] = None) -> torch.device:
