@@ -468,10 +468,34 @@ void XLAGraphExecutor::MaybeDumpGraph(std::string name,
   }
 }
 
-XLAGraphExecutor::ComputationCache* XLAGraphExecutor::GetComputationCache() {
+XLAGraphExecutor::ComputationCache* createComputationCache() {
   static const size_t kMaxCacheSize =
       runtime::sys_util::GetEnvInt("XLA_COMPILATION_CACHE_SIZE", 1024);
-  static ComputationCache* cache = new ComputationCache(kMaxCacheSize);
+  static std::string persistentCacheDir = runtime::sys_util::GetEnvString(
+      "XLA_PERSISTENT_COMPILATION_CACHE_PATH", "");
+  if (persistentCacheDir != "") {
+    auto serialize_fn = [](auto& computation, auto& ostream) -> bool {
+      return runtime::GetComputationClient()->SerializeComputation(
+          computation->computation->client_computation(), ostream);
+    };
+    auto deserialize_fn = [](auto& istream)
+        -> std::shared_ptr<XLAGraphExecutor::CachedComputation> {
+      auto client_computation =
+          runtime::GetComputationClient()->DeserializeComputation(istream);
+      if (!client_computation) return nullptr;
+      auto computation =
+          std::make_shared<torch_xla::Computation>(client_computation);
+      return std::make_shared<XLAGraphExecutor::CachedComputation>(
+          computation, /*is_sharded=*/true);
+    };
+    return new XLAGraphExecutor::PersistentCache(
+        kMaxCacheSize, persistentCacheDir, serialize_fn, deserialize_fn);
+  }
+  return new XLAGraphExecutor::MemoryCache(kMaxCacheSize);
+}
+
+XLAGraphExecutor::ComputationCache* XLAGraphExecutor::GetComputationCache() {
+  static ComputationCache* cache = createComputationCache();
   return cache;
 }
 
