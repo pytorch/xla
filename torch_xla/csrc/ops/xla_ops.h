@@ -36,6 +36,7 @@ extern const OpKindWrapper xla_cast;
 extern const OpKindWrapper xla_collective_permute;
 extern const OpKindWrapper xla_cross_replica_sum;
 extern const OpKindWrapper xla_device_data;
+extern const OpKindWrapper xla_dequantize_per_tensor;
 extern const OpKindWrapper xla_diagonal_view_update;
 extern const OpKindWrapper xla_einsum_backward;
 extern const OpKindWrapper xla_generic_slice;

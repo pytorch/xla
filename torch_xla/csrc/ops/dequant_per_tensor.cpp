@@ -1,4 +1,4 @@
-#include "torch_xla/csrc/ops/quant_per_tensor.h"
+#include "torch_xla/csrc/ops/dequant_per_tensor.h"
 
 #include <torch/csrc/lazy/core/tensor_util.h>
 
@@ -25,7 +25,7 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input,
 
 }  // namespace
 
-QuantizePerTensor::QuantizePerTensor(const torch::lazy::Value& input,
+DequantizePerTensor::DequantizePerTensor(const torch::lazy::Value& input,
                                      const std::vector<float>& scale,
                                      const std::vector<float>& zero_point,
                                      int quant_min, int quant_max,
@@ -44,13 +44,13 @@ QuantizePerTensor::QuantizePerTensor(const torch::lazy::Value& input,
       scale_(scale),
       zero_point_(zero_point) {}
 
-torch::lazy::NodePtr QuantizePerTensor::Clone(
+torch::lazy::NodePtr DequantizePerTensor::Clone(
     torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<QuantizePerTensor>(
+  return torch::lazy::MakeNode<DequantizePerTensor>(
       operands.at(0), scale_, zero_point_, quant_min_, quant_max_, dtype_, axis_);
 }
 
-// XlaOpVector QuantizePerTensor::Lower(LoweringContext* loctx) const {
+// XlaOpVector DequantizePerTensor::Lower(LoweringContext* loctx) const {
 //   // torch.clamp(torch.round(input * inv_scale) + zero_point, quant_min,
 //   quant_max).to(dtype) xla::XlaOp input = loctx->GetOutputOp(operand(0));
 //   xla::XlaOp scale = loctx->GetOutputOp(operand(1));
@@ -91,14 +91,14 @@ static std::unordered_map<std::string, std::string> _type_str_map {
   {"torch.int8", "si8"}
 };
 
-XlaOpVector QuantizePerTensor::Lower(LoweringContext* loctx) const {
+XlaOpVector DequantizePerTensor::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::Shape input_shape = ShapeHelper::ShapeOfXlaOp(input);
 
-  const std::string opname = "stablehlo.uniform_quantize";
+  const std::string opname = "stablehlo.uniform_dequantize";
   std::stringstream ss;
   ss << "{";
-    if (axis_ != -1) {
+  if (axis_ != -1) {
     ss << "quantization_dimension=" << axis_ << ',';
   }
   ss << "scale=" << SeralizeFloatVector(scale_, true) << ',';
@@ -112,14 +112,14 @@ XlaOpVector QuantizePerTensor::Lower(LoweringContext* loctx) const {
 
   xla::XlaOp output =
       xla::CustomCall(input.builder(), opname, {input}, input_shape, ss.str(),
-                      /*has_side_effect=*/false,
-                      /*output_operand_aliasing=*/{}, /*literal=*/nullptr,
-                      /*schedule=*/xla::CustomCallSchedule::SCHEDULE_NONE,
-                      /*api_version=*/xla::CustomCallApiVersion::API_VERSION_TYPED_FFI);
+                        /*has_side_effect=*/false,
+                        /*output_operand_aliasing=*/{}, /*literal=*/nullptr,
+                        /*schedule=*/xla::CustomCallSchedule::SCHEDULE_NONE,
+                        /*api_version=*/xla::CustomCallApiVersion::API_VERSION_TYPED_FFI);
   return ReturnOp(output, loctx);
 }
 
-std::string QuantizePerTensor::ToString() const {
+std::string DequantizePerTensor::ToString() const {
   std::stringstream ss;
   ss << XlaNode::ToString() << ", quant_min=" << quant_min_
      << ", quant_max=" << quant_max_ << ", stype=" << dtype_;
