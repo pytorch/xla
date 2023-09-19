@@ -335,6 +335,14 @@ class ComputationClient {
   virtual std::vector<ComputationPtr> Compile(
       std::vector<CompileInstance> instances) = 0;
 
+  // Serialize a computation to the given ostream.
+  virtual bool SerializeComputation(ComputationPtr computation,
+                                    std::ostream& out) = 0;
+
+  // Deserialize an isteam back to a Computation. The input stream should yield
+  // the result of a SerializeComputation call.
+  virtual ComputationPtr DeserializeComputation(std::istream& in) = 0;
+
   // Executes computation with arguments and returns the result.
   // The passed device must match the common device of the arguments Data.
   // If options.explode_tuple is true, the output tuple will be decomposed into
