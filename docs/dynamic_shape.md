@@ -17,7 +17,24 @@ Dynamic shape can be further categorized into bounded dynamic shape and unbounde
 - bounded dynamic shape: refers to a shape whose dynamic dimensions are bounded by static values. It works for accelerators that require static memory allocation (e.g. TPU).
 - unbounded dynamic shape: refers to shape whose dynamic dimensions can be infinitely large. It works for accelerators that don’t require static memory allocation (e.g. GPU).
 
-Currently, only bounded dynamic shape is supported.
+Today, only bounded dynamic shape is supported and it is in experimental phase.
 
 ## Bounded dynamic shape
 
+Currently, we support multi-layer perceptron model (MLP) with dynamic size input on TPU.
+
+This feature is controlled by a flag `XLA_EXPERIMENTAL="nonzero:masked_select"`. To run a model with the feature enabled, you can do:
+```
+XLA_EXPERIMENTAL="nonzero:masked_select:masked_scatter" python your_scripts.py
+```
+
+Here are some numbers we get when we run the MLP model for 100 iterations:
+
+|             | No dynamic shape  | With dynamic shape     |
+| :---        |    :----:         |          ---: |
+| End-to-end training time | 29.49             | 20.03   |
+| Number of compilations   | 102               | 49      |
+| Compilation cache hit    | 198               | 1953      |
+
+![alt_text](assets/dynamic_shape_mlp_perf.png "image_tooltip")
+_<span style="text-decoration:underline;">Figure 1. Performance comparison (a) without dynamic shape  (b) with dynamic shape </span>_
