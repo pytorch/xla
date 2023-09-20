@@ -7,7 +7,7 @@ dev_images = [
     accelerator  = "cuda"
     cuda_version = "11.8"
     extra_tags   = ["cuda"]
-  }
+  },
   {
     accelerator  = "cuda"
     cuda_version = "12.1"
