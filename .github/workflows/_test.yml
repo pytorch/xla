@@ -52,11 +52,13 @@ jobs:
           # Use readable strings as they define the workflow titles.
           - run_cpp_tests: 'cpp_tests'
           - run_python_tests: 'python_tests'
-            run_xla_op_tests: 'xla_op'
+            run_xla_op_tests1: 'xla_op1'
+          - run_python_tests: 'python_tests'
+            run_xla_op_tests2: 'xla_op2'
+          - run_python_tests: 'python_tests'
+            run_xla_op_tests3: 'xla_op3'
           - run_python_tests: 'python'
-            run_torch_op_tests1: 'torch_op1'
-          - run_python_tests: 'python'
-            run_torch_op_tests2: 'torch_op2'
+            run_torch_op_tests: 'torch_op'
           - run_python_tests: 'python'
             run_mp_op_tests: 'mp_op'
     timeout-minutes: ${{ inputs.timeout-minutes }}
@@ -70,9 +72,10 @@ jobs:
       XLA_SKIP_MP_OP_TESTS: ${{ inputs.disable-pjrt }}
       RUN_CPP_TESTS: ${{ matrix.run_cpp_tests }}
       RUN_PYTHON_TESTS: ${{ matrix.run_python_tests }}
-      RUN_XLA_OP_TESTS: ${{ matrix.run_xla_op_tests }}
-      RUN_TORCH_OP_TESTS1: ${{ matrix.run_torch_op_tests1 }}
-      RUN_TORCH_OP_TESTS2: ${{ matrix.run_torch_op_tests2 }}
+      RUN_XLA_OP_TESTS1: ${{ matrix.run_xla_op_tests1 }}
+      RUN_XLA_OP_TESTS2: ${{ matrix.run_xla_op_tests2 }}
+      RUN_XLA_OP_TESTS3: ${{ matrix.run_xla_op_tests3 }}
+      RUN_TORCH_OP_TESTS: ${{ matrix.run_torch_op_tests }}
       RUN_MP_OP_TESTS: ${{ matrix.run_mp_op_tests }}
     steps:
       - name: Setup Linux
@@ -108,7 +111,7 @@ jobs:
         run: |
           echo "DOCKER_IMAGE: ${DOCKER_IMAGE}"
           docker pull "${DOCKER_IMAGE}"
-          pid=$(docker run --shm-size=16g ${GPU_FLAG:-} -e USE_COVERAGE -e XLA_SKIP_XRT_TESTS -e XLA_SKIP_TORCH_OP_TESTS -e XLA_SKIP_MP_OP_TESTS -e RUN_CPP_TESTS -e RUN_PYTHON_TESTS -e RUN_XLA_OP_TESTS -e RUN_TORCH_OP_TESTS1 -e RUN_TORCH_OP_TESTS2 -e RUN_MP_OP_TESTS -t -d -w "$WORKDIR" "${DOCKER_IMAGE}")
+          pid=$(docker run --shm-size=16g ${GPU_FLAG:-} -e USE_COVERAGE -e XLA_SKIP_XRT_TESTS -e XLA_SKIP_TORCH_OP_TESTS -e XLA_SKIP_MP_OP_TESTS -e RUN_CPP_TESTS -e RUN_PYTHON_TESTS -e RUN_XLA_OP_TESTS1 -e RUN_XLA_OP_TESTS2 -e RUN_XLA_OP_TESTS3 -e RUN_TORCH_OP_TESTS -e RUN_MP_OP_TESTS -t -d -w "$WORKDIR" "${DOCKER_IMAGE}")
           echo "${GCLOUD_SERVICE_KEY}" | docker exec -i "${pid}" sh -c "cat >> /tmp/pytorch/xla/default_credentials.json"
           echo "pid=${pid}" >> "${GITHUB_ENV}"
       - name: Test

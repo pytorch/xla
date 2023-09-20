@@ -118,7 +118,7 @@ function run_xla_backend_mp {
   MASTER_ADDR=localhost MASTER_PORT=6000 run_test "$@"
 }
 
-function run_torch_op_tests1 {
+function run_torch_op_tests {
   run_dynamic "$CDIR/../../test/test_view_ops.py" "$@" -v TestViewOpsXLA
   run_test_without_functionalization "$CDIR/../../test/test_view_ops.py" "$@" -v TestViewOpsXLA
   run_test "$CDIR/../../test/test_torch.py" "$@" -v TestTorchDeviceTypeXLA
@@ -127,9 +127,6 @@ function run_torch_op_tests1 {
   run_test "$CDIR/../../test/test_indexing.py" "$@" -v TestIndexingXLA
   run_test "$CDIR/../../test/test_indexing.py" "$@" -v NumpyTestsXLA
   run_dynamic "$CDIR/../../test/test_nn.py" "$@" -v TestNNDeviceTypeXLA
-}
-
-function run_torch_op_tests2 {
   run_dynamic "$CDIR/../../test/nn/test_dropout.py" "$@" -v TestDropoutNNDeviceTypeXLA
   run_dynamic "$CDIR/../../test/nn/test_pooling.py" "$@" -v TestPoolingNNDeviceTypeXLA
   run_dynamic "$CDIR/../../test/nn/test_embedding.py" "$@" -v TestEmbeddingNNDeviceTypeXLA
@@ -138,7 +135,12 @@ function run_torch_op_tests2 {
   run_dynamic "$CDIR/../../test/test_type_promotion.py" "$@" -v TestTypePromotionXLA
 }
 
-function run_xla_op_tests {
+#######################################################################################
+################################# XLA OP TESTS SHARDS #################################
+#######################################################################################
+
+# DO NOT MODIFY
+function run_xla_op_tests1 {
   run_dynamic "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_dynamic "$CDIR/ds/test_dynamic_shapes.py"
   run_dynamic "$CDIR/ds/test_dynamic_shape_models.py" "$@" --verbosity=$VERBOSITY
@@ -149,6 +151,10 @@ function run_xla_op_tests {
   run_test "$CDIR/test_async_closures.py"
   run_test "$CDIR/test_autocast.py"
   run_test "$CDIR/test_profiler.py"
+}
+
+# DO NOT MODIFY
+function run_xla_op_tests2 {
   run_test "$CDIR/test_ops.py"
   run_test "$CDIR/test_metrics.py"
   run_test "$CDIR/test_zero1.py"
@@ -162,10 +168,16 @@ function run_xla_op_tests {
   run_xla_ir_debug "$CDIR/test_env_var_mapper.py"
   run_xla_hlo_debug "$CDIR/test_env_var_mapper.py"
   run_xla_hlo_debug "$CDIR/stablehlo/test_stablehlo_save_load.py"
+  run_save_tensor_ir "$CDIR/spmd/test_spmd_graph_dump.py"
+  run_save_tensor_hlo "$CDIR/spmd/test_spmd_graph_dump.py"
   # TODO(qihqi): this test require tensorflow to run. need to setup separate
   #     CI with tf.
   run_xla_hlo_debug "$CDIR/stablehlo/test_stablehlo_inference.py"
   run_stablehlo_compile "$CDIR/stablehlo/test_stablehlo_compile.py"
+}
+
+# All the new xla op tests should go to run_xla_op_tests3
+function run_xla_op_tests3 {
   run_test "$CDIR/pjrt/test_runtime.py"
   run_test "$CDIR/pjrt/test_runtime_gpu.py"
   run_test "$CDIR/pjrt/test_runtime_multi_cpu.py"
@@ -178,17 +190,18 @@ function run_xla_op_tests {
   run_test "$CDIR/spmd/test_dynamo_spmd.py"
   run_test "$CDIR/spmd/test_xla_distributed_checkpoint.py"
   run_test "$CDIR/spmd/test_xla_spmd_python_api_interaction.py"
-  run_save_tensor_ir "$CDIR/spmd/test_spmd_graph_dump.py"
-  run_save_tensor_hlo "$CDIR/spmd/test_spmd_graph_dump.py"
   run_test "$CDIR/test_operations_hlo.py" "$@" --verbosity=$VERBOSITY
   run_test "$CDIR/test_input_output_aliases.py"
   run_test "$CDIR/test_torch_distributed_xla_backend.py"
 }
 
+#######################################################################################
+
 function run_op_tests {
-  run_torch_op_tests1
-  run_torch_op_tests2
-  run_xla_op_tests
+  run_torch_op_tests
+  run_xla_op_tests1
+  run_xla_op_tests2
+  run_xla_op_tests3
 }
 
 function run_mp_op_tests {
@@ -212,25 +225,30 @@ function run_mp_op_tests {
 
 function run_tests {
   # RUN_ flags filter an explicit test type to run, XLA_SKIP_ flags exclude one.
-  if [[ "$RUN_XLA_OP_TESTS" == "xla_op" ]]; then
+  if [[ "$RUN_XLA_OP_TESTS1" == "xla_op1" ]]; then
     echo "Running xla op tests..."
-    run_xla_op_tests
-  elif [[ "$RUN_TORCH_OP_TESTS1" == "torch_op1" ]]; then
-    echo "Running torch op tests1..."
-    run_torch_op_tests1
-  elif [[ "$RUN_TORCH_OP_TESTS2" == "torch_op2" ]]; then
-    echo "Running torch op tests1..."
-    run_torch_op_tests2
+    run_xla_op_tests1
+  elif [[ "$RUN_XLA_OP_TESTS2" == "xla_op2" ]]; then
+    echo "Running xla op tests..."
+    run_xla_op_tests2
+  elif [[ "$RUN_XLA_OP_TESTS3" == "xla_op3" ]]; then
+    echo "Running xla op tests..."
+    run_xla_op_tests3
+  elif [[ "$RUN_TORCH_OP_TESTS" == "torch_op" ]]; then
+    echo "Running torch op tests..."
+    run_torch_op_tests
   elif [[ "$RUN_MP_OP_TESTS" == "mp_op" ]]; then
     echo "Running mp op tests..."
     run_mp_op_tests
   else
+    # Run full tests without sharding, respects XLA_SKIP_*
     if [[ "$XLA_SKIP_XLA_OP_TESTS" != "1" ]]; then
-      run_xla_op_tests
+      run_xla_op_tests1
+      run_xla_op_tests2
+      run_xla_op_tests3
     fi
     if [[ "$XLA_SKIP_TORCH_OP_TESTS" != "1" ]]; then
-      run_torch_op_tests1
-      run_torch_op_tests2
+      run_torch_op_tests
     fi
     if [[ "$XLA_SKIP_MP_OP_TESTS" != "1" ]]; then
       run_mp_op_tests
