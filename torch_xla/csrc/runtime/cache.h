@@ -2,6 +2,7 @@
 #define XLA_CLIENT_CACHE_H_
 
 #include <sys/stat.h>
+#include <torch/csrc/lazy/core/metrics.h>
 
 #include <filesystem>
 #include <fstream>

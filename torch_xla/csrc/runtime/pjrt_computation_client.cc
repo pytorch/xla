@@ -1,8 +1,5 @@
 #include "torch_xla/csrc/runtime/pjrt_computation_client.h"
 
-#include <google/protobuf/io/coded_stream.h>
-#include <google/protobuf/io/zero_copy_stream_impl.h>
-
 #include <algorithm>
 #include <unordered_set>
 #include <vector>
@@ -538,56 +535,35 @@ bool PjRtComputationClient::SerializeComputation(ComputationPtr computation,
   const PjRtComputation& pjrt_computation =
       dynamic_cast<const PjRtComputation&>(*computation);
 
-  google::protobuf::io::OstreamOutputStream zero_copy_stream(&out);
-  google::protobuf::io::CodedOutputStream coded_stream(&zero_copy_stream);
-
-  auto computation_proto = computation->computation().proto();
-  coded_stream.WriteVarint64(computation_proto.ByteSize());
-  if (!computation_proto.SerializeToCodedStream(&coded_stream)) return false;
-
-  auto program_shape_proto = computation->program_shape().ToProto();
-  coded_stream.WriteVarint64(program_shape_proto.ByteSize());
-  if (!program_shape_proto.SerializeToCodedStream(&coded_stream)) return false;
-
   auto executable = pjrt_computation.executable->SerializeExecutable();
   if (!executable.ok()) return false;
-  coded_stream.WriteVarint64(executable->size());
-  coded_stream.WriteString(*executable);
+  out << *executable;
   return true;
 }
 
 ComputationClient::ComputationPtr PjRtComputationClient::DeserializeComputation(
     std::istream& in) {
-  xla::HloModuleProto computation_proto;
-  xla::ProgramShapeProto program_shape_proto;
-  google::protobuf::io::IstreamInputStream zero_copy_stream(&in);
-  google::protobuf::io::CodedInputStream coded_stream(&zero_copy_stream);
+  std::stringstream serialized;
+  serialized << in.rdbuf();
+  auto executable_or =
+      client_->DeserializeExecutable(serialized.str(), std::nullopt);
+  if (!executable_or.ok()) return nullptr;
+  auto executable = std::move(*executable_or);
 
-  uint64_t computation_size;
-  coded_stream.ReadVarint64(&computation_size);
-  auto limit = coded_stream.PushLimit(computation_size);
-  if (!computation_proto.ParseFromCodedStream(&coded_stream)) return nullptr;
-  coded_stream.PopLimit(limit);
-
-  uint64_t program_shape_size;
-  coded_stream.ReadVarint64(&program_shape_size);
-  limit = coded_stream.PushLimit(program_shape_size);
-  if (!program_shape_proto.ParseFromCodedStream(&coded_stream)) return nullptr;
-  coded_stream.PopLimit(limit);
-
-  uint64_t executable_size;
-  coded_stream.ReadVarint64(&executable_size);
-  std::string serialized;
-  serialized.resize(executable_size + 1);
-  if (!coded_stream.ReadString(&serialized, executable_size)) return nullptr;
-  auto executable = client_->DeserializeExecutable(serialized, std::nullopt);
-  if (!executable.ok()) return nullptr;
+  auto hlo_modules = executable->GetHloModules();
+  if (!hlo_modules.ok()) return nullptr;
+  XLA_CHECK(hlo_modules->size() == 1)
+      << "Only a single module is supported for persistent computation "
+         "caching. Please unset the XLA_PERSISTENT_COMPILATION_CACHE_PATH "
+         "variable to disable persistent caching.";
+  xla::XlaComputation computation((*hlo_modules)[0]->ToProto());
+  auto program_shape = computation.GetProgramShape();
+  if (!program_shape.ok()) return nullptr;
 
   // TODO(jonbolin): Only supports SPMD-mode execution
   std::vector<std::string> devices = {"SPMD:0"};
   return std::make_shared<PjRtComputation>(
-      xla::XlaComputation(computation_proto),
-      xla::ProgramShape(program_shape_proto), devices, std::move(*executable));
+      std::move(computation), *program_shape, devices, std::move(executable));
 }
 
 std::vector<ComputationClient::DataPtr>
