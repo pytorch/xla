@@ -85,9 +85,27 @@ if [[ "$BAZEL_VERB" == "coverage" ]]; then
   EXTRA_FLAGS="$EXTRA_FLAGS --remote_download_outputs=all" # for lcov symlink
 fi
 
-
-if [ "$LOGFILE" != "" ]; then
-  bazel $BAZEL_VERB $EXTRA_FLAGS //torch_xla/csrc/runtime:all //test/cpp:all --test_timeout 1000 ${FILTER:+"$FILTER"} 2> $LOGFILE
-else
-  bazel $BAZEL_VERB $EXTRA_FLAGS //torch_xla/csrc/runtime:all //test/cpp:all --test_timeout 1000 ${FILTER:+"$FILTER"}
+test_names=("all")
+if [[ "$RUN_CPP_TESTS1" == "cpp_tests1" ]]; then
+  test_names=("test_aten_xla_tensor_1"
+              "test_aten_xla_tensor_2"
+              "test_aten_xla_tensor_3"
+              "test_aten_xla_tensor_4")
+elif [[ "$RUN_CPP_TESTS2" == "cpp_tests2" ]]; then
+  test_names=("test_aten_xla_tensor_5"
+              "test_aten_xla_tensor_6"
+              "test_ir"
+              "test_lazy"
+              "test_replication"
+              "test_tensor"
+              "test_xla_backend_intf"
+              "test_xla_sharding")
 fi
+for name in "${test_names[@]}"; do
+  if [ "$LOGFILE" != "" ]; then
+    bazel $BAZEL_VERB $EXTRA_FLAGS //torch_xla/csrc/runtime:all //test/cpp:$name --test_timeout 1000 ${FILTER:+"$FILTER"} 2> $LOGFILE
+  else
+    bazel $BAZEL_VERB $EXTRA_FLAGS //torch_xla/csrc/runtime:all //test/cpp:$name --test_timeout 1000 ${FILTER:+"$FILTER"}
+  fi
+done
+

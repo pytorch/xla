@@ -149,12 +149,13 @@ function run_xla_op_tests1 {
   run_test "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_test_without_functionalization "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_test "$CDIR/test_async_closures.py"
-  run_test "$CDIR/test_autocast.py"
   run_test "$CDIR/test_profiler.py"
-}
-
-# DO NOT MODIFY
-function run_xla_op_tests2 {
+  run_test "$CDIR/pjrt/test_runtime.py"
+  run_test "$CDIR/pjrt/test_runtime_gpu.py"
+  run_test "$CDIR/pjrt/test_runtime_multi_cpu.py"
+  run_test "$CDIR/pjrt/test_internal_tpu.py"
+  run_test "$CDIR/pjrt/test_ddp.py"
+  run_test "$CDIR/pjrt/test_mesh_service.py"
   run_test "$CDIR/test_ops.py"
   run_test "$CDIR/test_metrics.py"
   run_test "$CDIR/test_zero1.py"
@@ -163,13 +164,18 @@ function run_xla_op_tests2 {
   run_test "$CDIR/dynamo/test_bridge.py"
   run_test "$CDIR/dynamo/test_num_output.py"
   run_save_tensor_ir "$CDIR/dynamo/test_dynamo_graph_dump.py"
-  run_downcast_bf16 "$CDIR/test_data_type.py"
   run_use_bf16 "$CDIR/test_data_type.py"
   run_xla_ir_debug "$CDIR/test_env_var_mapper.py"
   run_xla_hlo_debug "$CDIR/test_env_var_mapper.py"
   run_xla_hlo_debug "$CDIR/stablehlo/test_stablehlo_save_load.py"
   run_save_tensor_ir "$CDIR/spmd/test_spmd_graph_dump.py"
   run_save_tensor_hlo "$CDIR/spmd/test_spmd_graph_dump.py"
+}
+
+# DO NOT MODIFY
+function run_xla_op_tests2 {
+  run_downcast_bf16 "$CDIR/test_data_type.py"
+  run_test "$CDIR/test_autocast.py"  # TODO(yeounoh) this is expensive on GPU
   # TODO(qihqi): this test require tensorflow to run. need to setup separate
   #     CI with tf.
   run_xla_hlo_debug "$CDIR/stablehlo/test_stablehlo_inference.py"
@@ -178,12 +184,6 @@ function run_xla_op_tests2 {
 
 # All the new xla op tests should go to run_xla_op_tests3
 function run_xla_op_tests3 {
-  run_test "$CDIR/pjrt/test_runtime.py"
-  run_test "$CDIR/pjrt/test_runtime_gpu.py"
-  run_test "$CDIR/pjrt/test_runtime_multi_cpu.py"
-  run_test "$CDIR/pjrt/test_internal_tpu.py"
-  run_test "$CDIR/pjrt/test_ddp.py"
-  run_test "$CDIR/pjrt/test_mesh_service.py"
   run_test "$CDIR/spmd/test_xla_sharding.py"
   run_test "$CDIR/spmd/test_xla_sharding_hlo.py"
   run_test "$CDIR/spmd/test_xla_virtual_device.py"
@@ -234,11 +234,9 @@ function run_tests {
   elif [[ "$RUN_XLA_OP_TESTS3" == "xla_op3" ]]; then
     echo "Running xla op tests..."
     run_xla_op_tests3
-  elif [[ "$RUN_TORCH_OP_TESTS" == "torch_op" ]]; then
+  elif [[ "$RUN_TORCH_MP_OP_TESTS" == "torch_mp_op" ]]; then
     echo "Running torch op tests..."
     run_torch_op_tests
-  elif [[ "$RUN_MP_OP_TESTS" == "mp_op" ]]; then
-    echo "Running mp op tests..."
     run_mp_op_tests
   else
     # Run full tests without sharding, respects XLA_SKIP_*
