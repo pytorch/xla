@@ -223,7 +223,9 @@ function run_torch_xla_tests() {
   RUN_PYTHON="${RUN_PYTHON_TESTS:0}"
 
   if [ -x "$(command -v nvidia-smi)" ]; then
-    export GPU_NUM_DEVICES=2
+    num_devices=$(nvidia-smi --list-gpus | wc -l)
+    echo "Found $num_devices GPU devices..."
+    export GPU_NUM_DEVICES=$num_devices
   fi
   export PYTORCH_TESTING_DEVICE_ONLY_FOR="xla"
   export CXX_ABI=$(python -c "import torch;print(int(torch._C._GLIBCXX_USE_CXX11_ABI))")
