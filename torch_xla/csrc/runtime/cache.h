@@ -132,7 +132,7 @@ class PersistentCache : public AbstractCache<K, T, H, E> {
       int kMaxCacheSize, std::string cache_dir, bool readonly,
       std::function<void(TypePtr&, std::ostream&)> serialize,
       std::function<TypePtr(std::istream&)> deserialize)
-      : memcache_(kMaxCacheSize),
+      : memory_cache_(kMaxCacheSize),
         cache_dir_(cache_dir),
         readonly_(readonly),
         serialize_(serialize),
@@ -146,11 +146,11 @@ class PersistentCache : public AbstractCache<K, T, H, E> {
       std::ofstream out(path, std::ios::binary);
       serialize_(obj, out);
     }
-    return memcache_.Add(key, obj);
+    return memory_cache_.Add(key, obj);
   }
 
   TypePtr Get(const K& key) override {
-    TypePtr mem = memcache_.Get(key);
+    TypePtr mem = memory_cache_.Get(key);
     if (mem) {
       return mem;
     }
@@ -166,17 +166,17 @@ class PersistentCache : public AbstractCache<K, T, H, E> {
       return nullptr;
     }
     TORCH_LAZY_COUNTER("PersistentCacheHit", 1);
-    // Make sure the memcache tracks the value to prevent multiple loads
-    return memcache_.Add(key, val);
+    // Make sure the memory_cache_ tracks the value to prevent multiple loads
+    return memory_cache_.Add(key, val);
   }
 
   void Clear() override {
-    memcache_.Clear();
+    memory_cache_.Clear();
     // TODO(jonbolin): Clear the cache on disk
   }
 
   bool Erase(const K& key) override {
-    memcache_.Erase(key);
+    memory_cache_.Erase(key);
     return !readonly_ && std::remove(GetPath(key).c_str());
   }
 
@@ -192,7 +192,7 @@ class PersistentCache : public AbstractCache<K, T, H, E> {
     return stat(path.c_str(), &buffer) == 0;
   }
 
-  Cache<K, T, H, E> memcache_;
+  Cache<K, T, H, E> memory_cache_;
   std::function<void(TypePtr&, std::ostream&)> serialize_;
   std::function<TypePtr(std::istream&)> deserialize_;
   std::string cache_dir_;

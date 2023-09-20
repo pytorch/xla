@@ -473,7 +473,7 @@ XLAGraphExecutor::ComputationCache* createComputationCache() {
       runtime::sys_util::GetEnvInt("XLA_COMPILATION_CACHE_SIZE", 1024);
   static std::string persistentCacheDir = runtime::sys_util::GetEnvString(
       "XLA_PERSISTENT_COMPILATION_CACHE_PATH", "");
-  if (persistentCacheDir != "") {
+  if (!persistentCacheDir.empty()) {
     auto serialize_fn = [](auto& computation, auto& ostream) -> bool {
       return runtime::GetComputationClient()->SerializeComputation(
           computation->computation->client_computation(), ostream);

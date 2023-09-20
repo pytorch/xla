@@ -536,7 +536,10 @@ bool PjRtComputationClient::SerializeComputation(ComputationPtr computation,
       dynamic_cast<const PjRtComputation&>(*computation);
 
   auto executable = pjrt_computation.executable->SerializeExecutable();
-  if (!executable.ok()) return false;
+  if (!executable.ok()) {
+    TF_LOG(WARNING) << "Failed to serialize executable";
+    return false;
+  }
   out << *executable;
   return true;
 }
@@ -547,18 +550,29 @@ ComputationClient::ComputationPtr PjRtComputationClient::DeserializeComputation(
   serialized << in.rdbuf();
   auto executable_or =
       client_->DeserializeExecutable(serialized.str(), std::nullopt);
-  if (!executable_or.ok()) return nullptr;
+  if (!executable_or.ok()) {
+    TF_LOG(WARNING) << "Failed to deserialize executable";
+    return nullptr;
+  }
   auto executable = std::move(*executable_or);
 
   auto hlo_modules = executable->GetHloModules();
-  if (!hlo_modules.ok()) return nullptr;
+  if (!hlo_modules.ok()) {
+    TF_LOG(WARNING)
+        << "Failed to retrieve HLO modules from deserialized executable";
+    return nullptr;
+  }
   XLA_CHECK(hlo_modules->size() == 1)
       << "Only a single module is supported for persistent computation "
          "caching. Please unset the XLA_PERSISTENT_COMPILATION_CACHE_PATH "
          "variable to disable persistent caching.";
   xla::XlaComputation computation((*hlo_modules)[0]->ToProto());
   auto program_shape = computation.GetProgramShape();
-  if (!program_shape.ok()) return nullptr;
+  if (!program_shape.ok()) {
+    TF_LOG(WARNING)
+        << "Failed to get the ProgramShape from the deserialized executable";
+    return nullptr;
+  }
 
   // TODO(jonbolin): Only supports SPMD-mode execution
   std::vector<std::string> devices = {"SPMD:0"};
