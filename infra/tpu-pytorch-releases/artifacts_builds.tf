@@ -131,7 +131,6 @@ module "xrt_versioned_builds" {
   for_each = local.xrt_versioned_builds_dict
 
   ansible_vars = merge(each.value, {
-    pytorch_git_rev = "main"
     xla_git_rev     = "$COMMIT_SHA"
   })
 
