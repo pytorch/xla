@@ -866,6 +866,65 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     xs.mark_sharding(v, mesh, (0, None))
     self.assertEqual(met.counter_value("CreateOpSharding"), 2)
 
+  def test_from_cpu_shards(self):
+    # Create an OpSharding with all devices on a single axis
+    mesh = self._get_mesh((self.n_devices,))
+    op_sharding = mesh.get_op_sharding((0,))
+
+    # Infer the global shape from the OpSharding
+    shards = [torch.LongTensor([i]) for i in range(self.n_devices)]
+    global_tensor = XLAShardedTensor.from_cpu_shards(shards, op_sharding)
+    self.assertTrue(
+        torch.allclose(global_tensor.cpu(), torch.arange(self.n_devices)))
+
+    # Test incorrect number of shards
+    with self.assertRaises(RuntimeError):
+      XLAShardedTensor.from_cpu_shards(shards[:-1], op_sharding)
+
+    # Test an invalid global shape - too many values.
+    with self.assertRaises(RuntimeError):
+      bad_size = torch.Size((2 * self.n_devices,))
+      XLAShardedTensor.from_cpu_shards(shards, op_sharding, bad_size)
+
+    if self.n_devices > 1:
+      # Test an invalid global shape - incorrect rank
+      with self.assertRaises(RuntimeError):
+        bad_size = torch.Size((self.n_devices // 2, 2))
+        XLAShardedTensor.from_cpu_shards(shards, op_sharding, bad_size)
+
+      # Test a valid global shape - restrict the number of meaningful values
+      # to 1, treating the rest as padding.
+      global_shape = torch.Size((1,))
+      global_tensor = XLAShardedTensor.from_cpu_shards(shards, op_sharding,
+                                                       global_shape)
+      self.assertTrue(torch.allclose(global_tensor.cpu(), torch.arange(1)))
+
+      # Use a 2d mesh
+      mesh_2d = self._get_mesh((self.n_devices // 2, 2))
+      shards = [torch.LongTensor([[i]]) for i in range(self.n_devices)]
+      op_sharding = mesh_2d.get_op_sharding((0, 1))
+      global_tensor = XLAShardedTensor.from_cpu_shards(shards, op_sharding)
+      expected = torch.arange(self.n_devices).reshape(2, self.n_devices // 2)
+      self.assertTrue(torch.allclose(global_tensor.cpu(), expected))
+
+      # Use partial replication. With eight devices, the mesh and shards are:
+      #       mesh_2d            shards
+      #  | TPU:0 | TPU:1 |     | 0 | 1 |
+      #  | TPU:2 | TPU:3 |     | 0 | 1 |
+      #  | TPU:4 | TPU:5 |     | 0 | 1 |
+      #  | TPU:6 | TPU:7 |     | 0 | 1 |
+      #
+      # Partial replication along the 0th axis represents a global tensor
+      # of torch.Tensor([[0, 1]]).
+      shards = [torch.LongTensor([[i]]) for i in range(2)] * (
+          self.n_devices // 2)
+      op_sharding = mesh_2d.get_op_sharding((None, 1))
+      global_tensor = XLAShardedTensor.from_cpu_shards(shards, op_sharding)
+      expected = torch.arange(self.n_devices)
+      self.assertTrue(
+          torch.allclose(global_tensor.cpu(),
+                         torch.arange(2).reshape(1, 2)))
+
 
 if __name__ == '__main__':
   test = unittest.main()

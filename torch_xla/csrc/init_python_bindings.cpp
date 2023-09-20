@@ -1660,6 +1660,61 @@ void InitXlaModuleBindings(py::module m) {
           }
           return std::nullopt;
         });
+  // Reassemble the CPU shards into a global tensor. A new sharded tensor is
+  // created from the local shards with the provided sharding annotation
+  // attached. The order of the shards should coincide with the order of
+  // devices returned by `xr.local_runtime_devices()`.
+  m.def(
+      "_global_tensor_from_cpu_shards",
+      [](const std::vector<at::Tensor>& shards, const xla::OpSharding& sharding,
+         std::optional<std::vector<int>>& global_shape) -> at::Tensor {
+        XLA_CHECK(UseVirtualDevice())
+            << "Please enable SPMD via `torch_xla.runtime.use_spmd()`";
+        auto local_devices = runtime::GetComputationClient()->GetLocalDevices();
+        XLA_CHECK(local_devices.size() == shards.size())
+            << "Must specify a tensor for each local device";
+        // Set the global shape according to the input, or infer the global
+        // shape based on the tiling and shard shape.
+        auto tile_shape = sharding.tile_assignment_dimensions();
+        if (global_shape.has_value()) {
+          XLA_CHECK(global_shape->size() == shards[0].sizes().size())
+              << "Shard rank must match global tensor rank, got global rank "
+              << global_shape->size() << " and shard rank "
+              << shards[0].sizes().size();
+          // The global shape must be achievable through padding
+          for (int dim = 0; dim < shards[0].sizes().size(); ++dim) {
+            auto max_size = tile_shape[dim] * shards[0].sizes()[0];
+            XLA_CHECK(global_shape.value()[dim] <= max_size)
+                << "Invalid global shape " << global_shape.value()
+                << " for the provided shards and OpSharding: dimension " << dim
+                << " must be less than or equal to " << max_size;
+          }
+        } else {
+          global_shape = std::make_optional<std::vector<int>>();
+          for (int dim = 0; dim < shards[0].sizes().size(); ++dim) {
+            auto global_dim = tile_shape[dim] * shards[0].sizes()[0];
+            global_shape->push_back(global_dim);
+          }
+        }
+
+        xla::Shape tensor_shape =
+            CreateComputationShapeFromTensor(shards[0], nullptr);
+        for (int dim = 0; dim < tensor_shape.rank(); ++dim) {
+          tensor_shape.set_dimensions(dim, global_shape.value()[dim]);
+        }
+
+        auto sharding_spec =
+            std::make_shared<XLATensor::ShardingSpec>(sharding, tensor_shape);
+        auto data_handle = WrapXlaData(ShardingUtil::CreateShardedData(
+            shards, local_devices, sharding_spec));
+        XLATensorPtr xla_tensor = XLATensor::Create(std::move(data_handle));
+        xla_tensor->SetShardingSpec(*sharding_spec);
+        auto tensor = bridge::AtenFromXlaTensor(std::move(xla_tensor));
+        return torch::autograd::make_variable(tensor,
+                                              shards[0].requires_grad());
+      },
+      py::arg("shards"), py::arg("sharding"),
+      py::arg("global_shape") = py::none());
   // Returns the local shards of the tensor, with values taken from the
   // underlying ComputationClient::GetDataShards. As such, the shards will
   // contain any padding that was applied to ensure they all have the same
