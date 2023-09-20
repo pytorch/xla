@@ -128,11 +128,12 @@ class PersistentCache : public AbstractCache<K, T, H, E> {
   using TypePtr = std::shared_ptr<T>;
 
   explicit PersistentCache(
-      int kMaxCacheSize, std::string cache_dir,
+      int kMaxCacheSize, std::string cache_dir, bool readonly,
       std::function<void(TypePtr&, std::ostream&)> serialize,
       std::function<TypePtr(std::istream&)> deserialize)
       : memcache_(kMaxCacheSize),
         cache_dir_(cache_dir),
+        readonly_(readonly),
         serialize_(serialize),
         deserialize_(deserialize) {
     std::filesystem::create_directories(cache_dir);
@@ -140,7 +141,7 @@ class PersistentCache : public AbstractCache<K, T, H, E> {
 
   TypePtr Add(K key, TypePtr obj) override {
     std::string path = GetPath(key);
-    if (!Exists(path)) {
+    if (!Exists(path) && !readonly_) {
       std::ofstream out(path, std::ios::binary);
       serialize_(obj, out);
     }
@@ -175,7 +176,7 @@ class PersistentCache : public AbstractCache<K, T, H, E> {
 
   bool Erase(const K& key) override {
     memcache_.Erase(key);
-    return std::remove(GetPath(key).c_str());
+    return !readonly_ && std::remove(GetPath(key).c_str());
   }
 
  private:
@@ -194,6 +195,7 @@ class PersistentCache : public AbstractCache<K, T, H, E> {
   std::function<void(TypePtr&, std::ostream&)> serialize_;
   std::function<TypePtr(std::istream&)> deserialize_;
   std::string cache_dir_;
+  bool readonly_;
 };
 
 }  // namespace util

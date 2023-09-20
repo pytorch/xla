@@ -488,8 +488,10 @@ XLAGraphExecutor::ComputationCache* createComputationCache() {
       return std::make_shared<XLAGraphExecutor::CachedComputation>(
           computation, /*is_sharded=*/true);
     };
+    /* In a distributed SPMD context, only one worker should write. */
+    bool readonly = runtime::GetComputationClient()->GetProcessIndex() != 0;
     return new XLAGraphExecutor::PersistentCache(
-        kMaxCacheSize, persistentCacheDir, serialize_fn, deserialize_fn);
+        kMaxCacheSize, persistentCacheDir, readonly, serialize_fn, deserialize_fn);
   }
   return new XLAGraphExecutor::MemoryCache(kMaxCacheSize);
 }
