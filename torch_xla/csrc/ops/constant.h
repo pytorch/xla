@@ -21,6 +21,8 @@ class Constant : public XlaNode {
   xla::Literal value_;
 };
 
+torch::lazy::hash_t LiteralHash(const xla::Literal& l);
+
 }  // namespace torch_xla
 
 #endif  // XLA_TORCH_XLA_CSRC_OPS_CONSTANT_H_
