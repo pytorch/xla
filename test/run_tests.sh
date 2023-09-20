@@ -118,7 +118,7 @@ function run_xla_backend_mp {
   MASTER_ADDR=localhost MASTER_PORT=6000 run_test "$@"
 }
 
-function run_torch_op_tests {
+function run_torch_op_tests1 {
   run_dynamic "$CDIR/../../test/test_view_ops.py" "$@" -v TestViewOpsXLA
   run_test_without_functionalization "$CDIR/../../test/test_view_ops.py" "$@" -v TestViewOpsXLA
   run_test "$CDIR/../../test/test_torch.py" "$@" -v TestTorchDeviceTypeXLA
@@ -127,6 +127,9 @@ function run_torch_op_tests {
   run_test "$CDIR/../../test/test_indexing.py" "$@" -v TestIndexingXLA
   run_test "$CDIR/../../test/test_indexing.py" "$@" -v NumpyTestsXLA
   run_dynamic "$CDIR/../../test/test_nn.py" "$@" -v TestNNDeviceTypeXLA
+}
+
+function run_torch_op_tests2 {
   run_dynamic "$CDIR/../../test/nn/test_dropout.py" "$@" -v TestDropoutNNDeviceTypeXLA
   run_dynamic "$CDIR/../../test/nn/test_pooling.py" "$@" -v TestPoolingNNDeviceTypeXLA
   run_dynamic "$CDIR/../../test/nn/test_embedding.py" "$@" -v TestEmbeddingNNDeviceTypeXLA
@@ -183,7 +186,8 @@ function run_xla_op_tests {
 }
 
 function run_op_tests {
-  run_torch_op_tests
+  run_torch_op_tests1
+  run_torch_op_tests2
   run_xla_op_tests
 }
 
@@ -211,9 +215,12 @@ function run_tests {
   if [[ "$RUN_XLA_OP_TESTS" == "xla_op" ]]; then
     echo "Running xla op tests..."
     run_xla_op_tests
-  elif [[ "$RUN_TORCH_OP_TESTS" == "torch_op" ]]; then
-    echo "Running torch op tests..."
-    run_torch_op_tests
+  elif [[ "$RUN_TORCH_OP_TESTS1" == "torch_op1" ]]; then
+    echo "Running torch op tests1..."
+    run_torch_op_tests1
+  elif [[ "$RUN_TORCH_OP_TESTS2" == "torch_op2" ]]; then
+    echo "Running torch op tests1..."
+    run_torch_op_tests2
   elif [[ "$RUN_MP_OP_TESTS" == "mp_op" ]]; then
     echo "Running mp op tests..."
     run_mp_op_tests
@@ -222,7 +229,8 @@ function run_tests {
       run_xla_op_tests
     fi
     if [[ "$XLA_SKIP_TORCH_OP_TESTS" != "1" ]]; then
-      run_torch_op_tests
+      run_torch_op_tests1
+      run_torch_op_tests2
     fi
     if [[ "$XLA_SKIP_MP_OP_TESTS" != "1" ]]; then
       run_mp_op_tests
