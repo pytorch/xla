@@ -234,10 +234,10 @@ function run_torch_xla_tests() {
     run_torch_xla_cpp_tests $PYTORCH_DIR $XLA_DIR $USE_COVERAGE
   else
     # run python and cpp tests separately.
-    if [[ "$RUN_PYTHON_TESTS" != "0" ]]; then
+    if [[ "$RUN_PYTHON_TESTS" == "python_tests" ]]; then
       run_torch_xla_python_tests $PYTORCH_DIR $XLA_DIR $USE_COVERAGE
     fi
-    if [[ "$RUN_CPP_TESTS" != "0" ]]; then
+    if [[ "$RUN_CPP_TESTS" == "cpp_tests" ]]; then
       run_torch_xla_cpp_tests $PYTORCH_DIR $XLA_DIR $USE_COVERAGE
     fi
   fi

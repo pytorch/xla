@@ -208,11 +208,14 @@ function run_mp_op_tests {
 
 function run_tests {
   # RUN_ flags filter an explicit test type to run, XLA_SKIP_ flags exclude one.
-  if [[ "$RUN_XLA_OP_TESTS" == "1" ]]; then
+  if [[ "$RUN_XLA_OP_TESTS" == "xla_op" ]]; then
+    echo "Running xla op tests..."
     run_xla_op_tests
-  elif [[ "$RUN_TORCH_OP_TESTS" == "1" ]]; then
+  elif [[ "$RUN_TORCH_OP_TESTS" == "torch_op" ]]; then
+    echo "Running torch op tests..."
     run_torch_op_tests
-  elif [[ "$RUN_MP_OP_TESTS" == "1" ]]; then
+  elif [[ "$RUN_MP_OP_TESTS" == "mp_op" ]]; then
+    echo "Running mp op tests..."
     run_mp_op_tests
   else
     if [[ "$XLA_SKIP_XLA_OP_TESTS" != "1" ]]; then

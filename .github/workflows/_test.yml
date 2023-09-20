@@ -49,13 +49,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - run_cpp_tests: 1
-          - run_python_tests: 1
-            run_xla_op_tests: 1
-          - run_python_tests: 1
-            run_torch_op_tests: 1
-          - run_python_tests: 1
-            run_mp_op_tests: 1
+          # Use readable strings as they define the workflow titles.
+          - run_cpp_tests: 'cpp_tests'
+          - run_python_tests: 'python_tests'
+            run_xla_op_tests: 'xla_op'
+          - run_python_tests: 'python'
+            run_torch_op_tests: 'torch_op'
+          - run_python_tests: 'python'
+            run_mp_op_tests: 'mp_op'
     timeout-minutes: ${{ inputs.timeout-minutes }}
     env:
       DOCKER_IMAGE: ${{ inputs.docker-image }}
