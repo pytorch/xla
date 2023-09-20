@@ -176,14 +176,14 @@ function run_xla_op_tests1 {
 function run_xla_op_tests2 {
   run_downcast_bf16 "$CDIR/test_data_type.py"
   run_test "$CDIR/test_autocast.py"  # TODO(yeounoh) this is expensive on GPU
-  # TODO(qihqi): this test require tensorflow to run. need to setup separate
-  #     CI with tf.
-  run_xla_hlo_debug "$CDIR/stablehlo/test_stablehlo_inference.py"
-  run_stablehlo_compile "$CDIR/stablehlo/test_stablehlo_compile.py"
 }
 
 # All the new xla op tests should go to run_xla_op_tests3
 function run_xla_op_tests3 {
+  # TODO(qihqi): this test require tensorflow to run. need to setup separate
+  #     CI with tf.
+  run_xla_hlo_debug "$CDIR/stablehlo/test_stablehlo_inference.py"
+  run_stablehlo_compile "$CDIR/stablehlo/test_stablehlo_compile.py"
   run_test "$CDIR/spmd/test_xla_sharding.py"
   run_test "$CDIR/spmd/test_xla_sharding_hlo.py"
   run_test "$CDIR/spmd/test_xla_virtual_device.py"

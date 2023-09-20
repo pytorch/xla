@@ -102,10 +102,11 @@ elif [[ "$RUN_CPP_TESTS2" == "cpp_tests2" ]]; then
               "test_xla_sharding")
 fi
 for name in "${test_names[@]}"; do
+  echo "Running $name cpp test..."
   if [ "$LOGFILE" != "" ]; then
-    bazel $BAZEL_VERB $EXTRA_FLAGS //torch_xla/csrc/runtime:all //test/cpp:$name --test_timeout 1000 ${FILTER:+"$FILTER"} 2> $LOGFILE
+    bazel $BAZEL_VERB $EXTRA_FLAGS //torch_xla/csrc/runtime:all //test/cpp:${name} --test_timeout 1000 ${FILTER:+"$FILTER"} 2> $LOGFILE
   else
-    bazel $BAZEL_VERB $EXTRA_FLAGS //torch_xla/csrc/runtime:all //test/cpp:$name --test_timeout 1000 ${FILTER:+"$FILTER"}
+    bazel $BAZEL_VERB $EXTRA_FLAGS //torch_xla/csrc/runtime:all //test/cpp:${name} --test_timeout 1000 ${FILTER:+"$FILTER"}
   fi
 done
 
