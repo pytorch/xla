@@ -38,3 +38,8 @@ Here are some numbers we get when we run the MLP model for 100 iterations:
 
 ![alt_text](assets/dynamic_shape_mlp_perf.png "image_tooltip")
 _<span style="text-decoration:underline;">Figure 1. Performance comparison (a) without dynamic shape  (b) with dynamic shape </span>_
+
+To try it out, run
+```
+XLA_EXPERIMENTAL="nonzero:masked_select" PJRT_DEVICE=TPU python3 pytorch/xla/test/ds/test_dynamic_shape_models.py TestDynamicShapeModels.test_backward_pass_with_dynamic_input
+```
