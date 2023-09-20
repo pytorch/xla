@@ -263,11 +263,9 @@ class PjRtComputationClient : public ComputationClient {
 
   struct PjRtComputation : public Computation {
     PjRtComputation(xla::XlaComputation computation,
-                    xla::ProgramShape program_shape,
                     std::vector<std::string> devices,
                     std::unique_ptr<xla::PjRtLoadedExecutable> executable)
-        : Computation(std::move(computation), std::move(program_shape),
-                      std::move(devices)),
+        : Computation(std::move(computation), std::move(devices)),
           executable(std::move(executable)) {}
 
     std::unique_ptr<xla::PjRtLoadedExecutable> executable;
