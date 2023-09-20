@@ -194,6 +194,7 @@ bool ShardingUtil::EqualOpShardings(const xla::OpSharding& a,
 xla::OpSharding ShardingUtil::CreateOpSharding(
     const py::list& tile_assignment, const py::list& group_assignment,
     const py::list& replication_groups, ShardingType sharding_type) {
+  TORCH_LAZY_COUNTER("CreateOpSharding", 1);
   xla::OpSharding sharding;
   switch (sharding_type) {
     case ShardingType::MANUAL: {

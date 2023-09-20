@@ -205,6 +205,7 @@ def global_runtime_device_attributes() -> List[Dict[str, object]]:
 
 
 @requires_pjrt
+@functools.lru_cache()
 def global_runtime_device_count() -> int:
   """Returns the total number of runtime devices across all processes/hosts."""
   return len(torch_xla._XLAC._xla_get_all_runtime_devices())
