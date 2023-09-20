@@ -1,11 +1,11 @@
 # This requires cuda & cudnn packages pre-installed in the base image.
 # Other available cuda images are listed at https://hub.docker.com/r/nvidia/cuda
-ARG base_image="nvidia/cuda:11.7.0-cudnn8-devel-ubuntu18.04"
+ARG base_image="nvidia/cuda:12.0.1-cudnn8-devel-ubuntu20.04"
 FROM "${base_image}"
 
-ARG python_version="3.8"
+ARG python_version="3.10"
 ARG cuda="1"
-ARG cuda_compute="5.2,7.5"
+ARG cuda_compute="5.2,7.5,8.0"
 ARG cc="clang-8"
 ARG cxx="clang++-8"
 ARG cxx_abi="1"
@@ -39,7 +39,7 @@ ENV TPUVM_MODE "${tpuvm}"
 
 # Rotate nvidia repo public key (last updated: 04/27/2022)
 # Unfortunately, nvidia/cuda image is shipped with invalid public key
-RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/3bf863cc.pub
+RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/3bf863cc.pub
 
 # Install base system packages
 RUN apt-get clean && apt-get update
