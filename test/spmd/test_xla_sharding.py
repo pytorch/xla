@@ -881,6 +881,12 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     with self.assertRaises(RuntimeError):
       XLAShardedTensor.from_cpu_shards(shards[:-1], op_sharding)
 
+    # Test replicated sharding. The result should equal a shard.
+    op_sharding = mesh.get_op_sharding((None,))
+    shards = [torch.LongTensor([0])] * self.n_devices
+    global_tensor = XLAShardedTensor.from_cpu_shards(shards, op_sharding)
+    self.assertTrue(torch.allclose(global_tensor.cpu(), shards[0]))
+
     # Test an invalid global shape - too many values.
     with self.assertRaises(RuntimeError):
       bad_size = torch.Size((2 * self.n_devices,))
