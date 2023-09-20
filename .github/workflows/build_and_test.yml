@@ -19,7 +19,7 @@ jobs:
     uses: ./.github/workflows/_build.yml
     with:
       ecr-docker-image-base: 308535385114.dkr.ecr.us-east-1.amazonaws.com/pytorch/xla_base
-      gcr-docker-image: gcr.io/tpu-pytorch/xla_base:latest
+      gcr-docker-image: gcr.io/tpu-pytorch/xla_base:cuda_12_0
       disable_xrt: 1
       cuda: 1
     secrets:
