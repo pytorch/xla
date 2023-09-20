@@ -45,6 +45,17 @@ on:
 jobs:
   test:
     runs-on: ${{ inputs.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - run_cpp_tests: 1
+          - run_python_tests: 1
+            run_xla_op_tests: 1
+          - run_python_tests: 1
+            run_torch_op_tests: 1
+          - run_python_tests: 1
+            run_mp_op_tests: 1
     timeout-minutes: ${{ inputs.timeout-minutes }}
     env:
       DOCKER_IMAGE: ${{ inputs.docker-image }}
@@ -54,6 +65,11 @@ jobs:
       XLA_SKIP_XRT_TESTS: ${{ inputs.disable-xrt }}
       XLA_SKIP_TORCH_OP_TESTS: ${{ inputs.disable-pjrt }}
       XLA_SKIP_MP_OP_TESTS: ${{ inputs.disable-pjrt }}
+      RUN_CPP_TESTS: ${{ matrix.run_cpp_tests }}
+      RUN_PYTHON_TESTS: ${{ matrix.run_python_tests }}
+      RUN_XLA_OP_TESTS: ${{ matrix.run_xla_op_tests }}
+      RUN_TORCH_OP_TESTS: ${{ matrix.run_torch_op_tests }}
+      RUN_MP_OP_TESTS: ${{ matrix.run_mp_op_tests }}
     steps:
       - name: Setup Linux
         uses: pytorch/test-infra/.github/actions/setup-linux@main
@@ -88,12 +104,13 @@ jobs:
         run: |
           echo "DOCKER_IMAGE: ${DOCKER_IMAGE}"
           docker pull "${DOCKER_IMAGE}"
-          pid=$(docker run --shm-size=16g ${GPU_FLAG:-} -e USE_COVERAGE -e XLA_SKIP_XRT_TESTS -e XLA_SKIP_TORCH_OP_TESTS -e XLA_SKIP_MP_OP_TESTS -t -d -w "$WORKDIR" "${DOCKER_IMAGE}")
+          pid=$(docker run --shm-size=16g ${GPU_FLAG:-} -e USE_COVERAGE -e XLA_SKIP_XRT_TESTS -e XLA_SKIP_TORCH_OP_TESTS -e XLA_SKIP_MP_OP_TESTS -e RUN_CPP_TESTS -e RUN_PYTHON_TESTS -e RUN_XLA_OP_TESTS -e RUN_TORCH_OP_TESTS -e RUN_MP_OP_TESTS -t -d -w "$WORKDIR" "${DOCKER_IMAGE}")
           echo "${GCLOUD_SERVICE_KEY}" | docker exec -i "${pid}" sh -c "cat >> /tmp/pytorch/xla/default_credentials.json"
           echo "pid=${pid}" >> "${GITHUB_ENV}"
       - name: Test
         shell: bash
-        run: docker exec -u jenkins "${pid}" bash -c '. ~/.bashrc && .circleci/${{ inputs.test-script }}'
+        run: |
+          docker exec -u jenkins "${pid}" bash -c '. ~/.bashrc && .circleci/${{ inputs.test-script }}'
       - name: Upload coverage results
         if: ${{ inputs.collect-coverage }}
         shell: bash

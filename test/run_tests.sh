@@ -207,12 +207,23 @@ function run_mp_op_tests {
 }
 
 function run_tests {
-  run_xla_op_tests
-  if [[ "$XLA_SKIP_TORCH_OP_TESTS" != "1" ]]; then
+  # RUN_ flags filter an explicit test type to run, XLA_SKIP_ flags exclude one.
+  if [[ "$RUN_XLA_OP_TESTS" == "1" ]]; then
+    run_xla_op_tests
+  elif [[ "$RUN_TORCH_OP_TESTS" == "1" ]]; then
     run_torch_op_tests
-  fi
-  if [[ "$XLA_SKIP_MP_OP_TESTS" != "1" ]]; then
+  elif [[ "$RUN_MP_OP_TESTS" == "1" ]]; then
     run_mp_op_tests
+  else
+    if [[ "$XLA_SKIP_XLA_OP_TESTS" != "1" ]]; then
+      run_xla_op_tests
+    fi
+    if [[ "$XLA_SKIP_TORCH_OP_TESTS" != "1" ]]; then
+      run_torch_op_tests
+    fi
+    if [[ "$XLA_SKIP_MP_OP_TESTS" != "1" ]]; then
+      run_mp_op_tests
+    fi
   fi
 }
 

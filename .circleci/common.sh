@@ -127,15 +127,10 @@ function build_torch_xla() {
   popd
 }
 
-function run_torch_xla_tests() {
+function run_torch_xla_python_tests() {
   PYTORCH_DIR=$1
   XLA_DIR=$2
   USE_COVERAGE="${3:-0}"
-  if [ -x "$(command -v nvidia-smi)" ]; then
-    export GPU_NUM_DEVICES=2
-  fi
-  export PYTORCH_TESTING_DEVICE_ONLY_FOR="xla"
-  export CXX_ABI=$(python -c "import torch;print(int(torch._C._GLIBCXX_USE_CXX11_ABI))")
 
   pushd $XLA_DIR
     echo "Running Python Tests"
@@ -176,7 +171,15 @@ function run_torch_xla_tests() {
         fi
       fi
     fi
+  popd
+}
 
+function run_torch_xla_cpp_tests() {
+  PYTORCH_DIR=$1
+  XLA_DIR=$2
+  USE_COVERAGE="${3:-0}"
+
+  pushd $XLA_DIR
     echo "Running C++ Tests on PJRT"
     EXTRA_ARGS=""
     if [ "$USE_COVERAGE" != "0" ]; then
@@ -185,25 +188,57 @@ function run_torch_xla_tests() {
     if [ ! -z "$GCLOUD_SERVICE_KEY_FILE" ]; then
 	    EXTRA_ARGS="$EXTRA_ARGS -R"
     fi
-    if [ -x "$(command -v nvidia-smi)" ]; then
-      PJRT_DEVICE=GPU test/cpp/run_tests.sh $EXTRA_ARGS -L""
-      if [ "$USE_COVERAGE" != "0" ]; then
+
+    if [ "$USE_COVERAGE" != "0" ]; then
+      # TODO(yeounoh) shard the coverage testing
+      if [ -x "$(command -v nvidia-smi)" ]; then
+        PJRT_DEVICE=GPU test/cpp/run_tests.sh $EXTRA_ARGS -L""
         cp $XLA_DIR/bazel-out/_coverage/_coverage_report.dat /tmp/cov1.dat
-      fi
-      PJRT_DEVICE=GPU test/cpp/run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L"" $EXTRA_ARGS
-      if [ "$USE_COVERAGE" != "0" ]; then
+        PJRT_DEVICE=GPU test/cpp/run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L"" $EXTRA_ARGS
         cp $XLA_DIR/bazel-out/_coverage/_coverage_report.dat /tmp/cov2.dat
         lcov --add-tracefile /tmp/cov1.dat -a /tmp/cov2.dat -o /tmp/merged.dat
-      fi
-    else
-      PJRT_DEVICE=CPU test/cpp/run_tests.sh $EXTRA_ARGS -L""
-      if [ "$USE_COVERAGE" != "0" ]; then
+      else
+        PJRT_DEVICE=CPU test/cpp/run_tests.sh $EXTRA_ARGS -L""
         cp $XLA_DIR/bazel-out/_coverage/_coverage_report.dat /tmp/merged.dat
       fi
-    fi
-    if [ "$USE_COVERAGE" != "0" ]; then
       genhtml /tmp/merged.dat -o ~/htmlcov/cpp/cpp_lcov.info
       mv /tmp/merged.dat ~/htmlcov/cpp_lcov.info
+    else
+      # Shard GPU testing
+      if [ -x "$(command -v nvidia-smi)" ]; then
+        PJRT_DEVICE=GPU test/cpp/run_tests.sh $EXTRA_ARGS -L""
+        PJRT_DEVICE=GPU test/cpp/run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L"" $EXTRA_ARGS
+      else
+        PJRT_DEVICE=CPU test/cpp/run_tests.sh $EXTRA_ARGS -L""
+      fi
     fi
   popd
+}
+
+function run_torch_xla_tests() {
+  PYTORCH_DIR=$1
+  XLA_DIR=$2
+  USE_COVERAGE="${3:-0}"
+  RUN_CPP="${RUN_CPP_TESTS:0}"
+  RUN_PYTHON="${RUN_PYTHON_TESTS:0}"
+
+  if [ -x "$(command -v nvidia-smi)" ]; then
+    export GPU_NUM_DEVICES=2
+  fi
+  export PYTORCH_TESTING_DEVICE_ONLY_FOR="xla"
+  export CXX_ABI=$(python -c "import torch;print(int(torch._C._GLIBCXX_USE_CXX11_ABI))")
+
+  # TODO(yeounoh) test coverage workflow is not parallelized.
+  if [[ "$RUN_CPP_TESTS" == "0" && "$RUN_PYTHON_TESTS" == "0" || "$USE_COVERAGE" != "0" ]]; then
+    run_torch_xla_python_tests $PYTORCH_DIR $XLA_DIR $USE_COVERAGE
+    run_torch_xla_cpp_tests $PYTORCH_DIR $XLA_DIR $USE_COVERAGE
+  else
+    # run python and cpp tests separately.
+    if [[ "$RUN_PYTHON_TESTS" != "0" ]]; then
+      run_torch_xla_python_tests $PYTORCH_DIR $XLA_DIR $USE_COVERAGE
+    fi
+    if [[ "$RUN_CPP_TESTS" != "0" ]]; then
+      run_torch_xla_cpp_tests $PYTORCH_DIR $XLA_DIR $USE_COVERAGE
+    fi
+  fi
 }
