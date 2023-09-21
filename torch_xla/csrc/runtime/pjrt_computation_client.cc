@@ -576,8 +576,8 @@ ComputationClient::ComputationPtr PjRtComputationClient::DeserializeComputation(
 
   // TODO(jonbolin): Only supports SPMD-mode execution
   std::vector<std::string> devices = {"SPMD:0"};
-  return std::make_shared<PjRtComputation>(
-      std::move(computation), *program_shape, devices, std::move(executable));
+  return std::make_shared<PjRtComputation>(std::move(computation), devices,
+                                           std::move(executable));
 }
 
 std::vector<ComputationClient::DataPtr>

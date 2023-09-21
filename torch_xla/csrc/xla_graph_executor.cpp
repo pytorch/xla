@@ -471,28 +471,26 @@ void XLAGraphExecutor::MaybeDumpGraph(std::string name,
 XLAGraphExecutor::ComputationCache* createComputationCache() {
   static const size_t kMaxCacheSize =
       runtime::sys_util::GetEnvInt("XLA_COMPILATION_CACHE_SIZE", 1024);
-  static std::string persistentCacheDir = runtime::sys_util::GetEnvString(
-      "XLA_PERSISTENT_COMPILATION_CACHE_PATH", "");
+  static const bool readonlyPersistentCache =
+      runtime::sys_util::GetEnvBool("XLA_PERSISTENT_CACHE_RO", false);
+  static std::string persistentCacheDir =
+      runtime::sys_util::GetEnvString("XLA_PERSISTENT_CACHE_PATH", "");
   if (!persistentCacheDir.empty()) {
     auto serialize_fn = [](auto& computation, auto& ostream) -> bool {
       return runtime::GetComputationClient()->SerializeComputation(
-          computation->computation->client_computation(), ostream);
+          computation->computation, ostream);
     };
     auto deserialize_fn = [](auto& istream)
         -> std::shared_ptr<XLAGraphExecutor::CachedComputation> {
-      auto client_computation =
-          runtime::GetComputationClient()->DeserializeComputation(istream);
-      if (!client_computation) return nullptr;
       auto computation =
-          std::make_shared<torch_xla::Computation>(client_computation);
+          runtime::GetComputationClient()->DeserializeComputation(istream);
+      if (!computation) return nullptr;
       return std::make_shared<XLAGraphExecutor::CachedComputation>(
           computation, /*is_sharded=*/true);
     };
-    /* In a distributed SPMD context, only one worker should write. */
-    bool readonly = runtime::GetComputationClient()->GetProcessIndex() != 0;
-    return new XLAGraphExecutor::PersistentCache(kMaxCacheSize,
-                                                 persistentCacheDir, readonly,
-                                                 serialize_fn, deserialize_fn);
+    return new XLAGraphExecutor::PersistentCache(
+        kMaxCacheSize, persistentCacheDir, readonlyPersistentCache,
+        serialize_fn, deserialize_fn);
   }
   return new XLAGraphExecutor::MemoryCache(kMaxCacheSize);
 }
