@@ -447,24 +447,24 @@ torch::lazy::NodePtr ARange(const at::Scalar& start, const at::Scalar& end,
                                          step.toDouble());
       break;
     case xla::PrimitiveType::U8:
-      values = XlaHelpers::Range<uint8_t>(start.toByte(), end.toByte(),
-                                          step.toByte());
+      values = XlaHelpers::Range<uint8_t, uint64_t>(
+          start.toLong(), end.toLong(), step.toLong());
       break;
     case xla::PrimitiveType::S8:
-      values = XlaHelpers::Range<int8_t>(start.toChar(), end.toChar(),
-                                         step.toChar());
+      values = XlaHelpers::Range<int8_t, int64_t>(start.toLong(), end.toLong(),
+                                                  step.toLong());
       break;
     case xla::PrimitiveType::S16:
-      values = XlaHelpers::Range<int16_t>(start.toShort(), end.toShort(),
-                                          step.toShort());
+      values = XlaHelpers::Range<int16_t, int64_t>(start.toLong(), end.toLong(),
+                                                   step.toLong());
       break;
     case xla::PrimitiveType::U16:
-      values =
-          XlaHelpers::Range<uint16_t>(start.toInt(), end.toInt(), step.toInt());
+      values = XlaHelpers::Range<uint16_t, uint64_t>(
+          start.toLong(), end.toLong(), step.toLong());
       break;
     case xla::PrimitiveType::S32:
-      values =
-          XlaHelpers::Range<int32_t>(start.toInt(), end.toInt(), step.toInt());
+      values = XlaHelpers::Range<int32_t, int64_t>(start.toLong(), end.toLong(),
+                                                   step.toLong());
       break;
     case xla::PrimitiveType::U32:
       values = XlaHelpers::Range<uint32_t>(start.toLong(), end.toLong(),
