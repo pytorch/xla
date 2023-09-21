@@ -11,6 +11,8 @@ ARG cxx="clang++-8"
 ARG cxx_abi="1"
 ARG tpuvm=""
 
+ENV DEBIAN_FRONTEND noninteractive
+
 # Disable CUDA for PyTorch
 ENV USE_CUDA "0"
 
@@ -44,8 +46,10 @@ RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/
 # Install base system packages
 RUN apt-get clean && apt-get update
 RUN apt-get upgrade -y
-RUN apt-get install --fix-missing -y python-pip python3-pip git curl libopenblas-dev vim jq \
+RUN apt-get install --fix-missing -y python3-pip git curl libopenblas-dev vim jq \
     apt-transport-https ca-certificates procps openssl sudo wget libssl-dev libc6-dbg
+RUN echo 'debconf debconf/frontend select Noninteractive' | sudo debconf-set-selections
+RUN sudo apt-get install -y -q
 
 # Install clang & llvm
 ADD ./install_llvm_clang.sh install_llvm_clang.sh

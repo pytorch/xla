@@ -25,6 +25,14 @@ function install_llvm_clang() {
   # Build config also sets CC=clang-8, CXX=clang++-8
   sudo apt-get install -y clang-8 clang++-8
   sudo apt-get install -y llvm-8 llvm-8-dev llvm-8-tools
+
+  # TODO(yeounoh) enable clang-10+ for future dev images
+  if [[ -e /usr/bin/clang ]]; then
+    sudo unlink /usr/bin/clang
+  fi
+  if [[ -e /usr/bin/clang++ ]]; then
+    sudo unlink /usr/bin/clang++
+  fi
   sudo ln -s /usr/bin/clang-8 /usr/bin/clang
   sudo ln -s /usr/bin/clang++-8 /usr/bin/clang++
   export CC=clang-8 CXX=clang++-8
