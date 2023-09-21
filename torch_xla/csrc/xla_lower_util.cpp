@@ -764,8 +764,8 @@ xla::XlaOp BuildLinspace(const torch::lazy::BackendDevice& device,
 
   std::tie(start, end) = XlaHelpers::PromoteValues(start, end);
   xla::XlaOp indices = xla::ConvertElementType(
-      xla::ConstantLiteral(start.builder(),
-                           XlaHelpers::Range<int64_t>(0, steps, 1)),
+      xla::ConstantLiteral(start.builder(), XlaHelpers::Range<int64_t, int64_t>(
+                                                0ll, steps, 1ll)),
       XlaHelpers::TypeOfXlaOp(start));
 
   xla::XlaOp last_index = XlaHelpers::ScalarValue(

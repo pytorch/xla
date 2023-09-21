@@ -334,10 +334,13 @@ class XlaHelpers {
   static xla::XlaOp PromotedLogicalUnaryOp(
       xla::XlaOp op, const std::function<xla::XlaOp(xla::XlaOp)>& unary_op);
 
-  template <typename T>
-  static xla::Literal Range(T start, T end, T step) {
+  // T is the returned type, A is the type used for accumulation. In general,
+  // A should have higher-or-equal-precision to T.
+  template <typename T, typename A = T>
+  static xla::Literal Range(A start, A end, A step) {
+    std::vector<A> accumulated = runtime::util::Range<A>(start, end, step);
     return xla::LiteralUtil::CreateR1<T>(
-        runtime::util::Range<T>(start, end, step));
+        std::vector<T>(accumulated.begin(), accumulated.end()));
   }
 
   static xla::PrecisionConfig::Precision mat_mul_precision() {
