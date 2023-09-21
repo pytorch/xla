@@ -30,3 +30,6 @@ torch_xla/csrc/version.cpp
 
 # Clangd cache directory
 .cache/*
+
+# VS extension directory
+.VS*

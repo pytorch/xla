@@ -5,9 +5,9 @@ FROM "${base_image}"
 
 ARG python_version="3.10"
 ARG cuda="1"
-ARG cuda_compute="5.2,7.5,8.0"
-ARG cc="clang-8"
-ARG cxx="clang++-8"
+ARG cuda_compute="7.0,7.5,8.0"
+ARG cc="gcc-11"
+ARG cxx="g++-11"
 ARG cxx_abi="1"
 ARG tpuvm=""
 
@@ -95,6 +95,7 @@ ENV PATH $CARGO_HOME/bin:$PATH
 ADD ./install_conda.sh install_conda.sh
 RUN sudo chown jenkins ./install_conda.sh
 RUN bash ./install_conda.sh "${python_version}" /opt/conda
+ENV LD_LIBRARY_PATH /opt/conda/lib:/usr/local/lib:$LD_LIBRARY_PATH
 
 RUN echo "conda activate base" >> ~/.bashrc
 RUN echo "export TF_CPP_LOG_THREAD_ID=1" >> ~/.bashrc

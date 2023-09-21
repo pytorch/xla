@@ -77,6 +77,10 @@ function install_deps_pytorch_xla() {
 
   sudo apt-get -qq update
 
+  # Hack similar to https://github.com/pytorch/pytorch/pull/105227/files#diff-9e59213240d3b55d2ddc53c8c096db9eece0665d64f46473454f9dc0c10fd804
+  # TODO(yeounoh) confirm that this is not needed here.
+  sudo rm /opt/conda/lib/libstdc++.so*
+
   sudo apt-get -qq install npm nodejs
 
   # Install LCOV and llvm-cov to generate C++ coverage reports
@@ -91,33 +95,6 @@ function install_deps_pytorch_xla() {
   fi
 
   sudo ln -s "$(command -v bazelisk)" /usr/bin/bazel
-
-  # Install gcc-11
-  sudo apt-get update
-  # Update ppa for GCC
-  sudo apt-get install -y software-properties-common
-  sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-  sudo apt update -y
-  sudo apt install -y gcc-11
-  sudo apt install -y g++-11
-  sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100
-  sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 100
-
-  # Installing gcc/g++-11 could break existing toolchain.
-  sudo apt install --reinstall libffi-dev
-  sudo apt install -y gcc-10 g++-10
-  export CC=gcc-10
-  export CXX=g++-10
-
-  export NVCC_PREPEND_FLAGS='-ccbin /usr/bin/g++-11'
-
-  # Hack similar to https://github.com/pytorch/pytorch/pull/105227/files#diff-9e59213240d3b55d2ddc53c8c096db9eece0665d64f46473454f9dc0c10fd804
-  sudo rm /opt/conda/lib/libstdc++.so*
-
-  # Update gcov for test coverage
-  sudo update-alternatives --install /usr/bin/gcov gcov /usr/bin/gcov-11 100
-  sudo update-alternatives --install /usr/bin/gcov-dump gcov-dump /usr/bin/gcov-dump-11 100
-  sudo update-alternatives --install /usr/bin/gcov-tool gcov-tool /usr/bin/gcov-tool-11 100
 
   # Symnlink the missing cuda headers if exists
   CUBLAS_PATTERN="/usr/include/cublas*"

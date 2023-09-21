@@ -54,6 +54,11 @@ function install_and_setup_conda() {
   /usr/bin/yes | pip install pytest
   /usr/bin/yes | pip install sympy
 
+  sudo apt install -y libtinfo-dev python-is-python3
+  conda install -c conda-forge ncurses
+
+  # Ensure /opt/conda/lib/libtinfo.so.6 version information is available.
+  sudo apt install -y libtinfo-dev
 }
 
 install_and_setup_conda

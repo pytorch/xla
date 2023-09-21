@@ -27,6 +27,11 @@ if which sccache > /dev/null; then
   sccache --zero-stats
 fi
 
+# Allow bash to find missing pakcage versions
+if [[ -e /opt/conda/lib/libtinfo.so.6 ]]; then
+  rm /opt/conda/lib/libtinfo.so.6
+fi
+
 rebase_pull_request_on_target_branch
 
 pushd $PYTORCH_DIR
@@ -49,6 +54,7 @@ source $XLA_DIR/xla_env
 export GCLOUD_SERVICE_KEY_FILE="$XLA_DIR/default_credentials.json"
 export SILO_NAME='cache-silo-ci-gcc-11'  # cache bucket for CI
 export BUILD_CPP_TESTS='1'
+
 build_torch_xla $XLA_DIR
 
 popd
