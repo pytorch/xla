@@ -74,7 +74,7 @@ jobs:
             # Note: disable the following 2 lines while testing a new image, so we do not
             # push to the upstream.
             docker tag "${GCR_DOCKER_IMAGE}" "${ECR_DOCKER_IMAGE_BASE}:v1.0" >/dev/null
-            docker push "${ECR_DOCKER_IMAGE_BASE}:v1.1" >/dev/null
+            #docker push "${ECR_DOCKER_IMAGE_BASE}:v1.1" >/dev/null
       - name: Start the container
         shell: bash
         run: |

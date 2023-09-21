@@ -103,6 +103,12 @@ function install_deps_pytorch_xla() {
   sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100
   sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 100
 
+  # Installing gcc/g++-11 could break existing toolchain.
+  sudo apt install --reinstall libffi-dev
+  sudo apt install -y gcc-10 g++-10
+  export CC=gcc-10
+  export CXX=g++-10
+
   export NVCC_PREPEND_FLAGS='-ccbin /usr/bin/g++-11'
 
   # Hack similar to https://github.com/pytorch/pytorch/pull/105227/files#diff-9e59213240d3b55d2ddc53c8c096db9eece0665d64f46473454f9dc0c10fd804

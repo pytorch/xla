@@ -22,11 +22,9 @@ function install_llvm_clang() {
     wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
     sudo apt-get update
   fi
-  # Build config also sets CC=clang-8, CXX=clang++-8
+  # TODO(yeounoh) remove after fully migrating away from clang-8.
   sudo apt-get install -y clang-8 clang++-8
   sudo apt-get install -y llvm-8 llvm-8-dev llvm-8-tools
-
-  # TODO(yeounoh) enable clang-10+ for future dev images
   if [[ -e /usr/bin/clang ]]; then
     sudo unlink /usr/bin/clang
   fi

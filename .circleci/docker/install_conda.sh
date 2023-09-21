@@ -30,7 +30,7 @@ function install_and_setup_conda() {
   conda update -y -n base conda
   conda install -y python=$PYTHON_VERSION
 
-  conda install -y nomkl numpy pyyaml setuptools cmake \
+  conda install -y nomkl numpy pyyaml setuptools cmake git \
     cffi typing tqdm coverage hypothesis dataclasses cython
 
   /usr/bin/yes | pip install mkl==2022.2.1
