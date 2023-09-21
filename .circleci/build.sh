@@ -27,6 +27,10 @@ if which sccache > /dev/null; then
   sccache --zero-stats
 fi
 
+if [[ -e /opt/conda/lib/libtinfo.so.6 ]]; then
+  rm /opt/conda/lib/libtinfo.so.6
+fi
+
 rebase_pull_request_on_target_branch
 
 pushd $PYTORCH_DIR
