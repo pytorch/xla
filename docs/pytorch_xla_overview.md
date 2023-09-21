@@ -1,3 +1,5 @@
+# Beginner's Guide to PyTorch/XLA
+
 ### **Objective:**
 This document provides a high-level overview of PyTorch XLA and illustrates a
 few examples how PyTorch code is converted to run on XLA devices (e.g. TPUs).
@@ -6,7 +8,7 @@ depending on the specific code. However, this document should serve as a
 starting point for the conversion process.
 
 
-# Basic high-level understanding of some XLA details
+## Basic high-level understanding of some XLA details
 This section provides a brief overview of the basic details of PyTorch XLA,
  which should help readers better understand the required modifications and
  optimizations of code. It is supplement to the API guide described [here](https://github.com/pytorch/xla/blob/master/API_GUIDE.md).
@@ -56,7 +58,7 @@ Sometimes it is worth breaking the IR graph with `xm.mark_step()`. As explained 
 
 Another important point to consider is [MPDeviceLoader](https://github.com/pytorch/xla/blob/a1f822e2627a5639464273241821852677401026/torch_xla/distributed/parallel_loader.py#L186). Once your code is running on an XLA device, consider wrapping the torch dataloader with XLA `MPDeviceLoader` which preloads data to the device to improve performance and includes `xm.mark_step()` in it. The latter automatically breaks the iterations over batches of data and sends them for execution. Note, if you are not using MPDeviceLoader, you might need to set `barrier=True` in the `optimizer_step()` to enable `xm.mark_step()` if running a training job or explicitly adding `xm.mark_step()`.
 
-# TPU Setup
+## TPU Setup
 Create TPU with base image to use nightly wheels or from the stable release by specifying the `RUNTIME_VERSION`.
 ```
 export ZONE=us-central2-b
@@ -91,7 +93,7 @@ sudo apt-get install libopenblas-dev -y
 sudo apt-get update && sudo apt-get install libgl1 -y # diffusion specific
 ```
 
-# Converting code to PyTorch XLA
+## Converting code to PyTorch XLA
 General guidelines to modify your code:
 * Replace `cuda` with `xm.xla_device()`
 * Remove progress bar, printing that would access the XLA tensor values
@@ -101,7 +103,7 @@ General guidelines to modify your code:
 
 Remember: each case is unique so you might need to do something different for each case.
 
-# Example 1. Stable Diffusion inference in PyTorch Lightning on a Single TPU Device
+## Example 1. Stable Diffusion inference in PyTorch Lightning on a Single TPU Device
 
 As a first example consider the [inference code](https://github.com/pytorch-tpu/stable-diffusion/blob/main/scripts/txt2img.py) of the stable diffusion model in PyTorch Lightning which can be run from command line as
 ```
@@ -140,7 +142,7 @@ Now the [code](https://github.com/pytorch-tpu/stable-diffusion/blob/ss-inference
 
 Note: if you are running on v4-8 TPU, then you have 4 available XLA (TPU) devices. Running the code as above will only use one XLA device. In order to run on all 4 devices you need to use `xmp.spawn()` function to spawn the code on all the devices. We will discuss an `xmp.spawn` in the next example.
 
-# Example 2. HF Stable Diffusion Inference
+## Example 2. HF Stable Diffusion Inference
 Now, consider using [Stable Diffusion Inference](https://github.com/huggingface/diffusers/tree/main/examples/text_to_image) in the HuggingFace diffusers library for both the SD-XL and 2.1 versions of the model. For your reference, the changes described below can be found in this [repo](https://github.com/pytorch-tpu/diffusers). You can clone the repo and run the inference using the following command on your TPU VM:
 
 ```
@@ -162,7 +164,7 @@ or
 Warning: watch out for caveats highlighted [here](https://github.com/huggingface/diffusers/pull/4254#issuecomment-1712289803).
 
 
-# Running on a Single TPU device
+## Running on a Single TPU device
 
 This section describes the changes that need to be made to the [text_to_image inference example](https://github.com/huggingface/diffusers/tree/main/examples/text_to_image#inference) code to run it on TPUs.
 
@@ -202,7 +204,7 @@ Additionally, the `self.scheduler.step()` function, which by default uses the DP
 [^1]: 0 and 1 are magic numbers in XLA and treated as constants in the HLO. So if there is a random number generator in the code that can generate these values, the code will compile for each value separately. This can be disabled with `XLA_NO_SPECIAL_SCALARS=1` environment variable.
 
 
-# Profiling and performance analysis
+## Profiling and performance analysis
 
 To further investigate the performance of the model, we can profile it using the profiling [guide](https://cloud.google.com/tpu/docs/pytorch-xla-performance-profiling-tpu-vm). As a rule of thumb, the profiling script should be run with the maximum batch size that fits into the memory for [optimal memory usage](https://cloud.google.com/tpu/docs/performance-guide). It also helps to overlap tracing of the code with device execution which leads to more optimal device usage. The duration of profiling should be long enough to capture at least one step. Good performance of the model on TPUs means that device-host communication is minimized and the device is constantly running processes with no idle time.
 
@@ -242,7 +244,7 @@ Now if we zoom in on the loop, we can see that the graph within the loop is brok
 If we investigate the U-Net function and the scheduler, we can see that the U-Net code does not contain any optimization targets for PyTorch/XLA. However, there are `.item()` and `.nonzero()` calls inside the [scheduler.step](https://github.com/huggingface/diffusers/blob/15782fd506e8c4a7c2b288fc2e558bd77fdfa51a/src/diffusers/schedulers/scheduling_euler_discrete.py#L371). We can [rewrite](https://github.com/pytorch-tpu/diffusers/blob/0243d2ef9c2c7bc06956bb1bcc92c23038f6519d/src/diffusers/schedulers/scheduling_euler_discrete.py#L310) the function to avoid those calls. If we fix this issue and rerun a profile, we will not see much difference. However, since we have reduced the device-host communication that was introducing smaller graphs, we allowed the compiler to optimize the code better. The function [scale_model_input](https://github.com/huggingface/diffusers/blob/15782fd506e8c4a7c2b288fc2e558bd77fdfa51a/src/diffusers/schedulers/scheduling_euler_discrete.py#L205) has similar issues, and  we can fix these by making the changes we made above to the  `step` function. Overall, since many of the gaps are caused from python level code tracing and graph building, these gaps are not possible to optimize with the current version of PyTorch XLA, but we may see improvements in the future when dynamo is enabled in PyTorch XLA.
 
 
-# Running on Multiple TPU Devices
+## Running on Multiple TPU Devices
 
 To use multiple TPU devices, you can use the `xmp.spawn` function to spawn the function you ran on a single device to multiple devices. The `xmp.spawn` function will start processes on multiple TPU devices and sync them when needed. This can be done by passing the `index` argument to the function that runs on a single device. For example,
 ```
@@ -259,7 +261,7 @@ In this example, the `my_function` function will be spawned on 4 TPU devices on 
 [This file](https://github.com/ssusie/diffusers/blob/main/examples/text_to_image/inference_tpu_multidevice.py) illustrates how xmp.spawn can be used to run stable diffusion 2.1 version on multiple TPU devices. For this version similar to the above changes were made to the [pipeline](https://github.com/huggingface/diffusers/blob/main/src/diffusers/pipelines/stable_diffusion/pipeline_stable_diffusion.py) file.
 
 
-# Running on Pods
+## Running on Pods
 Once you have the code for running on a single host device, there is no further change needed. You can create the TPU pod, for example, by following these [instructions](https://cloud.google.com/tpu/docs/pytorch-pods#create-tpu-vm). Then run your script with
 ```
 gcloud compute tpus tpu-vm ssh ${TPU_NAME} \
