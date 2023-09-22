@@ -11,7 +11,7 @@ the shape of `out_tensor` depends on the value of `in_tensor` and is bounded by 
 >>> print(out_tensor.shape)
 torch.Size([<=25, 2])
 ```
-you can see the first dimension depends on the value of `in_tensor` and its maximum value is 25. We call the first dimension as the dynamic dimension. The second dimension does not depend on any upstream tensors so we call it the static dimension.
+you can see the first dimension depends on the value of `in_tensor` and its maximum value is 25. We call the first dimension the dynamic dimension. The second dimension does not depend on any upstream tensors so we call it the static dimension.
 
 Dynamic shape can be further categorized into bounded dynamic shape and unbounded dynamic shape.
 - bounded dynamic shape: refers to a shape whose dynamic dimensions are bounded by static values. It works for accelerators that require static memory allocation (e.g. TPU).
