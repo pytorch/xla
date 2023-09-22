@@ -5,7 +5,7 @@ FROM "${base_image}"
 
 ARG python_version="3.10"
 ARG cuda="1"
-ARG cuda_compute="7.0,7.5,8.0"
+ARG cuda_compute="sm_70,sm_75,compute_80"
 ARG cc="gcc-11"
 ARG cxx="g++-11"
 ARG cxx_abi="1"
@@ -20,6 +20,8 @@ ENV USE_CUDA "0"
 ENV XLA_CUDA "${cuda}"
 ENV TF_CUDA_COMPUTE_CAPABILITIES "${cuda_compute}"
 ENV TF_CUDA_PATHS "/usr/local/cuda,/usr/include,/usr"
+ENV TF_CUDA_VERSION "12"
+ENV TF_CUDNN_VERSION "8"
 
 # CUDA build guidance
 ENV NVIDIA_VISIBLE_DEVICES all
