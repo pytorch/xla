@@ -75,6 +75,15 @@ XLATensorPtr TryGetXlaTensor(const at::Tensor& tensor) {
   return impl->tensor();
 }
 
+std::vector<XLATensorPtr> TryGetXlaTensors(const at::ITensorListRef& tensors) {
+  std::vector<XLATensorPtr> xla_tensors;
+  xla_tensors.reserve(tensors.size());
+  for (const auto& tensor : tensors) {
+    xla_tensors.push_back(bridge::TryGetXlaTensor(tensor));
+  }
+  return xla_tensors;
+}
+
 bool IsXlaTensor(const at::Tensor& tensor) {
   return GetXlaTensorImpl(tensor) != nullptr;
 }

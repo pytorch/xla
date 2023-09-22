@@ -53,7 +53,7 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     debug_info = torch_xla._XLAC._get_xla_tensor_debug_info(xst1.global_tensor)
     self.assertIn('XLAShardedData', debug_info)
     self.assertIn('Data Device: SPMD:0', debug_info)
-    self.assertIn('OpSharding:', debug_info)
+    self.assertIn('OpSharding: {', debug_info)
     self.assertIn('NumShards: %s' % (self.n_devices), debug_info)
 
   def test_xla_shards(self):
@@ -846,6 +846,25 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     xs.mark_sharding(xla_x, self._get_mesh((1, self.n_devices)), (1, 0))
     self.assertNotEqual(torch_xla._XLAC._get_xla_sharding_spec(xla_x), '')
     self.assertTrue(torch.allclose(xla_x.cpu(), x))
+
+  def test_op_sharding_cache(self):
+    met.clear_all()
+    mesh = self._get_mesh((1, self.n_devices))
+
+    t = torch.randn(1, self.n_devices).to(xm.xla_device())
+    xs.mark_sharding(t, mesh, (0, 1))
+    self.assertIn("CreateOpSharding", met.counter_names())
+    self.assertEqual(met.counter_value("CreateOpSharding"), 1)
+
+    # Sharding with the same partition spec should not result in another call
+    u = torch.randn(1, self.n_devices).to(xm.xla_device())
+    xs.mark_sharding(u, mesh, (0, 1))
+    self.assertEqual(met.counter_value("CreateOpSharding"), 1)
+
+    # Changing the partition spec will result in another CreateOpSharding
+    v = torch.randn(1, self.n_devices).to(xm.xla_device())
+    xs.mark_sharding(v, mesh, (0, None))
+    self.assertEqual(met.counter_value("CreateOpSharding"), 2)
 
 
 if __name__ == '__main__':

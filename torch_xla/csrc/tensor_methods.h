@@ -1,8 +1,8 @@
 #ifndef XLA_TORCH_XLA_CSRC_TENSOR_METHODS_H_
 #define XLA_TORCH_XLA_CSRC_TENSOR_METHODS_H_
 
-#include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/cross_replica_reduces.h"
+#include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/tensor.h"
 
 namespace torch_xla {
@@ -83,7 +83,7 @@ void adam_optimizer_step_(const XLATensorPtr& found_inf, XLATensorPtr& step,
 
 std::vector<XLATensorPtr> user_computation(
     const std::string& opname, absl::Span<const XLATensorPtr> inputs,
-    ComputationPtr computation);
+    runtime::ComputationClient::ComputationPtr computation);
 
 //////////////////////////////////////////////////////////////////////////////
 // ATEN operators follows here, listed in alphabetical order.
@@ -162,12 +162,6 @@ XLATensorPtr amin(const XLATensorPtr& input, std::vector<int64_t> dimensions,
 void arange_out(XLATensorPtr& out, const at::Scalar& start,
                 const at::Scalar& end, const at::Scalar& step,
                 at::ScalarType scalar_type);
-
-XLATensorPtr argmax(const XLATensorPtr& input, int64_t dim, bool keepdim);
-XLATensorPtr argmax(const XLATensorPtr& input);
-
-XLATensorPtr argmin(const XLATensorPtr& input, int64_t dim, bool keepdim);
-XLATensorPtr argmin(const XLATensorPtr& input);
 
 // Takes a slice from the input as R1 at the specified offset and reshapes it
 // into the provided size.

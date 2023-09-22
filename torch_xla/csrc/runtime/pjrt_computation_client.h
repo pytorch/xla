@@ -164,6 +164,12 @@ class PjRtComputationClient : public ComputationClient {
              std::shared_ptr<xla::PjRtBuffer> buffer)
         : Data(std::move(device), std::move(device_shape)), buffer(buffer) {}
 
+    PjRtData(std::string device, std::shared_ptr<xla::PjRtBuffer> buffer)
+        : Data(std::move(device),
+               xla::Shape(buffer->element_type(), buffer->dimensions(),
+                          buffer->is_dynamic_dimension(), {})),
+          buffer(buffer) {}
+
     OpaqueHandle GetOpaqueHandle() override {
       XLA_CHECK(HasValue())
           << "buffer with shape " << shape().ToString() << " on device "
@@ -241,7 +247,8 @@ class PjRtComputationClient : public ComputationClient {
       ss << "XLAShardedData: \n";
       ss << "  Data Device: " << device() << "\n";
       ss << "  Data Shape: " << shape().ToString() << "\n";
-      ss << "  OpSharding: " << sharding.type() << "\n";
+      ss << "  OpSharding: "
+         << xla::HloSharding::FromProto(sharding)->ToString() << "\n";
       ss << "  NumShards: " << shards.size() << "\n";
       return ss.str();
     }
@@ -256,11 +263,9 @@ class PjRtComputationClient : public ComputationClient {
 
   struct PjRtComputation : public Computation {
     PjRtComputation(xla::XlaComputation computation,
-                    xla::ProgramShape program_shape,
                     std::vector<std::string> devices,
                     std::unique_ptr<xla::PjRtLoadedExecutable> executable)
-        : Computation(std::move(computation), std::move(program_shape),
-                      std::move(devices)),
+        : Computation(std::move(computation), std::move(devices)),
           executable(std::move(executable)) {}
 
     std::unique_ptr<xla::PjRtLoadedExecutable> executable;

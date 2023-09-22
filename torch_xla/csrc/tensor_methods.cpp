@@ -23,8 +23,6 @@
 #include "torch_xla/csrc/ops/all_to_all.h"
 #include "torch_xla/csrc/ops/amp_foreach_non_finite_check_and_unscale.h"
 #include "torch_xla/csrc/ops/amp_update_scale.h"
-#include "torch_xla/csrc/ops/arg_max.h"
-#include "torch_xla/csrc/ops/arg_min.h"
 #include "torch_xla/csrc/ops/arithmetic_ir_ops.h"
 #include "torch_xla/csrc/ops/as_strided.h"
 #include "torch_xla/csrc/ops/avg_pool_nd.h"
@@ -131,6 +129,7 @@
 #include "torch_xla/csrc/ops/var.h"
 #include "torch_xla/csrc/ops/var_mean.h"
 #include "torch_xla/csrc/ops/view.h"
+#include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/metrics.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
@@ -531,7 +530,7 @@ void adam_optimizer_step_(const XLATensorPtr& found_inf, XLATensorPtr& step,
 
 std::vector<XLATensorPtr> user_computation(
     const std::string& opname, absl::Span<const XLATensorPtr> inputs,
-    ComputationPtr computation) {
+    runtime::ComputationClient::ComputationPtr computation) {
   XLA_CHECK(!inputs.empty());
   std::vector<torch::lazy::Value> input_values;
   for (auto& input : inputs) {
@@ -695,34 +694,6 @@ void arange_out(XLATensorPtr& out, const at::Scalar& start,
                 at::ScalarType scalar_type) {
   out->SetIrValue(ARange(start, end, step, scalar_type));
   out->SetScalarType(scalar_type);
-}
-
-XLATensorPtr argmax(const XLATensorPtr& input, int64_t dim, bool keepdim) {
-  int64_t canonical_dim =
-      torch::lazy::GetCanonicalDimensionIndex(dim, input->shape().get().rank());
-  return input->CreateFrom(torch::lazy::MakeNode<ArgMax>(
-                               input->GetIrValue(), canonical_dim, keepdim),
-                           at::ScalarType::Long);
-}
-
-XLATensorPtr argmax(const XLATensorPtr& input) {
-  return input->CreateFrom(
-      torch::lazy::MakeNode<ArgMax>(input->GetIrValue(), -1, false),
-      at::ScalarType::Long);
-}
-
-XLATensorPtr argmin(const XLATensorPtr& input, int64_t dim, bool keepdim) {
-  int64_t canonical_dim =
-      torch::lazy::GetCanonicalDimensionIndex(dim, input->shape().get().rank());
-  return input->CreateFrom(torch::lazy::MakeNode<ArgMin>(
-                               input->GetIrValue(), canonical_dim, keepdim),
-                           at::ScalarType::Long);
-}
-
-XLATensorPtr argmin(const XLATensorPtr& input) {
-  return input->CreateFrom(
-      torch::lazy::MakeNode<ArgMin>(input->GetIrValue(), -1, false),
-      at::ScalarType::Long);
 }
 
 XLATensorPtr as_strided(const XLATensorPtr& input, std::vector<int64_t> size,

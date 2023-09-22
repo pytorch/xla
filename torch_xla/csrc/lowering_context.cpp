@@ -9,8 +9,8 @@
 #include "absl/strings/str_join.h"
 #include "absl/strings/str_replace.h"
 #include "absl/strings/string_view.h"
-#include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/ir.h"
+#include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/shape_helper.h"
@@ -231,7 +231,7 @@ void LoweringContext::AddParameter(const torch::lazy::Output& output,
 
 torch::lazy::ComputationPtr LoweringContext::Build() {
   xla::XlaComputation xla_computation = ConsumeValue(BuildXla());
-  return std::make_shared<torch_xla::Computation>(
+  return std::make_shared<runtime::ComputationClient::Computation>(
       builder_.name(), std::move(xla_computation), device_);
 }
 

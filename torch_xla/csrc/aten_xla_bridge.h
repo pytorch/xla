@@ -16,6 +16,9 @@ namespace bridge {
 
 XLATensorPtr TryGetXlaTensor(const at::Tensor& tensor);
 
+// Same as above, applied to a list of tensors.
+std::vector<XLATensorPtr> TryGetXlaTensors(const at::ITensorListRef& tensors);
+
 bool IsXlaTensor(const at::Tensor& tensor);
 
 // Extracts the XLATensorPtr out of our version of at::Tensor. Throws an

@@ -689,26 +689,6 @@ at::Tensor& XLANativeFunctions::arange_out(const at::Scalar& start,
   return out;
 }
 
-at::Tensor XLANativeFunctions::argmax(const at::Tensor& self,
-                                      c10::optional<int64_t> dim,
-                                      bool keepdim) {
-  TORCH_LAZY_FN_COUNTER("xla::");
-  return dim ? bridge::AtenFromXlaTensor(tensor_methods::argmax(
-                   bridge::GetXlaTensor(self), *dim, keepdim))
-             : bridge::AtenFromXlaTensor(
-                   tensor_methods::argmax(bridge::GetXlaTensor(self)));
-}
-
-at::Tensor XLANativeFunctions::argmin(const at::Tensor& self,
-                                      c10::optional<int64_t> dim,
-                                      bool keepdim) {
-  TORCH_LAZY_FN_COUNTER("xla::");
-  return dim ? bridge::AtenFromXlaTensor(tensor_methods::argmin(
-                   bridge::GetXlaTensor(self), *dim, keepdim))
-             : bridge::AtenFromXlaTensor(
-                   tensor_methods::argmin(bridge::GetXlaTensor(self)));
-}
-
 at::Tensor XLANativeFunctions::as_strided_copy(
     const at::Tensor& self, at::IntArrayRef size, at::IntArrayRef stride,
     c10::optional<int64_t> storage_offset) {
@@ -1170,12 +1150,19 @@ at::Tensor XLANativeFunctions::einsum(c10::string_view equation,
                      [](unsigned char x) { return std::isspace(x); }),
       cleansed_equation.end());
 
-  std::vector<XLATensorPtr> xla_tensors = bridge::GetXlaTensors(tensors);
+  std::vector<XLATensorPtr> xla_tensors = bridge::TryGetXlaTensors(tensors);
+  bool all_xla_tensors_are_valid = true;
+  for (const XLATensorPtr xla_tensor : xla_tensors) {
+    if (!xla_tensor) {
+      all_xla_tensors_are_valid = false;
+      break;
+    }
+  }
 
   TORCH_LAZY_FN_COUNTER("xla::");
   // Einsum operations with more than 2 operands, like bilinear operations, are
   // not currently supported in XLA
-  if (tensors.size() < 1 || tensors.size() > 2 ||
+  if (tensors.size() < 1 || tensors.size() > 2 || !all_xla_tensors_are_valid ||
       !EinsumUtilities::EquationIsValid(cleansed_equation) ||
       TensorsAreOfType(xla_tensors, at::ScalarType::Long)) {
     TORCH_LAZY_COUNTER("EinsumFallback", 1);

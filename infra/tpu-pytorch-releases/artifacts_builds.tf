@@ -17,10 +17,12 @@ variable "nightly_builds" {
 }
 
 // TODO: Remove this after the 2.1 release
-variable "xrt_nightly_builds" {
+variable "xrt_versioned_builds" {
   type = list(
     object({
+      package_version = string
       accelerator    = string
+      pytorch_git_rev = optional(string, "")
       cuda_version   = optional(string, "11.8")
       python_version = optional(string, "3.8")
       arch           = optional(string, "amd64")
@@ -58,9 +60,10 @@ locals {
   }
 
   // TODO: Remove this after the 2.1 release
-  xrt_nightly_builds_dict = {
-    for b in var.xrt_nightly_builds :
-    format("%s_%s",
+  xrt_versioned_builds_dict = {
+    for b in var.xrt_versioned_builds :
+    format("r%s_%s_%s",
+      replace(b.package_version, "+", "_"),
       b.python_version,
       b.accelerator == "tpu" ? "tpuvm" : format("cuda_%s", b.cuda_version)
     ) => b
@@ -69,7 +72,7 @@ locals {
   versioned_builds_dict = {
     for b in var.versioned_builds :
     format("r%s_%s_%s",
-      b.package_version,
+      replace(b.package_version, "+", "_"),
       b.python_version,
       b.accelerator == "tpu" ? "tpuvm" : format("cuda_%s", b.cuda_version)
     ) => b
@@ -123,29 +126,26 @@ module "nightly_builds" {
 }
 
 // TODO: Remove this after the 2.1 release
-module "xrt_nightly_builds" {
+module "xrt_versioned_builds" {
   source   = "../terraform_modules/xla_docker_build"
-  for_each = local.xrt_nightly_builds_dict
+  for_each = local.xrt_versioned_builds_dict
 
   ansible_vars = merge(each.value, {
-    package_version = var.nightly_package_version
-    nightly_release = true
-    pytorch_git_rev = "main"
     xla_git_rev     = "$COMMIT_SHA"
   })
 
   trigger_on_schedule = { schedule = "0 0 * * *", branch = "xrt" }
 
-  trigger_name = "nightly-xrt-${replace(each.key, "/[_.]/", "-")}"
+  trigger_name = replace(each.key, "/[_.]/", "-")
   image_name   = "xla"
   image_tags = [
-    "nightly_xrt_${each.key}",
+    each.key,
     # Append _YYYYMMDD suffix to nightly image name.
-    "nightly_xrt_${each.key}_$(date +%Y%m%d)",
+    "${each.key}_$(date +%Y%m%d)",
   ]
 
   description = join(" ", [
-    "Builds nightly xla:nightly_${each.key}' ${
+    "Builds nightly xla:${each.key}' ${
       each.value.accelerator == "tpu"
       ? "TPU"
       : format("CUDA %s", each.value.cuda_version)

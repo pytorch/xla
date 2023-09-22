@@ -1,5 +1,7 @@
 #include "torch_xla/csrc/ops/ops_xla_shape_fn.h"
 
+#include <torch/csrc/lazy/core/helpers.h>
+
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/elementwise.h"
 #include "torch_xla/csrc/helpers.h"
@@ -177,6 +179,38 @@ xla::Shape AnyDimOutputShape(const torch::lazy::Value& input, int64_t dim,
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return BuildAny(operands[0], {dim}, keepdim);
+  };
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
+}
+
+xla::Shape ArgmaxOutputShape(const torch::lazy::Value& input,
+                             c10::optional<int64_t> dim, bool keepdim) {
+  auto lower_for_shape_fn =
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    if (dim.has_value()) {
+      const xla::Shape& input_shape = GetXlaShape(input);
+      int64_t canonical_dim = torch::lazy::GetCanonicalDimensionIndex(
+          dim.value(), input_shape.rank());
+      return BuildArgMax(operands[0], {canonical_dim}, keepdim);
+    } else {
+      return BuildArgMax(operands[0], {-1}, false);
+    }
+  };
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
+}
+
+xla::Shape ArgminOutputShape(const torch::lazy::Value& input,
+                             c10::optional<int64_t> dim, bool keepdim) {
+  auto lower_for_shape_fn =
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    if (dim.has_value()) {
+      const xla::Shape& input_shape = GetXlaShape(input);
+      int64_t canonical_dim = torch::lazy::GetCanonicalDimensionIndex(
+          dim.value(), input_shape.rank());
+      return BuildArgMin(operands[0], {canonical_dim}, keepdim);
+    } else {
+      return BuildArgMin(operands[0], {-1}, false);
+    }
   };
   return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
 }

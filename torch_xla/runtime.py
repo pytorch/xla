@@ -84,6 +84,16 @@ def requires_pjrt(fn: FN) -> FN:
   return wrapper
 
 
+def is_bf16_supported():
+  """Returns whether torch.bfloat16 is supported on this environment.
+  """
+  try:
+    torch.tensor([1.], dtype=torch.bfloat16, device=xm.xla_device())
+    return True
+  except Exception as e:
+    return False
+
+
 @requires_pjrt
 def xla_device(n: Optional[int] = None,
                devkind: Optional[str] = None) -> torch.device:
@@ -195,6 +205,7 @@ def global_runtime_device_attributes() -> List[Dict[str, object]]:
 
 
 @requires_pjrt
+@functools.lru_cache()
 def global_runtime_device_count() -> int:
   """Returns the total number of runtime devices across all processes/hosts."""
   return len(torch_xla._XLAC._xla_get_all_runtime_devices())

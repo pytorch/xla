@@ -18,7 +18,7 @@ import torch_xla.debug.metrics as metrics
 import torch_xla.runtime as xr
 import torch_xla.utils.utils as xu
 
-debug = os.environ.get("TORCH_XLA_DEBUG") == "1"
+debug = os.environ.get("XLA_DYNAMO_DEBUG") == "1"
 
 
 @dataclasses.dataclass
@@ -322,6 +322,10 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule):
 
 
 def extract_internal(xla_model: torch.fx.GraphModule):
+  if debug:
+    for xla_arg in xla_model.xla_args:
+      print(torch_xla._XLAC._get_xla_tensor_debug_info(xla_arg))
+  xm.mark_step()
   (xla_args_sharding_spec, args_and_out, graph_hash,
    arg_index_to_need_update_index, none_remover, graph_input_matcher,
    dumb_return_handler, xla_args_need_update) = extract_graph_helper(xla_model)
@@ -471,6 +475,23 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
   collector = FallBackNodeCollector(xla_model)
   collector.run(*xla_args)
   fallback_ops = collector.get_fallback_ops()
+  if debug and len(fallback_ops) > 0:
+    print('fallback ops are' + str(fallback_ops))
+
+  # This logic, needed for supporting in-place operations, is a duplicate of
+  # the one in the main `extract_internal` function above. We need to do this
+  # check for fetching fallback ops as well.
+  # TODO (@wonjoo): Make this duplicate code a bit cleaner.
+  args_need_update_bool = torch_xla._XLAC._check_tensor_need_materialization(
+      all_xla_args)
+
+  # Again, same logic in the `extract_internal` above to support in-place operations.
+  # TODO (@wonjoo): Make this duplicate code a bit cleaner.
+  for i, need_update in enumerate(args_need_update_bool):
+    if need_update and isinstance(all_xla_args[i], torch.Tensor):
+      all_xla_args[i].copy_(cloned_args[i])
+
+  torch_xla._XLAC._clear_pending_irs(str(xm.xla_device()))
 
   class XlaOperatorSupport(torch.fx.passes.operator_support.OperatorSupport):
 
@@ -492,21 +513,6 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
   # fuse partitions and exectue to collect inputs
   partitioned_graph = partitioner.fuse_partitions(partitions)
   InputCollector(partitioned_graph).run(*xla_args)
-
-  # This logic, needed for supporting in-place operations, is a duplicate of
-  # the one in the main `extract_internal` function above. We need to do this
-  # check for fetching fallback ops as well.
-  # TODO (@wonjoo): Make this duplicate code a bit cleaner.
-  args_need_update_bool = torch_xla._XLAC._check_tensor_need_materialization(
-      all_xla_args)
-
-  # Again, same logic in the `extract_internal` above to support in-place operations.
-  # TODO (@wonjoo): Make this duplicate code a bit cleaner.
-  for i, need_update in enumerate(args_need_update_bool):
-    if need_update and isinstance(all_xla_args[i], torch.Tensor):
-      all_xla_args[i].copy_(cloned_args[i])
-
-  torch_xla._XLAC._clear_pending_irs(str(xm.xla_device()))
 
   # compile each submodule and replace it with a call
   for node in partitioned_graph.graph.nodes:

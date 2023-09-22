@@ -199,10 +199,12 @@ void XlaNode::UpdateShardingHash() {
       sharding_hash_ = torch::lazy::HashCombine(
           sharding_hash_, (uint32_t)tile_assignment_dimension);
     }
-    for (const auto& tile_assignment_device :
-         sharding->tile_assignment_devices()) {
-      sharding_hash_ = torch::lazy::HashCombine(
-          sharding_hash_, (uint32_t)tile_assignment_device);
+    {
+      const int64_t* data = sharding->tile_assignment_devices().data();
+      const size_t size_in_bytes =
+          sharding->tile_assignment_devices().size() * sizeof(*data);
+      sharding_hash_ =
+          torch::lazy::HashBlock(data, size_in_bytes, sharding_hash_);
     }
     for (const auto& last_tile_dim : sharding->last_tile_dims()) {
       sharding_hash_ =

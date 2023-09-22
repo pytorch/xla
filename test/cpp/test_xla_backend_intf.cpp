@@ -1,7 +1,7 @@
 #include <vector>
 
 #include "test/cpp/cpp_test_util.h"
-#include "torch_xla/csrc/computation.h"
+#include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/xla_backend_impl.h"
 
@@ -64,7 +64,7 @@ TEST(XLABackendTest, TestE2E) {
   ForEachDevice([&](const torch::lazy::BackendDevice& device) {
     xla::XlaComputation xla_computation = CreateAddComputation(input_shape);
     torch::lazy::ComputationPtr computation =
-        std::make_shared<torch_xla::Computation>(
+        std::make_shared<torch_xla::runtime::ComputationClient::Computation>(
             "test", std::move(xla_computation), device);
     std::vector<torch::lazy::ComputationPtr> compiled_programs =
         impl->Compile({computation});

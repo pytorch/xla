@@ -9,6 +9,10 @@ nightly_builds = [
   },
   {
     accelerator  = "cuda"
+    cuda_version = "12.1"
+  },
+  {
+    accelerator  = "cuda"
     cuda_version = "12.0"
   },
   {
@@ -27,14 +31,19 @@ nightly_builds = [
 ]
 
 # TODO: Remove this after the 2.1 release
-xrt_nightly_builds = [
+xrt_versioned_builds = [
   {
     accelerator    = "tpu"
     python_version = "3.10"
+    pytorch_git_rev = "v2.1.0-rc5"
+    package_version = "2.1.0rc5+xrt"
   },
   {
     accelerator  = "cuda"
+    python_version = "3.10"
     cuda_version = "12.0"
+    pytorch_git_rev = "v2.1.0-rc5"
+    package_version = "2.1.0rc5+xrt"
   },
 ]
 
@@ -42,17 +51,26 @@ xrt_nightly_builds = [
 versioned_builds = [
   {
     git_tag         = "v2.1.0"
-    pytorch_git_rev = "v2.1.0-rc2"
-    package_version = "2.1.0rc2"
+    pytorch_git_rev = "v2.1.0-rc5"
+    package_version = "2.1.0rc5"
     accelerator     = "tpu"
+    bundle_libtpu   = "0"
   },
   {
     git_tag         = "v2.1.0"
-    pytorch_git_rev = "v2.1.0-rc2"
-    package_version = "2.1.0rc2"
+    pytorch_git_rev = "v2.1.0-rc5"
+    package_version = "2.1.0rc5"
     accelerator     = "tpu"
     python_version  = "3.10"
     bundle_libtpu   = "0"
+  },
+  {
+    git_tag         = "v2.1.0"
+    pytorch_git_rev = "v2.1.0-rc5"
+    package_version = "2.1.0rc5+libtpu"
+    accelerator     = "tpu"
+    python_version  = "3.10"
+    bundle_libtpu   = "1"
   },
   {
     git_tag         = "v2.0.0"
@@ -66,22 +84,22 @@ versioned_builds = [
   },
   {
     git_tag         = "v2.1.0"
-    pytorch_git_rev = "v2.1.0-rc2"
-    package_version = "2.1.0rc2",
+    pytorch_git_rev = "v2.1.0-rc5"
+    package_version = "2.1.0rc5",
     accelerator     = "cuda"
     cuda_version    = "12.0"
   },
   {
     git_tag         = "v2.1.0"
-    pytorch_git_rev = "v2.1.0-rc2"
-    package_version = "2.1.0rc2"
+    pytorch_git_rev = "v2.1.0-rc5"
+    package_version = "2.1.0rc5"
     accelerator     = "cuda"
     cuda_version    = "11.8"
   },
   {
     git_tag         = "v2.1.0"
-    pytorch_git_rev = "v2.1.0-rc2"
-    package_version = "2.1.0rc2"
+    pytorch_git_rev = "v2.1.0-rc5"
+    package_version = "2.1.0rc5"
     accelerator     = "cuda"
     cuda_version    = "11.8"
     python_version  = "3.10"

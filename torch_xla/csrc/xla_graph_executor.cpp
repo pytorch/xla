@@ -27,7 +27,6 @@
 #include "absl/strings/str_join.h"
 #include "stablehlo/dialect/Serialization.h"  // from @stablehlo
 #include "torch_xla/csrc/aten_xla_bridge.h"
-#include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir_dump_util.h"
 #include "torch_xla/csrc/layout_manager.h"
@@ -42,6 +41,7 @@
 #include "torch_xla/csrc/ops/view.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
 #include "torch_xla/csrc/runtime/cache.h"
+#include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/env_vars.h"
 #include "torch_xla/csrc/runtime/runtime.h"
@@ -496,6 +496,9 @@ void XLAGraphExecutor::ClearPendingIrs(
               runtime::GetComputationClient()->CreateDataPlaceholder(
                   device.toString(), std::move(shape)));
           tensors[i]->data()->handle = handle;
+          TF_VLOG(4) << "Replacing the IR " << ir_value.node.get()->ToString()
+                     << " of Tensor with ID " << tensors[i]->GetUniqueId()
+                     << " with placeholder";
         }
         tensors[i]->AssignIrValue(torch::lazy::Value());
         tensors[i]->data()->view = nullptr;
@@ -709,9 +712,8 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
         std::vector<runtime::ComputationClient::DataPtr> outputs =
             ShardingUtil::OutputHandler(
                 runtime::GetComputationClient()->ExecuteReplicated(
-                    *async->cached_computation->computation
-                         ->client_computation(),
-                    device_arguments, devices, execute_options),
+                    *async->cached_computation->computation, device_arguments,
+                    devices, execute_options),
                 sharding_specs);
         results = WrapXlaData(outputs);
         TF_VLOG(3) << "Executing Dynamo IR sharded graph hash "
@@ -1111,9 +1113,8 @@ XLAGraphExecutor::ScheduleSyncTensorsGraph(
         std::vector<runtime::ComputationClient::DataPtr> outputs =
             ShardingUtil::OutputHandler(
                 runtime::GetComputationClient()->ExecuteReplicated(
-                    *async->cached_computation->computation
-                         ->client_computation(),
-                    device_arguments, devices, execute_options),
+                    *async->cached_computation->computation, device_arguments,
+                    devices, execute_options),
                 sharding_specs, /*replicated_output=*/false);
         results = WrapXlaData(outputs);
         TF_VLOG(3) << "Executing IR graph hash "
@@ -1419,7 +1420,7 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
   return {/*device=*/coll.device,
           /*emitted_nodes=*/lowering_ctx.GetEmittedNodeCount(),
           /*computation=*/
-          std::make_shared<Computation>(std::move(computations.front())),
+          computations.front(),
           /*parameters_data=*/std::move(po_data->parameters_data),
           /*is_sharded=*/is_sharded};
 }

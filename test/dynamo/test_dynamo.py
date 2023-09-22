@@ -72,10 +72,6 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     b = torch.sin(y)
     return a + b
 
-  @torch.compile(backend='openxla')
-  def fn_simple_dynamo(self, x, y):
-    return self.fn_simple(x, y)
-
   def test_simple_model(self):
     device = xm.xla_device()
     x = torch.tensor(100.0)
@@ -83,16 +79,17 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     xla_x = x.to(device)
     xla_y = y.to(device)
     res_cpu = self.fn_simple(x, y)
-    res_xla_dynamo = self.fn_simple_dynamo(xla_x, xla_y)
+    fn_simple_dynamo = torch.compile(self.fn_simple, backend="openxla")
+    res_xla_dynamo = fn_simple_dynamo(xla_x, xla_y)
     self.assertIn('xla::add', met.counter_names())
     self.assertTrue(torch.allclose(res_cpu, res_xla_dynamo.cpu()))
     # verifiy that tracing is skipped in following runs
     met.clear_counters()
-    res_xla_dynamo_2 = self.fn_simple_dynamo(xla_x, xla_y)
+    res_xla_dynamo_2 = fn_simple_dynamo(xla_x, xla_y)
     self.assertNotIn('xla::add', met.counter_names())
     self.assertTrue(torch.allclose(res_cpu, res_xla_dynamo_2.cpu()))
     # verify that dynamo can handle different inputs
-    res_xla_dynamo_3 = self.fn_simple_dynamo(xla_x + xla_y, xla_y * 3)
+    res_xla_dynamo_3 = fn_simple_dynamo(xla_x + xla_y, xla_y * 3)
     res_cpu_3 = self.fn_simple(x + y, y * 3)
     self.assertTrue(torch.allclose(res_cpu_3, res_xla_dynamo_3.cpu()))
 
@@ -156,20 +153,38 @@ class DynamoInferenceBasicTest(unittest.TestCase):
           xla_index, xla_copy_tensor, xla_input_tensor, op_name=in_place_op)
       self.assertTrue(torch.allclose(res_cpu, res_xla_dynamo.cpu()))
 
+  def test_einsum(self):
+    # einsum currently does not have meta function to compute the shape hence
+    # will fallback to XLA with FakeTensor as input to infer the output shape.
+    def einsum_mm(a, b):
+      return torch.einsum('ijkl,ijlm->ijkm', a, b)
+
+    device = xm.xla_device()
+    a = torch.randn(4, 4, 4, 4).to(xm.xla_device())
+    b = torch.randn(4, 4, 4, 4).to(xm.xla_device())
+    xm.mark_step()
+
+    dynamo_einsum_mm = torch.compile(einsum_mm, backend="openxla")
+    res_xla_dynamo = dynamo_einsum_mm(a, b)
+    res_xla_non_dynamo = einsum_mm(a, b)
+    self.assertTrue(
+        torch.allclose(res_xla_non_dynamo.cpu(), res_xla_dynamo.cpu()))
+
   def test_simple_model_with_different_input_shape(self):
     met.clear_counters()
     device = xm.xla_device()
     xla_x = torch.randn(5, 5).to(device)
     xla_y = torch.randn(5, 5).to(device)
     xla_z = torch.randn(10, 10).to(device)
-    self.fn_simple_dynamo(xla_x, xla_x)
+    fn_simple_dynamo = torch.compile(self.fn_simple, backend="openxla")
+    fn_simple_dynamo(xla_x, xla_x)
     compile_count = met.metric_data('CompileTime')[0]
     # Execute with input with same shape should not trigger additional compilation
-    self.fn_simple_dynamo(xla_y, xla_y)
+    fn_simple_dynamo(xla_y, xla_y)
     self.assertEqual(met.metric_data('CompileTime')[0], compile_count)
     # Give `fn_simple_dynamo` an input with different shappe, we expect
     # dynamo to recognize this is a different graph and let XLA to retrace/recompile
-    res_xla_dynamo_3 = self.fn_simple_dynamo(xla_z, xla_z)
+    res_xla_dynamo_3 = fn_simple_dynamo(xla_z, xla_z)
     self.assertEqual(met.metric_data('CompileTime')[0], compile_count + 1)
     self.assertTrue(
         torch.allclose(
@@ -273,21 +288,21 @@ class DynamoCpuFallbackTest(unittest.TestCase):
     xla_dynamo_res = dynamo_fn(t_xla)
     self.assertTrue(torch.allclose(cpu_res, xla_dynamo_res.cpu()))
     self.assertEqual(met.metric_data('CompileTime')[0], 3)
-    self.assertEqual(met.metric_data('ExecuteTime')[0], 10)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 11)
 
     # Second tracing
     met.clear_counters()
     xla_dynamo_res_2 = dynamo_fn(t_xla)
     self.assertTrue(torch.allclose(cpu_res, xla_dynamo_res_2.cpu()))
     self.assertEqual(met.metric_data('CompileTime')[0], 3)
-    self.assertEqual(met.metric_data('ExecuteTime')[0], 12)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 13)
 
     # Verify that dynamo can handle different inputs
     xla_dynamo_res_3 = dynamo_fn(t_xla * 3)
     cpu_res_3 = fn_fallback(t * 3)
     self.assertTrue(torch.allclose(cpu_res_3, xla_dynamo_res_3.cpu()))
     self.assertEqual(met.metric_data('CompileTime')[0], 4)
-    self.assertEqual(met.metric_data('ExecuteTime')[0], 15)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 16)
 
 
 class DynamoTrainingBasicTest(unittest.TestCase):
@@ -303,10 +318,6 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     loss.backward()
     return loss
 
-  @torch.compile(backend='openxla')
-  def fn_simple_dynamo(self, input):
-    return self.fn_simple(input)
-
   def train_model(self, model, data, target):
     loss_fn = torch.nn.CrossEntropyLoss()
     pred = model(data)
@@ -321,7 +332,8 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     xla_input = input.detach().to(device)
     xla_input.requires_grad = True
     res_cpu = self.fn_simple(input)
-    res_xla_dynamo = self.fn_simple_dynamo(xla_input)
+    fn_simple_dynamo = torch.compile(self.fn_simple, backend="openxla")
+    res_xla_dynamo = fn_simple_dynamo(xla_input)
     self.assertIn('xla::nll_loss_backward', met.counter_names())
     self.assertTrue(torch.allclose(res_cpu, res_xla_dynamo.cpu()))
     self.assertTrue(
@@ -330,7 +342,7 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     # verifiy that tracing is skipped in following runs
     xla_input.grad = None
     met.clear_counters()
-    res_xla_dynamo_2 = self.fn_simple_dynamo(xla_input)
+    res_xla_dynamo_2 = fn_simple_dynamo(xla_input)
     self.assertNotIn('xla::nll_loss_backward', met.counter_names())
     self.assertTrue(torch.allclose(res_cpu, res_xla_dynamo_2.cpu()))
     self.assertTrue(
@@ -339,7 +351,7 @@ class DynamoTrainingBasicTest(unittest.TestCase):
     # verify that dynamo can handle different inputs
     input.grad = None
     xla_input.grad = None
-    res_xla_dynamo_3 = self.fn_simple_dynamo(xla_input * 2)
+    res_xla_dynamo_3 = fn_simple_dynamo(xla_input * 2)
     res_cpu_3 = self.fn_simple(input * 2)
     self.assertTrue(torch.allclose(res_cpu_3, res_xla_dynamo_3.cpu()))
     self.assertTrue(
@@ -413,10 +425,6 @@ class DynamoTrainingOptimizerTest(unittest.TestCase):
     optimizer.step()
     return loss
 
-  @torch.compile(backend='openxla')
-  def fn_simple_dynamo(self, input, optimizer):
-    return self.fn_simple(input, optimizer)
-
   def train_model(self, model, data, target, optimizer):
     loss_fn = torch.nn.CrossEntropyLoss()
     optimizer.zero_grad(True)
@@ -441,7 +449,8 @@ class DynamoTrainingOptimizerTest(unittest.TestCase):
       # fwd + bwd is not being captured, hence we will get one lazy graph
       # + one dynamo optimizer graph
       res_cpu = self.fn_simple(input, optimizer)
-      res_xla_dynamo = self.fn_simple_dynamo(xla_input, xla_optimizer)
+      fn_simple_dynamo = torch.compile(self.fn_simple, backend="openxla")
+      res_xla_dynamo = fn_simple_dynamo(xla_input, xla_optimizer)
       assert torch.allclose(res_cpu, res_xla_dynamo.cpu())
       assert torch.allclose(
           input.grad, xla_input.grad.cpu(), rtol=1e-04, atol=1e-04)
@@ -539,9 +548,10 @@ class DynamErrorMessageTest(unittest.TestCase):
       # there should be 18 paramters + 1 input
       self.assertGreater(len(w), 15)
       self.assertIn('Found tensor with shape torch.Size', str(w[0].message))
-    # no XLA operation should happens. Partitioner should offload all CPU
+    # no XLA operation should happens except a empty mark_step. Partitioner should offload all CPU
     # ops to CPU.
-    self.assertEqual(len(met.counter_names()), 0)
+    self.assertEqual(len(met.counter_names()), 1)
+    self.assertIn('MarkStep', met.counter_names())
 
 
 if __name__ == '__main__':
