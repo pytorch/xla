@@ -590,12 +590,11 @@ torch::lazy::BackendDataPtr TensorToXlaData(
       [&](const runtime::ComputationClient::TensorSource& source_tensor,
           void* dest_buffer, size_t dest_buffer_size) {
         PopulateTensorBuffer(tensor, source_tensor.shape, dest_buffer,
-                              dest_buffer_size, device);
+                             dest_buffer_size, device);
       };
 
   std::vector<runtime::ComputationClient::TensorSource> source_tensors;
-  source_tensors.emplace_back(shape, device.toString(),
-                              std::move(populate_fn));
+  source_tensors.emplace_back(shape, device.toString(), std::move(populate_fn));
 
   auto handles =
       runtime::GetComputationClient()->TransferToServer(source_tensors);
@@ -826,7 +825,7 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
             const runtime::ComputationClient::TensorSource& source_tensor,
             void* dest_buffer, size_t dest_buffer_size) {
           PopulateTensorBuffer(tensors[i], source_tensor.shape, dest_buffer,
-                                dest_buffer_size, device);
+                               dest_buffer_size, device);
         };
     source_tensors.emplace_back(std::move(shape), devices[i],
                                 std::move(populate_fn));
