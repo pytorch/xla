@@ -62,10 +62,6 @@ RUN bash ./install_llvm_clang.sh
 ADD ./install_valgrind.sh install_valgrind.sh
 RUN bash ./install_valgrind.sh
 
-# Install nccl 2.18.3 for CUDA 12.0.1
-ADD ./install_nccl.sh install_nccl.sh
-RUN bash ./install_nccl.sh
-
 # Sets up jenkins user.
 RUN useradd jenkins && \
     mkdir /home/jenkins && \
