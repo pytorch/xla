@@ -79,6 +79,7 @@ test
 .. autofunction:: print_training_update
 .. autofunction:: print_test_update
 
+.. mdinclude:: ../pytorch_xla_overview.md
 .. mdinclude:: ../../TROUBLESHOOTING.md
 .. mdinclude:: ../pjrt.md
 .. mdinclude:: ../dynamo.md
