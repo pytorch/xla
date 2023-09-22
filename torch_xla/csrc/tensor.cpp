@@ -22,7 +22,6 @@
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/layout_manager.h"
-#include "torch_xla/csrc/op_by_op_executor.h"
 #include "torch_xla/csrc/ops/arithmetic_ir_ops.h"
 #include "torch_xla/csrc/ops/cast.h"
 #include "torch_xla/csrc/ops/device_data.h"

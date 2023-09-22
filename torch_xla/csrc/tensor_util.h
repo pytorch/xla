@@ -56,7 +56,7 @@ torch::lazy::hash_t TensorHash(const at::Tensor& tensor);
 // TODO LTC @wonjoo - Migrate to upstream after Device -> BackendDevice
 std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
     const std::vector<at::Tensor>& tensors,
-    const std::vector<std::string>& devices, bool transfer_async = false);
+    const std::vector<std::string>& devices);
 
 // Shard and transfer tensors to devices using `PjRtComputationClient`.
 // The client's data transfer to device is asynchronous.
