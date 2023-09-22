@@ -35,11 +35,12 @@ ENV CUDA_PATH /usr/local/cuda
 # Set C/C++ compilers
 ENV CC "${cc}"
 ENV CXX "${cxx}"
+ENV NVCC_PREPEND_FLAGS "-ccbin /usr/bin/${cxx}"
 
 # Whether to build for TPUVM mode
 ENV TPUVM_MODE "${tpuvm}"
 
-# Rotate nvidia repo public key (last updated: 04/27/2022)
+# Rotate nvidia repo public key (last checked: 09/21/2023)
 # Unfortunately, nvidia/cuda image is shipped with invalid public key
 RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/3bf863cc.pub
 
