@@ -231,15 +231,14 @@ function run_torch_xla_tests() {
   export CXX_ABI=$(python -c "import torch;print(int(torch._C._GLIBCXX_USE_CXX11_ABI))")
 
   # TODO(yeounoh) test coverage workflow is not parallelized.
-  if [[ "$RUN_CPP_TESTS" == "0" && "$RUN_PYTHON_TESTS" == "0" || "$USE_COVERAGE" != "0" ]]; then
+  if [[ -z "$RUN_CPP_TESTS1" && -z "$RUN_CPP_TESTS2" && -z "$RUN_PYTHON_TESTS" || "$USE_COVERAGE" != "0" ]]; then
     run_torch_xla_python_tests $PYTORCH_DIR $XLA_DIR $USE_COVERAGE
     run_torch_xla_cpp_tests $PYTORCH_DIR $XLA_DIR $USE_COVERAGE
   else
     # run python and cpp tests separately.
     if [[ "$RUN_PYTHON_TESTS" == "python_tests" ]]; then
       run_torch_xla_python_tests $PYTORCH_DIR $XLA_DIR $USE_COVERAGE
-    fi
-    if [[ "$RUN_CPP_TESTS" == "cpp_tests" ]]; then
+    else
       run_torch_xla_cpp_tests $PYTORCH_DIR $XLA_DIR $USE_COVERAGE
     fi
   fi
