@@ -353,6 +353,11 @@ void XLAGraphExecutor::SyncTensorsGraph(std::vector<XLATensorPtr>* tensors,
   if (warm_up_cache_only) {
     config.force_ltc_data = false;
   }
+  auto async =
+      SyncTensorsGraphInternal(tensors, devices, config, warm_up_cache_only);
+  if (wait && async != nullptr && !warm_up_cache_only) {
+      async->mwait.Wait();
+  }
 }
 
 void XLAGraphExecutor::SyncLiveTensorsGraph(
