@@ -1886,6 +1886,22 @@ std::tuple<XLATensorPtr, XLATensorPtr, XLATensorPtr> native_batch_norm_backward(
                          std::move(grad_bias));
 }
 
+
+XLATensorPtr masked_select(const XLATensorPtr& input,
+                           const XLATensorPtr& mask) {
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<MaskedSelect>(
+      input->GetIrValue(), mask->GetIrValue());
+  return input->CreateFrom(torch::lazy::Value(node, 0));
+}
+
+
+XLATensorPtr native_dropout(const XLATensorPtr& input, double p, c10::optional<bool> train) {
+  auto input_shape = input->shape();
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<NativeDropout>(
+      input->GetIrValue(), p, XLAGraphExecutor::Get()->GetRngSeed(input->GetDevice()), train);
+  return input->CreateFrom(node);
+}
+
 XLATensorPtr ne(const XLATensorPtr& input, const at::Scalar& other) {
   return DispatchComparisonOp(at::aten::ne, input, other);
 }
