@@ -568,8 +568,12 @@ torch_xla::XlaOpVector NativeDropoutBackward::Lower(
   xla::XlaOp mask = loctx->GetOutputOp(operand(1));
   xla::PrimitiveType grad_type =
       ShapeHelper::ShapeOfXlaOp(grad_output).element_type();
-  return ReturnOp(grad_output * xla::ConvertElementType(mask, grad_type),
-                  loctx);
+  xla::XlaOp res = grad_output * xla::ConvertElementType(mask, grad_type);
+  if (scale != 1.0) {
+    res = res * XlaHelpers::ScalarValue<float>(scale, grad_type,
+                                               grad_output.builder());
+  }
+  return ReturnOp(res, loctx);
 }
 
 torch_xla::XlaOpVector NeScalar::Lower(LoweringContext* loctx) const {
