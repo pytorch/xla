@@ -65,6 +65,7 @@ full_codegen:
   - lt.Tensor
   - maximum
   - minimum
+  - native_dropout_backward
   - ne.Scalar
   - ne.Tensor
   - reciprocal
