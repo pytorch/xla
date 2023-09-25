@@ -122,11 +122,20 @@ InitializePjRt(const std::string& device_type) {
                      .status());
     client = std::move(xla::GetCApiClient("NEURON").value());
   } else {
-    XLA_ERROR() << absl::StrFormat("Unknown %s '%s'", env::kEnvPjRtDevice,
-                                   device_type);
+    auto plugins = ComputationClient::GetPjRtPlugins();
+    if (plugins.find(device_type) != plugins.end()) {
+      TF_VLOG(1) << "Initializing client for PjRt plugin " << device_type;
+      XLA_CHECK_OK(pjrt::LoadPjrtPlugin(
+        device_type, plugins[device_type]));
+      tsl::Status init_status = pjrt::InitializePjrtPlugin(device_type);
+      XLA_CHECK_OK(init_status);
+      client_ = std::move(xla::GetCApiClient(absl::AsciiStrToUpper(device_type)).value());
+    }
   }
 
-  XLA_CHECK(client.get() != nullptr);
+
+  XLA_CHECK(client.get() != nullptr) <<
+      absl::StrFormat("Unknown %s '%s'", env::kEnvPjRtDevice, device_type);
 
   return {std::move(client), std::move(coordinator)};
 }
