@@ -76,6 +76,7 @@
 #include "torch_xla/csrc/ops/multinomial.h"
 #include "torch_xla/csrc/ops/native_batch_norm_backward.h"
 #include "torch_xla/csrc/ops/native_batch_norm_forward.h"
+#include "torch_xla/csrc/ops/native_dropout.h"
 #include "torch_xla/csrc/ops/nll_loss.h"
 #include "torch_xla/csrc/ops/nll_loss2d.h"
 #include "torch_xla/csrc/ops/nll_loss2d_backward.h"
@@ -1886,20 +1887,13 @@ std::tuple<XLATensorPtr, XLATensorPtr, XLATensorPtr> native_batch_norm_backward(
                          std::move(grad_bias));
 }
 
-
-XLATensorPtr masked_select(const XLATensorPtr& input,
-                           const XLATensorPtr& mask) {
-  torch::lazy::NodePtr node = torch::lazy::MakeNode<MaskedSelect>(
-      input->GetIrValue(), mask->GetIrValue());
-  return input->CreateFrom(torch::lazy::Value(node, 0));
-}
-
-
-XLATensorPtr native_dropout(const XLATensorPtr& input, double p, c10::optional<bool> train) {
-  auto input_shape = input->shape();
+std::tuple<XLATensorPtr, XLATensorPtr> native_dropout(
+    const XLATensorPtr& input, double p, c10::optional<bool> train) {
   torch::lazy::NodePtr node = torch::lazy::MakeNode<NativeDropout>(
-      input->GetIrValue(), p, XLAGraphExecutor::Get()->GetRngSeed(input->GetDevice()), train);
-  return input->CreateFrom(node);
+      input->GetIrValue(), p, train,
+      XLAGraphExecutor::Get()->GetRngSeed(input->GetDevice()));
+  return std::make_tuple(input->CreateFrom(torch::lazy::Value(node, 0)),
+                         input->CreateFrom(torch::lazy::Value(node, 1)));
 }
 
 XLATensorPtr ne(const XLATensorPtr& input, const at::Scalar& other) {

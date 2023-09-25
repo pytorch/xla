@@ -10,14 +10,16 @@ namespace torch_xla {
 // it gets its own IR node class.
 class NativeDropout : public XlaNode {
  public:
- NativeDropout(const torch::lazy::Value& input, 
-                        const float probability, 
-                        const c10::optional<bool> train,
-                        const torch::lazy::Value& seed);
+  NativeDropout(const torch::lazy::Value& input, float p,
+                c10::optional<bool> train, const torch::lazy::Value& seed);
 
   torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
+
+ private:
+  float p_;
+  absl::optional<bool> train_;
 };
 
 }  // namespace torch_xla

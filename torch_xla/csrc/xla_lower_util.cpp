@@ -504,7 +504,9 @@ xla::XlaOp BuildDropout(xla::XlaOp input, float probability, xla::XlaOp seed) {
   return input * mask;
 }
 
-xla::XlaOp BuildNativeDropout(xla::XlaOp input, float p, absl::optional<bool> train, xla::XlaOp seed) {
+std::vector<xla::XlaOp> BuildNativeDropout(xla::XlaOp input, float probability,
+                                           absl::optional<bool> train,
+                                           xla::XlaOp seed) {
   const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(input);
   if (!train.has_value() || *train) {
     xla::XlaOp prob =

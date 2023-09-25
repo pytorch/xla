@@ -583,7 +583,8 @@ std::tuple<XLATensorPtr, XLATensorPtr, XLATensorPtr> native_batch_norm_backward(
     const XLATensorPtr& weight, const XLATensorPtr& save_mean,
     const XLATensorPtr& save_invstd, bool training, double eps);
 
-XLATensorPtr native_dropout(const XLATensorPtr& input, double p, c10::optional<bool> train);
+std::tuple<XLATensorPtr, XLATensorPtr> native_dropout(
+    const XLATensorPtr& input, double p, c10::optional<bool> train);
 
 XLATensorPtr ne(const XLATensorPtr& input, const at::Scalar& other);
 

@@ -2083,11 +2083,13 @@ XLANativeFunctions::native_batch_norm_backward(
                      : undefined);
 }
 
-std::tuple<at::Tensor, at::Tensor>
-XLANativeFunctions::native_dropout(const at::Tensor& self,  double p, c10::optional<bool> train) {
+std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::native_dropout(
+    const at::Tensor& self, double p, c10::optional<bool> train) {
   TORCH_LAZY_FN_COUNTER("xla::");
-  XLATensorPtr self_tensor = bridge::GetXlaTensor(tensors);
-  return bridge::AtenFromXlaTensor(tensor_methods::native_dropout(self_tensor, p, train));
+  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
+  auto results = tensor_methods::native_dropout(self_tensor, p, train);
+  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
+                         bridge::AtenFromXlaTensor(std::get<1>(results)));
 }
 
 at::Tensor XLANativeFunctions::neg(const at::Tensor& self) {
