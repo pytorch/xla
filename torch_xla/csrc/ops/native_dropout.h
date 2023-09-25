@@ -19,7 +19,7 @@ class NativeDropout : public XlaNode {
 
  private:
   float p_;
-  absl::optional<bool> train_;
+  c10::optional<bool> train_;
 };
 
 }  // namespace torch_xla

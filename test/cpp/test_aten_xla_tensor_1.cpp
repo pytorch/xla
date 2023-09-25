@@ -1400,6 +1400,24 @@ TEST_F(AtenXlaTensorTest, TestDropoutInPlace) {
   ExpectCounterChanged("xla::bernoulli", cpp_test::GetIgnoredCounters());
 }
 
+TEST_F(AtenXlaTensorTest, TestNativeDropout) {
+  torch::Tensor a = torch::rand({17, 21}, torch::TensorOptions(torch::kFloat));
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    auto [xla_b_val, xla_b_mask] = torch::native_dropout(xla_a, 0.1, /*train=*/true);
+    double prob =
+        static_cast<double>(xla_b_val.cpu().ne(0.0f).sum().item().toDouble()) /
+        a.numel();
+    EXPECT_GT(prob, 0.86);
+    EXPECT_LT(prob, 0.94);
+  });
+
+  ExpectCounterNotChanged("aten::(?!_local_scalar_dense).*",
+                          cpp_test::GetIgnoredCounters());
+  // dropout is composed of many arithmetic ops.
+  ExpectCounterChanged("xla::bernoulli", cpp_test::GetIgnoredCounters());
+}
+
 TEST_F(AtenXlaTensorTest, TestRandperm) {
   int n = 5;
   torch::Tensor shuffle = torch::randperm(

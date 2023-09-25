@@ -9,6 +9,7 @@ namespace {
 
 xla::Shape NodeOutputShape(const torch::lazy::Value& input) {
   xla::Shape input_shape = GetXlaShape(input);
+  input_shape.set_element_type(xla::PrimitiveType::U8);
   return xla::ShapeUtil::MakeTupleShape({input_shape, input_shape});
 }
 
@@ -23,8 +24,7 @@ NativeDropout::NativeDropout(const torch::lazy::Value& input, float p,
       train_(train) {}
 
 torch::lazy::NodePtr NativeDropout::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<NativeDropout>(operands.at(0), operands.at(1),
-                                              operands.at(2), operands.at(3));
+  return torch::lazy::MakeNode<NativeDropout>(operands.at(0), p_, train_, operands.at(3));
 }
 
 XlaOpVector NativeDropout::Lower(LoweringContext* loctx) const {
