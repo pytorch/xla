@@ -10,27 +10,30 @@ namespace {
 xla::Shape NodeOutputShape(const torch::lazy::Value& input) {
   xla::Shape input_shape = GetXlaShape(input);
   input_shape.set_element_type(xla::PrimitiveType::U8);
-  return xla::ShapeUtil::MakeTupleShape({input_shape, input_shape});
+  xla::Shape mask_shape = GetXlaShape(input);
+  mask_shape.set_element_type(xla::PrimitiveType::PRED);
+  return xla::ShapeUtil::MakeTupleShape({input_shape, mask_shape});
 }
 
 }  // namespace
 
-NativeDropout::NativeDropout(const torch::lazy::Value& input, float p,
-                             c10::optional<bool> train,
-                             const torch::lazy::Value& seed)
+NativeDropout::NativeDropout(const torch::lazy::Value& input,
+                             const torch::lazy::Value& seed, float p,
+                             c10::optional<bool> train)
     : XlaNode(torch::lazy::OpKind(at::aten::native_dropout), {input, seed},
               [&]() { return NodeOutputShape(input); }, 2),
       p_(p),
       train_(train) {}
 
 torch::lazy::NodePtr NativeDropout::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<NativeDropout>(operands.at(0), p_, train_, operands.at(3));
+  return torch::lazy::MakeNode<NativeDropout>(operands.at(0), operands.at(1),
+                                              p_, train_);
 }
 
 XlaOpVector NativeDropout::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
-  xla::XlaOp seed = loctx->GetOutputOp(operand(3));
-  return ReturnOps(BuildNativeDropout(input, p_, train_, seed), loctx);
+  xla::XlaOp seed = loctx->GetOutputOp(operand(1));
+  return ReturnOps(BuildNativeDropout(input, seed, p_, train_), loctx);
 }
 
 }  // namespace torch_xla

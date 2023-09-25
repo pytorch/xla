@@ -504,20 +504,22 @@ xla::XlaOp BuildDropout(xla::XlaOp input, float probability, xla::XlaOp seed) {
   return input * mask;
 }
 
-std::vector<xla::XlaOp> BuildNativeDropout(xla::XlaOp input, float probability,
-                                           c10::optional<bool> train,
-                                           xla::XlaOp seed) {
+std::vector<xla::XlaOp> BuildNativeDropout(xla::XlaOp input, xla::XlaOp seed,
+                                           float probability,
+                                           c10::optional<bool> train) {
   const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(input);
   if (!train.has_value() || *train) {
     xla::XlaOp prob =
         XlaHelpers::ScalarBroadcast<float>(probability, shape, input.builder());
+    xla::XlaOp one = xla::One(input.builder(), shape.element_type());
     xla::XlaOp mask = BuildBernoulli(prob, seed, shape.element_type());
+    mask = mask / (one - prob);
     if (probability > 0.0f) {
       mask = mask / prob;
     }
     return {input * mask, mask};
   } else {
-    xla::XlaOp one = xla::One(input.builder(), shape.element_type());
+    xla::XlaOp one = xla::One(input.builder(), xla::PrimitiveType::PRED);
     return {input, one};
   }
 }

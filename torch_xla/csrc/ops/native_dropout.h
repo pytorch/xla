@@ -10,8 +10,8 @@ namespace torch_xla {
 // it gets its own IR node class.
 class NativeDropout : public XlaNode {
  public:
-  NativeDropout(const torch::lazy::Value& input, float p,
-                c10::optional<bool> train, const torch::lazy::Value& seed);
+  NativeDropout(const torch::lazy::Value& input, const torch::lazy::Value& seed,
+                float p, c10::optional<bool> train);
 
   torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 

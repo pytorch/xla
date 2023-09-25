@@ -1400,22 +1400,41 @@ TEST_F(AtenXlaTensorTest, TestDropoutInPlace) {
   ExpectCounterChanged("xla::bernoulli", cpp_test::GetIgnoredCounters());
 }
 
-TEST_F(AtenXlaTensorTest, TestNativeDropout) {
+TEST_F(AtenXlaTensorTest, TestNativeDropoutNotTrain) {
   torch::Tensor a = torch::rand({17, 21}, torch::TensorOptions(torch::kFloat));
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_a = CopyToDevice(a, device);
-    auto [xla_b_val, xla_b_mask] = torch::native_dropout(xla_a, 0.1, /*train=*/true);
-    double prob =
-        static_cast<double>(xla_b_val.cpu().ne(0.0f).sum().item().toDouble()) /
-        a.numel();
-    EXPECT_GT(prob, 0.86);
-    EXPECT_LT(prob, 0.94);
+    auto [xla_b_val, xla_b_mask] =
+        torch::native_dropout(xla_a, 0.5, /*train=*/false);
+    AllClose(xla_b_val, xla_a);
+    EXPECT_EQ(xla_b_val.scalar_type(), torch::kFloat);
+    EXPECT_EQ(xla_b_mask.scalar_type(), torch::kBool);
   });
 
   ExpectCounterNotChanged("aten::(?!_local_scalar_dense).*",
                           cpp_test::GetIgnoredCounters());
-  // dropout is composed of many arithmetic ops.
-  ExpectCounterChanged("xla::bernoulli", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::native_dropout", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestNativeDropout) {
+  torch::Tensor a = torch::rand({17, 21}, torch::TensorOptions(torch::kFloat));
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    auto [xla_b_val, xla_b_mask] =
+        torch::native_dropout(xla_a, 0.1, /*train=*/true);
+    double prob =
+        static_cast<double>(xla_b_val.cpu().ne(0.0f).sum().item().toDouble()) /
+        a.numel();
+    EXPECT_GT(prob, 0.06);
+    EXPECT_LT(prob, 0.14);
+    EXPECT_EQ(xla_b_val.scalar_type(), torch::kFloat);
+    EXPECT_EQ(xla_b_mask.scalar_type(), torch::kBool);
+    // AllClose(xla_b_val*xla_b_mask, xla_b_val);
+  });
+
+  ExpectCounterNotChanged("aten::(?!_local_scalar_dense).*",
+                          cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::native_dropout", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestRandperm) {

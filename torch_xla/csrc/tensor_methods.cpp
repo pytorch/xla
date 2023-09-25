@@ -1890,10 +1890,11 @@ std::tuple<XLATensorPtr, XLATensorPtr, XLATensorPtr> native_batch_norm_backward(
 std::tuple<XLATensorPtr, XLATensorPtr> native_dropout(
     const XLATensorPtr& input, double p, c10::optional<bool> train) {
   torch::lazy::NodePtr node = torch::lazy::MakeNode<NativeDropout>(
-      input->GetIrValue(), p, train,
-      XLAGraphExecutor::Get()->GetRngSeed(input->GetDevice()));
-  return std::make_tuple(input->CreateFrom(torch::lazy::Value(node, 0)),
-                         input->CreateFrom(torch::lazy::Value(node, 1)));
+      input->GetIrValue(),
+      XLAGraphExecutor::Get()->GetRngSeed(input->GetDevice()), p, train);
+  return std::make_tuple(
+      input->CreateFrom(torch::lazy::Value(node, 0)),
+      input->CreateFrom(torch::lazy::Value(node, 1), at::ScalarType::Bool));
 }
 
 XLATensorPtr ne(const XLATensorPtr& input, const at::Scalar& other) {
