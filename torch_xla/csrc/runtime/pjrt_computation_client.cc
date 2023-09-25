@@ -4,7 +4,6 @@
 #include <unordered_set>
 #include <vector>
 
-// TODO: fix absl headers
 #include "absl/strings/ascii.h"
 #include "absl/types/span.h"
 #include "pjrt_computation_client.h"
@@ -27,7 +26,6 @@
 #include "xla/pjrt/pjrt_client.h"
 #include "xla/pjrt/pjrt_executable.h"
 #include "xla/pjrt/tfrt_cpu_pjrt_client.h"
-#include "xla/pjrt/tpu_client.h"
 #include "xla/shape.h"
 
 using xla::internal::XlaBuilderFriend;
@@ -117,10 +115,7 @@ PjRtComputationClient::PjRtComputationClient() {
     XLA_CHECK(tpu_status.ok());
     client_ = std::move(xla::GetCApiClient("TPU").value());
   } else if (device_type == "TPU_LEGACY") {
-    TF_VLOG(1) << "Initializing PjRt StreamExecutor TPU client...";
-    int64_t max_inflight_computations = sys_util::GetEnvInt(
-        env::kEnvPjRtTpuMaxInflightComputations, /*defval=*/32);
-    client_ = xla::GetTpuClient(max_inflight_computations).value();
+    XLA_ERROR() << "TPU_LEGACY client is no longer available.";
   } else if (device_type == "GPU") {
     TF_VLOG(1) << "Initializing PjRt GPU client...";
     bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncGpuClient, true);
