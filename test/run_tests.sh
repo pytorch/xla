@@ -115,7 +115,7 @@ function run_stablehlo_compile {
 
 function run_xla_backend_mp {
   echo "Running XLA backend multiprocessing test: $@"
-  MASTER_ADDR=localhost MASTER_PORT=6000 run_test "$@"
+  NCCL_DEBUG=INFO MASTER_ADDR=localhost MASTER_PORT=6000 run_test "$@"
 }
 
 function run_torch_op_tests {
@@ -225,6 +225,8 @@ function run_mp_op_tests {
 }
 
 function run_tests {
+  echo "check env var..."
+  env
   # RUN_ flags filter an explicit test type to run, XLA_SKIP_ flags exclude one.
   if [[ "$RUN_XLA_OP_TESTS1" == "xla_op1" ]]; then
     echo "Running xla op tests..."
