@@ -9,9 +9,7 @@ namespace {
 
 xla::Shape NodeOutputShape(const torch::lazy::Value& input) {
   xla::Shape input_shape = GetXlaShape(input);
-  xla::Shape mask_shape = GetXlaShape(input);
-  mask_shape.set_element_type(xla::PrimitiveType::PRED);
-  return xla::ShapeUtil::MakeTupleShape({input_shape, mask_shape});
+  return xla::ShapeUtil::MakeTupleShape({input_shape, input_shape});
 }
 
 }  // namespace
