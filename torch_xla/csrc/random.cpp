@@ -77,6 +77,7 @@ xla::Shape MakeRngShape(const xla::Shape& shape, bool downcast = false) {
   xla::Shape rng_shape(shape);
   if (element_type == xla::PrimitiveType::BF16 ||
       element_type == xla::PrimitiveType::F16) {
+    // TODO(yeounoh) consider using xla::PrimitiveType::F8E5M2
     auto dtype = downcast ? xla::PrimitiveType::F16 : xla::PrimitiveType::F32;
     rng_shape.set_element_type(dtype);
   } else if (xla::primitive_util::IsComplexType(element_type)) {
