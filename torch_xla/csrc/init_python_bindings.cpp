@@ -33,6 +33,7 @@
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ir_dump_util.h"
+#include "torch_xla/csrc/layout_manager.h"
 #include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
@@ -1667,12 +1668,17 @@ void InitXlaModuleBindings(py::module m) {
   m.def(
       "_global_tensor_from_cpu_shards",
       [](const std::vector<at::Tensor>& shards, const xla::OpSharding& sharding,
-         std::optional<std::vector<long int>>& global_shape) -> at::Tensor {
+         std::optional<std::vector<int64_t>>& global_shape) -> at::Tensor {
         XLA_CHECK(UseVirtualDevice())
             << "Please enable SPMD via `torch_xla.runtime.use_spmd()`";
         auto local_devices = runtime::GetComputationClient()->GetLocalDevices();
         XLA_CHECK(local_devices.size() == shards.size())
             << "Must specify a shard for each local device";
+        XLA_CHECK(!global_shape.has_value() ||
+                  global_shape.value().size() == shards[0].sizes().size())
+            << "Global shape rank must agree with shard rank: expected rank "
+            << shards[0].sizes().size() << ", got "
+            << global_shape.value().size();
 
         if (!global_shape.has_value()) {
           // Set a default value for the global shape based on the sharding
@@ -1681,23 +1687,24 @@ void InitXlaModuleBindings(py::module m) {
             // Infer the global shape to be the shard shape scaled by the tiling
             // dimensionality.
             auto tile_shape = sharding.tile_assignment_dimensions();
-            global_shape = std::vector<long int>();
+            global_shape = std::vector<int64_t>();
             for (int dim = 0; dim < shards[0].sizes().size(); ++dim) {
               auto global_dim = tile_shape[dim] * shards[0].sizes()[dim];
               global_shape->push_back(global_dim);
             }
-          } else {
-            // If the sharding type is not tiled, the tensor shards are
-            // replicated.
+          } else if (sharding.type() == xla::OpSharding::REPLICATED) {
             global_shape = shards[0].sizes().vec();
+          } else {
+            XLA_ERROR() << "Unsupported OpSharding type: " << sharding.type();
           }
         }
 
-        xla::Shape tensor_shape =
-            CreateComputationShapeFromTensor(shards[0], nullptr);
-        for (int dim = 0; dim < tensor_shape.rank(); ++dim) {
-          tensor_shape.set_dimensions(dim, global_shape.value()[dim]);
-        }
+        auto device = GetVirtualDevice();
+        auto primitive_type =
+            MakeXlaPrimitiveType(shards[0].type().scalarType(), &device);
+        xla::Shape tensor_shape = MakeArrayShapeFromDimensions(
+            global_shape.value(), /*dynamic_dimensions=*/{}, primitive_type,
+            static_cast<XlaDeviceType>(device.type()));
         auto sharding_spec =
             std::make_shared<XLATensor::ShardingSpec>(sharding, tensor_shape);
 

@@ -102,19 +102,6 @@ class XLAShardedTensor(torch.Tensor):
     r.global_tensor = elem.detach() if r.requires_grad else elem
     return r
 
-  @staticmethod
-  def from_cpu_shards(shards: List[torch.Tensor],
-                      sharding: torch_xla._XLAC.OpSharding,
-                      global_shape: torch.Size = None):
-    """
-    Create an XLAShardedTensor from the given list of CPU shards. The order of
-    the shards determines which device it will be placed on, coinciding with
-    the device order returned by `torch_xla.runtime.local_runtime_devices`.
-    """
-    return XLAShardedTensor(
-        torch_xla._XLAC._global_tensor_from_cpu_shards(shards, sharding,
-                                                       global_shape))
-
   # Shards on the devices are materialized/available after the lazy
   # execution of the partitioned HLO graph. Each XLAShard points
   # to torch.Tensor. The shards represent a snapshot on CPU, detached
