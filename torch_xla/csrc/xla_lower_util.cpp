@@ -513,8 +513,8 @@ std::vector<xla::XlaOp> BuildNativeDropout(xla::XlaOp input, xla::XlaOp seed,
         XlaHelpers::ScalarBroadcast<float>(probability, shape, input.builder());
     xla::XlaOp one = xla::One(input.builder(), shape.element_type());
     xla::XlaOp mask = BuildBernoulli(prob, seed, shape.element_type());
-    mask = mask / (one - prob);
     if (probability > 0.0f) {
+      mask = mask / (one - prob);
       mask = mask / prob;
     }
     return {input * mask, mask};
