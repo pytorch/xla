@@ -30,6 +30,7 @@ python_configure(
 # b) get the sha256 hash of the commit by running:
 #    curl -L https://github.com/openxla/xla/archive/<git hash>.tar.gz | sha256sum
 #    and update the sha256 with the result.
+<<<<<<< HEAD
 http_archive(
     name = "xla",
     patch_args = [
@@ -49,6 +50,28 @@ http_archive(
         "https://github.com/openxla/xla/archive/4f8381651977dff16b1d86bb4b198eb733c5f478.tar.gz",
     ],
 )
+=======
+# http_archive(
+#     name = "xla",
+#     patch_args = [
+#         "-l",
+#         "-p1",
+#     ],
+#     patch_tool = "patch",
+#     patches = [
+#         "//openxla_patches:cache_urls.diff",
+#         "//openxla_patches:f16_abi_clang.diff",
+#         "//openxla_patches:gpu_race_condition.diff",
+#         "//openxla_patches:constexpr_return.diff",
+#         "//openxla_patches:pjrt_api_tsl_logging.diff",
+#         "//openxla_patches:pjrt_c_api_dynamic_dimensions.diff",
+#     ],
+#     strip_prefix = "xla-97a5f819faf9ff793b7ba68ff1f31f74f9459c18",
+#     urls = [
+#         "https://github.com/openxla/xla/archive/97a5f819faf9ff793b7ba68ff1f31f74f9459c18.tar.gz",
+#     ],
+# )
+>>>>>>> 86256b63f (Use local xla repo)
 
 # For development, one often wants to make changes to the OpenXLA repository as well
 # as the PyTorch/XLA repository. You can override the pinned repository above with a
@@ -58,10 +81,10 @@ http_archive(
 #    bazel --override_repository=xla=/path/to/openxla
 #    or
 # b) by commenting out the http_archive above and uncommenting the following:
-# local_repository(
-#    name = "xla",
-#    path = "/path/to/openxla",
-# )
+local_repository(
+   name = "xla",
+   path = "/home/yeounoh/xla",
+)
 
 # Initialize OpenXLA's external dependencies.
 load("@xla//:workspace4.bzl", "xla_workspace4")

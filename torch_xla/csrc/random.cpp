@@ -64,7 +64,8 @@ xla::XlaOp MakeUniformBoundaryValue(xla::XlaOp val, bool downcast = false) {
   xla::PrimitiveType element_type = XlaHelpers::TypeOfXlaOp(val);
   if (element_type == xla::PrimitiveType::BF16 ||
       element_type == xla::PrimitiveType::F16) {
-    auto dtype = downcast ? xla::PrimitiveType::F16 : xla::PrimitiveType::F32;
+    auto dtype =
+        downcast ? xla::PrimitiveType::F8E5M2 : xla::PrimitiveType::F32;
     return xla::ConvertElementType(val, dtype);
   } else if (xla::primitive_util::IsComplexType(element_type)) {
     return xla::Real(val);
