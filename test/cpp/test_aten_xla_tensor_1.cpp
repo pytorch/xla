@@ -1406,7 +1406,7 @@ TEST_F(AtenXlaTensorTest, TestNativeDropoutNotTrain) {
     torch::Tensor xla_a = CopyToDevice(a, device);
     auto [xla_b_val, xla_b_mask] =
         torch::native_dropout(xla_a, 0.5, /*train=*/false);
-    AllClose(xla_b_val, xla_a);
+    AllEqual(xla_b_val, xla_a);
     EXPECT_EQ(xla_b_val.scalar_type(), torch::kFloat);
     EXPECT_EQ(xla_b_mask.scalar_type(), torch::kBool);
   });
@@ -1429,7 +1429,22 @@ TEST_F(AtenXlaTensorTest, TestNativeDropout) {
     EXPECT_LT(prob, 0.14);
     EXPECT_EQ(xla_b_val.scalar_type(), torch::kFloat);
     EXPECT_EQ(xla_b_mask.scalar_type(), torch::kBool);
-    // AllClose(xla_b_val*xla_b_mask, xla_b_val);
+  });
+
+  ExpectCounterNotChanged("aten::(?!_local_scalar_dense).*",
+                          cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::native_dropout", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestNativeDropoutMask) {
+  torch::Tensor a = torch::rand({17, 21}, torch::TensorOptions(torch::kFloat));
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    auto [xla_b_val, xla_b_mask] =
+        torch::native_dropout(xla_a, 0.5, /*train=*/true);
+    auto count1 = xla_b_val.cpu().ne(0.0f).sum().item().toInt();
+    auto count2 = xla_b_mask.cpu().ne(0.0f).sum().item().toInt();
+    EXPECT_EQ(count1, count2);
   });
 
   ExpectCounterNotChanged("aten::(?!_local_scalar_dense).*",
