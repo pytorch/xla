@@ -51,7 +51,7 @@ jobs:
   test-cpu-coverage:
     name: "Collect CPU test coverage"
     if: github.event_name == 'push' && github.event.ref == 'refs/heads/master'
-    uses: ./.github/workflows/_test.yml
+    uses: ./.github/workflows/_coverage.yml
     needs: build
     with:
       docker-image: ${{ needs.build.outputs.docker-image }}
@@ -64,7 +64,7 @@ jobs:
   test-gpu-coverage:
     name: "Collect GPU test coverage"
     if: github.event_name == 'push' && github.event.ref == 'refs/heads/master'
-    uses: ./.github/workflows/_test.yml
+    uses: ./.github/workflows/_coverage.yml
     needs: build
     with:
       docker-image: ${{ needs.build.outputs.docker-image }}
