@@ -44,6 +44,10 @@ xla::XlaOp BuildExponential(xla::XlaOp lambda, xla::XlaOp seed,
 
 xla::XlaOp BuildDropout(xla::XlaOp input, float probability, xla::XlaOp seed);
 
+std::vector<xla::XlaOp> BuildNativeDropout(xla::XlaOp input, xla::XlaOp seed,
+                                           float probability,
+                                           c10::optional<bool> train);
+
 xla::XlaOp BuildSigmoidBackward(xla::XlaOp grad_output, xla::XlaOp output,
                                 xla::XlaOp scalar_1);
 

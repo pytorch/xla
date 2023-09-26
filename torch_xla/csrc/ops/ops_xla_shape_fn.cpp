@@ -625,6 +625,11 @@ xla::Shape MinimumOutputShape(const torch::lazy::Value& input,
                           lower_for_shape_fn);
 }
 
+xla::Shape NativeDropoutBackwardOutputShape(
+    const torch::lazy::Value& grad_output, const torch::lazy::Value& mask) {
+  return GetXlaShape(grad_output);
+}
+
 xla::Shape NeScalarOutputShape(const torch::lazy::Value& self,
                                const torch::lazy::Value& other) {
   auto lower_for_shape_fn =
