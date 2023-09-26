@@ -132,12 +132,6 @@ def global_device_count() -> int:
 
 
 @requires_pjrt
-def local_runtime_devices() -> List[str]:
-  """Returns addressable devices as a list of string."""
-  return torch_xla._XLAC._xla_get_runtime_devices()
-
-
-@requires_pjrt
 def world_size() -> int:
   """Returns the total number of configured logical devices."""
   if torch_xla._XLAC._xla_get_replication_devices_count() == 0:
