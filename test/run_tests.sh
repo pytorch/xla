@@ -115,7 +115,7 @@ function run_stablehlo_compile {
 
 function run_xla_backend_mp {
   echo "Running XLA backend multiprocessing test: $@"
-  NCCL_DEBUG=INFO MASTER_ADDR=localhost MASTER_PORT=6000 run_test "$@"
+  MASTER_ADDR=localhost MASTER_PORT=6000 run_test "$@"
 }
 
 function run_torch_op_tests {
@@ -218,8 +218,7 @@ function run_mp_op_tests {
   run_xla_backend_mp "$CDIR/test_torch_distributed_all_reduce_xla_backend.py"
   run_xla_backend_mp "$CDIR/test_torch_distributed_multi_all_reduce_xla_backend.py"
   run_xla_backend_mp "$CDIR/test_torch_distributed_reduce_scatter_xla_backend.py"
-  # Skip for cuda dev container experiment.
-  # run_xla_backend_mp "$CDIR/test_ddp.py"
+  run_xla_backend_mp "$CDIR/test_ddp.py"
   run_xla_backend_mp "$CDIR/test_fsdp_auto_wrap.py"
   run_xla_backend_mp "$CDIR/test_torch_distributed_fsdp_meta.py"
 }
