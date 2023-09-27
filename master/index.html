@@ -1986,16 +1986,6 @@ file. Can be <code class="docutils literal notranslate"><span class="pre">text</
 saved at every step. Metrics will be appended to the file, if already existing.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">XLA_SAVE_HLO_FILE</span></code>: If set, the path to a local file where, in case of compilation/execution
 error, the offending HLO graph will be saved.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">XLA_GET_TENSORS_OPBYOP</span></code>: Enables pure <em>OpByOp</em> dispatch. The <em>PyTorch/XLA</em> software tries to
-fuse together many <em>PyTorch</em> operations into a single computation graph, but sometimes, either
-for debugging, or in case the <em>PyTorch</em> code have a very dynamic nature (in shapes or graph
-terms), it is better to force the execution in <em>OpByOp</em> mode (every IR node is lowered into
-a separate <em>XLA</em> computation, and chain-executed). This environment variable, if set to 1,
-enables <em>OpByOp</em> during the “get tensors” operation (the operation used by <em>PyTorch/XLA</em> to
-fetch intermediate values back from the <em>TPU</em> device into <em>PyTorch</em> CPU tensors).</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">XLA_SYNC_TENSORS_OPBYOP</span></code>: The same as _XLA_GET_TENSORS<em>OPBYOP</em> but for “sync tensors”
-operation (the operation used at the end of a step, to flush pending IR computations and
-materialize them into <em>TPU</em> device data).</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">XLA_SYNC_WAIT</span></code>: Forces the XLA tensor sync operation to wait for its completion, before
 moving to the next step.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">XLA_USE_BF16</span></code>: If set to 1, transforms all the <em>PyTorch</em> <em>Float</em> values into <em>BiFloat16</em>
