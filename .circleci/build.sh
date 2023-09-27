@@ -49,7 +49,7 @@ python setup.py install
 
 source $XLA_DIR/xla_env
 export GCLOUD_SERVICE_KEY_FILE="$XLA_DIR/default_credentials.json"
-export SILO_NAME='cache-silo-ci-gcc-11'  # cache bucket for CI
+export SILO_NAME='cache-silo-ci-dev-container-python38-bullseye'  # cache bucket for CI
 export BUILD_CPP_TESTS='1'
 export TF_CUDA_COMPUTE_CAPABILITIES="sm_50,sm_70,sm_75,compute_80,$TF_CUDA_COMPUTE_CAPABILITIES"
 build_torch_xla $XLA_DIR

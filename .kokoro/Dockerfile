@@ -47,7 +47,7 @@ ARG SCCACHE="$(which sccache)"
 
 WORKDIR /pytorch/xla
 ARG GCLOUD_SERVICE_KEY_FILE="/pytorch/xla/default_credentials.json"
-ARG SILO_NAME='cache-silo-ci-gcc-11'  # cache bucket for CI
+ARG SILO_NAME='cache-silo-ci-dev-container-python38-bullseye'  # cache bucket for CI
 RUN time pip install -e .
 
 # Run tests
