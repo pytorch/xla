@@ -63,7 +63,7 @@ jobs:
     timeout-minutes: ${{ inputs.timeout-minutes }}
     env:
       DOCKER_IMAGE: ${{ inputs.docker-image }}
-      WORKDIR: /home
+      WORKDIR: /root/workspace
       GCLOUD_SERVICE_KEY: ${{ secrets.gcloud-service-key }}
       USE_COVERAGE: ${{ inputs.collect-coverage && '1' || '0' }}
       XLA_SKIP_XRT_TESTS: ${{ inputs.disable-xrt }}
