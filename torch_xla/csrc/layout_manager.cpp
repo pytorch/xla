@@ -183,7 +183,7 @@ xla::Shape MakeArrayShapeFromDimensions(
     return MakeShapeWithLayout(type, dimensions, dynamic_dimensions,
                                *layout_ptr);
   }
-  if (dimensions.size() > 1 && 
+  if (dimensions.size() > 1 &&
       (hw_type == XlaDeviceType::TPU || hw_type != XlaDeviceType::NEURON)) {
     return MakeTpuShape(dimensions, dynamic_dimensions, type);
   }
