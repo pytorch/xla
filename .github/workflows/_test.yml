@@ -123,7 +123,6 @@ jobs:
           CIRCLE_WORKFLOW_ID: ${{ github.run_id }}
           CIRCLE_BUILD_NUM: ${{ github.run_number }}
         run: |
-            # docker cp "${pid}":/home/jenkins/htmlcov "${GITHUB_WORKSPACE}"
             docker cp "${pid}":/root/htmlcov "${GITHUB_WORKSPACE}"
             if [ -n "${GPU_FLAG:-}" ]; then
               # Python

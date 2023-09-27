@@ -18,9 +18,6 @@ jobs:
     uses: ./.github/workflows/_build.yml
     with:
       ecr-docker-image-base: 308535385114.dkr.ecr.us-east-1.amazonaws.com/pytorch/xla_base
-      # gcr-docker-image: gcr.io/tpu-pytorch/xla_base:latest
-      # gcr-docker-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:cuda
-      # gcr-docker-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.8_cuda_11.8
       gcr-docker-image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.8_cuda_12.1
       disable_xrt: 0
       cuda: 1

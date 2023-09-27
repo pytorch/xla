@@ -44,7 +44,6 @@ jobs:
     env:
       ECR_DOCKER_IMAGE_BASE: ${{ inputs.ecr-docker-image-base }}
       GCR_DOCKER_IMAGE: ${{ inputs.gcr-docker-image }}
-      # TODO create work dir in Dockerfile, create user similar to .circleci/docker/Dockerfile
       WORKDIR: /home
       SCCACHE_BUCKET: ossci-compiler-cache-circleci-v2
       GCLOUD_SERVICE_KEY: ${{ secrets.gcloud-service-key }}
@@ -79,9 +78,7 @@ jobs:
       - name: Start the container
         shell: bash
         run: |
-          # pid=$(docker run -t -d -w "$WORKDIR" "${GCR_DOCKER_IMAGE}")
           pid=$(docker run --privileged -t -d -w "$WORKDIR" -e "TERM=xterm-256color" "${GCR_DOCKER_IMAGE}")
-          # docker exec -u jenkins "${pid}" sudo chown -R jenkins "${WORKDIR}"
           docker exec --privileged "${pid}" /bin/bash
           docker cp "${GITHUB_WORKSPACE}/." "$pid:$WORKDIR"
           echo "pid=${pid}" >> "${GITHUB_ENV}"
@@ -89,9 +86,6 @@ jobs:
       - name: Prepare build env
         shell: bash
         run: |
-          # echo "declare -x SCCACHE_BUCKET=${SCCACHE_BUCKET}" | docker exec -i "${pid}" sh -c "cat >> env"
-          # echo "declare -x CC=clang-8 CXX=clang++-8" | docker exec -i "${pid}" sh -c "cat >> xla_env"
-          # add USE_CUDA=0 to disable pytorch gpu build in gpu container
           echo "declare -x USE_CUDA=0" | docker exec -i "${pid}" sh -c "cat >> xla_env"
           echo "declare -x DISABLE_XRT=${DISABLE_XRT}" | docker exec -i "${pid}" sh -c "cat >> xla_env"
           echo "declare -x XLA_CUDA=${XLA_CUDA}" | docker exec -i "${pid}" sh -c "cat >> xla_env"
@@ -101,7 +95,6 @@ jobs:
       - name: Build
         shell: bash
         run: |
-          # docker exec -u jenkins "${pid}" bash -c ". ~/.bashrc && .circleci/build.sh"
           docker exec --privileged "${pid}" bash -c ". ~/.bashrc && .circleci/build.sh"
       - name: Cleanup build env
         shell: bash
@@ -119,7 +112,6 @@ jobs:
           fi
 
           export COMMIT_DOCKER_IMAGE="${ECR_DOCKER_IMAGE_BASE}:${image_tag_base}-${GITHUB_SHA}"
-          # export COMMIT_DOCKER_IMAGE="${GCR_DOCKER_IMAGE_BASE}:${image_tag_base}-${GITHUB_SHA}"
           time docker commit "${pid}" "${COMMIT_DOCKER_IMAGE}"
           time docker push "${COMMIT_DOCKER_IMAGE}"
           echo "docker-image=${COMMIT_DOCKER_IMAGE}" >> "${GITHUB_OUTPUT}"
