@@ -71,9 +71,9 @@ TEST_F(XLAShardingTest, GetShardIndicesForDevices) {
   auto sharding_spec =
       std::make_shared<XLATensor::ShardingSpec>(sharding, tensor_shape);
   auto shard_shape = ShardingUtil::GetShardShape(sharding_spec);
-  auto indices_and_rank = ShardingUtil::GetShardRankAndIndicesForDevices(
+  auto rank_and_indices = ShardingUtil::GetShardRankAndIndicesForDevices(
       shard_shape, tensor.sizes().vec(), sharding, devices);
-  EXPECT_EQ(indices_and_rank.size(), devices.size());
+  EXPECT_EQ(rank_and_indices.size(), devices.size());
   /* Tiled indices should be:
                  dim=0 dim=1
        device=0  [0:4,  0:4]
@@ -82,10 +82,10 @@ TEST_F(XLAShardingTest, GetShardIndicesForDevices) {
        device=3  [4:8,  4:7] */
   std::vector<std::vector<int>> slice_starts = {{0, 0}, {0, 4}, {4, 0}, {4, 4}};
   std::vector<std::vector<int>> slice_ends = {{4, 4}, {4, 7}, {8, 4}, {8, 7}};
-  for (int device = 0; device < indices_and_rank.size(); ++device) {
-    auto& shard_rank = indices_and_rank[device].first;
+  for (int device = 0; device < rank_and_indices.size(); ++device) {
+    auto& shard_rank = rank_and_indices[device].first;
     EXPECT_EQ(shard_rank, 0);  // Shard rank is always 0 for tiled sharding.
-    auto& shard_indices = indices_and_rank[device].second;
+    auto& shard_indices = rank_and_indices[device].second;
     EXPECT_EQ(shard_indices.size(), tensor.sizes().size());
     for (int dim = 0; dim < shard_indices.size(); ++dim) {
       EXPECT_TRUE(shard_indices[dim].is_slice());
@@ -98,11 +98,13 @@ TEST_F(XLAShardingTest, GetShardIndicesForDevices) {
   sharding = xla::HloSharding::Replicate().ToProto();
   sharding_spec->sharding = sharding;
   shard_shape = ShardingUtil::GetShardShape(sharding_spec);
-  indices_and_rank = ShardingUtil::GetShardRankAndIndicesForDevices(
+  rank_and_indices = ShardingUtil::GetShardRankAndIndicesForDevices(
       shard_shape, tensor.sizes().vec(), sharding, devices);
-  EXPECT_EQ(indices_and_rank.size(), devices.size());
+  EXPECT_EQ(rank_and_indices.size(), devices.size());
   for (int i = 0; i < devices.size(); ++i) {
-    auto& shard_indices = indices_and_rank[i].second;
+    auto& rank = rank_and_indices[i].first;
+    EXPECT_EQ(rank, i);  // Shard rank should equal global ordinal.
+    auto& shard_indices = rank_and_indices[i].second;
     EXPECT_EQ(shard_indices.size(), 1);
     EXPECT_TRUE(shard_indices[0].is_ellipsis());
   }

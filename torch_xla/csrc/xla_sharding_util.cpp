@@ -547,9 +547,7 @@ std::vector<at::Tensor> ShardingUtil::ShardTensor(
       // Extract only the indices, the rank is unnecessary for sharding.
       std::transform(rank_and_indices.begin(), rank_and_indices.end(),
                      std::back_inserter(shard_indices),
-                     [](auto& pair) -> std::vector<at::indexing::TensorIndex> {
-                       return pair.second;
-                     });
+                     [](auto& pair) { return pair.second; });
     }
 
     for (size_t i = 0; i < shard_indices.size(); i++) {
