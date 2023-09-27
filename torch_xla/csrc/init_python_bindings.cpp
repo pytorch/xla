@@ -1664,7 +1664,7 @@ void InitXlaModuleBindings(py::module m) {
   // underlying ComputationClient::GetDataShards. As such, the shards will
   // contain any padding that was applied to ensure they all have the same
   // shape. Note that this padding is _not_ included in the global indices
-  // returned by `_get_local_shard_indices`.
+  // returned by `_get_local_shard_rank_and_indices`.
   m.def("_get_local_shards",
         [](const at::Tensor& input)
             -> std::tuple<std::vector<at::Tensor>, std::vector<std::string>> {
@@ -1699,8 +1699,8 @@ void InitXlaModuleBindings(py::module m) {
   // indicating that the tensor is replicated. These indices will not reflect
   // any padding that has been applied to the shards. The order of the returned
   // indices matches the order of the shards returned from `_get_local_shards`.
-  m.def("_get_local_shard_indices",
-        [](const at::Tensor& input) -> std::vector<py::object> {
+  m.def("_get_local_shard_rank_and_indices",
+        [](const at::Tensor& input) -> std::vector<std::pair<int, py::object>> {
           XLATensorPtr xtensor = bridge::GetXlaTensor(input);
           XLA_CHECK(xtensor->sharding_spec() != nullptr)
               << "Tensor is not sharded";
@@ -1713,29 +1713,32 @@ void InitXlaModuleBindings(py::module m) {
           auto sharding_spec = xtensor->sharding_spec();
           auto sharding = xtensor->sharding_spec()->sharding;
           auto shard_shape = ShardingUtil::GetShardShape(sharding_spec);
-          auto indices = ShardingUtil::GetShardIndicesForDevices(
-              shard_shape, input.sizes().vec(), sharding, shard_devices);
+          auto rank_and_indices =
+              ShardingUtil::GetShardRankAndIndicesForDevices(
+                  shard_shape, input.sizes().vec(), sharding, shard_devices);
 
           // Convert each vector<TensorIndex> to List[py::slice] or py::ellipsis
-          std::vector<py::object> result;
+          std::vector<std::pair<int, py::object>> result;
           result.reserve(shard_devices.size());
-          for (auto& device_indices : indices) {
-            XLA_CHECK(device_indices.size() > 0)
+          for (auto& device_rank_and_indices : rank_and_indices) {
+            auto& rank = device_rank_and_indices.first;
+            auto& indices = device_rank_and_indices.second;
+            XLA_CHECK(indices.size() > 0)
                 << "Unexpected empty shard indices for tensor " << input;
-            if (device_indices[0].is_ellipsis()) {
-              result.push_back(py::ellipsis());
+            if (indices[0].is_ellipsis()) {
+              result.push_back(std::make_pair(rank, py::ellipsis()));
             } else {
-              std::vector<py::object> device_slices;
-              for (auto& tensor_index : device_indices) {
+              std::vector<py::object> index_slices;
+              for (auto& tensor_index : indices) {
                 XLA_CHECK(tensor_index.is_slice())
                     << "Unexpected TensorIndex type: " << tensor_index;
                 auto slice = tensor_index.slice();
                 ssize_t start = slice.start().expect_int();
                 ssize_t stop = slice.stop().expect_int();
                 ssize_t step = slice.step().expect_int();
-                device_slices.push_back(py::slice(start, stop, step));
+                index_slices.push_back(py::slice(start, stop, step));
               }
-              result.push_back(py::cast(device_slices));
+              result.push_back(std::make_pair(rank, py::cast(index_slices)));
             }
           }
           return result;

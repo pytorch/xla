@@ -433,24 +433,29 @@ ShardingUtil::GetShardIndicesForMinibatchTensor(
   return shard_indices;
 }
 
-std::vector<std::vector<at::indexing::TensorIndex>>
-ShardingUtil::GetShardIndicesForDevices(
+std::vector<std::pair<int, std::vector<at::indexing::TensorIndex>>>
+ShardingUtil::GetShardRankAndIndicesForDevices(
     const std::vector<int64_t>& shard_shape,
     const std::vector<int64_t>& tensor_shape, const xla::OpSharding sharding,
     const std::vector<std::string>& devices) {
+  using namespace at::indexing;
+
   // `shard_indices[dev][dim]` represents the index slice for dimension `dim`
   // that belongs on device `devices[dev]` if the tensor is sharded. If
   // `sharding` is REPLICATED, `shard_indices[dev]` will only have a single
   // Ellipsis element to indicate that the tensor is replicated across all
   // dimensions.
-  std::vector<std::vector<at::indexing::TensorIndex>> shard_indices(
+  std::vector<std::pair<int, std::vector<TensorIndex>>> shard_indices(
       devices.size());
   auto tile_shape = sharding.tile_assignment_dimensions();
   if (sharding.type() == xla::OpSharding::REPLICATED) {
     // Use Ellipsis to indicate all dimensions are replicated
-    auto ellipsis = at::indexing::TensorIndex(at::indexing::Ellipsis);
-    auto indices = std::vector<at::indexing::TensorIndex>({ellipsis});
-    std::fill_n(shard_indices.begin(), shard_indices.size(), indices);
+    auto ellipsis = TensorIndex(Ellipsis);
+    auto indices = std::vector<TensorIndex>({ellipsis});
+    for (int i = 0; i < devices.size(); ++i) {
+      int global_ordinal = ParseDeviceString(devices[i]).ordinal();
+      shard_indices[i] = std::make_pair(global_ordinal, indices);
+    }
   } else if (sharding.type() == xla::OpSharding::OTHER) {
     auto device_index = build_index_map(devices);
     std::vector<int64_t> tile_assignment_devices(
@@ -470,6 +475,10 @@ ShardingUtil::GetShardIndicesForDevices(
         continue;
       }
 
+      // The rank of this shard among its replicas. This value is only updated
+      // from 0 if the sharding is partially replicated.
+      int replica_rank = 0;
+
       // Given the shard's row-major index `i`, we need to calculate shard's
       // coordinates (n_0, ..., n_d) in the tiling to generate the index
       // slices. Using `N_j = tile_shape[j]` and `0 <= n_j < N_j`, the
@@ -480,26 +489,27 @@ ShardingUtil::GetShardIndicesForDevices(
       // n_0)))`. Then `offset_d = i`, `n_j = offset_j % N_j`, and
       // `offset_{j-1} = offset_j / N_j`.
       int offset = i;
-      std::vector<at::indexing::TensorIndex> indices;
+      std::vector<TensorIndex> indices;
       for (int j = tile_shape.size() - 1; j >= 0; j--) {
+        int64_t n_j = offset % tile_shape[j];
         if (sharding.replicate_on_last_tile_dim() &&
             j == tile_shape.size() - 1) {
           // the last tile assignment dimension is replicated, which implies
           // that the consecutive `tile_shape[j]` devices hold the replicated.
+          replica_rank = n_j;
           offset /= tile_shape[j];
           continue;
         }
-        int64_t n_j = offset % tile_shape[j];
         // Clamp the slice bounds to the tensor shape to accurately reflect
         // the shard size without padding.
         int start = std::min(n_j * shard_shape[j], tensor_shape[j]);
         int end = std::min((n_j + 1) * shard_shape[j], tensor_shape[j]);
-        auto slice = at::indexing::Slice(start, end);
-        indices.push_back(at::indexing::TensorIndex(slice));
+        auto slice = Slice(start, end);
+        indices.push_back(TensorIndex(slice));
         offset /= tile_shape[j];
       }
       std::reverse(indices.begin(), indices.end());
-      shard_indices[device_index[core]] = indices;
+      shard_indices[device_index[core]] = std::make_pair(replica_rank, indices);
     }
   } else {
     TF_LOG(ERROR) << "Unsupported OpSharding type " << sharding.type();
@@ -532,8 +542,14 @@ std::vector<at::Tensor> ShardingUtil::ShardTensor(
     if (minibatch) {
       shard_indices = GetShardIndicesForMinibatchTensor(shard_shape, devices);
     } else {
-      shard_indices = GetShardIndicesForDevices(
+      auto rank_and_indices = GetShardRankAndIndicesForDevices(
           shard_shape, tensor.sizes().vec(), sharding, devices);
+      // Extract only the indices, the rank is unnecessary for sharding.
+      std::transform(rank_and_indices.begin(), rank_and_indices.end(),
+                     std::back_inserter(shard_indices),
+                     [](auto& pair) -> std::vector<at::indexing::TensorIndex> {
+                       return pair.second;
+                     });
     }
 
     for (size_t i = 0; i < shard_indices.size(); i++) {
