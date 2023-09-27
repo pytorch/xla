@@ -46,7 +46,10 @@ class ComputationClient {
 
     // TODO set Device and torch::lazy_shape correctly
     Data(std::string device, xla::Shape shape)
-        : torch::lazy::BackendData(ParseDeviceString(device), torch::lazy::Shape()), xla_device_(device), xla_shape_(std::move(shape)) {}
+        : torch::lazy::BackendData(ParseDeviceString(device),
+                                   torch::lazy::Shape()),
+          xla_device_(device),
+          xla_shape_(std::move(shape)) {}
 
     virtual ~Data() {}
 
@@ -68,7 +71,9 @@ class ComputationClient {
 
     OpaqueHandle GetHandle() { return GetOpaqueHandle(); };
 
-    void Assign(const BackendData& data) { Assign(dynamic_cast<const Data&>(data)); };
+    void Assign(const BackendData& data) {
+      Assign(dynamic_cast<const Data&>(data));
+    };
 
    private:
     std::string xla_device_;

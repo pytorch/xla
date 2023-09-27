@@ -3,8 +3,8 @@
 #include <climits>
 
 #include "torch_xla/csrc/helpers.h"
-#include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "xla/client/lib/constants.h"
 #include "xla/literal_util.h"
