@@ -98,7 +98,6 @@ cc_library(
     "@xla//xla/pjrt/distributed",
     "@xla//xla/pjrt/gpu:se_gpu_pjrt_client",
     "@xla//xla/service:gpu_plugin",
-    "@xla//xla/pjrt:tpu_client",
     "@xla//xla/pjrt:pjrt_client",
     "@xla//xla/pjrt:tfrt_cpu_pjrt_client",
     "@xla//xla/pjrt:pjrt_c_api_client",

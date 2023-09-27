@@ -1646,6 +1646,29 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
         for dtype in (torch.long, torch.int32, torch.bool)
     ], test_fn)
 
+  def test_native_dropout_backward(self):
+
+    def test_fn(input):
+      dropped = torch.native_dropout(input, 0.5, train=True)
+      loss = dropped[0] + 0.5
+      loss.mean().backward()
+      return dropped[1].cpu(), input.grad.cpu()
+
+    met.clear_all()
+    xla_device = xm.xla_device()
+    input_cpu = torch.randn(7, 7, requires_grad=True)
+    input_xla = torch.randn(7, 7, device=xla_device, requires_grad=True)
+    mask_cpu, grad_cpu = test_fn(input_cpu)
+    mask_xla, grad_xla = test_fn(input_xla)
+    # dropout is random, hence we construct the expected grad_xla by mask_xla
+    # and gradient_cpu.
+    grad_cpu_single = grad_cpu[mask_cpu][0]
+    torch.allclose(
+        grad_cpu_single * mask_xla.to(torch.float), grad_xla, rtol=1e-03)
+
+    self.assertIn("xla::native_dropout_backward", met.counter_names())
+    self.assertNotIn("aten::native_dropout_backward", met.counter_names())
+
   def test_conv2d_backward(self):
     # Somehow eager cpu produces different results than us, and
     # therefore we can't compare eager and xla.

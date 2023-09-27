@@ -216,6 +216,9 @@ xla::Shape MaximumOutputShape(const torch::lazy::Value& input,
 xla::Shape MinimumOutputShape(const torch::lazy::Value& input,
                               const torch::lazy::Value& other);
 
+xla::Shape NativeDropoutBackwardOutputShape(
+    const torch::lazy::Value& grad_output, const torch::lazy::Value& mask);
+
 xla::Shape NeScalarOutputShape(const torch::lazy::Value& self,
                                const torch::lazy::Value& other);
 
