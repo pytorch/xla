@@ -119,7 +119,6 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   // the tensors must be on the same device. If wait is true, the sync operation
   // will be run synchronously. The devices argument, if not empty, tells the
   // devices which should be participating into the replicated computation.
-  // We don't use the upstream one given we have OpbyOp mode.
   void SyncTensorsGraph(std::vector<XLATensorPtr>* tensors,
                         absl::Span<const std::string> devices, bool wait,
                         bool sync_ltc_data, bool warm_up_cache_only = false);
@@ -146,7 +145,6 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
 
   // Retrieves the PyTorch CPU tensors behind the XLA tensors IR operations.
   // All the tensors must be on the same device.
-  // We don't use the GetTensors given we have OpByOp mode.
   std::vector<at::Tensor> GetTensors(std::vector<XLATensorPtr>* tensors);
 
   // We don't use the upstream GetGraphHash as XLATensorPtr is used instead.
@@ -260,17 +258,8 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   // Override to enable SPMD.
   void TensorCollectionBarrier(SyncTensorCollection* coll) final;
 
-  // Implementation of the GetTensors() API using the op-by-op executor.
-  std::vector<at::Tensor> GetTensorsOpByOp(std::vector<XLATensorPtr>* tensors);
-
   // We don't use upstream GetTensorsFused as we have xla::Literal.
   std::vector<at::Tensor> GetTensorsFused(std::vector<XLATensorPtr>* tensors);
-
-  // Runs an asynchronous syn operation using the op-by-op executor.
-  using OpByOpAsync = runtime::util::AsyncTask<int>;
-  OpByOpAsync SyncTensorsGraphOpByOp(std::vector<XLATensorPtr>* tensors,
-                                     absl::Span<const std::string> devices,
-                                     const SyncTensorsConfig& config);
 
   // Gathers the XLA device data for all the input tensors, after an
   // asynchronous operation.

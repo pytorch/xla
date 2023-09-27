@@ -240,35 +240,6 @@ class ComputationClient {
 
   struct ExecuteReplicatedOptions : public ClientExecuteOptions {};
 
-  struct ExecuteParallelOptions : public ClientExecuteOptions {};
-
-  // Describes an operation to be fed to the ExecuteChained() API.
-  // If the device_data member is not nullptr, this operation is a device data
-  // input. Otherwise computation must not be nullptr, and represents the
-  // computation to be executed. The indices of the inputs to the computation,
-  // are coming from the inputs member. Since the operations fed to
-  // ExecuteChained() are a valid post-order, the op_index indices listed within
-  // the inputs member must be lower of the index of the current
-  // ExecuteChainedOp within the post-order. If the outputs member has values,
-  // the result of this ExecuteChainedOp will become an output of the
-  // ExecuteChained() API, with the output_index output of this ExecuteChainedOp
-  // feeding the result_index result.
-  struct ExecuteChainedOp {
-    struct Input {
-      size_t op_index;
-      absl::optional<size_t> output_index;
-    };
-    struct Output {
-      size_t result_index;
-      absl::optional<size_t> output_index;
-    };
-
-    DataPtr device_data;
-    ComputationPtr computation;
-    std::vector<Output> outputs;
-    std::vector<Input> inputs;
-  };
-
   struct MemoryInfo {
     int64_t kb_free = 0;
     int64_t kb_total = 0;
@@ -280,15 +251,6 @@ class ComputationClient {
   // will be populated in an asynchrounous fashion.
   virtual DataPtr CreateDataPlaceholder(std::string device,
                                         xla::Shape shape) = 0;
-
-  // Create DataPtr that only has dummy information which can be filled in
-  // later.
-  virtual std::vector<DataPtr> CreateAsyncDatas(
-      absl::Span<const TensorSource> tensors) = 0;
-
-  // Lock the DataPtr
-  virtual std::vector<torch_xla::runtime::util::ExceptionCleanup>
-  LockAsyncDatas(absl::Span<const DataPtr> datas) = 0;
 
   // Returns data shards. We expect this to be called on PjRtShardedData to
   // retrieve the shards. If other data type is passed, it returns the input
@@ -310,12 +272,6 @@ class ComputationClient {
   // Transfers local tensor values to the TPU devices and fetches the handles.
   virtual std::vector<DataPtr> TransferToServer(
       absl::Span<const TensorSource> tensors) = 0;
-
-  // Transfers local tensor values to the TPU devices and fetches the handles.
-  // Update the handles associated with DataPtrs passed instead of creating new
-  // datas.
-  virtual void TransferToServer(absl::Span<const TensorSource> tensors,
-                                absl::Span<const DataPtr> datas) = 0;
 
   // Transfers local sharded tensor values to the TPU devices and returns a
   // `PjRtShardedData`.
@@ -362,36 +318,6 @@ class ComputationClient {
       absl::Span<const std::string> devices,
       const ExecuteReplicatedOptions& options) = 0;
 
-  // Executes the computations in parallel. Each computation must target a
-  // different device, and the the common device of arguments[i] must match
-  // devices[i]. The computations[i] computation is fed with arguments[i]
-  // arguments.
-  // Returns a vector of vectors of device side Data object, with result[i]
-  // being the return value of computations[i]. If options.explode_tuple is
-  // true, the output tuples will be decomposed into their single elements.
-  virtual std::vector<std::vector<DataPtr>> ExecuteParallel(
-      absl::Span<const Computation* const> computations,
-      const std::vector<std::vector<DataPtr>>& arguments,
-      absl::Span<const std::string> devices,
-      const ExecuteParallelOptions& options) = 0;
-
-  // Executes a serie of operations, whose results are input of other
-  // operations. The ops is a valid post-order for the execution, which means
-  // that the inputs of op at index I, will have to be coming from ops at index
-  // lower than I. It returns a vector of device data shared pointers, one for
-  // every ExecuteChainedOp marked with is_result=true, in the order they appear
-  // within the ops post-order.
-  virtual std::vector<DataPtr> ExecuteChained(
-      absl::Span<const ExecuteChainedOp> ops, const std::string& device) = 0;
-
-  virtual std::vector<std::vector<DataPtr>> DeconstructTuple(
-      absl::Span<const DataPtr> tuples) = 0;
-
-  // Returns a unique string which identifies the resource domain of a given
-  // device. Within a resource domain, handles to device memory or compiled
-  // computations can be used for all devices part of such domain.
-  virtual std::string GetResourceDomain(const std::string& device) const = 0;
-
   virtual std::string GetDefaultDevice() const = 0;
 
   virtual size_t GetNumDevices() const = 0;
@@ -415,8 +341,6 @@ class ComputationClient {
       std::shared_ptr<std::vector<std::string>> devices) = 0;
 
   virtual std::shared_ptr<std::vector<std::string>> GetReplicationDevices() = 0;
-
-  virtual void SetRngSeed(size_t seed) = 0;
 
   virtual std::map<std::string, Metric> GetMetrics() const = 0;
 

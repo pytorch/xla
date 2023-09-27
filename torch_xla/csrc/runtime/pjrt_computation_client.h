@@ -87,51 +87,9 @@ class PjRtComputationClient : public ComputationClient {
 
   void WaitDeviceOps(const std::vector<std::string>& devices) override;
 
-  // NOT IMPLEMENTED
-
-  void TransferToServer(absl::Span<const TensorSource> tensors,
-                        absl::Span<const DataPtr> datas) override {
-    XLA_ERROR() << __FUNCTION__ << " not implemented";
-  };
-
-  std::vector<DataPtr> CreateAsyncDatas(
-      absl::Span<const TensorSource> tensors) override {
-    XLA_ERROR() << __FUNCTION__ << " not implemented";
-  };
-
-  std::vector<torch_xla::runtime::util::ExceptionCleanup> LockAsyncDatas(
-      absl::Span<const DataPtr> datas) override {
-    XLA_ERROR() << __FUNCTION__ << " not implemented";
-  };
-
-  std::vector<std::vector<DataPtr>> DeconstructTuple(
-      absl::Span<const DataPtr> tuples) override {
-    XLA_ERROR() << __FUNCTION__ << " not implemented";
-  };
-
-  std::vector<std::vector<DataPtr>> ExecuteParallel(
-      absl::Span<const Computation* const> computations,
-      const std::vector<std::vector<DataPtr>>& arguments,
-      absl::Span<const std::string> devices,
-      const ExecuteParallelOptions& options) override {
-    XLA_ERROR() << __FUNCTION__ << " not implemented";
-  };
-
-  std::vector<DataPtr> ExecuteChained(absl::Span<const ExecuteChainedOp> ops,
-                                      const std::string& device) override {
-    XLA_ERROR() << __FUNCTION__ << " not implemented";
-  };
-
-  std::string GetResourceDomain(const std::string& device) const override {
-    // TODO(wcromar): return a meaningful value
-    return "getresourcedomainplaceholder";
-  };
-
-  void SetRngSeed(size_t seed) override {
-    XLA_ERROR() << __FUNCTION__ << " not implemented";
-  };
-
   std::map<std::string, Metric> GetMetrics() const override;
+
+  // NOT IMPLEMENTED
 
   MemoryInfo GetMemoryInfo(const std::string& device) override {
     XLA_ERROR() << __FUNCTION__ << " not implemented";
