@@ -78,29 +78,8 @@ torch::lazy::BackendDevice ParseDeviceString(const std::string& device_spec) {
   return torch::lazy::BackendDevice(std::move(device_type), ordinal);
 }
 
-const torch::lazy::BackendDevice* GetDefaultDevice() {
-  static const torch::lazy::BackendDevice default_device =
-      ParseDeviceString("");
-  return &default_device;
-}
-
 torch::lazy::BackendDevice GetVirtualDevice() {
   return ParseDeviceString("SPMD:0");
-}
-
-torch::lazy::BackendDevice GetCurrentDevice() {
-  if (!g_current_device) {
-    g_current_device = *GetDefaultDevice();
-  }
-  return *g_current_device;
-}
-
-torch::lazy::BackendDevice SetCurrentDevice(
-    const torch::lazy::BackendDevice& device) {
-  torch::lazy::BackendDevice current = GetCurrentDevice();
-  g_current_device = device;
-  TF_VLOG(2) << "New current device: " << device;
-  return current;
 }
 
 bool ShouldUseVirtualDevice() {

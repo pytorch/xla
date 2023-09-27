@@ -14,6 +14,7 @@
 #include "torch_xla/csrc/ops/generic.h"
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
