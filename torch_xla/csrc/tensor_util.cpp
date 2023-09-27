@@ -582,8 +582,8 @@ torch::lazy::BackendDataPtr TensorToXlaData(
         std::vector<at::Tensor>(local_devices.size(), tensor);
     auto sharding_spec = std::make_shared<XLATensor::ShardingSpec>(
         xla::HloSharding::Replicate().ToProto(), shape);
-    return ShardingUtil::CreateShardedData(
-        replicated_data, local_devices, sharding_spec);
+    return ShardingUtil::CreateShardedData(replicated_data, local_devices,
+                                           sharding_spec);
   }
 
   auto populate_fn =

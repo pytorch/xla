@@ -24,7 +24,8 @@ std::vector<runtime::ComputationClient::DataPtr> UnwrapXlaData(
   std::vector<runtime::ComputationClient::DataPtr> xla_datas;
   xla_datas.reserve(datas.size());
   for (const auto& data : datas) {
-    xla_datas.push_back(std::dynamic_pointer_cast<runtime::ComputationClient::Data>(data));
+    xla_datas.push_back(
+        std::dynamic_pointer_cast<runtime::ComputationClient::Data>(data));
   }
   return xla_datas;
 }
