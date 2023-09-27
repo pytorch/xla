@@ -16,9 +16,6 @@ runtime::ComputationClient::DataPtr UnwrapXlaData(
 std::vector<runtime::ComputationClient::DataPtr> UnwrapXlaData(
     absl::Span<const torch::lazy::BackendDataPtr> datas);
 
-torch::lazy::BackendDataPtr WrapXlaData(
-    const runtime::ComputationClient::DataPtr& xla_data);
-
 std::vector<torch::lazy::BackendDataPtr> WrapXlaData(
     absl::Span<const runtime::ComputationClient::DataPtr> xla_datas);
 

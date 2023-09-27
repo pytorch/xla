@@ -1687,7 +1687,7 @@ void InitXlaModuleBindings(py::module m) {
                shard_handles) {
             shards.push_back(
                 XlaDataToTensors(
-                    {WrapXlaData(shard_handle)},
+                    {shard_handle},
                     TensorTypeFromXlaType(shard_handle->shape().element_type()))
                     .front());
             str_devices.push_back(shard_handle->device());
@@ -1764,7 +1764,7 @@ void InitXlaModuleBindings(py::module m) {
     }
     auto xla_data =
         ShardingUtil::CreateShardedData(shards, devices, sharding_spec);
-    xtensor->SetXlaData(WrapXlaData(xla_data));
+    xtensor->SetXlaData(xla_data);
   });
   // This is useful for debugging and generating a partitioned HLO separately
   // outside the actual compilation & execution. This allows testing with

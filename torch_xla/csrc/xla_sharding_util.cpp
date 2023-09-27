@@ -357,7 +357,7 @@ std::vector<runtime::ComputationClient::DataPtr> ShardingUtil::OutputHandler(
         (sharding->sharding.type() != xla::OpSharding::REPLICATED)) {
       // Reshards replicated output if `sharding` is present.
       std::vector<at::Tensor> tensors = XlaDataToTensors(
-          {WrapXlaData(sharded_results[0][i])},
+          {sharded_results[0][i]},
           TensorTypeFromXlaType(sharding->shape.element_type()));
       outputs.push_back(UnwrapXlaData(CreateTensorsData(
           tensors, {sharding},
@@ -619,9 +619,9 @@ std::vector<torch::lazy::BackendDataPtr> ShardingUtil::CreateShardedPlaceholder(
     // hold the corresponding computation results for both sharding &
     // replication.
     auto sharded_data_placeholder =
-        WrapXlaData(runtime::GetComputationClient()->WrapDataShards(
+        runtime::GetComputationClient()->WrapDataShards(
             {}, GetVirtualDevice().toString(), sharding_specs[i]->shape,
-            sharding_specs[i]->sharding));
+            sharding_specs[i]->sharding);
 
     // Register the sharded data placeholder to the tensor and its node.
     placeholders.push_back(sharded_data_placeholder);
@@ -675,9 +675,9 @@ void ShardingUtil::PrepareOutputShardingPropagation(
     // hold the corresponding computation results for both sharding &
     // replication.
     auto sharded_data_placeholder =
-        WrapXlaData(runtime::GetComputationClient()->WrapDataShards(
+        runtime::GetComputationClient()->WrapDataShards(
             {}, GetVirtualDevice().toString(), (*sharding_specs)[i]->shape,
-            (*sharding_specs)[i]->sharding));
+            (*sharding_specs)[i]->sharding);
 
     // Register the sharded data placeholder to the tensor and its node.
     (*data_placeholders)[i] = sharded_data_placeholder;

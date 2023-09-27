@@ -582,8 +582,8 @@ torch::lazy::BackendDataPtr TensorToXlaData(
         std::vector<at::Tensor>(local_devices.size(), tensor);
     auto sharding_spec = std::make_shared<XLATensor::ShardingSpec>(
         xla::HloSharding::Replicate().ToProto(), shape);
-    return WrapXlaData(ShardingUtil::CreateShardedData(
-        replicated_data, local_devices, sharding_spec));
+    return ShardingUtil::CreateShardedData(
+        replicated_data, local_devices, sharding_spec);
   }
 
   auto populate_fn =
@@ -599,7 +599,7 @@ torch::lazy::BackendDataPtr TensorToXlaData(
   auto handles =
       runtime::GetComputationClient()->TransferToServer(source_tensors);
   XLA_CHECK_EQ(handles.size(), 1);
-  return WrapXlaData(handles.front());
+  return handles.front();
 }
 
 template <typename SType, typename DType>

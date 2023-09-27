@@ -29,12 +29,6 @@ std::vector<runtime::ComputationClient::DataPtr> UnwrapXlaData(
   return xla_datas;
 }
 
-torch::lazy::BackendDataPtr WrapXlaData(
-    const runtime::ComputationClient::DataPtr& xla_data) {
-  TORCH_LAZY_TIMED("WrapXlaData");
-  return xla_data;
-}
-
 std::vector<torch::lazy::BackendDataPtr> WrapXlaData(
     absl::Span<const runtime::ComputationClient::DataPtr> xla_datas) {
   TORCH_LAZY_TIMED("WrapXlaData");

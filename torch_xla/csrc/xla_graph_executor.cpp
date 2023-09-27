@@ -480,9 +480,9 @@ void XLAGraphExecutor::ClearPendingIrs(
         } else {
           xla::Shape shape = MakeShapeWithDeviceLayout(
               tensors[i]->shape(), static_cast<XlaDeviceType>(device.type()));
-          torch::lazy::BackendDataPtr handle = WrapXlaData(
+          torch::lazy::BackendDataPtr handle =
               runtime::GetComputationClient()->CreateDataPlaceholder(
-                  device.toString(), std::move(shape)));
+                  device.toString(), std::move(shape));
           tensors[i]->data()->handle = handle;
           TF_VLOG(4) << "Replacing the IR " << ir_value.node.get()->ToString()
                      << " of Tensor with ID " << tensors[i]->GetUniqueId()
@@ -634,8 +634,8 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
   } else {
     for (const xla::Shape& shape : *output_shapes) {
       torch::lazy::BackendDataPtr handle =
-          WrapXlaData(runtime::GetComputationClient()->CreateDataPlaceholder(
-              device.toString(), std::move(shape)));
+          runtime::GetComputationClient()->CreateDataPlaceholder(
+              device.toString(), std::move(shape));
       placeholders.push_back(handle);
     }
   }
@@ -794,11 +794,7 @@ std::vector<torch::lazy::BackendDataPtr> XLAGraphExecutor::ExecuteStablehlo(
       runtime::GetComputationClient()->ExecuteComputation(
           *computations[0], UnwrapXlaData(arguments), device.toString());
 
-  std::vector<torch::lazy::BackendDataPtr> result_backend_data;
-  for (const auto data : result_data) {
-    result_backend_data.push_back(WrapXlaData(data));
-  }
-  return result_backend_data;
+  return WrapXlaData(result_data);
 }
 
 std::vector<at::Tensor> XLAGraphExecutor::GetTensorsFused(
@@ -936,8 +932,8 @@ void XLAGraphExecutor::ExtractIRAndPrepareXlaData_(
     xla::Shape shape = MakeShapeWithDeviceLayout(
         tensor->shape(), static_cast<XlaDeviceType>(tensor_device.type()));
     torch::lazy::BackendDataPtr handle =
-        WrapXlaData(runtime::GetComputationClient()->CreateDataPlaceholder(
-            tensor_device.toString(), std::move(shape)));
+        runtime::GetComputationClient()->CreateDataPlaceholder(
+            tensor_device.toString(), std::move(shape));
     tensor_data_vec.push_back(handle);
     if (tensor->CurrentDataHandle() == nullptr && config.force_ltc_data) {
       tensor->AssignIrValue(torch::lazy::Value());

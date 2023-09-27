@@ -12,23 +12,12 @@
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/tensor.h"
+#include "torch_xla/csrc/unwrap_data.h"
 #include "xla/literal.h"
 #include "xla/shape.h"
 #include "xla/types.h"
 
 namespace torch_xla {
-
-runtime::ComputationClient::DataPtr UnwrapXlaData(
-    const torch::lazy::BackendDataPtr& data);
-
-std::vector<runtime::ComputationClient::DataPtr> UnwrapXlaData(
-    absl::Span<const torch::lazy::BackendDataPtr> datas);
-
-torch::lazy::BackendDataPtr WrapXlaData(
-    const runtime::ComputationClient::DataPtr& xla_data);
-
-std::vector<torch::lazy::BackendDataPtr> WrapXlaData(
-    absl::Span<const runtime::ComputationClient::DataPtr> xla_datas);
 
 std::vector<int64_t> ComputeShapeStrides(const xla::Shape& shape);
 

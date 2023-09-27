@@ -76,8 +76,8 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
       const torch::lazy::BackendDevice& device,
       const torch::lazy::Shape& shape) const override {
     xla::Shape xla_shape = MakeXlaShapeFromLazyShape(shape, device);
-    return WrapXlaData(runtime::GetComputationClient()->CreateDataPlaceholder(
-        device.toString(), std::move(xla_shape)));
+    return runtime::GetComputationClient()->CreateDataPlaceholder(
+        device.toString(), std::move(xla_shape));
   }
 
   torch::lazy::BackendDataPtr GetComputationDataFromNode(
