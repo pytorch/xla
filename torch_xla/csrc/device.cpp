@@ -3,8 +3,8 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
 #include "absl/types/optional.h"
+#include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
-#include "torch_xla/csrc/runtime/runtime.h"
 
 namespace torch_xla {
 namespace {
@@ -42,19 +42,10 @@ std::string DeviceType::toString() const {
 
 torch::lazy::BackendDevice ParseDeviceString(const std::string& device_spec) {
   if (device_spec.empty()) {
-    std::string default_device_spec =
-        UseVirtualDevice()
-            ? "SPMD:0"
-            : runtime::GetComputationClient()->GetDefaultDevice();
-    XLA_CHECK(!default_device_spec.empty());
-    return ParseDeviceString(default_device_spec);
+    XLA_ERROR() << "oops";
   }
   if (device_spec[0] == ':') {
-    std::string default_device_spec =
-        runtime::GetComputationClient()->GetDefaultDevice();
-    auto pos = default_device_spec.find(':');
-    XLA_CHECK_NE(pos, std::string::npos) << default_device_spec;
-    return ParseDeviceString(default_device_spec.substr(0, pos) + device_spec);
+    XLA_ERROR() << "oops";
   }
   std::vector<std::string> device_spec_parts = absl::StrSplit(device_spec, ':');
   XLA_CHECK_EQ(device_spec_parts.size(), 2)

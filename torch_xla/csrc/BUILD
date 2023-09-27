@@ -161,7 +161,9 @@ ptxla_cc_library(
     srcs = ["device.cpp"],
     hdrs = ["device.h"],
     deps = [
-        "//torch_xla/csrc/runtime",
+        "//torch_xla/csrc/runtime:tf_logging",
+        "//torch_xla/csrc/runtime:debug_macros",
+        "//torch_xla/csrc/runtime:sys_util",
         "//torch_xla/csrc/runtime:util",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:optional",
@@ -305,7 +307,7 @@ cc_library(
 
 ptxla_cc_library(
     name = "xla_data",
-    srcs = ["xla_data.cpp"],
+    # srcs = ["xla_data.cpp"],
     hdrs = ["xla_data.h"],
     deps = [
         ":device",

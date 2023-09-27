@@ -13,23 +13,25 @@ namespace torch_xla {
 // should actually be letting ComputationClient::Data inherit it.
 // Since ComputationClient is within TensorFlow, and TF cannot
 // depend on PyTorch. Therefore, we have this intermediate wrapper.
-class XLAData : public torch::lazy::BackendData {
- public:
-  XLAData(const torch::lazy::Shape& shape,
-          const torch::lazy::BackendDevice& device,
-          runtime::ComputationClient::DataPtr xla_data);
+// class XLAData : public torch::lazy::BackendData {
+//  public:
+//   XLAData(const torch::lazy::Shape& shape,
+//           const torch::lazy::BackendDevice& device,
+//           runtime::ComputationClient::DataPtr xla_data);
 
-  XLAData(runtime::ComputationClient::DataPtr xla_data);
+//   XLAData(runtime::ComputationClient::DataPtr xla_data);
 
-  Handle GetHandle() override;
-  void Assign(const torch::lazy::BackendData& data) override;
-  bool HasValue() const override;
-  runtime::ComputationClient::DataPtr xla_data();
+//   Handle GetHandle() override;
+//   void Assign(const torch::lazy::BackendData& data) override;
+//   bool HasValue() const override;
+//   runtime::ComputationClient::DataPtr xla_data();
 
- private:
-  // TODO: Do we really need a Share_Ptr here?
-  runtime::ComputationClient::DataPtr xla_data_;
-};
+//  private:
+//   // TODO: Do we really need a Share_Ptr here?
+//   runtime::ComputationClient::DataPtr xla_data_;
+// };
+
+using XLAData = runtime::ComputationClient::Data;
 
 }  // namespace torch_xla
 

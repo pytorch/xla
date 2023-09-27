@@ -1,6 +1,7 @@
 #ifndef XLA_CLIENT_COMPUTATION_CLIENT_H_
 #define XLA_CLIENT_COMPUTATION_CLIENT_H_
 
+#include <torch/csrc/lazy/backend/backend_data.h>
 #include <torch/csrc/lazy/backend/lowering_context.h>
 #include <torch/csrc/lazy/core/hash.h>
 #include <torch/csrc/lazy/core/shape.h>
@@ -16,6 +17,7 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
+#include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/metrics.h"
 #include "torch_xla/csrc/runtime/types.h"
@@ -38,18 +40,19 @@ struct ClientExecuteOptions {
 
 class ComputationClient {
  public:
-  class Data {
+  class Data : public torch::lazy::BackendData {
    public:
     using OpaqueHandle = int64_t;
 
+    // TODO set Device and torch::lazy_shape correctly
     Data(std::string device, xla::Shape shape)
-        : device_(std::move(device)), shape_(std::move(shape)) {}
+        : torch::lazy::BackendData(ParseDeviceString(device), torch::lazy::Shape()), xla_device_(device), xla_shape_(std::move(shape)) {}
 
     virtual ~Data() {}
 
-    const std::string& device() const { return device_; }
+    const std::string& device() const { return xla_device_; }
 
-    const xla::Shape& shape() const { return shape_; }
+    const xla::Shape& shape() const { return xla_shape_; }
 
     virtual OpaqueHandle GetOpaqueHandle() = 0;
 
@@ -63,9 +66,13 @@ class ComputationClient {
 
     virtual xla::OpSharding GetSharding() const = 0;
 
+    OpaqueHandle GetHandle() { return GetOpaqueHandle(); };
+
+    void Assign(const BackendData& data) { Assign(dynamic_cast<const Data&>(data)); };
+
    private:
-    std::string device_;
-    xla::Shape shape_;
+    std::string xla_device_;
+    xla::Shape xla_shape_;
   };
 
   using DataPtr = std::shared_ptr<Data>;
