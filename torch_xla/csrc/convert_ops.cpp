@@ -58,7 +58,7 @@ xla::XlaOp ConvertTo(xla::XlaOp op, xla::PrimitiveType from,
   }
   XlaDeviceType hw_type =
       static_cast<XlaDeviceType>(GetDeviceOrCurrent(device).type());
-  if (hw_type != XlaDeviceType::TPU) {
+  if (hw_type != XlaDeviceType::TPU && hw_type != XlaDeviceType::NEURON) {
     return xla::ConvertElementType(op, to);
   }
   switch (from) {
