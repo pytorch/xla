@@ -392,7 +392,8 @@ std::string GetXLATensorDebugInfo(const at::Tensor& tensor) {
 
   torch::lazy::BackendDataPtr handle = xtensor->CurrentDataHandle();
   if (handle) {
-    auto data = UnwrapXlaData(handle);
+    auto data =
+        std::dynamic_pointer_cast<runtime::ComputationClient::Data>(handle);
     ss << data->ToString();
   } else {
     ss << "XLAData: None\n";
@@ -1675,7 +1676,9 @@ void InitXlaModuleBindings(py::module m) {
               << "Tensor is not sharded";
           XLA_CHECK(UseVirtualDevice())
               << "Virtual device must be enabled to use _get_local_shards";
-          auto handle = UnwrapXlaData(xtensor->GetXlaData());
+          auto handle =
+              std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
+                  xtensor->GetXlaData());
           std::vector<runtime::ComputationClient::DataPtr> shard_handles =
               runtime::GetComputationClient()->GetDataShards(handle);
           std::vector<at::Tensor> shards;
@@ -1704,7 +1707,9 @@ void InitXlaModuleBindings(py::module m) {
           XLATensorPtr xtensor = bridge::GetXlaTensor(input);
           XLA_CHECK(xtensor->sharding_spec() != nullptr)
               << "Tensor is not sharded";
-          auto handle = UnwrapXlaData(xtensor->GetXlaData());
+          auto handle =
+              std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
+                  xtensor->GetXlaData());
           auto shards = runtime::GetComputationClient()->GetDataShards(handle);
           std::vector<std::string> shard_devices;
           for (auto& shard : shards) {

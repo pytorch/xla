@@ -359,9 +359,11 @@ std::vector<runtime::ComputationClient::DataPtr> ShardingUtil::OutputHandler(
       std::vector<at::Tensor> tensors = XlaDataToTensors(
           {sharded_results[0][i]},
           TensorTypeFromXlaType(sharding->shape.element_type()));
-      outputs.push_back(UnwrapXlaData(CreateTensorsData(
-          tensors, {sharding},
-          std::vector<std::string>{GetVirtualDevice().toString()})[0]));
+      outputs.push_back(
+          std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
+              CreateTensorsData(
+                  tensors, {sharding},
+                  std::vector<std::string>{GetVirtualDevice().toString()})[0]));
     } else {
       // The output is sharded or replicated.
       std::vector<runtime::ComputationClient::DataPtr> shards;

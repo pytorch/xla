@@ -1148,7 +1148,10 @@ XLAGraphExecutor::BuildInputOutputAliases(
         size_t output_index = it->second;
         xla::XlaOp root = lowering_ctx->GetResult(output_index);
         const xla::Shape& root_shape = ShapeHelper::ShapeOfXlaOp(root);
-        auto parameter_data_shape = UnwrapXlaData(parameters_data[i])->shape();
+        auto parameter_data_shape =
+            std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
+                parameters_data[i])
+                ->shape();
         // Need to check whether existing buffer and the new value has the same
         // shape and the existing buffer has not been aliased before aliasing
         // the existing and new buffer.
@@ -1157,7 +1160,8 @@ XLAGraphExecutor::BuildInputOutputAliases(
         // get sharding for the parameter data
         std::optional<xla::OpSharding> parameter_sharding =
             torch_xla::runtime::GetComputationClient()->GetDataSharding(
-                UnwrapXlaData(parameters_data[i]));
+                std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
+                    parameters_data[i]));
         // get sharding for output tensor
         size_t output_tensor_index = indices[output_index];
         XLATensor::ShardingSpecPtr output_sharding =

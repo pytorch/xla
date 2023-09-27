@@ -104,7 +104,8 @@ XLATensor::XLATensor(torch::lazy::BackendDataPtr handle,
     : XLATensor(std::make_shared<Data>(handle, handle->device(),
                                        logical_element_type)) {
   // if data is sharded we need to carry the sharding spec over.
-  runtime::ComputationClient::DataPtr data = UnwrapXlaData(handle);
+  runtime::ComputationClient::DataPtr data =
+      std::dynamic_pointer_cast<runtime::ComputationClient::Data>(handle);
   if (data->HasSharding()) {
     ShardingSpec sharding_spec(data->GetSharding(), data->shape());
     SetShardingSpec(sharding_spec);
@@ -169,7 +170,9 @@ runtime::util::MaybeRef<xla::Shape> XLATensor::shape() const {
     return data()->view->shape();
   }
   if (data()->handle != nullptr) {
-    return UnwrapXlaData(data()->handle)->shape();
+    return std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
+               data()->handle)
+        ->shape();
   }
   if (data()->ir_value) {
     return GetXlaShape(data()->ir_value);
@@ -875,7 +878,8 @@ std::string XLASymNodeImpl::str() {
 int64_t XLATensor::GetOpaqueHandle() const {
   torch::lazy::BackendDataPtr handle = CurrentDataHandle();
   if (handle != nullptr) {
-    return UnwrapXlaData(handle)->GetOpaqueHandle();
+    return std::dynamic_pointer_cast<runtime::ComputationClient::Data>(handle)
+        ->GetOpaqueHandle();
   }
   const auto backend_data =
       torch::lazy::getBackend()->GetComputationDataFromNode(
