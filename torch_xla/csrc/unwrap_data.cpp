@@ -9,14 +9,13 @@
 
 #include "absl/types/span.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
-#include "torch_xla/csrc/xla_data.h"
 
 namespace torch_xla {
 
 runtime::ComputationClient::DataPtr UnwrapXlaData(
     const torch::lazy::BackendDataPtr& data) {
   TORCH_LAZY_TIMED("UnwrapXlaData");
-  return std::dynamic_pointer_cast<XLAData>(data);
+  return std::dynamic_pointer_cast<runtime::ComputationClient::Data>(data);
 }
 
 std::vector<runtime::ComputationClient::DataPtr> UnwrapXlaData(
@@ -25,7 +24,7 @@ std::vector<runtime::ComputationClient::DataPtr> UnwrapXlaData(
   std::vector<runtime::ComputationClient::DataPtr> xla_datas;
   xla_datas.reserve(datas.size());
   for (const auto& data : datas) {
-    xla_datas.push_back(std::dynamic_pointer_cast<XLAData>(data));
+    xla_datas.push_back(std::dynamic_pointer_cast<runtime::ComputationClient::Data>(data));
   }
   return xla_datas;
 }
@@ -39,11 +38,6 @@ torch::lazy::BackendDataPtr WrapXlaData(
 std::vector<torch::lazy::BackendDataPtr> WrapXlaData(
     absl::Span<const runtime::ComputationClient::DataPtr> xla_datas) {
   TORCH_LAZY_TIMED("WrapXlaData");
-  // std::vector<torch::lazy::BackendDataPtr> datas;
-  // datas.reserve(xla_datas.size());
-  // for (const auto& xla_data : xla_datas) {
-  //   datas.push_back(std::make_shared<XLAData>(xla_data));
-  // }
   return {xla_datas.begin(), xla_datas.end()};
 }
 

@@ -288,7 +288,6 @@ ptxla_cc_library(
         ":device",
         ":shape_helper",
         ":unwrap_data",
-        ":xla_data",
         "//torch_xla/csrc/runtime:cache",
         "//torch_xla/csrc/runtime:computation_client",
         "@com_google_absl//absl/types:span",
@@ -306,21 +305,10 @@ cc_library(
 )
 
 ptxla_cc_library(
-    name = "xla_data",
-    # srcs = ["xla_data.cpp"],
-    hdrs = ["xla_data.h"],
-    deps = [
-        ":device",
-        "//torch_xla/csrc/runtime:computation_client",
-    ],
-)
-
-ptxla_cc_library(
     name = "unwrap_data",
     srcs = ["unwrap_data.cpp"],
     hdrs = ["unwrap_data.h"],
     deps = [
-        ":xla_data",
         "//torch_xla/csrc/runtime:computation_client",
         "@com_google_absl//absl/types:span",
     ],
