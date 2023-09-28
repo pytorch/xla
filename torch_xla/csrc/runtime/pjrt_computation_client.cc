@@ -346,7 +346,7 @@ ComputationClient::DataPtr PjRtComputationClient::ReplicateShardedData(
   if (PjRtShardedData* sharded_data =
           dynamic_cast<PjRtShardedData*>(handle.get())) {
     XLA_COUNTER("ReplicateShardedData", 1);
-    TF_VLOG(1) << "ReplicateShardedData (handle=" << handle->GetOpaqueHandle()
+    TF_VLOG(1) << "ReplicateShardedData (handle=" << handle->GetHandle()
                << ", shape=" << handle->shape() << ")";
     if (sharded_data->GetSharding().type() == xla::OpSharding::REPLICATED) {
       // Data is replicated, return the first shard

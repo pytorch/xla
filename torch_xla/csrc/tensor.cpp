@@ -875,11 +875,11 @@ std::string XLASymNodeImpl::str() {
   return "<=" + std::to_string(DimCast(node().get())->getStaticValue());
 }
 
-int64_t XLATensor::GetOpaqueHandle() const {
+int64_t XLATensor::GetHandle() const {
   torch::lazy::BackendDataPtr handle = CurrentDataHandle();
   if (handle != nullptr) {
     return std::dynamic_pointer_cast<runtime::ComputationClient::Data>(handle)
-        ->GetOpaqueHandle();
+        ->GetHandle();
   }
   const auto backend_data =
       torch::lazy::getBackend()->GetComputationDataFromNode(

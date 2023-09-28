@@ -42,7 +42,7 @@ class ComputationClient {
  public:
   class Data : public torch::lazy::BackendData {
    public:
-    using OpaqueHandle = int64_t;
+    // using Handle = torch::lazy::BackendData::Handle;
 
     // TODO set Device and torch::lazy_shape correctly
     Data(std::string device, xla::Shape shape)
@@ -57,19 +57,13 @@ class ComputationClient {
 
     const xla::Shape& shape() const { return xla_shape_; }
 
-    virtual OpaqueHandle GetOpaqueHandle() = 0;
-
     virtual void Assign(const Data& data) = 0;
-
-    virtual bool HasValue() const = 0;
 
     virtual std::string ToString() const = 0;
 
     virtual bool HasSharding() const = 0;
 
     virtual xla::OpSharding GetSharding() const = 0;
-
-    OpaqueHandle GetHandle() { return GetOpaqueHandle(); };
 
     void Assign(const BackendData& data) {
       Assign(dynamic_cast<const Data&>(data));

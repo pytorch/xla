@@ -5,6 +5,7 @@
 #include <torch/csrc/autograd/utils/wrap_outputs.h>
 #include <torch/csrc/autograd/variable.h>
 #include <torch/csrc/jit/python/pybind.h>
+#include <torch/csrc/lazy/backend/backend_data.h>
 #include <torch/csrc/lazy/core/config.h>
 #include <torch/csrc/lazy/core/ir_util.h>
 #include <torch/csrc/lazy/core/lazy_graph_executor.h>
@@ -1868,10 +1869,10 @@ void InitXlaModuleBindings(py::module m) {
 
   m.def("_get_tensors_handle",
         [](const std::vector<at::Tensor>& tensors) -> std::vector<int64_t> {
-          std::vector<int64_t> handles;
+          std::vector<torch::lazy::BackendData::Handle> handles;
           handles.reserve(tensors.size());
           for (auto& tensor : tensors) {
-            handles.push_back(bridge::GetXlaTensor(tensor)->GetOpaqueHandle());
+            handles.push_back(bridge::GetXlaTensor(tensor)->GetHandle());
           }
           return handles;
         });
@@ -1894,7 +1895,7 @@ void InitXlaModuleBindings(py::module m) {
             }
           }
           auto post_order = torch::lazy::Util::ComputePostOrder(roots);
-          std::unordered_set<runtime::ComputationClient::Data::OpaqueHandle>
+          std::unordered_set<torch::lazy::BackendData::Handle>
               data_handles;
 
           for (const torch::lazy::Node* nodeptr : post_order) {
@@ -1905,7 +1906,7 @@ void InitXlaModuleBindings(py::module m) {
             }
 
             // Dedup by handle
-            runtime::ComputationClient::Data::OpaqueHandle handle =
+            torch::lazy::BackendData::Handle handle =
                 backend_data->GetHandle();
             if (!data_handles.insert(handle).second) {
               continue;

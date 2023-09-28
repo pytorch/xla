@@ -128,7 +128,7 @@ class PjRtComputationClient : public ComputationClient {
                           buffer->is_dynamic_dimension(), {})),
           buffer(buffer) {}
 
-    OpaqueHandle GetOpaqueHandle() override {
+    Handle GetHandle() override {
       XLA_CHECK(HasValue())
           << "buffer with shape " << shape().ToString() << " on device "
           << device() << (buffer == nullptr ? " is null" : " is deleted");
@@ -174,9 +174,9 @@ class PjRtComputationClient : public ComputationClient {
           shards(shards),
           sharding(sharding) {}
 
-    OpaqueHandle GetOpaqueHandle() override {
-      // Always returns `OpaqueHandle` of the first shard.
-      return shards[0]->GetOpaqueHandle();
+    Handle GetHandle() override {
+      // Always returns `Handle` of the first shard.
+      return shards[0]->GetHandle();
     }
 
     void Assign(const Data& data) override {
