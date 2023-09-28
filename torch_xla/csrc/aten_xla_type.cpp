@@ -3153,7 +3153,7 @@ at::Tensor XLANativeFunctions::upsample_bilinear2d_backward(
   // our XLA lowering.
   XlaDeviceType hw_type =
       static_cast<XlaDeviceType>(grad_output_tensor->GetDevice().type());
-  if (hw_type != XlaDeviceType::TPU && hw_type != XlaDeviceType::NEURON) {
+  if (hw_type != XlaDeviceType::TPU) {
     return at::native::call_fallback_fn<
         &xla_cpu_fallback,
         ATEN_OP(upsample_bilinear2d_backward)>::call(grad_output, output_size,
