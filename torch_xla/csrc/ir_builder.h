@@ -56,8 +56,8 @@ struct XLAIrBuilder : torch::lazy::IrBuilder {
           static_cast<uint32_t>(0x5a2d296e9)) const override {
     // TODO(JackCaoG): ltc generic op does not take lowering function
     // return torch::lazy::MakeNode<Generic>(
-    //     op, operands, MakeXlaShapeFromLazyShape(shape, *bridge::GetDefaultDevice()),
-    //     num_outputs, hash_seed);
+    //     op, operands, MakeXlaShapeFromLazyShape(shape,
+    //     *bridge::GetDefaultDevice()), num_outputs, hash_seed);
   }
 
   torch::lazy::NodePtr MakeSizeNode(const torch::lazy::Value& input,

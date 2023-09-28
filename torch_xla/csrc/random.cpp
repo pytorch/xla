@@ -17,7 +17,8 @@ namespace torch_xla {
 namespace {
 
 std::string GetDefaultGitGeneratorName() {
-  XlaDeviceType hw_type = static_cast<XlaDeviceType>(bridge::GetCurrentDevice().type());
+  XlaDeviceType hw_type =
+      static_cast<XlaDeviceType>(bridge::GetCurrentDevice().type());
   switch (hw_type) {
     case XlaDeviceType::GPU:
       return "three_fry";
