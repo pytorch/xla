@@ -889,7 +889,8 @@ int64_t XLATensor::GetOpaqueHandle() const {
 }
 
 void XLATensor::MarkDynamicDimension(uint32_t dim) {
-  auto* xla_node = dynamic_cast<XlaNode*>(CurrentIrValue().node.get());
+  // auto* xla_node = dynamic_cast<XlaNode*>(CurrentIrValue().node.get());
+  auto* xla_node = dynamic_cast<XlaNode*>(GetIrValue().node.get());
   xla_node->MarkDynamicDimension(dim);
 }
 

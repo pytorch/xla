@@ -9,7 +9,7 @@ device = xm.xla_device()
 from torchvision.models import resnet18
 model = resnet18()
 model.to(device)
-input = torch.rand(1, 3, 224, 224).to(device)
+input = torch.rand(10, 3, 224, 224).to(device)
 torch_xla._XLAC._xla_mark_dynamic(input, 0)
 result = model(input)
 hlo_content = torch_xla._XLAC._get_xla_tensors_hlo([result])
@@ -30,7 +30,7 @@ export_filename = "resnet18_saved_model"
 ## 20230125::Span<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const>, bool, bool, bool)
 ##         torch_xla::XLAGraphExecutor::SyncLiveTensorsGraph(torch::lazy::BackendDevice const*, c10::ArrayRef<std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >, bool)
 
-tf_saved_model_integration.save_torch_module_as_tf_saved_model(model, (input,), export_filename)
+#tf_saved_model_integration.save_torch_module_as_tf_saved_model(model, (input,), export_filename)
 
 
 
