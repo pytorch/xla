@@ -90,6 +90,8 @@ c10::Device XlaDeviceToAtenDevice(const torch::lazy::BackendDevice& device);
 
 std::string ToXlaString(const c10::Device& device);
 
+const torch::lazy::BackendDevice* GetDefaultDevice();
+
 c10::Device AtenDefaultDevice();
 
 c10::Device SetCurrentDevice(const c10::Device& device);

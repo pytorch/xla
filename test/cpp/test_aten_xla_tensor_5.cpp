@@ -11,7 +11,6 @@
 #include "torch_xla/csrc/ops/expand.h"
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/runtime/metrics.h"
-#include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "xla/permutation_util.h"
 #include "xla/util.h"
@@ -1398,7 +1397,7 @@ TEST_F(AtenXlaTensorTest, TestAvgPool3DNoBatch) {
 
 TEST_F(AtenXlaTensorTest, TestAdaptiveMaxPool2D) {
   XlaDeviceType hw_type =
-      static_cast<XlaDeviceType>(runtime::GetDefaultDevice()->type());
+      static_cast<XlaDeviceType>(bridge::GetDefaultDevice()->type());
   // skip this test until the tile mismatch bug is fixed.
   if (hw_type == XlaDeviceType::TPU) {
     return;
@@ -1429,7 +1428,7 @@ TEST_F(AtenXlaTensorTest, TestAdaptiveMaxPool2D) {
 
 TEST_F(AtenXlaTensorTest, TestAdaptiveMaxPool2DBackward) {
   XlaDeviceType hw_type =
-      static_cast<XlaDeviceType>(runtime::GetDefaultDevice()->type());
+      static_cast<XlaDeviceType>(bridge::GetDefaultDevice()->type());
   // skip this test until the tile mismatch bug is fixed.
   if (hw_type == XlaDeviceType::TPU) {
     return;

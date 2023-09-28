@@ -14,8 +14,6 @@ ComputationClient* GetComputationClient();
 
 ComputationClient* GetComputationClientIfInitialized();
 
-const torch::lazy::BackendDevice* GetDefaultDevice();
-
 }  // namespace runtime
 }  // namespace torch_xla
 

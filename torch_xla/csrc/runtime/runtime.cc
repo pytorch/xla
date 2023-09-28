@@ -43,15 +43,5 @@ ComputationClient* GetComputationClientIfInitialized() {
   return g_computation_client.load();
 }
 
-const torch::lazy::BackendDevice* GetDefaultDevice() {
-  std::string default_device_spec =
-      UseVirtualDevice() ? "SPMD:0"
-                         : runtime::GetComputationClient()->GetDefaultDevice();
-  XLA_CHECK(!default_device_spec.empty());
-  static const torch::lazy::BackendDevice default_device =
-      ParseDeviceString(default_device_spec);
-  return &default_device;
-}
-
 }  // namespace runtime
 }  // namespace torch_xla

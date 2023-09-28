@@ -11,7 +11,6 @@
 #include "torch_xla/csrc/ops/expand.h"
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/runtime/metrics.h"
-#include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "xla/permutation_util.h"
 #include "xla/util.h"
@@ -873,7 +872,7 @@ TEST_F(AtenXlaTensorTest, TestEmbeddingBackward) {
 
 TEST_F(AtenXlaTensorTest, TestAmpUpdateScale) {
   XlaDeviceType hw_type =
-      static_cast<XlaDeviceType>(runtime::GetDefaultDevice()->type());
+      static_cast<XlaDeviceType>(bridge::GetDefaultDevice()->type());
   if (hw_type != XlaDeviceType::GPU && hw_type != XlaDeviceType::CPU) {
     return;
   }

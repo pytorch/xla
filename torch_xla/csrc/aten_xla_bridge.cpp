@@ -339,8 +339,18 @@ std::string ToXlaString(const c10::Device& device) {
   return absl::StrCat("xla:", device.index());
 }
 
+const torch::lazy::BackendDevice* GetDefaultDevice() {
+  std::string default_device_spec =
+      UseVirtualDevice() ? "SPMD:0"
+                         : runtime::GetComputationClient()->GetDefaultDevice();
+  XLA_CHECK(!default_device_spec.empty());
+  static const torch::lazy::BackendDevice default_device =
+      ParseDeviceString(default_device_spec);
+  return &default_device;
+}
+
 c10::Device AtenDefaultDevice() {
-  return XlaDeviceToAtenDevice(*runtime::GetDefaultDevice());
+  return XlaDeviceToAtenDevice(*GetDefaultDevice());
 }
 
 c10::Device SetCurrentDevice(const c10::Device& device) {
@@ -359,7 +369,7 @@ torch::lazy::BackendDevice SetCurrentDevice(
 
 torch::lazy::BackendDevice GetCurrentDevice() {
   if (!g_current_device) {
-    g_current_device = *runtime::GetDefaultDevice();
+    g_current_device = *GetDefaultDevice();
   }
   return *g_current_device;
 }
