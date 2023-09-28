@@ -44,7 +44,7 @@ jobs:
     env:
       ECR_DOCKER_IMAGE_BASE: ${{ inputs.ecr-docker-image-base }}
       GCR_DOCKER_IMAGE: ${{ inputs.gcr-docker-image }}
-      WORKDIR: /home
+      WORKDIR: /root/workspace
       SCCACHE_BUCKET: ossci-compiler-cache-circleci-v2
       GCLOUD_SERVICE_KEY: ${{ secrets.gcloud-service-key }}
       XLA_CUDA: ${{ inputs.cuda }}
