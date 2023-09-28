@@ -17,7 +17,6 @@
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/tensor_methods.h"
 #include "torch_xla/csrc/tensor_util.h"
-#include "torch_xla/csrc/xla_data.h"
 #include "torch_xla/csrc/xla_sharding_util.h"
 #include "xla/protobuf_util.h"
 #include "xla/xla_data.pb.h"
@@ -312,28 +311,29 @@ TEST_F(XLAShardingTest, CreateTensorsData) {
       CreateTensorsData(tensors, shardings, devices);
 
   // Returns the input without sharding
-  auto xla_data = dynamic_cast<XLAData*>(tensors_data[0].get())->xla_data();
+  auto xla_data =
+      std::dynamic_pointer_cast<torch_xla::runtime::ComputationClient::Data>(
+          tensors_data[0]);
   std::vector<torch_xla::runtime::ComputationClient::DataPtr> shards =
       torch_xla::runtime::GetComputationClient()->GetDataShards(xla_data);
   EXPECT_EQ(shards.size(), 1);
   EXPECT_TRUE(xla::Shape::Equal().IgnoreLayout()(xla_data->shape(),
                                                  shards[0]->shape()));
-  EXPECT_TRUE(
-      XlaDataValuesEqual(tensors_data[0], WrapXlaData(shards[0]), at::kFloat));
+  EXPECT_TRUE(XlaDataValuesEqual(tensors_data[0], shards[0], at::kFloat));
 
   // Returns multiple input shards, replicated
   int64_t n_devices =
       torch_xla::runtime::GetComputationClient()->GetLocalDevices().size();
   if (n_devices > 1) {
     auto sharded_xla_data =
-        dynamic_cast<XLAData*>(tensors_data[1].get())->xla_data();
+        std::dynamic_pointer_cast<torch_xla::runtime::ComputationClient::Data>(
+            tensors_data[1]);
     shards = torch_xla::runtime::GetComputationClient()->GetDataShards(
         sharded_xla_data);
     EXPECT_EQ(shards.size(), n_devices);
     EXPECT_TRUE(xla::Shape::Equal().IgnoreLayout()(sharded_xla_data->shape(),
                                                    shards[0]->shape()));
-    EXPECT_TRUE(XlaDataValuesEqual(WrapXlaData(shards[0]),
-                                   WrapXlaData(shards[1]), at::kFloat));
+    EXPECT_TRUE(XlaDataValuesEqual(shards[0], shards[1], at::kFloat));
   }
 }
 
@@ -366,13 +366,11 @@ TEST_F(XLAShardingTest, InputHandler) {
 
   auto arg0_dev0 = arguments_by_device[0][0];
   auto arg0_dev1 = arguments_by_device[1][0];
-  EXPECT_TRUE(XlaDataValuesEqual(WrapXlaData(arg0_dev0), WrapXlaData(arg0_dev1),
-                                 at::kFloat));
+  EXPECT_TRUE(XlaDataValuesEqual(arg0_dev0, arg0_dev1, at::kFloat));
 
   auto arg1_dev0 = arguments_by_device[0][1];
   auto arg1_dev1 = arguments_by_device[1][1];
-  EXPECT_TRUE(XlaDataValuesEqual(WrapXlaData(arg1_dev0), WrapXlaData(arg1_dev1),
-                                 at::kFloat));
+  EXPECT_TRUE(XlaDataValuesEqual(arg1_dev0, arg1_dev1, at::kFloat));
 }
 
 TEST_F(XLAShardingTest, OutputHandler) {
@@ -466,9 +464,9 @@ TEST_F(XLAShardingTest, PrepareOutputShardingPropagation) {
           "add", std::move(computations[0]->move_computation()));
 
   // Prepare output sharding propagation, expect a sharded output placeholder.
-  std::vector<XLATensorPtr> tensors{XLATensor::Create(WrapXlaData(
+  std::vector<XLATensorPtr> tensors{XLATensor::Create(
       torch_xla::runtime::GetComputationClient()->CreateDataPlaceholder(
-          GetDefaultDevice()->toString(), std::move(shape))))};
+          GetDefaultDevice()->toString(), std::move(shape)))};
   std::vector<torch::lazy::BackendDataPtr> data_placeholders;
   std::vector<XLATensor::ShardingSpecPtr> sharding_specs;
   ShardingUtil::PrepareOutputShardingPropagation(
@@ -488,8 +486,15 @@ TEST_F(XLAShardingTest, PrepareOutputShardingPropagation) {
 
   // Check if the placeholder is on a SPMD device (sharded) with no real values.
   EXPECT_EQ(data_placeholders.size(), 1);
-  EXPECT_EQ(UnwrapXlaData(data_placeholders[0])->device(), "SPMD:0");
-  EXPECT_FALSE(UnwrapXlaData(data_placeholders[0])->HasValue());
+  EXPECT_EQ(
+      std::dynamic_pointer_cast<torch_xla::runtime::ComputationClient::Data>(
+          data_placeholders[0])
+          ->device(),
+      "SPMD:0");
+  EXPECT_FALSE(
+      std::dynamic_pointer_cast<torch_xla::runtime::ComputationClient::Data>(
+          data_placeholders[0])
+          ->HasValue());
 }
 
 }  // namespace cpp_test

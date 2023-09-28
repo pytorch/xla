@@ -39,7 +39,8 @@ TEST(XLABackendTest, TestPlaceholder) {
     torch::lazy::BackendDataPtr data =
         impl->CreateDataPlaceholder(device, shape);
     torch_xla::runtime::ComputationClient::DataPtr computation_data =
-        UnwrapXlaData(data);
+        std::dynamic_pointer_cast<torch_xla::runtime::ComputationClient::Data>(
+            data);
     EXPECT_EQ(computation_data->device(), device.toString());
     EXPECT_EQ(computation_data->shape(),
               MakeXlaShapeFromLazyShape(shape, device));

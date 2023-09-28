@@ -11,6 +11,7 @@
 #include "torch_xla/csrc/ops/expand.h"
 #include "torch_xla/csrc/ops/ops.h"
 #include "torch_xla/csrc/runtime/metrics.h"
+#include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "xla/permutation_util.h"
 #include "xla/util.h"

@@ -63,7 +63,10 @@ void TestSingleReplication(
     auto executor = [&, i]() {
       results[i] =
           torch_xla::runtime::GetComputationClient()->ExecuteComputation(
-              *compiled_computations[i], {UnwrapXlaData(tensors_data[i])},
+              *compiled_computations[i],
+              {std::dynamic_pointer_cast<
+                  torch_xla::runtime::ComputationClient::Data>(
+                  tensors_data[i])},
               device_strings[i], exec_options);
     };
     torch_xla::runtime::env::ScheduleIoClosure(

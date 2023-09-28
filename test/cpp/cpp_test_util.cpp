@@ -294,9 +294,7 @@ std::vector<torch_xla::runtime::ComputationClient::DataPtr> Execute(
 
   torch_xla::runtime::ComputationClient::ExecuteComputationOptions options;
   return torch_xla::runtime::GetComputationClient()->ExecuteComputation(
-      *computations.front(),
-      std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
-          lowering_ctx.GetParametersData()),
+      *computations.front(), UnwrapXlaData(lowering_ctx.GetParametersData()),
       device.toString(), options);
 }
 
