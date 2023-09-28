@@ -11,7 +11,6 @@
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/layout_manager.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
-#include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/tensor_methods.h"
@@ -39,7 +38,7 @@ struct ReduceContext {
 };
 
 xla::Shape MakeReduceShape(absl::Span<const xla::Shape> operand_shapes) {
-  torch::lazy::BackendDevice xla_device = runtime::GetCurrentDevice();
+  torch::lazy::BackendDevice xla_device = bridge::GetCurrentDevice();
   std::vector<xla::Shape> shapes_and_layouts;
   shapes_and_layouts.reserve(operand_shapes.size());
   for (auto& shape : operand_shapes) {
@@ -194,7 +193,7 @@ AllToAllResult BuildAllToAll(xla::XlaOp input, xla::XlaOp token,
   TokenHandler token_handler(token);
   xla::XlaOp reduce_result;
   if (pin_layout) {
-    torch::lazy::BackendDevice xla_device = runtime::GetCurrentDevice();
+    torch::lazy::BackendDevice xla_device = bridge::GetCurrentDevice();
     xla::Shape reduce_shape = MakeArrayShapeFromDimensions(
         input_shape.dimensions(), input_shape.dynamic_dimensions(),
         input_shape.element_type(),
@@ -220,7 +219,7 @@ AllGatherResult BuildAllGather(xla::XlaOp input, xla::XlaOp token, int64_t dim,
   TokenHandler token_handler(token);
   xla::XlaOp all_gather_result;
   if (pin_layout) {
-    torch::lazy::BackendDevice xla_device = runtime::GetCurrentDevice();
+    torch::lazy::BackendDevice xla_device = bridge::GetCurrentDevice();
     xla::Shape reduce_shape = MakeArrayShapeFromDimensions(
         input_shape.dimensions(), input_shape.dynamic_dimensions(),
         input_shape.element_type(),
@@ -284,7 +283,7 @@ ReduceScatterResult BuildReduceScatter(
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   xla::XlaOp reduce_result;
   if (pin_layout) {
-    torch::lazy::BackendDevice xla_device = runtime::GetCurrentDevice();
+    torch::lazy::BackendDevice xla_device = bridge::GetCurrentDevice();
     xla::Shape reduce_shape = MakeArrayShapeFromDimensions(
         input_shape.dimensions(), input_shape.dynamic_dimensions(),
         input_shape.element_type(),

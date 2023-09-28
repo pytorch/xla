@@ -16,16 +16,6 @@ ComputationClient* GetComputationClientIfInitialized();
 
 const torch::lazy::BackendDevice* GetDefaultDevice();
 
-torch::lazy::BackendDevice GetCurrentDevice();
-
-torch::lazy::BackendDevice SetCurrentDevice(
-    const torch::lazy::BackendDevice& device);
-
-static inline torch::lazy::BackendDevice GetDeviceOrCurrent(
-    const torch::lazy::BackendDevice* device) {
-  return device != nullptr ? *device : GetCurrentDevice();
-}
-
 }  // namespace runtime
 }  // namespace torch_xla
 

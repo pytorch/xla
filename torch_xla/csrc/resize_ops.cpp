@@ -1,10 +1,10 @@
 #include "torch_xla/csrc/resize_ops.h"
 
+#include "torch_xla/csrc/aten_xla_bridge.h"
 #include "absl/strings/str_cat.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
-#include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/shape_builder.h"
 #include "torch_xla/csrc/shape_helper.h"
@@ -265,7 +265,7 @@ xla::XlaOp LowerForward2d(const std::string& target, xla::XlaOp input,
 
   xla::XlaOp resized;
 
-  XlaDeviceType hw_type = static_cast<XlaDeviceType>(runtime::GetCurrentDevice().type());
+  XlaDeviceType hw_type = static_cast<XlaDeviceType>(bridge::GetCurrentDevice().type());
   if (hw_type == XlaDeviceType::TPU) {
     // TPU uses custom call implementation
     resized =

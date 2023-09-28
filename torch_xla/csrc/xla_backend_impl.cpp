@@ -126,7 +126,7 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
       std::vector<torch::lazy::ComputationPtr> instances) const override {
     std::vector<torch::lazy::ComputationPtr> res;
     std::vector<runtime::ComputationClient::CompileInstance> compile_instances;
-    torch::lazy::BackendDevice current_device = runtime::GetCurrentDevice();
+    torch::lazy::BackendDevice current_device = bridge::GetCurrentDevice();
     std::vector<xla::Shape> output_shapes;
 
     for (const torch::lazy::ComputationPtr instance : instances) {

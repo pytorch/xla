@@ -159,7 +159,7 @@ void ForEachDevice(
                    [&](const DeviceType device_type) {
                      return device_type.type == default_device->type();
                    }) != device_types.end()) {
-    bridge::runtime::SetCurrentDevice(*default_device);
+    bridge::SetCurrentDevice(*default_device);
     devfn(*default_device);
   } else {
     GTEST_SKIP();
@@ -175,7 +175,7 @@ void ForEachDevice(absl::Span<const DeviceType> device_types,
                      return device_type.type == default_device->type();
                    }) != device_types.end()) {
     torch::Device torch_device = bridge::XlaDeviceToAtenDevice(*default_device);
-    bridge::runtime::SetCurrentDevice(torch_device);
+    bridge::SetCurrentDevice(torch_device);
     devfn(torch_device);
   } else {
     GTEST_SKIP();

@@ -19,6 +19,8 @@ namespace torch_xla {
 namespace bridge {
 namespace {
 
+thread_local absl::optional<torch::lazy::BackendDevice> g_current_device;
+
 class AtenXlaDeviceMapper {
  public:
   static AtenXlaDeviceMapper* Get();
@@ -318,7 +320,7 @@ torch::lazy::BackendDevice AtenDeviceToXlaDevice(const c10::Device& device) {
     }
   }
   if (ordinal < 0) {
-    return runtime::GetCurrentDevice();
+    return GetCurrentDevice();
   }
   return AtenXlaDeviceMapper::Get()->GetDeviceFromOrdinal(ordinal);
 }
@@ -343,17 +345,27 @@ c10::Device AtenDefaultDevice() {
 
 c10::Device SetCurrentDevice(const c10::Device& device) {
   torch::lazy::BackendDevice prev_device =
-      torch_xla::runtime::SetCurrentDevice(AtenDeviceToXlaDevice(device));
+      SetCurrentDevice(AtenDeviceToXlaDevice(device));
   return XlaDeviceToAtenDevice(prev_device);
 }
 
 torch::lazy::BackendDevice SetCurrentDevice(
     const torch::lazy::BackendDevice& device) {
-  return torch_xla::runtime::SetCurrentDevice(device);
+  torch::lazy::BackendDevice current = GetCurrentDevice();
+  g_current_device = device;
+  TF_VLOG(2) << "New current device: " << device;
+  return current;
+}
+
+torch::lazy::BackendDevice GetCurrentDevice() {
+  if (!g_current_device) {
+    g_current_device = *runtime::GetDefaultDevice();
+  }
+  return *g_current_device;
 }
 
 c10::Device GetCurrentAtenDevice() {
-  return XlaDeviceToAtenDevice(torch_xla::runtime::GetCurrentDevice());
+  return XlaDeviceToAtenDevice(GetCurrentDevice());
 }
 
 at::Tensor XlaToAtenTensor(XLATensorPtr xla_tensor,
