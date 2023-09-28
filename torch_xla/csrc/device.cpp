@@ -41,12 +41,9 @@ std::string DeviceType::toString() const {
 }
 
 torch::lazy::BackendDevice ParseDeviceString(const std::string& device_spec) {
-  if (device_spec.empty()) {
-    XLA_ERROR() << "oops";
-  }
-  if (device_spec[0] == ':') {
-    XLA_ERROR() << "oops";
-  }
+  XLA_CHECK(!device_spec.empty()) << "empty device spec";
+  XLA_CHECK(device_spec[0] != ':')
+      << "No device type in device specification: " << device_spec;
   std::vector<std::string> device_spec_parts = absl::StrSplit(device_spec, ':');
   XLA_CHECK_EQ(device_spec_parts.size(), 2)
       << "Invalid device specification: " << device_spec;
