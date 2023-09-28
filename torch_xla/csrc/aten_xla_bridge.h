@@ -94,11 +94,6 @@ const torch::lazy::BackendDevice* GetDefaultDevice();
 
 c10::Device AtenDefaultDevice();
 
-c10::Device SetCurrentDevice(const c10::Device& device);
-
-torch::lazy::BackendDevice SetCurrentDevice(
-    const torch::lazy::BackendDevice& device);
-
 torch::lazy::BackendDevice GetCurrentDevice();
 
 c10::Device GetCurrentAtenDevice();
@@ -107,6 +102,11 @@ static inline torch::lazy::BackendDevice GetDeviceOrCurrent(
     const torch::lazy::BackendDevice* device) {
   return device != nullptr ? *device : GetCurrentDevice();
 }
+
+c10::Device SetCurrentDevice(const c10::Device& device);
+
+torch::lazy::BackendDevice SetCurrentDevice(
+    const torch::lazy::BackendDevice& device);
 
 at::Tensor XlaToAtenTensor(XLATensorPtr xla_tensor,
                            const at::TensorOptions& tensor_options);

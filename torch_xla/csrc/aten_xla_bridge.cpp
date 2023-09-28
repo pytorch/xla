@@ -353,6 +353,17 @@ c10::Device AtenDefaultDevice() {
   return XlaDeviceToAtenDevice(*GetDefaultDevice());
 }
 
+torch::lazy::BackendDevice GetCurrentDevice() {
+  if (!g_current_device) {
+    g_current_device = *GetDefaultDevice();
+  }
+  return *g_current_device;
+}
+
+c10::Device GetCurrentAtenDevice() {
+  return XlaDeviceToAtenDevice(GetCurrentDevice());
+}
+
 c10::Device SetCurrentDevice(const c10::Device& device) {
   torch::lazy::BackendDevice prev_device =
       SetCurrentDevice(AtenDeviceToXlaDevice(device));
@@ -365,17 +376,6 @@ torch::lazy::BackendDevice SetCurrentDevice(
   g_current_device = device;
   TF_VLOG(2) << "New current device: " << device;
   return current;
-}
-
-torch::lazy::BackendDevice GetCurrentDevice() {
-  if (!g_current_device) {
-    g_current_device = *GetDefaultDevice();
-  }
-  return *g_current_device;
-}
-
-c10::Device GetCurrentAtenDevice() {
-  return XlaDeviceToAtenDevice(GetCurrentDevice());
 }
 
 at::Tensor XlaToAtenTensor(XLATensorPtr xla_tensor,
