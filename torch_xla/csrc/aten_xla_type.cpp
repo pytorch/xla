@@ -36,7 +36,6 @@
 #include "torch_xla/csrc/pooling.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/metrics.h"
-#include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/tensor_impl.h"

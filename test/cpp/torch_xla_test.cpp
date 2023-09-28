@@ -5,7 +5,6 @@
 #include "absl/memory/memory.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/helpers.h"
-#include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
 #include "torch_xla/csrc/tensor.h"
