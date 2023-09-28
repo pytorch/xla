@@ -188,7 +188,8 @@ PjRtComputationClient::PjRtComputationClient() {
   device_locks_.emplace(spmd_device_str, std::make_unique<std::shared_mutex>());
 }
 
-void PjRtComputationClient::PjRtData::Assign(const Data& data) {
+void PjRtComputationClient::PjRtData::Assign(
+    const torch::lazy::BackendData& data) {
   const PjRtData& pjrt_data = dynamic_cast<const PjRtData&>(data);
   if (&pjrt_data != this) {
     buffer = pjrt_data.buffer;

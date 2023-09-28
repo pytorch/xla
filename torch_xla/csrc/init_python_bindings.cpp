@@ -1895,8 +1895,7 @@ void InitXlaModuleBindings(py::module m) {
             }
           }
           auto post_order = torch::lazy::Util::ComputePostOrder(roots);
-          std::unordered_set<torch::lazy::BackendData::Handle>
-              data_handles;
+          std::unordered_set<torch::lazy::BackendData::Handle> data_handles;
 
           for (const torch::lazy::Node* nodeptr : post_order) {
             const auto backend_data =
@@ -1906,8 +1905,7 @@ void InitXlaModuleBindings(py::module m) {
             }
 
             // Dedup by handle
-            torch::lazy::BackendData::Handle handle =
-                backend_data->GetHandle();
+            torch::lazy::BackendData::Handle handle = backend_data->GetHandle();
             if (!data_handles.insert(handle).second) {
               continue;
             }

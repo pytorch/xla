@@ -1,6 +1,8 @@
 #ifndef XLA_CLIENT_PJRT_COMPUTATION_CLIENT_H_
 #define XLA_CLIENT_PJRT_COMPUTATION_CLIENT_H_
 
+#include <torch/csrc/lazy/backend/backend_data.h>
+
 #include <cstdint>
 #include <mutex>
 #include <shared_mutex>
@@ -134,7 +136,7 @@ class PjRtComputationClient : public ComputationClient {
           << device() << (buffer == nullptr ? " is null" : " is deleted");
       return reinterpret_cast<std::uintptr_t>(buffer.get());
     };
-    void Assign(const Data& data) override;
+    void Assign(const torch::lazy::BackendData& data) override;
     bool HasValue() const override {
       return buffer != nullptr && !buffer->IsDeleted();
     };
@@ -179,7 +181,7 @@ class PjRtComputationClient : public ComputationClient {
       return shards[0]->GetHandle();
     }
 
-    void Assign(const Data& data) override {
+    void Assign(const torch::lazy::BackendData& data) override {
       const PjRtShardedData& pjrt_sharded_data =
           dynamic_cast<const PjRtShardedData&>(data);
       if (&pjrt_sharded_data != this) {

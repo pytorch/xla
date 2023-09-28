@@ -42,8 +42,6 @@ class ComputationClient {
  public:
   class Data : public torch::lazy::BackendData {
    public:
-    // using Handle = torch::lazy::BackendData::Handle;
-
     // TODO set Device and torch::lazy_shape correctly
     Data(std::string device, xla::Shape shape)
         : torch::lazy::BackendData(ParseDeviceString(device),
@@ -57,17 +55,11 @@ class ComputationClient {
 
     const xla::Shape& shape() const { return xla_shape_; }
 
-    virtual void Assign(const Data& data) = 0;
-
     virtual std::string ToString() const = 0;
 
     virtual bool HasSharding() const = 0;
 
     virtual xla::OpSharding GetSharding() const = 0;
-
-    void Assign(const BackendData& data) {
-      Assign(dynamic_cast<const Data&>(data));
-    };
 
    private:
     std::string xla_device_;
