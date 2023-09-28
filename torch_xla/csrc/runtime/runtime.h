@@ -14,12 +14,6 @@ ComputationClient* GetComputationClient();
 
 ComputationClient* GetComputationClientIfInitialized();
 
-// Run the XRT local service, this will block the caller unitl the server
-// being stopped.
-void RunLocalService(uint64_t service_port);
-
-}  // namespace runtime
-
 const torch::lazy::BackendDevice* GetDefaultDevice();
 
 torch::lazy::BackendDevice GetCurrentDevice();
@@ -32,6 +26,7 @@ static inline torch::lazy::BackendDevice GetDeviceOrCurrent(
   return device != nullptr ? *device : GetCurrentDevice();
 }
 
+}  // namespace runtime
 }  // namespace torch_xla
 
 #endif

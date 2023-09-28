@@ -13,6 +13,8 @@ namespace {
 std::atomic<ComputationClient*> g_computation_client(nullptr);
 std::once_flag g_computation_client_once;
 
+thread_local absl::optional<torch::lazy::BackendDevice> g_current_device;
+
 ComputationClient* CreateClient() {
   if (sys_util::GetEnvBool("XLA_DUMP_FATAL_STACK", false)) {
     tsl::testing::InstallStacktraceHandler();
@@ -43,14 +45,6 @@ ComputationClient* GetComputationClientIfInitialized() {
   return g_computation_client.load();
 }
 
-}  // namespace runtime
-
-namespace {
-
-thread_local absl::optional<torch::lazy::BackendDevice> g_current_device;
-
-}
-
 const torch::lazy::BackendDevice* GetDefaultDevice() {
   std::string default_device_spec =
       UseVirtualDevice() ? "SPMD:0"
@@ -76,4 +70,5 @@ torch::lazy::BackendDevice SetCurrentDevice(
   return current;
 }
 
+}  // namespace runtime
 }  // namespace torch_xla

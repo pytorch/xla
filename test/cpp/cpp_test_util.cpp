@@ -153,13 +153,13 @@ bool EqualValuesNoElementTypeCheck(at::Tensor tensor1, at::Tensor tensor2) {
 void ForEachDevice(
     absl::Span<const DeviceType> device_types,
     const std::function<void(const torch::lazy::BackendDevice&)>& devfn) {
-  const torch::lazy::BackendDevice* default_device = GetDefaultDevice();
+  const torch::lazy::BackendDevice* default_device = runtime::GetDefaultDevice();
   if (device_types.empty() ||
       std::find_if(device_types.begin(), device_types.end(),
                    [&](const DeviceType device_type) {
                      return device_type.type == default_device->type();
                    }) != device_types.end()) {
-    bridge::SetCurrentDevice(*default_device);
+    bridge::runtime::SetCurrentDevice(*default_device);
     devfn(*default_device);
   } else {
     GTEST_SKIP();
@@ -168,14 +168,14 @@ void ForEachDevice(
 
 void ForEachDevice(absl::Span<const DeviceType> device_types,
                    const std::function<void(const torch::Device&)>& devfn) {
-  const torch::lazy::BackendDevice* default_device = GetDefaultDevice();
+  const torch::lazy::BackendDevice* default_device = runtime::GetDefaultDevice();
   if (device_types.empty() ||
       std::find_if(device_types.begin(), device_types.end(),
                    [&](const DeviceType device_type) {
                      return device_type.type == default_device->type();
                    }) != device_types.end()) {
     torch::Device torch_device = bridge::XlaDeviceToAtenDevice(*default_device);
-    bridge::SetCurrentDevice(torch_device);
+    bridge::runtime::SetCurrentDevice(torch_device);
     devfn(torch_device);
   } else {
     GTEST_SKIP();

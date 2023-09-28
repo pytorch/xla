@@ -50,7 +50,7 @@ int64_t SizeNode::getDynamicValue() const {
   // of this tensor. GetTensors will return a cpu at::Tensor so we can just
   // extract the value of it.
   std::vector<XLATensorPtr> dummy_size_tensors = {
-      XLATensor::Create(cloned, *GetDefaultDevice(), at::ScalarType::Long)};
+      XLATensor::Create(cloned, *runtime::GetDefaultDevice(), at::ScalarType::Long)};
   std::vector<at::Tensor> res =
       XLAGraphExecutor::Get()->GetTensors(&dummy_size_tensors);
   runtime_size_ = res[0].item().toInt();

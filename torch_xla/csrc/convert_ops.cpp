@@ -58,7 +58,7 @@ xla::XlaOp ConvertTo(xla::XlaOp op, xla::PrimitiveType from,
     return op;
   }
   XlaDeviceType hw_type =
-      static_cast<XlaDeviceType>(GetDeviceOrCurrent(device).type());
+      static_cast<XlaDeviceType>(runtime::GetDeviceOrCurrent(device).type());
   if (hw_type != XlaDeviceType::TPU) {
     return xla::ConvertElementType(op, to);
   }
@@ -101,7 +101,7 @@ xla::XlaOp ConvertToRaw(xla::XlaOp op, xla::PrimitiveType from,
 
 xla::XlaOp ConvertToNumeric(xla::XlaOp op, xla::PrimitiveType from) {
   if (from == xla::PrimitiveType::PRED) {
-    torch::lazy::BackendDevice xla_device = GetCurrentDevice();
+    torch::lazy::BackendDevice xla_device = runtime::GetCurrentDevice();
     op = ConvertTo(op, from,
                    GetDevicePrimitiveType(xla::PrimitiveType::U8, &xla_device),
                    &xla_device);
@@ -116,7 +116,7 @@ xla::XlaOp ConvertToNumeric(xla::XlaOp op) {
 xla::XlaOp CastToScalarType(xla::XlaOp input,
                             c10::optional<at::ScalarType> dtype) {
   if (dtype) {
-    torch::lazy::BackendDevice xla_device = GetCurrentDevice();
+    torch::lazy::BackendDevice xla_device = runtime::GetCurrentDevice();
     return ConvertTo(input, XlaHelpers::TypeOfXlaOp(input),
                      MakeXlaPrimitiveType(*dtype, &xla_device), &xla_device);
   }

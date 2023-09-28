@@ -873,7 +873,7 @@ TEST_F(AtenXlaTensorTest, TestEmbeddingBackward) {
 
 TEST_F(AtenXlaTensorTest, TestAmpUpdateScale) {
   XlaDeviceType hw_type =
-      static_cast<XlaDeviceType>(GetDefaultDevice()->type());
+      static_cast<XlaDeviceType>(runtime::GetDefaultDevice()->type());
   if (hw_type != XlaDeviceType::GPU && hw_type != XlaDeviceType::CPU) {
     return;
   }

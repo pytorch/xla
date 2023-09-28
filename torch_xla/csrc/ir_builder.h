@@ -28,7 +28,7 @@ struct XLAIrBuilder : torch::lazy::IrBuilder {
   torch::lazy::NodePtr MakeScalar(const at::Scalar& value,
                                   const at::ScalarType& type) const override {
     return torch::lazy::MakeNode<Scalar>(
-        value, MakeXlaPrimitiveType(type, GetDefaultDevice()));
+        value, MakeXlaPrimitiveType(type, runtime::GetDefaultDevice()));
   }
   torch::lazy::NodePtr MakeExpand(const torch::lazy::Value& input0,
                                   const std::vector<int64_t>& size,
@@ -56,7 +56,7 @@ struct XLAIrBuilder : torch::lazy::IrBuilder {
           static_cast<uint32_t>(0x5a2d296e9)) const override {
     // TODO(JackCaoG): ltc generic op does not take lowering function
     // return torch::lazy::MakeNode<Generic>(
-    //     op, operands, MakeXlaShapeFromLazyShape(shape, *GetDefaultDevice()),
+    //     op, operands, MakeXlaShapeFromLazyShape(shape, *runtime::GetDefaultDevice()),
     //     num_outputs, hash_seed);
   }
 

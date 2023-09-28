@@ -80,7 +80,7 @@ std::string DebugUtil::GetTensorsGraphHlo(
     }
   }
   return DumpUtil::ToHlo(root_values,
-                         unique_device ? *unique_device : GetCurrentDevice(),
+                         unique_device ? *unique_device : runtime::GetCurrentDevice(),
                          EmitMode::kStableHloReadable);
 }
 
@@ -137,10 +137,10 @@ std::string DebugUtil::GetTensorsGraphInfo(
     graph_str = DumpUtil::ToDot(root_nodes);
   } else if (format == GraphFormat::kHlo) {
     graph_str = DumpUtil::ToHlo(
-        root_values, unique_device ? *unique_device : GetCurrentDevice());
+        root_values, unique_device ? *unique_device : runtime::GetCurrentDevice());
   } else if (format == GraphFormat::kStableHlo) {
     graph_str = DumpUtil::ToHlo(
-        root_values, unique_device ? *unique_device : GetCurrentDevice(),
+        root_values, unique_device ? *unique_device : runtime::GetCurrentDevice(),
         EmitMode::kStableHloReadable);
   } else {
     XLA_ERROR() << "Invalid graph format: " << format;
@@ -155,7 +155,7 @@ void DebugUtil::SaveTensorsGraphInfo(const char* name,
                                      GraphFormat format) {
   thread_local const std::string save_file =
       runtime::sys_util::GetEnvOrdinalPath("XLA_SAVE_TENSORS_FILE", "",
-                                           GetCurrentDevice().ordinal());
+                                           runtime::GetCurrentDevice().ordinal());
   if (!save_file.empty()) {
     static std::mutex lock;
     if ((format == DebugUtil::GraphFormat::kHlo ||
@@ -178,7 +178,7 @@ void DebugUtil::SaveOutputShardingInfo(std::vector<XLATensorPtr>* tensors,
                                        absl::Span<const size_t> indices) {
   thread_local const std::string save_file =
       runtime::sys_util::GetEnvOrdinalPath("XLA_SAVE_TENSORS_FILE", "",
-                                           GetCurrentDevice().ordinal());
+                                           runtime::GetCurrentDevice().ordinal());
   std::string fmt_str =
       runtime::sys_util::GetEnvString("XLA_SAVE_TENSORS_FMT", "text");
   if (save_file.empty() || fmt_str != "hlo") {

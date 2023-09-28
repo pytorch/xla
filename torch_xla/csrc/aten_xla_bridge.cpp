@@ -318,7 +318,7 @@ torch::lazy::BackendDevice AtenDeviceToXlaDevice(const c10::Device& device) {
     }
   }
   if (ordinal < 0) {
-    return GetCurrentDevice();
+    return runtime::GetCurrentDevice();
   }
   return AtenXlaDeviceMapper::Get()->GetDeviceFromOrdinal(ordinal);
 }
@@ -338,22 +338,22 @@ std::string ToXlaString(const c10::Device& device) {
 }
 
 c10::Device AtenDefaultDevice() {
-  return XlaDeviceToAtenDevice(*GetDefaultDevice());
+  return XlaDeviceToAtenDevice(*runtime::GetDefaultDevice());
 }
 
 c10::Device SetCurrentDevice(const c10::Device& device) {
   torch::lazy::BackendDevice prev_device =
-      torch_xla::SetCurrentDevice(AtenDeviceToXlaDevice(device));
+      torch_xla::runtime::SetCurrentDevice(AtenDeviceToXlaDevice(device));
   return XlaDeviceToAtenDevice(prev_device);
 }
 
 torch::lazy::BackendDevice SetCurrentDevice(
     const torch::lazy::BackendDevice& device) {
-  return torch_xla::SetCurrentDevice(device);
+  return torch_xla::runtime::SetCurrentDevice(device);
 }
 
 c10::Device GetCurrentAtenDevice() {
-  return XlaDeviceToAtenDevice(torch_xla::GetCurrentDevice());
+  return XlaDeviceToAtenDevice(torch_xla::runtime::GetCurrentDevice());
 }
 
 at::Tensor XlaToAtenTensor(XLATensorPtr xla_tensor,

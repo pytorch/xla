@@ -84,7 +84,7 @@ c10::optional<torch::lazy::BackendDevice> GetOptionalDevice(
 
 torch::lazy::BackendDevice GetDeviceOrCurrent(const std::string& device_str) {
   if (device_str.empty()) {
-    return GetCurrentDevice();
+    return runtime::GetCurrentDevice();
   }
   return bridge::AtenDeviceToXlaDevice(c10::Device(device_str));
 }
@@ -752,7 +752,7 @@ void BuildProfilerSubmodule(py::module* m) {
 
 class PyLoweringContext {
  public:
-  PyLoweringContext() : PyLoweringContext(GetCurrentDevice()) {}
+  PyLoweringContext() : PyLoweringContext(runtime::GetCurrentDevice()) {}
 
   PyLoweringContext(torch::lazy::BackendDevice device)
       : lowering_ctx("PyLoweringContext", device) {}
@@ -1349,7 +1349,7 @@ void InitXlaModuleBindings(py::module m) {
         [](const std::string& bytecode,
            const std::vector<at::IValue>& graph_inputs)
             -> std::vector<at::Tensor> {
-          torch::lazy::BackendDevice device = torch_xla::GetCurrentDevice();
+          torch::lazy::BackendDevice device = torch_xla::runtime::GetCurrentDevice();
           auto results = XLAGraphExecutor::Get()->ExecuteStablehlo(
               bytecode, graph_inputs, device);
           std::vector<at::Tensor> retlist;
@@ -1983,7 +1983,7 @@ void InitXlaModuleBindings(py::module m) {
           XLA_CHECK(hash_str.size() == sizeof(torch::lazy::hash_t));
           torch::lazy::hash_t hash = *(torch::lazy::hash_t*)(hash_str.c_str());
           // Device will be Virtual device if SPMD is enabled.
-          torch::lazy::BackendDevice device = torch_xla::GetCurrentDevice();
+          torch::lazy::BackendDevice device = torch_xla::runtime::GetCurrentDevice();
           auto results = XLAGraphExecutor::Get()->ExecuteComputationWithBarrier(
               hash, graph_inputs, device);
           std::vector<at::Tensor> retlist;

@@ -882,7 +882,7 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
 
 xla::Literal GetTensorLiteral(const at::Tensor& tensor, const xla::Shape* shape,
                               const torch::lazy::BackendDevice* device) {
-  torch::lazy::BackendDevice xla_device = GetDeviceOrCurrent(device);
+  torch::lazy::BackendDevice xla_device = runtime::GetDeviceOrCurrent(device);
   xla::Shape computed_shape;
   if (shape == nullptr) {
     auto dimensions = XlaHelpers::I64List(tensor.sizes());
@@ -975,7 +975,7 @@ xla::Shape MakeShapeWithDeviceLayout(const xla::Shape& shape,
 
 xla::Shape CreateComputationShapeFromTensor(
     const at::Tensor& tensor, const torch::lazy::BackendDevice* device) {
-  torch::lazy::BackendDevice xla_device = GetDeviceOrCurrent(device);
+  torch::lazy::BackendDevice xla_device = runtime::GetDeviceOrCurrent(device);
   return MakeArrayShapeFromDimensions(
       XlaHelpers::I64List(tensor.sizes()),
       /*dynamic_dimensions=*/{},
@@ -1053,7 +1053,7 @@ xla::PrimitiveType TensorTypeToRawXlaType(at::ScalarType scalar_type) {
 
 xla::PrimitiveType GetDevicePrimitiveType(
     xla::PrimitiveType type, const torch::lazy::BackendDevice* device) {
-  torch::lazy::BackendDevice xla_device = GetDeviceOrCurrent(device);
+  torch::lazy::BackendDevice xla_device = runtime::GetDeviceOrCurrent(device);
   XlaDeviceType hw_type = static_cast<XlaDeviceType>(xla_device.type());
   switch (type) {
     case xla::PrimitiveType::F64:
