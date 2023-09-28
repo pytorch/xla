@@ -20,7 +20,7 @@ jobs:
     timeout-minutes: 45
     env:
       DOCKER_IMAGE: ${{ inputs.docker-image }}
-      WORKDIR: /var/lib/jenkins/workspace
+      WORKDIR: /root/workspace
     steps:
       - name: Setup Linux
         uses: pytorch/test-infra/.github/actions/setup-linux@main
