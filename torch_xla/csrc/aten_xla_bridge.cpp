@@ -340,7 +340,7 @@ std::string ToXlaString(const c10::Device& device) {
 }
 
 const torch::lazy::BackendDevice* GetDefaultDevice() {
-  std::string default_device_spec =
+  static std::string default_device_spec =
       UseVirtualDevice() ? "SPMD:0"
                          : runtime::GetComputationClient()->GetDefaultDevice();
   XLA_CHECK(!default_device_spec.empty());
