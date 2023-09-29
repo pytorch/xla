@@ -27,17 +27,17 @@ With the `torch.compile` you will see that PyTorch/XLA only traces the resent18 
 
 | model | Speed up |
 | --- | ----------- |
-resnet18 | 1.768
-resnet50 | 1.61
-resnext50_32x4d	| 1.328
-alexnet | 1.261
-mobilenet_v2 | 2.017
-mnasnet1_0 | 1.686
-vgg16 | 1.155
-BERT_pytorch | 3.502
-squeezenet1_1 | 1.674
-timm_vision_transformer | 3.138
-average | 1.9139
+resnet18 | 2.59
+resnet50 | 2.64
+resnext50_32x4d	| 1.91
+alexnet | 1.28
+mobilenet_v2 | 18.62
+mnasnet1_0 | 2.68
+vgg16 | 1.33
+BERT_pytorch | 7.49
+squeezenet1_1 | 2.29
+timm_vision_transformer | 3.52
+geomean | 3.04
 
 Note 
 1. User will likely see better inference perfomrance by putting the inference execution in a `torch.no_grad` context. `openxla` is a `aot-autograd` backend of `torch.compile`. `Aot-autograd` will attempt to save some states for potential backward. `torch.no_grad` will help `aot-autograd` understand that it is being executed in a inference context.
@@ -74,17 +74,17 @@ We expect to extract and execute 3 graphs per training step instead of 1 graph p
 
 | model | Speed up |
 | --- | ----------- |
-resnet50 | 0.937
-resnet18 | 1.003
-BERT_pytorch | 1.869
-resnext50_32x4d | 1.139
-alexnet | 0.802
-mobilenet_v2 | 0.672
-mnasnet1_0 | 0.967
-vgg16 | 0.742
-timm_vision_transformer | 1.69
-squeezenet1_1 | 0.958
-average | 1.0779
+resnet50 | 1.33
+resnet18 | 1.33
+BERT_pytorch | 3.07
+resnext50_32x4d | 1.43
+alexnet | 1.12
+mobilenet_v2 | 1.4
+mnasnet1_0 | 1.19
+vgg16 | 0.81
+timm_vision_transformer | 1.87
+squeezenet1_1 | 1.41
+geomean | 1.41
 
 > **NOTE:** We run each model's fwd and bwd for a single step and then collect the e2e time. In the real world we will run multiple steps at each training job which can easily hide the tracing cost from execution(since it is async). Lazy Tensor will have much better performance in that scenario.
 
