@@ -36,14 +36,14 @@ xrt_versioned_builds = [
     accelerator    = "tpu"
     python_version = "3.10"
     pytorch_git_rev = "v2.1.0-rc6"
-    package_version = "2.1.0"
+    package_version = "2.1.0+xrt"
   },
   {
     accelerator  = "cuda"
     python_version = "3.10"
     cuda_version = "12.0"
     pytorch_git_rev = "v2.1.0-rc6"
-    package_version = "2.1.0"
+    package_version = "2.1.0+xrt"
   },
 ]
 
