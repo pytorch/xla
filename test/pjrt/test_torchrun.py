@@ -12,9 +12,7 @@ from torch_xla._internal import gpu
 class TestTorchrun(absltest.TestCase):
 
   def test_all_gather(self):
-    print('xw32 test_all_gather. Running dist.init_process_group.')
     dist.init_process_group('xla', init_method='xla://')
-    print('xw32 test_all_gather. Finished running dist.init_process_group.')
 
     dist_world_size = xu.getenv_as('WORLD_SIZE', int) # value is 4.
     devices_per_thread = xr.addressable_device_count()
@@ -32,12 +30,6 @@ class TestTorchrun(absltest.TestCase):
 
     expected = torch.arange(0, expected_world_size, step=1, dtype=torch.float32)
     torch.testing.assert_close(result.cpu(), expected)
-
-    # TODO(xw32): for the moment, add a teardown to shutdown the 
-    # dist server. Need to find a better place to hide the dist server
-    # from the user.
-    if xr.device_type() == 'GPU':
-      gpu.shutdown_distributed_runtime()
 
 
 if __name__ == '__main__':

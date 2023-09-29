@@ -1,4 +1,5 @@
 import os
+import atexit
 import torch_xla
 import torch_xla.core.xla_env_vars as xenv
 
@@ -33,6 +34,7 @@ def initialize_distributed_runtime(global_world_size: int) -> None:
       num_nodes = global_world_size
       distributed_service = torch_xla._XLAC._xla_get_distributed_runtime_service(
           num_nodes)
+      atexit.register(shutdown_distributed_runtime)
 
 
 def shutdown_distributed_runtime() -> None:

@@ -105,7 +105,6 @@ def _run_singleprocess(fn: Callable[..., R], *args, **kwargs) -> Dict[int, R]:
 
 @runtime.requires_pjrt
 def initialize_multiprocess(local_rank: int, local_world_size: int):
-  print('xw32 pjrt.initialize_multiprocess begins.')
   os.environ.setdefault(xenv.PJRT_LOCAL_PROCESS_RANK, str(local_rank))
   os.environ.setdefault(xenv.PJRT_LOCAL_PROCESS_COUNT, str(local_world_size))
 
@@ -116,12 +115,10 @@ def initialize_multiprocess(local_rank: int, local_world_size: int):
   elif runtime.device_type() == 'GPU':
     global_world_size = xu.getenv_as('WORLD_SIZE', int)
     global_rank = xu.getenv_as('RANK', int)
-    print('xw32 pjrt_backend._pjrt_rendezvous_handler: global_world_size=', global_world_size, ', global_rank=', global_rank)
     if global_rank == 0:
       gpu.initialize_distributed_runtime(global_world_size)
 
   devices = xm.get_xla_supported_devices()
-  print('xw32 pjrt.initialize_multiprocess. xm.xla_device()=', xm.xla_device(), ', devices=', devices)
   xm.set_replication(xm.xla_device(), devices)
 
 
@@ -145,7 +142,6 @@ def run_multiprocess(fn: Callable[..., R],
     Dict of the form {device_ordinal: return_value}, where
     return_value is the result of calling `fn`.
   """
-  print('xw32 pjrt.run_multiprocess is running.')
   if runtime.device_type() == 'TPU':
     num_processes = tpu.num_local_processes()
   elif runtime.device_type() == 'GPU':

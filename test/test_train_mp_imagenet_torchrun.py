@@ -183,7 +183,6 @@ def _train_update(device, step, loss, tracker, epoch, writer):
 
 
 def train_imagenet():
-  print('xw32 train_imagenet begins. FLAGS.pjrt_distributed=', FLAGS.pjrt_distributed)
   if FLAGS.pjrt_distributed:
     dist.init_process_group('xla', init_method='xla://')
   elif FLAGS.ddp:
@@ -372,12 +371,6 @@ def _mp_fn(flags):
   FLAGS = flags
   torch.set_default_tensor_type('torch.FloatTensor')
   accuracy = train_imagenet()
-
-  # TODO(xw32): for the moment, add a teardown to shutdown the 
-  # dist server. Need to find a better place to hide the dist server
-  # from the user.
-  if xr.device_type() == 'GPU':
-    gpu.shutdown_distributed_runtime()
 
   if accuracy < FLAGS.target_accuracy:
     print('Accuracy {} is below target {}'.format(accuracy,
