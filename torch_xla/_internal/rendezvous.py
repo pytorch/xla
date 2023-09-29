@@ -1,13 +1,12 @@
 import datetime
 import logging
 import threading
-import os
 
 import torch.distributed as dist
 from torch_xla.distributed import xla_backend
 from torch_xla import runtime as xr
 from torch_xla._internal import pjrt
-from torch_xla._internal import tpu, gpu
+from torch_xla._internal import tpu
 import torch_xla.utils.utils as xu
 
 _store = None

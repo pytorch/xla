@@ -121,16 +121,6 @@ PjRtComputationClient::PjRtComputationClient() {
     bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncGpuClient, true);
     int local_rank = sys_util::GetEnvInt(env::kEnvPjRtLocalRank, 0);
     
-    // if (dist_runtime_service_ != nullptr && local_rank == 0) {
-    //   std::string dist_service = "127.0.0.1:8547";
-    //   xla::CoordinationServiceImpl::Options options;
-    //   auto local_process_count = sys_util::GetEnvInt(env::kEnvPjRtLocalProcessCount, 1);
-    //   options.num_nodes = local_process_count;
-    //   dist_runtime_service_ = xla::GetDistributedRuntimeService(dist_service, options).value();
-    // }
-    
-    // std::string dist_service_addr =
-    //     sys_util::GetEnvString(env::kEnvPjrtDistServiceAddr, "");
     std::string dist_service_addr =
         sys_util::GetEnvString("MASTER_ADDR", "")+":8547";
     int global_rank = sys_util::GetEnvInt("RANK", -1);
