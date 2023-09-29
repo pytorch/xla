@@ -1926,7 +1926,6 @@ void InitXlaModuleBindings(py::module m) {
         [](int num_nodes) -> std::unique_ptr<xla::DistributedRuntimeService> {
           std::string dist_service_addr =
               runtime::sys_util::GetEnvString("MASTER_ADDR", "") + ":8547";
-          std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": About to create dist runtime service at addr=" << dist_service_addr << std::endl;
           XLA_CHECK(!dist_service_addr.empty())
               << "Must set PJRT_DIST_SERVICE_ADDR environment variable to use "
                  "distributed runtime";

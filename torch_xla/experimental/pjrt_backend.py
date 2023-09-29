@@ -12,5 +12,4 @@ if tpu.num_available_chips() > 0 and tpu.version() <= 3:
                   'and does not support torchrun.')
   multi_threaded_pg._install_threaded_pg()
 
-print('xw32 pjrt_backend registering pjrt rendezvous handler')
 dist.register_rendezvous_handler('pjrt', rendezvous.pjrt_rendezvous_handler)

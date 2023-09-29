@@ -18,11 +18,9 @@ def pjrt_rendezvous_handler(url: str,
                             timeout: datetime.timedelta = ...,
                             **kwargs):
   # Assume `xmp.spawn` has not been called when using torchrun
-  print('xw32 pjrt_backend._pjrt_rendezvous_handler begins')
   if dist.is_torchelastic_launched():
     local_world_size = xu.getenv_as('LOCAL_WORLD_SIZE', int)
     local_rank = xu.getenv_as('LOCAL_RANK', int)
-    print('xw32 pjrt_backend._pjrt_rendezvous_handler calling pjrt.initialize_multiprocess')
     pjrt.initialize_multiprocess(local_rank, local_world_size)
 
   master_ip = xu.getenv_as('MASTER_ADDR', str)
@@ -34,21 +32,17 @@ def pjrt_rendezvous_handler(url: str,
   world_size = xr.world_size()
   with _store_lock:
     global _store
-    print('xw32 pjrt_backend._pjrt_rendezvous_handler creating dist.TCPStore')
     if not _store:
       if xu.getenv_as('TORCHELASTIC_USE_AGENT_STORE', str) == 'True':
-        print('xw32 pjrt_backend._pjrt_rendezvous_handler TORCHELASTIC_USE_AGENT_STORE is True')
         attempt = xu.getenv_as('TORCHELASTIC_RESTART_COUNT', int, defval=0)
         tcp_store = dist.TCPStore(
             master_ip, master_port, xr.process_count(), is_master=False)
         _store = dist.PrefixStore(f"/worker/attempt_{attempt}", tcp_store)
       else:
-        print('xw32 pjrt_backend._pjrt_rendezvous_handler TORCHELASTIC_USE_AGENT_STORE is False')
         _store = dist.TCPStore(
             master_ip,
             master_port,
             xr.process_count(),
             is_master=xr.process_index() == 0)
-      print('xw32 pjrt_backend._pjrt_rendezvous_handler dist.TCPStore has been created.')
 
   yield (_store, xr.global_ordinal(), world_size)
