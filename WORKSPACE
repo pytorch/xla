@@ -83,7 +83,7 @@ http_archive(
 # b) by commenting out the http_archive above and uncommenting the following:
 local_repository(
    name = "xla",
-   path = "/home/yeounoh/xla",
+   path = "/home/yeounoh/openxla",
 )
 
 # Initialize OpenXLA's external dependencies.
