@@ -146,7 +146,6 @@ def run_multiprocess(fn: Callable[..., R],
     num_processes = tpu.num_local_processes()
   elif runtime.device_type() in ('GPU', 'ROCM', 'CUDA'):
     num_processes = gpu.num_local_processes()
-    # gpu.initialize_distributed_runtime(num_processes)
   elif runtime.device_type() == 'NEURON':
     num_processes = neuron.num_local_processes()
   else:
