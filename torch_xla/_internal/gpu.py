@@ -37,7 +37,6 @@ def initialize_distributed_runtime(global_world_size: int) -> None:
 
 def shutdown_distributed_runtime() -> None:
   """Destroy the distributed runtime after a distributed computation."""
-  print('xw32 gpu.py shutdown_distributed_runtime is called.')
   global distributed_service
   if distributed_service:
     distributed_service.shutdown()

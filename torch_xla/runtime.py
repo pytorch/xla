@@ -108,10 +108,8 @@ def xla_device(n: Optional[int] = None,
     A `torch.device` representing an XLA device.
   """
   if n is None:
-    print('xw32 runtime.py xla_device(), n is None')
     return torch.device(torch_xla._XLAC._xla_get_default_device())
 
-  print('xw32 runtime.py xla_device(), n is not None')
   devices = xm.get_xla_supported_devices(devkind=devkind)
   if n > len(devices):
     raise IndexError('Device index {} out of range in {}'.format(n, devices))
