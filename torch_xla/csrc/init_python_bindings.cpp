@@ -1694,13 +1694,14 @@ void InitXlaModuleBindings(py::module m) {
           }
           return std::make_tuple(shards, str_devices);
         });
-  // For each local shard, returns the replica_id and the indices into the
-  // global tensor as either a Python list of slices for each dimension or a
-  // Python Ellipsis object indicating that the tensor is replicated. These
-  // indices will not reflect any padding that has been applied to the shards.
-  // The order of the returned indices matches the order of the shards returned
-  // from
-  // `_get_local_shards`.
+  // For each local shard, returns the tuple:
+  //        (replica_id: int, indices: Union[List[Slice], Ellipsis]),
+  // where `replica_id` is the replica the shard belongs to and `indices` index
+  // into the global tensor. The value of `indices` is either a Python list of
+  // slices for each dimension or an Ellipsis object indicating that the tensor
+  // is replicated. These indices will not reflect any padding that has been
+  // applied to the shards. The order of the returned indices matches the order
+  // of the shards returned from `_get_local_shards`.
   m.def("_get_local_shard_replica_and_indices",
         [](const at::Tensor& input) -> std::vector<std::pair<int, py::object>> {
           XLATensorPtr xtensor = bridge::GetXlaTensor(input);
