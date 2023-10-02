@@ -41,7 +41,6 @@ std::string DeviceType::toString() const {
 }
 
 torch::lazy::BackendDevice ParseDeviceString(const std::string& device_spec) {
-  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": ParseDeviceString() begins" << std::endl;
   if (device_spec.empty()) {
     std::string default_device_spec =
         UseVirtualDevice()
