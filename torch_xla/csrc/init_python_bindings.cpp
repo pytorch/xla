@@ -1843,8 +1843,9 @@ void InitXlaModuleBindings(py::module m) {
                                   py::call_guard<py::gil_scoped_release>());
   m.def("_xla_get_distributed_runtime_service",
         [](int num_nodes) -> std::unique_ptr<xla::DistributedRuntimeService> {
+          std::string port = runtime::sys_util::GetEnvString("COORDINATOR_PORT", "8547");
           std::string dist_service_addr =
-              runtime::sys_util::GetEnvString("MASTER_ADDR", "") + ":8547";
+              runtime::sys_util::GetEnvString("MASTER_ADDR", "") + ":" + port;
           XLA_CHECK(!dist_service_addr.empty())
               << "Must set PJRT_DIST_SERVICE_ADDR environment variable to use "
                  "distributed runtime";

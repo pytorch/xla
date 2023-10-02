@@ -45,8 +45,10 @@ MaybeInitializeDistributedRuntimeClient(int local_rank) {
   if (master_addr.empty()) {
     return std::move(client);
   }
+
+  std::string port = runtime::sys_util::GetEnvString("COORDINATOR_PORT", "8547");
   std::string dist_service_addr =
-        sys_util::GetEnvString("MASTER_ADDR", "")+":8547";
+        sys_util::GetEnvString("MASTER_ADDR", "")+":"+port ;
   xla::DistributedRuntimeClient::Options options;
   /* TODO(jonbolin): Use global rank for multi-host setup */
   options.node_id = local_rank;
