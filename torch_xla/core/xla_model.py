@@ -451,7 +451,6 @@ def all_reduce(reduce_type, inputs, scale=1.0, groups=None, pin_layout=True):
     this function performs an inplace all-reduce op on the input tensors, and
     returns the list/tuple itself.
   """
-  print('xw32 all reduce is called')
   groups = groups or []
 
   # No-op if there is only one device
@@ -546,7 +545,6 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
     A tensor which has, in the ``dim`` dimension, all the values from the
     participating replicas.
   """
-  print('xw32 xm.all_gather is called.')
   if pin_layout and (output == None or xla_device_hw(value.device) == 'NEURON'):
     # There is not an easy way to pin the all_gather layout on TPU, GPU and NEURON,
     # use all_reduce based all_gather for this purpose.
