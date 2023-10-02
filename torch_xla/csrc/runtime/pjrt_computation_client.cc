@@ -39,17 +39,20 @@ static std::string spmd_device_str = "SPMD:0";
 
 // Initializes a distributed runtime client if dist_service_addr is specified
 std::shared_ptr<xla::DistributedRuntimeClient>
-MaybeInitializeDistributedRuntimeClient(int local_rank,
-                                        std::string dist_service_addr) {
+MaybeInitializeDistributedRuntimeClient(int local_rank) {
   std::shared_ptr<xla::DistributedRuntimeClient> client;
-  if (!dist_service_addr.empty()) {
-    xla::DistributedRuntimeClient::Options options;
-    /* TODO(jonbolin): Use global rank for multi-host setup */
-    options.node_id = local_rank;
-    client = xla::GetDistributedRuntimeClient(dist_service_addr, options);
-    XLA_CHECK(client->Connect().ok())
-        << "Failed to initialize distributed runtime client";
+  std::string master_addr = sys_util::GetEnvString("MASTER_ADDR", "");
+  if (master_addr.empty()) {
+    return std::move(client);
   }
+  std::string dist_service_addr =
+        sys_util::GetEnvString("MASTER_ADDR", "")+":8547";
+  xla::DistributedRuntimeClient::Options options;
+  /* TODO(jonbolin): Use global rank for multi-host setup */
+  options.node_id = local_rank;
+  client = xla::GetDistributedRuntimeClient(dist_service_addr, options);
+  XLA_CHECK(client->Connect().ok())
+      << "Failed to initialize distributed runtime client";
   return std::move(client);
 }
 
@@ -125,11 +128,9 @@ PjRtComputationClient::PjRtComputationClient() {
     bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncGpuClient, true);
     int local_rank = sys_util::GetEnvInt(env::kEnvPjRtLocalRank, 0);
     
-    std::string dist_service_addr =
-        sys_util::GetEnvString("MASTER_ADDR", "")+":8547";
     int global_rank = sys_util::GetEnvInt("RANK", -1);
     auto distributed_client =
-        MaybeInitializeDistributedRuntimeClient(global_rank, dist_service_addr);
+        MaybeInitializeDistributedRuntimeClient(global_rank);
     auto allowed_devices =
         std::make_optional<std::set<int>>(std::set{local_rank});
     xla::PjRtClient::KeyValueGetCallback kv_get = nullptr;
@@ -146,7 +147,7 @@ PjRtComputationClient::PjRtComputationClient() {
         return distributed_client->KeyValueSet(absl::StrCat(key_prefix, k), v);
       };
     }
-    int global_world_size = sys_util::GetEnvInt("WORLD_SIZE", -1);
+    int global_world_size = sys_util::GetEnvInt("WORLD_SIZE", 1);
     client_ =
         std::move(xla::GetStreamExecutorGpuClient(
                       /*asynchronous=*/async,
