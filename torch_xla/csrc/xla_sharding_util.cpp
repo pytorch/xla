@@ -434,7 +434,7 @@ ShardingUtil::GetShardIndicesForMinibatchTensor(
 }
 
 std::vector<std::pair<int, std::vector<at::indexing::TensorIndex>>>
-ShardingUtil::GetShardRankAndIndicesForDevices(
+ShardingUtil::GetShardReplicaAndIndicesForDevices(
     const std::vector<int64_t>& shard_shape,
     const std::vector<int64_t>& tensor_shape, const xla::OpSharding sharding,
     const std::vector<std::string>& devices) {
@@ -475,9 +475,9 @@ ShardingUtil::GetShardRankAndIndicesForDevices(
         continue;
       }
 
-      // The rank of this shard among its replicas. This value is only updated
-      // from 0 if the sharding is partially replicated.
-      int replica_rank = 0;
+      // The replica id for this shard. This value is only updated from 0 if
+      // the sharding is partially replicated.
+      int replica_id = 0;
 
       // Given the shard's row-major index `i`, we need to calculate shard's
       // coordinates (n_0, ..., n_d) in the tiling to generate the index
@@ -496,7 +496,7 @@ ShardingUtil::GetShardRankAndIndicesForDevices(
             j == tile_shape.size() - 1) {
           // the last tile assignment dimension is replicated, which implies
           // that the consecutive `tile_shape[j]` devices hold the replicated.
-          replica_rank = n_j;
+          replica_id = n_j;
           offset /= tile_shape[j];
           continue;
         }
@@ -509,7 +509,7 @@ ShardingUtil::GetShardRankAndIndicesForDevices(
         offset /= tile_shape[j];
       }
       std::reverse(indices.begin(), indices.end());
-      shard_indices[device_index[core]] = std::make_pair(replica_rank, indices);
+      shard_indices[device_index[core]] = std::make_pair(replica_id, indices);
     }
   } else {
     TF_LOG(ERROR) << "Unsupported OpSharding type " << sharding.type();
@@ -542,10 +542,10 @@ std::vector<at::Tensor> ShardingUtil::ShardTensor(
     if (minibatch) {
       shard_indices = GetShardIndicesForMinibatchTensor(shard_shape, devices);
     } else {
-      auto rank_and_indices = GetShardRankAndIndicesForDevices(
+      auto replica_and_indices = GetShardReplicaAndIndicesForDevices(
           shard_shape, tensor.sizes().vec(), sharding, devices);
-      // Extract only the indices, the rank is unnecessary for sharding.
-      std::transform(rank_and_indices.begin(), rank_and_indices.end(),
+      // Extract only the indices, the replica_id is unnecessary for sharding.
+      std::transform(replica_and_indices.begin(), replica_and_indices.end(),
                      std::back_inserter(shard_indices),
                      [](auto& pair) { return pair.second; });
     }

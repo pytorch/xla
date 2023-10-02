@@ -23,12 +23,14 @@ class XLAShard:
   # The device this shard's data originated from.
   shard_device: str
 
-  # The shard's rank among its replicas. The value depends on the sharding:
-  #  - REPLICATED: the shard device's global rank.
-  #  - TILED:      always 0.
-  #  - PARTIAL:    the rank of the shard among its replicas as determined by the
-  #                replica group assignment
-  rank: int
+  # The replica this shard belongs to, as determined by the sharding. The
+  # replica is determined differently for each sharding type:
+  #  - TILED:       Since the tensor isn't replicated, replica_id is always 0.
+  #  - PARTIAL:     replica_id is taken from the OpSharding and is a value in
+  #                 the range [0, num_replica).
+  #  - REPLICATED:  Since the tensor is fully replicated, replica_id is the
+  #                 device's global ordinal.
+  replica_id: int
 
   @property
   def unpadded_data(self) -> torch.Tensor:
@@ -114,10 +116,13 @@ class XLAShardedTensor(torch.Tensor):
   @property
   def local_shards(self) -> List[XLAShard]:
     shards, devices = torch_xla._XLAC._get_local_shards(self.global_tensor)
-    rank_and_indices = torch_xla._XLAC._get_local_shard_rank_and_indices(
+    replica_and_indices = torch_xla._XLAC._get_local_shard_replica_and_indices(
         self.global_tensor)
-    zipped = zip(shards, rank_and_indices, devices)
-    return [XLAShard(data, ind, dev, rank) for data, (rank, ind), dev in zipped]
+    zipped = zip(shards, replica_and_indices, devices)
+    return [
+        XLAShard(data, indices, dev, replica)
+        for data, (replica, indices), dev in zipped
+    ]
 
   # Load the given list of local shards into the underlying tensor's data
   # on the local devices.

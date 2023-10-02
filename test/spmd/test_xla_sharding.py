@@ -77,8 +77,8 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
       else:
         self.assertIsInstance(shard.indices, type(Ellipsis))
       self.assertTrue(torch.allclose(shard.data, t[shard.indices]))
-      # Tiled sharding makes all shards rank 0.
-      self.assertEqual(shard.rank, 0)
+      # Tiled sharding makes all shards have replica_id 0.
+      self.assertEqual(shard.replica_id, 0)
 
   def test_padded_xla_shards(self):
     num_element = self.n_devices + 1  # Ensure padding with two or more devices
@@ -107,8 +107,8 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
       else:
         self.assertIsInstance(shard.indices, type(Ellipsis))
       self.assertTrue(torch.allclose(shard.unpadded_data, t[shard.indices]))
-      # Tiled sharding makes all shards rank 0.
-      self.assertEqual(shard.rank, 0)
+      # Tiled sharding makes all shards have replica_id 0.
+      self.assertEqual(shard.replica_id, 0)
 
   def test_replicated_xla_shards(self):
     num_element = self.n_devices
@@ -124,8 +124,8 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
       self.assertIsInstance(shard.indices, type(Ellipsis))
       self.assertTrue(torch.allclose(shard.data, t[shard.indices]))
       self.assertTrue(torch.allclose(shard.data, shard.unpadded_data))
-      # Replicated sharding sets the shard rank to the device ordinal
-      self.assertEqual(shard.rank, i)
+      # Replicated sharding sets the shard replica_id to the device ordinal
+      self.assertEqual(shard.replica_id, i)
 
   @unittest.skipUnless(xr.global_runtime_device_count() >= 4,
                        "Multiple devices required for partial replication")
@@ -150,10 +150,10 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
       self.assertEqual(shard.indices[1], slice(start, end, 1))
       self.assertTrue(torch.allclose(shard.data, t[shard.indices]))
       self.assertTrue(torch.allclose(shard.data, shard.unpadded_data))
-      # The rank should be coincide with the replication group for the device.
-      # Given the mesh shape, the shard rank will be the device's row in the
-      # mesh, which is device_id // 2
-      self.assertEqual(shard.rank, i // 2)
+      # The replica_id should be coincide with the replication group for the
+      # device. Given the mesh shape, the shard replica_id will be the device's
+      # row in the mesh, which is device_id // 2
+      self.assertEqual(shard.replica_id, i // 2)
 
   def test_load_local_shards(self):
     num_element = self.n_devices
