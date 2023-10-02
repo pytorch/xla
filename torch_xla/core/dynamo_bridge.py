@@ -18,7 +18,8 @@ import torch_xla.debug.metrics as metrics
 import torch_xla.runtime as xr
 import torch_xla.utils.utils as xu
 
-debug = os.environ.get("XLA_DYNAMO_DEBUG") == "1"
+dynamo_debug = int(os.environ.get('XLA_DYNAMO_DEBUG', '0')) == 1
+ptxla_debug = int(os.environ.get('PT_XLA_DEBUG', '0')) == 1
 
 
 @dataclasses.dataclass
@@ -130,7 +131,7 @@ class DumbReturnHandler:
     self.deduper = Deduper()
     self.deduped_trace_outputs = self.deduper.dedup(self.trace_outputs)
 
-    if debug:
+    if dynamo_debug:
       print(
           f"Number of duplicated outputs {len(self.trace_outputs) - len(self.deduped_trace_outputs)})"
       )
@@ -145,7 +146,7 @@ class DumbReturnHandler:
       if in_pos is not None and not trace_inputs_inplace_update_bool[in_pos]:
         self.trace_outputs_pos_to_inputs_pos.append((out_pos, in_pos))
 
-    if debug:
+    if dynamo_debug:
       print(
           f"Number trace input {len(trace_inputs)}, number trace output {len(trace_outputs)}"
       )
@@ -233,7 +234,7 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule):
       torch_xla._XLAC._xla_get_tensor_id(xla_arg) for xla_arg in xla_args
   ]
 
-  if debug:
+  if dynamo_debug:
     print(f"Graph module:\n{xla_model.code}")
     print(f"args_tensor_ids {args_tensor_ids}")
 
@@ -269,7 +270,7 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule):
 
   args_and_out = tuple(xla_args_need_update) + tuple(xla_out)
 
-  if debug:
+  if dynamo_debug:
     print(f"#inplace update: {len(xla_args_need_update)}")
     print(f"XLA IR Text: {torch_xla._XLAC._get_xla_tensors_text(args_and_out)}")
 
@@ -277,7 +278,7 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule):
   dumb_return_handler = DumbReturnHandler(xla_args, args_and_out,
                                           xla_args_need_update_bool)
   graph_hash = torch_xla._XLAC._get_graph_hash(args_and_out)
-  if debug:
+  if dynamo_debug:
     print("graph_hash", graph_hash)
 
   # Collect all device data nodes that is needed to compute the args_and_out
@@ -288,7 +289,7 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule):
       graph_input_tensor_ids,
       graph_input_xla_values,
   ) = torch_xla._XLAC._get_tensors_xla_device_data_node(args_and_out)
-  if debug:
+  if dynamo_debug:
     print(f"graph_input_tensor_ids {graph_input_tensor_ids}")
   assert len(graph_input_tensor_ids) == len(
       graph_input_xla_values
@@ -322,7 +323,7 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule):
 
 
 def extract_internal(xla_model: torch.fx.GraphModule):
-  if debug:
+  if dynamo_debug:
     for xla_arg in xla_model.xla_args:
       print(torch_xla._XLAC._get_xla_tensor_debug_info(xla_arg))
   xm.mark_step()
@@ -377,7 +378,7 @@ def extract_internal(xla_model: torch.fx.GraphModule):
     start_ts = time.time()
     res = torch_xla._XLAC._run_cached_graph(graph_hash, graph_input)
     res = dumb_return_handler.addDumbReturn(args, res)
-    if debug:
+    if dynamo_debug:
       print(
           f"torchxla reuse compiled graph run_cached_graph takes {time.time() - start_ts} seconds"
       )
@@ -389,14 +390,14 @@ def extract_internal(xla_model: torch.fx.GraphModule):
     for arg_index, res_index in arg_index_to_need_update_index.items():
       args[arg_index].copy_(res[res_index])
 
-    if debug:
+    if dynamo_debug:
       print(
           f"Copy {ncopy} args takes {time.time() - args_inplace_update_ts} seconds"
       )
 
     # First few elements might be xla_args that needs to be in place updated
     result = res[len(xla_args_need_update):]
-    if debug:
+    if dynamo_debug:
       print(f"optimized_mod takes {time.time() - enter_ts} seconds overall")
 
     none_remover.add_nones(result)
@@ -475,8 +476,9 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
   collector = FallBackNodeCollector(xla_model)
   collector.run(*xla_args)
   fallback_ops = collector.get_fallback_ops()
-  if debug and len(fallback_ops) > 0:
-    print('fallback ops are' + str(fallback_ops))
+  if (ptxla_debug or dynamo_debug) and len(fallback_ops) > 0:
+    print('Dynamo fallback ops are' + str(fallback_ops) +
+          '. Please open a GitHub issue with the above op lowering requests.')
 
   # This logic, needed for supporting in-place operations, is a duplicate of
   # the one in the main `extract_internal` function above. We need to do this
