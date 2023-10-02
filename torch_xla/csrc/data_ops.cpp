@@ -8,6 +8,7 @@
 #include <numeric>
 
 #include "absl/strings/str_join.h"
+#include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/reduction.h"
@@ -28,7 +29,8 @@ bool IsSparseGather(const xla::Shape& input_shape,
                     const xla::Shape& index_shape, int64_t dim) {
   // Conservative sparsity check for multi-platform support
   // to avoid gather on a single float on TPU.
-  XlaDeviceType hw_type = static_cast<XlaDeviceType>(GetCurrentDevice().type());
+  XlaDeviceType hw_type =
+      static_cast<XlaDeviceType>(bridge::GetCurrentDevice().type());
   if (hw_type == XlaDeviceType::TPU) {
     // XLA_DENSE_GATHER_FACTOR can be used to finely control the
     // sparsity check.

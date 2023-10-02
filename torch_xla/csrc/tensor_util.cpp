@@ -12,6 +12,7 @@
 #include <numeric>
 #include <thread>
 
+#include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/layout_manager.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
@@ -582,8 +583,8 @@ torch::lazy::BackendDataPtr TensorToXlaData(
         std::vector<at::Tensor>(local_devices.size(), tensor);
     auto sharding_spec = std::make_shared<XLATensor::ShardingSpec>(
         xla::HloSharding::Replicate().ToProto(), shape);
-    return WrapXlaData(ShardingUtil::CreateShardedData(
-        replicated_data, local_devices, sharding_spec));
+    return ShardingUtil::CreateShardedData(replicated_data, local_devices,
+                                           sharding_spec);
   }
 
   auto populate_fn =
@@ -599,7 +600,7 @@ torch::lazy::BackendDataPtr TensorToXlaData(
   auto handles =
       runtime::GetComputationClient()->TransferToServer(source_tensors);
   XLA_CHECK_EQ(handles.size(), 1);
-  return WrapXlaData(handles.front());
+  return handles.front();
 }
 
 template <typename SType, typename DType>
@@ -882,7 +883,7 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
 
 xla::Literal GetTensorLiteral(const at::Tensor& tensor, const xla::Shape* shape,
                               const torch::lazy::BackendDevice* device) {
-  torch::lazy::BackendDevice xla_device = GetDeviceOrCurrent(device);
+  torch::lazy::BackendDevice xla_device = bridge::GetDeviceOrCurrent(device);
   xla::Shape computed_shape;
   if (shape == nullptr) {
     auto dimensions = XlaHelpers::I64List(tensor.sizes());
@@ -975,7 +976,7 @@ xla::Shape MakeShapeWithDeviceLayout(const xla::Shape& shape,
 
 xla::Shape CreateComputationShapeFromTensor(
     const at::Tensor& tensor, const torch::lazy::BackendDevice* device) {
-  torch::lazy::BackendDevice xla_device = GetDeviceOrCurrent(device);
+  torch::lazy::BackendDevice xla_device = bridge::GetDeviceOrCurrent(device);
   return MakeArrayShapeFromDimensions(
       XlaHelpers::I64List(tensor.sizes()),
       /*dynamic_dimensions=*/{},
@@ -1053,7 +1054,7 @@ xla::PrimitiveType TensorTypeToRawXlaType(at::ScalarType scalar_type) {
 
 xla::PrimitiveType GetDevicePrimitiveType(
     xla::PrimitiveType type, const torch::lazy::BackendDevice* device) {
-  torch::lazy::BackendDevice xla_device = GetDeviceOrCurrent(device);
+  torch::lazy::BackendDevice xla_device = bridge::GetDeviceOrCurrent(device);
   XlaDeviceType hw_type = static_cast<XlaDeviceType>(xla_device.type());
   switch (type) {
     case xla::PrimitiveType::F64:

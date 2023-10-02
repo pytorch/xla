@@ -1397,7 +1397,7 @@ TEST_F(AtenXlaTensorTest, TestAvgPool3DNoBatch) {
 
 TEST_F(AtenXlaTensorTest, TestAdaptiveMaxPool2D) {
   XlaDeviceType hw_type =
-      static_cast<XlaDeviceType>(GetDefaultDevice()->type());
+      static_cast<XlaDeviceType>(bridge::GetDefaultDevice()->type());
   // skip this test until the tile mismatch bug is fixed.
   if (hw_type == XlaDeviceType::TPU) {
     return;
@@ -1428,7 +1428,7 @@ TEST_F(AtenXlaTensorTest, TestAdaptiveMaxPool2D) {
 
 TEST_F(AtenXlaTensorTest, TestAdaptiveMaxPool2DBackward) {
   XlaDeviceType hw_type =
-      static_cast<XlaDeviceType>(GetDefaultDevice()->type());
+      static_cast<XlaDeviceType>(bridge::GetDefaultDevice()->type());
   // skip this test until the tile mismatch bug is fixed.
   if (hw_type == XlaDeviceType::TPU) {
     return;

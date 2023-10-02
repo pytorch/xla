@@ -17,7 +17,6 @@
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/tensor_methods.h"
 #include "torch_xla/csrc/tensor_util.h"
-#include "torch_xla/csrc/xla_data.h"
 #include "torch_xla/csrc/xla_sharding_util.h"
 #include "xla/protobuf_util.h"
 #include "xla/xla_data.pb.h"
@@ -38,7 +37,7 @@ class XLAShardingTest : public AtenXlaTensorTestBase {};
 TEST_F(XLAShardingTest, GetShardShape) {
   auto tensor = at::ones({8, 7}, at::TensorOptions(at::kFloat));
   xla::Shape tensor_shape =
-      CreateComputationShapeFromTensor(tensor, GetDefaultDevice());
+      CreateComputationShapeFromTensor(tensor, bridge::GetDefaultDevice());
   xla::Array2D<int64_t> mesh({
       {0, 1},
       {2, 3},
@@ -62,7 +61,7 @@ TEST_F(XLAShardingTest, GetShardIndicesForDevices) {
 
   auto tensor = at::ones({8, 7}, at::TensorOptions(at::kFloat));
   xla::Shape tensor_shape =
-      CreateComputationShapeFromTensor(tensor, GetDefaultDevice());
+      CreateComputationShapeFromTensor(tensor, bridge::GetDefaultDevice());
   xla::Array2D<int64_t> mesh({
       {0, 1},
       {2, 3},
@@ -111,10 +110,10 @@ TEST_F(XLAShardingTest, ShardTensor) {
   // 1D tiled
   at::Tensor tensor = at::ones({8}, at::TensorOptions(at::kFloat));
   xla::Shape tensor_shape =
-      CreateComputationShapeFromTensor(tensor, GetDefaultDevice());
+      CreateComputationShapeFromTensor(tensor, bridge::GetDefaultDevice());
   xla::OpSharding sharding =
       xla::HloSharding::Tile1D(
-          CreateComputationShapeFromTensor(tensor, GetDefaultDevice()),
+          CreateComputationShapeFromTensor(tensor, bridge::GetDefaultDevice()),
           devices.size())
           .ToProto();
   auto sharding_spec =
@@ -128,7 +127,8 @@ TEST_F(XLAShardingTest, ShardTensor) {
   // 2D tiled, The first dim is halved and the last replicated. The last shard
   // size should be smaller in dim=1 because it's not evenly divisible.
   tensor = at::ones({8, 7, 4}, at::TensorOptions(at::kFloat));
-  tensor_shape = CreateComputationShapeFromTensor(tensor, GetDefaultDevice());
+  tensor_shape =
+      CreateComputationShapeFromTensor(tensor, bridge::GetDefaultDevice());
   xla::Array2D<int64_t> mesh({
       {0, 1, 2, 3},
       {4, 5, 6, 7},
@@ -164,7 +164,8 @@ TEST_F(XLAShardingTest, ShardTensor) {
   // last shard size should be smaller in dim=2 because it's not evenly
   // divisible.
   tensor = at::ones({1, 8, 7, 4}, at::TensorOptions(at::kFloat));
-  tensor_shape = CreateComputationShapeFromTensor(tensor, GetDefaultDevice());
+  tensor_shape =
+      CreateComputationShapeFromTensor(tensor, bridge::GetDefaultDevice());
   xla::Array4D<int64_t> tesseract({{{{0, 1}, {2, 3}, {4, 5}, {6, 7}}}});
   sharding = xla::HloSharding::Tile(tesseract).ToProto();
   sharding_spec =
@@ -186,7 +187,8 @@ TEST_F(XLAShardingTest, ShardTensor) {
   // last shard size should be smaller in dim=2 because it's not evenly
   // divisible.
   tensor = at::ones({10, 1, 8, 7, 4}, at::TensorOptions(at::kFloat));
-  tensor_shape = CreateComputationShapeFromTensor(tensor, GetDefaultDevice());
+  tensor_shape =
+      CreateComputationShapeFromTensor(tensor, bridge::GetDefaultDevice());
   xla::Array<int64_t> hypercube(std::vector<int64_t>{1, 1, 2, 2, 2});
   hypercube.FillIota(0);
   sharding = xla::HloSharding::Tile(hypercube).ToProto();
@@ -212,7 +214,7 @@ TEST_F(XLAShardingTest, ShardTensorMultiHost) {
   // 2D tiled, The first dim is halved and the last replicated.
   at::Tensor tensor = at::ones({8, 7, 4}, at::TensorOptions(at::kFloat));
   xla::Shape tensor_shape =
-      CreateComputationShapeFromTensor(tensor, GetDefaultDevice());
+      CreateComputationShapeFromTensor(tensor, bridge::GetDefaultDevice());
   xla::Array2D<int64_t> mesh({
       {4, 5, 0, 1},
       {6, 7, 2, 3},
@@ -246,8 +248,8 @@ TEST_F(XLAShardingTest, ShardTensorMiniBatch) {
   std::vector<std::string> devices = {"TPU:4", "TPU:5", "TPU:6", "TPU:7"};
   at::Tensor minibatch_tensor =
       at::ones({8, 7, 4}, at::TensorOptions(at::kFloat));
-  xla::Shape global_shape =
-      CreateComputationShapeFromTensor(minibatch_tensor, GetDefaultDevice());
+  xla::Shape global_shape = CreateComputationShapeFromTensor(
+      minibatch_tensor, bridge::GetDefaultDevice());
   global_shape.set_dimensions(
       0, minibatch_tensor.sizes()[0] * 2);  // Assuming 2 hosts
   xla::Array3D<int64_t> mesh({
@@ -274,7 +276,7 @@ TEST_F(XLAShardingTest, ShardTensorMiniBatch) {
 TEST_F(XLAShardingTest, EqualShardingSpecs) {
   auto tensor = at::ones({8, 7}, at::TensorOptions(at::kFloat));
   xla::Shape tensor_shape =
-      CreateComputationShapeFromTensor(tensor, GetDefaultDevice());
+      CreateComputationShapeFromTensor(tensor, bridge::GetDefaultDevice());
   XLATensor::ShardingSpec tiled_2d(xla::HloSharding::Tile({
                                                               {0, 1, 2, 3},
                                                               {4, 5, 6, 7},
@@ -301,10 +303,11 @@ TEST_F(XLAShardingTest, CreateTensorsData) {
   std::vector<at::Tensor> tensors(2);
   auto tensor = at::ones({8, 8}, at::TensorOptions(at::kFloat));
   xla::Shape tensor_shape =
-      CreateComputationShapeFromTensor(tensor, GetDefaultDevice());
+      CreateComputationShapeFromTensor(tensor, bridge::GetDefaultDevice());
   std::fill_n(tensors.begin(), tensors.size(), tensor);
   std::vector<std::string> devices(2);
-  std::fill_n(devices.begin(), devices.size(), GetDefaultDevice()->toString());
+  std::fill_n(devices.begin(), devices.size(),
+              bridge::GetDefaultDevice()->toString());
   std::vector<XLATensor::ShardingSpecPtr> shardings = {
       nullptr, std::make_shared<XLATensor::ShardingSpec>(
                    xla::HloSharding::Replicate().ToProto(), tensor_shape)};
@@ -312,28 +315,29 @@ TEST_F(XLAShardingTest, CreateTensorsData) {
       CreateTensorsData(tensors, shardings, devices);
 
   // Returns the input without sharding
-  auto xla_data = dynamic_cast<XLAData*>(tensors_data[0].get())->xla_data();
+  auto xla_data =
+      std::dynamic_pointer_cast<torch_xla::runtime::ComputationClient::Data>(
+          tensors_data[0]);
   std::vector<torch_xla::runtime::ComputationClient::DataPtr> shards =
       torch_xla::runtime::GetComputationClient()->GetDataShards(xla_data);
   EXPECT_EQ(shards.size(), 1);
   EXPECT_TRUE(xla::Shape::Equal().IgnoreLayout()(xla_data->shape(),
                                                  shards[0]->shape()));
-  EXPECT_TRUE(
-      XlaDataValuesEqual(tensors_data[0], WrapXlaData(shards[0]), at::kFloat));
+  EXPECT_TRUE(XlaDataValuesEqual(tensors_data[0], shards[0], at::kFloat));
 
   // Returns multiple input shards, replicated
   int64_t n_devices =
       torch_xla::runtime::GetComputationClient()->GetLocalDevices().size();
   if (n_devices > 1) {
     auto sharded_xla_data =
-        dynamic_cast<XLAData*>(tensors_data[1].get())->xla_data();
+        std::dynamic_pointer_cast<torch_xla::runtime::ComputationClient::Data>(
+            tensors_data[1]);
     shards = torch_xla::runtime::GetComputationClient()->GetDataShards(
         sharded_xla_data);
     EXPECT_EQ(shards.size(), n_devices);
     EXPECT_TRUE(xla::Shape::Equal().IgnoreLayout()(sharded_xla_data->shape(),
                                                    shards[0]->shape()));
-    EXPECT_TRUE(XlaDataValuesEqual(WrapXlaData(shards[0]),
-                                   WrapXlaData(shards[1]), at::kFloat));
+    EXPECT_TRUE(XlaDataValuesEqual(shards[0], shards[1], at::kFloat));
   }
 }
 
@@ -351,7 +355,7 @@ TEST_F(XLAShardingTest, InputHandler) {
   std::vector<at::Tensor> tensors(2);
   auto tensor = at::ones({8, 8}, at::TensorOptions(at::kFloat));
   xla::Shape tensor_shape =
-      CreateComputationShapeFromTensor(tensor, GetDefaultDevice());
+      CreateComputationShapeFromTensor(tensor, bridge::GetDefaultDevice());
   std::fill_n(tensors.begin(), tensors.size(), tensor);
   std::vector<std::string> devices = {"TPU:0", "TPU:1"};
   std::vector<XLATensor::ShardingSpecPtr> shardings = {
@@ -366,13 +370,11 @@ TEST_F(XLAShardingTest, InputHandler) {
 
   auto arg0_dev0 = arguments_by_device[0][0];
   auto arg0_dev1 = arguments_by_device[1][0];
-  EXPECT_TRUE(XlaDataValuesEqual(WrapXlaData(arg0_dev0), WrapXlaData(arg0_dev1),
-                                 at::kFloat));
+  EXPECT_TRUE(XlaDataValuesEqual(arg0_dev0, arg0_dev1, at::kFloat));
 
   auto arg1_dev0 = arguments_by_device[0][1];
   auto arg1_dev1 = arguments_by_device[1][1];
-  EXPECT_TRUE(XlaDataValuesEqual(WrapXlaData(arg1_dev0), WrapXlaData(arg1_dev1),
-                                 at::kFloat));
+  EXPECT_TRUE(XlaDataValuesEqual(arg1_dev0, arg1_dev1, at::kFloat));
 }
 
 TEST_F(XLAShardingTest, OutputHandler) {
@@ -400,10 +402,10 @@ TEST_F(XLAShardingTest, OutputHandler) {
   }
 
   xla::Shape tensor_shape =
-      CreateComputationShapeFromTensor(tensor, GetDefaultDevice());
+      CreateComputationShapeFromTensor(tensor, bridge::GetDefaultDevice());
   auto sharding_spec = std::make_shared<XLATensor::ShardingSpec>(
       xla::HloSharding::Tile1D(
-          CreateComputationShapeFromTensor(tensor, GetDefaultDevice()),
+          CreateComputationShapeFromTensor(tensor, bridge::GetDefaultDevice()),
           devices.size())
           .ToProto(),
       tensor_shape);
@@ -451,8 +453,8 @@ TEST_F(XLAShardingTest, PrepareOutputShardingPropagation) {
       ConsumeValue(b.Build(/*remove_dynamic_dimensions=*/false));
   std::vector<torch_xla::runtime::ComputationClient::CompileInstance> instances;
   instances.push_back({std::move(xla_computation),
-                       GetDefaultDevice()->toString(),
-                       {GetDefaultDevice()->toString()},
+                       bridge::GetDefaultDevice()->toString(),
+                       {bridge::GetDefaultDevice()->toString()},
                        &shape,
                        /*should_wrap_parameter=*/false,
                        /*is_sharded=*/true});
@@ -466,9 +468,9 @@ TEST_F(XLAShardingTest, PrepareOutputShardingPropagation) {
           "add", std::move(computations[0]->move_computation()));
 
   // Prepare output sharding propagation, expect a sharded output placeholder.
-  std::vector<XLATensorPtr> tensors{XLATensor::Create(WrapXlaData(
+  std::vector<XLATensorPtr> tensors{XLATensor::Create(
       torch_xla::runtime::GetComputationClient()->CreateDataPlaceholder(
-          GetDefaultDevice()->toString(), std::move(shape))))};
+          bridge::GetDefaultDevice()->toString(), std::move(shape)))};
   std::vector<torch::lazy::BackendDataPtr> data_placeholders;
   std::vector<XLATensor::ShardingSpecPtr> sharding_specs;
   ShardingUtil::PrepareOutputShardingPropagation(
@@ -488,8 +490,15 @@ TEST_F(XLAShardingTest, PrepareOutputShardingPropagation) {
 
   // Check if the placeholder is on a SPMD device (sharded) with no real values.
   EXPECT_EQ(data_placeholders.size(), 1);
-  EXPECT_EQ(UnwrapXlaData(data_placeholders[0])->device(), "SPMD:0");
-  EXPECT_FALSE(UnwrapXlaData(data_placeholders[0])->HasValue());
+  EXPECT_EQ(
+      std::dynamic_pointer_cast<torch_xla::runtime::ComputationClient::Data>(
+          data_placeholders[0])
+          ->device(),
+      "SPMD:0");
+  EXPECT_FALSE(
+      std::dynamic_pointer_cast<torch_xla::runtime::ComputationClient::Data>(
+          data_placeholders[0])
+          ->HasValue());
 }
 
 }  // namespace cpp_test

@@ -10,14 +10,9 @@
 #include "torch_xla/csrc/runtime/computation_client.h"
 
 namespace torch_xla {
-runtime::ComputationClient::DataPtr UnwrapXlaData(
-    const torch::lazy::BackendDataPtr& data);
 
 std::vector<runtime::ComputationClient::DataPtr> UnwrapXlaData(
     absl::Span<const torch::lazy::BackendDataPtr> datas);
-
-torch::lazy::BackendDataPtr WrapXlaData(
-    const runtime::ComputationClient::DataPtr& xla_data);
 
 std::vector<torch::lazy::BackendDataPtr> WrapXlaData(
     absl::Span<const runtime::ComputationClient::DataPtr> xla_datas);

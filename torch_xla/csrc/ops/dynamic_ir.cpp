@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/ops/dynamic_ir.h"
 
 #include "absl/strings/str_join.h"
+#include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
@@ -48,8 +49,8 @@ int64_t SizeNode::getDynamicValue() const {
   // Wrap the IR of SizeNode into a dummy tensor and execute/fetch the value
   // of this tensor. GetTensors will return a cpu at::Tensor so we can just
   // extract the value of it.
-  std::vector<XLATensorPtr> dummy_size_tensors = {
-      XLATensor::Create(cloned, *GetDefaultDevice(), at::ScalarType::Long)};
+  std::vector<XLATensorPtr> dummy_size_tensors = {XLATensor::Create(
+      cloned, *bridge::GetDefaultDevice(), at::ScalarType::Long)};
   std::vector<at::Tensor> res =
       XLAGraphExecutor::Get()->GetTensors(&dummy_size_tensors);
   runtime_size_ = res[0].item().toInt();

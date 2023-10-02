@@ -4,7 +4,7 @@
 #include "absl/strings/str_split.h"
 #include "absl/types/optional.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
-#include "torch_xla/csrc/runtime/runtime.h"
+#include "torch_xla/csrc/runtime/sys_util.h"
 
 namespace torch_xla {
 namespace {
@@ -41,21 +41,9 @@ std::string DeviceType::toString() const {
 }
 
 torch::lazy::BackendDevice ParseDeviceString(const std::string& device_spec) {
-  if (device_spec.empty()) {
-    std::string default_device_spec =
-        UseVirtualDevice()
-            ? "SPMD:0"
-            : runtime::GetComputationClient()->GetDefaultDevice();
-    XLA_CHECK(!default_device_spec.empty());
-    return ParseDeviceString(default_device_spec);
-  }
-  if (device_spec[0] == ':') {
-    std::string default_device_spec =
-        runtime::GetComputationClient()->GetDefaultDevice();
-    auto pos = default_device_spec.find(':');
-    XLA_CHECK_NE(pos, std::string::npos) << default_device_spec;
-    return ParseDeviceString(default_device_spec.substr(0, pos) + device_spec);
-  }
+  XLA_CHECK(!device_spec.empty()) << "empty device spec";
+  XLA_CHECK(device_spec[0] != ':')
+      << "No device type in device specification: " << device_spec;
   std::vector<std::string> device_spec_parts = absl::StrSplit(device_spec, ':');
   XLA_CHECK_EQ(device_spec_parts.size(), 2)
       << "Invalid device specification: " << device_spec;
@@ -87,29 +75,8 @@ torch::lazy::BackendDevice ParseDeviceString(const std::string& device_spec) {
   return torch::lazy::BackendDevice(std::move(device_type), ordinal);
 }
 
-const torch::lazy::BackendDevice* GetDefaultDevice() {
-  static const torch::lazy::BackendDevice default_device =
-      ParseDeviceString("");
-  return &default_device;
-}
-
 torch::lazy::BackendDevice GetVirtualDevice() {
   return ParseDeviceString("SPMD:0");
-}
-
-torch::lazy::BackendDevice GetCurrentDevice() {
-  if (!g_current_device) {
-    g_current_device = *GetDefaultDevice();
-  }
-  return *g_current_device;
-}
-
-torch::lazy::BackendDevice SetCurrentDevice(
-    const torch::lazy::BackendDevice& device) {
-  torch::lazy::BackendDevice current = GetCurrentDevice();
-  g_current_device = device;
-  TF_VLOG(2) << "New current device: " << device;
-  return current;
 }
 
 bool ShouldUseVirtualDevice() {

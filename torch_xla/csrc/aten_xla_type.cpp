@@ -81,7 +81,7 @@ at::Tensor to_meta(const at::Tensor& tensor) {
 torch::lazy::BackendDevice GetXlaDeviceOrCurrent(
     const c10::optional<c10::Device>& device) {
   auto xla_device_opt = bridge::GetXlaDevice(device);
-  return xla_device_opt ? *xla_device_opt : GetCurrentDevice();
+  return xla_device_opt ? *xla_device_opt : bridge::GetCurrentDevice();
 }
 
 bool IsOperationOnType(const c10::optional<at::ScalarType>& opt_dtype,

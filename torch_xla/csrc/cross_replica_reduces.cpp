@@ -38,7 +38,7 @@ struct ReduceContext {
 };
 
 xla::Shape MakeReduceShape(absl::Span<const xla::Shape> operand_shapes) {
-  torch::lazy::BackendDevice xla_device = GetCurrentDevice();
+  torch::lazy::BackendDevice xla_device = bridge::GetCurrentDevice();
   std::vector<xla::Shape> shapes_and_layouts;
   shapes_and_layouts.reserve(operand_shapes.size());
   for (auto& shape : operand_shapes) {
@@ -193,7 +193,7 @@ AllToAllResult BuildAllToAll(xla::XlaOp input, xla::XlaOp token,
   TokenHandler token_handler(token);
   xla::XlaOp reduce_result;
   if (pin_layout) {
-    torch::lazy::BackendDevice xla_device = GetCurrentDevice();
+    torch::lazy::BackendDevice xla_device = bridge::GetCurrentDevice();
     xla::Shape reduce_shape = MakeArrayShapeFromDimensions(
         input_shape.dimensions(), input_shape.dynamic_dimensions(),
         input_shape.element_type(),
@@ -219,7 +219,7 @@ AllGatherResult BuildAllGather(xla::XlaOp input, xla::XlaOp token, int64_t dim,
   TokenHandler token_handler(token);
   xla::XlaOp all_gather_result;
   if (pin_layout) {
-    torch::lazy::BackendDevice xla_device = GetCurrentDevice();
+    torch::lazy::BackendDevice xla_device = bridge::GetCurrentDevice();
     xla::Shape reduce_shape = MakeArrayShapeFromDimensions(
         input_shape.dimensions(), input_shape.dynamic_dimensions(),
         input_shape.element_type(),
@@ -283,7 +283,7 @@ ReduceScatterResult BuildReduceScatter(
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   xla::XlaOp reduce_result;
   if (pin_layout) {
-    torch::lazy::BackendDevice xla_device = GetCurrentDevice();
+    torch::lazy::BackendDevice xla_device = bridge::GetCurrentDevice();
     xla::Shape reduce_shape = MakeArrayShapeFromDimensions(
         input_shape.dimensions(), input_shape.dynamic_dimensions(),
         input_shape.element_type(),

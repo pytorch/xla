@@ -10,6 +10,7 @@
 
 #include "absl/memory/memory.h"
 #include "absl/strings/str_split.h"
+#include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ir_dump_util.h"
@@ -78,9 +79,9 @@ std::string DebugUtil::GetTensorsGraphHlo(
       }
     }
   }
-  return DumpUtil::ToHlo(root_values,
-                         unique_device ? *unique_device : GetCurrentDevice(),
-                         EmitMode::kStableHloReadable);
+  return DumpUtil::ToHlo(
+      root_values, unique_device ? *unique_device : bridge::GetCurrentDevice(),
+      EmitMode::kStableHloReadable);
 }
 
 std::string DebugUtil::GetTensorsGraphInfo(
@@ -135,11 +136,13 @@ std::string DebugUtil::GetTensorsGraphInfo(
   } else if (format == GraphFormat::kDot) {
     graph_str = DumpUtil::ToDot(root_nodes);
   } else if (format == GraphFormat::kHlo) {
-    graph_str = DumpUtil::ToHlo(
-        root_values, unique_device ? *unique_device : GetCurrentDevice());
+    graph_str = DumpUtil::ToHlo(root_values, unique_device
+                                                 ? *unique_device
+                                                 : bridge::GetCurrentDevice());
   } else if (format == GraphFormat::kStableHlo) {
     graph_str = DumpUtil::ToHlo(
-        root_values, unique_device ? *unique_device : GetCurrentDevice(),
+        root_values,
+        unique_device ? *unique_device : bridge::GetCurrentDevice(),
         EmitMode::kStableHloReadable);
   } else {
     XLA_ERROR() << "Invalid graph format: " << format;
@@ -153,8 +156,8 @@ void DebugUtil::SaveTensorsGraphInfo(const char* name,
                                      const std::vector<size_t>* indices,
                                      GraphFormat format) {
   thread_local const std::string save_file =
-      runtime::sys_util::GetEnvOrdinalPath("XLA_SAVE_TENSORS_FILE", "",
-                                           GetCurrentDevice().ordinal());
+      runtime::sys_util::GetEnvOrdinalPath(
+          "XLA_SAVE_TENSORS_FILE", "", bridge::GetCurrentDevice().ordinal());
   if (!save_file.empty()) {
     static std::mutex lock;
     if ((format == DebugUtil::GraphFormat::kHlo ||
@@ -176,8 +179,8 @@ void DebugUtil::SaveTensorsGraphInfo(const char* name,
 void DebugUtil::SaveOutputShardingInfo(std::vector<XLATensorPtr>* tensors,
                                        absl::Span<const size_t> indices) {
   thread_local const std::string save_file =
-      runtime::sys_util::GetEnvOrdinalPath("XLA_SAVE_TENSORS_FILE", "",
-                                           GetCurrentDevice().ordinal());
+      runtime::sys_util::GetEnvOrdinalPath(
+          "XLA_SAVE_TENSORS_FILE", "", bridge::GetCurrentDevice().ordinal());
   std::string fmt_str =
       runtime::sys_util::GetEnvString("XLA_SAVE_TENSORS_FMT", "text");
   if (save_file.empty() || fmt_str != "hlo") {
