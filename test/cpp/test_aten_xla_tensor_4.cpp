@@ -1014,7 +1014,6 @@ TEST_F(AtenXlaTensorTest, TestMaskedFill) {
   torch::Tensor mask =
       torch::randint(0, 2, {2, 3}, torch::TensorOptions(torch::kBool));
   torch::Scalar value(42);
-  // torch::Tensor value = torch::rand({1});
   torch::Tensor result = torch::masked_fill(input, mask, value);
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_input = CopyToDevice(input, device);
