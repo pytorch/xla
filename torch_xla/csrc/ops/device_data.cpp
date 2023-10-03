@@ -10,12 +10,15 @@
 namespace torch_xla {
 
 DeviceData::DeviceData(std::shared_ptr<torch::lazy::BackendData> data)
-    : XlaNode(xla_device_data, UnwrapXlaData(data)->shape(), /*num_outputs=*/1,
+    : XlaNode(xla_device_data,
+              std::dynamic_pointer_cast<runtime::ComputationClient::Data>(data)
+                  ->shape(),
+              /*num_outputs=*/1,
               /*hash_seed=*/(uint32_t)101),
       data_(std::move(data)) {
   std::optional<xla::OpSharding> op_sharding =
       torch_xla::runtime::GetComputationClient()->GetDataSharding(
-          UnwrapXlaData(data_));
+          std::dynamic_pointer_cast<runtime::ComputationClient::Data>(data_));
   if (op_sharding.has_value()) {
     // DeviceData Node only has 1 output.
     SetSharding(op_sharding.value(), 0);

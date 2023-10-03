@@ -12,23 +12,12 @@
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/tensor.h"
+#include "torch_xla/csrc/unwrap_data.h"
 #include "xla/literal.h"
 #include "xla/shape.h"
 #include "xla/types.h"
 
 namespace torch_xla {
-
-runtime::ComputationClient::DataPtr UnwrapXlaData(
-    const torch::lazy::BackendDataPtr& data);
-
-std::vector<runtime::ComputationClient::DataPtr> UnwrapXlaData(
-    absl::Span<const torch::lazy::BackendDataPtr> datas);
-
-torch::lazy::BackendDataPtr WrapXlaData(
-    const runtime::ComputationClient::DataPtr& xla_data);
-
-std::vector<torch::lazy::BackendDataPtr> WrapXlaData(
-    absl::Span<const runtime::ComputationClient::DataPtr> xla_datas);
 
 std::vector<int64_t> ComputeShapeStrides(const xla::Shape& shape);
 
@@ -56,7 +45,7 @@ torch::lazy::hash_t TensorHash(const at::Tensor& tensor);
 // TODO LTC @wonjoo - Migrate to upstream after Device -> BackendDevice
 std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
     const std::vector<at::Tensor>& tensors,
-    const std::vector<std::string>& devices, bool transfer_async = false);
+    const std::vector<std::string>& devices);
 
 // Shard and transfer tensors to devices using `PjRtComputationClient`.
 // The client's data transfer to device is asynchronous.

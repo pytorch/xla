@@ -19,6 +19,8 @@ namespace torch_xla {
 namespace bridge {
 namespace {
 
+thread_local absl::optional<torch::lazy::BackendDevice> g_current_device;
+
 class AtenXlaDeviceMapper {
  public:
   static AtenXlaDeviceMapper* Get();
@@ -337,23 +339,43 @@ std::string ToXlaString(const c10::Device& device) {
   return absl::StrCat("xla:", device.index());
 }
 
+const torch::lazy::BackendDevice* GetDefaultDevice() {
+  static std::string default_device_spec =
+      UseVirtualDevice() ? "SPMD:0"
+                         : runtime::GetComputationClient()->GetDefaultDevice();
+  XLA_CHECK(!default_device_spec.empty());
+  static const torch::lazy::BackendDevice default_device =
+      ParseDeviceString(default_device_spec);
+  return &default_device;
+}
+
 c10::Device AtenDefaultDevice() {
   return XlaDeviceToAtenDevice(*GetDefaultDevice());
 }
 
+torch::lazy::BackendDevice GetCurrentDevice() {
+  if (!g_current_device) {
+    g_current_device = *GetDefaultDevice();
+  }
+  return *g_current_device;
+}
+
+c10::Device GetCurrentAtenDevice() {
+  return XlaDeviceToAtenDevice(GetCurrentDevice());
+}
+
 c10::Device SetCurrentDevice(const c10::Device& device) {
   torch::lazy::BackendDevice prev_device =
-      torch_xla::SetCurrentDevice(AtenDeviceToXlaDevice(device));
+      SetCurrentDevice(AtenDeviceToXlaDevice(device));
   return XlaDeviceToAtenDevice(prev_device);
 }
 
 torch::lazy::BackendDevice SetCurrentDevice(
     const torch::lazy::BackendDevice& device) {
-  return torch_xla::SetCurrentDevice(device);
-}
-
-c10::Device GetCurrentAtenDevice() {
-  return XlaDeviceToAtenDevice(torch_xla::GetCurrentDevice());
+  torch::lazy::BackendDevice current = GetCurrentDevice();
+  g_current_device = device;
+  TF_VLOG(2) << "New current device: " << device;
+  return current;
 }
 
 at::Tensor XlaToAtenTensor(XLATensorPtr xla_tensor,

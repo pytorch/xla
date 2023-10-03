@@ -209,18 +209,6 @@ only be enabled for debugging.
 * ```XLA_SAVE_HLO_FILE```: If set, the path to a local file where, in case of compilation/execution
   error, the offending HLO graph will be saved.
 
-* ```XLA_GET_TENSORS_OPBYOP```: Enables pure _OpByOp_ dispatch. The _PyTorch/XLA_ software tries to
-  fuse together many _PyTorch_ operations into a single computation graph, but sometimes, either
-  for debugging, or in case the _PyTorch_ code have a very dynamic nature (in shapes or graph
-  terms), it is better to force the execution in _OpByOp_ mode (every IR node is lowered into
-  a separate _XLA_ computation, and chain-executed). This environment variable, if set to 1,
-  enables _OpByOp_ during the "get tensors" operation (the operation used by _PyTorch/XLA_ to
-  fetch intermediate values back from the _TPU_ device into _PyTorch_ CPU tensors).
-
-* ```XLA_SYNC_TENSORS_OPBYOP```: The same as _XLA_GET_TENSORS_OPBYOP_ but for "sync tensors"
-  operation (the operation used at the end of a step, to flush pending IR computations and
-  materialize them into _TPU_ device data).
-
 * ```XLA_SYNC_WAIT```: Forces the XLA tensor sync operation to wait for its completion, before
   moving to the next step.
 

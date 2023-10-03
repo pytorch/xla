@@ -12,6 +12,7 @@
 #include <numeric>
 #include <thread>
 
+#include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/layout_manager.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
@@ -569,41 +570,6 @@ void TensorToBufferSType(const at::Tensor& tensor, const xla::Shape& dest_shape,
   }
 }
 
-void TransferToServerAsync(std::shared_ptr<DataAsync> async,
-                           const std::vector<std::string>& devices) {
-  TORCH_LAZY_TIMED("TransferToServerAsync");
-
-  std::vector<runtime::ComputationClient::DataPtr> async_xla_datas =
-      runtime::GetComputationClient()->CreateAsyncDatas(async->source_tensors);
-  async->handle_unlockers =
-      runtime::GetComputationClient()->LockAsyncDatas(async_xla_datas);
-  async->async_datas = WrapXlaData(async_xla_datas);
-  auto mwait = std::make_shared<runtime::util::MultiWait>(/*num_wait=*/1);
-  auto update_data = [async, async_xla_datas]() {
-    try {
-      runtime::GetComputationClient()->TransferToServer(async->source_tensors,
-                                                        async_xla_datas);
-    } catch (...) {
-      // There are two paths of discovery of an exception happening on an
-      // asynchronous task. One happens if the creator of the asynchronous task
-      // explicitly waits for completion, in which case the exception will be
-      // thrown from the Wait() API. Re-throwing the exception below makes sure
-      // this will be captured by the completer function created below, and
-      // surfaced by the Wait() API. But we also need to surface the exception
-      // even in case the caller does not wait, and that is accomplished by
-      // setting the unlockers status. In that case the exception will be
-      // surfaced when the user tries to acquire the device locks the next time.
-      std::exception_ptr exptr = std::current_exception();
-      for (auto& unlocker : async->handle_unlockers) {
-        unlocker.SetStatus(exptr);
-      }
-      throw;
-    }
-  };
-  runtime::env::ScheduleIoClosure(
-      runtime::util::MultiWait::Completer(mwait, std::move(update_data)));
-}
-
 torch::lazy::BackendDataPtr TensorToXlaData(
     const at::Tensor& tensor, const xla::Shape& shape,
     const torch::lazy::BackendDevice& device) {
@@ -617,50 +583,24 @@ torch::lazy::BackendDataPtr TensorToXlaData(
         std::vector<at::Tensor>(local_devices.size(), tensor);
     auto sharding_spec = std::make_shared<XLATensor::ShardingSpec>(
         xla::HloSharding::Replicate().ToProto(), shape);
-    return WrapXlaData(ShardingUtil::CreateShardedData(
-        replicated_data, local_devices, sharding_spec));
+    return ShardingUtil::CreateShardedData(replicated_data, local_devices,
+                                           sharding_spec);
   }
 
-  static const bool transfer_async =
-      runtime::sys_util::GetEnvBool("XLA_TRANSFER_SCALAR_ASYNC", false);
-  if (transfer_async && tensor.dim() == 0 && tensor.numel() == 1) {
-    std::shared_ptr<DataAsync> async = std::make_shared<DataAsync>();
-    auto populate_mwait =
-        std::make_shared<runtime::util::MultiWait>(/*num_wait=*/1);
-    auto populate_fn =
-        [&](const runtime::ComputationClient::TensorSource& source_tensor,
-            void* dest_buffer, size_t dest_buffer_size) {
-          PopulateTensorBuffer(tensor, source_tensor.shape, dest_buffer,
-                               dest_buffer_size, device);
-          populate_mwait->Done();
-        };
+  auto populate_fn =
+      [&](const runtime::ComputationClient::TensorSource& source_tensor,
+          void* dest_buffer, size_t dest_buffer_size) {
+        PopulateTensorBuffer(tensor, source_tensor.shape, dest_buffer,
+                             dest_buffer_size, device);
+      };
 
-    async->source_tensors.emplace_back(shape, device.toString(),
-                                       std::move(populate_fn));
-    TransferToServerAsync(async, {device.toString()});
-    XLA_CHECK_EQ(async->async_datas.size(), 1);
-    // Tensor is a reference and can be inplace updated between this function
-    // returned and populate_fn being called. Need to wait for populate_fn to be
-    // called.
-    populate_mwait->Wait();
-    return async->async_datas.front();
-  } else {
-    auto populate_fn =
-        [&](const runtime::ComputationClient::TensorSource& source_tensor,
-            void* dest_buffer, size_t dest_buffer_size) {
-          PopulateTensorBuffer(tensor, source_tensor.shape, dest_buffer,
-                               dest_buffer_size, device);
-        };
+  std::vector<runtime::ComputationClient::TensorSource> source_tensors;
+  source_tensors.emplace_back(shape, device.toString(), std::move(populate_fn));
 
-    std::vector<runtime::ComputationClient::TensorSource> source_tensors;
-    source_tensors.emplace_back(shape, device.toString(),
-                                std::move(populate_fn));
-
-    auto handles =
-        runtime::GetComputationClient()->TransferToServer(source_tensors);
-    XLA_CHECK_EQ(handles.size(), 1);
-    return WrapXlaData(handles.front());
-  }
+  auto handles =
+      runtime::GetComputationClient()->TransferToServer(source_tensors);
+  XLA_CHECK_EQ(handles.size(), 1);
+  return handles.front();
 }
 
 template <typename SType, typename DType>
@@ -849,7 +789,7 @@ torch::lazy::BackendDataPtr TensorToXlaData(
 
 std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
     const std::vector<at::Tensor>& tensors,
-    const std::vector<std::string>& devices, bool transfer_async) {
+    const std::vector<std::string>& devices) {
   TORCH_LAZY_TIMED("TensorToData");
   XLA_CHECK_EQ(tensors.size(), devices.size());
 
@@ -861,9 +801,6 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
   if (devices[0] == "SPMD:0") {
     // When running in SPMD mode, tensors here in the unsharded
     // CreateTensorsData should be implicitly replicated to all devices.
-    // This case should always apply when using SPMD regardless
-    // of transfer_async's value, since SPMD requires PjRt and all transfers
-    // are asynchronous in PjRt.
     std::vector<std::string> local_devices =
         runtime::GetComputationClient()->GetLocalDevices();
     std::vector<runtime::ComputationClient::DataPtr> handles;
@@ -880,48 +817,22 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
     return WrapXlaData(handles);
   }
 
-  if (transfer_async) {
-    std::shared_ptr<DataAsync> async = std::make_shared<DataAsync>();
-    auto populate_mwait =
-        std::make_shared<runtime::util::MultiWait>(tensors.size());
-    for (size_t i = 0; i < tensors.size(); ++i) {
-      torch::lazy::BackendDevice device = ParseDeviceString(devices[i]);
-      xla::Shape shape = CreateComputationShapeFromTensor(tensors[i], &device);
-      auto populate_fn =
-          [&, i, device](
-              const runtime::ComputationClient::TensorSource& source_tensor,
-              void* dest_buffer, size_t dest_buffer_size) {
-            PopulateTensorBuffer(tensors[i], source_tensor.shape, dest_buffer,
-                                 dest_buffer_size, device);
-            populate_mwait->Done();
-          };
-      async->source_tensors.emplace_back(std::move(shape), devices[i],
-                                         std::move(populate_fn));
-    }
-    TransferToServerAsync(async, devices);
-    // Tensors is a vector reference and can be inplace updated between this
-    // function returned and populate_fn being called. Need to wait for
-    // populate_fn to be called.
-    populate_mwait->Wait();
-    return async->async_datas;
-  } else {
-    std::vector<runtime::ComputationClient::TensorSource> source_tensors;
-    for (size_t i = 0; i < tensors.size(); ++i) {
-      torch::lazy::BackendDevice device = ParseDeviceString(devices[i]);
-      xla::Shape shape = CreateComputationShapeFromTensor(tensors[i], &device);
-      auto populate_fn =
-          [&, i, device](
-              const runtime::ComputationClient::TensorSource& source_tensor,
-              void* dest_buffer, size_t dest_buffer_size) {
-            PopulateTensorBuffer(tensors[i], source_tensor.shape, dest_buffer,
-                                 dest_buffer_size, device);
-          };
-      source_tensors.emplace_back(std::move(shape), devices[i],
-                                  std::move(populate_fn));
-    }
-    return WrapXlaData(
-        runtime::GetComputationClient()->TransferToServer(source_tensors));
+  std::vector<runtime::ComputationClient::TensorSource> source_tensors;
+  for (size_t i = 0; i < tensors.size(); ++i) {
+    torch::lazy::BackendDevice device = ParseDeviceString(devices[i]);
+    xla::Shape shape = CreateComputationShapeFromTensor(tensors[i], &device);
+    auto populate_fn =
+        [&, i, device](
+            const runtime::ComputationClient::TensorSource& source_tensor,
+            void* dest_buffer, size_t dest_buffer_size) {
+          PopulateTensorBuffer(tensors[i], source_tensor.shape, dest_buffer,
+                               dest_buffer_size, device);
+        };
+    source_tensors.emplace_back(std::move(shape), devices[i],
+                                std::move(populate_fn));
   }
+  return WrapXlaData(
+      runtime::GetComputationClient()->TransferToServer(source_tensors));
 }
 
 std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
@@ -972,7 +883,7 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
 
 xla::Literal GetTensorLiteral(const at::Tensor& tensor, const xla::Shape* shape,
                               const torch::lazy::BackendDevice* device) {
-  torch::lazy::BackendDevice xla_device = GetDeviceOrCurrent(device);
+  torch::lazy::BackendDevice xla_device = bridge::GetDeviceOrCurrent(device);
   xla::Shape computed_shape;
   if (shape == nullptr) {
     auto dimensions = XlaHelpers::I64List(tensor.sizes());
@@ -1065,7 +976,7 @@ xla::Shape MakeShapeWithDeviceLayout(const xla::Shape& shape,
 
 xla::Shape CreateComputationShapeFromTensor(
     const at::Tensor& tensor, const torch::lazy::BackendDevice* device) {
-  torch::lazy::BackendDevice xla_device = GetDeviceOrCurrent(device);
+  torch::lazy::BackendDevice xla_device = bridge::GetDeviceOrCurrent(device);
   return MakeArrayShapeFromDimensions(
       XlaHelpers::I64List(tensor.sizes()),
       /*dynamic_dimensions=*/{},
@@ -1143,7 +1054,7 @@ xla::PrimitiveType TensorTypeToRawXlaType(at::ScalarType scalar_type) {
 
 xla::PrimitiveType GetDevicePrimitiveType(
     xla::PrimitiveType type, const torch::lazy::BackendDevice* device) {
-  torch::lazy::BackendDevice xla_device = GetDeviceOrCurrent(device);
+  torch::lazy::BackendDevice xla_device = bridge::GetDeviceOrCurrent(device);
   XlaDeviceType hw_type = static_cast<XlaDeviceType>(xla_device.type());
   switch (type) {
     case xla::PrimitiveType::F64:

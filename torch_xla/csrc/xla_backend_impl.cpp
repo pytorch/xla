@@ -24,9 +24,9 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
 
   bool InitDefaultDeviceType() {
     if (!default_device_type_inited_) {
-      // GetDefaultDevice will trigger the runtime device init, should
+      // bridge::GetDefaultDevice will trigger the runtime device init, should
       // not do it during class init time.
-      torch::lazy::BackendDevice default_device = *GetDefaultDevice();
+      torch::lazy::BackendDevice default_device = *bridge::GetDefaultDevice();
       default_device_type_ = std::make_shared<DeviceType>(
           static_cast<XlaDeviceType>(default_device.type()));
       default_device_type_inited_ = true;
@@ -36,9 +36,9 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
 
   bool InitDefaultDeviceOrdinal() {
     if (!default_device_ordinal_inited_) {
-      // GetDefaultDevice will trigger the runtime device init, should
+      // bridge::GetDefaultDevice will trigger the runtime device init, should
       // not do it during class init time.
-      torch::lazy::BackendDevice default_device = *GetDefaultDevice();
+      torch::lazy::BackendDevice default_device = *bridge::GetDefaultDevice();
       default_device_ordinal_ = default_device.ordinal();
       default_device_ordinal_inited_ = true;
     }
@@ -76,8 +76,8 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
       const torch::lazy::BackendDevice& device,
       const torch::lazy::Shape& shape) const override {
     xla::Shape xla_shape = MakeXlaShapeFromLazyShape(shape, device);
-    return WrapXlaData(runtime::GetComputationClient()->CreateDataPlaceholder(
-        device.toString(), std::move(xla_shape)));
+    return runtime::GetComputationClient()->CreateDataPlaceholder(
+        device.toString(), std::move(xla_shape));
   }
 
   torch::lazy::BackendDataPtr GetComputationDataFromNode(
@@ -126,7 +126,7 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
       std::vector<torch::lazy::ComputationPtr> instances) const override {
     std::vector<torch::lazy::ComputationPtr> res;
     std::vector<runtime::ComputationClient::CompileInstance> compile_instances;
-    torch::lazy::BackendDevice current_device = GetCurrentDevice();
+    torch::lazy::BackendDevice current_device = bridge::GetCurrentDevice();
     std::vector<xla::Shape> output_shapes;
 
     for (const torch::lazy::ComputationPtr instance : instances) {

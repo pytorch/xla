@@ -188,7 +188,8 @@ PjRtComputationClient::PjRtComputationClient() {
   device_locks_.emplace(spmd_device_str, std::make_unique<std::shared_mutex>());
 }
 
-void PjRtComputationClient::PjRtData::Assign(const Data& data) {
+void PjRtComputationClient::PjRtData::Assign(
+    const torch::lazy::BackendData& data) {
   const PjRtData& pjrt_data = dynamic_cast<const PjRtData&>(data);
   if (&pjrt_data != this) {
     buffer = pjrt_data.buffer;
@@ -346,7 +347,7 @@ ComputationClient::DataPtr PjRtComputationClient::ReplicateShardedData(
   if (PjRtShardedData* sharded_data =
           dynamic_cast<PjRtShardedData*>(handle.get())) {
     XLA_COUNTER("ReplicateShardedData", 1);
-    TF_VLOG(1) << "ReplicateShardedData (handle=" << handle->GetOpaqueHandle()
+    TF_VLOG(1) << "ReplicateShardedData (handle=" << handle->GetHandle()
                << ", shape=" << handle->shape() << ")";
     if (sharded_data->GetSharding().type() == xla::OpSharding::REPLICATED) {
       // Data is replicated, return the first shard

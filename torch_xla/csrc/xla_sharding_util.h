@@ -93,11 +93,14 @@ class ShardingUtil {
   // Uses the provided `sharding` spec and expected shard shape to determine the
   // index slices for the shards which belong on `devices`. Only supports
   // `REPLICATED` and `OTHER` sharding types.
-  static std::vector<std::vector<at::indexing::TensorIndex>>
-  GetShardIndicesForDevices(const std::vector<int64_t>& shard_shape,
-                            const std::vector<int64_t>& tensor_shape,
-                            const xla::OpSharding sharding,
-                            const std::vector<std::string>& devices);
+  // For each input device, returns a pair of the shard's replica_id and a
+  // vector of TensorIndex denoting the offset of the device's shard into the
+  // global tensor.
+  static std::vector<std::pair<int, std::vector<at::indexing::TensorIndex>>>
+  GetShardReplicaAndIndicesForDevices(const std::vector<int64_t>& shard_shape,
+                                      const std::vector<int64_t>& tensor_shape,
+                                      const xla::OpSharding sharding,
+                                      const std::vector<std::string>& devices);
 
   // Returns the indices for the shards. Supports `OTHER` sharding types and
   // called when input is sharded along the batch axis.

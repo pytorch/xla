@@ -276,7 +276,7 @@ class XLATensor : public torch::lazy::LazyTensor {
   void SetStorage(const c10::Storage& storage) { storage_ = storage; }
   const c10::Storage& Storage() const { return storage_; }
 
-  int64_t GetOpaqueHandle() const;
+  int64_t GetHandle() const;
 
   // Override to enable SPMD.
   void AssignIrValue(torch::lazy::Value ir_value) const final;

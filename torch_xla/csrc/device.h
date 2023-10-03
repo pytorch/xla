@@ -28,19 +28,7 @@ struct DeviceType : public torch::lazy::BackendDeviceType {
 
 torch::lazy::BackendDevice ParseDeviceString(const std::string& device_spec);
 
-const torch::lazy::BackendDevice* GetDefaultDevice();
-
 torch::lazy::BackendDevice GetVirtualDevice();
-
-torch::lazy::BackendDevice GetCurrentDevice();
-
-torch::lazy::BackendDevice SetCurrentDevice(
-    const torch::lazy::BackendDevice& device);
-
-static inline torch::lazy::BackendDevice GetDeviceOrCurrent(
-    const torch::lazy::BackendDevice* device) {
-  return device != nullptr ? *device : GetCurrentDevice();
-}
 
 // Test whether the XLA_USE_SPMD environment variable is set to enable the
 // virtual device optimization. This API is called before every device init,

@@ -3,6 +3,7 @@
 #include <string>
 #include <tuple>
 
+#include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/helpers.h"
@@ -16,7 +17,8 @@ namespace torch_xla {
 namespace {
 
 std::string GetDefaultGitGeneratorName() {
-  XlaDeviceType hw_type = static_cast<XlaDeviceType>(GetCurrentDevice().type());
+  XlaDeviceType hw_type =
+      static_cast<XlaDeviceType>(bridge::GetCurrentDevice().type());
   switch (hw_type) {
     case XlaDeviceType::GPU:
       return "three_fry";

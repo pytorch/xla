@@ -5,6 +5,7 @@
 #include <torch/csrc/autograd/utils/wrap_outputs.h>
 #include <torch/csrc/autograd/variable.h>
 #include <torch/csrc/jit/python/pybind.h>
+#include <torch/csrc/lazy/backend/backend_data.h>
 #include <torch/csrc/lazy/core/config.h>
 #include <torch/csrc/lazy/core/ir_util.h>
 #include <torch/csrc/lazy/core/lazy_graph_executor.h>
@@ -83,7 +84,7 @@ c10::optional<torch::lazy::BackendDevice> GetOptionalDevice(
 
 torch::lazy::BackendDevice GetDeviceOrCurrent(const std::string& device_str) {
   if (device_str.empty()) {
-    return GetCurrentDevice();
+    return bridge::GetCurrentDevice();
   }
   return bridge::AtenDeviceToXlaDevice(c10::Device(device_str));
 }
@@ -392,7 +393,8 @@ std::string GetXLATensorDebugInfo(const at::Tensor& tensor) {
 
   torch::lazy::BackendDataPtr handle = xtensor->CurrentDataHandle();
   if (handle) {
-    auto data = UnwrapXlaData(handle);
+    auto data =
+        std::dynamic_pointer_cast<runtime::ComputationClient::Data>(handle);
     ss << data->ToString();
   } else {
     ss << "XLAData: None\n";
@@ -750,7 +752,7 @@ void BuildProfilerSubmodule(py::module* m) {
 
 class PyLoweringContext {
  public:
-  PyLoweringContext() : PyLoweringContext(GetCurrentDevice()) {}
+  PyLoweringContext() : PyLoweringContext(bridge::GetCurrentDevice()) {}
 
   PyLoweringContext(torch::lazy::BackendDevice device)
       : lowering_ctx("PyLoweringContext", device) {}
@@ -1347,7 +1349,8 @@ void InitXlaModuleBindings(py::module m) {
         [](const std::string& bytecode,
            const std::vector<at::IValue>& graph_inputs)
             -> std::vector<at::Tensor> {
-          torch::lazy::BackendDevice device = torch_xla::GetCurrentDevice();
+          torch::lazy::BackendDevice device =
+              torch_xla::bridge::GetCurrentDevice();
           auto results = XLAGraphExecutor::Get()->ExecuteStablehlo(
               bytecode, graph_inputs, device);
           std::vector<at::Tensor> retlist;
@@ -1664,7 +1667,7 @@ void InitXlaModuleBindings(py::module m) {
   // underlying ComputationClient::GetDataShards. As such, the shards will
   // contain any padding that was applied to ensure they all have the same
   // shape. Note that this padding is _not_ included in the global indices
-  // returned by `_get_local_shard_indices`.
+  // returned by `_get_local_shard_replica_and_indices`.
   m.def("_get_local_shards",
         [](const at::Tensor& input)
             -> std::tuple<std::vector<at::Tensor>, std::vector<std::string>> {
@@ -1675,7 +1678,9 @@ void InitXlaModuleBindings(py::module m) {
               << "Tensor is not sharded";
           XLA_CHECK(UseVirtualDevice())
               << "Virtual device must be enabled to use _get_local_shards";
-          auto handle = UnwrapXlaData(xtensor->GetXlaData());
+          auto handle =
+              std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
+                  xtensor->GetXlaData());
           std::vector<runtime::ComputationClient::DataPtr> shard_handles =
               runtime::GetComputationClient()->GetDataShards(handle);
           std::vector<at::Tensor> shards;
@@ -1687,24 +1692,29 @@ void InitXlaModuleBindings(py::module m) {
                shard_handles) {
             shards.push_back(
                 XlaDataToTensors(
-                    {WrapXlaData(shard_handle)},
+                    {shard_handle},
                     TensorTypeFromXlaType(shard_handle->shape().element_type()))
                     .front());
             str_devices.push_back(shard_handle->device());
           }
           return std::make_tuple(shards, str_devices);
         });
-  // Returns the indices of the shards into the global tensor as either
-  // a Python list of slices for each dimension or a Python Ellipsis object
-  // indicating that the tensor is replicated. These indices will not reflect
-  // any padding that has been applied to the shards. The order of the returned
-  // indices matches the order of the shards returned from `_get_local_shards`.
-  m.def("_get_local_shard_indices",
-        [](const at::Tensor& input) -> std::vector<py::object> {
+  // For each local shard, returns the tuple:
+  //        (replica_id: int, indices: Union[List[Slice], Ellipsis]),
+  // where `replica_id` is the replica the shard belongs to and `indices` index
+  // into the global tensor. The value of `indices` is either a Python list of
+  // slices for each dimension or an Ellipsis object indicating that the tensor
+  // is replicated. These indices will not reflect any padding that has been
+  // applied to the shards. The order of the returned indices matches the order
+  // of the shards returned from `_get_local_shards`.
+  m.def("_get_local_shard_replica_and_indices",
+        [](const at::Tensor& input) -> std::vector<std::pair<int, py::object>> {
           XLATensorPtr xtensor = bridge::GetXlaTensor(input);
           XLA_CHECK(xtensor->sharding_spec() != nullptr)
               << "Tensor is not sharded";
-          auto handle = UnwrapXlaData(xtensor->GetXlaData());
+          auto handle =
+              std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
+                  xtensor->GetXlaData());
           auto shards = runtime::GetComputationClient()->GetDataShards(handle);
           std::vector<std::string> shard_devices;
           for (auto& shard : shards) {
@@ -1713,29 +1723,33 @@ void InitXlaModuleBindings(py::module m) {
           auto sharding_spec = xtensor->sharding_spec();
           auto sharding = xtensor->sharding_spec()->sharding;
           auto shard_shape = ShardingUtil::GetShardShape(sharding_spec);
-          auto indices = ShardingUtil::GetShardIndicesForDevices(
-              shard_shape, input.sizes().vec(), sharding, shard_devices);
+          auto replica_and_indices =
+              ShardingUtil::GetShardReplicaAndIndicesForDevices(
+                  shard_shape, input.sizes().vec(), sharding, shard_devices);
 
           // Convert each vector<TensorIndex> to List[py::slice] or py::ellipsis
-          std::vector<py::object> result;
+          std::vector<std::pair<int, py::object>> result;
           result.reserve(shard_devices.size());
-          for (auto& device_indices : indices) {
-            XLA_CHECK(device_indices.size() > 0)
+          for (auto& device_replica_and_indices : replica_and_indices) {
+            auto& replica_id = device_replica_and_indices.first;
+            auto& indices = device_replica_and_indices.second;
+            XLA_CHECK(indices.size() > 0)
                 << "Unexpected empty shard indices for tensor " << input;
-            if (device_indices[0].is_ellipsis()) {
-              result.push_back(py::ellipsis());
+            if (indices[0].is_ellipsis()) {
+              result.push_back(std::make_pair(replica_id, py::ellipsis()));
             } else {
-              std::vector<py::object> device_slices;
-              for (auto& tensor_index : device_indices) {
+              std::vector<py::object> index_slices;
+              for (auto& tensor_index : indices) {
                 XLA_CHECK(tensor_index.is_slice())
                     << "Unexpected TensorIndex type: " << tensor_index;
                 auto slice = tensor_index.slice();
                 ssize_t start = slice.start().expect_int();
                 ssize_t stop = slice.stop().expect_int();
                 ssize_t step = slice.step().expect_int();
-                device_slices.push_back(py::slice(start, stop, step));
+                index_slices.push_back(py::slice(start, stop, step));
               }
-              result.push_back(py::cast(device_slices));
+              result.push_back(
+                  std::make_pair(replica_id, py::cast(index_slices)));
             }
           }
           return result;
@@ -1764,7 +1778,7 @@ void InitXlaModuleBindings(py::module m) {
     }
     auto xla_data =
         ShardingUtil::CreateShardedData(shards, devices, sharding_spec);
-    xtensor->SetXlaData(WrapXlaData(xla_data));
+    xtensor->SetXlaData(xla_data);
   });
   // This is useful for debugging and generating a partitioned HLO separately
   // outside the actual compilation & execution. This allows testing with
@@ -1863,10 +1877,10 @@ void InitXlaModuleBindings(py::module m) {
 
   m.def("_get_tensors_handle",
         [](const std::vector<at::Tensor>& tensors) -> std::vector<int64_t> {
-          std::vector<int64_t> handles;
+          std::vector<torch::lazy::BackendData::Handle> handles;
           handles.reserve(tensors.size());
           for (auto& tensor : tensors) {
-            handles.push_back(bridge::GetXlaTensor(tensor)->GetOpaqueHandle());
+            handles.push_back(bridge::GetXlaTensor(tensor)->GetHandle());
           }
           return handles;
         });
@@ -1889,8 +1903,7 @@ void InitXlaModuleBindings(py::module m) {
             }
           }
           auto post_order = torch::lazy::Util::ComputePostOrder(roots);
-          std::unordered_set<runtime::ComputationClient::Data::OpaqueHandle>
-              data_handles;
+          std::unordered_set<torch::lazy::BackendData::Handle> data_handles;
 
           for (const torch::lazy::Node* nodeptr : post_order) {
             const auto backend_data =
@@ -1900,8 +1913,7 @@ void InitXlaModuleBindings(py::module m) {
             }
 
             // Dedup by handle
-            runtime::ComputationClient::Data::OpaqueHandle handle =
-                backend_data->GetHandle();
+            torch::lazy::BackendData::Handle handle = backend_data->GetHandle();
             if (!data_handles.insert(handle).second) {
               continue;
             }
@@ -1979,7 +1991,8 @@ void InitXlaModuleBindings(py::module m) {
           XLA_CHECK(hash_str.size() == sizeof(torch::lazy::hash_t));
           torch::lazy::hash_t hash = *(torch::lazy::hash_t*)(hash_str.c_str());
           // Device will be Virtual device if SPMD is enabled.
-          torch::lazy::BackendDevice device = torch_xla::GetCurrentDevice();
+          torch::lazy::BackendDevice device =
+              torch_xla::bridge::GetCurrentDevice();
           auto results = XLAGraphExecutor::Get()->ExecuteComputationWithBarrier(
               hash, graph_inputs, device);
           std::vector<at::Tensor> retlist;

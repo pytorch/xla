@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/resize_ops.h"
 
 #include "absl/strings/str_cat.h"
+#include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"

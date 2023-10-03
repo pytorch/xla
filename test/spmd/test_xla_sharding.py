@@ -68,7 +68,7 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     for i, shard in enumerate(shards):
       self.assertEqual(shard.data.device, torch.device('cpu'))
       self.assertEqual(shard.data.shape, (shard_len,))
-      start, end = (i, i + 1) * shard_len
+      start, end = i * shard_len, (i + 1) * shard_len
       expected = torch.arange(start, end, dtype=torch.float32)
       self.assertTrue(torch.allclose(shard.data, expected))
       if isinstance(shard.indices, list):
@@ -77,6 +77,8 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
       else:
         self.assertIsInstance(shard.indices, type(Ellipsis))
       self.assertTrue(torch.allclose(shard.data, t[shard.indices]))
+      # Tiled sharding makes all shards have replica_id 0.
+      self.assertEqual(shard.replica_id, 0)
 
   def test_padded_xla_shards(self):
     num_element = self.n_devices + 1  # Ensure padding with two or more devices
@@ -105,6 +107,8 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
       else:
         self.assertIsInstance(shard.indices, type(Ellipsis))
       self.assertTrue(torch.allclose(shard.unpadded_data, t[shard.indices]))
+      # Tiled sharding makes all shards have replica_id 0.
+      self.assertEqual(shard.replica_id, 0)
 
   def test_replicated_xla_shards(self):
     num_element = self.n_devices
@@ -120,6 +124,36 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
       self.assertIsInstance(shard.indices, type(Ellipsis))
       self.assertTrue(torch.allclose(shard.data, t[shard.indices]))
       self.assertTrue(torch.allclose(shard.data, shard.unpadded_data))
+      # Replicated sharding sets the shard replica_id to the device ordinal
+      self.assertEqual(shard.replica_id, i)
+
+  @unittest.skipUnless(xr.global_runtime_device_count() >= 4,
+                       "Multiple devices required for partial replication")
+  def test_partially_replicated_xla_shards(self):
+    num_element = 256
+    mesh = self._get_mesh((self.n_devices // 2, 2))
+    t = torch.arange(num_element, dtype=torch.float32).reshape((16, 16))
+    # Partial replication along the 0th tensor axis, shard 2-way on the 1st
+    xt = xs.mark_sharding(t.to(xm.xla_device()), mesh, (None, 1))
+    shard_len = t.shape[1] // 2
+
+    shards = xt.local_shards
+    self.assertEqual(len(shards), self.n_devices)
+    for i, shard in enumerate(shards):
+      self.assertEqual(shard.data.device, torch.device('cpu'))
+      self.assertEqual(shard.data.shape, (t.shape[0], shard_len))
+      self.assertEqual(len(shard.indices), len(t.shape))
+      start, end = (i % 2) * shard_len, ((i % 2) + 1) * shard_len
+      # All shards should contain the full range for dim 0
+      self.assertEqual(shard.indices[0], slice(0, t.shape[0], 1))
+      # The index range should be sharded for dim 1
+      self.assertEqual(shard.indices[1], slice(start, end, 1))
+      self.assertTrue(torch.allclose(shard.data, t[shard.indices]))
+      self.assertTrue(torch.allclose(shard.data, shard.unpadded_data))
+      # The replica_id should be coincide with the replication group for the
+      # device. Given the mesh shape, the shard replica_id will be the device's
+      # row in the mesh, which is device_id // 2
+      self.assertEqual(shard.replica_id, i // 2)
 
   def test_load_local_shards(self):
     num_element = self.n_devices

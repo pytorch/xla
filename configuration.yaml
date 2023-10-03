@@ -104,26 +104,6 @@ variables:
       type: bool
       default_value: false
   feature_variables:
-    XLA_GET_TENSORS_OPBYOP:
-      description:
-        - Enables pure OpByOp dispatch. The PyTorch/XLA software tries to fuse
-          together many PyTorch operations into a single computation graph, but
-          sometimes, either for debugging, or in case the PyTorch code have a
-          very dynamic nature (in shapes or graph terms), it is better to force
-          the execution in OpByOp mode (every IR node is lowered into a
-          separate XLA computation, and chain-executed). This environment
-          variable, if set to true, enables OpByOp during the "get tensors"
-          operation (the operation used by PyTorch/XLA to fetch intermediate
-          values back from the TPU device into PyTorch CPU tensors).
-      type: bool
-      default_value: false
-    XLA_SYNC_TENSORS_OPBYOP:
-      description:
-        - The same as XLA_GET_TENSORS_OPBYOP but for "sync tensors" operation
-          (the operation used at the end of a step, to flush pending IR
-          computations and materialize them into TPU device data).
-      type: bool
-      default_value: false
     XLA_SYNC_WAIT:
       description:
         - Forces the XLA tensor sync operation to wait for its completion,
