@@ -70,9 +70,9 @@ TEST_F(XLAShardingTest, GetShardIndicesForDevices) {
   auto sharding_spec =
       std::make_shared<XLATensor::ShardingSpec>(sharding, tensor_shape);
   auto shard_shape = ShardingUtil::GetShardShape(sharding_spec);
-  auto shard_indices = ShardingUtil::GetShardIndicesForDevices(
+  auto replica_and_indices = ShardingUtil::GetShardReplicaAndIndicesForDevices(
       shard_shape, tensor.sizes().vec(), sharding, devices);
-  EXPECT_EQ(shard_indices.size(), devices.size());
+  EXPECT_EQ(replica_and_indices.size(), devices.size());
   /* Tiled indices should be:
                  dim=0 dim=1
        device=0  [0:4,  0:4]
@@ -81,11 +81,15 @@ TEST_F(XLAShardingTest, GetShardIndicesForDevices) {
        device=3  [4:8,  4:7] */
   std::vector<std::vector<int>> slice_starts = {{0, 0}, {0, 4}, {4, 0}, {4, 4}};
   std::vector<std::vector<int>> slice_ends = {{4, 4}, {4, 7}, {8, 4}, {8, 7}};
-  for (int device = 0; device < shard_indices.size(); ++device) {
-    EXPECT_EQ(shard_indices[device].size(), tensor.sizes().size());
-    for (int dim = 0; dim < shard_indices[device].size(); ++dim) {
-      EXPECT_TRUE(shard_indices[device][dim].is_slice());
-      auto slice = shard_indices[device][dim].slice();
+  for (int device = 0; device < replica_and_indices.size(); ++device) {
+    auto& shard_replica_id = replica_and_indices[device].first;
+    EXPECT_EQ(shard_replica_id,
+              0);  // Shard replica_id is always 0 for tiled sharding.
+    auto& shard_indices = replica_and_indices[device].second;
+    EXPECT_EQ(shard_indices.size(), tensor.sizes().size());
+    for (int dim = 0; dim < shard_indices.size(); ++dim) {
+      EXPECT_TRUE(shard_indices[dim].is_slice());
+      auto slice = shard_indices[dim].slice();
       EXPECT_EQ(slice.start(), slice_starts[device][dim]);
       EXPECT_EQ(slice.stop(), slice_ends[device][dim]);
       EXPECT_EQ(slice.step(), 1);
@@ -94,12 +98,15 @@ TEST_F(XLAShardingTest, GetShardIndicesForDevices) {
   sharding = xla::HloSharding::Replicate().ToProto();
   sharding_spec->sharding = sharding;
   shard_shape = ShardingUtil::GetShardShape(sharding_spec);
-  shard_indices = ShardingUtil::GetShardIndicesForDevices(
+  replica_and_indices = ShardingUtil::GetShardReplicaAndIndicesForDevices(
       shard_shape, tensor.sizes().vec(), sharding, devices);
-  EXPECT_EQ(shard_indices.size(), devices.size());
+  EXPECT_EQ(replica_and_indices.size(), devices.size());
   for (int i = 0; i < devices.size(); ++i) {
-    EXPECT_EQ(shard_indices[i].size(), 1);
-    EXPECT_TRUE(shard_indices[i][0].is_ellipsis());
+    auto& replica_id = replica_and_indices[i].first;
+    EXPECT_EQ(replica_id, i);  // Shard replica_id should equal global ordinal.
+    auto& shard_indices = replica_and_indices[i].second;
+    EXPECT_EQ(shard_indices.size(), 1);
+    EXPECT_TRUE(shard_indices[0].is_ellipsis());
   }
 }
 
