@@ -62,4 +62,16 @@ RUN . $CARGO_HOME/env && \
 
 ENV PATH $CARGO_HOME/bin:$PATH
 
+RUN chmod a+x /usr/local/bin/bazel
+
+RUN useradd jenkins && \
+    mkdir /home/jenkins && \
+    chown jenkins /home/jenkins
+RUN echo 'jenkins ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+
+RUN mkdir -p /opt/cargo /opt/rustup /workspace /var/lib/jenkins && \
+    chown jenkins /opt/cargo /opt/rustup /workspace /var/lib/jenkins
+USER jenkins
+WORKDIR /workspace
+
 CMD ["bash"]
