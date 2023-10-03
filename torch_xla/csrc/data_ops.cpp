@@ -11,6 +11,7 @@
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/ops/scalar.h"
 #include "torch_xla/csrc/reduction.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
@@ -142,6 +143,25 @@ xla::XlaOp BuildExpand(xla::XlaOp input,
   xla::XlaOp implicit_reshape = XlaHelpers::DynamicReshape(input, input_sizes);
   return xla::BroadcastInDim(implicit_reshape, output_sizes,
                              torch::lazy::Iota<int64_t>(output_sizes.size()));
+}
+
+xla::XlaOp BuildMaskedFillScalar(xla::XlaOp input, xla::XlaOp mask,
+                                 xla::XlaOp scalar) {
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  int64_t input_rank = input_shape.rank();
+  const xla::Shape& mask_shape = ShapeHelper::ShapeOfXlaOp(mask);
+  int64_t mask_rank = mask_shape.rank();
+  if (input_rank <= mask_rank) {
+    input = BuildExpand(input, mask_shape.dimensions());
+  } else {
+    mask = BuildExpand(mask, input_shape.dimensions());
+  }
+  xla::XlaOp zero = xla::Zero(mask.builder(), XlaHelpers::TypeOfXlaOp(mask));
+  xla::XlaOp mask_pred = xla::Ne(mask, zero);
+  xla::XlaOp update_scalar =
+      ConvertTo(scalar, ShapeHelper::ShapeOfXlaOp(scalar).element_type(),
+                input_shape.element_type(), nullptr);
+  return xla::Select(mask_pred, update_scalar, input);
 }
 
 std::vector<int64_t> BuildSqueezedDimensions(

@@ -1639,25 +1639,6 @@ at::Tensor XLANativeFunctions::xlogy(const at::Tensor& self,
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
 }
 
-at::Tensor XLANativeFunctions::masked_fill(const at::Tensor& self,
-                                           const at::Tensor& mask,
-                                           const at::Tensor& value) {
-  TORCH_LAZY_FN_COUNTER("xla::");
-  XLA_CHECK_EQ(value.dim(), 0) << "masked_fill_ only supports a 0-dimensional "
-                               << "value tensor, but got tensor "
-                               << "with " << value.dim() << " dimension(s).";
-  return masked_fill(self, mask, value.item());
-}
-
-at::Tensor XLANativeFunctions::masked_fill(const at::Tensor& self,
-                                           const at::Tensor& mask,
-                                           const at::Scalar& value) {
-  TORCH_LAZY_FN_COUNTER("xla::");
-  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
-  return bridge::AtenFromXlaTensor(tensor_methods::masked_fill(
-      self_tensor, bridge::GetXlaTensor(mask), value));
-}
-
 at::Tensor XLANativeFunctions::masked_scatter(const at::Tensor& self,
                                               const at::Tensor& mask,
                                               const at::Tensor& source) {

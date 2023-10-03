@@ -483,9 +483,6 @@ XLATensorPtr lt(const XLATensorPtr& input, const at::Scalar& other);
 
 XLATensorPtr lt(const XLATensorPtr& input, const XLATensorPtr& other);
 
-XLATensorPtr masked_fill(XLATensorPtr& input, const XLATensorPtr& mask,
-                         const at::Scalar& value);
-
 XLATensorPtr masked_scatter(XLATensorPtr& input, const XLATensorPtr& mask,
                             const XLATensorPtr& source);
 
