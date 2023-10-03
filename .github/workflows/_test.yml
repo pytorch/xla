@@ -63,7 +63,7 @@ jobs:
     timeout-minutes: ${{ inputs.timeout-minutes }}
     env:
       DOCKER_IMAGE: ${{ inputs.docker-image }}
-      WORKDIR: /root/workspace
+      WORKDIR: /var/lib/jenkins/workspace
       GCLOUD_SERVICE_KEY: ${{ secrets.gcloud-service-key }}
       USE_COVERAGE: ${{ inputs.collect-coverage && '1' || '0' }}
       XLA_SKIP_XRT_TESTS: ${{ inputs.disable-xrt }}
@@ -115,7 +115,8 @@ jobs:
           echo "pid=${pid}" >> "${GITHUB_ENV}"
       - name: Test
         shell: bash
-        run: docker exec --privileged "${pid}" bash -c '. ~/.bashrc && .circleci/${{ inputs.test-script }}'
+        run: |
+          docker exec --privileged -u jenkins "${pid}" bash -c '. ~/.bashrc && .circleci/${{ inputs.test-script }}'
       - name: Upload coverage results
         if: ${{ inputs.collect-coverage }}
         shell: bash
@@ -123,7 +124,7 @@ jobs:
           CIRCLE_WORKFLOW_ID: ${{ github.run_id }}
           CIRCLE_BUILD_NUM: ${{ github.run_number }}
         run: |
-            docker cp "${pid}":/root/htmlcov "${GITHUB_WORKSPACE}"
+            docker cp "${pid}":/home/jenkins/htmlcov "${GITHUB_WORKSPACE}"
             if [ -n "${GPU_FLAG:-}" ]; then
               # Python
               gsutil cp ${GITHUB_WORKSPACE}/htmlcov/lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/gpu_python_coverage.out
