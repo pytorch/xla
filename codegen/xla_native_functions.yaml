@@ -63,6 +63,8 @@ full_codegen:
   - log_sigmoid_forward
   - lt.Scalar
   - lt.Tensor
+  - masked_fill.Scalar
+  - masked_fill.Tensor
   - maximum
   - minimum
   - native_dropout_backward
@@ -217,8 +219,6 @@ supported:
   - log2
   - log10
   - logsumexp
-  - masked_fill.Scalar
-  - masked_fill.Tensor
   - masked_scatter
   - masked_select
   - max

@@ -548,6 +548,20 @@ torch_xla::XlaOpVector LogSigmoidBackward::Lower(LoweringContext* loctx) const {
       BuildLogSigmoidBackward(xla_grad_output, xla_input, xla_buffer), loctx);
 }
 
+torch_xla::XlaOpVector MaskedFillScalar::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp mask = loctx->GetOutputOp(operand(1));
+  xla::XlaOp scalar = loctx->GetOutputOp(operand(2));
+  return ReturnOp(BuildMaskedFillScalar(xla_input, mask, scalar), loctx);
+}
+
+torch_xla::XlaOpVector MaskedFillTensor::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp mask = loctx->GetOutputOp(operand(1));
+  xla::XlaOp tensor = loctx->GetOutputOp(operand(2));
+  return ReturnOp(BuildMaskedFillScalar(xla_input, mask, tensor), loctx);
+}
+
 torch_xla::XlaOpVector Maximum::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   xla::XlaOp xla_other = loctx->GetOutputOp(operand(1));

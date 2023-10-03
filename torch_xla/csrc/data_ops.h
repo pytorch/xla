@@ -43,6 +43,9 @@ xla::XlaOp SqueezeAllTrivialDimensions(xla::XlaOp input);
 xla::XlaOp BuildExpand(xla::XlaOp input,
                        absl::Span<const int64_t> output_sizes);
 
+xla::XlaOp BuildMaskedFillScalar(xla::XlaOp input, xla::XlaOp mask,
+                                 xla::XlaOp scalar);
+
 std::vector<int64_t> BuildSqueezedDimensions(
     absl::Span<const int64_t> dimensions, int64_t squeeze_dim);
 

@@ -210,6 +210,14 @@ xla::Shape LogSigmoidBackwardOutputShape(const torch::lazy::Value& grad_output,
                                          const torch::lazy::Value& input,
                                          const torch::lazy::Value& buffer);
 
+xla::Shape MaskedFillScalarOutputShape(const torch::lazy::Value& input,
+                                       const torch::lazy::Value& mask,
+                                       const torch::lazy::Value& value);
+
+xla::Shape MaskedFillTensorOutputShape(const torch::lazy::Value& input,
+                                       const torch::lazy::Value& mask,
+                                       const torch::lazy::Value& value);
+
 xla::Shape MaximumOutputShape(const torch::lazy::Value& input,
                               const torch::lazy::Value& other);
 

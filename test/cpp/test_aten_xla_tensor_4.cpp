@@ -1081,6 +1081,24 @@ TEST_F(AtenXlaTensorTest, TestMaskedFillBroadcast2) {
   ExpectCounterChanged("xla::masked_fill", cpp_test::GetIgnoredCounters());
 }
 
+TEST_F(AtenXlaTensorTest, TestMaskedFillBroadcast3) {
+  torch::Tensor input =
+      torch::rand({2, 1}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor mask =
+      torch::randint(0, 2, {4, 2, 3}, torch::TensorOptions(torch::kBool));
+  torch::Scalar value(42);
+  torch::Tensor result = torch::masked_fill(input, mask, value);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_input = CopyToDevice(input, device);
+    torch::Tensor xla_mask = CopyToDevice(mask, device);
+    torch::Tensor xla_result = torch::masked_fill(xla_input, xla_mask, value);
+    AllClose(result, xla_result);
+  });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::masked_fill", cpp_test::GetIgnoredCounters());
+}
+
 TEST_F(AtenXlaTensorTest, TestFill) {
   torch::Scalar value(42);
   ForEachDevice([&](const torch::Device& device) {
