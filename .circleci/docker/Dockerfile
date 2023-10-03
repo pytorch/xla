@@ -62,7 +62,10 @@ RUN . $CARGO_HOME/env && \
 
 ENV PATH $CARGO_HOME/bin:$PATH
 
+# TODO: Add exec permisson for all users in base image.
 RUN chmod a+x /usr/local/bin/bazel
+# TODO: move sudo installation in base image.
+run apt-get install -y sudo
 
 RUN useradd jenkins && \
     mkdir /home/jenkins && \

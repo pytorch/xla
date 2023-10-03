@@ -96,7 +96,7 @@ jobs:
       - name: Build
         shell: bash
         run: |
-          docker exec --privileged -u jenkins "${pid}" bash -c ". ~/.bashrc && .circleci/build.sh"
+          docker exec --privileged -u jenkins "${pid}" bash -c ".circleci/build.sh"
       - name: Cleanup build env
         shell: bash
         run: |
