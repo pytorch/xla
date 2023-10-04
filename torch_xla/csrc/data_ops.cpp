@@ -29,7 +29,7 @@ bool IsSparseGather(const xla::Shape& input_shape,
   // Conservative sparsity check for multi-platform support
   // to avoid gather on a single float on TPU.
   XlaDeviceType hw_type = static_cast<XlaDeviceType>(GetCurrentDevice().type());
-  if (hw_type == XlaDeviceType::TPU) {
+  if (hw_type == XlaDeviceType::TPU || hw_type == XlaDeviceType::NEURON) {
     // XLA_DENSE_GATHER_FACTOR can be used to finely control the
     // sparsity check.
     static int dense_gather_factor =

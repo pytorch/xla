@@ -265,7 +265,7 @@ xla::XlaOp LowerForward2d(const std::string& target, xla::XlaOp input,
   xla::XlaOp resized;
 
   XlaDeviceType hw_type = static_cast<XlaDeviceType>(GetCurrentDevice().type());
-  if (hw_type == XlaDeviceType::TPU) {
+  if (hw_type == XlaDeviceType::TPU || hw_type == XlaDeviceType::NEURON) {
     // TPU uses custom call implementation
     resized =
         xla::CustomCall(input.builder(), target, {tinput}, resized_shape,
