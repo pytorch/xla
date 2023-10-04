@@ -6,7 +6,7 @@ in much larger volumes in jobs which is often unnecessary. We're waiting for [th
 to be implemented so that we could override this setting on some branches.
 
 Before the feature is available on CircleCi side, we'll use a manual process to publish documentation for release.
-[Documentation for master branch](http://pytorch.org/xla/master/) is still updated automatically by the CircleCI job.
+[Documentation for master branch](http://pytorch.org/xla/main/) is still updated automatically by the CircleCI job.
 But we'll need to manually commit the new versioned doc and point http://pytorch.org/xla to the documentation of new
 stable release.
 

@@ -20,7 +20,7 @@ The quicker is the repro to be run, the higher the chances the bug will be addre
 
 The best way to create quick repros is to create a Colab based on the following template:
 
-https://github.com/pytorch/xla/blob/master/TROUBLESHOOTING.md#using-debug_runpy-to-collect-debug-information
+https://github.com/pytorch/xla/blob/main/TROUBLESHOOTING.md#using-debug_runpy-to-collect-debug-information
 
 Things to avoid in repros is the need to download datasets which require setting up keys or other login information, like Kaggle downloads for example.
 
@@ -38,7 +38,7 @@ Steps to reproduce the behavior:
 2.
 3.
 
-<!-- If you have a code sample, error messages, stack traces, please provide it here as well. Or better use the Colab template: https://github.com/pytorch/xla/blob/master/contrib/colab/issue-report.ipynb -->
+<!-- If you have a code sample, error messages, stack traces, please provide it here as well. Or better use the Colab template: https://github.com/pytorch/xla/blob/main/contrib/colab/issue-report.ipynb -->
 
 ## Expected behavior
 

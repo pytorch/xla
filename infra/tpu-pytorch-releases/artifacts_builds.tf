@@ -90,7 +90,7 @@ module "nightly_builds" {
     xla_git_rev     = "$COMMIT_SHA"
   })
 
-  trigger_on_schedule = { schedule = "0 0 * * *", branch = "master" }
+  trigger_on_schedule = { schedule = "0 0 * * *", branch = "main" }
 
   trigger_name = "nightly-${replace(each.key, "/[_.]/", "-")}"
   image_name   = "xla"
@@ -180,7 +180,7 @@ module "versioned_builds" {
     xla_git_rev     = each.value.git_tag
   })
 
-  # Use Ansible setup from master branch for versioned release, because source
+  # Use Ansible setup from main branch for versioned release, because source
   # code at older version doesn't contain Ansible setup.
   trigger_on_push = { tag = each.value.git_tag }
 

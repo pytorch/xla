@@ -62,8 +62,8 @@ The implementation of this class is largely inspired by and mostly follows the s
 
 ### Example training scripts on MNIST and ImageNet
 
-* MNIST: [`test/test_train_mp_mnist_fsdp_with_ckpt.py`](https://github.com/pytorch/xla/blob/master/test/test_train_mp_mnist_fsdp_with_ckpt.py) (it also tests checkpoint consolidation)
-* ImageNet: [`test/test_train_mp_imagenet_fsdp.py`](https://github.com/pytorch/xla/blob/master/test/test_train_mp_imagenet_fsdp.py)
+* MNIST: [`test/test_train_mp_mnist_fsdp_with_ckpt.py`](https://github.com/pytorch/xla/blob/main/test/test_train_mp_mnist_fsdp_with_ckpt.py) (it also tests checkpoint consolidation)
+* ImageNet: [`test/test_train_mp_imagenet_fsdp.py`](https://github.com/pytorch/xla/blob/main/test/test_train_mp_imagenet_fsdp.py)
 
 #### Installation
 FSDP is available on PyTorch/XLA 1.12 release and newer nightly. Please refer to https://github.com/pytorch/xla#-available-images-and-wheels for installation guide.

@@ -1,16 +1,16 @@
 # Codegen migration Guide
 
 ## Background
-As PyTorch/XLA migrates to the LTC (Lazy Tensor Core), we need to clean up the existing stub code (which spans over 6+ files) that were used to do the op lowering. The complete process and file structure for the old op lowering can be found in [the op lowering guide](https://github.com/pytorch/xla/blob/master/OP_LOWERING_GUIDE.md). Replacing the supported op with the codegen SHOULD NOT introduce any new behavior, it is purely for the clean up purpose.
+As PyTorch/XLA migrates to the LTC (Lazy Tensor Core), we need to clean up the existing stub code (which spans over 6+ files) that were used to do the op lowering. The complete process and file structure for the old op lowering can be found in [the op lowering guide](https://github.com/pytorch/xla/blob/main/OP_LOWERING_GUIDE.md). Replacing the supported op with the codegen SHOULD NOT introduce any new behavior, it is purely for the clean up purpose.
 
 ## Before you start
-You should follow the instructions in [here](https://github.com/pytorch/xla/blob/master/CONTRIBUTING.md) to install required dependencies and build pytorch and pytorch/XLA from the source. You do not need access to TPU to implement the lowering. It is recommended to experiment on a workstation and configure it to use XLA:CPU. You can configure Pytorch/XLA to use XLA:CPU by running
+You should follow the instructions in [here](https://github.com/pytorch/xla/blob/main/CONTRIBUTING.md) to install required dependencies and build pytorch and pytorch/XLA from the source. You do not need access to TPU to implement the lowering. It is recommended to experiment on a workstation and configure it to use XLA:CPU. You can configure Pytorch/XLA to use XLA:CPU by running
 
 ```
 export PJRT_DEVICE=CPU
 ```
 
-It is also recommended that you're familiar with our [op lowering process](https://github.com/pytorch/xla/blob/master/OP_LOWERING_GUIDE.md) before you work on the codegen.
+It is also recommended that you're familiar with our [op lowering process](https://github.com/pytorch/xla/blob/main/OP_LOWERING_GUIDE.md) before you work on the codegen.
 
 PyTorch/XLA uses https://github.com/pytorch/xla/issues/3560 to track the status of codegen migration. When working on a codegen, please put your GitHub alias with the PR link on the issue to avoid duplicate work.
 

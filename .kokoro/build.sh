@@ -39,7 +39,7 @@ flakiness()
   pushd $XLA_DIR
   export_to_sponge_config "ng3_commit" "$(git rev-parse HEAD)"
   popd
-  export_to_sponge_config "ng3_cl_target_branch" "master"
+  export_to_sponge_config "ng3_cl_target_branch" "main"
   export_to_sponge_config "ng3_project_id" "pytorchxla"
   export_to_sponge_config "ng3_job_type" "POSTSUBMIT"
   export_to_sponge_config "ng3_test_type" "UNIT"

@@ -33,7 +33,7 @@ def _maybe_select_default_device():
 
   # TODO: Update this link in the release branch
   logging.warning('PJRT is now the default runtime. For more information, see '
-                  'https://github.com/pytorch/xla/blob/master/docs/pjrt.md')
+                  'https://github.com/pytorch/xla/blob/main/docs/pjrt.md')
   # Check for libtpu _and_ the TPU device
   if torch_xla._found_libtpu and tpu.num_available_chips() > 0:
     logging.warning('libtpu.so and TPU device found. Setting PJRT_DEVICE=TPU.')

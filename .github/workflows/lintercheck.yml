@@ -3,7 +3,7 @@ on:
   pull_request:
   push:
     branches:
-      - master
+      - main
     tags:
       - r[0-9]+.[0-9]+
 
@@ -21,7 +21,7 @@ jobs:
       - run: pip install yapf==0.30.0
 
       - name: Check no TORCH_PIN
-        if: github.event_name == 'push' && github.event.ref == 'refs/heads/master'
+        if: github.event_name == 'push' && github.event.ref == 'refs/heads/main'
         shell: bash
         run: |
           TORCH_PIN=./torch_patches/.torch_pin

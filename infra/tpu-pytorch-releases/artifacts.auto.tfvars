@@ -1,6 +1,6 @@
 nightly_package_version = "2.2.0"
 
-# Built once a day from master.
+# Built once a day from main.
 nightly_builds = [
   { accelerator = "tpu" },
   {
