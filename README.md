@@ -27,7 +27,7 @@ started:
 
 **PyTorch/XLA is now on PyPI!**
 
-To install PyTorch/XLA a new VM:
+To install PyTorch/XLA a new TPU VM:
 
 ```
 pip install torch~=2.1.0 torch_xla[tpu]~=2.1.0 -f https://storage.googleapis.com/libtpu-releases/index.html
