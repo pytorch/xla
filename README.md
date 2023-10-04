@@ -25,10 +25,12 @@ started:
 
 ## Getting Started
 
-To install PyTorch/XLA a new VM:
+**PyTorch/XLA is now on PyPI!**
+
+To install PyTorch/XLA a new TPU VM:
 
 ```
-pip install torch~=2.0.0 https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-2.0-cp38-cp38-linux_x86_64.whl
+pip install torch~=2.1.0 torch_xla[tpu]~=2.1.0 -f https://storage.googleapis.com/libtpu-releases/index.html
 ```
 
 To update your existing training loop, make the following changes:
@@ -130,26 +132,37 @@ Our comprehensive user guides are available at:
 
 ## Available docker images and wheels
 
-### Wheel
+### Python packages
+
+PyTorch/XLA releases starting with version r2.1 will be available on PyPI. You
+can now install the main build with `pip install torch_xla`. To also install the
+Cloud TPU plugin, install the optional `tpu` dependencies:
+
+```
+pip install torch_xla[tpu] -f https://storage.googleapis.com/libtpu-releases/index.html
+```
+
+GPU, XRT (legacy runtime), and nightly builds are available in our public GCS
+bucket.
 
 | Version | Cloud TPU VMs Wheel |
 | --- | ----------- |
-| 2.0 (Python 3.8) | `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-2.0-cp38-cp38-linux_x86_64.whl` |
-| nightly >= 2023/04/25 (Python 3.8) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-nightly-cp38-cp38-linux_x86_64.whl` |
-| nightly >= 2023/04/25 (Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-nightly-cp310-cp310-linux_x86_64.whl` |
+| 2.1 (CUDA 12.0 + Python 3.8) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.0/torch_xla-2.1.0-cp38-cp38-manylinux_2_28_x86_64.whl` |
+| 2.1 (XRT + Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/xrt/tpuvm/torch_xla-2.1.0%2Bxrt-cp310-cp310-manylinux_2_28_x86_64.whl` |
+| nightly (Python 3.8) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-nightly-cp38-cp38-linux_x86_64.whl` |
+| nightly (Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-nightly-cp310-cp310-linux_x86_64.whl` |
 
 <details>
-    <summary>older versions</summary>
+
+<summary>older versions</summary>
 
 | Version | Cloud TPU VMs Wheel |
 |---------|-------------------|
+| 2.0 (Python 3.8) | `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-2.0-cp38-cp38-linux_x86_64.whl` |
 | 1.13 | `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.13-cp38-cp38-linux_x86_64.whl` |
 | 1.12 | `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.12-cp38-cp38-linux_x86_64.whl` |
 | 1.11 | `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.11-cp38-cp38-linux_x86_64.whl` |
 | 1.10 | `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.10-cp38-cp38-linux_x86_64.whl` |
-| nightly <= 2023/04/25 |  `https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-nightly-cp38-cp38-linux_x86_64.whl` |
-
-</details>
 
 <br/>
 
@@ -204,53 +217,58 @@ pip3 install torch_xla[tpuvm]
 
 This is only required on Cloud TPU VMs.
 
+</details>
+
 ### Docker
 
 | Version | Cloud TPU VMs Docker |
 | --- | ----------- |
-2.0 | `gcr.io/tpu-pytorch/xla:r2.0_3.8_tpuvm` |
-1.13 | `gcr.io/tpu-pytorch/xla:r1.13_3.8_tpuvm` |
-nightly python 3.10 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.10_tpuvm` |
-nightly python 3.8 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_tpuvm` |
-nightly python 3.10(>= 2023/04/25) | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.10_tpuvm_YYYYMMDD` |
-nightly python 3.8(>= 2023/04/25) | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_tpuvm_YYYYMMDD` |
-nightly at date(< 2023/04/25) | `gcr.io/tpu-pytorch/xla:nightly_3.8_tpuvm_YYYYMMDD` |
+| 2.1 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.1.0_3.10_tpuvm` |
+| 2.0 | `gcr.io/tpu-pytorch/xla:r2.0_3.8_tpuvm` |
+| 1.13 | `gcr.io/tpu-pytorch/xla:r1.13_3.8_tpuvm` |
+| nightly python | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.10_tpuvm` |
 
 <br/>
 
-| Version | GPU CUDA 12.0 + Python 3.8 Docker |
+| Version | GPU CUDA 12.0 Docker |
 | --- | ----------- |
+| 2.1 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.1.0_3.10_cuda_12.0` |
 | nightly | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_cuda_12.0` |
-| nightly at date(>=2023/06/27) | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_cuda_12.0_YYYYMMDD` |
+| nightly at date | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_cuda_12.0_YYYYMMDD` |
 
 <br/>
 
-| Version | GPU CUDA 11.8 + Python 3.8 Docker |
+| Version | GPU CUDA 11.8 + Docker |
 | --- | ----------- |
+| 2.1 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.1.0_3.10_cuda_11.8` |
 | 2.0 | `gcr.io/tpu-pytorch/xla:r2.0_3.8_cuda_11.8` |
 | nightly | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_cuda_11.8` |
-| nightly at date(>=2023/04/25) | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_cuda_11.8_YYYYMMDD` |
-| nightly at date(<2023/04/25) | `gcr.io/tpu-pytorch/xla:nightly_3.8_cuda_11.8_YYYYMMDD` |
+| nightly at date | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_cuda_11.8_YYYYMMDD` |
 
 <br/>
 
-| Version | GPU CUDA 11.7 + Python 3.8 Docker |
+<details>
+
+<summary>older versions</summary>
+
+| Version | GPU CUDA 11.7 + Docker |
 | --- | ----------- |
 | 2.0 | `gcr.io/tpu-pytorch/xla:r2.0_3.8_cuda_11.7` |
 
 <br/>
 
-| Version | GPU CUDA 11.2 + Python 3.8 Docker |
+| Version | GPU CUDA 11.2 + Docker |
 | --- | ----------- |
 | 1.13 | `gcr.io/tpu-pytorch/xla:r1.13_3.8_cuda_11.2` |
 
 <br/>
 
-| Version | GPU CUDA 11.2 + Python 3.7 Docker |
+| Version | GPU CUDA 11.2 + Docker |
 | --- | ----------- |
-1.13 | `gcr.io/tpu-pytorch/xla:r1.13_3.7_cuda_11.2` |
-1.12 | `gcr.io/tpu-pytorch/xla:r1.12_3.7_cuda_11.2` |
+| 1.13 | `gcr.io/tpu-pytorch/xla:r1.13_3.7_cuda_11.2` |
+| 1.12 | `gcr.io/tpu-pytorch/xla:r1.12_3.7_cuda_11.2` |
 
+</details>
 
 To run on [compute instances with
 GPUs](https://cloud.google.com/compute/docs/gpus/create-vm-with-gpus).
