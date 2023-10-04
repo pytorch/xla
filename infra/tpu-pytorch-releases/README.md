@@ -87,7 +87,7 @@ unset properties of existing triggers.
 
 ### Nightly releases
 
-Nightly release are configured to build from the `master` branch once per day
+Nightly release are configured to build from the `main` branch once per day
 at midnight (`America/Los_Angeles` time zone).
 
 Nightly builds in the `nightly_builds` variable in
@@ -152,7 +152,7 @@ unset properties of existing triggers.
    to see status of the triggered builds.
 
 
-### Create experimental trigger for non-master branch
+### Create experimental trigger for non-main branch
 
 1. Add a new instance of `xla_docker_build` module to [artifacts_builds.tf](./artifacts_builds.tf)
    (or any other or new file within that directory - Terraform reads automatically all top-level
@@ -211,7 +211,7 @@ unset properties of existing triggers.
 2. Create the trigger in GCP. Complete either of the steps below.
 
     a) Either commit and merge the changed Terraform setup
-       to master to get it automatically applied, or
+       to main to get it automatically applied, or
 
     b) apply manually only the newly created
        resource, see

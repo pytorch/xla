@@ -45,7 +45,7 @@ substitutions:
     _GIT_CLONE: 'true'
     _CUDA_COMPUTE: '3.7,7.0,7.5,8.0'
     _GITHUB_XLA_BRANCH: ''
-    _GITHUB_EXAMPLE_BRANCH: 'master'
+    _GITHUB_EXAMPLE_BRANCH: 'main'
 options:
     pool:
       name: 'projects/tpu-pytorch/locations/us-central1/workerPools/wheel_build'

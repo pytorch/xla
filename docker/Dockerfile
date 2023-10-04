@@ -7,7 +7,7 @@ FROM "${base_image}"
 ARG python_version="3.7"
 ARG release_version="nightly"
 ARG xla_branch=""
-ARG example_branch="master"
+ARG example_branch="main"
 ARG cuda="0"
 ARG cuda_compute="3.7,7.0,7.5,8.0"
 ARG cxx_abi="0"
@@ -47,7 +47,7 @@ ENV BAZEL_JOBS "${bazel_jobs}"
 COPY . /pytorch/xla
 RUN if [ "${git_clone}" = "true" ]; then \
   if [ -z "${xla_branch}" ]; then xla_branch="${release_version}" && example_branch="${release_version}"; fi && \
-  if [ "${xla_branch}" = "nightly" ]; then xla_branch="master" && example_branch="master"; fi && \
+  if [ "${xla_branch}" = "nightly" ]; then xla_branch="main" && example_branch="main"; fi && \
   echo "\nxla_branch: ${xla_branch} example_branch: ${example_branch} \n" && \
   cd /pytorch && \
   rm -rf xla && \

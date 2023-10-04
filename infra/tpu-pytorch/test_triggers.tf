@@ -3,7 +3,7 @@ module "tpu_e2e_tests" {
 
   trigger_name = "ci-tpu-test-trigger"
 
-  trigger_on_push = { branch = "master" }
+  trigger_on_push = { branch = "main" }
   run_e2e_tests   = true
 
   image_name = "pytorch-xla-test"
@@ -14,7 +14,7 @@ module "tpu_e2e_tests" {
   ]
   dockerfile = "e2e_tests.Dockerfile"
   description = join(" ", [
-    "Run e2e TPU tests on an image built from master branch.",
+    "Run e2e TPU tests on an image built from main branch.",
     "Trigger managed by Terraform setup in",
     "infra/tpu-pytorch/test_triggers.tf.",
   ])

@@ -10,7 +10,7 @@ OPENXLADIR=$XDIR/third_party/xla
 TORCH_PIN="$XDIR/torch_patches/.torch_pin"
 if [ -f "$TORCH_PIN" ]; then
   CID=$(cat "$TORCH_PIN")
-  # If starts with # and it's not merged into master, fetch from origin
+  # If starts with # and it's not merged into main, fetch from origin
   if [[ $CID = \#* ]]; then
     PRNUM="${CID//[!0-9]/}"
     set +x

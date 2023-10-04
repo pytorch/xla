@@ -29,7 +29,7 @@ module "dev_images" {
   trigger_name = "dev-${replace(each.key, "/[_.]/", "-")}"
 
   trigger_on_push = {
-    branch         = "master"
+    branch         = "main"
     included_files = ["infra/**"]
   }
 
