@@ -74,6 +74,7 @@ RUN echo 'jenkins ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
 RUN mkdir -p /opt/cargo /opt/rustup /workspace /var/lib/jenkins && \
     chown jenkins /opt/cargo /opt/rustup /workspace /var/lib/jenkins
+ENV PATH /home/jenkins/.local/bin:$PATH
 USER jenkins
 WORKDIR /workspace
 
