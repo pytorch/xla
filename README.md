@@ -28,7 +28,7 @@ started:
 To install PyTorch/XLA a new VM:
 
 ```
-pip install torch~=2.1.0 torch_xla[tpu]~=2.1.0 -f https://storage.googleapis.com/libtpu-releases/libtpu_releases.html
+pip install torch~=2.1.0 torch_xla[tpu]~=2.1.0 -f https://storage.googleapis.com/libtpu-releases/index.html
 ```
 
 To update your existing training loop, make the following changes:
