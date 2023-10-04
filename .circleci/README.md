@@ -2,7 +2,7 @@
 PyTorch and PyTorch/XLA use CircleCI to lint, build, and test each PR that is submitted. All CircleCI tests should succeed before the PR is merged into master. PyTorch CircleCI pins PyTorch/XLA to a specific commit. On the other hand, PyTorch/XLA CircleCI pulls PyTorch from master unless a pin is manually provided. This README will go through the reasons of these pins, how to pin a PyTorch/XLA PR to an upstream PyTorch PR, and how to coordinate a merge for breaking PyTorch changes.
 
 ## Why does PyTorch CircleCI pin PyTorch/XLA?
-As mentioned above, [PyTorch CircleCI pins PyTorch/XLA](https://github.com/pytorch/pytorch/blob/master/.jenkins/pytorch/common_utils.sh#L119) to a "known good" commit to prevent accidental changes from PyTorch/XLA to break PyTorch CircleCI without warning. PyTorch has hundreds of commits each week, and this pin ensures that PyTorch/XLA as a downstream package does not cause failures in PyTorch CircleCI. 
+As mentioned above, [PyTorch CircleCI pins PyTorch/XLA](https://github.com/pytorch/pytorch/blob/main/.jenkins/pytorch/common_utils.sh#L119) to a "known good" commit to prevent accidental changes from PyTorch/XLA to break PyTorch CircleCI without warning. PyTorch has hundreds of commits each week, and this pin ensures that PyTorch/XLA as a downstream package does not cause failures in PyTorch CircleCI. 
 
 ## Why does PyTorch/XLA CircleCI pull from PyTorch master?
 [PyTorch/XLA CircleCI pulls PyTorch from master](https://github.com/pytorch/xla/blob/f3415929683880192b63b285921c72439af55bf0/.circleci/common.sh#L15) unless a PyTorch pin is manually provided. PyTorch/XLA is a downstream package to PyTorch, and pulling from master ensures that PyTorch/XLA will stay up-to-date and works with the latest PyTorch changes.

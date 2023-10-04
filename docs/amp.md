@@ -34,7 +34,7 @@ Please file an issue or submit a pull request if there is an operator that shoul
 1. `autocast` should wrap only the forward pass(es) and loss computation(s) of the network. Backward ops run in the same type that autocast used for the corresponding forward ops.
 2. Do not set `XLA_USE_BF16` flag when using AMP on TPUs. This will override the per-operator precision settings provided by AMP and cause all operators to execute in bfloat16.
 3. Since TPU's use bfloat16 mixed precision, gradient scaling is not necessary.
-4. Pytorch/XLA provides modified version of [optimizers](https://github.com/pytorch/xla/tree/master/torch_xla/amp/syncfree) that avoid the additional sync between device and host.
+4. Pytorch/XLA provides modified version of [optimizers](https://github.com/pytorch/xla/tree/main/torch_xla/amp/syncfree) that avoid the additional sync between device and host.
 
 ### Supported Operators
 AMP on TPUs operates like Pytorch's AMP. Rules for how autocasting is applied is summarized below:
@@ -89,8 +89,8 @@ for input, target in data:
 1. `autocast` should wrap only the forward pass(es) and loss computation(s) of the network. Backward ops run in the same type that autocast used for the corresponding forward ops.
 2. Do not set `XLA_USE_F16` flag when using AMP on Cuda devices. This will override the per-operator precision settings provided by AMP and cause all operators to execute in float16.
 3. Use gradient scaling to prevent float16 gradients from underflowing.
-4. Pytorch/XLA provides modified version of [optimizers](https://github.com/pytorch/xla/tree/master/torch_xla/amp/syncfree) that avoid the additional sync between device and host.
+4. Pytorch/XLA provides modified version of [optimizers](https://github.com/pytorch/xla/tree/main/torch_xla/amp/syncfree) that avoid the additional sync between device and host.
 
 ## Examples
-Our [mnist training script](https://github.com/pytorch/xla/blob/master/test/test_train_mp_mnist_amp.py) and [imagenet training script](https://github.com/pytorch/xla/blob/master/test/test_train_mp_imagenet_amp.py) demonstrate how AMP is used on both TPUs and GPUs.
+Our [mnist training script](https://github.com/pytorch/xla/blob/main/test/test_train_mp_mnist_amp.py) and [imagenet training script](https://github.com/pytorch/xla/blob/main/test/test_train_mp_imagenet_amp.py) demonstrate how AMP is used on both TPUs and GPUs.
 

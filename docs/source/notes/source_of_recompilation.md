@@ -105,7 +105,7 @@ Even if `x[0][0]` was a Tensor, we need to execute/materialize its value for pyt
 
 For now we just have no way to fix this. To fix it we need to lower the control flow from python to graph! Without too much thinking in implementation we can do this in two ways:
 
-* ask users to explicitly use a control flow op instead of python if/else/while/for. This is currently supported as [customized API in torch_xla](https://github.com/pytorch/xla/blob/master/torch_xla/core/xla_builder.py#L563-L574) but not widely adopted in users’ code. (python users are used to if/else/for and it’s hard to switch them to a uglier API unless there’s a huge perf win).
+* ask users to explicitly use a control flow op instead of python if/else/while/for. This is currently supported as [customized API in torch_xla](https://github.com/pytorch/xla/blob/main/torch_xla/core/xla_builder.py#L563-L574) but not widely adopted in users’ code. (python users are used to if/else/for and it’s hard to switch them to a uglier API unless there’s a huge perf win).
 * parse python source. code to get the control flow statement automatically. This is like Torchscript and somehow merge the torchscripted graph into the lazily trace graph properly (including shape info etc). I haven’t thought through the steps of how to implement this indeed :P
 
 But either solution above requires non-trivial amount of effort, either on user side or on the framework side. That’s why we currently just take the hit of early evaluation & multiple compilations as a short term solution given the bandwidth we have.

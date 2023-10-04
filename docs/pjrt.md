@@ -40,7 +40,7 @@ _New features in PyTorch/XLA r2.0_:
   (4 processes with 2 threads each), so your workload should be thread-safe. See
   [Multithreading on TPU v2/v3](#multithreading-on-tpu-v2v3) and the
   [Multiprocessing section of the API
-  guide](https://github.com/pytorch/xla/blob/master/API_GUIDE.md#running-on-multiple-xla-devices-with-multi-processing)
+  guide](https://github.com/pytorch/xla/blob/main/API_GUIDE.md#running-on-multiple-xla-devices-with-multi-processing)
   for more information. Key differences to keep in mind:
   * To initialize a model in a thread-safe way, either broadcast the parameters
     across replicas after initialization
@@ -308,7 +308,7 @@ from the PyTorch documentation. Keep in mind these constraints:
 _New in PyTorch/XLA r2.0_
 
 When using PJRT with `torch.distributed` and
-`[torch.nn.parallel.DistributedDataParallel](https://github.com/pytorch/xla/blob/master/docs/ddp.md)`
+`[torch.nn.parallel.DistributedDataParallel](https://github.com/pytorch/xla/blob/main/docs/ddp.md)`
 we strongly recommend using the new `xla://` `init_method`, which automatically
 finds the replica IDs, world size, and master IP by querying the runtime. For
 example:

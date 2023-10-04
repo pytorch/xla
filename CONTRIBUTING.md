@@ -8,7 +8,7 @@ Sending a PR without discussion might end up resulting in a rejected PR, because
 
 ## Building Manually
 
-We recommend you to use our prebuilt Docker image to start your development work. If you want to use VSCode with docker, please refer to this [config](https://github.com/pytorch/xla/tree/master/.devcontainer/tpu-contributor).
+We recommend you to use our prebuilt Docker image to start your development work. If you want to use VSCode with docker, please refer to this [config](https://github.com/pytorch/xla/tree/main/.devcontainer/tpu-contributor).
 
 * Setup Development Docker Image
 
@@ -45,7 +45,7 @@ We recommend you to use our prebuilt Docker image to start your development work
 
 ### Build PyTorch/XLA from source with GPU support
 
-Please refer to this [guide](https://github.com/pytorch/xla/blob/master/docs/gpu.md#develop-pytorchxla-on-a-gpu-instance-build-pytorchxla-from-source-with-gpu-support).
+Please refer to this [guide](https://github.com/pytorch/xla/blob/main/docs/gpu.md#develop-pytorchxla-on-a-gpu-instance-build-pytorchxla-from-source-with-gpu-support).
 
 ## Before Submitting A Pull Request:
 
@@ -97,7 +97,7 @@ To run the tests, follow __one__ of the options below:
   export PJRT_DEVICE=GPU GPU_NUM_DEVICES=${NUM_GPU}
   ```
 
-For more detail on configuring the runtime, please refer to [this doc](https://github.com/pytorch/xla/blob/master/docs/pjrt.md#quickstart)
+For more detail on configuring the runtime, please refer to [this doc](https://github.com/pytorch/xla/blob/main/docs/pjrt.md#quickstart)
 
 If you are planning to be building from source and hence using the latest _PyTorch/TPU_ code base,
 it is suggested for you to select the _Nightly_ builds when you create a Cloud TPU instance.
@@ -105,5 +105,5 @@ it is suggested for you to select the _Nightly_ builds when you create a Cloud T
 Then run `test/run_tests.sh` and `test/cpp/run_tests.sh` to verify the setup is working.
 
 ### Useful materials
-1. [OP Lowering Guide](https://github.com/pytorch/xla/blob/master/OP_LOWERING_GUIDE.md)
-2. [CODEGEN MIGRATION GUIDE](https://github.com/pytorch/xla/blob/master/CODEGEN_MIGRATION_GUIDE.md)
+1. [OP Lowering Guide](https://github.com/pytorch/xla/blob/main/OP_LOWERING_GUIDE.md)
+2. [CODEGEN MIGRATION GUIDE](https://github.com/pytorch/xla/blob/main/CODEGEN_MIGRATION_GUIDE.md)

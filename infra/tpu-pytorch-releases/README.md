@@ -76,7 +76,7 @@ unset properties of existing triggers.
       # ...
     ]
     ```
-2. See [Preview Terraform changes](https://github.com/pytorch/xla/blob/master/infra/Terraform.md#preview-terraform-changes)
+2. See [Preview Terraform changes](https://github.com/pytorch/xla/blob/main/infra/Terraform.md#preview-terraform-changes)
    to preview proposed Terraform changes without affecting any infrastructure.
 3. Commit proposed changes.
 4. After successfully merge, [`terraform-provision-trigger`](https://pantheon.corp.google.com/cloud-build/builds;region=us-central1?project=tpu-pytorch-releases&pageState=(%22builds%22:(%22f%22:%22%255B%257B_22k_22_3A_22Trigger%2520Name_22_2C_22t_22_3A10_2C_22v_22_3A_22_5C_22terraform-provision-trigger_5C_22_22_2C_22s_22_3Atrue_2C_22i_22_3A_22triggerName_22%257D%255D%22)))
@@ -129,7 +129,7 @@ unset properties of existing triggers.
       # ...
     ]
     ```
-2. See [Preview Terraform changes](https://github.com/pytorch/xla/blob/master/infra/Terraform.md#preview-terraform-changes)
+2. See [Preview Terraform changes](https://github.com/pytorch/xla/blob/main/infra/Terraform.md#preview-terraform-changes)
    to preview proposed Terraform changes without affecting any infrastructure.
 3. Commit proposed changes.
 4. After successfully merge, [`terraform-provision-trigger`](https://pantheon.corp.google.com/cloud-build/builds;region=us-central1?project=tpu-pytorch-releases&pageState=(%22builds%22:(%22f%22:%22%255B%257B_22k_22_3A_22Trigger%2520Name_22_2C_22t_22_3A10_2C_22v_22_3A_22_5C_22terraform-provision-trigger_5C_22_22_2C_22s_22_3Atrue_2C_22i_22_3A_22triggerName_22%257D%255D%22)))
@@ -215,4 +215,4 @@ unset properties of existing triggers.
 
     b) apply manually only the newly created
        resource, see
-       [Enforce only selected resource](https://github.com/pytorch/xla/blob/master/infra/Terraform.md#enforce-only-selected-resource) (this requires appropriate permissions in GCP).
+       [Enforce only selected resource](https://github.com/pytorch/xla/blob/main/infra/Terraform.md#enforce-only-selected-resource) (this requires appropriate permissions in GCP).
