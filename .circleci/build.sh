@@ -41,6 +41,7 @@ apply_patches
 
 python -c "import fcntl; fcntl.fcntl(1, fcntl.F_SETFL, 0)"
 
+# We always build PyTorch without CUDA support.
 export USE_CUDA=0
 python setup.py install --user
 
