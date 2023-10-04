@@ -1248,6 +1248,7 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_xla_get_default_device", []() { return GetCurrentThreadDevice(); });
   m.def("_xla_get_default_device_ordinal", []() {
     std::string device_str = GetCurrentThreadDevice();
+    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": device_str=" << device_str << std::endl;
     torch::lazy::BackendDevice device =
         bridge::AtenDeviceToXlaDevice(device_str);
     return device.ordinal();
@@ -1926,7 +1927,7 @@ void InitXlaModuleBindings(py::module m) {
         [](int num_nodes) -> std::unique_ptr<xla::DistributedRuntimeService> {
           std::string port = runtime::sys_util::GetEnvString("COORDINATOR_PORT", "8547");
           std::string dist_service_addr =
-              runtime::sys_util::GetEnvString("MASTER_ADDR", "") + ":" + port;
+              runtime::sys_util::GetEnvString("MASTER_ADDR", "127.0.0.1") + ":" + port;
           XLA_CHECK(!dist_service_addr.empty())
               << "Must set PJRT_DIST_SERVICE_ADDR environment variable to use "
                  "distributed runtime";
@@ -1935,6 +1936,7 @@ void InitXlaModuleBindings(py::module m) {
 
           xla::CoordinationServiceImpl::Options options;
           options.num_nodes = num_nodes;
+          std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": creating distributed runtime service" << std::endl;
           return std::move(
               xla::GetDistributedRuntimeService(dist_service_addr, options)
                   .value());
