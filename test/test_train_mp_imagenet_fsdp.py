@@ -110,7 +110,7 @@ from torch_xla.distributed.fsdp.wrap import (size_based_auto_wrap_policy,
                                              transformer_auto_wrap_policy)
 
 DEFAULT_KWARGS = dict(
-    batch_size=128,
+    batch_size=96,
     test_set_batch_size=64,
     num_epochs=18,
     momentum=0.9,
@@ -167,7 +167,7 @@ def train_imagenet():
   img_dim = get_model_property('img_dim')
   if FLAGS.fake_data:
     use_small_fake_sample = FLAGS.use_small_fake_sample
-    train_dataset_len = 5000 if use_small_fake_sample else 1200000  # Roughly the size of Imagenet dataset.
+    train_dataset_len = 50000 if use_small_fake_sample else 1200000  # Roughly the size of Imagenet dataset.
     train_loader = xu.SampleGenerator(
         data=(torch.zeros(FLAGS.batch_size, 3, img_dim, img_dim),
               torch.zeros(FLAGS.batch_size, dtype=torch.int64)),
