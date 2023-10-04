@@ -47,7 +47,6 @@ class AtenXlaDeviceMapper {
     } else {
       for (auto& device_str :
            torch_xla::runtime::GetComputationClient()->GetLocalDevices()) {
-        std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": device_str=" << device_str << std::endl;
         devices_.emplace_back(ParseDeviceString(device_str));
         devices_ordinals_[devices_.back()] = devices_.size() - 1;
       }
@@ -314,16 +313,13 @@ std::vector<torch::lazy::BackendDevice> GetBackendDevices() {
 torch::lazy::BackendDevice AtenDeviceToXlaDevice(const c10::Device& device) {
   XLA_CHECK_EQ(device.type(), at::kXLA) << device;
   int ordinal = device.has_index() ? device.index() : -1;
-  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": ordinal=" << ordinal << std::endl;
   if (ordinal < 0) {
     c10::Device current_device = GetCurrentAtenDevice();
     if (current_device.has_index()) {
-      std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": current_device.has_index()=" << current_device.has_index() << ", current_device.index()=" << current_device.index() << std::endl;
       ordinal = current_device.index();
     }
   }
   if (ordinal < 0) {
-    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": returning early" << std::endl;
     return GetCurrentDevice();
   }
   return AtenXlaDeviceMapper::Get()->GetDeviceFromOrdinal(ordinal);
