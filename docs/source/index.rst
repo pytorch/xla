@@ -85,3 +85,4 @@ test
 .. mdinclude:: ../fsdp.md
 .. mdinclude:: ../ddp.md
 .. mdinclude:: ../gpu.md
+.. mdinclude:: ../spmd.md
