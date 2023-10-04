@@ -329,7 +329,7 @@ class ComputationClient {
   virtual int GetNumProcesses() const = 0;
 
   using DeviceAttribute =
-      std::variant<std::string, int64_t, std::vector<int64_t>, float>;
+      std::variant<std::string, int64_t, std::vector<int64_t>, float, bool>;
 
   virtual const absl::flat_hash_map<
       std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>&
