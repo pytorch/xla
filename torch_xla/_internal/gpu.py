@@ -13,9 +13,9 @@ def num_local_processes() -> int:
     AssertionError: if GPU_NUM_DEVICES environment variable
                     is not configured
   """
-  assert xenv.GPU_NUM_DEVICES in os.environ, \
-      "Must set `GPU_NUM_DEVICES` environment variable to use the PjRt GPU client"
-  return int(os.environ[xenv.GPU_NUM_DEVICES])
+  assert xenv.WORLD_SIZE in os.environ, \
+      "Must set `WORLD_SIZE` environment variable to use the PjRt GPU client"
+  return int(os.environ[xenv.WORLD_SIZE])
 
 
 def initialize_distributed_runtime(global_world_size: int) -> None:
@@ -39,5 +39,7 @@ def shutdown_distributed_runtime() -> None:
   """Destroy the distributed runtime after a distributed computation."""
   global distributed_service
   if distributed_service:
+    print('xw32 shutdown_distributed_runtime: shutdown begins')
     distributed_service.shutdown()
     distributed_service = None
+    print('xw32 shutdown_distributed_runtime: shutdown finishes')

@@ -40,15 +40,15 @@ static std::string spmd_device_str = "SPMD:0";
 // Initializes a distributed runtime client if dist_service_addr is specified
 std::shared_ptr<xla::DistributedRuntimeClient>
 MaybeInitializeDistributedRuntimeClient(int local_rank) {
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": begins" << std::endl;
   std::shared_ptr<xla::DistributedRuntimeClient> client;
-  std::string master_addr = sys_util::GetEnvString("MASTER_ADDR", "");
-  if (master_addr.empty()) {
+  int global_world_size = sys_util::GetEnvInt("WORLD_SIZE", 1);
+  if (global_world_size < 2) {
     return std::move(client);
   }
-
+  std::string master_addr = sys_util::GetEnvString("MASTER_ADDR", "127.0.0.1");
   std::string port = runtime::sys_util::GetEnvString("COORDINATOR_PORT", "8547");
-  std::string dist_service_addr =
-        sys_util::GetEnvString("MASTER_ADDR", "")+":"+port ;
+  std::string dist_service_addr = master_addr+":"+port ;
   xla::DistributedRuntimeClient::Options options;
   /* TODO(jonbolin): Use global rank for multi-host setup */
   options.node_id = local_rank;
@@ -105,6 +105,16 @@ std::vector<std::string> PjRtComputationClient::PjRtDevicesToString(
   return strs;
 }
 
+int getGlobalRank(int localRank) {
+  int global_rank = sys_util::GetEnvInt("RANK", -1);
+  if (global_rank != -1) {
+    // torchrun case.
+    return global_rank;
+  }
+  // Single host.
+  return localRank;
+}
+
 PjRtComputationClient::PjRtComputationClient() {
   std::string device_type = sys_util::GetEnvString(env::kEnvPjRtDevice, "");
   if (device_type == "CPU") {
@@ -126,7 +136,7 @@ PjRtComputationClient::PjRtComputationClient() {
     bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncGpuClient, true);
     int local_rank = sys_util::GetEnvInt(env::kEnvPjRtLocalRank, 0);
     
-    int global_rank = sys_util::GetEnvInt("RANK", -1);
+    int global_rank = getGlobalRank(local_rank);
     auto distributed_client =
         MaybeInitializeDistributedRuntimeClient(global_rank);
     auto allowed_devices =
@@ -146,6 +156,7 @@ PjRtComputationClient::PjRtComputationClient() {
       };
     }
     int global_world_size = sys_util::GetEnvInt("WORLD_SIZE", 1);
+    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": global_world_size=" << global_world_size << ", global_rank=" << global_rank << std::endl;
     client_ =
         std::move(xla::GetStreamExecutorGpuClient(
                       /*asynchronous=*/async,
