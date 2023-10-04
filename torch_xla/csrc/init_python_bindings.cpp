@@ -1245,7 +1245,6 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_xla_get_default_device", []() { return GetCurrentThreadDevice(); });
   m.def("_xla_get_default_device_ordinal", []() {
     std::string device_str = GetCurrentThreadDevice();
-    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": device_str=" << device_str << std::endl;
     torch::lazy::BackendDevice device =
         bridge::AtenDeviceToXlaDevice(device_str);
     return device.ordinal();
@@ -1855,7 +1854,6 @@ void InitXlaModuleBindings(py::module m) {
 
           xla::CoordinationServiceImpl::Options options;
           options.num_nodes = num_nodes;
-          std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": creating distributed runtime service" << std::endl;
           return std::move(
               xla::GetDistributedRuntimeService(dist_service_addr, options)
                   .value());

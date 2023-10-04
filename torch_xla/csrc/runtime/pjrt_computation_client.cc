@@ -40,7 +40,6 @@ static std::string spmd_device_str = "SPMD:0";
 // Initializes a distributed runtime client if dist_service_addr is specified
 std::shared_ptr<xla::DistributedRuntimeClient>
 MaybeInitializeDistributedRuntimeClient(int local_rank) {
-  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": begins" << std::endl;
   std::shared_ptr<xla::DistributedRuntimeClient> client;
   int global_world_size = sys_util::GetEnvInt("WORLD_SIZE", 1);
   if (global_world_size < 2) {
@@ -156,7 +155,6 @@ PjRtComputationClient::PjRtComputationClient() {
       };
     }
     int global_world_size = sys_util::GetEnvInt("WORLD_SIZE", 1);
-    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": global_world_size=" << global_world_size << ", global_rank=" << global_rank << std::endl;
     client_ =
         std::move(xla::GetStreamExecutorGpuClient(
                       /*asynchronous=*/async,

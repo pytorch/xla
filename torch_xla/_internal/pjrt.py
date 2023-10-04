@@ -121,14 +121,11 @@ def initialize_multiprocess(local_rank: int, local_world_size: int):
   elif runtime.device_type() == 'GPU':
     global_world_size = xu.getenv_as('WORLD_SIZE', int)
     global_rank = get_global_rank(local_rank)
-    print('xw32 initialize_multiprocess for GPU: global_world_size=', global_world_size, ', global_rank=', global_rank)
     if global_rank == 0:
       gpu.initialize_distributed_runtime(global_world_size)
 
-  print('xw32 initialize_multiprocess for GPU: finished initialize distributed runtime')
   devices = xm.get_xla_supported_devices()
   xm.set_replication(xm.xla_device(), devices)
-  print('xw32 finished running initialize_multiprocess')
 
 
 @runtime.requires_pjrt

@@ -132,10 +132,8 @@ def get_ordinal(defval=0):
   """
   global _ORDINAL
   if _ORDINAL is not None:
-    print('xw32 _ORDINAL is not None. _ORDINAL=', _ORDINAL)
     return _ORDINAL
 
-  print('xw32 _ORDINAL is None.')
   return runtime.global_ordinal()
 
 
