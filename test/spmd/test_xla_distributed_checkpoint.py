@@ -16,7 +16,7 @@ from torch.distributed.checkpoint.default_planner import (
     create_default_global_save_plan,
 )
 from torch_xla.experimental.distributed_checkpoint import SPMDLoadPlanner, SPMDSavePlanner
-from torch_xla.experimental._distributed_checkpoint_helpers import (
+from torch_xla.experimental.distributed_checkpoint._helpers import (
     _sharded_cpu_state_dict, _CpuShards, _is_sharded_tensor)
 
 
