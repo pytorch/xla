@@ -29,6 +29,7 @@ cc_library(
     ":computation_client",
     ":env_vars",
     ":pjrt_computation_client",
+    ":ifrt_computation_client",
     "@tsl//tsl/platform:stacktrace",
   ],
 )
@@ -67,6 +68,42 @@ cc_library(
     "@com_google_absl//absl/types:span",
     "@torch//:headers",
     "@torch//:runtime_headers",
+  ],
+)
+
+cc_library(
+  name = "ifrt_computation_client",
+  srcs = [
+    "ifrt_computation_client.cc",
+  ],
+  hdrs = [
+    "ifrt_computation_client.h",
+  ],
+  deps = [
+    ":computation_client",
+    # TODO: why do I need this?
+    # ":pjrt_computation_client",
+    ":debug_macros",
+    ":env_vars",
+    ":multi_wait",
+    ":stablehlo_helper",
+    ":tf_logging",
+    ":thread_pool",
+    "@xla//xla:literal",
+    "@xla//xla:shape_util",
+    "@xla//xla/client:xla_computation",
+    "@xla//xla/pjrt/distributed",
+    "@xla//xla/pjrt/gpu:se_gpu_pjrt_client",
+    "@xla//xla/service:gpu_plugin",
+    "@xla//xla/pjrt:pjrt_client",
+    "@xla//xla/pjrt:tfrt_cpu_pjrt_client",
+    "@xla//xla/pjrt:pjrt_c_api_client",
+    "@xla//xla/python/ifrt",
+    "@xla//xla/python/pjrt_ifrt",
+    "@tsl//tsl/profiler/lib:traceme",
+    "@tsl//tsl/platform/cloud:gcs_file_system",
+    "@com_google_absl//absl/strings",
+    "@com_google_absl//absl/types:span",
   ],
 )
 
