@@ -1720,8 +1720,8 @@ void InitXlaModuleBindings(py::module m) {
               << " vs " << expected_shard_shape;
         }
 
-        auto data_handle = WrapXlaData(ShardingUtil::CreateShardedData(
-            shards, local_devices, sharding_spec));
+        auto data_handle = ShardingUtil::CreateShardedData(
+            shards, local_devices, sharding_spec);
         XLATensorPtr xla_tensor = XLATensor::Create(std::move(data_handle));
         xla_tensor->SetShardingSpec(*sharding_spec);
         auto tensor = bridge::AtenFromXlaTensor(std::move(xla_tensor));
