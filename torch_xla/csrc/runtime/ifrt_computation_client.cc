@@ -110,14 +110,16 @@ IfrtComputationClient::IfrtComputationClient() {
     TF_VLOG(1) << "Initializing PjRt CPU client...";
     bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncCpuClient, true);
     int cpu_device_count = sys_util::GetEnvInt(env::kEnvNumCpu, 1);
-    client_ = xla::ifrt::PjRtClient::Create(std::move(xla::GetTfrtCpuClient(async, cpu_device_count).value()));
+    client_ = xla::ifrt::PjRtClient::Create(
+        std::move(xla::GetTfrtCpuClient(async, cpu_device_count).value()));
   } else if (device_type == "TPU" || device_type == "TPU_C_API") {
     TF_VLOG(1) << "Initializing TFRT TPU client...";
     XLA_CHECK_OK(pjrt::LoadPjrtPlugin(
         "tpu", sys_util::GetEnvString(env::kEnvTpuLibraryPath, "libtpu.so")));
     tsl::Status tpu_status = pjrt::InitializePjrtPlugin("tpu");
     XLA_CHECK(tpu_status.ok());
-    client_ = xla::ifrt::PjRtClient::Create(std::move(xla::GetCApiClient("TPU").value()));
+    client_ = xla::ifrt::PjRtClient::Create(
+        std::move(xla::GetCApiClient("TPU").value()));
   } else {
     XLA_ERROR() << absl::StrFormat("Unknown %s '%s'", env::kEnvPjRtDevice,
                                    device_type);
@@ -240,11 +242,13 @@ std::vector<ComputationClient::DataPtr> IfrtComputationClient::TransferToServer(
         client_
             ->MakeArrayFromHostBuffer(
                 literal_pointer->untyped_data(),
-                xla::ifrt::ToDType(literal_pointer->shape().element_type()).value(),
+                xla::ifrt::ToDType(literal_pointer->shape().element_type())
+                    .value(),
                 xla::ifrt::Shape(literal_pointer->shape().dimensions()),
                 byte_strides,
                 // TODO: what is MemoryKind?
-                xla::ifrt::SingleDeviceSharding::Create(pjrt_device, xla::ifrt::MemoryKind()),
+                xla::ifrt::SingleDeviceSharding::Create(
+                    pjrt_device, xla::ifrt::MemoryKind()),
                 xla::PjRtClient::HostBufferSemantics::
                     kImmutableUntilTransferCompletes,
                 [literal{std::move(literal)}]() { /* frees literal */ })
@@ -328,7 +332,8 @@ ComputationClient::DataPtr IfrtComputationClient::ReplicateShardedData(
   //       xla::ConstantR0(&builder, 0), shape.element_type());
   //   xla::XlaOp y = xla::Add(x, scalar_zero_op);
   //   auto instruction = XlaBuilderFriend::GetInstruction(y);
-  //   *instruction->mutable_sharding() = xla::HloSharding::Replicate().ToProto();
+  //   *instruction->mutable_sharding() =
+  //   xla::HloSharding::Replicate().ToProto();
 
   //   xla::XlaComputation computation =
   //       ConsumeValue(builder.Build(/*remove_dynamic_dimensions=*/false));
@@ -352,7 +357,8 @@ ComputationClient::DataPtr IfrtComputationClient::ReplicateShardedData(
   //   auto device_index = build_index_map(GetLocalDevices());
 
   //   std::vector<std::vector<ComputationClient::DataPtr>> arguments_by_device(
-  //       GetLocalDevices().size(), std::vector<ComputationClient::DataPtr>(1));
+  //       GetLocalDevices().size(),
+  //       std::vector<ComputationClient::DataPtr>(1));
   //   for (auto shard : shards) {
   //     std::vector<std::string> device_spec =
   //         absl::StrSplit(shard->device(), ':');
@@ -394,12 +400,15 @@ std::vector<xla::Literal> IfrtComputationClient::TransferFromServer(
 
     // TODO: handle dynamic shapes
     auto& literal = literals.emplace_back(
-            xla::ShapeUtil::DeviceShapeToHostShape(pjrt_data->shape()));
+        xla::ShapeUtil::DeviceShapeToHostShape(pjrt_data->shape()));
     std::vector<int64_t> byte_strides(literal.shape().dimensions_size());
     XLA_CHECK_OK(xla::ShapeUtil::ByteStrides(literal.shape(),
                                              absl::MakeSpan(byte_strides)));
-    XLA_CHECK_OK(pjrt_data->buffer->CopyToHostBuffer(
-        literal.untyped_data(), byte_strides, xla::ifrt::ArrayCopySemantics::kAlwaysCopy).Await());
+    XLA_CHECK_OK(
+        pjrt_data->buffer
+            ->CopyToHostBuffer(literal.untyped_data(), byte_strides,
+                               xla::ifrt::ArrayCopySemantics::kAlwaysCopy)
+            .Await());
 
     total_size += literal.size_bytes();
   }
@@ -466,9 +475,10 @@ std::vector<ComputationClient::ComputationPtr> IfrtComputationClient::Compile(
         mlir::ModuleOp::create(mlir::UnknownLoc::get(&context));
     torch_xla::runtime::ConvertHloToStableHlo(
         instance.computation.mutable_proto(), &mlir_module);
-    std::unique_ptr<xla::ifrt::LoadedExecutable> executable = ConsumeValue(client_->GetDefaultCompiler()->Compile(
-      std::make_unique<xla::ifrt::XlaProgram>(std::move(mlir_module)),
-      std::make_unique<xla::ifrt::XlaCompileOptions>(compile_options)));
+    std::unique_ptr<xla::ifrt::LoadedExecutable> executable =
+        ConsumeValue(client_->GetDefaultCompiler()->Compile(
+            std::make_unique<xla::ifrt::XlaProgram>(std::move(mlir_module)),
+            std::make_unique<xla::ifrt::XlaCompileOptions>(compile_options)));
     StableHloCompileCounter()->AddValue(1);
 
     const auto& hlo_modules = ConsumeValue(executable->GetHloModules());
@@ -595,7 +605,8 @@ IfrtComputationClient::ExecuteReplicated(
   //     << "ExecuteReplicated over " << devices.size() << " devices, but "
   //     << arguments.size() << " arguments devices.";
   // auto mwait_argument = std::make_shared<util::MultiWait>(devices.size());
-  // std::vector<std::vector<xla::PjRtBuffer*>> argument_handles(devices.size());
+  // std::vector<std::vector<xla::PjRtBuffer*>>
+  // argument_handles(devices.size());
   // {
   //   tsl::profiler::TraceMe activity(
   //       "IfrtComputationClient::ExecuteReplicated_argument_handle",
@@ -603,11 +614,13 @@ IfrtComputationClient::ExecuteReplicated(
   //   for (int32_t i = 0; i < devices.size(); ++i) {
   //     auto buffer_converter = [&, i]() {
   //       xla::PjRtDevice* pjrt_device = StringToPjRtDevice(devices[i]);
-  //       XLA_CHECK(pjrt_device->IsAddressable()) << pjrt_device->DebugString();
+  //       XLA_CHECK(pjrt_device->IsAddressable()) <<
+  //       pjrt_device->DebugString();
 
   //       std::vector<xla::PjRtBuffer*> buffers;
   //       for (auto& argument : arguments[i]) {
-  //         const PjRtData* pjrt_data = dynamic_cast<PjRtData*>(argument.get());
+  //         const PjRtData* pjrt_data =
+  //         dynamic_cast<PjRtData*>(argument.get());
 
   //         XLA_CHECK(pjrt_device == pjrt_data->buffer->device())
   //             << pjrt_device->DebugString() << " vs "
@@ -695,10 +708,12 @@ IfrtComputationClient::ExecuteReplicated(
   //   returned_futures[0].OnReady(
   //       [timed, lock = std::move(lock)](xla::Status unused) mutable {
   //         timed.reset();
-  //         TF_VLOG(3) << "ExecuteReplicated returned_future->OnReady finished";
+  //         TF_VLOG(3) << "ExecuteReplicated returned_future->OnReady
+  //         finished";
   //       });
   // };
-  // env::ScheduleIoClosure(util::MultiWait::Completer(mwait, std::move(lockfn)));
+  // env::ScheduleIoClosure(util::MultiWait::Completer(mwait,
+  // std::move(lockfn)));
 
   // TF_VLOG(1) << "Returning " << data_handles.size() << " sets of results "
   //            << "with dimensions [" << absl::StrJoin(dims, ",") << "].";

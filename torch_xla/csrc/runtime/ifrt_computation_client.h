@@ -130,8 +130,8 @@ class IfrtComputationClient : public ComputationClient {
     IfrtData(std::string device, tsl::RCReference<xla::ifrt::Array> buffer)
         : Data(std::move(device),
                xla::ShapeUtil::MakeShape(
-                  xla::ifrt::ToPrimitiveType(buffer->dtype()).value(),
-                  buffer->shape().dims())),
+                   xla::ifrt::ToPrimitiveType(buffer->dtype()).value(),
+                   buffer->shape().dims())),
           buffer(buffer) {}
 
     Handle GetHandle() override {
@@ -142,14 +142,14 @@ class IfrtComputationClient : public ComputationClient {
     };
     void Assign(const torch::lazy::BackendData& data) override;
     bool HasValue() const override {
-      return buffer != nullptr; // TODO: && !buffer->IsDeleted();
+      return buffer != nullptr;  // TODO: && !buffer->IsDeleted();
     };
 
     bool HasSharding() const override { return false; }
 
     xla::OpSharding GetSharding() const override {
       XLA_ERROR() << "GetSharding should not be called on IfrtData, check "
-                      "HasSharding first";
+                     "HasSharding first";
       return xla::OpSharding();
     }
 
