@@ -41,6 +41,8 @@ http_archive(
         "//openxla_patches:cache_urls.diff",
         "//openxla_patches:constexpr_return.diff",
         "//openxla_patches:gpu_build_file.diff",
+        "//openxla_patches:gpu_race_condition.diff",
+        "//openxla_patches:f16_abi_clang.diff",
     ],
     strip_prefix = "xla-7a19856d74569fd1f765cd03bdee84e3b1fdc579",
     urls = [
