@@ -149,9 +149,7 @@ class TestExperimentalPjrtGpu(parameterized.TestCase):
     out = xm.all_gather(ordinal, pin_layout=pin_layout)
     xm.mark_step()
 
-    ret = out.cpu().numpy()
-    print('_all_gather returning ret=', ret)
-    return ret
+    return out.cpu().numpy()
 
   @parameterized.named_parameters(('pinned', True), ('unpinned', False))
   def test_all_gather(self, pin_layout):

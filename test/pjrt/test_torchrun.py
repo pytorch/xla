@@ -6,7 +6,6 @@ import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_backend
 import torch_xla.runtime as xr
 import torch_xla.utils.utils as xu
-from torch_xla._internal import gpu
 
 
 class TestTorchrun(absltest.TestCase):
@@ -37,8 +36,8 @@ class TestTorchrun(absltest.TestCase):
 
     dist_world_size = xu.getenv_as('WORLD_SIZE', int)
     devices_per_thread = xr.addressable_device_count()
-    expected_world_size = dist_world_size * devices_per_thread
-    tensors = [torch.arange(2, dtype=torch.int64) + 1 + 2 * r for r in range(expected_world_size)]
+    world_size = dist_world_size * devices_per_thread
+    tensors = [torch.arange(2, dtype=torch.int64) + 1 + 2 * r for r in range(world_size)]
     expected = sum(tensors)
 
     xla_tensor = torch.arange(2, dtype=torch.int64, device=xm.xla_device()) + 1 + 2 * dist.get_rank()
@@ -46,6 +45,23 @@ class TestTorchrun(absltest.TestCase):
     xm.mark_step()
 
     torch.testing.assert_close(xla_tensor.cpu(), expected)
+    dist.destroy_process_group()
+
+  def test_reduce_scatter(self):
+    dist.init_process_group('xla', init_method='xla://')
+
+    dist_world_size = xu.getenv_as('WORLD_SIZE', int)
+    devices_per_thread = xr.addressable_device_count()
+    world_size = dist_world_size * devices_per_thread
+    tensor = world_size * torch.arange(world_size * 2, dtype=torch.int64)
+    expected = torch.split(tensor, world_size)[dist.get_rank()]
+
+    tensor_out = torch.zeros(world_size, dtype=torch.int64, device=xm.xla_device())
+    tensor_in = torch.arange(world_size * 2, dtype=torch.int64, device=xm.xla_device())
+    dist.reduce_scatter(tensor_out, [tensor_in], op=dist.ReduceOp.SUM)
+    xm.mark_step()
+
+    torch.testing.assert_close(tensor_out.cpu(), expected)
     dist.destroy_process_group()
 
 

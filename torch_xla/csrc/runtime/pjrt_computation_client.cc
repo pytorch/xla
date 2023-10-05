@@ -49,8 +49,9 @@ MaybeInitializeDistributedRuntimeClient(int local_rank) {
   std::string port = runtime::sys_util::GetEnvString("COORDINATOR_PORT", "8547");
   std::string dist_service_addr = master_addr+":"+port ;
   xla::DistributedRuntimeClient::Options options;
-  /* TODO(jonbolin): Use global rank for multi-host setup */
   options.node_id = local_rank;
+  TF_VLOG(3) << "Getting distributed runtime client for address="
+              << dist_service_addr << ", node_id=" << options.node_id;
   client = xla::GetDistributedRuntimeClient(dist_service_addr, options);
   XLA_CHECK(client->Connect().ok())
       << "Failed to initialize distributed runtime client";
@@ -155,6 +156,8 @@ PjRtComputationClient::PjRtComputationClient() {
       };
     }
     int global_world_size = sys_util::GetEnvInt("WORLD_SIZE", 1);
+    TF_VLOG(3) << "Getting StreamExecutorGpuClient for node_id="
+               << global_rank << ", num_nodes=" << global_world_size;
     client_ =
         std::move(xla::GetStreamExecutorGpuClient(
                       /*asynchronous=*/async,
