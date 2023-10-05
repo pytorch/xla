@@ -6,8 +6,8 @@ FROM "${base_image}"
 ARG python_version="3.8"
 ARG cuda="1"
 ARG cuda_compute="5.2,7.5"
-ARG cc="gcc"
-ARG cxx="g++"
+ARG cc="clang"
+ARG cxx="clang++"
 ARG cxx_abi="1"
 ARG tpuvm=""
 
@@ -37,6 +37,8 @@ ENV CXX "${cxx}"
 # Whether to build for TPUVM mode
 ENV TPUVM_MODE "${tpuvm}"
 
+# Install clang as upstream CI forces clang
+RUN apt-get install -y clang
 # Install valgrind
 COPY ./install_valgrind.sh install_valgrind.sh
 RUN bash ./install_valgrind.sh
@@ -65,7 +67,7 @@ ENV PATH $CARGO_HOME/bin:$PATH
 # TODO: Add exec permisson for all users in base image.
 RUN chmod a+x /usr/local/bin/bazel
 # TODO: move sudo installation in base image.
-run apt-get install -y sudo
+RUN apt-get install -y sudo
 
 RUN useradd jenkins && \
     mkdir /home/jenkins && \
