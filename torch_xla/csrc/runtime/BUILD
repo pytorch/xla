@@ -81,8 +81,6 @@ cc_library(
   ],
   deps = [
     ":computation_client",
-    # TODO: why do I need this?
-    # ":pjrt_computation_client",
     ":debug_macros",
     ":env_vars",
     ":multi_wait",
