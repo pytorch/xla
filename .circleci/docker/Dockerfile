@@ -74,10 +74,21 @@ RUN useradd jenkins && \
     chown jenkins /home/jenkins
 RUN echo 'jenkins ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
-RUN mkdir -p /opt/cargo /opt/rustup /workspace /var/lib/jenkins && \
-    chown jenkins /opt/cargo /opt/rustup /workspace /var/lib/jenkins
+RUN mkdir -p /opt/conda /opt/cargo /opt/rustup /workspace /var/lib/jenkins && \
+    chown jenkins /opt/conda /opt/cargo /opt/rustup /workspace /var/lib/jenkins
 ENV PATH /home/jenkins/.local/bin:$PATH
 USER jenkins
 WORKDIR /workspace
+
+# Installs and configures Conda.
+ADD ./install_conda.sh install_conda.sh
+RUN sudo chown jenkins ./install_conda.sh
+RUN bash ./install_conda.sh "${python_version}" /opt/conda
+
+RUN echo "conda activate base" >> ~/.bashrc
+RUN echo "export TF_CPP_LOG_THREAD_ID=1" >> ~/.bashrc
+ENV PATH /opt/conda/bin:$PATH
+
+RUN bash -c "source ~/.bashrc"
 
 CMD ["bash"]
