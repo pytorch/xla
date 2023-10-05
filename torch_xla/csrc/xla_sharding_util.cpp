@@ -706,8 +706,7 @@ void ShardingUtil::PrepareOutputShardingPropagation(
 }
 
 runtime::ComputationClient::DataPtr ShardingUtil::CreateShardedData(
-    const std::vector<at::Tensor>& local_shards,
-    const std::vector<std::string>& devices,
+    std::vector<at::Tensor>& local_shards, std::vector<std::string>& devices,
     const XLATensor::ShardingSpecPtr& sharding_spec) {
   XLA_CHECK(local_shards.size() == devices.size())
       << "A device must be speficied for each shard";

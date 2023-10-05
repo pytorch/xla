@@ -147,8 +147,7 @@ class ShardingUtil {
   // Transfers the individual shards to the devices and returns a DataPtr for
   // the PjRtShardedData wrapping the shards.
   static runtime::ComputationClient::DataPtr CreateShardedData(
-      const std::vector<at::Tensor>& shards,
-      const std::vector<std::string>& devices,
+      std::vector<at::Tensor>& shards, std::vector<std::string>& devices,
       const XLATensor::ShardingSpecPtr& sharding_spec);
 };
 
