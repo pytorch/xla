@@ -59,6 +59,8 @@ class EndToEndCheckpointTest(DistributedCheckpointTestBase):
                         model_out,
                         save_planner=None,
                         load_planner=None,
+                        storage_reader_clz=dist_cp.FileSystemReader,
+                        storage_writer_clz=dist_cp.FileSystemWriter,
                         is_sharded_cpu_state_dict=False,
                         no_dist=True,
                         chkpt_path=None):
@@ -76,7 +78,7 @@ class EndToEndCheckpointTest(DistributedCheckpointTestBase):
     model_out_state_dict = model_out.state_dict()
     dist_cp.save_state_dict(
         state_dict=model_in_state_dict,
-        storage_writer=dist_cp.FileSystemWriter(chkpt_path),
+        storage_writer=storage_writer_clz(chkpt_path),
         planner=save_planner,
         no_dist=no_dist,
     )
@@ -86,7 +88,7 @@ class EndToEndCheckpointTest(DistributedCheckpointTestBase):
 
     dist_cp.load_state_dict(
         state_dict=model_out_state_dict,
-        storage_reader=dist_cp.FileSystemReader(chkpt_path),
+        storage_reader=storage_reader_clz(chkpt_path),
         planner=load_planner,
         no_dist=no_dist,
     )
@@ -130,6 +132,10 @@ class EndToEndCheckpointTest(DistributedCheckpointTestBase):
   def test_multihost_checkpoint(self):
     torch.manual_seed(42)
 
+    # Import fsspec storage classes. The import path is subject to change, so
+    # only import for the multihost test.
+    from torch.distributed.checkpoint._fsspec_filesystem import FsspecReader, FsspecWriter
+
     # Initialize the default CPU process group from the environment.
     dist.init_process_group()
 
@@ -141,6 +147,8 @@ class EndToEndCheckpointTest(DistributedCheckpointTestBase):
         model2,
         save_planner=SPMDSavePlanner(),
         load_planner=SPMDLoadPlanner(),
+        storage_reader_clz=FsspecReader,
+        storage_writer_clz=FsspecWriter,
         no_dist=False,
         chkpt_path=os.environ['CHKPT_PATH'])
 
