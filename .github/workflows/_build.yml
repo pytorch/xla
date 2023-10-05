@@ -7,7 +7,7 @@ on:
         type: string
         description: Base image for builds
       ecr-docker-image-base:
-        required: true
+        required: false
         type: string
         description: Container registry to upload image to
       runner:
@@ -64,17 +64,17 @@ jobs:
       - name: Download docker image from GCR
         shell: bash
         run: docker pull "${GCR_DOCKER_IMAGE}"
-      - name: Stage image to ECR
-        shell: bash
-        run: |
-            # This is to stage PyTorch/XLA base image for use in the upstream.
-            # To allow the upstream workflow to access PyTorch/XLA build images, we
-            # need to have them in the ECR. This is not expensive, and only pushes it
-            # if image layers are not present in the repo.
-            # Note: disable the following 2 lines while testing a new image, so we do not
-            # push to the upstream.
-            docker tag "${GCR_DOCKER_IMAGE}" "${ECR_DOCKER_IMAGE_BASE}:v1.1-lite-test" >/dev/null
-            docker push "${ECR_DOCKER_IMAGE_BASE}:v1.1-lite-test" >/dev/null
+      # - name: Stage image to ECR
+      #   shell: bash
+      #   run: |
+      #       # This is to stage PyTorch/XLA base image for use in the upstream.
+      #       # To allow the upstream workflow to access PyTorch/XLA build images, we
+      #       # need to have them in the ECR. This is not expensive, and only pushes it
+      #       # if image layers are not present in the repo.
+      #       # Note: disable the following 2 lines while testing a new image, so we do not
+      #       # push to the upstream.
+      #       docker tag "${GCR_DOCKER_IMAGE}" "${ECR_DOCKER_IMAGE_BASE}:v1.1-lite-test" >/dev/null
+      #       docker push "${ECR_DOCKER_IMAGE_BASE}:v1.1-lite-test" >/dev/null
       - name: Start the container
         shell: bash
         run: |
