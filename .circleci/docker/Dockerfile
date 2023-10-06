@@ -88,6 +88,7 @@ RUN bash ./install_conda.sh "${python_version}" /opt/conda
 RUN echo "conda activate base" >> ~/.bashrc
 RUN echo "export TF_CPP_LOG_THREAD_ID=1" >> ~/.bashrc
 ENV PATH /opt/conda/bin:$PATH
+ENV LD_LIBRARY_PATH /lib/x86_64-linux-gnu/:/usr/lib/x86_64-linux-gnu/:/opt/conda/lib/:$LD_LIBRARY_PATH
 
 RUN bash -c "source ~/.bashrc"
 
