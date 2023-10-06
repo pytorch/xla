@@ -26,6 +26,9 @@ COPY --from=build /src/pytorch/xla/dist/*.whl ./
 RUN echo "Installing the following wheels" && ls *.whl
 RUN pip install *.whl
 
+RUN echo "Install libtpu"
+RUN pip install torch_xla[tpu] -f https://storage.googleapis.com/libtpu-releases/index.html
+
 WORKDIR /
 
 RUN rm -rf /ansible /tmp/wheels
