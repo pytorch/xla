@@ -3,7 +3,7 @@ WORKDIR /
 RUN apt-get update
 RUN apt-get -y upgrade
 RUN apt-get -y install clang time
-RUN pip install pytest tf-nightly
+RUN pip install pytest
 ARG USE_MKLDNN=0
 ARG SCCACHE_BUCKET=ossci-compiler-cache-circleci-v2
 ARG DISABLE_XRT=1
