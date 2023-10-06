@@ -49,7 +49,7 @@ jobs:
 
   test-cpu-coverage:
     name: "Collect CPU test coverage"
-    if: github.event_name == 'push' && github.event.ref == 'refs/heads/master'
+    # if: github.event_name == 'push' && github.event.ref == 'refs/heads/master'
     uses: ./.github/workflows/_coverage.yml
     needs: build
     with:
@@ -62,7 +62,7 @@ jobs:
 
   test-gpu-coverage:
     name: "Collect GPU test coverage"
-    if: github.event_name == 'push' && github.event.ref == 'refs/heads/master'
+    # if: github.event_name == 'push' && github.event.ref == 'refs/heads/master'
     uses: ./.github/workflows/_coverage.yml
     needs: build
     with:
@@ -76,7 +76,7 @@ jobs:
 
   push-docs:
     name: "Build & publish docs"
-    if: github.event_name == 'push' && (github.event.ref == 'refs/heads/master' || startsWith(github.event.ref, 'refs/tags/r'))
+    # if: github.event_name == 'push' && (github.event.ref == 'refs/heads/master' || startsWith(github.event.ref, 'refs/tags/r'))
     uses: ./.github/workflows/_docs.yml
     needs: build
     with:
