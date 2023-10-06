@@ -94,7 +94,7 @@ class ReplicationTest : public AtenXlaTensorTestBase {};
 
 TEST_F(ReplicationTest, TestNSingleReplication) {
   WithAllDevices(
-      {XlaDeviceType::TPU, XlaDeviceType::GPU},
+      {XlaDeviceType::TPU, XlaDeviceType::CUDA},
       [&](const std::vector<torch::lazy::BackendDevice>& devices,
           const std::vector<torch::lazy::BackendDevice>& all_devices) {
         TestSingleReplication(devices, all_devices);

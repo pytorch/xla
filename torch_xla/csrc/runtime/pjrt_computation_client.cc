@@ -118,7 +118,8 @@ PjRtComputationClient::PjRtComputationClient() {
     client_ = std::move(xla::GetCApiClient("TPU").value());
   } else if (device_type == "TPU_LEGACY") {
     XLA_ERROR() << "TPU_LEGACY client is no longer available.";
-  } else if (device_type == "GPU") {
+  } else if (device_type == "GPU" || device_type == "CUDA" ||
+             device_type == "ROCM") {
     TF_VLOG(1) << "Initializing PjRt GPU client...";
     bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncGpuClient, true);
     int local_rank = sys_util::GetEnvInt(env::kEnvPjRtLocalRank, 0);

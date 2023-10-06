@@ -138,7 +138,7 @@ def run_multiprocess(fn: Callable[..., R],
   """
   if runtime.device_type() == 'TPU':
     num_processes = tpu.num_local_processes()
-  elif runtime.device_type() == 'GPU':
+  elif runtime.device_type() in ('GPU', 'ROCM', 'CUDA'):
     num_processes = gpu.num_local_processes()
     gpu.initialize_distributed_runtime(num_processes)
   elif runtime.device_type() == 'NEURON':
@@ -160,7 +160,7 @@ def run_multiprocess(fn: Callable[..., R],
         itertools.chain.from_iterable(
             result.items() for result in process_results))
 
-  if runtime.device_type() == 'GPU':
+  if runtime.device_type() in ('GPU', 'ROCM', 'CUDA'):
     gpu.shutdown_distributed_runtime()
 
   return _merge_replica_results(replica_results)
@@ -210,8 +210,8 @@ def _initialize_single_process(local_rank: int, local_world_size: int):
 
 def spawn_threads(fn: Callable, args: Tuple = ()) -> None:
   """Run function in one process with one thread per addressable device."""
-  assert runtime.device_type(
-  ) != 'GPU', "spawn_threads does not support GPU device"
+  assert runtime.device_type() not in (
+      'GPU', 'ROCM', 'CUDA'), "spawn_threads does not support GPU device"
   spawn_fn = _SpawnFn(fn, *args)
   _run_thread_per_device(
       local_rank=0,

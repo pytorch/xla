@@ -75,7 +75,9 @@ XLATensorImpl::XLATensorImpl(XLATensor&& tensor)
   // Upstream TensorImpl cannot differentiate between XLA:TPU and XLA:GPU
   // so we must manually update Autocast to AutocastCUDA on XLA:GPU.
   torch::lazy::BackendDevice current_device = bridge::GetCurrentDevice();
-  if (static_cast<XlaDeviceType>(current_device.type()) == XlaDeviceType::GPU) {
+  auto dev_type = static_cast<XlaDeviceType>(current_device.type());
+  if (dev_type == XlaDeviceType::GPU || dev_type == XlaDeviceType::CUDA ||
+      dev_type == XlaDeviceType::ROCM) {
     auto autocast_cuda_ks = c10::DispatchKeySet(c10::DispatchKey::AutocastCUDA);
     auto autocast_xla_ks = c10::DispatchKeySet(c10::DispatchKey::AutocastXLA);
     key_set_ = (key_set_ - autocast_xla_ks) | autocast_cuda_ks;

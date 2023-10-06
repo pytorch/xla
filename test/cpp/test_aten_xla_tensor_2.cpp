@@ -1512,7 +1512,7 @@ TEST_F(AtenXlaTensorTest, TestGroupNormBackward) {
             /*cudnn_enabled=*/false);
       };
       torch::Tensor undef;
-      ForEachDevice({XlaDeviceType::GPU, XlaDeviceType::TPU},
+      ForEachDevice({XlaDeviceType::CUDA, XlaDeviceType::TPU},
                     [&](const torch::Device& device) {
                       TestBackward({input, undef_weight ? undef : weight,
                                     undef_weight ? undef : bias},
