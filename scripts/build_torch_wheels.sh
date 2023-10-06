@@ -323,10 +323,6 @@ function install_torchaudio_from_source() {
   fi
 }
 
-function install_libtpu() {
-  pip install torch_xla[tpu] -f https://storage.googleapis.com/libtpu-releases/index.html
-}
-
 function main() {
   setup_system
   maybe_install_sources
@@ -340,7 +336,6 @@ function main() {
   build_and_install_torch
   pushd xla
   build_and_install_torch_xla
-  install_libtpu
   popd
   install_torchvision_from_source
   # install_torchaudio_from_source
