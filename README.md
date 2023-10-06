@@ -147,7 +147,8 @@ bucket.
 
 | Version | Cloud TPU VMs Wheel |
 | --- | ----------- |
-| 2.1 (CUDA 12.0 + Python 3.8) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.0/torch_xla-2.1.0-cp38-cp38-manylinux_2_28_x86_64.whl` |
+| 2.1 (Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.1.0%2Blibtpu-cp310-cp310-manylinux_2_28_x86_64.whl` |
+| 2.1 (Python 3.8) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.1.0-cp38-cp38-manylinux_2_28_x86_64.whl` |
 | 2.1 (XRT + Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/xrt/tpuvm/torch_xla-2.1.0%2Bxrt-cp310-cp310-manylinux_2_28_x86_64.whl` |
 | nightly (Python 3.8) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-nightly-cp38-cp38-linux_x86_64.whl` |
 | nightly (Python 3.10) | `https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-nightly-cp310-cp310-linux_x86_64.whl` |
@@ -206,7 +207,7 @@ You can also add `+yyyymmdd` after `torch_xla-nightly` to get the nightly wheel
 of a specified date. To get the companion pytorch and torchvision nightly wheel,
 replace the `torch_xla` with `torch` or `torchvision` on above wheel links.
 
-#### Installing libtpu (before PyTorch/XLA 2.0)
+#### Installing libtpu
 
 For PyTorch/XLA release r2.0 and older and when developing PyTorch/XLA, install
 the `libtpu` pip package with the following command:
@@ -223,7 +224,7 @@ This is only required on Cloud TPU VMs.
 
 | Version | Cloud TPU VMs Docker |
 | --- | ----------- |
-| 2.1 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.1.0_3.10_tpuvm` |
+| 2.1 | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:r2.1.0_libtpu_3.10_tpuvm` |
 | 2.0 | `gcr.io/tpu-pytorch/xla:r2.0_3.8_tpuvm` |
 | 1.13 | `gcr.io/tpu-pytorch/xla:r1.13_3.8_tpuvm` |
 | nightly python | `us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.10_tpuvm` |
