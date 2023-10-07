@@ -110,7 +110,7 @@ from torch_xla.distributed.fsdp.wrap import (size_based_auto_wrap_policy,
                                              transformer_auto_wrap_policy)
 
 DEFAULT_KWARGS = dict(
-    batch_size=128,
+    batch_size=64,
     test_set_batch_size=64,
     num_epochs=18,
     momentum=0.9,
