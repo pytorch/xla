@@ -978,7 +978,7 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
       partition_spec = (0, 1)
       op_sharding = mesh_2d.get_op_sharding(partition_spec)
       global_tensor = from_cpu_shards(shards, op_sharding)
-      expected = torch.arange(self.n_devices).reshape(2, self.n_devices // 2)
+      expected = torch.arange(self.n_devices).reshape(*mesh_shape)
       self.assertTrue(torch.allclose(global_tensor.cpu(), expected))
 
       # Partially replicated sharding
