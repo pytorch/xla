@@ -87,6 +87,14 @@ class Mesh:
     Return the OpSharding for the given partition spec. This is an expensive
     operation as the mesh grows, so the value is cached for reuse.
     """
+    partition_spec = _translate_named_partition_spec(self, partition_spec)
+    flat_specs = np.hstack([d for d in partition_spec])
+    specs = [d for d in flat_specs if d is not None]
+    assert all(d >= 0 and d < len(self.mesh_shape) for d in specs), \
+      f"partition_spec ({partition_spec}) contains out of bound index into mesh_shape."
+    assert len(specs) == len(np.unique(specs)), \
+    f"Each device mesh dimension should appear at most once in partition_spec {partition_spec}."
+
     tile_assignment = _get_tile_assignment(self, partition_spec)
     if len(tile_assignment.shape) > len(partition_spec):
       # Use partial replication for sharding a tensor over a higher-rank mesh
@@ -482,19 +490,12 @@ def mark_sharding(
   assert num_devices > 0, "This requires XLA supported device(s)."
   assert mesh.size() == num_devices, \
     f"{mesh.mesh_shape} is not mappable over {num_devices} devices."
-  partition_spec = _translate_named_partition_spec(mesh, partition_spec)
   # We only allow fully specified `partition_spec` to be applicable, as opposed
   # to filling in the unspecified replicated dims. Fully specified `partiion_spec`
   # should be of the same rank as `t`. This is to support partial replication
   # where the group assignment may vary with different input ranks.
   assert len(t.shape) == len(partition_spec), \
     f"Partition spec length ({len(partition_spec)}) should be equal to the input rank ({len(t.shape)})."
-  flat_specs = np.hstack([d for d in partition_spec])
-  specs = [d for d in flat_specs if d is not None]
-  assert all(d >= 0 and d < len(mesh.mesh_shape) for d in specs), \
-    f"partition_spec ({partition_spec}) contains out of bound index into mesh_shape."
-  assert len(specs) == len(np.unique(specs)), \
-    f"Each device mesh dimension should appear at most once in partition_spec {partition_spec}."
 
   op_sharding = mesh.get_op_sharding(partition_spec)
 
