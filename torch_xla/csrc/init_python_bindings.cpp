@@ -34,6 +34,7 @@
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ir_dump_util.h"
+#include "torch_xla/csrc/layout_manager.h"
 #include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
@@ -1663,6 +1664,72 @@ void InitXlaModuleBindings(py::module m) {
           }
           return std::nullopt;
         });
+  // Reassemble the CPU shards into a global tensor. A new sharded tensor is
+  // created from the local shards with the provided sharding annotation
+  // attached. The order of the shards should coincide with the order of
+  // devices returned by `torch_xla.runtime.local_runtime_devices()`.
+  m.def(
+      "_global_tensor_from_cpu_shards",
+      [](const std::vector<at::Tensor>& shards, const xla::OpSharding& sharding,
+         std::optional<std::vector<int64_t>>& global_shape) -> at::Tensor {
+        XLA_CHECK(UseVirtualDevice())
+            << "Please enable SPMD via `torch_xla.runtime.use_spmd()`";
+        auto local_devices = runtime::GetComputationClient()->GetLocalDevices();
+        XLA_CHECK(local_devices.size() == shards.size())
+            << "Must specify a shard for each local device";
+        XLA_CHECK(!global_shape.has_value() ||
+                  global_shape.value().size() == shards[0].sizes().size())
+            << "Global shape rank must agree with shard rank: expected rank "
+            << shards[0].sizes().size() << ", got "
+            << global_shape.value().size();
+
+        if (!global_shape.has_value()) {
+          // Set a default value for the global shape based on the sharding
+          // type.
+          if (sharding.type() == xla::OpSharding::OTHER) {
+            // Infer the global shape to be the shard shape scaled by the tiling
+            // dimensionality.
+            auto tile_shape = sharding.tile_assignment_dimensions();
+            global_shape = std::vector<int64_t>();
+            for (int dim = 0; dim < shards[0].sizes().size(); ++dim) {
+              auto global_dim = tile_shape[dim] * shards[0].sizes()[dim];
+              global_shape->push_back(global_dim);
+            }
+          } else if (sharding.type() == xla::OpSharding::REPLICATED) {
+            global_shape = shards[0].sizes().vec();
+          } else {
+            XLA_ERROR() << "Unsupported OpSharding type: " << sharding.type();
+          }
+        }
+
+        auto device = GetVirtualDevice();
+        auto primitive_type =
+            MakeXlaPrimitiveType(shards[0].type().scalarType(), &device);
+        xla::Shape tensor_shape = MakeArrayShapeFromDimensions(
+            global_shape.value(), /*dynamic_dimensions=*/{}, primitive_type,
+            static_cast<XlaDeviceType>(device.type()));
+        auto sharding_spec =
+            std::make_shared<XLATensor::ShardingSpec>(sharding, tensor_shape);
+
+        // Verify that the shard shape is correct for the global shape and
+        // sharding spec.
+        auto expected_shard_shape = ShardingUtil::GetShardShape(sharding_spec);
+        for (auto shard : shards) {
+          XLA_CHECK(shard.sizes() == expected_shard_shape)
+              << "Input shard shape must include padding: " << shard.sizes()
+              << " vs " << expected_shard_shape;
+        }
+
+        auto data_handle = ShardingUtil::CreateShardedData(
+            shards, local_devices, sharding_spec);
+        XLATensorPtr xla_tensor = XLATensor::Create(std::move(data_handle));
+        xla_tensor->SetShardingSpec(*sharding_spec);
+        auto tensor = bridge::AtenFromXlaTensor(std::move(xla_tensor));
+        return torch::autograd::make_variable(tensor,
+                                              shards[0].requires_grad());
+      },
+      py::arg("shards"), py::arg("sharding"),
+      py::arg("global_shape") = py::none());
   // Returns the local shards of the tensor, with values taken from the
   // underlying ComputationClient::GetDataShards. As such, the shards will
   // contain any padding that was applied to ensure they all have the same
