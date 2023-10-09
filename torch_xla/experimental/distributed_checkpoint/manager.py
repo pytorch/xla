@@ -61,6 +61,17 @@ class CheckpointManager:
     Args:
       path: The base path for the CheckpointManager to write checkpoints into.
       save_period: The number of steps between saving checkpoints.
+      max_to_keep: The maximum number of checkpoints to be tracked by the
+            CheckpointManager. When a new checkpoint will be taken, the
+            checkpoint for the lowest tracked step will be deleted.
+            Default: -1, indicating no upper bound on the number of checkpoints.
+      async_queue_size: The size of the execution queue which processes async
+            checkpoints. This should be a small value to ensure training doesn't
+            get too far ahead of the last finished checkpoint, but increasing
+            the value to 2 can unblock training when there are transient
+            network issues which slow down the active checkpoint.
+            Default: 1, which only allows a single async checkpoint to be
+            pending at a time.
     """
     raise NotImplementedError
 
@@ -82,7 +93,7 @@ class CheckpointManager:
       step: The current training step.
       state_dict: The state dict to be checkpointed.
       force: Option to force a checkpoint to be taken regardless of the result
-             of `should_save(step)`
+             of `should_save(step)`.
     Returns:
       True if a checkpoint was taken and False otherwise.
     """
@@ -99,14 +110,15 @@ class CheckpointManager:
 
     This function will do the following:
     1. Transfer `state_dict` to the CPU device.
-    2. Synchronously wait for any other async checkpoints to finish.
-    3. Start a background thread to take the checkpoint asynchronously.
+    2. Dispatch the checkpoint workload to an asynchronous execution 
+       queue. This will block training until the ongoing async 
+       checkpoint finishes when the queue is full.
 
     Args:
       step: The current training step.
       state_dict: The state dict to be checkpointed.
       force: Option to force a checkpoint to be taken regardless of the result
-             of `should_save(step)`
+             of `should_save(step)`.
     Returns:
       True if a checkpoint was taken and False otherwise.
     """
