@@ -27,7 +27,7 @@ class CheckpointManager:
   The intended usage of CheckpointManager is as follows:
 
   >>> # Create a CheckpointManager to checkpoint every 10 steps into GCS.
-  >>> chkpt_mgr = CheckpointManager('gs://my-bucket/my-experiemnt', 10)
+  >>> chkpt_mgr = CheckpointManager('gs://my-bucket/my-experiment', 10)
   
   >>> # Select a checkpoint to restore from, and restore if applicable
   >>> tracked_steps = chkpt_mgr.all_steps()
