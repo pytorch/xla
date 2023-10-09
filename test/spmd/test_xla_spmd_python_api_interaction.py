@@ -135,6 +135,7 @@ class BasicAutocastAPITest(test_xla_sharding_base.XlaShardingTest):
 
 
 class BasicDistributedTest(test_xla_sharding_base.XlaShardingTest):
+
   @classmethod
   def setUpClass(cls):
     xr.use_spmd()
