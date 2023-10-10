@@ -266,9 +266,6 @@ def configure_topology(local_rank: int,
   os.environ.setdefault(xenv.TPU_VISIBLE_CHIPS, str(local_rank))
   os.environ.setdefault(xenv.TPU_PROCESS_PORT, str(ports[local_rank]))
 
-  if version() == 4:
-    os.environ.setdefault(xenv.TPU_MEGACORE, 'megacore_dense')
-
 
 def discover_master_worker_ip(use_localhost: bool = True) -> str:
   """Find the IP of the TPU host with TPU:0.
