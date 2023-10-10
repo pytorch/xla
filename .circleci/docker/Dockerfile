@@ -64,6 +64,9 @@ RUN . $CARGO_HOME/env && \
 
 ENV PATH $CARGO_HOME/bin:$PATH
 
+# Upstream CI requires jq
+RUN apt-get install -y jq
+
 # TODO: Add exec permisson for all users in base image.
 RUN chmod a+x /usr/local/bin/bazel
 # TODO: move sudo installation in base image.
