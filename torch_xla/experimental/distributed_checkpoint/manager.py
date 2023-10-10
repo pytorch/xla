@@ -69,10 +69,16 @@ class CheckpointManager:
   # The period to take checkpoints, in steps.
   save_period: int
 
+  # The maximum number of checkpoints to keep.
+  max_to_keep: int
+
+  # The size of the queue which processes async checkpoints.
+  async_queue_size: int
+
   def __init__(self,
                path: str,
                save_period: int,
-               max_to_keep: Optional[int] = -1,
+               max_to_keep: Optional[int] = 0,
                async_queue_size: Optional[int] = 1):
     """
     Create a checkpoint manager that reads and writes checkpoints into
@@ -84,7 +90,7 @@ class CheckpointManager:
       max_to_keep: The maximum number of checkpoints to be tracked by the
             CheckpointManager. When a new checkpoint will be taken, the
             checkpoint for the lowest tracked step will be deleted.
-            Default: -1, indicating no upper bound on the number of checkpoints.
+            Default: 0, indicating no upper bound on the number of checkpoints.
       async_queue_size: The size of the execution queue which processes async
             checkpoints. This should be a small value to ensure training doesn't
             get too far ahead of the last finished checkpoint, but increasing
@@ -101,7 +107,7 @@ class CheckpointManager:
     self.async_queue_size = async_queue_size
     assert self.save_period > 0, "save_period must be positive"
     assert self.async_queue_size > 0, "async_queue_size must be positive"
-    assert self.max_to_keep != 0, "max_to_keep must be non-zero"
+    assert self.max_to_keep >= 0, "max_to_keep must be non-negative"
 
   def _get_path(self, step: int) -> str:
     return os.path.join(self.base_path, str(step))
@@ -110,7 +116,7 @@ class CheckpointManager:
     if self.max_to_keep > 0:
       tracked_steps = sorted(self.all_steps(), reverse=True)
       while len(tracked_steps) > self.max_to_keep:
-        # Delete the oldest checkpoint step to free up space for the new one.
+        # Delete the oldest checkpoint step
         oldest_step = tracked_steps.pop()
         path = self._get_path(oldest_step)
         fs, raw_path = url_to_fs(path)
