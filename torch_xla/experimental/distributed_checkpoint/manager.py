@@ -1,8 +1,16 @@
+import os
+import torch.distributed as dist
 import torch.distributed.checkpoint as dist_cp
+import torch_xla.runtime as xr
 import torch_xla.experimental.distributed_checkpoint as xc
 
-from typing import List, Optional
+from fsspec.core import url_to_fs
+from os.path import basename
+from typing import List, Optional, Union
 from torch.distributed.checkpoint.metadata import STATE_DICT_TYPE
+
+# TODO(jonbolin): Import path will change
+from torch.distributed.checkpoint._fsspec_filesystem import FsspecReader, FsspecWriter
 
 
 class CheckpointManager:
@@ -53,6 +61,14 @@ class CheckpointManager:
   https://github.com/google/orbax/blob/efc079c4e5b437782a80138913d322cb3ed365c7/checkpoint/orbax/checkpoint/checkpoint_manager.py
   """
 
+  # The base path to write checkpoints to. Each checkpoint taken by the manager
+  # will be written into a subdirectory of this path, identified by the
+  # checkpoint's step.
+  base_path: Union[str, os.PathLike]
+
+  # The period to take checkpoints, in steps.
+  save_period: int
+
   def __init__(self,
                path: str,
                save_period: int,
@@ -77,14 +93,36 @@ class CheckpointManager:
             Default: 1, which only allows a single async checkpoint to be
             pending at a time.
     """
-    raise NotImplementedError
+    assert dist.is_initialized(), "A process group is required."
+
+    self.base_path = path
+    self.save_period = save_period
+    self.max_to_keep = max_to_keep
+    self.async_queue_size = async_queue_size
+    assert self.save_period > 0, "save_period must be positive"
+    assert self.async_queue_size > 0, "async_queue_size must be positive"
+    assert self.max_to_keep != 0, "max_to_keep must be non-zero"
+
+  def _get_path(self, step: int) -> str:
+    return os.path.join(self.base_path, str(step))
+
+  def _release_oldest_checkpoints(self):
+    if self.max_to_keep > 0:
+      tracked_steps = sorted(self.all_steps(), reverse=True)
+      while len(tracked_steps) > self.max_to_keep:
+        # Delete the oldest checkpoint step to free up space for the new one.
+        oldest_step = tracked_steps.pop()
+        path = self._get_path(oldest_step)
+        fs, raw_path = url_to_fs(path)
+        fs.rm(raw_path, recursive=True)
 
   def should_save(self, step: int) -> bool:
     """
     Returns true if a checkpoint should be saved for the current step or if
     a preemption has been detected.
     """
-    raise NotImplementedError
+    # TODO(jonbolin): Support preemption notice for auto checkpointing
+    return step % self.save_period == 0
 
   def save(self,
            step,
@@ -101,7 +139,16 @@ class CheckpointManager:
     Returns:
       True if a checkpoint was taken and False otherwise.
     """
-    raise NotImplementedError
+    if self.should_save(step):
+      path = self._get_path(step)
+      dist_cp.save_state_dict(
+          state_dict=state_dict,
+          storage_writer=FsspecWriter(path),
+          planner=xc.SPMDSavePlanner(),
+      )
+      self._release_oldest_checkpoints()
+      return True
+    return False
 
   def save_async(self,
                  step: int,
@@ -139,10 +186,18 @@ class CheckpointManager:
       state_dict: The state dict to restore the checkpoint into. Values are
                   updated in-place within the state_dict.
     """
-    raise NotImplementedError
+    path = self._get_path(step)
+    dist_cp.load_state_dict(
+        state_dict=state_dict,
+        storage_reader=FsspecReader(path),
+        planner=xc.SPMDLoadPlanner(),
+    )
 
   def all_steps(self) -> List[int]:
     """
     List all steps tracked by the CheckpointManager.
     """
-    raise NotImplementedError
+    fs, raw_path = url_to_fs(self.base_path)
+    all_paths = fs.ls(raw_path, detail=False)
+    all_steps = map(basename, all_paths)
+    return list(map(int, all_steps))
