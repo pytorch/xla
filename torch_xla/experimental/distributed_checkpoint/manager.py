@@ -72,9 +72,6 @@ class CheckpointManager:
   # The maximum number of checkpoints to keep.
   max_to_keep: int
 
-  # The size of the queue which processes async checkpoints.
-  async_queue_size: int
-
   def __init__(self,
                path: str,
                save_period: int,
@@ -100,14 +97,13 @@ class CheckpointManager:
             pending at a time.
     """
     assert dist.is_initialized(), "A process group is required."
+    assert save_period > 0, "save_period must be positive"
+    assert async_queue_size > 0, "async_queue_size must be positive"
+    assert max_to_keep >= 0, "max_to_keep must be non-negative"
 
     self.base_path = path
     self.save_period = save_period
     self.max_to_keep = max_to_keep
-    self.async_queue_size = async_queue_size
-    assert self.save_period > 0, "save_period must be positive"
-    assert self.async_queue_size > 0, "async_queue_size must be positive"
-    assert self.max_to_keep >= 0, "max_to_keep must be non-negative"
 
   def _get_path(self, step: int) -> str:
     return os.path.join(self.base_path, str(step))
@@ -145,7 +141,7 @@ class CheckpointManager:
     Returns:
       True if a checkpoint was taken and False otherwise.
     """
-    if self.should_save(step):
+    if self.should_save(step) or force:
       path = self._get_path(step)
       dist_cp.save_state_dict(
           state_dict=state_dict,
