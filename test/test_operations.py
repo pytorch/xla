@@ -309,6 +309,19 @@ class TestSelect(test_utils.XlaTestCase):
     tx = t.select(1, 12)
     self.assertEqual(tx, sx.data.cpu())
 
+  def test_masked_fill_scalar(self):
+
+    def fn(tensor):
+      # Build a mask from the first line of tensor.
+      # Also, make it have the same rank as the original tensor.
+      mask = tensor[0].ge(0.5).unsqueeze(dim=0)
+      # Call masked_fill.
+      return tensor.masked_fill(mask, 10)
+
+    x = _gen_tensor(2, 2, device=xm.xla_device())
+    x_cpu = x.cpu()
+    self.assertEqual(fn(x_cpu), fn(x))
+
 
 class TestRandom(test_utils.XlaTestCase):
 
