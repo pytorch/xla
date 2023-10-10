@@ -105,14 +105,36 @@ std::vector<std::string> PjRtComputationClient::PjRtDevicesToString(
   return strs;
 }
 
-int getGlobalRank(int localRank) {
+int getGlobalRank(int local_rank) {
   int global_rank = sys_util::GetEnvInt("RANK", -1);
   if (global_rank != -1) {
     // torchrun case.
     return global_rank;
   }
   // Single host.
-  return localRank;
+  return local_rank;
+}
+
+std::optional<std::set<int>> getAllowedDevices(int local_rank) {
+  std::string cuda_visible_devices = sys_util::GetEnvString(env::kEnvCudaVisibleDevices, "");
+  if (cuda_visible_devices.empty()) {
+    return std::make_optional<std::set<int>>(std::set{local_rank});
+  }
+  std::vector<std::string> devices = absl::StrSplit(cuda_visible_devices, ',');
+  std::vector<int64_t> devices_list;
+  std::set<int64_t> devices_set;
+  for (const auto& d : devices) {
+    int device = std::stol(d);
+    XLA_CHECK(devices_set.find(device)==devices_set.end());
+    XLA_CHECK(device>=0);
+    devices_set.insert(device);
+    devices_list.push_back(device);
+  }
+  XLA_CHECK(local_rank <= devices_list.size()-1);
+  int chosen_device = devices_list[local_rank];
+  TF_VLOG(3) << "CUDA_VISIBLE_DEVICES is set. Using device="
+              << chosen_device;
+  return std::make_optional<std::set<int>>(std::set{chosen_device});
 }
 
 PjRtComputationClient::PjRtComputationClient() {
@@ -139,8 +161,11 @@ PjRtComputationClient::PjRtComputationClient() {
     int global_rank = getGlobalRank(local_rank);
     auto distributed_client =
         MaybeInitializeDistributedRuntimeClient(global_rank);
-    auto allowed_devices =
-        std::make_optional<std::set<int>>(std::set{local_rank});
+    // Existing logic is correct for multiprocess with CUDA_VISIBLE_DEVICES unset.
+    // Single process, we want allowed_devices to be std::nullopt.
+    // Multiprocess with CUDA_VISIBLE_DEVICES, we should set allowed_devies to std::set{CUDA_VISIBLE_DEVICES[local_rank]}.
+    // auto allowed_devices = std::make_optional<std::set<int>>(std::set{local_rank});
+    auto allowed_devices = getAllowedDevices(local_rank);
     xla::PjRtClient::KeyValueGetCallback kv_get = nullptr;
     xla::PjRtClient::KeyValuePutCallback kv_put = nullptr;
     if (distributed_client != nullptr) {

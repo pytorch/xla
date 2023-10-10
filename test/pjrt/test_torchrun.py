@@ -18,6 +18,8 @@ class TestTorchrun(absltest.TestCase):
 
     expected_world_size = dist_world_size * devices_per_thread
 
+    xla_dev = xm.xla_device()
+    print('xla_dev=', xla_dev, ', xla_device_hw=', xm.xla_device_hw(xla_dev))
     rank = torch.tensor([dist.get_rank()],
                         dtype=torch.float32,
                         device=xm.xla_device())

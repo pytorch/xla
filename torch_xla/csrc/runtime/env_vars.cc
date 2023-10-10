@@ -19,6 +19,8 @@ const char* const kEnvNeuronLibraryPath = "NEURON_LIBRARY_PATH";
 const char* const kEnvPjrtDistServiceAddr = "PJRT_DIST_SERVICE_ADDR";
 const char* const kEnvPjRtLocalProcessCount = "PJRT_LOCAL_PROCESS_COUNT";
 const char* const kEnvPjRtLocalRank = "PJRT_LOCAL_PROCESS_RANK";
+const char* const kEnvCudaVisibleDevices = "CUDA_VISIBLE_DEVICES";
+
 
 }  // namespace env
 }  // namespace runtime

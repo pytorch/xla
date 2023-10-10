@@ -29,6 +29,7 @@ extern const char* const kEnvNeuronLibraryPath;
 extern const char* const kEnvPjrtDistServiceAddr;
 extern const char* const kEnvPjRtLocalProcessCount;
 extern const char* const kEnvPjRtLocalRank;
+extern const char* const kEnvCudaVisibleDevices;
 
 }  // namespace env
 }  // namespace runtime
