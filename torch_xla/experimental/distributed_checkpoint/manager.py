@@ -2,10 +2,13 @@ import fsspec
 import logging
 import os
 import pickle
+import queue
+import threading
 import torch.distributed as dist
 import torch.distributed.checkpoint as dist_cp
 import torch_xla.runtime as xr
 import torch_xla.experimental.distributed_checkpoint as xc
+import traceback
 
 from dataclasses import dataclass
 from datetime import datetime
@@ -14,6 +17,7 @@ from fsspec.core import url_to_fs
 from os.path import basename
 from typing import Deque, List, Optional, Union
 from torch.distributed.checkpoint.metadata import STATE_DICT_TYPE
+from ._helpers import _sharded_cpu_state_dict
 
 # TODO(jonbolin): Import path will change
 from torch.distributed.checkpoint._fsspec_filesystem import FsspecReader, FsspecWriter
@@ -125,6 +129,13 @@ class CheckpointManager:
 
     self._tracked_chkpts = self._load_tracked_chkpts()
 
+    self._async_queue = queue.Queue(maxsize=async_queue_size)
+    self._chkpt_thread = threading.Thread(target=self._async_worker, daemon=True)
+    self._chkpt_thread.start()
+
+    # Create a CPU process group to coordinate the checkpoint.
+    self.pg = dist.new_group(backend='gloo')
+
   def _load_tracked_chkpts(self) -> Deque[_CheckpointMetadata]:
     """
     Loads a list of all tracked checkpoints from the storage backend.
@@ -142,6 +153,20 @@ class CheckpointManager:
     if invalid_paths:
       logging.warning(f'Ignoring invalid checkpoints: {invalid_paths}')
     return deque(sorted(all_chkpts, key=lambda m: m.ts))
+
+  def __del__(self):
+    # Ensure pending checkpoints are finished
+    self._async_queue.join()
+
+  def _async_worker(self):
+    while True:
+      try:
+        step, state_dict = self._async_queue.get()
+        self.save(step, state_dict, force=True)
+      except:
+        traceback.print_exc()
+      finally:
+        self._async_queue.task_done()
 
   def _get_path(self, step: int) -> str:
     return os.path.join(self.base_path, str(step))
@@ -193,6 +218,7 @@ class CheckpointManager:
           state_dict=state_dict,
           storage_writer=FsspecWriter(path),
           planner=xc.SPMDSavePlanner(),
+          process_group=self.pg,
       )
       metadata = _CheckpointMetadata(step=step, ts=datetime.now())
       with fsspec.open(os.path.join(path, _MANAGER_METADATA_FILE), 'wb') as f:
@@ -225,7 +251,12 @@ class CheckpointManager:
     Returns:
       True if a checkpoint was taken and False otherwise.
     """
-    raise NotImplementedError
+    if self.should_save(step) or force:
+      # Move the state_dict to CPU
+      cpu_state_dict = _sharded_cpu_state_dict(state_dict)
+      self._async_queue.put((step, cpu_state_dict))
+      return True
+    return False
 
   def restore(self, step: int, state_dict: STATE_DICT_TYPE) -> None:
     """
@@ -245,6 +276,7 @@ class CheckpointManager:
         state_dict=state_dict,
         storage_reader=FsspecReader(path),
         planner=xc.SPMDLoadPlanner(),
+        process_group=self.pg,
     )
 
   def all_steps(self) -> List[int]:

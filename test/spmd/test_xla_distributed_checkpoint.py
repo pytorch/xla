@@ -412,6 +412,44 @@ class CheckpointManagerTest(DistributedCheckpointTestBase):
     self.assertTrue(chkpt_mgr.save(20, state_dict))
     self.assertEqual(set(chkpt_mgr.all_steps()), {20, 10})
 
+  @run_with_tmpdir
+  def test_manager_async_checkpoint(self, tmpdir):
+    chkpt_mgr = CheckpointManager(tmpdir, save_period=10)
+    state_dict = self._get_sharded_model().state_dict()
+
+    self.assertEqual(chkpt_mgr.all_steps(), [])
+
+    # Steps not divisible by 10 should not be saved
+    for step in range(1, 10):
+      self.assertFalse(chkpt_mgr.save_async(step, state_dict))
+      self.assertEqual(chkpt_mgr.all_steps(), [])
+
+    # Steps divisible by 10 should be saved
+    saved = set()
+    for step in range(0, 100, 10):
+      self.assertTrue(chkpt_mgr.save_async(step, state_dict))
+      saved.add(step)
+
+    # Delete the checkpoint manager to block this thread until all pending
+    # async checkpoints are complete.
+    del chkpt_mgr
+
+    # The manager should track all steps which were asynchronously saved.
+    chkpt_mgr = CheckpointManager(tmpdir, save_period=10)
+    self.assertEqual(set(chkpt_mgr.all_steps()), saved)
+
+    # Load a checkpoint into a new state_dict
+    new_state_dict = self._get_sharded_model().state_dict()
+    self.assertFalse(
+        any(
+            torch.allclose(v, new_state_dict[k])
+            for k, v in state_dict.items()))
+    chkpt_mgr.restore(0, new_state_dict)
+    self.assertTrue(
+        all(
+            torch.allclose(v, new_state_dict[k])
+            for k, v in state_dict.items()))
+
 
 if __name__ == '__main__':
   test = unittest.main()
