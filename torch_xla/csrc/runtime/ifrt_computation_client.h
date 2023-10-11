@@ -147,11 +147,7 @@ class IfrtComputationClient : public ComputationClient {
 
     bool HasSharding() const override { return false; }
 
-    xla::OpSharding GetSharding() const override {
-      XLA_ERROR() << "GetSharding should not be called on IfrtData, check "
-                     "HasSharding first";
-      return xla::OpSharding();
-    }
+    xla::OpSharding GetSharding() const override;
 
     std::string ToString() const override {
       std::stringstream ss;

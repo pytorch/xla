@@ -30,6 +30,7 @@
 #include "xla/python/ifrt/sharding.h"
 #include "xla/python/pjrt_ifrt/pjrt_array.h"
 #include "xla/python/pjrt_ifrt/pjrt_client.h"
+#include "xla/python/pjrt_ifrt/xla_sharding.h"
 #include "xla/shape.h"
 
 using xla::internal::XlaBuilderFriend;
@@ -152,6 +153,15 @@ void IfrtComputationClient::IfrtData::Assign(
   }
 }
 
+xla::OpSharding IfrtComputationClient::IfrtData::GetSharding() const {
+  // XLA_ERROR() << "GetSharding should not be called on IfrtData, check "
+  //                "HasSharding first";
+  const xla::ifrt::Sharding& sharding = buffer->sharding();
+  auto hlo_sharding = dynamic_cast<const xla::ifrt::HloSharding&>(sharding);
+  // TODO: why are we using the proto?
+  return hlo_sharding.xla_hlo_sharding().ToProto();
+}
+
 ComputationClient::DataPtr IfrtComputationClient::CreateDataPlaceholder(
     std::string device, xla::Shape shape) {
   return std::make_shared<IfrtData>(device, shape);
@@ -267,7 +277,8 @@ std::vector<ComputationClient::DataPtr> IfrtComputationClient::TransferToServer(
 ComputationClient::DataPtr IfrtComputationClient::TransferShardsToServer(
     absl::Span<const TensorSource> tensor_shards, std::string device,
     xla::Shape shape, xla::OpSharding sharding) {
-  XLA_ERROR() << __FUNCTION__ << " not implemented";
+  // TODO: completely ignoring OpSharding. Is that important?
+  // XLA_ERROR() << __FUNCTION__ << " not implemented";
   // tsl::profiler::TraceMe activity(
   //     "IfrtComputationClient::TransferShardsToServer",
   //     tsl::profiler::TraceMeLevel::kInfo);
@@ -276,15 +287,37 @@ ComputationClient::DataPtr IfrtComputationClient::TransferShardsToServer(
   // // issues observed in ShardingUtil::InputHandler, but because CopyToDevice
   // // directly copies buffers between devices using ICI, it can be much faster
   // // than transferring from the host to each device.
-  // auto data_shards = TransferToServer(tensor_shards);
+  auto data_shards = TransferToServer(tensor_shards);
   // std::vector<std::shared_ptr<PjRtData>> pjrt_data_shards;
-  // for (auto& shard : data_shards) {
-  //   auto pjrt_shard = dynamic_cast<PjRtData*>(shard.get());
-  //   pjrt_data_shards.push_back(std::make_shared<PjRtData>(
-  //       pjrt_shard->device(), pjrt_shard->shape(), pjrt_shard->buffer));
-  // }
+  std::vector<tsl::RCReference<xla::ifrt::Array>> arrays;
+  std::vector<xla::ifrt::Shape> shard_shapes;
+  for (auto& shard : data_shards) {
+    auto ifrt_shard = std::dynamic_pointer_cast<IfrtData>(shard);
+    arrays.push_back(ifrt_shard->buffer);
+    shard_shapes.push_back(ifrt_shard->buffer->shape());
+    // pjrt_data_shards.push_back(std::make_shared<PjRtData>(
+    //     pjrt_shard->device(), pjrt_shard->shape(), pjrt_shard->buffer));
+  }
   // return std::make_shared<PjRtShardedData>(device, shape, pjrt_data_shards,
   //                                          sharding);
+  xla::ifrt::Shape ifrt_shape(shape.dimensions());
+  xla::ifrt::DeviceList devices_list({client_->addressable_devices().begin(), client_->addressable_devices().end()});
+  std::unique_ptr<xla::ifrt::Sharding> ifrt_sharding = xla::ifrt::ConcreteSharding::Create(
+    devices_list,
+    xla::ifrt::MemoryKind(),
+    ifrt_shape,
+    shard_shapes
+  );
+  // TODO: why doesn't HloSharding work?
+  // RuntimeError: Bad StatusOr access: INVALID_ARGUMENT: Only SingleDeviceSharding, OpaqueSharding, ConcreteSharding, ConcreteEvenSharding, and ShardingParamSharding are supported: sharding=HloSharding(memory_kind: (default), hlo_sharding: {devices=[1,4]0,1,2,3})
+  // std::unique_ptr<xla::ifrt::Sharding> ifrt_sharding = xla::ifrt::HloSharding::Create(
+  //   devices_list,
+  //   xla::ifrt::MemoryKind(),
+  //   xla::HloSharding::FromProto(sharding).value()
+  // );
+  tsl::RCReference<xla::ifrt::Array> sharded_array = client_->AssembleArrayFromSingleDeviceArrays(
+    ifrt_shape, std::move(ifrt_sharding), absl::MakeSpan(arrays), xla::ifrt::ArrayCopySemantics::kAlwaysCopy).value();
+  return std::make_shared<IfrtData>(device, shape, sharded_array);
 }
 
 ComputationClient::DataPtr IfrtComputationClient::CopyToDevice(
