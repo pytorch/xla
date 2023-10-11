@@ -1,3 +1,4 @@
+import itertools
 import sys
 import os
 from typing import List, Tuple, Any
@@ -44,7 +45,8 @@ def _make_input_signatures(
     meta: stablehlo.StableHLOFunctionMeta) -> List[tf.TensorSpec]:
   input_pos_to_spec = {
       loc.position: spec
-      for loc, spec in zip(meta.input_locations, meta.input_signature)
+      for loc, spec in itertools.chain(
+          zip(meta.input_locations, meta.input_signature), meta.unused_inputs)
       if loc.type_ == stablehlo.VariableType.INPUT_ARG
   }
   for i in range(len(input_pos_to_spec)):
