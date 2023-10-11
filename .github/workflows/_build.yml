@@ -73,8 +73,8 @@ jobs:
             # if image layers are not present in the repo.
             # Note: disable the following 2 lines while testing a new image, so we do not
             # push to the upstream.
-            docker tag "${GCR_DOCKER_IMAGE}" "${ECR_DOCKER_IMAGE_BASE}:v1.1.3-lite-test" >/dev/null
-            docker push "${ECR_DOCKER_IMAGE_BASE}:v1.1.3-lite-test" >/dev/null
+            docker tag "${GCR_DOCKER_IMAGE}" "${ECR_DOCKER_IMAGE_BASE}:v1.1-lite" >/dev/null
+            docker push "${ECR_DOCKER_IMAGE_BASE}:v1.1-lite" >/dev/null
       - name: Start the container
         shell: bash
         run: |
@@ -87,7 +87,6 @@ jobs:
         shell: bash
         run: |
           echo "declare -x SCCACHE_BUCKET=${SCCACHE_BUCKET}" | docker exec -i "${pid}" sh -c "cat >> env"
-          echo "declare -x USE_CUDA=0" | docker exec -i "${pid}" sh -c "cat >> xla_env"
           echo "declare -x DISABLE_XRT=${DISABLE_XRT}" | docker exec -i "${pid}" sh -c "cat >> xla_env"
           echo "declare -x XLA_CUDA=${XLA_CUDA}" | docker exec -i "${pid}" sh -c "cat >> xla_env"
           echo "declare -x BAZEL_REMOTE_CACHE=1" | docker exec -i "${pid}" sh -c "cat >> xla_env"
