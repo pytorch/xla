@@ -214,17 +214,8 @@ class TorchXLAReuseGraphTest(torch._dynamo.test_case.TestCase):
       def __init__(self):
         super().__init__(num_embeddings=10, embedding_dim=10, padding_idx=0)
 
-    class Main(torch.nn.Module):
-
-      def __init__(self):
-        super().__init__()
-        self.embedding = Emb()
-
-      def forward(self, x):
-        return self.embedding(x)
-
     device = xm.xla_device()
-    module = Main()
+    module = Emb()
     module.to(device)
 
     @torch.compile(backend="openxla_eval")
