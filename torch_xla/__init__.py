@@ -83,7 +83,7 @@ def _setup_tpu_vm_library_path() -> bool:
   Sets $PTXLA_TPU_LIBRARY_PATH if path is inferred by us to prevent conflicts
   with other frameworks. This env var will be removed in a future version.
   """
-  if 'TPU_LIBRARY_PATH' in os.environ or 'PTXLA_TPU_LIBRARY_PATH' in os.environ:
+  if 'TPU_LIBRARY_PATH' in os.environ:
     return True
 
   module_path = os.path.dirname(__file__)
