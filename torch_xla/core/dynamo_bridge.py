@@ -230,13 +230,12 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule):
       for xla_arg in xla_args
   ]
 
-  xla_tensor_args = [
-      (i, xla_arg) for i, xla_arg in enumerate(xla_args) if isinstance(xla_arg, torch.Tensor)
-  ]
+  xla_tensor_args = [(i, xla_arg)
+                     for i, xla_arg in enumerate(xla_args)
+                     if isinstance(xla_arg, torch.Tensor)]
 
-  args_tensor_ids = [
-      (index, torch_xla._XLAC._xla_get_tensor_id(xla_arg)) for index, xla_arg in xla_tensor_args
-  ]
+  args_tensor_ids = [(index, torch_xla._XLAC._xla_get_tensor_id(xla_arg))
+                     for index, xla_arg in xla_tensor_args]
 
   if dynamo_debug:
     print(f"Graph module:\n{xla_model.code}")
@@ -262,8 +261,7 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule):
 
   # If a arg is being in place updated by model, we need to include arg as part of the graph result.
   xla_args_need_update_bool = torch_xla._XLAC._check_tensor_need_materialization(
-      [tensor for _, tensor in xla_tensor_args]
-  )
+      [tensor for _, tensor in xla_tensor_args])
   xla_args_need_update = []
   arg_index_to_need_update_index = {}
   for i, need_update in enumerate(xla_args_need_update_bool):
@@ -354,7 +352,9 @@ def extract_internal(xla_model: torch.fx.GraphModule):
 
     # mark_step needs to be blocking since we want to access args's XLADatas
     # and they can't be placeholder.
-    if any(torch_xla._XLAC._check_tensor_need_materialization([a for a in args if isinstance(a, torch.Tensor)])):
+    if any(
+        torch_xla._XLAC._check_tensor_need_materialization(
+            [a for a in args if isinstance(a, torch.Tensor)])):
       xm.mark_step(wait=True)
 
     # If input sharding has changed from the previous program, dynamo current can
