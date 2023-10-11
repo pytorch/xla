@@ -14,6 +14,7 @@ const char* const kEnvPjRtTpuMaxInflightComputations =
 const char* const kEnvPjrtAsyncCpuClient = "PJRT_CPU_ASYNC_CLIENT";
 const char* const kEnvPjrtAsyncGpuClient = "PJRT_GPU_ASYNC_CLIENT";
 const char* const kEnvTpuLibraryPath = "TPU_LIBRARY_PATH";
+const char* const kEnvInferredTpuLibraryPath = "PTXLA_TPU_LIBRARY_PATH";
 const char* const kEnvXpuLibraryPath = "XPU_LIBRARY_PATH";
 const char* const kEnvNeuronLibraryPath = "NEURON_LIBRARY_PATH";
 const char* const kEnvPjrtDistServiceAddr = "PJRT_DIST_SERVICE_ADDR";
