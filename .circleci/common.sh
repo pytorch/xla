@@ -102,7 +102,7 @@ function install_deps_pytorch_xla() {
 function build_torch_xla() {
   XLA_DIR=$1
   pushd "$XLA_DIR"
-  python setup.py install --user
+  python setup.py install
   popd
 }
 
