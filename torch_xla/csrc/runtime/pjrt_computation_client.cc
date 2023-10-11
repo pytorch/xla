@@ -109,14 +109,17 @@ PjRtComputationClient::PjRtComputationClient() {
     client_ = std::move(xla::GetTfrtCpuClient(async, cpu_device_count).value());
   } else if (device_type == "TPU" || device_type == "TPU_C_API") {
     TF_VLOG(1) << "Initializing TFRT TPU client...";
-    XLA_CHECK_OK(pjrt::LoadPjrtPlugin(
-        "tpu", sys_util::GetEnvString(env::kEnvTpuLibraryPath, "libtpu.so")));
+    XLA_CHECK_OK(
+        pjrt::LoadPjrtPlugin(
+            "tpu", sys_util::GetEnvString(env::kEnvTpuLibraryPath, "libtpu.so"))
+            .status());
     tsl::Status tpu_status = pjrt::InitializePjrtPlugin("tpu");
     XLA_CHECK(tpu_status.ok());
     client_ = std::move(xla::GetCApiClient("TPU").value());
   } else if (device_type == "TPU_LEGACY") {
     XLA_ERROR() << "TPU_LEGACY client is no longer available.";
-  } else if (device_type == "GPU") {
+  } else if (device_type == "GPU" || device_type == "CUDA" ||
+             device_type == "ROCM") {
     TF_VLOG(1) << "Initializing PjRt GPU client...";
     bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncGpuClient, true);
     int local_rank = sys_util::GetEnvInt(env::kEnvPjRtLocalRank, 0);
@@ -154,15 +157,18 @@ PjRtComputationClient::PjRtComputationClient() {
                       .value());
   } else if (device_type == "XPU") {
     TF_VLOG(1) << "Initializing PjRt XPU client...";
-    XLA_CHECK_OK(pjrt::LoadPjrtPlugin(
-        "xpu", sys_util::GetEnvString(env::kEnvXpuLibraryPath, "libxpu.so")));
+    XLA_CHECK_OK(
+        pjrt::LoadPjrtPlugin(
+            "xpu", sys_util::GetEnvString(env::kEnvXpuLibraryPath, "libxpu.so"))
+            .status());
     client_ = std::move(xla::GetCApiClient("XPU").value());
 
   } else if (device_type == "NEURON") {
     TF_VLOG(1) << "Initializing PjRt NEURON client...";
-    XLA_CHECK_OK(pjrt::LoadPjrtPlugin(
-        "NEURON", sys_util::GetEnvString(env::kEnvNeuronLibraryPath,
-                                         "libneuronpjrt.so")));
+    XLA_CHECK_OK(pjrt::LoadPjrtPlugin("NEURON", sys_util::GetEnvString(
+                                                    env::kEnvNeuronLibraryPath,
+                                                    "libneuronpjrt.so"))
+                     .status());
     client_ = std::move(xla::GetCApiClient("NEURON").value());
   } else {
     XLA_ERROR() << absl::StrFormat("Unknown %s '%s'", env::kEnvPjRtDevice,

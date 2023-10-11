@@ -148,16 +148,16 @@ function run_torch_xla_python_tests() {
     else
       ./test/run_tests.sh
 
-      # GPU tests
+      # CUDA tests
       if [ -x "$(command -v nvidia-smi)" ]; then
-        # These tests fail on GPU with 03/30 TF-pin update (https://github.com/pytorch/xla/pull/4840)
-        PJRT_DEVICE=GPU python test/test_train_mp_imagenet_fsdp.py --fake_data --use_nested_fsdp --use_small_fake_sample --num_epochs=1
-        PJRT_DEVICE=GPU python test/test_train_mp_imagenet_fsdp.py --fake_data --auto_wrap_policy type_based --use_small_fake_sample --num_epochs=1
-        XLA_DISABLE_FUNCTIONALIZATION=1 PJRT_DEVICE=GPU python test/test_train_mp_imagenet_fsdp.py --fake_data --use_nested_fsdp --use_small_fake_sample --num_epochs=1
+        # These tests fail on CUDA with 03/30 TF-pin update (https://github.com/pytorch/xla/pull/4840)
+        PJRT_DEVICE=CUDA python test/test_train_mp_imagenet_fsdp.py --fake_data --use_nested_fsdp --use_small_fake_sample --num_epochs=1
+        PJRT_DEVICE=CUDA python test/test_train_mp_imagenet_fsdp.py --fake_data --auto_wrap_policy type_based --use_small_fake_sample --num_epochs=1
+        XLA_DISABLE_FUNCTIONALIZATION=1 PJRT_DEVICE=CUDA python test/test_train_mp_imagenet_fsdp.py --fake_data --use_nested_fsdp --use_small_fake_sample --num_epochs=1
         # Syncfree SGD optimizer tests
         if [ -d ./torch_xla/amp/syncfree ]; then
           echo "Running Syncfree Optimizer Test"
-          PJRT_DEVICE=GPU python test/test_syncfree_optimizers.py
+          PJRT_DEVICE=CUDA python test/test_syncfree_optimizers.py
 
           # Following test scripts are mainly useful for
           # performance evaluation & comparison among different
@@ -192,9 +192,9 @@ function run_torch_xla_cpp_tests() {
     if [ "$USE_COVERAGE" != "0" ]; then
       # TODO(yeounoh) shard the coverage testing
       if [ -x "$(command -v nvidia-smi)" ]; then
-        PJRT_DEVICE=GPU test/cpp/run_tests.sh $EXTRA_ARGS -L""
+        PJRT_DEVICE=CUDA test/cpp/run_tests.sh $EXTRA_ARGS -L""
         cp $XLA_DIR/bazel-out/_coverage/_coverage_report.dat /tmp/cov1.dat
-        PJRT_DEVICE=GPU test/cpp/run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L"" $EXTRA_ARGS
+        PJRT_DEVICE=CUDA test/cpp/run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L"" $EXTRA_ARGS
         cp $XLA_DIR/bazel-out/_coverage/_coverage_report.dat /tmp/cov2.dat
         lcov --add-tracefile /tmp/cov1.dat -a /tmp/cov2.dat -o /tmp/merged.dat
       else
@@ -206,8 +206,8 @@ function run_torch_xla_cpp_tests() {
     else
       # Shard GPU testing
       if [ -x "$(command -v nvidia-smi)" ]; then
-        PJRT_DEVICE=GPU test/cpp/run_tests.sh $EXTRA_ARGS -L""
-        PJRT_DEVICE=GPU test/cpp/run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L"" $EXTRA_ARGS
+        PJRT_DEVICE=CUDA test/cpp/run_tests.sh $EXTRA_ARGS -L""
+        PJRT_DEVICE=CUDA test/cpp/run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L"" $EXTRA_ARGS
       else
         PJRT_DEVICE=CPU test/cpp/run_tests.sh $EXTRA_ARGS -L""
       fi

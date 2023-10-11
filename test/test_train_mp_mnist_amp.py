@@ -142,7 +142,7 @@ def train_mnist(flags, **kwargs):
 
   if device_hw == 'TPU':
     scaler = None
-  elif device_hw == 'GPU':
+  elif device_hw == 'CUDA':
     # GradScaler only used for GPU
     scaler = GradScaler(use_zero_grad=FLAGS.use_zero_grad)
   else:
