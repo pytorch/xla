@@ -1,3 +1,4 @@
+import heapq
 import os
 import torch.distributed as dist
 import torch.distributed.checkpoint as dist_cp
@@ -105,15 +106,28 @@ class CheckpointManager:
     self.save_period = save_period
     self.max_to_keep = max_to_keep
 
+    # Cache tracked steps in a heap for efficient clearing.
+    self._tracked_steps = self._load_tracked_steps()
+    heapq.heapify(self._tracked_steps)
+
+  def _load_tracked_steps(self) -> List[int]:
+    """ Loads a list of all tracked steps from the storage backend. """
+    fs, raw_path = url_to_fs(self.base_path)
+    all_paths = fs.ls(raw_path, detail=False)
+    all_steps = map(basename, all_paths)
+    return list(map(int, all_steps))
+
   def _get_path(self, step: int) -> str:
     return os.path.join(self.base_path, str(step))
 
   def _release_oldest_checkpoints(self):
-    if self.max_to_keep > 0:
-      tracked_steps = sorted(self.all_steps(), reverse=True)
-      while len(tracked_steps) > self.max_to_keep:
-        # Delete the oldest checkpoint step
-        oldest_step = tracked_steps.pop()
+    """
+    Delete oldest checkpoints until the number of tracked checkpoints is below
+    self.max_to_keep. This operation is only execution on the rank 0 process.
+    """
+    if dist.get_rank() == 0 and self.max_to_keep > 0:
+      while len(self._tracked_steps) > self.max_to_keep:
+        oldest_step = heapq.heappop(self._tracked_steps)
         path = self._get_path(oldest_step)
         fs, raw_path = url_to_fs(path)
         fs.rm(raw_path, recursive=True)
@@ -148,6 +162,7 @@ class CheckpointManager:
           storage_writer=FsspecWriter(path),
           planner=xc.SPMDSavePlanner(),
       )
+      heapq.heappush(self._tracked_steps, step)
       self._release_oldest_checkpoints()
       return True
     return False
@@ -199,7 +214,4 @@ class CheckpointManager:
     """
     List all steps tracked by the CheckpointManager.
     """
-    fs, raw_path = url_to_fs(self.base_path)
-    all_paths = fs.ls(raw_path, detail=False)
-    all_steps = map(basename, all_paths)
-    return list(map(int, all_steps))
+    return sorted(self._tracked_steps)

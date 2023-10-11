@@ -26,9 +26,9 @@ def run_with_tmpdir(f):
 
   @functools.wraps(f)
   def run(*args, **kwargs):
-    assert 'tmpdir' not in kwargs
     with tempfile.TemporaryDirectory() as tmpdir:
-      f(*args, **kwargs, tmpdir=tmpdir)
+      kwargs.setdefault('tmpdir', tmpdir)
+      f(*args, **kwargs)
 
   return run
 
@@ -338,7 +338,7 @@ class CheckpointManagerTest(DistributedCheckpointTestBase):
     super().setUp()
     # Initialize the a minimal process group
     dist.init_process_group(
-        init_method='tcp://127.1:8932', world_size=1, rank=0)
+        backend='gloo', init_method='tcp://127.1:8932', world_size=1, rank=0)
 
   def tearDown(self):
     super().tearDown()
