@@ -71,7 +71,7 @@ def is_xla_tensor(tensor):
 
 
 def parse_xla_device(device):
-  m = re.match(r'(CPU|TPU|GPU|XPU|NEURON):(\d+)$', device)
+  m = re.match(r'(CPU|TPU|GPU|ROCM|CUDA|XPU|NEURON):(\d+)$', device)
   if m:
     return (m.group(1), int(m.group(2)))
 
@@ -89,7 +89,9 @@ def get_xla_supported_devices(devkind=None, max_devices=None):
     The list of device strings.
   """
   xla_devices = _DEVICES.value
-  devkind = [devkind] if devkind else ['TPU', 'GPU', 'XPU', 'NEURON', 'CPU']
+  devkind = [devkind] if devkind else [
+      'TPU', 'GPU', 'XPU', 'NEURON', 'CPU', 'CUDA', 'ROCM'
+  ]
   for kind in devkind:
     kind_devices = []
     for i, device in enumerate(xla_devices):
@@ -181,8 +183,8 @@ def xla_device(n=None, devkind=None):
     n (int, optional): The specific instance (ordinal) to be returned. If
       specified, the specific XLA device instance will be returned. Otherwise
       the first device of `devkind` will be returned.
-    devkind (string..., optional): If specified, one of `TPU`, `GPU`, `XPU` 
-      `NEURON` or `CPU`.
+    devkind (string..., optional): If specified, one of `TPU`, `CUDA`, `XPU` 
+      `NEURON`, `ROCM` or `CPU`.
 
   Returns:
     A `torch.device` with the requested instance.
@@ -217,7 +219,7 @@ def xla_device_hw(device):
       real device.
 
   Returns:
-    A string representation of the hardware type (`CPU`, `TPU`, `XPU`, `NEURON`, `GPU`) 
+    A string representation of the hardware type (`CPU`, `TPU`, `XPU`, `NEURON`, `GPU`, `CUDA`, `ROCM`) 
     of the given device.
   """
   real_device = _xla_real_device(device)

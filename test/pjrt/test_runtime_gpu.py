@@ -17,12 +17,12 @@ from torch_xla._internal import pjrt
 from absl.testing import absltest, parameterized
 
 
-@unittest.skipIf(xr.device_type() != 'GPU',
+@unittest.skipIf(xr.device_type() not in ('GPU', 'CUDA', 'ROCM'),
                  f"GPU tests should only run on GPU devices.")
 class TestExperimentalPjrtGpu(parameterized.TestCase):
 
   def setUp(self):
-    xr.set_device_type('GPU')
+    xr.set_device_type('CUDA')
 
     os.environ.update({
         xenv.PJRT_GPU_ASYNC_CLIENT: 'true',

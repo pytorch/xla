@@ -122,7 +122,7 @@ class BasicAutocastAPITest(test_xla_sharding_base.XlaShardingTest):
     xr.use_spmd()
     super().setUpClass()
 
-  @unittest.skipIf(xr.device_type() not in ['GPU', 'TPU'],
+  @unittest.skipIf(xr.device_type() not in ['GPU', 'TPU', 'CUDA', 'ROCM'],
                    f"TPU/GPU autocast test.")
   def test_xla_autocast_api(self):
     device = xm.xla_device()

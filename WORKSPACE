@@ -39,15 +39,14 @@ http_archive(
     patch_tool = "patch",
     patches = [
         "//openxla_patches:cache_urls.diff",
-        "//openxla_patches:f16_abi_clang.diff",
-        "//openxla_patches:gpu_race_condition.diff",
         "//openxla_patches:constexpr_return.diff",
-        "//openxla_patches:pjrt_api_tsl_logging.diff",
-        "//openxla_patches:pjrt_c_api_dynamic_dimensions.diff",
+        "//openxla_patches:gpu_race_condition.diff",
+        "//openxla_patches:f16_abi_clang.diff",
+        "//openxla_patches:gpu_topk_rewriter.diff",
     ],
-    strip_prefix = "xla-97a5f819faf9ff793b7ba68ff1f31f74f9459c18",
+    strip_prefix = "xla-51b59cfb1999c6f1b3ec59851675044b2c502aae",
     urls = [
-        "https://github.com/openxla/xla/archive/97a5f819faf9ff793b7ba68ff1f31f74f9459c18.tar.gz",
+        "https://github.com/openxla/xla/archive/51b59cfb1999c6f1b3ec59851675044b2c502aae.tar.gz",
     ],
 )
 

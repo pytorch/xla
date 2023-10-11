@@ -41,7 +41,7 @@ def _maybe_select_default_device():
   # TODO(wcromar): Detect GPU device
   elif xu.getenv_as(xenv.GPU_NUM_DEVICES, int, 0) > 0:
     logging.warning('GPU_NUM_DEVICES is set. Setting PJRT_DEVICE=GPU')
-    os.environ[xenv.PJRT_DEVICE] = 'GPU'
+    os.environ[xenv.PJRT_DEVICE] = 'CUDA'
   else:
     logging.warning('Defaulting to PJRT_DEVICE=CPU')
     os.environ[xenv.PJRT_DEVICE] = 'CPU'

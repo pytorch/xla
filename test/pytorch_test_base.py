@@ -519,7 +519,7 @@ DISABLED_TORCH_TESTS_TPU = union_of_disabled_tests(
 DISABLED_TORCH_TESTS = {
     'TPU': prepare_match_set(DISABLED_TORCH_TESTS_TPU),
     'CPU': prepare_match_set(DISABLED_TORCH_TESTS_CPU),
-    'GPU': prepare_match_set(DISABLED_TORCH_TESTS_GPU),
+    'CUDA': prepare_match_set(DISABLED_TORCH_TESTS_GPU),
 }
 
 
