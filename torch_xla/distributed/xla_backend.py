@@ -1,6 +1,7 @@
 import torch
 import torch.distributed as dist
 import torch_xla.core.xla_model as xm
+import torch_xla.runtime as xr
 from torch_xla._internal import rendezvous
 import logging
 import os
@@ -8,6 +9,8 @@ from torch._C._distributed_c10d import ProcessGroup
 
 
 def _create_xla_process_group(prefix_store, rank, size, timeout):
+  assert not xr.is_spmd(
+  ), "XLA backend is not supported with SPMD. Please use a CPU process group instead."
   return ProcessGroupXla(prefix_store, rank, size, timeout)
 
 

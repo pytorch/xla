@@ -3,7 +3,9 @@ import os
 import sys
 
 import torch
+import torch.distributed as dist
 import torch_xla
+import torch_xla.distributed.xla_backend
 import torch_xla.core.xla_model as xm
 from torch_xla import runtime as xr
 from torch_xla.amp import autocast
@@ -130,6 +132,19 @@ class BasicAutocastAPITest(test_xla_sharding_base.XlaShardingTest):
       t3 = torch.matmul(t1, t2)
     expected_dtype = torch.bfloat16 if xr.is_bf16_supported() else torch.float16
     self.assertTrue(t3.dtype == expected_dtype)
+
+
+class BasicDistributedTest(test_xla_sharding_base.XlaShardingTest):
+
+  @classmethod
+  def setUpClass(cls):
+    xr.use_spmd()
+    return super().setUpClass()
+
+  def test_xla_backend(self):
+    # XLA backend is not supported with SPMD
+    with self.assertRaises(AssertionError):
+      dist.init_process_group('xla', init_method='xla://')
 
 
 if __name__ == '__main__':
