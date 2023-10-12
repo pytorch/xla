@@ -128,12 +128,12 @@ class IfrtComputationClient : public ComputationClient {
              std::optional<xla::OpSharding> sharding = std::nullopt)
         : Data(std::move(device), std::move(device_shape)), buffer(buffer), sharding_(sharding) {}
 
-    IfrtData(std::string device, tsl::RCReference<xla::ifrt::Array> buffer)
+    IfrtData(std::string device, tsl::RCReference<xla::ifrt::Array> buffer, std::optional<xla::OpSharding> sharding = std::nullopt)
         : Data(std::move(device),
                xla::ShapeUtil::MakeShape(
                    xla::ifrt::ToPrimitiveType(buffer->dtype()).value(),
                    buffer->shape().dims())),
-          buffer(buffer) {}
+          buffer(buffer), sharding_(sharding) {}
 
     Handle GetHandle() override {
       XLA_CHECK(HasValue())

@@ -643,25 +643,64 @@ std::vector<std::vector<ComputationClient::DataPtr>>
 IfrtComputationClient::ExecuteReplicated(
     const ComputationClient::Computation& computation,
     const std::vector<std::vector<ComputationClient::DataPtr>>& arguments,
+    // TODO: devices isn't doing anything helpful here
     absl::Span<const std::string> devices,
     const ExecuteReplicatedOptions& options) {
   // XLA_ERROR() << __FUNCTION__ << " not implemented";
   // Shared ownership of the timed section ensures that it will only get logged
   // once both `ExecuteReplicated` and the async work in `Execute` are
   // complete; a copy is held from the lambda that releases it when done.
+  // TODO: fix timing
   auto timed =
       std::make_shared<metrics::TimedSection>(ExecuteReplicatedMetric());
   tsl::profiler::TraceMe activity("IfrtComputationClient::ExecuteReplicated",
                                   tsl::profiler::TraceMeLevel::kInfo);
   const IfrtComputation& ifrt_computation =
       dynamic_cast<const IfrtComputation&>(computation);
-  XLA_CHECK(devices.size() == arguments.size())
-      << "ExecuteReplicated over " << devices.size() << " devices, but "
-      << arguments.size() << " arguments devices.";
-  auto mwait_argument = std::make_shared<util::MultiWait>(devices.size());
-  std::vector<tsl::RCReference<Array>> argument_handles;
-
+  // XLA_CHECK(devices.size() == arguments.size())
+  //     << "ExecuteReplicated over " << devices.size() << " devices, but "
+  //     << arguments.size() << " arguments devices.";
   // TODO: parallelize again if necessary
+  std::vector<tsl::RCReference<xla::ifrt::Array>> argument_handles(arguments[0].size());
+  for (int32_t i = 0; i < arguments[0].size(); ++i) {
+    auto ifrt_data = std::dynamic_pointer_cast<IfrtData>(arguments[0][i]);
+    argument_handles[i] = ifrt_data->buffer;
+  }
+
+  xla::ExecuteOptions execute_options;
+  execute_options.untuple_result = options.explode_tuple;
+  execute_options.strict_shape_checking = true;
+  // TODO(yeounoh) currently only support single-slice execution
+  execute_options.multi_slice_config = nullptr;
+
+  xla::ifrt::LoadedExecutable::ExecuteResult result =
+      ifrt_computation.executable
+          ->Execute(absl::MakeSpan(argument_handles), execute_options, std::nullopt)
+          .value();
+
+  xla::ifrt::Future<xla::Status> returned_future = result.status;
+  auto results = result.outputs;
+
+  std::vector<ComputationClient::DataPtr> data_handles;
+  data_handles.reserve(results.size());
+
+  XLA_CHECK(ifrt_computation.executable->GetOutputShardings().has_value());
+  auto output_shardings = *(ifrt_computation.executable->GetOutputShardings());
+  XLA_CHECK_EQ(output_shardings.size(), results.size());
+
+  for (int32_t i = 0; i < results.size(); ++i) {
+    xla::PjRtDevice* pjrt_device = StringToPjRtDevice(devices[i]);
+    XLA_CHECK(pjrt_device->IsAddressable())
+        << pjrt_device->DebugString() << " is not addressable.";
+
+    std::shared_ptr<IfrtData> data =
+        std::make_shared<IfrtData>(devices[i], results[i], output_shardings[i]);
+    data_handles.push_back(data);
+  }
+
+  // TODO: any useful debug logging
+  return {data_handles};
+
   // {
   //   tsl::profiler::TraceMe activity(
   //       "IfrtComputationClient::ExecuteReplicated_argument_handle",
