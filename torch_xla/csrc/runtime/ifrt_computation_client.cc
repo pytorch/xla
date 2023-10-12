@@ -277,7 +277,6 @@ std::vector<ComputationClient::DataPtr> IfrtComputationClient::TransferToServer(
 ComputationClient::DataPtr IfrtComputationClient::TransferShardsToServer(
     absl::Span<const TensorSource> tensor_shards, std::string device,
     xla::Shape shape, xla::OpSharding sharding) {
-  // TODO: completely ignoring OpSharding. Is that important?
   // XLA_ERROR() << __FUNCTION__ << " not implemented";
   // tsl::profiler::TraceMe activity(
   //     "IfrtComputationClient::TransferShardsToServer",
@@ -288,18 +287,13 @@ ComputationClient::DataPtr IfrtComputationClient::TransferShardsToServer(
   // // directly copies buffers between devices using ICI, it can be much faster
   // // than transferring from the host to each device.
   auto data_shards = TransferToServer(tensor_shards);
-  // std::vector<std::shared_ptr<PjRtData>> pjrt_data_shards;
   std::vector<tsl::RCReference<xla::ifrt::Array>> arrays;
   std::vector<xla::ifrt::Shape> shard_shapes;
   for (auto& shard : data_shards) {
     auto ifrt_shard = std::dynamic_pointer_cast<IfrtData>(shard);
     arrays.push_back(ifrt_shard->buffer);
     shard_shapes.push_back(ifrt_shard->buffer->shape());
-    // pjrt_data_shards.push_back(std::make_shared<PjRtData>(
-    //     pjrt_shard->device(), pjrt_shard->shape(), pjrt_shard->buffer));
   }
-  // return std::make_shared<PjRtShardedData>(device, shape, pjrt_data_shards,
-  //                                          sharding);
   xla::ifrt::Shape ifrt_shape(shape.dimensions());
   xla::ifrt::DeviceList devices_list({client_->addressable_devices().begin(), client_->addressable_devices().end()});
   std::unique_ptr<xla::ifrt::Sharding> ifrt_sharding = xla::ifrt::ConcreteSharding::Create(
@@ -308,8 +302,7 @@ ComputationClient::DataPtr IfrtComputationClient::TransferShardsToServer(
     ifrt_shape,
     shard_shapes
   );
-  // TODO: why doesn't HloSharding work?
-  // RuntimeError: Bad StatusOr access: INVALID_ARGUMENT: Only SingleDeviceSharding, OpaqueSharding, ConcreteSharding, ConcreteEvenSharding, and ShardingParamSharding are supported: sharding=HloSharding(memory_kind: (default), hlo_sharding: {devices=[1,4]0,1,2,3})
+  // TODO: Attach HloSharding instead when it is supported
   // std::unique_ptr<xla::ifrt::Sharding> ifrt_sharding = xla::ifrt::HloSharding::Create(
   //   devices_list,
   //   xla::ifrt::MemoryKind(),
@@ -317,7 +310,7 @@ ComputationClient::DataPtr IfrtComputationClient::TransferShardsToServer(
   // );
   tsl::RCReference<xla::ifrt::Array> sharded_array = client_->AssembleArrayFromSingleDeviceArrays(
     ifrt_shape, std::move(ifrt_sharding), absl::MakeSpan(arrays), xla::ifrt::ArrayCopySemantics::kAlwaysCopy).value();
-  return std::make_shared<IfrtData>(device, shape, sharded_array);
+  return std::make_shared<IfrtData>(device, shape, sharded_array, sharding);
 }
 
 ComputationClient::DataPtr IfrtComputationClient::CopyToDevice(

@@ -124,8 +124,9 @@ class IfrtComputationClient : public ComputationClient {
         : Data(std::move(device), std::move(device_shape)) {}
 
     IfrtData(std::string device, xla::Shape device_shape,
-             tsl::RCReference<xla::ifrt::Array> buffer)
-        : Data(std::move(device), std::move(device_shape)), buffer(buffer) {}
+             tsl::RCReference<xla::ifrt::Array> buffer,
+             std::optional<xla::OpSharding> sharding = std::nullopt)
+        : Data(std::move(device), std::move(device_shape)), buffer(buffer), sharding_(sharding) {}
 
     IfrtData(std::string device, tsl::RCReference<xla::ifrt::Array> buffer)
         : Data(std::move(device),
@@ -145,24 +146,35 @@ class IfrtComputationClient : public ComputationClient {
       return buffer != nullptr;  // TODO: && !buffer->IsDeleted();
     };
 
-    bool HasSharding() const override { return false; }
+    bool HasSharding() const override { return sharding_.has_value(); }
 
     xla::OpSharding GetSharding() const override;
 
     std::string ToString() const override {
       std::stringstream ss;
-      ss << "XLAData: \n";
-      ss << "  Data Device: " << device() << "\n";
-      ss << "  Data Shape: " << shape().ToString() << "\n";
-      ss << "  Data Handle: ";
-      if (HasValue()) {
-        ss << reinterpret_cast<std::uintptr_t>(buffer.get()) << "\n";
+
+      if (HasSharding()) {
+        ss << "XLAShardedData: \n";
+        ss << "  Data Device: " << device() << "\n";
+        ss << "  Data Shape: " << shape().ToString() << "\n";
+        ss << "  OpSharding: "
+          << xla::HloSharding::FromProto(*sharding_)->ToString() << "\n";
+        ss << "  NumShards: " << buffer->sharding().devices().size() << "\n";
       } else {
-        ss << "None\n";
+        ss << "XLAData: \n";
+        ss << "  Data Device: " << device() << "\n";
+        ss << "  Data Shape: " << shape().ToString() << "\n";
+        ss << "  Data Handle: ";
+        if (HasValue()) {
+          ss << reinterpret_cast<std::uintptr_t>(buffer.get()) << "\n";
+        } else {
+          ss << "None\n";
+        }
       }
       return ss.str();
     }
 
+    std::optional<xla::OpSharding> sharding_;
     tsl::RCReference<xla::ifrt::Array> buffer;
   };
 
