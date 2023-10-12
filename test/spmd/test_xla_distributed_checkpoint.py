@@ -347,7 +347,7 @@ class CheckpointManagerTest(DistributedCheckpointTestBase):
 
   @run_with_tmpdir
   def test_manager_checkpointing(self, tmpdir):
-    chkpt_mgr = CheckpointManager(tmpdir, save_period=10)
+    chkpt_mgr = CheckpointManager(tmpdir, save_interval=10)
     state_dict = self._get_sharded_model().state_dict()
 
     # Take a checkpoint on step 0
@@ -367,7 +367,7 @@ class CheckpointManagerTest(DistributedCheckpointTestBase):
 
   @run_with_tmpdir
   def test_manager_step_tracking(self, tmpdir):
-    chkpt_mgr = CheckpointManager(tmpdir, save_period=10)
+    chkpt_mgr = CheckpointManager(tmpdir, save_interval=10)
     state_dict = self._get_sharded_model().state_dict()
 
     # No steps are being tracked initially
@@ -387,7 +387,7 @@ class CheckpointManagerTest(DistributedCheckpointTestBase):
 
   @run_with_tmpdir
   def test_manager_max_to_keep(self, tmpdir):
-    chkpt_mgr = CheckpointManager(tmpdir, save_period=10, max_to_keep=2)
+    chkpt_mgr = CheckpointManager(tmpdir, save_interval=10, max_to_keep=2)
     state_dict = self._get_sharded_model().state_dict()
 
     # No steps are being tracked initially
@@ -408,7 +408,7 @@ class CheckpointManagerTest(DistributedCheckpointTestBase):
     self.assertEqual(set(chkpt_mgr.all_steps()), {30, 10})
 
     # The deletion order should persist across executions
-    chkpt_mgr = CheckpointManager(tmpdir, save_period=10, max_to_keep=2)
+    chkpt_mgr = CheckpointManager(tmpdir, save_interval=10, max_to_keep=2)
     self.assertTrue(chkpt_mgr.save(20, state_dict))
     self.assertEqual(set(chkpt_mgr.all_steps()), {20, 10})
 
