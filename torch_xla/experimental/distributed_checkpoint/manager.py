@@ -193,7 +193,7 @@ class CheckpointManager:
     Delete oldest checkpoints until the number of tracked checkpoints is below
     self.max_to_keep. This operation is only execution on the rank 0 process.
     """
-    if dist.get_rank() == 0 and self.max_to_keep > 0:
+    if dist.get_rank(self.pg) == 0 and self.max_to_keep > 0:
       while len(self._tracked_chkpts) > self.max_to_keep:
         oldest_chkpt = self._tracked_chkpts.popleft()
         self._delete_chkpt_at_step(oldest_chkpt.step)
