@@ -389,7 +389,7 @@
 
 
 <span class="k">def</span> <span class="nf">parse_xla_device</span><span class="p">(</span><span class="n">device</span><span class="p">):</span>
-  <span class="n">m</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;(CPU|TPU|GPU|ROCM|CUDA|XPU|NEURON):(\d+)$&#39;</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span>
+  <span class="n">m</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;(CPU|TPU|GPU|XPU|NEURON):(\d+)$&#39;</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span>
   <span class="k">if</span> <span class="n">m</span><span class="p">:</span>
     <span class="k">return</span> <span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">2</span><span class="p">)))</span>
 
@@ -407,9 +407,7 @@
 <span class="sd">    The list of device strings.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="n">xla_devices</span> <span class="o">=</span> <span class="n">_DEVICES</span><span class="o">.</span><span class="n">value</span>
-  <span class="n">devkind</span> <span class="o">=</span> <span class="p">[</span><span class="n">devkind</span><span class="p">]</span> <span class="k">if</span> <span class="n">devkind</span> <span class="k">else</span> <span class="p">[</span>
-      <span class="s1">&#39;TPU&#39;</span><span class="p">,</span> <span class="s1">&#39;GPU&#39;</span><span class="p">,</span> <span class="s1">&#39;XPU&#39;</span><span class="p">,</span> <span class="s1">&#39;NEURON&#39;</span><span class="p">,</span> <span class="s1">&#39;CPU&#39;</span><span class="p">,</span> <span class="s1">&#39;CUDA&#39;</span><span class="p">,</span> <span class="s1">&#39;ROCM&#39;</span>
-  <span class="p">]</span>
+  <span class="n">devkind</span> <span class="o">=</span> <span class="p">[</span><span class="n">devkind</span><span class="p">]</span> <span class="k">if</span> <span class="n">devkind</span> <span class="k">else</span> <span class="p">[</span><span class="s1">&#39;TPU&#39;</span><span class="p">,</span> <span class="s1">&#39;GPU&#39;</span><span class="p">,</span> <span class="s1">&#39;XPU&#39;</span><span class="p">,</span> <span class="s1">&#39;NEURON&#39;</span><span class="p">,</span> <span class="s1">&#39;CPU&#39;</span><span class="p">]</span>
   <span class="k">for</span> <span class="n">kind</span> <span class="ow">in</span> <span class="n">devkind</span><span class="p">:</span>
     <span class="n">kind_devices</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">device</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">xla_devices</span><span class="p">):</span>
@@ -501,8 +499,8 @@
 <span class="sd">    n (int, optional): The specific instance (ordinal) to be returned. If</span>
 <span class="sd">      specified, the specific XLA device instance will be returned. Otherwise</span>
 <span class="sd">      the first device of `devkind` will be returned.</span>
-<span class="sd">    devkind (string..., optional): If specified, one of `TPU`, `CUDA`, `XPU` </span>
-<span class="sd">      `NEURON`, `ROCM` or `CPU`.</span>
+<span class="sd">    devkind (string..., optional): If specified, one of `TPU`, `GPU`, `XPU` </span>
+<span class="sd">      `NEURON` or `CPU`.</span>
 
 <span class="sd">  Returns:</span>
 <span class="sd">    A `torch.device` with the requested instance.</span>
@@ -537,7 +535,7 @@
 <span class="sd">      real device.</span>
 
 <span class="sd">  Returns:</span>
-<span class="sd">    A string representation of the hardware type (`CPU`, `TPU`, `XPU`, `NEURON`, `GPU`, `CUDA`, `ROCM`) </span>
+<span class="sd">    A string representation of the hardware type (`CPU`, `TPU`, `XPU`, `NEURON`, `GPU`) </span>
 <span class="sd">    of the given device.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="n">real_device</span> <span class="o">=</span> <span class="n">_xla_real_device</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
