@@ -41,14 +41,17 @@ apply_patches
 
 python -c "import fcntl; fcntl.fcntl(1, fcntl.F_SETFL, 0)"
 
+# We always build PyTorch without CUDA support.
+export USE_CUDA=0
 python setup.py install
 
 sccache --show-stats
 
 source $XLA_DIR/xla_env
 export GCLOUD_SERVICE_KEY_FILE="$XLA_DIR/default_credentials.json"
-export SILO_NAME='cache-silo-ci-gcc-11'  # cache bucket for CI
+export SILO_NAME='cache-silo-ci-dev-3.8_cuda_12.1'  # cache bucket for CI
 export BUILD_CPP_TESTS='1'
+export TF_CUDA_COMPUTE_CAPABILITIES="sm_50,sm_70,sm_75,compute_80,$TF_CUDA_COMPUTE_CAPABILITIES"
 build_torch_xla $XLA_DIR
 
 popd

@@ -1,13 +1,13 @@
 # This requires cuda & cudnn packages pre-installed in the base image.
 # Other available cuda images are listed at https://hub.docker.com/r/nvidia/cuda
-ARG base_image="nvidia/cuda:11.7.0-cudnn8-devel-ubuntu18.04"
+ARG base_image="us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.8_cuda_12.1"
 FROM "${base_image}"
 
 ARG python_version="3.8"
 ARG cuda="1"
 ARG cuda_compute="5.2,7.5"
-ARG cc="clang-8"
-ARG cxx="clang++-8"
+ARG cc="clang"
+ARG cxx="clang++"
 ARG cxx_abi="1"
 ARG tpuvm=""
 
@@ -37,38 +37,15 @@ ENV CXX "${cxx}"
 # Whether to build for TPUVM mode
 ENV TPUVM_MODE "${tpuvm}"
 
-# Rotate nvidia repo public key (last updated: 04/27/2022)
-# Unfortunately, nvidia/cuda image is shipped with invalid public key
-RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/3bf863cc.pub
-
-# Install base system packages
-RUN apt-get clean && apt-get update
-RUN apt-get upgrade -y
-RUN apt-get install --fix-missing -y python-pip python3-pip git curl libopenblas-dev vim jq \
-    apt-transport-https ca-certificates procps openssl sudo wget libssl-dev libc6-dbg
-
-# Install clang & llvm
-ADD ./install_llvm_clang.sh install_llvm_clang.sh
-RUN bash ./install_llvm_clang.sh
-
+# Install clang as upstream CI forces clang
+RUN apt-get install -y clang
 # Install valgrind
-ADD ./install_valgrind.sh install_valgrind.sh
+COPY ./install_valgrind.sh install_valgrind.sh
 RUN bash ./install_valgrind.sh
 
-# Sets up jenkins user.
-RUN useradd jenkins && \
-    mkdir /home/jenkins && \
-    chown jenkins /home/jenkins
-RUN echo 'jenkins ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
-
-RUN mkdir -p /opt/conda /opt/cargo /opt/rustup /workspace /var/lib/jenkins && \
-    chown jenkins /opt/conda /opt/cargo /opt/rustup /workspace /var/lib/jenkins
-USER jenkins
-WORKDIR /workspace
-
 # Install openmpi for CUDA
-run sudo apt-get install -y ssh
-run sudo apt-get install -y --allow-downgrades --allow-change-held-packages openmpi-bin libopenmpi-dev
+run apt-get install -y ssh
+run apt-get install -y --allow-downgrades --allow-change-held-packages openmpi-bin libopenmpi-dev
 
 # Builds and configure sccache
 ENV OPENSSL_INCLUDE_DIR /usr/include/openssl
@@ -87,6 +64,25 @@ RUN . $CARGO_HOME/env && \
 
 ENV PATH $CARGO_HOME/bin:$PATH
 
+# Upstream CI requires jq
+RUN apt-get install -y jq
+
+# TODO: Add exec permisson for all users in base image.
+RUN chmod a+x /usr/local/bin/bazel
+# TODO: move sudo installation in base image.
+RUN apt-get install -y sudo
+
+RUN useradd jenkins && \
+    mkdir /home/jenkins && \
+    chown jenkins /home/jenkins
+RUN echo 'jenkins ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+
+RUN mkdir -p /opt/conda /opt/cargo /opt/rustup /workspace /var/lib/jenkins && \
+    chown jenkins /opt/conda /opt/cargo /opt/rustup /workspace /var/lib/jenkins
+ENV PATH /home/jenkins/.local/bin:$PATH
+USER jenkins
+WORKDIR /workspace
+
 # Installs and configures Conda.
 ADD ./install_conda.sh install_conda.sh
 RUN sudo chown jenkins ./install_conda.sh
@@ -95,6 +91,7 @@ RUN bash ./install_conda.sh "${python_version}" /opt/conda
 RUN echo "conda activate base" >> ~/.bashrc
 RUN echo "export TF_CPP_LOG_THREAD_ID=1" >> ~/.bashrc
 ENV PATH /opt/conda/bin:$PATH
+ENV LD_LIBRARY_PATH /lib/x86_64-linux-gnu/:/usr/lib/x86_64-linux-gnu/:/opt/conda/lib/:$LD_LIBRARY_PATH
 
 RUN bash -c "source ~/.bashrc"
 CMD ["bash"]

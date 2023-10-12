@@ -43,7 +43,7 @@ jobs:
           echo "pid=${pid}" >> "${GITHUB_ENV}"
       - name: Build & publish docs
         shell: bash
-        run: docker exec -u jenkins "${pid}" bash -c '. ~/.bashrc && .circleci/doc_push.sh'
+        run: docker exec -u jenkins "${pid}" bash -c '.circleci/doc_push.sh'
       - name: Teardown Linux
         uses: pytorch/test-infra/.github/actions/teardown-linux@main
         if: always()
