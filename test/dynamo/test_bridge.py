@@ -218,7 +218,7 @@ class TorchXLAReuseGraphTest(torch._dynamo.test_case.TestCase):
     module = Emb()
     module.to(device)
 
-    @torch.compile(backend="openxla")
+    @torch.compile(backend="openxla_eval")
     def foo(x):
       return module(x)
 
