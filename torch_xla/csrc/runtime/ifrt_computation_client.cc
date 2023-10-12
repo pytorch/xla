@@ -154,12 +154,8 @@ void IfrtComputationClient::IfrtData::Assign(
 }
 
 xla::OpSharding IfrtComputationClient::IfrtData::GetSharding() const {
-  // XLA_ERROR() << "GetSharding should not be called on IfrtData, check "
-  //                "HasSharding first";
-  const xla::ifrt::Sharding& sharding = buffer->sharding();
-  auto hlo_sharding = dynamic_cast<const xla::ifrt::HloSharding&>(sharding);
-  // TODO: why are we using the proto?
-  return hlo_sharding.xla_hlo_sharding().ToProto();
+  XLA_CHECK(HasSharding()) << "Check HasSharding first";
+  return *sharding_;
 }
 
 ComputationClient::DataPtr IfrtComputationClient::CreateDataPlaceholder(
@@ -169,27 +165,28 @@ ComputationClient::DataPtr IfrtComputationClient::CreateDataPlaceholder(
 
 std::vector<ComputationClient::DataPtr> IfrtComputationClient::GetDataShards(
     ComputationClient::DataPtr data) {
-  XLA_ERROR() << __FUNCTION__ << " not implemented";
-  // tsl::profiler::TraceMe activity("IfrtComputationClient::GetDataShards",
-  //                                 tsl::profiler::TraceMeLevel::kInfo);
-  // std::vector<ComputationClient::DataPtr> shards;
-  // if (PjRtShardedData* sharded_data =
-  //         dynamic_cast<PjRtShardedData*>(data.get())) {
-  //   for (auto shard : sharded_data->shards) {
-  //     shards.push_back(std::make_shared<PjRtData>(
-  //         shard->device(), shard->shape(), shard->buffer));
-  //   }
-  // } else {
-  //   shards.push_back(data);
-  // }
-  // return shards;
+  tsl::profiler::TraceMe activity("IfrtComputationClient::GetDataShards",
+                                  tsl::profiler::TraceMeLevel::kInfo);
+  std::vector<ComputationClient::DataPtr> shards;
+  if (data->HasSharding()) {
+    auto ifrt_data = std::dynamic_pointer_cast<IfrtData>(data);
+    std::vector<tsl::RCReference<xla::ifrt::Array>> arrays = ifrt_data->buffer->DisassembleIntoSingleDeviceArrays(xla::ifrt::ArrayCopySemantics::kAlwaysCopy).value();
+
+    for (auto array : arrays) {
+      shards.push_back(std::make_shared<IfrtData>(
+          PjRtDeviceToString(array->sharding().devices()[0]), array));
+    }
+  } else {
+    shards.push_back(data);
+  }
+  return shards;
 }
 
 ComputationClient::DataPtr IfrtComputationClient::GetDataShard(
     ComputationClient::DataPtr data, size_t index) {
-  XLA_ERROR() << __FUNCTION__ << " not implemented";
-  // tsl::profiler::TraceMe activity("IfrtComputationClient::GetDataShard",
-  //                                 tsl::profiler::TraceMeLevel::kInfo);
+  tsl::profiler::TraceMe activity("IfrtComputationClient::GetDataShard",
+                                  tsl::profiler::TraceMeLevel::kInfo);
+  return GetDataShards(data)[index];
   // if (PjRtShardedData* sharded_data =
   //         dynamic_cast<PjRtShardedData*>(data.get())) {
   //   XLA_CHECK_LE(index, sharded_data->shards.size())
@@ -206,7 +203,7 @@ ComputationClient::DataPtr IfrtComputationClient::GetDataShard(
 ComputationClient::DataPtr IfrtComputationClient::WrapDataShards(
     const std::vector<DataPtr>& shards, std::string device, xla::Shape shape,
     xla::OpSharding sharding) {
-  XLA_ERROR() << __FUNCTION__ << " not implemented";
+  // XLA_ERROR() << __FUNCTION__ << " not implemented";
   // std::vector<std::shared_ptr<PjRtData>> pjrt_data_shards;
   // pjrt_data_shards.reserve(shards.size());
   // for (auto& shard : shards) {
@@ -217,15 +214,42 @@ ComputationClient::DataPtr IfrtComputationClient::WrapDataShards(
   // }
   // return std::make_shared<PjRtShardedData>(device, shape, pjrt_data_shards,
   //                                          sharding);
+  // TODO: implement CreateDataPlaceholder for sharded data
+  if (shards.size() == 0) {
+    TF_LOG(WARNING) << "creating sharded placeholder";
+    return std::make_shared<IfrtData>(device, shape, tsl::RCReference<xla::ifrt::Array>(), sharding);
+  }
+  std::vector<tsl::RCReference<xla::ifrt::Array>> arrays;
+  std::vector<xla::ifrt::Shape> shard_shapes;
+  for (auto& shard : shards) {
+    auto ifrt_shard = std::dynamic_pointer_cast<IfrtData>(shard);
+    arrays.push_back(ifrt_shard->buffer);
+    shard_shapes.push_back(ifrt_shard->buffer->shape());
+  }
+  xla::ifrt::Shape ifrt_shape(shape.dimensions());
+  xla::ifrt::DeviceList devices_list({client_->addressable_devices().begin(), client_->addressable_devices().end()});
+  XLA_CHECK_EQ(shard_shapes.size(), devices_list.size());
+  std::unique_ptr<xla::ifrt::Sharding> ifrt_sharding = xla::ifrt::ConcreteSharding::Create(
+    devices_list,
+    xla::ifrt::MemoryKind(),
+    ifrt_shape,
+    shard_shapes
+  );
+  // TODO: Attach HloSharding instead when it is supported
+  // std::unique_ptr<xla::ifrt::Sharding> ifrt_sharding = xla::ifrt::HloSharding::Create(
+  //   devices_list,
+  //   xla::ifrt::MemoryKind(),
+  //   xla::HloSharding::FromProto(sharding).value()
+  // );
+  tsl::RCReference<xla::ifrt::Array> sharded_array = client_->AssembleArrayFromSingleDeviceArrays(
+    ifrt_shape, std::move(ifrt_sharding), absl::MakeSpan(arrays), xla::ifrt::ArrayCopySemantics::kAlwaysCopy).value();
+  return std::make_shared<IfrtData>(device, shape, sharded_array, sharding);
 }
 
 std::optional<xla::OpSharding> IfrtComputationClient::GetDataSharding(
     DataPtr handle) {
-  return std::nullopt;
-  // if (auto sharded_data = dynamic_cast<IfrtShardedData*>(handle.get())) {
-  //   return sharded_data->GetSharding();
-  // }
-  // return std::optional<xla::OpSharding>();
+  auto ifrt_data = std::dynamic_pointer_cast<IfrtData>(handle);
+  return ifrt_data->sharding_;
 }
 
 std::vector<ComputationClient::DataPtr> IfrtComputationClient::TransferToServer(
@@ -424,6 +448,10 @@ std::vector<xla::Literal> IfrtComputationClient::TransferFromServer(
     // auto new_handle = ReplicateShardedData(handle);
     auto pjrt_data = std::dynamic_pointer_cast<const IfrtData>(handle);
 
+    // TODO: this is probably wrong for MP
+    auto replicated_array = pjrt_data->buffer->FullyReplicatedShard(
+        xla::ifrt::ArrayCopySemantics::kAlwaysCopy).value();
+
     // TODO: handle dynamic shapes
     auto& literal = literals.emplace_back(
         xla::ShapeUtil::DeviceShapeToHostShape(pjrt_data->shape()));
@@ -431,7 +459,7 @@ std::vector<xla::Literal> IfrtComputationClient::TransferFromServer(
     XLA_CHECK_OK(xla::ShapeUtil::ByteStrides(literal.shape(),
                                              absl::MakeSpan(byte_strides)));
     XLA_CHECK_OK(
-        pjrt_data->buffer
+        replicated_array
             ->CopyToHostBuffer(literal.untyped_data(), byte_strides,
                                xla::ifrt::ArrayCopySemantics::kAlwaysCopy)
             .Await());
@@ -617,22 +645,23 @@ IfrtComputationClient::ExecuteReplicated(
     const std::vector<std::vector<ComputationClient::DataPtr>>& arguments,
     absl::Span<const std::string> devices,
     const ExecuteReplicatedOptions& options) {
-  XLA_ERROR() << __FUNCTION__ << " not implemented";
+  // XLA_ERROR() << __FUNCTION__ << " not implemented";
   // Shared ownership of the timed section ensures that it will only get logged
   // once both `ExecuteReplicated` and the async work in `Execute` are
   // complete; a copy is held from the lambda that releases it when done.
-  // auto timed =
-  //     std::make_shared<metrics::TimedSection>(ExecuteReplicatedMetric());
-  // tsl::profiler::TraceMe activity("IfrtComputationClient::ExecuteReplicated",
-  //                                 tsl::profiler::TraceMeLevel::kInfo);
-  // const PjRtComputation& pjrt_computation =
-  //     dynamic_cast<const PjRtComputation&>(computation);
-  // XLA_CHECK(devices.size() == arguments.size())
-  //     << "ExecuteReplicated over " << devices.size() << " devices, but "
-  //     << arguments.size() << " arguments devices.";
-  // auto mwait_argument = std::make_shared<util::MultiWait>(devices.size());
-  // std::vector<std::vector<xla::PjRtBuffer*>>
-  // argument_handles(devices.size());
+  auto timed =
+      std::make_shared<metrics::TimedSection>(ExecuteReplicatedMetric());
+  tsl::profiler::TraceMe activity("IfrtComputationClient::ExecuteReplicated",
+                                  tsl::profiler::TraceMeLevel::kInfo);
+  const IfrtComputation& ifrt_computation =
+      dynamic_cast<const IfrtComputation&>(computation);
+  XLA_CHECK(devices.size() == arguments.size())
+      << "ExecuteReplicated over " << devices.size() << " devices, but "
+      << arguments.size() << " arguments devices.";
+  auto mwait_argument = std::make_shared<util::MultiWait>(devices.size());
+  std::vector<tsl::RCReference<Array>> argument_handles;
+
+  // TODO: parallelize again if necessary
   // {
   //   tsl::profiler::TraceMe activity(
   //       "IfrtComputationClient::ExecuteReplicated_argument_handle",
