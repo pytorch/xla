@@ -84,15 +84,15 @@ class CheckpointManager:
   # checkpoint's step.
   base_path: Union[str, os.PathLike]
 
-  # The period to take checkpoints, in steps.
-  save_period: int
+  # The interval to take checkpoints, in steps.
+  save_interval: int
 
   # The maximum number of checkpoints to keep.
   max_to_keep: int
 
   def __init__(self,
                path: str,
-               save_period: int,
+               save_interval: int,
                max_to_keep: Optional[int] = 0,
                async_queue_size: Optional[int] = 1):
     """
@@ -101,7 +101,7 @@ class CheckpointManager:
 
     Args:
       path: The base path for the CheckpointManager to write checkpoints into.
-      save_period: The number of steps between saving checkpoints.
+      save_interval: The number of steps between saving checkpoints.
       max_to_keep: The maximum number of checkpoints to be tracked by the
             CheckpointManager. When a new checkpoint will be taken, the
             checkpoint for the lowest tracked step will be deleted.
@@ -115,12 +115,12 @@ class CheckpointManager:
             pending at a time.
     """
     assert dist.is_initialized(), "A process group is required."
-    assert save_period > 0, "save_period must be positive"
+    assert save_interval > 0, "save_interval must be positive"
     assert async_queue_size > 0, "async_queue_size must be positive"
     assert max_to_keep >= 0, "max_to_keep must be non-negative"
 
     self.base_path = path
-    self.save_period = save_period
+    self.save_interval = save_interval
     self.max_to_keep = max_to_keep
 
     self._tracked_chkpts = self._load_tracked_chkpts()
@@ -168,7 +168,7 @@ class CheckpointManager:
     a preemption has been detected.
     """
     # TODO(jonbolin): Support preemption notice for auto checkpointing
-    return step % self.save_period == 0
+    return step % self.save_interval == 0
 
   def save(self,
            step,
