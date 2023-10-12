@@ -403,6 +403,15 @@ class CheckpointManagerTest(DistributedCheckpointTestBase):
     self.assertTrue(chkpt_mgr.save(30, state_dict))
     self.assertEqual(set(chkpt_mgr.all_steps()), {30, 20})
 
+    # The oldest is selected by creation timestamp, not step
+    self.assertTrue(chkpt_mgr.save(10, state_dict))
+    self.assertEqual(set(chkpt_mgr.all_steps()), {30, 10})
+
+    # The deletion order should persist across executions
+    chkpt_mgr = CheckpointManager(tmpdir, save_period=10, max_to_keep=2)
+    self.assertTrue(chkpt_mgr.save(20, state_dict))
+    self.assertEqual(set(chkpt_mgr.all_steps()), {20, 10})
+
 
 if __name__ == '__main__':
   test = unittest.main()

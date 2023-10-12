@@ -1,17 +1,34 @@
-import heapq
+import fsspec
+import logging
 import os
+import pickle
 import torch.distributed as dist
 import torch.distributed.checkpoint as dist_cp
 import torch_xla.runtime as xr
 import torch_xla.experimental.distributed_checkpoint as xc
 
+from dataclasses import dataclass
+from datetime import datetime
+from collections import deque
 from fsspec.core import url_to_fs
 from os.path import basename
-from typing import List, Optional, Union
+from typing import Deque, List, Optional, Union
 from torch.distributed.checkpoint.metadata import STATE_DICT_TYPE
 
 # TODO(jonbolin): Import path will change
 from torch.distributed.checkpoint._fsspec_filesystem import FsspecReader, FsspecWriter
+
+# File to track manager-specific metadata within each checkpoint path
+_MANAGER_METADATA_FILE = '.manager_metadata'
+
+
+@dataclass
+class _CheckpointMetadata:
+  # The step at which the checkpoint was taken
+  step: int
+
+  # The time at which the checkpoint was taken
+  ts: datetime
 
 
 class CheckpointManager:
@@ -106,19 +123,34 @@ class CheckpointManager:
     self.save_period = save_period
     self.max_to_keep = max_to_keep
 
-    # Cache tracked steps in a heap for efficient clearing.
-    self._tracked_steps = self._load_tracked_steps()
-    heapq.heapify(self._tracked_steps)
+    self._tracked_chkpts = self._load_tracked_chkpts()
 
-  def _load_tracked_steps(self) -> List[int]:
-    """ Loads a list of all tracked steps from the storage backend. """
+  def _load_tracked_chkpts(self) -> Deque[_CheckpointMetadata]:
+    """
+    Loads a list of all tracked checkpoints from the storage backend.
+    """
+    all_chkpts = []
+    invalid_paths = []
     fs, raw_path = url_to_fs(self.base_path)
-    all_paths = fs.ls(raw_path, detail=False)
-    all_steps = map(basename, all_paths)
-    return list(map(int, all_steps))
+    for path in fs.ls(raw_path, detail=False):
+      try:
+        with fsspec.open(os.path.join(path, _MANAGER_METADATA_FILE), 'rb') as f:
+          all_chkpts.append(pickle.load(f))
+      except:
+        invalid_paths.append(path)
+
+    if invalid_paths:
+      logging.warning(f'Ignoring invalid checkpoints: {invalid_paths}')
+    return deque(sorted(all_chkpts, key=lambda m: m.ts))
 
   def _get_path(self, step: int) -> str:
     return os.path.join(self.base_path, str(step))
+
+  def _delete_chkpt_at_step(self, step):
+    path = self._get_path(step)
+    fs, raw_path = url_to_fs(path)
+    if fs.exists(raw_path):
+      fs.rm(raw_path, recursive=True)
 
   def _release_oldest_checkpoints(self):
     """
@@ -126,11 +158,9 @@ class CheckpointManager:
     self.max_to_keep. This operation is only execution on the rank 0 process.
     """
     if dist.get_rank() == 0 and self.max_to_keep > 0:
-      while len(self._tracked_steps) > self.max_to_keep:
-        oldest_step = heapq.heappop(self._tracked_steps)
-        path = self._get_path(oldest_step)
-        fs, raw_path = url_to_fs(path)
-        fs.rm(raw_path, recursive=True)
+      while len(self._tracked_chkpts) > self.max_to_keep:
+        oldest_chkpt = self._tracked_chkpts.popleft()
+        self._delete_chkpt_at_step(oldest_chkpt.step)
 
   def should_save(self, step: int) -> bool:
     """
@@ -157,12 +187,17 @@ class CheckpointManager:
     """
     if self.should_save(step) or force:
       path = self._get_path(step)
+      # Delete any existing checkpoint at the current step.
+      self._delete_chkpt_at_step(step)
       dist_cp.save_state_dict(
           state_dict=state_dict,
           storage_writer=FsspecWriter(path),
           planner=xc.SPMDSavePlanner(),
       )
-      heapq.heappush(self._tracked_steps, step)
+      metadata = _CheckpointMetadata(step=step, ts=datetime.now())
+      with fsspec.open(os.path.join(path, _MANAGER_METADATA_FILE), 'wb') as f:
+        pickle.dump(metadata, f)
+      self._tracked_chkpts.append(metadata)
       self._release_oldest_checkpoints()
       return True
     return False
@@ -203,6 +238,8 @@ class CheckpointManager:
       state_dict: The state dict to restore the checkpoint into. Values are
                   updated in-place within the state_dict.
     """
+    tracked_steps = set(x.step for x in self._tracked_chkpts)
+    assert step in tracked_steps, f'Cannot restore from untracked step {step}. Valid steps are: {tracked_steps}'
     path = self._get_path(step)
     dist_cp.load_state_dict(
         state_dict=state_dict,
@@ -214,4 +251,4 @@ class CheckpointManager:
     """
     List all steps tracked by the CheckpointManager.
     """
-    return sorted(self._tracked_steps)
+    return sorted(x.step for x in self._tracked_chkpts)
