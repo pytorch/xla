@@ -19,8 +19,7 @@ jobs:
     uses: ./.github/workflows/_build.yml
     with:
       ecr-docker-image-base: 308535385114.dkr.ecr.us-east-1.amazonaws.com/pytorch/xla_base
-      gcr-docker-image: gcr.io/tpu-pytorch/xla_base:latest
-      disable_xrt: 1
+      gcr-docker-image: gcr.io/tpu-pytorch/xla_base:dev-3.8_cuda_12.1
       cuda: 1
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
@@ -43,7 +42,7 @@ jobs:
     with:
       docker-image: ${{ needs.build.outputs.docker-image }}
       runner: linux.8xlarge.nvidia.gpu
-      timeout-minutes: 300
+      timeout-minutes: 180
       disable-xrt: 1
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}

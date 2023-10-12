@@ -116,7 +116,7 @@ jobs:
       - name: Test
         shell: bash
         run: |
-          docker exec -u jenkins "${pid}" bash -c '. ~/.bashrc && .circleci/${{ inputs.test-script }}'
+          docker exec --privileged -u jenkins "${pid}" bash -c '.circleci/${{ inputs.test-script }}'
       - name: Upload coverage results
         if: ${{ inputs.collect-coverage }}
         shell: bash
