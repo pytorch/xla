@@ -98,7 +98,8 @@ class CheckpointManager:
                path: str,
                save_interval: int,
                max_to_keep: Optional[int] = 0,
-               async_queue_size: Optional[int] = 1):
+               async_queue_size: Optional[int] = 1,
+               process_group: dist.ProcessGroup = None):
     """
     Create a checkpoint manager that reads and writes checkpoints into
     the provided directory.
@@ -117,6 +118,9 @@ class CheckpointManager:
             network issues which slow down the active checkpoint.
             Default: 1, which only allows a single async checkpoint to be
             pending at a time.
+      process_group: The process group to use when coordinating the checkpoint.
+            Default: None, in which case a subgroup of the default process
+            group will be created.
     """
     assert dist.is_initialized(), "A process group is required."
     assert save_interval > 0, "save_interval must be positive"
@@ -128,13 +132,15 @@ class CheckpointManager:
     self.max_to_keep = max_to_keep
 
     self._tracked_chkpts = self._load_tracked_chkpts()
-
     self._async_queue = queue.Queue(maxsize=async_queue_size)
-    self._chkpt_thread = threading.Thread(target=self._async_worker, daemon=True)
+    self._alive = threading.Event()
+    self._alive.set()
+    self._chkpt_thread = threading.Thread(
+        target=self._async_worker, daemon=True)
     self._chkpt_thread.start()
 
-    # Create a CPU process group to coordinate the checkpoint.
-    self.pg = dist.new_group(backend='gloo')
+    # Create a new group if none is provided
+    self.pg = process_group or dist.new_group()
 
   def _load_tracked_chkpts(self) -> Deque[_CheckpointMetadata]:
     """
@@ -155,14 +161,19 @@ class CheckpointManager:
     return deque(sorted(all_chkpts, key=lambda m: m.ts))
 
   def __del__(self):
-    # Ensure pending checkpoints are finished
-    self._async_queue.join()
+    self._alive.clear()
+    # Send a sentinel value to tell the worker to exit, and wait for pending
+    # checkpoints to complete.
+    self._async_queue.put(None)
+    self._chkpt_thread.join()
 
   def _async_worker(self):
-    while True:
+    while self._alive.is_set():
       try:
-        step, state_dict = self._async_queue.get()
-        self.save(step, state_dict, force=True)
+        item = self._async_queue.get()
+        if item:
+          step, state_dict = item
+          self.save(step, state_dict, force=True)
       except:
         traceback.print_exc()
       finally:
@@ -284,3 +295,7 @@ class CheckpointManager:
     List all steps tracked by the CheckpointManager.
     """
     return sorted(x.step for x in self._tracked_chkpts)
+
+  def join(self):
+    """ Wait for all pending async checkpoints to complete. """
+    self._async_queue.join()

@@ -4,6 +4,7 @@ import sys
 import tempfile
 import unittest
 import test_xla_sharding_base
+import threading
 
 import torch
 import torch.distributed as dist
@@ -413,7 +414,35 @@ class CheckpointManagerTest(DistributedCheckpointTestBase):
     self.assertEqual(set(chkpt_mgr.all_steps()), {20, 10})
 
   @run_with_tmpdir
-  def test_manager_async_checkpoint(self, tmpdir):
+  def test_manager_async(self, tmpdir):
+    chkpt_mgr = CheckpointManager(tmpdir, save_period=10)
+    state_dict = self._get_sharded_model().state_dict()
+
+    # Patch the manager's save method to block until this thread signals.
+    cond = threading.Condition()
+    old_save = chkpt_mgr.save
+
+    def patched_save(*args, **kwargs):
+      cond.wait()
+      old_save(*args, **kwargs)
+
+    with unittest.mock.patch.object(chkpt_mgr, 'save', patched_save):
+      chkpt_mgr.save_async(10, state_dict)
+
+    # No new steps should be tracked immediately after calling save_async
+    self.assertEqual(chkpt_mgr.all_steps(), [])
+
+    # Trigger the actual checkpoint in the background thread and wait for
+    # completion.
+    with cond:
+      cond.notify()
+    chkpt_mgr.join()
+
+    # The manager should track all steps which were asynchronously saved.
+    self.assertEqual(set(chkpt_mgr.all_steps()), {10})
+
+  @run_with_tmpdir
+  def test_manager_async_step_tracking(self, tmpdir):
     chkpt_mgr = CheckpointManager(tmpdir, save_period=10)
     state_dict = self._get_sharded_model().state_dict()
 
@@ -430,12 +459,10 @@ class CheckpointManagerTest(DistributedCheckpointTestBase):
       self.assertTrue(chkpt_mgr.save_async(step, state_dict))
       saved.add(step)
 
-    # Delete the checkpoint manager to block this thread until all pending
-    # async checkpoints are complete.
-    del chkpt_mgr
+    # Join to allow pending async checkpoints to complete
+    chkpt_mgr.join()
 
     # The manager should track all steps which were asynchronously saved.
-    chkpt_mgr = CheckpointManager(tmpdir, save_period=10)
     self.assertEqual(set(chkpt_mgr.all_steps()), saved)
 
     # Load a checkpoint into a new state_dict
