@@ -140,6 +140,7 @@ class CheckpointManager:
     self._chkpt_thread.start()
 
     # Create a new group if none is provided
+    # TODO(jonbolin): Verify subgroup on GPU backend
     self.pg = process_group or dist.new_group()
 
   def _load_tracked_chkpts(self) -> Deque[_CheckpointMetadata]:

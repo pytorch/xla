@@ -415,7 +415,7 @@ class CheckpointManagerTest(DistributedCheckpointTestBase):
 
   @run_with_tmpdir
   def test_manager_async(self, tmpdir):
-    chkpt_mgr = CheckpointManager(tmpdir, save_period=10)
+    chkpt_mgr = CheckpointManager(tmpdir, save_interval=10)
     state_dict = self._get_sharded_model().state_dict()
 
     # Patch the manager's save method to block until this thread signals.
@@ -443,7 +443,7 @@ class CheckpointManagerTest(DistributedCheckpointTestBase):
 
   @run_with_tmpdir
   def test_manager_async_step_tracking(self, tmpdir):
-    chkpt_mgr = CheckpointManager(tmpdir, save_period=10)
+    chkpt_mgr = CheckpointManager(tmpdir, save_interval=10)
     state_dict = self._get_sharded_model().state_dict()
 
     self.assertEqual(chkpt_mgr.all_steps(), [])
