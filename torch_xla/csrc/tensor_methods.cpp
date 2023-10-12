@@ -442,6 +442,15 @@ void custom_sharding_(
   input->SetShardingSpec(*sharding_spec);
 }
 
+void custom_mark_sharding(
+    const XLATensorPtr& input,
+    const std::shared_ptr<XLATensor::ShardingSpec>& sharding_spec) {
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<CustomMarkSharding>(
+      torch::lazy::MakeNode<CustomSharding>(input->GetIrValue()));
+  return {input->CreateFrom(torch::lazy::Value(node, 0)),
+          torch::lazy::Value(node, 1)};
+}
+
 XLATensorPtr get_dimensions_size(const XLATensorPtr& input,
                                  std::vector<int64_t> dimensions) {
   return input->CreateFrom(torch::lazy::MakeNode<GetDimensionsSize>(

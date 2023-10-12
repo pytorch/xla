@@ -1228,4 +1228,9 @@ xla::XlaOp BuildCustomSharding(const xla::XlaOp& input) {
                          {input}, ShapeHelper::ShapeOfXlaOp(input));
 }
 
+xla::XlaOp BuildCustomMarkSharding(const xla::XlaOp& input) {
+  return xla::CustomCall(input.builder(), /*call_target_name=*/"MarkSharding",
+                         {input}, ShapeHelper::ShapeOfXlaOp(input));
+}
+
 }  // namespace torch_xla

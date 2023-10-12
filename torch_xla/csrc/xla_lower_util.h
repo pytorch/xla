@@ -150,6 +150,8 @@ xla::XlaOp BuildCdistForward(xla::XlaOp x1, xla::XlaOp x2, xla::XlaOp p,
 
 xla::XlaOp BuildCustomSharding(const xla::XlaOp& input);
 
+xla::XlaOp BuildCustomMarkSharding(const xla::XlaOp& input);
+
 }  // namespace torch_xla
 
 #endif  // XLA_TORCH_XLA_CSRC_XLA_LOWER_UTIL_H_
