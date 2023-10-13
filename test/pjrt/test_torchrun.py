@@ -41,10 +41,14 @@ class TestTorchrun(absltest.TestCase):
 
     # If world_size=2, then the `tensors` below will be [[1, 2], [3, 4]].
     # The `expected` will be [4, 6].
-    tensors = [torch.arange(2, dtype=torch.int64) + 1 + 2 * r for r in range(world_size)]
+    tensors = [
+        torch.arange(2, dtype=torch.int64) + 1 + 2 * r
+        for r in range(world_size)
+    ]
     expected = sum(tensors)
 
-    xla_tensor = torch.arange(2, dtype=torch.int64, device=xm.xla_device()) + 1 + 2 * dist.get_rank()
+    xla_tensor = torch.arange(
+        2, dtype=torch.int64, device=xm.xla_device()) + 1 + 2 * dist.get_rank()
     dist.all_reduce(xla_tensor, op=dist.ReduceOp.SUM)
     xm.mark_step()
 
@@ -60,8 +64,10 @@ class TestTorchrun(absltest.TestCase):
     tensor = world_size * torch.arange(world_size * 2, dtype=torch.int64)
     expected = torch.split(tensor, world_size)[dist.get_rank()]
 
-    tensor_out = torch.zeros(world_size, dtype=torch.int64, device=xm.xla_device())
-    tensor_in = torch.arange(world_size * 2, dtype=torch.int64, device=xm.xla_device())
+    tensor_out = torch.zeros(
+        world_size, dtype=torch.int64, device=xm.xla_device())
+    tensor_in = torch.arange(
+        world_size * 2, dtype=torch.int64, device=xm.xla_device())
     dist.reduce_scatter(tensor_out, [tensor_in], op=dist.ReduceOp.SUM)
     xm.mark_step()
 

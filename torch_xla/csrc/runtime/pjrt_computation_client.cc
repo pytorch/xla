@@ -46,13 +46,15 @@ MaybeInitializeDistributedRuntimeClient(int local_rank) {
     return std::move(client);
   }
   std::string LOCAL_HOST_IP_ADDR = "127.0.0.1";
-  std::string master_addr = sys_util::GetEnvString("MASTER_ADDR", LOCAL_HOST_IP_ADDR);
-  std::string port = runtime::sys_util::GetEnvString("XLA_COORDINATOR_PORT", "8547");
+  std::string master_addr =
+      sys_util::GetEnvString("MASTER_ADDR", LOCAL_HOST_IP_ADDR);
+  std::string port =
+      runtime::sys_util::GetEnvString("XLA_COORDINATOR_PORT", "8547");
   std::string dist_service_addr = absl::StrJoin({master_addr, port}, ":");
   xla::DistributedRuntimeClient::Options options;
   options.node_id = local_rank;
   TF_VLOG(3) << "Getting distributed runtime client for address="
-              << dist_service_addr << ", node_id=" << options.node_id;
+             << dist_service_addr << ", node_id=" << options.node_id;
   client = xla::GetDistributedRuntimeClient(dist_service_addr, options);
   XLA_CHECK(client->Connect().ok())
       << "Failed to initialize distributed runtime client";
@@ -130,7 +132,7 @@ PjRtComputationClient::PjRtComputationClient() {
     TF_VLOG(1) << "Initializing PjRt GPU client...";
     bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncGpuClient, true);
     int local_process_rank = sys_util::GetEnvInt(env::kEnvPjRtLocalRank, 0);
-    
+
     int global_process_rank = sys_util::GetEnvInt("RANK", local_process_rank);
     auto distributed_client =
         MaybeInitializeDistributedRuntimeClient(global_process_rank);
@@ -153,19 +155,17 @@ PjRtComputationClient::PjRtComputationClient() {
     int global_world_size = sys_util::GetEnvInt("WORLD_SIZE", 1);
     TF_VLOG(3) << "Getting StreamExecutorGpuClient for node_id="
                << global_process_rank << ", num_nodes=" << global_world_size;
-    client_ =
-        std::move(xla::GetStreamExecutorGpuClient(
-                      /*asynchronous=*/async,
-                      xla::GpuAllocatorConfig{},
-                      /*node_id=*/global_process_rank,
-                      /*num_nodes=*/
-                      global_world_size,
-                      /*allowed_devices=*/allowed_devices,
-                      /*platform_name*/ "gpu",
-                      /*should_stage_host_to_device_transfers*/ true,
-                      /*kv_get*/ kv_get,
-                      /*kv_put*/ kv_put)
-                      .value());
+    client_ = std::move(xla::GetStreamExecutorGpuClient(
+                            /*asynchronous=*/async, xla::GpuAllocatorConfig{},
+                            /*node_id=*/global_process_rank,
+                            /*num_nodes=*/
+                            global_world_size,
+                            /*allowed_devices=*/allowed_devices,
+                            /*platform_name*/ "gpu",
+                            /*should_stage_host_to_device_transfers*/ true,
+                            /*kv_get*/ kv_get,
+                            /*kv_put*/ kv_put)
+                            .value());
   } else if (device_type == "XPU") {
     TF_VLOG(1) << "Initializing PjRt XPU client...";
     XLA_CHECK_OK(

@@ -103,6 +103,7 @@ def _run_singleprocess(fn: Callable[..., R], *args, **kwargs) -> Dict[int, R]:
 
   return fn(*args, **kwargs)
 
+
 def get_global_rank(local_rank: int):
   if xenv.RANK in os.environ:
     # torchrun case.
@@ -110,11 +111,13 @@ def get_global_rank(local_rank: int):
   # Single host.
   return local_rank
 
+
 def should_initialize_dist_runtime(local_rank: int):
   if dist.is_torchelastic_launched():
     assert xenv.RANK in os.environ, 'Environment variable is not set.'
     return xu.getenv_as(xenv.RANK, int) == 0
   return local_rank == 0
+
 
 @runtime.requires_pjrt
 def initialize_multiprocess(local_rank: int, local_world_size: int):

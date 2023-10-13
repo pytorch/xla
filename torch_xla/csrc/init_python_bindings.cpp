@@ -1922,24 +1922,26 @@ void InitXlaModuleBindings(py::module m) {
   distributed_runtime_service.def("shutdown",
                                   &xla::DistributedRuntimeService::Shutdown,
                                   py::call_guard<py::gil_scoped_release>());
-  m.def("_xla_get_distributed_runtime_service",
-        [](int num_nodes) -> std::unique_ptr<xla::DistributedRuntimeService> {
-          std::string port = runtime::sys_util::GetEnvString("XLA_COORDINATOR_PORT", "8547");
-          std::string LOCAL_HOST_IP_ADDR = "127.0.0.1";
-          std::string dist_service_addr =
-              runtime::sys_util::GetEnvString("MASTER_ADDR", LOCAL_HOST_IP_ADDR) + ":" + port;
-          XLA_CHECK(!dist_service_addr.empty())
-              << "Must set PJRT_DIST_SERVICE_ADDR environment variable to use "
-                 "distributed runtime";
-          XLA_CHECK(num_nodes > 0)
-              << "num_nodes must be positive: " << num_nodes;
+  m.def(
+      "_xla_get_distributed_runtime_service",
+      [](int num_nodes) -> std::unique_ptr<xla::DistributedRuntimeService> {
+        std::string port =
+            runtime::sys_util::GetEnvString("XLA_COORDINATOR_PORT", "8547");
+        std::string LOCAL_HOST_IP_ADDR = "127.0.0.1";
+        std::string dist_service_addr =
+            runtime::sys_util::GetEnvString("MASTER_ADDR", LOCAL_HOST_IP_ADDR) +
+            ":" + port;
+        XLA_CHECK(!dist_service_addr.empty())
+            << "Must set PJRT_DIST_SERVICE_ADDR environment variable to use "
+               "distributed runtime";
+        XLA_CHECK(num_nodes > 0) << "num_nodes must be positive: " << num_nodes;
 
-          xla::CoordinationServiceImpl::Options options;
-          options.num_nodes = num_nodes;
-          return std::move(
-              xla::GetDistributedRuntimeService(dist_service_addr, options)
-                  .value());
-        });
+        xla::CoordinationServiceImpl::Options options;
+        options.num_nodes = num_nodes;
+        return std::move(
+            xla::GetDistributedRuntimeService(dist_service_addr, options)
+                .value());
+      });
 
   BuildProfilerSubmodule(&m);
   BuildLoweringContextSubmodule(&m);
