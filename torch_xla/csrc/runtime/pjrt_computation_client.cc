@@ -106,16 +106,6 @@ std::vector<std::string> PjRtComputationClient::PjRtDevicesToString(
   return strs;
 }
 
-int getGlobalProcessRank(int localRank) {
-  int global_rank = sys_util::GetEnvInt("RANK", -1);
-  if (global_rank != -1) {
-    // torchrun case.
-    return global_rank;
-  }
-  // Single host.
-  return localRank;
-}
-
 PjRtComputationClient::PjRtComputationClient() {
   std::string device_type = sys_util::GetEnvString(env::kEnvPjRtDevice, "");
   if (device_type == "CPU") {

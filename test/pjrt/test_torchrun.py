@@ -11,11 +11,9 @@ import torch_xla.utils.utils as xu
 class TestTorchrun(absltest.TestCase):
 
   def setUp(self):
-    print('xw32 setUp line 14.')
     dist.init_process_group('xla', init_method='xla://')
 
   def tearDown(self) -> None:
-    print('xw32 tearDown line 14.')
     dist.destroy_process_group()
 
   def test_all_gather(self):
