@@ -1,3 +1,4 @@
+import functools
 import os
 import sys
 import tempfile
@@ -15,9 +16,21 @@ from torch.distributed.checkpoint.default_planner import (
     create_default_local_save_plan,
     create_default_global_save_plan,
 )
-from torch_xla.experimental.distributed_checkpoint import SPMDLoadPlanner, SPMDSavePlanner
+from torch_xla.experimental.distributed_checkpoint import SPMDLoadPlanner, SPMDSavePlanner, CheckpointManager
 from torch_xla.experimental.distributed_checkpoint._helpers import (
     _sharded_cpu_state_dict, _CpuShards, _is_sharded_tensor)
+
+
+# Wrapper to manage a temporary directory for the wrapped test
+def run_with_tmpdir(f):
+
+  @functools.wraps(f)
+  def run(*args, **kwargs):
+    with tempfile.TemporaryDirectory() as tmpdir:
+      kwargs.setdefault('tmpdir', tmpdir)
+      f(*args, **kwargs)
+
+  return run
 
 
 class DistributedCheckpointTestBase(test_xla_sharding_base.XlaShardingTest):
@@ -317,6 +330,87 @@ class DistributedCheckpointHelpersTest(DistributedCheckpointTestBase):
       else:
         self.assertTrue(isinstance(param, torch.Tensor))
         self.assertTrue(param.device == torch.device("cpu"))
+
+
+class CheckpointManagerTest(DistributedCheckpointTestBase):
+
+  def setUp(self):
+    super().setUp()
+    # Initialize the a minimal process group
+    dist.init_process_group(
+        backend='gloo', init_method='tcp://127.1:8932', world_size=1, rank=0)
+
+  def tearDown(self):
+    super().tearDown()
+    # Destroy the CPU process group after the test
+    dist.destroy_process_group()
+
+  @run_with_tmpdir
+  def test_manager_checkpointing(self, tmpdir):
+    chkpt_mgr = CheckpointManager(tmpdir, save_interval=10)
+    state_dict = self._get_sharded_model().state_dict()
+
+    # Take a checkpoint on step 0
+    self.assertTrue(chkpt_mgr.save(0, state_dict))
+
+    # Load the checkpoint into a new state_dict
+    new_state_dict = self._get_sharded_model().state_dict()
+    self.assertFalse(
+        any(
+            torch.allclose(v, new_state_dict[k])
+            for k, v in state_dict.items()))
+    chkpt_mgr.restore(0, new_state_dict)
+    self.assertTrue(
+        all(
+            torch.allclose(v, new_state_dict[k])
+            for k, v in state_dict.items()))
+
+  @run_with_tmpdir
+  def test_manager_step_tracking(self, tmpdir):
+    chkpt_mgr = CheckpointManager(tmpdir, save_interval=10)
+    state_dict = self._get_sharded_model().state_dict()
+
+    # No steps are being tracked initially
+    self.assertEqual(chkpt_mgr.all_steps(), [])
+
+    # Steps not divisible by 10 should not be saved
+    for step in range(1, 10):
+      self.assertFalse(chkpt_mgr.save(step, state_dict))
+      self.assertEqual(chkpt_mgr.all_steps(), [])
+
+    # Steps divisible by 10 should be saved
+    saved = set()
+    for step in range(0, 100, 10):
+      self.assertTrue(chkpt_mgr.save(step, state_dict))
+      saved.add(step)
+      self.assertEqual(set(chkpt_mgr.all_steps()), saved)
+
+  @run_with_tmpdir
+  def test_manager_max_to_keep(self, tmpdir):
+    chkpt_mgr = CheckpointManager(tmpdir, save_interval=10, max_to_keep=2)
+    state_dict = self._get_sharded_model().state_dict()
+
+    # No steps are being tracked initially
+    self.assertEqual(chkpt_mgr.all_steps(), [])
+
+    self.assertTrue(chkpt_mgr.save(10, state_dict))
+    self.assertEqual(set(chkpt_mgr.all_steps()), {10})
+
+    self.assertTrue(chkpt_mgr.save(20, state_dict))
+    self.assertEqual(set(chkpt_mgr.all_steps()), {10, 20})
+
+    # The oldest checkpoint should be erased
+    self.assertTrue(chkpt_mgr.save(30, state_dict))
+    self.assertEqual(set(chkpt_mgr.all_steps()), {30, 20})
+
+    # The oldest is selected by creation timestamp, not step
+    self.assertTrue(chkpt_mgr.save(10, state_dict))
+    self.assertEqual(set(chkpt_mgr.all_steps()), {30, 10})
+
+    # The deletion order should persist across executions
+    chkpt_mgr = CheckpointManager(tmpdir, save_interval=10, max_to_keep=2)
+    self.assertTrue(chkpt_mgr.save(20, state_dict))
+    self.assertEqual(set(chkpt_mgr.all_steps()), {20, 10})
 
 
 if __name__ == '__main__':
