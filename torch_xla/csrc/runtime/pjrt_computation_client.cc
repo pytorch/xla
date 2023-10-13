@@ -45,9 +45,10 @@ MaybeInitializeDistributedRuntimeClient(int local_rank) {
   if (global_world_size < 2) {
     return std::move(client);
   }
-  std::string master_addr = sys_util::GetEnvString("MASTER_ADDR", "127.0.0.1");
-  std::string port = runtime::sys_util::GetEnvString("COORDINATOR_PORT", "8547");
-  std::string dist_service_addr = master_addr+":"+port ;
+  std::string LOCAL_HOST_IP_ADDR = "127.0.0.1";
+  std::string master_addr = sys_util::GetEnvString("MASTER_ADDR", LOCAL_HOST_IP_ADDR);
+  std::string port = runtime::sys_util::GetEnvString("XLA_COORDINATOR_PORT", "8547");
+  std::string dist_service_addr = absl::StrJoin({master_addr, port}, ":");
   xla::DistributedRuntimeClient::Options options;
   options.node_id = local_rank;
   TF_VLOG(3) << "Getting distributed runtime client for address="
@@ -105,7 +106,7 @@ std::vector<std::string> PjRtComputationClient::PjRtDevicesToString(
   return strs;
 }
 
-int getGlobalRank(int localRank) {
+int getGlobalProcessRank(int localRank) {
   int global_rank = sys_util::GetEnvInt("RANK", -1);
   if (global_rank != -1) {
     // torchrun case.
@@ -138,13 +139,13 @@ PjRtComputationClient::PjRtComputationClient() {
              device_type == "ROCM") {
     TF_VLOG(1) << "Initializing PjRt GPU client...";
     bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncGpuClient, true);
-    int local_rank = sys_util::GetEnvInt(env::kEnvPjRtLocalRank, 0);
+    int local_process_rank = sys_util::GetEnvInt(env::kEnvPjRtLocalRank, 0);
     
-    int global_rank = getGlobalRank(local_rank);
+    int global_process_rank = getGlobalProcessRank(local_process_rank);
     auto distributed_client =
-        MaybeInitializeDistributedRuntimeClient(global_rank);
+        MaybeInitializeDistributedRuntimeClient(global_process_rank);
     auto allowed_devices =
-        std::make_optional<std::set<int>>(std::set{local_rank});
+        std::make_optional<std::set<int>>(std::set{local_process_rank});
     xla::PjRtClient::KeyValueGetCallback kv_get = nullptr;
     xla::PjRtClient::KeyValuePutCallback kv_put = nullptr;
     if (distributed_client != nullptr) {
@@ -161,12 +162,12 @@ PjRtComputationClient::PjRtComputationClient() {
     }
     int global_world_size = sys_util::GetEnvInt("WORLD_SIZE", 1);
     TF_VLOG(3) << "Getting StreamExecutorGpuClient for node_id="
-               << global_rank << ", num_nodes=" << global_world_size;
+               << global_process_rank << ", num_nodes=" << global_world_size;
     client_ =
         std::move(xla::GetStreamExecutorGpuClient(
                       /*asynchronous=*/async,
                       xla::GpuAllocatorConfig{},
-                      /*node_id=*/global_rank,
+                      /*node_id=*/global_process_rank,
                       /*num_nodes=*/
                       global_world_size,
                       /*allowed_devices=*/allowed_devices,

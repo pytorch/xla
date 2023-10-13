@@ -10,9 +10,15 @@ import torch_xla.utils.utils as xu
 
 class TestTorchrun(absltest.TestCase):
 
-  def test_all_gather(self):
+  def setUp(self):
+    print('xw32 setUp line 14.')
     dist.init_process_group('xla', init_method='xla://')
 
+  def tearDown(self) -> None:
+    print('xw32 tearDown line 14.')
+    dist.destroy_process_group()
+
+  def test_all_gather(self):
     dist_world_size = xu.getenv_as('WORLD_SIZE', int)
     devices_per_thread = xr.addressable_device_count()
 
@@ -28,15 +34,15 @@ class TestTorchrun(absltest.TestCase):
 
     expected = torch.arange(0, expected_world_size, step=1, dtype=torch.float32)
     torch.testing.assert_close(result.cpu(), expected)
-    dist.destroy_process_group()
 
   def test_all_reduce(self):
     # The test is inspired by https://pytorch.org/docs/stable/distributed.html#torch.distributed.all_reduce
-    dist.init_process_group('xla', init_method='xla://')
-
     dist_world_size = xu.getenv_as('WORLD_SIZE', int)
     devices_per_thread = xr.addressable_device_count()
     world_size = dist_world_size * devices_per_thread
+
+    # If world_size=2, then the `tensors` below will be [[1, 2], [3, 4]].
+    # The `expected` will be [4, 6].
     tensors = [torch.arange(2, dtype=torch.int64) + 1 + 2 * r for r in range(world_size)]
     expected = sum(tensors)
 
@@ -45,14 +51,14 @@ class TestTorchrun(absltest.TestCase):
     xm.mark_step()
 
     torch.testing.assert_close(xla_tensor.cpu(), expected)
-    dist.destroy_process_group()
 
   def test_reduce_scatter(self):
-    dist.init_process_group('xla', init_method='xla://')
-
+    # The test is inspired by https://pytorch.org/docs/stable/distributed.html#torch.distributed.reduce_scatter
     dist_world_size = xu.getenv_as('WORLD_SIZE', int)
     devices_per_thread = xr.addressable_device_count()
     world_size = dist_world_size * devices_per_thread
+    # If world_size=2, then `tensor` will be tensor([0, 2, 4, 6])
+    # `expected` will be [0, 2] on rank 0 and [4, 6] on rank 1.
     tensor = world_size * torch.arange(world_size * 2, dtype=torch.int64)
     expected = torch.split(tensor, world_size)[dist.get_rank()]
 
@@ -62,7 +68,6 @@ class TestTorchrun(absltest.TestCase):
     xm.mark_step()
 
     torch.testing.assert_close(tensor_out.cpu(), expected)
-    dist.destroy_process_group()
 
 
 if __name__ == '__main__':
