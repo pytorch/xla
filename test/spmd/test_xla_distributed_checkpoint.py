@@ -4,6 +4,7 @@ import sys
 import tempfile
 import unittest
 import test_xla_sharding_base
+import threading
 
 import torch
 import torch.distributed as dist
@@ -411,6 +412,70 @@ class CheckpointManagerTest(DistributedCheckpointTestBase):
     chkpt_mgr = CheckpointManager(tmpdir, save_interval=10, max_to_keep=2)
     self.assertTrue(chkpt_mgr.save(20, state_dict))
     self.assertEqual(set(chkpt_mgr.all_steps()), {20, 10})
+
+  @run_with_tmpdir
+  def test_manager_async(self, tmpdir):
+    chkpt_mgr = CheckpointManager(tmpdir, save_interval=10)
+    state_dict = self._get_sharded_model().state_dict()
+
+    # Patch the manager's save method to block until this thread signals.
+    cond = threading.Condition()
+    old_save = chkpt_mgr.save
+
+    def patched_save(*args, **kwargs):
+      cond.wait()
+      old_save(*args, **kwargs)
+
+    with unittest.mock.patch.object(chkpt_mgr, 'save', patched_save):
+      chkpt_mgr.save_async(10, state_dict)
+
+    # No new steps should be tracked immediately after calling save_async
+    self.assertEqual(chkpt_mgr.all_steps(), [])
+
+    # Trigger the actual checkpoint in the background thread and wait for
+    # completion.
+    with cond:
+      cond.notify()
+    chkpt_mgr.join()
+
+    # The manager should track all steps which were asynchronously saved.
+    self.assertEqual(set(chkpt_mgr.all_steps()), {10})
+
+  @run_with_tmpdir
+  def test_manager_async_step_tracking(self, tmpdir):
+    chkpt_mgr = CheckpointManager(tmpdir, save_interval=10)
+    state_dict = self._get_sharded_model().state_dict()
+
+    self.assertEqual(chkpt_mgr.all_steps(), [])
+
+    # Steps not divisible by 10 should not be saved
+    for step in range(1, 10):
+      self.assertFalse(chkpt_mgr.save_async(step, state_dict))
+      self.assertEqual(chkpt_mgr.all_steps(), [])
+
+    # Steps divisible by 10 should be saved
+    saved = set()
+    for step in range(0, 100, 10):
+      self.assertTrue(chkpt_mgr.save_async(step, state_dict))
+      saved.add(step)
+
+    # Join to allow pending async checkpoints to complete
+    chkpt_mgr.join()
+
+    # The manager should track all steps which were asynchronously saved.
+    self.assertEqual(set(chkpt_mgr.all_steps()), saved)
+
+    # Load a checkpoint into a new state_dict
+    new_state_dict = self._get_sharded_model().state_dict()
+    self.assertFalse(
+        any(
+            torch.allclose(v, new_state_dict[k])
+            for k, v in state_dict.items()))
+    chkpt_mgr.restore(0, new_state_dict)
+    self.assertTrue(
+        all(
+            torch.allclose(v, new_state_dict[k])
+            for k, v in state_dict.items()))
 
 
 if __name__ == '__main__':
