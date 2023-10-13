@@ -29,7 +29,7 @@ AdamOptimizerStep::AdamOptimizerStep(
               {found_inf, step, param, grad, exp_avg, exp_avg_sq,
                max_exp_avg_sq, beta1, beta2, lr, weight_decay, eps},
               NodeOutputShape(step, param),
-              /*num_outputs=*/5,
+              /*num_outputs=*/(use_amsgrad ? 5 : 4),
               torch::lazy::MHash(use_weight_decay, use_amsgrad, use_adamw)),
       use_weight_decay_(use_weight_decay),
       use_amsgrad_(use_amsgrad),
