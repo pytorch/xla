@@ -525,7 +525,9 @@ void adam_optimizer_step_(const XLATensorPtr& found_inf, XLATensorPtr& step,
   param->SetInPlaceIrValue(torch::lazy::Value(node, 1));
   exp_avg->SetInPlaceIrValue(torch::lazy::Value(node, 2));
   exp_avg_sq->SetInPlaceIrValue(torch::lazy::Value(node, 3));
-  max_exp_avg_sq->SetInPlaceIrValue(torch::lazy::Value(node, 4));
+  if (amsgrad) {
+    max_exp_avg_sq->SetInPlaceIrValue(torch::lazy::Value(node, 4));
+  }
 }
 
 std::vector<XLATensorPtr> user_computation(

@@ -1013,10 +1013,11 @@ std::vector<xla::XlaOp> BuildAdamOptimizerStep(
   xla::XlaOp new_exp_avg_sq =
       xla::Select(found_inf_cond, exp_avg_sq,
                   exp_avg_sq * beta2 + new_grad * new_grad * (one - beta2));
-  xla::XlaOp new_max_exp_avg_sq = xla::Select(
-      found_inf_cond, max_exp_avg_sq, xla::Max(max_exp_avg_sq, new_exp_avg_sq));
+  xla::XlaOp new_max_exp_avg_sq;
   xla::XlaOp denom;
   if (use_amsgrad) {
+    new_max_exp_avg_sq = xla::Select(found_inf_cond, max_exp_avg_sq,
+                                     xla::Max(max_exp_avg_sq, new_exp_avg_sq));
     denom = xla::Sqrt(new_max_exp_avg_sq) / xla::Sqrt(bias_correction2) + eps;
   } else {
     denom = xla::Sqrt(new_exp_avg_sq) / xla::Sqrt(bias_correction2) + eps;
@@ -1031,7 +1032,9 @@ std::vector<xla::XlaOp> BuildAdamOptimizerStep(
   results.push_back(new_param);
   results.push_back(new_exp_avg);
   results.push_back(new_exp_avg_sq);
-  results.push_back(new_max_exp_avg_sq);
+  if (use_amsgrad) {
+    results.push_back(new_max_exp_avg_sq);
+  }
   return results;
 }
 
