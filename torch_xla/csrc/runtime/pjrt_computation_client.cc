@@ -141,7 +141,7 @@ PjRtComputationClient::PjRtComputationClient() {
     bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncGpuClient, true);
     int local_process_rank = sys_util::GetEnvInt(env::kEnvPjRtLocalRank, 0);
     
-    int global_process_rank = getGlobalProcessRank(local_process_rank);
+    int global_process_rank = sys_util::GetEnvInt("RANK", local_process_rank);
     auto distributed_client =
         MaybeInitializeDistributedRuntimeClient(global_process_rank);
     auto allowed_devices =
