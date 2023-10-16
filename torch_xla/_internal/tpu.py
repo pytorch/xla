@@ -270,7 +270,10 @@ def configure_topology(local_rank: int,
 
 
 def discover_master_worker_ip(use_localhost: bool = True) -> str:
-  """Find the IP of the TPU host with TPU:0.
+  """Find the IP of the master TPU host.
+
+  In multiprocess, this is the host with TPU:0.
+  In SPMD mode, this is the host running process 0.
 
   TPU device IDs are nondeterministic and independent from Cloud TPU worker IDs.
 
@@ -306,10 +309,11 @@ def _spmd_find_master_ip(current_worker_ip: str) -> str:
   # Create a global (n_dev x 2) tensor containing all process indices and IPs,
   # and find the process 0 IP as the master IP.
   shard = torch.LongTensor([[xr.process_index(), ip_int]])
-  op_sharding = xs.Mesh(n_dev, (n_dev, 1)).get_op_sharding((0, None))
+  op_sharding = xs.Mesh(range(n_dev), (n_dev, 1)).get_op_sharding((0, 1))
   global_tensor = from_cpu_shards([shard] * local_ndev, op_sharding).cpu()
-  # TODO(jonbolin): Confirm that this is necessary or whether process 0 will
-  # always control device 0.
-  for proc_ind, ip in global_tensor.tolist():
-    if proc_ind == 0:
-      return str(ip_address(ip))
+  try:
+    # Process 0 may not control device 0, so we must do a linear search.
+    master_ip = next(ip for proc, ip in global_tensor.tolist() if proc == 0)
+  except StopIteration:
+    raise RuntimeError('Could not find IP of host running process 0')
+  return str(ip_address(master_ip))

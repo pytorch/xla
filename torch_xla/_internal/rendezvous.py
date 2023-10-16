@@ -28,7 +28,6 @@ def pjrt_rendezvous_handler(url: str,
     ) == 'TPU' else 'localhost'
 
   master_port = xu.getenv_as('MASTER_PORT', int, 12355)
-  world_size = xr.process_count()
   with _store_lock:
     global _store
     if not _store:
@@ -44,7 +43,8 @@ def pjrt_rendezvous_handler(url: str,
             xr.process_count(),
             is_master=xr.process_index() == 0)
 
-  # In SPMD, the rank is the process index, while in multiprocess it should be
-  # the device ordinal.
+  # In SPMD, the world size and rank are determined by the process count and
+  # index, while in multiprocess they are based on the device count and ordinal.
+  world_size = xr.process_count() if xr.is_spmd() else xr.world_size()
   rank = xr.process_index() if xr.is_spmd() else xr.global_ordinal()
   yield (_store, rank, world_size)
