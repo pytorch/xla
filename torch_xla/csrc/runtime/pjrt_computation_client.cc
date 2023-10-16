@@ -46,9 +46,7 @@ MaybeInitializeDistributedRuntimeClient(int local_rank) {
   if (global_world_size < 2) {
     return std::move(client);
   }
-  std::string LOCAL_HOST_IP_ADDR = "127.0.0.1";
-  std::string master_addr =
-      sys_util::GetEnvString("MASTER_ADDR", LOCAL_HOST_IP_ADDR);
+  std::string master_addr = sys_util::GetEnvString("MASTER_ADDR", "localhost");
   std::string port =
       runtime::sys_util::GetEnvString("XLA_COORDINATOR_PORT", "8547");
   std::string dist_service_addr = absl::StrJoin({master_addr, port}, ":");
