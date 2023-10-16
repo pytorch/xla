@@ -70,12 +70,13 @@ class TestDynamicShapeModels(unittest.TestCase):
     num_batches = 100
     batches = []
     for i in range(num_batches):
+      # i=0: batches[0]=
       batches.append(self.create_dynamic_test_data(num_test_samples, num_features, device=xla_dev, num_non_zeros=i))
 
     # print('before training num_compilation=', met.metric_data('CompileTime')[0])
     # print('before training num_executions=', met.metric_data('ExecuteTime')[0])
-    # the x_training in each batch has size [<=10, 2] with real size [0, 2], [1, 2], [2, 2]... 
-    # and y_training has size [<=10] with real size [0], [1], [2], [3]...
+    # the x_training in each batch has size [<=400, 2] with real size [0, 2], [1, 2], [2, 2]... 
+    # and y_training has size [<=400] with real size [0], [1], [2], [3]...
     start = time.time()
     for (x_training, y_training) in batches:
       optimizer.zero_grad()
@@ -99,8 +100,8 @@ class TestDynamicShapeModels(unittest.TestCase):
 
 
   def create_dynamic_test_data(self,
-                               num_test_samples,
-                               num_features,
+                               num_test_samples, # 200
+                               num_features, # 2
                                device=None,
                                num_non_zeros=1):
     x_test = torch.zeros(num_test_samples, num_features)
