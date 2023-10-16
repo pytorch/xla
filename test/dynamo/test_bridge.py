@@ -207,6 +207,24 @@ class TorchXLAReuseGraphTest(torch._dynamo.test_case.TestCase):
   test_training_linear = make_training_test(LinearModule)
   test_training_maxpool = make_training_test(MaxPoolModule)
 
+  def test_non_tensor_args_for_partition(self):
+
+    class Emb(torch.nn.Embedding):
+
+      def __init__(self):
+        super().__init__(num_embeddings=10, embedding_dim=10, padding_idx=0)
+
+    device = xm.xla_device()
+    module = Emb()
+    module.to(device)
+
+    @torch.compile(backend="openxla_eval")
+    def foo(x):
+      return module(x)
+
+    x = torch.randint(0, 10, (10,), device=device)
+    foo(x)
+
 
 if __name__ == "__main__":
   from torch._dynamo.test_case import run_tests
