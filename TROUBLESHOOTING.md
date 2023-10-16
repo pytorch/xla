@@ -6,7 +6,7 @@ since many of them are peculiar to a given internal implementation which might c
 ## Sanity Check
 Before performing any in depth debugging, we want to do a sanity check on the installed PyTorch/XLA.
 
-### Check The Version installed
+### Check PyTorch/XLA Version
 PyTorch and PyTorch/XLA version should matach. Check out our [README](https://github.com/pytorch/xla#getting-started) for more detials on versions available.
 ```
 jackcao@t1v-n-e836a741-w-0:~$ python
@@ -33,12 +33,12 @@ Type "help", "copyright", "credits" or "license" for more information.
 tensor(100, device='xla:0')
 ```
 
-### Run Resnet With FakeDatta
+### Run Resnet With Fake Data
 ```
 git clone https://github.com/pytorch/xla.git
 python xla/test/test_train_mp_imagenet.py --fake_data
 ```
-If you can get the resnet to run it means the we can conclude that torch_xla is installed correctly. 
+If you can get the resnet to run we can conclude that torch_xla is installed correctly. 
 
 
 ## Performance Debugging
