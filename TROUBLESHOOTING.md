@@ -29,8 +29,9 @@ Type "help", "copyright", "credits" or "license" for more information.
 >>> import torch
 >>> import torch_xla.core.xla_model as xm
 >>> t1 = torch.tensor(100, device=xm.xla_device())
->>> print(t1)
-tensor(100, device='xla:0')
+>>> t2 = torch.tensor(200, device=xm.xla_device())
+>>> print(t1 + t2)
+tensor(300, device='xla:0')
 ```
 
 ### Run Resnet With Fake Data
