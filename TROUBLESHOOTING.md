@@ -7,11 +7,9 @@ since many of them are peculiar to a given internal implementation which might c
 Before performing any in depth debugging, we want to do a sanity check on the installed PyTorch/XLA.
 
 ### Check PyTorch/XLA Version
-PyTorch and PyTorch/XLA version should matach. Check out our [README](https://github.com/pytorch/xla#getting-started) for more detials on versions available.
+PyTorch and PyTorch/XLA version should match. Check out our [README](https://github.com/pytorch/xla#getting-started) for more detials on versions available.
 ```
-jackcao@t1v-n-e836a741-w-0:~$ python
-Python 3.10.12 (main, Jun 11 2023, 05:26:28) [GCC 11.4.0] on linux
-Type "help", "copyright", "credits" or "license" for more information.
+vm:~$ python
 >>> import torch
 >>> import torch_xla
 >>> print(torch.__version__)
@@ -22,10 +20,8 @@ Type "help", "copyright", "credits" or "license" for more information.
 
 ### Perform A Simple Calculation
 ```
-jackcao@t1v-n-e836a741-w-0:~$ export PJRT_DEVICE=TPU
-jackcao@t1v-n-e836a741-w-0:~$ python3
-Python 3.10.12 (main, Jun 11 2023, 05:26:28) [GCC 11.4.0] on linux
-Type "help", "copyright", "credits" or "license" for more information.
+vm:~$ export PJRT_DEVICE=TPU
+vm:~$ python3
 >>> import torch
 >>> import torch_xla.core.xla_model as xm
 >>> t1 = torch.tensor(100, device=xm.xla_device())
@@ -35,10 +31,18 @@ tensor(300, device='xla:0')
 ```
 
 ### Run Resnet With Fake Data
+For nightly
 ```
-git clone https://github.com/pytorch/xla.git
-python xla/test/test_train_mp_imagenet.py --fake_data
+vm:~$ git clone https://github.com/pytorch/xla.git
+vm:~$ python xla/test/test_train_mp_imagenet.py --fake_data
 ```
+
+For release version `x.y`, you want to use the branch `rx.y`. For 2.1 release you should do
+```
+git clone --branch r2.1 https://github.com/pytorch/xla.git
+vm:~$ python xla/test/test_train_mp_imagenet.py --fake_data
+```
+
 If you can get the resnet to run we can conclude that torch_xla is installed correctly. 
 
 
