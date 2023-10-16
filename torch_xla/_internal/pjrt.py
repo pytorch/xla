@@ -129,7 +129,9 @@ def initialize_multiprocess(local_rank: int, local_world_size: int):
   elif runtime.device_type() == 'NEURON':
     neuron.initialize_env(local_rank)
   elif runtime.device_type() in ('GPU', 'ROCM', 'CUDA'):
-    global_world_size = xu.getenv_as('WORLD_SIZE', int)
+    global_world_size = xu.getenv_as(
+        xenv.WORLD_SIZE, int, xu.getenv_as(xenv.LOCAL_WORLD_SIZE, int, -1))
+    assert global_world_size >= 0
     if should_initialize_dist_runtime(local_rank):
       gpu.initialize_distributed_runtime(global_world_size)
 

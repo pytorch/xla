@@ -161,10 +161,10 @@ PjRtComputationClient::PjRtComputationClient() {
                             /*num_nodes=*/
                             global_world_size,
                             /*allowed_devices=*/allowed_devices,
-                            /*platform_name*/ "gpu",
-                            /*should_stage_host_to_device_transfers*/ true,
-                            /*kv_get*/ kv_get,
-                            /*kv_put*/ kv_put)
+                            /*platform_name=*/"gpu",
+                            /*should_stage_host_to_device_transfers=*/true,
+                            /*kv_get=*/kv_get,
+                            /*kv_put=*/kv_put)
                             .value());
   } else if (device_type == "XPU") {
     TF_VLOG(1) << "Initializing PjRt XPU client...";

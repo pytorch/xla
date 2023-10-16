@@ -61,13 +61,14 @@ class TestTorchrun(absltest.TestCase):
     world_size = dist_world_size * devices_per_thread
     # If world_size=2, then `tensor` will be tensor([0, 2, 4, 6])
     # `expected` will be [0, 2] on rank 0 and [4, 6] on rank 1.
-    tensor = world_size * torch.arange(world_size * 2, dtype=torch.int64)
+    tensor = world_size * torch.arange(
+        world_size * world_size, dtype=torch.int64)
     expected = torch.split(tensor, world_size)[dist.get_rank()]
 
     tensor_out = torch.zeros(
         world_size, dtype=torch.int64, device=xm.xla_device())
     tensor_in = torch.arange(
-        world_size * 2, dtype=torch.int64, device=xm.xla_device())
+        world_size * world_size, dtype=torch.int64, device=xm.xla_device())
     dist.reduce_scatter(tensor_out, [tensor_in], op=dist.ReduceOp.SUM)
     xm.mark_step()
 
