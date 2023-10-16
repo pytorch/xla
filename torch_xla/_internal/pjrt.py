@@ -104,14 +104,6 @@ def _run_singleprocess(fn: Callable[..., R], *args, **kwargs) -> Dict[int, R]:
   return fn(*args, **kwargs)
 
 
-def get_global_rank(local_rank: int):
-  if xenv.RANK in os.environ:
-    # torchrun case.
-    return xu.getenv_as(xenv.RANK, int)
-  # Single host.
-  return local_rank
-
-
 def should_initialize_dist_runtime(local_rank: int):
   if dist.is_torchelastic_launched():
     assert xenv.RANK in os.environ, 'Environment variable is not set.'
@@ -130,7 +122,7 @@ def initialize_multiprocess(local_rank: int, local_world_size: int):
     neuron.initialize_env(local_rank)
   elif runtime.device_type() in ('GPU', 'ROCM', 'CUDA'):
     global_world_size = xu.getenv_as(
-        xenv.WORLD_SIZE, int, xu.getenv_as(xenv.LOCAL_WORLD_SIZE, int, -1))
+        xenv.WORLD_SIZE, int, xu.getenv_as(xenv.LOCAL_WORLD_SIZE, int, 1))
     assert global_world_size >= 0
     if should_initialize_dist_runtime(local_rank):
       gpu.initialize_distributed_runtime(global_world_size)

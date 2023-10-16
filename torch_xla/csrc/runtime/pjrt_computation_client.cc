@@ -41,7 +41,8 @@ static std::string spmd_device_str = "SPMD:0";
 std::shared_ptr<xla::DistributedRuntimeClient>
 MaybeInitializeDistributedRuntimeClient(int local_rank) {
   std::shared_ptr<xla::DistributedRuntimeClient> client;
-  int global_world_size = sys_util::GetEnvInt("WORLD_SIZE", 1);
+  int global_world_size = sys_util::GetEnvInt(
+      "WORLD_SIZE", sys_util::GetEnvInt("LOCAL_WORLD_SIZE", 1));
   if (global_world_size < 2) {
     return std::move(client);
   }
@@ -152,7 +153,8 @@ PjRtComputationClient::PjRtComputationClient() {
         return distributed_client->KeyValueSet(absl::StrCat(key_prefix, k), v);
       };
     }
-    int global_world_size = sys_util::GetEnvInt("WORLD_SIZE", 1);
+    int global_world_size = sys_util::GetEnvInt(
+        "WORLD_SIZE", sys_util::GetEnvInt("LOCAL_WORLD_SIZE", 1));
     TF_VLOG(3) << "Getting StreamExecutorGpuClient for node_id="
                << global_process_rank << ", num_nodes=" << global_world_size;
     client_ = std::move(xla::GetStreamExecutorGpuClient(
