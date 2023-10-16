@@ -37,9 +37,9 @@ vm:~$ git clone https://github.com/pytorch/xla.git
 vm:~$ python xla/test/test_train_mp_imagenet.py --fake_data
 ```
 
-For release version `x.y`, you want to use the branch `rx.y`. For 2.1 release you should do
+For release version `x.y`, you want to use the branch `rx.y`. For example if you installed 2.1 release, you should do
 ```
-git clone --branch r2.1 https://github.com/pytorch/xla.git
+vm:~$ git clone --branch r2.1 https://github.com/pytorch/xla.git
 vm:~$ python xla/test/test_train_mp_imagenet.py --fake_data
 ```
 
