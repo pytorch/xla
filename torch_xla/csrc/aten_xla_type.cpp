@@ -633,7 +633,6 @@ at::Tensor XLANativeFunctions::_unsafe_index(
   return index(self, indices);
 }
 
-
 at::Tensor XLANativeFunctions::add(const at::Tensor& self,
                                    const at::Tensor& other,
                                    const at::Scalar& alpha) {
