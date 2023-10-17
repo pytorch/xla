@@ -283,6 +283,13 @@
 </ul>
 </li>
 <li><a class="reference internal" href="#troubleshooting">Troubleshooting</a><ul>
+<li><a class="reference internal" href="#sanity-check">Sanity Check</a><ul>
+<li><a class="reference internal" href="#check-pytorch-xla-version">Check PyTorch/XLA Version</a></li>
+<li><a class="reference internal" href="#perform-a-simple-calculation">Perform A Simple Calculation</a></li>
+<li><a class="reference internal" href="#run-resnet-with-fake-data">Run Resnet With Fake Data</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#performance-debugging">Performance Debugging</a></li>
 <li><a class="reference internal" href="#perform-a-auto-metrics-analysis">Perform A Auto-Metrics Analysis</a></li>
 <li><a class="reference internal" href="#get-a-metrics-report">Get A Metrics Report</a></li>
 <li><a class="reference internal" href="#understand-the-metrics-report">Understand The Metrics Report</a></li>
@@ -1786,10 +1793,57 @@ As in the general guideline above, start with changes related to <code class="do
 <h1>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permalink to this headline">¶</a></h1>
 <p>Note that the information in this section is subject to be removed in future releases of the <em>PyTorch/XLA</em> software,
 since many of them are peculiar to a given internal implementation which might change.</p>
-<p>To diagnose issues, we can use the execution metrics and counters provided by <em>PyTorch/XLA</em>
+<div class="section" id="sanity-check">
+<h2>Sanity Check<a class="headerlink" href="#sanity-check" title="Permalink to this headline">¶</a></h2>
+<p>Before performing any in depth debugging, we want to do a sanity check on the installed PyTorch/XLA.</p>
+<div class="section" id="check-pytorch-xla-version">
+<h3>Check PyTorch/XLA Version<a class="headerlink" href="#check-pytorch-xla-version" title="Permalink to this headline">¶</a></h3>
+<p>PyTorch and PyTorch/XLA version should match. Check out our <a class="reference external" href="https://github.com/pytorch/xla#getting-started">README</a> for more detials on versions available.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>vm:~$ python
+&gt;&gt;&gt; import torch
+&gt;&gt;&gt; import torch_xla
+&gt;&gt;&gt; print(torch.__version__)
+2.1.0+cu121
+&gt;&gt;&gt; print(torch_xla.__version__)
+2.1.0
+</pre></div>
+</div>
+</div>
+<div class="section" id="perform-a-simple-calculation">
+<h3>Perform A Simple Calculation<a class="headerlink" href="#perform-a-simple-calculation" title="Permalink to this headline">¶</a></h3>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>vm:~$ export PJRT_DEVICE=TPU
+vm:~$ python3
+&gt;&gt;&gt; import torch
+&gt;&gt;&gt; import torch_xla.core.xla_model as xm
+&gt;&gt;&gt; t1 = torch.tensor(100, device=xm.xla_device())
+&gt;&gt;&gt; t2 = torch.tensor(200, device=xm.xla_device())
+&gt;&gt;&gt; print(t1 + t2)
+tensor(300, device=&#39;xla:0&#39;)
+</pre></div>
+</div>
+</div>
+<div class="section" id="run-resnet-with-fake-data">
+<h3>Run Resnet With Fake Data<a class="headerlink" href="#run-resnet-with-fake-data" title="Permalink to this headline">¶</a></h3>
+<p>For nightly</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>vm:~$ git clone https://github.com/pytorch/xla.git
+vm:~$ python xla/test/test_train_mp_imagenet.py --fake_data
+</pre></div>
+</div>
+<p>For release version <code class="docutils literal notranslate"><span class="pre">x.y</span></code>, you want to use the branch <code class="docutils literal notranslate"><span class="pre">rx.y</span></code>. For example if you installed 2.1 release, you should do</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>vm:~$ git clone --branch r2.1 https://github.com/pytorch/xla.git
+vm:~$ python xla/test/test_train_mp_imagenet.py --fake_data
+</pre></div>
+</div>
+<p>If you can get the resnet to run we can conclude that torch_xla is installed correctly.</p>
+</div>
+</div>
+<div class="section" id="performance-debugging">
+<h2>Performance Debugging<a class="headerlink" href="#performance-debugging" title="Permalink to this headline">¶</a></h2>
+<p>To diagnose performance issues, we can use the execution metrics and counters provided by <em>PyTorch/XLA</em>
 The <strong>first thing</strong> to check when model is slow is to generate a metrics report.</p>
 <p>Metrics report is extremely helpful in diagnosing issues. Please try to include it in your bug
 report sent to us if you have it.</p>
+</div>
 <div class="section" id="perform-a-auto-metrics-analysis">
 <h2>Perform A Auto-Metrics Analysis<a class="headerlink" href="#perform-a-auto-metrics-analysis" title="Permalink to this headline">¶</a></h2>
 <p>We provide ways to automatically analyze the metrics report and provide a summary. Simply run your workload with <code class="docutils literal notranslate"><span class="pre">PT_XLA_DEBUG=1</span></code>. Some example output would be</p>
@@ -3363,6 +3417,13 @@ PyTorch/XLA should have been installed successfully.</p>
 </ul>
 </li>
 <li><a class="reference internal" href="#troubleshooting">Troubleshooting</a><ul>
+<li><a class="reference internal" href="#sanity-check">Sanity Check</a><ul>
+<li><a class="reference internal" href="#check-pytorch-xla-version">Check PyTorch/XLA Version</a></li>
+<li><a class="reference internal" href="#perform-a-simple-calculation">Perform A Simple Calculation</a></li>
+<li><a class="reference internal" href="#run-resnet-with-fake-data">Run Resnet With Fake Data</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#performance-debugging">Performance Debugging</a></li>
 <li><a class="reference internal" href="#perform-a-auto-metrics-analysis">Perform A Auto-Metrics Analysis</a></li>
 <li><a class="reference internal" href="#get-a-metrics-report">Get A Metrics Report</a></li>
 <li><a class="reference internal" href="#understand-the-metrics-report">Understand The Metrics Report</a></li>
