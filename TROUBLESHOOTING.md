@@ -3,7 +3,52 @@
 Note that the information in this section is subject to be removed in future releases of the _PyTorch/XLA_ software,
 since many of them are peculiar to a given internal implementation which might change.
 
-To diagnose issues, we can use the execution metrics and counters provided by _PyTorch/XLA_
+## Sanity Check
+Before performing any in depth debugging, we want to do a sanity check on the installed PyTorch/XLA.
+
+### Check PyTorch/XLA Version
+PyTorch and PyTorch/XLA version should match. Check out our [README](https://github.com/pytorch/xla#getting-started) for more detials on versions available.
+```
+vm:~$ python
+>>> import torch
+>>> import torch_xla
+>>> print(torch.__version__)
+2.1.0+cu121
+>>> print(torch_xla.__version__)
+2.1.0
+```
+
+### Perform A Simple Calculation
+```
+vm:~$ export PJRT_DEVICE=TPU
+vm:~$ python3
+>>> import torch
+>>> import torch_xla.core.xla_model as xm
+>>> t1 = torch.tensor(100, device=xm.xla_device())
+>>> t2 = torch.tensor(200, device=xm.xla_device())
+>>> print(t1 + t2)
+tensor(300, device='xla:0')
+```
+
+### Run Resnet With Fake Data
+For nightly
+```
+vm:~$ git clone https://github.com/pytorch/xla.git
+vm:~$ python xla/test/test_train_mp_imagenet.py --fake_data
+```
+
+For release version `x.y`, you want to use the branch `rx.y`. For example if you installed 2.1 release, you should do
+```
+vm:~$ git clone --branch r2.1 https://github.com/pytorch/xla.git
+vm:~$ python xla/test/test_train_mp_imagenet.py --fake_data
+```
+
+If you can get the resnet to run we can conclude that torch_xla is installed correctly. 
+
+
+## Performance Debugging
+
+To diagnose performance issues, we can use the execution metrics and counters provided by _PyTorch/XLA_
 The **first thing** to check when model is slow is to generate a metrics report.
 
 Metrics report is extremely helpful in diagnosing issues. Please try to include it in your bug
