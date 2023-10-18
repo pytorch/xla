@@ -81,7 +81,8 @@ def save_stablehlo_graph_as_tf(
   bundle = copy.deepcopy(stablehlo_program._bundle)
   tfm = tf.Module()
   bundle.state_dict = {
-      k: tf.Variable(v, trainable=False) for k, v in bundle.state_dict.items()
+      k: tf.Variable(v, trainable=False, name=k)
+      for k, v in bundle.state_dict.items()
   }
   bundle.additional_constants = [
       tf.Variable(v, trainable=False) for v in bundle.additional_constants
