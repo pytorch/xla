@@ -270,6 +270,8 @@ std::vector<ComputationClient::DataPtr> IfrtComputationClient::TransferToServer(
                                              absl::MakeSpan(byte_strides)));
     total_size += literal->size_bytes();
 
+    std::cout << "transfer to " << tensor.device << " " << literal->ToString() << std::endl;
+
     // Avoid use-after-free on `literal` due to unsequenced move and use.
     xla::Literal* literal_pointer = literal.get();
     tsl::RCReference<xla::ifrt::Array> buffer =
@@ -447,11 +449,32 @@ std::vector<xla::Literal> IfrtComputationClient::TransferFromServer(
     // is not sharded, then it is a no-op.
     // auto new_handle = ReplicateShardedData(handle);
     auto pjrt_data = std::dynamic_pointer_cast<const IfrtData>(handle);
+    std::cout << "sharded " << pjrt_data->buffer->shape().DebugString() << std::endl;
 
     // TODO: this is probably wrong for MP
-    auto replicated_array = pjrt_data->buffer->FullyReplicatedShard(
-        xla::ifrt::ArrayCopySemantics::kAlwaysCopy).value();
+    xla::ifrt::DeviceList devices_list({client_->addressable_devices().begin(), client_->addressable_devices().end()});
+    // auto replicated_array = pjrt_data->buffer->FullyReplicatedShard(xla::ifrt::ArrayCopySemantics::kAlwaysCopy).value();
+    auto replicated_array = pjrt_data->buffer->Reshard(
+      xla::ifrt::ConcreteEvenSharding::Create(
+        pjrt_data->buffer->sharding().devices(),
+        xla::ifrt::MemoryKind(),
+        pjrt_data->buffer->shape(),
+        pjrt_data->buffer->shape()
+      ),
+      xla::ifrt::ArrayCopySemantics::kAlwaysCopy).value()->DisassembleIntoSingleDeviceArrays(xla::ifrt::ArrayCopySemantics::kAlwaysCopy).value()[0];
+    std::cout << "replicated " << replicated_array->shape().DebugString() << std::endl;
 
+    // ->Reshard(
+    //     xla::ifrt::ConcreteEvenSharding::Create(
+    //       devices_list,
+    //       xla::ifrt::MemoryKind(),
+    //       pjrt_data->buffer->shape(),
+    //       pjrt_data->buffer->shape()
+    //     ),
+    //     xla::ifrt::ArrayCopySemantics::kAlwaysCopy).value()
+    // auto& literal = literals.emplace_back(xla::ShapeUtil::MakeShape(
+    //     xla::ifrt::ToPrimitiveType(replicated_array->dtype()).value(),
+    //     replicated_array->shape().dims()));
     // TODO: handle dynamic shapes
     auto& literal = literals.emplace_back(
         xla::ShapeUtil::DeviceShapeToHostShape(pjrt_data->shape()));
@@ -465,6 +488,7 @@ std::vector<xla::Literal> IfrtComputationClient::TransferFromServer(
             .Await());
 
     total_size += literal.size_bytes();
+    std::cout << literal.ToString() << std::endl;
   }
   InboundDataMetric()->AddSample(total_size);
 
@@ -688,11 +712,13 @@ IfrtComputationClient::ExecuteReplicated(
   auto output_shardings = *(ifrt_computation.executable->GetOutputShardings());
   XLA_CHECK_EQ(output_shardings.size(), results.size());
 
+  std::cout << "output" << std::endl;
   for (int32_t i = 0; i < results.size(); ++i) {
     xla::PjRtDevice* pjrt_device = StringToPjRtDevice(devices[i]);
     XLA_CHECK(pjrt_device->IsAddressable())
         << pjrt_device->DebugString() << " is not addressable.";
 
+    std::cout << results[i]->sharding().DebugString() << std::endl;
     std::shared_ptr<IfrtData> data =
         std::make_shared<IfrtData>(devices[i], results[i], output_shardings[i]);
     data_handles.push_back(data);
