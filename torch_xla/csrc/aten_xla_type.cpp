@@ -2850,18 +2850,21 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::sort(
 
 std::vector<at::Tensor> XLANativeFunctions::split_copy(const at::Tensor& self,
                                                        int64_t split_size,
-                                                       int64_t dim) {
+                                                       int64_t dim,
+                                                       bool drop_remainder) {
   TORCH_LAZY_FN_COUNTER("xla::");
-  auto xla_tensors =
-      tensor_methods::split(bridge::GetXlaTensor(self), split_size, dim);
+  auto xla_tensors = tensor_methods::split(bridge::GetXlaTensor(self),
+                                           split_size, dim, drop_remainder);
   return bridge::AtenFromXlaTensors(xla_tensors);
 }
 
 std::vector<at::Tensor> XLANativeFunctions::split_with_sizes_copy(
-    const at::Tensor& self, at::IntArrayRef split_sizes, int64_t dim) {
+    const at::Tensor& self, at::IntArrayRef split_sizes, int64_t dim,
+    bool drop_remainder) {
   TORCH_LAZY_FN_COUNTER("xla::");
   auto xla_tensors = tensor_methods::split_with_sizes(
-      bridge::GetXlaTensor(self), XlaHelpers::I64List(split_sizes), dim);
+      bridge::GetXlaTensor(self), XlaHelpers::I64List(split_sizes), dim,
+      drop_remainder);
   return bridge::AtenFromXlaTensors(xla_tensors);
 }
 
