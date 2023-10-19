@@ -118,6 +118,14 @@ function run_xla_backend_mp {
   MASTER_ADDR=localhost MASTER_PORT=6000 run_test "$@"
 }
 
+function run_torchrun {
+  if [ -x "$(command -v nvidia-smi)" ] && [ "$XLA_CUDA" != "0" ]; then
+    echo "Running torchrun test for GPU $@"
+    num_devices=$(nvidia-smi --list-gpus | wc -l)
+    PJRT_DEVICE=GPU torchrun --nnodes 1 --nproc-per-node $num_devices $@
+  fi 
+}
+
 function run_torch_op_tests {
   run_dynamic "$CDIR/../../test/test_view_ops.py" "$@" -v TestViewOpsXLA
   run_test_without_functionalization "$CDIR/../../test/test_view_ops.py" "$@" -v TestViewOpsXLA
@@ -193,6 +201,7 @@ function run_xla_op_tests3 {
   run_test "$CDIR/test_operations_hlo.py" "$@" --verbosity=$VERBOSITY
   run_test "$CDIR/test_input_output_aliases.py"
   run_test "$CDIR/test_torch_distributed_xla_backend.py"
+  run_torchrun "$CDIR/pjrt/test_torchrun.py"
 }
 
 #######################################################################################
