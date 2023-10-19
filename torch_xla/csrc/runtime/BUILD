@@ -88,6 +88,7 @@ cc_library(
   deps = [
     ":computation_client",
     ":debug_macros",
+    ":distributed_runtime",
     ":env_vars",
     ":multi_wait",
     ":stablehlo_helper",
@@ -160,6 +161,17 @@ cc_library(
         ":debug_macros",
         ":metrics",
         ":util",
+    ],
+)
+
+cc_library(
+    name = "distributed_runtime",
+    srcs = ["distributed_runtime.cc"],
+    hdrs = ["distributed_runtime.h"],
+    deps = [
+        ":debug_macros",
+        ":sys_util",
+        "@xla//xla/pjrt/distributed",
     ],
 )
 
