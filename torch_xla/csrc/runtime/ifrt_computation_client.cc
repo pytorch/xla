@@ -696,12 +696,13 @@ IfrtComputationClient::ExecuteReplicated(
   XLA_CHECK_EQ(output_shardings.size(), results.size());
 
   for (int32_t i = 0; i < results.size(); ++i) {
-    xla::PjRtDevice* pjrt_device = StringToPjRtDevice(devices[i]);
-    XLA_CHECK(pjrt_device->IsAddressable())
-        << pjrt_device->DebugString() << " is not addressable.";
+    // std::cout << "device str " << devices[i] << std::endl;
+    // xla::PjRtDevice* pjrt_device = StringToPjRtDevice(devices[i]);
+    // XLA_CHECK(pjrt_device->IsAddressable())
+    //     << pjrt_device->DebugString() << " is not addressable.";
 
     std::shared_ptr<IfrtData> data =
-        std::make_shared<IfrtData>(devices[i], results[i], output_shardings[i]);
+        std::make_shared<IfrtData>("SPMD:0", results[i], output_shardings[i]);
     data_handles.push_back(data);
   }
 
