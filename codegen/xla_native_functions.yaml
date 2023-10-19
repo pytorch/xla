@@ -130,6 +130,7 @@ supported:
   - _to_cpu
   - _to_copy
   - _unsafe_view
+  - _unsafe_index.Tensor
   - adaptive_max_pool2d
   - adaptive_max_pool2d_backward
   - add.Scalar
