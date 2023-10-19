@@ -73,15 +73,6 @@ std::unordered_map<int, int> build_index_map(
   return device_index;
 }
 
-// Builds the xla::Shape of the output xla::Literal on the host.
-// xla::Shape host_output_shape(xla::PjRtBuffer* buffer) {
-//   xla::Shape shape = xla::ShapeUtil::MakeShape(
-//       buffer->element_type(), buffer->logical_dimensions().value());
-//   *shape.mutable_layout() = buffer->layout();
-
-//   return xla::ShapeUtil::DeviceShapeToHostShape(shape);
-// }
-
 }  // namespace
 
 std::string IfrtComputationClient::PjRtDeviceToString(
@@ -187,36 +178,14 @@ ComputationClient::DataPtr IfrtComputationClient::GetDataShard(
   tsl::profiler::TraceMe activity("IfrtComputationClient::GetDataShard",
                                   tsl::profiler::TraceMeLevel::kInfo);
   return GetDataShards(data)[index];
-  // if (PjRtShardedData* sharded_data =
-  //         dynamic_cast<PjRtShardedData*>(data.get())) {
-  //   XLA_CHECK_LE(index, sharded_data->shards.size())
-  //       << "GetDataShard out of range with index: " << index
-  //       << " and num of shard: " << sharded_data->shards.size();
-  //   std::shared_ptr<PjRtData> shard = sharded_data->shards[index];
-  //   return std::make_shared<PjRtData>(shard->device(), shard->shape(),
-  //                                     shard->buffer);
-  // } else {
-  //   return data;
-  // }
 }
 
 ComputationClient::DataPtr IfrtComputationClient::WrapDataShards(
     const std::vector<DataPtr>& shards, std::string device, xla::Shape shape,
     xla::OpSharding sharding) {
-  // XLA_ERROR() << __FUNCTION__ << " not implemented";
-  // std::vector<std::shared_ptr<PjRtData>> pjrt_data_shards;
-  // pjrt_data_shards.reserve(shards.size());
-  // for (auto& shard : shards) {
-  //   XLA_CHECK(shard != nullptr);
-  //   auto pjrt_shard = dynamic_cast<PjRtData*>(shard.get());
-  //   pjrt_data_shards.push_back(std::make_shared<PjRtData>(
-  //       pjrt_shard->device(), pjrt_shard->shape(), pjrt_shard->buffer));
-  // }
-  // return std::make_shared<PjRtShardedData>(device, shape, pjrt_data_shards,
-  //                                          sharding);
   // TODO: implement CreateDataPlaceholder for sharded data
   if (shards.size() == 0) {
-    TF_LOG(WARNING) << "creating sharded placeholder";
+    TF_LOG(INFO) << "creating sharded placeholder";
     return std::make_shared<IfrtData>(device, shape, tsl::RCReference<xla::ifrt::Array>(), sharding);
   }
   std::vector<tsl::RCReference<xla::ifrt::Array>> arrays;
@@ -301,15 +270,14 @@ std::vector<ComputationClient::DataPtr> IfrtComputationClient::TransferToServer(
 ComputationClient::DataPtr IfrtComputationClient::TransferShardsToServer(
     absl::Span<const TensorSource> tensor_shards, std::string device,
     xla::Shape shape, xla::OpSharding sharding) {
-  // XLA_ERROR() << __FUNCTION__ << " not implemented";
-  // tsl::profiler::TraceMe activity(
-  //     "IfrtComputationClient::TransferShardsToServer",
-  //     tsl::profiler::TraceMeLevel::kInfo);
-  // // TODO(jonbolin): Consider using CopyToDevice when sharding is REPLICATED.
-  // // We are opting out of CopyToDevice for now due to the synchronization
-  // // issues observed in ShardingUtil::InputHandler, but because CopyToDevice
-  // // directly copies buffers between devices using ICI, it can be much faster
-  // // than transferring from the host to each device.
+  tsl::profiler::TraceMe activity(
+      "IfrtComputationClient::TransferShardsToServer",
+      tsl::profiler::TraceMeLevel::kInfo);
+  // TODO(jonbolin): Consider using CopyToDevice when sharding is REPLICATED.
+  // We are opting out of CopyToDevice for now due to the synchronization
+  // issues observed in ShardingUtil::InputHandler, but because CopyToDevice
+  // directly copies buffers between devices using ICI, it can be much faster
+  // than transferring from the host to each device.
   auto data_shards = TransferToServer(tensor_shards);
   std::vector<tsl::RCReference<xla::ifrt::Array>> arrays;
   std::vector<xla::ifrt::Shape> shard_shapes;
@@ -340,22 +308,6 @@ ComputationClient::DataPtr IfrtComputationClient::TransferShardsToServer(
 ComputationClient::DataPtr IfrtComputationClient::CopyToDevice(
     ComputationClient::DataPtr data, std::string dst) {
   XLA_ERROR() << __FUNCTION__ << " not implemented";
-  // tsl::profiler::TraceMe activity("IfrtComputationClient::CopyToDevice",
-  //                                 tsl::profiler::TraceMeLevel::kInfo);
-  // const PjRtData* pjrt_data = dynamic_cast<PjRtData*>(data.get());
-  // XLA_CHECK(pjrt_data->HasValue()) << "Can't copy invalid device data.";
-
-  // xla::PjRtDevice* dst_device = StringToPjRtDevice(dst);
-  // XLA_CHECK(dst_device->IsAddressable()) << dst << "is not addressable.";
-
-  // // Returns error if the buffer is already on `dst_device`.
-  // xla::StatusOr<std::unique_ptr<xla::PjRtBuffer>> status_or =
-  //     pjrt_data->buffer->CopyToDevice(dst_device);
-  // XLA_CHECK(status_or.ok())
-  //     << pjrt_data->device() << " buffer already exists on " << dst;
-
-  // return std::make_shared<PjRtData>(dst, pjrt_data->shape(),
-  //                                   std::move(status_or.value()));
 }
 
 tsl::RCReference<xla::ifrt::Array> IfrtComputationClient::ReplicateShardedData(
@@ -366,8 +318,9 @@ tsl::RCReference<xla::ifrt::Array> IfrtComputationClient::ReplicateShardedData(
   }
 
   XLA_COUNTER("ReplicateShardedData", 1);
-  TF_VLOG(1) << "ReplicateShardedData (handle=" // TODO: why isn't GetHandle const? << handle->GetHandle()
+  TF_VLOG(1) << "ReplicateShardedData (handle=" << handle->GetHandle()
               << ", shape=" << handle->shape() << ")";
+  // TODO: handle replicated data
   // if (sharded_data->GetSharding().type() == xla::OpSharding::REPLICATED) {
   //   // Data is replicated, return the first shard
   //   return sharded_data->shards[0];
@@ -404,40 +357,18 @@ tsl::RCReference<xla::ifrt::Array> IfrtComputationClient::ReplicateShardedData(
       std::shared_ptr<torch_xla::runtime::ComputationClient::Computation>>
       computations = Compile(std::move(instances));
 
-  // auto shards = sharded_data->shards;
   XLA_CHECK_EQ(handle->buffer->sharding().devices().size(), GetLocalDevices().size());
-  // auto device_index = build_index_map(GetLocalDevices());
 
-  // std::vector<std::vector<ComputationClient::DataPtr>> arguments_by_device(
-  //     GetLocalDevices().size(),
-  //     std::vector<ComputationClient::DataPtr>(1));
-  // for (auto shard : shards) {
-  //   std::vector<std::string> device_spec =
-  //       absl::StrSplit(shard->device(), ':');
-  //   XLA_CHECK_EQ(device_spec.size(), 2)
-  //       << "Invalid device specification: " << shard->device();
-  //   int device_i = device_index[std::stoi(device_spec[1])];
-  //   TF_VLOG(3) << shard->device() << " is mapped to local device index "
-  //               << device_i;
-  //   arguments_by_device[device_i][0] = shard;
-  // }
   torch_xla::runtime::ComputationClient::ExecuteReplicatedOptions
       execute_options;
 
   // TODO: fix const plumbing for real
   DataPtr handle_but_not_const = std::make_shared<IfrtData>(handle->device(), handle->buffer, handle->GetSharding());
-  // std::vector<std::vector<DataPtr>> args; // TODO: figure out brace init = {{handle}};
-  // args.push_back({});
-  // args[0].push_back(handle_but_not_const);
   auto sharded_results =
       ExecuteReplicated(*computations.front(), {{handle_but_not_const}},
                         GetLocalDevices(), execute_options);
   auto replicated_output = std::dynamic_pointer_cast<IfrtData>(sharded_results[0][0])->buffer->FullyReplicatedShard(xla::ifrt::ArrayCopySemantics::kAlwaysCopy);
-  // XLA_CHECK(sharded_results.size() > 0)
-  //     << "empty ExecuteReplicated results returned.";
-  // XLA_CHECK(sharded_results[0].size() == 1)
-  //     << "Wrong number of outputs, expected: 1, actual: "
-  //     << sharded_results[0].size();
+  // TODO: sanity check outputs
   return *replicated_output;
 }
 
@@ -454,10 +385,6 @@ std::vector<xla::Literal> IfrtComputationClient::TransferFromServer(
     // is not sharded, then it is a no-op.
     auto ifrt_data = std::dynamic_pointer_cast<IfrtData>(handle);
     tsl::RCReference<xla::ifrt::Array> replicated_array = ReplicateShardedData(ifrt_data);
-
-    // TODO: this is probably wrong for MP
-    // auto replicated_array = pjrt_data->buffer->FullyReplicatedShard(
-    //     xla::ifrt::ArrayCopySemantics::kAlwaysCopy).value();
 
     // TODO: handle dynamic shapes
     auto& literal = literals.emplace_back(
@@ -563,87 +490,89 @@ IfrtComputationClient::ExecuteComputation(
     const ComputationClient::Computation& computation,
     absl::Span<const ComputationClient::DataPtr> arguments,
     const std::string& device, const ExecuteComputationOptions& options) {
-  // Shared ownership of the timed section ensures that it will only get logged
-  // once both `ExecuteComputation` and the async work in `ExecuteSharded` are
-  // complete; a copy is held from the lambda that releases it when done.
-  auto timed = std::make_shared<metrics::TimedSection>(ExecuteMetric());
-  tsl::profiler::TraceMe activity("IfrtComputationClient::ExecuteComputation",
-                                  tsl::profiler::TraceMeLevel::kInfo);
-  TF_VLOG(1) << "Executing Ifrt computation on " << device;
-  const IfrtComputation& pjrt_computation =
-      dynamic_cast<const IfrtComputation&>(computation);
+  // TODO: Implement sharded exec in IFRT
+  XLA_ERROR() << __FUNCTION__ << " not implemented";
+  // // Shared ownership of the timed section ensures that it will only get logged
+  // // once both `ExecuteComputation` and the async work in `ExecuteSharded` are
+  // // complete; a copy is held from the lambda that releases it when done.
+  // auto timed = std::make_shared<metrics::TimedSection>(ExecuteMetric());
+  // tsl::profiler::TraceMe activity("IfrtComputationClient::ExecuteComputation",
+  //                                 tsl::profiler::TraceMeLevel::kInfo);
+  // TF_VLOG(1) << "Executing Ifrt computation on " << device;
+  // const IfrtComputation& pjrt_computation =
+  //     dynamic_cast<const IfrtComputation&>(computation);
 
-  xla::PjRtDevice* pjrt_device = StringToPjRtDevice(device);
-  XLA_CHECK(pjrt_device->IsAddressable()) << pjrt_device->DebugString();
+  // xla::PjRtDevice* pjrt_device = StringToPjRtDevice(device);
+  // XLA_CHECK(pjrt_device->IsAddressable()) << pjrt_device->DebugString();
 
-  std::vector<tsl::RCReference<xla::ifrt::Array>> buffers;
-  buffers.reserve(arguments.size());
-  for (auto& argument : arguments) {
-    const IfrtData* pjrt_data = dynamic_cast<IfrtData*>(argument.get());
+  // std::vector<tsl::RCReference<xla::ifrt::Array>> buffers;
+  // buffers.reserve(arguments.size());
+  // for (auto& argument : arguments) {
+  //   const IfrtData* pjrt_data = dynamic_cast<IfrtData*>(argument.get());
 
-    // XLA_CHECK(pjrt_device == pjrt_data->buffer->device())
-    //     << pjrt_device->DebugString() << " vs "
-    //     << pjrt_data->buffer->device()->DebugString();
-    buffers.push_back(pjrt_data->buffer);
-  }
+  //   // XLA_CHECK(pjrt_device == pjrt_data->buffer->device())
+  //   //     << pjrt_device->DebugString() << " vs "
+  //   //     << pjrt_data->buffer->device()->DebugString();
+  //   buffers.push_back(pjrt_data->buffer);
+  // }
 
-  xla::ExecuteOptions execute_options;
-  execute_options.untuple_result = options.explode_tuple;
-  execute_options.strict_shape_checking = false;
+  // xla::ExecuteOptions execute_options;
+  // execute_options.untuple_result = options.explode_tuple;
+  // execute_options.strict_shape_checking = false;
 
-  // Required as of cl/518733871
-  execute_options.use_major_to_minor_data_layout_for_callbacks = true;
+  // // Required as of cl/518733871
+  // execute_options.use_major_to_minor_data_layout_for_callbacks = true;
 
-  xla::ifrt::DeviceList device_list({pjrt_device});
-  xla::ifrt::LoadedExecutable::ExecuteResult result =
-      pjrt_computation.executable
-          ->Execute(absl::MakeSpan(buffers), execute_options, device_list)
-          .value();
+  // xla::ifrt::DeviceList device_list({pjrt_device});
+  // xla::ifrt::LoadedExecutable::ExecuteResult result =
+  //     pjrt_computation.executable
+  //         ->Execute(absl::MakeSpan(buffers), execute_options, device_list)
+  //         .value();
 
-  xla::ifrt::Future<xla::Status> returned_future = result.status;
+  // xla::ifrt::Future<xla::Status> returned_future = result.status;
 
-  auto results = result.outputs;
-  std::vector<DataPtr> datas;
-  datas.reserve(results.size());
-  for (auto& result : results) {
-    tsl::RCReference<xla::ifrt::Array> buffer = std::move(result);
+  // auto results = result.outputs;
+  // std::vector<DataPtr> datas;
+  // datas.reserve(results.size());
+  // for (auto& result : results) {
+  //   tsl::RCReference<xla::ifrt::Array> buffer = std::move(result);
 
-    std::shared_ptr<IfrtData> data =
-        std::make_shared<IfrtData>(device, std::move(buffer));
+  //   std::shared_ptr<IfrtData> data =
+  //       std::make_shared<IfrtData>(device, std::move(buffer));
 
-    datas.push_back(data);
-  }
-  CreateDataHandlesCounter()->AddValue(datas.size());
+  //   datas.push_back(data);
+  // }
+  // CreateDataHandlesCounter()->AddValue(datas.size());
 
-  auto mwait = std::make_shared<util::MultiWait>(1);
-  auto lockfn = [&, this, device, returned_future = std::move(returned_future),
-                 timed]() mutable {
-    TF_VLOG(5) << "ExecuteComputation acquiring PJRT device lock for "
-               << device;
-    // Grab the shared lock and block the `WaitDeviceOps` until buffer is
-    // ready.
-    // TODO(JackCaoG): This lock should acquired outside of the lockfn and
-    // passed in. It is possible that lockfn started after ExecuteComputation
-    // released the xla_graph_executor lock, which will create a short windows
-    // where device is unlcoked while execution is still running.
-    auto lock = lock_device_shared(device);
-    TF_VLOG(5) << "ExecuteComputation acquiring PJRT device lock for " << device
-               << " Done";
-    // Signal that `ExecuteSharded` has completed for the ExecuteTime
-    // metric. Copies the `timed` shared pointer into the lambda.
-    XLA_CHECK(returned_future.IsValid())
-        << "returned_future in ExecuteComputation is empty";
-    returned_future.OnReady(
-        [timed, lock = std::move(lock)](xla::Status unused) mutable {
-          timed.reset();
-          TF_VLOG(3) << "ExecuteComputation returned_future->OnReady finished";
-        });
-  };
+  // auto mwait = std::make_shared<util::MultiWait>(1);
+  // auto lockfn = [&, this, device, returned_future = std::move(returned_future),
+  //                timed]() mutable {
+  //   TF_VLOG(5) << "ExecuteComputation acquiring PJRT device lock for "
+  //              << device;
+  //   // Grab the shared lock and block the `WaitDeviceOps` until buffer is
+  //   // ready.
+  //   // TODO(JackCaoG): This lock should acquired outside of the lockfn and
+  //   // passed in. It is possible that lockfn started after ExecuteComputation
+  //   // released the xla_graph_executor lock, which will create a short windows
+  //   // where device is unlcoked while execution is still running.
+  //   auto lock = lock_device_shared(device);
+  //   TF_VLOG(5) << "ExecuteComputation acquiring PJRT device lock for " << device
+  //              << " Done";
+  //   // Signal that `ExecuteSharded` has completed for the ExecuteTime
+  //   // metric. Copies the `timed` shared pointer into the lambda.
+  //   XLA_CHECK(returned_future.IsValid())
+  //       << "returned_future in ExecuteComputation is empty";
+  //   returned_future.OnReady(
+  //       [timed, lock = std::move(lock)](xla::Status unused) mutable {
+  //         timed.reset();
+  //         TF_VLOG(3) << "ExecuteComputation returned_future->OnReady finished";
+  //       });
+  // };
 
-  env::ScheduleIoClosure(util::MultiWait::Completer(mwait, std::move(lockfn)));
+  // env::ScheduleIoClosure(util::MultiWait::Completer(mwait, std::move(lockfn)));
 
-  TF_VLOG(1) << "Returning " << datas.size() << " results";
-  return datas;
+  // TF_VLOG(1) << "Returning " << datas.size() << " results";
+  // return datas;
 }
 
 std::vector<std::vector<ComputationClient::DataPtr>>
@@ -696,11 +625,6 @@ IfrtComputationClient::ExecuteReplicated(
   XLA_CHECK_EQ(output_shardings.size(), results.size());
 
   for (int32_t i = 0; i < results.size(); ++i) {
-    // std::cout << "device str " << devices[i] << std::endl;
-    // xla::PjRtDevice* pjrt_device = StringToPjRtDevice(devices[i]);
-    // XLA_CHECK(pjrt_device->IsAddressable())
-    //     << pjrt_device->DebugString() << " is not addressable.";
-
     std::shared_ptr<IfrtData> data =
         std::make_shared<IfrtData>("SPMD:0", results[i], output_shardings[i]);
     data_handles.push_back(data);
@@ -708,118 +632,6 @@ IfrtComputationClient::ExecuteReplicated(
 
   // TODO: any useful debug logging
   return {data_handles};
-
-  // {
-  //   tsl::profiler::TraceMe activity(
-  //       "IfrtComputationClient::ExecuteReplicated_argument_handle",
-  //       tsl::profiler::TraceMeLevel::kInfo);
-  //   for (int32_t i = 0; i < devices.size(); ++i) {
-  //     auto buffer_converter = [&, i]() {
-  //       xla::PjRtDevice* pjrt_device = StringToPjRtDevice(devices[i]);
-  //       XLA_CHECK(pjrt_device->IsAddressable()) <<
-  //       pjrt_device->DebugString();
-
-  //       std::vector<xla::PjRtBuffer*> buffers;
-  //       for (auto& argument : arguments[i]) {
-  //         const PjRtData* pjrt_data =
-  //         dynamic_cast<PjRtData*>(argument.get());
-
-  //         XLA_CHECK(pjrt_device == pjrt_data->buffer->device())
-  //             << pjrt_device->DebugString() << " vs "
-  //             << pjrt_data->buffer->device()->DebugString();
-  //         buffers.push_back(pjrt_data->buffer.get());
-  //       }
-  //       argument_handles[i] = std::move(buffers);
-  //     };
-  //     env::ScheduleIoClosure(util::MultiWait::Completer(
-  //         mwait_argument, std::move(buffer_converter)));
-  //   }
-  //   mwait_argument->Wait();
-  // }
-
-  // xla::ExecuteOptions execute_options;
-  // execute_options.untuple_result = options.explode_tuple;
-  // execute_options.strict_shape_checking = true;
-  // // TODO(yeounoh) currently only support single-slice execution
-  // execute_options.multi_slice_config = nullptr;
-
-  // // Required as of cl/518733871
-  // execute_options.use_major_to_minor_data_layout_for_callbacks = true;
-
-  // std::optional<std::vector<xla::PjRtFuture<xla::Status>>> returned_futures(
-  //     devices.size());
-  // std::vector<std::vector<std::unique_ptr<xla::PjRtBuffer>>> results;
-  // {
-  //   tsl::profiler::TraceMe activity(
-  //       "IfrtComputationClient::ExecuteReplicated_execute",
-  //       tsl::profiler::TraceMeLevel::kInfo);
-  //   results = pjrt_computation.executable
-  //                 ->Execute(std::move(argument_handles), execute_options,
-  //                           returned_futures)
-  //                 .value();
-  // }
-
-  // std::vector<std::vector<ComputationClient::DataPtr>> data_handles;
-  // data_handles.reserve(results.size());
-  // std::vector<size_t> dims(results.size());
-
-  // {
-  //   tsl::profiler::TraceMe activity(
-  //       "IfrtComputationClient::ExecuteReplicated_result_handle",
-  //       tsl::profiler::TraceMeLevel::kInfo);
-  //   for (int32_t i = 0; i < results.size(); ++i) {
-  //     xla::PjRtDevice* pjrt_device = StringToPjRtDevice(devices[i]);
-  //     XLA_CHECK(pjrt_device->IsAddressable())
-  //         << pjrt_device->DebugString() << " is not addressable.";
-
-  //     std::vector<ComputationClient::DataPtr> datas;
-  //     datas.reserve(results[i].size());
-  //     dims[i] = results[i].size();
-  //     for (int32_t j = 0; j < results[i].size(); ++j) {
-  //       std::unique_ptr<xla::PjRtBuffer> buffer = std::move(results[i][j]);
-  //       XLA_CHECK(pjrt_device == buffer->device())
-  //           << "Exepcted device: " << pjrt_device->DebugString()
-  //           << " vs. actual device: " << buffer->device()->DebugString();
-
-  //       std::shared_ptr<PjRtData> data =
-  //           std::make_shared<PjRtData>(devices[i], std::move(buffer));
-  //       datas.push_back(data);
-  //     }
-  //     data_handles.push_back(datas);
-  //   }
-  // }
-
-  // auto mwait = std::make_shared<util::MultiWait>(1);
-  // auto lockfn = [&, this, returned_futures = std::move(*returned_futures),
-  //                timed]() mutable {
-  //   // Grab the shared lock and block the `WaitDeviceOps` until buffer is
-  //   // ready. Since this is the SPMD code path. There is no points to grab
-  //   // devices lock for every individual device.
-  //   TF_VLOG(5) << "ExecuteReplicated acquiring PJRT device lock for "
-  //              << spmd_device_str;
-  //   auto lock = lock_device_shared(spmd_device_str);
-  //   TF_VLOG(5) << "ExecuteReplicated acquiring PJRT device lock for "
-  //              << spmd_device_str << " Done";
-  //   // Signal that `ExecuteReplicated` has completed for one of the devices
-  //   // the ExecuteReplicatedTime metric. Here, we assume that all devices
-  //   // will finish execution roughly at the same time, hence only use one of
-  //   // the returned_futures. Copies the `timed` shared pointer into the
-  //   // lambda.
-  //   XLA_CHECK(returned_futures[0].IsValid())
-  //       << "returned_future in ExecuteReplicated is empty";
-  //   returned_futures[0].OnReady(
-  //       [timed, lock = std::move(lock)](xla::Status unused) mutable {
-  //         timed.reset();
-  //         TF_VLOG(3) << "ExecuteReplicated returned_future->OnReady
-  //         finished";
-  //       });
-  // };
-  // env::ScheduleIoClosure(util::MultiWait::Completer(mwait,
-  // std::move(lockfn)));
-
-  // TF_VLOG(1) << "Returning " << data_handles.size() << " sets of results "
-  //            << "with dimensions [" << absl::StrJoin(dims, ",") << "].";
-  // return data_handles;
 }
 
 size_t IfrtComputationClient::GetNumDevices() const {
