@@ -358,80 +358,87 @@ ComputationClient::DataPtr IfrtComputationClient::CopyToDevice(
   //                                   std::move(status_or.value()));
 }
 
-ComputationClient::DataPtr IfrtComputationClient::ReplicateShardedData(
-    const ComputationClient::DataPtr& handle) {
-  XLA_ERROR() << __FUNCTION__ << " not implemented";
-  // if (PjRtShardedData* sharded_data =
-  //         dynamic_cast<PjRtShardedData*>(handle.get())) {
-  //   XLA_COUNTER("ReplicateShardedData", 1);
-  //   TF_VLOG(1) << "ReplicateShardedData (handle=" << handle->GetHandle()
-  //              << ", shape=" << handle->shape() << ")";
-  //   if (sharded_data->GetSharding().type() == xla::OpSharding::REPLICATED) {
-  //     // Data is replicated, return the first shard
-  //     return sharded_data->shards[0];
-  //   }
-  //   xla::XlaBuilder builder("ReplicateShardedData");
-  //   xla::Shape shape = sharded_data->shape();
-  //   builder.SetSharding(sharded_data->GetSharding());
+tsl::RCReference<xla::ifrt::Array> IfrtComputationClient::ReplicateShardedData(
+    const std::shared_ptr<IfrtData> handle) {
 
-  //   // perform a simple identity calculation to reassemble the input as
-  //   // replicated output.
-  //   xla::XlaOp x = xla::Parameter(&builder, 0, shape, "p0");
-  //   builder.SetSharding(xla::HloSharding::Replicate().ToProto());
-  //   xla::XlaOp scalar_zero_op = xla::ConvertElementType(
-  //       xla::ConstantR0(&builder, 0), shape.element_type());
-  //   xla::XlaOp y = xla::Add(x, scalar_zero_op);
-  //   auto instruction = XlaBuilderFriend::GetInstruction(y);
-  //   *instruction->mutable_sharding() =
-  //   xla::HloSharding::Replicate().ToProto();
+  if (handle->buffer->sharding().devices().size() == 1) {
+    return handle->buffer;
+  }
 
-  //   xla::XlaComputation computation =
-  //       ConsumeValue(builder.Build(/*remove_dynamic_dimensions=*/false));
-  //   xla::ProgramShape program_shape =
-  //       ConsumeValue(computation.GetProgramShape());
-
-  //   std::string device = GetDefaultDevice();
-  //   std::vector<torch_xla::runtime::ComputationClient::CompileInstance>
-  //       instances;
-  //   instances.push_back({std::move(computation), device,
-  //                        GetCompilationDevices(device, {}), &shape,
-  //                        /*should_wrap_parameter=*/false,
-  //                        /*is_sharded=*/true,
-  //                        /*allow_spmd_sharding_propagation_to_output=*/false});
-  //   std::vector<
-  //       std::shared_ptr<torch_xla::runtime::ComputationClient::Computation>>
-  //       computations = Compile(std::move(instances));
-
-  //   auto shards = sharded_data->shards;
-  //   XLA_CHECK_EQ(shards.size(), GetLocalDevices().size());
-  //   auto device_index = build_index_map(GetLocalDevices());
-
-  //   std::vector<std::vector<ComputationClient::DataPtr>> arguments_by_device(
-  //       GetLocalDevices().size(),
-  //       std::vector<ComputationClient::DataPtr>(1));
-  //   for (auto shard : shards) {
-  //     std::vector<std::string> device_spec =
-  //         absl::StrSplit(shard->device(), ':');
-  //     XLA_CHECK_EQ(device_spec.size(), 2)
-  //         << "Invalid device specification: " << shard->device();
-  //     int device_i = device_index[std::stoi(device_spec[1])];
-  //     TF_VLOG(3) << shard->device() << " is mapped to local device index "
-  //                << device_i;
-  //     arguments_by_device[device_i][0] = shard;
-  //   }
-  //   torch_xla::runtime::ComputationClient::ExecuteReplicatedOptions
-  //       execute_options;
-  //   auto sharded_results =
-  //       ExecuteReplicated(*computations.front(), arguments_by_device,
-  //                         GetLocalDevices(), execute_options);
-  //   XLA_CHECK(sharded_results.size() > 0)
-  //       << "empty ExecuteReplicated results returned.";
-  //   XLA_CHECK(sharded_results[0].size() == 1)
-  //       << "Wrong number of outputs, expected: 1, actual: "
-  //       << sharded_results[0].size();
-  //   return sharded_results[0][0];
+  XLA_COUNTER("ReplicateShardedData", 1);
+  TF_VLOG(1) << "ReplicateShardedData (handle=" // TODO: why isn't GetHandle const? << handle->GetHandle()
+              << ", shape=" << handle->shape() << ")";
+  // if (sharded_data->GetSharding().type() == xla::OpSharding::REPLICATED) {
+  //   // Data is replicated, return the first shard
+  //   return sharded_data->shards[0];
   // }
-  // return handle;
+  xla::XlaBuilder builder("ReplicateShardedData");
+  xla::Shape shape = handle->shape();
+  builder.SetSharding(handle->GetSharding());
+
+  // perform a simple identity calculation to reassemble the input as
+  // replicated output.
+  xla::XlaOp x = xla::Parameter(&builder, 0, shape, "p0");
+  builder.SetSharding(xla::HloSharding::Replicate().ToProto());
+  xla::XlaOp scalar_zero_op = xla::ConvertElementType(
+      xla::ConstantR0(&builder, 0), shape.element_type());
+  xla::XlaOp y = xla::Add(x, scalar_zero_op);
+  auto instruction = XlaBuilderFriend::GetInstruction(y);
+  *instruction->mutable_sharding() =
+  xla::HloSharding::Replicate().ToProto();
+
+  xla::XlaComputation computation =
+      ConsumeValue(builder.Build(/*remove_dynamic_dimensions=*/false));
+  xla::ProgramShape program_shape =
+      ConsumeValue(computation.GetProgramShape());
+
+  std::string device = GetDefaultDevice();
+  std::vector<torch_xla::runtime::ComputationClient::CompileInstance>
+      instances;
+  instances.push_back({std::move(computation), device,
+                        GetCompilationDevices(device, {}), &shape,
+                        /*should_wrap_parameter=*/false,
+                        /*is_sharded=*/true,
+                        /*allow_spmd_sharding_propagation_to_output=*/false});
+  std::vector<
+      std::shared_ptr<torch_xla::runtime::ComputationClient::Computation>>
+      computations = Compile(std::move(instances));
+
+  // auto shards = sharded_data->shards;
+  XLA_CHECK_EQ(handle->buffer->sharding().devices().size(), GetLocalDevices().size());
+  // auto device_index = build_index_map(GetLocalDevices());
+
+  // std::vector<std::vector<ComputationClient::DataPtr>> arguments_by_device(
+  //     GetLocalDevices().size(),
+  //     std::vector<ComputationClient::DataPtr>(1));
+  // for (auto shard : shards) {
+  //   std::vector<std::string> device_spec =
+  //       absl::StrSplit(shard->device(), ':');
+  //   XLA_CHECK_EQ(device_spec.size(), 2)
+  //       << "Invalid device specification: " << shard->device();
+  //   int device_i = device_index[std::stoi(device_spec[1])];
+  //   TF_VLOG(3) << shard->device() << " is mapped to local device index "
+  //               << device_i;
+  //   arguments_by_device[device_i][0] = shard;
+  // }
+  torch_xla::runtime::ComputationClient::ExecuteReplicatedOptions
+      execute_options;
+
+  // TODO: fix const plumbing for real
+  DataPtr handle_but_not_const = std::make_shared<IfrtData>(handle->device(), handle->buffer, handle->GetSharding());
+  // std::vector<std::vector<DataPtr>> args; // TODO: figure out brace init = {{handle}};
+  // args.push_back({});
+  // args[0].push_back(handle_but_not_const);
+  auto sharded_results =
+      ExecuteReplicated(*computations.front(), {{handle_but_not_const}},
+                        GetLocalDevices(), execute_options);
+  auto replicated_output = std::dynamic_pointer_cast<IfrtData>(sharded_results[0][0])->buffer->FullyReplicatedShard(xla::ifrt::ArrayCopySemantics::kAlwaysCopy);
+  // XLA_CHECK(sharded_results.size() > 0)
+  //     << "empty ExecuteReplicated results returned.";
+  // XLA_CHECK(sharded_results[0].size() == 1)
+  //     << "Wrong number of outputs, expected: 1, actual: "
+  //     << sharded_results[0].size();
+  return *replicated_output;
 }
 
 std::vector<xla::Literal> IfrtComputationClient::TransferFromServer(
@@ -445,16 +452,16 @@ std::vector<xla::Literal> IfrtComputationClient::TransferFromServer(
   for (auto handle : handles) {
     // Use XLA replication to reassemble the sharded data. If input handle
     // is not sharded, then it is a no-op.
-    // auto new_handle = ReplicateShardedData(handle);
-    auto pjrt_data = std::dynamic_pointer_cast<const IfrtData>(handle);
+    auto ifrt_data = std::dynamic_pointer_cast<IfrtData>(handle);
+    tsl::RCReference<xla::ifrt::Array> replicated_array = ReplicateShardedData(ifrt_data);
 
     // TODO: this is probably wrong for MP
-    auto replicated_array = pjrt_data->buffer->FullyReplicatedShard(
-        xla::ifrt::ArrayCopySemantics::kAlwaysCopy).value();
+    // auto replicated_array = pjrt_data->buffer->FullyReplicatedShard(
+    //     xla::ifrt::ArrayCopySemantics::kAlwaysCopy).value();
 
     // TODO: handle dynamic shapes
     auto& literal = literals.emplace_back(
-        xla::ShapeUtil::DeviceShapeToHostShape(pjrt_data->shape()));
+        xla::ShapeUtil::DeviceShapeToHostShape(ifrt_data->shape()));
     std::vector<int64_t> byte_strides(literal.shape().dimensions_size());
     XLA_CHECK_OK(xla::ShapeUtil::ByteStrides(literal.shape(),
                                              absl::MakeSpan(byte_strides)));
