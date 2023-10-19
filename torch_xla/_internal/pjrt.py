@@ -7,12 +7,14 @@ import os
 from typing import Callable, Dict, List, Tuple, TypeVar
 
 import torch
+import torch.distributed as dist
 import torch_xla
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_backend
 from torch_xla._internal import tpu, gpu, neuron
 from torch_xla import runtime
+import torch_xla.utils.utils as xu
 
 R = TypeVar('R')
 
@@ -102,6 +104,13 @@ def _run_singleprocess(fn: Callable[..., R], *args, **kwargs) -> Dict[int, R]:
   return fn(*args, **kwargs)
 
 
+def should_initialize_dist_runtime(local_rank: int):
+  if dist.is_torchelastic_launched():
+    assert xenv.RANK in os.environ, 'Environment variable is not set.'
+    return xu.getenv_as(xenv.RANK, int) == 0
+  return local_rank == 0
+
+
 @runtime.requires_pjrt
 def initialize_multiprocess(local_rank: int, local_world_size: int):
   os.environ.setdefault(xenv.PJRT_LOCAL_PROCESS_RANK, str(local_rank))
@@ -111,6 +120,12 @@ def initialize_multiprocess(local_rank: int, local_world_size: int):
     tpu.configure_topology(local_rank, local_world_size)
   elif runtime.device_type() == 'NEURON':
     neuron.initialize_env(local_rank)
+  elif runtime.device_type() in ('GPU', 'ROCM', 'CUDA'):
+    global_world_size = xu.getenv_as(
+        xenv.WORLD_SIZE, int, xu.getenv_as(xenv.LOCAL_WORLD_SIZE, int, 1))
+    assert global_world_size >= 0
+    if should_initialize_dist_runtime(local_rank):
+      gpu.initialize_distributed_runtime(global_world_size)
 
   devices = xm.get_xla_supported_devices()
   xm.set_replication(xm.xla_device(), devices)
@@ -140,7 +155,6 @@ def run_multiprocess(fn: Callable[..., R],
     num_processes = tpu.num_local_processes()
   elif runtime.device_type() in ('GPU', 'ROCM', 'CUDA'):
     num_processes = gpu.num_local_processes()
-    gpu.initialize_distributed_runtime(num_processes)
   elif runtime.device_type() == 'NEURON':
     num_processes = neuron.num_local_processes()
   else:
@@ -159,9 +173,6 @@ def run_multiprocess(fn: Callable[..., R],
     replica_results = list(
         itertools.chain.from_iterable(
             result.items() for result in process_results))
-
-  if runtime.device_type() in ('GPU', 'ROCM', 'CUDA'):
-    gpu.shutdown_distributed_runtime()
 
   return _merge_replica_results(replica_results)
 
