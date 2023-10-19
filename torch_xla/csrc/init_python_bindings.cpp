@@ -1625,6 +1625,14 @@ void InitXlaModuleBindings(py::module m) {
     // Register sharded tensor data.
     XLAGraphExecutor::Get()->RegisterTensor(xtensor->data());
   });
+  m.def("_xla_mark_sharding_custom_op", [](const at::Tensor& input,
+                                 xla::OpSharding sharding) {
+    TORCH_LAZY_COUNTER("XlaMarkSharding", 1);
+    XLA_CHECK(UseVirtualDevice())
+        << "Please enable SPMD via `torch_xla.runtime.use_spmd()`";
+    XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+    tensor_methods::custom_mark_sharding(input, sharding);
+  }
   m.def("_xla_clear_sharding", [](const at::Tensor& input) {
     XLATensorPtr xtensor = bridge::GetXlaTensor(input);
     xtensor->ClearShardingSpec();

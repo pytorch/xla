@@ -58,7 +58,7 @@ void custom_sharding_(const XLATensorPtr& input,
                       const std::shared_ptr<XLATensor::ShardingSpec>& spec);
 
 void custom_mark_sharding(const XLATensorPtr& input, 
-                            const std::shared_ptr<XLATensor::ShardingSpec>& spec);            
+                            xla::OpSharding sharding);            
 
 XLATensorPtr get_dimensions_size(const XLATensorPtr& input,
                                  std::vector<int64_t> dimensions);

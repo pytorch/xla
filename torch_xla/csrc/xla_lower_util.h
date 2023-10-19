@@ -150,7 +150,7 @@ xla::XlaOp BuildCdistForward(xla::XlaOp x1, xla::XlaOp x2, xla::XlaOp p,
 
 xla::XlaOp BuildCustomSharding(const xla::XlaOp& input);
 
-xla::XlaOp BuildCustomMarkSharding(const xla::XlaOp& input);
+xla::XlaOp BuildCustomMarkSharding(const torch::lazy::BackendDevice& device, const xla::XlaOp& input, xla::OpSharding sharding);
 
 }  // namespace torch_xla
 

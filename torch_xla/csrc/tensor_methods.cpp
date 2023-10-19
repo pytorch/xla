@@ -443,12 +443,10 @@ void custom_sharding_(
 }
 
 void custom_mark_sharding(
-    const XLATensorPtr& input,
-    const std::shared_ptr<XLATensor::ShardingSpec>& sharding_spec) {
+    const XLATensorPtr& input, xla::OpSharding sharding) {
   torch::lazy::NodePtr node = torch::lazy::MakeNode<CustomMarkSharding>(
-      torch::lazy::MakeNode<CustomSharding>(input->GetIrValue()));
-  return {input->CreateFrom(torch::lazy::Value(node, 0)),
-          torch::lazy::Value(node, 1)};
+      torch::lazy::MakeNode<CustomSharding>(input->GetIrValue(), sharding));
+  // TODO (@wonjoo) what do I return here?
 }
 
 XLATensorPtr get_dimensions_size(const XLATensorPtr& input,
