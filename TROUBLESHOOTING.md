@@ -121,7 +121,7 @@ Counter: aten::nonzero
 If you see `aten::` ops other than `nonzero` and `_local_scalar_dense`, that usually means a missing
 lowering in PyTorch/XLA. Feel free to open a feature request for it on [GitHub issues](https://github.com/pytorch/xla/issues).
 
-## Clar The Metrics Report
+## Clear The Metrics Report
 If you want to clear the metrics between steps/epochs, you can use
 ```Python
 import torch_xla.debug.metrics as met
