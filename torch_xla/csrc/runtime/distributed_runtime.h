@@ -7,29 +7,29 @@
 
 namespace torch_xla {
 namespace runtime {
-  
+
 class DistributedRuntime {
-  public:
-   static DistributedRuntime& getInstance(int global_rank) {
-     static DistributedRuntime dist_runtime_instance(global_rank);
-     return dist_runtime_instance;
-   }
-   ~DistributedRuntime();
-   DistributedRuntime(DistributedRuntime const&) = delete;
-   void operator=(DistributedRuntime const&) = delete;
+ public:
+  static DistributedRuntime& getInstance(int global_rank) {
+    static DistributedRuntime dist_runtime_instance(global_rank);
+    return dist_runtime_instance;
+  }
+  ~DistributedRuntime();
+  DistributedRuntime(DistributedRuntime const&) = delete;
+  void operator=(DistributedRuntime const&) = delete;
 
-   std::shared_ptr<xla::DistributedRuntimeClient> GetClient(int global_rank);
+  std::shared_ptr<xla::DistributedRuntimeClient> GetClient(int global_rank);
 
-  private:
-   DistributedRuntime(int global_rank);
+ private:
+  DistributedRuntime(int global_rank);
 
-   std::unique_ptr<xla::DistributedRuntimeService> dist_runtime_service_;
-   std::shared_ptr<xla::DistributedRuntimeClient> dist_runtime_client_;
+  std::unique_ptr<xla::DistributedRuntimeService> dist_runtime_service_;
+  std::shared_ptr<xla::DistributedRuntimeClient> dist_runtime_client_;
 
-   void shutdown();
+  void shutdown();
 };
 
-}
-}
+}  // namespace runtime
+}  // namespace torch_xla
 
-#endif // XLA_CLIENT_DISTRIBUTED_RUNTIME_H_
+#endif  // XLA_CLIENT_DISTRIBUTED_RUNTIME_H_

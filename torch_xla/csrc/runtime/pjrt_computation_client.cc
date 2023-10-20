@@ -38,29 +38,6 @@ namespace {
 
 static std::string spmd_device_str = "SPMD:0";
 
-// Initializes a distributed runtime client if dist_service_addr is specified
-std::shared_ptr<xla::DistributedRuntimeClient>
-MaybeInitializeDistributedRuntimeClient(int local_rank) {
-  std::shared_ptr<xla::DistributedRuntimeClient> client;
-  int global_world_size = sys_util::GetEnvInt(
-      "WORLD_SIZE", sys_util::GetEnvInt("LOCAL_WORLD_SIZE", 1));
-  if (global_world_size < 2) {
-    return std::move(client);
-  }
-  std::string master_addr = sys_util::GetEnvString("MASTER_ADDR", "localhost");
-  std::string port =
-      runtime::sys_util::GetEnvString("XLA_COORDINATOR_PORT", "8547");
-  std::string dist_service_addr = absl::StrJoin({master_addr, port}, ":");
-  xla::DistributedRuntimeClient::Options options;
-  options.node_id = local_rank;
-  TF_VLOG(3) << "Getting distributed runtime client for address="
-             << dist_service_addr << ", node_id=" << options.node_id;
-  client = xla::GetDistributedRuntimeClient(dist_service_addr, options);
-  XLA_CHECK(client->Connect().ok())
-      << "Failed to initialize distributed runtime client";
-  return std::move(client);
-}
-
 // Builds a map from the device's global ordinal to its index in the `devices`
 // array.
 std::unordered_map<int, int> build_index_map(
@@ -134,10 +111,9 @@ PjRtComputationClient::PjRtComputationClient() {
     int local_process_rank = sys_util::GetEnvInt(env::kEnvPjRtLocalRank, 0);
 
     int global_process_rank = sys_util::GetEnvInt("RANK", local_process_rank);
-    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": Initializing PjRt GPU client for global_process_rank=" << global_process_rank << std::endl;
-    std::shared_ptr<xla::DistributedRuntimeClient> distributed_client = DistributedRuntime::getInstance(global_process_rank).GetClient(global_process_rank);
-    //auto distributed_client =
-        //MaybeInitializeDistributedRuntimeClient(global_process_rank);
+    std::shared_ptr<xla::DistributedRuntimeClient> distributed_client =
+        DistributedRuntime::getInstance(global_process_rank)
+            .GetClient(global_process_rank);
     auto allowed_devices =
         std::make_optional<std::set<int>>(std::set{local_process_rank});
     xla::PjRtClient::KeyValueGetCallback kv_get = nullptr;
@@ -155,15 +131,14 @@ PjRtComputationClient::PjRtComputationClient() {
       };
     }
     int local_world_size = sys_util::GetEnvInt("LOCAL_WORLD_SIZE", 1);
-    int global_world_size = sys_util::GetEnvInt(
-        "WORLD_SIZE", local_world_size);
+    int global_world_size = sys_util::GetEnvInt("WORLD_SIZE", local_world_size);
     TF_VLOG(3) << "Getting StreamExecutorGpuClient for node_id="
                << global_process_rank << ", num_nodes=" << global_world_size;
     client_ = std::move(xla::GetStreamExecutorGpuClient(
-                            /*asynchronous=*/async, xla::GpuAllocatorConfig{},
+                            /*asynchronous=*/async,
+                            /*allocator_config=*/xla::GpuAllocatorConfig{},
                             /*node_id=*/global_process_rank,
-                            /*num_nodes=*/
-                            global_world_size,
+                            /*num_nodes=*/global_world_size,
                             /*allowed_devices=*/allowed_devices,
                             /*platform_name=*/"gpu",
                             /*should_stage_host_to_device_transfers=*/true,

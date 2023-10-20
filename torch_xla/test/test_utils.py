@@ -30,7 +30,6 @@ def mp_test(func):
   """
 
   def wrapper(*args, **kwargs):
-    print('xw32 args=', args, ', kwargs=', kwargs)
     proc = multiprocessing.Process(target=func, args=args, kwargs=kwargs)
     proc.start()
     proc.join()
