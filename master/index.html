@@ -305,7 +305,7 @@
 <li><a class="reference internal" href="#perform-a-auto-metrics-analysis">Perform A Auto-Metrics Analysis</a></li>
 <li><a class="reference internal" href="#get-a-metrics-report">Get A Metrics Report</a></li>
 <li><a class="reference internal" href="#understand-the-metrics-report">Understand The Metrics Report</a></li>
-<li><a class="reference internal" href="#clar-the-metrics-report">Clar The Metrics Report</a></li>
+<li><a class="reference internal" href="#clear-the-metrics-report">Clear The Metrics Report</a></li>
 <li><a class="reference internal" href="#performance-profiling">Performance Profiling</a></li>
 <li><a class="reference internal" href="#known-performance-caveats">Known Performance Caveats</a></li>
 <li><a class="reference internal" href="#xla-tensor-quirks">XLA Tensor Quirks</a></li>
@@ -1914,8 +1914,8 @@ They are fully qualified with their C++ namespace:</p>
 <p>If you see <code class="docutils literal notranslate"><span class="pre">aten::</span></code> ops other than <code class="docutils literal notranslate"><span class="pre">nonzero</span></code> and <code class="docutils literal notranslate"><span class="pre">_local_scalar_dense</span></code>, that usually means a missing
 lowering in PyTorch/XLA. Feel free to open a feature request for it on <a class="reference external" href="https://github.com/pytorch/xla/issues">GitHub issues</a>.</p>
 </div>
-<div class="section" id="clar-the-metrics-report">
-<h2>Clar The Metrics Report<a class="headerlink" href="#clar-the-metrics-report" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="clear-the-metrics-report">
+<h2>Clear The Metrics Report<a class="headerlink" href="#clear-the-metrics-report" title="Permalink to this headline">¶</a></h2>
 <p>If you want to clear the metrics between steps/epochs, you can use</p>
 <div class="highlight-Python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.debug.metrics</span> <span class="k">as</span> <span class="nn">met</span>
 
@@ -3439,7 +3439,7 @@ PyTorch/XLA should have been installed successfully.</p>
 <li><a class="reference internal" href="#perform-a-auto-metrics-analysis">Perform A Auto-Metrics Analysis</a></li>
 <li><a class="reference internal" href="#get-a-metrics-report">Get A Metrics Report</a></li>
 <li><a class="reference internal" href="#understand-the-metrics-report">Understand The Metrics Report</a></li>
-<li><a class="reference internal" href="#clar-the-metrics-report">Clar The Metrics Report</a></li>
+<li><a class="reference internal" href="#clear-the-metrics-report">Clear The Metrics Report</a></li>
 <li><a class="reference internal" href="#performance-profiling">Performance Profiling</a></li>
 <li><a class="reference internal" href="#known-performance-caveats">Known Performance Caveats</a></li>
 <li><a class="reference internal" href="#xla-tensor-quirks">XLA Tensor Quirks</a></li>
