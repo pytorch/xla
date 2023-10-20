@@ -28,8 +28,17 @@ DistributedRuntime::DistributedRuntime(int global_rank) {
   dist_runtime_client_ = xla::GetDistributedRuntimeClient(dist_service_addr, client_options);
   XLA_CHECK(dist_runtime_client_->Connect().ok())
       << "Failed to initialize distributed runtime client";
-  // atexit(shutdown)
+  // atexit(shutdown);
   // XLA_CHECK(atexit(shutdown) == 0);
+}
+
+DistributedRuntime::~DistributedRuntime(){
+  if (dist_runtime_client_ != nullptr) {
+    XLA_CHECK(dist_runtime_client_->Shutdown().ok()) << "Failed to shut down the distributed runtime client.";
+  }
+  if (dist_runtime_service_ != nullptr) {
+    dist_runtime_service_->Shutdown();
+  } 
 }
 
 std::shared_ptr<xla::DistributedRuntimeClient> DistributedRuntime::GetClient() {

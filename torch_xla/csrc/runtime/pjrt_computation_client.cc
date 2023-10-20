@@ -134,8 +134,9 @@ PjRtComputationClient::PjRtComputationClient() {
     int local_process_rank = sys_util::GetEnvInt(env::kEnvPjRtLocalRank, 0);
 
     int global_process_rank = sys_util::GetEnvInt("RANK", local_process_rank);
-    auto distributed_client =
-        MaybeInitializeDistributedRuntimeClient(global_process_rank);
+    std::shared_ptr<xla::DistributedRuntimeClient> distributed_client = DistributedRuntime::getInstance(global_process_rank).GetClient();
+    //auto distributed_client =
+        //MaybeInitializeDistributedRuntimeClient(global_process_rank);
     auto allowed_devices =
         std::make_optional<std::set<int>>(std::set{local_process_rank});
     xla::PjRtClient::KeyValueGetCallback kv_get = nullptr;
