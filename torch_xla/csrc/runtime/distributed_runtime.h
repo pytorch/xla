@@ -18,7 +18,7 @@ class DistributedRuntime {
    DistributedRuntime(DistributedRuntime const&) = delete;
    void operator=(DistributedRuntime const&) = delete;
 
-   std::shared_ptr<xla::DistributedRuntimeClient> GetClient();
+   std::shared_ptr<xla::DistributedRuntimeClient> GetClient(int global_rank);
 
   private:
    DistributedRuntime(int global_rank);

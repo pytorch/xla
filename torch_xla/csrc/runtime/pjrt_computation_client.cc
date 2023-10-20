@@ -134,7 +134,8 @@ PjRtComputationClient::PjRtComputationClient() {
     int local_process_rank = sys_util::GetEnvInt(env::kEnvPjRtLocalRank, 0);
 
     int global_process_rank = sys_util::GetEnvInt("RANK", local_process_rank);
-    std::shared_ptr<xla::DistributedRuntimeClient> distributed_client = DistributedRuntime::getInstance(global_process_rank).GetClient();
+    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": Initializing PjRt GPU client for global_process_rank=" << global_process_rank << std::endl;
+    std::shared_ptr<xla::DistributedRuntimeClient> distributed_client = DistributedRuntime::getInstance(global_process_rank).GetClient(global_process_rank);
     //auto distributed_client =
         //MaybeInitializeDistributedRuntimeClient(global_process_rank);
     auto allowed_devices =
@@ -153,8 +154,9 @@ PjRtComputationClient::PjRtComputationClient() {
         return distributed_client->KeyValueSet(absl::StrCat(key_prefix, k), v);
       };
     }
+    int local_world_size = sys_util::GetEnvInt("LOCAL_WORLD_SIZE", 1);
     int global_world_size = sys_util::GetEnvInt(
-        "WORLD_SIZE", sys_util::GetEnvInt("LOCAL_WORLD_SIZE", 1));
+        "WORLD_SIZE", local_world_size);
     TF_VLOG(3) << "Getting StreamExecutorGpuClient for node_id="
                << global_process_rank << ", num_nodes=" << global_world_size;
     client_ = std::move(xla::GetStreamExecutorGpuClient(
