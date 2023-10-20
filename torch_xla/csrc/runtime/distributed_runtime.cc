@@ -51,7 +51,8 @@ DistributedRuntime::~DistributedRuntime() {
 std::shared_ptr<xla::DistributedRuntimeClient> DistributedRuntime::GetClient(
     int global_rank) {
   XLA_CHECK(dist_runtime_client_ != nullptr)
-      << "distributed runtime client is null." return dist_runtime_client_;
+      << "distributed runtime client is null.";
+  return dist_runtime_client_;
 }
 
 void DistributedRuntime::shutdown() {
