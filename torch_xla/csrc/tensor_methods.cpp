@@ -442,8 +442,7 @@ void custom_sharding_(
   input->SetShardingSpec(*sharding_spec);
 }
 
-void custom_mark_sharding(
-    const XLATensorPtr& input, xla::OpSharding sharding) {
+void custom_mark_sharding(const XLATensorPtr& input, xla::OpSharding sharding) {
   torch::lazy::NodePtr node = torch::lazy::MakeNode<CustomMarkSharding>(
       torch::lazy::MakeNode<CustomSharding>(input->GetIrValue(), sharding));
   // TODO (@wonjoo) what do I return here?

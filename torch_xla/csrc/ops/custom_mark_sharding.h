@@ -16,8 +16,8 @@ class CustomMarkSharding : public XlaNode {
 
   std::string ToString() const override;
 
-  private:
-   xla::OpSharding sharding_;
+ private:
+  xla::OpSharding sharding_;
 };
 
 }  // namespace torch_xla

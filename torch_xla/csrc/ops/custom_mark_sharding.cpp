@@ -6,19 +6,24 @@
 
 namespace torch_xla {
 
-CustomMarkSharding::CustomMarkSharding(const torch::lazy::Value& input, xla::OpSharding sharding)
+CustomMarkSharding::CustomMarkSharding(const torch::lazy::Value& input,
+                                       xla::OpSharding sharding)
     : XlaNode(xla_custom_mark_sharding, {input}, GetXlaShape(input),
-              /*num_outputs=*/1, torch::lazy::MHash(std::string("MarkSharding"))),
+              /*num_outputs=*/1,
+              torch::lazy::MHash(std::string("MarkSharding"))),
       sharding_(sharding) {}
 
-torch::lazy::NodePtr CustomMarkSharding::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<CustomMarkSharding>(operands.at(0), operands.at(1));
+torch::lazy::NodePtr CustomMarkSharding::Clone(
+    torch::lazy::OpList operands) const {
+  return torch::lazy::MakeNode<CustomMarkSharding>(operands.at(0),
+                                                   operands.at(1));
 }
 
 XlaOpVector CustomMarkSharding::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::XlaOp sharding = loctx->GetOutputOp(operand(1));
-  return ReturnOp(BuildCustomMarkSharding(loctx->device(), input, sharding), loctx);
+  return ReturnOp(BuildCustomMarkSharding(loctx->device(), input, sharding),
+                  loctx);
 }
 
 std::string CustomMarkSharding::ToString() const {
