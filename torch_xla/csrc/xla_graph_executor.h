@@ -258,9 +258,6 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   // Override to enable SPMD.
   void TensorCollectionBarrier(SyncTensorCollection* coll) final;
 
-  // We don't use upstream GetTensorsFused as we have xla::Literal.
-  std::vector<at::Tensor> GetTensorsFused(std::vector<XLATensorPtr>* tensors);
-
   // Gathers the XLA device data for all the input tensors, after an
   // asynchronous operation.
   // TODO(alanwaketan): Reuse the upstream one once Functionalization is done.
