@@ -1652,6 +1652,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
   def test_print_executation(self):
     xla_device = xm.xla_device()
     xm.mark_step()
+    xm.wait_device_ops()
     met.clear_all()
 
     # case 1 mark_step
