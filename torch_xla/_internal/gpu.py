@@ -1,6 +1,8 @@
 import os
 import torch_xla.core.xla_env_vars as xenv
 
+distributed_service = None
+
 
 def num_local_processes() -> int:
   """Returns number of processes to create on this host.
