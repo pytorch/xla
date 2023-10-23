@@ -44,9 +44,9 @@ http_archive(
         "//openxla_patches:f16_abi_clang.diff",
         "//openxla_patches:gpu_topk_rewriter.diff",
     ],
-    strip_prefix = "xla-51b59cfb1999c6f1b3ec59851675044b2c502aae",
+    strip_prefix = "xla-4f8381651977dff16b1d86bb4b198eb733c5f478",
     urls = [
-        "https://github.com/openxla/xla/archive/51b59cfb1999c6f1b3ec59851675044b2c502aae.tar.gz",
+        "https://github.com/openxla/xla/archive/4f8381651977dff16b1d86bb4b198eb733c5f478.tar.gz",
     ],
 )
 
