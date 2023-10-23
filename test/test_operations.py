@@ -1649,6 +1649,34 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     xm.mark_step()
     self.assertEqual(met.metric_data("TransferToServerTime")[0], 4)
 
+  def test_print_executation(self):
+    xla_device = xm.xla_device()
+    xm.mark_step()
+    met.clear_all()
+
+    # case 1 mark_step
+    t1 = torch.randn(1, 4, device=xla_device)
+    xm.mark_step()
+    xm.wait_device_ops()
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
+    for _ in range(3):
+      print(t1.cpu())
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
+
+    # case 2 no mark_step, directly print
+    met.clear_all()
+    t1 = torch.randn(1, 4, device=xla_device)
+    for _ in range(3):
+      print(t1)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
+
+    # case 2 no mark_step, print with .cpu
+    met.clear_all()
+    t1 = torch.randn(1, 4, device=xla_device)
+    for _ in range(3):
+      print(t1.cpu())
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
+
   def test_index_types(self):
 
     def test_fn(*indices):
