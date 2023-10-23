@@ -1660,8 +1660,10 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     xm.wait_device_ops()
     self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
     for _ in range(3):
-      print(t1.cpu())
+      print(t1)
     self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
+    self.assertIn('xla::device_data',
+                  torch_xla._XLAC._get_xla_tensors_text([t1]))
 
     # case 2 no mark_step, directly print
     met.clear_all()
@@ -1669,6 +1671,8 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     for _ in range(3):
       print(t1)
     self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
+    self.assertIn('xla::device_data',
+                  torch_xla._XLAC._get_xla_tensors_text([t1]))
 
     # case 2 no mark_step, print with .cpu
     met.clear_all()
@@ -1676,6 +1680,8 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     for _ in range(3):
       print(t1.cpu())
     self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
+    self.assertIn('xla::device_data',
+                  torch_xla._XLAC._get_xla_tensors_text([t1]))
 
   def test_index_types(self):
 
