@@ -58,7 +58,13 @@ def _is_on_tpu():
   return 'XRT_TPU_CONFIG' in os.environ or xr.device_type() == 'TPU'
 
 
+def _is_on_eager_debug_mode():
+  return xu.getenv_as('XLA_USE_EAGER_DEBUG_MODE', bool, defval=False)
+
+
 skipOnTpu = unittest.skipIf(_is_on_tpu(), 'Not supported on TPU')
+skipOnEagerDebug = unittest.skipIf(_is_on_eager_debug_mode(),
+                                   'skip on eager debug mode')
 
 
 def _gen_tensor(*args, **kwargs):
@@ -1649,6 +1655,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     xm.mark_step()
     self.assertEqual(met.metric_data("TransferToServerTime")[0], 4)
 
+  @skipOnEagerDebug
   def test_print_executation(self):
     xla_device = xm.xla_device()
     xm.mark_step()
