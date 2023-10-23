@@ -19,6 +19,9 @@
 #include "torch_xla/csrc/runtime/unique.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
 
+#include <iostream>
+using std::cerr;
+
 namespace torch_xla {
 namespace {
 
@@ -207,6 +210,28 @@ void DebugUtil::SaveOutputShardingInfo(std::vector<XLATensorPtr>* tensors,
 bool DebugUtil::ExperimentEnabled(const std::string& name) {
   static const std::unordered_set<std::string>* xset = LoadExperiments();
   return xset->find(name) != xset->end();
+}
+
+void DebugUtil::analyze_graph_execution_python_frame() {
+  static std::string debug_output_prefix = "Execution Analysis: ";
+  std::vector<torch::lazy::SourceLocation> frames =
+      torch::lazy::GetPythonFrames();
+  // python frame must be > 1
+  XLA_CHECK_GE(frames.size(), 1);
+  if (frames[0].function == "mark_step") {
+    // TODO: be more specified about the caller of the mark step
+    // for example: parallelr loader, dynamo, step_trace, user code etc
+    cerr << debug_output_prefix << "execution is caused by mark_step\n";
+  }
+  // handle the exeuction caused by printing tensor or fallback or some
+  // weird indexing.
+
+  // make number of frames printed configurable
+  for (auto& location : frames) {
+    cerr << debug_output_prefix << "  " << location.function << " ("
+         << location.file << ":" << location.line << ")\n";
+  }
+  // print more information about the graph that is about to get executed.
 }
 
 }  // namespace torch_xla
