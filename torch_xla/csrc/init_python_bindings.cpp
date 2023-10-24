@@ -1635,14 +1635,11 @@ void InitXlaModuleBindings(py::module m) {
     // Register sharded tensor data.
     XLAGraphExecutor::Get()->RegisterTensor(xtensor->data());
   });
-  m.def("_xla_mark_sharding_custom_op", [](const at::Tensor& input,
-                                 xla::OpSharding sharding) {
-    TORCH_LAZY_COUNTER("XlaMarkSharding", 1);
-    XLA_CHECK(UseVirtualDevice())
-        << "Please enable SPMD via `torch_xla.runtime.use_spmd()`";
-    XLATensorPtr xtensor = bridge::GetXlaTensor(input);
-    tensor_methods::custom_mark_sharding(xtensor, sharding);
-  }
+  m.def("_xla_mark_sharding_custom_op",
+        [](const at::Tensor& input, xla::OpSharding sharding) {
+          XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+          tensor_methods::custom_mark_sharding(xtensor, sharding);
+        });
   m.def("_xla_clear_sharding", [](const at::Tensor& input) {
     XLATensorPtr xtensor = bridge::GetXlaTensor(input);
     xtensor->ClearShardingSpec();
@@ -1653,32 +1650,33 @@ void InitXlaModuleBindings(py::module m) {
   });
   m.def("_get_xla_sharding_specs",
         [](const std::vector<at::Tensor>& tensors) -> std::vector<std::string> {
-    tsl::profiler::TraceMe activity("_get_xla_sharding_specs",
-                                    tsl::profiler::TraceMeLevel::kInfo);
-    TORCH_LAZY_TIMED("_get_xla_sharding_specs");
-    std::vector<std::string> sharding_specs;
-    sharding_specs.reserve(tensors.size());
-    for (const at::Tensor& tensor : tensors) {
-      XLATensorPtr xtensor = bridge::GetXlaTensor(tensor);
-      XLATensor::ShardingSpecPtr sharding_spec =
-          xtensor ? xtensor->sharding_spec() : nullptr;
-      if (sharding_spec != nullptr) {
-        sharding_specs.push_back(
-            xla::HloSharding::FromProto(sharding_spec->sharding)->ToString());
-      } else {
-        sharding_specs.push_back("");
-      }
-    }
-    return sharding_specs;
+          tsl::profiler::TraceMe activity("_get_xla_sharding_specs",
+                                          tsl::profiler::TraceMeLevel::kInfo);
+          TORCH_LAZY_TIMED("_get_xla_sharding_specs");
+          std::vector<std::string> sharding_specs;
+          sharding_specs.reserve(tensors.size());
+          for (const at::Tensor& tensor : tensors) {
+            XLATensorPtr xtensor = bridge::GetXlaTensor(tensor);
+            XLATensor::ShardingSpecPtr sharding_spec =
+                xtensor ? xtensor->sharding_spec() : nullptr;
+            if (sharding_spec != nullptr) {
+              sharding_specs.push_back(
+                  xla::HloSharding::FromProto(sharding_spec->sharding)
+                      ->ToString());
+            } else {
+              sharding_specs.push_back("");
+            }
+          }
+          return sharding_specs;
         });
   m.def("_get_xla_sharding_type",
         [](const at::Tensor& input) -> std::optional<int> {
-    XLATensorPtr xtensor = bridge::GetXlaTensor(input);
-    auto sharding_spec = xtensor->sharding_spec();
-    if (sharding_spec != nullptr) {
-      return ShardingUtil::GetShardingType(sharding_spec->sharding);
-    }
-    return std::nullopt;
+          XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+          auto sharding_spec = xtensor->sharding_spec();
+          if (sharding_spec != nullptr) {
+            return ShardingUtil::GetShardingType(sharding_spec->sharding);
+          }
+          return std::nullopt;
         });
   // Reassemble the CPU shards into a global tensor. A new sharded tensor is
   // created from the local shards with the provided sharding annotation
@@ -1754,31 +1752,33 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_get_local_shards",
         [](const at::Tensor& input)
             -> std::tuple<std::vector<at::Tensor>, std::vector<std::string>> {
-    XLATensorPtr xtensor = bridge::GetXlaTensor(input);
-    XLA_CHECK(xtensor->GetXlaData() != nullptr)
-        << "Shard data is not available";
-    XLA_CHECK(xtensor->sharding_spec() != nullptr) << "Tensor is not sharded";
-    XLA_CHECK(UseVirtualDevice())
-        << "Virtual device must be enabled to use _get_local_shards";
-    auto handle = std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
-        xtensor->GetXlaData());
-    std::vector<runtime::ComputationClient::DataPtr> shard_handles =
-        runtime::GetComputationClient()->GetDataShards(handle);
-    std::vector<at::Tensor> shards;
-    std::vector<std::string> str_devices;
-    shards.reserve(shard_handles.size());
-    str_devices.reserve(shard_handles.size());
-    // Tansfer shards from the device and create cpu tensors.
-    for (const runtime::ComputationClient::DataPtr shard_handle :
-         shard_handles) {
-      shards.push_back(
-          XlaDataToTensors(
-              {shard_handle},
-              TensorTypeFromXlaType(shard_handle->shape().element_type()))
-              .front());
-      str_devices.push_back(shard_handle->device());
-    }
-    return std::make_tuple(shards, str_devices);
+          XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+          XLA_CHECK(xtensor->GetXlaData() != nullptr)
+              << "Shard data is not available";
+          XLA_CHECK(xtensor->sharding_spec() != nullptr)
+              << "Tensor is not sharded";
+          XLA_CHECK(UseVirtualDevice())
+              << "Virtual device must be enabled to use _get_local_shards";
+          auto handle =
+              std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
+                  xtensor->GetXlaData());
+          std::vector<runtime::ComputationClient::DataPtr> shard_handles =
+              runtime::GetComputationClient()->GetDataShards(handle);
+          std::vector<at::Tensor> shards;
+          std::vector<std::string> str_devices;
+          shards.reserve(shard_handles.size());
+          str_devices.reserve(shard_handles.size());
+          // Tansfer shards from the device and create cpu tensors.
+          for (const runtime::ComputationClient::DataPtr shard_handle :
+               shard_handles) {
+            shards.push_back(
+                XlaDataToTensors(
+                    {shard_handle},
+                    TensorTypeFromXlaType(shard_handle->shape().element_type()))
+                    .front());
+            str_devices.push_back(shard_handle->device());
+          }
+          return std::make_tuple(shards, str_devices);
         });
   // For each local shard, returns the tuple:
   //        (replica_id: int, indices: Union[List[Slice], Ellipsis]),
@@ -1790,47 +1790,50 @@ void InitXlaModuleBindings(py::module m) {
   // of the shards returned from `_get_local_shards`.
   m.def("_get_local_shard_replica_and_indices",
         [](const at::Tensor& input) -> std::vector<std::pair<int, py::object>> {
-    XLATensorPtr xtensor = bridge::GetXlaTensor(input);
-    XLA_CHECK(xtensor->sharding_spec() != nullptr) << "Tensor is not sharded";
-    auto handle = std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
-        xtensor->GetXlaData());
-    auto shards = runtime::GetComputationClient()->GetDataShards(handle);
-    std::vector<std::string> shard_devices;
-    for (auto& shard : shards) {
-      shard_devices.push_back(shard->device());
-    }
-    auto sharding_spec = xtensor->sharding_spec();
-    auto sharding = xtensor->sharding_spec()->sharding;
-    auto shard_shape = ShardingUtil::GetShardShape(sharding_spec);
-    auto replica_and_indices =
-        ShardingUtil::GetShardReplicaAndIndicesForDevices(
-            shard_shape, input.sizes().vec(), sharding, shard_devices);
+          XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+          XLA_CHECK(xtensor->sharding_spec() != nullptr)
+              << "Tensor is not sharded";
+          auto handle =
+              std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
+                  xtensor->GetXlaData());
+          auto shards = runtime::GetComputationClient()->GetDataShards(handle);
+          std::vector<std::string> shard_devices;
+          for (auto& shard : shards) {
+            shard_devices.push_back(shard->device());
+          }
+          auto sharding_spec = xtensor->sharding_spec();
+          auto sharding = xtensor->sharding_spec()->sharding;
+          auto shard_shape = ShardingUtil::GetShardShape(sharding_spec);
+          auto replica_and_indices =
+              ShardingUtil::GetShardReplicaAndIndicesForDevices(
+                  shard_shape, input.sizes().vec(), sharding, shard_devices);
 
-    // Convert each vector<TensorIndex> to List[py::slice] or py::ellipsis
-    std::vector<std::pair<int, py::object>> result;
-    result.reserve(shard_devices.size());
-    for (auto& device_replica_and_indices : replica_and_indices) {
-      auto& replica_id = device_replica_and_indices.first;
-      auto& indices = device_replica_and_indices.second;
-      XLA_CHECK(indices.size() > 0)
-          << "Unexpected empty shard indices for tensor " << input;
-      if (indices[0].is_ellipsis()) {
-        result.push_back(std::make_pair(replica_id, py::ellipsis()));
-      } else {
-        std::vector<py::object> index_slices;
-        for (auto& tensor_index : indices) {
-          XLA_CHECK(tensor_index.is_slice())
-              << "Unexpected TensorIndex type: " << tensor_index;
-          auto slice = tensor_index.slice();
-          ssize_t start = slice.start().expect_int();
-          ssize_t stop = slice.stop().expect_int();
-          ssize_t step = slice.step().expect_int();
-          index_slices.push_back(py::slice(start, stop, step));
-        }
-        result.push_back(std::make_pair(replica_id, py::cast(index_slices)));
-      }
-    }
-    return result;
+          // Convert each vector<TensorIndex> to List[py::slice] or py::ellipsis
+          std::vector<std::pair<int, py::object>> result;
+          result.reserve(shard_devices.size());
+          for (auto& device_replica_and_indices : replica_and_indices) {
+            auto& replica_id = device_replica_and_indices.first;
+            auto& indices = device_replica_and_indices.second;
+            XLA_CHECK(indices.size() > 0)
+                << "Unexpected empty shard indices for tensor " << input;
+            if (indices[0].is_ellipsis()) {
+              result.push_back(std::make_pair(replica_id, py::ellipsis()));
+            } else {
+              std::vector<py::object> index_slices;
+              for (auto& tensor_index : indices) {
+                XLA_CHECK(tensor_index.is_slice())
+                    << "Unexpected TensorIndex type: " << tensor_index;
+                auto slice = tensor_index.slice();
+                ssize_t start = slice.start().expect_int();
+                ssize_t stop = slice.stop().expect_int();
+                ssize_t step = slice.step().expect_int();
+                index_slices.push_back(py::slice(start, stop, step));
+              }
+              result.push_back(
+                  std::make_pair(replica_id, py::cast(index_slices)));
+            }
+          }
+          return result;
         });
   // Load a list of local shards into an explicitly-sharded tensor. A shard must
   // be provided for each device.
@@ -1867,25 +1870,26 @@ void InitXlaModuleBindings(py::module m) {
            bool choose_faster_windowed_einsum = false,
            bool unroll_windowed_einsum = false,
            bool bidirectional_windowed_einsum = false) -> std::string {
-    xla::HloModuleConfig config;
-    config.set_use_spmd_partitioning(true);
-    config.set_replica_count(num_replicas);
-    config.set_num_partitions(num_devices);
+          xla::HloModuleConfig config;
+          config.set_use_spmd_partitioning(true);
+          config.set_replica_count(num_replicas);
+          config.set_num_partitions(num_devices);
 
-    std::string hlo_text = GetTensorsHloGraph(tensors, EmitMode::kHloReadable);
-    auto hlo_module_error =
-        xla::ParseAndReturnUnverifiedModule(hlo_text, config);
-    XLA_CHECK_OK(hlo_module_error.status())
-        << "HLO Module loading failed: " << hlo_module_error.status();
+          std::string hlo_text =
+              GetTensorsHloGraph(tensors, EmitMode::kHloReadable);
+          auto hlo_module_error =
+              xla::ParseAndReturnUnverifiedModule(hlo_text, config);
+          XLA_CHECK_OK(hlo_module_error.status())
+              << "HLO Module loading failed: " << hlo_module_error.status();
 
-    auto module = std::move(hlo_module_error.value());
-    xla::HloModuleProto module_proto = ShardingUtil::SpmdPartitioningPass(
-        module->ToProto(), num_replicas, num_devices,
-        conv_halo_exchange_always_on_lhs, choose_faster_windowed_einsum,
-        unroll_windowed_einsum, bidirectional_windowed_einsum);
-    module = std::move(
-        xla::HloModule::CreateFromProto(module_proto, config).value());
-    return module->ToString();
+          auto module = std::move(hlo_module_error.value());
+          xla::HloModuleProto module_proto = ShardingUtil::SpmdPartitioningPass(
+              module->ToProto(), num_replicas, num_devices,
+              conv_halo_exchange_always_on_lhs, choose_faster_windowed_einsum,
+              unroll_windowed_einsum, bidirectional_windowed_einsum);
+          module = std::move(
+              xla::HloModule::CreateFromProto(module_proto, config).value());
+          return module->ToString();
         });
   m.def("_is_placecholder", [](at::Tensor& input) {
     XLATensorPtr xtensor = bridge::GetXlaTensor(input);
@@ -1897,36 +1901,32 @@ void InitXlaModuleBindings(py::module m) {
     InitXlaBackend();
   });
   m.def("_set_ir_debug",
-        [](bool ir_debug) {
-    FLAGS_torch_lazy_ir_debug = ir_debug; });
-  m.def("_get_ir_debug", []() {
-    return FLAGS_torch_lazy_ir_debug; });
+        [](bool ir_debug) { FLAGS_torch_lazy_ir_debug = ir_debug; });
+  m.def("_get_ir_debug", []() { return FLAGS_torch_lazy_ir_debug; });
   m.def("_set_xla_handle_special_scalars", [](bool handle_special_scalars) {
     FLAGS_torch_lazy_handle_special_scalars = handle_special_scalars;
   });
   m.def("_get_xla_handle_special_scalars",
-        []() {
-    return FLAGS_torch_lazy_handle_special_scalars; });
+        []() { return FLAGS_torch_lazy_handle_special_scalars; });
   m.def("_set_xla_enable_device_data_cache", [](bool enable_device_data_cache) {
     FLAGS_torch_lazy_enable_device_data_cache = enable_device_data_cache;
   });
   m.def("_get_xla_enable_device_data_cache",
-        []() {
-    return FLAGS_torch_lazy_enable_device_data_cache; });
+        []() { return FLAGS_torch_lazy_enable_device_data_cache; });
   m.def("_replace_xla_tensor",
         [](at::Tensor& self, const at::Tensor& source) -> at::Tensor& {
-    return XLANativeFunctions::set_(self, source);
+          return XLANativeFunctions::set_(self, source);
         });
   m.def("_get_all_reduce_token",
         [](const std::string& device_str) -> const torch::lazy::Value& {
-    auto device = GetDeviceOrCurrent(device_str);
-    return GetAllReduceToken(device);
+          auto device = GetDeviceOrCurrent(device_str);
+          return GetAllReduceToken(device);
         });
   m.def("_set_all_reduce_token",
         [](const std::string& device_str,
            const std::shared_ptr<torch::lazy::Value>& token) {
-    auto device = GetDeviceOrCurrent(device_str);
-    SetAllReduceToken(device, token);
+          auto device = GetDeviceOrCurrent(device_str);
+          SetAllReduceToken(device, token);
         });
 
   BuildProfilerSubmodule(&m);
@@ -1934,12 +1934,12 @@ void InitXlaModuleBindings(py::module m) {
 
   m.def("_get_tensors_handle",
         [](const std::vector<at::Tensor>& tensors) -> std::vector<int64_t> {
-    std::vector<torch::lazy::BackendData::Handle> handles;
-    handles.reserve(tensors.size());
-    for (auto& tensor : tensors) {
-      handles.push_back(bridge::GetXlaTensor(tensor)->GetHandle());
-    }
-    return handles;
+          std::vector<torch::lazy::BackendData::Handle> handles;
+          handles.reserve(tensors.size());
+          for (auto& tensor : tensors) {
+            handles.push_back(bridge::GetXlaTensor(tensor)->GetHandle());
+          }
+          return handles;
         });
 
   // -------------Dynamo Integration API Start-------------------------
@@ -1950,77 +1950,76 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_get_tensors_xla_device_data_node",
         [](const std::vector<at::Tensor>& tensors)
             -> std::pair<std::vector<int64_t>, std::vector<at::IValue>> {
-    std::vector<int64_t> tensor_ids;
-    std::vector<at::IValue> ivalues;
-    std::vector<const torch::lazy::Node*> roots;
-    for (const at::Tensor& tensor : tensors) {
-      auto xtensor = bridge::TryGetXlaTensor(tensor);
-      if (xtensor) {
-        roots.push_back(xtensor->GetIrValue().node.get());
-      }
-    }
-    auto post_order = torch::lazy::Util::ComputePostOrder(roots);
-    std::unordered_set<torch::lazy::BackendData::Handle> data_handles;
+          std::vector<int64_t> tensor_ids;
+          std::vector<at::IValue> ivalues;
+          std::vector<const torch::lazy::Node*> roots;
+          for (const at::Tensor& tensor : tensors) {
+            auto xtensor = bridge::TryGetXlaTensor(tensor);
+            if (xtensor) {
+              roots.push_back(xtensor->GetIrValue().node.get());
+            }
+          }
+          auto post_order = torch::lazy::Util::ComputePostOrder(roots);
+          std::unordered_set<torch::lazy::BackendData::Handle> data_handles;
 
-    for (const torch::lazy::Node* nodeptr : post_order) {
-      const auto backend_data =
-          torch::lazy::getBackend()->GetComputationDataFromNode(nodeptr);
-      if (!backend_data) {
-        continue;
-      }
+          for (const torch::lazy::Node* nodeptr : post_order) {
+            const auto backend_data =
+                torch::lazy::getBackend()->GetComputationDataFromNode(nodeptr);
+            if (!backend_data) {
+              continue;
+            }
 
-      // Dedup by handle
-      torch::lazy::BackendData::Handle handle = backend_data->GetHandle();
-      if (!data_handles.insert(handle).second) {
-        continue;
-      }
-      auto* infoptr =
-          static_cast<torch::lazy::LazyGraphExecutor::DeviceDataInfo*>(
-              backend_data->info());
-      if (infoptr) {
-        tensor_ids.push_back(infoptr->tensor_id);
-      } else {
-        // TODO(JackCaoG): Make sure this device data is actually seed.
-        tensor_ids.push_back(seed_info_id);
-      }
-      at::Tensor tensor =
-          bridge::AtenFromXlaTensor(torch_xla::XLATensor::Create(backend_data));
-      ivalues.emplace_back(tensor);
-    }
-    return std::make_pair(tensor_ids, ivalues);
+            // Dedup by handle
+            torch::lazy::BackendData::Handle handle = backend_data->GetHandle();
+            if (!data_handles.insert(handle).second) {
+              continue;
+            }
+            auto* infoptr =
+                static_cast<torch::lazy::LazyGraphExecutor::DeviceDataInfo*>(
+                    backend_data->info());
+            if (infoptr) {
+              tensor_ids.push_back(infoptr->tensor_id);
+            } else {
+              // TODO(JackCaoG): Make sure this device data is actually seed.
+              tensor_ids.push_back(seed_info_id);
+            }
+            at::Tensor tensor = bridge::AtenFromXlaTensor(
+                torch_xla::XLATensor::Create(backend_data));
+            ivalues.emplace_back(tensor);
+          }
+          return std::make_pair(tensor_ids, ivalues);
         });
 
-  m.def("_get_seed_info_id", []() -> int64_t {
-    return seed_info_id; });
+  m.def("_get_seed_info_id", []() -> int64_t { return seed_info_id; });
 
   m.def("_get_base_seed_as_tensor",
         [](const std::string& device_str) -> at::IValue {
-    torch::lazy::BackendDevice device =
-        bridge::AtenDeviceToXlaDevice(c10::Device(device_str));
-    return bridge::AtenFromXlaTensor(torch_xla::XLATensor::Create(
-        XLAGraphExecutor::Get()->GetBaseSeedData(device)));
+          torch::lazy::BackendDevice device =
+              bridge::AtenDeviceToXlaDevice(c10::Device(device_str));
+          return bridge::AtenFromXlaTensor(torch_xla::XLATensor::Create(
+              XLAGraphExecutor::Get()->GetBaseSeedData(device)));
         });
 
   // Return true if value of the tensor requires a computation.
   m.def("_check_tensor_need_materialization",
         [](const std::vector<at::Tensor>& tensors) -> std::vector<bool> {
-    std::vector<XLATensorPtr> xtensors;
-    xtensors.reserve(tensors.size());
-    for (const at::Tensor& tensor : tensors) {
-      xtensors.push_back(bridge::TryGetXlaTensor(tensor));
-    }
-    return check_materialization_helper(xtensors);
+          std::vector<XLATensorPtr> xtensors;
+          xtensors.reserve(tensors.size());
+          for (const at::Tensor& tensor : tensors) {
+            xtensors.push_back(bridge::TryGetXlaTensor(tensor));
+          }
+          return check_materialization_helper(xtensors);
         });
 
   // Return true if value of the any tensor in this devicerequires a
   // computation.
   m.def("_check_device_tensor_need_materialization",
         [](const std::string& device_str) -> std::vector<bool> {
-    auto opt_device = GetOptionalDevice(device_str);
-    std::vector<XLATensorPtr> xtensors =
-        XLAGraphExecutor::Get()->GetLiveTensors(opt_device ? &opt_device.value()
-                                                           : nullptr);
-    return check_materialization_helper(xtensors);
+          auto opt_device = GetOptionalDevice(device_str);
+          std::vector<XLATensorPtr> xtensors =
+              XLAGraphExecutor::Get()->GetLiveTensors(
+                  opt_device ? &opt_device.value() : nullptr);
+          return check_materialization_helper(xtensors);
         });
 
   m.def("_get_graph_hash", [](const std::vector<at::Tensor>& tensors) {
@@ -2046,23 +2045,24 @@ void InitXlaModuleBindings(py::module m) {
         [](const std::string& hash_str,
            const std::vector<at::IValue>& graph_inputs)
             -> std::vector<at::Tensor> {
-    XLA_CHECK(hash_str.size() == sizeof(torch::lazy::hash_t));
-    torch::lazy::hash_t hash = *(torch::lazy::hash_t*)(hash_str.c_str());
-    // Device will be Virtual device if SPMD is enabled.
-    torch::lazy::BackendDevice device = torch_xla::bridge::GetCurrentDevice();
-    auto results = XLAGraphExecutor::Get()->ExecuteComputationWithBarrier(
-        hash, graph_inputs, device);
-    std::vector<at::Tensor> retlist;
-    {
-      TORCH_LAZY_TIMED("RunCachedGraphOutputData");
-      // Convert result back to at::tensor
-      for (const auto& data : results) {
-        XLATensorPtr xla_tensor = torch_xla::XLATensor::Create(data);
-        retlist.push_back(bridge::AtenFromXlaTensor(xla_tensor));
-      }
-    }
+          XLA_CHECK(hash_str.size() == sizeof(torch::lazy::hash_t));
+          torch::lazy::hash_t hash = *(torch::lazy::hash_t*)(hash_str.c_str());
+          // Device will be Virtual device if SPMD is enabled.
+          torch::lazy::BackendDevice device =
+              torch_xla::bridge::GetCurrentDevice();
+          auto results = XLAGraphExecutor::Get()->ExecuteComputationWithBarrier(
+              hash, graph_inputs, device);
+          std::vector<at::Tensor> retlist;
+          {
+            TORCH_LAZY_TIMED("RunCachedGraphOutputData");
+            // Convert result back to at::tensor
+            for (const auto& data : results) {
+              XLATensorPtr xla_tensor = torch_xla::XLATensor::Create(data);
+              retlist.push_back(bridge::AtenFromXlaTensor(xla_tensor));
+            }
+          }
 
-    return retlist;
+          return retlist;
         });
   // -------------Dynamo Integration API End-------------------------
 }

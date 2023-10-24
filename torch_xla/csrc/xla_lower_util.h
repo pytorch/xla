@@ -152,7 +152,7 @@ xla::XlaOp BuildCustomSharding(const xla::XlaOp& input);
 
 xla::XlaOp BuildCustomMarkSharding(const torch::lazy::BackendDevice& device,
                                    const xla::XlaOp& input,
-                                   xla::OpSharding sharding);
+                                   const xla::XlaOp& sharding);
 
 }  // namespace torch_xla
 

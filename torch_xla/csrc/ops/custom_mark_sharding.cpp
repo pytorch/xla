@@ -7,11 +7,10 @@
 namespace torch_xla {
 
 CustomMarkSharding::CustomMarkSharding(const torch::lazy::Value& input,
-                                       xla::OpSharding sharding)
-    : XlaNode(xla_custom_mark_sharding, {input}, GetXlaShape(input),
+                                       const torch::lazy::Value& sharding)
+    : XlaNode(xla_custom_mark_sharding, {input, sharding}, GetXlaShape(input),
               /*num_outputs=*/1,
-              torch::lazy::MHash(std::string("MarkSharding"))),
-      sharding_(sharding) {}
+              torch::lazy::MHash(std::string("MarkSharding"))) {}
 
 torch::lazy::NodePtr CustomMarkSharding::Clone(
     torch::lazy::OpList operands) const {

@@ -1230,26 +1230,9 @@ xla::XlaOp BuildCustomSharding(const xla::XlaOp& input) {
 
 xla::XlaOp BuildCustomMarkSharding(const torch::lazy::BackendDevice& device,
                                    const xla::XlaOp& input,
-                                   xla::OpSharding sharding) {
-  auto new_sharding_spec = std::make_shared<XLATensor::ShardingSpec>(
-      sharding,
-      MakeShapeWithDeviceLayout(ShapeHelper::ShapeOfXlaOp(input),
-                                static_cast<XlaDeviceType>(device.type())));
-
-  // For Non DeviceData IR values, we directly attach the sharding spec
-  // to the xtensor.
-  const DeviceData* device_data_node = nullptr;
-  if (xtensor->CurrentIrValue()) {
-    device_data_node = DeviceData::Cast(xtensor->CurrentIrValue().node.get());
-    if (!device_data_node) {
-      tensor_methods::custom_sharding_(xtensor, new_sharding_spec);
-      return;
-    }
-
-    // TODO move rest of
-    // `xla/torch_xla/csrc/init_python_bindings.cpp::_xla_mark_sharding`. Note
-    // to self: `_xla_mark_sharding` works with XLATensorPtr directly, as
-    // opposed to XlaOp here.
-  }
+                                   const xla::XlaOp sharding) {
+  return xla::CustomCall(input.builder(), /*call_target_name=*/"MarkSharding",
+                         {input}, ShapeHelper::ShapeOfXlaOp(input));
+}
 
 }  // namespace torch_xla
