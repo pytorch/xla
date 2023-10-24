@@ -171,18 +171,23 @@ class DynamoSpmdInferenceTest(test_xla_sharding_base.XlaShardingTest):
     else:
       del os.environ['XLA_DYNAMO_INPUT_SHARDING_CHECK_THRESHOLD']
 
-  def test_mark_sharding_after_compile(self):
+  def test_mark_sharding_inside_compile(self):
+
+    def fn_simple(x):
+      y = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
+                       dtype=torch.float,
+                       device=xm.xla_device())
+      ys = xs.mark_sharding(y, self._get_mesh((1, self.n_devices)), (0, 1))
+
+      return x + ys
+
     device = xm.xla_device()
-    linear = SimpleLinear().to(device)
-    linear.eval()
-    xla_x = torch.randn(1, 128, device=device)
-    xs.mark_sharding(linear.fc2.weight, self._get_mesh((1, self.n_devices)),
-                     (1, 0))
-    xla_res = linear(xla_x)
+    x_xla = torch.zeros((1, 8)).to(device)
+    xla_res = fn_simple(x_xla)
     xm.mark_step()
 
-    dynamo_linear = torch.compile(linear, backend="openxla")
-    dynamo_res = dynamo_linear(xla_x)
+    dynamo_linear = torch.compile(fn_simple, backend="openxla")
+    dynamo_res = dynamo_linear(x_xla)
     torch.allclose(xla_res.cpu(), dynamo_res.cpu())
 
 
