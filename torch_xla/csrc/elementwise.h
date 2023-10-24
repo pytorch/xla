@@ -21,6 +21,9 @@ xla::XlaOp BuildRelu(xla::XlaOp input);
 
 xla::XlaOp BuildPrelu(xla::XlaOp input, xla::XlaOp weight);
 
+std::vector<xla::XlaOp> BuildPreluBackward(xla::XlaOp grad, xla::XlaOp input,
+                                           xla::XlaOp weight);
+
 std::vector<xla::XlaOp> BuildRrelu(xla::XlaOp input, const at::Scalar& lower,
                                    const at::Scalar& upper, bool training,
                                    xla::XlaOp rng_seed);

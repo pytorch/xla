@@ -3397,6 +3397,22 @@ TEST_F(AtenXlaTensorTest, TestPrelu) {
   ExpectCounterChanged("xla::_prelu_kernel", cpp_test::GetIgnoredCounters());
 }
 
+TEST_F(AtenXlaTensorTest, TestPreluBackward) {
+  auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
+    return torch::prelu(inputs[0], inputs[1]);
+  };
+  torch::Tensor input = torch::rand(
+      {5, 3}, torch::TensorOptions(torch::kFloat).requires_grad(true));
+  torch::Tensor weight = torch::rand({3}, torch::TensorOptions(torch::kFloat));
+  ForEachDevice([&](const torch::Device& device) {
+    TestBackward({input, weight}, device, testfn);
+  });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::_prelu_kernel_backward",
+                       cpp_test::GetIgnoredCounters());
+}
+
 TEST_F(AtenXlaTensorTest, TestHardshrink) {
   torch::Tensor input = torch::randn({10}, torch::TensorOptions(torch::kFloat));
   torch::Tensor output = torch::hardshrink(input);

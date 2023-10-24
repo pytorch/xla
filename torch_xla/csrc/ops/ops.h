@@ -101,6 +101,10 @@ torch::lazy::NodePtr Sqrt(const torch::lazy::Value& input);
 torch::lazy::NodePtr Prelu(const torch::lazy::Value& input,
                            const torch::lazy::Value& weight);
 
+torch::lazy::NodePtr PreluBackward(const torch::lazy::Value& grad,
+                                   const torch::lazy::Value& input,
+                                   const torch::lazy::Value& weight);
+
 torch::lazy::NodePtr Pow(const torch::lazy::Value& input,
                          const torch::lazy::Value& exponent);
 
