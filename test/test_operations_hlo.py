@@ -60,6 +60,13 @@ class TestOperationsHlo(unittest.TestCase):
         [p.grad for p in mod.parameters() if p.requires_grad])
     assert 'f64' not in hlo_text
 
+  def test_dropout_by_u8_mask(self):
+    mod = torch.nn.Dropout().to(xm.xla_device())
+    a = torch.rand(20, 16, dtype=torch.bfloat16).to(xm.xla_device())
+    b = mod(a)
+    hlo_text = torch_xla._XLAC._get_xla_tensors_hlo([b])
+    assert 'u8' in hlo_text
+
 
 if __name__ == '__main__':
   torch.set_default_tensor_type('torch.FloatTensor')
