@@ -8,7 +8,8 @@ namespace torch_xla {
 class CustomMarkSharding : public XlaNode {
  public:
   // Make a custom call to Sharding.
-  CustomMarkSharding(const torch::lazy::Value& input, const torch::lazy::Value& sharding);
+  CustomMarkSharding(const torch::lazy::Value& input,
+                     const torch::lazy::Value& sharding);
 
   torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
