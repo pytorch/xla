@@ -10,8 +10,11 @@ namespace runtime {
 
 class DistributedRuntime {
  public:
-  static DistributedRuntime& getInstance(int global_rank) {
-    static DistributedRuntime dist_runtime_instance(global_rank);
+  static DistributedRuntime& getInstance(int global_rank,
+                                         std::string master_addr,
+                                         std::string port) {
+    static DistributedRuntime dist_runtime_instance(global_rank, master_addr,
+                                                    port);
     return dist_runtime_instance;
   }
   ~DistributedRuntime();
@@ -21,7 +24,8 @@ class DistributedRuntime {
   std::shared_ptr<xla::DistributedRuntimeClient> GetClient(int global_rank);
 
  private:
-  DistributedRuntime(int global_rank);
+  DistributedRuntime(int global_rank, std::string master_addr,
+                     std::string port);
 
   std::unique_ptr<xla::DistributedRuntimeService> dist_runtime_service_;
   std::shared_ptr<xla::DistributedRuntimeClient> dist_runtime_client_;

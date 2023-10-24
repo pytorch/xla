@@ -109,10 +109,14 @@ PjRtComputationClient::PjRtComputationClient() {
     TF_VLOG(1) << "Initializing PjRt GPU client...";
     bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncGpuClient, true);
     int local_process_rank = sys_util::GetEnvInt(env::kEnvPjRtLocalRank, 0);
-
     int global_process_rank = sys_util::GetEnvInt("RANK", local_process_rank);
+    const std::string default_coordinator_port = "8547";
+    std::string master_addr =
+        runtime::sys_util::GetEnvString("MASTER_ADDR", "localhost");
+    std::string port = runtime::sys_util::GetEnvString(
+        "XLA_COORDINATOR_PORT", default_coordinator_port);
     std::shared_ptr<xla::DistributedRuntimeClient> distributed_client =
-        DistributedRuntime::getInstance(global_process_rank)
+        DistributedRuntime::getInstance(global_process_rank, master_addr, port)
             .GetClient(global_process_rank);
     auto allowed_devices =
         std::make_optional<std::set<int>>(std::set{local_process_rank});

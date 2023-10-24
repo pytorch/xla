@@ -6,13 +6,8 @@
 namespace torch_xla {
 namespace runtime {
 
-const std::string default_coordinator_port = "8547";
-
-DistributedRuntime::DistributedRuntime(int global_rank) {
-  std::string master_addr =
-      runtime::sys_util::GetEnvString("MASTER_ADDR", "localhost");
-  std::string port = runtime::sys_util::GetEnvString("XLA_COORDINATOR_PORT",
-                                                     default_coordinator_port);
+DistributedRuntime::DistributedRuntime(int global_rank, std::string master_addr,
+                                       std::string port) {
   std::string dist_service_addr = absl::StrJoin({master_addr, port}, ":");
   if (global_rank == 0) {
     int local_world_size = sys_util::GetEnvInt("LOCAL_WORLD_SIZE", 1);
@@ -21,13 +16,12 @@ DistributedRuntime::DistributedRuntime(int global_rank) {
                                         "should not be empty at the same time.";
     xla::CoordinationServiceImpl::Options service_options;
     service_options.num_nodes = global_world_size;
-    XLA_CHECK(
-        xla::GetDistributedRuntimeService(dist_service_addr, service_options)
-            .ok())
+    xla::StatusOr<std::unique_ptr<xla::DistributedRuntimeService>>
+        dist_runtime_service = xla::GetDistributedRuntimeService(
+            dist_service_addr, service_options);
+    XLA_CHECK(dist_runtime_service.ok())
         << "Failed to initialize distributed runtime service.";
-    dist_runtime_service_ =
-        xla::GetDistributedRuntimeService(dist_service_addr, service_options)
-            .value();
+    dist_runtime_service_ = std::move(dist_runtime_service.value());
   }
 
   xla::DistributedRuntimeClient::Options client_options;
