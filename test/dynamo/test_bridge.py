@@ -91,6 +91,27 @@ class UpsampleModule(nn.Module):
     return (torch.randn((1, 1, 5)),)
 
 
+class CopyToCPUModule(nn.Module):
+
+  def forward(self, x):
+    return (x + x).cpu()
+
+  def get_random_inputs(self):
+    return (torch.randn((2, 2)),)
+
+
+class IntermediateCPUModule(nn.Module):
+
+  def forward(self, x):
+    xx = x + x
+    # Splits the graph into 2 partitions.
+    xx_roundtrip = xx.cpu().to(xm.xla_device())
+    return xx_roundtrip + x
+
+  def get_random_inputs(self):
+    return (torch.randn((2, 2)),)
+
+
 def allclose(expected, actual):
 
   def unwrap(cont):
@@ -217,6 +238,9 @@ class TorchXLAReuseGraphTest(torch._dynamo.test_case.TestCase):
   test_matmul = make_reuse_graph_test(MatmulModule)
   test_linear = make_reuse_graph_test(LinearModule)
   test_inplace_update = make_reuse_graph_test(ModuleInplaceUpdate)
+  test_copy_to_cpu = make_reuse_graph_test(CopyToCPUModule, niter=1)
+  test_intermediate_cpu_output = make_reuse_graph_test(
+      IntermediateCPUModule, niter=1)
 
   test_training_linear = make_training_test(LinearModule)
   test_training_maxpool = make_training_test(MaxPoolModule)

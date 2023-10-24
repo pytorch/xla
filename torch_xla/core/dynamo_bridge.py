@@ -505,9 +505,11 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
   class XlaOperatorSupport(torch.fx.passes.operator_support.OperatorSupport):
 
     def is_node_supported(self, submodules, node: torch.fx.Node) -> bool:
-      return node.op in [
-          "call_function", "call_module", "call_method"
-      ] and (node not in fallback_ops or node.target == operator.getitem)
+      val = node.meta.get("val")
+      return node.op in ["call_function", "call_module", "call_method"] and (
+          node not in fallback_ops or
+          node.target == operator.getitem) and (val is not None and isinstance(
+              val, torch.Tensor) and is_xla_tensor(val))
 
   # partition the model
   supported_ops = XlaOperatorSupport()
