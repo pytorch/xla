@@ -237,8 +237,6 @@ xla::XlaOp BuildPrelu(xla::XlaOp input, xla::XlaOp weight) {
 
 std::vector<xla::XlaOp> BuildPreluBackward(xla::XlaOp grad, xla::XlaOp input,
                                            xla::XlaOp weight) {
-  // const xla::Shape& grad_output_shape =
-  // ShapeHelper::ShapeOfXlaOp(grad_output);
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   const xla::Shape& weight_shape = ShapeHelper::ShapeOfXlaOp(weight);
 
