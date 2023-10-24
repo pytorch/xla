@@ -178,7 +178,6 @@ class TestExperimentalPjrtGpu(parameterized.TestCase):
     return out.cpu().numpy()
 
   # 2023-08-02 04:16:36.520884: F external/xla/xla/service/layout_assignment.cc:157] Check failed: ShapeUtil::Compatible(shape_layout.shape(), instruction->operand(operand_no)->shape()) f32[1]{0} is not compatible with f32[2]{0} (for operand 0 of instruction %reduce-scatter.10 = f32[1]{0} reduce-scatter(f32[2]{0} %add.5), replica_groups={}, constrain_layout=true, dimensions={0}, to_apply=%AddComputation.6)
-  @unittest.skip("Failed with known error.")
   @parameterized.named_parameters(('pinned', True), ('unpinned', False))
   def test_reduce_scatter(self, pin_layout):
     results = pjrt.run_multiprocess(self._reduce_scatter, pin_layout)
