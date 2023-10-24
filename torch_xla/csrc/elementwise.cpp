@@ -235,6 +235,19 @@ xla::XlaOp BuildPrelu(xla::XlaOp input, xla::XlaOp weight) {
   return xla::Select(xla::Gt(input, zero), input, product);
 }
 
+std::vector<xla::XlaOp> BuildPreluBackward(xla::XlaOp grad, xla::XlaOp input,
+                                           xla::XlaOp weight) {
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  const xla::Shape& weight_shape = ShapeHelper::ShapeOfXlaOp(weight);
+
+  xla::XlaOp zero = xla::Zero(input.builder(), input_shape.element_type());
+  xla::XlaOp grad_input = xla::Mul(weight, grad);
+  xla::XlaOp grad_weight = xla::Mul(input, grad);
+
+  return {xla::Select(xla::Gt(input, zero), grad, grad_input),
+          xla::Select(xla::Gt(input, zero), zero, grad_weight)};
+}
+
 xla::XlaOp BuildSigmoid(xla::XlaOp input) { return xla::Logistic(input); }
 
 xla::XlaOp BuildSiLUBackward(xla::XlaOp grad_output, xla::XlaOp input) {

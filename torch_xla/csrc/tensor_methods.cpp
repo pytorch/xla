@@ -2065,6 +2065,15 @@ XLATensorPtr prelu(const XLATensorPtr& input, const XLATensorPtr& weight) {
   return input->CreateFrom(Prelu(input->GetIrValue(), weight->GetIrValue()));
 }
 
+std::tuple<XLATensorPtr, XLATensorPtr> prelu_backward(
+    const XLATensorPtr& grad, const XLATensorPtr& input,
+    const XLATensorPtr& weight) {
+  torch::lazy::NodePtr node = PreluBackward(
+      grad->GetIrValue(), input->GetIrValue(), weight->GetIrValue());
+  return std::make_tuple(input->CreateFrom(torch::lazy::Value(node, 0)),
+                         input->CreateFrom(torch::lazy::Value(node, 1)));
+}
+
 XLATensorPtr prod(const XLATensorPtr& input, std::vector<int64_t> dimensions,
                   bool keep_reduced_dimensions,
                   c10::optional<at::ScalarType> dtype) {
