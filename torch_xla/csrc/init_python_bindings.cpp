@@ -1915,30 +1915,6 @@ void InitXlaModuleBindings(py::module m) {
           SetAllReduceToken(device, token);
         });
 
-  /* The distributed runtime service is used by the PjRt GPU client. */
-  py::class_<xla::DistributedRuntimeService,
-             std::unique_ptr<xla::DistributedRuntimeService>>
-      distributed_runtime_service(m, "DistributedRuntimeService");
-  distributed_runtime_service.def("shutdown",
-                                  &xla::DistributedRuntimeService::Shutdown,
-                                  py::call_guard<py::gil_scoped_release>());
-  m.def(
-      "_xla_get_distributed_runtime_service",
-      [](int num_nodes) -> std::unique_ptr<xla::DistributedRuntimeService> {
-        std::string master_addr =
-            runtime::sys_util::GetEnvString("MASTER_ADDR", "localhost");
-        std::string port =
-            runtime::sys_util::GetEnvString("XLA_COORDINATOR_PORT", "8547");
-        std::string dist_service_addr = absl::StrJoin({master_addr, port}, ":");
-        XLA_CHECK(num_nodes > 0) << "num_nodes must be positive: " << num_nodes;
-
-        xla::CoordinationServiceImpl::Options options;
-        options.num_nodes = num_nodes;
-        return std::move(
-            xla::GetDistributedRuntimeService(dist_service_addr, options)
-                .value());
-      });
-
   BuildProfilerSubmodule(&m);
   BuildLoweringContextSubmodule(&m);
 
