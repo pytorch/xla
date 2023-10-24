@@ -58,7 +58,13 @@ def _is_on_tpu():
   return 'XRT_TPU_CONFIG' in os.environ or xr.device_type() == 'TPU'
 
 
+def _is_on_eager_debug_mode():
+  return xu.getenv_as('XLA_USE_EAGER_DEBUG_MODE', bool, defval=False)
+
+
 skipOnTpu = unittest.skipIf(_is_on_tpu(), 'Not supported on TPU')
+skipOnEagerDebug = unittest.skipIf(_is_on_eager_debug_mode(),
+                                   'skip on eager debug mode')
 
 
 def _gen_tensor(*args, **kwargs):
@@ -1648,6 +1654,42 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     t1.addcdiv_(t2, t3, value=0.1)
     xm.mark_step()
     self.assertEqual(met.metric_data("TransferToServerTime")[0], 4)
+
+  @skipOnEagerDebug
+  def test_print_executation(self):
+    xla_device = xm.xla_device()
+    xm.mark_step()
+    xm.wait_device_ops()
+    met.clear_all()
+
+    # case 1 mark_step
+    t1 = torch.randn(1, 4, device=xla_device)
+    xm.mark_step()
+    xm.wait_device_ops()
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
+    for _ in range(3):
+      print(t1)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
+    self.assertIn('xla::device_data',
+                  torch_xla._XLAC._get_xla_tensors_text([t1]))
+
+    # case 2 no mark_step, directly print
+    met.clear_all()
+    t1 = torch.randn(1, 4, device=xla_device)
+    for _ in range(3):
+      print(t1)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
+    self.assertIn('xla::device_data',
+                  torch_xla._XLAC._get_xla_tensors_text([t1]))
+
+    # case 2 no mark_step, print with .cpu
+    met.clear_all()
+    t1 = torch.randn(1, 4, device=xla_device)
+    for _ in range(3):
+      print(t1.cpu())
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
+    self.assertIn('xla::device_data',
+                  torch_xla._XLAC._get_xla_tensors_text([t1]))
 
   def test_index_types(self):
 
