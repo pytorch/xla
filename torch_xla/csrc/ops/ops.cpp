@@ -132,6 +132,25 @@ torch::lazy::NodePtr Prelu(const torch::lazy::Value& input,
                    GetXlaShape(input), std::move(lower_fn));
 }
 
+torch::lazy::NodePtr PreluBackward(const torch::lazy::Value& grad,
+                                   const torch::lazy::Value& input,
+                                   const torch::lazy::Value& weight) {
+  auto lower_fn = [](const XlaNode& node,
+                     LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_grad = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp xla_weight = loctx->GetOutputOp(node.operand(2));
+    return node.ReturnOps(BuildPreluBackward(xla_grad, xla_input, xla_weight),
+                          loctx);
+  };
+
+  return GenericOp(
+      torch::lazy::OpKind(at::aten::_prelu_kernel_backward),
+      {grad, input, weight},
+      xla::ShapeUtil::MakeTupleShape({GetXlaShape(grad), GetXlaShape(input)}),
+      std::move(lower_fn), /*num_outputs=*/2);
+}
+
 torch::lazy::NodePtr LogSigmoid(const torch::lazy::Value& input) {
   auto lower_fn = [](const XlaNode& node,
                      LoweringContext* loctx) -> XlaOpVector {

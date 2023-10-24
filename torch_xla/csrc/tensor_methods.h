@@ -645,6 +645,10 @@ XLATensorPtr pow(const at::Scalar& input, const XLATensorPtr& exponent);
 
 XLATensorPtr prelu(const XLATensorPtr& input, const XLATensorPtr& weight);
 
+std::tuple<XLATensorPtr, XLATensorPtr> prelu_backward(
+    const XLATensorPtr& grad_out, const XLATensorPtr& input,
+    const XLATensorPtr& weight);
+
 XLATensorPtr prod(const XLATensorPtr& input, std::vector<int64_t> dimensions,
                   bool keep_reduced_dimensions,
                   c10::optional<at::ScalarType> dtype);

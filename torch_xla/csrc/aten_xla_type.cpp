@@ -2350,6 +2350,21 @@ at::Tensor XLANativeFunctions::_prelu_kernel(const at::Tensor& self,
       tensor_methods::prelu(self_tensor, weight_tensor));
 }
 
+std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::_prelu_kernel_backward(
+    const at::Tensor& grad_output, const at::Tensor& self,
+    const at::Tensor& weight) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+
+  XLATensorPtr grad_output_tensor = bridge::GetXlaTensor(grad_output);
+  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
+  XLATensorPtr weight_tensor = bridge::GetXlaTensor(weight);
+
+  auto outputs = tensor_methods::prelu_backward(grad_output_tensor, self_tensor,
+                                                weight_tensor);
+  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(outputs)),
+                         bridge::AtenFromXlaTensor(std::get<1>(outputs)));
+}
+
 at::Tensor XLANativeFunctions::prod(const at::Tensor& self,
                                     c10::optional<at::ScalarType> dtype) {
   TORCH_LAZY_FN_COUNTER("xla::");
