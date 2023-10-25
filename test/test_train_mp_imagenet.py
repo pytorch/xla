@@ -376,6 +376,6 @@ def _mp_fn(index, flags):
 
 if __name__ == '__main__':
   if dist.is_torchelastic_launched():
-    _mp_fn(xu.getenv_as(xenv.RANK, int), FLAGS)
+    _mp_fn(xu.getenv_as(xenv.LOCAL_RANK, int), FLAGS)
   else:
     xmp.spawn(_mp_fn, args=(FLAGS,), nprocs=FLAGS.num_cores)
