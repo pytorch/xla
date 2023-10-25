@@ -386,7 +386,8 @@ ComputationClient::DataPtr PjRtComputationClient::CopyToDevice(
                                     std::move(status_or.value()));
 }
 
-std::shared_ptr<PjRtComputationClient::PjRtData> PjRtComputationClient::ReplicateShardedData(
+std::shared_ptr<PjRtComputationClient::PjRtData>
+PjRtComputationClient::ReplicateShardedData(
     const ComputationClient::DataPtr& handle) {
   if (PjRtShardedData* sharded_data =
           dynamic_cast<PjRtShardedData*>(handle.get())) {
@@ -430,15 +431,15 @@ std::shared_ptr<PjRtComputationClient::PjRtData> PjRtComputationClient::Replicat
 
     torch_xla::runtime::ComputationClient::ExecuteReplicatedOptions
         execute_options;
-    auto sharded_results =
-        ExecuteReplicated(*computations.front(), {handle},
-                          GetLocalDevices(), execute_options);
+    auto sharded_results = ExecuteReplicated(
+        *computations.front(), {handle}, GetLocalDevices(), execute_options);
     XLA_CHECK(sharded_results.size() > 0)
         << "empty ExecuteReplicated results returned.";
     XLA_CHECK(sharded_results.size() == 1)
         << "Wrong number of outputs, expected: 1, actual: "
         << sharded_results.size();
-    return std::dynamic_pointer_cast<PjRtShardedData>(sharded_results[0])->shards[0];
+    return std::dynamic_pointer_cast<PjRtShardedData>(sharded_results[0])
+        ->shards[0];
   }
   auto pjrt_data = std::dynamic_pointer_cast<PjRtData>(handle);
   XLA_CHECK(pjrt_data) << "Data must be PjRtData or PjRtShardedData.";
@@ -643,19 +644,20 @@ PjRtComputationClient::ExecuteReplicated(
                                   tsl::profiler::TraceMeLevel::kInfo);
   const PjRtComputation& pjrt_computation =
       dynamic_cast<const PjRtComputation&>(computation);
-  // XLA_CHECK(devices.size() == arguments.size())
-  //     << "ExecuteReplicated over " << devices.size() << " devices, but "
-  //     << arguments.size() << " arguments devices.";
+
   absl::BlockingCounter counter(arguments.size());
-  std::vector<std::vector<xla::PjRtBuffer*>> argument_handles(devices.size(), std::vector<xla::PjRtBuffer*>(arguments.size()));
+  std::vector<std::vector<xla::PjRtBuffer*>> argument_handles(
+      devices.size(), std::vector<xla::PjRtBuffer*>(arguments.size()));
   {
     tsl::profiler::TraceMe activity(
         "PjRtComputationClient::ExecuteReplicated_argument_handle",
         tsl::profiler::TraceMeLevel::kInfo);
     for (int32_t i = 0; i < arguments.size(); ++i) {
       auto buffer_converter = [&, i]() {
-        auto pjrt_data = std::dynamic_pointer_cast<PjRtShardedData>(arguments[i]);
-        XLA_CHECK_EQ(pjrt_data->shards.size(), devices.size()) << "Expected one shard per device";
+        auto pjrt_data =
+            std::dynamic_pointer_cast<PjRtShardedData>(arguments[i]);
+        XLA_CHECK_EQ(pjrt_data->shards.size(), devices.size())
+            << "Expected one shard per device";
 
         for (int32_t d = 0; d < devices.size(); d++) {
           std::shared_ptr<PjRtData> shard = pjrt_data->shards[d];
@@ -721,15 +723,22 @@ PjRtComputationClient::ExecuteReplicated(
         tsl::profiler::TraceMeLevel::kInfo);
     size_t num_returns = results[0].size();
 
-    std::vector<std::shared_ptr<xla::HloModule>> hlo_modules = pjrt_computation.executable->GetHloModules().value();
-    XLA_CHECK_EQ(hlo_modules.size(), 1) << "Expected one HLO module with multiple outputs.";
+    std::vector<std::shared_ptr<xla::HloModule>> hlo_modules =
+        pjrt_computation.executable->GetHloModules().value();
+    XLA_CHECK_EQ(hlo_modules.size(), 1)
+        << "Expected one HLO module with multiple outputs.";
     const xla::Shape& result_shape = hlo_modules[0]->result_shape();
-    const std::vector<xla::Shape>& output_shapes = result_shape.IsTuple() ? hlo_modules[0]->result_shape().tuple_shapes() : std::vector<xla::Shape>({result_shape});
-    XLA_CHECK_EQ(output_shapes.size(), num_returns) << "Output shape: " << result_shape.ToString();
+    const std::vector<xla::Shape>& output_shapes =
+        result_shape.IsTuple() ? hlo_modules[0]->result_shape().tuple_shapes()
+                               : std::vector<xla::Shape>({result_shape});
+    XLA_CHECK_EQ(output_shapes.size(), num_returns)
+        << "Output shape: " << result_shape.ToString();
 
     // TODO(wcromar): Implement this in PJRT C API client
-    // std::vector<xla::Shape> output_shapes = pjrt_computation.executable->GetOutputShapes().value();
-    std::vector<xla::OpSharding> output_shardings = pjrt_computation.executable->GetOutputShardings().value();
+    // std::vector<xla::Shape> output_shapes =
+    // pjrt_computation.executable->GetOutputShapes().value();
+    std::vector<xla::OpSharding> output_shardings =
+        pjrt_computation.executable->GetOutputShardings().value();
 
     XLA_CHECK_EQ(output_shardings.size(), num_returns);
 
@@ -748,8 +757,9 @@ PjRtComputationClient::ExecuteReplicated(
         shards[i] = std::make_shared<PjRtData>(devices[i], std::move(buffer));
       }
 
-      auto data =
-          std::make_shared<PjRtShardedData>(spmd_device_str, output_shapes[j], std::move(shards), output_shardings[j]);
+      auto data = std::make_shared<PjRtShardedData>(
+          spmd_device_str, output_shapes[j], std::move(shards),
+          output_shardings[j]);
       data_handles.push_back(data);
     }
   }

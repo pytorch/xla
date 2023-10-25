@@ -58,8 +58,7 @@ class PjRtComputationClient : public ComputationClient {
       const ExecuteComputationOptions& options) override;
 
   std::vector<DataPtr> ExecuteReplicated(
-      const Computation& computation,
-      absl::Span<const DataPtr> arguments,
+      const Computation& computation, absl::Span<const DataPtr> arguments,
       absl::Span<const std::string> devices,
       const ExecuteReplicatedOptions& options) override;
 
