@@ -212,6 +212,12 @@ bool DebugUtil::ExperimentEnabled(const std::string& name) {
   return xset->find(name) != xset->end();
 }
 
+// helper function until we move to C++ 20
+static bool endsWith(const std::string& str, const std::string& suffix) {
+  return str.size() >= suffix.size() &&
+         0 == str.compare(str.size() - suffix.size(), suffix.size(), suffix);
+}
+
 void DebugUtil::analyze_graph_execution_python_frame() {
   static bool is_master_process =
       (runtime::sys_util::GetEnvInt("PJRT_LOCAL_PROCESS_RANK", 0) == 0);
@@ -229,16 +235,27 @@ void DebugUtil::analyze_graph_execution_python_frame() {
      << "======================================================================"
         "=========="
      << "\n";
+  ss << debug_output_prefix << "Execution Cause\n";
   if (frames[0].function == "mark_step") {
     // TODO: be more specified about the caller of the mark step
     // for example: parallelr loader, dynamo, step_trace, user code etc
-    ss << debug_output_prefix << "execution is caused by mark_step\n";
+    if (frames.size() == 1) {
+      ss << debug_output_prefix << "  user mark_step\n";
+    } else if (frames[1].function == "next" &&
+               endsWith(frames[1].file, "parallel_loader.py")) {
+      ss << debug_output_prefix
+         << "  mark_step in parallel loader at step end\n";
+    } else if (frames[1].function == "__exit__" &&
+               endsWith(frames[1].file, "profiler.py")) {
+      ss << debug_output_prefix
+         << "  mark_step when exiting a profiler StepTrace region\n";
+    }
   }
   // handle the exeuction caused by printing tensor or fallback or some
   // weird indexing.
 
   // make number of frames printed configurable
-  ss << debug_output_prefix << "Python Frame triggered execution: \n";
+  ss << debug_output_prefix << "Python Frame Triggered Execution: \n";
   for (auto& location : frames) {
     ss << debug_output_prefix << "  " << location.function << " ("
        << location.file << ":" << location.line << ")\n";
