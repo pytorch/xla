@@ -40,9 +40,6 @@ class PjRtComputationClient : public ComputationClient {
   std::vector<DataPtr> TransferToServer(
       absl::Span<const std::shared_ptr<const TensorSource>> tensors) override;
 
-  // Use XLA replication to re-assemble the sharded data.
-  DataPtr ReplicateShardedData(const DataPtr& handle);
-
   std::vector<xla::Literal> TransferFromServer(
       absl::Span<const DataPtr> handles) override;
 
@@ -60,9 +57,9 @@ class PjRtComputationClient : public ComputationClient {
       const std::string& device,
       const ExecuteComputationOptions& options) override;
 
-  std::vector<std::vector<DataPtr>> ExecuteReplicated(
+  std::vector<DataPtr> ExecuteReplicated(
       const Computation& computation,
-      const std::vector<std::vector<DataPtr>>& arguments,
+      absl::Span<const DataPtr> arguments,
       absl::Span<const std::string> devices,
       const ExecuteReplicatedOptions& options) override;
 
@@ -235,6 +232,9 @@ class PjRtComputationClient : public ComputationClient {
 
     std::unique_ptr<xla::PjRtLoadedExecutable> executable;
   };
+
+  // Use XLA replication to re-assemble the sharded data.
+  std::shared_ptr<PjRtData> ReplicateShardedData(const DataPtr& handle);
 };
 
 }  // namespace runtime

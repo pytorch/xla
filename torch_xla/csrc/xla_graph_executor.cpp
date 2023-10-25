@@ -705,19 +705,14 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
       if (async->cached_computation->is_sharded) {
         std::vector<std::string> devices =
             runtime::GetComputationClient()->GetLocalDevices();
-        std::vector<std::vector<runtime::ComputationClient::DataPtr>>
-            device_arguments = ShardingUtil::InputHandler(
-                UnwrapXlaData(async->parameters_data), devices);
         runtime::ComputationClient::ExecuteReplicatedOptions execute_options;
         // OutputHandler creates sharded data for sharded
         // tensor results. Both sharded and unsharded results should be
         // "Assign"ed to the corresponding data placeholders.
         std::vector<runtime::ComputationClient::DataPtr> outputs =
-            ShardingUtil::OutputHandler(
                 runtime::GetComputationClient()->ExecuteReplicated(
-                    *async->cached_computation->computation, device_arguments,
-                    devices, execute_options),
-                sharding_specs);
+                    *async->cached_computation->computation, UnwrapXlaData(async->parameters_data),
+                    devices, execute_options);
         results = WrapXlaData(outputs);
         TF_VLOG(3) << "Executing Dynamo IR sharded graph hash "
                    << torch::lazy::HashToString(hash) << " on devices "
@@ -973,9 +968,6 @@ XLAGraphExecutor::ScheduleSyncTensorsGraph(
       if (async->cached_computation->is_sharded) {
         std::vector<std::string> devices =
             runtime::GetComputationClient()->GetLocalDevices();
-        std::vector<std::vector<runtime::ComputationClient::DataPtr>>
-            device_arguments = ShardingUtil::InputHandler(
-                UnwrapXlaData(async->parameters_data), devices);
         runtime::ComputationClient::ExecuteReplicatedOptions execute_options;
         TF_VLOG(3) << "Executing IR graph hash "
                    << torch::lazy::HashToString(hash)
@@ -984,11 +976,9 @@ XLAGraphExecutor::ScheduleSyncTensorsGraph(
         // tensor results. Both sharded and unsharded results should be
         // "Assign"ed to the corresponding data placeholders.
         std::vector<runtime::ComputationClient::DataPtr> outputs =
-            ShardingUtil::OutputHandler(
                 runtime::GetComputationClient()->ExecuteReplicated(
-                    *async->cached_computation->computation, device_arguments,
-                    devices, execute_options),
-                sharding_specs, /*replicated_output=*/false);
+                    *async->cached_computation->computation, UnwrapXlaData(async->parameters_data),
+                    devices, execute_options);
         results = WrapXlaData(outputs);
         TF_VLOG(3) << "Executing IR graph hash "
                    << torch::lazy::HashToString(hash)

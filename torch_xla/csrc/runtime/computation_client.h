@@ -302,9 +302,9 @@ class ComputationClient {
   // The result[i], a vector itself, will be the result of the computation fed
   // with arguments[i]. If options.explode_tuple is true, the output tuples will
   // be decomposed into their single elements.
-  virtual std::vector<std::vector<DataPtr>> ExecuteReplicated(
+  virtual std::vector<DataPtr> ExecuteReplicated(
       const Computation& computation,
-      const std::vector<std::vector<DataPtr>>& arguments,
+      absl::Span<const DataPtr> arguments,
       absl::Span<const std::string> devices,
       const ExecuteReplicatedOptions& options) = 0;
 
