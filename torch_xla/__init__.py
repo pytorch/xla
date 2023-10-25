@@ -33,6 +33,8 @@ def _setup_xla_flags():
   # shared memory limit 95% leads to OOM. Each rerun will choose a value
   # 0.9x of the previous run, and the number of rerun is set to 1 now.
   # Shared memory limit refers to --xla_tpu_scheduler_percent_shared_memory_limit.
+  # Lower shared memory limit means less communiation and computation overlapping,
+  # and thus worse performance.
   flags = _set_missing_flags(flags,
                              (('xla_latency_hiding_scheduler_rerun', '1'),))
   os.environ['XLA_FLAGS'] = ' '.join(flags)
