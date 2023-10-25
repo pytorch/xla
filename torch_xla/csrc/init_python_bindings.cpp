@@ -38,6 +38,7 @@
 #include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
+#include "torch_xla/csrc/runtime/distributed_runtime.h"
 #include "torch_xla/csrc/runtime/metrics.h"
 #include "torch_xla/csrc/runtime/metrics_analysis.h"
 #include "torch_xla/csrc/runtime/metrics_reader.h"
@@ -1876,6 +1877,39 @@ void InitXlaModuleBindings(py::module m) {
               xla::HloModule::CreateFromProto(module_proto, config).value());
           return module->ToString();
         });
+  // Initialize a distributed runtime if one has not already been created.
+  m.def("_ensure_dist_runtime_initialized",
+        [](int global_rank, int world_size, std::string master_addr,
+           std::string master_port) {
+          if (!runtime::DistributedRuntime::IsInitialized()) {
+            runtime::DistributedRuntime::Initialize(global_rank, world_size,
+                                                    master_addr, master_port);
+          }
+        },
+        py::arg("global_rank"), py::arg("world_size"), py::arg("master_addr"),
+        py::arg("master_port") =
+            runtime::DistributedRuntime::kDefaultCoordinatorPort);
+  // Shutdown the distributed runtime if it's active.
+  m.def("_ensure_dist_runtime_shutdown", []() {
+    if (runtime::DistributedRuntime::IsInitialized()) {
+      runtime::DistributedRuntime::Shutdown();
+    }
+  });
+  // Create a PreemptionSyncManager for the DistributedRuntime. The
+  // PreemptionSyncManager will register a SIGTERM handler as a side effect.
+  m.def("_activate_preemption_sync_manager", []() {
+    XLA_CHECK(runtime::DistributedRuntime::IsInitialized())
+        << "DistributedRuntime must be initialized to register "
+           "PreemptionSyncManager";
+    runtime::DistributedRuntime::Get().ActivatePreemptionSyncManager();
+  });
+  // Check whether a sync point has been reached. This method requires that the
+  // distributed runtime be initialized and a PreemptionSyncManager activated.
+  m.def("_sync_point_reached", [](int step) {
+    XLA_CHECK(runtime::DistributedRuntime::IsInitialized())
+        << "DistributedRuntime must be initialized";
+    return runtime::DistributedRuntime::Get().ReachedSyncPoint(step);
+  });
   m.def("_is_placecholder", [](at::Tensor& input) {
     XLATensorPtr xtensor = bridge::GetXlaTensor(input);
     return xtensor->CurrentDataHandle() &&

@@ -109,13 +109,17 @@ PjRtComputationClient::PjRtComputationClient() {
     bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncGpuClient, true);
     int local_process_rank = sys_util::GetEnvInt(env::kEnvPjRtLocalRank, 0);
     int global_process_rank = sys_util::GetEnvInt("RANK", local_process_rank);
+    int local_world_size = sys_util::GetEnvInt("LOCAL_WORLD_SIZE", 1);
+    int global_world_size = sys_util::GetEnvInt("WORLD_SIZE", local_world_size);
     std::string master_addr =
         runtime::sys_util::GetEnvString("MASTER_ADDR", "localhost");
     std::string port = runtime::sys_util::GetEnvString(
-        "XLA_COORDINATOR_PORT", DistributedRuntime::default_coordinator_port);
-    std::shared_ptr<xla::DistributedRuntimeClient> distributed_client =
-        DistributedRuntime::getInstance(global_process_rank, master_addr, port)
-            .GetClient();
+        "XLA_COORDINATOR_PORT", DistributedRuntime::kDefaultCoordinatorPort);
+
+    // Use the DistributedRuntime as the distributed key-value store.
+    DistributedRuntime::Initialize(global_process_rank, global_world_size,
+                                   master_addr, port);
+    auto distributed_client = DistributedRuntime::Get().GetClient();
     auto allowed_devices =
         std::make_optional<std::set<int>>(std::set{local_process_rank});
     xla::PjRtClient::KeyValueGetCallback kv_get = nullptr;
@@ -132,8 +136,6 @@ PjRtComputationClient::PjRtComputationClient() {
         return distributed_client->KeyValueSet(absl::StrCat(key_prefix, k), v);
       };
     }
-    int local_world_size = sys_util::GetEnvInt("LOCAL_WORLD_SIZE", 1);
-    int global_world_size = sys_util::GetEnvInt("WORLD_SIZE", local_world_size);
     TF_VLOG(3) << "Getting StreamExecutorGpuClient for node_id="
                << global_process_rank << ", num_nodes=" << global_world_size;
     client_ = std::move(xla::GetStreamExecutorGpuClient(

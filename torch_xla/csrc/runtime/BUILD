@@ -172,6 +172,7 @@ cc_library(
         ":debug_macros",
         ":sys_util",
         "@xla//xla/pjrt/distributed",
+        "@tsl//tsl/distributed_runtime/preemption:preemption_sync_manager",
     ],
 )
 
