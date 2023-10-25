@@ -213,8 +213,13 @@ bool DebugUtil::ExperimentEnabled(const std::string& name) {
 }
 
 void DebugUtil::analyze_graph_execution_python_frame() {
-  // TODO: maybe only print this for the master process
+  static bool is_master_process =
+      (runtime::sys_util::GetEnvInt("PJRT_LOCAL_PROCESS_RANK", 0) == 0);
   static std::string debug_output_prefix = "Execution Analysis: ";
+  // TODO: Make this configurable.
+  if (!is_master_process) {
+    return;
+  }
   std::vector<torch::lazy::SourceLocation> frames =
       torch::lazy::GetPythonFrames();
   // python frame must be > 1
