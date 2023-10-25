@@ -236,7 +236,7 @@ def addressable_runtime_device_count() -> int:
 # TODO(yeounoh) this does not block users from using XLA_USE_SPMD flag, yet.
 # we will enforce `use_spmd()` once the flag is fully deprecated.
 @requires_pjrt
-def use_spmd():
+def use_spmd(auto: Optional[bool] = False):
   if os.environ.get("XLA_USE_SPMD") is not None:
     warnings.warn("XLA_USE_SPMD is being deprecated. "
                   "Use torch_xla.runtime.use_spmd() "
@@ -251,8 +251,9 @@ def use_spmd():
         "(i.e., call use_spmd() in the beginning of the program).")
     torch_xla._XLAC._xla_force_spmd_device()
 
-  # TODO(yeounoh) replace this when we fully deprecate the flag.
+  # TODO(yeounoh) replace these when we fully deprecate the flags.
   os.environ["XLA_USE_SPMD"] = "1"
+  os.environ["XLA_AUTO_SPMD"] = "1"
 
 
 @requires_pjrt

@@ -14,6 +14,8 @@ from torch_xla.distributed.spmd import Mesh
 import torch.optim as optim
 from torch import nn
 
+xr.use_spmd(auto=True)
+
 MODEL_OPTS = {
     '--sharding': {
         'choices': ['batch', 'megatron-lm', 'fsdp'],

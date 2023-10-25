@@ -425,17 +425,33 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
     if (instance.is_sharded) {
       // TODO(yeounoh) multi-host, multi-slice configurations
       compile_options.executable_build_options.set_use_spmd_partitioning(true);
+
       // We can override the compiler's default behavior to replicate the
       // outputs. Setting this to true would wrapping the sharded outputs in
       // PjRtShardedData.
       compile_options.executable_build_options
           .set_allow_spmd_sharding_propagation_to_output(
               {instance.allow_spmd_sharding_propagation_to_output});
+
+      int num_partitions = client_->device_count();
       compile_options.executable_build_options.set_num_partitions(
-          client_->device_count());
+          num_partitions);
       compile_options.executable_build_options.set_num_replicas(1);
       compile_options.parameter_is_tupled_arguments =
           instance.parameter_is_tupled_arguments;
+
+      if (runtime::sys_util::GetEnvBool("XLA_AUTO_SPMD", false)) {
+        compile_options.executable_build_options.set_use_auto_spmd_partitioning(
+            true);
+        // TODO(yeounoh) use automatic mesh construction.
+        // compile_options.executable_build_options
+        //     .set_auto_spmd_partitioning_mesh_shape({2, 2});
+        // compile_options.executable_build_options
+        //     .set_auto_spmd_partitioning_mesh_ids({0, 1, 2, 3});
+        TF_VLOG(3) << "Auto SPMD partitioning enabled!"
+                   << compile_options.executable_build_options
+                          .use_auto_spmd_partitioning();
+      }
 
       // TODO(244391366) verify this is correct for the collectives ops
       xla::DeviceAssignment device_assignment(1, client_->device_count());

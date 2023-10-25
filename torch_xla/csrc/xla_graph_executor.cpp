@@ -798,6 +798,13 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
       if (async->cached_computation->is_sharded) {
         std::vector<std::string> devices =
             runtime::GetComputationClient()->GetLocalDevices();
+<<<<<<< HEAD
+=======
+        // TODO(yeounoh) we need to reshard after auto-sharding pass.
+        std::vector<std::vector<runtime::ComputationClient::DataPtr>>
+            device_arguments = ShardingUtil::InputHandler(
+                UnwrapXlaData(async->parameters_data), devices);
+>>>>>>> a6fd90507 (* Add auto-sharding flag to `use_spmd`)
         runtime::ComputationClient::ExecuteReplicatedOptions execute_options;
         // OutputHandler creates sharded data for sharded
         // tensor results. Both sharded and unsharded results should be
@@ -1313,6 +1320,8 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
       runtime::sys_util::GetEnvInt("XLA_PARAMETER_WRAPPING_THREADSHOLD", 3200);
   static const bool using_pjrt =
       runtime::sys_util::GetEnvString("PJRT_DEVICE", "").size() > 0;
+  static const bool use_autosharding =
+      runtime::sys_util::GetEnvBool("XLA_AUTO_SPMD", false);
   LoweringContext lowering_ctx("SyncTensorsGraph", coll.device,
                                po_data->post_order,
                                std::move(po_data->emission_map));
@@ -1369,6 +1378,28 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
   xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
 
+  // if (use_autosharding) {
+  //   TF_VLOG(3) << "Auto SPMD partitioning enabled!";
+  //   const xla::HloModuleProto& module_proto = computation.proto();
+
+  //   // TODO(yeounoh) use automatic mesh construction.
+  //   xla::ExecutionOptions execution_options;
+  //   //execution_options.set_use_auto_spmd_partitioning(true);
+  //   // config.set_auto_spmd_partitioning_mesh_shape(
+  //   //     absl::GetFlag(FLAGS_auto_spmd_partition_mesh_shape));
+  //   // config.set_auto_spmd_partitioning_mesh_ids(
+  //   //     absl::GetFlag(FLAGS_auto_spmd_partition_mesh_ids));
+
+  //   xla::HloModuleConfig module_config =
+  //       ConsumeValue(xla::HloModule::CreateModuleConfigFromProto(
+  //           module_proto, xla::DebugOptions(), &execution_options));
+  //   module_config.set_use_auto_spmd_partitioning(true);
+
+  //   std::unique_ptr<xla::HloModule> hlo_module = ConsumeValue(
+  //       xla::HloModule::CreateFromProto(module_proto, module_config));
+  //   computation = xla::XlaComputation(hlo_module->ToProto());
+  // }
+
   bool should_wrap_parameter =
       (program_shape.parameters_size() >= parameter_wrapping_threadshold) &&
       using_pjrt;
@@ -1417,6 +1448,34 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
   } else {
     XLA_CHECK_EQ(program_shape.parameters_size(),
                  po_data->parameters_data.size());
+  }
+  if (use_autosharding) {
+    const auto& computation_proto = computations.front()->computation().proto();
+
+    std::cout << "*** input sharding genereated: " << std::endl;
+    std::vector<xla::OpSharding> input_shardings;
+    for (const auto& sharding : computation_proto.spmd_parameters_shardings()) {
+      std::cout << "- " << sharding.DebugString() << std::endl;
+      input_shardings.push_back(sharding);
+    }
+
+    std::vector<xla::OpSharding> output_shardings;
+    if (computation_proto.has_spmd_output_sharding()) {
+      if (computation_proto.spmd_output_sharding().tuple_shardings().size() >
+          0) {
+        auto tuple_shardings =
+            computation_proto.spmd_output_sharding().tuple_shardings();
+        output_shardings = std::vector<xla::OpSharding>(tuple_shardings.begin(),
+                                                        tuple_shardings.end());
+      } else {
+        output_shardings = std::vector<xla::OpSharding>{
+            computation_proto.spmd_output_sharding()};
+      }
+    }
+    std::cout << "*** output sharding genereated: " << std::endl;
+    for (const auto& sharding : output_shardings) {
+      std::cout << "- " << sharding.DebugString() << std::endl;
+    }
   }
 
   return {/*device=*/coll.device,
