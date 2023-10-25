@@ -29,6 +29,12 @@ def _setup_xla_flags():
       flags, (('xla_gpu_simplify_all_fp_conversions', 'false'),))
   flags = _set_missing_flags(flags,
                              (('xla_gpu_force_compilation_parallelism', '8'),))
+  # This flag will rerun the latency hidding scheduler if the default
+  # shared memory limit 95% leads to OOM. Each rerun will choose a value
+  # 0.9x of the previous run, and the number of rerun is set to 1 now.
+  # Shared memory limit refers to --xla_tpu_scheduler_percent_shared_memory_limit.
+  flags = _set_missing_flags(flags,
+                             (('xla_latency_hiding_scheduler_rerun', '1'),))
   os.environ['XLA_FLAGS'] = ' '.join(flags)
 
 
