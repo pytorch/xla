@@ -209,15 +209,11 @@ You can also use `torchrun` to initiate the single-node multi-GPU training. For 
 PJRT_DEVICE=GPU torchrun --nnodes 1 --nproc-per-node ${NUM_GPU_DEVICES} xla/test/test_train_mp_imagenet.py --fake_data --batch_size=128 --num_epochs=1
 ```
 
-In the above example, `nnodes` means how many machines (phsical machines or VMs) to be used (it is 1 since we do single-node training). `NUM_GPU_DEVICES` means how many GPU devices to be used.
+In the above example, `nnodes` means how many machines (physical machines or VMs) to be used (it is 1 since we do single-node training). `NUM_GPU_DEVICES` means how many GPU devices to be used.
 
 ### Multi-node GPU training
 
-There are 2 ways to run multi-node training: `torchrun` and GKE (under development as of October 2023)
-
-1. torchrun:
-
-Similar to how PyTorch uses multi-node training, you can run the command below:
+Note that this feature only works for cuda 12+. Similar to how PyTorch uses multi-node training, you can run the command as below:
 
 ```
 PJRT_DEVICE=GPU torchrun \
@@ -252,7 +248,7 @@ On the second GPU machine, run
 --rdzv_endpoint="<MACHINE_0_IP_ADDRESS>:12355" pytorch/xla/test/test_train_mp_imagenet_torchrun.py  --fake_data --pjrt_distributed --batch_size=128 --num_epochs=1
 ```
 
-the difference bewteen the 2 commands above are `--node_rank` and potentially `--nproc_per_node` if you want to use different number of GPU devices on each machine. All the other scripts are identical.
+the difference between the 2 commands above are `--node_rank` and potentially `--nproc_per_node` if you want to use different number of GPU devices on each machine. All the rest are identical.
 
 ## Differences from XRT
 
