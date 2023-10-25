@@ -267,7 +267,7 @@ function build_and_install_torch() {
 function build_and_install_torch_xla() {
   git submodule update --init --recursive
   if [ "${RELEASE_VERSION}" = "nightly" ]; then
-    export VERSIONED_XLA_BUILD=1
+    export GIT_VERSIONED_XLA_BUILD=true
   else
     export TORCH_XLA_VERSION=${RELEASE_VERSION:1}  # r0.5 -> 0.5
   fi
