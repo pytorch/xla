@@ -41,7 +41,7 @@ variables:
         - Build the xla client with CUDA enabled.
       type: bool
       default_value: false
-    VERSIONED_XLA_BUILD:
+    GIT_VERSIONED_XLA_BUILD:
       description:
         - Creates a versioned build. In particular, appends a git sha to the
           version number string

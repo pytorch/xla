@@ -10,8 +10,8 @@
 #     specify the version of PyTorch/XLA, rather than the hard-coded version
 #     in this file; used when we're building binaries for distribution
 #
-#   VERSIONED_XLA_BUILD
-#     creates a versioned build
+#   GIT_VERSIONED_XLA_BUILD
+#     creates a git versioned build
 #
 #   TORCH_XLA_PACKAGE_NAME
 #     change the package name to something other than 'torch_xla'
@@ -101,9 +101,9 @@ def get_git_head_sha(base_dir):
 
 def get_build_version(xla_git_sha):
   version = os.getenv('TORCH_XLA_VERSION', '2.2.0')
-  if _check_env_flag('VERSIONED_XLA_BUILD', default='0'):
+  if _check_env_flag('GIT_VERSIONED_XLA_BUILD', default='TRUE'):
     try:
-      version += '+' + xla_git_sha[:7]
+      version += '+git' + xla_git_sha[:7]
     except Exception:
       pass
   return version
