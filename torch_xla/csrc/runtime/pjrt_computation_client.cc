@@ -721,45 +721,49 @@ PjRtComputationClient::ExecuteReplicated(
     tsl::profiler::TraceMe activity(
         "PjRtComputationClient::ExecuteReplicated_result_handle",
         tsl::profiler::TraceMeLevel::kInfo);
-    size_t num_returns = results[0].size();
+    size_t num_outputs = results[0].size();
 
+    // Next few calls are expected to output vectors of size [1 x outputs]
     std::vector<std::shared_ptr<xla::HloModule>> hlo_modules =
         pjrt_computation.executable->GetHloModules().value();
     XLA_CHECK_EQ(hlo_modules.size(), 1)
         << "Expected one HLO module with multiple outputs.";
     const xla::Shape& result_shape = hlo_modules[0]->result_shape();
-    const std::vector<xla::Shape>& output_shapes =
-        result_shape.IsTuple() ? hlo_modules[0]->result_shape().tuple_shapes()
-                               : std::vector<xla::Shape>({result_shape});
-    XLA_CHECK_EQ(output_shapes.size(), num_returns)
-        << "Output shape: " << result_shape.ToString();
+    TF_VLOG(3) << "Processing output with shape " << result_shape.ToString();
 
-    // TODO(wcromar): Implement this in PJRT C API client
-    // std::vector<xla::Shape> output_shapes =
-    // pjrt_computation.executable->GetOutputShapes().value();
+    std::vector<xla::DimensionVector> output_dims =
+        pjrt_computation.executable->GetOutputDimensions().value()[0];
+    XLA_CHECK_EQ(output_dims.size(), num_outputs);
+    std::vector<xla::PrimitiveType> output_types =
+        pjrt_computation.executable->GetOutputElementTypes().value()[0];
+    XLA_CHECK_EQ(output_types.size(), num_outputs);
+
     std::vector<xla::OpSharding> output_shardings =
         pjrt_computation.executable->GetOutputShardings().value();
 
-    XLA_CHECK_EQ(output_shardings.size(), num_returns);
+    XLA_CHECK_EQ(output_shardings.size(), num_outputs);
 
-    for (int32_t j = 0; j < num_returns; j++) {
+    for (int32_t i = 0; i < num_outputs; i++) {
       std::vector<std::shared_ptr<PjRtData>> shards(devices.size());
 
-      for (int32_t i = 0; i < devices.size(); i++) {
-        XLA_CHECK_EQ(results[i].size(), num_returns);
+      for (int32_t d = 0; d < devices.size(); d++) {
+        XLA_CHECK_EQ(results[d].size(), num_outputs);
 
-        std::unique_ptr<xla::PjRtBuffer> buffer = std::move(results[i][j]);
-        xla::PjRtDevice* pjrt_device = StringToPjRtDevice(devices[i]);
+        std::unique_ptr<xla::PjRtBuffer> buffer = std::move(results[d][i]);
+        xla::PjRtDevice* pjrt_device = StringToPjRtDevice(devices[d]);
         XLA_CHECK(pjrt_device == buffer->device())
             << "Exepected device: " << pjrt_device->DebugString()
             << " vs. actual device: " << buffer->device()->DebugString();
 
-        shards[i] = std::make_shared<PjRtData>(devices[i], std::move(buffer));
+        shards[d] = std::make_shared<PjRtData>(devices[d], std::move(buffer));
       }
 
       auto data = std::make_shared<PjRtShardedData>(
-          spmd_device_str, output_shapes[j], std::move(shards),
-          output_shardings[j]);
+          spmd_device_str,
+          xla::ShapeUtil::MakeShape(output_types[i], output_dims[i]),
+          std::move(shards), output_shardings[i]);
+      TF_VLOG(5) << "Created sharded data with shape "
+                 << data->shape().ToString();
       data_handles.push_back(data);
     }
   }
