@@ -57,8 +57,9 @@ def _make_input_signatures(
     yield tf.TensorSpec(
         shape=spec.shape, dtype=getattr(tf, spec.dtype), name=f'args_{i}')
 
+
 def _mangle_tf_root_scope_name(name):
-  # TF has more restricted constrain on the varaible names at root scope.
+  # TF has more restricted constrain on the variable names at root scope.
   # Root scope name constrain: [A-Za-z0-9.][A-Za-z0-9_.\\-/]*
   # Non-root scope name constrain: [A-Za-z0-9_.\\-/]*
   # https://github.com/tensorflow/tensorflow/blob/51b601fa6bb7e801c0b6ae73c25580e40a8b5745/tensorflow/python/framework/ops.py#L3301-L3302
@@ -68,6 +69,7 @@ def _mangle_tf_root_scope_name(name):
     return 'k' + name
   else:
     return name
+
 
 def save_stablehlo_graph_as_tf(
     stablehlo_program: stablehlo.StableHLOGraphModule,
