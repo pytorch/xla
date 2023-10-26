@@ -723,7 +723,7 @@ PjRtComputationClient::ExecuteReplicated(
         tsl::profiler::TraceMeLevel::kInfo);
     size_t num_outputs = results[0].size();
 
-    // Next few calls are expected to output vectors of size [1 x outputs]
+    // Output dims and types are expected to have size [hlo_modules x outputs]
     std::vector<std::shared_ptr<xla::HloModule>> hlo_modules =
         pjrt_computation.executable->GetHloModules().value();
     XLA_CHECK_EQ(hlo_modules.size(), 1)
