@@ -44,6 +44,13 @@ versioned_builds = [
     git_tag         = "v2.1.0"
     package_version = "2.1"
     accelerator     = "tpu"
+    python_version  = "3.9"
+    bundle_libtpu   = "0"
+  },
+  {
+    git_tag         = "v2.1.0"
+    package_version = "2.1"
+    accelerator     = "tpu"
     python_version  = "3.10"
     bundle_libtpu   = "0"
   },
@@ -65,9 +72,30 @@ versioned_builds = [
   },
   {
     git_tag         = "v2.1.0"
+    package_version = "2.1",
+    accelerator     = "cuda"
+    cuda_version    = "12.0"
+    python_version  = "3.9"
+  },
+  {
+    git_tag         = "v2.1.0"
+    package_version = "2.1",
+    accelerator     = "cuda"
+    cuda_version    = "12.0"
+    python_version  = "3.10"
+  },
+  {
+    git_tag         = "v2.1.0"
     package_version = "2.1"
     accelerator     = "cuda"
     cuda_version    = "11.8"
+  },
+  {
+    git_tag         = "v2.1.0"
+    package_version = "2.1"
+    accelerator     = "cuda"
+    cuda_version    = "11.8"
+    python_version  = "3.9"
   },
   {
     git_tag         = "v2.1.0"
