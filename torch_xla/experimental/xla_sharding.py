@@ -506,6 +506,33 @@ def mark_sharding(
   return XLAShardedTensor(t)
 
 
+@xr.requires_pjrt
+def mark_sharding_dynamo_custom_op(
+    t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
+    partition_spec: Tuple[Union[Tuple, int, str, None]]) -> XLAShardedTensor:
+  """
+    Same functionality as `mark_sharding` above, except this variant uses the custom mark_sharding op in torch_xla._XLAC to allow dynamo to recognize and trace it.
+  """
+  num_devices = xr.global_runtime_device_count()
+  assert num_devices > 0, "This requires XLA supported device(s)."
+  assert mesh.size() == num_devices, \
+    f"{mesh.mesh_shape} is not mappable over {num_devices} devices."
+  # We only allow fully specified `partition_spec` to be applicable, as opposed
+  # to filling in the unspecified replicated dims. Fully specified `partiion_spec`
+  # should be of the same rank as `t`. This is to support partial replication
+  # where the group assignment may vary with different input ranks.
+  assert len(t.shape) == len(partition_spec), \
+    f"Partition spec length ({len(partition_spec)}) should be equal to the input rank ({len(t.shape)})."
+
+  op_sharding = mesh.get_op_sharding(partition_spec)
+
+  if isinstance(t, XLAShardedTensor):
+    torch_xla._XLAC._xla_mark_sharding(t.global_tensor, op_sharding)
+    return t
+  torch_xla._XLAC._xla_mark_sharding(t, op_sharding)
+  return XLAShardedTensor(t)
+
+
 def clear_sharding(t: Union[torch.Tensor, XLAShardedTensor]) -> torch.Tensor:
   """Clear sharding annotation from the input tensor and return a `cpu` casted tensor."""
   torch_xla._XLAC._xla_clear_sharding(t)

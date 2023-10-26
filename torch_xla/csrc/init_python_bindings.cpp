@@ -1625,7 +1625,7 @@ void InitXlaModuleBindings(py::module m) {
     // Register sharded tensor data.
     XLAGraphExecutor::Get()->RegisterTensor(xtensor->data());
   });
-  m.def("_xla_mark_sharding_custom_op",
+  m.def("_xla_mark_sharding_dynamo_custom_op",
         [](const at::Tensor& input, xla::OpSharding sharding) {
           XLATensorPtr xtensor = bridge::GetXlaTensor(input);
           tensor_methods::custom_mark_sharding(xtensor, sharding);

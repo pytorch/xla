@@ -1230,7 +1230,7 @@ xla::XlaOp BuildCustomSharding(const xla::XlaOp& input) {
 
 xla::XlaOp BuildCustomMarkSharding(const torch::lazy::BackendDevice& device,
                                    const xla::XlaOp& input,
-                                   const xla::XlaOp sharding) {
+                                   const xla::XlaOp& sharding) {
   return xla::CustomCall(input.builder(), /*call_target_name=*/"MarkSharding",
                          {input}, ShapeHelper::ShapeOfXlaOp(input));
 }
