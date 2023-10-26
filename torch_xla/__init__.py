@@ -31,6 +31,7 @@ def _setup_xla_flags():
                              (('xla_gpu_force_compilation_parallelism', '8'),))
   os.environ['XLA_FLAGS'] = ' '.join(flags)
 
+
 def _setup_libtpu_flags():
   flags = os.environ.get('LIBTPU_INIT_ARGS', '').split(' ')
   # This flag will rerun the latency hidding scheduler if the default
@@ -40,8 +41,9 @@ def _setup_libtpu_flags():
   # Lower shared memory limit means less communiation and computation overlapping,
   # and thus worse performance.
   flags = _set_missing_flags(flags,
-                            (('xla_latency_hiding_scheduler_rerun', '1'),))
+                             (('xla_latency_hiding_scheduler_rerun', '1'),))
   os.environ['LIBTPU_INIT_ARGS'] = ' '.join(flags)
+
 
 def _setup_default_env():
   os.environ.setdefault('TF_CPP_MIN_LOG_LEVEL', '1')
