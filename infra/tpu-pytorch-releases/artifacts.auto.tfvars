@@ -49,11 +49,20 @@ xrt_versioned_builds = [
 
 # Built on push to specific tag.
 versioned_builds = [
+  # Remove libtpu from PyPI builds
   {
     git_tag         = "v2.1.0"
     pytorch_git_rev = "v2.1.0"
     package_version = "2.1.0"
     accelerator     = "tpu"
+    bundle_libtpu   = "0"
+  },
+  {
+    git_tag         = "v2.1.0"
+    pytorch_git_rev = "v2.1.0"
+    package_version = "2.1.0"
+    accelerator     = "tpu"
+    python_version  = "3.9"
     bundle_libtpu   = "0"
   },
   {
@@ -64,6 +73,7 @@ versioned_builds = [
     python_version  = "3.10"
     bundle_libtpu   = "0"
   },
+  # Bundle libtpu for Kaggle
   {
     git_tag         = "v2.1.0"
     pytorch_git_rev = "v2.1.0"
