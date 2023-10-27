@@ -342,9 +342,12 @@ class CheckpointManagerTest(DistributedCheckpointTestBase):
     super().setUp()
     # Initialize the a minimal process group
     dist.init_process_group(
-        backend='gloo', init_method='tcp://127.1:8932', world_size=1, rank=0)
+        backend='gloo',
+        init_method='tcp://localhost:8932',
+        world_size=1,
+        rank=0)
     torch_xla._XLAC._ensure_xla_coordinator_initialized(
-        global_rank=0, world_size=1, master_addr="127.1")
+        global_rank=0, world_size=1, master_addr="localhost")
 
   def tearDown(self):
     super().tearDown()

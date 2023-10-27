@@ -9,12 +9,12 @@
 #include "pjrt_computation_client.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
-//#include "torch_xla/csrc/runtime/xla_coordinator.h"
 #include "torch_xla/csrc/runtime/env_vars.h"
 #include "torch_xla/csrc/runtime/multi_wait.h"
 #include "torch_xla/csrc/runtime/stablehlo_helper.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
 #include "torch_xla/csrc/runtime/thread_pool.h"
+#include "torch_xla/csrc/runtime/xla_coordinator.h"
 #include "tsl/profiler/lib/traceme.h"
 #include "xla/client/xla_builder.h"
 #include "xla/client/xla_computation.h"
@@ -119,7 +119,8 @@ PjRtComputationClient::PjRtComputationClient() {
     // Use the XlaCoordinator as the distributed key-value store.
     coordinator_ = std::make_unique<XlaCoordinator>(
         global_process_rank, global_world_size, master_addr, port);
-    auto distributed_client = coordinator_->GetClient();
+    std::shared_ptr<xla::DistributedRuntimeClient> distributed_client =
+        coordinator_->GetClient();
     auto allowed_devices =
         std::make_optional<std::set<int>>(std::set{local_process_rank});
     xla::PjRtClient::KeyValueGetCallback kv_get = nullptr;
@@ -185,6 +186,13 @@ PjRtComputationClient::PjRtComputationClient() {
   }
   // manually create the device_locks for SPMD device
   device_locks_.emplace(spmd_device_str, std::make_unique<std::shared_mutex>());
+}
+
+PjRtComputationClient::~PjRtComputationClient() {
+  // In the GPU case, the PjRtClient depends on the DistributedRuntimeClient
+  // tracked in XlaCoordinator, so the PjRtClient must be destroyed first.
+  client_ = nullptr;
+  coordinator_ = nullptr;
 }
 
 bool PjRtComputationClient::CoordinatorInitialized() const {

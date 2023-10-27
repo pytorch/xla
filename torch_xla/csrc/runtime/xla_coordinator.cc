@@ -30,6 +30,7 @@ XlaCoordinator::XlaCoordinator(int global_rank, int world_size,
 }
 
 XlaCoordinator::~XlaCoordinator() {
+  preemption_sync_manager_ = nullptr;
   if (dist_runtime_client_ != nullptr) {
     XLA_CHECK(dist_runtime_client_->Shutdown().ok())
         << "Failed to shut down the distributed runtime client.";

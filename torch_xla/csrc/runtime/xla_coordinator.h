@@ -4,12 +4,7 @@
 #include <memory>
 
 #include "tsl/distributed_runtime/preemption/preemption_sync_manager.h"
-
-// Forward declaration
-namespace xla {
-class DistributedRuntimeClient;
-class DistributedRuntimeService;
-}  // namespace xla
+#include "xla/pjrt/distributed/distributed.h"
 
 namespace torch_xla {
 namespace runtime {

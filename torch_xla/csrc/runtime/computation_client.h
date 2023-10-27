@@ -30,7 +30,10 @@
 namespace torch_xla {
 namespace runtime {
 
-// Forward declaration
+// Forward declare XlaCoordinator to avoid logging macro redefinition from the
+// transitively included PJRT header.
+// TODO(jonbolin): We need a way to ensure the right macros are included
+// regardless of the import order.
 class XlaCoordinator;
 
 // Somehow the compiler doesn't allow type that has default member being

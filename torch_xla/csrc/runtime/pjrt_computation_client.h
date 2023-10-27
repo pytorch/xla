@@ -11,7 +11,6 @@
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/util.h"
-#include "torch_xla/csrc/runtime/xla_coordinator.h"
 #include "xla/client/xla_computation.h"
 #include "xla/literal.h"
 #include "xla/pjrt/pjrt_client.h"
@@ -24,6 +23,7 @@ namespace runtime {
 class PjRtComputationClient : public ComputationClient {
  public:
   PjRtComputationClient();
+  ~PjRtComputationClient();
 
   DataPtr CreateDataPlaceholder(std::string device, xla::Shape shape) override;
 
@@ -90,9 +90,9 @@ class PjRtComputationClient : public ComputationClient {
 
   std::map<std::string, Metric> GetMetrics() const override;
 
-  void InitializeCoordinator(
-      int global_rank, int world_size, std::string master_addr,
-      std::string port = XlaCoordinator::kDefaultCoordinatorPort) override;
+  void InitializeCoordinator(int global_rank, int world_size,
+                             std::string master_addr,
+                             std::string port) override;
 
   XlaCoordinator& GetCoordinator() override;
 
