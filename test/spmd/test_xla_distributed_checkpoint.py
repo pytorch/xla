@@ -343,6 +343,8 @@ class CheckpointManagerTest(DistributedCheckpointTestBase):
     # Initialize the a minimal process group
     dist.init_process_group(
         backend='gloo', init_method='tcp://127.1:8932', world_size=1, rank=0)
+    torch_xla._XLAC._ensure_xla_coordinator_initialized(
+        global_rank=0, world_size=1, master_addr="127.1")
 
   def tearDown(self):
     super().tearDown()
@@ -491,8 +493,6 @@ class CheckpointManagerTest(DistributedCheckpointTestBase):
 
   def test_preemption_sync_manager(self):
     try:
-      torch_xla._XLAC._ensure_dist_runtime_initialized(
-          global_rank=0, world_size=1, master_addr="127.1")
       torch_xla._XLAC._activate_preemption_sync_manager()
       sync_point_reached = torch_xla._XLAC._sync_point_reached
 
@@ -516,8 +516,8 @@ class CheckpointManagerTest(DistributedCheckpointTestBase):
         time.sleep(1)
       self.assertTrue(success, "Sync point was never reached after SIGTERM")
     finally:
-      # Scope the distributed runtime to the lifespan of the test.
-      torch_xla._XLAC._ensure_dist_runtime_shutdown()
+      # Scope the PreemptionSyncManager to the lifespan of the test.
+      torch_xla._XLAC._deactivate_preemption_sync_manager()
 
 
 if __name__ == '__main__':

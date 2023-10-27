@@ -9,7 +9,7 @@
 #include "pjrt_computation_client.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
-#include "torch_xla/csrc/runtime/distributed_runtime.h"
+//#include "torch_xla/csrc/runtime/xla_coordinator.h"
 #include "torch_xla/csrc/runtime/env_vars.h"
 #include "torch_xla/csrc/runtime/multi_wait.h"
 #include "torch_xla/csrc/runtime/stablehlo_helper.h"
@@ -114,12 +114,12 @@ PjRtComputationClient::PjRtComputationClient() {
     std::string master_addr =
         runtime::sys_util::GetEnvString("MASTER_ADDR", "localhost");
     std::string port = runtime::sys_util::GetEnvString(
-        "XLA_COORDINATOR_PORT", DistributedRuntime::kDefaultCoordinatorPort);
+        "XLA_COORDINATOR_PORT", XlaCoordinator::kDefaultCoordinatorPort);
 
-    // Use the DistributedRuntime as the distributed key-value store.
-    DistributedRuntime::Initialize(global_process_rank, global_world_size,
-                                   master_addr, port);
-    auto distributed_client = DistributedRuntime::Get().GetClient();
+    // Use the XlaCoordinator as the distributed key-value store.
+    coordinator_ = std::make_unique<XlaCoordinator>(
+        global_process_rank, global_world_size, master_addr, port);
+    auto distributed_client = coordinator_->GetClient();
     auto allowed_devices =
         std::make_optional<std::set<int>>(std::set{local_process_rank});
     xla::PjRtClient::KeyValueGetCallback kv_get = nullptr;
@@ -185,6 +185,26 @@ PjRtComputationClient::PjRtComputationClient() {
   }
   // manually create the device_locks for SPMD device
   device_locks_.emplace(spmd_device_str, std::make_unique<std::shared_mutex>());
+}
+
+bool PjRtComputationClient::CoordinatorInitialized() const {
+  return coordinator_ != nullptr;
+}
+
+void PjRtComputationClient::InitializeCoordinator(int global_rank,
+                                                  int world_size,
+                                                  std::string master_addr,
+                                                  std::string port) {
+  XLA_CHECK(coordinator_ == nullptr)
+      << "Can only initialize the XlaCoordinator once.";
+  coordinator_ = std::make_unique<XlaCoordinator>(global_rank, world_size,
+                                                  master_addr, port);
+}
+
+XlaCoordinator& PjRtComputationClient::GetCoordinator() {
+  XLA_CHECK(coordinator_ != nullptr)
+      << "XlaCoordinator has not been initialized";
+  return *coordinator_;
 }
 
 void PjRtComputationClient::PjRtData::Assign(

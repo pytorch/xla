@@ -1,14 +1,14 @@
-#include "torch_xla/csrc/runtime/distributed_runtime.h"
+#include "torch_xla/csrc/runtime/xla_coordinator.h"
 
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
+#include "xla/pjrt/distributed/distributed.h"
 
 namespace torch_xla {
 namespace runtime {
 
-DistributedRuntime::DistributedRuntime(int global_rank, int world_size,
-                                       std::string master_addr,
-                                       std::string port) {
+XlaCoordinator::XlaCoordinator(int global_rank, int world_size,
+                               std::string master_addr, std::string port) {
   std::string dist_service_addr = absl::StrJoin({master_addr, port}, ":");
   if (global_rank == 0) {
     xla::CoordinationServiceImpl::Options service_options;
@@ -29,7 +29,7 @@ DistributedRuntime::DistributedRuntime(int global_rank, int world_size,
       << "Failed to initialize distributed runtime client";
 }
 
-DistributedRuntime::~DistributedRuntime() {
+XlaCoordinator::~XlaCoordinator() {
   if (dist_runtime_client_ != nullptr) {
     XLA_CHECK(dist_runtime_client_->Shutdown().ok())
         << "Failed to shut down the distributed runtime client.";
@@ -41,13 +41,13 @@ DistributedRuntime::~DistributedRuntime() {
   }
 }
 
-std::shared_ptr<xla::DistributedRuntimeClient> DistributedRuntime::GetClient() {
+std::shared_ptr<xla::DistributedRuntimeClient> XlaCoordinator::GetClient() {
   XLA_CHECK(dist_runtime_client_ != nullptr)
       << "distributed runtime client is null.";
   return dist_runtime_client_;
 }
 
-void DistributedRuntime::ActivatePreemptionSyncManager() {
+void XlaCoordinator::ActivatePreemptionSyncManager() {
   if (preemption_sync_manager_ == nullptr) {
     preemption_sync_manager_ = std::move(tsl::CreatePreemptionSyncManager());
     auto client = dist_runtime_client_->GetCoordinationServiceAgent();
@@ -57,10 +57,14 @@ void DistributedRuntime::ActivatePreemptionSyncManager() {
   }
 }
 
-bool DistributedRuntime::ReachedSyncPoint(int step) {
+void XlaCoordinator::DeactivatePreemptionSyncManager() {
+  preemption_sync_manager_ = nullptr;
+}
+
+bool XlaCoordinator::ReachedSyncPoint(int step) {
   XLA_CHECK(preemption_sync_manager_ != nullptr)
       << "A PreemptionSyncManager has not been registered with the "
-         "DistributedRuntime.";
+         "XlaCoordinator.";
   return preemption_sync_manager_->ReachedSyncPoint(step);
 }
 

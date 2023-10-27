@@ -30,6 +30,9 @@
 namespace torch_xla {
 namespace runtime {
 
+// Forward declaration
+class XlaCoordinator;
+
 // Somehow the compiler doesn't allow type that has default member being
 // used as a default parameter in a method defined in the same scope.
 // Therefore, ClientExecuteOptions is defined here instead of within
@@ -347,6 +350,17 @@ class ComputationClient {
   // Block until pass in devices' async operation are finished. If empty, all
   // the local devices will be waited for.
   virtual void WaitDeviceOps(const std::vector<std::string>& devices) = 0;
+
+  // Check whether the XlaCoordinator has been initialized.
+  virtual bool CoordinatorInitialized() const = 0;
+
+  // Initialize the XlaCoordinator for the runtime.
+  virtual void InitializeCoordinator(int global_rank, int world_size,
+                                     std::string master_addr,
+                                     std::string port) = 0;
+
+  // Return the XlaCoordinator for the runtime.
+  virtual XlaCoordinator& GetCoordinator() = 0;
 
   // Utility API around the vector based Compile() API to compile a single
   // computation.

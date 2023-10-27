@@ -11,6 +11,7 @@
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/util.h"
+#include "torch_xla/csrc/runtime/xla_coordinator.h"
 #include "xla/client/xla_computation.h"
 #include "xla/literal.h"
 #include "xla/pjrt/pjrt_client.h"
@@ -89,6 +90,14 @@ class PjRtComputationClient : public ComputationClient {
 
   std::map<std::string, Metric> GetMetrics() const override;
 
+  void InitializeCoordinator(
+      int global_rank, int world_size, std::string master_addr,
+      std::string port = XlaCoordinator::kDefaultCoordinatorPort) override;
+
+  XlaCoordinator& GetCoordinator() override;
+
+  bool CoordinatorInitialized() const override;
+
   // NOT IMPLEMENTED
 
   MemoryInfo GetMemoryInfo(const std::string& device) override {
@@ -97,6 +106,7 @@ class PjRtComputationClient : public ComputationClient {
 
  private:
   std::shared_ptr<xla::PjRtClient> client_;
+  std::unique_ptr<XlaCoordinator> coordinator_;
   // global_ordinals_ tracks a map from PjRtDeviceId to the device's
   // dense global ordinal.
   std::unordered_map<int, int> global_ordinals_;
