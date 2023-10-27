@@ -225,7 +225,7 @@
               
               
                 <div class="version">
-                  master (2.2.0+gitb0dca12 )
+                  master (2.2.0+git63ea76c )
                 </div>
               
             
@@ -392,6 +392,7 @@
 <li><a class="reference internal" href="#hybrid-mesh">Hybrid Mesh</a></li>
 <li><a class="reference internal" href="#id28">Partition Spec</a></li>
 <li><a class="reference internal" href="#xlashardedtensor">XLAShardedTensor</a></li>
+<li><a class="reference internal" href="#dtensor-integration">DTensor Integration</a></li>
 <li><a class="reference internal" href="#sharding-aware-host-to-device-data-loading">Sharding-Aware Host-to-Device Data Loading</a></li>
 <li><a class="reference internal" href="#distributed-checkpointing">Distributed Checkpointing</a></li>
 <li><a class="reference internal" href="#virtual-device-optimization">Virtual Device Optimization</a></li>
@@ -3278,6 +3279,21 @@ PyTorch/XLA should have been installed successfully.</p>
 </ul>
 <p>There is also an ongoing effort to integrate <span class="raw-html-m2r"><code>XLAShardedTensor</code></span> into <span class="raw-html-m2r"><code>DistributedTensor</code></span> API to support XLA backend [<a class="reference external" href="https://github.com/pytorch/pytorch/issues/92909">RFC</a>].</p>
 </div>
+<div class="section" id="dtensor-integration">
+<h3>DTensor Integration<a class="headerlink" href="#dtensor-integration" title="Permalink to this headline">¶</a></h3>
+<p>PyTorch has prototype-released <a class="reference external" href="https://github.com/pytorch/pytorch/blob/main/torch/distributed/_tensor/README.md">DTensor</a> in 2.1.
+We are integrating PyTorch/XLA SPMD into DTensor API <a class="reference external" href="https://github.com/pytorch/pytorch/issues/92909">RFC</a>. We have a proof-of-concept integration for <code class="docutils literal notranslate"><span class="pre">distribute_tensor</span></code>, which calls <code class="docutils literal notranslate"><span class="pre">mark_sharding</span></code> annotation API to shard a tensor and its computation using XLA:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">from</span> <span class="nn">torch.distributed</span> <span class="kn">import</span> <span class="n">DeviceMesh</span><span class="p">,</span> <span class="n">Shard</span><span class="p">,</span> <span class="n">distribute_tensor</span>
+
+<span class="c1"># distribute_tensor now works with `xla` backend using PyTorch/XLA SPMD.</span>
+<span class="n">mesh</span> <span class="o">=</span> <span class="n">DeviceMesh</span><span class="p">(</span><span class="s2">&quot;xla&quot;</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">world_size</span><span class="p">)))</span>
+<span class="n">big_tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="mi">100000</span><span class="p">,</span> <span class="mi">88</span><span class="p">)</span>
+<span class="n">my_dtensor</span> <span class="o">=</span> <span class="n">distribute_tensor</span><span class="p">(</span><span class="n">big_tensor</span><span class="p">,</span> <span class="n">mesh</span><span class="p">,</span> <span class="p">[</span><span class="n">Shard</span><span class="p">(</span><span class="mi">0</span><span class="p">)])</span>
+</pre></div>
+</div>
+<p>This feature is experimental and stay tuned for more updates, examples and tutorials in the upcoming releases.</p>
+</div>
 <div class="section" id="sharding-aware-host-to-device-data-loading">
 <h3>Sharding-Aware Host-to-Device Data Loading<a class="headerlink" href="#sharding-aware-host-to-device-data-loading" title="Permalink to this headline">¶</a></h3>
 <p>PyTorch/XLA SPMD takes a single-device program, shards and executes it in parallel. The SPMD execution requires using the native PyTorch DataLoader, which transfers data synchronously from the host to XLA devices. This blocks the training during the input data transfer every step. To improve the native data loading performance, we made PyTorch/XLA ParallelLoader support input sharding directly (src), when passed the optional kwarg _input_sharding_:</p>
@@ -3568,6 +3584,7 @@ PyTorch/XLA should have been installed successfully.</p>
 <li><a class="reference internal" href="#hybrid-mesh">Hybrid Mesh</a></li>
 <li><a class="reference internal" href="#id28">Partition Spec</a></li>
 <li><a class="reference internal" href="#xlashardedtensor">XLAShardedTensor</a></li>
+<li><a class="reference internal" href="#dtensor-integration">DTensor Integration</a></li>
 <li><a class="reference internal" href="#sharding-aware-host-to-device-data-loading">Sharding-Aware Host-to-Device Data Loading</a></li>
 <li><a class="reference internal" href="#distributed-checkpointing">Distributed Checkpointing</a></li>
 <li><a class="reference internal" href="#virtual-device-optimization">Virtual Device Optimization</a></li>
