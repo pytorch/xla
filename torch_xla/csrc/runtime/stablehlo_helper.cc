@@ -5,6 +5,7 @@
 #include "mlir/IR/Verifier.h"       // from @llvm-project
 #include "mlir/Pass/PassManager.h"  // from @llvm-project
 #include "mlir/Transforms/Passes.h"
+#include "stablehlo/api/PortableApi.h"        // from @stablehlo
 #include "stablehlo/dialect/Serialization.h"  // from @stablehlo
 #include "stablehlo/dialect/StablehloOps.h"   // from @stablehlo
 #include "stablehlo/dialect/VhloOps.h"        // from @stablehlo
@@ -37,13 +38,23 @@ static std::string getMlirModuleStr(mlir::ModuleOp& mlir_module) {
   return txt_mlir_module;
 }
 
-static std::string getMlirModuleBytecode(const mlir::ModuleOp& mlir_module) {
+static std::string getMlirModuleBytecode(mlir::ModuleOp& mlir_module) {
+  static bool from_pretty_print =
+      runtime::sys_util::GetEnvBool("STABLEHLO_BYTECODE_FROM_PRETTYPRINT", false);
   std::string txt_mlir_module;
   llvm::raw_string_ostream os{txt_mlir_module};
   // TODO(lsiyuan): get the highest StableHLO version from runtime.
-  auto result = mlir::stablehlo::serializePortableArtifact(
-      mlir_module, /* target_version = */ "0.14.1", os);
-  XLA_CHECK(result.succeeded()) << "Serializing StableHLO Failed";
+  const std::string stablehlo_version = "0.14.23";
+  if (!from_pretty_print) {
+    auto result = mlir::stablehlo::serializePortableArtifact(
+        mlir_module, /* target_version = */ stablehlo_version, os);
+    XLA_CHECK(result.succeeded()) << "Serializing StableHLO Failed";
+  } else {
+    std::string pretty_print_txt = getMlirModuleStr(mlir_module);
+    auto result = mlir::stablehlo::serializePortableArtifact(
+      pretty_print_txt, /* target_version = */ stablehlo_version, os);
+    XLA_CHECK(result.succeeded()) << "Serializing StableHLO Failed";
+  }
   return txt_mlir_module;
 }
 
