@@ -213,7 +213,7 @@ In the above example, `--nnodes` means how many machines (physical machines or V
 
 ### Multi-node GPU training
 
-Note that this feature only works for cuda 12+. Similar to how PyTorch uses multi-node training, you can run the command as below:
+**Note that this feature only works for cuda 12+**. Similar to how PyTorch uses multi-node training, you can run the command as below:
 
 ```
 PJRT_DEVICE=GPU torchrun \
