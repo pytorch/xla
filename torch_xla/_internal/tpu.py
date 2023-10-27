@@ -311,9 +311,8 @@ def _spmd_find_master_ip(current_worker_ip: str) -> str:
   shard = torch.LongTensor([[xr.process_index(), ip_int]])
   op_sharding = xs.Mesh(range(n_dev), (n_dev, 1)).get_op_sharding((0, 1))
   global_tensor = from_cpu_shards([shard] * local_ndev, op_sharding).cpu()
-  try:
-    # Process 0 may not control device 0, so we must do a linear search.
-    master_ip = next(ip for proc, ip in global_tensor.tolist() if proc == 0)
-  except StopIteration:
-    raise RuntimeError('Could not find IP of host running process 0')
-  return str(ip_address(master_ip))
+  # Process 0 may not control device 0, so we must do a linear search.
+  for proc, ip in global_tensor.tolist():
+    if proc == 0:
+      return str(ip_address(ip))
+  raise RuntimeError('Could not find IP of host running process 0')
