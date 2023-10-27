@@ -209,7 +209,7 @@ You can also use `torchrun` to initiate the single-node multi-GPU training. For 
 PJRT_DEVICE=GPU torchrun --nnodes 1 --nproc-per-node ${NUM_GPU_DEVICES} xla/test/test_train_mp_imagenet.py --fake_data --batch_size=128 --num_epochs=1
 ```
 
-In the above example, `nnodes` means how many machines (physical machines or VMs) to be used (it is 1 since we do single-node training). `NUM_GPU_DEVICES` means how many GPU devices to be used.
+In the above example, `--nnodes` means how many machines (physical machines or VMs) to be used (it is 1 since we do single-node training). `--nproc-per-node` means how many GPU devices to be used.
 
 ### Multi-node GPU training
 
@@ -218,15 +218,15 @@ Note that this feature only works for cuda 12+. Similar to how PyTorch uses mult
 ```
 PJRT_DEVICE=GPU torchrun \
 --nnodes=${NUMBER_GPU_VM} \
---node_rank=${CURRENT_HOST_RANK} \
+--node_rank=${CURRENT_NODE_RANK} \
 --nproc_per_node=${NUMBER_LOCAL_GPU_DEVICES} \
 --rdzv_endpoint=<internal_ip_address:port> multinode_training.py
 ```
 
-`--nnodes`: how many GPU machines to be used.
-`--node_rank`: the index of the current GPU machines. The value can be 0, 1, ..., ${NUMBER_GPU_VM}-1.
-`--nproc_per_node`: the number of GPU devices to be used on the current machine.
-`--rdzv_endpoint`: the endpoint of the GPU machine with node_rank==0, in the form <host>:<port>. The `host` will be the internal IP address. The port can be any available port on the machine.
+- `--nnodes`: how many GPU machines to be used.
+- `--node_rank`: the index of the current GPU machines. The value can be 0, 1, ..., ${NUMBER_GPU_VM}-1.
+- `--nproc_per_node`: the number of GPU devices to be used on the current machine.
+- `--rdzv_endpoint`: the endpoint of the GPU machine with node_rank==0, in the form <host>:<port>. The `host` will be the internal IP address. The port can be any available port on the machine.
 
 For example, if you want to train on 2 GPU machines: machine_0 and machine_1, on the first GPU machine machine_0, run
 
