@@ -21,5 +21,7 @@ m = prepare_pt2e(m, quantizer)
 m = convert_pt2e(m)
 
 # Trace with torch/xla and export stablehlo
-stablehlo_txt = quantize_utils.pt2e_reference_model_to_stablehlo(m, input_args)
-print(stablehlo_txt)
+# stablehlo_txt = quantize_utils.pt2e_reference_model_to_stablehlo(m, input_args,True)
+# print(stablehlo_txt)
+
+quantize_utils.pt2e_reference_model_to_tf_saved_model(m, input_args, '/tmp/tf_saved_model/tmp1')

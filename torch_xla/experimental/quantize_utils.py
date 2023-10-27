@@ -1,26 +1,17 @@
+import os
 import torch
 from torch.fx import GraphModule
-from torch.utils import _pytree as pytree
-import torch_xla.core.xla_model as xm
 from torch_xla.experimental.quantized import (
     xla_quantize_per_channel,
     xla_quantize_per_tensor,
     xla_dequantize_per_channel,
     xla_dequantize_per_tensor,
 )
-from torch_xla.stablehlo import XLAExportInterpreter
+from torch_xla import stablehlo
+from torch_xla.tf_saved_model_integration import save_stablehlo_graph_as_tf
 from typing import Any, Tuple
 
-
-def pt2e_reference_model_to_stablehlo(m: GraphModule, args: Tuple[Any,
-                                                                  ...]) -> str:
-  exported_model = torch.export.export(m, args)
-  exported_model(*args)
-
-  #   print("check exported reference module")
-  #   exported_model.graph_module.graph.print_tabular()
-
-  def replace_xla_qdq(g: torch.fx.GraphModule):
+def replace_xla_qdq(g: torch.fx.GraphModule):
     _QUANTIZE_PER_TENSOR_OPS = [
         torch.ops.quantized_decomposed.quantize_per_tensor.default,
         torch.ops.quantized_decomposed.quantize_per_tensor.tensor,
@@ -46,21 +37,23 @@ def pt2e_reference_model_to_stablehlo(m: GraphModule, args: Tuple[Any,
         elif n.target in _DEQUANTIZE_PER_CHANNEL_OPS:
           n.target = xla_dequantize_per_channel
 
-  replace_xla_qdq(exported_model.graph_module)
+def pt2e_reference_model_to_stablehlo(m: GraphModule, args: Tuple[Any,
+                                                                  ...], emit_bytecode=False) -> str:
+  exported = torch.export.export(m, args)
+  replace_xla_qdq(exported.graph_module)
+  options = stablehlo.StableHLOExportOptions(override_tracing_arguments=args)
+  stablehlo_model = stablehlo.exported_program_to_stablehlo(exported, options)
 
-  # TODO: replace with exported_program_to_stablehlo
-  # Trace with XLA
-  device = xm.xla_device()
-  args = pytree.tree_map_only(torch.Tensor, lambda x: x.to(device=device), args)
-  param_and_buffer_keys = exported_model.graph_signature.parameters + exported_model.graph_signature.buffers
-  state_dict = pytree.tree_map_only(torch.Tensor, lambda x: x.to(device=device),
-                                    exported_model.state_dict)
-  param_buffer_values = (state_dict[key] for key in param_and_buffer_keys)
-  num_mutations = len(exported_model.graph_signature.buffers_to_mutate)
+  if emit_bytecode:
+    return stablehlo_model.get_stablehlo_bytecode()
+  else:
+    return stablehlo_model.get_stablehlo_text()
 
-  with torch.no_grad():
-    res = XLAExportInterpreter(exported_model.graph_module, device).run(
-        *param_buffer_values, *args, enable_io_processing=False)
-    res = res[num_mutations:]
-    stablehlo = xm.get_stablehlo(res)
-    return stablehlo
+def pt2e_reference_model_to_tf_saved_model(m: GraphModule, args: Tuple[Any,
+                                                                  ...],
+                                          saved_model_dir: os.PathLike) -> str:
+  exported = torch.export.export(m, args)
+  replace_xla_qdq(exported.graph_module)
+  options = stablehlo.StableHLOExportOptions(override_tracing_arguments=args)
+  stablehlo_model = stablehlo.exported_program_to_stablehlo(exported, options)
+  save_stablehlo_graph_as_tf(stablehlo_model, saved_model_dir)

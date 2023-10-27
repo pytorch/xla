@@ -1,11 +1,12 @@
 import itertools
 import sys
 import os
-from typing import List, Tuple, Any
+from typing import List, Tuple, Any, Union
 import copy
 import logging
 
 import torch
+from torch.fx import GraphModule
 from torch_xla import stablehlo
 
 try:
@@ -120,7 +121,7 @@ def save_stablehlo_graph_as_tf(
 
 
 def save_torch_module_as_tf_saved_model(
-    torch_model: torch.nn.Module,
+    torch_model: Union[torch.nn.Module, GraphModule],
     args: Tuple[Any],
     saved_model_dir: os.PathLike,
     serving_key: str = tf.saved_model.DEFAULT_SERVING_SIGNATURE_DEF_KEY,
@@ -139,7 +140,10 @@ def save_torch_module_as_tf_saved_model(
     function_alias: str - passed through saved_model.save, used to tag a function for 
        inference converter or other tools.
   """
-  exported = torch.export.export(torch_model, args)
+  if isinstance(torch_model, GraphModule):
+    exported = torch.export.export(torch_model, args)
+  else:
+    exported = torch_model
   options = stablehlo.StableHLOExportOptions(override_tracing_arguments=args)
   stablehlo_model = stablehlo.exported_program_to_stablehlo(exported, options)
   save_stablehlo_graph_as_tf(stablehlo_model, saved_model_dir, serving_key,
