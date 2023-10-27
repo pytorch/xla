@@ -237,8 +237,6 @@ void DebugUtil::analyze_graph_execution_python_frame() {
      << "\n";
   ss << debug_output_prefix << "Execution Cause\n";
   if (frames[0].function == "mark_step") {
-    // TODO: be more specified about the caller of the mark step
-    // for example: parallelr loader, dynamo, step_trace, user code etc
     if (frames.size() == 1) {
       ss << debug_output_prefix << "  user mark_step\n";
     } else if (frames[1].function == "next" &&
@@ -249,12 +247,24 @@ void DebugUtil::analyze_graph_execution_python_frame() {
                endsWith(frames[1].file, "profiler.py")) {
       ss << debug_output_prefix
          << "  mark_step when exiting a profiler StepTrace region\n";
+    } else if ((frames[1].function == "extract_compiled_graph" ||
+                frames[1].function == "extract_internal") &&
+               endsWith(frames[1].file, "dynamo_bridge.py")) {
+      ss << debug_output_prefix
+         << "  mark_step when dynamo processing input graphs\n";
     }
+  } else if (frames[0].function == "extract_graph_helper" &&
+             endsWith(frames[0].file, "dynamo_bridge.py")) {
+    ss << debug_output_prefix << "  dynamo compiles FX graph to HLO\n";
+  } else {
+    // TODO(JackCaoG): be more specific about  exeuction caused by printing
+    // tensor or fallback or some weird indexing.
+    ss << debug_output_prefix
+       << "  most likely user code trying to access tensor value before "
+          "mark_step\n";
   }
-  // handle the exeuction caused by printing tensor or fallback or some
-  // weird indexing.
 
-  // make number of frames printed configurable
+  // TODO(JackCaoG): make number of frames printed configurable
   ss << debug_output_prefix << "Python Frame Triggered Execution: \n";
   for (auto& location : frames) {
     ss << debug_output_prefix << "  " << location.function << " ("
@@ -269,7 +279,8 @@ void DebugUtil::analyze_graph_execution_python_frame() {
         "=========="
      << "\n";
 
-  // print more information about the graph that is about to get executed.
+  // TODO(JackCaoG): print more information about the graph that is about to get
+  // executed.
   cerr << ss.str();
 }
 
