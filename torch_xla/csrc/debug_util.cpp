@@ -221,6 +221,8 @@ static bool endsWith(const std::string& str, const std::string& suffix) {
 void DebugUtil::analyze_graph_execution_python_frame() {
   static bool is_master_process =
       (runtime::sys_util::GetEnvInt("PJRT_LOCAL_PROCESS_RANK", 0) == 0);
+  static std::string debug_file_name =
+      runtime::sys_util::GetEnvString("PT_XLA_DEBUG_FILE", "");
   static std::string debug_output_prefix = "Execution Analysis: ";
   // TODO: Make this configurable.
   if (!is_master_process) {
@@ -231,16 +233,15 @@ void DebugUtil::analyze_graph_execution_python_frame() {
   // python frame must be > 1
   XLA_CHECK_GE(frames.size(), 1);
   std::stringstream ss;
-  ss << debug_output_prefix
+  ss << "\n"
+     << debug_output_prefix
      << "======================================================================"
         "=========="
      << "\n";
   ss << debug_output_prefix << "Execution Cause\n";
   if (frames[0].function == "mark_step") {
-    if (frames.size() == 1) {
-      ss << debug_output_prefix << "  user mark_step\n";
-    } else if (frames[1].function == "next" &&
-               endsWith(frames[1].file, "parallel_loader.py")) {
+    if (frames[1].function == "next" &&
+        endsWith(frames[1].file, "parallel_loader.py")) {
       ss << debug_output_prefix
          << "  mark_step in parallel loader at step end\n";
     } else if (frames[1].function == "__exit__" &&
@@ -252,6 +253,8 @@ void DebugUtil::analyze_graph_execution_python_frame() {
                endsWith(frames[1].file, "dynamo_bridge.py")) {
       ss << debug_output_prefix
          << "  mark_step when dynamo processing input graphs\n";
+    } else {
+      ss << debug_output_prefix << "  user mark_step\n";
     }
   } else if (frames[0].function == "extract_graph_helper" &&
              endsWith(frames[0].file, "dynamo_bridge.py")) {
@@ -281,7 +284,14 @@ void DebugUtil::analyze_graph_execution_python_frame() {
 
   // TODO(JackCaoG): print more information about the graph that is about to get
   // executed.
-  cerr << ss.str();
+  if (debug_file_name == "") {
+    // print to stderr by default
+    cerr << ss.str();
+  } else {
+    std::ofstream outFile;
+    outFile.open(debug_file_name, std::ios_base::app);
+    outFile << ss.rdbuf();
+  }
 }
 
 }  // namespace torch_xla
