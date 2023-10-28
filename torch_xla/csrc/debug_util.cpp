@@ -4,6 +4,7 @@
 #include <torch/csrc/lazy/python/python_util.h>
 
 #include <fstream>
+#include <iostream>
 #include <mutex>
 #include <sstream>
 #include <unordered_set>
@@ -18,9 +19,6 @@
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/unique.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
-
-#include <iostream>
-using std::cerr;
 
 namespace torch_xla {
 namespace {
@@ -286,7 +284,7 @@ void DebugUtil::analyze_graph_execution_python_frame() {
   // executed.
   if (debug_file_name == "") {
     // print to stderr by default
-    cerr << ss.str();
+    std::cerr << ss.str();
   } else {
     std::ofstream outFile;
     outFile.open(debug_file_name, std::ios_base::app);
