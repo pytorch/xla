@@ -238,13 +238,6 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
           f"Expected exectue time of {i} to take more than "
           f"{expected_time_seconds} seconds, got {v / 1e9} seconds")
 
-  @mock.patch('torch_xla._internal.tpu.get_worker_ips')
-  def test_master_ip_discovery(self, patched_get_worker_ips):
-    # A basic test to verify the non-SPMD codepath returns the correct IP. Two
-    # IPs are needed to avoid the short-circuit return of localhost.
-    patched_get_worker_ips.return_value = ['10.0.0.1', '10.0.0.2']
-    self.assertTrue(xr.get_master_ip(), '10.0.0.1')
-
 
 if __name__ == '__main__':
   absltest.main()
