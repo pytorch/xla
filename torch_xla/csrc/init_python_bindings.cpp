@@ -95,7 +95,6 @@ void PrepareToExit() {
       runtime::GetComputationClientIfInitialized();
   if (client != nullptr) {
     XLAGraphExecutor::Get()->WaitDeviceOps({});
-    client->PrepareToExit();
   }
 }
 

@@ -344,8 +344,6 @@ class ComputationClient {
 
   virtual MemoryInfo GetMemoryInfo(const std::string& device) = 0;
 
-  virtual void PrepareToExit() = 0;
-
   // Block until pass in devices' async operation are finished. If empty, all
   // the local devices will be waited for.
   virtual void WaitDeviceOps(const std::vector<std::string>& devices) = 0;
