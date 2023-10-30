@@ -245,7 +245,7 @@ On the second GPU machine, run
 --nnodes=2 \
 --node_rank=1 \
 --nproc_per_node=4 \
---rdzv_endpoint="<MACHINE_0_IP_ADDRESS>:12355" pytorch/xla/test/test_train_mp_imagenet_torchrun.py  --fake_data --pjrt_distributed --batch_size=128 --num_epochs=1
+--rdzv_endpoint="<MACHINE_0_IP_ADDRESS>:12355" pytorch/xla/test/test_train_mp_imagenet.py  --fake_data --pjrt_distributed --batch_size=128 --num_epochs=1
 ```
 
 the difference between the 2 commands above are `--node_rank` and potentially `--nproc_per_node` if you want to use different number of GPU devices on each machine. All the rest are identical. For more information about `torchrun`, please refer to this [page](https://pytorch.org/docs/stable/elastic/run.html).
