@@ -200,7 +200,7 @@ To use GPUs with PJRT, simply set `PJRT_DEVICE=GPU` and configure
 `GPU_NUM_DEVICES` to the number of devices on the host. For example:
 
 ```
-PJRT_DEVICE=GPU GPU_NUM_DEVICES=4 python3 xla/test/test_train_mp_imagenet.py --fake_data --pjrt_distributed --batch_size=128 --num_epochs=1
+PJRT_DEVICE=GPU GPU_NUM_DEVICES=4 python3 xla/test/test_train_mp_imagenet.py --fake_data --batch_size=128 --num_epochs=1
 ```
 
 You can also use `torchrun` to initiate the single-node multi-GPU training. For example,
