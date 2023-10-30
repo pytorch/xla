@@ -31,6 +31,14 @@ MODEL_OPTS = {
     '--ddp': {
         'action': 'store_true',
     },
+    '--pjrt_distributed': {
+        'action': 'store_true',
+    },
+    # Use xla:// init_method instead of env:// for `torch.distributed`.
+    # Required for DDP on TPU v2/v3 when using PJRT.
+    '--pjrt_distributed': {
+        'action': 'store_true',
+    },
     '--profile': {
         'action': 'store_true',
     },
@@ -175,7 +183,7 @@ def _train_update(device, step, loss, tracker, epoch, writer):
 
 
 def train_imagenet():
-  if FLAGS.ddp:
+  if FLAGS.ddp or FLAGS.pjrt_distributed:
     dist.init_process_group('xla', init_method='xla://')
 
   print('==> Preparing data..')
@@ -368,6 +376,7 @@ def _mp_fn(index, flags):
 
 if __name__ == '__main__':
   if dist.is_torchelastic_launched():
+    # output error AttributeError: module 'torch_xla.core.xla_env_vars' has no attribute 'MASTER_ADDR'
     _mp_fn(xu.getenv_as(xenv.LOCAL_RANK, int), FLAGS)
   else:
     xmp.spawn(_mp_fn, args=(FLAGS,), nprocs=FLAGS.num_cores)
