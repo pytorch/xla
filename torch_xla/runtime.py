@@ -242,3 +242,14 @@ def is_spmd():
   """Returns if SPMD is set for execution."""
   # TODO(yeounoh) replace this when we fully deprecate the flag.
   return xu.check_env_flag('XLA_USE_SPMD')
+
+
+@requires_pjrt
+def get_master_ip() -> str:
+  """Retrieve the master worker IP for the runtime. This calls into
+  backend-specific discovery APIs.
+
+  Returns master worker's IP address as a string."""
+  if device_type() == 'TPU':
+    return tpu.discover_master_worker_ip()
+  raise RuntimeError(f'IP discovery not supported for device: {device_type()}')
