@@ -1,5 +1,6 @@
 import functools
 import glob
+from ipaddress import ip_address
 import operator
 import os
 import pathlib
@@ -10,6 +11,7 @@ import requests
 import yaml
 
 import torch
+import torch_xla
 import torch_xla.utils.utils as xu
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.core.xla_model as xm
@@ -268,7 +270,10 @@ def configure_topology(local_rank: int,
 
 
 def discover_master_worker_ip(use_localhost: bool = True) -> str:
-  """Find the IP of the TPU host with TPU:0.
+  """Find the IP of the master TPU host.
+
+  In multiprocess, this is the host with TPU:0.
+  In SPMD mode, this is the host running process 0.
 
   TPU device IDs are nondeterministic and independent from Cloud TPU worker IDs.
 
@@ -276,15 +281,38 @@ def discover_master_worker_ip(use_localhost: bool = True) -> str:
     use_localhost: if there is only one TPU host, return 'localhost` instead
       of that host's internal IP.
   """
+  import torch_xla.runtime as xr
   worker_ips = get_worker_ips()
   if len(worker_ips) == 1:
     return 'localhost'
 
   tpu_env = get_tpu_env()
   current_worker_id = int(tpu_env[xenv.WORKER_ID])
+  if xr.is_spmd():
+    return _spmd_find_master_ip(worker_ips[current_worker_id])
+
   t = torch.tensor([current_worker_id], device=xm.xla_device())
   xm.collective_broadcast([t])
   xm.mark_step()
 
   master_worker_id = int(t.cpu())
   return worker_ips[master_worker_id]
+
+
+def _spmd_find_master_ip(current_worker_ip: str) -> str:
+  import torch_xla.runtime as xr
+  import torch_xla.experimental.xla_sharding as xs
+  from_cpu_shards = torch_xla._XLAC._global_tensor_from_cpu_shards
+  ip_int = int(ip_address(current_worker_ip))
+  n_dev = xr.global_runtime_device_count()
+  local_ndev = len(torch_xla._XLAC._xla_get_runtime_devices())
+  # Create a global (n_dev x 2) tensor containing all process indices and IPs,
+  # and find the process 0 IP as the master IP.
+  shard = torch.LongTensor([[xr.process_index(), ip_int]])
+  op_sharding = xs.Mesh(range(n_dev), (n_dev, 1)).get_op_sharding((0, 1))
+  global_tensor = from_cpu_shards([shard] * local_ndev, op_sharding).cpu()
+  # Process 0 may not control device 0, so we must do a linear search.
+  for proc, ip in global_tensor.tolist():
+    if proc == 0:
+      return str(ip_address(ip))
+  raise RuntimeError('Could not find IP of host running process 0')
