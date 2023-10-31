@@ -228,6 +228,18 @@ def get_dataloaders():
   return train_device_loader, test_device_loader
     
 
+class MultipleEpochsDataset(Dataset):
+    def __init__(self, original_dataset, num_epochs):
+        self.original_dataset = original_dataset
+        self.num_epochs = num_epochs
+        self.length = len(self.original_dataset) * self.num_epochs
+
+    def __len__(self):
+        return self.length
+
+    def __getitem__(self, index):
+        return self.original_dataset[index % len(self.original_dataset)]
+
 def get_lmdb_dataset():
     resize_dim = FLAGS.img_dim
     normalize = transforms.Normalize(
@@ -273,6 +285,7 @@ def get_dataset():
         transforms.ConvertImageDtype(torch.bfloat16),
         normalize,
     ]))
+  #train_dataset = MultipleEpochsDataset(train_dataset, 4)
   resize_dim = max(FLAGS.img_dim, 256)
   test_dataset = torchvision.datasets.ImageFolder(
       os.path.join(FLAGS.datadir, 'val'),
@@ -322,6 +335,7 @@ def _train_update(device, step, loss, tracker, epoch, writer):
   #xm.master_print(f'loss: {loss.item()}')
 
 def train_imagenet():
+  print('preparing data ====> ')
   torch.manual_seed(FLAGS.seed)
   device = xm.xla_device() 
   model =  resnet_model.Resnet50(FLAGS.num_label_classes).to(device)  
@@ -411,11 +425,11 @@ def train_imagenet():
     return accuracy.item()
 
   accuracy, max_accuracy = 0.0, 0.0
-  for epoch in range(1, FLAGS.num_epochs + 1):
+  for epoch in range(1, (FLAGS.num_epochs + 1+3)//4):
     xm.master_print('Epoch {} train begin {}'.format(epoch, test_utils.now()))
     train_loop_fn(train_device_loader, epoch)
     xm.master_print('Epoch {} train end {}'.format(epoch, test_utils.now()))
-    if not FLAGS.train_only and epoch%4==0: # run eval every 4 epochs 
+    if not FLAGS.train_only and epoch: # run eval every 4 epochs 
       accuracy = test_loop_fn(test_device_loader, epoch)
       xm.master_print('Epoch {} test end {}, Accuracy={:.2f}'.format(
           epoch, test_utils.now(), accuracy))
