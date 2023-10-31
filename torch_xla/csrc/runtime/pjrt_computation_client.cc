@@ -732,14 +732,22 @@ PjRtComputationClient::ExecuteReplicated(
     const std::vector<xla::Shape>& output_shapes =
         result_shape.IsTuple() ? hlo_modules->result_shape().tuple_shapes()
                                : std::vector<xla::Shape>({result_shape});
-    xla::OpSharding output_sharding = hlo_modules->spmd_output_sharding().ToProto();
+
     std::vector<xla::OpSharding> output_shardings;
-    if (output_sharding.type() == xla::OpSharding::TUPLE) {
-      auto tuple_shardings = output_sharding.tuple_shardings();
-      output_shardings = std::vector<xla::OpSharding>({tuple_shardings.begin(), tuple_shardings.end()});
+    if (hlo_modules->has_spmd_output_sharding()) {
+      xla::OpSharding output_sharding = hlo_modules->spmd_output_sharding().ToProto();
+      if (output_sharding.type() == xla::OpSharding::TUPLE) {
+        auto tuple_shardings = output_sharding.tuple_shardings();
+        output_shardings = std::vector<xla::OpSharding>({tuple_shardings.begin(), tuple_shardings.end()});
+      } else {
+        output_shardings = std::vector<xla::OpSharding>({output_sharding});
+      }
     } else {
-      output_shardings = std::vector<xla::OpSharding>({output_sharding});
+      // Without an explicit sharding annotation, the output is implicitly
+      // replicated
+      output_shardings = std::vector<xla::OpSharding>(output_shapes.size(), xla::HloSharding::Replicate().ToProto());
     }
+    XLA_CHECK_EQ(output_shapes.size(), output_shardings.size());
 
     auto mwait = std::make_shared<util::MultiWait>(num_outputs);
     for (int32_t i = 0; i < num_outputs; ++i) {
