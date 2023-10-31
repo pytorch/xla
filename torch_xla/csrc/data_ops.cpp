@@ -180,8 +180,6 @@ std::vector<int64_t> BuildSqueezedDimensions(
   std::sort(squeeze_dims.begin(), squeeze_dims.end());
   std::vector<int64_t> output_dimensions;
   size_t i = 0;
-  std::vector<int64_t> tmp(dimensions.begin(), dimensions.end());
-  std::cout << "in: " << tmp << " seq: " << squeeze_dims << std::endl;
   for (size_t j = 0; j < dimensions.size(); j++) {
     auto dim = dimensions[j];
     if (i == squeeze_dims.size() || j < squeeze_dims[i]) {
