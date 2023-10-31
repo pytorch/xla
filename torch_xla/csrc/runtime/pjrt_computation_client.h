@@ -85,8 +85,6 @@ class PjRtComputationClient : public ComputationClient {
 
   std::shared_ptr<std::vector<std::string>> GetReplicationDevices() override;
 
-  void PrepareToExit() override { return; };
-
   void WaitDeviceOps(const std::vector<std::string>& devices) override;
 
   std::map<std::string, Metric> GetMetrics() const override;
