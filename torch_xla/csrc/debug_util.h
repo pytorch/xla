@@ -46,6 +46,10 @@ class DebugUtil {
                                      absl::Span<const size_t> indices);
 
   static bool ExperimentEnabled(const std::string& name);
+
+  // warning, this function should only be called when a graph execution is
+  // about to happen.
+  static void analyze_graph_execution_python_frame();
 };
 
 }  // namespace torch_xla

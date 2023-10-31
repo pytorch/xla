@@ -108,6 +108,11 @@ function run_save_tensor_hlo {
   XLA_SAVE_TENSORS_FILE="/tmp/xla_test_save_ir.txt" XLA_SAVE_TENSORS_FMT="hlo" run_test "$@"
 }
 
+function run_pt_xla_debug {
+  echo "Running in save tensor file mode: $@"
+  PT_XLA_DEBUG=1 PT_XLA_DEBUG_FILE="/tmp/pt_xla_debug.txt" run_test "$@"
+}
+
 function run_stablehlo_compile {
   echo "Running in StableHlo Compile mode: $@"
   XLA_STABLEHLO_COMPILE=1 run_test "$@"
@@ -156,6 +161,7 @@ function run_xla_op_tests1 {
   run_test "$CDIR/test_grad_checkpoint.py"
   run_test "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_test_without_functionalization "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
+  run_pt_xla_debug "$CDIR/test_pt_xla_debug.py"
   run_test "$CDIR/test_async_closures.py"
   run_test "$CDIR/test_profiler.py"
   run_test "$CDIR/pjrt/test_runtime.py"
