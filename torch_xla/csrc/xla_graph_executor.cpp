@@ -1322,6 +1322,9 @@ XLAGraphExecutor::SyncTensorsGraphInternal(
     const SyncTensorsConfig& config, bool warm_up_cache_only) {
   tsl::profiler::TraceMe activity("SyncTensorsGraphInternal",
                                   tsl::profiler::TraceMeLevel::kInfo);
+  if (runtime::sys_util::GetEnvBool("PT_XLA_DEBUG", false)) {
+    DebugUtil::analyze_graph_execution_python_frame();
+  }
   SyncTensorCollection coll = CollectSyncTensors(*tensors, config);
   if (coll.indices.empty()) {
     // Enure previous execution is complete before exiting this
