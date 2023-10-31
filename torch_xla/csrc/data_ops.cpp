@@ -175,6 +175,29 @@ std::vector<int64_t> BuildSqueezedDimensions(
   return output_dimensions;
 }
 
+std::vector<int64_t> BuildSqueezedDimensions(
+    absl::Span<const int64_t> dimensions, std::vector<int64_t>& squeeze_dims) {
+  std::sort(squeeze_dims.begin(), squeeze_dims.end());
+  std::vector<int64_t> output_dimensions;
+  size_t i = 0;
+  std::vector<int64_t> tmp(dimensions.begin(), dimensions.end());
+  std::cout << "in: " << tmp << " seq: " << squeeze_dims << std::endl;
+  for (size_t j = 0; j < dimensions.size(); j++) {
+    auto dim = dimensions[j];
+    if (i == squeeze_dims.size() || j < squeeze_dims[i]) {
+      output_dimensions.push_back(dim);
+      continue;
+    }
+    // Checks to see if we need to squeeze the dim or not.
+    if (dim != 1) {
+      output_dimensions.push_back(dim);
+    }
+    i++;
+  }
+  std::cout << "output_dims: " << output_dimensions << std::endl;
+  return output_dimensions;
+}
+
 std::vector<int64_t> BuildUnsqueezeDimensions(
     absl::Span<const int64_t> dimensions, int64_t dim) {
   XLA_CHECK_LE(dim, dimensions.size());
