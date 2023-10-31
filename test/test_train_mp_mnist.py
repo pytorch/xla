@@ -5,6 +5,9 @@ MODEL_OPTS = {
     '--ddp': {
         'action': 'store_true',
     },
+    '--pjrt_distributed': {
+        'action': 'store_true',
+    },
 }
 
 FLAGS = args_parse.parse_common_options(
@@ -73,7 +76,7 @@ def _train_update(device, step, loss, tracker, epoch, writer):
 
 
 def train_mnist(flags, **kwargs):
-  if flags.ddp:
+  if flags.ddp or flags.pjrt_distributed:
     dist.init_process_group('xla', init_method='xla://')
 
   torch.manual_seed(1)
