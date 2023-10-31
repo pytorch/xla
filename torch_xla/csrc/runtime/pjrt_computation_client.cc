@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/runtime/pjrt_computation_client.h"
 
 #include <algorithm>
+#include <future>
 #include <unordered_set>
 #include <vector>
 
@@ -652,6 +653,8 @@ PjRtComputationClient::ExecuteReplicated(
     tsl::profiler::TraceMe activity(
         "PjRtComputationClient::ExecuteReplicated_argument_handle",
         tsl::profiler::TraceMeLevel::kInfo);
+
+    auto mwait = std::make_shared<util::MultiWait>(arguments.size());
     for (int32_t i = 0; i < arguments.size(); ++i) {
       auto buffer_converter = [&, i]() {
         auto pjrt_data =
@@ -713,59 +716,51 @@ PjRtComputationClient::ExecuteReplicated(
         }));
   }
 
-  std::vector<ComputationClient::DataPtr> data_handles;
-  data_handles.reserve(results.size());
-  std::vector<size_t> dims(results.size());
+  size_t num_outputs = results[0].size();
+  std::vector<ComputationClient::DataPtr> data_handles(num_outputs);
 
   {
     tsl::profiler::TraceMe activity(
         "PjRtComputationClient::ExecuteReplicated_result_handle",
         tsl::profiler::TraceMeLevel::kInfo);
-    size_t num_outputs = results[0].size();
 
-    // Output dims and types are expected to have size [hlo_modules x outputs]
-    std::vector<std::shared_ptr<xla::HloModule>> hlo_modules =
-        pjrt_computation.executable->GetHloModules().value();
-    XLA_CHECK_EQ(hlo_modules.size(), 1)
-        << "Expected one HLO module with multiple outputs.";
-    const xla::Shape& result_shape = hlo_modules[0]->result_shape();
+    xla::HloModuleConfig hlo_config(computation.program_shape());
+    std::unique_ptr<xla::HloModule> hlo_modules = ConsumeValue(
+        xla::HloModule::CreateFromProto(computation.computation().proto(), hlo_config));
+    const xla::Shape& result_shape = hlo_modules->result_shape();
     TF_VLOG(3) << "Processing output with shape " << result_shape.ToString();
-
-    std::vector<xla::DimensionVector> output_dims =
-        pjrt_computation.executable->GetOutputDimensions().value()[0];
-    XLA_CHECK_EQ(output_dims.size(), num_outputs);
-    std::vector<xla::PrimitiveType> output_types =
-        pjrt_computation.executable->GetOutputElementTypes().value()[0];
-    XLA_CHECK_EQ(output_types.size(), num_outputs);
-
-    std::vector<xla::OpSharding> output_shardings =
-        pjrt_computation.executable->GetOutputShardings().value();
-
-    XLA_CHECK_EQ(output_shardings.size(), num_outputs);
-
-    for (int32_t i = 0; i < num_outputs; i++) {
-      std::vector<std::shared_ptr<PjRtData>> shards(devices.size());
-
-      for (int32_t d = 0; d < devices.size(); d++) {
-        XLA_CHECK_EQ(results[d].size(), num_outputs);
-
-        std::unique_ptr<xla::PjRtBuffer> buffer = std::move(results[d][i]);
-        xla::PjRtDevice* pjrt_device = StringToPjRtDevice(devices[d]);
-        XLA_CHECK(pjrt_device == buffer->device())
-            << "Exepected device: " << pjrt_device->DebugString()
-            << " vs. actual device: " << buffer->device()->DebugString();
-
-        shards[d] = std::make_shared<PjRtData>(devices[d], std::move(buffer));
-      }
-
-      auto data = std::make_shared<PjRtShardedData>(
-          spmd_device_str,
-          xla::ShapeUtil::MakeShape(output_types[i], output_dims[i]),
-          std::move(shards), output_shardings[i]);
-      TF_VLOG(5) << "Created sharded data with shape "
-                 << data->shape().ToString();
-      data_handles.push_back(data);
+    const std::vector<xla::Shape>& output_shapes =
+        result_shape.IsTuple() ? hlo_modules->result_shape().tuple_shapes()
+                               : std::vector<xla::Shape>({result_shape});
+    xla::OpSharding output_sharding = hlo_modules->spmd_output_sharding().ToProto();
+    std::vector<xla::OpSharding> output_shardings;
+    if (output_sharding.type() == xla::OpSharding::TUPLE) {
+      auto tuple_shardings = output_sharding.tuple_shardings();
+      output_shardings = std::vector<xla::OpSharding>({tuple_shardings.begin(), tuple_shardings.end()});
+    } else {
+      output_shardings = std::vector<xla::OpSharding>({output_sharding});
     }
+
+    auto mwait = std::make_shared<util::MultiWait>(num_outputs);
+    for (int32_t i = 0; i < num_outputs; ++i) {
+      auto collect_shards = [&, i]() {
+        std::vector<std::shared_ptr<PjRtData>> shards(devices.size());
+        for (int32_t d = 0; d < devices.size(); d++) {
+          std::unique_ptr<xla::PjRtBuffer> buffer = std::move(results[d][i]);
+          shards[d] = std::make_shared<PjRtData>(devices[d], std::move(buffer));
+        }
+
+        data_handles[i] = std::make_shared<PjRtShardedData>(
+            spmd_device_str,
+            output_shapes[i],
+            std::move(shards), output_shardings[i]);
+        TF_VLOG(5) << "Created sharded data with shape "
+                   << data_handles[i]->shape().ToString();
+      };
+      env::ScheduleIoClosure(util::MultiWait::Completer(
+          mwait, std::move(collect_shards)));
+    }
+    mwait->Wait();
   }
 
   TF_VLOG(1) << "Returning " << data_handles.size() << " sharded outputs.";
