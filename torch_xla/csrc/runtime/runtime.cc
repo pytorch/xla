@@ -24,6 +24,7 @@ ComputationClient* CreateClient() {
   if (sys_util::GetEnvString(env::kEnvPjRtDevice, "") != "") {
     client = new PjRtComputationClient();
   } else {
+    g_computation_client_initialized = false;
     XLA_ERROR() << "$PJRT_DEVICE is not set." << std::endl;
   }
 
