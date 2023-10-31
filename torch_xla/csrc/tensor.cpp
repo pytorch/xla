@@ -19,6 +19,7 @@
 #include <stdexcept>
 #include <unordered_set>
 
+#include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/layout_manager.h"
@@ -139,9 +140,9 @@ XLATensor::XLATensor(std::shared_ptr<View> view,
 XLATensor::XLATensor(std::shared_ptr<Data> data)
     : torch::lazy::LazyTensor(data),
       data_(std::move(data)),
-      storage_(c10::Storage(
-          {}, 0,
-          c10::DataPtr(nullptr, backendDeviceToAtenDevice(data_->device)))) {}
+      storage_(c10::Storage({}, 0,
+                            c10::DataPtr(nullptr, bridge::XlaDeviceToAtenDevice(
+                                                      data_->device)))) {}
 
 auto XLATensor::data() const -> const std::shared_ptr<Data>& {
   XLA_CHECK(data_ != nullptr) << "Trying to access a null cursor";

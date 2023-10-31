@@ -23,6 +23,16 @@ class AtenXlaTensorTest : public AtenXlaTensorTestBase {};
 
 }  // namespace
 
+TEST_F(AtenXlaTensorTest, TestStorage) {
+  torch::Tensor a = torch::tensor({0.0});
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    XLATensorPtr xla_tensor_a = bridge::GetXlaTensor(xla_a);
+    EXPECT_EQ(xla_a.device(), xla_tensor_a->Storage().device());
+    AllClose(a, xla_a);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestEmpty) {
   torch::Tensor a = torch::zeros({2, 2}, torch::TensorOptions(torch::kFloat));
   ForEachDevice([&](const torch::Device& device) {
