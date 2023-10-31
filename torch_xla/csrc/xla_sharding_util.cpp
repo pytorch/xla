@@ -728,15 +728,7 @@ runtime::ComputationClient::DataPtr ShardingUtil::CreateShardedData(
     auto shard_device = ParseDeviceString(devices[j]);
     auto shard_shape =
         CreateComputationShapeFromTensor(local_shards[j], &shard_device);
-    auto populate_fn =
-        [&, j, shard_device](
-            const runtime::ComputationClient::TensorSource& source_tensor,
-            void* dest_buffer, size_t dest_buffer_size) {
-          PopulateTensorBuffer(local_shards[j], source_tensor.shape,
-                               dest_buffer, dest_buffer_size, shard_device);
-        };
-    source_tensors.emplace_back(shard_shape, devices[j],
-                                std::move(populate_fn));
+    source_tensors.emplace_back(local_shards[j], shard_shape, devices[j]);
   }
   return runtime::GetComputationClient()->TransferShardsToServer(
       source_tensors, GetVirtualDevice().toString(), global_shape, sharding);

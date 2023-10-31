@@ -1,6 +1,7 @@
 #ifndef XLA_CLIENT_COMPUTATION_CLIENT_H_
 #define XLA_CLIENT_COMPUTATION_CLIENT_H_
 
+#include <ATen/Tensor.h>
 #include <torch/csrc/lazy/backend/backend_data.h>
 #include <torch/csrc/lazy/backend/lowering_context.h>
 #include <torch/csrc/lazy/core/hash.h>
@@ -192,17 +193,23 @@ class ComputationClient {
     // The PopulateFn accepts a dense buffer is standard array layout
     // (dim0-major) and deposits the source tensor data directly over the
     // provided buffer.
-    using PopulateFn = std::function<void(const TensorSource&, void*, size_t)>;
+    // using PopulateFn = std::function<void(const TensorSource&, void*, size_t)>;
 
     TensorSource() = default;
-    TensorSource(xla::Shape shape, std::string device, PopulateFn populate_fn)
-        : shape(std::move(shape)),
-          device(std::move(device)),
-          populate_fn(std::move(populate_fn)) {}
+    // TensorSource(xla::Shape shape, std::string device, PopulateFn populate_fn)
+    //     : shape(std::move(shape)),
+    //       device(std::move(device)),
+          // populate_fn(std::move(populate_fn)) {}
 
+    TensorSource(const at::Tensor& tensor, xla::Shape shape, std::string device)
+        : tensor(std::move(tensor.contiguous())),
+          shape(std::move(shape)),
+          device(std::move(device)) {}
+
+    at::Tensor tensor;
     xla::Shape shape;
     std::string device;
-    PopulateFn populate_fn;
+    // PopulateFn populate_fn;
   };
 
   // TODO(wcromar): Should CompileInstance still exist? Should it be a subclass

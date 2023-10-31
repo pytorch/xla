@@ -4,6 +4,9 @@
 #include <unordered_set>
 #include <vector>
 
+// #include <c10/core/ScalarType.h>
+#include <ATen/Tensor.h>
+
 #include "absl/strings/ascii.h"
 #include "absl/types/span.h"
 #include "pjrt_computation_client.h"
@@ -267,24 +270,22 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
   for (auto& tensor : tensors) {
     xla::PjRtDevice* pjrt_device = StringToPjRtDevice(tensor.device);
 
-    auto literal = std::make_shared<xla::Literal>(tensor.shape);
-    tensor.populate_fn(tensor, literal->untyped_data(), literal->size_bytes());
-    std::vector<int64_t> byte_strides(literal->shape().dimensions_size());
-    XLA_CHECK_OK(xla::ShapeUtil::ByteStrides(literal->shape(),
+    std::vector<int64_t> byte_strides(tensor.shape.dimensions_size());
+    XLA_CHECK_OK(xla::ShapeUtil::ByteStrides(tensor.shape,
                                              absl::MakeSpan(byte_strides)));
-    total_size += literal->size_bytes();
+    // total_size += literal->size_bytes();
 
-    // Avoid use-after-free on `literal` due to unsequenced move and use.
-    xla::Literal* literal_pointer = literal.get();
     std::shared_ptr<xla::PjRtBuffer> buffer = std::move(
         client_
             ->BufferFromHostBuffer(
-                literal_pointer->untyped_data(),
-                literal_pointer->shape().element_type(),
-                literal_pointer->shape().dimensions(), byte_strides,
+                tensor.tensor.const_data_ptr(),
+                tensor.shape.element_type(),
+                tensor.shape.dimensions(),
+                byte_strides,
                 xla::PjRtClient::HostBufferSemantics::
                     kImmutableUntilTransferCompletes,
-                [literal{std::move(literal)}]() { /* frees literal */ },
+                // TODO: do I need this?
+                [tensor]() { /* frees tensor */ },
                 pjrt_device)
             .value());
 
