@@ -31,6 +31,9 @@ MODEL_OPTS = {
     '--ddp': {
         'action': 'store_true',
     },
+    '--pjrt_distributed': {
+        'action': 'store_true',
+    },
     '--profile': {
         'action': 'store_true',
     },
@@ -175,7 +178,7 @@ def _train_update(device, step, loss, tracker, epoch, writer):
 
 
 def train_imagenet():
-  if FLAGS.ddp:
+  if FLAGS.ddp or FLAGS.pjrt_distributed:
     dist.init_process_group('xla', init_method='xla://')
 
   print('==> Preparing data..')
