@@ -192,7 +192,6 @@ std::vector<int64_t> BuildSqueezedDimensions(
     }
     i++;
   }
-  std::cout << "output_dims: " << output_dimensions << std::endl;
   return output_dimensions;
 }
 
