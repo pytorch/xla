@@ -82,7 +82,7 @@ class Mesh:
 
   @functools.lru_cache(maxsize=None)
   def get_op_sharding(self,
-                      partition_spec: Tuple) -> torch_xla._XLAC.OpSharding:
+                      partition_spec: Tuple, flatten = False) -> torch_xla._XLAC.OpSharding:
     """
     Return the OpSharding for the given partition spec. This is an expensive
     operation as the mesh grows, so the value is cached for reuse.
@@ -104,6 +104,15 @@ class Mesh:
     replicate_dims = {i for i, d in enumerate(partition_spec) if d is None}
     group_assignment, replication_groups = _get_group_assignment(
         sharding_type, tile_assignment, len(partition_spec), replicate_dims)
+    
+    # If flatten = True, return the flattened version of OpSharding
+    # print each return type to debug
+    print(tile_assignment.tolist())
+    print(group_assignment)
+    print(replication_groups)
+    if flatten:
+      return (tile_assignment.tolist(), group_assignment, replication_groups, int(sharding_type))
+    
     return torch_xla._XLAC.OpSharding(tile_assignment.tolist(),
                                       group_assignment, replication_groups,
                                       int(sharding_type))
@@ -524,12 +533,14 @@ def mark_sharding_dynamo_custom_op(
   assert len(t.shape) == len(partition_spec), \
     f"Partition spec length ({len(partition_spec)}) should be equal to the input rank ({len(t.shape)})."
 
-  op_sharding = mesh.get_op_sharding(partition_spec)
+  tile_assignment, group_assignment, replication_groups, sharding_type = mesh.get_op_sharding(partition_spec, flatten = True)
 
+  print('about to call xla_mark_sharding_dynamo_custom_op')
   if isinstance(t, XLAShardedTensor):
-    torch_xla._XLAC._xla_mark_sharding(t.global_tensor, op_sharding)
+    torch.ops.xla.xla_mark_sharding_dynamo_custom_op(t.global_tensor, tile_assignment, group_assignment, replication_groups, sharding_type)
     return t
-  torch_xla._XLAC._xla_mark_sharding(t, op_sharding)
+  torch.ops.xla.xla_mark_sharding_dynamo_custom_op(t, tile_assignment, group_assignment, replication_groups, sharding_type)
+  print('xla_mark_sharding_dynamo_custom_op call finished')
   return XLAShardedTensor(t)
 
 

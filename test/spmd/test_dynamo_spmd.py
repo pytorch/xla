@@ -200,11 +200,35 @@ class DynamoSpmdInferenceTest(test_xla_sharding_base.XlaShardingTest):
     device = xm.xla_device()
     x_xla = torch.zeros((1, 8)).to(device)
     xla_res = fn_simple(x_xla)
-    xm.mark_step()
+    print(xla_res)
+    # xm.mark_step()
 
-    dynamo_linear = torch.compile(fn_simple, backend="openxla")
-    dynamo_res = dynamo_linear(x_xla)
-    torch.allclose(xla_res.cpu(), dynamo_res.cpu())
+    # dynamo_linear = torch.compile(fn_simple, backend="openxla")
+    # dynamo_res = dynamo_linear(x_xla)
+    # torch.allclose(xla_res.cpu(), dynamo_res.cpu())
+
+  # TODO (@wonjoo) Remove this test, this is just for debugging
+  def test_wonjoo(self):
+
+    def fn_simple(x):
+      print(f'x inside fn_simple before: {x}')
+      torch_xla._XLAC._xla_mark_sharding_dynamo_custom_op(x_xla, [0], [0], [0], 0)
+      print(f'x inside fn_simple after: {x}')
+      return x
+
+    device = xm.xla_device()
+
+    x_xla = torch.zeros((1, 8)).to(device)
+
+    # print(torch.ops.xla.add)
+    print(torch.ops.xla.max_pool2d_forward)
+    print(torch.ops.xla.xla_mark_sharding_dynamo_custom_op)
+    print(dir(torch.ops.xla.xla_mark_sharding_dynamo_custom_op))
+    # print(f'x_xla before: {x_xla}')
+
+    # dynamo_fn = torch.compile(fn_simple, backend="openxla")
+    # dynamo_res = dynamo_fn(x_xla)
+    # print(f'dynamo_res: {dynamo_res}')
 
 
 if __name__ == '__main__':
