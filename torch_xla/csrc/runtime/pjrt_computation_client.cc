@@ -540,7 +540,7 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
       mlir::MLIRContext context;
       mlir::ModuleOp mlir_module =
           mlir::ModuleOp::create(mlir::UnknownLoc::get(&context));
-      torch_xla::runtime::ConvertHloToStableHlo(
+      ConvertHloToStableHlo(
           instance.computation.mutable_proto(), &mlir_module);
       executable = ConsumeValue(client_->Compile(mlir_module, compile_options));
       StableHloCompileCounter()->AddValue(1);

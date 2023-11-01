@@ -199,23 +199,23 @@ at::Tensor AllReduce(const std::string& reduce_type, const at::Tensor& input,
   return bridge::AtenFromXlaTensor(std::move(result));
 }
 
-at::Tensor QuantizePerTensor(const at::Tensor& input,
+at::Tensor QuantizeTensor(const at::Tensor& input,
                              const std::vector<float>& scale_list,
                              const std::vector<float>& zero_point_list,
                              int quant_min, int quant_max,
                              const std::string& dtype, int axis) {
-  auto result = tensor_methods::quantize_per_tensor(
+  auto result = tensor_methods::quantize_tensor(
       bridge::GetXlaTensor(input), scale_list, zero_point_list, quant_min,
       quant_max, dtype, axis);
   return bridge::AtenFromXlaTensor(std::move(result));
 }
 
-at::Tensor DeQuantizePerTensor(const at::Tensor& input,
+at::Tensor DequantizeTensor(const at::Tensor& input,
                                const std::vector<float>& scale_list,
                                const std::vector<float>& zero_point_list,
                                int quant_min, int quant_max,
                                const std::string& dtype, int axis) {
-  auto result = tensor_methods::dequantize_per_tensor(
+  auto result = tensor_methods::dequantize_tensor(
       bridge::GetXlaTensor(input), scale_list, zero_point_list, quant_min,
       quant_max, dtype, axis);
   return bridge::AtenFromXlaTensor(std::move(result));
@@ -1126,26 +1126,26 @@ void InitXlaModuleBindings(py::module m) {
     }
     return result;
   });
-  m.def("_xla_quantize_per_tensor",
+  m.def("_xla_quantize_tensor",
         [](const at::Tensor& input, const std::vector<float>& scale_list,
            const std::vector<float>& zero_point_list, int quant_min,
            int quant_max, const std::string& dtype, int axis) -> at::Tensor {
           at::Tensor result;
           {
             NoGilSection nogil;
-            result = QuantizePerTensor(input, scale_list, zero_point_list,
+            result = QuantizeTensor(input, scale_list, zero_point_list,
                                        quant_min, quant_max, dtype, axis);
           }
           return result;
         });
-  m.def("_xla_dequantize_per_tensor",
+  m.def("_xla_dequantize_tensor",
         [](const at::Tensor& input, const std::vector<float>& scale_list,
            const std::vector<float>& zero_point_list, int quant_min,
            int quant_max, const std::string& dtype, int axis) -> at::Tensor {
           at::Tensor result;
           {
             NoGilSection nogil;
-            result = DeQuantizePerTensor(input, scale_list, zero_point_list,
+            result = DequantizeTensor(input, scale_list, zero_point_list,
                                          quant_min, quant_max, dtype, axis);
           }
           return result;
