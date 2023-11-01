@@ -117,7 +117,7 @@ class VirtualDeviceTest(test_xla_sharding_base.XlaShardingTest):
     t1_debug_info = torch_xla._XLAC._get_xla_tensor_debug_info(t1)
     # t1's upload to device should be deferred
     self.assertIn("Tensor on host: with size [5, 5]", t1_debug_info)
-    self.assertNotIn("TransferToServerTime", met.metric_names())
+    self.assertNotIn("TransferToDeviceTime", met.metric_names())
     # t1 should be on SPMD device under spmd context
     self.assertIn("Device: SPMD:0", t1_debug_info)
     self.assertIn("IR: None", t1_debug_info)
@@ -136,7 +136,7 @@ class VirtualDeviceTest(test_xla_sharding_base.XlaShardingTest):
     self.assertIn("Tensor on host: None", t1_debug_info_new)
     self.assertIn("xla::device_data", t1_debug_info_new)
     self.assertIn("XLAShardedData", t1_debug_info_new)
-    self.assertIn("TransferToServerTime", met.metric_names())
+    self.assertIn("TransferToDeviceTime", met.metric_names())
 
   def test_virtual_device_upload_after_tracing(self):
     met.clear_all()
@@ -149,7 +149,7 @@ class VirtualDeviceTest(test_xla_sharding_base.XlaShardingTest):
     # tensor should be uploaded to device after being used as input to other op.
     self.assertIn("Tensor on host: None", t1_debug_info_new)
     self.assertIn("xla::device_data", t1_debug_info_new)
-    self.assertIn("TransferToServerTime", met.metric_names())
+    self.assertIn("TransferToDeviceTime", met.metric_names())
 
   def test_virtual_device_upload_for_sharded_dataloader(self):
     met.clear_counters()
@@ -165,7 +165,7 @@ class VirtualDeviceTest(test_xla_sharding_base.XlaShardingTest):
     self.assertIn("Tensor on host: None", t1_debug_info)
     self.assertIn("xla::device_data", t1_debug_info)
     self.assertIn("XLAShardedData", t1_debug_info)
-    self.assertIn("TransferToServerTime", met.metric_names())
+    self.assertIn("TransferToDeviceTime", met.metric_names())
 
 
 if __name__ == '__main__':

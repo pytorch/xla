@@ -421,7 +421,7 @@ std::vector<at::Tensor> XLAGraphExecutor::GetTensors(
       async != nullptr ? async->tensors_data
                        : absl::Span<const torch::lazy::BackendDataPtr>());
 
-  // Execution is async in PJRT, so TransferFromServer may block until execution
+  // Execution is async in PJRT, so TransferFromDevice may block until execution
   // completes. Release the GIL so other threads can proceed and unblock any
   // collective computations.
   // HACK: This method may be called outside of python (mainly in C++ tests) or
@@ -436,7 +436,7 @@ std::vector<at::Tensor> XLAGraphExecutor::GetTensors(
     save = PyEval_SaveThread();
   }
   std::vector<xla::Literal> literals =
-      runtime::GetComputationClient()->TransferFromServer(
+      runtime::GetComputationClient()->TransferFromDevice(
           UnwrapXlaData(tensors_data));
   if (save) {
     PyEval_RestoreThread(save);
@@ -1333,7 +1333,7 @@ XLAGraphExecutor::SyncTensorsGraphInternal(
     // second `SyncTensorsGraphInternal` will find there is nothing to sync and
     // return. It is possible that by the time second `SyncTensorsGraphInternal`
     // returned, first computation is still running. If user trying to call
-    // `TransferFromServer` on placeholder XLAData, runtime will segfault. Force
+    // `TransferFromDevice` on placeholder XLAData, runtime will segfault. Force
     // the `SyncTensorsGraphInternal` to block until previous computation either
     // here or in `ScheduleSyncTensorsGraph` will solve this issue.
     TensorCollectionBarrier(&coll);

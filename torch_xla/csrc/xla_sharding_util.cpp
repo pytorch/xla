@@ -730,7 +730,7 @@ runtime::ComputationClient::DataPtr ShardingUtil::CreateShardedData(
         CreateComputationShapeFromTensor(local_shards[j], &shard_device);
     source_tensors.push_back(std::make_shared<runtime::AtenSource>(local_shards[j], shard_shape, devices[j]));
   }
-  return runtime::GetComputationClient()->TransferShardsToServer(
+  return runtime::GetComputationClient()->TransferShardsToDevice(
       source_tensors, GetVirtualDevice().toString(), global_shape, sharding);
 }
 
