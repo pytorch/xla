@@ -1,3 +1,6 @@
+// TODO(lsy323): This is a patch on the HLO->StableHLO converter, this allows the custom call to
+// stablehlo.uniform_quantize/dequantize to be converted to stablehlo.uniform_quantize/dequantize.
+// The patch can be removed after quantize/dequantize, quantized dtype support is added to HLO.
 diff --git a/xla/translate/hlo_to_mhlo/BUILD b/xla/translate/hlo_to_mhlo/BUILD
 index f74973ae1..8e3f0e06b 100644
 --- a/xla/translate/hlo_to_mhlo/BUILD
