@@ -41,8 +41,8 @@
 #include "torch_xla/csrc/ops/cumprod.h"
 #include "torch_xla/csrc/ops/cumsum.h"
 #include "torch_xla/csrc/ops/custom_sharding.h"
-#include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/ops/dequant_per_tensor.h"
+#include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/ops/diagonal.h"
 #include "torch_xla/csrc/ops/discrete_uniform.h"
 #include "torch_xla/csrc/ops/einsum.h"
@@ -2113,8 +2113,7 @@ XLATensorPtr quantize_per_tensor(const XLATensorPtr& input,
                                  const std::vector<float>& scale_list,
                                  const std::vector<float>& zero_point_list,
                                  int quant_min, int quant_max,
-                                 const std::string& dtype,
-                                 int axis) {
+                                 const std::string& dtype, int axis) {
   torch::lazy::NodePtr node = torch::lazy::MakeNode<QuantizePerTensor>(
       input->GetIrValue(), scale_list, zero_point_list, quant_min, quant_max,
       dtype, axis);
@@ -2122,11 +2121,10 @@ XLATensorPtr quantize_per_tensor(const XLATensorPtr& input,
 }
 
 XLATensorPtr dequantize_per_tensor(const XLATensorPtr& input,
-                                 const std::vector<float>& scale_list,
-                                 const std::vector<float>& zero_point_list,
-                                 int quant_min, int quant_max,
-                                 const std::string& dtype,
-                                 int axis) {
+                                   const std::vector<float>& scale_list,
+                                   const std::vector<float>& zero_point_list,
+                                   int quant_min, int quant_max,
+                                   const std::string& dtype, int axis) {
   torch::lazy::NodePtr node = torch::lazy::MakeNode<DequantizePerTensor>(
       input->GetIrValue(), scale_list, zero_point_list, quant_min, quant_max,
       dtype, axis);

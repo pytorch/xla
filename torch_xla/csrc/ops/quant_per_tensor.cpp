@@ -29,8 +29,7 @@ QuantizePerTensor::QuantizePerTensor(const torch::lazy::Value& input,
                                      const std::vector<float>& scale,
                                      const std::vector<float>& zero_point,
                                      int quant_min, int quant_max,
-                                     const std::string& dtype,
-                                     int axis)
+                                     const std::string& dtype, int axis)
     : XlaNode(
           xla_quantize_per_tensor, {input},
           GetXlaShape(input) /* fix when quant type is added to HLO */,
@@ -46,8 +45,9 @@ QuantizePerTensor::QuantizePerTensor(const torch::lazy::Value& input,
 
 torch::lazy::NodePtr QuantizePerTensor::Clone(
     torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<QuantizePerTensor>(
-      operands.at(0), scale_, zero_point_, quant_min_, quant_max_, dtype_, axis_);
+  return torch::lazy::MakeNode<QuantizePerTensor>(operands.at(0), scale_,
+                                                  zero_point_, quant_min_,
+                                                  quant_max_, dtype_, axis_);
 }
 
 // XlaOpVector QuantizePerTensor::Lower(LoweringContext* loctx) const {
@@ -69,7 +69,8 @@ static inline std::string MaybeAppendDecimalForInteger(float v) {
   return ss.str();
 }
 
-static std::string SeralizeFloatVector(const std::vector<float>& v, bool append_decimal=false) {
+static std::string SeralizeFloatVector(const std::vector<float>& v,
+                                       bool append_decimal = false) {
   std::stringstream ss;
   ss << '[';
   for (size_t i = 0; i < v.size(); ++i) {
@@ -78,7 +79,7 @@ static std::string SeralizeFloatVector(const std::vector<float>& v, bool append_
     }
     if (append_decimal) {
       ss << MaybeAppendDecimalForInteger(v.at(i));
-    } else{
+    } else {
       ss << v.at(i);
     }
   }
@@ -87,9 +88,8 @@ static std::string SeralizeFloatVector(const std::vector<float>& v, bool append_
 }
 
 // TODO: add more types
-static std::unordered_map<std::string, std::string> _type_str_map {
-  {"torch.int8", "si8"}
-};
+static std::unordered_map<std::string, std::string> _type_str_map{
+    {"torch.int8", "si8"}};
 
 XlaOpVector QuantizePerTensor::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
@@ -98,24 +98,26 @@ XlaOpVector QuantizePerTensor::Lower(LoweringContext* loctx) const {
   const std::string opname = "stablehlo.uniform_quantize";
   std::stringstream ss;
   ss << "{";
-    if (axis_ != -1) {
+  if (axis_ != -1) {
     ss << "quantization_dimension=" << axis_ << ',';
   }
   ss << "scale=" << SeralizeFloatVector(scale_, true) << ',';
   ss << "zero_point=" << SeralizeFloatVector(zero_point_) << ',';
   ss << "storage_type=" << _type_str_map.at(dtype_) << ',';
-  ss << "expressed_type=" << "f32" << ','; /* should equal to the input scalar type*/
+  ss << "expressed_type="
+     << "f32" << ','; /* should equal to the input scalar type*/
   ss << "storage_min=" << quant_min_ << ',';
   ss << "storage_max=" << quant_max_;
   ss << '}';
-  // ss << "{quantization_dimension=0, scale=[1.0,2.0], zero_point = [1,1], storage_type=si8, expressed_type=f32, storage_min=-128, storage_max=127}";
+  // ss << "{quantization_dimension=0, scale=[1.0,2.0], zero_point = [1,1],
+  // storage_type=si8, expressed_type=f32, storage_min=-128, storage_max=127}";
 
-  xla::XlaOp output =
-      xla::CustomCall(input.builder(), opname, {input}, input_shape, ss.str(),
-                      /*has_side_effect=*/false,
-                      /*output_operand_aliasing=*/{}, /*literal=*/nullptr,
-                      /*schedule=*/xla::CustomCallSchedule::SCHEDULE_NONE,
-                      /*api_version=*/xla::CustomCallApiVersion::API_VERSION_TYPED_FFI);
+  xla::XlaOp output = xla::CustomCall(
+      input.builder(), opname, {input}, input_shape, ss.str(),
+      /*has_side_effect=*/false,
+      /*output_operand_aliasing=*/{}, /*literal=*/nullptr,
+      /*schedule=*/xla::CustomCallSchedule::SCHEDULE_NONE,
+      /*api_version=*/xla::CustomCallApiVersion::API_VERSION_TYPED_FFI);
   return ReturnOp(output, loctx);
 }
 

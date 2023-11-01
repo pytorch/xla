@@ -39,8 +39,8 @@ static std::string getMlirModuleStr(mlir::ModuleOp& mlir_module) {
 }
 
 static std::string getMlirModuleBytecode(mlir::ModuleOp& mlir_module) {
-  static bool from_pretty_print =
-      runtime::sys_util::GetEnvBool("STABLEHLO_BYTECODE_FROM_PRETTYPRINT", false);
+  static bool from_pretty_print = runtime::sys_util::GetEnvBool(
+      "STABLEHLO_BYTECODE_FROM_PRETTYPRINT", false);
   std::string txt_mlir_module;
   llvm::raw_string_ostream os{txt_mlir_module};
   // TODO(lsiyuan): get the highest StableHLO version from runtime.
@@ -52,7 +52,7 @@ static std::string getMlirModuleBytecode(mlir::ModuleOp& mlir_module) {
   } else {
     std::string pretty_print_txt = getMlirModuleStr(mlir_module);
     auto result = mlir::stablehlo::serializePortableArtifact(
-      pretty_print_txt, /* target_version = */ stablehlo_version, os);
+        pretty_print_txt, /* target_version = */ stablehlo_version, os);
     XLA_CHECK(result.succeeded()) << "Serializing StableHLO Failed";
   }
   return txt_mlir_module;

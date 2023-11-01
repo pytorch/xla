@@ -25,4 +25,5 @@ stablehlo_txt = quantize_utils.pt2e_reference_model_to_stablehlo(m, input_args)
 print(stablehlo_txt)
 
 # Save as tf.saved_model
-quantize_utils.pt2e_reference_model_to_tf_saved_model(m, input_args, '/tmp/tf_saved_model/tmp1')
+quantize_utils.pt2e_reference_model_to_tf_saved_model(
+    m, input_args, '/tmp/tf_saved_model/tmp1')

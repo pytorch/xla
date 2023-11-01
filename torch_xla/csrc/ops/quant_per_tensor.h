@@ -10,9 +10,7 @@ class QuantizePerTensor : public XlaNode {
   QuantizePerTensor(const torch::lazy::Value& input,
                     const std::vector<float>& scale,
                     const std::vector<float>& zero_point, int quant_min,
-                    int quant_max,
-                    const std::string& dtype,
-                    int axis);
+                    int quant_max, const std::string& dtype, int axis);
 
   std::string ToString() const override;
 

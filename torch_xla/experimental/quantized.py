@@ -9,6 +9,7 @@ xla_quantized_lib.define(
     "xla_quantize_per_tensor(Tensor input, float scale, int zero_point, "
     "int quant_min, int quant_max, ScalarType dtype) -> Tensor")
 
+
 @impl(xla_quantized_lib, "xla_quantize_per_tensor", "CompositeExplicitAutograd")
 def xla_quantize_per_tensor(input: torch.Tensor, scale: float, zero_point: int,
                             quant_min: int, quant_max: int, dtype: torch.dtype):
@@ -16,22 +17,27 @@ def xla_quantize_per_tensor(input: torch.Tensor, scale: float, zero_point: int,
                        torch.tensor([zero_point], dtype=torch.float), quant_min,
                        quant_max, dtype)
 
+
 @impl(xla_quantized_lib, "xla_quantize_per_tensor", "Meta")
 def xla_quantize_per_tensor(input: torch.Tensor, scale: float, zero_point: int,
                             quant_min: int, quant_max: int, dtype: torch.dtype):
   return torch.empty_like(input, dtype=dtype)
 
+
 xla_quantized_lib.define(
     "xla_quantize_per_channel(Tensor input, Tensor scales, Tensor zero_points, int axis, "
     "int quant_min, int quant_max, ScalarType dtype) -> Tensor")
 
-@impl(xla_quantized_lib, "xla_quantize_per_channel", "CompositeExplicitAutograd")
+
+@impl(xla_quantized_lib, "xla_quantize_per_channel",
+      "CompositeExplicitAutograd")
 def xla_quantize_per_channel(input: torch.Tensor, scale: torch.Tensor,
                              zero_point: torch.Tensor, axis: int,
                              quant_min: int, quant_max: int,
                              dtype: torch.dtype):
   return xla_quantize_(input, scale, zero_point, quant_min, quant_max, dtype,
                        axis)
+
 
 @impl(xla_quantized_lib, "xla_quantize_per_channel", "Meta")
 def xla_quantize_per_channel(input: torch.Tensor, scale: torch.Tensor,
@@ -40,11 +46,14 @@ def xla_quantize_per_channel(input: torch.Tensor, scale: torch.Tensor,
                              dtype: torch.dtype):
   return torch.empty_like(input, dtype=dtype)
 
+
 xla_quantized_lib.define(
     "xla_dequantize_per_tensor(Tensor input, float scale, int zero_point, "
     "int quant_min, int quant_max, ScalarType dtype) -> Tensor")
 
-@impl(xla_quantized_lib, "xla_dequantize_per_tensor", "CompositeExplicitAutograd")
+
+@impl(xla_quantized_lib, "xla_dequantize_per_tensor",
+      "CompositeExplicitAutograd")
 def xla_dequantize_per_tensor(input: torch.Tensor, scale: float,
                               zero_point: int, quant_min: int, quant_max: int,
                               dtype: torch.dtype):
@@ -52,22 +61,28 @@ def xla_dequantize_per_tensor(input: torch.Tensor, scale: float,
                          torch.tensor([zero_point], dtype=torch.float),
                          quant_min, quant_max, dtype)
 
+
 @impl(xla_quantized_lib, "xla_dequantize_per_tensor", "Meta")
-def xla_dequantize_per_tensor(input: torch.Tensor, scale: float, zero_point: int,
-                            quant_min: int, quant_max: int, dtype: torch.dtype):
+def xla_dequantize_per_tensor(input: torch.Tensor, scale: float,
+                              zero_point: int, quant_min: int, quant_max: int,
+                              dtype: torch.dtype):
   return torch.empty_like(input, dtype=torch.float32)
+
 
 xla_quantized_lib.define(
     "dequantize_per_channel(Tensor input, Tensor scales, Tensor zero_points, int axis, "
     "int quant_min, int quant_max, ScalarType dtype) -> Tensor")
 
-@impl(xla_quantized_lib, "xla_dequantize_per_channel", "CompositeExplicitAutograd")
+
+@impl(xla_quantized_lib, "xla_dequantize_per_channel",
+      "CompositeExplicitAutograd")
 def xla_dequantize_per_channel(input: torch.Tensor, scale: torch.Tensor,
                                zero_point: torch.Tensor, axis: int,
                                quant_min: int, quant_max: int,
                                dtype: torch.dtype):
   return xla_dequantize_(input, scale, zero_point, quant_min, quant_max, dtype,
                          axis)
+
 
 @impl(xla_quantized_lib, "xla_dequantize_per_channel", "Meta")
 def xla_dequantize_per_channel(input: torch.Tensor, scale: torch.Tensor,
@@ -98,6 +113,7 @@ def xla_quantize_(input: torch.Tensor,
                                                     zero_point_list, quant_min,
                                                     quant_max, str(dtype), axis)
   return result
+
 
 def xla_dequantize_(input: torch.Tensor,
                     scale: torch.Tensor,

@@ -8,12 +8,11 @@ namespace torch_xla {
 class DequantizePerTensor : public XlaNode {
  public:
   DequantizePerTensor(const torch::lazy::Value& input,
-                    const std::vector<float>& scale,
-                    const std::vector<float>& zero_point, int quant_min,
-                    int quant_max,
-                    // at::ScalarType dtype);
-                    const std::string& dtype,
-                    int axis);
+                      const std::vector<float>& scale,
+                      const std::vector<float>& zero_point, int quant_min,
+                      int quant_max,
+                      // at::ScalarType dtype);
+                      const std::string& dtype, int axis);
 
   std::string ToString() const override;
 

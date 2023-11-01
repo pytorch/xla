@@ -89,15 +89,13 @@ XLATensorPtr quantize_per_tensor(const XLATensorPtr& input,
                                  const std::vector<float>& scale_list,
                                  const std::vector<float>& zero_point_list,
                                  int quant_min, int quant_max,
-                                 const std::string& dtype,
-                                 int axis);
+                                 const std::string& dtype, int axis);
 
 XLATensorPtr dequantize_per_tensor(const XLATensorPtr& input,
-                                    const std::vector<float>& scale_list,
-                                    const std::vector<float>& zero_point_list,
-                                    int quant_min, int quant_max,
-                                    const std::string& dtype,
-                                    int axis);
+                                   const std::vector<float>& scale_list,
+                                   const std::vector<float>& zero_point_list,
+                                   int quant_min, int quant_max,
+                                   const std::string& dtype, int axis);
 
 //////////////////////////////////////////////////////////////////////////////
 // ATEN operators follows here, listed in alphabetical order.
