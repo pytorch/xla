@@ -711,7 +711,7 @@ runtime::ComputationClient::DataPtr ShardingUtil::CreateShardedData(
     const XLATensor::ShardingSpecPtr& sharding_spec) {
   XLA_CHECK(local_shards.size() == devices.size())
       << "A device must be speficied for each shard";
-  std::vector<runtime::ComputationClient::TensorSource> source_tensors;
+  std::vector<std::shared_ptr<const runtime::TensorSource>> source_tensors;
   xla::Shape global_shape;
   xla::OpSharding sharding;
   if (sharding_spec == nullptr) {
@@ -728,7 +728,7 @@ runtime::ComputationClient::DataPtr ShardingUtil::CreateShardedData(
     auto shard_device = ParseDeviceString(devices[j]);
     auto shard_shape =
         CreateComputationShapeFromTensor(local_shards[j], &shard_device);
-    source_tensors.emplace_back(local_shards[j], shard_shape, devices[j]);
+    source_tensors.push_back(std::make_shared<runtime::AtenSource>(local_shards[j], shard_shape, devices[j]));
   }
   return runtime::GetComputationClient()->TransferShardsToServer(
       source_tensors, GetVirtualDevice().toString(), global_shape, sharding);

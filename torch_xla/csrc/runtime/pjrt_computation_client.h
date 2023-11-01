@@ -36,7 +36,7 @@ class PjRtComputationClient : public ComputationClient {
   std::optional<xla::OpSharding> GetDataSharding(DataPtr handle) override;
 
   std::vector<DataPtr> TransferToServer(
-      absl::Span<const TensorSource> tensors) override;
+      absl::Span<const std::shared_ptr<const TensorSource>> tensors) override;
 
   // Use XLA replication to re-assemble the sharded data.
   DataPtr ReplicateShardedData(const DataPtr& handle);
@@ -44,7 +44,7 @@ class PjRtComputationClient : public ComputationClient {
   std::vector<xla::Literal> TransferFromServer(
       absl::Span<const DataPtr> handles) override;
 
-  DataPtr TransferShardsToServer(absl::Span<const TensorSource> tensor_shards,
+  DataPtr TransferShardsToServer(absl::Span<const std::shared_ptr<const TensorSource>> tensor_shards,
                                  std::string device, xla::Shape shape,
                                  xla::OpSharding sharding) override;
 

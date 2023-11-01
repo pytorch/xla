@@ -61,6 +61,7 @@ cc_library(
     ":metrics_reader",
     ":metrics",
     ":sys_util",
+    ":tensor_source",
     ":types",
     ":util",
     "//torch_xla/csrc:device",
@@ -92,6 +93,7 @@ cc_library(
     ":env_vars",
     ":multi_wait",
     ":stablehlo_helper",
+    ":tensor_source",
     ":tf_logging",
     ":thread_pool",
     "@xla//xla:literal",
@@ -289,6 +291,16 @@ cc_library(
         ":metrics",
         ":tf_logging",
     ],
+)
+
+cc_library(
+  name = "tensor_source",
+  hdrs = ["tensor_source.h"],
+  deps = [
+      "@xla//xla:literal",
+      "@xla//xla:shape_util",
+      "@torch//:headers",
+  ]
 )
 
 cc_library(

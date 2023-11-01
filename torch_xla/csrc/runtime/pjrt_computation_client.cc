@@ -16,6 +16,7 @@
 #include "torch_xla/csrc/runtime/env_vars.h"
 #include "torch_xla/csrc/runtime/multi_wait.h"
 #include "torch_xla/csrc/runtime/stablehlo_helper.h"
+#include "torch_xla/csrc/runtime/tensor_source.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
 #include "torch_xla/csrc/runtime/thread_pool.h"
 #include "tsl/profiler/lib/traceme.h"
@@ -260,7 +261,7 @@ std::optional<xla::OpSharding> PjRtComputationClient::GetDataSharding(
 }
 
 std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
-    absl::Span<const TensorSource> tensors) {
+    absl::Span<const std::shared_ptr<const TensorSource>> tensors) {
   metrics::TimedSection timed(TransferToServerMetric());
   tsl::profiler::TraceMe activity("PjRtComputationClient::TransferToServer",
                                   tsl::profiler::TraceMeLevel::kInfo);
@@ -268,19 +269,19 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
   datas.reserve(tensors.size());
   int64_t total_size = 0;
   for (auto& tensor : tensors) {
-    xla::PjRtDevice* pjrt_device = StringToPjRtDevice(tensor.device);
+    xla::PjRtDevice* pjrt_device = StringToPjRtDevice(tensor->device());
 
-    std::vector<int64_t> byte_strides(tensor.shape.dimensions_size());
-    XLA_CHECK_OK(xla::ShapeUtil::ByteStrides(tensor.shape,
+    std::vector<int64_t> byte_strides(tensor->shape().dimensions_size());
+    XLA_CHECK_OK(xla::ShapeUtil::ByteStrides(tensor->shape(),
                                              absl::MakeSpan(byte_strides)));
     // total_size += literal->size_bytes();
 
     std::shared_ptr<xla::PjRtBuffer> buffer = std::move(
         client_
             ->BufferFromHostBuffer(
-                tensor.tensor.const_data_ptr(),
-                tensor.shape.element_type(),
-                tensor.shape.dimensions(),
+                tensor->data(),
+                tensor->shape().element_type(),
+                tensor->shape().dimensions(),
                 byte_strides,
                 xla::PjRtClient::HostBufferSemantics::
                     kImmutableUntilTransferCompletes,
@@ -290,7 +291,7 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
             .value());
 
     ComputationClient::DataPtr data =
-        std::make_shared<PjRtData>(tensor.device, tensor.shape, buffer);
+        std::make_shared<PjRtData>(tensor->device(), tensor->shape(), buffer);
     datas.push_back(data);
   }
   OutboundDataMetric()->AddSample(total_size);
@@ -300,7 +301,7 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
 }
 
 ComputationClient::DataPtr PjRtComputationClient::TransferShardsToServer(
-    absl::Span<const TensorSource> tensor_shards, std::string device,
+    absl::Span<const std::shared_ptr<const TensorSource>> tensor_shards, std::string device,
     xla::Shape shape, xla::OpSharding sharding) {
   tsl::profiler::TraceMe activity(
       "PjRtComputationClient::TransferShardsToServer",
