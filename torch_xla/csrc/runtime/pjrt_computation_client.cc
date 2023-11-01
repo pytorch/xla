@@ -274,7 +274,7 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToDevice(
     std::vector<int64_t> byte_strides(tensor->shape().dimensions_size());
     XLA_CHECK_OK(xla::ShapeUtil::ByteStrides(tensor->shape(),
                                              absl::MakeSpan(byte_strides)));
-    // total_size += literal->size_bytes();
+    total_size += xla::ShapeUtil::ByteSizeOf(tensor->shape());
 
     std::shared_ptr<xla::PjRtBuffer> buffer = std::move(
         client_
@@ -285,7 +285,6 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToDevice(
                 byte_strides,
                 xla::PjRtClient::HostBufferSemantics::
                     kImmutableUntilTransferCompletes,
-                // TODO: do I need this?
                 [tensor]() { /* frees tensor */ },
                 pjrt_device)
             .value());
