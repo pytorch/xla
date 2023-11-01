@@ -76,7 +76,7 @@ void TestSingleReplication(
 
   for (size_t i = 0; i < results.size(); ++i) {
     auto literals =
-        torch_xla::runtime::GetComputationClient()->TransferFromDevice(
+        torch_xla::runtime::GetComputationClient()->TransferFromServer(
             results[i]);
     ASSERT_EQ(literals.size(), 1);
 

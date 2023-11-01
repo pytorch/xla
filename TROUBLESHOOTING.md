@@ -43,7 +43,7 @@ vm:~$ git clone --branch r2.1 https://github.com/pytorch/xla.git
 vm:~$ python xla/test/test_train_mp_imagenet.py --fake_data
 ```
 
-If you can get the resnet to run we can conclude that torch_xla is installed correctly.
+If you can get the resnet to run we can conclude that torch_xla is installed correctly. 
 
 
 ## Performance Debugging
@@ -60,10 +60,10 @@ We provide ways to automatically analyze the metrics report and provide a summar
 
 ```
 pt-xla-profiler: CompileTime too frequent: 21 counts during 11 steps
-pt-xla-profiler: TransferFromDeviceTime too frequent: 11 counts during 11 steps
+pt-xla-profiler: TransferFromServerTime too frequent: 11 counts during 11 steps
 pt-xla-profiler: Op(s) not lowered: aten::_ctc_loss, aten::_ctc_loss_backward,  Please open a GitHub issue with the above op lowering requests.
 pt-xla-profiler: CompileTime too frequent: 23 counts during 12 steps
-pt-xla-profiler: TransferFromDeviceTime too frequent: 12 counts during 12 steps
+pt-xla-profiler: TransferFromServerTime too frequent: 12 counts during 12 steps
 ```
 
 Following section will explain how to get and understand a more detail metrics report.

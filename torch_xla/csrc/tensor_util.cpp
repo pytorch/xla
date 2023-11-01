@@ -592,7 +592,7 @@ torch::lazy::BackendDataPtr TensorToXlaData(
       std::make_shared<runtime::AtenSource>(tensor, shape, device.toString()));
 
   auto handles =
-      runtime::GetComputationClient()->TransferToDevice(source_tensors);
+      runtime::GetComputationClient()->TransferToServer(source_tensors);
   XLA_CHECK_EQ(handles.size(), 1);
   return handles.front();
 }
@@ -819,7 +819,7 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
         tensors[i], std::move(shape), devices[i]));
   }
   return WrapXlaData(
-      runtime::GetComputationClient()->TransferToDevice(source_tensors));
+      runtime::GetComputationClient()->TransferToServer(source_tensors));
 }
 
 std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
@@ -855,7 +855,7 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
       source_tensors.push_back(std::make_shared<runtime::AtenSource>(
           tensors[i], std::move(shape), devices[i]));
       new_handles =
-          runtime::GetComputationClient()->TransferToDevice(source_tensors);
+          runtime::GetComputationClient()->TransferToServer(source_tensors);
     }
     handles.insert(handles.end(), new_handles.begin(), new_handles.end());
   }
@@ -883,7 +883,7 @@ std::vector<at::Tensor> XlaDataToTensors(
     absl::Span<const torch::lazy::BackendDataPtr> xla_data,
     at::ScalarType dest_element_type) {
   std::vector<xla::Literal> literals =
-      runtime::GetComputationClient()->TransferFromDevice(
+      runtime::GetComputationClient()->TransferFromServer(
           UnwrapXlaData(xla_data));
   std::vector<at::Tensor> tensors;
   tensors.reserve(literals.size());

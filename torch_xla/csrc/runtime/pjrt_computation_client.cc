@@ -257,10 +257,10 @@ std::optional<xla::OpSharding> PjRtComputationClient::GetDataSharding(
   return std::optional<xla::OpSharding>();
 }
 
-std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToDevice(
+std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
     absl::Span<const std::shared_ptr<const TensorSource>> tensors) {
-  metrics::TimedSection timed(TransferToDeviceMetric());
-  tsl::profiler::TraceMe activity("PjRtComputationClient::TransferToDevice",
+  metrics::TimedSection timed(TransferToServerMetric());
+  tsl::profiler::TraceMe activity("PjRtComputationClient::TransferToServer",
                                   tsl::profiler::TraceMeLevel::kInfo);
   std::vector<ComputationClient::DataPtr> datas;
   datas.reserve(tensors.size());
@@ -290,18 +290,18 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToDevice(
   return datas;
 }
 
-ComputationClient::DataPtr PjRtComputationClient::TransferShardsToDevice(
+ComputationClient::DataPtr PjRtComputationClient::TransferShardsToServer(
     absl::Span<const std::shared_ptr<const TensorSource>> tensor_shards,
     std::string device, xla::Shape shape, xla::OpSharding sharding) {
   tsl::profiler::TraceMe activity(
-      "PjRtComputationClient::TransferShardsToDevice",
+      "PjRtComputationClient::TransferShardsToServer",
       tsl::profiler::TraceMeLevel::kInfo);
   // TODO(jonbolin): Consider using CopyToDevice when sharding is REPLICATED.
   // We are opting out of CopyToDevice for now due to the synchronization
   // issues observed in ShardingUtil::InputHandler, but because CopyToDevice
   // directly copies buffers between devices using ICI, it can be much faster
   // than transferring from the host to each device.
-  auto data_shards = TransferToDevice(tensor_shards);
+  auto data_shards = TransferToServer(tensor_shards);
   std::vector<std::shared_ptr<PjRtData>> pjrt_data_shards;
   for (auto& shard : data_shards) {
     auto pjrt_shard = dynamic_cast<PjRtData*>(shard.get());
@@ -405,10 +405,10 @@ ComputationClient::DataPtr PjRtComputationClient::ReplicateShardedData(
   return handle;
 }
 
-std::vector<xla::Literal> PjRtComputationClient::TransferFromDevice(
+std::vector<xla::Literal> PjRtComputationClient::TransferFromServer(
     absl::Span<const DataPtr> handles) {
-  metrics::TimedSection timed(TransferFromDeviceMetric());
-  tsl::profiler::TraceMe activity("PjRtComputationClient::TransferFromDevice",
+  metrics::TimedSection timed(TransferFromServerMetric());
+  tsl::profiler::TraceMe activity("PjRtComputationClient::TransferFromServer",
                                   tsl::profiler::TraceMeLevel::kInfo);
   std::vector<xla::Literal> literals;
   literals.reserve(handles.size());

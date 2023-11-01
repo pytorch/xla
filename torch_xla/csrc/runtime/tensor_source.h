@@ -1,9 +1,9 @@
 #ifndef XLA_CLIENT_TENSOR_SOURCE_H_
 #define XLA_CLIENT_TENSOR_SOURCE_H_
 
-#include <vector>
-
 #include <ATen/Tensor.h>
+
+#include <vector>
 
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "xla/literal.h"

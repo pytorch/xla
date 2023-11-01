@@ -53,21 +53,21 @@ int64_t ComputationClient::GetDeviceOrdinal(const std::string& device) {
   return std::stoi(device.substr(pos + 1));
 }
 
-metrics::Metric* ComputationClient::TransferToDeviceMetric() {
+metrics::Metric* ComputationClient::TransferToServerMetric() {
   static metrics::Metric* metric =
-      new metrics::Metric("TransferToDeviceTime", metrics::MetricFnTime);
+      new metrics::Metric("TransferToServerTime", metrics::MetricFnTime);
   return metric;
 }
 
-metrics::Metric* ComputationClient::TransferToDeviceTransformMetric() {
+metrics::Metric* ComputationClient::TransferToServerTransformMetric() {
   static metrics::Metric* metric = new metrics::Metric(
-      "TransferToDeviceTransformTime", metrics::MetricFnTime);
+      "TransferToServerTransformTime", metrics::MetricFnTime);
   return metric;
 }
 
-metrics::Metric* ComputationClient::TransferFromDeviceMetric() {
+metrics::Metric* ComputationClient::TransferFromServerMetric() {
   static metrics::Metric* metric =
-      new metrics::Metric("TransferFromDeviceTime", metrics::MetricFnTime);
+      new metrics::Metric("TransferFromServerTime", metrics::MetricFnTime);
   return metric;
 }
 

@@ -792,7 +792,7 @@ class PyLoweringContext {
 
     // Fetch this parameter data
     std::vector<xla::Literal> literals =
-        runtime::GetComputationClient()->TransferFromDevice(
+        runtime::GetComputationClient()->TransferFromServer(
             UnwrapXlaData(device_data));
 
     // Create a mapping from paramater id to the tensor data

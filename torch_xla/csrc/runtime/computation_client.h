@@ -251,12 +251,12 @@ class ComputationClient {
   virtual std::optional<xla::OpSharding> GetDataSharding(DataPtr handle) = 0;
 
   // Transfers local tensor values to the TPU devices and fetches the handles.
-  virtual std::vector<DataPtr> TransferToDevice(
+  virtual std::vector<DataPtr> TransferToServer(
       absl::Span<const std::shared_ptr<const TensorSource>> tensors) = 0;
 
   // Transfers local sharded tensor values to the TPU devices and returns a
   // `PjRtShardedData`.
-  virtual DataPtr TransferShardsToDevice(
+  virtual DataPtr TransferShardsToServer(
       absl::Span<const std::shared_ptr<const TensorSource>> tensor_shards,
       std::string device, xla::Shape shape, xla::OpSharding sharding) = 0;
 
@@ -265,7 +265,7 @@ class ComputationClient {
 
   // Reads the tensor literal values stored at TPU server sites, behind the
   // supplied handles.
-  virtual std::vector<xla::Literal> TransferFromDevice(
+  virtual std::vector<xla::Literal> TransferFromServer(
       absl::Span<const DataPtr> handles) = 0;
 
   // Compiles a set of computations.
@@ -353,9 +353,9 @@ class ComputationClient {
 
  protected:
   // Metrics common to all client interfaces.
-  static metrics::Metric* TransferToDeviceMetric();
-  static metrics::Metric* TransferToDeviceTransformMetric();
-  static metrics::Metric* TransferFromDeviceMetric();
+  static metrics::Metric* TransferToServerMetric();
+  static metrics::Metric* TransferToServerTransformMetric();
+  static metrics::Metric* TransferFromServerMetric();
   static metrics::Metric* CompileMetric();
   static metrics::Metric* ExecuteMetric();
   static metrics::Metric* ExecuteReplicatedMetric();
