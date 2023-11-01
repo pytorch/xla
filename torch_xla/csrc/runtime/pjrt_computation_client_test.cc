@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "torch_xla/csrc/runtime/computation_client.h"
+#include "torch_xla/csrc/runtime/pjrt_computation_client.h"
 #include "torch_xla/csrc/runtime/tensor_source.h"
 #include "tsl/lib/core/status_test_util.h"
 #include "tsl/platform/env.h"
