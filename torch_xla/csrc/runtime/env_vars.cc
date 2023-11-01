@@ -19,6 +19,9 @@ const char* const kEnvNeuronLibraryPath = "NEURON_LIBRARY_PATH";
 const char* const kEnvPjrtDistServiceAddr = "PJRT_DIST_SERVICE_ADDR";
 const char* const kEnvPjRtLocalProcessCount = "PJRT_LOCAL_PROCESS_COUNT";
 const char* const kEnvPjRtLocalRank = "PJRT_LOCAL_PROCESS_RANK";
+const char* const kEnvPjrtAllocatorCudaAsync = "PJRT_ALLOCATOR_CUDA_ASYNC";
+const char* const kEnvPjrtAllocatorPreallocate = "PJRT_ALLOCATOR_PREALLOCATE";
+const char* const kEnvPjrtAllocatorFraction = "PJRT_ALLOCATOR_FRACTION";
 
 }  // namespace env
 }  // namespace runtime
