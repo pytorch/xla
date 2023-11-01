@@ -63,6 +63,7 @@ cc_library(
     ":sys_util",
     ":types",
     ":util",
+    ":xla_coordinator",
     "//torch_xla/csrc:device",
     "@tsl//tsl/platform:stacktrace_handler",
     "@xla//xla:literal_util",
@@ -88,12 +89,12 @@ cc_library(
   deps = [
     ":computation_client",
     ":debug_macros",
-    ":distributed_runtime",
     ":env_vars",
     ":multi_wait",
     ":stablehlo_helper",
     ":tf_logging",
     ":thread_pool",
+    ":xla_coordinator",
     "@xla//xla:literal",
     "@xla//xla:shape_util",
     "@xla//xla/client:xla_computation",
@@ -165,13 +166,14 @@ cc_library(
 )
 
 cc_library(
-    name = "distributed_runtime",
-    srcs = ["distributed_runtime.cc"],
-    hdrs = ["distributed_runtime.h"],
+    name = "xla_coordinator",
+    srcs = ["xla_coordinator.cc"],
+    hdrs = ["xla_coordinator.h"],
     deps = [
         ":debug_macros",
         ":sys_util",
         "@xla//xla/pjrt/distributed",
+        "@tsl//tsl/distributed_runtime/preemption:preemption_sync_manager",
     ],
 )
 

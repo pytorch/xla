@@ -1,21 +1,18 @@
-#include "torch_xla/csrc/runtime/distributed_runtime.h"
+#include "torch_xla/csrc/runtime/xla_coordinator.h"
 
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
+#include "xla/pjrt/distributed/distributed.h"
 
 namespace torch_xla {
 namespace runtime {
 
-const std::string DistributedRuntime::default_coordinator_port = "8547";
-
-DistributedRuntime::DistributedRuntime(int global_rank, std::string master_addr,
-                                       std::string port) {
+XlaCoordinator::XlaCoordinator(int global_rank, int world_size,
+                               std::string master_addr, std::string port) {
   std::string dist_service_addr = absl::StrJoin({master_addr, port}, ":");
   if (global_rank == 0) {
-    int local_world_size = sys_util::GetEnvInt("LOCAL_WORLD_SIZE", 1);
-    int global_world_size = sys_util::GetEnvInt("WORLD_SIZE", local_world_size);
     xla::CoordinationServiceImpl::Options service_options;
-    service_options.num_nodes = global_world_size;
+    service_options.num_nodes = world_size;
     xla::StatusOr<std::unique_ptr<xla::DistributedRuntimeService>>
         dist_runtime_service = xla::GetDistributedRuntimeService(
             dist_service_addr, service_options);
@@ -32,7 +29,8 @@ DistributedRuntime::DistributedRuntime(int global_rank, std::string master_addr,
       << "Failed to initialize distributed runtime client";
 }
 
-DistributedRuntime::~DistributedRuntime() {
+XlaCoordinator::~XlaCoordinator() {
+  preemption_sync_manager_ = nullptr;
   if (dist_runtime_client_ != nullptr) {
     XLA_CHECK(dist_runtime_client_->Shutdown().ok())
         << "Failed to shut down the distributed runtime client.";
@@ -44,10 +42,31 @@ DistributedRuntime::~DistributedRuntime() {
   }
 }
 
-std::shared_ptr<xla::DistributedRuntimeClient> DistributedRuntime::GetClient() {
+std::shared_ptr<xla::DistributedRuntimeClient> XlaCoordinator::GetClient() {
   XLA_CHECK(dist_runtime_client_ != nullptr)
       << "distributed runtime client is null.";
   return dist_runtime_client_;
+}
+
+void XlaCoordinator::ActivatePreemptionSyncManager() {
+  if (preemption_sync_manager_ == nullptr) {
+    preemption_sync_manager_ = std::move(tsl::CreatePreemptionSyncManager());
+    auto client = dist_runtime_client_->GetCoordinationServiceAgent();
+    XLA_CHECK(client.ok()) << "Failed to retrieve the CoodinationServiceAgent";
+    auto status = preemption_sync_manager_->Initialize(client.value());
+    XLA_CHECK(status.ok()) << "Failed to initialize the PreemptionSyncManager";
+  }
+}
+
+void XlaCoordinator::DeactivatePreemptionSyncManager() {
+  preemption_sync_manager_ = nullptr;
+}
+
+bool XlaCoordinator::ReachedSyncPoint(int step) {
+  XLA_CHECK(preemption_sync_manager_ != nullptr)
+      << "A PreemptionSyncManager has not been registered with the "
+         "XlaCoordinator.";
+  return preemption_sync_manager_->ReachedSyncPoint(step);
 }
 
 }  // namespace runtime
