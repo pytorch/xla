@@ -4,9 +4,6 @@
 #include <unordered_set>
 #include <vector>
 
-// #include <c10/core/ScalarType.h>
-#include <ATen/Tensor.h>
-
 #include "absl/strings/ascii.h"
 #include "absl/types/span.h"
 #include "pjrt_computation_client.h"

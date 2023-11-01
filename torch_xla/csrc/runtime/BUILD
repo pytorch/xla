@@ -114,7 +114,6 @@ cc_library(
     "@tsl//tsl/platform/cloud:gcs_file_system",
     "@com_google_absl//absl/strings",
     "@com_google_absl//absl/types:span",
-    "@torch//:headers",
   ],
 )
 
