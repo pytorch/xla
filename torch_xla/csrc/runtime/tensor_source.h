@@ -4,14 +4,13 @@
 #include "xla/literal.h"
 #include "xla/shape.h"
 
-
 namespace torch_xla {
 namespace runtime {
 
 // Owns a contiguous block of data with the shape and layout matching `shape()`.
 class TensorSource {
  public:
-  TensorSource(std::string device) : device_(std::move(device)) {};
+  TensorSource(std::string device) : device_(std::move(device)){};
 
   virtual const void* data() const = 0;
 
@@ -23,7 +22,7 @@ class TensorSource {
   std::string device_;
 };
 
-class AtenSource : public TensorSource{
+class AtenSource : public TensorSource {
  public:
   AtenSource(const at::Tensor& tensor, xla::Shape shape, std::string device)
       : TensorSource(std::move(device)),
@@ -42,8 +41,7 @@ class AtenSource : public TensorSource{
 class LiteralSource : public TensorSource {
  public:
   LiteralSource(xla::Literal literal, std::string device)
-      : TensorSource(std::move(device)),
-        literal_(std::move(literal)) {}
+      : TensorSource(std::move(device)), literal_(std::move(literal)) {}
 
   const void* data() const override { return literal_.untyped_data(); }
 
@@ -53,7 +51,7 @@ class LiteralSource : public TensorSource {
   xla::Literal literal_;
 };
 
-}
-}
+}  // namespace runtime
+}  // namespace torch_xla
 
 #endif  // XLA_CLIENT_COMPUTATION_CLIENT_H_

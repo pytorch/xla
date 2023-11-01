@@ -257,8 +257,8 @@ class ComputationClient {
   // Transfers local sharded tensor values to the TPU devices and returns a
   // `PjRtShardedData`.
   virtual DataPtr TransferShardsToDevice(
-      absl::Span<const std::shared_ptr<const TensorSource>> tensor_shards, std::string device,
-      xla::Shape shape, xla::OpSharding sharding) = 0;
+      absl::Span<const std::shared_ptr<const TensorSource>> tensor_shards,
+      std::string device, xla::Shape shape, xla::OpSharding sharding) = 0;
 
   // Copies `data->buffer` to `dst` device buffer.
   virtual DataPtr CopyToDevice(DataPtr data, std::string dst) = 0;

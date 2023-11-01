@@ -276,18 +276,15 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToDevice(
                                              absl::MakeSpan(byte_strides)));
     total_size += xla::ShapeUtil::ByteSizeOf(tensor->shape());
 
-    std::shared_ptr<xla::PjRtBuffer> buffer = std::move(
-        client_
-            ->BufferFromHostBuffer(
-                tensor->data(),
-                tensor->shape().element_type(),
-                tensor->shape().dimensions(),
-                byte_strides,
-                xla::PjRtClient::HostBufferSemantics::
-                    kImmutableUntilTransferCompletes,
-                [tensor]() { /* frees tensor */ },
-                pjrt_device)
-            .value());
+    std::shared_ptr<xla::PjRtBuffer> buffer =
+        std::move(client_
+                      ->BufferFromHostBuffer(
+                          tensor->data(), tensor->shape().element_type(),
+                          tensor->shape().dimensions(), byte_strides,
+                          xla::PjRtClient::HostBufferSemantics::
+                              kImmutableUntilTransferCompletes,
+                          [tensor]() { /* frees tensor */ }, pjrt_device)
+                      .value());
 
     ComputationClient::DataPtr data =
         std::make_shared<PjRtData>(tensor->device(), tensor->shape(), buffer);
@@ -300,8 +297,8 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToDevice(
 }
 
 ComputationClient::DataPtr PjRtComputationClient::TransferShardsToDevice(
-    absl::Span<const std::shared_ptr<const TensorSource>> tensor_shards, std::string device,
-    xla::Shape shape, xla::OpSharding sharding) {
+    absl::Span<const std::shared_ptr<const TensorSource>> tensor_shards,
+    std::string device, xla::Shape shape, xla::OpSharding sharding) {
   tsl::profiler::TraceMe activity(
       "PjRtComputationClient::TransferShardsToDevice",
       tsl::profiler::TraceMeLevel::kInfo);
