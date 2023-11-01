@@ -23,6 +23,7 @@ namespace runtime {
 class PjRtComputationClient : public ComputationClient {
  public:
   PjRtComputationClient();
+  ~PjRtComputationClient();
 
   DataPtr CreateDataPlaceholder(std::string device, xla::Shape shape) override;
 
@@ -89,6 +90,14 @@ class PjRtComputationClient : public ComputationClient {
 
   std::map<std::string, Metric> GetMetrics() const override;
 
+  void InitializeCoordinator(int global_rank, int world_size,
+                             std::string master_addr,
+                             std::string port) override;
+
+  XlaCoordinator& GetCoordinator() override;
+
+  bool CoordinatorInitialized() const override;
+
   // NOT IMPLEMENTED
 
   MemoryInfo GetMemoryInfo(const std::string& device) override {
@@ -97,6 +106,7 @@ class PjRtComputationClient : public ComputationClient {
 
  private:
   std::shared_ptr<xla::PjRtClient> client_;
+  std::unique_ptr<XlaCoordinator> coordinator_;
   // global_ordinals_ tracks a map from PjRtDeviceId to the device's
   // dense global ordinal.
   std::unordered_map<int, int> global_ordinals_;

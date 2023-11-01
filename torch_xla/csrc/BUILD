@@ -259,6 +259,7 @@ ptxla_cc_library(
         "//torch_xla/csrc/runtime:sys_util",
         "//torch_xla/csrc/runtime:thread_pool",
         "//torch_xla/csrc/runtime:util",
+        "//torch_xla/csrc/runtime:xla_coordinator",
         "//torch_xla/csrc/runtime:xla_util",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/strings",

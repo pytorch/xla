@@ -1,14 +1,17 @@
 import functools
 import os
+import signal
 import sys
 import tempfile
-import unittest
 import test_xla_sharding_base
 import threading
+import time
+import unittest
 
 import torch
 import torch.distributed as dist
 import torch.distributed.checkpoint as dist_cp
+import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.runtime as xr
 import torch_xla.experimental.xla_sharding as xs
@@ -339,7 +342,12 @@ class CheckpointManagerTest(DistributedCheckpointTestBase):
     super().setUp()
     # Initialize the a minimal process group
     dist.init_process_group(
-        backend='gloo', init_method='tcp://127.1:8932', world_size=1, rank=0)
+        backend='gloo',
+        init_method='tcp://localhost:8932',
+        world_size=1,
+        rank=0)
+    torch_xla._XLAC._ensure_xla_coordinator_initialized(
+        global_rank=0, world_size=1, master_addr="localhost")
 
   def tearDown(self):
     super().tearDown()
@@ -485,6 +493,34 @@ class CheckpointManagerTest(DistributedCheckpointTestBase):
     # are needed to avoid the short-circuit return of localhost.
     patched_get_worker_ips.return_value = ['10.0.0.1', '10.0.0.2']
     self.assertTrue(xr.get_master_ip(), '10.0.0.1')
+
+  def test_preemption_sync_manager(self):
+    try:
+      torch_xla._XLAC._activate_preemption_sync_manager()
+      sync_point_reached = torch_xla._XLAC._sync_point_reached
+
+      # No sync point for the first several steps
+      sigterm_step = 10
+      for step in range(sigterm_step):
+        self.assertFalse(sync_point_reached(step))
+
+      # Send a SIGTERM to the current process to trigger a sync point
+      os.kill(os.getpid(), signal.SIGTERM)
+
+      # Allow the signal to be processed. The PreemptionSyncManager must receive
+      # the SIGTERM, which happens asynchronously, and the state must be
+      # propagated through the distributed runtime. Eventually,
+      # sync_point_reached will return True.
+      success = False
+      for attempt in range(10):
+        success = sync_point_reached(sigterm_step + attempt)
+        if success:
+          break
+        time.sleep(1)
+      self.assertTrue(success, "Sync point was never reached after SIGTERM")
+    finally:
+      # Scope the PreemptionSyncManager to the lifespan of the test.
+      torch_xla._XLAC._deactivate_preemption_sync_manager()
 
 
 if __name__ == '__main__':
