@@ -225,7 +225,7 @@
               
               
                 <div class="version">
-                  master (2.2.0+git83778f0 )
+                  master (2.2.0+git4038f8e )
                 </div>
               
             
@@ -2301,7 +2301,7 @@ for more information.</p>
 </pre></div>
 </div>
 <p>You can also use <code class="docutils literal notranslate"><span class="pre">torchrun</span></code> to initiate the single-node multi-GPU training. For example,</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>PJRT_DEVICE=GPU torchrun --nnodes 1 --nproc-per-node ${NUM_GPU_DEVICES} xla/test/test_train_mp_imagenet.py --fake_data --batch_size=128 --num_epochs=1
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>PJRT_DEVICE=GPU torchrun --nnodes 1 --nproc-per-node ${NUM_GPU_DEVICES} xla/test/test_train_mp_imagenet.py --fake_data --pjrt_distributed --batch_size=128 --num_epochs=1
 </pre></div>
 </div>
 <p>In the above example, <code class="docutils literal notranslate"><span class="pre">--nnodes</span></code> means how many machines (physical machines or VMs) to be used (it is 1 since we do single-node training). <code class="docutils literal notranslate"><span class="pre">--nproc-per-node</span></code> means how many GPU devices to be used.</p>
@@ -2335,10 +2335,10 @@ for more information.</p>
 <span class="o">--</span><span class="n">nnodes</span><span class="o">=</span><span class="mi">2</span> \
 <span class="o">--</span><span class="n">node_rank</span><span class="o">=</span><span class="mi">1</span> \
 <span class="o">--</span><span class="n">nproc_per_node</span><span class="o">=</span><span class="mi">4</span> \
-<span class="o">--</span><span class="n">rdzv_endpoint</span><span class="o">=</span><span class="s2">&quot;&lt;MACHINE_0_IP_ADDRESS&gt;:12355&quot;</span> <span class="n">pytorch</span><span class="o">/</span><span class="n">xla</span><span class="o">/</span><span class="n">test</span><span class="o">/</span><span class="n">test_train_mp_imagenet_torchrun</span><span class="o">.</span><span class="n">py</span>  <span class="o">--</span><span class="n">fake_data</span> <span class="o">--</span><span class="n">pjrt_distributed</span> <span class="o">--</span><span class="n">batch_size</span><span class="o">=</span><span class="mi">128</span> <span class="o">--</span><span class="n">num_epochs</span><span class="o">=</span><span class="mi">1</span>
+<span class="o">--</span><span class="n">rdzv_endpoint</span><span class="o">=</span><span class="s2">&quot;&lt;MACHINE_0_IP_ADDRESS&gt;:12355&quot;</span> <span class="n">pytorch</span><span class="o">/</span><span class="n">xla</span><span class="o">/</span><span class="n">test</span><span class="o">/</span><span class="n">test_train_mp_imagenet</span><span class="o">.</span><span class="n">py</span>  <span class="o">--</span><span class="n">fake_data</span> <span class="o">--</span><span class="n">pjrt_distributed</span> <span class="o">--</span><span class="n">batch_size</span><span class="o">=</span><span class="mi">128</span> <span class="o">--</span><span class="n">num_epochs</span><span class="o">=</span><span class="mi">1</span>
 </pre></div>
 </div>
-<p>the difference between the 2 commands above are <code class="docutils literal notranslate"><span class="pre">--node_rank</span></code> and potentially <code class="docutils literal notranslate"><span class="pre">--nproc_per_node</span></code> if you want to use different number of GPU devices on each machine. All the rest are identical.</p>
+<p>the difference between the 2 commands above are <code class="docutils literal notranslate"><span class="pre">--node_rank</span></code> and potentially <code class="docutils literal notranslate"><span class="pre">--nproc_per_node</span></code> if you want to use different number of GPU devices on each machine. All the rest are identical. For more information about <code class="docutils literal notranslate"><span class="pre">torchrun</span></code>, please refer to this <a class="reference external" href="https://pytorch.org/docs/stable/elastic/run.html">page</a>.</p>
 </div>
 </div>
 <div class="section" id="differences-from-xrt">
