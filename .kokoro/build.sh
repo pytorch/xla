@@ -47,6 +47,9 @@ flakiness()
 
 flakiness || true
 
+# TODO(piz): remove once https://github.com/pytorch/pytorch/pull/107484 is merged.
+checkout_torch_pin_if_available
+
 exit "${test_status}"
 
 

@@ -770,11 +770,11 @@ XLATensorPtr softshrink_backward(const XLATensorPtr& grad_out,
                                  const at::Scalar& lambda);
 
 std::vector<XLATensorPtr> split(const XLATensorPtr& input, int64_t split_size,
-                                int64_t dim);
+                                int64_t dim, bool drop_remainder);
 
 std::vector<XLATensorPtr> split_with_sizes(const XLATensorPtr& input,
                                            std::vector<int64_t> split_size,
-                                           int64_t dim);
+                                           int64_t dim, bool drop_remainder);
 
 XLATensorPtr sqrt(const XLATensorPtr& input);
 

@@ -1337,6 +1337,27 @@ TEST_F(AtenXlaTensorTest, TestSplitWithSizes) {
   }
 }
 
+TEST_F(AtenXlaTensorTest, TestSplitDropRemainder) {
+  torch::Tensor input =
+      torch::rand({7, 8, 9}, torch::TensorOptions(torch::kFloat));
+  int rank = input.dim();
+  for (int split_size : {2, 3}) {
+    for (int dim = -rank; dim < rank; ++dim) {
+      std::vector<torch::Tensor> outputs =
+          torch::split(input, split_size, dim, true);
+      ForEachDevice([&](const torch::Device& device) {
+        torch::Tensor xla_input = CopyToDevice(input, device);
+        std::vector<torch::Tensor> xla_outputs =
+            torch::split(xla_input, split_size, dim, true);
+        ASSERT_EQ(outputs.size(), xla_outputs.size());
+        for (size_t i = 0; i < outputs.size(); ++i) {
+          AllClose(outputs[i], xla_outputs[i]);
+        }
+      });
+    }
+  }
+}
+
 TEST_F(AtenXlaTensorTest, TestCrossImplicitDim) {
   std::vector<std::vector<int64_t>> dim_sizes = {
       {4, 5, 3}, {4, 3, 5}, {3, 4, 5}};

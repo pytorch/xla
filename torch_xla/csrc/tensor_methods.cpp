@@ -2414,7 +2414,7 @@ XLATensorPtr softplus_backward(const XLATensorPtr& grad_output,
 }
 
 std::vector<XLATensorPtr> split(const XLATensorPtr& input, int64_t split_size,
-                                int64_t dim) {
+                                int64_t dim, bool drop_remainder) {
   auto input_shape = input->shape();
   int split_dim =
       torch::lazy::GetCanonicalDimensionIndex(dim, input_shape.get().rank());
@@ -2427,7 +2427,10 @@ std::vector<XLATensorPtr> split(const XLATensorPtr& input, int64_t split_size,
         input->CreateFrom(torch::lazy::MakeNode<Constant>(std::move(literal)))};
   }
   std::vector<int64_t> split_sizes;
-  for (; dim_size > 0; dim_size -= split_size) {
+  // If drop_remainder, we drop the last slice if the the slice size is less
+  // than split_size.
+  for (; dim_size > 0 && (!drop_remainder || dim_size >= split_size);
+       dim_size -= split_size) {
     split_sizes.push_back(std::min<int64_t>(dim_size, split_size));
   }
   torch::lazy::NodePtr node = torch::lazy::MakeNode<Split>(
@@ -2436,13 +2439,31 @@ std::vector<XLATensorPtr> split(const XLATensorPtr& input, int64_t split_size,
 }
 
 std::vector<XLATensorPtr> split_with_sizes(const XLATensorPtr& input,
-                                           std::vector<int64_t> split_size,
-                                           int64_t dim) {
+                                           std::vector<int64_t> split_sizes,
+                                           int64_t dim, bool drop_remainder) {
   auto input_shape = input->shape();
-  int split_dim =
-      torch::lazy::GetCanonicalDimensionIndex(dim, input_shape.get().rank());
+  int64_t rank = input_shape.get().rank();
+  int64_t split_dim = torch::lazy::GetCanonicalDimensionIndex(dim, rank);
+  int64_t dim_size = input_shape.get().dimensions(split_dim);
+  XLA_CHECK(rank != 0) << "split expects at least a 1-dimensional tensor.";
+  for (int64_t length : split_sizes) {
+    XLA_CHECK(length >= 0) << "split_with_sizes expects split_sizes have only "
+                              "non-negative entries.";
+  }
+  int64_t total_split =
+      std::accumulate(split_sizes.begin(), split_sizes.end(), (int64_t)0);
+  if (drop_remainder) {
+    XLA_CHECK(total_split <= dim_size)
+        << "split_with_sizes expects split_sizes to sum less or equal than "
+        << dim_size << " (input tensor's size at dimension " << split_dim
+        << ").";
+  } else {
+    XLA_CHECK(total_split == dim_size)
+        << "split_with_sizes expects split_sizes to sum exactly to " << dim_size
+        << " (input tensor's size at dimension " << split_dim << ").";
+  }
   torch::lazy::NodePtr node = torch::lazy::MakeNode<Split>(
-      input->GetIrValue(), std::move(split_size), split_dim);
+      input->GetIrValue(), std::move(split_sizes), split_dim);
   return input->MakeOutputTensors(node);
 }
 
