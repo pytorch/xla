@@ -1,6 +1,7 @@
 #ifndef XLA_CLIENT_TENSOR_SOURCE_H_
 #define XLA_CLIENT_TENSOR_SOURCE_H_
 
+#include "torch_xla/csrc/runtime/debug_macros.h"
 #include "xla/literal.h"
 #include "xla/shape.h"
 
@@ -17,6 +18,13 @@ class TensorSource {
   virtual const xla::Shape& shape() const = 0;
 
   const std::string& device() const { return device_; }
+
+  std::vector<int64_t> byte_strides() const {
+    std::vector<int64_t> byte_strides(shape().dimensions_size());
+    XLA_CHECK_OK(xla::ShapeUtil::ByteStrides(shape(),
+                                             absl::MakeSpan(byte_strides)));
+    return byte_strides;
+  }
 
  private:
   std::string device_;

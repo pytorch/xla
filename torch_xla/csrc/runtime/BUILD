@@ -302,6 +302,7 @@ cc_library(
   name = "tensor_source",
   hdrs = ["tensor_source.h"],
   deps = [
+      ":debug_macros",
       "@xla//xla:literal",
       "@xla//xla:shape_util",
       "@torch//:headers",
