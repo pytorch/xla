@@ -20,7 +20,7 @@ import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.test.test_utils as test_utils
 import torch.distributed as dist
 from torch_xla.amp import autocast
-from torch.utils.data import Dataset, DataLoader,ConcatDataset
+from torch.utils.data import Dataset, DataLoader, ConcatDataset
 import torch.utils.data as data
 import torchvision
 import torchvision.transforms as transforms
@@ -100,10 +100,10 @@ MODEL_OPTS = {
     '--train_only': {
         'action': 'store_true',
     },
-    '--bn_bias_separately': {
+    '--lmdb': {
         'action': 'store_true',
     },
-    '--lmdb': {
+    '--bn_bias_separately': {
         'action': 'store_true',
     },
     '--seed': {
@@ -124,7 +124,6 @@ DEFAULT_KWARGS = dict(
     loader_prefetch_size=16,
     device_prefetch_size=8,
     num_workers=16,
-    lmdb=False,
     host_to_device_transfer_threads=1,
     weight_decay=1e-4,
     seed=43,
@@ -159,25 +158,29 @@ LR_SCHEDULE = [    # (multiplier, epoch to start) tuples
     (1.0, 5), (0.1, 30), (0.01, 60), (0.001, 80)
 ]
 
-# for only training
-class InfiniteDataLoader(DataLoader):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Initialize an iterator over the dataset.
-        self.dataset_iterator = super().__iter__()
+class MultipleEpochsDataset(Dataset):
+    def __init__(self, original_dataset, num_epochs):
+        self.original_dataset = original_dataset
+        self.num_epochs = num_epochs
+        self.length = len(self.original_dataset) * self.num_epochs
 
-    def __iter__(self):
-        return self
+    def __len__(self):
+        return self.length
 
-    def __next__(self):
-        try:
-            batch = next(self.dataset_iterator)
-        except StopIteration:
-            # Dataset exhausted, use a new fresh iterator.
-            random.shuffle(self.dataset.imgs)
-            self.dataset_iterator = super().__iter__()
-            batch = next(self.dataset_iterator)
-        return batch
+    def __getitem__(self, index):
+        return self.original_dataset[index % len(self.original_dataset)]
+
+def worker_init_fn(worker_id):
+    worker_info = torch.utils.data.get_worker_info()
+    dataset = worker_info.dataset
+    
+    # Check if the dataset is an instance of ImageFolderLMDB
+    if isinstance(dataset, ImageFolderLMDB):
+        dataset._ensure_opened()
+    elif hasattr(dataset, 'datasets'):  # If it's a ConcatDataset or other composite dataset
+        for sub_dataset in dataset.datasets:
+            if isinstance(sub_dataset, ImageFolderLMDB):
+                sub_dataset._ensure_opened()
 
 def get_dataloaders():
   if FLAGS.datadir is None:
@@ -190,7 +193,7 @@ def get_dataloaders():
               torch.randint(1000,(FLAGS.eval_batch_size,), dtype=torch.int64)),
       sample_count=FLAGS.num_eval_images // FLAGS.eval_batch_size // xm.xrt_world_size())
   else:
-    train_dataset, test_dataset = get_dataset() if not FLAGS.lmdb else get_lmdb_dataset()
+    train_dataset, test_dataset = get_lmdb_dataset()
     train_sampler, test_sampler = get_samplers(train_dataset, test_dataset)
     train_loader = DataLoader(
         train_dataset,
@@ -226,19 +229,8 @@ def get_dataloaders():
     device_prefetch_size=4,
     host_to_device_transfer_threads=1)
   return train_device_loader, test_device_loader
-    
 
-class MultipleEpochsDataset(Dataset):
-    def __init__(self, original_dataset, num_epochs):
-        self.original_dataset = original_dataset
-        self.num_epochs = num_epochs
-        self.length = len(self.original_dataset) * self.num_epochs
 
-    def __len__(self):
-        return self.length
-
-    def __getitem__(self, index):
-        return self.original_dataset[index % len(self.original_dataset)]
 
 def get_lmdb_dataset():
     resize_dim = FLAGS.img_dim
@@ -254,9 +246,9 @@ def get_lmdb_dataset():
             transforms.ConvertImageDtype(torch.bfloat16),
             normalize,
         ]))
-
+    train_dataset = MultipleEpochsDataset(train_dataset, 4)
     valdir = os.path.join(FLAGS.datadir, 'val.lmdb')
-    val_dataset = ImageFolderLMDB(
+    test_dataset = ImageFolderLMDB(
         valdir,
         transforms.Compose([
             transforms.Resize(resize_dim),
@@ -271,7 +263,7 @@ def get_lmdb_dataset():
     padding_needed = padding_needed//xm.xrt_world_size()
     padding_dataset = [(torch.zeros(3, FLAGS.img_dim, FLAGS.img_dim), torch.tensor([-1])) for _ in range(padding_needed)]
     test_dataset = ConcatDataset([test_dataset, padding_dataset])
-    return train_dataset, val_dataset
+    return train_dataset, test_dataset
 
 def get_dataset():
   normalize = transforms.Normalize(
@@ -285,7 +277,7 @@ def get_dataset():
         transforms.ConvertImageDtype(torch.bfloat16),
         normalize,
     ]))
-  #train_dataset = MultipleEpochsDataset(train_dataset, 4)
+  train_dataset = MultipleEpochsDataset(train_dataset, 4)
   resize_dim = max(FLAGS.img_dim, 256)
   test_dataset = torchvision.datasets.ImageFolder(
       os.path.join(FLAGS.datadir, 'val'),
@@ -303,11 +295,11 @@ def get_dataset():
   global_batch_size = FLAGS.eval_batch_size * xm.xrt_world_size()
   padding_needed = ((eval_dataset_len + global_batch_size - 1)// global_batch_size)  * global_batch_size - eval_dataset_len
   padding_needed = padding_needed//xm.xrt_world_size()
-  
+
   padding_dataset = [(torch.zeros(3, FLAGS.img_dim, FLAGS.img_dim), torch.tensor([-1])) for _ in range(padding_needed)]
   test_dataset = ConcatDataset([test_dataset, padding_dataset])
   return train_dataset,test_dataset
-    
+
 def get_samplers(train_dataset, test_dataset):
   train_sampler, test_sampler = None, None
   if xm.xrt_world_size() > 1:
@@ -335,17 +327,16 @@ def _train_update(device, step, loss, tracker, epoch, writer):
   #xm.master_print(f'loss: {loss.item()}')
 
 def train_imagenet():
-  print('preparing data ====> ')
   torch.manual_seed(FLAGS.seed)
-  device = xm.xla_device() 
-  model =  resnet_model.Resnet50(FLAGS.num_label_classes).to(device)  
+  device = xm.xla_device()
+  model =  resnet_model.Resnet50(FLAGS.num_label_classes).to(device)
   train_device_loader, test_device_loader = get_dataloaders()
 
   # Initialization is nondeterministic with multiple threads in PjRt.
   # Synchronize model parameters across replicas manually.
   if pjrt.using_pjrt():
     pjrt.broadcast_master_param(model)
-  
+
   writer = None
   if xm.is_master_ordinal():
     writer = test_utils.get_summary_writer(FLAGS.logdir)
@@ -355,7 +346,7 @@ def train_imagenet():
   xm.master_print(f'epsilon: {FLAGS.epsilon}')
   xm.master_print(f'momentum: {FLAGS.momentum}')
   xm.master_print(f'weight_decay: {FLAGS.weight_decay}')
-  
+
   optimizer = create_optimizer_lars(model = model,
                                     lr = FLAGS.base_lr,
                                     eeta = FLAGS.eeta,
@@ -363,23 +354,23 @@ def train_imagenet():
                                     momentum=FLAGS.momentum,
                                     weight_decay=FLAGS.weight_decay,
                                     bn_bias_separately=FLAGS.bn_bias_separately)
-  
+
   steps_per_epoch = len(train_device_loader)
   print(f'steps_per_epoch_per_device: {steps_per_epoch}')
 
   lr_scheduler = PolynomialWarmup(optimizer,
                                   decay_steps=steps_per_epoch * FLAGS.num_epochs,
                                   warmup_steps=steps_per_epoch * FLAGS.warmup_epochs,
-                                  end_lr=0.0, 
-                                  power=2.0, 
+                                  end_lr=0.0,
+                                  power=2.0,
                                   last_epoch=-1)
 
   loss_fn = LabelSmoothLoss(FLAGS.label_smoothing)
 
   if FLAGS.profile:
     server = xp.start_server(FLAGS.profiler_port)
-  
-  
+
+
 
   def train_loop_fn(loader, epoch):
     tracker = xm.RateTracker()
@@ -429,7 +420,7 @@ def train_imagenet():
     xm.master_print('Epoch {} train begin {}'.format(epoch, test_utils.now()))
     train_loop_fn(train_device_loader, epoch)
     xm.master_print('Epoch {} train end {}'.format(epoch, test_utils.now()))
-    if not FLAGS.train_only and epoch: # run eval every 4 epochs 
+    if not FLAGS.train_only and epoch: # run eval every 4 epochs
       accuracy = test_loop_fn(test_device_loader, epoch)
       xm.master_print('Epoch {} test end {}, Accuracy={:.2f}'.format(
           epoch, test_utils.now(), accuracy))
