@@ -21,8 +21,8 @@ class TensorSource {
 
   std::vector<int64_t> byte_strides() const {
     std::vector<int64_t> byte_strides(shape().dimensions_size());
-    XLA_CHECK_OK(xla::ShapeUtil::ByteStrides(shape(),
-                                             absl::MakeSpan(byte_strides)));
+    XLA_CHECK_OK(
+        xla::ShapeUtil::ByteStrides(shape(), absl::MakeSpan(byte_strides)));
     return byte_strides;
   }
 
