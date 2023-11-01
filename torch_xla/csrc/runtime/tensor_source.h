@@ -8,6 +8,7 @@
 namespace torch_xla {
 namespace runtime {
 
+// Owns a contiguous block of data with the shape and layout matching `shape()`.
 class TensorSource {
  public:
   TensorSource(std::string device) : device_(std::move(device)) {};
