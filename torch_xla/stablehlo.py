@@ -355,7 +355,7 @@ def _exported_program_to_stablehlo_bundle(exported_model,
   output_signature = [
       VariableSignature(
           shape=list(tensor.shape),
-          dtype=str(tensor_value.dtype).replace('torch.', '')) for tensor in res
+          dtype=str(tensor.dtype).replace('torch.', '')) for tensor in res
   ]
 
   torch_xla._XLAC._clear_pending_irs(str(device))
