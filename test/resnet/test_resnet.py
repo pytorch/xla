@@ -117,6 +117,7 @@ DEFAULT_KWARGS = dict(
     num_epochs=18,
     momentum=0.9,
     base_lr=17,
+    lmdb=False,
     target_accuracy=0.759,
     persistent_workers=True,
     num_label_classes=1000,
@@ -193,7 +194,7 @@ def get_dataloaders():
               torch.randint(1000,(FLAGS.eval_batch_size,), dtype=torch.int64)),
       sample_count=FLAGS.num_eval_images // FLAGS.eval_batch_size // xm.xrt_world_size())
   else:
-    train_dataset, test_dataset = get_lmdb_dataset()
+    train_dataset, test_dataset = get_lmdb_dataset() if FLAGS.lmdb else get_dataset()
     train_sampler, test_sampler = get_samplers(train_dataset, test_dataset)
     train_loader = DataLoader(
         train_dataset,
