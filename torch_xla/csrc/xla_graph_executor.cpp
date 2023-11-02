@@ -1001,7 +1001,8 @@ XLAGraphExecutor::ScheduleSyncTensorsGraph(
         if (async->tensors_data[i] != nullptr) {
           async->tensors_data[i]->Assign(*results[i]);
         } else {
-          XLA_ERROR() << "TODO: remove this path if it is not being used.";
+          // TODO see if this passes CI
+        XLA_CHECK(!std::dynamic_pointer_cast<runtime::ComputationClient::Data>(results[i])->HasSharding() || std::dynamic_pointer_cast<runtime::ComputationClient::Data>(results[i])->GetSharding().type() != xla::OpSharding::UNKNOWN) << "TODO: remove this path if it is not being used.";
           async->tensors_data[i] = std::move(results[i]);
         }
       }

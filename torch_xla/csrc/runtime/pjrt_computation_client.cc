@@ -729,11 +729,11 @@ PjRtComputationClient::ExecuteReplicated(
     const std::vector<xla::Shape>& output_shapes =
         result_shape.IsTuple() ? result_shape.tuple_shapes()
                                : std::vector<xla::Shape>({result_shape});
+    XLA_CHECK_EQ(output_shapes.size(), num_outputs);
 
-    // Without an explicit sharding annotation, the output is implicitly
-    // replicated
+    // HACK: we don't use the sharding on this DataPtr anyway
     std::vector<xla::OpSharding> output_shardings = std::vector<xla::OpSharding>(
-        output_shapes.size(), xla::HloSharding::Manual().ToProto());
+        output_shapes.size(), xla::HloSharding::Unknown().ToProto());
     XLA_CHECK_EQ(output_shapes.size(), output_shardings.size());
 
     auto mwait = std::make_shared<util::MultiWait>(num_outputs);
