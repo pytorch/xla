@@ -433,13 +433,14 @@ class CheckpointManagerTest(DistributedCheckpointTestBase):
 
     # Patch the manager's save method to block until this thread signals.
     cond = threading.Condition()
-    old_save = chkpt_mgr.save
+    old_save = chkpt_mgr._save
 
     def patched_save(*args, **kwargs):
-      cond.wait()
+      with cond:
+        cond.wait()
       old_save(*args, **kwargs)
 
-    with unittest.mock.patch.object(chkpt_mgr, 'save', patched_save):
+    with unittest.mock.patch.object(chkpt_mgr, '_save', patched_save):
       chkpt_mgr.save_async(10, state_dict)
 
     # No new steps should be tracked immediately after calling save_async
