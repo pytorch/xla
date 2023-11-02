@@ -34,7 +34,7 @@ namespace torch_xla {
 namespace {
 
 struct DataAsync {
-  std::vector<std::shared_ptr<const runtime::TensorSource>> source_tensors;
+  std::vector<runtime::ComputationClient::TensorSource> source_tensors;
   std::vector<torch::lazy::BackendDataPtr> async_datas;
   std::vector<runtime::util::ExceptionCleanup> handle_unlockers;
 };
@@ -587,9 +587,15 @@ torch::lazy::BackendDataPtr TensorToXlaData(
                                            sharding_spec);
   }
 
-  std::vector<std::shared_ptr<const runtime::TensorSource>> source_tensors;
-  source_tensors.push_back(
-      std::make_shared<runtime::AtenSource>(tensor, shape, device.toString()));
+  auto populate_fn =
+      [&](const runtime::ComputationClient::TensorSource& source_tensor,
+          void* dest_buffer, size_t dest_buffer_size) {
+        PopulateTensorBuffer(tensor, source_tensor.shape, dest_buffer,
+                             dest_buffer_size, device);
+      };
+
+  std::vector<runtime::ComputationClient::TensorSource> source_tensors;
+  source_tensors.emplace_back(shape, device.toString(), std::move(populate_fn));
 
   auto handles =
       runtime::GetComputationClient()->TransferToServer(source_tensors);
@@ -811,12 +817,19 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
     return WrapXlaData(handles);
   }
 
-  std::vector<std::shared_ptr<const runtime::TensorSource>> source_tensors;
+  std::vector<runtime::ComputationClient::TensorSource> source_tensors;
   for (size_t i = 0; i < tensors.size(); ++i) {
     torch::lazy::BackendDevice device = ParseDeviceString(devices[i]);
     xla::Shape shape = CreateComputationShapeFromTensor(tensors[i], &device);
-    source_tensors.push_back(std::make_shared<runtime::AtenSource>(
-        tensors[i], std::move(shape), devices[i]));
+    auto populate_fn =
+        [&, i, device](
+            const runtime::ComputationClient::TensorSource& source_tensor,
+            void* dest_buffer, size_t dest_buffer_size) {
+          PopulateTensorBuffer(tensors[i], source_tensor.shape, dest_buffer,
+                               dest_buffer_size, device);
+        };
+    source_tensors.emplace_back(std::move(shape), devices[i],
+                                std::move(populate_fn));
   }
   return WrapXlaData(
       runtime::GetComputationClient()->TransferToServer(source_tensors));
@@ -835,8 +848,7 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
     torch::lazy::BackendDevice device = ParseDeviceString(devices[i]);
     xla::Shape shape = CreateComputationShapeFromTensor(tensors[i], &device);
 
-    std::vector<std::shared_ptr<const runtime::TensorSource>>
-        source_tensors;                                            // in
+    std::vector<runtime::ComputationClient::TensorSource> source_tensors;  // in
     std::vector<runtime::ComputationClient::DataPtr> new_handles;  // out
     if (static_cast<XlaDeviceType>(device.type()) == XlaDeviceType::SPMD) {
       // GetLocalDevices returns the list of local devices specified by their
@@ -852,8 +864,15 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
       new_handles.push_back(ShardingUtil::CreateShardedData(
           local_shards, local_devices, shardings[i]));
     } else {
-      source_tensors.push_back(std::make_shared<runtime::AtenSource>(
-          tensors[i], std::move(shape), devices[i]));
+      auto populate_fn =
+          [&, i, device](
+              const runtime::ComputationClient::TensorSource& source_tensor,
+              void* dest_buffer, size_t dest_buffer_size) {
+            PopulateTensorBuffer(tensors[i], source_tensor.shape, dest_buffer,
+                                 dest_buffer_size, device);
+          };
+      source_tensors.emplace_back(std::move(shape), devices[i],
+                                  std::move(populate_fn));
       new_handles =
           runtime::GetComputationClient()->TransferToServer(source_tensors);
     }
