@@ -15,7 +15,7 @@ DequantizeTensor::DequantizeTensor(const torch::lazy::Value& input,
                                    int quant_min, int quant_max,
                                    const std::string& dtype, int axis)
     : XlaNode(
-          xla_quantize_per_tensor, {input},
+          xla_dequantize_tensor, {input},
           GetXlaShape(input) /* fix when quant type is added to HLO */,
           /*num_outputs=*/1,
           torch::lazy::MHash(scale, zero_point, quant_min, quant_max, dtype)),
