@@ -732,8 +732,9 @@ PjRtComputationClient::ExecuteReplicated(
     XLA_CHECK_EQ(output_shapes.size(), num_outputs);
 
     // HACK: we don't use the sharding on this DataPtr anyway
-    std::vector<xla::OpSharding> output_shardings = std::vector<xla::OpSharding>(
-        output_shapes.size(), xla::HloSharding::Unknown().ToProto());
+    std::vector<xla::OpSharding> output_shardings =
+        std::vector<xla::OpSharding>(output_shapes.size(),
+                                     xla::HloSharding::Unknown().ToProto());
     XLA_CHECK_EQ(output_shapes.size(), output_shardings.size());
 
     auto mwait = std::make_shared<util::MultiWait>(num_outputs);
