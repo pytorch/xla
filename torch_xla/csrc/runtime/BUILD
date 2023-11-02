@@ -1,4 +1,9 @@
 load(
+    "//bazel:rules_def.bzl",
+    "ptxla_cc_test",
+)
+
+load(
     "@tsl//tsl/platform/default:cuda_build_defs.bzl",
     "if_cuda_is_configured",
 )
@@ -61,6 +66,7 @@ cc_library(
     ":metrics_reader",
     ":metrics",
     ":sys_util",
+    ":tensor_source",
     ":types",
     ":util",
     ":xla_coordinator",
@@ -92,6 +98,7 @@ cc_library(
     ":env_vars",
     ":multi_wait",
     ":stablehlo_helper",
+    ":tensor_source",
     ":tf_logging",
     ":thread_pool",
     ":xla_coordinator",
@@ -293,6 +300,17 @@ cc_library(
 )
 
 cc_library(
+  name = "tensor_source",
+  hdrs = ["tensor_source.h"],
+  deps = [
+      ":debug_macros",
+      "@xla//xla:literal",
+      "@xla//xla:shape_util",
+      "@torch//:headers",
+  ]
+)
+
+cc_library(
     name = "types",
     hdrs = ["types.h"],
     deps = [
@@ -376,25 +394,27 @@ cc_test(
     ],
 )
 
-# TODO(goranpetrovic): reenable when `xla_cc_test` is fixed upstream.
-# xla_cc_test(
-#     name = "pjrt_computation_client_test",
-#     srcs = ["pjrt_computation_client_test.cc"],
-#     deps = [
-#         ":computation_client",
-#         "@xla//xla:literal",
-#         "@xla//xla:literal_util",
-#         "@xla//xla:shape_util",
-#         "@xla//xla:status",
-#         "@xla//xla:statusor",
-#         "@xla//xla/client:xla_builder",
-#         "@xla//xla/client:xla_computation",
-#         "@xla//xla/tests:literal_test_util",
-#         "@xla//xla/tools:hlo_module_loader",
-#         "@org_tensorflow//tensorflow/core/platform:logging",
-#         "@tsl//tsl/lib/core:status_test_util",
-#         "@tsl//tsl/platform:env",
-#         "@tsl//tsl/platform:test",
-#         "@tsl//tsl/platform:test_main",
-#     ],
-# )
+ptxla_cc_test(
+    name = "pjrt_computation_client_test",
+    srcs = ["pjrt_computation_client_test.cc"],
+    deps = [
+        ":computation_client",
+        ":pjrt_computation_client",
+        ":tensor_source",
+        "@xla//xla:literal",
+        "@xla//xla:literal_util",
+        "@xla//xla:shape_util",
+        "@xla//xla:status",
+        "@xla//xla:statusor",
+        "@xla//xla/client:xla_builder",
+        "@xla//xla/client:xla_computation",
+        "@xla//xla/tests:literal_test_util",
+        "@xla//xla/tools:hlo_module_loader",
+        "@tsl//tsl/lib/core:status_test_util",
+        "@tsl//tsl/platform:env",
+        "@tsl//tsl/platform:errors",
+        "@tsl//tsl/platform:logging",
+        "@tsl//tsl/platform:test",
+        "@tsl//tsl/platform:test_main",
+    ],
+)

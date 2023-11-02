@@ -1,6 +1,7 @@
 #ifndef XLA_CLIENT_COMPUTATION_CLIENT_H_
 #define XLA_CLIENT_COMPUTATION_CLIENT_H_
 
+#include <ATen/Tensor.h>
 #include <torch/csrc/lazy/backend/backend_data.h>
 #include <torch/csrc/lazy/backend/lowering_context.h>
 #include <torch/csrc/lazy/core/hash.h>
@@ -20,6 +21,7 @@
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/metrics.h"
+#include "torch_xla/csrc/runtime/tensor_source.h"
 #include "torch_xla/csrc/runtime/types.h"
 #include "torch_xla/csrc/runtime/util.h"
 #include "xla/client/xla_computation.h"
@@ -192,25 +194,6 @@ class ComputationClient {
 
   using ComputationPtr = std::shared_ptr<Computation>;
 
-  // The TensorSource provides a way for a client to populate a buffer allocated
-  // by the core computation client code.
-  struct TensorSource {
-    // The PopulateFn accepts a dense buffer is standard array layout
-    // (dim0-major) and deposits the source tensor data directly over the
-    // provided buffer.
-    using PopulateFn = std::function<void(const TensorSource&, void*, size_t)>;
-
-    TensorSource() = default;
-    TensorSource(xla::Shape shape, std::string device, PopulateFn populate_fn)
-        : shape(std::move(shape)),
-          device(std::move(device)),
-          populate_fn(std::move(populate_fn)) {}
-
-    xla::Shape shape;
-    std::string device;
-    PopulateFn populate_fn;
-  };
-
   // TODO(wcromar): Should CompileInstance still exist? Should it be a subclass
   // of torch::lazy::Computation?
   struct CompileInstance {
@@ -275,13 +258,13 @@ class ComputationClient {
 
   // Transfers local tensor values to the TPU devices and fetches the handles.
   virtual std::vector<DataPtr> TransferToServer(
-      absl::Span<const TensorSource> tensors) = 0;
+      absl::Span<const std::shared_ptr<const TensorSource>> tensors) = 0;
 
   // Transfers local sharded tensor values to the TPU devices and returns a
   // `PjRtShardedData`.
   virtual DataPtr TransferShardsToServer(
-      absl::Span<const TensorSource> tensor_shards, std::string device,
-      xla::Shape shape, xla::OpSharding sharding) = 0;
+      absl::Span<const std::shared_ptr<const TensorSource>> tensor_shards,
+      std::string device, xla::Shape shape, xla::OpSharding sharding) = 0;
 
   // Copies `data->buffer` to `dst` device buffer.
   virtual DataPtr CopyToDevice(DataPtr data, std::string dst) = 0;
