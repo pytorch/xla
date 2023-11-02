@@ -200,10 +200,10 @@ at::Tensor AllReduce(const std::string& reduce_type, const at::Tensor& input,
 }
 
 at::Tensor QuantizeTensor(const at::Tensor& input,
-                             const std::vector<float>& scale_list,
-                             const std::vector<float>& zero_point_list,
-                             int quant_min, int quant_max,
-                             const std::string& dtype, int axis) {
+                          const std::vector<float>& scale_list,
+                          const std::vector<float>& zero_point_list,
+                          int quant_min, int quant_max,
+                          const std::string& dtype, int axis) {
   auto result = tensor_methods::quantize_tensor(
       bridge::GetXlaTensor(input), scale_list, zero_point_list, quant_min,
       quant_max, dtype, axis);
@@ -211,10 +211,10 @@ at::Tensor QuantizeTensor(const at::Tensor& input,
 }
 
 at::Tensor DequantizeTensor(const at::Tensor& input,
-                               const std::vector<float>& scale_list,
-                               const std::vector<float>& zero_point_list,
-                               int quant_min, int quant_max,
-                               const std::string& dtype, int axis) {
+                            const std::vector<float>& scale_list,
+                            const std::vector<float>& zero_point_list,
+                            int quant_min, int quant_max,
+                            const std::string& dtype, int axis) {
   auto result = tensor_methods::dequantize_tensor(
       bridge::GetXlaTensor(input), scale_list, zero_point_list, quant_min,
       quant_max, dtype, axis);
@@ -1134,7 +1134,7 @@ void InitXlaModuleBindings(py::module m) {
           {
             NoGilSection nogil;
             result = QuantizeTensor(input, scale_list, zero_point_list,
-                                       quant_min, quant_max, dtype, axis);
+                                    quant_min, quant_max, dtype, axis);
           }
           return result;
         });
@@ -1146,7 +1146,7 @@ void InitXlaModuleBindings(py::module m) {
           {
             NoGilSection nogil;
             result = DequantizeTensor(input, scale_list, zero_point_list,
-                                         quant_min, quant_max, dtype, axis);
+                                      quant_min, quant_max, dtype, axis);
           }
           return result;
         });
