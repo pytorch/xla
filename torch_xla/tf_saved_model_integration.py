@@ -133,17 +133,14 @@ def save_torch_module_as_tf_saved_model(
   or further convert to tflite flatbuffer for on-device serving.
 
   Args:
-    torch_model: torch.nn.Module - model to export and save
+    torch_model: Union[torch.nn.Module, torch.fx.GraphModule] - model to export and save
     args: Tuple[Any] - a set of args to trace the model with, i.e. torch_model(*args) must run
     saved_model_dir: os.PathLike - location to an empty directory to store the saved_model
     serving_key: str  - serving key tag, this is used by tf.serving to know which function to run.
     function_alias: str - passed through saved_model.save, used to tag a function for 
        inference converter or other tools.
   """
-  if isinstance(torch_model, GraphModule):
-    exported = torch.export.export(torch_model, args)
-  else:
-    exported = torch_model
+  exported = torch.export.export(torch_model, args)
   options = stablehlo.StableHLOExportOptions(override_tracing_arguments=args)
   stablehlo_model = stablehlo.exported_program_to_stablehlo(exported, options)
   save_stablehlo_graph_as_tf(stablehlo_model, saved_model_dir, serving_key,

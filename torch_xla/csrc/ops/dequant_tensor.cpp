@@ -36,7 +36,7 @@ torch::lazy::NodePtr DequantizeTensor::Clone(
 XlaOpVector DequantizeTensor::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::Shape input_shape = ShapeHelper::ShapeOfXlaOp(input);
-
+  // TODO(lsy323): Lower to HLO directly once qdtype is added to HLO.
   static const std::string opname = "stablehlo.uniform_dequantize";
   auto qparams = QuantParams(scale_, zero_point_, quant_min_, quant_max_, axis_,
                              dtype_, input_shape.element_type());
