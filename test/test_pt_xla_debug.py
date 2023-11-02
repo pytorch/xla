@@ -68,10 +68,11 @@ class PtXLADebugTest(unittest.TestCase):
     with open(self.debug_file_name, 'rb') as f:
       lines = f.readlines()
       causes = extract_execution_cause(lines)
-    self.assertEqual(len(causes), 3)
+    self.assertEqual(len(causes), 4)
     self.assertIn('mark_step when dynamo processing input graphs', causes[0])
     self.assertIn('mark_step when dynamo processing input graphs', causes[1])
-    self.assertIn('dynamo compiles FX graph to HLO', causes[2])
+    self.assertIn('dynamo is compiling a FX graph to HLO', causes[2])
+    self.assertIn('dynamo is executing a compiled program', causes[3])
     open(self.debug_file_name, 'w').close()
 
   def test_parallel_loader(self):
