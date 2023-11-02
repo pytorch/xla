@@ -7,8 +7,6 @@
 #include <vector>
 
 #include "torch_xla/csrc/runtime/computation_client.h"
-#include "torch_xla/csrc/runtime/pjrt_computation_client.h"
-#include "torch_xla/csrc/runtime/tensor_source.h"
 #include "tsl/lib/core/status_test_util.h"
 #include "tsl/platform/env.h"
 #include "tsl/platform/logging.h"
@@ -32,6 +30,17 @@ tsl::StatusOr<xla::XlaComputation> MakeComputation() {
   xla::XlaOp y = xla::Parameter(&builder, 1, input_shape, "y");
   xla::XlaOp sum = xla::Add(x, y);
   return builder.Build();
+}
+
+ComputationClient::TensorSource TensorSourceFromLiteral(
+    const std::string& device, const xla::Literal& literal) {
+  auto populate_fn = [&](const ComputationClient::TensorSource& source_tensor,
+                         void* dest_buffer, size_t dest_buffer_size) {
+    std::memcpy(dest_buffer, literal.data<float>().data(),
+                dest_buffer_size * sizeof(literal.data<float>().data()));
+  };
+  return ComputationClient::TensorSource(literal.shape(), device,
+                                         std::move(populate_fn));
 }
 
 TEST(PjRtComputationClientTest, Init) {
@@ -60,9 +69,9 @@ TEST(PjRtComputationClientTest, Init) {
 
   // Copy inputs to device.
   ComputationClient::ExecuteComputationOptions options{};
-  std::vector<std::shared_ptr<const TensorSource>> args = {
-      std::make_shared<LiteralSource>(std::move(literal_x), device),
-      std::make_shared<LiteralSource>(std::move(literal_y), device)};
+  std::vector<ComputationClient::TensorSource> args = {
+      TensorSourceFromLiteral(device, literal_x),
+      TensorSourceFromLiteral(device, literal_y)};
 
   // Execute the graph.
   std::vector<ComputationClient::DataPtr> results = client->ExecuteComputation(
