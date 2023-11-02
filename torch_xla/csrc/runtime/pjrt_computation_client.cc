@@ -12,6 +12,7 @@
 #include "torch_xla/csrc/runtime/env_vars.h"
 #include "torch_xla/csrc/runtime/multi_wait.h"
 #include "torch_xla/csrc/runtime/stablehlo_helper.h"
+#include "torch_xla/csrc/runtime/tensor_source.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
 #include "torch_xla/csrc/runtime/thread_pool.h"
 #include "torch_xla/csrc/runtime/xla_coordinator.h"
@@ -286,7 +287,7 @@ std::optional<xla::OpSharding> PjRtComputationClient::GetDataSharding(
 }
 
 std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
-    absl::Span<const TensorSource> tensors) {
+    absl::Span<const std::shared_ptr<const TensorSource>> tensors) {
   metrics::TimedSection timed(TransferToServerMetric());
   tsl::profiler::TraceMe activity("PjRtComputationClient::TransferToServer",
                                   tsl::profiler::TraceMeLevel::kInfo);
@@ -294,31 +295,22 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
   datas.reserve(tensors.size());
   int64_t total_size = 0;
   for (auto& tensor : tensors) {
-    xla::PjRtDevice* pjrt_device = StringToPjRtDevice(tensor.device);
+    xla::PjRtDevice* pjrt_device = StringToPjRtDevice(tensor->device());
 
-    auto literal = std::make_shared<xla::Literal>(tensor.shape);
-    tensor.populate_fn(tensor, literal->untyped_data(), literal->size_bytes());
-    std::vector<int64_t> byte_strides(literal->shape().dimensions_size());
-    XLA_CHECK_OK(xla::ShapeUtil::ByteStrides(literal->shape(),
-                                             absl::MakeSpan(byte_strides)));
-    total_size += literal->size_bytes();
+    total_size += xla::ShapeUtil::ByteSizeOf(tensor->shape());
 
-    // Avoid use-after-free on `literal` due to unsequenced move and use.
-    xla::Literal* literal_pointer = literal.get();
-    std::shared_ptr<xla::PjRtBuffer> buffer = std::move(
-        client_
-            ->BufferFromHostBuffer(
-                literal_pointer->untyped_data(),
-                literal_pointer->shape().element_type(),
-                literal_pointer->shape().dimensions(), byte_strides,
-                xla::PjRtClient::HostBufferSemantics::
-                    kImmutableUntilTransferCompletes,
-                [literal{std::move(literal)}]() { /* frees literal */ },
-                pjrt_device)
-            .value());
+    std::shared_ptr<xla::PjRtBuffer> buffer =
+        std::move(client_
+                      ->BufferFromHostBuffer(
+                          tensor->data(), tensor->shape().element_type(),
+                          tensor->shape().dimensions(), tensor->byte_strides(),
+                          xla::PjRtClient::HostBufferSemantics::
+                              kImmutableUntilTransferCompletes,
+                          [tensor]() { /* frees tensor */ }, pjrt_device)
+                      .value());
 
     ComputationClient::DataPtr data =
-        std::make_shared<PjRtData>(tensor.device, tensor.shape, buffer);
+        std::make_shared<PjRtData>(tensor->device(), tensor->shape(), buffer);
     datas.push_back(data);
   }
   OutboundDataMetric()->AddSample(total_size);
@@ -328,8 +320,8 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
 }
 
 ComputationClient::DataPtr PjRtComputationClient::TransferShardsToServer(
-    absl::Span<const TensorSource> tensor_shards, std::string device,
-    xla::Shape shape, xla::OpSharding sharding) {
+    absl::Span<const std::shared_ptr<const TensorSource>> tensor_shards,
+    std::string device, xla::Shape shape, xla::OpSharding sharding) {
   tsl::profiler::TraceMe activity(
       "PjRtComputationClient::TransferShardsToServer",
       tsl::profiler::TraceMeLevel::kInfo);
