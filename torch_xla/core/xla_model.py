@@ -89,9 +89,11 @@ def get_xla_supported_devices(devkind=None, max_devices=None):
   Returns:
     The list of device strings.
   """
-  # TODO(xiowei): Remove the below if statement after r2.2 release.
-  if devkind.casefold() == 'gpu':
-    warnings.warn("GPU as a device name is being deprecate. Please replace it with CUDA such as get_xla_supported_devices(devkind='CUDA'). Similarly, please replace PJRT_DEVICE=GPU with PJRT_DEVICE=CUDA.")
+  # TODO(xiowei replace gpu with cuda): Remove the below if statement after r2.2 release.
+  if devkind and devkind.casefold() == 'gpu':
+    warnings.warn(
+        "GPU as a device name is being deprecate. Please replace it with CUDA such as get_xla_supported_devices(devkind='CUDA'). Similarly, please replace PJRT_DEVICE=GPU with PJRT_DEVICE=CUDA."
+    )
     devkind = 'CUDA'
 
   xla_devices = _DEVICES.value
