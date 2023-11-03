@@ -12,6 +12,8 @@
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/operation_manager.h"
 #include "torch_xla/csrc/runtime/util.h"
+#include "tsl/platform/env.h"
+#include "tsl/platform/threadpool.h"
 #include "xla/client/xla_computation.h"
 #include "xla/literal.h"
 #include "xla/pjrt/pjrt_client.h"
@@ -110,6 +112,7 @@ class PjRtComputationClient : public ComputationClient {
   std::unordered_map<std::string, xla::PjRtDevice* const> string_to_device_;
   std::shared_ptr<std::vector<std::string>> replication_devices_;
   OperationManager operation_manager_;
+  tsl::thread::ThreadPool pool_ = tsl::thread::ThreadPool(tsl::Env::Default(), "pjrt", std::thread::hardware_concurrency());
 
   xla::PjRtDevice* StringToPjRtDevice(const std::string& device);
 
@@ -234,6 +237,7 @@ class PjRtComputationClient : public ComputationClient {
 
   // Use XLA replication to re-assemble the sharded data.
   std::shared_ptr<PjRtData> ReplicateShardedData(const DataPtr& handle);
+
 };
 
 }  // namespace runtime
