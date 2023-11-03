@@ -646,17 +646,16 @@ PjRtComputationClient::ExecuteReplicated(
   const PjRtComputation& pjrt_computation =
       dynamic_cast<const PjRtComputation&>(computation);
 
-  absl::BlockingCounter counter(arguments.size());
-  std::vector<std::vector<xla::PjRtBuffer*>> argument_handles(
-      devices.size(), std::vector<xla::PjRtBuffer*>(arguments.size()));
   {
     tsl::profiler::TraceMe activity(
         "PjRtComputationClient::ExecuteReplicated_argument_handle",
         tsl::profiler::TraceMeLevel::kInfo);
 
-    util::MultiWait mwait(arguments.size());
+    absl::BlockingCounter counter(arguments.size());
+    std::vector<std::vector<xla::PjRtBuffer*>> argument_handles(
+        devices.size(), std::vector<xla::PjRtBuffer*>(arguments.size()));
     // TODO: tune and document cost estimate
-    pool_.ParallelFor(arguments.size(), 100000, [&](int64_t start, int64_t end) {
+    pool_.ParallelFor(arguments.size(), 30000, [&](int64_t start, int64_t end) {
       tsl::profiler::TraceMe activity(
         "PjRtComputationClient::ExecuteReplicated_argument_handle_shard",
         tsl::profiler::TraceMeLevel::kInfo);
@@ -674,7 +673,6 @@ PjRtComputationClient::ExecuteReplicated(
           XLA_CHECK(pjrt_device->IsAddressable()) << pjrt_device->DebugString();
 
           argument_handles[d][i] = shard->buffer.get();
-          mwait.Done();
         }
         counter.DecrementCount();
       };
@@ -736,9 +734,9 @@ PjRtComputationClient::ExecuteReplicated(
                                : std::vector<xla::Shape>({result_shape});
     XLA_CHECK_EQ(output_shapes.size(), num_outputs);
 
-    util::MultiWait mwait(num_outputs);
+    absl::BlockingCounter counter(num_outputs);
     // TODO: tune and document cost estimate
-    pool_.ParallelFor(num_outputs, 100000, [&](int64_t start, int64_t end) {
+    pool_.ParallelFor(num_outputs, 30000, [&](int64_t start, int64_t end) {
       tsl::profiler::TraceMe activity(
         "PjRtComputationClient::ExecuteReplicated_result_handle_shard",
         tsl::profiler::TraceMeLevel::kInfo);
@@ -755,10 +753,10 @@ PjRtComputationClient::ExecuteReplicated(
             xla::HloSharding::Unknown().ToProto());
         TF_VLOG(5) << "Created sharded data with shape "
                    << data_handles[i]->shape().ToString();
-        mwait.Done();
+        counter.DecrementCount();
       }
     });
-    mwait.Wait();
+    counter.Wait();
   }
 
   TF_VLOG(1) << "Returning " << data_handles.size() << " sharded outputs.";
