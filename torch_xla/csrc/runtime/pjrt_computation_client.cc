@@ -657,8 +657,8 @@ PjRtComputationClient::ExecuteReplicated(
     // TODO: tune and document cost estimate
     pool_.ParallelFor(arguments.size(), 30000, [&](int64_t start, int64_t end) {
       tsl::profiler::TraceMe activity(
-        "PjRtComputationClient::ExecuteReplicated_argument_handle_shard",
-        tsl::profiler::TraceMeLevel::kInfo);
+          "PjRtComputationClient::ExecuteReplicated_argument_handle_shard",
+          tsl::profiler::TraceMeLevel::kInfo);
       for (int32_t i = start; i < end; ++i) {
         auto pjrt_data =
             std::dynamic_pointer_cast<PjRtShardedData>(arguments[i]);
@@ -738,8 +738,8 @@ PjRtComputationClient::ExecuteReplicated(
     // TODO: tune and document cost estimate
     pool_.ParallelFor(num_outputs, 30000, [&](int64_t start, int64_t end) {
       tsl::profiler::TraceMe activity(
-        "PjRtComputationClient::ExecuteReplicated_result_handle_shard",
-        tsl::profiler::TraceMeLevel::kInfo);
+          "PjRtComputationClient::ExecuteReplicated_result_handle_shard",
+          tsl::profiler::TraceMeLevel::kInfo);
       for (int32_t i = start; i < end; ++i) {
         std::vector<std::shared_ptr<PjRtData>> shards(devices.size());
         for (int32_t d = 0; d < devices.size(); d++) {
