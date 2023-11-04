@@ -196,17 +196,17 @@ for more information.
 
 ### Single-node GPU training
 
-To use GPUs with PJRT, simply set `PJRT_DEVICE=GPU` and configure
+To use GPUs with PJRT, simply set `PJRT_DEVICE=CUDA` and configure
 `GPU_NUM_DEVICES` to the number of devices on the host. For example:
 
 ```
-PJRT_DEVICE=GPU GPU_NUM_DEVICES=4 python3 xla/test/test_train_mp_imagenet.py --fake_data --batch_size=128 --num_epochs=1
+PJRT_DEVICE=CUDA GPU_NUM_DEVICES=4 python3 xla/test/test_train_mp_imagenet.py --fake_data --batch_size=128 --num_epochs=1
 ```
 
 You can also use `torchrun` to initiate the single-node multi-GPU training. For example,
 
 ```
-PJRT_DEVICE=GPU torchrun --nnodes 1 --nproc-per-node ${NUM_GPU_DEVICES} xla/test/test_train_mp_imagenet.py --fake_data --pjrt_distributed --batch_size=128 --num_epochs=1
+PJRT_DEVICE=CUDA torchrun --nnodes 1 --nproc-per-node ${NUM_GPU_DEVICES} xla/test/test_train_mp_imagenet.py --fake_data --pjrt_distributed --batch_size=128 --num_epochs=1
 ```
 
 In the above example, `--nnodes` means how many machines (physical machines or VMs) to be used (it is 1 since we do single-node training). `--nproc-per-node` means how many GPU devices to be used.
@@ -216,7 +216,7 @@ In the above example, `--nnodes` means how many machines (physical machines or V
 **Note that this feature only works for cuda 12+**. Similar to how PyTorch uses multi-node training, you can run the command as below:
 
 ```
-PJRT_DEVICE=GPU torchrun \
+PJRT_DEVICE=CUDA torchrun \
 --nnodes=${NUMBER_GPU_VM} \
 --node_rank=${CURRENT_NODE_RANK} \
 --nproc_per_node=${NUMBER_LOCAL_GPU_DEVICES} \
@@ -231,7 +231,7 @@ PJRT_DEVICE=GPU torchrun \
 For example, if you want to train on 2 GPU machines: machine_0 and machine_1, on the first GPU machine machine_0, run
 
 ```
-# PJRT_DEVICE=GPU torchrun \
+# PJRT_DEVICE=CUDA torchrun \
 --nnodes=2 \
 --node_rank=0 \
 --nproc_per_node=4 \
@@ -241,7 +241,7 @@ For example, if you want to train on 2 GPU machines: machine_0 and machine_1, on
 On the second GPU machine, run
 
 ```
-# PJRT_DEVICE=GPU torchrun \
+# PJRT_DEVICE=CUDA torchrun \
 --nnodes=2 \
 --node_rank=1 \
 --nproc_per_node=4 \

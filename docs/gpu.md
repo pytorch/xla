@@ -59,7 +59,7 @@ pip3 install https://storage.googleapis.com/tpu-pytorch/wheels/cuda/117/torch_xl
 In order to run below examples, you need to clone the pytorch/xla repo to access the imagenet example(We already clone it in our docker).
 
 ```
-(pytorch) root@20ab2c7a2d06:/# export GPU_NUM_DEVICES=1 PJRT_DEVICE=GPU
+(pytorch) root@20ab2c7a2d06:/# export GPU_NUM_DEVICES=1 PJRT_DEVICE=CUDA
 (pytorch) root@20ab2c7a2d06:/# git clone --recursive https://github.com/pytorch/xla.git
 (pytorch) root@20ab2c7a2d06:/# python xla/test/test_train_mp_imagenet.py --fake_data
 ==> Preparing data..

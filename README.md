@@ -111,7 +111,7 @@ If you're using `DistributedDataParallel`, make the following changes:
 Additional information on PyTorch/XLA, including a description of its semantics
 and functions, is available at [PyTorch.org](http://pytorch.org/xla/). See the
 [API Guide](API_GUIDE.md) for best practices when writing networks that run on
-XLA devices (TPU, GPU, CPU and...).
+XLA devices (TPU, CUDA, CPU and...).
 
 Our comprehensive user guides are available at:
 

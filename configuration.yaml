@@ -4,7 +4,7 @@ variables:
     PJRT_DEVICE:
       description:
         - Indicates which device is being used with PJRT. It can be either CPU,
-          TPU, or GPU
+          TPU, or CUDA
       type: string
     PJRT_SELECT_DEFAULT_DEVICE:
       description:
