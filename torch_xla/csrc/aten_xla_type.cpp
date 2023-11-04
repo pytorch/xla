@@ -626,13 +626,6 @@ at::Tensor XLANativeFunctions::_unsafe_view(const at::Tensor& self,
   return view_copy_symint(self, c10::fromIntArrayRefSlow(size));
 }
 
-at::Tensor XLANativeFunctions::_unsafe_index(
-    const at::Tensor& self,
-    const c10::List<c10::optional<at::Tensor>>& indices) {
-  TORCH_LAZY_FN_COUNTER("xla::");
-  return index(self, indices);
-}
-
 at::Tensor XLANativeFunctions::add(const at::Tensor& self,
                                    const at::Tensor& other,
                                    const at::Scalar& alpha) {
