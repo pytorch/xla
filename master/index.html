@@ -225,7 +225,7 @@
               
               
                 <div class="version">
-                  master (2.2.0+gita93e14b )
+                  master (2.2.0+gitf01cdb6 )
                 </div>
               
             
@@ -2295,13 +2295,13 @@ for more information.</p>
 </div>
 <div class="section" id="single-node-gpu-training">
 <h3>Single-node GPU training<a class="headerlink" href="#single-node-gpu-training" title="Permalink to this headline">¶</a></h3>
-<p>To use GPUs with PJRT, simply set <code class="docutils literal notranslate"><span class="pre">PJRT_DEVICE=GPU</span></code> and configure
+<p>To use GPUs with PJRT, simply set <code class="docutils literal notranslate"><span class="pre">PJRT_DEVICE=CUDA</span></code> and configure
 <code class="docutils literal notranslate"><span class="pre">GPU_NUM_DEVICES</span></code> to the number of devices on the host. For example:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">PJRT_DEVICE</span><span class="o">=</span><span class="n">GPU</span> <span class="n">GPU_NUM_DEVICES</span><span class="o">=</span><span class="mi">4</span> <span class="n">python3</span> <span class="n">xla</span><span class="o">/</span><span class="n">test</span><span class="o">/</span><span class="n">test_train_mp_imagenet</span><span class="o">.</span><span class="n">py</span> <span class="o">--</span><span class="n">fake_data</span> <span class="o">--</span><span class="n">batch_size</span><span class="o">=</span><span class="mi">128</span> <span class="o">--</span><span class="n">num_epochs</span><span class="o">=</span><span class="mi">1</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">PJRT_DEVICE</span><span class="o">=</span><span class="n">CUDA</span> <span class="n">GPU_NUM_DEVICES</span><span class="o">=</span><span class="mi">4</span> <span class="n">python3</span> <span class="n">xla</span><span class="o">/</span><span class="n">test</span><span class="o">/</span><span class="n">test_train_mp_imagenet</span><span class="o">.</span><span class="n">py</span> <span class="o">--</span><span class="n">fake_data</span> <span class="o">--</span><span class="n">batch_size</span><span class="o">=</span><span class="mi">128</span> <span class="o">--</span><span class="n">num_epochs</span><span class="o">=</span><span class="mi">1</span>
 </pre></div>
 </div>
 <p>You can also use <code class="docutils literal notranslate"><span class="pre">torchrun</span></code> to initiate the single-node multi-GPU training. For example,</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>PJRT_DEVICE=GPU torchrun --nnodes 1 --nproc-per-node ${NUM_GPU_DEVICES} xla/test/test_train_mp_imagenet.py --fake_data --pjrt_distributed --batch_size=128 --num_epochs=1
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>PJRT_DEVICE=CUDA torchrun --nnodes 1 --nproc-per-node ${NUM_GPU_DEVICES} xla/test/test_train_mp_imagenet.py --fake_data --pjrt_distributed --batch_size=128 --num_epochs=1
 </pre></div>
 </div>
 <p>In the above example, <code class="docutils literal notranslate"><span class="pre">--nnodes</span></code> means how many machines (physical machines or VMs) to be used (it is 1 since we do single-node training). <code class="docutils literal notranslate"><span class="pre">--nproc-per-node</span></code> means how many GPU devices to be used.</p>
@@ -2309,7 +2309,7 @@ for more information.</p>
 <div class="section" id="multi-node-gpu-training">
 <h3>Multi-node GPU training<a class="headerlink" href="#multi-node-gpu-training" title="Permalink to this headline">¶</a></h3>
 <p><strong>Note that this feature only works for cuda 12+</strong>. Similar to how PyTorch uses multi-node training, you can run the command as below:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>PJRT_DEVICE=GPU torchrun \
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>PJRT_DEVICE=CUDA torchrun \
 --nnodes=${NUMBER_GPU_VM} \
 --node_rank=${CURRENT_NODE_RANK} \
 --nproc_per_node=${NUMBER_LOCAL_GPU_DEVICES} \
@@ -2323,7 +2323,7 @@ for more information.</p>
 <li><p><cite>–rdzv_endpoint</cite>: the endpoint of the GPU machine with node_rank==0, in the form &lt;host&gt;:<span class="raw-html-m2r"><port></span>. The <code class="docutils literal notranslate"><span class="pre">host</span></code> will be the internal IP address. The port can be any available port on the machine.</p></li>
 </ul>
 <p>For example, if you want to train on 2 GPU machines: machine_0 and machine_1, on the first GPU machine machine_0, run</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># PJRT_DEVICE=GPU torchrun \</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># PJRT_DEVICE=CUDA torchrun \</span>
 <span class="o">--</span><span class="n">nnodes</span><span class="o">=</span><span class="mi">2</span> \
 <span class="o">--</span><span class="n">node_rank</span><span class="o">=</span><span class="mi">0</span> \
 <span class="o">--</span><span class="n">nproc_per_node</span><span class="o">=</span><span class="mi">4</span> \
@@ -2331,7 +2331,7 @@ for more information.</p>
 </pre></div>
 </div>
 <p>On the second GPU machine, run</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># PJRT_DEVICE=GPU torchrun \</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># PJRT_DEVICE=CUDA torchrun \</span>
 <span class="o">--</span><span class="n">nnodes</span><span class="o">=</span><span class="mi">2</span> \
 <span class="o">--</span><span class="n">node_rank</span><span class="o">=</span><span class="mi">1</span> \
 <span class="o">--</span><span class="n">nproc_per_node</span><span class="o">=</span><span class="mi">4</span> \
@@ -3053,7 +3053,7 @@ sudo docker exec -it $(sudo docker ps | awk &#39;NR==2 { print $1 }&#39;) /bin/b
 <div class="section" id="run-a-simple-model">
 <h2>Run a simple model<a class="headerlink" href="#run-a-simple-model" title="Permalink to this headline">¶</a></h2>
 <p>In order to run below examples, you need to clone the pytorch/xla repo to access the imagenet example(We already clone it in our docker).</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">(</span><span class="n">pytorch</span><span class="p">)</span> <span class="n">root</span><span class="o">@</span><span class="mi">20</span><span class="n">ab2c7a2d06</span><span class="p">:</span><span class="o">/</span><span class="c1"># export GPU_NUM_DEVICES=1 PJRT_DEVICE=GPU</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">(</span><span class="n">pytorch</span><span class="p">)</span> <span class="n">root</span><span class="o">@</span><span class="mi">20</span><span class="n">ab2c7a2d06</span><span class="p">:</span><span class="o">/</span><span class="c1"># export GPU_NUM_DEVICES=1 PJRT_DEVICE=CUDA</span>
 <span class="p">(</span><span class="n">pytorch</span><span class="p">)</span> <span class="n">root</span><span class="o">@</span><span class="mi">20</span><span class="n">ab2c7a2d06</span><span class="p">:</span><span class="o">/</span><span class="c1"># git clone --recursive https://github.com/pytorch/xla.git</span>
 <span class="p">(</span><span class="n">pytorch</span><span class="p">)</span> <span class="n">root</span><span class="o">@</span><span class="mi">20</span><span class="n">ab2c7a2d06</span><span class="p">:</span><span class="o">/</span><span class="c1"># python xla/test/test_train_mp_imagenet.py --fake_data</span>
 <span class="o">==&gt;</span> <span class="n">Preparing</span> <span class="n">data</span><span class="o">..</span>

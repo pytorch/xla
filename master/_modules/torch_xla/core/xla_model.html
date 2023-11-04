@@ -225,7 +225,7 @@
               
               
                 <div class="version">
-                  master (2.2.0+gita93e14b )
+                  master (2.2.0+gitf01cdb6 )
                 </div>
               
             
@@ -335,6 +335,7 @@
 <span class="kn">import</span> <span class="nn">re</span>
 <span class="kn">import</span> <span class="nn">threading</span>
 <span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
 <span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">import</span> <span class="nn">torch.distributed._functional_collectives</span>
@@ -418,6 +419,13 @@
 <span class="sd">  Returns:</span>
 <span class="sd">    The list of device strings.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
+  <span class="c1"># TODO(xiowei replace gpu with cuda): Remove the below if statement after r2.2 release.</span>
+  <span class="k">if</span> <span class="n">devkind</span> <span class="ow">and</span> <span class="n">devkind</span><span class="o">.</span><span class="n">casefold</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;gpu&#39;</span><span class="p">:</span>
+    <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+        <span class="s2">&quot;GPU as a device name is being deprecate. Please replace it with CUDA such as get_xla_supported_devices(devkind=&#39;CUDA&#39;). Similarly, please replace PJRT_DEVICE=GPU with PJRT_DEVICE=CUDA.&quot;</span>
+    <span class="p">)</span>
+    <span class="n">devkind</span> <span class="o">=</span> <span class="s1">&#39;CUDA&#39;</span>
+
   <span class="n">xla_devices</span> <span class="o">=</span> <span class="n">_DEVICES</span><span class="o">.</span><span class="n">value</span>
   <span class="n">devkind</span> <span class="o">=</span> <span class="p">[</span><span class="n">devkind</span><span class="p">]</span> <span class="k">if</span> <span class="n">devkind</span> <span class="k">else</span> <span class="p">[</span>
       <span class="s1">&#39;TPU&#39;</span><span class="p">,</span> <span class="s1">&#39;GPU&#39;</span><span class="p">,</span> <span class="s1">&#39;XPU&#39;</span><span class="p">,</span> <span class="s1">&#39;NEURON&#39;</span><span class="p">,</span> <span class="s1">&#39;CPU&#39;</span><span class="p">,</span> <span class="s1">&#39;CUDA&#39;</span><span class="p">,</span> <span class="s1">&#39;ROCM&#39;</span>
