@@ -74,9 +74,9 @@ class ProcessGroupXla(ProcessGroup):
   def allgather(self, output_tensors_list, input_tensors, opts=None):
     for input_tensor, output_tensors in zip(input_tensors, output_tensors_list):
       is_scalar = (input_tensor.dim() == 0)
-      result = xm.all_gather(
-          input_tensor if not is scalar else torch.reshape(input_tensor, (1,)),
-          groups=self._mesh, pin_layout=False)
+      if is_scalar:
+        input_tensor = torch.reshape(input_tensor, (1,))
+      result = xm.all_gather(input_tensor, groups=self._mesh, pin_layout=False)
       for i, slice in enumerate(torch.split(result, input_tensor.shape[0])):
         with torch.no_grad():
           output_tensors[i].copy_(slice if not is_scalar else torch.reshape(slice, ()))
