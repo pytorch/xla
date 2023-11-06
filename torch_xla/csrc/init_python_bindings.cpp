@@ -719,34 +719,38 @@ void xla_mark_sharding(const at::Tensor& input, xla::OpSharding sharding) {
 }
 
 void xla_mark_sharding_dynamo_custom_op(const at::Tensor& input, c10::List<at::IntArrayRef> tile_assignment, c10::List<at::IntArrayRef> group_assignment, c10::List<at::IntArrayRef> replication_groups, int64_t sharding_type) {
-  std::cout << "at xla_mark_sharding_dynamo_custom_op0" << std::endl;
+  py::list tile_assignment_py = py::list();
+  for (int i = 0; i < tile_assignment.size(); i++) {
+    py::list pylist = py::list();
+    for (int64_t t : tile_assignment[i].get().toIntList()) {
+      pylist.append(t);
+    }
+    tile_assignment_py.append(pylist);
+  }
 
-  std::cout << "input: " << input << std::endl;
-  // std::cout << "tile_assignment: " << tile_assignment << std::endl;
-  std::cout << "converting tile_assignment_py" << std::endl;
-  // const py::list& tile_assignment_py = py::cast(tile_assignment[0]);
-  const py::list& tile_assignment_py = py::cast(torch::lazy::ToVector<int64_t>(tile_assignment[0]));
+  py::list group_assignment_py = py::list();
+  for (int i = 0; i < group_assignment.size(); i++) {
+    py::list pylist = py::list();
+    for (int64_t t : group_assignment[i].get().toIntList()) {
+      pylist.append(t);
+    }
+    group_assignment_py.append(pylist);
+  }
 
-  // std::cout << "group_assignment: " << group_assignment << std::endl;
-  std::cout << "converting group_assignment_py" << std::endl;
-  const py::list& group_assignment_py = py::cast(group_assignment);
+  py::list replication_groups_py = py::list();
+  for (int i = 0; i < replication_groups.size(); i++) {
+    py::list pylist = py::list();
+    for (int64_t t : replication_groups[i].get().toIntList()) {
+      pylist.append(t);
+    }
+    replication_groups_py.append(pylist);
+  }
 
-  // std::cout << "replication_groups: " << replication_groups << std::endl;
-  std::cout << "converting replication_groups_py" << std::endl;
-  const py::list& replication_groups_py = py::cast(replication_groups);
-
-  std::cout << "at xla_mark_sharding_dynamo_custom_op1" << std::endl;
-
-  const xla::OpSharding op_sharding = ShardingUtil::CreateOpSharding(
-        tile_assignment_py, group_assignment_py, replication_groups_py,
-        ShardingUtil::ShardingType(sharding_type));
-
-
-  std::cout << "at xla_mark_sharding_dynamo_custom_op2" << std::endl;
+  xla::OpSharding op_sharding = ShardingUtil::CreateOpSharding(
+            tile_assignment_py, group_assignment_py, replication_groups_py,
+            ShardingUtil::ShardingType(sharding_type));
 
   xla_mark_sharding(input, op_sharding);
-
-  std::cout << "at xla_mark_sharding_dynamo_custom_op3" << std::endl;
 }
 
 // Macro for defining a function that will be run at static initialization time to define a library of operators in the namespace.
@@ -1679,12 +1683,27 @@ void InitXlaModuleBindings(py::module m) {
                                  xla::OpSharding sharding) {
     xla_mark_sharding(input, sharding);
   });
-  // m.def("_xla_mark_sharding_dynamo_custom_op",
-  //       [](const at::Tensor& input, xla::OpSharding sharding) {
-  //         // xla_mark_sharding_dynamo_custom_op(input, tile_assignment, group_assignment, replication_groups, sharding_type);
-  //         // at::IntArrayRef tile_assignment, at::IntArrayRef group_assignment, c10::List<at::IntArrayRef> replication_groups, int64_t sharding_type
-  //         at::IntArrayRef tile_assignment = 
-  //       });
+  m.def("_xla_mark_sharding_dynamo_custom_op",
+        [](const at::Tensor& input, const py::list& tile_assignment,
+                       const py::list& group_assignment,
+                       const py::list& replication_groups, int sharding_type) {
+          c10::List<at::IntArrayRef> time_assignment_list = c10::List<at::IntArrayRef>();
+          for (auto t : tile_assignment) {
+            time_assignment_list.push_back(at::IntArrayRef(t.cast<std::vector<int64_t>>()));
+          }
+
+          c10::List<at::IntArrayRef> group_assignment_list = c10::List<at::IntArrayRef>();
+          for (auto t : group_assignment) {
+            group_assignment_list.push_back(at::IntArrayRef(t.cast<std::vector<int64_t>>()));
+          }
+
+          c10::List<at::IntArrayRef> replication_groups_list = c10::List<at::IntArrayRef>();
+          for (auto t : replication_groups) {
+            replication_groups_list.push_back(at::IntArrayRef(t.cast<std::vector<int64_t>>()));
+          }
+
+          xla_mark_sharding_dynamo_custom_op(input, time_assignment_list, group_assignment_list, replication_groups_list, sharding_type);
+        });
   m.def("_xla_clear_sharding", [](const at::Tensor& input) {
     XLATensorPtr xtensor = bridge::GetXlaTensor(input);
     xtensor->ClearShardingSpec();

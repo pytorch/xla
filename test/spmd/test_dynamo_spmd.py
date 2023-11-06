@@ -15,7 +15,7 @@ import test_xla_sharding_base
 
 class SimpleLinear(nn.Module):
 
-  def __init__(self):
+  def __init__(self, mark_sharding_inside = False, op_sharding = None):
     super(SimpleLinear, self).__init__()
     self.fc1 = nn.Linear(128, 128)
     self.relu = nn.ReLU()
@@ -25,6 +25,9 @@ class SimpleLinear(nn.Module):
     self.fc3 = nn.Linear(1, 1)
 
   def forward(self, x):
+    print(f'self.fc2.weight.device={self.fc2.weight.device}')
+    if self.mark_sharding_inside and self.op_sharding and 'xla' in self.fc2.weight.device:
+      xs.mark_sharding(self.fc2.weight, self.op_sharding)
     y = self.relu(self.fc1(x))
     z = self.fc2(y)
     return self.fc3(z)
@@ -187,48 +190,25 @@ class DynamoSpmdInferenceTest(test_xla_sharding_base.XlaShardingTest):
       del os.environ['XLA_DYNAMO_INPUT_SHARDING_CHECK_THRESHOLD']
 
   def test_mark_sharding_inside_compile(self):
+    device = xm.xla_device()
 
-    def fn_simple(x):
-      y = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
+    def fn_simple(t):
+      xs.mark_sharding_dynamo_custom_op(
+          t, self._get_mesh((1, self.n_devices)), (0, 1))
+      
+      x = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
                        dtype=torch.float,
-                       device=xm.xla_device())
-      ys = xs.mark_sharding_dynamo_custom_op(
-          y, self._get_mesh((1, self.n_devices)), (0, 1))
+                       device=device)
 
-      return x + ys
+      return t + x
 
-    device = xm.xla_device()
-    x_xla = torch.zeros((1, 8)).to(device)
+    x_xla = torch.tensor([[0, 0, 0, 0, 0, 0, 0, 0]]).to(device)
     xla_res = fn_simple(x_xla)
-    print(xla_res)
-    # xm.mark_step()
+    xm.mark_step()
 
-    # dynamo_linear = torch.compile(fn_simple, backend="openxla")
-    # dynamo_res = dynamo_linear(x_xla)
-    # torch.allclose(xla_res.cpu(), dynamo_res.cpu())
-
-  # TODO (@wonjoo) Remove this test, this is just for debugging
-  def test_wonjoo(self):
-
-    def fn_simple(x):
-      print(f'x inside fn_simple before: {x}')
-      torch_xla._XLAC._xla_mark_sharding_dynamo_custom_op(x_xla, [0], [0], [0], 0)
-      print(f'x inside fn_simple after: {x}')
-      return x
-
-    device = xm.xla_device()
-
-    x_xla = torch.zeros((1, 8)).to(device)
-
-    # print(torch.ops.xla.add)
-    print(torch.ops.xla.max_pool2d_forward)
-    print(torch.ops.xla.xla_mark_sharding_dynamo_custom_op)
-    print(dir(torch.ops.xla.xla_mark_sharding_dynamo_custom_op))
-    # print(f'x_xla before: {x_xla}')
-
-    # dynamo_fn = torch.compile(fn_simple, backend="openxla")
-    # dynamo_res = dynamo_fn(x_xla)
-    # print(f'dynamo_res: {dynamo_res}')
+    dynamo_fn_simple = torch.compile(fn_simple, backend="openxla")
+    dynamo_res = dynamo_fn_simple(x_xla)
+    torch.allclose(xla_res.cpu(), dynamo_res.cpu())
 
 
 if __name__ == '__main__':

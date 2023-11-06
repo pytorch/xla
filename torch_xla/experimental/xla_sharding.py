@@ -106,14 +106,10 @@ class Mesh:
         sharding_type, tile_assignment, len(partition_spec), replicate_dims)
     
     # If flatten = True, return the flattened version of OpSharding
-    # print each return type to debug
-    print(tile_assignment.tolist())
-    print(group_assignment)
-    print(replication_groups)
     if flatten:
       return (tile_assignment.tolist(), group_assignment, replication_groups, int(sharding_type))
-    
-    return torch_xla._XLAC.OpSharding(tile_assignment.tolist(),
+    else:
+      return torch_xla._XLAC.OpSharding(tile_assignment.tolist(),
                                       group_assignment, replication_groups,
                                       int(sharding_type))
 
@@ -460,7 +456,7 @@ def _translate_named_partition_spec(mesh: Mesh, partition_spec: Tuple):
 @xr.requires_pjrt
 def mark_sharding(
     t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
-    partition_spec: Tuple[Union[Tuple, int, str, None]]) -> XLAShardedTensor:
+    partition_spec: Tuple[Union[Tuple, int, str, None]], dynamo_custom_op: bool = False) -> XLAShardedTensor:
   """
     Annotates the tensor provided with XLA partition spec. Internally,
     it annotates the corresponding XLATensor as sharded for the XLA SpmdPartitioner pass.
@@ -479,6 +475,9 @@ def mark_sharding(
         >> input = torch.randn(8, 10)
         >> mesh_shape = (4, 2)
         >> partition_spec = (0, None)
+
+        dynamo_custom_op (bool): if set to True, it calls the dynamo custom op variant of mark_sharding
+          to make itself recognizeable and traceable by dynamo.
 
     Examples
     —------------------------------
@@ -520,7 +519,8 @@ def mark_sharding_dynamo_custom_op(
     t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
     partition_spec: Tuple[Union[Tuple, int, str, None]]) -> XLAShardedTensor:
   """
-    Same functionality as `mark_sharding` above, except this variant uses the custom mark_sharding op in torch_xla._XLAC to allow dynamo to recognize and trace it.
+    Same functionality as `mark_sharding` above, except this variant uses the custom 
+    mark_sharding op in torch_xla._XLAC to allow dynamo to recognize and trace it.
   """
   num_devices = xr.global_runtime_device_count()
   assert num_devices > 0, "This requires XLA supported device(s)."
@@ -535,12 +535,10 @@ def mark_sharding_dynamo_custom_op(
 
   tile_assignment, group_assignment, replication_groups, sharding_type = mesh.get_op_sharding(partition_spec, flatten = True)
 
-  print('about to call xla_mark_sharding_dynamo_custom_op')
   if isinstance(t, XLAShardedTensor):
-    torch.ops.xla.xla_mark_sharding_dynamo_custom_op(t.global_tensor, tile_assignment, group_assignment, replication_groups, sharding_type)
+    torch_xla._XLAC._xla_mark_sharding_dynamo_custom_op(t.global_tensor, tile_assignment, group_assignment, replication_groups, sharding_type)
     return t
-  torch.ops.xla.xla_mark_sharding_dynamo_custom_op(t, tile_assignment, group_assignment, replication_groups, sharding_type)
-  print('xla_mark_sharding_dynamo_custom_op call finished')
+  torch_xla._XLAC._xla_mark_sharding_dynamo_custom_op(t, tile_assignment, group_assignment, replication_groups, sharding_type)
   return XLAShardedTensor(t)
 
 
