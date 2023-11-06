@@ -94,7 +94,7 @@ To run the tests, follow __one__ of the options below:
 * Run on GPU:
 
   ```Shell
-  export PJRT_DEVICE=GPU GPU_NUM_DEVICES=${NUM_GPU}
+  export PJRT_DEVICE=CUDA GPU_NUM_DEVICES=${NUM_GPU}
   ```
 
 For more detail on configuring the runtime, please refer to [this doc](https://github.com/pytorch/xla/blob/master/docs/pjrt.md#quickstart)

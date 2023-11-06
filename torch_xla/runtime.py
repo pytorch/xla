@@ -40,7 +40,7 @@ def _maybe_select_default_device():
     os.environ[xenv.PJRT_DEVICE] = 'TPU'
   # TODO(wcromar): Detect GPU device
   elif xu.getenv_as(xenv.GPU_NUM_DEVICES, int, 0) > 0:
-    logging.warning('GPU_NUM_DEVICES is set. Setting PJRT_DEVICE=GPU')
+    logging.warning('GPU_NUM_DEVICES is set. Setting PJRT_DEVICE=CUDA')
     os.environ[xenv.PJRT_DEVICE] = 'CUDA'
   else:
     logging.warning('Defaulting to PJRT_DEVICE=CPU')
@@ -107,6 +107,13 @@ def xla_device(n: Optional[int] = None,
   Returns:
     A `torch.device` representing an XLA device.
   """
+  # TODO(xiowei replace gpu with cuda): Remove the warning message at r2.2 release.
+  pjrt_device = xu.getenv_as(xenv.PJRT_DEVICE, str)
+  if pjrt_device.casefold() == 'gpu':
+    warnings.warn(
+        'PJRT_DEVICE=GPU is being deprecate. Please replace PJRT_DEVICE=GPU with PJRT_DEVICE=CUDA.'
+    )
+
   if n is None:
     return torch.device(torch_xla._XLAC._xla_get_default_device())
 
