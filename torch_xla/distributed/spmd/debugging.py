@@ -22,7 +22,7 @@ try:
   import rich.padding
   import rich.style
   import rich.table
-  RICH_ENABLED = True 
+  RICH_ENABLED = True
 except:
   RICH_ENABLED = False
 
@@ -30,13 +30,17 @@ except:
 sharding_callbacks = weakref.WeakValueDictionary()  # type: ignore
 _INSPECT_SHARDING_CALL_NAME = "InspectSharding"
 
+
 class ShardingCallbackInfo:
+
   def __init__(self, callback, module_context):
     self.callback = callback
     self.module_context = module_context
 
+
 Color = Union[tuple[float, float, float], str]
 ColorMap = Callable[[float], tuple[float, float, float, float]]
+
 
 def _canonicalize_color(color: Color) -> str:
   if isinstance(color, str):
@@ -44,11 +48,14 @@ def _canonicalize_color(color: Color) -> str:
   r, g, b = (int(a * 255) for a in color)
   return f"#{r:02X}{g:02X}{b:02X}"
 
+
 def _get_text_color(color: str) -> str:
-  r, g, b = torch.map(lambda x: int(x, 16), (color[1:3], color[3:5], color[5:7]))
+  r, g, b = torch.map(lambda x: int(x, 16), 
+                      (color[1:3], color[3:5], color[5:7]))
   if (r * 0.299 + g * 0.587 + b * 0.114) > 186:
     return "#000000"
   return "#ffffff"
+
 
 def make_color_iter(color_map, num_rows, num_cols):
   num_colors = num_rows * num_cols
@@ -58,10 +65,13 @@ def make_color_iter(color_map, num_rows, num_cols):
     yield color_map(color_values[idx])
     idx = (idx + num_colors // 2 + bool(num_colors % 2 == 0)) % num_colors
 
-# 把sharding画出来
-def visualize_sharding(shape: torch.Size, sharding: str, 
-                       use_color: bool = True, scale: float = 1.,
-                       min_width: int = 9, max_width: int = 80, 
+
+def visualize_sharding(shape: torch.Size,
+                       sharding: str,
+                       use_color: bool = True,
+                       scale: float = 1.,
+                       min_width: int = 9,
+                       max_width: int = 80, 
                        color_map: Optional[ColorMap] = None):
   """Visualizes a ``Sharding`` using ``rich``."""
   if not RICH_ENABLED:
@@ -76,7 +86,7 @@ def visualize_sharding(shape: torch.Size, sharding: str,
   heights: dict[tuple[int, ...], Optional[float]] = {}
   widths: dict[tuple[int, ...], float] = {}
 
-  if len(sharding)>0:
+  if len(sharding) > 0:
     # sharding is longer than 0
     # eg: '{devices=[2,2]0,1,2,3}' # 13
     # eg: '{replicated}'
@@ -91,10 +101,10 @@ def visualize_sharding(shape: torch.Size, sharding: str,
     else:
       # `device_indices_map`: [0, 1, 2, 3]
       # `sharding_spac`: [2, 2]
-      sharding_spac = sharding[sharding.index('['):sharding.index(']')+1]
+      sharding_spac = sharding[sharding.index('['):sharding.index(']') + 1]
       print('sharding_spac: ', sharding_spac)
       if len(sharding) >= 25 and sharding[-24:-1] == 'last_tile_dim_replicate':
-        device_list = list(sharding[sharding.index(']')+1:-24])
+        device_list = list(sharding[sharding.index(']') + 1:-24])
         print("device_list")
         print(device_list)
         device_indices_map = [int(i) for i in device_list[:-1] if i != ',']
@@ -102,12 +112,13 @@ def visualize_sharding(shape: torch.Size, sharding: str,
         widths = int(sharding_spac[3])
         last_dim_depth = int(sharding_spac[5])
         devices_len = len(device_indices_map)
-        len_after_dim_down = devices_len//last_dim_depth
+        len_after_dim_down = devices_len // last_dim_depth
         for i in range(len_after_dim_down):
-          slices.setdefault((i//widths, i%widths), device_indices_map[i:i+last_dim_depth])
+          slices.setdefault((i // widths, i % widths),
+                            device_indices_map[i:i+last_dim_depth])
       elif sharding[-1] == "}":
         # eg: '{devices=[2,2]0,1,2,3}' # 13
-        device_list = list(sharding[sharding.index(']')+1:-1])
+        device_list = list(sharding[sharding.index(']') + 1:-1])
         # print('device_list: ', device_list)
         device_indices_map = [int(i) for i in device_list if i != ',']
         # print('device_indices_map: ', device_indices_map)
@@ -118,7 +129,7 @@ def visualize_sharding(shape: torch.Size, sharding: str,
         devices_len = len(device_indices_map)
         # print('devices_len: ', devices_len)
         for i in range(devices_len):
-          slices.setdefault((i//widths, i%widths), device_indices_map[i])
+          slices.setdefault((i // widths, i % widths), device_indices_map[i])
       else:
         raise ValueError("sharding is not organized as expected")
   else:
@@ -127,21 +138,6 @@ def visualize_sharding(shape: torch.Size, sharding: str,
   num_rows = heights
   num_cols = widths
   print('slices', slices)
-
-  # # eg: '{replicated}'
-  # if sharding = '{replicated}':
-  #   # print it code here !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  #   heights = 1
-  #   widths = 1
-  #   num_devices = xr.global_runtime_device_count()
-  #   device_ids = list(range(num_devices))
-  #   slices.setdefault((0, 0), device_ids)
-
-  # # eg: '{devices=[2,2]0,1,2,3}' # 13
-  # # eg: '{devices=[2,1,2]0,1,2,3 last_tile_dim_replicate}' # 15
-  # if len(shape) > 2 or len(shape) < 1:
-  #   raise ValueError(
-  #       "`visualize_sharding` only works for shapes with 1 and 2 dimensions.")
 
   console = rich.console.Console(width=max_width)
   use_color = use_color and console.color_system is not None
@@ -165,18 +161,23 @@ def visualize_sharding(shape: torch.Size, sharding: str,
   # `sharding_spac`: [2, 2]
 
   # set the device kind to TPU as default since `sharding` here is `str`, TODO(@manfei): get device kind from commands for TPU/GPU/CPU
-  device_kind = 'TPU' # next(iter(sharding.device_set)).platform.upper()
+  device_kind = 'TPU'  # next(iter(sharding.device_set)).platform.upper()
 
   color_iter = make_color_iter(color_map, num_rows, num_cols)
-  table = rich.table.Table(show_header=False, show_lines=not use_color,
-                           padding=0,
-                           highlight=not use_color, pad_edge=False,
-                           box=rich.box.SQUARE if not use_color else None)
+  table = rich.table.Table(
+      show_header=False,
+      show_lines=not use_color,
+      padding=0,
+      highlight=not use_color,
+      pad_edge=False,
+      box=rich.box.SQUARE if not use_color else None)
   for i in range(num_rows):
     col = []
     for j in range(num_cols):
-      entry = f"{device_kind} "+ str(slices[i, j])# "entry"# .join([str(s) for s in sorted(slices[i, j])])
-      width, maybe_height = widths, heights# widths[i, j], heights[i, j]
+      entry = f"{device_kind} " + str(
+          slices[i,
+                 j])# "entry"# .join([str(s) for s in sorted(slices[i, j])])
+      width, maybe_height = widths, heights # widths[i, j], heights[i, j]
       width = int(width * base_width * height_to_width_ratio)
       if maybe_height is None:
         height = 1
