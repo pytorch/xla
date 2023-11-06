@@ -70,7 +70,7 @@ xla::GpuAllocatorConfig GetGpuAllocatorConfig() {
   allocator_config.preallocate =
       sys_util::GetEnvBool(env::kEnvPjrtAllocatorPreallocate, true);
   allocator_config.memory_fraction =
-      sys_util::GetEnvDouble(env::kEnvPjrtAllocatorFraction, 0.9);
+      sys_util::GetEnvDouble(env::kEnvPjrtAllocatorFraction, 0.75);
   return allocator_config;
 }
 
