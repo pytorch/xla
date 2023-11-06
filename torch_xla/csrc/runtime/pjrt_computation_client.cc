@@ -302,8 +302,8 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
     std::shared_ptr<xla::PjRtBuffer> buffer =
         std::move(client_
                       ->BufferFromHostBuffer(
-                          tensor->data(), tensor->shape().element_type(),
-                          tensor->shape().dimensions(), tensor->byte_strides(),
+                          tensor->data(), tensor->primitive_type(),
+                          tensor->dimensions(), tensor->byte_strides(),
                           xla::PjRtClient::HostBufferSemantics::
                               kImmutableUntilTransferCompletes,
                           [tensor]() { /* frees tensor */ }, pjrt_device)
