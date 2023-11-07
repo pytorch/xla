@@ -46,8 +46,8 @@ import numpy as np
 import torch
 import torch_xla.core.xla_model as xm
 import torch_xla.runtime as xr
-import torch_xla.experimental.xla_sharding as xs
-from torch_xla.experimental.xla_sharding import Mesh
+import torch_xla.experimental.spmd.xla_sharding as xs
+from torch_xla.experimental.spmd import Mesh
 
 # Enable XLA SPMD execution mode.
 xr.use_spmd()
@@ -104,7 +104,7 @@ We abstract logical mesh with [Mesh API](https://github.com/pytorch/xla/blob/028
 
 ```python
 import torch_xla.runtime as xr
-from torch_xla.experimental.xla_sharding import Mesh
+from torch_xla.experimental.spmd import Mesh
 
 # Assuming you are running on a TPU host that has 8 devices attached
 num_devices = xr.global_runtime_device_count()
@@ -130,7 +130,7 @@ In general, SPMD programs should create a single mesh and reuse it for all shard
 Mesh nicely abstracts how the physical device mesh is constructed. Users can arrange devices in any shape and order using the logical mesh. However, one can define a more performant mesh based on the physical topology, especially when it involves Data Center Network (DCN) cross slice connections. HybridMesh creates a mesh which gives good performance out of the box for such multislice environments. It accepts ici\_mesh\_shape and dcn\_mesh\_shape which denote logical mesh shapes of inner and outer network.
 
 ```python
-from torch_xla.experimental.xla_sharding import HybridMesh
+from torch_xla.distributed.spmd import HybridMesh
 
 # This example is assuming 2 slices of v4-8.
 # - ici_mesh_shape: shape of the logical mesh for inner connected devices.

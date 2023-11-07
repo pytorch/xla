@@ -137,7 +137,7 @@ class XLAShardedTensor(torch.Tensor):
 
   @property
   def sharding_type(self) -> 'ShardingType':
-    from torch_xla.experimental.xla_sharding import ShardingType
+    from torch_xla.experimental.spmd import ShardingType
     sharding_type = torch_xla._XLAC._get_xla_sharding_type(self.global_tensor)
     return ShardingType(sharding_type)
 
