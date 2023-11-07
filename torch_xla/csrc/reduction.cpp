@@ -400,7 +400,7 @@ xla::XlaOp BuildArgMax(xla::XlaOp input, int64_t dim, bool keepdim) {
   }
   xla::XlaOp result = xla::ArgMax(
       operand,
-      GetDevicePrimitiveType(xla::PrimitiveType::S64, /*device=*/nullptr), dim);
+      GetXlaPrimitiveTypeForCurrentDevice(xla::PrimitiveType::S64), dim);
   if (keepdim) {
     auto dimensions = torch::lazy::ToVector<int64_t>(shape->dimensions());
     dimensions[dim] = 1;
@@ -420,7 +420,7 @@ xla::XlaOp BuildArgMin(xla::XlaOp input, int64_t dim, bool keepdim) {
   }
   xla::XlaOp result = xla::ArgMin(
       operand,
-      GetDevicePrimitiveType(xla::PrimitiveType::S64, /*device=*/nullptr), dim);
+      GetXlaPrimitiveTypeForCurrentDevice(xla::PrimitiveType::S64), dim);
   if (keepdim) {
     auto dimensions = torch::lazy::ToVector<int64_t>(shape->dimensions());
     dimensions[dim] = 1;

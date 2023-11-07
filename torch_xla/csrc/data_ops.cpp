@@ -368,7 +368,7 @@ xla::XlaOp BuildUnselect(xla::XlaOp target, xla::XlaOp source, int64_t dim,
   }
 
   xla::PrimitiveType pred_type =
-      GetDevicePrimitiveType(xla::PrimitiveType::PRED, /*device=*/nullptr);
+      GetXlaPrimitiveTypeForCurrentDevice(xla::PrimitiveType::PRED);
   xla::XlaOp source_true = XlaHelpers::ScalarBroadcast(
       1, pred_type, source_shape.dimensions(), source.builder());
   xla::XlaOp pred_zero = xla::Zero(target.builder(), pred_type);

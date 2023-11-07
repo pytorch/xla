@@ -801,7 +801,7 @@ class PyLoweringContext {
       xla::Literal& literal = literals[i];
       xla::XlaOp op = lowering_ctx.GetParameter(device_data[i]);
       at::ScalarType dtype =
-          TensorTypeFromXlaType(literal.shape().element_type());
+          GetHostScalarType(literal.shape().element_type());
       at::Tensor input = MakeTensorFromXlaLiteral(literal, dtype);
       results[param_ids[i]] = input;
     }
@@ -1760,7 +1760,7 @@ void InitXlaModuleBindings(py::module m) {
             shards.push_back(
                 XlaDataToTensors(
                     {shard_handle},
-                    TensorTypeFromXlaType(shard_handle->shape().element_type()))
+                    GetHostScalarType(shard_handle->shape().element_type()))
                     .front());
             str_devices.push_back(shard_handle->device());
           }
