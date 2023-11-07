@@ -2471,16 +2471,17 @@ XLATensorPtr squeeze(const XLATensorPtr& input, std::vector<int64_t> dims) {
   std::vector<int64_t> input_dimensions =
       torch_xla::runtime::util::ToVector<int64_t>(
           input_shape.get().dimensions());
-  std::vector<int64_t> output_dimensions;
+  std::vector<int64_t> squeeze_dims;
   for (int64_t dim : dims) {
-    if (dim >= input_dimensions.size()) {
-      continue;
-    }
     int64_t squeeze_dim =
         torch::lazy::GetCanonicalDimensionIndex(dim, input_dimensions.size());
-    output_dimensions = BuildSqueezedDimensions(input_dimensions, squeeze_dim);
-    input_dimensions = output_dimensions;
+    if (squeeze_dim >= input_dimensions.size()) {
+      continue;
+    }
+    squeeze_dims.push_back(squeeze_dim);
   }
+  std::vector<int64_t> output_dimensions =
+      BuildSqueezedDimensions(input_dimensions, squeeze_dims);
   return view(input, output_dimensions);
 }
 
