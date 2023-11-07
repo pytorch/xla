@@ -82,7 +82,8 @@ class Mesh:
 
   @functools.lru_cache(maxsize=None)
   def get_op_sharding(self,
-                      partition_spec: Tuple, flatten = False) -> torch_xla._XLAC.OpSharding:
+                      partition_spec: Tuple,
+                      flatten=False) -> torch_xla._XLAC.OpSharding:
     """
     Return the OpSharding for the given partition spec. This is an expensive
     operation as the mesh grows, so the value is cached for reuse.
@@ -104,14 +105,15 @@ class Mesh:
     replicate_dims = {i for i, d in enumerate(partition_spec) if d is None}
     group_assignment, replication_groups = _get_group_assignment(
         sharding_type, tile_assignment, len(partition_spec), replicate_dims)
-    
+
     # If flatten = True, return the flattened version of OpSharding
     if flatten:
-      return (tile_assignment.tolist(), group_assignment, replication_groups, int(sharding_type))
+      return (tile_assignment.tolist(), group_assignment, replication_groups,
+              int(sharding_type))
     else:
       return torch_xla._XLAC.OpSharding(tile_assignment.tolist(),
-                                      group_assignment, replication_groups,
-                                      int(sharding_type))
+                                        group_assignment, replication_groups,
+                                        int(sharding_type))
 
 
 # HybridDevice class has been inspired from jax's mesh_utils: https://github.com/google/jax/blob/fc5960f2b8b7a0ef74dbae4e27c5c08ff1564cff/jax/experimental/mesh_utils.py#L4
@@ -454,9 +456,10 @@ def _translate_named_partition_spec(mesh: Mesh, partition_spec: Tuple):
 
 
 @xr.requires_pjrt
-def mark_sharding(
-    t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
-    partition_spec: Tuple[Union[Tuple, int, str, None]], dynamo_custom_op: bool = False) -> XLAShardedTensor:
+def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor],
+                  mesh: Mesh,
+                  partition_spec: Tuple[Union[Tuple, int, str, None]],
+                  dynamo_custom_op: bool = False) -> XLAShardedTensor:
   """
     Annotates the tensor provided with XLA partition spec. Internally,
     it annotates the corresponding XLATensor as sharded for the XLA SpmdPartitioner pass.
@@ -505,41 +508,28 @@ def mark_sharding(
   assert len(t.shape) == len(partition_spec), \
     f"Partition spec length ({len(partition_spec)}) should be equal to the input rank ({len(t.shape)})."
 
-  op_sharding = mesh.get_op_sharding(partition_spec)
+  if dynamo_custom_op:
+    tile_assignment, group_assignment, replication_groups, sharding_type = mesh.get_op_sharding(
+        partition_spec, flatten=True)
 
-  if isinstance(t, XLAShardedTensor):
-    torch_xla._XLAC._xla_mark_sharding(t.global_tensor, op_sharding)
-    return t
-  torch_xla._XLAC._xla_mark_sharding(t, op_sharding)
-  return XLAShardedTensor(t)
+    if isinstance(t, XLAShardedTensor):
+      torch_xla._XLAC._xla_mark_sharding_dynamo_custom_op(
+          t.global_tensor, tile_assignment, group_assignment,
+          replication_groups, sharding_type)
+      return t
+    torch_xla._XLAC._xla_mark_sharding_dynamo_custom_op(t, tile_assignment,
+                                                        group_assignment,
+                                                        replication_groups,
+                                                        sharding_type)
+    return XLAShardedTensor(t)
+  else:
+    op_sharding = mesh.get_op_sharding(partition_spec)
 
-
-@xr.requires_pjrt
-def mark_sharding_dynamo_custom_op(
-    t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh,
-    partition_spec: Tuple[Union[Tuple, int, str, None]]) -> XLAShardedTensor:
-  """
-    Same functionality as `mark_sharding` above, except this variant uses the custom 
-    mark_sharding op in torch_xla._XLAC to allow dynamo to recognize and trace it.
-  """
-  num_devices = xr.global_runtime_device_count()
-  assert num_devices > 0, "This requires XLA supported device(s)."
-  assert mesh.size() == num_devices, \
-    f"{mesh.mesh_shape} is not mappable over {num_devices} devices."
-  # We only allow fully specified `partition_spec` to be applicable, as opposed
-  # to filling in the unspecified replicated dims. Fully specified `partiion_spec`
-  # should be of the same rank as `t`. This is to support partial replication
-  # where the group assignment may vary with different input ranks.
-  assert len(t.shape) == len(partition_spec), \
-    f"Partition spec length ({len(partition_spec)}) should be equal to the input rank ({len(t.shape)})."
-
-  tile_assignment, group_assignment, replication_groups, sharding_type = mesh.get_op_sharding(partition_spec, flatten = True)
-
-  if isinstance(t, XLAShardedTensor):
-    torch_xla._XLAC._xla_mark_sharding_dynamo_custom_op(t.global_tensor, tile_assignment, group_assignment, replication_groups, sharding_type)
-    return t
-  torch_xla._XLAC._xla_mark_sharding_dynamo_custom_op(t, tile_assignment, group_assignment, replication_groups, sharding_type)
-  return XLAShardedTensor(t)
+    if isinstance(t, XLAShardedTensor):
+      torch_xla._XLAC._xla_mark_sharding(t.global_tensor, op_sharding)
+      return t
+    torch_xla._XLAC._xla_mark_sharding(t, op_sharding)
+    return XLAShardedTensor(t)
 
 
 def clear_sharding(t: Union[torch.Tensor, XLAShardedTensor]) -> torch.Tensor:

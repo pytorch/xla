@@ -140,7 +140,6 @@
 #include "torch_xla/csrc/tensor_ops.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
-#include "torch_xla/csrc/xla_sharding_util.h"
 #include "xla/literal_util.h"
 
 namespace torch_xla {
