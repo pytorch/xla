@@ -2,6 +2,7 @@
 #define XLA_CLIENT_TENSOR_SOURCE_H_
 
 #include <ATen/Tensor.h>
+#include <torch/csrc/lazy/core/metrics.h>
 
 #include <vector>
 
@@ -12,6 +13,45 @@
 
 namespace torch_xla {
 namespace runtime {
+
+namespace {
+
+// TODO: consolidate
+at::ScalarType TensorTypeFromXlaType(xla::PrimitiveType xla_type) {
+  switch (xla_type) {
+    case xla::PrimitiveType::BF16:
+      return at::ScalarType::BFloat16;
+    case xla::PrimitiveType::F16:
+      return at::ScalarType::Half;
+    case xla::PrimitiveType::F32:
+      return at::ScalarType::Float;
+    case xla::PrimitiveType::F64:
+      return at::ScalarType::Double;
+    case xla::PrimitiveType::PRED:
+      return at::ScalarType::Bool;
+    case xla::PrimitiveType::U8:
+      return at::ScalarType::Byte;
+    case xla::PrimitiveType::S8:
+      return at::ScalarType::Char;
+    case xla::PrimitiveType::S16:
+    case xla::PrimitiveType::U16:
+      return at::ScalarType::Short;
+    case xla::PrimitiveType::S32:
+    case xla::PrimitiveType::U32:
+      return at::ScalarType::Int;
+    case xla::PrimitiveType::S64:
+    case xla::PrimitiveType::U64:
+      return at::ScalarType::Long;
+    case xla::PrimitiveType::C64:
+      return at::ScalarType::ComplexFloat;
+    case xla::PrimitiveType::C128:
+      return at::ScalarType::ComplexDouble;
+    default:
+      XLA_ERROR() << "XLA type not supported: " << xla_type;
+  }
+}
+
+}
 
 // Owns a contiguous block of data with the shape and layout matching `shape()`.
 class TensorSource {
@@ -48,8 +88,15 @@ class AtenSource : public TensorSource {
  public:
   AtenSource(const at::Tensor& tensor, xla::Shape shape, std::string device)
       : TensorSource(std::move(device)),
-        tensor_(std::move(tensor.contiguous())),
-        shape_(std::move(shape)) {}
+        shape_(std::move(shape)) {
+          at::ScalarType target_torch_type = TensorTypeFromXlaType(primitive_type());
+          if (target_torch_type != tensor.type().scalarType()) {
+            TORCH_LAZY_COUNTER("AtenSourceDowncasts", 1);
+            tensor_ = std::move(tensor.to(TensorTypeFromXlaType(primitive_type())).contiguous());
+          } else {
+            tensor_ = std::move(tensor.contiguous());
+          }
+        }
 
   const void* data() const override { return tensor_.const_data_ptr(); }
 
@@ -67,37 +114,6 @@ class AtenSource : public TensorSource {
     auto sizes = tensor_.sizes();
     return {sizes.begin(), sizes.end()};
   }
-
-  // xla::PrimitiveType primitive_type() const override {
-  //   switch (tensor_.type().scalarType()) {
-  //     case at::ScalarType::Double:
-  //       return xla::PrimitiveType::F64;
-  //     case at::ScalarType::Float:
-  //       return xla::PrimitiveType::F32;
-  //     case at::ScalarType::BFloat16:
-  //       return xla::PrimitiveType::BF16;
-  //     case at::ScalarType::Half:
-  //       return xla::PrimitiveType::F16;
-  //     case at::ScalarType::Bool:
-  //       return xla::PrimitiveType::PRED;
-  //     case at::ScalarType::Byte:
-  //       return xla::PrimitiveType::U8;
-  //     case at::ScalarType::Char:
-  //       return xla::PrimitiveType::S8;
-  //     case at::ScalarType::Short:
-  //       return xla::PrimitiveType::S16;
-  //     case at::ScalarType::Int:
-  //       return xla::PrimitiveType::S32;
-  //     case at::ScalarType::Long:
-  //       return xla::PrimitiveType::S64;
-  //     case at::ScalarType::ComplexFloat:
-  //       return xla::PrimitiveType::C64;
-  //     case at::ScalarType::ComplexDouble:
-  //       return xla::PrimitiveType::C128;
-  //     default:
-  //       XLA_ERROR() << "Type not supported: " << tensor_.type().scalarType();
-  //   }
-  // }
 
  private:
   at::Tensor tensor_;
