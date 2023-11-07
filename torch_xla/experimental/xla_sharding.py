@@ -83,7 +83,7 @@ class Mesh:
   @functools.lru_cache(maxsize=None)
   def get_op_sharding(self,
                       partition_spec: Tuple,
-                      flatten=False) -> torch_xla._XLAC.OpSharding:
+                      flatten_opsharding = False) -> torch_xla._XLAC.OpSharding:
     """
     Return the OpSharding for the given partition spec. This is an expensive
     operation as the mesh grows, so the value is cached for reuse.
@@ -106,8 +106,8 @@ class Mesh:
     group_assignment, replication_groups = _get_group_assignment(
         sharding_type, tile_assignment, len(partition_spec), replicate_dims)
 
-    # If flatten = True, return the flattened version of OpSharding
-    if flatten:
+    # If flatten_opsharding = True, return the flattened version of OpSharding
+    if flatten_opsharding:
       return (tile_assignment.tolist(), group_assignment, replication_groups,
               int(sharding_type))
     else:
@@ -459,7 +459,7 @@ def _translate_named_partition_spec(mesh: Mesh, partition_spec: Tuple):
 def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor],
                   mesh: Mesh,
                   partition_spec: Tuple[Union[Tuple, int, str, None]],
-                  dynamo_custom_op: bool = False) -> XLAShardedTensor:
+                  use_dynamo_custom_op: bool = False) -> XLAShardedTensor:
   """
     Annotates the tensor provided with XLA partition spec. Internally,
     it annotates the corresponding XLATensor as sharded for the XLA SpmdPartitioner pass.
@@ -508,28 +508,29 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor],
   assert len(t.shape) == len(partition_spec), \
     f"Partition spec length ({len(partition_spec)}) should be equal to the input rank ({len(t.shape)})."
 
-  if dynamo_custom_op:
+  if use_dynamo_custom_op:
     tile_assignment, group_assignment, replication_groups, sharding_type = mesh.get_op_sharding(
-        partition_spec, flatten=True)
+        partition_spec, flatten_opsharding=True)
 
     if isinstance(t, XLAShardedTensor):
       torch_xla._XLAC._xla_mark_sharding_dynamo_custom_op(
           t.global_tensor, tile_assignment, group_assignment,
           replication_groups, sharding_type)
       return t
-    torch_xla._XLAC._xla_mark_sharding_dynamo_custom_op(t, tile_assignment,
-                                                        group_assignment,
-                                                        replication_groups,
-                                                        sharding_type)
-    return XLAShardedTensor(t)
+    else:
+      torch_xla._XLAC._xla_mark_sharding_dynamo_custom_op(
+          t, tile_assignment, group_assignment, replication_groups,
+          sharding_type)
+      return XLAShardedTensor(t)
   else:
     op_sharding = mesh.get_op_sharding(partition_spec)
 
     if isinstance(t, XLAShardedTensor):
       torch_xla._XLAC._xla_mark_sharding(t.global_tensor, op_sharding)
       return t
-    torch_xla._XLAC._xla_mark_sharding(t, op_sharding)
-    return XLAShardedTensor(t)
+    else:
+      torch_xla._XLAC._xla_mark_sharding(t, op_sharding)
+      return XLAShardedTensor(t)
 
 
 def clear_sharding(t: Union[torch.Tensor, XLAShardedTensor]) -> torch.Tensor:

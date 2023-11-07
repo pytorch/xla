@@ -30,7 +30,7 @@ class SimpleLinear(nn.Module):
   def forward(self, x):
     if self.mesh and 'xla' in str(self.fc2.weight.device):
       xs.mark_sharding(
-          self.fc2.weight, self.mesh, (1, 0), dynamo_custom_op=True)
+          self.fc2.weight, self.mesh, (1, 0), use_dynamo_custom_op=True)
     y = self.relu(self.fc1(x))
     z = self.fc2(y)
     return self.fc3(z)
@@ -67,7 +67,7 @@ class DynamoSpmdInferenceTest(test_xla_sharding_base.XlaShardingTest):
     xs.mark_sharding(
         linear.fc2.weight,
         self._get_mesh((1, self.n_devices)), (1, 0),
-        dynamo_custom_op=True)
+        use_dynamo_custom_op=True)
     xla_res = linear(xla_x)
     xm.mark_step()
 
