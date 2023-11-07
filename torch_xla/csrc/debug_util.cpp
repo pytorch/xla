@@ -216,7 +216,8 @@ static bool endsWith(const std::string& str, const std::string& suffix) {
          0 == str.compare(str.size() - suffix.size(), suffix.size(), suffix);
 }
 
-void DebugUtil::analyze_graph_execution_python_frame() {
+void DebugUtil::analyze_graph_execution_python_frame(
+    bool from_dynamo_executation) {
   static bool is_master_process =
       (runtime::sys_util::GetEnvInt("PJRT_LOCAL_PROCESS_RANK", 0) == 0);
   static std::string debug_file_name =
@@ -237,7 +238,13 @@ void DebugUtil::analyze_graph_execution_python_frame() {
         "=========="
      << "\n";
   ss << debug_output_prefix << "Execution Cause\n";
-  if (frames[0].function == "mark_step") {
+  if (from_dynamo_executation) {
+    // when executation is from dynamo compiled graph, the python stack will not
+    // show any dynamo related python file since frame is already replaced. We
+    // can either analyze the C++ call stack or rely on caller to pass a boolean
+    // variable.
+    ss << debug_output_prefix << "  dynamo is executing a compiled program\n";
+  } else if (frames[0].function == "mark_step") {
     if (frames[1].function == "next" &&
         endsWith(frames[1].file, "parallel_loader.py")) {
       ss << debug_output_prefix
@@ -256,7 +263,7 @@ void DebugUtil::analyze_graph_execution_python_frame() {
     }
   } else if (frames[0].function == "extract_graph_helper" &&
              endsWith(frames[0].file, "dynamo_bridge.py")) {
-    ss << debug_output_prefix << "  dynamo compiles FX graph to HLO\n";
+    ss << debug_output_prefix << "  dynamo is compiling a FX graph to HLO\n";
   } else {
     // TODO(JackCaoG): be more specific about  exeuction caused by printing
     // tensor or fallback or some weird indexing.

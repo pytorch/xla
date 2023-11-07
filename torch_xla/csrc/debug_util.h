@@ -49,7 +49,8 @@ class DebugUtil {
 
   // warning, this function should only be called when a graph execution is
   // about to happen.
-  static void analyze_graph_execution_python_frame();
+  static void analyze_graph_execution_python_frame(
+      bool from_dynamo_executation = false);
 };
 
 }  // namespace torch_xla
