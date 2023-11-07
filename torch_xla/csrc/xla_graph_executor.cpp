@@ -629,6 +629,10 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
   tsl::profiler::TraceMe activity("ExecuteComputationWithBarrier",
                                   tsl::profiler::TraceMeLevel::kInfo);
   MaybeDumpGraph("dynamo", hash);
+  if (runtime::sys_util::GetEnvBool("PT_XLA_DEBUG", false)) {
+    DebugUtil::analyze_graph_execution_python_frame(
+        /*from_dynamo_executation=*/true);
+  }
   auto cachedComputation =
       XLAGraphExecutor::Get()->GetComputationCache()->Get(hash);
   TF_VLOG(5) << "Cached computation (hash: " << torch::lazy::HashToString(hash)
