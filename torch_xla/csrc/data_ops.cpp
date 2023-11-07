@@ -165,12 +165,33 @@ xla::XlaOp BuildMaskedFillScalar(xla::XlaOp input, xla::XlaOp mask,
 
 std::vector<int64_t> BuildSqueezedDimensions(
     absl::Span<const int64_t> dimensions, int64_t squeeze_dim) {
+  std::vector<int64_t> squeeze_dims({squeeze_dim});
+  return BuildSqueezedDimensions(dimensions, squeeze_dims);
+}
+
+std::vector<int64_t> BuildSqueezedDimensions(
+    absl::Span<const int64_t> dimensions, std::vector<int64_t>& squeeze_dims) {
+  std::sort(squeeze_dims.begin(), squeeze_dims.end());
   std::vector<int64_t> output_dimensions;
-  for (int64_t i = 0; i < dimensions.size(); ++i) {
-    int64_t dim = dimensions[i];
-    if (dim != 1 || (i != squeeze_dim && squeeze_dim >= 0)) {
+  size_t i = 0;
+  for (size_t j = 0; j < dimensions.size(); j++) {
+    auto dim = dimensions[j];
+    if (squeeze_dims.size() == 1 && squeeze_dims[0] == -1) {
+      // Special case where squeeze_dims = {-1}.
+      if (dim != 1) {
+        output_dimensions.push_back(dim);
+      }
+      continue;
+    }
+    if (i == squeeze_dims.size() || j < squeeze_dims[i]) {
+      output_dimensions.push_back(dim);
+      continue;
+    }
+    // Checks to see if we need to squeeze the dim or not.
+    if (dim != 1) {
       output_dimensions.push_back(dim);
     }
+    i++;
   }
   return output_dimensions;
 }
