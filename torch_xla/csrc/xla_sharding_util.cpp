@@ -340,7 +340,7 @@ ShardingUtil::InputHandler(
         arguments_by_device[device_i][argument_i] = shard;
       }
     };
-    runtime::env::ScheduleIoClosure(
+    runtime::Schedule(
         runtime::util::MultiWait::Completer(mwait, std::move(argument_setter)));
   }
   mwait->Wait();

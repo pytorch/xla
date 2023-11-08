@@ -644,7 +644,7 @@ PjRtComputationClient::ExecuteComputation(
         });
   };
 
-  env::ScheduleIoClosure(util::MultiWait::Completer(mwait, std::move(lockfn)));
+  Schedule(util::MultiWait::Completer(mwait, std::move(lockfn)));
 
   TF_VLOG(1) << "Returning " << datas.size() << " results";
   return datas;
@@ -690,7 +690,7 @@ PjRtComputationClient::ExecuteReplicated(
         }
         argument_handles[i] = std::move(buffers);
       };
-      env::ScheduleIoClosure(util::MultiWait::Completer(
+      Schedule(util::MultiWait::Completer(
           mwait_argument, std::move(buffer_converter)));
     }
     mwait_argument->Wait();
@@ -772,7 +772,7 @@ PjRtComputationClient::ExecuteReplicated(
           TF_VLOG(3) << "ExecuteReplicated returned_future->OnReady finished";
         });
   };
-  env::ScheduleIoClosure(util::MultiWait::Completer(mwait, std::move(lockfn)));
+  Schedule(util::MultiWait::Completer(mwait, std::move(lockfn)));
 
   TF_VLOG(1) << "Returning " << data_handles.size() << " sets of results "
              << "with dimensions [" << absl::StrJoin(dims, ",") << "].";

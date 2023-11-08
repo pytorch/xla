@@ -372,7 +372,7 @@ void CopyTensors(const void* src_buffer, const xla::Shape& src_shape,
         SlicedCopy<SType, DType>(dest_shape.dimensions(), src_data, src_strides,
                                  dest_data, dest_strides, iter_dims, parts[i]);
       };
-      runtime::env::ScheduleClosure(
+      runtime::Schedule(
           runtime::util::MultiWait::Completer(mwait, std::move(copy_fn)));
     }
     mwait->Wait();

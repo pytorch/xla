@@ -2,37 +2,14 @@
 #define XLA_CLIENT_THREAD_POOL_H_
 
 #include <functional>
-#include <memory>
-#include <thread>
 
 namespace torch_xla {
 namespace runtime {
-namespace env {
-
-class Completion {
- public:
-  class Data;
-
-  explicit Completion(std::shared_ptr<Data> data);
-
-  ~Completion();
-
-  void Wait();
-
- private:
-  std::shared_ptr<Data> data_;
-};
 
 // Schedules a closure to be run. The closure should not block waiting for other
 // events.
-void ScheduleClosure(std::function<void()> closure);
-Completion ScheduleClosureWithCompletion(std::function<void()> closure);
+void Schedule(std::function<void()> fn);
 
-// Schedules a closure which might wait for IO or other events/conditions.
-void ScheduleIoClosure(std::function<void()> closure);
-Completion ScheduleIoClosureWithCompletion(std::function<void()> closure);
-
-}  // namespace env
 }  // namespace runtime
 }  // namespace torch_xla
 

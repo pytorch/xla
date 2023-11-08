@@ -69,7 +69,7 @@ void TestSingleReplication(
                   tensors_data[i])},
               device_strings[i], exec_options);
     };
-    torch_xla::runtime::env::ScheduleIoClosure(
+    torch_xla::runtime::Schedule(
         mwait.Completer(std::move(executor)));
   }
   mwait.Wait();

@@ -757,7 +757,7 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
     }
   };
 
-  runtime::env::ScheduleIoClosure(async->mwait.Completer(std::move(syncfn)));
+  runtime::Schedule(async->mwait.Completer(std::move(syncfn)));
 
   return placeholders;
 }
@@ -1029,7 +1029,7 @@ XLAGraphExecutor::ScheduleSyncTensorsGraph(
     }
   };
 
-  runtime::env::ScheduleIoClosure(async->mwait.Completer(std::move(syncfn)));
+  runtime::Schedule(async->mwait.Completer(std::move(syncfn)));
   return async;
 }
 
