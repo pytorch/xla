@@ -51,7 +51,7 @@ at::ScalarType TensorTypeFromXlaType(xla::PrimitiveType xla_type) {
   }
 }
 
-}
+}  // namespace
 
 // Owns a contiguous block of data with the shape and layout matching `shape()`.
 class TensorSource {
@@ -87,16 +87,15 @@ class TensorSource {
 class AtenSource : public TensorSource {
  public:
   AtenSource(const at::Tensor& tensor, xla::Shape shape, std::string device)
-      : TensorSource(std::move(device)),
-        shape_(std::move(shape)) {
-          at::ScalarType target_torch_type = TensorTypeFromXlaType(primitive_type());
-          if (target_torch_type != tensor.type().scalarType()) {
-            TORCH_LAZY_COUNTER("AtenSourceDowncasts", 1);
-            tensor_ = std::move(tensor.to(TensorTypeFromXlaType(primitive_type())).contiguous());
-          } else {
-            tensor_ = std::move(tensor.contiguous());
-          }
-        }
+      : TensorSource(std::move(device)), shape_(std::move(shape)) {
+    at::ScalarType target_torch_type = TorchTypeFromXlaType(primitive_type());
+    if (target_torch_type != tensor.type().scalarType()) {
+      TORCH_LAZY_COUNTER("AtenSourceDowncasts", 1);
+      tensor_ = std::move(tensor.to(target_torch_type).contiguous());
+    } else {
+      tensor_ = std::move(tensor.contiguous());
+    }
+  }
 
   const void* data() const override { return tensor_.const_data_ptr(); }
 
