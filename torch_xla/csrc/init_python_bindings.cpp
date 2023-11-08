@@ -801,8 +801,7 @@ class PyLoweringContext {
     for (int i = 0; i < device_data.size(); ++i) {
       xla::Literal& literal = literals[i];
       xla::XlaOp op = lowering_ctx.GetParameter(device_data[i]);
-      at::ScalarType dtype =
-          MaybeUpcastForHost(literal.shape().element_type());
+      at::ScalarType dtype = MaybeUpcastForHost(literal.shape().element_type());
       at::Tensor input = MakeTensorFromXlaLiteral(literal, dtype);
       results[param_ids[i]] = input;
     }

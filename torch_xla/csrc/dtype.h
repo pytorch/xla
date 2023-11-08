@@ -20,6 +20,6 @@ xla::PrimitiveType MaybeDowncastForDevice(
 // Upcast type to original PyTorch type.
 at::ScalarType MaybeUpcastForHost(xla::PrimitiveType xla_type);
 
-}
+}  // namespace torch_xla
 
 #endif  // XLA_TORCH_XLA_CSRC_DTYPE_H_

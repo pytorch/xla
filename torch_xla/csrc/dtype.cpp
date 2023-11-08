@@ -1,7 +1,7 @@
 
 #include "torch_xla/csrc/device.h"
-#include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/sys_util.h"
 #include "xla/shape.h"
 
 namespace torch_xla {
@@ -76,7 +76,6 @@ bool Use32BitLong() {
   return use_32bit_long;
 }
 
-
 bool IsTpuDevice(XlaDeviceType hw_type) {
   static bool spmd_device_is_tpu =
       (hw_type == XlaDeviceType::SPMD) &&
@@ -86,7 +85,7 @@ bool IsTpuDevice(XlaDeviceType hw_type) {
   return (hw_type == XlaDeviceType::TPU) || spmd_device_is_tpu;
 }
 
-}
+}  // namespace
 
 at::ScalarType TorchTypeFromXlaType(xla::PrimitiveType xla_type) {
   switch (xla_type) {
@@ -152,7 +151,6 @@ xla::PrimitiveType XlaTypeFromTorchType(at::ScalarType scalar_type) {
       XLA_ERROR() << "Type not supported: " << scalar_type;
   }
 }
-
 
 xla::PrimitiveType MaybeDowncastForDevice(
     xla::PrimitiveType type, const torch::lazy::BackendDevice& device) {
@@ -220,4 +218,4 @@ at::ScalarType MaybeUpcastForHost(xla::PrimitiveType xla_type) {
   }
 }
 
-}
+}  // namespace torch_xla
