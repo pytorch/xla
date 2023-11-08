@@ -64,6 +64,11 @@ xla::Shape host_output_shape(xla::PjRtBuffer* buffer) {
 
 xla::GpuAllocatorConfig GetGpuAllocatorConfig() {
   auto allocator_config = xla::GpuAllocatorConfig{};
+  if (sys_util::GetEnvString(env::kEnvPjrtAllocatorCudaAsync, "").empty() &&
+      sys_util::GetEnvString(env::kEnvPjrtAllocatorPreallocate, "").empty() &&
+      sys_util::GetEnvString(env::kEnvPjrtAllocatorFraction, "").empty()) {
+    return allocator_config;
+  }
   if (sys_util::GetEnvBool(env::kEnvPjrtAllocatorCudaAsync, false)) {
     allocator_config.kind = xla::GpuAllocatorConfig::Kind::kCudaAsync;
   }
