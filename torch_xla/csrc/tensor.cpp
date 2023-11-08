@@ -160,7 +160,7 @@ int64_t XLATensor::size(int64_t dim) const {
 at::ScalarType XLATensor::dtype() const {
   return data()->logical_element_type
              ? *data()->logical_element_type
-             : MaybeUpcastForHost(shape().get().element_type());
+             : MaybeUpcastToHostTorchType(shape().get().element_type());
 }
 
 c10::optional<at::ScalarType> XLATensor::dtype_optional() const {

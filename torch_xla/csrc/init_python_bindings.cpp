@@ -801,7 +801,8 @@ class PyLoweringContext {
     for (int i = 0; i < device_data.size(); ++i) {
       xla::Literal& literal = literals[i];
       xla::XlaOp op = lowering_ctx.GetParameter(device_data[i]);
-      at::ScalarType dtype = MaybeUpcastForHost(literal.shape().element_type());
+      at::ScalarType dtype =
+          MaybeUpcastToHostTorchType(literal.shape().element_type());
       at::Tensor input = MakeTensorFromXlaLiteral(literal, dtype);
       results[param_ids[i]] = input;
     }
@@ -1758,9 +1759,9 @@ void InitXlaModuleBindings(py::module m) {
           for (const runtime::ComputationClient::DataPtr shard_handle :
                shard_handles) {
             shards.push_back(
-                XlaDataToTensors(
-                    {shard_handle},
-                    MaybeUpcastForHost(shard_handle->shape().element_type()))
+                XlaDataToTensors({shard_handle},
+                                 MaybeUpcastToHostTorchType(
+                                     shard_handle->shape().element_type()))
                     .front());
             str_devices.push_back(shard_handle->device());
           }

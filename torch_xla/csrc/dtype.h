@@ -11,14 +11,14 @@ at::ScalarType TorchTypeFromXlaType(xla::PrimitiveType xla_type);
 xla::PrimitiveType XlaTypeFromTorchType(at::ScalarType scalar_type);
 
 // Downcast type to be compatible with device if necessary.
-xla::PrimitiveType MaybeDowncastForDevice(
+xla::PrimitiveType MaybeDowncastToXlaDeviceType(
     xla::PrimitiveType type, const torch::lazy::BackendDevice& device);
 
-xla::PrimitiveType MaybeDowncastForDevice(
+xla::PrimitiveType MaybeDowncastToXlaDeviceType(
     at::ScalarType scalar_type, const torch::lazy::BackendDevice& device);
 
 // Upcast type to original PyTorch type.
-at::ScalarType MaybeUpcastForHost(xla::PrimitiveType xla_type);
+at::ScalarType MaybeUpcastToHostTorchType(xla::PrimitiveType xla_type);
 
 }  // namespace torch_xla
 

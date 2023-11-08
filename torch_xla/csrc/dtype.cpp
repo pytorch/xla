@@ -152,7 +152,7 @@ xla::PrimitiveType XlaTypeFromTorchType(at::ScalarType scalar_type) {
   }
 }
 
-xla::PrimitiveType MaybeDowncastForDevice(
+xla::PrimitiveType MaybeDowncastToXlaDeviceType(
     xla::PrimitiveType type, const torch::lazy::BackendDevice& device) {
   XlaDeviceType hw_type = static_cast<XlaDeviceType>(device.type());
   switch (type) {
@@ -194,13 +194,13 @@ xla::PrimitiveType MaybeDowncastForDevice(
   }
 }
 
-xla::PrimitiveType MaybeDowncastForDevice(
+xla::PrimitiveType MaybeDowncastToXlaDeviceType(
     at::ScalarType scalar_type, const torch::lazy::BackendDevice& device) {
   xla::PrimitiveType xla_type = XlaTypeFromTorchType(scalar_type);
-  return MaybeDowncastForDevice(xla_type, device);
+  return MaybeDowncastToXlaDeviceType(xla_type, device);
 }
 
-at::ScalarType MaybeUpcastForHost(xla::PrimitiveType xla_type) {
+at::ScalarType MaybeUpcastToHostTorchType(xla::PrimitiveType xla_type) {
   at::ScalarType scalar_type = TorchTypeFromXlaType(xla_type);
   switch (scalar_type) {
     case at::ScalarType::BFloat16:

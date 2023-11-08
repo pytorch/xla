@@ -1028,9 +1028,9 @@ XLATensorPtr div(const XLATensorPtr& input, const XLATensorPtr& other,
   bool input_is_float = xla::primitive_util::IsFloatingPointType(input_type);
   bool other_is_float = xla::primitive_util::IsFloatingPointType(other_type);
   if (input_is_float && !other_is_float) {
-    scalar_type = MaybeUpcastForHost(input_type);
+    scalar_type = MaybeUpcastToHostTorchType(input_type);
   } else if (!input_is_float && other_is_float) {
-    scalar_type = MaybeUpcastForHost(other_type);
+    scalar_type = MaybeUpcastToHostTorchType(other_type);
   }
   // We need to cast both input and other to float to perform true divide, floor
   // divide and trunc divide.
@@ -1075,7 +1075,7 @@ XLATensorPtr div(const XLATensorPtr& input, const at::Scalar& other) {
   xla::PrimitiveType input_type = input->shape().get().element_type();
   bool input_is_float = xla::primitive_util::IsFloatingPointType(input_type);
   if (input_is_float) {
-    scalar_type = MaybeUpcastForHost(input_type);
+    scalar_type = MaybeUpcastToHostTorchType(input_type);
   }
   torch::lazy::Value input_value = GetFloatingIrValue(input, scalar_type);
   torch::lazy::Value other_value = XLAGraphExecutor::Get()->GetIrValueForScalar(
@@ -1183,8 +1183,8 @@ XLATensorPtr eye(int64_t lines, int64_t cols,
 void eye_out(XLATensorPtr& out, int64_t lines, int64_t cols) {
   out->SetIrValue(
       Identity(lines, cols >= 0 ? cols : lines,
-               MaybeDowncastForDevice(out->shape().get().element_type(),
-                                      out->GetDevice())));
+               MaybeDowncastToXlaDeviceType(out->shape().get().element_type(),
+                                            out->GetDevice())));
 }
 
 void fill_(XLATensorPtr& input, const at::Scalar& value) {
@@ -2057,8 +2057,9 @@ XLATensorPtr pow(const at::Scalar& input, const XLATensorPtr& exponent) {
   torch::lazy::NodePtr pow_node = Pow(input_node, exponent->GetIrValue());
   at::ScalarType input_dtype = GetScalarType(input);
   at::ScalarType exp_dtype = exponent->dtype();
-  at::ScalarType promoted_dtype = MaybeUpcastForHost(XlaHelpers::PromoteType(
-      XlaTypeFromTorchType(input_dtype), XlaTypeFromTorchType(exp_dtype)));
+  at::ScalarType promoted_dtype =
+      MaybeUpcastToHostTorchType(XlaHelpers::PromoteType(
+          XlaTypeFromTorchType(input_dtype), XlaTypeFromTorchType(exp_dtype)));
   return exponent->CreateFrom(pow_node, promoted_dtype);
 }
 

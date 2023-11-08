@@ -218,7 +218,7 @@ torch::lazy::Value XLAGraphExecutor::GetDeviceDataIrValue(
     const at::Scalar& value, xla::PrimitiveType type,
     const torch::lazy::BackendDevice& device) {
   torch::lazy::BackendDataPtr data =
-      GetDeviceData(value, MaybeUpcastForHost(type), device);
+      GetDeviceData(value, MaybeUpcastToHostTorchType(type), device);
   data->SetInfo(
       std::make_shared<torch::lazy::LazyGraphExecutor::DeviceDataInfo>(
           /*tensor_id=*/-1, /*read_only=*/true));
