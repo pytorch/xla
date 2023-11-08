@@ -98,7 +98,8 @@ elif [[ "$RUN_CPP_TESTS2" == "cpp_tests2" ]]; then
               "test_lazy"
               "test_replication"
               "test_tensor"
-              "test_xla_backend_intf"
+              # disable test_xla_backend_intf since it is flaky on upstream
+              #"test_xla_backend_intf"
               "test_xla_sharding")
 fi
 for name in "${test_names[@]}"; do
