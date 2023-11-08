@@ -26,6 +26,7 @@ def test_single_host_tiled():
   print("then print:")
   visualize_tensor_sharding(t)
 
+
 def test_single_host_partial_replication():
   xr.use_spmd()
   num_devices = xr.global_runtime_device_count()
@@ -41,6 +42,7 @@ def test_single_host_partial_replication():
   print(sharding)
   print("then print: ")
   visualize_tensor_sharding(t)
+
 
 def test_single_host_replicated():
   xr.use_spmd()
@@ -58,6 +60,7 @@ def test_single_host_replicated():
   print(sharding)
   print("then print: ")
   visualize_tensor_sharding(t)
+
 
 test_single_host_tiled()
 test_single_host_partial_replication()
