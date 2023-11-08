@@ -176,7 +176,7 @@ def visualize_sharding(shape: torch.Size,
     for j in range(num_cols):
       entry = f"{device_kind} " + str(
           slices[i,
-                 j]) # "entry"# .join([str(s) for s in sorted(slices[i, j])])
+                 j])  # "entry"# .join([str(s) for s in sorted(slices[i, j])])
       width, maybe_height = widths, heights  # widths[i, j], heights[i, j]
       width = int(width * base_width * height_to_width_ratio)
       if maybe_height is None:
