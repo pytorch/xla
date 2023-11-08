@@ -4,6 +4,7 @@
 import torch
 import warnings
 import torch_xla.core.xla_model as xm
+import torch_xla.debug.profiler as xp
 from torch.utils.checkpoint import detach_variable, check_backward_validity, get_device_states, set_device_states
 from typing import Iterable, List, Tuple, Union
 
@@ -22,8 +23,9 @@ class CheckpointFunction(torch.autograd.Function):
     return tensor_inputs
 
   @staticmethod
-  def forward(ctx, run_function, preserve_rng_state, *args):
+  def forward(ctx, m, run_function, preserve_rng_state, *args):
     check_backward_validity(args)
+    ctx.m = m
     ctx.run_function = run_function
     ctx.preserve_rng_state = preserve_rng_state
     # Accommodates the (remote) possibility that autocast is enabled for cpu AND gpu.
@@ -70,6 +72,7 @@ class CheckpointFunction(torch.autograd.Function):
     return outputs
 
   @staticmethod
+  @xp.trace_me("CheckpointFunctionBackward")
   def backward(ctx, *args):
     if not torch.autograd._is_checkpoint_valid():
       raise RuntimeError(
@@ -123,10 +126,17 @@ class CheckpointFunction(torch.autograd.Function):
         inp.grad if isinstance(inp, torch.Tensor) else None
         for inp in detached_inputs)
 
-    return (None, None) + grads
+    # a hack
+    gradients = []
+    for name, param in ctx.m.named_parameters():
+      if param.grad != None:
+        gradients.append(param.grad)
+    xm.optimization_barrier_(CheckpointFunction._extract_tensors_from_list(gradients + list(grads)))
+
+    return (None, None, None) + grads
 
 
-def checkpoint(function, *args, use_reentrant: bool = True, **kwargs):
+def checkpoint(m, function, *args, use_reentrant: bool = True, **kwargs):
   r"""Checkpoint a model or part of the model
 
     Checkpointing works by trading compute for memory. Rather than storing all
@@ -209,6 +219,6 @@ def checkpoint(function, *args, use_reentrant: bool = True, **kwargs):
                      ",".join(arg for arg in kwargs))
 
   if use_reentrant:
-    return CheckpointFunction.apply(function, preserve, *args)
+    return CheckpointFunction.apply(m, function, preserve, *args)
   else:
     raise ValueError("XLA currently does not support use_reentrant==False")

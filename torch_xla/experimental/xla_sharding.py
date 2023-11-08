@@ -6,6 +6,7 @@ import torch_xla
 import torch_xla.core.xla_model as xm
 from torch_xla.experimental.xla_sharded_tensor import XLAShardedTensor, XLAShard
 import torch_xla.runtime as xr
+import torch_xla.debug.profiler as xp
 
 import numpy as np
 import functools
@@ -597,6 +598,7 @@ class XLAPatchedLinear(torch.autograd.Function):
       return product + bias
 
   @staticmethod
+  @xp.trace_me("XLAPatchedLinearBackward")
   def backward(ctx, grad_output):
     input, weight, bias = ctx.saved_tensors
     grad_input = grad_weight = grad_bias = None

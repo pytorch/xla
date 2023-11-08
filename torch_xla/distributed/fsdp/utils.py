@@ -27,7 +27,7 @@ def checkpoint_module(module):
     input_requires_grad = any(
         isinstance(t, torch.Tensor) and t.requires_grad for t in packed_args)
     if input_requires_grad:
-      outputs = checkpoint(m._xla_checkpointed_forward_no_kwargs, len(args),
+      outputs = checkpoint(m, m._xla_checkpointed_forward_no_kwargs, len(args),
                            len(kwargs), *packed_args)
     else:
       # No input requires gradients so we won't checkpoint this forward pass.
