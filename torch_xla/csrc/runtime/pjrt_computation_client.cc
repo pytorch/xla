@@ -297,6 +297,8 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
   for (auto& tensor : tensors) {
     xla::PjRtDevice* pjrt_device = StringToPjRtDevice(tensor->device());
 
+    total_size += xla::ShapeUtil::ByteSizeOf(tensor->shape());
+
     std::shared_ptr<xla::PjRtBuffer> buffer =
         std::move(client_
                       ->BufferFromHostBuffer(
@@ -308,8 +310,7 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
                       .value());
 
     ComputationClient::DataPtr data =
-        std::make_shared<PjRtData>(tensor->device(), buffer);
-    total_size += xla::ShapeUtil::ByteSizeOf(data->shape());
+        std::make_shared<PjRtData>(tensor->device(), tensor->shape(), buffer);
     datas.push_back(data);
   }
   OutboundDataMetric()->AddSample(total_size);

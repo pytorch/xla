@@ -22,13 +22,25 @@ class TensorSource {
 
   virtual const void* data() const = 0;
 
-  virtual xla::PrimitiveType primitive_type() const = 0;
-
-  virtual std::vector<int64_t> dimensions() const = 0;
-
-  virtual std::vector<int64_t> byte_strides() const = 0;
+  virtual const xla::Shape& shape() const = 0;
 
   const std::string& device() const { return device_; }
+
+  virtual std::vector<int64_t> byte_strides() const {
+    std::vector<int64_t> byte_strides(shape().dimensions_size());
+    XLA_CHECK_OK(
+        xla::ShapeUtil::ByteStrides(shape(), absl::MakeSpan(byte_strides)));
+    return byte_strides;
+  }
+
+  virtual std::vector<int64_t> dimensions() const {
+    auto dimensions = shape().dimensions();
+    return {dimensions.begin(), dimensions.end()};
+  }
+
+  virtual xla::PrimitiveType primitive_type() const {
+    return shape().element_type();
+  }
 
  private:
   std::string device_;
@@ -36,9 +48,8 @@ class TensorSource {
 
 class AtenSource : public TensorSource {
  public:
-  AtenSource(const at::Tensor& tensor, xla::PrimitiveType target_type,
-             std::string device)
-      : TensorSource(std::move(device)), target_type_(target_type) {
+  AtenSource(const at::Tensor& tensor, xla::Shape shape, std::string device)
+      : TensorSource(std::move(device)), shape_(std::move(shape)) {
     at::ScalarType target_torch_type = TorchTypeFromXlaType(primitive_type());
     if (target_torch_type != tensor.type().scalarType()) {
       TORCH_LAZY_COUNTER("AtenSourceDowncasts", 1);
@@ -50,12 +61,7 @@ class AtenSource : public TensorSource {
 
   const void* data() const override { return tensor_.const_data_ptr(); }
 
-  xla::PrimitiveType primitive_type() const override { return target_type_; }
-
-  std::vector<int64_t> dimensions() const override {
-    auto sizes = tensor_.sizes();
-    return {sizes.begin(), sizes.end()};
-  }
+  const xla::Shape& shape() const override { return shape_; }
 
   std::vector<int64_t> byte_strides() const override {
     std::vector<int64_t> strides;
@@ -65,9 +71,14 @@ class AtenSource : public TensorSource {
     return strides;
   }
 
+  std::vector<int64_t> dimensions() const override {
+    auto sizes = tensor_.sizes();
+    return {sizes.begin(), sizes.end()};
+  }
+
  private:
   at::Tensor tensor_;
-  xla::PrimitiveType target_type_;
+  xla::Shape shape_;
 };
 
 class LiteralSource : public TensorSource {
@@ -77,23 +88,7 @@ class LiteralSource : public TensorSource {
 
   const void* data() const override { return literal_.untyped_data(); }
 
-  const xla::Shape& shape() const { return literal_.shape(); }
-
-  xla::PrimitiveType primitive_type() const override {
-    return shape().element_type();
-  }
-
-  std::vector<int64_t> dimensions() const override {
-    auto dimensions = shape().dimensions();
-    return {dimensions.begin(), dimensions.end()};
-  }
-
-  std::vector<int64_t> byte_strides() const override {
-    std::vector<int64_t> byte_strides(shape().dimensions_size());
-    XLA_CHECK_OK(
-        xla::ShapeUtil::ByteStrides(shape(), absl::MakeSpan(byte_strides)));
-    return byte_strides;
-  }
+  const xla::Shape& shape() const override { return literal_.shape(); }
 
  private:
   xla::Literal literal_;
