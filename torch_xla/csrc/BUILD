@@ -264,6 +264,7 @@ ptxla_cc_library(
     srcs = ["init_python_bindings.cpp"],
     deps = [
         ":device",
+        ":dtype",
         ":tensor",
         ":version",
         "//torch_xla/csrc/runtime",

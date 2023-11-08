@@ -10,6 +10,7 @@
 #include "absl/strings/str_join.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/convert_ops.h"
+#include "torch_xla/csrc/dtype.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/reduction.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
