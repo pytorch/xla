@@ -36,7 +36,8 @@ class TensorSource {
 
 class AtenSource : public TensorSource {
  public:
-  AtenSource(const at::Tensor& tensor, xla::PrimitiveType target_type, std::string device)
+  AtenSource(const at::Tensor& tensor, xla::PrimitiveType target_type,
+             std::string device)
       : TensorSource(std::move(device)), target_type_(target_type_) {
     at::ScalarType target_torch_type = TorchTypeFromXlaType(primitive_type());
     if (target_torch_type != tensor.type().scalarType()) {
