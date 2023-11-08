@@ -163,12 +163,11 @@ xla::PrimitiveType MaybeDowncastForDevice(
       if (UseBF16()) {
         return xla::PrimitiveType::BF16;
       }
-      if (DowncastBF16() || DowncastF16()) {
+      if (DowncastBF16() || DowncastF16() || IsTpuDevice(hw_type) ||
+          hw_type == XlaDeviceType::NEURON) {
         return xla::PrimitiveType::F32;
       }
-      return !IsTpuDevice(hw_type) && hw_type != XlaDeviceType::NEURON
-                 ? xla::PrimitiveType::F64
-                 : xla::PrimitiveType::F32;
+      return xla::PrimitiveType::F64;
     case xla::PrimitiveType::F32:
       if (UseF16() || DowncastF16()) {
         return xla::PrimitiveType::F16;
