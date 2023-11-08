@@ -6,6 +6,7 @@ import queue
 import threading
 import torch.distributed as dist
 import torch.distributed.checkpoint as dist_cp
+import torch_xla
 import torch_xla.runtime as xr
 import torch_xla.experimental.distributed_checkpoint as xc
 import traceback
@@ -94,12 +95,16 @@ class CheckpointManager:
   # The maximum number of checkpoints to keep.
   max_to_keep: int
 
+  # Whether a checkpoint should be taken when a preemption is detected.
+  chkpt_on_preemption: bool
+
   def __init__(self,
                path: str,
                save_interval: int,
                max_to_keep: Optional[int] = 0,
                async_queue_size: Optional[int] = 1,
-               process_group: dist.ProcessGroup = None):
+               process_group: dist.ProcessGroup = None,
+               chkpt_on_preemption: bool = True):
     """
     Create a checkpoint manager that reads and writes checkpoints into
     the provided directory.
@@ -121,6 +126,9 @@ class CheckpointManager:
       process_group: The process group to use when coordinating the checkpoint.
             Default: None, in which case a subgroup of the default process
             group will be created.
+      chkpt_on_preemption: Whether or not to take a checkpoint when a
+            preemption has been detected.
+            Default: True
     """
     assert dist.is_initialized(), "A process group is required."
     assert save_interval > 0, "save_interval must be positive"
@@ -130,6 +138,7 @@ class CheckpointManager:
     self.base_path = path
     self.save_interval = save_interval
     self.max_to_keep = max_to_keep
+    self.chkpt_on_preemption = chkpt_on_preemption
 
     self._tracked_chkpts = self._load_tracked_chkpts()
     self._async_queue = queue.Queue(maxsize=async_queue_size)
@@ -142,6 +151,13 @@ class CheckpointManager:
     # Create a new group if none is provided
     # TODO(jonbolin): Verify subgroup on GPU backend
     self.pg = process_group or dist.new_group()
+
+    if self.chkpt_on_preemption:
+      # Initialize the distributed runtime for preemption detection
+      master_ip = xr.get_master_ip()
+      torch_xla._XLAC._ensure_xla_coordinator_initialized(
+          xr.process_index(), xr.process_count(), master_ip)
+      torch_xla._XLAC._activate_preemption_sync_manager()
 
   def _load_tracked_chkpts(self) -> Deque[_CheckpointMetadata]:
     """
@@ -201,11 +217,19 @@ class CheckpointManager:
 
   def should_save(self, step: int) -> bool:
     """
-    Returns true if a checkpoint should be saved for the current step or if
-    a preemption has been detected.
+    Returns true if a checkpoint should be saved for the current step. A
+    checkpoint should be taken if any of the following conditions are met:
+     - The step aligns with the CheckpointManager's save_interval.
+     - The CheckpointManager was created with the `chkpt_on_preemption` option
+       and a preemption has been detected.
     """
-    # TODO(jonbolin): Support preemption notice for auto checkpointing
-    return step % self.save_interval == 0
+    preemption_detected = False
+    if self.chkpt_on_preemption and self.reached_preemption(step):
+      logging.warn(
+          f"Preemption sync point reached at step {step}. Triggering a checkpoint."
+      )
+      preemption_detected = True
+    return step % self.save_interval == 0 or preemption_detected
 
   def save(self,
            step,
@@ -300,3 +324,10 @@ class CheckpointManager:
   def join(self):
     """ Wait for all pending async checkpoints to complete. """
     self._async_queue.join()
+
+  def reached_preemption(self, step: int) -> bool:
+    """ Returns True if a preemption has been detected at the given step. """
+    assert self.chkpt_on_preemption, (
+        "Preemption detection not enabled. Please set `chkpt_on_preemption` "
+        " when creating the CheckpointManager")
+    return torch_xla._XLAC._sync_point_reached(step)

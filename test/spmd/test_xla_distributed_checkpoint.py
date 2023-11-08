@@ -356,7 +356,8 @@ class CheckpointManagerTest(DistributedCheckpointTestBase):
 
   @run_with_tmpdir
   def test_manager_checkpointing(self, tmpdir):
-    chkpt_mgr = CheckpointManager(tmpdir, save_interval=10)
+    chkpt_mgr = CheckpointManager(
+        tmpdir, save_interval=10, chkpt_on_preemption=False)
     state_dict = self._get_sharded_model().state_dict()
 
     # Take a checkpoint on step 0
@@ -376,7 +377,8 @@ class CheckpointManagerTest(DistributedCheckpointTestBase):
 
   @run_with_tmpdir
   def test_manager_step_tracking(self, tmpdir):
-    chkpt_mgr = CheckpointManager(tmpdir, save_interval=10)
+    chkpt_mgr = CheckpointManager(
+        tmpdir, save_interval=10, chkpt_on_preemption=False)
     state_dict = self._get_sharded_model().state_dict()
 
     # No steps are being tracked initially
@@ -396,7 +398,8 @@ class CheckpointManagerTest(DistributedCheckpointTestBase):
 
   @run_with_tmpdir
   def test_manager_max_to_keep(self, tmpdir):
-    chkpt_mgr = CheckpointManager(tmpdir, save_interval=10, max_to_keep=2)
+    chkpt_mgr = CheckpointManager(
+        tmpdir, save_interval=10, max_to_keep=2, chkpt_on_preemption=False)
     state_dict = self._get_sharded_model().state_dict()
 
     # No steps are being tracked initially
@@ -417,13 +420,15 @@ class CheckpointManagerTest(DistributedCheckpointTestBase):
     self.assertEqual(set(chkpt_mgr.all_steps()), {30, 10})
 
     # The deletion order should persist across executions
-    chkpt_mgr = CheckpointManager(tmpdir, save_interval=10, max_to_keep=2)
+    chkpt_mgr = CheckpointManager(
+        tmpdir, save_interval=10, max_to_keep=2, chkpt_on_preemption=False)
     self.assertTrue(chkpt_mgr.save(20, state_dict))
     self.assertEqual(set(chkpt_mgr.all_steps()), {20, 10})
 
   @run_with_tmpdir
   def test_manager_async(self, tmpdir):
-    chkpt_mgr = CheckpointManager(tmpdir, save_interval=10)
+    chkpt_mgr = CheckpointManager(
+        tmpdir, save_interval=10, chkpt_on_preemption=False)
     state_dict = self._get_sharded_model().state_dict()
 
     # Patch the manager's save method to block until this thread signals.
@@ -451,7 +456,8 @@ class CheckpointManagerTest(DistributedCheckpointTestBase):
 
   @run_with_tmpdir
   def test_manager_async_step_tracking(self, tmpdir):
-    chkpt_mgr = CheckpointManager(tmpdir, save_interval=10)
+    chkpt_mgr = CheckpointManager(
+        tmpdir, save_interval=10, chkpt_on_preemption=False)
     state_dict = self._get_sharded_model().state_dict()
 
     self.assertEqual(chkpt_mgr.all_steps(), [])
@@ -521,6 +527,24 @@ class CheckpointManagerTest(DistributedCheckpointTestBase):
     finally:
       # Scope the PreemptionSyncManager to the lifespan of the test.
       torch_xla._XLAC._deactivate_preemption_sync_manager()
+
+  @unittest.skipUnless(xr.device_type() == 'TPU',
+                       'TPU required for worker IP discovery')
+  @run_with_tmpdir
+  def test_auto_checkpoint(self, tmpdir):
+    # Create a checkpoint manager with a long save interval
+    chkpt_mgr = CheckpointManager(tmpdir, save_interval=100)
+    state_dict = self._get_sharded_model().state_dict()
+
+    preemption_step = 10
+    # Skip step 0 so the manager will track no checkpoints before preemption
+    for step in range(1, preemption_step):
+      self.assertFalse(chkpt_mgr.save(step, state_dict))
+
+    with unittest.mock.patch('torch_xla._XLAC._sync_point_reached',
+                             lambda x: True):
+      self.assertTrue(chkpt_mgr.save(preemption_step, state_dict))
+      self.assertTrue(chkpt_mgr.reached_preemption(step))
 
 
 if __name__ == '__main__':
