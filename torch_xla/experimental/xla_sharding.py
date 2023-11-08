@@ -83,7 +83,7 @@ class Mesh:
   @functools.lru_cache(maxsize=None)
   def get_op_sharding(self,
                       partition_spec: Tuple,
-                      flatten_opsharding = False) -> torch_xla._XLAC.OpSharding:
+                      flatten_opsharding=False) -> torch_xla._XLAC.OpSharding:
     """
     Return the OpSharding for the given partition spec. This is an expensive
     operation as the mesh grows, so the value is cached for reuse.
