@@ -481,7 +481,7 @@ torch::lazy::BackendDataPtr TensorToXlaData(
 
   std::vector<std::shared_ptr<const runtime::TensorSource>> source_tensors;
   source_tensors.push_back(
-      std::make_shared<runtime::AtenSource>(tensor, shape, device.toString()));
+      std::make_shared<runtime::AtenSource>(tensor, shape.element_type(), device.toString()));
 
   auto handles =
       runtime::GetComputationClient()->TransferToServer(source_tensors);
@@ -706,9 +706,8 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
   std::vector<std::shared_ptr<const runtime::TensorSource>> source_tensors;
   for (size_t i = 0; i < tensors.size(); ++i) {
     torch::lazy::BackendDevice device = ParseDeviceString(devices[i]);
-    xla::Shape shape = CreateComputationShapeFromTensor(tensors[i], &device);
     source_tensors.push_back(std::make_shared<runtime::AtenSource>(
-        tensors[i], std::move(shape), devices[i]));
+        tensors[i], MaybeDowncastForDevice(tensors[i].type().scalarType(), device), devices[i]));
   }
   return WrapXlaData(
       runtime::GetComputationClient()->TransferToServer(source_tensors));
@@ -725,7 +724,6 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
   std::vector<runtime::ComputationClient::DataPtr> handles;
   for (size_t i = 0; i < tensors.size(); ++i) {
     torch::lazy::BackendDevice device = ParseDeviceString(devices[i]);
-    xla::Shape shape = CreateComputationShapeFromTensor(tensors[i], &device);
 
     std::vector<std::shared_ptr<const runtime::TensorSource>>
         source_tensors;                                            // in
@@ -745,7 +743,7 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
           local_shards, local_devices, shardings[i]));
     } else {
       source_tensors.push_back(std::make_shared<runtime::AtenSource>(
-          tensors[i], std::move(shape), devices[i]));
+          tensors[i], MaybeDowncastForDevice(tensors[i].type().scalarType(), device), devices[i]));
       new_handles =
           runtime::GetComputationClient()->TransferToServer(source_tensors);
     }
