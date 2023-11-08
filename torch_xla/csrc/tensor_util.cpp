@@ -386,7 +386,7 @@ void TensorToBuffer(const at::Tensor& tensor, const xla::Shape& dest_shape,
   at::Tensor contiguous_tensor = tensor.contiguous();
   xla::Shape src_shape = MakeTorchTensorLayout(
       XlaHelpers::I64List(contiguous_tensor.sizes()), /*dynamic_dimensions=*/{},
-      GetXlaTypeFromTensorType(contiguous_tensor.type().scalarType(), device));
+      MaybeDowncastForDevice(contiguous_tensor.type().scalarType(), device));
   CopyTensors<SType, DType>(contiguous_tensor.data_ptr<SType>(), src_shape,
                             dest_buffer, dest_buffer_size, dest_shape);
 }
@@ -780,7 +780,7 @@ xla::Literal GetTensorLiteral(const at::Tensor& tensor, const xla::Shape* shape,
     auto dimensions = XlaHelpers::I64List(tensor.sizes());
     computed_shape = MakeTorchTensorLayout(
         dimensions, /*dynamic_dimensions=*/{},
-        GetXlaTypeFromTensorType(tensor.type().scalarType(), xla_device));
+        MaybeDowncastForDevice(tensor.type().scalarType(), xla_device));
     shape = &computed_shape;
   }
   xla::Literal literal(*shape);
@@ -878,13 +878,13 @@ xla::Shape CreateComputationShapeFromTensor(
 xla::PrimitiveType GetXlaPrimitiveTypeForCurrentDevice(
     xla::PrimitiveType xla_type) {
   torch::lazy::BackendDevice xla_device = bridge::GetCurrentDevice();
-  return GetDevicePrimitiveType(xla_type, xla_device);
+  return MaybeDowncastForDevice(xla_type, xla_device);
 }
 
 xla::PrimitiveType MakeXlaPrimitiveType(
     at::ScalarType scalar_type, const torch::lazy::BackendDevice* device) {
   torch::lazy::BackendDevice xla_device = bridge::GetDeviceOrCurrent(device);
-  return GetXlaTypeFromTensorType(scalar_type, xla_device);
+  return MaybeDowncastForDevice(scalar_type, xla_device);
 }
 
 xla::Shape MakeXlaShapeFromLazyShape(torch::lazy::Shape shape,

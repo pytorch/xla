@@ -104,7 +104,7 @@ xla::XlaOp ConvertToNumeric(xla::XlaOp op, xla::PrimitiveType from) {
   if (from == xla::PrimitiveType::PRED) {
     torch::lazy::BackendDevice xla_device = bridge::GetCurrentDevice();
     op = ConvertTo(op, from,
-                   GetDevicePrimitiveType(xla::PrimitiveType::U8, xla_device),
+                   MaybeDowncastForDevice(xla::PrimitiveType::U8, xla_device),
                    &xla_device);
   }
   return op;

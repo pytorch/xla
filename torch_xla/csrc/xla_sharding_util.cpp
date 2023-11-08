@@ -358,7 +358,7 @@ std::vector<runtime::ComputationClient::DataPtr> ShardingUtil::OutputHandler(
       // Reshards replicated output if `sharding` is present.
       std::vector<at::Tensor> tensors = XlaDataToTensors(
           {sharded_results[0][i]},
-          GetHostScalarType(sharding->shape.element_type()));
+          MaybeUpcastForHost(sharding->shape.element_type()));
       outputs.push_back(
           std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
               CreateTensorsData(
