@@ -82,7 +82,15 @@
         --command "sudo mkdir -p /mnt/disks/persist && \
         sudo mount -o ro,noload /dev/sdb /mnt/disks/persist" `
 
-- <h2> Run the training workload </h2>
+- <h2> Setup env and Run the training workload </h2>
+
+      `gcloud  alpha compute tpus tpu-vm ssh $TPU_NAME \
+        --zone=u$ZONE \
+        --worker=all \
+        --project=$PROJECT \
+        --command "pip3 install numpy
+        pip3 install torchvision
+        pip install torch~=2.1.0 torch_xla[tpu]~=2.1.0 -f https://storage.googleapis.com/libtpu-releases/index. --force"`
 
       `gcloud  alpha compute tpus tpu-vm ssh $TPU_NAME \
         --zone=u$ZONE \
