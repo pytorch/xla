@@ -202,20 +202,6 @@ cc_library(
 )
 
 cc_library(
-    name = "nccl_distributed",
-    srcs = ["nccl_distributed.cc"],
-    hdrs = ["nccl_distributed.h"],
-    deps = [
-        ":debug_macros",
-        "@com_google_absl//absl/strings",
-        "@com_google_absl//absl/types:span",
-        "@xla//xla:types",
-    ] + if_cuda_is_configured([
-        "@local_config_nccl//:nccl",
-    ]),
-)
-
-cc_library(
     name = "profiler",
     srcs = ["profiler.cc"],
     hdrs = ["profiler.h"],
