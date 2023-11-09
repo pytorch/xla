@@ -3,12 +3,12 @@
 
 #include <iostream>
 
+#include "absl/synchronization/blocking_counter.h"
 #include "test/cpp/cpp_test_util.h"
 #include "test/cpp/torch_xla_test.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
-#include "torch_xla/csrc/runtime/multi_wait.h"
 #include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/runtime/thread_pool.h"
 #include "torch_xla/csrc/tensor_util.h"
@@ -57,7 +57,7 @@ void TestSingleReplication(
 
   std::vector<std::vector<torch_xla::runtime::ComputationClient::DataPtr>>
       results(device_strings.size());
-  torch_xla::runtime::util::MultiWait mwait(device_strings.size());
+  absl::BlockingCounter mwait(device_strings.size());
   torch_xla::runtime::ComputationClient::ExecuteComputationOptions exec_options;
   for (size_t i = 0; i < device_strings.size(); ++i) {
     auto executor = [&, i]() {
@@ -68,9 +68,9 @@ void TestSingleReplication(
                   torch_xla::runtime::ComputationClient::Data>(
                   tensors_data[i])},
               device_strings[i], exec_options);
+      mwait.DecrementCount();
     };
-    torch_xla::runtime::Schedule(
-        mwait.Completer(std::move(executor)));
+    torch_xla::runtime::Schedule(std::move(executor));
   }
   mwait.Wait();
 
