@@ -77,7 +77,7 @@
       <h3>1. Setup env variables </h3>
 
         TPU_NAME=<Your TPU name>
-        ACCELERATOR_TYPE=v4-8
+        ACCELERATOR_TYPE=<ACCELERATOR TYPE>
         ZONE=<TPU zone>
         PROJECT=<PROJECT ID>
 
