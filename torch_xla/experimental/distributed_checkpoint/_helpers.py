@@ -5,7 +5,7 @@
 import dataclasses
 
 import torch
-import torch_xla.distributed.spmd.xla_sharding as xs
+import torch_xla.distributed.spmd as xs
 
 from torch.distributed.checkpoint.planner import SavePlan
 from typing import (

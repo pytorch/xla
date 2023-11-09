@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
-from torch_xla.experimental.spmd import XLAShardedTensor, XLAShard
+from torch_xla.distributed.spmd import XLAShardedTensor, XLAShard
 import torch_xla.runtime as xr
 
 import numpy as np

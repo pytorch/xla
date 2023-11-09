@@ -8,7 +8,7 @@ from torch.distributed._tensor import DeviceMesh, Shard
 import torch_xla
 import torch_xla.runtime as xr
 import torch_xla.core.xla_model as xm
-from torch_xla.experimental.spmd import xla_distribute_tensor
+from torch_xla.distributed.spmd import xla_distribute_tensor
 
 import unittest
 

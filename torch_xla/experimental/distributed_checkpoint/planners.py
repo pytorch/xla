@@ -4,7 +4,7 @@ import io
 import numpy as np
 import torch
 import torch_xla
-import torch_xla.distributed.spmd.xla_sharding as xs
+import torch_xla.distributed.spmd as xs
 
 from collections import ChainMap
 from torch.distributed.checkpoint.default_planner import (

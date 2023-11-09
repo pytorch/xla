@@ -9,21 +9,13 @@ import torch.nn as nn
 from torch.distributed._tensor.device_mesh import DeviceMesh
 from torch.distributed._tensor.placement_types import Placement, Replicate
 
+import torch_xla.core.xla_model as xm  # type:ignore[import]  # noqa: F401
+import torch_xla.runtime as xr  # type:ignore[import]
+from torch_xla.distributed.spmd import (  # type:ignore[import]
+    XLAShardedTensor, mark_sharding, Mesh, ShardingType,
+)
+
 log = logging.getLogger(__name__)
-
-TORCH_XLA_INITIALIZED = False
-try:
-  import torch_xla.core.xla_model as xm  # type:ignore[import]  # noqa: F401
-  import torch_xla.runtime as xr  # type:ignore[import]
-  from torch_xla.experimental.spmd import (  # type:ignore[import]
-      XLAShardedTensor,)
-  from torch_xla.experimental.spmd import (  # type:ignore[import]
-      mark_sharding, Mesh, ShardingType,
-  )
-
-  TORCH_XLA_INITIALIZED = True
-except ImportError as e:
-  log.warning(e.msg)
 
 
 # wrapper to check xla test requirements
@@ -36,14 +28,8 @@ def with_xla(func: Callable) -> Callable:
       *args: Tuple[object],
       **kwargs: Dict[str, Any]  # type: ignore[misc]
   ) -> None:
-    if TORCH_XLA_INITIALIZED:
-      # TODO(yeounoh) replace this with xr.use_spmd() when we deprecate the flag.
-      os.environ["XLA_USE_SPMD"] = "1"
-      return func(self, *args, **kwargs)  # type: ignore[misc]
-    else:
-      raise ImportError(
-          "torch.distributed._tensor._xla API requires torch_xla package installation."
-      )
+    os.environ["XLA_USE_SPMD"] = "1"
+    return func(self, *args, **kwargs)  # type: ignore[misc]
 
   return wrapper
 
@@ -176,7 +162,7 @@ def xla_distribute_tensor(
     assert (
         sharding_type is None or sharding_type == ShardingType.REPLICATED
     ), "XLAShardedTensor `tensor` is already annotated with non-replication sharding. "
-    "Clear the existing sharding annotation first, by callling torch_xla.experimental.spmd.clear_sharding API."
+    "Clear the existing sharding annotation first, by callling torch_xla.distributed.spmd.clear_sharding API."
     global_tensor = tensor.global_tensor  # type:ignore[attr-defined]
   assert global_tensor is not None, "distributing a tensor should not be None"
 
