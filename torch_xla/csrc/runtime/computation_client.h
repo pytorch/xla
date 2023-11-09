@@ -271,6 +271,9 @@ class ComputationClient {
 
   // Reads the tensor literal values stored at TPU server sites, behind the
   // supplied handles.
+  // Note: `TransferFromServer` call will block until the `DataPtrs` are ready
+  // if they were created by `TransferToServer` or `Execute*`. Calling this from
+  // python while holding the GIL can cause deadlocks!
   virtual std::vector<xla::Literal> TransferFromServer(
       absl::Span<const DataPtr> handles) = 0;
 

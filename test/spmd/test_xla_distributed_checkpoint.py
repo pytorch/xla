@@ -212,7 +212,6 @@ class SPMDLoadPlannerTest(DistributedCheckpointTestBase):
 
   @unittest.skipIf(xr.global_runtime_device_count() == 1,
                    "Multiple devices required to shard tensors")
-  @unittest.skip("Hanging in TPU CI")
   def test_resolve_and_commit_sharded_tensor(self):
     model = self._get_sharded_model()
     planner = self._get_load_planner(model)

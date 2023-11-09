@@ -771,12 +771,33 @@ xla::Literal GetTensorLiteral(const at::Tensor& tensor, const xla::Shape* shape,
   return literal;
 }
 
-std::vector<at::Tensor> XlaDataToTensors(
-    absl::Span<const torch::lazy::BackendDataPtr> xla_data,
-    at::ScalarType dest_element_type) {
+std::vector<xla::Literal> ReleaseGilAndTransferData(
+  absl::Span<const torch::lazy::BackendDataPtr> xla_data) {
+  // HACK: This method may be called outside of python (mainly in C++ tests) or
+  // when the GIL is already released, so we must check both cases here. If
+  // possible, prefer to release the GIL in the python bindings before copying
+  // this pattern.
+  PyThreadState* save = nullptr;
+  // TODO(wcromar): Remove this setting when we are more confident
+  static const bool release_gil =
+      runtime::sys_util::GetEnvBool("XLA_RELEASE_GIL_DURING_TRANSFER", true);
+  if (release_gil && Py_IsInitialized() && PyGILState_Check()) {
+    save = PyEval_SaveThread();
+  }
   std::vector<xla::Literal> literals =
       runtime::GetComputationClient()->TransferFromServer(
           UnwrapXlaData(xla_data));
+  if (save) {
+    PyEval_RestoreThread(save);
+  }
+
+  return literals;
+}
+
+std::vector<at::Tensor> XlaDataToTensors(
+    absl::Span<const torch::lazy::BackendDataPtr> xla_data,
+    at::ScalarType dest_element_type) {
+  std::vector<xla::Literal> literals = ReleaseGilAndTransferData(xla_data);
   std::vector<at::Tensor> tensors;
   tensors.reserve(literals.size());
   for (auto& literal : literals) {
