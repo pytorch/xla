@@ -59,22 +59,6 @@ class DynamoSpmdInferenceTest(test_xla_sharding_base.XlaShardingTest):
     # TODO(JackCaoG): add counter checks after ExecuteReplicated also creates
     # a ExecuteMetric.
 
-  def test_dynamo_spmd_basic_with_custom_mark_sharding_op(self):
-    device = xm.xla_device()
-    linear = SimpleLinear().to(device)
-    linear.eval()
-    xla_x = torch.randn(1, 128, device=device)
-    xs.mark_sharding(
-        linear.fc2.weight,
-        self._get_mesh((1, self.n_devices)), (1, 0),
-        use_dynamo_custom_op=True)
-    xla_res = linear(xla_x)
-    xm.mark_step()
-
-    dynamo_linear = torch.compile(linear, backend="openxla")
-    dynamo_res = dynamo_linear(xla_x)
-    torch.allclose(xla_res.cpu(), dynamo_res.cpu())
-
   def test_dynamo_spmd_output_sharding_spec(self):
     device = xm.xla_device()
     linear = SimpleLinear().to(device)
@@ -193,7 +177,29 @@ class DynamoSpmdInferenceTest(test_xla_sharding_base.XlaShardingTest):
     else:
       del os.environ['XLA_DYNAMO_INPUT_SHARDING_CHECK_THRESHOLD']
 
+  def test_dynamo_spmd_mark_sharding_outside_of_compile(self):
+    device = xm.xla_device()
+    linear = SimpleLinear().to(device)
+    linear.eval()
+    xla_x = torch.randn(1, 128, device=device)
+    xs.mark_sharding(
+        linear.fc2.weight,
+        self._get_mesh((1, self.n_devices)), (1, 0),
+        use_dynamo_custom_op=True)
+    xla_res = linear(xla_x)
+    xm.mark_step()
+
+    dynamo_linear = torch.compile(linear, backend="openxla")
+    dynamo_res = dynamo_linear(xla_x)
+    torch.allclose(xla_res.cpu(), dynamo_res.cpu())
+
+    # Ensure that another run with same input does not trigger additional compilation
+    compile_count = met.metric_data('CompileTime')[0]
+    dynamo_res = dynamo_linear(xla_x)
+    self.assertEqual(met.metric_data('CompileTime')[0], compile_count)
+
   def test_mark_sharding_inside_compile(self):
+    met.clear_counters()
     device = xm.xla_device()
     mesh = self._get_mesh((1, self.n_devices))
 
@@ -209,6 +215,11 @@ class DynamoSpmdInferenceTest(test_xla_sharding_base.XlaShardingTest):
     dynamo_linear = torch.compile(linear, backend="openxla")
     dynamo_res = dynamo_linear(xla_x)
     torch.allclose(xla_res.cpu(), dynamo_res.cpu())
+
+    # Ensure that another run with same input does not trigger additional compilation
+    compile_count = met.metric_data('CompileTime')[0]
+    dynamo_res = dynamo_linear(xla_x)
+    self.assertEqual(met.metric_data('CompileTime')[0], compile_count)
 
 
 if __name__ == '__main__':
