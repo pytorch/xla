@@ -17,6 +17,7 @@
 #include <fstream>
 #include <functional>
 #include <mutex>
+#include <optional>
 #include <set>
 #include <stdexcept>
 #include <unordered_map>
@@ -47,7 +48,6 @@
 #include "torch_xla/csrc/runtime/stablehlo_helper.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/thread_pool.h"
-#include "torch_xla/csrc/runtime/unique.h"
 #include "torch_xla/csrc/runtime/xla_util.h"
 #include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/tensor_util.h"
@@ -534,12 +534,12 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
     const std::vector<XLATensorPtr>& tensors, const SyncTensorsConfig& config) {
   tsl::profiler::TraceMe activity("CollectSyncTensors",
                                   tsl::profiler::TraceMeLevel::kInfo);
-  runtime::util::Unique<torch::lazy::BackendDevice> unique_device;
+  std::optional<torch::lazy::BackendDevice> device;
   for (size_t i = 0; i < tensors.size(); ++i) {
-    unique_device.set(tensors[i]->GetDevice());
+    device = tensors[i]->GetDevice();
   }
   SyncTensorCollection coll;
-  if (!unique_device) {
+  if (!device) {
     return coll;
   }
 
@@ -552,7 +552,7 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
   // graph with on/off force_ltc_data should not match, hash wise.
   coll.hash = torch::lazy::MHash(config.force_ltc_data);
   coll.config = config;
-  coll.device = *unique_device;
+  coll.device = *device;
   coll.indices.reserve(tensors.size());
   for (size_t i = 0; i < tensors.size(); ++i) {
     if (tensor_ids.insert(tensors[i]->GetUniqueId()).second &&

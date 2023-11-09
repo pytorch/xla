@@ -6,6 +6,7 @@
 #include <fstream>
 #include <iostream>
 #include <mutex>
+#include <optional>
 #include <sstream>
 #include <unordered_set>
 
@@ -17,7 +18,6 @@
 #include "torch_xla/csrc/ir_dump_util.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
-#include "torch_xla/csrc/runtime/unique.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
 
 namespace torch_xla {
@@ -61,14 +61,14 @@ std::string DebugUtil::GetTensorsGraphHlo(
     absl::Span<const XLATensorPtr> tensors, const std::vector<size_t>* indices,
     bool dump_stablehlo) {
   std::vector<torch::lazy::Value> root_values;
-  runtime::util::Unique<torch::lazy::BackendDevice> unique_device;
+  std::optional<torch::lazy::BackendDevice> device;
   if (indices != nullptr) {
     for (auto index : *indices) {
       const XLATensorPtr& tensor = tensors[index];
       torch::lazy::Value ir_value = tensor->CurrentIrValue();
       if (ir_value) {
         root_values.push_back(std::move(ir_value));
-        unique_device.set(tensor->GetDevice());
+        device = tensor->GetDevice();
       }
     }
   } else {
@@ -76,13 +76,13 @@ std::string DebugUtil::GetTensorsGraphHlo(
       torch::lazy::Value ir_value = tensor->CurrentIrValue();
       if (ir_value) {
         root_values.push_back(std::move(ir_value));
-        unique_device.set(tensor->GetDevice());
+        device = tensor->GetDevice();
       }
     }
   }
-  return DumpUtil::ToHlo(
-      root_values, unique_device ? *unique_device : bridge::GetCurrentDevice(),
-      EmitMode::kStableHloReadable);
+  return DumpUtil::ToHlo(root_values,
+                         device.value_or(bridge::GetCurrentDevice()),
+                         EmitMode::kStableHloReadable);
 }
 
 std::string DebugUtil::GetTensorsGraphInfo(
@@ -91,7 +91,7 @@ std::string DebugUtil::GetTensorsGraphInfo(
   std::vector<const torch::lazy::Node*> root_nodes;
   std::vector<torch::lazy::Value> root_values;
   std::vector<torch::lazy::hash_t> root_hashes;
-  runtime::util::Unique<torch::lazy::BackendDevice> unique_device;
+  std::optional<torch::lazy::BackendDevice> device;
   if (indices != nullptr) {
     for (auto index : *indices) {
       const XLATensorPtr& tensor = tensors[index];
@@ -100,7 +100,7 @@ std::string DebugUtil::GetTensorsGraphInfo(
         root_nodes.push_back(ir_value.node.get());
         root_hashes.push_back(ir_value.hash());
         root_values.push_back(std::move(ir_value));
-        unique_device.set(tensor->GetDevice());
+        device = tensor->GetDevice();
       }
     }
   } else {
@@ -110,7 +110,7 @@ std::string DebugUtil::GetTensorsGraphInfo(
         root_nodes.push_back(ir_value.node.get());
         root_hashes.push_back(ir_value.hash());
         root_values.push_back(std::move(ir_value));
-        unique_device.set(tensor->GetDevice());
+        device = tensor->GetDevice();
       }
     }
   }
@@ -137,14 +137,12 @@ std::string DebugUtil::GetTensorsGraphInfo(
   } else if (format == GraphFormat::kDot) {
     graph_str = DumpUtil::ToDot(root_nodes);
   } else if (format == GraphFormat::kHlo) {
-    graph_str = DumpUtil::ToHlo(root_values, unique_device
-                                                 ? *unique_device
-                                                 : bridge::GetCurrentDevice());
+    graph_str = DumpUtil::ToHlo(root_values,
+                                device.value_or(bridge::GetCurrentDevice()));
   } else if (format == GraphFormat::kStableHlo) {
-    graph_str = DumpUtil::ToHlo(
-        root_values,
-        unique_device ? *unique_device : bridge::GetCurrentDevice(),
-        EmitMode::kStableHloReadable);
+    graph_str = DumpUtil::ToHlo(root_values,
+                                device.value_or(bridge::GetCurrentDevice()),
+                                EmitMode::kStableHloReadable);
   } else {
     XLA_ERROR() << "Invalid graph format: " << format;
   }
