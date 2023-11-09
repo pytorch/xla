@@ -46,8 +46,8 @@ import numpy as np
 import torch
 import torch_xla.core.xla_model as xm
 import torch_xla.runtime as xr
-import torch_xla.experimental.spmd.xla_sharding as xs
-from torch_xla.experimental.spmd import Mesh
+import torch_xla.distributed.spmd.xla_sharding as xs
+from torch_xla.distributed.spmd import Mesh
 
 # Enable XLA SPMD execution mode.
 xr.use_spmd()
@@ -104,7 +104,7 @@ We abstract logical mesh with [Mesh API](https://github.com/pytorch/xla/blob/028
 
 ```python
 import torch_xla.runtime as xr
-from torch_xla.experimental.spmd import Mesh
+from torch_xla.distributed.spmd import Mesh
 
 # Assuming you are running on a TPU host that has 8 devices attached
 num_devices = xr.global_runtime_device_count()
