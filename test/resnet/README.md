@@ -33,20 +33,20 @@
 
         `gcloud compute disks create lmdb-imagenet \
         --size 200G \
-        --zone us-central2-b \
+        --zone $ZONE \
         --type pd-ssd \
-        --project mlperf-high-priority-project`
+        --project $PROJECT`
   <h3>2. attach the disk in read-write mode to TPU VM node </h3>
 
-        `gcloud  alpha compute tpus tpu-vm attach-disk chandra-pjrt3 \
-        --zone=us-central2-b \
+        `gcloud  alpha compute tpus tpu-vm attach-disk $TPU_NAME \
+        --zone=$ZONE \
         --disk=lmdb-imagenet2 \
         --mode=read-write \
-        --project=mlperf-high-priority-project`
+        --project$PROJECT`
 
       Login to TPU VM using
 
-      `gcloud alpha compute tpus tpu-vm ssh chandra-pjrt --zone us-central2-b --project xl-ml-test`
+      `gcloud alpha compute tpus tpu-vm ssh $TPU_NAME --zone $ZONE --project $PROJECT`
 
       -  Format the disk
          
@@ -61,13 +61,13 @@
 
   <h3>3. download data to the disk </h3>
 
-      `gsutil -m cp -r gs://imagenet-lmdb/imagenet /mnt/disks/persist`        
+      `gsutil -m cp -r gs://imagenet-lmdb/imagenet /mnt/disks/persist`
 
   <h3>4. detach disk </h3>
 
       `gcloud alpha compute tpus tpu-vm detach-disk $TPU_NAME  --zone=$ZONE --project=$PROJECT  --disk=lmdb-imagenet`
 
-  <h3>5. reattach the disk in read-only mode to all the nodes </h3>
+  <h3>5. reattach the disk in read-only mode to all the TPU nodes </h3>
 
       `gcloud  alpha compute tpus tpu-vm attach-disk $TPU_NAME \
         --zone=$ZONE \
