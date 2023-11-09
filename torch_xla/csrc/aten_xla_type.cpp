@@ -24,6 +24,7 @@
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/device.h"
+#include "torch_xla/csrc/dtype.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ops/as_strided.h"
 #include "torch_xla/csrc/ops/as_strided_view_update.h"
@@ -128,7 +129,7 @@ bool IsTypeWithLargerRangeThanLong(torch::ScalarType dtype) {
 // Return the upper limit for a given type. For floating point typesreturn
 // 2^mantissa to ensure that every value is representable.
 int64_t GetIntegerUpperLimitForType(torch::ScalarType dtype) {
-  xla::PrimitiveType xla_type = TensorTypeToRawXlaType(dtype);
+  xla::PrimitiveType xla_type = XlaTypeFromTorchType(dtype);
   switch (xla_type) {
     case xla::PrimitiveType::F16:
       return static_cast<int64_t>(1) << std::numeric_limits<xla::half>::digits;
@@ -150,7 +151,7 @@ void CheckRangeValues(torch::ScalarType dtype, int64_t from, int64_t to) {
   if (IsTypeWithLargerRangeThanLong(dtype)) {
     min_max = XlaHelpers::MinMaxValues(xla::PrimitiveType::S64);
   } else {
-    min_max = XlaHelpers::MinMaxValues(TensorTypeToRawXlaType(dtype));
+    min_max = XlaHelpers::MinMaxValues(XlaTypeFromTorchType(dtype));
   }
   XLA_CHECK_GE(from, min_max.min.toLong());
   XLA_CHECK_LE(from, min_max.max.toLong());

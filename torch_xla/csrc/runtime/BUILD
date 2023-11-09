@@ -65,6 +65,7 @@ cc_library(
     ":util",
     ":xla_coordinator",
     "//torch_xla/csrc:device",
+    "//torch_xla/csrc:dtype",
     "@tsl//tsl/platform:stacktrace_handler",
     "@xla//xla:literal_util",
     "@xla//xla/client:xla_computation",

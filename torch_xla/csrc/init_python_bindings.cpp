@@ -31,6 +31,7 @@
 #include "torch_xla/csrc/XLANativeFunctions.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/device.h"
+#include "torch_xla/csrc/dtype.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ir_dump_util.h"
@@ -801,7 +802,7 @@ class PyLoweringContext {
       xla::Literal& literal = literals[i];
       xla::XlaOp op = lowering_ctx.GetParameter(device_data[i]);
       at::ScalarType dtype =
-          TensorTypeFromXlaType(literal.shape().element_type());
+          MaybeUpcastToHostTorchType(literal.shape().element_type());
       at::Tensor input = MakeTensorFromXlaLiteral(literal, dtype);
       results[param_ids[i]] = input;
     }
@@ -1758,9 +1759,9 @@ void InitXlaModuleBindings(py::module m) {
           for (const runtime::ComputationClient::DataPtr shard_handle :
                shard_handles) {
             shards.push_back(
-                XlaDataToTensors(
-                    {shard_handle},
-                    TensorTypeFromXlaType(shard_handle->shape().element_type()))
+                XlaDataToTensors({shard_handle},
+                                 MaybeUpcastToHostTorchType(
+                                     shard_handle->shape().element_type()))
                     .front());
             str_devices.push_back(shard_handle->device());
           }

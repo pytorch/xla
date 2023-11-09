@@ -13,6 +13,7 @@
 #include "torch_xla/csrc/LazyIr.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/data_ops.h"
+#include "torch_xla/csrc/dtype.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/layout_manager.h"
 #include "torch_xla/csrc/lowering_context.h"
@@ -165,7 +166,7 @@ MinMaxValues GetMinMaxValues(const XLATensorPtr& tensor,
                              const c10::optional<at::Scalar>& max) {
   XLA_CHECK(min || max)
       << "At least one of \'min\' or \'max\' must not be None";
-  xla::PrimitiveType raw_element_type = TensorTypeToRawXlaType(tensor->dtype());
+  xla::PrimitiveType raw_element_type = XlaTypeFromTorchType(tensor->dtype());
   XlaHelpers::MinMax min_max = XlaHelpers::MinMaxValues(raw_element_type);
   auto shape = tensor->shape();
   return {XLAGraphExecutor::Get()->GetIrValueForScalar(
@@ -1027,9 +1028,9 @@ XLATensorPtr div(const XLATensorPtr& input, const XLATensorPtr& other,
   bool input_is_float = xla::primitive_util::IsFloatingPointType(input_type);
   bool other_is_float = xla::primitive_util::IsFloatingPointType(other_type);
   if (input_is_float && !other_is_float) {
-    scalar_type = TensorTypeFromXlaType(input_type);
+    scalar_type = MaybeUpcastToHostTorchType(input_type);
   } else if (!input_is_float && other_is_float) {
-    scalar_type = TensorTypeFromXlaType(other_type);
+    scalar_type = MaybeUpcastToHostTorchType(other_type);
   }
   // We need to cast both input and other to float to perform true divide, floor
   // divide and trunc divide.
@@ -1074,7 +1075,7 @@ XLATensorPtr div(const XLATensorPtr& input, const at::Scalar& other) {
   xla::PrimitiveType input_type = input->shape().get().element_type();
   bool input_is_float = xla::primitive_util::IsFloatingPointType(input_type);
   if (input_is_float) {
-    scalar_type = TensorTypeFromXlaType(input_type);
+    scalar_type = MaybeUpcastToHostTorchType(input_type);
   }
   torch::lazy::Value input_value = GetFloatingIrValue(input, scalar_type);
   torch::lazy::Value other_value = XLAGraphExecutor::Get()->GetIrValueForScalar(
@@ -1182,8 +1183,8 @@ XLATensorPtr eye(int64_t lines, int64_t cols,
 void eye_out(XLATensorPtr& out, int64_t lines, int64_t cols) {
   out->SetIrValue(
       Identity(lines, cols >= 0 ? cols : lines,
-               GetDevicePrimitiveType(out->shape().get().element_type(),
-                                      &out->GetDevice())));
+               MaybeDowncastToXlaDeviceType(out->shape().get().element_type(),
+                                            out->GetDevice())));
 }
 
 void fill_(XLATensorPtr& input, const at::Scalar& value) {
@@ -2056,8 +2057,9 @@ XLATensorPtr pow(const at::Scalar& input, const XLATensorPtr& exponent) {
   torch::lazy::NodePtr pow_node = Pow(input_node, exponent->GetIrValue());
   at::ScalarType input_dtype = GetScalarType(input);
   at::ScalarType exp_dtype = exponent->dtype();
-  at::ScalarType promoted_dtype = TensorTypeFromXlaType(XlaHelpers::PromoteType(
-      TensorTypeToRawXlaType(input_dtype), TensorTypeToRawXlaType(exp_dtype)));
+  at::ScalarType promoted_dtype =
+      MaybeUpcastToHostTorchType(XlaHelpers::PromoteType(
+          XlaTypeFromTorchType(input_dtype), XlaTypeFromTorchType(exp_dtype)));
   return exponent->CreateFrom(pow_node, promoted_dtype);
 }
 

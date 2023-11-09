@@ -7,6 +7,7 @@
 
 #include "torch/csrc/lazy/core/ir_util.h"
 #include "torch_xla/csrc/device.h"
+#include "torch_xla/csrc/dtype.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
@@ -358,7 +359,7 @@ std::vector<runtime::ComputationClient::DataPtr> ShardingUtil::OutputHandler(
       // Reshards replicated output if `sharding` is present.
       std::vector<at::Tensor> tensors = XlaDataToTensors(
           {sharded_results[0][i]},
-          TensorTypeFromXlaType(sharding->shape.element_type()));
+          MaybeUpcastToHostTorchType(sharding->shape.element_type()));
       outputs.push_back(
           std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
               CreateTensorsData(
