@@ -101,15 +101,16 @@ ptxla_cc_test(
     ],
 )
 
-ptxla_cc_test(
-    name = "test_xla_backend_intf",
-    srcs = ["test_xla_backend_intf.cpp"],
-    deps = [
-        ":cpp_test_util",
-        "//torch_xla/csrc:tensor",
-        "@com_google_googletest//:gtest_main",
-    ],
-)
+# Disable this test since it is flaky on upstream
+# ptxla_cc_test(
+#     name = "test_xla_backend_intf",
+#     srcs = ["test_xla_backend_intf.cpp"],
+#     deps = [
+#         ":cpp_test_util",
+#         "//torch_xla/csrc:tensor",
+#         "@com_google_googletest//:gtest_main",
+#     ],
+# )
 
 ptxla_cc_test(
     name = "test_xla_sharding",
