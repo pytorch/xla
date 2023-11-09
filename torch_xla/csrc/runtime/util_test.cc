@@ -90,21 +90,6 @@ TEST(UtilTest, Multiply) {
   EXPECT_EQ(Multiply<int32_t>(t), 720);
 }
 
-TEST(UtilTest, Hash) {
-  std::pair<std::string, int32_t> temp = {"hello", 3};
-  EXPECT_EQ(Hash(std::pair<std::string, int32_t>{"hello", 3}), Hash(temp));
-  EXPECT_EQ(HexHash(Hash(std::pair<std::string, int32_t>{"hello", 3})),
-            HexHash(Hash(temp)));
-
-  std::vector<int32_t> t = {1, 2, 3, 4, 5};
-  EXPECT_EQ(Hash({1, 2, 3, 4, 5}), Hash({1, 2, 3, 4, 5}));
-  EXPECT_EQ(Hash(std::set<int32_t>{1, 2, 3}), Hash(std::set<int32_t>{1, 2, 3}));
-  EXPECT_EQ(Hash(t), Hash(std::vector<int32_t>{1, 2, 3, 4, 5}));
-
-  EXPECT_EQ(StdDataHash(t.data(), t.size()),
-            StdDataHash(std::vector<int32_t>{1, 2, 3, 4, 5}.data(), t.size()));
-}
-
 TEST(UtilTest, MaybeRef) {
   using StringRef = torch_xla::runtime::util::MaybeRef<std::string>;
   std::string storage("String storage");

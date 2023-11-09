@@ -3,6 +3,11 @@ load(
     "if_cuda_is_configured",
 )
 
+load(
+    "//bazel:rules_def.bzl",
+    "ptxla_cc_test",
+)
+
 licenses(["notice"])  # Apache 2.0
 
 package(default_visibility = ["//visibility:public"])
@@ -313,10 +318,11 @@ cc_library(
         "@xla//xla/service:platform_util",
         "@xla//xla/service/spmd:spmd_partitioner",
         "@tsl//tsl/platform:errors",
+        "@torch//:headers",
     ],
 )
 
-cc_test(
+ptxla_cc_test(
     name = "xla_util_test",
     size = "small",
     srcs = ["xla_util_test.cc"],
