@@ -29,7 +29,7 @@ at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal,
 // block until `DataPtr`s are ready. Release the GIL so other threads can
 // proceed and unblock any transfers or collective computations.
 std::vector<xla::Literal> ReleaseGilAndTransferData(
-  absl::Span<const torch::lazy::BackendDataPtr> xla_data);
+    absl::Span<const torch::lazy::BackendDataPtr> xla_data);
 
 // TODO LTC @wonjoo - Migrate to upstream after Device -> BackendDevice
 std::vector<at::Tensor> XlaDataToTensors(

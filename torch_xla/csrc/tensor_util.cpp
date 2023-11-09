@@ -772,7 +772,7 @@ xla::Literal GetTensorLiteral(const at::Tensor& tensor, const xla::Shape* shape,
 }
 
 std::vector<xla::Literal> ReleaseGilAndTransferData(
-  absl::Span<const torch::lazy::BackendDataPtr> xla_data) {
+    absl::Span<const torch::lazy::BackendDataPtr> xla_data) {
   // HACK: This method may be called outside of python (mainly in C++ tests) or
   // when the GIL is already released, so we must check both cases here. If
   // possible, prefer to release the GIL in the python bindings before copying
