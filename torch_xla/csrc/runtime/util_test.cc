@@ -15,36 +15,6 @@ namespace util {
 
 using ::testing::ElementsAre;
 
-TEST(UtilTest, Cleanup) {
-  bool notify = false;
-
-  // Set to true.
-  {
-    Cleanup<bool> c([&notify](bool b) { notify = b; });
-    c.SetStatus(true);
-  }
-  EXPECT_TRUE(notify);
-
-  // Set to false.
-  {
-    Cleanup<bool> c([&notify](bool b) { notify = b; });
-    c.SetStatus(false);
-  }
-  EXPECT_FALSE(notify);
-
-  // Releasing the cleanup will not change the `notify` to true.
-  {
-    Cleanup<bool> c([&notify](bool b) { notify = b; });
-    c.SetStatus(true);
-    c.Release();
-  }
-  EXPECT_FALSE(notify);
-}
-
-TEST(UtilTest, Iota) {
-  EXPECT_THAT(Iota<int16_t>(5, 0, 2), ElementsAre(0, 2, 4, 6, 8));
-}
-
 TEST(UtilTest, Range) {
   EXPECT_THAT(Range<int16_t>(0, 10, 2), ElementsAre(0, 2, 4, 6, 8));
   EXPECT_THAT(Range<int16_t>(10, 0, -2), ElementsAre(10, 8, 6, 4, 2));
@@ -73,14 +43,6 @@ TEST(UtilTest, MapInsert) {
   EXPECT_EQ(MapInsert(&v, 1, [] { return 1; }), 1);
   EXPECT_EQ(MapInsert(&v, 1, [] { return 7; }), 1);
   EXPECT_EQ(MapInsert(&v, 1, [] { return 12; }), 1);
-}
-
-TEST(UtilTest, GetEnumValue) {
-  enum E { A = 0, B, C, D };
-  EXPECT_EQ(GetEnumValue(E::A), 0);
-  EXPECT_EQ(GetEnumValue(E::B), 1);
-  EXPECT_EQ(GetEnumValue(E::C), 2);
-  EXPECT_EQ(GetEnumValue(E::D), 3);
 }
 
 TEST(UtilTest, Multiply) {

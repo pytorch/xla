@@ -24,57 +24,6 @@ namespace torch_xla {
 namespace runtime {
 namespace util {
 
-template <typename F>
-xla::Status CheckedCall(const F& fn) {
-  try {
-    fn();
-  } catch (const std::exception& ex) {
-    return tsl::errors::Internal(ex.what());
-  }
-  return xla::Status();
-}
-
-template <typename T>
-class Cleanup {
- public:
-  using StatusType = T;
-
-  explicit Cleanup(std::function<void(StatusType)> func)
-      : func_(std::move(func)) {}
-  Cleanup(Cleanup&& ref)
-      : func_(std::move(ref.func_)), status_(std::move(ref.status_)) {}
-  Cleanup(const Cleanup&) = delete;
-
-  ~Cleanup() {
-    if (func_ != nullptr) {
-      func_(std::move(status_));
-    }
-  }
-
-  Cleanup& operator=(const Cleanup&) = delete;
-
-  Cleanup& operator=(Cleanup&& ref) {
-    if (this != &ref) {
-      func_ = std::move(ref.func_);
-      status_ = std::move(ref.status_);
-    }
-    return *this;
-  }
-
-  void Release() { func_ = nullptr; }
-
-  void SetStatus(StatusType status) { status_ = std::move(status); }
-
-  const StatusType& GetStatus() const { return status_; }
-
- private:
-  std::function<void(StatusType)> func_;
-  StatusType status_;
-};
-
-using ExceptionCleanup = Cleanup<std::exception_ptr>;
-using StatusCleanup = Cleanup<xla::Status>;
-
 // Allows APIs which might return const references and values, to not be forced
 // to return values in the signature.
 template <typename T>
@@ -94,10 +43,6 @@ class MaybeRef {
  private:
   absl::optional<T> storage_;
   const T& ref_;
-};
-
-struct MidPolicy {
-  size_t operator()(size_t size) const { return size / 2; }
 };
 
 template <class T>
@@ -120,48 +65,6 @@ class MaybePtr {
   T* ptr_ = nullptr;
   absl::optional<T> storage_;
 };
-
-template <typename C>
-std::vector<const typename C::value_type::element_type*> GetConstSharedPointers(
-    const C& shared_pointers) {
-  std::vector<const typename C::value_type::element_type*> pointers;
-  pointers.reserve(shared_pointers.size());
-  for (auto& shared_pointer : shared_pointers) {
-    pointers.push_back(shared_pointer.get());
-  }
-  return pointers;
-}
-
-template <typename C>
-std::vector<typename C::value_type::element_type*> GetSharedPointers(
-    const C& shared_pointers) {
-  std::vector<typename C::value_type::element_type*> pointers;
-  pointers.reserve(shared_pointers.size());
-  for (auto& shared_pointer : shared_pointers) {
-    pointers.push_back(shared_pointer.get());
-  }
-  return pointers;
-}
-
-template <typename C, typename K, typename T, typename F>
-void InsertCombined(C* map, const K& key, const T& value, const F& combiner) {
-  auto it = map->find(key);
-  if (it == map->end()) {
-    map->emplace(key, value);
-  } else {
-    it->second = combiner(it->second, value);
-  }
-}
-
-template <typename T>
-std::vector<T> Iota(size_t size, T init = 0, T incr = 1) {
-  std::vector<T> result(size);
-  T value = init;
-  for (size_t i = 0; i < size; ++i, value += incr) {
-    result[i] = value;
-  }
-  return result;
-}
 
 template <typename T>
 std::vector<T> Range(T start, T end, T step = 1) {
@@ -218,11 +121,6 @@ const typename T::mapped_type& MapInsert(T* cont,
     it = cont->emplace(key, gen()).first;
   }
   return it->second;
-}
-
-template <typename T>
-typename std::underlying_type<T>::type GetEnumValue(T value) {
-  return static_cast<typename std::underlying_type<T>::type>(value);
 }
 
 template <typename T, typename S>
