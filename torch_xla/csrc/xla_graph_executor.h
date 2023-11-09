@@ -16,7 +16,6 @@
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ir_dump_util.h"
 #include "torch_xla/csrc/lowering_context.h"
-#include "torch_xla/csrc/runtime/async_task.h"
 #include "torch_xla/csrc/runtime/cache.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/multi_wait.h"
