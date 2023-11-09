@@ -27,6 +27,7 @@
 #include "absl/strings/str_join.h"
 #include "stablehlo/dialect/Serialization.h"  // from @stablehlo
 #include "torch_xla/csrc/aten_xla_bridge.h"
+#include "torch_xla/csrc/dtype.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir_dump_util.h"
 #include "torch_xla/csrc/layout_manager.h"
@@ -217,7 +218,7 @@ torch::lazy::Value XLAGraphExecutor::GetDeviceDataIrValue(
     const at::Scalar& value, xla::PrimitiveType type,
     const torch::lazy::BackendDevice& device) {
   torch::lazy::BackendDataPtr data =
-      GetDeviceData(value, TensorTypeFromXlaType(type), device);
+      GetDeviceData(value, MaybeUpcastToHostTorchType(type), device);
   data->SetInfo(
       std::make_shared<torch::lazy::LazyGraphExecutor::DeviceDataInfo>(
           /*tensor_id=*/-1, /*read_only=*/true));

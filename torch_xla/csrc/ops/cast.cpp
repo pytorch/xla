@@ -3,6 +3,7 @@
 #include <torch/csrc/lazy/core/tensor_util.h>
 
 #include "torch_xla/csrc/convert_ops.h"
+#include "torch_xla/csrc/dtype.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
@@ -51,8 +52,8 @@ XlaOpVector Cast::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   xla::PrimitiveType raw_from =
-      stype_ ? TensorTypeToRawXlaType(*stype_) : input_shape.element_type();
-  xla::PrimitiveType raw_to = dtype_ ? TensorTypeToRawXlaType(*dtype_) : type_;
+      stype_ ? XlaTypeFromTorchType(*stype_) : input_shape.element_type();
+  xla::PrimitiveType raw_to = dtype_ ? XlaTypeFromTorchType(*dtype_) : type_;
   xla::XlaOp output =
       ConvertToRaw(input, input_shape.element_type(), raw_from, type_, raw_to,
                    /*device=*/nullptr);

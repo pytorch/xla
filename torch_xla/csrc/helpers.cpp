@@ -7,6 +7,7 @@
 
 #include "absl/strings/str_join.h"
 #include "torch_xla/csrc/convert_ops.h"
+#include "torch_xla/csrc/dtype.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
@@ -681,7 +682,7 @@ xla::StatusOr<xla::XlaComputation> XlaHelpers::WrapXlaComputation(
 }
 
 torch::lazy::Shape XlaHelpers::ConvertXlaShapeToLazy(const xla::Shape& shape) {
-  at::ScalarType scalar_type = TensorTypeFromXlaType(shape.element_type());
+  at::ScalarType scalar_type = MaybeUpcastToHostTorchType(shape.element_type());
   c10::optional<std::vector<bool>> is_symbolic = c10::nullopt;
   if (shape.is_dynamic()) {
     std::vector<bool> xla_dynamic_dimensions =

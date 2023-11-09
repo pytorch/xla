@@ -307,7 +307,7 @@ std::vector<at::Tensor> Fetch(
   std::vector<at::Tensor> tensors;
   for (auto& literal : literals) {
     tensors.push_back(MakeTensorFromXlaLiteral(
-        literal, TensorTypeFromXlaType(literal.shape().element_type())));
+        literal, MaybeUpcastToHostTorchType(literal.shape().element_type())));
   }
   return tensors;
 }

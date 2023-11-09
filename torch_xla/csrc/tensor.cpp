@@ -21,6 +21,7 @@
 
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/debug_util.h"
+#include "torch_xla/csrc/dtype.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/layout_manager.h"
 #include "torch_xla/csrc/ops/arithmetic_ir_ops.h"
@@ -159,7 +160,7 @@ int64_t XLATensor::size(int64_t dim) const {
 at::ScalarType XLATensor::dtype() const {
   return data()->logical_element_type
              ? *data()->logical_element_type
-             : TensorTypeFromXlaType(shape().get().element_type());
+             : MaybeUpcastToHostTorchType(shape().get().element_type());
 }
 
 c10::optional<at::ScalarType> XLATensor::dtype_optional() const {
