@@ -61,7 +61,7 @@
 
   <h3>3. download data to the disk </h3>
 
-      `gsutil -m cp -r gs://imagenet-lmdb/imagenet /mnt/disks/persist`
+      `gsutil -m cp -r gs://imagenet-lmdb/imagenet /mnt/disks/persist/`
 
   <h3>4. detach disk </h3>
 
@@ -105,6 +105,7 @@
           sudo mount -o ro,noload /dev/sdb /mnt/disks/persist" `
 
     <h3> Install torch and torch_xla </h3>
+
       `gcloud  alpha compute tpus tpu-vm ssh $TPU_NAME \
         --zone=u$ZONE \
         --worker=all \
