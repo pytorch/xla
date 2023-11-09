@@ -1,15 +1,15 @@
 <h1> Instructions for running ResNet model </h1>
 
 
-- <h2> Setup TPU VM Environment using the following instructions </h2>
+- <h2> Prepare SSD disk </h2>
 
   <h3>1. Setup env variables </h3>
 
-        
         TPU_NAME=<Your TPU name>
-        ACCELERATOR_TYPE=<Your accelerator type>
+        ACCELERATOR_TYPE=v4-8
         ZONE=<TPU zone>
         PROJECT=<PROJECT ID>
+
   <h3>2. Create TPU </h3>
 
         gcloud alpha compute tpus tpu-vm create $TPU_NAME \
@@ -67,30 +67,58 @@
 
       `gcloud alpha compute tpus tpu-vm detach-disk $TPU_NAME  --zone=$ZONE --project=$PROJECT  --disk=lmdb-imagenet`
 
-  <h3>5. reattach the disk in read-only mode to all the TPU nodes </h3>
 
-      `gcloud  alpha compute tpus tpu-vm attach-disk $TPU_NAME \
-        --zone=$ZONE \
-        --disk=lmdb-imagenet \
-        --mode=read-only \
-        --project=$PROJECT`
+  <h3>5. Once data disk is created you can delete the TPU VM </h3>
 
-      ` gcloud  alpha compute tpus tpu-vm ssh $TPU_NAME \
-        --zone=u$ZONE \
-        --worker=all \
-        --project=$PROJECT \
-        --command "sudo mkdir -p /mnt/disks/persist && \
-        sudo mount -o ro,noload /dev/sdb /mnt/disks/persist" `
+- <h2> Create TPU VM for training now </h2>
 
 - <h2> Setup env and Run the training workload </h2>
 
+      <h3>1. Setup env variables </h3>
+
+        TPU_NAME=<Your TPU name>
+        ACCELERATOR_TYPE=v4-8
+        ZONE=<TPU zone>
+        PROJECT=<PROJECT ID>
+
+      <h3>2. Create TPU </h3>
+
+        gcloud alpha compute tpus tpu-vm create $TPU_NAME \
+        --zone $ZONE \
+        --accelerator-type $ACCELERATOR_TYPE \ 
+        --version tpu-ubuntu2204-base \
+        --project $PROJECT
+
+      <h3>5. reattach the disk in read-only mode to all the TPU nodes </h3>
+
+        `gcloud  alpha compute tpus tpu-vm attach-disk $TPU_NAME \
+          --zone=$ZONE \
+          --disk=lmdb-imagenet \
+          --mode=read-only \
+          --project=$PROJECT`
+
+        ` gcloud  alpha compute tpus tpu-vm ssh $TPU_NAME \
+          --zone=u$ZONE \
+          --worker=all \
+          --project=$PROJECT \
+          --command "sudo mkdir -p /mnt/disks/persist && \
+          sudo mount -o ro,noload /dev/sdb /mnt/disks/persist" `
+
+    <h3> Install torch and torch_xla </h3>
       `gcloud  alpha compute tpus tpu-vm ssh $TPU_NAME \
         --zone=u$ZONE \
         --worker=all \
         --project=$PROJECT \
-        --command "pip3 install numpy
-        pip3 install torchvision
-        pip install torch~=2.1.0 torch_xla[tpu]~=2.1.0 -f https://storage.googleapis.com/libtpu-releases/index. --force"`
+        --command "
+        cd /usr/share/
+        sudo git clone --recursive https://github.com/pytorch/pytorch
+        cd pytorch/
+        sudo git clone --recursive https://github.com/pytorch/xla.git
+        sudo pip3 install numpy
+        sudo pip3 install torchvision
+        sudo pip3 install torch --force
+        pip install torch~=2.1.0 torch_xla[tpu]~=2.1.0 -f https://storage.googleapis.com/libtpu-releases/index.html --force
+        pip install lmdb"`
 
       `gcloud  alpha compute tpus tpu-vm ssh $TPU_NAME \
         --zone=u$ZONE \

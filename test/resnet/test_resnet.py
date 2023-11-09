@@ -155,9 +155,6 @@ for arg, value in default_value_dict.items():
   if getattr(FLAGS, arg) is None:
     setattr(FLAGS, arg, value)
 
-LR_SCHEDULE = [    # (multiplier, epoch to start) tuples
-    (1.0, 5), (0.1, 30), (0.01, 60), (0.001, 80)
-]
 
 class MultipleEpochsDataset(Dataset):
     def __init__(self, original_dataset, num_epochs):
@@ -231,8 +228,6 @@ def get_dataloaders():
     host_to_device_transfer_threads=1)
   return train_device_loader, test_device_loader
 
-
-
 def get_lmdb_dataset():
     resize_dim = FLAGS.img_dim
     normalize = transforms.Normalize(
@@ -295,7 +290,10 @@ def get_dataset():
   eval_dataset_len = len(test_dataset)
   global_batch_size = FLAGS.eval_batch_size * xm.xrt_world_size()
   padding_needed = ((eval_dataset_len + global_batch_size - 1)// global_batch_size)  * global_batch_size - eval_dataset_len
-  padding_needed = padding_needed//xm.xrt_world_size()
+  if xm.is_master_ordinal():
+    padding_needed = padding_needed - (padding_needed//xm.xrt_world_size)*(xm.xrt_world_size - 1)
+  else:
+    padding_needed = padding_needed//xm.xrt_world_size()
 
   padding_dataset = [(torch.zeros(3, FLAGS.img_dim, FLAGS.img_dim), torch.tensor([-1])) for _ in range(padding_needed)]
   test_dataset = ConcatDataset([test_dataset, padding_dataset])
@@ -317,14 +315,15 @@ def get_samplers(train_dataset, test_dataset):
   return train_sampler, test_sampler
 
 def _train_update(device, step, loss, tracker, epoch, writer):
-  test_utils.print_training_update(
-    device,
-    step,
-    loss.item(),
-    tracker.rate(),
-    tracker.global_rate(),
-    epoch,
-    summary_writer=writer)
+  if xm.is_master_ordinal():
+    test_utils.print_training_update(
+      device,
+      step,
+      loss.item(),
+      tracker.rate(),
+      tracker.global_rate(),
+      epoch,
+      summary_writer=writer)
   #xm.master_print(f'loss: {loss.item()}')
 
 def train_imagenet():
@@ -357,7 +356,7 @@ def train_imagenet():
                                     bn_bias_separately=FLAGS.bn_bias_separately)
 
   steps_per_epoch = len(train_device_loader)
-  print(f'steps_per_epoch_per_device: {steps_per_epoch}')
+  xm.master_print(f'steps_per_epoch_per_device: {steps_per_epoch}')
 
   lr_scheduler = PolynomialWarmup(optimizer,
                                   decay_steps=steps_per_epoch * FLAGS.num_epochs,
@@ -417,7 +416,8 @@ def train_imagenet():
     return accuracy.item()
 
   accuracy, max_accuracy = 0.0, 0.0
-  for epoch in range(1, (FLAGS.num_epochs + 1+3)//4):
+  adjusted_epochs = (FLAGS.num_epochs+4-1)//4
+  for epoch in range(1, adjusted_epochs):
     xm.master_print('Epoch {} train begin {}'.format(epoch, test_utils.now()))
     train_loop_fn(train_device_loader, epoch)
     xm.master_print('Epoch {} train end {}'.format(epoch, test_utils.now()))
