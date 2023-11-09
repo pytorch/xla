@@ -82,7 +82,6 @@ cc_library(
     ":computation_client",
     ":debug_macros",
     ":env_vars",
-    ":multi_wait",
     ":profiler",
     ":stablehlo_helper",
     ":tensor_source",
@@ -102,6 +101,7 @@ cc_library(
     "@tsl//tsl/profiler/lib:traceme",
     "@tsl//tsl/platform/cloud:gcs_file_system",
     "@com_google_absl//absl/strings",
+    "@com_google_absl//absl/synchronization",
     "@com_google_absl//absl/types:span",
   ],
 )
@@ -184,15 +184,6 @@ cc_library(
         "@com_google_absl//absl/strings",
         "@xla//xla:types",
         "@xla//xla/service:platform_util",
-    ],
-)
-
-cc_library(
-    name = "multi_wait",
-    srcs = ["multi_wait.cc"],
-    hdrs = ["multi_wait.h"],
-    deps = [
-        "@xla//xla:types",
     ],
 )
 
