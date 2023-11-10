@@ -47,7 +47,7 @@ class ResultAnalyzer:
                               "batch_size": pd.Series(dtype="int"),
                               "repeat": pd.Series(dtype="int"),
                               "iterations_per_run": pd.Series(dtype="int"),
-                              "error_message": pd.Series(dtype="str"),
+                              # "error_message": pd.Series(dtype="str"),
                               "median_total_time": pd.Series(dtype="float"),
                               "median_per_iter_time": pd.Series(dtype="float"),
                               "xla_median_trace_per_iter_time": pd.Series(dtype="float"),
@@ -80,7 +80,7 @@ class ResultAnalyzer:
            "batch_size": tmp["experiment"]["batch_size"],
            "repeat": tmp["repeat"],
            "iterations_per_run": tmp["iterations_per_run"],
-           "error_message": tmp["metrics"].get("error", None),
+          #  "error_message": tmp["metrics"].get("error", None),
            "outputs_file": tmp["outputs_file"],
           }
       if "error" not in tmp["metrics"]:
@@ -94,6 +94,9 @@ class ResultAnalyzer:
           d["xla_compile_time"] = np.max(total_time) - np.median(total_time)
         if tmp["experiment"]["dynamo"]:
           d["dynamo_compile_time"] = np.max(total_time) - np.median(total_time)
+
+      if "error" in tmp["metrics"]: 
+        tmp["metrics"].pop("error")
 
       new_row = pd.Series(d)
       new_row.fillna(value=np.nan, inplace=True)
