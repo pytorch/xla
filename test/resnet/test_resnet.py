@@ -355,7 +355,7 @@ def train_imagenet():
                                     weight_decay=FLAGS.weight_decay,
                                     bn_bias_separately=FLAGS.bn_bias_separately)
 
-  steps_per_epoch = len(train_device_loader)
+  steps_per_epoch = len(train_device_loader) // (FLAGS.train_batch_size // 128)
   xm.master_print(f'steps_per_epoch_per_device: {steps_per_epoch}')
 
   lr_scheduler = PolynomialWarmup(optimizer,
