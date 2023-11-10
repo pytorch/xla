@@ -274,6 +274,15 @@ cc_library(
 )
 
 cc_library(
+    name = "unique",
+    hdrs = ["unique.h"],
+    deps = [
+        ":debug_macros",
+        "@com_google_absl//absl/types:optional",
+    ],
+)
+
+cc_library(
     name = "util",
     hdrs = ["util.h"],
     deps = [
