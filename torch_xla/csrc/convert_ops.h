@@ -4,9 +4,9 @@
 #include <c10/core/ScalarType.h>
 #include <c10/util/Optional.h>
 
-#include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "tensorflow/compiler/xla/types.h"
 #include "torch_xla/csrc/device.h"
+#include "xla/client/xla_builder.h"
+#include "xla/types.h"
 
 namespace torch_xla {
 

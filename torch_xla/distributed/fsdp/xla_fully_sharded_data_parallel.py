@@ -974,7 +974,7 @@ class XlaFullyShardedDataParallel(nn.Module):
 
   def _dummy_forward(self, *args: Any, **kwargs: Any) -> torch.Tensor:
     """
-    A dummy forward passs with minimal computation that sums all inputs and
+    A dummy forward pass with minimal computation that sums all inputs and
     full parameters, e.g. to debug parameter memory consumption.
     """
     outputs = torch.zeros(1, device=xm.xla_device())
@@ -1299,13 +1299,19 @@ class XlaFullyShardedDataParallel(nn.Module):
     # A backward pass is done, clean up below.
     def _finalize_parameters(fsdp_module: XlaFullyShardedDataParallel) -> None:
       """Helper used below on all fsdp modules."""
+      frozen_params = []
       for p in fsdp_module.full_params:
         if not p.requires_grad:
-          continue
+          frozen_params.append(p)
         if hasattr(p, "_shard_bwd_hook"):
           assert len(p._shard_bwd_hook) == 2, len(p._shard_bwd_hook)
           p._shard_bwd_hook[1].remove()
           delattr(p, "_shard_bwd_hook")
+      # Free the full params with `requires_grad==False`
+      if frozen_params:
+        fsdp_module._free_full_params(
+            frozen_params,
+            apply_opt_barrier=self.optimization_barrier_in_backward)
 
     # Update root and nested FSDP's hooks and flags.
     for m in self.modules():  # includes self
@@ -1381,7 +1387,7 @@ class XlaFullyShardedDataParallel(nn.Module):
     """
     Gather all shards of params. If `dependency_tensors` is provided,
     it ensures that previous ops to compute tensors in `dependency_tensors`
-    are finished before rebuiding the full parameters.
+    are finished before rebuilding the full parameters.
 
     Note, this is idempotent if full params are already gathered. Callers
     assume the idempotency. So please keep it that way.

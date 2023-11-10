@@ -1,9 +1,9 @@
 #include "torch_xla/csrc/ops/nonzero.h"
 
-#include "tensorflow/compiler/xla/shape_util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/xla_lower_util.h"
+#include "xla/shape_util.h"
 
 namespace torch_xla {
 namespace {

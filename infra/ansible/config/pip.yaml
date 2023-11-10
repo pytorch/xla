@@ -29,7 +29,7 @@ pip:
       - typing
       - typing_extensions
       - sympy
-      - yapf
+      - yapf==0.30.0
 
     build_amd64:
       - mkl

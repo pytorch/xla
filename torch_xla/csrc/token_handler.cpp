@@ -1,16 +1,17 @@
 #include "torch_xla/csrc/token_handler.h"
 
-#include "tensorflow/compiler/xla/client/lib/constants.h"
-#include "tensorflow/compiler/xla/shape_util.h"
-#include "third_party/xla_client/sys_util.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/runtime/sys_util.h"
+#include "torch_xla/csrc/shape_helper.h"
+#include "xla/client/lib/constants.h"
+#include "xla/shape_util.h"
 
 namespace torch_xla {
 namespace {
 
 xla::XlaOp SliceOneToken(xla::XlaOp input) {
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   int64_t input_rank = input_shape.rank();
   if (input_rank > 0) {
     xla::GatherDimensionNumbers dim_numbers;
@@ -34,13 +35,13 @@ xla::XlaOp SliceOneToken(xla::XlaOp input) {
 xla::XlaOp TokenHandler::GetInput(xla::XlaOp input,
                                   const xla::Shape* input_shape) {
   static bool disable_numeric_token =
-      xla::sys_util::GetEnvBool("DISABLE_NUMERIC_CC_TOKEN", false);
+      runtime::sys_util::GetEnvBool("DISABLE_NUMERIC_CC_TOKEN", false);
   if (disable_numeric_token) {
     return input;
   }
 
   if (input_shape == nullptr) {
-    input_shape = &XlaHelpers::ShapeOfXlaOp(input);
+    input_shape = &ShapeHelper::ShapeOfXlaOp(input);
   }
   // Token is always a numeric zero, so adding to input does not change input.
   return input + MaybeConvertTo(token_, input_shape->element_type());
@@ -48,7 +49,7 @@ xla::XlaOp TokenHandler::GetInput(xla::XlaOp input,
 
 xla::XlaOp TokenHandler::GetNewToken(xla::XlaOp result) {
   static bool disable_numeric_token =
-      xla::sys_util::GetEnvBool("DISABLE_NUMERIC_CC_TOKEN", false);
+      runtime::sys_util::GetEnvBool("DISABLE_NUMERIC_CC_TOKEN", false);
   if (disable_numeric_token) {
     return token_;
   }

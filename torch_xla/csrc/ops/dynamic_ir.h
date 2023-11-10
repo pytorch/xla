@@ -12,10 +12,10 @@
 #include <utility>
 #include <vector>
 
-#include "third_party/xla_client/debug_macros.h"
 #include "torch/csrc/lazy/core/dynamic_ir.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ops/scalar.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
 
 namespace torch_xla {
 

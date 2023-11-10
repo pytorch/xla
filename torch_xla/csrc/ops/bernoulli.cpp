@@ -2,6 +2,7 @@
 
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/xla_lower_util.h"
 
 namespace torch_xla {
@@ -19,7 +20,7 @@ torch::lazy::NodePtr Bernoulli::Clone(torch::lazy::OpList operands) const {
 XlaOpVector Bernoulli::Lower(LoweringContext* loctx) const {
   xla::XlaOp probability = loctx->GetOutputOp(operand(0));
   xla::XlaOp rng_seed = loctx->GetOutputOp(operand(1));
-  const xla::Shape& probability_shape = XlaHelpers::ShapeOfXlaOp(probability);
+  const xla::Shape& probability_shape = ShapeHelper::ShapeOfXlaOp(probability);
   xla::Shape bcast_shape(xla_shape());
   bcast_shape.set_element_type(probability_shape.element_type());
   xla::XlaOp bcast_probability = XlaHelpers::ImplicitBroadcast(

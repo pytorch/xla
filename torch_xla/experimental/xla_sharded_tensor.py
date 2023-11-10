@@ -3,15 +3,50 @@ from torch.utils._pytree import tree_map
 import torch_xla
 
 from dataclasses import dataclass
-from typing import List, Tuple, Iterator
+from typing import List, Tuple, Iterator, Union
 import contextlib
 import collections
 
 
 @dataclass
 class XLAShard:
+  # A snapshot of the shard data from the time of XLAShard creation.
   data: torch.Tensor
-  rank: int
+
+  # The indices of the shard into the global tensor. If the tensor is replicated
+  # across local devices, the value of `indices` is Ellipsis. Otherwise, it is a
+  # list of the index slices across each dimension.
+  # The indices do not reflect padding, since the padding does not exist on the
+  # global tensor.
+  indices: Union[type(Ellipsis), List[slice]]
+
+  # The device this shard's data originated from.
+  shard_device: str
+
+  # The replica this shard belongs to, as determined by the sharding. The
+  # replica is determined differently for each sharding type:
+  #  - TILED:       Since the tensor isn't replicated, replica_id is always 0.
+  #  - PARTIAL:     replica_id is taken from the OpSharding and is a value in
+  #                 the range [0, num_replica).
+  #  - REPLICATED:  Since the tensor is fully replicated, replica_id is the
+  #                 device's global ordinal.
+  replica_id: int
+
+  @property
+  def unpadded_data(self) -> torch.Tensor:
+    ''' Returns a copy of `data` with padding removed '''
+    unpadded_indices = self.indices
+    # Replicated data has Ellipsis as indices
+    if self.indices != Ellipsis:
+      unpadded_indices = [slice(0, s.stop - s.start) for s in self.indices]
+    return self.data[unpadded_indices]
+
+  @unpadded_data.setter
+  def unpadded_data(self, t: torch.Tensor):
+    unpadded_indices = self.indices
+    if self.indices != Ellipsis:
+      unpadded_indices = [slice(0, s.stop - s.start) for s in self.indices]
+    self.data[unpadded_indices] = t
 
 
 @contextlib.contextmanager
@@ -41,13 +76,6 @@ class XLAShardedTensor(torch.Tensor):
   # data still remain on individual device as sharded or replicated.
   # Note: we should drop this reference, and force all gather on each access.
   global_tensor: torch.Tensor
-  # Shards on the devices are materialized/available after the lazy
-  # execution of the SPMDPartitioned HLO graph; otherwise,
-  # local_shards is set to `None`. Each XLAShard points to
-  # torch.Tensor (xla::device_data).
-  # Note: we can consider returning a callback or even define
-  # sharding at XLAShardedTensor construction after pjrt migration.
-  local_shards: List[XLAShard] = None
   # A logical device topology, each element describes
   # a number of devices in the corresponding axis.
   # NOTE: we could use more specific device-rank mapping, e.g., ShardingSpec,
@@ -80,14 +108,38 @@ class XLAShardedTensor(torch.Tensor):
     r.global_tensor = elem.detach() if r.requires_grad else elem
     return r
 
+  # Shards on the devices are materialized/available after the lazy
+  # execution of the partitioned HLO graph. Each XLAShard points
+  # to torch.Tensor. The shards represent a snapshot on CPU, detached
+  # from the global tensor. The shard data will contain any padding
+  # which results from the sharding.
+  @property
+  def local_shards(self) -> List[XLAShard]:
+    shards, devices = torch_xla._XLAC._get_local_shards(self.global_tensor)
+    replica_and_indices = torch_xla._XLAC._get_local_shard_replica_and_indices(
+        self.global_tensor)
+    zipped = zip(shards, replica_and_indices, devices)
+    return [
+        XLAShard(data, indices, dev, replica)
+        for data, (replica, indices), dev in zipped
+    ]
+
+  # Load the given list of local shards into the underlying tensor's data
+  # on the local devices.
+  def load_local_shards_(self, shards: List[XLAShard]):
+    data = [s.data for s in shards]
+    devices = [s.shard_device for s in shards]
+    torch_xla._XLAC._load_local_shards(self.global_tensor, data, devices)
+
   @property
   def sharding_spec(self):
     return torch_xla._XLAC._get_xla_sharding_spec(self.global_tensor)
 
   @property
-  def shards(self):
-    # Return a list of local shards
-    return NotImplemented
+  def sharding_type(self) -> 'ShardingType':
+    from torch_xla.experimental.xla_sharding import ShardingType
+    sharding_type = torch_xla._XLAC._get_xla_sharding_type(self.global_tensor)
+    return ShardingType(sharding_type)
 
   def __repr__(self):
     return f"XLAShardedTensor({self.global_tensor})"

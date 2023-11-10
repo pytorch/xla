@@ -1,5 +1,6 @@
 import contextlib
 import functools
+import os
 import re
 from unittest import mock
 
@@ -9,8 +10,7 @@ import torch.distributed as dist
 import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_backend
-import torch_xla.experimental.pjrt_backend
-from torch_xla.experimental import pjrt
+from torch_xla import runtime as xr
 
 
 def hlo_matches(hlo, expected_pattern, match_times=1):
@@ -39,7 +39,9 @@ class XlaBackendTest(parameterized.TestCase):
 
   @classmethod
   def setUpClass(cls):
-    dist.init_process_group('xla', init_method='pjrt://')
+    # Add no-op all-reduce ops to HLO
+    os.environ['XLA_ALWAYS_ALLREDUCE'] = '1'
+    dist.init_process_group('xla', init_method='xla://')
 
   def tearDown(self) -> None:
     # Purge all computations attached the device.
@@ -309,9 +311,9 @@ class XlaBackendTest(parameterized.TestCase):
 
 
 if __name__ == '__main__':
-  if pjrt.device_type() != 'CPU':
+  if xr.device_type() != 'CPU':
     print(f"Skipping XLA backend unit test as this test doesn't exercise"
-          "{pjrt.pjrt_device}-specific behaviors.")
+          "{xr.pjrt_device}-specific behaviors.")
     exit(0)
 
   absltest.main()

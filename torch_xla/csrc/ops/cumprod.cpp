@@ -2,14 +2,15 @@
 
 #include <torch/csrc/lazy/core/tensor_util.h>
 
-#include "tensorflow/compiler/xla/client/lib/constants.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/reduction.h"
+#include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
+#include "xla/client/lib/constants.h"
 
 namespace torch_xla {
 namespace {
@@ -17,7 +18,7 @@ namespace {
 xla::XlaOp LowerCumProd(xla::XlaOp input, int64_t dim,
                         c10::optional<at::ScalarType> dtype) {
   xla::XlaOp casted_input = CastToScalarType(input, dtype);
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(casted_input);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(casted_input);
   xla::XlaOp init =
       xla::One(casted_input.builder(), input_shape.element_type());
   xla::XlaComputation reducer =

@@ -1,8 +1,8 @@
 """Rules that simplify deps and compiler configuration for PyTorch/XLA."""
 
 load(
-    "@org_tensorflow//tensorflow:tensorflow.bzl",
-    "tf_cc_test",
+    "@xla//xla:xla.bzl",
+    "xla_cc_test",
 )
 
 def ptxla_cc_library(
@@ -22,9 +22,9 @@ def ptxla_cc_test(
         deps,
         copts = [],
         **kwargs):
-    tf_cc_test(
+    xla_cc_test(
         linkstatic = True,
-        extra_copts = copts + [
+        copts = copts + [
             "-isystemexternal/torch",  # Required for system includes.
             "-fexceptions",  # Required for testing crashes.
         ],

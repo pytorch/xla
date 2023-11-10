@@ -1,18 +1,18 @@
 # Codegen migration Guide
 
 ## Background
-As PyTorch/XLA migrates to the LTC (Lazy Tensor Core), we need to clean up the existing stub code (which spans over 6+ files) that were used to do the op lowering. The complete process and file structure for the old op lowering can be found in [the op lowering guide](https://github.com/pytorch/xla/blob/master/OP_LOWERING_GUIDE.md). Replacing the supported op with the codegen SHOULD NOT introduce any new behavior, it is purely for the clean up purpose. 
+As PyTorch/XLA migrates to the LTC (Lazy Tensor Core), we need to clean up the existing stub code (which spans over 6+ files) that were used to do the op lowering. The complete process and file structure for the old op lowering can be found in [the op lowering guide](https://github.com/pytorch/xla/blob/master/OP_LOWERING_GUIDE.md). Replacing the supported op with the codegen SHOULD NOT introduce any new behavior, it is purely for the clean up purpose.
 
 ## Before you start
 You should follow the instructions in [here](https://github.com/pytorch/xla/blob/master/CONTRIBUTING.md) to install required dependencies and build pytorch and pytorch/XLA from the source. You do not need access to TPU to implement the lowering. It is recommended to experiment on a workstation and configure it to use XLA:CPU. You can configure Pytorch/XLA to use XLA:CPU by running
 
 ```
-export XRT_DEVICE_MAP="CPU:0;/job:localservice/replica:0/task:0/device:XLA_CPU:0" XRT_WORKERS="localservice:0;grpc://localhost:51011"
+export PJRT_DEVICE=CPU
 ```
 
-It is also recommended that you're familiar with our [op lowering process](https://github.com/pytorch/xla/blob/master/OP_LOWERING_GUIDE.md) before you work on the codegen. 
+It is also recommended that you're familiar with our [op lowering process](https://github.com/pytorch/xla/blob/master/OP_LOWERING_GUIDE.md) before you work on the codegen.
 
-PyTorch/XLA uses https://github.com/pytorch/xla/issues/3560 to track the status of codegen migration. When working on a codegen, please put your GitHub alias with the PR link on the issue to avoid duplicate work. 
+PyTorch/XLA uses https://github.com/pytorch/xla/issues/3560 to track the status of codegen migration. When working on a codegen, please put your GitHub alias with the PR link on the issue to avoid duplicate work.
 
 ## File structure
 All file mentioned below lives under the `xla/torch_xla/csrc` folder, with the exception of `xla_native_functions.yaml`
@@ -46,7 +46,7 @@ All file mentioned below lives under the `xla/torch_xla/csrc` folder, with the e
   - Defines IR class for “most” ops. It is possible that multiple ops share the same IR.
 
 ## Codegen step by step
-### 1. Identify the op 
+### 1. Identify the op
 When you work on your first few codegens, we generally recommend you to start with the simpler ops. This guide will go over one unary one one binary op as examples, but it is recommend that you avoid ops with the following characteristics:
 1. Contains custom fallback code. For example in _adaptive_avg_pool3d, there is a conditional fallback:
 ```
@@ -55,12 +55,12 @@ When you work on your first few codegens, we generally recommend you to start wi
     return at::native::call_fallback_fn<&xla_cpu_fallback, ATEN_OP(_adaptive_avg_pool3d)>::call(self, output_size);
   }
 ```
-2. Results in dynamic shape as these ops are WIP and may evolve over time. At some future point, we may bring the ops into codegen. 
+2. Results in dynamic shape as these ops are WIP and may evolve over time. At some future point, we may bring the ops into codegen.
 3. Does not invoke a tensor_method directly. For example _copy_from:
 ```
  if (!self_tensor) {
    static bool sync_update =
-       xla::sys_util::GetEnvBool("XLA_TENSOR_UPDATE_SYNC", true);
+       torch_xla::runtime::sys_util::GetEnvBool("XLA_TENSOR_UPDATE_SYNC", true);
    XLA_CHECK(dst_tensor);
    dst_tensor->UpdateFromTensor(self, /*sync=*/sync_update);
  }
@@ -103,7 +103,7 @@ Describing the generated code line by line:
   auto common_device = torch_xla::bridge::GetXlaDevice(self);
   TORCH_INTERNAL_ASSERT(common_device);
 ```
-- Check if we can reuse the node from previous creation. If not, create corresponding IR node and cache it. 
+- Check if we can reuse the node from previous creation. If not, create corresponding IR node and cache it.
 ```
   torch::lazy::NodePtr node = torch::lazy::ReuseNode<Abs>(lazy_self->GetIrValue());
   if (!node) {
@@ -143,7 +143,7 @@ A couple of things to keep in mind:
 - For every op, it will generate a Lower declaration. We need to manually implement this lowering function in a separate file.
 
 ### 3. Implement the missing IR function
-#### torch_xla/csrc/ops/ops_xla_shape_fn.h 
+#### torch_xla/csrc/ops/ops_xla_shape_fn.h
 Declare the {OP}OutputShape:
 ```
 xla::Shape AbsOutputShape(const XlaValue& input);

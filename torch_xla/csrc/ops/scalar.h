@@ -6,8 +6,8 @@
 
 #include <iostream>
 
-#include "third_party/xla_client/types.h"
 #include "torch_xla/csrc/ir.h"
+#include "torch_xla/csrc/runtime/types.h"
 
 namespace torch_xla {
 

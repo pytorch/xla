@@ -1,9 +1,9 @@
 #include "torch_xla/csrc/ops/index_select.h"
 
-#include "tensorflow/compiler/xla/client/lib/slicing.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
+#include "xla/client/lib/slicing.h"
 
 namespace torch_xla {
 namespace {

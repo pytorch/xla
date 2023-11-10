@@ -1,18 +1,16 @@
-import distutils.util
-import os
 import torch
 import torch.distributed as dist
-import torch_xla
 import torch_xla.core.xla_model as xm
+import torch_xla.runtime as xr
+from torch_xla._internal import rendezvous
 import logging
-from torch._C._distributed_c10d import (
-    ProcessGroup,
-    Work,
-)
-from .xrt_init import init_xrt_context
+import os
+from torch._C._distributed_c10d import ProcessGroup
 
 
 def _create_xla_process_group(prefix_store, rank, size, timeout):
+  assert not xr.is_spmd(
+  ), "XLA backend is not supported with SPMD. Please use a CPU process group instead."
   return ProcessGroupXla(prefix_store, rank, size, timeout)
 
 
@@ -21,6 +19,8 @@ def _register_xla_backend():
 
 
 _register_xla_backend()
+
+dist.register_rendezvous_handler('xla', rendezvous.pjrt_rendezvous_handler)
 
 
 def _ret_work(ret):
@@ -42,13 +42,6 @@ class ProcessGroupXla(ProcessGroup):
     self.prefix_store = prefix_store  # reserved for future use.
     self.timeout = timeout
     self._mesh = []
-    # Initialize xrt neuron environment
-    # Passes in the store created by torch.distributed to avoid
-    # creating two TCP stores. We only want to call this
-    # when the user is using torchrun and not xmp.spawn()
-    # or some other flow.
-    if os.getenv('TORCHELASTIC_RUN_ID') != None:
-      init_xrt_context(store=prefix_store)
 
   def getBackendName(self):
     return 'xla'
@@ -217,7 +210,7 @@ def _infer_mesh(slice_ranks, world_size):
          [2, 6, 10],
          [3, 7, 11]]
 
-    We only support ractangular meshes.
+    We only support rectangular meshes.
     '''
   slice_len = len(slice_ranks)
   if world_size % slice_len != 0:

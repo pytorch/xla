@@ -1,10 +1,10 @@
 #include "torch_xla/csrc/ops/symeig.h"
 
-#include "tensorflow/compiler/xla/client/lib/constants.h"
-#include "tensorflow/compiler/xla/client/lib/matrix.h"
-#include "tensorflow/compiler/xla/client/lib/self_adjoint_eig.h"
-#include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/shape_helper.h"
+#include "xla/client/lib/constants.h"
+#include "xla/client/lib/matrix.h"
+#include "xla/client/lib/self_adjoint_eig.h"
 
 namespace torch_xla {
 namespace {
@@ -19,7 +19,7 @@ std::vector<xla::XlaOp> LowerSymEig(xla::XlaOp input, bool eigenvectors,
   if (!eigenvectors) {
     v = xla::Zeros(input.builder(),
                    xla::ShapeUtil::MakeShape(
-                       XlaHelpers::ShapeOfXlaOp(input).element_type(), {0}));
+                       ShapeHelper::ShapeOfXlaOp(input).element_type(), {0}));
   }
   return {w, v};
 }

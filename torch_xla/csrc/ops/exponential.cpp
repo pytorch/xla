@@ -2,6 +2,7 @@
 
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/xla_lower_util.h"
 
 namespace torch_xla {
@@ -19,7 +20,7 @@ torch::lazy::NodePtr Exponential::Clone(torch::lazy::OpList operands) const {
 XlaOpVector Exponential::Lower(LoweringContext* loctx) const {
   xla::XlaOp lambda = loctx->GetOutputOp(operand(0));
   xla::XlaOp rng_seed = loctx->GetOutputOp(operand(1));
-  const xla::Shape& lambda_shape = XlaHelpers::ShapeOfXlaOp(lambda);
+  const xla::Shape& lambda_shape = ShapeHelper::ShapeOfXlaOp(lambda);
   xla::Shape bcast_shape(xla_shape());
   bcast_shape.set_element_type(lambda_shape.element_type());
   xla::XlaOp bcast_lambda =

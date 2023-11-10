@@ -45,6 +45,12 @@ xla::Shape AmaxOutputShape(const torch::lazy::Value& input,
 xla::Shape AminOutputShape(const torch::lazy::Value& input,
                            absl::Span<const int64_t> dim, bool keepdim);
 
+xla::Shape ArgmaxOutputShape(const torch::lazy::Value& input,
+                             c10::optional<int64_t> dim, bool keepdim);
+
+xla::Shape ArgminOutputShape(const torch::lazy::Value& input,
+                             c10::optional<int64_t> dim, bool keepdim);
+
 xla::Shape AnyOutputShape(const torch::lazy::Value& input);
 
 xla::Shape AnyDimOutputShape(const torch::lazy::Value& input, int64_t dim,
@@ -137,6 +143,8 @@ xla::Shape GeScalarOutputShape(const torch::lazy::Value& self,
 xla::Shape GeTensorOutputShape(const torch::lazy::Value& self,
                                const torch::lazy::Value& other);
 
+xla::Shape GluOutputShape(const torch::lazy::Value& input, int64_t dim);
+
 xla::Shape GtScalarOutputShape(const torch::lazy::Value& self,
                                const torch::lazy::Value& other);
 
@@ -202,11 +210,22 @@ xla::Shape LogSigmoidBackwardOutputShape(const torch::lazy::Value& grad_output,
                                          const torch::lazy::Value& input,
                                          const torch::lazy::Value& buffer);
 
+xla::Shape MaskedFillScalarOutputShape(const torch::lazy::Value& input,
+                                       const torch::lazy::Value& mask,
+                                       const torch::lazy::Value& value);
+
+xla::Shape MaskedFillTensorOutputShape(const torch::lazy::Value& input,
+                                       const torch::lazy::Value& mask,
+                                       const torch::lazy::Value& value);
+
 xla::Shape MaximumOutputShape(const torch::lazy::Value& input,
                               const torch::lazy::Value& other);
 
 xla::Shape MinimumOutputShape(const torch::lazy::Value& input,
                               const torch::lazy::Value& other);
+
+xla::Shape NativeDropoutBackwardOutputShape(
+    const torch::lazy::Value& grad_output, const torch::lazy::Value& mask);
 
 xla::Shape NeScalarOutputShape(const torch::lazy::Value& self,
                                const torch::lazy::Value& other);

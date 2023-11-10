@@ -1,5 +1,6 @@
 import torch
 from torch import Tensor
+import torch_xla.core.xla_model as xm
 from . import _functional as F
 
 
@@ -84,9 +85,14 @@ class AdamW(torch.optim.AdamW):
             # Exponential moving average of squared gradient values
             state['exp_avg_sq'] = torch.zeros_like(
                 p, memory_format=torch.preserve_format)
-            # Maintains max of all exp. moving avg. of sq. grad. values
-            state['max_exp_avg_sq'] = torch.zeros_like(
-                p, memory_format=torch.preserve_format)
+
+            if group['amsgrad']:
+              # Maintains max of all exp. moving avg. of sq. grad. values
+              state['max_exp_avg_sq'] = torch.zeros_like(
+                  p, memory_format=torch.preserve_format)
+            else:
+              state['max_exp_avg_sq'] = torch.empty(
+                  0, dtype=torch.float, device=xm.xla_device())
 
           exp_avgs.append(state['exp_avg'])
           exp_avg_sqs.append(state['exp_avg_sq'])

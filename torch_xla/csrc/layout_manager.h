@@ -2,9 +2,9 @@
 #define XLA_TORCH_XLA_CSRC_LAYOUT_MANAGER_H_
 
 #include "absl/types/span.h"
-#include "tensorflow/compiler/xla/shape.h"
-#include "tensorflow/compiler/xla/types.h"
 #include "torch_xla/csrc/device.h"
+#include "xla/shape.h"
+#include "xla/types.h"
 
 namespace torch_xla {
 

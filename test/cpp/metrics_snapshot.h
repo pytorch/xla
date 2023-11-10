@@ -7,8 +7,8 @@
 #include <unordered_set>
 #include <vector>
 
-#include "tensorflow/compiler/xla/types.h"
-#include "third_party/xla_client/metrics.h"
+#include "torch_xla/csrc/runtime/metrics.h"
+#include "xla/types.h"
 
 namespace torch_xla {
 namespace cpp_test {
@@ -33,7 +33,7 @@ class MetricsSnapshot {
 
  private:
   struct MetricSamples {
-    std::vector<xla::metrics::Sample> samples;
+    std::vector<torch_xla::runtime::metrics::Sample> samples;
     double accumulator = 0.0;
     size_t total_samples = 0;
   };

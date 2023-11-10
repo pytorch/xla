@@ -16,9 +16,15 @@ class DebugUtil {
     kText,
     kDot,
     kHlo,
+    kStableHlo,
   };
 
   static GraphFormat GetDefaultGraphFormat();
+
+  // Return HLO/StableHLO gragh of the index selected tensors in string format.
+  static std::string GetTensorsGraphHlo(absl::Span<const XLATensorPtr> tensors,
+                                        const std::vector<size_t>* indices,
+                                        bool dump_stablehlo = true);
 
   // Dumps the current Python frame and the IR Graph whose roots are the IR
   // values held at the tensors. If indices is not nullptr, it selects the
@@ -36,7 +42,15 @@ class DebugUtil {
       const std::vector<size_t>* indices,
       GraphFormat format = GetDefaultGraphFormat());
 
+  static void SaveOutputShardingInfo(std::vector<XLATensorPtr>* tensors,
+                                     absl::Span<const size_t> indices);
+
   static bool ExperimentEnabled(const std::string& name);
+
+  // warning, this function should only be called when a graph execution is
+  // about to happen.
+  static void analyze_graph_execution_python_frame(
+      bool from_dynamo_executation = false);
 };
 
 }  // namespace torch_xla

@@ -3,6 +3,7 @@
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/random.h"
+#include "torch_xla/csrc/shape_helper.h"
 
 namespace torch_xla {
 
@@ -21,7 +22,7 @@ XlaOpVector Normal::Lower(LoweringContext* loctx) const {
   xla::XlaOp std = loctx->GetOutputOp(operand(1));
   xla::XlaOp rng_seed = loctx->GetOutputOp(operand(2));
   return ReturnOp(
-      RngNormal(rng_seed, XlaHelpers::ShapeOfXlaOp(mean), mean, std), loctx);
+      RngNormal(rng_seed, ShapeHelper::ShapeOfXlaOp(mean), mean, std), loctx);
 }
 
 }  // namespace torch_xla

@@ -5,9 +5,9 @@
 #include <vector>
 
 #include "absl/types/optional.h"
-#include "tensorflow/compiler/xla/shape.h"
-#include "tensorflow/compiler/xla/types.h"
 #include "torch_xla/csrc/ir.h"
+#include "xla/shape.h"
+#include "xla/types.h"
 
 namespace torch_xla {
 

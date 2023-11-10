@@ -4,7 +4,7 @@
 #include <ATen/core/interned_strings.h>
 #include <c10/core/Scalar.h>
 
-#include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "xla/client/xla_builder.h"
 
 namespace torch_xla {
 
@@ -20,6 +20,9 @@ xla::XlaOp BuildThreshold(xla::XlaOp input, xla::XlaOp output,
 xla::XlaOp BuildRelu(xla::XlaOp input);
 
 xla::XlaOp BuildPrelu(xla::XlaOp input, xla::XlaOp weight);
+
+std::vector<xla::XlaOp> BuildPreluBackward(xla::XlaOp grad, xla::XlaOp input,
+                                           xla::XlaOp weight);
 
 std::vector<xla::XlaOp> BuildRrelu(xla::XlaOp input, const at::Scalar& lower,
                                    const at::Scalar& upper, bool training,

@@ -1,4 +1,4 @@
-from torch_xla.experimental import pjrt
+from torch_xla import runtime as xr
 import args_parse
 
 SUPPORTED_MODELS = [
@@ -31,8 +31,6 @@ MODEL_OPTS = {
     '--ddp': {
         'action': 'store_true',
     },
-    # Use pjrt:// init_method instead of env:// for `torch.distributed`.
-    # Required for DDP on TPU v2/v3 when using PJRT.
     '--pjrt_distributed': {
         'action': 'store_true',
     },
@@ -85,6 +83,7 @@ import torch_xla.debug.metrics as met
 import torch_xla.distributed.parallel_loader as pl
 import torch_xla.debug.profiler as xp
 import torch_xla.utils.utils as xu
+import torch_xla.core.xla_env_vars as xenv
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
 import torch_xla.test.test_utils as test_utils
@@ -179,12 +178,8 @@ def _train_update(device, step, loss, tracker, epoch, writer):
 
 
 def train_imagenet():
-  if FLAGS.pjrt_distributed:
-    import torch_xla.experimental.pjrt_backend
-    dist.init_process_group('xla', init_method='pjrt://')
-  elif FLAGS.ddp:
-    dist.init_process_group(
-        'xla', world_size=xm.xrt_world_size(), rank=xm.get_ordinal())
+  if FLAGS.ddp or FLAGS.pjrt_distributed:
+    dist.init_process_group('xla', init_method='xla://')
 
   print('==> Preparing data..')
   img_dim = get_model_property('img_dim')
@@ -262,8 +257,8 @@ def train_imagenet():
 
   # Initialization is nondeterministic with multiple threads in PjRt.
   # Synchronize model parameters across replicas manually.
-  if pjrt.using_pjrt():
-    pjrt.broadcast_master_param(model)
+  if xr.using_pjrt():
+    xm.broadcast_master_param(model)
 
   if FLAGS.ddp:
     model = DDP(model, gradient_as_bucket_view=True, broadcast_buffers=False)
@@ -366,7 +361,7 @@ def train_imagenet():
 def _mp_fn(index, flags):
   global FLAGS
   FLAGS = flags
-  torch.set_default_tensor_type('torch.FloatTensor')
+  torch.set_default_dtype(torch.float32)
   accuracy = train_imagenet()
   if accuracy < FLAGS.target_accuracy:
     print('Accuracy {} is below target {}'.format(accuracy,
@@ -375,4 +370,7 @@ def _mp_fn(index, flags):
 
 
 if __name__ == '__main__':
-  xmp.spawn(_mp_fn, args=(FLAGS,), nprocs=FLAGS.num_cores)
+  if dist.is_torchelastic_launched():
+    _mp_fn(xu.getenv_as(xenv.LOCAL_RANK, int), FLAGS)
+  else:
+    xmp.spawn(_mp_fn, args=(FLAGS,), nprocs=FLAGS.num_cores)

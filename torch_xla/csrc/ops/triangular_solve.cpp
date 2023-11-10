@@ -1,9 +1,10 @@
 #include "torch_xla/csrc/ops/triangular_solve.h"
 
-#include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "tensorflow/compiler/xla/layout_util.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/shape_helper.h"
+#include "xla/client/xla_builder.h"
+#include "xla/layout_util.h"
 
 namespace torch_xla {
 namespace {
@@ -46,8 +47,8 @@ std::vector<xla::XlaOp> LowerTriangularSolve(xla::XlaOp rhs, xla::XlaOp lhs,
                                              bool left_side, bool lower,
                                              bool transpose,
                                              bool unit_diagonal) {
-  const xla::Shape& rhs_shape = XlaHelpers::ShapeOfXlaOp(rhs);
-  const xla::Shape& lhs_shape = XlaHelpers::ShapeOfXlaOp(lhs);
+  const xla::Shape& rhs_shape = ShapeHelper::ShapeOfXlaOp(rhs);
+  const xla::Shape& lhs_shape = ShapeHelper::ShapeOfXlaOp(lhs);
   std::pair<xla::Shape, xla::Shape> broadcasted_shapes =
       InferTriangularSolveShape(rhs_shape, lhs_shape);
   xla::XlaOp rhs_broadcasted =

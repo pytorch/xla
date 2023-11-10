@@ -7,15 +7,16 @@
 #include <cmath>
 #include <unordered_set>
 
-#include "tensorflow/compiler/xla/client/lib/arithmetic.h"
-#include "tensorflow/compiler/xla/client/lib/constants.h"
-#include "tensorflow/compiler/xla/client/lib/matrix.h"
-#include "tensorflow/compiler/xla/literal_util.h"
-#include "third_party/xla_client/debug_macros.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ops/einsum_utilities.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/tensor_util.h"
+#include "xla/client/lib/arithmetic.h"
+#include "xla/client/lib/constants.h"
+#include "xla/client/lib/matrix.h"
+#include "xla/literal_util.h"
 
 namespace torch_xla {
 namespace {
@@ -84,7 +85,7 @@ xla::XlaOp GetScaleValue(xla::XlaOp input, xla::XlaOp count,
 }
 
 xla::XlaOp AverageValue(xla::XlaOp input, xla::XlaOp reduced) {
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   xla::XlaOp num_elements =
       XlaHelpers::GetDimensionsSize({input},
                                     XlaHelpers::GetAllDimensions(input_shape))
@@ -95,7 +96,7 @@ xla::XlaOp AverageValue(xla::XlaOp input, xla::XlaOp reduced) {
 SummationResult CreateSummation(xla::XlaOp input,
                                 absl::Span<const int64_t> dimensions,
                                 bool keep_reduced_dimensions, bool scale) {
-  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(input);
   xla::XlaOp init_value = xla::Zero(input.builder(), shape.element_type());
   SummationResult result;
   result.rinfo =
@@ -116,7 +117,7 @@ SummationResult CreateSummation(xla::XlaOp input,
 
 xla::XlaOp CreateProduct(xla::XlaOp input, absl::Span<const int64_t> dimensions,
                          bool keep_reduced_dimensions) {
-  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(input);
   xla::XlaOp init_value = xla::One(input.builder(), shape.element_type());
   ReductionInfo rinfo =
       GetReductionInfo(input, shape, dimensions, keep_reduced_dimensions);
@@ -147,7 +148,7 @@ xla::XlaOp BuildBinaryCrossEntropy(xla::XlaOp input, xla::XlaOp target,
                                    const absl::optional<xla::XlaOp>& weight,
                                    ReductionMode reduction) {
   static const float kLogBound = -100;
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   xla::XlaOp xweight;
   if (weight) {
     // PyTorch guards weight and input has the same shape.
@@ -178,7 +179,7 @@ xla::XlaOp BuildBinaryCrossEntropyBackward(
     xla::XlaOp grad_output, xla::XlaOp input, xla::XlaOp target,
     const absl::optional<xla::XlaOp>& weight, ReductionMode reduction) {
   static const float kEpsilon = 1e-12;
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   xla::XlaOp xweight;
   if (weight) {
     // PyTorch guards weight and input has the same shape.
@@ -209,8 +210,8 @@ xla::XlaOp BuildMseLoss(xla::XlaOp input, xla::XlaOp target,
   if (reduction == ReductionMode::kNone) {
     return result;
   }
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
-  const xla::Shape& result_shape = XlaHelpers::ShapeOfXlaOp(result);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  const xla::Shape& result_shape = ShapeHelper::ShapeOfXlaOp(result);
   result = xla::ReduceAll(
       result, xla::Zero(result.builder(), result_shape.element_type()),
       XlaHelpers::CreateAddComputation(result_shape.element_type()));
@@ -230,7 +231,7 @@ xla::XlaOp BuildMseLoss(xla::XlaOp input, xla::XlaOp target,
 
 xla::XlaOp BuildMseLossBackward(xla::XlaOp grad_output, xla::XlaOp input,
                                 xla::XlaOp target, ReductionMode reduction) {
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   xla::XlaOp two = XlaHelpers::ScalarValue<double>(
       2, input_shape.element_type(), input.builder());
   xla::XlaOp d_input =
@@ -252,7 +253,7 @@ xla::XlaOp BuildMseLossBackward(xla::XlaOp grad_output, xla::XlaOp input,
 xla::XlaOp BuildCumulativeComputation(xla::XlaOp input, int64_t dim,
                                       const xla::XlaComputation& reducer,
                                       xla::XlaOp init) {
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   std::vector<int64_t> window_strides(input_shape.rank(), 1);
   std::vector<int64_t> window_dims(input_shape.rank(), 1);
   window_dims[dim] = input_shape.dimensions(dim);
@@ -285,7 +286,7 @@ xla::XlaOp ApplyCorrectedScaling(const SummationResult& sum_result,
 
 xla::XlaOp BuildVar(xla::XlaOp input, absl::Span<const int64_t> dimensions,
                     double correction, bool keep_reduced_dimensions) {
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   xla::XlaOp mean =
       BuildMean(input, dimensions, /*keep_reduced_dimensions*/ true);
   xla::XlaOp bcast_mean =
@@ -334,11 +335,11 @@ xla::XlaOp BuildMaxInDim(xla::XlaOp input, int64_t dim,
 xla::XlaOp BuildMaxInDims(xla::XlaOp input,
                           absl::Span<const int64_t> dimensions,
                           bool keep_reduced_dimensions) {
-  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(input);
   XlaHelpers::MinMax min_max = XlaHelpers::MinMaxValues(shape.element_type());
   std::vector<int64_t> canonical_dimensions =
       torch::lazy::GetCanonicalDimensionIndices(
-          xla::util::ToVector<int64_t>(dimensions), shape.rank());
+          runtime::util::ToVector<int64_t>(dimensions), shape.rank());
   xla::XlaOp init_value = XlaHelpers::ScalarValue(
       min_max.min, shape.element_type(), input.builder());
   ReductionInfo rinfo = GetReductionInfo(input, shape, canonical_dimensions,
@@ -364,12 +365,12 @@ xla::XlaOp BuildMinInDim(xla::XlaOp input, int64_t dim,
 xla::XlaOp BuildMinInDims(xla::XlaOp input,
                           absl::Span<const int64_t> dimensions,
                           bool keep_reduced_dimensions) {
-  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(input);
   XlaHelpers::MinMax min_max = XlaHelpers::MinMaxValues(shape.element_type());
 
   std::vector<int64_t> canonical_dimensions =
       torch::lazy::GetCanonicalDimensionIndices(
-          xla::util::ToVector<int64_t>(dimensions), shape.rank());
+          runtime::util::ToVector<int64_t>(dimensions), shape.rank());
 
   xla::XlaOp init_value = XlaHelpers::ScalarValue(
       min_max.max, shape.element_type(), input.builder());
@@ -389,13 +390,13 @@ xla::XlaOp BuildMinInDims(xla::XlaOp input,
 }
 
 xla::XlaOp BuildArgMax(xla::XlaOp input, int64_t dim, bool keepdim) {
-  const xla::Shape* shape = &XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape* shape = &ShapeHelper::ShapeOfXlaOp(input);
   xla::XlaOp operand = input;
   if (dim < 0) {
     dim = 0;
     operand = XlaHelpers::DynamicReshape(operand,
                                          {xla::ShapeUtil::ElementsIn(*shape)});
-    shape = &XlaHelpers::ShapeOfXlaOp(operand);
+    shape = &ShapeHelper::ShapeOfXlaOp(operand);
   }
   xla::XlaOp result = xla::ArgMax(
       operand,
@@ -409,13 +410,13 @@ xla::XlaOp BuildArgMax(xla::XlaOp input, int64_t dim, bool keepdim) {
 }
 
 xla::XlaOp BuildArgMin(xla::XlaOp input, int64_t dim, bool keepdim) {
-  const xla::Shape* shape = &XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape* shape = &ShapeHelper::ShapeOfXlaOp(input);
   xla::XlaOp operand = input;
   if (dim < 0) {
     dim = 0;
     operand = XlaHelpers::DynamicReshape(operand,
                                          {xla::ShapeUtil::ElementsIn(*shape)});
-    shape = &XlaHelpers::ShapeOfXlaOp(operand);
+    shape = &ShapeHelper::ShapeOfXlaOp(operand);
   }
   xla::XlaOp result = xla::ArgMin(
       operand,
@@ -430,10 +431,10 @@ xla::XlaOp BuildArgMin(xla::XlaOp input, int64_t dim, bool keepdim) {
 
 xla::XlaOp BuildAll(xla::XlaOp input, absl::Span<const int64_t> dimensions,
                     bool keep_reduced_dimensions) {
-  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(input);
   std::vector<int64_t> canonical_dimensions =
       torch::lazy::GetCanonicalDimensionIndices(
-          xla::util::ToVector<int64_t>(dimensions), shape.rank());
+          runtime::util::ToVector<int64_t>(dimensions), shape.rank());
   ReductionInfo rinfo = GetReductionInfo(input, shape, canonical_dimensions,
                                          keep_reduced_dimensions);
   xla::XlaOp init_value = xla::ConstantLiteral(
@@ -455,10 +456,10 @@ xla::XlaOp BuildAll(xla::XlaOp input, absl::Span<const int64_t> dimensions,
 
 xla::XlaOp BuildAny(xla::XlaOp input, absl::Span<const int64_t> dimensions,
                     bool keep_reduced_dimensions) {
-  const xla::Shape& shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(input);
   std::vector<int64_t> canonical_dimensions =
       torch::lazy::GetCanonicalDimensionIndices(
-          xla::util::ToVector<int64_t>(dimensions), shape.rank());
+          runtime::util::ToVector<int64_t>(dimensions), shape.rank());
   ReductionInfo rinfo = GetReductionInfo(input, shape, canonical_dimensions,
                                          keep_reduced_dimensions);
   xla::XlaOp init_value = xla::ConstantLiteral(

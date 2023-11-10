@@ -1,3 +1,4 @@
+import itertools
 import threading
 import torch
 import torch_xla
@@ -13,6 +14,7 @@ class PerDeviceQueue(object):
     self.device = device
     self.loader_queue = kq.Queue(maxsize=loader_prefetch_size)
     self.queue = kq.Queue(maxsize=device_prefetch_size)
+    self.close_queue_count = itertools.count()
 
 
 class PerDeviceLoader(object):
@@ -101,7 +103,12 @@ class ParallelLoader(object):
     thread.start()
     for dqueue in self._queues.values():
       for i in range(host_to_device_transfer_threads):
-        thread = threading.Thread(target=self._worker, args=(dqueue,))
+        thread = threading.Thread(
+            target=self._worker,
+            args=(
+                dqueue,
+                host_to_device_transfer_threads,
+            ))
         thread.daemon = True
         thread.start()
 
@@ -162,7 +169,7 @@ class ParallelLoader(object):
       batch.append(item)
     return batch
 
-  def _worker(self, dqueue):
+  def _worker(self, dqueue, host_to_device_transfer_threads):
     device = torch.device(dqueue.device)
     while True:
       batch = self._get_batch(dqueue)
@@ -171,7 +178,9 @@ class ParallelLoader(object):
       batch = xm.send_cpu_data_to_device(batch, device, self._input_sharding)
       for data in batch:
         dqueue.queue.put(data)
-    dqueue.queue.close_write()
+    close_queue_count = next(dqueue.close_queue_count)
+    if close_queue_count == host_to_device_transfer_threads - 1:
+      dqueue.queue.close_write()
 
 
 class MpDeviceLoader(object):

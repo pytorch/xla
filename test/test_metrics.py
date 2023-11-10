@@ -164,7 +164,9 @@ class MetricsTest(unittest.TestCase):
     self.assertIn("CachedCompile", report)
 
   @unittest.skipIf(
+      xm.get_xla_supported_devices("CUDA") or
       xm.get_xla_supported_devices("GPU") or
+      xm.get_xla_supported_devices("ROCM") or
       xm.get_xla_supported_devices("TPU"), f"This test only works on CPU.")
   def test_execute_time_metric(self):
     # Initialize the client before starting the timer.

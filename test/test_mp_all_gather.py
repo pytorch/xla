@@ -13,7 +13,7 @@ def all_gather(tensor, dim):
 def _mp_fn(index):
   device = xm.xla_device()
   world_size = xm.xrt_world_size()
-  if xm.xla_device_hw(device) in ('TPU', 'GPU'):
+  if xm.xla_device_hw(device) in ('TPU', 'GPU', 'CUDA', 'ROCM'):
     # Testing with a single replica group
     ordinal_tensor = torch.tensor([index], dtype=torch.float).to(device)
     result = xm.all_gather(ordinal_tensor, dim=0)
@@ -26,7 +26,7 @@ def _mp_fn(index):
       sys.exit(1)
 
     compiled_all_gather = torch.compile(
-        all_gather, backend='torchxla_trace_once', fullgraph=True)
+        all_gather, backend='openxla', fullgraph=True)
     ordinal_tensor = torch.tensor([index], dtype=torch.float).to(device)
     result = compiled_all_gather(ordinal_tensor, dim=0)
 

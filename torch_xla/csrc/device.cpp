@@ -3,8 +3,8 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
 #include "absl/types/optional.h"
-#include "third_party/xla_client/computation_client.h"
-#include "third_party/xla_client/debug_macros.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/sys_util.h"
 
 namespace torch_xla {
 namespace {
@@ -17,15 +17,25 @@ std::string XlaDeviceTypeToString(XlaDeviceType hw_type) {
       return "CPU";
     case XlaDeviceType::GPU:
       return "GPU";
+    case XlaDeviceType::CUDA:
+      return "CUDA";
+    case XlaDeviceType::ROCM:
+      return "ROCM";
     case XlaDeviceType::TPU:
       return "TPU";
     case XlaDeviceType::XPU:
       return "XPU";
+    case XlaDeviceType::NEURON:
+      return "NEURON";
     case XlaDeviceType::SPMD:
       return "SPMD";
   }
   XLA_ERROR() << "Invalid device type";
 }
+
+// This is set when any device is initialized, so to prevent using non-virtual
+// device and virtual device together.
+static bool spmd_config_is_locked = false;
 
 }  // namespace
 
@@ -35,19 +45,9 @@ std::string DeviceType::toString() const {
 }
 
 torch::lazy::BackendDevice ParseDeviceString(const std::string& device_spec) {
-  if (device_spec.empty()) {
-    std::string default_device_spec =
-        xla::ComputationClient::Get()->GetDefaultDevice();
-    XLA_CHECK(!default_device_spec.empty());
-    return ParseDeviceString(default_device_spec);
-  }
-  if (device_spec[0] == ':') {
-    std::string default_device_spec =
-        xla::ComputationClient::Get()->GetDefaultDevice();
-    auto pos = default_device_spec.find(':');
-    XLA_CHECK_NE(pos, std::string::npos) << default_device_spec;
-    return ParseDeviceString(default_device_spec.substr(0, pos) + device_spec);
-  }
+  XLA_CHECK(!device_spec.empty()) << "empty device spec";
+  XLA_CHECK(device_spec[0] != ':')
+      << "No device type in device specification: " << device_spec;
   std::vector<std::string> device_spec_parts = absl::StrSplit(device_spec, ':');
   XLA_CHECK_EQ(device_spec_parts.size(), 2)
       << "Invalid device specification: " << device_spec;
@@ -63,12 +63,21 @@ torch::lazy::BackendDevice ParseDeviceString(const std::string& device_spec) {
   } else if (device_spec_parts[0] == "CPU") {
     device_type->type =
         static_cast<std::underlying_type_t<XlaDeviceType>>(XlaDeviceType::CPU);
+  } else if (device_spec_parts[0] == "ROCM") {
+    device_type->type =
+        static_cast<std::underlying_type_t<XlaDeviceType>>(XlaDeviceType::ROCM);
+  } else if (device_spec_parts[0] == "CUDA") {
+    device_type->type =
+        static_cast<std::underlying_type_t<XlaDeviceType>>(XlaDeviceType::CUDA);
   } else if (device_spec_parts[0] == "GPU") {
     device_type->type =
         static_cast<std::underlying_type_t<XlaDeviceType>>(XlaDeviceType::GPU);
   } else if (device_spec_parts[0] == "XPU") {
     device_type->type =
         static_cast<std::underlying_type_t<XlaDeviceType>>(XlaDeviceType::XPU);
+  } else if (device_spec_parts[0] == "NEURON") {
+    device_type->type = static_cast<std::underlying_type_t<XlaDeviceType>>(
+        XlaDeviceType::NEURON);
   } else {
     XLA_ERROR() << "Invalid device specification: " << device_spec;
   }
@@ -76,29 +85,25 @@ torch::lazy::BackendDevice ParseDeviceString(const std::string& device_spec) {
   return torch::lazy::BackendDevice(std::move(device_type), ordinal);
 }
 
-const torch::lazy::BackendDevice* GetDefaultDevice() {
-  static const torch::lazy::BackendDevice default_device =
-      ParseDeviceString("");
-  return &default_device;
-}
-
 torch::lazy::BackendDevice GetVirtualDevice() {
   return ParseDeviceString("SPMD:0");
 }
 
-torch::lazy::BackendDevice GetCurrentDevice() {
-  if (!g_current_device) {
-    g_current_device = *GetDefaultDevice();
+bool ShouldUseVirtualDevice() {
+  bool use_virtual_device =
+      runtime::sys_util::GetEnvBool("XLA_USE_SPMD", false);
+  if (use_virtual_device) {
+    TF_LOG(INFO) << "Using SPMD virtual device optimization";
   }
-  return *g_current_device;
+  return use_virtual_device;
 }
 
-torch::lazy::BackendDevice SetCurrentDevice(
-    const torch::lazy::BackendDevice& device) {
-  torch::lazy::BackendDevice current = GetCurrentDevice();
-  g_current_device = device;
-  TF_VLOG(2) << "New current device: " << device;
-  return current;
+bool UseVirtualDevice() {
+  spmd_config_is_locked = true;
+  static bool use_virtual_device = ShouldUseVirtualDevice();
+  return use_virtual_device;
 }
+
+bool GetLockSpmdConfig() { return spmd_config_is_locked; }
 
 }  // namespace torch_xla

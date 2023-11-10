@@ -4,18 +4,24 @@
 
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
+#include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/tensor_util.h"
 
 namespace torch_xla {
 
 DeviceData::DeviceData(std::shared_ptr<torch::lazy::BackendData> data)
-    : XlaNode(xla_device_data, UnwrapXlaData(data)->shape(), /*num_outputs=*/1,
+    : XlaNode(xla_device_data,
+              std::dynamic_pointer_cast<runtime::ComputationClient::Data>(data)
+                  ->shape(),
+              /*num_outputs=*/1,
               /*hash_seed=*/(uint32_t)101),
       data_(std::move(data)) {
   std::optional<xla::OpSharding> op_sharding =
-      xla::ComputationClient::Get()->GetDataSharding(UnwrapXlaData(data_));
+      torch_xla::runtime::GetComputationClient()->GetDataSharding(
+          std::dynamic_pointer_cast<runtime::ComputationClient::Data>(data_));
   if (op_sharding.has_value()) {
-    SetSharding(op_sharding.value());
+    // DeviceData Node only has 1 output.
+    SetSharding(op_sharding.value(), 0);
   }
 }
 

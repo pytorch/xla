@@ -106,14 +106,10 @@ function build_torch_xla() {
   popd
 }
 
-function run_torch_xla_tests() {
+function run_torch_xla_python_tests() {
   PYTORCH_DIR=$1
   XLA_DIR=$2
   USE_COVERAGE="${3:-0}"
-  if [ -x "$(command -v nvidia-smi)" ]; then
-    export GPU_NUM_DEVICES=2
-  fi
-  export PYTORCH_TESTING_DEVICE_ONLY_FOR="xla"
 
   pushd $XLA_DIR
     echo "Running Python Tests"
@@ -130,19 +126,19 @@ function run_torch_xla_tests() {
       chmod -R 755 ~/htmlcov
     else
       ./test/run_tests.sh
-      # only run test_autocast for cpu and gpu on circleCI.
-      python test/test_autocast.py
 
-      # GPU tests
+      # CUDA tests
       if [ -x "$(command -v nvidia-smi)" ]; then
-        # These tests fail on GPU with 03/30 TF-pin update (https://github.com/pytorch/xla/pull/4840)
-        # PJRT_DEVICE=GPU python test/test_train_mp_imagenet_fsdp.py --fake_data --use_nested_fsdp --use_small_fake_sample --num_epochs=1
-        # PJRT_DEVICE=GPU python test/test_train_mp_imagenet_fsdp.py --fake_data --auto_wrap_policy type_based --use_small_fake_sample --num_epochs=1
-        # XLA_DISABLE_FUNCTIONALIZATION=1 PJRT_DEVICE=GPU python test/test_train_mp_imagenet_fsdp.py --fake_data --use_nested_fsdp --use_small_fake_sample --num_epochs=1
+        # These tests fail on CUDA with 03/30 TF-pin update (https://github.com/pytorch/xla/pull/4840)
+        PJRT_DEVICE=CUDA python test/test_train_mp_imagenet_fsdp.py --fake_data --use_nested_fsdp --use_small_fake_sample --num_epochs=1
+        # TODO(xiowei replace gpu with cuda): remove the test below with PJRT_DEVICE=GPU because PJRT_DEVICE=GPU is being deprecated.
+        PJRT_DEVICE=GPU python test/test_train_mp_imagenet_fsdp.py --fake_data --use_nested_fsdp --use_small_fake_sample --num_epochs=1
+        PJRT_DEVICE=CUDA python test/test_train_mp_imagenet_fsdp.py --fake_data --auto_wrap_policy type_based --use_small_fake_sample --num_epochs=1
+        XLA_DISABLE_FUNCTIONALIZATION=1 PJRT_DEVICE=CUDA python test/test_train_mp_imagenet_fsdp.py --fake_data --use_nested_fsdp --use_small_fake_sample --num_epochs=1
         # Syncfree SGD optimizer tests
         if [ -d ./torch_xla/amp/syncfree ]; then
           echo "Running Syncfree Optimizer Test"
-          PJRT_DEVICE=GPU python test/test_syncfree_optimizers.py
+          PJRT_DEVICE=CUDA python test/test_syncfree_optimizers.py
 
           # Following test scripts are mainly useful for
           # performance evaluation & comparison among different
@@ -156,26 +152,75 @@ function run_torch_xla_tests() {
         fi
       fi
     fi
-
-    pushd test/cpp
-      echo "Running C++ Tests on PJRT"
-      EXTRA_ARGS=""
-      if [ "$USE_COVERAGE" != "0" ]; then
-	      EXTRA_ARGS="-C"
-      fi
-      if [ ! -z "$GCLOUD_SERVICE_KEY_FILE" ]; then
-	      EXTRA_ARGS="$EXTRA_ARGS -R"
-      fi
-      if [ -x "$(command -v nvidia-smi)" ]; then
-        PJRT_DEVICE=GPU ./run_tests.sh $EXTRA_ARGS
-        PJRT_DEVICE=GPU ./run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L"" $EXTRA_ARGS
-      else
-        PJRT_DEVICE=CPU ./run_tests.sh $EXTRA_ARGS
-      fi
-      if [ "$USE_COVERAGE" != "0" ]; then
-        genhtml $XLA_DIR/bazel-out/_coverage/_coverage_report.dat -o ~/htmlcov/cpp/cpp_lcov.info
-        mv $XLA_DIR/bazel-out/_coverage/_coverage_report.dat ~/htmlcov/cpp_lcov.info
-      fi
-    popd
   popd
+}
+
+function run_torch_xla_cpp_tests() {
+  PYTORCH_DIR=$1
+  XLA_DIR=$2
+  USE_COVERAGE="${3:-0}"
+
+  pushd $XLA_DIR
+    echo "Running C++ Tests on PJRT"
+    EXTRA_ARGS=""
+    if [ "$USE_COVERAGE" != "0" ]; then
+	    EXTRA_ARGS="-C"
+    fi
+    if [ ! -z "$GCLOUD_SERVICE_KEY_FILE" ]; then
+	    EXTRA_ARGS="$EXTRA_ARGS -R"
+    fi
+
+    if [ "$USE_COVERAGE" != "0" ]; then
+      # TODO(yeounoh) shard the coverage testing
+      if [ -x "$(command -v nvidia-smi)" ]; then
+        PJRT_DEVICE=CUDA test/cpp/run_tests.sh $EXTRA_ARGS -L""
+        cp $XLA_DIR/bazel-out/_coverage/_coverage_report.dat /tmp/cov1.dat
+        PJRT_DEVICE=CUDA test/cpp/run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L"" $EXTRA_ARGS
+        cp $XLA_DIR/bazel-out/_coverage/_coverage_report.dat /tmp/cov2.dat
+        lcov --add-tracefile /tmp/cov1.dat -a /tmp/cov2.dat -o /tmp/merged.dat
+      else
+        PJRT_DEVICE=CPU test/cpp/run_tests.sh $EXTRA_ARGS -L""
+        cp $XLA_DIR/bazel-out/_coverage/_coverage_report.dat /tmp/merged.dat
+      fi
+      genhtml /tmp/merged.dat -o ~/htmlcov/cpp/cpp_lcov.info
+      mv /tmp/merged.dat ~/htmlcov/cpp_lcov.info
+    else
+      # Shard GPU testing
+      if [ -x "$(command -v nvidia-smi)" ]; then
+        PJRT_DEVICE=CUDA test/cpp/run_tests.sh $EXTRA_ARGS -L""
+        PJRT_DEVICE=CUDA test/cpp/run_tests.sh -X early_sync -F AtenXlaTensorTest.TestEarlySyncLiveTensors -L"" $EXTRA_ARGS
+      else
+        PJRT_DEVICE=CPU test/cpp/run_tests.sh $EXTRA_ARGS -L""
+      fi
+    fi
+  popd
+}
+
+function run_torch_xla_tests() {
+  PYTORCH_DIR=$1
+  XLA_DIR=$2
+  USE_COVERAGE="${3:-0}"
+  RUN_CPP="${RUN_CPP_TESTS:0}"
+  RUN_PYTHON="${RUN_PYTHON_TESTS:0}"
+
+  if [ -x "$(command -v nvidia-smi)" ]; then
+    num_devices=$(nvidia-smi --list-gpus | wc -l)
+    echo "Found $num_devices GPU devices..."
+    export GPU_NUM_DEVICES=$num_devices
+  fi
+  export PYTORCH_TESTING_DEVICE_ONLY_FOR="xla"
+  export CXX_ABI=$(python -c "import torch;print(int(torch._C._GLIBCXX_USE_CXX11_ABI))")
+
+  # TODO(yeounoh) test coverage workflow is not parallelized.
+  if [[ -z "$RUN_CPP_TESTS1" && -z "$RUN_CPP_TESTS2" && -z "$RUN_PYTHON_TESTS" || "$USE_COVERAGE" != "0" ]]; then
+    run_torch_xla_python_tests $PYTORCH_DIR $XLA_DIR $USE_COVERAGE
+    run_torch_xla_cpp_tests $PYTORCH_DIR $XLA_DIR $USE_COVERAGE
+  else
+    # run python and cpp tests separately.
+    if [[ "$RUN_PYTHON_TESTS" == "python_tests" ]]; then
+      run_torch_xla_python_tests $PYTORCH_DIR $XLA_DIR $USE_COVERAGE
+    else
+      run_torch_xla_cpp_tests $PYTORCH_DIR $XLA_DIR $USE_COVERAGE
+    fi
+  fi
 }

@@ -16,6 +16,9 @@ namespace bridge {
 
 XLATensorPtr TryGetXlaTensor(const at::Tensor& tensor);
 
+// Same as above, applied to a list of tensors.
+std::vector<XLATensorPtr> TryGetXlaTensors(const at::ITensorListRef& tensors);
+
 bool IsXlaTensor(const at::Tensor& tensor);
 
 // Extracts the XLATensorPtr out of our version of at::Tensor. Throws an
@@ -87,14 +90,23 @@ c10::Device XlaDeviceToAtenDevice(const torch::lazy::BackendDevice& device);
 
 std::string ToXlaString(const c10::Device& device);
 
+const torch::lazy::BackendDevice* GetDefaultDevice();
+
 c10::Device AtenDefaultDevice();
+
+torch::lazy::BackendDevice GetCurrentDevice();
+
+c10::Device GetCurrentAtenDevice();
+
+static inline torch::lazy::BackendDevice GetDeviceOrCurrent(
+    const torch::lazy::BackendDevice* device) {
+  return device != nullptr ? *device : GetCurrentDevice();
+}
 
 c10::Device SetCurrentDevice(const c10::Device& device);
 
 torch::lazy::BackendDevice SetCurrentDevice(
     const torch::lazy::BackendDevice& device);
-
-c10::Device GetCurrentAtenDevice();
 
 at::Tensor XlaToAtenTensor(XLATensorPtr xla_tensor,
                            const at::TensorOptions& tensor_options);

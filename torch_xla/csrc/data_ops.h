@@ -7,7 +7,7 @@
 
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
-#include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "xla/client/xla_builder.h"
 
 // Collection of XLA lowerings for operations which only involve some form of
 // data movement and no computation.
@@ -43,8 +43,14 @@ xla::XlaOp SqueezeAllTrivialDimensions(xla::XlaOp input);
 xla::XlaOp BuildExpand(xla::XlaOp input,
                        absl::Span<const int64_t> output_sizes);
 
+xla::XlaOp BuildMaskedFillScalar(xla::XlaOp input, xla::XlaOp mask,
+                                 xla::XlaOp scalar);
+
 std::vector<int64_t> BuildSqueezedDimensions(
     absl::Span<const int64_t> dimensions, int64_t squeeze_dim);
+
+std::vector<int64_t> BuildSqueezedDimensions(
+    absl::Span<const int64_t> dimensions, std::vector<int64_t>& squeeze_dim);
 
 std::vector<int64_t> BuildUnsqueezeDimensions(
     absl::Span<const int64_t> dimensions, int64_t dim);

@@ -4,6 +4,7 @@ import torch
 from torch import nn
 import torch_xla
 import torch_xla.core.xla_model as xm
+import torch_xla.runtime as xr
 import torch_xla.debug.profiler as xp
 import torch_xla.distributed.parallel_loader as pl
 import torch_xla.experimental.xla_sharding as xs
@@ -15,7 +16,7 @@ from torch import nn
 
 MODEL_OPTS = {
     '--sharding': {
-        'choices': ['batch', 'megatron-lm'],
+        'choices': ['batch', 'megatron-lm', 'fsdp'],
         'nargs': '+',
         'default': [],
     },
@@ -58,7 +59,6 @@ device = xm.xla_device()
 
 def train():
   print('===> Preparing data..')
-  num_epochs = 18
   lr = 0.1
   train_loader = xu.SampleGenerator(
       data=(torch.zeros(FLAGS.batch_size, FLAGS.input_dim),
@@ -67,7 +67,7 @@ def train():
   torch.manual_seed(42)
   model = SimpleLinear().to(device)
 
-  num_devices = len(xm.get_xla_supported_devices())
+  num_devices = xr.global_runtime_device_count()
   print(f'num_devices: {num_devices}')
   # Define a mesh with all devices along one axis
   mesh_shape = (num_devices, 1)
@@ -77,6 +77,14 @@ def train():
   if 'batch' in FLAGS.sharding:
     train_loader = pl.MpDeviceLoader(
         train_loader, device, input_sharding=xs.ShardingSpec(mesh, (0, 1)))
+
+  if 'fsdp' in FLAGS.sharding:
+    train_loader = pl.MpDeviceLoader(
+        train_loader, device, input_sharding=xs.ShardingSpec(mesh, (0, 1)))
+    print('Sharding model weights')
+    # Shard the weights according to their 0th dim
+    xs.mark_sharding(model.fc1.weight, mesh, (0, 1))
+    xs.mark_sharding(model.fc2.weight, mesh, (0, 1))
 
   if 'megatron-lm' in FLAGS.sharding:
     print('Sharding model weights')

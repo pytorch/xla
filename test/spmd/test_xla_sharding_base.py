@@ -1,15 +1,16 @@
 import unittest
 import numpy as np
 
-import torch
 from torch import nn
-import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.experimental.xla_sharding as xs
-from torch_xla.experimental.pjrt import using_pjrt
+import torch_xla.runtime as xr
+import torch_xla.core.xla_env_vars as xenv
+import torch_xla.utils.utils as xu
 
 
-@unittest.skipIf(not using_pjrt() or xm.get_xla_supported_devices("GPU"),
+@unittest.skipIf(not xr.using_pjrt() or
+                 xu.getenv_as(xenv.PJRT_DEVICE, str) in ("GPU", 'CUDA', 'ROCM'),
                  f"Requires PJRT_DEVICE set to `TPU` or `CPU`.")
 class XlaShardingTest(unittest.TestCase):
 
@@ -31,11 +32,15 @@ class XlaShardingTest(unittest.TestCase):
 
   @classmethod
   def setUpClass(cls):
-    cls.n_devices = len(xm.get_xla_supported_devices())
+    cls.n_devices = xr.global_runtime_device_count()
     cls.device_ids = np.array(range(cls.n_devices))
 
   def _get_mesh(self, mesh_shape, device_ids=None):
+    assert type(mesh_shape) is tuple, 'mesh_shape must be Tuple[int]'
     if device_ids is None:
       device_ids = self.device_ids
     assert len(device_ids) == self.n_devices
     return xs.Mesh(device_ids, mesh_shape)
+
+  def _get_hybrid_mesh(self, ici_mesh_shape, axis_names=None):
+    return xs.HybridMesh(ici_mesh_shape=ici_mesh_shape, axis_names=axis_names)

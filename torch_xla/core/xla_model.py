@@ -1,15 +1,17 @@
 import io
+import itertools
+import logging
 import sys
 import re
 import threading
 import time
+import warnings
 from typing import List, Optional
 import torch
 import torch.distributed._functional_collectives
 import torch.nn.functional as F
 import torch_xla
-from torch_xla.experimental import pjrt
-from torch_xla.experimental import tpu
+from torch_xla import runtime
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.debug.metrics_saver as ms
 import torch_xla.utils.utils as xu
@@ -37,11 +39,8 @@ _ORDINAL = None
 def _init_world_size_ordinal():
   global _WORLD_SIZE, _ORDINAL
 
-  if not pjrt.using_pjrt():
-    return
-
-  # We don't support V3-8. See Note [V3-8 Threading]
-  if pjrt.device_type() == 'TPU' and tpu.version() < 4:
+  # Dynamo doesn't support XRT or multithreaded runtime. See Note [V3-8 Threading]
+  if not runtime.using_pjrt() or runtime.addressable_device_count() > 1:
     return
 
   if _WORLD_SIZE is None:
@@ -73,7 +72,7 @@ def is_xla_tensor(tensor):
 
 
 def parse_xla_device(device):
-  m = re.match(r'(CPU|TPU|GPU|XPU):(\d+)$', device)
+  m = re.match(r'(CPU|TPU|GPU|ROCM|CUDA|XPU|NEURON):(\d+)$', device)
   if m:
     return (m.group(1), int(m.group(2)))
 
@@ -82,16 +81,25 @@ def get_xla_supported_devices(devkind=None, max_devices=None):
   """Returns a list of supported devices of a given kind.
 
   Args:
-    devkind (string..., optional): If specified, one of `TPU`, `GPU`, `XPU` or `CPU`
-      (the 'GPU' XLA device is currently not implemented).
+    devkind (string..., optional): If specified, one of `TPU`, `GPU`, `XPU`, 
+      `NEURON` or `CPU` (the 'GPU' XLA device is currently not implemented).
     max_devices (int, optional): The maximum number of devices to be returned of
       that kind.
 
   Returns:
     The list of device strings.
   """
+  # TODO(xiowei replace gpu with cuda): Remove the below if statement after r2.2 release.
+  if devkind and devkind.casefold() == 'gpu':
+    warnings.warn(
+        "GPU as a device name is being deprecate. Please replace it with CUDA such as get_xla_supported_devices(devkind='CUDA'). Similarly, please replace PJRT_DEVICE=GPU with PJRT_DEVICE=CUDA."
+    )
+    devkind = 'CUDA'
+
   xla_devices = _DEVICES.value
-  devkind = [devkind] if devkind else ['TPU', 'GPU', 'XPU', 'CPU']
+  devkind = [devkind] if devkind else [
+      'TPU', 'GPU', 'XPU', 'NEURON', 'CPU', 'CUDA', 'ROCM'
+  ]
   for kind in devkind:
     kind_devices = []
     for i, device in enumerate(xla_devices):
@@ -116,10 +124,7 @@ def xrt_world_size(defval=1):
   if _WORLD_SIZE is not None:
     return _WORLD_SIZE
 
-  if pjrt.using_pjrt():
-    return pjrt.world_size()
-
-  return xu.getenv_as(xenv.WORLD_SIZE, int, defval=defval)
+  return runtime.world_size()
 
 
 def get_ordinal(defval=0):
@@ -129,7 +134,7 @@ def get_ordinal(defval=0):
 
   Args:
     defval (int, optional): The default value to be returned in case there is no
-      replication information available. Ignored for PjRt.
+      replication information available. Ignored for runtime.
       Default: 0
 
   Returns:
@@ -139,10 +144,7 @@ def get_ordinal(defval=0):
   if _ORDINAL is not None:
     return _ORDINAL
 
-  if pjrt.using_pjrt():
-    return pjrt.global_ordinal()
-
-  return xu.getenv_as(xenv.ORDINAL, int, defval=defval)
+  return runtime.global_ordinal()
 
 
 def get_local_ordinal(defval=0):
@@ -152,19 +154,13 @@ def get_local_ordinal(defval=0):
 
   Args:
     defval (int, optional): The default value to be returned in case there is no
-      replication information available. Ignored for PjRt.
+      replication information available. Ignored for runtime.
       Default: 0
 
   Returns:
     The replication local ordinal of the current thread.
   """
-  if pjrt.using_pjrt():
-    return pjrt.local_ordinal()
-
-  ordinal = xu.getenv_as(xenv.LOCAL_ORDINAL, int, defval=-1)
-  if ordinal >= 0:
-    return ordinal
-  return getattr(_get_device_context(), 'device_index', defval)
+  return runtime.local_ordinal()
 
 
 def is_master_ordinal(local=True):
@@ -195,7 +191,8 @@ def xla_device(n=None, devkind=None):
     n (int, optional): The specific instance (ordinal) to be returned. If
       specified, the specific XLA device instance will be returned. Otherwise
       the first device of `devkind` will be returned.
-    devkind (string..., optional): If specified, one of `TPU`, `GPU`, `XPU` or `CPU`.
+    devkind (string..., optional): If specified, one of `TPU`, `CUDA`, `XPU` 
+      `NEURON`, `ROCM` or `CPU`.
 
   Returns:
     A `torch.device` with the requested instance.
@@ -207,20 +204,7 @@ def xla_device(n=None, devkind=None):
     torch_xla._XLAC._xla_set_default_device(device)
     return torch.device(device)
 
-  if pjrt.using_pjrt():
-    return pjrt.xla_device(n, devkind)
-
-  if n is None:
-    devices = get_xla_supported_devices(devkind=devkind)
-    assert devices, 'No devices of {} kind'.format(devkind or 'ANY')
-    # This is a utility API mainly called from tests or simple code which wants
-    # to just have a single device to run on. Set the default device so that
-    # the tensor barrier can work correctly and avoid growing graphs surprises.
-    device = devices[0]
-  else:
-    device = 'xla:{}'.format(n)
-  torch_xla._XLAC._xla_set_default_device(device)
-  return torch.device(device)
+  return runtime.xla_device(n, devkind)
 
 
 def _xla_real_device(device):
@@ -243,8 +227,8 @@ def xla_device_hw(device):
       real device.
 
   Returns:
-    A string representation of the hardware type (`CPU`, `TPU`, `XPU`, `GPU`) of the
-    given device.
+    A string representation of the hardware type (`CPU`, `TPU`, `XPU`, `NEURON`, `GPU`, `CUDA`, `ROCM`) 
+    of the given device.
   """
   real_device = _xla_real_device(device)
   return real_device.split(':')[0]
@@ -466,7 +450,7 @@ def all_reduce(reduce_type, inputs, scale=1.0, groups=None, pin_layout=True):
     pin_layout (bool, optional): whether to pin the layout for this communication op.
       Layout pining can prevent potential data corruption when each process that
       participate in the communication has slightly different program, but it might
-      cause some xla compiation to fail. Unpin the layout when you see error message
+      cause some xla compilation to fail. Unpin the layout when you see error message
       like "HloModule has a mix of layout constrained".
 
   Returns:
@@ -476,6 +460,15 @@ def all_reduce(reduce_type, inputs, scale=1.0, groups=None, pin_layout=True):
     returns the list/tuple itself.
   """
   groups = groups or []
+
+  # No-op if there is only one device
+  if xrt_world_size() == 1 and not xu.getenv_as('XLA_ALWAYS_ALLREDUCE', bool,
+                                                False):
+    if isinstance(inputs, torch.Tensor):
+      return inputs.clone()
+    else:
+      return inputs
+
   if isinstance(inputs, torch.Tensor):
     result = None
     if scale == 1.0 and groups == [] and pin_layout:
@@ -488,11 +481,8 @@ def all_reduce(reduce_type, inputs, scale=1.0, groups=None, pin_layout=True):
                                                groups, pin_layout)
     results = [result]
   else:
-    token, devctx = _get_all_reduce_token()
-    torch_xla._XLAC._set_all_reduce_token(
-        devctx.device,
-        torch_xla._XLAC._xla_all_reduce_inplace(reduce_type, inputs, token,
-                                                scale, groups, pin_layout))
+    torch_xla._XLAC._xla_all_reduce_inplace(reduce_type, inputs, scale, groups,
+                                            pin_layout)
     results = inputs
 
   return results[0] if isinstance(inputs, torch.Tensor) else results
@@ -514,7 +504,7 @@ def _all_gather_using_all_reduce(value, dim=0, groups=None, pin_layout=True):
     pin_layout (bool, optional): whether to pin the layout for this communication op.
       Layout pining can prevent potential data corruption when each process that
       participate in the communication has slightly different program, but it might
-      cause some xla compiation to fail. Unpin the layout when you see error message
+      cause some xla compilation to fail. Unpin the layout when you see error message
       like "HloModule has a mix of layout constrained".
 
   Returns:
@@ -556,21 +546,21 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
     pin_layout (bool, optional): whether to pin the layout for this communication op.
       Layout pining can prevent potential data corruption when each process that
       participate in the communication has slightly different program, but it might
-      cause some xla compiation to fail. Unpin the layout when you see error message
+      cause some xla compilation to fail. Unpin the layout when you see error message
       like "HloModule has a mix of layout constrained".
 
   Returns:
     A tensor which has, in the ``dim`` dimension, all the values from the
     participating replicas.
   """
-  if pin_layout and output == None:
-    # There is not an easy way to pin the all_gather layout on TPU and GPU, use
-    # all_reduce based all_gather for this purpose.
+  if pin_layout and (output == None or xla_device_hw(value.device) == 'NEURON'):
+    # There is not an easy way to pin the all_gather layout on TPU, GPU and NEURON,
+    # use all_reduce based all_gather for this purpose.
     return _all_gather_using_all_reduce(
         value, dim=dim, groups=groups, pin_layout=True)
+
   if dim < 0:
     dim = value.dim() + dim
-  token, devctx = _get_all_reduce_token()
   if groups:
     shard_count = len(groups[0])
     assert all(len(group) == shard_count for group in groups), \
@@ -578,6 +568,8 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
   else:
     # All replicas belong to a single group
     shard_count = xrt_world_size()
+
+  token, devctx = _get_all_reduce_token()
   if output != None:
     # Call the out of place version of the all_gather
     new_token = torch_xla._XLAC._xla_all_gather_out(output, value, token, dim,
@@ -586,10 +578,9 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
     torch_xla._XLAC._set_all_reduce_token(devctx.device, new_token)
     return output
 
-  result = torch_xla._XLAC._xla_all_gather(value, token, dim, shard_count,
-                                           groups or [], pin_layout)
-  torch_xla._XLAC._set_all_reduce_token(devctx.device, result[1])
-  return result[0]
+  result = torch_xla._XLAC._xla_all_gather(value, dim, shard_count, groups or
+                                           [], pin_layout)
+  return result
 
 
 def all_to_all(value,
@@ -615,7 +606,7 @@ def all_to_all(value,
     pin_layout (bool, optional): whether to pin the layout for this communication op.
       Layout pining can prevent potential data corruption when each process that
       participate in the communication has slightly different program, but it might
-      cause some xla compiation to fail. Unpin the layout when you see error message
+      cause some xla compilation to fail. Unpin the layout when you see error message
       like "HloModule has a mix of layout constrained".
 
   Returns:
@@ -671,7 +662,7 @@ def collective_broadcast(tensors: List[torch.Tensor],
     pin_layout (bool, optional): whether to pin the layout for this communication op.
       Layout pining can prevent potential data corruption when each process that
       participate in the communication has slightly different program, but it might
-      cause some xla compiation to fail. Unpin the layout when you see error message
+      cause some xla compilation to fail. Unpin the layout when you see error message
       like "HloModule has a mix of layout constrained".
   """
   with torch.no_grad():
@@ -682,7 +673,7 @@ def collective_broadcast(tensors: List[torch.Tensor],
           1 if get_ordinal() == root_ordinal else 0, dtype=tensor.dtype)
       # Transfer scale tensor as device data instead of constant 1 or 0.
       xscale = send_cpu_data_to_device(scale, tensor.device)
-      tensor.mul_(xscale)
+      tensor.mul_(xscale[0])
 
   all_reduce(REDUCE_SUM, tensors, groups=groups, pin_layout=pin_layout)
 
@@ -748,11 +739,11 @@ def reduce_scatter(reduce_type,
     pin_layout (bool, optional): whether to pin the layout for this communication op.
       Layout pining can prevent potential data corruption when each process that
       participate in the communication has slightly different program, but it might
-      cause some xla compiation to fail. Unpin the layout when you see error message
+      cause some xla compilation to fail. Unpin the layout when you see error message
       like "HloModule has a mix of layout constrained".
 
   Returns:
-    A `torch.Tensor` with all the values reduced accross replicas. Each process
+    A `torch.Tensor` with all the values reduced across replicas. Each process
     gets a shard split along the `scatter_dim`. All other dimensions are
     the same as the input.
   """
@@ -841,6 +832,55 @@ def mark_step(wait=False):
     ms.save_metrics()
   devctx = _run_step_closures()
   torch_xla._XLAC._set_all_reduce_token(devctx.device, None)
+
+
+def get_stablehlo(tensors=None) -> str:
+  """Get StableHLO for the computation graph in string format.
+
+  If `tensors` is not empty, the graph with `tensors` as outputs will be dump.
+  If `tensors` is empty, the whole computation graph will be dump.
+  TODO(lsy323): When `tensors` is empty, the some intermediate tensors will also be
+  dump as outputs. Need further investigation.
+
+  For inference graph, it is recommended to pass the model outputs to `tensors`.
+  For training graph, it is not straightforward to identify the "outputs". Using empty `tensors` is recommended.
+
+  To enable source line info in StableHLO, please set env var XLA_HLO_DEBUG=1.
+
+  Args:
+    tensors (list[torch.Tensor], optional): Tensors that represent the output/root of the StableHLO graph.
+
+  Returns:
+    StableHLO Module in string format.
+  """
+  if tensors is None:
+    tensors = []
+  return torch_xla._XLAC._get_stablehlo(
+      tensors, torch_xla._XLAC._xla_get_default_device(), [],
+      False).decode('utf-8')
+
+
+def get_stablehlo_bytecode(tensors=None) -> bytes:
+  """Get StableHLO for the computation graph in bytecode format.
+
+  If `tensors` is not empty, the graph with `tensors` as outputs will be dump.
+  If `tensors` is empty, the whole computation graph will be dump.
+  TODO(lsy323): When `tensors` is empty, the some intermediate tensors will also be
+  dump as outputs. Need further investigation.
+
+  For inference graph, it is recommended to pass the model outputs to `tensors`.
+  For training graph, it is not straightforward to identify the "outputs". Using empty `tensors` is recommended.
+
+  Args:
+    tensors (list[torch.Tensor], optional): Tensors that represent the output/root of the StableHLO graph.
+
+  Returns:
+    StableHLO Module in bytecode format.
+  """
+  if tensors is None:
+    tensors = []
+  return torch_xla._XLAC._get_stablehlo(
+      tensors, torch_xla._XLAC._xla_get_default_device(), [], True)
 
 
 def wait_device_ops(devices=[]):
@@ -966,25 +1006,86 @@ def _maybe_convert_to_cpu(data, convert=True):
   return ToXlaTensorArena(convert_fn, select_fn).transform(data)
 
 
-def send_cpu_data_to_device(data, device, input_sharding=None):
+def send_cpu_data_to_device(datas, device, input_sharding=None):
 
   def convert_fn(tensors):
     devices = [str(device)] * len(tensors)
-    xtensors = torch_xla._XLAC._xla_tensors_from_aten(tensors, devices)
+    shardings = None
     if input_sharding:
-      for xtensor in xtensors:
-        if input_sharding.can_apply(xtensor):
-          input_sharding.apply(xtensor)
+      shardings = [input_sharding.xla_spec(t) for t in tensors]
+    xtensors = torch_xla._XLAC._xla_tensors_from_aten(tensors, devices,
+                                                      shardings)
     return xtensors
 
   def select_fn(v):
     return type(v) == torch.Tensor and v.device.type == 'cpu'
 
-  return ToXlaTensorArena(convert_fn, select_fn).transform(data)
+  if type(datas) is torch.Tensor:
+    datas = [datas]
+  return ToXlaTensorArena(convert_fn, select_fn).transform(datas)
+
+
+def xla_rendezvous(payload: bytes = b'',
+                   ordinals: Optional[List[int]] = None,
+                   tag: Optional[str] = None) -> List[bytes]:
+  """Share `payload` with all replicas in `ordinals`.
+
+  `tag` is ignored except for logging.
+
+  Uses XLA collective communication to communicate between replicas, so this
+  will sync the graph (`xm.mark_step`).
+
+  Args:
+    tag: Name of this rendezvous operation.
+    payload: Payload to share with other replicas.
+    ordinals: List of replicas participating in rendezvous.
+  Returns:
+    List of bytes from other replicas.
+  """
+  if ordinals and len(ordinals) != runtime.global_device_count():
+    raise ValueError('Only global rendezvous is supported')
+
+  if not isinstance(payload, bytes):
+    raise TypeError('`payload` must be bytes, not {}'.format(type(payload)))
+
+  # Finish all execution of previous graphs to avoid recompilation
+  mark_step()
+
+  device = xla_device()
+
+  data = torch.tensor(list(payload), dtype=torch.uint8)
+  size = torch.tensor([data.shape[0]], dtype=torch.int, device=device)
+
+  if tag:
+    logging.info(f"Joining rendezvous '{tag}'...")
+
+  sizes = all_gather(size)
+
+  max_size = torch.max(sizes)
+  mark_step()
+
+  # If all payloads are empty, return immediately to avoid more CPU transfers
+  if max_size.item() < 1:
+    return [b'' for _ in range(sizes.size()[0])]
+
+  padded_data = torch.nn.functional.pad(data, (
+      0,
+      max_size.item() - size.item(),
+  )).to(xla_device())
+  raw_data = all_gather(padded_data)
+  data_list = torch.split(raw_data, max_size)
+
+  payloads = [d[:sz] for d, sz in zip(data_list, sizes.cpu())]
+  mark_step()
+
+  return [bytes(p.cpu().tolist()) for p in payloads]
 
 
 def rendezvous(tag, payload=b'', replicas=[]):
   """Waits for all the mesh clients to reach the named rendezvous.
+
+  Note: PJRT does not support the XRT mesh server, so this is effectively an
+  alias to `xla_rendezvous`.
 
   Args:
     tag (string): The name of the rendezvous to join.
@@ -997,10 +1098,7 @@ def rendezvous(tag, payload=b'', replicas=[]):
     The payloads exchanged by all the other cores, with the payload of core
     ordinal `i` at position `i` in the returned tuple.
   """
-  if pjrt.using_pjrt():
-    return pjrt.rendezvous(tag, payload, replicas or None)
-
-  return torch_xla._XLAC._xla_rendezvous(get_ordinal(), tag, payload, replicas)
+  return xla_rendezvous(payload, replicas or None, tag=tag)
 
 
 def do_on_ordinals(target, data=(), ordinals=(0,)):
@@ -1106,3 +1204,13 @@ def optimization_barrier_(tensors):
     tensors (List[torch.Tensor]): List of `torch.Tensor` to add barrier to.
   """
   torch_xla._XLAC._xla_optimization_barrier_(tensors)
+
+
+def broadcast_master_param(model: torch.nn.Module) -> None:
+  """
+  Broadcast the model parameters from master process to other processes
+  """
+  parameters_and_buffers = list(
+      itertools.chain(model.parameters(), model.buffers()))
+  collective_broadcast(parameters_and_buffers)
+  mark_step()

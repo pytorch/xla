@@ -2,18 +2,18 @@
 
 #include <unordered_map>
 
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/metrics.h"
-#include "third_party/xla_client/tf_logging.h"
 #include "torch_xla/csrc/function_call_tracker.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/metrics.h"
+#include "torch_xla/csrc/runtime/tf_logging.h"
 
 namespace torch_xla {
 
 // TODO(jwtan): Replace this with torch::lazy::Counter. We need
-// _cpu_fallback_counters to remain as xla::metrics::Counter to support
-// xla::metrics::CreatePerformanceReport(). For more information, see NOTE:
-// [TORCH_LAZY_COUNTER v.s. XLA_COUNTER].
-static std::unordered_map<std::string, ::xla::metrics::Counter*>
+// _cpu_fallback_counters to remain as torch_xla::runtime::metrics::Counter to
+// support torch_xla::runtime::metrics::CreatePerformanceReport(). For more
+// information, see NOTE: [TORCH_LAZY_COUNTER v.s. XLA_COUNTER].
+static std::unordered_map<std::string, ::torch_xla::runtime::metrics::Counter*>
     _cpu_fallback_counters;
 
 void xla_cpu_fallback(const c10::OperatorHandle& op, torch::jit::Stack* stack) {
@@ -26,7 +26,8 @@ void xla_cpu_fallback(const c10::OperatorHandle& op, torch::jit::Stack* stack) {
   // and the macro stamps out a static Counter object with a fixed name
   // at the code location that it was called.
   if (_cpu_fallback_counters.find(name) == _cpu_fallback_counters.end()) {
-    _cpu_fallback_counters[name] = new ::xla::metrics::Counter(name);
+    _cpu_fallback_counters[name] =
+        new ::torch_xla::runtime::metrics::Counter(name);
   }
   _cpu_fallback_counters[name]->AddValue(1);
 

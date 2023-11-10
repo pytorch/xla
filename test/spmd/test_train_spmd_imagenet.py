@@ -27,13 +27,25 @@ MODEL_OPTS = {
     '--test_only_at_end': {
         'action': 'store_true',
     },
+    '--persistent_workers': {
+        'action': 'store_true',
+    },
+    '--prefetch_factor': {
+        'type': int,
+    },
+    '--loader_prefetch_size': {
+        'type': int,
+    },
+    '--device_prefetch_size': {
+        'type': int,
+    },
+    '--host_to_device_transfer_threads': {
+        'type': int,
+    },
     '--sharding': {
         'choices': ['batch', 'spatial', 'conv', 'linear'],
         'nargs': '+',
         'default': [],
-    },
-    '--use_virtual_device': {
-        'action': 'store_true',
     },
     '--use_gradient_checkpointing': {
         'action': 'store_true',
@@ -67,13 +79,12 @@ import torch_xla.distributed.parallel_loader as pl
 from torch_xla.distributed.fsdp.wrap import (recursive_wrap,
                                              transformer_auto_wrap_policy)
 from torch_xla.distributed.fsdp.utils import checkpoint_module
+from torch_xla import runtime as xr
 import torch_xla.utils.utils as xu
-import torch_xla.utils.checkpoint as checkpoint
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.profiler as xp
 import torch_xla.test.test_utils as test_utils
 import torch_xla.experimental.xla_sharding as xs
-import torch_xla.experimental.pjrt as pjrt
 
 DEFAULT_KWARGS = dict(
     batch_size=128,
@@ -82,7 +93,14 @@ DEFAULT_KWARGS = dict(
     momentum=0.9,
     lr=0.1,
     target_accuracy=0.0,
+    persistent_workers=False,
+    prefetch_factor=16,
+    loader_prefetch_size=8,
+    device_prefetch_size=4,
+    num_workers=8,
+    host_to_device_transfer_threads=1,
 )
+
 MODEL_SPECIFIC_DEFAULTS = {
     # Override some of the args in DEFAULT_KWARGS, or add them to the dict
     # if they don't exist.
@@ -167,19 +185,22 @@ def train_imagenet():
             normalize,
         ]))
 
-    # For single-host SPMD, no data sampler is needed.
     train_loader = torch.utils.data.DataLoader(
         train_dataset,
         batch_size=FLAGS.batch_size,
-        sampler=None,
         drop_last=FLAGS.drop_last,
-        shuffle=True)
+        shuffle=True,
+        num_workers=FLAGS.num_workers,
+        persistent_workers=FLAGS.persistent_workers,
+        prefetch_factor=FLAGS.prefetch_factor)
     test_loader = torch.utils.data.DataLoader(
         test_dataset,
         batch_size=FLAGS.test_set_batch_size,
-        sampler=None,
         drop_last=FLAGS.drop_last,
-        shuffle=False)
+        shuffle=True,
+        num_workers=FLAGS.num_workers,
+        persistent_workers=FLAGS.persistent_workers,
+        prefetch_factor=FLAGS.prefetch_factor)
 
   torch.manual_seed(42)
 
@@ -201,7 +222,7 @@ def train_imagenet():
 
   input_mesh = None
   if FLAGS.sharding:
-    num_devices = pjrt.global_device_count()
+    num_devices = xr.global_runtime_device_count()
     device_ids = np.arange(num_devices)
     # Model sharding
     if 'conv' in FLAGS.sharding:
@@ -255,7 +276,10 @@ def train_imagenet():
       train_loader = pl.MpDeviceLoader(
           train_loader,
           device,
-          input_sharding=xs.ShardingSpec(input_mesh, (0, 1, 2, 3)))
+          input_sharding=xs.ShardingSpec(input_mesh, (0, 1, 2, 3)),
+          loader_prefetch_size=FLAGS.loader_prefetch_size,
+          device_prefetch_size=FLAGS.device_prefetch_size,
+          host_to_device_transfer_threads=FLAGS.host_to_device_transfer_threads)
 
   writer = None
   if xm.is_master_ordinal():
@@ -348,7 +372,7 @@ if __name__ == '__main__':
   if FLAGS.profile:
     server = xp.start_server(FLAGS.profiler_port)
 
-  torch.set_default_tensor_type('torch.FloatTensor')
+  torch.set_default_dtype(torch.float32)
   accuracy = train_imagenet()
   if accuracy < FLAGS.target_accuracy:
     print('Accuracy {} is below target {}'.format(accuracy,

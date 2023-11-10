@@ -2,13 +2,14 @@
 
 #include <torch/csrc/lazy/core/util.h>
 
-#include "tensorflow/compiler/xla/client/lib/constants.h"
-#include "tensorflow/compiler/xla/client/lib/matrix.h"
-#include "tensorflow/compiler/xla/client/lib/svd.h"
-#include "third_party/xla_client/util.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/runtime/util.h"
+#include "torch_xla/csrc/shape_helper.h"
+#include "xla/client/lib/constants.h"
+#include "xla/client/lib/matrix.h"
+#include "xla/client/lib/svd.h"
 
 namespace torch_xla {
 namespace {
@@ -17,12 +18,12 @@ std::vector<xla::XlaOp> LowerSVD(xla::XlaOp input, bool some, bool compute_uv) {
   xla::SVDResult svd_result =
       xla::SVD(input, /*max_iter=*/100, /*epsilon=*/1e-6,
                XlaHelpers::mat_mul_precision());
-  const xla::Shape& input_shape = XlaHelpers::ShapeOfXlaOp(input);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   xla::XlaOp u = svd_result.u;
   xla::XlaOp v = svd_result.v;
   if (!compute_uv) {
-    u = xla::Zeros(input.builder(), XlaHelpers::ShapeOfXlaOp(u));
-    v = xla::Zeros(input.builder(), XlaHelpers::ShapeOfXlaOp(v));
+    u = xla::Zeros(input.builder(), ShapeHelper::ShapeOfXlaOp(u));
+    v = xla::Zeros(input.builder(), ShapeHelper::ShapeOfXlaOp(v));
   } else if (some) {
     int64_t m_dim = input_shape.dimensions(input_shape.rank() - 2);
     int64_t n_dim = input_shape.dimensions(input_shape.rank() - 1);

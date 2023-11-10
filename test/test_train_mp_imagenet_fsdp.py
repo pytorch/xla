@@ -110,7 +110,7 @@ from torch_xla.distributed.fsdp.wrap import (size_based_auto_wrap_policy,
                                              transformer_auto_wrap_policy)
 
 DEFAULT_KWARGS = dict(
-    batch_size=128,
+    batch_size=64,
     test_set_batch_size=64,
     num_epochs=18,
     momentum=0.9,
@@ -385,7 +385,7 @@ def train_imagenet():
 def _mp_fn(index, flags):
   global FLAGS
   FLAGS = flags
-  torch.set_default_tensor_type('torch.FloatTensor')
+  torch.set_default_dtype(torch.float32)
   accuracy = train_imagenet()
   if accuracy < FLAGS.target_accuracy:
     print('Accuracy {} is below target {}'.format(accuracy,

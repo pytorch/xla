@@ -10,13 +10,6 @@ Tensorflow is a [bazel external dependency](https://bazel.build/external/overvie
 ```bzl
 http_archive(
     name = "org_tensorflow",
-    patch_args = [ "-l", "-p1"],
-    patch_tool = "patch",
-    patches = [
-        "//tf_patches:thread_local_random.diff",
-        "//tf_patches:xplane.diff",
-        ...
-    ],
     strip_prefix = "tensorflow-f7759359f8420d3ca7b9fd19493f2a01bd47b4ef",
     urls = [
         "https://github.com/tensorflow/tensorflow/archive/f7759359f8420d3ca7b9fd19493f2a01bd47b4ef.tar.gz",
@@ -69,13 +62,13 @@ transitively.
 Building the libraries is simple:
 
 ```bash
-bazel build //third_party/xla_client/...
+bazel build //torch_xla/csrc/runtime/...
 ```
 
 Bazel is configred via `.bazelrc`, but it can also take flags on the command line.
 
 ```bash
-bazel build --config=remote_cache //third_party/xla_client/...
+bazel build --config=remote_cache //torch_xla/csrc/runtime/...
 ```
 
 The `remote_cache` configurations use gcloud for caching and  usually faster, but require
@@ -122,7 +115,7 @@ Running the build with remote cache:
 BAZEL_REMOTE_CACHE=1 SILO_NAME="cache-silo-YOUR-USER" TPUVM_MODE=1 python setup.py bdist_wheel
 ```
 
-Adding 
+Adding
 
 ```bash
 GCLOUD_SERVICE_KEY_FILE=~/.config/gcloud/application_default_credentials.json
@@ -163,7 +156,7 @@ For that reason, all tests under `torch_xla/csrc/` are bundled into a single tar
 When running tests, it can be useful to calculate code coverage.
 
 ```bash
-bazel coverage //third_party/xla_client/...
+bazel coverage //torch_xla/csrc/runtime/...
 ```
 
 Coverage can be visualized using `lcov` as described in [Bazel's documentation](https://bazel.build/configure/coverage), or in your editor of choice with lcov plugins, e.g. [Coverage Gutters](https://marketplace.visualstudio.com/items?itemName=ryanluker.vscode-coverage-gutters) for VSCode.

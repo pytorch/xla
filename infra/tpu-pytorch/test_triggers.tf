@@ -3,7 +3,6 @@ module "tpu_e2e_tests" {
 
   trigger_name = "ci-tpu-test-trigger"
 
-  ansible_branch  = "master"
   trigger_on_push = { branch = "master" }
   run_e2e_tests   = true
 
@@ -21,14 +20,14 @@ module "tpu_e2e_tests" {
   ])
 
   build_args = {
-    python_version = "3.8"
-    debian_version = "buster"
+    python_version = "3.10"
   }
 
   ansible_vars = {
     arch            = "amd64"
     accelerator     = "tpu"
-    pytorch_git_rev = "HEAD"
+    disable_xrt     = "1"
+    pytorch_git_rev = "main"
     # The commit ID associated with the triggered build. Substituted when
     # Cloud Build is triggered.
     xla_git_rev = "$COMMIT_SHA"

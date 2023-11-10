@@ -11,10 +11,10 @@ ptxla_cc_library(
     srcs = ["metrics_snapshot.cpp"],
     hdrs = ["metrics_snapshot.h"],
     deps = [
-        "//third_party/xla_client:metrics",
-        "//third_party/xla_client:sys_util",
-        "//third_party/xla_client:tf_logging",
-        "//third_party/xla_client:util",
+        "//torch_xla/csrc/runtime:metrics",
+        "//torch_xla/csrc/runtime:sys_util",
+        "//torch_xla/csrc/runtime:tf_logging",
+        "//torch_xla/csrc/runtime:util",
     ],
 )
 
@@ -24,8 +24,8 @@ ptxla_cc_library(
     hdrs = ["torch_xla_test.h"],
     deps = [
         ":metrics_snapshot",
-        "//third_party/xla_client:sys_util",
-        "//third_party/xla_client:tf_logging",
+        "//torch_xla/csrc/runtime:sys_util",
+        "//torch_xla/csrc/runtime:tf_logging",
         "//torch_xla/csrc:tensor",
         "@com_google_absl//absl/memory",
         "@com_google_googletest//:gtest",
@@ -37,149 +37,110 @@ ptxla_cc_library(
     srcs = ["cpp_test_util.cpp"],
     hdrs = ["cpp_test_util.h"],
     deps = [
-        "//third_party/xla_client:computation_client",
-        "//third_party/xla_client:debug_macros",
-        "//third_party/xla_client:sys_util",
+        "//torch_xla/csrc/runtime:runtime",
+        "//torch_xla/csrc/runtime:debug_macros",
+        "//torch_xla/csrc/runtime:sys_util",
         "//torch_xla/csrc:tensor",
         "@com_google_absl//absl/types:span",
         "@com_google_googletest//:gtest",
     ],
 )
 
-ptxla_cc_library(
+ptxla_cc_test(
     name = "test_ir",
     srcs = ["test_ir.cpp"],
     deps = [
         ":cpp_test_util",
         ":torch_xla_test",
         "//torch_xla/csrc:tensor",
-        "@com_google_googletest//:gtest",
+        "@com_google_googletest//:gtest_main",
     ],
-    alwayslink = True,
 )
 
-ptxla_cc_library(
-    name = "test_aten_xla_tensor",
-    srcs = ["test_aten_xla_tensor.cpp"],
-    deps = [
-        ":cpp_test_util",
-        ":torch_xla_test",
-        "//third_party/xla_client:metrics",
-        "//torch_xla/csrc:tensor",
-        "@com_google_googletest//:gtest",
-        "@org_tensorflow//tensorflow/compiler/xla:permutation_util",
-    ],
-    alwayslink = True,
-)
-
-ptxla_cc_library(
+ptxla_cc_test(
     name = "test_lazy",
     srcs = ["test_lazy.cpp"],
     deps = [
         ":torch_xla_test",
         "//torch_xla/csrc:tensor",
-        "@com_google_googletest//:gtest",
-        "@org_tensorflow//tensorflow/compiler/xla:shape_util",
+        "@com_google_googletest//:gtest_main",
+        "@xla//xla:shape_util",
+        "@tsl//tsl/util:stats_calculator_test",
+        "@tsl//tsl/util:device_name_utils_test",
     ],
-    alwayslink = True,
 )
 
-ptxla_cc_library(
-    name = "test_op_by_op_executor",
-    srcs = ["test_op_by_op_executor.cpp"],
-    deps = [
-        ":cpp_test_util",
-        "//torch_xla/csrc:tensor",
-        "@com_google_googletest//:gtest",
-    ],
-    alwayslink = True,
-)
-
-ptxla_cc_library(
+ptxla_cc_test(
     name = "test_replication",
     srcs = ["test_replication.cpp"],
     deps = [
         ":cpp_test_util",
         ":torch_xla_test",
-        "//third_party/xla_client:computation_client",
-        "//third_party/xla_client:debug_macros",
-        "//third_party/xla_client:multi_wait",
-        "//third_party/xla_client:thread_pool",
+        "//torch_xla/csrc/runtime:runtime",
+        "//torch_xla/csrc/runtime:debug_macros",
+        "//torch_xla/csrc/runtime:multi_wait",
+        "//torch_xla/csrc/runtime:thread_pool",
         "//torch_xla/csrc:tensor",
-        "@com_google_googletest//:gtest",
-        "@org_tensorflow//tensorflow/compiler/xla:shape_util",
-        "@org_tensorflow//tensorflow/compiler/xla/client:xla_builder",
+        "@com_google_googletest//:gtest_main",
+        "@xla//xla:shape_util",
+        "@xla//xla/client:xla_builder",
     ],
-    alwayslink = True,
 )
 
-ptxla_cc_library(
-    name = "test_symint",
-    srcs = ["test_symint.cpp"],
-    deps = [
-        ":cpp_test_util",
-        "//torch_xla/csrc:tensor",
-        "@com_google_googletest//:gtest",
-    ],
-    alwayslink = True,
-)
-
-ptxla_cc_library(
+ptxla_cc_test(
     name = "test_tensor",
-    srcs = ["test_tensor.cpp"],
+    srcs = [
+        "test_symint.cpp",
+        "test_tensor.cpp",
+    ],
     deps = [
         ":cpp_test_util",
         ":torch_xla_test",
         "//torch_xla/csrc:tensor",
-        "@com_google_googletest//:gtest",
+        "@com_google_googletest//:gtest_main",
     ],
-    alwayslink = True,
 )
 
-ptxla_cc_library(
+ptxla_cc_test(
     name = "test_xla_backend_intf",
     srcs = ["test_xla_backend_intf.cpp"],
     deps = [
         ":cpp_test_util",
         "//torch_xla/csrc:tensor",
-        "@com_google_googletest//:gtest",
+        "@com_google_googletest//:gtest_main",
     ],
-    alwayslink = True,
 )
 
-ptxla_cc_library(
+ptxla_cc_test(
     name = "test_xla_sharding",
     srcs = ["test_xla_sharding.cpp"],
     deps = [
         ":cpp_test_util",
         ":torch_xla_test",
-        "//third_party/xla_client:env_vars",
-        "//third_party/xla_client:sys_util",
+        "//torch_xla/csrc/runtime:env_vars",
+        "//torch_xla/csrc/runtime:sys_util",
         "//torch_xla/csrc:tensor",
-        "@com_google_googletest//:gtest",
-        "@org_tensorflow//tensorflow/compiler/xla:xla_data_proto_cc",
+        "@com_google_googletest//:gtest_main",
+        "@xla//xla:xla_data_proto_cc",
+        "@tsl//tsl/profiler/utils:session_manager",
     ],
-    alwayslink = True,
 )
 
-# Keep all the tests in the same binary as long as XRT is supported.
-# Once PjRT is the only runtime, make each test library a test.
-# The reason for this is that we want to run tests in parallel
-# but XRT gRPC ports cannot be reused and are inhereted from the environment.
-ptxla_cc_test(
-    name = "main",
-    size = "enormous",
-    srcs = ["main.cpp"],
-    deps = [
-        ":test_aten_xla_tensor",
-        ":test_ir",
-        ":test_lazy",
-        ":test_op_by_op_executor",
-        ":test_replication",
-        ":test_symint",
-        ":test_tensor",
-        ":test_xla_backend_intf",
-        ":test_xla_sharding",
-        "@com_google_googletest//:gtest_main",
-    ],
-)
+# This tets is very large so it's split into shards.
+# To make it run fast, please add new shards when needed.
+[
+    ptxla_cc_test(
+        name = test[:-len(".cpp")],
+        size = "enormous",
+        srcs = [test],
+        deps = [
+            ":cpp_test_util",
+            ":torch_xla_test",
+            "//torch_xla/csrc/runtime:metrics",
+            "//torch_xla/csrc:tensor",
+            "@com_google_googletest//:gtest_main",
+            "@xla//xla:permutation_util",
+        ],
+    )
+    for test in glob(["test_aten_xla_tensor*cpp"])
+]

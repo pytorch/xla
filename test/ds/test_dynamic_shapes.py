@@ -248,6 +248,8 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     t5 = torch.tensor([1, 1, 3, 5, 1, 6], device=dev)
     t6 = torch.nonzero(t5)
     t7 = torch.ones((2, 3), device=dev)
+    # t6.shape=torch.Size([<=6, 1]) with real size [6, 1]
+    # t6 = [[0], [1], [2], [3], [4], [5]]
     t8 = t7.view(t6.shape[0])
     self.assertIsInstance(t8.shape[0], torch.SymInt)
     self.assertEqual(str(t8.shape[0]), '<=6')
@@ -342,6 +344,109 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     t9_aten = t8_aten.view(t4_aten.shape[0])
     self.assertEqual(t9.cpu(), t9_aten.cpu())
 
+  def test_add_dyn_with_static_broadcastable(self):
+    t1 = torch.tensor([[1, 0, 3, 5, 0, 6]], device=dev)
+    t2 = torch.nonzero(t1)
+    t3 = torch.tensor([[1, 1]], device=dev)
+
+    # t2.shape=torch.Size([<=6, 2]) with real size [4, 2]
+    # t3.shape=torch.Size([1, 2]) with real size [1, 2]
+    t4 = torch.add(t2, t3)
+    self.assertIsInstance(t4.shape[0], torch.SymInt)
+    self.assertEqual(str(t4.shape[0]), '<=6')
+    self.assertEqual(t4.shape[0], 4)
+    self.assertIsInstance(t4.shape[1], int)
+    self.assertEqual(str(t4.shape[1]), '2')
+    self.assertEqual(t4.shape[1], 2)
+
+    # test for correctness
+    t1_aten = torch.tensor([[1, 0, 3, 5, 0, 6]])
+    t2_aten = torch.nonzero(t1_aten)
+    t3_aten = torch.tensor([[1, 1]])
+    t4_aten = torch.add(t2_aten, t3_aten)
+    self.assertEqual(t4.cpu(), t4_aten.cpu())
+
+  def test_add_dyn_with_static_not_broadcastable(self):
+    t1 = torch.tensor([[1, 0, 3, 5, 0, 6]], device=dev)
+    t2 = torch.nonzero(t1)
+    t3 = torch.tensor([[1, 1], [1, 1]], device=dev)
+
+    # t2.shape=torch.Size([<=6, 2]) with real size [4, 2]
+    # t3.shape=torch.Size([2, 2]) with real size [2, 2]
+    self.assertRaises(RuntimeError, lambda: torch.add(t2, t3))
+    self.assertRaises(RuntimeError, lambda: torch.add(t3, t2))
+
+  def test_add_two_dynamic_tensors(self):
+    t1 = torch.tensor([[1, 0, 3, 5, 0, 6]], device=dev)
+    t2 = torch.nonzero(t1)
+    t3 = torch.tensor([[1]], device=dev)
+    t4 = torch.nonzero(t3)
+
+    # t2.shape=torch.Size([<=6, 2]) with real size [4, 2]
+    # t4.shape=torch.Size([<=1, 2]) with real size [1, 2]
+    self.assertRaises(RuntimeError, lambda: torch.add(t2, t4))
+    self.assertRaises(RuntimeError, lambda: torch.add(t4, t2))
+
+    # For now, we disallow if both operands have the same upper bound and real size.
+    # This is consistent with PyTorch's behavior.
+    # t2.shape=torch.Size([<=6, 2]) with real size [4, 2]
+    # t6.shape=torch.Size([<=6, 2]) with real size [4, 2]
+    t5 = torch.tensor([[1, 0, 3, 5, 0, 6]], device=dev)
+    t6 = torch.nonzero(t5)
+    self.assertRaises(RuntimeError, lambda: torch.add(t2, t6))
+
+  def test_sub_dyn_with_static_broadcastable(self):
+    t1 = torch.tensor([[1, 0, 3, 5, 0, 6]], device=dev)
+    t2 = torch.nonzero(t1)
+    t3 = torch.tensor([[1, 1]], device=dev)
+
+    # t2.shape=torch.Size([<=6, 2]) with real size [4, 2]
+    # t3.shape=torch.Size([1, 2]) with real size [1, 2]
+    t4 = torch.sub(t2, t3)
+    self.assertIsInstance(t4.shape[0], torch.SymInt)
+    self.assertEqual(str(t4.shape[0]), '<=6')
+    self.assertEqual(t4.shape[0], 4)
+    self.assertIsInstance(t4.shape[1], int)
+    self.assertEqual(str(t4.shape[1]), '2')
+    self.assertEqual(t4.shape[1], 2)
+
+    # test for correctness
+    t1_aten = torch.tensor([[1, 0, 3, 5, 0, 6]])
+    t2_aten = torch.nonzero(t1_aten)
+    t3_aten = torch.tensor([[1, 1]])
+    t4_aten = torch.sub(t2_aten, t3_aten)
+    self.assertEqual(t4.cpu(), t4_aten.cpu())
+
+  def test_sub_dyn_with_static_not_broadcastable(self):
+    t1 = torch.tensor([[1, 0, 3, 5, 0, 6]], device=dev)
+    t2 = torch.nonzero(t1)
+    t3 = torch.tensor([[1, 1], [1, 1]], device=dev)
+
+    # t2.shape=torch.Size([<=6, 2]) with real size [4, 2]
+    # t3.shape=torch.Size([2, 2]) with real size [2, 2]
+    self.assertRaises(RuntimeError, lambda: torch.sub(t2, t3))
+    self.assertRaises(RuntimeError, lambda: torch.sub(t3, t2))
+
+  def test_sub_two_dynamic_tensors(self):
+    t1 = torch.tensor([[1, 0, 3, 5, 0, 6]], device=dev)
+    t2 = torch.nonzero(t1)
+    t3 = torch.tensor([[1]], device=dev)
+    t4 = torch.nonzero(t3)
+
+    # t2.shape=torch.Size([<=6, 2]) with real size [4, 2]
+    # t4.shape=torch.Size([<=1, 2]) with real size [1, 2]
+    self.assertRaises(RuntimeError, lambda: torch.sub(t2, t4))
+    self.assertRaises(RuntimeError, lambda: torch.sub(t4, t2))
+
+    # For now, we disallow if both operands have the same upper bound and real size.
+    # This is consistent with PyTorch's behavior.
+    # t2.shape=torch.Size([<=6, 2]) with real size [4, 2]
+    # t6.shape=torch.Size([<=6, 2]) with real size [4, 2]
+    t5 = torch.tensor([[1, 0, 3, 5, 0, 6]], device=dev)
+    t6 = torch.nonzero(t5)
+    self.assertRaises(RuntimeError, lambda: torch.sub(t2, t6))
+    self.assertRaises(RuntimeError, lambda: torch.sub(t6, t2))
+
   def test_clone(self):
     t1 = torch.tensor([1, 0, 3, 5, 0, 6], device=dev)
     # t2.shape=torch.Size([<=6, 1]) with real size [4, 1]
@@ -387,6 +492,28 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     t2_aten = torch.nonzero(t1_aten)
     t3_aten = torch.abs(t2_aten)
     self.assertEqual(t3.cpu(), t3_aten.cpu())
+
+  def test_fill_(self):
+    t1 = torch.tensor([1, 0, 3, 5, 0, 6], device=dev)
+    # t2.shape=torch.Size([<=6, 1]) with real size [4, 1]
+    # t2 = [[0], [2], [3], [5]]
+    t2 = torch.nonzero(t1)
+    self.assertIsInstance(t2.shape[0], torch.SymInt)
+    self.assertIsInstance(t2.shape[1], int)
+
+    t2.fill_(1)
+    self.assertIsInstance(t2.shape[0], torch.SymInt)
+    self.assertEqual(str(t2.shape[0]), '<=6')
+    self.assertEqual(t2.shape[0], 4)
+    self.assertIsInstance(t2.shape[1], int)
+    self.assertEqual(str(t2.shape[1]), '1')
+    self.assertEqual(t2.shape[1], 1)
+
+    # test for correctness
+    t1_aten = torch.tensor([1, 0, 3, 5, 0, 6])
+    t2_aten = torch.nonzero(t1_aten)
+    t2_aten.fill_(1)
+    self.assertEqual(t2.cpu(), t2_aten.cpu())
 
   def test_sizeMod(self):
     met.clear_all()
@@ -471,7 +598,10 @@ class TestDynamicShapes(test_utils.XlaTestCase):
     dyn_size = t2.shape[0]
     self.assertEqual(dyn_size, dyn_size)
     # Without the code change, met.metric_data('CompileTime')[0] returns 1.
-    self.assertIsNone(met.metric_data('CompileTime'))
+    # self.assertIsNone(met.metric_data('CompileTime'))
+    # TODO(ds): Uncomment the line above after we implement 0/1 specialization.
+    # The extra compilation comes from the call `set_sizes_and_strides` in XLATensorImpl::XLATensorImpl when we compare a SymInt with 0.
+    self.assertEqual(met.metric_data('CompileTime')[0], 1)
 
 
 if __name__ == '__main__':

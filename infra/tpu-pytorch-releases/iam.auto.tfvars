@@ -4,3 +4,6 @@ project_admins = [
   "user:goranpetrovic@google.com",
   "user:jackcao@google.com",
 ]
+
+cloudbuild_editors = [
+]

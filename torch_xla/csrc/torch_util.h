@@ -10,8 +10,8 @@
 #include <torch/csrc/lazy/core/tensor.h>
 #include <torch/csrc/lazy/core/util.h>
 
-#include "tensorflow/compiler/xla/shape.h"
-#include "third_party/xla_client/debug_macros.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "xla/shape.h"
 
 namespace torch_xla {
 
@@ -25,6 +25,7 @@ struct SymIntElements {
       AddSymIntNodeElements(_size);
     }
   }
+  SymIntElements(torch::lazy::Value ir);
   std::vector<torch::lazy::NodePtr> GetSizeNodes() const { return size_nodes_; }
   std::vector<int64_t> GetUpperBounds() const { return upper_bounds_; }
   std::vector<bool> GetDynamicDims() const { return dynamic_dims_; }

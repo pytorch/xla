@@ -1,18 +1,23 @@
-# PJRT Runtime (Beta)
+# PJRT Runtime
 
-_This document reflects the current state of PJRT support in current nightly
-builds_. See the [same document on the r2.0 branch](https://github.com/pytorch/xla/blob/r2.0/docs/pjrt.md)
-for the status in the latest stable release.
-
-The PyTorch/XLA team is currently migrating from the currently-supported XRT
-runtime to the [PJRT
-runtime](https://github.com/tensorflow/tensorflow/tree/master/tensorflow/compiler/xla/pjrt)
+PyTorch/XLA has migrated from the TensorFlow-based XRT runtime to the [PJRT
+runtime](https://github.com/openxla/xla/tree/main/xla/pjrt)
 used by [JAX](https://github.com/google/jax).
 
-PJRT is available for preview in PyTorch/XLA 2.0. **We are planning to make
-PJRT our officially supported runtime**, so we encourage all users to experiment
-with it. We aim to make PJRT stable in release 2.1, so if you encounter a bug
-with PJRT, please file an issue on GitHub with the `runtime` tag.
+If you encounter a bug with PJRT, please file an issue on GitHub with the
+`runtime` tag.
+
+_New features in PyTorch/XLA r2.1_:
+
+* PJRT is stable in PyTorch/XLA r2.1!
+* Public runtime APIs have moved from `torch_xla.experimental.pjrt` to
+  `torch_xla.runtime`.
+  * The `pjrt://` init method has been renamed to `xla://`, and it is registered
+    by `torch_xla.distributed.xla_backend`.
+  * The previous `torch_xla.experimental.*` names are still available in this
+    release for compatibility.
+* `torchrun` is now supported when using `init_method='xla://'`.
+* New plugins for XPU and Neuron via the PJRT C API.
 
 _New features in PyTorch/XLA r2.0_:
 
@@ -29,7 +34,7 @@ _New features in PyTorch/XLA r2.0_:
 ## TL;DR
 
 * To use the PJRT preview runtime, set the `PJRT_DEVICE` environment variable to
-  `CPU`, `TPU, or `GPU`
+  `CPU`, `TPU`, or `GPU`
 * In XRT, all distributed workloads are multiprocess, with one process per
   device. On TPU v2 and v3 in PJRT, workloads are multiprocess and multithreaded
   (4 processes with 2 threads each), so your workload should be thread-safe. See
@@ -45,7 +50,7 @@ _New features in PyTorch/XLA r2.0_:
     The global `torch` RNG is _not_ thread-safe, even if you set the same
     `torch.manual_seed` across replicas.
   * To use `torch.distributed`, import `torch_xla.experimental.pjrt_backend` and
-    use the `pjrt://` `init_method`.
+    use the `xla://` `init_method`.
   * These steps are optional for GPU and TPU v4.
 
 Sample diff from XRT to PJRT:
@@ -62,20 +67,19 @@ Sample diff from XRT to PJRT:
  import torch_xla.distributed.parallel_loader as pl
  import torch_xla.distributed.xla_backend
  import torch_xla.distributed.xla_multiprocessing as xmp
-+import torch_xla.experimental.pjrt_backend
-+import torch_xla.experimental.pjrt as pjrt
++import torch_xla.runtime as xr
 
 
  def _mp_fn(index):
    device = xm.xla_device()
 -  dist.init_process_group('xla', rank=xm.get_ordinal(), world_size=xm.xrt_world_size())
-+  dist.init_process_group('xla', init_method='pjrt://')
++  dist.init_process_group('xla', init_method='xla://')
 
    torch.manual_seed(42)
    model = nn.Linear(128, 10).to(device)
 
 +  # Optional for TPU v4 and GPU
-+  pjrt.broadcast_master_param(model)
++  xm.broadcast_master_param(model)
    model = DDP(model, gradient_as_bucket_view=True)
 
    loss_fn = nn.MSELoss()
@@ -190,15 +194,61 @@ for more information.
 
 *Warning: GPU support is still highly experimental!*
 
-To use GPUs with PJRT, simply set `PJRT_DEVICE=GPU` and configure
+### Single-node GPU training
+
+To use GPUs with PJRT, simply set `PJRT_DEVICE=CUDA` and configure
 `GPU_NUM_DEVICES` to the number of devices on the host. For example:
 
 ```
-PJRT_DEVICE=GPU GPU_NUM_DEVICES=4 python3 xla/test/test_train_mp_imagenet.py --fake_data --batch_size=128 --num_epochs=1
+PJRT_DEVICE=CUDA GPU_NUM_DEVICES=4 python3 xla/test/test_train_mp_imagenet.py --fake_data --batch_size=128 --num_epochs=1
 ```
 
-Currently, only a single host is supported, and multi-host GPU cluster support
-will be added in an future release.
+You can also use `torchrun` to initiate the single-node multi-GPU training. For example,
+
+```
+PJRT_DEVICE=CUDA torchrun --nnodes 1 --nproc-per-node ${NUM_GPU_DEVICES} xla/test/test_train_mp_imagenet.py --fake_data --pjrt_distributed --batch_size=128 --num_epochs=1
+```
+
+In the above example, `--nnodes` means how many machines (physical machines or VMs) to be used (it is 1 since we do single-node training). `--nproc-per-node` means how many GPU devices to be used.
+
+### Multi-node GPU training
+
+**Note that this feature only works for cuda 12+**. Similar to how PyTorch uses multi-node training, you can run the command as below:
+
+```
+PJRT_DEVICE=CUDA torchrun \
+--nnodes=${NUMBER_GPU_VM} \
+--node_rank=${CURRENT_NODE_RANK} \
+--nproc_per_node=${NUMBER_LOCAL_GPU_DEVICES} \
+--rdzv_endpoint=<internal_ip_address:port> multinode_training.py
+```
+
+- `--nnodes`: how many GPU machines to be used.
+- `--node_rank`: the index of the current GPU machines. The value can be 0, 1, ..., ${NUMBER_GPU_VM}-1.
+- `--nproc_per_node`: the number of GPU devices to be used on the current machine.
+- `--rdzv_endpoint`: the endpoint of the GPU machine with node_rank==0, in the form <host>:<port>. The `host` will be the internal IP address. The port can be any available port on the machine.
+
+For example, if you want to train on 2 GPU machines: machine_0 and machine_1, on the first GPU machine machine_0, run
+
+```
+# PJRT_DEVICE=CUDA torchrun \
+--nnodes=2 \
+--node_rank=0 \
+--nproc_per_node=4 \
+--rdzv_endpoint="<MACHINE_0_IP_ADDRESS>:12355" pytorch/xla/test/test_train_mp_imagenet.py  --fake_data --pjrt_distributed --batch_size=128 --num_epochs=1
+```
+
+On the second GPU machine, run
+
+```
+# PJRT_DEVICE=CUDA torchrun \
+--nnodes=2 \
+--node_rank=1 \
+--nproc_per_node=4 \
+--rdzv_endpoint="<MACHINE_0_IP_ADDRESS>:12355" pytorch/xla/test/test_train_mp_imagenet.py  --fake_data --pjrt_distributed --batch_size=128 --num_epochs=1
+```
+
+the difference between the 2 commands above are `--node_rank` and potentially `--nproc_per_node` if you want to use different number of GPU devices on each machine. All the rest are identical. For more information about `torchrun`, please refer to this [page](https://pytorch.org/docs/stable/elastic/run.html).
 
 ## Differences from XRT
 
@@ -286,7 +336,7 @@ without altering the XLA graph and/or synchronizing a subset of workers),
 consider using
 [`torch.distributed.barrier`](https://pytorch.org/docs/stable/distributed.html#torch.distributed.barrier)
 or
-`[torch.distributed.all_gather_object](https://pytorch.org/docs/stable/distributed.html#torch.distributed.all_gather_object)`
+[`torch.distributed.all_gather_object`](https://pytorch.org/docs/stable/distributed.html#torch.distributed.all_gather_object)
 with a `gloo` process group. If you are also using the `xla` `torch.distributed`
 backend, you can use `torch.new_group` to create a `gloo` subgroup. See [this
 example](https://pytorch.org/docs/stable/distributed.html#monitored-barrier)
@@ -294,7 +344,7 @@ from the PyTorch documentation. Keep in mind these constraints:
 
 * `torch.distributed` is not fully supported on TPU v2/v3. Only a subset of
   operations with the `xla` backend are implemented, and `gloo` will likely not
-  work as expected in a multiprocessing context.
+  work as expected in a multithreaded context.
 * In our experiments, `gloo` does not scale well to thousands of TPU chips, so
   expect this alternative to be less reliable than using `xm.rendezvous` with
   PJRT at large scales.
@@ -305,7 +355,7 @@ _New in PyTorch/XLA r2.0_
 
 When using PJRT with `torch.distributed` and
 `[torch.nn.parallel.DistributedDataParallel](https://github.com/pytorch/xla/blob/master/docs/ddp.md)`
-we strongly recommend using the new `pjrt://` `init_method`, which automatically
+we strongly recommend using the new `xla://` `init_method`, which automatically
 finds the replica IDs, world size, and master IP by querying the runtime. For
 example:
 
@@ -316,12 +366,12 @@ import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
 from torch_xla.experimental import pjrt
 
-# Required for `pjrt://` init_method
-import torch_xla.experimental.pjrt_backend
+# Required for `xla://` init_method and `xla` backend
+import torch_xla.distributed.xla_backend
 
 def _all_gather(index: int):
   # No need to pass in `rank` or `world_size`
-  dist.init_process_group('xla', init_method='pjrt://')
+  dist.init_process_group('xla', init_method='xla://')
 
   t = torch.tensor([index], dtype=torch.int32, device=xm.xla_device())
   output = [torch.zeros_like(t) for _ in range(dist.get_world_size())]
@@ -334,10 +384,14 @@ if __name__ == '__main__':
   xmp.spawn(_all_gather)
 ```
 
-Note: Although the `pjrt://` init_method is not required on TPU v4, it is still
+Note: Although the `xla://` init_method is not required on TPU v4, it is still
 recommended. If you use `env://`, `MASTER_ADDR` must be set to IP host that has
-device 0, which is _not_ always worker 0. The `pjrt://` init_method finds this
-IP automatically and supports TPU v2/v3.
+device 0, which is _not_ always worker 0. The `xla://` init_method finds this
+IP automatically.
+
+Note: For TPU v2/v3, you still need to import
+`torch_xla.experimental.pjrt_backend`, as TPU v2/v3 support in
+`torch.distributed` is still experimental.
 
 For more information about using `DistributedDataParallel` on PyTorch/XLA, see
 [`ddp.md`](./ddp.md) on TPU V4. For an example that uses DDP and PJRT together,

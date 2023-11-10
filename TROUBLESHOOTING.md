@@ -3,7 +3,52 @@
 Note that the information in this section is subject to be removed in future releases of the _PyTorch/XLA_ software,
 since many of them are peculiar to a given internal implementation which might change.
 
-To diagnose issues, we can use the execution metrics and counters provided by _PyTorch/XLA_
+## Sanity Check
+Before performing any in depth debugging, we want to do a sanity check on the installed PyTorch/XLA.
+
+### Check PyTorch/XLA Version
+PyTorch and PyTorch/XLA version should match. Check out our [README](https://github.com/pytorch/xla#getting-started) for more detials on versions available.
+```
+vm:~$ python
+>>> import torch
+>>> import torch_xla
+>>> print(torch.__version__)
+2.1.0+cu121
+>>> print(torch_xla.__version__)
+2.1.0
+```
+
+### Perform A Simple Calculation
+```
+vm:~$ export PJRT_DEVICE=TPU
+vm:~$ python3
+>>> import torch
+>>> import torch_xla.core.xla_model as xm
+>>> t1 = torch.tensor(100, device=xm.xla_device())
+>>> t2 = torch.tensor(200, device=xm.xla_device())
+>>> print(t1 + t2)
+tensor(300, device='xla:0')
+```
+
+### Run Resnet With Fake Data
+For nightly
+```
+vm:~$ git clone https://github.com/pytorch/xla.git
+vm:~$ python xla/test/test_train_mp_imagenet.py --fake_data
+```
+
+For release version `x.y`, you want to use the branch `rx.y`. For example if you installed 2.1 release, you should do
+```
+vm:~$ git clone --branch r2.1 https://github.com/pytorch/xla.git
+vm:~$ python xla/test/test_train_mp_imagenet.py --fake_data
+```
+
+If you can get the resnet to run we can conclude that torch_xla is installed correctly. 
+
+
+## Performance Debugging
+
+To diagnose performance issues, we can use the execution metrics and counters provided by _PyTorch/XLA_
 The **first thing** to check when model is slow is to generate a metrics report.
 
 Metrics report is extremely helpful in diagnosing issues. Please try to include it in your bug
@@ -21,7 +66,7 @@ pt-xla-profiler: CompileTime too frequent: 23 counts during 12 steps
 pt-xla-profiler: TransferFromServerTime too frequent: 12 counts during 12 steps
 ```
 
-Following section will explain how to get and understand a more detial metrics report.
+Following section will explain how to get and understand a more detail metrics report.
 
 ## Get A Metrics Report
 
@@ -33,7 +78,7 @@ import torch_xla.debug.metrics as met
 # For short report that only contains a few key metrics.
 print(met.short_metrics_report())
 # For full report that includes all metrics.
-print(met.short_metrics_report())
+print(met.metrics_report())
 ```
 
 ## Understand The Metrics Report
@@ -76,8 +121,8 @@ Counter: aten::nonzero
 If you see `aten::` ops other than `nonzero` and `_local_scalar_dense`, that usually means a missing
 lowering in PyTorch/XLA. Feel free to open a feature request for it on [GitHub issues](https://github.com/pytorch/xla/issues).
 
-## Clar The Metrics Report
-If you want to clear the metrics between steps/epoches, you can use
+## Clear The Metrics Report
+If you want to clear the metrics between steps/epochs, you can use
 ```Python
 import torch_xla.debug.metrics as met
 
@@ -85,7 +130,7 @@ met.clear_all()
 ```
 
 ## Performance Profiling
-To profile your workload in depth to undertand bottlenecks please check the following resources:
+To profile your workload in depth to understand bottlenecks please check the following resources:
 * [Official tutorial](https://cloud.google.com/tpu/docs/pytorch-xla-performance-profiling-tpu-vm)
 * [Colab notebook](https://colab.research.google.com/github/pytorch/xla/blob/master/contrib/colab/pytorch-xla-profiling-colab.ipynb)
 * [Sample MNIST training script with profiling](https://github.com/pytorch/xla/blob/master/test/test_profile_mp_mnist.py)
@@ -203,28 +248,18 @@ only be enabled for debugging.
 * ```XLA_SAVE_TENSORS_FMT```: The format of the graphs stored within the _XLA_SAVE_TENSORS_FILE_
   file. Can be ```text``` (the default), ```dot``` (the _Graphviz_ format) or ```hlo```.
 
+* ```XLA_FLAGS=--xla_dump_to```: If set to ```=/tmp/dir_name```, XLA compiler will dump the unoptimized and optimzed HLO per compilation.
+
 * ```XLA_METRICS_FILE```: If set, the path to a local file where the internal metrics will be
   saved at every step. Metrics will be appended to the file, if already existing.
 
 * ```XLA_SAVE_HLO_FILE```: If set, the path to a local file where, in case of compilation/execution
   error, the offending HLO graph will be saved.
 
-* ```XLA_GET_TENSORS_OPBYOP```: Enables pure _OpByOp_ dispatch. The _PyTorch/XLA_ software tries to
-  fuse together many _PyTorch_ operations into a single computation graph, but sometimes, either
-  for debugging, or in case the _PyTorch_ code have a very dynamic nature (in shapes or graph
-  terms), it is better to force the execution in _OpByOp_ mode (every IR node is lowered into
-  a separate _XLA_ computation, and chain-executed). This environment variable, if set to 1,
-  enables _OpByOp_ during the "get tensors" operation (the operation used by _PyTorch/XLA_ to
-  fetch intermediate values back from the _TPU_ device into _PyTorch_ CPU tensors).
-
-* ```XLA_SYNC_TENSORS_OPBYOP```: The same as _XLA_GET_TENSORS_OPBYOP_ but for "sync tensors"
-  operation (the operation used at the end of a step, to flush pending IR computations and
-  materialize them into _TPU_ device data).
-
 * ```XLA_SYNC_WAIT```: Forces the XLA tensor sync operation to wait for its completion, before
   moving to the next step.
 
-* ```XLA_USE_BF16```: If set to 1, tranforms all the _PyTorch_ _Float_ values into _BiFloat16_
+* ```XLA_USE_BF16```: If set to 1, transforms all the _PyTorch_ _Float_ values into _BiFloat16_
   when sending to the _TPU_ device. Note that when using `XLA_USE_BF16=1` tensor arithmetic will
   be done in reduced precision and so tensors will not be accurate if accumulated over time.
   For example:
@@ -240,7 +275,7 @@ only be enabled for debugging.
   So to get accurate metrics such as average loss value over many steps, use manual mixed
   precision where metrics stay in FP32.
 
-* ```XLA_USE_F16```: If set to 1, tranforms all the _PyTorch_ _Float_ values into _Float16_
+* ```XLA_USE_F16```: If set to 1, transforms all the _PyTorch_ _Float_ values into _Float16_
   (_PyTorch_ _Half_ type) when sending to devices which supports them.
 
 * ```XLA_USE_32BIT_LONG```: If set to 1, maps _PyTorch_ _Long_ types to _XLA_ 32bit type.
@@ -273,61 +308,3 @@ only be enabled for debugging.
 * ```XLA_DUMP_HLO_GRAPH```: If set to `=1` in case of a compilation or execution error the
   offending HLO graph will be dumped as part of the runtime error raised by `xla_util.cc`.
 
-### Retrieving Stack Traces
-
-In the event that the _PyTorch_ process is hanging, it might be useful to include the stack
-traces together with the GitHub issue.
-
-First thing is to find out which PID the _PyTorch_ process is associated with. Using the ```ps```
-command it is possible to find that information. It will be a _python_ process running your
-main _python_ file.
-
-In order to allow _GDB_ to attach a user process the following command should be run as root:
-
-```Shell
-echo 0 > /proc/sys/kernel/yama/ptrace_scope
-```
-
-The above command remains active until the machine is rebooted.
-
-The, given the PID, it is possible to grab the stack traces with the following command:
-
-```Shell
-./scripts/dump_stacks.py PID > /tmp/stack-traces.log
-```
-
-## Using debug_run.py To Collect Debug Information
-
-A utility is provided in `scripts/debug_run.py` which can be used to create a `tar.gz`
-archive with the information required to debug _PyTorch/XLA_ executions.
-
-Example:
-
-```Shell
-./scripts/debug_run.py --outfile /tmp/debug_run.tar.gz -- python -u SCRIPT [ARGS...]
-```
-
-The _python_ `-u` flag is suggested to disable buffering so that captured logs are correctly
-interleaved (otherwise STDOUT will be rendered after all STDERR).
-
-The above command line example will leave the temporary folder containing the archived
-information on the filesystem. Use the `--tidy` flag to have that removed on exit:
-
-```Shell
-./scripts/debug_run.py --tidy --outfile /tmp/debug_run.tar.gz -- python -u SCRIPT [ARGS...]
-```
-
-The `debug_run.tar.gz` file should then be attached to bug reports when necessary.
-
-Since the script will collect a lot of data, it should usually be let run for no more
-than hundred steps or so.
-
-If the SCRIPT has arguments to control the number of steps, those should be used,
-otherwise hitting `CTRL^C` will interrupt the run.
-
-It is also sugested to run in single-core mode, to minimize the amount of data.
-Running in single-core mode is also strongly suggested when debugging execution issues.
-
-## Common Issues
-
-* `Missing XLA configuration` error message: You need to set `XRT_TPU_CONFIG` if using TPUs. If using GPUs set `GPU_NUM_DEVICES=N` for `N` number of GPUs. If using CPUs set `XRT_DEVICE_MAP="CPU:0;/job:localservice/replica:0/task:0/device:XLA_CPU:0"` and `XRT_WORKERS="localservice:0;grpc://localhost:9002"`

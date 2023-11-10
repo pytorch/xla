@@ -2,13 +2,14 @@
 
 #include <climits>
 
-#include "tensorflow/compiler/xla/client/lib/constants.h"
-#include "tensorflow/compiler/xla/literal_util.h"
-#include "tensorflow/compiler/xla/primitive_util.h"
-#include "tensorflow/compiler/xla/shape_util.h"
-#include "third_party/xla_client/debug_macros.h"
+#include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/helpers.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/tensor_util.h"
+#include "xla/client/lib/constants.h"
+#include "xla/literal_util.h"
+#include "xla/primitive_util.h"
+#include "xla/shape_util.h"
 
 namespace torch_xla {
 namespace {
@@ -57,7 +58,7 @@ xla::XlaOp ConvertTo(xla::XlaOp op, xla::PrimitiveType from,
     return op;
   }
   XlaDeviceType hw_type =
-      static_cast<XlaDeviceType>(GetDeviceOrCurrent(device).type());
+      static_cast<XlaDeviceType>(bridge::GetDeviceOrCurrent(device).type());
   if (hw_type != XlaDeviceType::TPU) {
     return xla::ConvertElementType(op, to);
   }
@@ -100,7 +101,7 @@ xla::XlaOp ConvertToRaw(xla::XlaOp op, xla::PrimitiveType from,
 
 xla::XlaOp ConvertToNumeric(xla::XlaOp op, xla::PrimitiveType from) {
   if (from == xla::PrimitiveType::PRED) {
-    torch::lazy::BackendDevice xla_device = GetCurrentDevice();
+    torch::lazy::BackendDevice xla_device = bridge::GetCurrentDevice();
     op = ConvertTo(op, from,
                    GetDevicePrimitiveType(xla::PrimitiveType::U8, &xla_device),
                    &xla_device);
@@ -115,7 +116,7 @@ xla::XlaOp ConvertToNumeric(xla::XlaOp op) {
 xla::XlaOp CastToScalarType(xla::XlaOp input,
                             c10::optional<at::ScalarType> dtype) {
   if (dtype) {
-    torch::lazy::BackendDevice xla_device = GetCurrentDevice();
+    torch::lazy::BackendDevice xla_device = bridge::GetCurrentDevice();
     return ConvertTo(input, XlaHelpers::TypeOfXlaOp(input),
                      MakeXlaPrimitiveType(*dtype, &xla_device), &xla_device);
   }

@@ -8,9 +8,9 @@
 #include <vector>
 
 #include "absl/strings/str_cat.h"
-#include "third_party/xla_client/computation_client.h"
-#include "third_party/xla_client/debug_macros.h"
 #include "torch_xla/csrc/device.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/tensor_impl.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
@@ -18,6 +18,8 @@
 namespace torch_xla {
 namespace bridge {
 namespace {
+
+thread_local absl::optional<torch::lazy::BackendDevice> g_current_device;
 
 class AtenXlaDeviceMapper {
  public:
@@ -39,9 +41,15 @@ class AtenXlaDeviceMapper {
 
  private:
   AtenXlaDeviceMapper() {
-    for (auto& device_str : xla::ComputationClient::Get()->GetLocalDevices()) {
-      devices_.emplace_back(ParseDeviceString(device_str));
-      devices_ordinals_[devices_.back()] = devices_.size() - 1;
+    if (UseVirtualDevice()) {
+      devices_.emplace_back(ParseDeviceString("SPMD:0"));
+      devices_ordinals_[devices_.back()] = 0;
+    } else {
+      for (auto& device_str :
+           torch_xla::runtime::GetComputationClient()->GetLocalDevices()) {
+        devices_.emplace_back(ParseDeviceString(device_str));
+        devices_ordinals_[devices_.back()] = devices_.size() - 1;
+      }
     }
   }
 
@@ -67,6 +75,15 @@ XLATensorPtr TryGetXlaTensor(const at::Tensor& tensor) {
     return XLATensorPtr();
   }
   return impl->tensor();
+}
+
+std::vector<XLATensorPtr> TryGetXlaTensors(const at::ITensorListRef& tensors) {
+  std::vector<XLATensorPtr> xla_tensors;
+  xla_tensors.reserve(tensors.size());
+  for (const auto& tensor : tensors) {
+    xla_tensors.push_back(bridge::TryGetXlaTensor(tensor));
+  }
+  return xla_tensors;
 }
 
 bool IsXlaTensor(const at::Tensor& tensor) {
@@ -149,9 +166,13 @@ std::vector<at::Tensor> XlaCreateTensorList(const at::ITensorListRef& tensors) {
   std::vector<bool> to_translate(tensors.size());
   size_t ix = 0;
   for (const auto& tensor : tensors) {
-    if (!tensor.defined()) continue;
+    if (!tensor.defined()) {
+      continue;
+    }
     auto inner_tensor = torch::lazy::maybe_unwrap_functional(tensor);
-    if (!inner_tensor.defined()) continue;
+    if (!inner_tensor.defined()) {
+      continue;
+    }
 
     auto xtensor = TryGetXlaTensor(tensor);
     if (xtensor) {
@@ -305,6 +326,11 @@ torch::lazy::BackendDevice AtenDeviceToXlaDevice(const c10::Device& device) {
 }
 
 c10::Device XlaDeviceToAtenDevice(const torch::lazy::BackendDevice& device) {
+  // TODO(yeounoh) until we expose SPMD virtual device to the frontend, this
+  // will just be `XLA:0`.
+  if (device.type() == (int8_t)XlaDeviceType::SPMD) {
+    return c10::Device(at::kXLA, (size_t)0);
+  }
   return c10::Device(at::kXLA,
                      AtenXlaDeviceMapper::Get()->GetDeviceOrdinal(device));
 }
@@ -313,23 +339,43 @@ std::string ToXlaString(const c10::Device& device) {
   return absl::StrCat("xla:", device.index());
 }
 
+const torch::lazy::BackendDevice* GetDefaultDevice() {
+  static std::string default_device_spec =
+      UseVirtualDevice() ? "SPMD:0"
+                         : runtime::GetComputationClient()->GetDefaultDevice();
+  XLA_CHECK(!default_device_spec.empty());
+  static const torch::lazy::BackendDevice default_device =
+      ParseDeviceString(default_device_spec);
+  return &default_device;
+}
+
 c10::Device AtenDefaultDevice() {
   return XlaDeviceToAtenDevice(*GetDefaultDevice());
 }
 
+torch::lazy::BackendDevice GetCurrentDevice() {
+  if (!g_current_device) {
+    g_current_device = *GetDefaultDevice();
+  }
+  return *g_current_device;
+}
+
+c10::Device GetCurrentAtenDevice() {
+  return XlaDeviceToAtenDevice(GetCurrentDevice());
+}
+
 c10::Device SetCurrentDevice(const c10::Device& device) {
   torch::lazy::BackendDevice prev_device =
-      torch_xla::SetCurrentDevice(AtenDeviceToXlaDevice(device));
+      SetCurrentDevice(AtenDeviceToXlaDevice(device));
   return XlaDeviceToAtenDevice(prev_device);
 }
 
 torch::lazy::BackendDevice SetCurrentDevice(
     const torch::lazy::BackendDevice& device) {
-  return torch_xla::SetCurrentDevice(device);
-}
-
-c10::Device GetCurrentAtenDevice() {
-  return XlaDeviceToAtenDevice(torch_xla::GetCurrentDevice());
+  torch::lazy::BackendDevice current = GetCurrentDevice();
+  g_current_device = device;
+  TF_VLOG(2) << "New current device: " << device;
+  return current;
 }
 
 at::Tensor XlaToAtenTensor(XLATensorPtr xla_tensor,

@@ -4,7 +4,7 @@ set -ex
 
 PYTHON_VERSION=$1
 CONDA_PREFIX=$2
-DEFAULT_PYTHON_VERSION=3.7
+DEFAULT_PYTHON_VERSION=3.8
 
 
 function install_and_setup_conda() {
@@ -30,7 +30,7 @@ function install_and_setup_conda() {
   conda update -y -n base conda
   conda install -y python=$PYTHON_VERSION
 
-  conda install -y nomkl numpy=1.18.5 pyyaml setuptools cmake \
+  conda install -y nomkl numpy=1.18.5 pyyaml setuptools \
     cffi typing tqdm coverage hypothesis dataclasses cython
 
   /usr/bin/yes | pip install mkl==2022.2.1
@@ -41,9 +41,6 @@ function install_and_setup_conda() {
   /usr/bin/yes | pip install --upgrade numba
   /usr/bin/yes | pip install cloud-tpu-client
   /usr/bin/yes | pip install expecttest==0.1.3
-  /usr/bin/yes | pip install ninja  # Install ninja to speedup the build
-  # Using Ninja requires CMake>=3.13, PyTorch requires CMake>=3.18
-  /usr/bin/yes | pip install "cmake>=3.18" --upgrade
   /usr/bin/yes | pip install absl-py
   # Additional PyTorch requirements
   /usr/bin/yes | pip install scikit-image scipy==1.6.3

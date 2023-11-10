@@ -3,10 +3,11 @@
 #include <torch/csrc/lazy/core/helpers.h>
 #include <torch/csrc/lazy/core/util.h>
 
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/util.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir.h"
+#include "torch_xla/csrc/runtime/computation_client.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/tensor_methods.h"
 
 namespace torch_xla {
@@ -186,7 +187,7 @@ XLATensorPtr Select(const XLATensorPtr& input, int64_t dim, int64_t index) {
   dim = torch::lazy::GetCanonicalDimensionIndex(dim, shape.get().rank());
   XLATensorPtr result = tensor_methods::narrow(input, dim, index, 1);
   auto new_dims = torch::lazy::DropDimensions(
-      xla::util::ToVector<int64_t>(shape.get().dimensions()),
+      torch_xla::runtime::util::ToVector<int64_t>(shape.get().dimensions()),
       std::vector<int64_t>({dim}));
   return tensor_methods::view(result, new_dims);
 }

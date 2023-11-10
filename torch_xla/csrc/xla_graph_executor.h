@@ -10,24 +10,23 @@
 #include <string>
 #include <unordered_map>
 
-#include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "tensorflow/compiler/xla/status.h"
-#include "tensorflow/compiler/xla/types.h"
-#include "third_party/xla_client/async_task.h"
-#include "third_party/xla_client/cache.h"
-#include "third_party/xla_client/computation_client.h"
-#include "third_party/xla_client/multi_wait.h"
-#include "third_party/xla_client/util.h"
-#include "torch_xla/csrc/computation.h"
 #include "torch_xla/csrc/cross_replica_reduces.h"
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir.h"
-#include "torch_xla/csrc/ir_util.h"
+#include "torch_xla/csrc/ir_dump_util.h"
 #include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/runtime/async_task.h"
+#include "torch_xla/csrc/runtime/cache.h"
+#include "torch_xla/csrc/runtime/computation_client.h"
+#include "torch_xla/csrc/runtime/multi_wait.h"
+#include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/view.h"
+#include "xla/client/xla_builder.h"
+#include "xla/status.h"
+#include "xla/types.h"
 
 namespace torch_xla {
 
@@ -88,6 +87,11 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
       const at::Scalar& value, const xla::Shape& shape,
       c10::optional<at::ScalarType> logical_element_type,
       const torch::lazy::BackendDevice& device);
+  torch::lazy::Value GetIrValueForScalar(
+      const at::Scalar& value, const xla::Shape& shape,
+      SymIntElements size_elements,
+      c10::optional<at::ScalarType> logical_element_type,
+      const torch::lazy::BackendDevice& device);
 
   // Override to use our own DeviceContextArena.
   torch::lazy::Value GetRngSeed(const torch::lazy::BackendDevice& device) final;
@@ -100,7 +104,8 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   // Dumps the XLA HLO text of the computation accumulated in the graph which is
   // attached the tensors.
   // We don't use upstream DumpBackendComputation given we have our own format.
-  std::string DumpHloComputation(const std::vector<XLATensorPtr>& tensors);
+  std::string DumpHloComputation(const std::vector<XLATensorPtr>& tensors,
+                                 EmitMode mode = EmitMode::kHloReadable);
 
   // Retrieves the set of XLA tensors which are currently live in the system,
   // for the given device. If device is nullptr, the live tensors for all
@@ -114,7 +119,6 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   // the tensors must be on the same device. If wait is true, the sync operation
   // will be run synchronously. The devices argument, if not empty, tells the
   // devices which should be participating into the replicated computation.
-  // We don't use the upstream one given we have OpbyOp mode.
   void SyncTensorsGraph(std::vector<XLATensorPtr>* tensors,
                         absl::Span<const std::string> devices, bool wait,
                         bool sync_ltc_data, bool warm_up_cache_only = false);
@@ -141,7 +145,6 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
 
   // Retrieves the PyTorch CPU tensors behind the XLA tensors IR operations.
   // All the tensors must be on the same device.
-  // We don't use the GetTensors given we have OpByOp mode.
   std::vector<at::Tensor> GetTensors(std::vector<XLATensorPtr>* tensors);
 
   // We don't use the upstream GetGraphHash as XLATensorPtr is used instead.
@@ -152,21 +155,27 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   // We don't use the upstream CachedComputation type given all fields are
   // different.
   struct CachedComputation {
-    CachedComputation(ComputationPtr computation, bool is_sharded = false)
+    CachedComputation(runtime::ComputationClient::ComputationPtr computation,
+                      bool is_sharded = false)
         : computation(std::move(computation)), is_sharded(is_sharded) {}
 
-    ComputationPtr computation;
+    runtime::ComputationClient::ComputationPtr computation;
     bool is_sharded;
   };
 
   using ComputationCache =
-      xla::util::Cache<torch::lazy::hash_t, CachedComputation,
-                       torch::lazy::HashReducer>;
+      runtime::util::Cache<torch::lazy::hash_t, CachedComputation,
+                           torch::lazy::HashReducer>;
 
   ComputationCache* GetComputationCache();
 
   std::vector<torch::lazy::BackendDataPtr> ExecuteComputationWithBarrier(
       torch::lazy::hash_t hash, const std::vector<at::IValue>& graph_inputs,
+      const torch::lazy::BackendDevice& device);
+
+  std::vector<torch::lazy::BackendDataPtr> ExecuteStablehlo(
+      std::string stablehlo_bytecode,
+      const std::vector<at::IValue>& graph_inputs,
       const torch::lazy::BackendDevice& device);
 
   void ClearPendingIrs(std::vector<XLATensorPtr> tensors,
@@ -178,7 +187,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   struct CompilationResult {
     torch::lazy::BackendDevice device;
     size_t emitted_nodes = 0;
-    ComputationPtr computation;
+    runtime::ComputationClient::ComputationPtr computation;
     std::vector<torch::lazy::BackendDataPtr> parameters_data;
     bool is_sharded = false;
   };
@@ -245,21 +254,9 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
       const std::vector<XLATensorPtr>& tensors,
       const SyncTensorsConfig& config);
 
-  // Waits for this SyncTensorCollection's device barrier and acuire the lock.
+  // Waits for this SyncTensorCollection's device barrier and acquire the lock.
   // Override to enable SPMD.
   void TensorCollectionBarrier(SyncTensorCollection* coll) final;
-
-  // Implementation of the GetTensors() API using the op-by-op executor.
-  std::vector<at::Tensor> GetTensorsOpByOp(std::vector<XLATensorPtr>* tensors);
-
-  // We don't use upstream GetTensorsFused as we have xla::Literal.
-  std::vector<at::Tensor> GetTensorsFused(std::vector<XLATensorPtr>* tensors);
-
-  // Runs an asynchronous syn operation using the op-by-op executor.
-  using OpByOpAsync = xla::util::AsyncTask<int>;
-  OpByOpAsync SyncTensorsGraphOpByOp(std::vector<XLATensorPtr>* tensors,
-                                     absl::Span<const std::string> devices,
-                                     const SyncTensorsConfig& config);
 
   // Gathers the XLA device data for all the input tensors, after an
   // asynchronous operation.
@@ -273,9 +270,6 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   std::vector<torch::lazy::Value> CollectRoots(
       const std::vector<XLATensorPtr>& tensors,
       absl::Span<const size_t> indices);
-
-  std::vector<XLATensor::ShardingSpecPtr> CollectShardingSpecs(
-      std::vector<XLATensorPtr>* tensors, absl::Span<const size_t> indices);
 
   // TODO(alanwaketan): Reuse the upstream one once Functionalization is done.
   std::vector<torch::lazy::BackendDataPtr> SetTensorData(

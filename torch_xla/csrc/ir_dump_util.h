@@ -10,6 +10,12 @@
 
 namespace torch_xla {
 
+enum class EmitMode {
+  kHloReadable,
+  kStableHloReadable,
+  kStableHloBytecode,
+};
+
 class DumpUtil {
  public:
   static std::string ToDot(absl::Span<const torch::lazy::Node* const> nodes);
@@ -25,7 +31,8 @@ class DumpUtil {
       absl::Span<const torch::lazy::Node* const> roots);
 
   static std::string ToHlo(c10::ArrayRef<torch::lazy::Value> values,
-                           const torch::lazy::BackendDevice& device);
+                           const torch::lazy::BackendDevice& device,
+                           EmitMode mode = EmitMode::kHloReadable);
 };
 
 }  // namespace torch_xla

@@ -10,16 +10,10 @@
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
-#include "tensorflow/compiler/xla/literal_util.h"
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/metrics.h"
-#include "third_party/xla_client/util.h"
-#include "third_party/xla_client/xla_util.h"
 #include "torch_xla/csrc/LazyIr.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/data_ops.h"
 #include "torch_xla/csrc/helpers.h"
-#include "torch_xla/csrc/ir_util.h"
 #include "torch_xla/csrc/layout_manager.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/adam_optimizer_step.h"
@@ -29,8 +23,6 @@
 #include "torch_xla/csrc/ops/all_to_all.h"
 #include "torch_xla/csrc/ops/amp_foreach_non_finite_check_and_unscale.h"
 #include "torch_xla/csrc/ops/amp_update_scale.h"
-#include "torch_xla/csrc/ops/arg_max.h"
-#include "torch_xla/csrc/ops/arg_min.h"
 #include "torch_xla/csrc/ops/arithmetic_ir_ops.h"
 #include "torch_xla/csrc/ops/as_strided.h"
 #include "torch_xla/csrc/ops/avg_pool_nd.h"
@@ -44,8 +36,10 @@
 #include "torch_xla/csrc/ops/constant_pad_nd.h"
 #include "torch_xla/csrc/ops/convolution_backward_overrideable.h"
 #include "torch_xla/csrc/ops/convolution_overrideable.h"
+#include "torch_xla/csrc/ops/count_nonzero.h"
 #include "torch_xla/csrc/ops/cumprod.h"
 #include "torch_xla/csrc/ops/cumsum.h"
+#include "torch_xla/csrc/ops/custom_sharding.h"
 #include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/ops/diagonal.h"
 #include "torch_xla/csrc/ops/discrete_uniform.h"
@@ -57,6 +51,7 @@
 #include "torch_xla/csrc/ops/flip.h"
 #include "torch_xla/csrc/ops/gather.h"
 #include "torch_xla/csrc/ops/generic.h"
+#include "torch_xla/csrc/ops/generic_slice.h"
 #include "torch_xla/csrc/ops/get_dimensions_size.h"
 #include "torch_xla/csrc/ops/hardtanh_backward.h"
 #include "torch_xla/csrc/ops/index_ops.h"
@@ -67,7 +62,6 @@
 #include "torch_xla/csrc/ops/linspace.h"
 #include "torch_xla/csrc/ops/log_softmax.h"
 #include "torch_xla/csrc/ops/logsumexp.h"
-#include "torch_xla/csrc/ops/masked_fill.h"
 #include "torch_xla/csrc/ops/masked_scatter.h"
 #include "torch_xla/csrc/ops/masked_select.h"
 #include "torch_xla/csrc/ops/max_in_dim.h"
@@ -81,6 +75,7 @@
 #include "torch_xla/csrc/ops/multinomial.h"
 #include "torch_xla/csrc/ops/native_batch_norm_backward.h"
 #include "torch_xla/csrc/ops/native_batch_norm_forward.h"
+#include "torch_xla/csrc/ops/native_dropout.h"
 #include "torch_xla/csrc/ops/nll_loss.h"
 #include "torch_xla/csrc/ops/nll_loss2d.h"
 #include "torch_xla/csrc/ops/nll_loss2d_backward.h"
@@ -109,6 +104,7 @@
 #include "torch_xla/csrc/ops/scatter.h"
 #include "torch_xla/csrc/ops/scatter_add.h"
 #include "torch_xla/csrc/ops/scatter_reduce.h"
+#include "torch_xla/csrc/ops/select.h"
 #include "torch_xla/csrc/ops/send.h"
 #include "torch_xla/csrc/ops/sgd_optimizer_step.h"
 #include "torch_xla/csrc/ops/softmax.h"
@@ -133,11 +129,18 @@
 #include "torch_xla/csrc/ops/var.h"
 #include "torch_xla/csrc/ops/var_mean.h"
 #include "torch_xla/csrc/ops/view.h"
+#include "torch_xla/csrc/runtime/computation_client.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/metrics.h"
+#include "torch_xla/csrc/runtime/sys_util.h"
+#include "torch_xla/csrc/runtime/util.h"
+#include "torch_xla/csrc/runtime/xla_util.h"
 #include "torch_xla/csrc/shape_builder.h"
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/tensor_ops.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
+#include "xla/literal_util.h"
 
 namespace torch_xla {
 namespace tensor_methods {
@@ -342,34 +345,22 @@ XLATensorPtr all_reduce(const XLATensorPtr& input, AllReduceType reduce_type,
   return input->CreateFrom(torch::lazy::Value(node, 0));
 }
 
-torch::lazy::Value all_reduce_(XLATensorPtr& input,
-                               const torch::lazy::Value& token,
-                               AllReduceType reduce_type, double scale,
-                               std::vector<std::vector<int64_t>> groups,
-                               bool pin_layout) {
-  std::vector<torch::lazy::Value> input_values({input->GetIrValue()});
-  torch::lazy::NodePtr node = torch::lazy::MakeNode<AllReduce>(
-      reduce_type, input_values, token, scale, std::move(groups), pin_layout);
-  input->SetInPlaceIrValue(torch::lazy::Value(node, 0));
-  return torch::lazy::Value(node, 1);
-}
-
-torch::lazy::Value all_reduce(std::vector<XLATensorPtr>* inputs,
-                              const torch::lazy::Value& token,
-                              AllReduceType reduce_type, double scale,
-                              std::vector<std::vector<int64_t>> groups,
-                              bool pin_layout) {
+void all_reduce(const std::vector<XLATensorPtr>& inputs,
+                AllReduceType reduce_type, double scale,
+                std::vector<std::vector<int64_t>> groups, bool pin_layout) {
   std::vector<torch::lazy::Value> input_values;
-  input_values.reserve(inputs->size());
-  for (auto& input : *inputs) {
+  input_values.reserve(inputs.size());
+  for (auto& input : inputs) {
     input_values.push_back(input->GetIrValue());
   }
   torch::lazy::NodePtr node = torch::lazy::MakeNode<AllReduce>(
-      reduce_type, input_values, token, scale, std::move(groups), pin_layout);
-  for (size_t i = 0; i < inputs->size(); ++i) {
-    (*inputs)[i]->SetInPlaceIrValue(torch::lazy::Value(node, i));
+      reduce_type, input_values, GetAllReduceToken(inputs.front()->GetDevice()),
+      scale, std::move(groups), pin_layout);
+  for (size_t i = 0; i < inputs.size(); ++i) {
+    inputs[i]->SetInPlaceIrValue(torch::lazy::Value(node, i));
   }
-  return torch::lazy::Value(node, inputs->size());
+  SetAllReduceToken(inputs.front()->GetDevice(),
+                    std::make_shared<torch::lazy::Value>(node, inputs.size()));
 }
 
 std::pair<XLATensorPtr, torch::lazy::Value> reduce_scatter(
@@ -409,15 +400,16 @@ std::pair<XLATensorPtr, torch::lazy::Value> all_to_all(
           torch::lazy::Value(node, 1)};
 }
 
-std::pair<XLATensorPtr, torch::lazy::Value> all_gather(
-    const XLATensorPtr& input, const torch::lazy::Value& token, int64_t dim,
-    int64_t shard_count, std::vector<std::vector<int64_t>> groups,
-    bool pin_layout) {
+XLATensorPtr all_gather(const XLATensorPtr& input, int64_t dim,
+                        int64_t shard_count,
+                        std::vector<std::vector<int64_t>> groups,
+                        bool pin_layout) {
   torch::lazy::NodePtr node = torch::lazy::MakeNode<AllGather>(
-      input->GetIrValue(), token, dim, shard_count, std::move(groups),
-      pin_layout);
-  return {input->CreateFrom(torch::lazy::Value(node, 0)),
-          torch::lazy::Value(node, 1)};
+      input->GetIrValue(), GetAllReduceToken(input->GetDevice()), dim,
+      shard_count, std::move(groups), pin_layout);
+  SetAllReduceToken(input->GetDevice(),
+                    std::make_shared<torch::lazy::Value>(node, 1));
+  return input->CreateFrom(torch::lazy::Value(node, 0));
 }
 
 torch::lazy::Value all_gather_out(XLATensorPtr& output,
@@ -440,6 +432,14 @@ std::pair<XLATensorPtr, torch::lazy::Value> collective_permute(
       input->GetIrValue(), token, std::move(source_target_pairs));
   return {input->CreateFrom(torch::lazy::Value(node, 0)),
           torch::lazy::Value(node, 1)};
+}
+
+void custom_sharding_(
+    const XLATensorPtr& input,
+    const std::shared_ptr<XLATensor::ShardingSpec>& sharding_spec) {
+  input->SetInPlaceIrValue(
+      torch::lazy::MakeNode<CustomSharding>(input->GetIrValue()));
+  input->SetShardingSpec(*sharding_spec);
 }
 
 XLATensorPtr get_dimensions_size(const XLATensorPtr& input,
@@ -525,12 +525,14 @@ void adam_optimizer_step_(const XLATensorPtr& found_inf, XLATensorPtr& step,
   param->SetInPlaceIrValue(torch::lazy::Value(node, 1));
   exp_avg->SetInPlaceIrValue(torch::lazy::Value(node, 2));
   exp_avg_sq->SetInPlaceIrValue(torch::lazy::Value(node, 3));
-  max_exp_avg_sq->SetInPlaceIrValue(torch::lazy::Value(node, 4));
+  if (amsgrad) {
+    max_exp_avg_sq->SetInPlaceIrValue(torch::lazy::Value(node, 4));
+  }
 }
 
 std::vector<XLATensorPtr> user_computation(
     const std::string& opname, absl::Span<const XLATensorPtr> inputs,
-    ComputationPtr computation) {
+    runtime::ComputationClient::ComputationPtr computation) {
   XLA_CHECK(!inputs.empty());
   std::vector<torch::lazy::Value> input_values;
   for (auto& input : inputs) {
@@ -652,8 +654,19 @@ XLATensorPtr abs(const XLATensorPtr& input) {
 XLATensorPtr add(const XLATensorPtr& input, const XLATensorPtr& other,
                  const at::Scalar& alpha,
                  c10::optional<at::ScalarType> logical_element_type) {
-  torch::lazy::Value constant = XLAGraphExecutor::Get()->GetIrValueForScalar(
-      alpha, other->shape(), logical_element_type, input->GetDevice());
+  xla::Shape input_shape = input->shape().get();
+  xla::Shape other_shape = other->shape().get();
+  torch::lazy::Value constant;
+  if (!input_shape.is_dynamic() && !other_shape.is_dynamic()) {
+    constant = XLAGraphExecutor::Get()->GetIrValueForScalar(
+        alpha, other->shape(), logical_element_type, input->GetDevice());
+  } else {
+    SymIntElements sym_int_elements(other->GetIrValue());
+    constant = XLAGraphExecutor::Get()->GetIrValueForScalar(
+        alpha, other->shape(), sym_int_elements, logical_element_type,
+        input->GetDevice());
+  }
+
   return input->CreateFrom(input->GetIrValue() + other->GetIrValue() * constant,
                            logical_element_type);
 }
@@ -685,40 +698,18 @@ void arange_out(XLATensorPtr& out, const at::Scalar& start,
   out->SetScalarType(scalar_type);
 }
 
-XLATensorPtr argmax(const XLATensorPtr& input, int64_t dim, bool keepdim) {
-  int64_t canonical_dim =
-      torch::lazy::GetCanonicalDimensionIndex(dim, input->shape().get().rank());
-  return input->CreateFrom(torch::lazy::MakeNode<ArgMax>(
-                               input->GetIrValue(), canonical_dim, keepdim),
-                           at::ScalarType::Long);
-}
-
-XLATensorPtr argmax(const XLATensorPtr& input) {
-  return input->CreateFrom(
-      torch::lazy::MakeNode<ArgMax>(input->GetIrValue(), -1, false),
-      at::ScalarType::Long);
-}
-
-XLATensorPtr argmin(const XLATensorPtr& input, int64_t dim, bool keepdim) {
-  int64_t canonical_dim =
-      torch::lazy::GetCanonicalDimensionIndex(dim, input->shape().get().rank());
-  return input->CreateFrom(torch::lazy::MakeNode<ArgMin>(
-                               input->GetIrValue(), canonical_dim, keepdim),
-                           at::ScalarType::Long);
-}
-
-XLATensorPtr argmin(const XLATensorPtr& input) {
-  return input->CreateFrom(
-      torch::lazy::MakeNode<ArgMin>(input->GetIrValue(), -1, false),
-      at::ScalarType::Long);
-}
-
 XLATensorPtr as_strided(const XLATensorPtr& input, std::vector<int64_t> size,
                         std::vector<int64_t> stride,
                         c10::optional<int64_t> storage_offset) {
-  auto input_shape = input->shape();
-  return input->CreateViewTensor(CreateAsStridedViewInfo(
-      input_shape, std::move(size), std::move(stride), storage_offset));
+  // See Note: [Disabling functionalization]
+  if (runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
+    auto input_shape = input->shape();
+    return input->CreateViewTensor(CreateAsStridedViewInfo(
+        input_shape, std::move(size), std::move(stride), storage_offset));
+  }
+  return input->CreateFrom(torch::lazy::MakeNode<AsStrided>(
+      input->GetIrValue(), std::move(size), std::move(stride),
+      storage_offset.value_or(0)));
 }
 
 void as_strided_(XLATensorPtr& input, std::vector<int64_t> size,
@@ -958,6 +949,13 @@ convolution_backward_overrideable(
                          std::move(grad_bias));
 }
 
+XLATensorPtr count_nonzero(const XLATensorPtr& input,
+                           std::vector<int64_t> dims) {
+  torch::lazy::NodePtr ir_value =
+      torch::lazy::MakeNode<CountNonzero>(input->GetIrValue(), dims);
+  return input->CreateFrom(ir_value);
+}
+
 XLATensorPtr cross(const XLATensorPtr& input, const XLATensorPtr& other,
                    c10::optional<int64_t> dim) {
   return tensor_ops::Cross(input, other, dim);
@@ -1004,13 +1002,19 @@ XLATensorPtr diagonal(const XLATensorPtr& input, int64_t offset, int64_t dim1,
       dim1, input->shape().get().rank());
   int64_t canonical_dim2 = torch::lazy::GetCanonicalDimensionIndex(
       dim2, input->shape().get().rank());
-  DiagonalInfo diagonal_info;
-  diagonal_info.offset = offset;
-  diagonal_info.dim1 = canonical_dim1;
-  diagonal_info.dim2 = canonical_dim2;
-  ViewInfo view_info(ViewInfo::Type::kDiagonal, input_shape,
-                     std::move(diagonal_info));
-  return input->CreateViewTensor(std::move(view_info));
+  // See Note: [Disabling functionalization]
+  if (runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
+    DiagonalInfo diagonal_info;
+    diagonal_info.offset = offset;
+    diagonal_info.dim1 = canonical_dim1;
+    diagonal_info.dim2 = canonical_dim2;
+    ViewInfo view_info(ViewInfo::Type::kDiagonal, input_shape,
+                       std::move(diagonal_info));
+    return input->CreateViewTensor(std::move(view_info));
+  }
+
+  return input->CreateFrom(torch::lazy::MakeNode<Diagonal>(
+      input->GetIrValue(), offset, canonical_dim1, canonical_dim2));
 }
 
 XLATensorPtr div(const XLATensorPtr& input, const XLATensorPtr& other,
@@ -1183,14 +1187,21 @@ void eye_out(XLATensorPtr& out, int64_t lines, int64_t cols) {
 }
 
 void fill_(XLATensorPtr& input, const at::Scalar& value) {
+  // Fill_ is implemented by expanding the pass in value to the same shape of
+  // input and replace input Tensor's IR with the expanded value. In order to
+  // support input with dynamic shapes, we need to expand the value to its
+  // dynamic dimension hence we need to create a sym_int_elements here.
+  SymIntElements sym_int_elements(input->GetIrValue());
   torch::lazy::Value constant = XLAGraphExecutor::Get()->GetIrValueForScalar(
-      value, input->shape(), input->GetDevice());
+      value, input->shape(), sym_int_elements, c10::nullopt,
+      input->GetDevice());
   input->SetInPlaceIrValue(std::move(constant));
 }
 
 XLATensorPtr flip(const XLATensorPtr& input, absl::Span<const int64_t> dims) {
   auto dimensions = torch::lazy::GetCanonicalDimensionIndices(
-      xla::util::ToVector<int64_t>(dims), input->shape().get().rank());
+      torch_xla::runtime::util::ToVector<int64_t>(dims),
+      input->shape().get().rank());
   std::set<int64_t> unique_dims(dimensions.begin(), dimensions.end());
   XLA_CHECK_EQ(unique_dims.size(), dimensions.size());
   return input->CreateFrom(
@@ -1449,7 +1460,7 @@ XLATensorPtr linalg_vector_norm(const XLATensorPtr& input,
   std::vector<int64_t> canonical_dims;
   if (input_rank != 0) {
     canonical_dims = torch::lazy::GetCanonicalDimensionIndices(
-        xla::util::ToVector<int64_t>(dimensions), input_rank);
+        torch_xla::runtime::util::ToVector<int64_t>(dimensions), input_rank);
   } else {
     canonical_dims = {0};
   }
@@ -1540,7 +1551,7 @@ XLATensorPtr logsumexp(const XLATensorPtr& input,
   return input->CreateFrom(torch::lazy::MakeNode<Logsumexp>(
       input->GetIrValue(),
       torch::lazy::GetCanonicalDimensionIndices(
-          xla::util::ToVector<int64_t>(dimensions),
+          torch_xla::runtime::util::ToVector<int64_t>(dimensions),
           input->shape().get().rank()),
       keep_reduced_dimensions));
 }
@@ -1562,22 +1573,6 @@ XLATensorPtr lt(const XLATensorPtr& input, const at::Scalar& other) {
 
 XLATensorPtr lt(const XLATensorPtr& input, const XLATensorPtr& other) {
   return DispatchComparisonOp(at::aten::lt, input, other);
-}
-
-XLATensorPtr masked_fill(XLATensorPtr& input, const XLATensorPtr& mask,
-                         const at::Scalar& value) {
-  torch::lazy::ScopePusher ir_scope(at::aten::masked_fill.toQualString());
-  auto input_value = input->GetIrValue();
-  // Expand input tensor to mask if needed (same as masked_scatter below).
-  // An additional check makes sure to only expand if the rank of input tensor
-  // is less than that of the mask tensor.
-  if (input->shape().get().rank() <= mask->shape().get().rank() &&
-      input->shape().get().dimensions() < mask->shape().get().dimensions()) {
-    input_value = MaybeExpand(input->GetIrValue(), mask->shape());
-  }
-  return input->CreateFrom(torch::lazy::MakeNode<MaskedFill>(
-      input_value, MaybeExpand(mask->GetIrValue(), GetXlaShape(input_value)),
-      value));
 }
 
 XLATensorPtr masked_scatter(XLATensorPtr& input, const XLATensorPtr& mask,
@@ -1674,11 +1669,12 @@ XLATensorPtr mean(const XLATensorPtr& input, std::vector<int64_t> dimensions,
     dtype = input->dtype_optional();
   }
   return input->CreateFrom(
-      torch::lazy::MakeNode<Mean>(input->GetIrValue(),
-                                  torch::lazy::GetCanonicalDimensionIndices(
-                                      xla::util::ToVector<int64_t>(dimensions),
-                                      input->shape().get().rank()),
-                                  keep_reduced_dimensions, dtype),
+      torch::lazy::MakeNode<Mean>(
+          input->GetIrValue(),
+          torch::lazy::GetCanonicalDimensionIndices(
+              torch_xla::runtime::util::ToVector<int64_t>(dimensions),
+              input->shape().get().rank()),
+          keep_reduced_dimensions, dtype),
       dtype);
 }
 
@@ -1796,17 +1792,29 @@ XLATensorPtr narrow(const XLATensorPtr& input, int64_t dim, int64_t start,
                     int64_t length) {
   auto input_shape = input->shape();
   dim = torch::lazy::GetCanonicalDimensionIndex(dim, input_shape.get().rank());
+
   xla::Shape narrow_shape = input_shape;
   narrow_shape.set_dimensions(dim, length);
 
-  ViewInfo::Type view_type = (xla::ShapeUtil::ElementsIn(input_shape) ==
-                              xla::ShapeUtil::ElementsIn(narrow_shape))
-                                 ? ViewInfo::Type::kReshape
-                                 : ViewInfo::Type::kNarrow;
-  ViewInfo view_info(view_type, std::move(narrow_shape), input_shape);
-  view_info.indices[dim] = torch::lazy::GetCanonicalPosition(
-      xla::util::ToVector<int64_t>(input_shape.get().dimensions()), dim, start);
-  return input->CreateViewTensor(std::move(view_info));
+  std::vector<int64_t> indices(input_shape.get().rank(), 0);
+  indices[dim] = torch::lazy::GetCanonicalPosition(
+      torch_xla::runtime::util::ToVector<int64_t>(
+          input_shape.get().dimensions()),
+      dim, start);
+
+  // See Note: [Disabling functionalization]
+  if (runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
+    ViewInfo::Type view_type = (xla::ShapeUtil::ElementsIn(input_shape) ==
+                                xla::ShapeUtil::ElementsIn(narrow_shape))
+                                   ? ViewInfo::Type::kReshape
+                                   : ViewInfo::Type::kNarrow;
+    ViewInfo view_info(view_type, std::move(narrow_shape), input_shape);
+    view_info.indices[dim] = indices[dim];
+    return input->CreateViewTensor(std::move(view_info));
+  }
+
+  return input->CreateFrom(torch::lazy::MakeNode<GenericSlice>(
+      input->GetIrValue(), std::move(indices), narrow_shape.dimensions()));
 }
 
 std::tuple<XLATensorPtr, XLATensorPtr, XLATensorPtr> native_batch_norm(
@@ -1863,6 +1871,16 @@ std::tuple<XLATensorPtr, XLATensorPtr, XLATensorPtr> native_batch_norm_backward(
   XLATensorPtr grad_bias = input->CreateFrom(torch::lazy::Value(node, 2));
   return std::make_tuple(std::move(grad_input), std::move(grad_weight),
                          std::move(grad_bias));
+}
+
+std::tuple<XLATensorPtr, XLATensorPtr> native_dropout(
+    const XLATensorPtr& input, double p, c10::optional<bool> train) {
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<NativeDropout>(
+      input->GetIrValue(),
+      XLAGraphExecutor::Get()->GetRngSeed(input->GetDevice()), p, train);
+  return std::make_tuple(
+      input->CreateFrom(torch::lazy::Value(node, 0)),
+      input->CreateFrom(torch::lazy::Value(node, 1), at::ScalarType::Bool));
 }
 
 XLATensorPtr ne(const XLATensorPtr& input, const at::Scalar& other) {
@@ -2005,11 +2023,18 @@ void optimization_barrier_(std::vector<XLATensorPtr>& tensors) {
 XLATensorPtr permute(const XLATensorPtr& input,
                      absl::Span<const int64_t> dims) {
   auto input_shape = input->shape();
-  ViewInfo view_info(
-      ViewInfo::Type::kPermute, input_shape,
-      torch::lazy::GetCanonicalDimensionIndices(
-          xla::util::ToVector<int64_t>(dims), input_shape.get().rank()));
-  return input->CreateViewTensor(std::move(view_info));
+  std::vector<int64_t> dimensions = torch::lazy::GetCanonicalDimensionIndices(
+      torch_xla::runtime::util::ToVector<int64_t>(dims),
+      input_shape.get().rank());
+
+  // See Note: [Disabling functionalization]
+  if (runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
+    ViewInfo view_info(ViewInfo::Type::kPermute, input_shape, dimensions);
+    return input->CreateViewTensor(std::move(view_info));
+  }
+
+  return input->CreateFrom(
+      torch::lazy::MakeNode<Permute>(input->GetIrValue(), dimensions));
 }
 
 XLATensorPtr pow(const XLATensorPtr& input, const at::Scalar& exponent) {
@@ -2025,13 +2050,28 @@ XLATensorPtr pow(const XLATensorPtr& input, const XLATensorPtr& exponent) {
 }
 
 XLATensorPtr pow(const at::Scalar& input, const XLATensorPtr& exponent) {
+  const torch::lazy::BackendDevice& device = exponent->GetDevice();
   torch::lazy::Value input_node = XLAGraphExecutor::Get()->GetIrValueForScalar(
-      input, exponent->shape(), exponent->GetDevice());
-  return exponent->CreateFrom(Pow(input_node, exponent->GetIrValue()));
+      input, MakeXlaPrimitiveType(GetScalarType(input), &device), device);
+  torch::lazy::NodePtr pow_node = Pow(input_node, exponent->GetIrValue());
+  at::ScalarType input_dtype = GetScalarType(input);
+  at::ScalarType exp_dtype = exponent->dtype();
+  at::ScalarType promoted_dtype = TensorTypeFromXlaType(XlaHelpers::PromoteType(
+      TensorTypeToRawXlaType(input_dtype), TensorTypeToRawXlaType(exp_dtype)));
+  return exponent->CreateFrom(pow_node, promoted_dtype);
 }
 
 XLATensorPtr prelu(const XLATensorPtr& input, const XLATensorPtr& weight) {
   return input->CreateFrom(Prelu(input->GetIrValue(), weight->GetIrValue()));
+}
+
+std::tuple<XLATensorPtr, XLATensorPtr> prelu_backward(
+    const XLATensorPtr& grad, const XLATensorPtr& input,
+    const XLATensorPtr& weight) {
+  torch::lazy::NodePtr node = PreluBackward(
+      grad->GetIrValue(), input->GetIrValue(), weight->GetIrValue());
+  return std::make_tuple(input->CreateFrom(torch::lazy::Value(node, 0)),
+                         input->CreateFrom(torch::lazy::Value(node, 1)));
 }
 
 XLATensorPtr prod(const XLATensorPtr& input, std::vector<int64_t> dimensions,
@@ -2041,11 +2081,12 @@ XLATensorPtr prod(const XLATensorPtr& input, std::vector<int64_t> dimensions,
     dtype = input->dtype_optional();
   }
   return input->CreateFrom(
-      torch::lazy::MakeNode<Prod>(input->GetIrValue(),
-                                  torch::lazy::GetCanonicalDimensionIndices(
-                                      xla::util::ToVector<int64_t>(dimensions),
-                                      input->shape().get().rank()),
-                                  keep_reduced_dimensions, dtype),
+      torch::lazy::MakeNode<Prod>(
+          input->GetIrValue(),
+          torch::lazy::GetCanonicalDimensionIndices(
+              torch_xla::runtime::util::ToVector<int64_t>(dimensions),
+              input->shape().get().rank()),
+          keep_reduced_dimensions, dtype),
       dtype);
 }
 
@@ -2208,7 +2249,8 @@ void copy_(XLATensorPtr& input, XLATensorPtr& src) {
   } else {
     auto input_shape = input->shape();
     at::Tensor src_tensor = src->ToTensor(/*detached=*/true);
-    if (!xla::util::Equal(src_tensor.sizes(), input_shape.get().dimensions())) {
+    if (!torch_xla::runtime::util::Equal(src_tensor.sizes(),
+                                         input_shape.get().dimensions())) {
       src_tensor = src_tensor.expand(
           torch::lazy::ToVector<int64_t>(input_shape.get().dimensions()));
     }
@@ -2290,18 +2332,27 @@ XLATensorPtr slice(const XLATensorPtr& input, int64_t dim, int64_t start,
   auto input_shape = input->shape();
   dim = torch::lazy::GetCanonicalDimensionIndex(dim, input_shape.get().rank());
   start = torch::lazy::GetCanonicalPosition(
-      xla::util::ToVector<int64_t>(input_shape.get().dimensions()), dim, start);
+      torch_xla::runtime::util::ToVector<int64_t>(
+          input_shape.get().dimensions()),
+      dim, start);
   end = torch::lazy::GetCanonicalPosition(
-      xla::util::ToVector<int64_t>(input_shape.get().dimensions()), dim, end);
+      torch_xla::runtime::util::ToVector<int64_t>(
+          input_shape.get().dimensions()),
+      dim, end);
   // PyTorch allows tensor[-1:0] to return a 0-dim tensor.
   if (start > end) {
     end = start;
   }
   step = std::min(step, end - start);
 
-  SelectInfo select = {dim, start, end, step};
-  ViewInfo view_info(ViewInfo::Type::kSelect, input_shape, std::move(select));
-  return input->CreateViewTensor(std::move(view_info));
+  // See Note: [Disabling functionalization]
+  if (runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
+    SelectInfo select = {dim, start, end, step};
+    ViewInfo view_info(ViewInfo::Type::kSelect, input_shape, std::move(select));
+    return input->CreateViewTensor(std::move(view_info));
+  }
+  return input->CreateFrom(torch::lazy::MakeNode<Select>(
+      input->GetIrValue(), dim, start, end, step));
 }
 
 std::tuple<XLATensorPtr, XLATensorPtr> slogdet(const XLATensorPtr& input) {
@@ -2415,6 +2466,25 @@ XLATensorPtr squeeze(const XLATensorPtr& input, int64_t dim) {
   return view(input, output_dimensions);
 }
 
+XLATensorPtr squeeze(const XLATensorPtr& input, std::vector<int64_t> dims) {
+  auto input_shape = input->shape();
+  std::vector<int64_t> input_dimensions =
+      torch_xla::runtime::util::ToVector<int64_t>(
+          input_shape.get().dimensions());
+  std::vector<int64_t> squeeze_dims;
+  for (int64_t dim : dims) {
+    int64_t squeeze_dim =
+        torch::lazy::GetCanonicalDimensionIndex(dim, input_dimensions.size());
+    if (squeeze_dim >= input_dimensions.size()) {
+      continue;
+    }
+    squeeze_dims.push_back(squeeze_dim);
+  }
+  std::vector<int64_t> output_dimensions =
+      BuildSqueezedDimensions(input_dimensions, squeeze_dims);
+  return view(input, output_dimensions);
+}
+
 XLATensorPtr stack(absl::Span<const XLATensorPtr> tensors, int64_t dim) {
   XLA_CHECK_GT(tensors.size(), 0);
   std::vector<torch::lazy::Value> values;
@@ -2429,12 +2499,12 @@ XLATensorPtr stack(absl::Span<const XLATensorPtr> tensors, int64_t dim) {
 
 XLATensorPtr std(const XLATensorPtr& input, std::vector<int64_t> dimensions,
                  bool keep_reduced_dimensions, double correction) {
-  return input->CreateFrom(
-      torch::lazy::MakeNode<Std>(input->GetIrValue(),
-                                 torch::lazy::GetCanonicalDimensionIndices(
-                                     xla::util::ToVector<int64_t>(dimensions),
-                                     input->shape().get().rank()),
-                                 keep_reduced_dimensions, correction));
+  return input->CreateFrom(torch::lazy::MakeNode<Std>(
+      input->GetIrValue(),
+      torch::lazy::GetCanonicalDimensionIndices(
+          torch_xla::runtime::util::ToVector<int64_t>(dimensions),
+          input->shape().get().rank()),
+      keep_reduced_dimensions, correction));
 }
 
 std::tuple<XLATensorPtr, XLATensorPtr> std_mean(const XLATensorPtr& input,
@@ -2444,7 +2514,7 @@ std::tuple<XLATensorPtr, XLATensorPtr> std_mean(const XLATensorPtr& input,
   torch::lazy::NodePtr node = torch::lazy::MakeNode<StdMean>(
       input->GetIrValue(),
       torch::lazy::GetCanonicalDimensionIndices(
-          xla::util::ToVector<int64_t>(dimensions),
+          torch_xla::runtime::util::ToVector<int64_t>(dimensions),
           input->shape().get().rank()),
       correction, keep_reduced_dimensions);
   return std::make_tuple(input->CreateFrom(torch::lazy::Value(node, 0)),
@@ -2454,8 +2524,19 @@ std::tuple<XLATensorPtr, XLATensorPtr> std_mean(const XLATensorPtr& input,
 XLATensorPtr sub(const XLATensorPtr& input, const XLATensorPtr& other,
                  const at::Scalar& alpha,
                  c10::optional<at::ScalarType> logical_element_type) {
-  torch::lazy::Value constant = XLAGraphExecutor::Get()->GetIrValueForScalar(
-      alpha, other->shape(), logical_element_type, other->GetDevice());
+  xla::Shape input_shape = input->shape().get();
+  xla::Shape other_shape = other->shape().get();
+  torch::lazy::Value constant;
+  if (!input_shape.is_dynamic() && !other_shape.is_dynamic()) {
+    constant = XLAGraphExecutor::Get()->GetIrValueForScalar(
+        alpha, other->shape(), logical_element_type, input->GetDevice());
+  } else {
+    SymIntElements sym_int_elements(other->GetIrValue());
+    constant = XLAGraphExecutor::Get()->GetIrValueForScalar(
+        alpha, other->shape(), sym_int_elements, logical_element_type,
+        input->GetDevice());
+  }
+
   return input->CreateFrom(input->GetIrValue() - other->GetIrValue() * constant,
                            logical_element_type);
 }
@@ -2483,11 +2564,12 @@ XLATensorPtr sum(const XLATensorPtr& input, std::vector<int64_t> dimensions,
     dtype = input->dtype_optional();
   }
   return input->CreateFrom(
-      torch::lazy::MakeNode<Sum>(input->GetIrValue(),
-                                 torch::lazy::GetCanonicalDimensionIndices(
-                                     xla::util::ToVector<int64_t>(dimensions),
-                                     input->shape().get().rank()),
-                                 keep_reduced_dimensions, dtype),
+      torch::lazy::MakeNode<Sum>(
+          input->GetIrValue(),
+          torch::lazy::GetCanonicalDimensionIndices(
+              torch_xla::runtime::util::ToVector<int64_t>(dimensions),
+              input->shape().get().rank()),
+          keep_reduced_dimensions, dtype),
       dtype);
 }
 
@@ -2563,19 +2645,37 @@ XLATensorPtr trace(const XLATensorPtr& input) {
 }
 
 XLATensorPtr transpose(const XLATensorPtr& input, int64_t dim0, int64_t dim1) {
-  xla::util::MaybeRef<xla::Shape> input_shape = input->shape();
-  ViewInfo view_info;
+  torch_xla::runtime::util::MaybeRef<xla::Shape> input_shape = input->shape();
+
+  // See Note: [Disabling functionalization]
+  if (runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
+    ViewInfo view_info;
+    if (input_shape.get().rank() <= 1) {
+      // return a view of self if input rank <=1
+      torch::lazy::Value ir_value = input->GetIrValue();
+      view_info = ViewInfo(ViewInfo::Type::kNoOp, GetXlaShape(ir_value),
+                           GetXlaShape(ir_value));
+    } else {
+      std::vector<int64_t> permute_dims = torch::lazy::MakeTransposePermutation(
+          /*dim0=*/dim0, /*dim1=*/dim1, /*rank=*/input_shape.get().rank());
+      view_info = ViewInfo(ViewInfo::Type::kPermute, input_shape, permute_dims);
+    }
+    return input->CreateViewTensor(std::move(view_info));
+  }
+
+  XLATensorPtr result;
   if (input_shape.get().rank() <= 1) {
-    // return a view of self if input rank <=1
-    torch::lazy::Value ir_value = input->GetIrValue();
-    view_info = ViewInfo(ViewInfo::Type::kNoOp, GetXlaShape(ir_value),
-                         GetXlaShape(ir_value));
+    // kNoOp
+    result = input;
   } else {
+    // kPermute
     std::vector<int64_t> permute_dims = torch::lazy::MakeTransposePermutation(
         /*dim0=*/dim0, /*dim1=*/dim1, /*rank=*/input_shape.get().rank());
-    view_info = ViewInfo(ViewInfo::Type::kPermute, input_shape, permute_dims);
+    result = input->CreateFrom(
+        torch::lazy::MakeNode<Permute>(input->GetIrValue(), permute_dims));
   }
-  return input->CreateViewTensor(std::move(view_info));
+
+  return result;
 }
 
 std::tuple<XLATensorPtr, XLATensorPtr> triangular_solve(
@@ -2613,7 +2713,7 @@ void uniform_(XLATensorPtr& input, double from, double to) {
 }
 
 XLATensorPtr unsqueeze(const XLATensorPtr& input, int64_t dim) {
-  xla::util::MaybeRef<xla::Shape> input_shape = input->shape();
+  torch_xla::runtime::util::MaybeRef<xla::Shape> input_shape = input->shape();
   int64_t squeeze_dim = torch::lazy::GetCanonicalDimensionIndex(
       dim, input_shape.get().rank() + 1);
   std::vector<int64_t> dimensions =
@@ -2661,9 +2761,13 @@ XLATensorPtr upsample_nearest2d_backward(const XLATensorPtr& grad_output,
 
 XLATensorPtr alias(const XLATensorPtr& input) {
   torch::lazy::Value ir_value = input->GetIrValue();
-  ViewInfo view_info(ViewInfo::Type::kNoOp, GetXlaShape(ir_value),
-                     GetXlaShape(ir_value));
-  return input->CreateViewTensor(std::move(view_info));
+  // See Note: [Disabling functionalization]
+  if (runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
+    ViewInfo view_info(ViewInfo::Type::kNoOp, GetXlaShape(ir_value),
+                       GetXlaShape(ir_value));
+    return input->CreateViewTensor(std::move(view_info));
+  }
+  return input->CreateFrom(ir_value);
 }
 
 XLATensorPtr view(const XLATensorPtr& input,
@@ -2673,22 +2777,33 @@ XLATensorPtr view(const XLATensorPtr& input,
       GetCompleteShape(output_size, input_shape.get().dimensions());
   xla::Shape shape =
       XlaHelpers::GetDynamicReshape(input_shape, complete_dimensions);
-  ViewInfo view_info(ViewInfo::Type::kReshape, std::move(shape), input_shape);
-  return input->CreateViewTensor(std::move(view_info));
+
+  // See Note: [Disabling functionalization]
+  if (runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
+    ViewInfo view_info(ViewInfo::Type::kReshape, std::move(shape), input_shape);
+    return input->CreateViewTensor(std::move(view_info));
+  }
+  return input->CreateFrom(torch::lazy::MakeNode<ViewOp>(
+      input->GetIrValue(), torch::lazy::ToVector<int64_t>(shape.dimensions())));
 }
 
 XLATensorPtr view_symint(const XLATensorPtr& input,
                          at::SymIntArrayRef sym_size) {
-  xla::util::MaybeRef<xla::Shape> input_shape = input->shape();
+  auto input_shape = input->shape();
   SymIntElements size_elements(sym_size);
   std::vector<int64_t> complete_dimensions = GetCompleteShape(
       size_elements.GetUpperBounds(), input_shape.get().dimensions());
   xla::Shape result_shape = xla::ShapeUtil::MakeShape(
       input_shape.get().element_type(), complete_dimensions,
       size_elements.GetDynamicDims());
-  ViewInfo view_info(ViewInfo::Type::kReshape, std::move(result_shape),
-                     input_shape);
-  return input->CreateViewTensor(std::move(view_info));
+  // See Note: [Disabling functionalization]
+  if (runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
+    ViewInfo view_info(ViewInfo::Type::kReshape, std::move(result_shape),
+                       input_shape);
+    return input->CreateViewTensor(std::move(view_info));
+  }
+  return input->CreateFrom(
+      torch::lazy::MakeNode<ViewOp>(input->GetIrValue(), result_shape));
 }
 
 XLATensorPtr view_as_complex_copy(const XLATensorPtr& input) {
@@ -2703,12 +2818,12 @@ XLATensorPtr view_as_real_copy(const XLATensorPtr& input) {
 
 XLATensorPtr var(const XLATensorPtr& input, std::vector<int64_t> dimensions,
                  double correction, bool keep_reduced_dimensions) {
-  return input->CreateFrom(
-      torch::lazy::MakeNode<Var>(input->GetIrValue(),
-                                 torch::lazy::GetCanonicalDimensionIndices(
-                                     xla::util::ToVector<int64_t>(dimensions),
-                                     input->shape().get().rank()),
-                                 correction, keep_reduced_dimensions));
+  return input->CreateFrom(torch::lazy::MakeNode<Var>(
+      input->GetIrValue(),
+      torch::lazy::GetCanonicalDimensionIndices(
+          torch_xla::runtime::util::ToVector<int64_t>(dimensions),
+          input->shape().get().rank()),
+      correction, keep_reduced_dimensions));
 }
 
 std::tuple<XLATensorPtr, XLATensorPtr> var_mean(const XLATensorPtr& input,
@@ -2718,7 +2833,7 @@ std::tuple<XLATensorPtr, XLATensorPtr> var_mean(const XLATensorPtr& input,
   torch::lazy::NodePtr node = torch::lazy::MakeNode<VarMean>(
       input->GetIrValue(),
       torch::lazy::GetCanonicalDimensionIndices(
-          xla::util::ToVector<int64_t>(dimensions),
+          torch_xla::runtime::util::ToVector<int64_t>(dimensions),
           input->shape().get().rank()),
       correction, keep_reduced_dimensions);
   return std::make_tuple(input->CreateFrom(torch::lazy::Value(node, 0)),

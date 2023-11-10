@@ -10,8 +10,8 @@
 #     specify the version of PyTorch/XLA, rather than the hard-coded version
 #     in this file; used when we're building binaries for distribution
 #
-#   VERSIONED_XLA_BUILD
-#     creates a versioned build
+#   GIT_VERSIONED_XLA_BUILD
+#     creates a git versioned build
 #
 #   TORCH_XLA_PACKAGE_NAME
 #     change the package name to something other than 'torch_xla'
@@ -44,12 +44,12 @@
 #     name of the remote build cache silo
 #
 #   CXX_ABI=""
-#     value for cxx_abi flag; if empty, it is infered from `torch._C`.
+#     value for cxx_abi flag; if empty, it is inferred from `torch._C`.
 #
-
 from __future__ import print_function
 
 from setuptools import setup, find_packages, distutils, Extension, command
+from setuptools.command import develop
 from torch.utils.cpp_extension import BuildExtension
 import posixpath
 import contextlib
@@ -72,7 +72,7 @@ import zipfile
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
-_libtpu_version = '0.1.dev20230330'
+_libtpu_version = '0.1.dev20231022'
 _libtpu_storage_path = f'https://storage.googleapis.com/cloud-tpu-tpuvm-artifacts/wheels/libtpu-nightly/libtpu_nightly-{_libtpu_version}-py3-none-any.whl'
 
 
@@ -100,10 +100,10 @@ def get_git_head_sha(base_dir):
 
 
 def get_build_version(xla_git_sha):
-  version = os.getenv('TORCH_XLA_VERSION', '2.1.0')
-  if _check_env_flag('VERSIONED_XLA_BUILD', default='0'):
+  version = os.getenv('TORCH_XLA_VERSION', '2.2.0')
+  if _check_env_flag('GIT_VERSIONED_XLA_BUILD', default='TRUE'):
     try:
-      version += '+' + xla_git_sha[:7]
+      version += '+git' + xla_git_sha[:7]
     except Exception:
       pass
   return version
@@ -161,6 +161,9 @@ def maybe_bundle_libtpu(base_dir):
 
 class Clean(distutils.command.clean.clean):
 
+  def bazel_clean_(self):
+    self.spawn(['bazel', 'clean', '--expunge'])
+
   def run(self):
     import glob
     import re
@@ -180,6 +183,8 @@ class Clean(distutils.command.clean.clean):
               os.remove(filename)
             except OSError:
               shutil.rmtree(filename, ignore_errors=True)
+
+    self.execute(self.bazel_clean_, (), msg="Cleaning bazel outputs")
 
     # It's an old-style class in Python 2.7...
     distutils.command.clean.clean.run(self)
@@ -208,7 +213,7 @@ extra_compile_args = []
 cxx_abi = os.getenv(
     'CXX_ABI', default='') or getattr(torch._C, '_GLIBCXX_USE_CXX11_ABI', None)
 if cxx_abi is not None:
-  extra_compile_args += ['-D_GLIBCXX_USE_CXX11_ABI={}'.format(int(cxx_abi))]
+  extra_compile_args.append(f'-D_GLIBCXX_USE_CXX11_ABI={int(cxx_abi)}')
 
 
 class BazelExtension(Extension):
@@ -251,12 +256,15 @@ class BuildBazelExtension(command.build_ext.build_ext):
       bazel_argv.append('--config=tpu')
 
     # Remote cache authentication.
-    if _check_env_flag('BAZEL_REMOTE_CACHE'):
-      bazel_argv.append('--config=remote_cache')
-
     if GCLOUD_KEY_FILE:
-      bazel_argv.append('--google_credentials=%s' % GCLOUD_KEY_FILE)
-      if not _check_env_flag('BAZEL_REMOTE_CACHE'):
+      # Temporary workaround to allow PRs from forked repo to run CI. See details at (#5259).
+      # TODO: Remove the check once self-hosted GHA workers are available to CPU/GPU CI.
+      gclout_key_file_size = os.path.getsize(GCLOUD_KEY_FILE)
+      if gclout_key_file_size > 1:
+        bazel_argv.append('--google_credentials=%s' % GCLOUD_KEY_FILE)
+        bazel_argv.append('--config=remote_cache')
+    else:
+      if _check_env_flag('BAZEL_REMOTE_CACHE'):
         bazel_argv.append('--config=remote_cache')
     if CACHE_SILO_NAME:
       bazel_argv.append('--remote_default_exec_properties=cache-silo-key=%s' %
@@ -264,7 +272,7 @@ class BuildBazelExtension(command.build_ext.build_ext):
 
     if _check_env_flag('BUILD_CPP_TESTS', default='0'):
       bazel_argv.append('//test/cpp:all')
-      bazel_argv.append('//third_party/xla_client:all')
+      bazel_argv.append('//torch_xla/csrc/runtime:all')
 
     if BAZEL_JOBS:
       bazel_argv.append('--jobs=%s' % BAZEL_JOBS)
@@ -292,34 +300,70 @@ class BuildBazelExtension(command.build_ext.build_ext):
     shutil.copyfile(ext_bazel_bin_path, ext_dest_path)
 
 
+class Develop(develop.develop):
+
+  def run(self):
+    self.run_command("build_ext")
+    super().run()
+
+
+# Read in README.md for our long_description
+cwd = os.path.dirname(os.path.abspath(__file__))
+with open(os.path.join(cwd, "README.md"), encoding="utf-8") as f:
+  long_description = f.read()
+
 setup(
     name=os.environ.get('TORCH_XLA_PACKAGE_NAME', 'torch_xla'),
     version=version,
     description='XLA bridge for PyTorch',
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     url='https://github.com/pytorch/xla',
     author='PyTorch/XLA Dev Team',
     author_email='pytorch-xla@googlegroups.com',
-    # Exclude the build files.
-    packages=find_packages(exclude=['build']),
+    classifiers=[
+        "Development Status :: 5 - Production/Stable",
+        "Intended Audience :: Developers",
+        "Intended Audience :: Education",
+        "Intended Audience :: Science/Research",
+        "License :: OSI Approved :: BSD License",
+        "Topic :: Scientific/Engineering",
+        "Topic :: Scientific/Engineering :: Mathematics",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
+        "Topic :: Software Development",
+        "Topic :: Software Development :: Libraries",
+        "Topic :: Software Development :: Libraries :: Python Modules",
+        "Programming Language :: C++",
+        "Programming Language :: Python :: 3",
+    ],
+    python_requires=">=3.8.0",
+    packages=find_packages(include=['torch_xla*']),
     ext_modules=[
         BazelExtension('//:_XLAC.so'),
     ],
     install_requires=[
         'absl-py>=1.0.0',
         'cloud-tpu-client>=0.10.0',
+        'pyyaml',
     ],
     package_data={
         'torch_xla': ['lib/*.so*',],
     },
+    entry_points={
+        'console_scripts': [
+            'stablehlo-to-saved-model = torch_xla.tf_saved_model_integration:main'
+        ]
+    },
     extras_require={
         # On Cloud TPU VM install with:
-        # $ sudo pip3 install torch_xla[tpuvm] -f https://storage.googleapis.com/tpu-pytorch/wheels/tpuvm/torch_xla-1.11-cp38-cp38-linux_x86_64.whl
+        # pip install torch_xla[tpu] -f https://storage.googleapis.com/libtpu-releases/index.html
+        'tpu': [f'libtpu-nightly=={_libtpu_version}'],
+        # On nightly, install libtpu with `pip install torch_xla[tpuvm]`
+        # Remove from release branches since this is not allowed by PyPI.
         'tpuvm': [f'libtpu-nightly @ {_libtpu_storage_path}'],
     },
-    data_files=[
-        'scripts/fixup_binary.py',
-    ],
     cmdclass={
         'build_ext': BuildBazelExtension,
         'clean': Clean,
+        'develop': Develop,
     })

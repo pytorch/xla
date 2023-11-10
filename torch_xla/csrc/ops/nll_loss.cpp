@@ -3,10 +3,10 @@
 #include <torch/csrc/lazy/core/util.h>
 
 #include "absl/types/span.h"
-#include "third_party/xla_client/util.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/nll_loss.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
+#include "torch_xla/csrc/runtime/util.h"
 
 namespace torch_xla {
 namespace {
@@ -25,7 +25,8 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& logits,
                         reduction);
   };
   std::vector<xla::Shape> shapes;
-  for (auto& input : xla::util::GetValuesVector<torch::lazy::Value>(
+  for (auto& input :
+       torch_xla::runtime::util::GetValuesVector<torch::lazy::Value>(
            {logits, labels}, {&weight})) {
     shapes.push_back(GetXlaShape(input));
   }
@@ -39,8 +40,8 @@ NllLoss::NllLoss(const torch::lazy::Value& logits,
                  const absl::optional<torch::lazy::Value>& weight,
                  ReductionMode reduction, int ignore_index)
     : XlaNode(torch::lazy::OpKind(at::aten::nll_loss),
-              xla::util::GetValuesVector<torch::lazy::Value>({logits, labels},
-                                                             {&weight}),
+              torch_xla::runtime::util::GetValuesVector<torch::lazy::Value>(
+                  {logits, labels}, {&weight}),
               [&]() {
                 return NodeOutputShape(logits, labels, weight, reduction,
                                        ignore_index);

@@ -1,9 +1,10 @@
 #include "torch_xla/csrc/ops/max_unpool_nd.h"
 
-#include "third_party/xla_client/debug_macros.h"
+#include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/pooling.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
 
 namespace torch_xla {
 namespace {
@@ -12,8 +13,8 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input,
                            const torch::lazy::Value& indices,
                            absl::Span<const int64_t> output_size) {
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    return BuildMaxUnpoolNd(GetCurrentDevice(), operands[0], operands[1],
-                            output_size);
+    return BuildMaxUnpoolNd(bridge::GetCurrentDevice(), operands[0],
+                            operands[1], output_size);
   };
   return InferOutputShape({GetXlaShape(input), GetXlaShape(indices)}, shape_fn);
 }

@@ -12,13 +12,13 @@
 
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
-#include "tensorflow/compiler/xla/client/xla_builder.h"
-#include "tensorflow/compiler/xla/literal_util.h"
-#include "tensorflow/compiler/xla/permutation_util.h"
-#include "tensorflow/compiler/xla/types.h"
-#include "tensorflow/tsl/platform/bfloat16.h"
-#include "third_party/xla_client/debug_macros.h"
-#include "third_party/xla_client/util.h"
+#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/util.h"
+#include "tsl/platform/bfloat16.h"
+#include "xla/client/xla_builder.h"
+#include "xla/literal_util.h"
+#include "xla/permutation_util.h"
+#include "xla/types.h"
 
 namespace torch_xla {
 
@@ -111,9 +111,6 @@ class XlaHelpers {
   //   result = value0 * alpha + value1 * (1 - alpha)
   static xla::XlaOp LinearInterpolation(xla::XlaOp value0, xla::XlaOp value1,
                                         double alpha);
-
-  // Returns the shape of the given XLA operation.
-  static const xla::Shape& ShapeOfXlaOp(xla::XlaOp op);
 
   // Returns the list of dimension sizes for the given XLA operation.
   static std::vector<int64_t> SizesOfXlaOp(xla::XlaOp op);
@@ -276,6 +273,9 @@ class XlaHelpers {
   static xla::Shape GetPromotedShape(const xla::Shape& shape1,
                                      const xla::Shape& shape2);
 
+  static xla::Shape GetPromotedDynamicShape(const xla::Shape& shape1,
+                                            const xla::Shape& shape2);
+
   // TODO @wonjoo - Migrate to torch::lazy after Shape is migrated
   static xla::Shape GetPromotedBinaryOpShape(const xla::Shape& shape1,
                                              const xla::Shape& shape2);
@@ -324,7 +324,8 @@ class XlaHelpers {
 
   template <typename T>
   static xla::Literal Range(T start, T end, T step) {
-    return xla::LiteralUtil::CreateR1<T>(xla::util::Range<T>(start, end, step));
+    return xla::LiteralUtil::CreateR1<T>(
+        runtime::util::Range<T>(start, end, step));
   }
 
   static xla::PrecisionConfig::Precision mat_mul_precision() {

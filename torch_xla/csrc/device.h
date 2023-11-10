@@ -8,14 +8,14 @@
 #include <iostream>
 #include <string>
 
-#include "third_party/xla_client/util.h"
+#include "torch_xla/csrc/runtime/util.h"
 
 namespace torch_xla {
 
 // TODO(yeounoh) `SPMD` is a virtual device that defers data `TransferToServer`
 // until after the paritioning pass. This avoids transfering  the full input
 // tensor to the device.
-enum class XlaDeviceType { CPU, GPU, TPU, XPU, SPMD };
+enum class XlaDeviceType { CPU, CUDA, ROCM, GPU, TPU, XPU, NEURON, SPMD };
 
 struct DeviceType : public torch::lazy::BackendDeviceType {
   DeviceType() { type = static_cast<int>(XlaDeviceType::CPU); }
@@ -28,19 +28,16 @@ struct DeviceType : public torch::lazy::BackendDeviceType {
 
 torch::lazy::BackendDevice ParseDeviceString(const std::string& device_spec);
 
-const torch::lazy::BackendDevice* GetDefaultDevice();
-
 torch::lazy::BackendDevice GetVirtualDevice();
 
-torch::lazy::BackendDevice GetCurrentDevice();
+// Test whether the XLA_USE_SPMD environment variable is set to enable the
+// virtual device optimization. This API is called before every device init,
+// and sets `spmd_config_is_locked` to block switching the SPMD mode.
+bool UseVirtualDevice();
 
-torch::lazy::BackendDevice SetCurrentDevice(
-    const torch::lazy::BackendDevice& device);
-
-static inline torch::lazy::BackendDevice GetDeviceOrCurrent(
-    const torch::lazy::BackendDevice* device) {
-  return device != nullptr ? *device : GetCurrentDevice();
-}
+// Return true if SPMD config can be switches. That is, no device has been
+// initialized, yet.
+bool GetLockSpmdConfig();
 
 }  // namespace torch_xla
 

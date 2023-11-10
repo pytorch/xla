@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#include "tensorflow/compiler/xla/client/xla_builder.h"
+#include "xla/client/xla_builder.h"
 
 namespace torch_xla {
 namespace op_builder {

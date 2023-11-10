@@ -1,6 +1,6 @@
 #include "torch_xla/csrc/shape_builder.h"
 
-#include "tensorflow/compiler/xla/shape_util.h"
+#include "xla/shape_util.h"
 
 namespace torch_xla {
 
