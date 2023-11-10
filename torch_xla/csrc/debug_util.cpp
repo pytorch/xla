@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/debug_util.h"
 
 #include <torch/csrc/lazy/core/hash.h>
+#include <torch/csrc/lazy/core/unique.h>
 #include <torch/csrc/lazy/python/python_util.h>
 
 #include <fstream>
@@ -17,7 +18,6 @@
 #include "torch_xla/csrc/ir_dump_util.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
-#include "torch_xla/csrc/runtime/unique.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
 
 namespace torch_xla {
@@ -61,7 +61,7 @@ std::string DebugUtil::GetTensorsGraphHlo(
     absl::Span<const XLATensorPtr> tensors, const std::vector<size_t>* indices,
     bool dump_stablehlo) {
   std::vector<torch::lazy::Value> root_values;
-  runtime::util::Unique<torch::lazy::BackendDevice> unique_device;
+  torch::lazy::Unique<torch::lazy::BackendDevice> unique_device;
   if (indices != nullptr) {
     for (auto index : *indices) {
       const XLATensorPtr& tensor = tensors[index];
@@ -91,7 +91,7 @@ std::string DebugUtil::GetTensorsGraphInfo(
   std::vector<const torch::lazy::Node*> root_nodes;
   std::vector<torch::lazy::Value> root_values;
   std::vector<torch::lazy::hash_t> root_hashes;
-  runtime::util::Unique<torch::lazy::BackendDevice> unique_device;
+  torch::lazy::Unique<torch::lazy::BackendDevice> unique_device;
   if (indices != nullptr) {
     for (auto index : *indices) {
       const XLATensorPtr& tensor = tensors[index];
