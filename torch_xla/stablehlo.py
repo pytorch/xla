@@ -73,10 +73,14 @@ class StableHLOGraphModule:
       res = pytree.tree_unflatten(res, out_spec)
     return res
 
-  def get_stablehlo_bytecode(self, method_name):
+  def get_stablehlo_bytecode(self, method_name=None):
+    if method_name is None:
+      method_name = self._default_method
     return self._name_to_stablehlo[method_name].bytecode
 
-  def get_stablehlo_text(self, method_name):
+  def get_stablehlo_text(self, method_name=None):
+    if method_name is None:
+      method_name = self._default_method
     return self._name_to_stablehlo[method_name].text
 
   def save(self, directory_path):
