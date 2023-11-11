@@ -212,8 +212,11 @@ BAZEL_JOBS = os.getenv('BAZEL_JOBS', default='')
 extra_compile_args = []
 cxx_abi = os.getenv(
     'CXX_ABI', default='') or getattr(torch._C, '_GLIBCXX_USE_CXX11_ABI', None)
+experimental_dynamism = os.getenv('EXPERIMENTAL_XLA_UNBOUNDED_DYNAMISM', default=None)
 if cxx_abi is not None:
   extra_compile_args.append(f'-D_GLIBCXX_USE_CXX11_ABI={int(cxx_abi)}')
+if experimental_dynamism is not None:
+  extra_compile_args.append(f'-DEXPERIMENTAL_XLA_UNBOUNDED_DYNAMISM={experimental_dynamism}')
 
 
 class BazelExtension(Extension):
@@ -244,9 +247,10 @@ class BuildBazelExtension(command.build_ext.build_ext):
 
     bazel_argv = [
         'bazel', 'build', ext.bazel_target,
-        f"--symlink_prefix={os.path.join(self.build_temp, 'bazel-')}",
-        '\n'.join(['--cxxopt=%s' % opt for opt in extra_compile_args])
+        f"--symlink_prefix={os.path.join(self.build_temp, 'bazel-')}"
     ]
+    for opt in extra_compile_args:
+      bazel_argv.append("--cxxopt={}".format(opt))
 
     # Debug build.
     if DEBUG:

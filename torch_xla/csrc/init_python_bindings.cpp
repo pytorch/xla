@@ -1968,6 +1968,20 @@ void InitXlaModuleBindings(py::module m) {
           return handles;
         });
 
+  m.def("_xla_mark_dynamic",
+        [](const at::Tensor& input, uint32_t dim) {
+          TORCH_LAZY_COUNTER("XlaMarkDynamic", 1);
+          XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+          xtensor->MarkDynamicDimension(dim);
+        });
+
+  m.def("_xla_set_tag",
+        [](const at::Tensor& input, const std::string& tag) {
+          TORCH_LAZY_COUNTER("XlaMarkDynamic", 1);
+          XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+          xtensor->SetTag(tag);
+        });
+
   // -------------Dynamo Integration API Start-------------------------
   /*
    * Return tensor ids and at::tensors for all DeviceData nodes that is needed

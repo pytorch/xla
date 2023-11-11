@@ -93,16 +93,24 @@ LoweringContext::LoweringContext(
   }
 }
 
+// import xla::Shape.h to inlcude the following defintion.
+static constexpr int64_t kUnboundedSize = std::numeric_limits<int64_t>::min();
 xla::XlaOp LoweringContext::GetParameter(
-    const std::shared_ptr<torch::lazy::BackendData>& data) {
+    const std::shared_ptr<torch::lazy::BackendData>& data, 
+    const std::vector<uint32_t>& dynamic_dims
+    ) {
   torch::lazy::BackendData::Handle handle = data->GetHandle();
   auto it = parameters_map_.find(handle);
   if (it == parameters_map_.end()) {
+    xla::Shape shape = std::dynamic_pointer_cast<runtime::ComputationClient::Data>(data)
+            ->shape();
+    for (const int dim : dynamic_dims) {
+      shape.set_dynamic_dimension(dim, true);
+      shape.set_dimensions(dim, kUnboundedSize);
+    }
     xla::XlaOp param = xla::Parameter(
-        builder(), parameters_.size(),
-        std::dynamic_pointer_cast<runtime::ComputationClient::Data>(data)
-            ->shape(),
-        absl::StrCat("p", parameters_.size()));
+      builder(), parameters_.size(),
+      shape, absl::StrCat("p", parameters_.size()));
     it = parameters_map_.emplace(handle, Parameter{param, parameters_.size()})
              .first;
     parameters_.push_back(data);
@@ -170,6 +178,19 @@ XlaOpVector LoweringContext::LowerNode(const torch::lazy::Node* node) {
 
     const XlaNode* casted = dynamic_cast<const XlaNode*>(node);
     result_ops = casted->Lower(this);
+    xla::internal::XlaBuilderFriend builder_friend;
+    auto* inst = builder_friend.GetInstruction(result_ops[0]);
+    auto* mutable_dynamic = inst->mutable_shape()->mutable_is_dynamic_dimension();
+    if (mutable_dynamic->empty()) {
+      for (int i = 0; i < inst->dimensions_size(); i++) {
+        mutable_dynamic->Add(false);
+      }
+    }
+    auto* mutable_dims = inst->mutable_shape()->mutable_dimensions();
+    for (const auto dim : casted->dynamic_dims()) {
+      mutable_dynamic->Set(dim, true);
+      mutable_dims->Set(dim, kUnboundedSize);
+    }
   } catch (const std::exception& ex) {
     ReportBuilderError(node, ex.what());
   }

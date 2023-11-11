@@ -66,8 +66,16 @@ xla::XlaOp BuildThreshold(xla::XlaOp input, xla::XlaOp output,
 
 xla::XlaOp BuildRelu(xla::XlaOp input) {
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+#ifndef EXPERIMENTAL_XLA_UNBOUNDED_DYNAMISM
   return xla::Max(input, XlaHelpers::ScalarValue<float>(
                              0, input_shape.element_type(), input.builder()));
+#else
+  xla::XlaOp scalar = XlaHelpers::ScalarValue<float>(
+      0, input_shape.element_type(), input.builder());
+  auto promoted = XlaHelpers::Promote(input, scalar);
+
+  return xla::Max(promoted.first, promoted.second);
+#endif
 }
 
 xla::XlaOp BuildHardshrink(xla::XlaOp input, xla::XlaOp lambda) {

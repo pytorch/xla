@@ -81,7 +81,12 @@ xla::XlaOp GetScaleValue(xla::XlaOp input, xla::XlaOp count,
   xla::XlaOp scale = xla::Select(xla::Ne(count, zero),
                                  one / xla::ConvertElementType(count, type),
                                  xla::NanValue(input.builder(), type));
+#if !EXPERIMENTAL_XLA_UNBOUNDED_DYNAMISM
   return input * scale;
+#else
+  auto promoted = XlaHelpers::Promote(input, scale);
+  return promoted.first * promoted.second;
+#endif
 }
 
 xla::XlaOp AverageValue(xla::XlaOp input, xla::XlaOp reduced) {
@@ -109,8 +114,13 @@ SummationResult CreateSummation(xla::XlaOp input,
         result.result, result.rinfo.element_count.size, shape.element_type());
   }
   if (keep_reduced_dimensions) {
+#if !EXPERIMENTAL_XLA_UNBOUNDED_DYNAMISM
     result.result =
         XlaHelpers::DynamicReshape(result.result, result.rinfo.new_dimensions);
+#else
+    result.result = XlaHelpers::DynamicUnboundedReshape(result.result, input,
+                                        result.rinfo.new_dimensions);
+#endif
   }
   return result;
 }
