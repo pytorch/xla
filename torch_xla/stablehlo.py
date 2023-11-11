@@ -222,6 +222,7 @@ class XLAExportInterpreter(torch.fx.Interpreter):
       return res
     return super().run_node(n)
 
+
 def _extract_input_args(exported_model, options):
   if options.override_tracing_arguments is not None:
     args = options.override_tracing_arguments
