@@ -46,6 +46,17 @@ struct MaxPool3dAutogradFunction
       torch::autograd::variable_list grad_output);
 };
 
+torch::Tensor max_pool2d_forward(torch::Tensor self,
+                                 torch::IntArrayRef kernel_size,
+                                 torch::IntArrayRef stride,
+                                 torch::IntArrayRef padding,
+                                 torch::IntArrayRef dilation, bool ceil_mode);
+
+torch::Tensor max_pool2d_backward(torch::Tensor grad_output, torch::Tensor self,
+                                  torch::IntArrayRef kernel_size,
+                                  torch::IntArrayRef stride,
+                                  torch::IntArrayRef padding, bool ceil_mode);
+
 }  // namespace aten_autograd_ops
 }  // namespace torch_xla
 

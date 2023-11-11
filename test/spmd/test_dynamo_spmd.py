@@ -15,7 +15,7 @@ import test_xla_sharding_base
 
 class SimpleLinear(nn.Module):
 
-  def __init__(self):
+  def __init__(self, mesh=None):
     super(SimpleLinear, self).__init__()
     self.fc1 = nn.Linear(128, 128)
     self.relu = nn.ReLU()
@@ -23,8 +23,14 @@ class SimpleLinear(nn.Module):
     # Add an additional 1x1 layer at the end to ensure the final layer
     # is not sharded.
     self.fc3 = nn.Linear(1, 1)
+    # If mesh is not none, we'll do a mark sharding inside the forward function
+    # to ensure dynamo can recognize and trace it in a torch compile.
+    self.mesh = mesh
 
   def forward(self, x):
+    if self.mesh and 'xla' in str(self.fc2.weight.device):
+      xs.mark_sharding(
+          self.fc2.weight, self.mesh, (1, 0), use_dynamo_custom_op=True)
     y = self.relu(self.fc1(x))
     z = self.fc2(y)
     return self.fc3(z)
@@ -170,6 +176,50 @@ class DynamoSpmdInferenceTest(test_xla_sharding_base.XlaShardingTest):
       os.environ['XLA_DYNAMO_INPUT_SHARDING_CHECK_THRESHOLD'] = saved_var
     else:
       del os.environ['XLA_DYNAMO_INPUT_SHARDING_CHECK_THRESHOLD']
+
+  def test_dynamo_spmd_mark_sharding_outside_of_compile(self):
+    device = xm.xla_device()
+    linear = SimpleLinear().to(device)
+    linear.eval()
+    xla_x = torch.randn(1, 128, device=device)
+    xs.mark_sharding(
+        linear.fc2.weight,
+        self._get_mesh((1, self.n_devices)), (1, 0),
+        use_dynamo_custom_op=True)
+    xla_res = linear(xla_x)
+    xm.mark_step()
+
+    dynamo_linear = torch.compile(linear, backend="openxla")
+    dynamo_res = dynamo_linear(xla_x)
+    torch.allclose(xla_res.cpu(), dynamo_res.cpu())
+
+    # Ensure that another run with same input does not trigger additional compilation
+    compile_count = met.metric_data('CompileTime')[0]
+    dynamo_res = dynamo_linear(xla_x)
+    self.assertEqual(met.metric_data('CompileTime')[0], compile_count)
+
+  def test_mark_sharding_inside_compile(self):
+    met.clear_counters()
+    device = xm.xla_device()
+    mesh = self._get_mesh((1, self.n_devices))
+
+    # Passing this `mesh` as a parameter to `SimpleLinear` will call the dynamo custom op
+    # variant of mark_sharding inside the forward function.
+    linear = SimpleLinear(mesh=mesh).to(device)
+    linear.eval()
+
+    xla_x = torch.randn(1, 128, device=device)
+    xla_res = linear(xla_x)
+    xm.mark_step()
+
+    dynamo_linear = torch.compile(linear, backend="openxla")
+    dynamo_res = dynamo_linear(xla_x)
+    torch.allclose(xla_res.cpu(), dynamo_res.cpu())
+
+    # Ensure that another run with same input does not trigger additional compilation
+    compile_count = met.metric_data('CompileTime')[0]
+    dynamo_res = dynamo_linear(xla_x)
+    self.assertEqual(met.metric_data('CompileTime')[0], compile_count)
 
 
 if __name__ == '__main__':
