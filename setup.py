@@ -212,11 +212,13 @@ BAZEL_JOBS = os.getenv('BAZEL_JOBS', default='')
 extra_compile_args = []
 cxx_abi = os.getenv(
     'CXX_ABI', default='') or getattr(torch._C, '_GLIBCXX_USE_CXX11_ABI', None)
-experimental_dynamism = os.getenv('EXPERIMENTAL_XLA_UNBOUNDED_DYNAMISM', default=None)
+experimental_dynamism = os.getenv(
+    'EXPERIMENTAL_XLA_UNBOUNDED_DYNAMISM', default=None)
 if cxx_abi is not None:
   extra_compile_args.append(f'-D_GLIBCXX_USE_CXX11_ABI={int(cxx_abi)}')
 if experimental_dynamism is not None:
-  extra_compile_args.append(f'-DEXPERIMENTAL_XLA_UNBOUNDED_DYNAMISM={experimental_dynamism}')
+  extra_compile_args.append(
+      f'-DEXPERIMENTAL_XLA_UNBOUNDED_DYNAMISM={experimental_dynamism}')
 
 
 class BazelExtension(Extension):

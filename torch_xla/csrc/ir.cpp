@@ -178,7 +178,8 @@ std::string XlaNode::ToString() const {
   for (const auto dim : dynamic_dims_) {
     ss << dim;
   }
-  ss << ", " << "tags: " << experimental_tag_;
+  ss << ", "
+     << "tags: " << experimental_tag_;
   return ss.str();
 }
 

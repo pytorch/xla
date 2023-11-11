@@ -334,7 +334,7 @@ xla::XlaOp XlaHelpers::DynamicReshapeAs(xla::XlaOp input,
 bool XlaHelpers::IsUnboundedDynamic(const xla::Shape& shape) {
   const absl::Span<const int64_t> dims = shape.dimensions();
   return std::any_of(dims.begin(), dims.end(),
-                  [](int64_t size) { return size == kUnboundedSize; });
+                     [](int64_t size) { return size == kUnboundedSize; });
 }
 
 xla::XlaOp XlaHelpers::DynamicUnboundedReshape(
@@ -603,7 +603,8 @@ xla::Shape XlaHelpers::GetPromotedBinaryOpShape(const xla::Shape& shape1,
             runtime::util::ToVector<int64_t>(shape2.dimensions())));
   }
 #if EXPERIMENTAL_XLA_UNBOUNDED_DYNAMISM
-  XLA_CHECK(!XlaHelpers::IsUnboundedDynamic(shape1) && !XlaHelpers::IsUnboundedDynamic(shape2))
+  XLA_CHECK(!XlaHelpers::IsUnboundedDynamic(shape1) &&
+            !XlaHelpers::IsUnboundedDynamic(shape2))
       << "Unreachable for unbounded dynamic code\n";
 #endif
   return GetPromotedDynamicShape(shape1, shape2);
@@ -703,7 +704,8 @@ std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteSecond(xla::XlaOp op1,
 xla::XlaOp XlaHelpers::ImplicitBroadcastWithUnboundedDynamicShapes(
     xla::XlaOp op, const xla::Shape& op_shape, xla::XlaOp aux_op,
     const xla::Shape& shape) {
-  XLA_CHECK(XlaHelpers::IsUnboundedDynamic(shape) || XlaHelpers::IsUnboundedDynamic(op_shape));
+  XLA_CHECK(XlaHelpers::IsUnboundedDynamic(shape) ||
+            XlaHelpers::IsUnboundedDynamic(op_shape));
 
   const xla::Shape& aux_shape = ShapeHelper::ShapeOfXlaOp(aux_op);
   const auto& op_shape_dims = op_shape.dimensions();

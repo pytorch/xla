@@ -118,8 +118,8 @@ SummationResult CreateSummation(xla::XlaOp input,
     result.result =
         XlaHelpers::DynamicReshape(result.result, result.rinfo.new_dimensions);
 #else
-    result.result = XlaHelpers::DynamicUnboundedReshape(result.result, input,
-                                        result.rinfo.new_dimensions);
+    result.result = XlaHelpers::DynamicUnboundedReshape(
+        result.result, input, result.rinfo.new_dimensions);
 #endif
   }
   return result;
