@@ -1,6 +1,6 @@
 import torch
 import torch_xla
-from torch_xla.distributed.fsdp.debugging import visualize_tensor_sharding
+from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
 
 import numpy as np
 import torch
