@@ -207,6 +207,7 @@ def visualize_sharding(shape: torch.Size,
               style=rich.style.Style(bgcolor=color, color=text_color)))
     table.add_row(*col)
   console.print(table, end='\n\n')
+  return table
 
 
 def visualize_tensor_sharding(ter, **kwargs):
