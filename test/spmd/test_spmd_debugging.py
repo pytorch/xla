@@ -10,6 +10,7 @@ import torch_xla.core.xla_model as xm
 import torch_xla.experimental.xla_sharding as xs
 from torch_xla.experimental.xla_sharded_tensor import XLAShardedTensor
 from torch_xla.experimental.xla_sharding import Mesh
+import torch_xla.distributed.spmd
 from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
 
 
