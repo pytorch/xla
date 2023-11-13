@@ -114,10 +114,11 @@ PjRtComputationClient::PjRtComputationClient() {
     client_ = std::move(xla::GetTfrtCpuClient(async, cpu_device_count).value());
   } else if (device_type == "TPU" || device_type == "TPU_C_API") {
     TF_VLOG(1) << "Initializing TFRT TPU client...";
-    XLA_CHECK_OK(
-        pjrt::LoadPjrtPlugin(
-            "tpu", sys_util::GetEnvString(env::kEnvTpuLibraryPath, "libtpu.so"))
-            .status());
+    // Prefer $TPU_LIBRARY_PATH if set
+    auto tpu_library_path = sys_util::GetEnvString(
+        env::kEnvTpuLibraryPath,
+        sys_util::GetEnvString(env::kEnvInferredTpuLibraryPath, "libtpu.so"));
+    XLA_CHECK_OK(pjrt::LoadPjrtPlugin("tpu", tpu_library_path).status());
     tsl::Status tpu_status = pjrt::InitializePjrtPlugin("tpu");
     XLA_CHECK_OK(tpu_status);
     client_ = std::move(xla::GetCApiClient("TPU").value());
