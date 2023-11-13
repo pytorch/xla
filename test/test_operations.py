@@ -2100,7 +2100,6 @@ class XpTraceTest(test_utils.XlaTestCase):
       with xp.Trace('conv1'):
         xm.mark_step()
 
-
   def test_non_empty_scope_decorator(self):
 
     @xp.trace_me("conv2")
