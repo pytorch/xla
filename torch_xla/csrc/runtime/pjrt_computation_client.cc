@@ -62,6 +62,23 @@ xla::Shape host_output_shape(xla::PjRtBuffer* buffer) {
   return xla::ShapeUtil::DeviceShapeToHostShape(shape);
 }
 
+xla::GpuAllocatorConfig GetGpuAllocatorConfig() {
+  auto allocator_config = xla::GpuAllocatorConfig{};
+  if (sys_util::GetEnvString(env::kEnvPjrtAllocatorCudaAsync, "").empty() &&
+      sys_util::GetEnvString(env::kEnvPjrtAllocatorPreallocate, "").empty() &&
+      sys_util::GetEnvString(env::kEnvPjrtAllocatorFraction, "").empty()) {
+    return allocator_config;
+  }
+  if (sys_util::GetEnvBool(env::kEnvPjrtAllocatorCudaAsync, false)) {
+    allocator_config.kind = xla::GpuAllocatorConfig::Kind::kCudaAsync;
+  }
+  allocator_config.preallocate =
+      sys_util::GetEnvBool(env::kEnvPjrtAllocatorPreallocate, true);
+  allocator_config.memory_fraction =
+      sys_util::GetEnvDouble(env::kEnvPjrtAllocatorFraction, 0.75);
+  return allocator_config;
+}
+
 }  // namespace
 
 std::string PjRtComputationClient::PjRtDeviceToString(
@@ -141,7 +158,7 @@ PjRtComputationClient::PjRtComputationClient() {
                << global_process_rank << ", num_nodes=" << global_world_size;
     client_ = std::move(xla::GetStreamExecutorGpuClient(
                             /*asynchronous=*/async,
-                            /*allocator_config=*/xla::GpuAllocatorConfig{},
+                            /*allocator_config=*/GetGpuAllocatorConfig(),
                             /*node_id=*/global_process_rank,
                             /*num_nodes=*/global_world_size,
                             /*allowed_devices=*/allowed_devices,
