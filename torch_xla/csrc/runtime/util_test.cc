@@ -15,36 +15,6 @@ namespace util {
 
 using ::testing::ElementsAre;
 
-TEST(UtilTest, Cleanup) {
-  bool notify = false;
-
-  // Set to true.
-  {
-    Cleanup<bool> c([&notify](bool b) { notify = b; });
-    c.SetStatus(true);
-  }
-  EXPECT_TRUE(notify);
-
-  // Set to false.
-  {
-    Cleanup<bool> c([&notify](bool b) { notify = b; });
-    c.SetStatus(false);
-  }
-  EXPECT_FALSE(notify);
-
-  // Releasing the cleanup will not change the `notify` to true.
-  {
-    Cleanup<bool> c([&notify](bool b) { notify = b; });
-    c.SetStatus(true);
-    c.Release();
-  }
-  EXPECT_FALSE(notify);
-}
-
-TEST(UtilTest, Iota) {
-  EXPECT_THAT(Iota<int16_t>(5, 0, 2), ElementsAre(0, 2, 4, 6, 8));
-}
-
 TEST(UtilTest, Range) {
   EXPECT_THAT(Range<int16_t>(0, 10, 2), ElementsAre(0, 2, 4, 6, 8));
   EXPECT_THAT(Range<int16_t>(10, 0, -2), ElementsAre(10, 8, 6, 4, 2));
@@ -75,34 +45,11 @@ TEST(UtilTest, MapInsert) {
   EXPECT_EQ(MapInsert(&v, 1, [] { return 12; }), 1);
 }
 
-TEST(UtilTest, GetEnumValue) {
-  enum E { A = 0, B, C, D };
-  EXPECT_EQ(GetEnumValue(E::A), 0);
-  EXPECT_EQ(GetEnumValue(E::B), 1);
-  EXPECT_EQ(GetEnumValue(E::C), 2);
-  EXPECT_EQ(GetEnumValue(E::D), 3);
-}
-
 TEST(UtilTest, Multiply) {
   std::vector<int32_t> t = {1, 2, 3, 4, 5};
   EXPECT_EQ(Multiply<int32_t>(t), 120);
   t.push_back(6);
   EXPECT_EQ(Multiply<int32_t>(t), 720);
-}
-
-TEST(UtilTest, Hash) {
-  std::pair<std::string, int32_t> temp = {"hello", 3};
-  EXPECT_EQ(Hash(std::pair<std::string, int32_t>{"hello", 3}), Hash(temp));
-  EXPECT_EQ(HexHash(Hash(std::pair<std::string, int32_t>{"hello", 3})),
-            HexHash(Hash(temp)));
-
-  std::vector<int32_t> t = {1, 2, 3, 4, 5};
-  EXPECT_EQ(Hash({1, 2, 3, 4, 5}), Hash({1, 2, 3, 4, 5}));
-  EXPECT_EQ(Hash(std::set<int32_t>{1, 2, 3}), Hash(std::set<int32_t>{1, 2, 3}));
-  EXPECT_EQ(Hash(t), Hash(std::vector<int32_t>{1, 2, 3, 4, 5}));
-
-  EXPECT_EQ(StdDataHash(t.data(), t.size()),
-            StdDataHash(std::vector<int32_t>{1, 2, 3, 4, 5}.data(), t.size()));
 }
 
 TEST(UtilTest, MaybeRef) {

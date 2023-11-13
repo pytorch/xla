@@ -41,7 +41,8 @@ class LayoutManager {
 
   struct DimensionsHasher {
     size_t operator()(const absl::Span<const int64_t>& dimensions) const {
-      return runtime::util::HashReduce(runtime::util::MHash(dimensions));
+      return torch::lazy::HashReduce(torch::lazy::MHash(
+          std::vector<int64_t>({dimensions.begin(), dimensions.end()})));
     }
   };
 

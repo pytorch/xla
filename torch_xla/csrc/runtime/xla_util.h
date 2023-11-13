@@ -1,6 +1,8 @@
 #ifndef XLA_CLIENT_XLA_UTIL_H_
 #define XLA_CLIENT_XLA_UTIL_H_
 
+#include <torch/csrc/lazy/core/hash.h>
+
 #include <string>
 
 #include "absl/types/span.h"
@@ -35,7 +37,7 @@ void CheckComputationStatus(
     absl::Span<const xla::XlaComputation* const> computations,
     absl::Span<const xla::Shape* const> output_shapes);
 
-hash_t ShapeHash(const xla::Shape& shape);
+torch::lazy::hash_t ShapeHash(const xla::Shape& shape);
 
 }  // namespace util
 }  // namespace runtime

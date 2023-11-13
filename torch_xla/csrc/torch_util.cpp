@@ -78,9 +78,7 @@ at::Tensor MaybeWrapTensorToFunctional(const at::Tensor& tensor) {
 namespace torch {
 namespace lazy {
 torch::lazy::hash_t Hash(const xla::Shape& shape) {
-  auto shape_hash = torch_xla::runtime::util::ShapeHash(shape);
-  return c10::uint128(absl::Uint128High64(shape_hash),
-                      absl::Uint128Low64(shape_hash));
+  return torch_xla::runtime::util::ShapeHash(shape);
 }
 }  // namespace lazy
 }  // namespace torch
