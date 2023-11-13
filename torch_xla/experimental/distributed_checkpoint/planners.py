@@ -4,7 +4,7 @@ import io
 import numpy as np
 import torch
 import torch_xla
-import torch_xla.experimental.xla_sharding as xs
+import torch_xla.distributed.spmd as xs
 
 from collections import ChainMap
 from torch.distributed.checkpoint.default_planner import (
@@ -34,7 +34,7 @@ from torch.distributed.checkpoint.metadata import (
 )
 from torch.distributed.checkpoint.utils import find_state_dict_object
 from torch.utils._pytree import tree_map
-from torch_xla.experimental.xla_sharding import XLAShardedTensor, XLAShard
+from torch_xla.distributed.spmd import XLAShardedTensor, XLAShard
 from torch_xla.experimental.distributed_checkpoint._helpers import (
     FLATTEN_MAPPING, flatten_state_dict, dedup_tensors, _is_sharded_tensor,
     set_element, narrow_tensor_by_index, _unwrap_xla_sharded_tensor, _CpuShards)

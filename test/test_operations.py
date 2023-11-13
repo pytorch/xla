@@ -36,7 +36,7 @@ from torch_xla.distributed.fsdp.utils import apply_xla_patch_to_nn_linear
 import torch_xla.debug.metrics as met
 import torch_xla.debug.model_comparator as mc
 import torch_xla.distributed.parallel_loader as pl
-import torch_xla.experimental.xla_sharding as xs
+import torch_xla.distributed.spmd as xs
 from torch_xla import runtime as xr
 import torch_xla.test.test_utils as xtu
 import torch_xla.utils.utils as xu
