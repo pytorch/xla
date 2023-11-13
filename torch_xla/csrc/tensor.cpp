@@ -899,9 +899,4 @@ void XLATensor::MarkDynamicDimension(uint32_t dim) {
   xla_node->MarkDynamicDimension(dim);
 }
 
-void XLATensor::SetTag(const std::string& tag) {
-  auto* xla_node = dynamic_cast<XlaNode*>(CurrentIrValue().node.get());
-  xla_node->SetTag(tag);
-}
-
 }  // namespace torch_xla
