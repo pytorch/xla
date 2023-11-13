@@ -422,26 +422,7 @@ std::vector<at::Tensor> XLAGraphExecutor::GetTensors(
       async != nullptr ? async->tensors_data
                        : absl::Span<const torch::lazy::BackendDataPtr>());
 
-  // Execution is async in PJRT, so TransferFromServer may block until execution
-  // completes. Release the GIL so other threads can proceed and unblock any
-  // collective computations.
-  // HACK: This method may be called outside of python (mainly in C++ tests) or
-  // when the GIL is already released, so we must check both cases here. If
-  // possible, prefer to release the GIL in the python bindings before copying
-  // this pattern.
-  PyThreadState* save = nullptr;
-  // TODO(wcromar): Remove this setting when we are more confident
-  static const bool release_gil =
-      runtime::sys_util::GetEnvBool("XLA_RELEASE_GIL_DURING_TRANSFER", true);
-  if (release_gil && Py_IsInitialized() && PyGILState_Check()) {
-    save = PyEval_SaveThread();
-  }
-  std::vector<xla::Literal> literals =
-      runtime::GetComputationClient()->TransferFromServer(
-          UnwrapXlaData(tensors_data));
-  if (save) {
-    PyEval_RestoreThread(save);
-  }
+  std::vector<xla::Literal> literals = ReleaseGilAndTransferData(tensors_data);
 
   return FetchTensors(tensors, literals,
                       async != nullptr ? &async->indices : nullptr);
