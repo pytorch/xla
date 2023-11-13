@@ -39,7 +39,6 @@
 #include "torch_xla/csrc/runtime/pjrt_computation_client.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/thread_pool.h"
-#include "torch_xla/csrc/runtime/unique.h"
 #include "torch_xla/csrc/runtime/xla_util.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"

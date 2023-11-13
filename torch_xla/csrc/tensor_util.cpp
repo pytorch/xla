@@ -37,7 +37,7 @@ namespace {
 struct DataAsync {
   std::vector<runtime::ComputationClient::TensorSource> source_tensors;
   std::vector<torch::lazy::BackendDataPtr> async_datas;
-  std::vector<runtime::util::ExceptionCleanup> handle_unlockers;
+  std::vector<torch::lazy::ExceptionCleanup> handle_unlockers;
 };
 
 template <typename S>
