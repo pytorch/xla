@@ -14,7 +14,7 @@ import torch.distributed.checkpoint as dist_cp
 import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.runtime as xr
-import torch_xla.experimental.xla_sharding as xs
+import torch_xla.distributed.spmd as xs
 
 from torch.distributed.checkpoint.default_planner import (
     create_default_local_save_plan,

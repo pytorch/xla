@@ -84,7 +84,7 @@ import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.profiler as xp
 import torch_xla.test.test_utils as test_utils
-import torch_xla.experimental.xla_sharding as xs
+import torch_xla.distributed.spmd as xs
 
 DEFAULT_KWARGS = dict(
     batch_size=128,

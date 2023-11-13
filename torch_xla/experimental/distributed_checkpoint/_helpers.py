@@ -5,7 +5,7 @@
 import dataclasses
 
 import torch
-import torch_xla.experimental.xla_sharding as xs
+import torch_xla.distributed.spmd as xs
 
 from torch.distributed.checkpoint.planner import SavePlan
 from typing import (
@@ -23,7 +23,7 @@ from typing import (
 )
 from torch.distributed.checkpoint.metadata import (MetadataIndex,
                                                    STATE_DICT_TYPE)
-from torch_xla.experimental.xla_sharding import XLAShardedTensor, ShardingType
+from torch_xla.distributed.spmd import XLAShardedTensor, ShardingType
 from torch.utils._pytree import tree_map
 
 PATH_ITEM = Union[str, int]
