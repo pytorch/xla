@@ -158,7 +158,6 @@ class XlaHelpers {
   static xla::XlaOp DynamicReshape(xla::XlaOp input,
                                    absl::Span<const int64_t> output_sizes);
 
-#if EXPERIMENTAL_XLA_UNBOUNDED_DYNAMISM
   static bool IsUnboundedDynamic(const xla::Shape& shape);
 
   static xla::XlaOp DynamicUnboundedReshape(
@@ -168,9 +167,6 @@ class XlaHelpers {
   static xla::XlaOp DynamicUnboundedBroadcast(
       xla::XlaOp input, xla::XlaOp aux_input,
       absl::Span<const int64_t> output_sizes);
-
-  static void PrintXlaOp(xla::XlaOp op, const std::string& msg);
-#endif
 
   static xla::XlaOp DynamicReshapeAs(xla::XlaOp input, const xla::Shape& shape);
 

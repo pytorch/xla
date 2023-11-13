@@ -21,9 +21,11 @@
 namespace torch_xla {
 namespace {
 
-#if EXPERIMENTAL_XLA_UNBOUNDED_DYNAMISM
+static const bool experimental_unbounded_dynamism =
+    runtime::sys_util::GetEnvBool("EXPERIMENTAL_XLA_UNBOUNDED_DYNAMISM", false);
+
+// TODO(lsy323): Get reserved number for unbounded dim after it's added in XLA.
 static constexpr int64_t kUnboundedSize = std::numeric_limits<int64_t>::min();
-#endif
 
 xla::XlaOp ConvertBinaryOpResult(xla::XlaOp op1, xla::XlaOp op2,
                                  xla::XlaOp result) {
@@ -67,9 +69,9 @@ xla::XlaOp XlaHelpers::BroadcastDimensions(xla::XlaOp input,
   std::vector<int64_t> bcast_sizes = SizesOfXlaOp(input);
   for (size_t i = 0; i < dimensions.size(); ++i) {
     bcast_sizes.at(dimensions[i]) = sizes[i];
-#if EXPERIMENTAL_XLA_UNBOUNDED_DYNAMISM
-    XLA_CHECK(sizes[i] != kUnboundedSize);
-#endif
+    if (experimental_unbounded_dynamism) {
+      XLA_CHECK(sizes[i] != kUnboundedSize);
+    }
   }
   return xla::BroadcastInDim(input, bcast_sizes,
                              GetAllDimensions(bcast_sizes.size()));
@@ -329,9 +331,9 @@ xla::XlaOp XlaHelpers::DynamicReshapeAs(xla::XlaOp input,
              : xla::Reshape(input, shape.dimensions());
 }
 
-#if EXPERIMENTAL_XLA_UNBOUNDED_DYNAMISM
-
 bool XlaHelpers::IsUnboundedDynamic(const xla::Shape& shape) {
+  XLA_CHECK(experimental_unbounded_dynamism)
+      << "EXPERIMENTAL_XLA_UNBOUNDED_DYNAMISM needs to be turned on.";
   const absl::Span<const int64_t> dims = shape.dimensions();
   return std::any_of(dims.begin(), dims.end(),
                      [](int64_t size) { return size == kUnboundedSize; });
@@ -340,6 +342,8 @@ bool XlaHelpers::IsUnboundedDynamic(const xla::Shape& shape) {
 xla::XlaOp XlaHelpers::DynamicUnboundedReshape(
     xla::XlaOp input, xla::XlaOp aux_input,
     absl::Span<const int64_t> output_sizes) {
+  XLA_CHECK(experimental_unbounded_dynamism)
+      << "EXPERIMENTAL_XLA_UNBOUNDED_DYNAMISM needs to be turned on.";
   const xla::Shape& aux_input_shape = ShapeHelper::ShapeOfXlaOp(aux_input);
   XLA_CHECK(output_sizes.size() == aux_input_shape.rank())
       << "XlaHelpers::DynamicUnboundedReshape constrainled failed!";
@@ -381,13 +385,17 @@ xla::XlaOp XlaHelpers::DynamicUnboundedReshape(
 xla::XlaOp XlaHelpers::DynamicUnboundedBroadcast(
     xla::XlaOp input, xla::XlaOp aux_input,
     absl::Span<const int64_t> aux_input_dimensions) {
+  XLA_CHECK(experimental_unbounded_dynamism)
+      << "EXPERIMENTAL_XLA_UNBOUNDED_DYNAMISM needs to be turned on.";
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   const xla::Shape& aux_input_shape = ShapeHelper::ShapeOfXlaOp(aux_input);
   bool all_static = true;
   std::vector<int64_t> output_dimensions;
   std::vector<bool> output_dynamic;
   for (auto dim : aux_input_dimensions) {
-    if (aux_input_shape.dimensions(dim) == kUnboundedSize) all_static = false;
+    if (aux_input_shape.dimensions(dim) == kUnboundedSize) {
+      all_static = false;
+    }
     output_dimensions.push_back(aux_input_shape.dimensions(dim));
     output_dynamic.push_back(aux_input_shape.is_dynamic_dimension(dim));
   }
@@ -431,13 +439,6 @@ xla::XlaOp XlaHelpers::DynamicUnboundedBroadcast(
       xla::ShapeUtil::MakeShape(input_shape.element_type(), output_dimensions,
                                 output_dynamic));
 }
-
-void XlaHelpers::PrintXlaOp(xla::XlaOp op, const std::string& msg) {
-  std::cout << "Handle: " << msg << ": " << op << "\n";
-  const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(op);
-  std::cout << xla::ShapeUtil::HumanString(shape);
-}
-#endif
 
 bool XlaHelpers::SameStaticDimensions(const xla::Shape& shape1,
                                       const xla::Shape& shape2) {
@@ -602,11 +603,11 @@ xla::Shape XlaHelpers::GetPromotedBinaryOpShape(const xla::Shape& shape1,
             runtime::util::ToVector<int64_t>(shape1.dimensions()),
             runtime::util::ToVector<int64_t>(shape2.dimensions())));
   }
-#if EXPERIMENTAL_XLA_UNBOUNDED_DYNAMISM
-  XLA_CHECK(!XlaHelpers::IsUnboundedDynamic(shape1) &&
-            !XlaHelpers::IsUnboundedDynamic(shape2))
-      << "Unreachable for unbounded dynamic code\n";
-#endif
+  if (experimental_unbounded_dynamism) {
+    XLA_CHECK(!XlaHelpers::IsUnboundedDynamic(shape1) &&
+              !XlaHelpers::IsUnboundedDynamic(shape2))
+        << "Unreachable for unbounded dynamic code\n";
+  }
   return GetPromotedDynamicShape(shape1, shape2);
 }
 
@@ -700,7 +701,6 @@ std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteSecond(xla::XlaOp op1,
   return PromoteShapes(vops.first, vops.second);
 }
 
-#if EXPERIMENTAL_XLA_UNBOUNDED_DYNAMISM
 xla::XlaOp XlaHelpers::ImplicitBroadcastWithUnboundedDynamicShapes(
     xla::XlaOp op, const xla::Shape& op_shape, xla::XlaOp aux_op,
     const xla::Shape& shape) {
@@ -721,7 +721,6 @@ xla::XlaOp XlaHelpers::ImplicitBroadcastWithUnboundedDynamicShapes(
   std::vector<xla::XlaOp> reshaped_ops;
 
   if (size_delta > 0) {
-    std::cout << "\t size_delta > 0\n";
     std::vector<int64_t> broadcast_sizes(shape_dims.begin(),
                                          shape_dims.begin() + size_delta);
     for (int i = 0; i < size_delta; i++) {
@@ -730,20 +729,15 @@ xla::XlaOp XlaHelpers::ImplicitBroadcastWithUnboundedDynamicShapes(
             XlaHelpers::ScalarValue<int32_t>(broadcast_sizes[i], op.builder()));
 
         auto s = ShapeHelper::ShapeOfXlaOp(get_dim_ops.back());
-        std::cout << "implicitB shape: " << xla::ShapeUtil::HumanString(s)
-                  << " for size: " << broadcast_sizes[i] << "\n";
       } else {
         get_dim_ops.push_back(xla::GetDimensionSize(aux_op, i));
 
         auto s = ShapeHelper::ShapeOfXlaOp(get_dim_ops.back());
-        std::cout << "implicitB shape: " << xla::ShapeUtil::HumanString(s)
-                  << " for size: ? of index: " << i << "\n";
       }
     }
   }
 
   if (size_delta == 0) {
-    std::cout << "\t size_delta == 0\n";
     int sz = op_shape_dims.size() - aux_shape_dims.size();
     std::vector<int64_t> broadcast_sizes(shape_dims.begin(),
                                          shape_dims.begin() + sz);
@@ -753,14 +747,10 @@ xla::XlaOp XlaHelpers::ImplicitBroadcastWithUnboundedDynamicShapes(
             XlaHelpers::ScalarValue<int32_t>(broadcast_sizes[i], op.builder()));
 
         auto s = ShapeHelper::ShapeOfXlaOp(get_dim_ops.back());
-        std::cout << "implicitB shape: " << xla::ShapeUtil::HumanString(s)
-                  << " for size: " << broadcast_sizes[i] << "\n";
       } else {
         get_dim_ops.push_back(xla::GetDimensionSize(op, i));
 
         auto s = ShapeHelper::ShapeOfXlaOp(get_dim_ops.back());
-        std::cout << "implicitB shape: " << xla::ShapeUtil::HumanString(s)
-                  << " for size: ? of index: " << i << "\n";
       }
     }
   }
@@ -789,8 +779,6 @@ xla::XlaOp XlaHelpers::ImplicitBroadcastWithUnboundedDynamicShapes(
       get_dim_ops.push_back(ScalarValue<int32_t>(shape_dim, op.builder()));
 
       auto s = ShapeHelper::ShapeOfXlaOp(get_dim_ops.back());
-      std::cout << "implicitB shape: " << xla::ShapeUtil::HumanString(s)
-                << " for size: " << shape_dim << "\n";
 
     } else if (op_shape_dim == 1 || aux_op_shape_dim == 1) {
       if (op_shape_dim == 1) {
@@ -798,22 +786,16 @@ xla::XlaOp XlaHelpers::ImplicitBroadcastWithUnboundedDynamicShapes(
             xla::GetDimensionSize(aux_op, aux_op_shape_index));
 
         auto s = ShapeHelper::ShapeOfXlaOp(get_dim_ops.back());
-        std::cout << "implicitB shape: " << xla::ShapeUtil::HumanString(s)
-                  << " for size: ? of index: " << aux_op_shape_index << "\n";
 
       } else {
         get_dim_ops.push_back(xla::GetDimensionSize(op, op_shape_index));
 
         auto s = ShapeHelper::ShapeOfXlaOp(get_dim_ops.back());
-        std::cout << "implicitB shape: " << xla::ShapeUtil::HumanString(s)
-                  << " for size: ? of index: " << op_shape_index << "\n";
       }
     } else {
       get_dim_ops.push_back(xla::GetDimensionSize(op, op_shape_index));
 
       auto s = ShapeHelper::ShapeOfXlaOp(get_dim_ops.back());
-      std::cout << "implicitB shape: " << xla::ShapeUtil::HumanString(s)
-                << " for size: ? of index: " << op_shape_index << "\n";
     }
   }
 
@@ -829,7 +811,6 @@ xla::XlaOp XlaHelpers::ImplicitBroadcastWithUnboundedDynamicShapes(
 
   return new_op;
 }
-#endif
 
 xla::XlaOp XlaHelpers::ImplicitBroadcast(xla::XlaOp op,
                                          const xla::Shape& op_shape,
