@@ -8,6 +8,7 @@
 #include <torch/csrc/lazy/core/lazy_graph_executor.h>
 #include <torch/csrc/lazy/core/metrics.h>
 #include <torch/csrc/lazy/core/tensor_util.h>
+#include <torch/csrc/lazy/core/unique.h>
 #include <torch/csrc/lazy/core/util.h>
 
 #include <algorithm>
@@ -27,6 +28,7 @@
 #include "absl/strings/str_join.h"
 #include "stablehlo/dialect/Serialization.h"  // from @stablehlo
 #include "torch_xla/csrc/aten_xla_bridge.h"
+#include "torch_xla/csrc/dtype.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir_dump_util.h"
 #include "torch_xla/csrc/layout_manager.h"
@@ -47,7 +49,6 @@
 #include "torch_xla/csrc/runtime/stablehlo_helper.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/thread_pool.h"
-#include "torch_xla/csrc/runtime/unique.h"
 #include "torch_xla/csrc/runtime/xla_util.h"
 #include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/tensor_util.h"
@@ -217,7 +218,7 @@ torch::lazy::Value XLAGraphExecutor::GetDeviceDataIrValue(
     const at::Scalar& value, xla::PrimitiveType type,
     const torch::lazy::BackendDevice& device) {
   torch::lazy::BackendDataPtr data =
-      GetDeviceData(value, TensorTypeFromXlaType(type), device);
+      GetDeviceData(value, MaybeUpcastToHostTorchType(type), device);
   data->SetInfo(
       std::make_shared<torch::lazy::LazyGraphExecutor::DeviceDataInfo>(
           /*tensor_id=*/-1, /*read_only=*/true));
@@ -421,26 +422,7 @@ std::vector<at::Tensor> XLAGraphExecutor::GetTensors(
       async != nullptr ? async->tensors_data
                        : absl::Span<const torch::lazy::BackendDataPtr>());
 
-  // Execution is async in PJRT, so TransferFromServer may block until execution
-  // completes. Release the GIL so other threads can proceed and unblock any
-  // collective computations.
-  // HACK: This method may be called outside of python (mainly in C++ tests) or
-  // when the GIL is already released, so we must check both cases here. If
-  // possible, prefer to release the GIL in the python bindings before copying
-  // this pattern.
-  PyThreadState* save = nullptr;
-  // TODO(wcromar): Remove this setting when we are more confident
-  static const bool release_gil =
-      runtime::sys_util::GetEnvBool("XLA_RELEASE_GIL_DURING_TRANSFER", true);
-  if (release_gil && Py_IsInitialized() && PyGILState_Check()) {
-    save = PyEval_SaveThread();
-  }
-  std::vector<xla::Literal> literals =
-      runtime::GetComputationClient()->TransferFromServer(
-          UnwrapXlaData(tensors_data));
-  if (save) {
-    PyEval_RestoreThread(save);
-  }
+  std::vector<xla::Literal> literals = ReleaseGilAndTransferData(tensors_data);
 
   return FetchTensors(tensors, literals,
                       async != nullptr ? &async->indices : nullptr);
@@ -534,7 +516,7 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
     const std::vector<XLATensorPtr>& tensors, const SyncTensorsConfig& config) {
   tsl::profiler::TraceMe activity("CollectSyncTensors",
                                   tsl::profiler::TraceMeLevel::kInfo);
-  runtime::util::Unique<torch::lazy::BackendDevice> unique_device;
+  torch::lazy::Unique<torch::lazy::BackendDevice> unique_device;
   for (size_t i = 0; i < tensors.size(); ++i) {
     unique_device.set(tensors[i]->GetDevice());
   }
@@ -629,6 +611,10 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
   tsl::profiler::TraceMe activity("ExecuteComputationWithBarrier",
                                   tsl::profiler::TraceMeLevel::kInfo);
   MaybeDumpGraph("dynamo", hash);
+  if (runtime::sys_util::GetEnvBool("PT_XLA_DEBUG", false)) {
+    DebugUtil::analyze_graph_execution_python_frame(
+        /*from_dynamo_executation=*/true);
+  }
   auto cachedComputation =
       XLAGraphExecutor::Get()->GetComputationCache()->Get(hash);
   TF_VLOG(5) << "Cached computation (hash: " << torch::lazy::HashToString(hash)
@@ -1322,6 +1308,9 @@ XLAGraphExecutor::SyncTensorsGraphInternal(
     const SyncTensorsConfig& config, bool warm_up_cache_only) {
   tsl::profiler::TraceMe activity("SyncTensorsGraphInternal",
                                   tsl::profiler::TraceMeLevel::kInfo);
+  if (runtime::sys_util::GetEnvBool("PT_XLA_DEBUG", false)) {
+    DebugUtil::analyze_graph_execution_python_frame();
+  }
   SyncTensorCollection coll = CollectSyncTensors(*tensors, config);
   if (coll.indices.empty()) {
     // Enure previous execution is complete before exiting this

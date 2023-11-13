@@ -198,7 +198,7 @@ def train_mnist(flags,
 
 
 def _mp_fn(index, flags):
-  torch.set_default_tensor_type('torch.FloatTensor')
+  torch.set_default_dtype(torch.float32)
   accuracy = train_mnist(flags, dynamic_graph=True, fetch_often=True)
   if flags.tidy and os.path.isdir(flags.datadir):
     shutil.rmtree(flags.datadir)

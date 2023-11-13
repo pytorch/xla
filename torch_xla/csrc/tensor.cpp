@@ -19,7 +19,9 @@
 #include <stdexcept>
 #include <unordered_set>
 
+#include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/debug_util.h"
+#include "torch_xla/csrc/dtype.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/layout_manager.h"
 #include "torch_xla/csrc/ops/arithmetic_ir_ops.h"
@@ -37,7 +39,6 @@
 #include "torch_xla/csrc/runtime/pjrt_computation_client.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/thread_pool.h"
-#include "torch_xla/csrc/runtime/unique.h"
 #include "torch_xla/csrc/runtime/xla_util.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
@@ -139,9 +140,9 @@ XLATensor::XLATensor(std::shared_ptr<View> view,
 XLATensor::XLATensor(std::shared_ptr<Data> data)
     : torch::lazy::LazyTensor(data),
       data_(std::move(data)),
-      storage_(c10::Storage(
-          {}, 0,
-          c10::DataPtr(nullptr, backendDeviceToAtenDevice(data_->device)))) {}
+      storage_(c10::Storage({}, 0,
+                            c10::DataPtr(nullptr, bridge::XlaDeviceToAtenDevice(
+                                                      data_->device)))) {}
 
 auto XLATensor::data() const -> const std::shared_ptr<Data>& {
   XLA_CHECK(data_ != nullptr) << "Trying to access a null cursor";
@@ -158,7 +159,7 @@ int64_t XLATensor::size(int64_t dim) const {
 at::ScalarType XLATensor::dtype() const {
   return data()->logical_element_type
              ? *data()->logical_element_type
-             : TensorTypeFromXlaType(shape().get().element_type());
+             : MaybeUpcastToHostTorchType(shape().get().element_type());
 }
 
 c10::optional<at::ScalarType> XLATensor::dtype_optional() const {

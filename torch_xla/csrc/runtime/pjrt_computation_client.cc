@@ -9,12 +9,13 @@
 #include "pjrt_computation_client.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
-#include "torch_xla/csrc/runtime/distributed_runtime.h"
 #include "torch_xla/csrc/runtime/env_vars.h"
 #include "torch_xla/csrc/runtime/multi_wait.h"
 #include "torch_xla/csrc/runtime/stablehlo_helper.h"
+#include "torch_xla/csrc/runtime/tensor_source.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
 #include "torch_xla/csrc/runtime/thread_pool.h"
+#include "torch_xla/csrc/runtime/xla_coordinator.h"
 #include "tsl/profiler/lib/traceme.h"
 #include "xla/client/xla_builder.h"
 #include "xla/client/xla_computation.h"
@@ -60,6 +61,23 @@ xla::Shape host_output_shape(xla::PjRtBuffer* buffer) {
   *shape.mutable_layout() = buffer->layout();
 
   return xla::ShapeUtil::DeviceShapeToHostShape(shape);
+}
+
+xla::GpuAllocatorConfig GetGpuAllocatorConfig() {
+  auto allocator_config = xla::GpuAllocatorConfig{};
+  if (sys_util::GetEnvString(env::kEnvPjrtAllocatorCudaAsync, "").empty() &&
+      sys_util::GetEnvString(env::kEnvPjrtAllocatorPreallocate, "").empty() &&
+      sys_util::GetEnvString(env::kEnvPjrtAllocatorFraction, "").empty()) {
+    return allocator_config;
+  }
+  if (sys_util::GetEnvBool(env::kEnvPjrtAllocatorCudaAsync, false)) {
+    allocator_config.kind = xla::GpuAllocatorConfig::Kind::kCudaAsync;
+  }
+  allocator_config.preallocate =
+      sys_util::GetEnvBool(env::kEnvPjrtAllocatorPreallocate, true);
+  allocator_config.memory_fraction =
+      sys_util::GetEnvDouble(env::kEnvPjrtAllocatorFraction, 0.75);
+  return allocator_config;
 }
 
 }  // namespace
@@ -109,13 +127,18 @@ PjRtComputationClient::PjRtComputationClient() {
     bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncGpuClient, true);
     int local_process_rank = sys_util::GetEnvInt(env::kEnvPjRtLocalRank, 0);
     int global_process_rank = sys_util::GetEnvInt("RANK", local_process_rank);
+    int local_world_size = sys_util::GetEnvInt("LOCAL_WORLD_SIZE", 1);
+    int global_world_size = sys_util::GetEnvInt("WORLD_SIZE", local_world_size);
     std::string master_addr =
         runtime::sys_util::GetEnvString("MASTER_ADDR", "localhost");
     std::string port = runtime::sys_util::GetEnvString(
-        "XLA_COORDINATOR_PORT", DistributedRuntime::default_coordinator_port);
+        "XLA_COORDINATOR_PORT", XlaCoordinator::kDefaultCoordinatorPort);
+
+    // Use the XlaCoordinator as the distributed key-value store.
+    coordinator_ = std::make_unique<XlaCoordinator>(
+        global_process_rank, global_world_size, master_addr, port);
     std::shared_ptr<xla::DistributedRuntimeClient> distributed_client =
-        DistributedRuntime::getInstance(global_process_rank, master_addr, port)
-            .GetClient();
+        coordinator_->GetClient();
     auto allowed_devices =
         std::make_optional<std::set<int>>(std::set{local_process_rank});
     xla::PjRtClient::KeyValueGetCallback kv_get = nullptr;
@@ -132,13 +155,11 @@ PjRtComputationClient::PjRtComputationClient() {
         return distributed_client->KeyValueSet(absl::StrCat(key_prefix, k), v);
       };
     }
-    int local_world_size = sys_util::GetEnvInt("LOCAL_WORLD_SIZE", 1);
-    int global_world_size = sys_util::GetEnvInt("WORLD_SIZE", local_world_size);
     TF_VLOG(3) << "Getting StreamExecutorGpuClient for node_id="
                << global_process_rank << ", num_nodes=" << global_world_size;
     client_ = std::move(xla::GetStreamExecutorGpuClient(
                             /*asynchronous=*/async,
-                            /*allocator_config=*/xla::GpuAllocatorConfig{},
+                            /*allocator_config=*/GetGpuAllocatorConfig(),
                             /*node_id=*/global_process_rank,
                             /*num_nodes=*/global_world_size,
                             /*allowed_devices=*/allowed_devices,
@@ -183,6 +204,33 @@ PjRtComputationClient::PjRtComputationClient() {
   }
   // manually create the device_locks for SPMD device
   device_locks_.emplace(spmd_device_str, std::make_unique<std::shared_mutex>());
+}
+
+PjRtComputationClient::~PjRtComputationClient() {
+  // In the GPU case, the PjRtClient depends on the DistributedRuntimeClient
+  // tracked in XlaCoordinator, so the PjRtClient must be destroyed first.
+  client_ = nullptr;
+  coordinator_ = nullptr;
+}
+
+bool PjRtComputationClient::CoordinatorInitialized() const {
+  return coordinator_ != nullptr;
+}
+
+void PjRtComputationClient::InitializeCoordinator(int global_rank,
+                                                  int world_size,
+                                                  std::string master_addr,
+                                                  std::string port) {
+  XLA_CHECK(coordinator_ == nullptr)
+      << "Can only initialize the XlaCoordinator once.";
+  coordinator_ = std::make_unique<XlaCoordinator>(global_rank, world_size,
+                                                  master_addr, port);
+}
+
+XlaCoordinator& PjRtComputationClient::GetCoordinator() {
+  XLA_CHECK(coordinator_ != nullptr)
+      << "XlaCoordinator has not been initialized";
+  return *coordinator_;
 }
 
 void PjRtComputationClient::PjRtData::Assign(
@@ -256,7 +304,7 @@ std::optional<xla::OpSharding> PjRtComputationClient::GetDataSharding(
 }
 
 std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
-    absl::Span<const TensorSource> tensors) {
+    absl::Span<const std::shared_ptr<const TensorSource>> tensors) {
   metrics::TimedSection timed(TransferToServerMetric());
   tsl::profiler::TraceMe activity("PjRtComputationClient::TransferToServer",
                                   tsl::profiler::TraceMeLevel::kInfo);
@@ -264,31 +312,22 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
   datas.reserve(tensors.size());
   int64_t total_size = 0;
   for (auto& tensor : tensors) {
-    xla::PjRtDevice* pjrt_device = StringToPjRtDevice(tensor.device);
+    xla::PjRtDevice* pjrt_device = StringToPjRtDevice(tensor->device());
 
-    auto literal = std::make_shared<xla::Literal>(tensor.shape);
-    tensor.populate_fn(tensor, literal->untyped_data(), literal->size_bytes());
-    std::vector<int64_t> byte_strides(literal->shape().dimensions_size());
-    XLA_CHECK_OK(xla::ShapeUtil::ByteStrides(literal->shape(),
-                                             absl::MakeSpan(byte_strides)));
-    total_size += literal->size_bytes();
+    total_size += xla::ShapeUtil::ByteSizeOf(tensor->shape());
 
-    // Avoid use-after-free on `literal` due to unsequenced move and use.
-    xla::Literal* literal_pointer = literal.get();
-    std::shared_ptr<xla::PjRtBuffer> buffer = std::move(
-        client_
-            ->BufferFromHostBuffer(
-                literal_pointer->untyped_data(),
-                literal_pointer->shape().element_type(),
-                literal_pointer->shape().dimensions(), byte_strides,
-                xla::PjRtClient::HostBufferSemantics::
-                    kImmutableUntilTransferCompletes,
-                [literal{std::move(literal)}]() { /* frees literal */ },
-                pjrt_device)
-            .value());
+    std::shared_ptr<xla::PjRtBuffer> buffer =
+        std::move(client_
+                      ->BufferFromHostBuffer(
+                          tensor->data(), tensor->primitive_type(),
+                          tensor->dimensions(), tensor->byte_strides(),
+                          xla::PjRtClient::HostBufferSemantics::
+                              kImmutableUntilTransferCompletes,
+                          [tensor]() { /* frees tensor */ }, pjrt_device)
+                      .value());
 
     ComputationClient::DataPtr data =
-        std::make_shared<PjRtData>(tensor.device, tensor.shape, buffer);
+        std::make_shared<PjRtData>(tensor->device(), tensor->shape(), buffer);
     datas.push_back(data);
   }
   OutboundDataMetric()->AddSample(total_size);
@@ -298,8 +337,8 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
 }
 
 ComputationClient::DataPtr PjRtComputationClient::TransferShardsToServer(
-    absl::Span<const TensorSource> tensor_shards, std::string device,
-    xla::Shape shape, xla::OpSharding sharding) {
+    absl::Span<const std::shared_ptr<const TensorSource>> tensor_shards,
+    std::string device, xla::Shape shape, xla::OpSharding sharding) {
   tsl::profiler::TraceMe activity(
       "PjRtComputationClient::TransferShardsToServer",
       tsl::profiler::TraceMeLevel::kInfo);

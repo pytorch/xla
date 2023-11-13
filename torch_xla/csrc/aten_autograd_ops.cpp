@@ -253,17 +253,5 @@ torch::Tensor max_pool2d_backward(torch::Tensor grad_output, torch::Tensor self,
   return grad;
 }
 
-TORCH_LIBRARY(xla, m) {
-  m.def(
-      "max_pool2d_forward(Tensor self, int[2] kernel_size, int[2] stride=[], "
-      "int[2] padding=0, int[2] dilation=1, bool ceil_mode=False) -> Tensor",
-      torch::dispatch(c10::DispatchKey::XLA, TORCH_FN(max_pool2d_forward)));
-
-  m.def(
-      "max_pool2d_backward(Tensor grad_output, Tensor self, int[2] "
-      "kernel_size, int[2] stride=[], int[2] padding=0, bool ceil_mode=False) "
-      "-> Tensor",
-      torch::dispatch(c10::DispatchKey::XLA, TORCH_FN(max_pool2d_backward)));
-}
 }  // namespace aten_autograd_ops
 }  // namespace torch_xla

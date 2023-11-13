@@ -40,7 +40,7 @@ def _maybe_select_default_device():
     os.environ[xenv.PJRT_DEVICE] = 'TPU'
   # TODO(wcromar): Detect GPU device
   elif xu.getenv_as(xenv.GPU_NUM_DEVICES, int, 0) > 0:
-    logging.warning('GPU_NUM_DEVICES is set. Setting PJRT_DEVICE=GPU')
+    logging.warning('GPU_NUM_DEVICES is set. Setting PJRT_DEVICE=CUDA')
     os.environ[xenv.PJRT_DEVICE] = 'CUDA'
   else:
     logging.warning('Defaulting to PJRT_DEVICE=CPU')
@@ -107,6 +107,13 @@ def xla_device(n: Optional[int] = None,
   Returns:
     A `torch.device` representing an XLA device.
   """
+  # TODO(xiowei replace gpu with cuda): Remove the warning message at r2.2 release.
+  pjrt_device = xu.getenv_as(xenv.PJRT_DEVICE, str)
+  if pjrt_device.casefold() == 'gpu':
+    warnings.warn(
+        'PJRT_DEVICE=GPU is being deprecate. Please replace PJRT_DEVICE=GPU with PJRT_DEVICE=CUDA.'
+    )
+
   if n is None:
     return torch.device(torch_xla._XLAC._xla_get_default_device())
 
@@ -242,3 +249,14 @@ def is_spmd():
   """Returns if SPMD is set for execution."""
   # TODO(yeounoh) replace this when we fully deprecate the flag.
   return xu.check_env_flag('XLA_USE_SPMD')
+
+
+@requires_pjrt
+def get_master_ip() -> str:
+  """Retrieve the master worker IP for the runtime. This calls into
+  backend-specific discovery APIs.
+
+  Returns master worker's IP address as a string."""
+  if device_type() == 'TPU':
+    return tpu.discover_master_worker_ip()
+  raise RuntimeError(f'IP discovery not supported for device: {device_type()}')

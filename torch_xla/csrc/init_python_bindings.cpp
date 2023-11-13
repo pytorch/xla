@@ -29,8 +29,10 @@
 #include "pybind11/pytypes.h"
 #include "pybind11/stl_bind.h"
 #include "torch_xla/csrc/XLANativeFunctions.h"
+#include "torch_xla/csrc/aten_autograd_ops.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/device.h"
+#include "torch_xla/csrc/dtype.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ir_dump_util.h"
@@ -47,6 +49,7 @@
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/thread_pool.h"
 #include "torch_xla/csrc/runtime/util.h"
+#include "torch_xla/csrc/runtime/xla_coordinator.h"
 #include "torch_xla/csrc/runtime/xla_util.h"
 #include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/tensor_impl.h"
@@ -95,7 +98,6 @@ void PrepareToExit() {
       runtime::GetComputationClientIfInitialized();
   if (client != nullptr) {
     XLAGraphExecutor::Get()->WaitDeviceOps({});
-    client->PrepareToExit();
   }
 }
 
@@ -801,7 +803,7 @@ class PyLoweringContext {
       xla::Literal& literal = literals[i];
       xla::XlaOp op = lowering_ctx.GetParameter(device_data[i]);
       at::ScalarType dtype =
-          TensorTypeFromXlaType(literal.shape().element_type());
+          MaybeUpcastToHostTorchType(literal.shape().element_type());
       at::Tensor input = MakeTensorFromXlaLiteral(literal, dtype);
       results[param_ids[i]] = input;
     }
@@ -1560,72 +1562,39 @@ void InitXlaModuleBindings(py::module m) {
             tile_assignment, group_assignment, replication_groups,
             ShardingUtil::ShardingType(sharding_type));
       }));
-  m.def("_xla_mark_sharding", [](const at::Tensor& input,
-                                 xla::OpSharding sharding) {
-    TORCH_LAZY_COUNTER("XlaMarkSharding", 1);
-    XLA_CHECK(UseVirtualDevice())
-        << "Please enable SPMD via `torch_xla.runtime.use_spmd()`";
-    XLATensorPtr xtensor = bridge::GetXlaTensor(input);
-    auto new_sharding_spec = std::make_shared<XLATensor::ShardingSpec>(
-        sharding, MakeShapeWithDeviceLayout(
-                      xtensor->shape(),
-                      static_cast<XlaDeviceType>(xtensor->GetDevice().type())));
+  m.def("_xla_mark_sharding",
+        [](const at::Tensor& input, xla::OpSharding sharding) {
+          ShardingUtil::xla_mark_sharding(input, sharding);
+        });
+  m.def("_xla_mark_sharding_dynamo_custom_op",
+        [](const at::Tensor& input, const py::list& tile_assignment,
+           const py::list& group_assignment, const py::list& replication_groups,
+           int sharding_type) {
+          c10::List<at::IntArrayRef> tile_assignment_list =
+              c10::List<at::IntArrayRef>();
+          for (auto t : tile_assignment) {
+            tile_assignment_list.push_back(
+                at::IntArrayRef(t.cast<std::vector<int64_t>>()));
+          }
 
-    // For Non DeviceData IR values, we directly attach the sharding spec
-    // to the xtensor.
-    const DeviceData* device_data_node = nullptr;
-    if (xtensor->CurrentIrValue()) {
-      device_data_node = DeviceData::Cast(xtensor->CurrentIrValue().node.get());
-      if (!device_data_node) {
-        tensor_methods::custom_sharding_(xtensor, new_sharding_spec);
-        return;
-      }
-    }
+          c10::List<at::IntArrayRef> group_assignment_list =
+              c10::List<at::IntArrayRef>();
+          for (auto t : group_assignment) {
+            group_assignment_list.push_back(
+                at::IntArrayRef(t.cast<std::vector<int64_t>>()));
+          }
 
-    // For data, we need to deal with the data transfers between
-    // host and device.
-    at::Tensor cpu_tensor;
-    if (xtensor->CurrentTensorData().has_value()) {
-      TORCH_LAZY_COUNTER("VirtualDeviceUsage", 1);
-      // When virtual device is enabled for SPMD, we defer the initial
-      // data transfer to the device and retain the original data on the
-      // host, until the sharded data transfer.
-      cpu_tensor = xtensor->CurrentTensorData().value();
-    } else {
-      // A new input tensor is not expected to be sharded. But sometimes,
-      // the same input is called for sharding annotation over multiple steps,
-      // in which case we can skip if it's the same sharding; however, if it's
-      // the same input with a different sharding then we block & ask the user
-      // to clear the existing sharding first.
-      auto current_sharding_spec = xtensor->sharding_spec();
-      if (current_sharding_spec && (current_sharding_spec->sharding.type() !=
-                                    xla::OpSharding::REPLICATED)) {
-        XLA_CHECK(ShardingUtil::EqualShardingSpecs(*new_sharding_spec,
-                                                   *current_sharding_spec))
-            << "Existing annotation must be cleared first.";
-        return;
-      }
+          c10::List<at::IntArrayRef> replication_groups_list =
+              c10::List<at::IntArrayRef>();
+          for (auto t : replication_groups) {
+            replication_groups_list.push_back(
+                at::IntArrayRef(t.cast<std::vector<int64_t>>()));
+          }
 
-      // If the at::Tensor data is not present, we need to re-download the
-      // tensor from the physical device to CPU. In that case, the value
-      // must be present on the backend device.
-      XLA_CHECK((xtensor->CurrentDataHandle() &&
-                 xtensor->CurrentDataHandle()->HasValue()) ||
-                device_data_node != nullptr)
-          << "Cannot shard tensor. Data does not present on any device.";
-      std::vector<XLATensorPtr> xla_tensors{xtensor};
-      cpu_tensor = XLAGraphExecutor::Get()->GetTensors(&xla_tensors)[0];
-    }
-    auto xla_data = CreateTensorsData(
-        std::vector<at::Tensor>{cpu_tensor},
-        std::vector<XLATensor::ShardingSpecPtr>{new_sharding_spec},
-        std::vector<std::string>{GetVirtualDevice().toString()})[0];
-    xtensor->SetXlaData(xla_data);
-    xtensor->SetShardingSpec(*new_sharding_spec);
-
-    // Register sharded tensor data.
-    XLAGraphExecutor::Get()->RegisterTensor(xtensor->data());
-  });
+          xla_mark_sharding_dynamo_custom_op(
+              input, tile_assignment_list, group_assignment_list,
+              replication_groups_list, sharding_type);
+        });
   m.def("_xla_clear_sharding", [](const at::Tensor& input) {
     XLATensorPtr xtensor = bridge::GetXlaTensor(input);
     xtensor->ClearShardingSpec();
@@ -1758,9 +1727,9 @@ void InitXlaModuleBindings(py::module m) {
           for (const runtime::ComputationClient::DataPtr shard_handle :
                shard_handles) {
             shards.push_back(
-                XlaDataToTensors(
-                    {shard_handle},
-                    TensorTypeFromXlaType(shard_handle->shape().element_type()))
+                XlaDataToTensors({shard_handle},
+                                 MaybeUpcastToHostTorchType(
+                                     shard_handle->shape().element_type()))
                     .front());
             str_devices.push_back(shard_handle->device());
           }
@@ -1877,6 +1846,45 @@ void InitXlaModuleBindings(py::module m) {
               xla::HloModule::CreateFromProto(module_proto, config).value());
           return module->ToString();
         });
+  // Initialize the XlaCoordinator in the runtime if not already initialized.
+  m.def("_ensure_xla_coordinator_initialized",
+        [](int global_rank, int world_size, std::string master_addr,
+           std::string master_port) {
+          auto comp_client = runtime::GetComputationClient();
+          if (!comp_client->CoordinatorInitialized()) {
+            runtime::GetComputationClient()->InitializeCoordinator(
+                global_rank, world_size, master_addr, master_port);
+          }
+        },
+        py::arg("global_rank"), py::arg("world_size"), py::arg("master_addr"),
+        py::arg("master_port") =
+            runtime::XlaCoordinator::kDefaultCoordinatorPort);
+  // Create a PreemptionSyncManager for the XlaCoordinator. The
+  // PreemptionSyncManager will register a SIGTERM handler as a side effect.
+  m.def("_activate_preemption_sync_manager", []() {
+    auto comp_client = runtime::GetComputationClient();
+    XLA_CHECK(comp_client->CoordinatorInitialized())
+        << "Coordinator must be initialized";
+    auto& coordinator = comp_client->GetCoordinator();
+    coordinator.ActivatePreemptionSyncManager();
+  });
+  // Deactivate the PreemptionSyncManager in the XlaCoordinator if one is active
+  m.def("_deactivate_preemption_sync_manager", []() {
+    auto comp_client = runtime::GetComputationClient();
+    XLA_CHECK(comp_client->CoordinatorInitialized())
+        << "Coordinator must be initialized";
+    auto& coordinator = comp_client->GetCoordinator();
+    coordinator.DeactivatePreemptionSyncManager();
+  });
+  // Check whether a sync point has been reached. This method requires that the
+  // distributed runtime be initialized and a PreemptionSyncManager activated.
+  m.def("_sync_point_reached", [](int step) {
+    auto comp_client = runtime::GetComputationClient();
+    XLA_CHECK(comp_client->CoordinatorInitialized())
+        << "Coordinator must be initialized";
+    auto& coordinator = comp_client->GetCoordinator();
+    return coordinator.ReachedSyncPoint(step);
+  });
   m.def("_is_placecholder", [](at::Tensor& input) {
     XLATensorPtr xtensor = bridge::GetXlaTensor(input);
     return xtensor->CurrentDataHandle() &&

@@ -1,31 +1,21 @@
 load(
+    "//bazel:rules_def.bzl",
+    "ptxla_cc_test",
+)
+
+load(
     "@tsl//tsl/platform/default:cuda_build_defs.bzl",
     "if_cuda_is_configured",
+)
+
+load(
+    "//bazel:rules_def.bzl",
+    "ptxla_cc_test",
 )
 
 licenses(["notice"])  # Apache 2.0
 
 package(default_visibility = ["//visibility:public"])
-
-cc_library(
-    name = "async_task",
-    hdrs = ["async_task.h"],
-    deps = [
-        ":debug_macros",
-        ":thread_pool",
-        "@com_google_absl//absl/types:optional",
-    ],
-)
-
-cc_test(
-    name = "async_task_test",
-    size = "small",
-    srcs = ["async_task_test.cc"],
-    deps = [
-        ":async_task",
-        "@com_google_googletest//:gtest_main",
-    ],
-)
 
 cc_library(
   name = "runtime",
@@ -61,9 +51,12 @@ cc_library(
     ":metrics_reader",
     ":metrics",
     ":sys_util",
+    ":tensor_source",
     ":types",
     ":util",
+    ":xla_coordinator",
     "//torch_xla/csrc:device",
+    "//torch_xla/csrc:dtype",
     "@tsl//tsl/platform:stacktrace_handler",
     "@xla//xla:literal_util",
     "@xla//xla/client:xla_computation",
@@ -88,12 +81,13 @@ cc_library(
   deps = [
     ":computation_client",
     ":debug_macros",
-    ":distributed_runtime",
     ":env_vars",
     ":multi_wait",
     ":stablehlo_helper",
+    ":tensor_source",
     ":tf_logging",
     ":thread_pool",
+    ":xla_coordinator",
     "@xla//xla:literal",
     "@xla//xla:shape_util",
     "@xla//xla/client:xla_computation",
@@ -165,13 +159,14 @@ cc_library(
 )
 
 cc_library(
-    name = "distributed_runtime",
-    srcs = ["distributed_runtime.cc"],
-    hdrs = ["distributed_runtime.h"],
+    name = "xla_coordinator",
+    srcs = ["xla_coordinator.cc"],
+    hdrs = ["xla_coordinator.h"],
     deps = [
         ":debug_macros",
         ":sys_util",
         "@xla//xla/pjrt/distributed",
+        "@tsl//tsl/distributed_runtime/preemption:preemption_sync_manager",
     ],
 )
 
@@ -197,20 +192,6 @@ cc_library(
     deps = [
         "@xla//xla:types",
     ],
-)
-
-cc_library(
-    name = "nccl_distributed",
-    srcs = ["nccl_distributed.cc"],
-    hdrs = ["nccl_distributed.h"],
-    deps = [
-        ":debug_macros",
-        "@com_google_absl//absl/strings",
-        "@com_google_absl//absl/types:span",
-        "@xla//xla:types",
-    ] + if_cuda_is_configured([
-        "@local_config_nccl//:nccl",
-    ]),
 )
 
 cc_library(
@@ -291,6 +272,17 @@ cc_library(
 )
 
 cc_library(
+  name = "tensor_source",
+  hdrs = ["tensor_source.h"],
+  deps = [
+      ":debug_macros",
+      "@xla//xla:literal",
+      "@xla//xla:shape_util",
+      "@torch//:headers",
+  ]
+)
+
+cc_library(
     name = "types",
     hdrs = ["types.h"],
     deps = [
@@ -301,17 +293,7 @@ cc_library(
 )
 
 cc_library(
-    name = "unique",
-    hdrs = ["unique.h"],
-    deps = [
-        ":debug_macros",
-        "@com_google_absl//absl/types:optional",
-    ],
-)
-
-cc_library(
     name = "util",
-    srcs = ["util.cc"],
     hdrs = ["util.h"],
     deps = [
         ":types",
@@ -354,10 +336,11 @@ cc_library(
         "@xla//xla/service:platform_util",
         "@xla//xla/service/spmd:spmd_partitioner",
         "@tsl//tsl/platform:errors",
+        "@torch//:headers",
     ],
 )
 
-cc_test(
+ptxla_cc_test(
     name = "xla_util_test",
     size = "small",
     srcs = ["xla_util_test.cc"],
@@ -374,25 +357,27 @@ cc_test(
     ],
 )
 
-# TODO(goranpetrovic): reenable when `xla_cc_test` is fixed upstream.
-# xla_cc_test(
-#     name = "pjrt_computation_client_test",
-#     srcs = ["pjrt_computation_client_test.cc"],
-#     deps = [
-#         ":computation_client",
-#         "@xla//xla:literal",
-#         "@xla//xla:literal_util",
-#         "@xla//xla:shape_util",
-#         "@xla//xla:status",
-#         "@xla//xla:statusor",
-#         "@xla//xla/client:xla_builder",
-#         "@xla//xla/client:xla_computation",
-#         "@xla//xla/tests:literal_test_util",
-#         "@xla//xla/tools:hlo_module_loader",
-#         "@org_tensorflow//tensorflow/core/platform:logging",
-#         "@tsl//tsl/lib/core:status_test_util",
-#         "@tsl//tsl/platform:env",
-#         "@tsl//tsl/platform:test",
-#         "@tsl//tsl/platform:test_main",
-#     ],
-# )
+ptxla_cc_test(
+    name = "pjrt_computation_client_test",
+    srcs = ["pjrt_computation_client_test.cc"],
+    deps = [
+        ":computation_client",
+        ":pjrt_computation_client",
+        ":tensor_source",
+        "@xla//xla:literal",
+        "@xla//xla:literal_util",
+        "@xla//xla:shape_util",
+        "@xla//xla:status",
+        "@xla//xla:statusor",
+        "@xla//xla/client:xla_builder",
+        "@xla//xla/client:xla_computation",
+        "@xla//xla/tests:literal_test_util",
+        "@xla//xla/tools:hlo_module_loader",
+        "@tsl//tsl/lib/core:status_test_util",
+        "@tsl//tsl/platform:env",
+        "@tsl//tsl/platform:errors",
+        "@tsl//tsl/platform:logging",
+        "@tsl//tsl/platform:test",
+        "@tsl//tsl/platform:test_main",
+    ],
+)

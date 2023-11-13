@@ -1,9 +1,11 @@
 #include "torch_xla/csrc/debug_util.h"
 
 #include <torch/csrc/lazy/core/hash.h>
+#include <torch/csrc/lazy/core/unique.h>
 #include <torch/csrc/lazy/python/python_util.h>
 
 #include <fstream>
+#include <iostream>
 #include <mutex>
 #include <sstream>
 #include <unordered_set>
@@ -16,7 +18,6 @@
 #include "torch_xla/csrc/ir_dump_util.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
-#include "torch_xla/csrc/runtime/unique.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
 
 namespace torch_xla {
@@ -60,7 +61,7 @@ std::string DebugUtil::GetTensorsGraphHlo(
     absl::Span<const XLATensorPtr> tensors, const std::vector<size_t>* indices,
     bool dump_stablehlo) {
   std::vector<torch::lazy::Value> root_values;
-  runtime::util::Unique<torch::lazy::BackendDevice> unique_device;
+  torch::lazy::Unique<torch::lazy::BackendDevice> unique_device;
   if (indices != nullptr) {
     for (auto index : *indices) {
       const XLATensorPtr& tensor = tensors[index];
@@ -90,7 +91,7 @@ std::string DebugUtil::GetTensorsGraphInfo(
   std::vector<const torch::lazy::Node*> root_nodes;
   std::vector<torch::lazy::Value> root_values;
   std::vector<torch::lazy::hash_t> root_hashes;
-  runtime::util::Unique<torch::lazy::BackendDevice> unique_device;
+  torch::lazy::Unique<torch::lazy::BackendDevice> unique_device;
   if (indices != nullptr) {
     for (auto index : *indices) {
       const XLATensorPtr& tensor = tensors[index];
@@ -207,6 +208,95 @@ void DebugUtil::SaveOutputShardingInfo(std::vector<XLATensorPtr>* tensors,
 bool DebugUtil::ExperimentEnabled(const std::string& name) {
   static const std::unordered_set<std::string>* xset = LoadExperiments();
   return xset->find(name) != xset->end();
+}
+
+// helper function until we move to C++ 20
+static bool endsWith(const std::string& str, const std::string& suffix) {
+  return str.size() >= suffix.size() &&
+         0 == str.compare(str.size() - suffix.size(), suffix.size(), suffix);
+}
+
+void DebugUtil::analyze_graph_execution_python_frame(
+    bool from_dynamo_executation) {
+  static bool is_master_process =
+      (runtime::sys_util::GetEnvInt("PJRT_LOCAL_PROCESS_RANK", 0) == 0);
+  static std::string debug_file_name =
+      runtime::sys_util::GetEnvString("PT_XLA_DEBUG_FILE", "");
+  static std::string debug_output_prefix = "Execution Analysis: ";
+  // TODO: Make this configurable.
+  if (!is_master_process) {
+    return;
+  }
+  std::vector<torch::lazy::SourceLocation> frames =
+      torch::lazy::GetPythonFrames();
+  // python frame must be > 1
+  XLA_CHECK_GE(frames.size(), 1);
+  std::stringstream ss;
+  ss << "\n"
+     << debug_output_prefix
+     << "======================================================================"
+        "=========="
+     << "\n";
+  ss << debug_output_prefix << "Execution Cause\n";
+  if (from_dynamo_executation) {
+    // when executation is from dynamo compiled graph, the python stack will not
+    // show any dynamo related python file since frame is already replaced. We
+    // can either analyze the C++ call stack or rely on caller to pass a boolean
+    // variable.
+    ss << debug_output_prefix << "  dynamo is executing a compiled program\n";
+  } else if (frames[0].function == "mark_step") {
+    if (frames[1].function == "next" &&
+        endsWith(frames[1].file, "parallel_loader.py")) {
+      ss << debug_output_prefix
+         << "  mark_step in parallel loader at step end\n";
+    } else if (frames[1].function == "__exit__" &&
+               endsWith(frames[1].file, "profiler.py")) {
+      ss << debug_output_prefix
+         << "  mark_step when exiting a profiler StepTrace region\n";
+    } else if ((frames[1].function == "extract_compiled_graph" ||
+                frames[1].function == "extract_internal") &&
+               endsWith(frames[1].file, "dynamo_bridge.py")) {
+      ss << debug_output_prefix
+         << "  mark_step when dynamo processing input graphs\n";
+    } else {
+      ss << debug_output_prefix << "  user mark_step\n";
+    }
+  } else if (frames[0].function == "extract_graph_helper" &&
+             endsWith(frames[0].file, "dynamo_bridge.py")) {
+    ss << debug_output_prefix << "  dynamo is compiling a FX graph to HLO\n";
+  } else {
+    // TODO(JackCaoG): be more specific about  exeuction caused by printing
+    // tensor or fallback or some weird indexing.
+    ss << debug_output_prefix
+       << "  most likely user code trying to access tensor value before "
+          "mark_step\n";
+  }
+
+  // TODO(JackCaoG): make number of frames printed configurable
+  ss << debug_output_prefix << "Python Frame Triggered Execution: \n";
+  for (auto& location : frames) {
+    ss << debug_output_prefix << "  " << location.function << " ("
+       << location.file << ":" << location.line << ")\n";
+  }
+  ss << debug_output_prefix
+     << "----------------------------------------------------------------------"
+        "----------"
+     << "\n";
+  ss << debug_output_prefix
+     << "======================================================================"
+        "=========="
+     << "\n";
+
+  // TODO(JackCaoG): print more information about the graph that is about to get
+  // executed.
+  if (debug_file_name == "") {
+    // print to stderr by default
+    std::cerr << ss.str();
+  } else {
+    std::ofstream outFile;
+    outFile.open(debug_file_name, std::ios_base::app);
+    outFile << ss.rdbuf();
+  }
 }
 
 }  // namespace torch_xla
