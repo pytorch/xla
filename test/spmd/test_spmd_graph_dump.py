@@ -11,42 +11,71 @@ import torch_xla
 import torch_xla.runtime as xr
 import torch_xla.core.xla_model as xm
 import torch_xla.experimental.xla_sharding as xs
+from torch_xla.experimental.xla_sharded_tensor import XLAShardedTensor
+from torch_xla.experimental.xla_sharding import Mesh
+from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
+
+
 import test_xla_sharding_base
 
-
-class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
+@unittest.skipIf(not using_pjrt() or xm.get_xla_supported_devices("GPU")
+                 or xm.get_xla_supported_devices("CPU"),
+                 f"Requires PJRT_DEVICE set to `TPU`.")
+class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
 
   @classmethod
   def setUpClass(cls):
-    xr.use_spmd()
+    xr.use_spmd()# os.environ["XLA_USE_SPMD"] = "1"
     super().setUpClass()
 
-  def test_dump_with_output_sharding(self):
-    save_file = os.getenv('XLA_SAVE_TENSORS_FILE')
-    save_format = os.getenv('XLA_SAVE_TENSORS_FMT')
-    if not save_file:
-      assert False, "This test should be run with XLA_SAVE_TENSORS_FILE"
-    should_dump_output_sharding = (save_format == 'hlo')
-    save_file += '.0'
+  def test_debugging_spmd_single_host_tiled(self):
     device = xm.xla_device()
-    xla_x = torch.randn(8, 32).to(device)
-    xla_y = torch.randn(8, 32).to(device)
-    # shard one of the input tensor
+    num_devices = xr.global_runtime_device_count()
+    mesh_shape = (2, num_devices // 2)
+    device_ids = np.array(range(num_devices))
+    mesh = Mesh(device_ids, mesh_shape, ('x', 'y'))
+    t = torch.randn(8, 4, device=device)
     partition_spec = (0, 1)
-    xla_sharded_x = xs.mark_sharding(xla_x, self._get_mesh((1, self.n_devices)),
-                                     partition_spec)
-    xla_res = xla_x + xla_y
-    with open(save_file, 'rb') as f:
-      current_line = sum(1 for line in f)
-    with open(save_file, 'rb') as f:
-      xm.mark_step()
-      lines = f.readlines()
-    self.assertGreater(len(lines), current_line)
-    if should_dump_output_sharding:
-      self.assertIn('OUTPUT_SHARDING_END', str(lines[-2]))
-    else:
-      self.assertIn('END_GRAPH', str(lines[-3]))
+    xs.mark_sharding(t, mesh, partition_spec)
+    sharding = torch_xla._XLAC._get_xla_sharding_spec(t)
+    print("sharding is:")
+    print(sharding)
+    print("then print:")
+    visualize_tensor_sharding(t)
 
+
+  def test_single_host_partial_replication():
+    device = xm.xla_device()
+    num_devices = xr.global_runtime_device_count()
+    mesh_shape = (2, num_devices // 2)
+    device_ids = np.array(range(num_devices))
+    mesh = Mesh(device_ids, mesh_shape, ('x', 'y'))
+
+    partition_spec = (0, None)
+    t = torch.randn(8, 32,  device=device)
+    xs.mark_sharding(t, mesh, (0, None))
+    sharding = torch_xla._XLAC._get_xla_sharding_spec(t)
+    print("sharding is: ")
+    print(sharding)
+    print("then print: ")
+    visualize_tensor_sharding(t)
+
+
+  def test_single_host_replicated():
+    device = xm.xla_device()
+    num_devices = xr.global_runtime_device_count()
+    mesh_shape = (2, num_devices // 2)
+    device_ids = np.array(range(num_devices))
+    mesh = Mesh(device_ids, mesh_shape, ('x', 'y'))
+
+    partition_spec_replicated = (None, None)
+    t = torch.randn(8, 32, device=device)
+    xs.mark_sharding(t, mesh, partition_spec_replicated)
+    sharding = torch_xla._XLAC._get_xla_sharding_spec(t)
+    print("sharding is: ")
+    print(sharding)
+    print("then print: ")
+    visualize_tensor_sharding(t)
 
 if __name__ == '__main__':
   test = unittest.main()
