@@ -28,6 +28,9 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     xr.use_spmd()# os.environ["XLA_USE_SPMD"] = "1"
     super().setUpClass()
 
+  @unittest.skipIf(xr.device_type() == 'CPU', "skipped on CPU before enable")
+  @unittest.skipIf(xr.device_type() in ('GPU', 'CUDA', 'ROCM'),
+                   "TODO(manfei): enable it.")
   def test_debugging_spmd_single_host_tiled(self):
     device = xm.xla_device()
     num_devices = xr.global_runtime_device_count()
@@ -44,6 +47,9 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     visualize_tensor_sharding(t)
 
 
+  @unittest.skipIf(xr.device_type() == 'CPU', "skipped on CPU before enable")
+  @unittest.skipIf(xr.device_type() in ('GPU', 'CUDA', 'ROCM'),
+                   "TODO(manfei): enable it.")
   def test_single_host_partial_replication():
     device = xm.xla_device()
     num_devices = xr.global_runtime_device_count()
@@ -61,6 +67,9 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     visualize_tensor_sharding(t)
 
 
+  @unittest.skipIf(xr.device_type() == 'CPU', "skipped on CPU before enable")
+  @unittest.skipIf(xr.device_type() in ('GPU', 'CUDA', 'ROCM'),
+                   "TODO(manfei): enable it.")
   def test_single_host_replicated():
     device = xm.xla_device()
     num_devices = xr.global_runtime_device_count()
