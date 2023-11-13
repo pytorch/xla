@@ -25,6 +25,12 @@ std::vector<int64_t> ComputeShapeStrides(const xla::Shape& shape);
 at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal,
                                     at::ScalarType dest_element_type);
 
+// Execution and data transfer are async in PJRT, so TransferFromServer may
+// block until `DataPtr`s are ready. Release the GIL so other threads can
+// proceed and unblock any transfers or collective computations.
+std::vector<xla::Literal> ReleaseGilAndTransferData(
+    absl::Span<const torch::lazy::BackendDataPtr> xla_data);
+
 // TODO LTC @wonjoo - Migrate to upstream after Device -> BackendDevice
 std::vector<at::Tensor> XlaDataToTensors(
     absl::Span<const torch::lazy::BackendDataPtr> xla_data,
