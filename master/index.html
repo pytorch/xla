@@ -225,7 +225,7 @@
               
               
                 <div class="version">
-                  master (2.2.0+git6f4183c )
+                  master (2.2.0+gite60428d )
                 </div>
               
             
@@ -3132,7 +3132,7 @@ PyTorch/XLA should have been installed successfully.</p>
 <h2>PyTorch/XLA SPMD Design Overview<a class="headerlink" href="#pytorch-xla-spmd-design-overview" title="Permalink to this headline">¶</a></h2>
 <div class="section" id="simple-example-sharding-aannotation-api">
 <h3>Simple Example &amp; Sharding Aannotation API<a class="headerlink" href="#simple-example-sharding-aannotation-api" title="Permalink to this headline">¶</a></h3>
-<p>Users can annotate native PyTorch tensors using the <code class="docutils literal notranslate"><span class="pre">mark_sharding</span></code> API (<a class="reference external" href="https://github.com/pytorch/xla/blob/9a5fdf3920c18275cf7dba785193636f1b39ced9/torch_xla/experimental/xla_sharding.py#L388">src</a>). This takes <code class="docutils literal notranslate"><span class="pre">torch.Tensor</span></code> as input and returns a <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code> as output.</p>
+<p>Users can annotate native PyTorch tensors using the <code class="docutils literal notranslate"><span class="pre">mark_sharding</span></code> API (<a class="reference external" href="https://github.com/pytorch/xla/blob/4e8e5511555073ce8b6d1a436bf808c9333dcac6/torch_xla/distributed/spmd/xla_sharding.py#L452">src</a>). This takes <code class="docutils literal notranslate"><span class="pre">torch.Tensor</span></code> as input and returns a <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code> as output.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">mark_sharding</span><span class="p">(</span><span class="n">t</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">XLAShardedTensor</span><span class="p">],</span> <span class="n">mesh</span><span class="p">:</span> <span class="n">Mesh</span><span class="p">,</span> <span class="n">partition_spec</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="kc">None</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">XLAShardedTensor</span>
 </pre></div>
 </div>
@@ -3141,8 +3141,8 @@ PyTorch/XLA should have been installed successfully.</p>
 <span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">import</span> <span class="nn">torch_xla.core.xla_model</span> <span class="k">as</span> <span class="nn">xm</span>
 <span class="kn">import</span> <span class="nn">torch_xla.runtime</span> <span class="k">as</span> <span class="nn">xr</span>
-<span class="kn">import</span> <span class="nn">torch_xla.experimental.xla_sharding</span> <span class="k">as</span> <span class="nn">xs</span>
-<span class="kn">from</span> <span class="nn">torch_xla.experimental.xla_sharding</span> <span class="kn">import</span> <span class="n">Mesh</span>
+<span class="kn">import</span> <span class="nn">torch_xla.distributed.spmd</span> <span class="k">as</span> <span class="nn">xs</span>
+<span class="kn">from</span> <span class="nn">torch_xla.distributed.spmd</span> <span class="kn">import</span> <span class="n">Mesh</span>
 
 <span class="c1"># Enable XLA SPMD execution mode.</span>
 <span class="n">xr</span><span class="o">.</span><span class="n">use_spmd</span><span class="p">()</span>
@@ -3189,9 +3189,9 @@ PyTorch/XLA should have been installed successfully.</p>
 <p>For a given cluster of devices, a physical mesh is a representation of the interconnect topology.</p>
 <p>We derive a logical mesh based on this topology to create sub-groups of devices which can be used for partitioning different axes of tensors in a model.</p>
 <a class="reference external image-reference" href="assets/mesh_spmd2.png"><img alt="alt_text" src="assets/mesh_spmd2.png" /></a>
-<p>We abstract logical mesh with <a class="reference external" href="https://github.com/pytorch/xla/blob/028df4da388468fa9a41b1f98ea08bfce13b4c63/torch_xla/experimental/xla_sharding.py#L16">Mesh API</a>. The axes of the logical Mesh can be named. Here is an example:</p>
+<p>We abstract logical mesh with <a class="reference external" href="https://github.com/pytorch/xla/blob/4e8e5511555073ce8b6d1a436bf808c9333dcac6/torch_xla/distributed/spmd/xla_sharding.py#L17">Mesh API</a>. The axes of the logical Mesh can be named. Here is an example:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.runtime</span> <span class="k">as</span> <span class="nn">xr</span>
-<span class="kn">from</span> <span class="nn">torch_xla.experimental.xla_sharding</span> <span class="kn">import</span> <span class="n">Mesh</span>
+<span class="kn">from</span> <span class="nn">torch_xla.distributed.spmd</span> <span class="kn">import</span> <span class="n">Mesh</span>
 
 <span class="c1"># Assuming you are running on a TPU host that has 8 devices attached</span>
 <span class="n">num_devices</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">global_runtime_device_count</span><span class="p">()</span>
@@ -3215,7 +3215,7 @@ PyTorch/XLA should have been installed successfully.</p>
 <div class="section" id="hybrid-mesh">
 <h3>Hybrid Mesh<a class="headerlink" href="#hybrid-mesh" title="Permalink to this headline">¶</a></h3>
 <p>Mesh nicely abstracts how the physical device mesh is constructed. Users can arrange devices in any shape and order using the logical mesh. However, one can define a more performant mesh based on the physical topology, especially when it involves Data Center Network (DCN) cross slice connections. HybridMesh creates a mesh which gives good performance out of the box for such multislice environments. It accepts ici_mesh_shape and dcn_mesh_shape which denote logical mesh shapes of inner and outer network.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torch_xla.experimental.xla_sharding</span> <span class="kn">import</span> <span class="n">HybridMesh</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torch_xla.distributed.spmd</span> <span class="kn">import</span> <span class="n">HybridMesh</span>
 
 <span class="c1"># This example is assuming 2 slices of v4-8.</span>
 <span class="c1"># - ici_mesh_shape: shape of the logical mesh for inner connected devices.</span>
@@ -3275,7 +3275,7 @@ PyTorch/XLA should have been installed successfully.</p>
 <li><p><code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code> is a <code class="docutils literal notranslate"><span class="pre">torch.Tensor</span></code> subclass and works directly with native torch ops and <code class="docutils literal notranslate"><span class="pre">module.layers</span></code>. We use <code class="docutils literal notranslate"><span class="pre">__torch_dispatch__</span></code> to send <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code> to the XLA backend. PyTorch/XLA retrieves attached sharding annotations to trace the graph and invokes XLA SPMDPartitioner.</p></li>
 <li><p>Internally, <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code> (and its global_tensor input) is backed by <code class="docutils literal notranslate"><span class="pre">XLATensor</span></code> with a special data structure holding references to the sharded device data.</p></li>
 <li><p>The sharded tensor after lazy execution may be gathered and materialized back to the host as global_tensor when requested on the host (e.g., printing the value of the global tensor.</p></li>
-<li><p>The handles to the local shards are materialized strictly after the lazy execution. <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code> exposes <a class="reference external" href="https://github.com/pytorch/xla/blob/909f28fa4c1a44efcd21051557b3bcf2d399620d/torch_xla/experimental/xla_sharded_tensor.py#L111">local_shards</a> to return the local shards on addressable devices as <span class="raw-html-m2r"><code>List[[XLAShard](https://github.com/pytorch/xla/blob/909f28fa4c1a44efcd21051557b3bcf2d399620d/torch_xla/experimental/xla_sharded_tensor.py#L12)]</code></span>.</p></li>
+<li><p>The handles to the local shards are materialized strictly after the lazy execution. <code class="docutils literal notranslate"><span class="pre">XLAShardedTensor</span></code> exposes <a class="reference external" href="https://github.com/pytorch/xla/blob/4e8e5511555073ce8b6d1a436bf808c9333dcac6/torch_xla/distributed/spmd/xla_sharded_tensor.py#L117">local_shards</a> to return the local shards on addressable devices as <span class="raw-html-m2r"><code>List[[XLAShard](https://github.com/pytorch/xla/blob/4e8e5511555073ce8b6d1a436bf808c9333dcac6/torch_xla/distributed/spmd/xla_sharded_tensor.py#L12)]</code></span>.</p></li>
 </ul>
 <p>There is also an ongoing effort to integrate <span class="raw-html-m2r"><code>XLAShardedTensor</code></span> into <span class="raw-html-m2r"><code>DistributedTensor</code></span> API to support XLA backend [<a class="reference external" href="https://github.com/pytorch/pytorch/issues/92909">RFC</a>].</p>
 </div>
