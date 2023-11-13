@@ -18,9 +18,6 @@ from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
 
 import test_xla_sharding_base
 
-@unittest.skipIf(not using_pjrt() or xm.get_xla_supported_devices("GPU")
-                 or xm.get_xla_supported_devices("CPU"),
-                 f"Requires PJRT_DEVICE set to `TPU`.")
 class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
 
   @classmethod
