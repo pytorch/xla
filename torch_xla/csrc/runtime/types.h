@@ -11,6 +11,8 @@
 namespace torch_xla {
 namespace runtime {
 
+using hash_t = absl::uint128;
+
 struct Percentile {
   enum class UnitOfMeaure {
     kNumber,

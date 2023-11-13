@@ -1,7 +1,5 @@
 #include "torch_xla/csrc/runtime/xla_util.h"
 
-#include <torch/csrc/lazy/core/hash.h>
-
 #include <fstream>
 #include <mutex>
 #include <sstream>
@@ -21,17 +19,16 @@ namespace runtime {
 namespace util {
 namespace {
 
-torch::lazy::hash_t SingleShapeHash(const xla::Shape& shape,
-                                    torch::lazy::hash_t seed) {
+hash_t SingleShapeHash(const xla::Shape& shape, hash_t seed) {
   if (shape.has_layout()) {
     for (auto dim : shape.layout().minor_to_major()) {
-      seed = torch::lazy::HashCombine(seed, dim);
+      seed = HashCombine(seed, dim);
     }
   }
   for (auto dim : shape.dimensions()) {
-    seed = torch::lazy::HashCombine(seed, dim);
+    seed = HashCombine(seed, dim);
   }
-  return torch::lazy::HashCombine(seed, static_cast<int>(shape.element_type()));
+  return HashCombine(seed, static_cast<int>(shape.element_type()));
 }
 
 void MaybeSaveHloGraph(const std::string& hlo_text, size_t index) {
@@ -106,8 +103,8 @@ void CheckComputationStatus(
   }
 }
 
-torch::lazy::hash_t ShapeHash(const xla::Shape& shape) {
-  torch::lazy::hash_t hash = 0xa5d2d6916;
+hash_t ShapeHash(const xla::Shape& shape) {
+  hash_t hash = 0xa5d2d6916;
   xla::ShapeUtil::ForEachSubshape(
       shape, [&](const xla::Shape& subshape, const xla::ShapeIndex&) {
         hash = SingleShapeHash(subshape, hash);
