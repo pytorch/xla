@@ -9,7 +9,6 @@
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/dtype.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
-#include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
 #include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/shape_helper.h"
@@ -20,9 +19,6 @@
 
 namespace torch_xla {
 namespace {
-
-static const bool experimental_unbounded_dynamism =
-    runtime::sys_util::GetEnvBool("EXPERIMENTAL_XLA_UNBOUNDED_DYNAMISM", false);
 
 // TODO(lsy323): Get reserved number for unbounded dim after it's added in XLA.
 static constexpr int64_t kUnboundedSize = std::numeric_limits<int64_t>::min();
@@ -69,7 +65,7 @@ xla::XlaOp XlaHelpers::BroadcastDimensions(xla::XlaOp input,
   std::vector<int64_t> bcast_sizes = SizesOfXlaOp(input);
   for (size_t i = 0; i < dimensions.size(); ++i) {
     bcast_sizes.at(dimensions[i]) = sizes[i];
-    if (experimental_unbounded_dynamism) {
+    if (XlaHelpers::IsUnboundedDynamismEnabled()) {
       XLA_CHECK(sizes[i] != kUnboundedSize);
     }
   }
@@ -332,7 +328,7 @@ xla::XlaOp XlaHelpers::DynamicReshapeAs(xla::XlaOp input,
 }
 
 bool XlaHelpers::IsUnboundedDynamic(const xla::Shape& shape) {
-  XLA_CHECK(experimental_unbounded_dynamism)
+  XLA_CHECK(XlaHelpers::IsUnboundedDynamismEnabled())
       << "EXPERIMENTAL_XLA_UNBOUNDED_DYNAMISM needs to be turned on.";
   const absl::Span<const int64_t> dims = shape.dimensions();
   return std::any_of(dims.begin(), dims.end(),
@@ -342,7 +338,7 @@ bool XlaHelpers::IsUnboundedDynamic(const xla::Shape& shape) {
 xla::XlaOp XlaHelpers::DynamicUnboundedReshape(
     xla::XlaOp input, xla::XlaOp aux_input,
     absl::Span<const int64_t> output_sizes) {
-  XLA_CHECK(experimental_unbounded_dynamism)
+  XLA_CHECK(XlaHelpers::IsUnboundedDynamismEnabled())
       << "EXPERIMENTAL_XLA_UNBOUNDED_DYNAMISM needs to be turned on.";
   const xla::Shape& aux_input_shape = ShapeHelper::ShapeOfXlaOp(aux_input);
   XLA_CHECK(output_sizes.size() == aux_input_shape.rank())
@@ -545,7 +541,7 @@ xla::Shape XlaHelpers::GetPromotedBinaryOpShape(const xla::Shape& shape1,
             runtime::util::ToVector<int64_t>(shape1.dimensions()),
             runtime::util::ToVector<int64_t>(shape2.dimensions())));
   }
-  if (experimental_unbounded_dynamism) {
+  if (XlaHelpers::IsUnboundedDynamismEnabled()) {
     XLA_CHECK(!XlaHelpers::IsUnboundedDynamic(shape1) &&
               !XlaHelpers::IsUnboundedDynamic(shape2))
         << "Unreachable for unbounded dynamic code\n";

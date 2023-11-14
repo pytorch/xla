@@ -31,9 +31,6 @@ struct SummationResult {
   xla::XlaOp result;
 };
 
-static const bool experimental_unbounded_dynamism =
-    runtime::sys_util::GetEnvBool("EXPERIMENTAL_XLA_UNBOUNDED_DYNAMISM", false);
-
 ReductionInfo GetReductionInfo(xla::XlaOp input, const xla::Shape& shape,
                                absl::Span<const int64_t> dimensions,
                                bool keep_reduced_dimensions) {
@@ -85,7 +82,7 @@ xla::XlaOp GetScaleValue(xla::XlaOp input, xla::XlaOp count,
                                  one / xla::ConvertElementType(count, type),
                                  xla::NanValue(input.builder(), type));
 
-  if (experimental_unbounded_dynamism) {
+  if (XlaHelpers::IsUnboundedDynamismEnabled()) {
     // XLA Multiply doesn't do implicit broadcasting for unbounded dynamism now.
     // TODO(lsy323): Remove this branch once the support is added in XLA.
     auto promoted = XlaHelpers::Promote(input, scale);
@@ -120,7 +117,7 @@ SummationResult CreateSummation(xla::XlaOp input,
         result.result, result.rinfo.element_count.size, shape.element_type());
   }
   if (keep_reduced_dimensions) {
-    if (experimental_unbounded_dynamism) {
+    if (XlaHelpers::IsUnboundedDynamismEnabled()) {
       // TODO(lsy323): Use XLA DynamicReshape once unbounded dynamism support is
       // added.
       result.result = XlaHelpers::DynamicUnboundedReshape(

@@ -15,9 +15,6 @@
 namespace torch_xla {
 namespace {
 
-static const bool experimental_unbounded_dynamism =
-    runtime::sys_util::GetEnvBool("EXPERIMENTAL_XLA_UNBOUNDED_DYNAMISM", false);
-
 xla::XlaOp Between(xla::XlaOp input, const at::Scalar& min_val,
                    const at::Scalar& max_val) {
   const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(input);
@@ -72,7 +69,7 @@ xla::XlaOp BuildRelu(xla::XlaOp input) {
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   xla::XlaOp scalar = XlaHelpers::ScalarValue<float>(
       0, input_shape.element_type(), input.builder());
-  if (experimental_unbounded_dynamism) {
+  if (XlaHelpers::IsUnboundedDynamismEnabled()) {
     // xla::Max doesn't do implicit broadcasting for unbounded dynamism now.
     // TODO(lsy323): Remove this branch once the support is added in XLA.
     auto promoted = XlaHelpers::Promote(input, scalar);
