@@ -83,6 +83,7 @@ cc_library(
     ":debug_macros",
     ":env_vars",
     ":multi_wait",
+    ":profiler",
     ":stablehlo_helper",
     ":tensor_source",
     ":tf_logging",
@@ -97,6 +98,7 @@ cc_library(
     "@xla//xla/pjrt:pjrt_client",
     "@xla//xla/pjrt:tfrt_cpu_pjrt_client",
     "@xla//xla/pjrt:pjrt_c_api_client",
+    "@xla//xla/pjrt/c:pjrt_c_api_hdrs",
     "@tsl//tsl/profiler/lib:traceme",
     "@tsl//tsl/platform/cloud:gcs_file_system",
     "@com_google_absl//absl/strings",
@@ -194,18 +196,34 @@ cc_library(
     ],
 )
 
+# Profiler silently fails unless we link these backends
+cc_library(
+  name = "profiler_backends",
+  visibility = ["//visibility:private"],
+  deps = [
+    "@xla//xla/backends/profiler/cpu:host_tracer",
+    "@xla//xla/backends/profiler/cpu:metadata_collector",
+  ] + if_cuda_is_configured([
+    "@xla//xla/backends/profiler/gpu:device_tracer",
+  ]),
+  alwayslink = True,
+)
+
 cc_library(
     name = "profiler",
     srcs = ["profiler.cc"],
     hdrs = ["profiler.h"],
     deps = [
+      ":debug_macros",
+      ":profiler_backends",
+      "@xla//xla/backends/profiler/plugin:profiler_c_api_hdrs",
+      "@xla//xla/backends/profiler/plugin:plugin_tracer",
+      "@xla//xla/pjrt/c:pjrt_c_api_profiler_extension_hdrs",
       "@tsl//tsl/platform:status",
+      "@tsl//tsl/profiler/lib:profiler_factory",
       "@tsl//tsl/profiler/rpc:profiler_server_impl",
       "@tsl//tsl/profiler/rpc/client:capture_profile",
       "@com_google_absl//absl/container:flat_hash_map",
-
-      # Profiler silently fails unless we include this
-      "@xla//xla/backends/profiler:profiler_backends",
 
       # TODO: We get missing symbol errors without these deps. Why aren't they
       # included transitively from TensorFlow/TSL?
