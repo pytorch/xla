@@ -1332,6 +1332,24 @@ at::Tensor XLANativeFunctions::fmod(const at::Tensor& self,
                     });
 }
 
+at::Tensor XLANativeFunctions::full(at::IntArrayRef size,
+                                    const at::Scalar& fill_value,
+                                    c10::optional<at::ScalarType> dtype,
+                                    c10::optional<at::Layout> layout,
+                                    c10::optional<at::Device> device,
+                                    c10::optional<bool> pin_memory) {
+  TORCH_LAZY_FN_COUNTER("xla::");
+  // Fall back to CPU if layout or pin_memory are not default
+  if (layout.value_or(at::Layout::Strided) != at::Layout::Strided ||
+      pin_memory.value_or(false)) {
+    return at::native::call_fallback_fn<&xla_cpu_fallback, ATEN_OP(full)>::call(
+        size, fill_value, dtype, layout, device, pin_memory);
+  }
+  return bridge::AtenFromXlaTensor(tensor_methods::full(
+      absl::Span<const int64_t>(size), fill_value,
+      GetXlaDeviceOrCurrent(device), at::dtype_or_default(dtype)));
+}
+
 at::Tensor XLANativeFunctions::gather(const at::Tensor& self, int64_t dim,
                                       const at::Tensor& index,
                                       bool /* sparse_grad */) {

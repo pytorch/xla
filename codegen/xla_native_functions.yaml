@@ -192,6 +192,7 @@ supported:
   - floor_divide
   - fmod.Scalar
   - fmod.Tensor
+  - full
   - gather
   - gelu
   - gelu_backward
