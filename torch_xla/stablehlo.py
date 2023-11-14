@@ -220,9 +220,10 @@ class XLAExportInterpreter(torch.fx.Interpreter):
     if n.op == 'placeholder':
       fake_t = n.meta['val']
       res = super().run_node(n)
-      for i, x in enumerate(fake_t.shape):
-        if not isinstance(x, int):
-          torch_xla._XLAC._xla_mark_dynamic(res, i)
+      if hasattr(fake_t, 'shape'):
+        for i, x in enumerate(fake_t.shape):
+          if not isinstance(x, int):
+            torch_xla._XLAC._xla_mark_dynamic(res, i)
       return res
     return super().run_node(n)
 
