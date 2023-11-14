@@ -1449,17 +1449,16 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
     XLA_CHECK_EQ(program_shape.parameters_size(),
                  po_data->parameters_data.size());
   }
-  if (use_autosharding) {
-    const auto& computation_proto = computations.front()->computation().proto();
 
-    std::cout << "*** input sharding genereated: " << std::endl;
+  if (use_autosharding) {
+    const xla::HloModuleProto& computation_proto =
+        computations.front()->computation().proto();
     std::vector<xla::OpSharding> input_shardings;
-    for (const auto& sharding : computation_proto.spmd_parameters_shardings()) {
-      std::cout << "- " << sharding.DebugString() << std::endl;
+    for (auto sharding : computation_proto.spmd_parameters_shardings()) {
       input_shardings.push_back(sharding);
     }
-
-    std::vector<xla::OpSharding> output_shardings;
+    std::vector<xla::OpSharding>
+        output_shardings;  // empty if no output shardings.
     if (computation_proto.has_spmd_output_sharding()) {
       if (computation_proto.spmd_output_sharding().tuple_shardings().size() >
           0) {
@@ -1472,10 +1471,37 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
             computation_proto.spmd_output_sharding()};
       }
     }
-    std::cout << "*** output sharding genereated: " << std::endl;
-    for (const auto& sharding : output_shardings) {
-      std::cout << "- " << sharding.DebugString() << std::endl;
-    }
+
+    // Extra debugging statements for auto-sharding. This iterates through all
+    // the inputs and outputs, so enable only for debugging.
+    std::vector<int> counters = {0, 0, 0};  // {R, S, O}
+    std::function sharding_counter = [&counters](const xla::OpSharding& s) {
+      if (s.type() == xla::OpSharding::REPLICATED) {
+        counters[0] += 1;
+      } else if (s.type() == xla::OpSharding::OTHER) {
+        counters[1] += 1;
+      } else {
+        counters[2] += 1;
+      }
+    };
+    std::for_each(input_shardings.begin(), input_shardings.end(),
+                  sharding_counter);
+    TF_VLOG(5) << "Input shardings counter after auto-sharding pass: "
+               << "Replicated=" << counters[0] << ", Sharded=" << counters[1]
+               << ", Other=" << counters[2];
+    counters = {0, 0, 0};
+    std::for_each(output_shardings.begin(), output_shardings.end(),
+                  sharding_counter);
+    TF_VLOG(5) << "Output shardings counter after auto-sharding pass: "
+               << "Replicated=" << counters[0] << ", Sharded=" << counters[1]
+               << ", Other=" << counters[2];
+
+    // Reshard the inputs if the expected shardings mismatch. Resharding is
+    // expensive especially for those already sharded. The cost can easily be
+    // armotized over multiple steps, though, since the input sharding is
+    // propagated to the output for the subsequent runs. Sharded data transfers
+    // during reshards should be asynchronous, and the input data sharding is
+    // respected.
   }
 
   return {/*device=*/coll.device,
