@@ -75,11 +75,11 @@ ptxla_cc_test(
     srcs = ["test_replication.cpp"],
     deps = [
         ":cpp_test_util",
-        ":thread_pool",
         ":torch_xla_test",
         "//torch_xla/csrc/runtime:runtime",
         "//torch_xla/csrc/runtime:debug_macros",
         "//torch_xla/csrc:tensor",
+        "//torch_xla/csrc:thread_pool",
         "@com_google_absl//absl/synchronization",
         "@com_google_googletest//:gtest_main",
         "@xla//xla:shape_util",
