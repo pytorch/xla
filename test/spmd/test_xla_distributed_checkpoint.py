@@ -273,6 +273,20 @@ class SPMDSavePlannerTest(DistributedCheckpointTestBase):
       self.assertTrue(
           isinstance(planner.sharded_state_dict['fc1.weight'], _CpuShards))
 
+  @unittest.skipUnless(xr.global_runtime_device_count() > 1,
+                       "Multiple devices required for sharded test")
+  def test_cpu_state_dict_flattening(self):
+    # In the case of a nested state_dict with fully sharded parameters,
+    # _CpuShards should be treated as terminal nodes.
+    t = torch.randn(128, 128).to(xm.xla_device())
+    mesh = self._get_mesh((self.n_devices, 1))
+    xs.mark_sharding(t, mesh, (0, 1))
+    state_dict = _sharded_cpu_state_dict({'model': {'weight': t}})
+    planner = SPMDSavePlanner()
+    planner.set_up_planner(state_dict, True)
+    # model.weight should be flattened and tracked in the sharded state dict.
+    self.assertCountEqual(planner.sharded_state_dict, ["model.weight"])
+
   def test_local_save_plan(self):
 
     def _write_item_assertions(plan, n_devices, parameter_count):
@@ -433,13 +447,14 @@ class CheckpointManagerTest(DistributedCheckpointTestBase):
 
     # Patch the manager's save method to block until this thread signals.
     cond = threading.Condition()
-    old_save = chkpt_mgr.save
+    old_save = chkpt_mgr._save
 
     def patched_save(*args, **kwargs):
-      cond.wait()
+      with cond:
+        cond.wait()
       old_save(*args, **kwargs)
 
-    with unittest.mock.patch.object(chkpt_mgr, 'save', patched_save):
+    with unittest.mock.patch.object(chkpt_mgr, '_save', patched_save):
       chkpt_mgr.save_async(10, state_dict)
 
     # No new steps should be tracked immediately after calling save_async

@@ -5,6 +5,7 @@ import operator
 import os
 import pathlib
 import re
+import socket
 from typing import NamedTuple, Optional, List
 from typing_extensions import TypedDict
 import requests
@@ -299,10 +300,12 @@ def discover_master_worker_ip(use_localhost: bool = True) -> str:
   return worker_ips[master_worker_id]
 
 
-def _spmd_find_master_ip(current_worker_ip: str) -> str:
+def _spmd_find_master_ip(current_worker_hostname: str) -> str:
   import torch_xla.runtime as xr
   import torch_xla.distributed.spmd as xs
   from_cpu_shards = torch_xla._XLAC._global_tensor_from_cpu_shards
+  # Translate the hostname to an IP address, e.g. for TPUs on GKE.
+  current_worker_ip = socket.gethostbyname(current_worker_hostname)
   ip_int = int(ip_address(current_worker_ip))
   n_dev = xr.global_runtime_device_count()
   local_ndev = len(torch_xla._XLAC._xla_get_runtime_devices())

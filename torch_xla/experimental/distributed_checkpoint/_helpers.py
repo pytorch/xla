@@ -34,8 +34,13 @@ STATE_DICT_ITEM = object
 CONTAINER_TYPE = MutableMapping[PATH_ITEM, STATE_DICT_ITEM]
 
 
+# TODO(jonbolin): Logic here is modified from the upstream to enable async
+# checkpointing. If the state_dict is comprised entirely of _CpuShards,
+# flatten_state_dict will not actually flatten the dict.
+# Once we can represent XLAShardedTensor on CPU, either directly or through
+# DistributedTensor, we can reuse the upstream logic.
 def _keep_visiting_tensors(value: STATE_DICT_ITEM) -> bool:
-  return isinstance(value, torch.Tensor)
+  return isinstance(value, torch.Tensor) or isinstance(value, _CpuShards)
 
 
 def _traverse_state_dict(
