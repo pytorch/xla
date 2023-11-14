@@ -5,6 +5,7 @@
 
 #include "absl/container/flat_hash_map.h"
 #include "tsl/platform/status.h"
+#include "xla/pjrt/c/pjrt_c_api.h"
 
 namespace torch_xla {
 namespace runtime {
@@ -27,6 +28,8 @@ tsl::Status Trace(
     int num_tracing_attempts,
     const absl::flat_hash_map<std::string, std::variant<int, std::string>>&
         options);
+
+void RegisterProfilerForPlugin(const PJRT_Api* c_api);
 
 }  // namespace profiler
 }  // namespace runtime

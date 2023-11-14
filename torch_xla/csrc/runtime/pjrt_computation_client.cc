@@ -11,6 +11,7 @@
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/env_vars.h"
 #include "torch_xla/csrc/runtime/multi_wait.h"
+#include "torch_xla/csrc/runtime/profiler.h"
 #include "torch_xla/csrc/runtime/stablehlo_helper.h"
 #include "torch_xla/csrc/runtime/tensor_source.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
@@ -21,6 +22,7 @@
 #include "xla/client/xla_computation.h"
 #include "xla/layout_util.h"
 #include "xla/literal.h"
+#include "xla/pjrt/c/pjrt_c_api.h"
 #include "xla/pjrt/distributed/distributed.h"
 #include "xla/pjrt/gpu/se_gpu_pjrt_client.h"
 #include "xla/pjrt/pjrt_api.h"
@@ -117,8 +119,11 @@ PjRtComputationClient::PjRtComputationClient() {
             "tpu", sys_util::GetEnvString(env::kEnvTpuLibraryPath, "libtpu.so"))
             .status());
     tsl::Status tpu_status = pjrt::InitializePjrtPlugin("tpu");
-    XLA_CHECK(tpu_status.ok());
+    XLA_CHECK_OK(tpu_status);
     client_ = std::move(xla::GetCApiClient("TPU").value());
+    const PJRT_Api* c_api =
+        static_cast<xla::PjRtCApiClient*>(client_.get())->pjrt_c_api();
+    profiler::RegisterProfilerForPlugin(c_api);
   } else if (device_type == "TPU_LEGACY") {
     XLA_ERROR() << "TPU_LEGACY client is no longer available.";
   } else if (device_type == "GPU" || device_type == "CUDA" ||
