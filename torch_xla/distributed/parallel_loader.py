@@ -75,7 +75,8 @@ class ParallelLoader(object):
       work in parallel to transfer data from loader queue to device queue.
       Default: 1
     input_sharding (Union[ShardingSpec, List[ShardingSpec]], optional): Sharding
-      specs to apply to compatible input tensors when loading.
+      specs to apply to compatible input tensors when loading. When a list is
+      provided, the first matching sharding spec will be applied.
       Default: None
   """
 

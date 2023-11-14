@@ -1014,6 +1014,7 @@ def send_cpu_data_to_device(datas, device, input_sharding=None):
     if input_sharding:
       if isinstance(input_sharding, list):
         shardings = [None] * len(tensors)
+        # Apply the first matching ShardingSpec to each tensor.
         for i, tensor in enumerate(tensors):
           for sharding in input_sharding:
             if sharding.can_apply(tensor):
