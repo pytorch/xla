@@ -87,13 +87,16 @@ def _aws_ec2_inf_trn_init():
 
 
 def _setup_tpu_vm_library_path() -> bool:
-  """Returns true if $TPU_LIBRARY is set or can be inferred.
+  """Returns true if $TPU_LIBRARY_PATH is set or can be inferred.
 
   We load libtpu.so in the following order of precedence:
 
   1. User-set $TPU_LIBRARY_PATH
   2. libtpu.so included in torch_xla/lib
   3. libtpu-nightly pip package
+
+  Sets $PTXLA_TPU_LIBRARY_PATH if path is inferred by us to prevent conflicts
+  with other frameworks. This env var will be removed in a future version.
   """
   if 'TPU_LIBRARY_PATH' in os.environ:
     return True
@@ -102,12 +105,12 @@ def _setup_tpu_vm_library_path() -> bool:
   bundled_libtpu_path = os.path.join(module_path, 'lib/libtpu.so')
   if os.path.isfile(bundled_libtpu_path) and not os.getenv('TPU_LIBRARY_PATH'):
     logger.info('Using bundled libtpu.so (%s)', bundled_libtpu_path)
-    os.environ['TPU_LIBRARY_PATH'] = bundled_libtpu_path
+    os.environ['PTXLA_TPU_LIBRARY_PATH'] = bundled_libtpu_path
     return True
 
   try:
     import libtpu
-    libtpu.configure_library_path()
+    os.environ['PTXLA_TPU_LIBRARY_PATH'] = libtpu.get_library_path()
     return True
   except ImportError:
     return False
