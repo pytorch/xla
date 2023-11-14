@@ -439,18 +439,19 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
       compile_options.executable_build_options.set_num_replicas(1);
       compile_options.parameter_is_tupled_arguments =
           instance.parameter_is_tupled_arguments;
-
-      if (runtime::sys_util::GetEnvBool("XLA_AUTO_SPMD", false)) {
-        compile_options.executable_build_options.set_use_auto_spmd_partitioning(
-            true);
-        // TODO(yeounoh) use automatic mesh construction.
-        // compile_options.executable_build_options
-        //     .set_auto_spmd_partitioning_mesh_shape({2, 2});
-        // compile_options.executable_build_options
-        //     .set_auto_spmd_partitioning_mesh_ids({0, 1, 2, 3});
-        TF_VLOG(3) << "Auto SPMD partitioning enabled!"
-                   << compile_options.executable_build_options
-                          .use_auto_spmd_partitioning();
+      compile_options.executable_build_options.set_use_auto_spmd_partitioning(
+          instance.use_auto_spmd_partitioning);
+      TF_VLOG(3) << "Auto SPMD partitioning "
+                 << (instance.use_auto_spmd_partitioning ? "enabled!"
+                                                         : "disabled.");
+      if (!instance.auto_spmd_mesh_shape.empty()) {
+        compile_options.executable_build_options
+            .set_auto_spmd_partitioning_mesh_shape(
+                instance.auto_spmd_mesh_shape);
+      }
+      if (!instance.auto_spmd_mesh_ids.empty()) {
+        compile_options.executable_build_options
+            .set_auto_spmd_partitioning_mesh_ids(instance.auto_spmd_mesh_ids);
       }
 
       // TODO(244391366) verify this is correct for the collectives ops

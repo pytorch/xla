@@ -1378,28 +1378,6 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
   xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
 
-  // if (use_autosharding) {
-  //   TF_VLOG(3) << "Auto SPMD partitioning enabled!";
-  //   const xla::HloModuleProto& module_proto = computation.proto();
-
-  //   // TODO(yeounoh) use automatic mesh construction.
-  //   xla::ExecutionOptions execution_options;
-  //   //execution_options.set_use_auto_spmd_partitioning(true);
-  //   // config.set_auto_spmd_partitioning_mesh_shape(
-  //   //     absl::GetFlag(FLAGS_auto_spmd_partition_mesh_shape));
-  //   // config.set_auto_spmd_partitioning_mesh_ids(
-  //   //     absl::GetFlag(FLAGS_auto_spmd_partition_mesh_ids));
-
-  //   xla::HloModuleConfig module_config =
-  //       ConsumeValue(xla::HloModule::CreateModuleConfigFromProto(
-  //           module_proto, xla::DebugOptions(), &execution_options));
-  //   module_config.set_use_auto_spmd_partitioning(true);
-
-  //   std::unique_ptr<xla::HloModule> hlo_module = ConsumeValue(
-  //       xla::HloModule::CreateFromProto(module_proto, module_config));
-  //   computation = xla::XlaComputation(hlo_module->ToProto());
-  // }
-
   bool should_wrap_parameter =
       (program_shape.parameters_size() >= parameter_wrapping_threadshold) &&
       using_pjrt;
@@ -1416,10 +1394,27 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
       program_shape.result(), static_cast<XlaDeviceType>(coll.device.type()));
 
   std::vector<runtime::ComputationClient::CompileInstance> instances;
-  instances.push_back({std::move(computation), coll.device.toString(),
+  instances.push_back({/*computation=*/std::move(computation),
+                       /*compilation_device=*/coll.device.toString(),
+                       /*devices=*/
                        runtime::GetComputationClient()->GetCompilationDevices(
                            coll.device.toString(), devices),
-                       &shape, should_wrap_parameter, is_sharded});
+                       /*output_shape=*/&shape,
+                       /*parameter_is_tupled_arguments=*/should_wrap_parameter,
+                       /*is_sharded=*/is_sharded});
+  if (use_autosharding) {
+    instances.front().use_auto_spmd_partitioning = use_autosharding;
+    TF_VLOG(5) << "use_auto_spmd_partitioning=" << use_autosharding;
+    auto mesh_shape_ids = ShardingUtil::GetAutoShardingMesh();
+    std::vector<int64_t> auto_spmd_mesh_shape = std::get<0>(mesh_shape_ids);
+    std::vector<int64_t> auto_spmd_mesh_ids = std::get<1>(mesh_shape_ids);
+    instances.front().auto_spmd_mesh_shape = auto_spmd_mesh_shape;
+    instances.front().auto_spmd_mesh_ids = auto_spmd_mesh_ids;
+    TF_VLOG(5) << "auto_spmd_mesh_shape={"
+               << absl::StrJoin(auto_spmd_mesh_shape, ",") << "}\n"
+               << "auto_spmd_mesh_ids={"
+               << absl::StrJoin(auto_spmd_mesh_ids, ",") << "}";
+  }
 
   DebugUtil::analyze_graph_execution_python_frame(
       DebugUtil::GraphAnalysisSource::Compilation,
@@ -1453,61 +1448,18 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
   if (use_autosharding) {
     const xla::HloModuleProto& computation_proto =
         computations.front()->computation().proto();
-    std::vector<xla::OpSharding> input_shardings;
-    for (auto sharding : computation_proto.spmd_parameters_shardings()) {
-      input_shardings.push_back(sharding);
-    }
-    std::vector<xla::OpSharding>
-        output_shardings;  // empty if no output shardings.
-    if (computation_proto.has_spmd_output_sharding()) {
-      if (computation_proto.spmd_output_sharding().tuple_shardings().size() >
-          0) {
-        auto tuple_shardings =
-            computation_proto.spmd_output_sharding().tuple_shardings();
-        output_shardings = std::vector<xla::OpSharding>(tuple_shardings.begin(),
-                                                        tuple_shardings.end());
-      } else {
-        output_shardings = std::vector<xla::OpSharding>{
-            computation_proto.spmd_output_sharding()};
-      }
-    }
-
-    // Extra debugging statements for auto-sharding. This iterates through all
-    // the inputs and outputs, so enable only for debugging.
-    std::vector<int> counters = {0, 0, 0};  // {R, S, O}
-    std::function sharding_counter = [&counters](const xla::OpSharding& s) {
-      if (s.type() == xla::OpSharding::REPLICATED) {
-        counters[0] += 1;
-      } else if (s.type() == xla::OpSharding::OTHER) {
-        counters[1] += 1;
-      } else {
-        counters[2] += 1;
-      }
-    };
-    std::for_each(input_shardings.begin(), input_shardings.end(),
-                  sharding_counter);
-    TF_VLOG(5) << "Input shardings counter after auto-sharding pass: "
-               << "Replicated=" << counters[0] << ", Sharded=" << counters[1]
-               << ", Other=" << counters[2];
-    counters = {0, 0, 0};
-    std::for_each(output_shardings.begin(), output_shardings.end(),
-                  sharding_counter);
-    TF_VLOG(5) << "Output shardings counter after auto-sharding pass: "
-               << "Replicated=" << counters[0] << ", Sharded=" << counters[1]
-               << ", Other=" << counters[2];
-
-    // Reshard the inputs if the expected shardings mismatch. Resharding is
-    // expensive especially for those already sharded. The cost can easily be
-    // armotized over multiple steps, though, since the input sharding is
-    // propagated to the output for the subsequent runs. Sharded data transfers
-    // during reshards should be asynchronous, and the input data sharding is
-    // respected.
+    // TODO(yeounoh) confirm if we need to re-trace for new po_data.
+    // TODO(yeounoh) verify that user sharding is respected by default.
+    bool resharded = ShardingUtil::ReshardParameters(computation_proto,
+                                                     &po_data->parameters_data);
+    TF_VLOG(5) << (resharded ? "Resharded parameters "
+                             : "No parameter resharding ")
+               << "after auto-sharding pass.";
   }
 
   return {/*device=*/coll.device,
           /*emitted_nodes=*/lowering_ctx.GetEmittedNodeCount(),
-          /*computation=*/
-          computations.front(),
+          /*computation=*/computations.front(),
           /*parameters_data=*/std::move(po_data->parameters_data),
           /*is_sharded=*/is_sharded};
 }

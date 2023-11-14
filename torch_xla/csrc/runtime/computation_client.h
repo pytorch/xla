@@ -213,7 +213,10 @@ class ComputationClient {
                     const xla::Shape* output_shape,
                     bool parameter_is_tupled_arguments = false,
                     bool is_sharded = false,
-                    bool allow_spmd_sharding_propagation_to_output = true)
+                    bool allow_spmd_sharding_propagation_to_output = true,
+                    bool use_auto_spmd_partitioning = false,
+                    std::vector<int64_t> auto_spmd_mesh_shape = {},
+                    std::vector<int64_t> auto_spmd_mesh_ids = {})
         : computation(std::move(computation)),
           compilation_device(std::move(compilation_device)),
           devices(std::move(devices)),
@@ -221,7 +224,10 @@ class ComputationClient {
           parameter_is_tupled_arguments(parameter_is_tupled_arguments),
           is_sharded(is_sharded),
           allow_spmd_sharding_propagation_to_output(
-              allow_spmd_sharding_propagation_to_output) {}
+              allow_spmd_sharding_propagation_to_output),
+          use_auto_spmd_partitioning(use_auto_spmd_partitioning),
+          auto_spmd_mesh_shape(auto_spmd_mesh_shape),
+          auto_spmd_mesh_ids(auto_spmd_mesh_ids) {}
 
     xla::XlaComputation computation;
     std::string compilation_device;
@@ -230,6 +236,9 @@ class ComputationClient {
     bool parameter_is_tupled_arguments;
     bool is_sharded;
     bool allow_spmd_sharding_propagation_to_output;
+    bool use_auto_spmd_partitioning;
+    std::vector<int64_t> auto_spmd_mesh_shape;
+    std::vector<int64_t> auto_spmd_mesh_ids;
   };
 
   struct ExecuteComputationOptions : public ClientExecuteOptions {};

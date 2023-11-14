@@ -14,8 +14,6 @@ from torch_xla.distributed.spmd import Mesh
 import torch.optim as optim
 from torch import nn
 
-xr.use_spmd(auto=True)
-
 MODEL_OPTS = {
     '--sharding': {
         'choices': ['batch', 'megatron-lm', 'fsdp'],
@@ -37,6 +35,8 @@ MODEL_OPTS = {
 
 FLAGS = args_parse.parse_common_options(
     batch_size=128, num_epochs=1, opts=MODEL_OPTS.items())
+
+xr.use_spmd(auto=FLAGS.auto_spmd)
 
 
 class SimpleLinear(nn.Module):

@@ -86,7 +86,7 @@ import torch_xla.debug.profiler as xp
 import torch_xla.test.test_utils as test_utils
 import torch_xla.distributed.spmd as xs
 
-xr.use_spmd(auto=True)
+xr.use_spmd(auto=FLAGS.auto_spmd)
 
 DEFAULT_KWARGS = dict(
     batch_size=128,

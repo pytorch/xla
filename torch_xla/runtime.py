@@ -253,7 +253,7 @@ def use_spmd(auto: Optional[bool] = False):
 
   # TODO(yeounoh) replace these when we fully deprecate the flags.
   os.environ["XLA_USE_SPMD"] = "1"
-  os.environ["XLA_AUTO_SPMD"] = "1"
+  os.environ["XLA_AUTO_SPMD"] = "1" if auto else "0"
 
 
 @requires_pjrt
