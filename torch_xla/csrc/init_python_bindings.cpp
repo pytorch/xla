@@ -47,7 +47,6 @@
 #include "torch_xla/csrc/runtime/profiler.h"
 #include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
-#include "torch_xla/csrc/runtime/thread_pool.h"
 #include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/runtime/xla_coordinator.h"
 #include "torch_xla/csrc/runtime/xla_util.h"

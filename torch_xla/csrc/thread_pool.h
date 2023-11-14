@@ -4,13 +4,13 @@
 #include <functional>
 
 namespace torch_xla {
-namespace runtime {
+namespace thread {
 
 // Schedules a closure to be run. The closure should not block waiting for other
 // events.
 void Schedule(std::function<void()> fn);
 
-}  // namespace runtime
+}  // namespace thread
 }  // namespace torch_xla
 
 #endif  // XLA_CLIENT_THREAD_POOL_H_

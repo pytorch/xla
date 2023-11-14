@@ -15,7 +15,7 @@
 #include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/runtime.h"
-#include "torch_xla/csrc/runtime/thread_pool.h"
+#include "torch_xla/csrc/thread_pool.h"
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/tensor_methods.h"
 #include "torch_xla/csrc/tensor_util.h"
@@ -341,7 +341,7 @@ ShardingUtil::InputHandler(
       }
       mwait.DecrementCount();
     };
-    runtime::Schedule(std::move(argument_setter));
+    thread::Schedule(std::move(argument_setter));
   }
   mwait.Wait();
   return arguments_by_device;

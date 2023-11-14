@@ -22,7 +22,7 @@
 #include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
-#include "torch_xla/csrc/runtime/thread_pool.h"
+#include "torch_xla/csrc/thread_pool.h"
 #include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/xla_backend_impl.h"
@@ -373,7 +373,7 @@ void CopyTensors(const void* src_buffer, const xla::Shape& src_shape,
                                  dest_data, dest_strides, iter_dims, parts[i]);
         mwait.DecrementCount();
       };
-      runtime::Schedule(std::move(copy_fn));
+      thread::Schedule(std::move(copy_fn));
     }
     mwait.Wait();
   }

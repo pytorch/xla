@@ -86,8 +86,8 @@ cc_library(
     ":stablehlo_helper",
     ":tensor_source",
     ":tf_logging",
-    ":thread_pool",
     ":xla_coordinator",
+    "//torch_xla/csrc:thread_pool",
     "@xla//xla:literal",
     "@xla//xla:shape_util",
     "@xla//xla/client:xla_computation",
@@ -267,17 +267,6 @@ cc_library(
     deps = [
         "@xla//xla:statusor",
         "@xla//xla/service:platform_util",
-    ],
-)
-
-cc_library(
-    name = "thread_pool",
-    srcs = ["thread_pool.cc"],
-    hdrs = ["thread_pool.h"],
-    deps = [
-        ":metrics",
-        ":tf_logging",
-        "@tsl//tsl/platform:env"
     ],
 )
 

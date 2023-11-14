@@ -271,7 +271,6 @@ ptxla_cc_library(
         "//torch_xla/csrc/runtime:metrics_reader",
         "//torch_xla/csrc/runtime:profiler",
         "//torch_xla/csrc/runtime:sys_util",
-        "//torch_xla/csrc/runtime:thread_pool",
         "//torch_xla/csrc/runtime:util",
         "//torch_xla/csrc/runtime:xla_coordinator",
         "//torch_xla/csrc/runtime:xla_util",
@@ -317,6 +316,16 @@ cc_library(
     deps = [
         "//torch_xla/csrc/runtime:debug_macros",
         "@xla//xla/client:xla_builder",
+    ],
+)
+
+cc_library(
+    name = "thread_pool",
+    srcs = ["thread_pool.cc"],
+    hdrs = ["thread_pool.h"],
+    deps = [
+        "//torch_xla/csrc/runtime:sys_util",
+        "@tsl//tsl/platform:env"
     ],
 )
 

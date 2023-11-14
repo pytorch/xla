@@ -10,7 +10,7 @@
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/runtime.h"
-#include "torch_xla/csrc/runtime/thread_pool.h"
+#include "torch_xla/csrc/thread_pool.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "xla/client/xla_builder.h"
@@ -70,7 +70,7 @@ void TestSingleReplication(
               device_strings[i], exec_options);
       mwait.DecrementCount();
     };
-    torch_xla::runtime::Schedule(std::move(executor));
+    torch_xla::thread::Schedule(std::move(executor));
   }
   mwait.Wait();
 

@@ -8,6 +8,7 @@
 #include "absl/synchronization/blocking_counter.h"
 #include "absl/types/span.h"
 #include "pjrt_computation_client.h"
+#include "torch_xla/csrc/thread_pool.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/env_vars.h"
@@ -15,7 +16,6 @@
 #include "torch_xla/csrc/runtime/stablehlo_helper.h"
 #include "torch_xla/csrc/runtime/tensor_source.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
-#include "torch_xla/csrc/runtime/thread_pool.h"
 #include "torch_xla/csrc/runtime/xla_coordinator.h"
 #include "tsl/profiler/lib/traceme.h"
 #include "xla/client/xla_builder.h"
@@ -619,7 +619,7 @@ PjRtComputationClient::ExecuteComputation(
   }
   CreateDataHandlesCounter()->AddValue(datas.size());
 
-  Schedule(std::move([&, this, device,
+  thread::Schedule(std::move([&, this, device,
                       returned_future = std::move(*returned_future),
                       timed]() mutable {
     TF_VLOG(5) << "ExecuteComputation acquiring PJRT device lock for "
@@ -689,7 +689,7 @@ PjRtComputationClient::ExecuteReplicated(
         argument_handles[i] = std::move(buffers);
         mwait.DecrementCount();
       };
-      Schedule(std::move(buffer_converter));
+      thread::Schedule(std::move(buffer_converter));
     }
     mwait.Wait();
   }
@@ -746,7 +746,7 @@ PjRtComputationClient::ExecuteReplicated(
     }
   }
 
-  Schedule(std::move([&, this, returned_futures = std::move(*returned_futures),
+  thread::Schedule(std::move([&, this, returned_futures = std::move(*returned_futures),
                       timed]() mutable {
     // Grab the shared lock and block the `WaitDeviceOps` until buffer is
     // ready. Since this is the SPMD code path. There is no points to grab
