@@ -117,7 +117,7 @@ std::shared_ptr<torch::lazy::Value> CreateToken(
 at::Tensor all_reduce(const at::Tensor& self, c10::string_view reduceOp,
                       c10::string_view /*tag*/, at::IntArrayRef /*ranks*/,
                       int64_t /*group_size*/) {
-  TORCH_LAZY_FN_COUNTER("xla::");
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   auto self_tensor = bridge::GetXlaTensor(self);
   // TODO(alanwaketan): Use ranks and group_size to generate groups. Currently
   // we just suse {} as a workaround. Scale is always 1.0 here, and we always

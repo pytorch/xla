@@ -641,7 +641,7 @@ c10::SymNode XLASymNodeImpl::add(const c10::SymNode& other) {
 }
 
 c10::SymNode XLASymNodeImpl::sub(const c10::SymNode& other) {
-  TORCH_LAZY_FN_COUNTER("xla::size_");
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::size_");
 
   torch_xla::XLASymNodeImpl* p_other =
       dynamic_cast<XLASymNodeImpl*>(other.get());
@@ -680,7 +680,7 @@ c10::SymNode XLASymNodeImpl::floordiv(const c10::SymNode& other) {
 }
 
 c10::SymNode XLASymNodeImpl::mod(const c10::SymNode& other) {
-  TORCH_LAZY_FN_COUNTER("xla::size_");
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::size_");
   torch_xla::XLASymNodeImpl* p_other =
       dynamic_cast<XLASymNodeImpl*>(other.get());
   XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
@@ -699,7 +699,7 @@ c10::SymNode XLASymNodeImpl::eq(const c10::SymNode& other) {
 }
 
 c10::SymNode XLASymNodeImpl::ne(const c10::SymNode& other) {
-  TORCH_LAZY_FN_COUNTER("xla::size_");
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::size_");
   auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
   XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
   XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
@@ -713,7 +713,7 @@ c10::SymNode XLASymNodeImpl::gt(const c10::SymNode& other) {
 }
 
 c10::SymNode XLASymNodeImpl::lt(const c10::SymNode& other) {
-  TORCH_LAZY_FN_COUNTER("xla::size_");
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::size_");
   auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
   XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
   XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
@@ -727,7 +727,7 @@ c10::SymNode XLASymNodeImpl::le(const c10::SymNode& other) {
 }
 
 c10::SymNode XLASymNodeImpl::ge(const c10::SymNode& other) {
-  TORCH_LAZY_FN_COUNTER("xla::size_");
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::size_");
   auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
   XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
   XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
@@ -814,7 +814,7 @@ c10::SymNode XLASymNodeImpl::is_non_overlapping_and_dense(
 }
 
 c10::SymNode XLASymNodeImpl::clone() {
-  TORCH_LAZY_FN_COUNTER("xla::size_");
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::size_");
   return c10::make_intrusive<XLASymNodeImpl>(node(), pytype_);
 }
 
