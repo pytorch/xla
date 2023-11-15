@@ -98,15 +98,10 @@ class BenchmarkModel:
   def _prepare_for_train(self):
     self.module.train()
     self.model_iter_fn = self.train
-    if self.benchmark_experiment.dynamo == "openxla":
-      # TODO: dynamo `openxla` would fail if there is an optimizer.
-      # This makes the `openxla` results not comparable with other training results.
-      self.optimizer = None
-    else:
-      if not hasattr(self, "optimizer"):
-        # For some special models, self.set_up() may have initialized an
-        # optimizer to use. So only initialize it when there is none existing.
-        self.optimizer = self.optimizer_class(self.module.parameters(), lr=0.01)
+    if not hasattr(self, "optimizer"):
+      # For some special models, self.set_up() may have initialized an
+      # optimizer to use. So only initialize it when there is none existing.
+      self.optimizer = self.optimizer_class(self.module.parameters(), lr=0.01)
 
   def prepare_for_experiment(self):
     self.device = self.benchmark_experiment.get_device()
