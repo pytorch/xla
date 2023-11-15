@@ -269,15 +269,14 @@ ptxla_cc_library(
         "//torch_xla/csrc/runtime:metrics",
         "//torch_xla/csrc/runtime:metrics_analysis",
         "//torch_xla/csrc/runtime:metrics_reader",
-        "//torch_xla/csrc/runtime:multi_wait",
         "//torch_xla/csrc/runtime:profiler",
         "//torch_xla/csrc/runtime:sys_util",
-        "//torch_xla/csrc/runtime:thread_pool",
         "//torch_xla/csrc/runtime:util",
         "//torch_xla/csrc/runtime:xla_coordinator",
         "//torch_xla/csrc/runtime:xla_util",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/synchronization",
         "@com_google_absl//absl/types:variant",
         "@tsl//tsl/profiler/lib:traceme",
         "@tsl//tsl/profiler/lib:traceme_encode",
@@ -317,6 +316,16 @@ cc_library(
     deps = [
         "//torch_xla/csrc/runtime:debug_macros",
         "@xla//xla/client:xla_builder",
+    ],
+)
+
+cc_library(
+    name = "thread_pool",
+    srcs = ["thread_pool.cc"],
+    hdrs = ["thread_pool.h"],
+    deps = [
+        "//torch_xla/csrc/runtime:sys_util",
+        "@tsl//tsl/platform:env"
     ],
 )
 

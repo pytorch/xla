@@ -12,18 +12,18 @@
 #include <numeric>
 #include <thread>
 
+#include "absl/synchronization/blocking_counter.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/dtype.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/layout_manager.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
-#include "torch_xla/csrc/runtime/multi_wait.h"
 #include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
-#include "torch_xla/csrc/runtime/thread_pool.h"
 #include "torch_xla/csrc/runtime/util.h"
+#include "torch_xla/csrc/thread_pool.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/xla_backend_impl.h"
 #include "torch_xla/csrc/xla_sharding_util.h"
@@ -366,16 +366,16 @@ void CopyTensors(const void* src_buffer, const xla::Shape& src_shape,
     std::vector<int64_t> iter_dims = GetIterationDimensions(dest_shape);
     std::vector<CopyPartition> parts =
         CreateCopyPartitions(dest_shape.dimensions(), iter_dims.front());
-    auto mwait = std::make_shared<runtime::util::MultiWait>(parts.size());
+    absl::BlockingCounter counter(parts.size());
     for (size_t i = 0; i < parts.size(); ++i) {
       auto copy_fn = [&, i]() {
         SlicedCopy<SType, DType>(dest_shape.dimensions(), src_data, src_strides,
                                  dest_data, dest_strides, iter_dims, parts[i]);
+        counter.DecrementCount();
       };
-      runtime::env::ScheduleClosure(
-          runtime::util::MultiWait::Completer(mwait, std::move(copy_fn)));
+      thread::Schedule(std::move(copy_fn));
     }
-    mwait->Wait();
+    counter.Wait();
   }
 }
 

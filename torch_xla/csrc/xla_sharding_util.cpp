@@ -5,6 +5,7 @@
 #include <cmath>
 #include <unordered_map>
 
+#include "absl/synchronization/blocking_counter.h"
 #include "torch/csrc/lazy/core/ir_util.h"
 #include "torch_xla/csrc/aten_autograd_ops.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
@@ -13,12 +14,11 @@
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
-#include "torch_xla/csrc/runtime/multi_wait.h"
 #include "torch_xla/csrc/runtime/runtime.h"
-#include "torch_xla/csrc/runtime/thread_pool.h"
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/tensor_methods.h"
 #include "torch_xla/csrc/tensor_util.h"
+#include "torch_xla/csrc/thread_pool.h"
 #include "torch_xla/csrc/xla_graph_executor.h"
 #include "tsl/profiler/lib/traceme.h"
 #include "xla/execution_options_util.h"
@@ -326,7 +326,7 @@ ShardingUtil::InputHandler(
   // the first local index with the first global device ordinal.
   auto device_index = build_index_map(devices);
 
-  auto mwait = std::make_shared<runtime::util::MultiWait>(devices.size());
+  absl::BlockingCounter counter(devices.size());
 
   for (int i = 0; i < devices.size(); i++) {
     auto argument_setter = [&, i]() {
@@ -339,11 +339,11 @@ ShardingUtil::InputHandler(
         int device_i = device_index[global_ordinal];
         arguments_by_device[device_i][argument_i] = shard;
       }
+      counter.DecrementCount();
     };
-    runtime::env::ScheduleIoClosure(
-        runtime::util::MultiWait::Completer(mwait, std::move(argument_setter)));
+    thread::Schedule(std::move(argument_setter));
   }
-  mwait->Wait();
+  counter.Wait();
   return arguments_by_device;
 }
 
