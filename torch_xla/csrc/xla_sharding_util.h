@@ -151,10 +151,11 @@ class ShardingUtil {
       const std::vector<std::string>& devices,
       const XLATensor::ShardingSpecPtr& sharding_spec);
 
-  //////////////////////////// Dynamo Integration ////////////////////////////
-
   static void XlaMarkSharding(const at::Tensor& input,
                               xla::OpSharding sharding);
+
+  //////////////////////////// Dynamo Integration ////////////////////////////
+
   static void XlaMarkShardingDynamoCustomOp(
       const at::Tensor& input, c10::List<at::IntArrayRef> tile_assignment,
       c10::List<at::IntArrayRef> group_assignment,

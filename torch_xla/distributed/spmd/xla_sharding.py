@@ -87,8 +87,10 @@ class Mesh:
     Return the OpSharding for the given partition spec. This is an expensive
     operation as the mesh grows, so the value is cached for reuse.
     """
-    return torch_xla._XLAC.OpSharding(
-        _extract_op_sharding_specs(self, partition_spec))
+    tile_assignment, group_assignment, replication_groups, sharding_type = _extract_op_sharding_specs(
+        self, partition_spec)
+    return torch_xla._XLAC.OpSharding(tile_assignment, group_assignment,
+                                      replication_groups, sharding_type)
 
 
 # HybridDevice class has been inspired from jax's mesh_utils: https://github.com/google/jax/blob/fc5960f2b8b7a0ef74dbae4e27c5c08ff1564cff/jax/experimental/mesh_utils.py#L4ƒ
@@ -505,7 +507,6 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor],
   assert len(t.shape) == len(partition_spec), \
     f"Partition spec length ({len(partition_spec)}) should be equal to the input rank ({len(t.shape)})."
 
-  op_sharding = mesh.get_op_sharding(partition_spec)
   tile_assignment, group_assignment, replication_groups, sharding_type = _extract_op_sharding_specs(
       mesh, partition_spec)
   if use_dynamo_custom_op:
@@ -515,6 +516,7 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor],
         unwrap_sharded_tensor(t), tile_assignment, group_assignment,
         replication_groups, sharding_type)
   else:
+    op_sharding = mesh.get_op_sharding(partition_spec)
     annotate_func = torch_xla._XLAC._xla_mark_sharding
     annotate_func(unwrap_sharded_tensor(t), op_sharding)
   return wrap_as_sharded_tensor(t)
