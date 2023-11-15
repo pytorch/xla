@@ -13,6 +13,7 @@
 #include "absl/types/optional.h"
 #include "absl/types/span.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/util.h"
 #include "tsl/platform/bfloat16.h"
 #include "xla/client/xla_builder.h"
@@ -157,6 +158,17 @@ class XlaHelpers {
 
   static xla::XlaOp DynamicReshape(xla::XlaOp input,
                                    absl::Span<const int64_t> output_sizes);
+
+  static bool IsUnboundedDynamic(const xla::Shape& shape);
+
+  static bool IsUnboundedDynamismEnabled() {
+    return runtime::sys_util::GetEnvBool("EXPERIMENTAL_XLA_UNBOUNDED_DYNAMISM",
+                                         false);
+  }
+
+  static xla::XlaOp DynamicUnboundedReshape(
+      xla::XlaOp input, xla::XlaOp aux_input,
+      absl::Span<const int64_t> output_sizes);
 
   static xla::XlaOp DynamicReshapeAs(xla::XlaOp input, const xla::Shape& shape);
 

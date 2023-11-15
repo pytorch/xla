@@ -9,9 +9,9 @@
 #include <functional>
 #include <iostream>
 #include <memory>
-#include <set>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -137,6 +137,17 @@ class XlaNode : public torch::lazy::Node {
   }
 
   std::string ToString() const override;
+
+  void MarkDynamicDimension(uint32_t dim) {
+    unbounded_dynamic_dims_.insert(dim);
+  }
+
+  const std::unordered_set<uint32_t>& dynamic_dims() const {
+    return unbounded_dynamic_dims_;
+  }
+
+ protected:
+  std::unordered_set<uint32_t> unbounded_dynamic_dims_;
 
  private:
   xla::Shape GetOpShape(const std::function<xla::Shape()>& shape_fn) const;

@@ -36,7 +36,7 @@ torch::lazy::NodePtr DeviceData::Clone(torch::lazy::OpList operands) const {
 }
 
 XlaOpVector DeviceData::Lower(LoweringContext* loctx) const {
-  return ReturnOp(loctx->GetParameter(data_), loctx);
+  return ReturnOp(loctx->GetParameter(data_, unbounded_dynamic_dims_), loctx);
 }
 
 DeviceData* DeviceData::Cast(const torch::lazy::Node* node) {

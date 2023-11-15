@@ -216,6 +216,16 @@ class XLAExportInterpreter(torch.fx.Interpreter):
       new_kwargs['device'] = self._device
     return super().call_function(target, args, new_kwargs)
 
+  def run_node(self, n) -> Any:
+    if n.op == 'placeholder':
+      fake_t = n.meta['val']
+      res = super().run_node(n)
+      for i, x in enumerate(fake_t.shape):
+        if not isinstance(x, int):
+          torch_xla._XLAC._xla_mark_dynamic(res, i)
+      return res
+    return super().run_node(n)
+
 
 def _extract_input_args(exported_model, options):
   if options.override_tracing_arguments is not None:

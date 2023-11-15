@@ -5,6 +5,7 @@
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/random.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/xla_lower_util.h"
@@ -66,8 +67,16 @@ xla::XlaOp BuildThreshold(xla::XlaOp input, xla::XlaOp output,
 
 xla::XlaOp BuildRelu(xla::XlaOp input) {
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
-  return xla::Max(input, XlaHelpers::ScalarValue<float>(
-                             0, input_shape.element_type(), input.builder()));
+  xla::XlaOp scalar = XlaHelpers::ScalarValue<float>(
+      0, input_shape.element_type(), input.builder());
+  if (XlaHelpers::IsUnboundedDynamismEnabled()) {
+    // xla::Max doesn't do implicit broadcasting for unbounded dynamism now.
+    // TODO(lsy323): Remove this branch once the support is added in XLA.
+    auto promoted = XlaHelpers::Promote(input, scalar);
+    return xla::Max(promoted.first, promoted.second);
+  } else {
+    return xla::Max(input, scalar);
+  }
 }
 
 xla::XlaOp BuildHardshrink(xla::XlaOp input, xla::XlaOp lambda) {
