@@ -230,4 +230,8 @@ void XlaNode::UpdateShardingHash() {
   }
 }
 
+void XlaNode::SetCustomOpName(const std::string& op_name) {
+  custom_op_name_ = op_name;
+}
+
 }  // namespace torch_xla
