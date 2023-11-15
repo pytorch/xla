@@ -19,7 +19,6 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-
 DETECTRON2_MODELS = {
     "detectron2_fasterrcnn_r_101_c4",
     "detectron2_fasterrcnn_r_101_dc5",
@@ -43,17 +42,18 @@ DENY_LIST = {
   # https://github.com/pytorch/torchdynamo/issues/145
   "fambench_xlmr": [{}],
   "llama": [{"test": "train"},],  # not implemented
-  "mobilenet_v2_quantized_qat": [{"test": "eval", "accelerator": "gpu"},  # not implemented
+  "mobilenet_v2_quantized_qat": [{"test": "eval", "accelerator": "cuda"},  # not implemented
                                  {"test": "eval", "accelerator": "tpu"},],  # not implemented
   "pyhpc_equation_of_state": [{"test": "train"},],  # not implemented
   "pyhpc_isoneutral_mixing": [{"test": "train"},],  # not implemented
   "pyhpc_turbulent_kinetic_energy": [{"test": "train"},],  # not implemented
   "pytorch_struct": [{"test": "eval"},],  # not implemented
-  "resnet50_quantized_qat": [{"test": "eval", "accelerator": "gpu"},  # not implemented
+  "resnet50_quantized_qat": [{"test": "eval", "accelerator": "cuda"},  # not implemented
                              {"test": "eval", "accelerator": "tpu"},],  # not implemented
   # https://github.com/pytorch/pytorch/issues/99438
   "vision_maskrcnn": [{}],
 }
+
 
 class TorchBenchModelLoader(ModelLoader):
 
@@ -150,7 +150,7 @@ class TorchBenchModel(BenchmarkModel):
 
     if self.benchmark_experiment.accelerator == "cpu":
       device = "cpu"
-    elif self.benchmark_experiment.accelerator == "gpu" and not self.benchmark_experiment.xla:
+    elif self.benchmark_experiment.accelerator == "cuda" and not self.benchmark_experiment.xla:
       device = "cuda"
     else:
       device = str(self.benchmark_experiment.get_device())
@@ -158,7 +158,6 @@ class TorchBenchModel(BenchmarkModel):
     benchmark = benchmark_cls(
         test=self.benchmark_experiment.test,
         device=device,
-        jit=False,
         batch_size=self.benchmark_experiment.batch_size,
     )
 
