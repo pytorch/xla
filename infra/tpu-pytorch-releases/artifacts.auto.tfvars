@@ -73,6 +73,14 @@ versioned_builds = [
     python_version  = "3.10"
     bundle_libtpu   = "0"
   },
+  {
+    git_tag         = "v2.1.0"
+    pytorch_git_rev = "v2.1.0"
+    package_version = "2.1.0"
+    accelerator     = "tpu"
+    python_version  = "3.11"
+    bundle_libtpu   = "0"
+  },
   # Bundle libtpu for Kaggle
   {
     git_tag         = "v2.1.0"
