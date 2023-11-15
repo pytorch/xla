@@ -666,7 +666,7 @@ PjRtComputationClient::ExecuteReplicated(
   XLA_CHECK(devices.size() == arguments.size())
       << "ExecuteReplicated over " << devices.size() << " devices, but "
       << arguments.size() << " arguments devices.";
-  absl::BlockingCounter mwait(devices.size());
+  absl::BlockingCounter counter(devices.size());
   std::vector<std::vector<xla::PjRtBuffer*>> argument_handles(devices.size());
   {
     tsl::profiler::TraceMe activity(
@@ -687,11 +687,11 @@ PjRtComputationClient::ExecuteReplicated(
           buffers.push_back(pjrt_data->buffer.get());
         }
         argument_handles[i] = std::move(buffers);
-        mwait.DecrementCount();
+        counter.DecrementCount();
       };
       thread::Schedule(std::move(buffer_converter));
     }
-    mwait.Wait();
+    counter.Wait();
   }
 
   xla::ExecuteOptions execute_options;

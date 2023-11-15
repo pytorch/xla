@@ -326,7 +326,7 @@ ShardingUtil::InputHandler(
   // the first local index with the first global device ordinal.
   auto device_index = build_index_map(devices);
 
-  absl::BlockingCounter mwait(devices.size());
+  absl::BlockingCounter counter(devices.size());
 
   for (int i = 0; i < devices.size(); i++) {
     auto argument_setter = [&, i]() {
@@ -339,11 +339,11 @@ ShardingUtil::InputHandler(
         int device_i = device_index[global_ordinal];
         arguments_by_device[device_i][argument_i] = shard;
       }
-      mwait.DecrementCount();
+      counter.DecrementCount();
     };
     thread::Schedule(std::move(argument_setter));
   }
-  mwait.Wait();
+  counter.Wait();
   return arguments_by_device;
 }
 

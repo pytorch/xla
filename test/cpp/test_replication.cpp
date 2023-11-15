@@ -57,7 +57,7 @@ void TestSingleReplication(
 
   std::vector<std::vector<torch_xla::runtime::ComputationClient::DataPtr>>
       results(device_strings.size());
-  absl::BlockingCounter mwait(device_strings.size());
+  absl::BlockingCounter counter(device_strings.size());
   torch_xla::runtime::ComputationClient::ExecuteComputationOptions exec_options;
   for (size_t i = 0; i < device_strings.size(); ++i) {
     auto executor = [&, i]() {
@@ -68,11 +68,11 @@ void TestSingleReplication(
                   torch_xla::runtime::ComputationClient::Data>(
                   tensors_data[i])},
               device_strings[i], exec_options);
-      mwait.DecrementCount();
+      counter.DecrementCount();
     };
     torch_xla::thread::Schedule(std::move(executor));
   }
-  mwait.Wait();
+  counter.Wait();
 
   for (size_t i = 0; i < results.size(); ++i) {
     auto literals =
