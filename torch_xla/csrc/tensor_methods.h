@@ -877,6 +877,15 @@ XLATensorPtr upsample_nearest2d_backward(const XLATensorPtr& grad_output,
                                          std::vector<int64_t> output_size,
                                          std::vector<int64_t> input_size);
 
+XLATensorPtr upsample_bicubic2d(const XLATensorPtr& input,
+                                std::vector<int64_t> output_size,
+                                bool align_corners);
+
+XLATensorPtr upsample_bicubic2d_backward(const XLATensorPtr& grad_output,
+                                         std::vector<int64_t> output_size,
+                                         std::vector<int64_t> input_size,
+                                         bool align_corners);
+
 XLATensorPtr var(const XLATensorPtr& input, std::vector<int64_t> dimensions,
                  double correction, bool keep_reduced_dimensions);
 

@@ -255,6 +255,23 @@ xla::XlaOp LowerForward2d(const std::string& target, xla::XlaOp input,
   if (input_shape.dimensions(2) == 1 && input_shape.dimensions(3) == 1) {
     return input + xla::Zeros(input.builder(), output_shape);
   }
+
+  // Bicubic custom call
+  if (target == "ResizeBicubic") {
+    return xla::CustomCall(
+        input.builder(), "__gpu$ResizeBicubic",
+        /*operands=*/{input},
+        /*shape=*/output_shape,
+        /*opaque=*/
+        absl::StrCat("{ align_corners = ", align_corners ? "true" : "false",
+                     " }"),
+        /*has_side_effect=*/false,
+        /*output_operand_aliasing=*/{},
+        /*literal=*/nullptr,
+        /*schedule=*/xla::CustomCallSchedule::SCHEDULE_NONE,
+        /*api_version=*/xla::CustomCallApiVersion::API_VERSION_TYPED_FFI);
+  }
+
   // XLA wants NHWC while PyTorch comes in as NCHW, so we need to transpose,
   // call the kernel, and transpose back.
   std::vector<int64_t> transpose_permute({0, 3, 2, 1});
@@ -297,6 +314,21 @@ xla::XlaOp LowerBackward2d(const std::string& target, xla::XlaOp input,
   if (input_shape.dimensions(2) == output_shape.dimensions(2) &&
       input_shape.dimensions(3) == output_shape.dimensions(3)) {
     return input;
+  }
+  // Bicubic custom call
+  if (target == "ResizeBicubicGrad") {
+    return xla::CustomCall(
+        input.builder(), "__gpu$ResizeBicubicGrad",
+        /*operands=*/{input},    // grad_output
+        /*shape=*/output_shape,  // grad_input
+        /*opaque=*/
+        absl::StrCat("{ align_corners = ", align_corners ? "true" : "false",
+                     " }"),
+        /*has_side_effect=*/false,
+        /*output_operand_aliasing=*/{},
+        /*literal=*/nullptr,
+        /*schedule=*/xla::CustomCallSchedule::SCHEDULE_NONE,
+        /*api_version=*/xla::CustomCallApiVersion::API_VERSION_TYPED_FFI);
   }
   // XLA wants NHWC while PyTorch comes in as NCHW, so we need to transpose,
   // call the kernel, and transpose back.

@@ -122,6 +122,8 @@
 #include "torch_xla/csrc/ops/triangular_solve.h"
 #include "torch_xla/csrc/ops/uniform.h"
 #include "torch_xla/csrc/ops/unsqueeze.h"
+#include "torch_xla/csrc/ops/upsample_bicubic2d.h"
+#include "torch_xla/csrc/ops/upsample_bicubic2d_backward.h"
 #include "torch_xla/csrc/ops/upsample_bilinear2d.h"
 #include "torch_xla/csrc/ops/upsample_bilinear2d_backward.h"
 #include "torch_xla/csrc/ops/upsample_nearest2d.h"
@@ -2759,6 +2761,22 @@ XLATensorPtr upsample_nearest2d_backward(const XLATensorPtr& grad_output,
   return grad_output->CreateFrom(torch::lazy::MakeNode<UpsampleNearestBackward>(
       grad_output->GetIrValue(), std::move(output_size),
       std::move(input_size)));
+}
+
+XLATensorPtr upsample_bicubic2d(const XLATensorPtr& input,
+                                std::vector<int64_t> output_size,
+                                bool align_corners) {
+  return input->CreateFrom(torch::lazy::MakeNode<UpsampleBicubic>(
+      input->GetIrValue(), std::move(output_size), align_corners));
+}
+
+XLATensorPtr upsample_bicubic2d_backward(const XLATensorPtr& grad_output,
+                                         std::vector<int64_t> output_size,
+                                         std::vector<int64_t> input_size,
+                                         bool align_corners) {
+  return grad_output->CreateFrom(torch::lazy::MakeNode<UpsampleBicubicBackward>(
+      grad_output->GetIrValue(), std::move(output_size), std::move(input_size),
+      align_corners));
 }
 
 XLATensorPtr alias(const XLATensorPtr& input) {

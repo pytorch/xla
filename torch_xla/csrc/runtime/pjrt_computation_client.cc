@@ -66,20 +66,17 @@ xla::Shape host_output_shape(xla::PjRtBuffer* buffer) {
 }
 
 xla::GpuAllocatorConfig GetGpuAllocatorConfig() {
-  auto allocator_config = xla::GpuAllocatorConfig{};
-  if (sys_util::GetEnvString(env::kEnvPjrtAllocatorCudaAsync, "").empty() &&
-      sys_util::GetEnvString(env::kEnvPjrtAllocatorPreallocate, "").empty() &&
-      sys_util::GetEnvString(env::kEnvPjrtAllocatorFraction, "").empty()) {
-    return allocator_config;
-  }
-  if (sys_util::GetEnvBool(env::kEnvPjrtAllocatorCudaAsync, false)) {
-    allocator_config.kind = xla::GpuAllocatorConfig::Kind::kCudaAsync;
-  }
-  allocator_config.preallocate =
-      sys_util::GetEnvBool(env::kEnvPjrtAllocatorPreallocate, true);
-  allocator_config.memory_fraction =
-      sys_util::GetEnvDouble(env::kEnvPjrtAllocatorFraction, 0.75);
-  return allocator_config;
+  xla::GpuAllocatorConfig config;
+  xla::GpuAllocatorConfig::Kind kind =
+      static_cast<xla::GpuAllocatorConfig::Kind>(
+          sys_util::GetEnvInt("XLA_GPU_MEMORY_ALLOCATOR_KIND", 2));
+  config.kind = kind;
+  config.memory_fraction =
+      sys_util::GetEnvDouble("XLA_GPU_MEMORY_FRACTION", 0.9);
+  config.preallocate = sys_util::GetEnvBool("XLA_GPU_MEMORY_PREALLOCATE", true);
+  config.garbage_collection =
+      sys_util::GetEnvBool("XLA_GPU_MEMORY_GARBAGE_COLLECTION", false);
+  return config;
 }
 
 }  // namespace
