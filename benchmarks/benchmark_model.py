@@ -98,11 +98,9 @@ class BenchmarkModel:
   def _prepare_for_train(self):
     self.module.train()
     self.model_iter_fn = self.train
-    if self.benchmark_experiment.dynamo == "aot_torchxla_trace_once":
-      # TODO: dynamo aot_torchxla_trace_once would fail if there is an
-      # optimizer.
-      # This makes the aot_torchxla_trace_once results not comparable
-      # with other training results
+    if self.benchmark_experiment.dynamo == "openxla":
+      # TODO: dynamo `openxla` would fail if there is an optimizer.
+      # This makes the `openxla` results not comparable with other training results.
       self.optimizer = None
     else:
       if not hasattr(self, "optimizer"):

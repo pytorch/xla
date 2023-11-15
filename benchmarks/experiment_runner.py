@@ -218,7 +218,7 @@ class ExperimentRunner:
   def _synchronize(self, benchmark_experiment):
     if benchmark_experiment.xla:
       xm.wait_device_ops()
-    elif benchmark_experiment.accelerator == "gpu":
+    elif benchmark_experiment.accelerator == "cuda":
       torch.cuda.synchronize()
     else:
       pass
@@ -303,7 +303,7 @@ def parse_args(args=None):
 
   parser.add_argument(
       "--accelerator",
-      choices=["cpu", "gpu", "tpu"],
+      choices=["cpu", "cuda", "tpu"],
       action="append",
       help="Specify an accelerator to use.",
   )
@@ -318,7 +318,7 @@ def parse_args(args=None):
   parser.add_argument(
       "--dynamo",
       choices=[
-          "None", "inductor", "torchxla_trace_once", "aot_torchxla_trace_once"
+          "None", "inductor", "openxla_eval", "openxla"
       ],
       action="append",
       help="Specify an xla option to use.",

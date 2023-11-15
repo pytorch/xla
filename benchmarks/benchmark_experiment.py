@@ -41,10 +41,10 @@ class ExperimentLoader:
   def list_experiment_configs(self):
     if self.experiment_name == "run_all":
       config_choices = {
-          "accelerator": ["cpu", "gpu", "tpu"],
+          "accelerator": ["cpu", "cuda", "tpu"],
           "xla": [None, "PJRT", "XRT"],
           "dynamo": [
-              None, "inductor", "torchxla_trace_once", "aot_torchxla_trace_once"
+              None, "inductor", "openxla_eval", "openxla"
           ],
           "test": ["eval", "train"],
       }
@@ -80,13 +80,13 @@ class ExperimentLoader:
         "dynamo"] not in dynamo.list_backends(exclude_tags=()):
       return False
     if experiment_config["dynamo"] == "inductor" and not (
-        experiment_config["accelerator"] == "gpu" and
+        experiment_config["accelerator"] == "cuda" and
         not experiment_config["xla"]):
       return False
-    if experiment_config["dynamo"] == "torchxla_trace_once" and not (
+    if experiment_config["dynamo"] == "openxla_eval" and not (
         experiment_config["xla"] and experiment_config["test"] == "eval"):
       return False
-    if experiment_config["dynamo"] == "aot_torchxla_trace_once" and not (
+    if experiment_config["dynamo"] == "openxla" and not (
         experiment_config["xla"] and experiment_config["test"] == "train"):
       return False
     if (experiment_config["xla"] and
@@ -95,7 +95,7 @@ class ExperimentLoader:
     if (experiment_config["accelerator"] == "tpu" and
         not experiment_config["xla"]):
       return False
-    if (experiment_config["accelerator"] == "gpu" and
+    if (experiment_config["accelerator"] == "cuda" and
         not experiment_config["xla"] and not torch.cuda.is_available()):
       return False
     return True
@@ -114,7 +114,7 @@ class ExperimentLoader:
       if is_xla_device_available("TPU"):
         process_env["TPU_NUM_DEVICES"] = "1"
         process_env["XRT_TPU_CONFIG"] = "localservice;0;localhost:51011"
-      elif is_xla_device_available("GPU"):
+      elif is_xla_device_available("CUDA"):
         process_env["GPU_NUM_DEVICES"] = "1"
     elif not experiment_config["xla"] and is_xla_device_available(
         experiment_config["accelerator"].upper()):
@@ -160,7 +160,7 @@ class BenchmarkExperiment:
       device = xm.xla_device(devkind=self.accelerator.upper())
     elif self.accelerator == "cpu":
       device = torch.device("cpu")
-    elif self.accelerator == "gpu":
+    elif self.accelerator == "cuda":
       device = torch.device("cuda")
     else:
       raise NotImplementedError
