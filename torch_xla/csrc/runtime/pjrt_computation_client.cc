@@ -5,18 +5,18 @@
 #include <vector>
 
 #include "absl/strings/ascii.h"
+#include "absl/synchronization/blocking_counter.h"
 #include "absl/types/span.h"
 #include "pjrt_computation_client.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/env_vars.h"
-#include "torch_xla/csrc/runtime/multi_wait.h"
 #include "torch_xla/csrc/runtime/profiler.h"
 #include "torch_xla/csrc/runtime/stablehlo_helper.h"
 #include "torch_xla/csrc/runtime/tensor_source.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
-#include "torch_xla/csrc/runtime/thread_pool.h"
 #include "torch_xla/csrc/runtime/xla_coordinator.h"
+#include "torch_xla/csrc/thread_pool.h"
 #include "tsl/profiler/lib/traceme.h"
 #include "xla/client/xla_builder.h"
 #include "xla/client/xla_computation.h"
@@ -620,9 +620,9 @@ PjRtComputationClient::ExecuteComputation(
   }
   CreateDataHandlesCounter()->AddValue(datas.size());
 
-  auto mwait = std::make_shared<util::MultiWait>(1);
-  auto lockfn = [&, this, device, returned_future = std::move(*returned_future),
-                 timed]() mutable {
+  thread::Schedule(std::move([&, this, device,
+                              returned_future = std::move(*returned_future),
+                              timed]() mutable {
     TF_VLOG(5) << "ExecuteComputation acquiring PJRT device lock for "
                << device;
     // Grab the shared lock and block the `WaitDeviceOps` until buffer is
@@ -643,9 +643,7 @@ PjRtComputationClient::ExecuteComputation(
           timed.reset();
           TF_VLOG(3) << "ExecuteComputation returned_future->OnReady finished";
         });
-  };
-
-  env::ScheduleIoClosure(util::MultiWait::Completer(mwait, std::move(lockfn)));
+  }));
 
   TF_VLOG(1) << "Returning " << datas.size() << " results";
   return datas;
@@ -669,7 +667,7 @@ PjRtComputationClient::ExecuteReplicated(
   XLA_CHECK(devices.size() == arguments.size())
       << "ExecuteReplicated over " << devices.size() << " devices, but "
       << arguments.size() << " arguments devices.";
-  auto mwait_argument = std::make_shared<util::MultiWait>(devices.size());
+  absl::BlockingCounter counter(devices.size());
   std::vector<std::vector<xla::PjRtBuffer*>> argument_handles(devices.size());
   {
     tsl::profiler::TraceMe activity(
@@ -690,11 +688,11 @@ PjRtComputationClient::ExecuteReplicated(
           buffers.push_back(pjrt_data->buffer.get());
         }
         argument_handles[i] = std::move(buffers);
+        counter.DecrementCount();
       };
-      env::ScheduleIoClosure(util::MultiWait::Completer(
-          mwait_argument, std::move(buffer_converter)));
+      thread::Schedule(std::move(buffer_converter));
     }
-    mwait_argument->Wait();
+    counter.Wait();
   }
 
   xla::ExecuteOptions execute_options;
@@ -749,9 +747,9 @@ PjRtComputationClient::ExecuteReplicated(
     }
   }
 
-  auto mwait = std::make_shared<util::MultiWait>(1);
-  auto lockfn = [&, this, returned_futures = std::move(*returned_futures),
-                 timed]() mutable {
+  thread::Schedule(std::move([&, this,
+                              returned_futures = std::move(*returned_futures),
+                              timed]() mutable {
     // Grab the shared lock and block the `WaitDeviceOps` until buffer is
     // ready. Since this is the SPMD code path. There is no points to grab
     // devices lock for every individual device.
@@ -772,8 +770,7 @@ PjRtComputationClient::ExecuteReplicated(
           timed.reset();
           TF_VLOG(3) << "ExecuteReplicated returned_future->OnReady finished";
         });
-  };
-  env::ScheduleIoClosure(util::MultiWait::Completer(mwait, std::move(lockfn)));
+  }));
 
   TF_VLOG(1) << "Returning " << data_handles.size() << " sets of results "
              << "with dimensions [" << absl::StrJoin(dims, ",") << "].";
