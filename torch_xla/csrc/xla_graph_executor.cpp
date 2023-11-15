@@ -537,9 +537,12 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
   // The force_ltc_data controls aliasing compilation, so effectively the same
   // graph with on/off force_ltc_data should not match, hash wise.
   coll.hash = torch::lazy::MHash(config.force_ltc_data);
-  // Ensure the compilation environment and git revision are reflected in the hash.
-  coll.hash = runtime::GetComputationClient()->HashCompilationEnv(coll.hash);
-  coll.hash = torch::lazy::HashCombine(coll.hash, torch::lazy::StringHash(XLA_GITREV));
+  // Ensure the compilation environment and git revision are reflected in the
+  // hash.
+  coll.hash = torch::lazy::HashCombine(
+      coll.hash, runtime::GetComputationClient()->HashCompilationEnv());
+  coll.hash =
+      torch::lazy::HashCombine(coll.hash, torch::lazy::StringHash(XLA_GITREV));
   coll.config = config;
   coll.device = *unique_device;
   coll.indices.reserve(tensors.size());

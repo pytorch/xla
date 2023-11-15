@@ -282,8 +282,7 @@ class ComputationClient {
       std::vector<CompileInstance> instances) = 0;
 
   // Returns a hash of the current compilation environment.
-  virtual torch::lazy::hash_t HashCompilationEnv(
-      const torch::lazy::hash_t& seed) const = 0;
+  virtual torch::lazy::hash_t HashCompilationEnv() = 0;
 
   // Executes computation with arguments and returns the result.
   // The passed device must match the common device of the arguments Data.

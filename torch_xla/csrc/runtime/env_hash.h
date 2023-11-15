@@ -8,7 +8,7 @@ namespace hash {
 // TODO(jonbolin): We should move away from manually hashing the env vars and
 // instead hash the compilation environment directly when the functionality is
 // supported in the runtime.
-torch::lazy::hash_t HashXlaEnvVars();
+torch::lazy::hash_t HashXlaEnvVars(bool force_rehash = false);
 
 }  // namespace hash
 }  // namespace runtime

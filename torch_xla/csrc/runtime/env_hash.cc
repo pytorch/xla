@@ -1,4 +1,4 @@
-#include "torch_xla/csrc/runtime/hash.h"
+#include "torch_xla/csrc/runtime/env_hash.h"
 
 #include <iostream>
 #include <sstream>
@@ -45,7 +45,6 @@ torch::lazy::hash_t hash_xla_flags(std::string env_var_name) {
   torch::lazy::hash_t hash = 0;
   // Parse the space-delimited flags once at a time.
   while (std::getline(xla_flag_env, current_flag, ' ')) {
-    // Only consider flags which 
     if (current_flag.rfind(XLA_FLAG_PREFIX, 0) != 0) {
       continue;
     }
@@ -71,7 +70,8 @@ torch::lazy::hash_t hash_xla_flags(std::string env_var_name) {
   return hash;
 }
 
-torch::lazy::hash_t hash_xla_env_vars(std::vector<std::string> flag_vars, std::vector<std::string> raw_vars) {
+torch::lazy::hash_t hash_xla_env_vars(std::vector<std::string> flag_vars,
+                                      std::vector<std::string> raw_vars) {
   torch::lazy::hash_t hash;
   // Parse the flag_vars for XLA flags.
   for (auto& env_var_name : flag_vars) {
@@ -81,16 +81,22 @@ torch::lazy::hash_t hash_xla_env_vars(std::vector<std::string> flag_vars, std::v
   // Include the raw flag value for raw_vars
   for (auto& env_var_name : raw_vars) {
     std::string raw_val = sys_util::GetEnvString(env_var_name.c_str(), "");
-    hash = torch::lazy::HashCombine(hash, torch::lazy::StringHash(raw_val.c_str()));
+    hash = torch::lazy::HashCombine(hash,
+                                    torch::lazy::StringHash(raw_val.c_str()));
   }
   return hash;
 }
 }  // namespace
 
-torch::lazy::hash_t HashXlaEnvVars() {
+torch::lazy::hash_t HashXlaEnvVars(bool force_rehash) {
   // Both XLA_FLAGS and LIBTPU_INIT_ARGS contain XLA flags which impact
   // the compilation result.
-  static torch::lazy::hash_t env_hash = hash_xla_env_vars(/*flag_vars=*/{"XLA_FLAGS", "LIBTPU_INIT_ARGS"}, /*raw_vars=*/{"TPU_MEGACORE"});
+  static std::vector<std::string> flag_vars = {"XLA_FLAGS", "LIBTPU_INIT_ARGS"};
+  static std::vector<std::string> raw_vars = {"TPU_MEGACORE"};
+  static torch::lazy::hash_t env_hash = hash_xla_env_vars(flag_vars, raw_vars);
+  if (force_rehash) {
+    env_hash = hash_xla_env_vars(flag_vars, raw_vars);
+  }
   return env_hash;
 }
 

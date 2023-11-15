@@ -72,8 +72,7 @@ class PjRtComputationClient : public ComputationClient {
 
   std::vector<std::string> GetAllDevices() const override;
 
-  torch::lazy::hash_t HashCompilationEnv(
-      const torch::lazy::hash_t& seed) const override;
+  torch::lazy::hash_t HashCompilationEnv() override;
 
   int GetProcessIndex() const override { return client_->process_index(); };
 
@@ -117,6 +116,7 @@ class PjRtComputationClient : public ComputationClient {
   OperationManager operation_manager_;
   tsl::thread::ThreadPool pool_ = tsl::thread::ThreadPool(
       tsl::Env::Default(), "pjrt", std::thread::hardware_concurrency());
+  torch::lazy::hash_t comp_env_hash_;
 
   xla::PjRtDevice* StringToPjRtDevice(const std::string& device);
 
