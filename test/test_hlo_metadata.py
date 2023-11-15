@@ -10,6 +10,7 @@ import unittest
 import json
 from custom_debug_lowering import CustomOpNameLowering
 
+
 class TestHloMetaData(unittest.TestCase):
 
   def setUp(self):
@@ -32,9 +33,9 @@ class TestHloMetaData(unittest.TestCase):
     model = torch.nn.Sequential(layer1, nl1, layer2, nl2)
 
     with CustomOpNameLowering():
-        model = model.to(device=xm.xla_device())
-        inp = torch.rand(4, 4, device=xm.xla_device())
-        out = model(inp)
+      model = model.to(device=xm.xla_device())
+      inp = torch.rand(4, 4, device=xm.xla_device())
+      out = model(inp)
 
     ctx = torch_xla._XLAC.lowering.LoweringContext()
     ctx.build([out])
@@ -87,4 +88,3 @@ if __name__ == '__main__':
   if xu.getenv_as('METRICS_DEBUG', bool, defval=False):
     print(met.metrics_report())
   sys.exit(0 if test.result.wasSuccessful() else 1)
-
