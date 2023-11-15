@@ -329,7 +329,8 @@ xla::XlaOp XlaHelpers::DynamicReshapeAs(xla::XlaOp input,
 
 bool XlaHelpers::IsUnboundedDynamic(const xla::Shape& shape) {
   XLA_CHECK(XlaHelpers::IsUnboundedDynamismEnabled())
-      << "EXPERIMENTAL_XLA_UNBOUNDED_DYNAMISM needs to be turned on.";
+      << "set EXPERIMENTAL_XLA_UNBOUNDED_DYNAMISM=1 to run any unbounded "
+         "dynamism workload.";
   const absl::Span<const int64_t> dims = shape.dimensions();
   return std::any_of(dims.begin(), dims.end(),
                      [](int64_t size) { return size == kUnboundedSize; });
@@ -339,7 +340,8 @@ xla::XlaOp XlaHelpers::DynamicUnboundedReshape(
     xla::XlaOp input, xla::XlaOp aux_input,
     absl::Span<const int64_t> output_sizes) {
   XLA_CHECK(XlaHelpers::IsUnboundedDynamismEnabled())
-      << "EXPERIMENTAL_XLA_UNBOUNDED_DYNAMISM needs to be turned on.";
+      << "set EXPERIMENTAL_XLA_UNBOUNDED_DYNAMISM=1 to run any unbounded "
+         "dynamism workload.";
   const xla::Shape& aux_input_shape = ShapeHelper::ShapeOfXlaOp(aux_input);
   XLA_CHECK(output_sizes.size() == aux_input_shape.rank())
       << "XlaHelpers::DynamicUnboundedReshape constrainled failed!";

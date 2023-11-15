@@ -138,14 +138,16 @@ class XlaNode : public torch::lazy::Node {
 
   std::string ToString() const override;
 
-  void MarkDynamicDimension(uint32_t dim) { dynamic_dims_.insert(dim); }
+  void MarkDynamicDimension(uint32_t dim) {
+    unbounded_dynamic_dims_.insert(dim);
+  }
 
   const std::unordered_set<uint32_t>& dynamic_dims() const {
-    return dynamic_dims_;
+    return unbounded_dynamic_dims_;
   }
 
  protected:
-  std::unordered_set<uint32_t> dynamic_dims_;
+  std::unordered_set<uint32_t> unbounded_dynamic_dims_;
 
  private:
   xla::Shape GetOpShape(const std::function<xla::Shape()>& shape_fn) const;
