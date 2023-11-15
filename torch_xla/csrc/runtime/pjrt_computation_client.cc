@@ -14,6 +14,7 @@
 #include "torch_xla/csrc/runtime/env_vars.h"
 #include "torch_xla/csrc/runtime/operation_manager.h"
 #include "torch_xla/csrc/runtime/profiler.h"
+#include "torch_xla/csrc/runtime/hash.h"
 #include "torch_xla/csrc/runtime/stablehlo_helper.h"
 #include "torch_xla/csrc/runtime/tensor_source.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
@@ -561,6 +562,31 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
   }
 
   return computations;
+}
+
+torch::lazy::hash_t PjRtComputationClient::HashCompilationEnv(
+    const torch::lazy::hash_t& seed) const {
+  torch::lazy::hash_t hash =
+      torch::lazy::HashCombine(seed, hash::HashXlaEnvVars());
+  auto topology_desc = client_->GetTopologyDescription();
+  // TODO(jonbolin): Incorporate CompileOptions into the hash. These are
+  // deterministically generated at the moment, so they don't need to be
+  // included. It will require a small refactor, so punting on this for now.
+  if (topology_desc.ok()) {
+    // Some backends support a topology description which provides a better
+    // view of the specific compilation environment.
+    std::string serialized = ConsumeValue(topology_desc.value()->Serialize());
+    hash = torch::lazy::HashCombine(hash, torch::lazy::DataHash(serialized.data(), serialized.length()));
+  } else {
+    std::string platform_name(client_->platform_name());
+    std::string platform_version(client_->platform_version());
+    hash = torch::lazy::HashCombine(
+        hash, torch::lazy::StringHash(platform_name.c_str()));
+    // platform_version incorporates libtpu version and hardware type.
+    hash = torch::lazy::HashCombine(
+        hash, torch::lazy::StringHash(platform_version.c_str()));
+  }
+  return hash;
 }
 
 std::vector<ComputationClient::DataPtr>

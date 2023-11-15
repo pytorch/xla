@@ -72,6 +72,9 @@ class PjRtComputationClient : public ComputationClient {
 
   std::vector<std::string> GetAllDevices() const override;
 
+  torch::lazy::hash_t HashCompilationEnv(
+      const torch::lazy::hash_t& seed) const override;
+
   int GetProcessIndex() const override { return client_->process_index(); };
 
   int GetNumProcesses() const override;

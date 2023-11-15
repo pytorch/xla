@@ -84,6 +84,7 @@ cc_library(
     ":env_vars",
     ":operation_manager",
     ":profiler",
+    ":hash",
     ":stablehlo_helper",
     ":tensor_source",
     ":tf_logging",
@@ -141,6 +142,16 @@ cc_library(
     name = "env_vars",
     srcs = ["env_vars.cc"],
     hdrs = ["env_vars.h"],
+)
+
+cc_library(
+    name = "hash",
+    srcs = ["hash.cc"],
+    hdrs = ["hash.h"],
+    deps = [
+        ":sys_util",
+        "@torch//:headers",
+    ],
 )
 
 cc_library(
