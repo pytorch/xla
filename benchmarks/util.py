@@ -49,7 +49,7 @@ def reset_rng_state(benchmark_experiment=None):
 
 @functools.lru_cache(maxsize=3)
 def is_xla_device_available(devkind):
-  if devkind not in ["CPU", "GPU", "TPU"]:
+  if devkind not in ["CPU", "CUDA", "TPU"]:
     raise ValueError(devkind)
 
   def _check_xla_device(q, devkind):
@@ -126,7 +126,7 @@ def set_cwd(path):
 def get_accelerator_model(accelerator):
   if accelerator == "cpu":
     return get_cpu_name()
-  elif accelerator == "gpu":
+  elif accelerator == "cuda":
     return get_gpu_name()
   elif accelerator == "tpu":
     return get_tpu_name()
@@ -141,9 +141,12 @@ def get_cpu_name():
 
 
 def get_gpu_name():
-  return subprocess.check_output(
+  gpu_names = subprocess.check_output(
       ["nvidia-smi", "--query-gpu=gpu_name", "--format=csv"],
-      encoding='utf-8').split("\n")[1]
+      encoding='utf-8').split("\n")[1:]
+  if len(gpu_names) == 1:
+    return gpu_names[0]
+  return "One of " + ", ".join(gpu_names)
 
 
 def get_tpu_name():
