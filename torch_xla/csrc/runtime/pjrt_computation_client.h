@@ -10,6 +10,7 @@
 #include "absl/types/span.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/operation_tracker.h"
 #include "torch_xla/csrc/runtime/util.h"
 #include "xla/client/xla_computation.h"
 #include "xla/literal.h"
@@ -112,8 +113,7 @@ class PjRtComputationClient : public ComputationClient {
   std::unordered_map<int, int> global_ordinals_;
   std::unordered_map<std::string, xla::PjRtDevice* const> string_to_device_;
   std::shared_ptr<std::vector<std::string>> replication_devices_;
-  std::unordered_map<std::string, std::unique_ptr<std::shared_mutex>>
-      device_locks_;
+  OperationTracker operation_tracker_;
 
   xla::PjRtDevice* StringToPjRtDevice(const std::string& device);
   std::shared_lock<std::shared_mutex> lock_device_shared(
