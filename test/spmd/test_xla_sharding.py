@@ -42,6 +42,20 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     # TODO(244003536) add more tests for XLAShardedTensror.
     self.assertTrue(isinstance(xst1, XLAShardedTensor))
 
+  def test_xla_sharded_tensor_repr(self):
+    xt = torch.randn(128, 128).to(xm.xla_device())
+    model = self.SimpleLinear().to(xm.xla_device())
+
+    mesh = self._get_mesh((1, self.n_devices))
+    partition_spec = (0, 1)
+    xst = xs.mark_sharding(xt, mesh, partition_spec)
+    self.assertTrue(isinstance(xst, XLAShardedTensor))
+
+    xt_output = model(xt)
+    self.assertTrue('XLAShardedTensor' not in str(xt_output))
+    xst_output = model(xst)
+    self.assertTrue('XLAShardedTensor' in str(xst_output))
+
   def test_sharded_tensor_debug_info(self):
     partition_spec = (0, 1)
     xt1 = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]],
