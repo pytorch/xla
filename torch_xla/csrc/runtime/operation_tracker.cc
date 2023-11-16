@@ -50,6 +50,7 @@ void OperationTracker::Counter::Decrement() {
   TF_VLOG(3) << "Decrement.... " << current;
 
   if (current == 0) {
+    std::unique_lock cv_lock(cv_mu_);
     TF_VLOG(3) << "notify";
     cv_.notify_all();
   }
