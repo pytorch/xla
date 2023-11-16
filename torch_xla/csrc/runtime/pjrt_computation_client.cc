@@ -616,7 +616,7 @@ PjRtComputationClient::ExecuteComputation(
                            returned_future)
           .value();
 
-  returned_future->OnReady(std::move([timed, op](xla::Status unused) mutable {
+  returned_future->OnReady(std::move([timed, op = std::move(op)](xla::Status unused) mutable {
     timed.reset();
     TF_VLOG(3) << "ExecuteComputation returned_future->OnReady finished";
   }));
@@ -715,7 +715,7 @@ PjRtComputationClient::ExecuteReplicated(
                   .value();
 
     (*returned_futures)[0].OnReady(
-        std::move([timed, op](xla::Status unused) mutable {
+        std::move([timed, op = std::move(op)](xla::Status unused) mutable {
           timed.reset();
           TF_VLOG(3) << "ExecuteReplicated returned_future->OnReady finished";
         }));

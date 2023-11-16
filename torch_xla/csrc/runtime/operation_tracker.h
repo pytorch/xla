@@ -54,8 +54,7 @@ class OperationTracker {
     Counter* counter_;
   };
 
-  // TODO: should this be a shared_ptr?
-  std::shared_ptr<Operation> StartOperation(std::string device);
+  std::unique_ptr<Operation> StartOperation(std::string device);
 
   void WaitForDevices(absl::Span<const std::string> devices);
 

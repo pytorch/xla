@@ -22,9 +22,9 @@ OperationTracker::Operation::Operation(Counter* counter) : counter_(counter) {
 
 OperationTracker::Operation::~Operation() { counter_->Decrement(); }
 
-std::shared_ptr<OperationTracker::Operation> OperationTracker::StartOperation(
+std::unique_ptr<OperationTracker::Operation> OperationTracker::StartOperation(
     std::string device) {
-  return std::make_shared<Operation>(op_counters_.at(device).get());
+  return std::make_unique<Operation>(op_counters_.at(device).get());
 }
 
 void OperationTracker::WaitForDevices(absl::Span<const std::string> devices) {
