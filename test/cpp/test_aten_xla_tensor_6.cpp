@@ -873,7 +873,7 @@ TEST_F(AtenXlaTensorTest, TestEmbeddingBackward) {
 TEST_F(AtenXlaTensorTest, TestAmpUpdateScale) {
   XlaDeviceType hw_type =
       static_cast<XlaDeviceType>(bridge::GetDefaultDevice()->type());
-  if (hw_type != XlaDeviceType::GPU && hw_type != XlaDeviceType::CPU) {
+  if (hw_type != XlaDeviceType::CUDA && hw_type != XlaDeviceType::CPU) {
     return;
   }
   torch::Tensor growth_tracker =

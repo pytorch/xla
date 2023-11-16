@@ -23,6 +23,16 @@ class AtenXlaTensorTest : public AtenXlaTensorTestBase {};
 
 }  // namespace
 
+TEST_F(AtenXlaTensorTest, TestStorage) {
+  torch::Tensor a = torch::tensor({0.0});
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    XLATensorPtr xla_tensor_a = bridge::GetXlaTensor(xla_a);
+    EXPECT_EQ(xla_a.device(), xla_tensor_a->Storage().device());
+    AllClose(a, xla_a);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestEmpty) {
   torch::Tensor a = torch::zeros({2, 2}, torch::TensorOptions(torch::kFloat));
   ForEachDevice([&](const torch::Device& device) {
@@ -129,8 +139,7 @@ TEST_F(AtenXlaTensorTest, TestFull) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::empty", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::fill_", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::full", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestFullLike) {
@@ -3367,6 +3376,22 @@ TEST_F(AtenXlaTensorTest, TestPrelu) {
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
   ExpectCounterChanged("xla::_prelu_kernel", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestPreluBackward) {
+  auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
+    return torch::prelu(inputs[0], inputs[1]);
+  };
+  torch::Tensor input = torch::rand(
+      {5, 3}, torch::TensorOptions(torch::kFloat).requires_grad(true));
+  torch::Tensor weight = torch::rand({3}, torch::TensorOptions(torch::kFloat));
+  ForEachDevice([&](const torch::Device& device) {
+    TestBackward({input, weight}, device, testfn);
+  });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::_prelu_kernel_backward",
+                       cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestHardshrink) {

@@ -39,6 +39,24 @@ class StableHLOInferenceTest(unittest.TestCase):
       output2 = torch.tensor(res.numpy())
       self.assertTrue(torch.allclose(output, output2, atol=1e-5))
 
+  def test_unused_param(self):
+
+    class M(torch.nn.Module):
+
+      def forward(self, a, b):
+        return torch.sin(b)
+
+    model = M()
+    data = (torch.randn(4, 3, 224, 224), torch.randn(1, 100))
+    output = model(*data)
+
+    with tempfile.TemporaryDirectory() as tempdir:
+      save_torch_module_as_tf_saved_model(model, data, tempdir)
+      loaded_m = tf.saved_model.load(tempdir)
+      res = loaded_m.f(data[0].detach().numpy(), data[1].detach().numpy())[0]
+      output2 = torch.tensor(res.numpy())
+      self.assertTrue(torch.allclose(output, output2, atol=1e-5))
+
 
 if __name__ == '__main__':
   test = unittest.main()

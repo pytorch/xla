@@ -38,6 +38,14 @@ class MetricsTest(unittest.TestCase):
     self.assertIn("TensorToData", met.metrics_report())
     assert (len(met.metric_names()) > 0)
 
+  def test_tracing_time_metrics(self):
+    xla_device = xm.xla_device()
+    met.clear_all()
+    t1 = torch.tensor(156, device=xla_device)
+    t2 = t1 + 100
+    self.assertIn('LazyTracing', met.metric_names())
+    self.assertGreater(met.metric_data('LazyTracing')[0], 1)
+
   def test_short_metrics_report_default_list(self):
     xla_device = xm.xla_device()
     t1 = torch.tensor(1456, device=xla_device)
@@ -164,7 +172,9 @@ class MetricsTest(unittest.TestCase):
     self.assertIn("CachedCompile", report)
 
   @unittest.skipIf(
+      xm.get_xla_supported_devices("CUDA") or
       xm.get_xla_supported_devices("GPU") or
+      xm.get_xla_supported_devices("ROCM") or
       xm.get_xla_supported_devices("TPU"), f"This test only works on CPU.")
   def test_execute_time_metric(self):
     # Initialize the client before starting the timer.

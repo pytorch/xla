@@ -56,7 +56,7 @@ function run_coverage {
 function run_test {
   echo "Running in PjRt runtime: $@"
   if [ -x "$(command -v nvidia-smi)" ] && [ "$XLA_CUDA" != "0" ]; then
-    PJRT_DEVICE=GPU run_coverage "$@"
+    PJRT_DEVICE=CUDA run_coverage "$@"
   else
     # TODO(darisoy): run these tests with multiple CPU devices, this fails due to TF issue.
     PJRT_DEVICE=CPU CPU_NUM_DEVICES=1 run_coverage "$@"
@@ -108,6 +108,11 @@ function run_save_tensor_hlo {
   XLA_SAVE_TENSORS_FILE="/tmp/xla_test_save_ir.txt" XLA_SAVE_TENSORS_FMT="hlo" run_test "$@"
 }
 
+function run_pt_xla_debug {
+  echo "Running in save tensor file mode: $@"
+  PT_XLA_DEBUG=1 PT_XLA_DEBUG_FILE="/tmp/pt_xla_debug.txt" run_test "$@"
+}
+
 function run_stablehlo_compile {
   echo "Running in StableHlo Compile mode: $@"
   XLA_STABLEHLO_COMPILE=1 run_test "$@"
@@ -116,6 +121,14 @@ function run_stablehlo_compile {
 function run_xla_backend_mp {
   echo "Running XLA backend multiprocessing test: $@"
   MASTER_ADDR=localhost MASTER_PORT=6000 run_test "$@"
+}
+
+function run_torchrun {
+  if [ -x "$(command -v nvidia-smi)" ] && [ "$XLA_CUDA" != "0" ]; then
+    echo "Running torchrun test for GPU $@"
+    num_devices=$(nvidia-smi --list-gpus | wc -l)
+    PJRT_DEVICE=CUDA torchrun --nnodes 1 --nproc-per-node $num_devices $@
+  fi 
 }
 
 function run_torch_op_tests {
@@ -148,6 +161,7 @@ function run_xla_op_tests1 {
   run_test "$CDIR/test_grad_checkpoint.py"
   run_test "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_test_without_functionalization "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
+  run_pt_xla_debug "$CDIR/test_pt_xla_debug.py"
   run_test "$CDIR/test_async_closures.py"
   run_test "$CDIR/test_profiler.py"
   run_test "$CDIR/pjrt/test_runtime.py"
@@ -193,6 +207,7 @@ function run_xla_op_tests3 {
   run_test "$CDIR/test_operations_hlo.py" "$@" --verbosity=$VERBOSITY
   run_test "$CDIR/test_input_output_aliases.py"
   run_test "$CDIR/test_torch_distributed_xla_backend.py"
+  run_torchrun "$CDIR/pjrt/test_torchrun.py"
 }
 
 #######################################################################################

@@ -18,7 +18,7 @@ curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -
 curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | sudo tee /etc/apt/sources.list.d/nvidia-docker.list
 sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit
 sudo systemctl restart docker
-sudo docker run --gpus all -it -d us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_cuda_11.8 bin/bash
+sudo docker run --shm-size=16g --net=host --gpus all -it -d us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_cuda_11.8 bin/bash
 sudo docker exec -it $(sudo docker ps | awk 'NR==2 { print $1 }') /bin/bash
 ```
 
@@ -59,7 +59,7 @@ pip3 install https://storage.googleapis.com/tpu-pytorch/wheels/cuda/117/torch_xl
 In order to run below examples, you need to clone the pytorch/xla repo to access the imagenet example(We already clone it in our docker).
 
 ```
-(pytorch) root@20ab2c7a2d06:/# export GPU_NUM_DEVICES=1 PJRT_DEVICE=GPU
+(pytorch) root@20ab2c7a2d06:/# export GPU_NUM_DEVICES=1 PJRT_DEVICE=CUDA
 (pytorch) root@20ab2c7a2d06:/# git clone --recursive https://github.com/pytorch/xla.git
 (pytorch) root@20ab2c7a2d06:/# python xla/test/test_train_mp_imagenet.py --fake_data
 ==> Preparing data..
@@ -87,7 +87,7 @@ curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -
 curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | sudo tee /etc/apt/sources.list.d/nvidia-docker.list
 sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit
 sudo systemctl restart docker
-sudo docker run --gpus all -it -d us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.8_cuda_11.8
+sudo docker run --shm-size=16g --net=host --gpus all -it -d us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.8_cuda_11.8
 sudo docker exec -it $(sudo docker ps | awk 'NR==2 { print $1 }') /bin/bash
 ```
 

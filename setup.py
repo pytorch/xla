@@ -10,8 +10,8 @@
 #     specify the version of PyTorch/XLA, rather than the hard-coded version
 #     in this file; used when we're building binaries for distribution
 #
-#   VERSIONED_XLA_BUILD
-#     creates a versioned build
+#   GIT_VERSIONED_XLA_BUILD
+#     creates a git versioned build
 #
 #   TORCH_XLA_PACKAGE_NAME
 #     change the package name to something other than 'torch_xla'
@@ -72,7 +72,7 @@ import zipfile
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
-_libtpu_version = '0.1.dev20230825'
+_libtpu_version = '0.1.dev20231022'
 _libtpu_storage_path = f'https://storage.googleapis.com/cloud-tpu-tpuvm-artifacts/wheels/libtpu-nightly/libtpu_nightly-{_libtpu_version}-py3-none-any.whl'
 
 
@@ -101,9 +101,9 @@ def get_git_head_sha(base_dir):
 
 def get_build_version(xla_git_sha):
   version = os.getenv('TORCH_XLA_VERSION', '2.2.0')
-  if _check_env_flag('VERSIONED_XLA_BUILD', default='0'):
+  if _check_env_flag('GIT_VERSIONED_XLA_BUILD', default='TRUE'):
     try:
-      version += '+' + xla_git_sha[:7]
+      version += '+git' + xla_git_sha[:7]
     except Exception:
       pass
   return version
@@ -244,9 +244,10 @@ class BuildBazelExtension(command.build_ext.build_ext):
 
     bazel_argv = [
         'bazel', 'build', ext.bazel_target,
-        f"--symlink_prefix={os.path.join(self.build_temp, 'bazel-')}",
-        '\n'.join(['--cxxopt=%s' % opt for opt in extra_compile_args])
+        f"--symlink_prefix={os.path.join(self.build_temp, 'bazel-')}"
     ]
+    for opt in extra_compile_args:
+      bazel_argv.append("--cxxopt={}".format(opt))
 
     # Debug build.
     if DEBUG:

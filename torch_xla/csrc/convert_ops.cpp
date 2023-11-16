@@ -3,6 +3,7 @@
 #include <climits>
 
 #include "torch_xla/csrc/aten_xla_bridge.h"
+#include "torch_xla/csrc/dtype.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/tensor_util.h"
@@ -102,9 +103,10 @@ xla::XlaOp ConvertToRaw(xla::XlaOp op, xla::PrimitiveType from,
 xla::XlaOp ConvertToNumeric(xla::XlaOp op, xla::PrimitiveType from) {
   if (from == xla::PrimitiveType::PRED) {
     torch::lazy::BackendDevice xla_device = bridge::GetCurrentDevice();
-    op = ConvertTo(op, from,
-                   GetDevicePrimitiveType(xla::PrimitiveType::U8, &xla_device),
-                   &xla_device);
+    op = ConvertTo(
+        op, from,
+        MaybeDowncastToXlaDeviceType(xla::PrimitiveType::U8, xla_device),
+        &xla_device);
   }
   return op;
 }

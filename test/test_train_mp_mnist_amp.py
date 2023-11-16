@@ -142,7 +142,7 @@ def train_mnist(flags, **kwargs):
 
   if device_hw == 'TPU':
     scaler = None
-  elif device_hw == 'GPU':
+  elif device_hw == 'CUDA':
     # GradScaler only used for GPU
     scaler = GradScaler(use_zero_grad=FLAGS.use_zero_grad)
   else:
@@ -211,7 +211,7 @@ def train_mnist(flags, **kwargs):
 
 
 def _mp_fn(index, flags):
-  torch.set_default_tensor_type('torch.FloatTensor')
+  torch.set_default_dtype(torch.float32)
   accuracy = train_mnist(flags)
   if flags.tidy and os.path.isdir(flags.datadir):
     shutil.rmtree(flags.datadir)

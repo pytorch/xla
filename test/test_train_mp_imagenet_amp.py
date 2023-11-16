@@ -221,7 +221,7 @@ def train_imagenet():
   if FLAGS.amp:
     if device_hw == 'TPU':
       scaler = None
-    elif device_hw == 'GPU':
+    elif device_hw in ('GPU', 'CUDA', 'ROCM'):
       scaler = GradScaler(use_zero_grad=FLAGS.use_zero_grad)
 
   def train_loop_fn(loader, epoch):
@@ -298,7 +298,7 @@ def train_imagenet():
 def _mp_fn(index, flags):
   global FLAGS
   FLAGS = flags
-  torch.set_default_tensor_type('torch.FloatTensor')
+  torch.set_default_dtype(torch.float32)
   accuracy = train_imagenet()
   if accuracy < FLAGS.target_accuracy:
     print('Accuracy {} is below target {}'.format(accuracy,

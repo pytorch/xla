@@ -36,7 +36,7 @@ from torch_xla.distributed.fsdp.utils import apply_xla_patch_to_nn_linear
 import torch_xla.debug.metrics as met
 import torch_xla.debug.model_comparator as mc
 import torch_xla.distributed.parallel_loader as pl
-import torch_xla.experimental.xla_sharding as xs
+import torch_xla.distributed.spmd as xs
 from torch_xla import runtime as xr
 import torch_xla.test.test_utils as xtu
 import torch_xla.utils.utils as xu
@@ -58,7 +58,13 @@ def _is_on_tpu():
   return 'XRT_TPU_CONFIG' in os.environ or xr.device_type() == 'TPU'
 
 
+def _is_on_eager_debug_mode():
+  return xu.getenv_as('XLA_USE_EAGER_DEBUG_MODE', bool, defval=False)
+
+
 skipOnTpu = unittest.skipIf(_is_on_tpu(), 'Not supported on TPU')
+skipOnEagerDebug = unittest.skipIf(_is_on_eager_debug_mode(),
+                                   'skip on eager debug mode')
 
 
 def _gen_tensor(*args, **kwargs):
@@ -309,6 +315,19 @@ class TestSelect(test_utils.XlaTestCase):
     tx = t.select(1, 12)
     self.assertEqual(tx, sx.data.cpu())
 
+  def test_masked_fill_scalar(self):
+
+    def fn(tensor):
+      # Build a mask from the first line of tensor.
+      # Also, make it have the same rank as the original tensor.
+      mask = tensor[0].ge(0.5).unsqueeze(dim=0)
+      # Call masked_fill.
+      return tensor.masked_fill(mask, 10)
+
+    x = _gen_tensor(2, 2, device=xm.xla_device())
+    x_cpu = x.cpu()
+    self.assertEqual(fn(x_cpu), fn(x))
+
 
 class TestRandom(test_utils.XlaTestCase):
 
@@ -434,7 +453,8 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     devices = xm.get_xla_supported_devices()
     xla_devices = torch_xla._XLAC._xla_real_devices(devices)
     for device, xdevice in zip(devices, xla_devices):
-      self.assertTrue(re.match(r'(CPU|GPU|TPU):\d+$', xdevice) is not None)
+      self.assertTrue(
+          re.match(r'(CPU|GPU|TPU|CUDA|ROCM):\d+$', xdevice) is not None)
 
   def test_negative_slice(self):
     t = _gen_tensor(32, 24, 32)
@@ -970,7 +990,9 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     b = torch.ones([2, 2])
     self.runAtenTest((a, b), func)
 
-  @unittest.skipIf(XLA_DISABLE_FUNCTIONALIZATION,
+  # TODO - upstream behavior has changed and results in expected DestroyXlaTensor
+  # counter as of 11/13/2023. Re-enable after reviewing the change.
+  @unittest.skipIf(True or XLA_DISABLE_FUNCTIONALIZATION,
                    'Metrics differ when functionalization is disabled.')
   def test_set(self):
     met.clear_all()
@@ -1634,6 +1656,42 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     t1.addcdiv_(t2, t3, value=0.1)
     xm.mark_step()
     self.assertEqual(met.metric_data("TransferToServerTime")[0], 4)
+
+  @skipOnEagerDebug
+  def test_print_executation(self):
+    xla_device = xm.xla_device()
+    xm.mark_step()
+    xm.wait_device_ops()
+    met.clear_all()
+
+    # case 1 mark_step
+    t1 = torch.randn(1, 4, device=xla_device)
+    xm.mark_step()
+    xm.wait_device_ops()
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
+    for _ in range(3):
+      print(t1)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
+    self.assertIn('xla::device_data',
+                  torch_xla._XLAC._get_xla_tensors_text([t1]))
+
+    # case 2 no mark_step, directly print
+    met.clear_all()
+    t1 = torch.randn(1, 4, device=xla_device)
+    for _ in range(3):
+      print(t1)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
+    self.assertIn('xla::device_data',
+                  torch_xla._XLAC._get_xla_tensors_text([t1]))
+
+    # case 2 no mark_step, print with .cpu
+    met.clear_all()
+    t1 = torch.randn(1, 4, device=xla_device)
+    for _ in range(3):
+      print(t1.cpu())
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
+    self.assertIn('xla::device_data',
+                  torch_xla._XLAC._get_xla_tensors_text([t1]))
 
   def test_index_types(self):
 

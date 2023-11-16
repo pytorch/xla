@@ -21,6 +21,8 @@ std::string GetDefaultGitGeneratorName() {
       static_cast<XlaDeviceType>(bridge::GetCurrentDevice().type());
   switch (hw_type) {
     case XlaDeviceType::GPU:
+    case XlaDeviceType::CUDA:
+    case XlaDeviceType::ROCM:
       return "three_fry";
     default:
       return "default";
@@ -62,7 +64,8 @@ xla::XlaOp MakeUniformBoundaryValue(xla::XlaOp val, bool downcast = false) {
   xla::PrimitiveType element_type = XlaHelpers::TypeOfXlaOp(val);
   if (element_type == xla::PrimitiveType::BF16 ||
       element_type == xla::PrimitiveType::F16) {
-    auto dtype = downcast ? xla::PrimitiveType::F16 : xla::PrimitiveType::F32;
+    // Use BF16 if `downcast` is set.
+    auto dtype = downcast ? xla::PrimitiveType::BF16 : xla::PrimitiveType::F32;
     return xla::ConvertElementType(val, dtype);
   } else if (xla::primitive_util::IsComplexType(element_type)) {
     return xla::Real(val);
@@ -75,7 +78,9 @@ xla::Shape MakeRngShape(const xla::Shape& shape, bool downcast = false) {
   xla::Shape rng_shape(shape);
   if (element_type == xla::PrimitiveType::BF16 ||
       element_type == xla::PrimitiveType::F16) {
-    auto dtype = downcast ? xla::PrimitiveType::F16 : xla::PrimitiveType::F32;
+    // This controls the bit width and we use 8-bit if `downcast` is set.
+    auto dtype =
+        downcast ? xla::PrimitiveType::F8E5M2 : xla::PrimitiveType::F32;
     rng_shape.set_element_type(dtype);
   } else if (xla::primitive_util::IsComplexType(element_type)) {
     rng_shape.set_element_type(

@@ -7,12 +7,14 @@ import os
 from typing import Callable, Dict, List, Tuple, TypeVar
 
 import torch
+import torch.distributed as dist
 import torch_xla
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_backend
 from torch_xla._internal import tpu, gpu, neuron
 from torch_xla import runtime
+import torch_xla.utils.utils as xu
 
 R = TypeVar('R')
 
@@ -138,9 +140,8 @@ def run_multiprocess(fn: Callable[..., R],
   """
   if runtime.device_type() == 'TPU':
     num_processes = tpu.num_local_processes()
-  elif runtime.device_type() == 'GPU':
+  elif runtime.device_type() in ('GPU', 'ROCM', 'CUDA'):
     num_processes = gpu.num_local_processes()
-    gpu.initialize_distributed_runtime(num_processes)
   elif runtime.device_type() == 'NEURON':
     num_processes = neuron.num_local_processes()
   else:
@@ -159,9 +160,6 @@ def run_multiprocess(fn: Callable[..., R],
     replica_results = list(
         itertools.chain.from_iterable(
             result.items() for result in process_results))
-
-  if runtime.device_type() == 'GPU':
-    gpu.shutdown_distributed_runtime()
 
   return _merge_replica_results(replica_results)
 
@@ -210,8 +208,8 @@ def _initialize_single_process(local_rank: int, local_world_size: int):
 
 def spawn_threads(fn: Callable, args: Tuple = ()) -> None:
   """Run function in one process with one thread per addressable device."""
-  assert runtime.device_type(
-  ) != 'GPU', "spawn_threads does not support GPU device"
+  assert runtime.device_type() not in (
+      'GPU', 'ROCM', 'CUDA'), "spawn_threads does not support GPU device"
   spawn_fn = _SpawnFn(fn, *args)
   _run_thread_per_device(
       local_rank=0,

@@ -12,17 +12,18 @@
 #include <numeric>
 #include <thread>
 
+#include "absl/synchronization/blocking_counter.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
+#include "torch_xla/csrc/dtype.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/layout_manager.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
-#include "torch_xla/csrc/runtime/multi_wait.h"
 #include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
-#include "torch_xla/csrc/runtime/thread_pool.h"
 #include "torch_xla/csrc/runtime/util.h"
+#include "torch_xla/csrc/thread_pool.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/xla_backend_impl.h"
 #include "torch_xla/csrc/xla_sharding_util.h"
@@ -34,120 +35,10 @@ namespace torch_xla {
 namespace {
 
 struct DataAsync {
-  std::vector<runtime::ComputationClient::TensorSource> source_tensors;
+  std::vector<std::shared_ptr<const runtime::TensorSource>> source_tensors;
   std::vector<torch::lazy::BackendDataPtr> async_datas;
-  std::vector<runtime::util::ExceptionCleanup> handle_unlockers;
+  std::vector<torch::lazy::ExceptionCleanup> handle_unlockers;
 };
-
-bool ShouldUseBF16() {
-  bool use_bf16 = runtime::sys_util::GetEnvBool("XLA_USE_BF16", false);
-  if (use_bf16) {
-    TF_LOG(INFO) << "Using BF16 data type for floating point values";
-  }
-  return use_bf16;
-}
-
-bool ShouldUseF16() {
-  bool use_fp16 = runtime::sys_util::GetEnvBool("XLA_USE_FP16", false);
-  if (use_fp16) {
-    TF_LOG(INFO) << "Using F16 data type for floating point values";
-  }
-  return use_fp16;
-}
-
-bool ShouldDowncastToBF16() {
-  bool downcast_bf16 =
-      runtime::sys_util::GetEnvBool("XLA_DOWNCAST_BF16", false);
-  if (downcast_bf16) {
-    TF_LOG(INFO) << "Downcasting floating point values, F64->F32, F32->BF16";
-  }
-  return downcast_bf16;
-}
-
-bool ShouldDowncastToF16() {
-  bool downcast_fp16 =
-      runtime::sys_util::GetEnvBool("XLA_DOWNCAST_FP16", false);
-  if (downcast_fp16) {
-    TF_LOG(INFO) << "Downcasting floating point values, F64->F32, F32->FP16";
-  }
-  return downcast_fp16;
-}
-
-bool ShouldUse32BitLong() {
-  bool use_32bit_long =
-      runtime::sys_util::GetEnvBool("XLA_USE_32BIT_LONG", false);
-  if (use_32bit_long) {
-    TF_LOG(INFO) << "Using 32bit integers for kLong values";
-  }
-  return use_32bit_long;
-}
-
-bool UseBF16() {
-  static bool use_bf16 = ShouldUseBF16();
-  return use_bf16;
-}
-
-bool UseF16() {
-  static bool use_fp16 = ShouldUseF16();
-  return use_fp16;
-}
-
-bool DowncastBF16() {
-  static bool downcast_bf16 = ShouldDowncastToBF16();
-  return downcast_bf16;
-}
-
-bool DowncastF16() {
-  static bool downcast_fp16 = ShouldDowncastToF16();
-  return downcast_fp16;
-}
-
-bool Use32BitLong() {
-  static bool use_32bit_long = ShouldUse32BitLong();
-  return use_32bit_long;
-}
-
-bool IsTpuDevice(XlaDeviceType hw_type) {
-  static bool spmd_device_is_tpu =
-      (hw_type == XlaDeviceType::SPMD) &&
-      runtime::GetComputationClient()->GetDefaultDevice().find("TPU") == 0;
-  return (hw_type == XlaDeviceType::TPU) || spmd_device_is_tpu;
-}
-
-xla::PrimitiveType XlaTypeFromTensorType(
-    at::ScalarType scalar_type, const torch::lazy::BackendDevice& device) {
-  XlaDeviceType hw_type = static_cast<XlaDeviceType>(device.type());
-  switch (scalar_type) {
-    case at::ScalarType::Double:
-      return !IsTpuDevice(hw_type) && hw_type != XlaDeviceType::NEURON
-                 ? xla::PrimitiveType::F64
-                 : xla::PrimitiveType::F32;
-    case at::ScalarType::Float:
-      return xla::PrimitiveType::F32;
-    case at::ScalarType::BFloat16:
-      return xla::PrimitiveType::BF16;
-    case at::ScalarType::Half:
-      return xla::PrimitiveType::F16;
-    case at::ScalarType::Bool:
-      return xla::PrimitiveType::PRED;
-    case at::ScalarType::Byte:
-      return xla::PrimitiveType::U8;
-    case at::ScalarType::Char:
-      return xla::PrimitiveType::S8;
-    case at::ScalarType::Short:
-      return xla::PrimitiveType::S16;
-    case at::ScalarType::Int:
-      return xla::PrimitiveType::S32;
-    case at::ScalarType::Long:
-      return xla::PrimitiveType::S64;
-    case at::ScalarType::ComplexFloat:
-      return xla::PrimitiveType::C64;
-    case at::ScalarType::ComplexDouble:
-      return xla::PrimitiveType::C128;
-    default:
-      XLA_ERROR() << "Type not supported: " << scalar_type;
-  }
-}
 
 template <typename S>
 struct Caster {
@@ -475,16 +366,16 @@ void CopyTensors(const void* src_buffer, const xla::Shape& src_shape,
     std::vector<int64_t> iter_dims = GetIterationDimensions(dest_shape);
     std::vector<CopyPartition> parts =
         CreateCopyPartitions(dest_shape.dimensions(), iter_dims.front());
-    auto mwait = std::make_shared<runtime::util::MultiWait>(parts.size());
+    absl::BlockingCounter counter(parts.size());
     for (size_t i = 0; i < parts.size(); ++i) {
       auto copy_fn = [&, i]() {
         SlicedCopy<SType, DType>(dest_shape.dimensions(), src_data, src_strides,
                                  dest_data, dest_strides, iter_dims, parts[i]);
+        counter.DecrementCount();
       };
-      runtime::env::ScheduleClosure(
-          runtime::util::MultiWait::Completer(mwait, std::move(copy_fn)));
+      thread::Schedule(std::move(copy_fn));
     }
-    mwait->Wait();
+    counter.Wait();
   }
 }
 
@@ -495,7 +386,8 @@ void TensorToBuffer(const at::Tensor& tensor, const xla::Shape& dest_shape,
   at::Tensor contiguous_tensor = tensor.contiguous();
   xla::Shape src_shape = MakeTorchTensorLayout(
       XlaHelpers::I64List(contiguous_tensor.sizes()), /*dynamic_dimensions=*/{},
-      XlaTypeFromTensorType(contiguous_tensor.type().scalarType(), device));
+      MaybeDowncastToXlaDeviceType(contiguous_tensor.type().scalarType(),
+                                   device));
   CopyTensors<SType, DType>(contiguous_tensor.data_ptr<SType>(), src_shape,
                             dest_buffer, dest_buffer_size, dest_shape);
 }
@@ -587,15 +479,9 @@ torch::lazy::BackendDataPtr TensorToXlaData(
                                            sharding_spec);
   }
 
-  auto populate_fn =
-      [&](const runtime::ComputationClient::TensorSource& source_tensor,
-          void* dest_buffer, size_t dest_buffer_size) {
-        PopulateTensorBuffer(tensor, source_tensor.shape, dest_buffer,
-                             dest_buffer_size, device);
-      };
-
-  std::vector<runtime::ComputationClient::TensorSource> source_tensors;
-  source_tensors.emplace_back(shape, device.toString(), std::move(populate_fn));
+  std::vector<std::shared_ptr<const runtime::TensorSource>> source_tensors;
+  source_tensors.push_back(
+      std::make_shared<runtime::AtenSource>(tensor, shape, device.toString()));
 
   auto handles =
       runtime::GetComputationClient()->TransferToServer(source_tensors);
@@ -817,19 +703,12 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
     return WrapXlaData(handles);
   }
 
-  std::vector<runtime::ComputationClient::TensorSource> source_tensors;
+  std::vector<std::shared_ptr<const runtime::TensorSource>> source_tensors;
   for (size_t i = 0; i < tensors.size(); ++i) {
     torch::lazy::BackendDevice device = ParseDeviceString(devices[i]);
     xla::Shape shape = CreateComputationShapeFromTensor(tensors[i], &device);
-    auto populate_fn =
-        [&, i, device](
-            const runtime::ComputationClient::TensorSource& source_tensor,
-            void* dest_buffer, size_t dest_buffer_size) {
-          PopulateTensorBuffer(tensors[i], source_tensor.shape, dest_buffer,
-                               dest_buffer_size, device);
-        };
-    source_tensors.emplace_back(std::move(shape), devices[i],
-                                std::move(populate_fn));
+    source_tensors.push_back(std::make_shared<runtime::AtenSource>(
+        tensors[i], std::move(shape), devices[i]));
   }
   return WrapXlaData(
       runtime::GetComputationClient()->TransferToServer(source_tensors));
@@ -848,7 +727,8 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
     torch::lazy::BackendDevice device = ParseDeviceString(devices[i]);
     xla::Shape shape = CreateComputationShapeFromTensor(tensors[i], &device);
 
-    std::vector<runtime::ComputationClient::TensorSource> source_tensors;  // in
+    std::vector<std::shared_ptr<const runtime::TensorSource>>
+        source_tensors;                                            // in
     std::vector<runtime::ComputationClient::DataPtr> new_handles;  // out
     if (static_cast<XlaDeviceType>(device.type()) == XlaDeviceType::SPMD) {
       // GetLocalDevices returns the list of local devices specified by their
@@ -864,15 +744,8 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
       new_handles.push_back(ShardingUtil::CreateShardedData(
           local_shards, local_devices, shardings[i]));
     } else {
-      auto populate_fn =
-          [&, i, device](
-              const runtime::ComputationClient::TensorSource& source_tensor,
-              void* dest_buffer, size_t dest_buffer_size) {
-            PopulateTensorBuffer(tensors[i], source_tensor.shape, dest_buffer,
-                                 dest_buffer_size, device);
-          };
-      source_tensors.emplace_back(std::move(shape), devices[i],
-                                  std::move(populate_fn));
+      source_tensors.push_back(std::make_shared<runtime::AtenSource>(
+          tensors[i], std::move(shape), devices[i]));
       new_handles =
           runtime::GetComputationClient()->TransferToServer(source_tensors);
     }
@@ -889,7 +762,7 @@ xla::Literal GetTensorLiteral(const at::Tensor& tensor, const xla::Shape* shape,
     auto dimensions = XlaHelpers::I64List(tensor.sizes());
     computed_shape = MakeTorchTensorLayout(
         dimensions, /*dynamic_dimensions=*/{},
-        XlaTypeFromTensorType(tensor.type().scalarType(), xla_device));
+        MaybeDowncastToXlaDeviceType(tensor.type().scalarType(), xla_device));
     shape = &computed_shape;
   }
   xla::Literal literal(*shape);
@@ -898,12 +771,33 @@ xla::Literal GetTensorLiteral(const at::Tensor& tensor, const xla::Shape* shape,
   return literal;
 }
 
-std::vector<at::Tensor> XlaDataToTensors(
-    absl::Span<const torch::lazy::BackendDataPtr> xla_data,
-    at::ScalarType dest_element_type) {
+std::vector<xla::Literal> ReleaseGilAndTransferData(
+    absl::Span<const torch::lazy::BackendDataPtr> xla_data) {
+  // HACK: This method may be called outside of python (mainly in C++ tests) or
+  // when the GIL is already released, so we must check both cases here. If
+  // possible, prefer to release the GIL in the python bindings before copying
+  // this pattern.
+  PyThreadState* save = nullptr;
+  // TODO(wcromar): Remove this setting when we are more confident
+  static const bool release_gil =
+      runtime::sys_util::GetEnvBool("XLA_RELEASE_GIL_DURING_TRANSFER", true);
+  if (release_gil && Py_IsInitialized() && PyGILState_Check()) {
+    save = PyEval_SaveThread();
+  }
   std::vector<xla::Literal> literals =
       runtime::GetComputationClient()->TransferFromServer(
           UnwrapXlaData(xla_data));
+  if (save) {
+    PyEval_RestoreThread(save);
+  }
+
+  return literals;
+}
+
+std::vector<at::Tensor> XlaDataToTensors(
+    absl::Span<const torch::lazy::BackendDataPtr> xla_data,
+    at::ScalarType dest_element_type) {
+  std::vector<xla::Literal> literals = ReleaseGilAndTransferData(xla_data);
   std::vector<at::Tensor> tensors;
   tensors.reserve(literals.size());
   for (auto& literal : literals) {
@@ -984,148 +878,16 @@ xla::Shape CreateComputationShapeFromTensor(
       static_cast<XlaDeviceType>(xla_device.type()));
 }
 
-at::ScalarType TensorTypeFromXlaType(xla::PrimitiveType xla_type) {
-  switch (xla_type) {
-    case xla::PrimitiveType::BF16:
-      return UseBF16() || DowncastBF16() ? at::ScalarType::Float
-                                         : at::ScalarType::BFloat16;
-    case xla::PrimitiveType::F16:
-      return UseF16() || DowncastF16() ? at::ScalarType::Float
-                                       : at::ScalarType::Half;
-    case xla::PrimitiveType::F32:
-      return DowncastBF16() || DowncastF16() ? at::ScalarType::Double
-                                             : at::ScalarType::Float;
-    case xla::PrimitiveType::F64:
-      return at::ScalarType::Double;
-    case xla::PrimitiveType::PRED:
-      return at::ScalarType::Bool;
-    case xla::PrimitiveType::U8:
-      return at::ScalarType::Byte;
-    case xla::PrimitiveType::S8:
-      return at::ScalarType::Char;
-    case xla::PrimitiveType::S16:
-    case xla::PrimitiveType::U16:
-      return at::ScalarType::Short;
-    case xla::PrimitiveType::S32:
-    case xla::PrimitiveType::U32:
-      return at::ScalarType::Int;
-    case xla::PrimitiveType::S64:
-    case xla::PrimitiveType::U64:
-      return at::ScalarType::Long;
-    case xla::PrimitiveType::C64:
-      return at::ScalarType::ComplexFloat;
-    case xla::PrimitiveType::C128:
-      return at::ScalarType::ComplexDouble;
-    default:
-      XLA_ERROR() << "XLA type not supported: " << xla_type;
-  }
-}
-
-xla::PrimitiveType TensorTypeToRawXlaType(at::ScalarType scalar_type) {
-  switch (scalar_type) {
-    case at::ScalarType::Double:
-      return xla::PrimitiveType::F64;
-    case at::ScalarType::Float:
-      return xla::PrimitiveType::F32;
-    case at::ScalarType::BFloat16:
-      return xla::PrimitiveType::BF16;
-    case at::ScalarType::Half:
-      return xla::PrimitiveType::F16;
-    case at::ScalarType::Bool:
-      return xla::PrimitiveType::PRED;
-    case at::ScalarType::Byte:
-      return xla::PrimitiveType::U8;
-    case at::ScalarType::Char:
-      return xla::PrimitiveType::S8;
-    case at::ScalarType::Short:
-      return xla::PrimitiveType::S16;
-    case at::ScalarType::Int:
-      return xla::PrimitiveType::S32;
-    case at::ScalarType::Long:
-      return xla::PrimitiveType::S64;
-    case at::ScalarType::ComplexFloat:
-      return xla::PrimitiveType::C64;
-    case at::ScalarType::ComplexDouble:
-      return xla::PrimitiveType::C128;
-    default:
-      XLA_ERROR() << "Type not supported: " << scalar_type;
-  }
-}
-
-xla::PrimitiveType GetDevicePrimitiveType(
-    xla::PrimitiveType type, const torch::lazy::BackendDevice* device) {
-  torch::lazy::BackendDevice xla_device = bridge::GetDeviceOrCurrent(device);
-  XlaDeviceType hw_type = static_cast<XlaDeviceType>(xla_device.type());
-  switch (type) {
-    case xla::PrimitiveType::F64:
-      if (UseF16()) {
-        return xla::PrimitiveType::F16;
-      }
-      if (UseBF16()) {
-        return xla::PrimitiveType::BF16;
-      }
-      if (DowncastBF16() || DowncastF16()) {
-        return xla::PrimitiveType::F32;
-      }
-      return !IsTpuDevice(hw_type) && hw_type != XlaDeviceType::NEURON
-                 ? xla::PrimitiveType::F64
-                 : xla::PrimitiveType::F32;
-    case xla::PrimitiveType::F32:
-      if (UseF16() || DowncastF16()) {
-        return xla::PrimitiveType::F16;
-      }
-      return UseBF16() || DowncastBF16() ? xla::PrimitiveType::BF16
-                                         : xla::PrimitiveType::F32;
-    case xla::PrimitiveType::U16:
-      return !IsTpuDevice(hw_type) && hw_type != XlaDeviceType::NEURON
-                 ? xla::PrimitiveType::U16
-                 : xla::PrimitiveType::U32;
-    case xla::PrimitiveType::S16:
-      return !IsTpuDevice(hw_type) && hw_type != XlaDeviceType::NEURON
-                 ? xla::PrimitiveType::S16
-                 : xla::PrimitiveType::S32;
-    case xla::PrimitiveType::S64:
-      return Use32BitLong() ? xla::PrimitiveType::S32 : xla::PrimitiveType::S64;
-    case xla::PrimitiveType::U64:
-      return Use32BitLong() ? xla::PrimitiveType::U32 : xla::PrimitiveType::U64;
-    case xla::PrimitiveType::C128:
-      return !IsTpuDevice(hw_type) ? xla::PrimitiveType::C128
-                                   : xla::PrimitiveType::C64;
-    default:
-      return type;
-  }
+xla::PrimitiveType GetXlaPrimitiveTypeForCurrentDevice(
+    xla::PrimitiveType xla_type) {
+  torch::lazy::BackendDevice xla_device = bridge::GetCurrentDevice();
+  return MaybeDowncastToXlaDeviceType(xla_type, xla_device);
 }
 
 xla::PrimitiveType MakeXlaPrimitiveType(
     at::ScalarType scalar_type, const torch::lazy::BackendDevice* device) {
-  switch (scalar_type) {
-    case at::ScalarType::Double:
-      return GetDevicePrimitiveType(xla::PrimitiveType::F64, device);
-    case at::ScalarType::Float:
-      return GetDevicePrimitiveType(xla::PrimitiveType::F32, device);
-    case at::ScalarType::BFloat16:
-      return GetDevicePrimitiveType(xla::PrimitiveType::BF16, device);
-    case at::ScalarType::Half:
-      return GetDevicePrimitiveType(xla::PrimitiveType::F16, device);
-    case at::ScalarType::Bool:
-      return GetDevicePrimitiveType(xla::PrimitiveType::PRED, device);
-    case at::ScalarType::Byte:
-      return GetDevicePrimitiveType(xla::PrimitiveType::U8, device);
-    case at::ScalarType::Char:
-      return GetDevicePrimitiveType(xla::PrimitiveType::S8, device);
-    case at::ScalarType::Short:
-      return GetDevicePrimitiveType(xla::PrimitiveType::S16, device);
-    case at::ScalarType::Int:
-      return GetDevicePrimitiveType(xla::PrimitiveType::S32, device);
-    case at::ScalarType::Long:
-      return GetDevicePrimitiveType(xla::PrimitiveType::S64, device);
-    case at::ScalarType::ComplexFloat:
-      return GetDevicePrimitiveType(xla::PrimitiveType::C64, device);
-    case at::ScalarType::ComplexDouble:
-      return GetDevicePrimitiveType(xla::PrimitiveType::C128, device);
-    default:
-      XLA_ERROR() << "Type not supported: " << scalar_type;
-  }
+  torch::lazy::BackendDevice xla_device = bridge::GetDeviceOrCurrent(device);
+  return MaybeDowncastToXlaDeviceType(scalar_type, xla_device);
 }
 
 xla::Shape MakeXlaShapeFromLazyShape(torch::lazy::Shape shape,
@@ -1144,7 +906,7 @@ bool RequiresRawTypeCasting(at::ScalarType scalar_type,
     case at::ScalarType::Char:
     case at::ScalarType::Short:
       return MakeXlaPrimitiveType(scalar_type, device) !=
-             TensorTypeToRawXlaType(scalar_type);
+             XlaTypeFromTorchType(scalar_type);
     default:
       return false;
   }

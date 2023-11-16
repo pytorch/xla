@@ -1,6 +1,7 @@
 #ifndef XLA_CLIENT_COMPUTATION_CLIENT_H_
 #define XLA_CLIENT_COMPUTATION_CLIENT_H_
 
+#include <ATen/Tensor.h>
 #include <torch/csrc/lazy/backend/backend_data.h>
 #include <torch/csrc/lazy/backend/lowering_context.h>
 #include <torch/csrc/lazy/core/hash.h>
@@ -20,6 +21,7 @@
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/metrics.h"
+#include "torch_xla/csrc/runtime/tensor_source.h"
 #include "torch_xla/csrc/runtime/types.h"
 #include "torch_xla/csrc/runtime/util.h"
 #include "xla/client/xla_computation.h"
@@ -29,6 +31,12 @@
 
 namespace torch_xla {
 namespace runtime {
+
+// Forward declare XlaCoordinator to avoid logging macro redefinition from the
+// transitively included PJRT header.
+// TODO(jonbolin): We need a way to ensure the right macros are included
+// regardless of the import order.
+class XlaCoordinator;
 
 // Somehow the compiler doesn't allow type that has default member being
 // used as a default parameter in a method defined in the same scope.
@@ -186,25 +194,6 @@ class ComputationClient {
 
   using ComputationPtr = std::shared_ptr<Computation>;
 
-  // The TensorSource provides a way for a client to populate a buffer allocated
-  // by the core computation client code.
-  struct TensorSource {
-    // The PopulateFn accepts a dense buffer is standard array layout
-    // (dim0-major) and deposits the source tensor data directly over the
-    // provided buffer.
-    using PopulateFn = std::function<void(const TensorSource&, void*, size_t)>;
-
-    TensorSource() = default;
-    TensorSource(xla::Shape shape, std::string device, PopulateFn populate_fn)
-        : shape(std::move(shape)),
-          device(std::move(device)),
-          populate_fn(std::move(populate_fn)) {}
-
-    xla::Shape shape;
-    std::string device;
-    PopulateFn populate_fn;
-  };
-
   // TODO(wcromar): Should CompileInstance still exist? Should it be a subclass
   // of torch::lazy::Computation?
   struct CompileInstance {
@@ -269,19 +258,22 @@ class ComputationClient {
 
   // Transfers local tensor values to the TPU devices and fetches the handles.
   virtual std::vector<DataPtr> TransferToServer(
-      absl::Span<const TensorSource> tensors) = 0;
+      absl::Span<const std::shared_ptr<const TensorSource>> tensors) = 0;
 
   // Transfers local sharded tensor values to the TPU devices and returns a
   // `PjRtShardedData`.
   virtual DataPtr TransferShardsToServer(
-      absl::Span<const TensorSource> tensor_shards, std::string device,
-      xla::Shape shape, xla::OpSharding sharding) = 0;
+      absl::Span<const std::shared_ptr<const TensorSource>> tensor_shards,
+      std::string device, xla::Shape shape, xla::OpSharding sharding) = 0;
 
   // Copies `data->buffer` to `dst` device buffer.
   virtual DataPtr CopyToDevice(DataPtr data, std::string dst) = 0;
 
   // Reads the tensor literal values stored at TPU server sites, behind the
   // supplied handles.
+  // Note: `TransferFromServer` call will block until the `DataPtrs` are ready
+  // if they were created by `TransferToServer` or `Execute*`. Calling this from
+  // python while holding the GIL can cause deadlocks!
   virtual std::vector<xla::Literal> TransferFromServer(
       absl::Span<const DataPtr> handles) = 0;
 
@@ -329,7 +321,7 @@ class ComputationClient {
   virtual int GetNumProcesses() const = 0;
 
   using DeviceAttribute =
-      std::variant<std::string, int64_t, std::vector<int64_t>, float>;
+      std::variant<std::string, int64_t, std::vector<int64_t>, float, bool>;
 
   virtual const absl::flat_hash_map<
       std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>&
@@ -344,11 +336,20 @@ class ComputationClient {
 
   virtual MemoryInfo GetMemoryInfo(const std::string& device) = 0;
 
-  virtual void PrepareToExit() = 0;
-
   // Block until pass in devices' async operation are finished. If empty, all
   // the local devices will be waited for.
   virtual void WaitDeviceOps(const std::vector<std::string>& devices) = 0;
+
+  // Check whether the XlaCoordinator has been initialized.
+  virtual bool CoordinatorInitialized() const = 0;
+
+  // Initialize the XlaCoordinator for the runtime.
+  virtual void InitializeCoordinator(int global_rank, int world_size,
+                                     std::string master_addr,
+                                     std::string port) = 0;
+
+  // Return the XlaCoordinator for the runtime.
+  virtual XlaCoordinator& GetCoordinator() = 0;
 
   // Utility API around the vector based Compile() API to compile a single
   // computation.

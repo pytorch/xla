@@ -5,20 +5,24 @@
 #include <vector>
 
 #include "absl/strings/ascii.h"
+#include "absl/synchronization/blocking_counter.h"
 #include "absl/types/span.h"
 #include "pjrt_computation_client.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/env_vars.h"
-#include "torch_xla/csrc/runtime/multi_wait.h"
+#include "torch_xla/csrc/runtime/profiler.h"
 #include "torch_xla/csrc/runtime/stablehlo_helper.h"
+#include "torch_xla/csrc/runtime/tensor_source.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
-#include "torch_xla/csrc/runtime/thread_pool.h"
+#include "torch_xla/csrc/runtime/xla_coordinator.h"
+#include "torch_xla/csrc/thread_pool.h"
 #include "tsl/profiler/lib/traceme.h"
 #include "xla/client/xla_builder.h"
 #include "xla/client/xla_computation.h"
 #include "xla/layout_util.h"
 #include "xla/literal.h"
+#include "xla/pjrt/c/pjrt_c_api.h"
 #include "xla/pjrt/distributed/distributed.h"
 #include "xla/pjrt/gpu/se_gpu_pjrt_client.h"
 #include "xla/pjrt/pjrt_api.h"
@@ -36,22 +40,6 @@ namespace runtime {
 namespace {
 
 static std::string spmd_device_str = "SPMD:0";
-
-// Initializes a distributed runtime client if dist_service_addr is specified
-std::shared_ptr<xla::DistributedRuntimeClient>
-MaybeInitializeDistributedRuntimeClient(int local_rank,
-                                        std::string dist_service_addr) {
-  std::shared_ptr<xla::DistributedRuntimeClient> client;
-  if (!dist_service_addr.empty()) {
-    xla::DistributedRuntimeClient::Options options;
-    /* TODO(jonbolin): Use global rank for multi-host setup */
-    options.node_id = local_rank;
-    client = xla::GetDistributedRuntimeClient(dist_service_addr, options);
-    XLA_CHECK(client->Connect().ok())
-        << "Failed to initialize distributed runtime client";
-  }
-  return std::move(client);
-}
 
 // Builds a map from the device's global ordinal to its index in the `devices`
 // array.
@@ -75,6 +63,23 @@ xla::Shape host_output_shape(xla::PjRtBuffer* buffer) {
   *shape.mutable_layout() = buffer->layout();
 
   return xla::ShapeUtil::DeviceShapeToHostShape(shape);
+}
+
+xla::GpuAllocatorConfig GetGpuAllocatorConfig() {
+  auto allocator_config = xla::GpuAllocatorConfig{};
+  if (sys_util::GetEnvString(env::kEnvPjrtAllocatorCudaAsync, "").empty() &&
+      sys_util::GetEnvString(env::kEnvPjrtAllocatorPreallocate, "").empty() &&
+      sys_util::GetEnvString(env::kEnvPjrtAllocatorFraction, "").empty()) {
+    return allocator_config;
+  }
+  if (sys_util::GetEnvBool(env::kEnvPjrtAllocatorCudaAsync, false)) {
+    allocator_config.kind = xla::GpuAllocatorConfig::Kind::kCudaAsync;
+  }
+  allocator_config.preallocate =
+      sys_util::GetEnvBool(env::kEnvPjrtAllocatorPreallocate, true);
+  allocator_config.memory_fraction =
+      sys_util::GetEnvDouble(env::kEnvPjrtAllocatorFraction, 0.75);
+  return allocator_config;
 }
 
 }  // namespace
@@ -109,23 +114,39 @@ PjRtComputationClient::PjRtComputationClient() {
     client_ = std::move(xla::GetTfrtCpuClient(async, cpu_device_count).value());
   } else if (device_type == "TPU" || device_type == "TPU_C_API") {
     TF_VLOG(1) << "Initializing TFRT TPU client...";
-    XLA_CHECK_OK(pjrt::LoadPjrtPlugin(
-        "tpu", sys_util::GetEnvString(env::kEnvTpuLibraryPath, "libtpu.so")));
+    // Prefer $TPU_LIBRARY_PATH if set
+    auto tpu_library_path = sys_util::GetEnvString(
+        env::kEnvTpuLibraryPath,
+        sys_util::GetEnvString(env::kEnvInferredTpuLibraryPath, "libtpu.so"));
+    XLA_CHECK_OK(pjrt::LoadPjrtPlugin("tpu", tpu_library_path).status());
     tsl::Status tpu_status = pjrt::InitializePjrtPlugin("tpu");
-    XLA_CHECK(tpu_status.ok());
+    XLA_CHECK_OK(tpu_status);
     client_ = std::move(xla::GetCApiClient("TPU").value());
+    const PJRT_Api* c_api =
+        static_cast<xla::PjRtCApiClient*>(client_.get())->pjrt_c_api();
+    profiler::RegisterProfilerForPlugin(c_api);
   } else if (device_type == "TPU_LEGACY") {
     XLA_ERROR() << "TPU_LEGACY client is no longer available.";
-  } else if (device_type == "GPU") {
+  } else if (device_type == "GPU" || device_type == "CUDA" ||
+             device_type == "ROCM") {
     TF_VLOG(1) << "Initializing PjRt GPU client...";
     bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncGpuClient, true);
-    int local_rank = sys_util::GetEnvInt(env::kEnvPjRtLocalRank, 0);
-    std::string dist_service_addr =
-        sys_util::GetEnvString(env::kEnvPjrtDistServiceAddr, "");
-    auto distributed_client =
-        MaybeInitializeDistributedRuntimeClient(local_rank, dist_service_addr);
+    int local_process_rank = sys_util::GetEnvInt(env::kEnvPjRtLocalRank, 0);
+    int global_process_rank = sys_util::GetEnvInt("RANK", local_process_rank);
+    int local_world_size = sys_util::GetEnvInt("LOCAL_WORLD_SIZE", 1);
+    int global_world_size = sys_util::GetEnvInt("WORLD_SIZE", local_world_size);
+    std::string master_addr =
+        runtime::sys_util::GetEnvString("MASTER_ADDR", "localhost");
+    std::string port = runtime::sys_util::GetEnvString(
+        "XLA_COORDINATOR_PORT", XlaCoordinator::kDefaultCoordinatorPort);
+
+    // Use the XlaCoordinator as the distributed key-value store.
+    coordinator_ = std::make_unique<XlaCoordinator>(
+        global_process_rank, global_world_size, master_addr, port);
+    std::shared_ptr<xla::DistributedRuntimeClient> distributed_client =
+        coordinator_->GetClient();
     auto allowed_devices =
-        std::make_optional<std::set<int>>(std::set{local_rank});
+        std::make_optional<std::set<int>>(std::set{local_process_rank});
     xla::PjRtClient::KeyValueGetCallback kv_get = nullptr;
     xla::PjRtClient::KeyValuePutCallback kv_put = nullptr;
     if (distributed_client != nullptr) {
@@ -140,29 +161,32 @@ PjRtComputationClient::PjRtComputationClient() {
         return distributed_client->KeyValueSet(absl::StrCat(key_prefix, k), v);
       };
     }
-    client_ =
-        std::move(xla::GetStreamExecutorGpuClient(
-                      /*asynchronous=*/async, xla::GpuAllocatorConfig{},
-                      /*node_id=*/local_rank,
-                      /*num_nodes=*/
-                      sys_util::GetEnvInt(env::kEnvPjRtLocalProcessCount, 1),
-                      /*allowed_devices=*/allowed_devices,
-                      /*platform_name*/ "gpu",
-                      /*should_stage_host_to_device_transfers*/ true,
-                      /*kv_get*/ kv_get,
-                      /*kv_put*/ kv_put)
-                      .value());
+    TF_VLOG(3) << "Getting StreamExecutorGpuClient for node_id="
+               << global_process_rank << ", num_nodes=" << global_world_size;
+    client_ = std::move(xla::GetStreamExecutorGpuClient(
+                            /*asynchronous=*/async,
+                            /*allocator_config=*/GetGpuAllocatorConfig(),
+                            /*node_id=*/global_process_rank,
+                            /*num_nodes=*/global_world_size,
+                            /*allowed_devices=*/allowed_devices,
+                            /*platform_name=*/"gpu",
+                            /*should_stage_host_to_device_transfers=*/true,
+                            /*kv_get=*/kv_get,
+                            /*kv_put=*/kv_put)
+                            .value());
   } else if (device_type == "XPU") {
     TF_VLOG(1) << "Initializing PjRt XPU client...";
-    XLA_CHECK_OK(pjrt::LoadPjrtPlugin(
-        "xpu", sys_util::GetEnvString(env::kEnvXpuLibraryPath, "libxpu.so")));
+    XLA_CHECK_OK(
+        pjrt::LoadPjrtPlugin(
+            "xpu", sys_util::GetEnvString(env::kEnvXpuLibraryPath, "libxpu.so"))
+            .status());
     client_ = std::move(xla::GetCApiClient("XPU").value());
-
   } else if (device_type == "NEURON") {
     TF_VLOG(1) << "Initializing PjRt NEURON client...";
-    XLA_CHECK_OK(pjrt::LoadPjrtPlugin(
-        "NEURON", sys_util::GetEnvString(env::kEnvNeuronLibraryPath,
-                                         "libneuronpjrt.so")));
+    XLA_CHECK_OK(pjrt::LoadPjrtPlugin("NEURON", sys_util::GetEnvString(
+                                                    env::kEnvNeuronLibraryPath,
+                                                    "libneuronpjrt.so"))
+                     .status());
     client_ = std::move(xla::GetCApiClient("NEURON").value());
   } else {
     XLA_ERROR() << absl::StrFormat("Unknown %s '%s'", env::kEnvPjRtDevice,
@@ -186,6 +210,33 @@ PjRtComputationClient::PjRtComputationClient() {
   }
   // manually create the device_locks for SPMD device
   device_locks_.emplace(spmd_device_str, std::make_unique<std::shared_mutex>());
+}
+
+PjRtComputationClient::~PjRtComputationClient() {
+  // In the GPU case, the PjRtClient depends on the DistributedRuntimeClient
+  // tracked in XlaCoordinator, so the PjRtClient must be destroyed first.
+  client_ = nullptr;
+  coordinator_ = nullptr;
+}
+
+bool PjRtComputationClient::CoordinatorInitialized() const {
+  return coordinator_ != nullptr;
+}
+
+void PjRtComputationClient::InitializeCoordinator(int global_rank,
+                                                  int world_size,
+                                                  std::string master_addr,
+                                                  std::string port) {
+  XLA_CHECK(coordinator_ == nullptr)
+      << "Can only initialize the XlaCoordinator once.";
+  coordinator_ = std::make_unique<XlaCoordinator>(global_rank, world_size,
+                                                  master_addr, port);
+}
+
+XlaCoordinator& PjRtComputationClient::GetCoordinator() {
+  XLA_CHECK(coordinator_ != nullptr)
+      << "XlaCoordinator has not been initialized";
+  return *coordinator_;
 }
 
 void PjRtComputationClient::PjRtData::Assign(
@@ -259,7 +310,7 @@ std::optional<xla::OpSharding> PjRtComputationClient::GetDataSharding(
 }
 
 std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
-    absl::Span<const TensorSource> tensors) {
+    absl::Span<const std::shared_ptr<const TensorSource>> tensors) {
   metrics::TimedSection timed(TransferToServerMetric());
   tsl::profiler::TraceMe activity("PjRtComputationClient::TransferToServer",
                                   tsl::profiler::TraceMeLevel::kInfo);
@@ -267,31 +318,22 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
   datas.reserve(tensors.size());
   int64_t total_size = 0;
   for (auto& tensor : tensors) {
-    xla::PjRtDevice* pjrt_device = StringToPjRtDevice(tensor.device);
+    xla::PjRtDevice* pjrt_device = StringToPjRtDevice(tensor->device());
 
-    auto literal = std::make_shared<xla::Literal>(tensor.shape);
-    tensor.populate_fn(tensor, literal->untyped_data(), literal->size_bytes());
-    std::vector<int64_t> byte_strides(literal->shape().dimensions_size());
-    XLA_CHECK_OK(xla::ShapeUtil::ByteStrides(literal->shape(),
-                                             absl::MakeSpan(byte_strides)));
-    total_size += literal->size_bytes();
+    total_size += xla::ShapeUtil::ByteSizeOf(tensor->shape());
 
-    // Avoid use-after-free on `literal` due to unsequenced move and use.
-    xla::Literal* literal_pointer = literal.get();
-    std::shared_ptr<xla::PjRtBuffer> buffer = std::move(
-        client_
-            ->BufferFromHostBuffer(
-                literal_pointer->untyped_data(),
-                literal_pointer->shape().element_type(),
-                literal_pointer->shape().dimensions(), byte_strides,
-                xla::PjRtClient::HostBufferSemantics::
-                    kImmutableUntilTransferCompletes,
-                [literal{std::move(literal)}]() { /* frees literal */ },
-                pjrt_device)
-            .value());
+    std::shared_ptr<xla::PjRtBuffer> buffer =
+        std::move(client_
+                      ->BufferFromHostBuffer(
+                          tensor->data(), tensor->primitive_type(),
+                          tensor->dimensions(), tensor->byte_strides(),
+                          xla::PjRtClient::HostBufferSemantics::
+                              kImmutableUntilTransferCompletes,
+                          [tensor]() { /* frees tensor */ }, pjrt_device)
+                      .value());
 
     ComputationClient::DataPtr data =
-        std::make_shared<PjRtData>(tensor.device, tensor.shape, buffer);
+        std::make_shared<PjRtData>(tensor->device(), tensor->shape(), buffer);
     datas.push_back(data);
   }
   OutboundDataMetric()->AddSample(total_size);
@@ -301,8 +343,8 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
 }
 
 ComputationClient::DataPtr PjRtComputationClient::TransferShardsToServer(
-    absl::Span<const TensorSource> tensor_shards, std::string device,
-    xla::Shape shape, xla::OpSharding sharding) {
+    absl::Span<const std::shared_ptr<const TensorSource>> tensor_shards,
+    std::string device, xla::Shape shape, xla::OpSharding sharding) {
   tsl::profiler::TraceMe activity(
       "PjRtComputationClient::TransferShardsToServer",
       tsl::profiler::TraceMeLevel::kInfo);
@@ -578,9 +620,9 @@ PjRtComputationClient::ExecuteComputation(
   }
   CreateDataHandlesCounter()->AddValue(datas.size());
 
-  auto mwait = std::make_shared<util::MultiWait>(1);
-  auto lockfn = [&, this, device, returned_future = std::move(*returned_future),
-                 timed]() mutable {
+  thread::Schedule(std::move([&, this, device,
+                              returned_future = std::move(*returned_future),
+                              timed]() mutable {
     TF_VLOG(5) << "ExecuteComputation acquiring PJRT device lock for "
                << device;
     // Grab the shared lock and block the `WaitDeviceOps` until buffer is
@@ -601,9 +643,7 @@ PjRtComputationClient::ExecuteComputation(
           timed.reset();
           TF_VLOG(3) << "ExecuteComputation returned_future->OnReady finished";
         });
-  };
-
-  env::ScheduleIoClosure(util::MultiWait::Completer(mwait, std::move(lockfn)));
+  }));
 
   TF_VLOG(1) << "Returning " << datas.size() << " results";
   return datas;
@@ -627,7 +667,7 @@ PjRtComputationClient::ExecuteReplicated(
   XLA_CHECK(devices.size() == arguments.size())
       << "ExecuteReplicated over " << devices.size() << " devices, but "
       << arguments.size() << " arguments devices.";
-  auto mwait_argument = std::make_shared<util::MultiWait>(devices.size());
+  absl::BlockingCounter counter(devices.size());
   std::vector<std::vector<xla::PjRtBuffer*>> argument_handles(devices.size());
   {
     tsl::profiler::TraceMe activity(
@@ -648,11 +688,11 @@ PjRtComputationClient::ExecuteReplicated(
           buffers.push_back(pjrt_data->buffer.get());
         }
         argument_handles[i] = std::move(buffers);
+        counter.DecrementCount();
       };
-      env::ScheduleIoClosure(util::MultiWait::Completer(
-          mwait_argument, std::move(buffer_converter)));
+      thread::Schedule(std::move(buffer_converter));
     }
-    mwait_argument->Wait();
+    counter.Wait();
   }
 
   xla::ExecuteOptions execute_options;
@@ -707,9 +747,9 @@ PjRtComputationClient::ExecuteReplicated(
     }
   }
 
-  auto mwait = std::make_shared<util::MultiWait>(1);
-  auto lockfn = [&, this, returned_futures = std::move(*returned_futures),
-                 timed]() mutable {
+  thread::Schedule(std::move([&, this,
+                              returned_futures = std::move(*returned_futures),
+                              timed]() mutable {
     // Grab the shared lock and block the `WaitDeviceOps` until buffer is
     // ready. Since this is the SPMD code path. There is no points to grab
     // devices lock for every individual device.
@@ -730,8 +770,7 @@ PjRtComputationClient::ExecuteReplicated(
           timed.reset();
           TF_VLOG(3) << "ExecuteReplicated returned_future->OnReady finished";
         });
-  };
-  env::ScheduleIoClosure(util::MultiWait::Completer(mwait, std::move(lockfn)));
+  }));
 
   TF_VLOG(1) << "Returning " << data_handles.size() << " sets of results "
              << "with dimensions [" << absl::StrJoin(dims, ",") << "].";

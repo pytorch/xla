@@ -23,6 +23,7 @@ namespace runtime {
 class PjRtComputationClient : public ComputationClient {
  public:
   PjRtComputationClient();
+  ~PjRtComputationClient();
 
   DataPtr CreateDataPlaceholder(std::string device, xla::Shape shape) override;
 
@@ -36,7 +37,7 @@ class PjRtComputationClient : public ComputationClient {
   std::optional<xla::OpSharding> GetDataSharding(DataPtr handle) override;
 
   std::vector<DataPtr> TransferToServer(
-      absl::Span<const TensorSource> tensors) override;
+      absl::Span<const std::shared_ptr<const TensorSource>> tensors) override;
 
   // Use XLA replication to re-assemble the sharded data.
   DataPtr ReplicateShardedData(const DataPtr& handle);
@@ -44,9 +45,9 @@ class PjRtComputationClient : public ComputationClient {
   std::vector<xla::Literal> TransferFromServer(
       absl::Span<const DataPtr> handles) override;
 
-  DataPtr TransferShardsToServer(absl::Span<const TensorSource> tensor_shards,
-                                 std::string device, xla::Shape shape,
-                                 xla::OpSharding sharding) override;
+  DataPtr TransferShardsToServer(
+      absl::Span<const std::shared_ptr<const TensorSource>> tensor_shards,
+      std::string device, xla::Shape shape, xla::OpSharding sharding) override;
 
   DataPtr CopyToDevice(DataPtr data, std::string dst) override;
 
@@ -85,11 +86,17 @@ class PjRtComputationClient : public ComputationClient {
 
   std::shared_ptr<std::vector<std::string>> GetReplicationDevices() override;
 
-  void PrepareToExit() override { return; };
-
   void WaitDeviceOps(const std::vector<std::string>& devices) override;
 
   std::map<std::string, Metric> GetMetrics() const override;
+
+  void InitializeCoordinator(int global_rank, int world_size,
+                             std::string master_addr,
+                             std::string port) override;
+
+  XlaCoordinator& GetCoordinator() override;
+
+  bool CoordinatorInitialized() const override;
 
   // NOT IMPLEMENTED
 
@@ -99,6 +106,7 @@ class PjRtComputationClient : public ComputationClient {
 
  private:
   std::shared_ptr<xla::PjRtClient> client_;
+  std::unique_ptr<XlaCoordinator> coordinator_;
   // global_ordinals_ tracks a map from PjRtDeviceId to the device's
   // dense global ordinal.
   std::unordered_map<int, int> global_ordinals_;

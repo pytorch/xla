@@ -10,16 +10,15 @@
 #include <string>
 #include <unordered_map>
 
+#include "absl/synchronization/blocking_counter.h"
 #include "torch_xla/csrc/cross_replica_reduces.h"
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ir_dump_util.h"
 #include "torch_xla/csrc/lowering_context.h"
-#include "torch_xla/csrc/runtime/async_task.h"
 #include "torch_xla/csrc/runtime/cache.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
-#include "torch_xla/csrc/runtime/multi_wait.h"
 #include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/torch_util.h"
@@ -257,9 +256,6 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   // Waits for this SyncTensorCollection's device barrier and acquire the lock.
   // Override to enable SPMD.
   void TensorCollectionBarrier(SyncTensorCollection* coll) final;
-
-  // We don't use upstream GetTensorsFused as we have xla::Literal.
-  std::vector<at::Tensor> GetTensorsFused(std::vector<XLATensorPtr>* tensors);
 
   // Gathers the XLA device data for all the input tensors, after an
   // asynchronous operation.

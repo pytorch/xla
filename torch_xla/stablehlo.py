@@ -73,10 +73,14 @@ class StableHLOGraphModule:
       res = pytree.tree_unflatten(res, out_spec)
     return res
 
-  def get_stablehlo_bytecode(self, method_name):
+  def get_stablehlo_bytecode(self, method_name=None):
+    if method_name is None:
+      method_name = self._default_method
     return self._name_to_stablehlo[method_name].bytecode
 
-  def get_stablehlo_text(self, method_name):
+  def get_stablehlo_text(self, method_name=None):
+    if method_name is None:
+      method_name = self._default_method
     return self._name_to_stablehlo[method_name].text
 
   def save(self, directory_path):
@@ -134,6 +138,8 @@ class StableHLOFunctionMeta:
   # An input to the underlying stable callable can come from
   # the arguments the user supplied, OR a parameter, OR a constant
   input_locations: List[InputLocation]
+
+  unused_inputs: List[Tuple[InputLocation, VariableSignature]]
 
   # input_pytree_spec
   input_pytree_spec: Optional[str] = None
@@ -210,6 +216,16 @@ class XLAExportInterpreter(torch.fx.Interpreter):
       new_kwargs['device'] = self._device
     return super().call_function(target, args, new_kwargs)
 
+  def run_node(self, n) -> Any:
+    if n.op == 'placeholder':
+      fake_t = n.meta['val']
+      res = super().run_node(n)
+      for i, x in enumerate(fake_t.shape):
+        if not isinstance(x, int):
+          torch_xla._XLAC._xla_mark_dynamic(res, i)
+      return res
+    return super().run_node(n)
+
 
 def _extract_input_args(exported_model, options):
   if options.override_tracing_arguments is not None:
@@ -238,7 +254,7 @@ def _exported_program_to_stablehlo_bundle(exported_model,
                                           options) -> StableHLOModelBundle:
   if options is None:
     options = StableHLOExportOptions()
-
+  exported_model = exported_model.run_decompositions()
   input_args = _extract_input_args(exported_model, options)
 
   device = xm.xla_device()
@@ -299,10 +315,16 @@ def _exported_program_to_stablehlo_bundle(exported_model,
       if isinstance(tensor, torch.Tensor)
   }
 
+  # there might be inputs that is part of input but not consumed by HLO graph
+  unused_input_positions = set(range(len(input_args)))
+
   for hlo_input_pos, (tensor_id, tensor_value) in enumerate(
       zip(graph_input_tensor_ids, graph_input_xla_values)):
     if tensor_id in input_ids:  # this is input
-      location = InputLocation.input_arg(position=input_ids[tensor_id])
+      pos_id = input_ids[tensor_id]
+      location = InputLocation.input_arg(position=pos_id)
+      if pos_id in unused_input_positions:
+        unused_input_positions.remove(pos_id)
     elif tensor_id in tensor_id_to_state_name:
       location = InputLocation.parameter(
           name=tensor_id_to_state_name[tensor_id])
@@ -314,6 +336,21 @@ def _exported_program_to_stablehlo_bundle(exported_model,
         VariableSignature(
             shape=list(tensor_value.shape),
             dtype=str(tensor_value.dtype).replace('torch.', '')))
+
+  unused_inputs = []
+  for i in unused_input_positions:
+    pos = InputLocation.input_arg(position=i)
+    arg = input_args[i]
+    if isinstance(arg, torch.Tensor):
+      signature = VariableSignature(
+          shape=list(arg.shape), dtype=str(arg.dtype).replace('torch.', ''))
+    else:
+      signature = VariableSignature(
+          shape=[],
+          dtype=str(type(arg)),
+      )
+
+    unused_inputs.append((pos, signature))
 
   output_signature = [
       VariableSignature(
@@ -330,6 +367,7 @@ def _exported_program_to_stablehlo_bundle(exported_model,
       input_signature=input_signatures,
       output_signature=output_signature,
       input_locations=input_locations,
+      unused_inputs=unused_inputs,
       input_pytree_spec=pytree.treespec_dumps(exported_model.call_spec.in_spec),
       output_pytree_spec=pytree.treespec_dumps(
           exported_model.call_spec.out_spec),

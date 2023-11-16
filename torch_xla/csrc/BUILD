@@ -112,16 +112,15 @@ ptxla_cc_library(
     deps = [
         ":aten_cpu_fallback",
         ":device",
+        ":dtype",
         ":einsum_utilities",
         ":ir",
         ":ir_builder",
         ":layout_manager",
         ":shape_builder",
         ":shape_helper",
-        "//torch_xla/csrc/runtime:async_task",
         "//torch_xla/csrc/runtime",
         "//torch_xla/csrc/runtime:stablehlo_helper",
-        "//torch_xla/csrc/runtime:unique",
         "//torch_xla/csrc/runtime:xla_util",
         "@com_google_absl//absl/hash",
         "@com_google_absl//absl/memory",
@@ -168,6 +167,21 @@ ptxla_cc_library(
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/types:optional",
         "@xla//xla/client:xla_builder",
+    ],
+)
+
+ptxla_cc_library(
+    name = "dtype",
+    srcs = ["dtype.cpp"],
+    hdrs = ["dtype.h"],
+    deps = [
+        "//torch_xla/csrc:device",
+        "//torch_xla/csrc/runtime:tf_logging",
+        "//torch_xla/csrc/runtime:debug_macros",
+        "//torch_xla/csrc/runtime:sys_util",
+        "//torch_xla/csrc/runtime:util",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/types:optional",
     ],
 )
 
@@ -248,20 +262,21 @@ ptxla_cc_library(
     srcs = ["init_python_bindings.cpp"],
     deps = [
         ":device",
+        ":dtype",
         ":tensor",
         ":version",
         "//torch_xla/csrc/runtime",
         "//torch_xla/csrc/runtime:metrics",
         "//torch_xla/csrc/runtime:metrics_analysis",
         "//torch_xla/csrc/runtime:metrics_reader",
-        "//torch_xla/csrc/runtime:multi_wait",
         "//torch_xla/csrc/runtime:profiler",
         "//torch_xla/csrc/runtime:sys_util",
-        "//torch_xla/csrc/runtime:thread_pool",
         "//torch_xla/csrc/runtime:util",
+        "//torch_xla/csrc/runtime:xla_coordinator",
         "//torch_xla/csrc/runtime:xla_util",
         "@com_google_absl//absl/container:flat_hash_map",
         "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/synchronization",
         "@com_google_absl//absl/types:variant",
         "@tsl//tsl/profiler/lib:traceme",
         "@tsl//tsl/profiler/lib:traceme_encode",
@@ -301,6 +316,16 @@ cc_library(
     deps = [
         "//torch_xla/csrc/runtime:debug_macros",
         "@xla//xla/client:xla_builder",
+    ],
+)
+
+cc_library(
+    name = "thread_pool",
+    srcs = ["thread_pool.cc"],
+    hdrs = ["thread_pool.h"],
+    deps = [
+        "//torch_xla/csrc/runtime:sys_util",
+        "@tsl//tsl/platform:env"
     ],
 )
 
