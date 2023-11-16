@@ -12,6 +12,7 @@
 namespace torch_xla {
 namespace runtime {
 
+// Track inflight operations for each device.
 class OperationTracker {
  public:
   OperationTracker() = default;
@@ -30,12 +31,17 @@ class OperationTracker {
     Counter(const Counter&) = delete;
     Counter& operator=(const Counter&) = delete;
 
+    // Register a new operation. Blocks if `BlockNewOperations` has been called.
     void Increment();
 
+    // Mark an inflight task completed.
     void Decrement();
 
+    // Wait until all operations are complete. Does not block new operations
+    // (see BlockNewOperations).
     void Wait();
 
+    // Returns a lock that prevents new operations on the device.
     std::unique_lock<std::shared_mutex> BlockNewOperations();
 
    private:
@@ -50,7 +56,10 @@ class OperationTracker {
 
   class Operation {
    public:
+    // Register an operation in the `counter_`.
     Operation(Counter* counter);
+
+    // Mark an operation complete in `counter_`.
     ~Operation();
 
     Operation(const Operation&) = delete;
@@ -61,8 +70,10 @@ class OperationTracker {
     Counter* counter_;
   };
 
+  // Register a new operation for `device`.
   std::unique_ptr<Operation> StartOperation(std::string device);
 
+  // Wait for all device execution to complete on devices.
   void WaitForDevices(absl::Span<const std::string> devices);
 
  private:
