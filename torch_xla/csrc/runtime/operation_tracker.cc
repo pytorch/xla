@@ -1,6 +1,6 @@
 #include "torch_xla/csrc/runtime/operation_tracker.h"
 
-#include <mutex>
+#include <shared_mutex>
 
 #include "absl/types/span.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
@@ -38,26 +38,28 @@ void OperationTracker::WaitForDevices(absl::Span<const std::string> devices) {
 }
 
 void OperationTracker::Counter::Increment() {
-  std::unique_lock<std::mutex> lock(mu_);
-  count_++;
-  TF_VLOG(3) << "Increment.... " << count_;
+  // Block new operations after Wait() is called. count_ is already atomic, so
+  // atomic so we don't need an exclusive lock to prevent data races.
+  std::shared_lock lock(pending_operations_mu_);
+  auto current = count_.fetch_add(1, std::memory_order_acq_rel) + 1;
+  TF_VLOG(3) << "Increment.... " << current;
 }
 
 void OperationTracker::Counter::Decrement() {
-  std::unique_lock<std::mutex> lock(mu_);
-  count_--;
-  TF_VLOG(3) << "Decrement.... " << count_;
+  auto current = count_.fetch_sub(1, std::memory_order_acq_rel) - 1;
+  TF_VLOG(3) << "Decrement.... " << current;
 
-  if (count_ == 0) {
+  if (current == 0) {
     TF_VLOG(3) << "notify";
     cv_.notify_all();
   }
 }
 
 void OperationTracker::Counter::Wait() {
-  std::unique_lock<std::mutex> lock(mu_);
+  std::unique_lock block_new_operations(pending_operations_mu_);
   TF_VLOG(3) << "Waiting.... " << count_;
-  cv_.wait(lock, [this] { return count_ == 0; });
+  std::unique_lock cv_lock(cv_mu_);
+  cv_.wait(cv_lock, [this]{ return count_.load(std::memory_order_acquire) == 0; });
   TF_VLOG(3) << "Done waiting.";
 }
 

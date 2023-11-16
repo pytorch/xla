@@ -1,11 +1,14 @@
 #ifndef XLA_CLIENT_OPERATION_TRACKER_H_
 #define XLA_CLIENT_OPERATION_TRACKER_H_
 
+#include <atomic>
 #include <condition_variable>
 #include <memory>
+#include <shared_mutex>
 #include <mutex>
 
 #include "absl/types/span.h"
+// #include "absl/synchronization/notification.h"
 
 namespace torch_xla {
 namespace runtime {
@@ -30,9 +33,11 @@ class OperationTracker {
     void Wait();
 
    private:
-    std::mutex mu_;
+    std::shared_mutex pending_operations_mu_;
+    std::atomic<int64_t> count_;
+
+    std::mutex cv_mu_;
     std::condition_variable cv_;
-    int64_t count_;
   };
 
   class Operation {
