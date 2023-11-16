@@ -806,7 +806,7 @@ xla::PjRtDevice* PjRtComputationClient::StringToPjRtDevice(
 }
 
 void PjRtComputationClient::WaitDeviceOps(
-    const std::vector<std::string>& devices) {
+    absl::Span<const std::string> devices) {
   TF_VLOG(3) << "Waiting for " << absl::StrJoin(devices, ", ");
   operation_tracker_.WaitForDevices(devices.empty() ? GetLocalDevices()
                                                     : devices);
