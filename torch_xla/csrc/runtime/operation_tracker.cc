@@ -62,14 +62,16 @@ void OperationTracker::Counter::Decrement() {
   }
 }
 
-std::unique_lock<std::shared_mutex> OperationTracker::Counter::BlockNewOperations() {
+std::unique_lock<std::shared_mutex>
+OperationTracker::Counter::BlockNewOperations() {
   return std::unique_lock(pending_operations_mu_);
 }
 
 void OperationTracker::Counter::Wait() {
   TF_VLOG(3) << "Waiting.... " << count_;
   std::unique_lock cv_lock(cv_mu_);
-  cv_.wait(cv_lock, [this]{ return count_.load(std::memory_order_acquire) == 0; });
+  cv_.wait(cv_lock,
+           [this] { return count_.load(std::memory_order_acquire) == 0; });
   TF_VLOG(3) << "Done waiting.";
 }
 

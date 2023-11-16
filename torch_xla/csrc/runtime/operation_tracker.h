@@ -4,11 +4,10 @@
 #include <atomic>
 #include <condition_variable>
 #include <memory>
-#include <shared_mutex>
 #include <mutex>
+#include <shared_mutex>
 
 #include "absl/types/span.h"
-// #include "absl/synchronization/notification.h"
 
 namespace torch_xla {
 namespace runtime {
