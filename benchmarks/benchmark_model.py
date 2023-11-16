@@ -37,9 +37,8 @@ class ModelLoader:
   def get_benchmark_indices(self, length):
     start = self._args.partition_id * (length // self._args.total_partitions)
     end = ((self._args.partition_id + 1) *
-           (length // self._args.total_partitions)
-           if self._args.partition_id < self._args.total_partitions - 1 else
-           length)
+           (length // self._args.total_partitions) if self._args.partition_id
+           < self._args.total_partitions - 1 else length)
     return start, end
 
   def skip_model(self, model_name):
@@ -116,8 +115,8 @@ class BenchmarkModel:
       raise NotImplementedError
 
     if self.benchmark_experiment.dynamo:
-      self.model_iter_fn = torch.compile(self.model_iter_fn,
-                                         backend=self.benchmark_experiment.dynamo)
+      self.model_iter_fn = torch.compile(
+          self.model_iter_fn, backend=self.benchmark_experiment.dynamo)
 
   def pick_grad(self):
     if self.benchmark_experiment.test == "eval":

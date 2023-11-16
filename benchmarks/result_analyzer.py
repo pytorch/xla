@@ -35,26 +35,27 @@ class ResultAnalyzer:
       if file.endswith(".jsonl"):
         jsonl_files.append(os.path.join(self.output_dir, file))
 
-    metric_df = pd.DataFrame({"timestamp": pd.Series(dtype="int"),
-                              "suite_name": pd.Series(dtype="str"),
-                              "model_name": pd.Series(dtype="str"),
-                              "experiment_name": pd.Series(dtype="str"),
-                              "accelerator": pd.Series(dtype="str"),
-                              "accelerator_model": pd.Series(dtype="str"),
-                              "xla": pd.Series(dtype="str"),
-                              "dynamo": pd.Series(dtype="str"),
-                              "test": pd.Series(dtype="str"),
-                              "batch_size": pd.Series(dtype="int"),
-                              "repeat": pd.Series(dtype="int"),
-                              "iterations_per_run": pd.Series(dtype="int"),
-                              "error_message": pd.Series(dtype="str"),
-                              "median_total_time": pd.Series(dtype="float"),
-                              "median_per_iter_time": pd.Series(dtype="float"),
-                              "xla_median_trace_per_iter_time": pd.Series(dtype="float"),
-                              "xla_compile_time": pd.Series(dtype="float"),
-                              "dynamo_compile_time": pd.Series(dtype="float"),
-                              "outputs_file": pd.Series(dtype="str"),
-                              })
+    metric_df = pd.DataFrame({
+        "timestamp": pd.Series(dtype="int"),
+        "suite_name": pd.Series(dtype="str"),
+        "model_name": pd.Series(dtype="str"),
+        "experiment_name": pd.Series(dtype="str"),
+        "accelerator": pd.Series(dtype="str"),
+        "accelerator_model": pd.Series(dtype="str"),
+        "xla": pd.Series(dtype="str"),
+        "dynamo": pd.Series(dtype="str"),
+        "test": pd.Series(dtype="str"),
+        "batch_size": pd.Series(dtype="int"),
+        "repeat": pd.Series(dtype="int"),
+        "iterations_per_run": pd.Series(dtype="int"),
+        "error_message": pd.Series(dtype="str"),
+        "median_total_time": pd.Series(dtype="float"),
+        "median_per_iter_time": pd.Series(dtype="float"),
+        "xla_median_trace_per_iter_time": pd.Series(dtype="float"),
+        "xla_compile_time": pd.Series(dtype="float"),
+        "dynamo_compile_time": pd.Series(dtype="float"),
+        "outputs_file": pd.Series(dtype="str"),
+    })
     for file in jsonl_files:
       metric_df = self.extract_metrics(file, metric_df)
 
@@ -68,28 +69,31 @@ class ResultAnalyzer:
 
     for jsonline in jsonlines:
       tmp = json.loads(jsonline)
-      d = {"timestamp": self.timestamp,
-           "suite_name": tmp["model"]["suite_name"],
-           "model_name": tmp["model"]["model_name"],
-           "experiment_name": tmp["experiment"]["experiment_name"],
-           "accelerator": tmp["experiment"]["accelerator"],
-           "accelerator_model": tmp["experiment"]["accelerator_model"],
-           "xla": tmp["experiment"]["xla"],
-           "dynamo": tmp["experiment"]["dynamo"],
-           "test": tmp["experiment"]["test"],
-           "batch_size": tmp["experiment"]["batch_size"],
-           "repeat": tmp["repeat"],
-           "iterations_per_run": tmp["iterations_per_run"],
-           "error_message": tmp["metrics"].get("error", None),
-           "outputs_file": tmp["outputs_file"],
-          }
+      d = {
+          "timestamp": self.timestamp,
+          "suite_name": tmp["model"]["suite_name"],
+          "model_name": tmp["model"]["model_name"],
+          "experiment_name": tmp["experiment"]["experiment_name"],
+          "accelerator": tmp["experiment"]["accelerator"],
+          "accelerator_model": tmp["experiment"]["accelerator_model"],
+          "xla": tmp["experiment"]["xla"],
+          "dynamo": tmp["experiment"]["dynamo"],
+          "test": tmp["experiment"]["test"],
+          "batch_size": tmp["experiment"]["batch_size"],
+          "repeat": tmp["repeat"],
+          "iterations_per_run": tmp["iterations_per_run"],
+          "error_message": tmp["metrics"].get("error", None),
+          "outputs_file": tmp["outputs_file"],
+      }
       if "error" not in tmp["metrics"]:
         total_time = np.asarray(tmp["metrics"]["total_time"], dtype="float")
         d["median_total_time"] = np.median(total_time)
-        per_iter_time = np.asarray(tmp["metrics"]["per_iter_time"], dtype="float")
+        per_iter_time = np.asarray(
+            tmp["metrics"]["per_iter_time"], dtype="float")
         d["median_per_iter_time"] = np.median(per_iter_time)
         if tmp["experiment"]["xla"]:
-          trace_per_iter_time = np.asarray(tmp["metrics"]["trace_per_iter_time"], dtype="float")
+          trace_per_iter_time = np.asarray(
+              tmp["metrics"]["trace_per_iter_time"], dtype="float")
           d["xla_median_trace_per_iter_time"] = np.median(trace_per_iter_time)
           d["xla_compile_time"] = np.max(total_time) - np.median(total_time)
         if tmp["experiment"]["dynamo"]:
@@ -97,17 +101,22 @@ class ResultAnalyzer:
 
       new_row = pd.Series(d)
       new_row.fillna(value=np.nan, inplace=True)
-      metric_df = pd.concat([metric_df, new_row.to_frame().T], ignore_index=True)
+      metric_df = pd.concat([metric_df, new_row.to_frame().T],
+                            ignore_index=True)
 
     return metric_df
 
   def export_metric_report(self, metric_df):
-    metric_df.to_csv(self.output_file, mode="w", encoding="utf-8", header=True, index=False)
+    metric_df.to_csv(
+        self.output_file, mode="w", encoding="utf-8", header=True, index=False)
 
     if not os.path.exists(self.database):
-      metric_df.to_csv(self.database, mode="w", encoding="utf-8", header=True, index=False)
+      metric_df.to_csv(
+          self.database, mode="w", encoding="utf-8", header=True, index=False)
     else:
-      metric_df.to_csv(self.database, mode="a", encoding="utf-8", header=False, index=False)
+      metric_df.to_csv(
+          self.database, mode="a", encoding="utf-8", header=False, index=False)
+
 
 def parse_args(args=None):
   parser = argparse.ArgumentParser()
