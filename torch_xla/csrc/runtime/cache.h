@@ -149,6 +149,7 @@ class PersistentCache : public AbstractCache<K, T, H, E> {
   // incur deserialization.
   // If the cache is readonly, nothing is written to disk.
   TypePtr Add(K key, TypePtr obj) override {
+    std::lock_guard<std::mutex> slock(lock_);
     std::string path = GetPath(key);
     if (!Exists(path) && !readonly_) {
       std::ofstream out(path, std::ios::binary);
@@ -161,6 +162,7 @@ class PersistentCache : public AbstractCache<K, T, H, E> {
   // if the key is tracked in memory, and if not it will check for a persisted
   // version on disk.
   TypePtr Get(const K& key) override {
+    std::lock_guard<std::mutex> slock(lock_);
     TypePtr mem = memory_cache_.Get(key);
     if (mem) {
       return mem;
@@ -180,7 +182,7 @@ class PersistentCache : public AbstractCache<K, T, H, E> {
     if (!val) {
       TORCH_LAZY_COUNTER("PersistentCacheDeserializeFailure", 1);
       // Remove the serialized value from disk to allow a new value to be stored
-      Erase(key);
+      _erase(key);
       return nullptr;
     }
     TORCH_LAZY_COUNTER("PersistentCacheHit", 1);
@@ -189,6 +191,7 @@ class PersistentCache : public AbstractCache<K, T, H, E> {
   }
 
   void Clear() override {
+    std::lock_guard<std::mutex> slock(lock_);
     memory_cache_.Clear();
     // Delete and recreate the cache directory on disk.
     if (!readonly_) {
@@ -198,8 +201,8 @@ class PersistentCache : public AbstractCache<K, T, H, E> {
   }
 
   bool Erase(const K& key) override {
-    memory_cache_.Erase(key);
-    return !readonly_ && std::filesystem::remove(GetPath(key));
+    std::lock_guard<std::mutex> slock(lock_);
+    return _erase(key);
   }
 
   Cache<K, T, H, E>& GetMemoryCache() { return memory_cache_; }
@@ -216,10 +219,16 @@ class PersistentCache : public AbstractCache<K, T, H, E> {
     return stat(path.c_str(), &buffer) == 0;
   }
 
+  bool _erase(const K& key) {
+    memory_cache_.Erase(key);
+    return !readonly_ && std::filesystem::remove(GetPath(key));
+  }
+
   Cache<K, T, H, E> memory_cache_;
   std::function<std::string(TypePtr&)> serialize_;
   std::function<TypePtr(std::string&)> deserialize_;
   std::filesystem::path cache_dir_;
+  std::mutex lock_;
   bool readonly_;
 };
 
