@@ -116,9 +116,6 @@ class PjRtComputationClient : public ComputationClient {
   OperationTracker operation_tracker_;
 
   xla::PjRtDevice* StringToPjRtDevice(const std::string& device);
-  std::shared_lock<std::shared_mutex> lock_device_shared(
-      const std::string& device);
-  std::unique_lock<std::shared_mutex> lock_device(const std::string& device);
 
   std::string PjRtDeviceToString(xla::PjRtDevice* const device) const;
   std::vector<std::string> PjRtDevicesToString(

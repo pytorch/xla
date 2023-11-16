@@ -805,20 +805,6 @@ xla::PjRtDevice* PjRtComputationClient::StringToPjRtDevice(
   return pjrt_device;
 }
 
-std::shared_lock<std::shared_mutex> PjRtComputationClient::lock_device_shared(
-    const std::string& device) {
-  // std::shared_lock lock(*device_locks_[device]);
-  // return lock;
-  XLA_ERROR();
-}
-
-std::unique_lock<std::shared_mutex> PjRtComputationClient::lock_device(
-    const std::string& device) {
-  // std::unique_lock lock(*device_locks_[device]);
-  // return lock;
-  XLA_ERROR();
-}
-
 void PjRtComputationClient::WaitDeviceOps(
     const std::vector<std::string>& devices) {
   TF_VLOG(3) << "Waiting for " << absl::StrJoin(devices, ", ");
