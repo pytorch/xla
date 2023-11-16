@@ -28,12 +28,18 @@ std::shared_ptr<OperationTracker::Operation> OperationTracker::StartOperation(
 }
 
 void OperationTracker::WaitForDevices(absl::Span<const std::string> devices) {
+  std::vector<std::unique_lock<std::shared_mutex>> locks;
+  locks.reserve(devices.size());
+
   for (const std::string& device_str : devices) {
+    TF_VLOG(5) << "Blocking new operations on " << device_str;
+    auto lock = op_counters_.at(device_str)->BlockNewOperations();
+    locks.emplace_back(std::move(lock));
+
     TF_VLOG(3) << "Waiting for device execution for " << device_str
                << " to finish";
     op_counters_.at(device_str)->Wait();
-    TF_VLOG(3) << "Waiting for device execution for " << device_str
-               << " to finish.. Done";
+    TF_VLOG(3) << "Finished operations on device " << device_str;
   }
 }
 
@@ -56,8 +62,11 @@ void OperationTracker::Counter::Decrement() {
   }
 }
 
+std::unique_lock<std::shared_mutex> OperationTracker::Counter::BlockNewOperations() {
+  return std::unique_lock(pending_operations_mu_);
+}
+
 void OperationTracker::Counter::Wait() {
-  std::unique_lock block_new_operations(pending_operations_mu_);
   TF_VLOG(3) << "Waiting.... " << count_;
   std::unique_lock cv_lock(cv_mu_);
   cv_.wait(cv_lock, [this]{ return count_.load(std::memory_order_acquire) == 0; });

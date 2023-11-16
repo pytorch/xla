@@ -32,6 +32,8 @@ class OperationTracker {
 
     void Wait();
 
+    std::unique_lock<std::shared_mutex> BlockNewOperations();
+
    private:
     std::shared_mutex pending_operations_mu_;
     std::atomic<int64_t> count_;
