@@ -192,6 +192,7 @@ cc_library(
   name = "operation_tracker",
   srcs = ["operation_tracker.cc"],
   hdrs = ["operation_tracker.h"],
+  visibility = ["//visibility:private"],
   deps = [
     ":debug_macros",
     ":tf_logging",
