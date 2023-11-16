@@ -25,7 +25,7 @@ class OperationTracker {
 
   class Counter {
    public:
-    Counter(const std::string& device) : device_(device) {};
+    Counter(const std::string& device) : device_(device){};
 
     Counter(const Counter&) = delete;
     Counter& operator=(const Counter&) = delete;
