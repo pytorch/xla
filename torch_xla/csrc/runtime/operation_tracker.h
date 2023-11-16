@@ -25,6 +25,11 @@ class OperationTracker {
 
   class Counter {
    public:
+    Counter() = default;
+
+    Counter(const Counter&) = delete;
+    Counter& operator=(const Counter&) = delete;
+
     void Increment();
 
     void Decrement();
@@ -59,8 +64,7 @@ class OperationTracker {
   void WaitForDevices(absl::Span<const std::string> devices);
 
  private:
-  // TODO: figure out how to safely construct counters in map
-  std::unordered_map<std::string, std::unique_ptr<Counter>> op_counters_;
+  std::unordered_map<std::string, Counter> op_counters_;
 };
 
 }  // namespace runtime

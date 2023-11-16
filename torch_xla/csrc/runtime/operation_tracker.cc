@@ -11,7 +11,7 @@ namespace runtime {
 
 OperationTracker::OperationTracker(absl::Span<const std::string> devices) {
   for (auto& device : devices) {
-    op_counters_.emplace(device, std::make_unique<Counter>());
+    op_counters_.try_emplace(device);
   }
 }
 
@@ -24,7 +24,7 @@ OperationTracker::Operation::~Operation() { counter_->Decrement(); }
 
 std::unique_ptr<OperationTracker::Operation> OperationTracker::StartOperation(
     std::string device) {
-  return std::make_unique<Operation>(op_counters_.at(device).get());
+  return std::make_unique<Operation>(&op_counters_.at(device));
 }
 
 void OperationTracker::WaitForDevices(absl::Span<const std::string> devices) {
@@ -33,12 +33,12 @@ void OperationTracker::WaitForDevices(absl::Span<const std::string> devices) {
 
   for (const std::string& device_str : devices) {
     TF_VLOG(5) << "Blocking new operations on " << device_str;
-    auto lock = op_counters_.at(device_str)->BlockNewOperations();
+    auto lock = op_counters_.at(device_str).BlockNewOperations();
     locks.emplace_back(std::move(lock));
 
     TF_VLOG(3) << "Waiting for device execution for " << device_str
                << " to finish";
-    op_counters_.at(device_str)->Wait();
+    op_counters_.at(device_str).Wait();
     TF_VLOG(3) << "Finished operations on device " << device_str;
   }
 }

@@ -209,7 +209,6 @@ PjRtComputationClient::PjRtComputationClient() {
     string_to_device_.emplace(device_str, device);
   }
 
-  // TODO: can we construct this in place instead?
   auto tracked_devices = GetLocalDevices();
   tracked_devices.emplace_back(spmd_device_str);
   operation_tracker_ = std::move(OperationTracker(std::move(tracked_devices)));
@@ -616,10 +615,11 @@ PjRtComputationClient::ExecuteComputation(
                            returned_future)
           .value();
 
-  returned_future->OnReady(std::move([timed, op = std::move(op)](xla::Status unused) mutable {
-    timed.reset();
-    TF_VLOG(3) << "ExecuteComputation returned_future->OnReady finished";
-  }));
+  returned_future->OnReady(
+      std::move([timed, op = std::move(op)](xla::Status unused) mutable {
+        timed.reset();
+        TF_VLOG(3) << "ExecuteComputation returned_future->OnReady finished";
+      }));
 
   std::vector<DataPtr> datas;
   datas.reserve(results.size());
