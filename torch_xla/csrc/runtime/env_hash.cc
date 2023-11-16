@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <sstream>
+#include <unordered_set>
 
 #include "torch_xla/csrc/runtime/sys_util.h"
 
@@ -14,7 +15,7 @@ static const std::string XLA_FLAG_PREFIX = "--xla";
 
 // Taken from JAX:
 // https://github.com/google/jax/blob/8ee5811/jax/_src/cache_key.py#L325-L346
-static const std::set<std::string> FlagsToExclude = {
+static const std::unordered_set<std::string> FlagsToExclude = {
     "--xla_dump_compress_protos",
     "--xla_dump_module_metadata",
     "--xla_dump_max_hlo_modules",
