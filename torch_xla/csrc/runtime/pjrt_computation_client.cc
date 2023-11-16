@@ -628,7 +628,8 @@ ComputationClient::ComputationPtr PjRtComputationClient::DeserializeComputation(
          "variable to disable persistent caching.";
   xla::XlaComputation computation((*hlo_modules)[0]->ToProto());
 
-  std::vector<std::string> devices = {GetDefaultDevice()};
+  std::vector<std::string> devices = {UseVirtualDevice() ? spmd_device_str
+                                                         : GetDefaultDevice()};
   return std::make_shared<PjRtComputation>(std::move(computation), devices,
                                            std::move(executable));
 }

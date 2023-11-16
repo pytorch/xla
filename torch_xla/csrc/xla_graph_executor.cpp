@@ -80,7 +80,7 @@ XLAGraphExecutor::ComputationCache* CreateComputationCache() {
   static const size_t kMaxCacheSize =
       runtime::sys_util::GetEnvInt("XLA_COMPILATION_CACHE_SIZE", 1024);
   static const bool readonlyPersistentCache =
-      runtime::sys_util::GetEnvBool("XLA_PERSISTENT_CACHE_RO", false);
+      runtime::sys_util::GetEnvBool("XLA_PERSISTENT_CACHE_READ_ONLY", false);
   static std::string persistentCacheDir =
       runtime::sys_util::GetEnvString("XLA_PERSISTENT_CACHE_PATH", "");
   if (!persistentCacheDir.empty()) {
@@ -94,10 +94,8 @@ XLAGraphExecutor::ComputationCache* CreateComputationCache() {
           runtime::GetComputationClient()->DeserializeComputation(
               serialization);
       if (!computation) return nullptr;
-      bool is_sharded = bridge::GetDefaultDevice()->toString() ==
-                        GetVirtualDevice().toString();
       return std::make_shared<XLAGraphExecutor::CachedComputation>(
-          computation, /*is_sharded=*/is_sharded);
+          computation, /*is_sharded=*/UseVirtualDevice());
     };
     return new XLAGraphExecutor::PersistentCache(
         kMaxCacheSize, persistentCacheDir, readonlyPersistentCache,
