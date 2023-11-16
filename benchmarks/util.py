@@ -13,7 +13,7 @@ import traceback
 
 try:
   import torch_xla.core.xla_model as xm
-  from torch_xla._internal import tpu
+  from torch_xla.distributed.cluster import ClusterResolver
 except ImportError:
   # ignore the error if torch_xla is not installed
   pass
