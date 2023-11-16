@@ -25,7 +25,7 @@ class OperationTracker {
 
   class Counter {
    public:
-    Counter() = default;
+    Counter(const std::string& device) : device_(device) {};
 
     Counter(const Counter&) = delete;
     Counter& operator=(const Counter&) = delete;
@@ -39,8 +39,10 @@ class OperationTracker {
     std::unique_lock<std::shared_mutex> BlockNewOperations();
 
    private:
+    std::string device_;
+
     std::shared_mutex pending_operations_mu_;
-    std::atomic<int64_t> count_;
+    std::atomic<int64_t> count_{0};
 
     std::mutex cv_mu_;
     std::condition_variable cv_;

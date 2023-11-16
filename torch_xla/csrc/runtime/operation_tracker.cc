@@ -11,7 +11,7 @@ namespace runtime {
 
 OperationTracker::OperationTracker(absl::Span<const std::string> devices) {
   for (auto& device : devices) {
-    op_counters_.try_emplace(device);
+    op_counters_.try_emplace(device, device);
   }
 }
 
@@ -48,16 +48,16 @@ void OperationTracker::Counter::Increment() {
   // atomic so we don't need an exclusive lock to prevent data races.
   std::shared_lock lock(pending_operations_mu_);
   auto current = count_.fetch_add(1, std::memory_order_acq_rel) + 1;
-  TF_VLOG(3) << "Increment.... " << current;
+  TF_VLOG(5) << "Incremented operations for " << device_ << " to " << current;
 }
 
 void OperationTracker::Counter::Decrement() {
   auto current = count_.fetch_sub(1, std::memory_order_acq_rel) - 1;
-  TF_VLOG(3) << "Decrement.... " << current;
+  TF_VLOG(5) << "Decremented operations for " << device_ << " to " << current;
 
   if (current == 0) {
     std::unique_lock cv_lock(cv_mu_);
-    TF_VLOG(3) << "notify";
+    TF_VLOG(3) << "All operations complete for " << device_;
     cv_.notify_all();
   }
 }
@@ -68,11 +68,11 @@ OperationTracker::Counter::BlockNewOperations() {
 }
 
 void OperationTracker::Counter::Wait() {
-  TF_VLOG(3) << "Waiting.... " << count_;
+  TF_VLOG(5) << "Waiting for " << count_ << " operations on " << device_;
   std::unique_lock cv_lock(cv_mu_);
   cv_.wait(cv_lock,
            [this] { return count_.load(std::memory_order_acquire) == 0; });
-  TF_VLOG(3) << "Done waiting.";
+  TF_VLOG(5) << "Done waiting for " << device_;
 }
 
 }  // namespace runtime
