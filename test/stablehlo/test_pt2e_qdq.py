@@ -28,11 +28,10 @@ class PT2EExportTest(unittest.TestCase):
     self.assertTrue("stablehlo.uniform_quantize" in stablehlo_txt)
     self.assertTrue("stablehlo.uniform_dequantize" in stablehlo_txt)
 
-  @unittest.skip("Currently Failing")
   def test_per_channel_qdq(self):
     device = xm.xla_device()
     x = torch.randn(2, 3, 4, 5).to(device)
-    scale = torch.tensor([3.2, 5.3, -0.1, 10])
+    scale = torch.tensor([3.2, 5.3, 0.1, 10])
     zero_point = torch.tensor([1, 2, -1, -2])
     x = torch.ops.quantized_decomposed.quantize_per_channel(
         x, scale, zero_point, 2, -128, 127, torch.int8)
