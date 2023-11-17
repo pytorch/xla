@@ -616,10 +616,11 @@ PjRtComputationClient::ExecuteComputation(
           .value();
 
   returned_future->OnReady(
-      std::move([timed, op = std::move(op)](xla::Status unused) mutable {
+      [timed, op = std::move(op)](xla::Status unused) mutable {
+        // Ensure timer stops before ending `op`.
         timed.reset();
         TF_VLOG(3) << "ExecuteComputation returned_future->OnReady finished";
-      }));
+      });
 
   std::vector<DataPtr> datas;
   datas.reserve(results.size());
@@ -702,8 +703,7 @@ PjRtComputationClient::ExecuteReplicated(
   TF_VLOG(5) << "ExecuteReplicated acquiring PJRT device lock for "
              << spmd_device_str << " Done";
 
-  std::optional<std::vector<xla::PjRtFuture<xla::Status>>> returned_futures(
-      devices.size());
+  std::optional<std::vector<xla::PjRtFuture<xla::Status>>> returned_futures;
   std::vector<std::vector<std::unique_ptr<xla::PjRtBuffer>>> results;
   {
     tsl::profiler::TraceMe activity(
@@ -715,10 +715,11 @@ PjRtComputationClient::ExecuteReplicated(
                   .value();
 
     (*returned_futures)[0].OnReady(
-        std::move([timed, op = std::move(op)](xla::Status unused) mutable {
+        [timed, op = std::move(op)](xla::Status unused) mutable {
+          // Ensure timer stops before ending `op`.
           timed.reset();
           TF_VLOG(3) << "ExecuteReplicated returned_future->OnReady finished";
-        }));
+        });
   }
 
   std::vector<std::vector<ComputationClient::DataPtr>> data_handles;
