@@ -88,7 +88,7 @@ resource "helm_release" "arc_runner_set" {
   create_namespace = true
 
   values = [
-    templatefile("modules/google-arc-v4-container-cluster/arc-values.yaml", {
+    templatefile("modules/arc-v4-container-cluster/arc-values.yaml", {
       github_repo_url = var.github_repo_url
       max_tpu_nodes = var.max_tpu_nodes
       runner_image = var.runner_image
