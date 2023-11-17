@@ -36,22 +36,54 @@ DETECTRON2_MODELS = {
 
 # Skip the experiment of a model if any of the experiment configs in the list is fully matched
 DENY_LIST = {
-  "doctr_det_predictor": [{"test": "train"},],  # not implemented
-  "doctr_reco_predictor": [{"test": "train"},],  # not implemented
-  "detectron2_fcos_r_50_fpn": [{"test": "train"},],  # not implemented
-  # https://github.com/pytorch/torchdynamo/issues/145
-  "fambench_xlmr": [{}],
-  "llama": [{"test": "train"},],  # not implemented
-  "mobilenet_v2_quantized_qat": [{"test": "eval", "accelerator": "cuda"},  # not implemented
-                                 {"test": "eval", "accelerator": "tpu"},],  # not implemented
-  "pyhpc_equation_of_state": [{"test": "train"},],  # not implemented
-  "pyhpc_isoneutral_mixing": [{"test": "train"},],  # not implemented
-  "pyhpc_turbulent_kinetic_energy": [{"test": "train"},],  # not implemented
-  "pytorch_struct": [{"test": "eval"},],  # not implemented
-  "resnet50_quantized_qat": [{"test": "eval", "accelerator": "cuda"},  # not implemented
-                             {"test": "eval", "accelerator": "tpu"},],  # not implemented
-  # https://github.com/pytorch/pytorch/issues/99438
-  "vision_maskrcnn": [{}],
+    "doctr_det_predictor": [{
+        "test": "train"
+    },],  # not implemented
+    "doctr_reco_predictor": [{
+        "test": "train"
+    },],  # not implemented
+    "detectron2_fcos_r_50_fpn": [{
+        "test": "train"
+    },],  # not implemented
+    # https://github.com/pytorch/torchdynamo/issues/145
+    "fambench_xlmr": [{}],
+    "llama": [{
+        "test": "train"
+    },],  # not implemented
+    "mobilenet_v2_quantized_qat": [
+        {
+            "test": "eval",
+            "accelerator": "cuda"
+        },  # not implemented
+        {
+            "test": "eval",
+            "accelerator": "tpu"
+        },
+    ],  # not implemented
+    "pyhpc_equation_of_state": [{
+        "test": "train"
+    },],  # not implemented
+    "pyhpc_isoneutral_mixing": [{
+        "test": "train"
+    },],  # not implemented
+    "pyhpc_turbulent_kinetic_energy": [{
+        "test": "train"
+    },],  # not implemented
+    "pytorch_struct": [{
+        "test": "eval"
+    },],  # not implemented
+    "resnet50_quantized_qat": [
+        {
+            "test": "eval",
+            "accelerator": "cuda"
+        },  # not implemented
+        {
+            "test": "eval",
+            "accelerator": "tpu"
+        },
+    ],  # not implemented
+    # https://github.com/pytorch/pytorch/issues/99438
+    "vision_maskrcnn": [{}],
 }
 
 
@@ -205,7 +237,7 @@ class TorchBenchModel(BenchmarkModel):
       return sum([reduce_to_scalar_loss(value) for value in pred.values()
                  ]) / len(pred.keys())
     raise NotImplementedError("Don't know how to reduce", type(pred))
-  
+
   def train(self, inputs, collect_full_output=False):
     if self.model_name in DETECTRON2_MODELS:
       from detectron2.utils.events import EventStorage
