@@ -5,6 +5,7 @@ from unittest.mock import patch
 import math
 import numpy as np
 import os
+import io
 
 import torch
 import torch_xla
@@ -41,7 +42,25 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     print("sharding is:")
     print(sharding)
     print("then print:")
-    visualize_tensor_sharding(t)
+    generatedtable = visualize_tensor_sharding(t)
+    
+    console = Console(file=io.StringIO(), width=120)
+    console.print(ttable)
+    fask_table = rich.table.Table(show_header=False, show_lines=False, padding=0, highlight=False, pad_edge=False, box=rich.box.SQUARE)
+    col = []
+    col.append(rich.padding.Padding(rich.align.Align('TPU 0', "center", vertical="middle"), (9,9,9,9), style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(rich.padding.Padding(rich.align.Align('TPU 1', "center", vertical="middle"), (9,9,9,9), style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(rich.padding.Padding(rich.align.Align('TPU 2', "center", vertical="middle"), (9,9,9,9), style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(rich.padding.Padding(rich.align.Align('TPU 3', "center", vertical="middle"), (9,9,9,9), style=rich.style.Style(bgcolor=color, color=text_color)))
+    fask_table.add_row(*col)
+    col = []
+    col.append(rich.padding.Padding(rich.align.Align('TPU 4', "center", vertical="middle"), (9,9,9,9), style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(rich.padding.Padding(rich.align.Align('TPU 5', "center", vertical="middle"), (9,9,9,9), style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(rich.padding.Padding(rich.align.Align('TPU 6', "center", vertical="middle"), (9,9,9,9), style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(rich.padding.Padding(rich.align.Align('TPU 7', "center", vertical="middle"), (9,9,9,9), style=rich.style.Style(bgcolor=color, color=text_color)))
+    fask_table.add_row(*col)
+    # console.print(table)
+    assert generatedtable.columns == fask_table.columns
 
 
   @unittest.skipIf(xr.device_type() == 'CPU', "skipped on CPU before enable")
