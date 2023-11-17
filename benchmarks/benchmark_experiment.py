@@ -43,9 +43,7 @@ class ExperimentLoader:
       config_choices = {
           "accelerator": ["cpu", "cuda", "tpu"],
           "xla": [None, "PJRT", "XRT"],
-          "dynamo": [
-              None, "inductor", "openxla_eval", "openxla"
-          ],
+          "dynamo": [None, "inductor", "openxla_eval", "openxla"],
           "test": ["eval", "train"],
       }
 
