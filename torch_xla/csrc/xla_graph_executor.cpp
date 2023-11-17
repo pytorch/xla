@@ -1450,11 +1450,9 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
         computations.front()->computation().proto();
     // TODO(yeounoh) confirm if we need to re-trace for new po_data.
     // TODO(yeounoh) verify that user sharding is respected by default.
-    bool resharded = ShardingUtil::ReshardParameters(computation_proto,
-                                                     &po_data->parameters_data);
-    TF_VLOG(5) << (resharded ? "Resharded parameters "
-                             : "No parameter resharding ")
-               << "after auto-sharding pass.";
+    ShardingUtil::ReshardParameters(computation_proto,
+                                    &po_data->parameters_data);
+    TF_VLOG(5) << ("Finished compilation with auto-sharding pass!");
   }
 
   return {/*device=*/coll.device,

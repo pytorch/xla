@@ -319,67 +319,82 @@ ComputationClient::DataPtr PjRtComputationClient::CopyToDevice(
                                     std::move(status_or.value()));
 }
 
-std::shared_ptr<PjRtComputationClient::PjRtData>
-PjRtComputationClient::ReplicateShardedData(
-    const ComputationClient::DataPtr& handle) {
-  if (auto unsharded_data = std::dynamic_pointer_cast<PjRtData>(handle)) {
-    return unsharded_data;
-  } else if (auto sharded_data =
-                 std::dynamic_pointer_cast<PjRtShardedData>(handle)) {
-    XLA_COUNTER("ReplicateShardedData", 1);
-    TF_VLOG(1) << "ReplicateShardedData (handle=" << sharded_data->GetHandle()
-               << ", shape=" << sharded_data->shape() << ")";
-    if (sharded_data->GetSharding().type() == xla::OpSharding::REPLICATED) {
-      // Data is replicated, return the first shard
-      return sharded_data->shards[0];
-    }
-    xla::XlaBuilder builder("ReplicateShardedData");
-    xla::Shape shape = sharded_data->shape();
-    builder.SetSharding(sharded_data->GetSharding());
+ComputationClient::DataPtr PjRtComputationClient::ReshardData(
+    const ComputationClient::DataPtr& handle, const xla::OpSharding& sharding) {
+  XLA_COUNTER("ReshardData", 1);
+  PjRtShardedData* sharded_data = dynamic_cast<PjRtShardedData*>(handle.get());
+  XLA_CHECK_NE(sharded_data, nullptr)
+      << "Resharding requires PjRtShardedData on SPMD virtual device.";
+  XLA_CHECK_NE(sharding.type(), xla::OpSharding::UNKNOWN)
+      << "Use REPLICATED for explicit replication.";
+  XLA_CHECK_EQ(sharded_data->shards.size(), GetLocalDevices().size());
+  TF_VLOG(3) << "ReshardData (handle=" << handle->GetHandle()
+             << ", shape=" << handle->shape() << ") by sharding type "
+             << sharding.type();
 
-    // perform a simple identity calculation to reassemble the input as
-    // replicated output.
-    xla::XlaOp x = xla::Parameter(&builder, 0, shape, "p0");
-    builder.SetSharding(xla::HloSharding::Replicate().ToProto());
-    xla::XlaOp scalar_zero_op = xla::ConvertElementType(
-        xla::ConstantR0(&builder, 0), shape.element_type());
-    xla::XlaOp y = xla::Add(x, scalar_zero_op);
-    auto instruction = XlaBuilderFriend::GetInstruction(y);
-    *instruction->mutable_sharding() = xla::HloSharding::Replicate().ToProto();
-
-    xla::XlaComputation computation =
-        ConsumeValue(builder.Build(/*remove_dynamic_dimensions=*/false));
-    xla::ProgramShape program_shape =
-        ConsumeValue(computation.GetProgramShape());
-
-    std::string device = GetDefaultDevice();
-    std::vector<torch_xla::runtime::ComputationClient::CompileInstance>
-        instances;
-    instances.push_back({std::move(computation), device,
-                         GetCompilationDevices(device, {}), &shape,
-                         /*should_wrap_parameter=*/false,
-                         /*is_sharded=*/true,
-                         /*allow_spmd_sharding_propagation_to_output=*/false});
-    std::vector<
-        std::shared_ptr<torch_xla::runtime::ComputationClient::Computation>>
-        computations = Compile(std::move(instances));
-
-    torch_xla::runtime::ComputationClient::ExecuteReplicatedOptions
-        execute_options;
-    auto sharded_results =
-        ExecuteReplicated(*computations.front(), {sharded_data},
-                          GetLocalDevices(), execute_options);
-    XLA_CHECK(sharded_results.size() > 0)
-        << "empty ExecuteReplicated results returned.";
-    XLA_CHECK(sharded_results.size() == 1)
-        << "Wrong number of outputs, expected: 1, actual: "
-        << sharded_results.size();
-    return std::dynamic_pointer_cast<PjRtShardedData>(sharded_results[0])
-        ->shards[0];
+  // Skip resharding if input & target sharding specs are identical.
+  if (xla::protobuf_util::ProtobufEquals(sharded_data->GetSharding(),
+                                         sharding) ||
+      (sharded_data->GetSharding().type() == xla::OpSharding::UNKNOWN &&
+       sharding.type() == xla::OpSharding::REPLICATED)) {
+    return handle;
   }
 
-  XLA_ERROR() << "Data must be PjRtData or PjRtShardedData, got "
-              << handle->ToString();
+  // Perform a simple identity calculation to reshard the input by the target
+  // sharding spec, `sharding`.
+  xla::XlaBuilder builder("ReshardData");
+  xla::Shape shape = sharded_data->shape();
+  xla::XlaOp scalar_zero_op = xla::ConvertElementType(
+      xla::ConstantR0(&builder, 0), shape.element_type());
+  builder.SetSharding(sharded_data->GetSharding());
+  xla::XlaOp x = xla::Parameter(&builder, 0, shape, "p0");
+  builder.SetSharding(sharding);
+  xla::XlaOp y = xla::Add(x, scalar_zero_op);
+  // xla::CustomCall(builder, /*call_target_name=*/"Sharding",
+  //                        {y}, ShapeHelper::ShapeOfXlaOp(y));
+
+  xla::XlaComputation xla_computation =
+      ConsumeValue(builder.Build(/*remove_dynamic_dimensions=*/false));
+  xla::ProgramShape program_shape =
+      ConsumeValue(xla_computation.GetProgramShape());
+
+  std::string device = GetDefaultDevice();
+  std::vector<torch_xla::runtime::ComputationClient::CompileInstance> instances;
+  instances.push_back({std::move(xla_computation), device,
+                       GetCompilationDevices(device, {}), &shape,
+                       /*should_wrap_parameter=*/false,
+                       /*is_sharded=*/true,
+                       /*allow_spmd_sharding_propagation_to_output=*/true});
+  std::shared_ptr<torch_xla::runtime::ComputationClient::Computation>
+      computation = Compile(std::move(instances)).front();
+
+  auto device_index = build_index_map(GetLocalDevices());
+  std::vector<std::vector<ComputationClient::DataPtr>> arguments_by_device(
+      GetLocalDevices().size(), std::vector<ComputationClient::DataPtr>(1));
+  for (auto shard : sharded_data->shards) {
+    std::vector<std::string> device_spec = absl::StrSplit(shard->device(), ':');
+    XLA_CHECK_EQ(device_spec.size(), 2)
+        << "Invalid device specification: " << shard->device();
+    int device_i = device_index[std::stoi(device_spec[1])];
+    TF_VLOG(3) << shard->device() << " is mapped to local device index "
+               << device_i;
+    arguments_by_device[device_i][0] = shard;
+  }
+  torch_xla::runtime::ComputationClient::ExecuteReplicatedOptions
+      execute_options;
+  std::vector<std::vector<ComputationClient::DataPtr>> sharded_results =
+      ExecuteReplicated(*computation, arguments_by_device, GetLocalDevices(),
+                        execute_options);
+  XLA_CHECK_EQ(sharded_results.size(), GetLocalDevices().size());
+  XLA_CHECK_EQ(sharded_results[0].size(), 1)
+      << "Wrong number of outputs, expected: 1, actual: "
+      << sharded_results[0].size();
+  std::vector<ComputationClient::DataPtr> arg0_shards;
+  arg0_shards.reserve(GetLocalDevices().size());
+  for (auto shards_per_device : sharded_results) {
+    arg0_shards.push_back(shards_per_device[0]);
+  }
+  return WrapDataShards(arg0_shards, "SPMD:0", sharded_data->shape(), sharding);
 }
 
 std::vector<xla::Literal> PjRtComputationClient::TransferFromDevice(
@@ -395,11 +410,11 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromDevice(
   for (auto handle : handles) {
     // Use XLA replication to reassemble the sharded data. If input handle
     // is not sharded, then it is a no-op.
-    std::shared_ptr<PjRtData> pjrt_data = ReplicateShardedData(handle);
-    XLA_CHECK(pjrt_data);
-
-    xla::Literal& literal =
-        literals.emplace_back(host_output_shape(pjrt_data->buffer.get()));
+    PjRtShardedData& replicated_data = dynamic_cast<PjRtShardedData&>(
+        *ReshardData(handle, xla::HloSharding::Replicate().ToProto()));
+    const PjRtData& pjrt_data = *replicated_data.shards[0];
+    auto& literal =
+        literals.emplace_back(host_output_shape(pjrt_data.buffer.get()));
     futures.push_back(pjrt_data->buffer->ToLiteral(&literal));
 
     total_size += literal.size_bytes();

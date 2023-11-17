@@ -615,17 +615,29 @@ ShardingUtil::GetAutoShardingMesh() {
   return std::make_tuple(mesh_shape, device_ids);
 }
 
-bool ShardingUtil::ReshardParameters(
+void ShardingUtil::ReshardParameters(
     const xla::HloModuleProto& module,
     std::vector<torch::lazy::BackendDataPtr>* parameters) {
+  TF_VLOG(INFO) << "ReshardParamters";
   std::vector<xla::OpSharding> input_shardings;
   for (auto sharding : module.spmd_parameters_shardings()) {
     input_shardings.push_back(sharding);
+    TF_VLOG(5) << "Parameter input_shardings: " << sharding.DebugString();
   }
+  if (input_shardings.size() == 0) {
+    return;
+  }
+  XLA_CHECK_EQ(input_shardings.size(), parameters->size());
 
   // TODO(yeounoh) Reshard parameters with mismatched sharding.
-
-  return false;
+  auto datas = UnwrapXlaData(*parameters);
+  for (size_t i = 0; i < datas.size(); ++i) {
+    TF_VLOG(5) << "Parameter data: " << datas[i]->ToString();
+    // TODO(yeounoh) we should be able to group individual resharidng into a
+    // single computation.
+    (*parameters)[i] = runtime::GetComputationClient()->ReshardData(
+        datas[i], input_shardings[i]);
+  }
 }
 
 void ShardingUtil::XlaMarkSharding(const at::Tensor& input,
@@ -740,32 +752,4 @@ void ShardingUtil::XlaMarkShardingDynamoCustomOp(
 
   ShardingUtil::XlaMarkSharding(input, op_sharding);
 }
-
-// Macro for defining a function that will be run at static initialization time
-// to define a library of operators in the namespace. Used to define a new set
-// of custom operators that do not already exist in PyTorch.
-TORCH_LIBRARY(xla, m) {
-  m.def(
-      "max_pool2d_forward(Tensor self, int[2] kernel_size, int[2] stride=[], "
-      "int[2] padding=0, int[2] dilation=1, bool ceil_mode=False) -> Tensor",
-      torch::dispatch(
-          c10::DispatchKey::XLA,
-          TORCH_FN(torch_xla::aten_autograd_ops::max_pool2d_forward)));
-
-  m.def(
-      "max_pool2d_backward(Tensor grad_output, Tensor self, int[2] "
-      "kernel_size, int[2] stride=[], int[2] padding=0, bool ceil_mode=False) "
-      "-> Tensor",
-      torch::dispatch(
-          c10::DispatchKey::XLA,
-          TORCH_FN(torch_xla::aten_autograd_ops::max_pool2d_backward)));
-  m.def(
-      "xla_mark_sharding_dynamo_custom_op(Tensor input, int[][] "
-      "tile_assignment, int[][] group_assignment, int[][] replication_groups, "
-      "int sharding_type) -> ()",
-      torch::dispatch(
-          c10::DispatchKey::XLA,
-          TORCH_FN(torch_xla::ShardingUtil::XlaMarkShardingDynamoCustomOp)));
-}
-
 }  // namespace torch_xla

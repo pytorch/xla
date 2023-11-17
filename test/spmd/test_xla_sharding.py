@@ -28,7 +28,6 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
   @classmethod
   def setUpClass(cls):
-    xr.use_spmd()
     super().setUpClass()
 
   def test_xla_sharded_tensor(self):
@@ -38,8 +37,6 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
                        device=xm.xla_device())
     xst1 = xs.mark_sharding(xt1, self._get_mesh((1, self.n_devices)),
                             partition_spec)
-
-    # TODO(244003536) add more tests for XLAShardedTensror.
     self.assertTrue(isinstance(xst1, XLAShardedTensor))
 
   def test_xla_sharded_tensor_repr(self):
@@ -579,7 +576,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
 
   def test_sharding_propagation(self):
     met.clear_all()
-    self.assertFalse(met.counter_value("ReplicateShardedData"))
+    self.assertFalse(met.counter_value("ReshardData"))
 
     # Linear model with two linear layers and only one is annotated.
     model = self.SimpleLinear().to(xm.xla_device())
@@ -604,7 +601,7 @@ class BasicXlaShardingTest(test_xla_sharding_base.XlaShardingTest):
     # Verify that the fc1 & output are sharded and valid
     model.fc1.weight.to('cpu')
     output.to('cpu')
-    self.assertEqual(met.counter_value("ReplicateShardedData"), 2)
+    self.assertEqual(met.counter_value("ReshardData"), 2)
 
   def test_inplace_add_with_sharding(self):
     xt = torch.ones(2, 2).to(xm.xla_device())

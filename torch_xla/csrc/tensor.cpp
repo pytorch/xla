@@ -50,6 +50,16 @@
 
 namespace torch_xla {
 
+namespace {
+bool CanApplySharding(const XLATensor::ShardingSpecPtr sharding) {
+  if (!sharding || sharding->sharding.type() == xla::OpSharding::REPLICATED ||
+      sharding->sharding.type() == xla::OpSharding::UNKNOWN) {
+    return true;
+  }
+  return false;
+}
+}  // namespace
+
 XLATensor::Data::~Data() { XLAGraphExecutor::Get()->UnregisterTensor(this); }
 
 XLATensorPtr XLATensor::Create(const at::Tensor& tensor,
@@ -247,7 +257,8 @@ void XLATensor::SetShardingSpec(const ShardingSpec& sharding, bool overwrite) {
     TORCH_LAZY_COUNTER("SetShardingSpec", 1);
     data()->sharding = std::make_shared<ShardingSpec>(sharding);
   } else {
-    XLA_CHECK(ShardingUtil::EqualShardingSpecs(sharding, *sharding_spec()))
+    XLA_CHECK(sharding_spec()->sharding.type() == xla::OpSharding::UNKNOWN ||
+              ShardingUtil::EqualShardingSpecs(sharding, *sharding_spec()))
         << "Existing sharding annotation, "
         << sharding_spec()->sharding.DebugString()
         << ", must be cleared before applying a new one, "

@@ -279,6 +279,11 @@ class ComputationClient {
   virtual std::vector<DataPtr> TransferToDevice(
       absl::Span<const std::shared_ptr<const TensorSource>> tensors) = 0;
 
+  // Reshard and return data sharded by `sharding` spec. This is a no-op if the
+  // input sharding spec is identical to the target `sharding` sharding spec.
+  virtual DataPtr ReshardData(const DataPtr& handle,
+                              const xla::OpSharding& sharding) = 0;
+
   // Transfers local sharded tensor values to the TPU devices and returns a
   // `PjRtShardedData`.
   virtual DataPtr TransferShardsToDevice(

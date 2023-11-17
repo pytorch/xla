@@ -44,6 +44,11 @@ class PjRtComputationClient : public ComputationClient {
   std::vector<DataPtr> TransferToDevice(
       absl::Span<const std::shared_ptr<const TensorSource>> tensors) override;
 
+  // Reshard and return data sharded by `sharding` spec. This is a no-op if the
+  // input sharding spec is identical to the target `sharding` sharding spec.
+  DataPtr ReshardData(const DataPtr& handle,
+                      const xla::OpSharding& sharding) override;
+
   std::vector<xla::Literal> TransferFromDevice(
       absl::Span<const DataPtr> handles) override;
 
@@ -256,9 +261,6 @@ class PjRtComputationClient : public ComputationClient {
     std::unique_ptr<xla::PjRtLoadedExecutable> executable;
     std::optional<std::vector<xla::OpSharding>> output_shardings_;
   };
-
-  // Use XLA replication to re-assemble the sharded data.
-  std::shared_ptr<PjRtData> ReplicateShardedData(const DataPtr& handle);
 };
 
 }  // namespace runtime
