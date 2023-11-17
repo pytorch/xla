@@ -43,6 +43,8 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     print(sharding)
     print("then print:")
     generatedtable = visualize_tensor_sharding(t)
+    print("generated table:")
+    print(generatedtable.columns)
     
     console = Console(file=io.StringIO(), width=120)
     console.print(ttable)
@@ -80,7 +82,21 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     print("sharding is: ")
     print(sharding)
     print("then print: ")
-    visualize_tensor_sharding(t)
+    generatedtable = visualize_tensor_sharding(t)
+    print("generated table:")
+    print(generatedtable.columns)
+    
+    console = Console(file=io.StringIO(), width=120)
+    console.print(ttable)
+    fask_table = rich.table.Table(show_header=False, show_lines=False, padding=0, highlight=False, pad_edge=False, box=rich.box.SQUARE)
+    col = []
+    col.append(rich.padding.Padding(rich.align.Align('TPU [0, 1, 2, 3]', "center", vertical="middle"), (9,9,9,9), style=rich.style.Style(bgcolor=color, color=text_color)))
+    fask_table.add_row(*col)
+    col = []
+    col.append(rich.padding.Padding(rich.align.Align('TPU [4, 5, 6, 7]', "center", vertical="middle"), (9,9,9,9), style=rich.style.Style(bgcolor=color, color=text_color)))
+    fask_table.add_row(*col)
+    # console.print(table)
+    assert generatedtable.columns == fask_table.columns
 
 
   @unittest.skipIf(xr.device_type() == 'CPU', "skipped on CPU before enable")
@@ -100,7 +116,18 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     print("sharding is: ")
     print(sharding)
     print("then print: ")
-    visualize_tensor_sharding(t)
+    generatedtable = visualize_tensor_sharding(t)
+    print("generated table:")
+    print(generatedtable.columns)
+    
+    console = Console(file=io.StringIO(), width=120)
+    console.print(ttable)
+    fask_table = rich.table.Table(show_header=False, show_lines=False, padding=0, highlight=False, pad_edge=False, box=rich.box.SQUARE)
+    col = []
+    col.append(rich.padding.Padding(rich.align.Align('TPU [0, 1, 2, 3, 4, 5, 6, 7]', "center", vertical="middle"), (9,9,9,9), style=rich.style.Style(bgcolor=color, color=text_color)))
+    fask_table.add_row(*col)
+    # console.print(table)
+    assert generatedtable.columns == fask_table.columns
 
 if __name__ == '__main__':
   test = unittest.main()
