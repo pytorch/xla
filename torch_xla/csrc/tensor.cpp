@@ -38,7 +38,6 @@
 #include "torch_xla/csrc/runtime/env_vars.h"
 #include "torch_xla/csrc/runtime/pjrt_computation_client.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
-#include "torch_xla/csrc/runtime/thread_pool.h"
 #include "torch_xla/csrc/runtime/xla_util.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
@@ -890,6 +889,11 @@ int64_t XLATensor::GetHandle() const {
   } else {
     XLA_CHECK(false) << "XlaTensor does not have data handle";
   }
+}
+
+void XLATensor::MarkDynamicDimension(uint32_t dim) {
+  auto* xla_node = dynamic_cast<XlaNode*>(GetIrValue().node.get());
+  xla_node->MarkDynamicDimension(dim);
 }
 
 }  // namespace torch_xla

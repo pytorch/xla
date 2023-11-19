@@ -81,7 +81,15 @@ xla::XlaOp GetScaleValue(xla::XlaOp input, xla::XlaOp count,
   xla::XlaOp scale = xla::Select(xla::Ne(count, zero),
                                  one / xla::ConvertElementType(count, type),
                                  xla::NanValue(input.builder(), type));
-  return input * scale;
+
+  if (XlaHelpers::IsUnboundedDynamismEnabled()) {
+    // XLA Multiply doesn't do implicit broadcasting for unbounded dynamism now.
+    // TODO(lsy323): Remove this branch once the support is added in XLA.
+    auto promoted = XlaHelpers::Promote(input, scale);
+    return promoted.first * promoted.second;
+  } else {
+    return input * scale;
+  }
 }
 
 xla::XlaOp AverageValue(xla::XlaOp input, xla::XlaOp reduced) {
@@ -109,8 +117,15 @@ SummationResult CreateSummation(xla::XlaOp input,
         result.result, result.rinfo.element_count.size, shape.element_type());
   }
   if (keep_reduced_dimensions) {
-    result.result =
-        XlaHelpers::DynamicReshape(result.result, result.rinfo.new_dimensions);
+    if (XlaHelpers::IsUnboundedDynamismEnabled()) {
+      // TODO(lsy323): Use XLA DynamicReshape once unbounded dynamism support is
+      // added.
+      result.result = XlaHelpers::DynamicUnboundedReshape(
+          result.result, input, result.rinfo.new_dimensions);
+    } else {
+      result.result = XlaHelpers::DynamicReshape(result.result,
+                                                 result.rinfo.new_dimensions);
+    }
   }
   return result;
 }

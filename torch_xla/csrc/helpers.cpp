@@ -9,7 +9,6 @@
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/dtype.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
-#include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
 #include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/shape_helper.h"
@@ -20,6 +19,9 @@
 
 namespace torch_xla {
 namespace {
+
+// TODO(lsy323): Get reserved number for unbounded dim after it's added in XLA.
+static constexpr int64_t kUnboundedSize = std::numeric_limits<int64_t>::min();
 
 xla::XlaOp ConvertBinaryOpResult(xla::XlaOp op1, xla::XlaOp op2,
                                  xla::XlaOp result) {
@@ -63,6 +65,9 @@ xla::XlaOp XlaHelpers::BroadcastDimensions(xla::XlaOp input,
   std::vector<int64_t> bcast_sizes = SizesOfXlaOp(input);
   for (size_t i = 0; i < dimensions.size(); ++i) {
     bcast_sizes.at(dimensions[i]) = sizes[i];
+    if (XlaHelpers::IsUnboundedDynamismEnabled()) {
+      XLA_CHECK(sizes[i] != kUnboundedSize);
+    }
   }
   return xla::BroadcastInDim(input, bcast_sizes,
                              GetAllDimensions(bcast_sizes.size()));
@@ -322,6 +327,59 @@ xla::XlaOp XlaHelpers::DynamicReshapeAs(xla::XlaOp input,
              : xla::Reshape(input, shape.dimensions());
 }
 
+bool XlaHelpers::IsUnboundedDynamic(const xla::Shape& shape) {
+  XLA_CHECK(XlaHelpers::IsUnboundedDynamismEnabled())
+      << "set EXPERIMENTAL_XLA_UNBOUNDED_DYNAMISM=1 to run any unbounded "
+         "dynamism workload.";
+  const absl::Span<const int64_t> dims = shape.dimensions();
+  return std::any_of(dims.begin(), dims.end(),
+                     [](int64_t size) { return size == kUnboundedSize; });
+}
+
+xla::XlaOp XlaHelpers::DynamicUnboundedReshape(
+    xla::XlaOp input, xla::XlaOp aux_input,
+    absl::Span<const int64_t> output_sizes) {
+  XLA_CHECK(XlaHelpers::IsUnboundedDynamismEnabled())
+      << "set EXPERIMENTAL_XLA_UNBOUNDED_DYNAMISM=1 to run any unbounded "
+         "dynamism workload.";
+  const xla::Shape& aux_input_shape = ShapeHelper::ShapeOfXlaOp(aux_input);
+  XLA_CHECK(output_sizes.size() == aux_input_shape.rank())
+      << "XlaHelpers::DynamicUnboundedReshape constrainled failed!";
+  std::vector<xla::XlaOp> get_dim_ops;
+  std::vector<xla::XlaOp> reshaped_ops;
+  bool all_static = true;
+  std::vector<bool> output_dynamic(output_sizes.size(), false);
+
+  for (int i = 0; i < output_sizes.size(); i++) {
+    if (output_sizes[i] == kUnboundedSize) {
+      output_dynamic[i] = true;
+      get_dim_ops.push_back(xla::GetDimensionSize(aux_input, i));
+      all_static = false;
+    } else {
+      get_dim_ops.push_back(XlaHelpers::ScalarValue<int32_t>(
+          output_sizes[i], aux_input.builder()));
+    }
+  }
+
+  if (all_static) {
+    return xla::Reshape(input, output_sizes);
+  }
+
+  // Create the reshape from scalar to 1-D vector
+  for (auto get_dim_op : get_dim_ops) {
+    reshaped_ops.push_back(xla::Reshape(get_dim_op, {1}));
+  }
+
+  // Create Concatenate op
+  auto concat_op = xla::ConcatInDim(input.builder(), reshaped_ops, {0});
+  return xla::CustomCall(
+      aux_input.builder(), "stablehlo.dynamic_reshape", {input, concat_op},
+      xla::ShapeUtil::MakeShape(aux_input_shape.element_type(), output_sizes,
+                                output_dynamic));
+
+  return input;
+}
+
 bool XlaHelpers::SameStaticDimensions(const xla::Shape& shape1,
                                       const xla::Shape& shape2) {
   return shape1.is_static() && shape2.is_static() &&
@@ -484,6 +542,11 @@ xla::Shape XlaHelpers::GetPromotedBinaryOpShape(const xla::Shape& shape1,
         torch::lazy::GetPromotedShape(
             runtime::util::ToVector<int64_t>(shape1.dimensions()),
             runtime::util::ToVector<int64_t>(shape2.dimensions())));
+  }
+  if (XlaHelpers::IsUnboundedDynamismEnabled()) {
+    XLA_CHECK(!XlaHelpers::IsUnboundedDynamic(shape1) &&
+              !XlaHelpers::IsUnboundedDynamic(shape2))
+        << "Unreachable for unbounded dynamic code\n";
   }
   return GetPromotedDynamicShape(shape1, shape2);
 }

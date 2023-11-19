@@ -20,6 +20,7 @@
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/strings/str_cat.h"
+#include "absl/synchronization/blocking_counter.h"
 #include "absl/types/variant.h"
 #include "pybind11/attr.h"
 #include "pybind11/cast.h"
@@ -43,11 +44,9 @@
 #include "torch_xla/csrc/runtime/metrics.h"
 #include "torch_xla/csrc/runtime/metrics_analysis.h"
 #include "torch_xla/csrc/runtime/metrics_reader.h"
-#include "torch_xla/csrc/runtime/multi_wait.h"
 #include "torch_xla/csrc/runtime/profiler.h"
 #include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
-#include "torch_xla/csrc/runtime/thread_pool.h"
 #include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/runtime/xla_coordinator.h"
 #include "torch_xla/csrc/runtime/xla_util.h"
@@ -1935,6 +1934,12 @@ void InitXlaModuleBindings(py::module m) {
           }
           return handles;
         });
+
+  m.def("_xla_mark_dynamic", [](const at::Tensor& input, uint32_t dim) {
+    TORCH_LAZY_COUNTER("XlaMarkDynamic", 1);
+    XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+    xtensor->MarkDynamicDimension(dim);
+  });
 
   // -------------Dynamo Integration API Start-------------------------
   /*
