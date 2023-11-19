@@ -51,8 +51,8 @@ Thu Dec  8 06:24:29 2022
 
 ### Wheel
 ```
-pip3 install torch==2.0
-pip3 install https://storage.googleapis.com/tpu-pytorch/wheels/cuda/117/torch_xla-2.0-cp38-cp38-linux_x86_64.whl
+pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/test/cu118
+pip3 install <torch_xla_new_release_wheel. Example: https://storage.googleapis.com/tpu-pytorch/wheels/cuda/117/torch_xla-2.0-cp38-cp38-linux_x86_64.whl>
 ```
 
 ## Run a simple model
