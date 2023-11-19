@@ -44,9 +44,9 @@ http_archive(
         "//openxla_patches:constexpr_return.diff",
         "//openxla_patches:pjrt_api_tsl_logging.diff",
     ],
-    strip_prefix = "xla-97a5f819faf9ff793b7ba68ff1f31f74f9459c18",
+    strip_prefix = "openxla-4ac6e4f0f5b2f1ef307e11c08e227044f613c870",
     urls = [
-        "https://github.com/openxla/xla/archive/97a5f819faf9ff793b7ba68ff1f31f74f9459c18.tar.gz",
+	"https://github.com/jeffhataws/openxla/archive/4ac6e4f0f5b2f1ef307e11c08e227044f613c870.tar.gz",
     ],
 )
 
