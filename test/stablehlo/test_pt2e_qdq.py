@@ -12,6 +12,7 @@ import torch_xla.core.xla_model as xm
 from torch_xla.tf_saved_model_integration import save_torch_module_as_tf_saved_model
 import unittest
 
+# Needed to workaround the stablehlo bytecode serialization issue in https://github.com/openxla/stablehlo/issues/1812
 os.environ['STABLEHLO_BYTECODE_FROM_PRETTYPRINT'] = '1'
 
 
