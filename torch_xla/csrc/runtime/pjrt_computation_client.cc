@@ -702,7 +702,7 @@ PjRtComputationClient::ExecuteReplicated(
   TF_VLOG(5) << "ExecuteReplicated acquiring PJRT device lock for "
              << spmd_device_str << " Done";
 
-  std::optional<std::vector<xla::PjRtFuture<xla::Status>>> returned_futures;
+  std::optional<std::vector<xla::PjRtFuture<xla::Status>>> returned_futures({});
   std::vector<std::vector<std::unique_ptr<xla::PjRtBuffer>>> results;
   {
     tsl::profiler::TraceMe activity(
