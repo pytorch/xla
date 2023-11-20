@@ -12,6 +12,7 @@ import sys
 import time
 import torch
 from tqdm import tqdm
+from torch.profiler import profile, record_function, ProfilerActivity
 
 try:
   from .benchmark_model import ModelLoader
@@ -232,6 +233,21 @@ class ExperimentRunner:
       inputs_list.append(inputs)
     return inputs_list
 
+  def dump_profile_info(self, prof, model_name):
+    assert prof is not None, 'Expecting profiler to be defined!'
+    if not self._args.profile_cuda_dump:
+      logger.warning('Profiling enabled, but dumping tracing/kernel summary disabled.') 
+      return
+
+    file_path = f"/tmp/{model_name}-profile"
+    os.makedirs(file_path, exist_ok=True)
+    prof.export_chrome_trace(os.path.join(file_path, "trace.json"))
+
+    kernel_dump = prof.key_averages().table(sort_by="cuda_time_total", row_limit=500)
+    with open(os.path.join(file_path, "kernel_dump.txt"), "a") as f:
+      f.write(kernel_dump)
+
+
   def timed_run(self, benchmark_experiment, benchmark_model):
     reset_rng_state(benchmark_experiment)
 
@@ -242,26 +258,41 @@ class ExperimentRunner:
     self._mark_step(benchmark_experiment)
     self._synchronize(benchmark_experiment)
 
+    enable_prof = self._args.profile_cuda
     metrics = OrderedDict()
     t_start = time.perf_counter()
     if benchmark_experiment.xla:
       t_trace = 0
 
-    for i in range(self._args.iterations_per_run):
-      if benchmark_experiment.xla:
-        t_trace_start = time.perf_counter()
+    def loop(prof=None):
+      nonlocal t_trace
+      for i in range(self._args.iterations_per_run):
+        if benchmark_experiment.xla:
+          t_trace_start = time.perf_counter()
 
-      output = benchmark_model.model_iter_fn(
-          inputs_list[i], collect_full_output=self._args.collect_full_output)
+        output = benchmark_model.model_iter_fn(
+            inputs_list[i], collect_full_output=self._args.collect_full_output)
 
-      if benchmark_experiment.xla:
-        t_trace += time.perf_counter() - t_trace_start
+        if benchmark_experiment.xla:
+          t_trace += time.perf_counter() - t_trace_start
 
-      self._mark_step(benchmark_experiment)
+        self._mark_step(benchmark_experiment)
+        
+        if prof:
+          prof.step()
+      return output
+
+    if enable_prof:
+      with profile(activities=[ProfilerActivity.CUDA, ProfilerActivity.CPU]) as prof
+        output = loop(prof)
+    else:
+      output = loop()
 
     self._synchronize(benchmark_experiment)
 
     t_end = time.perf_counter()
+    if enable_prof:
+      self.dump_profile_info(prof, benchmark_model.model_name)
 
     metrics["total_time"] = t_end - t_start
     metrics[
@@ -455,6 +486,20 @@ def parse_args(args=None):
       "--model-config",
       type=str,
       help="JSON string of the model config dict.",
+  )
+
+  parsed.add_argument(
+      "--profile-cuda",
+      action="store_true",
+      help="""Whether to profile CUDA or not. Note this does not do much except for
+      triggering a profiler. To get the profiling data use additionally --profile-cuda-dump""",
+  )
+
+  parser.add_argument(
+      "--profile-cuda-dump",
+      type=str,
+      default="./output/",
+      help="Directory specifying where to dump profiling information (summary, and trace)",
   )
 
   return parser.parse_args(args)
