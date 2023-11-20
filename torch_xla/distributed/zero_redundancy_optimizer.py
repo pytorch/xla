@@ -274,14 +274,14 @@ class ZeroRedundancyOptimizer(Optimizer):
 
     if self.coalesce_cc:
       grad_shard = xm.reduce_scatter(
-                    xm.REDUCE_SUM,
-                    padded_grads,
-                    scale=1.0 / self.local_world_size,
-                    scatter_dim=0,
-                    shard_count=self.local_world_size,
-                    pin_layout=self.pin_layout,
-                    groups=self.sharding_groups,
-                  )
+          xm.REDUCE_SUM,
+          padded_grads,
+          scale=1.0 / self.local_world_size,
+          scatter_dim=0,
+          shard_count=self.local_world_size,
+          pin_layout=self.pin_layout,
+          groups=self.sharding_groups,
+      )
       index = 0
       for param_group, sharded_param_group in zip(
           self.param_groups, self.base_optimizer.param_groups):
@@ -325,14 +325,14 @@ class ZeroRedundancyOptimizer(Optimizer):
                 groups=self.sharding_groups,
             )
             param.data.copy_(padded_param.data[:param.size(0)])
-    
+
     if self.coalesce_cc:
       padded_params = xm.all_gather(
-                        sharded_data,
-                        dim=0,
-                        pin_layout=self.pin_layout,
-                        groups=self.sharding_groups,
-                      )
+          sharded_data,
+          dim=0,
+          pin_layout=self.pin_layout,
+          groups=self.sharding_groups,
+      )
       index = 0
       for param_group, sharded_param_group in zip(
           self.param_groups, self.base_optimizer.param_groups):
