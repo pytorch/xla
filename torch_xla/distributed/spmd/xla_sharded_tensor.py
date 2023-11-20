@@ -142,6 +142,10 @@ class XLAShardedTensor(torch.Tensor):
     return ShardingType(sharding_type)
 
   def __repr__(self):
+    if not hasattr(self, "global_tensor"):
+      # materialize a copy of sharded global_tensnor and keep the actual data
+      # sharded on the XLA devices.
+      return str(self.cpu())
     return f"XLAShardedTensor({self.global_tensor})"
 
   @classmethod

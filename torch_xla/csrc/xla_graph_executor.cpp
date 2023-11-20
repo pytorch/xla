@@ -48,10 +48,10 @@
 #include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/runtime/stablehlo_helper.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
-#include "torch_xla/csrc/runtime/thread_pool.h"
 #include "torch_xla/csrc/runtime/xla_util.h"
 #include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/tensor_util.h"
+#include "torch_xla/csrc/thread_pool.h"
 #include "torch_xla/csrc/torch_util.h"
 #include "torch_xla/csrc/xla_backend_impl.h"
 #include "torch_xla/csrc/xla_sharding_util.h"
@@ -757,7 +757,7 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
     }
   };
 
-  runtime::env::ScheduleIoClosure(async->mwait.Completer(std::move(syncfn)));
+  thread::Schedule(async->mwait.Completer(std::move(syncfn)));
 
   return placeholders;
 }
@@ -1029,7 +1029,7 @@ XLAGraphExecutor::ScheduleSyncTensorsGraph(
     }
   };
 
-  runtime::env::ScheduleIoClosure(async->mwait.Completer(std::move(syncfn)));
+  thread::Schedule(async->mwait.Completer(std::move(syncfn)));
   return async;
 }
 

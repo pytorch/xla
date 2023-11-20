@@ -82,13 +82,12 @@ cc_library(
     ":computation_client",
     ":debug_macros",
     ":env_vars",
-    ":multi_wait",
     ":profiler",
     ":stablehlo_helper",
     ":tensor_source",
     ":tf_logging",
-    ":thread_pool",
     ":xla_coordinator",
+    "//torch_xla/csrc:thread_pool",
     "@xla//xla:literal",
     "@xla//xla:shape_util",
     "@xla//xla/client:xla_computation",
@@ -102,6 +101,7 @@ cc_library(
     "@tsl//tsl/profiler/lib:traceme",
     "@tsl//tsl/platform/cloud:gcs_file_system",
     "@com_google_absl//absl/strings",
+    "@com_google_absl//absl/synchronization",
     "@com_google_absl//absl/types:span",
   ],
 )
@@ -187,15 +187,6 @@ cc_library(
     ],
 )
 
-cc_library(
-    name = "multi_wait",
-    srcs = ["multi_wait.cc"],
-    hdrs = ["multi_wait.h"],
-    deps = [
-        "@xla//xla:types",
-    ],
-)
-
 # Profiler silently fails unless we link these backends
 cc_library(
   name = "profiler_backends",
@@ -276,16 +267,6 @@ cc_library(
     deps = [
         "@xla//xla:statusor",
         "@xla//xla/service:platform_util",
-    ],
-)
-
-cc_library(
-    name = "thread_pool",
-    srcs = ["thread_pool.cc"],
-    hdrs = ["thread_pool.h"],
-    deps = [
-        ":metrics",
-        ":tf_logging",
     ],
 )
 
