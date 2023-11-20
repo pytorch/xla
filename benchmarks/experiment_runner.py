@@ -236,17 +236,18 @@ class ExperimentRunner:
   def dump_profile_info(self, prof, model_name):
     assert prof is not None, 'Expecting profiler to be defined!'
     if not self._args.profile_cuda_dump:
-      logger.warning('Profiling enabled, but dumping tracing/kernel summary disabled.') 
+      logger.warning(
+          'Profiling enabled, but dumping tracing/kernel summary disabled.')
       return
 
     file_path = f"/tmp/{model_name}-profile"
     os.makedirs(file_path, exist_ok=True)
     prof.export_chrome_trace(os.path.join(file_path, "trace.json"))
 
-    kernel_dump = prof.key_averages().table(sort_by="cuda_time_total", row_limit=500)
+    kernel_dump = prof.key_averages().table(
+        sort_by="cuda_time_total", row_limit=500)
     with open(os.path.join(file_path, "kernel_dump.txt"), "a") as f:
       f.write(kernel_dump)
-
 
   def timed_run(self, benchmark_experiment, benchmark_model):
     reset_rng_state(benchmark_experiment)
@@ -277,13 +278,14 @@ class ExperimentRunner:
           t_trace += time.perf_counter() - t_trace_start
 
         self._mark_step(benchmark_experiment)
-        
+
         if prof:
           prof.step()
       return output
 
     if enable_prof:
-      with profile(activities=[ProfilerActivity.CUDA, ProfilerActivity.CPU]) as prof
+      with profile(
+          activities=[ProfilerActivity.CUDA, ProfilerActivity.CPU]) as prof:
         output = loop(prof)
     else:
       output = loop()
@@ -488,7 +490,7 @@ def parse_args(args=None):
       help="JSON string of the model config dict.",
   )
 
-  parsed.add_argument(
+  parser.add_argument(
       "--profile-cuda",
       action="store_true",
       help="""Whether to profile CUDA or not. Note this does not do much except for
