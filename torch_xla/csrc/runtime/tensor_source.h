@@ -54,7 +54,8 @@ class AtenSource : public TensorSource {
     if (target_torch_type != tensor.type().scalarType()) {
       TORCH_LAZY_COUNTER("AtenSourceDowncasts", 1);
     }
-    tensor_ = std::move(tensor.to(target_torch_type, /*non_blocking=*/false, /*copy=*/true, at::MemoryFormat::Contiguous));
+    tensor_ = std::move(tensor.to(target_torch_type, /*non_blocking=*/false,
+                                  /*copy=*/true, at::MemoryFormat::Contiguous));
   }
 
   const void* data() const override { return tensor_.const_data_ptr(); }
