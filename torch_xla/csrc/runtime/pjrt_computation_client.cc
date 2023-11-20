@@ -699,7 +699,6 @@ PjRtComputationClient::ExecuteReplicated(
   TF_VLOG(5) << "ExecuteReplicated acquiring PJRT device lock for "
              << spmd_device_str;
   auto op = operation_tracker_.StartOperation(spmd_device_str);
-  // auto lock = lock_device_shared(spmd_device_str);
   TF_VLOG(5) << "ExecuteReplicated acquiring PJRT device lock for "
              << spmd_device_str << " Done";
 
