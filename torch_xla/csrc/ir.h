@@ -146,6 +146,9 @@ class XlaNode : public torch::lazy::Node {
     return unbounded_dynamic_dims_;
   }
 
+  void SetCustomOpName(const std::string& op_name);
+  const std::string& custom_op_name() const { return custom_op_name_; }
+
  protected:
   std::unordered_set<uint32_t> unbounded_dynamic_dims_;
 
@@ -167,6 +170,8 @@ class XlaNode : public torch::lazy::Node {
 
   // Experimental sharding annotations attached to the IR node.
   std::vector<std::shared_ptr<xla::OpSharding>> output_shardings_;
+
+  std::string custom_op_name_;
 };
 
 inline std::ostream& operator<<(std::ostream& stream, const XlaNode& node) {

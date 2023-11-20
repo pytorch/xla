@@ -854,6 +854,13 @@ class PyLoweringContext {
     return result;
   }
 
+  std::string GetHloJsonText() {
+    const xla::HloModuleProto& proto = computation.proto();
+    std::string result;
+    google::protobuf::util::MessageToJsonString(proto, &result);
+    return result;
+  }
+
  private:
   LoweringContext lowering_ctx;
   xla::XlaComputation computation;
@@ -895,6 +902,7 @@ void BuildLoweringContextSubmodule(py::module* m) {
       .def("build", &PyLoweringContext::Build)
       .def("hlo", &PyLoweringContext::GetHlo)
       .def("hlo_text", &PyLoweringContext::GetHloText)
+      .def("hlo_json", &PyLoweringContext::GetHloJsonText)
       .def("parameter_id_tensor_mapping",
            &PyLoweringContext::GetParameterIdTensorMapping)
       .def("tensor_parameter_id", &PyLoweringContext::GetTensorParameterId);
@@ -1909,6 +1917,16 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_replace_xla_tensor",
         [](at::Tensor& self, const at::Tensor& source) -> at::Tensor& {
           return XLANativeFunctions::set_(self, source);
+        });
+  m.def("_set_xla_custom_op_name",
+        [](const at::Tensor& input, const std::string& op_name) {
+          XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+          xtensor->SetCustomOpName(op_name);
+        });
+  m.def("_get_xla_custom_op_name",
+        [](const at::Tensor& input) -> const std::string& {
+          XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+          return xtensor->GetCustomOpName();
         });
   m.def("_get_all_reduce_token",
         [](const std::string& device_str) -> const torch::lazy::Value& {

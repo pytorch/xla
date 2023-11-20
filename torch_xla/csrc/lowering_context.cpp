@@ -38,7 +38,7 @@ class HloMetadataSetter {
   static bool ShouldPopulateXlaOpMetadata() {
     static bool op_metadata =
         runtime::sys_util::GetEnvBool("XLA_HLO_DEBUG", false);
-    return op_metadata;
+    return FLAGS_torch_lazy_ir_debug || op_metadata;
   }
 
   static void PopulateXlaOpMetadata(LoweringContext* loctx,
@@ -53,6 +53,13 @@ class HloMetadataSetter {
     metadata.set_op_type(op_type);
     const torch::lazy::MetaData& nmeta = node->metadata();
     std::string op_name_prefix;
+
+    const XlaNode* xla_node_cast = dynamic_cast<const XlaNode*>(node);
+
+    if (xla_node_cast != nullptr && !xla_node_cast->custom_op_name().empty()) {
+      op_name_prefix = xla_node_cast->custom_op_name();
+    }
+
     if (!nmeta.scope.empty()) {
       op_name_prefix =
           absl::StrCat(absl::StrReplaceAll(nmeta.scope, {{":", "_"}}), "/");
@@ -61,13 +68,8 @@ class HloMetadataSetter {
 
     if (!nmeta.frame_info.empty()) {
       const torch::lazy::SourceLocation& frame = nmeta.frame_info.front();
-      std::string::size_type pos = frame.file.find_last_of('/');
-      if (pos == std::string::npos) {
-        pos = 0;
-      } else {
-        ++pos;
-      }
-      metadata.set_source_file(frame.function + "@" + frame.file.substr(pos));
+
+      metadata.set_source_file(frame.file);
       metadata.set_source_line(frame.line);
     }
     loctx->builder()->SetOpMetadata(std::move(metadata));

@@ -282,6 +282,10 @@ class XLATensor : public torch::lazy::LazyTensor {
   // Override to enable SPMD.
   void AssignIrValue(torch::lazy::Value ir_value) const final;
 
+  // Set custom op name on XlaNode
+  void SetCustomOpName(const std::string& op_name);
+  const std::string& GetCustomOpName() const;
+
  private:
   XLATensor(const at::Tensor& tensor, const torch::lazy::BackendDevice& device);
   XLATensor(torch::lazy::BackendDataPtr handle,
