@@ -446,7 +446,6 @@ std::pair<std::vector<XLATensorPtr>, torch::lazy::Value> all_gather(
   return {result, torch::lazy::Value(node, inputs.size())};
 }
 
-
 XLATensorPtr all_gather(const XLATensorPtr& input, int64_t dim,
                         int64_t shard_count,
                         std::vector<std::vector<int64_t>> groups,
