@@ -103,7 +103,7 @@ sudo docker exec -it $(sudo docker ps | awk 'NR==2 { print $1 }') /bin/bash
 
 2. Build PyTorch and PyTorch/XLA from source.
 
-Make sure `PATH` and `LD_LIBRARY_PATH` environment variables account for cuda. See the above for more info.
+Make sure `PATH` and `LD_LIBRARY_PATH` environment variables account for cuda. See the [above](https://github.com/pytorch/xla/blob/master/docs/gpu.md#check-environment-variable) for more info.
 
 ```
 git clone https://github.com/pytorch/pytorch.git
