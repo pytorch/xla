@@ -796,13 +796,20 @@ std::vector<xla::Literal> ReleaseGilAndTransferData(
 
 std::vector<at::Tensor> XlaDataToTensors(
     absl::Span<const torch::lazy::BackendDataPtr> xla_data,
-    at::ScalarType dest_element_type) {
+    absl::Span<const at::ScalarType> dest_element_type) {
   std::vector<xla::Literal> literals = ReleaseGilAndTransferData(xla_data);
-  std::vector<at::Tensor> tensors;
-  tensors.reserve(literals.size());
-  for (auto& literal : literals) {
-    tensors.push_back(MakeTensorFromXlaLiteral(literal, dest_element_type));
+  std::vector<at::Tensor> tensors(literals.size());
+  auto mwait = std::make_shared<runtime::util::MultiWait>(tensors.size());
+  for (size_t i = 0; i < tensors.size(); ++i) {
+    auto copy_fn = [&, i]() {
+      tensors[i] = MakeTensorFromXlaLiteral(literals[i], dest_element_type[i]);
+    };
+    // Use an IO closure, since MakeTensorFromXlaLiteral may block on async
+    // copies for >2D tensors.
+    runtime::env::ScheduleIoClosure(
+        runtime::util::MultiWait::Completer(mwait, std::move(copy_fn)));
   }
+  mwait->Wait();
   return tensors;
 }
 

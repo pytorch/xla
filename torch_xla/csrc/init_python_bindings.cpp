@@ -1784,8 +1784,8 @@ void InitXlaModuleBindings(py::module m) {
                shard_handles) {
             shards.push_back(
                 XlaDataToTensors({shard_handle},
-                                 MaybeUpcastToHostTorchType(
-                                     shard_handle->shape().element_type()))
+                                 {MaybeUpcastToHostTorchType(
+                                     shard_handle->shape().element_type())})
                     .front());
             str_devices.push_back(shard_handle->device());
           }
