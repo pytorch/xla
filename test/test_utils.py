@@ -387,6 +387,6 @@ class XlaTestCase(unittest.TestCase):
     xla_tensors = [
         x.to(device).detach().requires_grad_(x.requires_grad) for x in tensors
     ]
-    results = xu.as_list(fn(*tensors))
+    results = xu.as_list(fn(*(t.clone() for t in tensors)))
     xla_results = xu.as_list(fn(*xla_tensors))
     self.compareResults(results, xla_results, rel_err=rel_err, abs_err=abs_err)
