@@ -145,6 +145,7 @@ function run_xla_op_tests {
   run_test_without_functionalization "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_test "$CDIR/test_async_closures.py"
   run_test "$CDIR/test_autocast.py"
+  run_test "$CDIR/test_hlo_metadata.py"
   run_test "$CDIR/test_profiler.py"
   run_test "$CDIR/test_ops.py"
   run_test "$CDIR/test_metrics.py"

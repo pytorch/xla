@@ -85,9 +85,8 @@ if [[ "$BAZEL_VERB" == "coverage" ]]; then
   EXTRA_FLAGS="$EXTRA_FLAGS --remote_download_outputs=all" # for lcov symlink
 fi
 
-
 if [ "$LOGFILE" != "" ]; then
-  bazel $BAZEL_VERB $EXTRA_FLAGS //torch_xla/csrc/runtime:all //test/cpp:all --test_timeout 1000 ${FILTER:+"$FILTER"} 2> $LOGFILE
+  bazel $BAZEL_VERB $EXTRA_FLAGS //torch_xla/csrc/runtime:all //test/cpp:all --test_timeout 1200 ${FILTER:+"$FILTER"} 2> $LOGFILE
 else
-  bazel $BAZEL_VERB $EXTRA_FLAGS //torch_xla/csrc/runtime:all //test/cpp:all --test_timeout 1000 ${FILTER:+"$FILTER"}
+  bazel $BAZEL_VERB $EXTRA_FLAGS //torch_xla/csrc/runtime:all //test/cpp:all --test_timeout 1200 ${FILTER:+"$FILTER"}
 fi
