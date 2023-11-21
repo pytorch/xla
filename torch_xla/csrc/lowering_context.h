@@ -7,6 +7,7 @@
 
 #include <memory>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -95,6 +96,10 @@ class LoweringContext : public torch::lazy::LoweringContext {
     return emitted_outputs_;
   }
 
+  // Return stack frame id
+  int64_t AddStackFrameLocation(const torch::lazy::SourceLocation& source,
+                                int64_t parent_id);
+
  private:
   struct Parameter {
     xla::XlaOp param;
@@ -110,6 +115,14 @@ class LoweringContext : public torch::lazy::LoweringContext {
       parameters_map_;
   std::vector<xla::XlaOp> root_tuple_;
   OutputMap<xla::XlaOp> emitted_outputs_;
+
+  // Stack frame index tables - we accumulate and write these to the HloModule
+  xla::StackFrameIndexProto indexes_;
+
+  std::map<std::string_view, int> function_name_to_id_;
+  std::map<std::string_view, int> file_name_to_id_;
+  std::map<std::tuple<int, int, int, int>, int> file_location_to_id_;
+  std::map<std::tuple<int, int>, int> frame_to_id_;
 };  // namespace torch_xla
 
 }  // namespace torch_xla
