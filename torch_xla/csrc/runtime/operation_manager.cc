@@ -47,8 +47,9 @@ void OperationManager::WaitForDevices(absl::Span<const std::string> devices) {
 }
 
 void OperationManager::Counter::Increment() {
-  // Block new operations after Wait() is called. count_ is already atomic, so
-  // atomic so we don't need an exclusive lock to prevent data races.
+  // Block new operations after BlockNewOperations() is called. count_ is
+  // already atomic, so atomic so we don't need an exclusive lock to prevent
+  // data races.
   std::shared_lock lock(pending_operations_mu_);
   auto current = count_.fetch_add(1, std::memory_order_acq_rel) + 1;
   TF_VLOG(5) << "Incremented operations for " << device_ << " to " << current;
