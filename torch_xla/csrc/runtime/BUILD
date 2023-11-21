@@ -82,6 +82,7 @@ cc_library(
     ":computation_client",
     ":debug_macros",
     ":env_vars",
+    ":operation_manager",
     ":profiler",
     ":stablehlo_helper",
     ":tensor_source",
@@ -185,6 +186,18 @@ cc_library(
         "@xla//xla:types",
         "@xla//xla/service:platform_util",
     ],
+)
+
+cc_library(
+  name = "operation_manager",
+  srcs = ["operation_manager.cc"],
+  hdrs = ["operation_manager.h"],
+  visibility = ["//visibility:private"],
+  deps = [
+    ":debug_macros",
+    ":tf_logging",
+    "@com_google_absl//absl/types:span",
+  ],
 )
 
 # Profiler silently fails unless we link these backends
