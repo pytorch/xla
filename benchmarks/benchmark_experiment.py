@@ -43,6 +43,7 @@ class ExperimentLoader:
       config_choices = {
           "accelerator": ["cpu", "cuda", "tpu"],
           "xla": [None, "PJRT", "XRT"],
+          "xla_flags": [None],
           "dynamo": [None, "inductor", "openxla_eval", "openxla"],
           "test": ["eval", "train"],
       }
@@ -50,17 +51,20 @@ class ExperimentLoader:
       if self._args.accelerator:
         config_choices["accelerator"] = list(set(self._args.accelerator))
       if self._args.xla:
-        config_choices["xla"] = list(set(self._args.xla))
         config_choices["xla"] = [
-            x if x != "None" else None for x in config_choices["xla"]
+            x if x != "None" else None for x in list(set(self._args.xla))
         ]
       if self._args.dynamo:
-        config_choices["dynamo"] = list(set(self._args.dynamo))
         config_choices["dynamo"] = [
-            x if x != "None" else None for x in config_choices["dynamo"]
+            x if x != "None" else None for x in list(set(self._args.dynamo))
         ]
       if self._args.test:
         config_choices["test"] = list(set(self._args.test))
+      if self._args.xla_flags:
+        config_choices["xla_flags"] = [
+            x if x != "None" else None for x in list(set(self._args.xla_flags))
+        ]
+
     else:
       raise NotImplementedError
 
@@ -100,15 +104,17 @@ class ExperimentLoader:
 
   def _add_experiment_env(self, experiment_config):
     process_env = None
+
     if experiment_config["xla"]:
       # remove env vars that would interfere with subprocess settings
       os.environ.pop("PJRT_DEVICE", None)
       os.environ.pop("XRT_TPU_CONFIG", None)
+      os.environ.pop("XLA_FLAGS", None)
+
+    process_env = os.environ.copy()
     if experiment_config["xla"] == "PJRT":
-      process_env = os.environ.copy()
       process_env["PJRT_DEVICE"] = experiment_config["accelerator"].upper()
     elif experiment_config["xla"] == "XRT":
-      process_env = os.environ.copy()
       if is_xla_device_available("TPU"):
         process_env["TPU_NUM_DEVICES"] = "1"
         process_env["XRT_TPU_CONFIG"] = "localservice;0;localhost:51011"
@@ -118,8 +124,10 @@ class ExperimentLoader:
         experiment_config["accelerator"].upper()):
       # In non-xla CPU training experiments, an env var is still needed if an
       # xla device exists, or there will be "Missing XLA configuration" error.
-      process_env = os.environ.copy()
       process_env["PJRT_DEVICE"] = experiment_config["accelerator"].upper()
+
+    if experiment_config["xla_flags"]:
+      process_env["XLA_FLAGS"] = experiment_config["xla_flags"]
 
     experiment_config["process_env"] = process_env
 
@@ -127,6 +135,7 @@ class ExperimentLoader:
     experiment_name = self.experiment_name
     accelerator = experiment_config["accelerator"]
     xla = experiment_config["xla"]
+    xla_flags = experiment_config["xla_flags"]
     dynamo = experiment_config["dynamo"]
     test = experiment_config["test"]
     batch_size = experiment_config.get("batch_size", self._args.batch_size)
@@ -134,6 +143,7 @@ class ExperimentLoader:
         experiment_name=experiment_name,
         accelerator=accelerator,
         xla=xla,
+        xla_flags=xla_flags,
         dynamo=dynamo,
         test=test,
         batch_size=batch_size)
@@ -143,11 +153,12 @@ class ExperimentLoader:
 
 class BenchmarkExperiment:
 
-  def __init__(self, experiment_name, accelerator, xla, dynamo, test,
+  def __init__(self, experiment_name, accelerator, xla, xla_flags, dynamo, test,
                batch_size):
     self.experiment_name = experiment_name
     self.accelerator = accelerator
     self.xla = xla
+    self.xla_flags = xla_flags
     self.dynamo = dynamo
     self.test = test
     self.batch_size = batch_size
@@ -175,6 +186,7 @@ class BenchmarkExperiment:
     d["accelerator"] = self.accelerator
     d["accelerator_model"] = self.accelerator_model
     d["xla"] = self.xla
+    d["xla_flags"] = self.xla_flags
     d["dynamo"] = self.dynamo
     d["test"] = self.test
     d["batch_size"] = self.batch_size

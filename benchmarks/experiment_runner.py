@@ -252,6 +252,7 @@ class ExperimentRunner:
       f.write(kernel_dump)
 
   def timed_run(self, benchmark_experiment, benchmark_model):
+
     reset_rng_state(benchmark_experiment)
 
     inputs_list = self.prepare_inputs(benchmark_model.example_inputs,
@@ -323,12 +324,14 @@ def parse_args(args=None):
       action="append",
       default=[],
       help="filter benchmarks with regexp")
+
   parser.add_argument(
       "--exclude",
       "-x",
       action="append",
       default=[],
       help="filter out benchmarks with regexp")
+
   parser.add_argument(
       "--filter-by-tier",
       type=int,
@@ -336,6 +339,7 @@ def parse_args(args=None):
       default=[],
       help="filter benchmarks by predefined tier 1-3",
   )
+
   parser.add_argument(
       "--exclude-by-tier",
       type=int,
@@ -413,6 +417,7 @@ def parse_args(args=None):
       choices=range(1, 10),
       help="Total number of partitions we want to divide the benchmark suite into",
   )
+
   parser.add_argument(
       "--partition-id",
       type=int,
@@ -503,7 +508,14 @@ def parse_args(args=None):
       "--profile-cuda-dump",
       type=str,
       default="./output/",
-      help="Directory specifying where to dump profiling information (summary, and trace)",
+      help="Directory specifying where to dump profiling information (summary, and trace)"
+  ),
+
+  parser.add_argument(
+      "--xla-flags",
+      type=str,
+      action="append",
+      help="Flags to forward to XLA via `XLA_FLAGS` env var.",
   )
 
   return parser.parse_args(args)
