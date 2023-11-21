@@ -48,7 +48,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     print(generatedtable.columns)
     
     console = rich.console.Console(file=io.StringIO(), width=120)
-    console.print(ttable)
+    # console.print(ttable)
     fask_table = rich.table.Table(show_header=False, show_lines=False, padding=0, highlight=False, pad_edge=False, box=rich.box.SQUARE)
     col = []
     col.append(rich.padding.Padding(rich.align.Align('TPU 0', "center", vertical="middle"), (9,9,9,9), style=rich.style.Style(bgcolor=color, color=text_color)))
@@ -88,7 +88,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     print(generatedtable.columns)
     
     console = rich.console.Console(file=io.StringIO(), width=120)
-    console.print(ttable)
+    # console.print(ttable)
     fask_table = rich.table.Table(show_header=False, show_lines=False, padding=0, highlight=False, pad_edge=False, box=rich.box.SQUARE)
     col = []
     col.append(rich.padding.Padding(rich.align.Align('TPU [0, 1, 2, 3]', "center", vertical="middle"), (9,9,9,9), style=rich.style.Style(bgcolor=color, color=text_color)))
@@ -122,7 +122,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     print(generatedtable.columns)
     
     console = rich.console.Console(file=io.StringIO(), width=120)
-    console.print(ttable)
+    # console.print(ttable)
     fask_table = rich.table.Table(show_header=False, show_lines=False, padding=0, highlight=False, pad_edge=False, box=rich.box.SQUARE)
     col = []
     col.append(rich.padding.Padding(rich.align.Align('TPU [0, 1, 2, 3, 4, 5, 6, 7]', "center", vertical="middle"), (9,9,9,9), style=rich.style.Style(bgcolor=color, color=text_color)))
