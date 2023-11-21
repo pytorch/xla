@@ -240,6 +240,17 @@ class TorchXLAReuseGraphTest(torch._dynamo.test_case.TestCase):
     x = torch.randint(0, 10, (10,), device=device)
     foo(x)
 
+  def test_inputs_not_computed(self):
+
+    @torch.compile(backend="openxla")
+    def foo(x):
+      return x * 2
+
+    device = xm.xla_device()
+    x = torch.rand(5, device=device)
+    x = x.unsqueeze(dim=-1)
+    foo(x)
+
 
 if __name__ == "__main__":
   from torch._dynamo.test_case import run_tests
