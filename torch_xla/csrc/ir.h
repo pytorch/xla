@@ -149,6 +149,11 @@ class XlaNode : public torch::lazy::Node {
   void SetCustomOpName(const std::string& op_name);
   const std::string& custom_op_name() const { return custom_op_name_; }
 
+  void SetCustomCallStackDepth(size_t max_call_stack_depth) {
+    max_call_stack_depth_ = max_call_stack_depth;
+  }
+  const size_t max_call_stack_depth() const { return max_call_stack_depth_; }
+
  protected:
   std::unordered_set<uint32_t> unbounded_dynamic_dims_;
 
@@ -172,6 +177,7 @@ class XlaNode : public torch::lazy::Node {
   std::vector<std::shared_ptr<xla::OpSharding>> output_shardings_;
 
   std::string custom_op_name_;
+  size_t max_call_stack_depth_;
 };
 
 inline std::ostream& operator<<(std::ostream& stream, const XlaNode& node) {

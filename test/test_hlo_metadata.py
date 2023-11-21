@@ -44,9 +44,9 @@ class TestHloMetaData(unittest.TestCase):
     # Strings to match in the lowering
     bingo = {
         "torch/_ops.py": False,
-        #"torch/nn/modules/linear.py": False,
-        #"torch/nn/modules/activation.py": False,
-        #"torch/nn/functional.py": False,
+        "torch/nn/modules/linear.py": False,
+        "torch/nn/modules/activation.py": False,
+        "torch/nn/functional.py": False,
         "Sequential[model]/Linear[0]": False,
         "Sequential[model]/ReLU[1]": False,
         "Sequential[model]/Linear[2]": False,
@@ -60,6 +60,10 @@ class TestHloMetaData(unittest.TestCase):
     non_zero_metadata = False
 
     local_json = json.loads(hlo_text)
+
+    with open("./hlo.json", "w") as f:
+      f.write(json.dumps(local_json, indent=2))
+
     assert "computations" in local_json
     for c in local_json["computations"]:
       if "instructions" in c:

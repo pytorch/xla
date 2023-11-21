@@ -286,6 +286,12 @@ class XLATensor : public torch::lazy::LazyTensor {
   void SetCustomOpName(const std::string& op_name);
   const std::string& GetCustomOpName() const;
 
+  // When using TorchDispatch - e.g. to set a custom op name we end up
+  // adding additional frames in stack frame debug - this limits
+  // stack depth
+  void SetCustomCallStackDepth(size_t max_call_stack_depth);
+  size_t GetCustomCallStackDepth() const;
+
  private:
   XLATensor(const at::Tensor& tensor, const torch::lazy::BackendDevice& device);
   XLATensor(torch::lazy::BackendDataPtr handle,

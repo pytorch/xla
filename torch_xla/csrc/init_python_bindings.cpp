@@ -1919,9 +1919,11 @@ void InitXlaModuleBindings(py::module m) {
           return XLANativeFunctions::set_(self, source);
         });
   m.def("_set_xla_custom_op_name",
-        [](const at::Tensor& input, const std::string& op_name) {
+        [](const at::Tensor& input, const std::string& op_name,
+           size_t max_call_stack_depth) {
           XLATensorPtr xtensor = bridge::GetXlaTensor(input);
           xtensor->SetCustomOpName(op_name);
+          xtensor->SetCustomCallStackDepth(max_call_stack_depth);
         });
   m.def("_get_xla_custom_op_name",
         [](const at::Tensor& input) -> const std::string& {

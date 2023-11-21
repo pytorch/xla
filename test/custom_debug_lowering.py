@@ -172,11 +172,13 @@ def CleanNames(names):
 
 def GetAllObjectAndClassNames(frame):
   names = []
+  frame_count = 0
   while frame is not None:
     name = GetClassNameAndObjFromFrame(frame)
     if len(name) > 0:
       names.append(name)
     frame = frame.f_back
+    frame_count += 1
 
   names.reverse()
 
@@ -187,7 +189,7 @@ def GetAllObjectAndClassNames(frame):
   if len(output) > 0:
     output += "/"
 
-  return output
+  return output, frame_count
 
 
 class CustomOpNameLowering(TorchDispatchMode):
@@ -208,6 +210,6 @@ class CustomOpNameLowering(TorchDispatchMode):
     res = func(*args, **kwargs)
     if 'xla' in str(res.device):
       frame = inspect.currentframe()
-      prefix = GetAllObjectAndClassNames(frame)
-      torch_xla._XLAC._set_xla_custom_op_name(res, prefix)
+      prefix, depth = GetAllObjectAndClassNames(frame)
+      torch_xla._XLAC._set_xla_custom_op_name(res, prefix, depth - 2)
     return res

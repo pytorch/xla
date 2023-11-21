@@ -912,4 +912,20 @@ const std::string& XLATensor::GetCustomOpName() const {
   }
 }
 
+void XLATensor::SetCustomCallStackDepth(size_t max_call_stack_depth) {
+  auto* xla_node = dynamic_cast<XlaNode*>(CurrentIrValue().node.get());
+  if (xla_node != nullptr) {
+    xla_node->SetCustomCallStackDepth(max_call_stack_depth);
+  }
+}
+
+size_t XLATensor::GetCustomCallStackDepth() const {
+  auto* xla_node = dynamic_cast<XlaNode*>(CurrentIrValue().node.get());
+  if (xla_node != nullptr) {
+    return xla_node->max_call_stack_depth();
+  } else {
+    return size_t(0);
+  }
+}
+
 }  // namespace torch_xla

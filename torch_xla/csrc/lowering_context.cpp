@@ -2,6 +2,7 @@
 
 #include <torch/csrc/lazy/core/ir_metadata.h>
 
+#include <iostream>
 #include <sstream>
 #include <stdexcept>
 #include <string_view>
@@ -62,8 +63,14 @@ class HloMetadataSetter {
 
     const XlaNode* xla_node_cast = dynamic_cast<const XlaNode*>(node);
 
+    size_t max_stack_depth = nmeta.frame_info.size();
+
     if (xla_node_cast != nullptr && !xla_node_cast->custom_op_name().empty()) {
       op_name_prefix = xla_node_cast->custom_op_name();
+
+      if (xla_node_cast->max_call_stack_depth() != 0) {
+        max_stack_depth = xla_node_cast->max_call_stack_depth();
+      }
     }
 
     if (!nmeta.scope.empty()) {
@@ -75,9 +82,12 @@ class HloMetadataSetter {
     if (!nmeta.frame_info.empty()) {
       auto frame_it = nmeta.frame_info.rbegin();
       int parent_frame_id = kInvalidIndex;
-      for (; frame_it != nmeta.frame_info.rend(); ++frame_it) {
+      int depth = 0;
+      for (; frame_it != nmeta.frame_info.rend() && depth <= max_stack_depth;
+           ++frame_it) {
         parent_frame_id =
             loctx->AddStackFrameLocation(*frame_it, parent_frame_id);
+        ++depth;
       }
 
       // Point to first entry / deepest call / top frame in call stack
