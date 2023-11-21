@@ -84,9 +84,13 @@ class ResultAnalyzer:
           "batch_size": tmp["experiment"]["batch_size"],
           "repeat": tmp["repeat"],
           "iterations_per_run": tmp["iterations_per_run"],
-          "error_message": tmp["metrics"].get("error", None),
+          "error_message": None,
           "outputs_file": tmp["outputs_file"],
       }
+
+      if "error" in tmp["metrics"] and not self._args.hide_errors:
+        d["error_message"] = tmp["metrics"]["error"]
+
       if "error" not in tmp["metrics"]:
         total_time = np.asarray(tmp["metrics"]["total_time"], dtype="float")
         d["median_total_time"] = np.median(total_time)
@@ -155,6 +159,13 @@ def parse_args(args=None):
       "--timestamp",
       type=int,
       help="User provided timestamp. If not provided, get the timestamp in analyzer",
+  )
+
+  parser.add_argument(
+      "--hide-errors",
+      default=False,
+      action="store_true",
+      help="Hide errors to make the CSV more readable",
   )
 
   return parser.parse_args(args)
