@@ -38,7 +38,6 @@ http_archive(
     ],
     patch_tool = "patch",
     patches = [
-        "//openxla_patches:resize_bicubic.diff",
         "//openxla_patches:cache_urls.diff",
         "//openxla_patches:constexpr_return.diff",
         "//openxla_patches:gpu_race_condition.diff",
