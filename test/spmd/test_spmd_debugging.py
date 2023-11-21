@@ -6,6 +6,7 @@ import math
 import numpy as np
 import os
 import io
+import rich
 
 import torch
 import torch_xla
@@ -46,7 +47,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     print("generated table:")
     print(generatedtable.columns)
     
-    console = Console(file=io.StringIO(), width=120)
+    console = rich.console.Console(file=io.StringIO(), width=120)
     console.print(ttable)
     fask_table = rich.table.Table(show_header=False, show_lines=False, padding=0, highlight=False, pad_edge=False, box=rich.box.SQUARE)
     col = []
@@ -86,7 +87,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     print("generated table:")
     print(generatedtable.columns)
     
-    console = Console(file=io.StringIO(), width=120)
+    console = rich.console.Console(file=io.StringIO(), width=120)
     console.print(ttable)
     fask_table = rich.table.Table(show_header=False, show_lines=False, padding=0, highlight=False, pad_edge=False, box=rich.box.SQUARE)
     col = []
@@ -120,7 +121,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     print("generated table:")
     print(generatedtable.columns)
     
-    console = Console(file=io.StringIO(), width=120)
+    console = rich.console.Console(file=io.StringIO(), width=120)
     console.print(ttable)
     fask_table = rich.table.Table(show_header=False, show_lines=False, padding=0, highlight=False, pad_edge=False, box=rich.box.SQUARE)
     col = []
