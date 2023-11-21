@@ -1,31 +1,21 @@
 load(
+    "//bazel:rules_def.bzl",
+    "ptxla_cc_test",
+)
+
+load(
     "@tsl//tsl/platform/default:cuda_build_defs.bzl",
     "if_cuda_is_configured",
+)
+
+load(
+    "//bazel:rules_def.bzl",
+    "ptxla_cc_test",
 )
 
 licenses(["notice"])  # Apache 2.0
 
 package(default_visibility = ["//visibility:public"])
-
-cc_library(
-    name = "async_task",
-    hdrs = ["async_task.h"],
-    deps = [
-        ":debug_macros",
-        ":thread_pool",
-        "@com_google_absl//absl/types:optional",
-    ],
-)
-
-cc_test(
-    name = "async_task_test",
-    size = "small",
-    srcs = ["async_task_test.cc"],
-    deps = [
-        ":async_task",
-        "@com_google_googletest//:gtest_main",
-    ],
-)
 
 cc_library(
   name = "runtime",
@@ -61,10 +51,12 @@ cc_library(
     ":metrics_reader",
     ":metrics",
     ":sys_util",
+    ":tensor_source",
     ":types",
     ":util",
     ":xla_coordinator",
     "//torch_xla/csrc:device",
+    "//torch_xla/csrc:dtype",
     "@tsl//tsl/platform:stacktrace_handler",
     "@xla//xla:literal_util",
     "@xla//xla/client:xla_computation",
@@ -90,11 +82,12 @@ cc_library(
     ":computation_client",
     ":debug_macros",
     ":env_vars",
-    ":multi_wait",
+    ":profiler",
     ":stablehlo_helper",
+    ":tensor_source",
     ":tf_logging",
-    ":thread_pool",
     ":xla_coordinator",
+    "//torch_xla/csrc:thread_pool",
     "@xla//xla:literal",
     "@xla//xla:shape_util",
     "@xla//xla/client:xla_computation",
@@ -104,9 +97,11 @@ cc_library(
     "@xla//xla/pjrt:pjrt_client",
     "@xla//xla/pjrt:tfrt_cpu_pjrt_client",
     "@xla//xla/pjrt:pjrt_c_api_client",
+    "@xla//xla/pjrt/c:pjrt_c_api_hdrs",
     "@tsl//tsl/profiler/lib:traceme",
     "@tsl//tsl/platform/cloud:gcs_file_system",
     "@com_google_absl//absl/strings",
+    "@com_google_absl//absl/synchronization",
     "@com_google_absl//absl/types:span",
   ],
 )
@@ -192,27 +187,17 @@ cc_library(
     ],
 )
 
+# Profiler silently fails unless we link these backends
 cc_library(
-    name = "multi_wait",
-    srcs = ["multi_wait.cc"],
-    hdrs = ["multi_wait.h"],
-    deps = [
-        "@xla//xla:types",
-    ],
-)
-
-cc_library(
-    name = "nccl_distributed",
-    srcs = ["nccl_distributed.cc"],
-    hdrs = ["nccl_distributed.h"],
-    deps = [
-        ":debug_macros",
-        "@com_google_absl//absl/strings",
-        "@com_google_absl//absl/types:span",
-        "@xla//xla:types",
-    ] + if_cuda_is_configured([
-        "@local_config_nccl//:nccl",
-    ]),
+  name = "profiler_backends",
+  visibility = ["//visibility:private"],
+  deps = [
+    "@xla//xla/backends/profiler/cpu:host_tracer",
+    "@xla//xla/backends/profiler/cpu:metadata_collector",
+  ] + if_cuda_is_configured([
+    "@xla//xla/backends/profiler/gpu:device_tracer",
+  ]),
+  alwayslink = True,
 )
 
 cc_library(
@@ -220,13 +205,16 @@ cc_library(
     srcs = ["profiler.cc"],
     hdrs = ["profiler.h"],
     deps = [
+      ":debug_macros",
+      ":profiler_backends",
+      "@xla//xla/backends/profiler/plugin:profiler_c_api_hdrs",
+      "@xla//xla/backends/profiler/plugin:plugin_tracer",
+      "@xla//xla/pjrt/c:pjrt_c_api_profiler_extension_hdrs",
       "@tsl//tsl/platform:status",
+      "@tsl//tsl/profiler/lib:profiler_factory",
       "@tsl//tsl/profiler/rpc:profiler_server_impl",
       "@tsl//tsl/profiler/rpc/client:capture_profile",
       "@com_google_absl//absl/container:flat_hash_map",
-
-      # Profiler silently fails unless we include this
-      "@xla//xla/backends/profiler:profiler_backends",
 
       # TODO: We get missing symbol errors without these deps. Why aren't they
       # included transitively from TensorFlow/TSL?
@@ -283,13 +271,14 @@ cc_library(
 )
 
 cc_library(
-    name = "thread_pool",
-    srcs = ["thread_pool.cc"],
-    hdrs = ["thread_pool.h"],
-    deps = [
-        ":metrics",
-        ":tf_logging",
-    ],
+  name = "tensor_source",
+  hdrs = ["tensor_source.h"],
+  deps = [
+      ":debug_macros",
+      "@xla//xla:literal",
+      "@xla//xla:shape_util",
+      "@torch//:headers",
+  ]
 )
 
 cc_library(
@@ -303,17 +292,7 @@ cc_library(
 )
 
 cc_library(
-    name = "unique",
-    hdrs = ["unique.h"],
-    deps = [
-        ":debug_macros",
-        "@com_google_absl//absl/types:optional",
-    ],
-)
-
-cc_library(
     name = "util",
-    srcs = ["util.cc"],
     hdrs = ["util.h"],
     deps = [
         ":types",
@@ -356,10 +335,11 @@ cc_library(
         "@xla//xla/service:platform_util",
         "@xla//xla/service/spmd:spmd_partitioner",
         "@tsl//tsl/platform:errors",
+        "@torch//:headers",
     ],
 )
 
-cc_test(
+ptxla_cc_test(
     name = "xla_util_test",
     size = "small",
     srcs = ["xla_util_test.cc"],
@@ -376,25 +356,27 @@ cc_test(
     ],
 )
 
-# TODO(goranpetrovic): reenable when `xla_cc_test` is fixed upstream.
-# xla_cc_test(
-#     name = "pjrt_computation_client_test",
-#     srcs = ["pjrt_computation_client_test.cc"],
-#     deps = [
-#         ":computation_client",
-#         "@xla//xla:literal",
-#         "@xla//xla:literal_util",
-#         "@xla//xla:shape_util",
-#         "@xla//xla:status",
-#         "@xla//xla:statusor",
-#         "@xla//xla/client:xla_builder",
-#         "@xla//xla/client:xla_computation",
-#         "@xla//xla/tests:literal_test_util",
-#         "@xla//xla/tools:hlo_module_loader",
-#         "@org_tensorflow//tensorflow/core/platform:logging",
-#         "@tsl//tsl/lib/core:status_test_util",
-#         "@tsl//tsl/platform:env",
-#         "@tsl//tsl/platform:test",
-#         "@tsl//tsl/platform:test_main",
-#     ],
-# )
+ptxla_cc_test(
+    name = "pjrt_computation_client_test",
+    srcs = ["pjrt_computation_client_test.cc"],
+    deps = [
+        ":computation_client",
+        ":pjrt_computation_client",
+        ":tensor_source",
+        "@xla//xla:literal",
+        "@xla//xla:literal_util",
+        "@xla//xla:shape_util",
+        "@xla//xla:status",
+        "@xla//xla:statusor",
+        "@xla//xla/client:xla_builder",
+        "@xla//xla/client:xla_computation",
+        "@xla//xla/tests:literal_test_util",
+        "@xla//xla/tools:hlo_module_loader",
+        "@tsl//tsl/lib/core:status_test_util",
+        "@tsl//tsl/platform:env",
+        "@tsl//tsl/platform:errors",
+        "@tsl//tsl/platform:logging",
+        "@tsl//tsl/platform:test",
+        "@tsl//tsl/platform:test_main",
+    ],
+)

@@ -5,21 +5,24 @@
 #include <vector>
 
 #include "absl/strings/ascii.h"
+#include "absl/synchronization/blocking_counter.h"
 #include "absl/types/span.h"
 #include "pjrt_computation_client.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/env_vars.h"
-#include "torch_xla/csrc/runtime/multi_wait.h"
+#include "torch_xla/csrc/runtime/profiler.h"
 #include "torch_xla/csrc/runtime/stablehlo_helper.h"
+#include "torch_xla/csrc/runtime/tensor_source.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
-#include "torch_xla/csrc/runtime/thread_pool.h"
 #include "torch_xla/csrc/runtime/xla_coordinator.h"
+#include "torch_xla/csrc/thread_pool.h"
 #include "tsl/profiler/lib/traceme.h"
 #include "xla/client/xla_builder.h"
 #include "xla/client/xla_computation.h"
 #include "xla/layout_util.h"
 #include "xla/literal.h"
+#include "xla/pjrt/c/pjrt_c_api.h"
 #include "xla/pjrt/distributed/distributed.h"
 #include "xla/pjrt/gpu/se_gpu_pjrt_client.h"
 #include "xla/pjrt/pjrt_api.h"
@@ -62,6 +65,23 @@ xla::Shape host_output_shape(xla::PjRtBuffer* buffer) {
   return xla::ShapeUtil::DeviceShapeToHostShape(shape);
 }
 
+xla::GpuAllocatorConfig GetGpuAllocatorConfig() {
+  auto allocator_config = xla::GpuAllocatorConfig{};
+  if (sys_util::GetEnvString(env::kEnvPjrtAllocatorCudaAsync, "").empty() &&
+      sys_util::GetEnvString(env::kEnvPjrtAllocatorPreallocate, "").empty() &&
+      sys_util::GetEnvString(env::kEnvPjrtAllocatorFraction, "").empty()) {
+    return allocator_config;
+  }
+  if (sys_util::GetEnvBool(env::kEnvPjrtAllocatorCudaAsync, false)) {
+    allocator_config.kind = xla::GpuAllocatorConfig::Kind::kCudaAsync;
+  }
+  allocator_config.preallocate =
+      sys_util::GetEnvBool(env::kEnvPjrtAllocatorPreallocate, true);
+  allocator_config.memory_fraction =
+      sys_util::GetEnvDouble(env::kEnvPjrtAllocatorFraction, 0.75);
+  return allocator_config;
+}
+
 }  // namespace
 
 std::string PjRtComputationClient::PjRtDeviceToString(
@@ -94,13 +114,17 @@ PjRtComputationClient::PjRtComputationClient() {
     client_ = std::move(xla::GetTfrtCpuClient(async, cpu_device_count).value());
   } else if (device_type == "TPU" || device_type == "TPU_C_API") {
     TF_VLOG(1) << "Initializing TFRT TPU client...";
-    XLA_CHECK_OK(
-        pjrt::LoadPjrtPlugin(
-            "tpu", sys_util::GetEnvString(env::kEnvTpuLibraryPath, "libtpu.so"))
-            .status());
+    // Prefer $TPU_LIBRARY_PATH if set
+    auto tpu_library_path = sys_util::GetEnvString(
+        env::kEnvTpuLibraryPath,
+        sys_util::GetEnvString(env::kEnvInferredTpuLibraryPath, "libtpu.so"));
+    XLA_CHECK_OK(pjrt::LoadPjrtPlugin("tpu", tpu_library_path).status());
     tsl::Status tpu_status = pjrt::InitializePjrtPlugin("tpu");
-    XLA_CHECK(tpu_status.ok());
+    XLA_CHECK_OK(tpu_status);
     client_ = std::move(xla::GetCApiClient("TPU").value());
+    const PJRT_Api* c_api =
+        static_cast<xla::PjRtCApiClient*>(client_.get())->pjrt_c_api();
+    profiler::RegisterProfilerForPlugin(c_api);
   } else if (device_type == "TPU_LEGACY") {
     XLA_ERROR() << "TPU_LEGACY client is no longer available.";
   } else if (device_type == "GPU" || device_type == "CUDA" ||
@@ -141,7 +165,7 @@ PjRtComputationClient::PjRtComputationClient() {
                << global_process_rank << ", num_nodes=" << global_world_size;
     client_ = std::move(xla::GetStreamExecutorGpuClient(
                             /*asynchronous=*/async,
-                            /*allocator_config=*/xla::GpuAllocatorConfig{},
+                            /*allocator_config=*/GetGpuAllocatorConfig(),
                             /*node_id=*/global_process_rank,
                             /*num_nodes=*/global_world_size,
                             /*allowed_devices=*/allowed_devices,
@@ -286,7 +310,7 @@ std::optional<xla::OpSharding> PjRtComputationClient::GetDataSharding(
 }
 
 std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
-    absl::Span<const TensorSource> tensors) {
+    absl::Span<const std::shared_ptr<const TensorSource>> tensors) {
   metrics::TimedSection timed(TransferToServerMetric());
   tsl::profiler::TraceMe activity("PjRtComputationClient::TransferToServer",
                                   tsl::profiler::TraceMeLevel::kInfo);
@@ -294,31 +318,22 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
   datas.reserve(tensors.size());
   int64_t total_size = 0;
   for (auto& tensor : tensors) {
-    xla::PjRtDevice* pjrt_device = StringToPjRtDevice(tensor.device);
+    xla::PjRtDevice* pjrt_device = StringToPjRtDevice(tensor->device());
 
-    auto literal = std::make_shared<xla::Literal>(tensor.shape);
-    tensor.populate_fn(tensor, literal->untyped_data(), literal->size_bytes());
-    std::vector<int64_t> byte_strides(literal->shape().dimensions_size());
-    XLA_CHECK_OK(xla::ShapeUtil::ByteStrides(literal->shape(),
-                                             absl::MakeSpan(byte_strides)));
-    total_size += literal->size_bytes();
+    total_size += xla::ShapeUtil::ByteSizeOf(tensor->shape());
 
-    // Avoid use-after-free on `literal` due to unsequenced move and use.
-    xla::Literal* literal_pointer = literal.get();
-    std::shared_ptr<xla::PjRtBuffer> buffer = std::move(
-        client_
-            ->BufferFromHostBuffer(
-                literal_pointer->untyped_data(),
-                literal_pointer->shape().element_type(),
-                literal_pointer->shape().dimensions(), byte_strides,
-                xla::PjRtClient::HostBufferSemantics::
-                    kImmutableUntilTransferCompletes,
-                [literal{std::move(literal)}]() { /* frees literal */ },
-                pjrt_device)
-            .value());
+    std::shared_ptr<xla::PjRtBuffer> buffer =
+        std::move(client_
+                      ->BufferFromHostBuffer(
+                          tensor->data(), tensor->primitive_type(),
+                          tensor->dimensions(), tensor->byte_strides(),
+                          xla::PjRtClient::HostBufferSemantics::
+                              kImmutableUntilTransferCompletes,
+                          [tensor]() { /* frees tensor */ }, pjrt_device)
+                      .value());
 
     ComputationClient::DataPtr data =
-        std::make_shared<PjRtData>(tensor.device, tensor.shape, buffer);
+        std::make_shared<PjRtData>(tensor->device(), tensor->shape(), buffer);
     datas.push_back(data);
   }
   OutboundDataMetric()->AddSample(total_size);
@@ -328,8 +343,8 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToServer(
 }
 
 ComputationClient::DataPtr PjRtComputationClient::TransferShardsToServer(
-    absl::Span<const TensorSource> tensor_shards, std::string device,
-    xla::Shape shape, xla::OpSharding sharding) {
+    absl::Span<const std::shared_ptr<const TensorSource>> tensor_shards,
+    std::string device, xla::Shape shape, xla::OpSharding sharding) {
   tsl::profiler::TraceMe activity(
       "PjRtComputationClient::TransferShardsToServer",
       tsl::profiler::TraceMeLevel::kInfo);
@@ -605,9 +620,9 @@ PjRtComputationClient::ExecuteComputation(
   }
   CreateDataHandlesCounter()->AddValue(datas.size());
 
-  auto mwait = std::make_shared<util::MultiWait>(1);
-  auto lockfn = [&, this, device, returned_future = std::move(*returned_future),
-                 timed]() mutable {
+  thread::Schedule(std::move([&, this, device,
+                              returned_future = std::move(*returned_future),
+                              timed]() mutable {
     TF_VLOG(5) << "ExecuteComputation acquiring PJRT device lock for "
                << device;
     // Grab the shared lock and block the `WaitDeviceOps` until buffer is
@@ -628,9 +643,7 @@ PjRtComputationClient::ExecuteComputation(
           timed.reset();
           TF_VLOG(3) << "ExecuteComputation returned_future->OnReady finished";
         });
-  };
-
-  env::ScheduleIoClosure(util::MultiWait::Completer(mwait, std::move(lockfn)));
+  }));
 
   TF_VLOG(1) << "Returning " << datas.size() << " results";
   return datas;
@@ -654,7 +667,7 @@ PjRtComputationClient::ExecuteReplicated(
   XLA_CHECK(devices.size() == arguments.size())
       << "ExecuteReplicated over " << devices.size() << " devices, but "
       << arguments.size() << " arguments devices.";
-  auto mwait_argument = std::make_shared<util::MultiWait>(devices.size());
+  absl::BlockingCounter counter(devices.size());
   std::vector<std::vector<xla::PjRtBuffer*>> argument_handles(devices.size());
   {
     tsl::profiler::TraceMe activity(
@@ -675,11 +688,11 @@ PjRtComputationClient::ExecuteReplicated(
           buffers.push_back(pjrt_data->buffer.get());
         }
         argument_handles[i] = std::move(buffers);
+        counter.DecrementCount();
       };
-      env::ScheduleIoClosure(util::MultiWait::Completer(
-          mwait_argument, std::move(buffer_converter)));
+      thread::Schedule(std::move(buffer_converter));
     }
-    mwait_argument->Wait();
+    counter.Wait();
   }
 
   xla::ExecuteOptions execute_options;
@@ -734,9 +747,9 @@ PjRtComputationClient::ExecuteReplicated(
     }
   }
 
-  auto mwait = std::make_shared<util::MultiWait>(1);
-  auto lockfn = [&, this, returned_futures = std::move(*returned_futures),
-                 timed]() mutable {
+  thread::Schedule(std::move([&, this,
+                              returned_futures = std::move(*returned_futures),
+                              timed]() mutable {
     // Grab the shared lock and block the `WaitDeviceOps` until buffer is
     // ready. Since this is the SPMD code path. There is no points to grab
     // devices lock for every individual device.
@@ -757,8 +770,7 @@ PjRtComputationClient::ExecuteReplicated(
           timed.reset();
           TF_VLOG(3) << "ExecuteReplicated returned_future->OnReady finished";
         });
-  };
-  env::ScheduleIoClosure(util::MultiWait::Completer(mwait, std::move(lockfn)));
+  }));
 
   TF_VLOG(1) << "Returning " << data_handles.size() << " sets of results "
              << "with dimensions [" << absl::StrJoin(dims, ",") << "].";

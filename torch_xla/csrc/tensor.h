@@ -201,6 +201,7 @@ class XLATensor : public torch::lazy::LazyTensor {
   // Set logical_element_type which is visible to upstream PyTorch.
   void SetScalarType(c10::optional<at::ScalarType> logical_element_type);
 
+  void MarkDynamicDimension(uint32_t dim);
   // We don't use the upstream shape to provide xla::shape.
   runtime::util::MaybeRef<xla::Shape> shape() const;
 
@@ -280,6 +281,10 @@ class XLATensor : public torch::lazy::LazyTensor {
 
   // Override to enable SPMD.
   void AssignIrValue(torch::lazy::Value ir_value) const final;
+
+  // Set custom op name on XlaNode
+  void SetCustomOpName(const std::string& op_name);
+  const std::string& GetCustomOpName() const;
 
  private:
   XLATensor(const at::Tensor& tensor, const torch::lazy::BackendDevice& device);

@@ -73,10 +73,14 @@ class StableHLOGraphModule:
       res = pytree.tree_unflatten(res, out_spec)
     return res
 
-  def get_stablehlo_bytecode(self, method_name):
+  def get_stablehlo_bytecode(self, method_name=None):
+    if method_name is None:
+      method_name = self._default_method
     return self._name_to_stablehlo[method_name].bytecode
 
-  def get_stablehlo_text(self, method_name):
+  def get_stablehlo_text(self, method_name=None):
+    if method_name is None:
+      method_name = self._default_method
     return self._name_to_stablehlo[method_name].text
 
   def save(self, directory_path):
@@ -211,6 +215,17 @@ class XLAExportInterpreter(torch.fx.Interpreter):
     if 'device' in kwargs:
       new_kwargs['device'] = self._device
     return super().call_function(target, args, new_kwargs)
+
+  def run_node(self, n) -> Any:
+    if n.op == 'placeholder':
+      fake_t = n.meta['val']
+      res = super().run_node(n)
+      if hasattr(fake_t, 'shape'):
+        for i, x in enumerate(fake_t.shape):
+          if not isinstance(x, int):
+            torch_xla._XLAC._xla_mark_dynamic(res, i)
+      return res
+    return super().run_node(n)
 
 
 def _extract_input_args(exported_model, options):

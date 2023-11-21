@@ -139,8 +139,7 @@ TEST_F(AtenXlaTensorTest, TestFull) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::empty", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::fill_", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::full", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestFullLike) {

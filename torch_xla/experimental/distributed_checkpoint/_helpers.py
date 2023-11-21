@@ -5,7 +5,7 @@
 import dataclasses
 
 import torch
-import torch_xla.experimental.xla_sharding as xs
+import torch_xla.distributed.spmd as xs
 
 from torch.distributed.checkpoint.planner import SavePlan
 from typing import (
@@ -23,7 +23,7 @@ from typing import (
 )
 from torch.distributed.checkpoint.metadata import (MetadataIndex,
                                                    STATE_DICT_TYPE)
-from torch_xla.experimental.xla_sharding import XLAShardedTensor, ShardingType
+from torch_xla.distributed.spmd import XLAShardedTensor, ShardingType
 from torch.utils._pytree import tree_map
 
 PATH_ITEM = Union[str, int]
@@ -34,8 +34,13 @@ STATE_DICT_ITEM = object
 CONTAINER_TYPE = MutableMapping[PATH_ITEM, STATE_DICT_ITEM]
 
 
+# TODO(jonbolin): Logic here is modified from the upstream to enable async
+# checkpointing. If the state_dict is comprised entirely of _CpuShards,
+# flatten_state_dict will not actually flatten the dict.
+# Once we can represent XLAShardedTensor on CPU, either directly or through
+# DistributedTensor, we can reuse the upstream logic.
 def _keep_visiting_tensors(value: STATE_DICT_ITEM) -> bool:
-  return isinstance(value, torch.Tensor)
+  return isinstance(value, torch.Tensor) or isinstance(value, _CpuShards)
 
 
 def _traverse_state_dict(
