@@ -5,7 +5,15 @@ nightly_builds = [
   { accelerator = "tpu" },
   {
     accelerator    = "tpu"
+    python_version = "3.9"
+  },
+  {
+    accelerator    = "tpu"
     python_version = "3.10"
+  },
+  {
+    accelerator    = "tpu"
+    python_version = "3.11"
   },
   {
     accelerator  = "cuda"
