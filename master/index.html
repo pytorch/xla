@@ -225,7 +225,7 @@
               
               
                 <div class="version">
-                  master (2.2.0+git4fb5428 )
+                  master (2.2.0+git8c03ac9 )
                 </div>
               
             
@@ -376,6 +376,7 @@
 <li><a class="reference internal" href="#create-a-gpu-instance">Create a GPU instance</a></li>
 <li><a class="reference internal" href="#environment-setup">Environment Setup</a><ul>
 <li><a class="reference internal" href="#id21">Docker</a></li>
+<li><a class="reference internal" href="#check-environment-variable">Check environment variable</a></li>
 <li><a class="reference internal" href="#wheel">Wheel</a></li>
 </ul>
 </li>
@@ -3006,14 +3007,14 @@ native xla data parallel approach, here is the
 <div class="section" id="id21">
 <h3>Docker<a class="headerlink" href="#id21" title="Permalink to this headline">¶</a></h3>
 <p>Pytorch/XLA currently publish prebuilt docker images and wheels with cuda11.7/8 and python 3.8. We recommend users to create a docker container with corresponding config. For a full list of docker images and wheels, please refer to <a class="reference external" href="https://github.com/pytorch/xla#available-docker-images-and-wheels">this doc</a>.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>sudo docker pull us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_cuda_11.8
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>sudo docker pull us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_cuda_12.1
 sudo apt-get install -y apt-transport-https ca-certificates curl gnupg-agent    software-properties-common
 distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
 curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -
 curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | sudo tee /etc/apt/sources.list.d/nvidia-docker.list
 sudo apt-get update &amp;&amp; sudo apt-get install -y nvidia-container-toolkit
 sudo systemctl restart docker
-sudo docker run --shm-size=16g --net=host --gpus all -it -d us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_cuda_11.8 bin/bash
+sudo docker run --shm-size=16g --net=host --gpus all -it -d us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_cuda_12.1 bin/bash
 sudo docker exec -it $(sudo docker ps | awk &#39;NR==2 { print $1 }&#39;) /bin/bash
 </pre></div>
 </div>
@@ -3042,10 +3043,19 @@ sudo docker exec -it $(sudo docker ps | awk &#39;NR==2 { print $1 }&#39;) /bin/b
 </pre></div>
 </div>
 </div>
+<div class="section" id="check-environment-variable">
+<h3>Check environment variable<a class="headerlink" href="#check-environment-variable" title="Permalink to this headline">¶</a></h3>
+<p>Make sure <code class="docutils literal notranslate"><span class="pre">PATH</span></code> and <code class="docutils literal notranslate"><span class="pre">LD_LIBRARY_PATH</span></code> environment variables account for cuda. Please do a <code class="docutils literal notranslate"><span class="pre">echo</span> <span class="pre">$PATH</span></code> and <code class="docutils literal notranslate"><span class="pre">echo</span> <span class="pre">$LD_LIBRARY_PATH</span></code> to verify. If not, please follow <a class="reference external" href="https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#mandatory-actions">link</a> to do so. Example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">echo</span> <span class="s2">&quot;export PATH=/usr/local/cuda-12.1/bin${PATH:+:$</span><span class="si">{PATH}</span><span class="s2">}&quot;</span> <span class="o">&gt;&gt;</span> <span class="o">~/.</span><span class="n">bashrc</span>
+<span class="n">echo</span> <span class="s2">&quot;export LD_LIBRARY_PATH=/usr/local/cuda-12.1/lib64${LD_LIBRARY_PATH:+:$</span><span class="si">{LD_LIBRARY_PATH}</span><span class="s2">}&quot;</span> <span class="o">&gt;&gt;</span> <span class="o">~/.</span><span class="n">bashrc</span>
+<span class="n">source</span> <span class="o">~/.</span><span class="n">bashrc</span>
+</pre></div>
+</div>
+</div>
 <div class="section" id="wheel">
 <h3>Wheel<a class="headerlink" href="#wheel" title="Permalink to this headline">¶</a></h3>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip3</span> <span class="n">install</span> <span class="n">torch</span><span class="o">==</span><span class="mf">2.0</span>
-<span class="n">pip3</span> <span class="n">install</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">storage</span><span class="o">.</span><span class="n">googleapis</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">tpu</span><span class="o">-</span><span class="n">pytorch</span><span class="o">/</span><span class="n">wheels</span><span class="o">/</span><span class="n">cuda</span><span class="o">/</span><span class="mi">117</span><span class="o">/</span><span class="n">torch_xla</span><span class="o">-</span><span class="mf">2.0</span><span class="o">-</span><span class="n">cp38</span><span class="o">-</span><span class="n">cp38</span><span class="o">-</span><span class="n">linux_x86_64</span><span class="o">.</span><span class="n">whl</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip3</span> <span class="n">install</span> <span class="n">torch</span><span class="o">==</span><span class="mf">2.1</span>
+<span class="n">pip3</span> <span class="n">install</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">storage</span><span class="o">.</span><span class="n">googleapis</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">pytorch</span><span class="o">-</span><span class="n">xla</span><span class="o">-</span><span class="n">releases</span><span class="o">/</span><span class="n">wheels</span><span class="o">/</span><span class="n">cuda</span><span class="o">/</span><span class="mf">12.1</span><span class="o">/</span><span class="n">torch_xla</span><span class="o">-</span><span class="mf">2.1.0</span><span class="o">-</span><span class="n">cp38</span><span class="o">-</span><span class="n">cp38</span><span class="o">-</span><span class="n">manylinux_2_28_x86_64</span><span class="o">.</span><span class="n">whl</span>
 </pre></div>
 </div>
 </div>
@@ -3077,23 +3087,24 @@ sudo docker exec -it $(sudo docker ps | awk &#39;NR==2 { print $1 }&#39;) /bin/b
 <ol class="arabic simple">
 <li><p>Inside a GPU VM, create a docker container from a development docker image. For example:</p></li>
 </ol>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>sudo docker pull us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.8_cuda_11.8
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>sudo docker pull us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.8_cuda_12.1
 sudo apt-get install -y apt-transport-https ca-certificates curl gnupg-agent    software-properties-common
 distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
 curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -
 curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | sudo tee /etc/apt/sources.list.d/nvidia-docker.list
 sudo apt-get update &amp;&amp; sudo apt-get install -y nvidia-container-toolkit
 sudo systemctl restart docker
-sudo docker run --shm-size=16g --net=host --gpus all -it -d us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.8_cuda_11.8
+sudo docker run --shm-size=16g --net=host --gpus all -it -d us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.8_cuda_12.1
 sudo docker exec -it $(sudo docker ps | awk &#39;NR==2 { print $1 }&#39;) /bin/bash
 </pre></div>
 </div>
 <ol class="arabic simple">
 <li><p>Build PyTorch and PyTorch/XLA from source.</p></li>
 </ol>
+<p>Make sure <code class="docutils literal notranslate"><span class="pre">PATH</span></code> and <code class="docutils literal notranslate"><span class="pre">LD_LIBRARY_PATH</span></code> environment variables account for cuda. See the <a class="reference external" href="https://github.com/pytorch/xla/blob/master/docs/gpu.md#check-environment-variable">above</a> for more info.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">clone</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">pytorch</span><span class="o">/</span><span class="n">pytorch</span><span class="o">.</span><span class="n">git</span>
 <span class="n">cd</span> <span class="n">pytorch</span>
-<span class="n">USE_CUDA</span><span class="o">=</span><span class="mi">0</span> <span class="n">python</span> <span class="n">setup</span><span class="o">.</span><span class="n">py</span> <span class="n">install</span>
+<span class="n">USE_CUDA</span><span class="o">=</span><span class="mi">1</span> <span class="n">python</span> <span class="n">setup</span><span class="o">.</span><span class="n">py</span> <span class="n">install</span>
 
 <span class="n">git</span> <span class="n">clone</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">pytorch</span><span class="o">/</span><span class="n">xla</span><span class="o">.</span><span class="n">git</span>
 <span class="n">cd</span> <span class="n">xla</span>
@@ -3568,6 +3579,7 @@ We are integrating PyTorch/XLA SPMD into DTensor API <a class="reference externa
 <li><a class="reference internal" href="#create-a-gpu-instance">Create a GPU instance</a></li>
 <li><a class="reference internal" href="#environment-setup">Environment Setup</a><ul>
 <li><a class="reference internal" href="#id21">Docker</a></li>
+<li><a class="reference internal" href="#check-environment-variable">Check environment variable</a></li>
 <li><a class="reference internal" href="#wheel">Wheel</a></li>
 </ul>
 </li>
