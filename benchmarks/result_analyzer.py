@@ -1,18 +1,10 @@
 import argparse
-from collections import OrderedDict
-import copy
-import csv
-import io
 import json
 import logging
 import numpy as np
 import os
 import pandas as pd
-import subprocess
-import sys
 import time
-import torch
-from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
 
@@ -25,11 +17,30 @@ class ResultAnalyzer:
     self.output_dir = os.path.abspath(self._args.output_dirname)
     if not os.path.exists(self.output_dir):
       raise ValueError("The output directory does not exist.")
-    self.output_file = os.path.join(self.output_dir, "metric_report.csv")
+    self.output_file = os.path.join(self.output_dir,
+                                    "metric_report." + self._args.output_format)
 
     self.database = os.path.abspath(self._args.database)
 
-  def run(self):
+  def run_jsonl(self):
+    jsonl_files = []
+    for file in os.listdir(self.output_dir):
+      if file.endswith(".jsonl"):
+        jsonl_files.append(os.path.join(self.output_dir, file))
+
+    all_test_runs = []
+    for file in jsonl_files:
+      test_runs = self.extract_metrics_jsonl(file)
+      all_test_runs.extend(test_runs)
+
+    with open(self.output_file, 'w+') as f:
+      for test_run in all_test_runs:
+        f.write(json.dumps(test_run))
+        f.write("\n")
+
+    print(f"Saving report to: {self.output_file}")
+
+  def run_csv(self):
     jsonl_files = []
     for file in os.listdir(self.output_dir):
       if file.endswith(".jsonl"):
@@ -43,7 +54,6 @@ class ResultAnalyzer:
         "accelerator": pd.Series(dtype="str"),
         "accelerator_model": pd.Series(dtype="str"),
         "xla": pd.Series(dtype="str"),
-        "xla_flags": pd.Series(dtype="str"),
         "dynamo": pd.Series(dtype="str"),
         "test": pd.Series(dtype="str"),
         "batch_size": pd.Series(dtype="int"),
@@ -58,13 +68,92 @@ class ResultAnalyzer:
         "outputs_file": pd.Series(dtype="str"),
     })
     for file in jsonl_files:
-      metric_df = self.extract_metrics(file, metric_df)
+      metric_df = self.extract_metrics_csv(file, metric_df)
 
     # additional processing of the metric_df can be done here
 
     self.export_metric_report(metric_df)
 
-  def extract_metrics(self, file, metric_df):
+  def get_calculated_metrics(self, d, tmp):
+    total_time = np.asarray(tmp["metrics"]["total_time"], dtype="float")
+    d["median_total_time"] = np.median(total_time)
+    per_iter_time = np.asarray(tmp["metrics"]["per_iter_time"], dtype="float")
+    d["median_per_iter_time"] = np.median(per_iter_time)
+
+    if tmp["experiment"]["xla"]:
+      trace_per_iter_time = np.asarray(
+          tmp["metrics"]["trace_per_iter_time"], dtype="float")
+      d["xla_median_trace_per_iter_time"] = np.median(trace_per_iter_time)
+      d["xla_compile_time"] = np.max(total_time) - np.median(total_time)
+    else:
+      d["xla_median_trace_per_iter_time"] = -1
+      d["xla_compile_time"] = -1
+
+    if tmp["experiment"]["dynamo"]:
+      d["dynamo_compile_time"] = np.max(total_time) - np.median(total_time)
+    else:
+      d["dynamo_compile_time"] = -1
+
+    return d
+
+  # TODO: handle error message properly (database length restriction)
+  def extract_metrics_jsonl(self, file):
+    with open(file, mode="r", encoding="utf-8") as f:
+      jsonlines = f.read().splitlines()
+
+    runs = []
+    for jsonline in jsonlines:
+      tmp = json.loads(jsonline)
+      batch_size = tmp["experiment"]["batch_size"]
+      batch_side_value = -1 if batch_size is None else batch_size
+      xla = tmp["experiment"]["xla"]
+      xla_value = "None" if xla is None else xla
+      dynamo = tmp["experiment"]["dynamo"]
+      dynamo_value = "None" if dynamo is None else dynamo
+      test = tmp["experiment"]["test"]
+      test_value = "None" if test is None else test
+      outputs_file = tmp["experiment"].get("outputs_file", None)
+      outputs_file_value = "None" if outputs_file is None else outputs_file
+
+      d = {
+          "metrics": {
+              "timestamp": int(self.timestamp),
+              "batch_size": batch_side_value,
+              "repeat": tmp["repeat"],
+              "iterations_per_run": tmp["iterations_per_run"]
+          },
+          "dimensions": {
+              "suite_name": tmp["model"]["suite_name"],
+              "model_name": tmp["model"]["model_name"],
+              "experiment_name": tmp["experiment"]["experiment_name"],
+              "accelerator": tmp["experiment"]["accelerator_model"],
+              "accelerator_model": tmp["experiment"]["accelerator_model"],
+              "xla": xla_value,
+              "dynamo": dynamo_value,
+              "test": test_value,
+              "outputs_file": outputs_file_value
+          }
+      }
+
+      if "error" in tmp["metrics"] and not self._args.hide_errors:
+        d["error_message"] = tmp["metrics"]["error"]
+
+      if "error" not in tmp["metrics"]:
+        d["dimensions"]["run_status"] = "success"
+        d["metrics"] = self.get_calculated_metrics(d["metrics"], tmp)
+      else:
+        d["dimensions"]["run_status"] = "failure"
+        d["metrics"]["median_total_time"] = -1
+        d["metrics"]["median_per_iter_time"] = -1
+        d["metrics"]["xla_median_trace_per_iter_time"] = -1
+        d["metrics"]["xla_compile_time"] = -1
+        d["metrics"]["dynamo_compile_time"] = -1
+
+      runs.append(d)
+
+    return runs
+
+  def extract_metrics_csv(self, file, metric_df):
     with open(file, mode="r", encoding="utf-8") as f:
       jsonlines = f.read().splitlines()
 
@@ -78,13 +167,12 @@ class ResultAnalyzer:
           "accelerator": tmp["experiment"]["accelerator"],
           "accelerator_model": tmp["experiment"]["accelerator_model"],
           "xla": tmp["experiment"]["xla"],
-          "xla_flags": tmp["experiment"]["xla_flags"],
           "dynamo": tmp["experiment"]["dynamo"],
           "test": tmp["experiment"]["test"],
           "batch_size": tmp["experiment"]["batch_size"],
           "repeat": tmp["repeat"],
           "iterations_per_run": tmp["iterations_per_run"],
-          "error_message": None,
+          "error_message": tmp["metrics"].get("error", None),
           "outputs_file": tmp["outputs_file"],
       }
 
@@ -92,18 +180,7 @@ class ResultAnalyzer:
         d["error_message"] = tmp["metrics"]["error"]
 
       if "error" not in tmp["metrics"]:
-        total_time = np.asarray(tmp["metrics"]["total_time"], dtype="float")
-        d["median_total_time"] = np.median(total_time)
-        per_iter_time = np.asarray(
-            tmp["metrics"]["per_iter_time"], dtype="float")
-        d["median_per_iter_time"] = np.median(per_iter_time)
-        if tmp["experiment"]["xla"]:
-          trace_per_iter_time = np.asarray(
-              tmp["metrics"]["trace_per_iter_time"], dtype="float")
-          d["xla_median_trace_per_iter_time"] = np.median(trace_per_iter_time)
-          d["xla_compile_time"] = np.max(total_time) - np.median(total_time)
-        if tmp["experiment"]["dynamo"]:
-          d["dynamo_compile_time"] = np.max(total_time) - np.median(total_time)
+        d = self.get_calculated_metrics(d, tmp)
 
       new_row = pd.Series(d)
       new_row.fillna(value=np.nan, inplace=True)
@@ -113,6 +190,7 @@ class ResultAnalyzer:
     return metric_df
 
   def export_metric_report(self, metric_df):
+
     metric_df.to_csv(
         self.output_file, mode="w", encoding="utf-8", header=True, index=False)
 
@@ -123,13 +201,30 @@ class ResultAnalyzer:
       metric_df.to_csv(
           self.database, mode="a", encoding="utf-8", header=False, index=False)
 
+  def run(self):
+    if self._args.output_format == "jsonl":
+      self.run_jsonl()
+    elif self._args.output_format == "csv":
+      self.run_csv()
+    else:
+      raise ValueError(f"Unsupported output format: {self._args.output_format}")
+
 
 def parse_args(args=None):
   parser = argparse.ArgumentParser()
 
   parser.add_argument(
+      "--output-format",
+      default="jsonl",
+      type=str,
+      choices=["jsonl", "csv"],
+      help="Specify the output format.",
+  )
+
+  parser.add_argument(
       "--log-level",
       default="warning",
+      type=str,
       choices=["info", "warning"],
       help="Specify the logging level.",
   )
@@ -137,6 +232,7 @@ def parse_args(args=None):
   parser.add_argument(
       "--experiment-name",
       default="run_all",
+      type=str,
       choices=["run_all"],
       help="Experiment name to run.",
   )
