@@ -11,14 +11,14 @@ You can either use a local machine with GPU attached or a GPU VM on the cloud. F
 ### Docker
 Pytorch/XLA currently publish prebuilt docker images and wheels with cuda11.7/8 and python 3.8. We recommend users to create a docker container with corresponding config. For a full list of docker images and wheels, please refer to [this doc](https://github.com/pytorch/xla#available-docker-images-and-wheels).
 ```
-sudo docker pull us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_cuda_11.8
+sudo docker pull us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_cuda_12.1
 sudo apt-get install -y apt-transport-https ca-certificates curl gnupg-agent    software-properties-common
 distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
 curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -
 curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | sudo tee /etc/apt/sources.list.d/nvidia-docker.list
 sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit
 sudo systemctl restart docker
-sudo docker run --shm-size=16g --net=host --gpus all -it -d us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_cuda_11.8 bin/bash
+sudo docker run --shm-size=16g --net=host --gpus all -it -d us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_3.8_cuda_12.1 bin/bash
 sudo docker exec -it $(sudo docker ps | awk 'NR==2 { print $1 }') /bin/bash
 ```
 
@@ -49,10 +49,20 @@ Thu Dec  8 06:24:29 2022
 
 ```
 
+### Check environment variable
+
+Make sure `PATH` and `LD_LIBRARY_PATH` environment variables account for cuda. Please do a `echo $PATH` and `echo $LD_LIBRARY_PATH` to verify. If not, please follow [link](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#mandatory-actions) to do so. Example:
+
+```
+echo "export PATH=/usr/local/cuda-12.1/bin${PATH:+:${PATH}}" >> ~/.bashrc
+echo "export LD_LIBRARY_PATH=/usr/local/cuda-12.1/lib64${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}" >> ~/.bashrc
+source ~/.bashrc
+```
+
 ### Wheel
 ```
-pip3 install torch==2.0
-pip3 install https://storage.googleapis.com/tpu-pytorch/wheels/cuda/117/torch_xla-2.0-cp38-cp38-linux_x86_64.whl
+pip3 install torch==2.1
+pip3 install https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.1/torch_xla-2.1.0-cp38-cp38-manylinux_2_28_x86_64.whl
 ```
 
 ## Run a simple model
@@ -80,23 +90,25 @@ AMP is very useful on GPU training and PyTorch/XLA reuse Cuda's AMP rule. You ca
 1. Inside a GPU VM, create a docker container from a development docker image. For example:
 
 ```
-sudo docker pull us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.8_cuda_11.8
+sudo docker pull us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.8_cuda_12.1
 sudo apt-get install -y apt-transport-https ca-certificates curl gnupg-agent    software-properties-common
 distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
 curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -
 curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | sudo tee /etc/apt/sources.list.d/nvidia-docker.list
 sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit
 sudo systemctl restart docker
-sudo docker run --shm-size=16g --net=host --gpus all -it -d us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.8_cuda_11.8
+sudo docker run --shm-size=16g --net=host --gpus all -it -d us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/development:3.8_cuda_12.1
 sudo docker exec -it $(sudo docker ps | awk 'NR==2 { print $1 }') /bin/bash
 ```
 
 2. Build PyTorch and PyTorch/XLA from source.
 
+Make sure `PATH` and `LD_LIBRARY_PATH` environment variables account for cuda. See the [above](https://github.com/pytorch/xla/blob/master/docs/gpu.md#check-environment-variable) for more info.
+
 ```
 git clone https://github.com/pytorch/pytorch.git
 cd pytorch
-USE_CUDA=0 python setup.py install
+USE_CUDA=1 python setup.py install
 
 git clone https://github.com/pytorch/xla.git
 cd xla
