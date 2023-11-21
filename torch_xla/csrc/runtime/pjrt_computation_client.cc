@@ -11,7 +11,7 @@
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/env_vars.h"
-#include "torch_xla/csrc/runtime/operation_tracker.h"
+#include "torch_xla/csrc/runtime/operation_manager.h"
 #include "torch_xla/csrc/runtime/profiler.h"
 #include "torch_xla/csrc/runtime/stablehlo_helper.h"
 #include "torch_xla/csrc/runtime/tensor_source.h"
@@ -211,7 +211,7 @@ PjRtComputationClient::PjRtComputationClient() {
 
   auto tracked_devices = GetLocalDevices();
   tracked_devices.emplace_back(spmd_device_str);
-  operation_tracker_ = std::move(OperationTracker(std::move(tracked_devices)));
+  operation_manager_ = std::move(OperationManager(std::move(tracked_devices)));
 }
 
 PjRtComputationClient::~PjRtComputationClient() {
@@ -604,7 +604,7 @@ PjRtComputationClient::ExecuteComputation(
   execute_options.use_major_to_minor_data_layout_for_callbacks = true;
 
   TF_VLOG(5) << "ExecuteComputation acquiring PJRT device lock for " << device;
-  auto op = operation_tracker_.StartOperation(device);
+  auto op_tracker = operation_manager_.StartOperation(device);
   TF_VLOG(5) << "ExecuteComputation acquiring PJRT device lock for " << device
              << " Done";
 
@@ -615,8 +615,8 @@ PjRtComputationClient::ExecuteComputation(
                            returned_future)
           .value();
 
-  returned_future->OnReady(
-      std::move([timed, op = std::move(op)](xla::Status unused) mutable {
+  returned_future->OnReady(std::move(
+      [timed, op_tracker = std::move(op_tracker)](xla::Status unused) mutable {
         timed.reset();
         TF_VLOG(3) << "ExecuteComputation returned_future->OnReady finished";
       }));
@@ -697,7 +697,7 @@ PjRtComputationClient::ExecuteReplicated(
   // devices lock for every individual device.
   TF_VLOG(5) << "ExecuteReplicated acquiring PJRT device lock for "
              << spmd_device_str;
-  auto op = operation_tracker_.StartOperation(spmd_device_str);
+  auto op_tracker = operation_manager_.StartOperation(spmd_device_str);
   TF_VLOG(5) << "ExecuteReplicated acquiring PJRT device lock for "
              << spmd_device_str << " Done";
 
@@ -714,7 +714,8 @@ PjRtComputationClient::ExecuteReplicated(
                   .value();
 
     (*returned_futures)[0].OnReady(
-        std::move([timed, op = std::move(op)](xla::Status unused) mutable {
+        std::move([timed, op_tracker = std::move(op_tracker)](
+                      xla::Status unused) mutable {
           timed.reset();
           TF_VLOG(3) << "ExecuteReplicated returned_future->OnReady finished";
         }));
@@ -807,7 +808,7 @@ xla::PjRtDevice* PjRtComputationClient::StringToPjRtDevice(
 void PjRtComputationClient::WaitDeviceOps(
     absl::Span<const std::string> devices) {
   TF_VLOG(3) << "Waiting for " << absl::StrJoin(devices, ", ");
-  operation_tracker_.WaitForDevices(devices.empty() ? GetLocalDevices()
+  operation_manager_.WaitForDevices(devices.empty() ? GetLocalDevices()
                                                     : devices);
 }
 

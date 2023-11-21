@@ -1,4 +1,4 @@
-#include "torch_xla/csrc/runtime/operation_tracker.h"
+#include "torch_xla/csrc/runtime/operation_manager.h"
 
 #include <shared_mutex>
 
@@ -9,25 +9,28 @@
 namespace torch_xla {
 namespace runtime {
 
-OperationTracker::OperationTracker(absl::Span<const std::string> devices) {
+OperationManager::OperationManager(absl::Span<const std::string> devices) {
   for (auto& device : devices) {
     op_counters_.try_emplace(device, device);
   }
 }
 
-OperationTracker::Operation::Operation(Counter* counter) : counter_(counter) {
+OperationManager::OperationTracker::OperationTracker(Counter* counter)
+    : counter_(counter) {
   XLA_CHECK(counter_);
   counter_->Increment();
 }
 
-OperationTracker::Operation::~Operation() { counter_->Decrement(); }
-
-std::unique_ptr<OperationTracker::Operation> OperationTracker::StartOperation(
-    std::string device) {
-  return std::make_unique<Operation>(&op_counters_.at(device));
+OperationManager::OperationTracker::~OperationTracker() {
+  counter_->Decrement();
 }
 
-void OperationTracker::WaitForDevices(absl::Span<const std::string> devices) {
+std::unique_ptr<OperationManager::OperationTracker>
+OperationManager::StartOperation(std::string device) {
+  return std::make_unique<OperationTracker>(&op_counters_.at(device));
+}
+
+void OperationManager::WaitForDevices(absl::Span<const std::string> devices) {
   std::vector<std::unique_lock<std::shared_mutex>> locks;
   locks.reserve(devices.size());
 
@@ -43,7 +46,7 @@ void OperationTracker::WaitForDevices(absl::Span<const std::string> devices) {
   }
 }
 
-void OperationTracker::Counter::Increment() {
+void OperationManager::Counter::Increment() {
   // Block new operations after Wait() is called. count_ is already atomic, so
   // atomic so we don't need an exclusive lock to prevent data races.
   std::shared_lock lock(pending_operations_mu_);
@@ -51,7 +54,7 @@ void OperationTracker::Counter::Increment() {
   TF_VLOG(5) << "Incremented operations for " << device_ << " to " << current;
 }
 
-void OperationTracker::Counter::Decrement() {
+void OperationManager::Counter::Decrement() {
   auto current = count_.fetch_sub(1, std::memory_order_acq_rel) - 1;
   TF_VLOG(5) << "Decremented operations for " << device_ << " to " << current;
 
@@ -63,11 +66,11 @@ void OperationTracker::Counter::Decrement() {
 }
 
 std::unique_lock<std::shared_mutex>
-OperationTracker::Counter::BlockNewOperations() {
+OperationManager::Counter::BlockNewOperations() {
   return std::unique_lock(pending_operations_mu_);
 }
 
-void OperationTracker::Counter::Wait() {
+void OperationManager::Counter::Wait() {
   TF_VLOG(5) << "Waiting for " << count_ << " operations on " << device_;
   std::unique_lock cv_lock(cv_mu_);
   cv_.wait(cv_lock,

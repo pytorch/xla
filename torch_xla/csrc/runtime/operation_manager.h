@@ -1,5 +1,5 @@
-#ifndef XLA_CLIENT_OPERATION_TRACKER_H_
-#define XLA_CLIENT_OPERATION_TRACKER_H_
+#ifndef XLA_CLIENT_OPERATION_MANAGER_H_
+#define XLA_CLIENT_OPERATION_MANAGER_H_
 
 #include <atomic>
 #include <condition_variable>
@@ -13,16 +13,16 @@ namespace torch_xla {
 namespace runtime {
 
 // Track inflight operations for each device.
-class OperationTracker {
+class OperationManager {
  public:
-  OperationTracker() = default;
-  OperationTracker(absl::Span<const std::string>);
+  OperationManager() = default;
+  OperationManager(absl::Span<const std::string>);
 
-  OperationTracker(const OperationTracker&) = delete;
-  OperationTracker& operator=(const OperationTracker&) = delete;
+  OperationManager(const OperationManager&) = delete;
+  OperationManager& operator=(const OperationManager&) = delete;
 
-  OperationTracker(OperationTracker&&) = default;
-  OperationTracker& operator=(OperationTracker&&) = default;
+  OperationManager(OperationManager&&) = default;
+  OperationManager& operator=(OperationManager&&) = default;
 
   class Counter {
    public:
@@ -54,16 +54,16 @@ class OperationTracker {
     std::condition_variable cv_;
   };
 
-  class Operation {
+  class OperationTracker {
    public:
     // Register an operation in the `counter_`.
-    Operation(Counter* counter);
+    OperationTracker(Counter* counter);
 
     // Mark an operation complete in `counter_`.
-    ~Operation();
+    ~OperationTracker();
 
-    Operation(const Operation&) = delete;
-    Operation& operator=(const Operation&) = delete;
+    OperationTracker(const OperationTracker&) = delete;
+    OperationTracker& operator=(const OperationTracker&) = delete;
 
    private:
     std::string device_;
@@ -71,7 +71,7 @@ class OperationTracker {
   };
 
   // Register a new operation for `device`.
-  std::unique_ptr<Operation> StartOperation(std::string device);
+  std::unique_ptr<OperationTracker> StartOperation(std::string device);
 
   // Wait for all device execution to complete on devices.
   void WaitForDevices(absl::Span<const std::string> devices);

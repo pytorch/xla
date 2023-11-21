@@ -82,7 +82,7 @@ cc_library(
     ":computation_client",
     ":debug_macros",
     ":env_vars",
-    ":operation_tracker",
+    ":operation_manager",
     ":profiler",
     ":stablehlo_helper",
     ":tensor_source",
@@ -189,9 +189,9 @@ cc_library(
 )
 
 cc_library(
-  name = "operation_tracker",
-  srcs = ["operation_tracker.cc"],
-  hdrs = ["operation_tracker.h"],
+  name = "operation_manager",
+  srcs = ["operation_manager.cc"],
+  hdrs = ["operation_manager.h"],
   visibility = ["//visibility:private"],
   deps = [
     ":debug_macros",
