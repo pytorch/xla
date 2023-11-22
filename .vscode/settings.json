@@ -18,5 +18,5 @@
         "./bazel-out/_coverage/_coverage_report.dat"
     ],
     "python.formatting.provider": "yapf",
-    "editor.formatOnSave": false
+    "editor.formatOnSave": true
 }
