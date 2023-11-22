@@ -2,7 +2,7 @@ import contextlib
 import functools
 import os
 import re
-from unittest import mock
+from unittest import mock, skipIf
 
 from absl.testing import absltest, parameterized
 import torch
@@ -12,6 +12,13 @@ import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_backend
 from torch_xla import runtime as xr
 
+from datetime import timedelta
+
+def get_process_group_xla(rank, size):
+  pg_xla_creator = dist.Backend._plugins['XLA'].creator_fn
+  pg_xla = pg_xla_creator(
+      prefix_store=None, rank=rank, size=size, timeout=timedelta(minutes=1))
+  return pg_xla
 
 def hlo_matches(hlo, expected_pattern, match_times=1):
   matches = re.findall(expected_pattern, hlo)
@@ -87,6 +94,7 @@ class XlaBackendTest(parameterized.TestCase):
     hlo = torch_xla._XLAC._get_xla_tensors_hlo(output_tensors)
     hlo_matches(hlo, all_gather_pattern)
 
+  @patch_world(rank=3, size=8)
   def test_allgather_coalesced(self):
     device = xm.xla_device()
     tensor = torch.arange(2, device=device) + 1 + 2 * dist.get_rank()
@@ -126,6 +134,7 @@ class XlaBackendTest(parameterized.TestCase):
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([output])
     hlo_matches(hlo, reduce_scatter_pattern)
 
+  @skipIf(xr.device_type() == 'CPU', "UNIMPLEMENTED: ReduceScatter is not implemented on CPU.")
   def test_reduce_scatter_coalesced(self):
     device = xm.xla_device()
     tensor = torch.arange(2, device=device) + 1 + 2 * dist.get_rank()
@@ -139,16 +148,11 @@ class XlaBackendTest(parameterized.TestCase):
         r'%reduce\-scatter\.\d+ = \(s64\[2]\{0}, s64\[5]\{0}, s64\[]\) '
         r'reduce\-scatter\(s64\[4]\{0} %.+\.\d+, s64\[10]\{0} %.+\.\d+, '
         r's64\[] %.+\.\d+\)')
-    with self.assertRaises(RuntimeError) as cm:
-      pg_xla.reduce_scatter_coalesced(output_list, input_tensors_list, opts)
-      hlo = torch_xla._XLAC._get_xla_tensors_hlo(output_list)
-      hlo_matches(hlo, reduce_scatter_pattern)
-      # purge all computations attached the device.
-      xm.mark_step()
-    assert 'UNIMPLEMENTED: ReduceScatter is not implemented on CPU.' in str(
-        cm.exception), str(cm.exception)
-    # reset token to clean up the mess after the RuntimeError.
-    xm.set_replication(device, [])
+    pg_xla.reduce_scatter_coalesced(output_list, input_tensors_list, opts)
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo(output_list)
+    hlo_matches(hlo, reduce_scatter_pattern)
+    # purge all computations attached the device.
+    xm.mark_step()
 
   @patch_world(0, 6)
   def test_send(self):
@@ -335,7 +339,6 @@ class XlaBackendTest(parameterized.TestCase):
 
   @parameterized.parameters(
       'reduce',
-      'allgather_coalesced',
       'allreduce_coalesced',
       'alltoall',
       'alltoall_base',
