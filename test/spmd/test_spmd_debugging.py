@@ -46,11 +46,15 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     generatedtable = visualize_tensor_sharding(t)
     print("generated table:")
     print(generatedtable.columns)
-    
-    # console = rich.console.Console(file=io.StringIO(), width=120)
+    console = rich.console.Console(file=io.StringIO(), width=120)
+    console.print(generatedtable)
+    output = console.file.getvalue()
+    # console = rich.console.Console(width=120)
+
+    fake_console = rich.console.Console(file=io.StringIO(), width=120)
+    color = None
+    text_color = None
     # console.print(ttable)
-    color=None
-    text_color=None
     fask_table = rich.table.Table(show_header=False, show_lines=False, padding=0, highlight=False, pad_edge=False, box=rich.box.SQUARE)
     col = []
     col.append(rich.padding.Padding(rich.align.Align('TPU 0', "center", vertical="middle"), (9,9,9,9), style=rich.style.Style(bgcolor=color, color=text_color)))
@@ -64,8 +68,19 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     col.append(rich.padding.Padding(rich.align.Align('TPU 6', "center", vertical="middle"), (9,9,9,9), style=rich.style.Style(bgcolor=color, color=text_color)))
     col.append(rich.padding.Padding(rich.align.Align('TPU 7', "center", vertical="middle"), (9,9,9,9), style=rich.style.Style(bgcolor=color, color=text_color)))
     fask_table.add_row(*col)
-    # console.print(fake_table)
-    assert generatedtable.columns == fask_table.columns
+    print("fake_table 1")
+    # console.print(fask_table)
+    print("generatedtable.columns: ")
+    print(generatedtable.columns)
+    print("fask_table.columns: ")
+    print(fask_table.columns)
+    print("type: ")
+    print(type(generatedtable.columns))
+    # print(''.join(generatedtable.columns))
+    # print(type(''.join(generatedtable.columns)))
+    fake_console.print(fask_table)
+    fake_output = fake_console.file.getvalue()
+    assert output == fake_output # ''.join(generatedtable.columns) == ''.join(fask_table.columns)
 
 
   @unittest.skipIf(xr.device_type() == 'CPU', "skipped on CPU before enable")
@@ -88,11 +103,14 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     generatedtable = visualize_tensor_sharding(t)
     print("generated table:")
     print(generatedtable.columns)
-    
-    # console = rich.console.Console(file=io.StringIO(), width=120)
+    console = rich.console.Console(file=io.StringIO(), width=120)
+    # console = rich.console.Console(width=120)
+    console.print(generatedtable)
+    output = console.file.getvalue()
+
     # console.print(ttable)
-    color=None
-    text_color=None
+    color = None
+    text_color = None
     fask_table = rich.table.Table(show_header=False, show_lines=False, padding=0, highlight=False, pad_edge=False, box=rich.box.SQUARE)
     col = []
     col.append(rich.padding.Padding(rich.align.Align('TPU [0, 1, 2, 3]', "center", vertical="middle"), (9,9,9,9), style=rich.style.Style(bgcolor=color, color=text_color)))
@@ -100,8 +118,16 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     col = []
     col.append(rich.padding.Padding(rich.align.Align('TPU [4, 5, 6, 7]', "center", vertical="middle"), (9,9,9,9), style=rich.style.Style(bgcolor=color, color=text_color)))
     fask_table.add_row(*col)
-    # console.print(table)
-    assert generatedtable.columns == fask_table.columns
+    print("fake table 2")
+    console.print(fask_table)
+    print("generatedtable.columns: ")
+    print(generatedtable.columns)
+    print("fask_table.columns: ")
+    print(fask_table.columns)
+    fake_console = rich.console.Console(file=io.StringIO(), width=120)
+    console.print(fask_table)
+    fake_output = fake_console.file.getvalue()
+    assert output == fake_output # generatedtable.columns == fask_table.columns
 
 
   @unittest.skipIf(xr.device_type() == 'CPU', "skipped on CPU before enable")
@@ -124,17 +150,29 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     generatedtable = visualize_tensor_sharding(t)
     print("generated table:")
     print(generatedtable.columns)
-    
+    console = rich.console.Console(file=io.StringIO(), width=120)
+    console.print(generatedtable)
+    output = console.file.getvalue()
+
     # console = rich.console.Console(file=io.StringIO(), width=120)
+    # console = rich.console.Console(width=120)
     # console.print(ttable)
-    color=None
-    text_color=None
+    color = None
+    text_color = None
     fask_table = rich.table.Table(show_header=False, show_lines=False, padding=0, highlight=False, pad_edge=False, box=rich.box.SQUARE)
     col = []
     col.append(rich.padding.Padding(rich.align.Align('TPU [0, 1, 2, 3, 4, 5, 6, 7]', "center", vertical="middle"), (9,9,9,9), style=rich.style.Style(bgcolor=color, color=text_color)))
     fask_table.add_row(*col)
-    # console.print(table)
-    assert generatedtable.columns == fask_table.columns
+    print("fake table 3")
+    print("generatedtable.columns: ")
+    print(generatedtable.columns)
+    print("fask_table.columns: ")
+    print(fask_table.columns)
+    #console.print(fask_table)
+    fake_console = rich.console.Console(file=io.StringIO(), width=120)
+    fake_console.print(fask_table)
+    fake_output = fake_console.file.getvalue()
+    assert output == fake_output# generatedtable.columns == fask_table.columns
 
 if __name__ == '__main__':
   test = unittest.main()
