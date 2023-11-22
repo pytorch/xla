@@ -60,12 +60,12 @@ class HloMetadataSetter {
 
     const torch::lazy::MetaData& nmeta = node->metadata();
 
-    const CustomOpNameMetaData* custom_opname_meta = 
-      dynamic_cast<const CustomOpNameMetaData*>(node->user_metadata());
+    const CustomOpNameMetaData* custom_opname_meta =
+        dynamic_cast<const CustomOpNameMetaData*>(node->user_metadata());
 
-    //const XlaNode* xla_node_cast = dynamic_cast<const XlaNode*>(node);
+    // const XlaNode* xla_node_cast = dynamic_cast<const XlaNode*>(node);
     std::string op_name_prefix;
-    size_t max_stack_depth =  nmeta.frame_info.size();
+    size_t max_stack_depth = nmeta.frame_info.size();
 
     if (custom_opname_meta != nullptr) {
       op_name_prefix = custom_opname_meta->op_name_prefix;
@@ -96,9 +96,8 @@ class HloMetadataSetter {
       int depth = 0;
       for (; frame_it != nmeta.frame_info.rend() && depth < max_stack_depth;
            ++frame_it) {
-
         // Where we aren't working with an XLANode there is no way to pass down
-        // stack depth - 
+        // stack depth -
         if (custom_opname_meta == 0) {
           std::string_view func_search(frame_it->function);
           if (func_search.find("__torch_dispatch__") != func_search.npos) {

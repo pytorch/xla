@@ -4,8 +4,8 @@
 #include <ATen/core/interned_strings.h>
 #include <torch/csrc/lazy/core/hash.h>
 #include <torch/csrc/lazy/core/ir.h>
-#include <torch/csrc/lazy/core/ir_metadata.h>
 #include <torch/csrc/lazy/core/ir_builder.h>
+#include <torch/csrc/lazy/core/ir_metadata.h>
 
 #include <functional>
 #include <iostream>
@@ -179,8 +179,8 @@ class XlaNode : public torch::lazy::Node {
   // Experimental sharding annotations attached to the IR node.
   std::vector<std::shared_ptr<xla::OpSharding>> output_shardings_;
 
-  //std::string custom_op_name_;
-  //size_t max_call_stack_depth_;
+  // std::string custom_op_name_;
+  // size_t max_call_stack_depth_;
 };
 
 inline std::ostream& operator<<(std::ostream& stream, const XlaNode& node) {
@@ -205,12 +205,13 @@ T* NodeCast(const torch::lazy::Node* node, torch::lazy::OpKind op) {
 }
 
 struct CustomOpNameMetaData : public torch::lazy::UserMetaData {
-  CustomOpNameMetaData(const std::string& input_op_name_prefix, int input_max_stack_depth) 
-    : op_name_prefix(input_op_name_prefix), max_stack_depth(input_max_stack_depth) {}
+  CustomOpNameMetaData(const std::string& input_op_name_prefix,
+                       int input_max_stack_depth)
+      : op_name_prefix(input_op_name_prefix),
+        max_stack_depth(input_max_stack_depth) {}
   std::string op_name_prefix;
   size_t max_stack_depth;
 };
-
 
 }  // namespace torch_xla
 

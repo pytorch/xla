@@ -930,14 +930,15 @@ size_t XLATensor::GetCustomCallStackDepth() const {
 }
 */
 
-bool XLATensor::SetNodeUserMetadata(std::shared_ptr<torch::lazy::UserMetaData> metadata) {
-  //auto* node = dynamic_cast<torch::lazy::Node*>(CurrentIrValue().node.get());
+bool XLATensor::SetNodeUserMetadata(
+    std::shared_ptr<torch::lazy::UserMetaData> metadata) {
+  // auto* node = dynamic_cast<torch::lazy::Node*>(CurrentIrValue().node.get());
   auto* node = dynamic_cast<torch::lazy::Node*>(GetIrValue().node.get());
   if (node != nullptr) {
     auto old_val = node->SetUserMetadata(metadata);
-    return true; //old_val.get() != nullptr;
-  } 
-  return false; 
+    return true;  // old_val.get() != nullptr;
+  }
+  return false;
 }
 
 }  // namespace torch_xla

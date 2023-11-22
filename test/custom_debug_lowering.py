@@ -197,9 +197,11 @@ def GetAllObjectAndClassNames(frame):
   if len(output) > 0:
     output += "/"
 
-  return output, frame_count-1
+  return output, frame_count - 1
+
 
 class StackLayerSignature:
+
   def __init__(self, filename, func, line):
     self.filename = filename
     self.func = func
@@ -207,13 +209,14 @@ class StackLayerSignature:
 
   def __str__(self):
     return f"{self.filename}|{self.func}|{self.line}"
-  
+
   def __repr__(self):
     return str(self)
-  
+
   def __eq__(self, ref):
     return self.filename == ref.filename and self.func == ref.func and self.line == ref.line
-  
+
+
 class CustomOpNameLowering(TorchDispatchMode):
 
   def __init__(self):
@@ -230,11 +233,10 @@ class CustomOpNameLowering(TorchDispatchMode):
     del self.stack_sigs
     super().__exit__(exc_type, exc_val, exc_tb)
 
-
   def add_stack_sig(self, frame, depth):
     stack = []
     for s in inspect.getouterframes(frame):
-      sls = StackLayerSignature(s.filename,s.function,s.lineno)
+      sls = StackLayerSignature(s.filename, s.function, s.lineno)
       stack.append(sls)
 
       # Pop the top two stack laters
@@ -255,7 +257,8 @@ class CustomOpNameLowering(TorchDispatchMode):
       self.depth = depth
       stack_sig = self.add_stack_sig(frame, self.depth)
 
-      if not torch_xla._XLAC._set_xla_custom_op_name_prefix(res, prefix, self.depth):
+      if not torch_xla._XLAC._set_xla_custom_op_name_prefix(
+          res, prefix, self.depth):
         print("Set failed!")
         print(prefix)
         print(res)

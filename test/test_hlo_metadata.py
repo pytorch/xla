@@ -12,6 +12,7 @@ import inspect
 import copy
 from custom_debug_lowering import CustomOpNameLowering, StackLayerSignature
 
+
 class HloStackExtractor:
 
   def __init__(self, hlo_json):
@@ -29,16 +30,16 @@ class HloStackExtractor:
   def extract(self, stack_frame_id):
     stack_sigs = []
 
-    stack_frame = self.stack_frames[stack_frame_id-1]
+    stack_frame = self.stack_frames[stack_frame_id - 1]
 
     while True:
       file_location_id = stack_frame['fileLocationId']
-      file_location = self.file_locations[file_location_id-1]
+      file_location = self.file_locations[file_location_id - 1]
       file_name_id = file_location['fileNameId']
       function_name_id = file_location['functionNameId']
       line = file_location['line']
-      file_name = self.file_names[file_name_id-1]
-      function_name = self.function_names[function_name_id-1]
+      file_name = self.file_names[file_name_id - 1]
+      function_name = self.function_names[function_name_id - 1]
 
       sig = StackLayerSignature(file_name, function_name, line)
       stack_sigs.append(sig)
@@ -53,6 +54,7 @@ class HloStackExtractor:
         stack_frame = self.stack_frames[stack_frame_id - 1]
 
     return stack_sigs
+
 
 class TestHloMetaData(unittest.TestCase):
 
@@ -82,7 +84,7 @@ class TestHloMetaData(unittest.TestCase):
       inp = inp.to(device=xm.xla_device())
       out = model(inp)
 
-      # Get outer frames 
+      # Get outer frames
       stack_sigs = c.stack_sigs
 
     ctx = torch_xla._XLAC.lowering.LoweringContext()
@@ -147,7 +149,6 @@ class TestHloMetaData(unittest.TestCase):
                     print(f"** PARTIAL MATCH: Discarded {discards}")
 
               assert stack_frame_match, f"Stack\n{hlo_stack_sig} does not match any of\n{stack_sigs}"
-
 
     assert non_zero_metadata, "No metadata was lowered - an issue with turning on IR DEBUG?"
 

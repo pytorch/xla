@@ -3,8 +3,8 @@
 
 #include <c10/core/SymNodeImpl.h>
 #include <torch/csrc/autograd/variable.h>
-#include <torch/csrc/lazy/core/ir_util.h>
 #include <torch/csrc/lazy/core/ir_metadata.h>
+#include <torch/csrc/lazy/core/ir_util.h>
 
 #include <memory>
 #include <string>
