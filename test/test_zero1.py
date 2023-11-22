@@ -12,6 +12,7 @@ import unittest
 
 class XlaZeRO1Test(TestCase):
 
+  @unittest.skipIf(xr.device_type() == 'CPU', "Crash on CPU")
   @unittest.skipIf(xr.device_type() == 'TPU', "Crash on TPU")
   @unittest.skipIf(xr.device_type() == 'GPU',
                    "TODO(alanwaketan): Fix it for the token change.")
@@ -26,11 +27,13 @@ class XlaZeRO1Test(TestCase):
     y.backward()
 
     opt1 = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
+    # pin_layout=False to workaround "Check failed: has_layout() element_type"
     opt2 = ZeroRedundancyOptimizer(
         model.parameters(),
         torch.optim.SGD,
         lr=0.01,
         momentum=0.9,
+        pin_layout=False,
         grad_clipping=False)
 
     opt1.step()

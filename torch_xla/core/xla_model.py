@@ -567,18 +567,6 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
 
   token, devctx = _get_all_reduce_token()
 
-  if output != None:
-    # Call the out of place version of the all_gather
-    new_token = torch_xla._XLAC._xla_all_gather_out(output, value, token, dim,
-                                                    shard_count, groups or [],
-                                                    pin_layout)
-    torch_xla._XLAC._set_all_reduce_token(devctx.device, new_token)
-    return output
-
-  result = torch_xla._XLAC._xla_all_gather(value, dim, shard_count, groups or
-                                           [], pin_layout)
-  return result
-
   if isinstance(value, torch.Tensor):
     if output != None:
       # Call the out of place version of the all_gather
@@ -588,10 +576,9 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
       torch_xla._XLAC._set_all_reduce_token(devctx.device, new_token)
       return output
 
-    result = torch_xla._XLAC._xla_all_gather(value, token, dim, shard_count,
+    result = torch_xla._XLAC._xla_all_gather(value, dim, shard_count,
                                              groups or [], pin_layout)
-    torch_xla._XLAC._set_all_reduce_token(devctx.device, result[1])
-    return result[0]
+    return result
 
   # Now the input should be a list of Tensors.
   if not isinstance(value, list) or any(
