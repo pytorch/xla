@@ -55,23 +55,6 @@ xrt_versioned_builds = [
   },
 ]
 
-# TODO: Remove this after the 2.2 release
-xrt_versioned_builds = [
-  {
-    accelerator    = "tpu"
-    python_version = "3.10"
-    pytorch_git_rev = "v2.2.0"
-    package_version = "2.2.0+xrt"
-  },
-  {
-    accelerator  = "cuda"
-    python_version = "3.10"
-    cuda_version = "12.0"
-    pytorch_git_rev = "v2.2.0"
-    package_version = "2.2.0+xrt"
-  },
-]
-
 # Built on push to specific tag.
 versioned_builds = [
   # Remove libtpu from PyPI builds
