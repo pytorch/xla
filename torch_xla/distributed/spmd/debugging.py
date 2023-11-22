@@ -147,10 +147,10 @@ def visualize_sharding(shape: torch.Size,
     except ModuleNotFoundError:
       use_color = False
 
-  base_height = int(10 * scale)
+  base_height = int(3 * scale)
   aspect_ratio = (shape[1] if len(shape) == 2 else 1) / shape[0]
   base_width = int(base_height * aspect_ratio)
-  height_to_width_ratio = 2.5
+  height_to_width_ratio = 1.5
 
   # eg: '{devices=[2,2]0,1,2,3}' # 13
   # eg: '{devices=[2,1,2]0,1,2,3 last_tile_dim_replicate}' # 15
