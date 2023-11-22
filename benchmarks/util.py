@@ -141,9 +141,12 @@ def get_cpu_name():
 
 
 def get_gpu_name():
-  return subprocess.check_output(
+  gpu_names = subprocess.check_output(
       ["nvidia-smi", "--query-gpu=gpu_name", "--format=csv"],
-      encoding='utf-8').split("\n")[1]
+      encoding='utf-8').split("\n")[1:]
+  if len(gpu_names) == 1:
+    return gpu_names[0]
+  return "One of " + ", ".join(gpu_names)
 
 
 def get_tpu_name():

@@ -54,6 +54,7 @@ class ResultAnalyzer:
         "accelerator": pd.Series(dtype="str"),
         "accelerator_model": pd.Series(dtype="str"),
         "xla": pd.Series(dtype="str"),
+        "xla_flags": pd.Series(dtype="str"),
         "dynamo": pd.Series(dtype="str"),
         "test": pd.Series(dtype="str"),
         "batch_size": pd.Series(dtype="int"),
@@ -167,12 +168,13 @@ class ResultAnalyzer:
           "accelerator": tmp["experiment"]["accelerator"],
           "accelerator_model": tmp["experiment"]["accelerator_model"],
           "xla": tmp["experiment"]["xla"],
+          "xla_flags": tmp["experiment"]["xla_flags"],
           "dynamo": tmp["experiment"]["dynamo"],
           "test": tmp["experiment"]["test"],
           "batch_size": tmp["experiment"]["batch_size"],
           "repeat": tmp["repeat"],
           "iterations_per_run": tmp["iterations_per_run"],
-          "error_message": tmp["metrics"].get("error", None),
+          "error_message": None,
           "outputs_file": tmp["outputs_file"],
       }
 
