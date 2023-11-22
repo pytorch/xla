@@ -709,13 +709,13 @@ at::Tensor XLANativeFunctions::as_strided_copy(
                                                       storage_offset);
   }
   // Sets the base tensor as tensor.
-  // Even though this function copies (without aliasing) tensor, it's still treated
-  // as a view function in the functionalization layer.
-  return bridge::AtenFromXlaTensor(
-      bridge::SetBaseTensor(
-          tensor_methods::as_strided(
-              self_tensor, std::move(xsize), std::move(xstride), XlaHelpers::I64Optional(storage_offset)),
-          tensor));
+  // Even though this function copies (without aliasing) tensor, it's still
+  // treated as a view function in the functionalization layer.
+  return bridge::AtenFromXlaTensor(bridge::SetBaseTensor(
+      tensor_methods::as_strided(self_tensor, std::move(xsize),
+                                 std::move(xstride),
+                                 XlaHelpers::I64Optional(storage_offset)),
+      tensor));
 }
 
 at::Tensor XLANativeFunctions::as_strided_scatter(
@@ -2801,12 +2801,10 @@ at::Tensor XLANativeFunctions::slice_copy(const at::Tensor& self, int64_t dim,
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   int64_t start_val = start.has_value() ? start.value() : 0;
   int64_t end_val = end.has_value() ? end.value() : INT64_MAX;
-  return bridge::AtenFromXlaTensor(
-      bridge::SetBaseTensor(
-          tensor_methods::slice(
-              bridge::GetXlaTensor(self), dim, start_val, end_val, step),
-          self)
-      );
+  return bridge::AtenFromXlaTensor(bridge::SetBaseTensor(
+      tensor_methods::slice(bridge::GetXlaTensor(self), dim, start_val, end_val,
+                            step),
+      self));
 }
 
 at::Tensor XLANativeFunctions::slice_scatter(

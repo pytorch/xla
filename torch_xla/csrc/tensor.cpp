@@ -139,9 +139,9 @@ XLATensor::XLATensor(std::shared_ptr<View> view,
 XLATensor::XLATensor(std::shared_ptr<Data> data)
     : torch::lazy::LazyTensor(data),
       data_(std::move(data)),
-      storage_(c10::Storage({}, 0,
-                            c10::DataPtr(nullptr,
-                                         bridge::XlaDeviceToAtenDevice(data_->device)))),
+      storage_(c10::Storage(
+          {}, 0,
+          c10::DataPtr(nullptr, bridge::XlaDeviceToAtenDevice(data_->device)))),
       base_() {}
 
 auto XLATensor::data() const -> const std::shared_ptr<Data>& {
