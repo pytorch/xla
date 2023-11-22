@@ -55,7 +55,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     color = None
     text_color = None
     # console.print(ttable)
-    fask_table = rich.table.Table(show_header=False, show_lines=False, padding=0, highlight=False, pad_edge=False, box=rich.box.SQUARE)
+    fask_table = rich.table.Table(show_header=False, show_lines=True, padding=0, highlight=True, pad_edge=False, box=rich.box.SQUARE)
     col = []
     col.append(rich.padding.Padding(rich.align.Align('TPU 0', "center", vertical="middle"), (2,1,2,1), style=rich.style.Style(bgcolor=color, color=text_color)))
     col.append(rich.padding.Padding(rich.align.Align('TPU 1', "center", vertical="middle"), (2,1,2,1), style=rich.style.Style(bgcolor=color, color=text_color)))
@@ -115,7 +115,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     # console.print(ttable)
     color = None
     text_color = None
-    fask_table = rich.table.Table(show_header=False, show_lines=False, padding=0, highlight=False, pad_edge=False, box=rich.box.SQUARE)
+    fask_table = rich.table.Table(show_header=False, show_lines=True, padding=0, highlight=True, pad_edge=False, box=rich.box.SQUARE)
     col = []
     col.append(rich.padding.Padding(rich.align.Align('TPU [0, 1, 2, 3]', "center", vertical="middle"), (2,0,2,0), style=rich.style.Style(bgcolor=color, color=text_color)))
     fask_table.add_row(*col)
@@ -167,7 +167,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     # console.print(ttable)
     color = None
     text_color = None
-    fask_table = rich.table.Table(show_header=False, show_lines=False, padding=0, highlight=False, pad_edge=False, box=rich.box.SQUARE)
+    fask_table = rich.table.Table(show_header=False, show_lines=True, padding=0, highlight=True, pad_edge=False, box=rich.box.SQUARE)
     col = []
     col.append(rich.padding.Padding(rich.align.Align('TPU [0, 1, 2, 3, 4, 5, 6, 7]', "center", vertical="middle"), (0,0,1,0), style=rich.style.Style(bgcolor=color, color=text_color)))
     fask_table.add_row(*col)
