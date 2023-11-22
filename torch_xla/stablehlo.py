@@ -457,6 +457,7 @@ class StableHLOExportOptions:
   include_human_readable_text: bool = True
   override_tracing_arguments: Optional[Tuple[Any]] = None
   override_tracing_kwargs: Optional[Mapping[str, Any]] = None
+  save_weights: bool = True
 
 
 def save_as_stablehlo(exported_model: 'ExportedProgram',
