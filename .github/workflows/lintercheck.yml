@@ -66,7 +66,7 @@ jobs:
             exit 1
           fi
 
-          yapf -i -r *.py test/ scripts/ torch_xla/
+          yapf -i -r *.py test/ scripts/ torch_xla/ benchmarks/
           git_status=$(git status --porcelain)
           if [[ $git_status ]]; then
             git diff
