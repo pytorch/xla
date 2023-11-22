@@ -57,16 +57,16 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     # console.print(ttable)
     fask_table = rich.table.Table(show_header=False, show_lines=False, padding=0, highlight=False, pad_edge=False, box=rich.box.SQUARE)
     col = []
-    col.append(rich.padding.Padding(rich.align.Align('TPU 0', "center", vertical="middle"), (9,9,9,9), style=rich.style.Style(bgcolor=color, color=text_color)))
-    col.append(rich.padding.Padding(rich.align.Align('TPU 1', "center", vertical="middle"), (9,9,9,9), style=rich.style.Style(bgcolor=color, color=text_color)))
-    col.append(rich.padding.Padding(rich.align.Align('TPU 2', "center", vertical="middle"), (9,9,9,9), style=rich.style.Style(bgcolor=color, color=text_color)))
-    col.append(rich.padding.Padding(rich.align.Align('TPU 3', "center", vertical="middle"), (9,9,9,9), style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(rich.padding.Padding(rich.align.Align('TPU 0', "center", vertical="middle"), (2,1,2,1), style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(rich.padding.Padding(rich.align.Align('TPU 1', "center", vertical="middle"), (2,1,2,1), style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(rich.padding.Padding(rich.align.Align('TPU 2', "center", vertical="middle"), (2,1,2,1), style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(rich.padding.Padding(rich.align.Align('TPU 3', "center", vertical="middle"), (2,1,2,1), style=rich.style.Style(bgcolor=color, color=text_color)))
     fask_table.add_row(*col)
     col = []
-    col.append(rich.padding.Padding(rich.align.Align('TPU 4', "center", vertical="middle"), (9,9,9,9), style=rich.style.Style(bgcolor=color, color=text_color)))
-    col.append(rich.padding.Padding(rich.align.Align('TPU 5', "center", vertical="middle"), (9,9,9,9), style=rich.style.Style(bgcolor=color, color=text_color)))
-    col.append(rich.padding.Padding(rich.align.Align('TPU 6', "center", vertical="middle"), (9,9,9,9), style=rich.style.Style(bgcolor=color, color=text_color)))
-    col.append(rich.padding.Padding(rich.align.Align('TPU 7', "center", vertical="middle"), (9,9,9,9), style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(rich.padding.Padding(rich.align.Align('TPU 4', "center", vertical="middle"), (2,1,2,1), style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(rich.padding.Padding(rich.align.Align('TPU 5', "center", vertical="middle"), (2,1,2,1), style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(rich.padding.Padding(rich.align.Align('TPU 6', "center", vertical="middle"), (2,1,2,1), style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(rich.padding.Padding(rich.align.Align('TPU 7', "center", vertical="middle"), (2,1,2,1), style=rich.style.Style(bgcolor=color, color=text_color)))
     fask_table.add_row(*col)
     print("fake_table 1")
     # console.print(fask_table)
@@ -113,10 +113,10 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     text_color = None
     fask_table = rich.table.Table(show_header=False, show_lines=False, padding=0, highlight=False, pad_edge=False, box=rich.box.SQUARE)
     col = []
-    col.append(rich.padding.Padding(rich.align.Align('TPU [0, 1, 2, 3]', "center", vertical="middle"), (9,9,9,9), style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(rich.padding.Padding(rich.align.Align('TPU [0, 1, 2, 3]', "center", vertical="middle"), (2,0,2,0), style=rich.style.Style(bgcolor=color, color=text_color)))
     fask_table.add_row(*col)
     col = []
-    col.append(rich.padding.Padding(rich.align.Align('TPU [4, 5, 6, 7]', "center", vertical="middle"), (9,9,9,9), style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(rich.padding.Padding(rich.align.Align('TPU [4, 5, 6, 7]', "center", vertical="middle"), (2,0,2,0), style=rich.style.Style(bgcolor=color, color=text_color)))
     fask_table.add_row(*col)
     print("fake table 2")
     console.print(fask_table)
@@ -161,7 +161,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     text_color = None
     fask_table = rich.table.Table(show_header=False, show_lines=False, padding=0, highlight=False, pad_edge=False, box=rich.box.SQUARE)
     col = []
-    col.append(rich.padding.Padding(rich.align.Align('TPU [0, 1, 2, 3, 4, 5, 6, 7]', "center", vertical="middle"), (9,9,9,9), style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(rich.padding.Padding(rich.align.Align('TPU [0, 1, 2, 3, 4, 5, 6, 7]', "center", vertical="middle"), (0,0,1,0), style=rich.style.Style(bgcolor=color, color=text_color)))
     fask_table.add_row(*col)
     print("fake table 3")
     print("generatedtable.columns: ")
