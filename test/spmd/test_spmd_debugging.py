@@ -80,6 +80,10 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     # print(type(''.join(generatedtable.columns)))
     fake_console.print(fask_table)
     fake_output = fake_console.file.getvalue()
+    print("output: ")
+    print(output)
+    print("fake_output: ")
+    print(fake_output)
     assert output == fake_output # ''.join(generatedtable.columns) == ''.join(fask_table.columns)
 
 
@@ -127,6 +131,10 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     fake_console = rich.console.Console(file=io.StringIO(), width=120)
     console.print(fask_table)
     fake_output = fake_console.file.getvalue()
+    print("output: ")
+    print(output)
+    print("fake_output: ")
+    print(fake_output)
     assert output == fake_output # generatedtable.columns == fask_table.columns
 
 
@@ -172,6 +180,10 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     fake_console = rich.console.Console(file=io.StringIO(), width=120)
     fake_console.print(fask_table)
     fake_output = fake_console.file.getvalue()
+    print("output: ")
+    print(output)
+    print("fake_output: ")
+    print(fake_output)
     assert output == fake_output# generatedtable.columns == fask_table.columns
 
 if __name__ == '__main__':
