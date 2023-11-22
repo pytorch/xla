@@ -166,6 +166,8 @@ def visualize_sharding(shape: torch.Size,
   device_kind = 'TPU'  # next(iter(sharding.device_set)).platform.upper()
 
   color_iter = make_color_iter(color_map, num_rows, num_cols)
+  print("use_color")
+  print(use_color)
   table = rich.table.Table(
       show_header=False,
       show_lines=not use_color,
@@ -173,6 +175,10 @@ def visualize_sharding(shape: torch.Size,
       highlight=not use_color,
       pad_edge=False,
       box=rich.box.SQUARE if not use_color else None)
+  print("num_rows")
+  print(num_rows)
+  print("num_cols")
+  print(num_cols)
   for i in range(num_rows):
     col = []
     for j in range(num_cols):
@@ -190,6 +196,16 @@ def visualize_sharding(shape: torch.Size,
       right_padding = left_padding + remainder
       top_padding, remainder = divmod(height - 2, 2)
       bottom_padding = top_padding + remainder
+      print("width")
+      print(width)
+      print("left_padding")
+      print(left_padding)
+      print("right_padding")
+      print(right_padding)
+      print("top_padding")
+      print(top_padding)
+      print("bottom_padding")
+      print(bottom_padding)
       if use_color:
         color = _canonicalize_color(next(color_iter)[:3])
         text_color = _get_text_color(color)
@@ -200,8 +216,21 @@ def visualize_sharding(shape: torch.Size,
       else:
         color = None
         text_color = None
+      print(left_padding)
+      print("right_padding")
+      print(right_padding)
+      print("top_padding")
+      print(top_padding)
+      print("bottom_padding")
+      print(bottom_padding)
       padding = (top_padding, right_padding, bottom_padding, left_padding)
       padding = tuple(max(x, 0) for x in padding)  # type: ignore
+      print("added padding: ")
+      print(padding)
+      print("color")
+      print(color)
+      print("text_color")
+      print(text_color)
       col.append(
           rich.padding.Padding(
               rich.align.Align(entry, "center", vertical="middle"),
