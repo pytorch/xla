@@ -385,13 +385,17 @@ def _exported_program_to_stablehlo_bundle(exported_model,
 
 
 def _save_program_bundle(bundle: StableHLOModelBundle,
-                         stablehlo_dir: os.PathLike) -> None:
+                         stablehlo_dir: os.PathLike,
+                         options: Optional[StableHLOExportOptions] = None) -> None:
 
+  if options is None:
+    options = StableHLOExportOptions()
   data_dir = os.path.join(stablehlo_dir, 'data')
   os.makedirs(data_dir, exist_ok=True)
-  for key, val in bundle.state_dict.items():
-    with open(os.path.join(stablehlo_dir, 'data', key), 'wb') as f:
-      np.save(f, val)
+  if options.save_weights:
+    for key, val in bundle.state_dict.items():
+      with open(os.path.join(stablehlo_dir, 'data', key), 'wb') as f:
+        np.save(f, val)
 
   # save metadata and stablehlo bytecode
   func_dir = os.path.join(stablehlo_dir, 'functions')
