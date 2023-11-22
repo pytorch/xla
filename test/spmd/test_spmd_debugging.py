@@ -129,7 +129,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     print("fask_table.columns: ")
     print(fask_table.columns)
     fake_console = rich.console.Console(file=io.StringIO(), width=120)
-    console.print(fask_table)
+    fake_console.print(fask_table)
     fake_output = fake_console.file.getvalue()
     print("output: ")
     print(output)
