@@ -13,7 +13,7 @@ import traceback
 
 try:
   import torch_xla.core.xla_model as xm
-  from torch_xla.distributed.cluster import ClusterResolver
+  from torch_xla._internal import tpu
 except ImportError:
   # ignore the error if torch_xla is not installed
   pass
@@ -150,5 +150,4 @@ def get_gpu_name():
 
 
 def get_tpu_name():
-  return ClusterResolver.get_instance_metadata(
-      'instance/attributes/accelerator-type')
+  return tpu._get_metadata("accelerator-type")
