@@ -4,6 +4,7 @@
 #include <c10/core/SymNodeImpl.h>
 #include <torch/csrc/autograd/variable.h>
 #include <torch/csrc/lazy/core/ir_util.h>
+#include <torch/csrc/lazy/core/ir_metadata.h>
 
 #include <memory>
 #include <string>
@@ -291,6 +292,8 @@ class XLATensor : public torch::lazy::LazyTensor {
   // stack depth
   void SetCustomCallStackDepth(size_t max_call_stack_depth);
   size_t GetCustomCallStackDepth() const;
+
+  bool SetNodeUserMetadata(std::shared_ptr<torch::lazy::UserMetaData> metadata);
 
  private:
   XLATensor(const at::Tensor& tensor, const torch::lazy::BackendDevice& device);

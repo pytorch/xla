@@ -59,12 +59,22 @@ class HloMetadataSetter {
     metadata.set_op_type(op_type);
 
     const torch::lazy::MetaData& nmeta = node->metadata();
+
+    const CustomOpNameMetaData* custom_opname_meta = 
+      dynamic_cast<const CustomOpNameMetaData*>(node->user_metadata());
+
+    //const XlaNode* xla_node_cast = dynamic_cast<const XlaNode*>(node);
     std::string op_name_prefix;
+    size_t max_stack_depth =  nmeta.frame_info.size();
 
-    const XlaNode* xla_node_cast = dynamic_cast<const XlaNode*>(node);
+    if (custom_opname_meta != nullptr) {
+      op_name_prefix = custom_opname_meta->op_name_prefix;
+      max_stack_depth = custom_opname_meta->max_stack_depth;
+    } else {
+      TF_LOG(WARNING) << "*** No metadata! op_type=" << op_type;
+    }
 
-    size_t max_stack_depth = nmeta.frame_info.size();
-
+    /*
     if (xla_node_cast != nullptr && !xla_node_cast->custom_op_name().empty()) {
       op_name_prefix = xla_node_cast->custom_op_name();
 
@@ -72,6 +82,7 @@ class HloMetadataSetter {
         max_stack_depth = xla_node_cast->max_call_stack_depth();
       }
     }
+    */
 
     if (!nmeta.scope.empty()) {
       op_name_prefix =
@@ -83,8 +94,18 @@ class HloMetadataSetter {
       auto frame_it = nmeta.frame_info.rbegin();
       int parent_frame_id = kInvalidIndex;
       int depth = 0;
-      for (; frame_it != nmeta.frame_info.rend() && depth <= max_stack_depth;
+      for (; frame_it != nmeta.frame_info.rend() && depth < max_stack_depth;
            ++frame_it) {
+
+        // Where we aren't working with an XLANode there is no way to pass down
+        // stack depth - 
+        if (custom_opname_meta == 0) {
+          std::string_view func_search(frame_it->function);
+          if (func_search.find("__torch_dispatch__") != func_search.npos) {
+            break;
+          }
+        }
+
         parent_frame_id =
             loctx->AddStackFrameLocation(*frame_it, parent_frame_id);
         ++depth;
