@@ -19,13 +19,11 @@ try:
   from .torchbench_model import TorchBenchModelLoader
   from .benchmark_experiment import ExperimentLoader
   from .util import patch_torch_manual_seed, reset_rng_state, move_to_device, randomize_input
-  from .tiers import append_filter_by_tier
 except ImportError:
   from benchmark_model import ModelLoader
   from torchbench_model import TorchBenchModelLoader
   from benchmark_experiment import ExperimentLoader
   from util import patch_torch_manual_seed, reset_rng_state, move_to_device, randomize_input
-  from tiers import append_filter_by_tier
 
 try:
   import torch_xla.core.xla_model as xm
@@ -306,6 +304,21 @@ class ExperimentRunner:
       metrics["trace_per_iter_time"] = t_trace / self._args.iterations_per_run
 
     return metrics, output
+
+
+def append_filter_by_tier(filter_list: list[str], filter_by_tier: list[int]):
+  _FILTER_BY_TIER = {
+      1:
+          r"^(BERT_pytorch|cm3leon_generate|DALLE2_pytorch|dlrm|hf_GPT2|hf_GPT2_large|GPT_3|hf_T5|hf_T5_base|hf_T5_generate|hf_T5_large|llama_v2_7b_16h|stable_diffusion_xl)$",
+      2:
+          r"^(alexnet|attention_is_all_you_need_pytorch|Background_Matting|basic_gnn_gcn|basic_gnn_gin|basic_gnn_sage|dcgan|densenet121|detectron2_fasterrcnn_r_101_c4|detectron2_fasterrcnn_r_101_dc5|detectron2_fasterrcnn_r_101_fpn|detectron2_fasterrcnn_r_50_c4|detectron2_fasterrcnn_r_50_dc5|detectron2_fasterrcnn_r_50_fpn|detectron2_fcos_r_50_fpn|detectron2_maskrcnn|detectron2_maskrcnn_r_101_c4|detectron2_maskrcnn_r_101_fpn|detectron2_maskrcnn_r_50_c4|detectron2_maskrcnn_r_50_fpn|fastNLP_Bert|functorch_dp_cifar10|hf_Albert|hf_Bart|hf_Bert|hf_Bert_large|llama)$",
+      3:
+          r"^(doctr_det_predictor|doctr_reco_predictor|drq|functorch_maml_omniglot)$",
+  }
+  for tier in filter_by_tier:
+    if tier not in _FILTER_BY_TIER:
+      continue
+    filter_list.append(_FILTER_BY_TIER[tier])
 
 
 def parse_args(args=None):
