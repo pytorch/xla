@@ -44,9 +44,9 @@ http_archive(
         "//openxla_patches:f16_abi_clang.diff",
         "//openxla_patches:gpu_topk_rewriter.diff",
     ],
-    strip_prefix = "xla-4f8381651977dff16b1d86bb4b198eb733c5f478",
+    strip_prefix = "xla-85f07af5e1a626d88a0d486db1d7c0a24b27034f",
     urls = [
-        "https://github.com/openxla/xla/archive/4f8381651977dff16b1d86bb4b198eb733c5f478.tar.gz",
+        "https://github.com/openxla/xla/archive/85f07af5e1a626d88a0d486db1d7c0a24b27034f.tar.gz",
     ],
 )
 
@@ -60,7 +60,7 @@ http_archive(
 # b) by commenting out the http_archive above and uncommenting the following:
 # local_repository(
 #    name = "xla",
-#    path = "/path/to/openxla",
+#    path = "/path/to/xla",
 # )
 
 # Initialize OpenXLA's external dependencies.
