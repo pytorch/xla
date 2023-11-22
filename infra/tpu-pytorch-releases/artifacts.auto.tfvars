@@ -43,13 +43,13 @@ versioned_builds = [
   # Remove libtpu from PyPI builds
   {
     git_tag         = "v2.2.0-rc1"
-    package_version = "2.2.0"
+    package_version = "2.2.0-rc1"
     accelerator     = "tpu"
     bundle_libtpu   = "0"
   },
   {
     git_tag         = "v2.2.0-rc1"
-    package_version = "2.2.0"
+    package_version = "2.2.0-rc1"
     accelerator     = "tpu"
     python_version  = "3.9"
     bundle_libtpu   = "0"
