@@ -3736,13 +3736,15 @@ at::Tensor XLANativeFunctions::as_strided(
     const at::Tensor& self, at::IntArrayRef size, at::IntArrayRef stride,
     c10::optional<int64_t> storage_offset) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
+  const auto& base = bridge::GetXlaTensor(self)->Base();
+  const auto& tensor = base.defined() ? base : self;
+  XLATensorPtr self_tensor = bridge::GetXlaTensor(tensor);
   auto xsize = XlaHelpers::I64List(size);
   auto xstride = XlaHelpers::I64List(stride);
   if (!AsStrided::StrideIsSupported(self_tensor->shape(), xsize, xstride,
                                     storage_offset.value_or(0))) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(as_strided)>::call(self, size, stride,
+        &xla_cpu_fallback, ATEN_OP(as_strided)>::call(tensor, size, stride,
                                                       storage_offset);
   }
   return bridge::AtenFromXlaTensor(tensor_methods::as_strided(
