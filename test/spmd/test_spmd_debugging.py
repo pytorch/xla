@@ -17,7 +17,7 @@ import torch_xla.core.xla_model as xm
 import torch_xla.experimental.xla_sharding as xs
 from torch_xla.experimental.xla_sharded_tensor import XLAShardedTensor
 from torch_xla.experimental.xla_sharding import Mesh
-from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
+# from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
 
 
 import test_xla_sharding_base
@@ -33,6 +33,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
                  xu.getenv_as(xenv.PJRT_DEVICE, str) in ("GPU", 'CUDA', 'ROCM', 'CPU'),
                  f"Requires PJRT_DEVICE set to `TPU`.")
   def test_debugging_spmd_single_host_tiled(self):
+    from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
     device = xm.xla_device()
     num_devices = xr.global_runtime_device_count()
     mesh_shape = (2, num_devices // 2)
@@ -79,6 +80,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
                  xu.getenv_as(xenv.PJRT_DEVICE, str) in ("GPU", 'CUDA', 'ROCM', 'CPU'),
                  f"Requires PJRT_DEVICE set to `TPU`.")
   def test_single_host_partial_replication(self):
+    from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
     device = xm.xla_device()
     num_devices = xr.global_runtime_device_count()
     mesh_shape = (2, num_devices // 2)
@@ -114,6 +116,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
                  xu.getenv_as(xenv.PJRT_DEVICE, str) in ("GPU", 'CUDA', 'ROCM', 'CPU'),
                  f"Requires PJRT_DEVICE set to `TPU`.")
   def test_single_host_replicated(self):
+    from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
     device = xm.xla_device()
     num_devices = xr.global_runtime_device_count()
     mesh_shape = (2, num_devices // 2)
