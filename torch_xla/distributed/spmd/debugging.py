@@ -12,7 +12,6 @@ import torch_xla.runtime as xr
 import torch_xla.experimental.xla_sharding as xs
 from torch_xla.experimental.xla_sharded_tensor import XLAShardedTensor
 
-# pytype: disable=import-error
 try:
   import rich
   import rich.align
@@ -26,7 +25,7 @@ except:
   RICH_ENABLED = False
 
 # Sharding visualization
-sharding_callbacks = weakref.WeakValueDictionary()  # type: ignore
+sharding_callbacks = weakref.WeakValueDictionary()
 _INSPECT_SHARDING_CALL_NAME = "InspectSharding"
 
 
@@ -80,7 +79,6 @@ def visualize_sharding(shape: torch.Size,
     raise ValueError(
         "`visualize_sharding` only works for shapes with 1 and 2 dimensions.")
 
-  # sharding[sharding.index(']')+1:-1]# sharding.devices_indices_map(tuple(shape))
   slices: dict[tuple[int, ...], set[int]] = {}
   heights: dict[tuple[int, ...], Optional[float]] = {}
   widths: dict[tuple[int, ...], float] = {}
@@ -101,35 +99,24 @@ def visualize_sharding(shape: torch.Size,
       # `device_indices_map`: [0, 1, 2, 3]
       # `sharding_spac`: [2, 2]
       sharding_spac = sharding[sharding.index('['):sharding.index(']') + 1]
-      # print('sharding_spac: ', sharding_spac)
       if len(sharding) >= 25 and sharding[-24:-1] == 'last_tile_dim_replicate':
         device_list = list(sharding[sharding.index(']') + 1:-24])
-        # print("device_list")
-        # print(device_list)
         device_indices_map = [int(i) for i in device_list[:-1] if i != ',']
         heights = int(sharding_spac[1])
         widths = int(sharding_spac[3])
         last_dim_depth = int(sharding_spac[5])
         devices_len = len(device_indices_map)
         len_after_dim_down = devices_len // last_dim_depth
-        # for i in range(len_after_dim_down):
-        #   slices.setdefault((i // widths, i % widths),
-        #                     device_indices_map[i:i + last_dim_depth])
         for i in range(len_after_dim_down):
           slices.setdefault((i // widths, i % widths),
                             device_indices_map[i*last_dim_depth:(i + 1)*last_dim_depth])
       elif sharding[-1] == "}":
         # eg: '{devices=[2,2]0,1,2,3}' # 13
         device_list = list(sharding[sharding.index(']') + 1:-1])
-        # print('device_list: ', device_list)
         device_indices_map = [int(i) for i in device_list if i != ',']
-        # print('device_indices_map: ', device_indices_map)
         heights = int(sharding_spac[1])
-        # print('heights: ', heights)
         widths = int(sharding_spac[3])
-        # print('widths: ', widths)
         devices_len = len(device_indices_map)
-        # print('devices_len: ', devices_len)
         for i in range(devices_len):
           slices.setdefault((i // widths, i % widths), device_indices_map[i])
       else:
@@ -139,13 +126,12 @@ def visualize_sharding(shape: torch.Size,
 
   num_rows = heights
   num_cols = widths
-  # print('slices', slices)
 
   console = rich.console.Console(width=max_width)
   use_color = use_color and console.color_system is not None
   if use_color and not color_map:
     try:
-      import matplotlib as mpl  # pytype: disable=import-error
+      import matplotlib as mpl
       color_map = mpl.colormaps["tab20b"]
     except ModuleNotFoundError:
       use_color = False
@@ -166,8 +152,6 @@ def visualize_sharding(shape: torch.Size,
   device_kind = 'TPU'  # next(iter(sharding.device_set)).platform.upper()
 
   color_iter = make_color_iter(color_map, num_rows, num_cols)
-  # print("use_color")
-  # print(use_color)
   table = rich.table.Table(
       show_header=False,
       show_lines=not use_color,
@@ -175,16 +159,12 @@ def visualize_sharding(shape: torch.Size,
       highlight=not use_color,
       pad_edge=False,
       box=rich.box.SQUARE if not use_color else None)
-  # print("num_rows")
-  # print(num_rows)
-  # print("num_cols")
-  # print(num_cols)
   for i in range(num_rows):
     col = []
     for j in range(num_cols):
       entry = f"{device_kind} " + str(
           slices[i,
-                 j])  # "entry"# .join([str(s) for s in sorted(slices[i, j])])
+                 j])
       width, maybe_height = widths, heights  # widths[i, j], heights[i, j]
       width = int(width * base_width * height_to_width_ratio)
       if maybe_height is None:
@@ -196,16 +176,7 @@ def visualize_sharding(shape: torch.Size,
       right_padding = left_padding + remainder
       top_padding, remainder = divmod(height - 2, 2)
       bottom_padding = top_padding + remainder
-      # print("width")
-      # print(width)
-      # print("left_padding")
-      # print(left_padding)
-      # print("right_padding")
-      # print(right_padding)
-      # print("top_padding")
-      # print(top_padding)
-      # print("bottom_padding")
-      # print(bottom_padding)
+
       if use_color:
         color = _canonicalize_color(next(color_iter)[:3])
         text_color = _get_text_color(color)
@@ -216,21 +187,10 @@ def visualize_sharding(shape: torch.Size,
       else:
         color = None
         text_color = None
-      # print(left_padding)
-      # print("right_padding")
-      # print(right_padding)
-      # print("top_padding")
-      # print(top_padding)
-      # print("bottom_padding")
-      # print(bottom_padding)
+
       padding = (top_padding, right_padding, bottom_padding, left_padding)
       padding = tuple(max(x, 0) for x in padding)  # type: ignore
-      # print("added padding: ")
-      # print(padding)
-      # print("color")
-      # print(color)
-      # print("text_color")
-      # print(text_color)
+
       col.append(
           rich.padding.Padding(
               rich.align.Align(entry, "center", vertical="middle"),
