@@ -27,9 +27,9 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     xr.use_spmd()# os.environ["XLA_USE_SPMD"] = "1"
     super().setUpClass()
 
-  @unittest.skipIf(xr.device_type() == 'CPU', "skipped on CPU before enable")
-  @unittest.skipIf(xr.device_type() in ('GPU', 'CUDA', 'ROCM'),
-                   "TODO(manfei): enable it.")
+  @unittest.skipIf(not xr.using_pjrt() or
+                 xu.getenv_as(xenv.PJRT_DEVICE, str) in ("GPU", 'CUDA', 'ROCM', 'CPU'),
+                 f"Requires PJRT_DEVICE set to `TPU`.")
   def test_debugging_spmd_single_host_tiled(self):
     device = xm.xla_device()
     num_devices = xr.global_runtime_device_count()
@@ -68,28 +68,14 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     col.append(rich.padding.Padding(rich.align.Align('TPU 6', "center", vertical="middle"), (2,1,2,1), style=rich.style.Style(bgcolor=color, color=text_color)))
     col.append(rich.padding.Padding(rich.align.Align('TPU 7', "center", vertical="middle"), (2,1,2,1), style=rich.style.Style(bgcolor=color, color=text_color)))
     fask_table.add_row(*col)
-    # print("fake_table 1")
-    # console.print(fask_table)
-    # print("generatedtable.columns: ")
-    # print(generatedtable.columns)
-    # print("fask_table.columns: ")
-    # print(fask_table.columns)
-    # print("type: ")
-    # print(type(generatedtable.columns))
-    # print(''.join(generatedtable.columns))
-    # print(type(''.join(generatedtable.columns)))
     fake_console.print(fask_table)
     fake_output = fake_console.file.getvalue()
-    # print("output: ")
-    # print(output)
-    # print("fake_output: ")
-    # print(fake_output)
-    assert output == fake_output # ''.join(generatedtable.columns) == ''.join(fask_table.columns)
+    assert output == fake_output
 
 
-  @unittest.skipIf(xr.device_type() == 'CPU', "skipped on CPU before enable")
-  @unittest.skipIf(xr.device_type() in ('GPU', 'CUDA', 'ROCM'),
-                   "TODO(manfei): enable it.")
+  @unittest.skipIf(not xr.using_pjrt() or
+                 xu.getenv_as(xenv.PJRT_DEVICE, str) in ("GPU", 'CUDA', 'ROCM', 'CPU'),
+                 f"Requires PJRT_DEVICE set to `TPU`.")
   def test_single_host_partial_replication(self):
     device = xm.xla_device()
     num_devices = xr.global_runtime_device_count()
@@ -101,18 +87,11 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     t = torch.randn(8, 32,  device=device)
     xs.mark_sharding(t, mesh, (0, None))
     sharding = torch_xla._XLAC._get_xla_sharding_spec(t)
-    # print("sharding is: ")
-    # print(sharding)
-    # print("then print: ")
     generatedtable = visualize_tensor_sharding(t)
-    # print("generated table:")
-    # print(generatedtable.columns)
     console = rich.console.Console(file=io.StringIO(), width=120)
-    # console = rich.console.Console(width=120)
     console.print(generatedtable)
     output = console.file.getvalue()
 
-    # console.print(ttable)
     color = None
     text_color = None
     fask_table = rich.table.Table(show_header=False, show_lines=True, padding=0, highlight=True, pad_edge=False, box=rich.box.SQUARE)
@@ -122,25 +101,16 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     col = []
     col.append(rich.padding.Padding(rich.align.Align('TPU [4, 5, 6, 7]', "center", vertical="middle"), (2,0,2,0), style=rich.style.Style(bgcolor=color, color=text_color)))
     fask_table.add_row(*col)
-    # print("fake table 2")
     console.print(fask_table)
-    # print("generatedtable.columns: ")
-    # print(generatedtable.columns)
-    # print("fask_table.columns: ")
-    # print(fask_table.columns)
     fake_console = rich.console.Console(file=io.StringIO(), width=120)
     fake_console.print(fask_table)
     fake_output = fake_console.file.getvalue()
-    # print("output: ")
-    # print(output)
-    # print("fake_output: ")
-    # print(fake_output)
-    assert output == fake_output # generatedtable.columns == fask_table.columns
+    assert output == fake_output
 
 
-  @unittest.skipIf(xr.device_type() == 'CPU', "skipped on CPU before enable")
-  @unittest.skipIf(xr.device_type() in ('GPU', 'CUDA', 'ROCM'),
-                   "TODO(manfei): enable it.")
+  @unittest.skipIf(not xr.using_pjrt() or
+                 xu.getenv_as(xenv.PJRT_DEVICE, str) in ("GPU", 'CUDA', 'ROCM', 'CPU'),
+                 f"Requires PJRT_DEVICE set to `TPU`.")
   def test_single_host_replicated(self):
     device = xm.xla_device()
     num_devices = xr.global_runtime_device_count()
@@ -152,39 +122,21 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     t = torch.randn(8, 32, device=device)
     xs.mark_sharding(t, mesh, partition_spec_replicated)
     sharding = torch_xla._XLAC._get_xla_sharding_spec(t)
-    # print("sharding is: ")
-    # print(sharding)
-    # print("then print: ")
     generatedtable = visualize_tensor_sharding(t)
-    # print("generated table:")
-    # print(generatedtable.columns)
     console = rich.console.Console(file=io.StringIO(), width=120)
     console.print(generatedtable)
     output = console.file.getvalue()
 
-    # console = rich.console.Console(file=io.StringIO(), width=120)
-    # console = rich.console.Console(width=120)
-    # console.print(ttable)
     color = None
     text_color = None
     fask_table = rich.table.Table(show_header=False, show_lines=True, padding=0, highlight=True, pad_edge=False, box=rich.box.SQUARE)
     col = []
     col.append(rich.padding.Padding(rich.align.Align('TPU [0, 1, 2, 3, 4, 5, 6, 7]', "center", vertical="middle"), (0,0,1,0), style=rich.style.Style(bgcolor=color, color=text_color)))
     fask_table.add_row(*col)
-    # print("fake table 3")
-    # print("generatedtable.columns: ")
-    # print(generatedtable.columns)
-    # print("fask_table.columns: ")
-    # print(fask_table.columns)
-    #console.print(fask_table)
     fake_console = rich.console.Console(file=io.StringIO(), width=120)
     fake_console.print(fask_table)
     fake_output = fake_console.file.getvalue()
-    # print("output: ")
-    # print(output)
-    # print("fake_output: ")
-    # print(fake_output)
-    assert output == fake_output# generatedtable.columns == fask_table.columns
+    assert output == fake_output
 
 if __name__ == '__main__':
   test = unittest.main()
