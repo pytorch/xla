@@ -108,8 +108,9 @@ def visualize_sharding(shape: torch.Size,
         devices_len = len(device_indices_map)
         len_after_dim_down = devices_len // last_dim_depth
         for i in range(len_after_dim_down):
-          slices.setdefault((i // widths, i % widths),
-                            device_indices_map[i*last_dim_depth:(i + 1)*last_dim_depth])
+          slices.setdefault(
+              (i // widths, i % widths),
+              device_indices_map[i*last_dim_depth:(i + 1)*last_dim_depth])
       elif sharding[-1] == "}":
         # eg: '{devices=[2,2]0,1,2,3}' # 13
         device_list = list(sharding[sharding.index(']') + 1:-1])
@@ -162,9 +163,7 @@ def visualize_sharding(shape: torch.Size,
   for i in range(num_rows):
     col = []
     for j in range(num_cols):
-      entry = f"{device_kind} " + str(
-          slices[i,
-                 j])
+      entry = f"{device_kind} " + str(slices[i, j])
       width, maybe_height = widths, heights  # widths[i, j], heights[i, j]
       width = int(width * base_width * height_to_width_ratio)
       if maybe_height is None:
