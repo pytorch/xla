@@ -110,7 +110,7 @@ def visualize_sharding(shape: torch.Size,
         for i in range(len_after_dim_down):
           slices.setdefault(
               (i // widths, i % widths),
-              device_indices_map[i*last_dim_depth:(i + 1)*last_dim_depth])
+              device_indices_map[i * last_dim_depth:(i + 1) * last_dim_depth])
       elif sharding[-1] == "}":
         # eg: '{devices=[2,2]0,1,2,3}' # 13
         device_list = list(sharding[sharding.index(']') + 1:-1])
