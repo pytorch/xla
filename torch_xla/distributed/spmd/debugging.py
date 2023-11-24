@@ -188,7 +188,7 @@ def visualize_sharding(shape: torch.Size,
         text_color = None
 
       padding = (top_padding, right_padding, bottom_padding, left_padding)
-      padding = tuple(max(x, 0) for x in padding)  # type: ignore
+      padding = tuple(max(x, 0) for x in padding)
 
       col.append(
           rich.padding.Padding(
