@@ -43,21 +43,14 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     partition_spec = (0, 1)
     xs.mark_sharding(t, mesh, partition_spec)
     sharding = torch_xla._XLAC._get_xla_sharding_spec(t)
-    # print("sharding is:")
-    # print(sharding)
-    # print("then print:")
     generatedtable = visualize_tensor_sharding(t)
-    # print("generated table:")
-    # print(generatedtable.columns)
     console = rich.console.Console(file=io.StringIO(), width=120)
     console.print(generatedtable)
     output = console.file.getvalue()
-    # console = rich.console.Console(width=120)
 
     fake_console = rich.console.Console(file=io.StringIO(), width=120)
     color = None
     text_color = None
-    # console.print(ttable)
     fask_table = rich.table.Table(
         show_header=False,
         show_lines=True,
