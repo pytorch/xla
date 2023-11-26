@@ -456,6 +456,7 @@ class InputCollector(torch.fx.Interpreter):
 
 
 class XLAConstructorMoverPass(ConstructorMoverPass):
+
   def __init__(self):
     super().__init__("xla", inplace=True)
 
@@ -471,10 +472,8 @@ class XLAConstructorMoverPass(ConstructorMoverPass):
     # in this case, there should be a device keyword-argument
     # where its type is the same as the target device.
     device = node.kwargs.get("device")
-    return (
-      device is not None
-      and device.type == self.target
-    )
+    return (device is not None and device.type == self.target)
+
 
 def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
   # Synchronize xla_args, so that each FunctionalTensorWrapper argument updates its
