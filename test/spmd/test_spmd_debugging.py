@@ -30,8 +30,8 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
 
   @unittest.skipIf(
       not xr.using_pjrt() or
-      xu.getenv_as(xenv.PJRT_DEVICE, str) in ("GPU", 'CUDA', 'ROCM', 'CPU'),
-      f"Requires PJRT_DEVICE set to `TPU`.")
+      xu.getenv_as(xenv.PJRT_DEVICE, str) in ("GPU", 'CUDA', 'ROCM'),
+      f"Requires PJRT_DEVICE set to `TPU`, `CPU`.")
   def test_debugging_spmd_single_host_tiled(self):
     from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
     device = xm.xla_device()
@@ -108,8 +108,8 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
 
   @unittest.skipIf(
       not xr.using_pjrt() or
-      xu.getenv_as(xenv.PJRT_DEVICE, str) in ("GPU", 'CUDA', 'ROCM', 'CPU'),
-      f"Requires PJRT_DEVICE set to `TPU`.")
+      xu.getenv_as(xenv.PJRT_DEVICE, str) in ("GPU", 'CUDA', 'ROCM'),
+      f"Requires PJRT_DEVICE set to `TPU`, 'CPU'.")
   def test_single_host_partial_replication(self):
     from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
     device = xm.xla_device()
@@ -158,8 +158,8 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
 
   @unittest.skipIf(
       not xr.using_pjrt() or
-      xu.getenv_as(xenv.PJRT_DEVICE, str) in ("GPU", 'CUDA', 'ROCM', 'CPU'),
-      f"Requires PJRT_DEVICE set to `TPU`.")
+      xu.getenv_as(xenv.PJRT_DEVICE, str) in ("GPU", 'CUDA', 'ROCM'),
+      f"Requires PJRT_DEVICE set to `TPU`, 'CPU'.")
   def test_single_host_replicated(self):
     from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
     device = xm.xla_device()
