@@ -646,14 +646,14 @@ PjRtComputationClient::ExecuteReplicated(
   const PjRtComputation& pjrt_computation =
       dynamic_cast<const PjRtComputation&>(computation);
 
+  std::vector<std::vector<xla::PjRtBuffer*>> argument_handles(
+      devices.size(), std::vector<xla::PjRtBuffer*>(arguments.size()));
   {
     tsl::profiler::TraceMe activity(
         "PjRtComputationClient::ExecuteReplicated_argument_handle",
         tsl::profiler::TraceMeLevel::kInfo);
 
     absl::BlockingCounter counter(arguments.size());
-    std::vector<std::vector<xla::PjRtBuffer*>> argument_handles(
-        devices.size(), std::vector<xla::PjRtBuffer*>(arguments.size()));
     // TODO: tune and document cost estimate
     pool_.ParallelFor(arguments.size(), 30000, [&](int64_t start, int64_t end) {
       tsl::profiler::TraceMe activity(
@@ -676,7 +676,6 @@ PjRtComputationClient::ExecuteReplicated(
         }
         counter.DecrementCount();
       };
-      thread::Schedule(std::move(buffer_converter));
     });
     counter.Wait();
   }
