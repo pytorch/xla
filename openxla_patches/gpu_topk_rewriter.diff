@@ -117,7 +117,7 @@ index a0fc5758a..fc493f2f0 100644
 @@ -343,15 +305,14 @@ StatusOr<HloInstruction*> TopkRewriter::TransformPatternToCustomCall(
    HloInstruction* data = sort->mutable_operand(0);
    const PrimitiveType element_type = data->shape().element_type();
-
+ 
 +  if ((data->shape().rank() != 1 && data->shape().rank() != 2) ||
 +      (element_type != F32 && element_type != BF16)) {
      return nullptr;
