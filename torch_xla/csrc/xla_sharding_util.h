@@ -151,14 +151,16 @@ class ShardingUtil {
       const std::vector<std::string>& devices,
       const XLATensor::ShardingSpecPtr& sharding_spec);
 
-  static void xla_mark_sharding(const at::Tensor& input,
-                                xla::OpSharding sharding);
-};
+  static void XlaMarkSharding(const at::Tensor& input,
+                              xla::OpSharding sharding);
 
-void xla_mark_sharding_dynamo_custom_op(
-    const at::Tensor& input, c10::List<at::IntArrayRef> tile_assignment,
-    c10::List<at::IntArrayRef> group_assignment,
-    c10::List<at::IntArrayRef> replication_groups, int64_t sharding_type);
+  //////////////////////////// Dynamo Integration ////////////////////////////
+
+  static void XlaMarkShardingDynamoCustomOp(
+      const at::Tensor& input, c10::List<at::IntArrayRef> tile_assignment,
+      c10::List<at::IntArrayRef> group_assignment,
+      c10::List<at::IntArrayRef> replication_groups, int64_t sharding_type);
+};
 
 }  // namespace torch_xla
 

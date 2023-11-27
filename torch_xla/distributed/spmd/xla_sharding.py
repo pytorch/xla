@@ -81,13 +81,7 @@ class Mesh:
     return self.axis_names.index(name)
 
   @functools.lru_cache(maxsize=None)
-  def get_op_sharding(self,
-                      partition_spec: Tuple,
-                      flatten_opsharding=False) -> torch_xla._XLAC.OpSharding:
-    """
-    Return the OpSharding for the given partition spec. This is an expensive
-    operation as the mesh grows, so the value is cached for reuse.
-    """
+  def _get_op_sharding_args(self, partition_spec: Tuple):
     partition_spec = _translate_named_partition_spec(self, partition_spec)
     flat_specs = np.hstack([d for d in partition_spec])
     specs = [d for d in flat_specs if d is not None]
@@ -106,19 +100,24 @@ class Mesh:
     group_assignment, replication_groups = _get_group_assignment(
         sharding_type, tile_assignment, len(partition_spec), replicate_dims)
 
-    # If flatten_opsharding = True, return the flattened version of OpSharding
-    if flatten_opsharding:
-      return (tile_assignment.tolist(), group_assignment, replication_groups,
-              int(sharding_type))
-    else:
-      return torch_xla._XLAC.OpSharding(tile_assignment.tolist(),
-                                        group_assignment, replication_groups,
-                                        int(sharding_type))
+    tile_assignment = tile_assignment.tolist()
+    sharding_type = int(sharding_type)
+    return tile_assignment, group_assignment, replication_groups, sharding_type
+
+  @functools.lru_cache(maxsize=None)
+  def get_op_sharding(self,
+                      partition_spec: Tuple) -> torch_xla._XLAC.OpSharding:
+    """
+    Return the OpSharding for the given partition spec. This is an expensive
+    operation as the mesh grows, so the value is cached for reuse.
+    """
+    tile_assignment, group_assignment, replication_groups, sharding_type = self._get_op_sharding_args(
+        partition_spec)
+    return torch_xla._XLAC.OpSharding(tile_assignment, group_assignment,
+                                      replication_groups, sharding_type)
 
 
-# HybridDevice class has been inspired from jax's mesh_utils: https://github.com/google/jax/blob/fc5960f2b8b7a0ef74dbae4e27c5c08ff1564cff/jax/experimental/mesh_utils.py#L4
-
-
+# HybridDevice class has been inspired from jax's mesh_utils: https://github.com/google/jax/blob/fc5960f2b8b7a0ef74dbae4e27c5c08ff1564cff/jax/experimental/mesh_utils.py#L4ƒ
 class HybridMesh(Mesh):
   """Creates a hybrid device mesh of devices connected with ICI and DCN networks.
     The shape of logical mesh should be ordered by increasing network-intensity
@@ -509,33 +508,34 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor],
     f"Partition spec length ({len(partition_spec)}) should be equal to the input rank ({len(t.shape)})."
 
   if use_dynamo_custom_op:
-    tile_assignment, group_assignment, replication_groups, sharding_type = mesh.get_op_sharding(
-        partition_spec, flatten_opsharding=True)
-
-    if isinstance(t, XLAShardedTensor):
-      torch_xla._XLAC._xla_mark_sharding_dynamo_custom_op(
-          t.global_tensor, tile_assignment, group_assignment,
-          replication_groups, sharding_type)
-      return t
-    else:
-      torch_xla._XLAC._xla_mark_sharding_dynamo_custom_op(
-          t, tile_assignment, group_assignment, replication_groups,
-          sharding_type)
-      return XLAShardedTensor(t)
+    # Allows Dynamo to capture mark_sharding op
+    annotate_func = torch_xla._XLAC._xla_mark_sharding_dynamo_custom_op
+    annotate_func(
+        unwrap_sharded_tensor(t), *mesh._get_op_sharding_args(partition_spec))
   else:
     op_sharding = mesh.get_op_sharding(partition_spec)
-
-    if isinstance(t, XLAShardedTensor):
-      torch_xla._XLAC._xla_mark_sharding(t.global_tensor, op_sharding)
-      return t
-    else:
-      torch_xla._XLAC._xla_mark_sharding(t, op_sharding)
-      return XLAShardedTensor(t)
+    annotate_func = torch_xla._XLAC._xla_mark_sharding
+    annotate_func(unwrap_sharded_tensor(t), op_sharding)
+  return wrap_as_sharded_tensor(t)
 
 
 def clear_sharding(t: Union[torch.Tensor, XLAShardedTensor]) -> torch.Tensor:
   """Clear sharding annotation from the input tensor and return a `cpu` casted tensor."""
   torch_xla._XLAC._xla_clear_sharding(t)
+  if isinstance(t, XLAShardedTensor):
+    return t.global_tensor
+  return t
+
+
+def wrap_as_sharded_tensor(
+    t: Union[torch.Tensor, XLAShardedTensor]) -> XLAShardedTensor:
+  if not isinstance(t, XLAShardedTensor):
+    return XLAShardedTensor(t)
+  return t
+
+
+def unwrap_sharded_tensor(
+    t: Union[torch.Tensor, XLAShardedTensor]) -> torch.Tensor:
   if isinstance(t, XLAShardedTensor):
     return t.global_tensor
   return t

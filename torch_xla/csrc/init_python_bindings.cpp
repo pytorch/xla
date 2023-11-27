@@ -1571,7 +1571,7 @@ void InitXlaModuleBindings(py::module m) {
       }));
   m.def("_xla_mark_sharding",
         [](const at::Tensor& input, xla::OpSharding sharding) {
-          ShardingUtil::xla_mark_sharding(input, sharding);
+          ShardingUtil::XlaMarkSharding(input, sharding);
         });
   m.def("_xla_mark_sharding_dynamo_custom_op",
         [](const at::Tensor& input, const py::list& tile_assignment,
@@ -1598,7 +1598,7 @@ void InitXlaModuleBindings(py::module m) {
                 at::IntArrayRef(t.cast<std::vector<int64_t>>()));
           }
 
-          xla_mark_sharding_dynamo_custom_op(
+          ShardingUtil::XlaMarkShardingDynamoCustomOp(
               input, tile_assignment_list, group_assignment_list,
               replication_groups_list, sharding_type);
         });
