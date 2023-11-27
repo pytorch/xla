@@ -296,7 +296,7 @@ def new_xla_process_group(ranks=None,
                           backend=None,
                           pg_options=None):
   #this options tells xla backend to "infer" a mesh
-  use_spmd = False 
+  use_spmd = False
   #this option allows the application to pass in the mesh
   mesh_spmd = None
   if pg_options is not None and isinstance(pg_options, dict):
@@ -325,7 +325,7 @@ def new_xla_process_group(ranks=None,
       pg._mesh = [[r] for r in range(world_pg.size())]
     elif len(ranks) < world_pg.size() and len(ranks) > 1:
       if mesh_spmd:
-        pg._mesh = mesh_spmd  
+        pg._mesh = mesh_spmd
       elif use_spmd:
         pg._mesh = _infer_mesh(ranks, world_pg.size())
       else:
