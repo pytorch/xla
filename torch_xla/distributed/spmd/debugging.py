@@ -175,16 +175,8 @@ def visualize_sharding(shape: torch.Size,
       top_padding, remainder = divmod(height - 2, 2)
       bottom_padding = top_padding + remainder
 
-      if use_color:
-        # color = _canonicalize_color(next(color_iter)[:3])
-        # text_color = _get_text_color(color)
-        # top_padding += 1
-        # bottom_padding += 1
-        # left_padding += 1
-        # right_padding += 1
-      else:
-        color = None
-        text_color = None
+      color = None
+      text_color = None
 
       padding = (top_padding, right_padding, bottom_padding, left_padding)
       padding = tuple(max(x, 0) for x in padding)
