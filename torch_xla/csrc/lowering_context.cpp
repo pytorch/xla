@@ -20,7 +20,7 @@
 
 namespace torch_xla {
 
-// Invalid stack frame id
+// Invalid stack frame id - used for stack frame population
 static int kInvalidIndex = 0;
 
 namespace {
@@ -71,18 +71,8 @@ class HloMetadataSetter {
       op_name_prefix = custom_opname_meta->op_name_prefix;
       max_stack_depth = custom_opname_meta->max_stack_depth;
     } else {
-      TF_LOG(WARNING) << "*** No metadata! op_type=" << op_type;
+      TF_LOG(WARNING) << "No custom opname metadata! op_type=" << op_type;
     }
-
-    /*
-    if (xla_node_cast != nullptr && !xla_node_cast->custom_op_name().empty()) {
-      op_name_prefix = xla_node_cast->custom_op_name();
-
-      if (xla_node_cast->max_call_stack_depth() != 0) {
-        max_stack_depth = xla_node_cast->max_call_stack_depth();
-      }
-    }
-    */
 
     if (!nmeta.scope.empty()) {
       op_name_prefix =
@@ -96,8 +86,9 @@ class HloMetadataSetter {
       int depth = 0;
       for (; frame_it != nmeta.frame_info.rend() && depth < max_stack_depth;
            ++frame_it) {
-        // Where we aren't working with an XLANode there is no way to pass down
-        // stack depth -
+        // Sometimes we can't attach information to a torch::lazy::Node
+        // this code correct the remaining cases where TorchDispatch is
+        // used to intercept dispatches in python correcting stack depth
         if (custom_opname_meta == 0) {
           std::string_view func_search(frame_it->function);
           if (func_search.find("__torch_dispatch__") != func_search.npos) {
@@ -332,10 +323,11 @@ void LoweringContext::AddParameter(const torch::lazy::Output& output,
   return;
 }
 
+// TODO: Remove duplicate code copied form openxla/xla MHLO -> HLO
 int64_t LoweringContext::AddStackFrameLocation(
     const torch::lazy::SourceLocation& frame, int64_t parent_frame_id) {
   int line = frame.line;
-  int column = 0;  // Not provided in torch stack
+  int column = 0;  // Not provided in torch lazy source location - set to zero
   std::string filename = frame.file;
   std::string function_name = frame.function;
 

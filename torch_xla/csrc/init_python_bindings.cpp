@@ -1926,8 +1926,6 @@ void InitXlaModuleBindings(py::module m) {
               std::make_shared<CustomOpNameMetaData>(op_name_prefix,
                                                      max_call_stack_depth);
           return xtensor->SetNodeUserMetadata(user_meta);
-          // xtensor->SetUser(op_name);
-          // xtensor->SetCustomCallStackDepth(max_call_stack_depth);
         });
   m.def("_get_all_reduce_token",
         [](const std::string& device_str) -> const torch::lazy::Value& {

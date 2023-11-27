@@ -283,16 +283,10 @@ class XLATensor : public torch::lazy::LazyTensor {
   // Override to enable SPMD.
   void AssignIrValue(torch::lazy::Value ir_value) const final;
 
-  // Set custom op name on XlaNode
-  void SetCustomOpName(const std::string& op_name);
-  const std::string& GetCustomOpName() const;
-
-  // When using TorchDispatch - e.g. to set a custom op name we end up
-  // adding additional frames in stack frame debug - this limits
+  // Set custom op name on base Node type (since not all nodes are XlaNode),
+  // additionally when using TorchDispatch - e.g. to set a custom op name we
+  // end up adding additional frames in stack frame debug - this limits
   // stack depth
-  void SetCustomCallStackDepth(size_t max_call_stack_depth);
-  size_t GetCustomCallStackDepth() const;
-
   bool SetNodeUserMetadata(std::shared_ptr<torch::lazy::UserMetaData> metadata);
 
  private:

@@ -79,9 +79,9 @@ class TestHloMetaData(unittest.TestCase):
 
     with CustomOpNameLowering() as c:
       model = model.to(device=xm.xla_device())
-      #inp = torch.rand(4, 4, device=xm.xla_device())
-      inp = torch.rand(4, 4)
-      inp = inp.to(device=xm.xla_device())
+      inp = torch.rand(4, 4, device=xm.xla_device())
+      #inp = torch.rand(4, 4)
+      #inp = inp.to(device=xm.xla_device())
       out = model(inp)
 
       # Get outer frames
