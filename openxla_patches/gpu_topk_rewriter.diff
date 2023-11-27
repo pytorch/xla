@@ -1,5 +1,5 @@
 diff --git a/xla/service/topk_rewriter.cc b/xla/service/topk_rewriter.cc
-index a0fc5758a..da9be54c8 100644
+index a0fc5758a..fc493f2f0 100644
 --- a/xla/service/topk_rewriter.cc
 +++ b/xla/service/topk_rewriter.cc
 @@ -197,6 +197,8 @@ std::optional<int64_t> TopkRewriter::SortIsInTopK(HloInstruction* inst) {
@@ -31,14 +31,13 @@ index a0fc5758a..da9be54c8 100644
        break;
      }
      if (k == std::nullopt) {
-@@ -255,41 +252,21 @@ struct TopKCustomCall {
+@@ -255,41 +252,18 @@ struct TopKCustomCall {
  TopKCustomCall CreateTopKCustomCall(HloInstruction* input,
                                      const int64_t sort_dim, const int64_t k,
                                      HloComputation* comparator,
 -                                    HloComputation* comp) {
 +                                    HloComputation* comp,
 +                                    int64_t batch_dim,
-+                                    HloSortInstruction* sort) {
    Shape data_shape = input->shape();
    PrimitiveType element_type = data_shape.element_type();
 -  bool has_batch = data_shape.rank() >= 2;
@@ -65,7 +64,7 @@ index a0fc5758a..da9be54c8 100644
 -              : ShapeUtil::MakeShape(element_type, {batch_size, input_size}),
 -          input));
 -    }
- 
+-
 -    if (sort_dim == 0) {
 -      // Transpose for the custom call when sorting the first dimension.
 -      input = comp->AddInstruction(
@@ -79,11 +78,10 @@ index a0fc5758a..da9be54c8 100644
 +  // HloInstruction* input = sort->mutable_operand(0);
 +  if (has_batch && sort_dim == 0) {
 +        ShapeUtil::MakeShape(element_type, {batch_size, input_size}), input,
-+        {1, 0}));
    }
  
    Shape topk_shape =
-@@ -308,25 +285,13 @@ TopKCustomCall CreateTopKCustomCall(HloInstruction* input,
+@@ -308,25 +282,13 @@ TopKCustomCall CreateTopKCustomCall(HloInstruction* input,
        comp->AddInstruction(HloInstruction::CreateGetTupleElement(
            topk->shape().tuple_shapes(1), topk, 1));
  
@@ -116,10 +114,10 @@ index a0fc5758a..da9be54c8 100644
    }
    return {topk, value_gte, index_gte};
  }
-@@ -343,15 +308,14 @@ StatusOr<HloInstruction*> TopkRewriter::TransformPatternToCustomCall(
+@@ -343,15 +305,14 @@ StatusOr<HloInstruction*> TopkRewriter::TransformPatternToCustomCall(
    HloInstruction* data = sort->mutable_operand(0);
- 
--  if (element_type != F32 && element_type != BF16) {
+   const PrimitiveType element_type = data->shape().element_type();
+
 +  if ((data->shape().rank() != 1 && data->shape().rank() != 2) ||
 +      (element_type != F32 && element_type != BF16)) {
      return nullptr;
@@ -135,7 +133,7 @@ index a0fc5758a..da9be54c8 100644
  
    // Profitability check.
    if (!is_profitable_to_convert_(sort, *k)) {
-@@ -359,7 +323,7 @@ StatusOr<HloInstruction*> TopkRewriter::TransformPatternToCustomCall(
+@@ -359,7 +320,7 @@ StatusOr<HloInstruction*> TopkRewriter::TransformPatternToCustomCall(
    }
  
    TopKCustomCall topkcc = CreateTopKCustomCall(
@@ -144,11 +142,6 @@ index a0fc5758a..da9be54c8 100644
  
    for (HloInstruction* user : sort->users()) {
      if (sort->operand_count() == 2) {
-@@ -530,3 +494,4 @@ StatusOr<bool> TopkDecomposer::Run(
- }
- 
- }  // namespace xla
-+
 diff --git a/xla/service/topk_rewriter_test.cc b/xla/service/topk_rewriter_test.cc
 index 208b5e026..4e8776ebd 100644
 --- a/xla/service/topk_rewriter_test.cc
