@@ -14,11 +14,13 @@ from torch_xla import runtime as xr
 
 from datetime import timedelta
 
+
 def get_process_group_xla(rank, size):
   pg_xla_creator = dist.Backend._plugins['XLA'].creator_fn
   pg_xla = pg_xla_creator(
       prefix_store=None, rank=rank, size=size, timeout=timedelta(minutes=1))
   return pg_xla
+
 
 def hlo_matches(hlo, expected_pattern, match_times=1):
   matches = re.findall(expected_pattern, hlo)
