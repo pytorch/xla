@@ -26,11 +26,9 @@ index e7665a063..4468ebc42 100644
 .tar.gz".format(commit = LLVM_COMMIT),
 -            "https://github.com/llvm/llvm-project/archive/{commit}.tar.gz".format(commit = LLVM_COMMIT),
 -        ],
-+            "https://storage.googleapis.com/tpu-pytorch/llvm-raw/{commit}.tar.gz".format(commit = LLV
-M_COMMIT),
++            "https://storage.googleapis.com/tpu-pytorch/llvm-raw/{commit}.tar.gz".format(commit = LLVM_COMMIT),
 +           "https://github.com/llvm/llvm-project/archive/{commit}.tar.gz".format(commit = LLVM_COMMIT),
-+            "https://storage.googleapis.com/tpu-pytorch/llvm-raw/{commit}.tar.gz".format(commit = LLV
-M_COMMIT),
++            "https://storage.googleapis.com/tpu-pytorch/llvm-raw/{commit}.tar.gz".format(commit = LLVM_COMMIT),
 +       ],
          build_file = "//third_party/llvm:llvm.BUILD",
          patch_file = [
