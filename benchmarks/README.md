@@ -5,6 +5,27 @@ The two main benchmarking scripts are
   - `result_analyzer.py` to aggregate the benchmark result in CSV form.
 
 
+## Reducing benchmark noise 
+
+It is important to keep the benchmark runs safe from external effects 
+to reduce noise. Run:
+
+```
+# Sets the CPU statically to the highest tuneable frequency. 
+# Prevent energy saving features to kick in.
+sudo cpupower frequency-set --governor performance
+
+# Lock GPU clocks to lower frequency to reduce the chance of extra throttling. Choose
+# FREQ based on your GPU info. For example A100 operates on 765MHz (up to 1410 MHz),
+# with memory operating on 1215MHz. Setting the clock a couple hundrend MHz below
+# will most likely prevent thermal effects.
+FREQ=...
+nvidia-smi --lock-gpu-clocks=$FREQ,$FREQ
+
+# Disable autoboost selecting clock rate based on thermal, and power budget effects.
+CUDA_AUTO_BOOST=0
+```
+
 ## Experiment runner
 
 Run the `experiment_runner.py` from the `pytorch` directory, which should be the
