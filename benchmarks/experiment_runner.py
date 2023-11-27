@@ -254,7 +254,9 @@ class ExperimentRunner:
   def collect_profile_to_metrics(self, prof, metrics):
     assert prof is not None, 'Expecting profiler to be defined!'
     if not self._args.profile_cuda_cpu_collect:
-      logger.warning('Profiling enabled, but collection of CPU/CUDA profiling info disabled.')
+      logger.warning(
+          'Profiling enabled, but collection of CPU/CUDA profiling info disabled.'
+      )
       return
 
     kernel_dump = prof.profiler.total_average()
@@ -276,10 +278,12 @@ class ExperimentRunner:
 
     total_cpu_time /= 1000000
     total_cuda_time /= 1000000
-    metrics["total_cpu_time"] = total_cpu_time
-    metrics["total_cuda_time"] = total_cuda_time
-    metrics["per_iter_cpu_time"] = total_cpu_time / self._args.iterations_per_run
-    metrics["per_iter_cuda_time"] = total_cuda_time / self._args.iterations_per_run
+    metrics["total_cpu_time_s"] = total_cpu_time
+    metrics["total_cuda_time_s"] = total_cuda_time
+    metrics[
+        "per_iter_cpu_time_s"] = total_cpu_time / self._args.iterations_per_run
+    metrics[
+        "per_iter_cuda_time_s"] = total_cuda_time / self._args.iterations_per_run
 
   def timed_run(self, benchmark_experiment, benchmark_model):
     reset_rng_state(benchmark_experiment)
@@ -322,7 +326,6 @@ class ExperimentRunner:
         output = loop(prof)
     else:
       output = loop()
-
 
     t_end = time.perf_counter()
     if enable_prof:

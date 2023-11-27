@@ -88,18 +88,22 @@ class ResultAnalyzer:
       d["xla_median_trace_per_iter_time"] = -1
       d["xla_compile_time"] = -1
 
-    if "total_cpu_time" in dataline["metrics"]:
-      total_cpu_time = np.asarray(dataline["metrics"]["total_cpu_time"], dtype="float")
-      d["median_total_cpu_time"] = np.median(total_cpu_time)
-    if "per_iter_cpu_time" in dataline["metrics"]:
-      per_iter_cpu_time = np.asarray(dataline["metrics"]["per_iter_cpu_time"], dtype="float")
-      d["median_per_iter_cpu_time"] = np.median(per_iter_cpu_time)
-    if "total_cuda_time" in dataline["metrics"]:
-      total_cuda_time = np.asarray(dataline["metrics"]["total_cuda_time"], dtype="float")
-      d["median_total_cuda_time"] = np.median(total_cuda_time)
-    if "per_iter_cuda_time" in dataline["metrics"]:
-      per_iter_cuda_time = np.asarray(dataline["metrics"]["per_iter_cuda_time"], dtype="float")
-      d["median_per_iter_cuda_time"] = np.median(per_iter_cuda_time)
+    if "total_cpu_time_s" in dataline["metrics"]:
+      total_cpu_time = np.asarray(
+          dataline["metrics"]["total_cpu_time_s"], dtype="float")
+      d["median_total_cpu_time_s"] = np.median(total_cpu_time)
+    if "per_iter_cpu_time_s" in dataline["metrics"]:
+      per_iter_cpu_time = np.asarray(
+          dataline["metrics"]["per_iter_cpu_time_s"], dtype="float")
+      d["median_per_iter_cpu_time_s"] = np.median(per_iter_cpu_time)
+    if "total_cuda_time_s" in dataline["metrics"]:
+      total_cuda_time = np.asarray(
+          dataline["metrics"]["total_cuda_time_s"], dtype="float")
+      d["median_total_cuda_time_s"] = np.median(total_cuda_time)
+    if "per_iter_cuda_time_s" in dataline["metrics"]:
+      per_iter_cuda_time = np.asarray(
+          dataline["metrics"]["per_iter_cuda_time_s"], dtype="float")
+      d["median_per_iter_cuda_time_s"] = np.median(per_iter_cuda_time)
 
     if dataline["experiment"]["dynamo"]:
       d["dynamo_compile_time"] = np.max(total_time) - np.median(total_time)
