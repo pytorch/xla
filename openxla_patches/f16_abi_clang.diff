@@ -1,4 +1,3 @@
-upstream CI will fail without this
 diff --git a/xla/service/cpu/runtime_fp16.h b/xla/service/cpu/runtime_fp16.h
 index 3f7af5197..ce4491c5d 100644
 --- a/xla/service/cpu/runtime_fp16.h
