@@ -152,14 +152,16 @@ PjRtComputationClient::PjRtComputationClient() {
     xla::PjRtClient::KeyValuePutCallback kv_put = nullptr;
     if (distributed_client != nullptr) {
       std::string key_prefix = "gpu:";
-      kv_get = [distributed_client, key_prefix](const std::string& k,
-                                                absl::Duration timeout) {
+      kv_get = [distributed_client, key_prefix](
+                   std::string_view k,
+                   absl::Duration timeout) -> xla::StatusOr<std::string> {
         return distributed_client->BlockingKeyValueGet(
             absl::StrCat(key_prefix, k), timeout);
       };
-      kv_put = [distributed_client, key_prefix](const std::string& k,
-                                                const std::string& v) {
-        return distributed_client->KeyValueSet(absl::StrCat(key_prefix, k), v);
+      kv_put = [distributed_client, key_prefix](
+                   std::string_view k, std::string_view v) -> xla::Status {
+        return distributed_client->KeyValueSet(absl::StrCat(key_prefix, k),
+                                               v);
       };
     }
     TF_VLOG(3) << "Getting StreamExecutorGpuClient for node_id="
