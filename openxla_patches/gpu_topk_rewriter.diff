@@ -167,8 +167,7 @@ index 208b5e026..4e8776ebd 100644
 -    dimensions={2}, is_stable=true, to_apply=%compare
 -  %get-tuple-element.28 = f32[3, 8,1234567] get-tuple-element(%sort.27), index=0
 -  %slice.29 = f32[3,8,5] slice(%get-tuple-element.28), slice={[0:3], [0:8], [0:5]}
-
-...skipping 1 line
+-  %get-tuple-element.30 = s32[3,8,1234567] get-tuple-element(%sort.27), index=1
 -  %slice.31 = s32[3,8,5] slice(%get-tuple-element.30), slice={[0:3], [0:8], [0:5]}
 -  ROOT %tuple.32 = (f32[3,8,5], s32[3,8,5]) tuple(%slice.29, %slice.31)
 -})";
@@ -186,7 +185,6 @@ index 208b5e026..4e8776ebd 100644
 -                  m::Reshape(m::GetTupleElement(
 -                      m::CustomCall(m::Reshape(m::Parameter(0))), 1)))));
 -  const HloInstruction* cc = module->entry_computation()
--                                 ->root_instruction()
 -                                 ->operand(0)
 -                                 ->operand(0)
 -                                 ->operand(0);
