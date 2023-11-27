@@ -11,8 +11,7 @@ index a0fc5758a..da9be54c8 100644
  
    bool supported = true;
    std::optional<int64_t> k;
-
-...skipping 1 line
+@@ -221,15 +223,10 @@ std::optional<int64_t> TopkRewriter::SortIsInTopK(HloInstruction* inst) {
        supported = false;
        break;
      }
@@ -36,7 +35,6 @@ index a0fc5758a..da9be54c8 100644
  TopKCustomCall CreateTopKCustomCall(HloInstruction* input,
                                      const int64_t sort_dim, const int64_t k,
                                      HloComputation* comparator,
--                                    HloComputation* comp) {
 +                                    HloComputation* comp,
 +                                    int64_t batch_dim,
 +                                    bool has_batch,
@@ -44,8 +42,7 @@ index a0fc5758a..da9be54c8 100644
    Shape data_shape = input->shape();
    PrimitiveType element_type = data_shape.element_type();
 -  bool has_batch = data_shape.rank() >= 2;
-
-...skipping 1 line
+-  int64_t input_size = data_shape.dimensions(sort_dim);
 -  int64_t batch_size = 1;
 -  Shape topk_input_shape;
 -
@@ -75,10 +72,8 @@ index a0fc5758a..da9be54c8 100644
 -          HloInstruction::CreateTranspose(topk_input_shape, input, {1, 0}));
 -    }
 -  } else {
--    topk_input_shape = data_shape;
 +  const int64_t batch_size =
-
-...skipping 1 line
++      has_batch ? sort->operand(0)->shape().dimensions(batch_dim) : 1;
 +  const int64_t input_size = sort->operand(0)->shape().dimensions(sort_dim);
 +  // HloInstruction* input = sort->mutable_operand(0);
 +  if (has_batch && sort_dim == 0) {
@@ -110,12 +105,10 @@ index a0fc5758a..da9be54c8 100644
 -          ShapeUtil::MakeShape(element_type, shape_dim), value_gte));
 -      index_gte = comp->AddInstruction(HloInstruction::CreateReshape(
 -          ShapeUtil::MakeShape(S32, shape_dim), index_gte));
-
-...skipping 1 line
+-    }
 +  if (has_batch && sort_dim == 0) {
 +    value_gte = comp->AddInstruction(HloInstruction::CreateTranspose(
 +        ShapeUtil::MakeShape(element_type, {k, batch_size}),
-+        value_gte, {1, 0}));
 +    index_gte = comp->AddInstruction(HloInstruction::CreateTranspose(
 +        ShapeUtil::MakeShape(S32, {k, batch_size}), index_gte,
 +        {1, 0}));
@@ -143,8 +136,7 @@ index a0fc5758a..da9be54c8 100644
    // Profitability check.
    if (!is_profitable_to_convert_(sort, *k)) {
 @@ -359,7 +323,7 @@ StatusOr<HloInstruction*> TopkRewriter::TransformPatternToCustomCall(
-
-...skipping 1 line
+   }
  
    TopKCustomCall topkcc = CreateTopKCustomCall(
 -      data, sort_dim, k.value(), sort->to_apply(), inst->parent());
@@ -154,7 +146,6 @@ index a0fc5758a..da9be54c8 100644
      if (sort->operand_count() == 2) {
 @@ -530,3 +494,4 @@ StatusOr<bool> TopkDecomposer::Run(
  }
- 
  }  // namespace xla
 +
 diff --git a/xla/service/topk_rewriter_test.cc b/xla/service/topk_rewriter_test.cc
