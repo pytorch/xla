@@ -16,10 +16,15 @@ xla::Shape NodeOutputShape(c10::ArrayRef<torch::lazy::Value> inputs,
                            const std::vector<std::vector<int64_t>>& groups,
                            bool pin_layout) {
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    std::vector<xla::XlaOp> result =
+    AllGatherResult result =
         BuildAllGather(operands.subspan(0, operands.size() - 1),
                        operands.back(), dim, shard_count, groups, pin_layout);
-    return xla::Tuple(operands[0].builder(), result);
+    std::vector<xla::XlaOp> outputs;
+    for (size_t i = 0; i < result.result.size(); ++i) {
+      outputs.emplace_back(result.result[i]);
+    }
+    outputs.emplace_back(result.token);
+    return xla::Tuple(operands[0].builder(), outputs);
   };
   std::vector<xla::Shape> input_shapes;
   for (const auto& input : inputs) {
@@ -27,6 +32,7 @@ xla::Shape NodeOutputShape(c10::ArrayRef<torch::lazy::Value> inputs,
   }
   input_shapes.emplace_back(GetXlaShape(token));
   return InferOutputShape(input_shapes, shape_fn);
+
 }
 
 }  // namespace
@@ -61,9 +67,10 @@ XlaOpVector AllGather::Lower(LoweringContext* loctx) const {
     inputs.push_back(loctx->GetOutputOp(operand_list[i]));
   }
   xla::XlaOp token = loctx->GetOutputOp(operand_list.back());
-  return ReturnOps(
-      BuildAllGather(inputs, token, dim_, shard_count_, groups_, pin_layout_),
-      loctx);
+  AllGatherResult result =
+      BuildAllGather(inputs, token, dim_, shard_count_, groups_, pin_layout_);
+  result.result.push_back(result.token);
+  return ReturnOps(result.result, loctx);
 }
 
 std::string AllGather::ToString() const {

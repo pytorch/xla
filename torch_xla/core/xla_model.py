@@ -594,8 +594,8 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
   result = torch_xla._XLAC._xla_all_gather_coalesced(value, token, dim,
                                                      shard_count, groups or [],
                                                      pin_layout)
-  torch_xla._XLAC._set_all_reduce_token(devctx.device, result[-1])
-  return result[:-1]
+  torch_xla._XLAC._set_all_reduce_token(devctx.device, result[1])
+  return result[0]
 
 
 def all_to_all(value,

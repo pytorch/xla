@@ -210,23 +210,18 @@ AllToAllResult BuildAllToAll(xla::XlaOp input, xla::XlaOp token,
   return {reduce_result, token_handler.GetNewToken(reduce_result)};
 }
 
-std::vector<xla::XlaOp> BuildAllGather(
+AllGatherResult BuildAllGather(
     absl::Span<const xla::XlaOp> inputs, xla::XlaOp token, int64_t dim,
     int64_t shard_count, const std::vector<std::vector<int64_t>>& groups,
     bool pin_layout) {
   std::vector<xla::ReplicaGroup> cc_groups = CreateReduceGroups(groups);
+  TokenHandler token_handler(token);
   // TODO: We use pseudo-tokens ATM, which are real values. This need to be
   // switched to use the real XLA Token once support has been added to XLA
   // AllGather().
-  xla::XlaOp chained_token = token;
   ReduceContext cc_ctx = GetReduceContext(inputs);
   std::vector<xla::XlaOp> result(inputs.size());
   for (auto& type_ctx : cc_ctx.contexts) {
-    xla::XlaOp token_op = MaybeConvertTo(chained_token, type_ctx.first);
-    type_ctx.second.ops.push_back(token_op);
-    type_ctx.second.operand_shapes.push_back(
-        ShapeHelper::ShapeOfXlaOp(token_op));
-
     xla::XlaOp all_gather_result;
     if (pin_layout) {
       all_gather_result = xla::AllGather(
@@ -239,16 +234,17 @@ std::vector<xla::XlaOp> BuildAllGather(
           xla::AllGather(xla::Tuple(inputs[0].builder(), type_ctx.second.ops),
                          dim, shard_count, cc_groups);
     }
-    for (size_t i = 0; i < type_ctx.second.indices.size(); ++i) {
-      size_t op_idx = type_ctx.second.indices[i];
-      result[op_idx] = xla::GetTupleElement(all_gather_result, i);
+    if (type_ctx.second.indices.size() > 1) { 
+      for (size_t i = 0; i < type_ctx.second.indices.size(); ++i) {
+        size_t op_idx = type_ctx.second.indices[i];
+        result[op_idx] = xla::GetTupleElement(all_gather_result, i);
+      }
     }
-    chained_token =
-        xla::GetTupleElement(all_gather_result, type_ctx.second.indices.size());
+    else {
+      result[0] = all_gather_result;
+    }
   }
-  result.push_back(
-      MaybeConvertTo(chained_token, XlaHelpers::TypeOfXlaOp(token)));
-  return result;
+  return {result, token_handler.GetNewToken(result[0])};
 }
 
 CollectivePermuteResult BuildCollectivePermute(
