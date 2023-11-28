@@ -693,7 +693,12 @@ at::Tensor XLANativeFunctions::as_strided_copy(
     const at::Tensor& self, at::IntArrayRef size, at::IntArrayRef stride,
     c10::optional<int64_t> storage_offset) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
+  // Retrieve the base tensor, if there's one.
+  // This function actually operates on the tensor's storage. Since XLA does not
+  // expose the actual storage, we use the originally allocated tensor.
+  const at::Tensor& base = bridge::GetXlaTensor(self)->Base();
+  const at::Tensor& tensor = base.defined() ? base : self;
+  XLATensorPtr self_tensor = bridge::GetXlaTensor(tensor);
   auto xsize = XlaHelpers::I64List(size);
   auto xstride = XlaHelpers::I64List(stride);
   if (!AsStrided::StrideIsSupported(self_tensor->shape(), xsize, xstride,
@@ -702,9 +707,14 @@ at::Tensor XLANativeFunctions::as_strided_copy(
         &xla_cpu_fallback, ATEN_OP(as_strided)>::call(self, size, stride,
                                                       storage_offset);
   }
-  return bridge::AtenFromXlaTensor(tensor_methods::as_strided(
-      self_tensor, std::move(xsize), std::move(xstride),
-      XlaHelpers::I64Optional(storage_offset)));
+  // Sets the base tensor as tensor.
+  // Even though this function copies (without aliasing) tensor, it's still
+  // treated as a view function in the functionalization layer.
+  return bridge::AtenFromXlaTensor(bridge::SetBaseTensor(
+      tensor_methods::as_strided(self_tensor, std::move(xsize),
+                                 std::move(xstride),
+                                 XlaHelpers::I64Optional(storage_offset)),
+      tensor));
 }
 
 at::Tensor XLANativeFunctions::as_strided_scatter(
@@ -2807,8 +2817,10 @@ at::Tensor XLANativeFunctions::slice_copy(const at::Tensor& self, int64_t dim,
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   int64_t start_val = start.has_value() ? start.value() : 0;
   int64_t end_val = end.has_value() ? end.value() : INT64_MAX;
-  return bridge::AtenFromXlaTensor(tensor_methods::slice(
-      bridge::GetXlaTensor(self), dim, start_val, end_val, step));
+  return bridge::AtenFromXlaTensor(bridge::SetBaseTensor(
+      tensor_methods::slice(bridge::GetXlaTensor(self), dim, start_val, end_val,
+                            step),
+      self));
 }
 
 at::Tensor XLANativeFunctions::slice_scatter(
@@ -3740,13 +3752,15 @@ at::Tensor XLANativeFunctions::as_strided(
     const at::Tensor& self, at::IntArrayRef size, at::IntArrayRef stride,
     c10::optional<int64_t> storage_offset) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
+  const auto& base = bridge::GetXlaTensor(self)->Base();
+  const auto& tensor = base.defined() ? base : self;
+  XLATensorPtr self_tensor = bridge::GetXlaTensor(tensor);
   auto xsize = XlaHelpers::I64List(size);
   auto xstride = XlaHelpers::I64List(stride);
   if (!AsStrided::StrideIsSupported(self_tensor->shape(), xsize, xstride,
                                     storage_offset.value_or(0))) {
     return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(as_strided)>::call(self, size, stride,
+        &xla_cpu_fallback, ATEN_OP(as_strided)>::call(tensor, size, stride,
                                                       storage_offset);
   }
   return bridge::AtenFromXlaTensor(tensor_methods::as_strided(
