@@ -898,10 +898,10 @@ void XLATensor::MarkDynamicDimension(uint32_t dim) {
 
 bool XLATensor::SetNodeUserMetadata(
     std::shared_ptr<torch::lazy::UserMetaData> metadata) {
-  // auto* node = dynamic_cast<torch::lazy::Node*>(CurrentIrValue().node.get());
-  auto* node = dynamic_cast<torch::lazy::Node*>(GetIrValue().node.get());
+  auto* node = dynamic_cast<XlaNode*>(CurrentIrValue().node.get());
+  // auto* node = dynamic_cast<torch::lazy::Node*>(GetIrValue().node.get());
   if (node != nullptr) {
-    node->SetUserMetadata(metadata);
+    node->SetUserMetadataForSubGraph(metadata);
     return true;
   }
   return false;

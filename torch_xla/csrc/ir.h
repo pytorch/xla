@@ -147,6 +147,9 @@ class XlaNode : public torch::lazy::Node {
     return unbounded_dynamic_dims_;
   }
 
+  std::shared_ptr<torch::lazy::UserMetaData> SetUserMetadataForSubGraph(
+      std::shared_ptr<torch::lazy::UserMetaData> user_meta);
+
  protected:
   std::unordered_set<uint32_t> unbounded_dynamic_dims_;
 
