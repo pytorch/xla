@@ -697,8 +697,8 @@ at::Tensor XLANativeFunctions::as_strided_copy(
   // Retrieve the base tensor, if there's one.
   // This function actually operates on the tensor's storage. Since XLA does not
   // expose the actual storage, we use the originally allocated tensor.
-  const auto& base = bridge::GetXlaTensor(self)->Base();
-  const auto& tensor = base.defined() ? base : self;
+  const at::Tensor& base = bridge::GetXlaTensor(self)->Base();
+  const at::Tensor& tensor = base.defined() ? base : self;
   XLATensorPtr self_tensor = bridge::GetXlaTensor(tensor);
   auto xsize = XlaHelpers::I64List(size);
   auto xstride = XlaHelpers::I64List(stride);

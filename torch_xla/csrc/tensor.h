@@ -342,7 +342,7 @@ class XLATensor : public torch::lazy::LazyTensor {
   c10::Storage storage_;
   // Base tensor for view and view_copy operations. This is used mainly for
   // operations such as as_strided, which operates on the allocated storage.
-  // Since XLATensor doesn't actually use the storage, we have to run the
+  // Since XLATensor doesn't actually expose the storage, we have to run the
   // operation on the originally created tensor.
   at::Tensor base_;
 };

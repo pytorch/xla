@@ -450,6 +450,8 @@ const at::Tensor& GetRootBase(const at::Tensor& tensor) {
 }
 
 XLATensorPtr SetBaseTensor(XLATensorPtr tensor, const at::Tensor& base) {
+  XLA_CHECK(base.device().is_xla())
+      << "base tensor on unexpected device: " << base.device();
   tensor->SetBase(GetRootBase(base));
   return tensor;
 }
