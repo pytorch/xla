@@ -13,6 +13,7 @@ import time
 import torch
 from tqdm import tqdm
 from torch.profiler import profile, record_function, ProfilerActivity
+from typing import List
 
 try:
   from .benchmark_model import ModelLoader
@@ -306,7 +307,7 @@ class ExperimentRunner:
     return metrics, output
 
 
-def append_filter_by_tier(filter_list: list[str], filter_by_tier: list[int]):
+def append_filter_by_tier(filter_list: List[str], filter_by_tier: List[int]):
   _FILTER_BY_TIER = {
       1:
           r"^(BERT_pytorch|cm3leon_generate|DALLE2_pytorch|dlrm|hf_GPT2|hf_GPT2_large|GPT_3|hf_T5|hf_T5_base|hf_T5_generate|hf_T5_large|llama_v2_7b_16h|stable_diffusion_xl)$",
