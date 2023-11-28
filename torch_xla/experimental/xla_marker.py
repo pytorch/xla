@@ -55,7 +55,7 @@ def mark_tensor(x: torch.Tensor,
 
 
 @impl(xla_pattern_marking_lib, "mark_tensor", "CompositeExplicitAutograd")
-def mark_tensor(x: torch.Tensor,
+def mark_tensor_autograd(x: torch.Tensor,
                 name: str,
                 pos: int,
                 id: int,
@@ -66,7 +66,7 @@ def mark_tensor(x: torch.Tensor,
 
 
 @impl(xla_pattern_marking_lib, "mark_tensor", "Meta")
-def mark_tensor(x: torch.Tensor,
+def mark_tensor_meta(x: torch.Tensor,
                 name: str,
                 pos: int,
                 id: int,
