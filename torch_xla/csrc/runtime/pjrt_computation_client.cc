@@ -733,6 +733,10 @@ PjRtComputationClient::ExecuteReplicated(
                                : std::vector<xla::Shape>({result_shape});
     XLA_CHECK_EQ(output_shapes.size(), num_outputs);
 
+    XLA_CHECK(pjrt_computation.output_shardings_.has_value());
+    const std::vector<xla::OpSharding>& output_shardings = *pjrt_computation.output_shardings_;
+    XLA_CHECK_EQ(output_shardings.size(), num_outputs);
+
     absl::BlockingCounter counter(num_outputs);
     // TODO: tune and document cost estimate
     pool_.ParallelFor(num_outputs, 30000, [&](int64_t start, int64_t end) {
@@ -748,8 +752,7 @@ PjRtComputationClient::ExecuteReplicated(
 
         data_handles[i] = std::make_shared<PjRtShardedData>(
             spmd_device_str, output_shapes[i], std::move(shards),
-            // HACK: we don't use the sharding on this DataPtr anyway
-            xla::HloSharding::Unknown().ToProto());
+            output_shardings[i]);
         TF_VLOG(5) << "Created sharded data with shape "
                    << data_handles[i]->shape().ToString();
         counter.DecrementCount();
