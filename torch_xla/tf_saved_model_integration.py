@@ -1,12 +1,11 @@
 import itertools
 import sys
 import os
-from typing import List, Tuple, Any, Union
+from typing import List, Tuple, Any
 import copy
 import logging
 
 import torch
-from torch.fx import GraphModule
 from torch_xla import stablehlo
 
 try:
@@ -121,7 +120,7 @@ def save_stablehlo_graph_as_tf(
 
 
 def save_torch_module_as_tf_saved_model(
-    torch_model: Union[torch.nn.Module, GraphModule],
+    torch_model: torch.nn.Module,
     args: Tuple[Any],
     saved_model_dir: os.PathLike,
     serving_key: str = tf.saved_model.DEFAULT_SERVING_SIGNATURE_DEF_KEY,
@@ -133,7 +132,7 @@ def save_torch_module_as_tf_saved_model(
   or further convert to tflite flatbuffer for on-device serving.
 
   Args:
-    torch_model: Union[torch.nn.Module, torch.fx.GraphModule] - model to export and save
+    torch_model: torch.nn.Module - model to export and save
     args: Tuple[Any] - a set of args to trace the model with, i.e. torch_model(*args) must run
     saved_model_dir: os.PathLike - location to an empty directory to store the saved_model
     serving_key: str  - serving key tag, this is used by tf.serving to know which function to run.
