@@ -5,6 +5,7 @@
 #include "mlir/IR/Verifier.h"       // from @llvm-project
 #include "mlir/Pass/PassManager.h"  // from @llvm-project
 #include "mlir/Transforms/Passes.h"
+#include "stablehlo/api/PortableApi.h"        // from @stablehlo
 #include "stablehlo/dialect/Serialization.h"  // from @stablehlo
 #include "stablehlo/dialect/StablehloOps.h"   // from @stablehlo
 #include "stablehlo/dialect/VhloOps.h"        // from @stablehlo
@@ -16,7 +17,6 @@
 #include "xla/translate/mhlo_to_hlo/mlir_hlo_to_hlo.h"
 
 namespace torch_xla {
-namespace runtime {
 
 static std::string getHloModuleStr(const xla::HloModuleProto* proto) {
   auto hlo_module = torch_xla::runtime::util::CreateModuleFromProto(*proto);
@@ -37,13 +37,23 @@ static std::string getMlirModuleStr(mlir::ModuleOp& mlir_module) {
   return txt_mlir_module;
 }
 
-static std::string getMlirModuleBytecode(const mlir::ModuleOp& mlir_module) {
+static std::string getMlirModuleBytecode(mlir::ModuleOp& mlir_module) {
+  static bool from_pretty_print = runtime::sys_util::GetEnvBool(
+      "STABLEHLO_BYTECODE_FROM_PRETTYPRINT", false);
   std::string txt_mlir_module;
   llvm::raw_string_ostream os{txt_mlir_module};
   // TODO(lsiyuan): get the highest StableHLO version from runtime.
-  auto result = mlir::stablehlo::serializePortableArtifact(
-      mlir_module, /* target_version = */ "0.14.1", os);
-  XLA_CHECK(result.succeeded()) << "Serializing StableHLO Failed";
+  const std::string stablehlo_version = "0.14.23";
+  if (!from_pretty_print) {
+    auto result = mlir::stablehlo::serializePortableArtifact(
+        mlir_module, /* target_version = */ stablehlo_version, os);
+    XLA_CHECK(result.succeeded()) << "Serializing StableHLO Failed";
+  } else {
+    std::string pretty_print_txt = getMlirModuleStr(mlir_module);
+    auto result = mlir::stablehlo::serializePortableArtifact(
+        pretty_print_txt, /* target_version = */ stablehlo_version, os);
+    XLA_CHECK(result.succeeded()) << "Serializing StableHLO Failed";
+  }
   return txt_mlir_module;
 }
 
@@ -151,5 +161,28 @@ void ConvertStableHloToHlo(mlir::ModuleOp* mlir_module,
                          << getMlirModuleStr(*mlir_module);
 }
 
-}  // namespace runtime
+const std::unordered_map<std::string, std::string>&
+GetTorchDtypeToStablehloDtypeMap() {
+  static const std::unordered_map<std::string, std::string> m_{
+      {"torch.int8", "si8"},
+      {"torch.uint8", "ui8"},
+      {"torch.int16", "si16"},
+  };
+  return m_;
+}
+
+const std::unordered_map<xla::PrimitiveType, std::string>&
+GetHloDtypeToStablehloDtypeMap() {
+  static const std::unordered_map<xla::PrimitiveType, std::string> m_{
+      {xla::PrimitiveType::S4, "si4"},   {xla::PrimitiveType::S8, "si8"},
+      {xla::PrimitiveType::S16, "si16"}, {xla::PrimitiveType::S32, "si32"},
+      {xla::PrimitiveType::S64, "si64"}, {xla::PrimitiveType::U4, "ui4"},
+      {xla::PrimitiveType::U8, "ui8"},   {xla::PrimitiveType::U16, "ui16"},
+      {xla::PrimitiveType::U32, "ui32"}, {xla::PrimitiveType::U64, "ui64"},
+      {xla::PrimitiveType::F16, "f16"},  {xla::PrimitiveType::BF16, "bf16"},
+      {xla::PrimitiveType::F32, "f32"},
+  };
+  return m_;
+}
+
 }  // namespace torch_xla

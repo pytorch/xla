@@ -288,11 +288,11 @@ std::string DumpUtil::ToHlo(c10::ArrayRef<torch::lazy::Value> values,
     case EmitMode::kHloReadable:
       return ConsumeValue(runtime::util::GetComputationHloText(computation));
     case EmitMode::kStableHloReadable:
-      return runtime::hloToStablehlo(&computation.proto(),
-                                     /* emit_bytecode = */ false);
+      return hloToStablehlo(&computation.proto(),
+                            /* emit_bytecode = */ false);
     case EmitMode::kStableHloBytecode:
-      return runtime::hloToStablehlo(&computation.proto(),
-                                     /* emit_bytecode = */ true);
+      return hloToStablehlo(&computation.proto(),
+                            /* emit_bytecode = */ true);
   }
 }
 
