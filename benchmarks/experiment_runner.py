@@ -13,6 +13,8 @@ import time
 import torch
 from tqdm import tqdm
 from torch.profiler import profile, record_function, ProfilerActivity
+from torch.autograd import DeviceType
+from typing import List
 
 try:
   from .benchmark_model import ModelLoader
@@ -249,8 +251,41 @@ class ExperimentRunner:
     with open(os.path.join(file_path, "kernel_dump.txt"), "a") as f:
       f.write(kernel_dump)
 
-  def timed_run(self, benchmark_experiment, benchmark_model):
+  def collect_profile_to_metrics(self, prof, metrics):
+    assert prof is not None, 'Expecting profiler to be defined!'
+    if not self._args.profile_cuda_cpu_collect:
+      logger.warning(
+          'Profiling enabled, but collection of CPU/CUDA profiling info disabled.'
+      )
+      return
 
+    kernel_dump = prof.profiler.total_average()
+    total_cuda_time = 0
+    total_cpu_time = kernel_dump.self_cpu_time_total
+
+    # Avoid double counting CUDA time for inductor. Copied here, since the interface is not really exposed via any interface.
+    # The alternative is regex matching resulting string dump for CUDA kernel time.
+    # Source: https://github.com/pytorch/pytorch/blob/2f3beb715c608a060934c237de402faa40ea211f/torch/autograd/profiler_util.py#L1025-L1037
+    for evt in prof.profiler.key_averages():
+      if evt.device_type == DeviceType.CPU:
+        # in legacy profiler, kernel info is stored in cpu events
+        if evt.is_legacy:
+          if not use_device:
+            total_cuda_time += evt.self_cuda_time_total
+      elif evt.device_type == DeviceType.CUDA:
+        # in kineto profiler, there're events with the correct device type (e.g. CUDA)
+        total_cuda_time += evt.self_cuda_time_total
+
+    total_cpu_time /= 1000000
+    total_cuda_time /= 1000000
+    metrics["total_cpu_time_s"] = total_cpu_time
+    metrics["total_cuda_time_s"] = total_cuda_time
+    metrics[
+        "per_iter_cpu_time_s"] = total_cpu_time / self._args.iterations_per_run
+    metrics[
+        "per_iter_cuda_time_s"] = total_cuda_time / self._args.iterations_per_run
+
+  def timed_run(self, benchmark_experiment, benchmark_model):
     reset_rng_state(benchmark_experiment)
 
     inputs_list = self.prepare_inputs(benchmark_model.example_inputs,
@@ -282,6 +317,7 @@ class ExperimentRunner:
 
         if prof:
           prof.step()
+      self._synchronize(benchmark_experiment)
       return output
 
     if enable_prof:
@@ -291,11 +327,10 @@ class ExperimentRunner:
     else:
       output = loop()
 
-    self._synchronize(benchmark_experiment)
-
     t_end = time.perf_counter()
     if enable_prof:
       self.dump_profile_info(prof, benchmark_model.model_name)
+      self.collect_profile_to_metrics(prof, metrics)
 
     metrics["total_time"] = t_end - t_start
     metrics[
@@ -306,7 +341,7 @@ class ExperimentRunner:
     return metrics, output
 
 
-def append_filter_by_tier(filter_list: list[str], filter_by_tier: list[int]):
+def append_filter_by_tier(filter_list: List[str], filter_by_tier: List[int]):
   _FILTER_BY_TIER = {
       1:
           r"^(BERT_pytorch|cm3leon_generate|DALLE2_pytorch|dlrm|hf_GPT2|hf_GPT2_large|GPT_3|hf_T5|hf_T5_base|hf_T5_generate|hf_T5_large|llama_v2_7b_16h|stable_diffusion_xl)$",
@@ -521,7 +556,13 @@ def parse_args(args=None):
       "--profile-cuda-dump",
       type=str,
       default="./output/",
-      help="Directory specifying where to dump profiling information (summary, and trace)"
+      help="Directory specifying where to dump profiling information (summary, and trace)",
+  ),
+
+  parser.add_argument(
+      "--profile-cuda-cpu-collect",
+      action="store_true",
+      help="Whether to collect CPU/GPU profiling information in the resulting file.",
   ),
 
   parser.add_argument(
