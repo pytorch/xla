@@ -17,6 +17,7 @@ import torch_xla
 from torch_xla.core import xla_model as xm
 from torch_xla.core import dynamo_bridge
 from torch_xla.debug import metrics
+import torch_xla.experimental.quantized
 import torch._dynamo as torchdynamo
 from torch.utils import _pytree as pytree
 
@@ -356,7 +357,7 @@ def _exported_program_to_stablehlo_bundle(exported_model,
   output_signature = [
       VariableSignature(
           shape=list(tensor.shape),
-          dtype=str(tensor_value.dtype).replace('torch.', '')) for tensor in res
+          dtype=str(tensor.dtype).replace('torch.', '')) for tensor in res
   ]
 
   torch_xla._XLAC._clear_pending_irs(str(device))

@@ -86,6 +86,21 @@ std::vector<XLATensorPtr> user_computation(
     runtime::ComputationClient::ComputationPtr computation);
 
 //////////////////////////////////////////////////////////////////////////////
+// Quantization related ops here.
+//////////////////////////////////////////////////////////////////////////////
+XLATensorPtr quantize_tensor(const XLATensorPtr& input,
+                             const std::vector<float>& scale_list,
+                             const std::vector<int>& zero_point_list,
+                             int quant_min, int quant_max,
+                             const std::string& dtype, int axis);
+
+XLATensorPtr dequantize_tensor(const XLATensorPtr& input,
+                               const std::vector<float>& scale_list,
+                               const std::vector<int>& zero_point_list,
+                               int quant_min, int quant_max,
+                               const std::string& dtype, int axis);
+
+//////////////////////////////////////////////////////////////////////////////
 // ATEN operators follows here, listed in alphabetical order.
 //////////////////////////////////////////////////////////////////////////////
 void __ilshift__(XLATensorPtr& input, const at::Scalar& other);
