@@ -360,10 +360,8 @@ tsl::RCReference<xla::ifrt::Array> IfrtComputationClient::ReplicateShardedData(
   torch_xla::runtime::ComputationClient::ExecuteReplicatedOptions
       execute_options;
 
-  // TODO: fix const plumbing for real
-  DataPtr handle_but_not_const = std::make_shared<IfrtData>(handle->device(), handle->buffer, handle->GetSharding());
   auto sharded_results =
-      ExecuteReplicated(*computations.front(), {{handle_but_not_const}},
+      ExecuteReplicated(*computations.front(), {{handle}},
                         GetLocalDevices(), execute_options);
   auto replicated_output = std::dynamic_pointer_cast<IfrtData>(sharded_results[0])->buffer->FullyReplicatedShard(xla::ifrt::ArrayCopySemantics::kAlwaysCopy);
   // TODO: sanity check outputs
