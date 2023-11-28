@@ -14,11 +14,13 @@ from torch_xla import runtime as xr
 
 from datetime import timedelta
 
+
 def get_process_group_xla(rank, size):
   pg_xla_creator = dist.Backend._plugins['XLA'].creator_fn
   pg_xla = pg_xla_creator(
       prefix_store=None, rank=rank, size=size, timeout=timedelta(minutes=1))
   return pg_xla
+
 
 def hlo_matches(hlo, expected_pattern, match_times=1):
   matches = re.findall(expected_pattern, hlo)
@@ -134,7 +136,8 @@ class XlaBackendTest(parameterized.TestCase):
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([output])
     hlo_matches(hlo, reduce_scatter_pattern)
 
-  @skipIf(xr.device_type() == 'CPU', "UNIMPLEMENTED: ReduceScatter is not implemented on CPU.")
+  @skipIf(xr.device_type() == 'CPU',
+          "UNIMPLEMENTED: ReduceScatter is not implemented on CPU.")
   def test_reduce_scatter_coalesced(self):
     device = xm.xla_device()
     tensor = torch.arange(2, device=device) + 1 + 2 * dist.get_rank()

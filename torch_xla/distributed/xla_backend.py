@@ -295,6 +295,16 @@ def new_xla_process_group(ranks=None,
                           timeout=dist.default_pg_timeout,
                           backend=None,
                           pg_options=None):
+  #this options tells xla backend to "infer" a mesh
+  use_spmd = False
+  #this option allows the application to pass in the mesh
+  mesh_spmd = None
+  if pg_options is not None and isinstance(pg_options, dict):
+    if 'xla_pg_options' in pg_options:
+      mesh_spmd = pg_options['xla_pg_options'].get('mesh', None)
+      if mesh_spmd == None:
+        use_spmd = pg_options['xla_pg_options'].get('spmd', False)
+
   pg = _orig_new_group_fn(
       ranks=ranks, timeout=timeout, backend=backend, pg_options=pg_options)
   if isinstance(pg, ProcessGroupXla) and ranks is not None:
@@ -314,7 +324,12 @@ def new_xla_process_group(ranks=None,
                          f'World size: {world_pg.size()}, ranks: {ranks}')
       pg._mesh = [[r] for r in range(world_pg.size())]
     elif len(ranks) < world_pg.size() and len(ranks) > 1:
-      pg._mesh = _infer_mesh(ranks, world_pg.size())
+      if mesh_spmd:
+        pg._mesh = mesh_spmd
+      elif use_spmd:
+        pg._mesh = _infer_mesh(ranks, world_pg.size())
+      else:
+        pg._mesh = [ranks]
     else:
       logging.warn(
           f'Can\'t infer process group mesh from given ranks "{str(ranks)}". '
