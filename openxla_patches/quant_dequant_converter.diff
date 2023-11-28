@@ -1,8 +1,5 @@
-// TODO(lsy323): This is a patch on the HLO->StableHLO converter, this allows the custom call to
-// stablehlo.uniform_quantize/dequantize to be converted to stablehlo.uniform_quantize/dequantize.
-// The patch can be removed after quantize/dequantize, quantized dtype support is added to HLO.
 diff --git a/xla/translate/hlo_to_mhlo/BUILD b/xla/translate/hlo_to_mhlo/BUILD
-index f74973ae1..8e3f0e06b 100644
+index 0f0c5e842..59a30c585 100644
 --- a/xla/translate/hlo_to_mhlo/BUILD
 +++ b/xla/translate/hlo_to_mhlo/BUILD
 @@ -67,6 +67,7 @@ cc_library(
@@ -14,10 +11,10 @@ index f74973ae1..8e3f0e06b 100644
          "@llvm-project//mlir:SparseTensorDialect",
          "@tsl//tsl/platform:statusor",
 diff --git a/xla/translate/hlo_to_mhlo/hlo_function_importer.cc b/xla/translate/hlo_to_mhlo/hlo_function_importer.cc
-index 08d5f49c8..2f9ad1e0b 100644
+index cc7aa9e9e..0eaa68ff2 100644
 --- a/xla/translate/hlo_to_mhlo/hlo_function_importer.cc
 +++ b/xla/translate/hlo_to_mhlo/hlo_function_importer.cc
-@@ -664,6 +664,70 @@ StatusOr<mlir::Operation*> HloFunctionImporter::ImportInstruction(
+@@ -664,6 +664,71 @@ StatusOr<mlir::Operation*> HloFunctionImporter::ImportInstruction(
    return importer.ImportInstructionWithLayout(instr, operands, builder, mode);
  }
  
@@ -85,10 +82,11 @@ index 08d5f49c8..2f9ad1e0b 100644
 +  }
 +}
 +
++
  StatusOr<mlir::Operation*> HloFunctionImporter::ImportInstructionImpl(
      const HloInstruction* instruction,
      const llvm::SmallVectorImpl<mlir::Value>& operands,
-@@ -933,6 +997,25 @@ StatusOr<mlir::Operation*> HloFunctionImporter::ImportInstructionImpl(
+@@ -933,6 +998,25 @@ StatusOr<mlir::Operation*> HloFunctionImporter::ImportInstructionImpl(
                  "Couldn't parse backend config into a dictionary attribute");
  
            attributes.push_back(builder_->getNamedAttr("backend_config", attr));
@@ -115,7 +113,7 @@ index 08d5f49c8..2f9ad1e0b 100644
        } else {
          attributes.push_back(builder_->getNamedAttr(
 diff --git a/xla/translate/hlo_to_mhlo/hlo_module_importer.cc b/xla/translate/hlo_to_mhlo/hlo_module_importer.cc
-index 9f05992c8..03cf4840d 100644
+index 1494efd9e..dcb3d9e89 100644
 --- a/xla/translate/hlo_to_mhlo/hlo_module_importer.cc
 +++ b/xla/translate/hlo_to_mhlo/hlo_module_importer.cc
 @@ -19,6 +19,8 @@ limitations under the License.
