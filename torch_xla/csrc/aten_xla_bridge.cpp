@@ -440,5 +440,21 @@ std::vector<at::Tensor> CreateXlaTensors(
   return xtensors;
 }
 
+const at::Tensor& GetRootBase(const at::Tensor& tensor) {
+  auto xla_tensor = TryGetXlaTensor(tensor);
+  if (xla_tensor && xla_tensor->Base().defined()) {
+    return GetRootBase(xla_tensor->Base());
+  } else {
+    return tensor;
+  }
+}
+
+XLATensorPtr SetBaseTensor(XLATensorPtr tensor, const at::Tensor& base) {
+  XLA_CHECK(base.device().is_xla())
+      << "base tensor on unexpected device: " << base.device();
+  tensor->SetBase(GetRootBase(base));
+  return tensor;
+}
+
 }  // namespace bridge
 }  // namespace torch_xla
