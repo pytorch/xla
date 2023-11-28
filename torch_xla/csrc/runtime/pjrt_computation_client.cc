@@ -323,8 +323,9 @@ ComputationClient::DataPtr PjRtComputationClient::ReshardData(
     const ComputationClient::DataPtr& handle, const xla::OpSharding& sharding) {
   XLA_COUNTER("ReshardData", 1);
   PjRtShardedData* sharded_data = dynamic_cast<PjRtShardedData*>(handle.get());
-  XLA_CHECK_NE(sharded_data, nullptr)
-      << "Resharding requires PjRtShardedData on SPMD virtual device.";
+  if (!sharded_data) {
+    return handle;
+  }
   XLA_CHECK_NE(sharding.type(), xla::OpSharding::UNKNOWN)
       << "Use REPLICATED for explicit replication.";
   XLA_CHECK_EQ(sharded_data->shards.size(), GetLocalDevices().size());
@@ -340,8 +341,7 @@ ComputationClient::DataPtr PjRtComputationClient::ReshardData(
     return handle;
   }
 
-  // Perform a simple identity calculation to reshard the input by the target
-  // sharding spec, `sharding`.
+  // Perform a simple identity calculation to reshard.
   xla::XlaBuilder builder("ReshardData");
   xla::Shape shape = sharded_data->shape();
   xla::XlaOp scalar_zero_op = xla::ConvertElementType(
@@ -350,8 +350,8 @@ ComputationClient::DataPtr PjRtComputationClient::ReshardData(
   xla::XlaOp x = xla::Parameter(&builder, 0, shape, "p0");
   builder.SetSharding(sharding);
   xla::XlaOp y = xla::Add(x, scalar_zero_op);
-  // xla::CustomCall(builder, /*call_target_name=*/"Sharding",
-  //                        {y}, ShapeHelper::ShapeOfXlaOp(y));
+  const xla::Shape* y_shape = ConsumeValue(builder.GetShapePtr(y));
+  xla::CustomCall(&builder, /*call_target_name=*/"Sharding", {y}, *y_shape);
 
   xla::XlaComputation xla_computation =
       ConsumeValue(builder.Build(/*remove_dynamic_dimensions=*/false));
@@ -382,19 +382,23 @@ ComputationClient::DataPtr PjRtComputationClient::ReshardData(
   }
   torch_xla::runtime::ComputationClient::ExecuteReplicatedOptions
       execute_options;
-  std::vector<std::vector<ComputationClient::DataPtr>> sharded_results =
-      ExecuteReplicated(*computation, arguments_by_device, GetLocalDevices(),
-                        execute_options);
+  auto sharded_results = ExecuteReplicated(*computation, arguments_by_device,
+                                           GetLocalDevices(), execute_options);
   XLA_CHECK_EQ(sharded_results.size(), GetLocalDevices().size());
-  XLA_CHECK_EQ(sharded_results[0].size(), 1)
-      << "Wrong number of outputs, expected: 1, actual: "
-      << sharded_results[0].size();
-  std::vector<ComputationClient::DataPtr> arg0_shards;
+
+  std::vector<std::shared_ptr<PjRtData>> arg0_shards;
   arg0_shards.reserve(GetLocalDevices().size());
-  for (auto shards_per_device : sharded_results) {
-    arg0_shards.push_back(shards_per_device[0]);
+  for (auto args_per_device : sharded_results) {
+    XLA_CHECK_EQ(args_per_device.size(), 1)
+        << "Wrong number of outputs, expected: 1, actual: "
+        << args_per_device.size();
+    ComputationClient::DataPtr shard = args_per_device[0];
+    auto pjrt_shard = dynamic_cast<PjRtData*>(shard.get());
+    arg0_shards.push_back(std::make_shared<PjRtData>(
+        pjrt_shard->device(), pjrt_shard->shape(), pjrt_shard->buffer));
   }
-  return WrapDataShards(arg0_shards, "SPMD:0", sharded_data->shape(), sharding);
+  return std::make_shared<PjRtShardedData>("SPMD:0", sharded_data->shape(),
+                                           arg0_shards, sharding);
 }
 
 std::vector<xla::Literal> PjRtComputationClient::TransferFromDevice(
@@ -410,14 +414,16 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromDevice(
   for (auto handle : handles) {
     // Use XLA replication to reassemble the sharded data. If input handle
     // is not sharded, then it is a no-op.
-    PjRtShardedData& replicated_data = dynamic_cast<PjRtShardedData&>(
-        *ReshardData(handle, xla::HloSharding::Replicate().ToProto()));
-    const PjRtData& pjrt_data = *replicated_data.shards[0];
-    auto& literal =
-        literals.emplace_back(host_output_shape(pjrt_data.buffer.get()));
-    futures.push_back(pjrt_data->buffer->ToLiteral(&literal));
+    PjRtShardedData* replicated_data = dynamic_cast<PjRtShardedData*>(
+        ReshardData(handle, xla::HloSharding::Replicate().ToProto()).get());
+    std::shared_ptr<PjRtData> pjrt_data =
+        repicated_data ? replicated_data->shards[0] : handle;
+    XLA_CHECK(pjrt_data);
 
-    total_size += literal.size_bytes();
+    xla::Literal& literal =
+        literals.emplace_back(host_output_shape(pjrt_data->buffer.get()));
+    futures.push_back(pjrt_data->buffer->ToLiteral(&literal));
+    total_size += literals.back().size_bytes();
   }
   for (auto& future : futures) {
     absl::Status status = future.Await();

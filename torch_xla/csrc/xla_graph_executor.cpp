@@ -1403,6 +1403,7 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
                        /*parameter_is_tupled_arguments=*/should_wrap_parameter,
                        /*is_sharded=*/is_sharded});
   if (use_autosharding) {
+    TF_CHECK(is_sharded) << "Auto-sharding pass requires SPMD mode.";
     instances.front().use_auto_spmd_partitioning = use_autosharding;
     TF_VLOG(5) << "use_auto_spmd_partitioning=" << use_autosharding;
     auto mesh_shape_ids = ShardingUtil::GetAutoShardingMesh();
