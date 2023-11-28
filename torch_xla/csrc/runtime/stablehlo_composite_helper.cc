@@ -60,22 +60,35 @@ struct BoundaryMetadata {
   }
 
  private:
+  template <typename T>
+  static bool CopyJsonValue(const nlohmann::basic_json<>& j,
+                            llvm::StringRef key, json::value_t expected_type,
+                            T& to) {
+    auto kv = j.find(key);
+
+    if (kv == j.end()) {
+      return false;
+    }
+    if (kv.value().type() != expected_type) {
+      return false;
+    }
+    kv.value().get_to(to);
+    return true;
+  }
+
   static std::unique_ptr<BoundaryMetadata> Build(
       const nlohmann::basic_json<>& j) {
     BoundaryMetadata metadata;
-#define FIELD(key, value_type)                           \
-  if (auto kv = j.find(#key); kv != j.end()) {           \
-    if (kv.value().type() != value_type) return nullptr; \
-    kv.value().get_to(metadata.key);                     \
-  } else {                                               \
-    return nullptr;                                      \
-  }
 
-    FIELD(name, json::value_t::string);
-    FIELD(id, json::value_t::number_unsigned);
-    FIELD(pos, json::value_t::number_unsigned);
-    FIELD(is_input, json::value_t::boolean);
-#undef FIELD
+    bool is_valid_metadata_json =
+        CopyJsonValue(j, "name", json::value_t::string, metadata.name) &&
+        CopyJsonValue(j, "id", json::value_t::number_unsigned, metadata.id) &&
+        CopyJsonValue(j, "pos", json::value_t::number_unsigned, metadata.pos) &&
+        CopyJsonValue(j, "is_input", json::value_t::boolean, metadata.is_input);
+
+    if (!is_valid_metadata_json) {
+      return nullptr;
+    }
 
     if (auto kv = j.find("attr"); kv != j.end() && kv.value().is_object()) {
       auto& attrs_j = kv.value();
