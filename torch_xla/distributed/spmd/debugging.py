@@ -149,7 +149,7 @@ def visualize_sharding(shape: torch.Size,
   # `sharding_spac`: [2, 2]
 
   # set the device kind to TPU as default since `sharding` here is `str`, TODO(@manfei): get device kind from commands for TPU/GPU/CPU
-  device_kind = 'TPU'  # next(iter(sharding.device_set)).platform.upper()
+  device_kind = next(iter(sharding.device_set)).platform.upper() # 'TPU'
 
   # color_iter = make_color_iter(color_map, num_rows, num_cols)
   table = rich.table.Table(
