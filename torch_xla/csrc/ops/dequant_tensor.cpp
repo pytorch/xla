@@ -11,7 +11,7 @@ namespace torch_xla {
 
 DequantizeTensor::DequantizeTensor(const torch::lazy::Value& input,
                                    const std::vector<float>& scale,
-                                   const std::vector<float>& zero_point,
+                                   const std::vector<int>& zero_point,
                                    int quant_min, int quant_max,
                                    const std::string& dtype, int axis)
     : XlaNode(

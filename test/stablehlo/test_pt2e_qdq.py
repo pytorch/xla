@@ -68,7 +68,7 @@ class PT2EExportTest(unittest.TestCase):
     device = xm.xla_device()
     x = torch.randn(2, 3, 4, 5).to(device)
     scale = torch.tensor([3.2, 5.3, 0.1, 10])
-    zero_point = torch.tensor([1, 2, -1, -2])
+    zero_point = torch.tensor([1, 2, -1, -2], dtype=torch.int8)
     x = torch.ops.quantized_decomposed.quantize_per_channel(
         x, scale, zero_point, 2, -128, 127, torch.int8)
     x = torch.ops.quantized_decomposed.dequantize_per_channel(

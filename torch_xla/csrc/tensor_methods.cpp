@@ -2111,7 +2111,7 @@ std::tuple<XLATensorPtr, XLATensorPtr> qr(const XLATensorPtr& input,
 
 XLATensorPtr quantize_tensor(const XLATensorPtr& input,
                              const std::vector<float>& scale_list,
-                             const std::vector<float>& zero_point_list,
+                             const std::vector<int>& zero_point_list,
                              int quant_min, int quant_max,
                              const std::string& dtype, int axis) {
   torch::lazy::NodePtr node = torch::lazy::MakeNode<QuantizeTensor>(
@@ -2122,7 +2122,7 @@ XLATensorPtr quantize_tensor(const XLATensorPtr& input,
 
 XLATensorPtr dequantize_tensor(const XLATensorPtr& input,
                                const std::vector<float>& scale_list,
-                               const std::vector<float>& zero_point_list,
+                               const std::vector<int>& zero_point_list,
                                int quant_min, int quant_max,
                                const std::string& dtype, int axis) {
   torch::lazy::NodePtr node = torch::lazy::MakeNode<DequantizeTensor>(

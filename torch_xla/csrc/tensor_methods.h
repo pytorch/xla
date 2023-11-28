@@ -90,13 +90,13 @@ std::vector<XLATensorPtr> user_computation(
 //////////////////////////////////////////////////////////////////////////////
 XLATensorPtr quantize_tensor(const XLATensorPtr& input,
                              const std::vector<float>& scale_list,
-                             const std::vector<float>& zero_point_list,
+                             const std::vector<int>& zero_point_list,
                              int quant_min, int quant_max,
                              const std::string& dtype, int axis);
 
 XLATensorPtr dequantize_tensor(const XLATensorPtr& input,
                                const std::vector<float>& scale_list,
-                               const std::vector<float>& zero_point_list,
+                               const std::vector<int>& zero_point_list,
                                int quant_min, int quant_max,
                                const std::string& dtype, int axis);
 

@@ -201,7 +201,7 @@ at::Tensor AllReduce(const std::string& reduce_type, const at::Tensor& input,
 
 at::Tensor QuantizeTensor(const at::Tensor& input,
                           const std::vector<float>& scale_list,
-                          const std::vector<float>& zero_point_list,
+                          const std::vector<int>& zero_point_list,
                           int quant_min, int quant_max,
                           const std::string& dtype, int axis) {
   auto result = tensor_methods::quantize_tensor(
@@ -212,7 +212,7 @@ at::Tensor QuantizeTensor(const at::Tensor& input,
 
 at::Tensor DequantizeTensor(const at::Tensor& input,
                             const std::vector<float>& scale_list,
-                            const std::vector<float>& zero_point_list,
+                            const std::vector<int>& zero_point_list,
                             int quant_min, int quant_max,
                             const std::string& dtype, int axis) {
   auto result = tensor_methods::dequantize_tensor(
@@ -1128,7 +1128,7 @@ void InitXlaModuleBindings(py::module m) {
   });
   m.def("_xla_quantize_tensor",
         [](const at::Tensor& input, const std::vector<float>& scale_list,
-           const std::vector<float>& zero_point_list, int quant_min,
+           const std::vector<int>& zero_point_list, int quant_min,
            int quant_max, const std::string& dtype, int axis) -> at::Tensor {
           at::Tensor result;
           {
@@ -1140,7 +1140,7 @@ void InitXlaModuleBindings(py::module m) {
         });
   m.def("_xla_dequantize_tensor",
         [](const at::Tensor& input, const std::vector<float>& scale_list,
-           const std::vector<float>& zero_point_list, int quant_min,
+           const std::vector<int>& zero_point_list, int quant_min,
            int quant_max, const std::string& dtype, int axis) -> at::Tensor {
           at::Tensor result;
           {

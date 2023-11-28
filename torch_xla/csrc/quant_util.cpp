@@ -8,23 +8,6 @@
 
 namespace torch_xla {
 
-std::string QuantParams::SerializeToAttrDictStr() const {
-  std::stringstream ss;
-  ss << "{";
-  if (axis != -1) {
-    ss << "quantization_dimension=" << axis << ',';
-  }
-  ss << "scale=" << SeralizeFloatVector(scale, true) << ',';
-  ss << "zero_point=" << SeralizeFloatVector(zero_point) << ',';
-  ss << "storage_type=" << GetTorchDtypeToStablehloDtypeMap().at(dtype) << ',';
-  ss << "expressed_type=" << GetHloDtypeToStablehloDtypeMap().at(expressed_type)
-     << ',';
-  ss << "storage_min=" << quant_min << ',';
-  ss << "storage_max=" << quant_max;
-  ss << '}';
-  return ss.str();
-}
-
 static inline std::string MaybeAppendDecimalForInteger(float v) {
   std::stringstream ss;
   if (static_cast<int>(v) == v) {
@@ -34,8 +17,9 @@ static inline std::string MaybeAppendDecimalForInteger(float v) {
   return ss.str();
 }
 
-std::string SeralizeFloatVector(const std::vector<float>& v,
-                                bool append_decimal) {
+template <typename T>
+static std::string SeralizeFloatVector(const std::vector<T>& v,
+                                       bool append_decimal = false) {
   std::stringstream ss;
   ss << '[';
   for (size_t i = 0; i < v.size(); ++i) {
@@ -49,6 +33,23 @@ std::string SeralizeFloatVector(const std::vector<float>& v,
     }
   }
   ss << ']';
+  return ss.str();
+}
+
+std::string QuantParams::SerializeToAttrDictStr() const {
+  std::stringstream ss;
+  ss << "{";
+  if (axis != -1) {
+    ss << "quantization_dimension=" << axis << ',';
+  }
+  ss << "scale=" << SeralizeFloatVector<float>(scale, true) << ',';
+  ss << "zero_point=" << SeralizeFloatVector<int>(zero_point) << ',';
+  ss << "storage_type=" << GetTorchDtypeToStablehloDtypeMap().at(dtype) << ',';
+  ss << "expressed_type=" << GetHloDtypeToStablehloDtypeMap().at(expressed_type)
+     << ',';
+  ss << "storage_min=" << quant_min << ',';
+  ss << "storage_max=" << quant_max;
+  ss << '}';
   return ss.str();
 }
 
