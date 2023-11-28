@@ -2296,6 +2296,16 @@ class TestGeneric(test_utils.XlaTestCase):
     self.assertEqual(xdata.batch_sizes.device, torch.device('cpu'))
     self.assertEqual(xdata.data.device, xla_device)
 
+  def test_as_strided_input_larger(self):
+    size = (5, 5)
+    device = xm.xla_device()
+
+    a = torch.ones(size, device=device)
+    small_a = a[:, ::2]
+    former_a = small_a.as_strided(size, (5, 1), 0)
+
+    self.assertEqual(a, former_a)
+
 
 if __name__ == '__main__':
   torch.set_default_dtype(torch.float32)
