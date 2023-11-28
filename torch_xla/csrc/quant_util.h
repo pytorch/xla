@@ -9,6 +9,7 @@
 
 namespace torch_xla {
 
+// Struct for quantization parameters, for per-tensor/channel quant/dequant ops.
 struct QuantParams {
   std::vector<float> scale;
   std::vector<float> zero_point;
@@ -30,6 +31,7 @@ struct QuantParams {
         dtype(dtype),
         expressed_type(expressed_type) {}
 
+  // TODO(lsy323): Remove when qdtype is added in XLA.
   std::string SerializeToAttrDictStr() const;
 };
 
