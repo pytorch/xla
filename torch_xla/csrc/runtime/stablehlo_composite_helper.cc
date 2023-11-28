@@ -25,7 +25,7 @@ static bool IsXlaMarkTensorOp(mlir::Operation* op) {
   if (op->getNumOperands() != 1 || op->getNumResults() != 1) {
     return false;
   }
-  if (op->getName().getStringRef() != "stablehlo.custom_call") {
+  if (!llvm::isa<mlir::stablehlo::CustomCallOp>(op)) {
     return false;
   }
   auto target_name =
@@ -102,8 +102,8 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
     for (mlir::func::FuncOp& func_op : func_ops) {
       llvm::DenseMap<const mlir::Operation*, size_t> op_line_num =
           BuildOperationsLineNumberMap(func_op);
-      for (mlir::Operation& op : func_op.getOps()) {
-        BuildStableHLOCompositeOp(&op, op_line_num);
+      for (auto op : func_op.getOps<mlir::stablehlo::CustomCallOp>()) {
+        BuildStableHLOCompositeOp(op.getOperation(), op_line_num);
       }
     }
   }
@@ -216,7 +216,7 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
         if (def_op == nullptr) {
           // Terminal condition: Global function arg
           arg_pos_setvec.insert({value, std::numeric_limits<int64_t>::max()});
-        } else if (def_op->getName().getStringRef() == "stablehlo.constant") {
+        } else if (llvm::isa<mlir::stablehlo::ConstantOp>(op)) {
           // Terminal condition: constant
           scope_ops_setvec.insert(def_op);
         } else {
@@ -342,26 +342,27 @@ class RemoveXlaMarkTensorOpsPass
 
   void runOnOperation() override {
     mlir::func::FuncOp func_op = getOperation();
-    llvm::SmallVector<mlir::Operation*> ops;
-    for (mlir::Operation& op : func_op.getOps()) {
-      ops.push_back(&op);
-    }
+    llvm::SmallVector<mlir::Operation*> ops_to_erase;
 
-    for (mlir::Operation* mark_tensor : ops) {
-      if (!IsXlaMarkTensorOp(mark_tensor)) {
+    for (auto mark_tensor_op :
+         func_op.getOps<mlir::stablehlo::CustomCallOp>()) {
+      if (!IsXlaMarkTensorOp(mark_tensor_op.getOperation())) {
         continue;
       }
-      mlir::Value original_value = mark_tensor->getOperand(0);
+      mlir::Value original_value = mark_tensor_op.getOperand(0);
 
       llvm::SmallVector<std::tuple<mlir::Operation*, size_t>> uses;
-      for (mlir::OpOperand& use : mark_tensor->getResult(0).getUses()) {
+      for (mlir::OpOperand& use : mark_tensor_op.getResult(0).getUses()) {
         uses.push_back({use.getOwner(), use.getOperandNumber()});
       }
 
       for (auto [use_op, operand_number] : uses) {
         use_op->setOperand(operand_number, original_value);
       }
-      mark_tensor->erase();
+      ops_to_erase.push_back(mark_tensor_op.getOperation());
+    }
+    for (auto* op : ops_to_erase) {
+      op->erase();
     }
   }
 
