@@ -15,10 +15,11 @@ to reduce noise. Run:
 # Prevent energy saving features to kick in.
 sudo cpupower frequency-set --governor performance
 
-# Lock GPU clocks to lower frequency to reduce the chance of extra throttling. Choose
-# FREQ based on your GPU info. For example A100 operates on 765MHz (up to 1410 MHz),
-# with memory operating on 1215MHz. Setting the clock a couple hundrend MHz below
-# will most likely prevent thermal effects.
+# Lock GPU clocks to lower frequency to reduce the chance of thermal throttling. Choose
+# FREQ based on your GPU info. To find out clock frequency on your device run:
+# `nvidia-smi -q -d CLOCK`, and look for Graphics/SM in Max Clocks section.
+# Setting the clock a couple hundrend MHz below, or ~80% of max
+# will most likely prevent thermal throttling effects.
 FREQ=...
 nvidia-smi --lock-gpu-clocks=$FREQ,$FREQ
 
