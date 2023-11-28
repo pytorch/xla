@@ -773,7 +773,7 @@ std::vector<torch::lazy::BackendDataPtr> XLAGraphExecutor::ExecuteStablehlo(
       mlir::stablehlo::deserializePortableArtifact(bytecode, &context);
   mlir::ModuleOp mlir_module = *module;
   xla::HloProto hlo_proto;
-  runtime::ConvertStableHloToHlo(&mlir_module, &context, &hlo_proto);
+  ConvertStableHloToHlo(&mlir_module, &context, &hlo_proto);
   xla::HloModuleProto* hlo_module_proto = hlo_proto.mutable_hlo_module();
   xla::XlaComputation computation(*hlo_module_proto);
 
