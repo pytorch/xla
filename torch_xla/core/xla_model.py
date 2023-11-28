@@ -582,8 +582,8 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
       torch_xla._XLAC._set_all_reduce_token(devctx.device, new_token)
       return output
 
-    result = torch_xla._XLAC._xla_all_gather(value, dim, shard_count,
-                                             groups or [], pin_layout)
+    result = torch_xla._XLAC._xla_all_gather(value, dim, shard_count, groups or
+                                             [], pin_layout)
     return result
 
   # Now the input should be a list of Tensors.
@@ -594,8 +594,8 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
   result = torch_xla._XLAC._xla_all_gather_coalesced(value, token, dim,
                                                      shard_count, groups or [],
                                                      pin_layout)
-  torch_xla._XLAC._set_all_reduce_token(devctx.device, result[1])
-  return result[0]
+  torch_xla._XLAC._set_all_reduce_token(devctx.device, result[-1])
+  return result[:-1]
 
 
 def all_to_all(value,
@@ -773,14 +773,14 @@ def reduce_scatter(reduce_type,
       new_token = torch_xla._XLAC._xla_reduce_scatter_out(
           reduce_type, output, input, token, scale, scatter_dim, shard_count,
           groups or [], pin_layout)
-      devctx.all_reduce_token = new_token
+      torch_xla._XLAC._set_all_reduce_token(devctx.device, new_token)
       return output
 
     result = torch_xla._XLAC._xla_reduce_scatter(reduce_type, input, token,
                                                  scale, scatter_dim,
                                                  shard_count, groups or [],
                                                  pin_layout)
-    devctx.all_reduce_token = result[1]
+    torch_xla._XLAC._set_all_reduce_token(devctx.device, result[1])
     return result[0]
 
   # Now the input should be a list of Tensors.
@@ -801,7 +801,9 @@ def reduce_scatter(reduce_type,
   result = torch_xla._XLAC._xla_reduce_scatter_coalesced(
       reduce_type, output or [], input, token, scale, scatter_dim, shard_count,
       groups or [], pin_layout)
-  devctx.all_reduce_token = result[-1]
+  #torch_xla._XLAC._set_all_reduce_token(devctx.device, result[1])
+  #return result[0]
+  torch_xla._XLAC._set_all_reduce_token(devctx.device, result[-1])
   return result[:-1]
 
 

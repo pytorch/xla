@@ -32,7 +32,6 @@ xla::Shape NodeOutputShape(c10::ArrayRef<torch::lazy::Value> inputs,
   }
   input_shapes.emplace_back(GetXlaShape(token));
   return InferOutputShape(input_shapes, shape_fn);
-
 }
 
 }  // namespace

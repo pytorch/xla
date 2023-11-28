@@ -18,10 +18,15 @@ xla::Shape NodeOutputShape(AllReduceType reduce_type,
                            const std::vector<std::vector<int64_t>>& groups,
                            bool pin_layout) {
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    std::vector<xla::XlaOp> result = BuildReduceScatter(
+    ReduceScatterResult result = BuildReduceScatter(
         reduce_type, operands.subspan(0, operands.size() - 1), operands.back(),
         scale, scatter_dim, shard_count, groups, pin_layout);
-    return xla::Tuple(operands[0].builder(), result);
+    std::vector<xla::XlaOp> outputs;
+    for (size_t i = 0; i < result.result.size(); ++i) {
+      outputs.emplace_back(result.result[i]);
+    }
+    outputs.emplace_back(result.token);
+    return xla::Tuple(operands[0].builder(), outputs);
   };
   std::vector<xla::Shape> input_shapes;
   for (const auto& input : inputs) {
@@ -70,10 +75,11 @@ XlaOpVector ReduceScatter::Lower(LoweringContext* loctx) const {
     inputs.push_back(loctx->GetOutputOp(operand_list[i]));
   }
   xla::XlaOp token = loctx->GetOutputOp(operand_list.back());
-  return ReturnOps(
+  ReduceScatterResult result =
       BuildReduceScatter(reduce_type_, inputs, token, scale_, scatter_dim_,
-                         shard_count_, groups_, pin_layout_),
-      loctx);
+                         shard_count_, groups_, pin_layout_);
+  result.result.push_back(result.token);
+  return ReturnOps(result.result, loctx);
 }
 
 std::string ReduceScatter::ToString() const {

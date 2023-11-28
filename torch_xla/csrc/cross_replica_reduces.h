@@ -61,10 +61,10 @@ AllToAllResult BuildAllToAll(xla::XlaOp input, xla::XlaOp token,
                              const std::vector<std::vector<int64_t>>& groups,
                              bool pin_layout);
 
-AllGatherResult BuildAllGather(
-    absl::Span<const xla::XlaOp>, xla::XlaOp token, int64_t dim,
-    int64_t shard_count, const std::vector<std::vector<int64_t>>& groups,
-    bool pin_layout);
+AllGatherResult BuildAllGather(absl::Span<const xla::XlaOp>, xla::XlaOp token,
+                               int64_t dim, int64_t shard_count,
+                               const std::vector<std::vector<int64_t>>& groups,
+                               bool pin_layout);
 
 CollectivePermuteResult BuildCollectivePermute(
     xla::XlaOp input, xla::XlaOp token,
@@ -76,8 +76,7 @@ SendResult BuildSendWithToken(xla::XlaOp input, xla::XlaOp token,
 RecvResult BuildRecvWithToken(xla::XlaOp token, const xla::Shape& recv_shape,
                               int64_t channel_id);
 
-//ReduceScatterResult BuildReduceScatter(
-std::vector<xla::XlaOp> BuildReduceScatter(
+ReduceScatterResult BuildReduceScatter(
     AllReduceType reduce_type, absl::Span<const xla::XlaOp> inputs,
     xla::XlaOp token, double scale, int64_t scatter_dim, int64_t shard_count,
     const std::vector<std::vector<int64_t>>& groups, bool pin_layout);

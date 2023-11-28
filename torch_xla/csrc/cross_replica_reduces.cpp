@@ -210,10 +210,11 @@ AllToAllResult BuildAllToAll(xla::XlaOp input, xla::XlaOp token,
   return {reduce_result, token_handler.GetNewToken(reduce_result)};
 }
 
-AllGatherResult BuildAllGather(
-    absl::Span<const xla::XlaOp> inputs, xla::XlaOp token, int64_t dim,
-    int64_t shard_count, const std::vector<std::vector<int64_t>>& groups,
-    bool pin_layout) {
+AllGatherResult BuildAllGather(absl::Span<const xla::XlaOp> inputs,
+                               xla::XlaOp token, int64_t dim,
+                               int64_t shard_count,
+                               const std::vector<std::vector<int64_t>>& groups,
+                               bool pin_layout) {
   std::vector<xla::ReplicaGroup> cc_groups = CreateReduceGroups(groups);
   TokenHandler token_handler(token);
   // TODO: We use pseudo-tokens ATM, which are real values. This need to be
@@ -234,13 +235,12 @@ AllGatherResult BuildAllGather(
           xla::AllGather(xla::Tuple(inputs[0].builder(), type_ctx.second.ops),
                          dim, shard_count, cc_groups);
     }
-    if (type_ctx.second.indices.size() > 1) { 
+    if (type_ctx.second.indices.size() > 1) {
       for (size_t i = 0; i < type_ctx.second.indices.size(); ++i) {
         size_t op_idx = type_ctx.second.indices[i];
         result[op_idx] = xla::GetTupleElement(all_gather_result, i);
       }
-    }
-    else {
+    } else {
       result[0] = all_gather_result;
     }
   }
@@ -285,22 +285,18 @@ RecvResult BuildRecvWithToken(xla::XlaOp token, const xla::Shape& recv_shape,
   return {result, new_token};
 }
 
-std::vector<xla::XlaOp> BuildReduceScatter(
+ReduceScatterResult BuildReduceScatter(
     AllReduceType reduce_type, absl::Span<const xla::XlaOp> inputs,
     xla::XlaOp token, double scale, int64_t scatter_dim, int64_t shard_count,
     const std::vector<std::vector<int64_t>>& groups, bool pin_layout) {
   std::vector<xla::ReplicaGroup> cc_groups = CreateReduceGroups(groups);
+  TokenHandler token_handler(token);
   // TODO: We use pseudo-tokens ATM, which are real values. This need to be
   // switched to use the real XLA Token once support has been added to XLA
   // ReduceScatter().
-  xla::XlaOp chained_token = token;
   ReduceContext cc_ctx = GetReduceContext(inputs);
   std::vector<xla::XlaOp> result(inputs.size());
   for (auto& type_ctx : cc_ctx.contexts) {
-    xla::XlaOp token_op = MaybeConvertTo(chained_token, type_ctx.first);
-    type_ctx.second.ops.push_back(token_op);
-    type_ctx.second.operand_shapes.push_back(
-        ShapeHelper::ShapeOfXlaOp(token_op));
     xla::XlaOp reduce_result;
     if (pin_layout) {
       reduce_result = xla::ReduceScatter(
@@ -317,7 +313,12 @@ std::vector<xla::XlaOp> BuildReduceScatter(
     }
     for (size_t i = 0; i < type_ctx.second.indices.size(); ++i) {
       size_t op_idx = type_ctx.second.indices[i];
-      xla::XlaOp gte = xla::GetTupleElement(reduce_result, i);
+      xla::XlaOp gte;
+      if (ShapeHelper::ShapeOfXlaOp(reduce_result).rank() == 0) {
+        gte = xla::GetTupleElement(reduce_result, i);
+      } else {
+        gte = reduce_result;
+      }
       if (scale != 1.0) {
         xla::XlaOp scaling_value = XlaHelpers::ScalarValue<float>(
             scale, type_ctx.second.operand_shapes[i].element_type(),
@@ -326,12 +327,8 @@ std::vector<xla::XlaOp> BuildReduceScatter(
       }
       result[op_idx] = gte;
     }
-    chained_token =
-        xla::GetTupleElement(reduce_result, type_ctx.second.indices.size());
   }
-  result.push_back(
-      MaybeConvertTo(chained_token, XlaHelpers::TypeOfXlaOp(token)));
-  return result;
+  return {result, token_handler.GetNewToken(result[0])};
 }
 
 // moved from torch_xla/csrc/ops/all_reduce.cpp
