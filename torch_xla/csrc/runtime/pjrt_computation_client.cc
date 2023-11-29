@@ -464,6 +464,8 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromServer(
   metrics::TimedSection timed(TransferFromServerMetric());
   tsl::profiler::TraceMe activity("PjRtComputationClient::TransferFromServer",
                                   tsl::profiler::TraceMeLevel::kInfo);
+  std::vector<xla::PjRtFuture<tsl::Status>> futures;
+  futures.reserve(handles.size());
   std::vector<xla::Literal> literals;
   literals.reserve(handles.size());
   int64_t total_size = 0;
@@ -473,11 +475,15 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromServer(
     auto new_handle = ReplicateShardedData(handle);
     const PjRtData& pjrt_data = dynamic_cast<const PjRtData&>(*new_handle);
 
-    auto& literal =
+    xla::Literal& literal =
         literals.emplace_back(host_output_shape(pjrt_data.buffer.get()));
-    XLA_CHECK_OK(pjrt_data.buffer->ToLiteralSync(&literal));
+    futures.push_back(pjrt_data.buffer->ToLiteral(&literal));
 
     total_size += literal.size_bytes();
+  }
+  for (auto& future : futures) {
+    tsl::Status status = future.Await();
+    XLA_CHECK_OK(status);
   }
   InboundDataMetric()->AddSample(total_size);
 
