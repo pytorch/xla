@@ -8,24 +8,23 @@ The two main benchmarking scripts are
 ## Reducing benchmark noise 
 
 It is important to keep the benchmark runs safe from external effects 
-to reduce noise. Run:
+to reduce noise. Do the following:
 
-```
-# Sets the CPU statically to the highest tuneable frequency. 
-# Prevent energy saving features to kick in.
-sudo cpupower frequency-set --governor performance
+Sets the CPU statically to the highest tuneable frequency.
+Prevent energy saving features to kick in.
 
-# Lock GPU clocks to lower frequency to reduce the chance of thermal throttling. Choose
-# FREQ based on your GPU info. To find out clock frequency on your device run:
-# `nvidia-smi -q -d CLOCK`, and look for Graphics/SM in Max Clocks section.
-# Setting the clock a couple hundrend MHz below, or ~80% of max
-# will most likely prevent thermal throttling effects.
-FREQ=...
-nvidia-smi --lock-gpu-clocks=$FREQ,$FREQ
+```sudo cpupower frequency-set --governor performance```
 
-# Disable autoboost selecting clock rate based on thermal, and power budget effects.
-CUDA_AUTO_BOOST=0
-```
+Lock GPU clocks to lower frequency to reduce the chance of thermal throttling. Choose
+FREQ based on your GPU info. To find out clock frequency on your device run:
+`nvidia-smi -q -d CLOCK`, and look for Graphics/SM in Max Clocks section.
+Setting the clock a couple hundrend MHz below, or ~80% of max
+will most likely prevent thermal throttling effects.
+
+```FREQ=... nvidia-smi --lock-gpu-clocks=$FREQ,$FREQ```
+
+Disable autoboost selecting clock rate based on thermal, and power budget effects.
+```CUDA_AUTO_BOOST=0```
 
 ## Experiment runner
 
