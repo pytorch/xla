@@ -214,10 +214,10 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
       return mlir::failure();
     }
 
-    auto [args, scope_ops] = *args_ops_or;
+    auto [args, impl_ops] = *args_ops_or;
 
     mlir::func::FuncOp impl_func = BuildStableHLOCompositeImplFunc(
-        op, absl::StrCat(metadata->name, ".impl"), args, scope_ops);
+        op, absl::StrCat(metadata->name, ".impl"), args, impl_ops);
 
     mlir::Operation* composite_op =
         BuildStableHLOCompositeOp(op, impl_func, args, *metadata);
@@ -229,7 +229,7 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
       result.replaceAllUsesWith(composite_op->getResult(i));
     }
 
-    // The unused scope_ops will be eliminated with canonicalizer.
+    // The unused impl_ops will be eliminated with canonicalizer.
     return mlir::success();
   }
 
@@ -238,7 +238,7 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
   GetBoundaryArgsAndOps(
       mlir::Operation* boundary_output_op, const BoundaryMetadata& metadata,
       const llvm::DenseMap<const mlir::Operation*, size_t>& op_order_map) {
-    llvm::SetVector<mlir::Operation*> scope_ops_setvec;
+    llvm::SetVector<mlir::Operation*> impl_ops_setvec;
     llvm::SetVector<std::pair<mlir::Value, int64_t>> arg_pos_setvec;
     llvm::SmallVector<mlir::Operation*> processing({boundary_output_op});
 
@@ -247,7 +247,7 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
     while (!processing.empty()) {
       mlir::Operation* curr_op = processing.back();
       processing.pop_back();
-      if (scope_ops_setvec.contains(curr_op)) {
+      if (impl_ops_setvec.contains(curr_op)) {
         continue;
       }
 
@@ -267,7 +267,7 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
         }
       }
 
-      scope_ops_setvec.insert(curr_op);
+      impl_ops_setvec.insert(curr_op);
       for (mlir::Value value : curr_op->getOperands()) {
         mlir::Operation* def_op = value.getDefiningOp();
         if (def_op == nullptr) {
@@ -275,7 +275,7 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
           arg_pos_setvec.insert({value, std::numeric_limits<int64_t>::max()});
         } else if (llvm::isa<mlir::stablehlo::ConstantOp>(def_op)) {
           // Terminal condition: constant
-          scope_ops_setvec.insert(def_op);
+          impl_ops_setvec.insert(def_op);
         } else {
           processing.push_back(def_op);
         }
@@ -284,14 +284,13 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
     // Sorts all ops within the boundary by their line numbers in the input
     // MLIR. The ops will be duplicated to the impl function following this
     // order.
-    llvm::SmallVector<mlir::Operation*> scope_ops =
-        scope_ops_setvec.takeVector();
-    for (auto& op : scope_ops) {
+    llvm::SmallVector<mlir::Operation*> impl_ops = impl_ops_setvec.takeVector();
+    for (auto& op : impl_ops) {
       if (!op_order_map.contains(op)) {
         op->emitError() << "does not have a ordering number in its outer func.";
       }
     }
-    std::sort(scope_ops.begin(), scope_ops.end(),
+    std::sort(impl_ops.begin(), impl_ops.end(),
               [&op_order_map](const auto& a, const auto& b) {
                 return op_order_map.at(a) < op_order_map.at(b);
               });
@@ -311,7 +310,7 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
       args.push_back(arg);
     }
 
-    return std::make_pair(std::move(args), std::move(scope_ops));
+    return std::make_pair(std::move(args), std::move(impl_ops));
   }
 
   mlir::func::FuncOp BuildStableHLOCompositeImplFunc(
