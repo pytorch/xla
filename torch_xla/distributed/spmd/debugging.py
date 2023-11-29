@@ -10,6 +10,8 @@ import torch
 import torch_xla.core.xla_model as xm
 import torch_xla.runtime as xr
 import torch_xla.experimental.xla_sharding as xs
+import torch_xla.utils.utils as xu
+import torch_xla.core.xla_env_vars as xenv
 from torch_xla.experimental.xla_sharded_tensor import XLAShardedTensor
 
 try:
@@ -215,7 +217,7 @@ def visualize_sharding(shape: torch.Size,
 
 def visualize_tensor_sharding(t, **kwargs):
   """Visualizes an array's sharding."""
-  if (isinstance(t, torch.tensor)):
+  if torch.is_tensor(t):
     import torch_xla
     sharding = torch_xla._XLAC._get_xla_sharding_spec(t)
     return visualize_sharding(t.shape, sharding, **kwargs)
