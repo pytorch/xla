@@ -272,11 +272,18 @@ void DebugUtil::analyze_graph_execution_python_frame(
           "mark_step\n";
   }
 
-  // TODO(JackCaoG): make number of frames printed configurable
   ss << debug_output_prefix << "Python Frame Triggered Execution: \n";
   for (auto& location : frames) {
-    ss << debug_output_prefix << "  " << location.function << " ("
-       << location.file << ":" << location.line << ")\n";
+    // if current frame `__call__` at pjrt.py, bleow stack will be python
+    // code to spawn up process, not very useful to the user.
+    if (location.function == "__call__" &&
+        endsWith(location.file, "_internal/pjrt.py")) {
+      ss << debug_output_prefix << "  ..........\n";
+      break;
+    } else {
+      ss << debug_output_prefix << "  " << location.function << " ("
+         << location.file << ":" << location.line << ")\n";
+    }
   }
   ss << debug_output_prefix
      << "----------------------------------------------------------------------"
