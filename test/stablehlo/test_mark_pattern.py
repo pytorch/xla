@@ -82,7 +82,7 @@ class XlaMarkPatternTest(unittest.TestCase):
     self.assertTrue(
         '{attributes = {scale = 2 : i64}, name = "sdpa"}}' in stablehlo)
 
-  def test_composite_builder_sdpa_pattern_(self):
+  def test_composite_builder_sdpa_pattern(self):
     import torch.nn.functional as F
 
     class M(torch.nn.Module):
@@ -95,8 +95,6 @@ class XlaMarkPatternTest(unittest.TestCase):
         q, k, v = x.split(128, dim=-2)
         q, k, v = b.mark_inputs(q, k, v)
         attn_out = F.scaled_dot_product_attention(q, k, v, scale=0.25)
-        attn_out = torch.ops.xla_pattern_marking.mark_tensor(
-            attn_out, "sdpa", pos=0, id=0, is_input=False, attr={"scale": 0.25})
         attn_out = b.mark_outputs(attn_out)
 
         b2 = StableHLOCompositeBuilder("sdpa", {"scale": 2})
