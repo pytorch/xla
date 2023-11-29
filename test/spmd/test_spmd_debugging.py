@@ -42,7 +42,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     mesh = self._get_mesh(mesh_shape)
     t = torch.randn(8, 4, device=device)
     partition_spec = (0, 1)
-    Mesh.mark_sharding(t, mesh, partition_spec)
+    xs.mark_sharding(t, mesh, partition_spec)
     sharding = torch_xla._XLAC._get_xla_sharding_spec(t)
     generated_table = visualize_tensor_sharding(t)
     console = Console()
