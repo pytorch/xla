@@ -12,45 +12,37 @@ namespace torch_xla {
 namespace {
 
 xla::Shape NodeOutputShape(AllReduceType reduce_type,
-                           c10::ArrayRef<torch::lazy::Value> inputs,
+                           const torch::lazy::Value input,
                            const torch::lazy::Value& token, double scale,
                            int64_t scatter_dim, int64_t shard_count,
                            const std::vector<std::vector<int64_t>>& groups,
                            bool pin_layout) {
   auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    ReduceScatterResult result = BuildReduceScatter(
-        reduce_type, operands.subspan(0, operands.size() - 1), operands.back(),
-        scale, scatter_dim, shard_count, groups, pin_layout);
-    std::vector<xla::XlaOp> outputs;
-    for (size_t i = 0; i < result.result.size(); ++i) {
-      outputs.emplace_back(result.result[i]);
-    }
-    outputs.emplace_back(result.token);
-    return xla::Tuple(operands[0].builder(), outputs);
+    xla::XlaOp inputOp = operands[0];
+    xla::XlaOp tokenOp = operands[1];
+    ReduceScatterResult result =
+        BuildReduceScatter(reduce_type, inputOp, tokenOp, scale, scatter_dim,
+                           shard_count, groups, pin_layout);
+    return xla::Tuple(operands[0].builder(), {result.result, result.token});
   };
-  std::vector<xla::Shape> input_shapes;
-  for (const auto& input : inputs) {
-    input_shapes.emplace_back(GetXlaShape(input));
-  }
-  input_shapes.emplace_back(GetXlaShape(token));
-  return InferOutputShape(input_shapes, shape_fn);
+  return InferOutputShape({GetXlaShape(input), GetXlaShape(token)}, shape_fn);
 }
 
 }  // namespace
 
 ReduceScatter::ReduceScatter(AllReduceType reduce_type,
-                             c10::ArrayRef<torch::lazy::Value> inputs,
+                             const torch::lazy::Value& input,
                              const torch::lazy::Value& token, double scale,
                              int64_t scatter_dim, int64_t shard_count,
                              std::vector<std::vector<int64_t>> groups,
                              bool pin_layout)
-    : XlaNode(xla_reduce_scatter, GetOperandList(inputs, token),
+    : XlaNode(xla_reduce_scatter, {input, token},
               [&]() {
-                return NodeOutputShape(reduce_type, inputs, token, scale,
+                return NodeOutputShape(reduce_type, input, token, scale,
                                        scatter_dim, shard_count, groups,
                                        pin_layout);
               },
-              /*num_outputs=*/inputs.size() + 1,
+              /*num_outputs=*/2,
               torch::lazy::MHash(torch::lazy::GetEnumValue(reduce_type), scale,
                                  scatter_dim, shard_count, groups, pin_layout)),
       reduce_type_(reduce_type),
@@ -61,25 +53,18 @@ ReduceScatter::ReduceScatter(AllReduceType reduce_type,
       pin_layout_(pin_layout) {}
 
 torch::lazy::NodePtr ReduceScatter::Clone(torch::lazy::OpList operands) const {
-  std::vector<torch::lazy::Value> inputs(operands.begin(), operands.end() - 1);
   return torch::lazy::MakeNode<ReduceScatter>(
-      reduce_type_, inputs, operands.back(), scale_, scatter_dim_, shard_count_,
-      groups_, pin_layout_);
+      reduce_type_, operands.at(0), operands.at(1), scale_, scatter_dim_,
+      shard_count_, groups_, pin_layout_);
 }
 
 XlaOpVector ReduceScatter::Lower(LoweringContext* loctx) const {
-  auto& operand_list = operands();
-  std::vector<xla::XlaOp> inputs;
-  inputs.reserve(operand_list.size());
-  for (size_t i = 0; i + 1 < operand_list.size(); ++i) {
-    inputs.push_back(loctx->GetOutputOp(operand_list[i]));
-  }
-  xla::XlaOp token = loctx->GetOutputOp(operand_list.back());
+  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp token = loctx->GetOutputOp(operand(1));
   ReduceScatterResult result =
-      BuildReduceScatter(reduce_type_, inputs, token, scale_, scatter_dim_,
+      BuildReduceScatter(reduce_type_, input, token, scale_, scatter_dim_,
                          shard_count_, groups_, pin_layout_);
-  result.result.push_back(result.token);
-  return ReturnOps(result.result, loctx);
+  return ReturnOps({result.result, result.token}, loctx);
 }
 
 std::string ReduceScatter::ToString() const {

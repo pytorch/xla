@@ -46,7 +46,7 @@ struct RecvResult {
 };
 
 struct ReduceScatterResult {
-  std::vector<xla::XlaOp> result;
+  xla::XlaOp result;
   xla::XlaOp token;
 };
 
@@ -77,8 +77,8 @@ RecvResult BuildRecvWithToken(xla::XlaOp token, const xla::Shape& recv_shape,
                               int64_t channel_id);
 
 ReduceScatterResult BuildReduceScatter(
-    AllReduceType reduce_type, absl::Span<const xla::XlaOp> inputs,
-    xla::XlaOp token, double scale, int64_t scatter_dim, int64_t shard_count,
+    AllReduceType reduce_type, xla::XlaOp input, xla::XlaOp token, double scale,
+    int64_t scatter_dim, int64_t shard_count,
     const std::vector<std::vector<int64_t>>& groups, bool pin_layout);
 
 std::vector<torch::lazy::Value> GetOperandList(
