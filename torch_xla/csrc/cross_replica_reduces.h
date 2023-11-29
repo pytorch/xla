@@ -26,7 +26,7 @@ struct AllToAllResult {
 };
 
 struct AllGatherResult {
-  std::vector<xla::XlaOp> result;
+  xla::XlaOp result;
   xla::XlaOp token;
 };
 
@@ -61,8 +61,8 @@ AllToAllResult BuildAllToAll(xla::XlaOp input, xla::XlaOp token,
                              const std::vector<std::vector<int64_t>>& groups,
                              bool pin_layout);
 
-AllGatherResult BuildAllGather(absl::Span<const xla::XlaOp>, xla::XlaOp token,
-                               int64_t dim, int64_t shard_count,
+AllGatherResult BuildAllGather(xla::XlaOp input, xla::XlaOp token, int64_t dim,
+                               int64_t shard_count,
                                const std::vector<std::vector<int64_t>>& groups,
                                bool pin_layout);
 

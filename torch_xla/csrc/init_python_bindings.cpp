@@ -259,25 +259,6 @@ at::Tensor AllGather(const at::Tensor& input, int64_t dim, int64_t shard_count,
   return bridge::AtenFromXlaTensor(std::move(result));
 }
 
-std::pair<std::vector<at::Tensor>, std::shared_ptr<torch::lazy::Value>>
-AllGatherCoalesced(const std::vector<at::Tensor>& tensors,
-                   const std::shared_ptr<torch::lazy::Value>& token,
-                   int64_t dim, int64_t shard_count,
-                   const std::vector<std::vector<int64_t>>& replica_groups,
-                   bool pin_layout) {
-  std::vector<XLATensorPtr> xtensors =
-      GetXlaTensors(tensors, /*want_all=*/true);
-  std::vector<XLATensorPtr> result;
-  torch::lazy::Value new_token;
-  std::tie(result, new_token) = tensor_methods::all_gather(
-      xtensors, *token, dim, shard_count, replica_groups, pin_layout);
-  std::vector<at::Tensor> aten_result;
-  for (auto& xt : result) {
-    aten_result.emplace_back(bridge::AtenFromXlaTensor(std::move(xt)));
-  }
-  return {aten_result, std::make_shared<torch::lazy::Value>(new_token)};
-}
-
 std::shared_ptr<torch::lazy::Value> AllGatherOut(
     at::Tensor& output, const at::Tensor& input,
     const std::shared_ptr<torch::lazy::Value>& token, int64_t dim,
@@ -1193,27 +1174,6 @@ void InitXlaModuleBindings(py::module m) {
                                      replica_groups, pin_layout);
           }
           return new_token;
-        });
-  m.def("_xla_all_gather_coalesced",
-        [](const std::vector<at::Tensor>& tensors,
-           const std::shared_ptr<torch::lazy::Value>& token, int64_t dim,
-           int64_t shard_count, const py::list& groups, bool pin_layout) {
-          std::vector<std::vector<int64_t>> replica_groups =
-              CreateReduceGroups(groups);
-          std::vector<at::Tensor> result;
-          std::shared_ptr<torch::lazy::Value> new_token;
-          {
-            NoGilSection nogil;
-            std::tie(result, new_token) = AllGatherCoalesced(
-                tensors, token, dim, shard_count, replica_groups, pin_layout);
-          }
-          auto result_list = py::list(result.size() + 1);
-          for (int i = 0; i < result.size(); ++i) {
-            result_list[i] = torch::autograd::make_variable(
-                result[i], /*requires_grad=*/result[i].requires_grad());
-          }
-          result_list[result.size()] = new_token;
-          return result_list;
         });
   m.def("_xla_collective_permute",
         [](const at::Tensor& input,

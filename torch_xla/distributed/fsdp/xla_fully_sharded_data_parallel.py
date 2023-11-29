@@ -302,7 +302,6 @@ class XlaFullyShardedDataParallel(nn.Module):
       sharding_world_size: Optional[int] = None,
       shard_param_on_dim_0: bool = False,
       pin_layout_in_collective_ops: bool = True,
-      coalesce_all_gather_ops: bool = False,
       reduce_scatter_bucket_size_mb: Optional[int] = 0,
       auto_wrap_policy: Optional[Callable] = None,
       auto_wrapper_callable: Optional[Callable] = None,
@@ -406,7 +405,6 @@ class XlaFullyShardedDataParallel(nn.Module):
     # When `_shard_param_on_dim_0` is True, we shard and all-gather model parameter tensors
     # only along their dim 0 without flattening the parameter
     self._shard_param_on_dim_0 = shard_param_on_dim_0 and not flatten_parameters
-    self.coalesce_all_gather_ops = coalesce_all_gather_ops
     # Set layout pinning to False in all_gather, all_reduce, and reduce_scatter so that they can work together
     # TODO (ronghanghu): change the default layout pinning to True after it's supported simultaneously
     # on all collective ops (see https://github.com/pytorch/xla/pull/3511 for details)
@@ -1425,8 +1423,6 @@ class XlaFullyShardedDataParallel(nn.Module):
           [p for p in self.full_params if p._has_full_param],
           self.sharded_params, dependency_tensors)
 
-    if self.coalesce_all_gather_ops:
-      p_to_rebuild, shards_to_all_gather = [], []
     for p, p_shard in zip(self.full_params, self.sharded_params):
       if not p._has_full_param:
         p_shard_data = p_shard
@@ -1435,12 +1431,8 @@ class XlaFullyShardedDataParallel(nn.Module):
         if p_shard_data.dtype != self.compute_dtype:
           p_shard_data = p_shard_data.to(self.compute_dtype)
         if self._shard_param_on_dim_0 or self._shard_size_multiple == 1:
-          if self.coalesce_all_gather_ops:
-            p_to_rebuild.append((p, p_shard))
-            shards_to_all_gather.append(p_shard_data)
-          else:
-            p_padded = self.all_gather_op(
-                p_shard_data, groups=self.sharding_groups)
+          p_padded = self.all_gather_op(
+              p_shard_data, groups=self.sharding_groups)
         else:
           # gather full parameter from shards
           # reshape sharded parameters to 2d tensors for efficient gathering on
@@ -1448,35 +1440,25 @@ class XlaFullyShardedDataParallel(nn.Module):
           p_shard_2d = p_shard_data.view(-1, self._shard_size_multiple)
           p_padded = self.all_gather_op(
               p_shard_2d, groups=self.sharding_groups).flatten()
-        if not self.coalesce_all_gather_ops:
-          if apply_opt_barrier:
-            self.optimization_barrier_op([p_padded])
-          with torch.autograd._unsafe_preserve_version_counter(p):
-            if self._shard_param_on_dim_0:
-              if XLA_DISABLE_FUNCTIONALIZATION:
-                p.data = p_padded[:p_shard._orig_size[
-                    0]]  # Old behavior before Functionalization.
-              else:
-                torch_xla._XLAC._replace_xla_tensor(
-                    p, p_padded[:p_shard._orig_size[0]])
+        if apply_opt_barrier:
+          self.optimization_barrier_op([p_padded])
+        with torch.autograd._unsafe_preserve_version_counter(p):
+          if self._shard_param_on_dim_0:
+            if XLA_DISABLE_FUNCTIONALIZATION:
+              p.data = p_padded[:p_shard._orig_size[
+                  0]]  # Old behavior before Functionalization.
             else:
-              if XLA_DISABLE_FUNCTIONALIZATION:
-                p.data = p_padded[:p_shard._orig_size.numel()].view(
-                    p_shard._orig_size
-                )  # Old behavior before Functionalization.
-              else:
-                torch_xla._XLAC._replace_xla_tensor(
-                    p, p_padded[:p_shard._orig_size.numel()].view(
-                        p_shard._orig_size))
+              torch_xla._XLAC._replace_xla_tensor(
+                  p, p_padded[:p_shard._orig_size[0]])
+          else:
+            if XLA_DISABLE_FUNCTIONALIZATION:
+              p.data = p_padded[:p_shard._orig_size.numel()].view(
+                  p_shard._orig_size)  # Old behavior before Functionalization.
+            else:
+              torch_xla._XLAC._replace_xla_tensor(
+                  p, p_padded[:p_shard._orig_size.numel()].view(
+                      p_shard._orig_size))
         p._has_full_param = True
-
-    if self.coalesce_all_gather_ops:
-      p_padded_list = self.all_gather_op(
-          shards_to_all_gather, groups=self.sharding_groups)
-      if apply_opt_barrier:
-        self.optimization_barrier_op(p_padded_list)
-      for (p, p_shard), p_padded in zip(p_to_rebuild, p_padded_list):
-        p.data = p_padded[:p_shard._orig_size[0]]
 
     self.has_full_params = True
 
