@@ -614,6 +614,7 @@ xla::Shape XlaHelpers::GetPromotedDynamicShape(const xla::Shape& shape1,
 
 std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteShapes(xla::XlaOp op1,
                                                             xla::XlaOp op2) {
+  return std::make_pair(op1, op2);
   const xla::Shape& shape1 = ShapeHelper::ShapeOfXlaOp(op1);
   const xla::Shape& shape2 = ShapeHelper::ShapeOfXlaOp(op2);
   if (xla::ShapeUtil::Compatible(shape1, shape2)) {
