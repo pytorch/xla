@@ -1,8 +1,8 @@
 diff --git a/xla/service/gpu/gpu_executable.cc b/xla/service/gpu/gpu_executable.cc
-index 242961dd1..787275868 100644
+index 1f9903cb3..763b7fc23 100644
 --- a/xla/service/gpu/gpu_executable.cc
 +++ b/xla/service/gpu/gpu_executable.cc
-@@ -563,8 +563,7 @@ StatusOr<ExecutionOutput> GpuExecutable::ExecuteAsyncOnStreamImpl(
+@@ -589,8 +589,7 @@ StatusOr<ExecutionOutput> GpuExecutable::ExecuteAsyncOnStreamImpl(
    }
  
    // Force synchronous execution if the allocator requires it.
@@ -10,5 +10,5 @@ index 242961dd1..787275868 100644
 -      !memory_allocator->AllowsAsynchronousDeallocation();
 +  const bool block_host_until_done = true;
  
- 
    // Lock the GPU with a shared lock so that we don't interfere with autotuning
+   // that may be running during JIT compilation while allowing multiple XLA
