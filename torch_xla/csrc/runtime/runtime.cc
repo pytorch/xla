@@ -34,7 +34,7 @@ ComputationClient* GetComputationClient(bool create = true) {
   static std::unique_ptr<ComputationClient> client = nullptr;
   if (!client && create) {
     static std::once_flag flag;
-    std::call_once(flag, [](){ client = CreateClient(); });
+    std::call_once(flag, []() { client = CreateClient(); });
   }
   return client.get();
 }
