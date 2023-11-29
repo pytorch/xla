@@ -10,6 +10,7 @@ import torch
 import torch_xla.core.xla_model as xm
 import torch_xla.runtime as xr
 import torch_xla.experimental.xla_sharding as xs
+import torch_xla.utils.utils as xu
 from torch_xla.experimental.xla_sharded_tensor import XLAShardedTensor
 
 try:
@@ -149,7 +150,8 @@ def visualize_sharding(shape: torch.Size,
   # `sharding_spac`: [2, 2]
 
   # set the device kind to TPU as default since `sharding` here is `str`, TODO(@manfei): get device kind from commands for TPU/GPU/CPU
-  device_kind = next(iter(sharding.device_set)).platform.upper() # 'TPU'
+  pjrt_device = xu.getenv_as(xenv.PJRT_DEVICE, str)
+  device_kind = pjrt_device # next(iter(sharding.device_set)).platform.upper() # 'TPU'
 
   # color_iter = make_color_iter(color_map, num_rows, num_cols)
   table = rich.table.Table(
