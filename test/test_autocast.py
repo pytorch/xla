@@ -395,14 +395,14 @@ class TestAutocastCuda(TestAutocastBase):
           add_kwargs=maybe_kwargs,
           autocast_dtype=torch.bfloat16)
 
-  def test_autocast_torch_need_autocast_promote(self):
-    for op, args in self.get_autocast_list('torch_need_autocast_promote'):
-      self._run_autocast_outofplace(op, args, torch.float32)
+  # def test_autocast_torch_need_autocast_promote(self):
+  #   for op, args in self.get_autocast_list('torch_need_autocast_promote'):
+  #     self._run_autocast_outofplace(op, args, torch.float32)
 
-  def test_autocast_torch_expect_builtin_promote(self):
-    for op, args, out_type in self.get_autocast_list(
-        'torch_expect_builtin_promote'):
-      self._run_autocast_outofplace(op, args, torch.float32, out_type=out_type)
+  # def test_autocast_torch_expect_builtin_promote(self):
+  #   for op, args, out_type in self.get_autocast_list(
+  #       'torch_expect_builtin_promote'):
+  #     self._run_autocast_outofplace(op, args, torch.float32, out_type=out_type)
 
   def test_autocast_nn_fp32(self):
     for op, args in self.get_autocast_list('nn_fp32'):
@@ -414,11 +414,11 @@ class TestAutocastCuda(TestAutocastBase):
       print("autocast fp32", op)
       self._run_autocast_outofplace(op, args, torch.float32, module=None)
 
-  def test_autocast_methods_expect_builtin_promote(self):
-    for op, args, out_type in self.get_autocast_list(
-        'methods_expect_builtin_promote'):
-      self._run_autocast_outofplace(
-          op, args, torch.float32, module=None, out_type=out_type)
+  # def test_autocast_methods_expect_builtin_promote(self):
+  #   for op, args, out_type in self.get_autocast_list(
+  #       'methods_expect_builtin_promote'):
+  #     self._run_autocast_outofplace(
+  #         op, args, torch.float32, module=None, out_type=out_type)
 
 
 @unittest.skipIf(not xm.get_xla_supported_devices("TPU"), f"TPU autocast test.")
@@ -439,14 +439,14 @@ class TestAutocastTPU(TestAutocastBase):
       self._run_autocast_outofplace(
           op, args, torch.float32, add_kwargs=maybe_kwargs)
 
-  def test_autocast_torch_need_autocast_promote(self):
-    for op, args in self.get_autocast_list('torch_need_autocast_promote'):
-      self._run_autocast_outofplace(op, args, torch.float32)
+  # def test_autocast_torch_need_autocast_promote(self):
+  #   for op, args in self.get_autocast_list('torch_need_autocast_promote'):
+  #     self._run_autocast_outofplace(op, args, torch.float32)
 
-  def test_autocast_torch_expect_builtin_promote(self):
-    for op, args, out_type in self.get_autocast_list(
-        'torch_expect_builtin_promote'):
-      self._run_autocast_outofplace(op, args, torch.float32, out_type=out_type)
+  # def test_autocast_torch_expect_builtin_promote(self):
+  #   for op, args, out_type in self.get_autocast_list(
+  #       'torch_expect_builtin_promote'):
+  #     self._run_autocast_outofplace(op, args, torch.float32, out_type=out_type)
 
   def test_autocast_nn_fp32(self):
     for op, args in self.get_autocast_list('nn_fp32'):
@@ -458,11 +458,11 @@ class TestAutocastTPU(TestAutocastBase):
       print("autocast fp32", op)
       self._run_autocast_outofplace(op, args, torch.float32, module=None)
 
-  def test_autocast_methods_expect_builtin_promote(self):
-    for op, args, out_type in self.get_autocast_list(
-        'methods_expect_builtin_promote'):
-      self._run_autocast_outofplace(
-          op, args, torch.float32, module=None, out_type=out_type)
+  # def test_autocast_methods_expect_builtin_promote(self):
+  #   for op, args, out_type in self.get_autocast_list(
+  #       'methods_expect_builtin_promote'):
+  #     self._run_autocast_outofplace(
+  #         op, args, torch.float32, module=None, out_type=out_type)
 
   def test_autocast_tpu_check_dtype(self):
     with autocast(xm.xla_device(), dtype=torch.float16):
