@@ -38,7 +38,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     device = xm.xla_device()
     num_devices = xr.global_runtime_device_count()
     # TPU has more than 1 core here, so setup tesst mesh_shape with 2*x
-    mesh_shape = (2, num_devices / 2)
+    mesh_shape = (2, num_devices // 2)
     print("num_devices: ")
     print(num_devices)
     print("device: ")
