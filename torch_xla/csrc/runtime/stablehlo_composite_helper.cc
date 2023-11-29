@@ -116,7 +116,7 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
       llvm::DenseMap<const mlir::Operation*, size_t> op_line_num =
           BuildOperationsLineNumberMap(func_op);
       for (auto op : func_op.getOps<mlir::stablehlo::CustomCallOp>()) {
-        BuildStableHLOCompositeOp(op.getOperation(), op_line_num);
+        BuildStableHLOComposite(op.getOperation(), op_line_num);
       }
     }
   }
@@ -185,22 +185,40 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
     return builder.getDictionaryAttr(named_attrs);
   }
 
-  void BuildStableHLOCompositeOp(
+  void BuildStableHLOComposite(
       mlir::Operation* op,
-      const llvm::DenseMap<const mlir::Operation*, size_t>& op_line_num) {
-    mlir::ModuleOp module_op = getOperation();
-    mlir::MLIRContext* context = &getContext();
-    mlir::OpBuilder builder(context);
-
+      const llvm::DenseMap<const mlir::Operation*, size_t>& op_ordering_map) {
     std::unique_ptr<BoundaryMetadata> metadata = GetBoundaryMetadata(op);
     if (metadata == nullptr || metadata->is_input) {
       return;
     }
-    const auto& output_metadata = *metadata;
 
+    auto [args, scope_ops] =
+        GetBoundaryArgsAndOps(op, *metadata, op_ordering_map);
+
+    mlir::func::FuncOp impl_func = BuildStableHLOCompositeImplFunc(
+        op, absl::StrCat(metadata->name, ".impl"), args, scope_ops);
+
+    mlir::Operation* composite_op =
+        BuildStableHLOCompositeOp(op, impl_func, args, *metadata);
+
+    // Updates all users of this op's result(s) to use the results(s) of impl
+    // func call.
+    for (size_t i = 0; i < op->getNumResults(); ++i) {
+      mlir::OpResult result = op->getResult(i);
+      result.replaceAllUsesWith(composite_op->getResult(i));
+    }
+
+    // The unused scope_ops will be eliminated with canonicalizer.
+  }
+
+  std::pair<llvm::SmallVector<mlir::Value>, llvm::SmallVector<mlir::Operation*>>
+  GetBoundaryArgsAndOps(
+      mlir::Operation* boundary_output_op, const BoundaryMetadata& metadata,
+      const llvm::DenseMap<const mlir::Operation*, size_t>& op_ordering_map) {
     llvm::SetVector<mlir::Operation*> scope_ops_setvec;
     llvm::SetVector<std::pair<mlir::Value, int64_t>> arg_pos_setvec;
-    llvm::SmallVector<mlir::Operation*> processing({op});
+    llvm::SmallVector<mlir::Operation*> processing({boundary_output_op});
 
     // Reverse graph traversal: from boundary output op to boundary input op,
     // global function arg, or stablehlo constant.
@@ -215,7 +233,7 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
           curr_metadata_ptr != nullptr) {
         const auto& curr_metadata = *curr_metadata_ptr;
         if (curr_metadata.is_input &&
-            curr_metadata.boundary_key() == output_metadata.boundary_key()) {
+            curr_metadata.boundary_key() == metadata.boundary_key()) {
           // Terminal condition: boundary input op.
           arg_pos_setvec.insert({curr_op->getResult(0).dyn_cast<mlir::Value>(),
                                  curr_metadata.pos});
@@ -229,7 +247,7 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
         if (def_op == nullptr) {
           // Terminal condition: Global function arg
           arg_pos_setvec.insert({value, std::numeric_limits<int64_t>::max()});
-        } else if (llvm::isa<mlir::stablehlo::ConstantOp>(op)) {
+        } else if (llvm::isa<mlir::stablehlo::ConstantOp>(curr_op)) {
           // Terminal condition: constant
           scope_ops_setvec.insert(def_op);
         } else {
@@ -240,15 +258,16 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
     // Sorts all ops within the boundary by their line numbers in the input
     // MLIR. The ops will be duplicated to the impl function following this
     // order.
-    auto scope_ops = scope_ops_setvec.takeVector();
-    for (auto& op : scope_ops) {
-      if (!op_line_num.contains(op)) {
-        return;
-      }
-    }
+    llvm::SmallVector<mlir::Operation*> scope_ops =
+        scope_ops_setvec.takeVector();
+    // for (auto& op : scope_ops) {
+    //   if (!op_ordering_map.contains(op)) {
+    //     return;
+    //   }
+    // }
     std::sort(scope_ops.begin(), scope_ops.end(),
-              [&op_line_num](const auto& a, const auto& b) {
-                return op_line_num.at(a) < op_line_num.at(b);
+              [&op_ordering_map](const auto& a, const auto& b) {
+                return op_ordering_map.at(a) < op_ordering_map.at(b);
               });
 
     // Sorts boundary args by their positions. Note that the args of the
@@ -266,18 +285,31 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
       args.push_back(arg);
     }
 
+    return std::make_pair(std::move(args), std::move(scope_ops));
+  }
+
+  mlir::func::FuncOp BuildStableHLOCompositeImplFunc(
+      mlir::Operation* boundary_output_op, llvm::StringRef func_name,
+      const llvm::SmallVector<mlir::Value>& args,
+      const llvm::SmallVector<mlir::Operation*>& impl_ops) {
+    mlir::ModuleOp module_op = getOperation();
+    mlir::MLIRContext* context = &getContext();
+    mlir::OpBuilder builder(context);
+
     // Creates composite impl function and duplicates all ops within the
     // boundary in the function.
     llvm::SmallVector<mlir::Location> arg_locs;
-    llvm::SmallVector<mlir::Type> arg_types,
-        result_types(op->getResultTypes().begin(), op->getResultTypes().end());
+    llvm::SmallVector<mlir::Type> arg_types;
     for (auto& arg : args) {
       arg_types.push_back(arg.getType());
       arg_locs.push_back(arg.getLoc());
     }
+    llvm::SmallVector<mlir::Type> result_types(
+        boundary_output_op->getResultTypes().begin(),
+        boundary_output_op->getResultTypes().end());
 
     mlir::func::FuncOp impl_func = builder.create<mlir::func::FuncOp>(
-        module_op.getLoc(), absl::StrCat(output_metadata.name, ".impl"),
+        module_op.getLoc(), func_name,
         mlir::FunctionType::get(context, arg_types, result_types));
     mlir::IRMapping mapping;
     builder.createBlock(&impl_func.getBody(), impl_func.begin(), arg_types,
@@ -285,19 +317,31 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
     for (const auto& arg : llvm::enumerate(args)) {
       mapping.map(arg.value(), impl_func.getArgument(arg.index()));
     }
-    for (mlir::Operation* original_op : scope_ops) {
+    for (mlir::Operation* original_op : impl_ops) {
       mlir::Operation* cloned_op = builder.clone(*original_op, mapping);
       mapping.map(original_op, cloned_op);
     }
-    builder.create<mlir::func::ReturnOp>(impl_func.getBody().getLoc(),
-                                         mapping.lookup(op)->getResults());
+    builder.create<mlir::func::ReturnOp>(
+        impl_func.getBody().getLoc(),
+        mapping.lookup(boundary_output_op)->getResults());
 
     // Adds the new function to symbol table.
     mlir::SymbolTable symbol_table(module_op);
     impl_func.setPrivate();
     symbol_table.insert(impl_func);
 
-    builder.setInsertionPointAfter(op);
+    return impl_func;
+  }
+
+  mlir::Operation* BuildStableHLOCompositeOp(
+      mlir::Operation* boundary_output_op, mlir::func::FuncOp impl_func,
+      const llvm::SmallVector<mlir::Value>& args,
+      const BoundaryMetadata& metadata) {
+    mlir::ModuleOp module_op = getOperation();
+    mlir::MLIRContext* context = &getContext();
+    mlir::OpBuilder builder(context);
+
+    builder.setInsertionPointAfter(boundary_output_op);
     llvm::SmallVector<mlir::NamedAttribute> call_attrs{
         {
             builder.getStringAttr("call_target_name"),
@@ -313,30 +357,22 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
             builder.getDictionaryAttr(llvm::SmallVector<mlir::NamedAttribute>{
                 {
                     builder.getStringAttr("attributes"),
-                    BuildDictionaryAttrFromJsonMap(builder,
-                                                   output_metadata.attrs),
+                    BuildDictionaryAttrFromJsonMap(builder, metadata.attrs),
                 },
                 {
                     builder.getStringAttr("name"),
-                    builder.getStringAttr(output_metadata.name),
+                    builder.getStringAttr(metadata.name),
                 },
             }),
         },
     };
-    // Inserts composite call op.
-    mlir::Operation* composite_call_op =
+
+    // Creates and inserts composite call op.
+    mlir::Operation* composite_op =
         builder.create<mlir::stablehlo::CustomCallOp>(
-            op->getLoc(), impl_func.getFunctionType().getResults(), args,
-            call_attrs);
-
-    // Updates all users of this op's result(s) to use the results(s) of impl
-    // func call.
-    for (size_t i = 0; i < op->getNumResults(); ++i) {
-      mlir::OpResult result = op->getResult(i);
-      result.replaceAllUsesWith(composite_call_op->getResult(i));
-    }
-
-    // The unused scope_ops will be eliminated with canonicalizer.
+            boundary_output_op->getLoc(),
+            impl_func.getFunctionType().getResults(), args, call_attrs);
+    return composite_op;
   }
 };
 
