@@ -658,25 +658,28 @@ PjRtComputationClient::ExecuteReplicated(
     // Time in nanoseconds that it takes to prepare an argument. Used to tune
     // number of threads spawned by ParallelFor. Measured on 2023/11/28.
     static constexpr int64_t argument_handle_cost_ns = 10000;
-    pool_.ParallelFor(arguments.size(), argument_handle_cost_ns, [&](int64_t start, int64_t end) {
-      for (int32_t i = start; i < end; ++i) {
-        auto pjrt_data =
-            std::dynamic_pointer_cast<PjRtShardedData>(arguments[i]);
-        XLA_CHECK_EQ(pjrt_data->shards.size(), devices.size())
-            << "Expected one shard per device";
+    pool_.ParallelFor(
+        arguments.size(), argument_handle_cost_ns,
+        [&](int64_t start, int64_t end) {
+          for (int32_t i = start; i < end; ++i) {
+            auto pjrt_data =
+                std::dynamic_pointer_cast<PjRtShardedData>(arguments[i]);
+            XLA_CHECK_EQ(pjrt_data->shards.size(), devices.size())
+                << "Expected one shard per device";
 
-        for (int32_t d = 0; d < devices.size(); d++) {
-          std::shared_ptr<PjRtData> shard = pjrt_data->shards[d];
+            for (int32_t d = 0; d < devices.size(); d++) {
+              std::shared_ptr<PjRtData> shard = pjrt_data->shards[d];
 
-          xla::PjRtDevice* pjrt_device = StringToPjRtDevice(devices[d]);
-          XLA_CHECK_EQ(shard->buffer->device(), pjrt_device);
-          XLA_CHECK(pjrt_device->IsAddressable()) << pjrt_device->DebugString();
+              xla::PjRtDevice* pjrt_device = StringToPjRtDevice(devices[d]);
+              XLA_CHECK_EQ(shard->buffer->device(), pjrt_device);
+              XLA_CHECK(pjrt_device->IsAddressable())
+                  << pjrt_device->DebugString();
 
-          argument_handles[d][i] = shard->buffer.get();
-        }
-        counter.DecrementCount();
-      };
-    });
+              argument_handles[d][i] = shard->buffer.get();
+            }
+            counter.DecrementCount();
+          };
+        });
     counter.Wait();
   }
 
@@ -734,7 +737,8 @@ PjRtComputationClient::ExecuteReplicated(
     XLA_CHECK_EQ(output_shapes.size(), num_outputs);
 
     XLA_CHECK(pjrt_computation.output_shardings_.has_value());
-    const std::vector<xla::OpSharding>& output_shardings = *pjrt_computation.output_shardings_;
+    const std::vector<xla::OpSharding>& output_shardings =
+        *pjrt_computation.output_shardings_;
     XLA_CHECK_EQ(output_shardings.size(), num_outputs);
 
     absl::BlockingCounter counter(num_outputs);
@@ -742,22 +746,25 @@ PjRtComputationClient::ExecuteReplicated(
     // Time in nanoseconds that it takes to process a result buffer.
     // Measured on 2023/11/28.
     static constexpr int64_t result_handle_cost_ns = 10000;
-    pool_.ParallelFor(num_outputs, result_handle_cost_ns, [&](int64_t start, int64_t end) {
-      for (int32_t i = start; i < end; ++i) {
-        std::vector<std::shared_ptr<PjRtData>> shards(devices.size());
-        for (int32_t d = 0; d < devices.size(); d++) {
-          std::unique_ptr<xla::PjRtBuffer> buffer = std::move(results[d][i]);
-          shards[d] = std::make_shared<PjRtData>(devices[d], std::move(buffer));
-        }
+    pool_.ParallelFor(
+        num_outputs, result_handle_cost_ns, [&](int64_t start, int64_t end) {
+          for (int32_t i = start; i < end; ++i) {
+            std::vector<std::shared_ptr<PjRtData>> shards(devices.size());
+            for (int32_t d = 0; d < devices.size(); d++) {
+              std::unique_ptr<xla::PjRtBuffer> buffer =
+                  std::move(results[d][i]);
+              shards[d] =
+                  std::make_shared<PjRtData>(devices[d], std::move(buffer));
+            }
 
-        data_handles[i] = std::make_shared<PjRtShardedData>(
-            spmd_device_str, output_shapes[i], std::move(shards),
-            output_shardings[i]);
-        TF_VLOG(5) << "Created sharded data with shape "
-                   << data_handles[i]->shape().ToString();
-        counter.DecrementCount();
-      }
-    });
+            data_handles[i] = std::make_shared<PjRtShardedData>(
+                spmd_device_str, output_shapes[i], std::move(shards),
+                output_shardings[i]);
+            TF_VLOG(5) << "Created sharded data with shape "
+                       << data_handles[i]->shape().ToString();
+            counter.DecrementCount();
+          }
+        });
     counter.Wait();
   }
 
