@@ -199,6 +199,14 @@ class StableHLOModelBundle:
   stablehlo_funcs: List[StableHLOFunc]
 
 
+@dataclass
+class StableHLOExportOptions:
+  include_human_readable_text: bool = True
+  override_tracing_arguments: Optional[Tuple[Any]] = None
+  override_tracing_kwargs: Optional[Mapping[str, Any]] = None
+  save_weights: bool = True
+
+
 class XLAExportInterpreter(torch.fx.Interpreter):
 
   def __init__(self, module, device):
@@ -454,14 +462,6 @@ def _load_program_bundle(stablehlo_dir: os.PathLike) -> StableHLOModelBundle:
       stablehlo_funcs=stablehlo_funcs,
       additional_constants=constants,
       state_dict=state_dict)
-
-
-@dataclass
-class StableHLOExportOptions:
-  include_human_readable_text: bool = True
-  override_tracing_arguments: Optional[Tuple[Any]] = None
-  override_tracing_kwargs: Optional[Mapping[str, Any]] = None
-  save_weights: bool = True
 
 
 def save_as_stablehlo(exported_model: 'ExportedProgram',
