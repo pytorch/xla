@@ -45,7 +45,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     xs.mark_sharding(t, mesh, partition_spec)
     sharding = torch_xla._XLAC._get_xla_sharding_spec(t)
     generated_table = visualize_tensor_sharding(t)
-    console = Console()
+    console = rich.console.Console()
     with console.capture() as capture:
         console.print(generated_table)
     output = capture.get()
@@ -53,7 +53,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     # fake_console = rich.console.Console(file=io.StringIO(), width=120)
     color = None
     text_color = None
-    fask_table = rich.table.Table(
+    fake_table = rich.table.Table(
         show_header=False,
         show_lines=True,
         padding=0,
@@ -81,7 +81,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
             rich.align.Align('TPU 3', "center", vertical="middle"),
             (2, 1, 2, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
-    fask_table.add_row(*col)
+    fake_table.add_row(*col)
     col = []
     col.append(
         rich.padding.Padding(
@@ -103,8 +103,8 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
             rich.align.Align('TPU 7', "center", vertical="middle"),
             (2, 1, 2, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
-    fask_table.add_row(*col)
-    fake_console = Console()
+    fake_table.add_row(*col)
+    fake_console = rich.console.Console()
     with fake_console.capture() as fake_capture:
         fake_console.print(fake_table)
     fake_output = fake_capture.get()
@@ -128,7 +128,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     xs.mark_sharding(t, mesh, (0, None))
     sharding = torch_xla._XLAC._get_xla_sharding_spec(t)
     generated_table = visualize_tensor_sharding(t)
-    console = Console()
+    console = rich.console.Console()
     with console.capture() as capture:
         console.print(generated_table)
     output = capture.get()
@@ -156,7 +156,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
             (2, 0, 2, 0),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     fake_table.add_row(*col)
-    fake_console = Console()
+    fake_console = rich.console.Console()
     with fake_console.capture() as fake_capture:
         fake_console.print(fake_table)
     fake_output = fake_capture.get()
@@ -180,7 +180,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     xs.mark_sharding(t, mesh, partition_spec_replicated)
     sharding = torch_xla._XLAC._get_xla_sharding_spec(t)
     generated_table = visualize_tensor_sharding(t)
-    console = Console()
+    console = rich.console.Console()
     with console.capture() as capture:
         console.print(generated_table)
     output = capture.get()
@@ -202,7 +202,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
             (0, 0, 1, 0),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     fask_table.add_row(*col)
-    fake_console = Console()
+    fake_console = rich.console.Console()
     with fake_console.capture() as fake_capture:
         fake_console.print(fake_table)
     fake_output = fake_capture.get()
