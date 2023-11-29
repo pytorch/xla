@@ -117,8 +117,8 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
 
   @unittest.skipIf(
       not xr.using_pjrt() or
-      xu.getenv_as(xenv.PJRT_DEVICE, str) in ("GPU", 'CUDA', 'ROCM'),
-      f"Requires PJRT_DEVICE set to `TPU`, 'CPU'.")
+      xu.getenv_as(xenv.PJRT_DEVICE, str) in ("GPU", 'CUDA', 'ROCM', 'CPU'),
+      f"Requires PJRT_DEVICE set to `TPU`.")
   def test_single_host_partial_replication(self):
     from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
     device = xm.xla_device()
@@ -168,8 +168,8 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
 
   @unittest.skipIf(
       not xr.using_pjrt() or
-      xu.getenv_as(xenv.PJRT_DEVICE, str) in ("GPU", 'CUDA', 'ROCM'),
-      f"Requires PJRT_DEVICE set to `TPU`, 'CPU'.")
+      xu.getenv_as(xenv.PJRT_DEVICE, str) in ("GPU", 'CUDA', 'ROCM', 'CPU'),
+      f"Requires PJRT_DEVICE set to `TPU`.")
   def test_single_host_replicated(self):
     from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
     device = xm.xla_device()
@@ -252,8 +252,8 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     col = []
     col.append(
         rich.padding.Padding(
-            rich.align.Align('TPU 0', "center", vertical="middle"),
-            (2, 1, 2, 1),
+            rich.align.Align('CPU [0]', "center", vertical="middle"),
+            (0, 0, 1, 0),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     fask_table.add_row(*col)
     fake_console.print(fask_table)
