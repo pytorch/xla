@@ -271,7 +271,7 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
       for (mlir::Value value : curr_op->getOperands()) {
         mlir::Operation* def_op = value.getDefiningOp();
         if (def_op == nullptr) {
-          // Terminal condition: Global function arg
+          // Terminal condition: global function arg
           arg_pos_setvec.insert({value, std::numeric_limits<int64_t>::max()});
         } else if (llvm::isa<mlir::stablehlo::ConstantOp>(def_op)) {
           // Terminal condition: constant
