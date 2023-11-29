@@ -501,7 +501,7 @@ def parse_args(args=None):
       "--collect-full-output",
       action="store_true",
       help="""Whether to collect full output for training. Set this to true if we
-        want to verify the numerical correctness of graidents. But that may
+        want to verify the numerical correctness of gradients. But that may
         cause time measurement not accurate""",
   )
 
@@ -557,13 +557,13 @@ def parse_args(args=None):
       type=str,
       default="./output/",
       help="Directory specifying where to dump profiling information (summary, and trace)",
-  ),
+  )
 
   parser.add_argument(
       "--profile-cuda-cpu-collect",
       action="store_true",
       help="Whether to collect CPU/GPU profiling information in the resulting file.",
-  ),
+  )
 
   parser.add_argument(
       "--xla-flags",
