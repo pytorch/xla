@@ -2331,11 +2331,6 @@ at::Tensor XLANativeFunctions::permute_copy(const at::Tensor& self,
 at::Tensor XLANativeFunctions::pow(const at::Tensor& self,
                                    const at::Scalar& exponent) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  // xla::Pow() doesn't support integer types.
-  if (!at::native::is_floating_point(self)) {
-    return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP2(pow, Tensor_Scalar)>::call(self, exponent);
-  }
   return bridge::AtenFromXlaTensor(
       tensor_methods::pow(bridge::GetXlaTensor(self), exponent));
 }
@@ -2343,11 +2338,6 @@ at::Tensor XLANativeFunctions::pow(const at::Tensor& self,
 at::Tensor XLANativeFunctions::pow(const at::Tensor& self,
                                    const at::Tensor& exponent) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  // xla::Pow() doesn't support integer types.
-  if (!at::native::is_floating_point(self)) {
-    return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP2(pow, Tensor_Tensor)>::call(self, exponent);
-  }
   return bridge::AtenFromXlaTensor(tensor_methods::pow(
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(exponent)));
 }
@@ -2355,12 +2345,6 @@ at::Tensor XLANativeFunctions::pow(const at::Tensor& self,
 at::Tensor XLANativeFunctions::pow(const at::Scalar& self,
                                    const at::Tensor& exponent) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  // xla::Pow() doesn't support integer types.
-  if (!self.isFloatingPoint()) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback,
-                                        ATEN_OP2(pow, Scalar)>::call(self,
-                                                                     exponent);
-  }
   return bridge::AtenFromXlaTensor(
       tensor_methods::pow(self, bridge::GetXlaTensor(exponent)));
 }

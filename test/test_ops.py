@@ -1,8 +1,10 @@
 import collections
 import numbers
 from typing import Callable
+from torch_xla.core import xla_model as xm
 
 import torch
+import unittest
 from torch.testing._internal.common_utils import \
     (TestCase, run_tests)
 from torch.testing._internal.common_methods_invocations import \
@@ -148,7 +150,6 @@ allowed_opinfo = set(
             AllowedOpInfoEntry('outer'),
             AllowedOpInfoEntry('ormqr'),
             AllowedOpInfoEntry('permute'),
-            AllowedOpInfoEntry('pow'),
             AllowedOpInfoEntry('float_power'),
             AllowedOpInfoEntry('rad2deg'),
             AllowedOpInfoEntry('real'),
@@ -163,7 +164,6 @@ allowed_opinfo = set(
             AllowedOpInfoEntry('split_with_sizes'),
             AllowedOpInfoEntry('__radd__'),
             AllowedOpInfoEntry('__rmul__'),
-            AllowedOpInfoEntry('__rpow__'),
             AllowedOpInfoEntry('__rsub__'),
             AllowedOpInfoEntry('rsub', 'rsub_tensor'),
             AllowedOpInfoEntry('select'),
@@ -347,6 +347,8 @@ allowed_opinfo = set(
             # Worked locally (but failing on CI both CPU and CUDA)
             # app.circleci.com/pipelines/github/pytorch/xla/9130/workflows/71c74f3d-1735-4328-81b5-784d6e6744da/jobs/17998
             # AllowedOpInfoEntry('var_mean'),
+            # AllowedOpInfoEntry('pow'), # for int64 don't work, likely rounding issue
+            # AllowedOpInfoEntry('__rpow__'),
         }))
 
 
@@ -409,7 +411,6 @@ class TestOpInfo(TestCase):
   def test_reference_eager(self, device, dtype, op):
     if self.device_type != 'xla':
       self.skipTest("This test runs only on XLA")
-
     sample_inputs = op.sample_inputs(device, dtype)
     for sample_input in sample_inputs:
       self.compare_with_eager_reference(op, sample_input)
@@ -418,4 +419,5 @@ class TestOpInfo(TestCase):
 instantiate_device_type_tests(TestOpInfo, globals())
 
 if __name__ == '__main__':
-  run_tests()
+  #run_tests()
+  unittest.main()

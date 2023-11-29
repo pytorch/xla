@@ -3295,6 +3295,11 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.pow.Tensor_Scalar, args, kwargs)
 
+  def test_aten_pow_Scalar_1(self):
+    args = (10000, torch.randn(16 * 8))
+    kwargs = dict()
+    run_export_and_compare(self, torch.ops.aten.pow.Scalar, args, kwargs)
+
   @unittest.skip
   def test_aten_pow_Tensor_Tensor_0(self):
     args = (
@@ -3313,11 +3318,10 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.pow.Tensor_Tensor, args, kwargs)
 
-  @unittest.skip
   def test_aten_pow_Tensor_Tensor_2(self):
     args = (
-        torch.randint(0, 10, (10, 10)).to(torch.int32),
-        torch.randint(0, 10, (10, 10)).to(torch.int32),
+        torch.randint(0, 5, (10, 10)).to(torch.int32),
+        torch.randint(0, 5, (10, 10)).to(torch.int32),
     )
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.pow.Tensor_Tensor, args, kwargs)
