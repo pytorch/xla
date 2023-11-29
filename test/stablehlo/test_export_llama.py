@@ -34,8 +34,8 @@ class ExportTest(unittest.TestCase):
     with tempfile.TemporaryDirectory() as tempdir:
       save_as_stablehlo(exported2, tempdir, options)
 
-  def test_llama_export(self):
-    options = llama_model.ModelArgs()
+  def test_llama2_export(self):
+    options = llama_model2.ModelArgs()
     model = llama_model2.Transformer(options)
     arg = (torch.randint(0, 1000, (8, 100)), torch.arange(0, 100), None)
     options = StableHLOExportOptions()
