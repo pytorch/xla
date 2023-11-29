@@ -8,6 +8,7 @@
 #include "absl/log/log.h"
 #include "absl/strings/str_cat.h"
 #include "mlir/IR/IRMapping.h"
+#include "mlir/Support/LogicalResult.h"
 #include "single_include/nlohmann/json.hpp"
 #include "stablehlo/dialect/StablehloOps.h"
 
@@ -113,10 +114,14 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
     llvm::SmallVector<mlir::func::FuncOp> func_ops(
         module_op.getOps<mlir::func::FuncOp>());
     for (mlir::func::FuncOp& func_op : func_ops) {
-      llvm::DenseMap<const mlir::Operation*, size_t> op_line_num =
-          BuildOperationsLineNumberMap(func_op);
+      llvm::DenseMap<const mlir::Operation*, size_t> op_order_map =
+          BuildOpOrderMap(func_op);
       for (auto op : func_op.getOps<mlir::stablehlo::CustomCallOp>()) {
-        BuildStableHLOComposite(op.getOperation(), op_line_num);
+        if (mlir::failed(
+                BuildStableHLOComposite(op.getOperation(), op_order_map))) {
+          op.emitError() << "failed to build composite.";
+          return signalPassFailure();
+        }
       }
     }
   }
@@ -130,25 +135,31 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
   }
 
  private:
-  llvm::DenseMap<const mlir::Operation*, size_t> BuildOperationsLineNumberMap(
+  llvm::DenseMap<const mlir::Operation*, size_t> BuildOpOrderMap(
       mlir::func::FuncOp func_op) const {
-    llvm::DenseMap<const mlir::Operation*, size_t> op_line_num;
+    llvm::DenseMap<const mlir::Operation*, size_t> op_order_map;
     for (const auto& op : llvm::enumerate(func_op.getOps())) {
-      op_line_num[&op.value()] = op.index();
+      op_order_map[&op.value()] = op.index();
     }
-    return op_line_num;
+    return op_order_map;
   }
 
-  std::unique_ptr<BoundaryMetadata> GetBoundaryMetadata(mlir::Operation* op) {
+  mlir::FailureOr<std::unique_ptr<BoundaryMetadata>> GetBoundaryMetadata(
+      mlir::Operation* op) {
     if (!IsXlaMarkTensorOp(op)) {
-      return nullptr;
+      return mlir::FailureOr(nullptr);
     }
     auto backend_config =
         op->getAttr("backend_config").dyn_cast<mlir::StringAttr>();
     if (backend_config == nullptr) {
-      return nullptr;
+      return mlir::FailureOr(nullptr);
     }
-    return BoundaryMetadata::Parse(backend_config);
+    std::unique_ptr<BoundaryMetadata> metadata =
+        BoundaryMetadata::Parse(backend_config);
+    if (metadata == nullptr) {
+      return op->emitError() << "invalid boundary metadata JSON.";
+    }
+    return metadata;
   }
 
   mlir::DictionaryAttr BuildDictionaryAttrFromJsonMap(
@@ -185,16 +196,25 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
     return builder.getDictionaryAttr(named_attrs);
   }
 
-  void BuildStableHLOComposite(
+  mlir::LogicalResult BuildStableHLOComposite(
       mlir::Operation* op,
-      const llvm::DenseMap<const mlir::Operation*, size_t>& op_ordering_map) {
-    std::unique_ptr<BoundaryMetadata> metadata = GetBoundaryMetadata(op);
-    if (metadata == nullptr || metadata->is_input) {
-      return;
+      const llvm::DenseMap<const mlir::Operation*, size_t>& op_order_map) {
+    auto metadata_or = GetBoundaryMetadata(op);
+    if (mlir::failed(metadata_or)) {
+      return mlir::failure();
     }
 
-    auto [args, scope_ops] =
-        GetBoundaryArgsAndOps(op, *metadata, op_ordering_map);
+    std::unique_ptr<BoundaryMetadata> metadata = std::move(*metadata_or);
+    if (metadata == nullptr || metadata->is_input) {
+      return mlir::success();
+    }
+
+    auto args_ops_or = GetBoundaryArgsAndOps(op, *metadata, op_order_map);
+    if (mlir::failed(args_ops_or)) {
+      return mlir::failure();
+    }
+
+    auto [args, scope_ops] = *args_ops_or;
 
     mlir::func::FuncOp impl_func = BuildStableHLOCompositeImplFunc(
         op, absl::StrCat(metadata->name, ".impl"), args, scope_ops);
@@ -210,12 +230,14 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
     }
 
     // The unused scope_ops will be eliminated with canonicalizer.
+    return mlir::success();
   }
 
-  std::pair<llvm::SmallVector<mlir::Value>, llvm::SmallVector<mlir::Operation*>>
+  mlir::FailureOr<std::pair<llvm::SmallVector<mlir::Value>,
+                            llvm::SmallVector<mlir::Operation*>>>
   GetBoundaryArgsAndOps(
       mlir::Operation* boundary_output_op, const BoundaryMetadata& metadata,
-      const llvm::DenseMap<const mlir::Operation*, size_t>& op_ordering_map) {
+      const llvm::DenseMap<const mlir::Operation*, size_t>& op_order_map) {
     llvm::SetVector<mlir::Operation*> scope_ops_setvec;
     llvm::SetVector<std::pair<mlir::Value, int64_t>> arg_pos_setvec;
     llvm::SmallVector<mlir::Operation*> processing({boundary_output_op});
@@ -229,14 +251,18 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
         continue;
       }
 
-      if (auto curr_metadata_ptr = GetBoundaryMetadata(curr_op);
-          curr_metadata_ptr != nullptr) {
-        const auto& curr_metadata = *curr_metadata_ptr;
-        if (curr_metadata.is_input &&
-            curr_metadata.boundary_key() == metadata.boundary_key()) {
+      auto curr_metadata_or = GetBoundaryMetadata(curr_op);
+      if (mlir::failed(curr_metadata_or)) {
+        return mlir::failure();
+      }
+      std::unique_ptr<BoundaryMetadata> curr_metadata =
+          std::move(*curr_metadata_or);
+      if (curr_metadata != nullptr) {
+        if (curr_metadata->is_input &&
+            curr_metadata->boundary_key() == metadata.boundary_key()) {
           // Terminal condition: boundary input op.
           arg_pos_setvec.insert({curr_op->getResult(0).dyn_cast<mlir::Value>(),
-                                 curr_metadata.pos});
+                                 curr_metadata->pos});
           continue;
         }
       }
@@ -247,7 +273,7 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
         if (def_op == nullptr) {
           // Terminal condition: Global function arg
           arg_pos_setvec.insert({value, std::numeric_limits<int64_t>::max()});
-        } else if (llvm::isa<mlir::stablehlo::ConstantOp>(curr_op)) {
+        } else if (llvm::isa<mlir::stablehlo::ConstantOp>(def_op)) {
           // Terminal condition: constant
           scope_ops_setvec.insert(def_op);
         } else {
@@ -260,14 +286,14 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
     // order.
     llvm::SmallVector<mlir::Operation*> scope_ops =
         scope_ops_setvec.takeVector();
-    // for (auto& op : scope_ops) {
-    //   if (!op_ordering_map.contains(op)) {
-    //     return;
-    //   }
-    // }
+    for (auto& op : scope_ops) {
+      if (!op_order_map.contains(op)) {
+        op->emitError() << "does not have a ordering number in its outer func.";
+      }
+    }
     std::sort(scope_ops.begin(), scope_ops.end(),
-              [&op_ordering_map](const auto& a, const auto& b) {
-                return op_ordering_map.at(a) < op_ordering_map.at(b);
+              [&op_order_map](const auto& a, const auto& b) {
+                return op_order_map.at(a) < op_order_map.at(b);
               });
 
     // Sorts boundary args by their positions. Note that the args of the
