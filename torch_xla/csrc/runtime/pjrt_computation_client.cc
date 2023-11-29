@@ -654,11 +654,11 @@ PjRtComputationClient::ExecuteReplicated(
         tsl::profiler::TraceMeLevel::kInfo);
 
     absl::BlockingCounter counter(arguments.size());
-    // TODO: tune and document cost estimate
-    pool_.ParallelFor(arguments.size(), 30000, [&](int64_t start, int64_t end) {
-      tsl::profiler::TraceMe activity(
-          "PjRtComputationClient::ExecuteReplicated_argument_handle_shard",
-          tsl::profiler::TraceMeLevel::kInfo);
+
+    // Time in nanoseconds that it takes to prepare an argument. Used to tune
+    // number of threads spawned by ParallelFor. Measured on 2023/11/28.
+    static constexpr int64_t argument_handle_cost_ns = 10000;
+    pool_.ParallelFor(arguments.size(), argument_handle_cost_ns, [&](int64_t start, int64_t end) {
       for (int32_t i = start; i < end; ++i) {
         auto pjrt_data =
             std::dynamic_pointer_cast<PjRtShardedData>(arguments[i]);
@@ -738,11 +738,11 @@ PjRtComputationClient::ExecuteReplicated(
     XLA_CHECK_EQ(output_shardings.size(), num_outputs);
 
     absl::BlockingCounter counter(num_outputs);
-    // TODO: tune and document cost estimate
-    pool_.ParallelFor(num_outputs, 30000, [&](int64_t start, int64_t end) {
-      tsl::profiler::TraceMe activity(
-          "PjRtComputationClient::ExecuteReplicated_result_handle_shard",
-          tsl::profiler::TraceMeLevel::kInfo);
+
+    // Time in nanoseconds that it takes to process a result buffer.
+    // Measured on 2023/11/28.
+    static constexpr int64_t result_handle_cost_ns = 10000;
+    pool_.ParallelFor(num_outputs, result_handle_cost_ns, [&](int64_t start, int64_t end) {
       for (int32_t i = start; i < end; ++i) {
         std::vector<std::shared_ptr<PjRtData>> shards(devices.size());
         for (int32_t d = 0; d < devices.size(); d++) {
