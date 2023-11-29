@@ -36,7 +36,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
     device = xm.xla_device()
     num_devices = xr.global_runtime_device_count()
-    mesh_shape = (2, num_devices // 2)
+    mesh_shape = (2, num_devices / 2)
     print("num_devices: ")
     print(num_devices)
     print("device: ")
