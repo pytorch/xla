@@ -160,8 +160,7 @@ PjRtComputationClient::PjRtComputationClient() {
       };
       kv_put = [distributed_client, key_prefix](
                    std::string_view k, std::string_view v) -> xla::Status {
-        return distributed_client->KeyValueSet(absl::StrCat(key_prefix, k),
-                                               v);
+        return distributed_client->KeyValueSet(absl::StrCat(key_prefix, k), v);
       };
     }
     TF_VLOG(3) << "Getting StreamExecutorGpuClient for node_id="
