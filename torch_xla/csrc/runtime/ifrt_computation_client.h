@@ -187,60 +187,6 @@ class IfrtComputationClient : public ComputationClient {
 
   tsl::RCReference<xla::ifrt::Array> ReplicateShardedData(
       const std::shared_ptr<IfrtData> handle);
-  // struct PjRtShardedData : public Data {
-  //   PjRtShardedData(std::string device, xla::Shape shape) = delete;
-
-  //   PjRtShardedData(std::string device, xla::Shape shape,
-  //                   std::vector<std::shared_ptr<PjRtData>> shards,
-  //                   xla::OpSharding sharding)
-  //       : Data(std::move(device), std::move(shape)),
-  //         shards(shards),
-  //         sharding(sharding) {}
-
-  //   Handle GetHandle() override {
-  //     // Always returns `Handle` of the first shard.
-  //     return shards[0]->GetHandle();
-  //   }
-
-  //   void Assign(const torch::lazy::BackendData& data) override {
-  //     const PjRtShardedData& pjrt_sharded_data =
-  //         dynamic_cast<const PjRtShardedData&>(data);
-  //     if (&pjrt_sharded_data != this) {
-  //       shards = std::move(pjrt_sharded_data.shards);
-  //     }
-  //   }
-
-  //   bool HasValue() const override {
-  //     if (shards.empty()) {
-  //       return false;
-  //     }
-
-  //     for (auto& shard : shards) {
-  //       if (!shard->HasValue()) {
-  //         return false;
-  //       }
-  //     }
-  //     return true;
-  //   }
-
-  //   std::string ToString() const override {
-  //     std::stringstream ss;
-  //     ss << "XLAShardedData: \n";
-  //     ss << "  Data Device: " << device() << "\n";
-  //     ss << "  Data Shape: " << shape().ToString() << "\n";
-  //     ss << "  OpSharding: "
-  //        << xla::HloSharding::FromProto(sharding)->ToString() << "\n";
-  //     ss << "  NumShards: " << shards.size() << "\n";
-  //     return ss.str();
-  //   }
-
-  //   bool HasSharding() const override { return true; }
-
-  //   xla::OpSharding GetSharding() const override { return sharding; }
-
-  //   std::vector<std::shared_ptr<PjRtData>> shards;
-  //   xla::OpSharding sharding;
-  // };
 
   struct IfrtComputation : public Computation {
     IfrtComputation(xla::XlaComputation computation,
