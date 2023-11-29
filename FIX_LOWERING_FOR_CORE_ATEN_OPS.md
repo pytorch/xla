@@ -1,5 +1,7 @@
 In order for PyTorch/XLA to support the PyTorch core ATen opset, it requires lowering each core ATen op in PyTorch/XLA. Note that this document will serve as a guide for fixing these lowering for core aten opset, specifically looking at [test_core_aten_ops.py test](https://github.com/pytorch/xla/blob/master/test/test_core_aten_ops.py). This guide will **not** cover how to lower an op in PyTorch/XLA, please refer our [op lowering guide](https://github.com/pytorch/xla/blob/master/OP_LOWERING_GUIDE.md) for this. 
 
+We also have a worklog for lowering these core aten ops in a GitHub issue, so we can track who's working on which ops and share some findings: [[Core Aten ops] Logs for fixing core aten ops coverage issues](https://github.com/pytorch/xla/issues/5934). 
+
 Let's go back and take a closer look at the [test_core_aten_ops.py test](https://github.com/pytorch/xla/blob/master/test/test_core_aten_ops.py), which is the source of truth to verify and correctness of these lowerings. The core of this test file is the `run_export_and_compare` at https://github.com/pytorch/xla/blob/master/test/test_core_aten_ops.py#L28. Each op unit test initializes the input and passes the op as a function and its inputs. The `run_export_and_compare` has multiple subtests that have the following structure: 
 - `torch_eval`
    - `torch_xla_eval`
