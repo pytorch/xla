@@ -1816,10 +1816,10 @@ void InitXlaModuleBindings(py::module m) {
   // of the shards returned from `_get_local_shards`.
   m.def(
       "_get_local_shard_replica_and_indices",
-      [](const std::vector<at::Tensor>& input)
+      [](const std::vector<at::Tensor>& input_tensors)
           -> std::vector<std::vector<std::pair<int, py::object>>> {
         std::vector<std::vector<std::pair<int, py::object>>> result;
-        for (auto& tensor : input) {
+        for (auto& tensor : input_tensors) {
           XLATensorPtr xtensor = bridge::GetXlaTensor(tensor);
           XLA_CHECK(xtensor->sharding_spec() != nullptr)
               << "Tensor is not sharded";
