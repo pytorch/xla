@@ -272,7 +272,6 @@ void DebugUtil::analyze_graph_execution_python_frame(
           "mark_step\n";
   }
 
-  // TODO(JackCaoG): be smart about where to stop printing
   ss << debug_output_prefix << "Python Frame Triggered Execution: \n";
   for (auto& location : frames) {
     // if current frame `__call__` at pjrt.py, bleow stack will be python
