@@ -713,7 +713,7 @@ void MapXlaEnvVarsToLazy() {
 }
 
 at::Tensor MarkTensor(const at::Tensor& input, const std::string& info) {
-  auto result = tensor_methods::mark_tensor(bridge::GetXlaTensor(input), info);
+  XLATensorPtr result = tensor_methods::mark_tensor(bridge::GetXlaTensor(input), info);
   return bridge::AtenFromXlaTensor(std::move(result));
 }
 
