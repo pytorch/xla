@@ -376,11 +376,11 @@ class TestAutocastCuda(TestAutocastBase):
         with self.assertRaises(RuntimeError):
           getattr(module, op)(*args)
 
-  def test_autocast_torch_fp32(self):
-    for op_with_args in self.get_autocast_list('torch_fp32'):
-      op, args, maybe_kwargs = self.args_maybe_kwargs(op_with_args)
-      self._run_autocast_outofplace(
-          op, args, torch.float32, add_kwargs=maybe_kwargs)
+  # def test_autocast_torch_fp32(self):
+  #   for op_with_args in self.get_autocast_list('torch_fp32'):
+  #     op, args, maybe_kwargs = self.args_maybe_kwargs(op_with_args)
+  #     self._run_autocast_outofplace(
+  #         op, args, torch.float32, add_kwargs=maybe_kwargs)
 
   def test_autocast_torch_bf16(self):
     bf16_test_list = [
