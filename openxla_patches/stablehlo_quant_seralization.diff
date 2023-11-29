@@ -1,5 +1,3 @@
-// TODO(lsy323): This patch is needed to serialize stablehlo.uniform_quantize/dequantize in bytecode format
-// This patch can be removed after https://github.com/openxla/stablehlo/issues/1812 is fixed.
 diff --git a/third_party/stablehlo/stablehlo_quant_seralization.patch b/third_party/stablehlo/stablehlo_quant_seralization.patch
 new file mode 100644
 index 000000000..24e23b67d
@@ -33,7 +31,7 @@ index 000000000..24e23b67d
 + }  // namespace
 + 
 diff --git a/third_party/stablehlo/workspace.bzl b/third_party/stablehlo/workspace.bzl
-index 9f4494aac..64fa072bb 100644
+index 80ab0e479..caaa11080 100644
 --- a/third_party/stablehlo/workspace.bzl
 +++ b/third_party/stablehlo/workspace.bzl
 @@ -15,5 +15,6 @@ def repo():
