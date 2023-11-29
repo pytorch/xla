@@ -225,7 +225,7 @@
               
               
                 <div class="version">
-                  master (2.2.0+gita5e0738 )
+                  master (2.2.0+giteb728a8 )
                 </div>
               
             
@@ -2140,7 +2140,7 @@ soon!</p></li>
 <h2>TL;DR<a class="headerlink" href="#tl-dr" title="Permalink to this headline">¶</a></h2>
 <ul class="simple">
 <li><p>To use the PJRT preview runtime, set the <code class="docutils literal notranslate"><span class="pre">PJRT_DEVICE</span></code> environment variable to
-<code class="docutils literal notranslate"><span class="pre">CPU</span></code>, <code class="docutils literal notranslate"><span class="pre">TPU</span></code>, or <code class="docutils literal notranslate"><span class="pre">GPU</span></code></p></li>
+<code class="docutils literal notranslate"><span class="pre">CPU</span></code>, <code class="docutils literal notranslate"><span class="pre">TPU</span></code>, or <code class="docutils literal notranslate"><span class="pre">CUDA</span></code></p></li>
 <li><p>In XRT, all distributed workloads are multiprocess, with one process per
 device. On TPU v2 and v3 in PJRT, workloads are multiprocess and multithreaded
 (4 processes with 2 threads each), so your workload should be thread-safe. See
@@ -2221,7 +2221,7 @@ use the <code class="docutils literal notranslate"><span class="pre">xla://</spa
 <div class="section" id="benefits">
 <h2>Benefits<a class="headerlink" href="#benefits" title="Permalink to this headline">¶</a></h2>
 <ul class="simple">
-<li><p>Simple runtime configuration: just set <code class="docutils literal notranslate"><span class="pre">PJRT_DEVICE</span></code> to <code class="docutils literal notranslate"><span class="pre">TPU</span></code>, <code class="docutils literal notranslate"><span class="pre">CPU</span></code>, or <code class="docutils literal notranslate"><span class="pre">GPU</span></code>
+<li><p>Simple runtime configuration: just set <code class="docutils literal notranslate"><span class="pre">PJRT_DEVICE</span></code> to <code class="docutils literal notranslate"><span class="pre">TPU</span></code>, <code class="docutils literal notranslate"><span class="pre">CPU</span></code>, or <code class="docutils literal notranslate"><span class="pre">CUDA</span></code>
 and start using XLA! Or, let PJRT select a device automatically based on your
 environment.</p></li>
 <li><p>Improved performance: reduced overhead from gRPC means faster end-to-end
