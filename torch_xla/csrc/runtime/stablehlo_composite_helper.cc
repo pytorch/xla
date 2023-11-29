@@ -43,7 +43,7 @@ struct BoundaryMetadata {
   bool is_input;
   std::unordered_map<std::string, json> attrs;
 
-  std::string boundary_id() const { return absl::StrCat(name, "__", id); }
+  auto boundary_key() const { return std::forward_as_tuple(name, id); }
 
   auto uid() const { return std::forward_as_tuple(name, id, pos, is_input); }
 
@@ -215,7 +215,7 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
           curr_metadata_ptr != nullptr) {
         const auto& curr_metadata = *curr_metadata_ptr;
         if (curr_metadata.is_input &&
-            curr_metadata.boundary_id() == output_metadata.boundary_id()) {
+            curr_metadata.boundary_key() == output_metadata.boundary_key()) {
           // Terminal condition: boundary input op.
           arg_pos_setvec.insert({curr_op->getResult(0).dyn_cast<mlir::Value>(),
                                  curr_metadata.pos});
@@ -277,8 +277,7 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
     }
 
     mlir::func::FuncOp impl_func = builder.create<mlir::func::FuncOp>(
-        module_op.getLoc(),
-        absl::StrCat(output_metadata.boundary_id(), ".impl"),
+        module_op.getLoc(), absl::StrCat(output_metadata.name, ".impl"),
         mlir::FunctionType::get(context, arg_types, result_types));
     mlir::IRMapping mapping;
     builder.createBlock(&impl_func.getBody(), impl_func.begin(), arg_types,
