@@ -91,7 +91,9 @@ class ZeroRedundancyOptimizer(Optimizer):
           group = list(group)
         self.local_rank = group.index(self.global_rank)
     if self.local_rank is None:
-      raise ValueError(f"Current rank {self.global_rank} is missing from the sharding_groups {self.sharding_groups}")
+      raise ValueError(
+          f"Current rank {self.global_rank} is missing from the sharding_groups {self.sharding_groups}"
+      )
     # Shard parameters for use in optimizer
     sharded_param_groups = self._shard_parameters()
     # Optimizer initialization
