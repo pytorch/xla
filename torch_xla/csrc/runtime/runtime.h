@@ -7,7 +7,7 @@ namespace torch_xla {
 namespace runtime {
 
 // Returns the ComputationClient singleton.
-ComputationClient* GetComputationClient();
+ComputationClient* GetComputationClient(bool create = true);
 
 ComputationClient* GetComputationClientIfInitialized();
 
