@@ -10,7 +10,7 @@ from torch.library import Library, impl
 xla_pattern_marking_lib = Library("xla_pattern_marking", "DEF")
 
 xla_pattern_marking_lib.define(
-    "mark_tensor(Tensor x, str name, int pos, int id, bool is_input, Any? attr=None) -> Tensor"
+    "mark_tensor(Tensor x, str name, int pos, str id, bool is_input, Any? attr=None) -> Tensor"
 )
 
 
@@ -18,7 +18,7 @@ xla_pattern_marking_lib.define(
 class BoundaryMetadata:
   name: str  # Name of the Patttern.
   pos: int  # Arg/return position.
-  id: int  # Patten instance id.
+  id: str  # Patten instance id.
   is_input: bool = True  # If the marked tensor is input/output.
   attr: dict = None  # Attribute of the pattern, expected to be attached to output.
 
@@ -31,11 +31,24 @@ class BoundaryMetadataSerializer(json.JSONEncoder):
     return super().default(obj)
 
 
+def _assert_valid_composite_attrs(attrs):
+  if attrs is not None:
+    if not isinstance(attrs, dict):
+      raise ValueError("Composite attrs must be a Python dictionary.")
+
+    for k, v in attrs.items():
+      if not isinstance(k, str):
+        raise ValueError("Composite attr name must be a Python str.")
+      if type(k) not in [str, float, int]:
+        raise ValueError(
+            "Composite attr value must be either Python str, float, or int.")
+
+
 @impl(xla_pattern_marking_lib, "mark_tensor", "XLA")
 def mark_tensor_xla(x: torch.Tensor,
                     name: str,
                     pos: int,
-                    id: int,
+                    id: str,
                     is_input: bool,
                     attr: Dict = None):
   """Attach pattern boundary metadata to a XLA Tensor.
@@ -49,6 +62,7 @@ def mark_tensor_xla(x: torch.Tensor,
       attr: dict - Attribute of the pattern, it will be passed down to the attribute field
                    in the stablehlo composite.
   """
+  _assert_valid_composite_attrs(attr)
   pattern_info = BoundaryMetadata(name, pos, id, is_input, attr)
   return torch_xla._XLAC._xla_mark_tensor(
       x, json.dumps(pattern_info, cls=BoundaryMetadataSerializer))
@@ -58,7 +72,7 @@ def mark_tensor_xla(x: torch.Tensor,
 def mark_tensor(x: torch.Tensor,
                 name: str,
                 pos: int,
-                id: int,
+                id: str,
                 is_input: bool,
                 attr: Dict = None):
   # Do nothing for non-xla tensor.
@@ -69,7 +83,7 @@ def mark_tensor(x: torch.Tensor,
 def mark_tensor_meta(x: torch.Tensor,
                      name: str,
                      pos: int,
-                     id: int,
+                     id: str,
                      is_input: bool,
                      attr: Dict = None):
   return torch.empty_like(x)

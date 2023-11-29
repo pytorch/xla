@@ -38,7 +38,7 @@ static bool IsXlaMarkTensorOp(mlir::Operation* op) {
 
 struct BoundaryMetadata {
   std::string name;
-  int64_t id;
+  std::string id;
   int64_t pos;
   bool is_input;
   std::unordered_map<std::string, json> attrs;
@@ -82,7 +82,7 @@ struct BoundaryMetadata {
 
     bool is_valid_metadata_json =
         CopyJsonValue(j, "name", json::value_t::string, metadata.name) &&
-        CopyJsonValue(j, "id", json::value_t::number_unsigned, metadata.id) &&
+        CopyJsonValue(j, "id", json::value_t::string, metadata.id) &&
         CopyJsonValue(j, "pos", json::value_t::number_unsigned, metadata.pos) &&
         CopyJsonValue(j, "is_input", json::value_t::boolean, metadata.is_input);
 
