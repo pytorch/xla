@@ -5,6 +5,5 @@ module "terraform_apply" {
   branch           = "master"
   config_directory = "infra/tpu-ci"
 
-  worker_pool_id = module.worker_pool.id
   location       = "global"
 }

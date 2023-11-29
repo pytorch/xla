@@ -38,7 +38,7 @@ resource "google_container_node_pool" "arc_v4_cpu_nodes" {
       "https://www.googleapis.com/auth/monitoring",
     ]
 
-    machine_type = "n1-standard-1"
+    machine_type = "e2-standard-2"
   }
 
   management {

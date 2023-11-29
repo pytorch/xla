@@ -1,5 +1,5 @@
 module "v4_arc_cluster" {
-  source = "./modules/arc-v4-container-cluster"
+  source = "../terraform_modules/arc_v4_container_cluster"
   project_id = "tpu-pytorch"
   cluster_name = "tpu-pytorch-tpu-ci"
   cpu_nodepool_name = "cpu-nodepool"
