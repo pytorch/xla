@@ -215,11 +215,11 @@ def visualize_sharding(shape: torch.Size,
 
 def visualize_tensor_sharding(t, **kwargs):
   """Visualizes an array's sharding."""
-  if (assert instanceof(t, torch.tensor)):
+  if (isinstance(t, torch.tensor)):
     import torch_xla
     sharding = torch_xla._XLAC._get_xla_sharding_spec(t)
     return visualize_sharding(t.shape, sharding, **kwargs)
-  elif (assert instanceof(t, XLAShardedTensor)):
+  elif (isinstance(t, XLAShardedTensor)):
     import torch_xla
     sharding = torch_xla._XLAC._get_xla_sharding_spec(t.global_tensor)
     return visualize_sharding(t.global_tensor.shape, sharding, **kwargs)
