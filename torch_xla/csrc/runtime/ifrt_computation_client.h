@@ -247,9 +247,12 @@ class IfrtComputationClient : public ComputationClient {
                     std::vector<std::string> devices,
                     std::unique_ptr<xla::ifrt::LoadedExecutable> executable)
         : Computation(std::move(computation), std::move(devices)),
-          executable(std::move(executable)) {}
+          executable(std::move(executable)) {
+      output_shardings_ = this->executable->GetOutputShardings();
+    }
 
     std::unique_ptr<xla::ifrt::LoadedExecutable> executable;
+    std::optional<std::vector<xla::OpSharding>> output_shardings_;
   };
 };
 

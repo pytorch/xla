@@ -37,7 +37,7 @@ namespace runtime {
 
 namespace {
 
-static std::string spmd_device_str = "SPMD:0";
+static const std::string spmd_device_str = "SPMD:0";
 
 // Initializes a distributed runtime client if dist_service_addr is specified
 std::shared_ptr<xla::DistributedRuntimeClient>
@@ -589,15 +589,15 @@ IfrtComputationClient::ExecuteReplicated(
                                   tsl::profiler::TraceMeLevel::kInfo);
   const IfrtComputation& ifrt_computation =
       dynamic_cast<const IfrtComputation&>(computation);
-  // XLA_CHECK(devices.size() == arguments.size())
-  //     << "ExecuteReplicated over " << devices.size() << " devices, but "
-  //     << arguments.size() << " arguments devices.";
-  // TODO: parallelize again if necessary
+
   std::vector<tsl::RCReference<xla::ifrt::Array>> argument_handles(arguments.size());
-  for (int32_t i = 0; i < arguments.size(); ++i) {
-    auto ifrt_data = std::dynamic_pointer_cast<IfrtData>(arguments[i]);
-    argument_handles[i] = ifrt_data->buffer;
-  }
+  pool_.ParallelFor(arguments.size(), 10000,
+      [&](int64_t start, int64_t end) {
+        for (int32_t i = start; i < end; ++i) {
+          auto ifrt_data = std::dynamic_pointer_cast<IfrtData>(arguments[i]);
+          argument_handles[i] = ifrt_data->buffer;
+        }
+      });
 
   xla::ExecuteOptions execute_options;
   execute_options.untuple_result = options.explode_tuple;
@@ -613,21 +613,21 @@ IfrtComputationClient::ExecuteReplicated(
   xla::ifrt::Future<xla::Status> returned_future = result.status;
   auto results = result.outputs;
 
-  std::vector<ComputationClient::DataPtr> data_handles;
-  data_handles.reserve(results.size());
-
-  XLA_CHECK(ifrt_computation.executable->GetOutputShardings().has_value());
-  auto output_shardings = *(ifrt_computation.executable->GetOutputShardings());
+  XLA_CHECK(ifrt_computation.output_shardings_.has_value());
+  auto& output_shardings = *(ifrt_computation.output_shardings_);
   XLA_CHECK_EQ(output_shardings.size(), results.size());
 
-  for (int32_t i = 0; i < results.size(); ++i) {
-    std::shared_ptr<IfrtData> data =
-        std::make_shared<IfrtData>("SPMD:0", results[i], output_shardings[i]);
-    data_handles.push_back(data);
-  }
+  std::vector<ComputationClient::DataPtr> data_handles(results.size());
+  pool_.ParallelFor(results.size(), 10000,
+      [&](int64_t start, int64_t end) {
+        for (int32_t i = start; i < end; ++i) {
+          data_handles[i] =
+              std::make_shared<IfrtData>(spmd_device_str, results[i], output_shardings[i]);
+        }
+      });
 
-  // TODO: any useful debug logging
-  return {data_handles};
+  TF_VLOG(1) << "Returning " << data_handles.size() << " sharded outputs.";
+  return data_handles;
 }
 
 size_t IfrtComputationClient::GetNumDevices() const {
