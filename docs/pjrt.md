@@ -34,7 +34,7 @@ _New features in PyTorch/XLA r2.0_:
 ## TL;DR
 
 * To use the PJRT preview runtime, set the `PJRT_DEVICE` environment variable to
-  `CPU`, `TPU`, or `GPU`
+  `CPU`, `TPU`, or `CUDA`
 * In XRT, all distributed workloads are multiprocess, with one process per
   device. On TPU v2 and v3 in PJRT, workloads are multiprocess and multithreaded
   (4 processes with 2 threads each), so your workload should be thread-safe. See
@@ -112,7 +112,7 @@ Sample diff from XRT to PJRT:
 
 ## Benefits
 
-* Simple runtime configuration: just set `PJRT_DEVICE` to `TPU`, `CPU`, or `GPU`
+* Simple runtime configuration: just set `PJRT_DEVICE` to `TPU`, `CPU`, or `CUDA`
   and start using XLA! Or, let PJRT select a device automatically based on your
   environment.
 * Improved performance: reduced overhead from gRPC means faster end-to-end
