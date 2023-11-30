@@ -211,7 +211,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
   def test_debugging_spmd_single_host_tiled_cpu(self):
     from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
     device = xm.xla_device()
-    num_devices = xr.global_runtime_device_count()
+    num_devices = self.n_devices
     mesh_shape = (1, num_devices)
     device_ids = np.array(range(num_devices))
     mesh = self._get_mesh(mesh_shape)
@@ -252,7 +252,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
   def test_single_host_partial_replication_cpu(self):
     from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
     device = xm.xla_device()
-    num_devices = xr.global_runtime_device_count()
+    num_devices = self.n_devices
     mesh_shape = (1, num_devices)
     device_ids = np.array(range(num_devices))
     mesh = self._get_mesh(mesh_shape)
@@ -296,7 +296,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
   def test_single_host_replicated_cpu(self):
     from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
     device = xm.xla_device()
-    num_devices = xr.global_runtime_device_count()
+    num_devices = self.n_devices
     mesh_shape = (1, num_devices)
     device_ids = np.array(range(num_devices))
     mesh = self._get_mesh(mesh_shape)
@@ -341,7 +341,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
   def test_debugging_spmd_single_host_tiled_gpu(self):
     from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
     device = xm.xla_device()
-    num_devices = xr.global_runtime_device_count()
+    num_devices = self.n_devices
     mesh_shape = (1, num_devices)
     device_ids = np.array(range(num_devices))
     print("device_ids: ")
@@ -387,7 +387,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
   def test_single_host_partial_replication_gpu(self):
     from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
     device = xm.xla_device()
-    num_devices = xr.global_runtime_device_count()
+    num_devices = self.n_devices
     mesh_shape = (1, num_devices)
     device_ids = np.array(range(num_devices))
     mesh = self._get_mesh(mesh_shape)
@@ -431,7 +431,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
   def test_single_host_replicated_gpu(self):
     from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
     device = xm.xla_device()
-    num_devices = xr.global_runtime_device_count()
+    num_devices = self.n_devices
     mesh_shape = (1, num_devices)
     device_ids = np.array(range(num_devices))
     mesh = self._get_mesh(mesh_shape)
