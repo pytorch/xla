@@ -131,7 +131,8 @@ class TestHloMetaData(unittest.TestCase):
                 if isinstance(vm, str) and k in vm:
                   bingo[k] = True
 
-            # Decode stack frames
+            # Decode stack frame id and check it matches one of the
+            # the passed in stacks
             stack_frame_match = False
             if 'stackFrameId' in meta:
               hlo_stack_sig = hloEx.extract(meta['stackFrameId'])
@@ -145,6 +146,7 @@ class TestHloMetaData(unittest.TestCase):
                   discards = []
                   while len(hlo_stack_sig_copy) > len(t_sig):
                     discards.append(hlo_stack_sig_copy.pop(0))
+                  # Print an error message on a partial match
                   if hlo_stack_sig_copy == t_sig:
                     print(f"** PARTIAL MATCH: Discarded {discards}")
 

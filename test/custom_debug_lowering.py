@@ -9,6 +9,12 @@ from torch.utils._python_dispatch import TorchDispatchMode
 class_count = defaultdict(int)
 instance_count = dict()
 
+# This is a sample implementation for readying object
+# hierachies from a source stack usng a TorchDispatch
+# interceptor.  We then set the node op_name in XLA
+# via the output tensor and direct XLA to ignore stack
+# frames added (due to TorchDispatch) during lowering
+
 
 def GetInstancePlaceHolder(class_type, obj):
   global class_count
@@ -239,7 +245,7 @@ class CustomOpNameLowering(TorchDispatchMode):
       sls = StackLayerSignature(s.filename, s.function, s.lineno)
       stack.append(sls)
 
-      # Pop the top two stack laters
+    # Pop the top two stack laters
     while len(stack) > depth:
       stack.pop(0)
 
@@ -255,13 +261,8 @@ class CustomOpNameLowering(TorchDispatchMode):
       frame = inspect.currentframe()
       prefix, depth = GetAllObjectAndClassNames(frame)
       self.depth = depth
-      stack_sig = self.add_stack_sig(frame, self.depth)
+      self.add_stack_sig(frame, self.depth)
 
-      if not torch_xla._XLAC._set_xla_custom_op_name_prefix(
-          res, prefix, self.depth):
-        print("Set failed!")
-        print(prefix)
-        print(res)
-        print(stack_sig)
-        exit(1)
+      assert torch_xla._XLAC._set_xla_custom_op_name_prefix(
+          res, prefix, self.depth), "Custom op set failed"
     return res

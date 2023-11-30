@@ -22,6 +22,8 @@
 
 namespace torch_xla {
 
+class StackFrameIndexBuilder;
+
 class LoweringContext : public torch::lazy::LoweringContext {
  public:
   explicit LoweringContext(const std::string& name,
@@ -31,6 +33,10 @@ class LoweringContext : public torch::lazy::LoweringContext {
                   torch::lazy::Util::EmissionMap emit_status);
 
   xla::XlaBuilder* builder() { return &builder_; }
+
+  StackFrameIndexBuilder* stack_frame_index_builder() {
+    return stack_frame_index_builder_.get();
+  }
 
   const torch::lazy::BackendDevice& device() const { return device_; };
 
@@ -116,13 +122,7 @@ class LoweringContext : public torch::lazy::LoweringContext {
   std::vector<xla::XlaOp> root_tuple_;
   OutputMap<xla::XlaOp> emitted_outputs_;
 
-  // Stack frame index tables - we accumulate and write these to the HloModule
-  xla::StackFrameIndexProto indexes_;
-
-  std::map<std::string_view, int> function_name_to_id_;
-  std::map<std::string_view, int> file_name_to_id_;
-  std::map<std::tuple<int, int, int, int>, int> file_location_to_id_;
-  std::map<std::tuple<int, int>, int> frame_to_id_;
+  std::shared_ptr<StackFrameIndexBuilder> stack_frame_index_builder_;
 };  // namespace torch_xla
 
 }  // namespace torch_xla
