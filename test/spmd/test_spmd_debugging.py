@@ -343,6 +343,284 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     print(fake_table.columns)
     assert output == fake_output
 
+# Multi-host tests
+# sharding={devices=[2,8]0,4,8,12,2,6,10,14,1,5,9,13,3,7,11,15}
+# sharding={devices=[8,1,2]0,1,4,5,8,9,12,13,2,3,6,7,10,11,14,15 last_tile_dim_replicate}
+# sharding={replicated}
+
+  @unittest.skipIf(
+      not xr.using_pjrt() or
+      xu.getenv_as(xenv.PJRT_DEVICE, str) in ("GPU", 'CUDA', 'ROCM', 'CPU'),
+      f"Requires PJRT_DEVICE set to `TPU`.")
+  def test_debugging_spmd_multi_host_tiled_tpu(self):
+    sharding = '{devices=[2,8]0,4,8,12,2,6,10,14,1,5,9,13,3,7,11,15}'
+    generated_table = visualize_sharding(sharding)
+    console = rich.console.Console()
+    with console.capture() as capture:
+      console.print(generated_table)
+    output = capture.get()
+
+    color = None
+    text_color = None
+    fake_table = rich.table.Table(
+        show_header=False,
+        show_lines=True,
+        padding=0,
+        highlight=True,
+        pad_edge=False,
+        box=rich.box.SQUARE)
+    col = []
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('TPU 0', "center", vertical="middle"),
+            (2, 1, 2, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('TPU 1', "center", vertical="middle"),
+            (2, 1, 2, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('TPU 2', "center", vertical="middle"),
+            (2, 1, 2, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('TPU 3', "center", vertical="middle"),
+            (2, 1, 2, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    fake_table.add_row(*col)
+    col = []
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('TPU 4', "center", vertical="middle"),
+            (2, 1, 2, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('TPU 5', "center", vertical="middle"),
+            (2, 1, 2, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('TPU 6', "center", vertical="middle"),
+            (2, 1, 2, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('TPU 7', "center", vertical="middle"),
+            (2, 1, 2, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    fake_table.add_row(*col)
+    fake_console = rich.console.Console()
+    with fake_console.capture() as fake_capture:
+      fake_console.print(fake_table)
+    fake_output = fake_capture.get()
+    print("output: ")
+    print(generated_table.columns)
+    print("fake_output: ")
+    print(fake_table.columns)
+    assert output == fake_output
+
+  @unittest.skipIf(
+      not xr.using_pjrt() or
+      xu.getenv_as(xenv.PJRT_DEVICE, str) in ("GPU", 'CUDA', 'ROCM', 'CPU'),
+      f"Requires PJRT_DEVICE set to `TPU`.")
+  def test_single_host_partial_replication_tpu(self):
+    sharding = '{devices=[8,1,2]0,1,4,5,8,9,12,13,2,3,6,7,10,11,14,15 last_tile_dim_replicate}'
+    generated_table = visualize_sharding(sharding)
+    console = rich.console.Console()
+    with console.capture() as capture:
+      console.print(generated_table)
+    output = capture.get()
+
+    color = None
+    text_color = None
+    fake_table = rich.table.Table(
+        show_header=False,
+        show_lines=True,
+        padding=0,
+        highlight=True,
+        pad_edge=False,
+        box=rich.box.SQUARE)
+    col = []
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('TPU [0, 1, 2, 3]', "center", vertical="middle"),
+            (2, 0, 2, 0),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    fake_table.add_row(*col)
+    col = []
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('TPU [4, 5, 6, 7]', "center", vertical="middle"),
+            (2, 0, 2, 0),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    fake_table.add_row(*col)
+    fake_console = rich.console.Console()
+    with fake_console.capture() as fake_capture:
+      fake_console.print(fake_table)
+    fake_output = fake_capture.get()
+    print("output: ")
+    print(generated_table.columns)
+    print("fake_output: ")
+    print(fake_table.columns)
+    assert output == fake_output
+
+  @unittest.skipIf(
+      not xr.using_pjrt() or
+      xu.getenv_as(xenv.PJRT_DEVICE, str) in ("GPU", 'CUDA', 'ROCM', 'CPU'),
+      f"Requires PJRT_DEVICE set to `TPU`.")
+  def test_single_host_replicated_tpu(self):
+    sharding = '{replicated}'
+    generated_table = visualize_sharding(sharding)
+    console = rich.console.Console()
+    with console.capture() as capture:
+      console.print(generated_table)
+    output = capture.get()
+
+    color = None
+    text_color = None
+    fake_table = rich.table.Table(
+        show_header=False,
+        show_lines=True,
+        padding=0,
+        highlight=True,
+        pad_edge=False,
+        box=rich.box.SQUARE)
+    col = []
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align(
+                'TPU [0, 1, 2, 3, 4, 5, 6, 7]', "center", vertical="middle"),
+            (0, 0, 1, 0),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    fake_table.add_row(*col)
+    fake_console = rich.console.Console()
+    with fake_console.capture() as fake_capture:
+      fake_console.print(fake_table)
+    fake_output = fake_capture.get()
+    print("output: ")
+    print(generated_table.columns)
+    print("fake_output: ")
+    print(fake_table.columns)
+    assert output == fake_output
+
+  @unittest.skipIf(
+      not xr.using_pjrt() or
+      xu.getenv_as(xenv.PJRT_DEVICE, str) in ("GPU", 'CUDA', 'ROCM', 'TPU'),
+      f"Requires PJRT_DEVICE set to `CPU`.")
+  def test_debugging_spmd_single_host_tiled_cpu(self):
+    sharding = '{devices=[2,8]0,4,8,12,2,6,10,14,1,5,9,13,3,7,11,15}'
+    generated_table = visualize_sharding(sharding)
+    console = rich.console.Console()
+    with console.capture() as capture:
+      console.print(generated_table)
+    output = capture.get()
+
+    color = None
+    text_color = None
+    fake_table = rich.table.Table(
+        show_header=False,
+        show_lines=True,
+        padding=0,
+        highlight=True,
+        pad_edge=False,
+        box=rich.box.SQUARE)
+    col = []
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('CPU [0]', "center", vertical="middle"),
+            (0, 0, 1, 0),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    fake_table.add_row(*col)
+    fake_console = rich.console.Console()
+    with fake_console.capture() as fake_capture:
+      fake_console.print(fake_table)
+    fake_output = fake_capture.get()
+    print("output: ")
+    print(generated_table.columns)
+    print("fake_output: ")
+    print(fake_table.columns)
+    assert output == fake_output
+
+  @unittest.skipIf(
+      not xr.using_pjrt() or
+      xu.getenv_as(xenv.PJRT_DEVICE, str) in ("GPU", 'CUDA', 'ROCM', 'TPU'),
+      f"Requires PJRT_DEVICE set to `CPU`.")
+  def test_single_host_partial_replication_cpu(self):
+    sharding = '{devices=[8,1,2]0,1,4,5,8,9,12,13,2,3,6,7,10,11,14,15 last_tile_dim_replicate}'
+    generated_table = visualize_sharding(sharding)
+    console = rich.console.Console()
+    with console.capture() as capture:
+      console.print(generated_table)
+    output = capture.get()
+
+    color = None
+    text_color = None
+    fake_table = rich.table.Table(
+        show_header=False,
+        show_lines=True,
+        padding=0,
+        highlight=True,
+        pad_edge=False,
+        box=rich.box.SQUARE)
+    col = []
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('CPU [0]', "center", vertical="middle"),
+            (0, 5, 1, 4),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    fake_table.add_row(*col)
+    fake_console = rich.console.Console()
+    with fake_console.capture() as fake_capture:
+      fake_console.print(fake_table)
+    fake_output = fake_capture.get()
+    print("output: ")
+    print(generated_table.columns)
+    print("fake_output: ")
+    print(fake_table.columns)
+    assert output == fake_output
+
+  @unittest.skipIf(
+      not xr.using_pjrt() or
+      xu.getenv_as(xenv.PJRT_DEVICE, str) in ("GPU", 'CUDA', 'ROCM', 'TPU'),
+      f"Requires PJRT_DEVICE set to `CPU`.")
+  def test_single_host_replicated_cpu(self):
+    sharding = '{replicated}'
+    generated_table = visualize_sharding(sharding)
+    console = rich.console.Console()
+    with console.capture() as capture:
+      console.print(generated_table)
+    output = capture.get()
+
+    color = None
+    text_color = None
+    fake_table = rich.table.Table(
+        show_header=False,
+        show_lines=True,
+        padding=0,
+        highlight=True,
+        pad_edge=False,
+        box=rich.box.SQUARE)
+    col = []
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('CPU [0]', "center", vertical="middle"),
+            (0, 5, 1, 4),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    fake_table.add_row(*col)
+    fake_console = rich.console.Console()
+    with fake_console.capture() as fake_capture:
+      fake_console.print(fake_table)
+    fake_output = fake_capture.get()
+    print("output: ")
+    print(generated_table.columns)
+    print("fake_output: ")
+    print(fake_table.columns)
+    assert output == fake_output
+
 # these three GPU tests could be skipped before GPU SPMD enabled stably
   @unittest.skipIf(not xr.using_pjrt() or
                    xu.getenv_as(xenv.PJRT_DEVICE, str) in ('CPU', 'TPU'),
