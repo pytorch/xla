@@ -1177,19 +1177,19 @@ void InitXlaModuleBindings(py::module m) {
            int64_t shard_count, const py::list& groups, bool pin_layout) {
           std::vector<std::vector<int64_t>> replica_groups =
               CreateReduceGroups(groups);
-          std::vector<at::Tensor> result;
+          std::vector<at::Tensor> results;
           std::shared_ptr<torch::lazy::Value> new_token;
           {
             NoGilSection nogil;
-            std::tie(result, new_token) = AllGatherCoalesced(
+            std::tie(results, new_token) = AllGatherCoalesced(
                 tensors, token, dim, shard_count, replica_groups, pin_layout);
           }
-          auto result_list = py::list(result.size() + 1);
-          for (int i = 0; i < result.size(); ++i) {
+          auto result_list = py::list(results.size() + 1);
+          for (int i = 0; i < results.size(); ++i) {
             result_list[i] = torch::autograd::make_variable(
-                result[i], /*requires_grad=*/result[i].requires_grad());
+                results[i], /*requires_grad=*/results[i].requires_grad());
           }
-          result_list[result.size()] = new_token;
+          result_list[results.size()] = new_token;
           return result_list;
         });
   m.def("_xla_collective_permute",

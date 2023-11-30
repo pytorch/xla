@@ -585,15 +585,17 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
     return result
 
   # Now the input should be a list of Tensors.
-  if not isinstance(value, list) or any(
-      not isinstance(v, torch.Tensor) for v in value):
+  elif isinstance(value, list) and all(
+      isinstance(v, torch.Tensor) for v in value):
+    # do your thing here
+    result = torch_xla._XLAC._xla_all_gather_coalesced(value, token, dim,
+                                                       shard_count, groups or
+                                                       [], pin_layout)
+    torch_xla._XLAC._set_all_reduce_token(devctx.device, result[-1])
+    return result[:-1]
+  else:
     raise TypeError("`value` needs to be a Tensor or a list of Tensors, but "
                     f"given {type(value)}.")
-  result = torch_xla._XLAC._xla_all_gather_coalesced(value, token, dim,
-                                                     shard_count, groups or [],
-                                                     pin_layout)
-  torch_xla._XLAC._set_all_reduce_token(devctx.device, result[-1])
-  return result[:-1]
 
 
 def all_to_all(value,
