@@ -587,7 +587,6 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
   # Now the input should be a list of Tensors.
   elif isinstance(value, list) and all(
       isinstance(v, torch.Tensor) for v in value):
-    # do your thing here
     result = torch_xla._XLAC._xla_all_gather_coalesced(value, token, dim,
                                                        shard_count, groups or
                                                        [], pin_layout)
