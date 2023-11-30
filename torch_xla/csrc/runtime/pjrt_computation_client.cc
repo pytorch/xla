@@ -1,6 +1,7 @@
 #include "torch_xla/csrc/runtime/pjrt_computation_client.h"
 
 #include <algorithm>
+#include <future>
 #include <unordered_set>
 #include <vector>
 
@@ -386,13 +387,16 @@ ComputationClient::DataPtr PjRtComputationClient::CopyToDevice(
                                     std::move(status_or.value()));
 }
 
-ComputationClient::DataPtr PjRtComputationClient::ReplicateShardedData(
+std::shared_ptr<PjRtComputationClient::PjRtData>
+PjRtComputationClient::ReplicateShardedData(
     const ComputationClient::DataPtr& handle) {
-  if (PjRtShardedData* sharded_data =
-          dynamic_cast<PjRtShardedData*>(handle.get())) {
+  if (auto unsharded_data = std::dynamic_pointer_cast<PjRtData>(handle)) {
+    return unsharded_data;
+  } else if (auto sharded_data =
+                 std::dynamic_pointer_cast<PjRtShardedData>(handle)) {
     XLA_COUNTER("ReplicateShardedData", 1);
-    TF_VLOG(1) << "ReplicateShardedData (handle=" << handle->GetHandle()
-               << ", shape=" << handle->shape() << ")";
+    TF_VLOG(1) << "ReplicateShardedData (handle=" << sharded_data->GetHandle()
+               << ", shape=" << sharded_data->shape() << ")";
     if (sharded_data->GetSharding().type() == xla::OpSharding::REPLICATED) {
       // Data is replicated, return the first shard
       return sharded_data->shards[0];
@@ -428,35 +432,22 @@ ComputationClient::DataPtr PjRtComputationClient::ReplicateShardedData(
         std::shared_ptr<torch_xla::runtime::ComputationClient::Computation>>
         computations = Compile(std::move(instances));
 
-    auto shards = sharded_data->shards;
-    XLA_CHECK_EQ(shards.size(), GetLocalDevices().size());
-    auto device_index = build_index_map(GetLocalDevices());
-
-    std::vector<std::vector<ComputationClient::DataPtr>> arguments_by_device(
-        GetLocalDevices().size(), std::vector<ComputationClient::DataPtr>(1));
-    for (auto shard : shards) {
-      std::vector<std::string> device_spec =
-          absl::StrSplit(shard->device(), ':');
-      XLA_CHECK_EQ(device_spec.size(), 2)
-          << "Invalid device specification: " << shard->device();
-      int device_i = device_index[std::stoi(device_spec[1])];
-      TF_VLOG(3) << shard->device() << " is mapped to local device index "
-                 << device_i;
-      arguments_by_device[device_i][0] = shard;
-    }
     torch_xla::runtime::ComputationClient::ExecuteReplicatedOptions
         execute_options;
     auto sharded_results =
-        ExecuteReplicated(*computations.front(), arguments_by_device,
+        ExecuteReplicated(*computations.front(), {sharded_data},
                           GetLocalDevices(), execute_options);
     XLA_CHECK(sharded_results.size() > 0)
         << "empty ExecuteReplicated results returned.";
-    XLA_CHECK(sharded_results[0].size() == 1)
+    XLA_CHECK(sharded_results.size() == 1)
         << "Wrong number of outputs, expected: 1, actual: "
-        << sharded_results[0].size();
-    return sharded_results[0][0];
+        << sharded_results.size();
+    return std::dynamic_pointer_cast<PjRtShardedData>(sharded_results[0])
+        ->shards[0];
   }
-  return handle;
+
+  XLA_ERROR() << "Data must be PjRtData or PjRtShardedData, got "
+              << handle->ToString();
 }
 
 std::vector<xla::Literal> PjRtComputationClient::TransferFromServer(
@@ -472,12 +463,12 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromServer(
   for (auto handle : handles) {
     // Use XLA replication to reassemble the sharded data. If input handle
     // is not sharded, then it is a no-op.
-    auto new_handle = ReplicateShardedData(handle);
-    const PjRtData& pjrt_data = dynamic_cast<const PjRtData&>(*new_handle);
+    std::shared_ptr<PjRtData> pjrt_data = ReplicateShardedData(handle);
+    XLA_CHECK(pjrt_data);
 
     xla::Literal& literal =
-        literals.emplace_back(host_output_shape(pjrt_data.buffer.get()));
-    futures.push_back(pjrt_data.buffer->ToLiteral(&literal));
+        literals.emplace_back(host_output_shape(pjrt_data->buffer.get()));
+    futures.push_back(pjrt_data->buffer->ToLiteral(&literal));
 
     total_size += literal.size_bytes();
   }
@@ -642,10 +633,10 @@ PjRtComputationClient::ExecuteComputation(
   return datas;
 }
 
-std::vector<std::vector<ComputationClient::DataPtr>>
+std::vector<ComputationClient::DataPtr>
 PjRtComputationClient::ExecuteReplicated(
     const ComputationClient::Computation& computation,
-    const std::vector<std::vector<ComputationClient::DataPtr>>& arguments,
+    absl::Span<const ComputationClient::DataPtr> arguments,
     absl::Span<const std::string> devices,
     const ExecuteReplicatedOptions& options) {
   // Shared ownership of the timed section ensures that it will only get logged
@@ -657,34 +648,41 @@ PjRtComputationClient::ExecuteReplicated(
                                   tsl::profiler::TraceMeLevel::kInfo);
   const PjRtComputation& pjrt_computation =
       dynamic_cast<const PjRtComputation&>(computation);
-  XLA_CHECK(devices.size() == arguments.size())
-      << "ExecuteReplicated over " << devices.size() << " devices, but "
-      << arguments.size() << " arguments devices.";
-  absl::BlockingCounter counter(devices.size());
-  std::vector<std::vector<xla::PjRtBuffer*>> argument_handles(devices.size());
+
+  std::vector<std::vector<xla::PjRtBuffer*>> argument_handles(
+      devices.size(), std::vector<xla::PjRtBuffer*>(arguments.size()));
   {
     tsl::profiler::TraceMe activity(
         "PjRtComputationClient::ExecuteReplicated_argument_handle",
         tsl::profiler::TraceMeLevel::kInfo);
-    for (int32_t i = 0; i < devices.size(); ++i) {
-      auto buffer_converter = [&, i]() {
-        xla::PjRtDevice* pjrt_device = StringToPjRtDevice(devices[i]);
-        XLA_CHECK(pjrt_device->IsAddressable()) << pjrt_device->DebugString();
 
-        std::vector<xla::PjRtBuffer*> buffers;
-        for (auto& argument : arguments[i]) {
-          const PjRtData* pjrt_data = dynamic_cast<PjRtData*>(argument.get());
+    absl::BlockingCounter counter(arguments.size());
 
-          XLA_CHECK(pjrt_device == pjrt_data->buffer->device())
-              << pjrt_device->DebugString() << " vs "
-              << pjrt_data->buffer->device()->DebugString();
-          buffers.push_back(pjrt_data->buffer.get());
-        }
-        argument_handles[i] = std::move(buffers);
-        counter.DecrementCount();
-      };
-      thread::Schedule(std::move(buffer_converter));
-    }
+    // Time in nanoseconds that it takes to prepare an argument. Used to tune
+    // number of threads spawned by ParallelFor. Measured on 2023/11/28.
+    static constexpr int64_t argument_handle_cost_ns = 10000;
+    pool_.ParallelFor(
+        arguments.size(), argument_handle_cost_ns,
+        [&](int64_t start, int64_t end) {
+          for (int32_t i = start; i < end; ++i) {
+            auto pjrt_data =
+                std::dynamic_pointer_cast<PjRtShardedData>(arguments[i]);
+            XLA_CHECK_EQ(pjrt_data->shards.size(), devices.size())
+                << "Expected one shard per device";
+
+            for (int32_t d = 0; d < devices.size(); d++) {
+              std::shared_ptr<PjRtData> shard = pjrt_data->shards[d];
+
+              xla::PjRtDevice* pjrt_device = StringToPjRtDevice(devices[d]);
+              XLA_CHECK_EQ(shard->buffer->device(), pjrt_device);
+              XLA_CHECK(pjrt_device->IsAddressable())
+                  << pjrt_device->DebugString();
+
+              argument_handles[d][i] = shard->buffer.get();
+            }
+            counter.DecrementCount();
+          };
+        });
     counter.Wait();
   }
 
@@ -726,38 +724,58 @@ PjRtComputationClient::ExecuteReplicated(
         }));
   }
 
-  std::vector<std::vector<ComputationClient::DataPtr>> data_handles;
-  data_handles.reserve(results.size());
-  std::vector<size_t> dims(results.size());
+  size_t num_outputs = results[0].size();
+  std::vector<ComputationClient::DataPtr> data_handles(num_outputs);
 
   {
     tsl::profiler::TraceMe activity(
         "PjRtComputationClient::ExecuteReplicated_result_handle",
         tsl::profiler::TraceMeLevel::kInfo);
-    for (int32_t i = 0; i < results.size(); ++i) {
-      xla::PjRtDevice* pjrt_device = StringToPjRtDevice(devices[i]);
-      XLA_CHECK(pjrt_device->IsAddressable())
-          << pjrt_device->DebugString() << " is not addressable.";
 
-      std::vector<ComputationClient::DataPtr> datas;
-      datas.reserve(results[i].size());
-      dims[i] = results[i].size();
-      for (int32_t j = 0; j < results[i].size(); ++j) {
-        std::unique_ptr<xla::PjRtBuffer> buffer = std::move(results[i][j]);
-        XLA_CHECK(pjrt_device == buffer->device())
-            << "Exepcted device: " << pjrt_device->DebugString()
-            << " vs. actual device: " << buffer->device()->DebugString();
+    const xla::Shape& result_shape = computation.program_shape().result();
+    TF_VLOG(3) << "Processing output with shape " << result_shape.ToString();
+    const std::vector<xla::Shape>& output_shapes =
+        result_shape.IsTuple() ? result_shape.tuple_shapes()
+                               : std::vector<xla::Shape>({result_shape});
+    XLA_CHECK_EQ(output_shapes.size(), num_outputs);
 
-        std::shared_ptr<PjRtData> data =
-            std::make_shared<PjRtData>(devices[i], std::move(buffer));
-        datas.push_back(data);
-      }
-      data_handles.push_back(datas);
-    }
+    const std::vector<xla::OpSharding>& output_shardings =
+        pjrt_computation.output_shardings_
+            ? *pjrt_computation.output_shardings_
+            :
+            // Without an explicit sharding annotation, the output is implicitly
+            // replicated
+            std::vector(num_outputs, xla::HloSharding::Replicate().ToProto());
+    XLA_CHECK_EQ(output_shardings.size(), num_outputs);
+
+    absl::BlockingCounter counter(num_outputs);
+
+    // Time in nanoseconds that it takes to process a result buffer.
+    // Measured on 2023/11/28.
+    static constexpr int64_t result_handle_cost_ns = 10000;
+    pool_.ParallelFor(
+        num_outputs, result_handle_cost_ns, [&](int64_t start, int64_t end) {
+          for (int32_t i = start; i < end; ++i) {
+            std::vector<std::shared_ptr<PjRtData>> shards(devices.size());
+            for (int32_t d = 0; d < devices.size(); d++) {
+              std::unique_ptr<xla::PjRtBuffer> buffer =
+                  std::move(results[d][i]);
+              shards[d] =
+                  std::make_shared<PjRtData>(devices[d], std::move(buffer));
+            }
+
+            data_handles[i] = std::make_shared<PjRtShardedData>(
+                spmd_device_str, output_shapes[i], std::move(shards),
+                output_shardings[i]);
+            TF_VLOG(5) << "Created sharded data with shape "
+                       << data_handles[i]->shape().ToString();
+            counter.DecrementCount();
+          }
+        });
+    counter.Wait();
   }
 
-  TF_VLOG(1) << "Returning " << data_handles.size() << " sets of results "
-             << "with dimensions [" << absl::StrJoin(dims, ",") << "].";
+  TF_VLOG(1) << "Returning " << data_handles.size() << " sharded outputs.";
   return data_handles;
 }
 
