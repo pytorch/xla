@@ -343,6 +343,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     print(fake_table.columns)
     assert output == fake_output
 
+# these three GPU tests could be skipped before GPU SPMD enabled stably
   @unittest.skipIf(not xr.using_pjrt() or
                    xu.getenv_as(xenv.PJRT_DEVICE, str) in ('CPU', 'TPU'),
                    f"Requires PJRT_DEVICE set to `GPU`, `CUDA`, `ROCM`.")
