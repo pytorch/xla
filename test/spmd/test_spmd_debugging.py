@@ -289,6 +289,10 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     with fake_console.capture() as fake_capture:
       fake_console.print(fake_table)
     fake_output = fake_capture.get()
+    print("output: ")
+    print(generated_table.columns)
+    print("fake_output: ")
+    print(fake_table.columns)
     assert output == fake_output
 
   @unittest.skipIf(
@@ -333,6 +337,10 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     with fake_console.capture() as fake_capture:
       fake_console.print(fake_table)
     fake_output = fake_capture.get()
+    print("output: ")
+    print(generated_table.columns)
+    print("fake_output: ")
+    print(fake_table.columns)
     assert output == fake_output
 
   @unittest.skipIf(not xr.using_pjrt() or
