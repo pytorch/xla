@@ -167,4 +167,3 @@ def visualize_tensor_sharding(t, **kwargs):
     import torch_xla
     sharding = torch_xla._XLAC._get_xla_sharding_spec(t.global_tensor)
     return visualize_sharding(sharding, **kwargs)
-
