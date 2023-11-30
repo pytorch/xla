@@ -162,7 +162,7 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
     return metadata;
   }
 
-  mlir::DictionaryAttr BuildDictionaryAttrFromJsonMap(
+  mlir::FailureOr<mlir::DictionaryAttr> BuildDictionaryAttrFromJsonMap(
       mlir::OpBuilder& builder,
       const std::unordered_map<std::string, json>& json_map) {
     llvm::SmallVector<mlir::NamedAttribute> named_attrs;
@@ -189,8 +189,7 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
                builder.getStringAttr(j.template get<std::string>())});
           break;
         default:
-          // Ignored unrecognizable attr json
-          break;
+          return mlir::failure();
       }
     }
     return builder.getDictionaryAttr(named_attrs);
@@ -219,8 +218,12 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
     mlir::func::FuncOp impl_func = BuildStableHLOCompositeImplFunc(
         op, absl::StrCat(metadata->name, ".impl"), args, impl_ops);
 
-    mlir::Operation* composite_op =
+    mlir::FailureOr<mlir::Operation*> composite_op_or =
         BuildStableHLOCompositeOp(op, impl_func, args, *metadata);
+    if (mlir::failed(composite_op_or)) {
+      return mlir::failure();
+    }
+    mlir::Operation* composite_op = *composite_op_or;
 
     // Updates all users of this op's result(s) to use the results(s) of impl
     // func call.
@@ -358,13 +361,21 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
     return impl_func;
   }
 
-  mlir::Operation* BuildStableHLOCompositeOp(
+  mlir::FailureOr<mlir::Operation*> BuildStableHLOCompositeOp(
       mlir::Operation* boundary_output_op, mlir::func::FuncOp impl_func,
       const llvm::SmallVector<mlir::Value>& args,
       const BoundaryMetadata& metadata) {
     mlir::ModuleOp module_op = getOperation();
     mlir::MLIRContext* context = &getContext();
     mlir::OpBuilder builder(context);
+
+    mlir::FailureOr<mlir::DictionaryAttr> attributes_or =
+        BuildDictionaryAttrFromJsonMap(builder, metadata.attrs);
+    if (mlir::failed(attributes_or)) {
+      return boundary_output_op->emitError()
+             << "failed to transform boundary attr "
+                "JSON into composite attributes.";
+    }
 
     builder.setInsertionPointAfter(boundary_output_op);
     llvm::SmallVector<mlir::NamedAttribute> call_attrs{
@@ -382,7 +393,7 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
             builder.getDictionaryAttr(llvm::SmallVector<mlir::NamedAttribute>{
                 {
                     builder.getStringAttr("attributes"),
-                    BuildDictionaryAttrFromJsonMap(builder, metadata.attrs),
+                    *attributes_or,
                 },
                 {
                     builder.getStringAttr("name"),
