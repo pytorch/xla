@@ -219,15 +219,15 @@ static bool endsWith(const std::string& str, const std::string& suffix) {
 void DebugUtil::analyze_graph_execution_python_frame(
     GraphAnalysisSource source, torch::lazy::hash_t graph_hash,
     const xla::ProgramShape* program_shape) {
-  static bool pt_xla_debug_enabled =
+  static const bool pt_xla_debug_enabled =
       runtime::sys_util::GetEnvBool("PT_XLA_DEBUG", false);
-  static bool is_master_process =
+  static const bool is_master_process =
       (runtime::sys_util::GetEnvInt("PJRT_LOCAL_PROCESS_RANK", 0) == 0);
-  static std::string debug_file_name =
+  static const std::string debug_file_name =
       runtime::sys_util::GetEnvString("PT_XLA_DEBUG_FILE", "");
 
-  static std::string executation_output_prefix = "Execution Analysis: ";
-  static std::string compilation_output_prefix = "Compilation Analysis: ";
+  static const std::string executation_output_prefix = "Execution Analysis: ";
+  static const std::string compilation_output_prefix = "Compilation Analysis: ";
 
   if (!pt_xla_debug_enabled) {
     return;
