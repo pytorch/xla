@@ -36,7 +36,7 @@ class StableHLOCompositeBuilder:
               name=self.name,
               pos=pos,
               id=self.id,
-              is_input=mark_input,
+              is_input=is_input,
               attr=self.attr if not is_input else None,
           ))
 
