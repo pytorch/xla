@@ -353,6 +353,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
       xu.getenv_as(xenv.PJRT_DEVICE, str) in ("GPU", 'CUDA', 'ROCM', 'CPU'),
       f"Requires PJRT_DEVICE set to `TPU`.")
   def test_debugging_spmd_multi_host_tiled_tpu(self):
+    from torch_xla.distributed.spmd.debugging import visualize_sharding
     sharding = '{devices=[2,8]0,4,8,12,2,6,10,14,1,5,9,13,3,7,11,15}'
     generated_table = visualize_sharding(sharding)
     console = rich.console.Console()
@@ -428,6 +429,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
       xu.getenv_as(xenv.PJRT_DEVICE, str) in ("GPU", 'CUDA', 'ROCM', 'CPU'),
       f"Requires PJRT_DEVICE set to `TPU`.")
   def test_single_host_partial_replication_tpu(self):
+    from torch_xla.distributed.spmd.debugging import visualize_sharding
     sharding = '{devices=[8,1,2]0,1,4,5,8,9,12,13,2,3,6,7,10,11,14,15 last_tile_dim_replicate}'
     generated_table = visualize_sharding(sharding)
     console = rich.console.Console()
@@ -473,6 +475,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
       xu.getenv_as(xenv.PJRT_DEVICE, str) in ("GPU", 'CUDA', 'ROCM', 'CPU'),
       f"Requires PJRT_DEVICE set to `TPU`.")
   def test_single_host_replicated_tpu(self):
+    from torch_xla.distributed.spmd.debugging import visualize_sharding
     sharding = '{replicated}'
     generated_table = visualize_sharding(sharding)
     console = rich.console.Console()
@@ -512,6 +515,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
       xu.getenv_as(xenv.PJRT_DEVICE, str) in ("GPU", 'CUDA', 'ROCM', 'TPU'),
       f"Requires PJRT_DEVICE set to `CPU`.")
   def test_debugging_spmd_single_host_tiled_cpu(self):
+    from torch_xla.distributed.spmd.debugging import visualize_sharding
     sharding = '{devices=[2,8]0,4,8,12,2,6,10,14,1,5,9,13,3,7,11,15}'
     generated_table = visualize_sharding(sharding)
     console = rich.console.Console()
@@ -550,6 +554,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
       xu.getenv_as(xenv.PJRT_DEVICE, str) in ("GPU", 'CUDA', 'ROCM', 'TPU'),
       f"Requires PJRT_DEVICE set to `CPU`.")
   def test_single_host_partial_replication_cpu(self):
+    from torch_xla.distributed.spmd.debugging import visualize_sharding
     sharding = '{devices=[8,1,2]0,1,4,5,8,9,12,13,2,3,6,7,10,11,14,15 last_tile_dim_replicate}'
     generated_table = visualize_sharding(sharding)
     console = rich.console.Console()
@@ -588,6 +593,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
       xu.getenv_as(xenv.PJRT_DEVICE, str) in ("GPU", 'CUDA', 'ROCM', 'TPU'),
       f"Requires PJRT_DEVICE set to `CPU`.")
   def test_single_host_replicated_cpu(self):
+    from torch_xla.distributed.spmd.debugging import visualize_sharding
     sharding = '{replicated}'
     generated_table = visualize_sharding(sharding)
     console = rich.console.Console()
@@ -621,7 +627,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     print(fake_table.columns)
     assert output == fake_output
 
-# these three GPU tests could be skipped before GPU SPMD enabled stably
+# these three GPU tests could be skipped before GPU SPMD enabled stably, and TODO(manfei) add multi-host tests for GPU
   @unittest.skipIf(not xr.using_pjrt() or
                    xu.getenv_as(xenv.PJRT_DEVICE, str) in ('CPU', 'TPU'),
                    f"Requires PJRT_DEVICE set to `GPU`, `CUDA`, `ROCM`.")
