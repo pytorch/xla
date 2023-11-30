@@ -290,7 +290,8 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
     llvm::SmallVector<mlir::Operation*> impl_ops = impl_ops_setvec.takeVector();
     for (auto& op : impl_ops) {
       if (!op_order_map.contains(op)) {
-        op->emitError() << "does not have a ordering number in its outer func.";
+        return op->emitError()
+               << "does not have a ordering number in its outer func.";
       }
     }
     std::sort(impl_ops.begin(), impl_ops.end(),
