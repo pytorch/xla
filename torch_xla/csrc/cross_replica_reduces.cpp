@@ -210,11 +210,36 @@ AllToAllResult BuildAllToAll(xla::XlaOp input, xla::XlaOp token,
   return {reduce_result, token_handler.GetNewToken(reduce_result)};
 }
 
-AllGatherResult BuildAllGather(absl::Span<const xla::XlaOp> inputs,
-                               xla::XlaOp token, int64_t dim,
+AllGatherResult BuildAllGather(xla::XlaOp input, xla::XlaOp token, int64_t dim,
                                int64_t shard_count,
                                const std::vector<std::vector<int64_t>>& groups,
                                bool pin_layout) {
+  std::vector<xla::ReplicaGroup> reduce_groups = CreateReduceGroups(groups);
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  TokenHandler token_handler(token);
+  xla::XlaOp all_gather_result;
+  if (pin_layout) {
+    torch::lazy::BackendDevice xla_device = bridge::GetCurrentDevice();
+    xla::Shape reduce_shape = MakeArrayShapeFromDimensions(
+        input_shape.dimensions(), input_shape.dynamic_dimensions(),
+        input_shape.element_type(),
+        static_cast<XlaDeviceType>(xla_device.type()));
+    all_gather_result =
+        xla::AllGather(token_handler.GetInput(input, &input_shape), dim,
+                       shard_count, reduce_groups, /*channel_id=*/absl::nullopt,
+                       /*layout=*/reduce_shape.layout());
+  } else {
+    all_gather_result =
+        xla::AllGather(token_handler.GetInput(input, &input_shape), dim,
+                       shard_count, reduce_groups);
+  }
+  return {all_gather_result, token_handler.GetNewToken(all_gather_result)};
+}
+
+AllGatherResultCoalesced BuildAllGatherCoalesced(
+    absl::Span<const xla::XlaOp> inputs, xla::XlaOp token, int64_t dim,
+    int64_t shard_count, const std::vector<std::vector<int64_t>>& groups,
+    bool pin_layout) {
   std::vector<xla::ReplicaGroup> cc_groups = CreateReduceGroups(groups);
   TokenHandler token_handler(token);
   // TODO: We use pseudo-tokens ATM, which are real values. This need to be
