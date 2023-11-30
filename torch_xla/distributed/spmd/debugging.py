@@ -94,7 +94,7 @@ def visualize_sharding(sharding: str,
       elif sharding[-1] == "}":
         # eg: '{devices=[2,2]0,1,2,3}' # 13
         device_list = list(sharding[sharding.index(']') + 1:-1])
-        device_indices_map = [int(i) for i in device_list if i != ',']
+        device_indices_map = [int(i) for i in device_list.split(',')]
         heights = int(sharding_spac[1])
         widths = int(sharding_spac[3])
         devices_len = len(device_indices_map)
