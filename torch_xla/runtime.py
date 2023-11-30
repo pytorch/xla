@@ -23,6 +23,11 @@ def set_device_type(pjrt_device: str) -> None:
   Args:
     pjrt_device: 'TPU' or 'CPU'
   """
+  if torch_xla._XLAC._xla_runtime_is_initialized() and os.environ.get(
+      xenv.PJRT_DEVICE) != pjrt_device:
+    raise RuntimeError(
+        "Can't change device type after XLA runtime is initialized")
+
   os.environ[xenv.PJRT_DEVICE] = pjrt_device
 
 

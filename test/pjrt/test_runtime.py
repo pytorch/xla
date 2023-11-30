@@ -22,6 +22,26 @@ class TestExperimentalPjrt(parameterized.TestCase):
     with mock.patch.dict(os.environ, {'PJRT_DEVICE': pjrt_device}, clear=True):
       self.assertEqual(xr.device_type(), expected)
 
+  def test_set_device_type(self):
+    with mock.patch.dict(
+        os.environ, {'PJRT_DEVICE': 'CPU'}, clear=True), mock.patch.object(
+            torch_xla._XLAC, '_xla_runtime_is_initialized', return_value=False):
+      xr.set_device_type('TOASTER')
+      self.assertEqual(os.environ['PJRT_DEVICE'], 'TOASTER')
+
+  def test_set_device_type_error(self):
+    with mock.patch.dict(
+        os.environ, {'PJRT_DEVICE': 'CPU'}, clear=True), mock.patch.object(
+            torch_xla._XLAC, '_xla_runtime_is_initialized', return_value=True):
+      with self.assertRaises(RuntimeError):
+        xr.set_device_type('TPU')
+
+  def test_set_device_type_same_device(self):
+    with mock.patch.dict(
+        os.environ, {'PJRT_DEVICE': 'CPU'}, clear=True), mock.patch.object(
+            torch_xla._XLAC, '_xla_runtime_is_initialized', return_value=True):
+      xr.set_device_type('CPU')
+
   def test_requires_pjrt(self):
     with mock.patch.dict(
         os.environ, {'PJRT_SELECT_DEFAULT_DEVICE': '0'}, clear=True):
