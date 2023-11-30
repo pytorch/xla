@@ -80,7 +80,8 @@ def visualize_sharding(sharding: str,
       sharding_spac = sharding[sharding.index('['):sharding.index(']') + 1]
       if len(sharding) >= 25 and sharding[-24:-1] == 'last_tile_dim_replicate':
         device_list = list(sharding[sharding.index(']') + 1:-24])
-        device_indices_map = [int(i) for i in device_list[:-1] if i != ',']
+        middle = device_list[:-1]
+        device_indices_map = [int(s) for s in middle.split(',')]
         heights = int(sharding_spac[1])
         widths = int(sharding_spac[3])
         last_dim_depth = int(sharding_spac[5])
