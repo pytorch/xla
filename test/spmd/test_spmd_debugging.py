@@ -35,10 +35,9 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
   def test_debugging_spmd_single_host_tiled(self):
     from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
     device = xm.xla_device()
-    num_devices = self.n_devices # xr.global_runtime_device_count()
+    num_devices = self.n_devices
     mesh_shape = (2, num_devices // 2)
     device_ids = np.array(range(num_devices))
-    # mesh = Mesh(device_ids, mesh_shape, ('x', 'y'))
     mesh = self._get_mesh(mesh_shape)
     t = torch.randn(8, 4, device=device)
     partition_spec = (0, 1)
@@ -47,7 +46,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     generated_table = visualize_tensor_sharding(t)
     console = rich.console.Console()
     with console.capture() as capture:
-        console.print(generated_table)
+      console.print(generated_table)
     output = capture.get()
 
     # fake_console = rich.console.Console(file=io.StringIO(), width=120)
@@ -106,7 +105,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     fake_table.add_row(*col)
     fake_console = rich.console.Console()
     with fake_console.capture() as fake_capture:
-        fake_console.print(fake_table)
+      fake_console.print(fake_table)
     fake_output = fake_capture.get()
     assert output == fake_output
 
@@ -130,7 +129,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     generated_table = visualize_tensor_sharding(t)
     console = rich.console.Console()
     with console.capture() as capture:
-        console.print(generated_table)
+      console.print(generated_table)
     output = capture.get()
 
     color = None
@@ -158,7 +157,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     fake_table.add_row(*col)
     fake_console = rich.console.Console()
     with fake_console.capture() as fake_capture:
-        fake_console.print(fake_table)
+      fake_console.print(fake_table)
     fake_output = fake_capture.get()
     assert output == fake_output
 
@@ -182,7 +181,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     generated_table = visualize_tensor_sharding(t)
     console = rich.console.Console()
     with console.capture() as capture:
-        console.print(generated_table)
+      console.print(generated_table)
     output = capture.get()
 
     color = None
@@ -204,7 +203,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     fask_table.add_row(*col)
     fake_console = rich.console.Console()
     with fake_console.capture() as fake_capture:
-        fake_console.print(fake_table)
+      fake_console.print(fake_table)
     fake_output = fake_capture.get()
     assert output == fake_output
 
@@ -335,8 +334,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     col = []
     col.append(
         rich.padding.Padding(
-            rich.align.Align(
-                'CPU [0]', "center", vertical="middle"),
+            rich.align.Align('CPU [0]', "center", vertical="middle"),
             (0, 5, 1, 4),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     fask_table.add_row(*col)
@@ -345,11 +343,10 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     fake_output = fake_console.file.getvalue()
     assert output == fake_output
 
-  @unittest.skipIf(
-      not xr.using_pjrt() or
-      xu.getenv_as(xenv.PJRT_DEVICE, str) in ('CPU', 'TPU'),
-      f"Requires PJRT_DEVICE set to `GPU`, `CUDA`, `ROCM`.")
-  def test_debugging_spmd_single_host_tiled_cpu(self):
+  @unittest.skipIf(not xr.using_pjrt() or
+                   xu.getenv_as(xenv.PJRT_DEVICE, str) in ('CPU', 'TPU'),
+                   f"Requires PJRT_DEVICE set to `GPU`, `CUDA`, `ROCM`.")
+  def test_debugging_spmd_single_host_tiled_gpu(self):
     from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
     device = xm.xla_device()
     num_devices = xr.global_runtime_device_count()
@@ -394,11 +391,10 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     fake_output = fake_console.file.getvalue()
     assert output == fake_output
 
-  @unittest.skipIf(
-      not xr.using_pjrt() or
-      xu.getenv_as(xenv.PJRT_DEVICE, str) in ('CPU', 'TPU'),
-      f"Requires PJRT_DEVICE set to `GPU`, `CUDA`, `ROCM`.")
-  def test_single_host_partial_replication_cpu(self):
+  @unittest.skipIf(not xr.using_pjrt() or
+                   xu.getenv_as(xenv.PJRT_DEVICE, str) in ('CPU', 'TPU'),
+                   f"Requires PJRT_DEVICE set to `GPU`, `CUDA`, `ROCM`.")
+  def test_single_host_partial_replication_gpu(self):
     from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
     device = xm.xla_device()
     num_devices = xr.global_runtime_device_count()
@@ -438,11 +434,10 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     fake_output = fake_console.file.getvalue()
     assert output == fake_output
 
-  @unittest.skipIf(
-      not xr.using_pjrt() or
-      xu.getenv_as(xenv.PJRT_DEVICE, str) in ('CPU', 'TPU'),
-      f"Requires PJRT_DEVICE set to `GPU`, `CUDA`, `ROCM`.")
-  def test_single_host_replicated_cpu(self):
+  @unittest.skipIf(not xr.using_pjrt() or
+                   xu.getenv_as(xenv.PJRT_DEVICE, str) in ('CPU', 'TPU'),
+                   f"Requires PJRT_DEVICE set to `GPU`, `CUDA`, `ROCM`.")
+  def test_single_host_replicated_gpu(self):
     from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
     device = xm.xla_device()
     num_devices = xr.global_runtime_device_count()
@@ -472,8 +467,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     col = []
     col.append(
         rich.padding.Padding(
-            rich.align.Align(
-                'GPU [0]', "center", vertical="middle"),
+            rich.align.Align('GPU [0]', "center", vertical="middle"),
             (0, 5, 1, 4),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     fask_table.add_row(*col)
