@@ -30,7 +30,7 @@ std::unique_ptr<ComputationClient> CreateClient() {
 
 }  // namespace
 
-ComputationClient* GetComputationClient(bool create = true) {
+ComputationClient* GetComputationClient(bool create) {
   static std::unique_ptr<ComputationClient> client = nullptr;
   if (!client && create) {
     static std::once_flag flag;
