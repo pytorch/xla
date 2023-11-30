@@ -291,9 +291,9 @@ void DebugUtil::analyze_graph_execution_python_frame(
   ss << debug_output_prefix
      << "  Graph Hash: " << torch::lazy::HashToString(graph_hash) << "\n";
   ss << debug_output_prefix
-     << "  Number of Graph Input: " << program_shape->parameters().size()
+     << "  Number of Graph Inputs: " << program_shape->parameters().size()
      << "\n";
-  ss << debug_output_prefix << "  Number of Graph Output: "
+  ss << debug_output_prefix << "  Number of Graph Outputs: "
      << (program_shape->result().IsTuple()
              ? program_shape->result().tuple_shapes_size()
              : 1)

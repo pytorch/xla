@@ -43,9 +43,9 @@ def extract_graph_infos(lines):
     if 'Graph Info' in lines[i].decode():
       hash = lines[i + 1].decode().split('Graph Hash: ')[1].strip()
       num_input = lines[i +
-                        2].decode().split('Number of Graph Input:')[1].strip()
+                        2].decode().split('Number of Graph Inputs:')[1].strip()
       num_output = lines[i + 3].decode().split(
-          'Number of Graph Output:')[1].strip()
+          'Number of Graph Outputs:')[1].strip()
       infos.append(GraphInfo(hash, int(num_input), int(num_output)))
 
   return infos
