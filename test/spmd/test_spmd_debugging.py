@@ -215,16 +215,8 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
     device = xm.xla_device()
     num_devices = xr.global_runtime_device_count()
-    # 1 CPU testing env
     mesh_shape = (1, num_devices)
-    print("num_devices: ")
-    print(num_devices)
-    print("device: ")
-    print(device)
     device_ids = np.array(range(num_devices))
-    print("device_ids: ")
-    print(device_ids)
-    # mesh = Mesh(device_ids, mesh_shape, ('x', 'y'))
     mesh = self._get_mesh(mesh_shape)
     t = torch.randn(8, 4, device=device)
     partition_spec = (0, 1)
@@ -254,6 +246,10 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     fask_table.add_row(*col)
     fake_console.print(fask_table)
     fake_output = fake_console.file.getvalue()
+    print("output: ")
+    print(output.columns)
+    print("fake_output: ")
+    print(fake_output.columns)
     assert output == fake_output
 
   @unittest.skipIf(
@@ -266,7 +262,6 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     num_devices = xr.global_runtime_device_count()
     mesh_shape = (1, num_devices)
     device_ids = np.array(range(num_devices))
-    # mesh = Mesh(device_ids, mesh_shape, ('x', 'y'))
     mesh = self._get_mesh(mesh_shape)
 
     partition_spec = (0, None)
@@ -298,6 +293,10 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     fake_console = rich.console.Console(file=io.StringIO(), width=120)
     fake_console.print(fask_table)
     fake_output = fake_console.file.getvalue()
+    print("output: ")
+    print(output.columns)
+    print("fake_output: ")
+    print(fake_output.columns)
     assert output == fake_output
 
   @unittest.skipIf(
@@ -310,7 +309,6 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     num_devices = xr.global_runtime_device_count()
     mesh_shape = (1, num_devices)
     device_ids = np.array(range(num_devices))
-    # mesh = Mesh(device_ids, mesh_shape, ('x', 'y'))
     mesh = self._get_mesh(mesh_shape)
 
     partition_spec_replicated = (None, None)
@@ -341,6 +339,10 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     fake_console = rich.console.Console(file=io.StringIO(), width=120)
     fake_console.print(fask_table)
     fake_output = fake_console.file.getvalue()
+    print("output: ")
+    print(output.columns)
+    print("fake_output: ")
+    print(fake_output.columns)
     assert output == fake_output
 
   @unittest.skipIf(not xr.using_pjrt() or
@@ -350,16 +352,8 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
     device = xm.xla_device()
     num_devices = xr.global_runtime_device_count()
-    # 1 CPU testing env
     mesh_shape = (1, num_devices)
-    print("num_devices: ")
-    print(num_devices)
-    print("device: ")
-    print(device)
     device_ids = np.array(range(num_devices))
-    print("device_ids: ")
-    print(device_ids)
-    # mesh = Mesh(device_ids, mesh_shape, ('x', 'y'))
     mesh = self._get_mesh(mesh_shape)
     t = torch.randn(8, 4, device=device)
     partition_spec = (0, 1)
@@ -400,7 +394,6 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     num_devices = xr.global_runtime_device_count()
     mesh_shape = (1, num_devices)
     device_ids = np.array(range(num_devices))
-    # mesh = Mesh(device_ids, mesh_shape, ('x', 'y'))
     mesh = self._get_mesh(mesh_shape)
 
     partition_spec = (0, None)
@@ -443,7 +436,6 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     num_devices = xr.global_runtime_device_count()
     mesh_shape = (1, num_devices)
     device_ids = np.array(range(num_devices))
-    # mesh = Mesh(device_ids, mesh_shape, ('x', 'y'))
     mesh = self._get_mesh(mesh_shape)
 
     partition_spec_replicated = (None, None)
