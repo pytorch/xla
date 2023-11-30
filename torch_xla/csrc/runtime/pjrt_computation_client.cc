@@ -467,8 +467,8 @@ std::vector<xla::Literal> PjRtComputationClient::TransferFromServer(
     XLA_CHECK(pjrt_data);
 
     xla::Literal& literal =
-        literals.emplace_back(host_output_shape(pjrt_data.buffer.get()));
-    futures.push_back(pjrt_data.buffer->ToLiteral(&literal));
+        literals.emplace_back(host_output_shape(pjrt_data->buffer.get()));
+    futures.push_back(pjrt_data->buffer->ToLiteral(&literal));
 
     total_size += literal.size_bytes();
   }
