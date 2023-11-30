@@ -19,6 +19,12 @@ class DebugUtil {
     kStableHlo,
   };
 
+  enum GraphAnalysisSource {
+    Compilation,
+    Execution,
+    DynamoExecution,
+  };
+
   static GraphFormat GetDefaultGraphFormat();
 
   // Return HLO/StableHLO gragh of the index selected tensors in string format.
@@ -50,7 +56,8 @@ class DebugUtil {
   // warning, this function should only be called when a graph execution is
   // about to happen.
   static void analyze_graph_execution_python_frame(
-      bool from_dynamo_executation = false);
+      GraphAnalysisSource source, torch::lazy::hash_t graph_hash = 0,
+      const xla::ProgramShape* program_shape = nullptr);
 };
 
 }  // namespace torch_xla

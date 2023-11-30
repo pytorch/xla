@@ -217,12 +217,25 @@ static bool endsWith(const std::string& str, const std::string& suffix) {
 }
 
 void DebugUtil::analyze_graph_execution_python_frame(
-    bool from_dynamo_executation) {
-  static bool is_master_process =
+    GraphAnalysisSource source, torch::lazy::hash_t graph_hash,
+    const xla::ProgramShape* program_shape) {
+  static const bool pt_xla_debug_enabled =
+      runtime::sys_util::GetEnvBool("PT_XLA_DEBUG", false);
+  static const bool is_master_process =
       (runtime::sys_util::GetEnvInt("PJRT_LOCAL_PROCESS_RANK", 0) == 0);
-  static std::string debug_file_name =
+  static const std::string debug_file_name =
       runtime::sys_util::GetEnvString("PT_XLA_DEBUG_FILE", "");
-  static std::string debug_output_prefix = "Execution Analysis: ";
+
+  static const std::string executation_output_prefix = "Execution Analysis: ";
+  static const std::string compilation_output_prefix = "Compilation Analysis: ";
+
+  if (!pt_xla_debug_enabled) {
+    return;
+  }
+
+  std::string debug_output_prefix = (source == GraphAnalysisSource::Compilation)
+                                        ? compilation_output_prefix
+                                        : executation_output_prefix;
   // TODO: Make this configurable.
   if (!is_master_process) {
     return;
@@ -237,8 +250,10 @@ void DebugUtil::analyze_graph_execution_python_frame(
      << "======================================================================"
         "=========="
      << "\n";
-  ss << debug_output_prefix << "Execution Cause\n";
-  if (from_dynamo_executation) {
+  ss << debug_output_prefix
+     << ((source == GraphAnalysisSource::Compilation) ? "Compilation Cause\n"
+                                                      : "Execution Cause\n");
+  if (source == GraphAnalysisSource::DynamoExecution) {
     // when executation is from dynamo compiled graph, the python stack will not
     // show any dynamo related python file since frame is already replaced. We
     // can either analyze the C++ call stack or rely on caller to pass a boolean
@@ -271,6 +286,18 @@ void DebugUtil::analyze_graph_execution_python_frame(
        << "  most likely user code trying to access tensor value before "
           "mark_step\n";
   }
+
+  ss << debug_output_prefix << "Graph Info: \n";
+  ss << debug_output_prefix
+     << "  Graph Hash: " << torch::lazy::HashToString(graph_hash) << "\n";
+  ss << debug_output_prefix
+     << "  Number of Graph Inputs: " << program_shape->parameters().size()
+     << "\n";
+  ss << debug_output_prefix << "  Number of Graph Outputs: "
+     << (program_shape->result().IsTuple()
+             ? program_shape->result().tuple_shapes_size()
+             : 1)
+     << "\n";
 
   ss << debug_output_prefix << "Python Frame Triggered Execution: \n";
   for (auto& location : frames) {

@@ -611,10 +611,6 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
   tsl::profiler::TraceMe activity("ExecuteComputationWithBarrier",
                                   tsl::profiler::TraceMeLevel::kInfo);
   MaybeDumpGraph("dynamo", hash);
-  if (runtime::sys_util::GetEnvBool("PT_XLA_DEBUG", false)) {
-    DebugUtil::analyze_graph_execution_python_frame(
-        /*from_dynamo_executation=*/true);
-  }
   auto cachedComputation =
       XLAGraphExecutor::Get()->GetComputationCache()->Get(hash);
   TF_VLOG(5) << "Cached computation (hash: " << torch::lazy::HashToString(hash)
@@ -626,6 +622,11 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
       << "Failed to get computation by hash " << torch::lazy::HashToString(hash)
       << ". Maybe the entry get "
          "kicked out of the LRU cache";
+
+  DebugUtil::analyze_graph_execution_python_frame(
+      DebugUtil::GraphAnalysisSource::DynamoExecution,
+      /*graph_hash=*/hash,
+      /*program_shape=*/&(cachedComputation->computation->program_shape()));
 
   // Create DataPlaceHolder that will get filled in async executions.
   std::vector<xla::Shape>* output_shapes =
@@ -956,6 +957,10 @@ XLAGraphExecutor::ScheduleSyncTensorsGraph(
     std::vector<torch::lazy::BackendDataPtr> tensors_data,
     std::vector<XLATensor::ShardingSpecPtr> sharding_specs,
     ComputationCache::TypePtr cached_computation) {
+  DebugUtil::analyze_graph_execution_python_frame(
+      DebugUtil::GraphAnalysisSource::Execution,
+      /*graph_hash=*/coll->hash,
+      /*program_shape=*/&(cached_computation->computation->program_shape()));
   tsl::profiler::TraceMe activity("ScheduleSyncTensorsGraph",
                                   tsl::profiler::TraceMeLevel::kInfo);
   TensorCollectionBarrier(coll);
@@ -1261,6 +1266,10 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
                            coll.device.toString(), devices),
                        &shape, should_wrap_parameter, is_sharded});
 
+  DebugUtil::analyze_graph_execution_python_frame(
+      DebugUtil::GraphAnalysisSource::Compilation,
+      /*graph_hash=*/coll.hash, /*program_shape=*/&program_shape);
+
   TF_VLOG(3) << "Compiling IR graph hash "
              << torch::lazy::HashToString(coll.hash) << " on device "
              << coll.device << " ...";
@@ -1300,9 +1309,6 @@ XLAGraphExecutor::SyncTensorsGraphInternal(
     const SyncTensorsConfig& config, bool warm_up_cache_only) {
   tsl::profiler::TraceMe activity("SyncTensorsGraphInternal",
                                   tsl::profiler::TraceMeLevel::kInfo);
-  if (runtime::sys_util::GetEnvBool("PT_XLA_DEBUG", false)) {
-    DebugUtil::analyze_graph_execution_python_frame();
-  }
   SyncTensorCollection coll = CollectSyncTensors(*tensors, config);
   if (coll.indices.empty()) {
     // Enure previous execution is complete before exiting this
