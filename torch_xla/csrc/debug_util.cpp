@@ -290,16 +290,14 @@ void DebugUtil::analyze_graph_execution_python_frame(
   ss << debug_output_prefix << "Graph Info: \n";
   ss << debug_output_prefix
      << "  Graph Hash: " << torch::lazy::HashToString(graph_hash) << "\n";
-  if (program_shape) {
-    ss << debug_output_prefix
-       << "  Number of Graph Input: " << program_shape->parameters().size()
-       << "\n";
-    ss << debug_output_prefix << "  Number of Graph Output: "
-       << (program_shape->result().IsTuple()
-               ? program_shape->result().tuple_shapes_size()
-               : 1)
-       << "\n";
-  }
+  ss << debug_output_prefix
+     << "  Number of Graph Input: " << program_shape->parameters().size()
+     << "\n";
+  ss << debug_output_prefix << "  Number of Graph Output: "
+     << (program_shape->result().IsTuple()
+             ? program_shape->result().tuple_shapes_size()
+             : 1)
+     << "\n";
 
   ss << debug_output_prefix << "Python Frame Triggered Execution: \n";
   for (auto& location : frames) {
