@@ -12,6 +12,8 @@
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/operation_manager.h"
 #include "torch_xla/csrc/runtime/util.h"
+#include "tsl/platform/env.h"
+#include "tsl/platform/threadpool.h"
 #include "xla/client/xla_computation.h"
 #include "xla/literal.h"
 #include "xla/pjrt/pjrt_client.h"
@@ -40,9 +42,6 @@ class PjRtComputationClient : public ComputationClient {
   std::vector<DataPtr> TransferToServer(
       absl::Span<const std::shared_ptr<const TensorSource>> tensors) override;
 
-  // Use XLA replication to re-assemble the sharded data.
-  DataPtr ReplicateShardedData(const DataPtr& handle);
-
   std::vector<xla::Literal> TransferFromServer(
       absl::Span<const DataPtr> handles) override;
 
@@ -60,9 +59,8 @@ class PjRtComputationClient : public ComputationClient {
       const std::string& device,
       const ExecuteComputationOptions& options) override;
 
-  std::vector<std::vector<DataPtr>> ExecuteReplicated(
-      const Computation& computation,
-      const std::vector<std::vector<DataPtr>>& arguments,
+  std::vector<DataPtr> ExecuteReplicated(
+      const Computation& computation, absl::Span<const DataPtr> arguments,
       absl::Span<const std::string> devices,
       const ExecuteReplicatedOptions& options) override;
 
@@ -114,6 +112,8 @@ class PjRtComputationClient : public ComputationClient {
   std::unordered_map<std::string, xla::PjRtDevice* const> string_to_device_;
   std::shared_ptr<std::vector<std::string>> replication_devices_;
   OperationManager operation_manager_;
+  tsl::thread::ThreadPool pool_ = tsl::thread::ThreadPool(
+      tsl::Env::Default(), "pjrt", std::thread::hardware_concurrency());
 
   xla::PjRtDevice* StringToPjRtDevice(const std::string& device);
 
@@ -231,10 +231,16 @@ class PjRtComputationClient : public ComputationClient {
                     std::vector<std::string> devices,
                     std::unique_ptr<xla::PjRtLoadedExecutable> executable)
         : Computation(std::move(computation), std::move(devices)),
-          executable(std::move(executable)) {}
+          executable(std::move(executable)) {
+      output_shardings_ = this->executable->GetOutputShardings();
+    }
 
     std::unique_ptr<xla::PjRtLoadedExecutable> executable;
+    std::optional<std::vector<xla::OpSharding>> output_shardings_;
   };
+
+  // Use XLA replication to re-assemble the sharded data.
+  std::shared_ptr<PjRtData> ReplicateShardedData(const DataPtr& handle);
 };
 
 }  // namespace runtime

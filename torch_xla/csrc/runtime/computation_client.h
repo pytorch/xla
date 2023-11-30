@@ -291,20 +291,13 @@ class ComputationClient {
       const ExecuteComputationOptions& options =
           ExecuteComputationOptions{}) = 0;
 
-  // Executes the computation in replicated mode.
-  // The size of the arguments vector is the number of replicas to execute,
-  // and it must match the size of the computation.devices() as well as the
-  // devices passed as argument. The destination devices for each replicated
-  // computation come from the devices the Data objects are stored into, which
-  // must match the devices argument. Within arguments[i], every Data
-  // object must be coming from the same device. Returns a vector (of the same
-  // size of the arguments vector) with the results of the parallel execution.
-  // The result[i], a vector itself, will be the result of the computation fed
-  // with arguments[i]. If options.explode_tuple is true, the output tuples will
-  // be decomposed into their single elements.
-  virtual std::vector<std::vector<DataPtr>> ExecuteReplicated(
-      const Computation& computation,
-      const std::vector<std::vector<DataPtr>>& arguments,
+  // Executes the computation on multiple local devices in parallel.
+  // Each argument to the executable is expected to be sharded in the same order
+  // as `devices`. If options.explode_tuple is true, the output tuples will be
+  // decomposed into their single elements. Returns a vector of outputs, each
+  // of which is sharded in the same order as `devices`.
+  virtual std::vector<DataPtr> ExecuteReplicated(
+      const Computation& computation, absl::Span<const DataPtr> arguments,
       absl::Span<const std::string> devices,
       const ExecuteReplicatedOptions& options) = 0;
 

@@ -101,6 +101,7 @@ cc_library(
     "@xla//xla/pjrt/c:pjrt_c_api_hdrs",
     "@tsl//tsl/profiler/lib:traceme",
     "@tsl//tsl/platform/cloud:gcs_file_system",
+    "@tsl//tsl/platform:env",
     "@com_google_absl//absl/strings",
     "@com_google_absl//absl/synchronization",
     "@com_google_absl//absl/types:span",
