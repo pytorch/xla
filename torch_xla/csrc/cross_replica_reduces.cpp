@@ -247,8 +247,10 @@ AllGatherResultCoalesced BuildAllGatherCoalesced(
   // AllGather().
   ReduceContext cc_ctx = GetReduceContext(inputs);
   std::vector<xla::XlaOp> result(inputs.size());
+
   for (auto& type_ctx : cc_ctx.contexts) {
     xla::XlaOp all_gather_result;
+    type_ctx.second.ops[0] = token_handler.GetInput(type_ctx.second.ops[0], &type_ctx.second.operand_shapes[0]);
     if (pin_layout) {
       all_gather_result = xla::AllGather(
           xla::Tuple(inputs[0].builder(), type_ctx.second.ops), dim,

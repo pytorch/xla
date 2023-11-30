@@ -114,8 +114,6 @@ class XlaBackendTest(parameterized.TestCase):
                                [tensor, tensor2])
     hlo = torch_xla._XLAC._get_xla_tensors_hlo(output_tensors)
     hlo_matches(hlo, all_gather_pattern)
-    # purge all computations attached the device.
-    xm.mark_step()
 
   def test_broadcast(self):
     device = xm.xla_device()
