@@ -46,7 +46,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     generated_table = visualize_tensor_sharding(t)
     console = rich.console.Console()
     with console.capture() as capture:
-        console.print(generated_table)
+      console.print(generated_table)
     output = capture.get()
 
     color = None
@@ -104,7 +104,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     fake_table.add_row(*col)
     fake_console = rich.console.Console()
     with fake_console.capture() as fake_capture:
-        fake_console.print(fake_table)
+      fake_console.print(fake_table)
     fake_output = fake_capture.get()
     assert output == fake_output
 
@@ -127,7 +127,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     generated_table = visualize_tensor_sharding(t)
     console = rich.console.Console()
     with console.capture() as capture:
-        console.print(generated_table)
+      console.print(generated_table)
     output = capture.get()
 
     color = None
@@ -155,7 +155,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     fake_table.add_row(*col)
     fake_console = rich.console.Console()
     with fake_console.capture() as fake_capture:
-        fake_console.print(fake_table)
+      fake_console.print(fake_table)
     fake_output = fake_capture.get()
     assert output == fake_output
 
@@ -178,7 +178,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     generated_table = visualize_tensor_sharding(t)
     console = rich.console.Console()
     with console.capture() as capture:
-        console.print(generated_table)
+      console.print(generated_table)
     output = capture.get()
 
     color = None
@@ -200,7 +200,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     fake_table.add_row(*col)
     fake_console = rich.console.Console()
     with fake_console.capture() as fake_capture:
-        fake_console.print(fake_table)
+      fake_console.print(fake_table)
     fake_output = fake_capture.get()
     assert output == fake_output
 
@@ -220,11 +220,11 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     xs.mark_sharding(t, mesh, partition_spec)
     sharding = torch_xla._XLAC._get_xla_sharding_spec(t)
     generated_table = visualize_tensor_sharding(t)
-    console = rich.console.Console(file=io.StringIO(), width=120)
-    console.print(generated_table)
-    output = console.file.getvalue()
+    console = rich.console.Console()
+    with console.capture() as capture:
+      console.print(generated_table)
+    output = capture.get()
 
-    fake_console = rich.console.Console(file=io.StringIO(), width=120)
     color = None
     text_color = None
     fake_table = rich.table.Table(
@@ -241,8 +241,10 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
             (0, 0, 1, 0),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     fake_table.add_row(*col)
-    fake_console.print(fake_table)
-    fake_output = fake_console.file.getvalue()
+    fake_console = rich.console.Console()
+    with fake_console.capture() as fake_capture:
+      fake_console.print(fake_table)
+    fake_output = fake_capture.get()
     assert output == fake_output
 
   @unittest.skipIf(
@@ -264,7 +266,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     generated_table = visualize_tensor_sharding(t)
     console = rich.console.Console()
     with console.capture() as capture:
-        console.print(generated_table)
+      console.print(generated_table)
     output = capture.get()
 
     color = None
@@ -285,7 +287,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     fake_table.add_row(*col)
     fake_console = rich.console.Console()
     with fake_console.capture() as fake_capture:
-        fake_console.print(fake_table)
+      fake_console.print(fake_table)
     fake_output = fake_capture.get()
     assert output == fake_output
 
@@ -308,7 +310,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     generated_table = visualize_tensor_sharding(t)
     console = rich.console.Console()
     with console.capture() as capture:
-        console.print(generated_table)
+      console.print(generated_table)
     output = capture.get()
 
     color = None
@@ -330,7 +332,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     fake_table.add_row(*col)
     fake_console = rich.console.Console()
     with fake_console.capture() as fake_capture:
-        fake_console.print(fake_table)
+      fake_console.print(fake_table)
     fake_output = fake_capture.get()
     assert output == fake_output
 
@@ -354,10 +356,9 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     generated_table = visualize_tensor_sharding(t)
     console = rich.console.Console()
     with console.capture() as capture:
-        console.print(generated_table)
+      console.print(generated_table)
     output = capture.get()
 
-    fake_console = rich.console.Console(file=io.StringIO(), width=120)
     color = None
     text_color = None
     fake_table = rich.table.Table(
@@ -376,7 +377,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     fake_table.add_row(*col)
     fake_console = rich.console.Console()
     with fake_console.capture() as fake_capture:
-        fake_console.print(fake_table)
+      fake_console.print(fake_table)
     fake_output = fake_capture.get()
     assert output == fake_output
 
@@ -399,7 +400,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     generated_table = visualize_tensor_sharding(t)
     console = rich.console.Console()
     with console.capture() as capture:
-        console.print(generated_table)
+      console.print(generated_table)
     output = capture.get()
 
     color = None
@@ -420,7 +421,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     fake_table.add_row(*col)
     fake_console = rich.console.Console()
     with fake_console.capture() as fake_capture:
-        fake_console.print(fake_table)
+      fake_console.print(fake_table)
     fake_output = fake_capture.get()
     assert output == fake_output
 
@@ -443,7 +444,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     generated_table = visualize_tensor_sharding(t)
     console = rich.console.Console()
     with console.capture() as capture:
-        console.print(generated_table)
+      console.print(generated_table)
     output = capture.get()
 
     color = None
@@ -465,7 +466,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     fake_table.add_row(*col)
     fake_console = rich.console.Console()
     with fake_console.capture() as fake_capture:
-        fake_console.print(fake_table)
+      fake_console.print(fake_table)
     fake_output = fake_capture.get()
     assert output == fake_output
 
