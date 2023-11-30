@@ -38,43 +38,13 @@ class ShardingCallbackInfo:
     self.module_context = module_context
 
 
-# Color = Union[tuple[float, float, float], str]
-# ColorMap = Callable[[float], tuple[float, float, float, float]]
-
-
-# def _canonicalize_color(color: Color) -> str:
-#   if isinstance(color, str):
-#     return color
-#   r, g, b = (int(a * 255) for a in color)
-#   return f"#{r:02X}{g:02X}{b:02X}"
-
-
-# def _get_text_color(color: str) -> str:
-#   r, g, b = torch.map(lambda x: int(x, 16),
-#                       (color[1:3], color[3:5], color[5:7]))
-#   if (r * 0.299 + g * 0.587 + b * 0.114) > 186:
-#     return "#000000"
-#   return "#ffffff"
-
-
-# def make_color_iter(color_map, num_rows, num_cols):
-#   num_colors = num_rows * num_cols
-#   color_values = np.linspace(0, 1, num_colors)
-#   idx = 0
-#   for _ in range(num_colors):
-#     yield color_map(color_values[idx])
-#     idx = (idx + num_colors // 2 + bool(num_colors % 2 == 0)) % num_colors
-
-
-def visualize_sharding(shape: torch.Size,
-                       sharding: str,
+def visualize_sharding(sharding: str,
                        use_color: bool = True,
                        scale: float = 1.,
                        min_width: int = 9,
                        max_width: int = 80):
   """Visualizes a ``Sharding`` using ``rich``.
   Args:
-    shape (`torch.Size`): shape of tensor to be visualized
     sharding (`str`): sharding of given tensor with SPMD
     use_color (`bool`): whether use color or not
     scale (`float`): scale of table visualized in console
@@ -87,10 +57,6 @@ def visualize_sharding(shape: torch.Size,
 
   if not RICH_ENABLED:
     raise ValueError("`visualize_sharding` requires `rich` to be installed.")
-
-  # if len(shape) > 2 or len(shape) < 1:
-  #   raise ValueError(
-  #       "`visualize_sharding` only works for shapes with 1 and 2 dimensions.")
 
   slices: dict[tuple[int, ...], set[int]] = {}
   heights: dict[tuple[int, ...], Optional[float]] = {}
@@ -143,31 +109,15 @@ def visualize_sharding(shape: torch.Size,
 
   console = rich.console.Console(width=max_width)
   use_color = use_color and console.color_system is not None
-  # if use_color and not color_map:
-  #   try:
-  #     import matplotlib as mpl
-  #     color_map = mpl.colormaps["tab20b"]
-  #   except ModuleNotFoundError:
-  #     use_color = False
 
   base_height = int(3 * scale)
-  aspect_ratio = (shape[1] if len(shape) == 2 else 1) / shape[0]
+  aspect_ratio = 1
   base_width = int(base_height * aspect_ratio)
   height_to_width_ratio = 1.5
 
-  # eg: '{devices=[2,2]0,1,2,3}' # 13
-  # eg: '{devices=[2,1,2]0,1,2,3 last_tile_dim_replicate}' # 15
-
-  # slcs is the data we saved on this slice
-  # `device_indices_map`: [0, 1, 2, 3]
-  # `sharding_spac`: [2, 2]
-
-  # set the device kind to TPU as default since `sharding` here is `str`, TODO(@manfei): get device kind from commands for TPU/GPU/CPU
-  # device_kind = 'TPU'  # next(iter(sharding.device_set)).platform.upper()
   pjrt_device = xu.getenv_as(xenv.PJRT_DEVICE, str)
   device_kind = pjrt_device
 
-  # color_iter = make_color_iter(color_map, num_rows, num_cols)
   table = rich.table.Table(
       show_header=False,
       show_lines=not use_color,
@@ -191,14 +141,6 @@ def visualize_sharding(shape: torch.Size,
       top_padding, remainder = divmod(height - 2, 2)
       bottom_padding = top_padding + remainder
 
-      # if use_color:
-      #   color = _canonicalize_color(next(color_iter)[:3])
-      #   text_color = _get_text_color(color)
-      #   top_padding += 1
-      #   bottom_padding += 1
-      #   left_padding += 1
-      #   right_padding += 1
-      # else:
       color = None
       text_color = None
 
@@ -220,9 +162,9 @@ def visualize_tensor_sharding(t, **kwargs):
   if torch.is_tensor(t):
     import torch_xla
     sharding = torch_xla._XLAC._get_xla_sharding_spec(t)
-    return visualize_sharding(t.shape, sharding, **kwargs)
+    return visualize_sharding(sharding, **kwargs)
   elif (isinstance(t, XLAShardedTensor)):
     import torch_xla
     sharding = torch_xla._XLAC._get_xla_sharding_spec(t.global_tensor)
-    return visualize_sharding(t.global_tensor.shape, sharding, **kwargs)
+    return visualize_sharding(sharding, **kwargs)
 
