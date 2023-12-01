@@ -557,19 +557,26 @@ def parse_args(args=None):
       type=str,
       default="./output/",
       help="Directory specifying where to dump profiling information (summary, and trace)",
-  ),
+  )
 
   parser.add_argument(
       "--profile-cuda-cpu-collect",
       action="store_true",
       help="Whether to collect CPU/GPU profiling information in the resulting file.",
-  ),
+  )
 
   parser.add_argument(
       "--xla-flags",
       type=str,
       action="append",
       help="Flags to forward to XLA via `XLA_FLAGS` env var.",
+  )
+
+  parser.add_argument(
+      "--disable-tf32",
+      action="store_true",
+      default=False,
+      help="Whether to enable fast F32 multiplication in PyTorch.",
   )
 
   return parser.parse_args(args)
@@ -593,6 +600,11 @@ def main():
   logging.basicConfig(level=log_level, force=True)
 
   logger.info(args)
+
+  if not args.disable_tf32:
+    logger.warning('Enabling fast F32 mulitplication for PyTorch')
+    torch.set_float32_matmul_precision('high')
+
   runner = ExperimentRunner(args)
   runner.run()
 
