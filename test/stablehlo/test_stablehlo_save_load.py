@@ -100,11 +100,36 @@ class SimpleExportTest(unittest.TestCase):
     result = program2(*inputs).detach().cpu()
     self.assertTrue(torch.allclose(model(*inputs), result))
 
+  def test_save_load_without_saving_weights(self):
+    model = ElementwiseAdd()
+    inputs = model.get_random_inputs()
+    exported = torch._export.export(model, inputs)
+    options = StableHLOExportOptions()
+    options.override_tracing_arguments = inputs
+    options.save_weights = False
+    with tempfile.TemporaryDirectory() as tempdir:
+      save_as_stablehlo(exported, tempdir, options)
+      program2 = StableHLOGraphModule.load(tempdir)
+    result = program2(*inputs).detach().cpu()
+    self.assertTrue(torch.allclose(model(*inputs), result))
+
   def test_save_load2(self):
     model = ElementwiseAdd()
     inputs = model.get_random_inputs()
     with tempfile.TemporaryDirectory() as tempdir:
       save_torch_model_as_stablehlo(model, inputs, tempdir)
+      program2 = StableHLOGraphModule.load(tempdir)
+      result = program2(*inputs).detach().cpu()
+    self.assertTrue(torch.allclose(model(*inputs), result))
+
+  def test_save_load2_without_saving_weights(self):
+    model = ElementwiseAdd()
+    inputs = model.get_random_inputs()
+    options = StableHLOExportOptions()
+    options.override_tracing_arguments = inputs
+    options.save_weights = False
+    with tempfile.TemporaryDirectory() as tempdir:
+      save_torch_model_as_stablehlo(model, inputs, tempdir, options)
       program2 = StableHLOGraphModule.load(tempdir)
       result = program2(*inputs).detach().cpu()
     self.assertTrue(torch.allclose(model(*inputs), result))
