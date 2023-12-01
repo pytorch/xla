@@ -445,22 +445,7 @@ std::vector<ComputationClient::ComputationPtr> IfrtComputationClient::Compile(
       compile_options.executable_build_options.set_device_assignment(
           device_assignment);
     } else {
-      // TODO(wcromar): set compile_options.argument_layouts, enable strict
-      // shapes
-      compile_options.executable_build_options.set_num_partitions(1);
-      compile_options.executable_build_options.set_num_replicas(
-          client_->device_count());
-      compile_options.parameter_is_tupled_arguments =
-          instance.parameter_is_tupled_arguments;
-
-      xla::DeviceAssignment device_assignment(client_->device_count(), 1);
-      // DeviceAssignment values must be the PjRtDevice ID, so we need to
-      // unwind the global ordinal mapping.
-      for (const auto& [device_id, global_ordinal] : global_ordinals_) {
-        device_assignment(global_ordinal, 0) = device_id;
-      }
-      compile_options.executable_build_options.set_device_assignment(
-          device_assignment);
+      XLA_ERROR() << "Only SPMD compilation is supported";
     }
 
     // Convert HLO to StableHLO for Ifrt client compilation.
@@ -476,14 +461,13 @@ std::vector<ComputationClient::ComputationPtr> IfrtComputationClient::Compile(
     StableHloCompileCounter()->AddValue(1);
 
     const auto& hlo_modules = ConsumeValue(executable->GetHloModules());
-    xla::HloComputation* hlo_computation = hlo_modules[0]->entry_computation();
 
-    std::shared_ptr<IfrtComputation> pjrt_computation =
+    std::shared_ptr<IfrtComputation> ifrt_computation =
         std::make_shared<IfrtComputation>(
             std::move(xla::XlaComputation(hlo_modules[0]->ToProto())),
             instance.devices, std::move(executable));
 
-    computations.push_back(pjrt_computation);
+    computations.push_back(ifrt_computation);
 
     CreateCompileHandlesCounter()->AddValue(1);
   }
@@ -559,8 +543,11 @@ IfrtComputationClient::ExecuteReplicated(
 
   auto outputs = result.outputs;
 
-  XLA_CHECK(ifrt_computation.output_shardings_.has_value());
-  auto& output_shardings = *(ifrt_computation.output_shardings_);
+  const std::vector<xla::OpSharding>& output_shardings =
+      ifrt_computation.output_shardings_
+          ? *ifrt_computation.output_shardings_
+          : std::vector(outputs.size(),
+                        xla::HloSharding::Replicate().ToProto());
   XLA_CHECK_EQ(output_shardings.size(), outputs.size());
 
   std::vector<ComputationClient::DataPtr> data_handles(outputs.size());
