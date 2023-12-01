@@ -1967,15 +1967,14 @@ void InitXlaModuleBindings(py::module m) {
         [](at::Tensor& self, const at::Tensor& source) -> at::Tensor& {
           return XLANativeFunctions::set_(self, source);
         });
-  m.def("_set_xla_custom_op_name",
-        [](const at::Tensor& input, const std::string& op_name) {
+  m.def("_set_xla_custom_op_name_prefix",
+        [](const at::Tensor& input, const std::string& op_name_prefix,
+           size_t max_call_stack_depth) -> bool {
           XLATensorPtr xtensor = bridge::GetXlaTensor(input);
-          xtensor->SetCustomOpName(op_name);
-        });
-  m.def("_get_xla_custom_op_name",
-        [](const at::Tensor& input) -> const std::string& {
-          XLATensorPtr xtensor = bridge::GetXlaTensor(input);
-          return xtensor->GetCustomOpName();
+          std::shared_ptr<torch::lazy::UserMetaData> user_meta =
+              std::make_shared<CustomOpNameMetaData>(op_name_prefix,
+                                                     max_call_stack_depth);
+          return xtensor->SetNodeUserMetadata(user_meta);
         });
   m.def("_get_all_reduce_token",
         [](const std::string& device_str) -> const torch::lazy::Value& {
