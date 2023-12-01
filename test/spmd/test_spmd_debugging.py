@@ -62,44 +62,44 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     col.append(
         rich.padding.Padding(
             rich.align.Align('TPU 0', "center", vertical="middle"),
-            (2, 1, 2, 1),
+            (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     col.append(
         rich.padding.Padding(
             rich.align.Align('TPU 1', "center", vertical="middle"),
-            (2, 1, 2, 1),
+            (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     col.append(
         rich.padding.Padding(
             rich.align.Align('TPU 2', "center", vertical="middle"),
-            (2, 1, 2, 1),
+            (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     col.append(
         rich.padding.Padding(
             rich.align.Align('TPU 3', "center", vertical="middle"),
-            (2, 1, 2, 1),
+            (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     fake_table.add_row(*col)
     col = []
     col.append(
         rich.padding.Padding(
             rich.align.Align('TPU 4', "center", vertical="middle"),
-            (2, 1, 2, 1),
+            (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     col.append(
         rich.padding.Padding(
             rich.align.Align('TPU 5', "center", vertical="middle"),
-            (2, 1, 2, 1),
+            (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     col.append(
         rich.padding.Padding(
             rich.align.Align('TPU 6', "center", vertical="middle"),
-            (2, 1, 2, 1),
+            (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     col.append(
         rich.padding.Padding(
             rich.align.Align('TPU 7', "center", vertical="middle"),
-            (2, 1, 2, 1),
+            (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     fake_table.add_row(*col)
     fake_console = rich.console.Console()
@@ -143,14 +143,14 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     col.append(
         rich.padding.Padding(
             rich.align.Align('TPU [0, 1, 2, 3]', "center", vertical="middle"),
-            (2, 0, 2, 0),
+            (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     fake_table.add_row(*col)
     col = []
     col.append(
         rich.padding.Padding(
             rich.align.Align('TPU [4, 5, 6, 7]', "center", vertical="middle"),
-            (2, 0, 2, 0),
+            (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     fake_table.add_row(*col)
     fake_console = rich.console.Console()
@@ -195,7 +195,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
         rich.padding.Padding(
             rich.align.Align(
                 'TPU [0, 1, 2, 3, 4, 5, 6, 7]', "center", vertical="middle"),
-            (0, 0, 1, 0),
+            (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     fake_table.add_row(*col)
     fake_console = rich.console.Console()
@@ -238,7 +238,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     col.append(
         rich.padding.Padding(
             rich.align.Align('CPU [0]', "center", vertical="middle"),
-            (0, 0, 1, 0),
+            (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     fake_table.add_row(*col)
     fake_console = rich.console.Console()
@@ -282,7 +282,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     col.append(
         rich.padding.Padding(
             rich.align.Align('CPU [0]', "center", vertical="middle"),
-            (0, 5, 1, 4),
+            (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     fake_table.add_row(*col)
     fake_console = rich.console.Console()
@@ -330,7 +330,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     col.append(
         rich.padding.Padding(
             rich.align.Align('CPU [0]', "center", vertical="middle"),
-            (0, 5, 1, 4),
+            (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     fake_table.add_row(*col)
     fake_console = rich.console.Console()
@@ -374,44 +374,96 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     col.append(
         rich.padding.Padding(
             rich.align.Align('TPU 0', "center", vertical="middle"),
-            (2, 1, 2, 1),
+            (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     col.append(
         rich.padding.Padding(
             rich.align.Align('TPU 1', "center", vertical="middle"),
-            (2, 1, 2, 1),
-            style=rich.style.Style(bgcolor=color, color=text_color)))
-    col.append(
-        rich.padding.Padding(
-            rich.align.Align('TPU 2', "center", vertical="middle"),
-            (2, 1, 2, 1),
-            style=rich.style.Style(bgcolor=color, color=text_color)))
-    col.append(
-        rich.padding.Padding(
-            rich.align.Align('TPU 3', "center", vertical="middle"),
-            (2, 1, 2, 1),
+            (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     fake_table.add_row(*col)
     col = []
     col.append(
         rich.padding.Padding(
             rich.align.Align('TPU 4', "center", vertical="middle"),
-            (2, 1, 2, 1),
+            (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     col.append(
         rich.padding.Padding(
             rich.align.Align('TPU 5', "center", vertical="middle"),
-            (2, 1, 2, 1),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    fake_table.add_row(*col)
+    col = []
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('TPU 8', "center", vertical="middle"),
+            (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     col.append(
         rich.padding.Padding(
+            rich.align.Align('TPU 9', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    fake_table.add_row(*col)
+    col = []
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('TPU 12', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('TPU 13', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    fake_table.add_row(*col)
+    col = []
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('TPU 2', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('TPU 3', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    fake_table.add_row(*col)
+    col = []
+    col.append(
+        rich.padding.Padding(
             rich.align.Align('TPU 6', "center", vertical="middle"),
-            (2, 1, 2, 1),
+            (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     col.append(
         rich.padding.Padding(
             rich.align.Align('TPU 7', "center", vertical="middle"),
-            (2, 1, 2, 1),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    fake_table.add_row(*col)
+    col = []
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('TPU 10', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('TPU 11', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    fake_table.add_row(*col)
+    col = []
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('TPU 14', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('TPU 15', "center", vertical="middle"),
+            (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     fake_table.add_row(*col)
     fake_console = rich.console.Console()
@@ -449,15 +501,43 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     col = []
     col.append(
         rich.padding.Padding(
-            rich.align.Align('TPU [0, 1, 2, 3]', "center", vertical="middle"),
-            (2, 0, 2, 0),
+            rich.align.Align('TPU [0, 1]', "center", vertical="middle"),
+            (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
-    fake_table.add_row(*col)
-    col = []
     col.append(
         rich.padding.Padding(
-            rich.align.Align('TPU [4, 5, 6, 7]', "center", vertical="middle"),
-            (2, 0, 2, 0),
+            rich.align.Align('TPU [4, 5]', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('TPU [8, 9]', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('TPU [12, 13]', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('TPU [2, 3]', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('TPU [6, 7]', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('TPU [10, 11]', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('TPU [14, 15]', "center", vertical="middle"),
+            (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     fake_table.add_row(*col)
     fake_console = rich.console.Console()
@@ -497,7 +577,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
         rich.padding.Padding(
             rich.align.Align(
                 'TPU [0, 1, 2, 3, 4, 5, 6, 7]', "center", vertical="middle"),
-            (0, 0, 1, 0),
+            (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     fake_table.add_row(*col)
     fake_console = rich.console.Console()
@@ -535,8 +615,97 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     col = []
     col.append(
         rich.padding.Padding(
-            rich.align.Align('CPU [0]', "center", vertical="middle"),
-            (0, 0, 1, 0),
+            rich.align.Align('CPU 0', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('CPU 1', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    fake_table.add_row(*col)
+    col = []
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('CPU 4', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('CPU 5', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    fake_table.add_row(*col)
+    col = []
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('CPU 8', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('CPU 9', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    fake_table.add_row(*col)
+    col = []
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('CPU 12', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('CPU 13', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    fake_table.add_row(*col)
+    col = []
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('CPU 2', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('CPU 3', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    fake_table.add_row(*col)
+    col = []
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('CPU 6', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('CPU 7', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    fake_table.add_row(*col)
+    col = []
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('CPU 10', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('CPU 11', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    fake_table.add_row(*col)
+    col = []
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('CPU 14', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('CPU 15', "center", vertical="middle"),
+            (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     fake_table.add_row(*col)
     fake_console = rich.console.Console()
@@ -574,8 +743,43 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     col = []
     col.append(
         rich.padding.Padding(
-            rich.align.Align('CPU [0]', "center", vertical="middle"),
-            (0, 5, 1, 4),
+            rich.align.Align('CPU [0, 1]', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('CPU [4, 5]', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('CPU [8, 9]', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('CPU [12, 13]', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('CPU [2, 3]', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('CPU [6, 7]', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('CPU [10, 11]', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('CPU [14, 15]', "center", vertical="middle"),
+            (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     fake_table.add_row(*col)
     fake_console = rich.console.Console()
@@ -614,7 +818,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     col.append(
         rich.padding.Padding(
             rich.align.Align('CPU [0]', "center", vertical="middle"),
-            (0, 5, 1, 4),
+            (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     fake_table.add_row(*col)
     fake_console = rich.console.Console()
@@ -628,135 +832,135 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     assert output == fake_output
 
 # these three GPU tests could be skipped before GPU SPMD enabled stably, and TODO(manfei) add multi-host tests for GPU
-  @unittest.skipIf(not xr.using_pjrt() or
-                   xu.getenv_as(xenv.PJRT_DEVICE, str) in ('CPU', 'TPU'),
-                   f"Requires PJRT_DEVICE set to `GPU`, `CUDA`, `ROCM`.")
-  def test_debugging_spmd_single_host_tiled_gpu(self):
-    from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
-    device = xm.xla_device()
-    num_devices = self.n_devices
-    mesh_shape = (1, num_devices)
-    device_ids = np.array(range(num_devices))
-    print("device_ids: ")
-    print(device_ids)
-    mesh = self._get_mesh(mesh_shape)
-    t = torch.randn(8, 4, device=device)
-    partition_spec = (0, 1)
-    xs.mark_sharding(t, mesh, partition_spec)
-    sharding = torch_xla._XLAC._get_xla_sharding_spec(t)
-    generated_table = visualize_tensor_sharding(t)
-    console = rich.console.Console()
-    with console.capture() as capture:
-      console.print(generated_table)
-    output = capture.get()
+  # @unittest.skipIf(not xr.using_pjrt() or
+  #                  xu.getenv_as(xenv.PJRT_DEVICE, str) in ('CPU', 'TPU'),
+  #                  f"Requires PJRT_DEVICE set to `GPU`, `CUDA`, `ROCM`.")
+  # def test_debugging_spmd_single_host_tiled_gpu(self):
+  #   from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
+  #   device = xm.xla_device()
+  #   num_devices = self.n_devices
+  #   mesh_shape = (1, num_devices)
+  #   device_ids = np.array(range(num_devices))
+  #   print("device_ids: ")
+  #   print(device_ids)
+  #   mesh = self._get_mesh(mesh_shape)
+  #   t = torch.randn(8, 4, device=device)
+  #   partition_spec = (0, 1)
+  #   xs.mark_sharding(t, mesh, partition_spec)
+  #   sharding = torch_xla._XLAC._get_xla_sharding_spec(t)
+  #   generated_table = visualize_tensor_sharding(t)
+  #   console = rich.console.Console()
+  #   with console.capture() as capture:
+  #     console.print(generated_table)
+  #   output = capture.get()
 
-    color = None
-    text_color = None
-    fake_table = rich.table.Table(
-        show_header=False,
-        show_lines=True,
-        padding=0,
-        highlight=True,
-        pad_edge=False,
-        box=rich.box.SQUARE)
-    col = []
-    col.append(
-        rich.padding.Padding(
-            rich.align.Align('GPU [0]', "center", vertical="middle"),
-            (0, 0, 1, 0),
-            style=rich.style.Style(bgcolor=color, color=text_color)))
-    fake_table.add_row(*col)
-    fake_console = rich.console.Console()
-    with fake_console.capture() as fake_capture:
-      fake_console.print(fake_table)
-    fake_output = fake_capture.get()
-    assert output == fake_output
+  #   color = None
+  #   text_color = None
+  #   fake_table = rich.table.Table(
+  #       show_header=False,
+  #       show_lines=True,
+  #       padding=0,
+  #       highlight=True,
+  #       pad_edge=False,
+  #       box=rich.box.SQUARE)
+  #   col = []
+  #   col.append(
+  #       rich.padding.Padding(
+  #           rich.align.Align('GPU [0]', "center", vertical="middle"),
+  #           (1, 1, 1, 1),
+  #           style=rich.style.Style(bgcolor=color, color=text_color)))
+  #   fake_table.add_row(*col)
+  #   fake_console = rich.console.Console()
+  #   with fake_console.capture() as fake_capture:
+  #     fake_console.print(fake_table)
+  #   fake_output = fake_capture.get()
+  #   assert output == fake_output
 
-  @unittest.skipIf(not xr.using_pjrt() or
-                   xu.getenv_as(xenv.PJRT_DEVICE, str) in ('CPU', 'TPU'),
-                   f"Requires PJRT_DEVICE set to `GPU`, `CUDA`, `ROCM`.")
-  def test_single_host_partial_replication_gpu(self):
-    from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
-    device = xm.xla_device()
-    num_devices = self.n_devices
-    mesh_shape = (1, num_devices)
-    device_ids = np.array(range(num_devices))
-    mesh = self._get_mesh(mesh_shape)
+  # @unittest.skipIf(not xr.using_pjrt() or
+  #                  xu.getenv_as(xenv.PJRT_DEVICE, str) in ('CPU', 'TPU'),
+  #                  f"Requires PJRT_DEVICE set to `GPU`, `CUDA`, `ROCM`.")
+  # def test_single_host_partial_replication_gpu(self):
+  #   from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
+  #   device = xm.xla_device()
+  #   num_devices = self.n_devices
+  #   mesh_shape = (1, num_devices)
+  #   device_ids = np.array(range(num_devices))
+  #   mesh = self._get_mesh(mesh_shape)
 
-    partition_spec = (0, None)
-    t = torch.randn(8, 32, device=device)
-    xs.mark_sharding(t, mesh, (0, None))
-    sharding = torch_xla._XLAC._get_xla_sharding_spec(t)
-    generated_table = visualize_tensor_sharding(t)
-    console = rich.console.Console()
-    with console.capture() as capture:
-      console.print(generated_table)
-    output = capture.get()
+  #   partition_spec = (0, None)
+  #   t = torch.randn(8, 32, device=device)
+  #   xs.mark_sharding(t, mesh, (0, None))
+  #   sharding = torch_xla._XLAC._get_xla_sharding_spec(t)
+  #   generated_table = visualize_tensor_sharding(t)
+  #   console = rich.console.Console()
+  #   with console.capture() as capture:
+  #     console.print(generated_table)
+  #   output = capture.get()
 
-    color = None
-    text_color = None
-    fake_table = rich.table.Table(
-        show_header=False,
-        show_lines=True,
-        padding=0,
-        highlight=True,
-        pad_edge=False,
-        box=rich.box.SQUARE)
-    col = []
-    col.append(
-        rich.padding.Padding(
-            rich.align.Align('GPU [0]', "center", vertical="middle"),
-            (0, 5, 1, 4),
-            style=rich.style.Style(bgcolor=color, color=text_color)))
-    fake_table.add_row(*col)
-    fake_console = rich.console.Console()
-    with fake_console.capture() as fake_capture:
-      fake_console.print(fake_table)
-    fake_output = fake_capture.get()
-    assert output == fake_output
+  #   color = None
+  #   text_color = None
+  #   fake_table = rich.table.Table(
+  #       show_header=False,
+  #       show_lines=True,
+  #       padding=0,
+  #       highlight=True,
+  #       pad_edge=False,
+  #       box=rich.box.SQUARE)
+  #   col = []
+  #   col.append(
+  #       rich.padding.Padding(
+  #           rich.align.Align('GPU [0]', "center", vertical="middle"),
+  #           (1, 1, 1, 1),
+  #           style=rich.style.Style(bgcolor=color, color=text_color)))
+  #   fake_table.add_row(*col)
+  #   fake_console = rich.console.Console()
+  #   with fake_console.capture() as fake_capture:
+  #     fake_console.print(fake_table)
+  #   fake_output = fake_capture.get()
+  #   assert output == fake_output
 
-  @unittest.skipIf(not xr.using_pjrt() or
-                   xu.getenv_as(xenv.PJRT_DEVICE, str) in ('CPU', 'TPU'),
-                   f"Requires PJRT_DEVICE set to `GPU`, `CUDA`, `ROCM`.")
-  def test_single_host_replicated_gpu(self):
-    from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
-    device = xm.xla_device()
-    num_devices = self.n_devices
-    mesh_shape = (1, num_devices)
-    device_ids = np.array(range(num_devices))
-    mesh = self._get_mesh(mesh_shape)
+  # @unittest.skipIf(not xr.using_pjrt() or
+  #                  xu.getenv_as(xenv.PJRT_DEVICE, str) in ('CPU', 'TPU'),
+  #                  f"Requires PJRT_DEVICE set to `GPU`, `CUDA`, `ROCM`.")
+  # def test_single_host_replicated_gpu(self):
+  #   from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
+  #   device = xm.xla_device()
+  #   num_devices = self.n_devices
+  #   mesh_shape = (1, num_devices)
+  #   device_ids = np.array(range(num_devices))
+  #   mesh = self._get_mesh(mesh_shape)
 
-    partition_spec_replicated = (None, None)
-    t = torch.randn(8, 32, device=device)
-    xs.mark_sharding(t, mesh, partition_spec_replicated)
-    sharding = torch_xla._XLAC._get_xla_sharding_spec(t)
-    generated_table = visualize_tensor_sharding(t)
-    console = rich.console.Console()
-    with console.capture() as capture:
-      console.print(generated_table)
-    output = capture.get()
+  #   partition_spec_replicated = (None, None)
+  #   t = torch.randn(8, 32, device=device)
+  #   xs.mark_sharding(t, mesh, partition_spec_replicated)
+  #   sharding = torch_xla._XLAC._get_xla_sharding_spec(t)
+  #   generated_table = visualize_tensor_sharding(t)
+  #   console = rich.console.Console()
+  #   with console.capture() as capture:
+  #     console.print(generated_table)
+  #   output = capture.get()
 
-    color = None
-    text_color = None
-    fake_table = rich.table.Table(
-        show_header=False,
-        show_lines=True,
-        padding=0,
-        highlight=True,
-        pad_edge=False,
-        box=rich.box.SQUARE)
-    col = []
-    col.append(
-        rich.padding.Padding(
-            rich.align.Align('GPU [0]', "center", vertical="middle"),
-            (0, 5, 1, 4),
-            style=rich.style.Style(bgcolor=color, color=text_color)))
-    fake_table.add_row(*col)
-    fake_console = rich.console.Console()
-    with fake_console.capture() as fake_capture:
-      fake_console.print(fake_table)
-    fake_output = fake_capture.get()
-    assert output == fake_output
+  #   color = None
+  #   text_color = None
+  #   fake_table = rich.table.Table(
+  #       show_header=False,
+  #       show_lines=True,
+  #       padding=0,
+  #       highlight=True,
+  #       pad_edge=False,
+  #       box=rich.box.SQUARE)
+  #   col = []
+  #   col.append(
+  #       rich.padding.Padding(
+  #           rich.align.Align('GPU [0]', "center", vertical="middle"),
+  #           (1, 1, 1, 1),
+  #           style=rich.style.Style(bgcolor=color, color=text_color)))
+  #   fake_table.add_row(*col)
+  #   fake_console = rich.console.Console()
+  #   with fake_console.capture() as fake_capture:
+  #     fake_console.print(fake_table)
+  #   fake_output = fake_capture.get()
+  #   assert output == fake_output
 
 
 if __name__ == '__main__':
