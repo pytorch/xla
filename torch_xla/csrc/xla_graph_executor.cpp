@@ -146,8 +146,11 @@ void XLAGraphExecutor::DeviceContextArena::SaveGraphAsString(
       "";
   if (should_save_graph &&
       hash_to_graph_map.find(hash) == hash_to_graph_map.end()) {
-    hash_to_graph_map[hash] =
-        DebugUtil::GetTensorsGraphInfo(tensors, indices, format);
+    std::stringstream ss;
+    ss << DebugUtil::GetTensorsGraphInfo(tensors, indices, format);
+    ss << "Graph Hash: " << torch::lazy::HashToString(hash)
+       << "\n\n## END_GRAPH\n\n";
+    hash_to_graph_map[hash] = ss.str();
   }
 }
 
