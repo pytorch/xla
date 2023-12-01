@@ -2,8 +2,10 @@
 
 #include <torch/csrc/lazy/core/ir_metadata.h>
 
+#include <iostream>
 #include <sstream>
 #include <stdexcept>
+#include <string_view>
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_join.h"
@@ -14,9 +16,11 @@
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/shape_helper.h"
+#include "torch_xla/csrc/stack_frame_index_builder.h"
 #include "torch_xla/csrc/unwrap_data.h"
 
 namespace torch_xla {
+
 namespace {
 
 class HloMetadataSetter {
@@ -51,13 +55,20 @@ class HloMetadataSetter {
     std::string op_type =
         absl::StrReplaceAll(node->op().ToString(), {{":", "_"}});
     metadata.set_op_type(op_type);
+
     const torch::lazy::MetaData& nmeta = node->metadata();
+
+    const CustomOpNameMetaData* custom_opname_meta =
+        dynamic_cast<const CustomOpNameMetaData*>(node->user_metadata());
+
     std::string op_name_prefix;
+    size_t max_stack_depth = nmeta.frame_info.size();
 
-    const XlaNode* xla_node_cast = dynamic_cast<const XlaNode*>(node);
-
-    if (xla_node_cast != nullptr && !xla_node_cast->custom_op_name().empty()) {
-      op_name_prefix = xla_node_cast->custom_op_name();
+    if (custom_opname_meta != nullptr) {
+      op_name_prefix = custom_opname_meta->op_name_prefix;
+      max_stack_depth = custom_opname_meta->max_stack_depth;
+    } else {
+      TF_LOG(WARNING) << "No custom opname metadata! op_type=" << op_type;
     }
 
     if (!nmeta.scope.empty()) {
@@ -66,12 +77,10 @@ class HloMetadataSetter {
     }
     metadata.set_op_name(absl::StrCat(op_name_prefix, op_type));
 
-    if (!nmeta.frame_info.empty()) {
-      const torch::lazy::SourceLocation& frame = nmeta.frame_info.front();
+    // Sets file, line and stack_frame_id in metadata
+    loctx->stack_frame_index_builder()->AddStackFrameLocations(
+        nmeta.frame_info, max_stack_depth, metadata);
 
-      metadata.set_source_file(frame.file);
-      metadata.set_source_line(frame.line);
-    }
     loctx->builder()->SetOpMetadata(std::move(metadata));
   }
 
@@ -82,14 +91,17 @@ class HloMetadataSetter {
 
 LoweringContext::LoweringContext(const std::string& name,
                                  torch::lazy::BackendDevice device)
-    : torch::lazy::LoweringContext(name, device), builder_(name) {}
+    : torch::lazy::LoweringContext(name, device),
+      builder_(name),
+      stack_frame_index_builder_(std::make_shared<StackFrameIndexBuilder>()) {}
 
 LoweringContext::LoweringContext(
     const std::string& name, torch::lazy::BackendDevice device,
     c10::ArrayRef<const torch::lazy::Node*> post_order,
     torch::lazy::Util::EmissionMap emit_status)
     : torch::lazy::LoweringContext(name, device, {}, emit_status),
-      builder_(name) {
+      builder_(name),
+      stack_frame_index_builder_(std::make_shared<StackFrameIndexBuilder>()) {
   for (auto node : post_order) {
     LowerNode(node);
   }
@@ -143,16 +155,32 @@ void LoweringContext::SetResult(size_t index, xla::XlaOp op) {
 }
 
 xla::StatusOr<xla::XlaComputation> LoweringContext::BuildXla() {
+  xla::StatusOr<xla::XlaComputation> xla;
   if (!root_tuple_.empty()) {
     xla::XlaOp root = xla::Tuple(builder(), root_tuple_);
-    return builder()->Build(root);
+    xla = builder()->Build(root);
+  } else {
+    xla = builder()->Build();
   }
-  return builder()->Build();
+
+  if (xla.ok()) {
+    (*xla->mutable_proto()->mutable_stack_frame_index()) =
+        stack_frame_index_builder()->stack_frame_index();
+  }
+
+  return xla;
 }
 
 xla::StatusOr<xla::XlaComputation> LoweringContext::BuildXla(xla::XlaOp root) {
   XLA_CHECK(root_tuple_.empty());
-  return builder()->Build(root);
+  auto xla = builder()->Build(root);
+
+  if (xla.ok()) {
+    (*xla->mutable_proto()->mutable_stack_frame_index()) =
+        stack_frame_index_builder()->stack_frame_index();
+  }
+
+  return xla;
 }
 
 void LoweringContext::AssignOutputOp(const torch::lazy::Output& output,
@@ -265,6 +293,7 @@ void LoweringContext::AddParameter(const torch::lazy::Output& output,
 
 torch::lazy::ComputationPtr LoweringContext::Build() {
   xla::XlaComputation xla_computation = ConsumeValue(BuildXla());
+
   return std::make_shared<runtime::ComputationClient::Computation>(
       builder_.name(), std::move(xla_computation), device_);
 }

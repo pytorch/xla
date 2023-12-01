@@ -897,20 +897,15 @@ void XLATensor::MarkDynamicDimension(uint32_t dim) {
   xla_node->MarkDynamicDimension(dim);
 }
 
-void XLATensor::SetCustomOpName(const std::string& op_name) {
-  auto* xla_node = dynamic_cast<XlaNode*>(CurrentIrValue().node.get());
-  if (xla_node != nullptr) {
-    xla_node->SetCustomOpName(op_name);
+bool XLATensor::SetNodeUserMetadata(
+    std::shared_ptr<torch::lazy::UserMetaData> metadata) {
+  auto* node = dynamic_cast<XlaNode*>(CurrentIrValue().node.get());
+  // auto* node = dynamic_cast<torch::lazy::Node*>(GetIrValue().node.get());
+  if (node != nullptr) {
+    node->SetUserMetadataForSubGraph(metadata);
+    return true;
   }
-}
-
-const std::string& XLATensor::GetCustomOpName() const {
-  auto* xla_node = dynamic_cast<XlaNode*>(CurrentIrValue().node.get());
-  if (xla_node != nullptr) {
-    return xla_node->custom_op_name();
-  } else {
-    return "";
-  }
+  return false;
 }
 
 }  // namespace torch_xla

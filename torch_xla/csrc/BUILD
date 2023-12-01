@@ -296,10 +296,12 @@ ptxla_cc_library(
     srcs = [
         "ir.cpp",
         "lowering_context.cpp",
+        "stack_frame_index_builder.cpp",
     ],
     hdrs = [
         "ir.h",
         "lowering_context.h",
+        "stack_frame_index_builder.h",
     ],
     deps = [
         ":device",

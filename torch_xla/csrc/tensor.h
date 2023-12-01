@@ -3,6 +3,7 @@
 
 #include <c10/core/SymNodeImpl.h>
 #include <torch/csrc/autograd/variable.h>
+#include <torch/csrc/lazy/core/ir_metadata.h>
 #include <torch/csrc/lazy/core/ir_util.h>
 
 #include <memory>
@@ -285,9 +286,11 @@ class XLATensor : public torch::lazy::LazyTensor {
   // Override to enable SPMD.
   void AssignIrValue(torch::lazy::Value ir_value) const final;
 
-  // Set custom op name on XlaNode
-  void SetCustomOpName(const std::string& op_name);
-  const std::string& GetCustomOpName() const;
+  // Set custom op name on base Node type (since not all nodes are XlaNode),
+  // additionally when using TorchDispatch - e.g. to set a custom op name we
+  // end up adding additional frames in stack frame debug - this limits
+  // stack depth
+  bool SetNodeUserMetadata(std::shared_ptr<torch::lazy::UserMetaData> metadata);
 
  private:
   XLATensor(const at::Tensor& tensor, const torch::lazy::BackendDevice& device);

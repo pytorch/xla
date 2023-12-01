@@ -9,6 +9,12 @@ from torch.utils._python_dispatch import TorchDispatchMode
 class_count = defaultdict(int)
 instance_count = dict()
 
+# This is a sample implementation for readying object
+# hierachies from a source stack usng a TorchDispatch
+# interceptor.  We then set the node op_name in XLA
+# via the output tensor and direct XLA to ignore stack
+# frames added (due to TorchDispatch) during lowering
+
 
 def GetInstancePlaceHolder(class_type, obj):
   global class_count
@@ -172,11 +178,21 @@ def CleanNames(names):
 
 def GetAllObjectAndClassNames(frame):
   names = []
+  frame_count = 0
+  self_found = False
   while frame is not None:
+    if __file__ == frame.f_code.co_filename:
+      self_found = True
+
+    if not self_found:
+      frame = frame.f_back
+      continue
+
     name = GetClassNameAndObjFromFrame(frame)
     if len(name) > 0:
       names.append(name)
     frame = frame.f_back
+    frame_count += 1
 
   names.reverse()
 
@@ -187,7 +203,24 @@ def GetAllObjectAndClassNames(frame):
   if len(output) > 0:
     output += "/"
 
-  return output
+  return output, frame_count - 1
+
+
+class StackLayerSignature:
+
+  def __init__(self, filename, func, line):
+    self.filename = filename
+    self.func = func
+    self.line = line
+
+  def __str__(self):
+    return f"{self.filename}|{self.func}|{self.line}"
+
+  def __repr__(self):
+    return str(self)
+
+  def __eq__(self, ref):
+    return self.filename == ref.filename and self.func == ref.func and self.line == ref.line
 
 
 class CustomOpNameLowering(TorchDispatchMode):
@@ -198,16 +231,38 @@ class CustomOpNameLowering(TorchDispatchMode):
   def __enter__(self):
     self._old_ir_debug = torch_xla._XLAC._get_ir_debug()
     torch_xla._XLAC._set_ir_debug(True)
+    self.stack_sigs = []
     return super().__enter__()
 
   def __exit__(self, exc_type, exc_val, exc_tb):
     torch_xla._XLAC._set_ir_debug(self._old_ir_debug)
+    del self.stack_sigs
     super().__exit__(exc_type, exc_val, exc_tb)
+
+  def add_stack_sig(self, frame, depth):
+    stack = []
+    for s in inspect.getouterframes(frame):
+      sls = StackLayerSignature(s.filename, s.function, s.lineno)
+      stack.append(sls)
+
+    # Pop the top two stack laters
+    while len(stack) > depth:
+      stack.pop(0)
+
+    assert len(stack) == depth
+
+    self.stack_sigs.append(stack)
+
+    return stack
 
   def __torch_dispatch__(self, func, types, args=(), kwargs={}):
     res = func(*args, **kwargs)
     if 'xla' in str(res.device):
       frame = inspect.currentframe()
-      prefix = GetAllObjectAndClassNames(frame)
-      torch_xla._XLAC._set_xla_custom_op_name(res, prefix)
+      prefix, depth = GetAllObjectAndClassNames(frame)
+      self.depth = depth
+      self.add_stack_sig(frame, self.depth)
+
+      assert torch_xla._XLAC._set_xla_custom_op_name_prefix(
+          res, prefix, self.depth), "Custom op set failed"
     return res
