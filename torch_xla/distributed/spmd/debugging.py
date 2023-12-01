@@ -145,8 +145,9 @@ def visualize_sharding(sharding: str,
       color = None
       text_color = None
 
-      padding = (top_padding, right_padding, bottom_padding, left_padding)
-      padding = tuple(max(x, 0) for x in padding)
+      # padding = (top_padding, right_padding, bottom_padding, left_padding)
+      # padding = tuple(max(x, 0) for x in padding)
+      padding = (1, 1, 1, 1)
 
       col.append(
           rich.padding.Padding(
