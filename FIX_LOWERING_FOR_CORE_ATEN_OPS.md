@@ -23,7 +23,16 @@ This subtest calls the torch_xla version of the op. If you've made changes to lo
 
 ### `torch_xla_diff`
 
-This subtest compares the output of the op between torch and torch_xla. If this subtest fails, it implies that your lowering runs successfully but contains a bug and/or logical error. We recommend you to review your lowering code. And again, feel free to leave a comment in your assigned GitHub issue if you're blocked and/or unable to debug further.
+This subtest compares the output of the op between torch and torch_xla.
+If this subtest fails, it implies that your lowering runs successfully 
+but produced a different result than torch eager mode.
+
+If the test uses 16-bit floats (float16, bfloat16); This is very likely
+that the tolerances that we give to `torch.allclose` to compare was to 
+strict. You can relax it a bit. Take a look at [this issue](https://github.com/pytorch/xla/issues/5934) of one such example.
+
+If the result torchxla produces is totally different than what torch produces, that means it's a bug in lowering code; and probably need
+more work. Feel free to tag more people (such as qihqi to look).
 
 ### `can_export`, `can_convert_to_stablehlo`, `stablehlo_can_run`, `stablehlo_diff`
 
