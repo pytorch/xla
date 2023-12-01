@@ -505,13 +505,19 @@ IfrtComputationClient::ExecuteReplicated(
       arguments.size());
   {
     absl::BlockingCounter counter(arguments.size());
-    pool_.ParallelFor(arguments.size(), 10000, [&](int64_t start, int64_t end) {
-      for (int32_t i = start; i < end; ++i) {
-        auto ifrt_data = std::dynamic_pointer_cast<IfrtData>(arguments[i]);
-        argument_handles[i] = ifrt_data->buffer;
-        counter.DecrementCount();
-      }
-    });
+
+    // Cost to handle one input argument. See tsl::ThreadPool::ParallelFor
+    // documentation
+    static const int32_t argument_handle_cost_ns = 1000;
+    pool_.ParallelFor(arguments.size(), argument_handle_cost_ns,
+                      [&](int64_t start, int64_t end) {
+                        for (int32_t i = start; i < end; ++i) {
+                          auto ifrt_data =
+                              std::dynamic_pointer_cast<IfrtData>(arguments[i]);
+                          argument_handles[i] = ifrt_data->buffer;
+                          counter.DecrementCount();
+                        }
+                      });
     counter.Wait();
   }
 
@@ -553,13 +559,18 @@ IfrtComputationClient::ExecuteReplicated(
   std::vector<ComputationClient::DataPtr> data_handles(outputs.size());
   {
     absl::BlockingCounter counter(outputs.size());
-    pool_.ParallelFor(outputs.size(), 10000, [&](int64_t start, int64_t end) {
-      for (int32_t i = start; i < end; ++i) {
-        data_handles[i] = std::make_shared<IfrtData>(
-            spmd_device_str, outputs[i], output_shardings[i]);
-        counter.DecrementCount();
-      }
-    });
+
+    // Cost to handle one output. See tsl::ThreadPool::ParallelFor
+    // documentation.
+    static const int32_t result_handle_cost_ns = 2000;
+    pool_.ParallelFor(outputs.size(), result_handle_cost_ns,
+                      [&](int64_t start, int64_t end) {
+                        for (int32_t i = start; i < end; ++i) {
+                          data_handles[i] = std::make_shared<IfrtData>(
+                              spmd_device_str, outputs[i], output_shardings[i]);
+                          counter.DecrementCount();
+                        }
+                      });
     counter.Wait();
   }
 
