@@ -12,7 +12,10 @@ from typing import Any, Dict, List, Set, Tuple
 import torch
 from torch.fx.passes.infra.partitioner import CapabilityBasedPartitioner
 from torch.fx.passes.utils.fuser_utils import topo_sort
-from torch.fx.passes.constructor_mover_pass import ConstructorMoverPass
+
+import torch._inductor
+from torch._inductor.fx_passes.post_grad import ConstructorMoverPass
+
 import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as metrics
@@ -458,7 +461,7 @@ class InputCollector(torch.fx.Interpreter):
 class XLAConstructorMoverPass(ConstructorMoverPass):
 
   def __init__(self):
-    super().__init__("xla", inplace=True)
+    super().__init__("xla")
 
   def allow_cpu_device(self, node: torch.fx.Node):
     if super().allow_cpu_device(node):
@@ -486,7 +489,7 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
   xm.mark_step()
 
   # Move tensor constructor nodes that do not target XLA devices.
-  XLAConstructorMoverPass()(xla_model)
+  XLAConstructorMoverPass()(xla_model.graph)
 
   # If a model's `forward` function has an in-place op that acts on its `self.tensor`, the
   # `self.tensor` is not included as a part of the `xla_args` and does not get materialized.
