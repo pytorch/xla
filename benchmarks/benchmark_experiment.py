@@ -177,8 +177,7 @@ class BenchmarkExperiment:
 
   @property
   def filename_str(self):
-    return "-".join(
-        str(x) if x is not None else 'None' for x in self.to_dict().values())
+    return "-".join(str(v) for v in self.to_dict().values()).replace(" ", "")
 
   def to_dict(self):
     d = OrderedDict()
