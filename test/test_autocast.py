@@ -12,7 +12,6 @@ import collections
 import unittest
 from torch.testing._internal.autocast_test_lists import AutocastTestLists
 from torch_xla.amp import autocast, GradScaler
-import time
 
 
 class AutocastTPUTestLists:
@@ -270,6 +269,7 @@ class TestAutocastBase(unittest.TestCase):
                                module=torch,
                                add_kwargs=None,
                                autocast_dtype=None):
+    # helper to cast args
     def cast(val, to_type):
       if isinstance(val, torch.Tensor):
         return val.to(to_type) if val.is_floating_point() else val
@@ -346,7 +346,6 @@ class TestAutocastBase(unittest.TestCase):
                         "torch.{} result did not match control".format(op))
       self.assertTrue(self.is_autocast_enabled())
     self.assertFalse(self.is_autocast_enabled())
-    
 
 
 @unittest.skipIf(not xm.get_xla_supported_devices("CUDA"),
@@ -399,7 +398,6 @@ class TestAutocastCuda(TestAutocastBase):
     ]
     for op_with_args in bf16_test_list:
       op, args, maybe_kwargs = self.args_maybe_kwargs(op_with_args)
-      print('op=', op)
       self._run_autocast_outofplace(
           op,
           args,
@@ -418,8 +416,6 @@ class TestAutocastCuda(TestAutocastBase):
 
   def test_autocast_nn_fp32(self):
     for op, args in TestAutocastCuda.get_autocast_list('nn_fp32'):
-      print("op=", op)
-      # print("op=", op, ', args=', args)
       self._run_autocast_outofplace(
           op, args, torch.float32, module=torch._C._nn)
 
