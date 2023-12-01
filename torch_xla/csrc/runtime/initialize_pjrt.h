@@ -6,7 +6,8 @@
 namespace torch_xla {
 namespace runtime {
 
-std::unique_ptr<xla::PjRtClient> InitializePjRt(const std::string& device_type);
+std::tuple<std::unique_ptr<xla::PjRtClient>, std::unique_ptr<XlaCoordinator>>
+InitializePjRt(const std::string& device_type);
 
 }
 }  // namespace torch_xla

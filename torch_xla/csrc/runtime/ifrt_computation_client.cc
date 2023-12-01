@@ -96,8 +96,10 @@ std::vector<std::string> IfrtComputationClient::PjRtDevicesToString(
 
 IfrtComputationClient::IfrtComputationClient() {
   std::string device_type = sys_util::GetEnvString(env::kEnvPjRtDevice, "");
-  client_ =
-      xla::ifrt::PjRtClient::Create(std::move(InitializePjRt(device_type)));
+  std::unique_ptr<xla::PjRtClient> pjrt_client;
+  std::tie(pjrt_client, coordinator_) = std::move(InitializePjRt(device_type));
+
+  client_ = xla::ifrt::PjRtClient::Create(std::move(pjrt_client));
 
   // PjRtDevice IDs are not guaranteed to be dense, so we need to track
   // a device's global ordinal separately from its device ID. Order the

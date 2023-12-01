@@ -35,9 +35,10 @@ xla::GpuAllocatorConfig GetGpuAllocatorConfig() {
 
 }  // namespace
 
-std::unique_ptr<xla::PjRtClient> InitializePjRt(
-    const std::string& device_type) {
+std::tuple<std::unique_ptr<xla::PjRtClient>, std::unique_ptr<XlaCoordinator>>
+InitializePjRt(const std::string& device_type) {
   std::unique_ptr<xla::PjRtClient> client;
+  std::unique_ptr<XlaCoordinator> coordinator;
 
   if (device_type == "CPU") {
     TF_VLOG(1) << "Initializing PjRt CPU client...";
@@ -78,10 +79,10 @@ std::unique_ptr<xla::PjRtClient> InitializePjRt(
         std::make_optional<std::set<int>>(std::set{local_process_rank});
     if (global_world_size > 1) {
       // Use the XlaCoordinator as the distributed key-value store.
-      coordinator_ = std::make_unique<XlaCoordinator>(
+      coordinator = std::make_unique<XlaCoordinator>(
           global_process_rank, global_world_size, master_addr, port);
       std::shared_ptr<xla::DistributedRuntimeClient> distributed_client =
-          coordinator_->GetClient();
+          coordinator->GetClient();
       std::string key_prefix = "gpu:";
       kv_get = [distributed_client, key_prefix](
                    std::string_view k,
@@ -127,7 +128,7 @@ std::unique_ptr<xla::PjRtClient> InitializePjRt(
 
   XLA_CHECK(client.get() != nullptr);
 
-  return std::move(client);
+  return {std::move(client), std::move(coordinator)};
 }
 
 }  // namespace runtime

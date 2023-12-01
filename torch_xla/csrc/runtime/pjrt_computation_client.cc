@@ -120,7 +120,7 @@ std::vector<std::string> PjRtComputationClient::PjRtDevicesToString(
 
 PjRtComputationClient::PjRtComputationClient() {
   std::string device_type = sys_util::GetEnvString(env::kEnvPjRtDevice, "");
-  client_ = std::move(InitializePjRt(device_type));
+  std::tie(client_, coordinator_) = std::move(InitializePjRt(device_type));
 
   // PjRtDevice IDs are not guaranteed to be dense, so we need to track
   // a device's global ordinal separately from its device ID. Order the
