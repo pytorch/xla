@@ -228,7 +228,7 @@ class AutocastCudaTestUnsupportedLists(object):
 
 
 class TestAutocastBase(unittest.TestCase):
-  
+
   @classmethod
   def setUpClass(cls):
     cls.autocast_lists = AutocastTestLists(torch.device(xm.xla_device()))
@@ -394,7 +394,8 @@ class TestAutocastCuda(TestAutocastBase):
 
   def test_autocast_torch_bf16(self):
     bf16_test_list = [
-        tp for tp in getattr(TestAutocastCuda.autocast_lists_extra, 'torch_bf16')
+        tp
+        for tp in getattr(TestAutocastCuda.autocast_lists_extra, 'torch_bf16')
     ]
     for op_with_args in bf16_test_list:
       op, args, maybe_kwargs = self.args_maybe_kwargs(op_with_args)
@@ -406,7 +407,8 @@ class TestAutocastCuda(TestAutocastBase):
           autocast_dtype=torch.bfloat16)
 
   def test_autocast_torch_need_autocast_promote(self):
-    for op, args in TestAutocastCuda.get_autocast_list('torch_need_autocast_promote'):
+    for op, args in TestAutocastCuda.get_autocast_list(
+        'torch_need_autocast_promote'):
       self._run_autocast_outofplace(op, args, torch.float32)
 
   def test_autocast_torch_expect_builtin_promote(self):
@@ -428,6 +430,7 @@ class TestAutocastCuda(TestAutocastBase):
         'methods_expect_builtin_promote'):
       self._run_autocast_outofplace(
           op, args, torch.float32, module=None, out_type=out_type)
+
 
 @unittest.skipIf(not xm.get_xla_supported_devices("TPU"), f"TPU autocast test.")
 class TestAutocastTPU(TestAutocastBase):
@@ -451,7 +454,8 @@ class TestAutocastTPU(TestAutocastBase):
           op, args, torch.float32, add_kwargs=maybe_kwargs)
 
   def test_autocast_torch_need_autocast_promote(self):
-    for op, args in TestAutocastTPU.get_autocast_list('torch_need_autocast_promote'):
+    for op, args in TestAutocastTPU.get_autocast_list(
+        'torch_need_autocast_promote'):
       self._run_autocast_outofplace(op, args, torch.float32)
 
   def test_autocast_torch_expect_builtin_promote(self):
