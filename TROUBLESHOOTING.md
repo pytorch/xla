@@ -259,6 +259,10 @@ only be enabled for debugging.
 * ```XLA_SYNC_WAIT```: Forces the XLA tensor sync operation to wait for its completion, before
   moving to the next step.
 
+* ```XLA_USE_EAGER_DEBUG_MODE```: Forces the XLA tensor to execute eagerly, meaning compile and execute the torch operations one
+  by one. This is useful to bypass the long compilation time but overall step time will be a lot slower and memory usage will be higher
+  since all compiler optimizaiton will be skipped.
+
 * ```XLA_USE_BF16```: If set to 1, transforms all the _PyTorch_ _Float_ values into _BiFloat16_
   when sending to the _TPU_ device. Note that when using `XLA_USE_BF16=1` tensor arithmetic will
   be done in reduced precision and so tensors will not be accurate if accumulated over time.
@@ -278,28 +282,12 @@ only be enabled for debugging.
 * ```XLA_USE_F16```: If set to 1, transforms all the _PyTorch_ _Float_ values into _Float16_
   (_PyTorch_ _Half_ type) when sending to devices which supports them.
 
-* ```XLA_USE_32BIT_LONG```: If set to 1, maps _PyTorch_ _Long_ types to _XLA_ 32bit type.
-  On the versions of the TPU HW at the time of writing, 64bit integer computations are
-  expensive, so setting this flag might help. It should be verified by the user that truncating
-  to 32bit values is a valid operation according to the use of _PyTorch_ _Long_ values in it.
-
 * ```TF_CPP_LOG_THREAD_ID```: If set to 1, the TF logs will show the thread ID
   helping with debugging multithreaded processes.
 
 * ```TF_CPP_VMODULE```: Environment variable used for TF VLOGs and takes the
   form of `TF_CPP_VMODULE=name=value,...`. Note that for VLOGs you must set
-  `TF_CPP_MIN_LOG_LEVEL=0`. For PyTorch/XLA using a configuration like
-  `TF_CPP_VMODULE=tensor=5` would enable logging such as:
-
-  ```
-  2019-10-03 17:23:56.419040: I   27891 torch_xla/csrc/tensor.cpp:1104]
-  Executing IR graph hash 4211381954965020633 on device TPU:3 done!
-  2019-10-03 17:23:56.419448: I   27890 torch_xla/csrc/tensor.cpp:1104]
-  Executing IR graph hash 15483856951158150605 on device TPU:5 done!
-  2019-10-03 17:23:56.419539: I   27896 torch_xla/csrc/tensor.cpp:1104]
-  Executing IR graph hash 4211381954965020633 on device TPU:4 done!
-  ...
-  ```
+  `TF_CPP_MIN_LOG_LEVEL=0`.
 
 * ```TF_CPP_MIN_LOG_LEVEL```: Level to print messages for. `TF_CPP_MIN_LOG_LEVEL=0` will turn
   on INFO logging, `TF_CPP_MIN_LOG_LEVEL=1` WARNING and so on. Our PyTorch/XLA `TF_VLOG` uses
@@ -308,3 +296,19 @@ only be enabled for debugging.
 * ```XLA_DUMP_HLO_GRAPH```: If set to `=1` in case of a compilation or execution error the
   offending HLO graph will be dumped as part of the runtime error raised by `xla_util.cc`.
 
+### Common Debugging Environment Variables Combinations
+
+* Record the graph execution in the IR format
+  ```
+  XLA_SAVE_TENSORS_FMT="hlo" XLA_SAVE_TENSORS_FILE="/tmp/save1.hlo"
+  ```
+
+* Record the graph execution in the HLO format
+  ```
+  XLA_SAVE_TENSORS_FMT="text" XLA_SAVE_TENSORS_FILE="/tmp/save1.ir"
+  ```
+
+* Show debugging VLOG for runtime and graph compilation/execution
+  ```
+  TF_CPP_MIN_LOG_LEVEL=0 TF_CPP_VMODULE="xla_graph_executor=5,pjrt_computation_client=3"
+  ```
