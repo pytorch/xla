@@ -130,23 +130,17 @@ def visualize_sharding(sharding: str,
     col = []
     for j in range(num_cols):
       entry = f"{device_kind} " + str(slices[i, j])
-      width, maybe_height = widths, heights  # widths[i, j], heights[i, j]
+      width, maybe_height = widths, heights
       width = int(width * base_width * height_to_width_ratio)
       if maybe_height is None:
         height = 1
       else:
         height = int(maybe_height * base_height)
       width = min(max(width, min_width), max_width)
-      left_padding, remainder = divmod(width - len(entry) - 2, 2)
-      right_padding = left_padding + remainder
-      top_padding, remainder = divmod(height - 2, 2)
-      bottom_padding = top_padding + remainder
 
       color = None
       text_color = None
 
-      # padding = (top_padding, right_padding, bottom_padding, left_padding)
-      # padding = tuple(max(x, 0) for x in padding)
       padding = (1, 1, 1, 1)
 
       col.append(
