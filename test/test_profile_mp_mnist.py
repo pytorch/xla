@@ -1,6 +1,29 @@
 """Fork of test_train_mp_mnist.py to demonstrate how to profile workloads."""
 import args_parse
 
+profile_opts = {
+    '--profile_step': {
+        'type': int,
+        'default': -1,
+        'help': 'Step at which to trigger a profile programmatically',
+    },
+    '--profile_epoch': {
+        'type': int,
+        'default': -1,
+        'help': 'Epoch at which to trigger a profile programmatically',
+    },
+    '--profile_logdir': {
+        'type': str,
+        'default': None,
+        'help': 'Path to store programmatically-triggered profiles',
+    },
+    '--profile_duration_ms': {
+        'type': int,
+        'default': 5000,
+        'help': 'Duration of programmatically-triggered profile captures'
+    },
+}
+
 FLAGS = args_parse.parse_common_options(
     datadir='/tmp/mnist-data',
     batch_size=128,
@@ -8,7 +31,8 @@ FLAGS = args_parse.parse_common_options(
     lr=0.01,
     target_accuracy=98.0,
     num_epochs=18,
-    profiler_port=9012)
+    profiler_port=9012,
+    opts=profile_opts.items())
 
 import os
 import shutil
@@ -129,11 +153,20 @@ def train_mnist(flags,
   loss_fn = nn.NLLLoss()
 
   server = xp.start_server(flags.profiler_port)
+  profile_step = flags.profile_step
+  profile_epoch = flags.profile_epoch
 
-  def train_loop_fn(loader):
+  def train_loop_fn(loader, epoch):
     tracker = xm.RateTracker()
     model.train()
     for step, (data, target) in enumerate(loader):
+      if epoch == profile_epoch and step == profile_step and xm.is_master_ordinal(
+      ):
+        # Take a profile in a background thread
+        xp.trace_detached(
+            f'localhost:{flags.profiler_port}',
+            flags.profile_logdir,
+            duration_ms=flags.profile_duration_ms)
       if dynamic_graph:
         # testing purpose only: dynamic batch size and graph.
         index = max(-step, -flags.batch_size + 1)  # non-empty
@@ -177,7 +210,7 @@ def train_mnist(flags,
   accuracy, max_accuracy = 0.0, 0.0
   for epoch in range(1, flags.num_epochs + 1):
     xm.master_print('Epoch {} train begin {}'.format(epoch, test_utils.now()))
-    train_loop_fn(train_device_loader)
+    train_loop_fn(train_device_loader, epoch)
     xm.master_print('Epoch {} train end {}'.format(epoch, test_utils.now()))
 
     accuracy = test_loop_fn(test_device_loader)
