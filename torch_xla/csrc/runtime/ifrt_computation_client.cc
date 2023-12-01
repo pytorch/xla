@@ -97,7 +97,7 @@ std::vector<std::string> IfrtComputationClient::PjRtDevicesToString(
 IfrtComputationClient::IfrtComputationClient() {
   std::string device_type = sys_util::GetEnvString(env::kEnvPjRtDevice, "");
   std::unique_ptr<xla::PjRtClient> pjrt_client;
-  std::tie(pjrt_client, coordinator_) = std::move(InitializePjRt(device_type));
+  std::tie(pjrt_client, coordinator_) = InitializePjRt(device_type);
 
   client_ = xla::ifrt::PjRtClient::Create(std::move(pjrt_client));
 
