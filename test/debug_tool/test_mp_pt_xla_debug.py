@@ -38,8 +38,8 @@ def _mp_fn(index):
     # 1. Python Frame Triggered Execution:
     # 2. ....
     # 3. empty line
-    assert(len(frames[0].split('\n')) == max_frame + 3)
-    assert(len(frames[1].split('\n')) == max_frame + 3)
+    assert (len(frames[0].split('\n')) == max_frame + 3)
+    assert (len(frames[1].split('\n')) == max_frame + 3)
 
 
 if __name__ == '__main__':

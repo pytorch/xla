@@ -1,6 +1,7 @@
 import os
 from typing import NamedTuple
 
+
 def check_env_flag(name, default=''):
   return os.getenv(name, default).upper() in ['ON', '1', 'YES', 'TRUE', 'Y']
 
@@ -39,6 +40,7 @@ def extract_graph_infos(lines):
       infos.append(GraphInfo(hash, int(num_input), int(num_output)))
 
   return infos
+
 
 def extract_python_frames(lines):
   frames = []
