@@ -115,13 +115,12 @@ class XLAShardedTensor(torch.Tensor):
   # which results from the sharding.
   @property
   def local_shards(self) -> List[XLAShard]:
-    shards, devices = torch_xla._XLAC._get_local_shards(self.global_tensor)
-    replica_and_indices = torch_xla._XLAC._get_local_shard_replica_and_indices(
-        self.global_tensor)
-    zipped = zip(shards, replica_and_indices, devices)
+    shard_dev = torch_xla._XLAC._get_local_shards([self.global_tensor])[0]
+    replica_ind = torch_xla._XLAC._get_local_shard_replica_and_indices(
+        [self.global_tensor])[0]
     return [
         XLAShard(data, indices, dev, replica)
-        for data, (replica, indices), dev in zipped
+        for (data, dev), (replica, indices) in zip(shard_dev, replica_ind)
     ]
 
   # Load the given list of local shards into the underlying tensor's data

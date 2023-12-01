@@ -3,8 +3,10 @@
 # their APIs.
 
 import dataclasses
+from itertools import starmap
 
 import torch
+import torch_xla
 import torch_xla.distributed.spmd as xs
 
 from torch.distributed.checkpoint.planner import SavePlan
@@ -24,7 +26,7 @@ from typing import (
 from torch.distributed.checkpoint.metadata import (MetadataIndex,
                                                    STATE_DICT_TYPE)
 from torch_xla.distributed.spmd import XLAShardedTensor, ShardingType
-from torch.utils._pytree import tree_map
+from torch.utils._pytree import tree_flatten, tree_unflatten
 
 PATH_ITEM = Union[str, int]
 OBJ_PATH = Tuple[PATH_ITEM, ...]
@@ -217,16 +219,59 @@ class _CpuShards:
   global_shape: torch.Size
 
 
+def _cpu_shards_from_tensors(tensors: List[torch.Tensor]):
+  """
+  Transfer all shards for the input tensors to CPU, and create a _CpuShards
+  object for each.
+  """
+
+  def create_cpu_shards(global_tensor: torch.Tensor,
+                        shards_dev: List[Tuple[torch.Tensor, str]],
+                        replica_ind: List[Tuple[int, Union[List[slice],
+                                                           type(Ellipsis)]]]):
+    shards = [
+        xs.XLAShard(data, indices, dev, replica)
+        for (data, dev), (replica, indices) in zip(shards_dev, replica_ind)
+    ]
+    global_shape = global_tensor.shape
+    return _CpuShards(shards=shards, global_shape=global_shape)
+
+  shards_devs = torch_xla._XLAC._get_local_shards(tensors)
+  rep_inds = torch_xla._XLAC._get_local_shard_replica_and_indices(tensors)
+  return list(starmap(create_cpu_shards, zip(tensors, shards_devs, rep_inds)))
+
+
 def _sharded_cpu_state_dict(state_dict: STATE_DICT_TYPE) -> STATE_DICT_TYPE:
   """
   Converts a state_dict on XLA device to a sharded state_dict on CPU.
   """
+  flat, tree_spec = tree_flatten(state_dict)
+  flat = [xs.wrap_if_sharded(x) for x in flat]
+  sharded = [
+      _unwrap_xla_sharded_tensor(x) for x in flat if _is_sharded_tensor(x)
+  ]
 
-  def move_state_dict_to_cpu(v):
-    v = xs.wrap_if_sharded(v)
-    if not _is_sharded_tensor(v):
-      v = _unwrap_xla_sharded_tensor(v)
-      return v.cpu() if isinstance(v, torch.Tensor) else v
-    return _CpuShards(shards=v.local_shards, global_shape=v.global_tensor.shape)
+  # Move all sharded tensors to CPU
+  cpu_shards = _cpu_shards_from_tensors(sharded)
+  cpu_shards_iter = iter(cpu_shards)
 
-  return tree_map(move_state_dict_to_cpu, state_dict)
+  # Move all unsharded tensors to CPU
+  unsharded_tensors = [
+      _unwrap_xla_sharded_tensor(x)
+      for x in flat
+      if isinstance(x, torch.Tensor) and not _is_sharded_tensor(x)
+  ]
+  cpu_tensors = torch_xla._XLAC._xla_get_cpu_tensors(unsharded_tensors)
+  cpu_tensors_iter = iter(cpu_tensors)
+
+  # Combine the results. The order between the iterators and the flattened
+  # state_dict is consistent, so simply interweave the iterators.
+  def to_cpu(x: Any):
+    if _is_sharded_tensor(x):
+      return next(cpu_shards_iter)
+    elif isinstance(x, torch.Tensor):
+      return next(cpu_tensors_iter)
+    return x
+
+  flat = [to_cpu(x) for x in flat]
+  return tree_unflatten(flat, tree_spec)

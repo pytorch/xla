@@ -1760,38 +1760,53 @@ void InitXlaModuleBindings(py::module m) {
   // contain any padding that was applied to ensure they all have the same
   // shape. Note that this padding is _not_ included in the global indices
   // returned by `_get_local_shard_replica_and_indices`.
+  // For each input tensor, returns a list of shards and their corresponding
+  // device string.
   m.def("_get_local_shards",
-        [](const at::Tensor& input)
-            -> std::tuple<std::vector<at::Tensor>, std::vector<std::string>> {
-          XLATensorPtr xtensor = bridge::GetXlaTensor(input);
-          XLA_CHECK(xtensor->GetXlaData() != nullptr)
-              << "Shard data is not available";
-          XLA_CHECK(xtensor->sharding_spec() != nullptr)
-              << "Tensor is not sharded";
-          XLA_CHECK(UseVirtualDevice())
-              << "Virtual device must be enabled to use _get_local_shards";
-          auto handle =
-              std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
-                  xtensor->GetXlaData());
-          std::vector<runtime::ComputationClient::DataPtr> shard_handles =
-              runtime::GetComputationClient()->GetDataShards(handle);
-          std::vector<at::Tensor> shards;
-          std::vector<std::string> str_devices;
-          shards.reserve(shard_handles.size());
-          str_devices.reserve(shard_handles.size());
-          // Tansfer shards from the device and create cpu tensors.
-          for (const runtime::ComputationClient::DataPtr shard_handle :
-               shard_handles) {
-            shards.push_back(
-                XlaDataToTensors({shard_handle},
-                                 {MaybeUpcastToHostTorchType(
-                                     shard_handle->shape().element_type())})
-                    .front());
-            str_devices.push_back(shard_handle->device());
+        [](const std::vector<at::Tensor>& input)
+            -> std::vector<std::vector<std::pair<at::Tensor, std::string>>> {
+          std::vector<runtime::ComputationClient::DataPtr> handles;
+          std::vector<at::ScalarType> element_types;
+          // Find all shard handles for transfer
+          for (auto& tensor : input) {
+            XLATensorPtr xtensor = bridge::GetXlaTensor(tensor);
+            XLA_CHECK(xtensor->GetXlaData() != nullptr)
+                << "Shard data is not available";
+            XLA_CHECK(xtensor->sharding_spec() != nullptr)
+                << "Tensor is not sharded";
+            auto handle =
+                std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
+                    xtensor->GetXlaData());
+            std::vector<runtime::ComputationClient::DataPtr> shard_handles =
+                runtime::GetComputationClient()->GetDataShards(handle);
+            handles.insert(handles.end(), shard_handles.begin(),
+                           shard_handles.end());
+            element_types.insert(element_types.end(), shard_handles.size(),
+                                 MaybeUpcastToHostTorchType(
+                                     shard_handles[0]->shape().element_type()));
           }
-          return std::make_tuple(shards, str_devices);
+
+          std::vector<at::Tensor> cpu_shards =
+              XlaDataToTensors(WrapXlaData(handles), element_types);
+          // Populate the resulting vector of shards and device strings
+          std::vector<std::vector<std::pair<at::Tensor, std::string>>> result;
+          int shards_per_tensor =
+              runtime::GetComputationClient()->GetLocalDevices().size();
+          result.reserve(cpu_shards.size() / shards_per_tensor);
+          for (int i = 0; i < cpu_shards.size(); i += shards_per_tensor) {
+            std::vector<std::pair<at::Tensor, std::string>> shard_devices;
+            for (int shard = 0; shard < shards_per_tensor; ++shard) {
+              at::Tensor cpu_shard = cpu_shards[i + shard];
+              std::string source_device = handles[i + shard]->device();
+              std::pair<at::Tensor, std::string> shard_dev(cpu_shard,
+                                                           source_device);
+              shard_devices.push_back(shard_dev);
+            }
+            result.push_back(shard_devices);
+          }
+          return result;
         });
-  // For each local shard, returns the tuple:
+  // For each input tensors' local shards, returns the tuple:
   //        (replica_id: int, indices: Union[List[Slice], Ellipsis]),
   // where `replica_id` is the replica the shard belongs to and `indices` index
   // into the global tensor. The value of `indices` is either a Python list of
@@ -1799,9 +1814,13 @@ void InitXlaModuleBindings(py::module m) {
   // is replicated. These indices will not reflect any padding that has been
   // applied to the shards. The order of the returned indices matches the order
   // of the shards returned from `_get_local_shards`.
-  m.def("_get_local_shard_replica_and_indices",
-        [](const at::Tensor& input) -> std::vector<std::pair<int, py::object>> {
-          XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+  m.def(
+      "_get_local_shard_replica_and_indices",
+      [](const std::vector<at::Tensor>& input_tensors)
+          -> std::vector<std::vector<std::pair<int, py::object>>> {
+        std::vector<std::vector<std::pair<int, py::object>>> result;
+        for (auto& tensor : input_tensors) {
+          XLATensorPtr xtensor = bridge::GetXlaTensor(tensor);
           XLA_CHECK(xtensor->sharding_spec() != nullptr)
               << "Tensor is not sharded";
           auto handle =
@@ -1817,18 +1836,18 @@ void InitXlaModuleBindings(py::module m) {
           auto shard_shape = ShardingUtil::GetShardShape(sharding_spec);
           auto replica_and_indices =
               ShardingUtil::GetShardReplicaAndIndicesForDevices(
-                  shard_shape, input.sizes().vec(), sharding, shard_devices);
+                  shard_shape, tensor.sizes().vec(), sharding, shard_devices);
 
           // Convert each vector<TensorIndex> to List[py::slice] or py::ellipsis
-          std::vector<std::pair<int, py::object>> result;
-          result.reserve(shard_devices.size());
+          std::vector<std::pair<int, py::object>> tensor_ind;
+          tensor_ind.reserve(shard_devices.size());
           for (auto& device_replica_and_indices : replica_and_indices) {
             auto& replica_id = device_replica_and_indices.first;
             auto& indices = device_replica_and_indices.second;
             XLA_CHECK(indices.size() > 0)
-                << "Unexpected empty shard indices for tensor " << input;
+                << "Unexpected empty shard indices for tensor " << tensor;
             if (indices[0].is_ellipsis()) {
-              result.push_back(std::make_pair(replica_id, py::ellipsis()));
+              tensor_ind.push_back(std::make_pair(replica_id, py::ellipsis()));
             } else {
               std::vector<py::object> index_slices;
               for (auto& tensor_index : indices) {
@@ -1840,12 +1859,14 @@ void InitXlaModuleBindings(py::module m) {
                 ssize_t step = slice.step().expect_int();
                 index_slices.push_back(py::slice(start, stop, step));
               }
-              result.push_back(
+              tensor_ind.push_back(
                   std::make_pair(replica_id, py::cast(index_slices)));
             }
           }
-          return result;
-        });
+          result.push_back(tensor_ind);
+        }
+        return result;
+      });
   // Load a list of local shards into an explicitly-sharded tensor. A shard must
   // be provided for each device.
   m.def("_load_local_shards", [](const at::Tensor& tensor,
