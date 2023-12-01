@@ -225,7 +225,7 @@
               
               
                 <div class="version">
-                  master (2.2.0+gitf3b75ba )
+                  master (2.2.0+git6c5b7b8 )
                 </div>
               
             
@@ -311,6 +311,7 @@
 <li><a class="reference internal" href="#xla-tensor-quirks">XLA Tensor Quirks</a></li>
 <li><a class="reference internal" href="#more-debugging-tools">More Debugging Tools</a><ul>
 <li><a class="reference internal" href="#environment-variables">Environment Variables</a></li>
+<li><a class="reference internal" href="#common-debugging-environment-variables-combinations">Common Debugging Environment Variables Combinations</a></li>
 </ul>
 </li>
 </ul>
@@ -2056,6 +2057,9 @@ saved at every step. Metrics will be appended to the file, if already existing.<
 error, the offending HLO graph will be saved.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">XLA_SYNC_WAIT</span></code>: Forces the XLA tensor sync operation to wait for its completion, before
 moving to the next step.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">XLA_USE_EAGER_DEBUG_MODE</span></code>: Forces the XLA tensor to execute eagerly, meaning compile and execute the torch operations one
+by one. This is useful to bypass the long compilation time but overall step time will be a lot slower and memory usage will be higher
+since all compiler optimizaiton will be skipped.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">XLA_USE_BF16</span></code>: If set to 1, transforms all the <em>PyTorch</em> <em>Float</em> values into <em>BiFloat16</em>
 when sending to the <em>TPU</em> device. Note that when using <code class="docutils literal notranslate"><span class="pre">XLA_USE_BF16=1</span></code> tensor arithmetic will
 be done in reduced precision and so tensors will not be accurate if accumulated over time.
@@ -2073,31 +2077,36 @@ precision where metrics stay in FP32.</p>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">XLA_USE_F16</span></code>: If set to 1, transforms all the <em>PyTorch</em> <em>Float</em> values into <em>Float16</em>
 (<em>PyTorch</em> <em>Half</em> type) when sending to devices which supports them.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">XLA_USE_32BIT_LONG</span></code>: If set to 1, maps <em>PyTorch</em> <em>Long</em> types to <em>XLA</em> 32bit type.
-On the versions of the TPU HW at the time of writing, 64bit integer computations are
-expensive, so setting this flag might help. It should be verified by the user that truncating
-to 32bit values is a valid operation according to the use of <em>PyTorch</em> <em>Long</em> values in it.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">TF_CPP_LOG_THREAD_ID</span></code>: If set to 1, the TF logs will show the thread ID
 helping with debugging multithreaded processes.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">TF_CPP_VMODULE</span></code>: Environment variable used for TF VLOGs and takes the
 form of <code class="docutils literal notranslate"><span class="pre">TF_CPP_VMODULE=name=value,...</span></code>. Note that for VLOGs you must set
-<code class="docutils literal notranslate"><span class="pre">TF_CPP_MIN_LOG_LEVEL=0</span></code>. For PyTorch/XLA using a configuration like
-<code class="docutils literal notranslate"><span class="pre">TF_CPP_VMODULE=tensor=5</span></code> would enable logging such as:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>2019-10-03 17:23:56.419040: I   27891 torch_xla/csrc/tensor.cpp:1104]
-Executing IR graph hash 4211381954965020633 on device TPU:3 done!
-2019-10-03 17:23:56.419448: I   27890 torch_xla/csrc/tensor.cpp:1104]
-Executing IR graph hash 15483856951158150605 on device TPU:5 done!
-2019-10-03 17:23:56.419539: I   27896 torch_xla/csrc/tensor.cpp:1104]
-Executing IR graph hash 4211381954965020633 on device TPU:4 done!
-...
-</pre></div>
-</div>
-</li>
+<code class="docutils literal notranslate"><span class="pre">TF_CPP_MIN_LOG_LEVEL=0</span></code>.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">TF_CPP_MIN_LOG_LEVEL</span></code>: Level to print messages for. <code class="docutils literal notranslate"><span class="pre">TF_CPP_MIN_LOG_LEVEL=0</span></code> will turn
 on INFO logging, <code class="docutils literal notranslate"><span class="pre">TF_CPP_MIN_LOG_LEVEL=1</span></code> WARNING and so on. Our PyTorch/XLA <code class="docutils literal notranslate"><span class="pre">TF_VLOG</span></code> uses
 <code class="docutils literal notranslate"><span class="pre">tensorflow::INFO</span></code> level by default so to see VLOGs set <code class="docutils literal notranslate"><span class="pre">TF_CPP_MIN_LOG_LEVEL=0</span></code>.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">XLA_DUMP_HLO_GRAPH</span></code>: If set to <code class="docutils literal notranslate"><span class="pre">=1</span></code> in case of a compilation or execution error the
 offending HLO graph will be dumped as part of the runtime error raised by <code class="docutils literal notranslate"><span class="pre">xla_util.cc</span></code>.</p></li>
+</ul>
+</div>
+<div class="section" id="common-debugging-environment-variables-combinations">
+<h3>Common Debugging Environment Variables Combinations<a class="headerlink" href="#common-debugging-environment-variables-combinations" title="Permalink to this headline">¶</a></h3>
+<ul>
+<li><p>Record the graph execution in the IR format</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">XLA_SAVE_TENSORS_FMT</span><span class="o">=</span><span class="s2">&quot;hlo&quot;</span> <span class="n">XLA_SAVE_TENSORS_FILE</span><span class="o">=</span><span class="s2">&quot;/tmp/save1.hlo&quot;</span>
+</pre></div>
+</div>
+</li>
+<li><p>Record the graph execution in the HLO format</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">XLA_SAVE_TENSORS_FMT</span><span class="o">=</span><span class="s2">&quot;text&quot;</span> <span class="n">XLA_SAVE_TENSORS_FILE</span><span class="o">=</span><span class="s2">&quot;/tmp/save1.ir&quot;</span>
+</pre></div>
+</div>
+</li>
+<li><p>Show debugging VLOG for runtime and graph compilation/execution</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">TF_CPP_MIN_LOG_LEVEL</span><span class="o">=</span><span class="mi">0</span> <span class="n">TF_CPP_VMODULE</span><span class="o">=</span><span class="s2">&quot;xla_graph_executor=5,pjrt_computation_client=3&quot;</span>
+</pre></div>
+</div>
+</li>
 </ul>
 </div>
 </div>
@@ -3514,6 +3523,7 @@ We are integrating PyTorch/XLA SPMD into DTensor API <a class="reference externa
 <li><a class="reference internal" href="#xla-tensor-quirks">XLA Tensor Quirks</a></li>
 <li><a class="reference internal" href="#more-debugging-tools">More Debugging Tools</a><ul>
 <li><a class="reference internal" href="#environment-variables">Environment Variables</a></li>
+<li><a class="reference internal" href="#common-debugging-environment-variables-combinations">Common Debugging Environment Variables Combinations</a></li>
 </ul>
 </li>
 </ul>
