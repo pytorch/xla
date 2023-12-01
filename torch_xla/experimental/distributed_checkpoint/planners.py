@@ -329,7 +329,7 @@ def _create_write_items_for_xla_sharded_tensor(
   # Since local shards are currently moved to CPU on creation, we need to get
   # the shard indices indirectly to avoid unnecessarily consuming host memory.
   replica_and_indices = torch_xla._XLAC._get_local_shard_replica_and_indices(
-      t.global_tensor)
+      [t.global_tensor])[0]
   prop = TensorProperties.create_from_tensor(t)
   for shard_ind, (_, indices) in enumerate(replica_and_indices):
     write_item = _create_write_item_from_indices(fqn, shard_ind, indices,
@@ -386,7 +386,7 @@ def _create_xla_read_items(sharded_state_dict: STATE_DICT_TYPE,
     # Since local shards are currently moved to CPU on creation, we need to get
     # the shard indices indirectly to avoid unnecessarily consuming host memory.
     replica_and_indices = torch_xla._XLAC._get_local_shard_replica_and_indices(
-        t.global_tensor)
+        [t.global_tensor])[0]
     chunks = [
         _create_chunk_from_shard_index(ind) for _, ind in replica_and_indices
     ]
