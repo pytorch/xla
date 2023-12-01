@@ -2,14 +2,14 @@
 #include "torch_xla/csrc/runtime/env_vars.h"
 #include "torch_xla/csrc/runtime/profiler.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
+#include "torch_xla/csrc/runtime/tf_logging.h"
 #include "torch_xla/csrc/runtime/xla_coordinator.h"
-#include "xla/pjrt/pjrt_api.h"
-#include "xla/pjrt/pjrt_c_api_client.h"
-#include "xla/pjrt/tfrt_cpu_pjrt_client.h"
 #include "xla/pjrt/c/pjrt_c_api.h"
 #include "xla/pjrt/distributed/distributed.h"
 #include "xla/pjrt/gpu/se_gpu_pjrt_client.h"
-#include "torch_xla/csrc/runtime/tf_logging.h"
+#include "xla/pjrt/pjrt_api.h"
+#include "xla/pjrt/pjrt_c_api_client.h"
+#include "xla/pjrt/tfrt_cpu_pjrt_client.h"
 
 namespace torch_xla {
 namespace runtime {
@@ -33,9 +33,10 @@ xla::GpuAllocatorConfig GetGpuAllocatorConfig() {
   return allocator_config;
 }
 
-}
+}  // namespace
 
-std::unique_ptr<xla::PjRtClient> InitializePjRt(const std::string& device_type) {
+std::unique_ptr<xla::PjRtClient> InitializePjRt(
+    const std::string& device_type) {
   std::unique_ptr<xla::PjRtClient> client;
 
   if (device_type == "CPU") {
@@ -129,5 +130,5 @@ std::unique_ptr<xla::PjRtClient> InitializePjRt(const std::string& device_type) 
   return std::move(client);
 }
 
-}
-}
+}  // namespace runtime
+}  // namespace torch_xla

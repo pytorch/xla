@@ -64,8 +64,7 @@ class IfrtComputationClient : public ComputationClient {
       const ExecuteComputationOptions& options) override;
 
   std::vector<DataPtr> ExecuteReplicated(
-      const Computation& computation,
-      const absl::Span<const DataPtr> arguments,
+      const Computation& computation, const absl::Span<const DataPtr> arguments,
       absl::Span<const std::string> devices,
       const ExecuteReplicatedOptions& options) override;
 
@@ -133,14 +132,18 @@ class IfrtComputationClient : public ComputationClient {
     IfrtData(std::string device, xla::Shape device_shape,
              tsl::RCReference<xla::ifrt::Array> buffer,
              std::optional<xla::OpSharding> sharding = std::nullopt)
-        : Data(std::move(device), std::move(device_shape)), buffer(buffer), sharding_(sharding) {}
+        : Data(std::move(device), std::move(device_shape)),
+          buffer(buffer),
+          sharding_(sharding) {}
 
-    IfrtData(std::string device, tsl::RCReference<xla::ifrt::Array> buffer, std::optional<xla::OpSharding> sharding = std::nullopt)
+    IfrtData(std::string device, tsl::RCReference<xla::ifrt::Array> buffer,
+             std::optional<xla::OpSharding> sharding = std::nullopt)
         : Data(std::move(device),
                xla::ShapeUtil::MakeShape(
                    xla::ifrt::ToPrimitiveType(buffer->dtype()).value(),
                    buffer->shape().dims())),
-          buffer(buffer), sharding_(sharding) {}
+          buffer(buffer),
+          sharding_(sharding) {}
 
     Handle GetHandle() override {
       XLA_CHECK(HasValue())
@@ -165,7 +168,7 @@ class IfrtComputationClient : public ComputationClient {
         ss << "  Data Device: " << device() << "\n";
         ss << "  Data Shape: " << shape().ToString() << "\n";
         ss << "  OpSharding: "
-          << xla::HloSharding::FromProto(*sharding_)->ToString() << "\n";
+           << xla::HloSharding::FromProto(*sharding_)->ToString() << "\n";
         ss << "  NumShards: " << buffer->sharding().devices().size() << "\n";
       } else {
         ss << "XLAData: \n";
