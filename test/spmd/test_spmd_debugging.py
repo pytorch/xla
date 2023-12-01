@@ -626,23 +626,9 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
             style=rich.style.Style(bgcolor=color, color=text_color)))
     col.append(
         rich.padding.Padding(
-            rich.align.Align('CPU 1', "center", vertical="middle"),
-            (1, 1, 1, 1),
-            style=rich.style.Style(bgcolor=color, color=text_color)))
-    fake_table.add_row(*col)
-    col = []
-    col.append(
-        rich.padding.Padding(
             rich.align.Align('CPU 4', "center", vertical="middle"),
             (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
-    col.append(
-        rich.padding.Padding(
-            rich.align.Align('CPU 5', "center", vertical="middle"),
-            (1, 1, 1, 1),
-            style=rich.style.Style(bgcolor=color, color=text_color)))
-    fake_table.add_row(*col)
-    col = []
     col.append(
         rich.padding.Padding(
             rich.align.Align('CPU 8', "center", vertical="middle"),
@@ -650,23 +636,9 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
             style=rich.style.Style(bgcolor=color, color=text_color)))
     col.append(
         rich.padding.Padding(
-            rich.align.Align('CPU 9', "center", vertical="middle"),
-            (1, 1, 1, 1),
-            style=rich.style.Style(bgcolor=color, color=text_color)))
-    fake_table.add_row(*col)
-    col = []
-    col.append(
-        rich.padding.Padding(
             rich.align.Align('CPU 12', "center", vertical="middle"),
             (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
-    col.append(
-        rich.padding.Padding(
-            rich.align.Align('CPU 13', "center", vertical="middle"),
-            (1, 1, 1, 1),
-            style=rich.style.Style(bgcolor=color, color=text_color)))
-    fake_table.add_row(*col)
-    col = []
     col.append(
         rich.padding.Padding(
             rich.align.Align('CPU 2', "center", vertical="middle"),
@@ -674,23 +646,9 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
             style=rich.style.Style(bgcolor=color, color=text_color)))
     col.append(
         rich.padding.Padding(
-            rich.align.Align('CPU 3', "center", vertical="middle"),
-            (1, 1, 1, 1),
-            style=rich.style.Style(bgcolor=color, color=text_color)))
-    fake_table.add_row(*col)
-    col = []
-    col.append(
-        rich.padding.Padding(
             rich.align.Align('CPU 6', "center", vertical="middle"),
             (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
-    col.append(
-        rich.padding.Padding(
-            rich.align.Align('CPU 7', "center", vertical="middle"),
-            (1, 1, 1, 1),
-            style=rich.style.Style(bgcolor=color, color=text_color)))
-    fake_table.add_row(*col)
-    col = []
     col.append(
         rich.padding.Padding(
             rich.align.Align('CPU 10', "center", vertical="middle"),
@@ -698,14 +656,44 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
             style=rich.style.Style(bgcolor=color, color=text_color)))
     col.append(
         rich.padding.Padding(
-            rich.align.Align('CPU 11', "center", vertical="middle"),
+            rich.align.Align('CPU 14', "center", vertical="middle"),
             (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     fake_table.add_row(*col)
     col = []
     col.append(
         rich.padding.Padding(
-            rich.align.Align('CPU 14', "center", vertical="middle"),
+            rich.align.Align('CPU 1', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('CPU 5', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('CPU 9', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('CPU 13', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('CPU 3', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('CPU 7', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('CPU 11', "center", vertical="middle"),
             (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     col.append(
@@ -752,36 +740,50 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
             rich.align.Align('CPU [0, 1]', "center", vertical="middle"),
             (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
+    fake_table.add_row(*col)
+    col = []
     col.append(
         rich.padding.Padding(
             rich.align.Align('CPU [4, 5]', "center", vertical="middle"),
             (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
+    fake_table.add_row(*col)
+    col = []
     col.append(
         rich.padding.Padding(
             rich.align.Align('CPU [8, 9]', "center", vertical="middle"),
             (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
+    fake_table.add_row(*col)
+    col = []
     col.append(
         rich.padding.Padding(
             rich.align.Align('CPU [12, 13]', "center", vertical="middle"),
             (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
+    fake_table.add_row(*col)
+    col = []
     col.append(
         rich.padding.Padding(
             rich.align.Align('CPU [2, 3]', "center", vertical="middle"),
             (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
+    fake_table.add_row(*col)
+    col = []
     col.append(
         rich.padding.Padding(
             rich.align.Align('CPU [6, 7]', "center", vertical="middle"),
             (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
+    fake_table.add_row(*col)
+    col = []
     col.append(
         rich.padding.Padding(
             rich.align.Align('CPU [10, 11]', "center", vertical="middle"),
             (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
+    fake_table.add_row(*col)
+    col = []
     col.append(
         rich.padding.Padding(
             rich.align.Align('CPU [14, 15]', "center", vertical="middle"),
