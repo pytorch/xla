@@ -765,7 +765,13 @@ std::vector<std::string> PjRtComputationClient::GetLocalDevices() const {
 }
 
 std::vector<std::string> PjRtComputationClient::GetAllDevices() const {
-  return PjRtDevicesToString(client_->devices());
+  std::vector<std::string> devices = PjRtDevicesToString(client_->devices());
+
+  for (std::string dev: devices) {
+    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": dev=" << dev << std::endl;
+  }
+
+  return devices;
 }
 
 int PjRtComputationClient::GetNumProcesses() const {
