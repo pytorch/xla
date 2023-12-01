@@ -432,8 +432,10 @@ def _iter_dir(path: os.PathLike):
 
 def _load_program_bundle(stablehlo_dir: os.PathLike) -> StableHLOModelBundle:
   state_dict = {}
+  import os.path
   for name, f in _iter_dir(os.path.join(stablehlo_dir, 'data')):
-    state_dict[name] = np.load(f, allow_pickle=True)
+    if os.path.exists(f):
+      state_dict[name] = np.load(f, allow_pickle=True)
 
   constants = []
   for name, f in _iter_dir(os.path.join(stablehlo_dir, 'constants')):
