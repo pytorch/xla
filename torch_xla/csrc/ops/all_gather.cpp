@@ -65,7 +65,7 @@ AllGatherCoalesced::AllGatherCoalesced(c10::ArrayRef<torch::lazy::Value> inputs,
                                        int64_t dim, int64_t shard_count,
                                        std::vector<std::vector<int64_t>> groups,
                                        bool pin_layout)
-    : XlaNode(xla_all_gather, GetOperandList(inputs, token),
+    : XlaNode(xla_all_gather, GetOperandListWithToken(inputs, token),
               [&]() {
                 return NodeOutputShapeCoalesced(inputs, token, dim, shard_count,
                                                 groups, pin_layout);

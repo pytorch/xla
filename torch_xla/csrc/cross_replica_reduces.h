@@ -72,7 +72,7 @@ AllGatherResult BuildAllGather(xla::XlaOp input, xla::XlaOp token, int64_t dim,
                                bool pin_layout);
 
 AllGatherResultCoalesced BuildAllGatherCoalesced(
-    absl::Span<const xla::XlaOp>, xla::XlaOp token, int64_t dim,
+    absl::Span<const xla::XlaOp> inputs, xla::XlaOp token, int64_t dim,
     int64_t shard_count, const std::vector<std::vector<int64_t>>& groups,
     bool pin_layout);
 
@@ -91,7 +91,7 @@ ReduceScatterResult BuildReduceScatter(
     int64_t scatter_dim, int64_t shard_count,
     const std::vector<std::vector<int64_t>>& groups, bool pin_layout);
 
-std::vector<torch::lazy::Value> GetOperandList(
+std::vector<torch::lazy::Value> GetOperandListWithToken(
     c10::ArrayRef<torch::lazy::Value> operands,
     const torch::lazy::Value& token);
 

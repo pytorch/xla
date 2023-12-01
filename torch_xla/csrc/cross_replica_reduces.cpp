@@ -348,8 +348,7 @@ ReduceScatterResult BuildReduceScatter(
   return {reduce_result, token_handler.GetNewToken(reduce_result)};
 }
 
-// moved from torch_xla/csrc/ops/all_reduce.cpp
-std::vector<torch::lazy::Value> GetOperandList(
+std::vector<torch::lazy::Value> GetOperandListWithToken(
     c10::ArrayRef<torch::lazy::Value> operands,
     const torch::lazy::Value& token) {
   std::vector<torch::lazy::Value> operand_list(operands.begin(),
