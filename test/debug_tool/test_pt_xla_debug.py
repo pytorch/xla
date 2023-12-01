@@ -10,7 +10,7 @@ import torch_xla.distributed.parallel_loader as pl
 import unittest
 from extract_debug_helper import (check_env_flag, extract_execution_cause,
                                   extract_compilation_cause, GraphInfo,
-                                  extract_graph_infos)
+                                  extract_graph_infos, extract_python_frames)
 
 
 class PtXLADebugTest(unittest.TestCase):
@@ -181,6 +181,28 @@ class PtXLADebugTest(unittest.TestCase):
     # this graph has one input(random seed) and one output(t1)
     self.assertEqual(graph_infos[1].num_input, 1)
     self.assertEqual(graph_infos[1].num_output, 1)
+    open(self.debug_file_name, 'w').close()
+
+  def test_frame(self):
+    device = xm.xla_device()
+    t1 = torch.randn(6, 6, device=device)
+    xm.mark_step()
+    with open(self.debug_file_name, 'rb') as f:
+      lines = f.readlines()
+      frames = extract_python_frames(lines)
+
+    # one for compilation, one for execution
+    self.assertEqual(len(frames), 2)
+    max_frame = os.getenv('PT_XLA_DEBUG_MAX_FRAME', 8)
+    # Additonal lines are
+    # 1. Python Frame Triggered Execution:
+    # 2. ....
+    # 3. empty line
+    self.assertEqual(len(frames[0].split('\n')), max_frame + 3)
+    self.assertEqual(len(frames[1].split('\n')), max_frame + 3)
+    # Check mark_step is the first frame
+    self.assertIn('mark_step', frames[0].split('\n')[1])
+
     open(self.debug_file_name, 'w').close()
 
 
