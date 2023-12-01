@@ -434,10 +434,12 @@ def _iter_dir(path: os.PathLike):
 
 def _load_program_bundle(stablehlo_dir: os.PathLike) -> StableHLOModelBundle:
   state_dict = {}
-  import os.path
-  for name, f in _iter_dir(os.path.join(stablehlo_dir, 'data')):
-    if os.path.exists(f):
+  if os.path.exists(os.path.join(stablehlo_dir, 'data')):
+    for name, f in _iter_dir(os.path.join(stablehlo_dir, 'data')):
       state_dict[name] = np.load(f, allow_pickle=True)
+  else:
+    message = "There is no weights/state_dict to be loaded"
+    raise RuntimeError(message)
 
   constants = []
   for name, f in _iter_dir(os.path.join(stablehlo_dir, 'constants')):
