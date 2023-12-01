@@ -199,12 +199,14 @@ class StableHLOModelBundle:
   # can support the case of multiple callable of the same model.
   stablehlo_funcs: List[StableHLOFunc]
 
+
 @dataclass
 class StableHLOExportOptions:
   include_human_readable_text: bool = True
   override_tracing_arguments: Optional[Tuple[Any]] = None
   override_tracing_kwargs: Optional[Mapping[str, Any]] = None
   save_weights: bool = True
+
 
 class XLAExportInterpreter(torch.fx.Interpreter):
 
@@ -391,9 +393,10 @@ def _exported_program_to_stablehlo_bundle(exported_model,
   return bundle
 
 
-def _save_program_bundle(bundle: StableHLOModelBundle,
-                         stablehlo_dir: os.PathLike,
-                         options: Optional[StableHLOExportOptions] = None) -> None:
+def _save_program_bundle(
+    bundle: StableHLOModelBundle,
+    stablehlo_dir: os.PathLike,
+    options: Optional[StableHLOExportOptions] = None) -> None:
 
   if options is None:
     options = StableHLOExportOptions()
