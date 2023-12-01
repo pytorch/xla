@@ -831,6 +831,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     print(fake_table.columns)
     assert output == fake_output
 
+
 # these three GPU tests could be skipped before GPU SPMD enabled stably, and TODO(manfei) add multi-host tests for GPU
 # @unittest.skipIf(not xr.using_pjrt() or
 #                  xu.getenv_as(xenv.PJRT_DEVICE, str) in ('CPU', 'TPU'),
@@ -961,7 +962,6 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
 #     fake_console.print(fake_table)
 #   fake_output = fake_capture.get()
 #   assert output == fake_output
-
 
 if __name__ == '__main__':
   test = unittest.main()
