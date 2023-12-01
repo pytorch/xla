@@ -230,18 +230,13 @@ class AutocastCudaTestUnsupportedLists(object):
 
 class TestAutocastBase(unittest.TestCase):
   
-  count = 0
-
   @classmethod
   def setUpClass(cls):
-    print('xw32 calling setupClass line235, cls=', cls)
     cls.autocast_lists = AutocastTestLists(torch.device(xm.xla_device()))
-    print('xw32 cls.autocast_lists=', cls.autocast_lists)
     cls.autocast_unsupported_lists = None
 
   @classmethod
   def tearDownClass(cls):
-    print('xw32 cls.autocast_lists=', cls.autocast_lists)
     del cls.autocast_lists
 
   def setUp(self):
@@ -253,7 +248,6 @@ class TestAutocastBase(unittest.TestCase):
 
   @classmethod
   def get_autocast_list(cls, list_name):
-    print('cls=', cls)
     if cls.autocast_unsupported_lists:
       return [
           tp for tp in getattr(cls.autocast_lists, list_name)
@@ -276,9 +270,6 @@ class TestAutocastBase(unittest.TestCase):
                                module=torch,
                                add_kwargs=None,
                                autocast_dtype=None):
-    TestAutocastBase.count += 1
-    # print('Run test count=', TestAutocastBase.count)
-    # helper to cast args
     def cast(val, to_type):
       if isinstance(val, torch.Tensor):
         return val.to(to_type) if val.is_floating_point() else val
@@ -374,7 +365,6 @@ class TestAutocastCuda(TestAutocastBase):
     self.is_autocast_enabled = torch.is_autocast_xla_enabled
 
   def test_autocast_nn_fp16(self):
-    # print('xw32 TestAutocastCuda.get_autocast_list(nn_fp16)=', TestAutocastCuda.get_autocast_list('nn_fp16'))
     with torch.backends.cudnn.flags(enabled=True, deterministic=True):
       for op, args in TestAutocastCuda.get_autocast_list('nn_fp16'):
         self._run_autocast_outofplace(
@@ -398,20 +388,12 @@ class TestAutocastCuda(TestAutocastBase):
           getattr(module, op)(*args)
 
   def test_autocast_torch_fp32(self):
-    #print('xw32 TestAutocastCuda.get_autocast_list(torch_fp32)=', TestAutocastCuda.get_autocast_list('torch_fp32'))
     for op_with_args in TestAutocastCuda.get_autocast_list('torch_fp32'):
-      print('xw32 op_with_args=', op_with_args)
       op, args, maybe_kwargs = self.args_maybe_kwargs(op_with_args)
       self._run_autocast_outofplace(
           op, args, torch.float32, add_kwargs=maybe_kwargs)
-    print('===========')
-    for op_with_args in TestAutocastCuda.get_autocast_list('torch_fp32'):
-      print('xw32 op_with_args=', op_with_args)
 
-  # focus 1
   def test_autocast_torch_bf16(self):
-    #print('xw32 getattr(TestAutocastCuda.autocast_lists_extra, torch_bf16)=', getattr(TestAutocastCuda.autocast_lists_extra, 'torch_bf16'))
-    start = time.time()
     bf16_test_list = [
         tp for tp in getattr(TestAutocastCuda.autocast_lists_extra, 'torch_bf16')
     ]
@@ -424,11 +406,8 @@ class TestAutocastCuda(TestAutocastBase):
           torch.bfloat16,
           add_kwargs=maybe_kwargs,
           autocast_dtype=torch.bfloat16)
-    end = time.time()
-    print('xw32 test passed. Time used=', (end-start))
 
   def test_autocast_torch_need_autocast_promote(self):
-    #print('xw32 TestAutocastCuda.get_autocast_list(torch_need_autocast_promote)=', TestAutocastCuda.get_autocast_list('torch_need_autocast_promote'))
     for op, args in TestAutocastCuda.get_autocast_list('torch_need_autocast_promote'):
       self._run_autocast_outofplace(op, args, torch.float32)
 
@@ -437,17 +416,12 @@ class TestAutocastCuda(TestAutocastBase):
         'torch_expect_builtin_promote'):
       self._run_autocast_outofplace(op, args, torch.float32, out_type=out_type)
 
-  # focus 0
   def test_autocast_nn_fp32(self):
-    #print('xw32 TestAutocastCuda.get_autocast_list(nn_fp16)=', TestAutocastCuda.get_autocast_list('nn_fp16'))
-    start = time.time()
     for op, args in TestAutocastCuda.get_autocast_list('nn_fp32'):
       print("op=", op)
       # print("op=", op, ', args=', args)
       self._run_autocast_outofplace(
           op, args, torch.float32, module=torch._C._nn)
-    end = time.time()
-    print('xw32 test passed. Time used=', (end-start))
 
   def test_autocast_methods_fp32(self):
     for op, args in TestAutocastCuda.get_autocast_list('methods_fp32'):
