@@ -84,8 +84,8 @@ class StableHLOGraphModule:
       method_name = self._default_method
     return self._name_to_stablehlo[method_name].text
 
-  def save(self, directory_path):
-    _save_program_bundle(self._bundle, directory_path)
+  def save(self, directory_path, options):
+    _save_program_bundle(self._bundle, directory_path, options)
 
   @classmethod
   def load(cls, directory_path):
@@ -498,7 +498,7 @@ def save_as_stablehlo(exported_model: 'ExportedProgram',
   if options is None:
     options = StableHLOExportOptions()
   shlo_program = exported_program_to_stablehlo(exported_model, options)
-  shlo_program.save(stablehlo_dir)
+  shlo_program.save(stablehlo_dir, options)
 
 
 def exported_program_to_stablehlo(
