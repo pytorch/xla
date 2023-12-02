@@ -400,9 +400,9 @@ def _save_program_bundle(
 
   if options is None:
     options = StableHLOExportOptions()
-  data_dir = os.path.join(stablehlo_dir, 'data')
-  os.makedirs(data_dir, exist_ok=True)
   if options.save_weights:
+    data_dir = os.path.join(stablehlo_dir, 'data')
+    os.makedirs(data_dir, exist_ok=True)
     for key, val in bundle.state_dict.items():
       with open(os.path.join(stablehlo_dir, 'data', key), 'wb') as f:
         np.save(f, val)
