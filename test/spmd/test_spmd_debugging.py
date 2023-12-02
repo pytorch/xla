@@ -15,8 +15,8 @@ import torch_xla.utils.utils as xu
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.spmd as xs
-from torch_xla.experimental.xla_sharded_tensor import XLAShardedTensor
-from torch_xla.experimental.xla_sharding import Mesh
+from torch_xla.distributed.spmd import XLAShardedTensor
+from torch_xla.distributed.spmd import Mesh
 
 import test_xla_sharding_base
 
