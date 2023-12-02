@@ -19,5 +19,4 @@ __all__ = [
     "xla_distribute_tensor",
     "xla_distribute_module",
     "xla_patched_nn_linear_forward",
-    "visualize_tensor_sharding",
 ]
