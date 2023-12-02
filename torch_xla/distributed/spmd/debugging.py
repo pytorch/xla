@@ -66,7 +66,7 @@ def visualize_sharding(sharding: str,
     else:
       sharding_spac = sharding[sharding.index('['):sharding.index(']') + 1]
       device_list_original = sharding.split(' last_tile_dim_replicate')
-      if len(device_list_original) == 2 && device_list_original[1] == '}': # len(sharding) >= 25 and sharding[-24:-1] == 'last_tile_dim_replicate':
+      if len(device_list_original) == 2 and device_list_original[1] == '}':
         try:
           device_list_original_first = device_list_original[0]
           device_list = device_list_original_first[device_list_original_first.index(']') + 1:]
