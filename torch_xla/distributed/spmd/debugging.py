@@ -51,12 +51,12 @@ def visualize_sharding(sharding: str,
   heights: dict[tuple[int, ...], Optional[float]] = {}
   widths: dict[tuple[int, ...], float] = {}
 
-  if len(sharding) > 0:
+  if len(sharding) >= 0:
     # sharding is longer than 0
     # eg: '{devices=[2,2]0,1,2,3}'
     # eg: '{replicated}'
     # eg: '{devices=[2,1,2]0,1,2,3 last_tile_dim_replicate}'
-    if sharding == '{replicated}':
+    if sharding == '{replicated}' or len(sharding) == 0:
       heights = 1
       widths = 1
       num_devices = xr.global_runtime_device_count()
@@ -89,7 +89,7 @@ def visualize_sharding(sharding: str,
       else:
         raise ValueError("sharding ", sharding, " is not organized as expected")
   else:
-    raise ValueError("sharding ", sharding, " has no value")
+    raise ValueError("sharding length should >= 0")
 
   num_rows = heights
   num_cols = widths
