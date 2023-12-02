@@ -53,9 +53,10 @@ python xla/benchmarks/experiment_runner.py                   \
 You can change the flags to add the configurations you are interested in. The
 `experiment_runner.py` will expand the options to all supported configurations.
 For example, in the case above, it will consider all the possible combinations
-among the flags `--dynamo`, `--xla`, and `--test`, 4 of which are supported:
+among the flags `--dynamo`, `--xla`, and `--test`, 5 of which are supported:
 
   - `dynamo=openxla_eval`, `xla=PJRT`, `test=eval`
+  - `dynamo=openxla`, `xla=PJRT`, `test=eval`
   - `dynamo=openxla`, `xla=PJRT`, `test=train`
   - `dynamo=inductor`, `xla=None`, `test=eval`
   - `dynamo=inductor`, `xla=None`, `test=train`
