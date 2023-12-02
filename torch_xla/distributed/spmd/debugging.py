@@ -155,11 +155,8 @@ def visualize_sharding(sharding: str,
 
 def visualize_tensor_sharding(t, **kwargs):
   """Visualizes an array's sharding."""
-  if torch.is_tensor(t):
-    import torch_xla
-    sharding = torch_xla._XLAC._get_xla_sharding_spec(t)
-    return visualize_sharding(sharding, **kwargs)
-  elif (isinstance(t, XLAShardedTensor)):
-    import torch_xla
-    sharding = torch_xla._XLAC._get_xla_sharding_spec(t.global_tensor)
-    return visualize_sharding(sharding, **kwargs)
+  # XLAShardedTensor is-a torch.Tensor
+  def maybe_unwrap(t: torch.Tensor) -> torch.Tensor:
+    return t.global_tensor if isintance(t, XLAShardedTensor) else t
+  sharding = torch_xla._XLAC._get_xla_sharding_spec(maybe_unwrap(t))
+  return visualize_sharding(sharding, **kwargs)
