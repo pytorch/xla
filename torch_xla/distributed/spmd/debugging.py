@@ -85,8 +85,12 @@ def visualize_sharding(sharding: str,
       else:
         # eg: '{devices=[2,2]0,1,2,3}'
         try:
+          assert device_list_original[0][-1] == '}'
+        except:
+          raise ValueError("sharding ", sharding, " is not organized as expected")
+        try:
           device_list_original_first = device_list_original[0]
-          device_list = device_list_original_first[device_list_original_first.index(']') + 1:]
+          device_list = device_list_original_first[device_list_original_first.index(']') + 1:-1]
           device_indices_map = [int(i) for i in device_list.split(',')]
           heights = int(sharding_spac[1])
           widths = int(sharding_spac[3])
