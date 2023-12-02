@@ -2,7 +2,7 @@ import contextlib
 import functools
 import os
 import re
-from unittest import mock
+from unittest import mock, skipIf
 
 from absl.testing import absltest, parameterized
 import torch
@@ -11,6 +11,15 @@ import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_backend
 from torch_xla import runtime as xr
+
+from datetime import timedelta
+
+
+def get_process_group_xla(rank, size):
+  pg_xla_creator = dist.Backend._plugins['XLA'].creator_fn
+  pg_xla = pg_xla_creator(
+      prefix_store=None, rank=rank, size=size, timeout=timedelta(minutes=1))
+  return pg_xla
 
 
 def hlo_matches(hlo, expected_pattern, match_times=1):
@@ -84,6 +93,25 @@ class XlaBackendTest(parameterized.TestCase):
     output_tensors = [torch.zeros_like(tensor, device=device) for _ in range(8)]
     all_gather_pattern = r'%all\-gather\.\d+ = .+ all\-gather\('
     dist.all_gather(output_tensors, tensor)
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo(output_tensors)
+    hlo_matches(hlo, all_gather_pattern)
+
+  @patch_world(rank=3, size=8)
+  def test_allgather_coalesced(self):
+    device = xm.xla_device()
+    tensor = torch.arange(2, device=device) + 1 + 2 * dist.get_rank()
+    tensor2 = torch.arange(5, device=device) + 1 + 2 * dist.get_rank()
+    pg_xla = get_process_group_xla(rank=3, size=8)
+    output_tensors = [torch.zeros_like(tensor)] * 8
+    output_tensors2 = [torch.zeros_like(tensor2)] * 8
+    # because we set os.environ[xenv.WORLD_SIZE] = '1', here the outputs'
+    # shapes will be same as the inputs' shapes.
+    # Ex:  %all-gather.26 = (s64[2]{0}, s64[5]{0}) all-gather(s64[2]{0} %get-tuple-element.24, s64[5]{0} %get-tuple-element.25), replica_groups={}, dimensions={0}
+    all_gather_pattern = (
+        r'%all-gather\.\d+ = \(s64\[2]\{0}, s64\[5]\{0}\) '
+        r'all-gather\(s64\[2]\{0} %.+\.\d+, s64\[5]\{0} %.+\.\d+\)')
+    pg_xla.allgather_coalesced([output_tensors, output_tensors2],
+                               [tensor, tensor2])
     hlo = torch_xla._XLAC._get_xla_tensors_hlo(output_tensors)
     hlo_matches(hlo, all_gather_pattern)
 
@@ -291,7 +319,6 @@ class XlaBackendTest(parameterized.TestCase):
 
   @parameterized.parameters(
       'reduce',
-      'allgather_coalesced',
       'allreduce_coalesced',
       'alltoall',
       'alltoall_base',

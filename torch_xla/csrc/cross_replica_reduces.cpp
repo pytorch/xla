@@ -236,6 +236,45 @@ AllGatherResult BuildAllGather(xla::XlaOp input, xla::XlaOp token, int64_t dim,
   return {all_gather_result, token_handler.GetNewToken(all_gather_result)};
 }
 
+AllGatherResultCoalesced BuildAllGatherCoalesced(
+    absl::Span<const xla::XlaOp> inputs, xla::XlaOp token, int64_t dim,
+    int64_t shard_count, const std::vector<std::vector<int64_t>>& groups,
+    bool pin_layout) {
+  std::vector<xla::ReplicaGroup> cc_groups = CreateReduceGroups(groups);
+  TokenHandler token_handler(token);
+  // TODO: We use pseudo-tokens ATM, which are real values. This need to be
+  // switched to use the real XLA Token once support has been added to XLA
+  // AllGather().
+  ReduceContext cc_ctx = GetReduceContext(inputs);
+  std::vector<xla::XlaOp> result(inputs.size());
+
+  for (auto& type_ctx : cc_ctx.contexts) {
+    xla::XlaOp all_gather_result;
+    type_ctx.second.ops[0] = token_handler.GetInput(
+        type_ctx.second.ops[0], &type_ctx.second.operand_shapes[0]);
+    if (pin_layout) {
+      all_gather_result = xla::AllGather(
+          xla::Tuple(inputs[0].builder(), type_ctx.second.ops), dim,
+          shard_count, cc_groups, /*channel_id=*/absl::nullopt,
+          /*layout=*/
+          MakeReduceShape(type_ctx.second.operand_shapes).layout());
+    } else {
+      all_gather_result =
+          xla::AllGather(xla::Tuple(inputs[0].builder(), type_ctx.second.ops),
+                         dim, shard_count, cc_groups);
+    }
+    if (ShapeHelper::ShapeOfXlaOp(all_gather_result).rank() == 0) {
+      for (size_t i = 0; i < type_ctx.second.indices.size(); ++i) {
+        size_t op_idx = type_ctx.second.indices[i];
+        result[op_idx] = xla::GetTupleElement(all_gather_result, i);
+      }
+    } else {
+      result[0] = all_gather_result;
+    }
+  }
+  return {result, token_handler.GetNewToken(result[0])};
+}
+
 CollectivePermuteResult BuildCollectivePermute(
     xla::XlaOp input, xla::XlaOp token,
     const std::vector<std::pair<int64_t, int64_t>>& source_target_pairs) {
@@ -307,6 +346,15 @@ ReduceScatterResult BuildReduceScatter(
   }
 
   return {reduce_result, token_handler.GetNewToken(reduce_result)};
+}
+
+std::vector<torch::lazy::Value> GetOperandListWithToken(
+    c10::ArrayRef<torch::lazy::Value> operands,
+    const torch::lazy::Value& token) {
+  std::vector<torch::lazy::Value> operand_list(operands.begin(),
+                                               operands.end());
+  operand_list.push_back(token);
+  return operand_list;
 }
 
 const torch::lazy::Value& GetAllReduceToken(

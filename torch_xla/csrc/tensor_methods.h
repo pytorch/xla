@@ -38,6 +38,11 @@ std::pair<XLATensorPtr, torch::lazy::Value> all_to_all(
     int64_t split_dimension, int64_t concat_dimension, int64_t split_count,
     std::vector<std::vector<int64_t>> groups, bool pin_layout);
 
+std::pair<std::vector<XLATensorPtr>, torch::lazy::Value> all_gather(
+    const std::vector<XLATensorPtr>& inputs, const torch::lazy::Value& token,
+    int64_t dim, int64_t shard_count, std::vector<std::vector<int64_t>> groups,
+    bool pin_layout);
+
 XLATensorPtr all_gather(const XLATensorPtr& input, int64_t dim,
                         int64_t shard_count,
                         std::vector<std::vector<int64_t>> groups,
