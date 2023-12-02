@@ -26,10 +26,6 @@ try:
 except:
   RICH_ENABLED = False
 
-# Sharding visualization
-sharding_callbacks = weakref.WeakValueDictionary()
-_INSPECT_SHARDING_CALL_NAME = "InspectSharding"
-
 
 def visualize_sharding(sharding: str,
                        use_color: bool = True,
@@ -61,15 +57,12 @@ def visualize_sharding(sharding: str,
     # eg: '{replicated}'
     # eg: '{devices=[2,1,2]0,1,2,3 last_tile_dim_replicate}'
     if sharding == '{replicated}':
-      # eg: '{replicated}'
       heights = 1
       widths = 1
       num_devices = xr.global_runtime_device_count()
       device_ids = list(range(num_devices))
       slices.setdefault((0, 0), device_ids)
     else:
-      # `device_indices_map`: [0, 1, 2, 3]
-      # `sharding_spac`: [2, 2]
       sharding_spac = sharding[sharding.index('['):sharding.index(']') + 1]
       if len(sharding) >= 25 and sharding[-24:-1] == 'last_tile_dim_replicate':
         device_list = sharding[sharding.index(']') + 1:-24]
