@@ -437,8 +437,8 @@ class TestAutocastTPU(TestAutocastBase):
 
   @classmethod
   def setUpClass(cls):
-    cls.autocast_lists = AutocastTPUTestLists(torch.device(xm.xla_device()))
     super().setUpClass()
+    cls.autocast_lists = AutocastTPUTestLists(torch.device(xm.xla_device()))
 
   def setUp(self):
     super(TestAutocastTPU, self).setUp()
@@ -471,7 +471,6 @@ class TestAutocastTPU(TestAutocastBase):
 
   def test_autocast_methods_fp32(self):
     for op, args in TestAutocastTPU.get_autocast_list('methods_fp32'):
-      print("autocast fp32", op)
       self._run_autocast_outofplace(op, args, torch.float32, module=None)
 
   def test_autocast_methods_expect_builtin_promote(self):
