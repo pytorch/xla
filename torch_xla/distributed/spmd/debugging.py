@@ -87,9 +87,9 @@ def visualize_sharding(sharding: str,
         for i in range(devices_len):
           slices.setdefault((i // widths, i % widths), device_indices_map[i])
       else:
-        raise ValueError("sharding is not organized as expected")
+        raise ValueError("sharding ", sharding, " is not organized as expected")
   else:
-    raise ValueError("sharding has no value")
+    raise ValueError("sharding ", sharding, " has no value")
 
   num_rows = heights
   num_cols = widths
