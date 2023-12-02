@@ -404,6 +404,24 @@ std::pair<XLATensorPtr, torch::lazy::Value> all_to_all(
           torch::lazy::Value(node, 1)};
 }
 
+std::pair<std::vector<XLATensorPtr>, torch::lazy::Value> all_gather(
+    const std::vector<XLATensorPtr>& inputs, const torch::lazy::Value& token,
+    int64_t dim, int64_t shard_count, std::vector<std::vector<int64_t>> groups,
+    bool pin_layout) {
+  std::vector<torch::lazy::Value> input_values;
+  input_values.reserve(inputs.size());
+  for (auto& input : inputs) {
+    input_values.push_back(input->GetIrValue());
+  }
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<AllGatherCoalesced>(
+      input_values, token, dim, shard_count, std::move(groups), pin_layout);
+  std::vector<XLATensorPtr> result;
+  for (size_t i = 0; i < inputs.size(); ++i) {
+    result.emplace_back(inputs[i]->CreateFrom(torch::lazy::Value(node, i)));
+  }
+  return {result, torch::lazy::Value(node, inputs.size())};
+}
+
 XLATensorPtr all_gather(const XLATensorPtr& input, int64_t dim,
                         int64_t shard_count,
                         std::vector<std::vector<int64_t>> groups,

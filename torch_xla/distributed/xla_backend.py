@@ -80,6 +80,14 @@ class ProcessGroupXla(ProcessGroup):
 
     return _ret_work([t for sublist in output_tensors_list for t in sublist])
 
+  def allgather_coalesced(self, output_tensors_list, input_tensors, opts=None):
+    results = xm.all_gather(input_tensors, groups=self._mesh, pin_layout=False)
+    for i, result in enumerate(results):
+      for j, slice in enumerate(torch.split(result, input_tensors[i].shape[0])):
+        output_tensors_list[i][j].copy_(slice)
+
+    return _ret_work([t for sublist in output_tensors_list for t in sublist])
+
   # Call site:
   # https://github.com/pytorch/pytorch/blob/release/1.10/torch/distributed/distributed_c10d.py#L1129
   def broadcast(self, tensors, opts):
@@ -126,9 +134,6 @@ class ProcessGroupXla(ProcessGroup):
   # https://github.com/pytorch/pytorch/blob/70f57bcb1e45d21532bdb1c44d3aab018d1cbe88/torch/distributed/distributed_c10d.py#L1417
   # `reduce` is not needed by DeepSpeed for now.
   def reduce(self, *args):
-    raise NotImplementedError
-
-  def allgather_coalesced(self, *args):
     raise NotImplementedError
 
   def allreduce_coalesced(self, *args):
