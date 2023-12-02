@@ -501,7 +501,7 @@ def parse_args(args=None):
       "--collect-full-output",
       action="store_true",
       help="""Whether to collect full output for training. Set this to true if we
-        want to verify the numerical correctness of graidents. But that may
+        want to verify the numerical correctness of gradients. But that may
         cause time measurement not accurate""",
   )
 
