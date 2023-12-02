@@ -27,6 +27,15 @@ except:
   RICH_ENABLED = False
 
 
+def visualize_tensor_sharding(t, **kwargs):
+  """Visualizes an array's sharding."""
+  # XLAShardedTensor is-a torch.Tensor
+  def maybe_unwrap(t: torch.Tensor) -> torch.Tensor:
+    return t.global_tensor if isintance(t, XLAShardedTensor) else t
+  sharding = torch_xla._XLAC._get_xla_sharding_spec(maybe_unwrap(t))
+  return visualize_sharding(sharding, **kwargs)
+
+
 def visualize_sharding(sharding: str,
                        use_color: bool = True,
                        scale: float = 1.,
@@ -137,12 +146,3 @@ def visualize_sharding(sharding: str,
     table.add_row(*col)
   console.print(table, end='\n\n')
   return table
-
-
-def visualize_tensor_sharding(t, **kwargs):
-  """Visualizes an array's sharding."""
-  # XLAShardedTensor is-a torch.Tensor
-  def maybe_unwrap(t: torch.Tensor) -> torch.Tensor:
-    return t.global_tensor if isintance(t, XLAShardedTensor) else t
-  sharding = torch_xla._XLAC._get_xla_sharding_spec(maybe_unwrap(t))
-  return visualize_sharding(sharding, **kwargs)
