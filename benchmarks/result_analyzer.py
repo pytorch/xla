@@ -74,41 +74,23 @@ class ResultAnalyzer:
     self.export_metric_report(metric_df)
 
   def get_calculated_metrics(self, d, dataline):
-    total_time = np.asarray(dataline["metrics"]["total_time"], dtype="float")
-    d["median_total_time"] = np.median(total_time)
-    per_iter_time = np.asarray(
-        dataline["metrics"]["per_iter_time"], dtype="float")
-    d["median_per_iter_time"] = np.median(per_iter_time)
-    if dataline["experiment"]["xla"]:
-      trace_per_iter_time = np.asarray(
-          dataline["metrics"]["trace_per_iter_time"], dtype="float")
-      d["xla_median_trace_per_iter_time"] = np.median(trace_per_iter_time)
-      d["xla_compile_time"] = np.max(total_time) - np.median(total_time)
-    else:
-      d["xla_median_trace_per_iter_time"] = -1
-      d["xla_compile_time"] = -1
+    for metric, raw_values in dataline["metrics"].items():
+      values = np.sort(np.asarray(raw_values, dtype="float"))
+      no_outlier_values = values[1:-1]
 
-    if "total_cpu_time_s" in dataline["metrics"]:
-      total_cpu_time = np.asarray(
-          dataline["metrics"]["total_cpu_time_s"], dtype="float")
-      d["median_total_cpu_time_s"] = np.median(total_cpu_time)
-    if "per_iter_cpu_time_s" in dataline["metrics"]:
-      per_iter_cpu_time = np.asarray(
-          dataline["metrics"]["per_iter_cpu_time_s"], dtype="float")
-      d["median_per_iter_cpu_time_s"] = np.median(per_iter_cpu_time)
-    if "total_cuda_time_s" in dataline["metrics"]:
-      total_cuda_time = np.asarray(
-          dataline["metrics"]["total_cuda_time_s"], dtype="float")
-      d["median_total_cuda_time_s"] = np.median(total_cuda_time)
-    if "per_iter_cuda_time_s" in dataline["metrics"]:
-      per_iter_cuda_time = np.asarray(
-          dataline["metrics"]["per_iter_cuda_time_s"], dtype="float")
-      d["median_per_iter_cuda_time_s"] = np.median(per_iter_cuda_time)
+      is_valid = (
+        dataline["experiment"]["xla"] or metric != "trace_per_iter_time"
+      )
 
-    if dataline["experiment"]["dynamo"]:
-      d["dynamo_compile_time"] = np.max(total_time) - np.median(total_time)
-    else:
-      d["dynamo_compile_time"] = -1
+      for fn in (np.min, np.median, np.max):
+        d[f"{fn.__name__}_{metric}"] = fn(values) if is_valid else -1
+      for fn in (np.mean, np.std):
+        d[f"{fn.__name__}_{metric}"] = fn(no_outlier_values) if is_valid else -1
+
+
+    compile_time = d[f"{np.max.__name__}_total_time"] - d[f"{np.median.__name__}_total_time"]
+    d["dynamo_compile_time"] = compile_time if dataline["experiment"]["dynamo"] else -1
+    d["xla_compile_time"] = compile_time if dataline["experiment"]["xla"] else -1
     return d
 
   # TODO: handle error message properly (database length restriction)
