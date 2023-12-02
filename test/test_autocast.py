@@ -231,7 +231,6 @@ class TestAutocastBase(unittest.TestCase):
 
   @classmethod
   def setUpClass(cls):
-    cls.autocast_lists = AutocastTestLists(torch.device(xm.xla_device()))
     cls.autocast_unsupported_lists = None
 
   @classmethod
@@ -355,6 +354,7 @@ class TestAutocastCuda(TestAutocastBase):
   @classmethod
   def setUpClass(cls):
     super().setUpClass()
+    cls.autocast_lists = AutocastTestLists(torch.device(xm.xla_device()))
     cls.autocast_lists_extra = AutocastCudaTestExtraLists(
         torch.device(xm.xla_device()))
     cls.autocast_unsupported_lists = AutocastCudaTestUnsupportedLists()
@@ -437,6 +437,7 @@ class TestAutocastTPU(TestAutocastBase):
 
   @classmethod
   def setUpClass(cls):
+    cls.autocast_lists = AutocastTPUTestLists(torch.device(xm.xla_device()))
     super().setUpClass()
 
   def setUp(self):
