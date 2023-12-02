@@ -65,30 +65,36 @@ def visualize_sharding(sharding: str,
       slices.setdefault((0, 0), device_ids)
     else:
       sharding_spac = sharding[sharding.index('['):sharding.index(']') + 1]
-      if len(sharding) >= 25 and sharding[-24:-1] == 'last_tile_dim_replicate':
-        device_list = sharding[sharding.index(']') + 1:-24]
-        middle = device_list[:-1]
-        device_indices_map = [int(s) for s in middle.split(',')]
-        heights = int(sharding_spac[1])
-        widths = int(sharding_spac[3])
-        last_dim_depth = int(sharding_spac[5])
-        devices_len = len(device_indices_map)
-        len_after_dim_down = devices_len // last_dim_depth
-        for i in range(len_after_dim_down):
-          slices.setdefault(
-              (i // widths, i % widths),
-              device_indices_map[i * last_dim_depth:(i + 1) * last_dim_depth])
-      elif sharding[-1] == "}":
-        # eg: '{devices=[2,2]0,1,2,3}'
-        device_list = sharding[sharding.index(']') + 1:-1]
-        device_indices_map = [int(i) for i in device_list.split(',')]
-        heights = int(sharding_spac[1])
-        widths = int(sharding_spac[3])
-        devices_len = len(device_indices_map)
-        for i in range(devices_len):
-          slices.setdefault((i // widths, i % widths), device_indices_map[i])
+      device_list_original = sharding.split(' last_tile_dim_replicate')
+      if len(device_list_original) == 2 && device_list_original[1] == '}': # len(sharding) >= 25 and sharding[-24:-1] == 'last_tile_dim_replicate':
+        try:
+          device_list_original_first = device_list_original[0]
+          device_list = device_list_original_first[device_list_original_first.index(']') + 1:]
+          device_indices_map = [int(s) for s in device_list.split(',')]
+          heights = int(sharding_spac[1])
+          widths = int(sharding_spac[3])
+          last_dim_depth = int(sharding_spac[5])
+          devices_len = len(device_indices_map)
+          len_after_dim_down = devices_len // last_dim_depth
+          for i in range(len_after_dim_down):
+            slices.setdefault(
+                (i // widths, i % widths),
+                device_indices_map[i * last_dim_depth:(i + 1) * last_dim_depth])
+        except:
+          raise ValueError("sharding ", sharding, " is not organized as expected")
       else:
-        raise ValueError("sharding ", sharding, " is not organized as expected")
+        # eg: '{devices=[2,2]0,1,2,3}'
+        try:
+          device_list_original_first = device_list_original[0]
+          device_list = device_list_original_first[device_list_original_first.index(']') + 1:]
+          device_indices_map = [int(i) for i in device_list.split(',')]
+          heights = int(sharding_spac[1])
+          widths = int(sharding_spac[3])
+          devices_len = len(device_indices_map)
+          for i in range(devices_len):
+            slices.setdefault((i // widths, i % widths), device_indices_map[i])
+        except:
+          raise ValueError("sharding ", sharding, " is not organized as expected")
   else:
     raise ValueError("sharding length should >= 0")
 
