@@ -31,13 +31,6 @@ sharding_callbacks = weakref.WeakValueDictionary()
 _INSPECT_SHARDING_CALL_NAME = "InspectSharding"
 
 
-class ShardingCallbackInfo:
-
-  def __init__(self, callback, module_context):
-    self.callback = callback
-    self.module_context = module_context
-
-
 def visualize_sharding(sharding: str,
                        use_color: bool = True,
                        scale: float = 1.,
