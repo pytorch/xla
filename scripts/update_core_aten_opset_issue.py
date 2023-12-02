@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 """
 This script uses GitHub API to create or update issues for lowering core ATen opset.
 """
@@ -12,6 +11,7 @@ import urllib3
 AUTH_KEY = 'YOUR_AUTH_KEY_HERE'
 TEST_CORE_ATEN_OPS_LINK = 'https://raw.githubusercontent.com/pytorch/xla/master/test/test_core_aten_ops.py'
 LOWER_CORE_ATEN_OPS_README_LINK = 'https://github.com/pytorch/xla/blob/master/FIX_LOWERING_FOR_CORE_ATEN_OPS.md'
+
 
 def parse_test_file():
   issues_by_op = {}
@@ -34,13 +34,17 @@ def parse_test_file():
     prev_line = line
   return issues_by_op
 
+
 def initialize_client():
   auth = Auth.Token(AUTH_KEY)
   return Github(auth=auth)
 
+
 def create_issues(client, issues: dict[str, list[str]]):
   while True:
-    user_answer = input(f'Running this script will create {len(issues)} issues in PyTorch/XLA. Continue? [Y/N]: ').lower()
+    user_answer = input(
+        f'Running this script will create {len(issues)} issues in PyTorch/XLA. Continue? [Y/N]: '
+    ).lower()
     if user_answer in ['y', 'yes']:
       break
     elif user_answer in ['n', 'no']:
@@ -69,14 +73,15 @@ def create_issues(client, issues: dict[str, list[str]]):
     labels = []
     labels.append(pytorch_xla_repo.get_label('good first issue'))
     labels.append(pytorch_xla_repo.get_label('core aten opset'))
-    
+
     pytorch_xla_repo.create_issue(
-       title = title,
-       body = body,
-       labels = labels,
+        title=title,
+        body=body,
+        labels=labels,
     )
-    
+
     count += 1
+
 
 def check_for_new_issues(client, issues: dict[str, list[str]]):
   pytorch_xla_repo = client.get_repo('PyTorch/XLA')
