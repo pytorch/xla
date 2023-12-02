@@ -110,8 +110,8 @@ class SimpleExportTest(unittest.TestCase):
     with tempfile.TemporaryDirectory() as tempdir:
       save_as_stablehlo(exported, tempdir, options)
       program2 = StableHLOGraphModule.load(tempdir)
-    result = program2(*inputs).detach().cpu()
-    self.assertTrue(torch.allclose(model(*inputs), result))
+      self.assertTrue(len(program2._bundle.state_dict) == 0)
+    self.assertFalse(os.path.exists(os.path.join(stablehlo_dir, 'data')))
 
   def test_save_load2(self):
     model = ElementwiseAdd()
@@ -131,8 +131,8 @@ class SimpleExportTest(unittest.TestCase):
     with tempfile.TemporaryDirectory() as tempdir:
       save_torch_model_as_stablehlo(model, inputs, tempdir, options)
       program2 = StableHLOGraphModule.load(tempdir)
-      result = program2(*inputs).detach().cpu()
-    self.assertTrue(torch.allclose(model(*inputs), result))
+      self.assertTrue(len(program2._bundle.state_dict) == 0)
+    self.assertFalse(os.path.exists(os.path.join(stablehlo_dir, 'data')))
 
   def test_save_load3(self):
     model = ElementwiseAdd()
