@@ -336,9 +336,9 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     assert output == fake_output
 
 # Multi-host tests
-# sharding={devices=[2,8]0,4,8,12,2,6,10,14,1,5,9,13,3,7,11,15}
-# sharding={devices=[8,1,2]0,1,4,5,8,9,12,13,2,3,6,7,10,11,14,15 last_tile_dim_replicate}
-# sharding={replicated}
+# e.g.: sharding={devices=[2,8]0,4,8,12,2,6,10,14,1,5,9,13,3,7,11,15}
+# e.g.: sharding={devices=[8,1,2]0,1,4,5,8,9,12,13,2,3,6,7,10,11,14,15 last_tile_dim_replicate}
+# e.g.: sharding={replicated}
 
   @unittest.skipIf(
       not xr.using_pjrt() or
