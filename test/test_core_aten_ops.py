@@ -2951,7 +2951,6 @@ class AtenOpTest(unittest.TestCase):
                            kwargs)
 
   @unittest.skip
-  @unittest.skip
   def test_aten__native_batch_norm_legit_no_stats_0(self):
     args = (
         torch.randn((1, 3, 2, 10)).to(torch.float32),
