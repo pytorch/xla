@@ -9,6 +9,9 @@ namespace runtime {
 
 XlaCoordinator::XlaCoordinator(int global_rank, int world_size,
                                std::string master_addr, std::string port) {
+  if (world_size <= 1) {
+    return;
+  }
   std::string dist_service_addr = absl::StrJoin({master_addr, port}, ":");
   if (global_rank == 0) {
     xla::CoordinationServiceImpl::Options service_options;
@@ -43,8 +46,10 @@ XlaCoordinator::~XlaCoordinator() {
 }
 
 std::shared_ptr<xla::DistributedRuntimeClient> XlaCoordinator::GetClient() {
-  XLA_CHECK(dist_runtime_client_ != nullptr)
-      << "distributed runtime client is null.";
+  if (world_size_ > 1) {
+    XLA_CHECK(dist_runtime_client_ != nullptr)
+        << "distributed runtime client is null.";
+  }
   return dist_runtime_client_;
 }
 
