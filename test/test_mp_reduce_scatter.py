@@ -11,7 +11,7 @@ def _mp_fn(index):
   scatter_dim = 1
   shard_size = 2
 
-  if xm.xla_device_hw(device) == 'TPU':
+  if xm.xla_device_hw(device) in ['TPU', 'CUDA']:
     rand = torch.rand((32, shard_size * world_size, 32))
     xrand = rand.to(device)
 
