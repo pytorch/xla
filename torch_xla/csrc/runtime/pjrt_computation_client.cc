@@ -149,7 +149,6 @@ PjRtComputationClient::PjRtComputationClient() {
     int global_process_rank = sys_util::GetEnvInt("RANK", local_process_rank);
     int local_world_size = sys_util::GetEnvInt("LOCAL_WORLD_SIZE", 1);
     int global_world_size = sys_util::GetEnvInt("WORLD_SIZE", local_world_size);
-    // int global_world_size = 1;
     std::string master_addr =
         runtime::sys_util::GetEnvString("MASTER_ADDR", "localhost");
     std::string port = runtime::sys_util::GetEnvString(

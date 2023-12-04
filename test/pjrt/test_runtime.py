@@ -81,11 +81,8 @@ class TestExperimentalPjrt(parameterized.TestCase):
         check=True,
         text=True,
     )
-    print('printing result')
     expect = int(result.stdout)
-    print('expect=', expect)
     self.assertEqual(expect, xr.global_runtime_device_count())
-    print('test passed')
 
   @parameterized.named_parameters(('default', {}, True), ('no_default', {
       'PJRT_SELECT_DEFAULT_DEVICE': '0'
