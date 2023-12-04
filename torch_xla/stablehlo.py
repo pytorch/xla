@@ -52,6 +52,14 @@ def _extract_call_parameters(args, meta, bundle):
   return call_args
 
 
+@dataclass
+class StableHLOExportOptions:
+  include_human_readable_text: bool = True
+  override_tracing_arguments: Optional[Tuple[Any]] = None
+  override_tracing_kwargs: Optional[Mapping[str, Any]] = None
+  save_weights: bool = True
+
+
 class StableHLOGraphModule:
 
   def __init__(self, bundle):
@@ -198,14 +206,6 @@ class StableHLOModelBundle:
   additional_constants: List[np.ndarray]
   # can support the case of multiple callable of the same model.
   stablehlo_funcs: List[StableHLOFunc]
-
-
-@dataclass
-class StableHLOExportOptions:
-  include_human_readable_text: bool = True
-  override_tracing_arguments: Optional[Tuple[Any]] = None
-  override_tracing_kwargs: Optional[Mapping[str, Any]] = None
-  save_weights: bool = True
 
 
 class XLAExportInterpreter(torch.fx.Interpreter):
