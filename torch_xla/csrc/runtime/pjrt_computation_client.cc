@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <future>
-#include <iostream>
 #include <unordered_set>
 #include <vector>
 
@@ -163,8 +162,7 @@ PjRtComputationClient::PjRtComputationClient() {
         coordinator_->GetClient();
     std::optional<std::set<int>> allowed_devices;
     if (global_world_size > 1) {
-      allowed_devices =
-          std::make_optional<std::set<int>>(std::set{local_process_rank});
+      allowed_devices = std::set{local_process_rank};
     }
     xla::PjRtClient::KeyValueGetCallback kv_get = nullptr;
     xla::PjRtClient::KeyValuePutCallback kv_put = nullptr;
