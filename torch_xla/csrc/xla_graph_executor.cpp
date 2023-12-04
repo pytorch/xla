@@ -146,8 +146,11 @@ void XLAGraphExecutor::DeviceContextArena::SaveGraphAsString(
       "";
   if (should_save_graph &&
       hash_to_graph_map.find(hash) == hash_to_graph_map.end()) {
-    hash_to_graph_map[hash] =
-        DebugUtil::GetTensorsGraphInfo(tensors, indices, format);
+    std::stringstream ss;
+    ss << DebugUtil::GetTensorsGraphInfo(tensors, indices, format);
+    ss << "Graph Hash: " << torch::lazy::HashToString(hash)
+       << "\n\n## END_GRAPH\n\n";
+    hash_to_graph_map[hash] = ss.str();
   }
 }
 
@@ -1335,6 +1338,7 @@ XLAGraphExecutor::SyncTensorsGraphInternal(
   PostOrderData po_data = RunPostOrder(ir_values, &coll);
   coll.hash = torch::lazy::HashCombine(
       coll.hash, torch::lazy::Hash(po_data.parameter_sequence));
+  DebugUtil::SaveGraphHash(coll.hash);
   TF_VLOG(4) << "Parameter sequence graph hash "
              << torch::lazy::HashToString(coll.hash);
   std::shared_ptr<Async> async =

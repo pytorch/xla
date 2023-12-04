@@ -51,6 +51,8 @@ class DebugUtil {
   static void SaveOutputShardingInfo(std::vector<XLATensorPtr>* tensors,
                                      absl::Span<const size_t> indices);
 
+  static void SaveGraphHash(torch::lazy::hash_t graph_hash);
+
   static bool ExperimentEnabled(const std::string& name);
 
   // warning, this function should only be called when a graph execution is

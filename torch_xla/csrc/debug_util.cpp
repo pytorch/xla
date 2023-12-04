@@ -122,7 +122,7 @@ std::string DebugUtil::GetTensorsGraphInfo(
     ss << "  " << location.function << " (" << location.file << ":"
        << location.line << ")\n";
   }
-  ss << "\nHashes: (";
+  ss << "\nRoot Hashes: (";
   for (size_t i = 0; i < root_hashes.size(); ++i) {
     if (i > 0) {
       ss << ", ";
@@ -148,7 +148,7 @@ std::string DebugUtil::GetTensorsGraphInfo(
   } else {
     XLA_ERROR() << "Invalid graph format: " << format;
   }
-  ss << "\n## BEGIN_GRAPH\n" << graph_str << "\n## END_GRAPH\n\n";
+  ss << "\n## BEGIN_GRAPH\n" << graph_str;
   return ss.str();
 }
 
@@ -174,6 +174,23 @@ void DebugUtil::SaveTensorsGraphInfo(const char* name,
     std::lock_guard<std::mutex> guard(lock);
     std::ofstream graph_file(save_file, std::ios_base::app);
     graph_file << "[" << name << "]\n" << info << "\n";
+  }
+}
+
+void DebugUtil::SaveGraphHash(torch::lazy::hash_t graph_hash) {
+  thread_local const std::string save_file =
+      runtime::sys_util::GetEnvOrdinalPath(
+          "XLA_SAVE_TENSORS_FILE", "", bridge::GetCurrentDevice().ordinal());
+  if (!save_file.empty()) {
+    // Technically we don't need a lock here as this function should only be
+    // called one during each graph execution. Tracing is single thread and
+    // blocking. Put a lock here to be save, it is within the debugging tool so
+    // perfomrance implcation should be OK.
+    static std::mutex lock;
+    std::lock_guard<std::mutex> guard(lock);
+    std::ofstream graph_file(save_file, std::ios_base::app);
+    graph_file << "Graph Hash: " << torch::lazy::HashToString(graph_hash)
+               << "\n\n## END_GRAPH\n\n";
   }
 }
 

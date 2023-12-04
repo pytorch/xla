@@ -45,7 +45,7 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     if should_dump_output_sharding:
       self.assertIn('OUTPUT_SHARDING_END', str(lines[-2]))
     else:
-      self.assertIn('END_GRAPH', str(lines[-3]))
+      self.assertIn('END_GRAPH', str(lines[-2]))
 
 
 if __name__ == '__main__':
