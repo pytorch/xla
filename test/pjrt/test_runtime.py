@@ -2,7 +2,8 @@ import contextlib
 import logging
 import os
 from typing import Dict, Optional
-from unittest import mock
+from unittest import mock, skipUnless
+import subprocess
 
 import torch_xla
 from absl.testing import absltest, parameterized
@@ -68,6 +69,23 @@ class TestExperimentalPjrt(parameterized.TestCase):
   def test_xla_device_error(self):
     with self.assertRaises(IndexError):
       xm.xla_device(10)
+
+  @skipUnless(xr.device_type() == 'GPU', 'Only applicable to GPU.')
+  def test_global_runtime_device_count(self):
+    xr.set_device_type('CUDA')
+    command = 'nvidia-smi --list-gpus | wc -l'
+    result = subprocess.run(
+        command,
+        capture_output=True,
+        shell=True,
+        check=True,
+        text=True,
+    )
+    print('printing result')
+    expect = int(result.stdout)
+    print('expect=', expect)
+    self.assertEqual(expect, xr.global_runtime_device_count())
+    print('test passed')
 
   @parameterized.named_parameters(('default', {}, True), ('no_default', {
       'PJRT_SELECT_DEFAULT_DEVICE': '0'
