@@ -602,7 +602,7 @@ def main():
   logger.info(args)
 
   if not args.disable_tf32:
-    logger.warning('Enabling fast F32 mulitplication for PyTorch')
+    logger.warning('Enabling fast F32 multiplication for PyTorch')
     torch.set_float32_matmul_precision('high')
 
   runner = ExperimentRunner(args)
