@@ -52,6 +52,14 @@ def _extract_call_parameters(args, meta, bundle):
   return call_args
 
 
+@dataclass
+class StableHLOExportOptions:
+  include_human_readable_text: bool = True
+  override_tracing_arguments: Optional[Tuple[Any]] = None
+  override_tracing_kwargs: Optional[Mapping[str, Any]] = None
+  save_weights: bool = True
+
+
 class StableHLOGraphModule:
 
   def __init__(self, bundle):
@@ -84,8 +92,10 @@ class StableHLOGraphModule:
       method_name = self._default_method
     return self._name_to_stablehlo[method_name].text
 
-  def save(self, directory_path):
-    _save_program_bundle(self._bundle, directory_path)
+  def save(self,
+           directory_path,
+           options: Optional[StableHLOExportOptions] = None):
+    _save_program_bundle(self._bundle, directory_path, options)
 
   @classmethod
   def load(cls, directory_path):
@@ -385,14 +395,19 @@ def _exported_program_to_stablehlo_bundle(exported_model,
   return bundle
 
 
-def _save_program_bundle(bundle: StableHLOModelBundle,
-                         stablehlo_dir: os.PathLike) -> None:
+def _save_program_bundle(
+    bundle: StableHLOModelBundle,
+    stablehlo_dir: os.PathLike,
+    options: Optional[StableHLOExportOptions] = None) -> None:
 
-  data_dir = os.path.join(stablehlo_dir, 'data')
-  os.makedirs(data_dir, exist_ok=True)
-  for key, val in bundle.state_dict.items():
-    with open(os.path.join(stablehlo_dir, 'data', key), 'wb') as f:
-      np.save(f, val)
+  if options is None:
+    options = StableHLOExportOptions()
+  if options.save_weights:
+    data_dir = os.path.join(stablehlo_dir, 'data')
+    os.makedirs(data_dir, exist_ok=True)
+    for key, val in bundle.state_dict.items():
+      with open(os.path.join(stablehlo_dir, 'data', key), 'wb') as f:
+        np.save(f, val)
 
   # save metadata and stablehlo bytecode
   func_dir = os.path.join(stablehlo_dir, 'functions')
@@ -421,8 +436,10 @@ def _iter_dir(path: os.PathLike):
 
 def _load_program_bundle(stablehlo_dir: os.PathLike) -> StableHLOModelBundle:
   state_dict = {}
-  for name, f in _iter_dir(os.path.join(stablehlo_dir, 'data')):
-    state_dict[name] = np.load(f, allow_pickle=True)
+  # if there is no weights/state_dict to be loaded, will not load weights
+  if os.path.exists(os.path.join(stablehlo_dir, 'data')):
+    for name, f in _iter_dir(os.path.join(stablehlo_dir, 'data')):
+      state_dict[name] = np.load(f, allow_pickle=True)
 
   constants = []
   for name, f in _iter_dir(os.path.join(stablehlo_dir, 'constants')):
@@ -453,13 +470,6 @@ def _load_program_bundle(stablehlo_dir: os.PathLike) -> StableHLOModelBundle:
       state_dict=state_dict)
 
 
-@dataclass
-class StableHLOExportOptions:
-  include_human_readable_text: bool = True
-  override_tracing_arguments: Optional[Tuple[Any]] = None
-  override_tracing_kwargs: Optional[Mapping[str, Any]] = None
-
-
 def save_as_stablehlo(exported_model: 'ExportedProgram',
                       stablehlo_dir: os.PathLike,
                       options: Optional[StableHLOExportOptions] = None):
@@ -488,7 +498,7 @@ def save_as_stablehlo(exported_model: 'ExportedProgram',
   if options is None:
     options = StableHLOExportOptions()
   shlo_program = exported_program_to_stablehlo(exported_model, options)
-  shlo_program.save(stablehlo_dir)
+  shlo_program.save(stablehlo_dir, options)
 
 
 def exported_program_to_stablehlo(
