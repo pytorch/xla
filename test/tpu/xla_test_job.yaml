@@ -51,10 +51,6 @@ spec:
       python3 /src/pytorch/xla/test/spmd/test_xla_distributed_checkpoint.py
       python3 /src/pytorch/xla/test/spmd/test_train_spmd_linear_model.py
       python3 /src/pytorch/xla/test/spmd/test_xla_spmd_python_api_interaction.py
-      XLA_EXPERIMENTAL=nonzero:masked_select python3 /src/pytorch/xla/test/ds/test_dynamic_shape_models.py -v
-      XLA_EXPERIMENTAL=nonzero:masked_select python3 /src/pytorch/xla/test/ds/test_dynamic_shapes.py -v
-      python3 /src/pytorch/xla/test/test_autocast.py
-      python3 /src/pytorch/xla/test/dynamo/test_dynamo.py
       python3 /src/pytorch/xla/test/test_mp_all_gather.py
       python3 /src/pytorch/xla/test/test_mp_mesh_reduce.py
       python3 /src/pytorch/xla/test/test_mp_save.py
@@ -63,6 +59,11 @@ spec:
       python3 /src/pytorch/xla/test/test_mp_sync_batch_norm.py
       python3 /src/pytorch/xla/test/test_mp_distributed_mm.py
       python3 /src/pytorch/xla/test/test_mp_replication.py
+      XLA_EXPERIMENTAL=nonzero:masked_select python3 /src/pytorch/xla/test/ds/test_dynamic_shape_models.py -v
+      XLA_EXPERIMENTAL=nonzero:masked_select python3 /src/pytorch/xla/test/ds/test_dynamic_shapes.py -v
+      python3 /src/pytorch/xla/test/test_autocast.py
+      python3 /src/pytorch/xla/test/dynamo/test_dynamo.py
+
     volumeMounts:
     - mountPath: /dev/shm
       name: dshm
