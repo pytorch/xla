@@ -92,7 +92,9 @@ class StableHLOGraphModule:
       method_name = self._default_method
     return self._name_to_stablehlo[method_name].text
 
-  def save(self, directory_path, options: Optional[StableHLOExportOptions] = None):
+  def save(self,
+           directory_path,
+           options: Optional[StableHLOExportOptions] = None):
     _save_program_bundle(self._bundle, directory_path, options)
 
   @classmethod
