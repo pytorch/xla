@@ -172,6 +172,7 @@ PjRtComputationClient::PjRtComputationClient() {
     options.num_nodes = global_world_size;
     options.allowed_devices = allowed_devices;
     options.platform_name = "gpu";
+    options.should_stage_host_to_device_transfers = true;
     options.kv_get = kv_get;
     options.kv_put = kv_put;
     client_ = std::move(xla::GetStreamExecutorGpuClient(options).value());
