@@ -133,8 +133,8 @@ class PersistentCache : public AbstractCache<K, T, H, E> {
 
   explicit PersistentCache(int kMaxMemoryCacheSize, std::string cache_dir,
                            bool readonly,
-                           std::function<std::string(TypePtr&)> serialize,
-                           std::function<TypePtr(std::string&)> deserialize)
+                           std::function<std::string(const TypePtr&)> serialize,
+                           std::function<TypePtr(const std::string&)> deserialize)
       : memory_cache_(kMaxMemoryCacheSize),
         cache_dir_(cache_dir),
         readonly_(readonly),
@@ -211,7 +211,7 @@ class PersistentCache : public AbstractCache<K, T, H, E> {
   std::string GetPath(K key) {
     std::stringstream ss;
     ss << key;
-    return cache_dir_ / std::filesystem::path(ss.str());
+    return cache_dir_ / ss.str();
   }
 
   bool Exists(std::string path) {
@@ -225,8 +225,8 @@ class PersistentCache : public AbstractCache<K, T, H, E> {
   }
 
   Cache<K, T, H, E> memory_cache_;
-  std::function<std::string(TypePtr&)> serialize_;
-  std::function<TypePtr(std::string&)> deserialize_;
+  std::function<std::string(const TypePtr&)> serialize_;
+  std::function<TypePtr(const std::string&)> deserialize_;
   std::filesystem::path cache_dir_;
   std::mutex lock_;
   bool readonly_;
