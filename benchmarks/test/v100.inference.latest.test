@@ -1,0 +1,3 @@
+# WorkloadNumber,Speedup,ModelName
+0,0.566584884107471,Background_Matting
+1,0.9006749894489531,BERT_pytorch
