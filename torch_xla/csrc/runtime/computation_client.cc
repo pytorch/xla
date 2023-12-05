@@ -55,12 +55,14 @@ int64_t ComputationClient::GetDeviceOrdinal(const std::string& device) {
 
 std::unordered_map<std::string, std::string> pjrt_plugins_;
 
-void ComputationClient::RegisterPjRtPlugin(std::string name, std::string library_path) {
+void ComputationClient::RegisterPjRtPlugin(std::string name,
+                                           std::string library_path) {
   TF_VLOG(3) << "Registering PjRt plugin " << name << " at " << library_path;
   pjrt_plugins_[name] = library_path;
 }
 
-std::unordered_map<std::string, std::string>& ComputationClient::GetPjRtPlugins() {
+std::unordered_map<std::string, std::string>&
+ComputationClient::GetPjRtPlugins() {
   return pjrt_plugins_;
 }
 
