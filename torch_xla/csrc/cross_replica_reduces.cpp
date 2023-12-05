@@ -6,6 +6,7 @@
 
 #include "torch/csrc/lazy/core/util.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
+#include "torch_xla/csrc/common/lynx_types.h"
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/helpers.h"
@@ -254,7 +255,26 @@ SendResult BuildSendWithToken(xla::XlaOp input, xla::XlaOp token,
   xla::ChannelHandle channel_handle;
   channel_handle.set_handle(channel_id);
   channel_handle.set_type(xla::ChannelHandle::DEVICE_TO_DEVICE);
+  // result_token alias to "send_done"
   xla::XlaOp result_token = xla::SendWithToken(input, token, channel_handle);
+
+  // lynx set frontend_attributes of send op
+  xla::internal::XlaBuilderFriend builder_friend;
+  auto* send_done_instr = builder_friend.GetInstruction(result_token);
+  XLA_CHECK(send_done_instr->operand_ids().size() == 1)
+      << "send done operands size must be equal to 1";
+  auto send_operand_id = send_done_instr->operand_ids(0);
+  auto* send_instr = builder_friend.GetInstructionByHandle(
+      result_token.builder(), send_operand_id);
+  auto* frontend_attributes = send_instr->mutable_frontend_attributes();
+  auto p2p_channels_map = lynx::P2PChannelsManager::GetInstance();
+  auto src_tgt_pair = (*(p2p_channels_map->GetChannelsMap()))[channel_id];
+  std::stringstream ss;
+  ss << "{{" << src_tgt_pair.first << "," << src_tgt_pair.second << "}}";
+  // _xla_send_recv_source_target_pairs="{{0, 1}}"
+  (*frontend_attributes->mutable_map())[kSendRecvSourceTargetPairsAttr] =
+      ss.str();
+
   // Bind input into the result, so that the caller can depend on the result.
   // This can enable building the `send` op into the graph when the token
   // is ignored by some caller like `torch.distributed`.
@@ -269,6 +289,24 @@ RecvResult BuildRecvWithToken(xla::XlaOp token, const xla::Shape& recv_shape,
   channel_handle.set_handle(channel_id);
   channel_handle.set_type(xla::ChannelHandle::DEVICE_TO_DEVICE);
   xla::XlaOp recv = xla::RecvWithToken(token, recv_shape, channel_handle);
+
+  // lynx set frontend_attributes of recv op
+  xla::internal::XlaBuilderFriend builder_friend;
+  auto* recv_done_instr = builder_friend.GetInstruction(recv);
+  XLA_CHECK(recv_done_instr->operand_ids().size() == 1)
+      << "recv done operands size must be equal to 1";
+  auto recv_operand_id = recv_done_instr->operand_ids(0);
+  auto* recv_instr =
+      builder_friend.GetInstructionByHandle(recv.builder(), recv_operand_id);
+  auto* frontend_attributes = recv_instr->mutable_frontend_attributes();
+  auto p2p_channels_map = lynx::P2PChannelsManager::GetInstance();
+  auto src_tgt_pair = (*(p2p_channels_map->GetChannelsMap()))[channel_id];
+  std::stringstream ss;
+  ss << "{{" << src_tgt_pair.first << "," << src_tgt_pair.second << "}}";
+  // _xla_send_recv_source_target_pairs="{{0, 1}}"
+  (*frontend_attributes->mutable_map())[kSendRecvSourceTargetPairsAttr] =
+      ss.str();
+
   xla::XlaOp result = xla::GetTupleElement(recv, 0);
   xla::XlaOp new_token = xla::GetTupleElement(recv, 1);
   return {result, new_token};

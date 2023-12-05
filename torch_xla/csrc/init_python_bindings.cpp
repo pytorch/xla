@@ -32,6 +32,7 @@
 #include "torch_xla/csrc/XLANativeFunctions.h"
 #include "torch_xla/csrc/aten_autograd_ops.h"
 #include "torch_xla/csrc/aten_xla_bridge.h"
+#include "torch_xla/csrc/common/lynx_types.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/dtype.h"
 #include "torch_xla/csrc/helpers.h"
@@ -1882,6 +1883,18 @@ void InitXlaModuleBindings(py::module m) {
         << "Coordinator must be initialized";
     auto& coordinator = comp_client->GetCoordinator();
     coordinator.DeactivatePreemptionSyncManager();
+  });
+  m.def("_set_send_recv_channels", [](py::dict channel_pairs) {
+    auto p2p_channels_map = lynx::P2PChannelsManager::GetInstance();
+    for (const auto& item : channel_pairs) {
+      int64_t channel_id = item.first.cast<int64_t>();
+      const auto& src_tgt_list = item.second.cast<py::list>();
+      std::pair<int64_t, int64_t> src_tgt_pair;
+      src_tgt_pair.first = src_tgt_list[0].cast<int64_t>();
+      src_tgt_pair.second = src_tgt_list[1].cast<int64_t>();
+      (*(p2p_channels_map->GetChannelsMap()))[channel_id] = src_tgt_pair;
+    }
+    return true;
   });
   // Check whether a sync point has been reached. This method requires that the
   // distributed runtime be initialized and a PreemptionSyncManager activated.

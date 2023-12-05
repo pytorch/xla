@@ -8,6 +8,7 @@
 #include "absl/synchronization/blocking_counter.h"
 #include "absl/types/span.h"
 #include "pjrt_computation_client.h"
+#include "torch_xla/csrc/common/lynx_types.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/env_vars.h"

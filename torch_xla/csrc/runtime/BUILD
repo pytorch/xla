@@ -88,6 +88,7 @@ cc_library(
     ":tensor_source",
     ":tf_logging",
     ":xla_coordinator",
+    "//torch_xla/csrc:common",
     "//torch_xla/csrc:thread_pool",
     "@xla//xla:literal",
     "@xla//xla:shape_util",
@@ -373,6 +374,7 @@ ptxla_cc_test(
     name = "pjrt_computation_client_test",
     srcs = ["pjrt_computation_client_test.cc"],
     deps = [
+        ":common",
         ":computation_client",
         ":pjrt_computation_client",
         ":tensor_source",

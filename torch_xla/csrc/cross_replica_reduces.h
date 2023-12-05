@@ -19,6 +19,9 @@ enum class AllReduceType {
   kAnd,
 };
 
+constexpr char kSendRecvSourceTargetPairsAttr[] =
+    "_xla_send_recv_source_target_pairs";
+
 struct AllToAllResult {
   xla::XlaOp result;
   xla::XlaOp token;

@@ -110,6 +110,7 @@ ptxla_cc_library(
         ":XLANativeFunctions.h",
     ] + glob(["ops/*.h"]),
     deps = [
+        ":common",
         ":aten_cpu_fallback",
         ":device",
         ":dtype",
@@ -337,4 +338,13 @@ ptxla_cc_library(
         "//torch_xla/csrc/runtime:computation_client",
         "@com_google_absl//absl/types:span",
     ],
+)
+
+cc_library(
+    name = "common",
+    srcs = [],
+    hdrs = ["common/singleton.h",
+            "common/base.h",
+            "common/lynx_types.h"],
+    deps = [],
 )

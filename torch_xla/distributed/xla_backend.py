@@ -23,6 +23,42 @@ _register_xla_backend()
 dist.register_rendezvous_handler('xla', rendezvous.pjrt_rendezvous_handler)
 
 
+class P2PChannelManager(object):
+
+  _instance = None
+
+  def __init__(self):
+    self.map = {}
+    self.channel_to_src_tgt = {}
+    self.id_counter = {}
+
+  def next_channel_id(self, src_rank, dst_rank):
+    if (src_rank, dst_rank) not in self.id_counter:
+      self.id_counter[src_rank, dst_rank] = [1]
+    else:
+      count = self.id_counter[src_rank, dst_rank][-1]
+      self.id_counter[src_rank, dst_rank].append(count + 1)
+    count = self.id_counter[src_rank, dst_rank][-1]
+    channel_id = self._hash(src_rank, dst_rank, count)
+    if (src_rank, dst_rank) not in self.map:
+      self.map[(src_rank, dst_rank)] = [
+          channel_id,
+      ]
+    else:
+      self.map[(src_rank, dst_rank)].append(channel_id)
+    self.channel_to_src_tgt[channel_id] = src_rank, dst_rank
+    return channel_id
+
+  @classmethod
+  def get_instance(self):
+    if P2PChannelManager._instance is None:
+      P2PChannelManager._instance = P2PChannelManager()
+    return P2PChannelManager._instance
+
+  def _hash(self, src_rank, dst_rank, count):
+    return src_rank * 100000 * 100000 + dst_rank * 100000 + count
+
+
 def _ret_work(ret):
   fut = torch.futures.Future()
   fut.set_result(ret)
@@ -150,7 +186,11 @@ class ProcessGroupXla(ProcessGroup):
   # the maker with their specific one. See unit test in
   # test/test_torch_distributed_xla_backend.py for an example.
   def make_send_channel_id(self, dst_rank, tag):
-    raise NotImplementedError
+    src_rank = xm.get_ordinal()
+    channel_id = P2PChannelManager.get_instance().next_channel_id(
+        src_rank, dst_rank)
+    xm.set_send_recv_channels({channel_id: [src_rank, dst_rank]})
+    return channel_id
 
   # Call site e.g.
   # https://github.com/pytorch/pytorch/blob/release/1.10/torch/distributed/distributed_c10d.py#L877
@@ -171,7 +211,11 @@ class ProcessGroupXla(ProcessGroup):
   # the maker with their specific one. See unit test in
   # test/test_torch_distributed_xla_backend.py for an example.
   def make_recv_channel_id(self, src_rank, tag):
-    raise NotImplementedError
+    dst_rank = xm.get_ordinal()
+    channel_id = P2PChannelManager.get_instance().next_channel_id(
+        src_rank, dst_rank)
+    xm.set_send_recv_channels({channel_id: [src_rank, dst_rank]})
+    return channel_id
 
   # Call site e.g.
   # https://github.com/pytorch/pytorch/blob/release/1.10/torch/distributed/distributed_c10d.py#L913

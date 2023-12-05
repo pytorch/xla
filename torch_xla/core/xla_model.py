@@ -710,6 +710,10 @@ def recv(output, channel_id):
   return result
 
 
+def set_send_recv_channels(channel_pairs):
+  return torch_xla._XLAC._set_send_recv_channels(channel_pairs)
+
+
 def reduce_scatter(reduce_type,
                    input,
                    scale,
