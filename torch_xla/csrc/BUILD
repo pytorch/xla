@@ -269,6 +269,7 @@ ptxla_cc_library(
         ":tensor",
         ":version",
         "//torch_xla/csrc/runtime",
+        "//torch_xla/csrc/runtime:device_capabilities",
         "//torch_xla/csrc/runtime:metrics",
         "//torch_xla/csrc/runtime:metrics_analysis",
         "//torch_xla/csrc/runtime:metrics_reader",

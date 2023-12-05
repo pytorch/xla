@@ -139,6 +139,11 @@ cc_library(
 )
 
 cc_library(
+  name = "device_capabilities",
+  hdrs = ["device_capabilities.h"],
+)
+
+cc_library(
     name = "env_vars",
     srcs = ["env_vars.cc"],
     hdrs = ["env_vars.h"],
