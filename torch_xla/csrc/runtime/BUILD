@@ -85,7 +85,6 @@ cc_library(
     ":env_vars",
     ":operation_manager",
     ":profiler",
-    ":hash",
     ":stablehlo_helper",
     ":tensor_source",
     ":tf_logging",

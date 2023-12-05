@@ -89,16 +89,12 @@ torch::lazy::hash_t hash_xla_env_vars(std::vector<std::string> flag_vars,
 }
 }  // namespace
 
-torch::lazy::hash_t HashXlaEnvVars(bool force_rehash) {
+torch::lazy::hash_t HashXlaEnvVars() {
   // Both XLA_FLAGS and LIBTPU_INIT_ARGS contain XLA flags which impact
   // the compilation result.
   static std::vector<std::string> flag_vars = {"XLA_FLAGS", "LIBTPU_INIT_ARGS"};
   static std::vector<std::string> raw_vars = {"TPU_MEGACORE"};
-  static torch::lazy::hash_t env_hash = hash_xla_env_vars(flag_vars, raw_vars);
-  if (force_rehash) {
-    env_hash = hash_xla_env_vars(flag_vars, raw_vars);
-  }
-  return env_hash;
+  return hash_xla_env_vars(flag_vars, raw_vars);
 }
 
 }  // namespace hash
