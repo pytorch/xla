@@ -131,13 +131,13 @@ class PersistentCache : public AbstractCache<K, T, H, E> {
  public:
   using TypePtr = std::shared_ptr<T>;
 
-  explicit PersistentCache(int kMaxMemoryCacheSize, std::string cache_dir,
-                           bool readonly,
-                           std::function<std::string(const TypePtr&)> serialize,
-                           std::function<TypePtr(const std::string&)> deserialize)
+  explicit PersistentCache(
+      int kMaxMemoryCacheSize, std::string cache_dir, bool readonly_storage,
+      std::function<std::string(const TypePtr&)> serialize,
+      std::function<TypePtr(const std::string&)> deserialize)
       : memory_cache_(kMaxMemoryCacheSize),
         cache_dir_(cache_dir),
-        readonly_(readonly),
+        readonly_storage_(readonly_storage),
         serialize_(serialize),
         deserialize_(deserialize) {
     std::filesystem::create_directories(cache_dir);
@@ -151,7 +151,7 @@ class PersistentCache : public AbstractCache<K, T, H, E> {
   TypePtr Add(K key, TypePtr obj) override {
     std::lock_guard<std::mutex> slock(lock_);
     std::string path = GetPath(key);
-    if (!Exists(path) && !readonly_) {
+    if (!Exists(path) && !readonly_storage_) {
       std::ofstream out(path, std::ios::binary);
       out << serialize_(obj);
     }
@@ -182,7 +182,7 @@ class PersistentCache : public AbstractCache<K, T, H, E> {
     if (!val) {
       TORCH_LAZY_COUNTER("PersistentCacheDeserializeFailure", 1);
       // Remove the serialized value from disk to allow a new value to be stored
-      _erase(key);
+      EraseImpl(key);
       return nullptr;
     }
     TORCH_LAZY_COUNTER("PersistentCacheHit", 1);
@@ -194,7 +194,7 @@ class PersistentCache : public AbstractCache<K, T, H, E> {
     std::lock_guard<std::mutex> slock(lock_);
     memory_cache_.Clear();
     // Delete and recreate the cache directory on disk.
-    if (!readonly_) {
+    if (!readonly_storage_) {
       std::filesystem::remove_all(cache_dir_);
       std::filesystem::create_directories(cache_dir_);
     }
@@ -202,7 +202,7 @@ class PersistentCache : public AbstractCache<K, T, H, E> {
 
   bool Erase(const K& key) override {
     std::lock_guard<std::mutex> slock(lock_);
-    return _erase(key);
+    return EraseImpl(key);
   }
 
   Cache<K, T, H, E>& GetMemoryCache() { return memory_cache_; }
@@ -219,9 +219,9 @@ class PersistentCache : public AbstractCache<K, T, H, E> {
     return stat(path.c_str(), &buffer) == 0;
   }
 
-  bool _erase(const K& key) {
+  bool EraseImpl(const K& key) {
     memory_cache_.Erase(key);
-    return !readonly_ && std::filesystem::remove(GetPath(key));
+    return !readonly_storage_ && std::filesystem::remove(GetPath(key));
   }
 
   Cache<K, T, H, E> memory_cache_;
@@ -229,7 +229,11 @@ class PersistentCache : public AbstractCache<K, T, H, E> {
   std::function<TypePtr(const std::string&)> deserialize_;
   std::filesystem::path cache_dir_;
   std::mutex lock_;
-  bool readonly_;
+  // readonly_storage_ controls whether the cache will treat the persistence
+  // layer as readonly. When set, operations which mutate the cache, such as
+  // Erase and Add, are not written to disk, but they are still applied to the
+  // in-memory cache.
+  const bool readonly_storage_;
 };
 
 }  // namespace util
