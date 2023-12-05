@@ -42,13 +42,12 @@ http_archive(
         "//openxla_patches:constexpr_return.diff",
         "//openxla_patches:gpu_race_condition.diff",
         "//openxla_patches:f16_abi_clang.diff",
-        "//openxla_patches:gpu_topk_rewriter.diff",
         "//openxla_patches:quant_dequant_converter.diff",
         "//openxla_patches:stablehlo_quant_seralization.diff",
     ],
-    strip_prefix = "xla-4f8381651977dff16b1d86bb4b198eb733c5f478",
+    strip_prefix = "xla-8744c9a94782cd7804f015e6d29df253437af3cb",
     urls = [
-        "https://github.com/openxla/xla/archive/4f8381651977dff16b1d86bb4b198eb733c5f478.tar.gz",
+        "https://github.com/openxla/xla/archive/8744c9a94782cd7804f015e6d29df253437af3cb.tar.gz",
     ],
 )
 
