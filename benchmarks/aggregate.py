@@ -20,6 +20,19 @@ from scipy.stats.mstats import gmean
 
 logger = logging.getLogger(__name__)
 
+test_to_csv_field_name = {
+    'inference': {
+        'test': 'eval',
+        'xla_label': 'openxla_eval',
+        'inductor_label': 'inductor',
+    },
+    'training': {
+        'test': 'train',
+        'xla_label': 'openxla',
+        'inductor_label': 'inductor',
+    },
+}
+
 
 def find_files(input_dirname: str) -> list[str]:
   files = []
@@ -82,27 +95,23 @@ def process_file(args, results_map: dict[str, Any], filename: str):
         continue
       accelerator_model = clean_up_accelerator_model(
           row[field2index['accelerator_model']])
+      if accelerator_model != args.accelerator:
+        continue
       dynamo = row[field2index['dynamo']]
       test = row[field2index['test']]
+      if test != test_to_csv_field_name[args.test]['test']:
+        continue
       batch_size = row[field2index['batch_size']]
       median_total_time = row[field2index['median_total_time']]
       if timestamp not in results_map:
         results_map[timestamp] = {}
-      if accelerator_model not in results_map[timestamp]:
-        results_map[timestamp][accelerator_model] = {}
-      if dynamo not in results_map[timestamp][accelerator_model]:
-        results_map[timestamp][accelerator_model][dynamo] = {}
-      if test not in results_map[timestamp][accelerator_model][dynamo]:
-        results_map[timestamp][accelerator_model][dynamo][test] = {}
-      if (model_name
-          not in results_map[timestamp][accelerator_model][dynamo][test]):
-        results_map[timestamp][accelerator_model][dynamo][test][model_name] = {}
-      if (batch_size not in results_map[timestamp][accelerator_model][dynamo]
-          [test][model_name]):
-        results_map[timestamp][accelerator_model][dynamo][test][model_name][
-            batch_size] = {}
-      results_map[timestamp][accelerator_model][dynamo][test][model_name][
-          batch_size] = median_total_time
+      if dynamo not in results_map[timestamp]:
+        results_map[timestamp][dynamo] = {}
+      if (model_name not in results_map[timestamp][dynamo]):
+        results_map[timestamp][dynamo][model_name] = {}
+      if (batch_size not in results_map[timestamp][dynamo][model_name]):
+        results_map[timestamp][dynamo][model_name][batch_size] = {}
+      results_map[timestamp][dynamo][model_name][batch_size] = median_total_time
 
 
 def summarize_speedups(acc_map: dict[str, Any], label: str):
@@ -117,24 +126,20 @@ def summarize_speedups(acc_map: dict[str, Any], label: str):
 # The speedup values are stored in acc_map[label]; the corresponding
 # model names are stored in acc_map[f'{label}:model_name'].
 def compute_speedups(acc_map: dict[str, Any], label: str, xla_label,
-                     inductor_label, test_label):
+                     inductor_label):
   model_label = f'{label}:model_name'
   if xla_label not in acc_map:
     return
   if inductor_label not in acc_map:
     return
-  if (test_label not in acc_map[xla_label] or
-      test_label not in acc_map[inductor_label]):
-    return
-  for model_name, v in acc_map[xla_label][test_label].items():
-    if model_name not in acc_map[inductor_label][test_label]:
+  for model_name, v in acc_map[xla_label].items():
+    if model_name not in acc_map[inductor_label]:
       continue
     speedups = []
     # If we are running several batch sizes, keep the geomean of their speedups.
     for batch_size in v:
       xla_time = v[batch_size]
-      inductor_time = acc_map[inductor_label][test_label][model_name].get(
-          batch_size, None)
+      inductor_time = acc_map[inductor_label][model_name].get(batch_size, None)
       if not xla_time or not inductor_time:
         continue
       speedups.append(float(inductor_time) / float(xla_time))
@@ -148,15 +153,13 @@ def compute_speedups(acc_map: dict[str, Any], label: str, xla_label,
   summarize_speedups(acc_map, label)
 
 
-def process_results(results_map: dict[str, Any]):
+def process_results(args, results_map: dict[str, Any]):
   for timestamp in results_map:
-    for accelerator in results_map[timestamp]:
-      acc_map = results_map[timestamp][accelerator]
+    acc_map = results_map[timestamp]
 
-      compute_speedups(acc_map, 'speedups:inference', 'openxla_eval',
-                       'inductor', 'eval')
-      compute_speedups(acc_map, 'speedups:training', 'openxla', 'inductor',
-                       'train')
+    name2field = test_to_csv_field_name[args.test]
+    compute_speedups(acc_map, 'speedups', name2field['xla_label'],
+                     name2field['inductor_label'])
 
 
 def maketitle(args, title: str):
@@ -166,13 +169,11 @@ def maketitle(args, title: str):
 
 
 def pr_latest(results_map: dict[str, Any], args, timestamps: list[str]):
-  label = f'speedups:{args.test}'
+  label = f'speedups'
   model_label = f'{label}:model_name'
 
   for timestamp in reversed(timestamps):
-    if label not in results_map[timestamp][args.accelerator]:
-      continue
-    acc_map = results_map[timestamp][args.accelerator]
+    acc_map = results_map[timestamp]
     (speedups,
      model_names) = map(list,
                         zip(*sorted(zip(acc_map[label], acc_map[model_label]))))
@@ -198,16 +199,16 @@ def pr_latest(results_map: dict[str, Any], args, timestamps: list[str]):
 
 def pr_histogram(results_map: dict[str, Any], args, timestamps: list[str]):
   percentiles = [f'p{p}' for p in (5, 50, 95)]
-  labels = [f'speedups:{args.test}:{p}' for p in percentiles]
+  labels = [f'speedups:{p}' for p in percentiles]
   x = []
   y = [[] for i in range(len(percentiles))]
   for timestamp in timestamps:
-    if labels[0] in results_map[timestamp][args.accelerator]:
+    if labels[0] in results_map[timestamp]:
       for label in labels:
-        assert label in results_map[timestamp][args.accelerator]
+        assert label in results_map[timestamp]
       x.append(date.fromtimestamp(float(timestamp)))
       for i, label in enumerate(labels):
-        y[i].append(results_map[timestamp][args.accelerator][label])
+        y[i].append(results_map[timestamp][label])
   if args.format == 'csv':
     titles = ['# Datetime'] + percentiles
     print(','.join(titles))
@@ -227,14 +228,14 @@ def pr_histogram(results_map: dict[str, Any], args, timestamps: list[str]):
 
 
 def pr_gmean(results_map: dict[str, Any], args, timestamps: list[str]):
-  label = f'speedups:{args.test}:gmean'
+  label = f'speedups:gmean'
   x = []
   y = []
   for timestamp in timestamps:
-    if label not in results_map[timestamp][args.accelerator]:
+    if label not in results_map[timestamp]:
       continue
     x.append(date.fromtimestamp(float(timestamp)))
-    gmean = results_map[timestamp][args.accelerator][label]
+    gmean = results_map[timestamp][label]
     y.append(gmean)
   if args.format == 'csv':
     print('# Datetime,Speedup')
@@ -250,10 +251,7 @@ def pr_gmean(results_map: dict[str, Any], args, timestamps: list[str]):
 
 
 def pr_results(results_map: dict[str, Any], args):
-  timestamp_list = list(results_map.keys())
-  timestamps = [
-      ts for ts in timestamp_list if args.accelerator in results_map[ts]
-  ]
+  timestamps = list(results_map.keys())
   timestamps.sort()
 
   if args.report == 'latest':
@@ -334,7 +332,7 @@ def main():
 
   for filename in filenames:
     process_file(args, results_map, filename)
-  process_results(results_map)
+  process_results(args, results_map)
   if not results_map:
     sys.exit('no results found')
   pr_results(results_map, args)
