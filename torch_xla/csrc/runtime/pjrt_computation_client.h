@@ -54,9 +54,9 @@ class PjRtComputationClient : public ComputationClient {
   std::vector<ComputationPtr> Compile(
       std::vector<CompileInstance> instances) override;
 
-  std::string SerializeComputation(ComputationPtr computation) override;
+  std::string SerializeComputation(const ComputationPtr computation) override;
 
-  ComputationPtr DeserializeComputation(std::string& serialized) override;
+  ComputationPtr DeserializeComputation(const std::string& serialized) override;
 
   std::vector<DataPtr> ExecuteComputation(
       const Computation& computation, absl::Span<const DataPtr> arguments,

@@ -282,11 +282,13 @@ class ComputationClient {
       std::vector<CompileInstance> instances) = 0;
 
   // Serialize a computation to a string.
-  virtual std::string SerializeComputation(ComputationPtr computation) = 0;
+  virtual std::string SerializeComputation(
+      const ComputationPtr computation) = 0;
 
   // Deserialize a string resulting from SerializeComputation back to a
   // Computation. If the deserialization fails, nullptr is returned.
-  virtual ComputationPtr DeserializeComputation(std::string& serialized) = 0;
+  virtual ComputationPtr DeserializeComputation(
+      const std::string& serialized) = 0;
 
   // Returns a hash of the current compilation environment.
   virtual torch::lazy::hash_t HashCompilationEnv() = 0;

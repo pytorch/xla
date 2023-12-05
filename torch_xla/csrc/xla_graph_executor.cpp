@@ -84,13 +84,15 @@ XLAGraphExecutor::ComputationCache* CreateComputationCache() {
   static std::string persistentCacheDir =
       runtime::sys_util::GetEnvString("XLA_PERSISTENT_CACHE_PATH", "");
   if (!persistentCacheDir.empty()) {
-    auto serialize_fn = [](auto& computation) -> std::string {
+    auto serialize_fn =
+        [](XLAGraphExecutor::ComputationCache::TypePtr computation)
+        -> std::string {
       return runtime::GetComputationClient()->SerializeComputation(
           computation->computation);
     };
-    auto deserialize_fn = [](auto& serialization)
-        -> std::shared_ptr<XLAGraphExecutor::CachedComputation> {
-      auto computation =
+    auto deserialize_fn = [](std::string serialization)
+        -> XLAGraphExecutor::ComputationCache::TypePtr {
+      runtime::ComputationClient::ComputationPtr computation =
           runtime::GetComputationClient()->DeserializeComputation(
               serialization);
       if (!computation) return nullptr;

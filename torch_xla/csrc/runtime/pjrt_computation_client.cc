@@ -599,7 +599,7 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
 }
 
 std::string PjRtComputationClient::SerializeComputation(
-    ComputationPtr computation) {
+    const ComputationPtr computation) {
   const PjRtComputation& pjrt_computation =
       dynamic_cast<const PjRtComputation&>(*computation);
 
@@ -607,7 +607,7 @@ std::string PjRtComputationClient::SerializeComputation(
 }
 
 ComputationClient::ComputationPtr PjRtComputationClient::DeserializeComputation(
-    std::string& serialized) {
+    const std::string& serialized) {
   auto executable_or = client_->DeserializeExecutable(serialized, std::nullopt);
   if (!executable_or.ok()) {
     TF_LOG(WARNING) << "Failed to deserialize executable: "
