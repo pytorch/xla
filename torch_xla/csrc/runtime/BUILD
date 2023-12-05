@@ -111,6 +111,9 @@ cc_library(
 cc_library(
     name = "cache",
     hdrs = ["cache.h"],
+    deps = [
+      "@torch//:headers",
+    ],
 )
 
 cc_test(
@@ -118,8 +121,9 @@ cc_test(
     size = "small",
     srcs = ["cache_test.cc"],
     deps = [
-        ":cache",
-        "@com_google_googletest//:gtest_main",
+      ":cache",
+      "@torch//:libtorch_cpu",  # For TORCH_LAZY_COUNTER
+      "@com_google_googletest//:gtest_main",
     ],
 )
 
