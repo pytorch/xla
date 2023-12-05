@@ -12,6 +12,7 @@ import sys
 import time
 import torch
 import tiers
+import torch_xla.debug.metrics as met
 from tqdm import tqdm
 from torch.profiler import profile, record_function, ProfilerActivity
 from torch.autograd import DeviceType
@@ -164,7 +165,7 @@ class ExperimentRunner:
         outputs.append(output)
         for key, val in run_metrics.items():
           # metrics from repeated runs are formed into lists in the metrics dict
-          if i == 0:
+          if key not in metrics:
             metrics[key] = []
           metrics[key].append(val)
 
@@ -290,6 +291,41 @@ class ExperimentRunner:
     metrics[
         "per_iter_cuda_time_s"] = total_cuda_time / self._args.iterations_per_run
 
+  def get_xla_cpu_fallback_ops(self, met):
+    return set(name for name in met.counter_names() if self.is_aten_op(name))
+
+  def is_aten_op(self, op_name):
+    return 'aten::' in op_name
+
+  def collect_individual_ops(self, benchmark_experiment, metrics, prof):
+    assert prof is not None, 'Expecting prof to be defined!'
+
+    extract_prof_info = lambda event: {
+        "self_cpu_time_s": event.self_cpu_time_total / 1000000,
+        "self_cuda_time_s": event.self_cuda_time_total / 1000000,
+        "total_cpu_time_s": event.cpu_time_total / 1000000,
+        "total_cuda_time_s": event.cuda_time_total / 1000000,
+        "num_of_calls": event.count
+    }
+
+    if benchmark_experiment.xla:
+      unlowered_ops = self.get_xla_cpu_fallback_ops(met)
+      if not unlowered_ops:
+        return
+      if "xla_unlowered_ops" not in metrics:
+        metrics["xla_unlowered_ops"] = dict()
+      for event in prof.key_averages():
+        if event.key in unlowered_ops:
+          metrics["xla_unlowered_ops"][event.key] = extract_prof_info(event)
+    else:
+      for event in prof.key_averages():
+        op_name = event.key
+        if not self.is_aten_op(op_name):
+          continue
+        if "inductor_ops" not in metrics:
+          metrics["inductor_ops"] = dict()
+        metrics["inductor_ops"][op_name] = extract_prof_info(event)
+
   def timed_run(self, benchmark_experiment, benchmark_model):
     reset_rng_state(benchmark_experiment)
 
@@ -325,6 +361,7 @@ class ExperimentRunner:
       self._synchronize(benchmark_experiment)
       return output
 
+    prof = None
     if enable_prof:
       with profile(
           activities=[ProfilerActivity.CUDA, ProfilerActivity.CPU]) as prof:
@@ -342,6 +379,9 @@ class ExperimentRunner:
         "per_iter_time"] = metrics["total_time"] / self._args.iterations_per_run
     if benchmark_experiment.xla:
       metrics["trace_per_iter_time"] = t_trace / self._args.iterations_per_run
+
+    if prof:
+      self.collect_individual_ops(benchmark_experiment, metrics, prof)
 
     return metrics, output
 
