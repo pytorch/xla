@@ -59,21 +59,80 @@ def dummy_all_reduce(reduce_type, inputs, scale=1.0, groups=None):
   return [t.mul_(scale) for t in inputs]
 
 
-def dummy_reduce_scatter(reduce_type,
-                         input,
-                         scale,
-                         scatter_dim,
-                         shard_count,
-                         groups=None):
+class DummyReduceScatter:
   """A dummy op for debugging with the same output shape as reduce_scatter"""
-  assert shard_count == xm.xrt_world_size()
-  full_size = input.size(scatter_dim)
-  shard_size = full_size // xm.xrt_world_size()
-  begin = shard_size * xm.get_ordinal()
-  end = begin + shard_size
-  slices = [None] * input.dim()
-  slices[scatter_dim] = slice(begin, end)
-  return input[tuple(slices)] * scale
+
+  def __init__(self, shard_count):
+    assert shard_count == xm.xrt_world_size()
+    self.scale = 1.0
+
+  def __call__(self, input, callback):
+    full_size = input.size(0)
+    shard_size = full_size // xm.xrt_world_size()
+    begin = shard_size * xm.get_ordinal()
+    end = begin + shard_size
+    slices = [None] * input.dim()
+    slices[0] = slice(begin, end)
+    callback(input[tuple(slices)])
+
+  def flush(self):
+    pass
+
+
+class BucketizedReduceScatter:
+  """A reduce_scatter op that group input tensors before reduce-scattering them."""
+
+  def __init__(self, bucket_size_mb, shard_count, groups, pin_layout) -> None:
+    self.bucket_size_bytes = bucket_size_mb * 1024 * 1024
+    self.shard_count = shard_count
+    self.groups = groups
+    self.pin_layout = pin_layout
+    self.scale = 1.0
+
+    self.callbacks = []
+    self.bucket = []
+    self.bucket_watermark = 0
+
+  def __call__(self, input, callback):
+    input_byte_size = input.element_size() * input.numel()
+    self.bucket.append(input)
+    self.callbacks.append(callback)
+    self.bucket_watermark += input_byte_size
+    # If bucket_size_mb is default 0, flush for every tensor rather than coalesce
+    if self.bucket_watermark > self.bucket_size_bytes:
+      self.flush()
+
+  def flush(self):
+    if not self.bucket:
+      return
+    # TODO: debug coalesce error "" for GPU when pin_layout=True.
+    # For now, workaround by using the non-coalesce version of reduce-scatter
+    # when there's only 1 tensor input (bucket_size_mb=0).
+    if len(self.bucket) == 1:
+      result = xm.reduce_scatter(
+          xm.REDUCE_SUM,
+          self.bucket[0],
+          scale=self.scale,
+          scatter_dim=0,
+          shard_count=self.shard_count,
+          groups=self.groups,
+          pin_layout=self.pin_layout)
+      self.callbacks[0](result)
+    else:
+      results = xm.reduce_scatter(
+          xm.REDUCE_SUM,
+          self.bucket,
+          scale=self.scale,
+          scatter_dim=0,
+          shard_count=self.shard_count,
+          groups=self.groups,
+          pin_layout=self.pin_layout)
+      for cb, result in zip(self.callbacks, results):
+        cb(result)
+
+    self.bucket.clear()
+    self.callbacks.clear()
+    self.bucket_watermark = 0
 
 
 class XLAPatchedLinear(torch.autograd.Function):
