@@ -13,14 +13,10 @@ import os
 import re
 import sys
 import matplotlib.pyplot as plt
+import tiers
 from typing import Any
 import numpy as np
 from scipy.stats.mstats import gmean
-
-try:
-  from .tiers import append_filter_by_tier
-except ImportError:
-  from tiers import append_filter_by_tier
 
 logger = logging.getLogger(__name__)
 
@@ -320,8 +316,8 @@ def parse_args(args=None):
   parser.add_argument('--title', type=str, help="Plot title.")
   args = parser.parse_args(args)
 
-  append_filter_by_tier(args.filter, args.filter_by_tier)
-  append_filter_by_tier(args.exclude, args.exclude_by_tier)
+  tiers.append_filter_by_tier(args.filter, args.filter_by_tier)
+  tiers.append_filter_by_tier(args.exclude, args.exclude_by_tier)
   args.filter = args.filter or [r"."]
   args.exclude = args.exclude or [r"^$"]
 
