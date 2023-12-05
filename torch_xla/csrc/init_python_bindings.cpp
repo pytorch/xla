@@ -2243,7 +2243,13 @@ void InitXlaModuleBindings(py::module m) {
         });
   // -------------Dynamo Integration API End-------------------------
   py::class_<runtime::DeviceCapabilities>(m, "DeviceCapabilities")
-    .def(py::init<bool, bool, std::optional<int32_t>, std::optional<int32_t>, std::optional<std::string>>(), py::kw_only(), py::arg("supports_float64") = true, py::arg("supports_bool") = true, py::arg("dense_gather_factor") = std::nullopt, py::arg("dense_scatter_factor") = std::nullopt, py::arg("default_rng_bit_generator_name") = std::nullopt);
+      .def(py::init<bool, bool, std::optional<int32_t>, std::optional<int32_t>,
+                    std::optional<std::string>>(),
+           py::kw_only(), py::arg("supports_float64") = true,
+           py::arg("supports_bool") = true,
+           py::arg("dense_gather_factor") = std::nullopt,
+           py::arg("dense_scatter_factor") = std::nullopt,
+           py::arg("default_rng_bit_generator_name") = std::nullopt);
 }
 }  // namespace
 
