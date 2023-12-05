@@ -784,12 +784,6 @@ def reduce_scatter(reduce_type,
   # Now the input should be a list of Tensors.
   elif isinstance(input, list) and all(
       isinstance(v, torch.Tensor) for v in input):
-    result = torch_xla._XLAC._xla_reduce_scatter_coalesced(
-        reduce_type, output or [], input, token, scale, scatter_dim,
-        shard_count, groups or [], pin_layout)
-    torch_xla._XLAC._set_all_reduce_token(devctx.device, result[-1])
-    return result[:-1]
-  else:
     if output != None:
       if not isinstance(output, list) or any(
           not isinstance(v, torch.Tensor) for v in output):
@@ -799,10 +793,14 @@ def reduce_scatter(reduce_type,
       if len(output) != len(input):
         raise ValueError("`output` length doesn't match `input` length: "
                          f"{len(output)} vs {len(input)}.")
-
-    else:
-      raise TypeError("`input` needs to be a Tensor or a list of Tensors, but "
-                      f"given {type(input)}.")
+    result = torch_xla._XLAC._xla_reduce_scatter_coalesced(
+        reduce_type, output or [], input, token, scale, scatter_dim,
+        shard_count, groups or [], pin_layout)
+    torch_xla._XLAC._set_all_reduce_token(devctx.device, result[-1])
+    return result[:-1]
+  else:
+    raise TypeError("`input` needs to be a Tensor or a list of Tensors, but "
+                    f"given {type(input)}.")
 
 
 def add_step_closure(closure, args=(), run_async=False):
