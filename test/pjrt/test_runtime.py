@@ -70,7 +70,7 @@ class TestExperimentalPjrt(parameterized.TestCase):
     with self.assertRaises(IndexError):
       xm.xla_device(10)
 
-  @skipUnless(xr.device_type() == 'GPU', 'Only applicable to GPU.')
+  @skipUnless(xr.device_type() == 'CUDA', 'Only applicable to GPU.')
   def test_global_runtime_device_count(self):
     xr.set_device_type('CUDA')
     command = 'nvidia-smi --list-gpus | wc -l'
