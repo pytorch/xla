@@ -1074,12 +1074,6 @@ at::Tensor XLANativeFunctions::cumsum(const at::Tensor& self, int64_t dim,
                                       c10::optional<at::ScalarType> dtype) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
-  if (IsOperationOnType(dtype, self_tensor->dtype(), at::ScalarType::Long)) {
-    // XLA reduce-window does not support S64 mode.
-    return at::native::call_fallback_fn<&xla_cpu_fallback,
-                                        ATEN_OP(cumsum)>::call(self, dim,
-                                                               dtype);
-  }
   return bridge::AtenFromXlaTensor(
       tensor_methods::cumsum(self_tensor, dim, dtype));
 }
