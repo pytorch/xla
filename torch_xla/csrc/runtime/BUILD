@@ -102,6 +102,7 @@ cc_library(
     "@xla//xla/pjrt/c:pjrt_c_api_hdrs",
     "@tsl//tsl/profiler/lib:traceme",
     "@tsl//tsl/platform/cloud:gcs_file_system",
+    "@tsl//tsl/platform:env",
     "@com_google_absl//absl/strings",
     "@com_google_absl//absl/synchronization",
     "@com_google_absl//absl/types:span",
@@ -247,6 +248,7 @@ cc_library(
     deps = [
         ":types",
         ":xla_util",
+        "@stablehlo//:stablehlo_portable_api",
         "@stablehlo//:stablehlo_serialization",
         "@xla//xla/translate/hlo_to_mhlo:hlo_to_mlir_hlo",
         "@xla//xla/translate/mhlo_to_hlo:mlir_hlo_to_hlo",

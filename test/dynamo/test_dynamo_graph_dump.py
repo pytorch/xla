@@ -32,10 +32,14 @@ class DynamoGraphDumpTest(unittest.TestCase):
     xla_y = torch.tensor(200.0).to(device)
     res_xla_dynamo = self.fn_simple_dynamo(xla_x, xla_y)
     with open(save_file, 'rb') as f:
-      current_line = sum(1 for line in f)
+      lines = f.readlines()
+      current_line = len(lines)
+      self.assertIn('Graph Hash:', lines[-5].decode())
     with open(save_file, 'rb') as f:
       res_xla_dynamo_2 = self.fn_simple_dynamo(xla_x, xla_y)
-      new_line = sum(1 for line in f)
+      lines = f.readlines()
+      new_line = len(lines)
+      self.assertIn('Graph Hash:', lines[-5].decode())
     self.assertGreater(new_line, current_line)
 
 

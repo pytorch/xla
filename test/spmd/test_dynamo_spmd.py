@@ -157,9 +157,16 @@ class DynamoSpmdInferenceTest(test_xla_sharding_base.XlaShardingTest):
       saved_var = None
     os.environ['XLA_DYNAMO_INPUT_SHARDING_CHECK_THRESHOLD'] = '2'
 
+    # Execute the graph, threshold becomes 1 after this.
     dynamo_res = dynamo_linear(xla_x)
+    # Change the sharding, given it is within threshold, following execution should
+    # go through. Since the sharding change is detected, threshold will get reset to 2.
     xs.mark_sharding(xla_x, self._get_mesh((1, self.n_devices)), (1, 0))
     dynamo_res = dynamo_linear(xla_x)
+    dynamo_res = dynamo_linear(xla_x)
+    dynamo_res = dynamo_linear(xla_x)
+    # Change the sharding again, now it exceed the threshold, we expect the graph execution
+    # to fail.
     xs.clear_sharding(xla_x)
     xs.mark_sharding(xla_x, self._get_mesh((1, self.n_devices)), (0, 1))
     # crash will hapeen in a async execution thread, need to grab the lock again to
@@ -171,10 +178,7 @@ class DynamoSpmdInferenceTest(test_xla_sharding_base.XlaShardingTest):
       print('catch')
     # it is hard to catch the C++ runtime error in python, instead we can check if
     # after printing that dynamo_res is still a placeholder then it means C++ crashed.
-    # TODO(yeounoh) - this actually returns False, which means that the program was recompiled
-    # with the new sharding change. We expect it to be True after a crash without
-    # recompilation. Disabling the test until we debug.
-    #self.assertTrue(torch_xla._XLAC._is_placecholder(dynamo_res))
+    self.assertTrue(torch_xla._XLAC._is_placecholder(dynamo_res))
     if saved_var != None:
       os.environ['XLA_DYNAMO_INPUT_SHARDING_CHECK_THRESHOLD'] = saved_var
     else:

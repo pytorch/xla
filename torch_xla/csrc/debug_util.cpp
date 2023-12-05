@@ -122,7 +122,7 @@ std::string DebugUtil::GetTensorsGraphInfo(
     ss << "  " << location.function << " (" << location.file << ":"
        << location.line << ")\n";
   }
-  ss << "\nHashes: (";
+  ss << "\nRoot Hashes: (";
   for (size_t i = 0; i < root_hashes.size(); ++i) {
     if (i > 0) {
       ss << ", ";
@@ -148,7 +148,7 @@ std::string DebugUtil::GetTensorsGraphInfo(
   } else {
     XLA_ERROR() << "Invalid graph format: " << format;
   }
-  ss << "\n## BEGIN_GRAPH\n" << graph_str << "\n## END_GRAPH\n\n";
+  ss << "\n## BEGIN_GRAPH\n" << graph_str;
   return ss.str();
 }
 
@@ -174,6 +174,23 @@ void DebugUtil::SaveTensorsGraphInfo(const char* name,
     std::lock_guard<std::mutex> guard(lock);
     std::ofstream graph_file(save_file, std::ios_base::app);
     graph_file << "[" << name << "]\n" << info << "\n";
+  }
+}
+
+void DebugUtil::SaveGraphHash(torch::lazy::hash_t graph_hash) {
+  thread_local const std::string save_file =
+      runtime::sys_util::GetEnvOrdinalPath(
+          "XLA_SAVE_TENSORS_FILE", "", bridge::GetCurrentDevice().ordinal());
+  if (!save_file.empty()) {
+    // Technically we don't need a lock here as this function should only be
+    // called one during each graph execution. Tracing is single thread and
+    // blocking. Put a lock here to be save, it is within the debugging tool so
+    // perfomrance implcation should be OK.
+    static std::mutex lock;
+    std::lock_guard<std::mutex> guard(lock);
+    std::ofstream graph_file(save_file, std::ios_base::app);
+    graph_file << "Graph Hash: " << torch::lazy::HashToString(graph_hash)
+               << "\n\n## END_GRAPH\n\n";
   }
 }
 
@@ -217,12 +234,25 @@ static bool endsWith(const std::string& str, const std::string& suffix) {
 }
 
 void DebugUtil::analyze_graph_execution_python_frame(
-    bool from_dynamo_executation) {
-  static bool is_master_process =
+    GraphAnalysisSource source, torch::lazy::hash_t graph_hash,
+    const xla::ProgramShape* program_shape) {
+  static const bool pt_xla_debug_enabled =
+      runtime::sys_util::GetEnvBool("PT_XLA_DEBUG", false);
+  static const bool is_master_process =
       (runtime::sys_util::GetEnvInt("PJRT_LOCAL_PROCESS_RANK", 0) == 0);
-  static std::string debug_file_name =
+  static const std::string debug_file_name =
       runtime::sys_util::GetEnvString("PT_XLA_DEBUG_FILE", "");
-  static std::string debug_output_prefix = "Execution Analysis: ";
+
+  static const std::string executation_output_prefix = "Execution Analysis: ";
+  static const std::string compilation_output_prefix = "Compilation Analysis: ";
+
+  if (!pt_xla_debug_enabled) {
+    return;
+  }
+
+  std::string debug_output_prefix = (source == GraphAnalysisSource::Compilation)
+                                        ? compilation_output_prefix
+                                        : executation_output_prefix;
   // TODO: Make this configurable.
   if (!is_master_process) {
     return;
@@ -237,8 +267,10 @@ void DebugUtil::analyze_graph_execution_python_frame(
      << "======================================================================"
         "=========="
      << "\n";
-  ss << debug_output_prefix << "Execution Cause\n";
-  if (from_dynamo_executation) {
+  ss << debug_output_prefix
+     << ((source == GraphAnalysisSource::Compilation) ? "Compilation Cause\n"
+                                                      : "Execution Cause\n");
+  if (source == GraphAnalysisSource::DynamoExecution) {
     // when executation is from dynamo compiled graph, the python stack will not
     // show any dynamo related python file since frame is already replaced. We
     // can either analyze the C++ call stack or rely on caller to pass a boolean
@@ -272,11 +304,30 @@ void DebugUtil::analyze_graph_execution_python_frame(
           "mark_step\n";
   }
 
-  // TODO(JackCaoG): make number of frames printed configurable
+  ss << debug_output_prefix << "Graph Info: \n";
+  ss << debug_output_prefix
+     << "  Graph Hash: " << torch::lazy::HashToString(graph_hash) << "\n";
+  ss << debug_output_prefix
+     << "  Number of Graph Inputs: " << program_shape->parameters().size()
+     << "\n";
+  ss << debug_output_prefix << "  Number of Graph Outputs: "
+     << (program_shape->result().IsTuple()
+             ? program_shape->result().tuple_shapes_size()
+             : 1)
+     << "\n";
+
   ss << debug_output_prefix << "Python Frame Triggered Execution: \n";
   for (auto& location : frames) {
-    ss << debug_output_prefix << "  " << location.function << " ("
-       << location.file << ":" << location.line << ")\n";
+    // if current frame `__call__` at pjrt.py, bleow stack will be python
+    // code to spawn up process, not very useful to the user.
+    if (location.function == "__call__" &&
+        endsWith(location.file, "_internal/pjrt.py")) {
+      ss << debug_output_prefix << "  ..........\n";
+      break;
+    } else {
+      ss << debug_output_prefix << "  " << location.function << " ("
+         << location.file << ":" << location.line << ")\n";
+    }
   }
   ss << debug_output_prefix
      << "----------------------------------------------------------------------"

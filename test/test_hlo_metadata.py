@@ -8,7 +8,52 @@ import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
 import unittest
 import json
-from custom_debug_lowering import CustomOpNameLowering
+import inspect
+import copy
+from custom_debug_lowering import CustomOpNameLowering, StackLayerSignature
+
+
+class HloStackExtractor:
+
+  def __init__(self, hlo_json):
+    assert 'stackFrameIndex' in hlo_json
+    assert 'fileLocations' in hlo_json['stackFrameIndex']
+    assert 'stackFrames' in hlo_json['stackFrameIndex']
+    assert 'fileNames' in hlo_json['stackFrameIndex']
+    assert 'functionNames' in hlo_json['stackFrameIndex']
+
+    self.file_locations = hlo_json['stackFrameIndex']['fileLocations']
+    self.stack_frames = hlo_json['stackFrameIndex']['stackFrames']
+    self.file_names = hlo_json['stackFrameIndex']['fileNames']
+    self.function_names = hlo_json['stackFrameIndex']['functionNames']
+
+  def extract(self, stack_frame_id):
+    stack_sigs = []
+
+    stack_frame = self.stack_frames[stack_frame_id - 1]
+
+    while True:
+      file_location_id = stack_frame['fileLocationId']
+      file_location = self.file_locations[file_location_id - 1]
+      file_name_id = file_location['fileNameId']
+      function_name_id = file_location['functionNameId']
+      line = file_location['line']
+      file_name = self.file_names[file_name_id - 1]
+      function_name = self.function_names[function_name_id - 1]
+
+      sig = StackLayerSignature(file_name, function_name, line)
+      stack_sigs.append(sig)
+
+      stack_frame_id = 0
+      if 'parentFrameId' in stack_frame:
+        stack_frame_id = stack_frame['parentFrameId']
+
+      if stack_frame_id == 0:
+        break
+      else:
+        stack_frame = self.stack_frames[stack_frame_id - 1]
+
+    return stack_sigs
 
 
 class TestHloMetaData(unittest.TestCase):
@@ -32,10 +77,15 @@ class TestHloMetaData(unittest.TestCase):
     nl2 = torch.nn.Tanh()
     model = torch.nn.Sequential(layer1, nl1, layer2, nl2)
 
-    with CustomOpNameLowering():
+    with CustomOpNameLowering() as c:
       model = model.to(device=xm.xla_device())
       inp = torch.rand(4, 4, device=xm.xla_device())
+      #inp = torch.rand(4, 4)
+      #inp = inp.to(device=xm.xla_device())
       out = model(inp)
+
+      # Get outer frames
+      stack_sigs = c.stack_sigs
 
     ctx = torch_xla._XLAC.lowering.LoweringContext()
     ctx.build([out])
@@ -43,10 +93,9 @@ class TestHloMetaData(unittest.TestCase):
 
     # Strings to match in the lowering
     bingo = {
-        "torch/_ops.py": False,
-        #"torch/nn/modules/linear.py": False,
-        #"torch/nn/modules/activation.py": False,
-        #"torch/nn/functional.py": False,
+        "torch/nn/modules/linear.py": False,
+        "torch/nn/modules/activation.py": False,
+        "torch/nn/functional.py": False,
         "Sequential[model]/Linear[0]": False,
         "Sequential[model]/ReLU[1]": False,
         "Sequential[model]/Linear[2]": False,
@@ -60,10 +109,17 @@ class TestHloMetaData(unittest.TestCase):
     non_zero_metadata = False
 
     local_json = json.loads(hlo_text)
+
+    #with open("./hlo.json", "w") as f:
+    #  f.write(json.dumps(local_json, indent=2))
+
+    hloEx = HloStackExtractor(local_json)
+
     assert "computations" in local_json
     for c in local_json["computations"]:
       if "instructions" in c:
         i = c["instructions"]
+
         for op in i:
           if 'metadata' in op:
             meta = op["metadata"]
@@ -74,6 +130,27 @@ class TestHloMetaData(unittest.TestCase):
               for k in bingo.keys():
                 if isinstance(vm, str) and k in vm:
                   bingo[k] = True
+
+            # Decode stack frame id and check it matches one of the
+            # the passed in stacks
+            stack_frame_match = False
+            if 'stackFrameId' in meta:
+              hlo_stack_sig = hloEx.extract(meta['stackFrameId'])
+
+              for t_sig in stack_sigs:
+                if len(hlo_stack_sig) == len(t_sig) and hlo_stack_sig == t_sig:
+                  stack_frame_match = True
+                  break
+                elif len(hlo_stack_sig) > len(t_sig):
+                  hlo_stack_sig_copy = copy.copy(hlo_stack_sig)
+                  discards = []
+                  while len(hlo_stack_sig_copy) > len(t_sig):
+                    discards.append(hlo_stack_sig_copy.pop(0))
+                  # Print an error message on a partial match
+                  if hlo_stack_sig_copy == t_sig:
+                    print(f"** PARTIAL MATCH: Discarded {discards}")
+
+              assert stack_frame_match, f"Stack\n{hlo_stack_sig} does not match any of\n{stack_sigs}"
 
     assert non_zero_metadata, "No metadata was lowered - an issue with turning on IR DEBUG?"
 

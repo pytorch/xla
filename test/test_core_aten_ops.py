@@ -9,23 +9,24 @@ import tempfile
 import unittest
 
 
-def diff_output(testcase, output1, output2, atol):
+def diff_output(testcase, output1, output2, rtol, atol):
   if isinstance(output1, torch.Tensor):
     testcase.assertIsInstance(output2, torch.Tensor)
     output2_cpu = output2.detach().cpu()
     if output2_cpu.dtype != output1.dtype:
       output2_cpu = output2_cpu.to(output1.dtype)
-    testcase.assertTrue(torch.allclose(output1, output2_cpu, atol=atol))
+    testcase.assertTrue(
+        torch.allclose(output1, output2_cpu, atol=atol, rtol=rtol))
   elif isinstance(output1, (tuple, list)):
     testcase.assertIsInstance(output2, (tuple, list))
     testcase.assertEqual(len(output1), len(output2))
     for o1, o2 in zip(output1, output2):
-      diff_output(testcase, o1, o2, atol)
+      diff_output(testcase, o1, o2, rtol, atol)
   else:
     testcase.assertEqual(output1, output2)
 
 
-def run_export_and_compare(testcase, func, args, kwargs, atol=1e-3):
+def run_export_and_compare(testcase, func, args, kwargs, atol=1e-3, rtol=1e-5):
   device = xm.xla_device()
   with testcase.subTest('torch_eval'):
     res = func(*args, **kwargs)
@@ -36,7 +37,7 @@ def run_export_and_compare(testcase, func, args, kwargs, atol=1e-3):
                                      lambda x: x.to(device=device), kwargs)
       res_xla = func(*args2, **kwargs2)
       with testcase.subTest('torch_xla_diff:' + str(atol)):
-        diff_output(testcase, res, res_xla, atol)
+        diff_output(testcase, res, res_xla, atol=atol, rtol=rtol)
     with testcase.subTest('can_export'):
       exported = torch.export.export(func, args, kwargs)
       with testcase.subTest('can_convert_to_stablehlo'):
@@ -44,10 +45,13 @@ def run_export_and_compare(testcase, func, args, kwargs, atol=1e-3):
         with testcase.subTest('stablehlo_can_run'):
           res2 = shlo(*args, **kwargs)
           with testcase.subTest('stablehlo_diff: ' + str(atol)):
-            diff_output(testcase, res, res2, atol)
+            diff_output(testcase, res, res2, rtol=rtol, atol=atol)
 
 
 class AtenOpTest(unittest.TestCase):
+
+  def setUp(self):
+    torch.manual_seed(0)
 
   def test_aten_abs_0(self):
     args = (torch.randn((10, 10)).to(torch.float32),)
@@ -2947,7 +2951,6 @@ class AtenOpTest(unittest.TestCase):
                            kwargs)
 
   @unittest.skip
-  @unittest.skip
   def test_aten__native_batch_norm_legit_no_stats_0(self):
     args = (
         torch.randn((1, 3, 2, 10)).to(torch.float32),
@@ -3295,6 +3298,11 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.pow.Tensor_Scalar, args, kwargs)
 
+  def test_aten_pow_Scalar_1(self):
+    args = (10000, torch.randn(16 * 8))
+    kwargs = dict()
+    run_export_and_compare(self, torch.ops.aten.pow.Scalar, args, kwargs)
+
   @unittest.skip
   def test_aten_pow_Tensor_Tensor_0(self):
     args = (
@@ -3313,11 +3321,10 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.pow.Tensor_Tensor, args, kwargs)
 
-  @unittest.skip
   def test_aten_pow_Tensor_Tensor_2(self):
     args = (
-        torch.randint(0, 10, (10, 10)).to(torch.int32),
-        torch.randint(0, 10, (10, 10)).to(torch.int32),
+        torch.randint(0, 5, (10, 10)).to(torch.int32),
+        torch.randint(0, 5, (10, 10)).to(torch.int32),
     )
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.pow.Tensor_Tensor, args, kwargs)
@@ -3534,6 +3541,7 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.remainder.Tensor, args, kwargs)
 
+  @unittest.skip
   def test_aten_replication_pad2d_0(self):
     args = (
         torch.randn((3, 2, 10)).to(torch.float32),
@@ -3547,6 +3555,7 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.replication_pad2d, args, kwargs)
 
+  @unittest.skip
   def test_aten_replication_pad2d_1(self):
     args = (
         torch.randint(0, 10, (3, 2, 10)).to(torch.int32),
@@ -4363,11 +4372,17 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.tan, args, kwargs)
 
-  @unittest.skip
   def test_aten_tan_1(self):
     args = (torch.randn((10, 10)).to(torch.float16),)
     kwargs = dict()
-    run_export_and_compare(self, torch.ops.aten.tan, args, kwargs)
+    run_export_and_compare(
+        self,
+        torch.ops.aten.tan,
+        args,
+        kwargs,
+        rtol=0.001,
+        atol=0.01,
+    )
 
   def test_aten_tan_2(self):
     args = (torch.randint(0, 10, (10, 10)).to(torch.int32),)

@@ -19,6 +19,12 @@ class DebugUtil {
     kStableHlo,
   };
 
+  enum GraphAnalysisSource {
+    Compilation,
+    Execution,
+    DynamoExecution,
+  };
+
   static GraphFormat GetDefaultGraphFormat();
 
   // Return HLO/StableHLO gragh of the index selected tensors in string format.
@@ -45,12 +51,15 @@ class DebugUtil {
   static void SaveOutputShardingInfo(std::vector<XLATensorPtr>* tensors,
                                      absl::Span<const size_t> indices);
 
+  static void SaveGraphHash(torch::lazy::hash_t graph_hash);
+
   static bool ExperimentEnabled(const std::string& name);
 
   // warning, this function should only be called when a graph execution is
   // about to happen.
   static void analyze_graph_execution_python_frame(
-      bool from_dynamo_executation = false);
+      GraphAnalysisSource source, torch::lazy::hash_t graph_hash = 0,
+      const xla::ProgramShape* program_shape = nullptr);
 };
 
 }  // namespace torch_xla

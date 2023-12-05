@@ -34,7 +34,7 @@ std::vector<xla::Literal> ReleaseGilAndTransferData(
 // TODO LTC @wonjoo - Migrate to upstream after Device -> BackendDevice
 std::vector<at::Tensor> XlaDataToTensors(
     absl::Span<const torch::lazy::BackendDataPtr> xla_data,
-    at::ScalarType dest_element_type);
+    absl::Span<const at::ScalarType> dest_element_type);
 
 bool TensorCompare(const at::Tensor& t1, const at::Tensor& t2);
 

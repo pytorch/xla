@@ -3,6 +3,7 @@
 
 #include <c10/core/SymNodeImpl.h>
 #include <torch/csrc/autograd/variable.h>
+#include <torch/csrc/lazy/core/ir_metadata.h>
 #include <torch/csrc/lazy/core/ir_util.h>
 
 #include <memory>
@@ -277,14 +278,19 @@ class XLATensor : public torch::lazy::LazyTensor {
   void SetStorage(const c10::Storage& storage) { storage_ = storage; }
   const c10::Storage& Storage() const { return storage_; }
 
+  void SetBase(const at::Tensor& base) { base_ = base; }
+  const at::Tensor& Base() const { return base_; }
+
   int64_t GetHandle() const;
 
   // Override to enable SPMD.
   void AssignIrValue(torch::lazy::Value ir_value) const final;
 
-  // Set custom op name on XlaNode
-  void SetCustomOpName(const std::string& op_name);
-  const std::string& GetCustomOpName() const;
+  // Set custom op name on base Node type (since not all nodes are XlaNode),
+  // additionally when using TorchDispatch - e.g. to set a custom op name we
+  // end up adding additional frames in stack frame debug - this limits
+  // stack depth
+  bool SetNodeUserMetadata(std::shared_ptr<torch::lazy::UserMetaData> metadata);
 
  private:
   XLATensor(const at::Tensor& tensor, const torch::lazy::BackendDevice& device);
@@ -337,6 +343,11 @@ class XLATensor : public torch::lazy::LazyTensor {
   // points to the same storage, and thus alias of each other.
   // FIXME(alanwaketan): Remove this once we have functionalization (bdhirsh).
   c10::Storage storage_;
+  // Base tensor for view and view_copy operations. This is used mainly for
+  // operations such as as_strided, which operates on the allocated storage.
+  // Since XLATensor doesn't actually expose the storage, we have to run the
+  // operation on the originally created tensor.
+  at::Tensor base_;
 };
 
 }  // namespace torch_xla

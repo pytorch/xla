@@ -1,4 +1,5 @@
 import functools
+import threading
 import torch_xla
 import torch_xla.core.xla_model as xm
 
@@ -87,6 +88,15 @@ def trace(service_addr: str,
       timeout_s=timeout_s,
       interval_s=interval_s,
       options=options)
+
+
+def trace_detached(*args, **kwargs):
+  """
+  Wraps the :func:`~torch_xla.debug.profiler.trace` method to capture a profile
+  in a background thread. See that method for the list of supported parameters
+  and their semantics.
+  """
+  threading.Thread(target=trace, args=args, kwargs=kwargs).start()
 
 
 class Trace(torch_xla._XLAC.profiler.TraceMe):

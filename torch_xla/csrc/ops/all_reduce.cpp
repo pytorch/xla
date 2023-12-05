@@ -22,22 +22,13 @@ xla::Shape NodeOutputShape(c10::ArrayRef<torch::lazy::Value> operands,
   return xla::ShapeUtil::MakeTupleShape(tuple_shapes);
 }
 
-std::vector<torch::lazy::Value> GetOperandList(
-    c10::ArrayRef<torch::lazy::Value> operands,
-    const torch::lazy::Value& token) {
-  std::vector<torch::lazy::Value> operand_list(operands.begin(),
-                                               operands.end());
-  operand_list.push_back(token);
-  return operand_list;
-}
-
 }  // namespace
 
 AllReduce::AllReduce(AllReduceType reduce_type,
                      c10::ArrayRef<torch::lazy::Value> operands,
                      const torch::lazy::Value& token, double scale,
                      std::vector<std::vector<int64_t>> groups, bool pin_layout)
-    : XlaNode(xla_cross_replica_sum, GetOperandList(operands, token),
+    : XlaNode(xla_cross_replica_sum, GetOperandListWithToken(operands, token),
               [&]() { return NodeOutputShape(operands, token); },
               /*num_outputs=*/operands.size() + 1,
               torch::lazy::MHash(torch::lazy::GetEnumValue(reduce_type), scale,
