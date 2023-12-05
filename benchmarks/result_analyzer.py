@@ -79,17 +79,17 @@ class ResultAnalyzer:
       no_outlier_values = values[1:-1]
 
       is_valid = (
-        dataline["experiment"]["xla"] or metric != "trace_per_iter_time"
-      )
+          dataline["experiment"]["xla"] or metric != "trace_per_iter_time")
 
       for fn in (np.min, np.median, np.max):
         d[f"{fn.__name__}_{metric}"] = fn(values) if is_valid else -1
       for fn in (np.mean, np.std):
         d[f"{fn.__name__}_{metric}"] = fn(no_outlier_values) if is_valid else -1
 
-
-    compile_time = d[f"{np.max.__name__}_total_time"] - d[f"{np.median.__name__}_total_time"]
-    d["dynamo_compile_time"] = compile_time if dataline["experiment"]["dynamo"] else -1
+    compile_time = d[f"{np.max.__name__}_total_time"] - d[
+        f"{np.median.__name__}_total_time"]
+    d["dynamo_compile_time"] = compile_time if dataline["experiment"][
+        "dynamo"] else -1
     d["xla_compile_time"] = compile_time if dataline["experiment"]["xla"] else -1
     return d
 
