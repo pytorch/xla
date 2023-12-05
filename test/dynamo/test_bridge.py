@@ -222,12 +222,12 @@ class TorchXLAReuseGraphTest(torch._dynamo.test_case.TestCase):
   test_training_maxpool = make_training_test(MaxPoolModule)
   test_training_upsample = make_training_test(UpsampleModule)
 
-  def _compile_and_check(self, thing, args, backend="openxla"):
-    r = thing(*args)
+  def _compile_and_check(self, fn, args, backend="openxla"):
+    r = fn(*args)
     xm.mark_step()
 
-    compiled_thing = torch.compile(backend=backend)(thing)
-    compiled_r = compiled_thing(*args)
+    compiled_fn = torch.compile(backend=backend)(fn)
+    compiled_r = compiled_fn(*args)
     xm.mark_step()
 
     self.assertEqual(r, compiled_r)

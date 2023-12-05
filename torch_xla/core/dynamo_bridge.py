@@ -463,6 +463,9 @@ class XLAConstructorMoverPass(ConstructorMoverPass):
   def __init__(self):
     super().__init__("xla")
 
+  # Returns whether node may take CPU tensors as argument, while
+  # returning an XLA tensor. For example, index.Tensor may take CPU
+  # indices, while its return value remains on XLA.
   def allow_cpu_device(self, node: torch.fx.Node):
     if super().allow_cpu_device(node):
       return True
@@ -488,7 +491,9 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
   # This call is critical to make sure xla_args' tensor id show up in graph_input_tensor_ids
   xm.mark_step()
 
-  # Move tensor constructor nodes that do not target XLA devices.
+  # Find tensor constructor nodes that create CPU tensors, and make
+  # them create XLA tensors, where possible, instead. i.e. replace the
+  # device=CPU keyword-argument of tensor constructor nodes by XLA.
   XLAConstructorMoverPass()(xla_model.graph)
 
   # If a model's `forward` function has an in-place op that acts on its `self.tensor`, the
