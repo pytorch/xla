@@ -46,6 +46,7 @@ cc_library(
   ],
   deps = [
     ":debug_macros",
+    ":device_capabilities",
     ":env_vars",
     ":metrics_analysis",
     ":metrics_reader",
