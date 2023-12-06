@@ -226,4 +226,16 @@ void XlaNode::UpdateShardingHash() {
   }
 }
 
+std::shared_ptr<torch::lazy::UserMetaData> XlaNode::SetUserMetadataForSubGraph(
+    std::shared_ptr<torch::lazy::UserMetaData> user_meta) {
+  for (auto np : operands_) {
+    XlaNode* xnp = dynamic_cast<XlaNode*>(np.get());
+    if (xnp != nullptr && xnp->user_metadata() == nullptr) {
+      xnp->SetUserMetadataForSubGraph(user_meta);
+    }
+  }
+  // Only set if there is no metadata already set
+  return SetUserMetadata(user_meta);
+}
+
 }  // namespace torch_xla

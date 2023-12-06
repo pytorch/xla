@@ -888,4 +888,15 @@ int64_t XLATensor::GetOpaqueHandle() const {
   }
 }
 
+bool XLATensor::SetNodeUserMetadata(
+    std::shared_ptr<torch::lazy::UserMetaData> metadata) {
+  auto* node = dynamic_cast<XlaNode*>(CurrentIrValue().node.get());
+  // auto* node = dynamic_cast<torch::lazy::Node*>(GetIrValue().node.get());
+  if (node != nullptr) {
+    node->SetUserMetadataForSubGraph(metadata);
+    return true;
+  }
+  return false;
+}
+
 }  // namespace torch_xla
