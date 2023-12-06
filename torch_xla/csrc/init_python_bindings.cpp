@@ -2242,7 +2242,7 @@ void InitXlaModuleBindings(py::module m) {
           return retlist;
         });
   // -------------Dynamo Integration API End-------------------------
-  py::class_<runtime::DeviceCapabilities>(m, "DeviceCapabilities")
+  py::class_<runtime::DeviceCapabilities, std::shared_ptr<runtime::DeviceCapabilities>>(m, "DeviceCapabilities")
       .def(py::init<bool, bool, std::optional<int32_t>, std::optional<int32_t>,
                     std::optional<std::string>>(),
            py::kw_only(), py::arg("supports_float64") = true,

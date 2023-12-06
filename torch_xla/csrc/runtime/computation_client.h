@@ -20,6 +20,7 @@
 #include "absl/types/span.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/device_capabilities.h"
 #include "torch_xla/csrc/runtime/metrics.h"
 #include "torch_xla/csrc/runtime/tensor_source.h"
 #include "torch_xla/csrc/runtime/types.h"

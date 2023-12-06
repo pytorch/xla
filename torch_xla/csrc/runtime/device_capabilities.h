@@ -1,5 +1,5 @@
-#ifndef XLA_CLIENT_ENV_VARS_H_
-#define XLA_CLIENT_ENV_VARS_H_
+#ifndef XLA_CLIENT_DEVICE_CAPABIILITIES_H_
+#define XLA_CLIENT_DEVICE_CAPABIILITIES_H_
 
 #include <optional>
 
