@@ -1,0 +1,2 @@
+# Datetime,Speedup(Inductor/Oldest Inductor),Speedup(PytorchXLA/Oldest Inductor)
+2023-11-10,1.0,0.7685582181407948
