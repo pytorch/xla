@@ -45,7 +45,6 @@ class XlaCoordinator {
   std::unique_ptr<xla::DistributedRuntimeService> dist_runtime_service_;
   std::shared_ptr<xla::DistributedRuntimeClient> dist_runtime_client_;
   std::unique_ptr<tsl::PreemptionSyncManager> preemption_sync_manager_;
-  int world_size_;
 };
 
 }  // namespace runtime
