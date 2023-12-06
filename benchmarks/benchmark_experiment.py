@@ -183,9 +183,7 @@ class BenchmarkExperiment:
     d = OrderedDict()
     d["experiment_name"] = self.experiment_name
     d["accelerator"] = self.accelerator
-    d["accelerator_model"] = self.accelerator_model
     d["xla"] = self.xla
-    d["xla_flags"] = self.xla_flags
     d["dynamo"] = self.dynamo
     d["test"] = self.test
     d["batch_size"] = self.batch_size
