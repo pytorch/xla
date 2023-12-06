@@ -242,6 +242,8 @@ void DebugUtil::analyze_graph_execution_python_frame(
       (runtime::sys_util::GetEnvInt("PJRT_LOCAL_PROCESS_RANK", 0) == 0);
   static const std::string debug_file_name =
       runtime::sys_util::GetEnvString("PT_XLA_DEBUG_FILE", "");
+  static const int64_t max_frame_count =
+      runtime::sys_util::GetEnvInt("PT_XLA_DEBUG_MAX_FRAME", 8);
 
   static const std::string executation_output_prefix = "Execution Analysis: ";
   static const std::string compilation_output_prefix = "Compilation Analysis: ";
@@ -316,12 +318,11 @@ void DebugUtil::analyze_graph_execution_python_frame(
              : 1)
      << "\n";
 
+  int remain_frame_count = max_frame_count;
   ss << debug_output_prefix << "Python Frame Triggered Execution: \n";
   for (auto& location : frames) {
-    // if current frame `__call__` at pjrt.py, bleow stack will be python
-    // code to spawn up process, not very useful to the user.
-    if (location.function == "__call__" &&
-        endsWith(location.file, "_internal/pjrt.py")) {
+    remain_frame_count--;
+    if (remain_frame_count < 0) {
       ss << debug_output_prefix << "  ..........\n";
       break;
     } else {

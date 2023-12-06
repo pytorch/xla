@@ -4,33 +4,8 @@ import torch
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.xla_multiprocessing as xmp
 
-
-def check_env_flag(name, default=''):
-  return os.getenv(name, default).upper() in ['ON', '1', 'YES', 'TRUE', 'Y']
-
-
-def extract_execution_cause(lines):
-  causes = []
-  for i in range(len(lines)):
-    if 'Execution Cause' in lines[i].decode():
-      causes.append(lines[i + 1].decode())
-  return causes
-
-
-def extract_python_frames(lines):
-  frames = []
-  current_frame = ''
-  record_frame = False
-  for i in range(len(lines)):
-    if 'Python Frame Triggered Execution' in lines[i].decode():
-      record_frame = True
-    elif 'Execution Analysis: ----------------' in lines[i].decode():
-      record_frame = False
-      frames.append(current_frame)
-      current_frame = ''
-    if record_frame:
-      current_frame += lines[i].decode()
-  return frames
+from extract_debug_helper import (check_env_flag, extract_execution_cause,
+                                  extract_python_frames)
 
 
 def _mp_fn(index):
@@ -57,10 +32,14 @@ def _mp_fn(index):
     # only the local master process should dump the executation analysis
     assert (len(causes) == 1)
     assert ('user mark_step' in causes[0])
-    # make sure that frame that spawn up process is skipped
-    assert (len(frames) == 1)
-    assert ('....' in frames[0])
-    assert ('_internal/pjrt.py' not in frames[0])
+    assert (len(frames) == 2)
+    max_frame = os.getenv('PT_XLA_DEBUG_MAX_FRAME', 8)
+    # Additonal lines are
+    # 1. Python Frame Triggered Execution:
+    # 2. ....
+    # 3. empty line
+    assert (len(frames[0].split('\n')) == max_frame + 3)
+    assert (len(frames[1].split('\n')) == max_frame + 3)
 
 
 if __name__ == '__main__':
