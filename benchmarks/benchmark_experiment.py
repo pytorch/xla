@@ -177,13 +177,21 @@ class BenchmarkExperiment:
 
   @property
   def filename_str(self):
+    d = self.to_dict()
+
+    # Remove these 2 components that may end up making the filename too big.
+    d.pop("accelerator_model", None)
+    d.pop("xla_flags", None)
+
     return "-".join(str(v) for v in self.to_dict().values()).replace(" ", "")
 
   def to_dict(self):
     d = OrderedDict()
     d["experiment_name"] = self.experiment_name
     d["accelerator"] = self.accelerator
+    d["accelerator_model"] = self.accelerator_model
     d["xla"] = self.xla
+    d["xla_flags"] = self.xla_flags
     d["dynamo"] = self.dynamo
     d["test"] = self.test
     d["batch_size"] = self.batch_size
