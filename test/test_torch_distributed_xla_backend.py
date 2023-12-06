@@ -75,9 +75,10 @@ class XlaBackendTest(parameterized.TestCase):
     device = xm.xla_device()
     tensor = torch.arange(2, device=device) + 1 + 2 * dist.get_rank()
 
+    pg_options = {'xla_pg_options': {'spmd': True}}
     ranks = [2, 3]
     with new_group_barrier_disabled():
-      new_pg = dist.new_group(ranks=ranks)
+      new_pg = dist.new_group(ranks=ranks, pg_options=pg_options)
     opts = dist.AllreduceOptions()
     opts.reduceOp = dist.ReduceOp.SUM
     all_reduce_pattern = (r'%all\-reduce\.\d+ = .+ all\-reduce\(.+\), .*'
@@ -206,10 +207,11 @@ class XlaBackendTest(parameterized.TestCase):
     self.assertEqual(pg.size(), dist.get_world_size())
 
   def test_new_group_horizontal(self):
+    pg_options = {'xla_pg_options': {'spmd': True}}
     with patch_world(rank=5, size=12):
       ranks = [4, 5, 6, 7]
       with new_group_barrier_disabled():
-        pg = dist.new_group(ranks=ranks)
+        pg = dist.new_group(ranks=ranks, pg_options=pg_options)
       self.assertIsInstance(pg,
                             torch_xla.distributed.xla_backend.ProcessGroupXla)
       self.assertEqual(pg.size(), len(ranks))
@@ -220,7 +222,7 @@ class XlaBackendTest(parameterized.TestCase):
     with patch_world(rank=2, size=12):
       ranks = [0, 1, 2, 3]
       with new_group_barrier_disabled():
-        pg = dist.new_group(ranks=ranks)
+        pg = dist.new_group(ranks=ranks, pg_options=pg_options)
       self.assertIsInstance(pg,
                             torch_xla.distributed.xla_backend.ProcessGroupXla)
       self.assertEqual(pg.size(), len(ranks))
@@ -231,7 +233,7 @@ class XlaBackendTest(parameterized.TestCase):
     with patch_world(rank=11, size=12):
       ranks = [8, 9, 10, 11]
       with new_group_barrier_disabled():
-        pg = dist.new_group(ranks=ranks)
+        pg = dist.new_group(ranks=ranks, pg_options=pg_options)
       self.assertIsInstance(pg,
                             torch_xla.distributed.xla_backend.ProcessGroupXla)
       self.assertEqual(pg.size(), len(ranks))
@@ -240,10 +242,11 @@ class XlaBackendTest(parameterized.TestCase):
                            [[0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11]])
 
   def test_new_group_vertical(self):
+    pg_options = {'xla_pg_options': {'spmd': True}}
     with patch_world(rank=5, size=12):
       ranks = [1, 5, 9]
       with new_group_barrier_disabled():
-        pg = dist.new_group(ranks=ranks)
+        pg = dist.new_group(ranks=ranks, pg_options=pg_options)
       self.assertIsInstance(pg,
                             torch_xla.distributed.xla_backend.ProcessGroupXla)
       self.assertEqual(pg.size(), len(ranks))
@@ -254,7 +257,7 @@ class XlaBackendTest(parameterized.TestCase):
     with patch_world(rank=0, size=12):
       ranks = [0, 4, 8]
       with new_group_barrier_disabled():
-        pg = dist.new_group(ranks=ranks)
+        pg = dist.new_group(ranks=ranks, pg_options=pg_options)
       self.assertIsInstance(pg,
                             torch_xla.distributed.xla_backend.ProcessGroupXla)
       self.assertEqual(pg.size(), len(ranks))
@@ -265,7 +268,7 @@ class XlaBackendTest(parameterized.TestCase):
     with patch_world(rank=11, size=12):
       ranks = [3, 7, 11]
       with new_group_barrier_disabled():
-        pg = dist.new_group(ranks=ranks)
+        pg = dist.new_group(ranks=ranks, pg_options=pg_options)
       self.assertIsInstance(pg,
                             torch_xla.distributed.xla_backend.ProcessGroupXla)
       self.assertEqual(pg.size(), len(ranks))
@@ -276,9 +279,10 @@ class XlaBackendTest(parameterized.TestCase):
   @patch_world(rank=5, size=12)
   def test_new_group_one_paticipant(self):
 
+    pg_options = {'xla_pg_options': {'spmd': True}}
     ranks = [5]
     with new_group_barrier_disabled():
-      pg = dist.new_group(ranks=ranks)
+      pg = dist.new_group(ranks=ranks, pg_options=pg_options)
     self.assertIsInstance(pg, torch_xla.distributed.xla_backend.ProcessGroupXla)
     self.assertEqual(pg.size(), 1)
     self.assertEqual(pg.rank(), 0)
@@ -297,44 +301,47 @@ class XlaBackendTest(parameterized.TestCase):
     self.assertListEqual(pg._mesh, [[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]])
 
   def test_new_group_invalid_horizontal(self):
+    pg_options = {'xla_pg_options': {'spmd': True}}
     with patch_world(rank=5, size=12):
       ranks = [4, 5, 6]
       with new_group_barrier_disabled():
         with self.assertRaises(ValueError):
-          dist.new_group(ranks=ranks)
+          dist.new_group(ranks=ranks, pg_options=pg_options)
 
     with patch_world(rank=2, size=12):
       ranks = [0, 1, 2, 3, 4]
       with new_group_barrier_disabled():
         with self.assertRaises(ValueError):
-          dist.new_group(ranks=ranks)
+          dist.new_group(ranks=ranks, pg_options=pg_options)
 
     with patch_world(rank=9, size=12):
       ranks = [7, 8, 9, 10]
       with new_group_barrier_disabled():
         with self.assertRaises(ValueError):
-          dist.new_group(ranks=ranks)
+          dist.new_group(ranks=ranks, pg_options=pg_options)
 
   def test_new_group_invalid_vertical(self):
+    pg_options = {'xla_pg_options': {'spmd': True}}
     with patch_world(rank=5, size=12):
       ranks = [1, 5]
       with new_group_barrier_disabled():
         with self.assertRaises(ValueError):
-          dist.new_group(ranks=ranks)
+          dist.new_group(ranks=ranks, pg_options=pg_options)
 
     with patch_world(rank=4, size=12):
       ranks = [4, 7, 10]
       with new_group_barrier_disabled():
         with self.assertRaises(ValueError):
-          dist.new_group(ranks=ranks)
+          dist.new_group(ranks=ranks, pg_options=pg_options)
 
   def test_new_group_invalid_ranks(self):
     # unevenly distributed
+    pg_options = {'xla_pg_options': {'spmd': True}}
     with patch_world(rank=5, size=12):
       ranks = [1, 5, 10]
       with new_group_barrier_disabled():
         with self.assertRaises(ValueError):
-          dist.new_group(ranks=ranks)
+          dist.new_group(ranks=ranks, pg_options=pg_options)
 
   def test_barrier(self):
     # nothing to verify. Just run it through.
