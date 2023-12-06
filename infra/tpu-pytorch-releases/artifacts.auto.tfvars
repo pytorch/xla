@@ -44,12 +44,14 @@ versioned_builds = [
   {
     git_tag         = "v2.2.0-rc1"
     package_version = "2.2.0-rc1"
+    pytorch_git_rev = "release/2.2"
     accelerator     = "tpu"
     bundle_libtpu   = "0"
   },
   {
     git_tag         = "v2.2.0-rc1"
     package_version = "2.2.0-rc1"
+    pytorch_git_rev = "release/2.2"
     accelerator     = "tpu"
     python_version  = "3.9"
     bundle_libtpu   = "0"
@@ -57,6 +59,7 @@ versioned_builds = [
   {
     git_tag         = "v2.2.0-rc1"
     package_version = "2.2.0-rc1"
+    pytorch_git_rev = "release/2.2"
     accelerator     = "tpu"
     python_version  = "3.10"
     bundle_libtpu   = "0"
@@ -64,6 +67,7 @@ versioned_builds = [
   {
     git_tag         = "v2.2.0-rc1"
     package_version = "2.2.0-rc1"
+    pytorch_git_rev = "release/2.2"
     accelerator     = "tpu"
     python_version  = "3.11"
     bundle_libtpu   = "0"
@@ -72,6 +76,7 @@ versioned_builds = [
   {
     git_tag         = "v2.2.0-rc1"
     package_version = "2.2.0-rc1+libtpu"
+    pytorch_git_rev = "release/2.2"
     accelerator     = "tpu"
     python_version  = "3.10"
     bundle_libtpu   = "1"
