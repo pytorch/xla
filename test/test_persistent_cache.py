@@ -88,14 +88,8 @@ class PersistentCacheTest(parameterized.TestCase):
   and perform assertions on the metrics generated.
   """
 
-  @parameterized.named_parameters(
-      ('mp', xmp.spawn, _mp_test),
-      ('single_device', _test_spawn, _single_device_test),
-      ('spmd_replicated', _test_spawn, _spmd_replicated_test),
-      ('spmd_sharded', _test_spawn, _spmd_sharded_test),
-  )
   @run_with_tmpdir
-  def test_persistent_cache(self, launch_method, test_fn, tmpdir):
+  def _run_test(self, launch_method, test_fn, tmpdir):
     os.environ['XLA_PERSISTENT_CACHE_PATH'] = tmpdir
 
     # Run once to warm the cache
@@ -109,6 +103,20 @@ class PersistentCacheTest(parameterized.TestCase):
         'PersistentCacheMiss': None,
         'PersistentCacheHit': 1
     },))
+
+  def test_persistent_cache_mp(self):
+    self._run_test(xmp.spawn, _mp_test)
+
+  @parameterized.named_parameters(
+      ('single_device', _single_device_test),
+      ('spmd_replicated', _spmd_replicated_test),
+      ('spmd_sharded', _spmd_sharded_test),
+  )
+  @absltest.skipUnless(
+      xr.device_type() == 'TPU',
+      'TPU required for SPMD; single-device GPU is pending #6023')
+  def test_persistent_cache(self, test_fn):
+    self._run_test(_test_spawn, test_fn)
 
 
 if __name__ == '__main__':
