@@ -53,6 +53,7 @@
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/thread_pool.h"
 #include "torch_xla/csrc/torch_util.h"
+#include "torch_xla/csrc/version.h"
 #include "torch_xla/csrc/xla_backend_impl.h"
 #include "torch_xla/csrc/xla_sharding_util.h"
 #include "tsl/platform/errors.h"
@@ -536,6 +537,12 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
   // The force_ltc_data controls aliasing compilation, so effectively the same
   // graph with on/off force_ltc_data should not match, hash wise.
   coll.hash = torch::lazy::MHash(config.force_ltc_data);
+  // Ensure the compilation environment and git revision are reflected in the
+  // hash.
+  coll.hash = torch::lazy::HashCombine(
+      coll.hash, runtime::GetComputationClient()->HashCompilationEnv());
+  coll.hash =
+      torch::lazy::HashCombine(coll.hash, torch::lazy::StringHash(XLA_GITREV));
   coll.config = config;
   coll.device = *unique_device;
   coll.indices.reserve(tensors.size());
