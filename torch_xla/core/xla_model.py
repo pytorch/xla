@@ -785,14 +785,10 @@ def reduce_scatter(reduce_type,
   elif isinstance(input, list) and all(
       isinstance(v, torch.Tensor) for v in input):
     if output != None:
-      if not isinstance(output, list) or any(
-          not isinstance(v, torch.Tensor) for v in output):
-        raise TypeError(
-            f"`output` needs to be a list of Tensors, but given {type(output)}."
-        )
-      if len(output) != len(input):
-        raise ValueError("`output` length doesn't match `input` length: "
-                         f"{len(output)} vs {len(input)}.")
+      raise RuntimeError(
+          "For xm.reduce_scatter with list of tensors input, output != None is not yet supported."
+      )
+
     result = torch_xla._XLAC._xla_reduce_scatter_coalesced(
         reduce_type, output or [], input, token, scale, scatter_dim,
         shard_count, groups or [], pin_layout)
