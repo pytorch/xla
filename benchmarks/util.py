@@ -49,6 +49,17 @@ def reset_rng_state(benchmark_experiment=None):
 def is_xla_device_available(devkind):
   if devkind not in ["CPU", "CUDA", "TPU"]:
     raise ValueError(devkind)
+  # Checking the availability of a given device kind.
+  #
+  # We intentionally use subprocess instead of multiprocessing library. The
+  # reason being that we might initialize CUDA in the parent process and use
+  # CUDA in the child process. This is a known limitation of using CUDA and
+  # forking the process.
+  #
+  # In this case, subprocess works because it replaces the forked memory with
+  # the execution of the new program (fresh memory), avoiding the error.
+  #
+  # For more information: https://github.com/pytorch/xla/pull/5960
   CHECK_XLA_DEVICE_PY = "check_xla_device.py"
   python_file = os.path.join(os.path.dirname(__file__), CHECK_XLA_DEVICE_PY)
   r = subprocess.run([sys.executable, python_file, devkind])
