@@ -43,6 +43,8 @@ XlaCoordinator::~XlaCoordinator() {
 }
 
 std::shared_ptr<xla::DistributedRuntimeClient> XlaCoordinator::GetClient() {
+  XLA_CHECK(dist_runtime_client_ != nullptr)
+      << "distributed runtime client is null.";
   return dist_runtime_client_;
 }
 
