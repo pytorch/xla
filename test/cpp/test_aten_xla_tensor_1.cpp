@@ -1505,6 +1505,18 @@ TEST_F(AtenXlaTensorTest, TestSlice) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestSliceZeroDimSize) {
+  torch::Tensor a =
+      torch::rand({0, 24, 16}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b = torch::slice(a, 0, 0, -1, 1);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = torch::slice(xla_a, 0, 0, -1, 1);
+    EXPECT_EQ(xla_b.numel(), 0);
+    EXPECT_EQ(b.numel(), 0);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestTake) {
   torch::Tensor a = torch::rand({4, 4}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = torch::randint(16, {5}, torch::TensorOptions(torch::kLong));

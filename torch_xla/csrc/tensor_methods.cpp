@@ -2392,14 +2392,16 @@ XLATensorPtr slice(const XLATensorPtr& input, int64_t dim, int64_t start,
                    int64_t end, int64_t step) {
   auto input_shape = input->shape();
   dim = torch::lazy::GetCanonicalDimensionIndex(dim, input_shape.get().rank());
-  start = torch::lazy::GetCanonicalPosition(
-      torch_xla::runtime::util::ToVector<int64_t>(
-          input_shape.get().dimensions()),
-      dim, start);
-  end = torch::lazy::GetCanonicalPosition(
-      torch_xla::runtime::util::ToVector<int64_t>(
-          input_shape.get().dimensions()),
-      dim, end);
+  std::vector<int64_t> input_dims = torch_xla::runtime::util::ToVector<int64_t>(
+      input_shape.get().dimensions());
+  if (input_dims[dim] == 0) {
+    // `GetCanonicalDimensionIndex` doesn't support case where dim size = 0.
+    // So we add a special handling in torch_xla.
+    return input->CreateFrom(
+        torch::lazy::MakeNode<Select>(input->GetIrValue(), dim, 0, 0, step));
+  }
+  start = torch::lazy::GetCanonicalPosition(input_dims, dim, start);
+  end = torch::lazy::GetCanonicalPosition(input_dims, dim, end);
   // PyTorch allows tensor[-1:0] to return a 0-dim tensor.
   if (start > end) {
     end = start;
