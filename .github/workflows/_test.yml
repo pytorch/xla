@@ -50,6 +50,7 @@ jobs:
       matrix:
         include:
           # Use readable strings as they define the workflow titles.
+          - run_benchmark_tests: 'benchmark_tests'
           - run_cpp_tests1: 'cpp_tests1'
           - run_cpp_tests2: 'cpp_tests2'
           - run_python_tests: 'python_tests'
@@ -69,6 +70,7 @@ jobs:
       XLA_SKIP_XRT_TESTS: ${{ inputs.disable-xrt }}
       XLA_SKIP_TORCH_OP_TESTS: ${{ inputs.disable-pjrt }}
       XLA_SKIP_MP_OP_TESTS: ${{ inputs.disable-pjrt }}
+      RUN_BENCHMARK_TESTS: ${{ matrix.run_benchmark_tests }}
       RUN_CPP_TESTS1: ${{ matrix.run_cpp_tests1 }}
       RUN_CPP_TESTS2: ${{ matrix.run_cpp_tests2 }}
       RUN_PYTHON_TESTS: ${{ matrix.run_python_tests }}
@@ -110,7 +112,7 @@ jobs:
         run: |
           echo "DOCKER_IMAGE: ${DOCKER_IMAGE}"
           docker pull "${DOCKER_IMAGE}"
-          pid=$(docker run --shm-size=16g ${GPU_FLAG:-} -e USE_COVERAGE -e XLA_SKIP_XRT_TESTS -e XLA_SKIP_TORCH_OP_TESTS -e XLA_SKIP_MP_OP_TESTS -e RUN_CPP_TESTS1 -e RUN_CPP_TESTS2 -e RUN_PYTHON_TESTS -e RUN_XLA_OP_TESTS1 -e RUN_XLA_OP_TESTS2 -e RUN_XLA_OP_TESTS3 -e RUN_TORCH_MP_OP_TESTS -t -d -w "$WORKDIR" "${DOCKER_IMAGE}")
+          pid=$(docker run --shm-size=16g ${GPU_FLAG:-} -e USE_COVERAGE -e XLA_SKIP_XRT_TESTS -e XLA_SKIP_TORCH_OP_TESTS -e XLA_SKIP_MP_OP_TESTS -e RUN_BENCHMARK_TESTS -e RUN_CPP_TESTS1 -e RUN_CPP_TESTS2 -e RUN_PYTHON_TESTS -e RUN_XLA_OP_TESTS1 -e RUN_XLA_OP_TESTS2 -e RUN_XLA_OP_TESTS3 -e RUN_TORCH_MP_OP_TESTS -t -d -w "$WORKDIR" "${DOCKER_IMAGE}")
           echo "${GCLOUD_SERVICE_KEY}" | docker exec -i "${pid}" sh -c "cat >> /tmp/pytorch/xla/default_credentials.json"
           echo "pid=${pid}" >> "${GITHUB_ENV}"
       - name: Test
