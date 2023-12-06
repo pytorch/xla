@@ -79,7 +79,7 @@ def _spmd_sharded_test(metrics):
   _assert_correctness_and_metrics(t, xt, metrics)
 
 
-@absltest.skipUnless(xr.device_type() in {'TPU', 'GPU'},
+@absltest.skipUnless(xr.device_type() in {'TPU', 'CUDA'},
                      'Device type does not support persistent caching')
 class PersistentCacheTest(parameterized.TestCase):
   """
