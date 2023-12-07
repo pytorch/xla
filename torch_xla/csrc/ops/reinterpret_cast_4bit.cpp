@@ -12,7 +12,7 @@ namespace torch_xla {
 static xla::Shape NodeOutputShape(const torch::lazy::Value& input) {
     xla::Shape s = GetXlaShape(input);
     s.add_dimensions(2);
-    // s.set_element_type()
+    s.set_element_type(xla::PrimitiveType::S4);
     std::cout << "check dim after casting: " << s << std::endl;
     return s;
 }
@@ -29,8 +29,7 @@ XlaOpVector ReinterpretCast4bit::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::Shape input_shape = ShapeHelper::ShapeOfXlaOp(input);
 
-  xla::XlaOp tensor_4bit = xla::BitcastConvertType(input, xla::PrimitiveType::S4);
-  xla::XlaOp output = xla::ConvertElementType(input, xla::PrimitiveType::S8);
+  xla::XlaOp output = xla::BitcastConvertType(input, xla::PrimitiveType::S4);
   return ReturnOp(output, loctx);
 }
 
