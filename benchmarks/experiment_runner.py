@@ -300,11 +300,12 @@ class ExperimentRunner:
   def collect_individual_ops(self, benchmark_experiment, metrics, prof):
     assert prof is not None, 'Expecting prof to be defined!'
 
+    us_to_s = lambda x: x / 1000000
     extract_prof_info = lambda event: {
-        "self_cpu_time_s": event.self_cpu_time_total / 1000000,
-        "self_cuda_time_s": event.self_cuda_time_total / 1000000,
-        "total_cpu_time_s": event.cpu_time_total / 1000000,
-        "total_cuda_time_s": event.cuda_time_total / 1000000,
+        "self_cpu_time_s": us_to_s(event.self_cpu_time_total),
+        "self_cuda_time_s": us_to_s(event.self_cuda_time_total),
+        "total_cpu_time_s": us_to_s(event.cpu_time_total),
+        "total_cuda_time_s": us_to_s(event.cuda_time_total),
         "num_of_calls": event.count
     }
 
