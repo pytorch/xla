@@ -5,6 +5,8 @@ from torch.library import Library, impl
 
 quantized_decomposed_lib = Library("quantized_decomposed", "IMPL")
 
+def bitcast_to_4bit(input: torch.Tensor):
+  return torch_xla._XLAC._xla_reinterpret_cast_4bit(input)
 
 @impl(quantized_decomposed_lib, "quantize_per_tensor", "XLA")
 def xla_quantize_per_tensor(input: torch.Tensor, scale: float, zero_point: int,

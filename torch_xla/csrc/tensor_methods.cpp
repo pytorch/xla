@@ -95,6 +95,7 @@
 #include "torch_xla/csrc/ops/quant_tensor.h"
 #include "torch_xla/csrc/ops/recv.h"
 #include "torch_xla/csrc/ops/reduce_scatter.h"
+#include "torch_xla/csrc/ops/reinterpret_cast_4bit.h"
 #include "torch_xla/csrc/ops/reflection_pad2d.h"
 #include "torch_xla/csrc/ops/reflection_pad2d_backward.h"
 #include "torch_xla/csrc/ops/replication_pad.h"
@@ -2146,6 +2147,12 @@ XLATensorPtr dequantize_tensor(const XLATensorPtr& input,
   torch::lazy::NodePtr node = torch::lazy::MakeNode<DequantizeTensor>(
       input->GetIrValue(), scale_list, zero_point_list, quant_min, quant_max,
       dtype, axis);
+  return input->CreateFrom(torch::lazy::Value(node));
+}
+
+XLATensorPtr reinterpret_cast_4bit(const XLATensorPtr& input) {
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<ReinterpretCast4bit>(
+      input->GetIrValue(), 0);
   return input->CreateFrom(torch::lazy::Value(node));
 }
 

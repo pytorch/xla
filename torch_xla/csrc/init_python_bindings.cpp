@@ -199,6 +199,12 @@ at::Tensor AllReduce(const std::string& reduce_type, const at::Tensor& input,
   return bridge::AtenFromXlaTensor(std::move(result));
 }
 
+at::Tensor ReinterpretCast4bit(const at::Tensor& input) {
+  auto result = tensor_methods::reinterpret_cast_4bit(
+                  bridge::GetXlaTensor(input));
+  return bridge::AtenFromXlaTensor(std::move(result));
+}
+
 at::Tensor QuantizeTensor(const at::Tensor& input,
                           const std::vector<float>& scale_list,
                           const std::vector<int>& zero_point_list,
@@ -1156,6 +1162,15 @@ void InitXlaModuleBindings(py::module m) {
     }
     return result;
   });
+  m.def("_xla_reinterpret_cast_4bit",
+        [](const at::Tensor& input) -> at::Tensor {
+          at::Tensor result;
+          {
+            NoGilSection nogil;
+            result = ReinterpretCast4bit(input);
+          }
+          return result;
+        });
   m.def("_xla_quantize_tensor",
         [](const at::Tensor& input, const std::vector<float>& scale_list,
            const std::vector<int>& zero_point_list, int quant_min,
