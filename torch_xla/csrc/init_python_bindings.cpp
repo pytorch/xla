@@ -236,6 +236,29 @@ std::pair<at::Tensor, std::shared_ptr<torch::lazy::Value>> ReduceScatter(
       std::make_shared<torch::lazy::Value>(new_token));
 }
 
+std::pair<std::vector<at::Tensor>, std::shared_ptr<torch::lazy::Value>>
+ReduceScatterCoalesced(const std::string& reduce_type,
+                       const std::vector<at::Tensor>& outputs,
+                       const std::vector<at::Tensor>& inputs,
+                       const std::shared_ptr<torch::lazy::Value>& token,
+                       double scale, int64_t scatter_dim, int64_t shard_count,
+                       const std::vector<std::vector<int64_t>>& replica_groups,
+                       bool pin_layout) {
+  std::vector<XLATensorPtr> xtensors_out =
+      GetXlaTensors(outputs, /*want_all=*/true);
+  std::vector<XLATensorPtr> xtensors = GetXlaTensors(inputs, /*want_all=*/true);
+  std::vector<XLATensorPtr> result;
+  torch::lazy::Value new_token;
+  std::tie(result, new_token) = tensor_methods::reduce_scatter_coalesced(
+      xtensors_out, xtensors, *token, GetReduceType(reduce_type), scale,
+      scatter_dim, shard_count, replica_groups, pin_layout);
+  std::vector<at::Tensor> aten_result;
+  for (auto& xt : result) {
+    aten_result.emplace_back(bridge::AtenFromXlaTensor(std::move(xt)));
+  }
+  return {aten_result, std::make_shared<torch::lazy::Value>(new_token)};
+}
+
 std::shared_ptr<torch::lazy::Value> ReduceScatterOut(
     const std::string& reduce_type, at::Tensor& output, const at::Tensor& input,
     const std::shared_ptr<torch::lazy::Value>& token, double scale,
@@ -1319,6 +1342,30 @@ void InitXlaModuleBindings(py::module m) {
               result, /*requires_grad=*/input.requires_grad());
           result_tuple[1] = new_token;
           return result_tuple;
+        });
+  m.def("_xla_reduce_scatter_coalesced",
+        [](const std::string& reduce_type, std::vector<at::Tensor>& outputs,
+           const std::vector<at::Tensor>& inputs,
+           const std::shared_ptr<torch::lazy::Value>& token, double scale,
+           int64_t scatter_dim, int64_t shard_count, const py::list& groups,
+           bool pin_layout) {
+          std::vector<std::vector<int64_t>> replica_groups =
+              CreateReduceGroups(groups);
+          std::vector<at::Tensor> result;
+          std::shared_ptr<torch::lazy::Value> new_token;
+          {
+            NoGilSection nogil;
+            std::tie(result, new_token) = ReduceScatterCoalesced(
+                reduce_type, outputs, inputs, token, scale, scatter_dim,
+                shard_count, replica_groups, pin_layout);
+          }
+          auto result_list = py::list(result.size() + 1);
+          for (int i = 0; i < result.size(); ++i) {
+            result_list[i] = torch::autograd::make_variable(
+                result[i], /*requires_grad=*/result[i].requires_grad());
+          }
+          result_list[result.size()] = new_token;
+          return result_list;
         });
   m.def("_xla_reduce_scatter_out",
         [](const std::string& reduce_type, at::Tensor& output,
