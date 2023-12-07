@@ -7,11 +7,15 @@ import functools
 import itertools
 import os
 import time
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Set, Tuple
 
 import torch
 from torch.fx.passes.infra.partitioner import CapabilityBasedPartitioner
 from torch.fx.passes.utils.fuser_utils import topo_sort
+
+import torch._inductor
+from torch._inductor.fx_passes.post_grad import ConstructorMoverPass
+
 import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as metrics
@@ -454,6 +458,29 @@ class InputCollector(torch.fx.Interpreter):
     return super().call_module(target, args, kwargs)
 
 
+class XLAConstructorMoverPass(ConstructorMoverPass):
+
+  def __init__(self):
+    super().__init__("xla")
+
+  # Returns whether node may take CPU tensors as argument, while
+  # returning an XLA tensor. For example, index.Tensor may take CPU
+  # indices, while its return value remains on XLA.
+  def allow_cpu_device(self, node: torch.fx.Node):
+    if super().allow_cpu_device(node):
+      return True
+
+    # also allow _to_copy calls.
+    # this is a recurring pattern when creating new tensors.
+    if node.target != torch.ops.aten._to_copy.default:
+      return False
+
+    # in this case, there should be a device keyword-argument
+    # where its type is the same as the target device.
+    device = node.kwargs.get("device")
+    return (device is not None and device.type == self.target)
+
+
 def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
   # Synchronize xla_args, so that each FunctionalTensorWrapper argument updates its
   # value reference before actually computing it.
@@ -463,6 +490,11 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
 
   # This call is critical to make sure xla_args' tensor id show up in graph_input_tensor_ids
   xm.mark_step()
+
+  # Find tensor constructor nodes that create CPU tensors, and make
+  # them create XLA tensors, where possible, instead. i.e. replace the
+  # device=CPU keyword-argument of tensor constructor nodes by XLA.
+  XLAConstructorMoverPass()(xla_model.graph)
 
   # If a model's `forward` function has an in-place op that acts on its `self.tensor`, the
   # `self.tensor` is not included as a part of the `xla_args` and does not get materialized.
