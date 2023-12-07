@@ -281,6 +281,18 @@ class ComputationClient {
   virtual std::vector<ComputationPtr> Compile(
       std::vector<CompileInstance> instances) = 0;
 
+  // Serialize a computation to a string.
+  virtual std::string SerializeComputation(
+      const ComputationPtr computation) = 0;
+
+  // Deserialize a string resulting from SerializeComputation back to a
+  // Computation. If the deserialization fails, nullptr is returned.
+  virtual ComputationPtr DeserializeComputation(
+      const std::string& serialized) = 0;
+
+  // Returns a hash of the current compilation environment.
+  virtual torch::lazy::hash_t HashCompilationEnv() = 0;
+
   // Executes computation with arguments and returns the result.
   // The passed device must match the common device of the arguments Data.
   // If options.explode_tuple is true, the output tuple will be decomposed into

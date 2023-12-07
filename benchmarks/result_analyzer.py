@@ -229,7 +229,7 @@ def parse_args(args=None):
 
   parser.add_argument(
       "--output-format",
-      default="jsonl",
+      default="csv",
       type=str,
       choices=["jsonl", "csv"],
       help="Specify the output format.",

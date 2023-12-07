@@ -1,9 +1,4 @@
 """Processes .csv result files and aggregates them."""
-# TODO: support more plots:
-# - Speedup of Inductor and PytorchXLA over the oldest Inductor data set.
-#   This will allow us to have a sense of how fast Inductor is improving
-#   as well as PytorchXLA.
-# - Number of working Inductor and PytorchXLA workloads.
 
 import argparse
 import csv
@@ -13,16 +8,27 @@ import os
 import re
 import sys
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+import tiers
+import itertools
 from typing import Any
 import numpy as np
 from scipy.stats.mstats import gmean
 
-try:
-  from .tiers import append_filter_by_tier
-except ImportError:
-  from tiers import append_filter_by_tier
-
 logger = logging.getLogger(__name__)
+
+test_to_csv_field_name = {
+    'inference': {
+        'test': 'eval',
+        'xla_label': 'openxla_eval',
+        'inductor_label': 'inductor',
+    },
+    'training': {
+        'test': 'train',
+        'xla_label': 'openxla',
+        'inductor_label': 'inductor',
+    },
+}
 
 
 def find_files(input_dirname: str) -> list[str]:
@@ -86,27 +92,23 @@ def process_file(args, results_map: dict[str, Any], filename: str):
         continue
       accelerator_model = clean_up_accelerator_model(
           row[field2index['accelerator_model']])
+      if accelerator_model != args.accelerator:
+        continue
       dynamo = row[field2index['dynamo']]
       test = row[field2index['test']]
+      if test != test_to_csv_field_name[args.test]['test']:
+        continue
       batch_size = row[field2index['batch_size']]
       median_total_time = row[field2index['median_total_time']]
       if timestamp not in results_map:
         results_map[timestamp] = {}
-      if accelerator_model not in results_map[timestamp]:
-        results_map[timestamp][accelerator_model] = {}
-      if dynamo not in results_map[timestamp][accelerator_model]:
-        results_map[timestamp][accelerator_model][dynamo] = {}
-      if test not in results_map[timestamp][accelerator_model][dynamo]:
-        results_map[timestamp][accelerator_model][dynamo][test] = {}
-      if (model_name
-          not in results_map[timestamp][accelerator_model][dynamo][test]):
-        results_map[timestamp][accelerator_model][dynamo][test][model_name] = {}
-      if (batch_size not in results_map[timestamp][accelerator_model][dynamo]
-          [test][model_name]):
-        results_map[timestamp][accelerator_model][dynamo][test][model_name][
-            batch_size] = {}
-      results_map[timestamp][accelerator_model][dynamo][test][model_name][
-          batch_size] = median_total_time
+      if dynamo not in results_map[timestamp]:
+        results_map[timestamp][dynamo] = {}
+      if (model_name not in results_map[timestamp][dynamo]):
+        results_map[timestamp][dynamo][model_name] = {}
+      if (batch_size not in results_map[timestamp][dynamo][model_name]):
+        results_map[timestamp][dynamo][model_name][batch_size] = {}
+      results_map[timestamp][dynamo][model_name][batch_size] = median_total_time
 
 
 def summarize_speedups(acc_map: dict[str, Any], label: str):
@@ -118,49 +120,61 @@ def summarize_speedups(acc_map: dict[str, Any], label: str):
     acc_map[f'{label}:p{p}'] = percentile
 
 
-# The speedup values are stored in acc_map[label]; the corresponding
-# model names are stored in acc_map[f'{label}:model_name'].
-def compute_speedups(acc_map: dict[str, Any], label: str, xla_label,
-                     inductor_label, test_label):
-  model_label = f'{label}:model_name'
-  if xla_label not in acc_map:
+# The speedup values are stored in acc_map[out_label]; the corresponding
+# model names are stored in acc_map[f'{out_label}:model_name'].
+def compute_speedups(acc_map: dict[str, Any], baseline: dict[str, Any],
+                     out_label: str, in_label: str):
+  model_label = f'{out_label}:model_name'
+  if in_label not in acc_map:
     return
-  if inductor_label not in acc_map:
-    return
-  if (test_label not in acc_map[xla_label] or
-      test_label not in acc_map[inductor_label]):
-    return
-  for model_name, v in acc_map[xla_label][test_label].items():
-    if model_name not in acc_map[inductor_label][test_label]:
+  for model_name, v in acc_map[in_label].items():
+    if model_name not in baseline:
       continue
     speedups = []
     # If we are running several batch sizes, keep the geomean of their speedups.
     for batch_size in v:
-      xla_time = v[batch_size]
-      inductor_time = acc_map[inductor_label][test_label][model_name].get(
-          batch_size, None)
-      if not xla_time or not inductor_time:
+      experiment_time = v[batch_size]
+      baseline_time = baseline[model_name].get(batch_size, None)
+      if not experiment_time or not baseline_time:
         continue
-      speedups.append(float(inductor_time) / float(xla_time))
+      speedups.append(float(baseline_time) / float(experiment_time))
     if speedups:
-      if label not in acc_map:
-        acc_map[label] = []
-      acc_map[label].append(gmean(speedups))
+      if out_label not in acc_map:
+        acc_map[out_label] = []
+      acc_map[out_label].append(gmean(speedups))
       if model_label not in acc_map:
         acc_map[model_label] = []
       acc_map[model_label].append(model_name)
-  summarize_speedups(acc_map, label)
+  summarize_speedups(acc_map, out_label)
 
 
-def process_results(results_map: dict[str, Any]):
+# A benchmark's baseline is the oldest Inductor perf number we have for it.
+# This way we can track both Pytorch/XLA and Inductor perf improvements over
+# time.
+def compute_baseline(results_map: dict[str, Any]) -> dict[str, Any]:
+  baseline = {}
+  for ts in sorted(list(results_map.keys())):
+    if 'inductor' not in results_map[ts]:
+      continue
+    for model_name in results_map[ts]['inductor']:
+      if model_name not in baseline:
+        baseline[model_name] = {}
+      for batch_size in results_map[ts]['inductor'][model_name]:
+        if batch_size not in baseline[model_name]:
+          baseline[model_name][batch_size] = results_map[ts]['inductor'][
+              model_name][batch_size]
+  return baseline
+
+
+def process_results(args, results_map: dict[str, Any]):
+  baseline = compute_baseline(results_map)
   for timestamp in results_map:
-    for accelerator in results_map[timestamp]:
-      acc_map = results_map[timestamp][accelerator]
+    acc_map = results_map[timestamp]
 
-      compute_speedups(acc_map, 'speedups:inference', 'openxla_eval',
-                       'inductor', 'eval')
-      compute_speedups(acc_map, 'speedups:training', 'openxla', 'inductor',
-                       'train')
+    name2field = test_to_csv_field_name[args.test]
+    compute_speedups(acc_map, baseline, 'xla:speedups', name2field['xla_label'])
+    compute_speedups(acc_map, baseline, 'inductor:speedups',
+                     name2field['inductor_label'])
 
 
 def maketitle(args, title: str):
@@ -170,94 +184,137 @@ def maketitle(args, title: str):
 
 
 def pr_latest(results_map: dict[str, Any], args, timestamps: list[str]):
-  label = f'speedups:{args.test}'
-  model_label = f'{label}:model_name'
+  prefixes = ('inductor', 'xla')
+  speedups = [[], []]
+  model_names = [[], []]
+  speedup_timestamps = [[], []]
 
-  for timestamp in reversed(timestamps):
-    if label not in results_map[timestamp][args.accelerator]:
-      continue
-    acc_map = results_map[timestamp][args.accelerator]
-    (speedups,
-     model_names) = map(list,
-                        zip(*sorted(zip(acc_map[label], acc_map[model_label]))))
-
-    if args.format == 'csv':
-      print('# WorkloadNumber,Speedup,ModelName')
-      for i, speedup in enumerate(speedups):
-        print(','.join(map(str, [i, speedup, model_names[i]])))
-    else:
-      plt.axhline(y=1.0, color='lightgray')
-      plt.plot(speedups, marker='o')
-      plt.title(
-          maketitle(
-              args,
-              f'Speedup of Pytorch/XLA over Inductor\n{date.fromtimestamp(float(timestamp))}'
-          ))
-      plt.xlabel('Workload Number')
-      plt.ylabel(f'Speedup')
-      plt.savefig(sys.stdout.buffer)
+  for i, pfx in enumerate(prefixes):
+    label = f'{pfx}:speedups'
+    model_label = f'{label}:model_name'
+    for timestamp in reversed(timestamps):
+      acc_map = results_map[timestamp]
+      if label in acc_map:
+        (speedups[i], model_names[i]) = map(
+            list, zip(*sorted(zip(acc_map[label], acc_map[model_label]))))
+        speedup_timestamps[i] = timestamp
+        break
+  if not speedups[0] or not speedups[1]:
+    logger.warning(f'cannot find data for accelerator {args.accelerator}')
     return
-  logger.warning(f'cannot find data for accelerator {args.accelerator}')
+
+  if args.format == 'csv':
+    print('# WorkloadNumber,Speedup(Inductor/Oldest Inductor),'
+          'ModelName(Inductor),Speedup(PytorchXLA/Oldest Inductor),'
+          'ModelName(PytorchXLA)')
+    # Use zip_longest because the latest timestamp might not have complete
+    # results for all benchmarks.
+    for i, z in enumerate(itertools.zip_longest(speedups[0], speedups[1])):
+      print(','.join(
+          map(str, [
+              i, z[0], model_names[0][i] if z[0] else None, z[1],
+              model_names[1][i] if z[1] else None
+          ])))
+  else:
+    plt.axhline(y=1.0, color='lightgray')
+    plt.plot(speedups[0], label='Inductor', marker='^')
+    plt.plot(speedups[1], label='PytorchXLA', marker='o')
+    plt.legend()
+    dates = date.fromtimestamp(float(speedup_timestamps[0]))
+    if speedup_timestamps[0] != speedup_timestamps[1]:
+      dates = f'{dates} (Inductor)'
+      dates += ', {date.fromtimestamp(float(dates[1]))} (PytorchXLA)'
+    plt.title(
+        maketitle(args,
+                  f'Speedup over Oldest Benchmarked Inductor as of {dates}'))
+    plt.xlabel('Workload Number')
+    plt.ylabel(f'Speedup')
+    plt.savefig(sys.stdout.buffer)
 
 
 def pr_histogram(results_map: dict[str, Any], args, timestamps: list[str]):
-  percentiles = [f'p{p}' for p in (5, 50, 95)]
-  labels = [f'speedups:{args.test}:{p}' for p in percentiles]
+  percentiles = [f'p{p}' for p in (95, 50, 5)]
+  prefixes = ('inductor', 'xla')
+  labels = [f'{pfx}:speedups:{p}' for pfx in prefixes for p in percentiles]
+  titles = [
+      l.replace(':speedups:',
+                ' ').replace('xla',
+                             'PytorchXLA').replace('inductor', 'Inductor')
+      for l in labels
+  ]
   x = []
-  y = [[] for i in range(len(percentiles))]
+  y = [[] for i in range(len(labels))]
   for timestamp in timestamps:
-    if labels[0] in results_map[timestamp][args.accelerator]:
+    if labels[0] in results_map[timestamp]:
       for label in labels:
-        assert label in results_map[timestamp][args.accelerator]
+        assert label in results_map[timestamp]
       x.append(date.fromtimestamp(float(timestamp)))
       for i, label in enumerate(labels):
-        y[i].append(results_map[timestamp][args.accelerator][label])
+        y[i].append(results_map[timestamp][label])
   if args.format == 'csv':
-    titles = ['# Datetime'] + percentiles
+    titles = ['# Datetime'] + titles
     print(','.join(titles))
     for i, datetime in enumerate(x):
       print(','.join([str(datetime)] +
-                     [str(y[j][i]) for j in range(len(percentiles))]))
+                     [str(y[j][i]) for j in range(len(labels))]))
   else:
-    plt.axhline(y=1.0, color='lightgray')
-    for i, p in enumerate(percentiles):
-      plt.plot(x, y[i], label=p, marker='^')
-      plt.legend()
-      plt.xlabel("Date")
-      plt.ylabel("Geomean Speedup")
-      plt.title(
-          maketitle(args, f"Histogram of Pytorch/XLA's Speedup over Inductor"))
-      plt.savefig(sys.stdout.buffer)
+    fig, ax = plt.subplots()
+    ax.axhline(y=1.0, color='lightgray')
+    markers = ('^', 'o')
+    linestyles = ('solid', 'dotted')
+    for i, label in enumerate(labels):
+      style = int(i / len(percentiles))
+      ax.plot(
+          x,
+          y[i],
+          label=titles[i],
+          marker=markers[style],
+          linestyle=linestyles[style])
+    ax.xaxis.set_major_formatter(
+        mdates.ConciseDateFormatter(ax.xaxis.get_major_locator()))
+    plt.legend()
+    plt.xlabel("Date")
+    plt.ylabel("Geomean Speedup")
+    plt.title(
+        maketitle(args,
+                  'Histogram of Speedup over Oldest Benchmarked Inductor'))
+    plt.savefig(sys.stdout.buffer)
 
 
 def pr_gmean(results_map: dict[str, Any], args, timestamps: list[str]):
-  label = f'speedups:{args.test}:gmean'
+  label = f'speedups:gmean'
   x = []
-  y = []
+  y0 = []
+  y1 = []
   for timestamp in timestamps:
-    if label not in results_map[timestamp][args.accelerator]:
+    if 'inductor:speedups:gmean' not in results_map[
+        timestamp] or 'xla:speedups:gmean' not in results_map[timestamp]:
       continue
     x.append(date.fromtimestamp(float(timestamp)))
-    gmean = results_map[timestamp][args.accelerator][label]
-    y.append(gmean)
+    y0.append(results_map[timestamp]['inductor:speedups:gmean'])
+    y1.append(results_map[timestamp]['xla:speedups:gmean'])
   if args.format == 'csv':
-    print('# Datetime,Speedup')
-    for a, b in zip(x, y):
-      print(','.join(map(str, [a, b])))
+    print(
+        '# Datetime,Speedup(Inductor/Oldest Inductor),Speedup(PytorchXLA/Oldest Inductor)'
+    )
+    for a, b, c in zip(x, y0, y1):
+      print(','.join(map(str, [a, b, c])))
   else:
-    plt.axhline(y=1.0, color='lightgray')
-    plt.plot(x, y, marker='^')
+    fig, ax = plt.subplots()
+    ax.axhline(y=1.0, color='lightgray')
+    ax.plot(x, y0, marker='^', label='Inductor')
+    ax.plot(x, y1, marker='o', label='PytorchXLA')
+    ax.xaxis.set_major_formatter(
+        mdates.ConciseDateFormatter(ax.xaxis.get_major_locator()))
+    plt.legend()
     plt.xlabel("Date")
     plt.ylabel("Geomean Speedup")
-    plt.title(maketitle(args, f"Pytorch/XLA's Speedup over Inductor"))
+    plt.title(maketitle(args, 'Speedup over Oldest Benchmarked Inductor'))
     plt.savefig(sys.stdout.buffer)
 
 
 def pr_results(results_map: dict[str, Any], args):
-  timestamp_list = list(results_map.keys())
-  timestamps = [
-      ts for ts in timestamp_list if args.accelerator in results_map[ts]
-  ]
+  timestamps = list(results_map.keys())
   timestamps.sort()
 
   if args.report == 'latest':
@@ -320,8 +377,8 @@ def parse_args(args=None):
   parser.add_argument('--title', type=str, help="Plot title.")
   args = parser.parse_args(args)
 
-  append_filter_by_tier(args.filter, args.filter_by_tier)
-  append_filter_by_tier(args.exclude, args.exclude_by_tier)
+  tiers.append_filter_by_tier(args.filter, args.filter_by_tier)
+  tiers.append_filter_by_tier(args.exclude, args.exclude_by_tier)
   args.filter = args.filter or [r"."]
   args.exclude = args.exclude or [r"^$"]
 
@@ -338,7 +395,7 @@ def main():
 
   for filename in filenames:
     process_file(args, results_map, filename)
-  process_results(results_map)
+  process_results(args, results_map)
   if not results_map:
     sys.exit('no results found')
   pr_results(results_map, args)

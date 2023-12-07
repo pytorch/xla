@@ -54,6 +54,10 @@ class PjRtComputationClient : public ComputationClient {
   std::vector<ComputationPtr> Compile(
       std::vector<CompileInstance> instances) override;
 
+  std::string SerializeComputation(const ComputationPtr computation) override;
+
+  ComputationPtr DeserializeComputation(const std::string& serialized) override;
+
   std::vector<DataPtr> ExecuteComputation(
       const Computation& computation, absl::Span<const DataPtr> arguments,
       const std::string& device,
@@ -71,6 +75,8 @@ class PjRtComputationClient : public ComputationClient {
   std::vector<std::string> GetLocalDevices() const override;
 
   std::vector<std::string> GetAllDevices() const override;
+
+  torch::lazy::hash_t HashCompilationEnv() override;
 
   int GetProcessIndex() const override { return client_->process_index(); };
 
@@ -114,6 +120,7 @@ class PjRtComputationClient : public ComputationClient {
   OperationManager operation_manager_;
   tsl::thread::ThreadPool pool_ = tsl::thread::ThreadPool(
       tsl::Env::Default(), "pjrt", std::thread::hardware_concurrency());
+  torch::lazy::hash_t comp_env_hash_;
 
   xla::PjRtDevice* StringToPjRtDevice(const std::string& device);
 
