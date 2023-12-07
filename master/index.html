@@ -225,7 +225,7 @@
               
               
                 <div class="version">
-                  master (2.2.0+git39fcf8b )
+                  master (2.2.0+gita01de39 )
                 </div>
               
             
@@ -272,6 +272,7 @@
 <li><a class="reference internal" href="#saving-and-loading-xla-tensors">Saving and Loading XLA Tensors</a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#compilation-caching">Compilation Caching</a></li>
 <li><a class="reference internal" href="#further-reading">Further Reading</a></li>
 </ul>
 </li>
@@ -778,6 +779,26 @@ tensors are always loaded back to the device they were saved from, and if
 that device is unavailable the load will fail. PyTorch/XLA, like all of PyTorch,
 is under active development and this behavior may change in the future.</p>
 </div>
+</div>
+<div class="section" id="compilation-caching">
+<h2>Compilation Caching<a class="headerlink" href="#compilation-caching" title="Permalink to this headline">¶</a></h2>
+<p>The XLA compiler converts the traced HLO into an executable which runs on
+the devices. Compilation can be time consuming, and in cases where the HLO
+doesn’t change across executions, the compilation result can be persisted to
+disk for reuse, significantly reducing development iteration time.</p>
+<p>Note that if the HLO changes between executions, a recompilation will still
+occur.</p>
+<p>This is currently an experimental opt-in API, which must be activated before
+any computations are executed. Initialization is done through the
+<code class="docutils literal notranslate"><span class="pre">initialize_cache</span></code> API:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch_xla.runtime</span> <span class="k">as</span> <span class="nn">xr</span>
+<span class="n">xr</span><span class="o">.</span><span class="n">initialize_cache</span><span class="p">(</span><span class="s1">&#39;YOUR_CACHE_PATH&#39;</span><span class="p">,</span> <span class="n">readonly</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This will initialize a persistent compilation cache at the specified path. The
+<code class="docutils literal notranslate"><span class="pre">readonly</span></code> parameter can be used to control whether the worker will be able to
+write to the cache, which can be useful when a shared cache mount is used for
+an SPMD workload.</p>
 </div>
 <div class="section" id="further-reading">
 <h2>Further Reading<a class="headerlink" href="#further-reading" title="Permalink to this headline">¶</a></h2>
@@ -3484,6 +3505,7 @@ We are integrating PyTorch/XLA SPMD into DTensor API <a class="reference externa
 <li><a class="reference internal" href="#saving-and-loading-xla-tensors">Saving and Loading XLA Tensors</a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#compilation-caching">Compilation Caching</a></li>
 <li><a class="reference internal" href="#further-reading">Further Reading</a></li>
 </ul>
 </li>
