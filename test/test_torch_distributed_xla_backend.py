@@ -134,6 +134,27 @@ class XlaBackendTest(parameterized.TestCase):
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([output])
     hlo_matches(hlo, reduce_scatter_pattern)
 
+  @skipIf(xr.device_type() == 'CPU',
+          "UNIMPLEMENTED: ReduceScatter is not implemented on CPU.")
+  def test_reduce_scatter_coalesced(self):
+    device = xm.xla_device()
+    tensor = torch.arange(2, device=device) + 1 + 2 * dist.get_rank()
+    tensor2 = torch.arange(5, device=device) + 1 + 2 * dist.get_rank()
+    input_tensors_list = [[tensor, tensor], [tensor2, tensor2]]
+    output_list = [torch.zeros_like(tensor), torch.zeros_like(tensor2)]
+    pg_xla = get_process_group_xla(rank=0, size=len(input_tensors_list[0]))
+    opts = dist.ReduceScatterOptions()
+    opts.reduceOp = dist.ReduceOp.SUM
+    reduce_scatter_pattern = (
+        r'%reduce\-scatter\.\d+ = \(s64\[2]\{0}, s64\[5]\{0}, s64\[]\) '
+        r'reduce\-scatter\(s64\[4]\{0} %.+\.\d+, s64\[10]\{0} %.+\.\d+, '
+        r's64\[] %.+\.\d+\)')
+    pg_xla.reduce_scatter_coalesced(output_list, input_tensors_list, opts)
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo(output_list)
+    hlo_matches(hlo, reduce_scatter_pattern)
+    # purge all computations attached the device.
+    xm.mark_step()
+
   @patch_world(0, 6)
   def test_send(self):
     device = xm.xla_device()
