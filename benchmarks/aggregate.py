@@ -9,7 +9,7 @@ import re
 import sys
 import tiers
 import itertools
-from typing import Any, List
+from typing import Any, Dict, List
 import numpy as np
 from scipy.stats.mstats import gmean
 
@@ -61,7 +61,7 @@ def skip_model(args, model_name: str):
           re.search("|".join(args.exclude), model_name, re.I))
 
 
-def process_file(args, results_map: dict[str, Any], filename: str):
+def process_file(args, results_map: Dict[str, Any], filename: str):
   with open(filename) as check_header_file:
     try:
       has_header = csv.Sniffer().has_header(check_header_file.read(1024))
@@ -116,7 +116,7 @@ def process_file(args, results_map: dict[str, Any], filename: str):
       results_map[timestamp][dynamo][model_name][batch_size] = median_total_time
 
 
-def summarize_speedups(acc_map: dict[str, Any], label: str):
+def summarize_speedups(acc_map: Dict[str, Any], label: str):
   if label not in acc_map:
     return
   acc_map[f'{label}:gmean'] = gmean(acc_map[label])
@@ -127,7 +127,7 @@ def summarize_speedups(acc_map: dict[str, Any], label: str):
 
 # The speedup values are stored in acc_map[out_label]; the corresponding
 # model names are stored in acc_map[f'{out_label}:model_name'].
-def compute_speedups(acc_map: dict[str, Any], baseline: dict[str, Any],
+def compute_speedups(acc_map: Dict[str, Any], baseline: Dict[str, Any],
                      out_label: str, in_label: str):
   model_label = f'{out_label}:model_name'
   if in_label not in acc_map:
@@ -156,7 +156,7 @@ def compute_speedups(acc_map: dict[str, Any], baseline: dict[str, Any],
 # A benchmark's baseline is the oldest Inductor perf number we have for it.
 # This way we can track both Pytorch/XLA and Inductor perf improvements over
 # time.
-def compute_baseline(results_map: dict[str, Any]) -> dict[str, Any]:
+def compute_baseline(results_map: Dict[str, Any]) -> Dict[str, Any]:
   baseline = {}
   for ts in sorted(list(results_map.keys())):
     if 'inductor' not in results_map[ts]:
@@ -171,7 +171,7 @@ def compute_baseline(results_map: dict[str, Any]) -> dict[str, Any]:
   return baseline
 
 
-def process_results(args, results_map: dict[str, Any]):
+def process_results(args, results_map: Dict[str, Any]):
   baseline = compute_baseline(results_map)
   for timestamp in results_map:
     acc_map = results_map[timestamp]
@@ -188,7 +188,7 @@ def maketitle(args, title: str):
   return title
 
 
-def pr_latest(results_map: dict[str, Any], args, timestamps: List[str]):
+def pr_latest(results_map: Dict[str, Any], args, timestamps: List[str]):
   prefixes = ('inductor', 'xla')
   speedups = [[], []]
   model_names = [[], []]
@@ -237,7 +237,7 @@ def pr_latest(results_map: dict[str, Any], args, timestamps: List[str]):
     plt.savefig(sys.stdout.buffer)
 
 
-def pr_histogram(results_map: dict[str, Any], args, timestamps: List[str]):
+def pr_histogram(results_map: Dict[str, Any], args, timestamps: List[str]):
   percentiles = [f'p{p}' for p in (95, 50, 5)]
   prefixes = ('inductor', 'xla')
   labels = [f'{pfx}:speedups:{p}' for pfx in prefixes for p in percentiles]
@@ -286,7 +286,7 @@ def pr_histogram(results_map: dict[str, Any], args, timestamps: List[str]):
     plt.savefig(sys.stdout.buffer)
 
 
-def pr_gmean(results_map: dict[str, Any], args, timestamps: List[str]):
+def pr_gmean(results_map: Dict[str, Any], args, timestamps: List[str]):
   label = f'speedups:gmean'
   x = []
   y0 = []
@@ -318,7 +318,7 @@ def pr_gmean(results_map: dict[str, Any], args, timestamps: List[str]):
     plt.savefig(sys.stdout.buffer)
 
 
-def pr_results(results_map: dict[str, Any], args):
+def pr_results(results_map: Dict[str, Any], args):
   timestamps = list(results_map.keys())
   timestamps.sort()
 
