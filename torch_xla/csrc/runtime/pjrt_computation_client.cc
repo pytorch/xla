@@ -598,6 +598,42 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
   return computations;
 }
 
+std::string PjRtComputationClient::SerializeComputation(
+    const ComputationPtr computation) {
+  const PjRtComputation& pjrt_computation =
+      dynamic_cast<const PjRtComputation&>(*computation);
+
+  return ConsumeValue(pjrt_computation.executable->SerializeExecutable());
+}
+
+ComputationClient::ComputationPtr PjRtComputationClient::DeserializeComputation(
+    const std::string& serialized) {
+  auto executable_or = client_->DeserializeExecutable(serialized, std::nullopt);
+  if (!executable_or.ok()) {
+    TF_LOG(WARNING) << "Failed to deserialize executable: "
+                    << executable_or.status();
+    return nullptr;
+  }
+  auto executable = std::move(*executable_or);
+
+  auto hlo_modules = executable->GetHloModules();
+  if (!hlo_modules.ok()) {
+    TF_LOG(WARNING)
+        << "Failed to retrieve HLO modules from deserialized executable";
+    return nullptr;
+  }
+  XLA_CHECK(hlo_modules->size() == 1)
+      << "Only a single module is supported for persistent computation "
+         "caching. Please unset the XLA_PERSISTENT_CACHE_PATH "
+         "variable to disable persistent caching.";
+  xla::XlaComputation computation((*hlo_modules)[0]->ToProto());
+
+  std::vector<std::string> devices = {UseVirtualDevice() ? spmd_device_str
+                                                         : GetDefaultDevice()};
+  return std::make_shared<PjRtComputation>(std::move(computation), devices,
+                                           std::move(executable));
+}
+
 torch::lazy::hash_t PjRtComputationClient::HashCompilationEnv() {
   // TODO(jonbolin): Incorporate CompileOptions into the hash. These are
   // deterministically generated at the moment, so they don't need to be

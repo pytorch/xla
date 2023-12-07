@@ -76,6 +76,36 @@ bool ShouldSyncIrValue(const torch::lazy::Value& ir_value) {
   return ir_value->op() != xla_not_supported;
 }
 
+XLAGraphExecutor::ComputationCache* CreateComputationCache() {
+  static const size_t kMaxCacheSize =
+      runtime::sys_util::GetEnvInt("XLA_COMPILATION_CACHE_SIZE", 1024);
+  static const bool readonlyPersistentCache =
+      runtime::sys_util::GetEnvBool("XLA_PERSISTENT_CACHE_READ_ONLY", false);
+  static std::string persistentCacheDir =
+      runtime::sys_util::GetEnvString("XLA_PERSISTENT_CACHE_PATH", "");
+  if (!persistentCacheDir.empty()) {
+    auto serialize_fn =
+        [](XLAGraphExecutor::ComputationCache::TypePtr computation)
+        -> std::string {
+      return runtime::GetComputationClient()->SerializeComputation(
+          computation->computation);
+    };
+    auto deserialize_fn = [](std::string serialization)
+        -> XLAGraphExecutor::ComputationCache::TypePtr {
+      runtime::ComputationClient::ComputationPtr computation =
+          runtime::GetComputationClient()->DeserializeComputation(
+              serialization);
+      if (!computation) return nullptr;
+      return std::make_shared<XLAGraphExecutor::CachedComputation>(
+          computation, /*is_sharded=*/UseVirtualDevice());
+    };
+    return new XLAGraphExecutor::PersistentCache(
+        kMaxCacheSize, persistentCacheDir, readonlyPersistentCache,
+        serialize_fn, deserialize_fn);
+  }
+  return new XLAGraphExecutor::MemoryCache(kMaxCacheSize);
+}
+
 }  // namespace
 
 auto XLAGraphExecutor::DeviceContextArena::Get() -> DeviceContextArena* {
@@ -477,9 +507,7 @@ void XLAGraphExecutor::MaybeDumpGraph(std::string name,
 }
 
 XLAGraphExecutor::ComputationCache* XLAGraphExecutor::GetComputationCache() {
-  static const size_t kMaxCacheSize =
-      runtime::sys_util::GetEnvInt("XLA_COMPILATION_CACHE_SIZE", 1024);
-  static ComputationCache* cache = new ComputationCache(kMaxCacheSize);
+  static ComputationCache* cache = CreateComputationCache();
   return cache;
 }
 
