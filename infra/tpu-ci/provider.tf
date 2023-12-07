@@ -1,3 +1,8 @@
+provider "google" {
+  project = "tpu-pytorch"
+  region  = "us-central-1"
+}
+
 terraform {
   required_providers {
     google = {
