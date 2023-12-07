@@ -35,17 +35,17 @@ xla::XlaOp BuildComparisonOp(c10::Symbol kind, xla::XlaOp lhs, xla::XlaOp rhs) {
   std::tie(lhs, rhs) = XlaHelpers::Promote(lhs, rhs);
   switch (kind) {
     case at::aten::ne:
-      return xla::Ne(lhs, rhs);
+      return xla::Ne(lhs, rhs, XlaHelpers::getBroadcastDimensions(lhs, rhs));
     case at::aten::eq:
-      return xla::Eq(lhs, rhs);
+      return xla::Eq(lhs, rhs, XlaHelpers::getBroadcastDimensions(lhs, rhs));
     case at::aten::ge:
-      return xla::Ge(lhs, rhs);
+      return xla::Ge(lhs, rhs, XlaHelpers::getBroadcastDimensions(lhs, rhs));
     case at::aten::le:
-      return xla::Le(lhs, rhs);
+      return xla::Le(lhs, rhs, XlaHelpers::getBroadcastDimensions(lhs, rhs));
     case at::aten::gt:
-      return xla::Gt(lhs, rhs);
+      return xla::Gt(lhs, rhs, XlaHelpers::getBroadcastDimensions(lhs, rhs));
     case at::aten::lt:
-      return xla::Lt(lhs, rhs);
+      return xla::Lt(lhs, rhs, XlaHelpers::getBroadcastDimensions(lhs, rhs));
     default:
       XLA_ERROR() << "Invalid comparison operator kind: "
                   << kind.toQualString();
@@ -73,7 +73,9 @@ xla::XlaOp BuildRelu(xla::XlaOp input) {
     // xla::Max doesn't do implicit broadcasting for unbounded dynamism now.
     // TODO(lsy323): Remove this branch once the support is added in XLA.
     auto promoted = XlaHelpers::Promote(input, scalar);
-    return xla::Max(promoted.first, promoted.second);
+    return xla::Max(
+        promoted.first, promoted.second,
+        XlaHelpers::getBroadcastDimensions(promoted.first, promoted.second));
   } else {
     return xla::Max(input, scalar);
   }
