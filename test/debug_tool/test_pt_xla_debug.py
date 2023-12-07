@@ -8,47 +8,9 @@ import torch_xla.debug.profiler as xp
 import torch_xla.utils.utils as xu
 import torch_xla.distributed.parallel_loader as pl
 import unittest
-from typing import NamedTuple
-
-
-def check_env_flag(name, default=''):
-  return os.getenv(name, default).upper() in ['ON', '1', 'YES', 'TRUE', 'Y']
-
-
-def extract_execution_cause(lines):
-  causes = []
-  for i in range(len(lines)):
-    if 'Execution Cause' in lines[i].decode():
-      causes.append(lines[i + 1].decode())
-  return causes
-
-
-def extract_compilation_cause(lines):
-  causes = []
-  for i in range(len(lines)):
-    if 'Compilation Cause' in lines[i].decode():
-      causes.append(lines[i + 1].decode())
-  return causes
-
-
-class GraphInfo(NamedTuple):
-  hash: str
-  num_input: int
-  num_output: int
-
-
-def extract_graph_infos(lines):
-  infos = []
-  for i in range(len(lines)):
-    if 'Graph Info' in lines[i].decode():
-      hash = lines[i + 1].decode().split('Graph Hash: ')[1].strip()
-      num_input = lines[i +
-                        2].decode().split('Number of Graph Inputs:')[1].strip()
-      num_output = lines[i + 3].decode().split(
-          'Number of Graph Outputs:')[1].strip()
-      infos.append(GraphInfo(hash, int(num_input), int(num_output)))
-
-  return infos
+from extract_debug_helper import (check_env_flag, extract_execution_cause,
+                                  extract_compilation_cause, GraphInfo,
+                                  extract_graph_infos, extract_python_frames)
 
 
 class PtXLADebugTest(unittest.TestCase):
@@ -219,6 +181,28 @@ class PtXLADebugTest(unittest.TestCase):
     # this graph has one input(random seed) and one output(t1)
     self.assertEqual(graph_infos[1].num_input, 1)
     self.assertEqual(graph_infos[1].num_output, 1)
+    open(self.debug_file_name, 'w').close()
+
+  def test_frame(self):
+    device = xm.xla_device()
+    t1 = torch.randn(6, 6, device=device)
+    xm.mark_step()
+    with open(self.debug_file_name, 'rb') as f:
+      lines = f.readlines()
+      frames = extract_python_frames(lines)
+
+    # one for compilation, one for execution
+    self.assertEqual(len(frames), 2)
+    max_frame = os.getenv('PT_XLA_DEBUG_MAX_FRAME', 8)
+    # Additonal lines are
+    # 1. Python Frame Triggered Execution:
+    # 2. ....
+    # 3. empty line
+    self.assertEqual(len(frames[0].split('\n')), max_frame + 3)
+    self.assertEqual(len(frames[1].split('\n')), max_frame + 3)
+    # Check mark_step is the first frame
+    self.assertIn('mark_step', frames[0].split('\n')[1])
+
     open(self.debug_file_name, 'w').close()
 
 
