@@ -78,7 +78,7 @@ class ResultAnalyzer:
     MEDIAN_TOTAL_TIME = f"{np.median.__name__}_total_time"
 
     for metric, raw_values in dataline["metrics"].items():
-      values = np.sort(np.asarray(raw_values, dtype="float"))
+      values = np.asarray(raw_values, dtype="float")
 
       is_valid = (
           dataline["experiment"]["xla"] or metric != "trace_per_iter_time")
@@ -86,13 +86,15 @@ class ResultAnalyzer:
       for fn in (np.min, np.median, np.max):
         d[f"{fn.__name__}_{metric}"] = fn(values) if is_valid else -1
 
-      # Remove both the min and max values so as to remove
-      # outliers from the statistical data.
-      middle_values = values[1:-1]
+      # Remove first measurement.
+      # Assumption: the first measurement has tracing + compilation times
+      # embedded into it. Therefore, we remove it from our data for computing
+      # the average and standard deviation.
+      skip_head = values[1:]
 
-      if len(middle_values) > 0:
+      if len(skip_head) > 0:
         for fn in (np.mean, np.std):
-          d[f"{fn.__name__}_{metric}"] = fn(middle_values) if is_valid else -1
+          d[f"{fn.__name__}_{metric}"] = fn(skip_head) if is_valid else -1
 
     compile_time = d[MAX_TOTAL_TIME] - d[MEDIAN_TOTAL_TIME]
     d["dynamo_compile_time"] = compile_time if dataline["experiment"][
