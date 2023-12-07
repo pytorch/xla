@@ -106,7 +106,7 @@ class XlaBackendTest(parameterized.TestCase):
     dist.all_gather(output_tensors, tensor)
     hlo = torch_xla._XLAC._get_xla_tensors_hlo(output_tensors)
     hlo_matches(hlo, all_gather_pattern)
-    
+
   @patch_world(rank=3, size=8)
   def test_allgather_coalesced(self):
     device = xm.xla_device()
