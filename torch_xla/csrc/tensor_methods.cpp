@@ -2150,9 +2150,9 @@ XLATensorPtr dequantize_tensor(const XLATensorPtr& input,
   return input->CreateFrom(torch::lazy::Value(node));
 }
 
-XLATensorPtr reinterpret_cast_4bit(const XLATensorPtr& input) {
+XLATensorPtr reinterpret_cast_4bit(const XLATensorPtr& input, const XLATensorPtr& weight) {
   torch::lazy::NodePtr node = torch::lazy::MakeNode<ReinterpretCast4bit>(
-      input->GetIrValue(), 0);
+      input->GetIrValue(), weight->GetIrValue());
   return input->CreateFrom(torch::lazy::Value(node));
 }
 
