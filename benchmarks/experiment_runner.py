@@ -242,17 +242,17 @@ class ExperimentRunner:
           'Profiling enabled, but dumping tracing/kernel summary disabled.')
       return
 
-    with_configuration_suffix = lambda name, ext: f"{name}-{benchmark_model.filename_str}-{benchmark_experiment.filename_str}.{ext}"
+    create_prof_filename = lambda name, ext: f"ptprofile-{name}-{benchmark_model.filename_str}-{benchmark_experiment.filename_str}.{ext}"
     model_name = benchmark_model.model_name
     file_path = os.path.join(self._args.profile_cuda_dump, model_name)
     os.makedirs(file_path, exist_ok=True)
     prof.export_chrome_trace(
-        os.path.join(file_path, with_configuration_suffix("trace", "json")))
+        os.path.join(file_path, create_prof_filename("trace", "json")))
 
     kernel_dump = prof.key_averages().table(
         sort_by="cuda_time_total", row_limit=500)
     with open(
-        os.path.join(file_path, with_configuration_suffix("kernel_dump",
+        os.path.join(file_path, create_prof_filename("kernel_dump",
                                                           "txt")), "a") as f:
       f.write(kernel_dump)
 
