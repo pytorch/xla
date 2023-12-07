@@ -9,7 +9,7 @@ import re
 import sys
 import tiers
 import itertools
-from typing import Any
+from typing import Any, List
 import numpy as np
 from scipy.stats.mstats import gmean
 
@@ -36,7 +36,7 @@ test_to_csv_field_name = {
 }
 
 
-def find_files(input_dirname: str) -> list[str]:
+def find_files(input_dirname: str) -> List[str]:
   files = []
   for root, _, filenames in os.walk(input_dirname):
     for filename in filenames:
@@ -188,7 +188,7 @@ def maketitle(args, title: str):
   return title
 
 
-def pr_latest(results_map: dict[str, Any], args, timestamps: list[str]):
+def pr_latest(results_map: dict[str, Any], args, timestamps: List[str]):
   prefixes = ('inductor', 'xla')
   speedups = [[], []]
   model_names = [[], []]
@@ -237,7 +237,7 @@ def pr_latest(results_map: dict[str, Any], args, timestamps: list[str]):
     plt.savefig(sys.stdout.buffer)
 
 
-def pr_histogram(results_map: dict[str, Any], args, timestamps: list[str]):
+def pr_histogram(results_map: dict[str, Any], args, timestamps: List[str]):
   percentiles = [f'p{p}' for p in (95, 50, 5)]
   prefixes = ('inductor', 'xla')
   labels = [f'{pfx}:speedups:{p}' for pfx in prefixes for p in percentiles]
@@ -286,7 +286,7 @@ def pr_histogram(results_map: dict[str, Any], args, timestamps: list[str]):
     plt.savefig(sys.stdout.buffer)
 
 
-def pr_gmean(results_map: dict[str, Any], args, timestamps: list[str]):
+def pr_gmean(results_map: dict[str, Any], args, timestamps: List[str]):
   label = f'speedups:gmean'
   x = []
   y0 = []
