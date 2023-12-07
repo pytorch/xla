@@ -7,13 +7,18 @@ import logging
 import os
 import re
 import sys
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
 import tiers
 import itertools
 from typing import Any
 import numpy as np
 from scipy.stats.mstats import gmean
+
+try:
+  import matplotlib.pyplot as plt
+  import matplotlib.dates as mdates
+  has_matplotlib = True
+except ImportError:
+  has_matplotlib = False
 
 logger = logging.getLogger(__name__)
 
@@ -316,6 +321,9 @@ def pr_gmean(results_map: dict[str, Any], args, timestamps: list[str]):
 def pr_results(results_map: dict[str, Any], args):
   timestamps = list(results_map.keys())
   timestamps.sort()
+
+  if args.format == 'png' and not has_matplotlib:
+    sys.exit('Fatal: cannot find matplotlib packages needed for PNG output.')
 
   if args.report == 'latest':
     return pr_latest(results_map, args, timestamps)
