@@ -187,7 +187,6 @@ PjRtComputationClient::PjRtComputationClient() {
           global_process_rank, global_world_size, master_addr, port);
       std::shared_ptr<xla::DistributedRuntimeClient> distributed_client =
           coordinator_->GetClient();
-      XLA_CHECK(distributed_client != nullptr);
       std::string key_prefix = "gpu:";
       kv_get = [distributed_client, key_prefix](
                    std::string_view k,
