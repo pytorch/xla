@@ -977,6 +977,9 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_xla_runtime_is_initialized", []() {
     return runtime::GetComputationClientIfInitialized() != nullptr;
   });
+  m.def("_xla_computation_cache_is_initialized", []() {
+    return XLAGraphExecutor::Get()->IsComputationCacheInitialized();
+  });
   m.def("_get_git_revs", []() { return GetRevisions(); });
   m.def("_get_xla_tensor_dimension_size",
         [](const at::Tensor& tensor, int dim) {
