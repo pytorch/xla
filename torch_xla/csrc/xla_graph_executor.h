@@ -163,8 +163,14 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   };
 
   using ComputationCache =
+      runtime::util::AbstractCache<torch::lazy::hash_t, CachedComputation,
+                                   torch::lazy::HashReducer>;
+  using MemoryCache =
       runtime::util::Cache<torch::lazy::hash_t, CachedComputation,
                            torch::lazy::HashReducer>;
+  using PersistentCache =
+      runtime::util::PersistentCache<torch::lazy::hash_t, CachedComputation,
+                                     torch::lazy::HashReducer>;
 
   ComputationCache* GetComputationCache();
 

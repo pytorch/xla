@@ -72,7 +72,7 @@ If your PR touches the Python source files, please run the following command bef
 
 ```Shell
 # How to install: pip install yapf==0.30.0
-yapf --recursive -i *.py test/ scripts/ torch_xla/
+yapf --recursive -i *.py test/ scripts/ torch_xla/ benchmarks/
 ```
 
 ### Running the Tests

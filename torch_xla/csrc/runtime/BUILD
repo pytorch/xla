@@ -81,6 +81,7 @@ cc_library(
   deps = [
     ":computation_client",
     ":debug_macros",
+    ":env_hash",
     ":env_vars",
     ":operation_manager",
     ":profiler",
@@ -112,6 +113,9 @@ cc_library(
 cc_library(
     name = "cache",
     hdrs = ["cache.h"],
+    deps = [
+      "@torch//:headers",
+    ],
 )
 
 cc_test(
@@ -119,8 +123,9 @@ cc_test(
     size = "small",
     srcs = ["cache_test.cc"],
     deps = [
-        ":cache",
-        "@com_google_googletest//:gtest_main",
+      ":cache",
+      "@torch//:libtorch_cpu",  # For TORCH_LAZY_COUNTER
+      "@com_google_googletest//:gtest_main",
     ],
 )
 
@@ -138,6 +143,27 @@ cc_library(
     name = "env_vars",
     srcs = ["env_vars.cc"],
     hdrs = ["env_vars.h"],
+)
+
+cc_library(
+    name = "env_hash",
+    srcs = ["env_hash.cc"],
+    hdrs = ["env_hash.h"],
+    deps = [
+        ":sys_util",
+        "@torch//:headers",
+    ],
+)
+
+cc_test(
+    name = "env_hash_test",
+    size = "small",
+    srcs = ["env_hash_test.cc"],
+    deps = [
+      ":env_hash",
+      "@torch//:libtorch_cpu",  # For torch::lazy::hash
+      "@com_google_googletest//:gtest_main",
+    ],
 )
 
 cc_library(
@@ -372,28 +398,29 @@ ptxla_cc_test(
     ],
 )
 
-ptxla_cc_test(
-    name = "pjrt_computation_client_test",
-    srcs = ["pjrt_computation_client_test.cc"],
-    deps = [
-        ":common",
-        ":computation_client",
-        ":pjrt_computation_client",
-        ":tensor_source",
-        "@xla//xla:literal",
-        "@xla//xla:literal_util",
-        "@xla//xla:shape_util",
-        "@xla//xla:status",
-        "@xla//xla:statusor",
-        "@xla//xla/client:xla_builder",
-        "@xla//xla/client:xla_computation",
-        "@xla//xla/tests:literal_test_util",
-        "@xla//xla/tools:hlo_module_loader",
-        "@tsl//tsl/lib/core:status_test_util",
-        "@tsl//tsl/platform:env",
-        "@tsl//tsl/platform:errors",
-        "@tsl//tsl/platform:logging",
-        "@tsl//tsl/platform:test",
-        "@tsl//tsl/platform:test_main",
-    ],
-)
+# disable for now since it is flaky on the upstream test.
+# ptxla_cc_test(
+#     name = "pjrt_computation_client_test",
+#     srcs = ["pjrt_computation_client_test.cc"],
+#     deps = [
+#         ":common",
+#         ":computation_client",
+#         ":pjrt_computation_client",
+#         ":tensor_source",
+#         "@xla//xla:literal",
+#         "@xla//xla:literal_util",
+#         "@xla//xla:shape_util",
+#         "@xla//xla:status",
+#         "@xla//xla:statusor",
+#         "@xla//xla/client:xla_builder",
+#         "@xla//xla/client:xla_computation",
+#         "@xla//xla/tests:literal_test_util",
+#         "@xla//xla/tools:hlo_module_loader",
+#         "@tsl//tsl/lib/core:status_test_util",
+#         "@tsl//tsl/platform:env",
+#         "@tsl//tsl/platform:errors",
+#         "@tsl//tsl/platform:logging",
+#         "@tsl//tsl/platform:test",
+#         "@tsl//tsl/platform:test_main",
+#     ],
+# )

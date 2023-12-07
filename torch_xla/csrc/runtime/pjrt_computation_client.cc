@@ -12,6 +12,7 @@
 #include "torch_xla/csrc/common/lynx_types.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/env_hash.h"
 #include "torch_xla/csrc/runtime/env_vars.h"
 #include "torch_xla/csrc/runtime/operation_manager.h"
 #include "torch_xla/csrc/runtime/profiler.h"
@@ -80,6 +81,40 @@ xla::GpuAllocatorConfig GetGpuAllocatorConfig() {
   config.garbage_collection =
       sys_util::GetEnvBool("XLA_GPU_MEMORY_GARBAGE_COLLECTION", false);
   return config;
+}
+
+torch::lazy::hash_t hash_comp_env(
+    std::shared_ptr<xla::PjRtClient> client,
+    std::vector<xla::PjRtDevice*>& ordered_devices) {
+  torch::lazy::hash_t hash = hash::HashXlaEnvVars();
+  // Whether or not SPMD mode is active should influence the hash.
+  hash = torch::lazy::HashCombine(hash, UseVirtualDevice());
+  auto topology_desc = client->GetTopologyDescription();
+  if (topology_desc.ok()) {
+    // Some backends support a topology description which provides a better
+    // view of the specific compilation environment.
+    auto serialized = topology_desc.value()->Serialize();
+    if (serialized.ok()) {
+      return torch::lazy::HashCombine(
+          hash,
+          torch::lazy::DataHash(serialized->data(), serialized->length()));
+    }
+    // If serialization fails, fallthrough to the manual approach.
+  }
+  std::string platform_name(client->platform_name());
+  std::string platform_version(client->platform_version());
+  hash = torch::lazy::HashCombine(
+      hash, torch::lazy::StringHash(platform_name.c_str()));
+  // platform_version incorporates libtpu version and hardware type.
+  hash = torch::lazy::HashCombine(
+      hash, torch::lazy::StringHash(platform_version.c_str()));
+  // Include global devices in the hash, ensuring order is consistent.
+  for (auto& device : ordered_devices) {
+    std::string device_str(device->ToString());
+    hash = torch::lazy::HashCombine(
+        hash, torch::lazy::StringHash(device_str.c_str()));
+  }
+  return hash;
 }
 
 }  // namespace
@@ -559,6 +594,49 @@ std::vector<ComputationClient::ComputationPtr> PjRtComputationClient::Compile(
   }
 
   return computations;
+}
+
+std::string PjRtComputationClient::SerializeComputation(
+    const ComputationPtr computation) {
+  const PjRtComputation& pjrt_computation =
+      dynamic_cast<const PjRtComputation&>(*computation);
+
+  return ConsumeValue(pjrt_computation.executable->SerializeExecutable());
+}
+
+ComputationClient::ComputationPtr PjRtComputationClient::DeserializeComputation(
+    const std::string& serialized) {
+  auto executable_or = client_->DeserializeExecutable(serialized, std::nullopt);
+  if (!executable_or.ok()) {
+    TF_LOG(WARNING) << "Failed to deserialize executable: "
+                    << executable_or.status();
+    return nullptr;
+  }
+  auto executable = std::move(*executable_or);
+
+  auto hlo_modules = executable->GetHloModules();
+  if (!hlo_modules.ok()) {
+    TF_LOG(WARNING)
+        << "Failed to retrieve HLO modules from deserialized executable";
+    return nullptr;
+  }
+  XLA_CHECK(hlo_modules->size() == 1)
+      << "Only a single module is supported for persistent computation "
+         "caching. Please unset the XLA_PERSISTENT_CACHE_PATH "
+         "variable to disable persistent caching.";
+  xla::XlaComputation computation((*hlo_modules)[0]->ToProto());
+
+  std::vector<std::string> devices = {UseVirtualDevice() ? spmd_device_str
+                                                         : GetDefaultDevice()};
+  return std::make_shared<PjRtComputation>(std::move(computation), devices,
+                                           std::move(executable));
+}
+
+torch::lazy::hash_t PjRtComputationClient::HashCompilationEnv() {
+  // TODO(jonbolin): Incorporate CompileOptions into the hash. These are
+  // deterministically generated at the moment, so they don't need to be
+  // included. It will require a small refactor, so punting on this for now.
+  return comp_env_hash_;
 }
 
 std::vector<ComputationClient::DataPtr>
