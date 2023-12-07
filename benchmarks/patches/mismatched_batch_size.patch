@@ -6,6 +6,7 @@ index 8593ba4c..57fef507 100644
 
          # use the device suggestion on CUDA inference tests, key should be either eval_batch_size or train_batch_size
          device_batch_size_key = f"{self.test}_batch_size"
++        # A patch to making sure batch sizes are comparable. It's needed because xla device string is unrecognized.
 +        current_device_name = 'NVIDIA A100-SXM4-40GB'
          if self.metadata and "devices" in self.metadata and current_device_name in self.metadata["devices"] \
                              and device_batch_size_key in self.metadata["devices"][current_device_name]:
