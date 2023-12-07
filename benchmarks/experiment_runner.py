@@ -362,7 +362,6 @@ class ExperimentRunner:
       self._synchronize(benchmark_experiment)
       return output
 
-    prof = None
     if enable_prof:
       with profile(
           activities=[ProfilerActivity.CUDA, ProfilerActivity.CPU]) as prof:
@@ -381,7 +380,7 @@ class ExperimentRunner:
     if benchmark_experiment.xla:
       metrics["trace_per_iter_time"] = t_trace / self._args.iterations_per_run
 
-    if prof:
+    if enable_prof:
       self.collect_individual_ops(benchmark_experiment, metrics, prof)
 
     return metrics, output
