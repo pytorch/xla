@@ -11,7 +11,7 @@ ifndef V
 endif
 
 $(TESTS):
-	$(QUIET_AGGREGATE)python3 ../aggregate.py $(TEST_ARGS) \
+	$(QUIET_AGGREGATE)python3 ../../benchmarks/aggregate.py $(TEST_ARGS) \
 		--input-dirname=. --format=csv > $@.tmp
 	$(QUIET_DIFF)git diff --no-index $@ $@.tmp
 	$(QUIET_RM)$(RM) $@.tmp
