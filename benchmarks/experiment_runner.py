@@ -252,8 +252,8 @@ class ExperimentRunner:
     kernel_dump = prof.key_averages().table(
         sort_by="cuda_time_total", row_limit=500)
     with open(
-        os.path.join(file_path, create_prof_filename("kernel_dump",
-                                                          "txt")), "a") as f:
+        os.path.join(file_path, create_prof_filename("kernel_dump", "txt")),
+        "a") as f:
       f.write(kernel_dump)
 
   def collect_profile_to_metrics(self, prof, metrics):
