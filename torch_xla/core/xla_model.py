@@ -740,16 +740,18 @@ def reduce_scatter(reduce_type,
     reduce_type (string): One of ``xm.REDUCE_SUM``, ``xm.REDUCE_MUL``,
       ``xm.REDUCE_AND``, ``xm.REDUCE_OR``, ``xm.REDUCE_MIN`` and
       ``xm.REDUCE_MAX``.
-    input: A single `torch.Tensor` all reduce + scatter op to.
+    input: (torch.Tensor or a list of torch.Tensor): The input. If it's a list, then
+      it will also be the output.
     scale (float): A default scaling value to be applied after the reduce.
     scatter_dim (int): Dimension number to which apply scatter operation.
     shard_count (int): The number of ways to split up the scatter_dim in.
     groups (list): A list of list, representing the replica groups for
-      the `all_reduce()` operation. Example: `[[0, 1, 2, 3], [4, 5, 6, 7]]`
+      the `reduce_scatter()` operation. Example: `[[0, 1, 2, 3], [4, 5, 6, 7]]`
         defines two groups, one with the `[0, 1, 2, 3]` replicas and one with
         the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with
         all the replicas in it.
-    output: Optional output tensor
+    output: Optional output tensor if `input` is a torch.Tensor, or a list of
+      torch.Tensor if `input` is a list of torch.Tensor.
     pin_layout (bool, optional): whether to pin the layout for this communication op.
       Layout pining can prevent potential data corruption when each process that
       participate in the communication has slightly different program, but it might
@@ -762,21 +764,39 @@ def reduce_scatter(reduce_type,
     the same as the input.
   """
   token, devctx = _get_all_reduce_token()
-  if output != None:
-    # Call the out of place version of the reduce_scatter
-    new_token = torch_xla._XLAC._xla_reduce_scatter_out(reduce_type, output,
-                                                        input, token, scale,
-                                                        scatter_dim,
-                                                        shard_count, groups or
-                                                        [], pin_layout)
-    torch_xla._XLAC._set_all_reduce_token(devctx.device, new_token)
-    return output
 
-  result = torch_xla._XLAC._xla_reduce_scatter(reduce_type, input, token, scale,
-                                               scatter_dim, shard_count,
-                                               groups or [], pin_layout)
-  torch_xla._XLAC._set_all_reduce_token(devctx.device, result[1])
-  return result[0]
+  if isinstance(input, torch.Tensor):
+    if output != None:
+      # Call the out of place version of the reduce_scatter
+      new_token = torch_xla._XLAC._xla_reduce_scatter_out(
+          reduce_type, output, input, token, scale, scatter_dim, shard_count,
+          groups or [], pin_layout)
+      torch_xla._XLAC._set_all_reduce_token(devctx.device, new_token)
+      return output
+
+    result = torch_xla._XLAC._xla_reduce_scatter(reduce_type, input, token,
+                                                 scale, scatter_dim,
+                                                 shard_count, groups or [],
+                                                 pin_layout)
+    torch_xla._XLAC._set_all_reduce_token(devctx.device, result[1])
+    return result[0]
+
+  # Now the input should be a list of Tensors.
+  elif isinstance(input, list) and all(
+      isinstance(v, torch.Tensor) for v in input):
+    if output != None:
+      raise RuntimeError(
+          "For xm.reduce_scatter with list of tensors input, output != None is not yet supported."
+      )
+
+    result = torch_xla._XLAC._xla_reduce_scatter_coalesced(
+        reduce_type, output or [], input, token, scale, scatter_dim,
+        shard_count, groups or [], pin_layout)
+    torch_xla._XLAC._set_all_reduce_token(devctx.device, result[-1])
+    return result[:-1]
+  else:
+    raise TypeError("`input` needs to be a Tensor or a list of Tensors, but "
+                    f"given {type(input)}.")
 
 
 def add_step_closure(closure, args=(), run_async=False):
