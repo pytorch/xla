@@ -37,6 +37,9 @@
 #   BAZEL_REMOTE_CACHE=""
 #     whether to use remote cache for builds
 #
+#   BAZEL_REMOTE_CACHE_ADDR="127.0.0.1:9092"
+#     using bazel-remote-cache with server host and port
+#
 #   TPUVM_MODE=0
 #     whether to build for TPU
 #
@@ -208,6 +211,7 @@ IS_LINUX = (platform.system() == 'Linux')
 GCLOUD_KEY_FILE = os.getenv('GCLOUD_SERVICE_KEY_FILE', default='')
 CACHE_SILO_NAME = os.getenv('SILO_NAME', default='dev')
 BAZEL_JOBS = os.getenv('BAZEL_JOBS', default='')
+BAZEL_REMOTE_CACHE_ADDR = os.getenv('BAZEL_REMOTE_CACHE_ADDR', default='')
 
 extra_compile_args = []
 cxx_abi = os.getenv(
@@ -267,6 +271,9 @@ class BuildBazelExtension(command.build_ext.build_ext):
     else:
       if _check_env_flag('BAZEL_REMOTE_CACHE'):
         bazel_argv.append('--config=remote_cache')
+      elif BAZEL_REMOTE_CACHE_ADDR:
+        bazel_argv.append('--config=remote_cache')
+        bazel_argv.append('--remote_cache=grpc://%s' % BAZEL_REMOTE_CACHE_ADDR)
     if CACHE_SILO_NAME:
       bazel_argv.append('--remote_default_exec_properties=cache-silo-key=%s' %
                         CACHE_SILO_NAME)

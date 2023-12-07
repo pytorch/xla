@@ -1,3 +1,4 @@
+
 ############################################################################
 # All default build options below.
 
@@ -108,15 +109,16 @@ build --incompatible_strict_action_env
 build --noremote_upload_local_results
 
 # Remote caching with local builds.
-build:remote_cache --remote_cache=grpcs://remotebuildexecution.googleapis.com
-build:remote_cache --remote_instance_name=projects/tpu-pytorch/instances/default_instance
-build:remote_cache --google_default_credentials
+#build:remote_cache --remote_cache=grpc://$BAZEL_REMOTE_CACHE_ADDR
+#build:remote_cache --remote_instance_name=projects/tpu-pytorch/instances/default_instance
+build:remote_cache --remote_instance_name=projects/torch_xla/default_instance
+#build:remote_cache --google_default_credentials
 build:remote_cache --remote_upload_local_results
-build:remote_cache --bes_backend=buildeventservice.googleapis.com
-build:remote_cache --bes_upload_mode=fully_async
-build:remote_cache --bes_results_url="https://source.cloud.google.com/results/invocations"
-build:remote_cache --bes_instance_name="tpu-pytorch"
-build:remote_cache --bes_timeout=600s  # On longer builds, BES can cause a non-zero exit from bazel.
+#build:remote_cache --bes_backend=buildeventservice.googleapis.com
+#build:remote_cache --bes_upload_mode=fully_async
+#build:remote_cache --bes_results_url="https://source.cloud.google.com/results/invocations"
+#build:remote_cache --bes_instance_name="tpu-pytorch"
+#build:remote_cache --bes_timeout=600s  # On longer builds, BES can cause a non-zero exit from bazel.
 
 # Attempt to minimize the amount of data transfer between bazel and the remote
 # workers:
