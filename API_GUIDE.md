@@ -314,6 +314,30 @@ tensors are always loaded back to the device they were saved from, and if
 that device is unavailable the load will fail. PyTorch/XLA, like all of PyTorch,
 is under active development and this behavior may change in the future.
 
+## Compilation Caching
+
+The XLA compiler converts the traced HLO into an executable which runs on
+the devices. Compilation can be time consuming, and in cases where the HLO
+doesn't change across executions, the compilation result can be persisted to
+disk for reuse, significantly reducing development iteration time.
+
+Note that if the HLO changes between executions, a recompilation will still
+occur.
+
+This is currently an experimental opt-in API, which must be activated before
+any computations are executed. Initialization is done through the
+`initialize_cache` API:
+
+```python
+import torch_xla.runtime as xr
+xr.initialize_cache('YOUR_CACHE_PATH', readonly=False)
+```
+
+This will initialize a persistent compilation cache at the specified path. The
+`readonly` parameter can be used to control whether the worker will be able to
+write to the cache, which can be useful when a shared cache mount is used for
+an SPMD workload.
+
 ## Further Reading
 
 Additional documentation is available at the

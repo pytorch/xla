@@ -506,9 +506,15 @@ void XLAGraphExecutor::MaybeDumpGraph(std::string name,
   }
 }
 
+bool XLAGraphExecutor::IsComputationCacheInitialized() {
+  return computation_cache_ != nullptr;
+}
+
 XLAGraphExecutor::ComputationCache* XLAGraphExecutor::GetComputationCache() {
-  static ComputationCache* cache = CreateComputationCache();
-  return cache;
+  if (computation_cache_ == nullptr) {
+    computation_cache_ = CreateComputationCache();
+  }
+  return computation_cache_;
 }
 
 void XLAGraphExecutor::ClearPendingIrs(

@@ -265,3 +265,21 @@ def get_master_ip() -> str:
   if device_type() == 'TPU':
     return tpu.discover_master_worker_ip()
   raise RuntimeError(f'IP discovery not supported for device: {device_type()}')
+
+
+@requires_pjrt
+def initialize_cache(path: str, readonly: bool = False):
+  """Initializes the persistent compilation cache. This API must be called
+  before any computations have been performed.
+
+  Args:
+    path: The path at which to store the persistent cache.
+    readonly: Whether or not this worker should have write access to the cache.
+  """
+  assert not torch_xla._XLAC._xla_computation_cache_is_initialized(
+  ), "Computation cache has already been initialized"
+
+  # TODO(jonbolin): Consider moving away from environment variables to control
+  # the cache.
+  os.environ['XLA_PERSISTENT_CACHE_PATH'] = path
+  os.environ['XLA_PERSISTENT_CACHE_READ_ONLY'] = '1' if readonly else '0'

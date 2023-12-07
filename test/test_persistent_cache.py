@@ -43,32 +43,34 @@ def _assert_correctness_and_metrics(t, xt, metrics):
       f'Unexpected value for counter {counter}: expected {value}, got {actual}'
 
 
-def _mp_test(rank, metrics):
+def _mp_test(rank, tmpdir, metrics):
   # In MP, the cache dir must be different for each process to avoid a race
   # condition where one process loads the compilation result of another, which
   # would break the metrics assertion.
-  os.environ['XLA_PERSISTENT_CACHE_PATH'] = \
-    os.path.join(os.environ['XLA_PERSISTENT_CACHE_PATH'], str(rank))
+  xr.initialize_cache(os.path.join(tmpdir, str(rank)))
 
   t = torch.randn(16)
   xt = t.to(xm.xla_device())
   _assert_correctness_and_metrics(t, xt, metrics)
 
 
-def _single_device_test(metrics):
+def _single_device_test(tmpdir, metrics):
+  xr.initialize_cache(tmpdir)
   t = torch.randn(16)
   xt = t.to(xm.xla_device())
   _assert_correctness_and_metrics(t, xt, metrics)
 
 
-def _spmd_replicated_test(metrics):
+def _spmd_replicated_test(tmpdir, metrics):
+  xr.initialize_cache(tmpdir)
   xr.use_spmd()
   t = torch.randn(16)
   xt = t.to(xm.xla_device())
   _assert_correctness_and_metrics(t, xt, metrics)
 
 
-def _spmd_sharded_test(metrics):
+def _spmd_sharded_test(tmpdir, metrics):
+  xr.initialize_cache(tmpdir)
   xr.use_spmd()
   t = torch.randn(16)
 
@@ -90,19 +92,23 @@ class PersistentCacheTest(parameterized.TestCase):
 
   @run_with_tmpdir
   def _run_test(self, launch_method, test_fn, tmpdir):
-    os.environ['XLA_PERSISTENT_CACHE_PATH'] = tmpdir
-
     # Run once to warm the cache
-    launch_method(test_fn, ({
-        'PersistentCacheMiss': 1,
-        'PersistentCacheHit': None
-    },))
+    launch_method(test_fn, (
+        tmpdir,
+        {
+            'PersistentCacheMiss': 1,
+            'PersistentCacheHit': None
+        },
+    ))
 
     # The second run should hit the cache
-    launch_method(test_fn, ({
-        'PersistentCacheMiss': None,
-        'PersistentCacheHit': 1
-    },))
+    launch_method(test_fn, (
+        tmpdir,
+        {
+            'PersistentCacheMiss': None,
+            'PersistentCacheHit': 1
+        },
+    ))
 
   def test_persistent_cache_mp(self):
     self._run_test(xmp.spawn, _mp_test)
