@@ -109,7 +109,6 @@ if os.environ.get('TF_CPP_MIN_LOG_LEVEL') == '0':
 import atexit
 import torch
 from ._patched_functions import _apply_patches
-from .version import __version__
 
 import _XLAC
 
