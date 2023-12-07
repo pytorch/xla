@@ -17,6 +17,7 @@ import torch_xla
 from torch_xla.core import xla_model as xm
 from torch_xla.core import dynamo_bridge
 from torch_xla.debug import metrics
+import torch_xla.experimental.quantized
 import torch._dynamo as torchdynamo
 from torch.utils import _pytree as pytree
 
@@ -51,6 +52,14 @@ def _extract_call_parameters(args, meta, bundle):
   return call_args
 
 
+@dataclass
+class StableHLOExportOptions:
+  include_human_readable_text: bool = True
+  override_tracing_arguments: Optional[Tuple[Any]] = None
+  override_tracing_kwargs: Optional[Mapping[str, Any]] = None
+  save_weights: bool = True
+
+
 class StableHLOGraphModule:
 
   def __init__(self, bundle):
@@ -73,14 +82,20 @@ class StableHLOGraphModule:
       res = pytree.tree_unflatten(res, out_spec)
     return res
 
-  def get_stablehlo_bytecode(self, method_name):
+  def get_stablehlo_bytecode(self, method_name=None):
+    if method_name is None:
+      method_name = self._default_method
     return self._name_to_stablehlo[method_name].bytecode
 
-  def get_stablehlo_text(self, method_name):
+  def get_stablehlo_text(self, method_name=None):
+    if method_name is None:
+      method_name = self._default_method
     return self._name_to_stablehlo[method_name].text
 
-  def save(self, directory_path):
-    _save_program_bundle(self._bundle, directory_path)
+  def save(self,
+           directory_path,
+           options: Optional[StableHLOExportOptions] = None):
+    _save_program_bundle(self._bundle, directory_path, options)
 
   @classmethod
   def load(cls, directory_path):
@@ -212,6 +227,17 @@ class XLAExportInterpreter(torch.fx.Interpreter):
       new_kwargs['device'] = self._device
     return super().call_function(target, args, new_kwargs)
 
+  def run_node(self, n) -> Any:
+    if n.op == 'placeholder':
+      fake_t = n.meta['val']
+      res = super().run_node(n)
+      if hasattr(fake_t, 'shape'):
+        for i, x in enumerate(fake_t.shape):
+          if not isinstance(x, int):
+            torch_xla._XLAC._xla_mark_dynamic(res, i)
+      return res
+    return super().run_node(n)
+
 
 def _extract_input_args(exported_model, options):
   if options.override_tracing_arguments is not None:
@@ -341,7 +367,7 @@ def _exported_program_to_stablehlo_bundle(exported_model,
   output_signature = [
       VariableSignature(
           shape=list(tensor.shape),
-          dtype=str(tensor_value.dtype).replace('torch.', '')) for tensor in res
+          dtype=str(tensor.dtype).replace('torch.', '')) for tensor in res
   ]
 
   torch_xla._XLAC._clear_pending_irs(str(device))
@@ -369,14 +395,19 @@ def _exported_program_to_stablehlo_bundle(exported_model,
   return bundle
 
 
-def _save_program_bundle(bundle: StableHLOModelBundle,
-                         stablehlo_dir: os.PathLike) -> None:
+def _save_program_bundle(
+    bundle: StableHLOModelBundle,
+    stablehlo_dir: os.PathLike,
+    options: Optional[StableHLOExportOptions] = None) -> None:
 
-  data_dir = os.path.join(stablehlo_dir, 'data')
-  os.makedirs(data_dir, exist_ok=True)
-  for key, val in bundle.state_dict.items():
-    with open(os.path.join(stablehlo_dir, 'data', key), 'wb') as f:
-      np.save(f, val)
+  if options is None:
+    options = StableHLOExportOptions()
+  if options.save_weights:
+    data_dir = os.path.join(stablehlo_dir, 'data')
+    os.makedirs(data_dir, exist_ok=True)
+    for key, val in bundle.state_dict.items():
+      with open(os.path.join(stablehlo_dir, 'data', key), 'wb') as f:
+        np.save(f, val)
 
   # save metadata and stablehlo bytecode
   func_dir = os.path.join(stablehlo_dir, 'functions')
@@ -405,8 +436,10 @@ def _iter_dir(path: os.PathLike):
 
 def _load_program_bundle(stablehlo_dir: os.PathLike) -> StableHLOModelBundle:
   state_dict = {}
-  for name, f in _iter_dir(os.path.join(stablehlo_dir, 'data')):
-    state_dict[name] = np.load(f, allow_pickle=True)
+  # if there is no weights/state_dict to be loaded, will not load weights
+  if os.path.exists(os.path.join(stablehlo_dir, 'data')):
+    for name, f in _iter_dir(os.path.join(stablehlo_dir, 'data')):
+      state_dict[name] = np.load(f, allow_pickle=True)
 
   constants = []
   for name, f in _iter_dir(os.path.join(stablehlo_dir, 'constants')):
@@ -437,13 +470,6 @@ def _load_program_bundle(stablehlo_dir: os.PathLike) -> StableHLOModelBundle:
       state_dict=state_dict)
 
 
-@dataclass
-class StableHLOExportOptions:
-  include_human_readable_text: bool = True
-  override_tracing_arguments: Optional[Tuple[Any]] = None
-  override_tracing_kwargs: Optional[Mapping[str, Any]] = None
-
-
 def save_as_stablehlo(exported_model: 'ExportedProgram',
                       stablehlo_dir: os.PathLike,
                       options: Optional[StableHLOExportOptions] = None):
@@ -472,7 +498,7 @@ def save_as_stablehlo(exported_model: 'ExportedProgram',
   if options is None:
     options = StableHLOExportOptions()
   shlo_program = exported_program_to_stablehlo(exported_model, options)
-  shlo_program.save(stablehlo_dir)
+  shlo_program.save(stablehlo_dir, options)
 
 
 def exported_program_to_stablehlo(

@@ -21,6 +21,7 @@
 
 #include "torch_xla/csrc/aten_xla_bridge.h"
 #include "torch_xla/csrc/debug_util.h"
+#include "torch_xla/csrc/dtype.h"
 #include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/layout_manager.h"
 #include "torch_xla/csrc/ops/arithmetic_ir_ops.h"
@@ -37,8 +38,6 @@
 #include "torch_xla/csrc/runtime/env_vars.h"
 #include "torch_xla/csrc/runtime/pjrt_computation_client.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
-#include "torch_xla/csrc/runtime/thread_pool.h"
-#include "torch_xla/csrc/runtime/unique.h"
 #include "torch_xla/csrc/runtime/xla_util.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
@@ -140,9 +139,10 @@ XLATensor::XLATensor(std::shared_ptr<View> view,
 XLATensor::XLATensor(std::shared_ptr<Data> data)
     : torch::lazy::LazyTensor(data),
       data_(std::move(data)),
-      storage_(c10::Storage({}, 0,
-                            c10::DataPtr(nullptr, bridge::XlaDeviceToAtenDevice(
-                                                      data_->device)))) {}
+      storage_(c10::Storage(
+          {}, 0,
+          c10::DataPtr(nullptr, bridge::XlaDeviceToAtenDevice(data_->device)))),
+      base_() {}
 
 auto XLATensor::data() const -> const std::shared_ptr<Data>& {
   XLA_CHECK(data_ != nullptr) << "Trying to access a null cursor";
@@ -159,7 +159,7 @@ int64_t XLATensor::size(int64_t dim) const {
 at::ScalarType XLATensor::dtype() const {
   return data()->logical_element_type
              ? *data()->logical_element_type
-             : TensorTypeFromXlaType(shape().get().element_type());
+             : MaybeUpcastToHostTorchType(shape().get().element_type());
 }
 
 c10::optional<at::ScalarType> XLATensor::dtype_optional() const {
@@ -467,7 +467,8 @@ at::Tensor XLATensor::ToTensor(bool detached) {
     XLAGraphExecutor::Get()->DeviceBarrier(GetDevice());
     // The GetXlaData() call will trigger an ApplyPendingGraph() if an IR
     // XlaNode is available on the tensor.
-    std::vector<at::Tensor> tensors = XlaDataToTensors({GetXlaData()}, dtype());
+    std::vector<at::Tensor> tensors =
+        XlaDataToTensors({GetXlaData()}, {dtype()});
     tensor = std::move(tensors.front());
     if (!detached) {
       SetTensorData(tensor);
@@ -641,7 +642,7 @@ c10::SymNode XLASymNodeImpl::add(const c10::SymNode& other) {
 }
 
 c10::SymNode XLASymNodeImpl::sub(const c10::SymNode& other) {
-  TORCH_LAZY_FN_COUNTER("xla::size_");
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::size_");
 
   torch_xla::XLASymNodeImpl* p_other =
       dynamic_cast<XLASymNodeImpl*>(other.get());
@@ -680,7 +681,7 @@ c10::SymNode XLASymNodeImpl::floordiv(const c10::SymNode& other) {
 }
 
 c10::SymNode XLASymNodeImpl::mod(const c10::SymNode& other) {
-  TORCH_LAZY_FN_COUNTER("xla::size_");
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::size_");
   torch_xla::XLASymNodeImpl* p_other =
       dynamic_cast<XLASymNodeImpl*>(other.get());
   XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
@@ -699,7 +700,7 @@ c10::SymNode XLASymNodeImpl::eq(const c10::SymNode& other) {
 }
 
 c10::SymNode XLASymNodeImpl::ne(const c10::SymNode& other) {
-  TORCH_LAZY_FN_COUNTER("xla::size_");
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::size_");
   auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
   XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
   XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
@@ -713,7 +714,7 @@ c10::SymNode XLASymNodeImpl::gt(const c10::SymNode& other) {
 }
 
 c10::SymNode XLASymNodeImpl::lt(const c10::SymNode& other) {
-  TORCH_LAZY_FN_COUNTER("xla::size_");
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::size_");
   auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
   XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
   XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
@@ -727,7 +728,7 @@ c10::SymNode XLASymNodeImpl::le(const c10::SymNode& other) {
 }
 
 c10::SymNode XLASymNodeImpl::ge(const c10::SymNode& other) {
-  TORCH_LAZY_FN_COUNTER("xla::size_");
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::size_");
   auto p_other = dynamic_cast<XLASymNodeImpl*>(other.get());
   XLA_CHECK(is_int()) << __FUNCTION__ << " with non-int NYI";
   XLA_CHECK(p_other->is_int()) << __FUNCTION__ << " with non-int NYI";
@@ -814,7 +815,7 @@ c10::SymNode XLASymNodeImpl::is_non_overlapping_and_dense(
 }
 
 c10::SymNode XLASymNodeImpl::clone() {
-  TORCH_LAZY_FN_COUNTER("xla::size_");
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::size_");
   return c10::make_intrusive<XLASymNodeImpl>(node(), pytype_);
 }
 
@@ -890,6 +891,22 @@ int64_t XLATensor::GetHandle() const {
   } else {
     XLA_CHECK(false) << "XlaTensor does not have data handle";
   }
+}
+
+void XLATensor::MarkDynamicDimension(uint32_t dim) {
+  auto* xla_node = dynamic_cast<XlaNode*>(GetIrValue().node.get());
+  xla_node->MarkDynamicDimension(dim);
+}
+
+bool XLATensor::SetNodeUserMetadata(
+    std::shared_ptr<torch::lazy::UserMetaData> metadata) {
+  auto* node = dynamic_cast<XlaNode*>(CurrentIrValue().node.get());
+  // auto* node = dynamic_cast<torch::lazy::Node*>(GetIrValue().node.get());
+  if (node != nullptr) {
+    node->SetUserMetadataForSubGraph(metadata);
+    return true;
+  }
+  return false;
 }
 
 }  // namespace torch_xla

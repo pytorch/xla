@@ -2,8 +2,10 @@
 
 #include <torch/csrc/lazy/core/ir_metadata.h>
 
+#include <iostream>
 #include <sstream>
 #include <stdexcept>
+#include <string_view>
 
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_join.h"
@@ -14,9 +16,11 @@
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/shape_helper.h"
+#include "torch_xla/csrc/stack_frame_index_builder.h"
 #include "torch_xla/csrc/unwrap_data.h"
 
 namespace torch_xla {
+
 namespace {
 
 class HloMetadataSetter {
@@ -38,7 +42,7 @@ class HloMetadataSetter {
   static bool ShouldPopulateXlaOpMetadata() {
     static bool op_metadata =
         runtime::sys_util::GetEnvBool("XLA_HLO_DEBUG", false);
-    return op_metadata;
+    return FLAGS_torch_lazy_ir_debug || op_metadata;
   }
 
   static void PopulateXlaOpMetadata(LoweringContext* loctx,
@@ -51,25 +55,32 @@ class HloMetadataSetter {
     std::string op_type =
         absl::StrReplaceAll(node->op().ToString(), {{":", "_"}});
     metadata.set_op_type(op_type);
+
     const torch::lazy::MetaData& nmeta = node->metadata();
+
+    const CustomOpNameMetaData* custom_opname_meta =
+        dynamic_cast<const CustomOpNameMetaData*>(node->user_metadata());
+
     std::string op_name_prefix;
+    size_t max_stack_depth = nmeta.frame_info.size();
+
+    if (custom_opname_meta != nullptr) {
+      op_name_prefix = custom_opname_meta->op_name_prefix;
+      max_stack_depth = custom_opname_meta->max_stack_depth;
+    } else {
+      TF_LOG(WARNING) << "No custom opname metadata! op_type=" << op_type;
+    }
+
     if (!nmeta.scope.empty()) {
       op_name_prefix =
           absl::StrCat(absl::StrReplaceAll(nmeta.scope, {{":", "_"}}), "/");
     }
     metadata.set_op_name(absl::StrCat(op_name_prefix, op_type));
 
-    if (!nmeta.frame_info.empty()) {
-      const torch::lazy::SourceLocation& frame = nmeta.frame_info.front();
-      std::string::size_type pos = frame.file.find_last_of('/');
-      if (pos == std::string::npos) {
-        pos = 0;
-      } else {
-        ++pos;
-      }
-      metadata.set_source_file(frame.function + "@" + frame.file.substr(pos));
-      metadata.set_source_line(frame.line);
-    }
+    // Sets file, line and stack_frame_id in metadata
+    loctx->stack_frame_index_builder()->AddStackFrameLocations(
+        nmeta.frame_info, max_stack_depth, metadata);
+
     loctx->builder()->SetOpMetadata(std::move(metadata));
   }
 
@@ -80,32 +91,47 @@ class HloMetadataSetter {
 
 LoweringContext::LoweringContext(const std::string& name,
                                  torch::lazy::BackendDevice device)
-    : torch::lazy::LoweringContext(name, device), builder_(name) {}
+    : torch::lazy::LoweringContext(name, device),
+      builder_(name),
+      stack_frame_index_builder_(std::make_shared<StackFrameIndexBuilder>()) {}
 
 LoweringContext::LoweringContext(
     const std::string& name, torch::lazy::BackendDevice device,
     c10::ArrayRef<const torch::lazy::Node*> post_order,
     torch::lazy::Util::EmissionMap emit_status)
     : torch::lazy::LoweringContext(name, device, {}, emit_status),
-      builder_(name) {
+      builder_(name),
+      stack_frame_index_builder_(std::make_shared<StackFrameIndexBuilder>()) {
   for (auto node : post_order) {
     LowerNode(node);
   }
 }
 
+// TODO(lsy323): Get reserved number for unbounded dim after it's added in XLA.
+static constexpr int64_t kUnboundedSize = std::numeric_limits<int64_t>::min();
+
 xla::XlaOp LoweringContext::GetParameter(
-    const std::shared_ptr<torch::lazy::BackendData>& data) {
+    const std::shared_ptr<torch::lazy::BackendData>& data,
+    const std::unordered_set<uint32_t>& unbounded_dynamic_dims) {
   torch::lazy::BackendData::Handle handle = data->GetHandle();
   auto it = parameters_map_.find(handle);
   if (it == parameters_map_.end()) {
-    xla::XlaOp param = xla::Parameter(
-        builder(), parameters_.size(),
+    xla::Shape shape =
         std::dynamic_pointer_cast<runtime::ComputationClient::Data>(data)
-            ->shape(),
-        absl::StrCat("p", parameters_.size()));
+            ->shape();
+    for (const int dim : unbounded_dynamic_dims) {
+      shape.set_dynamic_dimension(dim, true);
+      shape.set_dimensions(dim, kUnboundedSize);
+    }
+    xla::XlaOp param = xla::Parameter(builder(), parameters_.size(), shape,
+                                      absl::StrCat("p", parameters_.size()));
     it = parameters_map_.emplace(handle, Parameter{param, parameters_.size()})
              .first;
     parameters_.push_back(data);
+  } else {
+    XLA_CHECK(unbounded_dynamic_dims.empty())
+        << "The unbounded dynamic dims can only be set when Parameter is "
+           "created.";
   }
   parameter_sequence_.push_back(it->second.index);
   return it->second.param;
@@ -129,16 +155,32 @@ void LoweringContext::SetResult(size_t index, xla::XlaOp op) {
 }
 
 xla::StatusOr<xla::XlaComputation> LoweringContext::BuildXla() {
+  xla::StatusOr<xla::XlaComputation> xla;
   if (!root_tuple_.empty()) {
     xla::XlaOp root = xla::Tuple(builder(), root_tuple_);
-    return builder()->Build(root);
+    xla = builder()->Build(root);
+  } else {
+    xla = builder()->Build();
   }
-  return builder()->Build();
+
+  if (xla.ok()) {
+    (*xla->mutable_proto()->mutable_stack_frame_index()) =
+        stack_frame_index_builder()->stack_frame_index();
+  }
+
+  return xla;
 }
 
 xla::StatusOr<xla::XlaComputation> LoweringContext::BuildXla(xla::XlaOp root) {
   XLA_CHECK(root_tuple_.empty());
-  return builder()->Build(root);
+  auto xla = builder()->Build(root);
+
+  if (xla.ok()) {
+    (*xla->mutable_proto()->mutable_stack_frame_index()) =
+        stack_frame_index_builder()->stack_frame_index();
+  }
+
+  return xla;
 }
 
 void LoweringContext::AssignOutputOp(const torch::lazy::Output& output,
@@ -170,6 +212,22 @@ XlaOpVector LoweringContext::LowerNode(const torch::lazy::Node* node) {
 
     const XlaNode* casted = dynamic_cast<const XlaNode*>(node);
     result_ops = casted->Lower(this);
+    if (!casted->dynamic_dims().empty()) {
+      xla::internal::XlaBuilderFriend builder_friend;
+      auto* inst = builder_friend.GetInstruction(result_ops[0]);
+      auto* mutable_dynamic =
+          inst->mutable_shape()->mutable_is_dynamic_dimension();
+      if (mutable_dynamic->empty()) {
+        for (int i = 0; i < inst->dimensions_size(); i++) {
+          mutable_dynamic->Add(false);
+        }
+      }
+      auto* mutable_dims = inst->mutable_shape()->mutable_dimensions();
+      for (const auto dim : casted->dynamic_dims()) {
+        mutable_dynamic->Set(dim, true);
+        mutable_dims->Set(dim, kUnboundedSize);
+      }
+    }
   } catch (const std::exception& ex) {
     ReportBuilderError(node, ex.what());
   }
@@ -235,6 +293,7 @@ void LoweringContext::AddParameter(const torch::lazy::Output& output,
 
 torch::lazy::ComputationPtr LoweringContext::Build() {
   xla::XlaComputation xla_computation = ConsumeValue(BuildXla());
+
   return std::make_shared<runtime::ComputationClient::Computation>(
       builder_.name(), std::move(xla_computation), device_);
 }

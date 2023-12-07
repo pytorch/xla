@@ -127,7 +127,7 @@ function run_torchrun {
   if [ -x "$(command -v nvidia-smi)" ] && [ "$XLA_CUDA" != "0" ]; then
     echo "Running torchrun test for GPU $@"
     num_devices=$(nvidia-smi --list-gpus | wc -l)
-    PJRT_DEVICE=GPU torchrun --nnodes 1 --nproc-per-node $num_devices $@
+    PJRT_DEVICE=CUDA torchrun --nnodes 1 --nproc-per-node $num_devices $@
   fi 
 }
 
@@ -161,8 +161,9 @@ function run_xla_op_tests1 {
   run_test "$CDIR/test_grad_checkpoint.py"
   run_test "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_test_without_functionalization "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
-  run_pt_xla_debug "$CDIR/test_pt_xla_debug.py"
+  run_pt_xla_debug "$CDIR/debug_tool/test_pt_xla_debug.py"
   run_test "$CDIR/test_async_closures.py"
+  run_test "$CDIR/test_hlo_metadata.py"
   run_test "$CDIR/test_profiler.py"
   run_test "$CDIR/pjrt/test_runtime.py"
   run_test "$CDIR/pjrt/test_runtime_gpu.py"
@@ -202,12 +203,16 @@ function run_xla_op_tests3 {
   run_test "$CDIR/spmd/test_xla_sharding_hlo.py"
   run_test "$CDIR/spmd/test_xla_virtual_device.py"
   run_test "$CDIR/spmd/test_dynamo_spmd.py"
+  run_test "$CDIR/spmd/test_spmd_debugging.py"
   run_test "$CDIR/spmd/test_xla_distributed_checkpoint.py"
   run_test "$CDIR/spmd/test_xla_spmd_python_api_interaction.py"
   run_test "$CDIR/test_operations_hlo.py" "$@" --verbosity=$VERBOSITY
   run_test "$CDIR/test_input_output_aliases.py"
   run_test "$CDIR/test_torch_distributed_xla_backend.py"
   run_torchrun "$CDIR/pjrt/test_torchrun.py"
+  run_test "$CDIR/test_persistent_cache.py"
+  # NOTE: this line below is testing export and don't care about GPU
+  PJRT_DEVICE=CPU CPU_NUM_DEVICES=1 run_coverage "$CDIR/test_core_aten_ops.py"
 }
 
 #######################################################################################
@@ -229,6 +234,7 @@ function run_mp_op_tests {
   run_test "$CDIR/test_mp_save.py"
   run_test "$CDIR/test_mp_mesh_reduce.py"
   run_test "$CDIR/test_mp_sync_batch_norm.py"
+  run_pt_xla_debug "$CDIR/debug_tool/test_mp_pt_xla_debug.py"
   run_xla_backend_mp "$CDIR/test_torch_distributed_all_gather_xla_backend.py"
   run_xla_backend_mp "$CDIR/test_torch_distributed_all_reduce_xla_backend.py"
   run_xla_backend_mp "$CDIR/test_torch_distributed_multi_all_reduce_xla_backend.py"

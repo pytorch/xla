@@ -2,10 +2,11 @@ import fsspec
 import logging
 import os
 import pickle
-import queue
 import threading
 import torch.distributed as dist
 import torch.distributed.checkpoint as dist_cp
+import torch_xla
+import torch_xla.core.xla_model as xm
 import torch_xla.runtime as xr
 import torch_xla.experimental.distributed_checkpoint as xc
 import traceback
@@ -15,6 +16,7 @@ from datetime import datetime
 from collections import deque
 from fsspec.core import url_to_fs
 from os.path import basename
+from concurrent.futures import ThreadPoolExecutor, wait
 from typing import Deque, List, Optional, Union
 from torch.distributed.checkpoint.metadata import STATE_DICT_TYPE
 from ._helpers import _sharded_cpu_state_dict
@@ -80,7 +82,7 @@ class CheckpointManager:
   step_period, as would be the case in auto checkpointing.
 
   This class is inspired by Orbax's CheckpointManager, which can be found here:
-  https://github.com/google/orbax/blob/efc079c4e5b437782a80138913d322cb3ed365c7/checkpoint/orbax/checkpoint/checkpoint_manager.py
+  https://github.com/google/orbax/blob/efc079c/checkpoint/orbax/checkpoint/checkpoint_manager.py
   """
 
   # The base path to write checkpoints to. Each checkpoint taken by the manager
@@ -94,12 +96,16 @@ class CheckpointManager:
   # The maximum number of checkpoints to keep.
   max_to_keep: int
 
+  # Whether a checkpoint should be taken when a preemption is detected.
+  chkpt_on_preemption: bool
+
   def __init__(self,
                path: str,
                save_interval: int,
                max_to_keep: Optional[int] = 0,
-               async_queue_size: Optional[int] = 1,
-               process_group: dist.ProcessGroup = None):
+               max_pending_async: Optional[int] = 1,
+               process_group: dist.ProcessGroup = None,
+               chkpt_on_preemption: bool = True):
     """
     Create a checkpoint manager that reads and writes checkpoints into
     the provided directory.
@@ -111,37 +117,50 @@ class CheckpointManager:
             CheckpointManager. When a new checkpoint will be taken, the
             checkpoint for the lowest tracked step will be deleted.
             Default: 0, indicating no upper bound on the number of checkpoints.
-      async_queue_size: The size of the execution queue which processes async
-            checkpoints. This should be a small value to ensure training doesn't
+      max_pending_async: The maximum number of async checkpoints which can be
+            pending. This should be a small value to ensure training doesn't
             get too far ahead of the last finished checkpoint, but increasing
-            the value to 2 can unblock training when there are transient
-            network issues which slow down the active checkpoint.
+            the value can unblock training when there are transient issues which
+            slow down the active checkpoint.
             Default: 1, which only allows a single async checkpoint to be
             pending at a time.
       process_group: The process group to use when coordinating the checkpoint.
             Default: None, in which case a subgroup of the default process
             group will be created.
+      chkpt_on_preemption: Whether or not to take a checkpoint when a
+            preemption has been detected.
+            Default: True
     """
     assert dist.is_initialized(), "A process group is required."
     assert save_interval > 0, "save_interval must be positive"
-    assert async_queue_size > 0, "async_queue_size must be positive"
+    assert max_pending_async > 0, "max_pending_async must be positive"
     assert max_to_keep >= 0, "max_to_keep must be non-negative"
 
-    self.base_path = path
+    self.base_path = os.path.join(path, '')  # Ensure the base path ends in '/'
     self.save_interval = save_interval
     self.max_to_keep = max_to_keep
-
-    self._tracked_chkpts = self._load_tracked_chkpts()
-    self._async_queue = queue.Queue(maxsize=async_queue_size)
-    self._alive = threading.Event()
-    self._alive.set()
-    self._chkpt_thread = threading.Thread(
-        target=self._async_worker, daemon=True)
-    self._chkpt_thread.start()
+    self.chkpt_on_preemption = chkpt_on_preemption
 
     # Create a new group if none is provided
     # TODO(jonbolin): Verify subgroup on GPU backend
     self.pg = process_group or dist.new_group()
+
+    # Thread pool to run the async checkpoints. `_async_sem` is used to guard
+    # the number of pending checkpoints, and `_async_futures` tracks all
+    # futures returned by the pool.
+    self._async_worker_pool = ThreadPoolExecutor(max_workers=1)
+    self._async_sem = threading.Semaphore(max_pending_async)
+    self._async_futures = []
+    # Mutex to ensure only a single thread can write a checkpoint at a time.
+    self._save_mutex = threading.Lock()
+
+    self._tracked_chkpts = self._load_tracked_chkpts()
+
+    if self.chkpt_on_preemption:
+      # Initialize the distributed runtime for preemption detection
+      torch_xla._XLAC._ensure_xla_coordinator_initialized(
+          xr.process_index(), xr.process_count(), xr.get_master_ip())
+      torch_xla._XLAC._activate_preemption_sync_manager()
 
   def _load_tracked_chkpts(self) -> Deque[_CheckpointMetadata]:
     """
@@ -150,35 +169,19 @@ class CheckpointManager:
     all_chkpts = []
     invalid_paths = []
     fs, raw_path = url_to_fs(self.base_path)
-    for path in fs.ls(raw_path, detail=False):
-      try:
-        with fsspec.open(os.path.join(path, _MANAGER_METADATA_FILE), 'rb') as f:
-          all_chkpts.append(pickle.load(f))
-      except:
-        invalid_paths.append(path)
+    if not fs.exists(raw_path):
+      fs.mkdir(raw_path)
+    else:
+      for path in fs.ls(raw_path, detail=False):
+        try:
+          with fs.open(os.path.join(path, _MANAGER_METADATA_FILE), 'rb') as f:
+            all_chkpts.append(pickle.load(f))
+        except:
+          invalid_paths.append(path)
 
     if invalid_paths:
       logging.warning(f'Ignoring invalid checkpoints: {invalid_paths}')
     return deque(sorted(all_chkpts, key=lambda m: m.ts))
-
-  def __del__(self):
-    self._alive.clear()
-    # Send a sentinel value to tell the worker to exit, and wait for pending
-    # checkpoints to complete.
-    self._async_queue.put(None)
-    self._chkpt_thread.join()
-
-  def _async_worker(self):
-    while self._alive.is_set():
-      try:
-        item = self._async_queue.get()
-        if item:
-          step, state_dict = item
-          self.save(step, state_dict, force=True)
-      except:
-        traceback.print_exc()
-      finally:
-        self._async_queue.task_done()
 
   def _get_path(self, step: int) -> str:
     return os.path.join(self.base_path, str(step))
@@ -199,13 +202,50 @@ class CheckpointManager:
         oldest_chkpt = self._tracked_chkpts.popleft()
         self._delete_chkpt_at_step(oldest_chkpt.step)
 
+  def _wait_for_data(self):
+    xm.mark_step()
+    xm.wait_device_ops()
+
+  def _save(self, step, state_dict):
+    """
+    The actual checkpointing logic, which is shared between async and
+    synchronous checkpointing.
+
+    The caller must ensure that data is accessible within the state_dict before
+    calling, which can be achieved with `self._wait_for_data`.
+    """
+    with self._save_mutex:
+      path = self._get_path(step)
+      # Delete any existing checkpoint at the current step.
+      self._delete_chkpt_at_step(step)
+      dist_cp.save_state_dict(
+          state_dict=state_dict,
+          storage_writer=FsspecWriter(path),
+          planner=xc.SPMDSavePlanner(),
+          process_group=self.pg,
+      )
+      metadata = _CheckpointMetadata(step=step, ts=datetime.now())
+      self._tracked_chkpts.append(metadata)
+      if dist.get_rank(self.pg) == 0:
+        with fsspec.open(os.path.join(path, _MANAGER_METADATA_FILE), 'wb') as f:
+          pickle.dump(metadata, f)
+        self._release_oldest_checkpoints()
+
   def should_save(self, step: int) -> bool:
     """
-    Returns true if a checkpoint should be saved for the current step or if
-    a preemption has been detected.
+    Returns true if a checkpoint should be saved for the current step. A
+    checkpoint should be taken if any of the following conditions are met:
+     - The step aligns with the CheckpointManager's save_interval.
+     - The CheckpointManager was created with the `chkpt_on_preemption` option
+       and a preemption has been detected.
     """
-    # TODO(jonbolin): Support preemption notice for auto checkpointing
-    return step % self.save_interval == 0
+    preemption_detected = False
+    if self.chkpt_on_preemption and self.reached_preemption(step):
+      logging.warn(
+          f"Preemption sync point reached at step {step}. Triggering a checkpoint."
+      )
+      preemption_detected = True
+    return step % self.save_interval == 0 or preemption_detected
 
   def save(self,
            step,
@@ -223,20 +263,8 @@ class CheckpointManager:
       True if a checkpoint was taken and False otherwise.
     """
     if self.should_save(step) or force:
-      path = self._get_path(step)
-      # Delete any existing checkpoint at the current step.
-      self._delete_chkpt_at_step(step)
-      dist_cp.save_state_dict(
-          state_dict=state_dict,
-          storage_writer=FsspecWriter(path),
-          planner=xc.SPMDSavePlanner(),
-          process_group=self.pg,
-      )
-      metadata = _CheckpointMetadata(step=step, ts=datetime.now())
-      with fsspec.open(os.path.join(path, _MANAGER_METADATA_FILE), 'wb') as f:
-        pickle.dump(metadata, f)
-      self._tracked_chkpts.append(metadata)
-      self._release_oldest_checkpoints()
+      self._wait_for_data()
+      self._save(step, state_dict)
       return True
     return False
 
@@ -264,9 +292,13 @@ class CheckpointManager:
       True if a checkpoint was taken and False otherwise.
     """
     if self.should_save(step) or force:
+      self._wait_for_data()
       # Move the state_dict to CPU
       cpu_state_dict = _sharded_cpu_state_dict(state_dict)
-      self._async_queue.put((step, cpu_state_dict))
+      self._async_sem.acquire()
+      future = self._async_worker_pool.submit(self._save, step, cpu_state_dict)
+      future.add_done_callback(lambda _: self._async_sem.release())
+      self._async_futures.append(future)
       return True
     return False
 
@@ -298,5 +330,12 @@ class CheckpointManager:
     return sorted(x.step for x in self._tracked_chkpts)
 
   def join(self):
-    """ Wait for all pending async checkpoints to complete. """
-    self._async_queue.join()
+    """ Wait for any pending async checkpoints to complete. """
+    wait(self._async_futures)
+
+  def reached_preemption(self, step: int) -> bool:
+    """ Returns True if a preemption has been detected at the given step. """
+    assert self.chkpt_on_preemption, (
+        "Preemption detection not enabled. Please set `chkpt_on_preemption` "
+        " when creating the CheckpointManager")
+    return torch_xla._XLAC._sync_point_reached(step)

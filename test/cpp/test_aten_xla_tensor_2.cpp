@@ -2000,6 +2000,8 @@ TEST_F(AtenXlaTensorTest, TestCumSumLong) {
       AllEqual(result, xla_result);
     });
   }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::cumsum", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestCumSumCastLong) {

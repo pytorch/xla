@@ -72,7 +72,7 @@ import zipfile
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
-_libtpu_version = '0.1.dev20231022'
+_libtpu_version = '0.1.dev20231124'
 _libtpu_storage_path = f'https://storage.googleapis.com/cloud-tpu-tpuvm-artifacts/wheels/libtpu-nightly/libtpu_nightly-{_libtpu_version}-py3-none-any.whl'
 
 
@@ -244,9 +244,10 @@ class BuildBazelExtension(command.build_ext.build_ext):
 
     bazel_argv = [
         'bazel', 'build', ext.bazel_target,
-        f"--symlink_prefix={os.path.join(self.build_temp, 'bazel-')}",
-        '\n'.join(['--cxxopt=%s' % opt for opt in extra_compile_args])
+        f"--symlink_prefix={os.path.join(self.build_temp, 'bazel-')}"
     ]
+    for opt in extra_compile_args:
+      bazel_argv.append("--cxxopt={}".format(opt))
 
     # Debug build.
     if DEBUG:

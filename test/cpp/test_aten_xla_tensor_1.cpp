@@ -139,8 +139,7 @@ TEST_F(AtenXlaTensorTest, TestFull) {
   });
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::empty", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::fill_", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::full", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestFullLike) {
@@ -1506,6 +1505,18 @@ TEST_F(AtenXlaTensorTest, TestSlice) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestSliceZeroDimSize) {
+  torch::Tensor a =
+      torch::rand({0, 24, 16}, torch::TensorOptions(torch::kFloat));
+  torch::Tensor b = torch::slice(a, 0, 0, -1, 1);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = torch::slice(xla_a, 0, 0, -1, 1);
+    EXPECT_EQ(xla_b.numel(), 0);
+    EXPECT_EQ(b.numel(), 0);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestTake) {
   torch::Tensor a = torch::rand({4, 4}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = torch::randint(16, {5}, torch::TensorOptions(torch::kLong));
@@ -2041,34 +2052,6 @@ TEST_F(AtenXlaTensorTest, TestScatterReduceMaxInPlace) {
 
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
   ExpectCounterChanged("xla::scatter_reduce", cpp_test::GetIgnoredCounters());
-}
-
-TEST_F(AtenXlaTensorTest, TestUnsafeIndex) {
-  for (torch::ScalarType scalar_type :
-       {torch::kFloat, torch::kByte, torch::kChar, torch::kShort, torch::kInt,
-        torch::kLong}) {
-    torch::Tensor a =
-        isFloatingType(scalar_type)
-            ? torch::rand({3, 4}, torch::TensorOptions(scalar_type))
-            : torch::randint(100, {3, 4}, torch::TensorOptions(scalar_type));
-    for (torch::ScalarType index_scalar_type : {torch::kInt, torch::kLong}) {
-      torch::List<torch::optional<torch::Tensor>> indices{
-          torch::tensor({0, 1}, torch::TensorOptions(index_scalar_type)),
-          torch::tensor({2, 3}, torch::TensorOptions(index_scalar_type))};
-      torch::Tensor c0 = torch::_unsafe_index(a, indices);
-      ForEachDevice([&](const torch::Device& device) {
-        torch::Tensor xla_a = CopyToDevice(a, device);
-        torch::List<torch::optional<torch::Tensor>> xla_indices{
-            CopyToDevice(*indices.get(0), device),
-            CopyToDevice(*indices.get(1), device)};
-        torch::Tensor xla_c0 = torch::_unsafe_index(xla_a, xla_indices);
-        AllEqual(c0, xla_c0);
-      });
-    }
-  }
-  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::index", cpp_test::GetIgnoredCounters());
-  ExpectCounterChanged("xla::_unsafe_index", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestIndexSelect) {

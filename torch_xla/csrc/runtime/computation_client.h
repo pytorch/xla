@@ -1,6 +1,7 @@
 #ifndef XLA_CLIENT_COMPUTATION_CLIENT_H_
 #define XLA_CLIENT_COMPUTATION_CLIENT_H_
 
+#include <ATen/Tensor.h>
 #include <torch/csrc/lazy/backend/backend_data.h>
 #include <torch/csrc/lazy/backend/lowering_context.h>
 #include <torch/csrc/lazy/core/hash.h>
@@ -20,6 +21,7 @@
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/metrics.h"
+#include "torch_xla/csrc/runtime/tensor_source.h"
 #include "torch_xla/csrc/runtime/types.h"
 #include "torch_xla/csrc/runtime/util.h"
 #include "xla/client/xla_computation.h"
@@ -192,25 +194,6 @@ class ComputationClient {
 
   using ComputationPtr = std::shared_ptr<Computation>;
 
-  // The TensorSource provides a way for a client to populate a buffer allocated
-  // by the core computation client code.
-  struct TensorSource {
-    // The PopulateFn accepts a dense buffer is standard array layout
-    // (dim0-major) and deposits the source tensor data directly over the
-    // provided buffer.
-    using PopulateFn = std::function<void(const TensorSource&, void*, size_t)>;
-
-    TensorSource() = default;
-    TensorSource(xla::Shape shape, std::string device, PopulateFn populate_fn)
-        : shape(std::move(shape)),
-          device(std::move(device)),
-          populate_fn(std::move(populate_fn)) {}
-
-    xla::Shape shape;
-    std::string device;
-    PopulateFn populate_fn;
-  };
-
   // TODO(wcromar): Should CompileInstance still exist? Should it be a subclass
   // of torch::lazy::Computation?
   struct CompileInstance {
@@ -275,25 +258,40 @@ class ComputationClient {
 
   // Transfers local tensor values to the TPU devices and fetches the handles.
   virtual std::vector<DataPtr> TransferToServer(
-      absl::Span<const TensorSource> tensors) = 0;
+      absl::Span<const std::shared_ptr<const TensorSource>> tensors) = 0;
 
   // Transfers local sharded tensor values to the TPU devices and returns a
   // `PjRtShardedData`.
   virtual DataPtr TransferShardsToServer(
-      absl::Span<const TensorSource> tensor_shards, std::string device,
-      xla::Shape shape, xla::OpSharding sharding) = 0;
+      absl::Span<const std::shared_ptr<const TensorSource>> tensor_shards,
+      std::string device, xla::Shape shape, xla::OpSharding sharding) = 0;
 
   // Copies `data->buffer` to `dst` device buffer.
   virtual DataPtr CopyToDevice(DataPtr data, std::string dst) = 0;
 
   // Reads the tensor literal values stored at TPU server sites, behind the
   // supplied handles.
+  // Note: `TransferFromServer` call will block until the `DataPtrs` are ready
+  // if they were created by `TransferToServer` or `Execute*`. Calling this from
+  // python while holding the GIL can cause deadlocks!
   virtual std::vector<xla::Literal> TransferFromServer(
       absl::Span<const DataPtr> handles) = 0;
 
   // Compiles a set of computations.
   virtual std::vector<ComputationPtr> Compile(
       std::vector<CompileInstance> instances) = 0;
+
+  // Serialize a computation to a string.
+  virtual std::string SerializeComputation(
+      const ComputationPtr computation) = 0;
+
+  // Deserialize a string resulting from SerializeComputation back to a
+  // Computation. If the deserialization fails, nullptr is returned.
+  virtual ComputationPtr DeserializeComputation(
+      const std::string& serialized) = 0;
+
+  // Returns a hash of the current compilation environment.
+  virtual torch::lazy::hash_t HashCompilationEnv() = 0;
 
   // Executes computation with arguments and returns the result.
   // The passed device must match the common device of the arguments Data.
@@ -305,20 +303,13 @@ class ComputationClient {
       const ExecuteComputationOptions& options =
           ExecuteComputationOptions{}) = 0;
 
-  // Executes the computation in replicated mode.
-  // The size of the arguments vector is the number of replicas to execute,
-  // and it must match the size of the computation.devices() as well as the
-  // devices passed as argument. The destination devices for each replicated
-  // computation come from the devices the Data objects are stored into, which
-  // must match the devices argument. Within arguments[i], every Data
-  // object must be coming from the same device. Returns a vector (of the same
-  // size of the arguments vector) with the results of the parallel execution.
-  // The result[i], a vector itself, will be the result of the computation fed
-  // with arguments[i]. If options.explode_tuple is true, the output tuples will
-  // be decomposed into their single elements.
-  virtual std::vector<std::vector<DataPtr>> ExecuteReplicated(
-      const Computation& computation,
-      const std::vector<std::vector<DataPtr>>& arguments,
+  // Executes the computation on multiple local devices in parallel.
+  // Each argument to the executable is expected to be sharded in the same order
+  // as `devices`. If options.explode_tuple is true, the output tuples will be
+  // decomposed into their single elements. Returns a vector of outputs, each
+  // of which is sharded in the same order as `devices`.
+  virtual std::vector<DataPtr> ExecuteReplicated(
+      const Computation& computation, absl::Span<const DataPtr> arguments,
       absl::Span<const std::string> devices,
       const ExecuteReplicatedOptions& options) = 0;
 
@@ -335,7 +326,7 @@ class ComputationClient {
   virtual int GetNumProcesses() const = 0;
 
   using DeviceAttribute =
-      std::variant<std::string, int64_t, std::vector<int64_t>, float, bool>;
+      std::variant<std::string, bool, int64_t, std::vector<int64_t>, float>;
 
   virtual const absl::flat_hash_map<
       std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>&
@@ -352,7 +343,7 @@ class ComputationClient {
 
   // Block until pass in devices' async operation are finished. If empty, all
   // the local devices will be waited for.
-  virtual void WaitDeviceOps(const std::vector<std::string>& devices) = 0;
+  virtual void WaitDeviceOps(absl::Span<const std::string> devices) = 0;
 
   // Check whether the XlaCoordinator has been initialized.
   virtual bool CoordinatorInitialized() const = 0;

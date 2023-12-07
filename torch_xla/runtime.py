@@ -23,6 +23,11 @@ def set_device_type(pjrt_device: str) -> None:
   Args:
     pjrt_device: 'TPU' or 'CPU'
   """
+  if torch_xla._XLAC._xla_runtime_is_initialized() and os.environ.get(
+      xenv.PJRT_DEVICE) != pjrt_device:
+    raise RuntimeError(
+        "Can't change device type after XLA runtime is initialized")
+
   os.environ[xenv.PJRT_DEVICE] = pjrt_device
 
 
@@ -40,7 +45,7 @@ def _maybe_select_default_device():
     os.environ[xenv.PJRT_DEVICE] = 'TPU'
   # TODO(wcromar): Detect GPU device
   elif xu.getenv_as(xenv.GPU_NUM_DEVICES, int, 0) > 0:
-    logging.warning('GPU_NUM_DEVICES is set. Setting PJRT_DEVICE=GPU')
+    logging.warning('GPU_NUM_DEVICES is set. Setting PJRT_DEVICE=CUDA')
     os.environ[xenv.PJRT_DEVICE] = 'CUDA'
   else:
     logging.warning('Defaulting to PJRT_DEVICE=CPU')
@@ -107,6 +112,13 @@ def xla_device(n: Optional[int] = None,
   Returns:
     A `torch.device` representing an XLA device.
   """
+  # TODO(xiowei replace gpu with cuda): Remove the warning message at r2.2 release.
+  pjrt_device = xu.getenv_as(xenv.PJRT_DEVICE, str)
+  if pjrt_device.casefold() == 'gpu':
+    warnings.warn(
+        'PJRT_DEVICE=GPU is being deprecate. Please replace PJRT_DEVICE=GPU with PJRT_DEVICE=CUDA.'
+    )
+
   if n is None:
     return torch.device(torch_xla._XLAC._xla_get_default_device())
 
@@ -253,3 +265,21 @@ def get_master_ip() -> str:
   if device_type() == 'TPU':
     return tpu.discover_master_worker_ip()
   raise RuntimeError(f'IP discovery not supported for device: {device_type()}')
+
+
+@requires_pjrt
+def initialize_cache(path: str, readonly: bool = False):
+  """Initializes the persistent compilation cache. This API must be called
+  before any computations have been performed.
+
+  Args:
+    path: The path at which to store the persistent cache.
+    readonly: Whether or not this worker should have write access to the cache.
+  """
+  assert not torch_xla._XLAC._xla_computation_cache_is_initialized(
+  ), "Computation cache has already been initialized"
+
+  # TODO(jonbolin): Consider moving away from environment variables to control
+  # the cache.
+  os.environ['XLA_PERSISTENT_CACHE_PATH'] = path
+  os.environ['XLA_PERSISTENT_CACHE_READ_ONLY'] = '1' if readonly else '0'

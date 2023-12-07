@@ -350,9 +350,9 @@ std::vector<xla::XlaOp> CreateKthValue(xla::XlaOp input, int64_t k, int64_t dim,
     indices = XlaHelpers::DynamicReshape(indices, reshape_sizes);
   }
   // aten::kthvalue() wants Long tensors as indices.
-  return {values, xla::ConvertElementType(
-                      indices, GetDevicePrimitiveType(xla::PrimitiveType::S64,
-                                                      /*device=*/nullptr))};
+  return {values,
+          xla::ConvertElementType(indices, GetXlaPrimitiveTypeForCurrentDevice(
+                                               xla::PrimitiveType::S64))};
 }
 
 std::vector<xla::XlaOp> CreateTopK(xla::XlaOp input, int64_t k, int64_t dim,
@@ -383,9 +383,9 @@ std::vector<xla::XlaOp> CreateTopK(xla::XlaOp input, int64_t k, int64_t dim,
   xla::XlaOp indices = xla::Slice(xla::GetTupleElement(sort_result, 1),
                                   start_indices, limit_indices, strides);
   // aten::topk() wants Long tensors as indices.
-  return {values, xla::ConvertElementType(
-                      indices, GetDevicePrimitiveType(xla::PrimitiveType::S64,
-                                                      /*device=*/nullptr))};
+  return {values,
+          xla::ConvertElementType(indices, GetXlaPrimitiveTypeForCurrentDevice(
+                                               xla::PrimitiveType::S64))};
 }
 
 xla::XlaOp CreateMatMul(xla::XlaOp lhs, xla::XlaOp rhs) {

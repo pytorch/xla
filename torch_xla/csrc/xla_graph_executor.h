@@ -10,16 +10,15 @@
 #include <string>
 #include <unordered_map>
 
+#include "absl/synchronization/blocking_counter.h"
 #include "torch_xla/csrc/cross_replica_reduces.h"
 #include "torch_xla/csrc/debug_util.h"
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/ir_dump_util.h"
 #include "torch_xla/csrc/lowering_context.h"
-#include "torch_xla/csrc/runtime/async_task.h"
 #include "torch_xla/csrc/runtime/cache.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
-#include "torch_xla/csrc/runtime/multi_wait.h"
 #include "torch_xla/csrc/runtime/util.h"
 #include "torch_xla/csrc/tensor.h"
 #include "torch_xla/csrc/torch_util.h"
@@ -164,10 +163,17 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   };
 
   using ComputationCache =
+      runtime::util::AbstractCache<torch::lazy::hash_t, CachedComputation,
+                                   torch::lazy::HashReducer>;
+  using MemoryCache =
       runtime::util::Cache<torch::lazy::hash_t, CachedComputation,
                            torch::lazy::HashReducer>;
+  using PersistentCache =
+      runtime::util::PersistentCache<torch::lazy::hash_t, CachedComputation,
+                                     torch::lazy::HashReducer>;
 
   ComputationCache* GetComputationCache();
+  bool IsComputationCacheInitialized();
 
   std::vector<torch::lazy::BackendDataPtr> ExecuteComputationWithBarrier(
       torch::lazy::hash_t hash, const std::vector<at::IValue>& graph_inputs,
@@ -339,6 +345,8 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   std::shared_ptr<Async> SyncTensorsGraphInternal(
       std::vector<XLATensorPtr>* tensors, absl::Span<const std::string> devices,
       const SyncTensorsConfig& config, bool warm_up_cache_only = false);
+
+  ComputationCache* computation_cache_;
 };
 
 }  // namespace torch_xla

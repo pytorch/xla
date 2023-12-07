@@ -15,7 +15,7 @@ namespace torch_xla {
 
 class ShardingUtil {
  public:
-  // This maps to `torch_xla.experimental.xla_sharding.ShardingType` enum type.
+  // This maps to `torch_xla.distributed.spmd.ShardingType` enum type.
   enum ShardingType {
     REPLICATED = 0,
     MAXIMAL = 1,
@@ -57,32 +57,6 @@ class ShardingUtil {
       bool choose_faster_windowed_einsum_over_mem = false,
       bool unroll_windowed_einsum = false,
       bool bidirectional_windowed_einsum = false);
-
-  // Reshuffles arguments (sharded or replicated) on the devices. The
-  // size of the arguments vector must match that of the sharding_specs.
-  // The the returned arguments will be in 1:1 correspondence with the `devices`
-  // vector, so the `i`th result will belong on the `i`th device.
-  // TODO(yeounoh) avoiding pre-loading of the unpartitioned input arguments
-  // might improve the performance and save the bandwidth.
-  static std::vector<std::vector<runtime::ComputationClient::DataPtr>>
-  InputHandler(std::vector<runtime::ComputationClient::DataPtr> arguments,
-               std::vector<std::string> devices);
-
-  // Processes replicated execution results, where `sharded_results` contains
-  // `PjRtData` handles and spans the number of devices (outer) and the number
-  // of arguments (innner). This requires `sharding_specs` of the same size as
-  // the number of arguments. `sharding_specs` can contain `nullptr` if the
-  // corresponding result argument is not sharded. The replicated execution
-  // `replicated_output=true` leaves the results in replicated states, which is
-  // aligned with the default exepctation of XLA compiler. However, we override
-  // the compiler's default behavior and allow the execution to return sharded
-  // results and wrap sharded arguments into `PjRtShardedData`. This returns a
-  // vector of size that is equal to the number of arguments.
-  static std::vector<runtime::ComputationClient::DataPtr> OutputHandler(
-      std::vector<std::vector<runtime::ComputationClient::DataPtr>>
-          sharded_results,
-      std::vector<XLATensor::ShardingSpecPtr> sharding_specs,
-      bool replicated_output = false);
 
   // Returns the shape of the resulting shards of `tensor` after applying
   // `sharding`. This assumes the shards will be padded to ensure they all
@@ -150,6 +124,16 @@ class ShardingUtil {
       const std::vector<at::Tensor>& shards,
       const std::vector<std::string>& devices,
       const XLATensor::ShardingSpecPtr& sharding_spec);
+
+  static void XlaMarkSharding(const at::Tensor& input,
+                              xla::OpSharding sharding);
+
+  //////////////////////////// Dynamo Integration ////////////////////////////
+
+  static void XlaMarkShardingDynamoCustomOp(
+      const at::Tensor& input, c10::List<at::IntArrayRef> tile_assignment,
+      c10::List<at::IntArrayRef> group_assignment,
+      c10::List<at::IntArrayRef> replication_groups, int64_t sharding_type);
 };
 
 }  // namespace torch_xla

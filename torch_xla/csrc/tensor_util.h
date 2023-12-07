@@ -25,10 +25,16 @@ std::vector<int64_t> ComputeShapeStrides(const xla::Shape& shape);
 at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal,
                                     at::ScalarType dest_element_type);
 
+// Execution and data transfer are async in PJRT, so TransferFromServer may
+// block until `DataPtr`s are ready. Release the GIL so other threads can
+// proceed and unblock any transfers or collective computations.
+std::vector<xla::Literal> ReleaseGilAndTransferData(
+    absl::Span<const torch::lazy::BackendDataPtr> xla_data);
+
 // TODO LTC @wonjoo - Migrate to upstream after Device -> BackendDevice
 std::vector<at::Tensor> XlaDataToTensors(
     absl::Span<const torch::lazy::BackendDataPtr> xla_data,
-    at::ScalarType dest_element_type);
+    absl::Span<const at::ScalarType> dest_element_type);
 
 bool TensorCompare(const at::Tensor& t1, const at::Tensor& t2);
 
@@ -80,14 +86,9 @@ void PopulateTensorBuffer(const at::Tensor& tensor,
 xla::Shape CreateComputationShapeFromTensor(
     const at::Tensor& tensor, const torch::lazy::BackendDevice* device);
 
-at::ScalarType TensorTypeFromXlaType(xla::PrimitiveType xla_type);
-
-xla::PrimitiveType TensorTypeToRawXlaType(at::ScalarType scalar_type);
-
-// Maps an XLA type to the one which can be used on the given device (or the
-// default device, id device is nullptr).
-xla::PrimitiveType GetDevicePrimitiveType(
-    xla::PrimitiveType type, const torch::lazy::BackendDevice* device);
+// Make a compatible dtype for the current device
+xla::PrimitiveType GetXlaPrimitiveTypeForCurrentDevice(
+    xla::PrimitiveType xla_type);
 
 // Converts the given scalar type to an XLA primitive type.
 xla::PrimitiveType MakeXlaPrimitiveType(

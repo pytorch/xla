@@ -24,11 +24,15 @@ extern const char* const kEnvPjRtTpuMaxInflightComputations;
 extern const char* const kEnvPjrtAsyncCpuClient;
 extern const char* const kEnvPjrtAsyncGpuClient;
 extern const char* const kEnvTpuLibraryPath;
+extern const char* const kEnvInferredTpuLibraryPath;
 extern const char* const kEnvXpuLibraryPath;
 extern const char* const kEnvNeuronLibraryPath;
 extern const char* const kEnvPjrtDistServiceAddr;
 extern const char* const kEnvPjRtLocalProcessCount;
 extern const char* const kEnvPjRtLocalRank;
+extern const char* const kEnvPjrtAllocatorCudaAsync;
+extern const char* const kEnvPjrtAllocatorPreallocate;
+extern const char* const kEnvPjrtAllocatorFraction;
 
 }  // namespace env
 }  // namespace runtime
