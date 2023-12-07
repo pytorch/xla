@@ -5,6 +5,19 @@ The two main benchmarking scripts are
   - `result_analyzer.py` to aggregate the benchmark result in CSV form.
 
 
+## Patching mismatched batch sizes
+
+Sometimes batch sizes for inference might differ between Inductor, and XLA.
+This stems from the fact that we pass in an XLA device string to the TorchBench
+modelling code, instead of a raw CUDA string, and the path to correctly
+fetch the accelerator underneath is not covered. To fix this apply a patch:
+
+```
+git apply benchmarks/patches/mismatched_batch_size.patch
+```
+
+And replace the `current_device_name` with your actual accelerator name.
+
 ## Reducing benchmark noise 
 
 It is important to keep the benchmark runs safe from external effects 
