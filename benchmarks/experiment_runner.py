@@ -235,20 +235,25 @@ class ExperimentRunner:
       inputs_list.append(inputs)
     return inputs_list
 
-  def dump_profile_info(self, prof, model_name):
+  def dump_profile_info(self, prof, benchmark_model, benchmark_experiment):
     assert prof is not None, 'Expecting profiler to be defined!'
     if not self._args.profile_cuda_dump:
       logger.warning(
           'Profiling enabled, but dumping tracing/kernel summary disabled.')
       return
 
-    file_path = f"/tmp/{model_name}-profile"
+    create_prof_filename = lambda name, ext: f"ptprofile-{name}-{benchmark_model.filename_str}-{benchmark_experiment.filename_str}.{ext}"
+    model_name = benchmark_model.model_name
+    file_path = os.path.join(self._args.profile_cuda_dump, model_name)
     os.makedirs(file_path, exist_ok=True)
-    prof.export_chrome_trace(os.path.join(file_path, "trace.json"))
+    prof.export_chrome_trace(
+        os.path.join(file_path, create_prof_filename("trace", "json")))
 
     kernel_dump = prof.key_averages().table(
         sort_by="cuda_time_total", row_limit=500)
-    with open(os.path.join(file_path, "kernel_dump.txt"), "a") as f:
+    with open(
+        os.path.join(file_path, create_prof_filename("kernel_dump", "txt")),
+        "a") as f:
       f.write(kernel_dump)
 
   def collect_profile_to_metrics(self, prof, metrics):
@@ -329,7 +334,7 @@ class ExperimentRunner:
 
     t_end = time.perf_counter()
     if enable_prof:
-      self.dump_profile_info(prof, benchmark_model.model_name)
+      self.dump_profile_info(prof, benchmark_model, benchmark_experiment)
       self.collect_profile_to_metrics(prof, metrics)
 
     metrics["total_time"] = t_end - t_start
@@ -540,7 +545,7 @@ def parse_args(args=None):
   parser.add_argument(
       "--profile-cuda-dump",
       type=str,
-      default="./output/",
+      default="",
       help="Directory specifying where to dump profiling information (summary, and trace)",
   )
 
