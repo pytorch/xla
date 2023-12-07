@@ -187,19 +187,18 @@ PjRtComputationClient::PjRtComputationClient() {
           global_process_rank, global_world_size, master_addr, port);
       std::shared_ptr<xla::DistributedRuntimeClient> distributed_client =
           coordinator_->GetClient();
-      if (distributed_client != nullptr) {
-        std::string key_prefix = "gpu:";
-        kv_get = [distributed_client, key_prefix](
-                    std::string_view k,
-                    absl::Duration timeout) -> xla::StatusOr<std::string> {
-          return distributed_client->BlockingKeyValueGet(
-              absl::StrCat(key_prefix, k), timeout);
-        };
-        kv_put = [distributed_client, key_prefix](
-                    std::string_view k, std::string_view v) -> xla::Status {
-          return distributed_client->KeyValueSet(absl::StrCat(key_prefix, k), v);
-        };
-      }
+      XLA_CHECK(distributed_client != nullptr);
+      std::string key_prefix = "gpu:";
+      kv_get = [distributed_client, key_prefix](
+                   std::string_view k,
+                   absl::Duration timeout) -> xla::StatusOr<std::string> {
+        return distributed_client->BlockingKeyValueGet(
+            absl::StrCat(key_prefix, k), timeout);
+      };
+      kv_put = [distributed_client, key_prefix](
+                   std::string_view k, std::string_view v) -> xla::Status {
+        return distributed_client->KeyValueSet(absl::StrCat(key_prefix, k), v);
+      };
     }
     TF_VLOG(3) << "Getting StreamExecutorGpuClient for node_id="
                << global_process_rank << ", num_nodes=" << global_world_size;
