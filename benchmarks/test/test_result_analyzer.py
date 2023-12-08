@@ -1,6 +1,8 @@
 import argparse
-import unittest
+import functools
 import numpy
+import unittest
+import os
 
 from result_analyzer import ResultAnalyzer, parse_args
 
@@ -17,6 +19,19 @@ def apply_skip_head(fn, data):
   return fn(data[1:])
 
 
+@functools.cache
+def get_dirname():
+  return os.path.dirname(__file__)
+
+
+@functools.cache
+def get_dataline():
+  import json
+  example_json = os.path.join(get_dirname(), "example.json")
+  with open(example_json, "r") as f:
+    return json.load(f)
+
+
 class TestResultAnalyzer(unittest.TestCase):
 
   def _key(self, fn, metric):
@@ -29,30 +44,23 @@ class TestResultAnalyzer(unittest.TestCase):
       self.assertEqual(output[key],
                        output_value_fn(fn, dataline["metrics"][metric]))
 
-  def _test_calculate_metrics(self, dynamo):
-    xla = "PJRT" if dynamo == "openxla" else ""
+  def _test_calculate_metrics(self, xla, dynamo):
+    dataline = get_dataline()
+    dataline["experiment"]["xla"] = xla
+    dataline["experiment"]["dynamo"] = dynamo
 
-    dataline = {
-        "experiment": {
-            "xla": xla,
-            "dynamo": dynamo,
-        },
-        "metrics": {
-            "total_time": [1, 2, 3, 4],
-            "single_value": [1],
-            "trace_per_iter_time": [1, 2],
-        }
-    }
-
-    r = ResultAnalyzer(parse_args())
+    r = ResultAnalyzer(parse_args(["--output-dirname", get_dirname()]))
     output = r.get_calculated_metrics({}, dataline)
 
     # Check that output has data for each metric, summarized by
     # each of its corresponding summary functions.
 
-    # - total_time
-    self._check(dataline, output, fns_whole, "total_time", apply)
-    self._check(dataline, output, fns_skip_head, "total_time", apply_skip_head)
+    # - metrics with more than one measurement
+    for metric in ("total_cpu_time_s", "total_cuda_time_s",
+                   "per_iter_cpu_time_s", "per_iter_cuda_time_s", "total_time",
+                   "per_iter_time"):
+      self._check(dataline, output, fns_whole, metric, apply)
+      self._check(dataline, output, fns_skip_head, metric, apply_skip_head)
 
     # - single_value: since it has only one value, we only check it for
     #   fns_whole set of statistical functions
@@ -65,7 +73,7 @@ class TestResultAnalyzer(unittest.TestCase):
     return output, dataline
 
   def test_calculate_metrics_inductor(self):
-    output, _ = self._test_calculate_metrics(dynamo="inductor")
+    output, _ = self._test_calculate_metrics(xla=None, dynamo="inductor")
 
     # There should be a dynamo_compile_time key, if it's not an XLA run.
     self.assertIn("dynamo_compile_time", output)
@@ -80,7 +88,7 @@ class TestResultAnalyzer(unittest.TestCase):
         self.assertEqual(output[k], -1)
 
   def test_calculate_metrics_xla(self):
-    output, dataline = self._test_calculate_metrics(dynamo="openxla")
+    output, dataline = self._test_calculate_metrics(xla="PJRT", dynamo="openxla")
 
     # There should be an xla_compile_time key.
     self.assertIn("xla_compile_time", output)

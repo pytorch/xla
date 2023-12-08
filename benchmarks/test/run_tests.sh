@@ -1,4 +1,5 @@
-BASEDIR="$(dirname $0)"
+BASEDIR="$(dirname $(dirname $(realpath $0)))"
+export PYTHONPATH="$BASEDIR"
 
 function run_test {
     pushd "$BASEDIR"
