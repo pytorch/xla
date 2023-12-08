@@ -58,35 +58,8 @@ xla::XlaOp ConvertTo(xla::XlaOp op, xla::PrimitiveType from,
   if (from == to) {
     return op;
   }
-  XlaDeviceType hw_type =
-      static_cast<XlaDeviceType>(bridge::GetDeviceOrCurrent(device).type());
-  if (hw_type != XlaDeviceType::TPU) {
-    return xla::ConvertElementType(op, to);
-  }
-  switch (from) {
-    case xla::PrimitiveType::PRED:
-    case xla::PrimitiveType::S8:
-    case xla::PrimitiveType::U8:
-    case xla::PrimitiveType::S16:
-    case xla::PrimitiveType::U16:
-    case xla::PrimitiveType::S32:
-    case xla::PrimitiveType::U32:
-    case xla::PrimitiveType::BF16:
-    case xla::PrimitiveType::F32:
-      return xla::ConvertElementType(op, to);
-    case xla::PrimitiveType::S64:
-    case xla::PrimitiveType::U64: {
-      switch (to) {
-        case xla::PrimitiveType::PRED:
-          return ExplicitBooleanConvert(op, from);
-        default:
-          return xla::ConvertElementType(op, to);
-      }
-      break;
-    }
-    default:
-      XLA_ERROR() << "Unsupported XLA type " << from;
-  }
+
+  return xla::ConvertElementType(op, to);
 }
 
 xla::XlaOp ConvertToRaw(xla::XlaOp op, xla::PrimitiveType from,

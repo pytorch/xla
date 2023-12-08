@@ -30,13 +30,11 @@ bool IsSparseGather(const xla::Shape& input_shape,
                     const xla::Shape& index_shape, int64_t dim) {
   // Conservative sparsity check for multi-platform support
   // to avoid gather on a single float on TPU.
-  XlaDeviceType hw_type =
-      static_cast<XlaDeviceType>(bridge::GetCurrentDevice().type());
-  if (hw_type == XlaDeviceType::TPU || hw_type == XlaDeviceType::NEURON) {
+  auto device_capabilities = runtime::GetComputationClient()->GetDeviceCapabilities();
+  if (device_capabilities.dense_gather_factor) {
     // XLA_DENSE_GATHER_FACTOR can be used to finely control the
     // sparsity check.
-    static int dense_gather_factor =
-        runtime::sys_util::GetEnvInt("XLA_DENSE_GATHER_FACTOR", 8192);
+    static int dense_gather_factor = *device_capabilities.dense_gather_factor;
     int64_t input_elements = input_shape.dimensions()[dim];
     // Use a very conservative check so that we run dense gather
     // most of the time on TPU.

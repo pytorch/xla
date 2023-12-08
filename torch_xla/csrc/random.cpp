@@ -17,16 +17,8 @@ namespace torch_xla {
 namespace {
 
 std::string GetDefaultGitGeneratorName() {
-  XlaDeviceType hw_type =
-      static_cast<XlaDeviceType>(bridge::GetCurrentDevice().type());
-  switch (hw_type) {
-    case XlaDeviceType::GPU:
-    case XlaDeviceType::CUDA:
-    case XlaDeviceType::ROCM:
-      return "three_fry";
-    default:
-      return "default";
-  }
+  auto device_capabilities = runtime::GetComputationClient()->GetDeviceCapabilities();
+  return device_capabilities.default_rng_bit_generator_name.value_or("default");
 }
 
 xla::BitGeneratorTy GetBitGenerator() {

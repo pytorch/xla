@@ -162,6 +162,7 @@ PjRtComputationClient::PjRtComputationClient() {
     const PJRT_Api* c_api =
         static_cast<xla::PjRtCApiClient*>(client_.get())->pjrt_c_api();
     profiler::RegisterProfilerForPlugin(c_api);
+    device_capabilities_ = DeviceCapabilities{false, false, 8192, 100, std::nullopt};
   } else if (device_type == "TPU_LEGACY") {
     XLA_ERROR() << "TPU_LEGACY client is no longer available.";
   } else if (device_type == "GPU" || device_type == "CUDA" ||
@@ -211,6 +212,7 @@ PjRtComputationClient::PjRtComputationClient() {
     options.kv_get = kv_get;
     options.kv_put = kv_put;
     client_ = std::move(xla::GetStreamExecutorGpuClient(options).value());
+    device_capabilities_ = DeviceCapabilities{true, true, std::nullopt, std::nullopt, "three_fry"};
   } else if (device_type == "XPU") {
     TF_VLOG(1) << "Initializing PjRt XPU client...";
     XLA_CHECK_OK(

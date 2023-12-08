@@ -103,6 +103,8 @@ class PjRtComputationClient : public ComputationClient {
 
   bool CoordinatorInitialized() const override;
 
+  const DeviceCapabilities& GetDeviceCapabilities() const override { return device_capabilities_; };
+
   // NOT IMPLEMENTED
 
   MemoryInfo GetMemoryInfo(const std::string& device) override {
@@ -121,6 +123,7 @@ class PjRtComputationClient : public ComputationClient {
   tsl::thread::ThreadPool pool_ = tsl::thread::ThreadPool(
       tsl::Env::Default(), "pjrt", std::thread::hardware_concurrency());
   torch::lazy::hash_t comp_env_hash_;
+  DeviceCapabilities device_capabilities_;
 
   xla::PjRtDevice* StringToPjRtDevice(const std::string& device);
 
