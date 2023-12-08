@@ -5,6 +5,22 @@ from torch.library import Library, impl
 
 quantized_decomposed_lib = Library("quantized_decomposed", "IMPL")
 
+def pack_4bit(x, dtype):
+    # Pack 4 bit tensor into int8 or int32
+    # Always pack along the last dim
+    assert dtype == torch.int8 or dtype == torch.int32
+    num_int4_per_element = 2 if dtype == torch.int8 else 8
+    assert x.shape[-1] % num_int4_per_element == 0
+    packed = x.reshape(*x.shape[:-1], x.shape[-1]//num_int4_per_element, num_int4_per_element)
+    # print(packed)
+    shift = torch.arange(num_int4_per_element)
+    shift *= 4
+    # print(shift)
+    packed = packed << shift
+    packed = torch.sum(packed, -1)
+    packed = packed.to(x.dtype)
+    return packed
+
 def matmul_4bit(input: torch.Tensor, weight: torch.Tensor):
   return torch_xla._XLAC._xla_reinterpret_cast_4bit(input, weight)
 
