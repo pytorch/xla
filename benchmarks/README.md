@@ -1,7 +1,7 @@
 # Benchmarking
 
-The two main benchmarking scripts are 
-  - `experiment_runner.py` to run benchmark experiments, and 
+The two main benchmarking scripts are
+  - `experiment_runner.py` to run benchmark experiments, and
   - `result_analyzer.py` to aggregate the benchmark result in CSV form.
 
 
@@ -18,9 +18,9 @@ git apply benchmarks/patches/mismatched_batch_size.patch
 
 And replace the `current_device_name` with your actual accelerator name.
 
-## Reducing benchmark noise 
+## Reducing benchmark noise
 
-It is important to keep the benchmark runs safe from external effects 
+It is important to keep the benchmark runs safe from external effects
 to reduce noise. Do the following:
 
 Sets the CPU statically to the highest tuneable frequency.
@@ -174,3 +174,8 @@ files. (Note: to reiterate, because we are plotting data from single day,
 Inductor gets speedup == 1 for all benchmarks). This plot also shows the
 correctness gap between Pytorch/XLA and Inductor; there are benchmarks that do
 run on Inductor but not on Pytorch/XLA.
+
+## Continuous Integration Tests
+
+Benchmark-related tests run by CI are located at `xla/test/benchmarks`.
+To run the tests locally, do `$ make -C xla/test/benchmarks`.
