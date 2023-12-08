@@ -36,6 +36,11 @@ test_to_csv_field_name = {
 }
 
 
+# Round floats before printing them so that tiny differences don't break tests.
+def pr_round(x):
+  return round(x, 8)
+
+
 def find_files(input_dirname: str) -> List[str]:
   files = []
   for root, _, filenames in os.walk(input_dirname):
@@ -200,8 +205,9 @@ def pr_latest(results_map: Dict[str, Any], args, timestamps: List[str]):
     for timestamp in reversed(timestamps):
       acc_map = results_map[timestamp]
       if label in acc_map:
-        (speedups[i], model_names[i]) = map(
+        speedups[i], model_names[i] = map(
             list, zip(*sorted(zip(acc_map[label], acc_map[model_label]))))
+        speedups[i] = map(pr_round, speedups[i])
         speedup_timestamps[i] = timestamp
         break
   if not speedups[0] or not speedups[1]:
@@ -255,7 +261,7 @@ def pr_histogram(results_map: Dict[str, Any], args, timestamps: List[str]):
         assert label in results_map[timestamp]
       x.append(datetime.utcfromtimestamp(float(timestamp)))
       for i, label in enumerate(labels):
-        y[i].append(results_map[timestamp][label])
+        y[i].append(pr_round(results_map[timestamp][label]))
   if args.format == 'csv':
     titles = ['# Datetime(UTC)'] + titles
     print(','.join(titles))
@@ -295,8 +301,8 @@ def pr_gmean(results_map: Dict[str, Any], args, timestamps: List[str]):
         timestamp] or 'xla:speedups:gmean' not in results_map[timestamp]:
       continue
     x.append(datetime.utcfromtimestamp(float(timestamp)))
-    y0.append(results_map[timestamp]['inductor:speedups:gmean'])
-    y1.append(results_map[timestamp]['xla:speedups:gmean'])
+    y0.append(pr_round(results_map[timestamp]['inductor:speedups:gmean']))
+    y1.append(pr_round(results_map[timestamp]['xla:speedups:gmean']))
   if args.format == 'csv':
     print(
         '# Datetime(UTC),Speedup(Inductor/Oldest Inductor),Speedup(PytorchXLA/Oldest Inductor)'
