@@ -2,7 +2,7 @@
 
 import argparse
 import csv
-from datetime import date
+from datetime import datetime
 import logging
 import os
 import re
@@ -225,13 +225,13 @@ def pr_latest(results_map: Dict[str, Any], args, timestamps: List[str]):
     plt.plot(speedups[0], label='Inductor', marker='^')
     plt.plot(speedups[1], label='PytorchXLA', marker='o')
     plt.legend()
-    dates = date.fromtimestamp(float(speedup_timestamps[0]))
+    datestr = datetime.utcfromtimestamp(float(speedup_timestamps[0]))
     if speedup_timestamps[0] != speedup_timestamps[1]:
-      dates = f'{dates} (Inductor)'
-      dates += ', {date.fromtimestamp(float(dates[1]))} (PytorchXLA)'
+      datestr = f'{datestr} (Inductor)'
+      datestr += ', {datetime.utcfromtimestamp(float(speedup_timestamps[1]))} (PytorchXLA)'
     plt.title(
         maketitle(args,
-                  f'Speedup over Oldest Benchmarked Inductor as of {dates}'))
+                  f'Speedup over Oldest Benchmarked Inductor as of {datestr}'))
     plt.xlabel('Workload Number')
     plt.ylabel(f'Speedup')
     plt.savefig(sys.stdout.buffer)
@@ -253,15 +253,14 @@ def pr_histogram(results_map: Dict[str, Any], args, timestamps: List[str]):
     if labels[0] in results_map[timestamp]:
       for label in labels:
         assert label in results_map[timestamp]
-      x.append(date.fromtimestamp(float(timestamp)))
+      x.append(datetime.utcfromtimestamp(float(timestamp)))
       for i, label in enumerate(labels):
         y[i].append(results_map[timestamp][label])
   if args.format == 'csv':
-    titles = ['# Datetime'] + titles
+    titles = ['# Datetime(UTC)'] + titles
     print(','.join(titles))
-    for i, datetime in enumerate(x):
-      print(','.join([str(datetime)] +
-                     [str(y[j][i]) for j in range(len(labels))]))
+    for i, utc in enumerate(x):
+      print(','.join([str(utc)] + [str(y[j][i]) for j in range(len(labels))]))
   else:
     fig, ax = plt.subplots()
     ax.axhline(y=1.0, color='lightgray')
@@ -295,12 +294,12 @@ def pr_gmean(results_map: Dict[str, Any], args, timestamps: List[str]):
     if 'inductor:speedups:gmean' not in results_map[
         timestamp] or 'xla:speedups:gmean' not in results_map[timestamp]:
       continue
-    x.append(date.fromtimestamp(float(timestamp)))
+    x.append(datetime.utcfromtimestamp(float(timestamp)))
     y0.append(results_map[timestamp]['inductor:speedups:gmean'])
     y1.append(results_map[timestamp]['xla:speedups:gmean'])
   if args.format == 'csv':
     print(
-        '# Datetime,Speedup(Inductor/Oldest Inductor),Speedup(PytorchXLA/Oldest Inductor)'
+        '# Datetime(UTC),Speedup(Inductor/Oldest Inductor),Speedup(PytorchXLA/Oldest Inductor)'
     )
     for a, b, c in zip(x, y0, y1):
       print(','.join(map(str, [a, b, c])))
