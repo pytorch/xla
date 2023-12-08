@@ -177,16 +177,16 @@ PjRtComputationClient::PjRtComputationClient() {
     std::string port = runtime::sys_util::GetEnvString(
         "XLA_COORDINATOR_PORT", XlaCoordinator::kDefaultCoordinatorPort);
 
-    // Use the XlaCoordinator as the distributed key-value store.
-    coordinator_ = std::make_unique<XlaCoordinator>(
-        global_process_rank, global_world_size, master_addr, port);
-    std::shared_ptr<xla::DistributedRuntimeClient> distributed_client =
-        coordinator_->GetClient();
-    auto allowed_devices =
-        std::make_optional<std::set<int>>(std::set{local_process_rank});
     xla::PjRtClient::KeyValueGetCallback kv_get = nullptr;
     xla::PjRtClient::KeyValuePutCallback kv_put = nullptr;
-    if (distributed_client != nullptr) {
+    auto allowed_devices =
+        std::make_optional<std::set<int>>(std::set{local_process_rank});
+    if (global_world_size > 1) {
+      // Use the XlaCoordinator as the distributed key-value store.
+      coordinator_ = std::make_unique<XlaCoordinator>(
+          global_process_rank, global_world_size, master_addr, port);
+      std::shared_ptr<xla::DistributedRuntimeClient> distributed_client =
+          coordinator_->GetClient();
       std::string key_prefix = "gpu:";
       kv_get = [distributed_client, key_prefix](
                    std::string_view k,
