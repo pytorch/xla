@@ -12,6 +12,7 @@ import sys
 import time
 import torch
 import tiers
+import torch_xla.debug.metrics as met
 from tqdm import tqdm
 from torch.profiler import profile, record_function, ProfilerActivity
 from torch.autograd import DeviceType
@@ -164,7 +165,7 @@ class ExperimentRunner:
         outputs.append(output)
         for key, val in run_metrics.items():
           # metrics from repeated runs are formed into lists in the metrics dict
-          if i == 0:
+          if key not in metrics:
             metrics[key] = []
           metrics[key].append(val)
 
@@ -235,20 +236,25 @@ class ExperimentRunner:
       inputs_list.append(inputs)
     return inputs_list
 
-  def dump_profile_info(self, prof, model_name):
+  def dump_profile_info(self, prof, benchmark_model, benchmark_experiment):
     assert prof is not None, 'Expecting profiler to be defined!'
     if not self._args.profile_cuda_dump:
       logger.warning(
           'Profiling enabled, but dumping tracing/kernel summary disabled.')
       return
 
-    file_path = f"/tmp/{model_name}-profile"
+    create_prof_filename = lambda name, ext: f"ptprofile-{name}-{benchmark_model.filename_str}-{benchmark_experiment.filename_str}.{ext}"
+    model_name = benchmark_model.model_name
+    file_path = os.path.join(self._args.profile_cuda_dump, model_name)
     os.makedirs(file_path, exist_ok=True)
-    prof.export_chrome_trace(os.path.join(file_path, "trace.json"))
+    prof.export_chrome_trace(
+        os.path.join(file_path, create_prof_filename("trace", "json")))
 
     kernel_dump = prof.key_averages().table(
         sort_by="cuda_time_total", row_limit=500)
-    with open(os.path.join(file_path, "kernel_dump.txt"), "a") as f:
+    with open(
+        os.path.join(file_path, create_prof_filename("kernel_dump", "txt")),
+        "a") as f:
       f.write(kernel_dump)
 
   def collect_profile_to_metrics(self, prof, metrics):
@@ -284,6 +290,42 @@ class ExperimentRunner:
         "per_iter_cpu_time_s"] = total_cpu_time / self._args.iterations_per_run
     metrics[
         "per_iter_cuda_time_s"] = total_cuda_time / self._args.iterations_per_run
+
+  def get_xla_cpu_fallback_ops(self, met):
+    return set(name for name in met.counter_names() if self.is_aten_op(name))
+
+  def is_aten_op(self, op_name):
+    return 'aten::' in op_name
+
+  def collect_individual_ops(self, benchmark_experiment, metrics, prof):
+    assert prof is not None, 'Expecting prof to be defined!'
+
+    us_to_s = lambda x: x / 1000000
+    extract_prof_info = lambda event: {
+        "self_cpu_time_s": us_to_s(event.self_cpu_time_total),
+        "self_cuda_time_s": us_to_s(event.self_cuda_time_total),
+        "total_cpu_time_s": us_to_s(event.cpu_time_total),
+        "total_cuda_time_s": us_to_s(event.cuda_time_total),
+        "num_of_calls": event.count
+    }
+
+    if benchmark_experiment.xla:
+      unlowered_ops = self.get_xla_cpu_fallback_ops(met)
+      if not unlowered_ops:
+        return
+      if "xla_unlowered_ops" not in metrics:
+        metrics["xla_unlowered_ops"] = dict()
+      for event in prof.key_averages():
+        if event.key in unlowered_ops:
+          metrics["xla_unlowered_ops"][event.key] = extract_prof_info(event)
+    else:
+      for event in prof.key_averages():
+        op_name = event.key
+        if not self.is_aten_op(op_name):
+          continue
+        if "inductor_ops" not in metrics:
+          metrics["inductor_ops"] = dict()
+        metrics["inductor_ops"][op_name] = extract_prof_info(event)
 
   def timed_run(self, benchmark_experiment, benchmark_model):
     reset_rng_state(benchmark_experiment)
@@ -329,7 +371,7 @@ class ExperimentRunner:
 
     t_end = time.perf_counter()
     if enable_prof:
-      self.dump_profile_info(prof, benchmark_model.model_name)
+      self.dump_profile_info(prof, benchmark_model, benchmark_experiment)
       self.collect_profile_to_metrics(prof, metrics)
 
     metrics["total_time"] = t_end - t_start
@@ -337,6 +379,9 @@ class ExperimentRunner:
         "per_iter_time"] = metrics["total_time"] / self._args.iterations_per_run
     if benchmark_experiment.xla:
       metrics["trace_per_iter_time"] = t_trace / self._args.iterations_per_run
+
+    if enable_prof:
+      self.collect_individual_ops(benchmark_experiment, metrics, prof)
 
     return metrics, output
 
@@ -540,7 +585,7 @@ def parse_args(args=None):
   parser.add_argument(
       "--profile-cuda-dump",
       type=str,
-      default="./output/",
+      default="",
       help="Directory specifying where to dump profiling information (summary, and trace)",
   )
 

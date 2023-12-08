@@ -163,10 +163,17 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   };
 
   using ComputationCache =
+      runtime::util::AbstractCache<torch::lazy::hash_t, CachedComputation,
+                                   torch::lazy::HashReducer>;
+  using MemoryCache =
       runtime::util::Cache<torch::lazy::hash_t, CachedComputation,
                            torch::lazy::HashReducer>;
+  using PersistentCache =
+      runtime::util::PersistentCache<torch::lazy::hash_t, CachedComputation,
+                                     torch::lazy::HashReducer>;
 
   ComputationCache* GetComputationCache();
+  bool IsComputationCacheInitialized();
 
   std::vector<torch::lazy::BackendDataPtr> ExecuteComputationWithBarrier(
       torch::lazy::hash_t hash, const std::vector<at::IValue>& graph_inputs,
@@ -338,6 +345,8 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   std::shared_ptr<Async> SyncTensorsGraphInternal(
       std::vector<XLATensorPtr>* tensors, absl::Span<const std::string> devices,
       const SyncTensorsConfig& config, bool warm_up_cache_only = false);
+
+  ComputationCache* computation_cache_;
 };
 
 }  // namespace torch_xla
