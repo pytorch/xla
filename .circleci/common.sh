@@ -154,7 +154,7 @@ function run_torch_xla_python_tests() {
           # Benchmark tests.
           # Only run on CPU, for xla_op1.
           echo "Running Benchmark tests."
-          ./benchmark/test/run_tests.sh
+          ./benchmarks/test/run_tests.sh
       fi
     fi
   popd
