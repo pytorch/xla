@@ -222,6 +222,16 @@ class TorchXLAReuseGraphTest(torch._dynamo.test_case.TestCase):
   test_training_maxpool = make_training_test(MaxPoolModule)
   test_training_upsample = make_training_test(UpsampleModule)
 
+  def _compile_and_check(self, fn, args, backend="openxla"):
+    r = fn(*args)
+    xm.mark_step()
+
+    compiled_fn = torch.compile(backend=backend)(fn)
+    compiled_r = compiled_fn(*args)
+    xm.mark_step()
+
+    self.assertEqual(r, compiled_r)
+
   def test_non_tensor_args_for_partition(self):
 
     class Emb(torch.nn.Embedding):
@@ -233,23 +243,28 @@ class TorchXLAReuseGraphTest(torch._dynamo.test_case.TestCase):
     module = Emb()
     module.to(device)
 
-    @torch.compile(backend="openxla_eval")
     def foo(x):
       return module(x)
 
     x = torch.randint(0, 10, (10,), device=device)
-    foo(x)
+    self._compile_and_check(foo, (x,), backend="openxla_eval")
 
   def test_inputs_not_computed(self):
 
-    @torch.compile(backend="openxla")
     def foo(x):
       return x * 2
 
     device = xm.xla_device()
     x = torch.rand(5, device=device)
     x = x.unsqueeze(dim=-1)
-    foo(x)
+    self._compile_and_check(foo, (x,))
+
+  def test_factory_copy(self):
+
+    def foo(device):
+      return torch.arange(5, device="cpu").to(device)
+
+    self._compile_and_check(foo, (xm.xla_device(),))
 
 
 if __name__ == "__main__":
