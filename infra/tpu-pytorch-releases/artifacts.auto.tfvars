@@ -21,11 +21,11 @@ nightly_builds = [
   },
   {
     accelerator  = "cuda"
-    cuda_version = "12.2"
+    cuda_version = "12.3"
   },
   {
     accelerator  = "cuda"
-    cuda_version = "12.2"
+    cuda_version = "12.3"
     python_version = "3.10"
   }
 ]
@@ -36,14 +36,14 @@ versioned_builds = [
   {
     git_tag         = "v2.2.0"
     package_version = "2.2.0rc1"
-    pytorch_git_rev = "v2.2.0-rc1"
+    pytorch_git_rev = "v2.2.0-rc5"
     accelerator     = "tpu"
     bundle_libtpu   = "0"
   },
   {
     git_tag         = "v2.2.0"
     package_version = "2.2.0rc1"
-    pytorch_git_rev = "v2.2.0-rc1"
+    pytorch_git_rev = "v2.2.0-rc5"
     accelerator     = "tpu"
     python_version  = "3.9"
     bundle_libtpu   = "0"
@@ -51,7 +51,7 @@ versioned_builds = [
   {
     git_tag         = "v2.2.0"
     package_version = "2.2.0rc1"
-    pytorch_git_rev = "v2.2.0-rc1"
+    pytorch_git_rev = "v2.2.0-rc5"
     accelerator     = "tpu"
     python_version  = "3.10"
     bundle_libtpu   = "0"
@@ -59,7 +59,7 @@ versioned_builds = [
   {
     git_tag         = "v2.2.0"
     package_version = "2.2.0rc1"
-    pytorch_git_rev = "v2.2.0-rc1"
+    pytorch_git_rev = "v2.2.0-rc5"
     accelerator     = "tpu"
     python_version  = "3.11"
     bundle_libtpu   = "0"
@@ -68,7 +68,7 @@ versioned_builds = [
   {
     git_tag         = "v2.2.0"
     package_version = "2.2.0rc1+libtpu"
-    pytorch_git_rev = "v2.2.0-rc1"
+    pytorch_git_rev = "v2.2.0-rc5"
     accelerator     = "tpu"
     python_version  = "3.10"
     bundle_libtpu   = "1"
@@ -83,7 +83,7 @@ versioned_builds = [
     git_tag         = "v2.2.0"
     package_version = "2.2.0rc1"
     accelerator     = "cuda"
-    cuda_version    = "12.2"
+    cuda_version    = "12.3"
   },
   {
     git_tag         = "v2.2.0"
@@ -96,7 +96,7 @@ versioned_builds = [
     git_tag         = "v2.2.0"
     package_version = "2.2.0rc1"
     accelerator     = "cuda"
-    cuda_version    = "12.2"
+    cuda_version    = "12.3"
     python_version  = "3.10"
   },
   {
