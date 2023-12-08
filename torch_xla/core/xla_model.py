@@ -587,6 +587,21 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
   # Now the input should be a list of Tensors.
   elif isinstance(value, list) and all(
       isinstance(v, torch.Tensor) for v in value):
+    if output != None:
+      if not isinstance(output, list) or any(
+          not isinstance(v, torch.Tensor) for v in output):
+        raise TypeError(
+            f"`output` needs to be a list of Tensors, but given {type(output)}."
+        )
+      if len(output) != len(input):
+        raise ValueError("`output` length doesn't match `input` length: "
+                         f"{len(output)} vs {len(input)}.")
+      # Call the out of place version of the reduce_scatter
+      new_token = torch_xla._XLAC._xla_all_gather_coalesced_out(
+          output, value, token, dim, shard_count, groups or [], pin_layout)
+      torch_xla._XLAC._set_all_reduce_token(devctx.device, new_token)
+      return output
+
     result = torch_xla._XLAC._xla_all_gather_coalesced(value, token, dim,
                                                        shard_count, groups or
                                                        [], pin_layout)
