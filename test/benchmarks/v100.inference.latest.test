@@ -1,3 +1,3 @@
 # WorkloadNumber,Speedup(Inductor/Oldest Inductor),ModelName(Inductor),Speedup(PytorchXLA/Oldest Inductor),ModelName(PytorchXLA)
-0,1.2957024017088707,Background_Matting,0.7341253951099924,Background_Matting
-1,1.4722963316097097,BERT_pytorch,1.3260604829383074,BERT_pytorch
+0,1.2957024,Background_Matting,0.7341254,Background_Matting
+1,1.47229633,BERT_pytorch,1.32606048,BERT_pytorch
