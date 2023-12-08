@@ -19,29 +19,20 @@ nightly_builds = [
     accelerator  = "cuda"
     cuda_version = "12.1"
   },
-  {
-    accelerator  = "cuda"
-    cuda_version = "12.3"
-  },
-  {
-    accelerator  = "cuda"
-    cuda_version = "12.3"
-    python_version = "3.10"
-  }
 ]
 
 # Built on push to specific tag.
 versioned_builds = [
   # Remove libtpu from PyPI builds
   {
-    git_tag         = "v2.2.0"
+    git_tag         = "v2.2.0-rc5"
     package_version = "2.2.0rc5"
     pytorch_git_rev = "v2.2.0-rc5"
     accelerator     = "tpu"
     bundle_libtpu   = "0"
   },
   {
-    git_tag         = "v2.2.0"
+    git_tag         = "v2.2.0-rc5"
     package_version = "2.2.0rc5"
     pytorch_git_rev = "v2.2.0-rc5"
     accelerator     = "tpu"
@@ -49,7 +40,7 @@ versioned_builds = [
     bundle_libtpu   = "0"
   },
   {
-    git_tag         = "v2.2.0"
+    git_tag         = "v2.2.0-rc5"
     package_version = "2.2.0rc5"
     pytorch_git_rev = "v2.2.0-rc5"
     accelerator     = "tpu"
@@ -57,7 +48,7 @@ versioned_builds = [
     bundle_libtpu   = "0"
   },
   {
-    git_tag         = "v2.2.0"
+    git_tag         = "v2.2.0-rc5"
     package_version = "2.2.0rc5"
     pytorch_git_rev = "v2.2.0-rc5"
     accelerator     = "tpu"
@@ -66,7 +57,7 @@ versioned_builds = [
   },
   # Bundle libtpu for Kaggle
   {
-    git_tag         = "v2.2.0"
+    git_tag         = "v2.2.0-rc5"
     package_version = "2.2.0rc5+libtpu"
     pytorch_git_rev = "v2.2.0-rc5"
     accelerator     = "tpu"
@@ -74,29 +65,16 @@ versioned_builds = [
     bundle_libtpu   = "1"
   },
   {
-    git_tag         = "v2.2.0"
+    git_tag         = "v2.2.0-rc5"
     package_version = "2.2.0rc5"
     accelerator     = "cuda"
     cuda_version    = "12.1"
   },
   {
-    git_tag         = "v2.2.0"
-    package_version = "2.2.0rc5"
-    accelerator     = "cuda"
-    cuda_version    = "12.3"
-  },
-  {
-    git_tag         = "v2.2.0"
+    git_tag         = "v2.2.0-rc5"
     package_version = "2.2.0rc5"
     accelerator     = "cuda"
     cuda_version    = "12.1"
-    python_version  = "3.10"
-  },
-  {
-    git_tag         = "v2.2.0"
-    package_version = "2.2.0rc5"
-    accelerator     = "cuda"
-    cuda_version    = "12.3"
     python_version  = "3.10"
   },
   {
