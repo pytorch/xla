@@ -113,7 +113,7 @@ class ProfilerTest(unittest.TestCase):
       flags.profile_step = 10
       flags.profile_epoch = 1
       flags.profile_logdir = logdir
-      flags.profile_duration_ms = 1000
+      flags.profile_duration_ms = 5000
 
       test_profile_mp_mnist.train_mnist(
           flags,
@@ -125,7 +125,7 @@ class ProfilerTest(unittest.TestCase):
     p.start()
     training_started.wait(60)
     # Delay to allow the profile to capture
-    time.sleep(5)
+    time.sleep(10)
     p.terminate()
     path = self._check_xspace_pb_exist(logdir)
     self._check_trace_namespace_exists(path)
