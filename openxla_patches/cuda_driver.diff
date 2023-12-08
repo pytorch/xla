@@ -1,0 +1,13 @@
+diff --git a/xla/stream_executor/cuda/cuda_driver.cc b/xla/stream_executor/cuda/cuda_driver.cc
+index e60e17d64..5f3792060 100644
+--- a/xla/stream_executor/cuda/cuda_driver.cc
++++ b/xla/stream_executor/cuda/cuda_driver.cc
+@@ -902,7 +902,7 @@ static CUmemLocationType ToCudaLocationType(
+       return CU_MEM_LOCATION_TYPE_INVALID;
+     case GpuDriver::MemLocationType::kDevice:
+       return CU_MEM_LOCATION_TYPE_DEVICE;
+-#if CUDA_VERSION >= 12000
++#if CUDA_VERSION >= 12030
+     case GpuDriver::MemLocationType::kHost:
+       return CU_MEM_LOCATION_TYPE_HOST;
+     case GpuDriver::MemLocationType::kHostNuma:
