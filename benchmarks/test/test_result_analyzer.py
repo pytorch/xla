@@ -88,7 +88,8 @@ class TestResultAnalyzer(unittest.TestCase):
         self.assertEqual(output[k], -1)
 
   def test_calculate_metrics_xla(self):
-    output, dataline = self._test_calculate_metrics(xla="PJRT", dynamo="openxla")
+    output, dataline = self._test_calculate_metrics(
+        xla="PJRT", dynamo="openxla")
 
     # There should be an xla_compile_time key.
     self.assertIn("xla_compile_time", output)
