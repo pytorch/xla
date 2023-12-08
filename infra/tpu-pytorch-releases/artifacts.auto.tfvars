@@ -34,14 +34,14 @@ nightly_builds = [
 versioned_builds = [
   # Remove libtpu from PyPI builds
   {
-    git_tag         = "v2.2.0-rc1"
+    git_tag         = "v2.2.0"
     package_version = "2.2.0rc1"
     pytorch_git_rev = "v2.2.0-rc1"
     accelerator     = "tpu"
     bundle_libtpu   = "0"
   },
   {
-    git_tag         = "v2.2.0-rc1"
+    git_tag         = "v2.2.0"
     package_version = "2.2.0rc1"
     pytorch_git_rev = "v2.2.0-rc1"
     accelerator     = "tpu"
@@ -49,7 +49,7 @@ versioned_builds = [
     bundle_libtpu   = "0"
   },
   {
-    git_tag         = "v2.2.0-rc1"
+    git_tag         = "v2.2.0"
     package_version = "2.2.0rc1"
     pytorch_git_rev = "v2.2.0-rc1"
     accelerator     = "tpu"
@@ -57,7 +57,7 @@ versioned_builds = [
     bundle_libtpu   = "0"
   },
   {
-    git_tag         = "v2.2.0-rc1"
+    git_tag         = "v2.2.0"
     package_version = "2.2.0rc1"
     pytorch_git_rev = "v2.2.0-rc1"
     accelerator     = "tpu"
@@ -66,7 +66,7 @@ versioned_builds = [
   },
   # Bundle libtpu for Kaggle
   {
-    git_tag         = "v2.2.0-rc1"
+    git_tag         = "v2.2.0"
     package_version = "2.2.0rc1+libtpu"
     pytorch_git_rev = "v2.2.0-rc1"
     accelerator     = "tpu"
@@ -74,26 +74,26 @@ versioned_builds = [
     bundle_libtpu   = "1"
   },
   {
-    git_tag         = "v2.2.0-rc1"
+    git_tag         = "v2.2.0"
     package_version = "2.2.0rc1"
     accelerator     = "cuda"
     cuda_version    = "12.1"
   },
   {
-    git_tag         = "v2.2.0-rc1"
+    git_tag         = "v2.2.0"
     package_version = "2.2.0rc1"
     accelerator     = "cuda"
     cuda_version    = "12.2"
   },
   {
-    git_tag         = "v2.2.0-rc1"
+    git_tag         = "v2.2.0"
     package_version = "2.2.0rc1"
     accelerator     = "cuda"
     cuda_version    = "12.1"
     python_version  = "3.10"
   },
   {
-    git_tag         = "v2.2.0-rc1"
+    git_tag         = "v2.2.0"
     package_version = "2.2.0rc1"
     accelerator     = "cuda"
     cuda_version    = "12.2"
