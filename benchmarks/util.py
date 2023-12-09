@@ -1,15 +1,13 @@
 from contextlib import contextmanager
 import functools
 import logging
-from multiprocessing import Process, Queue
 import numpy as np
 import os
 from os.path import abspath
-import queue
 import random
 import subprocess
 import torch
-import traceback
+import sys
 
 try:
   import torch_xla.core.xla_model as xm
@@ -51,28 +49,21 @@ def reset_rng_state(benchmark_experiment=None):
 def is_xla_device_available(devkind):
   if devkind not in ["CPU", "CUDA", "TPU"]:
     raise ValueError(devkind)
-
-  def _check_xla_device(q, devkind):
-    try:
-      import os
-      os.environ["PJRT_DEVICE"] = devkind
-
-      import torch_xla.core.xla_model as xm
-
-      q.put(bool(xm.get_xla_supported_devices(devkind=devkind)))
-    except Exception:
-      traceback.print_exc()
-      q.put(False)
-
-  q = Queue()
-  process = Process(target=_check_xla_device, args=(q, devkind))
-  process.start()
-  process.join(60)
-  try:
-    return q.get_nowait()
-  except queue.Empty:
-    traceback.print_exc()
-    return False
+  # Checking the availability of a given device kind.
+  #
+  # We intentionally use subprocess instead of multiprocessing library. The
+  # reason being that we might initialize CUDA in the parent process and use
+  # CUDA in the child process. This is a known limitation of using CUDA and
+  # forking the process.
+  #
+  # In this case, subprocess works because it replaces the forked memory with
+  # the execution of the new program (fresh memory), avoiding the error.
+  #
+  # For more information: https://github.com/pytorch/xla/pull/5960
+  CHECK_XLA_DEVICE_PY = "check_xla_device.py"
+  python_file = os.path.join(os.path.dirname(__file__), CHECK_XLA_DEVICE_PY)
+  r = subprocess.run([sys.executable, python_file, devkind])
+  return r.returncode == 0
 
 
 def move_to_device(item, device):
