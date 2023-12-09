@@ -177,8 +177,13 @@ class BenchmarkExperiment:
 
   @property
   def filename_str(self):
-    return "-".join(
-        str(x) if x is not None else 'None' for x in self.to_dict().values())
+    d = self.to_dict()
+
+    # Remove these 2 components that may end up making the filename too big.
+    d.pop("accelerator_model", None)
+    d.pop("xla_flags", None)
+
+    return "-".join(str(v) for v in self.to_dict().values()).replace(" ", "")
 
   def to_dict(self):
     d = OrderedDict()
