@@ -21,12 +21,8 @@ XlaOpVector MarkTensor::Lower(LoweringContext* loctx) const {
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   xla::Shape input_shape = ShapeHelper::ShapeOfXlaOp(input);
   static const std::string opname = "xla_mark_tensor";
-  xla::XlaOp output = xla::CustomCall(
-      input.builder(), opname, {input}, input_shape, info_,
-      /*has_side_effect=*/false,
-      /*output_operand_aliasing=*/{}, /*literal=*/nullptr,
-      /*schedule=*/xla::CustomCallSchedule::SCHEDULE_NONE,
-      /*api_version=*/xla::CustomCallApiVersion::API_VERSION_ORIGINAL);
+  xla::XlaOp output =
+      xla::CustomCall(input.builder(), opname, {input}, input_shape, info_);
   return ReturnOp(output, loctx);
 }
 
