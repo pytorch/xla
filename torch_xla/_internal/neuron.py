@@ -17,5 +17,6 @@ def num_local_processes() -> int:
 
 
 def initialize_env(local_rank):
+  os.environ["DISABLE_NUMERIC_CC_TOKEN"] = "1"
   os.environ["NEURON_PJRT_PROCESS_INDEX"] = str(local_rank)
   os.environ["NEURON_RT_VISIBLE_CORES"] = str(local_rank)

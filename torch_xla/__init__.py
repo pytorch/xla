@@ -78,10 +78,6 @@ def _summarize_fn_tracker():
 
 
 def _aws_ec2_inf_trn_init():
-  import importlib.util
-  if importlib.util.find_spec("torch_neuronx") is not None:
-    os.environ["DISABLE_NUMERIC_CC_TOKEN"] = "1"
-
   try:
     from torch_neuronx import xla
   except ImportError:
