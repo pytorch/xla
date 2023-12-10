@@ -2,6 +2,7 @@ import sys
 import unittest
 
 import torch
+import torch.nn.functional as F
 import torch_xla.core.xla_model as xm
 import torch_xla.experimental.xla_marker
 from torch.utils import _pytree as pytree
@@ -83,7 +84,6 @@ class XlaMarkPatternTest(unittest.TestCase):
         '{attributes = {scale = 2 : i64}, name = "sdpa"}}' in stablehlo)
 
   def test_composite_builder_sdpa_pattern(self):
-    import torch.nn.functional as F
 
     class M(torch.nn.Module):
 
