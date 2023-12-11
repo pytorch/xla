@@ -54,9 +54,13 @@ The **first thing** to check when model is slow is to generate a metrics report.
 Metrics report is extremely helpful in diagnosing issues. Please try to include it in your bug
 report sent to us if you have it.
 
-## Perform A Auto-Metrics Analysis
+## PyTorch/XLA Debugging Tool
 
-We provide ways to automatically analyze the metrics report and provide a summary. Simply run your workload with `PT_XLA_DEBUG=1`. Some example output would be
+You can enable the PyTorch/XLA debugging tool by setting `PT_XLA_DEBUG=1`, which provides a couple useful debugging features.
+
+### Perform A Auto-Metrics Analysis
+
+The debugging tool will analyze the metrics report and provide a summary. Some example output would be
 
 ```
 pt-xla-profiler: CompileTime too frequent: 21 counts during 11 steps
@@ -65,6 +69,61 @@ pt-xla-profiler: Op(s) not lowered: aten::_ctc_loss, aten::_ctc_loss_backward,  
 pt-xla-profiler: CompileTime too frequent: 23 counts during 12 steps
 pt-xla-profiler: TransferFromServerTime too frequent: 12 counts during 12 steps
 ```
+
+### Compilation & Execution Analysis
+The debugging tool will analyze every compilation and execution for your model. Some example output would be
+```
+Compilation Analysis: ================================================================================
+Compilation Analysis: Compilation Cause
+Compilation Analysis:   user mark_step
+Compilation Analysis: Graph Info:
+Compilation Analysis:   Graph Hash: 537d4b0264b029688281412214d252e9
+Compilation Analysis:   Number of Graph Inputs: 588
+Compilation Analysis:   Number of Graph Outputs: 320
+Compilation Analysis: Python Frame Triggered Execution:
+Compilation Analysis:   mark_step (/workspaces/dk2/pytorch/xla/torch_xla/core/xla_model.py:840)
+Compilation Analysis:   broadcast_master_param (/workspaces/dk2/pytorch/xla/torch_xla/core/xla_model.py:1230)
+Compilation Analysis:   train_imagenet (/workspaces/dk2/pytorch/xla/test/test_train_mp_imagenet.py:261)
+Compilation Analysis:   _mp_fn (/workspaces/dk2/pytorch/xla/test/test_train_mp_imagenet.py:365)
+Compilation Analysis:   __call__ (/workspaces/dk2/pytorch/xla/torch_xla/_internal/pjrt.py:176)
+Compilation Analysis:   _thread_fn (/workspaces/dk2/pytorch/xla/torch_xla/_internal/pjrt.py:70)
+Compilation Analysis:   run (/usr/local/lib/python3.8/concurrent/futures/thread.py:57)
+Compilation Analysis:   _worker (/usr/local/lib/python3.8/concurrent/futures/thread.py:80)
+Compilation Analysis:   ..........
+Compilation Analysis: --------------------------------------------------------------------------------
+Compilation Analysis: ================================================================================
+
+Execution Analysis: ================================================================================
+Execution Analysis: Execution Cause
+Execution Analysis:   user mark_step
+Execution Analysis: Graph Info:
+Execution Analysis:   Graph Hash: 537d4b0264b029688281412214d252e9
+Execution Analysis:   Number of Graph Inputs: 588
+Execution Analysis:   Number of Graph Outputs: 320
+Execution Analysis: Python Frame Triggered Execution:
+Execution Analysis:   mark_step (/workspaces/dk2/pytorch/xla/torch_xla/core/xla_model.py:840)
+Execution Analysis:   broadcast_master_param (/workspaces/dk2/pytorch/xla/torch_xla/core/xla_model.py:1230)
+Execution Analysis:   train_imagenet (/workspaces/dk2/pytorch/xla/test/test_train_mp_imagenet.py:261)
+Execution Analysis:   _mp_fn (/workspaces/dk2/pytorch/xla/test/test_train_mp_imagenet.py:365)
+Execution Analysis:   __call__ (/workspaces/dk2/pytorch/xla/torch_xla/_internal/pjrt.py:176)
+Execution Analysis:   _thread_fn (/workspaces/dk2/pytorch/xla/torch_xla/_internal/pjrt.py:70)
+Execution Analysis:   run (/usr/local/lib/python3.8/concurrent/futures/thread.py:57)
+Execution Analysis:   _worker (/usr/local/lib/python3.8/concurrent/futures/thread.py:80)
+Execution Analysis:   ..........
+Execution Analysis: --------------------------------------------------------------------------------
+Execution Analysis: ================================================================================
+```
+
+Some common causes of Compilation/Executation are
+1. User manually call `mark_step`.
+2. [Parallel loader](https://github.com/pytorch/xla/blob/fe4af0080af07f78ca2b614dd91b71885a3bbbb8/torch_xla/distributed/parallel_loader.py#L49-L51) call `mark_step` for every x (configurable) batch.
+3. Exiting a [profiler StepTrace region](https://github.com/pytorch/xla/blob/fe4af0080af07f78ca2b614dd91b71885a3bbbb8/torch_xla/debug/profiler.py#L165-L171).
+4. Dynamo decide to compile/execute the graph.
+5. User trying to access(often due to logging) the value of a tensor before the `mark_step`.
+
+The executation caused by 1-4 are expected, and we want to avoid 5 by either reduce the frequency of accessing tensor values or manually add a `mark_step` before accessing.
+
+Users should expect to see this `Compilation Cause` + `Executation Cause` pairs for first couple steps. After the model stabilize users should expect to only see `Execution Cause`. To use PyTorch/XLA efficiently, we expect the same models code to be run for every step and compilation only happen once for every graph. If you keep seeing `Compilation Cause`, you should try to dump the IR/HLO following [this section](#common-debugging-environment-variables-combinations) and compare the graphs for each step and understand the source of the differences.
 
 Following section will explain how to get and understand a more detail metrics report.
 
@@ -300,12 +359,12 @@ only be enabled for debugging.
 
 * Record the graph execution in the IR format
   ```
-  XLA_SAVE_TENSORS_FMT="hlo" XLA_SAVE_TENSORS_FILE="/tmp/save1.hlo"
+  XLA_IR_DEBUG=1 XLA_HLO_DEBUG=1 XLA_SAVE_TENSORS_FMT="hlo" XLA_SAVE_TENSORS_FILE="/tmp/save1.hlo"
   ```
 
 * Record the graph execution in the HLO format
   ```
-  XLA_SAVE_TENSORS_FMT="text" XLA_SAVE_TENSORS_FILE="/tmp/save1.ir"
+  XLA_IR_DEBUG=1 XLA_HLO_DEBUG=1 XLA_SAVE_TENSORS_FMT="text" XLA_SAVE_TENSORS_FILE="/tmp/save1.ir"
   ```
 
 * Show debugging VLOG for runtime and graph compilation/execution
