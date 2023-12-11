@@ -1062,6 +1062,13 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
         '%opt-barrier.37 = (f32[1,64]{0,1}, f32[1]{0}, f32[2,64]{1,0}) opt-barrier((f32[1,64]{0,1}, f32[1]{0}, f32[2,64]{1,0}) %tuple.36)',
         hlo)
 
+  def test_mark_shard_scalar(self):
+    x = torch.tensor(1.0).to(xm.xla_device())
+    self.assertEqual(len(x.shape), 0)
+
+    with self.assertRaises(ValueError):
+      xs.mark_sharding(x, self._get_mesh((1, self.n_devices)), ())
+
 
 if __name__ == '__main__':
   test = unittest.main()
