@@ -98,6 +98,16 @@ class XlaBackendTest(parameterized.TestCase):
     hlo_matches(hlo, all_gather_pattern)
 
   @patch_world(rank=3, size=8)
+  def test_all_scalar_allgather(self):
+    device = xm.xla_device()
+    tensor = torch.zeros((), device=device) + 1 + 2 * dist.get_rank()
+    output_tensors = [torch.zeros_like(tensor, device=device) for _ in range(8)]
+    all_gather_pattern = r'%all\-gather\.\d+ = .+ all\-gather\('
+    dist.all_gather(output_tensors, tensor)
+    hlo = torch_xla._XLAC._get_xla_tensors_hlo(output_tensors)
+    hlo_matches(hlo, all_gather_pattern)
+
+  @patch_world(rank=3, size=8)
   def test_allgather_coalesced(self):
     device = xm.xla_device()
     tensor = torch.arange(2, device=device) + 1 + 2 * dist.get_rank()
