@@ -8,39 +8,34 @@
 
 namespace torch_xla {
 namespace runtime {
-namespace {
 
-std::unique_ptr<ComputationClient> CreateClient() {
-  if (sys_util::GetEnvBool("XLA_DUMP_FATAL_STACK", false)) {
-    tsl::testing::InstallStacktraceHandler();
-  }
+std::atomic<bool> g_computation_client_initialized(false);
 
-  std::unique_ptr<ComputationClient> client = nullptr;
+ComputationClient* GetComputationClient() {
+  static std::unique_ptr<ComputationClient> client = []() {
+    if (sys_util::GetEnvBool("XLA_DUMP_FATAL_STACK", false)) {
+      tsl::testing::InstallStacktraceHandler();
+    }
 
-  if (sys_util::GetEnvString(env::kEnvPjRtDevice, "") != "") {
-    client = std::make_unique<PjRtComputationClient>();
-  } else {
-    XLA_ERROR() << "$PJRT_DEVICE is not set." << std::endl;
-  }
+    std::unique_ptr<ComputationClient> client;
 
-  XLA_CHECK(client);
+    if (sys_util::GetEnvString(env::kEnvPjRtDevice, "") != "") {
+      client = std::make_unique<PjRtComputationClient>();
+    } else {
+      XLA_ERROR() << "$PJRT_DEVICE is not set." << std::endl;
+    }
 
-  return client;
-}
+    XLA_CHECK(client);
 
-}  // namespace
+    g_computation_client_initialized.exchange(true);
+    return client;
+  }();
 
-ComputationClient* GetComputationClient(bool create) {
-  static std::unique_ptr<ComputationClient> client = nullptr;
-  if (!client && create) {
-    static std::once_flag flag;
-    std::call_once(flag, []() { client = CreateClient(); });
-  }
   return client.get();
 }
 
 ComputationClient* GetComputationClientIfInitialized() {
-  return GetComputationClient(/*create=*/false);
+  return g_computation_client_initialized ? GetComputationClient() : nullptr;
 }
 
 }  // namespace runtime
