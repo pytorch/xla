@@ -28,6 +28,9 @@ class TensorConstant(torch.nn.Module):
 
 class ExportTest(unittest.TestCase):
 
+  def setUp(self):
+    torch.manual_seed(0)
+
   def test_interpolate(self):
 
     arg = (torch.randn(3, 3, 200, 200),)
