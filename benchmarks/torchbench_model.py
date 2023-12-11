@@ -82,17 +82,6 @@ DENY_LIST = {
     "vision_maskrcnn": [{}],
 }
 
-# Models that have to be initialized on CUDA, before being
-# moved to XLA.
-INIT_WITH_CUDA_MODELS = {
-    "moco",
-    "nvidia_deeprecommender",
-    "pytorch_CycleGAN_and_pix2pix",
-    "simple_gpt",
-    "simple_gpt_tp_manual",
-    "timm_efficientdet",
-}
-
 
 class TorchBenchModelLoader(ModelLoader):
 
@@ -155,10 +144,6 @@ class TorchBenchModelLoader(ModelLoader):
             break
         if matched:
           return False
-
-    if benchmark_experiment.xla and dummy_benchmark_model.model_name in INIT_WITH_CUDA_MODELS:
-      return benchmark_experiment.accelerator == "cuda"
-
     return True
 
 
@@ -208,21 +193,16 @@ class TorchBenchModel(BenchmarkModel):
     # workaround "RuntimeError: not allowed to set torch.backends.cudnn flags"
     # torch.backends.__allow_nonbracketed_mutation_flag = True
 
-    xla_should_init_with_cuda = (
-        self.benchmark_experiment.xla and
-        self.model_name in INIT_WITH_CUDA_MODELS)
+    benchmark = benchmark_cls(
+        test=self.benchmark_experiment.test,
+        device=self.benchmark_experiment.accelerator,
+        batch_size=self.benchmark_experiment.batch_size,
+    )
 
-    if self.benchmark_experiment.accelerator == "cpu":
-      device = "cpu"
-    elif xla_should_init_with_cuda or (self.benchmark_experiment.accelerator
-                                       == "cuda" and
-                                       not self.benchmark_experiment.xla):
-      device = "cuda"
-    else:
-      device = str(self.benchmark_experiment.get_device())
+    self.module, self.example_inputs = benchmark.get_module()
 
     # Move the initialized model to XLA device.
-    if xla_should_init_with_cuda:
+    if self.benchmark_experiment.xla:
       device = self.benchmark_experiment.get_device()
       self.module = self.module.to(device)
       self.example_inputs = pytree.tree_map_only(torch.Tensor,
