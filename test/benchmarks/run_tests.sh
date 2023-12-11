@@ -4,6 +4,9 @@ CDIR="$(cd "$(dirname "$0")" ; pwd -P)"
 LOGFILE=/tmp/pytorch_benchmarks_test.log
 VERBOSITY=0
 
+# Make benchmark module available as it is not part of torch_xla.
+export PYTHONPATH=$PYTHONPATH:$CDIR/../../benchmarks/
+
 # Note [Keep Going]
 #
 # Set the `CONTINUE_ON_ERROR` flag to `true` to make the CircleCI tests continue on error.
@@ -19,10 +22,10 @@ do
   case $OPTION in
     L)
       LOGFILE=
-      ;;
+    ;;
     V)
       VERBOSITY=$OPTARG
-      ;;
+    ;;
   esac
 done
 shift $(($OPTIND - 1))
@@ -35,8 +38,13 @@ function run_make_tests {
   make -C $CDIR $MAKE_V all
 }
 
+function run_python_tests {
+  python3 "$CDIR/test_benchmark_experiment.py"
+}
+
 function run_tests {
   run_make_tests
+  run_python_tests
 }
 
 if [ "$LOGFILE" != "" ]; then
