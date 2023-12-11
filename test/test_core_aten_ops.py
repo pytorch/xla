@@ -30,7 +30,8 @@ def diff_output(testcase, output1, output2, rtol, atol):
     if output2_cpu.dtype != output1.dtype:
       output2_cpu = output2_cpu.to(output1.dtype)
     testcase.assertTrue(
-        torch.allclose(output1, output2_cpu, atol=atol, rtol=rtol))
+        torch.allclose(
+            output1, output2_cpu, atol=atol, rtol=rtol, equal_nan=True))
   elif isinstance(output1, (tuple, list)):
     testcase.assertIsInstance(output2, (tuple, list))
     testcase.assertEqual(len(output1), len(output2))
@@ -3285,7 +3286,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.pow.Scalar, args, kwargs)
 
-  @unittest.skip
   def test_aten_pow_Tensor_Scalar_0(self):
     args = (
         torch.randn((10, 10)).to(torch.float32),
@@ -3294,7 +3294,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.pow.Tensor_Scalar, args, kwargs)
 
-  @unittest.skip
   def test_aten_pow_Tensor_Scalar_1(self):
     args = (
         torch.randn((10, 10)).to(torch.float16),
@@ -3303,7 +3302,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.pow.Tensor_Scalar, args, kwargs)
 
-  @unittest.skip
   def test_aten_pow_Tensor_Scalar_2(self):
     args = (
         torch.randint(0, 10, (10, 10)).to(torch.int32),
@@ -3317,7 +3315,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.pow.Scalar, args, kwargs)
 
-  @unittest.skip
   def test_aten_pow_Tensor_Tensor_0(self):
     args = (
         torch.randn((10, 10)).to(torch.float32),
@@ -3326,7 +3323,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.pow.Tensor_Tensor, args, kwargs)
 
-  @unittest.skip
   def test_aten_pow_Tensor_Tensor_1(self):
     args = (
         torch.randn((10, 10)).to(torch.float16),
