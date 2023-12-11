@@ -88,7 +88,8 @@ class ExperimentLoader:
     if experiment_config["dynamo"] == "openxla_eval" and not (
         experiment_config["xla"] and experiment_config["test"] == "eval"):
       return False
-    if experiment_config["dynamo"] == "openxla" and not experiment_config["xla"]:
+    if experiment_config["dynamo"] == "openxla" and not (
+        experiment_config["xla"] and experiment_config["test"] == "train"):
       return False
     if (experiment_config["xla"] and
         not is_xla_device_available(experiment_config["accelerator"].upper())):
