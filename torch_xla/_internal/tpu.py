@@ -325,7 +325,11 @@ def _spmd_find_master_ip(current_worker_hostname: str) -> str:
 
 class TpuPlugin(plugins.DevicePlugin):
   def library_path(self):
-    return os.getenv('TPU_LIBRARY_PATH')
+    libtpu_path = os.getenv('TPU_LIBRARY_PATH') or os.getenv('PTXLA_TPU_LIBRARY_PATH')
+    if not libtpu_path:
+      raise EnvironmentError('libtpu not found')
+
+    return libtpu_path
 
   def host_index(self):
     return worker_id()
