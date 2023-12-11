@@ -77,10 +77,7 @@ def _mp_fn(index):
         sys.exit(1)
 
     # Testing with a single replica group and tensor list as input and output!=None (out-of-place)
-    ordinal_tensors = [
-        torch.tensor([i * 1000 + index], dtype=torch.float).to(device)
-        for i in range(input_list_size)
-    ]
+    # Reuse ordinal_tensors from previous test
     output_tensors = [
         torch.zeros([world_size], dtype=torch.float).to(device)
         for i in range(input_list_size)

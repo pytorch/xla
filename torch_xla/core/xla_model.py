@@ -553,6 +553,7 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
     A tensor which has, in the ``dim`` dimension, all the values from the
     participating replicas.
   """
+  # _all_gather_using_all_reduce does not support list of tensors as input
   if pin_layout and output == None and isinstance(value, torch.Tensor):
     # There is not an easy way to pin the all_gather layout on TPU, GPU and NEURON,
     # use all_reduce based all_gather for this purpose.
