@@ -47,6 +47,44 @@ class ExperimentRunnerTest(unittest.TestCase):
     for expected in expected_in_stderr:
       self.assertIn(expected, child.stderr)
 
+  def test_alexnet_dry_run_inductor_cuda(self):
+    child = subprocess.run([
+        "python", EXPERIMENT_RUNNER_PY, "--dynamo=inductor", "--xla=PJRT",
+        "--xla=None", "--test=eval", "--test=train", "--suite-name=torchbench",
+        "--accelerator=cuda", "--filter=^alexnet$", "--dry-run"
+    ],
+                           capture_output=True,
+                           text=True)
+    expected_in_stderr = [
+        "Number of selected experiment configs: 2",
+        "Number of selected model configs: 1",
+        "'--experiment-config={\"accelerator\": \"cuda\", \"xla\": null, \"xla_flags\": null, \"dynamo\": \"inductor\", \"test\": \"eval\"}', '--model-config={\"model_name\": \"alexnet\"}'",
+        "'--experiment-config={\"accelerator\": \"cuda\", \"xla\": null, \"xla_flags\": null, \"dynamo\": \"inductor\", \"test\": \"train\"}', '--model-config={\"model_name\": \"alexnet\"}'",
+    ]
+    for expected in expected_in_stderr:
+      self.assertIn(expected, child.stderr)
+
+  def test_alexnet_openxla_eval_train_cuda(self):
+    child = subprocess.run([
+        "python", EXPERIMENT_RUNNER_PY, "--dynamo=inductor", "--dynamo=openxla",
+        "--dynamo=openxla_eval", "--xla=PJRT", "--xla=None", "--test=eval",
+        "--test=train", "--suite-name=torchbench", "--accelerator=cuda",
+        "--filter=^alexnet$", "--dry-run"
+    ],
+                           capture_output=True,
+                           text=True)
+    expected_in_stderr = [
+        "Number of selected experiment configs: 5",
+        "Number of selected model configs: 1",
+        "'--experiment-config={\"accelerator\": \"cuda\", \"xla\": \"PJRT\", \"xla_flags\": null, \"dynamo\": \"openxla_eval\", \"test\": \"eval\"}', '--model-config={\"model_name\": \"alexnet\"}'",
+        "'--experiment-config={\"accelerator\": \"cuda\", \"xla\": \"PJRT\", \"xla_flags\": null, \"dynamo\": \"openxla\", \"test\": \"train\"}', '--model-config={\"model_name\": \"alexnet\"}'",
+        "'--experiment-config={\"accelerator\": \"cuda\", \"xla\": \"PJRT\", \"xla_flags\": null, \"dynamo\": \"openxla_eval\", \"test\": \"eval\"}', '--model-config={\"model_name\": \"alexnet\"}'",
+        "'--experiment-config={\"accelerator\": \"cuda\", \"xla\": \"PJRT\", \"xla_flags\": null, \"dynamo\": \"openxla\", \"test\": \"eval\"}', '--model-config={\"model_name\": \"alexnet\"}'",
+        "'--experiment-config={\"accelerator\": \"cuda\", \"xla\": \"PJRT\", \"xla_flags\": null, \"dynamo\": \"openxla\", \"test\": \"train\"}', '--model-config={\"model_name\": \"alexnet\"}'",
+    ]
+    for expected in expected_in_stderr:
+      self.assertIn(expected, child.stderr)
+
 
 if __name__ == '__main__':
   unittest.main()
