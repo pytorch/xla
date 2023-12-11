@@ -1052,7 +1052,6 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     # The first layer won't have gradients in the hook. Not sure why.
     xs.xla_sharding.apply_backward_optimization_barrier(model.fc2)
 
-    # optimizer.zero_grad()
     x = torch.randn(2, 128).to(xm.xla_device())
     y = model(x)
     loss = y.sum()
