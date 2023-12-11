@@ -50,25 +50,24 @@ The results will be stored in a json file in `experiment_results`.
 
 ```
 cd pytorch
-python xla/benchmarks/experiment_runner.py                   \
-    --dynamo=openxla_eval --dynamo=openxla --dynamo=inductor \
-    --xla=PJRT --xla=None                                    \
-    --test=eval --test=train                                 \
-    --suite-name=torchbench                                  \
-    --accelerator=cuda                                       \
-    --output-dirname=experiment_results                      \
-    --repeat=5                                               \
-    --print-subprocess                                       \
-    --no-resume                                              \
+python xla/benchmarks/experiment_runner.py  \
+    --dynamo=openxla --dynamo=inductor      \
+    --xla=PJRT --xla=None                   \
+    --test=eval --test=train                \
+    --suite-name=torchbench                 \
+    --accelerator=cuda                      \
+    --output-dirname=experiment_results     \
+    --repeat=5                              \
+    --print-subprocess                      \
+    --no-resume                             \
     --filter="^alexnet$"
 ```
 
 You can change the flags to add the configurations you are interested in. The
 `experiment_runner.py` will expand the options to all supported configurations.
 For example, in the case above, it will consider all the possible combinations
-among the flags `--dynamo`, `--xla`, and `--test`, 5 of which are supported:
+among the flags `--dynamo`, `--xla`, and `--test`, 4 of which are supported:
 
-  - `dynamo=openxla_eval`, `xla=PJRT`, `test=eval`
   - `dynamo=openxla`, `xla=PJRT`, `test=eval`
   - `dynamo=openxla`, `xla=PJRT`, `test=train`
   - `dynamo=inductor`, `xla=None`, `test=eval`
