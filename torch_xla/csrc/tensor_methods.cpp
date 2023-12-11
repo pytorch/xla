@@ -2129,11 +2129,19 @@ XLATensorPtr pow(const XLATensorPtr& input, const at::Scalar& exponent) {
   // optimize
   torch::lazy::Value exponent_node =
       XLAGraphExecutor::Get()->GetIrValueForConstant(exponent, input->shape());
-  return input->CreateFrom(Pow(input->GetIrValue(), exponent_node));
+  torch::lazy::NodePtr node = Pow(input->GetIrValue(), exponent_node);
+  auto* xla_node = dynamic_cast<XlaNode*>(node.get());
+  at::ScalarType dtype =
+      TorchTypeFromXlaType(xla_node->xla_shape().element_type());
+  return input->CreateFrom(node, dtype);
 }
 
 XLATensorPtr pow(const XLATensorPtr& input, const XLATensorPtr& exponent) {
-  return input->CreateFrom(Pow(input->GetIrValue(), exponent->GetIrValue()));
+  torch::lazy::NodePtr node = Pow(input->GetIrValue(), exponent->GetIrValue());
+  auto* xla_node = dynamic_cast<XlaNode*>(node.get());
+  at::ScalarType dtype =
+      TorchTypeFromXlaType(xla_node->xla_shape().element_type());
+  return input->CreateFrom(node, dtype);
 }
 
 XLATensorPtr pow(const at::Scalar& input, const XLATensorPtr& exponent) {
