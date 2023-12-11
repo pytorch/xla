@@ -3767,7 +3767,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.scatter_add, args, kwargs)
 
-  @unittest.skip
   def test_aten_scatter_add_1(self):
     args = (
         torch.randn((10, 10)).to(torch.float16),
