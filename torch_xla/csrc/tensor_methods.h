@@ -34,13 +34,19 @@ torch::lazy::Value reduce_scatter_out(XLATensorPtr& output,
                                       bool pin_layout);
 
 std::pair<std::vector<XLATensorPtr>, torch::lazy::Value>
-reduce_scatter_coalesced(const std::vector<XLATensorPtr>& outputs,
-                         const std::vector<XLATensorPtr>& inputs,
+reduce_scatter_coalesced(const std::vector<XLATensorPtr>& inputs,
                          const torch::lazy::Value& token,
                          AllReduceType reduce_type, double scale,
                          int64_t scatter_dim, int64_t shard_count,
                          std::vector<std::vector<int64_t>> groups,
                          bool pin_layout);
+
+torch::lazy::Value reduce_scatter_coalesced_out(
+    const std::vector<XLATensorPtr>& outputs,
+    const std::vector<XLATensorPtr>& inputs, const torch::lazy::Value& token,
+    AllReduceType reduce_type, double scale, int64_t scatter_dim,
+    int64_t shard_count, std::vector<std::vector<int64_t>> groups,
+    bool pin_layout);
 
 std::pair<XLATensorPtr, torch::lazy::Value> all_to_all(
     const XLATensorPtr& input, const torch::lazy::Value& token,
