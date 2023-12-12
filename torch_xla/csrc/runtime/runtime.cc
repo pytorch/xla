@@ -5,7 +5,6 @@
 #include "torch_xla/csrc/runtime/env_vars.h"
 #include "torch_xla/csrc/runtime/ifrt_computation_client.h"
 #include "torch_xla/csrc/runtime/pjrt_computation_client.h"
-#include "torch_xla/csrc/runtime/tf_logging.h"
 #include "tsl/platform/stacktrace_handler.h"
 
 namespace torch_xla {

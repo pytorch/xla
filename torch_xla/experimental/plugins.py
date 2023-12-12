@@ -3,6 +3,7 @@ import os
 import torch_xla
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.runtime as xr
+import torch_xla.utils.utils as xu
 
 class DevicePlugin:
   """Base class for device plugings.
@@ -39,10 +40,6 @@ class DevicePlugin:
     """
     return 1
 
-  def shutdown(self):
-    """Performs any necessary cleanup for this device."""
-    pass
-
 
 _plugin_registry = {}
 
@@ -53,6 +50,9 @@ def use_dynamic_plugins():
         "Can't enable dynamic plugins after XLA runtime is initialized")
 
   os.environ[xenv.PJRT_DYNAMIC_PLUGINS] = "1"
+
+def using_dynamic_plugins():
+  return xu.getenv_as(xenv.PJRT_DYNAMIC_PLUGINS, bool, False)
 
 def default() -> DevicePlugin:
   return _plugin_registry[xr.device_type()]

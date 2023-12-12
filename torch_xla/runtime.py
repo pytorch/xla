@@ -60,7 +60,7 @@ def device_type() -> Optional[str]:
   """
   _maybe_select_default_device()
   pjrt_device = xu.getenv_as(xenv.PJRT_DEVICE, str)
-  return pjrt_device.split('_')[0].upper() if pjrt_device else pjrt_device
+  return pjrt_device.split('_')[0] if pjrt_device else pjrt_device
 
 
 def using_pjrt() -> bool:
@@ -199,7 +199,14 @@ def process_count() -> int:
 
 @requires_pjrt
 def host_index() -> int:
-  plugins.default.host_index()
+  if plugins.using_dynamic_plugins():
+    return plugins.default().host_index()
+  elif device_type() == 'TPU':
+    return tpu.worker_id()
+
+  # TODO: Update this when we support multi-host GPU
+  return 0
+
 
 # API below will be used to query physcial device attribute.
 @requires_pjrt
