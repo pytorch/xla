@@ -160,7 +160,3 @@ _init_xla_lazy_backend()
 torch._dynamo.config.automatic_dynamic_shapes = False
 
 from .stablehlo import save_as_stablehlo, save_torch_model_as_stablehlo
-
-from .experimental import plugins
-
-plugins.register_plugin('tpu', tpu.TpuPlugin())
