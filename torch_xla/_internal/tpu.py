@@ -342,6 +342,3 @@ class TpuPlugin(plugins.DevicePlugin):
 
   def physical_chip_count(self):
     return num_available_chips()
-
-
-# plugins.register_plugin('tpu', TpuPlugin())
