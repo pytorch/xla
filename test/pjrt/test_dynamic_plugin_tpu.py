@@ -10,13 +10,15 @@ from torch_xla._internal import tpu
 plugins.register_plugin('TPU', tpu.TpuPlugin())
 plugins.use_dynamic_plugins()
 
+
 class TestDynamicTpuPlugin(absltest.TestCase):
+
   @classmethod
   def setUpClass(cls):
     xr.set_device_type('TPU')
 
   @staticmethod
-  def _assert_tpus_exist(index = 0):
+  def _assert_tpus_exist(index=0):
     del index
     assert len(xm.get_xla_supported_devices('TPU')) > 0
 
@@ -26,6 +28,7 @@ class TestDynamicTpuPlugin(absltest.TestCase):
 
   def test_spawn(self):
     xmp.spawn(self._assert_tpus_exist)
+
 
 if __name__ == '__main__':
   absltest.main()

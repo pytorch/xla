@@ -5,6 +5,7 @@ import torch_xla.core.xla_env_vars as xenv
 import torch_xla.runtime as xr
 import torch_xla.utils.utils as xu
 
+
 class DevicePlugin:
   """Base class for device plugings.
 
@@ -43,6 +44,7 @@ class DevicePlugin:
 
 _plugin_registry = {}
 
+
 def use_dynamic_plugins():
   if torch_xla._XLAC._xla_runtime_is_initialized() and os.environ.get(
       xenv.PJRT_DEVICE) != "1":
@@ -51,11 +53,14 @@ def use_dynamic_plugins():
 
   os.environ[xenv.PJRT_DYNAMIC_PLUGINS] = "1"
 
+
 def using_dynamic_plugins():
   return xu.getenv_as(xenv.PJRT_DYNAMIC_PLUGINS, bool, False)
 
+
 def default() -> DevicePlugin:
   return _plugin_registry[xr.device_type()]
+
 
 def register_plugin(name: str, device_plugin: DevicePlugin):
   _plugin_registry[name.upper()] = device_plugin

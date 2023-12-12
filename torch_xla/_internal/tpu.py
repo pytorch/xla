@@ -18,7 +18,6 @@ import torch_xla.core.xla_env_vars as xenv
 import torch_xla.core.xla_model as xm
 from torch_xla.experimental import plugins
 
-
 _GCE_METADATA_ROOT_URL = 'http://metadata.google.internal/computeMetadata/v1'
 _ACCELERATOR_TYPE_TO_HOST_BOUNDS = {
     # v2
@@ -324,8 +323,10 @@ def _spmd_find_master_ip(current_worker_hostname: str) -> str:
 
 
 class TpuPlugin(plugins.DevicePlugin):
+
   def library_path(self):
-    libtpu_path = os.getenv('TPU_LIBRARY_PATH') or os.getenv('PTXLA_TPU_LIBRARY_PATH')
+    libtpu_path = os.getenv('TPU_LIBRARY_PATH') or os.getenv(
+        'PTXLA_TPU_LIBRARY_PATH')
     if not libtpu_path:
       raise EnvironmentError('libtpu not found')
 
