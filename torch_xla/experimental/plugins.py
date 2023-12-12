@@ -31,7 +31,7 @@ class DevicePlugin:
     """
     pass
 
-  def physical_chip_count():
+  def physical_chip_count(self):
     """The number of physical chips available on this host.
 
     This is the number of processes we expect to be created by `xmp.spawn` or
@@ -39,7 +39,7 @@ class DevicePlugin:
     """
     return 1
 
-  def shutdown():
+  def shutdown(self):
     """Performs any necessary cleanup for this device."""
     pass
 

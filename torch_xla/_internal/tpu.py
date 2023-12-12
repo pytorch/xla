@@ -340,7 +340,7 @@ class TpuPlugin(plugins.DevicePlugin):
   def configure_multiprocess(self, local_rank, local_world_size):
     return configure_topology(local_rank, local_world_size)
 
-  def local_process_count(self):
+  def physical_chip_count(self):
     return num_available_chips()
 
 
