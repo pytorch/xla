@@ -1062,6 +1062,28 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
         '%opt-barrier.37 = (f32[1,64]{0,1}, f32[1]{0}, f32[2,64]{1,0}) opt-barrier((f32[1,64]{0,1}, f32[1]{0}, f32[2,64]{1,0}) %tuple.36)',
         hlo)
 
+  def test_mark_shard_scalar(self):
+    x = torch.tensor(1.0).to(xm.xla_device())
+    self.assertEqual(len(x.shape), 0)
+
+    xt = xs.mark_sharding(x, self._get_mesh((1, self.n_devices)), ())
+    self.assertEqual(xt, x)
+    self.assertEqual(xt.sharding_type, xs.ShardingType.REPLICATED)
+    self.assertEqual(xt.sharding_spec, "{replicated}")
+
+    shards = xt.local_shards
+    self.assertEqual(len(shards), self.n_devices)
+    # all shards are REPLICATED.
+    for i, shard in enumerate(shards):
+      self.assertEqual(shard.data.device, torch.device('cpu'))
+      self.assertTrue(torch.allclose(shard.data, torch.tensor(1.0)))
+      self.assertIsInstance(shard.indices, type(Ellipsis))
+      self.assertEqual(shard.replica_id, i)
+
+    # It looks like mesh_shape attribute is never implemented.
+    with self.assertRaises(AttributeError):
+      xt.mesh_shape
+
 
 if __name__ == '__main__':
   test = unittest.main()
