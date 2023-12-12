@@ -111,6 +111,8 @@ def initialize_multiprocess(local_rank: int, local_world_size: int):
 
   if runtime.device_type() == 'TPU':
     tpu.configure_topology(local_rank, local_world_size)
+  elif runtime.device_type() == 'GPU':
+    gpu.initialize_env(local_world_size)
   elif runtime.device_type() == 'NEURON':
     neuron.initialize_env(local_rank)
 

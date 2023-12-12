@@ -11,5 +11,8 @@ def num_local_processes() -> int:
   """
   assert xenv.GPU_NUM_DEVICES in os.environ, \
       "Must set `GPU_NUM_DEVICES` environment variable to use the PjRt GPU client"
-  os.environ[xenv.LOCAL_WORLD_SIZE] = os.environ[xenv.GPU_NUM_DEVICES]
-  return int(os.environ[xenv.LOCAL_WORLD_SIZE])
+  return int(os.environ[xenv.GPU_NUM_DEVICES])
+
+
+def initialize_env(local_world_size: int):
+  os.environ[xenv.LOCAL_WORLD_SIZE] = local_world_size
