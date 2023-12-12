@@ -1066,7 +1066,6 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     x = torch.tensor(1.0).to(xm.xla_device())
     self.assertEqual(len(x.shape), 0)
 
-    # with self.assertRaises(ValueError):
     xt = xs.mark_sharding(x, self._get_mesh((1, self.n_devices)), ())
     self.assertEqual(xt, x)
     self.assertEqual(xt.sharding_type, xs.ShardingType.REPLICATED)
