@@ -1104,10 +1104,15 @@ at::Tensor XLANativeFunctions::diagonal_scatter(const at::Tensor& base,
                                                 int64_t dim2) {
   auto base_ = bridge::GetXlaTensor(base);
   auto mutated_view_ = bridge::GetXlaTensor(mutated_view);
+  int64_t base_rank = bridge::GetXlaTensor(base)->shape().get().rank();
+  int64_t canonical_dim1 =
+      torch::lazy::GetCanonicalDimensionIndex(dim1, base_rank);
+  int64_t canonical_dim2 =
+      torch::lazy::GetCanonicalDimensionIndex(dim2, base_rank);
   return bridge::AtenFromXlaTensor(
       base_->CreateFrom(torch::lazy::MakeNode<DiagonalViewUpdate>(
-          base_->GetIrValue(), mutated_view_->GetIrValue(), offset, dim1,
-          dim2)));
+          base_->GetIrValue(), mutated_view_->GetIrValue(), offset,
+          canonical_dim1, canonical_dim2)));
 }
 
 at::Tensor XLANativeFunctions::div(const at::Tensor& self,

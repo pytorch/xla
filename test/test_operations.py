@@ -1200,6 +1200,13 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     self.runAtenTest(torch.rand(4, 3), test_fn)
 
+  def test_diagonal_scatter_negative_dim(self):
+
+    def test_fn(input, src):
+      return torch.diagonal_scatter(input, src, 0, dim1=-1, dim2=0)
+
+    self.runAtenTest([torch.zeros(3, 3), torch.ones(3)], test_fn)
+
   def test_scatter_add_bool(self):
     xla_device = xm.xla_device()
     a = torch.tensor([[True, True, True, True, True],
