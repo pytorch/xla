@@ -376,7 +376,8 @@ class ComputationClient {
 
   static void RegisterPjRtPlugin(std::string name, std::string library_path);
 
-  static std::unordered_map<std::string, std::string>& GetPjRtPlugins();
+  static std::optional<std::string> GetPjRtPluginPath(
+      const std::string& device_type);
 
  protected:
   static constexpr auto spmd_device_str = "SPMD:0";

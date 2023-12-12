@@ -61,9 +61,11 @@ void ComputationClient::RegisterPjRtPlugin(std::string name,
   pjrt_plugins_[name] = library_path;
 }
 
-std::unordered_map<std::string, std::string>&
-ComputationClient::GetPjRtPlugins() {
-  return pjrt_plugins_;
+std::optional<std::string> ComputationClient::GetPjRtPluginPath(
+    const std::string& device_type) {
+  auto plugin_path = pjrt_plugins_.find(device_type);
+  return plugin_path != pjrt_plugins_.end() ? std::optional(plugin_path->second)
+                                            : std::nullopt;
 }
 
 metrics::Metric* ComputationClient::TransferToServerMetric() {
