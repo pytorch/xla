@@ -265,12 +265,11 @@ class XlaHelpers {
   static std::pair<xla::XlaOp, xla::XlaOp> PromoteSecondValue(xla::XlaOp op1,
                                                               xla::XlaOp op2);
 
-  // Eventually performs a broadcast to make sure the shapes of the returned
-  // xla::XlaOp values have the same shape. The first returned xla::XlaOp is op1
-  // or a broadcast of it, and the second returned xla::XlaOp is either op2 or a
-  // broadcast ot it.
-  static std::pair<xla::XlaOp, xla::XlaOp> PromoteShapes(xla::XlaOp op1,
-                                                         xla::XlaOp op2);
+  // Validates the shapes of xla::XlaOp values: Ignore fp-precison if the shapes
+  // of op1 and op2 have same dimensions, otherwise the element-types must
+  // exactly match.
+  static std::pair<xla::XlaOp, xla::XlaOp> ValidateShapes(xla::XlaOp op1,
+                                                          xla::XlaOp op2);
 
   // Combines PromoteValues() and PromoteShapes() returning two operations which
   // match in shape and types.
@@ -300,6 +299,11 @@ class XlaHelpers {
   static xla::XlaOp ImplicitBroadcast(xla::XlaOp op, const xla::Shape& op_shape,
                                       const xla::Shape& shape);
 
+  // Retuns the explicit broadcasting specifications on operations between
+  // arrays of different ranks.
+  static std::vector<int64_t> getBroadcastDimensions(xla::XlaOp op1,
+                                                     xla::XlaOp op2);
+
   // Performs the bin_op binary operation by promoting types and shapes of the
   // two input operands.
   static xla::XlaOp PromotedBinaryOp(
@@ -308,23 +312,27 @@ class XlaHelpers {
 
   // Basic promoted binary operation implementation follow.
   static xla::XlaOp PromotedAdd(xla::XlaOp op1, xla::XlaOp op2) {
-    return PromotedBinaryOp(
-        op1, op2, [](xla::XlaOp op1, xla::XlaOp op2) { return op1 + op2; });
+    return PromotedBinaryOp(op1, op2, [](xla::XlaOp op1, xla::XlaOp op2) {
+      return xla::Add(op1, op2, getBroadcastDimensions(op1, op2));
+    });
   }
 
   static xla::XlaOp PromotedSub(xla::XlaOp op1, xla::XlaOp op2) {
-    return PromotedBinaryOp(
-        op1, op2, [](xla::XlaOp op1, xla::XlaOp op2) { return op1 - op2; });
+    return PromotedBinaryOp(op1, op2, [](xla::XlaOp op1, xla::XlaOp op2) {
+      return xla::Sub(op1, op2, getBroadcastDimensions(op1, op2));
+    });
   }
 
   static xla::XlaOp PromotedMul(xla::XlaOp op1, xla::XlaOp op2) {
-    return PromotedBinaryOp(
-        op1, op2, [](xla::XlaOp op1, xla::XlaOp op2) { return op1 * op2; });
+    return PromotedBinaryOp(op1, op2, [](xla::XlaOp op1, xla::XlaOp op2) {
+      return xla::Mul(op1, op2, getBroadcastDimensions(op1, op2));
+    });
   }
 
   static xla::XlaOp PromotedDiv(xla::XlaOp op1, xla::XlaOp op2) {
-    return PromotedBinaryOp(
-        op1, op2, [](xla::XlaOp op1, xla::XlaOp op2) { return op1 / op2; });
+    return PromotedBinaryOp(op1, op2, [](xla::XlaOp op1, xla::XlaOp op2) {
+      return xla::Div(op1, op2, getBroadcastDimensions(op1, op2));
+    });
   }
 
   static xla::XlaOp PromotedLogicalBinaryOp(

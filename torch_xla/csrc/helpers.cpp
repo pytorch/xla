@@ -534,6 +534,21 @@ xla::Shape XlaHelpers::GetPromotedShape(const xla::Shape& shape1,
           runtime::util::ToVector<int64_t>(shape2.dimensions())));
 }
 
+std::vector<int64_t> XlaHelpers::getBroadcastDimensions(xla::XlaOp op1,
+                                                        xla::XlaOp op2) {
+  const xla::Shape& shape1 = ShapeHelper::ShapeOfXlaOp(op1);
+  const xla::Shape& shape2 = ShapeHelper::ShapeOfXlaOp(op2);
+  if (shape1.rank() == 0 || shape2.rank() == 0 ||
+      shape1.rank() == shape2.rank())
+    return {};
+
+  std::vector<int64_t> broadcast_dimensions(
+      shape1.rank() <= shape2.rank() ? shape1.rank() : shape2.rank());
+  std::iota(broadcast_dimensions.begin(), broadcast_dimensions.end(),
+            std::abs(shape1.rank() - shape2.rank()));
+  return broadcast_dimensions;
+}
+
 xla::Shape XlaHelpers::GetPromotedBinaryOpShape(const xla::Shape& shape1,
                                                 const xla::Shape& shape2) {
   if (!shape1.is_dynamic() && !shape2.is_dynamic()) {
@@ -612,8 +627,8 @@ xla::Shape XlaHelpers::GetPromotedDynamicShape(const xla::Shape& shape1,
   return promoted_shape;
 }
 
-std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteShapes(xla::XlaOp op1,
-                                                            xla::XlaOp op2) {
+std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::ValidateShapes(xla::XlaOp op1,
+                                                             xla::XlaOp op2) {
   const xla::Shape& shape1 = ShapeHelper::ShapeOfXlaOp(op1);
   const xla::Shape& shape2 = ShapeHelper::ShapeOfXlaOp(op2);
   if (xla::ShapeUtil::Compatible(shape1, shape2)) {
@@ -623,22 +638,19 @@ std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteShapes(xla::XlaOp op1,
   XLA_CHECK(xla::ShapeUtil::SameElementType(shape1, shape2))
       << shape1 << " and " << shape2;
 
-  xla::Shape shape = GetPromotedShape(shape1, shape2);
-  return std::pair<xla::XlaOp, xla::XlaOp>(
-      ImplicitBroadcast(op1, shape1, shape),
-      ImplicitBroadcast(op2, shape2, shape));
+  return std::pair<xla::XlaOp, xla::XlaOp>(op1, op2);
 }
 
 std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::Promote(xla::XlaOp op1,
                                                       xla::XlaOp op2) {
   std::pair<xla::XlaOp, xla::XlaOp> vops = PromoteValues(op1, op2);
-  return PromoteShapes(vops.first, vops.second);
+  return ValidateShapes(vops.first, vops.second);
 }
 
 std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteSecond(xla::XlaOp op1,
                                                             xla::XlaOp op2) {
   std::pair<xla::XlaOp, xla::XlaOp> vops = PromoteSecondValue(op1, op2);
-  return PromoteShapes(vops.first, vops.second);
+  return ValidateShapes(vops.first, vops.second);
 }
 
 xla::XlaOp XlaHelpers::ImplicitBroadcast(xla::XlaOp op,

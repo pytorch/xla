@@ -232,7 +232,9 @@ xla::Shape Atan2OutputShape(const torch::lazy::Value& input,
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     auto promoted = XlaHelpers::Promote(operands[0], operands[1]);
-    return xla::Atan2(promoted.first, promoted.second);
+    return xla::Atan2(
+        promoted.first, promoted.second,
+        XlaHelpers::getBroadcastDimensions(promoted.first, promoted.second));
   };
   return InferOutputShape({GetXlaShape(input), GetXlaShape(other)},
                           lower_for_shape_fn);
@@ -302,8 +304,9 @@ xla::Shape BinaryCrossEntropyBackwardOutputShape(
 
 xla::Shape BitwiseAndTensorOutputShape(const torch::lazy::Value& input,
                                        const torch::lazy::Value& other) {
-  return InferBinaryOpShape(
-      input, other, [](xla::XlaOp one, xla::XlaOp two) { return one & two; });
+  return InferBinaryOpShape(input, other, [](xla::XlaOp one, xla::XlaOp two) {
+    return xla::And(one, two, XlaHelpers::getBroadcastDimensions(one, two));
+  });
 }
 
 xla::Shape BitwiseNotOutputShape(const torch::lazy::Value& input) {
@@ -312,14 +315,16 @@ xla::Shape BitwiseNotOutputShape(const torch::lazy::Value& input) {
 
 xla::Shape BitwiseOrTensorOutputShape(const torch::lazy::Value& input,
                                       const torch::lazy::Value& other) {
-  return InferBinaryOpShape(
-      input, other, [](xla::XlaOp one, xla::XlaOp two) { return one | two; });
+  return InferBinaryOpShape(input, other, [](xla::XlaOp one, xla::XlaOp two) {
+    return xla::Or(one, two, XlaHelpers::getBroadcastDimensions(one, two));
+  });
 }
 
 xla::Shape BitwiseXorTensorOutputShape(const torch::lazy::Value& input,
                                        const torch::lazy::Value& other) {
-  return InferBinaryOpShape(
-      input, other, [](xla::XlaOp one, xla::XlaOp two) { return one ^ two; });
+  return InferBinaryOpShape(input, other, [](xla::XlaOp one, xla::XlaOp two) {
+    return xla::Xor(one, two, XlaHelpers::getBroadcastDimensions(one, two));
+  });
 }
 
 xla::Shape CeilOutputShape(const torch::lazy::Value& input) {
@@ -346,11 +351,15 @@ xla::Shape ClampTensorOutputShape(
     xla::XlaOp res = operands[0];
     if (operands.size() > 1) {
       auto promoted = XlaHelpers::Promote(res, operands[1]);
-      res = xla::Max(promoted.first, promoted.second);
+      res = xla::Max(
+          promoted.first, promoted.second,
+          XlaHelpers::getBroadcastDimensions(promoted.first, promoted.second));
     }
     if (operands.size() > 2) {
       auto promoted = XlaHelpers::Promote(res, operands[2]);
-      res = xla::Min(promoted.first, promoted.second);
+      res = xla::Min(
+          promoted.first, promoted.second,
+          XlaHelpers::getBroadcastDimensions(promoted.first, promoted.second));
     }
     return res;
   };
@@ -592,8 +601,10 @@ xla::Shape LogicalAndOutputShape(const torch::lazy::Value& input,
                                  const torch::lazy::Value& other) {
   auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return XlaHelpers::PromotedLogicalBinaryOp(
-        operands[0], operands[1],
-        [](xla::XlaOp lhs, xla::XlaOp rhs) { return xla::And(lhs, rhs); });
+        operands[0], operands[1], [](xla::XlaOp lhs, xla::XlaOp rhs) {
+          return xla::And(lhs, rhs,
+                          XlaHelpers::getBroadcastDimensions(lhs, rhs));
+        });
   };
   return InferOutputShape({GetXlaShape(input), GetXlaShape(other)}, shape_fn);
 }
@@ -610,8 +621,10 @@ xla::Shape LogicalOrOutputShape(const torch::lazy::Value& input,
                                 const torch::lazy::Value& other) {
   auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return XlaHelpers::PromotedLogicalBinaryOp(
-        operands[0], operands[1],
-        [](xla::XlaOp lhs, xla::XlaOp rhs) { return xla::Or(lhs, rhs); });
+        operands[0], operands[1], [](xla::XlaOp lhs, xla::XlaOp rhs) {
+          return xla::Or(lhs, rhs,
+                         XlaHelpers::getBroadcastDimensions(lhs, rhs));
+        });
   };
   return InferOutputShape({GetXlaShape(input), GetXlaShape(other)}, shape_fn);
 }
@@ -620,8 +633,10 @@ xla::Shape LogicalXorOutputShape(const torch::lazy::Value& input,
                                  const torch::lazy::Value& other) {
   auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return XlaHelpers::PromotedLogicalBinaryOp(
-        operands[0], operands[1],
-        [](xla::XlaOp lhs, xla::XlaOp rhs) { return xla::Xor(lhs, rhs); });
+        operands[0], operands[1], [](xla::XlaOp lhs, xla::XlaOp rhs) {
+          return xla::Xor(lhs, rhs,
+                          XlaHelpers::getBroadcastDimensions(lhs, rhs));
+        });
   };
   return InferOutputShape({GetXlaShape(input), GetXlaShape(other)}, shape_fn);
 }
@@ -660,7 +675,9 @@ xla::Shape MaximumOutputShape(const torch::lazy::Value& input,
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     auto promoted = XlaHelpers::Promote(operands[0], operands[1]);
-    return xla::Max(promoted.first, promoted.second);
+    return xla::Max(
+        promoted.first, promoted.second,
+        XlaHelpers::getBroadcastDimensions(promoted.first, promoted.second));
   };
   return InferOutputShape({GetXlaShape(input), GetXlaShape(other)},
                           lower_for_shape_fn);
@@ -671,7 +688,9 @@ xla::Shape MinimumOutputShape(const torch::lazy::Value& input,
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     auto promoted = XlaHelpers::Promote(operands[0], operands[1]);
-    return xla::Max(promoted.first, promoted.second);
+    return xla::Max(
+        promoted.first, promoted.second,
+        XlaHelpers::getBroadcastDimensions(promoted.first, promoted.second));
   };
   return InferOutputShape({GetXlaShape(input), GetXlaShape(other)},
                           lower_for_shape_fn);

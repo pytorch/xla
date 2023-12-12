@@ -55,14 +55,19 @@ namespace torch_xla {
                             const torch::lazy::Value& input1) {                \
     auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp { \
       auto promoted = XlaHelpers::Promote(operands[0], operands[1]);           \
-      return xla_fn(promoted.first, promoted.second);                          \
+      return xla_fn(promoted.first, promoted.second,                           \
+                    XlaHelpers::getBroadcastDimensions(promoted.first,         \
+                                                       promoted.second));      \
     };                                                                         \
     auto lower_fn = [](const XlaNode& node,                                    \
                        LoweringContext* loctx) -> XlaOpVector {                \
       xla::XlaOp xla_input0 = loctx->GetOutputOp(node.operand(0));             \
       xla::XlaOp xla_input1 = loctx->GetOutputOp(node.operand(1));             \
       auto promoted = XlaHelpers::Promote(xla_input0, xla_input1);             \
-      return node.ReturnOp(xla_fn(promoted.first, promoted.second), loctx);    \
+      return node.ReturnOp(xla_fn(promoted.first, promoted.second,             \
+                                  XlaHelpers::getBroadcastDimensions(          \
+                                      promoted.first, promoted.second)),       \
+                           loctx);                                             \
     };                                                                         \
     return GenericOp(                                                          \
         torch::lazy::OpKind(sym), {input0, input1},                            \
@@ -408,7 +413,7 @@ torch::lazy::NodePtr Where(const torch::lazy::Value& condition,
     xla::XlaOp pred_condition =
         ConvertTo(xla_condition, XlaHelpers::TypeOfXlaOp(xla_condition),
                   xla::PrimitiveType::PRED, /*device=*/nullptr);
-    auto promoted_branches = XlaHelpers::PromoteShapes(xla_input, xla_other);
+    auto promoted_branches = XlaHelpers::ValidateShapes(xla_input, xla_other);
     return node.ReturnOp(xla::Select(pred_condition, promoted_branches.first,
                                      promoted_branches.second),
                          loctx);
