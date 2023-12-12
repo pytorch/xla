@@ -260,7 +260,7 @@ torch::lazy::Value XLAGraphExecutor::GetDeviceDataIrValue(
 }
 
 torch::lazy::Value XLAGraphExecutor::GetIrValueForConstant(
-    const at::Scalar& value, const xla::Shape& shape) {
+    const at::Scalar& value) {
   torch::lazy::Value ir_value =
       ScalarOp(std::move(value), XlaTypeFromTorchType(value.type()));
   return ir_value;

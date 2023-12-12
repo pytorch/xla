@@ -2128,7 +2128,7 @@ XLATensorPtr pow(const XLATensorPtr& input, const at::Scalar& exponent) {
   // We want to pass exponent_node as a constant to give XLA more room to
   // optimize
   torch::lazy::Value exponent_node =
-      XLAGraphExecutor::Get()->GetIrValueForConstant(exponent, input->shape());
+      XLAGraphExecutor::Get()->GetIrValueForConstant(exponent);
   torch::lazy::NodePtr node = Pow(input->GetIrValue(), exponent_node);
   auto* xla_node = dynamic_cast<XlaNode*>(node.get());
   at::ScalarType dtype =
