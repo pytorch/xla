@@ -349,7 +349,9 @@ xla::XlaOp BuildConvolutionOverrideableBias(
       xla::Transpose(xla::Broadcast(bias, broadcast_sizes),
                      BiasTransposePermutation(broadcast_sizes.size() + 1));
   auto promoted = XlaHelpers::Promote(conv, bias_broadcast);
-  return promoted.first + promoted.second;
+  return xla::Add(
+      promoted.first, promoted.second,
+      XlaHelpers::getBroadcastDimensions(promoted.first, promoted.second));
 }
 
 ConvGrads BuildConvolutionBackwardOverrideable(

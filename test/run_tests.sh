@@ -199,6 +199,7 @@ function run_xla_op_tests3 {
   #     CI with tf.
   run_xla_hlo_debug "$CDIR/stablehlo/test_stablehlo_inference.py"
   run_stablehlo_compile "$CDIR/stablehlo/test_stablehlo_compile.py"
+  run_stablehlo_compile "$CDIR/stablehlo/test_implicit_broadcasting.py"
   run_test "$CDIR/spmd/test_xla_sharding.py"
   run_test "$CDIR/spmd/test_xla_sharding_hlo.py"
   run_test "$CDIR/spmd/test_xla_virtual_device.py"
