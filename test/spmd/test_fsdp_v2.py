@@ -19,11 +19,6 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     xr.use_spmd()
     super().setUpClass()
 
-  def _print_children_name(self, m):
-    for name, child in m.named_children():
-      print(name)
-      self._print_children_name(child)
-
   def test_fsdp_v2(self):
     model = self.SimpleLinear().to(xm.xla_device())
     mesh = self._get_mesh((self.n_devices, 1), None, ('fsdp', 'tensor'))
@@ -43,9 +38,6 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     optimizer.step()
 
     xm.mark_step()
-
-
-    self._print_children_name(model)
 
 
 if __name__ == '__main__':
