@@ -27,7 +27,7 @@ ComputationClient* GetComputationClient() {
 
     XLA_CHECK(client);
 
-    g_computation_client_initialized.exchange(true);
+    g_computation_client_initialized = true;
     return client;
   }();
 
