@@ -125,7 +125,7 @@ class ProfilerTest(unittest.TestCase):
     p.start()
     training_started.wait(60)
     # Delay to allow the profile to capture
-    time.sleep(5)
+    time.sleep(10)
     p.terminate()
     path = self._check_xspace_pb_exist(logdir)
     self._check_trace_namespace_exists(path)
