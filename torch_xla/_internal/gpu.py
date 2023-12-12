@@ -15,4 +15,4 @@ def num_local_processes() -> int:
 
 
 def initialize_env(local_world_size: int):
-  os.environ[xenv.LOCAL_WORLD_SIZE] = local_world_size
+  os.environ[xenv.LOCAL_WORLD_SIZE] = str(local_world_size)
