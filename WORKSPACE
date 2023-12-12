@@ -16,6 +16,14 @@ http_archive(
     urls = ["https://github.com/pybind/pybind11/archive/442261da585536521ff459b1457b2904895f23b4.tar.gz"],
 )
 
+http_archive(
+    name = "com_nlohmann_json",
+    build_file = "//bazel:nlohmann_json.BUILD",
+    sha256 = "d69f9deb6a75e2580465c6c4c5111b89c4dc2fa94e3a85fcd2ffcd9a143d9273",
+    strip_prefix = "json-3.11.2",
+    url = "https://github.com/nlohmann/json/archive/refs/tags/v3.11.2.tar.gz",
+)
+
 load("@pybind11_bazel//:python_configure.bzl", "python_configure")
 
 # This is required for setting up the linkopts for -lpython.q

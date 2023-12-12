@@ -267,12 +267,25 @@ cc_library(
 )
 
 cc_library(
+    name = "stablehlo_composite_helper",
+    srcs = ["stablehlo_composite_helper.cc"],
+    hdrs = ["stablehlo_composite_helper.h"],
+    deps = [
+        ":types",
+        ":xla_util",
+        "@com_nlohmann_json//:json",
+        "@xla//xla/mlir_hlo:all_passes",
+    ],
+)
+
+cc_library(
     name = "stablehlo_helper",
     srcs = ["stablehlo_helper.cc"],
     hdrs = ["stablehlo_helper.h"],
     deps = [
         ":types",
         ":xla_util",
+        ":stablehlo_composite_helper",
         "@stablehlo//:stablehlo_portable_api",
         "@stablehlo//:stablehlo_serialization",
         "@xla//xla/translate/hlo_to_mhlo:hlo_to_mlir_hlo",

@@ -740,6 +740,12 @@ void MapXlaEnvVarsToLazy() {
       runtime::sys_util::GetEnvInt("XLA_TRIM_GRAPH_SIZE", 100000);
 }
 
+at::Tensor MarkTensor(const at::Tensor& input, const std::string& info) {
+  XLATensorPtr result =
+      tensor_methods::mark_tensor(bridge::GetXlaTensor(input), info);
+  return bridge::AtenFromXlaTensor(std::move(result));
+}
+
 std::string GetPyTypeString(py::handle obj) {
   std::string type = obj.attr("__class__").attr("__name__").cast<std::string>();
   return type;
@@ -2172,7 +2178,16 @@ void InitXlaModuleBindings(py::module m) {
           }
           return handles;
         });
-
+  m.def("_xla_mark_tensor",
+        [](const at::Tensor& input, const std::string& info) {
+          TORCH_LAZY_COUNTER("XlaMarkTensor", 1);
+          at::Tensor result;
+          {
+            NoGilSection nogil;
+            result = MarkTensor(input, info);
+          }
+          return result;
+        });
   m.def("_xla_mark_dynamic", [](const at::Tensor& input, uint32_t dim) {
     TORCH_LAZY_COUNTER("XlaMarkDynamic", 1);
     XLATensorPtr xtensor = bridge::GetXlaTensor(input);
