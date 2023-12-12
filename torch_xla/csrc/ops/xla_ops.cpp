@@ -15,6 +15,7 @@ const OpKindWrapper xla_diagonal_view_update("xla::diagonal_view_update");
 const OpKindWrapper xla_einsum_backward("xla::einsum_backward");
 const OpKindWrapper xla_generic_slice("xla::generic_slice");
 const OpKindWrapper xla_get_dimensions_size("xla::xla_get_dimensions_size");
+const OpKindWrapper xla_mark_tensor("xla::mark_tensor");
 const OpKindWrapper xla_moving_average("xla::moving_average");
 const OpKindWrapper xla_nms("xla::nms");
 const OpKindWrapper xla_not_supported("xla::not_supported");
