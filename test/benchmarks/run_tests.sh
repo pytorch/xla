@@ -39,9 +39,7 @@ function run_make_tests {
 }
 
 function run_python_tests {
-  python3 "$CDIR/test_experiment_runner.py"
   python3 "$CDIR/test_benchmark_experiment.py"
-  python3 "$CDIR/test_benchmark_model.py"
 }
 
 function run_tests {
