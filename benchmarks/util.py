@@ -14,6 +14,12 @@ from torch_xla._internal import tpu
 logger = logging.getLogger(__name__)
 
 
+def parse_none_str(a: str):
+  if isinstance(a, str) and a.upper() == "None".upper():
+    return None
+  return a
+
+
 @functools.lru_cache(None)
 def patch_torch_manual_seed():
   """Make torch manual seed deterministic. Helps with accuracy testing."""
