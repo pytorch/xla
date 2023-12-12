@@ -553,7 +553,8 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
     A tensor which has, in the ``dim`` dimension, all the values from the
     participating replicas.
   """
-  if pin_layout and (output == None or xla_device_hw(value.device) == 'NEURON'):
+  # _all_gather_using_all_reduce does not support list of tensors as input
+  if pin_layout and output == None and isinstance(value, torch.Tensor):
     # There is not an easy way to pin the all_gather layout on TPU, GPU and NEURON,
     # use all_reduce based all_gather for this purpose.
     return _all_gather_using_all_reduce(
@@ -587,6 +588,25 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
   # Now the input should be a list of Tensors.
   elif isinstance(value, list) and all(
       isinstance(v, torch.Tensor) for v in value):
+    if pin_layout:
+      raise RuntimeError(
+          "For xm.all_gather with list of tensors input, pin_layout=True is not yet supported."
+      )
+    if output != None:
+      if not isinstance(output, list) or any(
+          not isinstance(v, torch.Tensor) for v in output):
+        raise TypeError(
+            f"`output` needs to be a list of Tensors, but given {type(output)}."
+        )
+      if len(output) != len(value):
+        raise ValueError("`output` length doesn't match `input` length: "
+                         f"{len(output)} vs {len(input)}.")
+      # Call the out of place version of the reduce_scatter
+      new_token = torch_xla._XLAC._xla_all_gather_coalesced_out(
+          output, value, token, dim, shard_count, groups or [], pin_layout)
+      torch_xla._XLAC._set_all_reduce_token(devctx.device, new_token)
+      return output
+
     result = torch_xla._XLAC._xla_all_gather_coalesced(value, token, dim,
                                                        shard_count, groups or
                                                        [], pin_layout)
