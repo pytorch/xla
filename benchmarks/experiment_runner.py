@@ -425,11 +425,33 @@ def parse_args(args=None):
       help="filter out benchmarks by predefined tier 1-3",
   )
 
+  def parse_log_level(level: str):
+    level = level.lower()
+    if level == "critical":
+      return logging.CRITICAL
+    elif level == "error":
+      return logging.ERROR
+    elif level == "warning":
+      return logging.WARNING
+    elif level == "info":
+      return logging.INFO
+    elif level == "debug":
+      return logging.DEBUG
+    else:
+      raise NotImplementedError
+
   parser.add_argument(
       "--log-level",
-      default="warning",
-      choices=["info", "warning"],
-      help="Specify the logging level.",
+      default="info",
+      choices=[
+          logging.CRITICAL,
+          logging.ERROR,
+          logging.WARNING,
+          logging.INFO,
+          logging.DEBUG,
+      ],
+      type=parse_log_level,
+      help="Specify log level.",
   )
 
   parser.add_argument(
@@ -613,13 +635,7 @@ def main():
   args.filter = args.filter or [r"."]
   args.exclude = args.exclude or [r"^$"]
 
-  if args.log_level == "info":
-    log_level = logging.INFO
-  elif args.log_level == "warning":
-    log_level = logging.WARNING
-  else:
-    log_level = None
-  logging.basicConfig(level=log_level, force=True)
+  logging.basicConfig(level=args.log_level, force=True)
 
   logger.info(args)
 
