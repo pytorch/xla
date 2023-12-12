@@ -5,7 +5,6 @@ import csv
 import io
 import json
 import logging
-import numpy as np
 import os
 import subprocess
 import sys
@@ -14,25 +13,13 @@ import torch
 import tiers
 import torch_xla.debug.metrics as met
 from tqdm import tqdm
-from torch.profiler import profile, record_function, ProfilerActivity
+from torch.profiler import profile, ProfilerActivity
 from torch.autograd import DeviceType
-
-try:
-  from .benchmark_model import ModelLoader
-  from .torchbench_model import TorchBenchModelLoader
-  from .benchmark_experiment import ExperimentLoader
-  from .util import patch_torch_manual_seed, reset_rng_state, move_to_device, randomize_input
-except ImportError:
-  from benchmark_model import ModelLoader
-  from torchbench_model import TorchBenchModelLoader
-  from benchmark_experiment import ExperimentLoader
-  from util import patch_torch_manual_seed, reset_rng_state, move_to_device, randomize_input
-
-try:
-  import torch_xla.core.xla_model as xm
-except ImportError:
-  # ignore the error if torch_xla is not installed
-  pass
+from benchmark_model import ModelLoader
+from torchbench_model import TorchBenchModelLoader
+from benchmark_experiment import ExperimentLoader
+from util import reset_rng_state, move_to_device, randomize_input
+import torch_xla.core.xla_model as xm
 
 logger = logging.getLogger(__name__)
 
