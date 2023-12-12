@@ -123,11 +123,10 @@ InitializePjRt(const std::string& device_type) {
     client = std::move(xla::GetCApiClient("NEURON").value());
   } else {
     std::optional<std::string> plugin_path =
-        ComputationClient::GetPjRtPluginPath(
-            absl::AsciiStrToLower(device_type));
+        ComputationClient::GetPjRtPluginPath(device_type);
     if (plugin_path) {
       TF_VLOG(1) << "Initializing client for PjRt plugin " << device_type;
-      XLA_CHECK_OK(pjrt::LoadPjrtPlugin(device_type, *plugin_path).status());
+      XLA_CHECK_OK(pjrt::LoadPjrtPlugin(absl::AsciiStrToLower(device_type), *plugin_path).status());
       tsl::Status init_status = pjrt::InitializePjrtPlugin(device_type);
       XLA_CHECK_OK(init_status);
       client_ = std::move(
