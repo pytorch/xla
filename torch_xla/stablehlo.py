@@ -279,6 +279,16 @@ def _exported_program_to_stablehlo_bundle(exported_model,
                                     exported_model.state_dict)
   param_buffer_values = (state_dict[key] for key in param_and_buffer_keys)
 
+  if hasattr(exported_model.graph_signature, "lifted_tensor_constants"):
+    ordered_tensor_constants = tuple(
+        exported_model.tensor_constants[name]
+        for name in exported_model.graph_signature.lifted_tensor_constants)
+  else:
+    ordered_tensor_constants = ()
+
+  ordered_tensor_constants = pytree.tree_map_only(torch.Tensor,
+                                                  lambda x: x.to(device=device),
+                                                  ordered_tensor_constants)
   num_mutations = len(exported_model.graph_signature.buffers_to_mutate)
 
   xm.mark_step()
@@ -289,7 +299,10 @@ def _exported_program_to_stablehlo_bundle(exported_model,
   # Run the fx graph tracing using lazy tensor
   with torch.no_grad():
     res = XLAExportInterpreter(exported_model.graph_module, device).run(
-        *param_buffer_values, *input_args, enable_io_processing=False)
+        *param_buffer_values,
+        *input_args,
+        *ordered_tensor_constants,
+        enable_io_processing=False)
     res = res[num_mutations:]
 
   # If there are any fallback ops, this means that in torch/XLA side,
