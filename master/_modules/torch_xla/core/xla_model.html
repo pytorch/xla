@@ -225,7 +225,7 @@
               
               
                 <div class="version">
-                  master (2.2.0+git6ae66f7 )
+                  master (2.2.0+gite3012bf )
                 </div>
               
             
@@ -883,7 +883,8 @@
 <span class="sd">    A tensor which has, in the ``dim`` dimension, all the values from the</span>
 <span class="sd">    participating replicas.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
-  <span class="k">if</span> <span class="n">pin_layout</span> <span class="ow">and</span> <span class="p">(</span><span class="n">output</span> <span class="o">==</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">xla_device_hw</span><span class="p">(</span><span class="n">value</span><span class="o">.</span><span class="n">device</span><span class="p">)</span> <span class="o">==</span> <span class="s1">&#39;NEURON&#39;</span><span class="p">):</span>
+  <span class="c1"># _all_gather_using_all_reduce does not support list of tensors as input</span>
+  <span class="k">if</span> <span class="n">pin_layout</span> <span class="ow">and</span> <span class="n">output</span> <span class="o">==</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
     <span class="c1"># There is not an easy way to pin the all_gather layout on TPU, GPU and NEURON,</span>
     <span class="c1"># use all_reduce based all_gather for this purpose.</span>
     <span class="k">return</span> <span class="n">_all_gather_using_all_reduce</span><span class="p">(</span>
@@ -917,6 +918,25 @@
   <span class="c1"># Now the input should be a list of Tensors.</span>
   <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">all</span><span class="p">(</span>
       <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">value</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">pin_layout</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+          <span class="s2">&quot;For xm.all_gather with list of tensors input, pin_layout=True is not yet supported.&quot;</span>
+      <span class="p">)</span>
+    <span class="k">if</span> <span class="n">output</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">:</span>
+      <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">any</span><span class="p">(</span>
+          <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">output</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;`output` needs to be a list of Tensors, but given </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">output</span><span class="p">)</span><span class="si">}</span><span class="s2">.&quot;</span>
+        <span class="p">)</span>
+      <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">output</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;`output` length doesn&#39;t match `input` length: &quot;</span>
+                         <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">output</span><span class="p">)</span><span class="si">}</span><span class="s2"> vs </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="nb">input</span><span class="p">)</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+      <span class="c1"># Call the out of place version of the reduce_scatter</span>
+      <span class="n">new_token</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_all_gather_coalesced_out</span><span class="p">(</span>
+          <span class="n">output</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">dim</span><span class="p">,</span> <span class="n">shard_count</span><span class="p">,</span> <span class="n">groups</span> <span class="ow">or</span> <span class="p">[],</span> <span class="n">pin_layout</span><span class="p">)</span>
+      <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_set_all_reduce_token</span><span class="p">(</span><span class="n">devctx</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">new_token</span><span class="p">)</span>
+      <span class="k">return</span> <span class="n">output</span>
+
     <span class="n">result</span> <span class="o">=</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_all_gather_coalesced</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">token</span><span class="p">,</span> <span class="n">dim</span><span class="p">,</span>
                                                        <span class="n">shard_count</span><span class="p">,</span> <span class="n">groups</span> <span class="ow">or</span>
                                                        <span class="p">[],</span> <span class="n">pin_layout</span><span class="p">)</span>
