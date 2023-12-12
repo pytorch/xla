@@ -75,10 +75,9 @@ class ExperimentRunner:
             jsonlines = f.read().splitlines()
           for jsonline in jsonlines:
             tmp = json.loads(jsonline)
-            if self._args.experiment_name == "run_all":
-              # the finished experiment batch_size may be altered by model set_up(),
-              # so the dummy experiment will not match it
-              tmp["experiment"]["batch_size"] = self._args.batch_size
+            # the finished experiment batch_size may be altered by model set_up(),
+            # so the dummy experiment will not match it
+            tmp["experiment"]["batch_size"] = self._args.batch_size
             finished_experiments.add("-".join(
                 str(item) for item in (list(tmp["model"].values()) +
                                        list(tmp["experiment"].values()))))
@@ -431,13 +430,6 @@ def parse_args(args=None):
       default="warning",
       choices=["info", "warning"],
       help="Specify the logging level.",
-  )
-
-  parser.add_argument(
-      "--experiment-name",
-      default="run_all",
-      choices=["run_all"],
-      help="Experiment name to run.",
   )
 
   parser.add_argument(

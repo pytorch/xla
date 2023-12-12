@@ -4,7 +4,6 @@
     "model_name": "DALLE2_pytorch"
   },
   "experiment": {
-    "experiment_name": "run_all",
     "accelerator": "cuda",
     "accelerator_model": "One of NVIDIA GeForce RTX 2060, NVIDIA GeForce RTX 2060",
     "xla": "PJRT",
@@ -100,7 +99,9 @@
       0.05571739934384823,
       0.058703068643808365
     ],
-    "single_value": [1]
+    "single_value": [
+      1
+    ]
   },
   "outputs_file": null
 }
