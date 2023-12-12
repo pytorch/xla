@@ -1,4 +1,7 @@
+import os
+
 import torch_xla
+import torch_xla.core.xla_env_vars as xenv
 import torch_xla.runtime as xr
 
 class DevicePlugin:
@@ -42,6 +45,14 @@ class DevicePlugin:
 
 
 _plugin_registry = {}
+
+def use_dynamic_plugins():
+  if torch_xla._XLAC._xla_runtime_is_initialized() and os.environ.get(
+      xenv.PJRT_DEVICE) != "1":
+    raise RuntimeError(
+        "Can't enable dynamic plugins after XLA runtime is initialized")
+
+  os.environ[xenv.PJRT_DYNAMIC_PLUGINS] = "1"
 
 def default() -> DevicePlugin:
   return _plugin_registry[xr.device_type()]

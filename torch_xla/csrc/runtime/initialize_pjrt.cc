@@ -40,7 +40,18 @@ InitializePjRt(const std::string& device_type) {
   std::unique_ptr<xla::PjRtClient> client;
   std::unique_ptr<XlaCoordinator> coordinator;
 
-  if (device_type == "CPU") {
+  if (sys_util::GetEnvBool(env::kEnvPjrtDynamicPlugins, false)) {
+    std::optional<std::string> plugin_path =
+        ComputationClient::GetPjRtPluginPath(device_type);
+    if (plugin_path) {
+      TF_VLOG(1) << "Initializing client for PjRt plugin " << device_type;
+      XLA_CHECK_OK(pjrt::LoadPjrtPlugin(absl::AsciiStrToLower(device_type), *plugin_path).status());
+      tsl::Status init_status = pjrt::InitializePjrtPlugin(device_type);
+      XLA_CHECK_OK(init_status);
+      client_ = std::move(
+          xla::GetCApiClient(absl::AsciiStrToUpper(device_type)).value());
+    }
+  } else if (device_type == "CPU") {
     TF_VLOG(1) << "Initializing PjRt CPU client...";
     bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncCpuClient, true);
     int cpu_device_count = sys_util::GetEnvInt(env::kEnvNumCpu, 1);

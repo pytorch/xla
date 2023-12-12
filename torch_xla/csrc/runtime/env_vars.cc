@@ -23,6 +23,7 @@ const char* const kEnvPjRtLocalRank = "PJRT_LOCAL_PROCESS_RANK";
 const char* const kEnvPjrtAllocatorCudaAsync = "PJRT_ALLOCATOR_CUDA_ASYNC";
 const char* const kEnvPjrtAllocatorPreallocate = "PJRT_ALLOCATOR_PREALLOCATE";
 const char* const kEnvPjrtAllocatorFraction = "PJRT_ALLOCATOR_FRACTION";
+const char* const kEnvPjrtDynamicPlugins = "PJRT_DYNAMIC_PLUGINS";
 
 }  // namespace env
 }  // namespace runtime
