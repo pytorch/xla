@@ -199,6 +199,7 @@ cc_library(
   hdrs = ["initialize_pjrt.h"],
   deps = [
     ":debug_macros",
+    ":env_hash",
     ":env_vars",
     ":profiler",
     ":sys_util",

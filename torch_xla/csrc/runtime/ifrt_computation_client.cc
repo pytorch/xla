@@ -9,6 +9,7 @@
 #include "absl/types/span.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/env_hash.h"
 #include "torch_xla/csrc/runtime/env_vars.h"
 #include "torch_xla/csrc/runtime/initialize_pjrt.h"
 #include "torch_xla/csrc/runtime/stablehlo_helper.h"
@@ -71,6 +72,40 @@ std::unordered_map<int, int> build_index_map(
   return device_index;
 }
 
+torch::lazy::hash_t hash_comp_env(
+    std::shared_ptr<xla::ifrt::Client> client,
+    std::vector<xla::ifrt::Device*>& ordered_devices) {
+  torch::lazy::hash_t hash = hash::HashXlaEnvVars();
+  // Whether or not SPMD mode is active should influence the hash.
+  hash = torch::lazy::HashCombine(hash, UseVirtualDevice());
+  auto topology_desc = client->GetTopologyForDevices(ordered_devices);
+  if (topology_desc.ok()) {
+    // Some backends support a topology description which provides a better
+    // view of the specific compilation environment.
+    auto serialized = topology_desc.value()->Serialize();
+    if (serialized.ok()) {
+      return torch::lazy::HashCombine(
+          hash,
+          torch::lazy::DataHash(serialized->data(), serialized->length()));
+    }
+    // If serialization fails, fallthrough to the manual approach.
+  }
+  std::string platform_name(client->platform_name());
+  std::string platform_version(client->platform_version());
+  hash = torch::lazy::HashCombine(
+      hash, torch::lazy::StringHash(platform_name.c_str()));
+  // platform_version incorporates libtpu version and hardware type.
+  hash = torch::lazy::HashCombine(
+      hash, torch::lazy::StringHash(platform_version.c_str()));
+  // Include global devices in the hash, ensuring order is consistent.
+  for (auto& device : ordered_devices) {
+    std::string device_str(device->ToString());
+    hash = torch::lazy::HashCombine(
+        hash, torch::lazy::StringHash(device_str.c_str()));
+  }
+  return hash;
+}
+
 }  // namespace
 
 std::string IfrtComputationClient::IfrtDeviceToString(
@@ -113,6 +148,7 @@ IfrtComputationClient::IfrtComputationClient() {
     std::string device_str = IfrtDeviceToString(device);
     string_to_device_.emplace(device_str, device);
   }
+  comp_env_hash_ = hash_comp_env(client_, ordered_devices);
 
   auto tracked_devices = GetLocalDevices();
   tracked_devices.emplace_back(spmd_device_str);
@@ -241,7 +277,7 @@ std::optional<xla::OpSharding> IfrtComputationClient::GetDataSharding(
 
 std::vector<ComputationClient::DataPtr> IfrtComputationClient::TransferToServer(
     absl::Span<const std::shared_ptr<const TensorSource>> tensors) {
-  metrics::TimedSection timed(TransferToServerMetric());
+  auto timed = std::make_shared<metrics::TimedSection>(TransferToServerMetric());
   tsl::profiler::TraceMe activity("IfrtComputationClient::TransferToServer",
                                   tsl::profiler::TraceMeLevel::kInfo);
   std::vector<ComputationClient::DataPtr> datas;
@@ -263,7 +299,7 @@ std::vector<ComputationClient::DataPtr> IfrtComputationClient::TransferToServer(
                     ifrt_device, xla::ifrt::MemoryKind()),
                 xla::ifrt::Client::HostBufferSemantics::
                     kImmutableUntilTransferCompletes,
-                [tensor]() { /* frees tensor */ })
+                [tensor, timed]() { /* frees tensor and timer */ })
             .value();
 
     ComputationClient::DataPtr data =
