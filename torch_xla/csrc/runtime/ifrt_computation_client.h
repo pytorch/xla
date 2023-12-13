@@ -101,11 +101,27 @@ class IfrtComputationClient : public ComputationClient {
 
   bool CoordinatorInitialized() const override;
 
+  torch::lazy::hash_t HashCompilationEnv() override {
+    return comp_env_hash_;
+  }
+
   // NOT IMPLEMENTED
 
   MemoryInfo GetMemoryInfo(const std::string& device) override {
     XLA_ERROR() << __FUNCTION__ << " not implemented";
   };
+
+  std::string SerializeComputation(
+      const ComputationPtr computation) override {
+    XLA_ERROR() << __FUNCTION__ << " not implemented";
+  }
+
+  ComputationPtr DeserializeComputation(
+      const std::string& serialized) override {
+    XLA_ERROR() << __FUNCTION__ << " not implemented";
+  }
+
+
 
  private:
   std::shared_ptr<xla::ifrt::PjRtClient> client_;
@@ -118,12 +134,13 @@ class IfrtComputationClient : public ComputationClient {
   OperationManager operation_manager_;
   tsl::thread::ThreadPool pool_ = tsl::thread::ThreadPool(
       tsl::Env::Default(), "ifrt", std::thread::hardware_concurrency());
+  torch::lazy::hash_t comp_env_hash_;
 
-  xla::PjRtDevice* StringToPjRtDevice(const std::string& device);
+  xla::ifrt::Device* StringToIfrtDevice(const std::string& device);
 
-  std::string PjRtDeviceToString(xla::PjRtDevice* const device) const;
-  std::vector<std::string> PjRtDevicesToString(
-      absl::Span<xla::PjRtDevice* const> devices) const;
+  std::string IfrtDeviceToString(xla::ifrt::Device* const device) const;
+  std::vector<std::string> IfrtDevicesToString(
+      absl::Span<xla::ifrt::Device* const> devices) const;
 
   struct IfrtData : public Data {
     IfrtData(std::string device, xla::Shape device_shape)

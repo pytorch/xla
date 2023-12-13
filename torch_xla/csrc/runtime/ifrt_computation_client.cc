@@ -110,7 +110,7 @@ IfrtComputationClient::IfrtComputationClient() {
                          [](auto& a, auto& b) { return a->id() < b->id(); });
   for (auto* device : ordered_devices) {
     global_ordinals_[device->id()] = global_ordinals_.size();
-    std::string device_str = PjRtDeviceToString(device);
+    std::string device_str = IfrtDeviceToString(device);
     string_to_device_.emplace(device_str, device);
   }
 
