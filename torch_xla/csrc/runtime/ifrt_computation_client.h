@@ -101,9 +101,7 @@ class IfrtComputationClient : public ComputationClient {
 
   bool CoordinatorInitialized() const override;
 
-  torch::lazy::hash_t HashCompilationEnv() override {
-    return comp_env_hash_;
-  }
+  torch::lazy::hash_t HashCompilationEnv() override { return comp_env_hash_; }
 
   // NOT IMPLEMENTED
 
@@ -111,8 +109,7 @@ class IfrtComputationClient : public ComputationClient {
     XLA_ERROR() << __FUNCTION__ << " not implemented";
   };
 
-  std::string SerializeComputation(
-      const ComputationPtr computation) override {
+  std::string SerializeComputation(const ComputationPtr computation) override {
     XLA_ERROR() << __FUNCTION__ << " not implemented";
   }
 
@@ -120,8 +117,6 @@ class IfrtComputationClient : public ComputationClient {
       const std::string& serialized) override {
     XLA_ERROR() << __FUNCTION__ << " not implemented";
   }
-
-
 
  private:
   std::shared_ptr<xla::ifrt::PjRtClient> client_;
