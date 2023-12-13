@@ -3,17 +3,8 @@ import logging
 import os
 import torch
 import torch._dynamo as dynamo
-
-try:
-  from .util import is_xla_device_available, get_accelerator_model
-except ImportError:
-  from util import is_xla_device_available, get_accelerator_model
-
-try:
-  import torch_xla.core.xla_model as xm
-except ImportError:
-  # ignore the error if torch_xla is not installed
-  pass
+import torch_xla.core.xla_model as xm
+from util import is_xla_device_available, get_accelerator_model
 
 logger = logging.getLogger(__name__)
 
