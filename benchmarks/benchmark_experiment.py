@@ -56,66 +56,35 @@ class ExperimentLoader:
 
     experiment_configs = []
     for experiment_config in self.expand_config_choices(config_choices):
-      if not self._is_available(experiment_config):
+      if not self.is_available(experiment_config):
         continue
 
       self._add_experiment_env(experiment_config)
       experiment_configs.append(experiment_config)
     return experiment_configs
 
-  def _expand_config_choices(self, config_choices):
-    configs = [{}]
-    for k, choices in config_choices.items():
-      new_configs = []
-      for base_cfg in configs:
-        for c in choices:
-          new_cfg = base_cfg.copy()
-          new_cfg[k] = c
-          new_configs.append(new_cfg)
-      configs = new_configs
-    return configs
-
-  def _is_available(self, experiment_config):
-    cfg_dynamo = experiment_config["dynamo"]
-    cfg_accelerator = experiment_config["accelerator"]
-    cfg_xla = experiment_config["xla"]
-    cfg_test = experiment_config["test"]
-
-    # Check that dynamo refers to an existing backend.
-    if cfg_dynamo is not None and cfg_dynamo not in dynamo.list_backends(
-        exclude_tags=()):
+  def is_available(self, experiment_config):
+    if experiment_config["dynamo"] and experiment_config[
+        "dynamo"] not in dynamo.list_backends(exclude_tags=()):
       return False
-
-    # Check dynamo backend-specifics constraints.
-    if cfg_dynamo == "inductor":
-      if cfg_accelerator != "cuda" or cfg_xla is not None:
-        return False
-    elif cfg_dynamo == "openxla_eval":
-      if cfg_xla is None or cfg_test != "eval":
-        return False
-    elif cfg_dynamo == "openxla":
-      if cfg_xla is None:
-        return False
-    else:
-      raise NotImplementedError
-
-    # Check XLA device available if requested.
-    if cfg_xla is not None and not is_xla_device_available(
-        cfg_accelerator.upper()):
+    if experiment_config["dynamo"] == "inductor" and not (
+        experiment_config["accelerator"] == "cuda" and
+        not experiment_config["xla"]):
       return False
-
-    # Check accelerator contraints.
-    if cfg_accelerator == "tpu":
-      if cfg_xla is None:
-        return False
-    elif cfg_accelerator == "cuda":
-      if cfg_xla is None and not torch.cuda.is_available():
-        return False
-    elif cfg_accelerator == "cpu":
-      pass
-    else:
-      raise NotImplementedError
-
+    if experiment_config["dynamo"] == "openxla_eval" and not (
+        experiment_config["xla"] and experiment_config["test"] == "eval"):
+      return False
+    if experiment_config["dynamo"] == "openxla" and not experiment_config["xla"]:
+      return False
+    if (experiment_config["xla"] and
+        not is_xla_device_available(experiment_config["accelerator"].upper())):
+      return False
+    if (experiment_config["accelerator"] == "tpu" and
+        not experiment_config["xla"]):
+      return False
+    if (experiment_config["accelerator"] == "cuda" and
+        not experiment_config["xla"] and not is_xla_device_available("CUDA")):
+      return False
     return True
 
   def _add_experiment_env(self, experiment_config):
