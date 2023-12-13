@@ -207,7 +207,7 @@ def pr_latest(results_map: Dict[str, Any], args, timestamps: List[str]):
       if label in acc_map:
         speedups[i], model_names[i] = map(
             list, zip(*sorted(zip(acc_map[label], acc_map[model_label]))))
-        speedups[i] = map(pr_round, speedups[i])
+        speedups[i] = list(map(pr_round, speedups[i]))
         speedup_timestamps[i] = timestamp
         break
   if not speedups[0] or not speedups[1]:
