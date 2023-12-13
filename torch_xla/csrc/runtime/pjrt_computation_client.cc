@@ -62,8 +62,7 @@ xla::Shape host_output_shape(xla::PjRtBuffer* buffer) {
 }
 
 torch::lazy::hash_t hash_comp_env(
-    xla::PjRtClient* client,
-    std::vector<xla::PjRtDevice*>& ordered_devices) {
+    xla::PjRtClient* client, std::vector<xla::PjRtDevice*>& ordered_devices) {
   torch::lazy::hash_t hash = hash::HashXlaEnvVars();
   auto topology_desc = client->GetTopologyDescription();
   if (topology_desc.ok()) {
