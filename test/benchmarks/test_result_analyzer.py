@@ -27,7 +27,7 @@ def get_dirname():
 @functools.cache
 def get_dataline():
   import json
-  example_json = os.path.join(get_dirname(), "example.json")
+  example_json = os.path.join(get_dirname(), "output-example.json")
   with open(example_json, "r") as f:
     return json.load(f)
 
