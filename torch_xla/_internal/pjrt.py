@@ -109,12 +109,14 @@ def initialize_multiprocess(local_rank: int, local_world_size: int):
   os.environ.setdefault(xenv.PJRT_LOCAL_PROCESS_RANK, str(local_rank))
   os.environ.setdefault(xenv.PJRT_LOCAL_PROCESS_COUNT, str(local_world_size))
 
+  assert not torch_xla._XLAC._xla_runtime_is_initialized()
   if runtime.device_type() == 'TPU':
     tpu.configure_topology(local_rank, local_world_size)
   elif runtime.device_type() == 'GPU':
     gpu.initialize_env(local_world_size)
   elif runtime.device_type() == 'NEURON':
     neuron.initialize_env(local_rank)
+  assert not torch_xla._XLAC._xla_runtime_is_initialized()
 
   devices = xm.get_xla_supported_devices()
   xm.set_replication(xm.xla_device(), devices)
