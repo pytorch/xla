@@ -33,15 +33,25 @@ torch::lazy::Value reduce_scatter_out(XLATensorPtr& output,
                                       std::vector<std::vector<int64_t>> groups,
                                       bool pin_layout);
 
+std::pair<std::vector<XLATensorPtr>, torch::lazy::Value>
+reduce_scatter_coalesced(const std::vector<XLATensorPtr>& inputs,
+                         const torch::lazy::Value& token,
+                         AllReduceType reduce_type, double scale,
+                         int64_t scatter_dim, int64_t shard_count,
+                         std::vector<std::vector<int64_t>> groups,
+                         bool pin_layout);
+
+torch::lazy::Value reduce_scatter_coalesced_out(
+    const std::vector<XLATensorPtr>& outputs,
+    const std::vector<XLATensorPtr>& inputs, const torch::lazy::Value& token,
+    AllReduceType reduce_type, double scale, int64_t scatter_dim,
+    int64_t shard_count, std::vector<std::vector<int64_t>> groups,
+    bool pin_layout);
+
 std::pair<XLATensorPtr, torch::lazy::Value> all_to_all(
     const XLATensorPtr& input, const torch::lazy::Value& token,
     int64_t split_dimension, int64_t concat_dimension, int64_t split_count,
     std::vector<std::vector<int64_t>> groups, bool pin_layout);
-
-std::pair<std::vector<XLATensorPtr>, torch::lazy::Value> all_gather(
-    const std::vector<XLATensorPtr>& inputs, const torch::lazy::Value& token,
-    int64_t dim, int64_t shard_count, std::vector<std::vector<int64_t>> groups,
-    bool pin_layout);
 
 XLATensorPtr all_gather(const XLATensorPtr& input, int64_t dim,
                         int64_t shard_count,
@@ -54,6 +64,16 @@ torch::lazy::Value all_gather_out(XLATensorPtr& output,
                                   int64_t shard_count,
                                   std::vector<std::vector<int64_t>> groups,
                                   bool pin_layout);
+
+std::pair<std::vector<XLATensorPtr>, torch::lazy::Value> all_gather_coalesced(
+    const std::vector<XLATensorPtr>& inputs, const torch::lazy::Value& token,
+    int64_t dim, int64_t shard_count, std::vector<std::vector<int64_t>> groups,
+    bool pin_layout);
+
+torch::lazy::Value all_gather_coalesced_out(
+    std::vector<XLATensorPtr>& outputs, const std::vector<XLATensorPtr>& inputs,
+    const torch::lazy::Value& token, int64_t dim, int64_t shard_count,
+    std::vector<std::vector<int64_t>> groups, bool pin_layout);
 
 std::pair<XLATensorPtr, torch::lazy::Value> collective_permute(
     const XLATensorPtr& input, const torch::lazy::Value& token,
@@ -502,6 +522,8 @@ XLATensorPtr xlogy(const XLATensorPtr& input, const XLATensorPtr& other);
 XLATensorPtr lt(const XLATensorPtr& input, const at::Scalar& other);
 
 XLATensorPtr lt(const XLATensorPtr& input, const XLATensorPtr& other);
+
+XLATensorPtr mark_tensor(const XLATensorPtr& input, const std::string& info);
 
 XLATensorPtr masked_scatter(XLATensorPtr& input, const XLATensorPtr& mask,
                             const XLATensorPtr& source);

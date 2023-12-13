@@ -64,6 +64,7 @@
 #include "torch_xla/csrc/ops/linspace.h"
 #include "torch_xla/csrc/ops/log_softmax.h"
 #include "torch_xla/csrc/ops/logsumexp.h"
+#include "torch_xla/csrc/ops/mark_tensor.h"
 #include "torch_xla/csrc/ops/masked_scatter.h"
 #include "torch_xla/csrc/ops/masked_select.h"
 #include "torch_xla/csrc/ops/max_in_dim.h"
@@ -394,6 +395,48 @@ torch::lazy::Value reduce_scatter_out(XLATensorPtr& output,
   return torch::lazy::Value(node, 1);
 }
 
+std::pair<std::vector<XLATensorPtr>, torch::lazy::Value>
+reduce_scatter_coalesced(const std::vector<XLATensorPtr>& inputs,
+                         const torch::lazy::Value& token,
+                         AllReduceType reduce_type, double scale,
+                         int64_t scatter_dim, int64_t shard_count,
+                         std::vector<std::vector<int64_t>> groups,
+                         bool pin_layout) {
+  std::vector<torch::lazy::Value> input_values;
+  input_values.reserve(inputs.size());
+  for (auto& input : inputs) {
+    input_values.push_back(input->GetIrValue());
+  }
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<ReduceScatterCoalesced>(
+      reduce_type, input_values, token, scale, scatter_dim, shard_count,
+      std::move(groups), pin_layout);
+  std::vector<XLATensorPtr> result;
+  for (size_t i = 0; i < inputs.size(); ++i) {
+    result.emplace_back(inputs[i]->CreateFrom(torch::lazy::Value(node, i)));
+  }
+  return {result, torch::lazy::Value(node, inputs.size())};
+}
+
+torch::lazy::Value reduce_scatter_coalesced_out(
+    const std::vector<XLATensorPtr>& outputs,
+    const std::vector<XLATensorPtr>& inputs, const torch::lazy::Value& token,
+    AllReduceType reduce_type, double scale, int64_t scatter_dim,
+    int64_t shard_count, std::vector<std::vector<int64_t>> groups,
+    bool pin_layout) {
+  std::vector<torch::lazy::Value> input_values;
+  input_values.reserve(inputs.size());
+  for (auto& input : inputs) {
+    input_values.push_back(input->GetIrValue());
+  }
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<ReduceScatterCoalesced>(
+      reduce_type, input_values, token, scale, scatter_dim, shard_count,
+      std::move(groups), pin_layout);
+  for (size_t i = 0; i < inputs.size(); ++i) {
+    outputs[i]->SetIrValue(torch::lazy::Value(node, i));
+  }
+  return torch::lazy::Value(node, inputs.size());
+}
+
 std::pair<XLATensorPtr, torch::lazy::Value> all_to_all(
     const XLATensorPtr& input, const torch::lazy::Value& token,
     int64_t split_dimension, int64_t concat_dimension, int64_t split_count,
@@ -403,24 +446,6 @@ std::pair<XLATensorPtr, torch::lazy::Value> all_to_all(
       split_count, std::move(groups), pin_layout);
   return {input->CreateFrom(torch::lazy::Value(node, 0)),
           torch::lazy::Value(node, 1)};
-}
-
-std::pair<std::vector<XLATensorPtr>, torch::lazy::Value> all_gather(
-    const std::vector<XLATensorPtr>& inputs, const torch::lazy::Value& token,
-    int64_t dim, int64_t shard_count, std::vector<std::vector<int64_t>> groups,
-    bool pin_layout) {
-  std::vector<torch::lazy::Value> input_values;
-  input_values.reserve(inputs.size());
-  for (auto& input : inputs) {
-    input_values.push_back(input->GetIrValue());
-  }
-  torch::lazy::NodePtr node = torch::lazy::MakeNode<AllGatherCoalesced>(
-      input_values, token, dim, shard_count, std::move(groups), pin_layout);
-  std::vector<XLATensorPtr> result;
-  for (size_t i = 0; i < inputs.size(); ++i) {
-    result.emplace_back(inputs[i]->CreateFrom(torch::lazy::Value(node, i)));
-  }
-  return {result, torch::lazy::Value(node, inputs.size())};
 }
 
 XLATensorPtr all_gather(const XLATensorPtr& input, int64_t dim,
@@ -446,6 +471,41 @@ torch::lazy::Value all_gather_out(XLATensorPtr& output,
       pin_layout);
   output->SetIrValue(torch::lazy::Value(node, 0));
   return torch::lazy::Value(node, 1);
+}
+
+std::pair<std::vector<XLATensorPtr>, torch::lazy::Value> all_gather_coalesced(
+    const std::vector<XLATensorPtr>& inputs, const torch::lazy::Value& token,
+    int64_t dim, int64_t shard_count, std::vector<std::vector<int64_t>> groups,
+    bool pin_layout) {
+  std::vector<torch::lazy::Value> input_values;
+  input_values.reserve(inputs.size());
+  for (auto& input : inputs) {
+    input_values.push_back(input->GetIrValue());
+  }
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<AllGatherCoalesced>(
+      input_values, token, dim, shard_count, std::move(groups), pin_layout);
+  std::vector<XLATensorPtr> result;
+  for (size_t i = 0; i < inputs.size(); ++i) {
+    result.emplace_back(inputs[i]->CreateFrom(torch::lazy::Value(node, i)));
+  }
+  return {result, torch::lazy::Value(node, inputs.size())};
+}
+
+torch::lazy::Value all_gather_coalesced_out(
+    std::vector<XLATensorPtr>& outputs, const std::vector<XLATensorPtr>& inputs,
+    const torch::lazy::Value& token, int64_t dim, int64_t shard_count,
+    std::vector<std::vector<int64_t>> groups, bool pin_layout) {
+  std::vector<torch::lazy::Value> input_values;
+  input_values.reserve(inputs.size());
+  for (auto& input : inputs) {
+    input_values.push_back(input->GetIrValue());
+  }
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<AllGatherCoalesced>(
+      input_values, token, dim, shard_count, std::move(groups), pin_layout);
+  for (size_t i = 0; i < inputs.size(); ++i) {
+    outputs[i]->SetIrValue(torch::lazy::Value(node, i));
+  }
+  return torch::lazy::Value(node, inputs.size());
 }
 
 std::pair<XLATensorPtr, torch::lazy::Value> collective_permute(
@@ -1596,6 +1656,12 @@ XLATensorPtr lt(const XLATensorPtr& input, const at::Scalar& other) {
 
 XLATensorPtr lt(const XLATensorPtr& input, const XLATensorPtr& other) {
   return DispatchComparisonOp(at::aten::lt, input, other);
+}
+
+XLATensorPtr mark_tensor(const XLATensorPtr& input, const std::string& info) {
+  torch::lazy::NodePtr node =
+      torch::lazy::MakeNode<MarkTensor>(input->GetIrValue(), info);
+  return input->CreateFrom(torch::lazy::Value(node));
 }
 
 XLATensorPtr masked_scatter(XLATensorPtr& input, const XLATensorPtr& mask,

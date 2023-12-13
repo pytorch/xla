@@ -1,13 +1,26 @@
 # Benchmarking
 
-The two main benchmarking scripts are 
-  - `experiment_runner.py` to run benchmark experiments, and 
+The two main benchmarking scripts are
+  - `experiment_runner.py` to run benchmark experiments, and
   - `result_analyzer.py` to aggregate the benchmark result in CSV form.
 
 
-## Reducing benchmark noise 
+## Patching mismatched batch sizes
 
-It is important to keep the benchmark runs safe from external effects 
+Sometimes batch sizes for inference might differ between Inductor, and XLA.
+This stems from the fact that we pass in an XLA device string to the TorchBench
+modelling code, instead of a raw CUDA string, and the path to correctly
+fetch the accelerator underneath is not covered. To fix this apply a patch:
+
+```
+git apply benchmarks/patches/mismatched_batch_size.patch
+```
+
+And replace the `current_device_name` with your actual accelerator name.
+
+## Reducing benchmark noise
+
+It is important to keep the benchmark runs safe from external effects
 to reduce noise. Do the following:
 
 Sets the CPU statically to the highest tuneable frequency.
@@ -37,25 +50,24 @@ The results will be stored in a json file in `experiment_results`.
 
 ```
 cd pytorch
-python xla/benchmarks/experiment_runner.py                   \
-    --dynamo=openxla_eval --dynamo=openxla --dynamo=inductor \
-    --xla=PJRT --xla=None                                    \
-    --test=eval --test=train                                 \
-    --suite-name=torchbench                                  \
-    --accelerator=cuda                                       \
-    --output-dirname=experiment_results                      \
-    --repeat=5                                               \
-    --print-subprocess                                       \
-    --no-resume                                              \
+python xla/benchmarks/experiment_runner.py  \
+    --dynamo=openxla --dynamo=inductor      \
+    --xla=PJRT --xla=None                   \
+    --test=eval --test=train                \
+    --suite-name=torchbench                 \
+    --accelerator=cuda                      \
+    --output-dirname=experiment_results     \
+    --repeat=5                              \
+    --print-subprocess                      \
+    --no-resume                             \
     --filter="^alexnet$"
 ```
 
 You can change the flags to add the configurations you are interested in. The
 `experiment_runner.py` will expand the options to all supported configurations.
 For example, in the case above, it will consider all the possible combinations
-among the flags `--dynamo`, `--xla`, and `--test`, 5 of which are supported:
+among the flags `--dynamo`, `--xla`, and `--test`, 4 of which are supported:
 
-  - `dynamo=openxla_eval`, `xla=PJRT`, `test=eval`
   - `dynamo=openxla`, `xla=PJRT`, `test=eval`
   - `dynamo=openxla`, `xla=PJRT`, `test=train`
   - `dynamo=inductor`, `xla=None`, `test=eval`
@@ -161,3 +173,8 @@ files. (Note: to reiterate, because we are plotting data from single day,
 Inductor gets speedup == 1 for all benchmarks). This plot also shows the
 correctness gap between Pytorch/XLA and Inductor; there are benchmarks that do
 run on Inductor but not on Pytorch/XLA.
+
+## Continuous Integration Tests
+
+Benchmark-related tests run by CI are located at `xla/test/benchmarks`.
+To run the tests locally, do `$ make -C xla/test/benchmarks`.
