@@ -197,7 +197,6 @@ def pr_latest(results_map: Dict[str, Any], args, timestamps: List[str]):
   prefixes = ('inductor', 'xla')
   speedups = [[], []]
   model_names = [[], []]
-  speedup_timestamps = [[], []]
 
   for i, pfx in enumerate(prefixes):
     label = f'{pfx}:speedups'
@@ -208,7 +207,6 @@ def pr_latest(results_map: Dict[str, Any], args, timestamps: List[str]):
         speedups[i], model_names[i] = map(
             list, zip(*sorted(zip(acc_map[label], acc_map[model_label]))))
         speedups[i] = list(map(pr_round, speedups[i]))
-        speedup_timestamps[i] = timestamp
         break
   if not speedups[0] or not speedups[1]:
     logger.warning(f'cannot find data for accelerator {args.accelerator}')
@@ -231,13 +229,7 @@ def pr_latest(results_map: Dict[str, Any], args, timestamps: List[str]):
     plt.plot(speedups[0], label='Inductor', marker='^')
     plt.plot(speedups[1], label='PytorchXLA', marker='o')
     plt.legend()
-    datestr = datetime.utcfromtimestamp(float(speedup_timestamps[0]))
-    if speedup_timestamps[0] != speedup_timestamps[1]:
-      datestr = f'{datestr} (Inductor)'
-      datestr += ', {datetime.utcfromtimestamp(float(speedup_timestamps[1]))} (PytorchXLA)'
-    plt.title(
-        maketitle(args,
-                  f'Speedup over Oldest Benchmarked Inductor as of {datestr}'))
+    plt.title(maketitle(args, f'Speedup over Oldest Benchmarked Inductor'))
     plt.xlabel('Workload Number')
     plt.ylabel(f'Speedup')
     plt.savefig(sys.stdout.buffer)
