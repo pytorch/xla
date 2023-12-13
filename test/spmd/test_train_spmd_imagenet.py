@@ -369,6 +369,7 @@ def train_imagenet():
 
 
 if __name__ == '__main__':
+  xr.use_spmd()
   if FLAGS.profile:
     server = xp.start_server(FLAGS.profiler_port)
 

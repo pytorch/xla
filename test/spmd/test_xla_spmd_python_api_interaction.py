@@ -17,7 +17,6 @@ class BasicXMAPITest(test_xla_sharding_base.XlaShardingTest):
 
   @classmethod
   def setUpClass(cls):
-    xr.use_spmd()
     super().setUpClass()
 
   def test_get_xla_supported_devices(self):
@@ -148,5 +147,6 @@ class BasicDistributedTest(test_xla_sharding_base.XlaShardingTest):
 
 
 if __name__ == '__main__':
+  xr.use_spmd()
   test = unittest.main()
   sys.exit(0 if test.result.wasSuccessful() else 1)

@@ -18,7 +18,6 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
 
   @classmethod
   def setUpClass(cls):
-    xr.use_spmd()
     super().setUpClass()
 
   @patch.dict(os.environ, {"XLA_DUMP_POST_OPTIMIZATIONS": "1"})
@@ -34,5 +33,6 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
 
 
 if __name__ == '__main__':
+  xr.use_spmd()
   test = unittest.main()
   sys.exit(0 if test.result.wasSuccessful() else 1)
