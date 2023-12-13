@@ -8,13 +8,8 @@ import random
 import subprocess
 import torch
 import sys
-
-try:
-  import torch_xla.core.xla_model as xm
-  from torch_xla._internal import tpu
-except ImportError:
-  # ignore the error if torch_xla is not installed
-  pass
+import torch_xla.core.xla_model as xm
+from torch_xla._internal import tpu
 
 logger = logging.getLogger(__name__)
 

@@ -5,18 +5,10 @@ import os
 from os.path import abspath, exists
 import sys
 import torch
-import torch.nn as nn
 import torch.utils._pytree as pytree
-from torch._dynamo.testing import collect_results, reduce_to_scalar_loss
-from torch._dynamo.utils import clone_inputs
-import types
-
-try:
-  from .util import move_to_device, set_cwd
-  from .benchmark_model import ModelLoader, BenchmarkModel
-except ImportError:
-  from util import move_to_device, set_cwd
-  from benchmark_model import ModelLoader, BenchmarkModel
+from torch._dynamo.testing import reduce_to_scalar_loss
+from util import move_to_device, set_cwd
+from benchmark_model import ModelLoader, BenchmarkModel
 
 logger = logging.getLogger(__name__)
 
