@@ -37,8 +37,6 @@ namespace runtime {
 
 namespace {
 
-static const std::string spmd_device_str = "SPMD:0";
-
 // Builds a map from the device's global ordinal to its index in the `devices`
 // array.
 std::unordered_map<int, int> build_index_map(
