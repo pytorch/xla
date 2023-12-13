@@ -29,7 +29,7 @@ def _get_uuid_tensor_internal(id: uuid.UUID):
 
 def get_uuid_tensor():
   id = uuid.uuid4()
-  return (_get_uuid_tensor_internal(id))
+  return _get_uuid_tensor_internal(id)
 
 
 def decode_uuid_tensor(x):
