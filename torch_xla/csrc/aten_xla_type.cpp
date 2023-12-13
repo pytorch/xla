@@ -463,6 +463,7 @@ at::Tensor XLANativeFunctions::_copy_from(const at::Tensor& self,
                                           const at::Tensor& dst,
                                           bool /*non_blocking*/) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  std::cout << "xw32 spmd, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   auto dst_tensor = bridge::TryGetXlaTensor(dst);
   auto self_tensor = bridge::TryGetXlaTensor(self);
   if (!self_tensor) {
@@ -2386,6 +2387,7 @@ at::Tensor XLANativeFunctions::prod(const at::Tensor& self, int64_t dim,
 
 void XLANativeFunctions::_propagate_xla_data(const at::Tensor& input,
                                              const at::Tensor& output) {
+  std::cout << "xw32 spmd, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   // This op is only called when functionalize pass is transforming an in-place
   // op. Therefore, we can populate some meta data to maintain any optimization
@@ -2398,6 +2400,7 @@ void XLANativeFunctions::_propagate_xla_data(const at::Tensor& input,
 
   // 2) Aid SPMD.
   if (input_tensor->sharding_spec()) {
+    std::cout << "xw32 spmd, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": input_tensor->sharding_spec() is true." << std::endl;
     tensor_methods::custom_sharding_(output_tensor,
                                      input_tensor->sharding_spec());
   }

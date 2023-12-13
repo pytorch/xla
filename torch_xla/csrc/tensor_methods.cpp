@@ -967,6 +967,7 @@ XLATensorPtr clamp(const XLATensorPtr& input,
 }
 
 XLATensorPtr clone(const XLATensorPtr& input) {
+  std::cout << "xw32 spmd, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   XLATensorPtr cloned = input->CreateFrom(input->GetIrValue());
   if (input->sharding_spec() != nullptr) {
     cloned->SetShardingSpec(*input->sharding_spec());

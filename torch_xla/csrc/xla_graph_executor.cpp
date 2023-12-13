@@ -990,6 +990,7 @@ XLAGraphExecutor::ScheduleSyncTensorsGraph(
     std::vector<torch::lazy::BackendDataPtr> tensors_data,
     std::vector<XLATensor::ShardingSpecPtr> sharding_specs,
     ComputationCache::TypePtr cached_computation) {
+  std::cout << "xw32 spmd, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   DebugUtil::analyze_graph_execution_python_frame(
       DebugUtil::GraphAnalysisSource::Execution,
       /*graph_hash=*/coll->hash,
@@ -1069,6 +1070,7 @@ XLAGraphExecutor::ScheduleSyncTensorsGraph(
     std::vector<torch::lazy::BackendDataPtr> parameters_data,
     std::string device, ComputationCache::TypePtr cached_computation,
     const std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec) {
+  std::cout << "xw32 spmd, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   auto tensors_data =
       SetTensorData(tensors, coll->config, coll->indices, tensor_data_vec);
   std::vector<XLATensor::ShardingSpecPtr> sharding_specs(coll->indices.size(),
@@ -1216,6 +1218,7 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
     const std::vector<XLATensorPtr>& tensors,
     absl::Span<const std::string> devices, const SyncTensorCollection& coll,
     PostOrderData* po_data, const std::vector<torch::lazy::Value>& ir_values) {
+  std::cout << "xw32 spmd, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   tsl::profiler::TraceMe activity(
       [&] {
         return tsl::profiler::TraceMeEncode(
@@ -1340,6 +1343,7 @@ std::shared_ptr<XLAGraphExecutor::Async>
 XLAGraphExecutor::SyncTensorsGraphInternal(
     std::vector<XLATensorPtr>* tensors, absl::Span<const std::string> devices,
     const SyncTensorsConfig& config, bool warm_up_cache_only) {
+  std::cout << "xw32 spmd, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   tsl::profiler::TraceMe activity("SyncTensorsGraphInternal",
                                   tsl::profiler::TraceMeLevel::kInfo);
   SyncTensorCollection coll = CollectSyncTensors(*tensors, config);

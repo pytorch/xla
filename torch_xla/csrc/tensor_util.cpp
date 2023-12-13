@@ -466,9 +466,11 @@ torch::lazy::BackendDataPtr TensorToXlaData(
     const at::Tensor& tensor, const xla::Shape& shape,
     const torch::lazy::BackendDevice& device) {
   TORCH_LAZY_TIMED("TensorToData");
+  std::cout << "xw32 spmd, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   if (static_cast<XlaDeviceType>(device.type()) == XlaDeviceType::SPMD) {
     // The tensor is bypassing the virtual device, so it should be replicated
     // to all devices.
+    std::cout << "xw32 spmd, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": device is spmd" << std::endl;
     std::vector<std::string> local_devices =
         runtime::GetComputationClient()->GetLocalDevices();
     auto replicated_data =

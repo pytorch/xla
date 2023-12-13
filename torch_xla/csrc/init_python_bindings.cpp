@@ -561,6 +561,7 @@ std::vector<at::Tensor> GetXlaTensorsFromAten(
         sharding_specs) {
   std::vector<std::shared_ptr<torch::lazy::BackendData>> data_handles;
   if (sharding_specs.has_value()) {
+    std::cout << "xw32 spmd, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": harding_specs.has_value()==True, calling CreateTensorsData" << std::endl;
     data_handles = CreateTensorsData(aten_tensors, sharding_specs.value(),
                                      GetXlaDevices(devices));
   } else {

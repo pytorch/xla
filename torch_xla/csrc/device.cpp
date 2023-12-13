@@ -86,6 +86,7 @@ torch::lazy::BackendDevice ParseDeviceString(const std::string& device_spec) {
 }
 
 torch::lazy::BackendDevice GetVirtualDevice() {
+  std::cout << "xw32 spmd, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   return ParseDeviceString("SPMD:0");
 }
 

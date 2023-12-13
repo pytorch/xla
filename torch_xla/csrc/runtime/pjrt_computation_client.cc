@@ -278,6 +278,7 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToDevice(
 ComputationClient::DataPtr PjRtComputationClient::TransferShardsToDevice(
     absl::Span<const std::shared_ptr<const TensorSource>> tensor_shards,
     std::string device, xla::Shape shape, xla::OpSharding sharding) {
+  std::cout << "xw32 spmd, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   tsl::profiler::TraceMe activity(
       "PjRtComputationClient::TransferShardsToDevice",
       tsl::profiler::TraceMeLevel::kInfo);
@@ -320,10 +321,12 @@ ComputationClient::DataPtr PjRtComputationClient::CopyToDevice(
 std::shared_ptr<PjRtComputationClient::PjRtData>
 PjRtComputationClient::ReplicateShardedData(
     const ComputationClient::DataPtr& handle) {
+  std::cout << "xw32 spmd, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   if (auto unsharded_data = std::dynamic_pointer_cast<PjRtData>(handle)) {
     return unsharded_data;
   } else if (auto sharded_data =
                  std::dynamic_pointer_cast<PjRtShardedData>(handle)) {
+    std::cout << "xw32 spmd, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": input handle is sharded data." << std::endl;
     XLA_COUNTER("ReplicateShardedData", 1);
     TF_VLOG(1) << "ReplicateShardedData (handle=" << sharded_data->GetHandle()
                << ", shape=" << sharded_data->shape() << ")";
@@ -612,9 +615,11 @@ PjRtComputationClient::ExecuteReplicated(
     absl::Span<const ComputationClient::DataPtr> arguments,
     absl::Span<const std::string> devices,
     const ExecuteReplicatedOptions& options) {
+  std::cout << "xw32 spmd, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   // Shared ownership of the timed section ensures that it will only get logged
   // once both `ExecuteReplicated` and the async work in `Execute` are
   // complete; a copy is held from the lambda that releases it when done.
+  std::cout << "xw32 spmd, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   auto timed =
       std::make_shared<metrics::TimedSection>(ExecuteReplicatedMetric());
   tsl::profiler::TraceMe activity("PjRtComputationClient::ExecuteReplicated",

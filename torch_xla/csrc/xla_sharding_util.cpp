@@ -475,6 +475,7 @@ ShardingUtil::GetShardReplicaAndIndicesForDevices(
 std::vector<at::Tensor> ShardingUtil::ShardTensor(
     const at::Tensor& tensor, const XLATensor::ShardingSpecPtr shardings,
     const std::vector<std::string>& devices, bool padded) {
+  std::cout << "xw32 spmd, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   xla::OpSharding sharding;
   bool minibatch = false;
   if (shardings != nullptr) {
@@ -603,6 +604,7 @@ void ShardingUtil::PrepareOutputShardingPropagation(
     runtime::ComputationClient::ComputationPtr computation,
     std::vector<torch::lazy::BackendDataPtr>* data_placeholders,
     std::vector<XLATensor::ShardingSpecPtr>* sharding_specs) {
+  std::cout << "xw32 spmd, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   // Resizes the containers to `indices.size()`.
   data_placeholders->resize(indices.size());
   sharding_specs->resize(indices.size());
