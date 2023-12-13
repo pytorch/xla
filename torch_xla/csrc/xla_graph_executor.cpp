@@ -575,6 +575,8 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
   // hash.
   coll.hash = torch::lazy::HashCombine(
       coll.hash, runtime::GetComputationClient()->HashCompilationEnv());
+  // Whether or not SPMD mode is active should influence the hash.
+  coll.hash = torch::lazy::HashCombine(coll.hash, UseVirtualDevice());
   coll.hash =
       torch::lazy::HashCombine(coll.hash, torch::lazy::StringHash(XLA_GITREV));
   coll.config = config;
