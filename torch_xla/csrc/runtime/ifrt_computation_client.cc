@@ -277,7 +277,8 @@ std::optional<xla::OpSharding> IfrtComputationClient::GetDataSharding(
 
 std::vector<ComputationClient::DataPtr> IfrtComputationClient::TransferToServer(
     absl::Span<const std::shared_ptr<const TensorSource>> tensors) {
-  auto timed = std::make_shared<metrics::TimedSection>(TransferToServerMetric());
+  auto timed =
+      std::make_shared<metrics::TimedSection>(TransferToServerMetric());
   tsl::profiler::TraceMe activity("IfrtComputationClient::TransferToServer",
                                   tsl::profiler::TraceMeLevel::kInfo);
   std::vector<ComputationClient::DataPtr> datas;

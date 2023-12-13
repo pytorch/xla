@@ -43,9 +43,6 @@ class IfrtComputationClient : public ComputationClient {
   std::vector<DataPtr> TransferToServer(
       absl::Span<const std::shared_ptr<const TensorSource>> tensors) override;
 
-  // Use XLA replication to re-assemble the sharded data.
-  // DataPtr ReplicateShardedData(const DataPtr& handle);
-
   std::vector<xla::Literal> TransferFromServer(
       absl::Span<const DataPtr> handles) override;
 
