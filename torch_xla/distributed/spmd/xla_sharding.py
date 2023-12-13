@@ -111,6 +111,12 @@ class Mesh:
     Return the OpSharding for the given partition spec. This is an expensive
     operation as the mesh grows, so the value is cached for reuse.
     """
+    # For scalar tensors, it can only be replicated.
+    # We have made sure len(t.shape) == len(partition_spec)
+    # in mark_sharding API.
+    if len(partition_spec) == 0:
+      return torch_xla._XLAC.OpSharding([], [], [], ShardingType.REPLICATED)
+
     tile_assignment, group_assignment, replication_groups, sharding_type = self._get_op_sharding_args(
         partition_spec)
     return torch_xla._XLAC.OpSharding(tile_assignment, group_assignment,
