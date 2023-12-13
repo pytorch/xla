@@ -209,18 +209,20 @@ class TorchBenchModel(BenchmarkModel):
     elif test == "train" and hasattr(benchmark, 'DEFAULT_TRAIN_CUDA_PRECISION'):
       precision = benchmark.DEFAULT_TRAIN_CUDA_PRECISION
     else:
-      raise f"Unkown test type {test}!"
+      logger.warning("No default precision set. No patching needed.")
+      return
 
     if precision == "fp16":
       os.environ['XLA_USE_FP16'] = '1'
     elif precision == "amp":
-      raise f"AMP for PT/XLA:GPU is not implemented yet for torchbench models"
+      raise ValueError(
+          f"AMP for PT/XLA:GPU is not implemented yet for torchbench models")
     elif precision == "bf16":
       os.environ['XLA_USE_BF16'] = '1'
     elif precision == "fp32":
       logger.warning("Sticking with the default fp32 precision.")
     else:
-      raise f"Unknown precision: {precision}"
+      raise ValueError(f"Unknown precision: {precision}")
 
   def pick_grad(self):
     # special case
