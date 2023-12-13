@@ -154,10 +154,7 @@ torch_xla::XlaOpVector Atan2::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   xla::XlaOp xla_other = loctx->GetOutputOp(operand(1));
   auto promoted = XlaHelpers::Promote(xla_input, xla_other);
-  return ReturnOp(xla::Atan2(promoted.first, promoted.second,
-                             XlaHelpers::getBroadcastDimensions(
-                                 promoted.first, promoted.second)),
-                  loctx);
+  return ReturnOp(xla::Atan2(promoted.first, promoted.second), loctx);
 }
 
 torch_xla::XlaOpVector Atanh::Lower(LoweringContext* loctx) const {
@@ -211,11 +208,7 @@ torch_xla::XlaOpVector BitwiseAndTensor::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_other_input = loctx->GetOutputOp(operand(1));
   return ReturnOp(XlaHelpers::PromotedBinaryOp(
                       xla_input, xla_other_input,
-                      [](xla::XlaOp one, xla::XlaOp two) {
-                        return xla::And(
-                            one, two,
-                            XlaHelpers::getBroadcastDimensions(one, two));
-                      }),
+                      [](xla::XlaOp one, xla::XlaOp two) { return one & two; }),
                   loctx);
 }
 
@@ -229,11 +222,7 @@ torch_xla::XlaOpVector BitwiseOrTensor::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_other_input = loctx->GetOutputOp(operand(1));
   return ReturnOp(XlaHelpers::PromotedBinaryOp(
                       xla_input, xla_other_input,
-                      [](xla::XlaOp one, xla::XlaOp two) {
-                        return xla::Or(
-                            one, two,
-                            XlaHelpers::getBroadcastDimensions(one, two));
-                      }),
+                      [](xla::XlaOp one, xla::XlaOp two) { return one | two; }),
                   loctx);
 }
 
@@ -242,11 +231,7 @@ torch_xla::XlaOpVector BitwiseXorTensor::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_other_input = loctx->GetOutputOp(operand(1));
   return ReturnOp(XlaHelpers::PromotedBinaryOp(
                       xla_input, xla_other_input,
-                      [](xla::XlaOp one, xla::XlaOp two) {
-                        return xla::Xor(
-                            one, two,
-                            XlaHelpers::getBroadcastDimensions(one, two));
-                      }),
+                      [](xla::XlaOp one, xla::XlaOp two) { return one ^ two; }),
                   loctx);
 }
 
@@ -278,26 +263,18 @@ torch_xla::XlaOpVector ClampTensor::Lower(LoweringContext* loctx) const {
   if (has_min && has_max) {
     auto promoted_min =
         XlaHelpers::Promote(res, loctx->GetOutputOp(operand(1)));
-    res = xla::Max(promoted_min.first, promoted_min.second,
-                   XlaHelpers::getBroadcastDimensions(promoted_min.first,
-                                                      promoted_min.second));
+    res = xla::Max(promoted_min.first, promoted_min.second);
     auto promoted_max =
         XlaHelpers::Promote(res, loctx->GetOutputOp(operand(2)));
-    res = xla::Min(promoted_max.first, promoted_max.second,
-                   XlaHelpers::getBroadcastDimensions(promoted_max.first,
-                                                      promoted_max.second));
+    res = xla::Min(promoted_max.first, promoted_max.second);
   } else if (has_min) {
     auto promoted_min =
         XlaHelpers::Promote(res, loctx->GetOutputOp(operand(1)));
-    res = xla::Max(promoted_min.first, promoted_min.second,
-                   XlaHelpers::getBroadcastDimensions(promoted_min.first,
-                                                      promoted_min.second));
+    res = xla::Max(promoted_min.first, promoted_min.second);
   } else if (has_max) {
     auto promoted_max =
         XlaHelpers::Promote(res, loctx->GetOutputOp(operand(1)));
-    res = xla::Min(promoted_max.first, promoted_max.second,
-                   XlaHelpers::getBroadcastDimensions(promoted_max.first,
-                                                      promoted_max.second));
+    res = xla::Min(promoted_max.first, promoted_max.second);
   }
 
   return ReturnOp(res, loctx);
@@ -524,14 +501,11 @@ torch_xla::XlaOpVector LogicalAnd::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   xla::XlaOp xla_other = loctx->GetOutputOp(operand(1));
 
-  return ReturnOp(XlaHelpers::PromotedLogicalBinaryOp(
-                      xla_input, xla_other,
-                      [](xla::XlaOp lhs, xla::XlaOp rhs) {
-                        return xla::And(
-                            lhs, rhs,
-                            XlaHelpers::getBroadcastDimensions(lhs, rhs));
-                      }),
-                  loctx);
+  return ReturnOp(
+      XlaHelpers::PromotedLogicalBinaryOp(
+          xla_input, xla_other,
+          [](xla::XlaOp lhs, xla::XlaOp rhs) { return xla::And(lhs, rhs); }),
+      loctx);
 }
 
 torch_xla::XlaOpVector LogicalNot::Lower(LoweringContext* loctx) const {
@@ -544,27 +518,21 @@ torch_xla::XlaOpVector LogicalNot::Lower(LoweringContext* loctx) const {
 torch_xla::XlaOpVector LogicalOr::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   xla::XlaOp xla_other = loctx->GetOutputOp(operand(1));
-  return ReturnOp(XlaHelpers::PromotedLogicalBinaryOp(
-                      xla_input, xla_other,
-                      [](xla::XlaOp lhs, xla::XlaOp rhs) {
-                        return xla::Or(
-                            lhs, rhs,
-                            XlaHelpers::getBroadcastDimensions(lhs, rhs));
-                      }),
-                  loctx);
+  return ReturnOp(
+      XlaHelpers::PromotedLogicalBinaryOp(
+          xla_input, xla_other,
+          [](xla::XlaOp lhs, xla::XlaOp rhs) { return xla::Or(lhs, rhs); }),
+      loctx);
 }
 
 torch_xla::XlaOpVector LogicalXor::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   xla::XlaOp xla_other = loctx->GetOutputOp(operand(1));
-  return ReturnOp(XlaHelpers::PromotedLogicalBinaryOp(
-                      xla_input, xla_other,
-                      [](xla::XlaOp lhs, xla::XlaOp rhs) {
-                        return xla::Xor(
-                            lhs, rhs,
-                            XlaHelpers::getBroadcastDimensions(lhs, rhs));
-                      }),
-                  loctx);
+  return ReturnOp(
+      XlaHelpers::PromotedLogicalBinaryOp(
+          xla_input, xla_other,
+          [](xla::XlaOp lhs, xla::XlaOp rhs) { return xla::Xor(lhs, rhs); }),
+      loctx);
 }
 
 torch_xla::XlaOpVector LogSigmoidForward::Lower(LoweringContext* loctx) const {
@@ -598,20 +566,14 @@ torch_xla::XlaOpVector Maximum::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   xla::XlaOp xla_other = loctx->GetOutputOp(operand(1));
   auto promoted = XlaHelpers::Promote(xla_input, xla_other);
-  return ReturnOp(xla::Max(promoted.first, promoted.second,
-                           XlaHelpers::getBroadcastDimensions(promoted.first,
-                                                              promoted.second)),
-                  loctx);
+  return ReturnOp(xla::Max(promoted.first, promoted.second), loctx);
 }
 
 torch_xla::XlaOpVector Minimum::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   xla::XlaOp xla_other = loctx->GetOutputOp(operand(1));
   auto promoted = XlaHelpers::Promote(xla_input, xla_other);
-  return ReturnOp(xla::Min(promoted.first, promoted.second,
-                           XlaHelpers::getBroadcastDimensions(promoted.first,
-                                                              promoted.second)),
-                  loctx);
+  return ReturnOp(xla::Min(promoted.first, promoted.second), loctx);
 }
 
 torch_xla::XlaOpVector NativeDropoutBackward::Lower(

@@ -50,6 +50,7 @@ class ResultAnalyzer:
         "timestamp": pd.Series(dtype="int"),
         "suite_name": pd.Series(dtype="str"),
         "model_name": pd.Series(dtype="str"),
+        "experiment_name": pd.Series(dtype="str"),
         "accelerator": pd.Series(dtype="str"),
         "accelerator_model": pd.Series(dtype="str"),
         "xla": pd.Series(dtype="str"),
@@ -129,6 +130,7 @@ class ResultAnalyzer:
           "dimensions": {
               "suite_name": dataline["model"]["suite_name"],
               "model_name": dataline["model"]["model_name"],
+              "experiment_name": dataline["experiment"]["experiment_name"],
               "accelerator": dataline["experiment"]["accelerator_model"],
               "accelerator_model": dataline["experiment"]["accelerator_model"],
               "xla": xla_value,
@@ -166,6 +168,7 @@ class ResultAnalyzer:
           "timestamp": self.timestamp,
           "suite_name": dataline["model"]["suite_name"],
           "model_name": dataline["model"]["model_name"],
+          "experiment_name": dataline["experiment"]["experiment_name"],
           "accelerator": dataline["experiment"]["accelerator"],
           "accelerator_model": dataline["experiment"]["accelerator_model"],
           "xla": dataline["experiment"]["xla"],

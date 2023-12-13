@@ -86,9 +86,7 @@ xla::XlaOp GetScaleValue(xla::XlaOp input, xla::XlaOp count,
     // XLA Multiply doesn't do implicit broadcasting for unbounded dynamism now.
     // TODO(lsy323): Remove this branch once the support is added in XLA.
     auto promoted = XlaHelpers::Promote(input, scale);
-    return xla::Mul(
-        promoted.first, promoted.second,
-        XlaHelpers::getBroadcastDimensions(promoted.first, promoted.second));
+    return promoted.first * promoted.second;
   } else {
     return input * scale;
   }
