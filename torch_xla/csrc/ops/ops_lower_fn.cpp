@@ -473,6 +473,12 @@ torch_xla::XlaOpVector Inverse::Lower(LoweringContext* loctx) const {
 
 torch_xla::XlaOpVector Isnan::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  // PyTorch allows integral types as input to torch.isnan, however XLA does
+  // not. So we do a manual type conversion for integral types only to keep our
+  // bevahior same as PyTorch.
+  if (xla::primitive_util::IsIntegralType(XlaHelpers::TypeOfXlaOp(xla_input))) {
+    xla_input = xla::ConvertElementType(xla_input, xla::PrimitiveType::F32);
+  }
   return ReturnOp(xla::IsNan(xla_input), loctx);
 }
 
