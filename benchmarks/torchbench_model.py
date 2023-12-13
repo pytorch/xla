@@ -204,23 +204,36 @@ class TorchBenchModel(BenchmarkModel):
     gc.collect()
 
   def apply_default_precision_config(self, test, benchmark):
+    """
+    Apply default precision config to XLA, if present.
+
+    Whenever a model has a default precision for cuda set
+    we need to set proper environment flags so XLA catches
+    the requird precision.
+
+    This function is a workaround. Proper solution requires
+    changes to the PT/XLA bridge so that the input shape
+    is properly inferred after issuing converts to `torch.nn.Module`.
+    """
     if test == "eval" and hasattr(benchmark, 'DEFAULT_EVAL_CUDA_PRECISION'):
       precision = benchmark.DEFAULT_EVAL_CUDA_PRECISION
     elif test == "train" and hasattr(benchmark, 'DEFAULT_TRAIN_CUDA_PRECISION'):
       precision = benchmark.DEFAULT_TRAIN_CUDA_PRECISION
     else:
-      raise f"Unkown test type {test}!"
+      logger.warning("No default precision set. No patching needed.")
+      return
 
     if precision == "fp16":
       os.environ['XLA_USE_FP16'] = '1'
     elif precision == "amp":
-      raise f"AMP for PT/XLA:GPU is not implemented yet for torchbench models"
+      raise ValueError(
+          f"AMP for PT/XLA:GPU is not implemented yet for torchbench models")
     elif precision == "bf16":
       os.environ['XLA_USE_BF16'] = '1'
     elif precision == "fp32":
       logger.warning("Sticking with the default fp32 precision.")
     else:
-      raise f"Unknown precision: {precision}"
+      raise ValueError(f"Unknown precision: {precision}")
 
   def pick_grad(self):
     # special case
