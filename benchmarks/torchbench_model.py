@@ -187,6 +187,8 @@ class TorchBenchModel(BenchmarkModel):
       self.example_inputs = pytree.tree_map_only(torch.Tensor,
                                                  lambda t: t.to(device),
                                                  self.example_inputs)
+      self.apply_default_precision_config(self.benchmark_experiment.test,
+                                          benchmark)
 
     self.benchmark_experiment.batch_size = benchmark.batch_size
 
@@ -200,6 +202,25 @@ class TorchBenchModel(BenchmarkModel):
 
     del benchmark
     gc.collect()
+
+  def apply_default_precision_config(self, test, benchmark):
+    if test == "eval" and hasattr(benchmark, 'DEFAULT_EVAL_CUDA_PRECISION'):
+      precision = benchmark.DEFAULT_EVAL_CUDA_PRECISION
+    elif test == "train" and hasattr(benchmark, 'DEFAULT_TRAIN_CUDA_PRECISION'):
+      precision = benchmark.DEFAULT_TRAIN_CUDA_PRECISION
+    else:
+      raise f"Unkown test type {test}!"
+
+    if precision == "fp16":
+      os.environ['XLA_USE_FP16'] = '1'
+    elif precision == "amp":
+      raise f"AMP for PT/XLA:GPU is not implemented yet for torchbench models"
+    elif precision == "bf16":
+      os.environ['XLA_USE_BF16'] = '1'
+    elif precision == "fp32":
+      logger.warning("Sticking with the default fp32 precision.")
+    else:
+      raise f"Unknown precision: {precision}"
 
   def pick_grad(self):
     # special case
