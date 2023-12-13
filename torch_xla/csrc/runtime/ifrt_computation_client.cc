@@ -73,8 +73,8 @@ std::unordered_map<int, int> build_index_map(
 
 }  // namespace
 
-std::string IfrtComputationClient::PjRtDeviceToString(
-    xla::PjRtDevice* const device) const {
+std::string IfrtComputationClient::IfrtDeviceToString(
+    xla::ifrt::Device* const device) const {
   std::string platform =
       absl::AsciiStrToUpper(device->client()->platform_name());
   int ordinal = global_ordinals_.at(device->id());
@@ -82,13 +82,13 @@ std::string IfrtComputationClient::PjRtDeviceToString(
   return str;
 }
 
-std::vector<std::string> IfrtComputationClient::PjRtDevicesToString(
-    absl::Span<xla::PjRtDevice* const> devices) const {
+std::vector<std::string> IfrtComputationClient::IfrtDevicesToString(
+    absl::Span<xla::ifrt::Device* const> devices) const {
   std::vector<std::string> strs;
   strs.reserve(devices.size());
 
   for (auto* device : devices) {
-    strs.push_back(PjRtDeviceToString(device));
+    strs.push_back(IfrtDeviceToString(device));
   }
 
   return strs;
@@ -104,7 +104,7 @@ IfrtComputationClient::IfrtComputationClient() {
   // PjRtDevice IDs are not guaranteed to be dense, so we need to track
   // a device's global ordinal separately from its device ID. Order the
   // devices by increasing ID to assign global ordinals.
-  std::vector<xla::PjRtDevice*> ordered_devices(client_->device_count());
+  std::vector<xla::ifrt::Device*> ordered_devices(client_->device_count());
   std::partial_sort_copy(client_->devices().begin(), client_->devices().end(),
                          ordered_devices.begin(), ordered_devices.end(),
                          [](auto& a, auto& b) { return a->id() < b->id(); });
@@ -148,9 +148,9 @@ XlaCoordinator& IfrtComputationClient::GetCoordinator() {
 
 void IfrtComputationClient::IfrtData::Assign(
     const torch::lazy::BackendData& data) {
-  const IfrtData& pjrt_data = dynamic_cast<const IfrtData&>(data);
-  if (&pjrt_data != this) {
-    buffer = pjrt_data.buffer;
+  const IfrtData& ifrt_data = dynamic_cast<const IfrtData&>(data);
+  if (&ifrt_data != this) {
+    buffer = ifrt_data.buffer;
   }
 }
 
@@ -179,7 +179,7 @@ std::vector<ComputationClient::DataPtr> IfrtComputationClient::GetDataShards(
 
     for (auto array : arrays) {
       shards.push_back(std::make_shared<IfrtData>(
-          PjRtDeviceToString(array->sharding().devices()[0]), array));
+          IfrtDeviceToString(array->sharding().devices()[0]), array));
     }
   } else {
     shards.push_back(data);
@@ -248,7 +248,7 @@ std::vector<ComputationClient::DataPtr> IfrtComputationClient::TransferToServer(
   datas.reserve(tensors.size());
   int64_t total_size = 0;
   for (auto& tensor : tensors) {
-    xla::PjRtDevice* pjrt_device = StringToPjRtDevice(tensor->device());
+    xla::ifrt::Device* ifrt_device = StringToIfrtDevice(tensor->device());
 
     total_size += xla::ShapeUtil::ByteSizeOf(tensor->shape());
 
@@ -260,8 +260,8 @@ std::vector<ComputationClient::DataPtr> IfrtComputationClient::TransferToServer(
                 xla::ifrt::Shape(tensor->dimensions()), tensor->byte_strides(),
                 // TODO: what is MemoryKind?
                 xla::ifrt::SingleDeviceSharding::Create(
-                    pjrt_device, xla::ifrt::MemoryKind()),
-                xla::PjRtClient::HostBufferSemantics::
+                    ifrt_device, xla::ifrt::MemoryKind()),
+                xla::ifrt::Client::HostBufferSemantics::
                     kImmutableUntilTransferCompletes,
                 [tensor]() { /* frees tensor */ })
             .value();
@@ -424,8 +424,7 @@ std::vector<ComputationClient::ComputationPtr> IfrtComputationClient::Compile(
       // TODO(yeounoh) multi-host, multi-slice configurations
       compile_options.executable_build_options.set_use_spmd_partitioning(true);
       // We can override the compiler's default behavior to replicate the
-      // outputs. Setting this to true would wrapping the sharded outputs in
-      // PjRtShardedData.
+      // outputs.
       compile_options.executable_build_options
           .set_allow_spmd_sharding_propagation_to_output(
               {instance.allow_spmd_sharding_propagation_to_output});
@@ -583,15 +582,15 @@ size_t IfrtComputationClient::GetNumDevices() const {
 }
 
 std::string IfrtComputationClient::GetDefaultDevice() const {
-  return PjRtDeviceToString(client_->addressable_devices()[0]);
+  return IfrtDeviceToString(client_->addressable_devices()[0]);
 }
 
 std::vector<std::string> IfrtComputationClient::GetLocalDevices() const {
-  return PjRtDevicesToString(client_->addressable_devices());
+  return IfrtDevicesToString(client_->addressable_devices());
 }
 
 std::vector<std::string> IfrtComputationClient::GetAllDevices() const {
-  return PjRtDevicesToString(client_->devices());
+  return IfrtDevicesToString(client_->devices());
 }
 
 int IfrtComputationClient::GetNumProcesses() const {
@@ -606,7 +605,7 @@ int IfrtComputationClient::GetNumProcesses() const {
 const absl::flat_hash_map<
     std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>&
 IfrtComputationClient::GetDeviceAttributes(const std::string& device) {
-  return IfrtComputationClient::StringToPjRtDevice(device)->Attributes();
+  return IfrtComputationClient::StringToIfrtDevice(device)->Attributes();
 }
 
 void IfrtComputationClient::SetReplicationDevices(
@@ -619,12 +618,12 @@ IfrtComputationClient::GetReplicationDevices() {
   return replication_devices_;
 }
 
-xla::PjRtDevice* IfrtComputationClient::StringToPjRtDevice(
+xla::ifrt::Device* IfrtComputationClient::StringToIfrtDevice(
     const std::string& device) {
   XLA_CHECK(string_to_device_.find(device) != string_to_device_.end())
       << "Unknown device " << device;
-  xla::PjRtDevice* pjrt_device = string_to_device_[device];
-  return pjrt_device;
+  xla::ifrt::Device* ifrt_device = string_to_device_[device];
+  return ifrt_device;
 }
 
 void IfrtComputationClient::WaitDeviceOps(
@@ -635,7 +634,7 @@ void IfrtComputationClient::WaitDeviceOps(
 }
 
 std::map<std::string, Metric> IfrtComputationClient::GetMetrics() const {
-  // TODO(jonbolin): Add any PJRt-client-specific metrics here
+  // TODO(jonbolin): Add any Ifrt-client-specific metrics here
   return {};
 }
 
