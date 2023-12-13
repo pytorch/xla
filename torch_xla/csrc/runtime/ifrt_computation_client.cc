@@ -41,22 +41,6 @@ namespace {
 
 static const std::string spmd_device_str = "SPMD:0";
 
-// Initializes a distributed runtime client if dist_service_addr is specified
-std::shared_ptr<xla::DistributedRuntimeClient>
-MaybeInitializeDistributedRuntimeClient(int local_rank,
-                                        std::string dist_service_addr) {
-  std::shared_ptr<xla::DistributedRuntimeClient> client;
-  if (!dist_service_addr.empty()) {
-    xla::DistributedRuntimeClient::Options options;
-    /* TODO(jonbolin): Use global rank for multi-host setup */
-    options.node_id = local_rank;
-    client = xla::GetDistributedRuntimeClient(dist_service_addr, options);
-    XLA_CHECK(client->Connect().ok())
-        << "Failed to initialize distributed runtime client";
-  }
-  return std::move(client);
-}
-
 // Builds a map from the device's global ordinal to its index in the `devices`
 // array.
 std::unordered_map<int, int> build_index_map(
