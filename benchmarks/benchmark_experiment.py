@@ -83,7 +83,7 @@ class ExperimentLoader:
         not experiment_config["xla"]):
       return False
     if (experiment_config["accelerator"] == "cuda" and
-        not experiment_config["xla"] and not torch.cuda.is_available()):
+        not experiment_config["xla"] and not is_xla_device_available("CUDA")):
       return False
     return True
 
