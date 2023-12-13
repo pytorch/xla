@@ -22,7 +22,6 @@ class ExperimentLoader:
 
   def __init__(self, args):
     self._args = args
-    self.experiment_name = self._args.experiment_name
 
   def expand_config_choices(self, config_choices):
     configs = [{}]
@@ -39,34 +38,30 @@ class ExperimentLoader:
     return configs
 
   def list_experiment_configs(self):
-    if self.experiment_name == "run_all":
-      config_choices = {
-          "accelerator": ["cpu", "cuda", "tpu"],
-          "xla": [None, "PJRT", "XRT"],
-          "xla_flags": [None],
-          "dynamo": [None, "inductor", "openxla_eval", "openxla"],
-          "test": ["eval", "train"],
-      }
+    config_choices = {
+        "accelerator": ["cpu", "cuda", "tpu"],
+        "xla": [None, "PJRT", "XRT"],
+        "xla_flags": [None],
+        "dynamo": [None, "inductor", "openxla_eval", "openxla"],
+        "test": ["eval", "train"],
+    }
 
-      if self._args.accelerator:
-        config_choices["accelerator"] = list(set(self._args.accelerator))
-      if self._args.xla:
-        config_choices["xla"] = [
-            x if x != "None" else None for x in list(set(self._args.xla))
-        ]
-      if self._args.dynamo:
-        config_choices["dynamo"] = [
-            x if x != "None" else None for x in list(set(self._args.dynamo))
-        ]
-      if self._args.test:
-        config_choices["test"] = list(set(self._args.test))
-      if self._args.xla_flags:
-        config_choices["xla_flags"] = [
-            x if x != "None" else None for x in list(set(self._args.xla_flags))
-        ]
-
-    else:
-      raise NotImplementedError
+    if self._args.accelerator:
+      config_choices["accelerator"] = list(set(self._args.accelerator))
+    if self._args.xla:
+      config_choices["xla"] = [
+          x if x != "None" else None for x in list(set(self._args.xla))
+      ]
+    if self._args.dynamo:
+      config_choices["dynamo"] = [
+          x if x != "None" else None for x in list(set(self._args.dynamo))
+      ]
+    if self._args.test:
+      config_choices["test"] = list(set(self._args.test))
+    if self._args.xla_flags:
+      config_choices["xla_flags"] = [
+          x if x != "None" else None for x in list(set(self._args.xla_flags))
+      ]
 
     experiment_configs = []
     for experiment_config in self.expand_config_choices(config_choices):
@@ -131,7 +126,6 @@ class ExperimentLoader:
     experiment_config["process_env"] = process_env
 
   def load_experiment(self, experiment_config, dummy=False):
-    experiment_name = self.experiment_name
     accelerator = experiment_config["accelerator"]
     xla = experiment_config["xla"]
     xla_flags = experiment_config["xla_flags"]
@@ -139,7 +133,6 @@ class ExperimentLoader:
     test = experiment_config["test"]
     batch_size = experiment_config.get("batch_size", self._args.batch_size)
     benchmark_experiment = BenchmarkExperiment(
-        experiment_name=experiment_name,
         accelerator=accelerator,
         xla=xla,
         xla_flags=xla_flags,
@@ -152,9 +145,7 @@ class ExperimentLoader:
 
 class BenchmarkExperiment:
 
-  def __init__(self, experiment_name, accelerator, xla, xla_flags, dynamo, test,
-               batch_size):
-    self.experiment_name = experiment_name
+  def __init__(self, accelerator, xla, xla_flags, dynamo, test, batch_size):
     self.accelerator = accelerator
     self.xla = xla
     self.xla_flags = xla_flags
@@ -187,7 +178,6 @@ class BenchmarkExperiment:
 
   def to_dict(self):
     d = OrderedDict()
-    d["experiment_name"] = self.experiment_name
     d["accelerator"] = self.accelerator
     d["accelerator_model"] = self.accelerator_model
     d["xla"] = self.xla
