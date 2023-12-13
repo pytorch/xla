@@ -205,11 +205,7 @@ function run_torch_xla_benchmark_tests() {
   XLA_DIR=$1
   pushd $XLA_DIR
     echo "Running Benchmark Tests"
-    if [ -x "$(command -v nvidia-smi)" ]; then
-      PJRT_DEVICE=CUDA test/benchmarks/run_tests.sh -L""
-    else
-      PJRT_DEVICE=CPU test/benchmarks/run_tests.sh -L""
-    fi
+    test/benchmarks/run_tests.sh -L""
 }
 
 function run_torch_xla_tests() {
