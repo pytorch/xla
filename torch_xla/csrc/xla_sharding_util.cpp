@@ -616,28 +616,98 @@ ShardingUtil::GetAutoShardingMesh() {
 }
 
 void ShardingUtil::ReshardParameters(
-    const xla::HloModuleProto& module,
-    std::vector<torch::lazy::BackendDataPtr>* parameters) {
-  TF_VLOG(INFO) << "ReshardParamters";
+    const xla::HloModuleProto& module, std::vector<XLATensorPtr>* tensors,
+    std::vector<torch::lazy::BackendDataPtr>* parameters,
+    std::vector<const torch::lazy::Node*>* nodes) {
+  // Extract input shardings generated from auto-sharding pass.
   std::vector<xla::OpSharding> input_shardings;
   for (auto sharding : module.spmd_parameters_shardings()) {
     input_shardings.push_back(sharding);
-    TF_VLOG(5) << "Parameter input_shardings: " << sharding.DebugString();
-  }
-  if (input_shardings.size() == 0) {
-    return;
   }
   XLA_CHECK_EQ(input_shardings.size(), parameters->size());
 
-  // TODO(yeounoh) Reshard parameters with mismatched sharding.
+  // // Construct parameter handle to XLATensor mapping for faster look-up.
+  // std::unordered_map<torch::lazy::BackendData::Handle, XLATensorPtr>
+  //     xla_tensor_map;
+  // for (auto tensor : *tensors) {
+  //   torch::lazy::BackendDataPtr handle = tensor->CurrentDataHandle();
+  //   if (handle != nullptr) {
+  //     xla_tensor_map[handle->GetHandle()] = tensor;
+  //   } else if (tensor->CurrentIrValue()) {
+  //     torch::lazy::BackendDataPtr node_data =
+  //         torch::lazy::getBackend()->GetComputationDataFromNode(
+  //             tensor->CurrentIrValue().node.get());
+  //     if (node_data) {
+  //       xla_tensor_map[node_data->GetHandle()] = tensor;
+  //     }
+  //   }
+  // }
+
+  // Construct parameter handle to XlaNode mappping for faster look-up.
+  std::unordered_map<torch::lazy::BackendData::Handle, const torch::lazy::Node*>
+      xla_node_map;
+  for (const torch::lazy::Node* node : *nodes) {
+    const auto backend_data =
+        torch::lazy::getBackend()->GetComputationDataFromNode(node);
+    if (backend_data) {
+      torch::lazy::BackendData::Handle handle = backend_data->GetHandle();
+      xla_node_map[handle] = node;
+    }
+  }
+
+  // Reshard parameters as needed, as with a new sharding spec.
+  size_t reshard_count = 0;
   auto datas = UnwrapXlaData(*parameters);
-  for (size_t i = 0; i < datas.size(); ++i) {
-    TF_VLOG(5) << "Parameter data: " << datas[i]->ToString();
+  for (size_t i = 0; i < input_shardings.size(); ++i) {
+    // Skip if sharding type is UNKNOWN or equal to the existing.
+    if ((input_shardings[i].type() == xla::OpSharding::UNKNOWN) ||
+        (datas[i]->GetSharding().type() == xla::OpSharding::UNKNOWN &&
+         input_shardings[i].type() == xla::OpSharding::REPLICATED) ||
+        xla::protobuf_util::ProtobufEquals(datas[i]->GetSharding(),
+                                           input_shardings[i])) {
+      continue;
+    }
+
     // TODO(yeounoh) we should be able to group individual resharidng into a
     // single computation.
     (*parameters)[i] = runtime::GetComputationClient()->ReshardData(
         datas[i], input_shardings[i]);
+    reshard_count++;
+
+    // auto it_tensor = xla_tensor_map.find(datas[i]->GetHandle());
+    // if (it_tensor == xla_tensor_map.end()) {
+      auto it_node = xla_node_map.find(datas[i]->GetHandle());
+      XLA_CHECK(it_node != xla_node_map.end())
+          << "xla_node_map does not contain " << datas[i]->ToString()
+          << ", target sharding: " << input_shardings[i].DebugString();
+      auto device_data_node = DeviceData::Cast(it_node->second);
+      device_data_node->Assign((*parameters)[i]);
+      device_data_node->SetSharding(input_shardings[i], 0);
+
+      TF_VLOG(6) << "Resharding parameter: " << datas[i]->ToString()
+                 << ", resharded parameter shape: "
+                 << UnwrapXlaData({(*parameters)[i]})[0]->ToString()
+                 << " attaching new sharding spec to the node: "
+                 << input_shardings[i].DebugString();
+      // TODO(yeounoh) device data doesn't have an input? If so, propagate.
+      // - OK: there is no operand for device_data node.
+      // - does the node ptr retain its relationship to the parameter in the next round?
+      // -- TODO(verify) I can print parameter nodes, and also the shardings attached to them.
+      // -- TODO(verify) here, I can reprint the post order nodes, to see if the sharding is updated?
+      // - but some doesn't? Possibly due to functionalization (this breaks the compilation)?
+      // - TODO(try) also, maybe I should recompute the hash after a auto-sharding pass to cache right.
+    // } else {
+    //   it_tensor->second->SetXlaData((*parameters)[i]);
+    //   auto sharding_spec = std::make_shared<XLATensor::ShardingSpec>(
+    //       input_shardings[i], it_tensor->second->shape());
+    //   it_tensor->second->SetShardingSpec(*sharding_spec);
+
+    //   TF_VLOG(6) << "Resharding parameter: " << datas[i]->ToString()
+    //              << " attaching new sharding spec to the tensor: "
+    //              << input_shardings[i].DebugString();
+    // }
   }
+    TF_VLOG(3) << "ReshardParamters: resharded " << reshard_count << "parameters.";
 }
 
 void ShardingUtil::XlaMarkSharding(const at::Tensor& input,

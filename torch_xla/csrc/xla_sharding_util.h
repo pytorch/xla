@@ -138,7 +138,9 @@ class ShardingUtil {
   // input sharding on the input data as-is.
   static void ReshardParameters(
       const xla::HloModuleProto& module,
-      std::vector<torch::lazy::BackendDataPtr>* parameters);
+      std::vector<XLATensorPtr>* tensors,
+      std::vector<torch::lazy::BackendDataPtr>* parameters,
+      std::vector<const torch::lazy::Node*>* nodes);
 
   //////////////////////////// Dynamo Integration ////////////////////////////
 

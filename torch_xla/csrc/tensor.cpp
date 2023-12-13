@@ -280,17 +280,32 @@ XLATensor::ShardingSpecPtr XLATensor::sharding_spec() const {
   ShardingSpecPtr sharding = data()->sharding;
   torch::lazy::Value ir_value = CurrentIrValue();
   if (sharding && ir_value) {
-    // The copy of sharding annotation on the IR node should be the same.
     auto* xla_node = dynamic_cast<XlaNode*>(ir_value.node.get());
     if (xla_node->GetSharding(ir_value.index)) {
-      XLA_CHECK(ShardingUtil::EqualShardingSpecs(
-          *sharding, ShardingSpec{*xla_node->GetSharding(ir_value.index),
-                                  xla_node->xla_shape()}))
-          << "Sharding on tensor: "
-          << xla::HloSharding::FromProto(sharding->sharding)->ToString()
-          << ", sharding on IR: "
-          << xla::HloSharding::FromProto(*xla_node->GetSharding(ir_value.index))
-                 ->ToString();
+      // There is a case where the sharding spec copy on the node and that of
+      // the tensor disagress. This happens during the auto-sharding pass, and
+      // here we re-sync from the node to the tensor.
+      // TODO(yeounoh) verify that this change doesn't break the existing tests.
+      xla::OpSharding new_sharding = *xla_node->GetSharding(ir_value.index);
+      if (!ShardingUtil::EqualOpShardings(new_sharding, sharding->sharding)) {
+        std::cout << "*** sharding_spec() syncing node sharding " << new_sharding.DebugString()
+      << " to tensor sharding " << sharding->sharding.DebugString() << std::endl;
+        data()->sharding =
+            std::make_shared<ShardingSpec>(new_sharding, xla_node->xla_shape());
+      }
+      // XLA_CHECK(ShardingUtil::EqualShardingSpecs(
+      //     *sharding, ShardingSpec{*xla_node->GetSharding(ir_value.index),
+      //                             xla_node->xla_shape()}))
+      //     << "Sharding on tensor: "
+      //     << xla::HloSharding::FromProto(sharding->sharding)->ToString()
+      //     << ", sharding on IR: "
+      //     <<
+      //     xla::HloSharding::FromProto(*xla_node->GetSharding(ir_value.index))
+      //            ->ToString();
+    } else {
+      // There is a case where the sharding spec copy on the tensor is not
+      // propagated to the node after a reset.
+      xla_node->SetSharding(sharding->sharding, ir_value.index);
     }
   }
   return sharding;
