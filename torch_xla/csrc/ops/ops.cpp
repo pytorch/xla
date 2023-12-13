@@ -55,14 +55,19 @@ namespace torch_xla {
                             const torch::lazy::Value& input1) {                \
     auto shape_fn = [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp { \
       auto promoted = XlaHelpers::Promote(operands[0], operands[1]);           \
-      return xla_fn(promoted.first, promoted.second);                          \
+      return xla_fn(promoted.first, promoted.second,                           \
+                    XlaHelpers::getBroadcastDimensions(promoted.first,         \
+                                                       promoted.second));      \
     };                                                                         \
     auto lower_fn = [](const XlaNode& node,                                    \
                        LoweringContext* loctx) -> XlaOpVector {                \
       xla::XlaOp xla_input0 = loctx->GetOutputOp(node.operand(0));             \
       xla::XlaOp xla_input1 = loctx->GetOutputOp(node.operand(1));             \
       auto promoted = XlaHelpers::Promote(xla_input0, xla_input1);             \
-      return node.ReturnOp(xla_fn(promoted.first, promoted.second), loctx);    \
+      return node.ReturnOp(xla_fn(promoted.first, promoted.second,             \
+                                  XlaHelpers::getBroadcastDimensions(          \
+                                      promoted.first, promoted.second)),       \
+                           loctx);                                             \
     };                                                                         \
     return GenericOp(torch::lazy::OpKind(sym), {input0, input1},               \
                      [&]() {                                                   \
@@ -408,7 +413,7 @@ torch::lazy::NodePtr Where(const torch::lazy::Value& condition,
     xla::XlaOp pred_condition =
         ConvertTo(xla_condition, XlaHelpers::TypeOfXlaOp(xla_condition),
                   xla::PrimitiveType::PRED, /*device=*/nullptr);
-    auto promoted_branches = XlaHelpers::PromoteShapes(xla_input, xla_other);
+    auto promoted_branches = XlaHelpers::ValidateShapes(xla_input, xla_other);
     return node.ReturnOp(xla::Select(pred_condition, promoted_branches.first,
                                      promoted_branches.second),
                          loctx);
@@ -431,44 +436,40 @@ torch::lazy::NodePtr ARange(const at::Scalar& start, const at::Scalar& end,
   xla::Literal values;
   switch (type) {
     case xla::PrimitiveType::BF16:
-      values = XlaHelpers::Range<tsl::bfloat16>(
-          static_cast<tsl::bfloat16>(start.toFloat()),
-          static_cast<tsl::bfloat16>(end.toFloat()),
-          static_cast<tsl::bfloat16>(step.toFloat()));
+      values = XlaHelpers::Range<tsl::bfloat16, double>(
+          start.toDouble(), end.toDouble(), step.toDouble());
       break;
     case xla::PrimitiveType::F16:
-      values =
-          XlaHelpers::Range<xla::half>(static_cast<xla::half>(start.toHalf()),
-                                       static_cast<xla::half>(end.toHalf()),
-                                       static_cast<xla::half>(step.toHalf()));
+      values = XlaHelpers::Range<xla::half, double>(
+          start.toDouble(), end.toDouble(), step.toDouble());
       break;
     case xla::PrimitiveType::F32:
-      values = XlaHelpers::Range<float>(start.toFloat(), end.toFloat(),
-                                        step.toFloat());
+      values = XlaHelpers::Range<float, double>(
+          start.toDouble(), end.toDouble(), step.toDouble());
       break;
     case xla::PrimitiveType::F64:
       values = XlaHelpers::Range<double>(start.toDouble(), end.toDouble(),
                                          step.toDouble());
       break;
     case xla::PrimitiveType::U8:
-      values = XlaHelpers::Range<uint8_t>(start.toByte(), end.toByte(),
-                                          step.toByte());
+      values = XlaHelpers::Range<uint8_t, uint64_t>(
+          start.toLong(), end.toLong(), step.toLong());
       break;
     case xla::PrimitiveType::S8:
-      values = XlaHelpers::Range<int8_t>(start.toChar(), end.toChar(),
-                                         step.toChar());
+      values = XlaHelpers::Range<int8_t, int64_t>(start.toLong(), end.toLong(),
+                                                  step.toLong());
       break;
     case xla::PrimitiveType::S16:
-      values = XlaHelpers::Range<int16_t>(start.toShort(), end.toShort(),
-                                          step.toShort());
+      values = XlaHelpers::Range<int16_t, int64_t>(start.toLong(), end.toLong(),
+                                                   step.toLong());
       break;
     case xla::PrimitiveType::U16:
-      values =
-          XlaHelpers::Range<uint16_t>(start.toInt(), end.toInt(), step.toInt());
+      values = XlaHelpers::Range<uint16_t, uint64_t>(
+          start.toLong(), end.toLong(), step.toLong());
       break;
     case xla::PrimitiveType::S32:
-      values =
-          XlaHelpers::Range<int32_t>(start.toInt(), end.toInt(), step.toInt());
+      values = XlaHelpers::Range<int32_t, int64_t>(start.toLong(), end.toLong(),
+                                                   step.toLong());
       break;
     case xla::PrimitiveType::U32:
       values = XlaHelpers::Range<uint32_t>(start.toLong(), end.toLong(),

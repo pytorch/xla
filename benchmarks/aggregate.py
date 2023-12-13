@@ -2,18 +2,23 @@
 
 import argparse
 import csv
-from datetime import date
+from datetime import datetime
 import logging
 import os
 import re
 import sys
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
 import tiers
 import itertools
-from typing import Any
+from typing import Any, Dict, List
 import numpy as np
 from scipy.stats.mstats import gmean
+
+try:
+  import matplotlib.pyplot as plt
+  import matplotlib.dates as mdates
+  has_matplotlib = True
+except ImportError:
+  has_matplotlib = False
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +36,12 @@ test_to_csv_field_name = {
 }
 
 
-def find_files(input_dirname: str) -> list[str]:
+# Round floats before printing them so that tiny differences don't break tests.
+def pr_round(x):
+  return round(x, 8)
+
+
+def find_files(input_dirname: str) -> List[str]:
   files = []
   for root, _, filenames in os.walk(input_dirname):
     for filename in filenames:
@@ -56,7 +66,7 @@ def skip_model(args, model_name: str):
           re.search("|".join(args.exclude), model_name, re.I))
 
 
-def process_file(args, results_map: dict[str, Any], filename: str):
+def process_file(args, results_map: Dict[str, Any], filename: str):
   with open(filename) as check_header_file:
     try:
       has_header = csv.Sniffer().has_header(check_header_file.read(1024))
@@ -111,7 +121,7 @@ def process_file(args, results_map: dict[str, Any], filename: str):
       results_map[timestamp][dynamo][model_name][batch_size] = median_total_time
 
 
-def summarize_speedups(acc_map: dict[str, Any], label: str):
+def summarize_speedups(acc_map: Dict[str, Any], label: str):
   if label not in acc_map:
     return
   acc_map[f'{label}:gmean'] = gmean(acc_map[label])
@@ -122,7 +132,7 @@ def summarize_speedups(acc_map: dict[str, Any], label: str):
 
 # The speedup values are stored in acc_map[out_label]; the corresponding
 # model names are stored in acc_map[f'{out_label}:model_name'].
-def compute_speedups(acc_map: dict[str, Any], baseline: dict[str, Any],
+def compute_speedups(acc_map: Dict[str, Any], baseline: Dict[str, Any],
                      out_label: str, in_label: str):
   model_label = f'{out_label}:model_name'
   if in_label not in acc_map:
@@ -151,7 +161,7 @@ def compute_speedups(acc_map: dict[str, Any], baseline: dict[str, Any],
 # A benchmark's baseline is the oldest Inductor perf number we have for it.
 # This way we can track both Pytorch/XLA and Inductor perf improvements over
 # time.
-def compute_baseline(results_map: dict[str, Any]) -> dict[str, Any]:
+def compute_baseline(results_map: Dict[str, Any]) -> Dict[str, Any]:
   baseline = {}
   for ts in sorted(list(results_map.keys())):
     if 'inductor' not in results_map[ts]:
@@ -166,7 +176,7 @@ def compute_baseline(results_map: dict[str, Any]) -> dict[str, Any]:
   return baseline
 
 
-def process_results(args, results_map: dict[str, Any]):
+def process_results(args, results_map: Dict[str, Any]):
   baseline = compute_baseline(results_map)
   for timestamp in results_map:
     acc_map = results_map[timestamp]
@@ -183,7 +193,7 @@ def maketitle(args, title: str):
   return title
 
 
-def pr_latest(results_map: dict[str, Any], args, timestamps: list[str]):
+def pr_latest(results_map: Dict[str, Any], args, timestamps: List[str]):
   prefixes = ('inductor', 'xla')
   speedups = [[], []]
   model_names = [[], []]
@@ -195,8 +205,9 @@ def pr_latest(results_map: dict[str, Any], args, timestamps: list[str]):
     for timestamp in reversed(timestamps):
       acc_map = results_map[timestamp]
       if label in acc_map:
-        (speedups[i], model_names[i]) = map(
+        speedups[i], model_names[i] = map(
             list, zip(*sorted(zip(acc_map[label], acc_map[model_label]))))
+        speedups[i] = map(pr_round, speedups[i])
         speedup_timestamps[i] = timestamp
         break
   if not speedups[0] or not speedups[1]:
@@ -220,19 +231,19 @@ def pr_latest(results_map: dict[str, Any], args, timestamps: list[str]):
     plt.plot(speedups[0], label='Inductor', marker='^')
     plt.plot(speedups[1], label='PytorchXLA', marker='o')
     plt.legend()
-    dates = date.fromtimestamp(float(speedup_timestamps[0]))
+    datestr = datetime.utcfromtimestamp(float(speedup_timestamps[0]))
     if speedup_timestamps[0] != speedup_timestamps[1]:
-      dates = f'{dates} (Inductor)'
-      dates += ', {date.fromtimestamp(float(dates[1]))} (PytorchXLA)'
+      datestr = f'{datestr} (Inductor)'
+      datestr += ', {datetime.utcfromtimestamp(float(speedup_timestamps[1]))} (PytorchXLA)'
     plt.title(
         maketitle(args,
-                  f'Speedup over Oldest Benchmarked Inductor as of {dates}'))
+                  f'Speedup over Oldest Benchmarked Inductor as of {datestr}'))
     plt.xlabel('Workload Number')
     plt.ylabel(f'Speedup')
     plt.savefig(sys.stdout.buffer)
 
 
-def pr_histogram(results_map: dict[str, Any], args, timestamps: list[str]):
+def pr_histogram(results_map: Dict[str, Any], args, timestamps: List[str]):
   percentiles = [f'p{p}' for p in (95, 50, 5)]
   prefixes = ('inductor', 'xla')
   labels = [f'{pfx}:speedups:{p}' for pfx in prefixes for p in percentiles]
@@ -248,15 +259,14 @@ def pr_histogram(results_map: dict[str, Any], args, timestamps: list[str]):
     if labels[0] in results_map[timestamp]:
       for label in labels:
         assert label in results_map[timestamp]
-      x.append(date.fromtimestamp(float(timestamp)))
+      x.append(datetime.utcfromtimestamp(float(timestamp)))
       for i, label in enumerate(labels):
-        y[i].append(results_map[timestamp][label])
+        y[i].append(pr_round(results_map[timestamp][label]))
   if args.format == 'csv':
-    titles = ['# Datetime'] + titles
+    titles = ['# Datetime(UTC)'] + titles
     print(','.join(titles))
-    for i, datetime in enumerate(x):
-      print(','.join([str(datetime)] +
-                     [str(y[j][i]) for j in range(len(labels))]))
+    for i, utc in enumerate(x):
+      print(','.join([str(utc)] + [str(y[j][i]) for j in range(len(labels))]))
   else:
     fig, ax = plt.subplots()
     ax.axhline(y=1.0, color='lightgray')
@@ -281,7 +291,7 @@ def pr_histogram(results_map: dict[str, Any], args, timestamps: list[str]):
     plt.savefig(sys.stdout.buffer)
 
 
-def pr_gmean(results_map: dict[str, Any], args, timestamps: list[str]):
+def pr_gmean(results_map: Dict[str, Any], args, timestamps: List[str]):
   label = f'speedups:gmean'
   x = []
   y0 = []
@@ -290,12 +300,12 @@ def pr_gmean(results_map: dict[str, Any], args, timestamps: list[str]):
     if 'inductor:speedups:gmean' not in results_map[
         timestamp] or 'xla:speedups:gmean' not in results_map[timestamp]:
       continue
-    x.append(date.fromtimestamp(float(timestamp)))
-    y0.append(results_map[timestamp]['inductor:speedups:gmean'])
-    y1.append(results_map[timestamp]['xla:speedups:gmean'])
+    x.append(datetime.utcfromtimestamp(float(timestamp)))
+    y0.append(pr_round(results_map[timestamp]['inductor:speedups:gmean']))
+    y1.append(pr_round(results_map[timestamp]['xla:speedups:gmean']))
   if args.format == 'csv':
     print(
-        '# Datetime,Speedup(Inductor/Oldest Inductor),Speedup(PytorchXLA/Oldest Inductor)'
+        '# Datetime(UTC),Speedup(Inductor/Oldest Inductor),Speedup(PytorchXLA/Oldest Inductor)'
     )
     for a, b, c in zip(x, y0, y1):
       print(','.join(map(str, [a, b, c])))
@@ -313,9 +323,12 @@ def pr_gmean(results_map: dict[str, Any], args, timestamps: list[str]):
     plt.savefig(sys.stdout.buffer)
 
 
-def pr_results(results_map: dict[str, Any], args):
+def pr_results(results_map: Dict[str, Any], args):
   timestamps = list(results_map.keys())
   timestamps.sort()
+
+  if args.format == 'png' and not has_matplotlib:
+    sys.exit('Fatal: cannot find matplotlib packages needed for PNG output.')
 
   if args.report == 'latest':
     return pr_latest(results_map, args, timestamps)

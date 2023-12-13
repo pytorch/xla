@@ -109,10 +109,14 @@ class ProcessGroupXla(ProcessGroup):
 
   def allgather(self, output_tensors_list, input_tensors, opts=None):
     for input_tensor, output_tensors in zip(input_tensors, output_tensors_list):
+      is_scalar = (input_tensor.dim() == 0)
+      if is_scalar:
+        input_tensor = torch.reshape(input_tensor, (1,))
       result = xm.all_gather(input_tensor, groups=self._mesh, pin_layout=False)
       for i, slice in enumerate(torch.split(result, input_tensor.shape[0])):
         with torch.no_grad():
-          output_tensors[i].copy_(slice)
+          output_tensors[i].copy_(
+              slice if not is_scalar else torch.reshape(slice, ()))
 
     return _ret_work([t for sublist in output_tensors_list for t in sublist])
 
@@ -158,6 +162,33 @@ class ProcessGroupXla(ProcessGroup):
           groups=groups,
           output=output_tensor,
           pin_layout=False)
+
+    return _ret_work(output_tensors)
+
+  def reduce_scatter_coalesced(self, output_tensors, input_tensors_list, opts):
+    input_tensor_list = []
+    for input_tensors in input_tensors_list:
+      # Ensure all inputs have the same shape.
+      first_shape = input_tensors[0].shape
+      for i, t in enumerate(input_tensors[1:]):
+        if first_shape != t.shape:
+          raise ValueError(f"Input {i+1}'s shape is different from input 0: "
+                           f"{t.shape} vs {first_shape}")
+      input_tensor = torch.cat(input_tensors)
+      input_tensor_list.append(input_tensor)
+
+    reduce_type = self._get_reduce_type(opts.reduceOp)
+    groups = self._mesh
+    shard_count = len(groups[0]) if groups else self.size()
+    xm.reduce_scatter(
+        reduce_type,
+        input_tensor_list,
+        scatter_dim=0,
+        shard_count=shard_count,
+        scale=1,
+        groups=groups,
+        output=output_tensors,
+        pin_layout=False)
 
     return _ret_work(output_tensors)
 
