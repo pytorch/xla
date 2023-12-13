@@ -55,7 +55,7 @@ std::unordered_map<int, int> build_index_map(
 }
 
 torch::lazy::hash_t hash_comp_env(
-    std::shared_ptr<xla::ifrt::Client> client,
+    xla::ifrt::Client* client,
     std::vector<xla::ifrt::Device*>& ordered_devices) {
   torch::lazy::hash_t hash = hash::HashXlaEnvVars();
   // Whether or not SPMD mode is active should influence the hash.
@@ -130,7 +130,7 @@ IfrtComputationClient::IfrtComputationClient() {
     std::string device_str = IfrtDeviceToString(device);
     string_to_device_.emplace(device_str, device);
   }
-  comp_env_hash_ = hash_comp_env(client_, ordered_devices);
+  comp_env_hash_ = hash_comp_env(client_.get(), ordered_devices);
 
   auto tracked_devices = GetLocalDevices();
   tracked_devices.emplace_back(spmd_device_str);

@@ -62,7 +62,7 @@ xla::Shape host_output_shape(xla::PjRtBuffer* buffer) {
 }
 
 torch::lazy::hash_t hash_comp_env(
-    std::shared_ptr<xla::PjRtClient> client,
+    xla::PjRtClient* client,
     std::vector<xla::PjRtDevice*>& ordered_devices) {
   torch::lazy::hash_t hash = hash::HashXlaEnvVars();
   auto topology_desc = client->GetTopologyDescription();
@@ -132,7 +132,7 @@ PjRtComputationClient::PjRtComputationClient() {
     std::string device_str = PjRtDeviceToString(device);
     string_to_device_.emplace(device_str, device);
   }
-  comp_env_hash_ = hash_comp_env(client_, ordered_devices);
+  comp_env_hash_ = hash_comp_env(client_.get(), ordered_devices);
 
   auto tracked_devices = GetLocalDevices();
   tracked_devices.emplace_back(spmd_device_str);
