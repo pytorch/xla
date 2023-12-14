@@ -244,7 +244,6 @@ PjRtComputationClient::PjRtComputationClient() {
     std::string device_str = PjRtDeviceToString(device);
     string_to_device_.emplace(device_str, device);
   }
-  comp_env_hash_ = hash_comp_env(client_, ordered_devices);
 
   auto tracked_devices = GetLocalDevices();
   tracked_devices.emplace_back(spmd_device_str);
