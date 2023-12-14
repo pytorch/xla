@@ -60,24 +60,29 @@ class XlaMarkPatternTest(unittest.TestCase):
       def forward(self, x, y):
         q, k, v = x.split(128, dim=-2)
         q = torch.ops.xla_pattern_marking.mark_tensor(
-            q, "sdpa", pos=0, id=0, is_input=True)
+            q, "sdpa", pos=0, id="0", is_input=True)
         k = torch.ops.xla_pattern_marking.mark_tensor(
-            k, "sdpa", pos=1, id=0, is_input=True)
+            k, "sdpa", pos=1, id="0", is_input=True)
         v = torch.ops.xla_pattern_marking.mark_tensor(
-            v, "sdpa", pos=2, id=0, is_input=True)
+            v, "sdpa", pos=2, id="0", is_input=True)
         attn_out = F.scaled_dot_product_attention(q, k, v, scale=0.25)
         attn_out = torch.ops.xla_pattern_marking.mark_tensor(
-            attn_out, "sdpa", pos=0, id=0, is_input=False, attr={"scale": 0.25})
+            attn_out,
+            "sdpa",
+            pos=0,
+            id="0",
+            is_input=False,
+            attr={"scale": 0.25})
         q, k, v = y.split(128, dim=-2)
         q = torch.ops.xla_pattern_marking.mark_tensor(
-            q, "sdpa", pos=0, id=1, is_input=True)
+            q, "sdpa", pos=0, id="1", is_input=True)
         k = torch.ops.xla_pattern_marking.mark_tensor(
-            k, "sdpa", pos=1, id=1, is_input=True)
+            k, "sdpa", pos=1, id="1", is_input=True)
         v = torch.ops.xla_pattern_marking.mark_tensor(
-            v, "sdpa", pos=2, id=1, is_input=True)
+            v, "sdpa", pos=2, id="1", is_input=True)
         attn_out2 = F.scaled_dot_product_attention(q, k, v, scale=4)
         attn_out2 = torch.ops.xla_pattern_marking.mark_tensor(
-            attn_out2, "sdpa", pos=0, id=1, is_input=False, attr={"scale": 2})
+            attn_out2, "sdpa", pos=0, id="1", is_input=False, attr={"scale": 2})
         return attn_out, attn_out2
 
     input_args = (torch.randn((32, 8, 384, 64)), torch.randn((32, 8, 384, 64)))
@@ -164,11 +169,11 @@ class XlaMarkPatternTest(unittest.TestCase):
   def test_multiple_input(self):
 
     def f(x, y):
-      x = torch.ops.xla_pattern_marking.mark_tensor(x, "p", 0, 0, True)
-      y = torch.ops.xla_pattern_marking.mark_tensor(y, "p", 1, 0, True)
+      x = torch.ops.xla_pattern_marking.mark_tensor(x, "p", 0, "0", True)
+      y = torch.ops.xla_pattern_marking.mark_tensor(y, "p", 1, "0", True)
       out = x + y
       out = out * x * y
-      out = torch.ops.xla_pattern_marking.mark_tensor(out, "p", 0, 0, False)
+      out = torch.ops.xla_pattern_marking.mark_tensor(out, "p", 0, "0", False)
       return out
 
     input_args = (torch.ones(5), torch.ones(5))
@@ -180,12 +185,12 @@ class XlaMarkPatternTest(unittest.TestCase):
   def test_multiple_output(self):
 
     def f(x, y):
-      x = torch.ops.xla_pattern_marking.mark_tensor(x, "p", 0, 0, True)
-      y = torch.ops.xla_pattern_marking.mark_tensor(y, "p", 1, 0, True)
+      x = torch.ops.xla_pattern_marking.mark_tensor(x, "p", 0, "0", True)
+      y = torch.ops.xla_pattern_marking.mark_tensor(y, "p", 1, "0", True)
       out1 = x + y
       out2 = x * y
-      out1 = torch.ops.xla_pattern_marking.mark_tensor(out1, "p", 0, 0, False)
-      out2 = torch.ops.xla_pattern_marking.mark_tensor(out2, "p", 1, 0, False)
+      out1 = torch.ops.xla_pattern_marking.mark_tensor(out1, "p", 0, "0", False)
+      out2 = torch.ops.xla_pattern_marking.mark_tensor(out2, "p", 1, "0", False)
       return out1, out2
 
     input_args = (torch.ones(5), torch.ones(5))
@@ -195,14 +200,14 @@ class XlaMarkPatternTest(unittest.TestCase):
   def test_nested_pattern(self):
 
     def f(x):
-      x = torch.ops.xla_pattern_marking.mark_tensor(x, "p_outter", 0, 0, True)
+      x = torch.ops.xla_pattern_marking.mark_tensor(x, "p_outter", 0, "0", True)
       x = x + 1
-      x = torch.ops.xla_pattern_marking.mark_tensor(x, "p_inner", 0, 0, True)
+      x = torch.ops.xla_pattern_marking.mark_tensor(x, "p_inner", 0, "0", True)
       x = x + 1
-      x = torch.ops.xla_pattern_marking.mark_tensor(x, "p_inner", 0, 0, False)
+      x = torch.ops.xla_pattern_marking.mark_tensor(x, "p_inner", 0, "0", False)
       x = x * 2
-      x = torch.ops.xla_pattern_marking.mark_tensor(x, "p_outter", 0, 0, False)
-      return x
+      x = torch.ops.xla_pattern_marking.mark_tensor(x, "p_outter", 0, "0",
+                                                    False)
 
     input_args = (torch.ones(5),)
     stablehlo = self.run_func_get_stablehlo(f, input_args)
@@ -211,14 +216,14 @@ class XlaMarkPatternTest(unittest.TestCase):
   def test_tangent_output(self):
     # Special case of nested pattern, outputs don't have dependencies.
     def f(x):
-      x = torch.ops.xla_pattern_marking.mark_tensor(x, "p_outter", 0, 0, True)
+      x = torch.ops.xla_pattern_marking.mark_tensor(x, "p_outter", 0, "0", True)
       x = x + 1
-      x = torch.ops.xla_pattern_marking.mark_tensor(x, "p_inner", 0, 0, True)
+      x = torch.ops.xla_pattern_marking.mark_tensor(x, "p_inner", 0, "0", True)
       x = x + 1
       y = x - 1
-      x = torch.ops.xla_pattern_marking.mark_tensor(x, "p_inner", 0, 0, False)
-      y = torch.ops.xla_pattern_marking.mark_tensor(y, "p_outter", 0, 0, False)
-      return x, y
+      x = torch.ops.xla_pattern_marking.mark_tensor(x, "p_inner", 0, "0", False)
+      y = torch.ops.xla_pattern_marking.mark_tensor(y, "p_outter", 0, "0",
+                                                    False)
 
     input_args = (torch.ones(5),)
     stablehlo = self.run_func_get_stablehlo(f, input_args)
