@@ -165,6 +165,7 @@ PjRtComputationClient::PjRtComputationClient() {
   } else if (device_type == "GPU" || device_type == "CUDA" ||
              device_type == "ROCM") {
     TF_VLOG(1) << "Initializing PjRt GPU client...";
+    XLA_CHECK(false) << "Just checking the stack trace";
     bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncGpuClient, true);
     int local_process_rank = sys_util::GetEnvInt(env::kEnvPjRtLocalRank, 0);
     int global_process_rank = sys_util::GetEnvInt("RANK", local_process_rank);

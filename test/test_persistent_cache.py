@@ -122,18 +122,19 @@ class PersistentCacheTest(parameterized.TestCase):
         },
     ))
 
-  def test_persistent_cache_mp(self):
-    self._run_test(xmp.spawn, _mp_test)
+  @parameterized.named_parameters(
+      ('mp', xmp.spawn, _mp_test),
+      ('single_device', _test_spawn, _single_device_test),
+  )
+  def test_persistent_cache(self, launch_method, test_fn):
+    self._run_test(launch_method, test_fn)
 
   @parameterized.named_parameters(
-      ('single_device', _single_device_test),
-      ('spmd_replicated', _spmd_replicated_test),
-      ('spmd_sharded', _spmd_sharded_test),
+      ('replicated', _spmd_replicated_test),
+      ('sharded', _spmd_sharded_test),
   )
-  @absltest.skipUnless(
-      xr.device_type() == 'TPU',
-      'TPU required for SPMD; single-device GPU is pending #6023')
-  def test_persistent_cache(self, test_fn):
+  @absltest.skipUnless(xr.device_type() == 'TPU', 'TPU required for SPMD')
+  def test_persistent_cache_spmd(self, test_fn):
     self._run_test(_test_spawn, test_fn)
 
   @absltest.skipUnless(xr.device_type() == 'TPU', 'TPU required for SPMD')
