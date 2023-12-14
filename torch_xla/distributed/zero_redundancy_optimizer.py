@@ -83,7 +83,17 @@ class ZeroRedundancyOptimizer(Optimizer):
 
   def init_zero(self):
     self.local_world_size = len(self.sharding_groups[0])
-    self.local_rank = self.global_rank // len(self.sharding_groups)
+    # Infer the local rank from the group
+    self.local_rank = None
+    for group in self.sharding_groups:
+      if self.global_rank in group:
+        if not isinstance(group, list):
+          group = list(group)
+        self.local_rank = group.index(self.global_rank)
+    if self.local_rank is None:
+      raise ValueError(
+          f"Current rank {self.global_rank} is missing from the sharding_groups {self.sharding_groups}"
+      )
     # Shard parameters for use in optimizer
     sharded_param_groups = self._shard_parameters()
     # Optimizer initialization
