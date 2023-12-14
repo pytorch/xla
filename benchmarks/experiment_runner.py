@@ -565,18 +565,6 @@ def parse_args(args=None):
   )
 
   parser.add_argument(
-      "--experiment-config",
-      type=str,
-      help="JSON string of the experiment config dict.",
-  )
-
-  parser.add_argument(
-      "--model-config",
-      type=str,
-      help="JSON string of the model config dict.",
-  )
-
-  parser.add_argument(
       "--profile-cuda",
       action="store_true",
       help="""Whether to profile CUDA or not. Note this does not do much except for
@@ -608,6 +596,18 @@ def parse_args(args=None):
       action="store_true",
       default=False,
       help="Whether to enable fast F32 multiplication in PyTorch.",
+  )
+
+  parser.add_argument(
+      "--experiment-config",
+      type=str,
+      help="JSON string defining the experiment configuration. When set an experiment is run with exactly this one configuration.",
+  )
+
+  parser.add_argument(
+      "--model-config",
+      type=str,
+      help="JSON string defining the model configuration. When set an experiment is run with exactly this one configuration.",
   )
 
   return parser.parse_args(args)
