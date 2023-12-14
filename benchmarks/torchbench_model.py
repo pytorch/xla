@@ -220,7 +220,12 @@ class TorchBenchModel(BenchmarkModel):
     is properly inferred after issuing converts to `torch.nn.Module`.
     """
     test = self.benchmark_experiment.test
-    benchmark = self.load_benchmark()
+    try:
+      benchmark = self.load_benchmark()
+    except Exception:
+      logger.exception("Cannot load benchmark model")
+      return None
+
     if test == "eval" and hasattr(benchmark, 'DEFAULT_EVAL_CUDA_PRECISION'):
       precision = benchmark.DEFAULT_EVAL_CUDA_PRECISION
     elif test == "train" and hasattr(benchmark, 'DEFAULT_TRAIN_CUDA_PRECISION'):
