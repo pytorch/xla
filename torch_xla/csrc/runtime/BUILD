@@ -292,7 +292,7 @@ cc_library(
     srcs = ["profiler.cc"],
     hdrs = ["profiler.h"],
     deps = [
-      ":debug_macros",
+      ":tf_logging",
       ":profiler_backends",
       "@xla//xla/backends/profiler/plugin:profiler_c_api_hdrs",
       "@xla//xla/backends/profiler/plugin:plugin_tracer",

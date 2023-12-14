@@ -45,13 +45,12 @@ InitializePjRt(const std::string& device_type) {
         ComputationClient::GetPjRtPluginPath(device_type);
     if (plugin_path) {
       TF_VLOG(1) << "Initializing client for PjRt plugin " << device_type;
-      XLA_CHECK_OK(
-          pjrt::LoadPjrtPlugin(absl::AsciiStrToLower(device_type), *plugin_path)
-              .status());
-      tsl::Status init_status = pjrt::InitializePjrtPlugin(device_type);
-      XLA_CHECK_OK(init_status);
+      const PJRT_Api* c_api = *pjrt::LoadPjrtPlugin(
+          absl::AsciiStrToLower(device_type), *plugin_path);
+      XLA_CHECK_OK(pjrt::InitializePjrtPlugin(device_type));
       client_ = std::move(
           xla::GetCApiClient(absl::AsciiStrToUpper(device_type)).value());
+      profiler::RegisterProfilerForPlugin(c_api);
     }
   } else if (device_type == "CPU") {
     TF_VLOG(1) << "Initializing PjRt CPU client...";
