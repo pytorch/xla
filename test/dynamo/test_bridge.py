@@ -266,6 +266,17 @@ class TorchXLAReuseGraphTest(torch._dynamo.test_case.TestCase):
 
     self._compile_and_check(foo, (xm.xla_device(),))
 
+  def test_cpu_input(self):
+
+    def foo(xt, t):
+      # Cannot move t to XLA, since it's also an output.
+      return (xt * 5)[t], t
+
+    device = xm.xla_device()
+    xt = torch.rand(5, device=device)
+    t = torch.randint(0, 5, (3,))
+    self._compile_and_check(foo, (xt, t))
+
 
 if __name__ == "__main__":
   from torch._dynamo.test_case import run_tests
