@@ -44,97 +44,114 @@ class ExperimentRunner:
     self.output_file = os.path.join(self.output_dir, self._args.output_basename)
 
   def run(self):
-    if self._args.experiment_config and self._args.model_config:
-      if self._args.dry_run:
-        logger.warning(f"Dry run with {[sys.executable] + sys.argv}")
-        return
-      experiment_config = json.loads(self._args.experiment_config)
-      model_config = json.loads(self._args.model_config)
-      self.run_single_experiment(experiment_config, model_config)
+    is_main_process = self._args.experiment_config is None and self._args.model_config is None
+    if is_main_process:
+      self.generate_and_run_all_configs()
     else:
-      assert not self._args.experiment_config and not self._args.model_config
-      finished_experiments = set()
-      if os.path.exists(self.output_file):
-        if self._args.no_resume:
-          os.unlink(self.output_file)
-        else:
-          with open(self.output_file, mode="r", encoding="utf-8") as f:
-            jsonlines = f.read().splitlines()
-          for jsonline in jsonlines:
-            tmp = json.loads(jsonline)
-            # the finished experiment batch_size may be altered by model set_up(),
-            # so the dummy experiment will not match it
-            tmp["experiment"]["batch_size"] = self._args.batch_size
-            finished_experiments.add("-".join(
-                str(item) for item in (list(tmp["model"].values()) +
-                                       list(tmp["experiment"].values()))))
+      assert self._args.experiment_config is not None and self._args.model_config is not None
+      self.run_single_config()
 
-      experiment_configs = self.experiment_loader.list_experiment_configs()
-      model_configs = self.model_loader.list_model_configs()
-      logger.warning(
-          f"Number of selected experiment configs: {len(experiment_configs)}")
-      logger.warning(f"Number of selected model configs: {len(model_configs)}")
-      for model_config in tqdm(
-          model_configs,
-          desc="model configs",
-          disable=not self._args.progress_bar):
-        for experiment_config in experiment_configs:
-          process_env = experiment_config.pop("process_env")
-          experiment_config_str = json.dumps(experiment_config)
-          model_config_str = json.dumps(model_config)
-          dummy_benchmark_experiment = self.experiment_loader.load_experiment(
-              experiment_config)
-          dummy_benchmark_model = self.model_loader.load_model(
-              model_config, dummy_benchmark_experiment, dummy=True)
-          experiment_config["process_env"] = process_env
-          command = ([sys.executable] + sys.argv +
-                     [f"--experiment-config={experiment_config_str}"] +
-                     [f"--model-config={model_config_str}"])
-          if self._args.dry_run:
-            logger.warning(f"Dry run with {command}")
-            continue
-          if "-".join(
-              str(item)
-              for item in (list(dummy_benchmark_model.to_dict().values()) +
-                           list(dummy_benchmark_experiment.to_dict().values())
-                          )) in finished_experiments:
-            continue
-          if self.model_loader.is_compatible(dummy_benchmark_model,
-                                             dummy_benchmark_experiment):
-            try:
-              completed_process = subprocess.run(
-                  command,
-                  timeout=60 * 30,
-                  env=process_env,
-                  check=True,
-                  capture_output=True,
-                  encoding="utf-8",
-              )
-            except subprocess.TimeoutExpired as e:
-              logger.error("TIMEOUT")
-              self.save_results(dummy_benchmark_experiment,
-                                dummy_benchmark_model, {"error": str(e)}, None)
-            except subprocess.CalledProcessError as e:
-              logger.error("ERROR")
-              self.save_results(dummy_benchmark_experiment,
-                                dummy_benchmark_model, {"error": e.stderr},
-                                None)
-            except subprocess.SubprocessError as e:
-              logger.error("ERROR")
-              self.save_results(dummy_benchmark_experiment,
-                                dummy_benchmark_model, {"error": str(e)}, None)
-            else:
-              if self._args.print_subprocess:
-                logger.info(completed_process.stdout)
-                logger.warning(completed_process.stderr)
+  def generate_and_run_all_configs(self):
+    assert self._args.experiment_config is None and self._args.model_config is None
 
-          else:
-            e = "SKIP because of incompatible model and experiment configs."
-            logger.warning(e)
+    # Collect fingerprints for configs to skip. These are configs for which we
+    # already have results. The derived fingerprints uniquely identify the
+    # benchmark configurations, currently a string.
+    skip_fingerprints = set()
+    if os.path.exists(self.output_file):
+      if self._args.no_resume:
+        os.unlink(self.output_file)
+      else:
+        with open(self.output_file, mode="r", encoding="utf-8") as f:
+          jsonlines = f.read().splitlines()
+        for ln in jsonlines:
+          ln_dict = json.loads(ln)
+          skip_fingerprints.add(
+              self._get_config_fingerprint(ln_dict["experiment"],
+                                           ln_dict["model"]))
+
+    experiment_configs = self.experiment_loader.list_experiment_configs()
+    model_configs = self.model_loader.list_model_configs()
+    logger.warning(
+        f"Number of selected experiment configs: {len(experiment_configs)}")
+    logger.warning(f"Number of selected model configs: {len(model_configs)}")
+    for model_config in tqdm(
+        model_configs,
+        desc="model configs",
+        disable=not self._args.progress_bar):
+      for experiment_config in experiment_configs:
+        process_env = experiment_config.pop("process_env")
+        experiment_config_str = json.dumps(experiment_config)
+        model_config_str = json.dumps(model_config)
+        dummy_benchmark_experiment = self.experiment_loader.load_experiment(
+            experiment_config)
+        dummy_benchmark_model = self.model_loader.load_model(
+            model_config, dummy_benchmark_experiment, dummy=True)
+        experiment_config["process_env"] = process_env
+        command = ([sys.executable] + sys.argv +
+                   [f"--experiment-config={experiment_config_str}"] +
+                   [f"--model-config={model_config_str}"])
+        # TODO: Actually run this and rely on dry running in subprocess.
+        if self._args.dry_run:
+          logger.warning(f"Dry run with {command}")
+          continue
+        fingerprint = self._get_config_fingerprint(
+            dummy_benchmark_experiment.to_dict(),
+            dummy_benchmark_model.to_dict())
+        if fingerprint in skip_fingerprints:
+          logger.info(f"Skipping {fingerprint}")
+          continue
+        if self.model_loader.is_compatible(dummy_benchmark_model,
+                                           dummy_benchmark_experiment):
+          try:
+            completed_process = subprocess.run(
+                command,
+                timeout=60 * 30,
+                env=process_env,
+                check=True,
+                capture_output=True,
+                encoding="utf-8",
+            )
+          except subprocess.TimeoutExpired as e:
+            logger.error("TIMEOUT")
             self.save_results(dummy_benchmark_experiment, dummy_benchmark_model,
                               {"error": str(e)}, None)
+          except subprocess.CalledProcessError as e:
+            logger.error("ERROR")
+            self.save_results(dummy_benchmark_experiment, dummy_benchmark_model,
+                              {"error": e.stderr}, None)
+          except subprocess.SubprocessError as e:
+            logger.error("ERROR")
+            self.save_results(dummy_benchmark_experiment, dummy_benchmark_model,
+                              {"error": str(e)}, None)
+          else:
+            if self._args.print_subprocess:
+              logger.info(completed_process.stdout)
+              logger.warning(completed_process.stderr)
 
-  def run_single_experiment(self, experiment_config, model_config):
+        else:
+          e = "SKIP because of incompatible model and experiment configs."
+          logger.warning(e)
+          self.save_results(dummy_benchmark_experiment, dummy_benchmark_model,
+                            {"error": str(e)}, None)
+
+  def _get_config_fingerprint(self, experiment_config: OrderedDict,
+                              model_config: OrderedDict) -> str:
+    # Experiment `batch_size` may be altered by model in `set_up`, so we will ignore that.
+    return "-".join(
+        list(map(str, model_config.values())) +
+        [str(v) for k, v in experiment_config.items() if k != "batch_size"] +
+        [str(self._args.batch_size)])
+
+  def run_single_config(self):
+    experiment_config = json.loads(self._args.experiment_config)
+    model_config = json.loads(self._args.model_config)
+
+    # Log and return if dry run.
+    if self._args.dry_run:
+      logger.info(f"Dry run with {[sys.executable] + sys.argv}")
+      return
+
     benchmark_experiment = self.experiment_loader.load_experiment(
         experiment_config)
     reset_rng_state(benchmark_experiment)
@@ -144,18 +161,17 @@ class ExperimentRunner:
     with benchmark_model.pick_grad():
       metrics = OrderedDict()
       outputs = []
-      for i in range(self._args.repeat):
+      for _ in range(self._args.repeat):
         run_metrics, output = self.timed_run(benchmark_experiment,
                                              benchmark_model)
         output = move_to_device(output, 'cpu')
         outputs.append(output)
         for key, val in run_metrics.items():
-          # metrics from repeated runs are formed into lists in the metrics dict
           if key not in metrics:
             metrics[key] = []
           metrics[key].append(val)
 
-    # additional experiment metrics can be added here
+    # Additional experiment metrics can be added here.
 
     self.save_results(benchmark_experiment, benchmark_model, metrics, outputs)
 
@@ -184,22 +200,6 @@ class ExperimentRunner:
     json_str = json.dumps(obj, ensure_ascii=False)
     with open(file_path, mode="a", encoding="utf-8") as f:
       f.write(f"{json_str}\n")
-
-  def output_csv(self, headers, row, file_path=None):
-    if not file_path:
-      file_path = self.output_file
-    existed = os.path.exists(file_path)
-    output = csv.writer(
-        io.TextIOWrapper(
-            open(file_path, "ab", buffering=0),
-            "utf-8",
-            write_through=True,
-        ),
-        lineterminator="\n",
-    )
-    if not existed:
-      output.writerow(headers)
-    output.writerow([(f"{x:.8e}" if isinstance(x, float) else x) for x in row])
 
   def _mark_step(self, benchmark_experiment):
     if benchmark_experiment.xla:
@@ -374,28 +374,24 @@ class ExperimentRunner:
 
 def parse_args(args=None):
   parser = argparse.ArgumentParser()
-
   parser.add_argument(
       "--suite-name",
       required=True,
       choices=["dummy", "torchbench"],
       help="Suite name for the model garden.",
   )
-
   parser.add_argument(
       "--filter",
       "-k",
       action="append",
       default=[],
       help="filter benchmarks with regexp")
-
   parser.add_argument(
       "--exclude",
       "-x",
       action="append",
       default=[],
       help="filter out benchmarks with regexp")
-
   parser.add_argument(
       "--filter-by-tier",
       type=int,
@@ -403,7 +399,6 @@ def parse_args(args=None):
       default=[],
       help="filter benchmarks by predefined tier 1-3",
   )
-
   parser.add_argument(
       "--exclude-by-tier",
       type=int,
@@ -440,55 +435,47 @@ def parse_args(args=None):
       type=parse_log_level,
       help="Specify log level.",
   )
-
   parser.add_argument(
       "--accelerator",
       choices=["cpu", "cuda", "tpu"],
       action="append",
       help="Specify an accelerator to use.",
   )
-
   parser.add_argument(
       "--xla",
       choices=["None", "PJRT", "XRT"],
       action="append",
       help="Specify an xla option to use.",
   )
-
   parser.add_argument(
       "--dynamo",
       choices=["None", "inductor", "openxla_eval", "openxla"],
       action="append",
       help="Specify an xla option to use.",
   )
-
   parser.add_argument(
       "--test",
       choices=["eval", "train"],
       action="append",
       help="Specify a test to run.",
   )
-
   parser.add_argument(
       "--repeat",
       type=int,
       default=10,
       help="Number of times to repeat the timed run in a single experiment.",
   )
-
   parser.add_argument(
       "--iterations-per-run",
       type=int,
       default=1,
       help="Number of times to repeat the model iteration inside a timed run.",
   )
-
   parser.add_argument(
       "--batch-size",
       type=int,
       help="Batch size to be used. If not provided, it depends on the model suites to determine it.",
   )
-
   parser.add_argument(
       "--total-partitions",
       type=int,
@@ -496,38 +483,32 @@ def parse_args(args=None):
       choices=range(1, 10),
       help="Total number of partitions we want to divide the benchmark suite into",
   )
-
   parser.add_argument(
       "--partition-id",
       type=int,
       default=0,
       help="ID of the benchmark suite partition to be run. Used to divide CI tasks",
   )
-
   parser.add_argument(
       "--dry-run",
       action="store_true",
       help="Do a dry run to only print the benchmark commands.",
   )
-
   parser.add_argument(
       "--print-subprocess",
       action="store_true",
       help="Print subprocess stdout.",
   )
-
   parser.add_argument(
       "--progress-bar",
       action="store_true",
       help="Display progress bar.",
   )
-
   parser.add_argument(
       "--randomize-input",
       action="store_true",
       help="Whether to randomize the input values. Dimensions will be kept the same.",
   )
-
   parser.add_argument(
       "--collect-full-output",
       action="store_true",
@@ -535,27 +516,23 @@ def parse_args(args=None):
         want to verify the numerical correctness of gradients. But that may
         cause time measurement not accurate""",
   )
-
   parser.add_argument(
       "--save-output",
       action="store_true",
       help="Whether to save the model output to disk",
   )
-
   parser.add_argument(
       "--output-dirname",
       type=str,
       default="./output/",
       help="Overrides the directory to place output files.",
   )
-
   parser.add_argument(
       "--output-basename",
       type=str,
       default="results.jsonl",
       help="Overrides the basename of output files.",
   )
-
   parser.add_argument(
       "--no-resume",
       action="store_true",
@@ -563,53 +540,45 @@ def parse_args(args=None):
         exist in the output-basename file. If --no-resume is set, the previous
         output-basename file will be deleted and all experiment will run""",
   )
-
   parser.add_argument(
       "--profile-cuda",
       action="store_true",
       help="""Whether to profile CUDA or not. Note this does not do much except for
       triggering a profiler. To get the profiling data use additionally --profile-cuda-dump""",
   )
-
   parser.add_argument(
       "--profile-cuda-dump",
       type=str,
       default="",
       help="Directory specifying where to dump profiling information (summary, and trace)",
   )
-
   parser.add_argument(
       "--profile-cuda-cpu-collect",
       action="store_true",
       help="Whether to collect CPU/GPU profiling information in the resulting file.",
   )
-
   parser.add_argument(
       "--xla-flags",
       type=str,
       action="append",
       help="Flags to forward to XLA via `XLA_FLAGS` env var.",
   )
-
   parser.add_argument(
       "--disable-tf32",
       action="store_true",
       default=False,
       help="Whether to enable fast F32 multiplication in PyTorch.",
   )
-
   parser.add_argument(
       "--experiment-config",
       type=str,
       help="JSON string defining the experiment configuration. When set an experiment is run with exactly this one configuration.",
   )
-
   parser.add_argument(
       "--model-config",
       type=str,
       help="JSON string defining the model configuration. When set an experiment is run with exactly this one configuration.",
   )
-
   return parser.parse_args(args)
 
 
