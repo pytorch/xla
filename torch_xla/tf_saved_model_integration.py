@@ -17,12 +17,19 @@ except ImportError:
   raise
 
 
+def _get_shape_with_dynamic(signature: stablehlo.VariableSignature):
+  shape = copy.copy(signature.shape)
+  for i in signature.dynamic_dims:
+    shape[i] = None
+  return shape
+
+
 def _wrap_as_tf_func(func, bundle):
 
   def inner(*args):
     output_sig = func.meta.output_signature[0]
     Touts = [sig.dtype for sig in func.meta.output_signature]
-    Souts = [sig.shape for sig in func.meta.output_signature]
+    Souts = [_get_shape_with_dynamic(sig) for sig in func.meta.output_signature]
     call_args = stablehlo._extract_call_parameters(args, func.meta, bundle)
     return tfxla.call_module(
         tuple(call_args),
@@ -54,8 +61,9 @@ def _make_input_signatures(
   }
   for i in range(len(input_pos_to_spec)):
     spec = input_pos_to_spec[i]
+    shape = _get_shape_with_dynamic(spec)
     yield tf.TensorSpec(
-        shape=spec.shape, dtype=getattr(tf, spec.dtype), name=f'args_{i}')
+        shape=shape, dtype=getattr(tf, spec.dtype), name=f'args_{i}')
 
 
 def _mangle_tf_root_scope_name(name):

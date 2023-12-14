@@ -1,10 +1,13 @@
+import numpy as np
 import torch_xla
 import torch_xla.core.xla_model as xm
 from torch_xla.stablehlo import StableHLOExportOptions, exported_program_to_stablehlo
-from torch_xla.tf_saved_model_integration import make_tf_function, save_torch_module_as_tf_saved_model
+from torch_xla.tf_saved_model_integration import (
+    make_tf_function, save_torch_module_as_tf_saved_model,
+    save_stablehlo_graph_as_tf)
 from torch.utils import _pytree as pytree
+from torch.export import export, dynamic_dim
 import torch
-import torchvision
 
 import tempfile
 import unittest
@@ -13,31 +16,39 @@ import tensorflow as tf
 
 class StableHLOInferenceTest(unittest.TestCase):
 
-  def test_resnet18_inference(self):
-    resnet18 = torchvision.models.resnet18().eval()
-    data = torch.randn(4, 3, 224, 224)
-    output = resnet18(data)
+  def test_dynamic_shapes(self):
 
-    exported = torch.export.export(resnet18, (data,))
-    options = StableHLOExportOptions(override_tracing_arguments=(data,))
-    stablehlo_program = exported_program_to_stablehlo(exported, options)
-    tf_func = make_tf_function(stablehlo_program)
+    class MyModule(torch.nn.Module):
 
-    output_tf = tf_func(*options.override_tracing_arguments)
-    output2 = torch.tensor(output_tf[0].numpy())
-    self.assertTrue(torch.allclose(output, output2, atol=1e-5))
+      def forward(self, a, b):
+        return a * b
 
-  def test_resnet18_save_load(self):
-    resnet18 = torchvision.models.resnet18().eval()
-    data = torch.randn(4, 3, 224, 224)
-    output = resnet18(data)
+    model = MyModule()
+    a = torch.randn(3, 10)
+    b = torch.randn(3, 10)
+    constraints = [
+        dynamic_dim(a, 0),
+        dynamic_dim(b, 0),
+        dynamic_dim(a, 0) == dynamic_dim(b, 0)
+    ]
 
+    exported = torch.export.export(
+        model, (
+            a,
+            b,
+        ), constraints=constraints)
+    shlo = exported_program_to_stablehlo(exported)
+    print(shlo.get_stablehlo_text())
     with tempfile.TemporaryDirectory() as tempdir:
-      save_torch_module_as_tf_saved_model(resnet18, (data,), tempdir)
+      save_stablehlo_graph_as_tf(
+          shlo,
+          tempdir,
+          serving_key=tf.saved_model.DEFAULT_SERVING_SIGNATURE_DEF_KEY,
+          function_alias='')
       loaded_m = tf.saved_model.load(tempdir)
-      res = loaded_m.f(data.detach().numpy())[0]
-      output2 = torch.tensor(res.numpy())
-      self.assertTrue(torch.allclose(output, output2, atol=1e-5))
+      data2 = (np.random.randn(2, 10), np.random.randn(2, 10))
+      res = loaded_m.f(*data2)
+      self.assertTrue(np.allclose(res, data2[0] * data2[1]))
 
   def test_unused_param(self):
 
