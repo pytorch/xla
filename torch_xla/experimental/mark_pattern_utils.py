@@ -1,8 +1,8 @@
-import uuid
 from typing import Dict, Union
 
 import torch
-from torch_xla.experimental import xla_marker
+import torch_xla.experimental.xla_marker
+from torch_xla.experimental.xla_marker import get_uuid_tensor
 
 
 class StableHLOCompositeBuilder:
@@ -21,7 +21,7 @@ class StableHLOCompositeBuilder:
 
     self.attr = attr
     self.name = name
-    self.id = uuid.uuid4().hex
+    self.id = get_uuid_tensor()
     self._inputs = []
     self._outputs = []
 
