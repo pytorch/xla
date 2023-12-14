@@ -121,7 +121,11 @@ class ExperimentRunner:
           process_env = benchmark_model.extend_process_env(process_env)
           command = [sys.executable] + sys.argv + [
               f"--experiment-config={json.dumps(experiment_cfg)}"
-          ] + [f"--model-config={json.dumps(model_cfg)}"]
+          ] + [f"--model-config={json.dumps(model_cfg)}"] + [
+              # Note: if "--timestamp foo" is already in sys.argv, we
+              # harmlessly pass "--timestamp foo" again here.
+              f"--timestamp={self._args.timestamp}"
+          ]
           command_str = " ".join(command)
           logger.debug(f"Run `{command_str}`")
           child_process = subprocess.run(
@@ -206,6 +210,7 @@ class ExperimentRunner:
 
     results["metrics"] = metrics
     results["outputs_file"] = outputs_file_name
+    results["timestamp"] = self._args.timestamp
 
     json_str = json.dumps(results, ensure_ascii=False)
     with open(self.output_file, mode="a", encoding="utf-8") as f:
@@ -612,6 +617,13 @@ def parse_args(args=None):
       type=str,
       help="JSON string defining the model configuration. When set an experiment is run with exactly this one configuration.",
   )
+
+  parser.add_argument(
+      "--timestamp",
+      default=time.time(),
+      type=float,
+      help="Timestamp (seconds since the epoch) to assign to the benchmarks.")
+
   return parser.parse_args(args)
 
 
