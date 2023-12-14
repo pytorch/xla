@@ -10,19 +10,6 @@ import tempfile
 import unittest
 
 
-def onlyIfTorchSupportsCUDA(fn):
-  return unittest.skipIf(
-      not torch.cuda.is_available(), reason="requires PyTorch CUDA support")(
-          fn)
-
-
-def onlyIfPJRTDeviceIsCUDA(fn):
-  return unittest.skipIf(
-      os.environ.get("PJRT_DEVICE") not in ("GPU", "CUDA"),
-      reason="requires CUDA as PJRT_DEVICE")(
-          fn)
-
-
 def diff_output(testcase, output1, output2, rtol, atol, equal_nan=True):
   if isinstance(output1, torch.Tensor):
     testcase.assertIsInstance(output2, torch.Tensor)
@@ -4725,27 +4712,6 @@ class AtenOpTest(unittest.TestCase):
     )
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.where.self, args, kwargs)
-
-  def _test_move_tensor_cuda_to_xla(self, cpu_tensor):
-    # Assumes CPU-XLA data movement works.
-    cuda_tensor = cpu_tensor.to("cuda")
-    # Move tensor CUDA -> XLA.
-    xla_tensor = cuda_tensor.to(xm.xla_device())
-    # Move the XLA tensor back to CPU, and check that it is the same as
-    # the original CPU tensor.
-    self.assertTrue(torch.equal(cpu_tensor, xla_tensor.cpu()))
-
-  @onlyIfTorchSupportsCUDA
-  @onlyIfPJRTDeviceIsCUDA
-  def test_aten_move_cuda_to_xla(self):
-    self._test_move_tensor_cuda_to_xla(torch.arange(5))
-
-  @onlyIfTorchSupportsCUDA
-  @onlyIfPJRTDeviceIsCUDA
-  def test_aten_move_scalar_cuda_to_xla(self):
-    # 0-dimensional scalar-tensor
-    # Has a different execution path than other tensors.
-    self._test_move_tensor_cuda_to_xla(torch.tensor(42))
 
 
 if __name__ == '__main__':
