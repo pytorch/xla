@@ -83,7 +83,7 @@ class ExperimentRunner:
           experiment_config_str = json.dumps(experiment_config)
           model_config_str = json.dumps(model_config)
           dummy_benchmark_experiment = self.experiment_loader.load_experiment(
-              experiment_config, dummy=True)
+              experiment_config)
           dummy_benchmark_model = self.model_loader.load_model(
               model_config, dummy_benchmark_experiment, dummy=True)
           experiment_config["process_env"] = process_env
