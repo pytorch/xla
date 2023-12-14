@@ -690,7 +690,7 @@ PjRtComputationClient::ExecuteReplicated(
         "PjRtComputationClient::ExecuteReplicated_execute",
         tsl::profiler::TraceMeLevel::kInfo);
     results = pjrt_computation.executable
-                  ->Execute(std::move(argument_handles), execute_options,
+                  ->Execute(std::move(argument_handles), execute_options, // xw32: look at here.
                             returned_futures)
                   .value();
 
