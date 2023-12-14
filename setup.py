@@ -359,9 +359,6 @@ setup(
         # On Cloud TPU VM install with:
         # pip install torch_xla[tpu] -f https://storage.googleapis.com/libtpu-releases/index.html
         'tpu': [f'libtpu-nightly=={_libtpu_version}'],
-        # On nightly, install libtpu with `pip install torch_xla[tpuvm]`
-        # Remove from release branches since this is not allowed by PyPI.
-        'tpuvm': [f'libtpu-nightly @ {_libtpu_storage_path}'],
     },
     cmdclass={
         'build_ext': BuildBazelExtension,
