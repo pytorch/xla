@@ -5,6 +5,7 @@ import torch
 import torch._dynamo as torchdynamo
 import torch_xla.experimental.xla_marker
 
+
 @torchdynamo.assume_constant_result
 def _get_uuid() -> str:
   return uuid.uuid4().hex
