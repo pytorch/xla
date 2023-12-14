@@ -39,9 +39,9 @@ class XlaMarkPatternTest(unittest.TestCase):
 
     def f(x):
       x = x + 1
-      x = torch.ops.xla_pattern_marking.mark_tensor(x, "p", 0, 0, True)
+      x = torch.ops.xla_pattern_marking.mark_tensor(x, "p", 0, "0", True)
       x = x + 2
-      x = torch.ops.xla_pattern_marking.mark_tensor(x, "p", 0, 0, False)
+      x = torch.ops.xla_pattern_marking.mark_tensor(x, "p", 0, "0", False)
       return x
 
     input_args = (torch.randn(5),)
@@ -123,15 +123,6 @@ class XlaMarkPatternTest(unittest.TestCase):
         stablehlo)
     self.assertTrue(
         '{attributes = {scale = 2 : i64}, name = "sdpa"}}' in stablehlo)
-
-  def test_uuid_ser_des(self):
-    import uuid
-    from torch_xla.experimental.xla_marker import _get_uuid_tensor_internal, decode_uuid_tensor
-    id = uuid.uuid4()
-    id_hex = id.hex
-    id_tensor = _get_uuid_tensor_internal(id)
-    decoded = decode_uuid_tensor(id_tensor)
-    self.assertTrue(decoded, id_hex)
 
   def test_composite_builder_export_sdpa_pattern(self):
 
