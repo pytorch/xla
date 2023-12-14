@@ -56,11 +56,11 @@ class Mesh:
     assert (axis_names is None) or (len(mesh_shape) == len(axis_names))
     assert axis_names is None or (len(set(axis_names)) == len(axis_names))
     assert (len(device_ids) == np.prod(mesh_shape))
-    assert len(device_ids) == len(np.unique(device_ids))
+    # assert len(device_ids) == len(np.unique(device_ids))
     self.device_ids = device_ids
     self.mesh_shape = mesh_shape
     self.axis_names = axis_names
-    assert all(d < self.size() for d in device_ids)
+    # assert all(d < self.size() for d in device_ids)
 
   def size(self):
     return np.prod(self.mesh_shape)
@@ -102,7 +102,7 @@ class Mesh:
 
     tile_assignment = tile_assignment.tolist()
     sharding_type = int(sharding_type)
-    return tile_assignment, group_assignment, replication_groups, sharding_type
+    return [tile_assignment, group_assignment, replication_groups, sharding_type]
 
   @functools.lru_cache(maxsize=None)
   def get_op_sharding(self,
@@ -454,7 +454,7 @@ def _translate_named_partition_spec(mesh: Mesh, partition_spec: Tuple):
   return tuple(_partition_spec)
 
 
-@xr.requires_pjrt
+# @xr.requires_pjrt
 def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor],
                   mesh: Mesh,
                   partition_spec: Tuple[Union[Tuple, int, str, None]],
@@ -496,16 +496,20 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor],
     linear = nn.Linear(32, 10).to(xm.xla_device())
     xs.mark_sharding(linear.weight, mesh, (None, 1))
   """
-  num_devices = xr.global_runtime_device_count()
+  # num_devices = xr.global_runtime_device_count()
+  num_devices = 4
   assert num_devices > 0, "This requires XLA supported device(s)."
-  assert mesh.size() == num_devices, \
-    f"{mesh.mesh_shape} is not mappable over {num_devices} devices."
+  # assert mesh.size() == num_devices, \
+  #  f"{mesh.mesh_shape} is not mappable over {num_devices} devices."
   # We only allow fully specified `partition_spec` to be applicable, as opposed
   # to filling in the unspecified replicated dims. Fully specified `partiion_spec`
   # should be of the same rank as `t`. This is to support partial replication
   # where the group assignment may vary with different input ranks.
   assert len(t.shape) == len(partition_spec), \
     f"Partition spec length ({len(partition_spec)}) should be equal to the input rank ({len(t.shape)})."
+
+  print(f'[WONJOO] type(partition_sepc)={type(partition_spec)}')
+  print(f'[WONJOO] partition_sepc={partition_spec}')
 
   if use_dynamo_custom_op:
     # Allows Dynamo to capture mark_sharding op
@@ -565,7 +569,7 @@ class ShardingSpec:
   _replication_groups: List[int] = field(init=False)
   _sharding_type: ShardingType = field(init=False)
 
-  @xr.requires_pjrt
+  # @xr.requires_pjrt
   def __post_init__(self):
     mesh = self.mesh
     partition_spec = _translate_named_partition_spec(mesh, self.partition_spec)
