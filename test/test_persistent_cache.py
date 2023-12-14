@@ -69,6 +69,18 @@ def _spmd_replicated_test(tmpdir, metrics):
   _assert_correctness_and_metrics(t, xt, metrics)
 
 
+def _spmd_explicitly_replicated_test(tmpdir, metrics):
+  xr.initialize_cache(tmpdir)
+  xr.use_spmd()
+  t = torch.randn(16)
+  xt = t.to(xm.xla_device())
+
+  n_dev = xr.global_runtime_device_count()
+  mesh = xs.Mesh(range(n_dev), (n_dev,))
+  xs.mark_sharding(xt, mesh, (None,))
+  _assert_correctness_and_metrics(t, xt, metrics)
+
+
 def _spmd_sharded_test(tmpdir, metrics):
   xr.initialize_cache(tmpdir)
   xr.use_spmd()
@@ -123,6 +135,20 @@ class PersistentCacheTest(parameterized.TestCase):
       'TPU required for SPMD; single-device GPU is pending #6023')
   def test_persistent_cache(self, test_fn):
     self._run_test(_test_spawn, test_fn)
+
+  @absltest.skipUnless(xr.device_type() == 'TPU', 'TPU required for SPMD')
+  @run_with_tmpdir
+  def test_replicated_spmd_hash(self, tmpdir):
+    # The hash should differ between replicated SPMD and the single-device test.
+    _test_spawn(_spmd_explicitly_replicated_test, (tmpdir, {
+        'PersistentCacheMiss': 1,
+        'PersistentCacheHit': None
+    }))
+
+    _test_spawn(_single_device_test, (tmpdir, {
+        'PersistentCacheMiss': 1,
+        'PersistentCacheHit': None
+    }))
 
 
 if __name__ == '__main__':
