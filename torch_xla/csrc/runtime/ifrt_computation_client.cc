@@ -58,8 +58,6 @@ torch::lazy::hash_t hash_comp_env(
     xla::ifrt::Client* client,
     std::vector<xla::ifrt::Device*>& ordered_devices) {
   torch::lazy::hash_t hash = hash::HashXlaEnvVars();
-  // Whether or not SPMD mode is active should influence the hash.
-  hash = torch::lazy::HashCombine(hash, UseVirtualDevice());
   auto topology_desc = client->GetTopologyForDevices(ordered_devices);
   if (topology_desc.ok()) {
     // Some backends support a topology description which provides a better
