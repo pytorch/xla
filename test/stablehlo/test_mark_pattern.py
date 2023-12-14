@@ -157,6 +157,39 @@ class XlaMarkPatternTest(unittest.TestCase):
         '{attributes = {scale = 2 : i64}, name = "sdpa"}}' in stablehlo)
     self.assertTrue(os.path.exists(os.path.join(tmp_path, 'saved_model.pb')))
 
+  def test_inlined_composite_builder_export_sdpa_pattern(self):
+
+    class M(torch.nn.Module):
+
+      def __init__(self):
+        super().__init__()
+
+      def forward(self, x, y):
+        b = StableHLOCompositeBuilder("sdpa", {"scale": 0.25})
+        q, k, v = x.split(128, dim=-2)
+        q, k, v = b.mark_inputs(q, k, v)
+        attn_out = F.scaled_dot_product_attention(q, k, v, scale=0.25)
+        attn_out = b.mark_outputs(attn_out)
+
+        b2 = StableHLOCompositeBuilder("sdpa", {"scale": 2})
+        q, k, v = y.split(128, dim=-2)
+        q, k, v = b2.mark_inputs(q, k, v)
+        attn_out2 = F.scaled_dot_product_attention(q, k, v, scale=4)
+        attn_out2 = b2.mark_outputs(attn_out2)
+        return attn_out, attn_out2
+
+    input_args = (torch.randn((32, 8, 384, 64)), torch.randn((32, 8, 384, 64)))
+    tmp_path = tempfile.mkdtemp()
+    stablehlo_gm = self.export_func(M(), input_args, tmp_path)
+    stablehlo = stablehlo_gm.get_stablehlo_text()
+    self.assertEqual(stablehlo.count("@stablehlo.composite"), 2)
+    self.assertTrue(
+        '{attributes = {scale = 2.500000e-01 : f32}, name = "sdpa"}}' in
+        stablehlo)
+    self.assertTrue(
+        '{attributes = {scale = 2 : i64}, name = "sdpa"}}' in stablehlo)
+    self.assertTrue(os.path.exists(os.path.join(tmp_path, 'saved_model.pb')))
+
   def test_multiple_input(self):
 
     def f(x, y):
