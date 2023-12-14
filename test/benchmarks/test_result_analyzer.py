@@ -1,5 +1,5 @@
 import argparse
-import functools
+import json
 import numpy
 import unittest
 import os
@@ -10,6 +10,8 @@ fns_whole = (numpy.min, numpy.median, numpy.max)
 fns_skip_head = (numpy.mean, numpy.std)
 fns_all = fns_whole + fns_skip_head
 
+_DATALINE = None
+
 
 def apply(fn, data):
   return fn(data)
@@ -19,17 +21,17 @@ def apply_skip_head(fn, data):
   return fn(data[1:])
 
 
-@functools.cache
 def get_dirname():
   return os.path.dirname(__file__)
 
 
-@functools.cache
 def get_dataline():
-  import json
-  example_json = os.path.join(get_dirname(), "example.json")
-  with open(example_json, "r") as f:
-    return json.load(f)
+  global _DATALINE
+  if _DATALINE is None:
+    example_json = os.path.join(get_dirname(), "output-example.json")
+    with open(example_json, "r") as f:
+      _DATALINE = json.load(f)
+  return _DATALINE
 
 
 class TestResultAnalyzer(unittest.TestCase):

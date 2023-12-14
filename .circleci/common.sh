@@ -151,11 +151,6 @@ function run_torch_xla_python_tests() {
           # echo "Running MNIST Test"
           # python test/test_train_mp_mnist_amp.py --fake_data --num_epochs=1
         fi
-      elif [[ "$RUN_XLA_OP_TESTS1" == "xla_op1" ]]; then
-          # Benchmark tests.
-          # Only run on CPU, for xla_op1.
-          echo "Running Benchmark tests."
-          ./benchmarks/test/run_tests.sh
       fi
     fi
   popd
