@@ -51,7 +51,7 @@ def _setup_libtpu_flags():
         # Limit compiler-injected rematerialization
         'xla_jf_rematerialization_percent_shared_memory_limit': '10000',
         # Enable collective matmul
-        'xla_jf_spmd_threshold_for_windowed_einsum_mib': '0'
+        'xla_jf_spmd_threshold_for_windowed_einsum_mib': '0',
         # Enable async collective fusions
         'xla_tpu_enable_async_collective_fusion': 'true',
         'xla_tpu_enable_async_collective_fusion_fuse_all_gather': 'true',
