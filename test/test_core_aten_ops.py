@@ -23,24 +23,31 @@ def onlyIfPJRTDeviceIsCUDA(fn):
           fn)
 
 
-def diff_output(testcase, output1, output2, rtol, atol):
+def diff_output(testcase, output1, output2, rtol, atol, equal_nan=True):
   if isinstance(output1, torch.Tensor):
     testcase.assertIsInstance(output2, torch.Tensor)
     output2_cpu = output2.detach().cpu()
     if output2_cpu.dtype != output1.dtype:
       output2_cpu = output2_cpu.to(output1.dtype)
     testcase.assertTrue(
-        torch.allclose(output1, output2_cpu, atol=atol, rtol=rtol))
+        torch.allclose(
+            output1, output2_cpu, atol=atol, rtol=rtol, equal_nan=equal_nan))
   elif isinstance(output1, (tuple, list)):
     testcase.assertIsInstance(output2, (tuple, list))
     testcase.assertEqual(len(output1), len(output2))
     for o1, o2 in zip(output1, output2):
-      diff_output(testcase, o1, o2, rtol, atol)
+      diff_output(testcase, o1, o2, rtol, atol, equal_nan)
   else:
     testcase.assertEqual(output1, output2)
 
 
-def run_export_and_compare(testcase, func, args, kwargs, atol=1e-3, rtol=1e-5):
+def run_export_and_compare(testcase,
+                           func,
+                           args,
+                           kwargs,
+                           atol=1e-3,
+                           rtol=1e-5,
+                           equal_nan=True):
   device = xm.xla_device()
   with testcase.subTest('torch_eval'):
     res = func(*args, **kwargs)
@@ -51,7 +58,8 @@ def run_export_and_compare(testcase, func, args, kwargs, atol=1e-3, rtol=1e-5):
                                      lambda x: x.to(device=device), kwargs)
       res_xla = func(*args2, **kwargs2)
       with testcase.subTest('torch_xla_diff:' + str(atol)):
-        diff_output(testcase, res, res_xla, atol=atol, rtol=rtol)
+        diff_output(
+            testcase, res, res_xla, atol=atol, rtol=rtol, equal_nan=equal_nan)
     with testcase.subTest('can_export'):
       exported = torch.export.export(func, args, kwargs)
       with testcase.subTest('can_convert_to_stablehlo'):
@@ -59,7 +67,8 @@ def run_export_and_compare(testcase, func, args, kwargs, atol=1e-3, rtol=1e-5):
         with testcase.subTest('stablehlo_can_run'):
           res2 = shlo(*args, **kwargs)
           with testcase.subTest('stablehlo_diff: ' + str(atol)):
-            diff_output(testcase, res, res2, rtol=rtol, atol=atol)
+            diff_output(
+                testcase, res, res2, rtol=rtol, atol=atol, equal_nan=equal_nan)
 
 
 class AtenOpTest(unittest.TestCase):
@@ -3284,7 +3293,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.pow.Scalar, args, kwargs)
 
-  @unittest.skip
   def test_aten_pow_Tensor_Scalar_0(self):
     args = (
         torch.randn((10, 10)).to(torch.float32),
@@ -3293,7 +3301,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.pow.Tensor_Scalar, args, kwargs)
 
-  @unittest.skip
   def test_aten_pow_Tensor_Scalar_1(self):
     args = (
         torch.randn((10, 10)).to(torch.float16),
@@ -3302,7 +3309,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.pow.Tensor_Scalar, args, kwargs)
 
-  @unittest.skip
   def test_aten_pow_Tensor_Scalar_2(self):
     args = (
         torch.randint(0, 10, (10, 10)).to(torch.int32),
@@ -3316,7 +3322,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.pow.Scalar, args, kwargs)
 
-  @unittest.skip
   def test_aten_pow_Tensor_Tensor_0(self):
     args = (
         torch.randn((10, 10)).to(torch.float32),
@@ -3325,7 +3330,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.pow.Tensor_Tensor, args, kwargs)
 
-  @unittest.skip
   def test_aten_pow_Tensor_Tensor_1(self):
     args = (
         torch.randn((10, 10)).to(torch.float16),
