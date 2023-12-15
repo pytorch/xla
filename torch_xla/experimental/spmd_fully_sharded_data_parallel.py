@@ -1,4 +1,5 @@
 from typing import (Any, Callable, Optional, Union)
+import warnings
 
 import torch
 import torch.nn as nn
@@ -11,7 +12,7 @@ import torch_xla.distributed.spmd as spmd
 
 def _prepare_spmd_partition_spec(param):
   partition_spec = [None] * len(param.shape)
-  # Skip scalar tensors.
+  # Skip scalar tensors and it replicated.
   if len(partition_spec) == 0:
     return partition_spec
 
@@ -24,6 +25,18 @@ def _prepare_spmd_partition_spec(param):
 
 
 class SpmdFullyShardedDataParallel(nn.Module):
+  """
+  This is an experiemntal implementation of rewriting FullyShardedDataParallel using SPMD.
+  The usage is similar to FSDP, but with some subtle differences args.
+
+  Args:
+    module: The module to be wrapped.
+    mesh: The mesh to be used for sharding.
+    shard_output: A callable to shard the output of the forward pass.
+      The callable should have the signature (output, mesh) -> None.
+      If None, the default implementation will shard the first tensor in the output.
+      If the output is a tuple, only the first tensor will be sharded.
+  """
 
   def __init__(self, module: nn.Module, mesh: spmd.Mesh, shard_output:Optional[Callable] = None):
     if isinstance(module, SpmdFullyShardedDataParallel):
@@ -70,10 +83,10 @@ class SpmdFullyShardedDataParallel(nn.Module):
         real_output = None
         if isinstance(output, TensorLike):
           real_output = output
-        # TODO: enhance the logic as real_output can be something else. use _extract_tensors_from_list
         elif isinstance(output, tuple):
-          real_output = output[0]
-        else:
+          real_output = output[0] if isinstance(output[0], TensorLike) else None
+          warnings.warn("The output is a tuple, but only the first element is sharded. If this is not intended, please provide your own shard_output callable.")
+        if real_output is None:
           raise RuntimeError(
               f"The output type is not supported: {type(output)}. Please provide your own shard_output callable.")
 
