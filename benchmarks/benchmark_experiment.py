@@ -83,6 +83,8 @@ class ExperimentLoader:
     elif cfg_dynamo == "openxla":
       if cfg_xla is None:
         return False
+    elif cfg_dynamo is None:
+      pass
     else:
       raise NotImplementedError
 
