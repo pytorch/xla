@@ -22,18 +22,12 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-test_to_csv_field_name = {
-    'inference': {
-        'test': 'eval',
-        'xla_label': 'openxla_eval',
-        'inductor_label': 'inductor',
-    },
-    'training': {
-        'test': 'train',
-        'xla_label': 'openxla',
-        'inductor_label': 'inductor',
-    },
+_test_to_csv_field_name = {
+    'inference': 'eval',
+    'training': 'train',
 }
+
+_markers = ('^', 'o', 's')
 
 
 # Round floats before printing them so that tiny differences don't break tests.
@@ -106,7 +100,7 @@ def process_file(args, results_map: Dict[str, Any], filename: str):
         continue
       dynamo = row[field2index['dynamo']]
       test = row[field2index['test']]
-      if test != test_to_csv_field_name[args.test]['test']:
+      if test != _test_to_csv_field_name[args.test]:
         continue
       batch_size = row[field2index['batch_size']]
       median_total_time = row[field2index['median_total_time']]
@@ -181,10 +175,9 @@ def process_results(args, results_map: Dict[str, Any]):
   for timestamp in results_map:
     acc_map = results_map[timestamp]
 
-    name2field = test_to_csv_field_name[args.test]
-    compute_speedups(acc_map, baseline, 'xla:speedups', name2field['xla_label'])
-    compute_speedups(acc_map, baseline, 'inductor:speedups',
-                     name2field['inductor_label'])
+    compute_speedups(acc_map, baseline, 'xla:speedups', 'openxla')
+    compute_speedups(acc_map, baseline, 'xla_eval:speedups', 'openxla_eval')
+    compute_speedups(acc_map, baseline, 'inductor:speedups', 'inductor')
 
 
 def maketitle(args, title: str):
@@ -193,12 +186,21 @@ def maketitle(args, title: str):
   return title
 
 
-def pr_latest(results_map: Dict[str, Any], args, timestamps: List[str]):
-  prefixes = ('inductor', 'xla')
-  speedups = [[], []]
-  model_names = [[], []]
+def get_pr_titles(args):
+  titles = ['Inductor', 'PytorchXLA']
+  data_labels = ['inductor', 'xla']
+  if args.test == "inference":
+    titles.append('PytorchXLA_Eval')
+    data_labels.append('xla_eval')
+  return [titles, data_labels]
 
-  for i, pfx in enumerate(prefixes):
+
+def pr_latest(results_map: Dict[str, Any], args, timestamps: List[str]):
+  titles, data_labels = get_pr_titles(args)
+  speedups = [[] for _ in titles]
+  model_names = [[] for _ in titles]
+
+  for i, pfx in enumerate(data_labels):
     label = f'{pfx}:speedups'
     model_label = f'{label}:model_name'
     for timestamp in reversed(timestamps):
@@ -213,21 +215,32 @@ def pr_latest(results_map: Dict[str, Any], args, timestamps: List[str]):
     return
 
   if args.format == 'csv':
-    print('# WorkloadNumber,Speedup(Inductor/Oldest Inductor),'
-          'ModelName(Inductor),Speedup(PytorchXLA/Oldest Inductor),'
-          'ModelName(PytorchXLA)')
-    # Use zip_longest because the latest timestamp might not have complete
-    # results for all benchmarks.
-    for i, z in enumerate(itertools.zip_longest(speedups[0], speedups[1])):
+    print(','.join(['# WorkloadNumber'] + [
+        f'Speedup({title}/Oldest Inductor),ModelName({title})'
+        for title in titles
+    ]))
+    # Note: the latest timestamp might not have results for all benchmarks.
+    max_len = max([len(l) for l in speedups])
+
+    def pad_array(arr, desired_len):
+      if len(arr) >= desired_len:
+        return
+      arr += [''] * (desired_len - len(arr))
+
+    for i in range(len(titles)):
+      pad_array(speedups[i], max_len)
+      pad_array(model_names[i], max_len)
+
+    for j in range(max_len):
       print(','.join(
-          map(str, [
-              i, z[0], model_names[0][i] if z[0] else None, z[1],
-              model_names[1][i] if z[1] else None
+          map(str, [j] + [
+              v for i in range(len(titles))
+              for v in (speedups[i][j], model_names[i][j])
           ])))
   else:
     plt.axhline(y=1.0, color='lightgray')
-    plt.plot(speedups[0], label='Inductor', marker='^')
-    plt.plot(speedups[1], label='PytorchXLA', marker='o')
+    for i in range(len(titles)):
+      plt.plot(speedups[i], label=titles[i], marker=_markers[i])
     plt.legend()
     plt.title(maketitle(args, f'Speedup over Oldest Benchmarked Inductor'))
     plt.xlabel('Workload Number')
@@ -236,15 +249,10 @@ def pr_latest(results_map: Dict[str, Any], args, timestamps: List[str]):
 
 
 def pr_histogram(results_map: Dict[str, Any], args, timestamps: List[str]):
+  titles, data_labels = get_pr_titles(args)
   percentiles = [f'p{p}' for p in (95, 50, 5)]
-  prefixes = ('inductor', 'xla')
-  labels = [f'{pfx}:speedups:{p}' for pfx in prefixes for p in percentiles]
-  titles = [
-      l.replace(':speedups:',
-                ' ').replace('xla',
-                             'PytorchXLA').replace('inductor', 'Inductor')
-      for l in labels
-  ]
+  labels = [f'{pfx}:speedups:{p}' for pfx in data_labels for p in percentiles]
+  full_titles = [f'{title} {p}' for title in titles for p in percentiles]
   x = []
   y = [[] for i in range(len(labels))]
   for timestamp in timestamps:
@@ -253,24 +261,25 @@ def pr_histogram(results_map: Dict[str, Any], args, timestamps: List[str]):
         assert label in results_map[timestamp]
       x.append(datetime.utcfromtimestamp(float(timestamp)))
       for i, label in enumerate(labels):
-        y[i].append(pr_round(results_map[timestamp][label]))
+        y[i].append(
+            pr_round(results_map[timestamp][label] if label in
+                     results_map[timestamp] else ''))
   if args.format == 'csv':
-    titles = ['# Datetime(UTC)'] + titles
-    print(','.join(titles))
-    for i, utc in enumerate(x):
-      print(','.join([str(utc)] + [str(y[j][i]) for j in range(len(labels))]))
+    full_titles = ['# Datetime(UTC)'] + full_titles
+    print(','.join(full_titles))
+    for j, utc in enumerate(x):
+      print(','.join([str(utc)] + [str(y[i][j]) for i in range(len(labels))]))
   else:
     fig, ax = plt.subplots()
     ax.axhline(y=1.0, color='lightgray')
-    markers = ('^', 'o')
-    linestyles = ('solid', 'dotted')
+    linestyles = ('solid', 'dotted', 'dashed')
     for i, label in enumerate(labels):
       style = int(i / len(percentiles))
       ax.plot(
           x,
           y[i],
-          label=titles[i],
-          marker=markers[style],
+          label=full_titles[i],
+          marker=_markers[style],
           linestyle=linestyles[style])
     ax.xaxis.set_major_formatter(
         mdates.ConciseDateFormatter(ax.xaxis.get_major_locator()))
@@ -286,26 +295,27 @@ def pr_histogram(results_map: Dict[str, Any], args, timestamps: List[str]):
 def pr_gmean(results_map: Dict[str, Any], args, timestamps: List[str]):
   label = f'speedups:gmean'
   x = []
-  y0 = []
-  y1 = []
+  titles, data_labels = get_pr_titles(args)
+  labels = [f"{x}:speedups:gmean" for x in data_labels]
+  y = [[] for _ in labels]
   for timestamp in timestamps:
-    if 'inductor:speedups:gmean' not in results_map[
-        timestamp] or 'xla:speedups:gmean' not in results_map[timestamp]:
+    if all(label not in results_map[timestamp] for label in labels):
       continue
     x.append(datetime.utcfromtimestamp(float(timestamp)))
-    y0.append(pr_round(results_map[timestamp]['inductor:speedups:gmean']))
-    y1.append(pr_round(results_map[timestamp]['xla:speedups:gmean']))
+    for i, label in enumerate(labels):
+      y[i].append(
+          pr_round(results_map[timestamp][label]) if label in
+          results_map[timestamp] else '')
   if args.format == 'csv':
-    print(
-        '# Datetime(UTC),Speedup(Inductor/Oldest Inductor),Speedup(PytorchXLA/Oldest Inductor)'
-    )
-    for a, b, c in zip(x, y0, y1):
-      print(','.join(map(str, [a, b, c])))
+    print(','.join(['# Datetime(UTC)'] +
+                   [f"Speedup({title}/Oldest Inductor)" for title in titles]))
+    for j, x in enumerate(x):
+      print(','.join(map(str, [x] + [y[i][j] for i in range(len(labels))])))
   else:
     fig, ax = plt.subplots()
     ax.axhline(y=1.0, color='lightgray')
-    ax.plot(x, y0, marker='^', label='Inductor')
-    ax.plot(x, y1, marker='o', label='PytorchXLA')
+    for i in range(len(labels)):
+      ax.plot(x, y[i], marker=_markers[i], label=titles[i])
     ax.xaxis.set_major_formatter(
         mdates.ConciseDateFormatter(ax.xaxis.get_major_locator()))
     plt.legend()
