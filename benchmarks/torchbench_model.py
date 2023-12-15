@@ -159,6 +159,24 @@ class TorchBenchModel(BenchmarkModel):
     """
     self.optimizer_class = torch.optim.Adam
 
+    benchmark = self.load_benchmark()
+
+    self.module, self.example_inputs = benchmark.get_module()
+
+    self.benchmark_experiment.batch_size = benchmark.batch_size
+
+    # Torchbench has quite different setup for yolov3, so directly passing
+    # the right example_inputs
+    if self.model_name == "yolov3":
+      self.example_inputs = (torch.rand(self.benchmark_experiment.batch_size, 3,
+                                        384, 512),)
+    if self.benchmark_experiment.test == "train" and self.model_name in DETECTRON2_MODELS:
+      self.optimizer = benchmark.optimizer
+
+    del benchmark
+    gc.collect()
+
+  def load_benchmark(self):
     try:
       module = importlib.import_module(
           f"torchbenchmark.models.{self.model_name}")
@@ -182,30 +200,16 @@ class TorchBenchModel(BenchmarkModel):
     else:
       device = str(self.benchmark_experiment.get_device())
 
-    benchmark = benchmark_cls(
+    return benchmark_cls(
         test=self.benchmark_experiment.test,
         device=device,
         batch_size=self.benchmark_experiment.batch_size,
     )
 
-    self.module, self.example_inputs = benchmark.get_module()
-
-    self.benchmark_experiment.batch_size = benchmark.batch_size
-
-    # Torchbench has quite different setup for yolov3, so directly passing
-    # the right example_inputs
-    if self.model_name == "yolov3":
-      self.example_inputs = (torch.rand(self.benchmark_experiment.batch_size, 3,
-                                        384, 512),)
-    if self.benchmark_experiment.test == "train" and self.model_name in DETECTRON2_MODELS:
-      self.optimizer = benchmark.optimizer
-
-    del benchmark
-    gc.collect()
-
-  def apply_default_precision_config(self, test, benchmark):
+  @property
+  def default_precision_flag(self):
     """
-    Apply default precision config to XLA, if present.
+    Get the default precision config to XLA, if present.
 
     Whenever a model has a default precision for cuda set
     we need to set proper environment flags so XLA catches
@@ -215,25 +219,43 @@ class TorchBenchModel(BenchmarkModel):
     changes to the PT/XLA bridge so that the input shape
     is properly inferred after issuing converts to `torch.nn.Module`.
     """
+    test = self.benchmark_experiment.test
+    try:
+      benchmark = self.load_benchmark()
+    except Exception:
+      logger.exception("Cannot load benchmark model")
+      return None
+
     if test == "eval" and hasattr(benchmark, 'DEFAULT_EVAL_CUDA_PRECISION'):
       precision = benchmark.DEFAULT_EVAL_CUDA_PRECISION
     elif test == "train" and hasattr(benchmark, 'DEFAULT_TRAIN_CUDA_PRECISION'):
       precision = benchmark.DEFAULT_TRAIN_CUDA_PRECISION
     else:
       logger.warning("No default precision set. No patching needed.")
-      return
+      return None
 
+    del benchmark
+    gc.collect()
+
+    precision_flag = None
     if precision == "fp16":
-      os.environ['XLA_USE_FP16'] = '1'
+      precision_flag = 'XLA_USE_FP16'
     elif precision == "amp":
       raise ValueError(
           f"AMP for PT/XLA:GPU is not implemented yet for torchbench models")
     elif precision == "bf16":
-      os.environ['XLA_USE_BF16'] = '1'
+      precision_flag = 'XLA_USE_BF16'
     elif precision == "fp32":
       logger.warning("Sticking with the default fp32 precision.")
     else:
       raise ValueError(f"Unknown precision: {precision}")
+    return precision_flag
+
+  def extend_process_env(self, process_env):
+    precision_flag = self.default_precision_flag
+    if precision_flag is not None:
+      process_env[precision_flag] = '1'
+    return process_env
 
   def pick_grad(self):
     # special case

@@ -157,3 +157,10 @@ class BenchmarkModel:
     d["suite_name"] = self.suite_name
     d["model_name"] = self.model_name
     return d
+
+  @property
+  def default_precision_flag(self):
+    return None
+
+  def extend_process_env(self, process_env):
+    return process_env

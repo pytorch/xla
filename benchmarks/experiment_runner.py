@@ -87,6 +87,7 @@ class ExperimentRunner:
             experiment_config)
         dummy_benchmark_model = self.model_loader.load_model(
             model_config, dummy_benchmark_experiment, dummy=True)
+        process_env = dummy_benchmark_model.extend_process_env(process_env)
         experiment_config["process_env"] = process_env
         command = ([sys.executable] + sys.argv +
                    [f"--experiment-config={experiment_config_str}"] +
