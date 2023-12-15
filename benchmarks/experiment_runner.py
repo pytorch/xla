@@ -323,6 +323,9 @@ class ExperimentRunner:
     self._mark_step(benchmark_experiment)
     self._synchronize(benchmark_experiment)
 
+    # Clear XLA metrics before executing the model.
+    met.clear_metrics()
+
     enable_prof = self._args.profile_cuda
     metrics = OrderedDict()
     t_start = time.perf_counter()
@@ -363,8 +366,20 @@ class ExperimentRunner:
     metrics["total_time"] = t_end - t_start
     metrics[
         "per_iter_time"] = metrics["total_time"] / self._args.iterations_per_run
+
     if benchmark_experiment.xla:
       metrics["trace_per_iter_time"] = t_trace / self._args.iterations_per_run
+
+      def ns_to_s(ns):
+        return ns * 1e-9
+
+      for m in ("CompileTime", "ExecuteTime"):
+        data = met.metric_data(m)
+        data = data if data is not None else (0, 0, [])
+        number, total_time, _ = data
+        # Time is measured in nano-seconds
+        metrics[f"xla_{m}_time_s"] = ns_to_s(total_time)
+        metrics[f"xla_{m}_number"] = number
 
     if enable_prof:
       self.collect_individual_ops(benchmark_experiment, metrics, prof)
