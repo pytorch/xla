@@ -40,12 +40,12 @@ class ExperimentLoader:
           map(parse_none_str, set(self._args.xla_flags)))
 
     # Expand experiment configs and add env vars.
-    logger.info(f"Expand experiment configs:")
+    logger.debug(f"Expand experiment configs")
     experiment_configs = []
     for cfg in self._expand_config_choices(config_choices):
       if not self._is_available(cfg):
         continue
-      logger.info(f"Experiment config (w/o env vars): {cfg}")
+      logger.debug(f"Experiment config (w/o env vars): {cfg}")
       self._add_experiment_env(cfg)
       experiment_configs.append(cfg)
     return experiment_configs
