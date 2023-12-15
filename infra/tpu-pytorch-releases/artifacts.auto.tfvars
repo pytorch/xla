@@ -1,4 +1,4 @@
-nightly_package_version = "2.2.0"
+nightly_package_version = "2.3.0"
 
 # Built once a day from master.
 nightly_builds = [
