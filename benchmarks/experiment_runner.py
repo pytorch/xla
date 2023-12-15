@@ -389,7 +389,7 @@ class ExperimentRunner:
           "calls_captured": dyn_utils.counters["stats"]["calls_captured"],
           "unique_graphs": dyn_utils.counters["stats"]["unique_graphs"],
           "graph_breaks": sum(dyn_utils.counters["graph_break"].values()),
-          # NB: The plus removes zero counts
+          # Note: The plus removes zero counts
           "unique_graph_breaks": len(+dyn_utils.counters["graph_break"]),
       })
 
