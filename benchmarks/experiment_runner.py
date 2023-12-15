@@ -15,6 +15,7 @@ import torch_xla.debug.metrics as met
 from tqdm import tqdm
 from torch.profiler import profile, ProfilerActivity
 from torch.autograd import DeviceType
+import torch._dynamo.utils as dyn_utils
 from benchmark_model import ModelLoader
 from torchbench_model import TorchBenchModelLoader
 from benchmark_experiment import ExperimentLoader
@@ -325,6 +326,8 @@ class ExperimentRunner:
 
     # Clear XLA metrics before executing the model.
     met.clear_metrics()
+    # Clear dynamo counters
+    dyn_utils.counters.clear()
 
     enable_prof = self._args.profile_cuda
     metrics = OrderedDict()
@@ -380,6 +383,15 @@ class ExperimentRunner:
         # Time is measured in nano-seconds
         metrics[f"xla_{m}_time_s"] = ns_to_s(total_time)
         metrics[f"xla_{m}_number"] = number
+
+    if benchmark_experiment.dynamo:
+      metrics.update({
+          "calls_captured": dyn_utils.counters["stats"]["calls_captured"],
+          "unique_graphs": dyn_utils.counters["stats"]["unique_graphs"],
+          "graph_breaks": sum(dyn_utils.counters["graph_break"].values()),
+          # NB: The plus removes zero counts
+          "unique_graph_breaks": len(+dyn_utils.counters["graph_break"]),
+      })
 
     if enable_prof:
       self.collect_individual_ops(benchmark_experiment, metrics, prof)
