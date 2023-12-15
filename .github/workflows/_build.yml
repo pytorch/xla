@@ -38,7 +38,7 @@ on:
 jobs:
   build:
     runs-on: ${{ inputs.runner }}
-    timeout-minutes: 90
+    timeout-minutes: 180
     outputs:
       docker-image: ${{ steps.upload-docker-image.outputs.docker-image }}
     env:
