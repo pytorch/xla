@@ -259,17 +259,6 @@ torch::lazy::Value XLAGraphExecutor::GetDeviceDataIrValue(
   return torch::lazy::MakeNode<DeviceData>(std::move(data));
 }
 
-torch::lazy::Value XLAGraphExecutor::GetIrValueForConstant(
-    const at::Scalar& value, const xla::Shape& shape) {
-  torch::lazy::Value ir_value =
-      ScalarOp(std::move(value), shape.element_type());
-  if (!shape.dimensions().empty()) {
-    ir_value = torch::lazy::MakeNode<Expand>(
-        ir_value, torch::lazy::ToVector<int64_t>(shape.dimensions()));
-  }
-  return ir_value;
-}
-
 torch::lazy::Value XLAGraphExecutor::GetIrValueForScalar(
     const at::Scalar& value, xla::PrimitiveType type,
     const torch::lazy::BackendDevice& device) {
