@@ -35,16 +35,6 @@ def pr_round(x):
   return round(x, 8)
 
 
-def find_files(input_dirname: str) -> List[str]:
-  files = []
-  for root, _, filenames in os.walk(input_dirname):
-    for filename in filenames:
-      match = re.search(r'.*\.csv$', filename)
-      if match:
-        files.append(os.path.join(root, filename))
-  return files
-
-
 def clean_up_accelerator_model(model: str) -> str:
   if re.search(r'One of Tesla V100', model):
     return 'v100'
@@ -377,8 +367,7 @@ def parse_args(args=None):
   )
   parser.add_argument(
       "--format", default='csv', choices=['csv', 'png'], help='Output format')
-  parser.add_argument(
-      '--input-dirname', '-i', required=True, type=str, help='Input directory.')
+  parser.add_argument('input_file', nargs='+')
   parser.add_argument(
       '--report',
       default='speedup',
@@ -402,7 +391,7 @@ def parse_args(args=None):
 
 def main():
   args = parse_args()
-  filenames = find_files(args.input_dirname)
+  filenames = args.input_file
   results_map = {}
 
   # Some CSV files have lots of errors from execution; expand CSV's size limit.
