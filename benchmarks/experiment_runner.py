@@ -262,8 +262,7 @@ class ExperimentRunner:
       if evt.device_type == DeviceType.CPU:
         # in legacy profiler, kernel info is stored in cpu events
         if evt.is_legacy:
-          if not use_device:
-            total_cuda_time += evt.self_cuda_time_total
+          total_cuda_time += evt.self_cuda_time_total
       elif evt.device_type == DeviceType.CUDA:
         # in kineto profiler, there're events with the correct device type (e.g. CUDA)
         total_cuda_time += evt.self_cuda_time_total
