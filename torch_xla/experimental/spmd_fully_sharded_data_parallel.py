@@ -10,6 +10,7 @@ import numpy as np
 import torch_xla
 import torch_xla.distributed.spmd as spmd
 
+
 def _prepare_spmd_partition_spec(param):
   partition_spec = [None] * len(param.shape)
   # Skip scalar tensors and it replicated.
@@ -38,7 +39,10 @@ class SpmdFullyShardedDataParallel(nn.Module):
       If the output is a tuple, only the first tensor will be sharded.
   """
 
-  def __init__(self, module: nn.Module, mesh: spmd.Mesh, shard_output:Optional[Callable] = None):
+  def __init__(self,
+               module: nn.Module,
+               mesh: spmd.Mesh,
+               shard_output: Optional[Callable] = None):
     if isinstance(module, SpmdFullyShardedDataParallel):
       raise RuntimeError(
           "Cannot wrap a module that is already wrapped with FSDP. For nested FSDP, "
@@ -79,18 +83,23 @@ class SpmdFullyShardedDataParallel(nn.Module):
     # Need to shard the output of the forward to instruct the compiler
     # to enforce the FSDP algorithm.
     if shard_output is None:
+
       def shard_output_impl(output, mesh):
         real_output = None
         if isinstance(output, TensorLike):
           real_output = output
         elif isinstance(output, tuple):
           real_output = output[0] if isinstance(output[0], TensorLike) else None
-          warnings.warn("The output is a tuple, but only the first element is sharded. If this is not intended, please provide your own shard_output callable.")
+          warnings.warn(
+              "The output is a tuple, but only the first element is sharded. If this is not intended, please provide your own shard_output callable."
+          )
         if real_output is None:
           raise RuntimeError(
-              f"The output type is not supported: {type(output)}. Please provide your own shard_output callable.")
+              f"The output type is not supported: {type(output)}. Please provide your own shard_output callable."
+          )
 
-        spmd.mark_sharding(real_output, mesh, _prepare_spmd_partition_spec(real_output))
+        spmd.mark_sharding(real_output, mesh,
+                           _prepare_spmd_partition_spec(real_output))
 
       shard_output = shard_output_impl
 

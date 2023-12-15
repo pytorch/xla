@@ -32,8 +32,10 @@ class FSDPv2Test(test_xla_sharding_base.XlaShardingTest):
     if self.n_devices > 1:
       annotation = '{devices=[%d,1]%s}' % (self.n_devices, ','.join(
           [str(i) for i in range(self.n_devices)]))
-      self.assertEqual(annotation, torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight))
-      self.assertEqual(annotation, torch_xla._XLAC._get_xla_sharding_spec(model.fc2.weight))
+      self.assertEqual(annotation,
+                       torch_xla._XLAC._get_xla_sharding_spec(model.fc1.weight))
+      self.assertEqual(annotation,
+                       torch_xla._XLAC._get_xla_sharding_spec(model.fc2.weight))
 
     x = torch.randn(16, 128).to(xm.xla_device())
     xs.mark_sharding(x, mesh, ('fsdp', None))
@@ -42,7 +44,8 @@ class FSDPv2Test(test_xla_sharding_base.XlaShardingTest):
     if self.n_devices > 1:
       annotation = '{devices=[%d,1]%s}' % (self.n_devices, ','.join(
           [str(i) for i in range(self.n_devices)]))
-      self.assertEqual(annotation, torch_xla._XLAC._get_xla_sharding_spec(output))
+      self.assertEqual(annotation,
+                       torch_xla._XLAC._get_xla_sharding_spec(output))
 
     loss = output.sum()
     loss.backward()
