@@ -23,7 +23,7 @@ def onlyIfPJRTDeviceIsCUDA(fn):
           fn)
 
 
-def diff_output(testcase, output1, output2, rtol, atol, equal_nan=False):
+def diff_output(testcase, output1, output2, rtol, atol, equal_nan=True):
   if isinstance(output1, torch.Tensor):
     testcase.assertIsInstance(output2, torch.Tensor)
     output2_cpu = output2.detach().cpu()
@@ -47,7 +47,7 @@ def run_export_and_compare(testcase,
                            kwargs,
                            atol=1e-3,
                            rtol=1e-5,
-                           equal_nan=False):
+                           equal_nan=True):
   device = xm.xla_device()
   with testcase.subTest('torch_eval'):
     res = func(*args, **kwargs)
@@ -3292,7 +3292,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.pow.Scalar, args, kwargs)
 
-  @unittest.skip
   def test_aten_pow_Tensor_Scalar_0(self):
     args = (
         torch.randn((10, 10)).to(torch.float32),
@@ -3301,7 +3300,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.pow.Tensor_Scalar, args, kwargs)
 
-  @unittest.skip
   def test_aten_pow_Tensor_Scalar_1(self):
     args = (
         torch.randn((10, 10)).to(torch.float16),
@@ -3310,7 +3308,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.pow.Tensor_Scalar, args, kwargs)
 
-  @unittest.skip
   def test_aten_pow_Tensor_Scalar_2(self):
     args = (
         torch.randint(0, 10, (10, 10)).to(torch.int32),
@@ -3324,7 +3321,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.pow.Scalar, args, kwargs)
 
-  @unittest.skip
   def test_aten_pow_Tensor_Tensor_0(self):
     args = (
         torch.randn((10, 10)).to(torch.float32),
@@ -3333,7 +3329,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.pow.Tensor_Tensor, args, kwargs)
 
-  @unittest.skip
   def test_aten_pow_Tensor_Tensor_1(self):
     args = (
         torch.randn((10, 10)).to(torch.float16),

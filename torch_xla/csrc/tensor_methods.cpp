@@ -2144,13 +2144,21 @@ XLATensorPtr permute(const XLATensorPtr& input,
 XLATensorPtr pow(const XLATensorPtr& input, const at::Scalar& exponent) {
   // We want to pass exponent_node as a constant to give XLA more room to
   // optimize
-  torch::lazy::Value exponent_node =
-      XLAGraphExecutor::Get()->GetIrValueForConstant(exponent, input->shape());
-  return input->CreateFrom(Pow(input->GetIrValue(), exponent_node));
+  const torch::lazy::BackendDevice& device = input->GetDevice();
+  auto xla_type = MakeXlaPrimitiveType(GetScalarType(exponent), &device);
+  // Float scalar literal in Python defaults to F64. But we want to produce
+  // F32 as this is the default Pytorch behavior.
+  if (xla_type == xla::PrimitiveType::F64) {
+    xla_type = xla::PrimitiveType::F32;
+  }
+  torch::lazy::Value exp_node = ScalarOp(exponent, xla_type);
+  torch::lazy::NodePtr node = Pow(input->GetIrValue(), exp_node);
+  return input->CreateFrom(node, /*logical_element_type=*/c10::nullopt);
 }
 
 XLATensorPtr pow(const XLATensorPtr& input, const XLATensorPtr& exponent) {
-  return input->CreateFrom(Pow(input->GetIrValue(), exponent->GetIrValue()));
+  torch::lazy::NodePtr node = Pow(input->GetIrValue(), exponent->GetIrValue());
+  return input->CreateFrom(node, /*logical_element_type=*/c10::nullopt);
 }
 
 XLATensorPtr pow(const at::Scalar& input, const XLATensorPtr& exponent) {

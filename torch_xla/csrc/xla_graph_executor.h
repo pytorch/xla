@@ -63,10 +63,6 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   torch::lazy::Value GetDeviceDataIrValue(
       const at::Scalar& value, xla::PrimitiveType type,
       const torch::lazy::BackendDevice& device);
-  // Use with caution, constant will cause more frequent recompilation
-  // compared to the device_data.
-  torch::lazy::Value GetIrValueForConstant(const at::Scalar& value,
-                                           const xla::Shape& shape);
   torch::lazy::Value GetIrValueForScalar(
       const at::Scalar& value, xla::PrimitiveType type,
       const torch::lazy::BackendDevice& device);
