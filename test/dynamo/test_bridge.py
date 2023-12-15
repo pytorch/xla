@@ -266,7 +266,7 @@ class TorchXLAReuseGraphTest(torch._dynamo.test_case.TestCase):
 
     self._compile_and_check(foo, (xm.xla_device(),))
 
-  def test_cpu_input(self):
+  def test_cpu_index_and_output(self):
 
     def foo(xt, t):
       # Cannot move t to XLA, since it's also an output.
@@ -276,6 +276,14 @@ class TorchXLAReuseGraphTest(torch._dynamo.test_case.TestCase):
     xt = torch.rand(5, device=device)
     t = torch.randint(0, 5, (3,))
     self._compile_and_check(foo, (xt, t))
+
+  def test_cpu_stack_input(self):
+
+    def foo(t):
+      return torch.stack([t])
+
+    t = torch.randint(0, 5, (3,))
+    self._compile_and_check(foo, (t,))
 
 
 if __name__ == "__main__":
