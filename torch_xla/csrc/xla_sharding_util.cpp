@@ -770,6 +770,7 @@ runtime::ComputationClient::DataPtr ShardingUtil::CreateShardedData(
 
 void ShardingUtil::XlaMarkSharding(const at::Tensor& input,
                                    xla::OpSharding sharding) {
+  std::cout << "[WONJOO] in xla_sharding_util.cpp, XlaMarkSharding starting" << std::endl;
   TORCH_LAZY_COUNTER("XlaMarkSharding", 1);
   XLA_CHECK(UseVirtualDevice())
       << "Please enable SPMD via `torch_xla.runtime.use_spmd()`";
@@ -833,13 +834,17 @@ void ShardingUtil::XlaMarkSharding(const at::Tensor& input,
 
   // Register sharded tensor data.
   XLAGraphExecutor::Get()->RegisterTensor(xtensor->data());
+
+  std::cout << "[WONJOO] in xla_sharding_util.cpp, XlaMarkSharding finished" << std::endl;
 }
 
 void ShardingUtil::XlaMarkShardingDynamoCustomOp(
     const at::Tensor& input, c10::List<at::IntArrayRef> tile_assignment,
     c10::List<at::IntArrayRef> group_assignment,
     c10::List<at::IntArrayRef> replication_groups, int64_t sharding_type) {
-  py::list tile_assignment_py = py::list();
+  std::cout << "[WONJOO] in xla_sharding_util.cpp, XlaMarkShardingDynamoCustomOp starting" << std::endl;
+  auto tile_assignment_py = py::list();
+  std::cout << "[WONJOO] in xla_sharding_util.cpp, tile_assignment_py: " << tile_assignment_py << std::endl;
   for (int i = 0; i < tile_assignment.size(); i++) {
     py::list pylist = py::list();
     for (int64_t t : tile_assignment[i].get().toIntList()) {
@@ -847,6 +852,7 @@ void ShardingUtil::XlaMarkShardingDynamoCustomOp(
     }
     tile_assignment_py.append(pylist);
   }
+  std::cout << "[WONJOO] in xla_sharding_util.cpp, tile_assignment_py: " << tile_assignment_py << std::endl;
 
   py::list group_assignment_py = py::list();
   for (int i = 0; i < group_assignment.size(); i++) {
@@ -871,6 +877,7 @@ void ShardingUtil::XlaMarkShardingDynamoCustomOp(
       ShardingUtil::ShardingType(sharding_type));
 
   ShardingUtil::XlaMarkSharding(input, op_sharding);
+  std::cout << "[WONJOO] in xla_sharding_util.cpp, XlaMarkShardingDynamoCustomOp finished" << std::endl;
 }
 
 }  // namespace torch_xla
