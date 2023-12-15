@@ -251,7 +251,7 @@ class TorchBenchModel(BenchmarkModel):
       raise ValueError(f"Unknown precision: {precision}")
     return precision_flag
 
-  def apply_env(self, process_env):
+  def extend_process_env(self, process_env):
     precision_flag = self.default_precision_flag
     if precision_flag is not None:
       process_env[precision_flag] = '1'
