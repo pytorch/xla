@@ -375,6 +375,8 @@ class ComputationClient {
   static int64_t GetDeviceOrdinal(const std::string& device);
 
  protected:
+  static constexpr auto spmd_device_str = "SPMD:0";
+
   // Metrics common to all client interfaces.
   static metrics::Metric* TransferToServerMetric();
   static metrics::Metric* TransferToServerTransformMetric();

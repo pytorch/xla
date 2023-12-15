@@ -1,5 +1,5 @@
-#ifndef XLA_CLIENT_PJRT_COMPUTATION_CLIENT_H_
-#define XLA_CLIENT_PJRT_COMPUTATION_CLIENT_H_
+#ifndef XLA_CLIENT_IFRT_COMPUTATION_CLIENT_H_
+#define XLA_CLIENT_IFRT_COMPUTATION_CLIENT_H_
 
 #include <torch/csrc/lazy/backend/backend_data.h>
 
@@ -12,21 +12,22 @@
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/operation_manager.h"
 #include "torch_xla/csrc/runtime/util.h"
-#include "tsl/platform/env.h"
-#include "tsl/platform/threadpool.h"
 #include "xla/client/xla_computation.h"
 #include "xla/literal.h"
 #include "xla/pjrt/pjrt_client.h"
 #include "xla/pjrt/pjrt_executable.h"
+#include "xla/python/pjrt_ifrt/pjrt_array.h"
+#include "xla/python/pjrt_ifrt/pjrt_client.h"
+#include "xla/python/pjrt_ifrt/xla_compiler.h"
 #include "xla/shape.h"
 
 namespace torch_xla {
 namespace runtime {
 
-class PjRtComputationClient : public ComputationClient {
+class IfrtComputationClient : public ComputationClient {
  public:
-  PjRtComputationClient();
-  ~PjRtComputationClient();
+  IfrtComputationClient();
+  ~IfrtComputationClient();
 
   DataPtr CreateDataPlaceholder(std::string device, xla::Shape shape) override;
 
@@ -54,17 +55,13 @@ class PjRtComputationClient : public ComputationClient {
   std::vector<ComputationPtr> Compile(
       std::vector<CompileInstance> instances) override;
 
-  std::string SerializeComputation(const ComputationPtr computation) override;
-
-  ComputationPtr DeserializeComputation(const std::string& serialized) override;
-
   std::vector<DataPtr> ExecuteComputation(
       const Computation& computation, absl::Span<const DataPtr> arguments,
       const std::string& device,
       const ExecuteComputationOptions& options) override;
 
   std::vector<DataPtr> ExecuteReplicated(
-      const Computation& computation, absl::Span<const DataPtr> arguments,
+      const Computation& computation, const absl::Span<const DataPtr> arguments,
       absl::Span<const std::string> devices,
       const ExecuteReplicatedOptions& options) override;
 
@@ -75,8 +72,6 @@ class PjRtComputationClient : public ComputationClient {
   std::vector<std::string> GetLocalDevices() const override;
 
   std::vector<std::string> GetAllDevices() const override;
-
-  torch::lazy::hash_t HashCompilationEnv() override;
 
   int GetProcessIndex() const override { return client_->process_index(); };
 
@@ -103,14 +98,25 @@ class PjRtComputationClient : public ComputationClient {
 
   bool CoordinatorInitialized() const override;
 
+  torch::lazy::hash_t HashCompilationEnv() override { return comp_env_hash_; }
+
   // NOT IMPLEMENTED
 
   MemoryInfo GetMemoryInfo(const std::string& device) override {
     XLA_ERROR() << __FUNCTION__ << " not implemented";
   };
 
+  std::string SerializeComputation(const ComputationPtr computation) override {
+    XLA_ERROR() << __FUNCTION__ << " not implemented";
+  }
+
+  ComputationPtr DeserializeComputation(
+      const std::string& serialized) override {
+    XLA_ERROR() << __FUNCTION__ << " not implemented";
+  }
+
  private:
-  std::unique_ptr<xla::PjRtClient> client_;
+  std::shared_ptr<xla::ifrt::PjRtClient> client_;
   std::unique_ptr<XlaCoordinator> coordinator_;
   // global_ordinals_ tracks a map from PjRtDeviceId to the device's
   // dense global ordinal.
@@ -119,28 +125,34 @@ class PjRtComputationClient : public ComputationClient {
   std::shared_ptr<std::vector<std::string>> replication_devices_;
   OperationManager operation_manager_;
   tsl::thread::ThreadPool pool_ = tsl::thread::ThreadPool(
-      tsl::Env::Default(), "pjrt", std::thread::hardware_concurrency());
+      tsl::Env::Default(), "ifrt", std::thread::hardware_concurrency());
   torch::lazy::hash_t comp_env_hash_;
 
-  xla::PjRtDevice* StringToPjRtDevice(const std::string& device);
+  xla::ifrt::Device* StringToIfrtDevice(const std::string& device);
 
-  std::string PjRtDeviceToString(xla::PjRtDevice* const device) const;
-  std::vector<std::string> PjRtDevicesToString(
-      absl::Span<xla::PjRtDevice* const> devices) const;
+  std::string IfrtDeviceToString(xla::ifrt::Device* const device) const;
+  std::vector<std::string> IfrtDevicesToString(
+      absl::Span<xla::ifrt::Device* const> devices) const;
 
-  struct PjRtData : public Data {
-    PjRtData(std::string device, xla::Shape device_shape)
+  struct IfrtData : public Data {
+    IfrtData(std::string device, xla::Shape device_shape)
         : Data(std::move(device), std::move(device_shape)) {}
 
-    PjRtData(std::string device, xla::Shape device_shape,
-             std::shared_ptr<xla::PjRtBuffer> buffer)
-        : Data(std::move(device), std::move(device_shape)), buffer(buffer) {}
+    IfrtData(std::string device, xla::Shape device_shape,
+             tsl::RCReference<xla::ifrt::Array> buffer,
+             std::optional<xla::OpSharding> sharding = std::nullopt)
+        : Data(std::move(device), std::move(device_shape)),
+          buffer(buffer),
+          sharding_(sharding) {}
 
-    PjRtData(std::string device, std::shared_ptr<xla::PjRtBuffer> buffer)
+    IfrtData(std::string device, tsl::RCReference<xla::ifrt::Array> buffer,
+             std::optional<xla::OpSharding> sharding = std::nullopt)
         : Data(std::move(device),
-               xla::Shape(buffer->element_type(), buffer->dimensions(),
-                          buffer->is_dynamic_dimension(), {})),
-          buffer(buffer) {}
+               xla::ShapeUtil::MakeShape(
+                   xla::ifrt::ToPrimitiveType(buffer->dtype()).value(),
+                   buffer->shape().dims())),
+          buffer(buffer),
+          sharding_(sharding) {}
 
     Handle GetHandle() override {
       XLA_CHECK(HasValue())
@@ -150,106 +162,58 @@ class PjRtComputationClient : public ComputationClient {
     };
     void Assign(const torch::lazy::BackendData& data) override;
     bool HasValue() const override {
-      return buffer != nullptr && !buffer->IsDeleted();
+      return buffer != nullptr;  // TODO: && !buffer->IsDeleted();
     };
 
-    bool HasSharding() const override { return false; }
+    bool HasSharding() const override { return sharding_.has_value(); }
 
-    xla::OpSharding GetSharding() const override {
-      XLA_CHECK(false) << "GetSharding should not be called on PjRtData, check "
-                          "HasSharding first";
-      return xla::OpSharding();
-    }
+    xla::OpSharding GetSharding() const override;
 
     std::string ToString() const override {
       std::stringstream ss;
-      ss << "XLAData: \n";
-      ss << "  Data Device: " << device() << "\n";
-      ss << "  Data Shape: " << shape().ToString() << "\n";
-      ss << "  Data Handle: ";
-      if (HasValue()) {
-        ss << reinterpret_cast<std::uintptr_t>(buffer.get()) << "\n";
+
+      if (HasSharding()) {
+        ss << "XLAShardedData: \n";
+        ss << "  Data Device: " << device() << "\n";
+        ss << "  Data Shape: " << shape().ToString() << "\n";
+        ss << "  OpSharding: "
+           << xla::HloSharding::FromProto(*sharding_)->ToString() << "\n";
+        ss << "  NumShards: " << buffer->sharding().devices().size() << "\n";
       } else {
-        ss << "None\n";
-      }
-      return ss.str();
-    }
-
-    std::shared_ptr<xla::PjRtBuffer> buffer;
-  };
-
-  struct PjRtShardedData : public Data {
-    PjRtShardedData(std::string device, xla::Shape shape) = delete;
-
-    PjRtShardedData(std::string device, xla::Shape shape,
-                    std::vector<std::shared_ptr<PjRtData>> shards,
-                    xla::OpSharding sharding)
-        : Data(std::move(device), std::move(shape)),
-          shards(shards),
-          sharding(sharding) {}
-
-    Handle GetHandle() override {
-      // Always returns `Handle` of the first shard.
-      return shards[0]->GetHandle();
-    }
-
-    void Assign(const torch::lazy::BackendData& data) override {
-      const PjRtShardedData& pjrt_sharded_data =
-          dynamic_cast<const PjRtShardedData&>(data);
-      if (&pjrt_sharded_data != this) {
-        shards = std::move(pjrt_sharded_data.shards);
-      }
-    }
-
-    bool HasValue() const override {
-      if (shards.empty()) {
-        return false;
-      }
-
-      for (auto& shard : shards) {
-        if (!shard->HasValue()) {
-          return false;
+        ss << "XLAData: \n";
+        ss << "  Data Device: " << device() << "\n";
+        ss << "  Data Shape: " << shape().ToString() << "\n";
+        ss << "  Data Handle: ";
+        if (HasValue()) {
+          ss << reinterpret_cast<std::uintptr_t>(buffer.get()) << "\n";
+        } else {
+          ss << "None\n";
         }
       }
-      return true;
-    }
-
-    std::string ToString() const override {
-      std::stringstream ss;
-      ss << "XLAShardedData: \n";
-      ss << "  Data Device: " << device() << "\n";
-      ss << "  Data Shape: " << shape().ToString() << "\n";
-      ss << "  OpSharding: "
-         << xla::HloSharding::FromProto(sharding)->ToString() << "\n";
-      ss << "  NumShards: " << shards.size() << "\n";
       return ss.str();
     }
 
-    bool HasSharding() const override { return true; }
-
-    xla::OpSharding GetSharding() const override { return sharding; }
-
-    std::vector<std::shared_ptr<PjRtData>> shards;
-    xla::OpSharding sharding;
+    std::optional<xla::OpSharding> sharding_;
+    tsl::RCReference<xla::ifrt::Array> buffer;
   };
 
-  struct PjRtComputation : public Computation {
-    PjRtComputation(xla::XlaComputation computation,
+  tsl::RCReference<xla::ifrt::Array> ReplicateShardedData(
+      const std::shared_ptr<IfrtData> handle);
+
+  struct IfrtComputation : public Computation {
+    IfrtComputation(xla::XlaComputation computation,
                     std::vector<std::string> devices,
-                    std::unique_ptr<xla::PjRtLoadedExecutable> executable)
+                    std::unique_ptr<xla::ifrt::LoadedExecutable> executable)
         : Computation(std::move(computation), std::move(devices)),
           executable(std::move(executable)) {
       output_shardings_ = this->executable->GetOutputShardings();
     }
 
-    std::unique_ptr<xla::PjRtLoadedExecutable> executable;
+    std::unique_ptr<xla::ifrt::LoadedExecutable> executable;
     std::optional<std::vector<xla::OpSharding>> output_shardings_;
   };
-
-  // Use XLA replication to re-assemble the sharded data.
-  std::shared_ptr<PjRtData> ReplicateShardedData(const DataPtr& handle);
 };
 
 }  // namespace runtime
 }  // namespace torch_xla
-#endif  // XLA_CLIENT_PJRT_COMPUTATION_CLIENT_H_
+#endif  // XLA_CLIENT_IFRT_COMPUTATION_CLIENT_H_
