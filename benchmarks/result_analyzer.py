@@ -108,6 +108,8 @@ class ResultAnalyzer:
     runs = []
     for jsonline in jsonlines:
       dataline = json.loads(jsonline)
+      timestamp = dataline[
+          "timestamp"] if "timestamp" in dataline else self.timestamp
       batch_size = dataline["experiment"]["batch_size"]
       batch_side_value = -1 if batch_size is None else batch_size
       xla = dataline["experiment"]["xla"]
@@ -121,7 +123,7 @@ class ResultAnalyzer:
 
       d = {
           "metrics": {
-              "timestamp": int(self.timestamp),
+              "timestamp": int(timestamp),
               "batch_size": batch_side_value,
               "repeat": dataline["repeat"],
               "iterations_per_run": dataline["iterations_per_run"]
@@ -162,8 +164,10 @@ class ResultAnalyzer:
 
     for jsonline in jsonlines:
       dataline = json.loads(jsonline)
+      timestamp = dataline[
+          "timestamp"] if "timestamp" in dataline else self.timestamp
       d = {
-          "timestamp": self.timestamp,
+          "timestamp": timestamp,
           "suite_name": dataline["model"]["suite_name"],
           "model_name": dataline["model"]["model_name"],
           "accelerator": dataline["experiment"]["accelerator"],
@@ -255,8 +259,8 @@ def parse_args(args=None):
 
   parser.add_argument(
       "--timestamp",
-      type=int,
-      help="User provided timestamp. If not provided, get the timestamp in analyzer",
+      type=float,
+      help="User provided timestamp used if the input data does not have it.",
   )
 
   parser.add_argument(
