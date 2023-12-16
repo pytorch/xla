@@ -106,7 +106,7 @@ Sample runs and sample output:
 - Note 3: we are using ASCII output here just to avoid checking in PNG files.
 
 ```
-$ python3 aggregate.py --accelerator=v100 --test=inference -i /tmp/test --format=png --report=histogram
+$ python3 aggregate.py --accelerator=v100 --test=inference --format=png --report=histogram /tmp/test/*.csv
 
                 Histogram of Speedup over Oldest Benchmarked Inductor
      1.2 +------------------------------------------------------------------+
@@ -126,7 +126,7 @@ $ python3 aggregate.py --accelerator=v100 --test=inference -i /tmp/test --format
         2000   2005    2010   2015    2020   2025    2030   2035    2040   2045
                                         Date
 
-$ python3 aggregate.py --accelerator=v100 --test=inference -i /tmp/test --format=png --report=speedup
+$ python3 aggregate.py --accelerator=v100 --test=inference --format=png --report=speedup /tmp/test/*.csv
 
         Geomean Speedup Over Oldest Benchmarked Inductor
        1 +----------------------------------------------+
@@ -145,7 +145,7 @@ $ python3 aggregate.py --accelerator=v100 --test=inference -i /tmp/test --format
      0.4 +----------------------------------------------+
         2000 2005 2010  2015 2020 2025 2030  2035 2040 2045
                               Date
-$ python3 aggregate.py --accelerator=v100 --test=inference -i /tmp/test --format=png --report=latest
+$ python3 aggregate.py --accelerator=v100 --test=inference --format=png --report=latest /tmp/test/*.csv
 
 Speedup Over Oldest Benchmarked Inductor as of 2023-11-11
      1.8 +----------------------------------------------+
