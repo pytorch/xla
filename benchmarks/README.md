@@ -90,13 +90,12 @@ python xla/benchmarks/result_analyzer.py --output-dirname=experiment_results
 
 ## Aggregating results
 
-Generated reports (e.g. `metric_report.csv` files mentioned above) can be
-aggregated to track performance improvements over time with the `aggregate.py`
-script.
+Aggregate reports can be generated directly from the output JSONL files
+(i.e., skipping `result_analyzer.py` altogether) with the `aggregate.py` script.
 The script compares Pytorch/XLA performance numbers against Inductor numbers.
 Because Inductor's performance also changes over time, the script takes
-the oldest Inductor performance numbers present in the CSV files (as determined
-by their timestamp) as the baseline for each benchmark.
+the oldest Inductor performance numbers present in the JSONL files (as
+determined by the records' timestamp) as the baseline for each benchmark.
 
 Sample runs and sample output:
 
@@ -106,7 +105,7 @@ Sample runs and sample output:
 - Note 3: we are using ASCII output here just to avoid checking in PNG files.
 
 ```
-$ python3 aggregate.py --accelerator=v100 --test=inference --format=png --report=histogram /tmp/test/*.csv
+$ python3 aggregate.py --accelerator=v100 --test=inference --format=png --report=histogram /tmp/test/*.jsonl
 
                 Histogram of Speedup over Oldest Benchmarked Inductor
      1.2 +------------------------------------------------------------------+
@@ -126,7 +125,7 @@ $ python3 aggregate.py --accelerator=v100 --test=inference --format=png --report
         2000   2005    2010   2015    2020   2025    2030   2035    2040   2045
                                         Date
 
-$ python3 aggregate.py --accelerator=v100 --test=inference --format=png --report=speedup /tmp/test/*.csv
+$ python3 aggregate.py --accelerator=v100 --test=inference --format=png --report=speedup /tmp/test/*.jsonl
 
         Geomean Speedup Over Oldest Benchmarked Inductor
        1 +----------------------------------------------+
@@ -145,7 +144,7 @@ $ python3 aggregate.py --accelerator=v100 --test=inference --format=png --report
      0.4 +----------------------------------------------+
         2000 2005 2010  2015 2020 2025 2030  2035 2040 2045
                               Date
-$ python3 aggregate.py --accelerator=v100 --test=inference --format=png --report=latest /tmp/test/*.csv
+$ python3 aggregate.py --accelerator=v100 --test=inference --format=png --report=latest /tmp/test/*.jsonl
 
 Speedup Over Oldest Benchmarked Inductor as of 2023-11-11
      1.8 +----------------------------------------------+
@@ -168,7 +167,7 @@ Speedup Over Oldest Benchmarked Inductor as of 2023-11-11
 
 The last plot shows the "latest" snapshot for all benchmarks ("Workload" on the
 plot), sorting them by speedup. That is, it shows the speedup of both Inductor
-and Pytorch/XLA over the oldest Inductor data point that we have in the CSV
+and Pytorch/XLA over the oldest Inductor data point that we have in the JSONL
 files. (Note: to reiterate, because we are plotting data from single day,
 Inductor gets speedup == 1 for all benchmarks). This plot also shows the
 correctness gap between Pytorch/XLA and Inductor; there are benchmarks that do
