@@ -202,8 +202,8 @@ class TorchBenchModel(BenchmarkModel):
     self.module, self.example_inputs = benchmark.get_module()
 
     # Move the initialized model to XLA device.
+    device = self.benchmark_experiment.get_device()
     if self.benchmark_experiment.xla:
-      device = self.benchmark_experiment.get_device()
       self.module = self.module.to(device)
       self.example_inputs = pytree.tree_map_only(torch.Tensor,
                                                  lambda t: t.to(device),
