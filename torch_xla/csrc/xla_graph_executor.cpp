@@ -614,6 +614,12 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
   coll.device = *unique_device;
   coll.indices.reserve(tensors.size());
   for (size_t i = 0; i < tensors.size(); ++i) {
+    // Sync sharding annotations between the tensor and its node, if exists.
+    // This either push down the sharding on the tensor to the IR before node
+    // hash computation if the node has no annotation, or it actually syncs the
+    // sharding attached to the node to the tensor, since sharding propagation &
+    // resharding should attach the latest to the node.
+    tensors[i]->sharding_spec();
     if (tensor_ids.insert(tensors[i]->GetUniqueId()).second &&
         // A tensor's xla_data might not be up to date if there is a view
         // associated with it. Make sure to sync those tensors here too.
@@ -623,34 +629,9 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
       torch::lazy::Value ir_value = tensors[i]->CurrentIrValue();
       if (ir_value) {
         if (ShouldSyncIrValue(ir_value)) {
-          // `sharding_spec()` checks sharding equality. If IR node has no
-          // sharding, then sync XLATensor sharding to the IR node. XLATensor's
-          // sharding takes the precedence as the source of the truth.
-          XLATensor::ShardingSpecPtr sharding = tensors[i]->sharding_spec();
-          if (sharding) {
-            dynamic_cast<XlaNode*>(ir_value.node.get())
-                ->SetSharding(sharding->sharding, ir_value.index);
-          }
-          auto device_data = torch_xla::DeviceData::Cast(ir_value.node.get());
-          // If current tensor is cloned from another tensor, we want to assign
-          // a new XlaData to it after current execution. Cloned tensor might
-          // share the same storage with the origional tensor but origional
-          // tensor might alias its storage with the output. It is safer to
-          // allocate a new buffer for the cloned tensor.
-          if (device_data != nullptr && !tensors[i]->data()->is_cloned) {
-            // current IR is a devicedata, we don't need to include it as a
-            // result of the computation. Call `GetXlaData` to extract the
-            // XlaData from the DeviceData Node and reset the IR. We also want
-            // to update XlaData's tensorID to make it match with the current
-            // XLATensor.
-            tensors[i]->GetXlaData()->SetInfo(
-                std::make_shared<LazyGraphExecutor::DeviceDataInfo>(
-                    tensors[i]->GetUniqueId(), /*=read_only=*/false));
-          } else {
-            // Add only tensors which need to be synced.
-            coll.hash = torch::lazy::HashCombine(coll.hash, ir_value.hash());
-            coll.indices.push_back(i);
-          }
+          // Add only tensors which need to be synced.
+          coll.hash = torch::lazy::HashCombine(coll.hash, ir_value.hash());
+          coll.indices.push_back(i);
         }
       } else if (config.force_ltc_data) {
         // The tensor only has at::Tensor data. We need to queue it for a
@@ -1472,7 +1453,7 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
                  po_data->parameters_data.size());
   }
 
-  // TODO(yeounoh) move this to sync tensors scheduling.
+  // TODO(yeounoh) refactoring.
   if (use_autosharding) {
     const xla::HloModuleProto& computation_proto =
         computations.front()->computation().proto();

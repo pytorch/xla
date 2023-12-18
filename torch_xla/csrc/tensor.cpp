@@ -279,32 +279,27 @@ void XLATensor::ClearShardingSpec() {
 XLATensor::ShardingSpecPtr XLATensor::sharding_spec() const {
   ShardingSpecPtr sharding = data()->sharding;
   torch::lazy::Value ir_value = CurrentIrValue();
-  if (sharding && ir_value) {
+  if (ir_value) {
     auto* xla_node = dynamic_cast<XlaNode*>(ir_value.node.get());
-    if (xla_node->GetSharding(ir_value.index)) {
-      // There is a case where the sharding spec copy on the node and that of
-      // the tensor disagress. This happens during the auto-sharding pass, and
-      // here we re-sync from the node to the tensor.
+    const auto* new_op_sharding = xla_node->GetSharding(ir_value.index).get();
+    if (new_op_sharding &&
+        (new_op_sharding->type() != xla::OpSharding::UNKNOWN)) {
+      // Re-sync the sharding annotation from the node to the tensor if there is
+      // one attached to the node. A new sharding annotation is attached
+      // directly to the node, and gets synced to the tensor after this.
       // TODO(yeounoh) verify that this change doesn't break the existing tests.
-      xla::OpSharding new_sharding = *xla_node->GetSharding(ir_value.index);
-      if (!ShardingUtil::EqualOpShardings(new_sharding, sharding->sharding)) {
-        std::cout << "*** sharding_spec() syncing node sharding " << new_sharding.DebugString()
-      << " to tensor sharding " << sharding->sharding.DebugString() << std::endl;
-        data()->sharding =
-            std::make_shared<ShardingSpec>(new_sharding, xla_node->xla_shape());
+      if (!sharding ||
+          (sharding && !ShardingUtil::EqualOpShardings(*new_op_sharding,
+                                                       sharding->sharding))) {
+        TF_VLOG(5) << "Syncing node sharding (type=" << new_op_sharding->type()
+                   << ") to tensor (shape=" << xla_node->xla_shape().ToString()
+                   << ").";
+        data()->sharding = std::make_shared<ShardingSpec>(
+            *new_op_sharding, xla_node->xla_shape());
       }
-      // XLA_CHECK(ShardingUtil::EqualShardingSpecs(
-      //     *sharding, ShardingSpec{*xla_node->GetSharding(ir_value.index),
-      //                             xla_node->xla_shape()}))
-      //     << "Sharding on tensor: "
-      //     << xla::HloSharding::FromProto(sharding->sharding)->ToString()
-      //     << ", sharding on IR: "
-      //     <<
-      //     xla::HloSharding::FromProto(*xla_node->GetSharding(ir_value.index))
-      //            ->ToString();
-    } else {
-      // There is a case where the sharding spec copy on the tensor is not
-      // propagated to the node after a reset.
+    } else if (sharding) {
+      // There is a case where the sharding spec on the tensor is not
+      // propagated down to the node after a reset.
       xla_node->SetSharding(sharding->sharding, ir_value.index);
     }
   }
@@ -361,7 +356,7 @@ void XLATensor::SetInPlaceIrValue(torch::lazy::Value ir_value) {
 }
 
 void XLATensor::AssignIrValue(torch::lazy::Value ir_value) const {
-  TF_VLOG(5) << "Assign IR value: "
+  TF_VLOG(6) << "Assign IR value: "
              << (ir_value ? ir_value->ToString() : "empty node");
   data()->ir_value = std::move(ir_value);
   data()->generation += 1;
