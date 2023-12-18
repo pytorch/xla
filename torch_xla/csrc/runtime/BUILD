@@ -83,7 +83,7 @@ cc_library(
     ":computation_client",
     ":debug_macros",
     ":env_vars",
-    ":initialize_pjrt",
+    ":pjrt_registry",
     ":operation_manager",
     ":stablehlo_helper",
     ":tf_logging",
@@ -114,7 +114,7 @@ cc_library(
     ":debug_macros",
     ":env_hash",
     ":env_vars",
-    ":initialize_pjrt",
+    ":pjrt_registry",
     ":operation_manager",
     ":profiler",
     ":stablehlo_helper",
@@ -194,9 +194,9 @@ cc_test(
 )
 
 cc_library(
-  name = "initialize_pjrt",
-  srcs = ["initialize_pjrt.cc"],
-  hdrs = ["initialize_pjrt.h"],
+  name = "pjrt_registry",
+  srcs = ["pjrt_registry.cc"],
+  hdrs = ["pjrt_registry.h"],
   deps = [
     ":debug_macros",
     ":env_hash",
