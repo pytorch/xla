@@ -1,15 +1,17 @@
 """Processes .jsonl result files and aggregates them."""
 
 import argparse
+from collections import namedtuple
 from datetime import datetime
 import json
 import logging
+import math
 import os
 import re
 import sys
 import tiers
 import itertools
-from typing import Any, Dict, List
+from typing import Any, Dict, List, NamedTuple
 import numpy as np
 from scipy.stats.mstats import gmean
 
@@ -22,17 +24,23 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+Datapoint = namedtuple('Datapoint', 'avg, std')
+
 _test_to_field_name = {
     'inference': 'eval',
     'training': 'train',
 }
+_fig_width = 9
+_fig_height = 6.75
+_fig_elinewidth = 0.5
+_fig_capsize = 3
 
-_markers = ('^', 'o', 's')
+_markers = ('D', 'o', 's')
 
 
 # Round floats before printing them so that tiny differences don't break tests.
-def pr_round(x):
-  return round(x, 8)
+def pr_round(x: NamedTuple):
+  return Datapoint(round(x.avg, 8), round(x.std, 8))
 
 
 def clean_up_accelerator_model(model: str) -> str:
@@ -86,6 +94,11 @@ def process_file(args, results_map: Dict[str, Any], filename: str):
       if len(total_times) <= 1:
         continue
       # Skip total_times[0] because it includes compilation time.
+      avg = np.average(total_times[1:])
+      # Standard deviation of the sample, i.e. N-1 denominator.
+      # Note: avoid NaN when we compute the std with just one sample.
+      std = np.std(total_times[1:], ddof=1) if len(total_times) > 2 else 0.0
+      dp = Datapoint(avg, std)
       median_total_time = np.median(total_times[1:])
       dynamo = r['experiment']['dynamo']
       batch_size = r['experiment']['batch_size']
@@ -100,16 +113,35 @@ def process_file(args, results_map: Dict[str, Any], filename: str):
         results_map[timestamp][dynamo][model_name] = {}
       if (batch_size not in results_map[timestamp][dynamo][model_name]):
         results_map[timestamp][dynamo][model_name][batch_size] = {}
-      results_map[timestamp][dynamo][model_name][batch_size] = median_total_time
+      results_map[timestamp][dynamo][model_name][batch_size] = dp
+
+
+# Speedup of a over baseline ("b"), with errors.
+def compute_speedup(a: NamedTuple, b: NamedTuple) -> NamedTuple:
+  rel_err_a = a.avg * a.std
+  rel_err_b = b.avg * b.std
+  rel_err = math.sqrt(rel_err_a**2 + rel_err_b**2)
+  speedup = b.avg / a.avg
+  err = rel_err * speedup
+  return Datapoint(speedup, err)
+
+
+# https://math.stackexchange.com/a/123297
+def compute_geomean(a: List[NamedTuple]) -> NamedTuple:
+  values = [v.avg for v in a]
+  g = gmean(values)
+  err = g / len(a) * math.sqrt(sum([(v.std / v.avg)**2 for v in a]))
+  return Datapoint(g, err)
 
 
 def summarize_speedups(acc_map: Dict[str, Any], label: str):
   if label not in acc_map:
     return
-  acc_map[f'{label}:gmean'] = gmean(acc_map[label])
+  acc_map[f'{label}:gmean'] = compute_geomean(acc_map[label])
   for p in (5, 50, 95):
-    percentile = float(np.percentile(acc_map[label], p))
-    acc_map[f'{label}:p{p}'] = percentile
+    percentile = float(np.percentile([v.avg for v in acc_map[label]], p))
+    # TODO: what stddev to pick here? Set it to 0.0 for now.
+    acc_map[f'{label}:p{p}'] = Datapoint(percentile, 0.0)
 
 
 # The speedup values are stored in acc_map[out_label]; the corresponding
@@ -125,15 +157,15 @@ def compute_speedups(acc_map: Dict[str, Any], baseline: Dict[str, Any],
     speedups = []
     # If we are running several batch sizes, keep the geomean of their speedups.
     for batch_size in v:
-      experiment_time = v[batch_size]
-      baseline_time = baseline[model_name].get(batch_size, None)
-      if not experiment_time or not baseline_time:
+      experiment_times = v[batch_size]
+      baseline_times = baseline[model_name].get(batch_size, None)
+      if not experiment_times or not baseline_times:
         continue
-      speedups.append(float(baseline_time) / float(experiment_time))
+      speedups.append(compute_speedup(experiment_times, baseline_times))
     if speedups:
       if out_label not in acc_map:
         acc_map[out_label] = []
-      acc_map[out_label].append(gmean(speedups))
+      acc_map[out_label].append(compute_geomean(speedups))
       if model_label not in acc_map:
         acc_map[model_label] = []
       acc_map[model_label].append(model_name)
@@ -204,31 +236,38 @@ def pr_latest(results_map: Dict[str, Any], args, timestamps: List[str]):
 
   if args.format == 'csv':
     print(','.join(['# WorkloadNumber'] + [
-        f'Speedup({title}/Oldest Inductor),ModelName({title})'
+        f'Speedup({title}/Oldest Inductor),StdDev,ModelName({title})'
         for title in titles
     ]))
     # Note: the latest timestamp might not have results for all benchmarks.
     max_len = max([len(l) for l in speedups])
 
-    def pad_array(arr, desired_len):
+    def pad_array(arr, desired_len, val):
       if len(arr) >= desired_len:
         return
-      arr += [''] * (desired_len - len(arr))
+      arr += [val] * (desired_len - len(arr))
 
     for i in range(len(titles)):
-      pad_array(speedups[i], max_len)
-      pad_array(model_names[i], max_len)
+      pad_array(speedups[i], max_len, Datapoint('', ''))
+      pad_array(model_names[i], max_len, '')
 
     for j in range(max_len):
       print(','.join(
           map(str, [j] + [
               v for i in range(len(titles))
-              for v in (speedups[i][j], model_names[i][j])
+              for v in (speedups[i][j].avg, speedups[i][j].std,
+                        model_names[i][j])
           ])))
   else:
+    plt.figure(figsize=(_fig_width, _fig_height))
     plt.axhline(y=1.0, color='lightgray')
     for i in range(len(titles)):
-      plt.plot(speedups[i], label=titles[i], marker=_markers[i])
+      plt.errorbar([j for j in range(len(speedups[i]))],
+                   [v.avg for v in speedups[i]], [v.std for v in speedups[i]],
+                   label=titles[i],
+                   marker=_markers[i],
+                   elinewidth=_fig_elinewidth,
+                   capsize=_fig_capsize)
     plt.legend()
     plt.title(maketitle(args, f'Speedup over Oldest Benchmarked Inductor'))
     plt.xlabel('Workload Number')
@@ -251,14 +290,14 @@ def pr_histogram(results_map: Dict[str, Any], args, timestamps: List[str]):
       for i, label in enumerate(labels):
         y[i].append(
             pr_round(results_map[timestamp][label] if label in
-                     results_map[timestamp] else ''))
+                     results_map[timestamp] else Datapoint('', '')).avg)
   if args.format == 'csv':
     full_titles = ['# Datetime(UTC)'] + full_titles
     print(','.join(full_titles))
     for j, utc in enumerate(x):
       print(','.join([str(utc)] + [str(y[i][j]) for i in range(len(labels))]))
   else:
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(_fig_width, _fig_height))
     ax.axhline(y=1.0, color='lightgray')
     linestyles = ('solid', 'dotted', 'dashed')
     for i, label in enumerate(labels):
@@ -293,17 +332,26 @@ def pr_gmean(results_map: Dict[str, Any], args, timestamps: List[str]):
     for i, label in enumerate(labels):
       y[i].append(
           pr_round(results_map[timestamp][label]) if label in
-          results_map[timestamp] else '')
+          results_map[timestamp] else Datapoint('', ''))
   if args.format == 'csv':
-    print(','.join(['# Datetime(UTC)'] +
-                   [f"Speedup({title}/Oldest Inductor)" for title in titles]))
+    print(','.join(
+        ['# Datetime(UTC)'] +
+        [f"Speedup({title}/Oldest Inductor),StdDev" for title in titles]))
     for j, x in enumerate(x):
-      print(','.join(map(str, [x] + [y[i][j] for i in range(len(labels))])))
+      print(','.join(
+          map(str, [x] + [
+              v for i in range(len(labels)) for v in (y[i][j].avg, y[i][j].std)
+          ])))
   else:
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(_fig_width, _fig_height))
     ax.axhline(y=1.0, color='lightgray')
     for i in range(len(labels)):
-      ax.plot(x, y[i], marker=_markers[i], label=titles[i])
+      ax.errorbar(
+          x, [v.avg for v in y[i]], [v.std for v in y[i]],
+          marker=_markers[i],
+          label=titles[i],
+          elinewidth=_fig_elinewidth,
+          capsize=_fig_capsize)
     ax.xaxis.set_major_formatter(
         mdates.ConciseDateFormatter(ax.xaxis.get_major_locator()))
     plt.legend()
