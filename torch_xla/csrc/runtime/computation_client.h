@@ -257,12 +257,12 @@ class ComputationClient {
   virtual std::optional<xla::OpSharding> GetDataSharding(DataPtr handle) = 0;
 
   // Transfers local tensor values to the TPU devices and fetches the handles.
-  virtual std::vector<DataPtr> TransferToServer(
+  virtual std::vector<DataPtr> TransferToDevice(
       absl::Span<const std::shared_ptr<const TensorSource>> tensors) = 0;
 
   // Transfers local sharded tensor values to the TPU devices and returns a
   // `PjRtShardedData`.
-  virtual DataPtr TransferShardsToServer(
+  virtual DataPtr TransferShardsToDevice(
       absl::Span<const std::shared_ptr<const TensorSource>> tensor_shards,
       std::string device, xla::Shape shape, xla::OpSharding sharding) = 0;
 
@@ -271,10 +271,10 @@ class ComputationClient {
 
   // Reads the tensor literal values stored at TPU server sites, behind the
   // supplied handles.
-  // Note: `TransferFromServer` call will block until the `DataPtrs` are ready
-  // if they were created by `TransferToServer` or `Execute*`. Calling this from
+  // Note: `TransferFromDevice` call will block until the `DataPtrs` are ready
+  // if they were created by `TransferToDevice` or `Execute*`. Calling this from
   // python while holding the GIL can cause deadlocks!
-  virtual std::vector<xla::Literal> TransferFromServer(
+  virtual std::vector<xla::Literal> TransferFromDevice(
       absl::Span<const DataPtr> handles) = 0;
 
   // Compiles a set of computations.
@@ -378,9 +378,9 @@ class ComputationClient {
   static constexpr auto spmd_device_str = "SPMD:0";
 
   // Metrics common to all client interfaces.
-  static metrics::Metric* TransferToServerMetric();
-  static metrics::Metric* TransferToServerTransformMetric();
-  static metrics::Metric* TransferFromServerMetric();
+  static metrics::Metric* TransferToDeviceMetric();
+  static metrics::Metric* TransferToDeviceTransformMetric();
+  static metrics::Metric* TransferFromDeviceMetric();
   static metrics::Metric* CompileMetric();
   static metrics::Metric* ExecuteMetric();
   static metrics::Metric* ExecuteReplicatedMetric();

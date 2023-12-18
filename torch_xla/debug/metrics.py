@@ -76,6 +76,6 @@ def short_metrics_report(counter_names: list = None, metric_names: list = None):
   if not metric_names:
     metric_names = [
         'CompileTime', 'ExecuteTime', 'ExecuteReplicatedTime',
-        'TransferToServerTime', 'TransferFromServerTime'
+        'TransferToDeviceTime', 'TransferFromDeviceTime'
     ]
   return torch_xla._XLAC._short_xla_metrics_report(counter_names, metric_names)
