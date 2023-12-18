@@ -35,8 +35,7 @@ xla::GpuAllocatorConfig GetGpuAllocatorConfig() {
   return allocator_config;
 }
 
-std::optional<std::string> GetPjRtPluginPath(
-    const std::string& device_type) {
+std::optional<std::string> GetPjRtPluginPath(const std::string& device_type) {
   auto plugin_path = pjrt_plugins_.find(device_type);
   return plugin_path != pjrt_plugins_.end() ? std::optional(plugin_path->second)
                                             : std::nullopt;
@@ -44,8 +43,7 @@ std::optional<std::string> GetPjRtPluginPath(
 
 }  // namespace
 
-void RegisterPjRtPlugin(std::string name,
-                                           std::string library_path) {
+void RegisterPjRtPlugin(std::string name, std::string library_path) {
   TF_VLOG(3) << "Registering PjRt plugin " << name << " at " << library_path;
   pjrt_plugins_[name] = library_path;
 }
@@ -148,8 +146,8 @@ InitializePjRt(const std::string& device_type) {
     client = std::move(xla::GetCApiClient("NEURON").value());
   }
 
-  XLA_CHECK(client)
-      << absl::StrFormat("Unknown %s '%s'", env::kEnvPjRtDevice, device_type);
+  XLA_CHECK(client) << absl::StrFormat("Unknown %s '%s'", env::kEnvPjRtDevice,
+                                       device_type);
 
   return {std::move(client), std::move(coordinator)};
 }
