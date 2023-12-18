@@ -12,7 +12,7 @@ endif
 
 $(TESTS):
 	$(QUIET_AGGREGATE)python3 ../../benchmarks/aggregate.py $(TEST_ARGS) \
-		--format=csv $(wildcard *.csv) > $@.tmp
+		--format=csv $(wildcard *.jsonl) > $@.tmp
 	$(QUIET_DIFF)git diff --no-index $@ $@.tmp
 	$(QUIET_RM)$(RM) $@.tmp
 

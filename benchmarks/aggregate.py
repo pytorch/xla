@@ -1,8 +1,8 @@
-"""Processes .csv result files and aggregates them."""
+"""Processes .jsonl result files and aggregates them."""
 
 import argparse
-import csv
 from datetime import datetime
+import json
 import logging
 import os
 import re
@@ -22,7 +22,7 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-_test_to_csv_field_name = {
+_test_to_field_name = {
     'inference': 'eval',
     'training': 'train',
 }
@@ -51,49 +51,47 @@ def skip_model(args, model_name: str):
 
 
 def process_file(args, results_map: Dict[str, Any], filename: str):
-  with open(filename) as check_header_file:
-    try:
-      has_header = csv.Sniffer().has_header(check_header_file.read(1024))
-    except csv.Error:
-      logger.error('Cannot read CSV in %s, skipping.', filename)
-      return
-    if not has_header:
-      logger.error('Cannot interpret %s: missing headers.', filename)
-      return
-  fields = (
-      'model_name',
-      'accelerator_model',
-      'dynamo',
-      'test',
-      'batch_size',
-      'median_total_time',
-  )
+  fields = {
+      'experiment': ['accelerator_model', 'batch_size', 'dynamo', 'test'],
+      'metrics': [],
+      'model': ['model_name'],
+      'timestamp': [],
+  }
   with open(filename) as read_file:
-    reader = csv.reader(read_file)
-    headers = next(reader)
-    if headers[0] != 'timestamp':
-      logger.error('Missing timestamp in CSV in %s, skipping.', filename)
-      return
-    field2index = {}
-    for i, header in enumerate(headers):
-      for field in fields:
-        if field == header:
-          field2index[field] = i
-    for row in reader:
-      timestamp = row[0]
-      model_name = row[field2index['model_name']]
-      if skip_model(args, model_name):
-        continue
+    for line in read_file:
+      try:
+        r = json.loads(line.rstrip('\n|\r'))
+      except json.JSONDecodeError as e:
+        sys.exit(f'Invalid JSONL:\n{line}{e}')
+
+      # check that all fields exist.
+      for k in fields:
+        if k not in r:
+          sys.exit(f'JSONL record does not contain key {k}. JSONL: {r}')
+        for kk in fields[k]:
+          if kk not in r[k]:
+            sys.exit(f'JSONL record does not contain key {k}.{kk}. JSONL: {r}')
+
+      # Read in what we need.
       accelerator_model = clean_up_accelerator_model(
-          row[field2index['accelerator_model']])
+          r['experiment']['accelerator_model'])
       if accelerator_model != args.accelerator:
         continue
-      dynamo = row[field2index['dynamo']]
-      test = row[field2index['test']]
-      if test != _test_to_csv_field_name[args.test]:
+      dynamo = r['experiment']['dynamo']
+      test = r['experiment']['test']
+      if test != _test_to_field_name[args.test]:
         continue
-      batch_size = row[field2index['batch_size']]
-      median_total_time = row[field2index['median_total_time']]
+      total_times = r['metrics']['total_time'] if 'total_time' in r[
+          'metrics'] else []
+      if len(total_times) <= 1:
+        continue
+      # Skip total_times[0] because it includes compilation time.
+      median_total_time = np.median(total_times[1:])
+      dynamo = r['experiment']['dynamo']
+      batch_size = r['experiment']['batch_size']
+      timestamp = r['timestamp']
+      model_name = r['model']['model_name']
+
       if timestamp not in results_map:
         results_map[timestamp] = {}
       if dynamo not in results_map[timestamp]:
@@ -393,9 +391,6 @@ def main():
   args = parse_args()
   filenames = args.input_file
   results_map = {}
-
-  # Some CSV files have lots of errors from execution; expand CSV's size limit.
-  csv.field_size_limit(1024 * 1024)
 
   for filename in filenames:
     process_file(args, results_map, filename)
