@@ -65,12 +65,12 @@ TEST(PjRtComputationClientTest, Init) {
 
   // Execute the graph.
   std::vector<ComputationClient::DataPtr> results = client->ExecuteReplicated(
-      *computations[0], client->TransferToServer(absl::MakeConstSpan(args)),
+      *computations[0], client->TransferToDevice(absl::MakeConstSpan(args)),
       {device}, options);
 
   // Copy the output from device back to host and assert correctness..
   ASSERT_EQ(results.size(), 1);
-  auto result_literals = client->TransferFromServer(results);
+  auto result_literals = client->TransferFromDevice(results);
   ASSERT_THAT(result_literals, ::testing::SizeIs(1));
   EXPECT_TRUE(xla::LiteralTestUtil::Equal(
       xla::LiteralUtil::CreateR2<float>({{6.0f, 8.0f}, {10.0f, 12.0f}}),

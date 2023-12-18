@@ -255,11 +255,11 @@ std::optional<xla::OpSharding> IfrtComputationClient::GetDataSharding(
   return ifrt_data->sharding_;
 }
 
-std::vector<ComputationClient::DataPtr> IfrtComputationClient::TransferToServer(
+std::vector<ComputationClient::DataPtr> IfrtComputationClient::TransferToDevice(
     absl::Span<const std::shared_ptr<const TensorSource>> tensors) {
   auto timed =
-      std::make_shared<metrics::TimedSection>(TransferToServerMetric());
-  tsl::profiler::TraceMe activity("IfrtComputationClient::TransferToServer",
+      std::make_shared<metrics::TimedSection>(TransferToDeviceMetric());
+  tsl::profiler::TraceMe activity("IfrtComputationClient::TransferToDevice",
                                   tsl::profiler::TraceMeLevel::kInfo);
   std::vector<ComputationClient::DataPtr> datas;
   datas.reserve(tensors.size());
@@ -293,18 +293,18 @@ std::vector<ComputationClient::DataPtr> IfrtComputationClient::TransferToServer(
   return datas;
 }
 
-ComputationClient::DataPtr IfrtComputationClient::TransferShardsToServer(
+ComputationClient::DataPtr IfrtComputationClient::TransferShardsToDevice(
     absl::Span<const std::shared_ptr<const TensorSource>> tensor_shards,
     std::string device, xla::Shape shape, xla::OpSharding sharding) {
   tsl::profiler::TraceMe activity(
-      "IfrtComputationClient::TransferShardsToServer",
+      "IfrtComputationClient::TransferShardsToDevice",
       tsl::profiler::TraceMeLevel::kInfo);
   // TODO(jonbolin): Consider using CopyToDevice when sharding is REPLICATED.
   // We are opting out of CopyToDevice for now due to the synchronization
   // issues observed in ShardingUtil::InputHandler, but because CopyToDevice
   // directly copies buffers between devices using ICI, it can be much faster
   // than transferring from the host to each device.
-  auto data_shards = TransferToServer(tensor_shards);
+  auto data_shards = TransferToDevice(tensor_shards);
   std::vector<tsl::RCReference<xla::ifrt::Array>> arrays;
   std::vector<xla::ifrt::Shape> shard_shapes;
   for (auto& shard : data_shards) {
@@ -394,10 +394,10 @@ tsl::RCReference<xla::ifrt::Array> IfrtComputationClient::ReplicateShardedData(
   return *replicated_output;
 }
 
-std::vector<xla::Literal> IfrtComputationClient::TransferFromServer(
+std::vector<xla::Literal> IfrtComputationClient::TransferFromDevice(
     absl::Span<const DataPtr> handles) {
-  metrics::TimedSection timed(TransferFromServerMetric());
-  tsl::profiler::TraceMe activity("IfrtComputationClient::TransferFromServer",
+  metrics::TimedSection timed(TransferFromDeviceMetric());
+  tsl::profiler::TraceMe activity("IfrtComputationClient::TransferFromDevice",
                                   tsl::profiler::TraceMeLevel::kInfo);
   std::vector<xla::Literal> literals;
   literals.reserve(handles.size());

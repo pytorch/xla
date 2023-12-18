@@ -25,7 +25,7 @@ std::vector<int64_t> ComputeShapeStrides(const xla::Shape& shape);
 at::Tensor MakeTensorFromXlaLiteral(const xla::Literal& literal,
                                     at::ScalarType dest_element_type);
 
-// Execution and data transfer are async in PJRT, so TransferFromServer may
+// Execution and data transfer are async in PJRT, so TransferFromDevice may
 // block until `DataPtr`s are ready. Release the GIL so other threads can
 // proceed and unblock any transfers or collective computations.
 std::vector<xla::Literal> ReleaseGilAndTransferData(

@@ -186,7 +186,7 @@ class UnloweredOp : public Analyzer {
 std::vector<Analyzer*>* GetAnalyzers() {
   static std::vector<Analyzer*>* analyzers = new std::vector<Analyzer*>{
       new MetricFrequency("CompileTime", 0.5f, 10),
-      new MetricFrequency("TransferFromServerTime", 0.5f),
+      new MetricFrequency("TransferFromDeviceTime", 0.5f),
       new MetricTime("CompileTime", 300e9),
       new MetricTime("ExecuteTime", 30e9),
       new UnloweredOp(),

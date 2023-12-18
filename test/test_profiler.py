@@ -31,8 +31,8 @@ class ProfilerTest(unittest.TestCase):
     with open(fname, 'r') as f:
       debug_warnings = f.read()
     logging.info(f'PT_XLA_DEBUG_FILE Contents:\n{debug_warnings}')
-    self.assertTrue('TransferFromServerTime too frequent' in debug_warnings,
-                    f'Expected "TransferFromServerTime" warning in: {fname}')
+    self.assertTrue('TransferFromDeviceTime too frequent' in debug_warnings,
+                    f'Expected "TransferFromDeviceTime" warning in: {fname}')
     self.assertTrue('CompileTime too frequent' in debug_warnings,
                     f'Expected "CompileTime" wraning in: {fname}')
 

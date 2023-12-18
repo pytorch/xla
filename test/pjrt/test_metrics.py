@@ -13,8 +13,8 @@ EXPECTED_COMPUTATION_CLIENT_METRICS = [
     "ExecuteTime",
     "InboundData",
     "OutboundData",
-    "TransferFromServerTime",
-    "TransferToServerTime",
+    "TransferFromDeviceTime",
+    "TransferToDeviceTime",
 ]
 
 

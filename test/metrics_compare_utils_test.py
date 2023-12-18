@@ -10,7 +10,7 @@ _REPORT_1 = """Metric: InboundData
   Accumulator: 10GB
   Rate: 16.8665 / second
   Percentiles: 1%=393.00KB; 5%=393.00KB; 10%=786.00KB; 20%=1.54MB; 50%=1.54MB; 80%=1.54MB; 90%=1.54MB; 95%=1.54MB; 99%=1.54MB
-Metric: TransferToServerTime
+Metric: TransferToDeviceTime
   TotalSamples: 2616
   Accumulator: 01m29s615ms
   ValueRate: 783ms426.227us / second
@@ -27,7 +27,7 @@ _REPORT_2 = """--metric:localhost\n\n\nMetric: InboundData
   TotalSamples: 73216
   Accumulator: 64.75TB
   Percentiles: 1%=393.00KB; 5%=393.00KB; 10%=786.00KB; 20%=1.54MB; 50%=1.54MB; 80%=1.54MB; 90%=1.54MB; 95%=1.54MB; 99%=1.54MB
-Metric: TransferToServerTime
+Metric: TransferToDeviceTime
   TotalSamples: 247016
   Accumulator: 04d17h11m07s495ms546.299us
   Percentiles: 1%=05m003ms; 5%=05m004ms; 10%=05m010ms; 20%=05m015ms; 50%=05m026ms; 80%=05m035ms; 90%=05m082ms; 95%=05m108ms; 99%=05m129ms
@@ -43,7 +43,7 @@ _REPORT_3 = """--root='gs://metric'\n\n\nMetric: InboundData
   TotalSamples: 73216
   Accumulator: 64.75GB
   Percentiles: 1%=393.00KB; 5%=393.00KB; 10%=786.00KB; 20%=1.54MB; 50%=1.54MB; 80%=1.54MB; 90%=1.54MB; 95%=1.54MB; 99%=1.54MB
-Metric: TransferToServerTime
+Metric: TransferToDeviceTime
   TotalSamples: 247016
   Accumulator: 1s
   Percentiles: 1%=05m003ms; 5%=05m004ms; 10%=05m010ms; 20%=05m015ms; 50%=05m026ms; 80%=05m035ms; 90%=05m082ms; 95%=05m108ms; 99%=05m129ms
@@ -66,7 +66,7 @@ _REPORT_3_SLIGHTLY_DIFFERENT_VALUES = """distracting text\n\n\nMetric: InboundDa
   TotalSamples: 70000
   Accumulator: 74.75GB
   Percentiles: 1%=393.00KB; 5%=393.00KB; 10%=786.00KB; 20%=1.54MB; 50%=1.54MB; 80%=1.54MB; 90%=1.54MB; 95%=1.54MB; 99%=1.54MB
-Metric: TransferToServerTime
+Metric: TransferToDeviceTime
   TotalSamples: 247016
   Accumulator: 1s
   Percentiles: 1%=05m003ms; 5%=05m004ms; 10%=05m010ms; 20%=05m015ms; 50%=05m026ms; 80%=05m035ms; 90%=05m082ms; 95%=05m108ms; 99%=05m129ms
@@ -89,7 +89,7 @@ _REPORT_3_WITH_NEW_COUNTERS = """Metric: InboundData
   TotalSamples: 73216
   Accumulator: 64.75GB
   Percentiles: 1%=393.00KB; 5%=393.00KB; 10%=786.00KB; 20%=1.54MB; 50%=1.54MB; 80%=1.54MB; 90%=1.54MB; 95%=1.54MB; 99%=1.54MB
-Metric: TransferToServerTime
+Metric: TransferToDeviceTime
   TotalSamples: 247016
   Accumulator: 1s
   Percentiles: 1%=05m003ms; 5%=05m004ms; 10%=05m010ms; 20%=05m015ms; 50%=05m026ms; 80%=05m035ms; 90%=05m082ms; 95%=05m108ms; 99%=05m129ms
@@ -157,19 +157,19 @@ class MetricsCompareUtilsTest(unittest.TestCase):
         'InboundData__Percentile_90_mb': [1.54, 1.54, 1.54],
         'InboundData__Percentile_95_mb': [1.54, 1.54, 1.54],
         'InboundData__Percentile_99_mb': [1.54, 1.54, 1.54],
-        'TransferToServerTime__TotalSamples': [2616.0, 247016.0, 247016.0],
-        'TransferToServerTime__Accumulator_sec': [
+        'TransferToDeviceTime__TotalSamples': [2616.0, 247016.0, 247016.0],
+        'TransferToDeviceTime__Accumulator_sec': [
             89.615, 407467.495546299, 1.0
         ],
-        'TransferToServerTime__Percentile_1_sec': [300.003, 300.003, 300.003],
-        'TransferToServerTime__Percentile_5_sec': [300.004, 300.004, 300.004],
-        'TransferToServerTime__Percentile_10_sec': [300.01, 300.01, 300.01],
-        'TransferToServerTime__Percentile_20_sec': [300.015, 300.015, 300.015],
-        'TransferToServerTime__Percentile_50_sec': [300.026, 300.026, 300.026],
-        'TransferToServerTime__Percentile_80_sec': [300.035, 300.035, 300.035],
-        'TransferToServerTime__Percentile_90_sec': [300.082, 300.082, 300.082],
-        'TransferToServerTime__Percentile_95_sec': [300.108, 300.108, 300.108],
-        'TransferToServerTime__Percentile_99_sec': [300.129, 300.129, 300.129],
+        'TransferToDeviceTime__Percentile_1_sec': [300.003, 300.003, 300.003],
+        'TransferToDeviceTime__Percentile_5_sec': [300.004, 300.004, 300.004],
+        'TransferToDeviceTime__Percentile_10_sec': [300.01, 300.01, 300.01],
+        'TransferToDeviceTime__Percentile_20_sec': [300.015, 300.015, 300.015],
+        'TransferToDeviceTime__Percentile_50_sec': [300.026, 300.026, 300.026],
+        'TransferToDeviceTime__Percentile_80_sec': [300.035, 300.035, 300.035],
+        'TransferToDeviceTime__Percentile_90_sec': [300.082, 300.082, 300.082],
+        'TransferToDeviceTime__Percentile_95_sec': [300.108, 300.108, 300.108],
+        'TransferToDeviceTime__Percentile_99_sec': [300.129, 300.129, 300.129],
         'UniqueMetric__TotalSamples': [None, None, 9000.0],
         'UniqueMetric__Accumulator': [None, None, 9000.0],
         'UniqueMetric__Percentile_1': [None, None, 8902.0],

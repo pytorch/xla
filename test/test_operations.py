@@ -1656,13 +1656,13 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     t3 = torch.randn(1, 3).to(xla_device)
     t1.addcdiv_(t2, t3, value=0.1)
     xm.mark_step()
-    self.assertEqual(met.metric_data("TransferToServerTime")[0], 4)
+    self.assertEqual(met.metric_data("TransferToDeviceTime")[0], 4)
 
-    # The following two scalars shouldn't trigger TransferToServerTime.
+    # The following two scalars shouldn't trigger TransferToDeviceTime.
     t1.addcdiv_(t2, t3, value=0.1)
     t1.addcdiv_(t2, t3, value=0.1)
     xm.mark_step()
-    self.assertEqual(met.metric_data("TransferToServerTime")[0], 4)
+    self.assertEqual(met.metric_data("TransferToDeviceTime")[0], 4)
 
   @skipOnEagerDebug
   def test_print_executation(self):

@@ -40,13 +40,13 @@ class IfrtComputationClient : public ComputationClient {
 
   std::optional<xla::OpSharding> GetDataSharding(DataPtr handle) override;
 
-  std::vector<DataPtr> TransferToServer(
+  std::vector<DataPtr> TransferToDevice(
       absl::Span<const std::shared_ptr<const TensorSource>> tensors) override;
 
-  std::vector<xla::Literal> TransferFromServer(
+  std::vector<xla::Literal> TransferFromDevice(
       absl::Span<const DataPtr> handles) override;
 
-  DataPtr TransferShardsToServer(
+  DataPtr TransferShardsToDevice(
       absl::Span<const std::shared_ptr<const TensorSource>> tensor_shards,
       std::string device, xla::Shape shape, xla::OpSharding sharding) override;
 
