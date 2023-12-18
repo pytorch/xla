@@ -15,10 +15,10 @@
 namespace torch_xla {
 namespace {
 
-xla::XlaOp ExplicitBooleanConvert(xla::XlaOp op, xla::PrimitiveType from) {
-  xla::XlaOp zero = xla::Zero(op.builder(), from);
-  return xla::Ne(op, zero);
-}
+// xla::XlaOp ExplicitBooleanConvert(xla::XlaOp op, xla::PrimitiveType from) {
+//   xla::XlaOp zero = xla::Zero(op.builder(), from);
+//   return xla::Ne(op, zero);
+// }
 
 xla::XlaOp CreateRawMask(xla::XlaOp op, xla::PrimitiveType type, int64_t size,
                          int64_t narrow_size) {
@@ -60,33 +60,33 @@ xla::XlaOp ConvertTo(xla::XlaOp op, xla::PrimitiveType from,
   }
   XlaDeviceType hw_type =
       static_cast<XlaDeviceType>(bridge::GetDeviceOrCurrent(device).type());
-  if (hw_type != XlaDeviceType::TPU) {
-    return xla::ConvertElementType(op, to);
-  }
-  switch (from) {
-    case xla::PrimitiveType::PRED:
-    case xla::PrimitiveType::S8:
-    case xla::PrimitiveType::U8:
-    case xla::PrimitiveType::S16:
-    case xla::PrimitiveType::U16:
-    case xla::PrimitiveType::S32:
-    case xla::PrimitiveType::U32:
-    case xla::PrimitiveType::BF16:
-    case xla::PrimitiveType::F32:
-      return xla::ConvertElementType(op, to);
-    case xla::PrimitiveType::S64:
-    case xla::PrimitiveType::U64: {
-      switch (to) {
-        case xla::PrimitiveType::PRED:
-          return ExplicitBooleanConvert(op, from);
-        default:
-          return xla::ConvertElementType(op, to);
-      }
-      break;
-    }
-    default:
-      XLA_ERROR() << "Unsupported XLA type " << from;
-  }
+  // if (hw_type != XlaDeviceType::TPU) {
+  return xla::ConvertElementType(op, to);
+  // }
+  // switch (from) {
+  //   case xla::PrimitiveType::PRED:
+  //   case xla::PrimitiveType::S8:
+  //   case xla::PrimitiveType::U8:
+  //   case xla::PrimitiveType::S16:
+  //   case xla::PrimitiveType::U16:
+  //   case xla::PrimitiveType::S32:
+  //   case xla::PrimitiveType::U32:
+  //   case xla::PrimitiveType::BF16:
+  //   case xla::PrimitiveType::F32:
+  //     return xla::ConvertElementType(op, to);
+  //   case xla::PrimitiveType::S64:
+  //   case xla::PrimitiveType::U64: {
+  //     switch (to) {
+  //       case xla::PrimitiveType::PRED:
+  //         return ExplicitBooleanConvert(op, from);
+  //       default:
+  //         return xla::ConvertElementType(op, to);
+  //     }
+  //     break;
+  //   }
+  //   default:
+  //     XLA_ERROR() << "Unsupported XLA type " << from;
+  // }
 }
 
 xla::XlaOp ConvertToRaw(xla::XlaOp op, xla::PrimitiveType from,
