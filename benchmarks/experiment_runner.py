@@ -14,6 +14,7 @@ import tiers
 from typing import Optional
 import torch_xla.debug.metrics as met
 from tqdm import tqdm
+from enum import Enum
 from torch.profiler import profile, ProfilerActivity
 from torch.autograd import DeviceType
 from benchmark_model import ModelLoader
@@ -508,32 +509,28 @@ def parse_args(args=None):
       help="filter out benchmarks by predefined tier 1-3",
   )
 
-  def _parse_log_level(level: str):
-    level = level.lower()
-    if level == "critical":
-      return logging.CRITICAL
-    elif level == "error":
-      return logging.ERROR
-    elif level == "warning":
-      return logging.WARNING
-    elif level == "info":
-      return logging.INFO
-    elif level == "debug":
-      return logging.DEBUG
-    else:
-      raise NotImplementedError
+  class LogLevel(Enum):
+    critical = logging.CRITICAL
+    error = logging.ERROR
+    warning = logging.WARNING
+    info = logging.INFO
+    debug = logging.DEBUG
+
+    @staticmethod
+    def parse(s: str):
+      try:
+        return LogLevel[s]
+      except KeyError:
+        raise ValueError()
+
+    def __str__(self):
+      return self.name
 
   parser.add_argument(
       "--log-level",
-      default=logging.INFO,
-      choices=[
-          logging.CRITICAL,
-          logging.ERROR,
-          logging.WARNING,
-          logging.INFO,
-          logging.DEBUG,
-      ],
-      type=_parse_log_level,
+      default=LogLevel.info,
+      choices=list(LogLevel),
+      type=LogLevel.parse,
       help="Specify log level.",
   )
   parser.add_argument(
@@ -708,7 +705,7 @@ def main():
   args.filter = args.filter or [r"."]
   args.exclude = args.exclude or [r"^$"]
 
-  logging.basicConfig(level=args.log_level, force=True)
+  logging.basicConfig(level=args.log_level.value, force=True)
   logger.debug(f"Parsed args: {args}")
 
   if not args.disable_tf32:
