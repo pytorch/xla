@@ -45,8 +45,7 @@ class ExperimentLoader:
     for cfg in self._expand_config_choices(config_choices):
       if not self._is_available(cfg):
         continue
-      logger.debug(f"Experiment config (w/o env vars): {cfg}")
-      self._add_experiment_env(cfg)
+      logger.debug(f"Experiment config: {cfg}")
       experiment_configs.append(cfg)
     return experiment_configs
 
@@ -107,35 +106,6 @@ class ExperimentLoader:
 
     return True
 
-  def _add_experiment_env(self, experiment_config):
-    cfg_xla = experiment_config["xla"]
-
-    # Remove env vars that would interfere with the subprocess.
-    if cfg_xla is not None:
-      os.environ.pop("PJRT_DEVICE", None)
-      os.environ.pop("XRT_TPU_CONFIG", None)
-      os.environ.pop("XLA_FLAGS", None)
-
-    process_env = os.environ.copy()
-    if cfg_xla == "PJRT":
-      process_env["PJRT_DEVICE"] = experiment_config["accelerator"].upper()
-    elif cfg_xla == "XRT":
-      if is_xla_device_available("TPU"):
-        process_env["TPU_NUM_DEVICES"] = "1"
-        process_env["XRT_TPU_CONFIG"] = "localservice;0;localhost:51011"
-      elif is_xla_device_available("CUDA"):
-        process_env["GPU_NUM_DEVICES"] = "1"
-    elif cfg_xla is None:
-      # In non-xla CPU training experiments, an env var is still needed if an
-      # xla device exists, or there will be "Missing XLA configuration" error.
-      if is_xla_device_available(experiment_config["accelerator"].upper()):
-        process_env["PJRT_DEVICE"] = experiment_config["accelerator"].upper()
-
-    if experiment_config["xla_flags"]:
-      process_env["XLA_FLAGS"] = experiment_config["xla_flags"]
-
-    experiment_config["process_env"] = process_env
-
   def load_experiment(self, experiment_config):
     accelerator = experiment_config["accelerator"]
     xla = experiment_config["xla"]
@@ -162,6 +132,31 @@ class BenchmarkExperiment:
     self.test = test
     self.batch_size = batch_size
     self.accelerator_model = get_accelerator_model(self.accelerator)
+
+  def update_process_env(self, process_env):
+
+    # Remove env vars that would interfere with the subprocess.
+    if self.xla is not None:
+      process_env.pop("PJRT_DEVICE", None)
+      process_env.pop("XRT_TPU_CONFIG", None)
+      process_env.pop("XLA_FLAGS", None)
+
+    if self.xla == "PJRT":
+      process_env["PJRT_DEVICE"] = self.accelerator.upper()
+    elif self.xla == "XRT":
+      if is_xla_device_available("TPU"):
+        process_env["TPU_NUM_DEVICES"] = "1"
+        process_env["XRT_TPU_CONFIG"] = "localservice;0;localhost:51011"
+      elif is_xla_device_available("CUDA"):
+        process_env["GPU_NUM_DEVICES"] = "1"
+    elif self.xla is None:
+      # In non-xla CPU training experiments, an env var is still needed if an
+      # xla device exists, or there will be "Missing XLA configuration" error.
+      if is_xla_device_available(self.accelerator.upper()):
+        process_env["PJRT_DEVICE"] = self.accelerator.upper()
+
+    if self.xla_flags:
+      process_env["XLA_FLAGS"] = self.xla_flags
 
   def get_device(self):
     if self.xla:
