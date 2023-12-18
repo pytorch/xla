@@ -4584,7 +4584,7 @@ class AtenOpTest(unittest.TestCase):
                            kwargs)
 
   def correction_wrapper(self, input, correction):
-    return torch.ops.aten.var.correction(input, correction=correction) 
+    return torch.ops.aten.var.correction(input, correction=correction)
 
   def test_aten_var_correction_0(self):
     args = (torch.randn((10, 10)).to(torch.float32),)
