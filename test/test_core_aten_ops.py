@@ -3749,7 +3749,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.rsub.Scalar, args, kwargs)
 
-  @unittest.skip
   def test_aten_rsub_Scalar_2(self):
     args = (
         torch.randint(0, 10, (10, 10)).to(torch.int32),
@@ -4150,7 +4149,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.split_copy.Tensor, args, kwargs)
 
-  @unittest.skip
   def test_aten_split_copy_Tensor_1(self):
     args = (
         torch.randn((10, 10)).to(torch.float16),
