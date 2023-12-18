@@ -11,6 +11,7 @@ import sys
 import time
 import torch
 import tiers
+from typing import Optional
 import torch_xla.debug.metrics as met
 from tqdm import tqdm
 from torch.profiler import profile, ProfilerActivity
@@ -28,13 +29,13 @@ class ExperimentRunner:
 
   def __init__(self, args):
     self._args = args
-    self.suite_name = self._args.suite_name
 
     self.experiment_loader = ExperimentLoader(self._args)
 
-    if self.suite_name == "torchbench":
+    # Choose model loader.
+    if self._args.suite_name == "torchbench":
       self.model_loader = TorchBenchModelLoader(self._args)
-    elif self.suite_name == "dummy":
+    elif self._args.suite_name == "dummy":
       self.model_loader = ModelLoader(self._args)
     else:
       raise NotImplementedError
@@ -118,6 +119,8 @@ class ExperimentRunner:
 
         # Launch subprocess.
         try:
+          # TODO: See if we can generalize this for all env vars. The experiment
+          # config is currently a bit bloated.
           process_env = benchmark_model.extend_process_env(process_env)
           command = [sys.executable] + sys.argv + [
               f"--experiment-config={json.dumps(experiment_cfg)}"
@@ -156,6 +159,7 @@ class ExperimentRunner:
           self._fwd_captured_stdout_stderr(e.stdout, e.stderr)
           logger.exception("ERROR")
 
+  # TODO: Use `_unique_basename` instead.
   def _get_config_fingerprint(self, experiment_config: OrderedDict,
                               model_config: OrderedDict) -> str:
     # Experiment `batch_size` may be altered by model in `set_up`, so we will
@@ -183,9 +187,9 @@ class ExperimentRunner:
     with benchmark_model.pick_grad():
       metrics = OrderedDict()
       outputs = []
-      for _ in range(self._args.repeat):
+      for repeat_iteration in range(self._args.repeat):
         run_metrics, output = self.timed_run(benchmark_experiment,
-                                             benchmark_model)
+                                             benchmark_model, repeat_iteration)
         output = move_to_device(output, 'cpu')
         outputs.append(output)
         for key, val in run_metrics.items():
@@ -196,6 +200,55 @@ class ExperimentRunner:
     # Additional experiment metrics can be added here.
 
     self.save_results(benchmark_experiment, benchmark_model, metrics, outputs)
+
+  def _unique_basename(self, experiment_config: OrderedDict,
+                       model_config: OrderedDict) -> str:
+
+    def unique_basename_segment(x, max_len=32):
+      s = str(x).replace(" ", "")
+      if len(s) > max_len:
+        s = str(hex(hash(s)))
+      return s
+
+    # Ignore batch_size as it may be altered by the model.
+    segments = [
+        unique_basename_segment(v)
+        for k, v in experiment_config.items()
+        if k != "batch_size"
+    ] + [unique_basename_segment(v) for k, v in model_config.items()]
+    return "-".join(segments)
+
+  def _get_results_file_path(self,
+                             experiment_config: OrderedDict,
+                             model_config: OrderedDict,
+                             partial_name: str,
+                             ext: str = "txt",
+                             sub_dirname: Optional[str] = None) -> str:
+    model_name = model_config["model_name"]
+    basename = self._unique_basename(experiment_config, model_config)
+    filename = f"{partial_name}-{basename}.{ext}"
+    path = os.path.abspath(os.path.join(self._args.output_dirname, model_name))
+    if sub_dirname is not None:
+      path = os.path.join(path, sub_dirname)
+    path = os.path.join(path, filename)
+
+    # Create parent directory.
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+
+    return path
+
+  def _dump_results_file(self,
+                         text: str,
+                         experiment_config: OrderedDict,
+                         model_config: OrderedDict,
+                         partial_name: str,
+                         ext: str = "txt",
+                         sub_dirname: Optional[str] = None,
+                         mode: str = "w"):
+    path = self._get_results_file_path(experiment_config, model_config,
+                                       partial_name, ext, sub_dirname)
+    with open(path, mode) as f:
+      f.write(text)
 
   def save_results(self, benchmark_experiment, benchmark_model, metrics,
                    outputs):
@@ -240,26 +293,40 @@ class ExperimentRunner:
       inputs_list.append(inputs)
     return inputs_list
 
-  def dump_profile_info(self, prof, benchmark_model, benchmark_experiment):
+  def dump_profile_info(self, prof, benchmark_model, benchmark_experiment,
+                        repeat_iteration: int):
+    model_config = benchmark_model.to_dict()
+    experiment_config = benchmark_experiment.to_dict()
     assert prof is not None, 'Expecting profiler to be defined!'
     if not self._args.profile_cuda_dump:
       logger.warning(
           'Profiling enabled, but dumping tracing/kernel summary disabled.')
       return
 
-    create_prof_filename = lambda name, ext: f"ptprofile-{name}-{benchmark_model.filename_str}-{benchmark_experiment.filename_str}.{ext}"
-    model_name = benchmark_model.model_name
-    file_path = os.path.join(self._args.profile_cuda_dump, model_name)
-    os.makedirs(file_path, exist_ok=True)
+    # Dump pytorch trace.
     prof.export_chrome_trace(
-        os.path.join(file_path, create_prof_filename("trace", "json")))
+        self._get_results_file_path(
+            experiment_config,
+            model_config,
+            "trace",
+            ext="json",
+            sub_dirname=str(repeat_iteration)))
 
-    kernel_dump = prof.key_averages().table(
+    # Dump pytorch profile.
+    pytorch_profile = prof.key_averages().table(
         sort_by="cuda_time_total", row_limit=500)
-    with open(
-        os.path.join(file_path, create_prof_filename("kernel_dump", "txt")),
-        "a") as f:
-      f.write(kernel_dump)
+    self._dump_results_file(
+        pytorch_profile,
+        experiment_config,
+        model_config,
+        "pytorch-profile",
+        sub_dirname=str(repeat_iteration))
+    self._dump_results_file(
+        pytorch_profile,
+        experiment_config,
+        model_config,
+        "pytorch-profile",
+        mode="a")
 
   def collect_profile_to_metrics(self, prof, metrics):
     assert prof is not None, 'Expecting profiler to be defined!'
@@ -330,7 +397,8 @@ class ExperimentRunner:
           metrics["inductor_ops"] = dict()
         metrics["inductor_ops"][op_name] = extract_prof_info(event)
 
-  def timed_run(self, benchmark_experiment, benchmark_model):
+  def timed_run(self, benchmark_experiment, benchmark_model,
+                repeat_iteration: int):
     reset_rng_state(benchmark_experiment)
 
     inputs_list = self.prepare_inputs(benchmark_model.example_inputs,
@@ -377,7 +445,8 @@ class ExperimentRunner:
 
     t_end = time.perf_counter()
     if enable_prof:
-      self.dump_profile_info(prof, benchmark_model, benchmark_experiment)
+      self.dump_profile_info(prof, benchmark_model, benchmark_experiment,
+                             repeat_iteration)
       self.collect_profile_to_metrics(prof, metrics)
 
     metrics["total_time"] = t_end - t_start
@@ -439,7 +508,7 @@ def parse_args(args=None):
       help="filter out benchmarks by predefined tier 1-3",
   )
 
-  def parse_log_level(level: str):
+  def _parse_log_level(level: str):
     level = level.lower()
     if level == "critical":
       return logging.CRITICAL
@@ -464,7 +533,7 @@ def parse_args(args=None):
           logging.INFO,
           logging.DEBUG,
       ],
-      type=parse_log_level,
+      type=_parse_log_level,
       help="Specify log level.",
   )
   parser.add_argument(
