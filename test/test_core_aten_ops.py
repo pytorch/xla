@@ -4576,28 +4576,28 @@ class AtenOpTest(unittest.TestCase):
     run_export_and_compare(self, torch.ops.aten.upsample_nearest2d, args,
                            kwargs)
 
+  def correction_wrapper(self, input, correction):
+    return torch.ops.aten.var.correction(input, correction=correction)
+
   def test_aten_var_correction_0(self):
     args = (torch.randn((10, 10)).to(torch.float32),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.var.correction, args, kwargs)
 
-  @unittest.skip
   def test_aten_var_correction_1(self):
     args = (torch.randn((10, 10)).to(torch.float16),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.var.correction, args, kwargs)
 
-  @unittest.skip
   def test_aten_var_correction_2(self):
-    args = (torch.randn((10, 10)).to(torch.float32),)
-    kwargs = dict(correction=0)
-    run_export_and_compare(self, torch.ops.aten.var.correction, args, kwargs)
+    args = (torch.randn((10, 10)).to(torch.float32), 0)
+    kwargs = dict()
+    run_export_and_compare(self, self.correction_wrapper, args, kwargs)
 
-  @unittest.skip
   def test_aten_var_correction_3(self):
-    args = (torch.randn((10, 10)).to(torch.float16),)
-    kwargs = dict(correction=0)
-    run_export_and_compare(self, torch.ops.aten.var.correction, args, kwargs)
+    args = (torch.randn((10, 10)).to(torch.float16), 0)
+    kwargs = dict()
+    run_export_and_compare(self, self.correction_wrapper, args, kwargs)
 
   def test_aten_view_0(self):
     args = (
