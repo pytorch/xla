@@ -14,6 +14,8 @@
 namespace torch_xla {
 namespace runtime {
 
+std::unordered_map<std::string, std::string> pjrt_plugins_;
+
 namespace {
 
 xla::GpuAllocatorConfig GetGpuAllocatorConfig() {
@@ -33,7 +35,20 @@ xla::GpuAllocatorConfig GetGpuAllocatorConfig() {
   return allocator_config;
 }
 
+std::optional<std::string> GetPjRtPluginPath(
+    const std::string& device_type) {
+  auto plugin_path = pjrt_plugins_.find(device_type);
+  return plugin_path != pjrt_plugins_.end() ? std::optional(plugin_path->second)
+                                            : std::nullopt;
+}
+
 }  // namespace
+
+void RegisterPjRtPlugin(std::string name,
+                                           std::string library_path) {
+  TF_VLOG(3) << "Registering PjRt plugin " << name << " at " << library_path;
+  pjrt_plugins_[name] = library_path;
+}
 
 std::tuple<std::unique_ptr<xla::PjRtClient>, std::unique_ptr<XlaCoordinator>>
 InitializePjRt(const std::string& device_type) {
@@ -41,8 +56,7 @@ InitializePjRt(const std::string& device_type) {
   std::unique_ptr<XlaCoordinator> coordinator;
 
   if (sys_util::GetEnvBool(env::kEnvPjrtDynamicPlugins, false)) {
-    std::optional<std::string> plugin_path =
-        ComputationClient::GetPjRtPluginPath(device_type);
+    std::optional<std::string> plugin_path = GetPjRtPluginPath(device_type);
     if (plugin_path) {
       TF_VLOG(1) << "Initializing client for PjRt plugin " << device_type;
       const PJRT_Api* c_api = *pjrt::LoadPjrtPlugin(

@@ -6,6 +6,8 @@
 namespace torch_xla {
 namespace runtime {
 
+void RegisterPjRtPlugin(std::string name, std::string library_path);
+
 std::tuple<std::unique_ptr<xla::PjRtClient>, std::unique_ptr<XlaCoordinator>>
 InitializePjRt(const std::string& device_type);
 

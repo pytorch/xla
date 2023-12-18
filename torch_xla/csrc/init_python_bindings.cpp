@@ -41,6 +41,7 @@
 #include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
+#include "torch_xla/csrc/runtime/initialize_pjrt.h"
 #include "torch_xla/csrc/runtime/metrics.h"
 #include "torch_xla/csrc/runtime/metrics_analysis.h"
 #include "torch_xla/csrc/runtime/metrics_reader.h"
@@ -2319,7 +2320,7 @@ void InitXlaModuleBindings(py::module m) {
   // -------------Dynamo Integration API End-------------------------
   m.def("_register_pjrt_plugin",
         [](std::string name, std::string library_path) {
-          runtime::ComputationClient::RegisterPjRtPlugin(name, library_path);
+          runtime::RegisterPjRtPlugin(name, library_path);
         });
 }
 }  // namespace

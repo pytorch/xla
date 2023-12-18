@@ -53,21 +53,6 @@ int64_t ComputationClient::GetDeviceOrdinal(const std::string& device) {
   return std::stoi(device.substr(pos + 1));
 }
 
-std::unordered_map<std::string, std::string> pjrt_plugins_;
-
-void ComputationClient::RegisterPjRtPlugin(std::string name,
-                                           std::string library_path) {
-  TF_VLOG(3) << "Registering PjRt plugin " << name << " at " << library_path;
-  pjrt_plugins_[name] = library_path;
-}
-
-std::optional<std::string> ComputationClient::GetPjRtPluginPath(
-    const std::string& device_type) {
-  auto plugin_path = pjrt_plugins_.find(device_type);
-  return plugin_path != pjrt_plugins_.end() ? std::optional(plugin_path->second)
-                                            : std::nullopt;
-}
-
 metrics::Metric* ComputationClient::TransferToServerMetric() {
   static metrics::Metric* metric =
       new metrics::Metric("TransferToServerTime", metrics::MetricFnTime);
