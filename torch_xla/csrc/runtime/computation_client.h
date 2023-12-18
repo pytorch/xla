@@ -236,8 +236,9 @@ class ComputationClient {
 
   // Creates a Data object with no actual device handle in it. The device handle
   // will be populated in an asynchrounous fashion.
-  virtual DataPtr CreateDataPlaceholder(std::string device,
-                                        xla::Shape shape, std::optional<xla::OpSharding> sharding = std::nullopt) = 0;
+  virtual DataPtr CreateDataPlaceholder(
+      std::string device, xla::Shape shape,
+      std::optional<xla::OpSharding> sharding = std::nullopt) = 0;
 
   // Returns data shards. We expect this to be called on PjRtShardedData to
   // retrieve the shards. If other data type is passed, it returns the input

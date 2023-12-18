@@ -174,9 +174,11 @@ void PjRtComputationClient::PjRtData::Assign(
 }
 
 ComputationClient::DataPtr PjRtComputationClient::CreateDataPlaceholder(
-    std::string device, xla::Shape shape, std::optional<xla::OpSharding> sharding) {
+    std::string device, xla::Shape shape,
+    std::optional<xla::OpSharding> sharding) {
   if (sharding.has_value()) {
-    return std::make_shared<PjRtShardedData>(std::move(device), std::move(shape), std::move(*sharding));
+    return std::make_shared<PjRtShardedData>(
+        std::move(device), std::move(shape), std::move(*sharding));
   }
 
   return std::make_shared<PjRtData>(std::move(device), std::move(shape));

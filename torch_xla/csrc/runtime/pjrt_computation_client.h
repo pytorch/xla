@@ -28,7 +28,9 @@ class PjRtComputationClient : public ComputationClient {
   PjRtComputationClient();
   ~PjRtComputationClient();
 
-  DataPtr CreateDataPlaceholder(std::string device, xla::Shape shape, std::optional<xla::OpSharding> sharding = std::nullopt) override;
+  DataPtr CreateDataPlaceholder(
+      std::string device, xla::Shape shape,
+      std::optional<xla::OpSharding> sharding = std::nullopt) override;
 
   std::vector<DataPtr> GetDataShards(DataPtr data) override;
 
@@ -182,7 +184,8 @@ class PjRtComputationClient : public ComputationClient {
     PjRtShardedData(std::string device, xla::Shape shape) = delete;
 
     PjRtShardedData(std::string device, xla::Shape shape,
-                    xla::OpSharding sharding) : Data(std::move(device), std::move(shape)), sharding(sharding) {}
+                    xla::OpSharding sharding)
+        : Data(std::move(device), std::move(shape)), sharding(sharding) {}
 
     PjRtShardedData(std::string device, xla::Shape shape,
                     std::vector<std::shared_ptr<PjRtData>> shards,

@@ -176,8 +176,11 @@ xla::OpSharding IfrtComputationClient::IfrtData::GetSharding() const {
 }
 
 ComputationClient::DataPtr IfrtComputationClient::CreateDataPlaceholder(
-    std::string device, xla::Shape shape, std::optional<xla::OpSharding> sharding) {
-  return std::make_shared<IfrtData>(std::move(device), std::move(shape), tsl::RCReference<xla::ifrt::Array>(), std::move(sharding));
+    std::string device, xla::Shape shape,
+    std::optional<xla::OpSharding> sharding) {
+  return std::make_shared<IfrtData>(std::move(device), std::move(shape),
+                                    tsl::RCReference<xla::ifrt::Array>(),
+                                    std::move(sharding));
 }
 
 std::vector<ComputationClient::DataPtr> IfrtComputationClient::GetDataShards(
