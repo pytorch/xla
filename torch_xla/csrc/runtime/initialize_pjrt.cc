@@ -48,8 +48,7 @@ InitializePjRt(const std::string& device_type) {
       const PJRT_Api* c_api = *pjrt::LoadPjrtPlugin(
           absl::AsciiStrToLower(device_type), *plugin_path);
       XLA_CHECK_OK(pjrt::InitializePjrtPlugin(device_type));
-      client_ = std::move(
-          xla::GetCApiClient(absl::AsciiStrToUpper(device_type)).value());
+      client = xla::GetCApiClient(absl::AsciiStrToUpper(device_type)).value();
       profiler::RegisterProfilerForPlugin(c_api);
     }
   } else if (device_type == "CPU") {
@@ -133,22 +132,9 @@ InitializePjRt(const std::string& device_type) {
                                                     "libneuronpjrt.so"))
                      .status());
     client = std::move(xla::GetCApiClient("NEURON").value());
-  } else {
-    std::optional<std::string> plugin_path =
-        ComputationClient::GetPjRtPluginPath(device_type);
-    if (plugin_path) {
-      TF_VLOG(1) << "Initializing client for PjRt plugin " << device_type;
-      XLA_CHECK_OK(
-          pjrt::LoadPjrtPlugin(absl::AsciiStrToLower(device_type), *plugin_path)
-              .status());
-      tsl::Status init_status = pjrt::InitializePjrtPlugin(device_type);
-      XLA_CHECK_OK(init_status);
-      client_ = std::move(
-          xla::GetCApiClient(absl::AsciiStrToUpper(device_type)).value());
-    }
   }
 
-  XLA_CHECK(client.get() != nullptr)
+  XLA_CHECK(client)
       << absl::StrFormat("Unknown %s '%s'", env::kEnvPjRtDevice, device_type);
 
   return {std::move(client), std::move(coordinator)};
