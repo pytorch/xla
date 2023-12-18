@@ -114,8 +114,7 @@ class ExperimentRunner:
         if not self.model_loader.is_compatible(benchmark_model,
                                                benchmark_experiment):
           logger.warning("SKIP incompatible model and experiment configs.")
-          self.save_results(benchmark_experiment, benchmark_model,
-                            {"error": "SKIP"}, None)
+          self._save_results(experiment_cfg, model_cfg, {"error": "SKIP"})
           continue
 
         # Launch subprocess.
@@ -145,20 +144,17 @@ class ExperimentRunner:
         except subprocess.TimeoutExpired as e:
           self._fwd_captured_stdout_stderr(e.stdout, e.stderr)
           logger.error("TIMEOUT")
-          self.save_results(benchmark_experiment, benchmark_model,
-                            {"error": str(e)}, None)
+          self._save_results(experiment_cfg, model_cfg, {"error": str(e)})
         except subprocess.CalledProcessError as e:
           self._fwd_captured_stdout_stderr(e.stdout, e.stderr)
           logger.error("ERROR in subprocess")
-          self.save_results(benchmark_experiment, benchmark_model,
-                            {"error": e.stderr}, None)
+          self._save_results(experiment_cfg, model_cfg, {"error": e.stderr})
         except subprocess.SubprocessError as e:
           logger.error("ERROR when launching child process")
-          self.save_results(benchmark_experiment, benchmark_model,
-                            {"error": str(e)}, None)
+          self._save_results(experiment_cfg, model_cfg, {"error": str(e)})
         except ValueError as e:
-          self._fwd_captured_stdout_stderr(e.stdout, e.stderr)
-          logger.exception("ERROR")
+          logger.error(f"ERROR {e}")
+          self._save_results(experiment_cfg, model_cfg, {"error": str(e)})
 
   # TODO: Use `_unique_basename` instead.
   def _get_config_fingerprint(self, experiment_config: OrderedDict,
@@ -177,6 +173,8 @@ class ExperimentRunner:
     print(stderr_text, file=sys.stderr, end='', flush=True)
 
   def run_single_config(self):
+
+    # Load experiment and model.
     experiment_config = json.loads(self._args.experiment_config)
     model_config = json.loads(self._args.model_config)
     benchmark_experiment = self.experiment_loader.load_experiment(
@@ -187,20 +185,20 @@ class ExperimentRunner:
 
     with benchmark_model.pick_grad():
       metrics = OrderedDict()
-      outputs = []
       for repeat_iteration in range(self._args.repeat):
-        run_metrics, output = self.timed_run(benchmark_experiment,
-                                             benchmark_model, repeat_iteration)
-        output = move_to_device(output, 'cpu')
-        outputs.append(output)
+        run_metrics = self.timed_run(benchmark_experiment, benchmark_model,
+                                     experiment_config, model_config,
+                                     repeat_iteration)
+
         for key, val in run_metrics.items():
           if key not in metrics:
             metrics[key] = []
           metrics[key].append(val)
 
-    # Additional experiment metrics can be added here.
-
-    self.save_results(benchmark_experiment, benchmark_model, metrics, outputs)
+    # TODO: Use `experiment_config` and `model_config` when env vars are no
+    # longer included.
+    self._save_results(benchmark_experiment.to_dict(),
+                       benchmark_model.to_dict(), metrics)
 
   def _unique_basename(self, experiment_config: OrderedDict,
                        model_config: OrderedDict) -> str:
@@ -212,11 +210,14 @@ class ExperimentRunner:
       return s
 
     # Ignore batch_size as it may be altered by the model.
+    sorted_items = sorted(experiment_config.items()) + sorted(
+        model_config.items())
+    skip_keys = set(["batch_size", "process_env"])
     segments = [
         unique_basename_segment(v)
-        for k, v in experiment_config.items()
-        if k != "batch_size"
-    ] + [unique_basename_segment(v) for k, v in model_config.items()]
+        for k, v in sorted_items
+        if k not in skip_keys
+    ]
     return "-".join(segments)
 
   def _get_results_file_path(self,
@@ -238,7 +239,7 @@ class ExperimentRunner:
 
     return path
 
-  def _dump_results_file(self,
+  def _save_results_file(self,
                          text: str,
                          experiment_config: OrderedDict,
                          model_config: OrderedDict,
@@ -248,30 +249,21 @@ class ExperimentRunner:
                          mode: str = "w"):
     path = self._get_results_file_path(experiment_config, model_config,
                                        partial_name, ext, sub_dirname)
-    with open(path, mode) as f:
+    with open(path, mode, encoding="utf-8") as f:
       f.write(text)
 
-  def save_results(self, benchmark_experiment, benchmark_model, metrics,
-                   outputs):
-    if self._args.save_output and outputs is not None:
-      outputs_file_name = f"{benchmark_model.filename_str}-{benchmark_experiment.filename_str}.pt"
-      torch.save(outputs, os.path.join(self.output_dir, outputs_file_name))
-    else:
-      outputs_file_name = None
-
+  def _save_results(self, experiment_config: OrderedDict,
+                    model_config: OrderedDict, metrics):
     results = OrderedDict()
-    results["model"] = benchmark_model.to_dict()
-    results["experiment"] = benchmark_experiment.to_dict()
+    results["model"] = model_config
+    results["experiment"] = experiment_config
     results["repeat"] = self._args.repeat
     results["iterations_per_run"] = self._args.iterations_per_run
-
     results["metrics"] = metrics
-    results["outputs_file"] = outputs_file_name
     results["timestamp"] = self._args.timestamp
-
-    json_str = json.dumps(results, ensure_ascii=False)
     with open(self.output_file, mode="a", encoding="utf-8") as f:
-      f.write(f"{json_str}\n")
+      json.dump(results, f, ensure_ascii=False)
+      f.write("\n")
 
   def _mark_step(self, benchmark_experiment):
     if benchmark_experiment.xla:
@@ -316,13 +308,13 @@ class ExperimentRunner:
     # Dump pytorch profile.
     pytorch_profile = prof.key_averages().table(
         sort_by="cuda_time_total", row_limit=500)
-    self._dump_results_file(
+    self._save_results_file(
         pytorch_profile,
         experiment_config,
         model_config,
         "pytorch-profile",
         sub_dirname=str(repeat_iteration))
-    self._dump_results_file(
+    self._save_results_file(
         pytorch_profile,
         experiment_config,
         model_config,
@@ -398,8 +390,8 @@ class ExperimentRunner:
           metrics["inductor_ops"] = dict()
         metrics["inductor_ops"][op_name] = extract_prof_info(event)
 
-  def timed_run(self, benchmark_experiment, benchmark_model,
-                repeat_iteration: int):
+  def timed_run(self, benchmark_experiment, benchmark_model, experiment_config,
+                model_config, repeat_iteration: int):
     reset_rng_state(benchmark_experiment)
 
     inputs_list = self.prepare_inputs(benchmark_model.example_inputs,
@@ -471,7 +463,13 @@ class ExperimentRunner:
     if enable_prof:
       self.collect_individual_ops(benchmark_experiment, metrics, prof)
 
-    return metrics, output
+    if self._args.save_output and output is not None:
+      output = move_to_device(output, "cpu")
+      path = self._get_results_file_path(
+          experiment_config, model_config, repeat_iteration, "output", ext="pt")
+      torch.save(output, path)
+
+    return metrics
 
 
 def parse_args(args=None):
