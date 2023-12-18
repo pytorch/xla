@@ -1,0 +1,33 @@
+name: TPU Integration Test
+run-name: TPU Testing
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 16,20,0 * * 1-5'
+jobs:
+  tpu-test:
+    runs-on: v4-runner-set
+    steps:
+      - name: Checkout and Setup PyTorch Repo
+        run: |
+          git clone --recursive https://github.com/pytorch/pytorch
+          cd pytorch/
+          python3 setup.py install --user
+      - name: Checkout PyTorch/XLA Repo
+        uses: actions/checkout@v4
+        with:
+          path: pytorch/xla
+      - name: Run PyTorch/XLA Setup
+        env:
+          BAZEL_VERBOSE: 1
+          BUNDLE_LIBTPU: 1
+          TPUVM_MODE: 1
+        run: |
+          cd pytorch/xla
+          python3 setup.py install --user
+      - name: Run Tests
+        env:
+          PJRT_DEVICE: TPU
+        run: |
+          cd pytorch/xla
+          python3 -u test/test_operations.py -v
