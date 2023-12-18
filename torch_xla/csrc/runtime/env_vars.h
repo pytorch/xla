@@ -33,6 +33,7 @@ extern const char* const kEnvPjRtLocalRank;
 extern const char* const kEnvPjrtAllocatorCudaAsync;
 extern const char* const kEnvPjrtAllocatorPreallocate;
 extern const char* const kEnvPjrtAllocatorFraction;
+extern const char* const kEnvPjrtDynamicPlugins;
 
 }  // namespace env
 }  // namespace runtime

@@ -14,6 +14,8 @@
 namespace torch_xla {
 namespace runtime {
 
+std::unordered_map<std::string, std::string> pjrt_plugins_;
+
 namespace {
 
 xla::GpuAllocatorConfig GetGpuAllocatorConfig() {
@@ -33,14 +35,35 @@ xla::GpuAllocatorConfig GetGpuAllocatorConfig() {
   return allocator_config;
 }
 
+std::optional<std::string> GetPjRtPluginPath(const std::string& device_type) {
+  auto plugin_path = pjrt_plugins_.find(device_type);
+  return plugin_path != pjrt_plugins_.end() ? std::optional(plugin_path->second)
+                                            : std::nullopt;
+}
+
 }  // namespace
+
+void RegisterPjRtPlugin(std::string name, std::string library_path) {
+  TF_VLOG(3) << "Registering PjRt plugin " << name << " at " << library_path;
+  pjrt_plugins_[name] = library_path;
+}
 
 std::tuple<std::unique_ptr<xla::PjRtClient>, std::unique_ptr<XlaCoordinator>>
 InitializePjRt(const std::string& device_type) {
   std::unique_ptr<xla::PjRtClient> client;
   std::unique_ptr<XlaCoordinator> coordinator;
 
-  if (device_type == "CPU") {
+  if (sys_util::GetEnvBool(env::kEnvPjrtDynamicPlugins, false)) {
+    std::optional<std::string> plugin_path = GetPjRtPluginPath(device_type);
+    if (plugin_path) {
+      TF_VLOG(1) << "Initializing client for PjRt plugin " << device_type;
+      const PJRT_Api* c_api = *pjrt::LoadPjrtPlugin(
+          absl::AsciiStrToLower(device_type), *plugin_path);
+      XLA_CHECK_OK(pjrt::InitializePjrtPlugin(device_type));
+      client = xla::GetCApiClient(absl::AsciiStrToUpper(device_type)).value();
+      profiler::RegisterProfilerForPlugin(c_api);
+    }
+  } else if (device_type == "CPU") {
     TF_VLOG(1) << "Initializing PjRt CPU client...";
     bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncCpuClient, true);
     int cpu_device_count = sys_util::GetEnvInt(env::kEnvNumCpu, 1);
@@ -121,12 +144,10 @@ InitializePjRt(const std::string& device_type) {
                                                     "libneuronpjrt.so"))
                      .status());
     client = std::move(xla::GetCApiClient("NEURON").value());
-  } else {
-    XLA_ERROR() << absl::StrFormat("Unknown %s '%s'", env::kEnvPjRtDevice,
-                                   device_type);
   }
 
-  XLA_CHECK(client.get() != nullptr);
+  XLA_CHECK(client) << absl::StrFormat("Unknown %s '%s'", env::kEnvPjRtDevice,
+                                       device_type);
 
   return {std::move(client), std::move(coordinator)};
 }
