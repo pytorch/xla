@@ -152,6 +152,9 @@ class ExperimentRunner:
           logger.error("ERROR when launching child process")
           self.save_results(benchmark_experiment, benchmark_model,
                             {"error": str(e)}, None)
+        except ValueError as e:
+          self._fwd_captured_stdout_stderr(e.stdout, e.stderr)
+          logger.exception("ERROR")
 
   def _get_config_fingerprint(self, experiment_config: OrderedDict,
                               model_config: OrderedDict) -> str:
