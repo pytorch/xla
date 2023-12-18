@@ -75,16 +75,6 @@ bool Use32BitLong() {
   return use_32bit_long;
 }
 
-// bool IsTpuDevice(XlaDeviceType hw_type) {
-//   static bool spmd_device_is_tpu =
-//       (hw_type == XlaDeviceType::SPMD) &&
-//       // HACK: find a better way to decide if SPMD is actually a TPU without
-//       // accessing the runtime.
-//       runtime::sys_util::GetEnvString("PJRT_DEVICE", "").find("TPU") !=
-//           std::string::npos;
-//   return (hw_type == XlaDeviceType::TPU) || spmd_device_is_tpu;
-// }
-
 }  // namespace
 
 at::ScalarType TorchTypeFromXlaType(xla::PrimitiveType xla_type) {
