@@ -1,7 +1,7 @@
 #include "torch_xla/csrc/runtime/profiler.h"
 
 #include "absl/container/flat_hash_map.h"
-#include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/tf_logging.h"
 #include "tsl/platform/status.h"
 #include "tsl/profiler/lib/profiler_factory.h"
 #include "tsl/profiler/rpc/client/capture_profile.h"
@@ -58,7 +58,9 @@ tsl::Status Trace(
 
 void RegisterProfilerForPlugin(const PJRT_Api* c_api) {
   const PLUGIN_Profiler_Api* profiler_api = FindProfilerApi(c_api);
-  XLA_CHECK(profiler_api);
+  if (!profiler_api) {
+    TF_LOG(WARNING) << "Profiler API not found for PJRT plugin";
+  }
 
   tsl::profiler::ProfilerFactory create_func =
       [profiler_api](const tensorflow::ProfileOptions& options) {

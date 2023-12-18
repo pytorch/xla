@@ -10,6 +10,7 @@ import torch_xla.core.xla_env_vars as xenv
 import torch_xla.core.xla_model as xm
 import torch_xla.utils.utils as xu
 import torch_xla._internal.tpu as tpu
+from torch_xla.experimental import plugins
 
 R = TypeVar('R')
 FN = TypeVar('FN')
@@ -198,7 +199,9 @@ def process_count() -> int:
 
 @requires_pjrt
 def host_index() -> int:
-  if device_type() == 'TPU':
+  if plugins.using_dynamic_plugins():
+    return plugins.default().host_index()
+  elif device_type() == 'TPU':
     return tpu.worker_id()
 
   # TODO: Update this when we support multi-host GPU
