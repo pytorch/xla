@@ -15,8 +15,7 @@ xla::XlaOp ConvertTo(xla::XlaOp op, xla::PrimitiveType from,
 
 xla::XlaOp ConvertToRaw(xla::XlaOp op, xla::PrimitiveType from,
                         xla::PrimitiveType raw_from, xla::PrimitiveType to,
-                        xla::PrimitiveType raw_to,
-                        const torch::lazy::BackendDevice* device);
+                        xla::PrimitiveType raw_to);
 
 xla::XlaOp ConvertToNumeric(xla::XlaOp op, xla::PrimitiveType from);
 
