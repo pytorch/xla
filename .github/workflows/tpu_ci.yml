@@ -32,7 +32,6 @@ jobs:
         run: |
           cd pytorch/xla
           python3 -u test/test_operations.py -v
-          python3 -u test/test_operations.py -v
           python3 -u test/pjrt/test_runtime_tpu.py
           python3 -u test/pjrt/test_collective_ops_tpu.py
           python3 -u test/spmd/test_xla_sharding.py
