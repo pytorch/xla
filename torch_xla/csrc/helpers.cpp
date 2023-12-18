@@ -519,10 +519,9 @@ std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteSecondValue(
     xla::XlaOp op1, xla::XlaOp op2) {
   xla::PrimitiveType type1 = TypeOfXlaOp(op1);
   xla::PrimitiveType type2 = TypeOfXlaOp(op2);
-  return type1 == type2
-             ? std::pair<xla::XlaOp, xla::XlaOp>(op1, op2)
-             : std::pair<xla::XlaOp, xla::XlaOp>(
-                   op1, ConvertTo(op2, type2, type1));
+  return type1 == type2 ? std::pair<xla::XlaOp, xla::XlaOp>(op1, op2)
+                        : std::pair<xla::XlaOp, xla::XlaOp>(
+                              op1, ConvertTo(op2, type2, type1));
 }
 
 xla::Shape XlaHelpers::GetPromotedShape(const xla::Shape& shape1,
