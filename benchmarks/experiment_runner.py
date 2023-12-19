@@ -406,12 +406,12 @@ class ExperimentRunner:
 
     enable_prof = self._args.profile_cuda
     metrics = OrderedDict()
-    t_start = time.perf_counter()
+    t_start, t_end = time.perf_counter(), None
     if benchmark_experiment.xla:
       t_trace = 0
 
     def loop(prof=None):
-      nonlocal t_trace
+      nonlocal t_trace, t_end
       for i in range(self._args.iterations_per_run):
         if benchmark_experiment.xla:
           t_trace_start = time.perf_counter()
@@ -427,6 +427,7 @@ class ExperimentRunner:
         if prof:
           prof.step()
       self._synchronize(benchmark_experiment)
+      t_end = time.perf_counter()
       return output
 
     if enable_prof:
@@ -436,7 +437,7 @@ class ExperimentRunner:
     else:
       output = loop()
 
-    t_end = time.perf_counter()
+    assert t_end is not None, "t_end should be modified by the loop!"
     if enable_prof:
       self.dump_profile_info(prof, benchmark_model, benchmark_experiment,
                              repeat_iteration)
