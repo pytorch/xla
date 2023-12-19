@@ -147,6 +147,11 @@ torch_xla::XlaOpVector Asinh::Lower(LoweringContext* loctx) const {
 
 torch_xla::XlaOpVector Atan::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  // PyTorch allows integral types as input to torch.atan while XLA does not,
+  // hence the manual type conversion.
+  if (xla::primitive_util::IsIntegralType(XlaHelpers::TypeOfXlaOp(xla_input))) {
+    xla_input = xla::ConvertElementType(xla_input, xla::PrimitiveType::F32);
+  }
   return ReturnOp(xla::Atan(xla_input), loctx);
 }
 
