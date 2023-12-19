@@ -85,6 +85,9 @@ def process_file(args, results_map: Dict[str, Any], filename: str):
           r['experiment']['accelerator_model'])
       if accelerator_model != args.accelerator:
         continue
+      model_name = r['model']['model_name']
+      if skip_model(args, model_name):
+        continue
       dynamo = r['experiment']['dynamo']
       test = r['experiment']['test']
       if test != _test_to_field_name[args.test]:
@@ -100,10 +103,8 @@ def process_file(args, results_map: Dict[str, Any], filename: str):
       std = np.std(total_times[1:], ddof=1) if len(total_times) > 2 else 0.0
       dp = Datapoint(avg, std)
       median_total_time = np.median(total_times[1:])
-      dynamo = r['experiment']['dynamo']
       batch_size = r['experiment']['batch_size']
       timestamp = r['timestamp']
-      model_name = r['model']['model_name']
 
       if timestamp not in results_map:
         results_map[timestamp] = {}
