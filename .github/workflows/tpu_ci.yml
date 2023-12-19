@@ -31,6 +31,7 @@ jobs:
           PJRT_DEVICE: TPU
         run: |
           pip install fsspec
+          pip install rich
           cd pytorch/xla
           python3 -u test/test_operations.py -v
           python3 -u test/pjrt/test_runtime_tpu.py
