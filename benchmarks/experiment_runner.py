@@ -18,9 +18,10 @@ from enum import Enum
 from torch.profiler import profile, ProfilerActivity
 from torch.autograd import DeviceType
 from benchmark_model import ModelLoader
+from enum import Enum
 from torchbench_model import TorchBenchModelLoader
 from benchmark_experiment import ExperimentLoader
-from util import reset_rng_state, move_to_device, randomize_input
+from util import reset_rng_state, move_to_device, randomize_input, us_to_s, ns_to_s
 import torch_xla.core.xla_model as xm
 
 logger = logging.getLogger(__name__)
@@ -114,7 +115,8 @@ class ExperimentRunner:
         if not self.model_loader.is_compatible(benchmark_model,
                                                benchmark_experiment):
           logger.warning("SKIP incompatible model and experiment configs.")
-          self._save_results(experiment_cfg, model_cfg, {"error": "SKIP"})
+          self._save_results(experiment_cfg_wo_env, model_cfg,
+                             {"error": "SKIP"})
           continue
 
         # Launch subprocess.
@@ -144,17 +146,20 @@ class ExperimentRunner:
         except subprocess.TimeoutExpired as e:
           self._fwd_captured_stdout_stderr(e.stdout, e.stderr)
           logger.error("TIMEOUT")
-          self._save_results(experiment_cfg, model_cfg, {"error": str(e)})
+          self._save_results(experiment_cfg_wo_env, model_cfg,
+                             {"error": str(e)})
         except subprocess.CalledProcessError as e:
           self._fwd_captured_stdout_stderr(e.stdout, e.stderr)
           logger.error("ERROR in subprocess")
-          self._save_results(experiment_cfg, model_cfg, {"error": e.stderr})
+          self._save_results(experiment_cfg_wo_env, model_cfg,
+                             {"error": e.stderr})
         except subprocess.SubprocessError as e:
           logger.error("ERROR when launching child process")
           self._save_results(experiment_cfg, model_cfg, {"error": str(e)})
         except ValueError as e:
           logger.error(f"ERROR {e}")
-          self._save_results(experiment_cfg, model_cfg, {"error": str(e)})
+          self._save_results(experiment_cfg_wo_env, model_cfg,
+                             {"error": str(e)})
 
   # TODO: Use `_unique_basename` instead.
   def _get_config_fingerprint(self, experiment_config: OrderedDict,
@@ -183,22 +188,145 @@ class ExperimentRunner:
     benchmark_model = self.model_loader.load_model(model_config,
                                                    benchmark_experiment)
 
+    # Repeat the experiment and accumulate metrics.
     with benchmark_model.pick_grad():
-      metrics = OrderedDict()
+      accumulated_metrics = OrderedDict()
       for repeat_iteration in range(self._args.repeat):
-        run_metrics = self.timed_run(benchmark_experiment, benchmark_model,
-                                     experiment_config, model_config,
-                                     repeat_iteration)
-
-        for key, val in run_metrics.items():
-          if key not in metrics:
-            metrics[key] = []
-          metrics[key].append(val)
+        metrics = self.run_once_and_gather_metrics(benchmark_experiment,
+                                                   benchmark_model,
+                                                   experiment_config,
+                                                   model_config,
+                                                   repeat_iteration)
+        for k, v in metrics.items():
+          if k not in accumulated_metrics:
+            accumulated_metrics[k] = []
+          accumulated_metrics[k].append(v)
 
     # TODO: Use `experiment_config` and `model_config` when env vars are no
     # longer included.
     self._save_results(benchmark_experiment.to_dict(),
-                       benchmark_model.to_dict(), metrics)
+                       benchmark_model.to_dict(), accumulated_metrics)
+
+  def run_once_and_gather_metrics(self, benchmark_experiment, benchmark_model,
+                                  experiment_config, model_config,
+                                  repeat_iteration: int):
+
+    # Prepare inputs.
+    reset_rng_state(benchmark_experiment)
+    inputs_list = self._prepare_inputs(benchmark_model.example_inputs,
+                                       self._args.randomize_input)
+
+    # Reset state and sync.
+    reset_rng_state(benchmark_experiment)
+    self._mark_step(benchmark_experiment)
+    self._synchronize(benchmark_experiment)
+    met.clear_all()
+    metrics = OrderedDict()
+
+    # Start timers.
+    t_start = time.perf_counter()
+    if benchmark_experiment.xla:
+      t_trace = 0
+
+    def loop(pytorch_profile=None):
+      nonlocal t_trace
+      for i in range(self._args.iterations_per_run):
+
+        # Invoke iteration function and measure tracing time w/o waiting on the
+        # result.
+        if benchmark_experiment.xla:
+          t_trace_start = time.perf_counter()
+        output = benchmark_model.model_iter_fn(
+            inputs_list[i], collect_full_output=self._args.collect_full_output)
+        if benchmark_experiment.xla:
+          t_trace += time.perf_counter() - t_trace_start
+
+        # Mark step.
+        self._mark_step(benchmark_experiment)
+        if pytorch_profile is not None:
+          pytorch_profile.step()
+
+      self._synchronize(benchmark_experiment)
+      return output
+
+    # Execute all iterations (with) profiling.
+    enable_pytorch_profiling = self._args.dump_pytorch_profiles or \
+        self._args.profile_cuda_cpu or \
+        self._args.profile_cuda_cpu_individual_ops
+    if enable_pytorch_profiling:
+      with profile(activities=[ProfilerActivity.CUDA, ProfilerActivity.CPU
+                              ]) as pytorch_profile:
+        output = loop(pytorch_profile)
+    else:
+      output = loop()
+
+    # Stop timers.
+    t_end = time.perf_counter()
+    metrics["total_time"] = t_end - t_start
+    metrics[
+        "per_iter_time"] = metrics["total_time"] / self._args.iterations_per_run
+    if benchmark_experiment.xla:
+      metrics["trace_total_time"] = t_trace
+      metrics["trace_per_iter_time"] = t_trace / self._args.iterations_per_run
+
+    # Dump PyTorch profile and/or extract metrics.
+    if self._args.dump_pytorch_profiles:
+      self._dump_pytorch_profile(pytorch_profile, experiment_config,
+                                 model_config, repeat_iteration)
+    if self._args.profile_cuda_cpu:
+      self._collect_cuda_cpu_metrics(pytorch_profile, metrics)
+    if self._args.profile_cuda_cpu_individual_ops:
+      self._collect_cuda_cpu_metrics_individual_ops(benchmark_experiment,
+                                                    metrics, pytorch_profile)
+
+    # Dump PyTorch/XLA metrics and extract some.
+    if benchmark_experiment.xla:
+      if self._args.dump_pytorch_xla_metrics:
+        self._dump_pytorch_xla_metrics(experiment_config, model_config,
+                                       repeat_iteration)
+      for m in ("CompileTime", "ExecuteTime"):
+        data = met.metric_data(m)
+        data = data if data is not None else (0, 0, [])
+        number, total_time, _ = data
+        # Time is measured in nano-seconds
+        metrics[f"xla_{m}_time_s"] = ns_to_s(total_time)
+        metrics[f"xla_{m}_number"] = number
+
+    # Additional experiment metrics can be added here.
+
+    # Save output.
+    if self._args.save_output and output is not None:
+      output = move_to_device(output, "cpu")
+      path = self._get_results_file_path(
+          experiment_config, model_config, repeat_iteration, "output", ext="pt")
+      torch.save(output, path)
+
+    return metrics
+
+  def _prepare_inputs(self, example_inputs, should_randomize_input):
+    inputs_list = []
+    for i in range(self._args.iterations_per_run):
+      inputs = copy.deepcopy(example_inputs)
+      if should_randomize_input:
+        inputs = randomize_input(inputs)
+      inputs_list.append(inputs)
+    return inputs_list
+
+  def _mark_step(self, benchmark_experiment):
+    if benchmark_experiment.xla:
+      xm.mark_step()
+
+  def _synchronize(self, benchmark_experiment):
+    if benchmark_experiment.xla:
+      xm.wait_device_ops()
+    elif benchmark_experiment.accelerator == "cuda":
+      torch.cuda.synchronize()
+    else:
+      pass
+
+  ##############################################################################
+  # Helpers to save results and result files.                                  #
+  ##############################################################################
 
   def _unique_basename(self, experiment_config: OrderedDict,
                        model_config: OrderedDict) -> str:
@@ -265,39 +393,16 @@ class ExperimentRunner:
       json.dump(results, f, ensure_ascii=False)
       f.write("\n")
 
-  def _mark_step(self, benchmark_experiment):
-    if benchmark_experiment.xla:
-      xm.mark_step()
+  ##############################################################################
+  # Helpers to dump and analyze the PyTorch profile                            #
+  ##############################################################################
 
-  def _synchronize(self, benchmark_experiment):
-    if benchmark_experiment.xla:
-      xm.wait_device_ops()
-    elif benchmark_experiment.accelerator == "cuda":
-      torch.cuda.synchronize()
-    else:
-      pass
+  def _dump_pytorch_profile(self, profile, experiment_config: OrderedDict,
+                            model_config: OrderedDict, repeat_iteration: int):
+    assert profile is not None, "Expect PyTorch profile"
 
-  def prepare_inputs(self, example_inputs, should_randomize_input):
-    inputs_list = []
-    for i in range(self._args.iterations_per_run):
-      inputs = copy.deepcopy(example_inputs)
-      if should_randomize_input:
-        inputs = randomize_input(inputs)
-      inputs_list.append(inputs)
-    return inputs_list
-
-  def dump_profile_info(self, prof, benchmark_model, benchmark_experiment,
-                        repeat_iteration: int):
-    model_config = benchmark_model.to_dict()
-    experiment_config = benchmark_experiment.to_dict()
-    assert prof is not None, 'Expecting profiler to be defined!'
-    if not self._args.profile_cuda_dump:
-      logger.warning(
-          'Profiling enabled, but dumping tracing/kernel summary disabled.')
-      return
-
-    # Dump pytorch trace.
-    prof.export_chrome_trace(
+    # Dump PyTorch trace.
+    profile.export_chrome_trace(
         self._get_results_file_path(
             experiment_config,
             model_config,
@@ -305,65 +410,57 @@ class ExperimentRunner:
             ext="json",
             sub_dirname=str(repeat_iteration)))
 
-    # Dump pytorch profile.
-    pytorch_profile = prof.key_averages().table(
+    # Dump PyTorch profile.
+    text = profile.key_averages().table(
         sort_by="cuda_time_total", row_limit=500)
     self._save_results_file(
-        pytorch_profile,
+        text,
         experiment_config,
         model_config,
         "pytorch-profile",
         sub_dirname=str(repeat_iteration))
     self._save_results_file(
-        pytorch_profile,
-        experiment_config,
-        model_config,
-        "pytorch-profile",
-        mode="a")
+        text, experiment_config, model_config, "pytorch-profile", mode="a")
 
-  def collect_profile_to_metrics(self, prof, metrics):
-    assert prof is not None, 'Expecting profiler to be defined!'
-    if not self._args.profile_cuda_cpu_collect:
-      logger.warning(
-          'Profiling enabled, but collection of CPU/CUDA profiling info disabled.'
-      )
-      return
+  def _collect_cuda_cpu_metrics(self, pytorch_profile, metrics):
+    assert pytorch_profile is not None, "Expect profile"
 
-    kernel_dump = prof.profiler.total_average()
+    kernel_dump = pytorch_profile.profiler.total_average()
     total_cuda_time = 0
     total_cpu_time = kernel_dump.self_cpu_time_total
 
-    # Avoid double counting CUDA time for inductor. Copied here, since the interface is not really exposed via any interface.
-    # The alternative is regex matching resulting string dump for CUDA kernel time.
-    # Source: https://github.com/pytorch/pytorch/blob/2f3beb715c608a060934c237de402faa40ea211f/torch/autograd/profiler_util.py#L1025-L1037
-    for evt in prof.profiler.key_averages():
+    # Avoid double counting CUDA time for inductor. Copied here, since the
+    # interface is not really exposed via any interface. The alternative is
+    # regex matching resulting string dump for CUDA kernel time. See
+    # https://github.com/pytorch/pytorch/blob/2f3beb715c608a060934c237de402faa40ea211f/torch/autograd/profiler_util.py#L1025-L1037
+    for evt in pytorch_profile.profiler.key_averages():
       if evt.device_type == DeviceType.CPU:
-        # in legacy profiler, kernel info is stored in cpu events
+        # In legacy profiler, kernel info is stored in cpu events
         if evt.is_legacy:
           total_cuda_time += evt.self_cuda_time_total
       elif evt.device_type == DeviceType.CUDA:
-        # in kineto profiler, there're events with the correct device type (e.g. CUDA)
+        # In kineto profiler, there're events with the correct device type
+        # (e.g. CUDA)
         total_cuda_time += evt.self_cuda_time_total
 
-    total_cpu_time /= 1000000
-    total_cuda_time /= 1000000
-    metrics["total_cpu_time_s"] = total_cpu_time
-    metrics["total_cuda_time_s"] = total_cuda_time
-    metrics[
-        "per_iter_cpu_time_s"] = total_cpu_time / self._args.iterations_per_run
-    metrics[
-        "per_iter_cuda_time_s"] = total_cuda_time / self._args.iterations_per_run
+    metrics["total_cpu_time_s"] = us_to_s(total_cpu_time)
+    metrics["total_cuda_time_s"] = us_to_s(total_cuda_time)
+    metrics["per_iter_cpu_time_s"] = us_to_s(total_cpu_time /
+                                             self._args.iterations_per_run)
+    metrics["per_iter_cuda_time_s"] = us_to_s(total_cuda_time /
+                                              self._args.iterations_per_run)
 
-  def get_xla_cpu_fallback_ops(self, met):
-    return set(name for name in met.counter_names() if self.is_aten_op(name))
+  def _collect_cuda_cpu_metrics_individual_ops(self, benchmark_experiment,
+                                               metrics, pytorch_profile):
+    assert pytorch_profile is not None, "Expect profile"
+    logger.debug("Collect CUDA and CPU metrics for individual ops")
 
-  def is_aten_op(self, op_name):
-    return 'aten::' in op_name
+    def is_aten_op(op_name):
+      return 'aten::' in op_name
 
-  def collect_individual_ops(self, benchmark_experiment, metrics, prof):
-    assert prof is not None, 'Expecting prof to be defined!'
+    def get_xla_cpu_fallback_ops(met):
+      return set(name for name in met.counter_names() if is_aten_op(name))
 
-    us_to_s = lambda x: x / 1000000
     extract_prof_info = lambda event: {
         "self_cpu_time_s": us_to_s(event.self_cpu_time_total),
         "self_cuda_time_s": us_to_s(event.self_cuda_time_total),
@@ -373,103 +470,38 @@ class ExperimentRunner:
     }
 
     if benchmark_experiment.xla:
-      unlowered_ops = self.get_xla_cpu_fallback_ops(met)
+      unlowered_ops = get_xla_cpu_fallback_ops(met)
       if not unlowered_ops:
         return
       if "xla_unlowered_ops" not in metrics:
         metrics["xla_unlowered_ops"] = dict()
-      for event in prof.key_averages():
+      for event in pytorch_profile.key_averages():
         if event.key in unlowered_ops:
           metrics["xla_unlowered_ops"][event.key] = extract_prof_info(event)
     else:
-      for event in prof.key_averages():
+      for event in pytorch_profile.key_averages():
         op_name = event.key
-        if not self.is_aten_op(op_name):
+        if not is_aten_op(op_name):
           continue
         if "inductor_ops" not in metrics:
           metrics["inductor_ops"] = dict()
         metrics["inductor_ops"][op_name] = extract_prof_info(event)
 
-  def timed_run(self, benchmark_experiment, benchmark_model, experiment_config,
-                model_config, repeat_iteration: int):
-    reset_rng_state(benchmark_experiment)
+  def _dump_pytorch_xla_metrics(self, experiment_config, model_config,
+                                repeat_iteration):
+    text = met.metrics_report()
+    assert isinstance(text, str)
+    self._save_results_file(
+        text,
+        experiment_config,
+        model_config,
+        "pytorch-xla-metrics",
+        sub_dirname=str(repeat_iteration))
 
-    inputs_list = self.prepare_inputs(benchmark_model.example_inputs,
-                                      self._args.randomize_input)
 
-    reset_rng_state(benchmark_experiment)
-    self._mark_step(benchmark_experiment)
-    self._synchronize(benchmark_experiment)
-
-    # Clear XLA metrics before executing the model.
-    met.clear_metrics()
-
-    enable_prof = self._args.profile_cuda
-    metrics = OrderedDict()
-    t_start = time.perf_counter()
-    if benchmark_experiment.xla:
-      t_trace = 0
-
-    def loop(prof=None):
-      nonlocal t_trace
-      for i in range(self._args.iterations_per_run):
-        if benchmark_experiment.xla:
-          t_trace_start = time.perf_counter()
-
-        output = benchmark_model.model_iter_fn(
-            inputs_list[i], collect_full_output=self._args.collect_full_output)
-
-        if benchmark_experiment.xla:
-          t_trace += time.perf_counter() - t_trace_start
-
-        self._mark_step(benchmark_experiment)
-
-        if prof:
-          prof.step()
-      self._synchronize(benchmark_experiment)
-      return output
-
-    if enable_prof:
-      with profile(
-          activities=[ProfilerActivity.CUDA, ProfilerActivity.CPU]) as prof:
-        output = loop(prof)
-    else:
-      output = loop()
-
-    t_end = time.perf_counter()
-    if enable_prof:
-      self.dump_profile_info(prof, benchmark_model, benchmark_experiment,
-                             repeat_iteration)
-      self.collect_profile_to_metrics(prof, metrics)
-
-    metrics["total_time"] = t_end - t_start
-    metrics[
-        "per_iter_time"] = metrics["total_time"] / self._args.iterations_per_run
-
-    if benchmark_experiment.xla:
-      metrics["trace_per_iter_time"] = t_trace / self._args.iterations_per_run
-
-      def ns_to_s(ns):
-        return ns * 1e-9
-
-      for m in ("CompileTime", "ExecuteTime"):
-        data = met.metric_data(m)
-        data = data if data is not None else (0, 0, [])
-        number, total_time, _ = data
-        # Time is measured in nano-seconds
-        metrics[f"xla_{m}_time_s"] = ns_to_s(total_time)
-        metrics[f"xla_{m}_number"] = number
-
-    if enable_prof:
-      self.collect_individual_ops(benchmark_experiment, metrics, prof)
-
-    if self._args.save_output and output is not None:
-      output = move_to_device(output, "cpu")
-      path = self._get_results_file_path(
-          experiment_config, model_config, repeat_iteration, "output", ext="pt")
-      torch.save(output, path)
-
-    return metrics
+################################################################################
+# CLI                                                                          #
+################################################################################
 
 
 def parse_args(args=None):
@@ -645,22 +677,30 @@ def parse_args(args=None):
         output-basename file will be deleted and all experiment will run.""",
   )
   parser.add_argument(
-      "--profile-cuda",
+      "--dump-pytorch-profiles",
       action="store_true",
-      help="""Whether to profile CUDA or not. Note this does not do much except
-        for triggering a profiler. To get the profiling data use additionally
-        --profile-cuda-dump""",
+      help="""Dump PyTorch profiles in the output directory. This
+        includes CPU/GPU times per operation and Chrome traces. See also
+        https://pytorch.org/tutorials/recipes/recipes/profiler_recipe.html""",
   )
   parser.add_argument(
-      "--profile-cuda-dump",
-      type=str,
-      default="",
-      help="Directory specifying where to dump profiling information (summary, and trace)",
+      "--dump-pytorch-xla-metrics",
+      action="store_true",
+      help="""Dump PyTorch/XLA metrics in the output directory. This includes
+      compile time and various counters. See also
+      https://github.com/pytorch/xla/blob/master/TROUBLESHOOTING.md#get-a-metrics-report""",
   )
   parser.add_argument(
-      "--profile-cuda-cpu-collect",
+      "--profile-cuda-cpu",
       action="store_true",
-      help="Whether to collect CPU/GPU profiling information in the resulting file.",
+      help="""Collect CUDA and CPU times. To dump the entire profile, use
+        `--dump-pytorch-profiles`.""",
+  )
+  parser.add_argument(
+      "--profile-cuda-cpu-individual-ops",
+      action="store_true",
+      help="""Collect CUDA and CPU times per operation. This will also gather
+        CPU fallbacks.""",
   )
   parser.add_argument(
       "--xla-flags",
@@ -677,12 +717,14 @@ def parse_args(args=None):
   parser.add_argument(
       "--experiment-config",
       type=str,
-      help="JSON string defining the experiment configuration. When set an experiment is run with exactly this one configuration.",
+      help="""JSON string defining the experiment configuration. When set an
+        experiment is run with exactly this one configuration.""",
   )
   parser.add_argument(
       "--model-config",
       type=str,
-      help="JSON string defining the model configuration. When set an experiment is run with exactly this one configuration.",
+      help="""JSON string defining the model configuration. When set an
+        experiment is run with exactly this one configuration.""",
   )
 
   parser.add_argument(
