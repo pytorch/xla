@@ -225,7 +225,7 @@
               
               
                 <div class="version">
-                  master (2.2.0+git6f3f38f )
+                  master (2.2.0+gitad14582 )
                 </div>
               
             
@@ -411,7 +411,7 @@
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns a list of supported devices of a given kind.</span>
 
 <span class="sd">  Args:</span>
-<span class="sd">    devkind (string..., optional): If specified, one of `TPU`, `GPU`, `XPU`, </span>
+<span class="sd">    devkind (string..., optional): If specified, one of `TPU`, `GPU`, `XPU`,</span>
 <span class="sd">      `NEURON` or `CPU` (the &#39;GPU&#39; XLA device is currently not implemented).</span>
 <span class="sd">    max_devices (int, optional): The maximum number of devices to be returned of</span>
 <span class="sd">      that kind.</span>
@@ -521,7 +521,7 @@
 <span class="sd">    n (int, optional): The specific instance (ordinal) to be returned. If</span>
 <span class="sd">      specified, the specific XLA device instance will be returned. Otherwise</span>
 <span class="sd">      the first device of `devkind` will be returned.</span>
-<span class="sd">    devkind (string..., optional): If specified, one of `TPU`, `CUDA`, `XPU` </span>
+<span class="sd">    devkind (string..., optional): If specified, one of `TPU`, `CUDA`, `XPU`</span>
 <span class="sd">      `NEURON`, `ROCM` or `CPU`.</span>
 
 <span class="sd">  Returns:</span>
@@ -545,7 +545,10 @@
   <span class="k">return</span> <span class="n">_DEVICES</span><span class="o">.</span><span class="n">value</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))]</span>
 
 
-<span class="k">def</span> <span class="nf">xla_real_devices</span><span class="p">(</span><span class="n">devices</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">xla_real_devices</span><span class="p">(</span><span class="n">devices</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+  <span class="k">if</span> <span class="ow">not</span> <span class="n">devices</span><span class="p">:</span>
+    <span class="n">devices</span> <span class="o">=</span> <span class="n">get_xla_supported_devices</span><span class="p">()</span>
+
   <span class="k">return</span> <span class="p">[</span><span class="n">_xla_real_device</span><span class="p">(</span><span class="n">device</span><span class="p">)</span> <span class="k">for</span> <span class="n">device</span> <span class="ow">in</span> <span class="n">devices</span><span class="p">]</span>
 
 
@@ -557,7 +560,7 @@
 <span class="sd">      real device.</span>
 
 <span class="sd">  Returns:</span>
-<span class="sd">    A string representation of the hardware type (`CPU`, `TPU`, `XPU`, `NEURON`, `GPU`, `CUDA`, `ROCM`) </span>
+<span class="sd">    A string representation of the hardware type (`CPU`, `TPU`, `XPU`, `NEURON`, `GPU`, `CUDA`, `ROCM`)</span>
 <span class="sd">    of the given device.</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="n">real_device</span> <span class="o">=</span> <span class="n">_xla_real_device</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
