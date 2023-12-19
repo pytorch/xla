@@ -267,9 +267,12 @@ class XlaHelpers {
 
   // Validates the shapes of xla::XlaOp values: Ignore fp-precison if the shapes
   // of op1 and op2 have same dimensions, otherwise the element-types must
-  // exactly match.
-  static std::pair<xla::XlaOp, xla::XlaOp> ValidateShapes(xla::XlaOp op1,
-                                                          xla::XlaOp op2);
+  // exactly match.  Eventually performs a broadcast with unbounded dynamic
+  // shapes to make sure the shapes of the returned xla::XlaOp values have the
+  // same shape. The first returned xla::XlaOp is op1 or a broadcast of it, and
+  // the second returned xla::XlaOp is either op2 or a broadcast ot it.
+  static std::pair<xla::XlaOp, xla::XlaOp> PromoteShapes(xla::XlaOp op1,
+                                                         xla::XlaOp op2);
 
   // Combines PromoteValues() and PromoteShapes() returning two operations which
   // match in shape and types.
@@ -281,6 +284,12 @@ class XlaHelpers {
   static std::pair<xla::XlaOp, xla::XlaOp> PromoteSecond(xla::XlaOp op1,
                                                          xla::XlaOp op2);
 
+  // Given the two shape 'shape1' and 'shape2', infers the broadcasted shape.
+  // When the inputs shapes have static or bounded dynamic dimension sizes, the
+  // broadcasted shape is determined using the numpy broadcasting rules. If the
+  // input shapes constitute unbounded dynamic sizes, then the corresponding
+  // dimension size in the inferred broadcasted shape is marked unbounded
+  // dynamic.
   static xla::Shape GetPromotedShape(const xla::Shape& shape1,
                                      const xla::Shape& shape2);
 
@@ -298,6 +307,16 @@ class XlaHelpers {
   // returned.
   static xla::XlaOp ImplicitBroadcast(xla::XlaOp op, const xla::Shape& op_shape,
                                       const xla::Shape& shape);
+
+  // Returns new operations which broadcast the input operations 'op1' and 'op2'
+  // with unbounded dynamic dimensions into the 'shape' which is usually the
+  // result of a GetPromotedShape() call.
+  // Assumption: The shapes of 'op1' and 'op2' are valid for broadcasting.
+  // TODO: We need to emit runtime shape assertions to validate the broadcasting
+  // rules are met.
+  static std::pair<xla::XlaOp, xla::XlaOp>
+  ImplicitBroadcastWithUnboundedDynamicShapes(xla::XlaOp op1, xla::XlaOp op2,
+                                              const xla::Shape& shape);
 
   // Retuns the explicit broadcasting specifications on operations between
   // arrays of different ranks.
