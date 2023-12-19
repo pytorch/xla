@@ -162,5 +162,5 @@ class BenchmarkModel:
   def default_precision_flag(self):
     return None
 
-  def extend_process_env(self, process_env):
-    return process_env
+  def update_process_env(self, process_env):
+    pass

@@ -89,10 +89,8 @@ class ExperimentRunner:
       for experiment_cfg in experiment_configs:
 
         # Log run and configs.
-        experiment_cfg_wo_env = experiment_cfg.copy()
-        process_env = experiment_cfg_wo_env.pop("process_env")
         logger.info(f"Run with --model-config={json.dumps(model_cfg)} "
-                    f"--experiment-config={json.dumps(experiment_cfg_wo_env)}")
+                    f"--experiment-config={json.dumps(experiment_cfg)}")
 
         # Move on if dry running.
         if self._args.dry_run:
@@ -100,7 +98,7 @@ class ExperimentRunner:
 
         # TODO: See if we can pass experiment_cfg to `load_experiment`.
         benchmark_experiment = self.experiment_loader.load_experiment(
-            experiment_cfg_wo_env)
+            experiment_cfg)
         benchmark_model = self.model_loader.load_model(
             model_cfg, benchmark_experiment, dummy=True)
 
@@ -115,15 +113,28 @@ class ExperimentRunner:
         if not self.model_loader.is_compatible(benchmark_model,
                                                benchmark_experiment):
           logger.warning("SKIP incompatible model and experiment configs.")
-          self._save_results(experiment_cfg_wo_env, model_cfg,
-                             {"error": "SKIP"})
+          self._save_results(experiment_cfg, model_cfg, {"error": "SKIP"})
           continue
+
+        # Compose child process environment.
+        process_env = os.environ.copy()
+        benchmark_experiment.update_process_env(process_env)
+        benchmark_model.update_process_env(process_env)
+
+        # Setup HLO dumps.
+        if self._args.dump_hlo:
+          hlo_path = self._get_results_dir_path(experiment_cfg, model_cfg,
+                                                "hlo")
+          new_xla_flags = f"--xla_dump_to={hlo_path}"
+          xla_flags = process_env.pop("XLA_FLAGS", None)
+          if xla_flags is None:
+            xla_flags = new_xla_flags
+          else:
+            xla_flags = f"{xla_flags} {new_xla_flags}"
+          process_env["XLA_FLAGS"] = xla_flags
 
         # Launch subprocess.
         try:
-          # TODO: See if we can generalize this for all env vars. The experiment
-          # config is currently a bit bloated.
-          process_env = benchmark_model.extend_process_env(process_env)
           command = [sys.executable] + sys.argv + [
               f"--experiment-config={json.dumps(experiment_cfg)}"
           ] + [f"--model-config={json.dumps(model_cfg)}"] + [
@@ -146,20 +157,17 @@ class ExperimentRunner:
         except subprocess.TimeoutExpired as e:
           self._fwd_captured_stdout_stderr(e.stdout, e.stderr)
           logger.error("TIMEOUT")
-          self._save_results(experiment_cfg_wo_env, model_cfg,
-                             {"error": str(e)})
+          self._save_results(experiment_cfg, model_cfg, {"error": str(e)})
         except subprocess.CalledProcessError as e:
           self._fwd_captured_stdout_stderr(e.stdout, e.stderr)
           logger.error("ERROR in subprocess")
-          self._save_results(experiment_cfg_wo_env, model_cfg,
-                             {"error": e.stderr})
+          self._save_results(experiment_cfg, model_cfg, {"error": e.stderr})
         except subprocess.SubprocessError as e:
           logger.error("ERROR when launching child process")
           self._save_results(experiment_cfg, model_cfg, {"error": str(e)})
         except ValueError as e:
           logger.error(f"ERROR {e}")
-          self._save_results(experiment_cfg_wo_env, model_cfg,
-                             {"error": str(e)})
+          self._save_results(experiment_cfg, model_cfg, {"error": str(e)})
 
   # TODO: Use `_unique_basename` instead.
   def _get_config_fingerprint(self, experiment_config: OrderedDict,
@@ -352,20 +360,35 @@ class ExperimentRunner:
                              experiment_config: OrderedDict,
                              model_config: OrderedDict,
                              partial_name: str,
-                             ext: str = "txt",
+                             ext: Optional[str] = "txt",
                              sub_dirname: Optional[str] = None) -> str:
+    is_dir = ext is None
     model_name = model_config["model_name"]
     basename = self._unique_basename(experiment_config, model_config)
-    filename = f"{partial_name}-{basename}.{ext}"
+    filename = f"{partial_name}-{basename}"
+    if not is_dir:
+      filename += f".{ext}"
     path = os.path.abspath(os.path.join(self._args.output_dirname, model_name))
     if sub_dirname is not None:
       path = os.path.join(path, sub_dirname)
     path = os.path.join(path, filename)
 
-    # Create parent directory.
-    os.makedirs(os.path.dirname(path), exist_ok=True)
+    # Create (parent) directory.
+    os.makedirs(path if is_dir else os.path.dirname(path), exist_ok=True)
 
     return path
+
+  def _get_results_dir_path(self,
+                            experiment_config: OrderedDict,
+                            model_config: OrderedDict,
+                            partial_name: str,
+                            sub_dirname: Optional[str] = None) -> str:
+    return self._get_results_file_path(
+        experiment_config,
+        model_config,
+        partial_name,
+        ext=None,
+        sub_dirname=sub_dirname)
 
   def _save_results_file(self,
                          text: str,
@@ -610,13 +633,15 @@ def parse_args(args=None):
       type=int,
       default=1,
       choices=range(1, 10),
-      help="Total number of partitions we want to divide the benchmark suite into",
+      help="""Total number of partitions we want to divide the benchmark suite
+        into""",
   )
   parser.add_argument(
       "--partition-id",
       type=int,
       default=0,
-      help="ID of the benchmark suite partition to be run. Used to divide CI tasks",
+      help="""ID of the benchmark suite partition to be run. Used to divide CI
+        tasks""",
   )
   parser.add_argument(
       "--dry-run",
@@ -677,6 +702,11 @@ def parse_args(args=None):
         output-basename file will be deleted and all experiment will run.""",
   )
   parser.add_argument(
+      "--dump-hlo",
+      action="store_true",
+      help="""Dump HLO modules by passing `--xla_dump_to` as `XLA_FLAGS`""",
+  )
+  parser.add_argument(
       "--dump-pytorch-profiles",
       action="store_true",
       help="""Dump PyTorch profiles in the output directory. This
@@ -726,13 +756,11 @@ def parse_args(args=None):
       help="""JSON string defining the model configuration. When set an
         experiment is run with exactly this one configuration.""",
   )
-
   parser.add_argument(
       "--timestamp",
       default=time.time(),
       type=float,
       help="Timestamp (seconds since the epoch) to assign to the benchmarks.")
-
   return parser.parse_args(args)
 
 
