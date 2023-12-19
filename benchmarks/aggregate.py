@@ -273,7 +273,7 @@ def pr_latest(results_map: Dict[str, Any], args, timestamps: List[str]):
     plt.title(maketitle(args, f'Speedup over Oldest Benchmarked Inductor'))
     plt.xlabel('Workload Number')
     plt.ylabel(f'Speedup')
-    plt.savefig(sys.stdout.buffer)
+    plt.savefig(sys.stdout.buffer, format=args.format)
 
 
 def pr_histogram(results_map: Dict[str, Any], args, timestamps: List[str]):
@@ -317,7 +317,7 @@ def pr_histogram(results_map: Dict[str, Any], args, timestamps: List[str]):
     plt.title(
         maketitle(args,
                   'Histogram of Speedup over Oldest Benchmarked Inductor'))
-    plt.savefig(sys.stdout.buffer)
+    plt.savefig(sys.stdout.buffer, format=args.format)
 
 
 def pr_gmean(results_map: Dict[str, Any], args, timestamps: List[str]):
@@ -359,15 +359,15 @@ def pr_gmean(results_map: Dict[str, Any], args, timestamps: List[str]):
     plt.xlabel("Date")
     plt.ylabel("Geomean Speedup")
     plt.title(maketitle(args, 'Speedup over Oldest Benchmarked Inductor'))
-    plt.savefig(sys.stdout.buffer)
+    plt.savefig(sys.stdout.buffer, format=args.format)
 
 
 def pr_results(results_map: Dict[str, Any], args):
   timestamps = list(results_map.keys())
   timestamps.sort()
 
-  if args.format == 'png' and not has_matplotlib:
-    sys.exit('Fatal: cannot find matplotlib packages needed for PNG output.')
+  if args.format != 'csv' and not has_matplotlib:
+    sys.exit(f'Fatal: cannot find matplotlib, needed for {args.format} output.')
 
   if args.report == 'latest':
     return pr_latest(results_map, args, timestamps)
@@ -413,7 +413,10 @@ def parse_args(args=None):
       help="filter benchmarks by predefined tier 1-3",
   )
   parser.add_argument(
-      "--format", default='csv', choices=['csv', 'png'], help='Output format')
+      "--format",
+      default='csv',
+      choices=['csv', 'png', 'svg'],
+      help='Output format')
   parser.add_argument('input_file', nargs='+')
   parser.add_argument(
       '--report',
