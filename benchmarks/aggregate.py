@@ -30,8 +30,6 @@ _test_to_field_name = {
     'inference': 'eval',
     'training': 'train',
 }
-_fig_width = 9
-_fig_height = 6.75
 _fig_elinewidth = 0.5
 _fig_capsize = 3
 
@@ -260,7 +258,7 @@ def pr_latest(results_map: Dict[str, Any], args, timestamps: List[str]):
                         model_names[i][j])
           ])))
   else:
-    plt.figure(figsize=(_fig_width, _fig_height))
+    plt.figure(figsize=(args.fig_width, args.fig_height))
     plt.axhline(y=1.0, color='lightgray')
     for i in range(len(titles)):
       plt.errorbar([j for j in range(len(speedups[i]))],
@@ -298,7 +296,7 @@ def pr_histogram(results_map: Dict[str, Any], args, timestamps: List[str]):
     for j, utc in enumerate(x):
       print(','.join([str(utc)] + [str(y[i][j]) for i in range(len(labels))]))
   else:
-    fig, ax = plt.subplots(figsize=(_fig_width, _fig_height))
+    fig, ax = plt.subplots(figsize=(args.fig_width, args.fig_height))
     ax.axhline(y=1.0, color='lightgray')
     linestyles = ('solid', 'dotted', 'dashed')
     for i, label in enumerate(labels):
@@ -344,7 +342,7 @@ def pr_gmean(results_map: Dict[str, Any], args, timestamps: List[str]):
               v for i in range(len(labels)) for v in (y[i][j].avg, y[i][j].std)
           ])))
   else:
-    fig, ax = plt.subplots(figsize=(_fig_width, _fig_height))
+    fig, ax = plt.subplots(figsize=(args.fig_width, args.fig_height))
     ax.axhline(y=1.0, color='lightgray')
     for i in range(len(labels)):
       ax.errorbar(
@@ -398,6 +396,18 @@ def parse_args(args=None):
       action="append",
       default=[],
       help="filter out benchmarks by predefined tier 1-3",
+  )
+  parser.add_argument(
+      "--fig-height",
+      type=float,
+      default=6.75,
+      help="Figure height (inches)",
+  )
+  parser.add_argument(
+      "--fig-width",
+      type=float,
+      default=9.0,
+      help="Figure width (inches)",
   )
   parser.add_argument(
       "--filter",
