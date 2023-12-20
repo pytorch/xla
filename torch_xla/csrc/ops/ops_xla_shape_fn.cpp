@@ -422,7 +422,11 @@ xla::Shape EqTensorOutputShape(const torch::lazy::Value& self,
 }
 
 xla::Shape ErfOutputShape(const torch::lazy::Value& input) {
-  return GetXlaShape(input);
+  auto shape = GetXlaShape(input);
+  if (xla::primitive_util::IsIntegralType(shape.element_type())) {
+    shape.set_element_type(xla::PrimitiveType::F32);
+  }
+  return shape;
 }
 
 xla::Shape ErfcOutputShape(const torch::lazy::Value& input) {
