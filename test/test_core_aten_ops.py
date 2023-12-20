@@ -1569,7 +1569,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.exp, args, kwargs)
 
-  @unittest.skip
   def test_aten_exp_2(self):
     args = (torch.randint(0, 10, (10, 10)).to(torch.int32),)
     kwargs = dict()
