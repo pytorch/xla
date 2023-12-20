@@ -51,6 +51,8 @@ import os
 XLA_DISABLE_FUNCTIONALIZATION = bool(
     os.environ.get('XLA_DISABLE_FUNCTIONALIZATION', False))
 
+from torch_xla.utils.checkpoint import chkpt_status
+
 FLOAT_DTYPES = [torch.float32, torch.float16, torch.bfloat16]
 
 
@@ -957,7 +959,10 @@ class XlaFullyShardedDataParallel(nn.Module):
       # This can be used to debug FSDP parameter memory consumption.
       outputs = self._dummy_forward(*args, **kwargs)
 
-    if self.reshard_after_forward:
+    # Allgather reduction optimization: if this forward is a recompute forward
+    # in checkpoint, then we do not reshard here, so that the following backward
+    # does not need to do the allgather
+    if self.reshard_after_forward and not chkpt_status.in_chkpt_bwd:
       output_opt_barrier_tensors = []
       if self.optimization_barrier_in_forward:
         # Ensure that the full parameters of this FSDP module are freed
@@ -1074,7 +1079,9 @@ class XlaFullyShardedDataParallel(nn.Module):
       # All-gather full parameters or switching to the full params.
       # Note, ``self._rebuild_full_params`` is idempotent. So in case it is called
       # unnecessarily, it doesn't incur much overhead.
-      if self.reshard_after_forward:
+      # Allgather reduction optimization: if this backward is in checkpoint, then we
+      # do not allgather here, since the previous recompute forward does not reshard
+      if self.reshard_after_forward and not chkpt_status.in_chkpt_bwd:
         dependency_tensors = []
         if self.optimization_barrier_in_backward:
           # Ensure that backward pass ops of feature gradients, parameter

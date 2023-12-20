@@ -8,6 +8,16 @@ from torch.utils.checkpoint import detach_variable, check_backward_validity, get
 from typing import Iterable, List, Tuple, Union
 
 
+class CheckpointStatus:
+
+  def __init__(self):
+    self.in_chkpt_bwd = False
+
+
+# chkpt_status is used for FSDP allgather reduction optimizaion
+chkpt_status = CheckpointStatus()
+
+
 class CheckpointFunction(torch.autograd.Function):
 
   def _extract_tensors_from_list(inputs):
@@ -38,6 +48,7 @@ class CheckpointFunction(torch.autograd.Function):
         "cache_enabled": torch.is_autocast_cache_enabled()
     }
     if preserve_rng_state:
+      ctx.fwd_xla_state = xm.get_rng_state()
       ctx.fwd_cpu_state = torch.get_rng_state()
       # Don't eagerly initialize the cuda context by accident.
       # (If the user intends that the context is initialized later, within their
@@ -71,6 +82,8 @@ class CheckpointFunction(torch.autograd.Function):
 
   @staticmethod
   def backward(ctx, *args):
+    chkpt_status.in_chkpt_bwd = True
+
     if not torch.autograd._is_checkpoint_valid():
       raise RuntimeError(
           "Checkpointing is not compatible with .grad() or when an `inputs` parameter"
@@ -93,17 +106,21 @@ class CheckpointFunction(torch.autograd.Function):
       rng_devices = ctx.fwd_gpu_devices
     xm.optimization_barrier_(
         CheckpointFunction._extract_tensors_from_list(inputs + list(args)))
+    # torch.random.fork_rng will handle the cpu and gpu seed
+    # xm.fork_rng will handle the xla device seed
     with torch.random.fork_rng(
         devices=rng_devices, enabled=ctx.preserve_rng_state):
-      if ctx.preserve_rng_state:
-        torch.set_rng_state(ctx.fwd_cpu_state)
-        if ctx.had_cuda_in_fwd:
-          set_device_states(ctx.fwd_gpu_devices, ctx.fwd_gpu_states)
-      detached_inputs = detach_variable(tuple(inputs))
-      with torch.enable_grad(), \
-           torch.cuda.amp.autocast(**ctx.gpu_autocast_kwargs), \
-           torch.cpu.amp.autocast(**ctx.cpu_autocast_kwargs):
-        outputs = ctx.run_function(*detached_inputs)
+      with xm.fork_rng():
+        if ctx.preserve_rng_state:
+          xm.set_rng_state(ctx.fwd_xla_state)
+          torch.set_rng_state(ctx.fwd_cpu_state)
+          if ctx.had_cuda_in_fwd:
+            set_device_states(ctx.fwd_gpu_devices, ctx.fwd_gpu_states)
+        detached_inputs = detach_variable(tuple(inputs))
+        with torch.enable_grad(), \
+            torch.cuda.amp.autocast(**ctx.gpu_autocast_kwargs), \
+            torch.cpu.amp.autocast(**ctx.cpu_autocast_kwargs):
+          outputs = ctx.run_function(*detached_inputs)
 
     if isinstance(outputs, torch.Tensor):
       outputs = (outputs,)
@@ -123,6 +140,7 @@ class CheckpointFunction(torch.autograd.Function):
         inp.grad if isinstance(inp, torch.Tensor) else None
         for inp in detached_inputs)
 
+    chkpt_status.in_chkpt_bwd = False
     return (None, None) + grads
 
 
