@@ -271,6 +271,23 @@ def pr_latest(results_map: Dict[str, Any], args, timestamps: List[str]):
                    marker=_markers[i],
                    elinewidth=_fig_elinewidth,
                    capsize=_fig_capsize)
+      # Annotate the plot with the model names.
+      for j in range(len(speedups[i])):
+        # Try to declutter the plot to avoid overlapping text when two lines
+        # are very close. To achieve this we alternate the alignment of
+        # the rotated annotations, either "bottom left" or "top right".
+        # For details on matplotlib's alignment, see
+        #   https://matplotlib.org/stable/gallery/text_labels_and_annotations/text_rotation.html
+        valignment = ('bottom', 'top')
+        halignment = ('left', 'right')
+        annotation = plt.annotate(
+            model_names[i][j], (j, speedups[i][j].avg),
+            rotation=45,
+            size=5.0,
+            verticalalignment=valignment[i % len(valignment)],
+            horizontalalignment=halignment[i % len(halignment)])
+        # Make overlapping text more legible by making it transparent.
+        annotation.set_alpha(0.5)
     plt.legend()
     plt.title(maketitle(args, f'Speedup over Oldest Benchmarked Inductor'))
     plt.xlabel('Workload Number')
