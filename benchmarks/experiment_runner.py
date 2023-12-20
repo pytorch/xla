@@ -10,12 +10,14 @@ import subprocess
 import sys
 import time
 import torch
+import torch._dynamo.utils as dynamo_utils
 import tiers
 from typing import Optional
 import torch_xla.debug.metrics as met
 from tqdm import tqdm
 from enum import Enum
 from torch.profiler import profile, ProfilerActivity
+import copy
 from torch.autograd import DeviceType
 from benchmark_model import ModelLoader
 from enum import Enum
@@ -229,6 +231,7 @@ class ExperimentRunner:
     self._mark_step(benchmark_experiment)
     self._synchronize(benchmark_experiment)
     met.clear_all()
+    dynamo_utils.counters.clear()
     metrics = OrderedDict()
 
     # Start timers.
@@ -286,6 +289,13 @@ class ExperimentRunner:
     if self._args.profile_cuda_cpu_individual_ops:
       self._collect_cuda_cpu_metrics_individual_ops(benchmark_experiment,
                                                     metrics, pytorch_profile)
+
+    # Dump Dynamo counters and collect metrics.
+    if self._args.dump_dynamo_counters:
+      self._dump_dynamo_counters(experiment_config, model_config,
+                                 repeat_iteration)
+    if self._args.collect_dynamo_counters:
+      metrics["dynamo_counters"] = copy.deepcopy(dynamo_utils.counters)
 
     # Dump PyTorch/XLA metrics and extract some.
     if benchmark_experiment.xla:
@@ -417,7 +427,7 @@ class ExperimentRunner:
       f.write("\n")
 
   ##############################################################################
-  # Helpers to dump and analyze the PyTorch profile                            #
+  # Helpers to dump and analyze the PyTorch profile, PyTorch/XLA metrics, etc. #
   ##############################################################################
 
   def _dump_pytorch_profile(self, profile, experiment_config: OrderedDict,
@@ -509,6 +519,16 @@ class ExperimentRunner:
         if "inductor_ops" not in metrics:
           metrics["inductor_ops"] = dict()
         metrics["inductor_ops"][op_name] = extract_prof_info(event)
+
+  def _dump_dynamo_counters(self, experiment_config, model_config,
+                            repeat_iteration: int):
+    text = f"{json.dumps(dynamo_utils.counters)}\n"
+    self._save_results_file(
+        text,
+        experiment_config,
+        model_config,
+        "dynamo-counters",
+        sub_dirname=str(repeat_iteration))
 
   def _dump_pytorch_xla_metrics(self, experiment_config, model_config,
                                 repeat_iteration):
@@ -705,6 +725,16 @@ def parse_args(args=None):
       "--dump-hlo",
       action="store_true",
       help="""Dump HLO modules by passing `--xla_dump_to` as `XLA_FLAGS`""",
+  )
+  parser.add_argument(
+      "--dump-dynamo-counters",
+      action="store_true",
+      help="""Dump dynamo counters.""",
+  )
+  parser.add_argument(
+      "--collect-dynamo-counters",
+      action="store_true",
+      help="""Collect dynamo counters as part of the regular metrics.""",
   )
   parser.add_argument(
       "--dump-pytorch-profiles",
