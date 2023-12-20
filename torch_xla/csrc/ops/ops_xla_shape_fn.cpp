@@ -236,8 +236,15 @@ xla::Shape Atan2OutputShape(const torch::lazy::Value& input,
         promoted.first, promoted.second,
         XlaHelpers::getBroadcastDimensions(promoted.first, promoted.second));
   };
-  return InferOutputShape({GetXlaShape(input), GetXlaShape(other)},
-                          lower_for_shape_fn);
+  xla::Shape input_shape = GetXlaShape(input);
+  xla::Shape other_shape = GetXlaShape(other);
+  if (xla::primitive_util::IsIntegralType(input_shape.element_type())) {
+    input_shape.set_element_type(xla::PrimitiveType::F32);
+  }
+  if (xla::primitive_util::IsIntegralType(other_shape.element_type())) {
+    other_shape.set_element_type(xla::PrimitiveType::F32);
+  }
+  return InferOutputShape({input_shape, other_shape}, lower_for_shape_fn);
 }
 
 xla::Shape AtanhOutputShape(const torch::lazy::Value& input) {
