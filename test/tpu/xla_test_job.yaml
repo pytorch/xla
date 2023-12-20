@@ -41,7 +41,7 @@ spec:
     - bash
     - -cxe
     - |
-      pip install expecttest
+      pip install expecttest==0.1.6
       pip install rich
 
       python3 /src/pytorch/xla/test/test_operations.py -v
