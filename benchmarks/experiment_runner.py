@@ -115,7 +115,8 @@ class ExperimentRunner:
         if not self.model_loader.is_compatible(benchmark_model,
                                                benchmark_experiment):
           logger.warning("SKIP incompatible model and experiment configs.")
-          self._save_results(experiment_cfg, model_cfg, {"error": "SKIP"})
+          self._save_results(benchmark_experiment.to_dict(),
+                             benchmark_model.to_dict(), {"error": "SKIP"})
           continue
 
         # Compose child process environment.
@@ -159,17 +160,21 @@ class ExperimentRunner:
         except subprocess.TimeoutExpired as e:
           self._fwd_captured_stdout_stderr(e.stdout, e.stderr)
           logger.error("TIMEOUT")
-          self._save_results(experiment_cfg, model_cfg, {"error": str(e)})
+          self._save_results(benchmark_experiment.to_dict(),
+                             benchmark_model.to_dict(), {"error": str(e)})
         except subprocess.CalledProcessError as e:
           self._fwd_captured_stdout_stderr(e.stdout, e.stderr)
           logger.error("ERROR in subprocess")
-          self._save_results(experiment_cfg, model_cfg, {"error": e.stderr})
+          self._save_results(benchmark_experiment.to_dict(),
+                             benchmark_model.to_dict(), {"error": e.stderr})
         except subprocess.SubprocessError as e:
           logger.error("ERROR when launching child process")
-          self._save_results(experiment_cfg, model_cfg, {"error": str(e)})
+          self._save_results(benchmark_experiment.to_dict(),
+                             benchmark_model.to_dict(), {"error": str(e)})
         except ValueError as e:
           logger.error(f"ERROR {e}")
-          self._save_results(experiment_cfg, model_cfg, {"error": str(e)})
+          self._save_results(benchmark_experiment.to_dict(),
+                             benchmark_model.to_dict(), {"error": str(e)})
 
   # TODO: Use `_unique_basename` instead.
   def _get_config_fingerprint(self, experiment_config: OrderedDict,
@@ -212,8 +217,6 @@ class ExperimentRunner:
             accumulated_metrics[k] = []
           accumulated_metrics[k].append(v)
 
-    # TODO: Use `experiment_config` and `model_config` when env vars are no
-    # longer included.
     self._save_results(benchmark_experiment.to_dict(),
                        benchmark_model.to_dict(), accumulated_metrics)
 
