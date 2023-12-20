@@ -25,7 +25,7 @@ class ExperimentLoader:
         "test": ["eval", "train"],
     }
 
-    # Apply command line chocies.
+    # Apply command line choices.
     if self._args.accelerator:
       config_choices["accelerator"] = list(set(self._args.accelerator))
     if self._args.xla:
