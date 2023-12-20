@@ -92,13 +92,17 @@ def process_file(args, results_map: Dict[str, Any], filename: str):
         continue
       total_times = r['metrics']['total_time'] if 'total_time' in r[
           'metrics'] else []
-      if len(total_times) <= 1:
+      # Skip the first three elements in total_times[]; the first one
+      # includes compilation time, the 2nd and 3rd warm up the caches.
+      skip_elems = 3
+      if len(total_times) <= skip_elems:
         continue
-      # Skip total_times[0] because it includes compilation time.
-      avg = np.average(total_times[1:])
+      avg = np.average(total_times[skip_elems:])
       # Standard deviation of the sample, i.e. N-1 denominator.
       # Note: avoid NaN when we compute the std with just one sample.
-      std = np.std(total_times[1:], ddof=1) if len(total_times) > 2 else 0.0
+      std = np.std(
+          total_times[skip_elems:],
+          ddof=1) if len(total_times) > skip_elems + 1 else 0.0
       dp = Datapoint(avg, std)
       median_total_time = np.median(total_times[1:])
       batch_size = r['experiment']['batch_size']
