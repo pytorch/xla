@@ -122,7 +122,13 @@ class ExperimentRunner:
         # Compose child process environment.
         process_env = os.environ.copy()
         benchmark_experiment.update_process_env(process_env)
-        benchmark_model.update_process_env(process_env)
+        try:
+          benchmark_model.update_process_env(process_env)
+        except ValueError as e:
+          logger.error(f"ERROR preparing child env: {e}")
+          self._save_results(benchmark_experiment.to_dict(),
+                             benchmark_model.to_dict(), {"error": str(e)})
+          continue
 
         # Setup HLO dumps.
         if self._args.dump_hlo:
