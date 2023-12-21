@@ -265,12 +265,11 @@ class XlaHelpers {
   static std::pair<xla::XlaOp, xla::XlaOp> PromoteSecondValue(xla::XlaOp op1,
                                                               xla::XlaOp op2);
 
-  // Validates the shapes of xla::XlaOp values: Ignore fp-precison if the shapes
-  // of op1 and op2 have same dimensions, otherwise the element-types must
-  // exactly match.  Eventually performs a broadcast with unbounded dynamic
-  // shapes to make sure the shapes of the returned xla::XlaOp values have the
-  // same shape. The first returned xla::XlaOp is op1 or a broadcast of it, and
-  // the second returned xla::XlaOp is either op2 or a broadcast ot it.
+  // If any of the shapes of input operations has unbounded dynamic dimensions,
+  // performs implicit broadcasting and return the broadcasted operations. For
+  // satic or bounded dynamic input shapes, validate the shapes and return the
+  // input operations. The implicit broadcasting in static and bounded dynamic
+  // cases will be handled eventually by the XlaBuilder.
   static std::pair<xla::XlaOp, xla::XlaOp> PromoteShapes(xla::XlaOp op1,
                                                          xla::XlaOp op2);
 
