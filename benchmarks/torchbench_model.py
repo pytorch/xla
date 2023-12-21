@@ -6,7 +6,6 @@ from os.path import abspath, exists
 import sys
 import torch
 import torch.nn as nn
-import torch.utils._pytree as pytree
 from torch._dynamo.testing import collect_results, reduce_to_scalar_loss
 from torch._dynamo.utils import clone_inputs
 import types
@@ -158,6 +157,7 @@ class TorchBenchModelLoader(ModelLoader):
             break
         if matched:
           return False
+
     return True
 
 
@@ -207,23 +207,12 @@ class TorchBenchModel(BenchmarkModel):
     # workaround "RuntimeError: not allowed to set torch.backends.cudnn flags"
     # torch.backends.__allow_nonbracketed_mutation_flag = True
 
-    benchmark = benchmark_cls(
-        test=self.benchmark_experiment.test,
-        device=self.benchmark_experiment.accelerator,
-        batch_size=self.benchmark_experiment.batch_size,
-    )
-
-    self.module, self.example_inputs = benchmark.get_module()
-
-    # Move the initialized model to XLA device.
-    device = self.benchmark_experiment.get_device()
-    if self.benchmark_experiment.xla:
-      self.module = self.module.to(device)
-      self.example_inputs = pytree.tree_map_only(torch.Tensor,
-                                                 lambda t: t.to(device),
-                                                 self.example_inputs)
-
-    self.benchmark_experiment.batch_size = benchmark.batch_size
+    if self.benchmark_experiment.accelerator == "cpu":
+      device = "cpu"
+    elif self.benchmark_experiment.accelerator == "cuda" and not self.benchmark_experiment.xla:
+      device = "cuda"
+    else:
+      device = str(self.benchmark_experiment.get_device())
 
     return benchmark_cls(
         test=self.benchmark_experiment.test,
