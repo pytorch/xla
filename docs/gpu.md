@@ -61,7 +61,7 @@ source ~/.bashrc
 
 ### Wheel
 ```
-pip3 install torch==2.1
+pip3 install torch==2.1.2
 pip3 install https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.1/torch_xla-2.1.0-cp38-cp38-manylinux_2_28_x86_64.whl
 ```
 
@@ -69,7 +69,7 @@ pip3 install https://storage.googleapis.com/pytorch-xla-releases/wheels/cuda/12.
 In order to run below examples, you need to clone the pytorch/xla repo to access the imagenet example(We already clone it in our docker).
 
 ```
-(pytorch) root@20ab2c7a2d06:/# export GPU_NUM_DEVICES=1 PJRT_DEVICE=CUDA
+(pytorch) root@20ab2c7a2d06:/# export GPU_NUM_DEVICES=1 PJRT_DEVICE=GPU
 (pytorch) root@20ab2c7a2d06:/# git clone --recursive https://github.com/pytorch/xla.git
 (pytorch) root@20ab2c7a2d06:/# python xla/test/test_train_mp_imagenet.py --fake_data
 ==> Preparing data..
