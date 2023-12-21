@@ -92,19 +92,16 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.abs, args, kwargs)
 
-  @unittest.skip
   def test_aten_acos_0(self):
     args = (torch.randn((10, 10)).to(torch.float32),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.acos, args, kwargs)
 
-  @unittest.skip
   def test_aten_acos_1(self):
     args = (torch.randn((10, 10)).to(torch.float16),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.acos, args, kwargs)
 
-  @unittest.skip
   def test_aten_acos_2(self):
     args = (torch.randint(0, 10, (10, 10)).to(torch.int32),)
     kwargs = dict()
