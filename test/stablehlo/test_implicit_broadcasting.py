@@ -44,7 +44,7 @@ class ImplicitBroadcasting(unittest.TestCase):
                   stablehlo_text) is not None)
 
   ## broadcasting with unbounded dynamic shapes
-  ### (X,?) * c
+  ### (10,?) * c
   def test_scalar_broadcast_with_unbounded_dynamic_shapes(self):
     a = torch.randn(()).to(device=device)
     b = torch.randn((10, 5)).to(device=device)
@@ -60,7 +60,7 @@ class ImplicitBroadcasting(unittest.TestCase):
             r'dynamic_broadcast_in_dim.*=.*\[0, 1\].*: \(tensor<10x\?xf32>, tensor<2xi32>\) -> tensor<10x\?xf32>',
             stablehlo_text) is not None)
 
-  ### (?) * (X)
+  ### (?) * (10)
   def test_same_rank_broadcast_with_unbounded_dynamic_shapes_1(self):
     a = torch.randn((10)).to(device=device)
     b = torch.randn((10)).to(device=device)
@@ -130,7 +130,7 @@ class ImplicitBroadcasting(unittest.TestCase):
             r'dynamic_broadcast_in_dim.*=.*\[0, 1\].*: \(tensor<\?x5xf32>, tensor<2xi32>\) -> tensor<\?x5xf32>',
             stablehlo_text) is not None)
 
-  ### (?,X,?)) * (1,?)
+  ### (?,5,?) * (1,?)
   def test_different_rank_broadcast_with_unbounded_dynamic_shapes_1(self):
     a = torch.randn((10, 5, 4)).to(device=device)
     b = torch.randn((1, 4)).to(device=device)
@@ -148,7 +148,7 @@ class ImplicitBroadcasting(unittest.TestCase):
             r'dynamic_broadcast_in_dim.*=.*\[0, 1, 2\].*: \(tensor<\?x5x\?xf32>, tensor<3xi32>\) -> tensor<\?x5x\?xf32>',
             stablehlo_text) is not None)
 
-  ### (?,?,?)) * (?,?)
+  ### (?,?,?) * (?,?)
   def test_different_rank_broadcast_with_unbounded_dynamic_shapes_2(self):
     a = torch.randn((10, 5, 4)).to(device=device)
     b = torch.randn((1, 4)).to(device=device)

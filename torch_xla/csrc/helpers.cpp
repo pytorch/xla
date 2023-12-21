@@ -524,6 +524,22 @@ std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteSecondValue(
                    op1, ConvertTo(op2, type2, type1, /*device=*/nullptr));
 }
 
+namespace {
+
+// Polulate 'dimensions' and 'dynamic_dimension' respectively with `count`
+// number of dimension sizes and dynamic dimensions from 'shape'.
+void ExtractDimensionSizesAndDynamicDimensionsFromShape(
+    const xla::Shape& shape, int64_t count, std::vector<int64_t>& dimensions,
+    std::vector<bool>& dynamic_dimensions) {
+  dimensions.insert(dimensions.end(), shape.dimensions().begin(),
+                    shape.dimensions().begin() + count);
+  dynamic_dimensions.insert(dynamic_dimensions.end(),
+                            shape.dynamic_dimensions().begin(),
+                            shape.dynamic_dimensions().begin() + count);
+}
+
+}  // namespace
+
 xla::Shape XlaHelpers::GetPromotedShape(const xla::Shape& shape1,
                                         const xla::Shape& shape2) {
   std::vector<int64_t> dimensions;
@@ -532,30 +548,18 @@ xla::Shape XlaHelpers::GetPromotedShape(const xla::Shape& shape1,
   // If the rank of a shape is bigger than then other, fill up the first
   // dimensions with the ones of the bigger.
   // Example:
-  //   shape1 = [9, 7, 6, 5, 2]
+  //   shape1 = [9, ?, 6, ?, ?]
   //   shape2 =       [6, 1, 2]
-  // Insert [9, 7] into the dimensions vector.
-  if (shape1.dimensions().size() > shape2.dimensions().size()) {
-    dimensions.insert(
-        dimensions.end(), shape1.dimensions().begin(),
-        shape1.dimensions().begin() +
-            (shape1.dimensions().size() - shape2.dimensions().size()));
-    dynamic_dimensions.insert(dynamic_dimensions.end(),
-                              shape1.dynamic_dimensions().begin(),
-                              shape1.dynamic_dimensions().begin() +
-                                  (shape1.dynamic_dimensions().size() -
-                                   shape2.dynamic_dimensions().size()));
-  } else if (shape2.dimensions().size() > shape1.dimensions().size()) {
-    dimensions.insert(
-        dimensions.end(), shape2.dimensions().begin(),
-        shape2.dimensions().begin() +
-            (shape2.dimensions().size() - shape1.dimensions().size()));
-    dynamic_dimensions.insert(dynamic_dimensions.end(),
-                              shape2.dynamic_dimensions().begin(),
-                              shape2.dynamic_dimensions().begin() +
-                                  (shape2.dynamic_dimensions().size() -
-                                   shape1.dynamic_dimensions().size()));
-  }
+  // Insert [9, ?] into the dimensions vector.
+  if (shape1.dimensions().size() > shape2.dimensions().size())
+    ExtractDimensionSizesAndDynamicDimensionsFromShape(
+        shape1, shape1.dimensions().size() - shape2.dimensions().size(),
+        dimensions, dynamic_dimensions);
+  else
+    ExtractDimensionSizesAndDynamicDimensionsFromShape(
+        shape2, shape2.dimensions().size() - shape1.dimensions().size(),
+        dimensions, dynamic_dimensions);
+
   // For the common dimensions, they must match, or one of them be 1.
   size_t min_size =
       std::min(shape1.dimensions().size(), shape2.dimensions().size());
@@ -694,10 +698,6 @@ std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteShapes(xla::XlaOp op1,
     return ImplicitBroadcastWithUnboundedDynamicShapes(op1, op2, shape);
   }
 
-  if (xla::ShapeUtil::Compatible(shape1, shape2)) {
-    // Fast path shortcut if the shapes already matches in dimensions.
-    return std::pair<xla::XlaOp, xla::XlaOp>(op1, op2);
-  }
   XLA_CHECK(xla::ShapeUtil::SameElementType(shape1, shape2))
       << shape1 << " and " << shape2;
 
@@ -754,6 +754,58 @@ xla::XlaOp XlaHelpers::ImplicitBroadcast(xla::XlaOp op,
   return new_op;
 }
 
+namespace {
+
+// Extract the 'num_dims' counts of dimension sizes from the 'op', reshape
+// them to 'tensor<1xi32>', and append them at 'op_dims' after prepending
+// 'pad_count' of 1's reshaped to 'tensor<1xi32>'.
+std::vector<xla::XlaOp> ExtractDimensionSizesWithPadding(const xla::XlaOp op,
+                                                         size_t num_dims,
+                                                         int pad_count) {
+  std::vector<xla::XlaOp> op_dims;
+  for (size_t i = 0; i < pad_count; i++) {
+    op_dims.push_back(
+        xla::Reshape(XlaHelpers::ScalarValue<int32_t>(1, op.builder()), {1}));
+  }
+
+  for (size_t i = 0; i < num_dims; i++) {
+    op_dims.push_back(xla::Reshape(xla::GetDimensionSize(op, i), {1}));
+  }
+
+  return op_dims;
+}
+
+// Stringify the broadcast dimensions to provide for the 'backend_config'
+// attribute of the generated custom_call.
+std::string StringifyBroadcastDimensions(std::vector<int64_t> broadcast_dims) {
+  std::string str("{broadcast_dimensions=[");
+  if (broadcast_dims.size() >= 1) {
+    str += std::to_string(broadcast_dims[0]);
+  }
+  for (size_t i = 1; i < broadcast_dims.size(); i++) {
+    str += ", " + std::to_string(broadcast_dims[i]);
+  }
+  str += "]}";
+  return str;
+};
+
+// Emit XLA custom call for dynamic_broadcast_in_dim.
+xla::XlaOp DynamicBroadcastInDim(xla::XlaOp op, const xla::Shape& final_shape,
+                                 xla::XlaOp final_broadcast_dimensions) {
+  const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(op);
+
+  std::vector<int64_t> op_broadcast_dims(shape.dimensions().size());
+  std::iota(op_broadcast_dims.begin(), op_broadcast_dims.end(),
+            final_shape.dimensions().size() - shape.dimensions().size());
+
+  return xla::CustomCall(
+      op.builder(), "mhlo.dynamic_broadcast_in_dim",
+      /*operands=*/{op, final_broadcast_dimensions}, /*shape*/ final_shape,
+      /*opaque=*/StringifyBroadcastDimensions(op_broadcast_dims));
+}
+
+}  // namespace
+
 std::pair<xla::XlaOp, xla::XlaOp>
 XlaHelpers::ImplicitBroadcastWithUnboundedDynamicShapes(
     xla::XlaOp op1, xla::XlaOp op2, const xla::Shape& shape) {
@@ -761,104 +813,41 @@ XlaHelpers::ImplicitBroadcastWithUnboundedDynamicShapes(
 
   const xla::Shape& shape1 = ShapeHelper::ShapeOfXlaOp(op1);
   const xla::Shape& shape2 = ShapeHelper::ShapeOfXlaOp(op2);
-  const auto& shape1_dims = shape1.dimensions();
-  const auto& shape2_dims = shape2.dimensions();
-  const auto& shape_dims = shape.dimensions();
 
-  XLA_CHECK((shape1_dims.size() == shape2_dims.size() &&
-             shape_dims.size() == shape1_dims.size()) ||
-            (shape1_dims.size() > shape2_dims.size() &&
-             shape_dims.size() == shape1_dims.size()) ||
-            (shape1_dims.size() < shape2_dims.size() &&
-             shape_dims.size() == shape2_dims.size()));
+  XLA_CHECK(shape.dimensions().size() ==
+            std::max(shape1.dimensions().size(), shape2.dimensions().size()));
 
-  int64_t size_delta = shape2_dims.size() - shape1_dims.size();
+  // Collect the dimension sizes of the 'op1' and 'op2' in 'op1_dims' and
+  // 'op2_dims' resp. with potential padding.
+  //   Example:
+  //     shape1 = [9, ?, 6, ?, ?]
+  //     shape2 =       [6, 1, 2]
+  //      shape = [9, ?, 6, ?, 2] where ?: represents unbounded dynamic size.
+  //
+  //   rank(shape1) = rank(shape): No padding needed and
+  //   the pre-broadcast result, 'op1_dims', just collects the dimension sizes
+  //   of shape1.
+  //     op1_dims = [9, ?, 6, ?, ?]
+  //   rank(shape2) < rank(shape): Make the rank of shape2 match
+  //   that of shape by padding it with 1's. The pre-broadcast result is
+  //   'op2_dims'.
+  //     op2_dims = [1, 1, 6, 1, 2]
+  std::vector<xla::XlaOp> op1_dims = ExtractDimensionSizesWithPadding(
+      op1, shape1.dimensions().size(),
+      shape.dimensions().size() - shape1.dimensions().size());
+  std::vector<xla::XlaOp> op2_dims = ExtractDimensionSizesWithPadding(
+      op2, shape2.dimensions().size(),
+      shape.dimensions().size() - shape2.dimensions().size());
 
-  // Extract the 'num_dims' counts of dimension sizes from the 'op' and append
-  // them at 'op_dims'.
-  auto extract_dim_size = [&](const xla::XlaOp op, const xla::Shape& op_shape,
-                              int num_dims, std::vector<xla::XlaOp>& op_dims) {
-    for (int i = 0; i < num_dims; i++) {
-      op_dims.push_back(xla::Reshape(xla::GetDimensionSize(op, i), {1}));
-    }
-  };
-
-  // Collect the dimension sizes of the broadcasted 'op1'.
-  // Example:
-  //   shape1 = [     1,    ?_1]
-  //   shape2 = [?_2, ?_2', 5]
-  //     ?: represents unbounded dynamic size and the prefix '_n' is used to
-  //        differentiate instances of
-  // We compute the followings:
-  //   op1_dims = [?_2, 1, ?_1]
-  //   op1_broadcast_dims = [1, 2]
-  std::vector<xla::XlaOp> op1_dims;
-  std::vector<int64_t> op1_broadcast_dims(shape1_dims.size());
-  int64_t op1_broadcast_dim_start = 0;
-  if (size_delta > 0) {
-    extract_dim_size(op2, shape2, size_delta, op1_dims);
-    op1_broadcast_dim_start = size_delta;
-  }
-  extract_dim_size(op1, shape1, shape1_dims.size(), op1_dims);
-  std::iota(op1_broadcast_dims.begin(), op1_broadcast_dims.end(),
-            op1_broadcast_dim_start);
-
-  // Collect the dimension sizes of the broadcasted 'op2'.
-  // Example:
-  //   shape1 = [     1,    ?_1]
-  //   shape2 = [?_2, ?_2', 5]
-  // We compute the followings:
-  //   op2_dims = [?_2, ?_2', 5]
-  //   op2_broadcast_dims = [0, 1, 2]
-  std::vector<xla::XlaOp> op2_dims;
-  std::vector<int64_t> op2_broadcast_dims(shape2_dims.size());
-  int64_t op2_broadcast_dim_start = 0;
-  if (size_delta < 0) {
-    extract_dim_size(op1, shape1, std::abs(size_delta), op2_dims);
-    op2_broadcast_dim_start = std::abs(size_delta);
-  }
-  extract_dim_size(op2, shape2, shape2_dims.size(), op2_dims);
-  std::iota(op2_broadcast_dims.begin(), op2_broadcast_dims.end(),
-            op2_broadcast_dim_start);
-
-  // The broadcasted shape is the max of the individual broadcasted shapes.
-  // Example:
-  //   shape1 = [     1,    ?_1]
-  //   shape2 = [?_2, ?_2', 5]
-  // We compute the followings:
-  //   op1_dims = [?_2, 1, ?_1]
-  //   op2_dims = [?_2, ?_2', 5]
-  //   output_dimensions = max(op1_dims, op2_dims);
-  auto output_dimensions =
+  // The broadcasted shape is the max of the individual pre-broadcasted shapes.
+  // final_broadcast_dimensions = max(op1_dims, op2_dims).
+  auto final_broadcast_dimensions =
       xla::Max(xla::ConcatInDim(op1.builder(), op1_dims, {0}),
                xla::ConcatInDim(op2.builder(), op2_dims, {0}));
 
-  // Stringify the broadcast dimensions to provide for the 'backend_config'
-  // attribute of the generated custom_call.
-  auto stringify_broadcast_dimensions =
-      [&](std::vector<int64_t> broadcast_dims) -> std::string {
-    std::string str("{broadcast_dimensions=[");
-    if (broadcast_dims.size() >= 1) {
-      str += std::to_string(broadcast_dims[0]);
-    }
-    for (size_t i = 1; i < broadcast_dims.size(); i++) {
-      str += ", " + std::to_string(broadcast_dims[i]);
-    }
-    str += "]}";
-    return str;
-  };
-
-  auto broadcasted_op1 = xla::CustomCall(
-      op1.builder(), "mhlo.dynamic_broadcast_in_dim",
-      /*operands=*/{op1, output_dimensions}, /*shape*/ shape,
-      /*opaque=*/stringify_broadcast_dimensions(op1_broadcast_dims));
-
-  auto broadcasted_op2 = xla::CustomCall(
-      op2.builder(), "mhlo.dynamic_broadcast_in_dim",
-      /*operands=*/{op2, output_dimensions}, /*shape*/ shape,
-      /*opaque=*/stringify_broadcast_dimensions(op2_broadcast_dims));
-
-  return std::pair<xla::XlaOp, xla::XlaOp>(broadcasted_op1, broadcasted_op2);
+  return std::pair<xla::XlaOp, xla::XlaOp>(
+      DynamicBroadcastInDim(op1, shape, final_broadcast_dimensions),
+      DynamicBroadcastInDim(op2, shape, final_broadcast_dimensions));
 }
 
 xla::XlaOp XlaHelpers::PromotedBinaryOp(
