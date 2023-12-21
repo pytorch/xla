@@ -164,6 +164,21 @@ std::vector<std::vector<int64_t>> ExtractGroupMembers(
   return groups;
 }
 
+std::vector<int64_t> ParseStringToIntVector(const std::string& str) {
+  std::istringstream ss;
+  ss.str(str);
+  std::vector<int64_t> result;
+  for (std::string s; std::getline(ss, s, ',');) {
+    try {
+      result.push_back(std::stoi(s));
+    } catch (std::invalid_argument const& e) {
+      TF_LOG(ERROR) << "Error parsing string: " << str
+                    << " with an exception: " << e.what();
+    }
+  }
+  return result;
+}
+
 }  // namespace
 
 bool ShardingUtil::SetHloSharding(LoweringContext* lowering_ctx) {
@@ -609,15 +624,24 @@ runtime::ComputationClient::DataPtr ShardingUtil::CreateShardedData(
 
 std::tuple<std::vector<int64_t>, std::vector<int64_t>>
 ShardingUtil::GetAutoShardingMesh() {
-  std::vector<int64_t> mesh_shape = {4, 1, 1};
-  int64_t total_devices = 1;
-  for (auto i : mesh_shape) {
-    total_devices *= i;
+  // Auto-sharding uses mesh_shape = {n_devices, 1} if XLA_AUTO_SPMD_MESH
+  // is not set. XLA_AUTO_SPMD_MESH takes a form of string, "2,2" which
+  // corresponds to a 2-by-2 mesh.
+  std::vector<int64_t> mesh_shape = ParseStringToIntVector(
+      runtime::sys_util::GetEnvString("XLA_AUTO_SPMD_MESH", ""));
+  std::vector<int64_t> device_mesh_ids;
+  if (!mesh_shape.empty()) {
+    int64_t total_devices = 1;
+    for (auto i : mesh_shape) {
+      total_devices *= i;
+    }
+    XLA_CHECK_EQ(total_devices,
+                 runtime::GetComputationClient()->GetAllDevices().size())
+        << "Invalid auto-sharding mesh_shape: "
+        << absl::StrJoin(mesh_shape, ",");
+    device_mesh_ids = std::vector<int64_t>(total_devices);
+    std::iota(device_mesh_ids.begin(), device_mesh_ids.end(), 0);
   }
-  std::vector<int64_t> device_mesh_ids = std::vector<int64_t>(total_devices);
-  std::iota(device_mesh_ids.begin(), device_mesh_ids.end(), 0);
-
-  // TODO(yeounoh) allow custom mesh to be used.
   return std::make_tuple(mesh_shape, device_mesh_ids);
 }
 

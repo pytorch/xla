@@ -47,8 +47,6 @@ class PjRtComputationClient : public ComputationClient {
   // Reshard and return data sharded by `sharding` spec. This is a no-op if
   // the input sharding spec is identical to the target `sharding` sharding
   // spec.
-  DataPtr ReshardData(const DataPtr& handle,
-                      const xla::OpSharding& sharding) override;
   std::vector<DataPtr> ReshardData(
       absl::Span<const DataPtr> handles,
       absl::Span<const xla::OpSharding> shardings) override;

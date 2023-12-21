@@ -281,8 +281,6 @@ class ComputationClient {
 
   // Reshard and return data sharded by `sharding` spec. This is a no-op if the
   // input sharding spec is identical to the target `sharding` sharding spec.
-  virtual DataPtr ReshardData(const DataPtr& handle,
-                              const xla::OpSharding& sharding) = 0;
   virtual std::vector<DataPtr> ReshardData(
       absl::Span<const DataPtr> handles,
       absl::Span<const xla::OpSharding> shardings) = 0;

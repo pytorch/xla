@@ -1306,6 +1306,7 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
       runtime::sys_util::GetEnvString("PJRT_DEVICE", "").size() > 0;
   static const bool use_autosharding =
       runtime::sys_util::GetEnvBool("XLA_AUTO_SPMD", false);
+  std::cout << "*** use_autosharding=" << use_autosharding << std::endl;
   LoweringContext lowering_ctx("SyncTensorsGraph", coll.device,
                                po_data->post_order,
                                std::move(po_data->emission_map));
@@ -1366,18 +1367,16 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
   //   TF_VLOG(3) << "Auto SPMD partitioning enabled!";
   //   const xla::HloModuleProto& module_proto = computation.proto();
 
-  //   // TODO(yeounoh) use automatic mesh construction.
   //   xla::ExecutionOptions execution_options;
-  //   //execution_options.set_use_auto_spmd_partitioning(true);
-  //   // config.set_auto_spmd_partitioning_mesh_shape(
-  //   //     absl::GetFlag(FLAGS_auto_spmd_partition_mesh_shape));
-  //   // config.set_auto_spmd_partitioning_mesh_ids(
-  //   //     absl::GetFlag(FLAGS_auto_spmd_partition_mesh_ids));
-
   //   xla::HloModuleConfig module_config =
   //       ConsumeValue(xla::HloModule::CreateModuleConfigFromProto(
   //           module_proto, xla::DebugOptions(), &execution_options));
   //   module_config.set_use_auto_spmd_partitioning(true);
+  //   auto mesh_shape_ids = ShardingUtil::GetAutoShardingMesh();
+  //   std::vector<int64_t> auto_spmd_mesh_shape = std::get<0>(mesh_shape_ids);
+  //   std::vector<int64_t> auto_spmd_mesh_ids = std::get<1>(mesh_shape_ids);
+  //   module_config.set_auto_spmd_partitioning_mesh_shape(auto_spmd_mesh_shape);
+  //   module_config.set_auto_spmd_partitioning_mesh_ids(auto_spmd_mesh_ids);
 
   //   std::unique_ptr<xla::HloModule> hlo_module = ConsumeValue(
   //       xla::HloModule::CreateFromProto(module_proto, module_config));
@@ -1402,7 +1401,7 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
   std::vector<runtime::ComputationClient::CompileInstance> instances;
   instances.push_back({/*computation=*/std::move(computation),
                        /*compilation_device=*/coll.device.toString(),
-/*devices=*/
+                       /*devices=*/
                        runtime::GetComputationClient()->GetCompilationDevices(
                            coll.device.toString(), devices),
                        /*output_shape=*/&shape,
@@ -1457,7 +1456,7 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
   if (use_autosharding) {
     const xla::HloModuleProto& computation_proto =
         computations.front()->computation().proto();
-ShardingUtil::ReshardParameters(computation_proto, &tensors,
+    ShardingUtil::ReshardParameters(computation_proto, &tensors,
                                     &po_data->parameters_data,
                                     &po_data->post_order);
     TF_VLOG(5) << "Parameter sequence hash after resharding: "
