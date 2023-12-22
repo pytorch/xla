@@ -267,7 +267,7 @@ class XlaHelpers {
 
   // If any of the shapes of input operations has unbounded dynamic dimensions,
   // performs implicit broadcasting and return the broadcasted operations. For
-  // satic or bounded dynamic input shapes, validate the shapes and return the
+  // static or bounded dynamic input shapes, validate the shapes and return the
   // input operations. The implicit broadcasting in static and bounded dynamic
   // cases will be handled eventually by the XlaBuilder.
   static std::pair<xla::XlaOp, xla::XlaOp> PromoteShapes(xla::XlaOp op1,
@@ -284,11 +284,6 @@ class XlaHelpers {
                                                          xla::XlaOp op2);
 
   // Given the two shape 'shape1' and 'shape2', infers the broadcasted shape.
-  // When the inputs shapes have static or bounded dynamic dimension sizes, the
-  // broadcasted shape is determined using the numpy broadcasting rules. If the
-  // input shapes constitute unbounded dynamic sizes, then the corresponding
-  // dimension size in the inferred broadcasted shape is marked unbounded
-  // dynamic.
   static xla::Shape GetPromotedShape(const xla::Shape& shape1,
                                      const xla::Shape& shape2);
 
