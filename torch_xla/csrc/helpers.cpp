@@ -525,8 +525,8 @@ std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteSecondValue(
 
 namespace {
 
-// Polulate 'dimensions' and 'dynamic_dimension' respectively with `count`
-// number of dimension sizes and dynamic dimensions from 'shape'.
+// Polulate 'dimensions' and 'dynamic_dimension' from left-most dimensions of
+// 'shape' respective to 'count'.
 void ExtractDimensionSizesAndDynamicDimensionsFromShape(
     const xla::Shape& shape, int64_t count, std::vector<int64_t>& dimensions,
     std::vector<bool>& dynamic_dimensions) {
@@ -577,19 +577,46 @@ xla::Shape XlaHelpers::GetPromotedShape(const xla::Shape& shape1,
     XLA_CHECK(dim1 == dim2 || dim1 == 1 || dim2 == 1 ||
               dim1 == xla::Shape::kUnboundedSize ||
               dim2 == xla::Shape::kUnboundedSize);
-    if (dim1 == 0 || dim2 == 0) {
-      dimensions.push_back(0);
+
+    // TODO: Consider replacing the broadcasting logic below with
+    // 'xla::ShapeInference::InferDegenerateDimensionBroadcastShape' resuing the
+    // existing xla shape inference machinery. The function is better suited for
+    // inferring shape when the participating
+    // ranks are the same. However, the function has private visisbilty and
+    // needs some refactoring before use.
+    if (dim1 == 1 || dim2 == 1) {
+      // dim1 | dim2 | result
+      // 1   | X   | X
+      // 1   | <=X | <=X
+      // 1   | ?   | ?
+      // X   | 1   | X
+      // <=X | 1   | <=X
+      // ?   | 1   | ?
+      dimensions.push_back(dim1 == 1 ? dim2 : dim1);
+      dynamic_dimensions.push_back(dim1 == 1 ? dynamic_dim2 : dynamic_dim1);
+    } else if (dim1 == dim2) {
+      // dim1 | dim2 | result
+      // X   | X   | X
+      // X   | <=X | <=X
+      // <=X | X   | <=X
+      // <=X | <=X | <=X
+      // ?   | ?   | ?
+      dimensions.push_back(dim1);
       dynamic_dimensions.push_back(dynamic_dim1 || dynamic_dim2);
-    } else if (dim1 == xla::Shape::kUnboundedSize ||
-               dim2 == xla::Shape::kUnboundedSize) {
-      dimensions.push_back(xla::Shape::kUnboundedSize);
-      dynamic_dimensions.push_back(true);
     } else {
-      dimensions.push_back(std::max<int64_t>(dim1, dim2));
-      dynamic_dimensions.push_back(dynamic_dim1 || dynamic_dim2);
+      // dim1 == xla::Shape::kUnboundedSize || dim2 ==
+      // xla::Shape::kUnboundedSize
+      //
+      // dim1 | dim2 | result
+      // X   | ?   | X
+      // ?   | X   | X
+      // <=X | ?   | ?
+      // ?   | <=X | ?
+      dimensions.push_back(dim1 == xla::Shape::kUnboundedSize ? dim2 : dim1);
+      dynamic_dimensions.push_back(
+          dim1 == xla::Shape::kUnboundedSize ? dynamic_dim2 : dynamic_dim1);
     }
   }
-
   return xla::ShapeUtil::MakeShape(shape1.element_type(), dimensions,
                                    dynamic_dimensions);
 }
@@ -663,8 +690,8 @@ xla::Shape XlaHelpers::GetPromotedDynamicShape(const xla::Shape& shape1,
           << ", both dimension are static with real size " << ubound1 << " and "
           << ubound2;
     } else {
-      // For now, if both dimension are dynamic and has the same upper bound, we
-      // regard this dimension to be broadcastable.
+      // For now, if both dimension are dynamic and has the same upper bound,
+      // we regard this dimension to be broadcastable.
       XLA_CHECK((is_dim1_dynamic && !is_dim2_dynamic && ubound2 == 1) ||
                 (is_dim2_dynamic && !is_dim1_dynamic && ubound1 == 1) ||
                 (is_dim1_dynamic && is_dim2_dynamic && ubound1 == ubound2))
@@ -683,7 +710,6 @@ xla::Shape XlaHelpers::GetPromotedDynamicShape(const xla::Shape& shape1,
       PromoteType(shape1.element_type(), shape2.element_type()), upper_bounds,
       dyn_dims);
 
-  std::cout << xla::ShapeUtil::HumanString(promoted_shape);
   return promoted_shape;
 }
 
@@ -693,7 +719,7 @@ std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteShapes(xla::XlaOp op1,
   const xla::Shape& shape2 = ShapeHelper::ShapeOfXlaOp(op2);
 
   xla::Shape shape = GetPromotedShape(shape1, shape2);
-  if (shape.is_unbounded_dynamic()) {
+  if (shape1.is_unbounded_dynamic() || shape2.is_unbounded_dynamic()) {
     return ImplicitBroadcastWithUnboundedDynamicShapes(op1, op2, shape);
   }
 
@@ -808,11 +834,10 @@ xla::XlaOp DynamicBroadcastInDim(xla::XlaOp op, const xla::Shape& final_shape,
 std::pair<xla::XlaOp, xla::XlaOp>
 XlaHelpers::ImplicitBroadcastWithUnboundedDynamicShapes(
     xla::XlaOp op1, xla::XlaOp op2, const xla::Shape& shape) {
-  XLA_CHECK(shape.is_unbounded_dynamic());
-
   const xla::Shape& shape1 = ShapeHelper::ShapeOfXlaOp(op1);
   const xla::Shape& shape2 = ShapeHelper::ShapeOfXlaOp(op2);
 
+  XLA_CHECK(shape1.is_unbounded_dynamic() || shape2.is_unbounded_dynamic());
   XLA_CHECK(shape.dimensions().size() ==
             std::max(shape1.dimensions().size(), shape2.dimensions().size()));
 
@@ -838,8 +863,8 @@ XlaHelpers::ImplicitBroadcastWithUnboundedDynamicShapes(
       op2, shape2.dimensions().size(),
       shape.dimensions().size() - shape2.dimensions().size());
 
-  // The broadcasted shape is the max of the individual pre-broadcasted shapes.
-  // final_broadcast_dimensions = max(op1_dims, op2_dims).
+  // The broadcasted shape is the max of the individual pre-broadcasted
+  // shapes. final_broadcast_dimensions = max(op1_dims, op2_dims).
   auto final_broadcast_dimensions =
       xla::Max(xla::ConcatInDim(op1.builder(), op1_dims, {0}),
                xla::ConcatInDim(op2.builder(), op2_dims, {0}));
@@ -904,7 +929,8 @@ xla::StatusOr<xla::XlaComputation> XlaHelpers::WrapXlaComputation(
 
   // Rebuild aliasing.
   for (const auto& [input_index, output_index] : input_output_alias_pair) {
-    // Both input and output will be a tuple so parameter_number will always be
+    // Both input and output will be a tuple so parameter_number will always
+    // be
     // 0
     builder.SetUpAlias(/*output_index=*/xla::ShapeIndex({output_index}),
                        /*param_number=*/0,
