@@ -174,8 +174,14 @@ void PjRtComputationClient::PjRtData::Assign(
 }
 
 ComputationClient::DataPtr PjRtComputationClient::CreateDataPlaceholder(
-    std::string device, xla::Shape shape) {
-  return std::make_shared<PjRtData>(device, shape);
+    std::string device, xla::Shape shape,
+    std::optional<xla::OpSharding> sharding) {
+  if (sharding.has_value()) {
+    return std::make_shared<PjRtShardedData>(
+        std::move(device), std::move(shape), std::move(*sharding));
+  }
+
+  return std::make_shared<PjRtData>(std::move(device), std::move(shape));
 }
 
 std::vector<ComputationClient::DataPtr> PjRtComputationClient::GetDataShards(
@@ -213,8 +219,9 @@ ComputationClient::DataPtr PjRtComputationClient::GetDataShard(
 }
 
 ComputationClient::DataPtr PjRtComputationClient::WrapDataShards(
-    const std::vector<DataPtr>& shards, std::string device, xla::Shape shape,
+    absl::Span<const DataPtr> shards, std::string device, xla::Shape shape,
     xla::OpSharding sharding) {
+  XLA_CHECK_EQ(shards.size(), client_->addressable_device_count());
   std::vector<std::shared_ptr<PjRtData>> pjrt_data_shards;
   pjrt_data_shards.reserve(shards.size());
   for (auto& shard : shards) {
