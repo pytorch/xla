@@ -83,8 +83,7 @@ InitializePjRt(const std::string& device_type) {
     profiler::RegisterProfilerForPlugin(c_api);
   } else if (device_type == "TPU_LEGACY") {
     XLA_ERROR() << "TPU_LEGACY client is no longer available.";
-  } else if (device_type == "GPU" || device_type == "CUDA" ||
-             device_type == "ROCM") {
+  } else if (device_type == "CUDA") {
     TF_VLOG(1) << "Initializing PjRt GPU client...";
     bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncGpuClient, true);
     int local_process_rank = sys_util::GetEnvInt(env::kEnvPjRtLocalRank, 0);

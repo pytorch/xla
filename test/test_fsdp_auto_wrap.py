@@ -31,9 +31,8 @@ class TestNoBackwardModule(test_utils.XlaTestCase):
       hidden2 = self.fc2(x)
       return hidden1, hidden2
 
-  @unittest.skipIf(xr.device_type() in (
-      'GPU', 'ROCM', 'CUDA'
-  ), "This test fails only on GPU with 03/30 TF-pin update (https://github.com/pytorch/xla/pull/4840)"
+  @unittest.skipIf(xr.device_type() == 'CUDA',
+  "This test fails only on GPU with 03/30 TF-pin update (https://github.com/pytorch/xla/pull/4840)"
                   )
   def test(self):
     dev = xm.xla_device()
@@ -50,7 +49,7 @@ class TestNoBackwardModule(test_utils.XlaTestCase):
 
 def _mp_fn(index):
   device = xm.xla_device()
-  if xm.xla_device_hw(device) in ('TPU', 'GPU', 'CUDA', 'ROCM'):
+  if xm.xla_device_hw(device) in ('TPU', 'CUDA'):
     test = unittest.main(exit=False)
     sys.exit(0 if test.result.wasSuccessful() else 1)
   else:
