@@ -29,13 +29,15 @@ class IfrtComputationClient : public ComputationClient {
   IfrtComputationClient();
   ~IfrtComputationClient();
 
-  DataPtr CreateDataPlaceholder(std::string device, xla::Shape shape) override;
+  DataPtr CreateDataPlaceholder(
+      std::string device, xla::Shape shape,
+      std::optional<xla::OpSharding> sharding = std::nullopt) override;
 
   std::vector<DataPtr> GetDataShards(DataPtr data) override;
 
   DataPtr GetDataShard(DataPtr data, size_t index) override;
 
-  DataPtr WrapDataShards(const std::vector<DataPtr>& shards, std::string device,
+  DataPtr WrapDataShards(absl::Span<const DataPtr> shards, std::string device,
                          xla::Shape shape, xla::OpSharding sharding) override;
 
   std::optional<xla::OpSharding> GetDataSharding(DataPtr handle) override;

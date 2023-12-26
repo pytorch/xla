@@ -588,8 +588,8 @@ std::vector<torch::lazy::BackendDataPtr> ShardingUtil::CreateShardedPlaceholder(
     // hold the corresponding computation results for both sharding &
     // replication.
     auto sharded_data_placeholder =
-        runtime::GetComputationClient()->WrapDataShards(
-            {}, GetVirtualDevice().toString(), sharding_specs[i]->shape,
+        runtime::GetComputationClient()->CreateDataPlaceholder(
+            GetVirtualDevice().toString(), sharding_specs[i]->shape,
             sharding_specs[i]->sharding);
 
     // Register the sharded data placeholder to the tensor and its node.
@@ -644,8 +644,8 @@ void ShardingUtil::PrepareOutputShardingPropagation(
     // hold the corresponding computation results for both sharding &
     // replication.
     auto sharded_data_placeholder =
-        runtime::GetComputationClient()->WrapDataShards(
-            {}, GetVirtualDevice().toString(), (*sharding_specs)[i]->shape,
+        runtime::GetComputationClient()->CreateDataPlaceholder(
+            GetVirtualDevice().toString(), (*sharding_specs)[i]->shape,
             (*sharding_specs)[i]->sharding);
 
     // Register the sharded data placeholder to the tensor and its node.
