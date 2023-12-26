@@ -15,12 +15,8 @@ std::string XlaDeviceTypeToString(XlaDeviceType hw_type) {
   switch (hw_type) {
     case XlaDeviceType::CPU:
       return "CPU";
-    case XlaDeviceType::GPU:
-      return "GPU";
     case XlaDeviceType::CUDA:
       return "CUDA";
-    case XlaDeviceType::ROCM:
-      return "ROCM";
     case XlaDeviceType::TPU:
       return "TPU";
     case XlaDeviceType::XPU:
@@ -63,15 +59,9 @@ torch::lazy::BackendDevice ParseDeviceString(const std::string& device_spec) {
   } else if (device_spec_parts[0] == "CPU") {
     device_type->type =
         static_cast<std::underlying_type_t<XlaDeviceType>>(XlaDeviceType::CPU);
-  } else if (device_spec_parts[0] == "ROCM") {
-    device_type->type =
-        static_cast<std::underlying_type_t<XlaDeviceType>>(XlaDeviceType::ROCM);
   } else if (device_spec_parts[0] == "CUDA") {
     device_type->type =
         static_cast<std::underlying_type_t<XlaDeviceType>>(XlaDeviceType::CUDA);
-  } else if (device_spec_parts[0] == "GPU") {
-    device_type->type =
-        static_cast<std::underlying_type_t<XlaDeviceType>>(XlaDeviceType::GPU);
   } else if (device_spec_parts[0] == "XPU") {
     device_type->type =
         static_cast<std::underlying_type_t<XlaDeviceType>>(XlaDeviceType::XPU);

@@ -114,8 +114,7 @@ def xla_device(n: Optional[int] = None,
     A `torch.device` representing an XLA device.
   """
   # TODO(xiowei replace gpu with cuda): Remove the warning message at r2.2 release.
-  pjrt_device = xu.getenv_as(xenv.PJRT_DEVICE, str)
-  if pjrt_device.casefold() == 'gpu':
+  if device_type().casefold() == 'gpu':
     warnings.warn(
         'PJRT_DEVICE=GPU is being deprecate. Please replace PJRT_DEVICE=GPU with PJRT_DEVICE=CUDA.'
     )
