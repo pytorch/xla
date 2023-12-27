@@ -3,8 +3,8 @@ from torch_xla.experimental import plugins
 from torch_xla._internal import tpu
 
 class GpuPlugin(plugins.DevicePlugin):
-  def library_path(self):
-    return None
+  def library_path(self) -> str:
+    return os.path.join(os.path.dirname(__file__), 'pjrt_c_api_gpu_plugin.so')
 
   # def host_index(self):
   #   return 0
