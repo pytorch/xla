@@ -3,14 +3,8 @@ import logging
 import re
 import torch
 import torch.nn as nn
-import torch._dynamo as dynamo
 from torch._dynamo.testing import collect_results
-import types
-
-try:
-  from .util import move_to_device
-except ImportError:
-  from util import move_to_device
+from util import move_to_device
 
 logger = logging.getLogger(__name__)
 
@@ -163,3 +157,10 @@ class BenchmarkModel:
     d["suite_name"] = self.suite_name
     d["model_name"] = self.model_name
     return d
+
+  @property
+  def default_precision_flag(self):
+    return None
+
+  def update_process_env(self, process_env):
+    pass

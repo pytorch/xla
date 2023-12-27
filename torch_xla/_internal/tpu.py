@@ -16,6 +16,7 @@ import torch_xla
 import torch_xla.utils.utils as xu
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.core.xla_model as xm
+from torch_xla.experimental import plugins
 
 _GCE_METADATA_ROOT_URL = 'http://metadata.google.internal/computeMetadata/v1'
 _ACCELERATOR_TYPE_TO_HOST_BOUNDS = {
@@ -319,3 +320,26 @@ def _spmd_find_master_ip(current_worker_hostname: str) -> str:
     if proc == 0:
       return str(ip_address(ip))
   raise RuntimeError('Could not find IP of host running process 0')
+
+
+class TpuPlugin(plugins.DevicePlugin):
+
+  def library_path(self):
+    libtpu_path = os.getenv('TPU_LIBRARY_PATH') or os.getenv(
+        'PTXLA_TPU_LIBRARY_PATH')
+    if not libtpu_path:
+      raise EnvironmentError('libtpu not found')
+
+    return libtpu_path
+
+  def host_index(self):
+    return worker_id()
+
+  def configure_single_process(self):
+    return configure_one_chip_topology()
+
+  def configure_multiprocess(self, local_rank, local_world_size):
+    return configure_topology(local_rank, local_world_size)
+
+  def physical_chip_count(self):
+    return num_available_chips()

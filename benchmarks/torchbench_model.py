@@ -6,17 +6,11 @@ from os.path import abspath, exists
 import sys
 import torch
 import torch.nn as nn
-import torch.utils._pytree as pytree
 from torch._dynamo.testing import collect_results, reduce_to_scalar_loss
 from torch._dynamo.utils import clone_inputs
 import types
-
-try:
-  from .util import move_to_device, set_cwd
-  from .benchmark_model import ModelLoader, BenchmarkModel
-except ImportError:
-  from util import move_to_device, set_cwd
-  from benchmark_model import ModelLoader, BenchmarkModel
+from util import move_to_device, set_cwd
+from benchmark_model import ModelLoader, BenchmarkModel
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +55,8 @@ DENY_LIST = {
             "accelerator": "tpu"
         },
     ],  # not implemented
+    # self.load_benchmark() exits the main process. See issue #6207.
+    "pytorch_CycleGAN_and_pix2pix": [{}],
     "pyhpc_equation_of_state": [{
         "test": "train"
     },],  # not implemented
@@ -73,6 +69,12 @@ DENY_LIST = {
     "pytorch_struct": [{
         "test": "eval"
     },],  # not implemented
+    "pytorch_unet": [
+        {
+            # self.load_benchmark() exits the main process. See issue #6207.
+            "xla": "PJRT",
+        },
+    ],
     "resnet50_quantized_qat": [
         {
             "test": "eval",
@@ -83,6 +85,12 @@ DENY_LIST = {
             "accelerator": "tpu"
         },
     ],  # not implemented
+    "tacotron2": [
+        {
+            # self.load_benchmark() exits the main process. See issue #6207.
+            "xla": "PJRT",
+        },
+    ],
     # https://github.com/pytorch/pytorch/issues/99438
     "vision_maskrcnn": [{}],
 }
@@ -149,6 +157,7 @@ class TorchBenchModelLoader(ModelLoader):
             break
         if matched:
           return False
+
     return True
 
 
@@ -164,6 +173,24 @@ class TorchBenchModel(BenchmarkModel):
     """
     self.optimizer_class = torch.optim.Adam
 
+    benchmark = self.load_benchmark()
+
+    self.module, self.example_inputs = benchmark.get_module()
+
+    self.benchmark_experiment.batch_size = benchmark.batch_size
+
+    # Torchbench has quite different setup for yolov3, so directly passing
+    # the right example_inputs
+    if self.model_name == "yolov3":
+      self.example_inputs = (torch.rand(self.benchmark_experiment.batch_size, 3,
+                                        384, 512),)
+    if self.benchmark_experiment.test == "train" and self.model_name in DETECTRON2_MODELS:
+      self.optimizer = benchmark.optimizer
+
+    del benchmark
+    gc.collect()
+
+  def load_benchmark(self):
     try:
       module = importlib.import_module(
           f"torchbenchmark.models.{self.model_name}")
@@ -180,34 +207,68 @@ class TorchBenchModel(BenchmarkModel):
     # workaround "RuntimeError: not allowed to set torch.backends.cudnn flags"
     # torch.backends.__allow_nonbracketed_mutation_flag = True
 
-    benchmark = benchmark_cls(
+    if self.benchmark_experiment.accelerator == "cpu":
+      device = "cpu"
+    elif self.benchmark_experiment.accelerator == "cuda" and not self.benchmark_experiment.xla:
+      device = "cuda"
+    else:
+      device = str(self.benchmark_experiment.get_device())
+
+    return benchmark_cls(
         test=self.benchmark_experiment.test,
-        device=self.benchmark_experiment.accelerator,
+        device=device,
         batch_size=self.benchmark_experiment.batch_size,
     )
 
-    self.module, self.example_inputs = benchmark.get_module()
+  @property
+  def default_precision_flag(self):
+    """
+    Get the default precision config to XLA, if present.
 
-    # Move the initialized model to XLA device.
-    if self.benchmark_experiment.xla:
-      device = self.benchmark_experiment.get_device()
-      self.module = self.module.to(device)
-      self.example_inputs = pytree.tree_map_only(torch.Tensor,
-                                                 lambda t: t.to(device),
-                                                 self.example_inputs)
+    Whenever a model has a default precision for cuda set
+    we need to set proper environment flags so XLA catches
+    the requird precision.
 
-    self.benchmark_experiment.batch_size = benchmark.batch_size
+    This function is a workaround. Proper solution requires
+    changes to the PT/XLA bridge so that the input shape
+    is properly inferred after issuing converts to `torch.nn.Module`.
+    """
+    test = self.benchmark_experiment.test
+    try:
+      benchmark = self.load_benchmark()
+    except Exception:
+      logger.exception("Cannot load benchmark model")
+      return None
 
-    # Torchbench has quite different setup for yolov3, so directly passing
-    # the right example_inputs
-    if self.model_name == "yolov3":
-      self.example_inputs = (torch.rand(self.benchmark_experiment.batch_size, 3,
-                                        384, 512),)
-    if self.benchmark_experiment.test == "train" and self.model_name in DETECTRON2_MODELS:
-      self.optimizer = benchmark.optimizer
+    if test == "eval" and hasattr(benchmark, 'DEFAULT_EVAL_CUDA_PRECISION'):
+      precision = benchmark.DEFAULT_EVAL_CUDA_PRECISION
+    elif test == "train" and hasattr(benchmark, 'DEFAULT_TRAIN_CUDA_PRECISION'):
+      precision = benchmark.DEFAULT_TRAIN_CUDA_PRECISION
+    else:
+      logger.warning("No default precision set. No patching needed.")
+      return None
 
     del benchmark
     gc.collect()
+
+    precision_flag = None
+    if precision == "fp16":
+      precision_flag = 'XLA_USE_FP16'
+    elif precision == "amp":
+      raise ValueError(
+          f"AMP for PT/XLA:GPU is not implemented yet for torchbench models")
+    elif precision == "bf16":
+      precision_flag = 'XLA_USE_BF16'
+    elif precision == "fp32":
+      logger.warning("Sticking with the default fp32 precision.")
+    else:
+      raise ValueError(f"Unknown precision: {precision}")
+    return precision_flag
+
+  def update_process_env(self, process_env):
+    precision_flag = self.default_precision_flag
+    if precision_flag is not None:
+      process_env[precision_flag] = '1'
 
   def pick_grad(self):
     # special case
