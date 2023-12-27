@@ -166,9 +166,20 @@ class XlaHelpers {
                                          false);
   }
 
+  // If 'output_sizes' are static, then create xla::Reshape. Else
+  // creates custom_call to express dynamic reshape op using the dimension
+  // sizes of 'aux_input'.
   static xla::XlaOp DynamicUnboundedReshape(
       xla::XlaOp input, xla::XlaOp aux_input,
       absl::Span<const int64_t> output_sizes);
+
+  // Broadcasts 'input' shape to
+  // shape(aux_input)[aux_input_dimensions] x shape(input).
+  // This method is used as a replacement for xla::Broadcast when unbounded
+  // dynamic shapes are involved.
+  static xla::XlaOp DynamicUnboundedBroadcast(
+      xla::XlaOp input, xla::XlaOp aux_input,
+      std::vector<int64_t> aux_input_dimensions);
 
   static xla::XlaOp DynamicReshapeAs(xla::XlaOp input, const xla::Shape& shape);
 
