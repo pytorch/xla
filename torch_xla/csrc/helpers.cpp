@@ -301,6 +301,12 @@ xla::Shape XlaHelpers::GetDynamicReshape(
 xla::XlaOp XlaHelpers::DynamicReshape(xla::XlaOp input,
                                       absl::Span<const int64_t> output_sizes) {
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  bool is_output_sizes_unbounded_dynamic = std::any_of(
+      output_sizes.begin(), output_sizes.end(),
+      [](int64_t size) { return size == xla::Shape::kUnboundedSize; });
+  XLA_CHECK(!is_output_sizes_unbounded_dynamic)
+      << "reshape operation does not support unbounded dynamic output shape.";
+
   if (output_sizes == input_shape.dimensions()) {
     return input;
   }
@@ -341,27 +347,35 @@ xla::XlaOp XlaHelpers::DynamicUnboundedReshape(
   XLA_CHECK(XlaHelpers::IsUnboundedDynamismEnabled())
       << "set EXPERIMENTAL_XLA_UNBOUNDED_DYNAMISM=1 to run any unbounded "
          "dynamism workload.";
+
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  bool output_sizes_unbounded_dynamic = std::any_of(
+      output_sizes.begin(), output_sizes.end(),
+      [](int64_t size) { return size == xla::Shape::kUnboundedSize; });
+  XLA_CHECK(input_shape.is_unbounded_dynamic() ||
+            output_sizes_unbounded_dynamic)
+      << "XlaHelpers::DynamicUnboundedReshape constrainled failed!";
+
+  if (input_shape.is_unbounded_dynamic() && !output_sizes_unbounded_dynamic) {
+    return xla::Reshape(input, output_sizes);
+  }
+
   const xla::Shape& aux_input_shape = ShapeHelper::ShapeOfXlaOp(aux_input);
   XLA_CHECK(output_sizes.size() == aux_input_shape.rank())
       << "XlaHelpers::DynamicUnboundedReshape constrainled failed!";
+
   std::vector<xla::XlaOp> get_dim_ops;
   std::vector<xla::XlaOp> reshaped_ops;
-  bool all_static = true;
   std::vector<bool> output_dynamic(output_sizes.size(), false);
 
   for (int i = 0; i < output_sizes.size(); i++) {
     if (output_sizes[i] == xla::Shape::kUnboundedSize) {
       output_dynamic[i] = true;
       get_dim_ops.push_back(xla::GetDimensionSize(aux_input, i));
-      all_static = false;
     } else {
       get_dim_ops.push_back(XlaHelpers::ScalarValue<int32_t>(
           output_sizes[i], aux_input.builder()));
     }
-  }
-
-  if (all_static) {
-    return xla::Reshape(input, output_sizes);
   }
 
   // Create the reshape from scalar to 1-D vector
@@ -372,11 +386,123 @@ xla::XlaOp XlaHelpers::DynamicUnboundedReshape(
   // Create Concatenate op
   auto concat_op = xla::ConcatInDim(input.builder(), reshaped_ops, {0});
   return xla::CustomCall(
-      aux_input.builder(), "stablehlo.dynamic_reshape", {input, concat_op},
+      aux_input.builder(), "mhlo.dynamic_reshape", {input, concat_op},
       xla::ShapeUtil::MakeShape(aux_input_shape.element_type(), output_sizes,
                                 output_dynamic));
 
   return input;
+}
+
+namespace {
+
+// Extract the 'num_dims' counts of dimension sizes from the 'op', reshape
+// them to 'tensor<1xi32>', and append them at 'op_dims' after prepending
+// 'pad_count' of 1's reshaped to 'tensor<1xi32>'.
+std::vector<xla::XlaOp> ExtractDimensionSizesWithPadding(const xla::XlaOp op,
+                                                         size_t num_dims,
+                                                         int pad_count) {
+  std::vector<xla::XlaOp> op_dims;
+  for (size_t i = 0; i < pad_count; i++) {
+    op_dims.push_back(
+        xla::Reshape(XlaHelpers::ScalarValue<int32_t>(1, op.builder()), {1}));
+  }
+
+  for (size_t i = 0; i < num_dims; i++) {
+    op_dims.push_back(xla::Reshape(xla::GetDimensionSize(op, i), {1}));
+  }
+
+  return op_dims;
+}
+
+// Stringify the broadcast dimensions to provide for the 'backend_config'
+// attribute of the generated custom_call.
+std::string StringifyBroadcastDimensions(std::vector<int64_t> broadcast_dims) {
+  std::string str("{broadcast_dimensions=[");
+  if (broadcast_dims.size() >= 1) {
+    str += std::to_string(broadcast_dims[0]);
+  }
+  for (size_t i = 1; i < broadcast_dims.size(); i++) {
+    str += ", " + std::to_string(broadcast_dims[i]);
+  }
+  str += "]}";
+  return str;
+};
+
+// Emit XLA custom call for dynamic_broadcast_in_dim.
+xla::XlaOp DynamicBroadcastInDim(xla::XlaOp op, const xla::Shape& final_shape,
+                                 xla::XlaOp final_broadcast_dimensions) {
+  const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(op);
+
+  std::vector<int64_t> op_broadcast_dims(shape.dimensions().size());
+  std::iota(op_broadcast_dims.begin(), op_broadcast_dims.end(),
+            final_shape.dimensions().size() - shape.dimensions().size());
+
+  return xla::CustomCall(
+      op.builder(), "mhlo.dynamic_broadcast_in_dim",
+      /*operands=*/{op, final_broadcast_dimensions}, /*shape*/ final_shape,
+      /*opaque=*/StringifyBroadcastDimensions(op_broadcast_dims));
+}
+
+}  // namespace
+
+xla::XlaOp XlaHelpers::DynamicUnboundedBroadcast(
+    xla::XlaOp input, xla::XlaOp aux_input,
+    std::vector<int64_t> aux_input_dimensions) {
+  XLA_CHECK(XlaHelpers::IsUnboundedDynamismEnabled())
+      << "set EXPERIMENTAL_XLA_UNBOUNDED_DYNAMISM=1 to run any unbounded "
+         "dynamism workload.";
+
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  const xla::Shape& aux_input_shape = ShapeHelper::ShapeOfXlaOp(aux_input);
+  std::vector<int64_t> output_dimensions;
+  std::vector<bool> output_dynamic;
+  // Collect the dimension sizes and dynamic dimensions corresponding to the
+  // final broadcasted shape.
+  for (auto dim : aux_input_dimensions) {
+    output_dimensions.push_back(aux_input_shape.dimensions(dim));
+    output_dynamic.push_back(aux_input_shape.is_dynamic_dimension(dim));
+  }
+
+  for (int dim = 0; dim < input_shape.rank(); dim++) {
+    output_dimensions.push_back(input_shape.dimensions(dim));
+    output_dynamic.push_back(input_shape.is_dynamic_dimension(dim));
+  }
+
+  std::vector<xla::XlaOp> get_dim_ops;
+  // Create a concatente op with the dimension sizes to be fed as the second
+  // argument of the 'soon-to-be-created' dynamic_broadcast_in_dim.
+  for (auto dim : aux_input_dimensions) {
+    if (aux_input_shape.dimensions(dim) != xla::Shape::kUnboundedSize) {
+      get_dim_ops.push_back(xla::Reshape(
+          XlaHelpers::ScalarValue<int32_t>(aux_input_shape.dimensions(dim),
+                                           aux_input.builder()),
+          {1}));
+    } else {
+      get_dim_ops.push_back(
+          xla::Reshape(xla::GetDimensionSize(aux_input, dim), {1}));
+    }
+  }
+
+  for (int dim = 0; dim < input_shape.rank(); dim++) {
+    if (input_shape.dimensions(dim) != xla::Shape::kUnboundedSize) {
+      get_dim_ops.push_back(
+          xla::Reshape(XlaHelpers::ScalarValue<int32_t>(
+                           input_shape.dimensions(dim), input.builder()),
+                       {1}));
+    } else {
+      get_dim_ops.push_back(
+          xla::Reshape(xla::GetDimensionSize(input, dim), {1}));
+    }
+  }
+
+  // Create Concatenate op
+  auto concat_op = xla::ConcatInDim(input.builder(), get_dim_ops, {0});
+
+  return DynamicBroadcastInDim(
+      input,
+      xla::ShapeUtil::MakeShape(input_shape.element_type(), output_dimensions,
+                                output_dynamic),
+      concat_op);
 }
 
 bool XlaHelpers::SameStaticDimensions(const xla::Shape& shape1,
@@ -781,58 +907,6 @@ xla::XlaOp XlaHelpers::ImplicitBroadcast(xla::XlaOp op,
   return new_op;
 }
 
-namespace {
-
-// Extract the 'num_dims' counts of dimension sizes from the 'op', reshape
-// them to 'tensor<1xi32>', and append them at 'op_dims' after prepending
-// 'pad_count' of 1's reshaped to 'tensor<1xi32>'.
-std::vector<xla::XlaOp> ExtractDimensionSizesWithPadding(const xla::XlaOp op,
-                                                         size_t num_dims,
-                                                         int pad_count) {
-  std::vector<xla::XlaOp> op_dims;
-  for (size_t i = 0; i < pad_count; i++) {
-    op_dims.push_back(
-        xla::Reshape(XlaHelpers::ScalarValue<int32_t>(1, op.builder()), {1}));
-  }
-
-  for (size_t i = 0; i < num_dims; i++) {
-    op_dims.push_back(xla::Reshape(xla::GetDimensionSize(op, i), {1}));
-  }
-
-  return op_dims;
-}
-
-// Stringify the broadcast dimensions to provide for the 'backend_config'
-// attribute of the generated custom_call.
-std::string StringifyBroadcastDimensions(std::vector<int64_t> broadcast_dims) {
-  std::string str("{broadcast_dimensions=[");
-  if (broadcast_dims.size() >= 1) {
-    str += std::to_string(broadcast_dims[0]);
-  }
-  for (size_t i = 1; i < broadcast_dims.size(); i++) {
-    str += ", " + std::to_string(broadcast_dims[i]);
-  }
-  str += "]}";
-  return str;
-};
-
-// Emit XLA custom call for dynamic_broadcast_in_dim.
-xla::XlaOp DynamicBroadcastInDim(xla::XlaOp op, const xla::Shape& final_shape,
-                                 xla::XlaOp final_broadcast_dimensions) {
-  const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(op);
-
-  std::vector<int64_t> op_broadcast_dims(shape.dimensions().size());
-  std::iota(op_broadcast_dims.begin(), op_broadcast_dims.end(),
-            final_shape.dimensions().size() - shape.dimensions().size());
-
-  return xla::CustomCall(
-      op.builder(), "mhlo.dynamic_broadcast_in_dim",
-      /*operands=*/{op, final_broadcast_dimensions}, /*shape*/ final_shape,
-      /*opaque=*/StringifyBroadcastDimensions(op_broadcast_dims));
-}
-
-}  // namespace
-
 std::pair<xla::XlaOp, xla::XlaOp>
 XlaHelpers::ImplicitBroadcastWithUnboundedDynamicShapes(
     xla::XlaOp op1, xla::XlaOp op2, const xla::Shape& shape) {
@@ -931,8 +1005,7 @@ xla::StatusOr<xla::XlaComputation> XlaHelpers::WrapXlaComputation(
 
   // Rebuild aliasing.
   for (const auto& [input_index, output_index] : input_output_alias_pair) {
-    // Both input and output will be a tuple so parameter_number will always
-    // be
+    // Both input and output will be a tuple so parameter_number will always be
     // 0
     builder.SetUpAlias(/*output_index=*/xla::ShapeIndex({output_index}),
                        /*param_number=*/0,

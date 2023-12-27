@@ -71,10 +71,6 @@ class ImplicitBroadcasting(unittest.TestCase):
         re.search(
             r'dynamic_broadcast_in_dim.*=.*\[0\].*: \(tensor<\?xf32>, tensor<1xi32>\) -> tensor<10xf32>',
             stablehlo_text) is not None)
-    self.assertTrue(
-        re.search(
-            r'dynamic_broadcast_in_dim.*=.*\[0\].*: \(tensor<10xf32>, tensor<1xi32>\) -> tensor<10xf32>',
-            stablehlo_text) is not None)
 
   ### (?,?) * (?,1)
   def test_same_rank_broadcast_with_unbounded_dynamic_shapes_2(self):
@@ -175,10 +171,6 @@ class ImplicitBroadcasting(unittest.TestCase):
     torch_xla._XLAC._xla_mark_dynamic(b, 0)
     c = a * b
     stablehlo_text = xm.get_stablehlo([c])
-    self.assertTrue(
-        re.search(
-            r'dynamic_broadcast_in_dim.*=.*\[0, 1\].*: \(tensor<2x5xf32>, tensor<2xi32>\) -> tensor<2x5xf32>',
-            stablehlo_text) is not None)
     self.assertTrue(
         re.search(
             r'dynamic_broadcast_in_dim.*=.*\[1\].*: \(tensor<\?xf32>, tensor<2xi32>\) -> tensor<2x5xf32>',
