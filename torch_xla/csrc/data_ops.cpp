@@ -92,6 +92,12 @@ std::vector<int64_t> GetCompleteShape(absl::Span<const int64_t> output_sizes,
 
 xla::XlaOp BuildView(xla::XlaOp input, absl::Span<const int64_t> output_sizes) {
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  if (input_shape.is_unbounded_dynamic() ||
+      std::any_of(output_sizes.begin(), output_sizes.end(), [](int64_t size) {
+        return size == xla::Shape::kUnboundedSize;
+      }))
+    return XlaHelpers::DynamicUnboundedReshape(input, input, output_sizes);
+
   const auto complete_output_sizes =
       GetCompleteShape(output_sizes, input_shape.dimensions());
   return XlaHelpers::DynamicReshape(input, complete_output_sizes);
