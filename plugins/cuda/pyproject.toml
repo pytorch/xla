@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "torch_xla_cuda_plugin"
+version = "0.0.1"
+authors = [
+    {name = "Will Cromar", email = "wcromar@google.com"},
+]
+description = "CUDA Plugin"
+requires-python = ">=3.8"
+
+[project.entry-points."torch_xla.plugins"]
+tpu = "torch_xla_cuda_plugin:GpuPlugin"

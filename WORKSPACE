@@ -103,3 +103,7 @@ new_local_repository(
     build_file = "//bazel:torch.BUILD",
     path = PYTORCH_LOCAL_DIR,
 )
+
+load("@bazel_skylib//:workspace.bzl", "bazel_skylib_workspace")
+
+bazel_skylib_workspace()
