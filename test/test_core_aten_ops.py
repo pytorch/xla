@@ -30,6 +30,8 @@ def diff_output(testcase, output1, output2, rtol, atol, equal_nan=True):
     if output2_cpu.dtype != output1.dtype:
       output2_cpu = output2_cpu.to(output1.dtype)
     # import pdb; pdb.set_trace()
+    print(f'[WONJOO] output1={output1}')
+    print(f'[WONJOO] output2_cpu={output2_cpu}')
     testcase.assertTrue(
         torch.allclose(
             output1, output2_cpu, atol=atol, rtol=rtol, equal_nan=equal_nan))
@@ -53,15 +55,19 @@ def run_export_and_compare(testcase,
   with testcase.subTest('torch_eval'):
     res = func(*args, **kwargs)
     with testcase.subTest('torch_xla_eval'):
+      print('at subtest torch_xla_eval')
       args2 = pytree.tree_map_only(torch.Tensor, lambda x: x.to(device=device),
                                    args)
       kwargs2 = pytree.tree_map_only(torch.Tensor,
                                      lambda x: x.to(device=device), kwargs)
       res_xla = func(*args2, **kwargs2)
+      print(f'[WONJOO] res={res}')
+      print(f'[WONJOO] res_xla={res_xla}')
       with testcase.subTest('torch_xla_diff:' + str(atol)):
         diff_output(
             testcase, res, res_xla, atol=atol, rtol=rtol, equal_nan=equal_nan)
     with testcase.subTest('can_export'):
+      print('at subtest can_export')
       exported = torch.export.export(func, args, kwargs)
       with testcase.subTest('can_convert_to_stablehlo'):
         shlo = exported_program_to_stablehlo(exported)
@@ -295,7 +301,6 @@ class AtenOpTest(unittest.TestCase):
     run_export_and_compare(self, torch.ops.aten._adaptive_avg_pool3d, args,
                            kwargs)
 
-  def test_aten_add_Scalar_0(self):
     args = (
         torch.randn((10, 10)).to(torch.float32),
         0.1,
@@ -4196,19 +4201,16 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.split_with_sizes, args, kwargs)
 
-  @unittest.skip
   def test_aten_sqrt_0(self):
     args = (torch.randn((10, 10)).to(torch.float32),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.sqrt, args, kwargs)
 
-  @unittest.skip
   def test_aten_sqrt_1(self):
     args = (torch.randn((10, 10)).to(torch.float16),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.sqrt, args, kwargs)
 
-  @unittest.skip
   def test_aten_sqrt_2(self):
     args = (torch.randint(0, 10, (10, 10)).to(torch.int32),)
     kwargs = dict()

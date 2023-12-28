@@ -831,6 +831,14 @@ xla::Shape SoftshrinkBackwardOutputShape(const torch::lazy::Value& grad_out,
 //   return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
 // }
 
+xla::Shape SqrtOutputShape(const torch::lazy::Value& input) {
+  xla::Shape result_shape = GetXlaShape(input);
+  if (xla::primitive_util::IsIntegralType(result_shape.element_type())) {
+    result_shape.set_element_type(xla::PrimitiveType::F32);
+  }
+  return result_shape;
+}
+
 xla::Shape TanOutputShape(const torch::lazy::Value& input) {
   xla::Shape result_shape = GetXlaShape(input);
   if (xla::primitive_util::IsIntegralType(result_shape.element_type())) {
