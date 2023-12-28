@@ -854,6 +854,10 @@ xla::Shape TanhOutputShape(const torch::lazy::Value& input) {
   return result_shape;
 }
 
+xla::Shape TopkOutputShape(const torch::lazy::Value& input) {
+  return GetXlaShape(input);
+}
+
 xla::Shape TrilOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }
