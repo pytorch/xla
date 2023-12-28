@@ -295,6 +295,7 @@ class AtenOpTest(unittest.TestCase):
     run_export_and_compare(self, torch.ops.aten._adaptive_avg_pool3d, args,
                            kwargs)
 
+  def test_aten_add_Scalar_0(self):
     args = (
         torch.randn((10, 10)).to(torch.float32),
         0.1,
