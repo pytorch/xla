@@ -1760,7 +1760,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.floor_divide, args, kwargs)
 
-  @unittest.skip
   def test_aten_floor_divide_1(self):
     args = (
         torch.randn((10, 10)).to(torch.float16),
