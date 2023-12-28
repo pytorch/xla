@@ -393,6 +393,9 @@ torch_xla::XlaOpVector Exp::Lower(LoweringContext* loctx) const {
 
 torch_xla::XlaOpVector Expm1::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  if (xla::primitive_util::IsIntegralType(XlaHelpers::TypeOfXlaOp(xla_input))) {
+    xla_input = xla::ConvertElementType(xla_input, xla::PrimitiveType::F32);
+  }
   return ReturnOp(xla::Expm1(xla_input), loctx);
 }
 
