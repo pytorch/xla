@@ -275,6 +275,8 @@ xla::Shape TanOutputShape(const torch::lazy::Value& input);
 
 xla::Shape TanhOutputShape(const torch::lazy::Value& input);
 
+xla::Shape TopkOutputShape(const torch::lazy::Value& input);
+
 xla::Shape TrilOutputShape(const torch::lazy::Value& input);
 
 xla::Shape TriuOutputShape(const torch::lazy::Value& input);
