@@ -1,4 +1,4 @@
-torch_xla/csrc/runtime/BUILDload(
+load(
     "//bazel:rules_def.bzl",
     "ptxla_cc_test",
 )
