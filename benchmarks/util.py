@@ -8,15 +8,24 @@ import random
 import subprocess
 import torch
 import sys
-
-try:
-  import torch_xla.core.xla_model as xm
-  from torch_xla._internal import tpu
-except ImportError:
-  # ignore the error if torch_xla is not installed
-  pass
+import torch_xla.core.xla_model as xm
+from torch_xla._internal import tpu
 
 logger = logging.getLogger(__name__)
+
+
+def parse_none_str(a: str):
+  if isinstance(a, str) and a.upper() == "None".upper():
+    return None
+  return a
+
+
+def ns_to_s(ns):
+  return ns * 1e-9
+
+
+def us_to_s(us):
+  return us * 1e-6
 
 
 @functools.lru_cache(None)
@@ -40,7 +49,7 @@ def reset_rng_state(benchmark_experiment=None):
   torch.manual_seed(1337)
   random.seed(1337)
   np.random.seed(1337)
-  if benchmark_experiment and benchmark_experiment.xla:
+  if benchmark_experiment is not None and benchmark_experiment.xla is not None:
     device = benchmark_experiment.get_device()
     xm.set_rng_state(1337, str(device))
 

@@ -23,6 +23,11 @@ torch_xla::XlaOpVector Abs::Lower(LoweringContext* loctx) const {
 
 torch_xla::XlaOpVector Acos::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  if (xla::primitive_util::IsIntegralType(XlaHelpers::TypeOfXlaOp(xla_input))) {
+    xla::PrimitiveType input_type = XlaHelpers::TypeOfXlaOp(xla_input);
+    xla_input = ConvertTo(xla_input, input_type, xla::PrimitiveType::F32,
+                          /*device=*/nullptr);
+  }
   return ReturnOp(xla::Acos(xla_input), loctx);
 }
 
@@ -137,6 +142,9 @@ torch_xla::XlaOpVector Argmin::Lower(LoweringContext* loctx) const {
 
 torch_xla::XlaOpVector Asin::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  if (xla::primitive_util::IsIntegralType(XlaHelpers::TypeOfXlaOp(xla_input))) {
+    xla_input = xla::ConvertElementType(xla_input, xla::PrimitiveType::F32);
+  }
   return ReturnOp(xla::Asin(xla_input), loctx);
 }
 
@@ -147,12 +155,23 @@ torch_xla::XlaOpVector Asinh::Lower(LoweringContext* loctx) const {
 
 torch_xla::XlaOpVector Atan::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  // PyTorch allows integral types as input to torch.atan while XLA does not,
+  // hence the manual type conversion.
+  if (xla::primitive_util::IsIntegralType(XlaHelpers::TypeOfXlaOp(xla_input))) {
+    xla_input = xla::ConvertElementType(xla_input, xla::PrimitiveType::F32);
+  }
   return ReturnOp(xla::Atan(xla_input), loctx);
 }
 
 torch_xla::XlaOpVector Atan2::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  if (xla::primitive_util::IsIntegralType(XlaHelpers::TypeOfXlaOp(xla_input))) {
+    xla_input = xla::ConvertElementType(xla_input, xla::PrimitiveType::F32);
+  }
   xla::XlaOp xla_other = loctx->GetOutputOp(operand(1));
+  if (xla::primitive_util::IsIntegralType(XlaHelpers::TypeOfXlaOp(xla_other))) {
+    xla_other = xla::ConvertElementType(xla_other, xla::PrimitiveType::F32);
+  }
   auto promoted = XlaHelpers::Promote(xla_input, xla_other);
   return ReturnOp(xla::Atan2(promoted.first, promoted.second,
                              XlaHelpers::getBroadcastDimensions(
@@ -348,6 +367,9 @@ torch_xla::XlaOpVector EqTensor::Lower(LoweringContext* loctx) const {
 
 torch_xla::XlaOpVector Erf::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  if (xla::primitive_util::IsIntegralType(XlaHelpers::TypeOfXlaOp(xla_input))) {
+    xla_input = xla::ConvertElementType(xla_input, xla::PrimitiveType::F32);
+  }
   return ReturnOp(xla::Erf(xla_input), loctx);
 }
 
@@ -363,6 +385,9 @@ torch_xla::XlaOpVector Erfinv::Lower(LoweringContext* loctx) const {
 
 torch_xla::XlaOpVector Exp::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  if (xla::primitive_util::IsIntegralType(XlaHelpers::TypeOfXlaOp(xla_input))) {
+    xla_input = xla::ConvertElementType(xla_input, xla::PrimitiveType::F32);
+  }
   return ReturnOp(xla::Exp(xla_input), loctx);
 }
 
@@ -473,6 +498,12 @@ torch_xla::XlaOpVector Inverse::Lower(LoweringContext* loctx) const {
 
 torch_xla::XlaOpVector Isnan::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  // PyTorch allows integral types as input to torch.isnan, however XLA does
+  // not. So we do a manual type conversion for integral types only to keep our
+  // bevahior same as PyTorch.
+  if (xla::primitive_util::IsIntegralType(XlaHelpers::TypeOfXlaOp(xla_input))) {
+    xla_input = xla::ConvertElementType(xla_input, xla::PrimitiveType::F32);
+  }
   return ReturnOp(xla::IsNan(xla_input), loctx);
 }
 
@@ -745,6 +776,11 @@ torch_xla::XlaOpVector Tan::Lower(LoweringContext* loctx) const {
 
 torch_xla::XlaOpVector Tanh::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  if (xla::primitive_util::IsIntegralType(XlaHelpers::TypeOfXlaOp(xla_input))) {
+    xla::PrimitiveType input_type = XlaHelpers::TypeOfXlaOp(xla_input);
+    xla_input = ConvertTo(xla_input, input_type, xla::PrimitiveType::F32,
+                          /*device=*/nullptr);
+  }
   return ReturnOp(xla::Tanh(xla_input), loctx);
 }
 

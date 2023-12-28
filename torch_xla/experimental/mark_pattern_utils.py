@@ -2,7 +2,13 @@ import uuid
 from typing import Dict, Union
 
 import torch
-from torch_xla.experimental import xla_marker
+import torch._dynamo as torchdynamo
+import torch_xla.experimental.xla_marker
+
+
+@torchdynamo.assume_constant_result
+def _get_uuid() -> str:
+  return uuid.uuid4().hex
 
 
 class StableHLOCompositeBuilder:
@@ -21,7 +27,7 @@ class StableHLOCompositeBuilder:
 
     self.attr = attr
     self.name = name
-    self.id = uuid.uuid4().hex
+    self.id = _get_uuid()
     self._inputs = []
     self._outputs = []
 

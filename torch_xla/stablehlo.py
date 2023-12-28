@@ -116,6 +116,7 @@ class VariableType(enum.Enum):
 class VariableSignature:  # either argument or parameters
   shape: List[int]
   dtype: str
+  dynamic_dims: List[int] = dataclasses.field(default_factory=list)
 
 
 @dataclass
@@ -215,6 +216,13 @@ class XLAExportInterpreter(torch.fx.Interpreter):
   def __init__(self, module, device):
     self._device = device
     super().__init__(module)
+    self.tensor_id_to_dynamic_dims = {}
+
+  def _mark_dynamic(self, tensor, dynamic_dims):
+    tid = torch_xla._XLAC._xla_get_tensor_id(tensor)
+    self.tensor_id_to_dynamic_dims[tid] = dynamic_dims
+    for i in dynamic_dims:
+      torch_xla._XLAC._xla_mark_dynamic(tensor, i)
 
   def call_function(self, target, args: Tuple, kwargs: Dict) -> Any:
     # NOTE(qihqi): We need to do this because there are some operators
@@ -232,9 +240,10 @@ class XLAExportInterpreter(torch.fx.Interpreter):
       fake_t = n.meta['val']
       res = super().run_node(n)
       if hasattr(fake_t, 'shape'):
-        for i, x in enumerate(fake_t.shape):
-          if not isinstance(x, int):
-            torch_xla._XLAC._xla_mark_dynamic(res, i)
+        dynamic_dims = [
+            i for i, x in enumerate(fake_t.shape) if not isinstance(x, int)
+        ]
+        self._mark_dynamic(res, dynamic_dims)
       return res
     return super().run_node(n)
 
@@ -297,8 +306,9 @@ def _exported_program_to_stablehlo_bundle(exported_model,
   device = xm.xla_device()
 
   # Run the fx graph tracing using lazy tensor
+  xla_interpreter = XLAExportInterpreter(exported_model.graph_module, device)
   with torch.no_grad():
-    res = XLAExportInterpreter(exported_model.graph_module, device).run(
+    res = xla_interpreter.run(
         *param_buffer_values,
         *input_args,
         *ordered_tensor_constants,
@@ -357,10 +367,12 @@ def _exported_program_to_stablehlo_bundle(exported_model,
       location = InputLocation.constant(position=len(additional_constants))
       additional_constants.append(tensor_value.detach().cpu().numpy())
     input_locations.append(location)
+    dynamic_dims = xla_interpreter.tensor_id_to_dynamic_dims.get(tensor_id, [])
     input_signatures.append(
         VariableSignature(
             shape=list(tensor_value.shape),
-            dtype=str(tensor_value.dtype).replace('torch.', '')))
+            dtype=str(tensor_value.dtype).replace('torch.', ''),
+            dynamic_dims=dynamic_dims))
 
   unused_inputs = []
   for i in unused_input_positions:

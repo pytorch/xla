@@ -1,4 +1,6 @@
+import os
 import sys
+import tempfile
 import unittest
 
 import torch
@@ -6,7 +8,9 @@ import torch.nn.functional as F
 import torch_xla.core.xla_model as xm
 import torch_xla.experimental.xla_marker
 from torch.utils import _pytree as pytree
+from torch_xla import stablehlo
 from torch_xla.experimental.mark_pattern_utils import StableHLOCompositeBuilder
+from torch_xla.tf_saved_model_integration import save_torch_module_as_tf_saved_model
 
 
 class XlaMarkPatternTest(unittest.TestCase):
@@ -23,6 +27,13 @@ class XlaMarkPatternTest(unittest.TestCase):
       out = [out]
     stablehlo = xm.get_stablehlo(out)
     return stablehlo
+
+  def export_func(self, f, args, saved_model_path=None):
+    exported = torch.export.export(f, args)
+    stablehlo_gm = stablehlo.exported_program_to_stablehlo(exported)
+    if saved_model_path is not None:
+      save_torch_module_as_tf_saved_model(f, args, saved_model_path)
+    return stablehlo_gm
 
   def test_basic(self):
 
@@ -113,6 +124,72 @@ class XlaMarkPatternTest(unittest.TestCase):
     self.assertTrue(
         '{attributes = {scale = 2 : i64}, name = "sdpa"}}' in stablehlo)
 
+  def test_composite_builder_export_sdpa_pattern(self):
+
+    class M(torch.nn.Module):
+
+      def __init__(self):
+        super().__init__()
+        self.b = StableHLOCompositeBuilder("sdpa", {"scale": 0.25})
+        self.b2 = StableHLOCompositeBuilder("sdpa", {"scale": 2})
+
+      def forward(self, x, y):
+        q, k, v = x.split(128, dim=-2)
+        q, k, v = self.b.mark_inputs(q, k, v)
+        attn_out = F.scaled_dot_product_attention(q, k, v, scale=0.25)
+        attn_out = self.b.mark_outputs(attn_out)
+
+        q, k, v = y.split(128, dim=-2)
+        q, k, v = self.b2.mark_inputs(q, k, v)
+        attn_out2 = F.scaled_dot_product_attention(q, k, v, scale=4)
+        attn_out2 = self.b2.mark_outputs(attn_out2)
+        return attn_out, attn_out2
+
+    input_args = (torch.randn((32, 8, 384, 64)), torch.randn((32, 8, 384, 64)))
+    tmp_path = tempfile.mkdtemp()
+    stablehlo_gm = self.export_func(M(), input_args, tmp_path)
+    stablehlo = stablehlo_gm.get_stablehlo_text()
+    self.assertEqual(stablehlo.count("@stablehlo.composite"), 2)
+    self.assertTrue(
+        '{attributes = {scale = 2.500000e-01 : f32}, name = "sdpa"}}' in
+        stablehlo)
+    self.assertTrue(
+        '{attributes = {scale = 2 : i64}, name = "sdpa"}}' in stablehlo)
+    self.assertTrue(os.path.exists(os.path.join(tmp_path, 'saved_model.pb')))
+
+  def test_inlined_composite_builder_export_sdpa_pattern(self):
+
+    class M(torch.nn.Module):
+
+      def __init__(self):
+        super().__init__()
+
+      def forward(self, x, y):
+        b = StableHLOCompositeBuilder("sdpa", {"scale": 0.25})
+        q, k, v = x.split(128, dim=-2)
+        q, k, v = b.mark_inputs(q, k, v)
+        attn_out = F.scaled_dot_product_attention(q, k, v, scale=0.25)
+        attn_out = b.mark_outputs(attn_out)
+
+        b2 = StableHLOCompositeBuilder("sdpa", {"scale": 2})
+        q, k, v = y.split(128, dim=-2)
+        q, k, v = b2.mark_inputs(q, k, v)
+        attn_out2 = F.scaled_dot_product_attention(q, k, v, scale=4)
+        attn_out2 = b2.mark_outputs(attn_out2)
+        return attn_out, attn_out2
+
+    input_args = (torch.randn((32, 8, 384, 64)), torch.randn((32, 8, 384, 64)))
+    tmp_path = tempfile.mkdtemp()
+    stablehlo_gm = self.export_func(M(), input_args, tmp_path)
+    stablehlo = stablehlo_gm.get_stablehlo_text()
+    self.assertEqual(stablehlo.count("@stablehlo.composite"), 2)
+    self.assertTrue(
+        '{attributes = {scale = 2.500000e-01 : f32}, name = "sdpa"}}' in
+        stablehlo)
+    self.assertTrue(
+        '{attributes = {scale = 2 : i64}, name = "sdpa"}}' in stablehlo)
+    self.assertTrue(os.path.exists(os.path.join(tmp_path, 'saved_model.pb')))
+
   def test_multiple_input(self):
 
     def f(x, y):
@@ -155,7 +232,6 @@ class XlaMarkPatternTest(unittest.TestCase):
       x = x * 2
       x = torch.ops.xla_pattern_marking.mark_tensor(x, "p_outter", 0, "0",
                                                     False)
-      return x
 
     input_args = (torch.ones(5),)
     stablehlo = self.run_func_get_stablehlo(f, input_args)
@@ -172,7 +248,6 @@ class XlaMarkPatternTest(unittest.TestCase):
       x = torch.ops.xla_pattern_marking.mark_tensor(x, "p_inner", 0, "0", False)
       y = torch.ops.xla_pattern_marking.mark_tensor(y, "p_outter", 0, "0",
                                                     False)
-      return x, y
 
     input_args = (torch.ones(5),)
     stablehlo = self.run_func_get_stablehlo(f, input_args)
