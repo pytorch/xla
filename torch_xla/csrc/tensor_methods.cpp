@@ -2594,10 +2594,6 @@ std::vector<XLATensorPtr> split_with_sizes(const XLATensorPtr& input,
   return input->MakeOutputTensors(node);
 }
 
-XLATensorPtr sqrt(const XLATensorPtr& input) {
-  return input->CreateFrom(Sqrt(input->GetIrValue()));
-}
-
 XLATensorPtr squeeze(const XLATensorPtr& input) {
   auto input_shape = input->shape();
   auto output_dimensions = BuildSqueezedDimensions(

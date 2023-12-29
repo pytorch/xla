@@ -295,7 +295,6 @@ class AtenOpTest(unittest.TestCase):
     run_export_and_compare(self, torch.ops.aten._adaptive_avg_pool3d, args,
                            kwargs)
 
-  @unittest.skip
   def test_aten_add_Scalar_0(self):
     args = (
         torch.randn((10, 10)).to(torch.float32),
@@ -1641,13 +1640,18 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.expm1, args, kwargs)
 
-  @unittest.skip
   def test_aten_expm1_1(self):
     args = (torch.randn((10, 10)).to(torch.float16),)
     kwargs = dict()
-    run_export_and_compare(self, torch.ops.aten.expm1, args, kwargs)
+    run_export_and_compare(
+        self,
+        torch.ops.aten.expm1,
+        args,
+        kwargs,
+        rtol=0.001,
+        atol=0.01,
+    )
 
-  @unittest.skip
   def test_aten_expm1_2(self):
     args = (torch.randint(0, 10, (10, 10)).to(torch.int32),)
     kwargs = dict()
@@ -1757,7 +1761,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.floor_divide, args, kwargs)
 
-  @unittest.skip
   def test_aten_floor_divide_1(self):
     args = (
         torch.randn((10, 10)).to(torch.float16),
@@ -4018,7 +4021,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.sinh, args, kwargs)
 
-  @unittest.skip
   def test_aten_sinh_2(self):
     args = (torch.randint(0, 10, (10, 10)).to(torch.int32),)
     kwargs = dict()
@@ -4197,19 +4199,16 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.split_with_sizes, args, kwargs)
 
-  @unittest.skip
   def test_aten_sqrt_0(self):
     args = (torch.randn((10, 10)).to(torch.float32),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.sqrt, args, kwargs)
 
-  @unittest.skip
   def test_aten_sqrt_1(self):
     args = (torch.randn((10, 10)).to(torch.float16),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.sqrt, args, kwargs)
 
-  @unittest.skip
   def test_aten_sqrt_2(self):
     args = (torch.randint(0, 10, (10, 10)).to(torch.int32),)
     kwargs = dict()

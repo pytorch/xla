@@ -2904,12 +2904,6 @@ std::vector<at::Tensor> XLANativeFunctions::split_with_sizes_copy(
   return bridge::AtenFromXlaTensors(xla_tensors);
 }
 
-at::Tensor XLANativeFunctions::sqrt(const at::Tensor& self) {
-  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::sqrt(bridge::GetXlaTensor(self)));
-}
-
 at::Tensor XLANativeFunctions::squeeze_copy(const at::Tensor& self) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   return bridge::AtenFromXlaTensor(

@@ -825,8 +825,6 @@ std::vector<XLATensorPtr> split_with_sizes(const XLATensorPtr& input,
                                            std::vector<int64_t> split_size,
                                            int64_t dim);
 
-XLATensorPtr sqrt(const XLATensorPtr& input);
-
 // Squeeze out all trivial (size 1) dimensions.
 XLATensorPtr squeeze(const XLATensorPtr& input);
 

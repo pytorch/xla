@@ -84,6 +84,7 @@ full_codegen:
   - sinh
   - softshrink
   - softshrink_backward
+  - sqrt
   - take
   - tan
   - tanh
@@ -313,7 +314,6 @@ supported:
   - sort.stable
   - split_copy.Tensor
   - split_with_sizes_copy
-  - sqrt
   - squeeze_copy
   - squeeze_copy.dim
   - squeeze_copy.dims
