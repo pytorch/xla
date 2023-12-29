@@ -3062,15 +3062,6 @@ at::Tensor XLANativeFunctions::threshold_backward(const at::Tensor& grad_output,
       threshold.to<double>()));
 }
 
-std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::topk(
-    const at::Tensor& self, int64_t k, int64_t dim, bool largest, bool sorted) {
-  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  auto results = tensor_methods::topk(bridge::GetXlaTensor(self), k, dim,
-                                      largest, sorted, /*stable=*/false);
-  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
-                         bridge::AtenFromXlaTensor(std::get<1>(results)));
-}
-
 at::Tensor XLANativeFunctions::trace(const at::Tensor& self) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   return bridge::AtenFromXlaTensor(
