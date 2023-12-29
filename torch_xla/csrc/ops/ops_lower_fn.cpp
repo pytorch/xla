@@ -784,6 +784,16 @@ torch_xla::XlaOpVector Tanh::Lower(LoweringContext* loctx) const {
   return ReturnOp(xla::Tanh(xla_input), loctx);
 }
 
+torch_xla::XlaOpVector TopK::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  // if (xla::primitive_util::IsIntegralType(XlaHelpers::TypeOfXlaOp(xla_input))) {
+  //   xla::PrimitiveType input_type = XlaHelpers::TypeOfXlaOp(xla_input);
+  //   xla_input = ConvertTo(xla_input, input_type, xla::PrimitiveType::F32,
+  //                         /*device=*/nullptr);
+  // }
+  return ReturnOp(xla::TopK(xla_input), loctx);
+}
+
 torch_xla::XlaOpVector Tril::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   return ReturnOp(BuildTril(xla_input, diagonal), loctx);
