@@ -26,14 +26,14 @@ versioned_builds = [
   # Remove libtpu from PyPI builds
   {
     git_tag         = "v2.2.0-rc5"
-    package_version = "2.2.0rc5"
+    package_version = "2.2.0rc5nc2"
     pytorch_git_rev = "v2.2.0-rc5"
     accelerator     = "tpu"
     bundle_libtpu   = "0"
   },
   {
     git_tag         = "v2.2.0-rc5"
-    package_version = "2.2.0rc5"
+    package_version = "2.2.0rc5nc2"
     pytorch_git_rev = "v2.2.0-rc5"
     accelerator     = "tpu"
     python_version  = "3.9"
@@ -41,7 +41,7 @@ versioned_builds = [
   },
   {
     git_tag         = "v2.2.0-rc5"
-    package_version = "2.2.0rc5"
+    package_version = "2.2.0rc5nc2"
     pytorch_git_rev = "v2.2.0-rc5"
     accelerator     = "tpu"
     python_version  = "3.10"
@@ -49,7 +49,7 @@ versioned_builds = [
   },
   {
     git_tag         = "v2.2.0-rc5"
-    package_version = "2.2.0rc5"
+    package_version = "2.2.0rc5nc2"
     pytorch_git_rev = "v2.2.0-rc5"
     accelerator     = "tpu"
     python_version  = "3.11"
@@ -58,7 +58,7 @@ versioned_builds = [
   # Bundle libtpu for Kaggle
   {
     git_tag         = "v2.2.0-rc5"
-    package_version = "2.2.0rc5+libtpu"
+    package_version = "2.2.0rc5nc2+libtpu"
     pytorch_git_rev = "v2.2.0-rc5"
     accelerator     = "tpu"
     python_version  = "3.10"
@@ -66,13 +66,13 @@ versioned_builds = [
   },
   {
     git_tag         = "v2.2.0-rc5"
-    package_version = "2.2.0rc5"
+    package_version = "2.2.0rc5nc2"
     accelerator     = "cuda"
     cuda_version    = "12.1"
   },
   {
     git_tag         = "v2.2.0-rc5"
-    package_version = "2.2.0rc5"
+    package_version = "2.2.0rc5nc2"
     accelerator     = "cuda"
     cuda_version    = "12.1"
     python_version  = "3.10"
