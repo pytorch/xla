@@ -15,7 +15,7 @@ namespace torch_xla {
 // TODO(yeounoh) `SPMD` is a virtual device that defers data `TransferToDevice`
 // until after the paritioning pass. This avoids transfering  the full input
 // tensor to the device.
-enum class XlaDeviceType { CPU, CUDA, TPU, XPU, NEURON, SPMD, PLUGIN };
+enum class XlaDeviceType { CPU, CUDA, TPU, NEURON, SPMD, PLUGIN };
 
 struct DeviceType : public torch::lazy::BackendDeviceType {
   DeviceType() { type = static_cast<int>(XlaDeviceType::CPU); }
