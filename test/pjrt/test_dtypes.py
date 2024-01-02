@@ -1,25 +1,20 @@
 from absl.testing import absltest, parameterized
-import torch_xla.runtime as xr
-import torch_xla.core.xla_model as xm
 import torch
+import torch_xla.core.xla_model as xm
+import torch_xla.runtime as xr
+
 
 class TestDtypes(parameterized.TestCase):
 
   def setUp(self):
     xr.set_device_type('TPU')
 
-  @parameterized.parameters(
-      torch.float16,
-      torch.float32,
-      torch.float64,
-      torch.bfloat16,
-      torch.complex64,
-      torch.complex128)
+  @parameterized.parameters(torch.float16, torch.float32, torch.float64,
+                            torch.bfloat16, torch.complex64, torch.complex128)
   def test_float_round_trip(self, dtype: torch.dtype):
     t = torch.randn((3, 3), dtype=dtype)
     xt = t.to(xm.xla_device())
     torch.testing.assert_close(xt.cpu(), t)
-
 
   @parameterized.parameters(
       torch.uint8,
