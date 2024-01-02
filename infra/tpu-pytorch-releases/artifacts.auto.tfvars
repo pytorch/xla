@@ -25,54 +25,54 @@ nightly_builds = [
 versioned_builds = [
   # Remove libtpu from PyPI builds
   {
-    git_tag         = "v2.2.0-rc5"
-    package_version = "2.2.0rc5"
-    pytorch_git_rev = "v2.2.0-rc5"
+    git_tag         = "v2.2.0-rc6"
+    package_version = "2.2.0rc6"
+    pytorch_git_rev = "v2.2.0-rc6"
     accelerator     = "tpu"
     bundle_libtpu   = "0"
   },
   {
-    git_tag         = "v2.2.0-rc5"
-    package_version = "2.2.0rc5"
-    pytorch_git_rev = "v2.2.0-rc5"
+    git_tag         = "v2.2.0-rc6"
+    package_version = "2.2.0rc6"
+    pytorch_git_rev = "v2.2.0-rc6"
     accelerator     = "tpu"
     python_version  = "3.9"
     bundle_libtpu   = "0"
   },
   {
-    git_tag         = "v2.2.0-rc5"
-    package_version = "2.2.0rc5"
-    pytorch_git_rev = "v2.2.0-rc5"
+    git_tag         = "v2.2.0-rc6"
+    package_version = "2.2.0rc6"
+    pytorch_git_rev = "v2.2.0-rc6"
     accelerator     = "tpu"
     python_version  = "3.10"
     bundle_libtpu   = "0"
   },
   {
-    git_tag         = "v2.2.0-rc5"
-    package_version = "2.2.0rc5"
-    pytorch_git_rev = "v2.2.0-rc5"
+    git_tag         = "v2.2.0-rc6"
+    package_version = "2.2.0rc6"
+    pytorch_git_rev = "v2.2.0-rc6"
     accelerator     = "tpu"
     python_version  = "3.11"
     bundle_libtpu   = "0"
   },
   # Bundle libtpu for Kaggle
   {
-    git_tag         = "v2.2.0-rc5"
-    package_version = "2.2.0rc5+libtpu"
-    pytorch_git_rev = "v2.2.0-rc5"
+    git_tag         = "v2.2.0-rc6"
+    package_version = "2.2.0rc6+libtpu"
+    pytorch_git_rev = "v2.2.0-rc6"
     accelerator     = "tpu"
     python_version  = "3.10"
     bundle_libtpu   = "1"
   },
   {
-    git_tag         = "v2.2.0-rc5"
-    package_version = "2.2.0rc5"
+    git_tag         = "v2.2.0-rc6"
+    package_version = "2.2.0rc6"
     accelerator     = "cuda"
     cuda_version    = "12.1"
   },
   {
-    git_tag         = "v2.2.0-rc5"
-    package_version = "2.2.0rc5"
+    git_tag         = "v2.2.0-rc6"
+    package_version = "2.2.0rc6"
     accelerator     = "cuda"
     cuda_version    = "12.1"
     python_version  = "3.10"
