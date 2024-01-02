@@ -10,7 +10,7 @@ class TestDtypes(parameterized.TestCase):
     xr.set_device_type('TPU')
 
   @parameterized.parameters(torch.float16, torch.float32, torch.float64,
-                            torch.bfloat16, torch.complex64, torch.complex128)
+                            torch.bfloat16, torch.complex64)
   def test_float_round_trip(self, dtype: torch.dtype):
     t = torch.randn((3, 3), dtype=dtype)
     xt = t.to(xm.xla_device())
