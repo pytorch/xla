@@ -93,16 +93,16 @@ def get_xla_supported_devices(devkind=None, max_devices=None):
   # multiple device types.
   if not devkind:
     devices = torch_xla._XLAC._xla_get_devices()
-    return devices[:max_devices] if max_devices else devices
+    return [f'xla:{i}' for i, _ in (devices[:max_devices] if max_devices else devices)]
   else:
     warnings.warn("`devkind` argument is deprecated and will be removed in a "
-                    "future release.", DeprecationWarning)
+                  "future release.")
 
   # TODO(xiowei replace gpu with cuda): Remove the below if statement after r2.2 release.
   if devkind and devkind.casefold() == 'gpu':
     warnings.warn(
         "GPU as a device name is being deprecated. Replace PJRT_DEVICE=GPU with"
-        " PJRT_DEVICE=CUDA.", DeprecationWarning
+        " PJRT_DEVICE=CUDA."
     )
     devkind = 'CUDA'
 
