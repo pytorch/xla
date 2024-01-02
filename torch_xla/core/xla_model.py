@@ -95,7 +95,7 @@ def get_xla_supported_devices(devkind=None, max_devices=None):
     devices = torch_xla._XLAC._xla_get_devices()
     return [
         f'xla:{i}'
-        for i, _ in (devices[:max_devices] if max_devices else devices)
+        for i, _ in enumerate(devices[:max_devices] if max_devices else devices)
     ]
   else:
     warnings.warn("`devkind` argument is deprecated and will be removed in a "
