@@ -20,6 +20,14 @@ def parse_none_str(a: str):
   return a
 
 
+def ns_to_s(ns):
+  return ns * 1e-9
+
+
+def us_to_s(us):
+  return us * 1e-6
+
+
 @functools.lru_cache(None)
 def patch_torch_manual_seed():
   """Make torch manual seed deterministic. Helps with accuracy testing."""

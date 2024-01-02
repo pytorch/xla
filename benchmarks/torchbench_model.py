@@ -55,6 +55,8 @@ DENY_LIST = {
             "accelerator": "tpu"
         },
     ],  # not implemented
+    # self.load_benchmark() exits the main process. See issue #6207.
+    "pytorch_CycleGAN_and_pix2pix": [{}],
     "pyhpc_equation_of_state": [{
         "test": "train"
     },],  # not implemented
@@ -67,6 +69,12 @@ DENY_LIST = {
     "pytorch_struct": [{
         "test": "eval"
     },],  # not implemented
+    "pytorch_unet": [
+        {
+            # self.load_benchmark() exits the main process. See issue #6207.
+            "xla": "PJRT",
+        },
+    ],
     "resnet50_quantized_qat": [
         {
             "test": "eval",
@@ -77,6 +85,12 @@ DENY_LIST = {
             "accelerator": "tpu"
         },
     ],  # not implemented
+    "tacotron2": [
+        {
+            # self.load_benchmark() exits the main process. See issue #6207.
+            "xla": "PJRT",
+        },
+    ],
     # https://github.com/pytorch/pytorch/issues/99438
     "vision_maskrcnn": [{}],
 }
@@ -251,11 +265,10 @@ class TorchBenchModel(BenchmarkModel):
       raise ValueError(f"Unknown precision: {precision}")
     return precision_flag
 
-  def extend_process_env(self, process_env):
+  def update_process_env(self, process_env):
     precision_flag = self.default_precision_flag
     if precision_flag is not None:
       process_env[precision_flag] = '1'
-    return process_env
 
   def pick_grad(self):
     # special case

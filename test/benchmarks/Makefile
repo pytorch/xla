@@ -1,4 +1,4 @@
-TEST_ARGS = $(shell echo $@ | perl -pe 's/([^.]*)\.([^.]*)\.([^.]*)\.test/--accelerator=$$1 --test=$$2 --report=$$3/')
+TEST_ARGS = $(shell echo $@ | perl -pe 's/([^.]*)\.([^.]*)\.([^.]*)(?:\.tier([0-9]+))?\.test/--accelerator=$$1 --test=$$2 --report=$$3/; if (defined($$4)) { print "--filter-by-tier=$$4 " }')
 
 TESTS := $(wildcard *.test)
 all: $(TESTS)
@@ -12,7 +12,7 @@ endif
 
 $(TESTS):
 	$(QUIET_AGGREGATE)python3 ../../benchmarks/aggregate.py $(TEST_ARGS) \
-		--input-dirname=. --format=csv > $@.tmp
+		--format=csv $(wildcard *.jsonl) > $@.tmp
 	$(QUIET_DIFF)git diff --no-index $@ $@.tmp
 	$(QUIET_RM)$(RM) $@.tmp
 

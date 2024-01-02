@@ -745,12 +745,6 @@ at::Tensor XLANativeFunctions::as_strided_scatter(
 at::Tensor XLANativeFunctions::atan2(const at::Tensor& self,
                                      const at::Tensor& other) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  // xla::Atan2 doesn't support integer types.
-  if (!self.is_floating_point() || !other.is_floating_point()) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback,
-                                        ATEN_OP(atan2)>::call(self, other);
-  }
-
   auto common_device = torch_xla::bridge::GetXlaDevice(self, other);
   XLA_CHECK(common_device);
   torch::lazy::NodePtr node =
@@ -2892,12 +2886,6 @@ std::vector<at::Tensor> XLANativeFunctions::split_with_sizes_copy(
   auto xla_tensors = tensor_methods::split_with_sizes(
       bridge::GetXlaTensor(self), XlaHelpers::I64List(split_sizes), dim);
   return bridge::AtenFromXlaTensors(xla_tensors);
-}
-
-at::Tensor XLANativeFunctions::sqrt(const at::Tensor& self) {
-  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::sqrt(bridge::GetXlaTensor(self)));
 }
 
 at::Tensor XLANativeFunctions::squeeze_copy(const at::Tensor& self) {

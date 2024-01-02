@@ -1,4 +1,4 @@
-#include "torch_xla/csrc/runtime/pjrt_computation_client.h"
+#include "torch_xla/csrc/runtime/ifrt_computation_client.h"
 
 #include <gtest/gtest.h>
 
@@ -7,7 +7,6 @@
 #include <vector>
 
 #include "torch_xla/csrc/runtime/computation_client.h"
-#include "torch_xla/csrc/runtime/pjrt_computation_client.h"
 #include "torch_xla/csrc/runtime/tensor_source.h"
 #include "tsl/lib/core/status_test_util.h"
 #include "tsl/platform/env.h"
@@ -37,7 +36,7 @@ tsl::StatusOr<xla::XlaComputation> MakeComputation() {
 TEST(PjRtComputationClientTest, Init) {
   // Get a CPU client.
   tsl::setenv("PJRT_DEVICE", "CPU", true);
-  auto client = std::make_unique<PjRtComputationClient>();
+  auto client = std::make_unique<IfrtComputationClient>();
   std::string device = client->GetDefaultDevice();
 
   // Compose a computation.
@@ -45,8 +44,8 @@ TEST(PjRtComputationClientTest, Init) {
   std::vector<ComputationClient::CompileInstance> instances;
   instances.push_back(ComputationClient::CompileInstance(
       std::move(MakeComputation().value()), device,
-      client->GetCompilationDevices(device, client->GetLocalDevices()),
-      &shape));
+      client->GetCompilationDevices(device, client->GetLocalDevices()), &shape,
+      /*parameter_is_tupled_arguments=*/false, /*is_sharded=*/true));
 
   // Prepare inputs.
   xla::Literal literal_x =
@@ -59,15 +58,15 @@ TEST(PjRtComputationClientTest, Init) {
       client->Compile(std::move(instances));
 
   // Copy inputs to device.
-  ComputationClient::ExecuteComputationOptions options{};
+  ComputationClient::ExecuteReplicatedOptions options{};
   std::vector<std::shared_ptr<const TensorSource>> args = {
       std::make_shared<LiteralSource>(std::move(literal_x), device),
       std::make_shared<LiteralSource>(std::move(literal_y), device)};
 
   // Execute the graph.
-  std::vector<ComputationClient::DataPtr> results = client->ExecuteComputation(
+  std::vector<ComputationClient::DataPtr> results = client->ExecuteReplicated(
       *computations[0], client->TransferToDevice(absl::MakeConstSpan(args)),
-      device, options);
+      {device}, options);
 
   // Copy the output from device back to host and assert correctness..
   ASSERT_EQ(results.size(), 1);

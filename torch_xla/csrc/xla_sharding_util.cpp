@@ -588,8 +588,8 @@ std::vector<torch::lazy::BackendDataPtr> ShardingUtil::CreateShardedPlaceholder(
     // hold the corresponding computation results for both sharding &
     // replication.
     auto sharded_data_placeholder =
-        runtime::GetComputationClient()->WrapDataShards(
-            {}, GetVirtualDevice().toString(), sharding_specs[i]->shape,
+        runtime::GetComputationClient()->CreateDataPlaceholder(
+            GetVirtualDevice().toString(), sharding_specs[i]->shape,
             sharding_specs[i]->sharding);
 
     // Register the sharded data placeholder to the tensor and its node.
@@ -644,8 +644,8 @@ void ShardingUtil::PrepareOutputShardingPropagation(
     // hold the corresponding computation results for both sharding &
     // replication.
     auto sharded_data_placeholder =
-        runtime::GetComputationClient()->WrapDataShards(
-            {}, GetVirtualDevice().toString(), (*sharding_specs)[i]->shape,
+        runtime::GetComputationClient()->CreateDataPlaceholder(
+            GetVirtualDevice().toString(), (*sharding_specs)[i]->shape,
             (*sharding_specs)[i]->sharding);
 
     // Register the sharded data placeholder to the tensor and its node.
@@ -684,7 +684,7 @@ runtime::ComputationClient::DataPtr ShardingUtil::CreateShardedData(
     source_tensors.push_back(std::make_shared<runtime::AtenSource>(
         local_shards[j], shard_shape, devices[j]));
   }
-  return runtime::GetComputationClient()->TransferShardsToServer(
+  return runtime::GetComputationClient()->TransferShardsToDevice(
       source_tensors, GetVirtualDevice().toString(), global_shape, sharding);
 }
 

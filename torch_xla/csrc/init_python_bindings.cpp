@@ -44,6 +44,7 @@
 #include "torch_xla/csrc/runtime/metrics.h"
 #include "torch_xla/csrc/runtime/metrics_analysis.h"
 #include "torch_xla/csrc/runtime/metrics_reader.h"
+#include "torch_xla/csrc/runtime/pjrt_registry.h"
 #include "torch_xla/csrc/runtime/profiler.h"
 #include "torch_xla/csrc/runtime/runtime.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
@@ -891,7 +892,7 @@ class PyLoweringContext {
 
     // Fetch this parameter data
     std::vector<xla::Literal> literals =
-        runtime::GetComputationClient()->TransferFromServer(
+        runtime::GetComputationClient()->TransferFromDevice(
             UnwrapXlaData(device_data));
 
     // Create a mapping from paramater id to the tensor data
@@ -2317,6 +2318,10 @@ void InitXlaModuleBindings(py::module m) {
           return retlist;
         });
   // -------------Dynamo Integration API End-------------------------
+  m.def("_register_pjrt_plugin",
+        [](std::string name, std::string library_path) {
+          runtime::RegisterPjRtPlugin(name, library_path);
+        });
 }
 }  // namespace
 
