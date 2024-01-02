@@ -101,13 +101,6 @@ def get_xla_supported_devices(devkind=None, max_devices=None):
     warnings.warn("`devkind` argument is deprecated and will be removed in a "
                   "future release.")
 
-  # TODO(xiowei replace gpu with cuda): Remove the below if statement after r2.2 release.
-  if devkind and devkind.casefold() == 'gpu':
-    warnings.warn(
-        "GPU as a device name is being deprecated. Replace PJRT_DEVICE=GPU with"
-        " PJRT_DEVICE=CUDA.")
-    devkind = 'CUDA'
-
   xla_devices = _DEVICES.value
   kind_devices = []
   for i, device in enumerate(xla_devices):
