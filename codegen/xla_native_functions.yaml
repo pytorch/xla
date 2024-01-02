@@ -372,7 +372,6 @@ supported:
   - narrow_copy
   - pixel_shuffle
   - pixel_unshuffle
-  - reshape
   - select_backward
   - select.int
   - slice.Tensor
@@ -405,8 +404,6 @@ symint:
   - narrow_copy
   - select_backward
   - select.int
-  # See Note: [functionalization and CompositeExplicitAutograd]
-  - reshape
   # See Note: [Disabling functionalization]
   - expand
   - view
