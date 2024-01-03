@@ -262,10 +262,8 @@ torch::lazy::NodePtr Clamp(const torch::lazy::Value& input,
     xla::XlaOp xla_min = loctx->GetOutputOp(node.operand(1));
     xla::XlaOp xla_max = loctx->GetOutputOp(node.operand(2));
     xla::PrimitiveType input_type = XlaHelpers::TypeOfXlaOp(xla_input);
-    xla_min = ConvertTo(xla_min, XlaHelpers::TypeOfXlaOp(xla_min), input_type,
-                        /*device=*/nullptr);
-    xla_max = ConvertTo(xla_max, XlaHelpers::TypeOfXlaOp(xla_max), input_type,
-                        /*device=*/nullptr);
+    xla_min = ConvertTo(xla_min, XlaHelpers::TypeOfXlaOp(xla_min), input_type);
+    xla_max = ConvertTo(xla_max, XlaHelpers::TypeOfXlaOp(xla_max), input_type);
     return node.ReturnOp(xla::Clamp(xla_min, xla_input, xla_max), loctx);
   };
   return GenericOp(torch::lazy::OpKind(at::aten::clamp), {input, min, max},
@@ -412,7 +410,7 @@ torch::lazy::NodePtr Where(const torch::lazy::Value& condition,
     xla::XlaOp xla_other = loctx->GetOutputOp(node.operand(2));
     xla::XlaOp pred_condition =
         ConvertTo(xla_condition, XlaHelpers::TypeOfXlaOp(xla_condition),
-                  xla::PrimitiveType::PRED, /*device=*/nullptr);
+                  xla::PrimitiveType::PRED);
     auto promoted_branches = XlaHelpers::ValidateShapes(xla_input, xla_other);
     return node.ReturnOp(xla::Select(pred_condition, promoted_branches.first,
                                      promoted_branches.second),

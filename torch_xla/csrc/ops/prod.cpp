@@ -20,8 +20,7 @@ xla::XlaOp LowerProd(xla::XlaOp input, const std::vector<int64_t>& dimensions,
   xla::XlaOp casted_input;
   if (dtype) {
     casted_input = ConvertTo(input, XlaHelpers::TypeOfXlaOp(input),
-                             MakeXlaPrimitiveType(*dtype, /*device=*/nullptr),
-                             /*device=*/nullptr);
+                             MakeXlaPrimitiveType(*dtype, /*device=*/nullptr));
   } else {
     casted_input = ConvertToNumeric(input, XlaHelpers::TypeOfXlaOp(input));
   }

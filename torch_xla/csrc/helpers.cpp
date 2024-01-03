@@ -29,7 +29,7 @@ xla::XlaOp ConvertBinaryOpResult(xla::XlaOp op1, xla::XlaOp op2,
   xla::PrimitiveType type2 = XlaHelpers::TypeOfXlaOp(op2);
   xla::PrimitiveType result_type = XlaHelpers::TypeOfXlaOp(result);
   if (type1 == type2 && type1 != result_type) {
-    return ConvertTo(result, result_type, type1, /*device=*/nullptr);
+    return ConvertTo(result, result_type, type1);
   }
   return result;
 }
@@ -489,10 +489,10 @@ std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteValues(xla::XlaOp op1,
   xla::PrimitiveType type2 = TypeOfXlaOp(op2);
   xla::PrimitiveType result_type = PromoteType(type1, type2);
   if (type1 != result_type) {
-    op1 = ConvertTo(op1, type1, result_type, /*device=*/nullptr);
+    op1 = ConvertTo(op1, type1, result_type);
   }
   if (type2 != result_type) {
-    op2 = ConvertTo(op2, type2, result_type, /*device=*/nullptr);
+    op2 = ConvertTo(op2, type2, result_type);
   }
   return std::pair<xla::XlaOp, xla::XlaOp>(op1, op2);
 }
@@ -504,13 +504,13 @@ std::tuple<xla::XlaOp, xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteValues(
   xla::PrimitiveType type3 = TypeOfXlaOp(op3);
   xla::PrimitiveType result_type = PromoteType(type1, type2, type3);
   if (type1 != result_type) {
-    op1 = ConvertTo(op1, type1, result_type, /*device=*/nullptr);
+    op1 = ConvertTo(op1, type1, result_type);
   }
   if (type2 != result_type) {
-    op2 = ConvertTo(op2, type2, result_type, /*device=*/nullptr);
+    op2 = ConvertTo(op2, type2, result_type);
   }
   if (type3 != result_type) {
-    op3 = ConvertTo(op3, type3, result_type, /*device=*/nullptr);
+    op3 = ConvertTo(op3, type3, result_type);
   }
   return std::tuple<xla::XlaOp, xla::XlaOp, xla::XlaOp>(op1, op2, op3);
 }
@@ -519,10 +519,9 @@ std::pair<xla::XlaOp, xla::XlaOp> XlaHelpers::PromoteSecondValue(
     xla::XlaOp op1, xla::XlaOp op2) {
   xla::PrimitiveType type1 = TypeOfXlaOp(op1);
   xla::PrimitiveType type2 = TypeOfXlaOp(op2);
-  return type1 == type2
-             ? std::pair<xla::XlaOp, xla::XlaOp>(op1, op2)
-             : std::pair<xla::XlaOp, xla::XlaOp>(
-                   op1, ConvertTo(op2, type2, type1, /*device=*/nullptr));
+  return type1 == type2 ? std::pair<xla::XlaOp, xla::XlaOp>(op1, op2)
+                        : std::pair<xla::XlaOp, xla::XlaOp>(
+                              op1, ConvertTo(op2, type2, type1));
 }
 
 xla::Shape XlaHelpers::GetPromotedShape(const xla::Shape& shape1,

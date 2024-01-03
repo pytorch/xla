@@ -75,16 +75,6 @@ bool Use32BitLong() {
   return use_32bit_long;
 }
 
-bool IsTpuDevice(XlaDeviceType hw_type) {
-  static bool spmd_device_is_tpu =
-      (hw_type == XlaDeviceType::SPMD) &&
-      // HACK: find a better way to decide if SPMD is actually a TPU without
-      // accessing the runtime.
-      runtime::sys_util::GetEnvString("PJRT_DEVICE", "").find("TPU") !=
-          std::string::npos;
-  return (hw_type == XlaDeviceType::TPU) || spmd_device_is_tpu;
-}
-
 }  // namespace
 
 at::ScalarType TorchTypeFromXlaType(xla::PrimitiveType xla_type) {
@@ -163,8 +153,7 @@ xla::PrimitiveType MaybeDowncastToXlaDeviceType(
       if (UseBF16()) {
         return xla::PrimitiveType::BF16;
       }
-      if (DowncastBF16() || DowncastF16() || IsTpuDevice(hw_type) ||
-          hw_type == XlaDeviceType::NEURON) {
+      if (DowncastBF16() || DowncastF16() || hw_type == XlaDeviceType::NEURON) {
         return xla::PrimitiveType::F32;
       }
       return xla::PrimitiveType::F64;
@@ -175,20 +164,17 @@ xla::PrimitiveType MaybeDowncastToXlaDeviceType(
       return UseBF16() || DowncastBF16() ? xla::PrimitiveType::BF16
                                          : xla::PrimitiveType::F32;
     case xla::PrimitiveType::U16:
-      return !IsTpuDevice(hw_type) && hw_type != XlaDeviceType::NEURON
-                 ? xla::PrimitiveType::U16
-                 : xla::PrimitiveType::U32;
+      return hw_type != XlaDeviceType::NEURON ? xla::PrimitiveType::U16
+                                              : xla::PrimitiveType::U32;
     case xla::PrimitiveType::S16:
-      return !IsTpuDevice(hw_type) && hw_type != XlaDeviceType::NEURON
-                 ? xla::PrimitiveType::S16
-                 : xla::PrimitiveType::S32;
+      return hw_type != XlaDeviceType::NEURON ? xla::PrimitiveType::S16
+                                              : xla::PrimitiveType::S32;
     case xla::PrimitiveType::S64:
       return Use32BitLong() ? xla::PrimitiveType::S32 : xla::PrimitiveType::S64;
     case xla::PrimitiveType::U64:
       return Use32BitLong() ? xla::PrimitiveType::U32 : xla::PrimitiveType::U64;
     case xla::PrimitiveType::C128:
-      return !IsTpuDevice(hw_type) ? xla::PrimitiveType::C128
-                                   : xla::PrimitiveType::C64;
+      return xla::PrimitiveType::C128;
     default:
       return type;
   }

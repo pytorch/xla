@@ -170,7 +170,7 @@ xla::XlaOp CreateIndexAlongDim(
   xla::XlaOp updates = value;
   if (buffer_shape.element_type() != value_shape.element_type()) {
     updates = ConvertTo(updates, value_shape.element_type(),
-                        buffer_shape.element_type(), /*device=*/nullptr);
+                        buffer_shape.element_type());
   }
   if (broadcast_value_to_index) {
     const xla::Shape& index_shape = ShapeHelper::ShapeOfXlaOp(index);
@@ -603,7 +603,7 @@ xla::XlaOp CreateIndexUpdate(
   xla::XlaOp new_values = values;
   if (buffer_shape.element_type() != values_shape.element_type()) {
     new_values = ConvertTo(new_values, values_shape.element_type(),
-                           buffer_shape.element_type(), /*device=*/nullptr);
+                           buffer_shape.element_type());
   }
   new_values = BuildExpand(new_values, expected_values_dims);
   const xla::Shape& new_values_shape = ShapeHelper::ShapeOfXlaOp(new_values);
@@ -654,8 +654,7 @@ XlaOpCombiner NumericAddCombiner() {
     xla::XlaOp numeric_y = ConvertToNumeric(y);
     xla::XlaOp numeric_sum = numeric_x + numeric_y;
     return ConvertTo(numeric_sum, XlaHelpers::TypeOfXlaOp(numeric_sum),
-                     XlaHelpers::TypeOfXlaOp(x),
-                     /*device=*/nullptr);
+                     XlaHelpers::TypeOfXlaOp(x));
   };
 }
 
@@ -665,8 +664,7 @@ XlaOpCombiner NumericMulCombiner() {
     xla::XlaOp numeric_y = ConvertToNumeric(y);
     xla::XlaOp numeric_sum = numeric_x * numeric_y;
     return ConvertTo(numeric_sum, XlaHelpers::TypeOfXlaOp(numeric_sum),
-                     XlaHelpers::TypeOfXlaOp(x),
-                     /*device=*/nullptr);
+                     XlaHelpers::TypeOfXlaOp(x));
   };
 }
 
@@ -677,8 +675,7 @@ XlaOpCombiner NumericMinCombiner() {
     xla::XlaOp numeric_sum = xla::Min(numeric_x, numeric_y);
     // xla::XlaOp numeric_sum = xla::Min(numeric_x, numeric_y);
     return ConvertTo(numeric_sum, XlaHelpers::TypeOfXlaOp(numeric_sum),
-                     XlaHelpers::TypeOfXlaOp(x),
-                     /*device=*/nullptr);
+                     XlaHelpers::TypeOfXlaOp(x));
   };
 }
 
@@ -688,8 +685,7 @@ XlaOpCombiner NumericMaxCombiner() {
     xla::XlaOp numeric_y = ConvertToNumeric(y);
     xla::XlaOp numeric_sum = xla::Max(numeric_x, numeric_y);
     return ConvertTo(numeric_sum, XlaHelpers::TypeOfXlaOp(numeric_sum),
-                     XlaHelpers::TypeOfXlaOp(x),
-                     /*device=*/nullptr);
+                     XlaHelpers::TypeOfXlaOp(x));
   };
 }
 

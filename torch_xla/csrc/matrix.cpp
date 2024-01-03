@@ -110,7 +110,7 @@ xla::XlaOp BuildDiagonalViewUpdate(xla::XlaOp target, xla::XlaOp input,
   xla::XlaOp diag_input = input;
   if (target_shape->element_type() != input_shape.element_type()) {
     diag_input = ConvertTo(input, input_shape.element_type(),
-                           target_shape->element_type(), /*device=*/nullptr);
+                           target_shape->element_type());
   }
   std::vector<int64_t> permutation;
   xla::XlaOp diag_target = target;
