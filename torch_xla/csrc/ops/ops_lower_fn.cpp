@@ -25,8 +25,7 @@ torch_xla::XlaOpVector Acos::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   if (xla::primitive_util::IsIntegralType(XlaHelpers::TypeOfXlaOp(xla_input))) {
     xla::PrimitiveType input_type = XlaHelpers::TypeOfXlaOp(xla_input);
-    xla_input = ConvertTo(xla_input, input_type, xla::PrimitiveType::F32,
-                          /*device=*/nullptr);
+    xla_input = ConvertTo(xla_input, input_type, xla::PrimitiveType::F32);
   }
   return ReturnOp(xla::Acos(xla_input), loctx);
 }
@@ -739,8 +738,7 @@ torch_xla::XlaOpVector Sinh::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   if (xla::primitive_util::IsIntegralType(XlaHelpers::TypeOfXlaOp(xla_input))) {
     xla::PrimitiveType input_type = XlaHelpers::TypeOfXlaOp(xla_input);
-    xla_input = ConvertTo(xla_input, input_type, xla::PrimitiveType::F32,
-                          /*device=*/nullptr);
+    xla_input = ConvertTo(xla_input, input_type, xla::PrimitiveType::F32);
   }
   return ReturnOp(xla::Sinh(xla_input), loctx);
 }
@@ -769,8 +767,7 @@ torch_xla::XlaOpVector Sqrt::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   if (xla::primitive_util::IsIntegralType(XlaHelpers::TypeOfXlaOp(xla_input))) {
     xla::PrimitiveType input_type = XlaHelpers::TypeOfXlaOp(xla_input);
-    xla_input = ConvertTo(xla_input, input_type, xla::PrimitiveType::F32,
-                          /*device=*/nullptr);
+    xla_input = ConvertTo(xla_input, input_type, xla::PrimitiveType::F32);
   }
   return ReturnOp(xla::Sqrt(xla_input), loctx);
 }
@@ -786,8 +783,7 @@ torch_xla::XlaOpVector Tan::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   if (xla::primitive_util::IsIntegralType(XlaHelpers::TypeOfXlaOp(xla_input))) {
     xla::PrimitiveType input_type = XlaHelpers::TypeOfXlaOp(xla_input);
-    xla_input = ConvertTo(xla_input, input_type, xla::PrimitiveType::F32,
-                          /*device=*/nullptr);
+    xla_input = ConvertTo(xla_input, input_type, xla::PrimitiveType::F32);
   }
   return ReturnOp(xla::Tan(xla_input), loctx);
 }
@@ -796,8 +792,7 @@ torch_xla::XlaOpVector Tanh::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   if (xla::primitive_util::IsIntegralType(XlaHelpers::TypeOfXlaOp(xla_input))) {
     xla::PrimitiveType input_type = XlaHelpers::TypeOfXlaOp(xla_input);
-    xla_input = ConvertTo(xla_input, input_type, xla::PrimitiveType::F32,
-                          /*device=*/nullptr);
+    xla_input = ConvertTo(xla_input, input_type, xla::PrimitiveType::F32);
   }
   return ReturnOp(xla::Tanh(xla_input), loctx);
 }

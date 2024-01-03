@@ -128,7 +128,7 @@ function run_torchrun {
     echo "Running torchrun test for GPU $@"
     num_devices=$(nvidia-smi --list-gpus | wc -l)
     PJRT_DEVICE=CUDA torchrun --nnodes 1 --nproc-per-node $num_devices $@
-  fi 
+  fi
 }
 
 function run_torch_op_tests {
@@ -190,6 +190,7 @@ function run_xla_op_tests1 {
 # DO NOT MODIFY
 function run_xla_op_tests2 {
   run_downcast_bf16 "$CDIR/test_data_type.py"
+  run_test "$CDIR/pjrt/test_dtypes.py"
   run_test "$CDIR/test_autocast.py"  # TODO(yeounoh) this is expensive on GPU
 }
 
