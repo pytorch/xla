@@ -1,4 +1,3 @@
-# PJRT GPU plugin. Can be configured to be built for CUDA or ROCM.
 load(
     "@xla//xla:xla.bzl",
     "xla_cc_binary",
