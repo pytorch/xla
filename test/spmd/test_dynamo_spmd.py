@@ -10,6 +10,8 @@ import torch_xla.distributed.spmd as xs
 import torch_xla.debug.metrics as met
 import unittest
 
+from torch_xla.distributed.spmd import XLAShardedTensor
+
 import test_xla_sharding_base
 
 
@@ -227,6 +229,21 @@ class DynamoSpmdInferenceTest(test_xla_sharding_base.XlaShardingTest):
     compile_count = met.metric_data('CompileTime')[0]
     dynamo_res = dynamo_linear(xla_x)
     self.assertEqual(met.metric_data('CompileTime')[0], compile_count)
+
+  def test_xla_sharded_tensor_traceability(self):
+
+    def my_fn(t):
+      return XLAShardedTensor(t)
+
+    met.clear_counters()
+    device = xm.xla_device()
+    dynamo_fn = torch.compile(
+        my_fn, backend="openxla")
+    t = torch.tensor([0, 1, 2])
+    xla_t = t.to(device)
+    xla_result = dynamo_fn(xla_t)
+    print(type(xla_result))
+    # torch.allclose(xla_result.cpu(), dynamo_res.cpu())
 
 
 if __name__ == '__main__':
