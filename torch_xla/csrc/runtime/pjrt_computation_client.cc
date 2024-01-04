@@ -37,21 +37,6 @@ namespace runtime {
 
 namespace {
 
-// Builds a map from the device's global ordinal to its index in the `devices`
-// array.
-std::unordered_map<int, int> build_index_map(
-    const std::vector<std::string>& devices) {
-  std::unordered_map<int, int> device_index;
-  for (int i = 0; i < devices.size(); ++i) {
-    std::vector<std::string> device_spec = absl::StrSplit(devices[i], ':');
-    XLA_CHECK_EQ(device_spec.size(), 2)
-        << "Invalid device specification: " << devices[i];
-    int global_ordinal = std::stoi(device_spec[1]);
-    device_index[global_ordinal] = i;
-  }
-  return device_index;
-}
-
 // Builds the xla::Shape of the output xla::Literal on the host.
 xla::Shape host_output_shape(xla::PjRtBuffer* buffer) {
   xla::Shape shape = xla::ShapeUtil::MakeShape(
@@ -94,18 +79,15 @@ torch::lazy::hash_t hash_comp_env(
 
 }  // namespace
 
-std::string PjRtComputationClient::PjRtDeviceToString(
+torch::lazy::BackendDevice PjRtComputationClient::PjRtDeviceToString(
     xla::PjRtDevice* const device) const {
-  std::string platform =
-      absl::AsciiStrToUpper(device->client()->platform_name());
-  int ordinal = global_ordinals_.at(device->id());
-  std::string str = absl::StrFormat("%s:%d", platform, ordinal);
-  return str;
+  return pjrt_device_to_lazy_.at(device->id());
 }
 
-std::vector<std::string> PjRtComputationClient::PjRtDevicesToString(
+std::vector<torch::lazy::BackendDevice>
+PjRtComputationClient::PjRtDevicesToString(
     absl::Span<xla::PjRtDevice* const> devices) const {
-  std::vector<std::string> strs;
+  std::vector<torch::lazy::BackendDevice> strs;
   strs.reserve(devices.size());
 
   for (auto* device : devices) {
@@ -116,8 +98,8 @@ std::vector<std::string> PjRtComputationClient::PjRtDevicesToString(
 }
 
 PjRtComputationClient::PjRtComputationClient() {
-  std::string device_type = sys_util::GetEnvString(env::kEnvPjRtDevice, "");
-  std::tie(client_, coordinator_) = InitializePjRt(device_type);
+  std::string pjrt_device = sys_util::GetEnvString(env::kEnvPjRtDevice, "");
+  std::tie(client_, coordinator_) = InitializePjRt(pjrt_device);
 
   // PjRtDevice IDs are not guaranteed to be dense, so we need to track
   // a device's global ordinal separately from its device ID. Order the
@@ -126,10 +108,19 @@ PjRtComputationClient::PjRtComputationClient() {
   std::partial_sort_copy(client_->devices().begin(), client_->devices().end(),
                          ordered_devices.begin(), ordered_devices.end(),
                          [](auto& a, auto& b) { return a->id() < b->id(); });
+  std::string platform = absl::AsciiStrToUpper(client_->platform_name());
+  auto device_type = std::make_shared<torch_xla::DeviceType>(platform);
   for (auto* device : ordered_devices) {
-    global_ordinals_[device->id()] = global_ordinals_.size();
-    std::string device_str = PjRtDeviceToString(device);
-    string_to_device_.emplace(device_str, device);
+    auto current_ordinal = global_ordinals_.size();
+    global_ordinals_[device->id()] = current_ordinal;
+
+    auto [lazy_device, inserted] = pjrt_device_to_lazy_.try_emplace(
+        device->id(), std::move(device_type), current_ordinal);
+    XLA_CHECK(inserted) << "Duplicate device key for " << device->DebugString();
+
+    auto [pjrt_device, inserted2] = lazy_device_to_pjrt_.try_emplace(
+        lazy_device->second.toString(), device);
+    XLA_CHECK(inserted2) << "Duplicate device key for " << pjrt_device->first;
   }
   comp_env_hash_ = hash_comp_env(client_.get(), ordered_devices);
 
@@ -174,7 +165,7 @@ void PjRtComputationClient::PjRtData::Assign(
 }
 
 ComputationClient::DataPtr PjRtComputationClient::CreateDataPlaceholder(
-    std::string device, xla::Shape shape,
+    torch::lazy::BackendDevice device, xla::Shape shape,
     std::optional<xla::OpSharding> sharding) {
   if (sharding.has_value()) {
     return std::make_shared<PjRtShardedData>(
@@ -219,8 +210,8 @@ ComputationClient::DataPtr PjRtComputationClient::GetDataShard(
 }
 
 ComputationClient::DataPtr PjRtComputationClient::WrapDataShards(
-    absl::Span<const DataPtr> shards, std::string device, xla::Shape shape,
-    xla::OpSharding sharding) {
+    absl::Span<const DataPtr> shards, torch::lazy::BackendDevice device,
+    xla::Shape shape, xla::OpSharding sharding) {
   XLA_CHECK_EQ(shards.size(), client_->addressable_device_count());
   std::vector<std::shared_ptr<PjRtData>> pjrt_data_shards;
   pjrt_data_shards.reserve(shards.size());
@@ -277,7 +268,8 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::TransferToDevice(
 
 ComputationClient::DataPtr PjRtComputationClient::TransferShardsToDevice(
     absl::Span<const std::shared_ptr<const TensorSource>> tensor_shards,
-    std::string device, xla::Shape shape, xla::OpSharding sharding) {
+    torch::lazy::BackendDevice device, xla::Shape shape,
+    xla::OpSharding sharding) {
   tsl::profiler::TraceMe activity(
       "PjRtComputationClient::TransferShardsToDevice",
       tsl::profiler::TraceMeLevel::kInfo);
@@ -298,7 +290,7 @@ ComputationClient::DataPtr PjRtComputationClient::TransferShardsToDevice(
 }
 
 ComputationClient::DataPtr PjRtComputationClient::CopyToDevice(
-    ComputationClient::DataPtr data, std::string dst) {
+    ComputationClient::DataPtr data, torch::lazy::BackendDevice dst) {
   tsl::profiler::TraceMe activity("PjRtComputationClient::CopyToDevice",
                                   tsl::profiler::TraceMeLevel::kInfo);
   const PjRtData* pjrt_data = dynamic_cast<PjRtData*>(data.get());
@@ -350,7 +342,7 @@ PjRtComputationClient::ReplicateShardedData(
     xla::ProgramShape program_shape =
         ConsumeValue(computation.GetProgramShape());
 
-    std::string device = GetDefaultDevice();
+    torch::lazy::BackendDevice device = GetDefaultDevice();
     std::vector<torch_xla::runtime::ComputationClient::CompileInstance>
         instances;
     instances.push_back({std::move(computation), device,
@@ -523,8 +515,8 @@ ComputationClient::ComputationPtr PjRtComputationClient::DeserializeComputation(
          "variable to disable persistent caching.";
   xla::XlaComputation computation((*hlo_modules)[0]->ToProto());
 
-  std::vector<std::string> devices = {UseVirtualDevice() ? spmd_device_str
-                                                         : GetDefaultDevice()};
+  std::vector<torch::lazy::BackendDevice> devices = {
+      UseVirtualDevice() ? spmd_device_str : GetDefaultDevice()};
   return std::make_shared<PjRtComputation>(std::move(computation), devices,
                                            std::move(executable));
 }
@@ -540,7 +532,8 @@ std::vector<ComputationClient::DataPtr>
 PjRtComputationClient::ExecuteComputation(
     const ComputationClient::Computation& computation,
     absl::Span<const ComputationClient::DataPtr> arguments,
-    const std::string& device, const ExecuteComputationOptions& options) {
+    const torch::lazy::BackendDevice& device,
+    const ExecuteComputationOptions& options) {
   // Shared ownership of the timed section ensures that it will only get logged
   // once both `ExecuteComputation` and the async work in `ExecuteSharded` are
   // complete; a copy is held from the lambda that releases it when done.
@@ -610,7 +603,7 @@ std::vector<ComputationClient::DataPtr>
 PjRtComputationClient::ExecuteReplicated(
     const ComputationClient::Computation& computation,
     absl::Span<const ComputationClient::DataPtr> arguments,
-    absl::Span<const std::string> devices,
+    absl::Span<const torch::lazy::BackendDevice> devices,
     const ExecuteReplicatedOptions& options) {
   // Shared ownership of the timed section ensures that it will only get logged
   // once both `ExecuteReplicated` and the async work in `Execute` are
@@ -756,15 +749,17 @@ size_t PjRtComputationClient::GetNumDevices() const {
   return client_->addressable_device_count();
 }
 
-std::string PjRtComputationClient::GetDefaultDevice() const {
+torch::lazy::BackendDevice PjRtComputationClient::GetDefaultDevice() const {
   return PjRtDeviceToString(client_->addressable_devices()[0]);
 }
 
-std::vector<std::string> PjRtComputationClient::GetLocalDevices() const {
+std::vector<torch::lazy::BackendDevice> PjRtComputationClient::GetLocalDevices()
+    const {
   return PjRtDevicesToString(client_->addressable_devices());
 }
 
-std::vector<std::string> PjRtComputationClient::GetAllDevices() const {
+std::vector<torch::lazy::BackendDevice> PjRtComputationClient::GetAllDevices()
+    const {
   return PjRtDevicesToString(client_->devices());
 }
 
@@ -779,31 +774,33 @@ int PjRtComputationClient::GetNumProcesses() const {
 
 const absl::flat_hash_map<
     std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>&
-PjRtComputationClient::GetDeviceAttributes(const std::string& device) {
+PjRtComputationClient::GetDeviceAttributes(
+    const torch::lazy::BackendDevice& device) {
   return PjRtComputationClient::StringToPjRtDevice(device)->Attributes();
 }
 
 void PjRtComputationClient::SetReplicationDevices(
-    std::shared_ptr<std::vector<std::string>> devices) {
+    std::shared_ptr<std::vector<torch::lazy::BackendDevice>> devices) {
   replication_devices_ = std::move(devices);
 }
 
-std::shared_ptr<std::vector<std::string>>
+std::shared_ptr<std::vector<torch::lazy::BackendDevice>>
 PjRtComputationClient::GetReplicationDevices() {
   return replication_devices_;
 }
 
 xla::PjRtDevice* PjRtComputationClient::StringToPjRtDevice(
-    const std::string& device) {
-  XLA_CHECK(string_to_device_.find(device) != string_to_device_.end())
+    const torch::lazy::BackendDevice& device) {
+  XLA_CHECK(lazy_device_to_pjrt_.find(device.toString()) !=
+            lazy_device_to_pjrt_.end())
       << "Unknown device " << device;
-  xla::PjRtDevice* pjrt_device = string_to_device_[device];
+  xla::PjRtDevice* pjrt_device = lazy_device_to_pjrt_[device.toString()];
   return pjrt_device;
 }
 
 void PjRtComputationClient::WaitDeviceOps(
-    absl::Span<const std::string> devices) {
-  TF_VLOG(3) << "Waiting for " << absl::StrJoin(devices, ", ");
+    absl::Span<const torch::lazy::BackendDevice> devices) {
+  // TF_VLOG(3) << "Waiting for " << absl::StrJoin(devices, ", ");
   operation_manager_.WaitForDevices(devices.empty() ? GetLocalDevices()
                                                     : devices);
 }

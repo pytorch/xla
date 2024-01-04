@@ -29,7 +29,7 @@ cc_library(
     ":computation_client",
     ":env_vars",
     ":pjrt_computation_client",
-    ":ifrt_computation_client",
+    # ":ifrt_computation_client",
     "@tsl//tsl/platform:stacktrace",
   ],
 )
@@ -121,6 +121,7 @@ cc_library(
     ":tensor_source",
     ":tf_logging",
     ":xla_coordinator",
+    "//torch_xla/csrc:device",
     "//torch_xla/csrc:thread_pool",
     "@xla//xla:literal",
     "@xla//xla:shape_util",
@@ -271,6 +272,8 @@ cc_library(
     ":debug_macros",
     ":tf_logging",
     "@com_google_absl//absl/types:span",
+    "@torch//:headers",
+    "@torch//:runtime_headers",
   ],
 )
 

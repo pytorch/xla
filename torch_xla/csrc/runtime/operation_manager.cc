@@ -9,9 +9,10 @@
 namespace torch_xla {
 namespace runtime {
 
-OperationManager::OperationManager(absl::Span<const std::string> devices) {
+OperationManager::OperationManager(
+    absl::Span<const torch::lazy::BackendDevice> devices) {
   for (auto& device : devices) {
-    op_counters_.try_emplace(device, device);
+    op_counters_.try_emplace(device.toString(), device);
   }
 }
 
@@ -26,22 +27,24 @@ OperationManager::OperationTracker::~OperationTracker() {
 }
 
 std::unique_ptr<OperationManager::OperationTracker>
-OperationManager::StartOperation(std::string device) {
-  return std::make_unique<OperationTracker>(&op_counters_.at(device));
+OperationManager::StartOperation(torch::lazy::BackendDevice device) {
+  return std::make_unique<OperationTracker>(
+      &op_counters_.at(device.toString()));
 }
 
-void OperationManager::WaitForDevices(absl::Span<const std::string> devices) {
+void OperationManager::WaitForDevices(
+    absl::Span<const torch::lazy::BackendDevice> devices) {
   std::vector<std::unique_lock<std::shared_mutex>> locks;
   locks.reserve(devices.size());
 
-  for (const std::string& device_str : devices) {
+  for (const torch::lazy::BackendDevice& device_str : devices) {
     TF_VLOG(5) << "Blocking new operations on " << device_str;
-    auto lock = op_counters_.at(device_str).BlockNewOperations();
+    auto lock = op_counters_.at(device_str.toString()).BlockNewOperations();
     locks.emplace_back(std::move(lock));
 
     TF_VLOG(3) << "Waiting for device execution for " << device_str
                << " to finish";
-    op_counters_.at(device_str).Wait();
+    op_counters_.at(device_str.toString()).Wait();
     TF_VLOG(3) << "Finished operations on device " << device_str;
   }
 }

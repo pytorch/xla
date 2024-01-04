@@ -1,6 +1,8 @@
 #ifndef XLA_CLIENT_OPERATION_MANAGER_H_
 #define XLA_CLIENT_OPERATION_MANAGER_H_
 
+#include <torch/csrc/lazy/backend/backend_device.h>
+
 #include <atomic>
 #include <condition_variable>
 #include <memory>
@@ -16,7 +18,7 @@ namespace runtime {
 class OperationManager {
  public:
   OperationManager() = default;
-  OperationManager(absl::Span<const std::string>);
+  OperationManager(absl::Span<const torch::lazy::BackendDevice>);
 
   OperationManager(const OperationManager&) = delete;
   OperationManager& operator=(const OperationManager&) = delete;
@@ -26,7 +28,7 @@ class OperationManager {
 
   class Counter {
    public:
-    Counter(const std::string& device) : device_(device){};
+    Counter(const torch::lazy::BackendDevice& device) : device_(device){};
 
     Counter(const Counter&) = delete;
     Counter& operator=(const Counter&) = delete;
@@ -45,7 +47,7 @@ class OperationManager {
     std::unique_lock<std::shared_mutex> BlockNewOperations();
 
    private:
-    std::string device_;
+    torch::lazy::BackendDevice device_;
 
     std::shared_mutex pending_operations_mu_;
     std::atomic<int64_t> count_{0};
@@ -71,10 +73,11 @@ class OperationManager {
   };
 
   // Register a new operation for `device`.
-  std::unique_ptr<OperationTracker> StartOperation(std::string device);
+  std::unique_ptr<OperationTracker> StartOperation(
+      torch::lazy::BackendDevice device);
 
   // Wait for all device execution to complete on devices.
-  void WaitForDevices(absl::Span<const std::string> devices);
+  void WaitForDevices(absl::Span<const torch::lazy::BackendDevice> devices);
 
  private:
   std::unordered_map<std::string, Counter> op_counters_;

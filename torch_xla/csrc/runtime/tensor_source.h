@@ -18,13 +18,14 @@ namespace runtime {
 // Owns a contiguous block of data with the shape and layout matching `shape()`.
 class TensorSource {
  public:
-  TensorSource(std::string device) : device_(std::move(device)){};
+  TensorSource(torch::lazy::BackendDevice device)
+      : device_(std::move(device)){};
 
   virtual const void* data() const = 0;
 
   virtual const xla::Shape& shape() const = 0;
 
-  const std::string& device() const { return device_; }
+  const torch::lazy::BackendDevice& device() const { return device_; }
 
   virtual std::vector<int64_t> byte_strides() const {
     std::vector<int64_t> byte_strides(shape().dimensions_size());
@@ -43,12 +44,13 @@ class TensorSource {
   }
 
  private:
-  std::string device_;
+  torch::lazy::BackendDevice device_;
 };
 
 class AtenSource : public TensorSource {
  public:
-  AtenSource(const at::Tensor& tensor, xla::Shape shape, std::string device)
+  AtenSource(const at::Tensor& tensor, xla::Shape shape,
+             torch::lazy::BackendDevice device)
       : TensorSource(std::move(device)), shape_(std::move(shape)) {
     at::ScalarType target_torch_type = TorchTypeFromXlaType(primitive_type());
     if (target_torch_type != tensor.type().scalarType()) {
@@ -87,7 +89,7 @@ class AtenSource : public TensorSource {
 
 class LiteralSource : public TensorSource {
  public:
-  LiteralSource(xla::Literal literal, std::string device)
+  LiteralSource(xla::Literal literal, torch::lazy::BackendDevice device)
       : TensorSource(std::move(device)), literal_(std::move(literal)) {}
 
   const void* data() const override { return literal_.untyped_data(); }

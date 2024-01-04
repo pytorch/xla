@@ -2,12 +2,14 @@
 #define XLA_CLIENT_PJRT_COMPUTATION_CLIENT_H_
 
 #include <torch/csrc/lazy/backend/backend_data.h>
+#include <torch/csrc/lazy/backend/backend_device.h>
 
 #include <cstdint>
 #include <mutex>
 #include <shared_mutex>
 
 #include "absl/types/span.h"
+#include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/operation_manager.h"
@@ -29,15 +31,16 @@ class PjRtComputationClient : public ComputationClient {
   ~PjRtComputationClient();
 
   DataPtr CreateDataPlaceholder(
-      std::string device, xla::Shape shape,
+      torch::lazy::BackendDevice device, xla::Shape shape,
       std::optional<xla::OpSharding> sharding = std::nullopt) override;
 
   std::vector<DataPtr> GetDataShards(DataPtr data) override;
 
   DataPtr GetDataShard(DataPtr data, size_t index) override;
 
-  DataPtr WrapDataShards(absl::Span<const DataPtr> shards, std::string device,
-                         xla::Shape shape, xla::OpSharding sharding) override;
+  DataPtr WrapDataShards(absl::Span<const DataPtr> shards,
+                         torch::lazy::BackendDevice device, xla::Shape shape,
+                         xla::OpSharding sharding) override;
 
   std::optional<xla::OpSharding> GetDataSharding(DataPtr handle) override;
 
@@ -49,9 +52,10 @@ class PjRtComputationClient : public ComputationClient {
 
   DataPtr TransferShardsToDevice(
       absl::Span<const std::shared_ptr<const TensorSource>> tensor_shards,
-      std::string device, xla::Shape shape, xla::OpSharding sharding) override;
+      torch::lazy::BackendDevice device, xla::Shape shape,
+      xla::OpSharding sharding) override;
 
-  DataPtr CopyToDevice(DataPtr data, std::string dst) override;
+  DataPtr CopyToDevice(DataPtr data, torch::lazy::BackendDevice dst) override;
 
   std::vector<ComputationPtr> Compile(
       std::vector<CompileInstance> instances) override;
@@ -62,21 +66,21 @@ class PjRtComputationClient : public ComputationClient {
 
   std::vector<DataPtr> ExecuteComputation(
       const Computation& computation, absl::Span<const DataPtr> arguments,
-      const std::string& device,
+      const torch::lazy::BackendDevice& device,
       const ExecuteComputationOptions& options) override;
 
   std::vector<DataPtr> ExecuteReplicated(
       const Computation& computation, absl::Span<const DataPtr> arguments,
-      absl::Span<const std::string> devices,
+      absl::Span<const torch::lazy::BackendDevice> devices,
       const ExecuteReplicatedOptions& options) override;
 
   size_t GetNumDevices() const override;
 
-  std::string GetDefaultDevice() const override;
+  torch::lazy::BackendDevice GetDefaultDevice() const override;
 
-  std::vector<std::string> GetLocalDevices() const override;
+  std::vector<torch::lazy::BackendDevice> GetLocalDevices() const override;
 
-  std::vector<std::string> GetAllDevices() const override;
+  std::vector<torch::lazy::BackendDevice> GetAllDevices() const override;
 
   torch::lazy::hash_t HashCompilationEnv() override;
 
@@ -86,14 +90,17 @@ class PjRtComputationClient : public ComputationClient {
 
   const absl::flat_hash_map<
       std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>&
-  GetDeviceAttributes(const std::string& device) override;
+  GetDeviceAttributes(const torch::lazy::BackendDevice& device) override;
 
   void SetReplicationDevices(
-      std::shared_ptr<std::vector<std::string>> devices) override;
+      std::shared_ptr<std::vector<torch::lazy::BackendDevice>> devices)
+      override;
 
-  std::shared_ptr<std::vector<std::string>> GetReplicationDevices() override;
+  std::shared_ptr<std::vector<torch::lazy::BackendDevice>>
+  GetReplicationDevices() override;
 
-  void WaitDeviceOps(absl::Span<const std::string> devices) override;
+  void WaitDeviceOps(
+      absl::Span<const torch::lazy::BackendDevice> devices) override;
 
   std::map<std::string, Metric> GetMetrics() const override;
 
@@ -107,7 +114,7 @@ class PjRtComputationClient : public ComputationClient {
 
   // NOT IMPLEMENTED
 
-  MemoryInfo GetMemoryInfo(const std::string& device) override {
+  MemoryInfo GetMemoryInfo(const torch::lazy::BackendDevice& device) override {
     XLA_ERROR() << __FUNCTION__ << " not implemented";
   };
 
@@ -117,28 +124,31 @@ class PjRtComputationClient : public ComputationClient {
   // global_ordinals_ tracks a map from PjRtDeviceId to the device's
   // dense global ordinal.
   std::unordered_map<int, int> global_ordinals_;
-  std::unordered_map<std::string, xla::PjRtDevice* const> string_to_device_;
-  std::shared_ptr<std::vector<std::string>> replication_devices_;
+  absl::flat_hash_map<int64_t, torch::lazy::BackendDevice> pjrt_device_to_lazy_;
+  absl::flat_hash_map<std::string, xla::PjRtDevice*> lazy_device_to_pjrt_;
+  std::shared_ptr<std::vector<torch::lazy::BackendDevice>> replication_devices_;
   OperationManager operation_manager_;
   tsl::thread::ThreadPool pool_ = tsl::thread::ThreadPool(
       tsl::Env::Default(), "pjrt", std::thread::hardware_concurrency());
   torch::lazy::hash_t comp_env_hash_;
 
-  xla::PjRtDevice* StringToPjRtDevice(const std::string& device);
+  xla::PjRtDevice* StringToPjRtDevice(const torch::lazy::BackendDevice& device);
 
-  std::string PjRtDeviceToString(xla::PjRtDevice* const device) const;
-  std::vector<std::string> PjRtDevicesToString(
+  torch::lazy::BackendDevice PjRtDeviceToString(
+      xla::PjRtDevice* const device) const;
+  std::vector<torch::lazy::BackendDevice> PjRtDevicesToString(
       absl::Span<xla::PjRtDevice* const> devices) const;
 
   struct PjRtData : public Data {
-    PjRtData(std::string device, xla::Shape device_shape)
+    PjRtData(torch::lazy::BackendDevice device, xla::Shape device_shape)
         : Data(std::move(device), std::move(device_shape)) {}
 
-    PjRtData(std::string device, xla::Shape device_shape,
+    PjRtData(torch::lazy::BackendDevice device, xla::Shape device_shape,
              std::shared_ptr<xla::PjRtBuffer> buffer)
         : Data(std::move(device), std::move(device_shape)), buffer(buffer) {}
 
-    PjRtData(std::string device, std::shared_ptr<xla::PjRtBuffer> buffer)
+    PjRtData(torch::lazy::BackendDevice device,
+             std::shared_ptr<xla::PjRtBuffer> buffer)
         : Data(std::move(device),
                xla::Shape(buffer->element_type(), buffer->dimensions(),
                           buffer->is_dynamic_dimension(), {})),
@@ -181,13 +191,14 @@ class PjRtComputationClient : public ComputationClient {
   };
 
   struct PjRtShardedData : public Data {
-    PjRtShardedData(std::string device, xla::Shape shape) = delete;
+    PjRtShardedData(torch::lazy::BackendDevice device,
+                    xla::Shape shape) = delete;
 
-    PjRtShardedData(std::string device, xla::Shape shape,
+    PjRtShardedData(torch::lazy::BackendDevice device, xla::Shape shape,
                     xla::OpSharding sharding)
         : Data(std::move(device), std::move(shape)), sharding(sharding) {}
 
-    PjRtShardedData(std::string device, xla::Shape shape,
+    PjRtShardedData(torch::lazy::BackendDevice device, xla::Shape shape,
                     std::vector<std::shared_ptr<PjRtData>> shards,
                     xla::OpSharding sharding)
         : Data(std::move(device), std::move(shape)),
@@ -241,7 +252,7 @@ class PjRtComputationClient : public ComputationClient {
 
   struct PjRtComputation : public Computation {
     PjRtComputation(xla::XlaComputation computation,
-                    std::vector<std::string> devices,
+                    std::vector<torch::lazy::BackendDevice> devices,
                     std::unique_ptr<xla::PjRtLoadedExecutable> executable)
         : Computation(std::move(computation), std::move(devices)),
           executable(std::move(executable)) {

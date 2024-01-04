@@ -50,16 +50,12 @@ class ComputationClient {
  public:
   class Data : public torch::lazy::BackendData {
    public:
-    // TODO set Device and torch::lazy_shape correctly
-    Data(std::string device, xla::Shape shape)
-        : torch::lazy::BackendData(ParseDeviceString(device),
-                                   torch::lazy::Shape()),
-          xla_device_(device),
+    // TODO(wcromar): set torch::lazy::Shape correctly
+    Data(torch::lazy::BackendDevice device, xla::Shape shape)
+        : torch::lazy::BackendData(device, torch::lazy::Shape()),
           xla_shape_(std::move(shape)) {}
 
     virtual ~Data() {}
-
-    const std::string& device() const { return xla_device_; }
 
     const xla::Shape& shape() const { return xla_shape_; }
 
@@ -70,7 +66,6 @@ class ComputationClient {
     virtual xla::OpSharding GetSharding() const = 0;
 
    private:
-    std::string xla_device_;
     xla::Shape xla_shape_;
   };
 
@@ -98,7 +93,7 @@ class ComputationClient {
     //    compiled.
     //    ...
     Computation(std::string name, xla::XlaComputation computation,
-                std::vector<std::string> devices = {})
+                std::vector<torch::lazy::BackendDevice> devices = {})
         : name_(name),
           computation_(std::move(computation)),
           devices_(std::move(devices)) {
@@ -109,7 +104,8 @@ class ComputationClient {
 
     Computation(std::string name, xla::XlaComputation computation,
                 torch::lazy::BackendDevice device)
-        : Computation(name, std::move(computation), {device.toString()}) {}
+        : Computation(name, std::move(computation),
+                      std::vector<torch::lazy::BackendDevice>({device})) {}
 
     // ...
     // 3. To represent a computation that is already compiled. In this case
@@ -118,7 +114,7 @@ class ComputationClient {
     //    is not ideal to use same class for 3 different purposes but this is
     //    the path took by upstream ltc.
     Computation(xla::XlaComputation computation,
-                std::vector<std::string> devices)
+                std::vector<torch::lazy::BackendDevice> devices)
         : Computation("", std::move(computation), std::move(devices)) {}
 
     Computation(xla::XlaComputation computation)
@@ -128,7 +124,7 @@ class ComputationClient {
 
     const std::string& name() const { return name_; }
 
-    std::string get_device_string() const {
+    torch::lazy::BackendDevice get_device_string() const {
       // Assume that a xla_client_computation_ only contains one device for now.
       XLA_CHECK_EQ(devices().size(), 1);
       return devices()[0];
@@ -173,7 +169,9 @@ class ComputationClient {
       XLA_ERROR() << "Unimplemented";
     }
 
-    const std::vector<std::string>& devices() const { return devices_; }
+    const std::vector<torch::lazy::BackendDevice>& devices() const {
+      return devices_;
+    }
 
     const std::string to_string() const override {
       xla::HloModuleConfig hlo_config(program_shape());
@@ -185,7 +183,7 @@ class ComputationClient {
    private:
     xla::XlaComputation computation_;
     xla::ProgramShape program_shape_;
-    std::vector<std::string> devices_;
+    std::vector<torch::lazy::BackendDevice> devices_;
     bool computation_moved_ = false;
 
     torch::lazy::hash_t hash_;
@@ -199,8 +197,8 @@ class ComputationClient {
   struct CompileInstance {
     CompileInstance() = default;
     CompileInstance(xla::XlaComputation computation,
-                    std::string compilation_device,
-                    std::vector<std::string> devices,
+                    torch::lazy::BackendDevice compilation_device,
+                    std::vector<torch::lazy::BackendDevice> devices,
                     const xla::Shape* output_shape,
                     bool parameter_is_tupled_arguments = false,
                     bool is_sharded = false,
@@ -215,8 +213,8 @@ class ComputationClient {
               allow_spmd_sharding_propagation_to_output) {}
 
     xla::XlaComputation computation;
-    std::string compilation_device;
-    std::vector<std::string> devices;
+    torch::lazy::BackendDevice compilation_device;
+    std::vector<torch::lazy::BackendDevice> devices;
     const xla::Shape* output_shape = nullptr;
     bool parameter_is_tupled_arguments;
     bool is_sharded;
@@ -237,7 +235,7 @@ class ComputationClient {
   // Creates a Data object with no actual device handle in it. The device handle
   // will be populated in an asynchrounous fashion.
   virtual DataPtr CreateDataPlaceholder(
-      std::string device, xla::Shape shape,
+      torch::lazy::BackendDevice device, xla::Shape shape,
       std::optional<xla::OpSharding> sharding = std::nullopt) = 0;
 
   // Returns data shards. We expect this to be called on PjRtShardedData to
@@ -250,7 +248,8 @@ class ComputationClient {
 
   // Returns wrapped data shards as PjRtShardedData.
   virtual DataPtr WrapDataShards(absl::Span<const DataPtr> shards,
-                                 std::string device, xla::Shape shape,
+                                 torch::lazy::BackendDevice device,
+                                 xla::Shape shape,
                                  xla::OpSharding sharding) = 0;
 
   // Returns OpSharding attached to PjRtShardedData. The returned optional
@@ -265,10 +264,12 @@ class ComputationClient {
   // `PjRtShardedData`.
   virtual DataPtr TransferShardsToDevice(
       absl::Span<const std::shared_ptr<const TensorSource>> tensor_shards,
-      std::string device, xla::Shape shape, xla::OpSharding sharding) = 0;
+      torch::lazy::BackendDevice device, xla::Shape shape,
+      xla::OpSharding sharding) = 0;
 
   // Copies `data->buffer` to `dst` device buffer.
-  virtual DataPtr CopyToDevice(DataPtr data, std::string dst) = 0;
+  virtual DataPtr CopyToDevice(DataPtr data,
+                               torch::lazy::BackendDevice dst) = 0;
 
   // Reads the tensor literal values stored at TPU server sites, behind the
   // supplied handles.
@@ -300,7 +301,7 @@ class ComputationClient {
   // its single elements.
   virtual std::vector<DataPtr> ExecuteComputation(
       const Computation& computation, absl::Span<const DataPtr> arguments,
-      const std::string& device,
+      const torch::lazy::BackendDevice& device,
       const ExecuteComputationOptions& options =
           ExecuteComputationOptions{}) = 0;
 
@@ -311,16 +312,16 @@ class ComputationClient {
   // of which is sharded in the same order as `devices`.
   virtual std::vector<DataPtr> ExecuteReplicated(
       const Computation& computation, absl::Span<const DataPtr> arguments,
-      absl::Span<const std::string> devices,
+      absl::Span<const torch::lazy::BackendDevice> devices,
       const ExecuteReplicatedOptions& options) = 0;
 
-  virtual std::string GetDefaultDevice() const = 0;
+  virtual torch::lazy::BackendDevice GetDefaultDevice() const = 0;
 
   virtual size_t GetNumDevices() const = 0;
 
-  virtual std::vector<std::string> GetLocalDevices() const = 0;
+  virtual std::vector<torch::lazy::BackendDevice> GetLocalDevices() const = 0;
 
-  virtual std::vector<std::string> GetAllDevices() const = 0;
+  virtual std::vector<torch::lazy::BackendDevice> GetAllDevices() const = 0;
 
   virtual int GetProcessIndex() const = 0;
 
@@ -331,20 +332,23 @@ class ComputationClient {
 
   virtual const absl::flat_hash_map<
       std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>&
-  GetDeviceAttributes(const std::string& device) = 0;
+  GetDeviceAttributes(const torch::lazy::BackendDevice& device) = 0;
 
   virtual void SetReplicationDevices(
-      std::shared_ptr<std::vector<std::string>> devices) = 0;
+      std::shared_ptr<std::vector<torch::lazy::BackendDevice>> devices) = 0;
 
-  virtual std::shared_ptr<std::vector<std::string>> GetReplicationDevices() = 0;
+  virtual std::shared_ptr<std::vector<torch::lazy::BackendDevice>>
+  GetReplicationDevices() = 0;
 
   virtual std::map<std::string, Metric> GetMetrics() const = 0;
 
-  virtual MemoryInfo GetMemoryInfo(const std::string& device) = 0;
+  virtual MemoryInfo GetMemoryInfo(
+      const torch::lazy::BackendDevice& device) = 0;
 
   // Block until pass in devices' async operation are finished. If empty, all
   // the local devices will be waited for.
-  virtual void WaitDeviceOps(absl::Span<const std::string> devices) = 0;
+  virtual void WaitDeviceOps(
+      absl::Span<const torch::lazy::BackendDevice> devices) = 0;
 
   // Check whether the XlaCoordinator has been initialized.
   virtual bool CoordinatorInitialized() const = 0;
@@ -360,23 +364,26 @@ class ComputationClient {
   // Utility API around the vector based Compile() API to compile a single
   // computation.
   ComputationPtr Compile(xla::XlaComputation computation,
-                         std::string compilation_device,
-                         std::vector<std::string> devices,
+                         torch::lazy::BackendDevice compilation_device,
+                         std::vector<torch::lazy::BackendDevice> devices,
                          const xla::Shape* output_shape);
 
   // Retrieves the set of devices to be passed to the computation client
   // Compile() API. If the devices array is empty, a vector with the single
   // device will be returned. Otherwise a vector with the devices content will
   // be returned.
-  std::vector<std::string> GetCompilationDevices(
-      const std::string& device, absl::Span<const std::string> devices);
+  std::vector<torch::lazy::BackendDevice> GetCompilationDevices(
+      const torch::lazy::BackendDevice& device,
+      absl::Span<const torch::lazy::BackendDevice> devices);
 
   // Retrieves the ordinal number out of a device string. This is the number
   // after the last ':' character of the device string.
-  static int64_t GetDeviceOrdinal(const std::string& device);
+  static int64_t GetDeviceOrdinal(const torch::lazy::BackendDevice& device);
 
  protected:
-  static constexpr auto spmd_device_str = "SPMD:0";
+  const torch::lazy::BackendDevice spmd_device_str = torch::lazy::BackendDevice(
+      std::make_shared<torch_xla::DeviceType>(torch_xla::XlaDeviceType::SPMD),
+      0);
 
   // Metrics common to all client interfaces.
   static metrics::Metric* TransferToDeviceMetric();

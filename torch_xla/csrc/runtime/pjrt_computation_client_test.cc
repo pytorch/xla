@@ -38,7 +38,7 @@ TEST(PjRtComputationClientTest, Init) {
   // Get a CPU client.
   tsl::setenv("PJRT_DEVICE", "CPU", true);
   auto client = std::make_unique<PjRtComputationClient>();
-  std::string device = client->GetDefaultDevice();
+  torch::lazy::BackendDevice device = client->GetDefaultDevice();
 
   // Compose a computation.
   auto shape = xla::ShapeUtil::MakeShape(xla::F32, {2, 2});
