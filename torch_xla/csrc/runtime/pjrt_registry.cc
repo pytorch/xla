@@ -135,15 +135,17 @@ InitializePjRt(const std::string& device_type) {
     std::string port = runtime::sys_util::GetEnvString(
         "XLA_COORDINATOR_PORT", XlaCoordinator::kDefaultCoordinatorPort);
 
-    bool spmd = sys_util::GetEnvBool("XLA_USE_SPMD", false);
+    xla::PjRtClient::KeyValueGetCallback kv_get = nullptr;
+    xla::PjRtClient::KeyValuePutCallback kv_put = nullptr;
     std::optional<std::set<int>> allowed_devices;
+    bool spmd = sys_util::GetEnvBool("XLA_USE_SPMD", false);
     if (!spmd) {
       allowed_devices = std::set{local_process_rank};
     }
-
-    std::shared_ptr<xla::KeyValueStoreInterface> kv_store;
-    if (global_world_size > 1) {
-      // Use the distributed key-value store from DistributedRuntimeClient.
+    else if (global_world_size > 1) {
+      allowed_devices =
+        std::make_optional<std::set<int>>(std::set{local_process_rank});
+      // Use the XlaCoordinator as the distributed key-value store.
       coordinator = std::make_unique<XlaCoordinator>(
           global_process_rank, global_world_size, master_addr, port);
       std::shared_ptr<xla::DistributedRuntimeClient> distributed_client =

@@ -47,6 +47,7 @@ class AtenXlaDeviceMapper {
     } else {
       for (auto& device_str :
            torch_xla::runtime::GetComputationClient()->GetLocalDevices()) {
+        std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": Got local device:" << device_str << std::endl;
         devices_.emplace_back(ParseDeviceString(device_str));
         devices_ordinals_[devices_.back()] = devices_.size() - 1;
       }
