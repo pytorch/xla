@@ -171,10 +171,9 @@ class XLAShardedTensor(torch.Tensor):
 
     # This method is required to be implemented for tensor subclass to make it traceable.
     def __tensor_flatten__(self):
-        return ["global_tensor"], (self.mesh_shape, self.partition_spec)
+      return ["global_tensor"], (self.mesh_shape, self.partition_spec)
 
     # This method is required to be implemented for tensor subclass to make it traceable.
     @staticmethod
     def __tensor_unflatten__(inner_tensors, metadata, outer_size, outer_stride):
-        return XLAShardedTensor(inner_tensors["global_tensor"])
-
+      return XLAShardedTensor(inner_tensors["global_tensor"])

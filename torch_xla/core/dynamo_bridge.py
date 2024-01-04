@@ -484,9 +484,9 @@ class XLAConstructorMoverPass(ConstructorMoverPass):
 def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
   # Synchronize xla_args, so that each FunctionalTensorWrapper argument updates its
   # value reference before actually computing it.
-  # for a in xla_args:
-  #   if isinstance(a, torch.Tensor) and torch._is_functional_tensor(a):
-  #     torch._functionalize_sync(a)
+  for a in xla_args:
+    if isinstance(a, torch.Tensor) and torch._is_functional_tensor(a):
+      torch._functionalize_sync(a)
 
   # This call is critical to make sure xla_args' tensor id show up in graph_input_tensor_ids
   xm.mark_step()

@@ -237,13 +237,11 @@ class DynamoSpmdInferenceTest(test_xla_sharding_base.XlaShardingTest):
 
     met.clear_counters()
     device = xm.xla_device()
-    dynamo_fn = torch.compile(
-        my_fn, backend="openxla")
+    dynamo_fn = torch.compile(my_fn, backend="openxla")
     t = torch.tensor([0, 1, 2])
     xla_t = t.to(device)
     xla_result = dynamo_fn(xla_t)
-    print(type(xla_result))
-    # torch.allclose(xla_result.cpu(), dynamo_res.cpu())
+    torch.allclose(xla_result.cpu(), dynamo_res.cpu())
 
 
 if __name__ == '__main__':
