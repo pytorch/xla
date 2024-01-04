@@ -176,8 +176,11 @@ xla::OpSharding IfrtComputationClient::IfrtData::GetSharding() const {
 }
 
 ComputationClient::DataPtr IfrtComputationClient::CreateDataPlaceholder(
-    std::string device, xla::Shape shape) {
-  return std::make_shared<IfrtData>(device, shape);
+    std::string device, xla::Shape shape,
+    std::optional<xla::OpSharding> sharding) {
+  return std::make_shared<IfrtData>(std::move(device), std::move(shape),
+                                    tsl::RCReference<xla::ifrt::Array>(),
+                                    std::move(sharding));
 }
 
 std::vector<ComputationClient::DataPtr> IfrtComputationClient::GetDataShards(
@@ -211,14 +214,9 @@ ComputationClient::DataPtr IfrtComputationClient::GetDataShard(
 }
 
 ComputationClient::DataPtr IfrtComputationClient::WrapDataShards(
-    const std::vector<DataPtr>& shards, std::string device, xla::Shape shape,
+    absl::Span<const DataPtr> shards, std::string device, xla::Shape shape,
     xla::OpSharding sharding) {
-  // TODO: implement CreateDataPlaceholder for sharded data
-  if (shards.size() == 0) {
-    TF_LOG(INFO) << "creating sharded placeholder";
-    return std::make_shared<IfrtData>(
-        device, shape, tsl::RCReference<xla::ifrt::Array>(), sharding);
-  }
+  XLA_CHECK_EQ(shards.size(), client_->addressable_device_count());
   std::vector<tsl::RCReference<xla::ifrt::Array>> arrays;
   std::vector<xla::ifrt::Shape> shard_shapes;
   for (auto& shard : shards) {
