@@ -36,6 +36,8 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
     device = xm.xla_device()
     num_devices = self.n_devices
+    if num_devices != 8:
+      self.skipTest("skip num_devices!=8 env to avoid circular reasoning")
     mesh_shape = (2, num_devices // 2)
     device_ids = np.array(range(num_devices))
     mesh = self._get_mesh(mesh_shape)
@@ -116,6 +118,8 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
     device = xm.xla_device()
     num_devices = self.n_devices
+    if num_devices != 8:
+      self.skipTest("skip num_devices!=8 env to avoid circular reasoning")
     mesh_shape = (2, num_devices // 2)
     device_ids = np.array(range(num_devices))
     mesh = self._get_mesh(mesh_shape)
@@ -167,6 +171,8 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
     device = xm.xla_device()
     num_devices = self.n_devices
+    if num_devices != 8:
+      self.skipTest("skip num_devices!=8 env to avoid circular reasoning")
     mesh_shape = (2, num_devices // 2)
     device_ids = np.array(range(num_devices))
     mesh = self._get_mesh(mesh_shape)
@@ -212,6 +218,8 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
     device = xm.xla_device()
     num_devices = self.n_devices
+    if num_devices != 1:
+      self.skipTest("skip num_devices!=1 env to avoid circular reasoning")
     mesh_shape = (1, num_devices)
     device_ids = np.array(range(num_devices))
     mesh = self._get_mesh(mesh_shape)
@@ -255,6 +263,8 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
     device = xm.xla_device()
     num_devices = self.n_devices
+    if num_devices != 1:
+      self.skipTest("skip num_devices!=1 env to avoid circular reasoning")
     mesh_shape = (1, num_devices)
     device_ids = np.array(range(num_devices))
     mesh = self._get_mesh(mesh_shape)
@@ -299,6 +309,8 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
     device = xm.xla_device()
     num_devices = self.n_devices
+    if num_devices != 1:
+      self.skipTest("skip num_devices!=1 env to avoid circular reasoning")
     mesh_shape = (1, num_devices)
     device_ids = np.array(range(num_devices))
     mesh = self._get_mesh(mesh_shape)
