@@ -148,6 +148,8 @@ _aws_ec2_inf_trn_init()
 
 
 def _prepare_to_exit():
+  device = _XLAC._xla_get_default_device()
+  _XLAC._set_all_reduce_token(device, None)
   _XLAC._prepare_to_exit()
   if int(os.environ.get('PT_XLA_DEBUG', '0')):
     _summarize_fn_tracker()
