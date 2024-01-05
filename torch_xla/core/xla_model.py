@@ -285,7 +285,7 @@ def unlazy(tensors):
 
 
 def set_replication(device, devices):
-  import pdb; pdb.set_trace()
+  # import pdb; pdb.set_trace()
   device = str(device)
   devctx = _get_device_context(device=device)
   devices = [str(x) for x in devices]
