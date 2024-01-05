@@ -15,7 +15,6 @@ static bool spmd_config_is_locked = false;
 
 }  // namespace
 
-
 std::string DeviceType::XlaDeviceTypeToString(XlaDeviceType hw_type) {
   XLA_CHECK(hw_type != XlaDeviceType::PLUGIN) << "PLUGIN type name unknown";
 

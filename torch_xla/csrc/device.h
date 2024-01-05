@@ -18,11 +18,16 @@ namespace torch_xla {
 enum class XlaDeviceType { CPU, CUDA, TPU, NEURON, SPMD, PLUGIN };
 
 struct DeviceType : public torch::lazy::BackendDeviceType {
-  DeviceType(XlaDeviceType xla_device_type) : torch::lazy::BackendDeviceType(static_cast<int>(xla_device_type)), type_name_(XlaDeviceTypeToString(xla_device_type)) { }
-  DeviceType(const std::string& type_name) : torch::lazy::BackendDeviceType(static_cast<int>(StringToXlaDeviceType(type_name))), type_name_(type_name) { }
+  DeviceType(XlaDeviceType xla_device_type)
+      : torch::lazy::BackendDeviceType(static_cast<int>(xla_device_type)),
+        type_name_(XlaDeviceTypeToString(xla_device_type)) {}
+  DeviceType(const std::string& type_name)
+      : torch::lazy::BackendDeviceType(
+            static_cast<int>(StringToXlaDeviceType(type_name))),
+        type_name_(type_name) {}
 
   // TODO(wcromar): do we even want this default constructor?
-  DeviceType() : DeviceType(XlaDeviceType::CPU) {};
+  DeviceType() : DeviceType(XlaDeviceType::CPU){};
 
   std::string toString() const override;
 
