@@ -236,6 +236,7 @@ function run_mp_op_tests {
   run_test "$CDIR/test_mp_save.py"
   run_test "$CDIR/test_mp_mesh_reduce.py"
   run_test "$CDIR/test_mp_sync_batch_norm.py"
+  run_test "$CDIR/test_mp_early_exit.py"
   run_pt_xla_debug "$CDIR/debug_tool/test_mp_pt_xla_debug.py"
   run_xla_backend_mp "$CDIR/test_torch_distributed_all_gather_xla_backend.py"
   run_xla_backend_mp "$CDIR/test_torch_distributed_all_reduce_xla_backend.py"
