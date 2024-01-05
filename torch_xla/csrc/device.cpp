@@ -86,6 +86,17 @@ torch::lazy::BackendDevice ParseDeviceString(const std::string& device_spec) {
       std::make_shared<DeviceType>(device_type[0]), ordinal);
 }
 
+std::vector<torch::lazy::BackendDevice> ParseDeviceString(absl::Span<const std::string> devices) {
+  std::vector<torch::lazy::BackendDevice> parsed_devices;
+  parsed_devices.reserve(devices.size());
+
+  for (auto& device : devices) {
+    parsed_devices.emplace_back(ParseDeviceString(device));
+  }
+
+  return parsed_devices;
+}
+
 torch::lazy::BackendDevice GetVirtualDevice() {
   return ParseDeviceString("SPMD:0");
 }

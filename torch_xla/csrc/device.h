@@ -29,6 +29,8 @@ struct DeviceType : public torch::lazy::BackendDeviceType {
 
 torch::lazy::BackendDevice ParseDeviceString(const std::string& device_spec);
 
+std::vector<torch::lazy::BackendDevice> ParseDeviceString(absl::Span<const std::string> devices);
+
 torch::lazy::BackendDevice GetVirtualDevice();
 
 // Test whether the XLA_USE_SPMD environment variable is set to enable the

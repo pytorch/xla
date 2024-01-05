@@ -126,14 +126,14 @@ std::string GetCurrentThreadDevice() {
   return bridge::GetCurrentAtenDevice().str();
 }
 
-std::vector<std::string> GetXlaDevices(
+std::vector<torch::lazy::BackendDevice> GetXlaDevices(
     const std::vector<std::string>& devices) {
-  std::vector<std::string> xla_devices;
+  std::vector<torch::lazy::BackendDevice> xla_devices;
   xla_devices.reserve(devices.size());
   for (auto& device_str : devices) {
     torch::lazy::BackendDevice device =
         bridge::AtenDeviceToXlaDevice(c10::Device(device_str));
-    xla_devices.emplace_back(device);
+    xla_devices.emplace_back(std::move(device));
   }
   return xla_devices;
 }
@@ -401,7 +401,7 @@ void SyncTensors(const std::vector<at::Tensor>& tensors,
                  bool sync_xla_data, bool warm_up_cache_only = false) {
   std::vector<XLATensorPtr> xtensors =
       GetXlaTensors(tensors, /*want_all=*/false);
-  XLAGraphExecutor::Get()->SyncTensorsGraph(&xtensors, devices, wait,
+  XLAGraphExecutor::Get()->SyncTensorsGraph(&xtensors, ParseDeviceString(devices), wait,
                                             sync_xla_data, warm_up_cache_only);
 }
 
@@ -409,7 +409,7 @@ void SyncLiveTensors(const std::string& device_str,
                      const std::vector<std::string>& devices, bool wait) {
   auto opt_device = GetOptionalDevice(device_str);
   XLAGraphExecutor::Get()->SyncLiveTensorsGraph(
-      opt_device ? &opt_device.value() : nullptr, devices, wait);
+      opt_device ? &opt_device.value() : nullptr, ParseDeviceString(devices), wait);
 }
 
 void StepMarker(const std::string& device_str,
@@ -417,7 +417,7 @@ void StepMarker(const std::string& device_str,
   tsl::profiler::TraceMe activity("StepMarker",
                                   tsl::profiler::TraceMeLevel::kInfo);
   torch::lazy::BackendDevice device = GetDeviceOrCurrent(device_str);
-  XLAGraphExecutor::Get()->SyncLiveTensorsGraph(&device, devices, wait);
+  XLAGraphExecutor::Get()->SyncLiveTensorsGraph(&device, ParseDeviceString(devices), wait);
   XLAGraphExecutor::Get()->MarkStep(device);
   bool debug_mode = runtime::sys_util::GetEnvBool("PT_XLA_DEBUG", false);
   if (TF_PREDICT_FALSE(debug_mode)) {
@@ -1175,7 +1175,7 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_xla_set_replication_devices",
         [](const std::vector<std::string>& devices) {
           auto replication_devices =
-              std::make_shared<std::vector<std::string>>(devices);
+              std::make_shared<std::vector<torch::lazy::BackendDevice>>(ParseDeviceString(devices));
           runtime::GetComputationClient()->SetReplicationDevices(
               std::move(replication_devices));
         });
@@ -1183,7 +1183,7 @@ void InitXlaModuleBindings(py::module m) {
     auto replication_devices =
         runtime::GetComputationClient()->GetReplicationDevices();
     return replication_devices != nullptr ? *replication_devices
-                                          : std::vector<std::string>();
+                                          : std::vector<torch::lazy::BackendDevice>();
   });
   m.def("_xla_get_replication_devices_count", []() {
     auto replication_devices =
@@ -1487,7 +1487,7 @@ void InitXlaModuleBindings(py::module m) {
     return dict;
   });
   m.def("_xla_get_all_device_attributes", []() {
-    std::vector<std::string> global_devices =
+    std::vector<torch::lazy::BackendDevice> global_devices =
         runtime::GetComputationClient()->GetAllDevices();
     std::vector<py::dict> list;
     for (auto const& device : global_devices) {
@@ -1545,7 +1545,6 @@ void InitXlaModuleBindings(py::module m) {
         py::arg("device") = "", py::arg("devices"), py::arg("wait") = true);
   m.def("_get_stablehlo",
         [](const std::vector<at::Tensor>& tensors, const std::string& device,
-           const std::vector<std::string>& devices,
            bool emit_bytecode) -> py::bytes {
           NoGilSection nogil;
           EmitMode mode = emit_bytecode ? EmitMode::kStableHloBytecode
@@ -1582,12 +1581,11 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_xla_wait_device_ops",
         [](const std::vector<std::string>& devices) {
           NoGilSection nogil;
-          XLAGraphExecutor::Get()->WaitDeviceOps(devices);
+          XLAGraphExecutor::Get()->WaitDeviceOps(ParseDeviceString(devices));
           if (UseVirtualDevice()) {
-            std::vector<std::string> spmd_device = {"SPMD:0"};
-            runtime::GetComputationClient()->WaitDeviceOps(spmd_device);
+            runtime::GetComputationClient()->WaitDeviceOps({ParseDeviceString("SPMD:0")});
           } else {
-            runtime::GetComputationClient()->WaitDeviceOps(devices);
+            runtime::GetComputationClient()->WaitDeviceOps(ParseDeviceString(devices));
           }
         },
         py::arg("devices"));
@@ -1921,7 +1919,7 @@ void InitXlaModuleBindings(py::module m) {
   // device string.
   m.def("_get_local_shards",
         [](const std::vector<at::Tensor>& input)
-            -> std::vector<std::vector<std::pair<at::Tensor, std::string>>> {
+            -> std::vector<std::vector<std::pair<at::Tensor, torch::lazy::BackendDevice>>> {
           std::vector<runtime::ComputationClient::DataPtr> handles;
           std::vector<at::ScalarType> element_types;
           // Find all shard handles for transfer
@@ -1946,16 +1944,16 @@ void InitXlaModuleBindings(py::module m) {
           std::vector<at::Tensor> cpu_shards =
               XlaDataToTensors(WrapXlaData(handles), element_types);
           // Populate the resulting vector of shards and device strings
-          std::vector<std::vector<std::pair<at::Tensor, std::string>>> result;
+          std::vector<std::vector<std::pair<at::Tensor, torch::lazy::BackendDevice>>> result;
           int shards_per_tensor =
               runtime::GetComputationClient()->GetLocalDevices().size();
           result.reserve(cpu_shards.size() / shards_per_tensor);
           for (int i = 0; i < cpu_shards.size(); i += shards_per_tensor) {
-            std::vector<std::pair<at::Tensor, std::string>> shard_devices;
+            std::vector<std::pair<at::Tensor, torch::lazy::BackendDevice>> shard_devices;
             for (int shard = 0; shard < shards_per_tensor; ++shard) {
               at::Tensor cpu_shard = cpu_shards[i + shard];
-              std::string source_device = handles[i + shard]->device();
-              std::pair<at::Tensor, std::string> shard_dev(cpu_shard,
+              torch::lazy::BackendDevice source_device = handles[i + shard]->device();
+              std::pair<at::Tensor, torch::lazy::BackendDevice> shard_dev(cpu_shard,
                                                            source_device);
               shard_devices.push_back(shard_dev);
             }
@@ -1984,7 +1982,7 @@ void InitXlaModuleBindings(py::module m) {
               std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
                   xtensor->GetXlaData());
           auto shards = runtime::GetComputationClient()->GetDataShards(handle);
-          std::vector<std::string> shard_devices;
+          std::vector<torch::lazy::BackendDevice> shard_devices;
           for (auto& shard : shards) {
             shard_devices.push_back(shard->device());
           }
@@ -2047,7 +2045,7 @@ void InitXlaModuleBindings(py::module m) {
           << " vs " << shard_shape;
     }
     auto xla_data =
-        ShardingUtil::CreateShardedData(shards, devices, sharding_spec);
+        ShardingUtil::CreateShardedData(shards, ParseDeviceString(devices), sharding_spec);
     xtensor->SetXlaData(xla_data);
   });
   // This is useful for debugging and generating a partitioned HLO separately
