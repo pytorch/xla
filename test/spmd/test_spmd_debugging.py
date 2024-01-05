@@ -368,7 +368,6 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
 
     color = None
     text_color = None
-    test_debugging_spmd_multi_host_tiled_tpu
     # console = rich.console.Console() # width=max_width)
     use_color = True if rich.console.Console().color_system else False 
     fake_table = rich.table.Table(
