@@ -240,8 +240,10 @@ class DynamoSpmdInferenceTest(test_xla_sharding_base.XlaShardingTest):
     dynamo_fn = torch.compile(my_fn, backend="openxla")
     t = torch.tensor([0, 1, 2])
     xla_t = t.to(device)
-    xla_result = dynamo_fn(xla_t)
+    xla_result = my_fn(xla_t)
+    dynamo_res = dynamo_fn(xla_t)
     torch.allclose(xla_result.cpu(), dynamo_res.cpu())
+    self.assertTrue(isinstance(dynamo_res, XLAShardedTensor))
 
 
 if __name__ == '__main__':
