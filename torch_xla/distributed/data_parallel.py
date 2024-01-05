@@ -81,7 +81,7 @@ class DataParallel(object):
   def _handle_runner_exception(self, device, e):
     print(
         'Exception in model function for device={}: {}'.format(device, str(e)),
-        file=sys.stderr)
+        flush=True)
     traceback.print_exc(limit=16, file=sys.stderr)
     # Explicitly flush out stderr and stdout before exiting since
     # os._exit doesn't flush them.
@@ -95,6 +95,7 @@ class DataParallel(object):
 
   def _module_runner(self, loop_fn, device, module, loader, context, result,
                      **kwargs):
+    print('xw32 device=', device, ', self._device_ids=', self._device_ids)
     xm.set_replication(device, self._device_ids)
     try:
       result.result = loop_fn(module, loader, torch.device(device), context,
@@ -123,6 +124,7 @@ class DataParallel(object):
     Returns:
       A list with the values returned by the `loop_fn` on each device.
     """
+    print('xw32 self._native_run=', self._native_run)
     if self._native_run:
       ## This is called without XLA devices available. Run in normal mode.
       return [
@@ -131,11 +133,14 @@ class DataParallel(object):
                   self._kwargs)
       ]
 
+    print('xw32 line135') 
     xm.wait_device_ops()
+    print('xw32 line137') 
     para_loader = pl.ParallelLoader(
         loader, self._device_ids, batchdim=batchdim, **self._kwargs)
     threads = []
     results = []
+    print('xw32 line142') 
     for module, device, context in zip(self._models, self._device_ids,
                                        self._contexts):
       result = ThreadResult()
@@ -148,6 +153,7 @@ class DataParallel(object):
       thread.start()
       threads.append(thread)
       results.append(result)
+    print('xw32 line155') 
     for thread in threads:
       thread.join()
     para_loader.close()

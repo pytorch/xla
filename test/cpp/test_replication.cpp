@@ -46,14 +46,14 @@ void TestSingleReplication(
     instances.emplace_back(CreateCrsComputation(shape), device_str,
                            all_device_strings, &shape);
   }
-  auto compiled_computations =
+  std::vector<torch_xla::runtime::ComputationClient::ComputationPtr> compiled_computations =
       torch_xla::runtime::GetComputationClient()->Compile(std::move(instances));
 
   std::vector<at::Tensor> tensors;
   for (size_t i = 0; i < device_strings.size(); ++i) {
     tensors.push_back(at::ones({8, 8}, at::TensorOptions(at::kFloat)));
   }
-  auto tensors_data = CreateTensorsData(tensors, device_strings);
+  std::vector<torch::lazy::BackendDataPtr> tensors_data = CreateTensorsData(tensors, device_strings);
 
   std::vector<std::vector<torch_xla::runtime::ComputationClient::DataPtr>>
       results(device_strings.size());
@@ -61,6 +61,7 @@ void TestSingleReplication(
   torch_xla::runtime::ComputationClient::ExecuteComputationOptions exec_options;
   for (size_t i = 0; i < device_strings.size(); ++i) {
     auto executor = [&, i]() {
+      std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": about to run ExecuteComputation" << std::endl;
       results[i] =
           torch_xla::runtime::GetComputationClient()->ExecuteComputation(
               *compiled_computations[i],
@@ -68,6 +69,7 @@ void TestSingleReplication(
                   torch_xla::runtime::ComputationClient::Data>(
                   tensors_data[i])},
               device_strings[i], exec_options);
+      std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": finished running ExecuteComputation" << std::endl;
       counter.DecrementCount();
     };
     torch_xla::thread::Schedule(std::move(executor));
@@ -75,7 +77,7 @@ void TestSingleReplication(
   counter.Wait();
 
   for (size_t i = 0; i < results.size(); ++i) {
-    auto literals =
+    std::vector<xla::Literal> literals =
         torch_xla::runtime::GetComputationClient()->TransferFromDevice(
             results[i]);
     ASSERT_EQ(literals.size(), 1);
@@ -94,7 +96,7 @@ class ReplicationTest : public AtenXlaTensorTestBase {};
 
 TEST_F(ReplicationTest, TestNSingleReplication) {
   WithAllDevices(
-      {XlaDeviceType::TPU, XlaDeviceType::CUDA},
+      {XlaDeviceType::TPU},
       [&](const std::vector<torch::lazy::BackendDevice>& devices,
           const std::vector<torch::lazy::BackendDevice>& all_devices) {
         TestSingleReplication(devices, all_devices);

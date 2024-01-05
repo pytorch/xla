@@ -731,8 +731,10 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
         source_tensors;                                            // in
     std::vector<runtime::ComputationClient::DataPtr> new_handles;  // out
     if (static_cast<XlaDeviceType>(device.type()) == XlaDeviceType::SPMD) {
+      std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
       // GetLocalDevices returns the list of local devices specified by their
       // global ordinals (e.g. ["TPU:4", "TPU:5", "TPU:6", "TPU:7"]).
+
       std::vector<std::string> local_devices =
           runtime::GetComputationClient()->GetLocalDevices();
       // Shards the input tensors with padding, to split evenly.
@@ -744,6 +746,7 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
       new_handles.push_back(ShardingUtil::CreateShardedData(
           local_shards, local_devices, shardings[i]));
     } else {
+      std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
       source_tensors.push_back(std::make_shared<runtime::AtenSource>(
           tensors[i], std::move(shape), devices[i]));
       new_handles =

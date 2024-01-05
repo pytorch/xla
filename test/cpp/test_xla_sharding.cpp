@@ -313,6 +313,7 @@ TEST_F(XLAShardingTest, CreateTensorsData) {
           torch_xla::runtime::env::kEnvPjRtDevice, "") == "") {
     GTEST_SKIP() << "`PJRT_DEVICE` is not set.";
   }
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": XLA_USE_SPMD=" << torch_xla::runtime::sys_util::GetEnvString("XLA_USE_SPMD", "") << std::endl;
 
   std::vector<at::Tensor> tensors(2);
   auto tensor = at::ones({8, 8}, at::TensorOptions(at::kFloat));

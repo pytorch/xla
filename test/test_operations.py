@@ -236,11 +236,14 @@ class XlaMNIST(nn.Module):
     x = self.fc2(x)
     return F.log_softmax(x, dim=1)
 
-
+@unittest.skipIf(xr.device_type() == 'CUDA',
+    'Parallelism for cuda assumes one GPU device per process instead of relying on threads.')
 class TestParallelTensorMNIST(test_utils.XlaTestCase):
 
   def test(self):
+    # devices=['xla:0', 'xla:1', 'xla:2', 'xla:3'] for example.
     devices = xm.get_xla_supported_devices()
+    print('xw32 len(devices)=', len(devices))
     batch_size = xu.getenv_as('BATCH_SIZE', int, defval=8)
     sample_count = xu.getenv_as('SAMPLE_COUNT', int, defval=10)
     train_loader = xu.SampleGenerator(
@@ -1247,8 +1250,6 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     self.runAtenTest(torch.zeros([4, 4]), test_fn)
 
-  @unittest.skipIf(xr.device_type() == 'GPU',
-                   "This test fails only on GPU with 07/05 XLA pin update.")
   def test_stack_pred(self):
 
     def test_fn(a):

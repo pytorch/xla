@@ -226,6 +226,7 @@ void WithAllDevices(
     std::vector<torch::lazy::BackendDevice> all_devices;
     for (const auto& device_str :
          torch_xla::runtime::GetComputationClient()->GetLocalDevices()) {
+      std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": device_type=" << device_type.type << ", device_str=" << device_str << std::endl;
       torch::lazy::BackendDevice device = ParseDeviceString(device_str);
       if (device.type() == device_type.type) {
         devices.push_back(device);
@@ -233,6 +234,7 @@ void WithAllDevices(
     }
     for (const auto& device_str :
          torch_xla::runtime::GetComputationClient()->GetAllDevices()) {
+      std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": device_type=" << device_type.type << ", device_str=" << device_str << std::endl;
       torch::lazy::BackendDevice device = ParseDeviceString(device_str);
       if (device.type() == device_type.type) {
         all_devices.push_back(device);

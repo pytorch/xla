@@ -191,11 +191,14 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::GetDataShards(
   std::vector<ComputationClient::DataPtr> shards;
   if (PjRtShardedData* sharded_data =
           dynamic_cast<PjRtShardedData*>(data.get())) {
+    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
     for (auto shard : sharded_data->shards) {
+      std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
       shards.push_back(std::make_shared<PjRtData>(
           shard->device(), shard->shape(), shard->buffer));
     }
   } else {
+    std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
     shards.push_back(data);
   }
   return shards;

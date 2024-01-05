@@ -216,6 +216,8 @@ def _xla_real_device(device):
   return _DEVICES.value[int(m.group(1))]
 
 
+# if the input devices=['xla:0', 'xla:1'],
+# the output will be ['CUDA:0', 'CUDA:1'].
 def xla_real_devices(devices: Optional[List[torch.device]] = None):
   if not devices:
     devices = get_xla_supported_devices()
@@ -237,6 +239,8 @@ def xla_device_hw(device):
   return real_device.split(':')[0]
 
 
+# Sample input: ['xla:0', 'xla:1', 'xla:2', 'xla:3']
+# Sample output: ['CUDA:0', 'CUDA:1', 'CUDA:2', 'CUDA:3']
 def xla_replication_devices(local_devices):
   real_devices = xla_real_devices(local_devices)
   device_types = set()
@@ -257,6 +261,7 @@ def xla_replication_devices(local_devices):
         format(len(local_devices), len(kind_devices)))
   replication_devices = []
   for device in torch_xla._XLAC._xla_get_all_devices():
+    # device is like 'CUDA:0'
     xdev = parse_xla_device(device)
     if not xdev:
       raise RuntimeError('Invalid device format: {}'.format(device))
@@ -280,10 +285,12 @@ def unlazy(tensors):
 
 
 def set_replication(device, devices):
+  import pdb; pdb.set_trace()
   device = str(device)
   devctx = _get_device_context(device=device)
   devices = [str(x) for x in devices]
   if devices:
+    # sample replication_devices: ['CUDA:0', 'CUDA:1', 'CUDA:2', 'CUDA:3']
     replication_devices = xla_replication_devices(devices)
     torch_xla._XLAC._xla_set_replication_devices(replication_devices)
     devctx.device_index = devices.index(device)
