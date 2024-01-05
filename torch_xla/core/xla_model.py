@@ -87,7 +87,7 @@ def get_xla_supported_devices(devkind=None, max_devices=None):
       that kind.
 
   Returns:
-    The list of device strings.
+    The list of device strings such as ['xla:0', 'xla:1', ...]
   """
   # TODO(wcromar): Remove `devkind` after 2.3 release cut. We no longer support
   # multiple device types.

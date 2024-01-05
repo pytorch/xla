@@ -15,7 +15,17 @@ from torch_xla import runtime as xr
 class TestExperimentalPjrt(parameterized.TestCase):
 
   def setUp(self):
-    xr.set_device_type('CPU')
+    if xr.device_type() == 'CUDA':
+      xr.set_device_type('CUDA')
+      command = 'nvidia-smi --list-gpus | wc -l'
+      result = subprocess.run(
+          command,
+          capture_output=True,
+          shell=True,
+          check=True,
+          text=True,
+      )
+      self.num_cuda_devices = int(result.stdout)
 
   @parameterized.parameters(('CPU', 'CPU'), ('CUDA', 'CUDA'), ('TPU', 'TPU'))
   def test_device_type(self, pjrt_device, expected):
@@ -58,10 +68,16 @@ class TestExperimentalPjrt(parameterized.TestCase):
   def test_num_local_devices(self):
     self.assertLen(xm.get_xla_supported_devices(),
                    xr.addressable_device_count())
+    if xr.device_type() == 'CUDA':
+      self.assertEqual(self.num_cuda_devices, xr.addressable_device_count())
+      
 
   def test_num_global_devices(self):
     self.assertLen(torch_xla._XLAC._xla_get_all_devices(),
                    xr.global_device_count())
+    if xr.device_type() == 'CUDA':
+      print('test_num_global_devices is run for cuda. self.num_cuda_devices=', self.num_cuda_devices)     
+      self.assertEqual(self.num_cuda_devices, xr.global_device_count())
 
   def test_world_size(self):
     self.assertEqual(xm.xrt_world_size(), xr.world_size())
@@ -70,19 +86,11 @@ class TestExperimentalPjrt(parameterized.TestCase):
     with self.assertRaises(IndexError):
       xm.xla_device(10)
 
-  @skipUnless(xr.device_type() == 'CUDA', 'Only applicable to GPU.')
   def test_global_runtime_device_count(self):
-    xr.set_device_type('CUDA')
-    command = 'nvidia-smi --list-gpus | wc -l'
-    result = subprocess.run(
-        command,
-        capture_output=True,
-        shell=True,
-        check=True,
-        text=True,
-    )
-    expect = int(result.stdout)
-    self.assertEqual(expect, xr.global_runtime_device_count())
+    if xr.device_type() == 'CUDA':
+      self.assertEqual(self.num_cuda_devices, xr.global_runtime_device_count())
+    else: # CPU case. TPU is not run for this test.
+      self.assertEqual(1, xr.global_runtime_device_count())
 
   @parameterized.named_parameters(('default', {}, True), ('no_default', {
       'PJRT_SELECT_DEFAULT_DEVICE': '0'
