@@ -35,10 +35,10 @@ void TestSingleReplication(
   std::vector<std::string> device_strings;
   std::vector<std::string> all_device_strings;
   for (auto& device : devices) {
-    device_strings.push_back(device.toString());
+    device_strings.push_back(device);
   }
   for (auto& device : all_devices) {
-    all_device_strings.push_back(device.toString());
+    all_device_strings.push_back(device);
   }
   xla::Shape shape = xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {8, 8});
   std::vector<torch_xla::runtime::ComputationClient::CompileInstance> instances;

@@ -168,7 +168,7 @@ void DebugUtil::SaveTensorsGraphInfo(const char* name,
       // previous execution. We need to wait for last execution to finish before
       // proceeding.
       torch::lazy::BackendDevice device = tensors[(*indices)[0]]->GetDevice();
-      XLAGraphExecutor::Get()->WaitDeviceOps({device.toString()});
+      XLAGraphExecutor::Get()->WaitDeviceOps({device});
     }
     std::string info = GetTensorsGraphInfo(tensors, indices, format);
     std::lock_guard<std::mutex> guard(lock);

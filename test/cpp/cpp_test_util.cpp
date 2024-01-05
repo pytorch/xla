@@ -226,14 +226,14 @@ void WithAllDevices(
     std::vector<torch::lazy::BackendDevice> all_devices;
     for (const auto& device_str :
          torch_xla::runtime::GetComputationClient()->GetLocalDevices()) {
-      torch::lazy::BackendDevice device = ParseDeviceString(device_str);
+      torch::lazy::BackendDevice device = device_str;
       if (device.type() == device_type.type) {
         devices.push_back(device);
       }
     }
     for (const auto& device_str :
          torch_xla::runtime::GetComputationClient()->GetAllDevices()) {
-      torch::lazy::BackendDevice device = ParseDeviceString(device_str);
+      torch::lazy::BackendDevice device = device_str;
       if (device.type() == device_type.type) {
         all_devices.push_back(device);
       }
@@ -282,9 +282,9 @@ std::vector<torch_xla::runtime::ComputationClient::DataPtr> Execute(
 
   std::vector<torch_xla::runtime::ComputationClient::CompileInstance> instances;
   instances.push_back(
-      {std::move(computation), device.toString(),
-       torch_xla::runtime::GetComputationClient()->GetCompilationDevices(
-           device.toString(), {}),
+      {std::move(computation), device,
+       torch_xla::runtime::GetComputationClient()->GetCompilationDevices(device,
+                                                                         {}),
        &shape});
 
   std::vector<
@@ -295,7 +295,7 @@ std::vector<torch_xla::runtime::ComputationClient::DataPtr> Execute(
   torch_xla::runtime::ComputationClient::ExecuteComputationOptions options;
   return torch_xla::runtime::GetComputationClient()->ExecuteComputation(
       *computations.front(), UnwrapXlaData(lowering_ctx.GetParametersData()),
-      device.toString(), options);
+      device, options);
 }
 
 std::vector<at::Tensor> Fetch(

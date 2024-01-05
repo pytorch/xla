@@ -133,7 +133,7 @@ std::vector<std::string> GetXlaDevices(
   for (auto& device_str : devices) {
     torch::lazy::BackendDevice device =
         bridge::AtenDeviceToXlaDevice(c10::Device(device_str));
-    xla_devices.emplace_back(device.toString());
+    xla_devices.emplace_back(device);
   }
   return xla_devices;
 }
@@ -691,8 +691,7 @@ py::dict GetMemoryInfo(const std::string& device_str) {
   {
     NoGilSection nogil;
     torch::lazy::BackendDevice device = GetDeviceOrCurrent(device_str);
-    mem_info =
-        runtime::GetComputationClient()->GetMemoryInfo(device.toString());
+    mem_info = runtime::GetComputationClient()->GetMemoryInfo(device);
   }
   auto py_dict = py::dict();
   py_dict["kb_free"] = mem_info.kb_free;

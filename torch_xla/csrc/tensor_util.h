@@ -51,14 +51,14 @@ torch::lazy::hash_t TensorHash(const at::Tensor& tensor);
 // TODO LTC @wonjoo - Migrate to upstream after Device -> BackendDevice
 std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
     const std::vector<at::Tensor>& tensors,
-    const std::vector<std::string>& devices);
+    const std::vector<torch::lazy::BackendDevice>& devices);
 
 // Shard and transfer tensors to devices using `PjRtComputationClient`.
 // The client's data transfer to device is asynchronous.
 std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
     const std::vector<at::Tensor>& tensors,
     const std::vector<XLATensor::ShardingSpecPtr>& sharding_specs,
-    const std::vector<std::string>& devices);
+    const std::vector<torch::lazy::BackendDevice>& devices);
 
 // Creates an XLA literal out of an ATEN tensor. If shape is specified, that
 // shape+layout will be used, otherwise one will be generated out of the ATEN
