@@ -563,6 +563,9 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
       f"Requires PJRT_DEVICE set to `TPU`.")
   def test_multi_host_replicated_tpu(self):
     from torch_xla.distributed.spmd.debugging import visualize_sharding
+    num_devices = self.n_devices
+    if num_devices != 8:
+      self.skipTest("skip num_devices!=8 env to avoid circular reasoning")
     sharding = '{replicated}'
     generated_table = visualize_sharding(sharding)
     console = rich.console.Console()
