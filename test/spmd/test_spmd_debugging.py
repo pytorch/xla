@@ -53,7 +53,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
 
     color = None
     text_color = None
-    use_color = True if rich.console.Console().color_system else False 
+    use_color = True if rich.console.Console().color_system else False
     fake_table = rich.table.Table(
         show_header=False,
         show_lines=not use_color,
@@ -137,7 +137,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
 
     color = None
     text_color = None
-    use_color = True if rich.console.Console().color_system else False 
+    use_color = True if rich.console.Console().color_system else False
     fake_table = rich.table.Table(
         show_header=False,
         show_lines=not use_color,
@@ -191,7 +191,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
 
     color = None
     text_color = None
-    use_color = True if rich.console.Console().color_system else False 
+    use_color = True if rich.console.Console().color_system else False
     fake_table = rich.table.Table(
         show_header=False,
         show_lines=not use_color,
@@ -238,7 +238,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
 
     color = None
     text_color = None
-    use_color = True if rich.console.Console().color_system else False 
+    use_color = True if rich.console.Console().color_system else False
     fake_table = rich.table.Table(
         show_header=False,
         show_lines=not use_color,
@@ -285,7 +285,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
 
     color = None
     text_color = None
-    use_color = True if rich.console.Console().color_system else False 
+    use_color = True if rich.console.Console().color_system else False
     fake_table = rich.table.Table(
         show_header=False,
         show_lines=not use_color,
@@ -332,7 +332,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
 
     color = None
     text_color = None
-    use_color = True if rich.console.Console().color_system else False 
+    use_color = True if rich.console.Console().color_system else False
     fake_table = rich.table.Table(
         show_header=False,
         show_lines=not use_color,
@@ -374,7 +374,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
 
     color = None
     text_color = None
-    use_color = True if rich.console.Console().color_system else False 
+    use_color = True if rich.console.Console().color_system else False
     fake_table = rich.table.Table(
         show_header=False,
         show_lines=not use_color,
@@ -487,7 +487,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
 
     color = None
     text_color = None
-    use_color = True if rich.console.Console().color_system else False 
+    use_color = True if rich.console.Console().color_system else False
     fake_table = rich.table.Table(
         show_header=False,
         show_lines=not use_color,
@@ -575,7 +575,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
 
     color = None
     text_color = None
-    use_color = True if rich.console.Console().color_system else False 
+    use_color = True if rich.console.Console().color_system else False
     fake_table = rich.table.Table(
         show_header=False,
         show_lines=not use_color,
@@ -612,7 +612,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
 
     color = None
     text_color = None
-    use_color = True if rich.console.Console().color_system else False 
+    use_color = True if rich.console.Console().color_system else False
     fake_table = rich.table.Table(
         show_header=False,
         show_lines=not use_color,
@@ -725,7 +725,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
 
     color = None
     text_color = None
-    use_color = True if rich.console.Console().color_system else False 
+    use_color = True if rich.console.Console().color_system else False
     fake_table = rich.table.Table(
         show_header=False,
         show_lines=not use_color,
@@ -810,7 +810,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
 
     color = None
     text_color = None
-    use_color = True if rich.console.Console().color_system else False 
+    use_color = True if rich.console.Console().color_system else False
     fake_table = rich.table.Table(
         show_header=False,
         show_lines=not use_color,
