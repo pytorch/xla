@@ -53,13 +53,14 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
 
     color = None
     text_color = None
+    use_color = True if rich.console.Console().color_system else False 
     fake_table = rich.table.Table(
         show_header=False,
-        show_lines=True,
+        show_lines=not use_color,
         padding=0,
-        highlight=True,
+        highlight=not use_color,
         pad_edge=False,
-        box=rich.box.SQUARE)
+        box=rich.box.SQUARE if not use_color else None)
     col = []
     col.append(
         rich.padding.Padding(
@@ -136,13 +137,14 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
 
     color = None
     text_color = None
+    use_color = True if rich.console.Console().color_system else False 
     fake_table = rich.table.Table(
         show_header=False,
-        show_lines=True,
+        show_lines=not use_color,
         padding=0,
-        highlight=True,
+        highlight=not use_color,
         pad_edge=False,
-        box=rich.box.SQUARE)
+        box=rich.box.SQUARE if not use_color else None)
     col = []
     col.append(
         rich.padding.Padding(
@@ -189,13 +191,14 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
 
     color = None
     text_color = None
+    use_color = True if rich.console.Console().color_system else False 
     fake_table = rich.table.Table(
         show_header=False,
-        show_lines=True,
+        show_lines=not use_color,
         padding=0,
-        highlight=True,
+        highlight=not use_color,
         pad_edge=False,
-        box=rich.box.SQUARE)
+        box=rich.box.SQUARE if not use_color else None)
     col = []
     col.append(
         rich.padding.Padding(
@@ -235,13 +238,14 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
 
     color = None
     text_color = None
+    use_color = True if rich.console.Console().color_system else False 
     fake_table = rich.table.Table(
         show_header=False,
-        show_lines=True,
+        show_lines=not use_color,
         padding=0,
-        highlight=True,
+        highlight=not use_color,
         pad_edge=False,
-        box=rich.box.SQUARE)
+        box=rich.box.SQUARE if not use_color else None)
     col = []
     col.append(
         rich.padding.Padding(
@@ -281,13 +285,14 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
 
     color = None
     text_color = None
+    use_color = True if rich.console.Console().color_system else False 
     fake_table = rich.table.Table(
         show_header=False,
-        show_lines=True,
+        show_lines=not use_color,
         padding=0,
-        highlight=True,
+        highlight=not use_color,
         pad_edge=False,
-        box=rich.box.SQUARE)
+        box=rich.box.SQUARE if not use_color else None)
     col = []
     col.append(
         rich.padding.Padding(
@@ -327,13 +332,14 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
 
     color = None
     text_color = None
+    use_color = True if rich.console.Console().color_system else False 
     fake_table = rich.table.Table(
         show_header=False,
-        show_lines=True,
+        show_lines=not use_color,
         padding=0,
-        highlight=True,
+        highlight=not use_color,
         pad_edge=False,
-        box=rich.box.SQUARE)
+        box=rich.box.SQUARE if not use_color else None)
     col = []
     col.append(
         rich.padding.Padding(
@@ -368,7 +374,6 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
 
     color = None
     text_color = None
-    # console = rich.console.Console() # width=max_width)
     use_color = True if rich.console.Console().color_system else False 
     fake_table = rich.table.Table(
         show_header=False,
@@ -482,13 +487,14 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
 
     color = None
     text_color = None
+    use_color = True if rich.console.Console().color_system else False 
     fake_table = rich.table.Table(
         show_header=False,
-        show_lines=True,
+        show_lines=not use_color,
         padding=0,
-        highlight=True,
+        highlight=not use_color,
         pad_edge=False,
-        box=rich.box.SQUARE)
+        box=rich.box.SQUARE if not use_color else None)
     col = []
     col.append(
         rich.padding.Padding(
@@ -566,13 +572,14 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
 
     color = None
     text_color = None
+    use_color = True if rich.console.Console().color_system else False 
     fake_table = rich.table.Table(
         show_header=False,
-        show_lines=True,
+        show_lines=not use_color,
         padding=0,
-        highlight=True,
+        highlight=not use_color,
         pad_edge=False,
-        box=rich.box.SQUARE)
+        box=rich.box.SQUARE if not use_color else None)
     col = []
     col.append(
         rich.padding.Padding(
@@ -602,13 +609,14 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
 
     color = None
     text_color = None
+    use_color = True if rich.console.Console().color_system else False 
     fake_table = rich.table.Table(
         show_header=False,
-        show_lines=True,
+        show_lines=not use_color,
         padding=0,
-        highlight=True,
+        highlight=not use_color,
         pad_edge=False,
-        box=rich.box.SQUARE)
+        box=rich.box.SQUARE if not use_color else None)
     col = []
     col.append(
         rich.padding.Padding(
@@ -714,13 +722,14 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
 
     color = None
     text_color = None
+    use_color = True if rich.console.Console().color_system else False 
     fake_table = rich.table.Table(
         show_header=False,
-        show_lines=True,
+        show_lines=not use_color,
         padding=0,
-        highlight=True,
+        highlight=not use_color,
         pad_edge=False,
-        box=rich.box.SQUARE)
+        box=rich.box.SQUARE if not use_color else None)
     col = []
     col.append(
         rich.padding.Padding(
@@ -798,13 +807,14 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
 
     color = None
     text_color = None
+    use_color = True if rich.console.Console().color_system else False 
     fake_table = rich.table.Table(
         show_header=False,
-        show_lines=True,
+        show_lines=not use_color,
         padding=0,
-        highlight=True,
+        highlight=not use_color,
         pad_edge=False,
-        box=rich.box.SQUARE)
+        box=rich.box.SQUARE if not use_color else None)
     col = []
     col.append(
         rich.padding.Padding(
