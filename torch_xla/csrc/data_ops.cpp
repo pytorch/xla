@@ -160,7 +160,7 @@ xla::XlaOp BuildMaskedFillScalar(xla::XlaOp input, xla::XlaOp mask,
   xla::XlaOp mask_pred = xla::Ne(mask, zero);
   xla::XlaOp update_scalar =
       ConvertTo(scalar, ShapeHelper::ShapeOfXlaOp(scalar).element_type(),
-                ShapeHelper::ShapeOfXlaOp(input).element_type(), nullptr);
+                ShapeHelper::ShapeOfXlaOp(input).element_type());
   return xla::Select(mask_pred, update_scalar, input);
 }
 
@@ -291,7 +291,7 @@ xla::XlaOp BuildUpdateSlice(xla::XlaOp input, xla::XlaOp source,
   xla::XlaOp update_source = source;
   if (source_shape.element_type() != input_shape.element_type()) {
     update_source = ConvertTo(source, source_shape.element_type(),
-                              input_shape.element_type(), /*device=*/nullptr);
+                              input_shape.element_type());
   }
   xla::XlaOp reshaped_source =
       XlaHelpers::ReshapeToRank(update_source, input_shape.rank());

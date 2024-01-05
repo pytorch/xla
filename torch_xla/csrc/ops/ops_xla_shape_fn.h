@@ -268,6 +268,8 @@ xla::Shape SoftshrinkBackwardOutputShape(const torch::lazy::Value& grad_out,
 /* Blocked on https://github.com/pytorch/xla/issues/3596 */
 // xla::Shape SlogdetOutputShape(const torch::lazy::Value& input);
 
+xla::Shape SqrtOutputShape(const torch::lazy::Value& input);
+
 xla::Shape TakeOutputShape(const torch::lazy::Value& input,
                            const torch::lazy::Value& index);
 

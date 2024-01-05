@@ -15,7 +15,7 @@ def _create_xla_process_group(prefix_store, rank, size, timeout):
 
 
 def _register_xla_backend():
-  dist.Backend.register_backend('xla', _create_xla_process_group)
+  dist.Backend.register_backend('xla', _create_xla_process_group, devices='xla')
 
 
 _register_xla_backend()
