@@ -84,6 +84,8 @@ full_codegen:
   - sinh
   - softshrink
   - softshrink_backward
+  - sort
+  - sort.stable
   - sqrt
   - take
   - tan
@@ -311,8 +313,6 @@ supported:
   - smooth_l1_loss_backward
   - softplus
   - softplus_backward
-  - sort
-  - sort.stable
   - split_copy.Tensor
   - split_with_sizes_copy
   - squeeze_copy

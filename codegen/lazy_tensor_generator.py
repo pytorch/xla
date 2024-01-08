@@ -56,7 +56,7 @@ class GenXlaLazyIR(GenLazyIR):
         f"{a.name}" for a in (schema.positional_args + schema.keyword_args)
         if (a.is_lazy_value or isinstance(a.lazy_type, VectorCType) or
             is_boolean_dtype(a.lazy_type) or a.name == 'reduction' or
-            a.name == 'dim' or a.name == 'k' or a.name == 'stable')
+            a.name == 'dim' ) #or a.name == 'k' or a.name == 'stable')
     ]
     shape_fn_inputs = ", ".join(shape_fn_inputs_list)
 

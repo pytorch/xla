@@ -871,7 +871,7 @@ xla::Shape TanhOutputShape(const torch::lazy::Value& input) {
 }
 
 xla::Shape TopkOutputShape(const torch::lazy::Value& input, const int64_t k,
-                           const int64_t dim, const bool largest, const bool sorted,
+                           const int64_t dim, const bool largest,
                            const bool stable) {
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
