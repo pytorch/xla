@@ -1607,11 +1607,15 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_xla_wait_device_ops",
         [](const std::vector<std::string>& devices) {
           NoGilSection nogil;
+          std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
           XLAGraphExecutor::Get()->WaitDeviceOps(devices);
+          std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
           if (UseVirtualDevice()) {
+            std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
             std::vector<std::string> spmd_device = {"SPMD:0"};
             runtime::GetComputationClient()->WaitDeviceOps(spmd_device);
           } else {
+            std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
             runtime::GetComputationClient()->WaitDeviceOps(devices);
           }
         },

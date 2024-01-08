@@ -101,6 +101,7 @@ void XlaTest::MakeEndSnapshot() {
 }
 
 void XlaTest::CommonSetup() {
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   XlaHelpers::set_mat_mul_precision(xla::PrecisionConfig::HIGHEST);
 }
 

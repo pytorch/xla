@@ -965,6 +965,7 @@ def wait_device_ops(devices=[]):
     devices (string..., optional): The devices whose async ops need to be waited
       for. If empty, all the local devices will be waited for.
   """
+  print('xw32 calling torch_xla._XLAC._xla_wait_device_ops with devices=', devices)
   torch_xla._XLAC._xla_wait_device_ops(devices=devices)
 
 

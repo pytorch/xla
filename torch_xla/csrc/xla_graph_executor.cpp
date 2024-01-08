@@ -415,18 +415,23 @@ void XLAGraphExecutor::WaitDeviceOps(absl::Span<const std::string> devices) {
     }
   } else {
     if (UseVirtualDevice()) {
+      std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
       wait_devices.insert(ParseDeviceString("SPMD:0"));
     } else {
+      std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
       for (auto& device_str :
            runtime::GetComputationClient()->GetLocalDevices()) {
+        std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": local device=" << device_str << std::endl;
         wait_devices.insert(ParseDeviceString(device_str));
       }
     }
   }
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   // The DeviceLockerArena::Get()->LockDevices() API returns a vector of
   // torch::lazy::ExceptionCleanup object, which is going to be freed
   // immediately, turning this operation into a lock barrier.
   DeviceLockerArena::Get()->LockDevices(wait_devices);
+  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   TF_VLOG(4) << "XLAGraphExecutor::WaitDeviceOps completed";
 }
 
