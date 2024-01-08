@@ -88,6 +88,7 @@ full_codegen:
   - take
   - tan
   - tanh
+  - topk
   - tril
   - triu
   - trunc
@@ -331,7 +332,6 @@ supported:
   - tanh_backward
   - threshold
   - threshold_backward
-  - topk
   - trace
   - transpose_copy.int
   - triangular_solve

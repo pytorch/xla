@@ -121,7 +121,6 @@
 #include "torch_xla/csrc/ops/svd.h"
 #include "torch_xla/csrc/ops/threshold.h"
 #include "torch_xla/csrc/ops/threshold_backward.h"
-#include "torch_xla/csrc/ops/topk.h"
 #include "torch_xla/csrc/ops/triangular_solve.h"
 #include "torch_xla/csrc/ops/uniform.h"
 #include "torch_xla/csrc/ops/unsqueeze.h"
@@ -2745,19 +2744,6 @@ XLATensorPtr to(XLATensorPtr& input,
     new_tensor->SetScalarType(*scalar_type);
   }
   return new_tensor;
-}
-
-std::tuple<XLATensorPtr, XLATensorPtr> topk(const XLATensorPtr& input,
-                                            int64_t k, int64_t dim,
-                                            bool largest, bool sorted,
-                                            bool stable) {
-  torch::lazy::NodePtr node = torch::lazy::MakeNode<TopK>(
-      input->GetIrValue(), k,
-      torch::lazy::GetCanonicalDimensionIndex(dim, input->shape().get().rank()),
-      largest, sorted, stable);
-  return std::make_tuple(
-      input->CreateFrom(torch::lazy::Value(node, 0)),
-      input->CreateFrom(torch::lazy::Value(node, 1), at::ScalarType::Long));
 }
 
 XLATensorPtr trace(const XLATensorPtr& input) {
