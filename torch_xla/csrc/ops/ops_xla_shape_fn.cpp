@@ -839,6 +839,28 @@ xla::Shape SoftshrinkBackwardOutputShape(const torch::lazy::Value& grad_out,
 //   return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
 // }
 
+xla::Shape SortOutputShape(const torch::lazy::Value& input, const int64_t& dim, const bool& descending) {
+  const int64_t k = input.shape().size(dim);
+  auto lower_for_shape_fn =
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return xla::Tuple(operands[0].builder(),
+                      CreateTopK(operands[0], k, dim, descending, false));
+  };
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
+}
+
+xla::Shape SortStableOutputShape(const torch::lazy::Value& input, const c10::optional<bool> stable,
+ const int64_t& dim, const bool& descending) {
+  const int64_t k = input.shape().size(dim);
+  const bool stable_ = stable.has_value() ? stable.value() : false;
+  auto lower_for_shape_fn =
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return xla::Tuple(operands[0].builder(),
+                      CreateTopK(operands[0], k, dim, descending, stable_));
+  };
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
+}
+
 xla::Shape SqrtOutputShape(const torch::lazy::Value& input) {
   xla::Shape result_shape = GetXlaShape(input);
   if (xla::primitive_util::IsIntegralType(result_shape.element_type())) {
