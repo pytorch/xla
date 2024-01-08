@@ -7,6 +7,16 @@ import torch_xla.core.xla_model as xm
 from torch.utils.checkpoint import detach_variable, check_backward_validity, _get_device_module, _infer_device_type
 from typing import Iterable, List, Tuple, Union
 
+# The 2 functions below (get_device_states and set_device_states) are slightly modified versions
+# from PyTorch's original file.
+#
+# They are mostly implemented the same, while accounting for XLA device. In summary, the problem was
+# twofold:
+#
+#     1. No XLA device support.
+#
+#     2. The XLA device module (torch_xla.core.xla_model) has a slightly different API: its state
+#        representation is an int, instead of a tensor.
 
 def get_device_states(
     *args) -> Tuple[List[torch.device], List[Union[torch.Tensor, int]]]:
