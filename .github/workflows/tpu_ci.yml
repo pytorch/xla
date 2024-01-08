@@ -1,0 +1,49 @@
+name: TPU Integration Test
+run-name: TPU Testing
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+jobs:
+  tpu-test:
+    runs-on: v4-runner-set
+    steps:
+      - name: Checkout and Setup PyTorch Repo
+        run: |
+          git clone --recursive https://github.com/pytorch/pytorch
+          cd pytorch/
+          python3 setup.py install --user
+      - name: Checkout PyTorch/XLA Repo
+        uses: actions/checkout@v4
+        with:
+          path: pytorch/xla
+      - name: Run PyTorch/XLA Setup
+        env:
+          BAZEL_VERBOSE: 1
+          BUNDLE_LIBTPU: 1
+          TPUVM_MODE: 1
+        run: |
+          cd pytorch/xla
+          python3 setup.py install --user
+      - name: Run Tests
+        env:
+          PJRT_DEVICE: TPU
+        run: |
+          pip install fsspec
+          pip install rich
+          cd pytorch/xla
+          python3 -u test/test_operations.py -v
+          python3 -u test/pjrt/test_runtime_tpu.py
+          python3 -u test/pjrt/test_collective_ops_tpu.py
+          python3 -u test/spmd/test_xla_sharding.py
+          python3 -u test/spmd/test_xla_virtual_device.py
+          python3 -u test/spmd/test_xla_distributed_checkpoint.py
+          python3 -u test/spmd/test_train_spmd_linear_model.py
+          python3 -u test/spmd/test_xla_spmd_python_api_interaction.py
+          XLA_EXPERIMENTAL=nonzero:masked_select python3 -u test/ds/test_dynamic_shape_models.py -v
+          XLA_EXPERIMENTAL=nonzero:masked_select python3 -u test/ds/test_dynamic_shapes.py -v
+          python3 -u test/test_autocast.py
+          python3 -u test/dynamo/test_dynamo.py
+          # TODO(mbzomowski): Uncomment once https://github.com/pytorch/xla/issues/6252 is fixed
+          # python3 -u test/spmd/test_spmd_debugging.py
