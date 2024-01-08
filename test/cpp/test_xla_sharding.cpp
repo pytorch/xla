@@ -309,14 +309,6 @@ TEST_F(XLAShardingTest, EqualShardingSpecs) {
 }
 
 TEST_F(XLAShardingTest, CreateTensorsData) {
-  if (torch_xla::runtime::sys_util::GetEnvString(
-          torch_xla::runtime::env::kEnvPjRtDevice, "") == "" ||
-      torch_xla::runtime::sys_util::GetEnvString( // TODO: xiowei need to remove this and the next line so we make this test run on CUDA.
-          torch_xla::runtime::env::kEnvPjRtDevice, "") == "CUDA") {
-    GTEST_SKIP() << "`PJRT_DEVICE` is not set.";
-  }
-  std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": XLA_USE_SPMD=" << torch_xla::runtime::sys_util::GetEnvString("XLA_USE_SPMD", "") << std::endl;
-
   std::vector<at::Tensor> tensors(2);
   auto tensor = at::ones({8, 8}, at::TensorOptions(at::kFloat));
   xla::Shape tensor_shape =
