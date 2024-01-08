@@ -3,6 +3,17 @@ load(
     "xla_cc_binary",
 )
 
+cc_library(
+    name = "test_cpu_plugin",
+    srcs = ["test_cpu_plugin.cc"],
+    hdrs = ["test_cpu_plugin.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@xla//xla/pjrt/c:pjrt_c_api_cpu_internal",
+        "@xla//xla/pjrt/c:pjrt_c_api_hdrs",
+    ],
+)
+
 xla_cc_binary(
     name = "pjrt_c_api_cpu_plugin.so",
     linkopts = [
@@ -12,6 +23,6 @@ xla_cc_binary(
     linkshared = True,
     deps = [
         ":pjrt_c_api_cpu_version_script.lds",
-        "@xla//xla/pjrt/c:pjrt_c_api_cpu"
+        ":test_cpu_plugin",
     ],
 )
