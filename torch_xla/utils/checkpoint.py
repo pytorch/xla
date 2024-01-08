@@ -18,6 +18,7 @@ from typing import Iterable, List, Tuple, Union
 #     2. The XLA device module (torch_xla.core.xla_model) has a slightly different API: its state
 #        representation is an int, instead of a tensor.
 
+
 def get_device_states(
     *args) -> Tuple[List[torch.device], List[Union[torch.Tensor, int]]]:
   fwd_device = list({
