@@ -2888,12 +2888,6 @@ std::vector<at::Tensor> XLANativeFunctions::split_with_sizes_copy(
   return bridge::AtenFromXlaTensors(xla_tensors);
 }
 
-at::Tensor XLANativeFunctions::sqrt(const at::Tensor& self) {
-  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::sqrt(bridge::GetXlaTensor(self)));
-}
-
 at::Tensor XLANativeFunctions::squeeze_copy(const at::Tensor& self) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   return bridge::AtenFromXlaTensor(
@@ -3647,16 +3641,6 @@ at::Tensor XLANativeFunctions::pixel_unshuffle(const at::Tensor& self,
       !runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false));
   return at::functionalization::functionalize_aten_op<ATEN_OP(
       pixel_unshuffle)>::call(self, downscale_factor);
-}
-
-at::Tensor XLANativeFunctions::reshape_symint(const at::Tensor& self,
-                                              c10::SymIntArrayRef shape) {
-  // See Note: [Disabling functionalization]
-  if (runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
-    return at::native::reshape_symint(self, shape);
-  }
-  return at::functionalization::functionalize_aten_op_symint<ATEN_OP(
-      reshape)>::call(self, shape);
 }
 
 at::Tensor XLANativeFunctions::select_backward_symint(

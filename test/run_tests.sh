@@ -128,7 +128,7 @@ function run_torchrun {
     echo "Running torchrun test for GPU $@"
     num_devices=$(nvidia-smi --list-gpus | wc -l)
     PJRT_DEVICE=CUDA torchrun --nnodes 1 --nproc-per-node $num_devices $@
-  fi 
+  fi
 }
 
 function run_torch_op_tests {
@@ -190,6 +190,7 @@ function run_xla_op_tests1 {
 # DO NOT MODIFY
 function run_xla_op_tests2 {
   run_downcast_bf16 "$CDIR/test_data_type.py"
+  run_test "$CDIR/pjrt/test_dtypes.py"
   run_test "$CDIR/test_autocast.py"  # TODO(yeounoh) this is expensive on GPU
 }
 
@@ -235,6 +236,7 @@ function run_mp_op_tests {
   run_test "$CDIR/test_mp_save.py"
   run_test "$CDIR/test_mp_mesh_reduce.py"
   run_test "$CDIR/test_mp_sync_batch_norm.py"
+  run_test "$CDIR/test_mp_early_exit.py"
   run_pt_xla_debug "$CDIR/debug_tool/test_mp_pt_xla_debug.py"
   run_xla_backend_mp "$CDIR/test_torch_distributed_all_gather_xla_backend.py"
   run_xla_backend_mp "$CDIR/test_torch_distributed_all_reduce_xla_backend.py"
