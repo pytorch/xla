@@ -47,6 +47,7 @@ http_archive(
     patch_tool = "patch",
     patches = [
         "//openxla_patches:cache_urls.diff",
+        "//openxla_patches:compile_options.diff",
         "//openxla_patches:constexpr_return.diff",
         "//openxla_patches:gpu_race_condition.diff",
         "//openxla_patches:f16_abi_clang.diff",
