@@ -2,9 +2,6 @@ name: TPU Integration Test
 run-name: TPU Testing
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - master
 jobs:
   tpu-test:
     runs-on: v4-runner-set
