@@ -5,6 +5,8 @@
 #include "xla/pjrt/c/pjrt_c_api.h"
 #include "xla/pjrt/c/pjrt_c_api_cpu_internal.h"
 
+// Use `test` as the platform name instead of `cpu` so torch_xla treats this
+// as an unknown device.
 PJRT_Error* test_platform_name(PJRT_Client_PlatformName_Args* args) {
   static const std::string platform_name = "test";
   args->platform_name = platform_name.c_str();
