@@ -172,8 +172,7 @@ class MetricsTest(unittest.TestCase):
     report = met.metrics_report()
     self.assertIn("CachedCompile", report)
 
-  @unittest.skipUnless(xr.device_type() == "CPU",
-                       f"This test only works on CPU.")
+  @unittest.skipIf(xr.device_type() != "CPU", f"This test only works on CPU.")
   def test_execute_time_metric(self):
     # Initialize the client before starting the timer.
     xm.xla_device()
