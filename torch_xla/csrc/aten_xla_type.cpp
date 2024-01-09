@@ -55,7 +55,7 @@
 //         ATEN_OP2(op_name, overload_name)>::call(args...)
 //   ATEN_OP accepts an operator name without an overload, and
 //   ATEN_OP2 accepts an operator name along with its overload name.
-//   The description of these acros can be found in
+//   The description of these macros can be found in
 //   https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/templates/Operators.h
 //   (You can find some examples below)
 
