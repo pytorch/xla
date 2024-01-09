@@ -35,7 +35,7 @@ import torch_xla_cpu_plugin
 import torch_xla.core.xla_model as xm
 import torch_xla.runtime as xr
 
-# Use dynamic plugin instead of built-in CUDA support
+# Use dynamic plugin instead of built-in CPU support
 plugins.use_dynamic_plugins()
 plugins.register_plugin('CPU', torch_xla_cpu_plugin.CpuPlugin())
 xr.set_device_type('CPU')
