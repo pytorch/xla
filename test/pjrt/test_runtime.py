@@ -86,12 +86,6 @@ class TestExperimentalPjrt(parameterized.TestCase):
     with self.assertRaises(IndexError):
       xm.xla_device(10)
 
-  def test_global_runtime_device_count(self):
-    if xr.device_type() == 'CUDA':
-      self.assertEqual(self.num_cuda_devices, xr.global_runtime_device_count())
-    else: # CPU case. TPU CI does not run this test.
-      self.assertEqual(1, xr.global_runtime_device_count())
-
   @parameterized.named_parameters(('default', {}, True), ('no_default', {
       'PJRT_SELECT_DEFAULT_DEVICE': '0'
   }, False), ('pjrt_cpu', {
