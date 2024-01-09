@@ -35,7 +35,7 @@ def verify(output: torch.Tensor,
            noop: bool = False):
   """
     Verify the mean relative error for `output` against eager runtime of the model.
-    If `mean_rel_error_tolerance` is greater than the calculated mean relative error of
+    If `mean_rel_error_tolerance` is less than the calculated mean relative error of
     the output vs. eager run then the function returns `VerificationCode.FAIL`.
     Otherwise, if the run is successful, `VerificationCode.PASS` is returned, along with calculated
     mean relative error.
