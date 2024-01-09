@@ -243,7 +243,6 @@ class TestParallelTensorMNIST(test_utils.XlaTestCase):
   def test(self):
     # devices=['xla:0', 'xla:1', 'xla:2', 'xla:3'] for example.
     devices = xm.get_xla_supported_devices()
-    print('xw32 len(devices)=', len(devices))
     batch_size = xu.getenv_as('BATCH_SIZE', int, defval=8)
     sample_count = xu.getenv_as('SAMPLE_COUNT', int, defval=10)
     train_loader = xu.SampleGenerator(
@@ -1991,7 +1990,6 @@ class TestWaitDeviceOps(test_utils.XlaTestCase):
       val_list.append(new_val)
       val_mean_list.append(new_val.mean())
     xm.mark_step()
-    print('xw32 finished running mark_step()')
     xm.wait_device_ops()
     self.assertTrue("ExecuteTime" in met.metric_names() or
                     "ExecuteChainedTime" in met.metric_names())

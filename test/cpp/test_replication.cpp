@@ -61,7 +61,6 @@ void TestSingleReplication(
   torch_xla::runtime::ComputationClient::ExecuteComputationOptions exec_options;
   for (size_t i = 0; i < device_strings.size(); ++i) {
     auto executor = [&, i]() {
-      std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": about to run ExecuteComputation" << std::endl;
       results[i] =
           torch_xla::runtime::GetComputationClient()->ExecuteComputation(
               *compiled_computations[i],
@@ -69,7 +68,6 @@ void TestSingleReplication(
                   torch_xla::runtime::ComputationClient::Data>(
                   tensors_data[i])},
               device_strings[i], exec_options);
-      std::cout << "xw32, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": finished running ExecuteComputation" << std::endl;
       counter.DecrementCount();
     };
     torch_xla::thread::Schedule(std::move(executor));

@@ -89,7 +89,7 @@ class TestExperimentalPjrt(parameterized.TestCase):
   def test_global_runtime_device_count(self):
     if xr.device_type() == 'CUDA':
       self.assertEqual(self.num_cuda_devices, xr.global_runtime_device_count())
-    else: # CPU case. TPU is not run for this test.
+    else: # CPU case. TPU CI does not run this test.
       self.assertEqual(1, xr.global_runtime_device_count())
 
   @parameterized.named_parameters(('default', {}, True), ('no_default', {

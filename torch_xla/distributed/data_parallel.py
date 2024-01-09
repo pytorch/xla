@@ -81,7 +81,7 @@ class DataParallel(object):
   def _handle_runner_exception(self, device, e):
     print(
         'Exception in model function for device={}: {}'.format(device, str(e)),
-        flush=True)
+        file=sys.stderr)
     traceback.print_exc(limit=16, file=sys.stderr)
     # Explicitly flush out stderr and stdout before exiting since
     # os._exit doesn't flush them.
