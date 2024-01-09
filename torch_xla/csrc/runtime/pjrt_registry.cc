@@ -98,25 +98,57 @@ InitializePjRt(const std::string& device_type) {
 
     xla::PjRtClient::KeyValueGetCallback kv_get = nullptr;
     xla::PjRtClient::KeyValuePutCallback kv_put = nullptr;
-    auto allowed_devices =
-        std::make_optional<std::set<int>>(std::set{local_process_rank});
-    if (global_world_size > 1) {
-      // Use the XlaCoordinator as the distributed key-value store.
-      coordinator = std::make_unique<XlaCoordinator>(
-          global_process_rank, global_world_size, master_addr, port);
-      std::shared_ptr<xla::DistributedRuntimeClient> distributed_client =
-          coordinator->GetClient();
-      std::string key_prefix = "gpu:";
-      kv_get = [distributed_client, key_prefix](
-                   std::string_view k,
-                   absl::Duration timeout) -> xla::StatusOr<std::string> {
-        return distributed_client->BlockingKeyValueGet(
-            absl::StrCat(key_prefix, k), timeout);
-      };
-      kv_put = [distributed_client, key_prefix](
-                   std::string_view k, std::string_view v) -> xla::Status {
-        return distributed_client->KeyValueSet(absl::StrCat(key_prefix, k), v);
-      };
+    bool spmd = sys_util::GetEnvBool("XLA_USE_SPMD", true);
+    std::optional<std::set<int>> allowed_devices;
+    TF_VLOG(3) << "spmd case=" << spmd;
+    if (!spmd) {
+      allowed_devices = std::make_optional<std::set<int>>(std::set{local_process_rank});
+      if (global_world_size > 1) {
+        // Use the XlaCoordinator as the distributed key-value store.
+        coordinator = std::make_unique<XlaCoordinator>(
+            global_process_rank, global_world_size, master_addr, port);
+        std::shared_ptr<xla::DistributedRuntimeClient> distributed_client =
+            coordinator->GetClient();
+        std::string key_prefix = "gpu:";
+        kv_get = [distributed_client, key_prefix](
+                    std::string_view k,
+                    absl::Duration timeout) -> xla::StatusOr<std::string> {
+          return distributed_client->BlockingKeyValueGet(
+              absl::StrCat(key_prefix, k), timeout);
+        };
+        kv_put = [distributed_client, key_prefix](
+                    std::string_view k, std::string_view v) -> xla::Status {
+          return distributed_client->KeyValueSet(absl::StrCat(key_prefix, k), v);
+        };
+      }
+    } else {
+      // int num_dev_per_host = sys_util::GetEnvInt(env::kEnvNumGpu, -1);
+      // XLA_CHECK(num_dev_per_host >= 1) << "GPU_NUM_DEVICE=" << num_dev_per_host;
+      // std::set<int> allowed_devices_id = {};
+      // for (int i=0; i < num_dev_per_host; i++) {
+      //   allowed_devices_id.insert(allowed_devices_id.end(), i + global_process_rank*num_dev_per_host);
+      // }
+      // TF_VLOG(3) << "allowed_devices_id=" << allowed_devices_id;
+      // allowed_devices = std::make_optional<std::set<int>>(allowed_devices_id);
+
+      if (global_world_size > 1) {
+        // Use the XlaCoordinator as the distributed key-value store.
+        coordinator = std::make_unique<XlaCoordinator>(
+            global_process_rank, global_world_size, master_addr, port);
+        std::shared_ptr<xla::DistributedRuntimeClient> distributed_client =
+            coordinator->GetClient();
+        std::string key_prefix = "gpu:";
+        kv_get = [distributed_client, key_prefix](
+                    std::string_view k,
+                    absl::Duration timeout) -> xla::StatusOr<std::string> {
+          return distributed_client->BlockingKeyValueGet(
+              absl::StrCat(key_prefix, k), timeout);
+        };
+        kv_put = [distributed_client, key_prefix](
+                    std::string_view k, std::string_view v) -> xla::Status {
+          return distributed_client->KeyValueSet(absl::StrCat(key_prefix, k), v);
+        };
+      }
     }
     TF_VLOG(3) << "Getting StreamExecutorGpuClient for node_id="
                << global_process_rank << ", num_nodes=" << global_world_size;
