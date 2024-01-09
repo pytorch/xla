@@ -93,7 +93,10 @@ def microbench(test_name,
 
 
 def _dump_flame(filepath, prof):
-  """Data can be interpreted with running ./flamegraph.pl --title "CUDA time" --countname "us." /tmp/profiler_stacks.txt > perf_viz.svg"""
+  """Data can be interpreted with running ./flamegraph.pl --title "CUDA time" --countname "us." /tmp/profiler_stacks.txt > perf_viz.svg
+
+  More about flamegraphs, and the flamegraph.pl script can be found in https://pytorch.org/tutorials/recipes/recipes/profiler_recipe.html#visualizing-data-as-a-flame-graph.
+  """
   os.makedirs(filepath, exist_ok=True)
   filedest = os.path.join(filepath, "flame.txt")
   prof.export_stacks(filedest)
