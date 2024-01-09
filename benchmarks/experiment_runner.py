@@ -1,8 +1,7 @@
 import argparse
+import bench
 from collections import OrderedDict
 import copy
-import csv
-import io
 import json
 import logging
 import os
@@ -198,6 +197,36 @@ class ExperimentRunner:
     print(stdout_text, file=sys.stdout, end='', flush=True)
     print(stderr_text, file=sys.stderr, end='', flush=True)
 
+  def _default_iter_fn(self, benchmark_experiment, benchmark_model,
+                       input_tensor):
+    tracing_time = None
+    total_time_start = time.perf_counter()
+    # Invoke iteration function and measure tracing time w/o waiting on the
+    # result.
+    if benchmark_experiment.xla:
+      t_trace_start = time.perf_counter()
+    output = benchmark_model.model_iter_fn(
+        input_tensor, collect_full_output=self._args.collect_full_output)
+    if benchmark_experiment.xla:
+      tracing_time = time.perf_counter() - t_trace_start
+
+    # Mark step.
+    self._mark_step(benchmark_experiment)
+    total_time = time.perf_counter() - total_time_start
+    return output, total_time, tracing_time
+
+  def _pure_wall_time_iter_fn(self, benchmark_experiment, benchmark_model,
+                              input_tensor):
+    device = xm.xla_device() if benchmark_experiment.xla else 'cuda'
+    sync_fn = xm.wait_device_ops if benchmark_experiment.xla else torch.cuda.synchronize
+    timing, output = bench.do_bench(
+        lambda: benchmark_model.model_iter_fn(
+            input_tensor, collect_full_output=self._args.collect_full_output),
+        return_mode='min',
+        sync_fn=sync_fn,
+        device=device)
+    return output, timing, None
+
   def run_single_config(self):
 
     # Load experiment and model.
@@ -248,18 +277,16 @@ class ExperimentRunner:
     if benchmark_experiment.xla:
       t_trace = 0
 
-    def loop(pytorch_profile=None):
+    def loop(pytorch_profile=None, iter_fn=None):
       nonlocal t_trace
+      total_timing = 0
       for i in range(self._args.iterations_per_run):
-
-        # Invoke iteration function and measure tracing time w/o waiting on the
-        # result.
-        if benchmark_experiment.xla:
-          t_trace_start = time.perf_counter()
-        output = benchmark_model.model_iter_fn(
-            inputs_list[i], collect_full_output=self._args.collect_full_output)
-        if benchmark_experiment.xla:
-          t_trace += time.perf_counter() - t_trace_start
+        output, timing, trace = iter_fn(benchmark_experiment, benchmark_model,
+                                        inputs_list[i])
+        if trace is not None:
+          t_trace += trace
+        if timing is not None:
+          total_timing += timing
 
         # Mark step.
         self._mark_step(benchmark_experiment)
@@ -267,22 +294,40 @@ class ExperimentRunner:
           pytorch_profile.step()
 
       self._synchronize(benchmark_experiment)
-      return output
+      return output, total_timing
 
     # Execute all iterations (with) profiling.
     enable_pytorch_profiling = self._args.dump_pytorch_profiles or \
         self._args.profile_cuda_cpu or \
         self._args.profile_cuda_cpu_individual_ops
     if enable_pytorch_profiling:
+      if self._args.pure_wall_time:
+        logger.warning(
+            'Run with pure wall time, but also with profiling flags enabled. Falling back to a default wall time.'
+        )
       with profile(activities=[ProfilerActivity.CUDA, ProfilerActivity.CPU
                               ]) as pytorch_profile:
-        output = loop(pytorch_profile)
+        output, _ = loop(pytorch_profile, iter_fn=self._default_iter_fn)
     else:
-      output = loop()
+      if self._args.pure_wall_time:
+        output, pure_wall_timing = loop(iter_fn=self._pure_wall_time_iter_fn)
+      else:
+        output, _ = loop(iter_fn=self._default_iter_fn)
 
     # Stop timers.
     t_end = time.perf_counter()
-    metrics["total_time"] = t_end - t_start
+
+    # Calculate metrics.
+    if self._args.pure_wall_time:
+      logger.warning(
+          'For measuring pure wall time tracing time equals wall time')
+
+    if self._args.pure_wall_time:
+      assert pure_wall_timing is not None
+      metrics["total_time"] = pure_wall_timing / 1000  # convert ms to s
+    else:
+      metrics["total_time"] = t_end - t_start
+
     metrics[
         "per_iter_time"] = metrics["total_time"] / self._args.iterations_per_run
     if benchmark_experiment.xla:
@@ -800,6 +845,12 @@ def parse_args(args=None):
       default=time.time(),
       type=float,
       help="Timestamp (seconds since the epoch) to assign to the benchmarks.")
+  parser.add_argument(
+      "--pure-wall-time",
+      action="store_true",
+      default=False,
+      help="Times wall time measurements with pure CUDA events. No kernel launch overhead.",
+  )
   return parser.parse_args(args)
 
 
