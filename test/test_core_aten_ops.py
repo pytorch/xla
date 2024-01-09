@@ -2478,7 +2478,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.logical_or, args, kwargs)
 
-  @unittest.skip
   def test_aten_logical_or_1(self):
     args = (
         torch.randn((10, 10)).to(torch.float16),
@@ -3350,7 +3349,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.prod, args, kwargs)
 
-  @unittest.skip
   def test_aten_prod_1(self):
     args = (torch.randint(0, 10, (10, 10)).to(torch.int32),)
     kwargs = dict()

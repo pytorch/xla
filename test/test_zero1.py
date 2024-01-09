@@ -13,8 +13,6 @@ import unittest
 class XlaZeRO1Test(TestCase):
 
   @unittest.skipIf(xr.device_type() == 'TPU', "Crash on TPU")
-  @unittest.skipIf(xr.device_type() == 'CUDA',
-                   "TODO(alanwaketan): Fix it for the token change.")
   def test_zero1(self):
     device = xm.xla_device()
 
