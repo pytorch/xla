@@ -34,17 +34,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
       f"Requires PJRT_DEVICE set to `TPU`.")
   def test_debugging_spmd_single_host_tiled_tpu(self):
     from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
-    device = xm.xla_device()
-    num_devices = self.n_devices
-    if num_devices != 8:
-      self.skipTest("skip num_devices!=8 env to avoid circular reasoning")
-    mesh_shape = (2, num_devices // 2)
-    device_ids = np.array(range(num_devices))
-    mesh = self._get_mesh(mesh_shape)
-    t = torch.randn(8, 4, device=device)
-    partition_spec = (0, 1)
-    xs.mark_sharding(t, mesh, partition_spec)
-    sharding = torch_xla._XLAC._get_xla_sharding_spec(t)
+    sharding={devices=[2,8]0,4,8,12,2,6,10,14,1,5,9,13,3,7,11,15}
     generated_table = visualize_tensor_sharding(t)
     console = rich.console.Console()
     with console.capture() as capture:
@@ -117,18 +107,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
       f"Requires PJRT_DEVICE set to `TPU`.")
   def test_single_host_partial_replication_tpu(self):
     from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
-    device = xm.xla_device()
-    num_devices = self.n_devices
-    if num_devices != 8:
-      self.skipTest("skip num_devices!=8 env to avoid circular reasoning")
-    mesh_shape = (2, num_devices // 2)
-    device_ids = np.array(range(num_devices))
-    mesh = self._get_mesh(mesh_shape)
-
-    partition_spec = (0, None)
-    t = torch.randn(8, 32, device=device)
-    xs.mark_sharding(t, mesh, (0, None))
-    sharding = torch_xla._XLAC._get_xla_sharding_spec(t)
+    sharding={devices=[8,1,2]0,1,4,5,8,9,12,13,2,3,6,7,10,11,14,15 last_tile_dim_replicate}
     generated_table = visualize_tensor_sharding(t)
     console = rich.console.Console()
     with console.capture() as capture:
@@ -171,18 +150,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
       f"Requires PJRT_DEVICE set to `TPU`.")
   def test_single_host_replicated_tpu(self):
     from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
-    device = xm.xla_device()
-    num_devices = self.n_devices
-    if num_devices != 8:
-      self.skipTest("skip num_devices!=8 env to avoid circular reasoning")
-    mesh_shape = (2, num_devices // 2)
-    device_ids = np.array(range(num_devices))
-    mesh = self._get_mesh(mesh_shape)
-
-    partition_spec_replicated = (None, None)
-    t = torch.randn(8, 32, device=device)
-    xs.mark_sharding(t, mesh, partition_spec_replicated)
-    sharding = torch_xla._XLAC._get_xla_sharding_spec(t)
+    sharding = '{replicated}'
     generated_table = visualize_tensor_sharding(t)
     console = rich.console.Console()
     with console.capture() as capture:
@@ -218,18 +186,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
       xu.getenv_as(xenv.PJRT_DEVICE, str) in ("GPU", 'CUDA', 'ROCM', 'TPU'),
       f"Requires PJRT_DEVICE set to `CPU`.")
   def test_debugging_spmd_single_host_tiled_cpu(self):
-    from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
-    device = xm.xla_device()
-    num_devices = self.n_devices
-    if num_devices != 1:
-      self.skipTest("skip num_devices!=1 env to avoid circular reasoning")
-    mesh_shape = (1, num_devices)
-    device_ids = np.array(range(num_devices))
-    mesh = self._get_mesh(mesh_shape)
-    t = torch.randn(8, 4, device=device)
-    partition_spec = (0, 1)
-    xs.mark_sharding(t, mesh, partition_spec)
-    sharding = torch_xla._XLAC._get_xla_sharding_spec(t)
+    sharding={devices=[2,8]0,4,8,12,2,6,10,14,1,5,9,13,3,7,11,15}
     generated_table = visualize_tensor_sharding(t)
     console = rich.console.Console()
     with console.capture() as capture:
@@ -265,18 +222,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
       f"Requires PJRT_DEVICE set to `CPU`.")
   def test_single_host_partial_replication_cpu(self):
     from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
-    device = xm.xla_device()
-    num_devices = self.n_devices
-    if num_devices != 1:
-      self.skipTest("skip num_devices!=1 env to avoid circular reasoning")
-    mesh_shape = (1, num_devices)
-    device_ids = np.array(range(num_devices))
-    mesh = self._get_mesh(mesh_shape)
-
-    partition_spec = (0, None)
-    t = torch.randn(8, 32, device=device)
-    xs.mark_sharding(t, mesh, (0, None))
-    sharding = torch_xla._XLAC._get_xla_sharding_spec(t)
+    sharding={devices=[8,1,2]0,1,4,5,8,9,12,13,2,3,6,7,10,11,14,15 last_tile_dim_replicate}
     generated_table = visualize_tensor_sharding(t)
     console = rich.console.Console()
     with console.capture() as capture:
@@ -312,18 +258,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
       f"Requires PJRT_DEVICE set to `CPU`.")
   def test_single_host_replicated_cpu(self):
     from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
-    device = xm.xla_device()
-    num_devices = self.n_devices
-    if num_devices != 1:
-      self.skipTest("skip num_devices!=1 env to avoid circular reasoning")
-    mesh_shape = (1, num_devices)
-    device_ids = np.array(range(num_devices))
-    mesh = self._get_mesh(mesh_shape)
-
-    partition_spec_replicated = (None, None)
-    t = torch.randn(8, 32, device=device)
-    xs.mark_sharding(t, mesh, partition_spec_replicated)
-    sharding = torch_xla._XLAC._get_xla_sharding_spec(t)
+    sharding = '{replicated}'
     generated_table = visualize_tensor_sharding(t)
     console = rich.console.Console()
     with console.capture() as capture:
@@ -564,8 +499,6 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
   def test_multi_host_replicated_tpu(self):
     from torch_xla.distributed.spmd.debugging import visualize_sharding
     num_devices = self.n_devices
-    if num_devices != 8:
-      self.skipTest("skip num_devices!=8 env to avoid circular reasoning")
     sharding = '{replicated}'
     generated_table = visualize_sharding(sharding)
     console = rich.console.Console()
