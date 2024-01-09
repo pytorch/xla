@@ -49,6 +49,7 @@ jobs:
       GCLOUD_SERVICE_KEY: ${{ secrets.gcloud-service-key }}
       XLA_CUDA: ${{ inputs.cuda }}
       DISABLE_XRT: ${{ inputs.disable_xrt }}
+      BAZEL_JOBS: 32
     steps:
       - name: Setup Linux
         uses: pytorch/test-infra/.github/actions/setup-linux@main
