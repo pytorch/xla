@@ -235,7 +235,6 @@ class AtenOpTest(unittest.TestCase):
     run_export_and_compare(self, torch.ops.aten._adaptive_avg_pool2d, args,
                            kwargs)
 
-  @unittest.skip
   def test_aten_squeeze_dim_0(self):
     args = (
         torch.randn((1, 3, 1, 5)).to(torch.float32),
@@ -244,7 +243,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.squeeze.dim, args, kwargs)
 
-  @unittest.skip
   def test_aten_squeeze_dim_1(self):
     args = (
         torch.randn((1, 3, 1, 5)).to(torch.float32),
