@@ -24,30 +24,21 @@ def onlyIfPJRTDeviceIsCUDA(fn):
 
 
 def diff_output(testcase, output1, output2, rtol, atol, equal_nan=True):
-  # import pdb; pdb.set_trace()
   if isinstance(output1, torch.Tensor):
-    # print('at 1')
     testcase.assertIsInstance(output2, torch.Tensor)
     output2_cpu = output2.detach().cpu()
     if output2_cpu.dtype != output1.dtype:
       output2_cpu = output2_cpu.to(output1.dtype)
     # import pdb; pdb.set_trace()
-    print(f'[WONJOO] output1={output1}')
-    print(f'[WONJOO] output2_cpu={output2_cpu}')
-    print(f'[WONJOO] output2_cpu-output1={output2_cpu-output1}')
     testcase.assertTrue(
         torch.allclose(
             output1, output2_cpu, atol=atol, rtol=rtol, equal_nan=equal_nan))
   elif isinstance(output1, (tuple, list)):
-    # print('at 2')
     testcase.assertIsInstance(output2, (tuple, list))
     testcase.assertEqual(len(output1), len(output2))
     for o1, o2 in zip(output1, output2):
-      # print(f'o1={o1}')
-      # print(f'o2={o2}')
       diff_output(testcase, o1, o2, rtol, atol)
   else:
-    # print('at 3')
     testcase.assertEqual(output1, output2)
 
 
@@ -58,7 +49,6 @@ def run_export_and_compare(testcase,
                            atol=1e-3,
                            rtol=1e-5,
                            equal_nan=True):
-  # import pdb; pdb.set_trace()
   device = xm.xla_device()
   with testcase.subTest('torch_eval'):
     res = func(*args, **kwargs)
@@ -67,11 +57,8 @@ def run_export_and_compare(testcase,
                                    args)
       kwargs2 = pytree.tree_map_only(torch.Tensor,
                                      lambda x: x.to(device=device), kwargs)
-      print(f'args2={args2}')
-      print(f'kwargs2={kwargs2}')
       res_xla = func(*args2, **kwargs2)
       with testcase.subTest('torch_xla_diff:' + str(atol)):
-        print('subtest torch_xla_diff')
         diff_output(
             testcase, res, res_xla, atol=atol, rtol=rtol, equal_nan=equal_nan)
     with testcase.subTest('can_export'):
@@ -81,7 +68,6 @@ def run_export_and_compare(testcase,
         with testcase.subTest('stablehlo_can_run'):
           res2 = shlo(*args, **kwargs)
           with testcase.subTest('stablehlo_diff: ' + str(atol)):
-            print('subtest stablehlo_diff')
             diff_output(
                 testcase, res, res2, rtol=rtol, atol=atol, equal_nan=equal_nan)
 
