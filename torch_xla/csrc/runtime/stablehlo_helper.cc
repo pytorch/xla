@@ -168,14 +168,14 @@ void ConvertStableHloToHlo(mlir::ModuleOp* mlir_module,
                          << getMlirModuleStr(*mlir_module);
 }
 
-const std::unordered_map<std::string, std::string>&
-GetTorchDtypeToStablehloDtypeMap() {
-  static const std::unordered_map<std::string, std::string> m_{
-      {"torch.int8", "si8"},
-      {"torch.uint8", "ui8"},
-      {"torch.int16", "si16"},
-  };
-  return m_;
+const std::string GetTorchDtypeToStablehloDtype(const std::string& dtype) {
+  if (dtype == "torch.int8") return "si8";
+  if (dtype == "torch.uint8") return "ui8";
+  if (dtype == "torch.int16") return "si16";
+  if (dtype == "torch.int32") return "si32";
+  if (dtype == "torch.int64") return "si64";
+  XLA_ERROR() << "Unsupported dtype for conversion to Stablehlo type: "
+              << dtype;
 }
 
 const std::unordered_map<xla::PrimitiveType, std::string>&
@@ -187,9 +187,18 @@ GetHloDtypeToStablehloDtypeMap() {
       {xla::PrimitiveType::U8, "ui8"},   {xla::PrimitiveType::U16, "ui16"},
       {xla::PrimitiveType::U32, "ui32"}, {xla::PrimitiveType::U64, "ui64"},
       {xla::PrimitiveType::F16, "f16"},  {xla::PrimitiveType::BF16, "bf16"},
-      {xla::PrimitiveType::F32, "f32"},
+      {xla::PrimitiveType::F32, "f32"},  {xla::PrimitiveType::F64, "f64"},
   };
   return m_;
+}
+
+xla::PrimitiveType GetTorchIntDtypeToHloDtype(const std::string& dtype) {
+  if (dtype == "torch.int8") return xla::PrimitiveType::S8;
+  if (dtype == "torch.uint8") return xla::PrimitiveType::U8;
+  if (dtype == "torch.int16") return xla::PrimitiveType::S16;
+  if (dtype == "torch.int32") return xla::PrimitiveType::S32;
+  if (dtype == "torch.int64") return xla::PrimitiveType::S64;
+  XLA_ERROR() << "Unsupported dtype for conversion to Hlo type: " << dtype;
 }
 
 }  // namespace torch_xla
