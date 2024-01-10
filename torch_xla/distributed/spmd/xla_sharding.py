@@ -504,7 +504,6 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor],
     linear = nn.Linear(32, 10).to(xm.xla_device())
     xs.mark_sharding(linear.weight, mesh, (None, 1))
   """
-  import pdb; pdb.set_trace()
   num_devices = xr.global_runtime_device_count()
   assert num_devices > 0, "This requires XLA supported device(s)."
   assert mesh.size() == num_devices, \
