@@ -139,7 +139,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.acosh, args, kwargs)
 
-  @unittest.skip
   def test_aten_unsqueeze_0(self):
     args = (
         torch.randn((1, 3, 10)).to(torch.float32),
@@ -148,7 +147,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.unsqueeze, args, kwargs)
 
-  @unittest.skip
   def test_aten_unsqueeze_1(self):
     args = (
         torch.randn((1, 3, 10)).to(torch.float16),
@@ -157,7 +155,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.unsqueeze, args, kwargs)
 
-  @unittest.skip
   def test_aten_unsqueeze_2(self):
     args = (
         torch.randint(0, 10, (1, 3, 10)).to(torch.int32),
@@ -166,7 +163,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.unsqueeze, args, kwargs)
 
-  @unittest.skip
   def test_aten_unsqueeze_3(self):
     args = (
         torch.randn((1, 3, 10)).to(torch.float32),
@@ -175,7 +171,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.unsqueeze, args, kwargs)
 
-  @unittest.skip
   def test_aten_unsqueeze_4(self):
     args = (
         torch.randn((1, 3, 10)).to(torch.float16),
@@ -184,7 +179,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.unsqueeze, args, kwargs)
 
-  @unittest.skip
   def test_aten_unsqueeze_5(self):
     args = (
         torch.randint(0, 10, (1, 3, 10)).to(torch.int32),
