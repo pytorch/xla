@@ -434,11 +434,11 @@ class UnsupportedNodesCollector(torch.fx.Interpreter):
       self._unsupported_nodes.append(n)
     else:
       # Check whether the tensors contained in value are all XLA tensors.
-      def are_all_tensors_xla(value):
+      def all_tensors_on_xla_device(value):
         if isinstance(value, torch.Tensor):
           return is_xla_tensor(value)
         if isinstance(value, (list, tuple)):
-          return all(are_all_tensors_xla(v) for v in value)
+          return all(all_tensors_on_xla_device(v) for v in value)
         # Not a tensor nor a container.
         return True
 
@@ -447,13 +447,13 @@ class UnsupportedNodesCollector(torch.fx.Interpreter):
       # A supported node has the following characteristics:
       # - a node whose result is a composition of XLA tensors:
       #   avoids non-XLA tensors as FX graph return value.
-      result_is_supported = are_all_tensors_xla(result)
+      result_is_supported = all_tensors_on_xla_device(result)
 
       # - a node that whose tensor arguments are XLA tensors:
       #   avoids non-XLA tensors as FX graph arguments.
       args, kwargs = self.fetch_args_kwargs_from_env(n)
       args_are_supported = all(
-          are_all_tensors_xla(v)
+          all_tensors_on_xla_device(v)
           for v in itertools.chain(args, kwargs.values()))
 
       # If the current node is NOT supported, we add it to
