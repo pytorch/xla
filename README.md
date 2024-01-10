@@ -21,7 +21,7 @@ started:
 * [Stable Diffusion with PyTorch/XLA
   2.0](https://github.com/pytorch/xla/blob/master/contrib/kaggle/pytorch-xla-2-0-on-kaggle.ipynb)
 * [Distributed PyTorch/XLA
-  Basics](https://github.com/pytorch/xla/blob/master/contrib/kaggle/distributed-pytorch-xla-basics.ipynb)
+  Basics](https://github.com/pytorch/xla/blob/master/contrib/kaggle/distributed-pytorch-xla-basics-with-pjrt.ipynb)
 
 ## Getting Started
 
