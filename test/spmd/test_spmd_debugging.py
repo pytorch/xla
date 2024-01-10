@@ -28,7 +28,6 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     xr.use_spmd()
     super().setUpClass()
 
-
   def test_debugging_spmd_single_host_tiled_tpu(self):
     from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
     sharding = '{devices=[2,8]0,4,8,12,2,6,10,14,1,5,9,13,3,7,11,15}'
@@ -98,7 +97,6 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     fake_output = fake_capture.get()
     assert output == fake_output
 
-
   def test_single_host_partial_replication_tpu(self):
     from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
     sharding = '{devices=[8,1,2]0,1,4,5,8,9,12,13,2,3,6,7,10,11,14,15 last_tile_dim_replicate}'
@@ -137,7 +135,6 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
       fake_console.print(fake_table)
     fake_output = fake_capture.get()
     assert output == fake_output
-
 
   def test_single_host_replicated_tpu(self):
     from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
