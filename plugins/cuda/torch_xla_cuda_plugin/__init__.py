@@ -8,4 +8,4 @@ class GpuPlugin(plugins.DevicePlugin):
 
   def physical_chip_count(self) -> int:
     # TODO: default to actual device count
-    return os.getenv('GPU_NUM_DEVICES', 1)
+    return int(os.getenv('GPU_NUM_DEVICES', '1'))
