@@ -453,8 +453,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     devices = xm.get_xla_supported_devices()
     xla_devices = torch_xla._XLAC._xla_real_devices(devices)
     for device, xdevice in zip(devices, xla_devices):
-      self.assertTrue(
-          re.match(r'(CPU|GPU|TPU|CUDA|ROCM):\d+$', xdevice) is not None)
+      self.assertIsNotNone(re.fullmatch(r'[A-Z]+:\d+$', xdevice))
 
   def test_negative_slice(self):
     t = _gen_tensor(32, 24, 32)

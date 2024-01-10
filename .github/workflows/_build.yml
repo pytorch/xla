@@ -49,6 +49,7 @@ jobs:
       GCLOUD_SERVICE_KEY: ${{ secrets.gcloud-service-key }}
       XLA_CUDA: ${{ inputs.cuda }}
       DISABLE_XRT: ${{ inputs.disable_xrt }}
+      BAZEL_JOBS: 16
     steps:
       - name: Setup Linux
         uses: pytorch/test-infra/.github/actions/setup-linux@main
@@ -89,6 +90,7 @@ jobs:
           echo "declare -x SCCACHE_BUCKET=${SCCACHE_BUCKET}" | docker exec -i "${pid}" sh -c "cat >> env"
           echo "declare -x DISABLE_XRT=${DISABLE_XRT}" | docker exec -i "${pid}" sh -c "cat >> xla_env"
           echo "declare -x XLA_CUDA=${XLA_CUDA}" | docker exec -i "${pid}" sh -c "cat >> xla_env"
+          echo "declare -x BAZEL_JOBS=${BAZEL_JOBS}" | docker exec -i "${pid}" sh -c "cat >> xla_env"
           echo "declare -x BAZEL_REMOTE_CACHE=1" | docker exec -i "${pid}" sh -c "cat >> xla_env"
           echo "${GCLOUD_SERVICE_KEY}" | docker exec -i "${pid}" sh -c "cat >> default_credentials.json"
 
