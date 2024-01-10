@@ -74,6 +74,11 @@ class PjRtComputationClient : public ComputationClient {
 
   std::string GetDefaultDevice() const override;
 
+  torch_xla::DeviceType GetDeviceType() const override {
+    return torch_xla::DeviceType(
+        absl::AsciiStrToUpper(client_->platform_name()));
+  };
+
   std::vector<std::string> GetLocalDevices() const override;
 
   std::vector<std::string> GetAllDevices() const override;

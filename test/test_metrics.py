@@ -3,6 +3,7 @@ import time
 
 import torch
 import torch_xla
+import torch_xla.runtime as xr
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
 import unittest
@@ -171,11 +172,7 @@ class MetricsTest(unittest.TestCase):
     report = met.metrics_report()
     self.assertIn("CachedCompile", report)
 
-  @unittest.skipIf(
-      xm.get_xla_supported_devices("CUDA") or
-      xm.get_xla_supported_devices("GPU") or
-      xm.get_xla_supported_devices("ROCM") or
-      xm.get_xla_supported_devices("TPU"), f"This test only works on CPU.")
+  @unittest.skipIf(xr.device_type() != "CPU", f"This test only works on CPU.")
   def test_execute_time_metric(self):
     # Initialize the client before starting the timer.
     xm.xla_device()

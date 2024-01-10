@@ -72,7 +72,7 @@ def is_xla_tensor(tensor):
 
 
 def parse_xla_device(device):
-  m = re.match(r'(CPU|TPU|GPU|ROCM|CUDA|XPU|NEURON):(\d+)$', device)
+  m = re.match(r'([A-Z]+):(\d+)$', device)
   if m:
     return (m.group(1), int(m.group(2)))
 
@@ -81,32 +81,33 @@ def get_xla_supported_devices(devkind=None, max_devices=None):
   """Returns a list of supported devices of a given kind.
 
   Args:
-    devkind (string..., optional): If specified, one of `TPU`, `GPU`, `XPU`,
-      `NEURON` or `CPU` (the 'GPU' XLA device is currently not implemented).
+    devkind (string..., optional): If specified, a device type such as `TPU`,
+      `CUDA`, `CPU`, or name of custom PJRT device.
     max_devices (int, optional): The maximum number of devices to be returned of
       that kind.
 
   Returns:
     The list of device strings.
   """
-  # TODO(xiowei replace gpu with cuda): Remove the below if statement after r2.2 release.
-  if devkind and devkind.casefold() == 'gpu':
-    warnings.warn(
-        "GPU as a device name is being deprecate. Please replace it with CUDA such as get_xla_supported_devices(devkind='CUDA'). Similarly, please replace PJRT_DEVICE=GPU with PJRT_DEVICE=CUDA."
-    )
-    devkind = 'CUDA'
+  # TODO(wcromar): Remove `devkind` after 2.3 release cut. We no longer support
+  # multiple device types.
+  if not devkind:
+    devices = torch_xla._XLAC._xla_get_devices()
+    return [
+        f'xla:{i}'
+        for i, _ in enumerate(devices[:max_devices] if max_devices else devices)
+    ]
+  else:
+    warnings.warn("`devkind` argument is deprecated and will be removed in a "
+                  "future release.")
 
   xla_devices = _DEVICES.value
-  devkind = [devkind] if devkind else [
-      'TPU', 'GPU', 'XPU', 'NEURON', 'CPU', 'CUDA', 'ROCM'
-  ]
-  for kind in devkind:
-    kind_devices = []
-    for i, device in enumerate(xla_devices):
-      if re.match(kind + r':\d+$', device):
-        kind_devices.append('xla:{}'.format(i))
-    if kind_devices:
-      return kind_devices[:max_devices] if max_devices else kind_devices
+  kind_devices = []
+  for i, device in enumerate(xla_devices):
+    if re.match(devkind + r':\d+$', device):
+      kind_devices.append('xla:{}'.format(i))
+  if kind_devices:
+    return kind_devices[:max_devices] if max_devices else kind_devices
 
 
 def xrt_world_size(defval=1):
@@ -191,8 +192,8 @@ def xla_device(n=None, devkind=None):
     n (int, optional): The specific instance (ordinal) to be returned. If
       specified, the specific XLA device instance will be returned. Otherwise
       the first device of `devkind` will be returned.
-    devkind (string..., optional): If specified, one of `TPU`, `CUDA`, `XPU`
-      `NEURON`, `ROCM` or `CPU`.
+    devkind (string..., optional): If specified, device type such as `TPU`,
+      `CUDA`, `CPU`, or custom PJRT device. Deprecated.
 
   Returns:
     A `torch.device` with the requested instance.
@@ -230,8 +231,7 @@ def xla_device_hw(device):
       real device.
 
   Returns:
-    A string representation of the hardware type (`CPU`, `TPU`, `XPU`, `NEURON`, `GPU`, `CUDA`, `ROCM`)
-    of the given device.
+    A string representation of the hardware type of the given device.
   """
   real_device = _xla_real_device(device)
   return real_device.split(':')[0]
@@ -558,8 +558,8 @@ def all_gather(value, dim=0, groups=None, output=None, pin_layout=True):
   """
   # _all_gather_using_all_reduce does not support list of tensors as input
   if pin_layout and output == None and isinstance(value, torch.Tensor):
-    # There is not an easy way to pin the all_gather layout on TPU, GPU and NEURON,
-    # use all_reduce based all_gather for this purpose.
+    # There is not an easy way to pin the all_gather layout, so use all_reduce
+    # based all_gather for this purpose.
     return _all_gather_using_all_reduce(
         value, dim=dim, groups=groups, pin_layout=True)
 

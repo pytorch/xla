@@ -20,9 +20,7 @@ std::string GetDefaultGitGeneratorName() {
   XlaDeviceType hw_type =
       static_cast<XlaDeviceType>(bridge::GetCurrentDevice().type());
   switch (hw_type) {
-    case XlaDeviceType::GPU:
     case XlaDeviceType::CUDA:
-    case XlaDeviceType::ROCM:
       return "three_fry";
     default:
       return "default";

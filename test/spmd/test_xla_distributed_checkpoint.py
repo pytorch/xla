@@ -506,8 +506,8 @@ class CheckpointManagerTest(DistributedCheckpointTestBase):
             torch.allclose(v, new_state_dict[k])
             for k, v in state_dict.items()))
 
-  @unittest.skipUnless(xr.device_type() == 'TPU',
-                       'TPU required for worker IP discovery')
+  @unittest.skipIf(xr.device_type() != 'TPU',
+                   'TPU required for worker IP discovery')
   @unittest.mock.patch('torch_xla._internal.tpu.get_worker_ips')
   def test_master_ip_discovery(self, patched_get_worker_ips):
     # A basic test to verify the SPMD codepath returns the correct IP. Two IPs
@@ -543,8 +543,8 @@ class CheckpointManagerTest(DistributedCheckpointTestBase):
       # Scope the PreemptionSyncManager to the lifespan of the test.
       torch_xla._XLAC._deactivate_preemption_sync_manager()
 
-  @unittest.skipUnless(xr.device_type() == 'TPU',
-                       'TPU required for worker IP discovery')
+  @unittest.skipIf(xr.device_type() != 'TPU',
+                   'TPU required for worker IP discovery')
   @run_with_tmpdir
   def test_auto_checkpoint(self, tmpdir):
     # Create a checkpoint manager with a long save interval

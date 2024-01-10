@@ -14,7 +14,7 @@ def _mp_fn(index):
   device = xm.xla_device()
   world_size = xm.xrt_world_size()
   input_list_size = 5
-  if xm.xla_device_hw(device) in ('TPU', 'GPU', 'CUDA', 'ROCM', 'NEURON'):
+  if xm.xla_device_hw(device) in ('TPU', 'CUDA', 'NEURON'):
     # Testing with a single replica group
     ordinal_tensor = torch.tensor([index], dtype=torch.float).to(device)
     result = xm.all_gather(ordinal_tensor, dim=0)
