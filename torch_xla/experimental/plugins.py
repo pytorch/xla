@@ -62,6 +62,6 @@ def default() -> DevicePlugin:
   return _plugin_registry[xr.device_type()]
 
 
-def register_plugin(name: str, device_plugin: DevicePlugin):
+def register_plugin(name: str, device_plugin: DevicePlugin, create_options = {}):
   _plugin_registry[name.upper()] = device_plugin
-  torch_xla._XLAC._register_pjrt_plugin(name, device_plugin.library_path())
+  torch_xla._XLAC._register_pjrt_plugin(name, device_plugin.library_path(), create_options)
