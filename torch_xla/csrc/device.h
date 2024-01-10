@@ -22,11 +22,14 @@ struct DeviceType : public torch::lazy::BackendDeviceType {
   DeviceType(XlaDeviceType xla_device_type) {
     type = static_cast<int>(xla_device_type);
   }
+  DeviceType(const std::string& device_type);
 
   std::string toString() const override;
 };
 
 torch::lazy::BackendDevice ParseDeviceString(const std::string& device_spec);
+
+std::vector<torch::lazy::BackendDevice> ParseDeviceString(absl::Span<const std::string> devices);
 
 torch::lazy::BackendDevice GetVirtualDevice();
 

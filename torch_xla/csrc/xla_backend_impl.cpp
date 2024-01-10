@@ -77,7 +77,7 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
       const torch::lazy::Shape& shape) const override {
     xla::Shape xla_shape = MakeXlaShapeFromLazyShape(shape, device);
     return runtime::GetComputationClient()->CreateDataPlaceholder(
-        device.toString(), std::move(xla_shape));
+        device, std::move(xla_shape));
   }
 
   torch::lazy::BackendDataPtr GetComputationDataFromNode(
@@ -118,8 +118,8 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
   std::vector<std::string> GetCompilationDevices(
       const std::string& device,
       c10::ArrayRef<std::string> devices) const override {
-    return runtime::GetComputationClient()->GetCompilationDevices(device,
-                                                                  devices);
+    // TODO(wcromar): do we need this?
+    XLA_ERROR() << __FUNCTION__ << " not implemented";
   }
 
   std::vector<torch::lazy::ComputationPtr> Compile(
@@ -149,8 +149,8 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
       // multiple GPU as replica.
       compile_instances.push_back(runtime::ComputationClient::CompileInstance(
           torch_xla_computation->move_computation(),
-          torch_xla_computation->get_device_string(),
-          {current_device.toString()}, &output_shapes.back()));
+          torch_xla_computation->get_device_string(), {current_device},
+          &output_shapes.back()));
     }
     std::vector<std::shared_ptr<runtime::ComputationClient::Computation>>
         client_computations = runtime::GetComputationClient()->Compile(
@@ -166,7 +166,7 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
         runtime::GetComputationClient()->ExecuteComputation(
             *std::dynamic_pointer_cast<runtime::ComputationClient::Computation>(
                 computation),
-            UnwrapXlaData(arguments), device.toString());
+            UnwrapXlaData(arguments), device);
     return WrapXlaData(results);
   }
 

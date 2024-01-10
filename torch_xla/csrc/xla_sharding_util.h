@@ -71,16 +71,17 @@ class ShardingUtil {
   // vector of TensorIndex denoting the offset of the device's shard into the
   // global tensor.
   static std::vector<std::pair<int, std::vector<at::indexing::TensorIndex>>>
-  GetShardReplicaAndIndicesForDevices(const std::vector<int64_t>& shard_shape,
-                                      const std::vector<int64_t>& tensor_shape,
-                                      const xla::OpSharding sharding,
-                                      const std::vector<std::string>& devices);
+  GetShardReplicaAndIndicesForDevices(
+      const std::vector<int64_t>& shard_shape,
+      const std::vector<int64_t>& tensor_shape, const xla::OpSharding sharding,
+      const std::vector<torch::lazy::BackendDevice>& devices);
 
   // Returns the indices for the shards. Supports `OTHER` sharding types and
   // called when input is sharded along the batch axis.
   static std::vector<std::vector<at::indexing::TensorIndex>>
-  GetShardIndicesForMinibatchTensor(const std::vector<int64_t>& shard_shape,
-                                    const std::vector<std::string>& devices);
+  GetShardIndicesForMinibatchTensor(
+      const std::vector<int64_t>& shard_shape,
+      const std::vector<torch::lazy::BackendDevice>& devices);
 
   // Shards a tensor and returns the sharded tensors which belong on `devices`
   // based on the `sharding` spec. REPLICATED sharding should result in shards
@@ -93,7 +94,8 @@ class ShardingUtil {
   // vector, so the `i`th result will belong on the `i`th device.
   static std::vector<at::Tensor> ShardTensor(
       const at::Tensor& tensor, const XLATensor::ShardingSpecPtr shardings,
-      const std::vector<std::string>& devices, bool padded = true);
+      const std::vector<torch::lazy::BackendDevice>& devices,
+      bool padded = true);
 
   // Retrieve output sharding of a given XLA computation.
   static std::vector<XLATensor::ShardingSpecPtr> GetOutputSharding(
@@ -122,7 +124,7 @@ class ShardingUtil {
   // the PjRtShardedData wrapping the shards.
   static runtime::ComputationClient::DataPtr CreateShardedData(
       const std::vector<at::Tensor>& shards,
-      const std::vector<std::string>& devices,
+      const std::vector<torch::lazy::BackendDevice>& devices,
       const XLATensor::ShardingSpecPtr& sharding_spec);
 
   static void XlaMarkSharding(const at::Tensor& input,

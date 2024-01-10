@@ -924,7 +924,7 @@ def get_stablehlo(tensors=None) -> str:
   if tensors is None:
     tensors = []
   return torch_xla._XLAC._get_stablehlo(
-      tensors, torch_xla._XLAC._xla_get_default_device(), [],
+      tensors, torch_xla._XLAC._xla_get_default_device(),
       False).decode('utf-8')
 
 
@@ -948,7 +948,7 @@ def get_stablehlo_bytecode(tensors=None) -> bytes:
   if tensors is None:
     tensors = []
   return torch_xla._XLAC._get_stablehlo(
-      tensors, torch_xla._XLAC._xla_get_default_device(), [], True)
+      tensors, torch_xla._XLAC._xla_get_default_device(), True)
 
 
 def wait_device_ops(devices=[]):

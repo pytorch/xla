@@ -20,8 +20,10 @@ namespace torch_xla {
 namespace runtime {
 
 std::shared_ptr<ComputationClient::Computation> ComputationClient::Compile(
-    xla::XlaComputation computation, std::string compilation_device,
-    std::vector<std::string> devices, const xla::Shape* output_shape) {
+    xla::XlaComputation computation,
+    torch::lazy::BackendDevice compilation_device,
+    std::vector<torch::lazy::BackendDevice> devices,
+    const xla::Shape* output_shape) {
   std::vector<CompileInstance> instances;
   instances.emplace_back(std::move(computation), std::move(compilation_device),
                          std::move(devices), output_shape);
@@ -30,9 +32,11 @@ std::shared_ptr<ComputationClient::Computation> ComputationClient::Compile(
   return std::move(results[0]);
 }
 
-std::vector<std::string> ComputationClient::GetCompilationDevices(
-    const std::string& device, absl::Span<const std::string> devices) {
-  std::vector<std::string> compilation_devices;
+std::vector<torch::lazy::BackendDevice>
+ComputationClient::GetCompilationDevices(
+    const torch::lazy::BackendDevice& device,
+    absl::Span<const torch::lazy::BackendDevice> devices) {
+  std::vector<torch::lazy::BackendDevice> compilation_devices;
   if (devices.empty()) {
     auto replication_devices = GetReplicationDevices();
     if (replication_devices == nullptr || replication_devices->empty()) {
@@ -47,10 +51,9 @@ std::vector<std::string> ComputationClient::GetCompilationDevices(
   return compilation_devices;
 }
 
-int64_t ComputationClient::GetDeviceOrdinal(const std::string& device) {
-  auto pos = device.rfind(':');
-  XLA_CHECK_NE(pos, std::string::npos) << device;
-  return std::stoi(device.substr(pos + 1));
+int64_t ComputationClient::GetDeviceOrdinal(
+    const torch::lazy::BackendDevice& device) {
+  return device.ordinal();
 }
 
 metrics::Metric* ComputationClient::TransferToDeviceMetric() {

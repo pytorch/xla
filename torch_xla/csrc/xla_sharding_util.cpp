@@ -98,10 +98,10 @@ std::vector<int64_t> TileAssignmentDimensions(
 // order of the output corresponds to the order of the `devices`, which can be
 // arbitrarily set by the caller.
 std::unordered_map<int, int> build_index_map(
-    const std::vector<std::string>& devices) {
+    const std::vector<torch::lazy::BackendDevice>& devices) {
   std::unordered_map<int, int> device_index;
   for (int i = 0; i < devices.size(); ++i) {
-    int global_ordinal = ParseDeviceString(devices[i]).ordinal();
+    int global_ordinal = devices[i].ordinal();
     device_index[global_ordinal] = i;
   }
   return device_index;
@@ -369,7 +369,7 @@ std::vector<int64_t> ShardingUtil::GetShardShape(
 std::vector<std::vector<at::indexing::TensorIndex>>
 ShardingUtil::GetShardIndicesForMinibatchTensor(
     const std::vector<int64_t>& shard_shape,
-    const std::vector<std::string>& devices) {
+    const std::vector<torch::lazy::BackendDevice>& devices) {
   std::vector<std::vector<at::indexing::TensorIndex>> shard_indices(
       devices.size());
   for (int i = 0; i < devices.size(); i++) {
@@ -392,7 +392,7 @@ std::vector<std::pair<int, std::vector<at::indexing::TensorIndex>>>
 ShardingUtil::GetShardReplicaAndIndicesForDevices(
     const std::vector<int64_t>& shard_shape,
     const std::vector<int64_t>& tensor_shape, const xla::OpSharding sharding,
-    const std::vector<std::string>& devices) {
+    const std::vector<torch::lazy::BackendDevice>& devices) {
   using namespace at::indexing;
 
   // `shard_indices[dev][dim]` represents the index slice for dimension `dim`
@@ -408,7 +408,7 @@ ShardingUtil::GetShardReplicaAndIndicesForDevices(
     auto ellipsis = TensorIndex(Ellipsis);
     auto indices = std::vector<TensorIndex>({ellipsis});
     for (int i = 0; i < devices.size(); ++i) {
-      int global_ordinal = ParseDeviceString(devices[i]).ordinal();
+      int global_ordinal = devices[i].ordinal();
       shard_indices[i] = std::make_pair(global_ordinal, indices);
     }
   } else if (sharding.type() == xla::OpSharding::OTHER) {
@@ -474,7 +474,7 @@ ShardingUtil::GetShardReplicaAndIndicesForDevices(
 
 std::vector<at::Tensor> ShardingUtil::ShardTensor(
     const at::Tensor& tensor, const XLATensor::ShardingSpecPtr shardings,
-    const std::vector<std::string>& devices, bool padded) {
+    const std::vector<torch::lazy::BackendDevice>& devices, bool padded) {
   xla::OpSharding sharding;
   bool minibatch = false;
   if (shardings != nullptr) {
@@ -589,7 +589,7 @@ std::vector<torch::lazy::BackendDataPtr> ShardingUtil::CreateShardedPlaceholder(
     // replication.
     auto sharded_data_placeholder =
         runtime::GetComputationClient()->CreateDataPlaceholder(
-            GetVirtualDevice().toString(), sharding_specs[i]->shape,
+            GetVirtualDevice(), sharding_specs[i]->shape,
             sharding_specs[i]->sharding);
 
     // Register the sharded data placeholder to the tensor and its node.
@@ -645,7 +645,7 @@ void ShardingUtil::PrepareOutputShardingPropagation(
     // replication.
     auto sharded_data_placeholder =
         runtime::GetComputationClient()->CreateDataPlaceholder(
-            GetVirtualDevice().toString(), (*sharding_specs)[i]->shape,
+            GetVirtualDevice(), (*sharding_specs)[i]->shape,
             (*sharding_specs)[i]->sharding);
 
     // Register the sharded data placeholder to the tensor and its node.
@@ -660,7 +660,7 @@ void ShardingUtil::PrepareOutputShardingPropagation(
 
 runtime::ComputationClient::DataPtr ShardingUtil::CreateShardedData(
     const std::vector<at::Tensor>& local_shards,
-    const std::vector<std::string>& devices,
+    const std::vector<torch::lazy::BackendDevice>& devices,
     const XLATensor::ShardingSpecPtr& sharding_spec) {
   XLA_CHECK(local_shards.size() == devices.size())
       << "A device must be speficied for each shard";
@@ -669,7 +669,7 @@ runtime::ComputationClient::DataPtr ShardingUtil::CreateShardedData(
   xla::OpSharding sharding;
   if (sharding_spec == nullptr) {
     // if sharding.type is replicated, global_shape is shape of the tensor.
-    auto first_device = ParseDeviceString(devices[0]);
+    auto first_device = devices[0];
     global_shape =
         CreateComputationShapeFromTensor(local_shards[0], &first_device);
     sharding = xla::HloSharding::Replicate().ToProto();
@@ -678,14 +678,14 @@ runtime::ComputationClient::DataPtr ShardingUtil::CreateShardedData(
     sharding = sharding_spec->sharding;
   }
   for (int64_t j = 0; j < devices.size(); ++j) {
-    auto shard_device = ParseDeviceString(devices[j]);
+    auto shard_device = devices[j];
     auto shard_shape =
         CreateComputationShapeFromTensor(local_shards[j], &shard_device);
     source_tensors.push_back(std::make_shared<runtime::AtenSource>(
         local_shards[j], shard_shape, devices[j]));
   }
   return runtime::GetComputationClient()->TransferShardsToDevice(
-      source_tensors, GetVirtualDevice().toString(), global_shape, sharding);
+      source_tensors, GetVirtualDevice(), global_shape, sharding);
 }
 
 void ShardingUtil::XlaMarkSharding(const at::Tensor& input,
@@ -747,7 +747,7 @@ void ShardingUtil::XlaMarkSharding(const at::Tensor& input,
   auto xla_data = CreateTensorsData(
       std::vector<at::Tensor>{cpu_tensor},
       std::vector<XLATensor::ShardingSpecPtr>{new_sharding_spec},
-      std::vector<std::string>{GetVirtualDevice().toString()})[0];
+      std::vector<torch::lazy::BackendDevice>{GetVirtualDevice()})[0];
   xtensor->SetXlaData(xla_data);
   xtensor->SetShardingSpec(*new_sharding_spec);
 

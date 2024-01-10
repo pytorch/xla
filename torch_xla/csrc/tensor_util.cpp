@@ -469,7 +469,7 @@ torch::lazy::BackendDataPtr TensorToXlaData(
   if (static_cast<XlaDeviceType>(device.type()) == XlaDeviceType::SPMD) {
     // The tensor is bypassing the virtual device, so it should be replicated
     // to all devices.
-    std::vector<std::string> local_devices =
+    std::vector<torch::lazy::BackendDevice> local_devices =
         runtime::GetComputationClient()->GetLocalDevices();
     auto replicated_data =
         std::vector<at::Tensor>(local_devices.size(), tensor);
@@ -481,7 +481,7 @@ torch::lazy::BackendDataPtr TensorToXlaData(
 
   std::vector<std::shared_ptr<const runtime::TensorSource>> source_tensors;
   source_tensors.push_back(
-      std::make_shared<runtime::AtenSource>(tensor, shape, device.toString()));
+      std::make_shared<runtime::AtenSource>(tensor, shape, device));
 
   auto handles =
       runtime::GetComputationClient()->TransferToDevice(source_tensors);
@@ -675,7 +675,7 @@ torch::lazy::BackendDataPtr TensorToXlaData(
 
 std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
     const std::vector<at::Tensor>& tensors,
-    const std::vector<std::string>& devices) {
+    const std::vector<torch::lazy::BackendDevice>& devices) {
   TORCH_LAZY_TIMED("TensorToData");
   XLA_CHECK_EQ(tensors.size(), devices.size());
 
@@ -684,14 +684,14 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
   }
 
   // We assume that caller can't mix virtual device and real device.
-  if (devices[0] == "SPMD:0") {
+  if (devices[0] == ParseDeviceString("SPMD:0")) {
     // When running in SPMD mode, tensors here in the unsharded
     // CreateTensorsData should be implicitly replicated to all devices.
-    std::vector<std::string> local_devices =
+    std::vector<torch::lazy::BackendDevice> local_devices =
         runtime::GetComputationClient()->GetLocalDevices();
     std::vector<runtime::ComputationClient::DataPtr> handles;
     for (size_t i = 0; i < tensors.size(); ++i) {
-      auto device = ParseDeviceString(devices[i]);
+      auto device = devices[i];
       auto shape = CreateComputationShapeFromTensor(tensors[i], &device);
       auto replicated_data =
           std::vector<at::Tensor>(local_devices.size(), tensors[i]);
@@ -705,7 +705,7 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
 
   std::vector<std::shared_ptr<const runtime::TensorSource>> source_tensors;
   for (size_t i = 0; i < tensors.size(); ++i) {
-    torch::lazy::BackendDevice device = ParseDeviceString(devices[i]);
+    torch::lazy::BackendDevice device = devices[i];
     xla::Shape shape = CreateComputationShapeFromTensor(tensors[i], &device);
     source_tensors.push_back(std::make_shared<runtime::AtenSource>(
         tensors[i], std::move(shape), devices[i]));
@@ -717,14 +717,14 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
 std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
     const std::vector<at::Tensor>& tensors,
     const std::vector<XLATensor::ShardingSpecPtr>& shardings,
-    const std::vector<std::string>& devices) {
+    const std::vector<torch::lazy::BackendDevice>& devices) {
   TORCH_LAZY_TIMED("TensorToData");
   XLA_CHECK_EQ(tensors.size(), shardings.size());
   XLA_CHECK_EQ(tensors.size(), devices.size());
 
   std::vector<runtime::ComputationClient::DataPtr> handles;
   for (size_t i = 0; i < tensors.size(); ++i) {
-    torch::lazy::BackendDevice device = ParseDeviceString(devices[i]);
+    torch::lazy::BackendDevice device = devices[i];
     xla::Shape shape = CreateComputationShapeFromTensor(tensors[i], &device);
 
     std::vector<std::shared_ptr<const runtime::TensorSource>>
@@ -733,7 +733,7 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
     if (static_cast<XlaDeviceType>(device.type()) == XlaDeviceType::SPMD) {
       // GetLocalDevices returns the list of local devices specified by their
       // global ordinals (e.g. ["TPU:4", "TPU:5", "TPU:6", "TPU:7"]).
-      std::vector<std::string> local_devices =
+      std::vector<torch::lazy::BackendDevice> local_devices =
           runtime::GetComputationClient()->GetLocalDevices();
       // Shards the input tensors with padding, to split evenly.
       // The execution requires consistent shard sizes, and the zero-padded
