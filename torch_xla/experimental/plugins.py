@@ -41,6 +41,9 @@ class DevicePlugin:
     """
     return 1
 
+  def client_create_options(self) -> dict:
+    return {}
+
 
 _plugin_registry = {}
 
@@ -62,6 +65,6 @@ def default() -> DevicePlugin:
   return _plugin_registry[xr.device_type()]
 
 
-def register_plugin(name: str, device_plugin: DevicePlugin, create_options = {}):
+def register_plugin(name: str, device_plugin: DevicePlugin):
   _plugin_registry[name.upper()] = device_plugin
-  torch_xla._XLAC._register_pjrt_plugin(name, device_plugin.library_path(), create_options)
+  torch_xla._XLAC._register_pjrt_plugin(name, device_plugin.library_path(), device_plugin.client_create_options())
