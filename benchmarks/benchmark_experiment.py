@@ -80,7 +80,7 @@ class ExperimentLoader:
       if cfg_xla is None or cfg_test != "eval":
         return False
     elif cfg_dynamo == "openxla":
-      if cfg_xla is None or cfg_test != "train":
+      if cfg_xla is None:
         return False
     elif cfg_dynamo is None:
       pass
