@@ -26,9 +26,6 @@ struct DeviceType : public torch::lazy::BackendDeviceType {
             static_cast<int>(StringToXlaDeviceType(type_name))),
         type_name_(type_name) {}
 
-  // TODO(wcromar): do we even want this default constructor?
-  DeviceType() : DeviceType(XlaDeviceType::CPU){};
-
   std::string toString() const override;
 
  private:
