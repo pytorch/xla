@@ -60,19 +60,20 @@ jobs:
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
-  test-gpu-coverage:
-    name: "Collect GPU test coverage"
-    if: github.event_name == 'push' && github.event.ref == 'refs/heads/master'
-    uses: ./.github/workflows/_coverage.yml
-    needs: build
-    with:
-      docker-image: ${{ needs.build.outputs.docker-image }}
-      runner: linux.8xlarge.nvidia.gpu
-      timeout-minutes: 300
-      collect-coverage: true
-      disable-xrt: 1
-    secrets:
-      gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
+  # TODO(yeounoh) re-enable after resolving the timeout issue
+  # test-gpu-coverage:
+  #   name: "Collect GPU test coverage"
+  #   if: github.event_name == 'push' && github.event.ref == 'refs/heads/master'
+  #   uses: ./.github/workflows/_coverage.yml
+  #   needs: build
+  #   with:
+  #     docker-image: ${{ needs.build.outputs.docker-image }}
+  #     runner: linux.8xlarge.nvidia.gpu
+  #     timeout-minutes: 300
+  #     collect-coverage: true
+  #     disable-xrt: 1
+  #   secrets:
+  #     gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}
 
   push-docs:
     name: "Build & publish docs"
