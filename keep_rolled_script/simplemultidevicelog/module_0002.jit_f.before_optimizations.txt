@@ -1,0 +1,10 @@
+HloModule jit_f, entry_computation_layout={(s32[9]{0:T(128)})->f32[9]{0:T(128)}}, allow_spmd_sharding_propagation_to_output={true}
+
+ENTRY main.6 {
+  Arg_0.1 = s32[9]{0} parameter(0), sharding={replicated}
+  convert.4 = f32[9]{0} convert(Arg_0.1), metadata={op_name="jit(f)/jit(main)/convert_element_type[new_dtype=float32 weak_type=True]" source_file="/root/script/jaxvmapsimple.py" source_line=8}
+  constant.2 = f32[] constant(1)
+  broadcast.3 = f32[9]{0} broadcast(constant.2), dimensions={}
+  ROOT add.5 = f32[9]{0} add(convert.4, broadcast.3), metadata={op_name="jit(f)/jit(main)/add" source_file="/root/script/jaxvmapsimple.py" source_line=8}
+}
+

@@ -1,0 +1,15 @@
+HloModule jit_f, is_scheduled=true, entry_computation_layout={(s32[9]{0:T(128)})->f32[9]{0:T(128)}}, allow_spmd_sharding_propagation_to_output={true}
+
+fused_computation {
+  param_0.2 = s32[9]{0:T(128)} parameter(0)
+  convert.0 = f32[9]{0:T(128)} convert(param_0.2), metadata={op_name="jit(f)/jit(main)/convert_element_type[new_dtype=float32 weak_type=True]" source_file="/root/script/jaxvmapsimple.py" source_line=8}
+  constant.0 = f32[]{:T(128)} constant(1)
+  broadcast.0 = f32[9]{0:T(128)} broadcast(constant.0), dimensions={}
+  ROOT add.0 = f32[9]{0:T(128)} add(convert.0, broadcast.0), metadata={op_name="jit(f)/jit(main)/add" source_file="/root/script/jaxvmapsimple.py" source_line=8}
+}
+
+ENTRY main.6 {
+  Arg_0.1 = s32[9]{0:T(128)} parameter(0), sharding={replicated}
+  ROOT fusion = f32[9]{0:T(128)} fusion(Arg_0.1), kind=kLoop, calls=fused_computation, metadata={op_name="jit(f)/jit(main)/add" source_file="/root/script/jaxvmapsimple.py" source_line=8}
+}
+

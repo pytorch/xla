@@ -1,0 +1,22 @@
+BufferAssignment:
+allocation 0: size 512, output shape is |s32[9]|, maybe-live-out:
+ value: <0 iota.1 @0> (size=512,offset=0): s32[9]{0:T(128)}
+allocation 1: size 0, color 3, preallocated-temp:
+
+Total bytes used: 512 (512B)
+
+Used values:
+<0 iota.1 @0>
+ positions:
+  iota.1
+ uses:
+ from instruction:%iota.1 = s32[9]{0:T(128)} iota(), iota_dimension=0, metadata={op_name="jit(iota)/jit(main)/iota[dtype=int32 shape=(9,) dimension=0]" source_file="/root/script/jaxvmapsimple.py" source_line=4}
+
+
+HloLiveRange (max 1):
+  InstructionSequence:
+    0:iota.1
+  BufferLiveRange:
+    iota.1{}:0-1
+  Live ranges at 0 (peak):
+    iota.1: 36 bytes

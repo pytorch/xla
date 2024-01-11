@@ -1,0 +1,95 @@
+entry_computation_layout {
+  result {
+    element_type: S32
+    dimensions: 9
+    layout {
+      minor_to_major: 0
+      tiles {
+        dimensions: 128
+      }
+    }
+    is_dynamic_dimension: false
+  }
+}
+replica_count: 1
+num_partitions: 1
+use_spmd_partitioning: true
+intra_op_parallelism_threads: -1
+debug_options {
+  xla_backend_optimization_level: 3
+  xla_eliminate_hlo_implicit_broadcast: true
+  xla_cpu_multi_thread_eigen: true
+  xla_gpu_cuda_data_dir: "./cuda_sdk_lib"
+  xla_llvm_enable_alias_scope_metadata: true
+  xla_llvm_enable_noalias_metadata: true
+  xla_llvm_enable_invariant_load_metadata: true
+  xla_force_host_platform_device_count: 1
+  xla_dump_to: "/root/script/log"
+  xla_dump_hlo_as_text: true
+  xla_cpu_fast_math_honor_nans: true
+  xla_cpu_fast_math_honor_infs: true
+  xla_allow_excess_precision: true
+  xla_gpu_autotune_level: 4
+  xla_cpu_fast_math_honor_division: true
+  xla_cpu_fast_math_honor_functions: true
+  xla_dump_max_hlo_modules: -1
+  xla_multiheap_size_constraint_per_heap: -1
+  xla_gpu_enable_async_all_reduce: true
+  xla_gpu_strict_conv_algorithm_picker: true
+  xla_gpu_all_reduce_combine_threshold_bytes: 31457280
+  xla_gpu_enable_cudnn_frontend: true
+  xla_gpu_nccl_termination_timeout_seconds: -1
+  xla_gpu_enable_shared_constants: true
+  xla_gpu_redzone_scratch_max_megabytes: 4096
+  xla_gpu_simplify_all_fp_conversions: true
+  xla_gpu_enable_xla_runtime_executable: true
+  xla_gpu_shape_checks: RUNTIME
+  xla_gpu_normalize_layouts: true
+  xla_cpu_enable_mlir_tiling_and_fusion: true
+  xla_dump_enable_mlir_pretty_form: true
+  xla_gpu_enable_triton_gemm: true
+  xla_gpu_enable_cudnn_int8x32_convolution_reordering: true
+  xla_cpu_enable_experimental_deallocation: true
+  xla_cpu_enable_mlir_fusion_outlining: true
+  xla_cpu_matmul_tiling_m_dim: 8
+  xla_cpu_matmul_tiling_n_dim: 8
+  xla_cpu_matmul_tiling_k_dim: 8
+  xla_gpu_graph_num_runs_to_instantiate: -1
+  xla_gpu_lhs_enable_gpu_async_tracker: true
+  xla_gpu_collective_inflation_factor: 1
+  xla_gpu_graph_min_graph_size: 5
+  xla_gpu_enable_reassociation_for_converted_ar: true
+  xla_gpu_all_gather_combine_threshold_bytes: 31457280
+  xla_gpu_reduce_scatter_combine_threshold_bytes: 31457280
+  xla_gpu_enable_highest_priority_async_stream: true
+  xla_gpu_auto_spmd_partitioning_memory_budget_ratio: 1.1
+  xla_gpu_redzone_padding_bytes: 8388608
+  xla_gpu_triton_fusion_level: 2
+  xla_gpu_graph_eviction_timeout_seconds: 60
+  xla_gpu_enable_gpu2_hal: true
+  xla_gpu_copy_insertion_use_region_analysis: true
+  xla_gpu_collective_permute_decomposer_threshold: 9223372036854775807
+  xla_gpu_enable_split_k_autotuning: true
+  xla_gpu_enable_reduction_epilogue_fusion: true
+  xla_gpu_cublas_fallback: true
+  xla_gpu_filter_kernels_spilling_registers_on_autotuning: true
+  xla_debug_buffer_assignment_show_max: 15
+  xla_enable_dumping: true
+  xla_gpu_enable_all_gather_combine_by_dim: true
+  xla_gpu_enable_reduce_scatter_combine_by_dim: true
+  xla_gpu_enable_command_buffer: FUSION
+  xla_gpu_enable_command_buffer: CUBLAS
+  xla_gpu_enable_cub_radix_sort: true
+  xla_gpu_memory_limit_slop_factor: 95
+  xla_gpu_threshold_for_windowed_einsum_mib: 100000
+}
+static_device_assignment {
+  replica_count: 1
+  computation_count: 1
+  computation_devices {
+    replica_device_ids: 0
+  }
+}
+content_aware_computation_sorting: true
+allow_spmd_sharding_propagation_to_output: true
+device_memory_size: 33014415360

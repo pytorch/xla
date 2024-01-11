@@ -1,0 +1,23 @@
+configured_properties {
+  degraded_axes {
+  }
+}
+replica_count: 1
+reserved_hbm_usage_bytes: 0
+tpu_topology_args {
+  version: TPU_VERSION_e0897fcce0
+  platform_type: TPU_PLATFORM_TYPE_HARDWARE
+  chip_config_name: "megacore"
+  chips_per_host_bounds {
+    x: 2
+    y: 2
+    z: 1
+  }
+  host_bounds {
+    x: 1
+    y: 1
+    z: 1
+  }
+  wrap {
+  }
+}

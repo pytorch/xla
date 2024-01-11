@@ -1,0 +1,58 @@
+[ScheduleSyncTensorsGraph]
+TensorsGraphInfo:
+  _str_intern (/root/miniconda3/envs/newtorch310/lib/python3.10/site-packages/torch/_tensor_str.py:432)
+  _str (/root/miniconda3/envs/newtorch310/lib/python3.10/site-packages/torch/_tensor_str.py:677)
+  __repr__ (/root/miniconda3/envs/newtorch310/lib/python3.10/site-packages/torch/_tensor.py:461)
+  <module> (/root/script/torchxlafor.py:22)
+
+Root Hashes: (4cfd59e6c8a7900d5ecff03a722ba5d0)
+
+## BEGIN_GRAPH
+IR {
+  %0 = f32[] prim::Constant(), xla_shape=f32[]
+  %1 = f32[] prim::Constant(), xla_shape=f32[]
+  %2 = f32[] aten::mul(%1, %0), xla_shape=f32[]
+  %3 = f32[] prim::Constant(), xla_shape=f32[]
+  %4 = f32[] prim::Constant(), xla_shape=f32[]
+  %5 = f32[] aten::mul(%4, %3), xla_shape=f32[]
+  %6 = f32[] prim::Constant(), xla_shape=f32[]
+  %7 = f32[] prim::Constant(), xla_shape=f32[]
+  %8 = f32[] aten::mul(%7, %6), xla_shape=f32[]
+  %9 = f32[] prim::Constant(), xla_shape=f32[]
+  %10 = f32[] prim::Constant(), xla_shape=f32[]
+  %11 = f32[] aten::mul(%10, %9), xla_shape=f32[]
+  %12 = f32[] prim::Constant(), xla_shape=f32[]
+  %13 = f32[] prim::Constant(), xla_shape=f32[]
+  %14 = f32[] aten::mul(%13, %12), xla_shape=f32[]
+  %15 = f32[] prim::Constant(), xla_shape=f32[]
+  %16 = f32[] prim::Constant(), xla_shape=f32[]
+  %17 = f32[] aten::mul(%16, %15), xla_shape=f32[]
+  %18 = f32[] prim::Constant(), xla_shape=f32[]
+  %19 = f32[] prim::Constant(), xla_shape=f32[]
+  %20 = f32[] aten::mul(%19, %18), xla_shape=f32[]
+  %21 = f32[] prim::Constant(), xla_shape=f32[]
+  %22 = f32[] prim::Constant(), xla_shape=f32[]
+  %23 = f32[] aten::mul(%22, %21), xla_shape=f32[]
+  %24 = f32[] prim::Constant(), xla_shape=f32[]
+  %25 = f32[] prim::Constant(), xla_shape=f32[]
+  %26 = f32[] aten::mul(%25, %24), xla_shape=f32[]
+  %27 = f32[] prim::Constant(), xla_shape=f32[]
+  %28 = f32[] prim::Constant(), xla_shape=f32[]
+  %29 = f32[] aten::mul(%28, %27), xla_shape=f32[]
+  %30 = f32[1]{0} xla::device_data(), xla_shape=f32[1]{0}
+  %31 = f32[1]{0} aten::add(%30, %29), xla_shape=f32[1]{0}
+  %32 = f32[1]{0} aten::add(%31, %26), xla_shape=f32[1]{0}
+  %33 = f32[1]{0} aten::add(%32, %23), xla_shape=f32[1]{0}
+  %34 = f32[1]{0} aten::add(%33, %20), xla_shape=f32[1]{0}
+  %35 = f32[1]{0} aten::add(%34, %17), xla_shape=f32[1]{0}
+  %36 = f32[1]{0} aten::add(%35, %14), xla_shape=f32[1]{0}
+  %37 = f32[1]{0} aten::add(%36, %11), xla_shape=f32[1]{0}
+  %38 = f32[1]{0} aten::add(%37, %8), xla_shape=f32[1]{0}
+  %39 = f32[1]{0} aten::add(%38, %5), xla_shape=f32[1]{0}
+  %40 = f32[1]{0} aten::add(%39, %2), xla_shape=f32[1]{0}, ROOT=0
+}
+
+Graph Hash: 520449ec37269869dad5976fa81887d4
+
+## END_GRAPH
+
