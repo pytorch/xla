@@ -33,7 +33,13 @@ bool XlaDataValuesEqual(torch::lazy::BackendDataPtr a,
 }
 }  // namespace
 
-class XLAShardingTest : public AtenXlaTensorTestBase {};
+class XLAShardingTest : public AtenXlaTensorTestBase {
+ protected:
+  static void SetUpTestCase() {
+    setenv("XLA_USE_SPMD", "1", /*overwrite=*/true);
+    CommonSetup();
+  }
+};
 
 TEST_F(XLAShardingTest, GetShardShape) {
   auto tensor = at::ones({8, 7}, at::TensorOptions(at::kFloat));
