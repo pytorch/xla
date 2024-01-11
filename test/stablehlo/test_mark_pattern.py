@@ -190,7 +190,7 @@ class XlaMarkPatternTest(unittest.TestCase):
         '{attributes = {scale = 2 : i64}, name = "sdpa"}}' in stablehlo)
     self.assertTrue(os.path.exists(os.path.join(tmp_path, 'saved_model.pb')))
 
-  def test_multiple_input(self):
+  def test_multiple_inputs(self):
 
     def f(x, y):
       x = torch.ops.xla_pattern_marking.mark_tensor(x, "p", 0, "0", True)
@@ -205,8 +205,7 @@ class XlaMarkPatternTest(unittest.TestCase):
     self.assertEqual(stablehlo.count("@stablehlo.composite"), 1)
     self.assertTrue('{attributes = {}, name = "p"}' in stablehlo)
 
-  @unittest.skip("Multiple outputs patterns are not supported now.")
-  def test_multiple_output(self):
+  def test_multiple_outputs(self):
 
     def f(x, y):
       x = torch.ops.xla_pattern_marking.mark_tensor(x, "p", 0, "0", True)
