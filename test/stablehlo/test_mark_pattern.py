@@ -190,6 +190,28 @@ class XlaMarkPatternTest(unittest.TestCase):
         '{attributes = {scale = 2 : i64}, name = "sdpa"}}' in stablehlo)
     self.assertTrue(os.path.exists(os.path.join(tmp_path, 'saved_model.pb')))
 
+  def test_composite_builder_multiple_outputs(self):
+
+    class M(torch.nn.Module):
+
+      def __init__(self):
+        super().__init__()
+
+      def forward(self, x, y):
+        builder = StableHLOCompositeBuilder("sample_composite")
+        x, y = builder.mark_inputs(x, y)
+        a = x + y
+        b = x - y
+        c = x + 1
+        a, b, c = builder.mark_outputs(a, b, c)
+        return a + b + c
+
+    input_args = (torch.randn((5, 5)), torch.randn((5, 5)))
+    stablehlo = self.run_func_get_stablehlo(M(), input_args)
+    print(stablehlo)
+    self.assertEqual(stablehlo.count("@stablehlo.composite"), 1)
+    self.assertTrue(False)
+
   def test_multiple_inputs(self):
 
     def f(x, y):
