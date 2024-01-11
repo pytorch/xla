@@ -22,11 +22,12 @@ void ConvertStableHloToHlo(mlir::ModuleOp* mlir_module,
 
 std::string GetHloModuleStr(const xla::HloModuleProto* proto);
 
-const std::unordered_map<std::string, std::string>&
-GetTorchDtypeToStablehloDtypeMap();
+const std::string GetTorchDtypeToStablehloDtype(const std::string& dtype);
 
 const std::unordered_map<xla::PrimitiveType, std::string>&
 GetHloDtypeToStablehloDtypeMap();
+
+xla::PrimitiveType GetTorchIntDtypeToHloDtype(const std::string& dtype);
 
 }  // namespace torch_xla
 
