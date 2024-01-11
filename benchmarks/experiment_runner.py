@@ -851,6 +851,12 @@ def parse_args(args=None):
       default=False,
       help="Times wall time measurements with pure CUDA events. No kernel launch overhead.",
   )
+  parser.add_argument(
+      "--filter-by-single-graph",
+      action="store_true",
+      default=False,
+      help="Runs the experiment with hard-failing when it detects there will be multiple graphs out of a single compiled region.",
+  )
   return parser.parse_args(args)
 
 
