@@ -44,6 +44,14 @@ class DevicePlugin:
   def client_create_options(self) -> dict:
     return {}
 
+  def requires_xla_coordinator(self) -> bool:
+    """Whether to initialize the XLA coordinator before plugin client.
+
+    Expects `torchrun` variables such as RANK, WORLD_SIZE, MASTER_ADDR to be
+    set.
+    """
+    return False
+
 
 _plugin_registry = {}
 
@@ -67,4 +75,4 @@ def default() -> DevicePlugin:
 
 def register_plugin(name: str, device_plugin: DevicePlugin):
   _plugin_registry[name.upper()] = device_plugin
-  torch_xla._XLAC._register_pjrt_plugin(name, device_plugin.library_path(), device_plugin.client_create_options())
+  torch_xla._XLAC._register_pjrt_plugin(name, device_plugin.library_path(), device_plugin.client_create_options(), device_plugin.requires_xla_coordinator())
