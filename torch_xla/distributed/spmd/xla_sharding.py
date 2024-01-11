@@ -90,18 +90,20 @@ class Mesh:
     assert len(specs) == len(np.unique(specs)), \
     f"Each device mesh dimension should appear at most once in partition_spec {partition_spec}."
 
-    tile_assignment = _get_tile_assignment(self, partition_spec)
+    tile_assignment = _get_tile_assignment(self, partition_spec) # [[0, 1]]
     if len(tile_assignment.shape) > len(partition_spec):
       # Use partial replication for sharding a tensor over a higher-rank mesh
       sharding_type = ShardingType.PARTIAL
     else:
-      sharding_type = _get_sharding_type(partition_spec, self.size())
+      sharding_type = _get_sharding_type(partition_spec, self.size()) # ShardingType.TILED
     replicate_dims = {i for i, d in enumerate(partition_spec) if d is None}
     group_assignment, replication_groups = _get_group_assignment(
         sharding_type, tile_assignment, len(partition_spec), replicate_dims)
 
     tile_assignment = tile_assignment.tolist()
     sharding_type = int(sharding_type)
+    # tile_assignment=[[0, 1]], group_assignment=[]
+    # replication_groups=[], sharding_type=3
     return tile_assignment, group_assignment, replication_groups, sharding_type
 
   @functools.lru_cache(maxsize=None)

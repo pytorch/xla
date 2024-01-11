@@ -118,6 +118,7 @@ XLATensor::XLATensor(torch::lazy::Value ir_value,
     : XLATensor(std::make_shared<Data>(std::move(ir_value), device,
                                        logical_element_type)) {
   // Preserve sharding if a new tensor is created from a sharded IR node.
+  std::cout << "xw32 spmd, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
   if (CurrentIrValue()) {
     auto* xla_node = dynamic_cast<XlaNode*>(CurrentIrValue().node.get());
     if (xla_node->GetSharding(CurrentIrValue().index)) {

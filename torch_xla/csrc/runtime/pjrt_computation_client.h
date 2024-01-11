@@ -197,7 +197,9 @@ class PjRtComputationClient : public ComputationClient {
                     xla::OpSharding sharding)
         : Data(std::move(device), std::move(shape)),
           shards(shards),
-          sharding(sharding) {}
+          sharding(sharding) {
+            std::cout << "xw32 spmd, file=" << __FILE__ << ", line=" << __LINE__ << "function=" << __FUNCTION__ << ": " << std::endl;
+          }
 
     Handle GetHandle() override {
       // Always returns `Handle` of the first shard.

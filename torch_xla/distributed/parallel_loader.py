@@ -88,6 +88,7 @@ class ParallelLoader(object):
                device_prefetch_size=4,
                host_to_device_transfer_threads=1,
                input_sharding=None):
+    print('xw32 spmd ParallelLoader __init__')
     self._loader = loader
     self._devices = [torch.device(x) for x in devices]
     self._batchdim = batchdim
