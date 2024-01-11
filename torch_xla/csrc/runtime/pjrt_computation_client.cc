@@ -677,8 +677,8 @@ PjRtComputationClient::ExecuteReplicated(
   TF_VLOG(5) << "ExecuteReplicated acquiring PJRT device lock for "
              << spmd_device_str << " Done";
 
-  using FutureVector = std::vector<xla::PjRtFuture<xla::Status>>;
-  std::optional<FutureVector> returned_futures = FutureVector();
+  std::optional<std::vector<xla::PjRtFuture<xla::Status>>> returned_futures =
+      std::vector<xla::PjRtFuture<xla::Status>>();
   returned_futures->reserve(devices.size());
   std::vector<std::vector<std::unique_ptr<xla::PjRtBuffer>>> results;
   {
