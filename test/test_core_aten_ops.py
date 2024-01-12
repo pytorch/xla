@@ -2209,9 +2209,9 @@ class AtenOpTest(unittest.TestCase):
 
   def test_aten_index_Tensor_0(self):
     args = (
-        torch.randn((11, 12)).to(torch.float32),
+        torch.randn((11, 2)).to(torch.float32),
         [
-            torch.randint(0, 10, (2,)).to(torch.int64),
+            torch.randint(5, 10, (2,)).to(torch.int64),
         ],
     )
     kwargs = dict()
@@ -2219,9 +2219,9 @@ class AtenOpTest(unittest.TestCase):
 
   def test_aten_index_Tensor_1(self):
     args = (
-        torch.randn((11, 12)).to(torch.float16),
+        torch.randn((11, 2)).to(torch.float16),
         [
-            torch.randint(0, 10, (2,)).to(torch.int64),
+            torch.randint(5, 10, (2,)).to(torch.int64),
         ],
     )
     kwargs = dict()
@@ -2229,9 +2229,9 @@ class AtenOpTest(unittest.TestCase):
 
   def test_aten_index_Tensor_2(self):
     args = (
-        torch.randint(0, 10, (11, 12)).to(torch.int32),
+        torch.randint(0, 10, (11, 2)).to(torch.int32),
         [
-            torch.randint(0, 10, (2,)).to(torch.int64),
+            torch.randint(5, 10, (2,)).to(torch.int64),
         ],
     )
     kwargs = dict()
