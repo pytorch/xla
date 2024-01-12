@@ -16,6 +16,7 @@ class GpuPlugin(plugins.DevicePlugin):
     local_world_size = xu.getenv_as("LOCAL_WORLD_SIZE", int, 1)
     global_world_size = xu.getenv_as("WORLD_SIZE", int, local_world_size)
 
+    # The available options are defined in OpenXLA: https://github.com/openxla/xla/blob/1bb2a74be91fabf5f9aa2702b2592b5b022c9052/xla/pjrt/c/pjrt_c_api_gpu_internal.cc#L58-L67
     return {
       "platform_name": "gpu",
       # TODO(wcromar): make this configurable
