@@ -2207,10 +2207,9 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.index_select, args, kwargs)
 
-  @unittest.skip
   def test_aten_index_Tensor_0(self):
     args = (
-        torch.randn((2, 10)).to(torch.float32),
+        torch.randn((11, 12)).to(torch.float32),
         [
             torch.randint(0, 10, (2,)).to(torch.int64),
         ],
@@ -2218,10 +2217,9 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.index.Tensor, args, kwargs)
 
-  @unittest.skip
   def test_aten_index_Tensor_1(self):
     args = (
-        torch.randn((2, 10)).to(torch.float16),
+        torch.randn((11, 12)).to(torch.float16),
         [
             torch.randint(0, 10, (2,)).to(torch.int64),
         ],
@@ -2229,10 +2227,9 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.index.Tensor, args, kwargs)
 
-  @unittest.skip
   def test_aten_index_Tensor_2(self):
     args = (
-        torch.randint(0, 10, (2, 10)).to(torch.int32),
+        torch.randint(0, 10, (11, 12)).to(torch.int32),
         [
             torch.randint(0, 10, (2,)).to(torch.int64),
         ],
