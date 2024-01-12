@@ -211,7 +211,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     col = []
     col.append(
         rich.padding.Padding(
-            rich.align.Align('CPU 0', "center", vertical="middle"),
+            rich.align.Align('CPU [0]', "center", vertical="middle"),
             (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     fake_table.add_row(*col)
