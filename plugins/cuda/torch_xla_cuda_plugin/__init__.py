@@ -1,6 +1,6 @@
 import os
 from torch_xla.experimental import plugins
-from torch_xla._internal import tpu
+import torch_xla.utils.utils as xu
 
 class GpuPlugin(plugins.DevicePlugin):
   def library_path(self) -> str:
@@ -8,4 +8,24 @@ class GpuPlugin(plugins.DevicePlugin):
 
   def physical_chip_count(self) -> int:
     # TODO: default to actual device count
-    return int(os.getenv('GPU_NUM_DEVICES', '1'))
+    return xu.getenv_as('GPU_NUM_DEVICES', int, 1)
+
+  def client_create_options(self) -> dict:
+    local_process_rank = xu.getenv_as("LOCAL_RANK", int, 0)
+    global_process_rank = xu.getenv_as("RANK", int, local_process_rank)
+    local_world_size = xu.getenv_as("LOCAL_WORLD_SIZE", int, 1)
+    global_world_size = xu.getenv_as("WORLD_SIZE", int, local_world_size)
+
+    return {
+      "platform_name": "gpu",
+      # TODO(wcromar): make this configurable
+      "allocator": "cuda_async" if xu.getenv_as("PJRT_ALLOCATOR_CUDA_ASYNC", bool, False) else "default",
+      "memory_fraction": xu.getenv_as("PJRT_ALLOCATOR_FRACTION", float, .75),
+      "preallocate": xu.getenv_as("PJRT_ALLOCATOR_PREALLOCATE", bool, True),
+      "visible_devices": [local_process_rank],
+      "node_id": global_process_rank,
+      "num_nodes": global_world_size,
+    }
+
+  def requires_xla_coordinator(self) -> bool:
+    return True
