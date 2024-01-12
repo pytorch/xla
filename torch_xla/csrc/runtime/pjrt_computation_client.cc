@@ -679,7 +679,6 @@ PjRtComputationClient::ExecuteReplicated(
 
   std::optional<std::vector<xla::PjRtFuture<xla::Status>>> returned_futures =
       std::vector<xla::PjRtFuture<xla::Status>>();
-  returned_futures->reserve(devices.size());
   std::vector<std::vector<std::unique_ptr<xla::PjRtBuffer>>> results;
   {
     tsl::profiler::TraceMe activity(
