@@ -62,33 +62,33 @@ def verify(output: torch.Tensor,
     return VerificationResult(VerificationCode.NO_OUTPUT_PROVIDED)
 
   try:
-    experiment = apply_eager_config_(experiment)
+    experiment = _apply_eager_config(experiment)
     benchmark_experiment = experiment_loader.load_experiment(experiment)
     model = model_loader.load_model(model_config, benchmark_experiment)
 
-    eager_output = run_(model)
-    additional_eager_output = run_(model)
+    eager_output = _run(model)
+    additional_eager_output = _run(model)
 
-    rel_err, close_res = close_results_(eager_output, additional_eager_output,
+    rel_err, close_res = _close_results(eager_output, additional_eager_output,
                                         mean_rel_error_tolerance)
     if not close_res:
       return VerificationResult(VerificationCode.NONDETERMINISTIC_EAGER_RUN,
                                 rel_err)
 
     eager_output = eager_output.to(device=output.device)
-    rel_err, close_res = close_results_(eager_output, output,
+    rel_err, close_res = _close_results(eager_output, output,
                                         mean_rel_error_tolerance)
     if close_res:
       return VerificationResult(VerificationCode.PASS, rel_err)
     else:
-      log_(eager_output, output)
+      _log(eager_output, output)
       return VerificationResult(VerificationCode.FAIL, rel_err)
   except Exception as e:
     logger.exception(e)
     return VerificationResult(VerificationCode.VERIFICATION_FAILED)
 
 
-def log_(lhs, rhs):
+def _log(lhs, rhs):
   logger.error('Output differs significantly.')
   lhs = lhs.clone().to(device='cpu')
   rhs = rhs.clone().to(device='cpu')
@@ -97,20 +97,21 @@ def log_(lhs, rhs):
   logger.error(f"rhs: {rhs}")
 
 
-def run_(model):
+def _run(model):
   inputs = model.example_inputs
   with model.pick_grad():
     output = model.model_iter_fn(inputs)
   return output
 
 
-def apply_eager_config_(experiment):
+def _apply_eager_config(experiment):
   experiment = experiment.copy()
-  experiment['dynamo'] = experiment['xla'] = None
+  experiment['dynamo'] = None
+  experiment['xla'] = None
   return experiment
 
 
-def close_results_(lhs, rhs, delta):
+def _close_results(lhs, rhs, delta):
   rel_error_tensor = torch.abs(rhs - lhs) / torch.abs(lhs)
   mean_rel_error = (rel_error_tensor.sum() / lhs.numel()).item()
   return mean_rel_error, (mean_rel_error < delta)
