@@ -156,12 +156,11 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
 
   @unittest.skipIf(xr.device_type() != 'TPU',
                    f"Requires PJRT_DEVICE set to `TPU`.")
+  @unittest.skipIf(xr.global_runtime_device_count() != 8,
+                   f"Limit test num_devices to 8 for function consistency")
   def test_single_host_replicated_tpu(self):
     from torch_xla.distributed.spmd.debugging import visualize_sharding
     sharding = '{replicated}'
-    num_devices = self.n_devices
-    if num_devices != 8:
-      self.skipTest("limit test num_devices to 8 for function consistency")
     generated_table = visualize_sharding(sharding)
     console = rich.console.Console()
     with console.capture() as capture:
@@ -523,12 +522,11 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
 
   @unittest.skipIf(xr.device_type() != 'TPU',
                    f"Requires PJRT_DEVICE set to `TPU`.")
+  @unittest.skipIf(xr.global_runtime_device_count() != 8,
+                   f"Limit test num_devices to 8 for function consistency")
   def test_multi_host_replicated_tpu(self):
     from torch_xla.distributed.spmd.debugging import visualize_sharding
     sharding = '{replicated}'
-    num_devices = self.n_devices
-    if num_devices != 8:
-      self.skipTest("limit test num_devices to 8 for function consistency")
     generated_table = visualize_sharding(sharding)
     console = rich.console.Console()
     with console.capture() as capture:
@@ -755,12 +753,11 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
 
   @unittest.skipIf(xr.device_type() != 'CPU',
                    f"Requires PJRT_DEVICE set to `CPU`.")
+  @unittest.skipIf(xr.global_runtime_device_count() != 8,
+                   f"Limit test num_devices to 8 for function consistency")
   def test_multi_host_replicated_cpu(self):
     from torch_xla.distributed.spmd.debugging import visualize_sharding
     sharding = '{replicated}'
-    num_devices = self.n_devices
-    if num_devices != 8:
-      self.skipTest("limit test num_devices to 8 for function consistency")
     generated_table = visualize_sharding(sharding)
     console = rich.console.Console()
     with console.capture() as capture:
