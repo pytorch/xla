@@ -123,14 +123,28 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     col = []
     col.append(
         rich.padding.Padding(
-            rich.align.Align('TPU [0, 1, 2, 3]', "center", vertical="middle"),
+            rich.align.Align('TPU [0, 1]', "center", vertical="middle"),
             (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     fake_table.add_row(*col)
     col = []
     col.append(
         rich.padding.Padding(
-            rich.align.Align('TPU [4, 5, 6, 7]', "center", vertical="middle"),
+            rich.align.Align('TPU [2, 3]', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    fake_table.add_row(*col)
+    col = []
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('TPU [4, 5]', "center", vertical="middle"),
+            (1, 1, 1, 1),
+            style=rich.style.Style(bgcolor=color, color=text_color)))
+    fake_table.add_row(*col)
+    col = []
+    col.append(
+        rich.padding.Padding(
+            rich.align.Align('TPU [6, 7]', "center", vertical="middle"),
             (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     fake_table.add_row(*col)
