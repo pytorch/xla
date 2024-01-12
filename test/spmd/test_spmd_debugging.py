@@ -774,14 +774,11 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
         highlight=not use_color,
         pad_edge=False,
         box=rich.box.SQUARE if not use_color else None)
-    alltpus = 'CPU [0'
-    for i in range(xr.global_runtime_device_count()-1):
-      alltpus = alltpus + ',' + str(i+1)
-    alltpus = alltpus + ']'
     col = []
+    # PJRT_DEVICE=CPU will only has one CPU, please update once situation change
     col.append(
         rich.padding.Padding(
-            rich.align.Align(alltpus, "center", vertical="middle"),
+            rich.align.Align('CPU [0]', "center", vertical="middle"),
             (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     fake_table.add_row(*col)
