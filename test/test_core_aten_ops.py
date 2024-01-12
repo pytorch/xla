@@ -1304,7 +1304,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.cosh, args, kwargs)
 
-  @unittest.skip
   def test_aten_cumsum_0(self):
     args = (
         torch.randn((10, 10)).to(torch.float32),
@@ -1313,14 +1312,13 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.cumsum, args, kwargs)
 
-  @unittest.skip
   def test_aten_cumsum_1(self):
     args = (
         torch.randn((10, 10)).to(torch.float16),
         1,
     )
     kwargs = dict()
-    run_export_and_compare(self, torch.ops.aten.cumsum, args, kwargs)
+    run_export_and_compare(self, torch.ops.aten.cumsum, args, kwargs, rtol=0.001, atol=0.01)
 
   def test_aten_cumsum_2(self):
     args = (
