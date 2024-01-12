@@ -2319,11 +2319,12 @@ void InitXlaModuleBindings(py::module m) {
         });
   // -------------Dynamo Integration API End-------------------------
   m.def("_register_pjrt_plugin",
-        [](std::string name, std::string library_path, std::unordered_map<std::string, xla::PjRtValueType> create_options, bool init_coordinator) {
-          // for (auto item : create_options) {
-          //   std::cout << "key: " << item.first << std::endl;
-          // }
-          runtime::RegisterPjRtPlugin(name, library_path, {create_options.begin(), create_options.end()}, init_coordinator);
+        [](std::string name, std::string library_path,
+           std::unordered_map<std::string, xla::PjRtValueType> create_options,
+           bool init_coordinator) {
+          runtime::RegisterPjRtPlugin(
+              name, library_path,
+              {create_options.begin(), create_options.end()}, init_coordinator);
         });
 }
 }  // namespace

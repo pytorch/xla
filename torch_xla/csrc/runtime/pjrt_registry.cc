@@ -49,12 +49,13 @@ std::optional<PluginEntry> GetPjRtPlugin(const std::string& device_type) {
 
 }  // namespace
 
-void RegisterPjRtPlugin(std::string name, std::string library_path, absl::flat_hash_map<std::string, xla::PjRtValueType> create_options, bool init_coordinator) {
+void RegisterPjRtPlugin(
+    std::string name, std::string library_path,
+    absl::flat_hash_map<std::string, xla::PjRtValueType> create_options,
+    bool init_coordinator) {
   TF_VLOG(3) << "Registering PjRt plugin " << name << " at " << library_path;
-  for (auto item : create_options) {
-    std::cout << "key: " << item.first << std::endl;
-  }
-  pjrt_plugins_[name] = {std::move(library_path), std::move(create_options), init_coordinator};
+  pjrt_plugins_[name] = {std::move(library_path), std::move(create_options),
+                         init_coordinator};
 }
 
 std::tuple<std::unique_ptr<xla::PjRtClient>, std::unique_ptr<XlaCoordinator>>
@@ -85,21 +86,24 @@ InitializePjRt(const std::string& device_type) {
               coordinator->GetClient();
           std::string key_prefix = "gpu:";
           kv_get = [distributed_client, key_prefix](
-                   std::string_view k,
-                   absl::Duration timeout) -> xla::StatusOr<std::string> {
+                       std::string_view k,
+                       absl::Duration timeout) -> xla::StatusOr<std::string> {
             return distributed_client->BlockingKeyValueGet(
                 absl::StrCat(key_prefix, k), timeout);
           };
           kv_put = [distributed_client, key_prefix](
-                      std::string_view k, std::string_view v) -> xla::Status {
-            return distributed_client->KeyValueSet(absl::StrCat(key_prefix, k), v);
+                       std::string_view k, std::string_view v) -> xla::Status {
+            return distributed_client->KeyValueSet(absl::StrCat(key_prefix, k),
+                                                   v);
           };
         }
       }
       const PJRT_Api* c_api = *pjrt::LoadPjrtPlugin(
           absl::AsciiStrToLower(device_type), plugin->library_path);
       XLA_CHECK_OK(pjrt::InitializePjrtPlugin(device_type));
-      client = xla::GetCApiClient(absl::AsciiStrToUpper(device_type), plugin->create_options, kv_get, kv_put).value();
+      client = xla::GetCApiClient(absl::AsciiStrToUpper(device_type),
+                                  plugin->create_options, kv_get, kv_put)
+                   .value();
       profiler::RegisterProfilerForPlugin(c_api);
     }
   } else if (device_type == "CPU") {
