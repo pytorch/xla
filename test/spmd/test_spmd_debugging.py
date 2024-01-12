@@ -28,6 +28,8 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     xr.use_spmd()
     super().setUpClass()
 
+  @unittest.skipIf(xr.device_type() != 'TPU',
+                   f"Requires PJRT_DEVICE set to `TPU`.")
   def test_debugging_spmd_single_host_tiled_tpu(self):
     from torch_xla.distributed.spmd.debugging import visualize_sharding
     sharding = '{devices=[2,4]0,1,2,3,4,5,6,7}'
@@ -97,6 +99,8 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     fake_output = fake_capture.get()
     assert output == fake_output
 
+  @unittest.skipIf(xr.device_type() != 'TPU',
+                   f"Requires PJRT_DEVICE set to `TPU`.")
   def test_single_host_partial_replication_tpu(self):
     from torch_xla.distributed.spmd.debugging import visualize_sharding
     sharding = '{devices=[4,1,2]0,1,2,3,4,5,6,7 last_tile_dim_replicate}'
@@ -136,6 +140,8 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     fake_output = fake_capture.get()
     assert output == fake_output
 
+  @unittest.skipIf(xr.device_type() != 'TPU',
+                   f"Requires PJRT_DEVICE set to `TPU`.")
   def test_single_host_replicated_tpu(self):
     from torch_xla.distributed.spmd.debugging import visualize_sharding
     sharding = '{replicated}'
@@ -176,7 +182,16 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
                    f"Requires PJRT_DEVICE set to `CPU`.")
   def test_debugging_spmd_single_host_tiled_cpu(self):
     from torch_xla.distributed.spmd.debugging import visualize_sharding
-    sharding = '{devices=[2,4]0,1,2,3,4,5,6,7}'
+    device = xm.xla_device()
+    num_devices = self.n_devices
+    mesh_shape = (1, num_devices)
+    device_ids = np.array(range(num_devices))
+    mesh = self._get_mesh(mesh_shape)
+
+    partition_spec = (0, None)
+    t = torch.randn(8, 32, device=device)
+    xs.mark_sharding(t, mesh, (0, None))
+    sharding = torch_xla._XLAC._get_xla_sharding_spec(t)
     generated_table = visualize_sharding(sharding)
     console = rich.console.Console()
     with console.capture() as capture:
@@ -196,7 +211,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     col = []
     col.append(
         rich.padding.Padding(
-            rich.align.Align('CPU [0]', "center", vertical="middle"),
+            rich.align.Align('CPU 0', "center", vertical="middle"),
             (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     fake_table.add_row(*col)
@@ -210,7 +225,16 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
                    f"Requires PJRT_DEVICE set to `CPU`.")
   def test_single_host_partial_replication_cpu(self):
     from torch_xla.distributed.spmd.debugging import visualize_sharding
-    sharding = '{devices=[4,1,2]0,1,2,3,4,5,6,7 last_tile_dim_replicate}'
+    device = xm.xla_device()
+    num_devices = self.n_devices
+    mesh_shape = (1, num_devices)
+    device_ids = np.array(range(num_devices))
+    mesh = self._get_mesh(mesh_shape)
+
+    partition_spec = (0, None)
+    t = torch.randn(8, 32, device=device)
+    xs.mark_sharding(t, mesh, (0, None))
+    sharding = torch_xla._XLAC._get_xla_sharding_spec(t)
     generated_table = visualize_sharding(sharding)
     console = rich.console.Console()
     with console.capture() as capture:
@@ -244,10 +268,16 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
                    f"Requires PJRT_DEVICE set to `CPU`.")
   def test_single_host_replicated_cpu(self):
     from torch_xla.distributed.spmd.debugging import visualize_sharding
-    sharding = '{replicated}'
+    device = xm.xla_device()
     num_devices = self.n_devices
-    if num_devices != 8:
-      self.skipTest("limit test num_devices to 8 for function consistency")
+    mesh_shape = (1, num_devices)
+    device_ids = np.array(range(num_devices))
+    mesh = self._get_mesh(mesh_shape)
+
+    partition_spec_replicated = (None, None)
+    t = torch.randn(8, 32, device=device)
+    xs.mark_sharding(t, mesh, partition_spec_replicated)
+    sharding = torch_xla._XLAC._get_xla_sharding_spec(t)
     generated_table = visualize_sharding(sharding)
     console = rich.console.Console()
     with console.capture() as capture:
