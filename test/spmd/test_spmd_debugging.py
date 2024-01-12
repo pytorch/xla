@@ -30,7 +30,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
 
   def test_debugging_spmd_single_host_tiled_tpu(self):
     from torch_xla.distributed.spmd.debugging import visualize_sharding
-    sharding = '{devices=[2,8]0,4,8,12,2,6,10,14,1,5,9,13,3,7,11,15}'
+    sharding = '{devices=[2,4]0,1,2,3,4,5,6,7}'
     generated_table = visualize_sharding(sharding)
     console = rich.console.Console()
     with console.capture() as capture:
@@ -99,7 +99,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
 
   def test_single_host_partial_replication_tpu(self):
     from torch_xla.distributed.spmd.debugging import visualize_sharding
-    sharding = '{devices=[8,1,2]0,1,4,5,8,9,12,13,2,3,6,7,10,11,14,15 last_tile_dim_replicate}'
+    sharding = '{devices=[4,1,2]0,1,2,3,4,5,6,7 last_tile_dim_replicate}'
     generated_table = visualize_sharding(sharding)
     console = rich.console.Console()
     with console.capture() as capture:
@@ -139,6 +139,9 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
   def test_single_host_replicated_tpu(self):
     from torch_xla.distributed.spmd.debugging import visualize_sharding
     sharding = '{replicated}'
+    num_devices = self.n_devices
+    if num_devices != 8:
+      self.skipTest("limit test num_devices to 8 for function consistency")
     generated_table = visualize_sharding(sharding)
     console = rich.console.Console()
     with console.capture() as capture:
@@ -173,7 +176,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
                    f"Requires PJRT_DEVICE set to `CPU`.")
   def test_debugging_spmd_single_host_tiled_cpu(self):
     from torch_xla.distributed.spmd.debugging import visualize_sharding
-    sharding = '{devices=[2,8]0,4,8,12,2,6,10,14,1,5,9,13,3,7,11,15}'
+    sharding = '{devices=[2,4]0,1,2,3,4,5,6,7}'
     generated_table = visualize_sharding(sharding)
     console = rich.console.Console()
     with console.capture() as capture:
@@ -207,7 +210,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
                    f"Requires PJRT_DEVICE set to `CPU`.")
   def test_single_host_partial_replication_cpu(self):
     from torch_xla.distributed.spmd.debugging import visualize_sharding
-    sharding = '{devices=[8,1,2]0,1,4,5,8,9,12,13,2,3,6,7,10,11,14,15 last_tile_dim_replicate}'
+    sharding = '{devices=[4,1,2]0,1,2,3,4,5,6,7 last_tile_dim_replicate}'
     generated_table = visualize_sharding(sharding)
     console = rich.console.Console()
     with console.capture() as capture:
@@ -242,6 +245,9 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
   def test_single_host_replicated_cpu(self):
     from torch_xla.distributed.spmd.debugging import visualize_sharding
     sharding = '{replicated}'
+    num_devices = self.n_devices
+    if num_devices != 8:
+      self.skipTest("limit test num_devices to 8 for function consistency")
     generated_table = visualize_sharding(sharding)
     console = rich.console.Console()
     with console.capture() as capture:
@@ -476,6 +482,9 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
   def test_multi_host_replicated_tpu(self):
     from torch_xla.distributed.spmd.debugging import visualize_sharding
     sharding = '{replicated}'
+    num_devices = self.n_devices
+    if num_devices != 8:
+      self.skipTest("limit test num_devices to 8 for function consistency")
     generated_table = visualize_sharding(sharding)
     console = rich.console.Console()
     with console.capture() as capture:
@@ -705,6 +714,9 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
   def test_multi_host_replicated_cpu(self):
     from torch_xla.distributed.spmd.debugging import visualize_sharding
     sharding = '{replicated}'
+    num_devices = self.n_devices
+    if num_devices != 8:
+      self.skipTest("limit test num_devices to 8 for function consistency")
     generated_table = visualize_sharding(sharding)
     console = rich.console.Console()
     with console.capture() as capture:
