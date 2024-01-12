@@ -156,8 +156,6 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
 
   @unittest.skipIf(xr.device_type() != 'TPU',
                    f"Requires PJRT_DEVICE set to `TPU`.")
-  @unittest.skipIf(xr.global_runtime_device_count() != 8,
-                   f"Limit test num_devices to 8 for function consistency")
   def test_single_host_replicated_tpu(self):
     from torch_xla.distributed.spmd.debugging import visualize_sharding
     sharding = '{replicated}'
@@ -178,10 +176,14 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
         pad_edge=False,
         box=rich.box.SQUARE if not use_color else None)
     col = []
+    alltpus = 'TPU [0'
+    for i in range(xr.global_runtime_device_count()-1):
+      alltpus = alltpus + ',' + str(i+1)
+    alltpus = alltpus + ']'
     col.append(
         rich.padding.Padding(
             rich.align.Align(
-                'TPU [0, 1, 2, 3, 4, 5, 6, 7]', "center", vertical="middle"),
+                alltpus, "center", vertical="middle"),
             (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     fake_table.add_row(*col)
@@ -753,8 +755,6 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
 
   @unittest.skipIf(xr.device_type() != 'CPU',
                    f"Requires PJRT_DEVICE set to `CPU`.")
-  @unittest.skipIf(xr.global_runtime_device_count() != 8,
-                   f"Limit test num_devices to 8 for function consistency")
   def test_multi_host_replicated_cpu(self):
     from torch_xla.distributed.spmd.debugging import visualize_sharding
     sharding = '{replicated}'
@@ -774,10 +774,14 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
         highlight=not use_color,
         pad_edge=False,
         box=rich.box.SQUARE if not use_color else None)
+    alltpus = 'CPU [0'
+    for i in range(xr.global_runtime_device_count()-1):
+      alltpus = alltpus + ',' + str(i+1)
+    alltpus = alltpus + ']'
     col = []
     col.append(
         rich.padding.Padding(
-            rich.align.Align('CPU [0]', "center", vertical="middle"),
+            rich.align.Align(alltpus, "center", vertical="middle"),
             (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     fake_table.add_row(*col)
