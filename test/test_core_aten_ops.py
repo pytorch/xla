@@ -29,7 +29,7 @@ def diff_output(testcase, output1, output2, rtol, atol, equal_nan=True):
     output2_cpu = output2.detach().cpu()
     if output2_cpu.dtype != output1.dtype:
       output2_cpu = output2_cpu.to(output1.dtype)
-    # import pdb; pdb.set_trace()
+    import pdb; pdb.set_trace()
     testcase.assertTrue(
         torch.allclose(
             output1, output2_cpu, atol=atol, rtol=rtol, equal_nan=equal_nan))
@@ -2429,7 +2429,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten._log_softmax, args, kwargs)
 
-  @unittest.skip
   def test_aten__log_softmax_1(self):
     args = (
         torch.randn((10, 10)).to(torch.float16),
@@ -2437,7 +2436,8 @@ class AtenOpTest(unittest.TestCase):
         False,
     )
     kwargs = dict()
-    run_export_and_compare(self, torch.ops.aten._log_softmax, args, kwargs)
+    run_export_and_compare(self, torch.ops.aten._log_softmax, args, kwargs,         rtol=0.001,
+        atol=0.01)
 
   def test_aten_logical_and_0(self):
     args = (
