@@ -107,19 +107,16 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.acos, args, kwargs)
 
-  @unittest.skip
   def test_aten_acosh_0(self):
     args = (torch.randn((10, 10)).to(torch.float32),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.acosh, args, kwargs)
 
-  @unittest.skip
   def test_aten_acosh_1(self):
     args = (torch.randn((10, 10)).to(torch.float16),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.acosh, args, kwargs)
 
-  @unittest.skip
   def test_aten_acosh_2(self):
     args = (torch.randint(0, 10, (10, 10)).to(torch.int32),)
     kwargs = dict()
@@ -696,19 +693,16 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.atan2, args, kwargs)
 
-  @unittest.skip
   def test_aten_atanh_0(self):
     args = (torch.randn((10, 10)).to(torch.float32),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.atanh, args, kwargs)
 
-  @unittest.skip
   def test_aten_atanh_1(self):
     args = (torch.randn((10, 10)).to(torch.float16),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.atanh, args, kwargs)
 
-  @unittest.skip
   def test_aten_atanh_2(self):
     args = (torch.randint(0, 10, (10, 10)).to(torch.int32),)
     kwargs = dict()
@@ -1307,7 +1301,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.cosh, args, kwargs)
 
-  @unittest.skip
   def test_aten_cumsum_0(self):
     args = (
         torch.randn((10, 10)).to(torch.float32),
@@ -1316,14 +1309,14 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.cumsum, args, kwargs)
 
-  @unittest.skip
   def test_aten_cumsum_1(self):
     args = (
         torch.randn((10, 10)).to(torch.float16),
         1,
     )
     kwargs = dict()
-    run_export_and_compare(self, torch.ops.aten.cumsum, args, kwargs)
+    run_export_and_compare(
+        self, torch.ops.aten.cumsum, args, kwargs, rtol=0.001, atol=0.01)
 
   def test_aten_cumsum_2(self):
     args = (
@@ -2434,7 +2427,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten._log_softmax, args, kwargs)
 
-  @unittest.skip
   def test_aten__log_softmax_1(self):
     args = (
         torch.randn((10, 10)).to(torch.float16),
@@ -2442,7 +2434,8 @@ class AtenOpTest(unittest.TestCase):
         False,
     )
     kwargs = dict()
-    run_export_and_compare(self, torch.ops.aten._log_softmax, args, kwargs)
+    run_export_and_compare(
+        self, torch.ops.aten._log_softmax, args, kwargs, rtol=0.001, atol=0.01)
 
   def test_aten_logical_and_0(self):
     args = (

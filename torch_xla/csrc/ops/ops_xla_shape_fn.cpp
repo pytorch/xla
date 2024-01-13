@@ -56,7 +56,11 @@ xla::Shape AcosOutputShape(const torch::lazy::Value& input) {
 }
 
 xla::Shape AcoshOutputShape(const torch::lazy::Value& input) {
-  return GetXlaShape(input);
+  xla::Shape result_shape = GetXlaShape(input);
+  if (xla::primitive_util::IsIntegralType(result_shape.element_type())) {
+    result_shape.set_element_type(xla::PrimitiveType::F32);
+  }
+  return result_shape;
 }
 
 xla::Shape AdaptiveAvgPool2dOutputShape(const torch::lazy::Value& input,
@@ -262,7 +266,11 @@ xla::Shape Atan2OutputShape(const torch::lazy::Value& input,
 }
 
 xla::Shape AtanhOutputShape(const torch::lazy::Value& input) {
-  return GetXlaShape(input);
+  xla::Shape result_shape = GetXlaShape(input);
+  if (xla::primitive_util::IsIntegralType(result_shape.element_type())) {
+    result_shape.set_element_type(xla::PrimitiveType::F32);
+  }
+  return result_shape;
 }
 
 xla::Shape BaddbmmOutputShape(const torch::lazy::Value& self,
