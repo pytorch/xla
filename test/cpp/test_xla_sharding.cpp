@@ -339,7 +339,7 @@ TEST_F(XLAShardingTest, CreateTensorsData) {
         torch_xla::runtime::GetComputationClient()->GetDataShards(xla_data);
     EXPECT_EQ(shards.size(), n_devices);
     EXPECT_TRUE(xla::Shape::Equal().IgnoreLayout()(xla_data->shape(),
-                                                    shards[0]->shape()));
+                                                   shards[0]->shape()));
     EXPECT_TRUE(XlaDataValuesEqual(tensors_data[0], shards[0], at::kFloat));
 
     // Returns multiple input shards, replicated
