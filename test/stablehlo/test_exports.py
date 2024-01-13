@@ -23,7 +23,7 @@ class TensorConstant(torch.nn.Module):
     super().__init__()
 
   def forward(self, a):
-    return a * torch.tensor(3)
+    return a / torch.tensor(3)
 
 
 class ExportTest(unittest.TestCase):
