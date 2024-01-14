@@ -97,8 +97,11 @@ InitializePjRt(const std::string& device_type) {
 
     xla::PjRtClient::KeyValueGetCallback kv_get = nullptr;
     xla::PjRtClient::KeyValuePutCallback kv_put = nullptr;
-    auto allowed_devices =
-        std::make_optional<std::set<int>>(std::set{local_process_rank});
+    bool spmd = sys_util::GetEnvBool("XLA_USE_SPMD", false);
+    std::optional<std::set<int>> allowed_devices;
+    if (!spmd) {
+      allowed_devices = std::set{local_process_rank};
+    }
     if (global_world_size > 1) {
       // Use the XlaCoordinator as the distributed key-value store.
       coordinator = std::make_unique<XlaCoordinator>(
