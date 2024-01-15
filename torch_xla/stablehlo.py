@@ -300,8 +300,8 @@ def _exported_program_to_stablehlo_bundle(exported_model,
   with torch.no_grad():
     res = XLAExportInterpreter(exported_model.graph_module, device).run(
         *param_buffer_values,
-        *input_args,
         *ordered_tensor_constants,
+        *input_args,
         enable_io_processing=False)
     res = res[num_mutations:]
 
