@@ -29,6 +29,12 @@ DETECTRON2_MODELS = {
     "detectron2_fcos_r_50_fpn",
 }
 
+USE_MODEL_OPTIMIZER = {
+  # Using SGD with llama saves up memory.
+  "llama_v2_7b_16h",
+  *DETECTRON2_MODELS,
+}
+
 # Skip the experiment of a model if any of the experiment configs in the list is fully matched
 DENY_LIST = {
     "doctr_det_predictor": [{
@@ -205,7 +211,7 @@ class TorchBenchModel(BenchmarkModel):
     if self.model_name == "yolov3":
       self.example_inputs = (torch.rand(self.benchmark_experiment.batch_size, 3,
                                         384, 512),)
-    if self.benchmark_experiment.test == "train" and self.model_name in DETECTRON2_MODELS:
+    if self.benchmark_experiment.test == "train" and self.model_name in USE_MODEL_OPTIMIZER:
       self.optimizer = benchmark.optimizer
 
     del benchmark
