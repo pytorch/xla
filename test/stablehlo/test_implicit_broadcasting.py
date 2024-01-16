@@ -119,6 +119,7 @@
     torch_xla._XLAC._xla_mark_dynamic(a, 0)
     c = a * b
     stablehlo_text = xm.get_stablehlo([c])
+    # print(stablehlo_text)
     self.assertTrue(
         re.search(
             r'dynamic_broadcast_in_dim.*=.*\[0\].*: \(tensor<\?xf32>, tensor<1xi32>\) -> tensor<\?xf32>',
@@ -140,6 +141,7 @@
 =======
 >>>>>>> c9359372e (e2e prototype for hf_vit_base_patch16_224)
 
+<<<<<<< HEAD
 #   ### (?,?) * (?,1)
 #   def test_same_rank_broadcast_with_unbounded_dynamic_shapes_2(self):
 #     a = torch.randn((5, 10)).to(device=device)
@@ -157,6 +159,26 @@
 #         re.search(
 #             r'dynamic_broadcast_in_dim.*=.*\[0, 1\].*: \(tensor<\?x1xf32>, tensor<2xi32>\) -> tensor<\?x\?xf32>',
 #             stablehlo_text) is not None)
+=======
+  ### (?,?) * (?,1)
+  def test_same_rank_broadcast_with_unbounded_dynamic_shapes_2(self):
+    a = torch.randn((5, 10)).to(device=device)
+    b = torch.randn((5, 1)).to(device=device)
+    torch_xla._XLAC._xla_mark_dynamic(a, 0)
+    torch_xla._XLAC._xla_mark_dynamic(a, 1)
+    torch_xla._XLAC._xla_mark_dynamic(b, 0)
+    c = a * b
+    stablehlo_text = xm.get_stablehlo([c])
+    print(stablehlo_text)
+    self.assertTrue(
+        re.search(
+            r'dynamic_broadcast_in_dim.*=.*\[0, 1\].*: \(tensor<\?x\?xf32>, tensor<2xi32>\) -> tensor<\?x\?xf32>',
+            stablehlo_text) is not None)
+    self.assertTrue(
+        re.search(
+            r'dynamic_broadcast_in_dim.*=.*\[0, 1\].*: \(tensor<\?x1xf32>, tensor<2xi32>\) -> tensor<\?x\?xf32>',
+            stablehlo_text) is not None)
+>>>>>>> df36582a5 (add dynamic expand)
 
 #   ### (?,?) * (?,?)
 #   def test_same_rank_broadcast_with_unbounded_dynamic_shapes_3(self):

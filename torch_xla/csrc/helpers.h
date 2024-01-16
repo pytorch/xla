@@ -323,6 +323,9 @@ class XlaHelpers {
   static std::vector<int64_t> getBroadcastDimensions(xla::XlaOp op1,
                                                      xla::XlaOp op2);
 
+  static xla::XlaOp DynamicBroadcastInDim(xla::XlaOp op, const xla::Shape& final_shape,
+                                 xla::XlaOp final_broadcast_dimensions);
+
   // Performs the bin_op binary operation by promoting types and shapes of the
   // two input operands.
   static xla::XlaOp PromotedBinaryOp(

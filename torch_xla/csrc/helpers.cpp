@@ -428,8 +428,10 @@ std::string StringifyBroadcastDimensions(std::vector<int64_t> broadcast_dims) {
   return str;
 };
 
+}  // namespace
+
 // Emit XLA custom call for dynamic_broadcast_in_dim.
-xla::XlaOp DynamicBroadcastInDim(xla::XlaOp op, const xla::Shape& final_shape,
+xla::XlaOp XlaHelpers::DynamicBroadcastInDim(xla::XlaOp op, const xla::Shape& final_shape,
                                  xla::XlaOp final_broadcast_dimensions) {
   const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(op);
 
@@ -442,8 +444,6 @@ xla::XlaOp DynamicBroadcastInDim(xla::XlaOp op, const xla::Shape& final_shape,
       /*operands=*/{op, final_broadcast_dimensions}, /*shape*/ final_shape,
       /*opaque=*/StringifyBroadcastDimensions(op_broadcast_dims));
 }
-
-}  // namespace
 
 xla::XlaOp XlaHelpers::DynamicUnboundedBroadcast(
     xla::XlaOp input, xla::XlaOp aux_input,

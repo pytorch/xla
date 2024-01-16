@@ -236,6 +236,22 @@ class XLAExportInterpreter(torch.fx.Interpreter):
     return super().call_function(target, args, new_kwargs)
 
   def run_node(self, n) -> Any:
+    import pdb
+    if n.op == 'call_function' and n.target == torch.ops.aten.sym_size.int:
+      pdb.set_trace()
+      print(n)
+    if n.op == 'call_function' and n.target == torch.ops.aten.expand.default:
+      pdb.set_trace()
+      new_args = (n.args[0], list(n.args[1]))
+      expand_size = new_args[1]
+      for idx in range(len(expand_size)):
+        if not isinstance(expand_size[idx], int):
+          new_args[1][idx] = np.iinfo(np.int32).max
+          # new_args[1][idx] = 10
+          print(type(new_args[1][idx]))
+      n.args = new_args
+      print(n)
+      print(n.args)
     if n.op == 'placeholder':
       fake_t = n.meta['val']
       res = super().run_node(n)
@@ -245,7 +261,8 @@ class XLAExportInterpreter(torch.fx.Interpreter):
         ]
         self._mark_dynamic(res, dynamic_dims)
       return res
-    return super().run_node(n)
+    res = super().run_node(n)
+    return res
 
 
 def _extract_input_args(exported_model, options):

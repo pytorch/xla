@@ -45,6 +45,7 @@
 #include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/ops/diagonal.h"
 #include "torch_xla/csrc/ops/discrete_uniform.h"
+#include "torch_xla/csrc/ops/dynamic_expand.h"
 #include "torch_xla/csrc/ops/einsum.h"
 #include "torch_xla/csrc/ops/einsum_backward.h"
 #include "torch_xla/csrc/ops/expand.h"
@@ -2220,6 +2221,19 @@ XLATensorPtr dequantize_tensor(const XLATensorPtr& input,
   torch::lazy::NodePtr node = torch::lazy::MakeNode<DequantizeTensor>(
       input->GetIrValue(), scale_list, zero_point_list, quant_min, quant_max,
       dtype, axis);
+  return input->CreateFrom(torch::lazy::Value(node));
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// Dynamic Reshape ops here.
+//////////////////////////////////////////////////////////////////////////////
+
+XLATensorPtr dynamic_expand(const XLATensorPtr& input,
+                            const std::vector<int64_t>& size,
+                            const XLATensorPtr& src_tensor,
+                            int src_dim, int target_dim) {
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<DynamicExpand>(
+      input->GetIrValue(), size, src_tensor->GetIrValue(), src_dim, target_dim);
   return input->CreateFrom(torch::lazy::Value(node));
 }
 
