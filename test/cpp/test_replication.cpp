@@ -46,14 +46,17 @@ void TestSingleReplication(
     instances.emplace_back(CreateCrsComputation(shape), device_str,
                            all_device_strings, &shape);
   }
-  std::vector<torch_xla::runtime::ComputationClient::ComputationPtr> compiled_computations =
-      torch_xla::runtime::GetComputationClient()->Compile(std::move(instances));
+  std::vector<torch_xla::runtime::ComputationClient::ComputationPtr>
+      compiled_computations =
+          torch_xla::runtime::GetComputationClient()->Compile(
+              std::move(instances));
 
   std::vector<at::Tensor> tensors;
   for (size_t i = 0; i < device_strings.size(); ++i) {
     tensors.push_back(at::ones({8, 8}, at::TensorOptions(at::kFloat)));
   }
-  std::vector<torch::lazy::BackendDataPtr> tensors_data = CreateTensorsData(tensors, device_strings);
+  std::vector<torch::lazy::BackendDataPtr> tensors_data =
+      CreateTensorsData(tensors, device_strings);
 
   std::vector<std::vector<torch_xla::runtime::ComputationClient::DataPtr>>
       results(device_strings.size());

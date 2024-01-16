@@ -141,10 +141,9 @@ InitializePjRt(const std::string& device_type) {
     bool spmd = sys_util::GetEnvBool("XLA_USE_SPMD", false);
     if (!spmd) {
       allowed_devices = std::set{local_process_rank};
-    }
-    else if (global_world_size > 1) {
+    } else if (global_world_size > 1) {
       allowed_devices =
-        std::make_optional<std::set<int>>(std::set{local_process_rank});
+          std::make_optional<std::set<int>>(std::set{local_process_rank});
       // Use the XlaCoordinator as the distributed key-value store.
       coordinator = std::make_unique<XlaCoordinator>(
           global_process_rank, global_world_size, master_addr, port);

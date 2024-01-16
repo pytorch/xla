@@ -70,13 +70,11 @@ class TestExperimentalPjrt(parameterized.TestCase):
                    xr.addressable_device_count())
     if xr.device_type() == 'CUDA':
       self.assertEqual(self.num_cuda_devices, xr.addressable_device_count())
-      
 
   def test_num_global_devices(self):
     self.assertLen(torch_xla._XLAC._xla_get_all_devices(),
                    xr.global_device_count())
     if xr.device_type() == 'CUDA':
-      print('test_num_global_devices is run for cuda. self.num_cuda_devices=', self.num_cuda_devices)     
       self.assertEqual(self.num_cuda_devices, xr.global_device_count())
 
   def test_world_size(self):

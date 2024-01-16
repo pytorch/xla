@@ -236,8 +236,11 @@ class XlaMNIST(nn.Module):
     x = self.fc2(x)
     return F.log_softmax(x, dim=1)
 
-@unittest.skipIf(xr.device_type() == 'CUDA',
-    'Parallelism for DataParallel uses multi-threads. But cuda assumes one GPU device per process instead of relying on threads.')
+
+@unittest.skipIf(
+    xr.device_type() == 'CUDA',
+    'Parallelism for DataParallel uses multi-threads. But cuda assumes one GPU device per process instead of relying on threads.'
+)
 class TestParallelTensorMNIST(test_utils.XlaTestCase):
 
   def test(self):
@@ -268,8 +271,11 @@ class TestParallelTensorMNIST(test_utils.XlaTestCase):
     model_parallel = dp.DataParallel(XlaMNIST, device_ids=devices)
     model_parallel(loop_fn, train_loader)
 
-@unittest.skipIf(xr.device_type() == 'CUDA',
-    'Parallelism for DataParallel uses multi-threads. But cuda assumes one GPU device per process instead of relying on threads.')
+
+@unittest.skipIf(
+    xr.device_type() == 'CUDA',
+    'Parallelism for DataParallel uses multi-threads. But cuda assumes one GPU device per process instead of relying on threads.'
+)
 class TestParallelTensorResnet18(test_utils.XlaTestCase):
 
   def test(self):
