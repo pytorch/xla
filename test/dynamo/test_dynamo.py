@@ -130,7 +130,6 @@ class DynamoInferenceBasicTest(unittest.TestCase):
         return output
 
     torch._dynamo.reset()
-    met.clear_counters()
     met.clear_all()
     device = xm.xla_device()
 
@@ -236,7 +235,6 @@ class DynamoCpuFallbackTest(unittest.TestCase):
       return torch._foobar(t)
 
     torch._dynamo.reset()
-    met.clear_counters()
     met.clear_all()
     device = xm.xla_device()
 
