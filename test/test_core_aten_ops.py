@@ -4698,6 +4698,15 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.where.self, args, kwargs)
 
+  def test_aten_where_self_1(self):
+    args = (
+        torch.randn((10, 10)).to(torch.bool),
+        torch.randn((10, 10)).to(torch.float32),
+        torch.randn((10, 10)).to(torch.float64),
+    )
+    kwargs = dict()
+    run_export_and_compare(self, torch.ops.aten.where.self, args, kwargs)
+
   def _test_move_tensor_cuda_to_xla(self, cpu_tensor):
     # Assumes CPU-XLA data movement works.
     cuda_tensor = cpu_tensor.to("cuda")
