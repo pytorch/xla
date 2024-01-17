@@ -105,6 +105,7 @@
 #include "torch_xla/csrc/ops/rrelu_with_noise.h"
 #include "torch_xla/csrc/ops/rrelu_with_noise_backward.h"
 #include "torch_xla/csrc/ops/scalar.h"
+#include "torch_xla/csrc/ops/scan.h"
 #include "torch_xla/csrc/ops/scatter.h"
 #include "torch_xla/csrc/ops/scatter_add.h"
 #include "torch_xla/csrc/ops/scatter_reduce.h"
@@ -2390,6 +2391,12 @@ void copy_(XLATensorPtr& input, XLATensorPtr& src) {
   if (src->sharding_spec() != nullptr) {
     input->SetShardingSpec(*src->sharding_spec());
   }
+}
+
+XLATensorPtr scan(const Callable f, const XLATensorPtr& init,
+                  const XLATensorPtr& xs) {
+  return init->CreateFrom(torch::lazy::MakeNode<Scan>(
+      f->GetIrValue(), init->GetIrValue(), xs->GetIrValue()));
 }
 
 XLATensorPtr scatter(const XLATensorPtr& input, int64_t dim,
