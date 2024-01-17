@@ -68,6 +68,20 @@ xla::XlaOp GetPromotedR1Mask(xla::XlaOp mask, const xla::Shape& input_shape) {
   return XlaHelpers::Flatten(GetPromotedMask(mask, input_shape));
 }
 
+xla::XlaOp BuildScan(const Callable f, const at::Tensor& init,
+                     const at::Tensor& xs) {
+  const xla::Shape& f_shape = ShapeHelper::ShapeOfXlaOp(f);
+  const xla::Shape& init_shape = ShapeHelper::ShapeOfXlaOp(init);
+  const xla::Shape& xs_shape = ShapeHelper::ShapeOfXlaOp(xs);
+  int64_t i = 0;
+  xla::Callable = generateXLACallable(f)
+  xla::XlaOp result = f(init);
+  while i < xs.size() - 1:
+    i = i + 1;
+    result = f(result);
+  return result;
+}
+
 bool ShouldUseDenseScatter(const torch::lazy::BackendDevice& device,
                            const xla::Shape& input_shape,
                            const xla::Shape& index_shape) {
