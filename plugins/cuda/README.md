@@ -7,11 +7,6 @@ repository (see `bazel build` command below).
 ## Building
 
 ```bash
-# Build PJRT plugin
-bazel build @xla//xla/pjrt/c:pjrt_c_api_gpu_plugin.so --cxxopt=-D_GLIBCXX_USE_CXX11_ABI=1  --config=cuda
-# Copy to package dir
-cp bazel-bin/external/xla/xla/pjrt/c/pjrt_c_api_gpu_plugin.so plugins/cuda/torch_xla_cuda_plugin
-
 # Build wheel
 pip wheel plugins/cuda
 # Or install directly
