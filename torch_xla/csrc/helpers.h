@@ -265,11 +265,6 @@ class XlaHelpers {
   static std::pair<xla::XlaOp, xla::XlaOp> PromoteSecondValue(xla::XlaOp op1,
                                                               xla::XlaOp op2);
 
-  // If any of the shapes of input operations has unbounded dynamic dimensions,
-  // performs implicit broadcasting and return the broadcasted operations. For
-  // static or bounded dynamic input shapes, validate the shapes and return the
-  // input operations. The implicit broadcasting in static and bounded dynamic
-  // cases will be handled eventually by the XlaBuilder.
   static std::pair<xla::XlaOp, xla::XlaOp> PromoteShapes(xla::XlaOp op1,
                                                          xla::XlaOp op2);
 

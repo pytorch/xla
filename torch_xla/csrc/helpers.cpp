@@ -710,6 +710,7 @@ xla::Shape XlaHelpers::GetPromotedDynamicShape(const xla::Shape& shape1,
       PromoteType(shape1.element_type(), shape2.element_type()), upper_bounds,
       dyn_dims);
 
+  std::cout << xla::ShapeUtil::HumanString(promoted_shape);
   return promoted_shape;
 }
 
