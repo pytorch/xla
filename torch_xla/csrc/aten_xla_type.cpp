@@ -1661,6 +1661,14 @@ at::Tensor XLANativeFunctions::xlogy(const at::Tensor& self,
       bridge::GetXlaTensor(self), bridge::GetXlaTensor(other)));
 }
 
+std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::map(
+    const Callable f, const at::Tensor& xs) {
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
+  return bridge::AtenFromXlaTensor(tensor_methods::map(
+      self_tensor, f, bridge::GetXlaTensor(xs)));
+}
+
 at::Tensor XLANativeFunctions::masked_scatter(const at::Tensor& self,
                                               const at::Tensor& mask,
                                               const at::Tensor& source) {
