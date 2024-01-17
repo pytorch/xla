@@ -752,6 +752,9 @@ XLATensorPtr rsub(
 
 void copy_(XLATensorPtr& input, XLATensorPtr& src);
 
+XLATensorPtr scan(const Callable f, const XLATensorPtr& init,
+                  const XLATensorPtr& xs);
+
 XLATensorPtr scatter(const XLATensorPtr& input, int64_t dim,
                      const XLATensorPtr& index, const XLATensorPtr& src);
 XLATensorPtr scatter(const XLATensorPtr& input, int64_t dim,
