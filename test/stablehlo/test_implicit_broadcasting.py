@@ -43,6 +43,7 @@
 #         re.search(r'stablehlo.multiply.* : tensor<6x8x10x5xf32>',
 #                   stablehlo_text) is not None)
 
+<<<<<<< HEAD
 #   ## broadcasting with unbounded dynamic shapes
 # <<<<<<< HEAD
 #   ### (10,?) * c
@@ -94,6 +95,64 @@
 # >>>>>>> 6961241db (unbounded implelcit broadcasting)
 #             stablehlo_text) is not None)
 # >>>>>>> 02cbe918c (fix rebase)
+=======
+  ## broadcasting with unbounded dynamic shapes
+<<<<<<< HEAD
+<<<<<<< HEAD
+  ### (10,?) * c
+=======
+  ### (X,?) * c
+>>>>>>> 6961241db (unbounded implelcit broadcasting)
+=======
+  ### (10,?) * c
+>>>>>>> 659bd534d (Address feedback:I)
+  def test_scalar_broadcast_with_unbounded_dynamic_shapes(self):
+    a = torch.randn(()).to(device=device)
+    b = torch.randn((10, 5)).to(device=device)
+    torch_xla._XLAC._xla_mark_dynamic(b, 1)
+    c = a * b
+    stablehlo_text = xm.get_stablehlo([c])
+    self.assertTrue(
+        re.search(
+            r'dynamic_broadcast_in_dim.*=.*\[\].*: \(tensor<f32>, tensor<2xi32>\) -> tensor<10x\?xf32>',
+            stablehlo_text) is not None)
+    self.assertTrue(
+        re.search(
+            r'dynamic_broadcast_in_dim.*=.*\[0, 1\].*: \(tensor<10x\?xf32>, tensor<2xi32>\) -> tensor<10x\?xf32>',
+            stablehlo_text) is not None)
+
+<<<<<<< HEAD
+<<<<<<< HEAD
+  ### (?) * (10)
+=======
+  ### (?) * (X)
+>>>>>>> 6961241db (unbounded implelcit broadcasting)
+=======
+  ### (?) * (10)
+>>>>>>> 659bd534d (Address feedback:I)
+  def test_same_rank_broadcast_with_unbounded_dynamic_shapes_1(self):
+    a = torch.randn((10)).to(device=device)
+    b = torch.randn((10)).to(device=device)
+    torch_xla._XLAC._xla_mark_dynamic(a, 0)
+    c = a * b
+    stablehlo_text = xm.get_stablehlo([c])
+    self.assertTrue(
+        re.search(
+<<<<<<< HEAD
+            r'dynamic_broadcast_in_dim.*=.*\[0\].*: \(tensor<\?xf32>, tensor<1xi32>\) -> tensor<10xf32>',
+            stablehlo_text) is not None)
+    self.assertTrue(
+        re.search(
+            r'dynamic_broadcast_in_dim.*=.*\[0\].*: \(tensor<10xf32>, tensor<1xi32>\) -> tensor<10xf32>',
+=======
+            r'dynamic_broadcast_in_dim.*=.*\[0\].*: \(tensor<\?xf32>, tensor<1xi32>\) -> tensor<\?xf32>',
+            stablehlo_text) is not None)
+    self.assertTrue(
+        re.search(
+            r'dynamic_broadcast_in_dim.*=.*\[0\].*: \(tensor<10xf32>, tensor<1xi32>\) -> tensor<\?xf32>',
+>>>>>>> 6961241db (unbounded implelcit broadcasting)
+            stablehlo_text) is not None)
+>>>>>>> 88ad63edb (fix rebase)
 
 #   ### (?,?) * (?,1)
 #   def test_same_rank_broadcast_with_unbounded_dynamic_shapes_2(self):
@@ -149,6 +208,7 @@
 #             r'dynamic_broadcast_in_dim.*=.*\[0, 1\].*: \(tensor<\?x5xf32>, tensor<2xi32>\) -> tensor<\?x5xf32>',
 #             stablehlo_text) is not None)
 
+<<<<<<< HEAD
 # <<<<<<< HEAD
 #   ### (?,5,?) * (1,?)
 # =======
@@ -194,6 +254,61 @@
 #         re.search(
 #             r'dynamic_broadcast_in_dim.*=.*\[0, 1, 2\].*: \(tensor<\?x\?x\?xf32>, tensor<3xi32>\) -> tensor<\?x\?x\?xf32>',
 #             stablehlo_text) is not None)
+=======
+<<<<<<< HEAD
+<<<<<<< HEAD
+  ### (?,5,?) * (1,?)
+=======
+  ### (?,X,?)) * (1,?)
+>>>>>>> 6961241db (unbounded implelcit broadcasting)
+=======
+  ### (?,5,?) * (1,?)
+>>>>>>> 659bd534d (Address feedback:I)
+  def test_different_rank_broadcast_with_unbounded_dynamic_shapes_1(self):
+    a = torch.randn((10, 5, 4)).to(device=device)
+    b = torch.randn((1, 4)).to(device=device)
+    torch_xla._XLAC._xla_mark_dynamic(a, 0)
+    torch_xla._XLAC._xla_mark_dynamic(a, 2)
+    torch_xla._XLAC._xla_mark_dynamic(b, 1)
+    c = a * b
+    stablehlo_text = xm.get_stablehlo([c])
+    self.assertTrue(
+        re.search(
+            r'dynamic_broadcast_in_dim.*=.*\[1, 2\].*: \(tensor<1x\?xf32>, tensor<3xi32>\) -> tensor<\?x5x\?xf32>',
+            stablehlo_text) is not None)
+    self.assertTrue(
+        re.search(
+            r'dynamic_broadcast_in_dim.*=.*\[0, 1, 2\].*: \(tensor<\?x5x\?xf32>, tensor<3xi32>\) -> tensor<\?x5x\?xf32>',
+            stablehlo_text) is not None)
+
+<<<<<<< HEAD
+<<<<<<< HEAD
+  ### (?,?,?) * (?,?)
+=======
+  ### (?,?,?)) * (?,?)
+>>>>>>> 6961241db (unbounded implelcit broadcasting)
+=======
+  ### (?,?,?) * (?,?)
+>>>>>>> 659bd534d (Address feedback:I)
+  def test_different_rank_broadcast_with_unbounded_dynamic_shapes_2(self):
+    a = torch.randn((10, 5, 4)).to(device=device)
+    b = torch.randn((1, 4)).to(device=device)
+    torch_xla._XLAC._xla_mark_dynamic(a, 0)
+    torch_xla._XLAC._xla_mark_dynamic(a, 1)
+    torch_xla._XLAC._xla_mark_dynamic(a, 2)
+    torch_xla._XLAC._xla_mark_dynamic(b, 0)
+    torch_xla._XLAC._xla_mark_dynamic(b, 1)
+    c = a * b
+    stablehlo_text = xm.get_stablehlo([c])
+    self.assertTrue(
+        re.search(
+            r'dynamic_broadcast_in_dim.*=.*\[1, 2\].*: \(tensor<\?x\?xf32>, tensor<3xi32>\) -> tensor<\?x\?x\?xf32>',
+            stablehlo_text) is not None)
+    self.assertTrue(
+        re.search(
+            r'dynamic_broadcast_in_dim.*=.*\[0, 1, 2\].*: \(tensor<\?x\?x\?xf32>, tensor<3xi32>\) -> tensor<\?x\?x\?xf32>',
+            stablehlo_text) is not None)
+>>>>>>> 88ad63edb (fix rebase)
 
 # <<<<<<< HEAD
 #   ### (2,5) * (?)
