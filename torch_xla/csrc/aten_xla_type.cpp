@@ -2648,6 +2648,14 @@ at::Tensor scatter_reduce_helper(const at::Tensor& self, int64_t dim,
   }
 }
 
+at::Tensor XLANativeFunctions::scan(const at::Tensor& self,
+                                    const Callable f,
+                                    const at::Tensor& init,
+                                    const at::Tensor& xs) {
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  return bridge::AtenFromXlaTensor(tensor_methods::scan(f, init, xs));
+}
+
 at::Tensor XLANativeFunctions::scatter(const at::Tensor& self, int64_t dim,
                                        const at::Tensor& index,
                                        const at::Tensor& src) {
