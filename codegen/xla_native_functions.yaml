@@ -292,6 +292,7 @@ supported:
   - rrelu_with_noise_backward
   - rsub.Scalar
   - rsub.Tensor
+  - scan
   - scatter.reduce
   - scatter.src
   - scatter.value
