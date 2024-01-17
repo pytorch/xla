@@ -139,6 +139,7 @@
     self.assertTrue(
         re.search(
 <<<<<<< HEAD
+<<<<<<< HEAD
             r'dynamic_broadcast_in_dim.*=.*\[0\].*: \(tensor<\?xf32>, tensor<1xi32>\) -> tensor<10xf32>',
             stablehlo_text) is not None)
     self.assertTrue(
@@ -151,6 +152,13 @@
         re.search(
             r'dynamic_broadcast_in_dim.*=.*\[0\].*: \(tensor<10xf32>, tensor<1xi32>\) -> tensor<\?xf32>',
 >>>>>>> 6961241db (unbounded implelcit broadcasting)
+=======
+            r'dynamic_broadcast_in_dim.*=.*\[0\].*: \(tensor<\?xf32>, tensor<1xi32>\) -> tensor<10xf32>',
+            stablehlo_text) is not None)
+    self.assertTrue(
+        re.search(
+            r'dynamic_broadcast_in_dim.*=.*\[0\].*: \(tensor<10xf32>, tensor<1xi32>\) -> tensor<10xf32>',
+>>>>>>> 249b8b3c1 (Address feedback:II)
             stablehlo_text) is not None)
 >>>>>>> 88ad63edb (fix rebase)
 
@@ -310,6 +318,7 @@
             stablehlo_text) is not None)
 >>>>>>> 88ad63edb (fix rebase)
 
+<<<<<<< HEAD
 # <<<<<<< HEAD
 #   ### (2,5) * (?)
 #   def test_different_rank_broadcast_with_unbounded_dynamic_shapes_3(self):
@@ -325,6 +334,33 @@
 
 # =======
 # >>>>>>> 6961241db (unbounded implelcit broadcasting)
+=======
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 249b8b3c1 (Address feedback:II)
+  ### (2,5) * (?)
+  def test_different_rank_broadcast_with_unbounded_dynamic_shapes_3(self):
+    a = torch.randn((2, 5)).to(device=device)
+    b = torch.randn((5)).to(device=device)
+    torch_xla._XLAC._xla_mark_dynamic(b, 0)
+    c = a * b
+    stablehlo_text = xm.get_stablehlo([c])
+    self.assertTrue(
+        re.search(
+            r'dynamic_broadcast_in_dim.*=.*\[0, 1\].*: \(tensor<2x5xf32>, tensor<2xi32>\) -> tensor<2x5xf32>',
+            stablehlo_text) is not None)
+    self.assertTrue(
+        re.search(
+            r'dynamic_broadcast_in_dim.*=.*\[1\].*: \(tensor<\?xf32>, tensor<2xi32>\) -> tensor<2x5xf32>',
+            stablehlo_text) is not None)
+
+<<<<<<< HEAD
+=======
+>>>>>>> 6961241db (unbounded implelcit broadcasting)
+=======
+>>>>>>> 249b8b3c1 (Address feedback:II)
+>>>>>>> 0f3f34019 (fix rebase)
 
 # if __name__ == '__main__':
 #   test = unittest.main()
