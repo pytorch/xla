@@ -51,7 +51,6 @@ std::unique_ptr<XlaCoordinator> SetKeyValueCallback(
     std::unique_ptr<XlaCoordinator> coordinator,
     xla::PjRtClient::KeyValueGetCallback& kv_get,
     xla::PjRtClient::KeyValuePutCallback& kv_put) {
-            << "function=" << __FUNCTION__ << ": " << std::endl;
   std::string master_addr =
       runtime::sys_util::GetEnvString("MASTER_ADDR", "localhost");
   std::string port = runtime::sys_util::GetEnvString(
