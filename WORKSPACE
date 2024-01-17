@@ -56,9 +56,9 @@ http_archive(
         "//openxla_patches:stablehlo_quant_seralization.diff",
         "//openxla_patches:cuda_driver.diff",
     ],
-    strip_prefix = "xla-58e6b428e22e40c4100a7b66790fbe86dc9d7845",
+    strip_prefix = "xla-9708d9059a62a908474302c00f31dcac0e0fcb3b",
     urls = [
-        "https://github.com/openxla/xla/archive/58e6b428e22e40c4100a7b66790fbe86dc9d7845.tar.gz",
+        "https://github.com/openxla/xla/archive/9708d9059a62a908474302c00f31dcac0e0fcb3b.tar.gz",
     ],
 )
 
