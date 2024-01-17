@@ -22,11 +22,11 @@ torch::lazy::NodePtr Scan::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<Scan>(operands.at(0), operands.at(1), operands.at(2));
 }
 
-XlaOpVector Map::Lower(LoweringContext* loctx) const {
+XlaOpVector Scan::Lower(LoweringContext* loctx) const {
   xla::XlaOp f = loctx->GetOutputOp(operand(0));
   xla::XlaOp init = loctx->GetOutputOp(operand(1));
   xla::XlaOp xs = loctx->GetOutputOp(operand(2));
-  return ReturnOps(BuildMap(f, init, xs), loctx);
+  return ReturnOps(BuildScan(f, init, xs), loctx);
 }
 
 }  // namespace torch_xla
