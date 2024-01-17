@@ -66,7 +66,6 @@ full_codegen:
   - masked_fill.Scalar
   - masked_fill.Tensor
   - maximum
-  - map
   - minimum
   - native_dropout_backward
   - ne.Scalar
@@ -222,6 +221,7 @@ supported:
   - log2
   - log10
   - logsumexp
+  - map
   - masked_scatter
   - masked_select
   - max
