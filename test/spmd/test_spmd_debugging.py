@@ -28,7 +28,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     xr.use_spmd()
     super().setUpClass()
 
-  @unittest.skipIf(xr.device_type() == ('CPU'),
+  @unittest.skipIf(xr.device_type() == 'CPU',
                    f"Requires PJRT_DEVICE set to `TPU`, `GPU`, or `CUDA`.")
   def test_debugging_spmd_single_host_tiled_tpu(self):
     from torch_xla.distributed.spmd.debugging import visualize_sharding
