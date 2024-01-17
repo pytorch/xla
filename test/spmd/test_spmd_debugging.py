@@ -28,8 +28,8 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     xr.use_spmd()
     super().setUpClass()
 
-  @unittest.skipIf(xr.device_type() not in ('TPU', 'GPU'),
-                   f"Requires PJRT_DEVICE set to `TPU` or `GPU`.")
+  @unittest.skipIf(xr.device_type() == ('CPU'),
+                   f"Requires PJRT_DEVICE set to `TPU`, `GPU`, or `CUDA`.")
   def test_debugging_spmd_single_host_tiled_tpu(self):
     from torch_xla.distributed.spmd.debugging import visualize_sharding
     sharding = '{devices=[2,4]0,1,2,3,4,5,6,7}'
@@ -52,44 +52,52 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     col = []
     col.append(
         rich.padding.Padding(
-            rich.align.Align(xr.device_type() + ' 0', "center", vertical="middle"),
+            rich.align.Align(
+                xr.device_type() + ' 0', "center", vertical="middle"),
             (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     col.append(
         rich.padding.Padding(
-            rich.align.Align(xr.device_type() + ' 1', "center", vertical="middle"),
+            rich.align.Align(
+                xr.device_type() + ' 1', "center", vertical="middle"),
             (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     col.append(
         rich.padding.Padding(
-            rich.align.Align(xr.device_type() + ' 2', "center", vertical="middle"),
+            rich.align.Align(
+                xr.device_type() + ' 2', "center", vertical="middle"),
             (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     col.append(
         rich.padding.Padding(
-            rich.align.Align(xr.device_type() + ' 3', "center", vertical="middle"),
+            rich.align.Align(
+                xr.device_type() + ' 3', "center", vertical="middle"),
             (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     fake_table.add_row(*col)
     col = []
     col.append(
         rich.padding.Padding(
-            rich.align.Align(xr.device_type() + ' 4', "center", vertical="middle"),
+            rich.align.Align(
+                xr.device_type() + ' 4', "center", vertical="middle"),
             (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     col.append(
         rich.padding.Padding(
-            rich.align.Align(xr.device_type() + ' 5', "center", vertical="middle"),
+            rich.align.Align(
+                xr.device_type() + ' 5', "center", vertical="middle"),
             (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     col.append(
         rich.padding.Padding(
-            rich.align.Align(xr.device_type() + ' 6', "center", vertical="middle"),
+            rich.align.Align(
+                xr.device_type() + ' 6', "center", vertical="middle"),
             (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     col.append(
         rich.padding.Padding(
-            rich.align.Align(xr.device_type() + ' 7', "center", vertical="middle"),
+            rich.align.Align(
+                xr.device_type() + ' 7', "center", vertical="middle"),
             (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     fake_table.add_row(*col)
@@ -177,13 +185,12 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
         box=rich.box.SQUARE if not use_color else None)
     col = []
     alltpus = 'TPU [0'
-    for i in range(xr.global_runtime_device_count()-1):
-      alltpus = alltpus + ',' + str(i+1)
+    for i in range(xr.global_runtime_device_count() - 1):
+      alltpus = alltpus + ',' + str(i + 1)
     alltpus = alltpus + ']'
     col.append(
         rich.padding.Padding(
-            rich.align.Align(
-                alltpus, "center", vertical="middle"),
+            rich.align.Align(alltpus, "center", vertical="middle"),
             (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     fake_table.add_row(*col)
