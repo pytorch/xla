@@ -32,22 +32,22 @@ DETECTRON2_MODELS = {
 # torchbench models that might OOM using Adam.
 # This list was extracted from PyTorch's repository: benchmarks/dynamo/common.py
 TRAIN_WITH_SGD = {
-  "torchrec_dlrm",
-  "demucs",
-  "hf_T5_base",
-  "hf_clip",
-  "llama_v2_7b_16h",
-  "mobilenet_v2_quantized_qat",
-  "phi_1_5",
-  "resnet50_quantized_qat",
-  "DALLE2_pytorch",
-  "moco",
-  "timm_efficientdet",
-  "pytorch_CycleGAN_and_pix2pix",
-  "vision_maskrcnn",
-  "dlrm",
-  "resnet50",
-  *DETECTRON2_MODELS,
+    "torchrec_dlrm",
+    "demucs",
+    "hf_T5_base",
+    "hf_clip",
+    "llama_v2_7b_16h",
+    "mobilenet_v2_quantized_qat",
+    "phi_1_5",
+    "resnet50_quantized_qat",
+    "DALLE2_pytorch",
+    "moco",
+    "timm_efficientdet",
+    "pytorch_CycleGAN_and_pix2pix",
+    "vision_maskrcnn",
+    "dlrm",
+    "resnet50",
+    *DETECTRON2_MODELS,
 }
 
 # Skip the experiment of a model if any of the experiment configs in the list is fully matched
