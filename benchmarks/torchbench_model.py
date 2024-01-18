@@ -189,12 +189,16 @@ class TorchBenchModel(BenchmarkModel):
 
     # Move the initialized model to XLA device.
     if self.benchmark_experiment.xla:
-      import torch.utils._pytree as pytree
+      # First, move the model and the inputs to CPU.
+      # This avoids having dupplicated data on CUDA.
+      if self.benchmark_experiment.accelerator == "cuda":
+        self.module = self.module.to("cpu")
+        self.example_inputs = move_to_device(self.example_inputs, "cpu")
+        self._cleanup()
+
       device = self.benchmark_experiment.get_device()
       self.module = self.module.to(device)
-      self.example_inputs = pytree.tree_map_only(torch.Tensor,
-                                                 lambda t: t.to(device),
-                                                 self.example_inputs)
+      self.example_inputs = move_to_device(self.example_inputs, device)
 
     # Torchbench has quite different setup for yolov3, so directly passing
     # the right example_inputs
