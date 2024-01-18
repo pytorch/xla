@@ -292,6 +292,10 @@ def _exported_program_to_stablehlo_bundle(exported_model,
     ordered_tensor_constants = tuple(
         exported_model.tensor_constants[name]
         for name in exported_model.graph_signature.lifted_tensor_constants)
+  elif hasattr(exported_model.graph_signature, "map"):
+    ordered_tensor_constants = tuple(
+        exported_model.tensor_constants[name]
+        for name in exported_model.graph_signature.map)
   else:
     ordered_tensor_constants = ()
 
