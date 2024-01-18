@@ -84,7 +84,7 @@ InitializePjRt(const std::string& device_type) {
               global_process_rank, global_world_size, master_addr, port);
           std::shared_ptr<xla::DistributedRuntimeClient> distributed_client =
               coordinator->GetClient();
-          std::string key_prefix = "gpu:";
+          std::string key_prefix = "pjrt:";
           kv_get = [distributed_client, key_prefix](
                        std::string_view k,
                        absl::Duration timeout) -> xla::StatusOr<std::string> {
