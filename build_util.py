@@ -4,6 +4,7 @@ import subprocess
 import sys
 import shutil
 
+
 def check_env_flag(name: str, default: str = '') -> bool:
   return os.getenv(name, default).upper() in ['ON', '1', 'YES', 'TRUE', 'Y']
 
@@ -33,7 +34,7 @@ def bazel_options_from_env() -> Iterable[str]:
   cache_silo_name = os.getenv('SILO_NAME', default='dev')
   if cache_silo_name:
     bazel_flags.append('--remote_default_exec_properties=cache-silo-key=%s' %
-                      cache_silo_name)
+                       cache_silo_name)
 
   if check_env_flag('BUILD_CPP_TESTS', default='0'):
     bazel_flags.append('//test/cpp:all')
@@ -53,8 +54,14 @@ def bazel_options_from_env() -> Iterable[str]:
 
   return bazel_flags
 
-def bazel_build(bazel_target: str, destination_dir: str, options: Iterable[str] = []):
-  bazel_argv = ['bazel', 'build', bazel_target, f"--symlink_prefix={os.path.join(os.getcwd(), 'bazel-')}"]
+
+def bazel_build(bazel_target: str,
+                destination_dir: str,
+                options: Iterable[str] = []):
+  bazel_argv = [
+      'bazel', 'build', bazel_target,
+      f"--symlink_prefix={os.path.join(os.getcwd(), 'bazel-')}"
+  ]
 
   # Remove duplicated flags because they confuse bazel
   flags = set(bazel_options_from_env() + options)
@@ -63,11 +70,12 @@ def bazel_build(bazel_target: str, destination_dir: str, options: Iterable[str] 
   print(' '.join(bazel_argv), flush=True)
   subprocess.check_call(bazel_argv, stdout=sys.stdout, stderr=sys.stderr)
 
-  target_path = bazel_target.replace('@xla//', 'external/xla/').replace('//', '').replace(':', '/')
+  target_path = bazel_target.replace('@xla//', 'external/xla/').replace(
+      '//', '').replace(':', '/')
   output_path = os.path.join('bazel-bin', target_path)
   output_filename = os.path.basename(output_path)
 
   if not os.path.exists(destination_dir):
-      os.makedirs(destination_dir)
+    os.makedirs(destination_dir)
 
   shutil.copyfile(output_path, os.path.join(destination_dir, output_filename))

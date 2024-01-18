@@ -75,7 +75,6 @@ def _get_build_mode():
       return sys.argv[i]
 
 
-
 def get_git_head_sha(base_dir):
   xla_git_sha = subprocess.check_output(['git', 'rev-parse', 'HEAD'],
                                         cwd=base_dir).decode('ascii').strip()
@@ -191,6 +190,7 @@ if build_mode not in ['clean']:
   # Copy libtpu.so into torch_xla/lib
   maybe_bundle_libtpu(base_dir)
 
+
 class BazelExtension(Extension):
   """A C/C++ extension that is defined as a Bazel BUILD target."""
 
@@ -222,7 +222,8 @@ class BuildBazelExtension(build_ext.build_ext):
         f"--symlink_prefix={os.path.join(self.build_temp, 'bazel-')}"
     ]
 
-    cxx_abi = os.getenv('CXX_ABI') or getattr(torch._C, '_GLIBCXX_USE_CXX11_ABI', None)
+    cxx_abi = os.getenv('CXX_ABI') or getattr(torch._C,
+                                              '_GLIBCXX_USE_CXX11_ABI', None)
     if cxx_abi is not None:
       bazel_argv.append(f'--cxxopt=-D_GLIBCXX_USE_CXX11_ABI={int(cxx_abi)}')
 
