@@ -882,6 +882,21 @@ xla::Shape TanhOutputShape(const torch::lazy::Value& input) {
   return result_shape;
 }
 
+xla::Shape TopkOutputShape(const torch::lazy::Value& input) {
+  return GetXlaShape(input);
+}
+
+xla::Shape TopKOutputShape(const torch::lazy::Value& input, int64_t k,	
+                           int64_t dim, bool largest, bool sorted,	
+                           bool stable) {	
+  auto lower_for_shape_fn =	
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {	
+    return xla::Tuple(operands[0].builder(),	
+                      CreateTopK(operands[0], k, dim, largest, stable));	
+  };	
+  return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);	
+}
+
 xla::Shape TrilOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
 }

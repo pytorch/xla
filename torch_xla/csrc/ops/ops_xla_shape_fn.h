@@ -277,6 +277,10 @@ xla::Shape TanOutputShape(const torch::lazy::Value& input);
 
 xla::Shape TanhOutputShape(const torch::lazy::Value& input);
 
+xla::Shape TopKOutputShape(const torch::lazy::Value& input, int64_t k,	
+                           int64_t dim, bool largest, bool sorted,	
+                           bool stable);
+
 xla::Shape TrilOutputShape(const torch::lazy::Value& input);
 
 xla::Shape TriuOutputShape(const torch::lazy::Value& input);
