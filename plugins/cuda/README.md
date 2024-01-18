@@ -8,9 +8,9 @@ repository (see `bazel build` command below).
 
 ```bash
 # Build wheel
-pip wheel plugins/cuda
+pip wheel plugins/cuda --no-build-isolation -v
 # Or install directly
-pip install plugins/cuda
+pip install plugins/cuda --no-build-isolation -v
 ```
 
 ## Usage
