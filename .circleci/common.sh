@@ -104,7 +104,6 @@ function build_torch_xla() {
   XLA_DIR=$1
   pushd "$XLA_DIR"
   python setup.py install
-  pip install plugins/cuda --no-build-isolation -v
   popd
 }
 
