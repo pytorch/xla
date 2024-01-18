@@ -47,18 +47,14 @@ http_archive(
     patch_tool = "patch",
     patches = [
         "//openxla_patches:cache_urls.diff",
-        "//openxla_patches:constexpr_return.diff",
-        "//openxla_patches:cpu_compile_options.diff",
-        "//openxla_patches:gpu_compile_options.diff",
         "//openxla_patches:gpu_race_condition.diff",
         "//openxla_patches:f16_abi_clang.diff",
         "//openxla_patches:quant_dequant_converter.diff",
         "//openxla_patches:stablehlo_quant_seralization.diff",
-        "//openxla_patches:cuda_driver.diff",
     ],
-    strip_prefix = "xla-58e6b428e22e40c4100a7b66790fbe86dc9d7845",
+    strip_prefix = "xla-9708d9059a62a908474302c00f31dcac0e0fcb3b",
     urls = [
-        "https://github.com/openxla/xla/archive/58e6b428e22e40c4100a7b66790fbe86dc9d7845.tar.gz",
+        "https://github.com/openxla/xla/archive/9708d9059a62a908474302c00f31dcac0e0fcb3b.tar.gz",
     ],
 )
 
