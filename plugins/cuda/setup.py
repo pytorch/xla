@@ -5,48 +5,16 @@ import setuptools
 import shutil
 import os
 
-def _check_env_flag(name, default=''):
-  return os.getenv(name, default).upper() in ['ON', '1', 'YES', 'TRUE', 'Y']
-
-DEBUG = _check_env_flag('DEBUG')
-GCLOUD_KEY_FILE = os.getenv('GCLOUD_SERVICE_KEY_FILE', default='')
-CACHE_SILO_NAME = os.getenv('SILO_NAME', default='dev')
-BAZEL_JOBS = os.getenv('BAZEL_JOBS', default='')
+import build_util
 
 def _bazel_build(bazel_target: str, destination_path: str, options: Iterable[str] = []):
   bazel_argv = ['bazel', 'build', bazel_target, f"--symlink_prefix={os.path.join(os.getcwd(), 'bazel-')}"]
-  # for opt in extra_compile_args:
-  #   bazel_argv.append("--cxxopt={}".format(opt))
 
-  # Debug build.
-  if DEBUG:
-    bazel_argv.append('--config=dbg')
+  # Remove duplicated flags because they confuse bazel
+  flags = set(build_util.bazel_options_from_env() + options)
+  bazel_argv.extend(flags)
 
-  # Remote cache authentication.
-  if GCLOUD_KEY_FILE:
-    # Temporary workaround to allow PRs from forked repo to run CI. See details at (#5259).
-    # TODO: Remove the check once self-hosted GHA workers are available to CPU/GPU CI.
-    gcloud_key_file_size = os.path.getsize(GCLOUD_KEY_FILE)
-    if gcloud_key_file_size > 1:
-      bazel_argv.append('--google_credentials=%s' % GCLOUD_KEY_FILE)
-      bazel_argv.append('--config=remote_cache')
-  else:
-    if _check_env_flag('BAZEL_REMOTE_CACHE'):
-      bazel_argv.append('--config=remote_cache')
-  if CACHE_SILO_NAME:
-    bazel_argv.append('--remote_default_exec_properties=cache-silo-key=%s' %
-                      CACHE_SILO_NAME)
-
-  if BAZEL_JOBS:
-    bazel_argv.append('--jobs=%s' % BAZEL_JOBS)
-
-  # Build configuration.
-  if _check_env_flag('BAZEL_VERBOSE'):
-    bazel_argv.append('-s')
-
-  bazel_argv.extend(options)
-
-  # subprocess.check_call(['pwd'], stdout=sys.stdout, stderr=sys.stderr)
+  print(' '.join(bazel_argv), flush=True)
   subprocess.check_call(bazel_argv, stdout=sys.stdout, stderr=sys.stderr)
 
   target_path = bazel_target.replace('@xla//', 'external/xla/').replace(':', '/')
