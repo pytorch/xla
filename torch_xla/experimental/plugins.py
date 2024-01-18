@@ -1,3 +1,4 @@
+import logging
 import os
 import sys
 
@@ -79,4 +80,12 @@ def register_installed_plugins():
   pjrt_entry_points = importlib_metadata.entry_points(group='torch_xla.plugins')
   for ep in pjrt_entry_points:
     device_plugin_class = ep.load()
-    register_plugin(ep.name.upper(), device_plugin_class())
+
+    # HACK: TpuPlugin raises EnvironmentError if libtpu is not installed.
+    # TODO(wcromar): Device if catching `EnvironmentError` is a permanent
+    # behavior or temporary hack.
+    try:
+      register_plugin(ep.name.upper(), device_plugin_class())
+    except EnvironmentError as e:
+      logging.warning(
+          "Failed to register plugin {}".format(ep.name), exc_info=e)
