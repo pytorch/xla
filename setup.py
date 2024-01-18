@@ -346,6 +346,9 @@ setup(
         'absl-py>=1.0.0',
         'cloud-tpu-client>=0.10.0',
         'pyyaml',
+        # importlib.metadata backport required for PJRT plugin discovery prior
+        # to Python 3.10
+        'importlib_metadata>=4.6;python_version<"3.10"'
     ],
     package_data={
         'torch_xla': ['lib/*.so*',],
