@@ -2,7 +2,7 @@ import os
 from torch_xla.experimental import plugins
 
 
-class GpuPlugin(plugins.DevicePlugin):
+class CudaPlugin(plugins.DevicePlugin):
 
   def library_path(self) -> str:
     return os.path.join(
