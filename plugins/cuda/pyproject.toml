@@ -15,4 +15,4 @@ requires-python = ">=3.8"
 torch_xla_cuda_plugin = ["lib/*.so"]
 
 [project.entry-points."torch_xla.plugins"]
-gpu = "torch_xla_cuda_plugin:GpuPlugin"
+cuda = "torch_xla_cuda_plugin:CudaPlugin"

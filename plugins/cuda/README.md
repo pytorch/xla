@@ -29,7 +29,7 @@ import torch_xla.runtime as xr
 
 # Use dynamic plugin instead of built-in CUDA support
 plugins.use_dynamic_plugins()
-plugins.register_plugin('CUDA', torch_xla_cuda_plugin.GpuPlugin())
+plugins.register_plugin('CUDA', torch_xla_cuda_plugin.CudaPlugin())
 xr.set_device_type('CUDA')
 
 print(xm.xla_device())
