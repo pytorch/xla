@@ -9,8 +9,6 @@ import torch_xla.core.xla_env_vars as xenv
 import torch_xla.utils.utils as xu
 
 
-@unittest.skipUnless(xr.device_type() in ("TPU", "CPU"),
-                     f"Requires PJRT_DEVICE set to `TPU` or `CPU`.")
 class XlaShardingTest(unittest.TestCase):
 
   class SimpleLinear(nn.Module):

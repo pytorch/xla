@@ -15,6 +15,9 @@ class ModelLoader:
     self._args = args
     self.suite_name = self._args.suite_name
     self.benchmark_model_class = BenchmarkModel
+    self._dynamo_compile_opts = dict()
+    if self._args.filter_by_single_graph:
+      self._dynamo_compile_opts['fullgraph'] = True
 
   def list_model_configs(self):
     model_configs = [
@@ -51,7 +54,8 @@ class ModelLoader:
 
     if not dummy:
       benchmark_model.set_up()
-      benchmark_model.prepare_for_experiment()
+      benchmark_model.prepare_for_experiment(
+          dynamo_compilation_opts=self._dynamo_compile_opts)
 
     return benchmark_model
 
@@ -97,7 +101,7 @@ class BenchmarkModel:
       # optimizer to use. So only initialize it when there is none existing.
       self.optimizer = self.optimizer_class(self.module.parameters(), lr=0.01)
 
-  def prepare_for_experiment(self):
+  def prepare_for_experiment(self, dynamo_compilation_opts):
     self.device = self.benchmark_experiment.get_device()
     self.module = self.module.to(self.device)
     self.example_inputs = move_to_device(self.example_inputs, self.device)
@@ -110,8 +114,11 @@ class BenchmarkModel:
       raise NotImplementedError
 
     if self.benchmark_experiment.dynamo:
-      self.model_iter_fn = torch.compile(
-          self.model_iter_fn, backend=self.benchmark_experiment.dynamo)
+      compilation_opts = dynamo_compilation_opts.copy()
+      compilation_opts['backend'] = self.benchmark_experiment.dynamo
+
+      logger.info(f"Running torch.compile with opts {compilation_opts}")
+      self.model_iter_fn = torch.compile(self.model_iter_fn, **compilation_opts)
 
   def pick_grad(self):
     if self.benchmark_experiment.test == "eval":

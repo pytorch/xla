@@ -265,11 +265,13 @@ class XlaHelpers {
   static std::pair<xla::XlaOp, xla::XlaOp> PromoteSecondValue(xla::XlaOp op1,
                                                               xla::XlaOp op2);
 
-  // Validates the shapes of xla::XlaOp values: Ignore fp-precison if the shapes
-  // of op1 and op2 have same dimensions, otherwise the element-types must
-  // exactly match.
-  static std::pair<xla::XlaOp, xla::XlaOp> ValidateShapes(xla::XlaOp op1,
-                                                          xla::XlaOp op2);
+  // If any of the shapes of input operations has unbounded dynamic dimensions,
+  // performs implicit broadcasting and return the broadcasted operations. For
+  // static or bounded dynamic input shapes, validate the shapes and return the
+  // input operations. The implicit broadcasting in static and bounded dynamic
+  // cases will be handled eventually by the XlaBuilder.
+  static std::pair<xla::XlaOp, xla::XlaOp> PromoteShapes(xla::XlaOp op1,
+                                                         xla::XlaOp op2);
 
   // Combines PromoteValues() and PromoteShapes() returning two operations which
   // match in shape and types.
@@ -281,6 +283,7 @@ class XlaHelpers {
   static std::pair<xla::XlaOp, xla::XlaOp> PromoteSecond(xla::XlaOp op1,
                                                          xla::XlaOp op2);
 
+  // Given the two shape 'shape1' and 'shape2', infers the broadcasted shape.
   static xla::Shape GetPromotedShape(const xla::Shape& shape1,
                                      const xla::Shape& shape2);
 
@@ -298,6 +301,16 @@ class XlaHelpers {
   // returned.
   static xla::XlaOp ImplicitBroadcast(xla::XlaOp op, const xla::Shape& op_shape,
                                       const xla::Shape& shape);
+
+  // Returns new operations which broadcast the input operations 'op1' and 'op2'
+  // with unbounded dynamic dimensions into the 'shape' which is usually the
+  // result of a GetPromotedShape() call.
+  // Assumption: The shapes of 'op1' and 'op2' are valid for broadcasting.
+  // TODO: We need to emit runtime shape assertions to validate the broadcasting
+  // rules are met.
+  static std::pair<xla::XlaOp, xla::XlaOp>
+  ImplicitBroadcastWithUnboundedDynamicShapes(xla::XlaOp op1, xla::XlaOp op2,
+                                              const xla::Shape& shape);
 
   // Retuns the explicit broadcasting specifications on operations between
   // arrays of different ranks.

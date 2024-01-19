@@ -1215,7 +1215,8 @@ void InitXlaModuleBindings(py::module m) {
       NoGilSection nogil;
       result = AllReduce(reduce_type, input, scale, replica_groups, pin_layout);
     }
-    return result;
+    return torch::autograd::make_variable(
+        result, /*requires_grad=*/input.requires_grad());
   });
   m.def("_xla_quantize_tensor",
         [](const at::Tensor& input, const std::vector<float>& scale_list,

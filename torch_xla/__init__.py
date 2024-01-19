@@ -148,8 +148,6 @@ _aws_ec2_inf_trn_init()
 
 
 def _prepare_to_exit():
-  device = _XLAC._xla_get_default_device()
-  _XLAC._set_all_reduce_token(device, None)
   _XLAC._prepare_to_exit()
   if int(os.environ.get('PT_XLA_DEBUG', '0')):
     _summarize_fn_tracker()
@@ -171,3 +169,9 @@ _init_xla_lazy_backend()
 torch._dynamo.config.automatic_dynamic_shapes = False
 
 from .stablehlo import save_as_stablehlo, save_torch_model_as_stablehlo
+
+from .experimental import plugins
+
+if os.getenv('XLA_REGISTER_INSTALLED_PLUGINS') == '1':
+  plugins.use_dynamic_plugins()
+  plugins.register_installed_plugins()

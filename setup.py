@@ -72,7 +72,7 @@ import zipfile
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
-_libtpu_version = '0.1.dev20231130'
+_libtpu_version = '0.1.dev20240118'
 _libtpu_storage_path = f'https://storage.googleapis.com/cloud-tpu-tpuvm-artifacts/wheels/libtpu-nightly/libtpu_nightly-{_libtpu_version}-py3-none-any.whl'
 
 
@@ -346,6 +346,9 @@ setup(
         'absl-py>=1.0.0',
         'cloud-tpu-client>=0.10.0',
         'pyyaml',
+        # importlib.metadata backport required for PJRT plugin discovery prior
+        # to Python 3.10
+        'importlib_metadata>=4.6;python_version<"3.10"',
     ],
     package_data={
         'torch_xla': ['lib/*.so*',],
@@ -353,7 +356,8 @@ setup(
     entry_points={
         'console_scripts': [
             'stablehlo-to-saved-model = torch_xla.tf_saved_model_integration:main'
-        ]
+        ],
+        'torch_xla.plugins': ['tpu = torch_xla._internal.tpu:TpuPlugin',],
     },
     extras_require={
         # On Cloud TPU VM install with:
