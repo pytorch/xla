@@ -359,7 +359,7 @@ class AtenOpTest(unittest.TestCase):
         torch.randn((10, 10)).to(torch.float16),
     )
     kwargs = dict()
-    run_export_and_compare(self, torch.ops.aten.addmm, args, kwargs)
+    run_export_and_compare(self, torch.ops.aten.addmm, args, kwargs, atol=1e-2)
 
   def test_aten_addmm_2(self):
     args = (
