@@ -166,6 +166,14 @@ class TorchBenchModel(BenchmarkModel):
   def __init__(self, suite_name, model_name, benchmark_experiment):
     super().__init__(suite_name, model_name, benchmark_experiment)
 
+  def _cleanup(self):
+    # Garbage-collect right now.
+    gc.collect()
+
+    # If we are using CUDA, clean-up its cache left-over.
+    if self.benchmark_experiment.accelerator == "cuda":
+      torch.cuda.empty_cache()
+
   def set_up(self):
     """Set up module, actual batch_size, example_inputs, and optimizer_class
 
@@ -181,12 +189,16 @@ class TorchBenchModel(BenchmarkModel):
 
     # Move the initialized model to XLA device.
     if self.benchmark_experiment.xla:
-      import torch.utils._pytree as pytree
+      # First, move the model and the inputs to CPU.
+      # This avoids having dupplicated data on CUDA.
+      if self.benchmark_experiment.accelerator == "cuda":
+        self.module = self.module.to("cpu")
+        self.example_inputs = move_to_device(self.example_inputs, "cpu")
+        self._cleanup()
+
       device = self.benchmark_experiment.get_device()
       self.module = self.module.to(device)
-      self.example_inputs = pytree.tree_map_only(torch.Tensor,
-                                                 lambda t: t.to(device),
-                                                 self.example_inputs)
+      self.example_inputs = move_to_device(self.example_inputs, device)
 
     # Torchbench has quite different setup for yolov3, so directly passing
     # the right example_inputs
@@ -197,7 +209,7 @@ class TorchBenchModel(BenchmarkModel):
       self.optimizer = benchmark.optimizer
 
     del benchmark
-    gc.collect()
+    self._cleanup()
 
   def load_benchmark(self):
     try:
@@ -247,13 +259,15 @@ class TorchBenchModel(BenchmarkModel):
     elif test == "train" and hasattr(benchmark, 'DEFAULT_TRAIN_CUDA_PRECISION'):
       precision = benchmark.DEFAULT_TRAIN_CUDA_PRECISION
     else:
+      precision = None
       logger.warning("No default precision set. No patching needed.")
-      return None
 
     del benchmark
-    gc.collect()
+    self._cleanup()
 
     precision_flag = None
+    if precision is None:
+      return None
     if precision == "fp16":
       precision_flag = 'XLA_USE_FP16'
     elif precision == "amp":
