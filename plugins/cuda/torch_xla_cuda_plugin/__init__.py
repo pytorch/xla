@@ -2,7 +2,9 @@ import os
 from torch_xla.experimental import plugins
 import torch_xla.utils.utils as xu
 
+
 class GpuPlugin(plugins.DevicePlugin):
+
   def library_path(self) -> str:
     return os.path.join(os.path.dirname(__file__), 'pjrt_c_api_gpu_plugin.so')
 
@@ -17,16 +19,25 @@ class GpuPlugin(plugins.DevicePlugin):
     global_world_size = xu.getenv_as("WORLD_SIZE", int, local_world_size)
 
     # The available options are defined in OpenXLA: https://github.com/openxla/xla/blob/1bb2a74be91fabf5f9aa2702b2592b5b022c9052/xla/pjrt/c/pjrt_c_api_gpu_internal.cc#L58-L67
-    return {
-      "platform_name": "gpu",
-      # TODO(wcromar): make this configurable
-      "allocator": "cuda_async" if xu.getenv_as("PJRT_ALLOCATOR_CUDA_ASYNC", bool, False) else "default",
-      "memory_fraction": xu.getenv_as("PJRT_ALLOCATOR_FRACTION", float, .75),
-      "preallocate": xu.getenv_as("PJRT_ALLOCATOR_PREALLOCATE", bool, True),
-      "visible_devices": [local_process_rank],
-      "node_id": global_process_rank,
-      "num_nodes": global_world_size,
+    options = {
+        "platform_name":
+            "gpu",
+        # TODO(wcromar): make this configurable
+        "allocator":
+            "cuda_async" if xu.getenv_as("PJRT_ALLOCATOR_CUDA_ASYNC", bool,
+                                         False) else "default",
+        "memory_fraction":
+            xu.getenv_as("PJRT_ALLOCATOR_FRACTION", float, None),
+        "preallocate":
+            xu.getenv_as("PJRT_ALLOCATOR_PREALLOCATE", bool, None),
+        "visible_devices": [local_process_rank],
+        "node_id":
+            global_process_rank,
+        "num_nodes":
+            global_world_size,
     }
+
+    return {k: v for k, v in options.items() if v is not None}
 
   def requires_xla_coordinator(self) -> bool:
     return True
