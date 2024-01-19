@@ -357,9 +357,7 @@ setup(
         'console_scripts': [
             'stablehlo-to-saved-model = torch_xla.tf_saved_model_integration:main'
         ],
-        'torch_xla.plugins': [
-            'tpu = torch_xla._internal.tpu:TpuPlugin',
-        ],
+        'torch_xla.plugins': ['tpu = torch_xla._internal.tpu:TpuPlugin',],
     },
     extras_require={
         # On Cloud TPU VM install with:
