@@ -35,12 +35,12 @@ We recommend you to use our prebuilt Docker image to start your development work
 * Build PyTorch
   ```Shell
   cd /pytorch/
-  python setup.py install
+  python setup.py develop
   ```
 * Build PyTorch/XLA
   ```Shell
   cd xla/
-  python setup.py install
+  python setup.py develop
   ```
 
 ### Build PyTorch/XLA from source with GPU support
@@ -107,3 +107,7 @@ Then run `test/run_tests.sh` and `test/cpp/run_tests.sh` to verify the setup is 
 ### Useful materials
 1. [OP Lowering Guide](https://github.com/pytorch/xla/blob/master/OP_LOWERING_GUIDE.md)
 2. [CODEGEN MIGRATION GUIDE](https://github.com/pytorch/xla/blob/master/CODEGEN_MIGRATION_GUIDE.md)
+
+### Sharp Edges
+
+* If local changes aren't visible, uninstall existing pytorch/xla with `pip uninstall torch_xla` and `pip uninstall torch`, then rebuild PyTorch and PyTorch/XLA with `python setup.py develop` or `python setup.py install`.
