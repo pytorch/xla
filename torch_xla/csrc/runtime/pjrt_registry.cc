@@ -70,8 +70,7 @@ InitializePjRt(const std::string& device_type) {
     if (plugin) {
       TF_VLOG(1) << "Initializing client for PjRt plugin " << device_type;
 
-      xla::PjRtClient::KeyValueGetCallback kv_get = nullptr;
-      xla::PjRtClient::KeyValuePutCallback kv_put = nullptr;
+      std::shared_ptr<xla::KeyValueStoreInterface> kv_store;
       if (plugin->init_coordinator) {
         int global_process_rank = sys_util::GetEnvInt("RANK", 0);
         int global_world_size = sys_util::GetEnvInt("WORLD_SIZE", 1);
@@ -86,25 +85,15 @@ InitializePjRt(const std::string& device_type) {
               global_process_rank, global_world_size, master_addr, port);
           std::shared_ptr<xla::DistributedRuntimeClient> distributed_client =
               coordinator->GetClient();
-          std::string key_prefix = "pjrt:";
-          kv_get = [distributed_client, key_prefix](
-                       std::string_view k,
-                       absl::Duration timeout) -> xla::StatusOr<std::string> {
-            return distributed_client->BlockingKeyValueGet(
-                absl::StrCat(key_prefix, k), timeout);
-          };
-          kv_put = [distributed_client, key_prefix](
-                       std::string_view k, std::string_view v) -> xla::Status {
-            return distributed_client->KeyValueSet(absl::StrCat(key_prefix, k),
-                                                   v);
-          };
+          kv_store = xla::GetDistributedKeyValueStore(distributed_client,
+                                                      /*key_prefix=*/"pjrt:");
         }
       }
       const PJRT_Api* c_api = *pjrt::LoadPjrtPlugin(
           absl::AsciiStrToLower(device_type), plugin->library_path);
       XLA_CHECK_OK(pjrt::InitializePjrtPlugin(device_type));
       client = xla::GetCApiClient(absl::AsciiStrToUpper(device_type),
-                                  plugin->create_options, kv_get, kv_put)
+                                  plugin->create_options, kv_store)
                    .value();
       profiler::RegisterProfilerForPlugin(c_api);
     }
