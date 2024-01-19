@@ -79,7 +79,9 @@ InitializePjRt(const std::string& device_type) {
         std::string port = runtime::sys_util::GetEnvString(
             "XLA_COORDINATOR_PORT", XlaCoordinator::kDefaultCoordinatorPort);
 
-        TF_VLOG(3) << "Creating coordinator for rank=" << global_process_rank << ", world size=" << global_world_size << ", coordinator address=" << master_addr << ":" << port;
+        TF_VLOG(3) << "Creating coordinator for rank=" << global_process_rank
+                   << ", world size=" << global_world_size
+                   << ", coordinator address=" << master_addr << ":" << port;
 
         // Use the XlaCoordinator as the distributed key-value store.
         coordinator = std::make_unique<XlaCoordinator>(
