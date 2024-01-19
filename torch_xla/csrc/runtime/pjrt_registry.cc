@@ -70,7 +70,7 @@ InitializePjRt(const std::string& device_type) {
     if (plugin) {
       TF_VLOG(1) << "Initializing client for PjRt plugin " << device_type;
 
-      std::shared_ptr<xla::KeyValueStoreInterface> kv_store;
+      std::shared_ptr<xla::KeyValueStoreInterface> kv_store = nullptr;
       if (plugin->init_coordinator) {
         int global_process_rank = sys_util::GetEnvInt("RANK", 0);
         int global_world_size = sys_util::GetEnvInt("WORLD_SIZE", 1);
@@ -79,15 +79,15 @@ InitializePjRt(const std::string& device_type) {
         std::string port = runtime::sys_util::GetEnvString(
             "XLA_COORDINATOR_PORT", XlaCoordinator::kDefaultCoordinatorPort);
 
-        if (global_world_size > 1) {
-          // Use the XlaCoordinator as the distributed key-value store.
-          coordinator = std::make_unique<XlaCoordinator>(
-              global_process_rank, global_world_size, master_addr, port);
-          std::shared_ptr<xla::DistributedRuntimeClient> distributed_client =
-              coordinator->GetClient();
-          kv_store = xla::GetDistributedKeyValueStore(distributed_client,
-                                                      /*key_prefix=*/"pjrt:");
-        }
+        TF_VLOG(3) << "Creating coordinator for rank=" << global_process_rank << ", world size=" << global_world_size << ", coordinator address=" << master_addr << ":" << port;
+
+        // Use the XlaCoordinator as the distributed key-value store.
+        coordinator = std::make_unique<XlaCoordinator>(
+            global_process_rank, global_world_size, master_addr, port);
+        std::shared_ptr<xla::DistributedRuntimeClient> distributed_client =
+            coordinator->GetClient();
+        kv_store = xla::GetDistributedKeyValueStore(distributed_client,
+                                                    /*key_prefix=*/"pjrt:");
       }
       const PJRT_Api* c_api = *pjrt::LoadPjrtPlugin(
           absl::AsciiStrToLower(device_type), plugin->library_path);
