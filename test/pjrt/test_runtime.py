@@ -97,7 +97,7 @@ class TestExperimentalPjrt(parameterized.TestCase):
         xr.using_pjrt()
 
       if expect_using_pjrt:
-        self.assertIn(xr.device_type(), ['CPU', 'CUDA', 'TPU', 'ROCM', 'GPU'])
+        self.assertIn(xr.device_type(), ['CPU', 'CUDA', 'TPU'])
       else:
         self.assertIsNone(xr.device_type())
 

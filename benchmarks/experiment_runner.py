@@ -1,8 +1,7 @@
 import argparse
+import bench
 from collections import OrderedDict
 import copy
-import csv
-import io
 import json
 import logging
 import os
@@ -20,6 +19,7 @@ from torch.profiler import profile, ProfilerActivity
 import copy
 from torch.autograd import DeviceType
 from benchmark_model import ModelLoader
+from verifier import VerificationCode, VerificationResult, verify
 from enum import Enum
 from torchbench_model import TorchBenchModelLoader
 from benchmark_experiment import ExperimentLoader
@@ -198,6 +198,36 @@ class ExperimentRunner:
     print(stdout_text, file=sys.stdout, end='', flush=True)
     print(stderr_text, file=sys.stderr, end='', flush=True)
 
+  def _default_iter_fn(self, benchmark_experiment, benchmark_model,
+                       input_tensor):
+    tracing_time = None
+    total_time_start = time.perf_counter()
+    # Invoke iteration function and measure tracing time w/o waiting on the
+    # result.
+    if benchmark_experiment.xla:
+      t_trace_start = time.perf_counter()
+    output = benchmark_model.model_iter_fn(
+        input_tensor, collect_full_output=self._args.collect_full_output)
+    if benchmark_experiment.xla:
+      tracing_time = time.perf_counter() - t_trace_start
+
+    # Mark step.
+    self._mark_step(benchmark_experiment)
+    total_time = time.perf_counter() - total_time_start
+    return output, total_time, tracing_time
+
+  def _pure_wall_time_iter_fn(self, benchmark_experiment, benchmark_model,
+                              input_tensor):
+    device = xm.xla_device() if benchmark_experiment.xla else 'cuda'
+    sync_fn = xm.wait_device_ops if benchmark_experiment.xla else torch.cuda.synchronize
+    timing, output = bench.do_bench(
+        lambda: benchmark_model.model_iter_fn(
+            input_tensor, collect_full_output=self._args.collect_full_output),
+        return_mode='min',
+        sync_fn=sync_fn,
+        device=device)
+    return output, timing, None
+
   def run_single_config(self):
 
     # Load experiment and model.
@@ -210,21 +240,29 @@ class ExperimentRunner:
                                                    benchmark_experiment)
 
     # Repeat the experiment and accumulate metrics.
+    last_output = None
     with benchmark_model.pick_grad():
       accumulated_metrics = OrderedDict()
       for repeat_iteration in range(self._args.repeat):
-        metrics = self.run_once_and_gather_metrics(benchmark_experiment,
-                                                   benchmark_model,
-                                                   experiment_config,
-                                                   model_config,
-                                                   repeat_iteration)
+        metrics, last_output = self.run_once_and_gather_metrics(
+            benchmark_experiment, benchmark_model, experiment_config,
+            model_config, repeat_iteration)
         for k, v in metrics.items():
           if k not in accumulated_metrics:
             accumulated_metrics[k] = []
           accumulated_metrics[k].append(v)
 
+    verify_res = verify(
+        last_output,
+        experiment_config,
+        model_config,
+        self.experiment_loader,
+        self.model_loader,
+        mean_rel_error_tolerance=0.02,  # allow max 2% difference w.r.t eager runtime
+        noop=not self._args.verify)
     self._save_results(benchmark_experiment.to_dict(),
-                       benchmark_model.to_dict(), accumulated_metrics)
+                       benchmark_model.to_dict(), accumulated_metrics,
+                       verify_res)
 
   def run_once_and_gather_metrics(self, benchmark_experiment, benchmark_model,
                                   experiment_config, model_config,
@@ -248,18 +286,16 @@ class ExperimentRunner:
     if benchmark_experiment.xla:
       t_trace = 0
 
-    def loop(pytorch_profile=None):
+    def loop(pytorch_profile=None, iter_fn=None):
       nonlocal t_trace
+      total_timing = 0
       for i in range(self._args.iterations_per_run):
-
-        # Invoke iteration function and measure tracing time w/o waiting on the
-        # result.
-        if benchmark_experiment.xla:
-          t_trace_start = time.perf_counter()
-        output = benchmark_model.model_iter_fn(
-            inputs_list[i], collect_full_output=self._args.collect_full_output)
-        if benchmark_experiment.xla:
-          t_trace += time.perf_counter() - t_trace_start
+        output, timing, trace = iter_fn(benchmark_experiment, benchmark_model,
+                                        inputs_list[i])
+        if trace is not None:
+          t_trace += trace
+        if timing is not None:
+          total_timing += timing
 
         # Mark step.
         self._mark_step(benchmark_experiment)
@@ -267,22 +303,40 @@ class ExperimentRunner:
           pytorch_profile.step()
 
       self._synchronize(benchmark_experiment)
-      return output
+      return output, total_timing
 
     # Execute all iterations (with) profiling.
     enable_pytorch_profiling = self._args.dump_pytorch_profiles or \
         self._args.profile_cuda_cpu or \
         self._args.profile_cuda_cpu_individual_ops
     if enable_pytorch_profiling:
+      if self._args.pure_wall_time:
+        logger.warning(
+            'Run with pure wall time, but also with profiling flags enabled. Falling back to a default wall time.'
+        )
       with profile(activities=[ProfilerActivity.CUDA, ProfilerActivity.CPU
                               ]) as pytorch_profile:
-        output = loop(pytorch_profile)
+        output, _ = loop(pytorch_profile, iter_fn=self._default_iter_fn)
     else:
-      output = loop()
+      if self._args.pure_wall_time:
+        output, pure_wall_timing = loop(iter_fn=self._pure_wall_time_iter_fn)
+      else:
+        output, _ = loop(iter_fn=self._default_iter_fn)
 
     # Stop timers.
     t_end = time.perf_counter()
-    metrics["total_time"] = t_end - t_start
+
+    # Calculate metrics.
+    if self._args.pure_wall_time:
+      logger.warning(
+          'For measuring pure wall time tracing time equals wall time')
+
+    if self._args.pure_wall_time:
+      assert pure_wall_timing is not None
+      metrics["total_time"] = pure_wall_timing / 1000  # convert ms to s
+    else:
+      metrics["total_time"] = t_end - t_start
+
     metrics[
         "per_iter_time"] = metrics["total_time"] / self._args.iterations_per_run
     if benchmark_experiment.xla:
@@ -328,7 +382,7 @@ class ExperimentRunner:
           experiment_config, model_config, repeat_iteration, "output", ext="pt")
       torch.save(output, path)
 
-    return metrics
+    return metrics, output
 
   def _prepare_inputs(self, example_inputs, should_randomize_input):
     inputs_list = []
@@ -422,8 +476,13 @@ class ExperimentRunner:
     with open(path, mode, encoding="utf-8") as f:
       f.write(text)
 
-  def _save_results(self, experiment_config: OrderedDict,
-                    model_config: OrderedDict, metrics):
+  def _save_results(
+      self,
+      experiment_config: OrderedDict,
+      model_config: OrderedDict,
+      metrics,
+      verification_result: Optional[VerificationResult] = VerificationResult(
+          VerificationCode.CANNOT_PROCEED_WITH_VERIFICATION)):
     results = OrderedDict()
     results["model"] = model_config
     results["experiment"] = experiment_config
@@ -431,6 +490,8 @@ class ExperimentRunner:
     results["iterations_per_run"] = self._args.iterations_per_run
     results["metrics"] = metrics
     results["timestamp"] = self._args.timestamp
+    results["verification_code"] = verification_result.result_code
+    results["verification_mean_rel_error"] = verification_result.mean_rel_error
     with open(self.output_file, mode="a", encoding="utf-8") as f:
       json.dump(results, f, ensure_ascii=False)
       f.write("\n")
@@ -800,6 +861,24 @@ def parse_args(args=None):
       default=time.time(),
       type=float,
       help="Timestamp (seconds since the epoch) to assign to the benchmarks.")
+  parser.add_argument(
+      "--pure-wall-time",
+      action="store_true",
+      default=False,
+      help="Times wall time measurements with pure CUDA events. No kernel launch overhead.",
+  )
+  parser.add_argument(
+      "--filter-by-single-graph",
+      action="store_true",
+      default=False,
+      help="Runs the experiment with hard-failing when it detects there will be multiple graphs out of a single compiled region.",
+  )
+  parser.add_argument(
+      "--verify",
+      action="store_true",
+      default=False,
+      help="""If set, verifies the model output with PT Eager mode, and saves relative error to the output file."""
+  )
   return parser.parse_args(args)
 
 

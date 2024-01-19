@@ -1,6 +1,7 @@
 import unittest
 import os
 import sys
+import subprocess
 
 import torch
 import torch.distributed as dist
@@ -99,6 +100,17 @@ class BasicRuntimeAPITest(test_xla_sharding_base.XlaShardingTest):
       self.assertGreaterEqual(xr.global_runtime_device_count(), 4)
     elif device_type == "CPU":
       self.assertEqual(xr.global_runtime_device_count(), 1)
+    elif device_type == 'CUDA':
+      command = 'nvidia-smi --list-gpus | wc -l'
+      result = subprocess.run(
+          command,
+          capture_output=True,
+          shell=True,
+          check=True,
+          text=True,
+      )
+      expected_gpu_cnt = int(result.stdout)
+      self.assertEqual(xr.global_runtime_device_count(), expected_gpu_cnt)
 
   def test_addressable_runtime_device_count(self):
     device_type = os.environ['PJRT_DEVICE']
@@ -122,7 +134,7 @@ class BasicAutocastAPITest(test_xla_sharding_base.XlaShardingTest):
     xr.use_spmd()
     super().setUpClass()
 
-  @unittest.skipIf(xr.device_type() not in ['GPU', 'TPU', 'CUDA', 'ROCM'],
+  @unittest.skipIf(xr.device_type() not in ['TPU', 'CUDA'],
                    f"TPU/GPU autocast test.")
   def test_xla_autocast_api(self):
     device = xm.xla_device()

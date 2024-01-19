@@ -38,11 +38,13 @@ class TestCollectiveOpsTpu(parameterized.TestCase):
     device = xm.xla_device()
     # Prevent 0 and 1 from being converted to constants
     ordinal = xm.send_cpu_data_to_device(
-        torch.tensor(xm.get_ordinal()), device=device)
+        torch.tensor(xm.get_ordinal(), dtype=torch.float32, requires_grad=True),
+        device=device)
     out = xm.all_reduce(xm.REDUCE_SUM, ordinal, pin_layout=pin_layout)[0]
+    assert out.requires_grad
     xm.mark_step()
 
-    return out.cpu().numpy()
+    return out.cpu().detach().numpy()
 
   @parameterized.named_parameters(('pinned', True), ('unpinned', False))
   def test_all_reduce(self, pin_layout):
