@@ -504,9 +504,11 @@ class DynamoTrainingOptimizerTest(unittest.TestCase):
     # Graph 3: optimizer
     # Graph 4: sync input for backward
     # Graph 5: sync input for backward (TODO(JackCaoG) understand why there are two graphs)
-    self.assertEqual(met.metric_data('CompileTime')[0], 5)
-    # We execute 4 graphs per step when optimizer is enabled.
-    self.assertEqual(met.metric_data('ExecuteTime')[0], sample_count * 4)
+    # Graph 6, 7: PyTorch has updated the number of captured by resnet
+    # (https://github.com/pytorch/pytorch/pull/117434)
+    self.assertEqual(met.metric_data('CompileTime')[0], 7)
+    # We execute 4 graphs per step (+ 1 for SGD) when optimizer is enabled.
+    self.assertEqual(met.metric_data('ExecuteTime')[0], sample_count * 4 + 1)
     # one for each forward, backward and optimizer
     self.assertEqual(
         met.metric_data('RunCachedGraphInputData')[0], sample_count * 3)
