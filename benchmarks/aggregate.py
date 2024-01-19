@@ -56,7 +56,38 @@ def skip_model(args, model_name: str):
           re.search("|".join(args.exclude), model_name, re.I))
 
 
-def process_file(args, results_map: Dict[str, Any], filename: str):
+class DatapointStrategy:
+
+  def avg(total_times):
+    # Skip the first three elements in total_times[]; the first one
+    # includes compilation time, the 2nd and 3rd warm up the caches.
+    skip_elems = 3
+    if len(total_times) <= skip_elems:
+      logger.warning(
+          f"Skipping the datapoint calculation due less data than expected. Got {len(total_times)} v. expected {skip_elems}"
+      )
+      return None
+    avg = np.average(total_times[skip_elems:])
+    # Standard deviation of the sample, i.e. N-1 denominator.
+    # Note: avoid NaN when we compute the std with just one sample.
+    std = np.std(
+        total_times[skip_elems:],
+        ddof=1) if len(total_times) > skip_elems + 1 else 0.0
+    return Datapoint(avg, std)
+
+  def min(total_times):
+    if len(total_times) == 0:
+      return None
+    val = np.min(total_times)
+    std = np.std(total_times)
+    # TODO: Rename `Datapoint` avg to something more generic
+    return Datapoint(avg=val, std=std)
+
+
+def process_file(args,
+                 results_map: Dict[str, Any],
+                 filename: str,
+                 datapoint_strategy=DatapointStrategy.avg):
   fields = {
       'experiment': ['accelerator_model', 'batch_size', 'dynamo', 'test'],
       'metrics': [],
@@ -92,19 +123,9 @@ def process_file(args, results_map: Dict[str, Any], filename: str):
         continue
       total_times = r['metrics']['total_time'] if 'total_time' in r[
           'metrics'] else []
-      # Skip the first three elements in total_times[]; the first one
-      # includes compilation time, the 2nd and 3rd warm up the caches.
-      skip_elems = 3
-      if len(total_times) <= skip_elems:
+      dp = datapoint_strategy(total_times)
+      if dp is None:
         continue
-      avg = np.average(total_times[skip_elems:])
-      # Standard deviation of the sample, i.e. N-1 denominator.
-      # Note: avoid NaN when we compute the std with just one sample.
-      std = np.std(
-          total_times[skip_elems:],
-          ddof=1) if len(total_times) > skip_elems + 1 else 0.0
-      dp = Datapoint(avg, std)
-      median_total_time = np.median(total_times[1:])
       batch_size = r['experiment']['batch_size']
       timestamp = r['timestamp']
 
@@ -261,6 +282,69 @@ def pr_latest(results_map: Dict[str, Any], args, timestamps: List[str]):
               for v in (speedups[i][j].avg, speedups[i][j].std,
                         model_names[i][j])
           ])))
+  elif args.format == 'tab':
+    assert args.test == 'inference', "Tabular format supports inference only."
+    assert len(
+        results_map
+    ) == 1, f"Expected only one of day data to be calculated. Got {results_map.keys()}"
+
+    from tabulate import tabulate
+
+    # Compute aux KV structure of (model_name, {inductor|openxla|openxla_eval}) => Datapoint.
+    model_to_speedup = {}
+    for _, results in results_map.items():
+      for compiler, datapoint in results.items():
+        if type(datapoint) is not dict:
+          continue
+        for model_name, v in datapoint.items():
+          if model_name not in model_to_speedup:
+            model_to_speedup[model_name] = {}
+          assert len(v) == 1, f"Expected 1 data point, got: {v}"
+          model_to_speedup[model_name][compiler] = list(v.values())[0]
+
+    # Clear models which do not have the respective inductor, or XLA inference runs.
+    skip_models = []
+    for model_name, results in model_to_speedup.items():
+      if 'openxla_eval' in results and 'inductor' in results:
+        continue
+      skip_models.append(model_name)
+
+    for skip in skip_models:
+      model_to_speedup.pop(skip)
+
+    speedups = []
+    for model_name, data in model_to_speedup.items():
+      # Calculate speedup v. inductor.
+      openxla_eval_wall = data[
+          'openxla_eval'].avg if 'openxla_eval' in data else math.inf
+      openxla_wall = data['openxla'].avg if 'openxla' in data else math.inf
+      inductor_wall = data['inductor'].avg
+      speedup = inductor_wall / min(openxla_eval_wall, openxla_wall)
+
+      # Report worst case std for XLA.
+      openxla_std = data['openxla'].std if 'openxla' in data else -math.inf
+      openxla_eval_std = data[
+          'openxla_eval'].std if 'openxla_eval' in data else -math.inf
+      xla_std = max(openxla_eval_std, openxla_std)
+      inductor_std = data['inductor'].std
+      speedups.append(
+          (model_name, speedup, 1000 * xla_std, 1000 * inductor_std))
+
+    # Sort by speedup asc.
+    speedups.sort(key=lambda x: x[1])
+
+    print(
+        tabulate(
+            speedups,
+            headers=['model', 'speedup', 'xla std (ms)', 'inductor std (ms)'],
+            tablefmt='fancy_grid',
+            floatfmt=".2f"))
+
+    # Print geomean.
+    print(
+        f"\n\nGeomean: {gmean([speedup for _, speedup, _, _ in speedups]):.2f}x."
+    )
+
   else:
     plt.figure(figsize=(args.fig_width, args.fig_height))
     plt.axhline(y=1.0, color='lightgray')
@@ -316,6 +400,8 @@ def pr_histogram(results_map: Dict[str, Any], args, timestamps: List[str]):
     print(','.join(full_titles))
     for j, utc in enumerate(x):
       print(','.join([str(utc)] + [str(y[i][j]) for i in range(len(labels))]))
+  elif args.format == 'tab':
+    raise ValueError("'tab' format is unsupported for histogram")
   else:
     fig, ax = plt.subplots(figsize=(args.fig_width, args.fig_height))
     ax.axhline(y=1.0, color='lightgray')
@@ -362,6 +448,8 @@ def pr_gmean(results_map: Dict[str, Any], args, timestamps: List[str]):
           map(str, [x] + [
               v for i in range(len(labels)) for v in (y[i][j].avg, y[i][j].std)
           ])))
+  elif args.format == 'tab':
+    raise ValueError("'tab' format is unsupported for gmean")
   else:
     fig, ax = plt.subplots(figsize=(args.fig_width, args.fig_height))
     ax.axhline(y=1.0, color='lightgray')
@@ -446,7 +534,7 @@ def parse_args(args=None):
   parser.add_argument(
       "--format",
       default='csv',
-      choices=['csv', 'png', 'svg'],
+      choices=['csv', 'png', 'svg', 'tab'],
       help='Output format')
   parser.add_argument('input_file', nargs='+')
   parser.add_argument(
@@ -459,6 +547,11 @@ def parse_args(args=None):
       default='inference',
       choices=['inference', 'training'],
       help='Test mode.')
+  parser.add_argument(
+      '--agg',
+      default='avg',
+      choices=['avg', 'min'],
+      help='Aggregation mode to on the set of total times.')
   parser.add_argument('--title', type=str, help="Plot title.")
   args = parser.parse_args(args)
 
@@ -476,7 +569,11 @@ def main():
   results_map = {}
 
   for filename in filenames:
-    process_file(args, results_map, filename)
+    process_file(
+        args,
+        results_map,
+        filename,
+        datapoint_strategy=getattr(DatapointStrategy, args.agg))
   process_results(args, results_map)
   if not results_map:
     sys.exit('no results found')
