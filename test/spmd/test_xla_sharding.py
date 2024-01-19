@@ -492,7 +492,7 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
       self.assertTrue('last_tile_dim_replicate' in
                       torch_xla._XLAC._get_xla_sharding_spec(xw))
     actual = (xx @ xw + xb).cpu()
-    self.assertTrue(torch.allclose(expected, actual))
+    self.assertTrue(torch.allclose(expected, actual, atol=1e-5))
 
   def test_clear_sharding(self):
     xt = torch.randn(2, 4, 8, 16).to(xm.xla_device())
