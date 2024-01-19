@@ -2,6 +2,7 @@ import os
 from torch_xla.experimental import plugins
 import torch_xla.utils.utils as xu
 
+
 class GpuPlugin(plugins.DevicePlugin):
 
   def library_path(self) -> str:
@@ -31,9 +32,12 @@ class GpuPlugin(plugins.DevicePlugin):
         "preallocate":
             xu.getenv_as("PJRT_ALLOCATOR_PREALLOCATE", bool, None),
         # Use all devices by default and when using SPMD
-        "visible_devices": [local_process_rank] if local_world_size > 1 else None,
-        "node_id": global_process_rank,
-        "num_nodes": global_world_size,
+        "visible_devices": [local_process_rank]
+                           if local_world_size > 1 else None,
+        "node_id":
+            global_process_rank,
+        "num_nodes":
+            global_world_size,
     }
 
     return {k: v for k, v in options.items() if v is not None}

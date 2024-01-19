@@ -2,7 +2,9 @@ import os
 from torch_xla.experimental import plugins
 from torch_xla._internal import tpu
 
+
 class CpuPlugin(plugins.DevicePlugin):
+
   def library_path(self) -> str:
     return os.path.join(os.path.dirname(__file__), 'pjrt_c_api_cpu_plugin.so')
 
