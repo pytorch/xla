@@ -2,7 +2,6 @@ import os
 from torch_xla.experimental import plugins
 import torch_xla.utils.utils as xu
 
-
 class GpuPlugin(plugins.DevicePlugin):
 
   def library_path(self) -> str:
@@ -15,6 +14,7 @@ class GpuPlugin(plugins.DevicePlugin):
   def client_create_options(self) -> dict:
     local_process_rank = xu.getenv_as("LOCAL_RANK", int, 0)
     global_process_rank = xu.getenv_as("RANK", int, local_process_rank)
+
     local_world_size = xu.getenv_as("LOCAL_WORLD_SIZE", int, 1)
     global_world_size = xu.getenv_as("WORLD_SIZE", int, local_world_size)
 
@@ -30,11 +30,10 @@ class GpuPlugin(plugins.DevicePlugin):
             xu.getenv_as("PJRT_ALLOCATOR_FRACTION", float, None),
         "preallocate":
             xu.getenv_as("PJRT_ALLOCATOR_PREALLOCATE", bool, None),
-        "visible_devices": [local_process_rank],
-        "node_id":
-            global_process_rank,
-        "num_nodes":
-            global_world_size,
+        # Use all devices by default and when using SPMD
+        "visible_devices": [local_process_rank] if local_world_size > 1 else None,
+        "node_id": global_process_rank,
+        "num_nodes": global_world_size,
     }
 
     return {k: v for k, v in options.items() if v is not None}
