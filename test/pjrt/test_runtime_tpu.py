@@ -187,6 +187,19 @@ class TestExperimentalPjrtTpu(parameterized.TestCase):
           {i: torch.device(f'xla:{i}') for i in range(self.num_devices)})
 
   @staticmethod
+  def _spawn_error():
+    # Initialize the client in the parent process
+    xm.xla_device()
+
+    xmp.spawn(xm.xla_device)
+
+  def test_spawn_error(self):
+    with concurrent.futures.ProcessPoolExecutor(max_workers=1) as executor:
+      # Error message should at least mention that the runtime is initialized
+      with self.assertRaisesRegex(RuntimeError, "initialized"):
+        executor.submit(self._spawn_error).result()
+
+  @staticmethod
   def _runtime_device_attributes():
     return xr.runtime_device_attributes(str(xm.xla_device()))
 
