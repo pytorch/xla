@@ -7,6 +7,7 @@ from os.path import abspath
 import random
 import subprocess
 import torch
+import torch.utils._pytree as pytree
 import sys
 import torch_xla.core.xla_model as xm
 from torch_xla._internal import tpu
@@ -76,16 +77,7 @@ def is_xla_device_available(devkind):
 
 
 def move_to_device(item, device):
-  if isinstance(item, torch.Tensor):
-    return item.to(device=device)
-  elif isinstance(item, list):
-    return [move_to_device(t, device) for t in item]
-  elif isinstance(item, tuple):
-    return tuple(move_to_device(t, device) for t in item)
-  elif isinstance(item, dict):
-    return dict((k, move_to_device(t, device)) for k, t in item.items())
-  else:
-    return item
+  return pytree.tree_map_only(torch.Tensor, lambda t: t.to(device), item)
 
 
 def randomize_input(inputs):
