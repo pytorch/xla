@@ -205,6 +205,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_index_reduce',  # Broke by functionalization, pytorch/pytorch#94471
         'test_logcumsumexp_xla',  # doesn't raise, pytorch/pytorch#92912
         'test_narrow_copy_non_contiguous',  # the test is added for CPU, pytorch/pytorch#91789
+        'test_take_xla_bfloat16',  # precision for CPU and TPU
     },
 
     # test_view_ops.py
@@ -394,7 +395,6 @@ DISABLED_TORCH_TESTS_TPU_ONLY = {
         'test_nondeterministic_alert_grid_sample_3d_xla',  # server side crash
         'test_nondeterministic_alert_index_add_xla',  # server side crash
         'test_put_xla_bfloat16',  # (TPU) 0.46484375 vs. 0.484375
-        'test_take_xla_bfloat16',  # (TPU) -6.53125 vs. -6.5625
         'test_multinomial_constraints',  # server side crash
         'test_multinomial_invalid_distribution',  # server side crash
         'test_multinomial_invalid_xla',  # TODO: only fail on xlml
