@@ -65,7 +65,7 @@ std::unique_ptr<XlaCoordinator> SetKeyValueCallback(
   std::shared_ptr<xla::DistributedRuntimeClient> distributed_client =
       coordinator->GetClient();
   kv_store = xla::GetDistributedKeyValueStore(distributed_client,
-      /*key_prefix=*/"gpu:");
+                                              /*key_prefix=*/"gpu:");
   return coordinator;
 }
 
