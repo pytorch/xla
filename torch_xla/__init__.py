@@ -169,3 +169,9 @@ _init_xla_lazy_backend()
 torch._dynamo.config.automatic_dynamic_shapes = False
 
 from .stablehlo import save_as_stablehlo, save_torch_model_as_stablehlo
+
+from .experimental import plugins
+
+if os.getenv('XLA_REGISTER_INSTALLED_PLUGINS') == '1':
+  plugins.use_dynamic_plugins()
+  plugins.register_installed_plugins()

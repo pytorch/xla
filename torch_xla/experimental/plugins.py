@@ -1,4 +1,13 @@
+import logging
 import os
+import sys
+
+# TODO: delete this and just use importlib.metadata after we drop Python 3.9
+# support.
+if sys.version_info < (3, 10):
+  import importlib_metadata
+else:
+  import importlib.metadata as importlib_metadata
 
 import torch_xla
 import torch_xla.core.xla_env_vars as xenv
@@ -65,3 +74,18 @@ def default() -> DevicePlugin:
 def register_plugin(name: str, device_plugin: DevicePlugin):
   _plugin_registry[name.upper()] = device_plugin
   torch_xla._XLAC._register_pjrt_plugin(name, device_plugin.library_path())
+
+
+def register_installed_plugins():
+  pjrt_entry_points = importlib_metadata.entry_points(group='torch_xla.plugins')
+  for ep in pjrt_entry_points:
+    device_plugin_class = ep.load()
+
+    # HACK: TpuPlugin raises EnvironmentError if libtpu is not installed.
+    # TODO(wcromar): Decide if catching `EnvironmentError` is a permanent
+    # behavior or temporary hack.
+    try:
+      register_plugin(ep.name.upper(), device_plugin_class())
+    except EnvironmentError as e:
+      logging.warning(
+          "Failed to register plugin {}".format(ep.name), exc_info=e)
