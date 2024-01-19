@@ -110,4 +110,4 @@ Then run `test/run_tests.sh` and `test/cpp/run_tests.sh` to verify the setup is 
 
 ### Sharp Edges
 
-* If local changes aren't visible, ensure you built both PyTorch and PyTorch/XLA with `python setup.py develop` and not `python setup.py install`. If you're unsure, uninstall existing pytorch/xla with `pip uninstall torch_xla` and `pip uninstall torch`, then rebuild PyTorch and PyTorch/XLA.
+* If local changes aren't visible, uninstall existing pytorch/xla with `pip uninstall torch_xla` and `pip uninstall torch`, then rebuild PyTorch and PyTorch/XLA with `python setup.py develop` or `python setup.py install`.
