@@ -48,8 +48,7 @@ std::shared_ptr<const PjRtPlugin> GetPjRtPlugin(
 
 std::unique_ptr<XlaCoordinator> SetKeyValueCallback(
     int global_process_rank, int global_world_size,
-    std::unique_ptr<XlaCoordinator> coordinator,
-    std::shared_ptr<xla::KeyValueStoreInterface> kv_store) {
+    std::shared_ptr<xla::KeyValueStoreInterface>& kv_store) {
   std::string master_addr =
       runtime::sys_util::GetEnvString("MASTER_ADDR", "localhost");
   std::string port = runtime::sys_util::GetEnvString(
@@ -60,8 +59,9 @@ std::unique_ptr<XlaCoordinator> SetKeyValueCallback(
              << global_process_rank
              << ", global_world_size=" << global_world_size
              << ", master_addr=" << master_addr << ", port=" << port;
-  coordinator = std::make_unique<XlaCoordinator>(
-      global_process_rank, global_world_size, master_addr, port);
+  std::unique_ptr<XlaCoordinator> coordinator =
+      std::make_unique<XlaCoordinator>(global_process_rank, global_world_size,
+                                       master_addr, port);
   std::shared_ptr<xla::DistributedRuntimeClient> distributed_client =
       coordinator->GetClient();
   kv_store = xla::GetDistributedKeyValueStore(distributed_client,
@@ -157,19 +157,15 @@ InitializePjRt(const std::string& device_type) {
     std::shared_ptr<xla::KeyValueStoreInterface> kv_store;
     std::optional<std::set<int>> allowed_devices;
     bool spmd = sys_util::GetEnvBool("XLA_USE_SPMD", false);
-    if (spmd) {
+    if (local_world_size == 1) {
       if (global_world_size > 1) {
-        coordinator =
-            SetKeyValueCallback(global_process_rank, global_world_size,
-                                std::move(coordinator), kv_store);
+        coordinator = SetKeyValueCallback(global_process_rank,
+                                          global_world_size, kv_store);
       }
     } else {
-      if (global_world_size > 1) {
-        allowed_devices = std::set{local_process_rank};
-        coordinator =
-            SetKeyValueCallback(global_process_rank, global_world_size,
-                                std::move(coordinator), kv_store);
-      }
+      allowed_devices = std::set{local_process_rank};
+      coordinator =
+          SetKeyValueCallback(global_process_rank, global_world_size, kv_store);
     }
     TF_VLOG(3) << "Getting StreamExecutorGpuClient for node_id="
                << global_process_rank << ", num_nodes=" << global_world_size

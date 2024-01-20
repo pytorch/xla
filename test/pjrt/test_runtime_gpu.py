@@ -4,6 +4,7 @@ import os
 import queue
 import requests
 import unittest
+import subprocess
 
 import numpy as np
 import torch
@@ -27,6 +28,16 @@ class TestExperimentalPjrtGpu(parameterized.TestCase):
     os.environ.update({
         xenv.PJRT_GPU_ASYNC_CLIENT: 'true',
     })
+    
+    command = 'nvidia-smi --list-gpus | wc -l'
+    result = subprocess.run(
+          command,
+          capture_output=True,
+          shell=True,
+          check=True,
+          text=True,
+      )
+    self.num_cuda_devices = int(result.stdout)
 
   def test_default_gpu_device(self):
     os.environ.pop(xenv.PJRT_GPU_ASYNC_CLIENT, None)
@@ -35,6 +46,16 @@ class TestExperimentalPjrtGpu(parameterized.TestCase):
     expected = {i: torch.device(f'xla:0') for i in range(num_devices)}
     devices_per_process = pjrt.run_multiprocess(xm.xla_device)
     self.assertDictEqual(devices_per_process, expected)
+
+  def test_num_local_devices(self):
+    self.assertLen(xm.get_xla_supported_devices(),
+                   xr.addressable_device_count())
+    self.assertEqual(self.num_cuda_devices, xr.addressable_device_count())
+
+  def test_num_global_devices(self):
+    self.assertLen(torch_xla._XLAC._xla_get_all_devices(),
+                   xr.global_device_count())
+    self.assertEqual(self.num_cuda_devices, xr.global_device_count())
 
   def test_multi_gpu_devices(self):
     num_devices = int(os.environ[xenv.GPU_NUM_DEVICES])

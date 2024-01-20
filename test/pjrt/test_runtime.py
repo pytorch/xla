@@ -2,8 +2,7 @@ import contextlib
 import logging
 import os
 from typing import Dict, Optional
-from unittest import mock, skipUnless
-import subprocess
+from unittest import mock
 
 import torch_xla
 from absl.testing import absltest, parameterized
@@ -15,17 +14,7 @@ from torch_xla import runtime as xr
 class TestExperimentalPjrt(parameterized.TestCase):
 
   def setUp(self):
-    if xr.device_type() == 'CUDA':
-      xr.set_device_type('CUDA')
-      command = 'nvidia-smi --list-gpus | wc -l'
-      result = subprocess.run(
-          command,
-          capture_output=True,
-          shell=True,
-          check=True,
-          text=True,
-      )
-      self.num_cuda_devices = int(result.stdout)
+    xr.set_device_type('CPU')
 
   @parameterized.parameters(('CPU', 'CPU'), ('CUDA', 'CUDA'), ('TPU', 'TPU'))
   def test_device_type(self, pjrt_device, expected):
@@ -68,14 +57,10 @@ class TestExperimentalPjrt(parameterized.TestCase):
   def test_num_local_devices(self):
     self.assertLen(xm.get_xla_supported_devices(),
                    xr.addressable_device_count())
-    if xr.device_type() == 'CUDA':
-      self.assertEqual(self.num_cuda_devices, xr.addressable_device_count())
 
   def test_num_global_devices(self):
     self.assertLen(torch_xla._XLAC._xla_get_all_devices(),
                    xr.global_device_count())
-    if xr.device_type() == 'CUDA':
-      self.assertEqual(self.num_cuda_devices, xr.global_device_count())
 
   def test_world_size(self):
     self.assertEqual(xm.xrt_world_size(), xr.world_size())

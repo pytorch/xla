@@ -216,9 +216,15 @@ def _xla_real_device(device):
   return _DEVICES.value[int(m.group(1))]
 
 
-# if the input devices=['xla:0', 'xla:1'],
-# the output will be ['CUDA:0', 'CUDA:1'].
 def xla_real_devices(devices: Optional[List[torch.device]] = None):
+  """Returns the real devices' name.
+
+  Args:
+    devices: The list of torch devices such as ['xla:0', 'xla:1'].
+
+  Returns:
+    A list of real devices' name such as ['CUDA:0', 'CUDA:1'].
+  """
   if not devices:
     devices = get_xla_supported_devices()
 
@@ -239,8 +245,6 @@ def xla_device_hw(device):
   return real_device.split(':')[0]
 
 
-# Sample input: ['xla:0', 'xla:1', 'xla:2', 'xla:3']
-# Sample output: ['CUDA:0', 'CUDA:1', 'CUDA:2', 'CUDA:3']
 def xla_replication_devices(local_devices):
   real_devices = xla_real_devices(local_devices)
   device_types = set()
