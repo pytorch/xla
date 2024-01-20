@@ -563,8 +563,9 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     col.append(
         rich.padding.Padding(
             rich.align.Align(
-                'TPU [0, 1, 2, 3, 4, 5, 6, 7]', "center", vertical="middle"),
-            (1, 1, 1, 1),
+                xr.device_type() + ' [0, 1, 2, 3, 4, 5, 6, 7]',
+                "center",
+                vertical="middle"), (1, 1, 1, 1),
             style=rich.style.Style(bgcolor=color, color=text_color)))
     fake_table.add_row(*col)
     fake_console = rich.console.Console()
