@@ -794,13 +794,14 @@ torch::lazy::NodePtr Lerp(const torch::lazy::Value& start,
     XLA_CHECK_EQ(operands.size(), 3) << "Unexpected number of operands";
     return BuildLerp(operands[0], operands[1], operands[2]);
   };
-  return GenericOp(torch::lazy::OpKind(at::aten::lerp), {start, end, weight},
-                   [&]() {
-                     return InferOutputShape(
-                         {GetXlaShape(start), GetXlaShape(end), GetXlaShape(weight)},
-                         lower_for_shape_fn);
-                   },
-                   std::move(lower_fn));
+  return GenericOp(
+      torch::lazy::OpKind(at::aten::lerp), {start, end, weight},
+      [&]() {
+        return InferOutputShape(
+            {GetXlaShape(start), GetXlaShape(end), GetXlaShape(weight)},
+            lower_for_shape_fn);
+      },
+      std::move(lower_fn));
 }
 
 torch::lazy::NodePtr XLogY(const torch::lazy::Value& input,
