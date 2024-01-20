@@ -266,10 +266,10 @@ def train_imagenet():
   writer = None
   if xm.is_master_ordinal():
     writer = test_utils.get_summary_writer(FLAGS.logdir)
-  optimizer = optim.AdamW(
+  optimizer = optim.SGD(
       model.parameters(),
       lr=FLAGS.lr,
-    #   momentum=FLAGS.momentum,
+      momentum=FLAGS.momentum,
       weight_decay=1e-4)
   num_training_steps_per_epoch = train_dataset_len // (
       FLAGS.batch_size * xm.xrt_world_size())
@@ -306,8 +306,6 @@ def train_imagenet():
         if step % FLAGS.log_steps == 0:
           xm.add_step_closure(
               _train_update, args=(device, step, loss, tracker, epoch, writer))
-      xm.mark_step()
-      prof.step()
 
   def test_loop_fn(loader, epoch):
     total_samples, correct = 0, 0
