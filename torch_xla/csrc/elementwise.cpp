@@ -454,4 +454,9 @@ xla::XlaOp BuildEluBackward(xla::XlaOp grad_output, xla::XlaOp output,
                                    negative_output_branch);
 }
 
+xla::XlaOp BuildLerp(xla::XlaOp start, xla::XlaOp end, xla::XlaOp weight) {
+  // start + weight * (end - start);
+  return xla::Add(start, xla::Mul(weight, xla::Sub(end, start)));
+}
+
 }  // namespace torch_xla
