@@ -58,6 +58,7 @@ extern const OpKindWrapper xla_tensor_data;
 extern const OpKindWrapper xla_unselect;
 extern const OpKindWrapper xla_update_slice;
 extern const OpKindWrapper xla_custom_sharding;
+extern const OpKindWrapper xla_tpu_custom_call;
 
 }  // namespace torch_xla
 

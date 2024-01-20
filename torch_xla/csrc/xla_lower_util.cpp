@@ -1224,4 +1224,10 @@ xla::XlaOp BuildCustomSharding(const xla::XlaOp& input) {
                          {input}, ShapeHelper::ShapeOfXlaOp(input));
 }
 
+xla::XlaOp BuildTpuCustomCall(const xla::XlaOp& x, const xla::XlaOp& y, const std::string& payload) {
+  return xla::CustomCallWithLayout(x.builder(), /*call_target_name=*/"tpu_custom_call",
+                         {x, y}, ShapeHelper::ShapeOfXlaOp(x) /*TODO: update later*/,
+                         {ShapeHelper::ShapeOfXlaOp(x), ShapeHelper::ShapeOfXlaOp(y)}, payload);
+}
+
 }  // namespace torch_xla

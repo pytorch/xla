@@ -41,6 +41,7 @@
 #include "torch_xla/csrc/ops/cumprod.h"
 #include "torch_xla/csrc/ops/cumsum.h"
 #include "torch_xla/csrc/ops/custom_sharding.h"
+#include "torch_xla/csrc/ops/tpu_custom_call.h"
 #include "torch_xla/csrc/ops/dequant_tensor.h"
 #include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/ops/diagonal.h"
@@ -521,6 +522,11 @@ void custom_sharding_(
   input->SetInPlaceIrValue(
       torch::lazy::MakeNode<CustomSharding>(input->GetIrValue()));
   input->SetShardingSpec(*sharding_spec);
+}
+
+void tpu_custom_call_(XLATensorPtr& output, const XLATensorPtr& x, const XLATensorPtr& y, const std::string& payload) {
+  output->SetInPlaceIrValue(
+      torch::lazy::MakeNode<TpuCustomCall>(x->GetIrValue(), y->GetIrValue(), payload));
 }
 
 XLATensorPtr get_dimensions_size(const XLATensorPtr& input,

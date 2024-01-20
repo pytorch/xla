@@ -2170,6 +2170,11 @@ void InitXlaModuleBindings(py::module m) {
         [](at::Tensor& self, const at::Tensor& source) -> at::Tensor& {
           return XLANativeFunctions::set_(self, source);
         });
+  m.def("_xla_tpu_custom_call_",
+      [](at::Tensor& output, const at::Tensor& x, const at::Tensor& y, const std::string& payload) {
+        auto x_output = bridge::GetXlaTensor(output);
+        return tensor_methods::tpu_custom_call_(x_output, bridge::GetXlaTensor(x), bridge::GetXlaTensor(y), payload);
+      });
   m.def("_set_xla_custom_op_name_prefix",
         [](const at::Tensor& input, const std::string& op_name_prefix,
            size_t max_call_stack_depth) -> bool {
