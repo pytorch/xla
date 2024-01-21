@@ -229,8 +229,8 @@ class TorchBenchModel(BenchmarkModel):
     # torch.backends.__allow_nonbracketed_mutation_flag = True
 
     # torchbench uses `xla` as device instead of `tpu`
-    if device:=self.benchmark_experiment.accelerator=='tpu':
-        device = 'xla'
+    if device := self.benchmark_experiment.accelerator == 'tpu':
+      device = 'xla'
     return benchmark_cls(
         test=self.benchmark_experiment.test,
         device=device,
