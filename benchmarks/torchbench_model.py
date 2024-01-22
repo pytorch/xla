@@ -60,6 +60,7 @@ TRAIN_WITH_SGD = {
 
 # Skip the experiment of a model if any of the experiment configs in the list is fully matched
 DENY_LIST = {
+    "cm3leon_generate": [{}],  # no install.py
     "doctr_det_predictor": [{
         "test": "train"
     },],  # not implemented
@@ -71,6 +72,7 @@ DENY_LIST = {
     },],  # not implemented
     # https://github.com/pytorch/torchdynamo/issues/145
     "fambench_xlmr": [{}],
+    "hf_T5_generate": [{}],  # no install.py
     "llama": [{
         "test": "train"
     },],  # not implemented
@@ -84,6 +86,9 @@ DENY_LIST = {
             "accelerator": "tpu"
         },
     ],  # not implemented
+    "opacus_cifar10": [{
+        "accelerator": "tpu"
+    },],  # stackdump issus in TPU
     # self.load_benchmark() exits the main process. See issue #6207.
     "pytorch_CycleGAN_and_pix2pix": [{}],
     "pyhpc_equation_of_state": [{
