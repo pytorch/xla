@@ -193,7 +193,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     col = []
     alltpus = xr.device_type() + ' [0'
     for i in range(xr.global_runtime_device_count() - 1):
-      alltpus = alltpus + ',' + str(i + 1)
+      alltpus = alltpus + ', ' + str(i + 1)
     alltpus = alltpus + ']'
     col.append(
         rich.padding.Padding(
@@ -205,6 +205,8 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     with fake_console.capture() as fake_capture:
       fake_console.print(fake_table)
     fake_output = fake_capture.get()
+    print("output", output)
+    print("fake_output", fake_output)
     assert output == fake_output
 
   @unittest.skipIf(xr.device_type() != 'CPU',
