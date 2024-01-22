@@ -1906,11 +1906,13 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.gelu, args, kwargs)
 
-  @unittest.skip
   def test_aten_gelu_1(self):
     args = (torch.randn((10, 10)).to(torch.float16),)
     kwargs = dict()
-    run_export_and_compare(self, torch.ops.aten.gelu, args, kwargs)
+    run_export_and_compare(self, torch.ops.aten.gelu, args, kwargs, 
+        rtol=0.001,
+        atol=0.01,
+    )
 
   def test_aten_glu_0(self):
     args = (
