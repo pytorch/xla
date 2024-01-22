@@ -15,8 +15,8 @@ import torch_xla.runtime as xr
 import torch_xla.utils.utils as xu
 
 
-class DevicePlugin:
-  """Base class for device plugings.
+class DevicePlugin(torch_xla._XLAC.PjRtPlugin):
+  """Base class for device plugins.
 
   Default implementations assume a single device and local process.
   """
@@ -84,9 +84,7 @@ def default() -> DevicePlugin:
 
 def register_plugin(name: str, device_plugin: DevicePlugin):
   _plugin_registry[name.upper()] = device_plugin
-  torch_xla._XLAC._register_pjrt_plugin(
-      name, device_plugin.library_path(), device_plugin.client_create_options(),
-      device_plugin.requires_xla_coordinator())
+  torch_xla._XLAC._register_pjrt_plugin(name, device_plugin)
 
 
 def register_installed_plugins():

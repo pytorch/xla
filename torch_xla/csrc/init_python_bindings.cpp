@@ -28,6 +28,7 @@
 #include "pybind11/numpy.h"
 #include "pybind11/pybind11.h"
 #include "pybind11/pytypes.h"
+#include "pybind11/stl.h"
 #include "pybind11/stl_bind.h"
 #include "torch_xla/csrc/XLANativeFunctions.h"
 #include "torch_xla/csrc/aten_autograd_ops.h"
@@ -69,6 +70,28 @@
 
 namespace torch_xla {
 namespace {
+
+class PyPjRtPlugin : public runtime::PjRtPlugin {
+ public:
+  using runtime::PjRtPlugin::PjRtPlugin;
+
+  std::string library_path() override {
+    PYBIND11_OVERRIDE_PURE(std::string, runtime::PjRtPlugin, library_path, );
+  }
+
+  // Templates with commas confuse pybind's macros, so use an alias here
+  // See https://github.com/pybind/pybind11/issues/2185#issuecomment-634005168
+  using PjRtCreateOptions = std::unordered_map<std::string, xla::PjRtValueType>;
+  PjRtCreateOptions client_create_options() override {
+    PYBIND11_OVERRIDE_PURE(PjRtCreateOptions, runtime::PjRtPlugin,
+                           client_create_options, );
+  }
+
+  bool requires_xla_coordinator() override {
+    PYBIND11_OVERRIDE_PURE(bool, runtime::PjRtPlugin,
+                           requires_xla_coordinator, );
+  }
+};
 
 static int64_t seed_info_id = -127389;
 
@@ -2319,14 +2342,19 @@ void InitXlaModuleBindings(py::module m) {
           return retlist;
         });
   // -------------Dynamo Integration API End-------------------------
-  m.def("_register_pjrt_plugin",
-        [](std::string name, std::string library_path,
-           std::unordered_map<std::string, xla::PjRtValueType> create_options,
-           bool init_coordinator) {
-          runtime::RegisterPjRtPlugin(
-              name, library_path,
-              {create_options.begin(), create_options.end()}, init_coordinator);
-        });
+  m.def("_register_pjrt_plugin", [](std::string name,
+                                    runtime::PjRtPlugin& plugin) {
+    auto create_options = plugin.client_create_options();
+    runtime::RegisterPjRtPlugin(name, plugin.library_path(),
+                                {create_options.begin(), create_options.end()},
+                                plugin.requires_xla_coordinator());
+  });
+  py::class_<runtime::PjRtPlugin, PyPjRtPlugin>(m, "PjRtPlugin")
+      .def(py::init<>())
+      .def("library_path", &runtime::PjRtPlugin::library_path)
+      .def("client_create_options", &runtime::PjRtPlugin::client_create_options)
+      .def("requires_xla_coordinator",
+           &runtime::PjRtPlugin::requires_xla_coordinator);
 }
 }  // namespace
 
