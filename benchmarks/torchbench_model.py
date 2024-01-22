@@ -230,7 +230,7 @@ class TorchBenchModel(BenchmarkModel):
 
     # torchbench uses `xla` as device instead of `tpu`
     if device := self.benchmark_experiment.accelerator == 'tpu':
-      device = 'xla'
+      device = str(self.benchmark_experiment.get_device())
     return benchmark_cls(
         test=self.benchmark_experiment.test,
         device=device,
