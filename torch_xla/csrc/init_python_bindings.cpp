@@ -2342,14 +2342,12 @@ void InitXlaModuleBindings(py::module m) {
           return retlist;
         });
   // -------------Dynamo Integration API End-------------------------
-  m.def("_register_pjrt_plugin", [](std::string name,
-                                    runtime::PjRtPlugin& plugin) {
-    auto create_options = plugin.client_create_options();
-    runtime::RegisterPjRtPlugin(name, plugin.library_path(),
-                                {create_options.begin(), create_options.end()},
-                                plugin.requires_xla_coordinator());
-  });
-  py::class_<runtime::PjRtPlugin, PyPjRtPlugin>(m, "PjRtPlugin")
+  m.def("_register_pjrt_plugin",
+        [](std::string name, std::shared_ptr<runtime::PjRtPlugin> plugin) {
+          runtime::RegisterPjRtPlugin(name, plugin);
+        });
+  py::class_<runtime::PjRtPlugin, PyPjRtPlugin,
+             std::shared_ptr<runtime::PjRtPlugin>>(m, "PjRtPlugin")
       .def(py::init<>())
       .def("library_path", &runtime::PjRtPlugin::library_path)
       .def("client_create_options", &runtime::PjRtPlugin::client_create_options)
