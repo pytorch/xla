@@ -405,6 +405,22 @@ xla::XlaOp BuildLogSigmoidBackward(xla::XlaOp grad_output, xla::XlaOp input,
   return grad_output * (xla::Neg(max_deriv) - sign * (buffer - one) / buffer);
 }
 
+xla::XlaOp BuildLogit(xla::XlaOp input, c10::optional<double> eps) {
+  const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(input);
+  xla::XlaOp one = XlaHelpers::ScalarValue<float>(1.0, shape.element_type(),
+                                                  input.builder());
+  xla::XlaOp xla_eps = eps.has_value()
+                       ? XlaHelpers::ScalarValue<float>(
+                             eps.value(), shape.element_type(), input.builder())
+                       : xla::Zero(input.builder(), shape.element_type());
+  xla::XlaOp clamped = xla::Clamp(input, xla_eps, one - xla_eps);
+  xla::XlaOp xla_log = xla::Log(clamped / (one - clamped));
+  xla::XlaOp nan = xla::NanValue(input.builder(), shape.element_type());
+  xla::XlaOp is_finite = xla::IsFinite(xla_log);
+  // Replace non-finite tensor values (e.g. Inf, NaN) with NaN
+  return xla::Select(is_finite, xla_log, nan);
+}
+
 xla::XlaOp BuildElu(xla::XlaOp input, xla::XlaOp alpha, xla::XlaOp scale,
                     xla::XlaOp input_scale) {
   const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(input);
@@ -414,7 +430,7 @@ xla::XlaOp BuildElu(xla::XlaOp input, xla::XlaOp alpha, xla::XlaOp scale,
   xla::XlaOp scaled_input = input * input_scale;
   xla::XlaOp zero = xla::Zero(input.builder(), shape.element_type());
   xla::XlaOp one = XlaHelpers::ScalarValue<float>(1.0, shape.element_type(),
-                                                  input.builder());
+                                                  input.builder()); 
   return xla::Select(xla::Le(input, zero),
                      alpha * (xla::Exp(scaled_input) - one), input) *
          scale;
