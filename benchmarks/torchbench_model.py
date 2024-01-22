@@ -60,7 +60,6 @@ TRAIN_WITH_SGD = {
 
 # Skip the experiment of a model if any of the experiment configs in the list is fully matched
 DENY_LIST = {
-    "cm3leon_generate": [{}],  # no install.py
     "doctr_det_predictor": [{
         "test": "train"
     },],  # not implemented
@@ -72,7 +71,6 @@ DENY_LIST = {
     },],  # not implemented
     # https://github.com/pytorch/torchdynamo/issues/145
     "fambench_xlmr": [{}],
-    "hf_T5_generate": [{}],  # no install.py
     "llama": [{
         "test": "train"
     },],  # not implemented
@@ -86,9 +84,6 @@ DENY_LIST = {
             "accelerator": "tpu"
         },
     ],  # not implemented
-    "opacus_cifar10": [{
-        "accelerator": "tpu"
-    },],  # stackdump issus in TPU
     # self.load_benchmark() exits the main process. See issue #6207.
     "pytorch_CycleGAN_and_pix2pix": [{}],
     "pyhpc_equation_of_state": [{
@@ -127,6 +122,16 @@ DENY_LIST = {
     ],
     # https://github.com/pytorch/pytorch/issues/99438
     "vision_maskrcnn": [{}],
+}
+
+
+# This strict deny list denies tests that hold for too long and timeoout.
+STRICT_DENY_LIST = DENY_LIST | {
+  "cm3leon_generate": [{}], # no install.py
+  "hf_T5_generate": [{}],  # no install.py
+  "opacus_cifar10": [{
+        "accelerator": "tpu"
+  },],  # stackdump issus in TPU
 }
 
 
@@ -181,9 +186,10 @@ class TorchBenchModelLoader(ModelLoader):
 
     return model_configs
 
-  def is_compatible(self, dummy_benchmark_model, benchmark_experiment):
-    if dummy_benchmark_model.model_name in DENY_LIST:
-      for deny_experiment_config in DENY_LIST[dummy_benchmark_model.model_name]:
+  def is_compatible(self, dummy_benchmark_model, benchmark_experiment, use_strict_deny=False):
+    deny_list = STRICT_DENY_LIST if use_strict_deny else DENY_LIST
+    if dummy_benchmark_model.model_name in deny_list:
+      for deny_experiment_config in deny_list[dummy_benchmark_model.model_name]:
         matched = True
         for k, v in deny_experiment_config.items():
           if getattr(benchmark_experiment, k) != v:
