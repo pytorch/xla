@@ -193,7 +193,7 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
     col = []
     alltpus = xr.device_type() + ' [0'
     for i in range(xr.global_runtime_device_count() - 1):
-      alltpus = alltpus + ',' + str(i + 1)
+      alltpus = alltpus + ', ' + str(i + 1)
     alltpus = alltpus + ']'
     col.append(
         rich.padding.Padding(
