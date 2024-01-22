@@ -124,14 +124,13 @@ DENY_LIST = {
     "vision_maskrcnn": [{}],
 }
 
-
 # This strict deny list denies tests that hold for too long and timeoout.
 STRICT_DENY_LIST = DENY_LIST | {
-  "cm3leon_generate": [{}], # no install.py
-  "hf_T5_generate": [{}],  # no install.py
-  "opacus_cifar10": [{
+    "cm3leon_generate": [{}],  # no install.py
+    "hf_T5_generate": [{}],  # no install.py
+    "opacus_cifar10": [{
         "accelerator": "tpu"
-  },],  # stackdump issus in TPU
+    },],  # stackdump issus in TPU
 }
 
 
@@ -186,7 +185,10 @@ class TorchBenchModelLoader(ModelLoader):
 
     return model_configs
 
-  def is_compatible(self, dummy_benchmark_model, benchmark_experiment, use_strict_deny=False):
+  def is_compatible(self,
+                    dummy_benchmark_model,
+                    benchmark_experiment,
+                    use_strict_deny=False):
     deny_list = STRICT_DENY_LIST if use_strict_deny else DENY_LIST
     if dummy_benchmark_model.model_name in deny_list:
       for deny_experiment_config in deny_list[dummy_benchmark_model.model_name]:
