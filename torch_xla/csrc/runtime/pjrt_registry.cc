@@ -20,7 +20,8 @@ namespace runtime {
 
 namespace {
 
-std::unordered_map<std::string, std::shared_ptr<PjRtPlugin>> pjrt_plugins_;
+std::unordered_map<std::string, std::shared_ptr<const PjRtPlugin>>
+    pjrt_plugins_;
 
 xla::GpuAllocatorConfig GetGpuAllocatorConfig() {
   auto allocator_config = xla::GpuAllocatorConfig{};
@@ -39,14 +40,16 @@ xla::GpuAllocatorConfig GetGpuAllocatorConfig() {
   return allocator_config;
 }
 
-std::shared_ptr<PjRtPlugin> GetPjRtPlugin(const std::string& device_type) {
+std::shared_ptr<const PjRtPlugin> GetPjRtPlugin(
+    const std::string& device_type) {
   auto plugin_path = pjrt_plugins_.find(device_type);
   return plugin_path != pjrt_plugins_.end() ? plugin_path->second : nullptr;
 }
 
 }  // namespace
 
-void RegisterPjRtPlugin(std::string name, std::shared_ptr<PjRtPlugin> plugin) {
+void RegisterPjRtPlugin(std::string name,
+                        std::shared_ptr<const PjRtPlugin> plugin) {
   TF_VLOG(3) << "Registering PjRt plugin " << name;
   pjrt_plugins_[name] = plugin;
 }
@@ -57,7 +60,7 @@ InitializePjRt(const std::string& device_type) {
   std::unique_ptr<XlaCoordinator> coordinator;
 
   if (sys_util::GetEnvBool(env::kEnvPjrtDynamicPlugins, false)) {
-    std::shared_ptr<PjRtPlugin> plugin = GetPjRtPlugin(device_type);
+    std::shared_ptr<const PjRtPlugin> plugin = GetPjRtPlugin(device_type);
     if (plugin) {
       TF_VLOG(1) << "Initializing client for PjRt plugin " << device_type;
 

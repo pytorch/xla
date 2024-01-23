@@ -10,15 +10,16 @@ namespace runtime {
 
 class PjRtPlugin {
  public:
-  virtual std::string library_path() = 0;
+  virtual std::string library_path() const = 0;
 
-  virtual std::unordered_map<std::string, xla::PjRtValueType>
-  client_create_options() = 0;
+  virtual const std::unordered_map<std::string, xla::PjRtValueType>
+  client_create_options() const = 0;
 
-  virtual bool requires_xla_coordinator() = 0;
+  virtual bool requires_xla_coordinator() const = 0;
 };
 
-void RegisterPjRtPlugin(std::string name, std::shared_ptr<PjRtPlugin> plugin);
+void RegisterPjRtPlugin(std::string name,
+                        std::shared_ptr<const PjRtPlugin> plugin);
 
 std::tuple<std::unique_ptr<xla::PjRtClient>, std::unique_ptr<XlaCoordinator>>
 InitializePjRt(const std::string& device_type);

@@ -75,19 +75,19 @@ class PyPjRtPlugin : public runtime::PjRtPlugin {
  public:
   using runtime::PjRtPlugin::PjRtPlugin;
 
-  std::string library_path() override {
+  std::string library_path() const override {
     PYBIND11_OVERRIDE_PURE(std::string, runtime::PjRtPlugin, library_path, );
   }
 
   // Templates with commas confuse pybind's macros, so use an alias here
   // See https://github.com/pybind/pybind11/issues/2185#issuecomment-634005168
   using PjRtCreateOptions = std::unordered_map<std::string, xla::PjRtValueType>;
-  PjRtCreateOptions client_create_options() override {
+  const PjRtCreateOptions client_create_options() const override {
     PYBIND11_OVERRIDE_PURE(PjRtCreateOptions, runtime::PjRtPlugin,
                            client_create_options, );
   }
 
-  bool requires_xla_coordinator() override {
+  bool requires_xla_coordinator() const override {
     PYBIND11_OVERRIDE_PURE(bool, runtime::PjRtPlugin,
                            requires_xla_coordinator, );
   }
@@ -2342,10 +2342,11 @@ void InitXlaModuleBindings(py::module m) {
           return retlist;
         });
   // -------------Dynamo Integration API End-------------------------
-  m.def("_register_pjrt_plugin",
-        [](std::string name, std::shared_ptr<runtime::PjRtPlugin> plugin) {
-          runtime::RegisterPjRtPlugin(name, plugin);
-        });
+  m.def(
+      "_register_pjrt_plugin",
+      [](std::string name, std::shared_ptr<const runtime::PjRtPlugin> plugin) {
+        runtime::RegisterPjRtPlugin(name, plugin);
+      });
   py::class_<runtime::PjRtPlugin, PyPjRtPlugin,
              std::shared_ptr<runtime::PjRtPlugin>>(m, "PjRtPlugin")
       .def(py::init<>())
