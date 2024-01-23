@@ -6,13 +6,13 @@ build-backend = "setuptools.build_meta"
 name = "torch_xla_cuda_plugin"
 version = "0.0.1"
 authors = [
-    {name = "Will Cromar", email = "wcromar@google.com"},
+    {name = "PyTorch/XLA Dev Team", email = "pytorch-xla@googlegroups.com"},
 ]
-description = "CUDA Plugin"
+description = "PyTorch/XLA CUDA Plugin"
 requires-python = ">=3.8"
 
 [tool.setuptools.package-data]
-torch_xla_cuda_plugin = ["*.so"]
+torch_xla_cuda_plugin = ["lib/*.so"]
 
 [project.entry-points."torch_xla.plugins"]
-gpu = "torch_xla_cuda_plugin:GpuPlugin"
+cuda = "torch_xla_cuda_plugin:CudaPlugin"

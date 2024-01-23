@@ -12,7 +12,7 @@ description = "CPU PJRT Plugin for testing only"
 requires-python = ">=3.8"
 
 [tool.setuptools.package-data]
-torch_xla_cpu_plugin = ["*.so"]
+torch_xla_cpu_plugin = ["lib/*.so"]
 
 [project.entry-points."torch_xla.plugins"]
 cpu = "torch_xla_cpu_plugin:CpuPlugin"

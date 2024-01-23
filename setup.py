@@ -46,29 +46,22 @@
 #   CXX_ABI=""
 #     value for cxx_abi flag; if empty, it is inferred from `torch._C`.
 #
-from __future__ import print_function
-
 from setuptools import setup, find_packages, distutils, Extension, command
-from setuptools.command import develop
-from torch.utils.cpp_extension import BuildExtension
+from setuptools.command import develop, build_ext
 import posixpath
 import contextlib
 import distutils.ccompiler
 import distutils.command.clean
-import glob
-import inspect
-import multiprocessing
-import multiprocessing.pool
 import os
-import platform
-import re
 import requests
 import shutil
 import subprocess
 import sys
 import tempfile
-import torch
 import zipfile
+
+import build_util
+import torch
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -80,10 +73,6 @@ def _get_build_mode():
   for i in range(1, len(sys.argv)):
     if not sys.argv[i].startswith('-'):
       return sys.argv[i]
-
-
-def _check_env_flag(name, default=''):
-  return os.getenv(name, default).upper() in ['ON', '1', 'YES', 'TRUE', 'Y']
 
 
 def get_git_head_sha(base_dir):
@@ -101,7 +90,7 @@ def get_git_head_sha(base_dir):
 
 def get_build_version(xla_git_sha):
   version = os.getenv('TORCH_XLA_VERSION', '2.2.0')
-  if _check_env_flag('GIT_VERSIONED_XLA_BUILD', default='TRUE'):
+  if build_util.check_env_flag('GIT_VERSIONED_XLA_BUILD', default='TRUE'):
     try:
       version += '+git' + xla_git_sha[:7]
     except Exception:
@@ -135,7 +124,7 @@ def maybe_bundle_libtpu(base_dir):
   with contextlib.suppress(FileNotFoundError):
     os.remove(libtpu_path)
 
-  if not _check_env_flag('BUNDLE_LIBTPU', '0'):
+  if not build_util.check_env_flag('BUNDLE_LIBTPU', '0'):
     return
 
   try:
@@ -201,20 +190,6 @@ if build_mode not in ['clean']:
   # Copy libtpu.so into torch_xla/lib
   maybe_bundle_libtpu(base_dir)
 
-DEBUG = _check_env_flag('DEBUG')
-IS_DARWIN = (platform.system() == 'Darwin')
-IS_WINDOWS = sys.platform.startswith('win')
-IS_LINUX = (platform.system() == 'Linux')
-GCLOUD_KEY_FILE = os.getenv('GCLOUD_SERVICE_KEY_FILE', default='')
-CACHE_SILO_NAME = os.getenv('SILO_NAME', default='dev')
-BAZEL_JOBS = os.getenv('BAZEL_JOBS', default='')
-
-extra_compile_args = []
-cxx_abi = os.getenv(
-    'CXX_ABI', default='') or getattr(torch._C, '_GLIBCXX_USE_CXX11_ABI', None)
-if cxx_abi is not None:
-  extra_compile_args.append(f'-D_GLIBCXX_USE_CXX11_ABI={int(cxx_abi)}')
-
 
 class BazelExtension(Extension):
   """A C/C++ extension that is defined as a Bazel BUILD target."""
@@ -230,7 +205,7 @@ class BazelExtension(Extension):
     Extension.__init__(self, ext_name, sources=[])
 
 
-class BuildBazelExtension(command.build_ext.build_ext):
+class BuildBazelExtension(build_ext.build_ext):
   """A command that runs Bazel to build a C/C++ extension."""
 
   def run(self):
@@ -246,49 +221,13 @@ class BuildBazelExtension(command.build_ext.build_ext):
         'bazel', 'build', ext.bazel_target,
         f"--symlink_prefix={os.path.join(self.build_temp, 'bazel-')}"
     ]
-    for opt in extra_compile_args:
-      bazel_argv.append("--cxxopt={}".format(opt))
 
-    # Debug build.
-    if DEBUG:
-      bazel_argv.append('--config=dbg')
+    cxx_abi = os.getenv('CXX_ABI') or getattr(torch._C,
+                                              '_GLIBCXX_USE_CXX11_ABI', None)
+    if cxx_abi is not None:
+      bazel_argv.append(f'--cxxopt=-D_GLIBCXX_USE_CXX11_ABI={int(cxx_abi)}')
 
-    if _check_env_flag('TPUVM_MODE'):
-      bazel_argv.append('--config=tpu')
-
-    # Remote cache authentication.
-    if GCLOUD_KEY_FILE:
-      # Temporary workaround to allow PRs from forked repo to run CI. See details at (#5259).
-      # TODO: Remove the check once self-hosted GHA workers are available to CPU/GPU CI.
-      gclout_key_file_size = os.path.getsize(GCLOUD_KEY_FILE)
-      if gclout_key_file_size > 1:
-        bazel_argv.append('--google_credentials=%s' % GCLOUD_KEY_FILE)
-        bazel_argv.append('--config=remote_cache')
-    else:
-      if _check_env_flag('BAZEL_REMOTE_CACHE'):
-        bazel_argv.append('--config=remote_cache')
-    if CACHE_SILO_NAME:
-      bazel_argv.append('--remote_default_exec_properties=cache-silo-key=%s' %
-                        CACHE_SILO_NAME)
-
-    if _check_env_flag('BUILD_CPP_TESTS', default='0'):
-      bazel_argv.append('//test/cpp:all')
-      bazel_argv.append('//torch_xla/csrc/runtime:all')
-
-    if BAZEL_JOBS:
-      bazel_argv.append('--jobs=%s' % BAZEL_JOBS)
-
-    # Build configuration.
-    if _check_env_flag('BAZEL_VERBOSE'):
-      bazel_argv.append('-s')
-    if _check_env_flag('XLA_CUDA'):
-      bazel_argv.append('--config=cuda')
-    if _check_env_flag('XLA_CPU_USE_ACL'):
-      bazel_argv.append('--config=acl')
-
-    if IS_WINDOWS:
-      for library_dir in self.library_dirs:
-        bazel_argv.append('--linkopt=/LIBPATH:' + library_dir)
+    bazel_argv.extend(build_util.bazel_options_from_env())
 
     self.spawn(bazel_argv)
 
