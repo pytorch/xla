@@ -191,10 +191,8 @@ class DebuggingSpmdTest(test_xla_sharding_base.XlaShardingTest):
         pad_edge=False,
         box=rich.box.SQUARE if not use_color else None)
     col = []
-    alltpus = xr.device_type() + ' [0'
-    for i in range(xr.global_runtime_device_count() - 1):
-      alltpus = alltpus + ',' + str(i + 1)
-    alltpus = alltpus + ']'
+    alltpus = xr.device_type() + ' ' + str(
+        list(range(xr.global_runtime_device_count())))
     col.append(
         rich.padding.Padding(
             rich.align.Align(alltpus, "center", vertical="middle"),
