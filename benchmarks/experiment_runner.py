@@ -882,7 +882,7 @@ def parse_args(args=None):
   )
   parser.add_argument(
       "--strict-compatible",
-      type="store_true",
+      action="store_true",
       default=False,
       help="Strictly skipping some models including models cause stackdump or no installation file.",
   )
