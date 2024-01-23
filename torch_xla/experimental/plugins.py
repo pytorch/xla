@@ -93,11 +93,4 @@ def register_installed_plugins():
   for ep in pjrt_entry_points:
     device_plugin_class = ep.load()
 
-    # HACK: TpuPlugin raises EnvironmentError if libtpu is not installed.
-    # TODO(wcromar): Decide if catching `EnvironmentError` is a permanent
-    # behavior or temporary hack.
-    try:
-      register_plugin(ep.name.upper(), device_plugin_class())
-    except EnvironmentError as e:
-      logging.warning(
-          "Failed to register plugin {}".format(ep.name), exc_info=e)
+    register_plugin(ep.name.upper(), device_plugin_class())
