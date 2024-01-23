@@ -390,15 +390,15 @@ sharding = torch_xla._XLAC._get_xla_sharding_spec(t)
 generated_table = visualize_tensor_sharding(t, use_color=False)
 ```
   - result:
-    ![alt_text](assets/mesh_spmd2.png "visualize_tensor_sharding example on TPU v4-8(single-host)")
+    ![alt_text](assets/spmd_debug_1.png "visualize_tensor_sharding example on TPU v4-8(single-host)")
 - Code Example used `visualize_sharding`:
 ```
 from torch_xla.distributed.spmd.debugging import visualize_sharding
-sharding = '{devices=[2,4]0,1,2,3,4,5,6,7}'
-generated_table = visualize_sharding(sharding)
+sharding = '{devices=[2,2]0,1,2,3}'
+generated_table = visualize_sharding(sharding, use_color=False)
 ```
   - result:
-    ![alt_text](assets/mesh_spmd2.png "visualize_sharding example on TPU v4-8(single-host")
+    ![alt_text](assets/spmd_debug_2.png "visualize_sharding example on TPU v4-8(single-host")
 
 You could use these examples on TPU/GPU/CPU single-host and modify it to run on multi-host. And you could modify it to sharding-style `partial_replication` and `replicated` too.
 
