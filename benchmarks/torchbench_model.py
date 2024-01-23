@@ -125,12 +125,15 @@ DENY_LIST = {
 }
 
 # This strict deny list denies tests that hold for too long and timeoout.
-STRICT_DENY_LIST = DENY_LIST | {
-    "cm3leon_generate": [{}],  # no install.py
-    "hf_T5_generate": [{}],  # no install.py
-    "opacus_cifar10": [{
-        "accelerator": "tpu"
-    },],  # stackdump issus in TPU
+STRICT_DENY_LIST = {
+    **{
+        "cm3leon_generate": [{}],  # no install.py
+        "hf_T5_generate": [{}],  # no install.py
+        "opacus_cifar10": [{
+            "accelerator": "tpu"
+        },],  # stackdump issue in TPU
+    },
+    **DENY_LIST
 }
 
 
