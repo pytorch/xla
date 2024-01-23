@@ -62,6 +62,7 @@ class DevicePlugin(torch_xla._XLAC.PjRtPlugin):
     return False
 
 
+# TODO(wcromar): figure out if we can share this map with the C++ code.
 _plugin_registry = {}
 
 
