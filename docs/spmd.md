@@ -351,3 +351,43 @@ XLA_USE_SPMD=1 python test/spmd/test_train_spmd_imagenet.py --fake_data --batch_
 ```
 
 Note that I used a batch size 4 times as large since I am running it on a TPU v4 which has 4 TPU devices attached to it. You should see the throughput becomes roughly 4x the non-spmd run.
+
+### SPMD Debugging Tool
+
+We provide a `shard placement visualization debug tool` for PyTorch/XLA SPMD user on TPU/GPU/CPU with single-host/multi-host: you could use `visualize_tensor_sharding` to visualize sharded tensor, or you could use `visualize_sharding` to visualize sharing string. Here are one code example on TPU single-host(v4-8):
+```
+import numpy as np
+import rich
+import torch
+import torch_xla
+import torch_xla.runtime as xr
+import torch_xla.utils.utils as xu
+import torch_xla.core.xla_model as xm
+import torch_xla.distributed.spmd as xs
+from torch_xla.distributed.spmd import Mesh
+from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
+
+# enable SPMD
+xr.use_spmd()
+
+# current devices
+device = xm.xla_device()
+num_devices = xr.global_runtime_device_count()
+
+# origanize device sharding to (2, num_devices//2)
+mesh_shape = (2, num_devices // 2)
+
+# tiled shard input
+device_ids = np.array(range(num_devices))
+mesh = Mesh(device_ids, mesh_shape, ('x', 'y'))
+t = torch.randn(8, 4, device=device)
+partition_spec = (0, 1)
+xs.mark_sharding(t, mesh, partition_spec)
+
+# visulize tensor sharding
+sharding = torch_xla._XLAC._get_xla_sharding_spec(t)
+generated_table = visualize_tensor_sharding(t, use_color=False)
+```
+You could use this example on TPU/GPU/CPU single host and modify it to run on multi-host. And you would modify it to `partial_replication` and `replicated` too.
+
+
