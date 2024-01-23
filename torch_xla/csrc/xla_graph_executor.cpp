@@ -619,7 +619,7 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
     // hash computation if the node has no annotation, or it actually syncs the
     // sharding attached to the node to the tensor, since sharding propagation &
     // resharding should attach the latest to the node.
-    tensors[i]->sharding_spec();
+    //tensors[i]->sharding_spec();
     if (tensor_ids.insert(tensors[i]->GetUniqueId()).second &&
         // A tensor's xla_data might not be up to date if there is a view
         // associated with it. Make sure to sync those tensors here too.
