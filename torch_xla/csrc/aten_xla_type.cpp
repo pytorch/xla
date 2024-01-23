@@ -115,10 +115,9 @@ void CheckSubOperandTypes(at::ScalarType type1, at::ScalarType type2) {
 
 c10::optional<at::ScalarType> PromoteIntegralType(
     at::ScalarType src_dtype, const c10::optional<at::ScalarType>& opt_dtype) {
-  return opt_dtype.has_value()
-             ? opt_dtype.value()
-             : at::isIntegralType(src_dtype, /*includeBool=*/true) ? at::kLong
-                                                                   : opt_dtype;
+  return opt_dtype.has_value() ? opt_dtype.value()
+         : at::isIntegralType(src_dtype, /*includeBool=*/true) ? at::kLong
+                                                               : opt_dtype;
 }
 
 bool IsTypeWithLargerRangeThanLong(torch::ScalarType dtype) {
@@ -1628,7 +1627,8 @@ at::Tensor XLANativeFunctions::log(const at::Tensor& self) {
       tensor_methods::log(bridge::GetXlaTensor(self)));
 }
 
-at::Tensor XLANativeFunctions::logit(const at::Tensor& self, c10::optional<double> eps) {
+at::Tensor XLANativeFunctions::logit(const at::Tensor& self,
+                                     c10::optional<double> eps) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   return bridge::AtenFromXlaTensor(
       tensor_methods::logit(bridge::GetXlaTensor(self), eps));
