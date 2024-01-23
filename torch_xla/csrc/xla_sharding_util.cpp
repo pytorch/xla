@@ -656,6 +656,20 @@ void ShardingUtil::ReshardParameters(
   }
   XLA_CHECK_EQ(input_shardings.size(), parameters->size());
 
+
+  std::vector<xla::OpSharding> output_shardings;
+  if (module.has_spmd_output_sharding()) {
+    if (module.spmd_output_sharding().tuple_shardings().size() > 0) {
+      auto tuple_shardings =
+          module.spmd_output_sharding().tuple_shardings();
+      output_shardings = std::vector<xla::OpSharding>(tuple_shardings.begin(),
+                                                      tuple_shardings.end());
+    } else {
+      output_shardings = std::vector<xla::OpSharding>{
+          module.spmd_output_sharding()};
+    }
+  }
+
   // Reshard parameters as needed, as with a new sharding spec.
   auto data = UnwrapXlaData(*parameters);
   std::vector<size_t> indices;
@@ -702,7 +716,7 @@ void ShardingUtil::ReshardParameters(
         << "xla_node_map does not contain " << filtered_data[i]->ToString()
         << ", target sharding: " << filtered_shardings[i].DebugString();
     auto device_data_node = DeviceData::Cast(it_node->second);
-    device_data_node->Assign((*parameters)[indices[i]]);
+    // device_data_node->Assign((*parameters)[indices[i]]);
     device_data_node->SetSharding(filtered_shardings[i], 0);
 
     // TODO(yeounoh) attach custom sharding to the node, or track tensors and

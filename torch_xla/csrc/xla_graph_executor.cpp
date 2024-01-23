@@ -619,7 +619,7 @@ XLAGraphExecutor::SyncTensorCollection XLAGraphExecutor::CollectSyncTensors(
     // hash computation if the node has no annotation, or it actually syncs the
     // sharding attached to the node to the tensor, since sharding propagation &
     // resharding should attach the latest to the node.
-    //tensors[i]->sharding_spec();
+    tensors[i]->sharding_spec();
     if (tensor_ids.insert(tensors[i]->GetUniqueId()).second &&
         // A tensor's xla_data might not be up to date if there is a view
         // associated with it. Make sure to sync those tensors here too.
@@ -1362,26 +1362,6 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
 
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
   xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
-
-  // if (use_autosharding) {
-  //   TF_VLOG(3) << "Auto SPMD partitioning enabled!";
-  //   const xla::HloModuleProto& module_proto = computation.proto();
-
-  //   xla::ExecutionOptions execution_options;
-  //   xla::HloModuleConfig module_config =
-  //       ConsumeValue(xla::HloModule::CreateModuleConfigFromProto(
-  //           module_proto, xla::DebugOptions(), &execution_options));
-  //   module_config.set_use_auto_spmd_partitioning(true);
-  //   auto mesh_shape_ids = ShardingUtil::GetAutoShardingMesh();
-  //   std::vector<int64_t> auto_spmd_mesh_shape = std::get<0>(mesh_shape_ids);
-  //   std::vector<int64_t> auto_spmd_mesh_ids = std::get<1>(mesh_shape_ids);
-  //   module_config.set_auto_spmd_partitioning_mesh_shape(auto_spmd_mesh_shape);
-  //   module_config.set_auto_spmd_partitioning_mesh_ids(auto_spmd_mesh_ids);
-
-  //   std::unique_ptr<xla::HloModule> hlo_module = ConsumeValue(
-  //       xla::HloModule::CreateFromProto(module_proto, module_config));
-  //   computation = xla::XlaComputation(hlo_module->ToProto());
-  // }
 
   bool should_wrap_parameter =
       (program_shape.parameters_size() >= parameter_wrapping_threadshold) &&
