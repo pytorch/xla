@@ -128,10 +128,10 @@ DENY_LIST = {
 STRICT_DENY_LIST = {
     **{
         "cm3leon_generate": [{
-          "test": "train",
+            "test": "train",
         }],  # no install.py
         "hf_T5_generate": [{
-           "test": "train",
+            "test": "train",
         }],  # no install.py
         "opacus_cifar10": [{
             "accelerator": "tpu",
