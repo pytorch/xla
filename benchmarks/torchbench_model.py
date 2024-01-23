@@ -60,6 +60,15 @@ TRAIN_WITH_SGD = {
 
 # Skip the experiment of a model if any of the experiment configs in the list is fully matched
 DENY_LIST = {
+    "cm3leon_generate": [
+        {
+            "test": "train",
+        },
+        {
+            "test": "eval",
+            "xla": "PJRT",
+        },
+    ],  # no install.py
     "doctr_det_predictor": [{
         "test": "train"
     },],  # not implemented
@@ -71,6 +80,15 @@ DENY_LIST = {
     },],  # not implemented
     # https://github.com/pytorch/torchdynamo/issues/145
     "fambench_xlmr": [{}],
+    "hf_T5_generate": [
+        {
+            "test": "train",
+        },
+        {
+            "test": "eval",
+            "xla": "PJRT",
+        },
+    ],  # no install.py
     "llama": [{
         "test": "train"
     },],  # not implemented
@@ -127,24 +145,6 @@ DENY_LIST = {
 # This strict deny list denies tests that hold for too long and timeoout.
 STRICT_DENY_LIST = {
     **{
-        "cm3leon_generate": [
-            {
-                "test": "train",
-            },
-            {
-                "test": "eval",
-                "xla": "PJRT",
-            },
-        ],  # no install.py
-        "hf_T5_generate": [
-            {
-                "test": "train",
-            },
-            {
-                "test": "eval",
-                "xla": "PJRT",
-            },
-        ],  # no install.py
         "opacus_cifar10": [{
             "accelerator": "tpu",
         },],  # stackdump issue in TPU
