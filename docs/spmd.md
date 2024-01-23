@@ -355,7 +355,7 @@ Note that I used a batch size 4 times as large since I am running it on a TPU v4
 ### SPMD Debugging Tool
 
 We provide a `shard placement visualization debug tool` for PyTorch/XLA SPMD user on TPU/GPU/CPU with single-host/multi-host: you could use `visualize_tensor_sharding` to visualize sharded tensor, or you could use `visualize_sharding` to visualize sharing string. Here are two code examples on TPU single-host(v4-8) with `visualize_tensor_sharding` or `visualize_sharding`:
-- Code Example used `visualize_tensor_sharding`:
+- Code Example used `visualize_tensor_sharding` and Visualization result:
 ```
 import numpy as np
 import rich
@@ -389,16 +389,14 @@ xs.mark_sharding(t, mesh, partition_spec)
 sharding = torch_xla._XLAC._get_xla_sharding_spec(t)
 generated_table = visualize_tensor_sharding(t, use_color=False)
 ```
-  - result:
-    ![alt_text](assets/spmd_debug_1.png "visualize_tensor_sharding example on TPU v4-8(single-host)")
-- Code Example used `visualize_sharding`:
+![alt_text](assets/spmd_debug_1.png "visualize_tensor_sharding example on TPU v4-8(single-host)")
+- Code Example used `visualize_sharding` and Visualization result:
 ```
 from torch_xla.distributed.spmd.debugging import visualize_sharding
 sharding = '{devices=[2,2]0,1,2,3}'
 generated_table = visualize_sharding(sharding, use_color=False)
 ```
-  - result:
-    ![alt_text](assets/spmd_debug_2.png "visualize_sharding example on TPU v4-8(single-host")
+![alt_text](assets/spmd_debug_2.png "visualize_sharding example on TPU v4-8(single-host")
 
 You could use these examples on TPU/GPU/CPU single-host and modify it to run on multi-host. And you could modify it to sharding-style `partial_replication` and `replicated` too.
 
