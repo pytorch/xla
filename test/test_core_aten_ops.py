@@ -3406,15 +3406,6 @@ class AtenOpTest(unittest.TestCase):
     run_export_and_compare(self, torch.ops.aten.prod.dim_int, args, kwargs)
 
   @unittest.skip
-  def test_aten_randn_0(self):
-    args = ([
-        2,
-        1,
-    ],)
-    kwargs = dict()
-    run_export_and_compare(self, torch.ops.aten.randn, args, kwargs)
-
-  @unittest.skip
   def test_aten_randperm_0(self):
     args = (20,)
     kwargs = dict()
