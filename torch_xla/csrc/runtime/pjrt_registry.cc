@@ -97,11 +97,10 @@ InitializePjRt(const std::string& device_type) {
           absl::AsciiStrToLower(device_type), plugin->library_path());
       XLA_CHECK_OK(pjrt::InitializePjrtPlugin(device_type));
       auto create_options = plugin->client_create_options();
-      client =
-          xla::GetCApiClient(absl::AsciiStrToUpper(device_type),
-                             {create_options.begin(), create_options.end()},
-                             kv_store)
-              .value();
+      client = xla::GetCApiClient(
+                   absl::AsciiStrToUpper(device_type),
+                   {create_options.begin(), create_options.end()}, kv_store)
+                   .value();
       profiler::RegisterProfilerForPlugin(c_api);
     }
   } else if (device_type == "CPU") {
