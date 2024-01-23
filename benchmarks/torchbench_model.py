@@ -258,9 +258,12 @@ class TorchBenchModel(BenchmarkModel):
     # workaround "RuntimeError: not allowed to set torch.backends.cudnn flags"
     # torch.backends.__allow_nonbracketed_mutation_flag = True
 
+    # torchbench uses `xla` as device instead of `tpu`
+    if device := self.benchmark_experiment.accelerator == 'tpu':
+      device = str(self.benchmark_experiment.get_device())
     return benchmark_cls(
         test=self.benchmark_experiment.test,
-        device=self.benchmark_experiment.accelerator,
+        device=device,
         batch_size=self.benchmark_experiment.batch_size,
     )
 
