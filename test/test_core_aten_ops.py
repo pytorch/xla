@@ -1906,11 +1906,17 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.gelu, args, kwargs)
 
-  @unittest.skip
   def test_aten_gelu_1(self):
     args = (torch.randn((10, 10)).to(torch.float16),)
     kwargs = dict()
-    run_export_and_compare(self, torch.ops.aten.gelu, args, kwargs)
+    run_export_and_compare(
+        self,
+        torch.ops.aten.gelu,
+        args,
+        kwargs,
+        rtol=0.001,
+        atol=0.01,
+    )
 
   def test_aten_glu_0(self):
     args = (
@@ -3089,7 +3095,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.native_group_norm, args, kwargs)
 
-  @unittest.skip
   def test_aten_native_group_norm_1(self):
     args = (
         torch.randn((1, 3, 2, 10)).to(torch.float16),
@@ -3102,7 +3107,14 @@ class AtenOpTest(unittest.TestCase):
         0.0,
     )
     kwargs = dict()
-    run_export_and_compare(self, torch.ops.aten.native_group_norm, args, kwargs)
+    run_export_and_compare(
+        self,
+        torch.ops.aten.native_group_norm,
+        args,
+        kwargs,
+        rtol=0.001,
+        atol=0.01,
+    )
 
   def test_aten_native_layer_norm_0(self):
     args = (
@@ -3418,7 +3430,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.reciprocal, args, kwargs)
 
-  @unittest.skip
   def test_aten_reciprocal_2(self):
     args = (torch.randint(0, 10, (10, 10)).to(torch.int32),)
     kwargs = dict()
@@ -4016,7 +4027,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.sigmoid, args, kwargs)
 
-  @unittest.skip
   def test_aten_sigmoid_2(self):
     args = (torch.randint(0, 10, (10, 10)).to(torch.int32),)
     kwargs = dict()

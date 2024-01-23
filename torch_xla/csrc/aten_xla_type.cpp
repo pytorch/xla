@@ -2774,12 +2774,6 @@ at::Tensor& XLANativeFunctions::set_(at::Tensor& self,
   return self;
 }
 
-at::Tensor XLANativeFunctions::sigmoid(const at::Tensor& self) {
-  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::sigmoid(bridge::GetXlaTensor(self)));
-}
-
 at::Tensor XLANativeFunctions::sigmoid_backward(const at::Tensor& grad_output,
                                                 const at::Tensor& output) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
