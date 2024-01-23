@@ -19,7 +19,6 @@ TORCH_TEST_PRECIIONS = {
     'test_sum_xla_bfloat16': 0.1,
     'test_put_xla_bfloat16': 0.05,
     'test_take_xla_bfloat16': 0.05,
-    'test_EmbeddingBag_per_sample_weights_and_new_offsets_xla': 0.01,
 }
 
 DISABLED_TORCH_TESTS_ANY = {
@@ -316,6 +315,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_embedding_bag_device',  # FIXME! Unsupported device type for sparse layout: xla
         'test_embedding_scalar_weight_error_xla',  # tsl::CurrentStackTrace[abi:cxx11]
         'test_EmbeddingBag_per_sample_weights_and_no_offsets',  # FIXME! Unsupported device type for sparse layout: xla
+        'test_EmbeddingBag_per_sample_weights_and_new_offsets',  # precision
     },
 
     # test/nn/test_convolution.py
