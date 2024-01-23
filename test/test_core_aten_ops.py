@@ -654,7 +654,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.asin, args, kwargs)
 
-  @unittest.skip
   def test_aten_asinh_0(self):
     args = (torch.randn((10, 10)).to(torch.float32),)
     kwargs = dict()
@@ -665,7 +664,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.asinh, args, kwargs)
 
-  @unittest.skip
   def test_aten_asinh_2(self):
     args = (torch.randint(0, 10, (10, 10)).to(torch.int32),)
     kwargs = dict()
