@@ -56,6 +56,9 @@ TRAIN_WITH_SGD = {
     "timm_vovnet",
     "vgg16",
     "hf_T5",
+    # PyTorch/benchmark sets its optimizer as SGD.
+    # Otherwise, OOMs.
+    "llama_v2_7b_16h",
 }
 
 # Skip the experiment of a model if any of the experiment configs in the list is fully matched
