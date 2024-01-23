@@ -7,15 +7,10 @@ repository (see `bazel build` command below).
 ## Building
 
 ```bash
-# Build PJRT plugin
-bazel build @xla//xla/pjrt/c:pjrt_c_api_gpu_plugin.so --cxxopt=-D_GLIBCXX_USE_CXX11_ABI=1  --config=cuda
-# Copy to package dir
-cp bazel-bin/external/xla/xla/pjrt/c/pjrt_c_api_gpu_plugin.so plugins/cuda/torch_xla_cuda_plugin
-
 # Build wheel
-pip wheel plugins/cuda
+pip wheel plugins/cuda --no-build-isolation -v
 # Or install directly
-pip install plugins/cuda
+pip install plugins/cuda --no-build-isolation -v
 ```
 
 ## Usage
@@ -34,7 +29,7 @@ import torch_xla.runtime as xr
 
 # Use dynamic plugin instead of built-in CUDA support
 plugins.use_dynamic_plugins()
-plugins.register_plugin('CUDA', torch_xla_cuda_plugin.GpuPlugin())
+plugins.register_plugin('CUDA', torch_xla_cuda_plugin.CudaPlugin())
 xr.set_device_type('CUDA')
 
 print(xm.xla_device())
