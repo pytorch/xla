@@ -225,7 +225,7 @@
               
               
                 <div class="version">
-                  master (2.2.0+git07832b0 )
+                  master (2.2.0+gitbc2ebed )
                 </div>
               
             
@@ -411,10 +411,13 @@
 <li><a class="reference internal" href="#use-spmd-to-express-data-parallel">Use SPMD to express Data Parallel</a></li>
 <li><a class="reference internal" href="#use-spmd-to-express-fsdp-fully-sharded-data-parallel">Use SPMD to express FSDP(Fully Sharded Data Parallel)</a></li>
 <li><a class="reference internal" href="#running-resnet50-example-with-spmd">Running Resnet50 example with SPMD</a></li>
+<li><a class="reference internal" href="#spmd-debugging-tool">SPMD Debugging Tool</a></li>
 </ul>
 </li>
 </ul>
 </li>
+<li><a class="reference internal" href="#here-mesh-is-a-2x2-mesh-with-axes-x-and-y">Here, mesh is a 2x2 mesh with axes ‘x’ and ‘y’</a></li>
+<li><a class="reference internal" href="#a-tensor-s-sharding-can-be-visualized-using-the-visualize-tensor-sharding-method">A tensor’s sharding can be visualized using the <code class="docutils literal notranslate"><span class="pre">visualize_tensor_sharding</span></code> method</a></li>
 </ul>
 </div>
             
@@ -3513,7 +3516,36 @@ We are integrating PyTorch/XLA SPMD into DTensor API <a class="reference externa
 </div>
 <p>Note that I used a batch size 4 times as large since I am running it on a TPU v4 which has 4 TPU devices attached to it. You should see the throughput becomes roughly 4x the non-spmd run.</p>
 </div>
+<div class="section" id="spmd-debugging-tool">
+<h3>SPMD Debugging Tool<a class="headerlink" href="#spmd-debugging-tool" title="Permalink to this headline">¶</a></h3>
+<p>We provide a <code class="docutils literal notranslate"><span class="pre">shard</span> <span class="pre">placement</span> <span class="pre">visualization</span> <span class="pre">debug</span> <span class="pre">tool</span></code> for PyTorch/XLA SPMD user on TPU/GPU/CPU with single-host/multi-host: you could use <code class="docutils literal notranslate"><span class="pre">visualize_tensor_sharding</span></code> to visualize sharded tensor, or you could use <code class="docutils literal notranslate"><span class="pre">visualize_sharding</span></code> to visualize sharing string. Here are two code examples on TPU single-host(v4-8) with <code class="docutils literal notranslate"><span class="pre">visualize_tensor_sharding</span></code> or <code class="docutils literal notranslate"><span class="pre">visualize_sharding</span></code>:</p>
+<ul class="simple">
+<li><p>Code snippet used <code class="docutils literal notranslate"><span class="pre">visualize_tensor_sharding</span></code> and visualization result:
+<a href="#id34"><span class="problematic" id="id35">``</span></a><a href="#id36"><span class="problematic" id="id37">`</span></a>python
+import rich</p></li>
+</ul>
 </div>
+</div>
+</div>
+<div class="section" id="here-mesh-is-a-2x2-mesh-with-axes-x-and-y">
+<h1>Here, mesh is a 2x2 mesh with axes ‘x’ and ‘y’<a class="headerlink" href="#here-mesh-is-a-2x2-mesh-with-axes-x-and-y" title="Permalink to this headline">¶</a></h1>
+<p>t = torch.randn(8, 4, device=’xla’)
+xs.mark_sharding(t, mesh, (‘x’, ‘y’))</p>
+</div>
+<div class="section" id="a-tensor-s-sharding-can-be-visualized-using-the-visualize-tensor-sharding-method">
+<h1>A tensor’s sharding can be visualized using the <code class="docutils literal notranslate"><span class="pre">visualize_tensor_sharding</span></code> method<a class="headerlink" href="#a-tensor-s-sharding-can-be-visualized-using-the-visualize-tensor-sharding-method" title="Permalink to this headline">¶</a></h1>
+<p>from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
+generated_table = visualize_tensor_sharding(t, use_color=False)</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>![alt_text](assets/spmd_debug_1.png &quot;visualize_tensor_sharding example on TPU v4-8(single-host)&quot;)
+- Code snippet used `visualize_sharding` and visualization result:
+```python
+from torch_xla.distributed.spmd.debugging import visualize_sharding
+sharding = &#39;{devices=[2,2]0,1,2,3}&#39;
+generated_table = visualize_sharding(sharding, use_color=False)
+</pre></div>
+</div>
+<a class="reference external image-reference" href="assets/spmd_debug_2.png"><img alt="alt_text" src="assets/spmd_debug_2.png" /></a>
+<p>You could use these examples on TPU/GPU/CPU single-host and modify it to run on multi-host. And you could modify it to sharding-style <code class="docutils literal notranslate"><span class="pre">tiled</span></code>, <code class="docutils literal notranslate"><span class="pre">partial_replication</span></code> and <code class="docutils literal notranslate"><span class="pre">replicated</span></code>.</p>
 </div>
 
 
@@ -3706,10 +3738,13 @@ We are integrating PyTorch/XLA SPMD into DTensor API <a class="reference externa
 <li><a class="reference internal" href="#use-spmd-to-express-data-parallel">Use SPMD to express Data Parallel</a></li>
 <li><a class="reference internal" href="#use-spmd-to-express-fsdp-fully-sharded-data-parallel">Use SPMD to express FSDP(Fully Sharded Data Parallel)</a></li>
 <li><a class="reference internal" href="#running-resnet50-example-with-spmd">Running Resnet50 example with SPMD</a></li>
+<li><a class="reference internal" href="#spmd-debugging-tool">SPMD Debugging Tool</a></li>
 </ul>
 </li>
 </ul>
 </li>
+<li><a class="reference internal" href="#here-mesh-is-a-2x2-mesh-with-axes-x-and-y">Here, mesh is a 2x2 mesh with axes ‘x’ and ‘y’</a></li>
+<li><a class="reference internal" href="#a-tensor-s-sharding-can-be-visualized-using-the-visualize-tensor-sharding-method">A tensor’s sharding can be visualized using the <code class="docutils literal notranslate"><span class="pre">visualize_tensor_sharding</span></code> method</a></li>
 </ul>
 
             </div>
