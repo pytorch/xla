@@ -75,7 +75,7 @@ namespace torch_xla {
                            {GetXlaShape(input0), GetXlaShape(input1)},         \
                            shape_fn);                                          \
                      },                                                        \
-                     std::move(lower_fn));                                                  \
+                     std::move(lower_fn));                                     \
   }
 
 PTXLA_UNARY_OP(Neg, at::aten::neg, xla::Neg);
