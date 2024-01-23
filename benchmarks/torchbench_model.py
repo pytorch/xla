@@ -56,14 +56,20 @@ TRAIN_WITH_SGD = {
     "timm_vovnet",
     "vgg16",
     "hf_T5",
-    # PyTorch/benchmark sets its optimizer as SGD.
-    # Otherwise, OOMs.
-    "llama_v2_7b_16h",
 }
 
 # Skip the experiment of a model if any of the experiment configs in the list is fully matched
 DENY_LIST = {
     "cm3leon_generate": [
+        {
+            "test": "train",
+        },
+        {
+            "test": "eval",
+            "xla": "PJRT",
+        },
+    ],  # no install.py
+    "hf_T5_generate": [
         {
             "test": "train",
         },
@@ -83,15 +89,6 @@ DENY_LIST = {
     },],  # not implemented
     # https://github.com/pytorch/torchdynamo/issues/145
     "fambench_xlmr": [{}],
-    "hf_T5_generate": [
-        {
-            "test": "train",
-        },
-        {
-            "test": "eval",
-            "xla": "PJRT",
-        },
-    ],  # no install.py
     "llama": [{
         "test": "train"
     },],  # not implemented
@@ -149,6 +146,9 @@ DENY_LIST = {
 STRICT_DENY_LIST = {
     **{
         "opacus_cifar10": [{
+            "accelerator": "tpu",
+        },],  # stackdump issue in TPU
+        "pytorch_stargan": [{
             "accelerator": "tpu",
         },],  # stackdump issue in TPU
     },
