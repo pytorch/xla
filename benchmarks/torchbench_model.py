@@ -306,11 +306,20 @@ class TorchBenchModel(BenchmarkModel):
     if (device := self.benchmark_experiment.accelerator) == 'tpu':
       device = str(self.benchmark_experiment.get_device())
 
-    return self.benchmark_cls()(
-        test=self.benchmark_experiment.test,
-        device=device,
-        batch_size=self.benchmark_experiment.batch_size,
-    )
+    kwargs = {
+        "test": self.benchmark_experiment.test,
+        "device": device,
+        "batch_size": self.benchmark_experiment.batch_size,
+    }
+
+    # Force FP32 when precision is either FP16 or BF16.
+    # If the model is, e.g. FP16 and XLA_USE_FP16, XLA will unexpectedly up-cast
+    # return values to FP32.
+    # Issue: https://github.com/pytorch/xla/issues/6348
+    if self.is_cuda_precision_fp16() or self.is_cuda_precision_bf16():
+      kwargs["extra_args"] = ["--precision", "fp32"]
+
+    return self.benchmark_cls()(**kwargs)
 
   def get_cuda_precision(self):
     test = self.benchmark_experiment.test.upper()
