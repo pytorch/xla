@@ -111,7 +111,8 @@ torch::lazy::NodePtr Logit(const torch::lazy::Value& input,
     return node.ReturnOp(BuildLogit(xla_input, eps), loctx);
   };
   return GenericOp(torch::lazy::OpKind(at::aten::logit), {input},
-                   GetXlaShape(input), std::move(lower_fn));
+                   GetXlaShape(input), std::move(lower_fn), /*num_outputs=*/1,
+                   torch::lazy::MHash(eps));
 }
 
 torch::lazy::NodePtr SgnOp(const torch::lazy::Value& input) {
