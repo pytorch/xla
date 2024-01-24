@@ -2124,7 +2124,6 @@ class AtenOpTest(unittest.TestCase):
     ))
     run_export_and_compare(self, torch.ops.aten.randint.low, args, kwargs)
 
-  @unittest.skip
   def test_aten_index_put_0(self):
     args = (
         torch.randn((10, 10)).to(torch.float32),
@@ -2147,7 +2146,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.index_put, args, kwargs)
 
-  @unittest.skip
   def test_aten_index_put_2(self):
     args = (
         torch.randint(0, 10, (10, 10)).to(torch.int32),
