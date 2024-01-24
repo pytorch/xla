@@ -128,6 +128,11 @@ jobs:
           PYTHON_TEST_NAME: ${{ env.RUN_PYTHON_TESTS }}${{ env.RUN_XLA_OP_TESTS1 }}${{ env.RUN_XLA_OP_TESTS2 }}${{ env.RUN_XLA_OP_TESTS3 }}${{ env.RUN_TORCH_MP_OP_TESTS }}
           CPP_TEST_NAME: ${{ env.RUN_CPP_TESTS1 }}${{ env.RUN_CPP_TESTS2 }}
         run: |
+            if [ -n "$env.RUN_BENCHMARK_TESTS" ]; then
+              exit 0
+            fi
+
+            echo ${pid}
             docker cp "${pid}":/home/jenkins/htmlcov "${GITHUB_WORKSPACE}"
             if [ -n "${GPU_FLAG:-}" ]; then
               if [ -n "${PYTHON_TEST_NAME}" ]; then
