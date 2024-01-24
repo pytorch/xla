@@ -67,8 +67,6 @@ class HloMetadataSetter {
     if (custom_opname_meta != nullptr) {
       op_name_prefix = custom_opname_meta->op_name_prefix;
       max_stack_depth = custom_opname_meta->max_stack_depth;
-    } else {
-      TF_LOG(WARNING) << "No custom opname metadata! op_type=" << op_type;
     }
 
     if (!nmeta.scope.empty()) {
