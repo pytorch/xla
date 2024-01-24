@@ -30,8 +30,8 @@ torch::lazy::NodePtr Expand::Clone(torch::lazy::OpList operands) const {
 }
 
 XlaOpVector Expand::Lower(LoweringContext* loctx) const {
-  std::cout << "in expand lowering" << std::endl;
-  std::cout << size_ << std::endl;
+  // std::cout << "in expand lowering" << std::endl;
+  // std::cout << size_ << std::endl;
   xla::XlaOp input = loctx->GetOutputOp(operand(0));
   return ReturnOp(BuildExpand(input, size_), loctx);
 }

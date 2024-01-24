@@ -40,6 +40,7 @@ SizeNode::SizeNode(torch::lazy::Value input, size_t dim)
 };
 
 int64_t SizeNode::getDynamicValue() const {
+  std::cout << "in SizeNode::getDynamicValue" << std::endl;
   if (dynamic_value_computed_) {
     TORCH_LAZY_COUNTER("CachedSizeNodeValue", 1);
     return runtime_size_;

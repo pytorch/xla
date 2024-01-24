@@ -361,8 +361,10 @@ xla::XlaOp XlaHelpers::DynamicUnboundedReshape(
   }
 
   const xla::Shape& aux_input_shape = ShapeHelper::ShapeOfXlaOp(aux_input);
-  XLA_CHECK(output_sizes.size() == aux_input_shape.rank())
-      << "XlaHelpers::DynamicUnboundedReshape constrainled failed!";
+  // XLA_CHECK(output_sizes.size() == aux_input_shape.rank())
+  //     << "XlaHelpers::DynamicUnboundedReshape constrainled failed!"
+  //     << "output_size rank: " << output_sizes.size() << ", aux input shape rank: "
+  //     << aux_input_shape.rank();
 
   std::vector<xla::XlaOp> get_dim_ops;
   std::vector<xla::XlaOp> reshaped_ops;

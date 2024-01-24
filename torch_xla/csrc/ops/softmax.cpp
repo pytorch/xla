@@ -4,6 +4,7 @@
 
 #include "torch_xla/csrc/convert_ops.h"
 #include "torch_xla/csrc/lowering_context.h"
+#include "torch_xla/csrc/shape_helper.h"
 #include "torch_xla/csrc/softmax_builder.h"
 #include "torch_xla/csrc/tensor_util.h"
 #include "torch_xla/csrc/torch_util.h"
@@ -13,7 +14,13 @@ namespace {
 
 xla::XlaOp LowerSoftmax(xla::XlaOp input, int64_t dim,
                         const c10::optional<at::ScalarType>& dtype) {
+  std::cout << "in LowerSoftmax" << std::endl;
+  xla::Shape input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  std::cout << "check input shape: " << input_shape << std::endl;
   xla::XlaOp result = BuildSoftmax(input, dim);
+  xla::Shape result_shape = ShapeHelper::ShapeOfXlaOp(result);
+  std::cout << "in LowerSoftmax, check result shape: "
+            << result_shape << std::endl;
   return CastToScalarType(result, dtype);
 }
 

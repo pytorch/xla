@@ -920,6 +920,7 @@ XLATensorPtr cat(absl::Span<const XLATensorPtr> tensors, int64_t dim,
   std::vector<xla::Shape> shapes;
   for (size_t i = 0; i < tensors.size(); ++i) {
     xla::Shape tensor_shape = tensors[i]->shape();
+    std::cout << "check tensor " << i << " shape: " << tensor_shape << std::endl;
     if (tensor_shape.rank() == 1 && tensor_shape.dimensions()[0] == 0) {
       continue;
     }
@@ -2110,6 +2111,7 @@ void optimization_barrier_(std::vector<XLATensorPtr>& tensors) {
 
 XLATensorPtr permute(const XLATensorPtr& input,
                      absl::Span<const int64_t> dims) {
+  std::cout << " in permute " << std::endl;
   auto input_shape = input->shape();
   std::vector<int64_t> dimensions = torch::lazy::GetCanonicalDimensionIndices(
       torch_xla::runtime::util::ToVector<int64_t>(dims),
@@ -2918,7 +2920,7 @@ XLATensorPtr view(const XLATensorPtr& input,
       GetCompleteShape(output_size, input_shape.get().dimensions());
   xla::Shape shape =
       XlaHelpers::GetDynamicReshape(input_shape, complete_dimensions);
-
+  // std::cout << "in view tensor methods " << std::endl;
   // See Note: [Disabling functionalization]
   if (runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
     ViewInfo view_info(ViewInfo::Type::kReshape, std::move(shape), input_shape);
@@ -2931,12 +2933,20 @@ XLATensorPtr view(const XLATensorPtr& input,
 XLATensorPtr view_symint(const XLATensorPtr& input,
                          at::SymIntArrayRef sym_size) {
   auto input_shape = input->shape();
+  std::cout << "in view symint tensor methods " << std::endl;
+  std::cout << "check shape: " << input_shape << std::endl;
   SymIntElements size_elements(sym_size);
   std::vector<int64_t> complete_dimensions = GetCompleteShape(
       size_elements.GetUpperBounds(), input_shape.get().dimensions());
   xla::Shape result_shape = xla::ShapeUtil::MakeShape(
       input_shape.get().element_type(), complete_dimensions,
       size_elements.GetDynamicDims());
+  // This won't be triggered because unbounded dynamic dim doesn't propagate
+  // through xla node.
+  // if (!(dynamic_cast<XlaNode*>(input->GetIrValue().node.get())->dynamic_dims()).empty()) {
+  //   std::cout << "input has dynamic dim" << std::endl;
+  //   result_shape.set_unbounded_dynamic_dimension(0);
+  // }
   // See Note: [Disabling functionalization]
   if (runtime::sys_util::GetEnvBool("XLA_DISABLE_FUNCTIONALIZATION", false)) {
     ViewInfo view_info(ViewInfo::Type::kReshape, std::move(result_shape),

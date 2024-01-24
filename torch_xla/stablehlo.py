@@ -236,22 +236,6 @@ class XLAExportInterpreter(torch.fx.Interpreter):
     return super().call_function(target, args, new_kwargs)
 
   def run_node(self, n) -> Any:
-    import pdb
-    if n.op == 'call_function' and n.target == torch.ops.aten.sym_size.int:
-      pdb.set_trace()
-      print(n)
-    if n.op == 'call_function' and n.target == torch.ops.aten.expand.default:
-      pdb.set_trace()
-      new_args = (n.args[0], list(n.args[1]))
-      expand_size = new_args[1]
-      for idx in range(len(expand_size)):
-        if not isinstance(expand_size[idx], int):
-          new_args[1][idx] = np.iinfo(np.int32).max
-          # new_args[1][idx] = 10
-          print(type(new_args[1][idx]))
-      n.args = new_args
-      print(n)
-      print(n.args)
     if n.op == 'placeholder':
       fake_t = n.meta['val']
       res = super().run_node(n)
@@ -288,10 +272,17 @@ def _extract_input_args(exported_model, options):
     return copy.deepcopy(args)
 
 
+def _preprocess_exported_program(exported_model: 'ExportedProgram'):
+  from torch_xla.experimental.stablehlo_unbounded_dynamism_utils import replace_dynamic_expand_with_xla_op
+  replace_dynamic_expand_with_xla_op(exported_model)
+
+
 def _exported_program_to_stablehlo_bundle(exported_model,
                                           options) -> StableHLOModelBundle:
   if options is None:
     options = StableHLOExportOptions()
+  _preprocess_exported_program(exported_model)
+  exported_model.graph_module.graph.print_tabular()
   exported_model = exported_model.run_decompositions()
   input_args = _extract_input_args(exported_model, options)
 

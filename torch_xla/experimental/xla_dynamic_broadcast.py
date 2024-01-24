@@ -18,7 +18,7 @@ def dynamic_expand_xla(
     src_dim: int,
     target_dim: int,
 ):
-    """Attach pattern boundary metadata to a XLA Tensor.
+  """Attach pattern boundary metadata to a XLA Tensor.
 
     Args:
         x: torch.Tensor (On XLA device) - the marked tensor.
@@ -29,9 +29,8 @@ def dynamic_expand_xla(
         attr: dict - Attribute of the pattern, it will be passed down to the attribute field
                      in the stablehlo composite.
     """
-    return torch_xla._XLAC._xla_dynamic_expand(
-        x, size, src_tensor, src_dim, target_dim
-    )
+  return torch_xla._XLAC._xla_dynamic_expand(x, size, src_tensor, src_dim,
+                                             target_dim)
 
 
 @impl(xla_pattern_marking_lib, "dynamic_expand", "CompositeExplicitAutograd")
@@ -42,8 +41,8 @@ def dynamic_expand(
     src_dim: int,
     target_dim: int,
 ):
-    size[target_dim] = src_tensor.shape[src_dim]
-    return x.expand(*size)
+  size[target_dim] = src_tensor.shape[src_dim]
+  return x.expand(*size)
 
 
 @impl(xla_pattern_marking_lib, "dynamic_expand", "Meta")
@@ -54,9 +53,6 @@ def dynamic_expand_meta(
     src_dim: int,
     target_dim: int,
 ):
-    final_size = list(x.shape)
-    final_size[target_dim] = src_tensor.shape[src_dim]
-    print(src_tensor.shape)
-    print(final_size)
-    return torch.empty(*final_size, device='meta')
-
+  final_size = list(x.shape)
+  final_size[target_dim] = src_tensor.shape[src_dim]
+  return torch.empty(*final_size, device='meta')

@@ -15,14 +15,12 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input,
                            const std::vector<int64_t>& size,
                            const torch::lazy::Value& src_tensor,
                            int src_index, int target_index) {
-  // std::vector<bool> dynamic_dims(size.size(), false);
-  // std::vector<int64_t> expanded_size = true
-  // dynamic_dims[target_index] = true;
   std::vector<int64_t> expanded_size(size);
-  xla::Shape src_shape = GetXlaShape(src_tensor);
+  xla::Shape input_shape = GetXlaShape(input);
+  std::cout << "check src size: " << input_shape << std::endl;
   for(size_t i = 0; i < expanded_size.size(); ++i) {
     if (expanded_size[i] == -1) {
-      expanded_size[i] = src_shape.dimensions(i);
+      expanded_size[i] = input_shape.dimensions(i);
     }
   }
   expanded_size[target_index] = GetXlaShape(src_tensor).dimensions(src_index);
