@@ -154,6 +154,9 @@ STRICT_DENY_LIST = {
         "soft_actor_critic": [{
             "accelerator": "tpu",
         },],  # stackdump issue in TPU
+        "speech_transformer": [{
+            "accelerator": "tpu",
+        },],  # stackdump issue in TPU
     },
     **DENY_LIST
 }
