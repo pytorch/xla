@@ -113,7 +113,8 @@ class ExperimentRunner:
 
         # Skip unsupported config.
         if not self.model_loader.is_compatible(benchmark_model,
-                                               benchmark_experiment):
+                                               benchmark_experiment,
+                                               self._args.strict_compatible):
           logger.warning("SKIP incompatible model and experiment configs.")
           self._save_results(benchmark_experiment.to_dict(),
                              benchmark_model.to_dict(), {"error": "SKIP"})
@@ -841,7 +842,6 @@ def parse_args(args=None):
   parser.add_argument(
       "--disable-tf32",
       action="store_true",
-      default=False,
       help="Whether to enable fast F32 multiplication in PyTorch.",
   )
   parser.add_argument(
@@ -864,20 +864,22 @@ def parse_args(args=None):
   parser.add_argument(
       "--pure-wall-time",
       action="store_true",
-      default=False,
       help="Times wall time measurements with pure CUDA events. No kernel launch overhead.",
   )
   parser.add_argument(
       "--filter-by-single-graph",
       action="store_true",
-      default=False,
       help="Runs the experiment with hard-failing when it detects there will be multiple graphs out of a single compiled region.",
   )
   parser.add_argument(
       "--verify",
       action="store_true",
-      default=False,
       help="""If set, verifies the model output with PT Eager mode, and saves relative error to the output file."""
+  )
+  parser.add_argument(
+      "--strict-compatible",
+      action="store_true",
+      help="Strictly skips some models including models without installation file or causing stackdump.",
   )
   return parser.parse_args(args)
 

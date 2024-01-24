@@ -56,13 +56,28 @@ TRAIN_WITH_SGD = {
     "timm_vovnet",
     "vgg16",
     "hf_T5",
-    # PyTorch/benchmark sets its optimizer as SGD.
-    # Otherwise, OOMs.
-    "llama_v2_7b_16h",
 }
 
 # Skip the experiment of a model if any of the experiment configs in the list is fully matched
 DENY_LIST = {
+    "cm3leon_generate": [
+        {
+            "test": "train",
+        },
+        {
+            "test": "eval",
+            "xla": "PJRT",
+        },
+    ],  # no install.py
+    "hf_T5_generate": [
+        {
+            "test": "train",
+        },
+        {
+            "test": "eval",
+            "xla": "PJRT",
+        },
+    ],  # no install.py
     "doctr_det_predictor": [{
         "test": "train"
     },],  # not implemented
@@ -127,6 +142,25 @@ DENY_LIST = {
     "vision_maskrcnn": [{}],
 }
 
+# This strict deny list denies tests that hold for too long and timeoout.
+STRICT_DENY_LIST = {
+    **{
+        "opacus_cifar10": [{
+            "accelerator": "tpu",
+        },],  # stackdump issue in TPU
+        "pytorch_stargan": [{
+            "accelerator": "tpu",
+        },],  # stackdump issue in TPU
+        "soft_actor_critic": [{
+            "accelerator": "tpu",
+        },],  # stackdump issue in TPU
+        "speech_transformer": [{
+            "accelerator": "tpu",
+        },],  # stackdump issue in TPU
+    },
+    **DENY_LIST
+}
+
 
 class TorchBenchModelLoader(ModelLoader):
 
@@ -179,9 +213,13 @@ class TorchBenchModelLoader(ModelLoader):
 
     return model_configs
 
-  def is_compatible(self, dummy_benchmark_model, benchmark_experiment):
-    if dummy_benchmark_model.model_name in DENY_LIST:
-      for deny_experiment_config in DENY_LIST[dummy_benchmark_model.model_name]:
+  def is_compatible(self,
+                    dummy_benchmark_model,
+                    benchmark_experiment,
+                    use_strict_deny=False):
+    deny_list = STRICT_DENY_LIST if use_strict_deny else DENY_LIST
+    if dummy_benchmark_model.model_name in deny_list:
+      for deny_experiment_config in deny_list[dummy_benchmark_model.model_name]:
         matched = True
         for k, v in deny_experiment_config.items():
           if getattr(benchmark_experiment, k) != v:
