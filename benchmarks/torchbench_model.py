@@ -282,6 +282,19 @@ class TorchBenchModel(BenchmarkModel):
     del benchmark
     self._cleanup()
 
+  def load_benchmark_precision(self):
+    try:
+      module = importlib.import_module(
+          f"torchbenchmark.models.{self.model_name}")
+    except ModuleNotFoundError:
+      module = importlib.import_module(
+          f"torchbenchmark.models.fb.{self.model_name}")
+    benchmark_train_precision = getattr(module.Model,
+                                        "DEFAULT_TRAIN_CUDA_PRECISION", None)
+    benchmark_eval_precision = getattr(module.Model,
+                                       "DEFAULT_EVAL_CUDA_PRECISION", None)
+    return benchmark_train_precision, benchmark_eval_precision
+
   def load_benchmark(self):
     try:
       module = importlib.import_module(
@@ -323,20 +336,19 @@ class TorchBenchModel(BenchmarkModel):
     """
     test = self.benchmark_experiment.test
     try:
-      benchmark = self.load_benchmark()
+      train_precision, eval_precision = self.load_benchmark_precision()
     except Exception:
       logger.exception("Cannot load benchmark model")
       return None
 
-    if test == "eval" and hasattr(benchmark, 'DEFAULT_EVAL_CUDA_PRECISION'):
-      precision = benchmark.DEFAULT_EVAL_CUDA_PRECISION
-    elif test == "train" and hasattr(benchmark, 'DEFAULT_TRAIN_CUDA_PRECISION'):
-      precision = benchmark.DEFAULT_TRAIN_CUDA_PRECISION
+    if test == "eval":
+      precision = eval_precision
+    elif test == "train":
+      precision = train_precision
     else:
       precision = None
       logger.warning("No default precision set. No patching needed.")
 
-    del benchmark
     self._cleanup()
 
     precision_flag = None
