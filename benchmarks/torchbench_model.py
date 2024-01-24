@@ -29,6 +29,38 @@ DETECTRON2_MODELS = {
     "detectron2_fcos_r_50_fpn",
 }
 
+# torchbench models that might OOM using Adam.
+# This list was extracted from PyTorch's repository: benchmarks/dynamo/common.py
+TRAIN_WITH_SGD = {
+    "BERT_pytorch",
+    "LearningToPaint",
+    "alexnet",
+    "dcgan",
+    "demucs",
+    "densenet121",
+    "dlrm",
+    "fastNLP_Bert",
+    "mobilenet_v2",
+    "phlippe_densenet",
+    "phlippe_resnet",
+    "pytorch_stargan",
+    "resnet18",
+    "shufflenet_v2_x1_0",
+    "speech_transformer",
+    "squeezenet1_1",
+    "stable_diffusion_text_encoder",
+    "timm_efficientdet",
+    "timm_nfnet",
+    "timm_regnet",
+    "timm_vision_transformer",
+    "timm_vovnet",
+    "vgg16",
+    "hf_T5",
+    # PyTorch/benchmark sets its optimizer as SGD.
+    # Otherwise, OOMs.
+    "llama_v2_7b_16h",
+}
+
 # Skip the experiment of a model if any of the experiment configs in the list is fully matched
 DENY_LIST = {
     "doctr_det_predictor": [{
@@ -179,7 +211,10 @@ class TorchBenchModel(BenchmarkModel):
 
     This is model suite specific.
     """
-    self.optimizer_class = torch.optim.Adam
+    if self.benchmark_experiment.test == "train" and self.model_name in TRAIN_WITH_SGD:
+      self.optimizer_class = torch.optim.SGD
+    else:
+      self.optimizer_class = torch.optim.Adam
 
     benchmark = self.load_benchmark()
 
@@ -205,8 +240,6 @@ class TorchBenchModel(BenchmarkModel):
     if self.model_name == "yolov3":
       self.example_inputs = (torch.rand(self.benchmark_experiment.batch_size, 3,
                                         384, 512),)
-    if self.benchmark_experiment.test == "train" and self.model_name in DETECTRON2_MODELS:
-      self.optimizer = benchmark.optimizer
 
     del benchmark
     self._cleanup()
@@ -228,9 +261,12 @@ class TorchBenchModel(BenchmarkModel):
     # workaround "RuntimeError: not allowed to set torch.backends.cudnn flags"
     # torch.backends.__allow_nonbracketed_mutation_flag = True
 
+    # torchbench uses `xla` as device instead of `tpu`
+    if device := self.benchmark_experiment.accelerator == 'tpu':
+      device = str(self.benchmark_experiment.get_device())
     return benchmark_cls(
         test=self.benchmark_experiment.test,
-        device=self.benchmark_experiment.accelerator,
+        device=device,
         batch_size=self.benchmark_experiment.batch_size,
     )
 

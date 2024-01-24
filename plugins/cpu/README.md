@@ -10,15 +10,10 @@ repository (see `bazel build` command below).
 ## Building
 
 ```bash
-# Build PJRT plugin
-bazel build //plugins/cpu:pjrt_c_api_cpu_plugin.so --cxxopt=-D_GLIBCXX_USE_CXX11_ABI=1
-# Copy to package dir
-cp bazel-bin/plugins/cpu/pjrt_c_api_cpu_plugin.so plugins/cpu/torch_xla_cpu_plugin/
-
 # Build wheel
-pip wheel plugins/cpu
+pip wheel plugins/cpu --no-build-isolation -v
 # Or install directly
-pip install plugins/cpu
+pip install plugins/cpu --no-build-isolation -v
 ```
 
 ## Usage
