@@ -133,7 +133,6 @@ jobs:
             if [ -n "${BENCHMARK_TEST_NAME}" ] || [ "${PYTHON_TEST_NAME}" == "pythontorch_mp_op" ]; then
                 exit 0
             fi
-
             docker cp "${pid}":/home/jenkins/htmlcov "${GITHUB_WORKSPACE}"
             if [ -n "${GPU_FLAG:-}" ]; then
               if [ -n "${PYTHON_TEST_NAME}" ]; then
