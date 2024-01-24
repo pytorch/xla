@@ -151,6 +151,9 @@ STRICT_DENY_LIST = {
         "pytorch_stargan": [{
             "accelerator": "tpu",
         },],  # stackdump issue in TPU
+        "soft_actor_critic": [{
+            "accelerator": "tpu",
+        },],  # stackdump issue in TPU
     },
     **DENY_LIST
 }
