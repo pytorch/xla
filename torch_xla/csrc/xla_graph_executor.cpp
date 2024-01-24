@@ -1306,7 +1306,6 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
       runtime::sys_util::GetEnvString("PJRT_DEVICE", "").size() > 0;
   static const bool use_autosharding =
       runtime::sys_util::GetEnvBool("XLA_AUTO_SPMD", false);
-  std::cout << "*** use_autosharding=" << use_autosharding << std::endl;
   LoweringContext lowering_ctx("SyncTensorsGraph", coll.device,
                                po_data->post_order,
                                std::move(po_data->emission_map));
@@ -1388,9 +1387,11 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
                        /*parameter_is_tupled_arguments=*/should_wrap_parameter,
                        /*is_sharded=*/is_sharded});
   if (use_autosharding) {
+    TF_VLOG(5) << "use_auto_spmd_partitioning is set.";
     TF_CHECK(is_sharded) << "Auto-sharding pass requires SPMD mode.";
     instances.front().use_auto_spmd_partitioning = use_autosharding;
-    TF_VLOG(5) << "use_auto_spmd_partitioning=" << use_autosharding;
+
+    // Apply XLA_AUTO_SPMD_MESH if it is set.
     auto mesh_shape_ids = ShardingUtil::GetAutoShardingMesh();
     std::vector<int64_t> auto_spmd_mesh_shape = std::get<0>(mesh_shape_ids);
     std::vector<int64_t> auto_spmd_mesh_ids = std::get<1>(mesh_shape_ids);
@@ -1400,6 +1401,8 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
                << absl::StrJoin(auto_spmd_mesh_shape, ",") << "}\n"
                << "auto_spmd_mesh_ids={"
                << absl::StrJoin(auto_spmd_mesh_ids, ",") << "}";
+
+    // TODO(yeounoh) allow multi mesh exploration.
   }
 
   DebugUtil::analyze_graph_execution_python_frame(
