@@ -25,7 +25,7 @@
 
 - name: Build PyTorch/XLA CUDA Plugin
   ansible.builtin.command:
-    cmd: pip wheel -w dist plugins/cuda -v --no-build-isolation
+    cmd: pip wheel -w dist plugins/cuda -v
     chdir: "{{ (src_root, 'pytorch/xla') | path_join }}"
   environment: "{{ env_vars }}"
   when: accelerator == "cuda"
