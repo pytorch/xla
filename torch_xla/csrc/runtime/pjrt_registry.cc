@@ -72,8 +72,16 @@ InitializePjRt(const std::string& device_type) {
 
       std::shared_ptr<xla::KeyValueStoreInterface> kv_store = nullptr;
       if (plugin->init_coordinator) {
-        int global_process_rank = sys_util::GetEnvInt("RANK", 0);
-        int global_world_size = sys_util::GetEnvInt("WORLD_SIZE", 1);
+        int local_process_rank = sys_util::GetEnvInt(
+            env::kEnvPjRtLocalRank, sys_util::GetEnvInt("LOCAL_RANK", 0));
+        int global_process_rank =
+            sys_util::GetEnvInt("RANK", local_process_rank);
+        int local_world_size =
+            sys_util::GetEnvInt(env::kEnvPjRtLocalProcessCount,
+                                sys_util::GetEnvInt("LOCAL_WORLD_SIZE", 1));
+        int global_world_size =
+            sys_util::GetEnvInt("WORLD_SIZE", local_world_size);
+
         std::string master_addr =
             runtime::sys_util::GetEnvString("MASTER_ADDR", "localhost");
         std::string port = runtime::sys_util::GetEnvString(
