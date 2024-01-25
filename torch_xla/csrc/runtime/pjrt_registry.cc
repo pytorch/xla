@@ -65,7 +65,7 @@ InitializePjRt(const std::string& device_type) {
       TF_VLOG(1) << "Initializing client for PjRt plugin " << device_type;
 
       std::shared_ptr<xla::KeyValueStoreInterface> kv_store = nullptr;
-      if (plugin->init_coordinator) {
+      if (plugin->requires_xla_coordinator()) {
         int local_process_rank = sys_util::GetEnvInt(
             env::kEnvPjRtLocalRank, sys_util::GetEnvInt("LOCAL_RANK", 0));
         int global_process_rank =
