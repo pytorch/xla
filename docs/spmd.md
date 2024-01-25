@@ -270,6 +270,56 @@ dist_cp.load_state_dict(
 model.load_state_dict(state_dict["model"])
 ```
 
+#### CheckpointManager
+
+The experimental [CheckpointManager](https://github.com/pytorch/xla/blob/master/torch_xla/experimental/distributed_checkpoint/manager.py#L40)
+interface provides a higher-level API over the `torch.distributed.checkpoint`
+functions to enable a few key features:
+
+- **Managed checkpoints**: Each checkpoint taken by the `CheckpointManager` is
+identified by the step at which it was taken. All steps tracked are accessible
+through the `CheckpointManager.all_steps` method, and any tracked steps can be
+restored using `CheckpointManager.restore`.
+- **Asynchronous checkpointing**: Checkpoints taken through the
+`CheckpointManager.save_async` API are written to persistent storage
+asynchronously to unblock training for the duration of the checkpoint. The
+input sharded state_dict is first moved to CPU before the checkpoint is
+dispatched to a background thread.
+- **Auto-checkpointing on preemption**: On Cloud TPU, preemptions can be detected
+and a checkpoint taken before the process is terminated. To use, ensure your
+TPU is provisioned through a QueuedResource with
+[Autocheckpointing enabled](https://cloud.google.com/sdk/gcloud/reference/alpha/compute/tpus/queued-resources/create#--autocheckpoint-enabled),
+and ensure the `chkpt_on_preemption` parameter is set when constructing the
+CheckpointManager (this option is enabled by default).
+- **FSSpec Support**: `CheckpointManager` uses an fsspec storage backend to enable
+checkpointing directly to any fsspec-compatible filesystem, including GCS.
+
+Example usage of the CheckpointManager is below:
+
+```python
+from torch_xla.experimental.distributed_checkpoint import CheckpointManager
+
+# Create a CheckpointManager to checkpoint every 10 steps into GCS.
+chkpt_mgr = CheckpointManager('gs://my-bucket/my-experiment', 10)
+
+# Select a checkpoint to restore from, and restore if applicable
+tracked_steps = chkpt_mgr.all_steps()
+if tracked_steps:
+    # Choose the highest step
+    best_step = max(tracked_steps)
+    state_dict = {'model': model.state_dict()}
+    chkpt_mgr.restore(best_step, state_dict)
+    model.load_state_dict(state_dict['model'])
+
+# Call `save` or `save_async` every step within the train loop. These methods
+# return True when a checkpoint is taken.
+for step, data in enumerate(dataloader):
+    ...
+    state_dict = {'model': model.state_dict(), 'optim': optim.state_dict()}
+    if chkpt_mgr.save_async(step, state_dict):
+        print(f'Checkpoint taken at step {step}')
+```
+
 ### Virtual Device Optimization
 
 PyTorch/XLA normally transfers tensor data asynchronously from host to device once the tensor is defined. This is to overlap the data transfer with the graph tracing time. However, because GSPMD allows the user to modify the tensor sharding _after _the tensor has been defined, we need an optimization to prevent unnecessary transfer of tensor data back and forth between host and device. We introduce Virtual Device Optimization, a technique to place the tensor data on a virtual device SPMD:0 first, before uploading to the physical devices when all the sharding decisions are finalized. Every tensor data in SPMD mode is placed on a virtual device, SPMD:0. The virtual device is exposed to the user as an XLA device XLA:0 with the actual shards on physical devices, like TPU:0, TPU:1, etc.
