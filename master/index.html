@@ -225,7 +225,7 @@
               
               
                 <div class="version">
-                  master (2.2.0+gita9005e3 )
+                  master (2.2.0+git1521316 )
                 </div>
               
             
@@ -401,7 +401,10 @@
 <li><a class="reference internal" href="#xlashardedtensor">XLAShardedTensor</a></li>
 <li><a class="reference internal" href="#dtensor-integration">DTensor Integration</a></li>
 <li><a class="reference internal" href="#sharding-aware-host-to-device-data-loading">Sharding-Aware Host-to-Device Data Loading</a></li>
-<li><a class="reference internal" href="#distributed-checkpointing">Distributed Checkpointing</a></li>
+<li><a class="reference internal" href="#distributed-checkpointing">Distributed Checkpointing</a><ul>
+<li><a class="reference internal" href="#checkpointmanager">CheckpointManager</a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#virtual-device-optimization">Virtual Device Optimization</a></li>
 <li><a class="reference internal" href="#number-of-processes">Number of processes</a></li>
 <li><a class="reference internal" href="#running-spmd-on-tpu-pod">Running SPMD on TPU Pod</a></li>
@@ -3447,6 +3450,55 @@ We are integrating PyTorch/XLA SPMD into DTensor API <a class="reference externa
 <span class="n">model</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">state_dict</span><span class="p">[</span><span class="s2">&quot;model&quot;</span><span class="p">])</span>
 </pre></div>
 </div>
+<div class="section" id="checkpointmanager">
+<h4>CheckpointManager<a class="headerlink" href="#checkpointmanager" title="Permalink to this headline">¶</a></h4>
+<p>The experimental <a class="reference external" href="https://github.com/pytorch/xla/blob/master/torch_xla/experimental/distributed_checkpoint/manager.py#L40">CheckpointManager</a>
+interface provides a higher-level API over the <code class="docutils literal notranslate"><span class="pre">torch.distributed.checkpoint</span></code>
+functions to enable a few key features:</p>
+<ul class="simple">
+<li><p><strong>Managed checkpoints</strong>: Each checkpoint taken by the <code class="docutils literal notranslate"><span class="pre">CheckpointManager</span></code> is
+identified by the step at which it was taken. All steps tracked are accessible
+through the <code class="docutils literal notranslate"><span class="pre">CheckpointManager.all_steps</span></code> method, and any tracked steps can be
+restored using <code class="docutils literal notranslate"><span class="pre">CheckpointManager.restore</span></code>.</p></li>
+<li><p><strong>Asynchronous checkpointing</strong>: Checkpoints taken through the
+<code class="docutils literal notranslate"><span class="pre">CheckpointManager.save_async</span></code> API are written to persistent storage
+asynchronously to unblock training for the duration of the checkpoint. The
+input sharded state_dict is first moved to CPU before the checkpoint is
+dispatched to a background thread.</p></li>
+<li><p><strong>Auto-checkpointing on preemption</strong>: On Cloud TPU, preemptions can be detected
+and a checkpoint taken before the process is terminated. To use, ensure your
+TPU is provisioned through a QueuedResource with
+<a class="reference external" href="https://cloud.google.com/sdk/gcloud/reference/alpha/compute/tpus/queued-resources/create#--autocheckpoint-enabled">Autocheckpointing enabled</a>,
+and ensure the <code class="docutils literal notranslate"><span class="pre">chkpt_on_preemption</span></code> parameter is set when constructing the
+CheckpointManager (this option is enabled by default).</p></li>
+<li><p><strong>FSSpec Support</strong>: <code class="docutils literal notranslate"><span class="pre">CheckpointManager</span></code> uses an fsspec storage backend to enable
+checkpointing directly to any fsspec-compatible filesystem, including GCS.</p></li>
+</ul>
+<p>Example usage of the CheckpointManager is below:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">torch_xla.experimental.distributed_checkpoint</span> <span class="kn">import</span> <span class="n">CheckpointManager</span>
+
+<span class="c1"># Create a CheckpointManager to checkpoint every 10 steps into GCS.</span>
+<span class="n">chkpt_mgr</span> <span class="o">=</span> <span class="n">CheckpointManager</span><span class="p">(</span><span class="s1">&#39;gs://my-bucket/my-experiment&#39;</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+
+<span class="c1"># Select a checkpoint to restore from, and restore if applicable</span>
+<span class="n">tracked_steps</span> <span class="o">=</span> <span class="n">chkpt_mgr</span><span class="o">.</span><span class="n">all_steps</span><span class="p">()</span>
+<span class="k">if</span> <span class="n">tracked_steps</span><span class="p">:</span>
+    <span class="c1"># Choose the highest step</span>
+    <span class="n">best_step</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">tracked_steps</span><span class="p">)</span>
+    <span class="n">state_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;model&#39;</span><span class="p">:</span> <span class="n">model</span><span class="o">.</span><span class="n">state_dict</span><span class="p">()}</span>
+    <span class="n">chkpt_mgr</span><span class="o">.</span><span class="n">restore</span><span class="p">(</span><span class="n">best_step</span><span class="p">,</span> <span class="n">state_dict</span><span class="p">)</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">state_dict</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">])</span>
+
+<span class="c1"># Call `save` or `save_async` every step within the train loop. These methods</span>
+<span class="c1"># return True when a checkpoint is taken.</span>
+<span class="k">for</span> <span class="n">step</span><span class="p">,</span> <span class="n">data</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">dataloader</span><span class="p">):</span>
+    <span class="o">...</span>
+    <span class="n">state_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;model&#39;</span><span class="p">:</span> <span class="n">model</span><span class="o">.</span><span class="n">state_dict</span><span class="p">(),</span> <span class="s1">&#39;optim&#39;</span><span class="p">:</span> <span class="n">optim</span><span class="o">.</span><span class="n">state_dict</span><span class="p">()}</span>
+    <span class="k">if</span> <span class="n">chkpt_mgr</span><span class="o">.</span><span class="n">save_async</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="n">state_dict</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Checkpoint taken at step </span><span class="si">{</span><span class="n">step</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
 </div>
 <div class="section" id="virtual-device-optimization">
 <h3>Virtual Device Optimization<a class="headerlink" href="#virtual-device-optimization" title="Permalink to this headline">¶</a></h3>
@@ -3521,7 +3573,7 @@ We are integrating PyTorch/XLA SPMD into DTensor API <a class="reference externa
 <p>We provide a <code class="docutils literal notranslate"><span class="pre">shard</span> <span class="pre">placement</span> <span class="pre">visualization</span> <span class="pre">debug</span> <span class="pre">tool</span></code> for PyTorch/XLA SPMD user on TPU/GPU/CPU with single-host/multi-host: you could use <code class="docutils literal notranslate"><span class="pre">visualize_tensor_sharding</span></code> to visualize sharded tensor, or you could use <code class="docutils literal notranslate"><span class="pre">visualize_sharding</span></code> to visualize sharing string. Here are two code examples on TPU single-host(v4-8) with <code class="docutils literal notranslate"><span class="pre">visualize_tensor_sharding</span></code> or <code class="docutils literal notranslate"><span class="pre">visualize_sharding</span></code>:</p>
 <ul class="simple">
 <li><p>Code snippet used <code class="docutils literal notranslate"><span class="pre">visualize_tensor_sharding</span></code> and visualization result:
-<a href="#id34"><span class="problematic" id="id35">``</span></a><a href="#id36"><span class="problematic" id="id37">`</span></a>python
+<a href="#id35"><span class="problematic" id="id36">``</span></a><a href="#id37"><span class="problematic" id="id38">`</span></a>python
 import rich</p></li>
 </ul>
 </div>
@@ -3728,7 +3780,10 @@ generated_table = visualize_sharding(sharding, use_color=False)
 <li><a class="reference internal" href="#xlashardedtensor">XLAShardedTensor</a></li>
 <li><a class="reference internal" href="#dtensor-integration">DTensor Integration</a></li>
 <li><a class="reference internal" href="#sharding-aware-host-to-device-data-loading">Sharding-Aware Host-to-Device Data Loading</a></li>
-<li><a class="reference internal" href="#distributed-checkpointing">Distributed Checkpointing</a></li>
+<li><a class="reference internal" href="#distributed-checkpointing">Distributed Checkpointing</a><ul>
+<li><a class="reference internal" href="#checkpointmanager">CheckpointManager</a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#virtual-device-optimization">Virtual Device Optimization</a></li>
 <li><a class="reference internal" href="#number-of-processes">Number of processes</a></li>
 <li><a class="reference internal" href="#running-spmd-on-tpu-pod">Running SPMD on TPU Pod</a></li>
