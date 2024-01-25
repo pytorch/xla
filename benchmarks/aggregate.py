@@ -45,11 +45,9 @@ class DatapointSelector:
       return None
     compile_and_run_time = total_times[0]
     run_time = np.average(total_times[1:])
-    std = np.std(total_times[1:])
     compile_time = compile_and_run_time - run_time
     # Single sample size for compilation time, std = 0.
-    # Using stddev of the run time distribution.
-    return Datapoint(compile_time, 0)
+    return Datapoint(compile_time, std=0)
 
   def exec(row):
     total_times = row['metrics']['total_time'] if 'total_time' in row[
