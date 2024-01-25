@@ -125,14 +125,15 @@ jobs:
         env:
           CIRCLE_WORKFLOW_ID: ${{ github.run_id }}
           CIRCLE_BUILD_NUM: ${{ github.run_number }}
+          BENCHMARK_TEST_NAME: ${{ env.RUN_BENCHMARK_TESTS }}
           PYTHON_TEST_NAME: ${{ env.RUN_PYTHON_TESTS }}${{ env.RUN_XLA_OP_TESTS1 }}${{ env.RUN_XLA_OP_TESTS2 }}${{ env.RUN_XLA_OP_TESTS3 }}${{ env.RUN_TORCH_MP_OP_TESTS }}
           CPP_TEST_NAME: ${{ env.RUN_CPP_TESTS1 }}${{ env.RUN_CPP_TESTS2 }}
         run: |
-            if [ -n "$env.RUN_BENCHMARK_TESTS" ]; then
+            if [ -n "${BENCHMARK_TEST_NAME}" ]; then
               exit 0
             fi
 
-            echo ${pid}
+            docker exec --privileged -u jenkins "${pid}" bash -c 'find / -name "lcov.info"'
             docker cp "${pid}":/home/jenkins/htmlcov "${GITHUB_WORKSPACE}"
             if [ -n "${GPU_FLAG:-}" ]; then
               if [ -n "${PYTHON_TEST_NAME}" ]; then
