@@ -1,3 +1,9 @@
+import os
+import sys
+
+# add `build_util` to import path
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+
 import build_util
 import setuptools
 
