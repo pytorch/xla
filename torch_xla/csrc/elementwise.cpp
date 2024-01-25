@@ -418,7 +418,7 @@ xla::XlaOp BuildLogit(xla::XlaOp input, c10::optional<double> eps) {
   xla::XlaOp xla_log = xla::Log(clamped / (one - clamped));
   xla::XlaOp invalid_input = xla::Or(xla::Lt(input, zero), xla::Gt(input, one));
   xla::XlaOp xla_nan = xla::NanValue(input.builder(), shape.element_type());
-  // // Replace invalid inputs with Nan.
+  // Replace invalid inputs with Nan.
   return xla::Select(invalid_input, xla_nan, xla_log);
 }
 
