@@ -77,7 +77,6 @@ full_codegen:
   - rsqrt
   - selu
   - sgn
-  - sigmoid
   - sign
   - silu
   - silu_backward
@@ -218,6 +217,7 @@ supported:
   - linalg_vector_norm
   - linspace
   - log
+  - logit
   - log1p
   - log2
   - log10
@@ -303,6 +303,7 @@ supported:
   - select_scatter
   - selu_
   - set_.source_Tensor
+  - sigmoid
   - sigmoid_backward
   - slice_copy.Tensor
   - slice_scatter

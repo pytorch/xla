@@ -1,3 +1,4 @@
+import functools
 import gc
 import importlib
 import logging
@@ -56,13 +57,28 @@ TRAIN_WITH_SGD = {
     "timm_vovnet",
     "vgg16",
     "hf_T5",
-    # PyTorch/benchmark sets its optimizer as SGD.
-    # Otherwise, OOMs.
-    "llama_v2_7b_16h",
 }
 
 # Skip the experiment of a model if any of the experiment configs in the list is fully matched
 DENY_LIST = {
+    "cm3leon_generate": [
+        {
+            "test": "train",
+        },
+        {
+            "test": "eval",
+            "xla": "PJRT",
+        },
+    ],  # no install.py
+    "hf_T5_generate": [
+        {
+            "test": "train",
+        },
+        {
+            "test": "eval",
+            "xla": "PJRT",
+        },
+    ],  # no install.py
     "doctr_det_predictor": [{
         "test": "train"
     },],  # not implemented
@@ -127,6 +143,25 @@ DENY_LIST = {
     "vision_maskrcnn": [{}],
 }
 
+# This strict deny list denies tests that hold for too long and timeoout.
+STRICT_DENY_LIST = {
+    **{
+        "opacus_cifar10": [{
+            "accelerator": "tpu",
+        },],  # stackdump issue in TPU
+        "pytorch_stargan": [{
+            "accelerator": "tpu",
+        },],  # stackdump issue in TPU
+        "soft_actor_critic": [{
+            "accelerator": "tpu",
+        },],  # stackdump issue in TPU
+        "speech_transformer": [{
+            "accelerator": "tpu",
+        },],  # stackdump issue in TPU
+    },
+    **DENY_LIST
+}
+
 
 class TorchBenchModelLoader(ModelLoader):
 
@@ -179,9 +214,13 @@ class TorchBenchModelLoader(ModelLoader):
 
     return model_configs
 
-  def is_compatible(self, dummy_benchmark_model, benchmark_experiment):
-    if dummy_benchmark_model.model_name in DENY_LIST:
-      for deny_experiment_config in DENY_LIST[dummy_benchmark_model.model_name]:
+  def is_compatible(self,
+                    dummy_benchmark_model,
+                    benchmark_experiment,
+                    use_strict_deny=False):
+    deny_list = STRICT_DENY_LIST if use_strict_deny else DENY_LIST
+    if dummy_benchmark_model.model_name in deny_list:
+      for deny_experiment_config in deny_list[dummy_benchmark_model.model_name]:
         matched = True
         for k, v in deny_experiment_config.items():
           if getattr(benchmark_experiment, k) != v:
@@ -244,16 +283,18 @@ class TorchBenchModel(BenchmarkModel):
     del benchmark
     self._cleanup()
 
-  def load_benchmark(self):
+  @functools.lru_cache(maxsize=1)
+  def benchmark_cls(self):
     try:
       module = importlib.import_module(
           f"torchbenchmark.models.{self.model_name}")
     except ModuleNotFoundError:
       module = importlib.import_module(
           f"torchbenchmark.models.fb.{self.model_name}")
-    benchmark_cls = getattr(module, "Model", None)
+    return getattr(module, "Model", None)
 
-    cant_change_batch_size = (not getattr(benchmark_cls,
+  def load_benchmark(self):
+    cant_change_batch_size = (not getattr(self.benchmark_cls(),
                                           "ALLOW_CUSTOMIZE_BSIZE", True))
     if cant_change_batch_size:
       self.benchmark_experiment.batch_size = None
@@ -262,9 +303,10 @@ class TorchBenchModel(BenchmarkModel):
     # torch.backends.__allow_nonbracketed_mutation_flag = True
 
     # torchbench uses `xla` as device instead of `tpu`
-    if device := self.benchmark_experiment.accelerator == 'tpu':
+    if (device := self.benchmark_experiment.accelerator) == 'tpu':
       device = str(self.benchmark_experiment.get_device())
-    return benchmark_cls(
+
+    return self.benchmark_cls()(
         test=self.benchmark_experiment.test,
         device=device,
         batch_size=self.benchmark_experiment.batch_size,
@@ -285,20 +327,20 @@ class TorchBenchModel(BenchmarkModel):
     """
     test = self.benchmark_experiment.test
     try:
-      benchmark = self.load_benchmark()
+      benchmark_cls = self.benchmark_cls()
     except Exception:
-      logger.exception("Cannot load benchmark model")
+      logger.exception("Cannot import benchmark model")
       return None
 
-    if test == "eval" and hasattr(benchmark, 'DEFAULT_EVAL_CUDA_PRECISION'):
-      precision = benchmark.DEFAULT_EVAL_CUDA_PRECISION
-    elif test == "train" and hasattr(benchmark, 'DEFAULT_TRAIN_CUDA_PRECISION'):
-      precision = benchmark.DEFAULT_TRAIN_CUDA_PRECISION
+    if test == "eval" and hasattr(benchmark_cls, 'DEFAULT_EVAL_CUDA_PRECISION'):
+      precision = benchmark_cls.DEFAULT_EVAL_CUDA_PRECISION
+    elif test == "train" and hasattr(benchmark_cls,
+                                     'DEFAULT_TRAIN_CUDA_PRECISION'):
+      precision = benchmark_cls.DEFAULT_TRAIN_CUDA_PRECISION
     else:
       precision = None
       logger.warning("No default precision set. No patching needed.")
 
-    del benchmark
     self._cleanup()
 
     precision_flag = None
