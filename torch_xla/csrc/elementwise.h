@@ -96,6 +96,10 @@ xla::XlaOp BuildSelu(xla::XlaOp input);
 // Computes the LogSigmoid function of input.
 std::vector<xla::XlaOp> BuildLogSigmoid(xla::XlaOp input);
 
+// Computes the logit function of the input.
+// If eps is given, the input is clamped between eps and 1-eps.
+xla::XlaOp BuildLogit(xla::XlaOp input, c10::optional<double> eps);
+
 // Computes the backward of LogSigmoid.
 xla::XlaOp BuildLogSigmoidBackward(xla::XlaOp grad_output, xla::XlaOp input,
                                    xla::XlaOp buffer);

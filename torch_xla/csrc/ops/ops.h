@@ -91,6 +91,9 @@ torch::lazy::NodePtr Exp(const torch::lazy::Value& input);
 
 torch::lazy::NodePtr Log(const torch::lazy::Value& input);
 
+torch::lazy::NodePtr Logit(const torch::lazy::Value& input,
+                           c10::optional<double> eps);
+
 torch::lazy::NodePtr LogBase(const torch::lazy::Value& input,
                              torch::lazy::OpKind op, double base);
 

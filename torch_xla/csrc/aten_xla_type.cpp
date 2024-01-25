@@ -1644,6 +1644,13 @@ at::Tensor XLANativeFunctions::log(const at::Tensor& self) {
       tensor_methods::log(bridge::GetXlaTensor(self)));
 }
 
+at::Tensor XLANativeFunctions::logit(const at::Tensor& self,
+                                     c10::optional<double> eps) {
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::logit(bridge::GetXlaTensor(self), eps));
+}
+
 at::Tensor XLANativeFunctions::log10(const at::Tensor& self) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   return bridge::AtenFromXlaTensor(tensor_methods::log_base(

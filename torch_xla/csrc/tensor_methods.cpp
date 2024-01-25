@@ -1594,6 +1594,16 @@ XLATensorPtr log(const XLATensorPtr& input) {
       Log(GetFloatingIrValue(input, at::ScalarType::Float)), c10::nullopt);
 }
 
+XLATensorPtr logit(const XLATensorPtr& input, c10::optional<double> eps) {
+  // Here we explictly pass c10::nullopt as logical_element_type because
+  // otherwise result will inherit the input's logical_element_type. In the
+  // case of logit(int) -> float, we want to derive the dtype from IR value
+  // instead of input's logical_element_type.
+  return input->CreateFrom(
+      Logit(GetFloatingIrValue(input, at::ScalarType::Float), eps),
+      c10::nullopt);
+}
+
 XLATensorPtr log_base(const XLATensorPtr& input, torch::lazy::OpKind op,
                       double base) {
   // Here we explictly pass c10::nullopt as logical_element_type because

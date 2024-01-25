@@ -505,6 +505,8 @@ XLATensorPtr linspace(const at::Scalar& start, const at::Scalar& end,
 
 XLATensorPtr log(const XLATensorPtr& input);
 
+XLATensorPtr logit(const XLATensorPtr& input, c10::optional<double> eps);
+
 XLATensorPtr log_base(const XLATensorPtr& input, torch::lazy::OpKind op,
                       double base);
 

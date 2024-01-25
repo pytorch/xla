@@ -103,6 +103,18 @@ torch::lazy::NodePtr LogBase(const torch::lazy::Value& input,
                    /*num_outputs=*/1, torch::lazy::MHash(base));
 }
 
+torch::lazy::NodePtr Logit(const torch::lazy::Value& input,
+                           c10::optional<double> eps) {
+  auto lower_fn = [eps](const XlaNode& node,
+                        LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    return node.ReturnOp(BuildLogit(xla_input, eps), loctx);
+  };
+  return GenericOp(torch::lazy::OpKind(at::aten::logit), {input},
+                   GetXlaShape(input), std::move(lower_fn), /*num_outputs=*/1,
+                   torch::lazy::MHash(eps));
+}
+
 torch::lazy::NodePtr SgnOp(const torch::lazy::Value& input) {
   auto lower_fn = [](const XlaNode& node,
                      LoweringContext* loctx) -> XlaOpVector {
