@@ -11,9 +11,9 @@ repository (see `bazel build` command below).
 
 ```bash
 # Build wheel
-pip wheel plugins/cpu --no-build-isolation -v
+pip wheel plugins/cpu -v
 # Or install directly
-pip install plugins/cpu --no-build-isolation -v
+pip install plugins/cpu -v
 ```
 
 ## Usage
