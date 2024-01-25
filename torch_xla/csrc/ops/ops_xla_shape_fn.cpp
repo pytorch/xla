@@ -762,11 +762,7 @@ xla::Shape NeTensorOutputShape(const torch::lazy::Value& self,
 }
 
 xla::Shape ReciprocalOutputShape(const torch::lazy::Value& input) {
-  xla::Shape result_shape = GetXlaShape(input);
-  if (xla::primitive_util::IsIntegralType(result_shape.element_type())) {
-    result_shape.set_element_type(xla::PrimitiveType::F32);
-  }
-  return result_shape;
+  return GetXlaShape(input);
 }
 
 xla::Shape ReluOutputShape(const torch::lazy::Value& input) {
@@ -806,14 +802,6 @@ xla::Shape SeluOutputShape(const torch::lazy::Value& input) {
 
 xla::Shape SgnOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
-}
-
-xla::Shape SigmoidOutputShape(const torch::lazy::Value& input) {
-  xla::Shape result_shape = GetXlaShape(input);
-  if (xla::primitive_util::IsIntegralType(result_shape.element_type())) {
-    result_shape.set_element_type(xla::PrimitiveType::F32);
-  }
-  return result_shape;
 }
 
 xla::Shape SignOutputShape(const torch::lazy::Value& input) {
