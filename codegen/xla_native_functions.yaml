@@ -77,6 +77,7 @@ full_codegen:
   - rsqrt
   - selu
   - sgn
+  - sigmoid
   - sign
   - silu
   - silu_backward
@@ -304,7 +305,6 @@ supported:
   - select_scatter
   - selu_
   - set_.source_Tensor
-  - sigmoid
   - sigmoid_backward
   - slice_copy.Tensor
   - slice_scatter
