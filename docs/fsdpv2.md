@@ -4,6 +4,8 @@ Fully Sharded Data Parallel via SPMD or FSDPv2 is an utility that re-epxresses t
 an experimental feature that aiming to offer a familiar interface for users to enjoy all the benefits that SPMD brings into
 the table. The design doc is [here](https://github.com/pytorch/xla/issues/6379).
 
+Please review the [SPMD user guide](./spmd.md) before proceeding.
+
 Example usage:
 ```python3
 import torch
@@ -17,6 +19,9 @@ mesh_shape = (num_devices, 1)
 device_ids = np.array(range(num_devices))
 # To be noted, the mesh must have an axis named 'fsdp', which the weights and activations will be sharded on.
 mesh = Mesh(device_ids, mesh_shape, ('fsdp', 'model'))
+
+# Shard the input, and assume x is a 2D tensor.
+x = xs.mark_sharding(x, mesh, ('fsdp', None))
 
 # As normal FSDP, but an extra mesh is needed.
 model = FSDPv2(my_module, mesh)
