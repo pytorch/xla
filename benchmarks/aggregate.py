@@ -175,26 +175,43 @@ def compute_speedups(acc_map: Dict[str, Any], baseline: Dict[str, Any],
   summarize_speedups(acc_map, out_label)
 
 
-# A benchmark's baseline is the oldest Inductor perf number we have for it.
-# This way we can track both Pytorch/XLA and Inductor perf improvements over
-# time.
-def compute_baseline(results_map: Dict[str, Any]) -> Dict[str, Any]:
+def populate_baseline(baseline: Dict[str, Any], inductor_results: Dict[str,
+                                                                       Any]):
+  for model_name in inductor_results:
+    if model_name not in baseline:
+      baseline[model_name] = {}
+    for batch_size in inductor_results[model_name]:
+      if batch_size not in baseline[model_name]:
+        baseline[model_name][batch_size] = inductor_results[model_name][
+            batch_size]
+
+
+def compute_baseline(args, results_map: Dict[str, Any]) -> Dict[str, Any]:
   baseline = {}
-  for ts in sorted(list(results_map.keys())):
+  timestamps = list(results_map.keys())
+  if not timestamps:
+    return baseline
+  timestamps.sort()
+  if args.baseline == 'oldest':
+    # A benchmark's baseline is the oldest Inductor perf number we have for it.
+    # This way we can track both Pytorch/XLA and Inductor perf improvements over
+    # time.
+    for ts in timestamps:
+      if 'inductor' not in results_map[ts]:
+        continue
+      populate_baseline(baseline, results_map[ts]['inductor'])
+
+  elif args.baseline == 'latest':
+    # Pick only results from the latest timestamp.
+    ts = timestamps[-1]
     if 'inductor' not in results_map[ts]:
-      continue
-    for model_name in results_map[ts]['inductor']:
-      if model_name not in baseline:
-        baseline[model_name] = {}
-      for batch_size in results_map[ts]['inductor'][model_name]:
-        if batch_size not in baseline[model_name]:
-          baseline[model_name][batch_size] = results_map[ts]['inductor'][
-              model_name][batch_size]
+      sys.exit(f'No Inductor results in the latest timestamp {ts}')
+    populate_baseline(baseline, results_map[ts]['inductor'])
   return baseline
 
 
 def process_results(args, results_map: Dict[str, Any]):
-  baseline = compute_baseline(results_map)
+  baseline = compute_baseline(args, results_map)
   for timestamp in results_map:
     acc_map = results_map[timestamp]
 
@@ -239,7 +256,7 @@ def pr_latest(results_map: Dict[str, Any], args, timestamps: List[str]):
 
   if args.format == 'csv':
     print(','.join(['# WorkloadNumber'] + [
-        f'Speedup({title}/Oldest Inductor),StdDev,ModelName({title})'
+        f'Speedup({title}/{args.baseline.capitalize()} Inductor),StdDev,ModelName({title})'
         for title in titles
     ]))
     # Note: the latest timestamp might not have results for all benchmarks.
@@ -289,7 +306,10 @@ def pr_latest(results_map: Dict[str, Any], args, timestamps: List[str]):
         # Make overlapping text more legible by making it transparent.
         annotation.set_alpha(0.5)
     plt.legend()
-    plt.title(maketitle(args, f'Speedup over Oldest Benchmarked Inductor'))
+    plt.title(
+        maketitle(
+            args,
+            f'Speedup over {args.baseline.capitalize()} Benchmarked Inductor'))
     plt.xlabel('Workload Number')
     plt.ylabel(f'Speedup')
     plt.savefig(sys.stdout.buffer, format=args.format)
@@ -334,8 +354,10 @@ def pr_histogram(results_map: Dict[str, Any], args, timestamps: List[str]):
     plt.xlabel("Date")
     plt.ylabel("Geomean Speedup")
     plt.title(
-        maketitle(args,
-                  'Histogram of Speedup over Oldest Benchmarked Inductor'))
+        maketitle(
+            args,
+            f'Histogram of Speedup over {args.baseline.capitalize()} Benchmarked Inductor'
+        ))
     plt.savefig(sys.stdout.buffer, format=args.format)
 
 
@@ -354,9 +376,10 @@ def pr_gmean(results_map: Dict[str, Any], args, timestamps: List[str]):
           pr_round(results_map[timestamp][label]) if label in
           results_map[timestamp] else Datapoint('', ''))
   if args.format == 'csv':
-    print(','.join(
-        ['# Datetime(UTC)'] +
-        [f"Speedup({title}/Oldest Inductor),StdDev" for title in titles]))
+    print(','.join(['# Datetime(UTC)'] + [
+        f"Speedup({title}/{args.baseline.capitalize()} Inductor),StdDev"
+        for title in titles
+    ]))
     for j, x in enumerate(x):
       print(','.join(
           map(str, [x] + [
@@ -377,7 +400,10 @@ def pr_gmean(results_map: Dict[str, Any], args, timestamps: List[str]):
     plt.legend()
     plt.xlabel("Date")
     plt.ylabel("Geomean Speedup")
-    plt.title(maketitle(args, 'Speedup over Oldest Benchmarked Inductor'))
+    plt.title(
+        maketitle(
+            args,
+            f'Speedup over {args.baseline.capitalize()} Benchmarked Inductor'))
     plt.savefig(sys.stdout.buffer, format=args.format)
 
 
@@ -405,6 +431,11 @@ def parse_args(args=None):
       default='v100',
       choices=['a100', 'v100', 'a6000'],
       help='Accelerator.')
+  parser.add_argument(
+      '--baseline',
+      default='oldest',
+      choices=['oldest', 'latest'],
+      help='Inductor baseline to be used for computing speedups.')
   parser.add_argument(
       "--exclude",
       "-x",
