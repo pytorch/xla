@@ -280,7 +280,6 @@ supported:
   - random_
   - random_.from
   - random_.to
-  - randperm
   - reflection_pad2d
   - reflection_pad2d_backward
   - remainder.Scalar

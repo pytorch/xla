@@ -95,7 +95,6 @@
 #include "torch_xla/csrc/ops/put.h"
 #include "torch_xla/csrc/ops/qr.h"
 #include "torch_xla/csrc/ops/quant_tensor.h"
-#include "torch_xla/csrc/ops/randperm.h"
 #include "torch_xla/csrc/ops/recv.h"
 #include "torch_xla/csrc/ops/reduce_scatter.h"
 #include "torch_xla/csrc/ops/reflection_pad2d.h"
@@ -2260,16 +2259,6 @@ void random_(XLATensorPtr& input, int64_t from, int64_t to) {
       XLAGraphExecutor::Get()->GetIrValueForScalar(to, xla::PrimitiveType::S64,
                                                    input->GetDevice()),
       XLAGraphExecutor::Get()->GetRngSeed(input->GetDevice()), input_shape));
-}
-
-XLATensorPtr randperm(int64_t n, const torch::lazy::BackendDevice& device,
-                      at::ScalarType scalar_type) {
-  // These are all PyTorch defaults. PyTorch/XLA doesn't support non default
-  // params here yet.
-  torch::lazy::NodePtr node = torch::lazy::MakeNode<RandPerm>(
-      n, at::ScalarType::Long, at::Layout::Strided, at::DeviceType::XLA,
-      /*pin_memory=*/false);
-  return XLATensor::Create(node, device, scalar_type);
 }
 
 XLATensorPtr reflection_pad2d(const XLATensorPtr& input,
