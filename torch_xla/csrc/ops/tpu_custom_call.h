@@ -8,7 +8,7 @@ namespace torch_xla {
 class TpuCustomCall : public XlaNode {
  public:
   // Make a TPU custom call with payload, e.g., Mosaic.
-  TpuCustomCall(const torch::lazy::Value& x, const torch::lazy::Value& y, const std::string& payload);
+  TpuCustomCall(torch::lazy::OpList inputs, xla::Shape output_shape, const std::string& payload);
 
   torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 

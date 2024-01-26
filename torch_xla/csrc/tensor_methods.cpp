@@ -524,9 +524,13 @@ void custom_sharding_(
   input->SetShardingSpec(*sharding_spec);
 }
 
-void tpu_custom_call_(XLATensorPtr& output, const XLATensorPtr& x, const XLATensorPtr& y, const std::string& payload) {
+void tpu_custom_call_(XLATensorPtr& output, const std::vector<XLATensorPtr>& inputs, const std::string& payload) {
+  std::vector<torch::lazy::Value> values;
+  for (const auto& input : inputs) {
+    values.push_back(input->GetIrValue());
+  }
   output->SetInPlaceIrValue(
-      torch::lazy::MakeNode<TpuCustomCall>(x->GetIrValue(), y->GetIrValue(), payload));
+      torch::lazy::MakeNode<TpuCustomCall>(values, output->shape().get(), payload));
 }
 
 XLATensorPtr get_dimensions_size(const XLATensorPtr& input,

@@ -6,19 +6,22 @@
 
 namespace torch_xla {
 
-TpuCustomCall::TpuCustomCall(const torch::lazy::Value& x, const torch::lazy::Value& y, const std::string& payload)
-    : XlaNode(xla_tpu_custom_call, {x, y}, GetXlaShape(x) /*TODO: update it later.*/,
+TpuCustomCall::TpuCustomCall(torch::lazy::OpList inputs, xla::Shape output_shape, const std::string& payload)
+    : XlaNode(xla_tpu_custom_call, inputs, std::move(output_shape),
               /*num_outputs=*/1, torch::lazy::MHash(payload))
     , payload_(payload) {}
 
 torch::lazy::NodePtr TpuCustomCall::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<TpuCustomCall>(operands.at(0), operands.at(1), payload_);
+  return torch::lazy::MakeNode<TpuCustomCall>(operands, xla_shape(), payload_);
 }
 
 XlaOpVector TpuCustomCall::Lower(LoweringContext* loctx) const {
-  xla::XlaOp x = loctx->GetOutputOp(operand(0));
-  xla::XlaOp y = loctx->GetOutputOp(operand(1));
-  xla::XlaOp output = BuildTpuCustomCall(x, y, payload_);
+  std::vector<xla::XlaOp> inputs;
+  inputs.reserve(operands().size());
+  for (auto& operand : operands()) {
+    inputs.push_back(loctx->GetOutputOp(operand));
+  }
+  xla::XlaOp output = BuildTpuCustomCall(inputs, xla_shape(), payload_);
   return ReturnOp(output, loctx);
 }
 

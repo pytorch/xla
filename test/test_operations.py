@@ -1874,7 +1874,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     y = torch.arange(8, dtype=torch.int).to("xla")
     output = torch.arange(8, dtype=torch.int).to("xla")
 
-    torch_xla._XLAC._xla_tpu_custom_call_(output, x, y, payload)
+    torch_xla._XLAC._xla_tpu_custom_call_(output, [x, y], payload)
     print(output)
 
 
