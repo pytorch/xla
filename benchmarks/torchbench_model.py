@@ -318,6 +318,7 @@ class TorchBenchModel(BenchmarkModel):
     # Issue: https://github.com/pytorch/xla/issues/6348
     if self.benchmark_experiment.accelerator == "cuda" and self.benchmark_experiment.xla:
       if self.is_cuda_precision_fp16() or self.is_cuda_precision_bf16():
+        # PyTorch/benchmark will use these 'extra_args' for converting the model.
         kwargs["extra_args"] = ["--precision", "fp32"]
 
     return self.benchmark_cls()(**kwargs)
