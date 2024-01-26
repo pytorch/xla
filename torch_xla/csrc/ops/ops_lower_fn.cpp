@@ -810,6 +810,11 @@ torch_xla::XlaOpVector Tanh::Lower(LoweringContext* loctx) const {
   return ReturnOp(xla::Tanh(xla_input), loctx);
 }
 
+torch_xla::XlaOpVector Topk::Lower(LoweringContext* loctx) const {
+  xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  return ReturnOp(CreateTopK(xla_input, k, dim, largest, stable), loctx);
+}
+
 torch_xla::XlaOpVector Tril::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
   return ReturnOp(BuildTril(xla_input, diagonal), loctx);
