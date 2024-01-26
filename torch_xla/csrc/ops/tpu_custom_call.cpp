@@ -6,10 +6,12 @@
 
 namespace torch_xla {
 
-TpuCustomCall::TpuCustomCall(torch::lazy::OpList inputs, xla::Shape output_shape, const std::string& payload)
+TpuCustomCall::TpuCustomCall(torch::lazy::OpList inputs,
+                             xla::Shape output_shape,
+                             const std::string& payload)
     : XlaNode(xla_tpu_custom_call, inputs, std::move(output_shape),
-              /*num_outputs=*/1, torch::lazy::MHash(payload))
-    , payload_(payload) {}
+              /*num_outputs=*/1, torch::lazy::MHash(payload)),
+      payload_(payload) {}
 
 torch::lazy::NodePtr TpuCustomCall::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<TpuCustomCall>(operands, xla_shape(), payload_);

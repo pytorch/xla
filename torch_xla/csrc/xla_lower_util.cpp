@@ -1224,7 +1224,9 @@ xla::XlaOp BuildCustomSharding(const xla::XlaOp& input) {
                          {input}, ShapeHelper::ShapeOfXlaOp(input));
 }
 
-xla::XlaOp BuildTpuCustomCall(const std::vector<xla::XlaOp>& inputs, const xla::Shape& output_shape, const std::string& payload) {
+xla::XlaOp BuildTpuCustomCall(const std::vector<xla::XlaOp>& inputs,
+                              const xla::Shape& output_shape,
+                              const std::string& payload) {
   std::vector<xla::Shape> input_shapes;
   input_shapes.reserve(inputs.size());
   for (const auto& input : inputs) {
@@ -1232,9 +1234,9 @@ xla::XlaOp BuildTpuCustomCall(const std::vector<xla::XlaOp>& inputs, const xla::
   }
 
   XLA_CHECK(inputs.size() > 0) << "inputs are empty";
-  return xla::CustomCallWithLayout(inputs[0].builder(), /*call_target_name=*/"tpu_custom_call",
-                         inputs, output_shape,
-                         input_shapes, payload);
+  return xla::CustomCallWithLayout(inputs[0].builder(),
+                                   /*call_target_name=*/"tpu_custom_call",
+                                   inputs, output_shape, input_shapes, payload);
 }
 
 }  // namespace torch_xla
