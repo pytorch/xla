@@ -1484,14 +1484,47 @@ TEST_F(AtenXlaTensorTest, TestNativeDropoutZeroProbability) {
 
 TEST_F(AtenXlaTensorTest, TestRandperm) {
   int n = 5;
-  torch::Tensor shuffle = torch::randperm(
-      n, torch::TensorOptions(torch::kLong).device(torch::kXLA));
-  torch::Tensor shuffle_cpu = CopyToDevice(shuffle, torch::kCPU);
-  std::vector<int64_t> shuffle_data(shuffle_cpu.data_ptr<int64_t>(),
-                                    shuffle_cpu.data_ptr<int64_t>() + n);
-  EXPECT_TRUE(shuffle_data.size() == n && xla::IsPermutation(shuffle_data));
-  ExpectCounterNotChanged("aten::(?!randperm.generator_out).*",
-                          cpp_test::GetIgnoredCounters());
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor shuffle =
+        torch::randperm(n, torch::TensorOptions(torch::kLong).device(device));
+    torch::Tensor shuffle_cpu = CopyToDevice(shuffle, torch::kCPU);
+
+    std::vector<int64_t> shuffle_data(shuffle_cpu.data_ptr<int64_t>(),
+                                      shuffle_cpu.data_ptr<int64_t>() + n);
+    EXPECT_TRUE(shuffle_data.size() == n && xla::IsPermutation(shuffle_data));
+  });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::randperm", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestRandpermZeroDoesntCrash) {
+  int n = 0;
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor shuffle =
+        torch::randperm(n, torch::TensorOptions(torch::kLong).device(device));
+    torch::Tensor shuffle_cpu = CopyToDevice(shuffle, torch::kCPU);
+
+    std::vector<int64_t> shuffle_data(shuffle_cpu.data_ptr<int64_t>(),
+                                      shuffle_cpu.data_ptr<int64_t>() + n);
+    EXPECT_TRUE(shuffle_data.empty());
+  });
+}
+
+TEST_F(AtenXlaTensorTest, TestRandpermCPUFallback) {
+  int n = 5;
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor shuffle = torch::randperm(
+        n,
+        torch::TensorOptions(torch::kLong).device(device).pinned_memory(true));
+    torch::Tensor shuffle_cpu = CopyToDevice(shuffle, torch::kCPU);
+
+    std::vector<int64_t> shuffle_data(shuffle_cpu.data_ptr<int64_t>(),
+                                      shuffle_cpu.data_ptr<int64_t>() + n);
+    EXPECT_TRUE(shuffle_data.size() == n && xla::IsPermutation(shuffle_data));
+  });
+
+  ExpectCounterChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
 TEST_F(AtenXlaTensorTest, TestSlice) {
