@@ -16,11 +16,11 @@ xla::XlaOp LowerSoftmax(xla::XlaOp input, int64_t dim,
                         const c10::optional<at::ScalarType>& dtype) {
   std::cout << "in LowerSoftmax" << std::endl;
   xla::Shape input_shape = ShapeHelper::ShapeOfXlaOp(input);
-  std::cout << "check input shape: " << input_shape << std::endl;
+  // std::cout << "check input shape: " << input_shape << std::endl;
   xla::XlaOp result = BuildSoftmax(input, dim);
   xla::Shape result_shape = ShapeHelper::ShapeOfXlaOp(result);
-  std::cout << "in LowerSoftmax, check result shape: "
-            << result_shape << std::endl;
+  // std::cout << "in LowerSoftmax, check result shape: "
+  //           << result_shape << std::endl;
   return CastToScalarType(result, dtype);
 }
 

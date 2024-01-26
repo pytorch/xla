@@ -441,6 +441,9 @@ xla::XlaOp XlaHelpers::DynamicBroadcastInDim(xla::XlaOp op, const xla::Shape& fi
   std::iota(op_broadcast_dims.begin(), op_broadcast_dims.end(),
             final_shape.dimensions().size() - shape.dimensions().size());
 
+  std::cout << "in DynamicBroadcastInDim " << std::endl;
+  std::cout << "check final_shape " << final_shape << std::endl;
+  std::cout << "check op_broadcast_dims " << op_broadcast_dims << std::endl;
   return xla::CustomCall(
       op.builder(), "mhlo.dynamic_broadcast_in_dim",
       /*operands=*/{op, final_broadcast_dimensions}, /*shape*/ final_shape,
@@ -678,14 +681,18 @@ xla::Shape XlaHelpers::GetPromotedShape(const xla::Shape& shape1,
   //   shape1 = [9, ?, 6, ?, ?]
   //   shape2 =       [6, 1, 2]
   // Insert [9, ?] into the dimensions vector.
-  if (shape1.dimensions().size() > shape2.dimensions().size())
+  if (shape1.dimensions().size() > shape2.dimensions().size()) {
     ExtractDimensionSizesAndDynamicDimensionsFromShape(
         shape1, shape1.dimensions().size() - shape2.dimensions().size(),
         dimensions, dynamic_dimensions);
-  else
+  } else {
     ExtractDimensionSizesAndDynamicDimensionsFromShape(
         shape2, shape2.dimensions().size() - shape1.dimensions().size(),
         dimensions, dynamic_dimensions);
+  }
+
+  std::cout << "dimensions: " << dimensions
+            << " dynamic_dimensions: " << dynamic_dimensions << std::endl;
 
   // For the common dimensions, they must match, or one of them be 1.
   size_t min_size =
@@ -702,6 +709,7 @@ xla::Shape XlaHelpers::GetPromotedShape(const xla::Shape& shape1,
         shape2.dynamic_dimensions()[shape2.dynamic_dimensions().size() -
                                     min_size + i];
 
+    std::cout << "dim1: " << dim1 << " dim2: " << dim2 << std::endl;
     XLA_CHECK(dim1 == dim2 || dim1 == 1 || dim2 == 1 ||
               dim1 == xla::Shape::kUnboundedSize ||
               dim2 == xla::Shape::kUnboundedSize);
