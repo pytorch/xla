@@ -52,9 +52,9 @@ http_archive(
         "//openxla_patches:quant_dequant_converter.diff",
         "//openxla_patches:stablehlo_quant_seralization.diff",
     ],
-    strip_prefix = "xla-9708d9059a62a908474302c00f31dcac0e0fcb3b",
+    strip_prefix = "xla-c08cfb0377e4e33a21bde65950f986a21c8a8199",
     urls = [
-        "https://github.com/openxla/xla/archive/9708d9059a62a908474302c00f31dcac0e0fcb3b.tar.gz",
+        "https://github.com/openxla/xla/archive/c08cfb0377e4e33a21bde65950f986a21c8a8199.tar.gz",
     ],
 )
 
