@@ -1,3 +1,5 @@
+// This patch is for https://github.com/openxla/xla/commit/ec0177de1748b4ebb0ecbd6f26043fdb1eb47d24.
+// It can be removed in the next openXLA pin update after 01/26/2024.
 diff --git a/xla/service/gpu/gpu_executable.cc b/xla/service/gpu/gpu_executable.cc
 index 0f1818be2..c181f3025 100644
 --- a/xla/service/gpu/gpu_executable.cc

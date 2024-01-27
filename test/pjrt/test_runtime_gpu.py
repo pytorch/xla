@@ -28,15 +28,15 @@ class TestExperimentalPjrtGpu(parameterized.TestCase):
     os.environ.update({
         xenv.PJRT_GPU_ASYNC_CLIENT: 'true',
     })
-    
+
     command = 'nvidia-smi --list-gpus | wc -l'
     result = subprocess.run(
-          command,
-          capture_output=True,
-          shell=True,
-          check=True,
-          text=True,
-      )
+        command,
+        capture_output=True,
+        shell=True,
+        check=True,
+        text=True,
+    )
     self.num_cuda_devices = int(result.stdout)
 
   def test_default_gpu_device(self):
