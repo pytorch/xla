@@ -129,58 +129,43 @@ jobs:
           PYTHON_TEST_NAME: ${{ env.RUN_PYTHON_TESTS }}${{ env.RUN_XLA_OP_TESTS1 }}${{ env.RUN_XLA_OP_TESTS2 }}${{ env.RUN_XLA_OP_TESTS3 }}${{ env.RUN_TORCH_MP_OP_TESTS }}
           CPP_TEST_NAME: ${{ env.RUN_CPP_TESTS1 }}${{ env.RUN_CPP_TESTS2 }}
         run: |
-            if [ -n "${BENCHMARK_TEST_NAME}" ]; then
-              exit 0
+            # TODO(yeounoh) collect coverage report as needed.
+            if [ -n "${BENCHMARK_TEST_NAME}" ] || [ "${PYTHON_TEST_NAME}" == "pythontorch_mp_op" ]; then
+                exit 0
             fi
 
-            docker exec --privileged -u jenkins "${pid}" bash -c 'find / -name "lcov.info"' | while read -r remote_file; do
-
-              #docker cp "${pid}":/home/jenkins/htmlcov "${GITHUB_WORKSPACE}"
-              docker cp "${pid}:${remote_file}" "${GITHUB_WORKSPACE}"
-              if [ $? -ne 0 ]; then
-                echo "Error copying ${remote_file}" >&2
-                continue
+            docker cp "${pid}":/home/jenkins/htmlcov "${GITHUB_WORKSPACE}"
+            if [ -n "${GPU_FLAG:-}" ]; then
+              if [ -n "${PYTHON_TEST_NAME}" ]; then
+                gsutil cp ${GITHUB_WORKSPACE}/htmlcov/lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/gpu_python_coverage_${PYTHON_TEST_NAME}.out
+                gsutil cp ${GITHUB_WORKSPACE}/htmlcov/lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/incremental/pytorchxla/${CIRCLE_WORKFLOW_ID}/gpu_python_coverage_${PYTHON_TEST_NAME}.out
               fi
-              if [ -n "${GPU_FLAG:-}" ]; then
-                if [ -n "${PYTHON_TEST_NAME}" ]; then
-                  gsutil cp ${GITHUB_WORKSPACE}/${remote_file} gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/gpu_python_coverage_${PYTHON_TEST_NAME}.out
-                  gsutil cp ${GITHUB_WORKSPACE}/${remote_file} gs://ng3-metrics/ng3-pytorchxla-coverage/incremental/pytorchxla/${CIRCLE_WORKFLOW_ID}/gpu_python_coverage_${PYTHON_TEST_NAME}.out
-                  #gsutil cp ${GITHUB_WORKSPACE}/htmlcov/lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/gpu_python_coverage_${PYTHON_TEST_NAME}.out
-                  #gsutil cp ${GITHUB_WORKSPACE}/htmlcov/lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/incremental/pytorchxla/${CIRCLE_WORKFLOW_ID}/gpu_python_coverage_${PYTHON_TEST_NAME}.out
-                fi
 
-                if [ -n "${CPP_TEST_NAME}" ]; then
-                  gsutil cp ${GITHUB_WORKSPACE}/${remote_file} gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/gpu_cpp_coverage_${CPP_TEST_NAME}.out
-                  gsutil cp ${GITHUB_WORKSPACE}/${remote_file} gs://ng3-metrics/ng3-pytorchxla-coverage/incremental/pytorchxla/${CIRCLE_WORKFLOW_ID}/gpu_cpp_coverage_${CPP_TEST_NAME}.out
-                  # gsutil cp ${GITHUB_WORKSPACE}/htmlcov/cpp_lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/gpu_cpp_coverage_${CPP_TEST_NAME}.out
-                  # gsutil cp ${GITHUB_WORKSPACE}/htmlcov/cpp_lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/incremental/pytorchxla/${CIRCLE_WORKFLOW_ID}/gpu_cpp_coverage_${CPP_TEST_NAME}.out
-                fi
-              else
-                if [ -n "${PYTHON_TEST_NAME}" ]; then
-                  gsutil cp ${GITHUB_WORKSPACE}/${remote_file} gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/cpu_python_coverage_${PYTHON_TEST_NAME}.out
-                  gsutil cp ${GITHUB_WORKSPACE}/${remote_file} gs://ng3-metrics/ng3-pytorchxla-coverage/incremental/pytorchxla/${CIRCLE_WORKFLOW_ID}/cpu_python_coverage_${PYTHON_TEST_NAME}.out
-                  # gsutil cp ${GITHUB_WORKSPACE}/htmlcov/lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/cpu_python_coverage_${PYTHON_TEST_NAME}.out
-                  # gsutil cp ${GITHUB_WORKSPACE}/htmlcov/lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/incremental/pytorchxla/${CIRCLE_WORKFLOW_ID}/cpu_python_coverage_${PYTHON_TEST_NAME}.out
-                fi
-
-                if [ -n "${CPP_TEST_NAME}" ]; then
-                  gsutil cp ${GITHUB_WORKSPACE}/${remote_file} gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/cpu_cpp_coverage_${CPP_TEST_NAME}.out
-                  gsutil cp ${GITHUB_WORKSPACE}/${remote_file} gs://ng3-metrics/ng3-pytorchxla-coverage/incremental/pytorchxla/${CIRCLE_WORKFLOW_ID}/cpu_cpp_coverage_${CPP_TEST_NAME}.out
-                  # gsutil cp ${GITHUB_WORKSPACE}/htmlcov/cpp_lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/cpu_cpp_coverage_${CPP_TEST_NAME}.out
-                  # gsutil cp ${GITHUB_WORKSPACE}/htmlcov/cpp_lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/incremental/pytorchxla/${CIRCLE_WORKFLOW_ID}/cpu_cpp_coverage_${CPP_TEST_NAME}.out
-                fi
-
-                if [ "${CPP_TEST_NAME}" == "cpp_tests1" ]; then
-                  ABS_METADATA='{"host": "github", "project": "pytorchxla", "trace_type": "LCOV", "commit_id": '\"${GITHUB_SHA}\"', "ref": "HEAD", "source": "https://github.com/pytorch/xla", "owner": "cloud-tpu-pt-dev", "bug_component": "587012"}'
-                  echo $ABS_METADATA > abs_metadata.json
-                  gsutil cp abs_metadata.json gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/metadata.json
-
-                  INC_METADATA='{"host": "github", "project": "pytorchxla", "trace_type": "LCOV", "patchset_num": 1, "change_id": '${CIRCLE_BUILD_NUM}', "owner": "cloud-tpu-pt-dev", "bug_component": "587012"}'
-                  echo $INC_METADATA > inc_metadata.json
-                  gsutil cp inc_metadata.json gs://ng3-metrics/ng3-pytorchxla-coverage/incremental/pytorchxla/${CIRCLE_WORKFLOW_ID}/metadata.json
-                fi
+              if [ -n "${CPP_TEST_NAME}" ]; then
+                gsutil cp ${GITHUB_WORKSPACE}/htmlcov/cpp_lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/gpu_cpp_coverage_${CPP_TEST_NAME}.out
+                gsutil cp ${GITHUB_WORKSPACE}/htmlcov/cpp_lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/incremental/pytorchxla/${CIRCLE_WORKFLOW_ID}/gpu_cpp_coverage_${CPP_TEST_NAME}.out
               fi
-            done
+            else
+              if [ -n "${PYTHON_TEST_NAME}" ]; then
+                gsutil cp ${GITHUB_WORKSPACE}/htmlcov/lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/cpu_python_coverage_${PYTHON_TEST_NAME}.out
+                gsutil cp ${GITHUB_WORKSPACE}/htmlcov/lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/incremental/pytorchxla/${CIRCLE_WORKFLOW_ID}/cpu_python_coverage_${PYTHON_TEST_NAME}.out
+              fi
+
+              if [ -n "${CPP_TEST_NAME}" ]; then
+                gsutil cp ${GITHUB_WORKSPACE}/htmlcov/cpp_lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/cpu_cpp_coverage_${CPP_TEST_NAME}.out
+                gsutil cp ${GITHUB_WORKSPACE}/htmlcov/cpp_lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/incremental/pytorchxla/${CIRCLE_WORKFLOW_ID}/cpu_cpp_coverage_${CPP_TEST_NAME}.out
+              fi
+
+              if [ "${CPP_TEST_NAME}" == "cpp_tests1" ]; then
+                ABS_METADATA='{"host": "github", "project": "pytorchxla", "trace_type": "LCOV", "commit_id": '\"${GITHUB_SHA}\"', "ref": "HEAD", "source": "https://github.com/pytorch/xla", "owner": "cloud-tpu-pt-dev", "bug_component": "587012"}'
+                echo $ABS_METADATA > abs_metadata.json
+                gsutil cp abs_metadata.json gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/metadata.json
+
+                INC_METADATA='{"host": "github", "project": "pytorchxla", "trace_type": "LCOV", "patchset_num": 1, "change_id": '${CIRCLE_BUILD_NUM}', "owner": "cloud-tpu-pt-dev", "bug_component": "587012"}'
+                echo $INC_METADATA > inc_metadata.json
+                gsutil cp inc_metadata.json gs://ng3-metrics/ng3-pytorchxla-coverage/incremental/pytorchxla/${CIRCLE_WORKFLOW_ID}/metadata.json
+              fi
+            fi
 
       - name: Teardown Linux
         uses: pytorch/test-infra/.github/actions/teardown-linux@main
