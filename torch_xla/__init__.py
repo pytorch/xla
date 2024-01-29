@@ -3,6 +3,8 @@ import os
 import re
 import tempfile
 
+import torch
+import _XLAC
 from ._internal import tpu
 
 logging.basicConfig()
@@ -135,11 +137,8 @@ if os.environ.get('TF_CPP_MIN_LOG_LEVEL') == '0':
   logger.setLevel(logging.INFO)
 
 import atexit
-import torch
 from ._patched_functions import _apply_patches
 from .version import __version__
-
-import _XLAC
 
 _found_libtpu = _setup_tpu_vm_library_path()
 
