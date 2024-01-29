@@ -306,11 +306,39 @@ class TorchBenchModel(BenchmarkModel):
     if (device := self.benchmark_experiment.accelerator) == 'tpu':
       device = str(self.benchmark_experiment.get_device())
 
-    return self.benchmark_cls()(
-        test=self.benchmark_experiment.test,
-        device=device,
-        batch_size=self.benchmark_experiment.batch_size,
-    )
+    kwargs = {
+        "test": self.benchmark_experiment.test,
+        "device": device,
+        "batch_size": self.benchmark_experiment.batch_size,
+    }
+
+    # Force FP32 when precision is either FP16 or BF16 (only for XLA:CUDA).
+    # If the model is, e.g. FP16 and XLA_USE_FP16, XLA will unexpectedly up-cast
+    # return values to FP32.
+    # Issue: https://github.com/pytorch/xla/issues/6348
+    if self.benchmark_experiment.accelerator == "cuda" and self.benchmark_experiment.xla:
+      if self.is_cuda_precision_fp16() or self.is_cuda_precision_bf16():
+        # PyTorch/benchmark will use these 'extra_args' for converting the model.
+        kwargs["extra_args"] = ["--precision", "fp32"]
+
+    return self.benchmark_cls()(**kwargs)
+
+  def get_cuda_precision(self):
+    test = self.benchmark_experiment.test.upper()
+    attr = f"DEFAULT_{test}_CUDA_PRECISION"
+    return getattr(self.benchmark_cls(), attr, None)
+
+  def is_cuda_precision_fp16(self):
+    return self.get_cuda_precision() == "fp16"
+
+  def is_cuda_precision_fp32(self):
+    return self.get_cuda_precision() == "fp32"
+
+  def is_cuda_precision_bf16(self):
+    return self.get_cuda_precision() == "bf16"
+
+  def is_cuda_precision_amp(self):
+    return self.get_cuda_precision() == "amp"
 
   @property
   def default_precision_flag(self):
@@ -325,39 +353,24 @@ class TorchBenchModel(BenchmarkModel):
     changes to the PT/XLA bridge so that the input shape
     is properly inferred after issuing converts to `torch.nn.Module`.
     """
-    test = self.benchmark_experiment.test
-    try:
-      benchmark_cls = self.benchmark_cls()
-    except Exception:
-      logger.exception("Cannot import benchmark model")
+    if self.get_cuda_precision() is None:
       return None
 
-    if test == "eval" and hasattr(benchmark_cls, 'DEFAULT_EVAL_CUDA_PRECISION'):
-      precision = benchmark_cls.DEFAULT_EVAL_CUDA_PRECISION
-    elif test == "train" and hasattr(benchmark_cls,
-                                     'DEFAULT_TRAIN_CUDA_PRECISION'):
-      precision = benchmark_cls.DEFAULT_TRAIN_CUDA_PRECISION
-    else:
-      precision = None
-      logger.warning("No default precision set. No patching needed.")
+    if self.is_cuda_precision_fp16():
+      return 'XLA_USE_FP16'
 
-    self._cleanup()
+    if self.is_cuda_precision_bf16():
+      return 'XLA_USE_BF16'
 
-    precision_flag = None
-    if precision is None:
-      return None
-    if precision == "fp16":
-      precision_flag = 'XLA_USE_FP16'
-    elif precision == "amp":
+    if self.is_cuda_precision_amp():
       raise ValueError(
           f"AMP for PT/XLA:GPU is not implemented yet for torchbench models")
-    elif precision == "bf16":
-      precision_flag = 'XLA_USE_BF16'
-    elif precision == "fp32":
+
+    if self.is_cuda_precision_fp32():
       logger.warning("Sticking with the default fp32 precision.")
-    else:
-      raise ValueError(f"Unknown precision: {precision}")
-    return precision_flag
+      return None
+
+    raise ValueError(f"Unknown precision: {precision}")
 
   def update_process_env(self, process_env):
     precision_flag = self.default_precision_flag
