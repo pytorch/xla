@@ -15,8 +15,8 @@ import torch_xla.runtime as xr
 import torch_xla.utils.utils as xu
 
 
-class DevicePlugin:
-  """Base class for device plugings.
+class DevicePlugin(torch_xla._XLAC.PjRtPlugin):
+  """Base class for device plugins.
 
   Default implementations assume a single device and local process.
   """
@@ -62,6 +62,7 @@ class DevicePlugin:
     return False
 
 
+# TODO(wcromar): figure out if we can share this map with the C++ code.
 _plugin_registry = {}
 
 
@@ -84,9 +85,7 @@ def default() -> DevicePlugin:
 
 def register_plugin(name: str, device_plugin: DevicePlugin):
   _plugin_registry[name.upper()] = device_plugin
-  torch_xla._XLAC._register_pjrt_plugin(
-      name, device_plugin.library_path(), device_plugin.client_create_options(),
-      device_plugin.requires_xla_coordinator())
+  torch_xla._XLAC._register_pjrt_plugin(name, device_plugin)
 
 
 def register_installed_plugins():
@@ -94,11 +93,4 @@ def register_installed_plugins():
   for ep in pjrt_entry_points:
     device_plugin_class = ep.load()
 
-    # HACK: TpuPlugin raises EnvironmentError if libtpu is not installed.
-    # TODO(wcromar): Decide if catching `EnvironmentError` is a permanent
-    # behavior or temporary hack.
-    try:
-      register_plugin(ep.name.upper(), device_plugin_class())
-    except EnvironmentError as e:
-      logging.warning(
-          "Failed to register plugin {}".format(ep.name), exc_info=e)
+    register_plugin(ep.name.upper(), device_plugin_class())

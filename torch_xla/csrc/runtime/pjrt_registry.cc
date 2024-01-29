@@ -1,3 +1,5 @@
+#include "torch_xla/csrc/runtime/pjrt_registry.h"
+
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/env_vars.h"
 #include "torch_xla/csrc/runtime/profiler.h"
@@ -18,13 +20,8 @@ namespace runtime {
 
 namespace {
 
-struct PluginEntry {
-  std::string library_path;
-  absl::flat_hash_map<std::string, xla::PjRtValueType> create_options;
-  bool init_coordinator;
-};
-
-std::unordered_map<std::string, PluginEntry> pjrt_plugins_;
+std::unordered_map<std::string, std::shared_ptr<const PjRtPlugin>>
+    pjrt_plugins_;
 
 xla::GpuAllocatorConfig GetGpuAllocatorConfig() {
   auto allocator_config = xla::GpuAllocatorConfig{};
@@ -43,21 +40,18 @@ xla::GpuAllocatorConfig GetGpuAllocatorConfig() {
   return allocator_config;
 }
 
-std::optional<PluginEntry> GetPjRtPlugin(const std::string& device_type) {
+std::shared_ptr<const PjRtPlugin> GetPjRtPlugin(
+    const std::string& device_type) {
   auto plugin_path = pjrt_plugins_.find(device_type);
-  return plugin_path != pjrt_plugins_.end() ? std::optional(plugin_path->second)
-                                            : std::nullopt;
+  return plugin_path != pjrt_plugins_.end() ? plugin_path->second : nullptr;
 }
 
 }  // namespace
 
-void RegisterPjRtPlugin(
-    std::string name, std::string library_path,
-    absl::flat_hash_map<std::string, xla::PjRtValueType> create_options,
-    bool init_coordinator) {
-  TF_VLOG(3) << "Registering PjRt plugin " << name << " at " << library_path;
-  pjrt_plugins_[name] = {std::move(library_path), std::move(create_options),
-                         init_coordinator};
+void RegisterPjRtPlugin(std::string name,
+                        std::shared_ptr<const PjRtPlugin> plugin) {
+  TF_VLOG(3) << "Registering PjRt plugin " << name;
+  pjrt_plugins_[name] = plugin;
 }
 
 std::tuple<std::unique_ptr<xla::PjRtClient>, std::unique_ptr<XlaCoordinator>>
@@ -66,12 +60,12 @@ InitializePjRt(const std::string& device_type) {
   std::unique_ptr<XlaCoordinator> coordinator;
 
   if (sys_util::GetEnvBool(env::kEnvPjrtDynamicPlugins, false)) {
-    std::optional<PluginEntry> plugin = GetPjRtPlugin(device_type);
+    std::shared_ptr<const PjRtPlugin> plugin = GetPjRtPlugin(device_type);
     if (plugin) {
       TF_VLOG(1) << "Initializing client for PjRt plugin " << device_type;
 
       std::shared_ptr<xla::KeyValueStoreInterface> kv_store = nullptr;
-      if (plugin->init_coordinator) {
+      if (plugin->requires_xla_coordinator()) {
         int local_process_rank = sys_util::GetEnvInt(
             env::kEnvPjRtLocalRank, sys_util::GetEnvInt("LOCAL_RANK", 0));
         int global_process_rank =
@@ -100,10 +94,12 @@ InitializePjRt(const std::string& device_type) {
                                                     /*key_prefix=*/"pjrt:");
       }
       const PJRT_Api* c_api = *pjrt::LoadPjrtPlugin(
-          absl::AsciiStrToLower(device_type), plugin->library_path);
+          absl::AsciiStrToLower(device_type), plugin->library_path());
       XLA_CHECK_OK(pjrt::InitializePjrtPlugin(device_type));
-      client = xla::GetCApiClient(absl::AsciiStrToUpper(device_type),
-                                  plugin->create_options, kv_store)
+      auto create_options = plugin->client_create_options();
+      client = xla::GetCApiClient(
+                   absl::AsciiStrToUpper(device_type),
+                   {create_options.begin(), create_options.end()}, kv_store)
                    .value();
       profiler::RegisterProfilerForPlugin(c_api);
     }
