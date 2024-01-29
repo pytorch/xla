@@ -749,6 +749,36 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.avg_pool2d, args, kwargs)
 
+  def test_aten_avg_pool2d_2(self):
+    args = (
+        torch.randn((1, 192, 40, 40)).to(torch.float32),
+        [3, 3],
+        [1, 1],
+        [1, 1],
+        True,
+    )
+    kwargs = dict()
+    run_export_and_compare(self, torch.ops.aten.avg_pool2d, args, kwargs)
+
+  def test_aten_avg_pool2d_3(self):
+    args = (
+        torch.randn((1, 3, 1, 10)).to(torch.float32),
+        [
+            1,
+            2,
+        ],
+        [
+            1,
+            2,
+        ],
+    )
+
+    def avg_pool_divisor(*args):
+      return torch.ops.aten.avg_pool2d(*args, divisor_override=7)
+
+    kwargs = dict()
+    run_export_and_compare(self, avg_pool_divisor, args, kwargs)
+
   def test_aten_avg_pool3d_0(self):
     args = (
         torch.randn((1, 3, 10, 10, 10)).to(torch.float32),
