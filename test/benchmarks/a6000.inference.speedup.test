@@ -1,2 +1,2 @@
-# Datetime(UTC),Speedup(Inductor/Oldest Inductor),StdDev,Speedup(PytorchXLA/Oldest Inductor),StdDev,Speedup(PytorchXLA_Eval/Oldest Inductor),StdDev
+# Datetime(UTC),Speedup(Inductor/Oldest Inductor),StdDev,Speedup(XLA+Dynamo/Oldest Inductor),StdDev,Speedup(XLA_Eval+Dynamo/Oldest Inductor),StdDev
 2023-11-11 04:43:56.070348,1.0,0.0,,,0.76855822,0.0

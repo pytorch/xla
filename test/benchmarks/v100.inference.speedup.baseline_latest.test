@@ -1,4 +1,4 @@
 # ARGS: --baseline=latest
-# Datetime(UTC),Speedup(Inductor/Latest Inductor),StdDev,Speedup(PytorchXLA/Latest Inductor),StdDev,Speedup(PytorchXLA_Eval/Latest Inductor),StdDev
+# Datetime(UTC),Speedup(Inductor/Latest Inductor),StdDev,Speedup(XLA+Dynamo/Latest Inductor),StdDev,Speedup(XLA_Eval+Dynamo/Latest Inductor),StdDev
 2023-11-11 05:32:18.723407,0.71267792,1.621e-05,0.60245072,0.0,0.55375084,0.0
 2023-11-12 05:32:18,1.0,0.0,0.78480315,0.0,0.71435904,0.0

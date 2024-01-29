@@ -26,6 +26,14 @@ logger = logging.getLogger(__name__)
 
 Datapoint = namedtuple('Datapoint', 'avg, std')
 
+_title_map = {
+    'eager': 'Eager',
+    'inductor': 'Inductor',
+    'openxla_eval+dynamo': 'XLA_Eval+Dynamo',
+    'openxla+dynamo': 'XLA+Dynamo',
+    'openxla+lazytensor': 'XLA+LazyTensor',
+}
+
 _test_to_field_name = {
     'inference': 'eval',
     'training': 'train',
@@ -86,9 +94,26 @@ def skip_model(args, model_name: str):
           re.search("|".join(args.exclude), model_name, re.I))
 
 
+def get_backend_name(dynamo: str, xla: str) -> str:
+  if dynamo == 'inductor':
+    return 'inductor'
+  if xla == 'PJRT':
+    assert dynamo == 'openxla' or dynamo == 'openxla_eval' or dynamo == None
+    xla_name = dynamo
+    tracer = 'dynamo'
+    if not dynamo:
+      xla_name = 'openxla'
+      tracer = 'lazytensor'
+    return f'{xla_name}+{tracer}'
+  assert dynamo == None and xla == None
+  return 'eager'
+
+
 def process_file(args, results_map: Dict[str, Any], filename: str):
   fields = {
-      'experiment': ['accelerator_model', 'batch_size', 'dynamo', 'test'],
+      'experiment': [
+          'accelerator_model', 'batch_size', 'dynamo', 'test', 'xla'
+      ],
       'metrics': [],
       'model': ['model_name'],
       'timestamp': [],
@@ -116,7 +141,9 @@ def process_file(args, results_map: Dict[str, Any], filename: str):
       model_name = r['model']['model_name']
       if skip_model(args, model_name):
         continue
+      xla = r['experiment']['xla']
       dynamo = r['experiment']['dynamo']
+      backend = get_backend_name(dynamo, xla)
       test = r['experiment']['test']
       if test != _test_to_field_name[args.test]:
         continue
@@ -129,13 +156,13 @@ def process_file(args, results_map: Dict[str, Any], filename: str):
 
       if timestamp not in results_map:
         results_map[timestamp] = {}
-      if dynamo not in results_map[timestamp]:
-        results_map[timestamp][dynamo] = {}
-      if (model_name not in results_map[timestamp][dynamo]):
-        results_map[timestamp][dynamo][model_name] = {}
-      if (batch_size not in results_map[timestamp][dynamo][model_name]):
-        results_map[timestamp][dynamo][model_name][batch_size] = {}
-      results_map[timestamp][dynamo][model_name][batch_size] = dp
+      if backend not in results_map[timestamp]:
+        results_map[timestamp][backend] = {}
+      if (model_name not in results_map[timestamp][backend]):
+        results_map[timestamp][backend][model_name] = {}
+      if (batch_size not in results_map[timestamp][backend][model_name]):
+        results_map[timestamp][backend][model_name][batch_size] = {}
+      results_map[timestamp][backend][model_name][batch_size] = dp
 
 
 # Speedup of a over baseline ("b"), with errors.
@@ -211,21 +238,21 @@ def compute_baseline(args, results_map: Dict[str, Any]) -> Dict[str, Any]:
   if not timestamps:
     return baseline
   timestamps.sort()
+  base_backend = args.backends[0]
   if args.baseline == 'oldest':
-    # A benchmark's baseline is the oldest Inductor perf number we have for it.
-    # This way we can track both Pytorch/XLA and Inductor perf improvements over
-    # time.
+    # A benchmark's baseline is the oldest `base_backend` perf number we have
+    # for it. This way we can track perf improvements over time.
     for ts in timestamps:
-      if 'inductor' not in results_map[ts]:
+      if base_backend not in results_map[ts]:
         continue
-      populate_baseline(baseline, results_map[ts]['inductor'])
+      populate_baseline(baseline, results_map[ts][base_backend])
 
   elif args.baseline == 'latest':
     # Pick only results from the latest timestamp.
     ts = timestamps[-1]
-    if 'inductor' not in results_map[ts]:
-      sys.exit(f'No Inductor results in the latest timestamp {ts}')
-    populate_baseline(baseline, results_map[ts]['inductor'])
+    if base_backend not in results_map[ts]:
+      sys.exit(f'No {base_backend} results in the latest timestamp {ts}')
+    populate_baseline(baseline, results_map[ts][base_backend])
   return baseline
 
 
@@ -234,9 +261,8 @@ def process_results(args, results_map: Dict[str, Any]):
   for timestamp in results_map:
     acc_map = results_map[timestamp]
 
-    compute_speedups(acc_map, baseline, 'xla:speedups', 'openxla')
-    compute_speedups(acc_map, baseline, 'xla_eval:speedups', 'openxla_eval')
-    compute_speedups(acc_map, baseline, 'inductor:speedups', 'inductor')
+    for backend in sorted(_title_map.keys()):
+      compute_speedups(acc_map, baseline, f'{backend}:speedups', backend)
 
 
 def maketitle(args, title: str):
@@ -246,11 +272,8 @@ def maketitle(args, title: str):
 
 
 def get_pr_titles(args):
-  titles = ['Inductor', 'PytorchXLA']
-  data_labels = ['inductor', 'xla']
-  if args.test == "inference":
-    titles.append('PytorchXLA_Eval')
-    data_labels.append('xla_eval')
+  titles = [_title_map[t] for t in args.backends]
+  data_labels = args.backends
   return [titles, data_labels]
 
 
@@ -258,6 +281,7 @@ def pr_latest(results_map: Dict[str, Any], args, timestamps: List[str]):
   titles, data_labels = get_pr_titles(args)
   speedups = [[] for _ in titles]
   model_names = [[] for _ in titles]
+  base_backend_name = _title_map[args.backends[0]]
 
   for i, pfx in enumerate(data_labels):
     label = f'{pfx}:speedups'
@@ -274,8 +298,8 @@ def pr_latest(results_map: Dict[str, Any], args, timestamps: List[str]):
     return
 
   if args.format == 'csv':
-    print(','.join(['# WorkloadNumber'] + [
-        f'Speedup({title}/{args.baseline.capitalize()} Inductor),StdDev,ModelName({title})'
+    print(','.join(['# Workload'] + [
+        f'Speedup({title}/{args.baseline.capitalize()} {base_backend_name}),StdDev,ModelName({title})'
         for title in titles
     ]))
     # Note: the latest timestamp might not have results for all benchmarks.
@@ -328,7 +352,8 @@ def pr_latest(results_map: Dict[str, Any], args, timestamps: List[str]):
     plt.title(
         maketitle(
             args,
-            f'Speedup over {args.baseline.capitalize()} Benchmarked Inductor'))
+            f'Speedup over {args.baseline.capitalize()} Benchmarked {base_backend_name}'
+        ))
     plt.xlabel('Workload Number')
     plt.ylabel(f'Speedup')
     plt.savefig(sys.stdout.buffer, format=args.format)
@@ -339,6 +364,7 @@ def pr_histogram(results_map: Dict[str, Any], args, timestamps: List[str]):
   percentiles = [f'p{p}' for p in (95, 50, 5)]
   labels = [f'{pfx}:speedups:{p}' for pfx in data_labels for p in percentiles]
   full_titles = [f'{title} {p}' for title in titles for p in percentiles]
+  base_backend_name = _title_map[args.backends[0]]
   x = []
   y = [[] for i in range(len(labels))]
   for timestamp in timestamps:
@@ -375,7 +401,7 @@ def pr_histogram(results_map: Dict[str, Any], args, timestamps: List[str]):
     plt.title(
         maketitle(
             args,
-            f'Histogram of Speedup over {args.baseline.capitalize()} Benchmarked Inductor'
+            f'Histogram of Speedup over {args.baseline.capitalize()} Benchmarked {base_backend_name}'
         ))
     plt.savefig(sys.stdout.buffer, format=args.format)
 
@@ -385,6 +411,7 @@ def pr_gmean(results_map: Dict[str, Any], args, timestamps: List[str]):
   x = []
   titles, data_labels = get_pr_titles(args)
   labels = [f"{x}:speedups:gmean" for x in data_labels]
+  base_backend_name = _title_map[args.backends[0]]
   y = [[] for _ in labels]
   for timestamp in timestamps:
     if all(label not in results_map[timestamp] for label in labels):
@@ -396,7 +423,7 @@ def pr_gmean(results_map: Dict[str, Any], args, timestamps: List[str]):
           results_map[timestamp] else Datapoint('', ''))
   if args.format == 'csv':
     print(','.join(['# Datetime(UTC)'] + [
-        f"Speedup({title}/{args.baseline.capitalize()} Inductor),StdDev"
+        f"Speedup({title}/{args.baseline.capitalize()} {base_backend_name}),StdDev"
         for title in titles
     ]))
     for j, x in enumerate(x):
@@ -422,7 +449,8 @@ def pr_gmean(results_map: Dict[str, Any], args, timestamps: List[str]):
     plt.title(
         maketitle(
             args,
-            f'Speedup over {args.baseline.capitalize()} Benchmarked Inductor'))
+            f'Speedup over {args.baseline.capitalize()} Benchmarked {base_backend_name}'
+        ))
     plt.savefig(sys.stdout.buffer, format=args.format)
 
 
@@ -451,10 +479,18 @@ def parse_args(args=None):
       choices=['a100', 'v100', 'a6000'],
       help='Accelerator.')
   parser.add_argument(
+      '--backends',
+      type=str,
+      action='extend',
+      nargs='+',
+      help=f'''List of backends to report on.
+      Valid: {sorted(_title_map.keys())}.
+      Note: the first element is used as the baseline backend.''')
+  parser.add_argument(
       '--baseline',
       default='oldest',
       choices=['oldest', 'latest'],
-      help='Inductor baseline to be used for computing speedups.')
+      help='Baseline point in time to be used for computing speedups.')
   parser.add_argument(
       "--exclude",
       "-x",
@@ -522,6 +558,15 @@ def parse_args(args=None):
   tiers.append_filter_by_tier(args.exclude, args.exclude_by_tier)
   args.filter = args.filter or [r"."]
   args.exclude = args.exclude or [r"^$"]
+  if not args.backends:
+    if args.test == 'inference':
+      args.backends = ['inductor', 'openxla+dynamo', 'openxla_eval+dynamo']
+    else:
+      args.backends = ['inductor', 'openxla+dynamo']
+  for backend in args.backends:
+    if backend not in _title_map:
+      sys.exit(f"error: argument --backends: invalid choice: '{backend}' "
+               f"(choose from {sorted(_title_map.keys())})")
 
   return args
 
