@@ -36,6 +36,36 @@ _fig_capsize = 3
 _markers = ('D', 'o', 's')
 
 
+class DatapointSelector:
+
+  def compile(row):
+    total_times = row['metrics']['total_time'] if 'total_time' in row[
+        'metrics'] else []
+    if len(total_times) <= 1:
+      return None
+    compile_and_run_time = total_times[0]
+    run_time = np.average(total_times[1:])
+    compile_time = compile_and_run_time - run_time
+    # Single sample size for compilation time, std = 0.
+    return Datapoint(compile_time, std=0)
+
+  def exec(row):
+    total_times = row['metrics']['total_time'] if 'total_time' in row[
+        'metrics'] else []
+    # Skip the first three elements in total_times[]; the first one
+    # includes compilation time, the 2nd and 3rd warm up the caches.
+    skip_elems = 3
+    if len(total_times) <= skip_elems:
+      return None
+    avg = np.average(total_times[skip_elems:])
+    # Standard deviation of the sample, i.e. N-1 denominator.
+    # Note: avoid NaN when we compute the std with just one sample.
+    std = np.std(
+        total_times[skip_elems:],
+        ddof=1) if len(total_times) > skip_elems + 1 else 0.0
+    return Datapoint(avg, std)
+
+
 # Round floats before printing them so that tiny differences don't break tests.
 def pr_round(x: NamedTuple):
   return Datapoint(round(x.avg, 8), round(x.std, 8))
@@ -90,21 +120,10 @@ def process_file(args, results_map: Dict[str, Any], filename: str):
       test = r['experiment']['test']
       if test != _test_to_field_name[args.test]:
         continue
-      total_times = r['metrics']['total_time'] if 'total_time' in r[
-          'metrics'] else []
-      # Skip the first three elements in total_times[]; the first one
-      # includes compilation time, the 2nd and 3rd warm up the caches.
-      skip_elems = 3
-      if len(total_times) <= skip_elems:
+
+      dp = getattr(DatapointSelector, args.metric)(r)
+      if dp is None:
         continue
-      avg = np.average(total_times[skip_elems:])
-      # Standard deviation of the sample, i.e. N-1 denominator.
-      # Note: avoid NaN when we compute the std with just one sample.
-      std = np.std(
-          total_times[skip_elems:],
-          ddof=1) if len(total_times) > skip_elems + 1 else 0.0
-      dp = Datapoint(avg, std)
-      median_total_time = np.median(total_times[1:])
       batch_size = r['experiment']['batch_size']
       timestamp = r['timestamp']
 
@@ -490,6 +509,12 @@ def parse_args(args=None):
       default='inference',
       choices=['inference', 'training'],
       help='Test mode.')
+
+  parser.add_argument(
+      '--metric',
+      default='exec',
+      choices=['exec', 'compile'],
+      help='Metric to extract.')
   parser.add_argument('--title', type=str, help="Plot title.")
   args = parser.parse_args(args)
 
