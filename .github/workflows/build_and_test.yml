@@ -44,7 +44,7 @@ jobs:
       docker-image: ${{ needs.build.outputs.docker-image }}
       runner: linux.8xlarge.nvidia.gpu
       timeout-minutes: 300
-      collect-coverage: false #${{ github.event_name == 'push' && github.event.ref == 'refs/heads/master' }}
+      collect-coverage: ${{ github.event_name == 'push' && github.event.ref == 'refs/heads/master' }}
       disable-xrt: 1
     secrets:
       gcloud-service-key: ${{ secrets.GCLOUD_SERVICE_KEY }}

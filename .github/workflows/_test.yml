@@ -125,9 +125,15 @@ jobs:
         env:
           CIRCLE_WORKFLOW_ID: ${{ github.run_id }}
           CIRCLE_BUILD_NUM: ${{ github.run_number }}
-          PYTHON_TEST_NAME: ${{ env.RUN_BENCHMARK_TESTS }}${{ env.RUN_PYTHON_TESTS }}${{ env.RUN_XLA_OP_TESTS1 }}${{ env.RUN_XLA_OP_TESTS2 }}${{ env.RUN_XLA_OP_TESTS3 }}${{ env.RUN_TORCH_MP_OP_TESTS }}
+          BENCHMARK_TEST_NAME: ${{ env.RUN_BENCHMARK_TESTS }}
+          PYTHON_TEST_NAME: ${{ env.RUN_PYTHON_TESTS }}${{ env.RUN_XLA_OP_TESTS1 }}${{ env.RUN_XLA_OP_TESTS2 }}${{ env.RUN_XLA_OP_TESTS3 }}${{ env.RUN_TORCH_MP_OP_TESTS }}
           CPP_TEST_NAME: ${{ env.RUN_CPP_TESTS1 }}${{ env.RUN_CPP_TESTS2 }}
         run: |
+            # TODO(yeounoh) collect coverage report as needed.
+            if [ -n "${BENCHMARK_TEST_NAME}" ] || [ "${PYTHON_TEST_NAME}" == "pythontorch_mp_op" ]; then
+                exit 0
+            fi
+
             docker cp "${pid}":/home/jenkins/htmlcov "${GITHUB_WORKSPACE}"
             if [ -n "${GPU_FLAG:-}" ]; then
               if [ -n "${PYTHON_TEST_NAME}" ]; then
