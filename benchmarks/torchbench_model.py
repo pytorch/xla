@@ -171,7 +171,8 @@ class TorchBenchModelLoader(ModelLoader):
   def add_torchbench_dir(self):
     os.environ["KALDI_ROOT"] = "/tmp"  # avoids some spam
 
-    torchbench_dir = self._find_near_file(("torchbenchmark", "torchbench", "benchmark"))
+    torchbench_dir = self._find_near_file(
+        ("torchbenchmark", "torchbench", "benchmark"))
     assert torchbench_dir is not None, "Torch Benchmark folder not found."
 
     if torchbench_dir is not None:
@@ -192,7 +193,8 @@ class TorchBenchModelLoader(ModelLoader):
     benchmarks_dir = self._find_near_file(("benchmarks",))
     assert benchmarks_dir is not None, "PyTorch benchmarks folder not found."
 
-    skip_file = os.path.join(benchmarks_dir, "dynamo", "torchbench_skip_models.yaml")
+    skip_file = os.path.join(benchmarks_dir, "dynamo",
+                             "torchbench_skip_models.yaml")
     with open(skip_file) as f:
       data = yaml.safe_load(f)
 
