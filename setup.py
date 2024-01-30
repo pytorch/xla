@@ -61,7 +61,6 @@ import tempfile
 import zipfile
 
 import build_util
-import torch
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -222,6 +221,7 @@ class BuildBazelExtension(build_ext.build_ext):
         f"--symlink_prefix={os.path.join(self.build_temp, 'bazel-')}"
     ]
 
+    import torch
     cxx_abi = os.getenv('CXX_ABI') or getattr(torch._C,
                                               '_GLIBCXX_USE_CXX11_ABI', None)
     if cxx_abi is not None:
