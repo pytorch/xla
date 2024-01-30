@@ -9,7 +9,7 @@ WORKSPACE=$(date --utc +%Y-%m-%d)
 REPEAT=8
 ENABLE_PROFILING=
 
-while getopts 'A:O:PR:W:' OPTION
+while getopts 'A:O:PR:T:W:' OPTION
 do
   case ${OPTION?} in
     A)
@@ -23,6 +23,12 @@ do
       ;;
     R)
       REPEAT=${OPTARG:?}
+      ;;
+    T)
+      # Avoid printing the token; re-enable printing later.
+      { set +x; } 2>/dev/null
+      export HUGGING_FACE_HUB_TOKEN=${OPTARG:?}
+      set -x
       ;;
     W)
       WORKSPACE=${OPTARG:?}
