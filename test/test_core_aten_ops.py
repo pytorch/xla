@@ -2700,7 +2700,6 @@ class AtenOpTest(unittest.TestCase):
     run_export_and_compare(self, torch.ops.aten.max_pool2d_with_indices, args,
                            kwargs)
 
-  @unittest.skip
   def test_aten_max_pool2d_with_indices_2(self):
     args = (
         torch.randint(0, 10, (3, 2, 10)).to(torch.int32),
