@@ -157,7 +157,7 @@ cp ${WORKSPACE_RESULTS_DIR:?}/results.jsonl \
    ${NIGHTLY_RESULTS_DIR:?}/${WORKSPACE:?}.jsonl
 
 PYTORCH_GIT_REV=$(git -C pytorch rev-parse --short HEAD)
-XLA_GIT_TAG=$(git -C pytorch/xla describe --tags)
+XLA_GIT_TAG=$(git -C pytorch/xla describe --tags --always)
 GIT_TAGS="PT: ${PYTORCH_GIT_REV:?} XLA: ${XLA_GIT_TAG:?}"
 BM_DIR=${WORKSPACE_DIR:?}/pytorch/xla/benchmarks
 
