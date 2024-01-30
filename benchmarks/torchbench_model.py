@@ -361,8 +361,8 @@ class TorchBenchModel(BenchmarkModel):
     #   2. Dynamo backend is not inductor: PyTorch/benchmark scripts already
     #      take care of converting the model to the right precision.
     #
-    if not (self.benchmark_experiment.accelerator == "cuda" and
-            self.benchmark_experiment.dynamo != "inductor"):
+    if (self.benchmark_experiment.accelerator != "cuda" or
+        self.benchmark_experiment.dynamo == "inductor"):
       return None
 
     if self.get_cuda_precision() is None:
