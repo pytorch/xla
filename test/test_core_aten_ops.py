@@ -4385,14 +4385,15 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.sum.dim_IntList, args, kwargs)
 
-  @unittest.skip
   def test_aten_sum_dim_IntList_1(self):
     args = (
         torch.randn((10, 10)).to(torch.float16),
         None,
     )
     kwargs = dict()
-    run_export_and_compare(self, torch.ops.aten.sum.dim_IntList, args, kwargs)
+    run_export_and_compare(self, torch.ops.aten.sum.dim_IntList, args, kwargs,
+        rtol=0.001,
+        atol=0.01,)
 
   def test_aten_sum_dim_IntList_2(self):
     args = (
