@@ -2335,19 +2335,16 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.leaky_relu, args, kwargs)
 
-  @unittest.skip
   def test_aten_lift_fresh_copy_0(self):
     args = (torch.randn((10, 10)).to(torch.float32),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.lift_fresh_copy, args, kwargs)
 
-  @unittest.skip
   def test_aten_lift_fresh_copy_1(self):
     args = (torch.randn((10, 10)).to(torch.float16),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.lift_fresh_copy, args, kwargs)
 
-  @unittest.skip
   def test_aten_lift_fresh_copy_2(self):
     args = (torch.randint(0, 10, (10, 10)).to(torch.int32),)
     kwargs = dict()
