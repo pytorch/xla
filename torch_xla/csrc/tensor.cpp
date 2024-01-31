@@ -761,22 +761,18 @@ c10::SymNode XLASymNodeImpl::sym_max(const c10::SymNode& other) {
                    << " has not been implemented.";
 }
 
-// It is used to compute contiguity fields on tensors like "is non overlapping
-// and dense" and it's never fetched. If they are never fetched it is fine for
-// them to error only if poked.
+// Force guards when performing these logical operations
+
 c10::SymNode XLASymNodeImpl::sym_or(const c10::SymNode& other) {
-  auto error_node = torch::lazy::MakeNode<SizeError>();
-  return c10::make_intrusive<XLASymNodeImpl>(error_node, PyType::BOOL);
+  return bool_() || other.bool_();
 }
 
 c10::SymNode XLASymNodeImpl::sym_and(const c10::SymNode& other) {
-  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
-                   << " has not been implemented.";
+  return bool_() && other.bool_();
 }
 
 c10::SymNode XLASymNodeImpl::sym_not() {
-  XLA_CHECK(false) << "XLASymNodeImpl::" << __FUNCTION__
-                   << " has not been implemented.";
+  return !bool_();
 }
 // NB: self is ignored here, only the arguments are used
 c10::SymNode XLASymNodeImpl::is_contiguous(at::ArrayRef<c10::SymNode> sizes,
