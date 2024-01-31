@@ -108,7 +108,7 @@ InitializePjRt(const std::string& device_type) {
     bool async = sys_util::GetEnvBool(env::kEnvPjrtAsyncCpuClient, true);
     int cpu_device_count = sys_util::GetEnvInt(env::kEnvNumCpu, 1);
     client = std::move(xla::GetTfrtCpuClient(async, cpu_device_count).value());
-  } else if (device_type == "TPU" || device_type == "TPU_C_API") {
+  } else if (device_type == "TPU") {
     TF_VLOG(1) << "Initializing TFRT TPU client...";
     // Prefer $TPU_LIBRARY_PATH if set
     auto tpu_library_path = sys_util::GetEnvString(
