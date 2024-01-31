@@ -1,3 +1,4 @@
-# Workload,Speedup(Inductor/Oldest Inductor),StdDev,ModelName(Inductor),Speedup(XLA+Dynamo/Oldest Inductor),StdDev,ModelName(XLA+Dynamo),Speedup(XLA_Eval+Dynamo/Oldest Inductor),StdDev,ModelName(XLA_Eval+Dynamo)
-0,1.2957024,0.0,Background_Matting,0.77297688,0.0,Background_Matting,0.7341254,0.0,Background_Matting
-1,1.51952596,6.914e-05,BERT_pytorch,1.56880282,7.138e-05,BERT_pytorch,1.36859903,6.227e-05,BERT_pytorch
+# ARGS: --backends inductor openxla+dynamo openxla_eval+dynamo openxla+lazytensor --
+# Workload,Speedup(Inductor/Oldest Inductor),StdDev,ModelName(Inductor),Speedup(XLA+Dynamo/Oldest Inductor),StdDev,ModelName(XLA+Dynamo),Speedup(XLA_Eval+Dynamo/Oldest Inductor),StdDev,ModelName(XLA_Eval+Dynamo),Speedup(XLA+LazyTensor/Oldest Inductor),StdDev,ModelName(XLA+LazyTensor)
+0,1.2957024,0.0,Background_Matting,0.77297688,0.0,Background_Matting,0.7341254,0.0,Background_Matting,0.41071322,0.0,Background_Matting
+1,1.51952596,6.914e-05,BERT_pytorch,1.56880282,7.138e-05,BERT_pytorch,1.36859903,6.227e-05,BERT_pytorch,,,
