@@ -222,7 +222,8 @@ XLATensorPtr avg_pool_nd(const XLATensorPtr& input, int64_t spatial_dim_count,
                          std::vector<int64_t> kernel_size,
                          std::vector<int64_t> stride,
                          std::vector<int64_t> padding, bool ceil_mode,
-                         bool count_include_pad);
+                         bool count_include_pad,
+                         std::optional<int> divisor_override);
 
 XLATensorPtr avg_pool_nd_backward(const XLATensorPtr& out_backprop,
                                   const XLATensorPtr& input,
