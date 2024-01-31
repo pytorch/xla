@@ -96,10 +96,7 @@ class ExperimentLoader:
     if cfg_accelerator == "tpu":
       if cfg_xla is None:
         return False
-    elif cfg_accelerator == "cuda":
-      if cfg_xla is None and not is_xla_device_available("CUDA"):
-        return False
-    elif cfg_accelerator == "cpu":
+    elif cfg_accelerator in ("cpu", "cuda"):
       pass
     else:
       raise NotImplementedError
