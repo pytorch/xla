@@ -273,17 +273,24 @@ def _extract_input_args(exported_model, options):
 
 
 def _preprocess_exported_program(exported_model: 'ExportedProgram'):
-  from torch_xla.experimental.stablehlo_unbounded_dynamism_utils import replace_dynamic_expand_with_xla_op
+  from torch_xla.experimental.stablehlo_unbounded_dynamism_utils import replace_dynamic_expand_with_xla_op, replace_dynamic_view_with_xla_op
   replace_dynamic_expand_with_xla_op(exported_model)
+  replace_dynamic_view_with_xla_op(exported_model)
 
 
 def _exported_program_to_stablehlo_bundle(exported_model,
                                           options) -> StableHLOModelBundle:
   if options is None:
     options = StableHLOExportOptions()
-  _preprocess_exported_program(exported_model)
-  exported_model.graph_module.graph.print_tabular()
+  # _preprocess_exported_program(exported_model)
+  # print("before decomp")
+  # exported_model.graph_module.graph.print_tabular()
+  # print(exported_model)
   exported_model = exported_model.run_decompositions()
+  _preprocess_exported_program(exported_model)
+  # print("after decomp")
+  # print(exported_model)
+  exported_model.graph_module.graph.print_tabular()
   input_args = _extract_input_args(exported_model, options)
 
   device = xm.xla_device()

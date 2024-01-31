@@ -210,6 +210,16 @@ at::Tensor DynamicExpand(const at::Tensor& input,
   return bridge::AtenFromXlaTensor(std::move(result));
 }
 
+at::Tensor DynamicView(const at::Tensor& input,
+                         const std::vector<int64_t>& size,
+                         const at::Tensor& src_tensor,
+                         int src_dim, int target_dim, float mul_scaler) {
+  XLATensorPtr result = tensor_methods::dynamic_view(
+      bridge::GetXlaTensor(input), size, bridge::GetXlaTensor(src_tensor),
+      src_dim, target_dim, mul_scaler);
+  return bridge::AtenFromXlaTensor(std::move(result));
+}
+
 at::Tensor QuantizeTensor(const at::Tensor& input,
                           const std::vector<float>& scale_list,
                           const std::vector<int>& zero_point_list,
@@ -2211,6 +2221,15 @@ void InitXlaModuleBindings(py::module m) {
     {
       NoGilSection nogil;
       result = DynamicExpand(input, size, src_tensor, src_dim, target_dim);
+    }
+    return result;
+  });
+  m.def("_xla_dynamic_view", [](const at::Tensor& input, const std::vector<int64_t>& size,
+                                  const at::Tensor& src_tensor, int src_dim, int target_dim, float mul_scaler) -> at::Tensor {
+    at::Tensor result;
+    {
+      NoGilSection nogil;
+      result = DynamicView(input, size, src_tensor, src_dim, target_dim, mul_scaler);
     }
     return result;
   });
