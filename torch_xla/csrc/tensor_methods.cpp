@@ -824,13 +824,15 @@ XLATensorPtr avg_pool_nd(const XLATensorPtr& input, int64_t spatial_dim_count,
                          std::vector<int64_t> kernel_size,
                          std::vector<int64_t> stride,
                          std::vector<int64_t> padding, bool ceil_mode,
-                         bool count_include_pad) {
+                         bool count_include_pad,
+                         std::optional<int> divisor_override) {
   kernel_size = CheckIntList(kernel_size, spatial_dim_count, "kernel_size");
   stride = CheckIntList(stride, spatial_dim_count, "stride", kernel_size);
   padding = CheckIntList(padding, spatial_dim_count, "padding");
   return input->CreateFrom(torch::lazy::MakeNode<AvgPoolNd>(
       input->GetIrValue(), spatial_dim_count, std::move(kernel_size),
-      std::move(stride), std::move(padding), ceil_mode, count_include_pad));
+      std::move(stride), std::move(padding), ceil_mode, count_include_pad,
+      divisor_override));
 }
 
 XLATensorPtr avg_pool_nd_backward(const XLATensorPtr& out_backprop,
