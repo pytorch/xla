@@ -713,6 +713,7 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertIn('%p0.2 = f32[] parameter(0), sharding={replicated}', hlo)
 
   def test_2d_tensor_3d_mesh(self):
+    print('xw32 all env var=', print(os.environ))
     ct1 = torch.randn(16, 16, device='cpu')
     ct2 = torch.randn(16, 16, device='cpu')
     expected = ct1 + ct2
@@ -723,6 +724,7 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     # Meaningful test for higher-order mesh with extra replication
     # requires multiple devices. Otherwise, this should defaults back to
     # full replication.
+    print('xw32 self.n_devices=', self.n_devices)
     if self.n_devices > 1:
       mesh = self._get_mesh((2, self.n_devices // 2, 1))
       xs.mark_sharding(t1, mesh, partition_spec=(2, 1))
