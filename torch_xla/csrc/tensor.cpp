@@ -764,16 +764,17 @@ c10::SymNode XLASymNodeImpl::sym_max(const c10::SymNode& other) {
 // Force guards when performing these logical operations
 
 c10::SymNode XLASymNodeImpl::sym_or(const c10::SymNode& other) {
-  return bool_() || other.bool_();
+  return guard_bool(__FILE__, __LINE__) || other.guard_bool(__FILE__, __LINE__);
 }
 
 c10::SymNode XLASymNodeImpl::sym_and(const c10::SymNode& other) {
-  return bool_() && other.bool_();
+  return guard_bool(__FILE__, __LINE__) && other.guard_bool(__FILE__, __LINE__);
 }
 
 c10::SymNode XLASymNodeImpl::sym_not() {
-  return !bool_();
+  return !guard_bool(__FILE__, __LINE__);
 }
+
 // NB: self is ignored here, only the arguments are used
 c10::SymNode XLASymNodeImpl::is_contiguous(at::ArrayRef<c10::SymNode> sizes,
                                            at::ArrayRef<c10::SymNode> strides) {
