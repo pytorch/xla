@@ -17,3 +17,4 @@ Below is a performance visual comparison of throughput for ResNet50 pre and post
 | :------------  | :------------  | :------------  | :------------  |
 | Pre Migration  | 18.59    | 20.06 | 27.92 |
 | Post Migration | 18.63    | 19.94 | 27.14 |
+
