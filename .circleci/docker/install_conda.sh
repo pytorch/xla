@@ -43,6 +43,7 @@ function install_and_setup_conda() {
   /usr/bin/yes | pip install expecttest==0.1.3
   /usr/bin/yes | pip install absl-py
   /usr/bin/yes | pip install pandas
+  /usr/bin/yes | pip install tabulate
   # Additional PyTorch requirements
   /usr/bin/yes | pip install scikit-image scipy==1.6.3
   /usr/bin/yes | pip install boto3==1.16.34
