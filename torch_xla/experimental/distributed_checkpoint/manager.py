@@ -220,7 +220,10 @@ class CheckpointManager:
       self._delete_chkpt_at_step(step)
       dist_cp.save_state_dict(
           state_dict=state_dict,
-          storage_writer=FsspecWriter(path),
+          storage_writer=FsspecWriter(
+              path,
+              per_thread_copy_ahead=0,
+          ),
           planner=xc.SPMDSavePlanner(),
           process_group=self.pg,
       )

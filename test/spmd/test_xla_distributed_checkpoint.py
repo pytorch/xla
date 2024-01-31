@@ -93,7 +93,10 @@ class EndToEndCheckpointTest(DistributedCheckpointTestBase):
     model_out_state_dict = model_out.state_dict()
     dist_cp.save_state_dict(
         state_dict=model_in_state_dict,
-        storage_writer=dist_cp.FileSystemWriter(chkpt_path),
+        storage_writer=dist_cp.FileSystemWriter(
+            chkpt_path,
+            per_thread_copy_ahead=0,
+        ),
         planner=save_planner,
         no_dist=no_dist,
     )
