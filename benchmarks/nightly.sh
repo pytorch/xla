@@ -141,9 +141,23 @@ fi
 
 # Run the experiments
 cd pytorch
+# Note: to avoid running in Eager mode (i.e. --xla=None --dynamo=None),
+# we split experiment_runner.py's invocation in two.
+#
+# Inference + Training: XLA Lazy tensors, XLA+XLA_Eval Dynamo.
 python xla/benchmarks/experiment_runner.py \
-       --dynamo=openxla --dynamo=openxla_eval --dynamo=inductor \
-       --xla=PJRT --xla=None --test=eval --test=train \
+       --test=eval --test=train \
+       --xla=PJRT \
+       --dynamo=None --dynamo=openxla --dynamo=openxla_eval \
+       --suite-name=torchbench --accelerator=cuda \
+       --output-dirname=${WORKSPACE_RESULTS_DIR:?} \
+       --repeat=${REPEAT:?} --print-subprocess \
+       --timestamp=${TIMESTAMP:?} ${PROFILING_FLAGS?}
+# Inference + Training: Inductor Dynamo.
+python xla/benchmarks/experiment_runner.py \
+       --test=eval --test=train \
+       --xla=None \
+       --dynamo=inductor \
        --suite-name=torchbench --accelerator=cuda \
        --output-dirname=${WORKSPACE_RESULTS_DIR:?} \
        --repeat=${REPEAT:?} --print-subprocess \
@@ -189,11 +203,18 @@ for testname in inference training; do
 	    HEIGHT=8
 	  fi
 	fi
+	BACKENDS_CMD=
+	if [ "${testname:?}" = 'inference' ]; then
+	    BACKENDS_CMD='--backends inductor openxla+dynamo openxla_eval+dynamo openxla+lazytensor'
+	else
+	    BACKENDS_CMD='--backends inductor openxla+dynamo openxla+lazytensor'
+	fi
 	python ${BM_DIR:?}/aggregate.py --accelerator=${ACCELERATOR:?} \
                --report=${report:?} --test=${testname:?} --format=${format:?} \
 	       --title="${TITLE_PREFIX?}${TITLE:?}" \
 	       --fig-height=${HEIGHT:?} --fig-width=${WIDTH:?} \
 	       ${TIER_CMD?} \
+	       ${BACKENDS_CMD:?} -- \
 	       ${NIGHTLY_RESULTS_DIR:?}/*.jsonl \
                > ${REPORTS_DIR:?}/${ACCELERATOR:?}-${testname:?}-${report:?}${TIER_FILE_SUFFIX?}.${format:?}
       done
