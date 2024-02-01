@@ -332,7 +332,25 @@ xla::XlaOp BuildGelu(xla::XlaOp input) {
   xla::XlaOp m_sqrt1_2 = XlaHelpers::ScalarValue<float>(
       M_SQRT1_2, shape.element_type(), input.builder());
 
-  return input * half * (xla::Erf(input * m_sqrt1_2) + one);
+  if (XlaHelpers::IsUnboundedDynamismEnabled()) {
+    std::pair<xla::XlaOp, xla::XlaOp> promoted_input_m_sqrt1_2 = XlaHelpers::Promote(input, m_sqrt1_2);
+    auto mul1 = xla::Mul(promoted_input_m_sqrt1_2.first, promoted_input_m_sqrt1_2.second);
+    std::cout << "after mul1 " << std::endl;
+    std::cout << "half shape: " << ShapeHelper::ShapeOfXlaOp(mul1) << std::endl;
+    auto erf = xla::Erf(mul1);
+    std::cout << "after erf " << std::endl;
+    std::pair<xla::XlaOp, xla::XlaOp> promoted_erf_one = XlaHelpers::Promote(erf, one);
+    auto add1 = promoted_erf_one.first + promoted_erf_one.second;
+    std::cout << "after add1 " << std::endl;
+    // std::cout << "input shape: " << shape << std::endl;
+    // std::cout << "half shape: " << ShapeHelper::ShapeOfXlaOp(half) << std::endl;
+    // std::cout << "add1 shape: " << ShapeHelper::ShapeOfXlaOp(add1) << std::endl;
+    std::pair<xla::XlaOp, xla::XlaOp> promoted_input_half = XlaHelpers::Promote(input, half);
+    xla::XlaOp mul_input_half = xla::Mul(input, half);
+    return mul_input_half * add1;
+  } else {
+    return input * half * (xla::Erf(input * m_sqrt1_2) + one);
+  }
 }
 
 xla::XlaOp BuildGeluBackward(xla::XlaOp grad_output, xla::XlaOp input) {

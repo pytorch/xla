@@ -68,6 +68,7 @@ XlaOpVector DynamicView::Lower(LoweringContext* loctx) const {
       {input, final_broadcast_dimensions}, final_shape);
   std::cout << ToString() << std::endl;
   std::cout << "check final shape" << final_shape << std::endl;
+  std::cout << "check result shape: " << ShapeHelper::ShapeOfXlaOp(result) << std::endl;
   return ReturnOp(result, loctx);
 }
 
