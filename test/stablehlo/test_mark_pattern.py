@@ -208,9 +208,7 @@ class XlaMarkPatternTest(unittest.TestCase):
 
     input_args = (torch.randn((5, 5)), torch.randn((5, 5)))
     stablehlo = self.run_func_get_stablehlo(M(), input_args)
-    print(stablehlo)
     self.assertEqual(stablehlo.count("@stablehlo.composite"), 1)
-    self.assertTrue(False)
 
   def test_multiple_inputs(self):
 

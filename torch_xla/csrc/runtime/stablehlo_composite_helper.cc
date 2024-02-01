@@ -229,15 +229,15 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
       return mlir::success();
     }
 
-    // Get the output op with maximum order num as the representative.
-    mlir::Operation* last_output_op = output_ops[0];
+    // Get the output op with minimum order num as the representative.
+    mlir::Operation* first_output_op = output_ops[0];
     for (mlir::Operation* op : output_ops) {
-      if (op_order_map.at(op) > op_order_map.at(last_output_op)) {
-        last_output_op = op;
+      if (op_order_map.at(op) < op_order_map.at(first_output_op)) {
+        first_output_op = op;
       }
     }
 
-    auto metadata_or = GetBoundaryMetadata(last_output_op);
+    auto metadata_or = GetBoundaryMetadata(first_output_op);
     if (mlir::failed(metadata_or)) {
       return mlir::failure();
     }
@@ -257,9 +257,8 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
 
     mlir::func::FuncOp impl_func = BuildStableHLOCompositeImplFunc(
         output_ops, absl::StrCat(metadata->name, ".impl"), args, impl_ops);
-
     mlir::FailureOr<mlir::Operation*> composite_op_or =
-        BuildStableHLOCompositeOp(last_output_op, impl_func, args, *metadata);
+        BuildStableHLOCompositeOp(first_output_op, impl_func, args, *metadata);
     if (mlir::failed(composite_op_or)) {
       return mlir::failure();
     }
@@ -267,12 +266,12 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
 
     // Updates all users of this op's result(s) to use the results(s) of impl
     // func call.
-    size_t next_composite_result_i = 0;
+    size_t composite_result_i = 0;
     for (mlir::Operation* op : output_ops) {
       for (size_t i = 0; i < op->getNumResults(); ++i) {
         mlir::OpResult result = op->getResult(i);
         result.replaceAllUsesWith(
-            composite_op->getResult(next_composite_result_i++));
+            composite_op->getResult(composite_result_i++));
       }
     }
 
