@@ -59,7 +59,7 @@ jobs:
             run_xla_op_tests2: 'xla_op2'
           - run_python_tests: 'python_tests'
             run_xla_op_tests3: 'xla_op3'
-          - run_python_tests: 'python'
+          - run_python_tests: 'python_tests'
             run_torch_mp_op_tests: 'torch_mp_op'
     timeout-minutes: ${{ inputs.timeout-minutes }}
     env:
@@ -130,17 +130,15 @@ jobs:
           CPP_TEST_NAME: ${{ env.RUN_CPP_TESTS1 }}${{ env.RUN_CPP_TESTS2 }}
         run: |
             # TODO(yeounoh) collect coverage report as needed.
-            if [ -n "${BENCHMARK_TEST_NAME}" ] || [ "${PYTHON_TEST_NAME}" == "pythontorch_mp_op" ]; then
+            if [ -n "${BENCHMARK_TEST_NAME}" ]; then
                 exit 0
             fi
-
             docker cp "${pid}":/home/jenkins/htmlcov "${GITHUB_WORKSPACE}"
             if [ -n "${GPU_FLAG:-}" ]; then
               if [ -n "${PYTHON_TEST_NAME}" ]; then
                 gsutil cp ${GITHUB_WORKSPACE}/htmlcov/lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/gpu_python_coverage_${PYTHON_TEST_NAME}.out
                 gsutil cp ${GITHUB_WORKSPACE}/htmlcov/lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/incremental/pytorchxla/${CIRCLE_WORKFLOW_ID}/gpu_python_coverage_${PYTHON_TEST_NAME}.out
               fi
-
               if [ -n "${CPP_TEST_NAME}" ]; then
                 gsutil cp ${GITHUB_WORKSPACE}/htmlcov/cpp_lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/absolute/pytorchxla/${CIRCLE_WORKFLOW_ID}/gpu_cpp_coverage_${CPP_TEST_NAME}.out
                 gsutil cp ${GITHUB_WORKSPACE}/htmlcov/cpp_lcov.info gs://ng3-metrics/ng3-pytorchxla-coverage/incremental/pytorchxla/${CIRCLE_WORKFLOW_ID}/gpu_cpp_coverage_${CPP_TEST_NAME}.out
