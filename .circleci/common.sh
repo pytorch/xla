@@ -70,6 +70,7 @@ function install_deps_pytorch_xla() {
   pip install cloud-tpu-client
   pip install absl-py
   pip install pandas
+  pip install tabulate
   pip install --upgrade "numpy>=1.18.5"
   pip install --upgrade numba
 
