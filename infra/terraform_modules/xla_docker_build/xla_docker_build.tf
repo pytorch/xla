@@ -131,7 +131,8 @@ locals {
 
           # Try to setup kubectl credentials the new way,
           # see https://cloud.google.com/blog/products/containers-kubernetes/kubectl-auth-changes-in-gke
-          apt-get install google-cloud-sdk-gke-gcloud-auth-plugin -o DPkg::options::="--force-overwrite"
+          apt-get remove google-cloud-cli-gke-gcloud-auth-plugin
+          apt-get install google-cloud-sdk-gke-gcloud-auth-plugin -y -o DPkg::options::="--force-overwrite"
           export USE_GKE_GCLOUD_AUTH_PLUGIN=True
           apt-get install kubectl
           gcloud container clusters get-credentials $_CLUSTER_NAME --zone $_CLUSTER_ZONE
