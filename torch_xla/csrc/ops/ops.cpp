@@ -781,7 +781,27 @@ torch::lazy::NodePtr Lerp(const torch::lazy::Value& start,
                           const torch::lazy::Value& end,
                           const torch::lazy::Value& weight) {
   torch::lazy::ScopePusher ir_scope(at::aten::lerp.toQualString());
-  return start + weight * (end - start);
+  auto lower_fn = [](const XlaNode& node,
+                     LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_start = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_end = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp xla_weight = loctx->GetOutputOp(node.operand(2));
+    xla::XlaOp xla_output = BuildLerp(xla_start, xla_end, xla_weight);
+    return node.ReturnOp(xla_output, loctx);
+  };
+  auto lower_for_shape_fn =
+      [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    XLA_CHECK_EQ(operands.size(), 3) << "Unexpected number of operands";
+    return BuildLerp(operands[0], operands[1], operands[2]);
+  };
+  return GenericOp(
+      torch::lazy::OpKind(at::aten::lerp), {start, end, weight},
+      [&]() {
+        return InferOutputShape(
+            {GetXlaShape(start), GetXlaShape(end), GetXlaShape(weight)},
+            lower_for_shape_fn);
+      },
+      std::move(lower_fn));
 }
 
 torch::lazy::NodePtr XLogY(const torch::lazy::Value& input,

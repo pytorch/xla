@@ -113,6 +113,10 @@ xla::XlaOp BuildEluBackward(xla::XlaOp grad_output, xla::XlaOp output,
                             const at::Scalar& alpha, const at::Scalar& scale,
                             const at::Scalar& input_scale);
 
+// Computes a linear interpolation of two tensors start (given by input) and end
+// based on a scalar or tensor weight and returns the resulting out tensor.
+xla::XlaOp BuildLerp(xla::XlaOp start, xla::XlaOp end, xla::XlaOp weight);
+
 }  // namespace torch_xla
 
 #endif  // XLA_TORCH_XLA_CSRC_ELEMENTWISE_H_
