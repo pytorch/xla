@@ -314,13 +314,16 @@ class TorchBenchModel(BenchmarkModel):
 
   @functools.lru_cache(maxsize=1)
   def benchmark_cls(self):
-    try:
-      module = importlib.import_module(
-          f"torchbenchmark.models.{self.model_name}")
-    except ModuleNotFoundError:
-      module = importlib.import_module(
-          f"torchbenchmark.models.fb.{self.model_name}")
-    return getattr(module, "Model", None)
+    for module_src in [
+        f"torchbenchmark.models.{self.model_name}",
+        f"torchbenchmark.models.fb.{self.model_name}"
+    ]:
+      try:
+        module = importlib.import_module(module_src)
+        return getattr(module, "Model", None)
+      except ModuleNotFoundError:
+        logger.warning(f"Unable to import {module_src}.")
+    return None
 
   def load_benchmark(self):
     cant_change_batch_size = (not getattr(self.benchmark_cls(),
