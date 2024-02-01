@@ -54,9 +54,6 @@ class XlaMarkPatternTest(unittest.TestCase):
 
     class M(torch.nn.Module):
 
-      def __init__(self):
-        super().__init__()
-
       def forward(self, x, y):
         q, k, v = x.split(128, dim=-2)
         q = torch.ops.xla_pattern_marking.mark_tensor(
@@ -97,9 +94,6 @@ class XlaMarkPatternTest(unittest.TestCase):
   def test_composite_builder_sdpa_pattern(self):
 
     class M(torch.nn.Module):
-
-      def __init__(self):
-        super().__init__()
 
       def forward(self, x, y):
         b = StableHLOCompositeBuilder("sdpa", {"scale": 0.25})
@@ -161,9 +155,6 @@ class XlaMarkPatternTest(unittest.TestCase):
 
     class M(torch.nn.Module):
 
-      def __init__(self):
-        super().__init__()
-
       def forward(self, x, y):
         b = StableHLOCompositeBuilder("sdpa", {"scale": 0.25})
         q, k, v = x.split(128, dim=-2)
@@ -193,9 +184,6 @@ class XlaMarkPatternTest(unittest.TestCase):
   def test_composite_builder_multiple_outputs(self):
 
     class M(torch.nn.Module):
-
-      def __init__(self):
-        super().__init__()
 
       def forward(self, x, y):
         builder = StableHLOCompositeBuilder("sample_composite")
