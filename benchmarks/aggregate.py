@@ -42,7 +42,7 @@ _test_to_field_name = {
 _fig_elinewidth = 0.5
 _fig_capsize = 3
 
-_markers = ('D', 'o', 's')
+_markers = ('D', 'o', 's', 'v', 'x', '+')
 
 
 class DatapointSelector:
@@ -372,7 +372,7 @@ def pr_latest(results_map: Dict[str, Any], args, timestamps: List[str]):
       plt.errorbar([j for j in range(len(speedups[i]))],
                    [v.avg for v in speedups[i]], [v.std for v in speedups[i]],
                    label=titles[i],
-                   marker=_markers[i],
+                   marker=_markers[i % len(_markers)],
                    elinewidth=_fig_elinewidth,
                    capsize=_fig_capsize)
       # Annotate the plot with the model names.
@@ -428,15 +428,15 @@ def pr_histogram(results_map: Dict[str, Any], args, timestamps: List[str]):
   else:
     fig, ax = plt.subplots(figsize=(args.fig_width, args.fig_height))
     ax.axhline(y=1.0, color='lightgray')
-    linestyles = ('solid', 'dotted', 'dashed')
+    linestyles = ('solid', 'dotted', 'dashed', 'dashdot')
     for i, label in enumerate(labels):
       style = int(i / len(percentiles))
       ax.plot(
           x,
           y[i],
           label=full_titles[i],
-          marker=_markers[style],
-          linestyle=linestyles[style])
+          marker=_markers[style % len(_markers)],
+          linestyle=linestyles[style % len(linestyles)])
     ax.xaxis.set_major_formatter(
         mdates.ConciseDateFormatter(ax.xaxis.get_major_locator()))
     plt.legend()
@@ -482,8 +482,9 @@ def pr_gmean(results_map: Dict[str, Any], args, timestamps: List[str]):
     ax.axhline(y=1.0, color='lightgray')
     for i in range(len(labels)):
       ax.errorbar(
-          x, [v.avg for v in y[i]], [v.std for v in y[i]],
-          marker=_markers[i],
+          x, [v.avg if v.avg is not None else np.nan for v in y[i]],
+          [v.std if v.std is not None else np.nan for v in y[i]],
+          marker=_markers[i % len(_markers)],
           label=titles[i],
           elinewidth=_fig_elinewidth,
           capsize=_fig_capsize)
