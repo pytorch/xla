@@ -131,6 +131,19 @@ def _zeros_like(tensor_list):
   return zeros_tensors
 
 
+def onlyIfTorchSupportsCUDA(fn):
+  return unittest.skipIf(
+      not torch.cuda.is_available(), reason="requires PyTorch CUDA support")(
+          fn)
+
+
+def onlyIfPJRTDeviceIsCUDA(fn):
+  return unittest.skipIf(
+      os.environ.get("PJRT_DEVICE") not in ("GPU", "CUDA"),
+      reason="requires CUDA as PJRT_DEVICE")(
+          fn)
+
+
 class TestToXlaTensorArena(test_utils.XlaTestCase):
 
   def test(self):
@@ -2355,6 +2368,27 @@ class TestGeneric(test_utils.XlaTestCase):
     former_a = small_a.as_strided(size, (5, 1), 0)
 
     self.assertEqual(a, former_a)
+
+  def _test_move_tensor_cuda_to_xla(self, cpu_tensor):
+    # Assumes CPU-XLA data movement works.
+    cuda_tensor = cpu_tensor.to("cuda")
+    # Move tensor CUDA -> XLA.
+    xla_tensor = cuda_tensor.to(xm.xla_device())
+    # Move the XLA tensor back to CPU, and check that it is the same as
+    # the original CPU tensor.
+    self.assertTrue(torch.equal(cpu_tensor, xla_tensor.cpu()))
+
+  @onlyIfTorchSupportsCUDA
+  @onlyIfPJRTDeviceIsCUDA
+  def test_aten_move_cuda_to_xla(self):
+    self._test_move_tensor_cuda_to_xla(torch.arange(5))
+
+  @onlyIfTorchSupportsCUDA
+  @onlyIfPJRTDeviceIsCUDA
+  def test_aten_move_scalar_cuda_to_xla(self):
+    # 0-dimensional scalar-tensor
+    # Has a different execution path than other tensors.
+    self._test_move_tensor_cuda_to_xla(torch.tensor(42))
 
 
 if __name__ == '__main__':
