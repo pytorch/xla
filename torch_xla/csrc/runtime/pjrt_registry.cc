@@ -159,7 +159,12 @@ InitializePjRt(const std::string& device_type) {
     bool spmd = sys_util::GetEnvBool("XLA_USE_SPMD", false);
     TF_VLOG(3) << "Getting StreamExecutorGpuClient for node_id="
                << global_process_rank << ", num_nodes=" << global_world_size
-               << ", spmd case=" << spmd << ", PJRT_LOCAL_PROCESS_RANK=" << sys_util::GetEnvInt(env::kEnvPjRtLocalRank, -1) << ", RANK=" << sys_util::GetEnvInt("RANK", -1) << ", LOCAL_WORLD_SIZE=" << sys_util::GetEnvInt("LOCAL_WORLD_SIZE", -1) << ", WORLD_SIZE=" << sys_util::GetEnvInt("WORLD_SIZE", -1);
+               << ", spmd case=" << spmd << ", PJRT_LOCAL_PROCESS_RANK="
+               << sys_util::GetEnvInt(env::kEnvPjRtLocalRank, -1)
+               << ", RANK=" << sys_util::GetEnvInt("RANK", -1)
+               << ", LOCAL_WORLD_SIZE="
+               << sys_util::GetEnvInt("LOCAL_WORLD_SIZE", -1)
+               << ", WORLD_SIZE=" << sys_util::GetEnvInt("WORLD_SIZE", -1);
     if (local_world_size == 1) {
       if (global_world_size > 1) {
         coordinator = SetKeyValueCallback(global_process_rank,
