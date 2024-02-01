@@ -17,6 +17,9 @@ TORCH_TEST_PRECIIONS = {
     'test_pow_xla_float64': 0.0045,
     'test_var_neg_dim_xla_bfloat16': 0.01,
     'test_sum_xla_bfloat16': 0.1,
+    'test_put_xla_bfloat16': 0.05,
+    'test_take_xla_bfloat16': 0.05,
+    'test_EmbeddingBag_per_sample_weights_and_new_offsets_xla': 0.01,
 }
 
 DISABLED_TORCH_TESTS_ANY = {

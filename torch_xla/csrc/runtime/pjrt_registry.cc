@@ -1,3 +1,5 @@
+#include "torch_xla/csrc/runtime/pjrt_registry.h"
+
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/env_vars.h"
 #include "torch_xla/csrc/runtime/profiler.h"
@@ -5,7 +7,9 @@
 #include "torch_xla/csrc/runtime/tf_logging.h"
 #include "torch_xla/csrc/runtime/xla_coordinator.h"
 #include "xla/pjrt/c/pjrt_c_api.h"
+#include "xla/pjrt/distributed/client.h"
 #include "xla/pjrt/distributed/distributed.h"
+#include "xla/pjrt/distributed/in_memory_key_value_store.h"
 #include "xla/pjrt/gpu/se_gpu_pjrt_client.h"
 #include "xla/pjrt/pjrt_api.h"
 #include "xla/pjrt/pjrt_c_api_client.h"
@@ -14,9 +18,10 @@
 namespace torch_xla {
 namespace runtime {
 
-std::unordered_map<std::string, std::string> pjrt_plugins_;
-
 namespace {
+
+std::unordered_map<std::string, std::shared_ptr<const PjRtPlugin>>
+    pjrt_plugins_;
 
 xla::GpuAllocatorConfig GetGpuAllocatorConfig() {
   auto allocator_config = xla::GpuAllocatorConfig{};
@@ -35,17 +40,18 @@ xla::GpuAllocatorConfig GetGpuAllocatorConfig() {
   return allocator_config;
 }
 
-std::optional<std::string> GetPjRtPluginPath(const std::string& device_type) {
+std::shared_ptr<const PjRtPlugin> GetPjRtPlugin(
+    const std::string& device_type) {
   auto plugin_path = pjrt_plugins_.find(device_type);
-  return plugin_path != pjrt_plugins_.end() ? std::optional(plugin_path->second)
-                                            : std::nullopt;
+  return plugin_path != pjrt_plugins_.end() ? plugin_path->second : nullptr;
 }
 
 }  // namespace
 
-void RegisterPjRtPlugin(std::string name, std::string library_path) {
-  TF_VLOG(3) << "Registering PjRt plugin " << name << " at " << library_path;
-  pjrt_plugins_[name] = library_path;
+void RegisterPjRtPlugin(std::string name,
+                        std::shared_ptr<const PjRtPlugin> plugin) {
+  TF_VLOG(3) << "Registering PjRt plugin " << name;
+  pjrt_plugins_[name] = plugin;
 }
 
 std::tuple<std::unique_ptr<xla::PjRtClient>, std::unique_ptr<XlaCoordinator>>
@@ -54,13 +60,47 @@ InitializePjRt(const std::string& device_type) {
   std::unique_ptr<XlaCoordinator> coordinator;
 
   if (sys_util::GetEnvBool(env::kEnvPjrtDynamicPlugins, false)) {
-    std::optional<std::string> plugin_path = GetPjRtPluginPath(device_type);
-    if (plugin_path) {
+    std::shared_ptr<const PjRtPlugin> plugin = GetPjRtPlugin(device_type);
+    if (plugin) {
       TF_VLOG(1) << "Initializing client for PjRt plugin " << device_type;
+
+      std::shared_ptr<xla::KeyValueStoreInterface> kv_store = nullptr;
+      if (plugin->requires_xla_coordinator()) {
+        int local_process_rank = sys_util::GetEnvInt(
+            env::kEnvPjRtLocalRank, sys_util::GetEnvInt("LOCAL_RANK", 0));
+        int global_process_rank =
+            sys_util::GetEnvInt("RANK", local_process_rank);
+        int local_world_size =
+            sys_util::GetEnvInt(env::kEnvPjRtLocalProcessCount,
+                                sys_util::GetEnvInt("LOCAL_WORLD_SIZE", 1));
+        int global_world_size =
+            sys_util::GetEnvInt("WORLD_SIZE", local_world_size);
+
+        std::string master_addr =
+            runtime::sys_util::GetEnvString("MASTER_ADDR", "localhost");
+        std::string port = runtime::sys_util::GetEnvString(
+            "XLA_COORDINATOR_PORT", XlaCoordinator::kDefaultCoordinatorPort);
+
+        TF_VLOG(3) << "Creating coordinator for rank=" << global_process_rank
+                   << ", world size=" << global_world_size
+                   << ", coordinator address=" << master_addr << ":" << port;
+
+        // Use the XlaCoordinator as the distributed key-value store.
+        coordinator = std::make_unique<XlaCoordinator>(
+            global_process_rank, global_world_size, master_addr, port);
+        std::shared_ptr<xla::DistributedRuntimeClient> distributed_client =
+            coordinator->GetClient();
+        kv_store = xla::GetDistributedKeyValueStore(distributed_client,
+                                                    /*key_prefix=*/"pjrt:");
+      }
       const PJRT_Api* c_api = *pjrt::LoadPjrtPlugin(
-          absl::AsciiStrToLower(device_type), *plugin_path);
+          absl::AsciiStrToLower(device_type), plugin->library_path());
       XLA_CHECK_OK(pjrt::InitializePjrtPlugin(device_type));
-      client = xla::GetCApiClient(absl::AsciiStrToUpper(device_type)).value();
+      auto create_options = plugin->client_create_options();
+      client = xla::GetCApiClient(
+                   absl::AsciiStrToUpper(device_type),
+                   {create_options.begin(), create_options.end()}, kv_store)
+                   .value();
       profiler::RegisterProfilerForPlugin(c_api);
     }
   } else if (device_type == "CPU") {
@@ -95,30 +135,25 @@ InitializePjRt(const std::string& device_type) {
     std::string port = runtime::sys_util::GetEnvString(
         "XLA_COORDINATOR_PORT", XlaCoordinator::kDefaultCoordinatorPort);
 
-    xla::PjRtClient::KeyValueGetCallback kv_get = nullptr;
-    xla::PjRtClient::KeyValuePutCallback kv_put = nullptr;
-    auto allowed_devices =
-        std::make_optional<std::set<int>>(std::set{local_process_rank});
+    bool spmd = sys_util::GetEnvBool("XLA_USE_SPMD", false);
+    std::optional<std::set<int>> allowed_devices;
+    if (!spmd) {
+      allowed_devices = std::set{local_process_rank};
+    }
+
+    std::shared_ptr<xla::KeyValueStoreInterface> kv_store;
     if (global_world_size > 1) {
-      // Use the XlaCoordinator as the distributed key-value store.
+      // Use the distributed key-value store from DistributedRuntimeClient.
       coordinator = std::make_unique<XlaCoordinator>(
           global_process_rank, global_world_size, master_addr, port);
       std::shared_ptr<xla::DistributedRuntimeClient> distributed_client =
           coordinator->GetClient();
-      std::string key_prefix = "gpu:";
-      kv_get = [distributed_client, key_prefix](
-                   std::string_view k,
-                   absl::Duration timeout) -> xla::StatusOr<std::string> {
-        return distributed_client->BlockingKeyValueGet(
-            absl::StrCat(key_prefix, k), timeout);
-      };
-      kv_put = [distributed_client, key_prefix](
-                   std::string_view k, std::string_view v) -> xla::Status {
-        return distributed_client->KeyValueSet(absl::StrCat(key_prefix, k), v);
-      };
+      kv_store = xla::GetDistributedKeyValueStore(distributed_client,
+                                                  /*key_prefix=*/"gpu:");
     }
     TF_VLOG(3) << "Getting StreamExecutorGpuClient for node_id="
                << global_process_rank << ", num_nodes=" << global_world_size;
+
     xla::GpuClientOptions options;
     options.allocator_config = GetGpuAllocatorConfig();
     options.node_id = global_process_rank;
@@ -126,8 +161,7 @@ InitializePjRt(const std::string& device_type) {
     options.allowed_devices = allowed_devices;
     options.platform_name = "gpu";
     options.should_stage_host_to_device_transfers = true;
-    options.kv_get = kv_get;
-    options.kv_put = kv_put;
+    options.kv_store = kv_store;
     client = std::move(xla::GetStreamExecutorGpuClient(options).value());
   } else if (device_type == "XPU") {
     TF_VLOG(1) << "Initializing PjRt XPU client...";

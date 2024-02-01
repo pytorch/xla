@@ -103,6 +103,18 @@ torch::lazy::NodePtr LogBase(const torch::lazy::Value& input,
                    /*num_outputs=*/1, torch::lazy::MHash(base));
 }
 
+torch::lazy::NodePtr Logit(const torch::lazy::Value& input,
+                           c10::optional<double> eps) {
+  auto lower_fn = [eps](const XlaNode& node,
+                        LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    return node.ReturnOp(BuildLogit(xla_input, eps), loctx);
+  };
+  return GenericOp(torch::lazy::OpKind(at::aten::logit), {input},
+                   GetXlaShape(input), std::move(lower_fn), /*num_outputs=*/1,
+                   torch::lazy::MHash(eps));
+}
+
 torch::lazy::NodePtr SgnOp(const torch::lazy::Value& input) {
   auto lower_fn = [](const XlaNode& node,
                      LoweringContext* loctx) -> XlaOpVector {
@@ -411,7 +423,7 @@ torch::lazy::NodePtr Where(const torch::lazy::Value& condition,
     xla::XlaOp pred_condition =
         ConvertTo(xla_condition, XlaHelpers::TypeOfXlaOp(xla_condition),
                   xla::PrimitiveType::PRED);
-    auto promoted_branches = XlaHelpers::ValidateShapes(xla_input, xla_other);
+    auto promoted_branches = XlaHelpers::Promote(xla_input, xla_other);
     return node.ReturnOp(xla::Select(pred_condition, promoted_branches.first,
                                      promoted_branches.second),
                          loctx);

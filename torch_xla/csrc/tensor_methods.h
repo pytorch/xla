@@ -82,6 +82,10 @@ std::pair<XLATensorPtr, torch::lazy::Value> collective_permute(
 void custom_sharding_(const XLATensorPtr& input,
                       const std::shared_ptr<XLATensor::ShardingSpec>& spec);
 
+void tpu_custom_call_(XLATensorPtr& output,
+                      const std::vector<XLATensorPtr>& inputs,
+                      const std::string& payload);
+
 XLATensorPtr get_dimensions_size(const XLATensorPtr& input,
                                  std::vector<int64_t> dimensions);
 
@@ -218,7 +222,8 @@ XLATensorPtr avg_pool_nd(const XLATensorPtr& input, int64_t spatial_dim_count,
                          std::vector<int64_t> kernel_size,
                          std::vector<int64_t> stride,
                          std::vector<int64_t> padding, bool ceil_mode,
-                         bool count_include_pad);
+                         bool count_include_pad,
+                         std::optional<int> divisor_override);
 
 XLATensorPtr avg_pool_nd_backward(const XLATensorPtr& out_backprop,
                                   const XLATensorPtr& input,
@@ -497,6 +502,8 @@ XLATensorPtr linspace(const at::Scalar& start, const at::Scalar& end,
                       const torch::lazy::BackendDevice& device);
 
 XLATensorPtr log(const XLATensorPtr& input);
+
+XLATensorPtr logit(const XLATensorPtr& input, c10::optional<double> eps);
 
 XLATensorPtr log_base(const XLATensorPtr& input, torch::lazy::OpKind op,
                       double base);

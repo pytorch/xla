@@ -19,6 +19,7 @@ from torch.profiler import profile, ProfilerActivity
 import copy
 from torch.autograd import DeviceType
 from benchmark_model import ModelLoader
+from verifier import VerificationCode, VerificationResult, verify
 from enum import Enum
 from torchbench_model import TorchBenchModelLoader
 from benchmark_experiment import ExperimentLoader
@@ -112,7 +113,8 @@ class ExperimentRunner:
 
         # Skip unsupported config.
         if not self.model_loader.is_compatible(benchmark_model,
-                                               benchmark_experiment):
+                                               benchmark_experiment,
+                                               self._args.strict_compatible):
           logger.warning("SKIP incompatible model and experiment configs.")
           self._save_results(benchmark_experiment.to_dict(),
                              benchmark_model.to_dict(), {"error": "SKIP"})
@@ -239,21 +241,29 @@ class ExperimentRunner:
                                                    benchmark_experiment)
 
     # Repeat the experiment and accumulate metrics.
+    last_output = None
     with benchmark_model.pick_grad():
       accumulated_metrics = OrderedDict()
       for repeat_iteration in range(self._args.repeat):
-        metrics = self.run_once_and_gather_metrics(benchmark_experiment,
-                                                   benchmark_model,
-                                                   experiment_config,
-                                                   model_config,
-                                                   repeat_iteration)
+        metrics, last_output = self.run_once_and_gather_metrics(
+            benchmark_experiment, benchmark_model, experiment_config,
+            model_config, repeat_iteration)
         for k, v in metrics.items():
           if k not in accumulated_metrics:
             accumulated_metrics[k] = []
           accumulated_metrics[k].append(v)
 
+    verify_res = verify(
+        last_output,
+        experiment_config,
+        model_config,
+        self.experiment_loader,
+        self.model_loader,
+        mean_rel_error_tolerance=0.02,  # allow max 2% difference w.r.t eager runtime
+        noop=not self._args.verify)
     self._save_results(benchmark_experiment.to_dict(),
-                       benchmark_model.to_dict(), accumulated_metrics)
+                       benchmark_model.to_dict(), accumulated_metrics,
+                       verify_res)
 
   def run_once_and_gather_metrics(self, benchmark_experiment, benchmark_model,
                                   experiment_config, model_config,
@@ -373,7 +383,7 @@ class ExperimentRunner:
           experiment_config, model_config, repeat_iteration, "output", ext="pt")
       torch.save(output, path)
 
-    return metrics
+    return metrics, output
 
   def _prepare_inputs(self, example_inputs, should_randomize_input):
     inputs_list = []
@@ -467,8 +477,13 @@ class ExperimentRunner:
     with open(path, mode, encoding="utf-8") as f:
       f.write(text)
 
-  def _save_results(self, experiment_config: OrderedDict,
-                    model_config: OrderedDict, metrics):
+  def _save_results(
+      self,
+      experiment_config: OrderedDict,
+      model_config: OrderedDict,
+      metrics,
+      verification_result: Optional[VerificationResult] = VerificationResult(
+          VerificationCode.CANNOT_PROCEED_WITH_VERIFICATION)):
     results = OrderedDict()
     results["model"] = model_config
     results["experiment"] = experiment_config
@@ -476,6 +491,8 @@ class ExperimentRunner:
     results["iterations_per_run"] = self._args.iterations_per_run
     results["metrics"] = metrics
     results["timestamp"] = self._args.timestamp
+    results["verification_code"] = verification_result.result_code
+    results["verification_mean_rel_error"] = verification_result.mean_rel_error
     with open(self.output_file, mode="a", encoding="utf-8") as f:
       json.dump(results, f, ensure_ascii=False)
       f.write("\n")
@@ -825,7 +842,6 @@ def parse_args(args=None):
   parser.add_argument(
       "--disable-tf32",
       action="store_true",
-      default=False,
       help="Whether to enable fast F32 multiplication in PyTorch.",
   )
   parser.add_argument(
@@ -848,8 +864,22 @@ def parse_args(args=None):
   parser.add_argument(
       "--pure-wall-time",
       action="store_true",
-      default=False,
       help="Times wall time measurements with pure CUDA events. No kernel launch overhead.",
+  )
+  parser.add_argument(
+      "--filter-by-single-graph",
+      action="store_true",
+      help="Runs the experiment with hard-failing when it detects there will be multiple graphs out of a single compiled region.",
+  )
+  parser.add_argument(
+      "--verify",
+      action="store_true",
+      help="""If set, verifies the model output with PT Eager mode, and saves relative error to the output file."""
+  )
+  parser.add_argument(
+      "--strict-compatible",
+      action="store_true",
+      help="Strictly skips some models including models without installation file or causing stackdump.",
   )
   return parser.parse_args(args)
 

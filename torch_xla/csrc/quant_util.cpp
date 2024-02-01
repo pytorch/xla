@@ -4,6 +4,7 @@
 #include <iostream>
 #include <unordered_map>
 
+#include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/stablehlo_helper.h"
 
 namespace torch_xla {
@@ -44,7 +45,10 @@ std::string QuantParams::SerializeToAttrDictStr() const {
   }
   ss << "scale=" << SeralizeFloatVector<float>(scale, true) << ',';
   ss << "zero_point=" << SeralizeFloatVector<int>(zero_point) << ',';
-  ss << "storage_type=" << GetTorchDtypeToStablehloDtypeMap().at(dtype) << ',';
+  ss << "storage_type=" << GetTorchDtypeToStablehloDtype(dtype) << ',';
+  if (!GetHloDtypeToStablehloDtypeMap().count(expressed_type))
+    XLA_ERROR() << "Unsupported dtype for conversion from Hlo to Stablehlo: "
+                << dtype;
   ss << "expressed_type=" << GetHloDtypeToStablehloDtypeMap().at(expressed_type)
      << ',';
   ss << "storage_min=" << quant_min << ',';

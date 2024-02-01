@@ -1,4 +1,13 @@
+import logging
 import os
+import sys
+
+# TODO: delete this and just use importlib.metadata after we drop Python 3.9
+# support.
+if sys.version_info < (3, 10):
+  import importlib_metadata
+else:
+  import importlib.metadata as importlib_metadata
 
 import torch_xla
 import torch_xla.core.xla_env_vars as xenv
@@ -6,8 +15,8 @@ import torch_xla.runtime as xr
 import torch_xla.utils.utils as xu
 
 
-class DevicePlugin:
-  """Base class for device plugings.
+class DevicePlugin(torch_xla._XLAC.PjRtPlugin):
+  """Base class for device plugins.
 
   Default implementations assume a single device and local process.
   """
@@ -41,7 +50,19 @@ class DevicePlugin:
     """
     return 1
 
+  def client_create_options(self) -> dict:
+    return {}
 
+  def requires_xla_coordinator(self) -> bool:
+    """Whether to initialize the XLA coordinator before plugin client.
+
+    Expects `torchrun` variables such as RANK, WORLD_SIZE, MASTER_ADDR to be
+    set.
+    """
+    return False
+
+
+# TODO(wcromar): figure out if we can share this map with the C++ code.
 _plugin_registry = {}
 
 
@@ -64,4 +85,12 @@ def default() -> DevicePlugin:
 
 def register_plugin(name: str, device_plugin: DevicePlugin):
   _plugin_registry[name.upper()] = device_plugin
-  torch_xla._XLAC._register_pjrt_plugin(name, device_plugin.library_path())
+  torch_xla._XLAC._register_pjrt_plugin(name, device_plugin)
+
+
+def register_installed_plugins():
+  pjrt_entry_points = importlib_metadata.entry_points(group='torch_xla.plugins')
+  for ep in pjrt_entry_points:
+    device_plugin_class = ep.load()
+
+    register_plugin(ep.name.upper(), device_plugin_class())

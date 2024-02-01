@@ -7,8 +7,9 @@ ACCELERATOR=a100
 OUTPUT_DIR=${HOME:?}
 WORKSPACE=$(date --utc +%Y-%m-%d)
 REPEAT=8
+ENABLE_PROFILING=
 
-while getopts 'A:O:R:W:' OPTION
+while getopts 'A:O:PR:T:W:' OPTION
 do
   case ${OPTION?} in
     A)
@@ -17,8 +18,17 @@ do
     O)
       OUTPUT_DIR=${OPTARG:?}
       ;;
+    P)
+      ENABLE_PROFILING=1
+      ;;
     R)
       REPEAT=${OPTARG:?}
+      ;;
+    T)
+      # Avoid printing the token; re-enable printing later.
+      { set +x; } 2>/dev/null
+      export HUGGING_FACE_HUB_TOKEN=${OPTARG:?}
+      set -x
       ;;
     W)
       WORKSPACE=${OPTARG:?}
@@ -26,13 +36,19 @@ do
   esac
 done
 
-WORKSPACE_DIR=${OUTPUT_DIR:?}/nightly_runs/${WORKSPACE:?}
+NIGHTLY_RUNS=nightly_runs
+NIGHTLY_RESULTS=nightly_results
+if [[ ${ENABLE_PROFILING?} ]]; then
+  NIGHTLY_RUNS=nightly_profiling_runs
+  NIGHTLY_RESULTS=nightly_profiling_results
+fi
+WORKSPACE_DIR=${OUTPUT_DIR:?}/${NIGHTLY_RUNS:?}/${WORKSPACE:?}
 
 # Intermediate results, which are processed to generate reports.
 WORKSPACE_RESULTS_DIR=${WORKSPACE_DIR:?}/experiment_results
 
 # Final data files and reports go here.
-NIGHTLY_RESULTS_DIR=${OUTPUT_DIR:?}/nightly_results
+NIGHTLY_RESULTS_DIR=${OUTPUT_DIR:?}/${NIGHTLY_RESULTS:?}
 
 # Init workspace
 #
@@ -113,6 +129,16 @@ sudo nvidia-smi --lock-gpu-clocks=1200,1200
 # Moreover, we should look into disabling turbo boost if possible.
 #   sudo cpupower frequency-set --governor performance
 
+PROFILING_FLAGS=
+if [[ ${ENABLE_PROFILING?} ]]; then
+  PROFILING_FLAGS="--dump-dynamo-counters \
+    --collect-dynamo-counters \
+    --dump-pytorch-profiles \
+    --dump-pytorch-xla-metrics \
+    --profile-cuda-cpu \
+    --profile-cuda-cpu-individual-ops"
+fi
+
 # Run the experiments
 cd pytorch
 python xla/benchmarks/experiment_runner.py \
@@ -121,7 +147,7 @@ python xla/benchmarks/experiment_runner.py \
        --suite-name=torchbench --accelerator=cuda \
        --output-dirname=${WORKSPACE_RESULTS_DIR:?} \
        --repeat=${REPEAT:?} --print-subprocess \
-       --timestamp=${TIMESTAMP:?}
+       --timestamp=${TIMESTAMP:?} ${PROFILING_FLAGS?}
 cd ..
 
 # Gather results and generate reports
@@ -131,7 +157,7 @@ cp ${WORKSPACE_RESULTS_DIR:?}/results.jsonl \
    ${NIGHTLY_RESULTS_DIR:?}/${WORKSPACE:?}.jsonl
 
 PYTORCH_GIT_REV=$(git -C pytorch rev-parse --short HEAD)
-XLA_GIT_TAG=$(git -C pytorch/xla describe --tags)
+XLA_GIT_TAG=$(git -C pytorch/xla describe --tags --always)
 GIT_TAGS="PT: ${PYTORCH_GIT_REV:?} XLA: ${XLA_GIT_TAG:?}"
 BM_DIR=${WORKSPACE_DIR:?}/pytorch/xla/benchmarks
 
@@ -141,11 +167,14 @@ for testname in inference training; do
       for tier in '' 1; do
 	# Note: these (as well as $tier) can be null; read them with ${FOO?}
 	# instead of ${FOO:?}.
-	TITLE_PFX=
+        TITLE_PREFIX=
+        if [[ ${ENABLE_PROFILING?} ]]; then
+          TITLE_PREFIX="[Profiling ON] "
+        fi
 	TIER_CMD=
 	TIER_FILE_SUFFIX=
 	if [[ ${tier?} ]]; then
-	  TITLE_PFX="Tier${tier?} "
+	  TITLE_PREFIX="${TITLE_PREFIX?}Tier${tier?} "
 	  TIER_CMD=--filter-by-tier=${tier:?}
 	  TIER_FILE_SUFFIX=-tier${tier:?}
 	fi
@@ -162,7 +191,7 @@ for testname in inference training; do
 	fi
 	python ${BM_DIR:?}/aggregate.py --accelerator=${ACCELERATOR:?} \
                --report=${report:?} --test=${testname:?} --format=${format:?} \
-	       --title="${TITLE_PFX?}${TITLE:?}" \
+	       --title="${TITLE_PREFIX?}${TITLE:?}" \
 	       --fig-height=${HEIGHT:?} --fig-width=${WIDTH:?} \
 	       ${TIER_CMD?} \
 	       ${NIGHTLY_RESULTS_DIR:?}/*.jsonl \

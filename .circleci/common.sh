@@ -104,6 +104,7 @@ function build_torch_xla() {
   XLA_DIR=$1
   pushd "$XLA_DIR"
   python setup.py install
+  pip install plugins/cuda -v
   popd
 }
 
@@ -219,7 +220,7 @@ function run_torch_xla_tests() {
   export CXX_ABI=$(python -c "import torch;print(int(torch._C._GLIBCXX_USE_CXX11_ABI))")
 
   # TODO(yeounoh) test coverage workflow is not parallelized.
-  if [[ -z "$RUN_BENCHMARK_TESTS" && -z "$RUN_CPP_TESTS1" && -z "$RUN_CPP_TESTS2" && -z "$RUN_PYTHON_TESTS" || "$USE_COVERAGE" != "0" ]]; then
+  if [[ -z "$RUN_BENCHMARK_TESTS" && -z "$RUN_CPP_TESTS1" && -z "$RUN_CPP_TESTS2" && -z "$RUN_PYTHON_TESTS" ]]; then
     run_torch_xla_python_tests $PYTORCH_DIR $XLA_DIR $USE_COVERAGE
     run_torch_xla_cpp_tests $PYTORCH_DIR $XLA_DIR $USE_COVERAGE
     run_torch_xla_benchmark_tests $XLA_DIR

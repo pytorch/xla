@@ -760,17 +760,11 @@ at::Tensor XLANativeFunctions::avg_pool2d(
     at::IntArrayRef padding, bool ceil_mode, bool count_include_pad,
     c10::optional<int64_t> divisor_override) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  if ((ceil_mode && count_include_pad) || divisor_override) {
-    return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(avg_pool2d)>::call(self, kernel_size, stride,
-                                                      padding, ceil_mode,
-                                                      count_include_pad,
-                                                      divisor_override);
-  }
   return bridge::AtenFromXlaTensor(tensor_methods::avg_pool_nd(
       bridge::GetXlaTensor(self), /*spatial_dim_count=*/2,
       XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
-      XlaHelpers::I64List(padding), ceil_mode, count_include_pad));
+      XlaHelpers::I64List(padding), ceil_mode, count_include_pad,
+      divisor_override));
 }
 
 at::Tensor XLANativeFunctions::avg_pool2d_backward(
@@ -797,17 +791,11 @@ at::Tensor XLANativeFunctions::avg_pool3d(
     at::IntArrayRef padding, bool ceil_mode, bool count_include_pad,
     c10::optional<int64_t> divisor_override) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  if ((ceil_mode && count_include_pad) || divisor_override) {
-    return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(avg_pool3d)>::call(self, kernel_size, stride,
-                                                      padding, ceil_mode,
-                                                      count_include_pad,
-                                                      divisor_override);
-  }
   return bridge::AtenFromXlaTensor(tensor_methods::avg_pool_nd(
       bridge::GetXlaTensor(self), /*spatial_dim_count=*/3,
       XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
-      XlaHelpers::I64List(padding), ceil_mode, count_include_pad));
+      XlaHelpers::I64List(padding), ceil_mode, count_include_pad,
+      divisor_override));
 }
 
 at::Tensor XLANativeFunctions::avg_pool3d_backward(
@@ -1626,6 +1614,13 @@ at::Tensor XLANativeFunctions::log(const at::Tensor& self) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   return bridge::AtenFromXlaTensor(
       tensor_methods::log(bridge::GetXlaTensor(self)));
+}
+
+at::Tensor XLANativeFunctions::logit(const at::Tensor& self,
+                                     c10::optional<double> eps) {
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::logit(bridge::GetXlaTensor(self), eps));
 }
 
 at::Tensor XLANativeFunctions::log10(const at::Tensor& self) {
@@ -2756,12 +2751,6 @@ at::Tensor& XLANativeFunctions::set_(at::Tensor& self,
   XLATensorPtr source_tensor = bridge::GetXlaTensor(source);
   bridge::ReplaceXlaTensor(self, source_tensor);
   return self;
-}
-
-at::Tensor XLANativeFunctions::sigmoid(const at::Tensor& self) {
-  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::sigmoid(bridge::GetXlaTensor(self)));
 }
 
 at::Tensor XLANativeFunctions::sigmoid_backward(const at::Tensor& grad_output,

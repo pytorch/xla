@@ -3,6 +3,8 @@ import os
 import re
 import tempfile
 
+import torch
+import _XLAC
 from ._internal import tpu
 
 logging.basicConfig()
@@ -135,11 +137,8 @@ if os.environ.get('TF_CPP_MIN_LOG_LEVEL') == '0':
   logger.setLevel(logging.INFO)
 
 import atexit
-import torch
 from ._patched_functions import _apply_patches
 from .version import __version__
-
-import _XLAC
 
 _found_libtpu = _setup_tpu_vm_library_path()
 
@@ -148,8 +147,6 @@ _aws_ec2_inf_trn_init()
 
 
 def _prepare_to_exit():
-  device = _XLAC._xla_get_default_device()
-  _XLAC._set_all_reduce_token(device, None)
   _XLAC._prepare_to_exit()
   if int(os.environ.get('PT_XLA_DEBUG', '0')):
     _summarize_fn_tracker()
@@ -171,3 +168,9 @@ _init_xla_lazy_backend()
 torch._dynamo.config.automatic_dynamic_shapes = False
 
 from .stablehlo import save_as_stablehlo, save_torch_model_as_stablehlo
+
+from .experimental import plugins
+
+if os.getenv('XLA_REGISTER_INSTALLED_PLUGINS') == '1':
+  plugins.use_dynamic_plugins()
+  plugins.register_installed_plugins()

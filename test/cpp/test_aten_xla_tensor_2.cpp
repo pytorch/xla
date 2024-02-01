@@ -2226,6 +2226,18 @@ TEST_F(AtenXlaTensorTest, TestAsin) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestAsinhWithInt) {
+  torch::Tensor a = torch::rand({2, 2});
+  torch::Tensor b = torch::asinh(a);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_a = CopyToDevice(a, device);
+    torch::Tensor xla_b = torch::asinh(xla_a);
+    AllClose(b, xla_b, /*rtol=*/1e-3, /*atol=*/1e-5);
+  });
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::asinh", cpp_test::GetIgnoredCounters());
+}
+
 TEST_F(AtenXlaTensorTest, TestAsinh) {
   torch::Tensor a = torch::rand({2, 2}, torch::TensorOptions(torch::kFloat));
   torch::Tensor b = torch::asinh(a);

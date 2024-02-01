@@ -143,6 +143,10 @@ def run_multiprocess(fn: Callable[..., R],
     Dict of the form {device_ordinal: return_value}, where
     return_value is the result of calling `fn`.
   """
+  if torch_xla._XLAC._xla_runtime_is_initialized():
+    raise RuntimeError('Runtime is already initialized. Do not use the XLA '
+                       'device before calling xmp.spawn.')
+
   if plugins.using_dynamic_plugins():
     num_processes = plugins.default().physical_chip_count()
   elif runtime.device_type() == 'TPU':

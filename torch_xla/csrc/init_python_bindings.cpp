@@ -28,6 +28,7 @@
 #include "pybind11/numpy.h"
 #include "pybind11/pybind11.h"
 #include "pybind11/pytypes.h"
+#include "pybind11/stl.h"
 #include "pybind11/stl_bind.h"
 #include "torch_xla/csrc/XLANativeFunctions.h"
 #include "torch_xla/csrc/aten_autograd_ops.h"
@@ -76,6 +77,28 @@ struct NoGilSection {
   NoGilSection() : state(PyEval_SaveThread()) {}
   ~NoGilSection() { PyEval_RestoreThread(state); }
   PyThreadState* state = nullptr;
+};
+
+class PyPjRtPlugin : public runtime::PjRtPlugin {
+ public:
+  using runtime::PjRtPlugin::PjRtPlugin;
+
+  std::string library_path() const override {
+    PYBIND11_OVERRIDE_PURE(std::string, runtime::PjRtPlugin, library_path, );
+  }
+
+  // Templates with commas confuse pybind's macros, so use an alias here
+  // See https://github.com/pybind/pybind11/issues/2185#issuecomment-634005168
+  using PjRtCreateOptions = std::unordered_map<std::string, xla::PjRtValueType>;
+  const PjRtCreateOptions client_create_options() const override {
+    PYBIND11_OVERRIDE_PURE(PjRtCreateOptions, runtime::PjRtPlugin,
+                           client_create_options, );
+  }
+
+  bool requires_xla_coordinator() const override {
+    PYBIND11_OVERRIDE_PURE(bool, runtime::PjRtPlugin,
+                           requires_xla_coordinator, );
+  }
 };
 
 c10::optional<torch::lazy::BackendDevice> GetOptionalDevice(
@@ -1215,7 +1238,8 @@ void InitXlaModuleBindings(py::module m) {
       NoGilSection nogil;
       result = AllReduce(reduce_type, input, scale, replica_groups, pin_layout);
     }
-    return result;
+    return torch::autograd::make_variable(
+        result, /*requires_grad=*/input.requires_grad());
   });
   m.def("_xla_quantize_tensor",
         [](const at::Tensor& input, const std::vector<float>& scale_list,
@@ -2146,6 +2170,13 @@ void InitXlaModuleBindings(py::module m) {
         [](at::Tensor& self, const at::Tensor& source) -> at::Tensor& {
           return XLANativeFunctions::set_(self, source);
         });
+  m.def("_xla_tpu_custom_call_",
+        [](at::Tensor& output, const std::vector<at::Tensor>& inputs,
+           const std::string& payload) {
+          auto x_output = bridge::GetXlaTensor(output);
+          return tensor_methods::tpu_custom_call_(
+              x_output, bridge::GetXlaTensors(inputs), payload);
+        });
   m.def("_set_xla_custom_op_name_prefix",
         [](const at::Tensor& input, const std::string& op_name_prefix,
            size_t max_call_stack_depth) -> bool {
@@ -2318,10 +2349,18 @@ void InitXlaModuleBindings(py::module m) {
           return retlist;
         });
   // -------------Dynamo Integration API End-------------------------
-  m.def("_register_pjrt_plugin",
-        [](std::string name, std::string library_path) {
-          runtime::RegisterPjRtPlugin(name, library_path);
-        });
+  m.def(
+      "_register_pjrt_plugin",
+      [](std::string name, std::shared_ptr<const runtime::PjRtPlugin> plugin) {
+        runtime::RegisterPjRtPlugin(name, plugin);
+      });
+  py::class_<runtime::PjRtPlugin, PyPjRtPlugin,
+             std::shared_ptr<runtime::PjRtPlugin>>(m, "PjRtPlugin")
+      .def(py::init<>())
+      .def("library_path", &runtime::PjRtPlugin::library_path)
+      .def("client_create_options", &runtime::PjRtPlugin::client_create_options)
+      .def("requires_xla_coordinator",
+           &runtime::PjRtPlugin::requires_xla_coordinator);
 }
 }  // namespace
 

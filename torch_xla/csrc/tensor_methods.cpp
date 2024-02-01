@@ -122,6 +122,7 @@
 #include "torch_xla/csrc/ops/threshold.h"
 #include "torch_xla/csrc/ops/threshold_backward.h"
 #include "torch_xla/csrc/ops/topk.h"
+#include "torch_xla/csrc/ops/tpu_custom_call.h"
 #include "torch_xla/csrc/ops/triangular_solve.h"
 #include "torch_xla/csrc/ops/uniform.h"
 #include "torch_xla/csrc/ops/unsqueeze.h"
@@ -523,6 +524,17 @@ void custom_sharding_(
   input->SetShardingSpec(*sharding_spec);
 }
 
+void tpu_custom_call_(XLATensorPtr& output,
+                      const std::vector<XLATensorPtr>& inputs,
+                      const std::string& payload) {
+  std::vector<torch::lazy::Value> values;
+  for (const auto& input : inputs) {
+    values.push_back(input->GetIrValue());
+  }
+  output->SetInPlaceIrValue(torch::lazy::MakeNode<TpuCustomCall>(
+      values, output->shape().get(), payload));
+}
+
 XLATensorPtr get_dimensions_size(const XLATensorPtr& input,
                                  std::vector<int64_t> dimensions) {
   return input->CreateFrom(torch::lazy::MakeNode<GetDimensionsSize>(
@@ -811,13 +823,15 @@ XLATensorPtr avg_pool_nd(const XLATensorPtr& input, int64_t spatial_dim_count,
                          std::vector<int64_t> kernel_size,
                          std::vector<int64_t> stride,
                          std::vector<int64_t> padding, bool ceil_mode,
-                         bool count_include_pad) {
+                         bool count_include_pad,
+                         std::optional<int> divisor_override) {
   kernel_size = CheckIntList(kernel_size, spatial_dim_count, "kernel_size");
   stride = CheckIntList(stride, spatial_dim_count, "stride", kernel_size);
   padding = CheckIntList(padding, spatial_dim_count, "padding");
   return input->CreateFrom(torch::lazy::MakeNode<AvgPoolNd>(
       input->GetIrValue(), spatial_dim_count, std::move(kernel_size),
-      std::move(stride), std::move(padding), ceil_mode, count_include_pad));
+      std::move(stride), std::move(padding), ceil_mode, count_include_pad,
+      divisor_override));
 }
 
 XLATensorPtr avg_pool_nd_backward(const XLATensorPtr& out_backprop,
@@ -1575,6 +1589,16 @@ XLATensorPtr log(const XLATensorPtr& input) {
   // instead of input's logical_element_type.
   return input->CreateFrom(
       Log(GetFloatingIrValue(input, at::ScalarType::Float)), c10::nullopt);
+}
+
+XLATensorPtr logit(const XLATensorPtr& input, c10::optional<double> eps) {
+  // Here we explictly pass c10::nullopt as logical_element_type because
+  // otherwise result will inherit the input's logical_element_type. In the
+  // case of logit(int) -> float, we want to derive the dtype from IR value
+  // instead of input's logical_element_type.
+  return input->CreateFrom(
+      Logit(GetFloatingIrValue(input, at::ScalarType::Float), eps),
+      c10::nullopt);
 }
 
 XLATensorPtr log_base(const XLATensorPtr& input, torch::lazy::OpKind op,

@@ -266,6 +266,42 @@ class TorchXLAReuseGraphTest(torch._dynamo.test_case.TestCase):
 
     self._compile_and_check(foo, (xm.xla_device(),))
 
+  def test_index_flag_unsupported(self):
+    # The indices of the index operation are represented as
+    # a list of objects. If any non-XLA tensors appear, the
+    # index operation should be flagged as unsupported, since
+    # their arguments might be turned into placeholders of the
+    # partition FX graph.
+
+    def foo(xt, t):
+      return xt[t]
+
+    device = xm.xla_device()
+    xt = torch.rand(5, device=device)
+    t = torch.randint(0, 5, (3,))
+    self._compile_and_check(foo, (xt, t))
+
+  def test_stack_flag_unsupported(self):
+    # Explicit list of tensors arguments.
+
+    def foo(t):
+      return torch.stack([t])
+
+    t = torch.randint(0, 5, (3,))
+    self._compile_and_check(foo, (t,))
+
+  def test_cpu_flag_unsupported(self):
+    # Nodes that return CPU tensors should also be flagged as
+    # unsupported, since their outputs could be turned into
+    # outputs of the partition FX graph.
+
+    def foo(t):
+      return t.cpu()
+
+    device = xm.xla_device()
+    t = torch.randint(0, 5, (3,), device=device)
+    self._compile_and_check(foo, (t,))
+
 
 if __name__ == "__main__":
   from torch._dynamo.test_case import run_tests

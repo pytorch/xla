@@ -74,6 +74,43 @@ among the flags `--dynamo`, `--xla`, and `--test`, 4 of which are supported:
   - `dynamo=inductor`, `xla=None`, `test=train`
 
 
+## Verification module
+
+Verification flag, enabled by running the experiment runner script with `--verify`
+calculates the mean relative error of the model's output against the eager run
+of the very same model. If the difference is greater than predefined threshold (e.g. 2%)
+it will report the `FAIL` status code in the output file of the benchmarking one, and `PASS`
+if it is not. Additional verification codes can be present if the verification fails
+due to various issues (e.g. unsupported output shape, failed eager run). The verification
+works only for inference now.
+
+```
+cd pytorch
+PJRT_DEVICE=CUDA python3 new_xla/benchmarks/experiment_runner.py \
+    --xla=PJRT \
+    --dynamo=openxla_eval \
+    --test=eval \
+    --filter=BERT_pytorch$ \
+    --suite-name=torchbench \
+    --accelerator=cuda \
+    --progress-bar \
+    --output-dirname=/tmp/output \
+    --repeat=2 \
+    --print-subprocess \
+    --no-resume \
+    --verify
+
+cat /tmp/output/results.jsonl
+{[...] "verification_code": "PASS", "verification_mean_rel_error": 0.007134194485843182}
+```
+
+## Microbenchmarks
+
+In `bench.py` there is a common infrastructure to measure things without
+CPU, and CUDA synchronisation overhead. `matmul_benchmark.py` is the microbenchmark
+which utilizes this  infra to perform a simple squared matrix multiplication for
+PT/XLA, and compare it against some basline.
+
 ## Result analyzer
 
 Run the `result_analyzer.py` from the `pytorch` directory, which should be the
