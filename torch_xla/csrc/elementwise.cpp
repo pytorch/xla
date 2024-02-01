@@ -459,11 +459,15 @@ xla::XlaOp BuildLerp(xla::XlaOp start, xla::XlaOp end, xla::XlaOp weight) {
   std::tie(start, end) = XlaHelpers::Promote(start, end);
   std::tie(start, weight) = XlaHelpers::Promote(start, weight);
   std::tie(start, end) = XlaHelpers::Promote(start, end);
-  
+
   // Perform the function = start + weight * (end - start)
-  xla::XlaOp sub_result = xla::Sub(end, start, XlaHelpers::getBroadcastDimensions(end, start));
-  xla::XlaOp mul_result = xla::Mul(weight, sub_result, XlaHelpers::getBroadcastDimensions(weight, sub_result));
-  xla::XlaOp add_result = xla::Add(start, mul_result, XlaHelpers::getBroadcastDimensions(start, mul_result));
+  xla::XlaOp sub_result =
+      xla::Sub(end, start, XlaHelpers::getBroadcastDimensions(end, start));
+  xla::XlaOp mul_result =
+      xla::Mul(weight, sub_result,
+               XlaHelpers::getBroadcastDimensions(weight, sub_result));
+  xla::XlaOp add_result = xla::Add(
+      start, mul_result, XlaHelpers::getBroadcastDimensions(start, mul_result));
 
   return add_result;
 }
