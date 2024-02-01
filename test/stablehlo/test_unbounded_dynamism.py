@@ -193,7 +193,6 @@ class UnboundedDynamismExportTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(tempdir, 'saved_model.pb')))
         compare_exported_program_and_saved_model_result(ep, tempdir, args)
 
-  @unittest.skip("Unbounded dynamism is not supported yet.")
   def test_conv1d(self):
     args = (
         torch.rand((3, 1, 800)),
@@ -571,7 +570,6 @@ class UnboundedDynamismExportTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(tempdir, 'saved_model.pb')))
         compare_exported_program_and_saved_model_result(ep, tempdir, args)
 
-  @unittest.skip("Unbounded dynamism is not supported yet.")
   def test_softmax_reduce_on_dynamic_dim(self):
     args = (torch.rand((1, 8, 128, 3)), -1, False)
     dynamic_shapes = ([{3: Dim("dim")}, None, None],)
