@@ -144,7 +144,23 @@ std::vector<std::pair<int64_t, int64_t>> CeilModePadding(
         (input_size + 2 * left_padding - kernel_size[i]) % stride[i];
     int64_t right_padding = left_padding;
     if (ceil_mode && output_size_rem != 0) {
-      right_padding += stride[i];
+      int64_t extra_padding = stride[i] - output_size_rem;
+      int64_t new_output_size =
+          (input_size + left_padding + right_padding + extra_padding -
+           kernel_size[i] + stride[i] - 1) /
+              stride[i] +
+          1;
+      // Ensure that the last pooling starts inside the image.
+      int64_t size_to_compare = input_size + left_padding;
+      if (count_include_pad) {
+        // here left padding is reset to 0;
+        // but input size already includes both left_padding and
+        // right padding so we need to substract padding[i]
+        size_to_compare = input_size - padding[i];
+      }
+      if ((new_output_size - 1) * stride[i] < size_to_compare) {
+        right_padding += extra_padding;
+      }
     }
     ceil_mode_padding.emplace_back(left_padding, right_padding);
   }
