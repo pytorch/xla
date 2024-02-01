@@ -46,7 +46,7 @@ std::shared_ptr<const PjRtPlugin> GetPjRtPlugin(
   return plugin_path != pjrt_plugins_.end() ? plugin_path->second : nullptr;
 }
 
-std::unique_ptr<XlaCoordinator> SetKeyValueCallback(
+std::unique_ptr<XlaCoordinator> SetGpuClientKVCallBack(
     int global_process_rank, int global_world_size,
     std::shared_ptr<xla::KeyValueStoreInterface>& kv_store) {
   std::string master_addr =
@@ -160,20 +160,20 @@ InitializePjRt(const std::string& device_type) {
     TF_VLOG(3) << "Getting StreamExecutorGpuClient for node_id="
                << global_process_rank << ", num_nodes=" << global_world_size
                << ", spmd case=" << spmd << ", PJRT_LOCAL_PROCESS_RANK="
-               << sys_util::GetEnvInt(env::kEnvPjRtLocalRank, -1)
-               << ", RANK=" << sys_util::GetEnvInt("RANK", -1)
+               << sys_util::GetEnvString(env::kEnvPjRtLocalRank, "")
+               << ", RANK=" << sys_util::GetEnvString("RANK", "")
                << ", LOCAL_WORLD_SIZE="
-               << sys_util::GetEnvInt("LOCAL_WORLD_SIZE", -1)
-               << ", WORLD_SIZE=" << sys_util::GetEnvInt("WORLD_SIZE", -1);
+               << sys_util::GetEnvString("LOCAL_WORLD_SIZE", "")
+               << ", WORLD_SIZE=" << sys_util::GetEnvString("WORLD_SIZE", "");
     if (local_world_size == 1) {
       if (global_world_size > 1) {
-        coordinator = SetKeyValueCallback(global_process_rank,
-                                          global_world_size, kv_store);
+        coordinator = SetGpuClientKVCallBack(global_process_rank,
+                                             global_world_size, kv_store);
       }
     } else {
       allowed_devices = std::set{local_process_rank};
-      coordinator =
-          SetKeyValueCallback(global_process_rank, global_world_size, kv_store);
+      coordinator = SetGpuClientKVCallBack(global_process_rank,
+                                           global_world_size, kv_store);
     }
 
     xla::GpuClientOptions options;

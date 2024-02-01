@@ -22,7 +22,8 @@ from absl.testing import absltest, parameterized
                  f"GPU tests should only run on GPU devices.")
 class TestExperimentalSingleProcPjrtGpu(parameterized.TestCase):
 
-  def setUp(self):
+  @classmethod
+  def setUpClass(cls):
     command = 'nvidia-smi --list-gpus | wc -l'
     result = subprocess.run(
         command,
@@ -31,7 +32,7 @@ class TestExperimentalSingleProcPjrtGpu(parameterized.TestCase):
         check=True,
         text=True,
     )
-    self.num_cuda_devices = int(result.stdout)
+    cls.num_cuda_devices = int(result.stdout)
 
   def test_num_local_devices(self):
     self.assertLen(xm.get_xla_supported_devices(),

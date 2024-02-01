@@ -30,7 +30,6 @@ class XlaShardingTest(unittest.TestCase):
   @classmethod
   def setUpClass(cls):
     cls.n_devices = xr.global_runtime_device_count()
-    print('xw32 cls.n_devices=', cls.n_devices)
     cls.device_ids = np.array(range(cls.n_devices))
 
   def _get_mesh(self, mesh_shape, device_ids=None, axis_names=None):
@@ -38,7 +37,6 @@ class XlaShardingTest(unittest.TestCase):
     if device_ids is None:
       device_ids = self.device_ids
     assert len(device_ids) == self.n_devices
-    print('device_ids=', device_ids)
     return xs.Mesh(device_ids, mesh_shape, axis_names)
 
   def _get_hybrid_mesh(self, ici_mesh_shape, axis_names=None):
