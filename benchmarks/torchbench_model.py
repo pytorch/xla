@@ -164,7 +164,7 @@ class TorchBenchModelLoader(ModelLoader):
 
     Looks for `names` in the current directory, up to its two direct parents.
     """
-    for dir in ("./", "../", "../../"):
+    for dir in ("./", "../", "../../", "../../../"):
       for name in names:
         path = os.path.join(dir, name)
         if exists(path):
@@ -193,7 +193,7 @@ class TorchBenchModelLoader(ModelLoader):
     its lists of models into sets of models.
     """
 
-    benchmarks_dir = self._find_near_file(("benchmarks",))
+    benchmarks_dir = self._find_near_file(("pytorch/benchmarks",))
     assert benchmarks_dir is not None, "PyTorch benchmarks folder not found."
 
     skip_file = os.path.join(benchmarks_dir, "dynamo",
