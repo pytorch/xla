@@ -18,6 +18,7 @@ from torch_xla.core import xla_model as xm
 from torch_xla.core import dynamo_bridge
 from torch_xla.debug import metrics
 import torch_xla.experimental.quantized
+from torch_xla.experimental.unbounded_dynamism_export import exported_program_has_symbolic_input_shape, process_exported_program_with_symbolic_input
 import torch._dynamo as torchdynamo
 from torch.utils import _pytree as pytree
 from torch._decomp import get_decompositions
@@ -297,7 +298,8 @@ def _exported_program_to_stablehlo_bundle(exported_model,
     options = StableHLOExportOptions()
   exported_model = exported_model.run_decompositions()
   exported_model = exported_model.run_decompositions(_extra_decompositions)
-
+  if exported_program_has_symbolic_input_shape(exported_model):
+    process_exported_program_with_symbolic_input(exported_model)
   args, kwargs = exported_model.example_inputs
 
   assert len(kwargs) == 0, "Export to stablehlo doesnt support kwargs yet."
@@ -356,6 +358,7 @@ def _exported_program_to_stablehlo_bundle(exported_model,
   stablehlo_content = xm.get_stablehlo_bytecode(res)
   if options.include_human_readable_text:
     stablehlo_text = xm.get_stablehlo(res)
+    # stablehlo_text = torch_xla._XLAC._get_xla_tensors_hlo(res)
   else:
     stablehlo_text = None
 
