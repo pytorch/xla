@@ -317,8 +317,12 @@ class TorchBenchModel(BenchmarkModel):
       module = importlib.import_module(
           f"torchbenchmark.models.{self.model_name}")
     except ModuleNotFoundError:
-      module = importlib.import_module(
-          f"torchbenchmark.models.fb.{self.model_name}")
+      try:
+        module = importlib.import_module(
+             f"torchbenchmark.models.fb.{self.model_name}")
+      except ModuleNotFoundError:
+        logger.warning(f"Unable to import model {self.model_name} even with falling back to fb model.")
+        return None
     return getattr(module, "Model", None)
 
   def load_benchmark(self):
