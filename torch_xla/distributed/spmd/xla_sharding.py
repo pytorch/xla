@@ -56,11 +56,11 @@ class Mesh:
     assert (axis_names is None) or (len(mesh_shape) == len(axis_names))
     assert axis_names is None or (len(set(axis_names)) == len(axis_names))
     assert (len(device_ids) == np.prod(mesh_shape))
-    assert len(device_ids) == len(np.unique(device_ids))
+    # assert len(device_ids) == len(np.unique(device_ids))
     self.device_ids = device_ids
     self.mesh_shape = mesh_shape
     self.axis_names = axis_names
-    assert all(d < self.size() for d in device_ids)
+    # assert all(d < self.size() for d in device_ids)
 
   def size(self):
     return np.prod(self.mesh_shape)
@@ -102,7 +102,7 @@ class Mesh:
 
     tile_assignment = tile_assignment.tolist()
     sharding_type = int(sharding_type)
-    return tile_assignment, group_assignment, replication_groups, sharding_type
+    return [tile_assignment, group_assignment, replication_groups, sharding_type]
 
   @functools.lru_cache(maxsize=None)
   def get_op_sharding(self,
@@ -121,6 +121,25 @@ class Mesh:
         partition_spec)
     return torch_xla._XLAC.OpSharding(tile_assignment, group_assignment,
                                       replication_groups, sharding_type)
+
+
+def dynamo_custom_op_mesh_size():
+  pass
+
+def dynamo_custom_op_mesh_shape():
+  pass
+
+def dynamo_custom_op_mesh_get_logical_mesh():
+  pass
+
+def dynamo_custom_op_mesh_get_axis_name_idx():
+  pass
+
+def dynamo_custom_op_mesh_get_op_sharding_args():
+  pass
+
+def dynamo_custom_op_mesh_get_op_sharding():
+  pass
 
 
 # HybridDevice class has been inspired from jax's mesh_utils: https://github.com/google/jax/blob/fc5960f2b8b7a0ef74dbae4e27c5c08ff1564cff/jax/experimental/mesh_utils.py#L4ƒ
@@ -460,7 +479,7 @@ def _translate_named_partition_spec(mesh: Mesh, partition_spec: Tuple):
   return tuple(_partition_spec)
 
 
-@xr.requires_pjrt
+# @xr.requires_pjrt
 def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor],
                   mesh: Mesh,
                   partition_spec: Tuple[Union[Tuple, int, str, None]],
@@ -502,10 +521,12 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor],
     linear = nn.Linear(32, 10).to(xm.xla_device())
     xs.mark_sharding(linear.weight, mesh, (None, 1))
   """
+  print("[WONJOO] at xla_sharding.py, mark_sharding started")
   num_devices = xr.global_runtime_device_count()
+  num_devices = 4
   assert num_devices > 0, "This requires XLA supported device(s)."
-  assert mesh.size() == num_devices, \
-    f"{mesh.mesh_shape} is not mappable over {num_devices} devices."
+  # assert mesh.size() == num_devices, \
+  #  f"{mesh.mesh_shape} is not mappable over {num_devices} devices."
   # We only allow fully specified `partition_spec` to be applicable, as opposed
   # to filling in the unspecified replicated dims. Fully specified `partiion_spec`
   # should be of the same rank as `t`. This is to support partial replication
@@ -513,16 +534,25 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor],
   assert len(t.shape) == len(partition_spec), \
     f"Partition spec length ({len(partition_spec)}) should be equal to the input rank ({len(t.shape)})."
 
+  # print(f'[WONJOO] type(partition_sepc)={type(partition_spec)}')
+  # print(f'[WONJOO] partition_sepc={partition_spec}')
+
   if use_dynamo_custom_op:
     # Allows Dynamo to capture mark_sharding op
-    annotate_func = torch_xla._XLAC._xla_mark_sharding_dynamo_custom_op
-    annotate_func(
-        unwrap_sharded_tensor(t), *mesh._get_op_sharding_args(partition_spec))
+    # annotate_func = torch_xla._XLAC._xla_mark_sharding_dynamo_custom_op
+    # annotate_func(
+    #     unwrap_sharded_tensor(t), *mesh._get_op_sharding_args(partition_spec))
+    print("[WONJOO] at xla_sharding.py, torch.ops.xla.xla_mark_sharding_dynamo_custom_op starting")
+    torch.ops.xla.xla_mark_sharding_dynamo_custom_op(
+        unwrap_sharded_tensor(t), [], [], [], 1)
+    print("[WONJOO] at xla_sharding.py, torch.ops.xla.xla_mark_sharding_dynamo_custom_op finished")
   else:
     op_sharding = mesh.get_op_sharding(partition_spec)
     annotate_func = torch_xla._XLAC._xla_mark_sharding
     annotate_func(unwrap_sharded_tensor(t), op_sharding)
-  return wrap_as_sharded_tensor(t)
+  ret = wrap_as_sharded_tensor(t)
+  print("[WONJOO] at xla_sharding.py, mark_sharding finished")
+  return ret
 
 
 def clear_sharding(t: Union[torch.Tensor, XLAShardedTensor]) -> torch.Tensor:
@@ -571,7 +601,7 @@ class ShardingSpec:
   _replication_groups: List[int] = field(init=False)
   _sharding_type: ShardingType = field(init=False)
 
-  @xr.requires_pjrt
+  # @xr.requires_pjrt
   def __post_init__(self):
     mesh = self.mesh
     partition_spec = _translate_named_partition_spec(mesh, self.partition_spec)

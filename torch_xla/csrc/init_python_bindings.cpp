@@ -1808,6 +1808,7 @@ void InitXlaModuleBindings(py::module m) {
         [](const at::Tensor& input, const py::list& tile_assignment,
            const py::list& group_assignment, const py::list& replication_groups,
            int sharding_type) {
+          std::cout << "[WONJOO] in init_python_bindings.cpp, _xla_mark_sharding_dynamo_custom_op starting" << std::endl;
           c10::List<at::IntArrayRef> tile_assignment_list =
               c10::List<at::IntArrayRef>();
           for (auto t : tile_assignment) {
@@ -1832,6 +1833,8 @@ void InitXlaModuleBindings(py::module m) {
           ShardingUtil::XlaMarkShardingDynamoCustomOp(
               input, tile_assignment_list, group_assignment_list,
               replication_groups_list, sharding_type);
+          
+          std::cout << "[WONJOO] in init_python_bindings.cpp, _xla_mark_sharding_dynamo_custom_op finished" << std::endl;
         });
   m.def("_xla_clear_sharding", [](const at::Tensor& input) {
     XLATensorPtr xtensor = bridge::GetXlaTensor(input);
