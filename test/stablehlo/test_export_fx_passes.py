@@ -32,6 +32,45 @@ class ExportFxPassTest(unittest.TestCase):
     out2 = ep.module()(*args)
     self.assertTrue(torch.allclose(out1, out2))
 
+  def test_decompose_dynamic_split_with_sizes(self):
+
+    class M(torch.nn.Module):
+
+      def forward(self, x):
+        res = torch.ops.aten.split_with_sizes.default(x, [1, 2, 3], -1)
+        return res[0], res[1]
+
+    args = (torch.rand((3, 10, 6)),)
+    dynamic_shapes = ({0: Dim("dim")},)
+    m = M()
+    ep = export(m, args, dynamic_shapes=dynamic_shapes)
+    out1 = ep.module()(*args)
+    decompose_split_with_sizes(ep.graph_module)
+    ep.graph_module.recompile()
+    self.assertTrue('split_with_sizes' in ep.graph_module.code)
+    out2 = ep.module()(*args)
+    self.assertTrue(torch.allclose(out1[0], out2[0]))
+    self.assertTrue(torch.allclose(out1[1], out2[1]))
+
+  def test_embedding_indices_flatten(self):
+    args = (torch.rand((20, 768)), torch.randint(0, 15,
+                                                 (3, 10)).to(torch.int64))
+    dynamic_shapes = ([None, {0: Dim("bs")}],)
+    m = wrap_func_as_nn_module(torch.ops.aten.embedding.default)
+    ep = export(m, args, dynamic_shapes=dynamic_shapes)
+    print(ep)
+    out1 = ep.module()(*args)
+    flatten_embedding_indices_tensor(ep.graph_module)
+    ep.graph_module.recompile()
+    print(ep)
+    self.assertTrue('aten.view' in ep.graph_module.code)
+    replace_dynamic_view_with_xla_op(ep.graph_module)
+    ep.graph_module.recompile()
+    self.assertTrue('aten.view' not in ep.graph_module.code)
+    self.assertTrue('xla.dynamic_view' in ep.graph_module.code)
+    out2 = ep.module()(*args)
+    self.assertTrue(torch.allclose(out1, out2))
+
   def test_no_op_slice_removal(self):
 
     class M(torch.nn.Module):

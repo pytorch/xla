@@ -294,25 +294,30 @@ class UnboundedDynamismExportTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(tempdir, 'saved_model.pb')))
         compare_exported_program_and_saved_model_result(ep, tempdir, args)
 
-  @unittest.skip("Unbounded dynamism is not supported yet.")
   def test_embedding(self):
 
     class M(torch.nn.Module):
 
       def forward(self, x, y):
         res = torch.ops.aten.embedding.default(x, y)
-        return res[0], res[1]
+        return res
 
-    args = (torch.rand((1, 768)), torch.randint(0, 15, (3, 10)).to(torch.int64))
+    args = (torch.rand((20, 768)), torch.randint(0, 15,
+                                                 (3, 10)).to(torch.int64))
     dynamic_shapes = (None, {0: Dim("dim")})
-    # dynamic_shapes = None
     m = M()
     ep = export(m, args=args, dynamic_shapes=dynamic_shapes)
     shlo_module = exported_program_to_stablehlo(ep)
     shlo_text = shlo_module.get_stablehlo_text()
     self.assertTrue(
-        re.search(r"%arg.: tensor<\?x5xf32>.*->.*tensor<\?x5xi32>", shlo_text)
-        is not None)
+        re.search(r"%arg.: tensor<\?x10xi64>.*->.*tensor<\?x10x768xf32>",
+                  shlo_text) is not None)
+    if has_tf_package():
+      with tempfile.TemporaryDirectory() as tempdir:
+        save_torch_module_as_tf_saved_model(
+            m, args, tempdir, dynamic_shapes=dynamic_shapes)
+        self.assertTrue(os.path.exists(os.path.join(tempdir, 'saved_model.pb')))
+        compare_exported_program_and_saved_model_result(ep, tempdir, args)
 
   def test_mean(self):
 
@@ -373,7 +378,7 @@ class UnboundedDynamismExportTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(tempdir, 'saved_model.pb')))
         compare_exported_program_and_saved_model_result(ep, tempdir, args)
 
-  @unittest.skip("Implicit broadcasting logic is broken.")
+  @unittest.skip("Unbounded dynamism is not supported.")
   def test_ne_scalar(self):
 
     class M(torch.nn.Module):
@@ -383,7 +388,6 @@ class UnboundedDynamismExportTest(unittest.TestCase):
 
     args = (torch.rand((3, 5)).to(torch.int64),)
     dynamic_shapes = ({0: Dim("dim")},)
-    # dynamic_shapes = None
     m = M()
     ep = export(m, args=args, dynamic_shapes=dynamic_shapes)
     shlo_module = exported_program_to_stablehlo(ep)
@@ -391,12 +395,12 @@ class UnboundedDynamismExportTest(unittest.TestCase):
     self.assertTrue(
         re.search(r"%arg.: tensor<\?x5xf32>.*->.*tensor<\?x5xi32>", shlo_text)
         is not None)
-    # if has_tf_package():
-    #   with tempfile.TemporaryDirectory() as tempdir:
-    #     save_torch_module_as_tf_saved_model(
-    #         m, args, tempdir, dynamic_shapes=dynamic_shapes)
-    #     self.assertTrue(os.path.exists(os.path.join(tempdir, 'saved_model.pb')))
-    #     compare_exported_program_and_saved_model_result(ep, tempdir, args)
+    if has_tf_package():
+      with tempfile.TemporaryDirectory() as tempdir:
+        save_torch_module_as_tf_saved_model(
+            m, args, tempdir, dynamic_shapes=dynamic_shapes)
+        self.assertTrue(os.path.exists(os.path.join(tempdir, 'saved_model.pb')))
+        compare_exported_program_and_saved_model_result(ep, tempdir, args)
 
   def test_var(self):
 
@@ -535,6 +539,24 @@ class UnboundedDynamismExportTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(tempdir, 'saved_model.pb')))
         compare_exported_program_and_saved_model_result(ep, tempdir, args)
 
+  def test_slice_2(self):
+    args = (torch.rand((10, 3, 224, 224)), 1, 0, 2)
+    dynamic_shapes = ([{0: Dim("dim")}, None, None, None],)
+    m = wrap_func_as_nn_module(torch.ops.aten.slice.Tensor)
+    ep = export(m, args=args, dynamic_shapes=dynamic_shapes)
+    shlo_module = exported_program_to_stablehlo(ep)
+    shlo_text = shlo_module.get_stablehlo_text()
+    self.assertTrue(
+        re.search(
+            r"%arg.: tensor<\?x3x224x224xf32>.*->.*tensor<\?x2x224x224xf32>",
+            shlo_text) is not None)
+    if has_tf_package():
+      with tempfile.TemporaryDirectory() as tempdir:
+        save_torch_module_as_tf_saved_model(
+            m, args, tempdir, dynamic_shapes=dynamic_shapes)
+        self.assertTrue(os.path.exists(os.path.join(tempdir, 'saved_model.pb')))
+        compare_exported_program_and_saved_model_result(ep, tempdir, args)
+
   def test_softmax(self):
     args = (torch.rand((10, 12, 197, 197)), -1, False)
     dynamic_shapes = ([{0: Dim("dim")}, None, None],)
@@ -626,25 +648,30 @@ class UnboundedDynamismExportTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(tempdir, 'saved_model.pb')))
         compare_exported_program_and_saved_model_result(ep, tempdir, args)
 
-  @unittest.skip("Unbounded dynamism is not supported yet.")
   def test_split_with_sizes(self):
 
     class M(torch.nn.Module):
 
       def forward(self, x):
-        res = torch.ops.aten.split_with_sizes.default(x, [1, 1], -1)
-        return res[0], res[1]
+        res = torch.ops.aten.split_with_sizes.default(x, [1, 2, 3], -1)
+        return res[0], res[1], res[2]
 
-    args = (torch.rand((3, 10, 2)),)
+    args = (torch.rand((3, 10, 6)),)
     dynamic_shapes = ({0: Dim("dim")},)
-    # dynamic_shapes = None
     m = M()
     ep = export(m, args=args, dynamic_shapes=dynamic_shapes)
     shlo_module = exported_program_to_stablehlo(ep)
     shlo_text = shlo_module.get_stablehlo_text()
     self.assertTrue(
-        re.search(r"%arg.: tensor<\?x5xf32>.*->.*tensor<\?x5xi32>", shlo_text)
-        is not None)
+        re.search(
+            r"%arg.: tensor<\?x10x6xf32>.*->.*tensor<\?x10x1xf32>.*tensor<\?x10x2xf32>.*tensor<\?x10x3xf32>",
+            shlo_text) is not None)
+    if has_tf_package():
+      with tempfile.TemporaryDirectory() as tempdir:
+        save_torch_module_as_tf_saved_model(
+            m, args, tempdir, dynamic_shapes=dynamic_shapes)
+        self.assertTrue(os.path.exists(os.path.join(tempdir, 'saved_model.pb')))
+        compare_exported_program_and_saved_model_result(ep, tempdir, args)
 
   def test_transpose_on_dynamic_dim(self):
     args = (torch.rand((1, 8, 3, 256)),)
