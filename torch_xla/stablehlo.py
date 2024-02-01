@@ -356,6 +356,7 @@ def _exported_program_to_stablehlo_bundle(exported_model,
   stablehlo_content = xm.get_stablehlo_bytecode(res)
   if options.include_human_readable_text:
     stablehlo_text = xm.get_stablehlo(res)
+    # stablehlo_text = torch_xla._XLAC._get_xla_tensors_hlo(res)
   else:
     stablehlo_text = None
 
