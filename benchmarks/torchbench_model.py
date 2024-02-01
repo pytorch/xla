@@ -193,10 +193,11 @@ class TorchBenchModelLoader(ModelLoader):
     its lists of models into sets of models.
     """
 
-    benchmarks_dir = self._find_near_file(("benchmarks/dynamo",))
+    benchmarks_dir = self._find_near_file(("benchmarks",))
     assert benchmarks_dir is not None, "PyTorch benchmarks folder not found."
 
-    skip_file = os.path.join(benchmarks_dir, "torchbench_skip_models.yaml")
+    skip_file = os.path.join(benchmarks_dir, "dynamo",
+                             "torchbench_skip_models.yaml")
     with open(skip_file) as f:
       data = yaml.safe_load(f)
 
