@@ -119,12 +119,8 @@ class Mesh:
 
     tile_assignment, group_assignment, replication_groups, sharding_type = self._get_op_sharding_args(
         partition_spec)
-    print('tile_assignment=', tile_assignment, ', group_assignment=',
-          group_assignment, ', replication_groups=', replication_groups,
-          ', sharding_type=', sharding_type)
-    opSharding = torch_xla._XLAC.OpSharding(tile_assignment, group_assignment,
-                                            replication_groups, sharding_type)
-    return opSharding
+    return torch_xla._XLAC.OpSharding(tile_assignment, group_assignment,
+                                      replication_groups, sharding_type)
 
 
 # HybridDevice class has been inspired from jax's mesh_utils: https://github.com/google/jax/blob/fc5960f2b8b7a0ef74dbae4e27c5c08ff1564cff/jax/experimental/mesh_utils.py#L4ƒ
