@@ -381,6 +381,18 @@ class TorchBenchModel(BenchmarkModel):
     changes to the PT/XLA bridge so that the input shape
     is properly inferred after issuing converts to `torch.nn.Module`.
     """
+    # At this moment, this method checks the precision flags only if both
+    # of the items below are true:
+    #
+    #   1. Device is CUDA: only check for 'DEFAULT_CUDA_<test>_PRECISION'
+    #
+    #   2. Dynamo backend is not inductor: PyTorch/benchmark scripts already
+    #      take care of converting the model to the right precision.
+    #
+    if (self.benchmark_experiment.accelerator != "cuda" or
+        self.benchmark_experiment.dynamo == "inductor"):
+      return None
+
     if self.get_cuda_precision() is None:
       return None
 
