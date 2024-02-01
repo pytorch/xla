@@ -713,7 +713,6 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     # scalar 5 should be replicated
     self.assertIn('%p0.2 = f32[] parameter(0), sharding={replicated}', hlo)
 
-  @unittest.skipIf(xr.device_type() == 'CUDA', "GPU CI has 2 devices.")
   def test_2d_tensor_3d_mesh(self):
     ct1 = torch.randn(16, 16, device='cpu')
     ct2 = torch.randn(16, 16, device='cpu')
@@ -725,12 +724,12 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     # Meaningful test for higher-order mesh with extra replication
     # requires multiple devices. Otherwise, this should defaults back to
     # full replication.
-    if self.n_devices > 1:
+    if self.n_devices >= 4:
       mesh = self._get_mesh((2, self.n_devices // 2, 1))
       xs.mark_sharding(t1, mesh, partition_spec=(2, 1))
       sharding_annotation = 'sharding={devices=[1,%d,2]' % (self.n_devices // 2)
     else:
-      mesh = self._get_mesh((1, 1, 1))
+      mesh = self._get_mesh((2, 1, 1))
       xs.mark_sharding(t1, mesh, partition_spec=(2, 1))
       sharding_annotation = "sharding={replicated}"
     self.assertIn(sharding_annotation,

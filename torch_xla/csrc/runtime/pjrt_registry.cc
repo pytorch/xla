@@ -156,10 +156,10 @@ InitializePjRt(const std::string& device_type) {
 
     std::shared_ptr<xla::KeyValueStoreInterface> kv_store;
     std::optional<std::set<int>> allowed_devices;
-    bool spmd = sys_util::GetEnvBool("XLA_USE_SPMD", false);
     TF_VLOG(3) << "Getting StreamExecutorGpuClient for node_id="
                << global_process_rank << ", num_nodes=" << global_world_size
-               << ", spmd case=" << spmd << ", PJRT_LOCAL_PROCESS_RANK="
+               << ", spmd case=" << sys_util::GetEnvBool("XLA_USE_SPMD", false)
+               << ", PJRT_LOCAL_PROCESS_RANK="
                << sys_util::GetEnvString(env::kEnvPjRtLocalRank, "")
                << ", RANK=" << sys_util::GetEnvString("RANK", "")
                << ", LOCAL_WORLD_SIZE="
