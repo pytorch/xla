@@ -203,8 +203,7 @@ function run_xla_op_tests3 {
   run_test "$CDIR/stablehlo/test_pt2e_qdq.py"
   run_xla_hlo_debug "$CDIR/stablehlo/test_stablehlo_inference.py"
   run_test "$CDIR/stablehlo/test_stablehlo_compile.py"
-  # TODO(lsy323): Will be fixed in #6494
-  # run_test "$CDIR/stablehlo/test_unbounded_dynamism.py"
+  run_test "$CDIR/stablehlo/test_unbounded_dynamism.py"
   run_test "$CDIR/spmd/test_xla_sharding.py"
   run_test "$CDIR/spmd/test_xla_sharding_hlo.py"
   run_test "$CDIR/spmd/test_xla_virtual_device.py"
