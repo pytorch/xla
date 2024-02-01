@@ -172,14 +172,13 @@ bucket.
 <br/>
 
 Note: For TPU Pod customers using XRT (our legacy runtime), we have custom
-wheels for `torch`, `torchvision`, and `torch_xla` at
+wheels for `torch` and `torch_xla` at
 `https://storage.googleapis.com/tpu-pytorch/wheels/xrt`.
 
 | Package | Cloud TPU VMs Wheel (XRT on Pod, Legacy Only) |
 | --- | ----------- |
 | torch_xla | `https://storage.googleapis.com/pytorch-xla-releases/wheels/xrt/tpuvm/torch_xla-2.1.0%2Bxrt-cp310-cp310-manylinux_2_28_x86_64.whl` |
 | torch | `https://storage.googleapis.com/pytorch-xla-releases/wheels/xrt/tpuvm/torch-2.1.0%2Bxrt-cp310-cp310-linux_x86_64.whl` |
-| torchvision | `https://storage.googleapis.com/tpu-pytorch/wheels/xrt/torchvision-2.1-cp38-cp38-linux_x86_64.whl` |
 
 <br/>
 
