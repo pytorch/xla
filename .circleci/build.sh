@@ -41,8 +41,7 @@ apply_patches
 
 python -c "import fcntl; fcntl.fcntl(1, fcntl.F_SETFL, 0)"
 
-# We always build PyTorch without CUDA support.
-export USE_CUDA=0
+export USE_CUDA=1
 python setup.py install
 
 sccache --show-stats
