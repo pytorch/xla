@@ -375,7 +375,7 @@ c10::optional<at::Tensor> XLATensor::CurrentTensorData() const {
 }
 
 torch::lazy::Value XLATensor::GetIrValueForTensor(
-    const at::Tensor& tensor, const torch::lazy::BackendDevice& device) const {
+    const at::Tensor& tensor, const torch::lazy::BackendDevice& device, bool non_blocking) const {
   torch::lazy::BackendDataPtr data;
   bool read_only = false;
   if (tensor.dim() == 0 && tensor.numel() == 1) {
@@ -388,7 +388,7 @@ torch::lazy::Value XLATensor::GetIrValueForTensor(
     read_only = true;
   } else {
     TORCH_LAZY_TIMED("IrValueTensorToXlaData");
-    data = TensorToXlaData(tensor, device);
+    data = TensorToXlaData(tensor, device, non_blocking);
   }
   return CreateTensorNode(std::move(data), read_only);
 }
@@ -511,12 +511,12 @@ void XLATensor::SetTensor(at::Tensor tensor) {
   AssignIrValue(torch::lazy::Value());
 }
 
-void XLATensor::UpdateFromTensor(at::Tensor tensor, bool sync) {
+void XLATensor::UpdateFromTensor(at::Tensor tensor, bool sync, bool non_blocking) {
   torch::lazy::BackendDevice device = GetDevice();
   if (sync) {
     at::Tensor typed_tensor =
         torch::lazy::CopyTensor(tensor, dtype(), /*copy=*/false);
-    SetIrValue(GetIrValueForTensor(typed_tensor, device),
+    SetIrValue(GetIrValueForTensor(typed_tensor, device, non_blocking),
                /*inplace=*/true);
   } else {
     at::Tensor coyped_tensor = torch::lazy::CopyTensor(tensor, dtype());
@@ -524,7 +524,7 @@ void XLATensor::UpdateFromTensor(at::Tensor tensor, bool sync) {
     data()->handle = nullptr;
     AssignIrValue(torch::lazy::Value());
     if (data()->view != nullptr) {
-      torch::lazy::Value ir_value = GetIrValueForTensor(coyped_tensor, device);
+      torch::lazy::Value ir_value = GetIrValueForTensor(coyped_tensor, device, non_blocking);
       data()->view = UpdateView(data()->view, std::move(ir_value));
     }
   }

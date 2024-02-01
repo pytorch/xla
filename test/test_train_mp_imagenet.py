@@ -292,6 +292,7 @@ def train_imagenet():
     for step, (data, target) in enumerate(loader):
       with xp.StepTrace('train_imagenet'):
         with xp.Trace('build_graph'):
+          data, target = data.to(xm.xla_device(), non_blocking=True), target.to(xm.xla_device(), non_blocking=True)
           optimizer.zero_grad()
           output = model(data)
           loss = loss_fn(output, target)
@@ -322,12 +323,12 @@ def train_imagenet():
     accuracy = xm.mesh_reduce('test_accuracy', accuracy, np.mean)
     return accuracy
 
-  train_device_loader = pl.MpDeviceLoader(
-      train_loader,
-      device,
-      loader_prefetch_size=FLAGS.loader_prefetch_size,
-      device_prefetch_size=FLAGS.device_prefetch_size,
-      host_to_device_transfer_threads=FLAGS.host_to_device_transfer_threads)
+  # train_device_loader = pl.MpDeviceLoader(
+  #     train_loader,
+  #     device,
+  #     loader_prefetch_size=FLAGS.loader_prefetch_size,
+  #     device_prefetch_size=FLAGS.device_prefetch_size,
+  #     host_to_device_transfer_threads=FLAGS.host_to_device_transfer_threads)
   test_device_loader = pl.MpDeviceLoader(
       test_loader,
       device,
@@ -338,7 +339,7 @@ def train_imagenet():
   accuracy, max_accuracy = 0.0, 0.0
   for epoch in range(1, FLAGS.num_epochs + 1):
     xm.master_print('Epoch {} train begin {}'.format(epoch, test_utils.now()))
-    train_loop_fn(train_device_loader, epoch)
+    train_loop_fn(train_loader, epoch)
     xm.master_print('Epoch {} train end {}'.format(epoch, test_utils.now()))
     if not FLAGS.test_only_at_end or epoch == FLAGS.num_epochs:
       accuracy = test_loop_fn(test_device_loader, epoch)

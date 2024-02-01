@@ -48,19 +48,25 @@ class TensorSource {
 
 class AtenSource : public TensorSource {
  public:
-  AtenSource(const at::Tensor& tensor, xla::Shape shape, std::string device)
+  AtenSource(const at::Tensor& tensor, xla::Shape shape, std::string device, bool non_blocking=false)
       : TensorSource(std::move(device)), shape_(std::move(shape)) {
     at::ScalarType target_torch_type = TorchTypeFromXlaType(primitive_type());
     if (target_torch_type != tensor.type().scalarType()) {
       TORCH_LAZY_COUNTER("AtenSourceDowncasts", 1);
     }
+
+    // static const bool always_copy = sys_util::GetEnvBool("XLA_ALWAYS_COPY_INPUTS", false);
+    bool copy = !non_blocking;
+
     // TODO(ysiraichi): check, first, if tensor lives in a device that the
     // current PjRt client has access. If so, we don't need to go through the
     // CPU.
+
+    TORCH_LAZY_TIMED("AtenSourceCopying");
     tensor_ = std::move(
         tensor.to(at::TensorOptions().device(at::kCPU).dtype(target_torch_type),
                   /*non_blocking=*/false,
-                  /*copy=*/true, at::MemoryFormat::Contiguous));
+                  /*copy=*/copy, at::MemoryFormat::Contiguous));
   }
 
   const void* data() const override { return tensor_.const_data_ptr(); }

@@ -174,3 +174,6 @@ from .experimental import plugins
 if os.getenv('XLA_REGISTER_INSTALLED_PLUGINS') == '1':
   plugins.use_dynamic_plugins()
   plugins.register_installed_plugins()
+
+from .experimental.decorator import step as experimental_step
+from .experimental.preload import preload as experimental_preload

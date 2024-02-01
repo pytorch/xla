@@ -461,7 +461,7 @@ at::Tensor& XLANativeFunctions::_amp_update_scale_(at::Tensor& current_scale,
 
 at::Tensor XLANativeFunctions::_copy_from(const at::Tensor& self,
                                           const at::Tensor& dst,
-                                          bool /*non_blocking*/) {
+                                          bool non_blocking) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   auto dst_tensor = bridge::TryGetXlaTensor(dst);
   auto self_tensor = bridge::TryGetXlaTensor(self);
@@ -469,7 +469,7 @@ at::Tensor XLANativeFunctions::_copy_from(const at::Tensor& self,
     static bool sync_update =
         runtime::sys_util::GetEnvBool("XLA_TENSOR_UPDATE_SYNC", true) &&
         !UseVirtualDevice();
-    dst_tensor->UpdateFromTensor(self, /*sync=*/sync_update);
+    dst_tensor->UpdateFromTensor(self, /*sync=*/sync_update, /*non_blocking=*/non_blocking);
     XLA_CHECK(dst_tensor);
   } else if (!dst_tensor) {
     at::Tensor tensor = self_tensor->ToTensor(/*detached=*/true);

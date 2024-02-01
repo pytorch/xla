@@ -191,7 +191,7 @@ class XLATensor : public torch::lazy::LazyTensor {
   void SetTensor(at::Tensor tensor);
 
   // TODO(alanwaketan): Reuse the upstream ones once Functionalization is done.
-  void UpdateFromTensor(at::Tensor tensor, bool sync);
+  void UpdateFromTensor(at::Tensor tensor, bool sync, bool non_blocking=false);
   void UpdateFromTensorOut(at::Tensor tensor);
   void UpdateFromTensorOut(const XLATensorPtr& tensor);
 
@@ -325,7 +325,7 @@ class XLATensor : public torch::lazy::LazyTensor {
   // Override to instantiate our own xla data.
   torch::lazy::Value GetIrValueForTensor(
       const at::Tensor& tensor,
-      const torch::lazy::BackendDevice& device) const final;
+      const torch::lazy::BackendDevice& device, bool non_blocking=false) const;
 
   static bool UseEagerDebugMode();
 

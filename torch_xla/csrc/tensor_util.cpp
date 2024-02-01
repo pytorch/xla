@@ -464,7 +464,7 @@ void TensorToBufferSType(const at::Tensor& tensor, const xla::Shape& dest_shape,
 
 torch::lazy::BackendDataPtr TensorToXlaData(
     const at::Tensor& tensor, const xla::Shape& shape,
-    const torch::lazy::BackendDevice& device) {
+    const torch::lazy::BackendDevice& device, bool non_blocking) {
   TORCH_LAZY_TIMED("TensorToData");
   if (static_cast<XlaDeviceType>(device.type()) == XlaDeviceType::SPMD) {
     // The tensor is bypassing the virtual device, so it should be replicated
@@ -481,7 +481,7 @@ torch::lazy::BackendDataPtr TensorToXlaData(
 
   std::vector<std::shared_ptr<const runtime::TensorSource>> source_tensors;
   source_tensors.push_back(
-      std::make_shared<runtime::AtenSource>(tensor, shape, device.toString()));
+      std::make_shared<runtime::AtenSource>(tensor, shape, device.toString(), non_blocking));
 
   auto handles =
       runtime::GetComputationClient()->TransferToDevice(source_tensors);
@@ -668,9 +668,9 @@ bool TensorCompare(const at::Tensor& t1, const at::Tensor& t2) {
 }
 
 torch::lazy::BackendDataPtr TensorToXlaData(
-    const at::Tensor& tensor, const torch::lazy::BackendDevice& device) {
+    const at::Tensor& tensor, const torch::lazy::BackendDevice& device, bool non_blocking) {
   return TensorToXlaData(
-      tensor, CreateComputationShapeFromTensor(tensor, &device), device);
+      tensor, CreateComputationShapeFromTensor(tensor, &device), device, non_blocking);
 }
 
 std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
