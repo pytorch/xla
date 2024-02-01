@@ -179,7 +179,7 @@ class UnboundedDynamismExportTest(unittest.TestCase):
             r"%arg.: tensor<\?x197x12x64xf32>.*->.*tensor<\?x12x197x64xf32>",
             shlo_text) is not None)
 
-  @unittest.skip("Select is not supported yet.")
+  @unittest.skip("Unbounded Dynamism not supported on select..")
   def test_select(self):
     args = (torch.rand((10, 197, 768)), 1, 0)
     constraints = [
@@ -193,7 +193,7 @@ class UnboundedDynamismExportTest(unittest.TestCase):
         re.search(r"%arg.: tensor<\?x197x768xf32>.*->.*tensor<\?x768xf32>",
                   shlo_text) is not None)
 
-  @unittest.skip("Slice is not supported yet.")
+  @unittest.skip("Unbounded Dynamism not supported on slice.")
   def test_slice(self):
     args = (torch.rand((10, 3, 224, 224)), 0, 0, 9223372036854775807)
     constraints = [
@@ -208,7 +208,7 @@ class UnboundedDynamismExportTest(unittest.TestCase):
             r"%arg.: tensor<\?x3x224x224xf32>.*->.*tensor<\?x3x224x224xf32>",
             shlo_text) is not None)
 
-  @unittest.skip("Unbounded Dynamism not supported on add.")
+  @unittest.skip("Unbounded Dynamism not supported on softmax.")
   def test_softmax(self):
     args = (torch.rand((10, 12, 197, 197)), -1, False)
     constraints = [
