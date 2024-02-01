@@ -131,50 +131,47 @@ xla::XlaOp RemoveTrivialBatch(xla::XlaOp batch, int64_t original_rank,
 std::vector<std::pair<int64_t, int64_t>> CeilModePadding(
     absl::Span<const int64_t> padding, const xla::Shape& input_shape,
     absl::Span<const int64_t> kernel_size, absl::Span<const int64_t> stride,
-    bool ceil_mode, bool count_include_pad) {
+    bool ceil_mode) {
   std::vector<std::pair<int64_t, int64_t>> ceil_mode_padding;
   for (int i = 0; i < padding.size(); ++i) {
     int64_t left_padding = padding[i];
-    if (count_include_pad) {
-      // if count_include_pad; the padding is added as XLA ops
-      left_padding = 0;
-    }
     int64_t input_size = input_shape.dimensions(2 + i);
     int64_t output_size_rem =
         (input_size + 2 * left_padding - kernel_size[i]) % stride[i];
     int64_t right_padding = left_padding;
     if (ceil_mode && output_size_rem != 0) {
-      right_padding += stride[i];
+      int64_t extra_padding = stride[i] - output_size_rem;
+      int64_t new_output_size =
+          (input_size + left_padding + right_padding + extra_padding -
+           kernel_size[i] + stride[i] - 1) /
+              stride[i] +
+          1;
+      // Ensure that the last pooling starts inside the image.
+      if ((new_output_size - 1) * stride[i] < input_size + left_padding) {
+        right_padding += extra_padding;
+      }
     }
     ceil_mode_padding.emplace_back(left_padding, right_padding);
   }
   return ceil_mode_padding;
 }
 
-xla::PaddingConfig MakeXlaPaddingConfig(absl::Span<const int64_t> padding) {
-  xla::PaddingConfig padding_config;
-  for (int i = 0; i < 2; ++i) {
-    padding_config.add_dimensions();
-  }
-  for (int pad : padding) {
-    xla::PaddingConfig::PaddingConfigDimension* dims =
-        padding_config.add_dimensions();
-    dims->set_edge_padding_low(pad);
-    dims->set_edge_padding_high(pad);
-  }
-  return padding_config;
-}
-
 // Creates an XLA padding configuration from a padding attribute value.
-xla::PaddingConfig MakeXlaPaddingConfig(
-    std::vector<std::pair<int64_t, int64_t>> padding) {
+xla::PaddingConfig MakeXlaPaddingConfig(absl::Span<const int64_t> padding,
+                                        const xla::Shape& input_shape,
+                                        absl::Span<const int64_t> kernel_size,
+                                        absl::Span<const int64_t> stride,
+                                        bool ceil_mode) {
   xla::PaddingConfig padding_config;
   for (int i = 0; i < 2; ++i) {
     padding_config.add_dimensions();
   }
-  for (const auto& dim_padding : padding) {
+  auto ceil_mode_padding =
+      CeilModePadding(padding, input_shape, kernel_size, stride, ceil_mode);
+  for (int i = 0; i < padding.size(); ++i) {
     xla::PaddingConfig::PaddingConfigDimension* dims =
         padding_config.add_dimensions();
+    const auto dim_padding = ceil_mode_padding[i];
     dims->set_edge_padding_low(dim_padding.first);
     dims->set_edge_padding_high(dim_padding.second);
   }
@@ -448,9 +445,8 @@ MaxPoolResult BuildMaxPoolNd(xla::XlaOp input, int64_t spatial_dim_count,
   const xla::Shape& input_shape =
       ShapeHelper::ShapeOfXlaOp(batch_input_info.batch_input);
   xla::XlaOp init_value = xla::MinValue(builder, input_shape.element_type());
-  std::vector<std::pair<int64_t, int64_t>> ceil_padding = CeilModePadding(
-      padding, input_shape, kernel_size, stride, ceil_mode, false);
-  xla::PaddingConfig padding_config = MakeXlaPaddingConfig(ceil_padding);
+  xla::PaddingConfig padding_config = MakeXlaPaddingConfig(
+      padding, input_shape, kernel_size, stride, ceil_mode);
   xla::XlaOp padded_input =
       xla::Pad(batch_input_info.batch_input, init_value, padding_config);
   PoolingOpAttributes pooling_op_attributes =
@@ -489,8 +485,8 @@ xla::XlaOp BuildMaxPoolNdBackward(xla::XlaOp out_backprop, xla::XlaOp input,
       MakePoolingOpAttributes(/*kernel_size_attr=*/kernel_size,
                               /*stride_attr=*/stride);
   std::vector<std::pair<int64_t, int64_t>> window_padding;
-  const auto ceil_mode_padding = CeilModePadding(
-      padding, input_shape, kernel_size, stride, ceil_mode, false);
+  const auto ceil_mode_padding =
+      CeilModePadding(padding, input_shape, kernel_size, stride, ceil_mode);
   window_padding.resize(2);
   window_padding.insert(window_padding.end(), ceil_mode_padding.begin(),
                         ceil_mode_padding.end());
@@ -575,27 +571,15 @@ xla::XlaOp BuildAvgPoolNd(xla::XlaOp input, int64_t spatial_dim_count,
   BatchInput batch_input_info = CreateBatchInput(input, spatial_dim_count);
   const xla::Shape& input_shape =
       ShapeHelper::ShapeOfXlaOp(batch_input_info.batch_input);
-
-  if (count_include_pad) {
-    xla::PaddingConfig padding_config = MakeXlaPaddingConfig(padding);
-    auto dtype = ShapeHelper::ShapeOfXlaOp(input).element_type();
-    auto padding_value = XlaHelpers::ScalarValue(0, dtype, input.builder());
-    batch_input_info.batch_input =
-        xla::Pad(batch_input_info.batch_input, padding_value, padding_config);
-  }
-
-  const auto ceil_mode_padding = CeilModePadding(
-      padding, ShapeHelper::ShapeOfXlaOp(batch_input_info.batch_input),
-      kernel_size, stride, ceil_mode, count_include_pad);
-
+  const auto ceil_mode_padding =
+      CeilModePadding(padding, input_shape, kernel_size, stride, ceil_mode);
   xla::XlaOp batch_result = xla::AvgPool(
       /*operand=*/batch_input_info.batch_input,
       /*kernel_size=*/pooling_op_attributes.kernel_size,
       /*stride=*/pooling_op_attributes.stride,
       /*padding=*/ceil_mode_padding,
       /*data_format=*/MakeNCHWFormat(spatial_dim_count),
-      /*counts_include_padding=*/false);  // already compensated in XLA
-
+      /*counts_include_padding=*/count_include_pad);
   return RemoveTrivialBatch(/*batch=*/batch_result,
                             /*original_rank=*/batch_input_info.original_rank,
                             /*spatial_dim_count=*/spatial_dim_count);
@@ -613,8 +597,8 @@ xla::XlaOp BuildAvgPoolNdBackward(xla::XlaOp out_backprop, xla::XlaOp input,
   BatchInput batch_input_info = CreateBatchInput(input, spatial_dim_count);
   const xla::Shape& gradients_shape =
       ShapeHelper::ShapeOfXlaOp(batch_input_info.batch_input);
-  const auto ceil_mode_padding = CeilModePadding(
-      padding, gradients_shape, kernel_size, stride, ceil_mode, false);
+  const auto ceil_mode_padding =
+      CeilModePadding(padding, gradients_shape, kernel_size, stride, ceil_mode);
   BatchInput batch_out_backprop_info =
       CreateBatchInput(out_backprop, spatial_dim_count);
   xla::XlaOp batch_result = xla::AvgPoolGrad(

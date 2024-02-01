@@ -1,12 +1,10 @@
 #include "torch_xla/csrc/ops/avg_pool_nd.h"
 
 #include "absl/strings/str_join.h"
-#include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/pooling.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
-#include "torch_xla/csrc/shape_helper.h"
 
 namespace torch_xla {
 namespace {
@@ -47,8 +45,7 @@ c10::Symbol AvgPoolNdSymbol(int64_t spatial_dim_count) {
 AvgPoolNd::AvgPoolNd(const torch::lazy::Value& input, int64_t spatial_dim_count,
                      std::vector<int64_t> kernel_size,
                      std::vector<int64_t> stride, std::vector<int64_t> padding,
-                     bool ceil_mode, bool count_include_pad,
-                     std::optional<int> divisor_override)
+                     bool ceil_mode, bool count_include_pad)
     : XlaNode(torch::lazy::OpKind(AvgPoolNdSymbol(spatial_dim_count)), {input},
               [&]() {
                 return NodeOutputShape(input, spatial_dim_count, kernel_size,
@@ -63,8 +60,7 @@ AvgPoolNd::AvgPoolNd(const torch::lazy::Value& input, int64_t spatial_dim_count,
       stride_(std::move(stride)),
       padding_(std::move(padding)),
       ceil_mode_(ceil_mode),
-      count_include_pad_(count_include_pad),
-      divisor_override_(divisor_override) {}
+      count_include_pad_(count_include_pad) {}
 
 torch::lazy::NodePtr AvgPoolNd::Clone(torch::lazy::OpList operands) const {
   return torch::lazy::MakeNode<AvgPoolNd>(operands.at(0), spatial_dim_count_,
@@ -77,15 +73,6 @@ XlaOpVector AvgPoolNd::Lower(LoweringContext* loctx) const {
   xla::XlaOp output =
       BuildAvgPoolNd(input, spatial_dim_count_, kernel_size_, stride_, padding_,
                      ceil_mode_, count_include_pad_);
-  if (divisor_override_) {
-    auto dtype = ShapeHelper::ShapeOfXlaOp(output).element_type();
-    auto* builder = loctx->builder();
-    int size = std::accumulate(kernel_size_.begin(), kernel_size_.end(), 1,
-                               std::multiplies<int>());
-    output = xla::Div(
-        xla::Mul(output, XlaHelpers::ScalarValue(size, dtype, builder)),
-        XlaHelpers::ScalarValue(*divisor_override_, dtype, builder));
-  }
   return ReturnOp(output, loctx);
 }
 
