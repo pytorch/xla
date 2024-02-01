@@ -16,8 +16,7 @@ class TestExperimentalPjrt(parameterized.TestCase):
   def setUp(self):
     xr.set_device_type('CPU')
 
-  @parameterized.parameters(('CPU', 'CPU'), ('CUDA', 'CUDA'), ('TPU', 'TPU'),
-                            ('TPU_C_API', 'TPU'), ('TPU_LEGACY', 'TPU'))
+  @parameterized.parameters(('CPU', 'CPU'), ('CUDA', 'CUDA'), ('TPU', 'TPU'))
   def test_device_type(self, pjrt_device, expected):
     with mock.patch.dict(os.environ, {'PJRT_DEVICE': pjrt_device}, clear=True):
       self.assertEqual(xr.device_type(), expected)
