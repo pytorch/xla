@@ -225,7 +225,7 @@
               
               
                 <div class="version">
-                  master (2.2.0+git904676b )
+                  master (2.2.0+git17161eb )
                 </div>
               
             
@@ -317,6 +317,7 @@
 <li><a class="reference internal" href="#more-debugging-tools">More Debugging Tools</a><ul>
 <li><a class="reference internal" href="#environment-variables">Environment Variables</a></li>
 <li><a class="reference internal" href="#common-debugging-environment-variables-combinations">Common Debugging Environment Variables Combinations</a></li>
+<li><a class="reference internal" href="#reproducing-pytorch-xla-ci-cd-unit-test-failures">Reproducing PyTorch/XLA CI/CD unit test failures.</a></li>
 </ul>
 </li>
 </ul>
@@ -2128,6 +2129,11 @@ independent copies of the shared tensor will be made on the XLA device.</p></li>
 <p>We don’t expect users to use tools in this section to debug their models. But we might ask for
 them when you submit a bug report since they provide additional information that metrics report
 doesn’t have.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">print(torch_xla._XLAC._get_xla_tensors_text([res]))</span></code> where <code class="docutils literal notranslate"><span class="pre">res</span></code> is the result tensor prints out the IR.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">print(torch_xla._XLAC._get_xla_tensors_hlo([res]))</span></code> where <code class="docutils literal notranslate"><span class="pre">res</span></code> is the result tensor prints out the generated XLA HLO.</p></li>
+</ul>
+<p>Note these functions must be called prior to <code class="docutils literal notranslate"><span class="pre">mark_step()</span></code>, otherwise the tensor will already be materialized.</p>
 <div class="section" id="environment-variables">
 <h3>Environment Variables<a class="headerlink" href="#environment-variables" title="Permalink to this headline">¶</a></h3>
 <p>There are also a number of environment variables which control the behavior of the <em>PyTorch/XLA</em>
@@ -2203,6 +2209,16 @@ offending HLO graph will be dumped as part of the runtime error raised by <code 
 </div>
 </li>
 </ul>
+</div>
+<div class="section" id="reproducing-pytorch-xla-ci-cd-unit-test-failures">
+<h3>Reproducing PyTorch/XLA CI/CD unit test failures.<a class="headerlink" href="#reproducing-pytorch-xla-ci-cd-unit-test-failures" title="Permalink to this headline">¶</a></h3>
+<p>You may see some test failures for a PR such as:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">To</span> <span class="n">execute</span> <span class="n">this</span> <span class="n">test</span><span class="p">,</span> <span class="n">run</span> <span class="n">the</span> <span class="n">following</span> <span class="kn">from</span> <span class="nn">the</span> <span class="n">base</span> <span class="n">repo</span> <span class="nb">dir</span><span class="p">:</span>
+    <span class="n">PYTORCH_TEST_WITH_SLOW</span><span class="o">=</span><span class="mi">1</span> <span class="n">python</span> <span class="o">../</span><span class="n">test</span><span class="o">/</span><span class="n">test_torch</span><span class="o">.</span><span class="n">py</span> <span class="o">-</span><span class="n">k</span> <span class="n">test_put_xla_uint8</span>
+</pre></div>
+</div>
+<p>Running this directly in the command line does not work. You need to set the environment variable <code class="docutils literal notranslate"><span class="pre">TORCH_TEST_DEVICES</span></code> to your local <code class="docutils literal notranslate"><span class="pre">pytorch/xla/test/pytorch_test_base.py</span></code>. For example:</p>
+<p><code class="docutils literal notranslate"><span class="pre">TORCH_TEST_DEVICES=/path/to/pytorch/xla/test/pytorch_test_base.py</span> <span class="pre">PYTORCH_TEST_WITH_SLOW=1</span> <span class="pre">python</span> <span class="pre">../test/test_torch.py</span> <span class="pre">-k</span> <span class="pre">test_put_xla_uint8</span></code> should work.</p>
 </div>
 </div>
 </div>
@@ -3765,6 +3781,7 @@ feature will come in the future releases.</p>
 <li><a class="reference internal" href="#more-debugging-tools">More Debugging Tools</a><ul>
 <li><a class="reference internal" href="#environment-variables">Environment Variables</a></li>
 <li><a class="reference internal" href="#common-debugging-environment-variables-combinations">Common Debugging Environment Variables Combinations</a></li>
+<li><a class="reference internal" href="#reproducing-pytorch-xla-ci-cd-unit-test-failures">Reproducing PyTorch/XLA CI/CD unit test failures.</a></li>
 </ul>
 </li>
 </ul>
