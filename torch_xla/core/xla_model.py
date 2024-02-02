@@ -38,6 +38,7 @@ _ORDINAL = None
 
 XLA_LIB = Library("xla", "DEF")
 
+
 def _init_world_size_ordinal():
   global _WORLD_SIZE, _ORDINAL
 

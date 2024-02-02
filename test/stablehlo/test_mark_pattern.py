@@ -59,12 +59,9 @@ class XlaMarkPatternTest(unittest.TestCase):
 
       def forward(self, x, y):
         q, k, v = x.split(128, dim=-2)
-        q = torch.ops.xla.mark_tensor(
-            q, "sdpa", pos=0, id="0", is_input=True)
-        k = torch.ops.xla.mark_tensor(
-            k, "sdpa", pos=1, id="0", is_input=True)
-        v = torch.ops.xla.mark_tensor(
-            v, "sdpa", pos=2, id="0", is_input=True)
+        q = torch.ops.xla.mark_tensor(q, "sdpa", pos=0, id="0", is_input=True)
+        k = torch.ops.xla.mark_tensor(k, "sdpa", pos=1, id="0", is_input=True)
+        v = torch.ops.xla.mark_tensor(v, "sdpa", pos=2, id="0", is_input=True)
         attn_out = F.scaled_dot_product_attention(q, k, v, scale=0.25)
         attn_out = torch.ops.xla.mark_tensor(
             attn_out,
@@ -74,12 +71,9 @@ class XlaMarkPatternTest(unittest.TestCase):
             is_input=False,
             attr={"scale": 0.25})
         q, k, v = y.split(128, dim=-2)
-        q = torch.ops.xla.mark_tensor(
-            q, "sdpa", pos=0, id="1", is_input=True)
-        k = torch.ops.xla.mark_tensor(
-            k, "sdpa", pos=1, id="1", is_input=True)
-        v = torch.ops.xla.mark_tensor(
-            v, "sdpa", pos=2, id="1", is_input=True)
+        q = torch.ops.xla.mark_tensor(q, "sdpa", pos=0, id="1", is_input=True)
+        k = torch.ops.xla.mark_tensor(k, "sdpa", pos=1, id="1", is_input=True)
+        v = torch.ops.xla.mark_tensor(v, "sdpa", pos=2, id="1", is_input=True)
         attn_out2 = F.scaled_dot_product_attention(q, k, v, scale=4)
         attn_out2 = torch.ops.xla.mark_tensor(
             attn_out2, "sdpa", pos=0, id="1", is_input=False, attr={"scale": 2})
@@ -230,8 +224,7 @@ class XlaMarkPatternTest(unittest.TestCase):
       x = x + 1
       x = torch.ops.xla.mark_tensor(x, "p_inner", 0, "0", False)
       x = x * 2
-      x = torch.ops.xla.mark_tensor(x, "p_outter", 0, "0",
-                                                    False)
+      x = torch.ops.xla.mark_tensor(x, "p_outter", 0, "0", False)
 
     input_args = (torch.ones(5),)
     stablehlo = self.run_func_get_stablehlo(f, input_args)
@@ -246,8 +239,7 @@ class XlaMarkPatternTest(unittest.TestCase):
       x = x + 1
       y = x - 1
       x = torch.ops.xla.mark_tensor(x, "p_inner", 0, "0", False)
-      y = torch.ops.xla.mark_tensor(y, "p_outter", 0, "0",
-                                                    False)
+      y = torch.ops.xla.mark_tensor(y, "p_outter", 0, "0", False)
 
     input_args = (torch.ones(5),)
     stablehlo = self.run_func_get_stablehlo(f, input_args)
