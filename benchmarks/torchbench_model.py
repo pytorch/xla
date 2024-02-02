@@ -431,7 +431,8 @@ class TorchBenchModel(BenchmarkModel):
       return torch.enable_grad()
 
   def pick_amp(self):
-    if self.benchmark_experiment.accelerator == "cuda" and self.is_cuda_precision_amp():
+    if (self.benchmark_experiment.accelerator == "cuda" and
+        self.is_cuda_precision_amp()):
       if self.benchmark_experiment.xla:
         return torch_xla.amp.autocast(xm.xla_device())
       else:
