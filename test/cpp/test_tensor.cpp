@@ -316,7 +316,8 @@ TEST_F(TensorTest, TestAvgPool2D) {
                            /*kernel_size=*/{kernel_size, kernel_size},
                            /*stride=*/{stride, stride},
                            /*padding=*/{padding, padding},
-                           /*ceil_mode=*/false, count_include_pad);
+                           /*ceil_mode=*/false, count_include_pad,
+                           /*divisor_override=*/std::nullopt);
         ForEachDevice([&](const torch::lazy::BackendDevice& device) {
           XLATensorPtr dev_input = XLATensor::Create(input, device);
           XLATensorPtr dev_output = tensor_methods::avg_pool_nd(
@@ -325,7 +326,8 @@ TEST_F(TensorTest, TestAvgPool2D) {
               /*kernel_size=*/{kernel_size, kernel_size},
               /*stride=*/{stride, stride},
               /*padding=*/{padding, padding},
-              /*ceil_mode=*/false, count_include_pad);
+              /*ceil_mode=*/false, count_include_pad,
+              /*divisor_override=*/std::nullopt);
           AllClose(output, dev_output);
         });
       }
@@ -344,7 +346,8 @@ TEST_F(TensorTest, TestAvgPool2DNonSquare) {
             /*kernel_size=*/{kernel_size, kernel_size + 1},
             /*stride=*/{stride, stride + 1},
             /*padding=*/{padding, padding + 1}, /*ceil_mode=*/false,
-            /*count_include_pad=*/count_include_pad);
+            /*count_include_pad=*/count_include_pad,
+            /*divisor_override=*/std::nullopt);
         ForEachDevice([&](const torch::lazy::BackendDevice& device) {
           XLATensorPtr dev_input = XLATensor::Create(input, device);
           XLATensorPtr dev_output = tensor_methods::avg_pool_nd(
@@ -354,7 +357,8 @@ TEST_F(TensorTest, TestAvgPool2DNonSquare) {
               /*stride=*/{stride, stride + 1},
               /*padding=*/{padding, padding + 1},
               /*ceil_mode=*/false,
-              /*count_include_pad=*/count_include_pad);
+              /*count_include_pad=*/count_include_pad,
+              /*divisor_override=*/std::nullopt);
           AllClose(output, dev_output);
         });
       }

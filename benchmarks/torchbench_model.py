@@ -164,7 +164,7 @@ class TorchBenchModelLoader(ModelLoader):
 
     Looks for `names` in the current directory, up to its two direct parents.
     """
-    for dir in ("./", "../", "../../"):
+    for dir in ("./", "../", "../../", "../../../"):
       for name in names:
         path = os.path.join(dir, name)
         if exists(path):
@@ -193,7 +193,8 @@ class TorchBenchModelLoader(ModelLoader):
     its lists of models into sets of models.
     """
 
-    benchmarks_dir = self._find_near_file(("benchmarks",))
+    benchmarks_dir = self._find_near_file(
+        ("pytorch/benchmarks", "benchmarks/dynamo"))
     assert benchmarks_dir is not None, "PyTorch benchmarks folder not found."
 
     skip_file = os.path.join(benchmarks_dir, "dynamo",
@@ -313,13 +314,16 @@ class TorchBenchModel(BenchmarkModel):
 
   @functools.lru_cache(maxsize=1)
   def benchmark_cls(self):
-    try:
-      module = importlib.import_module(
-          f"torchbenchmark.models.{self.model_name}")
-    except ModuleNotFoundError:
-      module = importlib.import_module(
-          f"torchbenchmark.models.fb.{self.model_name}")
-    return getattr(module, "Model", None)
+    for module_src in [
+        f"torchbenchmark.models.{self.model_name}",
+        f"torchbenchmark.models.fb.{self.model_name}"
+    ]:
+      try:
+        module = importlib.import_module(module_src)
+        return getattr(module, "Model", None)
+      except ModuleNotFoundError:
+        logger.warning(f"Unable to import {module_src}.")
+    return None
 
   def load_benchmark(self):
     cant_change_batch_size = (not getattr(self.benchmark_cls(),
@@ -381,6 +385,18 @@ class TorchBenchModel(BenchmarkModel):
     changes to the PT/XLA bridge so that the input shape
     is properly inferred after issuing converts to `torch.nn.Module`.
     """
+    # At this moment, this method checks the precision flags only if both
+    # of the items below are true:
+    #
+    #   1. Device is CUDA: only check for 'DEFAULT_CUDA_<test>_PRECISION'
+    #
+    #   2. Dynamo backend is not inductor: PyTorch/benchmark scripts already
+    #      take care of converting the model to the right precision.
+    #
+    if (self.benchmark_experiment.accelerator != "cuda" or
+        self.benchmark_experiment.dynamo == "inductor"):
+      return None
+
     if self.get_cuda_precision() is None:
       return None
 
