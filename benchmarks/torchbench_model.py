@@ -1,5 +1,6 @@
 import functools
 import gc
+import contextlib
 import importlib
 import logging
 import os
@@ -9,6 +10,9 @@ import torch
 import torch.nn as nn
 from torch._dynamo.testing import collect_results, reduce_to_scalar_loss
 from torch._dynamo.utils import clone_inputs
+import torch_xla
+import torch_xla.amp
+import torch_xla.core.xla_model as xm
 import types
 import yaml
 from util import move_to_device, set_cwd
@@ -407,8 +411,7 @@ class TorchBenchModel(BenchmarkModel):
       return 'XLA_USE_BF16'
 
     if self.is_cuda_precision_amp():
-      raise ValueError(
-          f"AMP for PT/XLA:GPU is not implemented yet for torchbench models")
+      return None
 
     if self.is_cuda_precision_fp32():
       logger.warning("Sticking with the default fp32 precision.")
@@ -430,6 +433,21 @@ class TorchBenchModel(BenchmarkModel):
       return torch.no_grad()
     elif self.benchmark_experiment.test == "train":
       return torch.enable_grad()
+
+  def pick_amp(self):
+    if (self.benchmark_experiment.accelerator == "cuda" and
+        self.is_cuda_precision_amp()):
+      if self.benchmark_experiment.xla:
+        return torch_xla.amp.autocast(xm.xla_device())
+      else:
+        return torch.cuda.amp.autocast()
+    return contextlib.nullcontext()
+
+  def pick_context(self):
+    stack = contextlib.ExitStack()
+    stack.enter_context(self.pick_amp())
+    stack.enter_context(self.pick_grad())
+    return stack
 
   def compute_loss(self, pred):
     """Reduce the output of a model to get scalar loss"""
