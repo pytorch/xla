@@ -36,21 +36,7 @@ namespace torch_xla {
 // Macro for defining a function that will be run at static initialization time
 // to define a library of operators in the namespace. Used to define a new set
 // of custom operators that do not already exist in PyTorch.
-TORCH_LIBRARY(xla, m) {
-  m.def(
-      "max_pool2d_forward(Tensor self, int[2] kernel_size, int[2] stride=[], "
-      "int[2] padding=0, int[2] dilation=1, bool ceil_mode=False) -> Tensor",
-      torch::dispatch(
-          c10::DispatchKey::XLA,
-          TORCH_FN(torch_xla::aten_autograd_ops::max_pool2d_forward)));
-
-  m.def(
-      "max_pool2d_backward(Tensor grad_output, Tensor self, int[2] "
-      "kernel_size, int[2] stride=[], int[2] padding=0, bool ceil_mode=False) "
-      "-> Tensor",
-      torch::dispatch(
-          c10::DispatchKey::XLA,
-          TORCH_FN(torch_xla::aten_autograd_ops::max_pool2d_backward)));
+TORCH_LIBRARY_FRAGMENT(xla, m) {
   m.def(
       "xla_mark_sharding_dynamo_custom_op(Tensor input, int[][] "
       "tile_assignment, int[][] group_assignment, int[][] replication_groups, "
