@@ -107,6 +107,7 @@ Then run `test/run_tests.sh` and `test/cpp/run_tests.sh` to verify the setup is 
 ### Useful materials
 1. [OP Lowering Guide](https://github.com/pytorch/xla/blob/master/OP_LOWERING_GUIDE.md)
 2. [CODEGEN MIGRATION GUIDE](https://github.com/pytorch/xla/blob/master/CODEGEN_MIGRATION_GUIDE.md)
+3. [Dynamo Integration Guide](https://github.com/pytorch/xla/blob/master/docs/dynamo.md)
 
 ### Sharp Edges
 
