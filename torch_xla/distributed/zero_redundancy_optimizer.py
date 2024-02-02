@@ -1,4 +1,6 @@
 import copy
+import inspect
+import os
 from typing import (Any, Iterator, Optional, Type, Union, List, Dict)
 
 import torch
@@ -95,14 +97,29 @@ class ZeroRedundancyOptimizer(Optimizer):
           group = list(group)
         self.local_rank = group.index(self.global_rank)
     if self.local_rank is None:
-      raise ValueError(
-          f"Current rank {self.global_rank} is missing from the sharding_groups {self.sharding_groups}"
-      )
+      raise ValueError(f"Current rank {self.global_rank} is missing from the sharding_groups {self.sharding_groups}")
     # Shard parameters for use in optimizer
     sharded_param_groups = self._shard_parameters()
     # Optimizer initialization
+    # Here we pop the differentiable default because the adam family of
+    # optimizers don't have differentiable as an argument. This should
+    # be fixed by this commit https://github.com/pytorch/pytorch/pull/86183
+    # and should be available in torch==2.0. For 1.13, we are patching it here.
+    # When we do a re-init after loading weights, the defaults would be set
+    # by optimizer base class which would break the adamw, adam initialization.
+    # Hence, we pop the argument if the optimizer class doesn't accept one.
+    # Assumption: If the optimizer class didn't have one, the base class added it
+    # when loading state dict.
+    func_args = inspect.signature(self.optimizer_class.__init__)
+    if "differentiable" not in func_args.parameters:
+      before_differentiable = self.defaults.pop("differentiable", None)
     self.base_optimizer = self.optimizer_class(sharded_param_groups,
                                                **self.defaults)
+    differentiable_value = getattr(self.base_optimizer, "differentiable", None)
+    if differentiable_value is not None:
+      assert before_differentiable == differentiable_value, \
+        "differentiable argument changes value after initialization"
+      self.defaults["differentiable"] = differentiable_value
     self._sync_param_groups(self.param_groups, self.base_optimizer.param_groups)
     self.inited = True
 
@@ -243,10 +260,10 @@ class ZeroRedundancyOptimizer(Optimizer):
     self._grad_norm = self._calc_grad_norm(norm_type)
 
     clip_coeff = torch.tensor(
-        max_norm, device=self.device) / (
+        max_norm, device=self.device, dtype=self.optimizer_dtype) / (
             self._grad_norm + 1e-6)
     clip_value = torch.where(clip_coeff < 1, clip_coeff,
-                             torch.tensor(1., device=self.device))
+                             torch.tensor(1., device=self.device, dtype=self.optimizer_dtype))
     for param_group in self.base_optimizer.param_groups:
       for p in param_group['params']:
         if p.grad is not None:
