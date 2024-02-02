@@ -41,6 +41,8 @@ XLA_LIB = Library("xla", "DEF")
 # Default bucket size for all-reduce
 _ALLREDUCE_BUCKET_CAP_MB = 50
 
+XLA_LIB = Library("xla", "DEF")
+
 
 def _init_world_size_ordinal():
   global _WORLD_SIZE, _ORDINAL
