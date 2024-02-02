@@ -1,12 +1,10 @@
 import numpy as np
 import torch
+from torch.library import impl
 import torch_xla
-from torch.library import Library, impl
-
-quantized_decomposed_lib = Library("quantized_decomposed", "IMPL")
 
 
-@impl(quantized_decomposed_lib, "quantize_per_tensor", "XLA")
+@impl("quantized_decomposed::quantize_per_tensor", "XLA")
 def xla_quantize_per_tensor(input: torch.Tensor, scale: float, zero_point: int,
                             quant_min: int, quant_max: int, dtype: torch.dtype):
   return _xla_quantize(input, torch.tensor([scale]),
@@ -14,7 +12,7 @@ def xla_quantize_per_tensor(input: torch.Tensor, scale: float, zero_point: int,
                        quant_max, dtype)
 
 
-@impl(quantized_decomposed_lib, "quantize_per_channel", "XLA")
+@impl("quantized_decomposed::quantize_per_channel", "XLA")
 def xla_quantize_per_channel(input: torch.Tensor, scale: torch.Tensor,
                              zero_point: torch.Tensor, axis: int,
                              quant_min: int, quant_max: int,
@@ -23,7 +21,7 @@ def xla_quantize_per_channel(input: torch.Tensor, scale: torch.Tensor,
                        axis)
 
 
-@impl(quantized_decomposed_lib, "dequantize_per_tensor", "XLA")
+@impl("quantized_decomposed::dequantize_per_tensor", "XLA")
 def xla_dequantize_per_tensor(input: torch.Tensor, scale: float,
                               zero_point: int, quant_min: int, quant_max: int,
                               dtype: torch.dtype):
@@ -32,7 +30,7 @@ def xla_dequantize_per_tensor(input: torch.Tensor, scale: float,
                          quant_max, dtype)
 
 
-@impl(quantized_decomposed_lib, "dequantize_per_channel", "XLA")
+@impl("quantized_decomposed::dequantize_per_channel", "XLA")
 def xla_dequantize_per_tensor(input: torch.Tensor, scale: torch.Tensor,
                               zero_point: torch.Tensor, axis: int,
                               quant_min: int, quant_max: int,
