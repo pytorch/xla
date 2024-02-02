@@ -242,7 +242,7 @@ class ExperimentRunner:
 
     # Repeat the experiment and accumulate metrics.
     last_output = None
-    with benchmark_model.pick_grad():
+    with benchmark_model.pick_context():
       accumulated_metrics = OrderedDict()
       for repeat_iteration in range(self._args.repeat):
         metrics, last_output = self.run_once_and_gather_metrics(
