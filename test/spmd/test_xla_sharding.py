@@ -728,8 +728,12 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
       mesh = self._get_mesh((2, self.n_devices // 2, 1))
       xs.mark_sharding(t1, mesh, partition_spec=(2, 1))
       sharding_annotation = 'sharding={devices=[1,%d,2]' % (self.n_devices // 2)
-    else:
+    elif self.n_devices == 2:
       mesh = self._get_mesh((2, 1, 1))
+      xs.mark_sharding(t1, mesh, partition_spec=(2, 1))
+      sharding_annotation = "sharding={replicated}"
+    else:
+      mesh = self._get_mesh((1, 1, 1))
       xs.mark_sharding(t1, mesh, partition_spec=(2, 1))
       sharding_annotation = "sharding={replicated}"
     self.assertIn(sharding_annotation,
