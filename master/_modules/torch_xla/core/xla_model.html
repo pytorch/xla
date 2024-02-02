@@ -225,7 +225,7 @@
               
               
                 <div class="version">
-                  master (2.2.0+git21653dc )
+                  master (2.2.0+git19923bd )
                 </div>
               
             
@@ -339,6 +339,7 @@
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
 <span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">import</span> <span class="nn">torch.distributed._functional_collectives</span>
+<span class="kn">from</span> <span class="nn">torch.library</span> <span class="kn">import</span> <span class="n">Library</span>
 <span class="kn">import</span> <span class="nn">torch.nn.functional</span> <span class="k">as</span> <span class="nn">F</span>
 <span class="kn">import</span> <span class="nn">torch_xla</span>
 <span class="kn">from</span> <span class="nn">torch_xla</span> <span class="kn">import</span> <span class="n">runtime</span>
@@ -364,6 +365,8 @@
 <span class="c1"># Dynamo won&#39;t do graph breaks when xm.xrt_world_size() and xm.get_ordinal() are called.</span>
 <span class="n">_WORLD_SIZE</span> <span class="o">=</span> <span class="kc">None</span>
 <span class="n">_ORDINAL</span> <span class="o">=</span> <span class="kc">None</span>
+
+<span class="n">XLA_LIB</span> <span class="o">=</span> <span class="n">Library</span><span class="p">(</span><span class="s2">&quot;xla&quot;</span><span class="p">,</span> <span class="s2">&quot;DEF&quot;</span><span class="p">)</span>
 
 
 <span class="k">def</span> <span class="nf">_init_world_size_ordinal</span><span class="p">():</span>
