@@ -208,9 +208,9 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     self.assertEqual(torch_xla._XLAC._get_xla_sharding_type(t), None)
 
     x_dim = 2 if self.n_devices >= 2 else 1
-    # if self.n_devices>=4, mesh=(2, 2)
-    # if self.n_devices>=2, mesh=(2,1)
-    # if self.n_devices=1, mesh=(1,1)
+    # if self.n_devices==4, mesh=(2,2)
+    # if self.n_devices==2, mesh=(2,1)
+    # if self.n_devices==1, mesh=(1,1)
     mesh = self._get_mesh((x_dim, self.n_devices // x_dim))
     xt = xs.mark_sharding(t, mesh, (0, 1))
     if self.n_devices >= 2:

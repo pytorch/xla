@@ -154,8 +154,6 @@ InitializePjRt(const std::string& device_type) {
     int local_world_size = sys_util::GetEnvInt("LOCAL_WORLD_SIZE", 1);
     int global_world_size = sys_util::GetEnvInt("WORLD_SIZE", local_world_size);
 
-    std::shared_ptr<xla::KeyValueStoreInterface> kv_store;
-    std::optional<std::set<int>> allowed_devices;
     TF_VLOG(3) << "Getting StreamExecutorGpuClient for node_id="
                << global_process_rank << ", num_nodes=" << global_world_size
                << ", spmd case=" << sys_util::GetEnvBool("XLA_USE_SPMD", false)
@@ -165,15 +163,24 @@ InitializePjRt(const std::string& device_type) {
                << ", LOCAL_WORLD_SIZE="
                << sys_util::GetEnvString("LOCAL_WORLD_SIZE", "")
                << ", WORLD_SIZE=" << sys_util::GetEnvString("WORLD_SIZE", "");
-    if (local_world_size == 1) {
-      if (global_world_size > 1) {
-        coordinator = SetGpuClientKVCallBack(global_process_rank,
-                                             global_world_size, kv_store);
-      }
-    } else {
+    std::optional<std::set<int>> allowed_devices;
+    if (local_world_size > 1) {
       allowed_devices = std::set{local_process_rank};
-      coordinator = SetGpuClientKVCallBack(global_process_rank,
-                                           global_world_size, kv_store);
+    }
+
+    std::shared_ptr<xla::KeyValueStoreInterface> kv_store;
+    if (global_world_size > 1) {
+      // Use the distributed key-value store from DistributedRuntimeClient.
+      std::string master_addr =
+          runtime::sys_util::GetEnvString("MASTER_ADDR", "localhost");
+      std::string port = runtime::sys_util::GetEnvString(
+          "XLA_COORDINATOR_PORT", XlaCoordinator::kDefaultCoordinatorPort);
+      coordinator = std::make_unique<XlaCoordinator>(
+          global_process_rank, global_world_size, master_addr, port);
+      std::shared_ptr<xla::DistributedRuntimeClient> distributed_client =
+          coordinator->GetClient();
+      kv_store = xla::GetDistributedKeyValueStore(distributed_client,
+                                                  /*key_prefix=*/"gpu:");
     }
 
     xla::GpuClientOptions options;
