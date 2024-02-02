@@ -15,7 +15,7 @@ class StableHLOCompositeBuilder:
   """
   Helper for building a StableHLO Composite by marking input and output tensors. It
   should be used with the StableHLO converters from `torch_xla.stablehlo`.
-  
+
   Args:
     name (str):
       The name of the built StableHLO Composite op.
@@ -37,7 +37,7 @@ class StableHLOCompositeBuilder:
       if not isinstance(tensor, torch.Tensor):
         raise ValueError(f"input must be a torch tensor. Got {type(tensor)}.")
       marked_tensors.append(
-          torch.ops.xla_pattern_marking.mark_tensor(
+          torch.ops.xla.mark_tensor(
               tensor,
               name=self.name,
               pos=pos,
@@ -52,9 +52,9 @@ class StableHLOCompositeBuilder:
 
   def mark_inputs(self, *tensors: torch.Tensor):
     """
-    Mark the input tensors of the StableHLO Composite. This method must only be 
+    Mark the input tensors of the StableHLO Composite. This method must only be
     called once per builder.
-    
+
     Args:
       *tensors (torch.Tensor):
         Torch tensors to mark.
@@ -68,9 +68,9 @@ class StableHLOCompositeBuilder:
 
   def mark_outputs(self, *tensors: torch.Tensor):
     """
-    Mark the output tensors of the StableHLO Composite. This method must only be 
+    Mark the output tensors of the StableHLO Composite. This method must only be
     called once per builder.
-    
+
     Args:
       *tensors (torch.Tensor):
         Torch tensors to mark.
