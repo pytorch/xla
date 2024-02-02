@@ -9,6 +9,7 @@ import warnings
 from typing import List, Optional
 import torch
 import torch.distributed._functional_collectives
+from torch.library import Library
 import torch.nn.functional as F
 import torch_xla
 from torch_xla import runtime
@@ -35,6 +36,7 @@ _DEVICE_CONTEXTS_LOCK = threading.Lock()
 _WORLD_SIZE = None
 _ORDINAL = None
 
+XLA_LIB = Library("xla", "DEF")
 
 def _init_world_size_ordinal():
   global _WORLD_SIZE, _ORDINAL
