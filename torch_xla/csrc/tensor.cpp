@@ -764,13 +764,15 @@ c10::SymNode XLASymNodeImpl::sym_max(const c10::SymNode& other) {
 // Force guards when performing these logical operations
 
 c10::SymNode XLASymNodeImpl::sym_or(const c10::SymNode& other) {
-  auto a = guard_bool(__FILE__, __LINE__) || other->guard_bool(__FILE__, __LINE__);
+  auto a =
+      guard_bool(__FILE__, __LINE__) || other->guard_bool(__FILE__, __LINE__);
   auto cnst = torch::lazy::MakeNode<SizeConstant>(a);
   return c10::make_intrusive<XLASymNodeImpl>(cnst, PyType::BOOL);
 }
 
 c10::SymNode XLASymNodeImpl::sym_and(const c10::SymNode& other) {
-  auto a = guard_bool(__FILE__, __LINE__) && other->guard_bool(__FILE__, __LINE__);
+  auto a =
+      guard_bool(__FILE__, __LINE__) && other->guard_bool(__FILE__, __LINE__);
   auto cnst = torch::lazy::MakeNode<SizeConstant>(a);
   return c10::make_intrusive<XLASymNodeImpl>(cnst, PyType::BOOL);
 }
