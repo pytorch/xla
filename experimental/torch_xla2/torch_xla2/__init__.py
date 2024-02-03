@@ -1,7 +1,7 @@
 import jax
 import torch
 import torch._functorch
-from torch.google._torx import tensor
+from torch_xla2 import tensor
 
 
 def extract_jax(mod: torch.nn.Module):

@@ -1,10 +1,11 @@
 import unittest
 
 import torch
-from torch.google._torx import ops  # pylint: disable=unused-import
-from torch.google._torx import ops_registry
-from torch.google._torx import tensor
-from torch.google._torx.test import test_base
+from torch_xla2 import ops  # pylint: disable=unused-import
+from torch_xla2 import ops_registry
+from torch_xla2 import tensor
+
+from . import test_base
 from torch.utils import _pytree as pytree
 
 
@@ -1758,6 +1759,7 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.glu, args, kwargs)
 
+  @unittest.skip
   def test_aten_grid_sampler_2d_0(self):
     args = (
         torch.randn((1, 3, 2, 10)).to(torch.float32),

@@ -2,9 +2,10 @@ import unittest
 import jax
 import torch
 from torch._functorch.make_functional import make_functional_with_buffers
-from torch.google._torx import tensor, ops  # pylint: disable=unused-import
-from torch.google._torx.test import test_base
-from torch.google._torx.test.llama import llama_model
+from torch_xla2 import tensor, ops  # pylint: disable=unused-import
+
+from .. import test_base
+from . import llama_model
 from torch.utils import _pytree as pytree
 
 

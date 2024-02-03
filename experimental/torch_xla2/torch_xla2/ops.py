@@ -6,8 +6,8 @@ import jax
 from jax import numpy as jnp
 import numpy as np
 import torch
-from torch.google._torx import ops_registry
-from torch.google._torx import tensor
+from torch_xla2 import ops_registry
+from torch_xla2 import tensor
 
 
 class TorchFunctionLowering:

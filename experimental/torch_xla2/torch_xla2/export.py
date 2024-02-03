@@ -5,7 +5,7 @@ from typing import Any, Dict, Tuple
 import jax
 import torch
 from torch.fx import _pytree as fx_pytree
-from torch.google._torx import ops_registry, tensor
+from torch_xla2 import ops_registry, tensor
 from torch.utils import _pytree as pytree
 
 

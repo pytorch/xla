@@ -5,7 +5,7 @@ from typing import Any, Tuple
 from jax.experimental import jax2tf
 import tensorflow as tf
 import torch
-from torch.google._torx import export
+from torch_xla2 import export
 
 
 def exported_program_to_tf_function(
