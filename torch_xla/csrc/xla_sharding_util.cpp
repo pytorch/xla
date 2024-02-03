@@ -273,7 +273,8 @@ xla::OpSharding ShardingUtil::CreateOpSharding(
     }
   }
   TF_VLOG(INFO) << "OpSharding (ShardingType: " << sharding_type << "):\n"
-                << sharding.DebugString();
+                << sharding.DebugString()
+                << ", sharding.type()=" << sharding.type();
   return sharding;
 }
 

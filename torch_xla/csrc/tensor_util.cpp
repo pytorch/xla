@@ -733,6 +733,7 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
     if (static_cast<XlaDeviceType>(device.type()) == XlaDeviceType::SPMD) {
       // GetLocalDevices returns the list of local devices specified by their
       // global ordinals (e.g. ["TPU:4", "TPU:5", "TPU:6", "TPU:7"]).
+
       std::vector<std::string> local_devices =
           runtime::GetComputationClient()->GetLocalDevices();
       // Shards the input tensors with padding, to split evenly.

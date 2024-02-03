@@ -130,20 +130,28 @@ InitializePjRt(const std::string& device_type) {
     int global_process_rank = sys_util::GetEnvInt("RANK", local_process_rank);
     int local_world_size = sys_util::GetEnvInt("LOCAL_WORLD_SIZE", 1);
     int global_world_size = sys_util::GetEnvInt("WORLD_SIZE", local_world_size);
-    std::string master_addr =
-        runtime::sys_util::GetEnvString("MASTER_ADDR", "localhost");
-    std::string port = runtime::sys_util::GetEnvString(
-        "XLA_COORDINATOR_PORT", XlaCoordinator::kDefaultCoordinatorPort);
 
-    bool spmd = sys_util::GetEnvBool("XLA_USE_SPMD", false);
+    TF_VLOG(3) << "Getting StreamExecutorGpuClient for node_id="
+               << global_process_rank << ", num_nodes=" << global_world_size
+               << ", spmd case=" << sys_util::GetEnvBool("XLA_USE_SPMD", false)
+               << ", PJRT_LOCAL_PROCESS_RANK="
+               << sys_util::GetEnvString(env::kEnvPjRtLocalRank, "")
+               << ", RANK=" << sys_util::GetEnvString("RANK", "")
+               << ", LOCAL_WORLD_SIZE="
+               << sys_util::GetEnvString("LOCAL_WORLD_SIZE", "")
+               << ", WORLD_SIZE=" << sys_util::GetEnvString("WORLD_SIZE", "");
     std::optional<std::set<int>> allowed_devices;
-    if (!spmd) {
+    if (local_world_size > 1) {
       allowed_devices = std::set{local_process_rank};
     }
 
     std::shared_ptr<xla::KeyValueStoreInterface> kv_store;
     if (global_world_size > 1) {
       // Use the distributed key-value store from DistributedRuntimeClient.
+      std::string master_addr =
+          runtime::sys_util::GetEnvString("MASTER_ADDR", "localhost");
+      std::string port = runtime::sys_util::GetEnvString(
+          "XLA_COORDINATOR_PORT", XlaCoordinator::kDefaultCoordinatorPort);
       coordinator = std::make_unique<XlaCoordinator>(
           global_process_rank, global_world_size, master_addr, port);
       std::shared_ptr<xla::DistributedRuntimeClient> distributed_client =
@@ -151,8 +159,6 @@ InitializePjRt(const std::string& device_type) {
       kv_store = xla::GetDistributedKeyValueStore(distributed_client,
                                                   /*key_prefix=*/"gpu:");
     }
-    TF_VLOG(3) << "Getting StreamExecutorGpuClient for node_id="
-               << global_process_rank << ", num_nodes=" << global_world_size;
 
     xla::GpuClientOptions options;
     options.allocator_config = GetGpuAllocatorConfig();

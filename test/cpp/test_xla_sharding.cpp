@@ -309,11 +309,6 @@ TEST_F(XLAShardingTest, EqualShardingSpecs) {
 }
 
 TEST_F(XLAShardingTest, CreateTensorsData) {
-  if (torch_xla::runtime::sys_util::GetEnvString(
-          torch_xla::runtime::env::kEnvPjRtDevice, "") == "") {
-    GTEST_SKIP() << "`PJRT_DEVICE` is not set.";
-  }
-
   std::vector<at::Tensor> tensors(2);
   auto tensor = at::ones({8, 8}, at::TensorOptions(at::kFloat));
   xla::Shape tensor_shape =

@@ -19,7 +19,7 @@ from absl.testing import absltest, parameterized
 
 @unittest.skipIf(xr.device_type() != "CUDA",
                  f"GPU tests should only run on GPU devices.")
-class TestExperimentalPjrtGpu(parameterized.TestCase):
+class TestExperimentalPjrtMultiGpu(parameterized.TestCase):
 
   def setUp(self):
     xr.set_device_type('CUDA')
