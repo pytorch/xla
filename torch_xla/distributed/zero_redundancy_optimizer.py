@@ -97,7 +97,9 @@ class ZeroRedundancyOptimizer(Optimizer):
           group = list(group)
         self.local_rank = group.index(self.global_rank)
     if self.local_rank is None:
-      raise ValueError(f"Current rank {self.global_rank} is missing from the sharding_groups {self.sharding_groups}")
+      raise ValueError(
+          f"Current rank {self.global_rank} is missing from the sharding_groups {self.sharding_groups}"
+      )
     # Shard parameters for use in optimizer
     sharded_param_groups = self._shard_parameters()
     # Optimizer initialization
@@ -262,8 +264,9 @@ class ZeroRedundancyOptimizer(Optimizer):
     clip_coeff = torch.tensor(
         max_norm, device=self.device, dtype=self.optimizer_dtype) / (
             self._grad_norm + 1e-6)
-    clip_value = torch.where(clip_coeff < 1, clip_coeff,
-                             torch.tensor(1., device=self.device, dtype=self.optimizer_dtype))
+    clip_value = torch.where(
+        clip_coeff < 1, clip_coeff,
+        torch.tensor(1., device=self.device, dtype=self.optimizer_dtype))
     for param_group in self.base_optimizer.param_groups:
       for p in param_group['params']:
         if p.grad is not None:
