@@ -4,12 +4,11 @@ from dataclasses import dataclass
 from typing import Dict
 
 import torch
+from torch.library import impl
 import torch_xla
-from torch.library import Library, impl
+from torch_xla.core.xla_model import XLA_LIB
 
-xla_pattern_marking_lib = Library("xla_pattern_marking", "DEF")
-
-xla_pattern_marking_lib.define(
+XLA_LIB.define(
     "mark_tensor(Tensor x, str name, int pos, str id, bool is_input, Any? attr=None) -> Tensor"
 )
 
@@ -45,7 +44,7 @@ def _assert_valid_composite_attr(attr):
           "Composite attr value must be either Python str, float, or int.")
 
 
-@impl(xla_pattern_marking_lib, "mark_tensor", "XLA")
+@impl(XLA_LIB, "mark_tensor", "XLA")
 def mark_tensor_xla(x: torch.Tensor,
                     name: str,
                     pos: int,
@@ -53,7 +52,7 @@ def mark_tensor_xla(x: torch.Tensor,
                     is_input: bool,
                     attr: Dict = None):
   """Attach pattern boundary metadata to a XLA Tensor.
-  
+
   Args:
       x: torch.Tensor (On XLA device) - the marked tensor.
       name: str - The name of the pattern, it will be the name of the stablehlo composite op.
@@ -69,7 +68,7 @@ def mark_tensor_xla(x: torch.Tensor,
       x, json.dumps(pattern_info, cls=BoundaryMetadataSerializer))
 
 
-@impl(xla_pattern_marking_lib, "mark_tensor", "CompositeExplicitAutograd")
+@impl(XLA_LIB, "mark_tensor", "CompositeExplicitAutograd")
 def mark_tensor(x: torch.Tensor,
                 name: str,
                 pos: int,
@@ -80,7 +79,7 @@ def mark_tensor(x: torch.Tensor,
   return x
 
 
-@impl(xla_pattern_marking_lib, "mark_tensor", "Meta")
+@impl(XLA_LIB, "mark_tensor", "Meta")
 def mark_tensor_meta(x: torch.Tensor,
                      name: str,
                      pos: int,
