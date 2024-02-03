@@ -46,29 +46,6 @@ std::shared_ptr<const PjRtPlugin> GetPjRtPlugin(
   return plugin_path != pjrt_plugins_.end() ? plugin_path->second : nullptr;
 }
 
-std::unique_ptr<XlaCoordinator> SetGpuClientKVCallBack(
-    int global_process_rank, int global_world_size,
-    std::shared_ptr<xla::KeyValueStoreInterface>& kv_store) {
-  std::string master_addr =
-      runtime::sys_util::GetEnvString("MASTER_ADDR", "localhost");
-  std::string port = runtime::sys_util::GetEnvString(
-      "XLA_COORDINATOR_PORT", XlaCoordinator::kDefaultCoordinatorPort);
-
-  // Use the XlaCoordinator as the distributed key-value store.
-  TF_VLOG(3) << "Creating a XlaCoordinator for global_process_rank="
-             << global_process_rank
-             << ", global_world_size=" << global_world_size
-             << ", master_addr=" << master_addr << ", port=" << port;
-  std::unique_ptr<XlaCoordinator> coordinator =
-      std::make_unique<XlaCoordinator>(global_process_rank, global_world_size,
-                                       master_addr, port);
-  std::shared_ptr<xla::DistributedRuntimeClient> distributed_client =
-      coordinator->GetClient();
-  kv_store = xla::GetDistributedKeyValueStore(distributed_client,
-                                              /*key_prefix=*/"gpu:");
-  return coordinator;
-}
-
 }  // namespace
 
 void RegisterPjRtPlugin(std::string name,
