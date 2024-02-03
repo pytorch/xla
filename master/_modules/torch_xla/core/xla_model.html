@@ -225,7 +225,7 @@
               
               
                 <div class="version">
-                  master (2.2.0+git3e68409 )
+                  master (2.2.0+git8fc8d57 )
                 </div>
               
             
@@ -420,7 +420,7 @@
 <span class="sd">      that kind.</span>
 
 <span class="sd">  Returns:</span>
-<span class="sd">    The list of device strings.</span>
+<span class="sd">    The list of device strings such as [&#39;xla:0&#39;, &#39;xla:1&#39;, ...]</span>
 <span class="sd">  &quot;&quot;&quot;</span>
   <span class="c1"># TODO(wcromar): Remove `devkind` after 2.3 release cut. We no longer support</span>
   <span class="c1"># multiple device types.</span>
@@ -550,6 +550,14 @@
 
 
 <span class="k">def</span> <span class="nf">xla_real_devices</span><span class="p">(</span><span class="n">devices</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Returns the real devices&#39; name.</span>
+
+<span class="sd">  Args:</span>
+<span class="sd">    devices: The list of torch devices such as [&#39;xla:0&#39;, &#39;xla:1&#39;].</span>
+
+<span class="sd">  Returns:</span>
+<span class="sd">    A list of real devices&#39; name such as [&#39;CUDA:0&#39;, &#39;CUDA:1&#39;].</span>
+<span class="sd">  &quot;&quot;&quot;</span>
   <span class="k">if</span> <span class="ow">not</span> <span class="n">devices</span><span class="p">:</span>
     <span class="n">devices</span> <span class="o">=</span> <span class="n">get_xla_supported_devices</span><span class="p">()</span>
 
@@ -590,6 +598,7 @@
         <span class="nb">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">local_devices</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">kind_devices</span><span class="p">)))</span>
   <span class="n">replication_devices</span> <span class="o">=</span> <span class="p">[]</span>
   <span class="k">for</span> <span class="n">device</span> <span class="ow">in</span> <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_get_all_devices</span><span class="p">():</span>
+    <span class="c1"># device is like &#39;CUDA:0&#39;</span>
     <span class="n">xdev</span> <span class="o">=</span> <span class="n">parse_xla_device</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">xdev</span><span class="p">:</span>
       <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s1">&#39;Invalid device format: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">device</span><span class="p">))</span>
@@ -617,6 +626,7 @@
   <span class="n">devctx</span> <span class="o">=</span> <span class="n">_get_device_context</span><span class="p">(</span><span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
   <span class="n">devices</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">devices</span><span class="p">]</span>
   <span class="k">if</span> <span class="n">devices</span><span class="p">:</span>
+    <span class="c1"># sample replication_devices: [&#39;CUDA:0&#39;, &#39;CUDA:1&#39;, &#39;CUDA:2&#39;, &#39;CUDA:3&#39;]</span>
     <span class="n">replication_devices</span> <span class="o">=</span> <span class="n">xla_replication_devices</span><span class="p">(</span><span class="n">devices</span><span class="p">)</span>
     <span class="n">torch_xla</span><span class="o">.</span><span class="n">_XLAC</span><span class="o">.</span><span class="n">_xla_set_replication_devices</span><span class="p">(</span><span class="n">replication_devices</span><span class="p">)</span>
     <span class="n">devctx</span><span class="o">.</span><span class="n">device_index</span> <span class="o">=</span> <span class="n">devices</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
