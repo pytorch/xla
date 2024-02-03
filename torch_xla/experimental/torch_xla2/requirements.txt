@@ -1,0 +1,7 @@
+--pre -f https://download.pytorch.org/whl/nightly/torch_nightly.html
+torch
+--pre -f https://storage.googleapis.com/jax-releases/jax_nightly_releases.html
+jax
+--pre -f https://storage.googleapis.com/jax-releases/jaxlib_nightly_releases.html
+jaxlib
+numpy
