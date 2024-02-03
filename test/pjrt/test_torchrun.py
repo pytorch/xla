@@ -16,6 +16,10 @@ class TestTorchrun(absltest.TestCase):
   def tearDown(self) -> None:
     dist.destroy_process_group()
 
+  def test_addressable_device_count(self):
+    devices_per_process = xr.addressable_device_count()
+    self.assertEqual(devices_per_process, 1)
+
   def test_all_gather(self):
     dist_world_size = xu.getenv_as('WORLD_SIZE', int)
     devices_per_thread = xr.addressable_device_count()

@@ -90,7 +90,7 @@ def get_xla_supported_devices(devkind=None, max_devices=None):
       that kind.
 
   Returns:
-    The list of device strings.
+    The list of device strings such as ['xla:0', 'xla:1', ...]
   """
   # TODO(wcromar): Remove `devkind` after 2.3 release cut. We no longer support
   # multiple device types.
@@ -220,6 +220,14 @@ def _xla_real_device(device):
 
 
 def xla_real_devices(devices: Optional[List[torch.device]] = None):
+  """Returns the real devices' name.
+
+  Args:
+    devices: The list of torch devices such as ['xla:0', 'xla:1'].
+
+  Returns:
+    A list of real devices' name such as ['CUDA:0', 'CUDA:1'].
+  """
   if not devices:
     devices = get_xla_supported_devices()
 
@@ -260,6 +268,7 @@ def xla_replication_devices(local_devices):
         format(len(local_devices), len(kind_devices)))
   replication_devices = []
   for device in torch_xla._XLAC._xla_get_all_devices():
+    # device is like 'CUDA:0'
     xdev = parse_xla_device(device)
     if not xdev:
       raise RuntimeError('Invalid device format: {}'.format(device))
@@ -287,6 +296,7 @@ def set_replication(device, devices):
   devctx = _get_device_context(device=device)
   devices = [str(x) for x in devices]
   if devices:
+    # sample replication_devices: ['CUDA:0', 'CUDA:1', 'CUDA:2', 'CUDA:3']
     replication_devices = xla_replication_devices(devices)
     torch_xla._XLAC._xla_set_replication_devices(replication_devices)
     devctx.device_index = devices.index(device)

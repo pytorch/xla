@@ -49,6 +49,7 @@ http_archive(
         "//openxla_patches:cache_urls.diff",
         "//openxla_patches:gpu_race_condition.diff",
         "//openxla_patches:f16_abi_clang.diff",
+        "//openxla_patches:gpu_hanging.diff",
         "//openxla_patches:quant_dequant_converter.diff",
         "//openxla_patches:stablehlo_quant_seralization.diff",
     ],

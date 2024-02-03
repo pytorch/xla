@@ -46,14 +46,17 @@ void TestSingleReplication(
     instances.emplace_back(CreateCrsComputation(shape), device_str,
                            all_device_strings, &shape);
   }
-  auto compiled_computations =
-      torch_xla::runtime::GetComputationClient()->Compile(std::move(instances));
+  std::vector<torch_xla::runtime::ComputationClient::ComputationPtr>
+      compiled_computations =
+          torch_xla::runtime::GetComputationClient()->Compile(
+              std::move(instances));
 
   std::vector<at::Tensor> tensors;
   for (size_t i = 0; i < device_strings.size(); ++i) {
     tensors.push_back(at::ones({8, 8}, at::TensorOptions(at::kFloat)));
   }
-  auto tensors_data = CreateTensorsData(tensors, device_strings);
+  std::vector<torch::lazy::BackendDataPtr> tensors_data =
+      CreateTensorsData(tensors, device_strings);
 
   std::vector<std::vector<torch_xla::runtime::ComputationClient::DataPtr>>
       results(device_strings.size());
@@ -75,7 +78,7 @@ void TestSingleReplication(
   counter.Wait();
 
   for (size_t i = 0; i < results.size(); ++i) {
-    auto literals =
+    std::vector<xla::Literal> literals =
         torch_xla::runtime::GetComputationClient()->TransferFromDevice(
             results[i]);
     ASSERT_EQ(literals.size(), 1);
@@ -92,9 +95,12 @@ void TestSingleReplication(
 
 class ReplicationTest : public AtenXlaTensorTestBase {};
 
+// Parallelism for DataParallel uses multi-threads. But cuda assumes one GPU
+// device per process instead of relying on threads so we will not run the test
+// on GPU.
 TEST_F(ReplicationTest, TestNSingleReplication) {
   WithAllDevices(
-      {XlaDeviceType::TPU, XlaDeviceType::CUDA},
+      {XlaDeviceType::TPU},
       [&](const std::vector<torch::lazy::BackendDevice>& devices,
           const std::vector<torch::lazy::BackendDevice>& all_devices) {
         TestSingleReplication(devices, all_devices);
