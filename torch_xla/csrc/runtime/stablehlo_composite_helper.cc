@@ -44,7 +44,7 @@ struct BoundaryMetadata {
   bool is_input;
   std::unordered_map<std::string, json> attrs;
 
-  auto boundary_key() const { return std::forward_as_tuple(name, id); }
+  auto boundary_key() const { return absl::StrCat(name, "__@@__", id); }
 
   auto uid() const { return std::forward_as_tuple(name, id, pos, is_input); }
 
@@ -116,10 +116,12 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
     for (mlir::func::FuncOp& func_op : func_ops) {
       llvm::DenseMap<const mlir::Operation*, size_t> op_order_map =
           BuildOpOrderMap(func_op);
-      for (auto op : func_op.getOps<mlir::stablehlo::CustomCallOp>()) {
-        if (mlir::failed(
-                BuildStableHLOComposite(op.getOperation(), op_order_map))) {
-          op.emitError() << "failed to build composite.";
+      std::unordered_map<std::string, llvm::SmallVector<mlir::Operation*>>
+          boundary_output_ops_map = BuildBoundaryOutputOpsMap(func_op);
+
+      for (const auto& [unused, ops] : boundary_output_ops_map) {
+        if (mlir::failed(BuildStableHLOComposite(ops, op_order_map))) {
+          func_op.emitError() << "failed to build composite.";
           return signalPassFailure();
         }
       }
@@ -142,6 +144,31 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
       op_order_map[&op.value()] = op.index();
     }
     return op_order_map;
+  }
+
+  std::unordered_map<std::string, llvm::SmallVector<mlir::Operation*>>
+  BuildBoundaryOutputOpsMap(mlir::func::FuncOp func_op) {
+    std::unordered_map<std::string, llvm::SmallVector<mlir::Operation*>>
+        boundary_output_ops;
+
+    for (auto op : func_op.getOps<mlir::stablehlo::CustomCallOp>()) {
+      auto metadata_or = GetBoundaryMetadata(op);
+      if (mlir::failed(metadata_or)) {
+        continue;
+      }
+
+      std::unique_ptr<BoundaryMetadata> metadata = std::move(*metadata_or);
+      if (metadata == nullptr || metadata->is_input) {
+        continue;
+      }
+
+      auto& output_ops = boundary_output_ops[metadata->boundary_key()];
+      if (metadata->pos >= output_ops.size()) {
+        output_ops.resize(metadata->pos + 1, nullptr);
+      }
+      output_ops[metadata->pos] = op.getOperation();
+    }
+    return boundary_output_ops;
   }
 
   mlir::FailureOr<std::unique_ptr<BoundaryMetadata>> GetBoundaryMetadata(
@@ -196,19 +223,34 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
   }
 
   mlir::LogicalResult BuildStableHLOComposite(
-      mlir::Operation* op,
+      const llvm::SmallVector<mlir::Operation*>& output_ops,
       const llvm::DenseMap<const mlir::Operation*, size_t>& op_order_map) {
-    auto metadata_or = GetBoundaryMetadata(op);
+    if (output_ops.empty()) {
+      return mlir::success();
+    }
+
+    // Get the output op with minimum order num as the representative.
+    mlir::Operation* first_output_op = output_ops[0];
+    for (mlir::Operation* op : output_ops) {
+      if (op_order_map.at(op) < op_order_map.at(first_output_op)) {
+        first_output_op = op;
+      }
+    }
+
+    auto metadata_or = GetBoundaryMetadata(first_output_op);
     if (mlir::failed(metadata_or)) {
       return mlir::failure();
     }
 
     std::unique_ptr<BoundaryMetadata> metadata = std::move(*metadata_or);
     if (metadata == nullptr || metadata->is_input) {
-      return mlir::success();
+      // There should always be a valid boundary output metadata associated with
+      // each op in output_ops.
+      return mlir::failure();
     }
 
-    auto args_ops_or = GetBoundaryArgsAndOps(op, *metadata, op_order_map);
+    auto args_ops_or =
+        GetBoundaryArgsAndOps(output_ops, *metadata, op_order_map);
     if (mlir::failed(args_ops_or)) {
       return mlir::failure();
     }
@@ -216,10 +258,9 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
     auto [args, impl_ops] = *args_ops_or;
 
     mlir::func::FuncOp impl_func = BuildStableHLOCompositeImplFunc(
-        op, absl::StrCat(metadata->name, ".impl"), args, impl_ops);
-
+        output_ops, absl::StrCat(metadata->name, ".impl"), args, impl_ops);
     mlir::FailureOr<mlir::Operation*> composite_op_or =
-        BuildStableHLOCompositeOp(op, impl_func, args, *metadata);
+        BuildStableHLOCompositeOp(first_output_op, impl_func, args, *metadata);
     if (mlir::failed(composite_op_or)) {
       return mlir::failure();
     }
@@ -227,9 +268,13 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
 
     // Updates all users of this op's result(s) to use the results(s) of impl
     // func call.
-    for (size_t i = 0; i < op->getNumResults(); ++i) {
-      mlir::OpResult result = op->getResult(i);
-      result.replaceAllUsesWith(composite_op->getResult(i));
+    size_t composite_result_i = 0;
+    for (mlir::Operation* op : output_ops) {
+      for (size_t i = 0; i < op->getNumResults(); ++i) {
+        mlir::OpResult result = op->getResult(i);
+        result.replaceAllUsesWith(
+            composite_op->getResult(composite_result_i++));
+      }
     }
 
     // The unused impl_ops will be eliminated with canonicalizer.
@@ -239,11 +284,13 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
   mlir::FailureOr<std::pair<llvm::SmallVector<mlir::Value>,
                             llvm::SmallVector<mlir::Operation*>>>
   GetBoundaryArgsAndOps(
-      mlir::Operation* boundary_output_op, const BoundaryMetadata& metadata,
+      const llvm::SmallVector<mlir::Operation*> boundary_output_ops,
+      const BoundaryMetadata& metadata,
       const llvm::DenseMap<const mlir::Operation*, size_t>& op_order_map) {
     llvm::SetVector<mlir::Operation*> impl_ops_setvec;
     llvm::SetVector<std::pair<mlir::Value, int64_t>> arg_pos_setvec;
-    llvm::SmallVector<mlir::Operation*> processing({boundary_output_op});
+    llvm::SmallVector<mlir::Operation*> processing(boundary_output_ops.begin(),
+                                                   boundary_output_ops.end());
 
     // Reverse graph traversal: from boundary output op to boundary input op,
     // global function arg, or stablehlo constant.
@@ -318,8 +365,8 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
   }
 
   mlir::func::FuncOp BuildStableHLOCompositeImplFunc(
-      mlir::Operation* boundary_output_op, llvm::StringRef func_name,
-      const llvm::SmallVector<mlir::Value>& args,
+      const llvm::SmallVector<mlir::Operation*> boundary_output_ops,
+      llvm::StringRef func_name, const llvm::SmallVector<mlir::Value>& args,
       const llvm::SmallVector<mlir::Operation*>& impl_ops) {
     mlir::ModuleOp module_op = getOperation();
     mlir::MLIRContext* context = &getContext();
@@ -333,9 +380,11 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
       arg_types.push_back(arg.getType());
       arg_locs.push_back(arg.getLoc());
     }
-    llvm::SmallVector<mlir::Type> result_types(
-        boundary_output_op->getResultTypes().begin(),
-        boundary_output_op->getResultTypes().end());
+    llvm::SmallVector<mlir::Type> result_types;
+    for (mlir::Operation* op : boundary_output_ops) {
+      result_types.append(op->getResultTypes().begin(),
+                          op->getResultTypes().end());
+    }
 
     mlir::func::FuncOp impl_func = builder.create<mlir::func::FuncOp>(
         module_op.getLoc(), func_name,
@@ -350,9 +399,13 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
       mlir::Operation* cloned_op = builder.clone(*original_op, mapping);
       mapping.map(original_op, cloned_op);
     }
-    builder.create<mlir::func::ReturnOp>(
-        impl_func.getBody().getLoc(),
-        mapping.lookup(boundary_output_op)->getResults());
+
+    llvm::SmallVector<mlir::Value> results;
+    for (mlir::Operation* op : boundary_output_ops) {
+      results.append(mapping.lookup(op)->getResults().begin(),
+                     mapping.lookup(op)->getResults().end());
+    }
+    builder.create<mlir::func::ReturnOp>(impl_func.getBody().getLoc(), results);
 
     // Adds the new function to symbol table.
     mlir::SymbolTable symbol_table(module_op);

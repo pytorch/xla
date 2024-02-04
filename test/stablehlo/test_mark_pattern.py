@@ -54,9 +54,6 @@ class XlaMarkPatternTest(unittest.TestCase):
 
     class M(torch.nn.Module):
 
-      def __init__(self):
-        super().__init__()
-
       def forward(self, x, y):
         q, k, v = x.split(128, dim=-2)
         q = torch.ops.xla.mark_tensor(q, "sdpa", pos=0, id="0", is_input=True)
@@ -91,9 +88,6 @@ class XlaMarkPatternTest(unittest.TestCase):
   def test_composite_builder_sdpa_pattern(self):
 
     class M(torch.nn.Module):
-
-      def __init__(self):
-        super().__init__()
 
       def forward(self, x, y):
         b = StableHLOCompositeBuilder("sdpa", {"scale": 0.25})
@@ -155,9 +149,6 @@ class XlaMarkPatternTest(unittest.TestCase):
 
     class M(torch.nn.Module):
 
-      def __init__(self):
-        super().__init__()
-
       def forward(self, x, y):
         b = StableHLOCompositeBuilder("sdpa", {"scale": 0.25})
         q, k, v = x.split(128, dim=-2)
@@ -184,7 +175,24 @@ class XlaMarkPatternTest(unittest.TestCase):
         '{attributes = {scale = 2 : i64}, name = "sdpa"}}' in stablehlo)
     self.assertTrue(os.path.exists(os.path.join(tmp_path, 'saved_model.pb')))
 
-  def test_multiple_input(self):
+  def test_composite_builder_multiple_outputs(self):
+
+    class M(torch.nn.Module):
+
+      def forward(self, x, y):
+        builder = StableHLOCompositeBuilder("sample_composite")
+        x, y = builder.mark_inputs(x, y)
+        a = x + y
+        b = x - y
+        c = x + 1
+        a, b, c = builder.mark_outputs(a, b, c)
+        return a + b + c
+
+    input_args = (torch.randn((5, 5)), torch.randn((5, 5)))
+    stablehlo = self.run_func_get_stablehlo(M(), input_args)
+    self.assertEqual(stablehlo.count("@stablehlo.composite"), 1)
+
+  def test_multiple_inputs(self):
 
     def f(x, y):
       x = torch.ops.xla.mark_tensor(x, "p", 0, "0", True)
@@ -199,8 +207,7 @@ class XlaMarkPatternTest(unittest.TestCase):
     self.assertEqual(stablehlo.count("@stablehlo.composite"), 1)
     self.assertTrue('{attributes = {}, name = "p"}' in stablehlo)
 
-  @unittest.skip("Multiple outputs patterns are not supported now.")
-  def test_multiple_output(self):
+  def test_multiple_outputs(self):
 
     def f(x, y):
       x = torch.ops.xla.mark_tensor(x, "p", 0, "0", True)
