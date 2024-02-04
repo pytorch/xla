@@ -244,7 +244,9 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
 
     std::unique_ptr<BoundaryMetadata> metadata = std::move(*metadata_or);
     if (metadata == nullptr || metadata->is_input) {
-      return mlir::success();
+      // There should always be a valid boundary output metadata associated with
+      // each op in output_ops.
+      return mlir::failure();
     }
 
     auto args_ops_or =
