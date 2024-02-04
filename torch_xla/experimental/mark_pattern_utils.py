@@ -80,8 +80,4 @@ class StableHLOCompositeBuilder:
         should be replaced by the marked tensors in later usages.
     """
 
-    if len(tensors) > 1:
-      # TODO: Allow multiple composite outputs
-      raise ValueError(
-          f"StableHLO composite with more than one outputs is not supported.")
     return self._mark_tensor(*tensors, is_input=False)
