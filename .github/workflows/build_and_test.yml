@@ -3,10 +3,14 @@ on:
     branches:
       - master
       - r[0-9]+.[0-9]+
+    paths-ignore:
+      - 'experimental/torch_xla2/**'
   push:
     branches:
       - master
       - r[0-9]+.[0-9]+
+    paths-ignore:
+      - 'experimental/torch_xla2/**'
   workflow_dispatch:
 
 concurrency:

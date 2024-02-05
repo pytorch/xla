@@ -1,0 +1,8 @@
+-r requirements.txt
+pytest
+yapf
+tabulate
+transformers
+tf-nightly
+--pre -f https://download.pytorch.org/whl/nightly/torch_nightly.html
+torchvision
