@@ -225,7 +225,7 @@
               
               
                 <div class="version">
-                  master (2.2.0+git4814d64 )
+                  master (2.2.0+git732a1c7 )
                 </div>
               
             
@@ -406,6 +406,7 @@
 <li><a class="reference internal" href="#checkpointmanager">CheckpointManager</a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#process-groups">Process Groups</a></li>
 <li><a class="reference internal" href="#virtual-device-optimization">Virtual Device Optimization</a></li>
 <li><a class="reference internal" href="#number-of-processes">Number of processes</a></li>
 <li><a class="reference internal" href="#running-spmd-on-tpu-pod">Running SPMD on TPU Pod</a></li>
@@ -3525,6 +3526,27 @@ checkpointing directly to any fsspec-compatible filesystem, including GCS.</p></
 </div>
 </div>
 </div>
+<div class="section" id="process-groups">
+<h3>Process Groups<a class="headerlink" href="#process-groups" title="Permalink to this headline">¶</a></h3>
+<p>To use <code class="docutils literal notranslate"><span class="pre">torch.distributed</span></code> APIs such as distributed checkpointing, a process
+group is required. In SPMD mode, the <code class="docutils literal notranslate"><span class="pre">xla</span></code> backend is not supported since the
+compiler is responsible for all collectives.</p>
+<p>Instead, a CPU process group such as <code class="docutils literal notranslate"><span class="pre">gloo</span></code> must be used. On TPUs, the <code class="docutils literal notranslate"><span class="pre">xla://</span></code>
+init_method is still supported to discover the master IP, global world size,
+and host rank. An example initialization is below:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">torch.distributed</span> <span class="k">as</span> <span class="nn">dist</span>
+<span class="c1"># Import to register the `xla://` init_method</span>
+<span class="kn">import</span> <span class="nn">torch_xla.distributed.xla_backend</span>
+<span class="kn">import</span> <span class="nn">torch_xla.runtime</span> <span class="k">as</span> <span class="nn">xr</span>
+
+<span class="n">xr</span><span class="o">.</span><span class="n">use_spmd</span><span class="p">()</span>
+
+<span class="c1"># The `xla://` init_method will automatically discover master worker IP, rank,</span>
+<span class="c1"># and global world size without requiring environment configuration on TPUs.</span>
+<span class="n">dist</span><span class="o">.</span><span class="n">init_process_group</span><span class="p">(</span><span class="s1">&#39;gloo&#39;</span><span class="p">,</span> <span class="n">init_method</span><span class="o">=</span><span class="s1">&#39;xla://&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
 <div class="section" id="virtual-device-optimization">
 <h3>Virtual Device Optimization<a class="headerlink" href="#virtual-device-optimization" title="Permalink to this headline">¶</a></h3>
 <p>PyTorch/XLA normally transfers tensor data asynchronously from host to device once the tensor is defined. This is to overlap the data transfer with the graph tracing time. However, because GSPMD allows the user to modify the tensor sharding _after _the tensor has been defined, we need an optimization to prevent unnecessary transfer of tensor data back and forth between host and device. We introduce Virtual Device Optimization, a technique to place the tensor data on a virtual device SPMD:0 first, before uploading to the physical devices when all the sharding decisions are finalized. Every tensor data in SPMD mode is placed on a virtual device, SPMD:0. The virtual device is exposed to the user as an XLA device XLA:0 with the actual shards on physical devices, like TPU:0, TPU:1, etc.</p>
@@ -3873,6 +3895,7 @@ feature will come in the future releases.</p>
 <li><a class="reference internal" href="#checkpointmanager">CheckpointManager</a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#process-groups">Process Groups</a></li>
 <li><a class="reference internal" href="#virtual-device-optimization">Virtual Device Optimization</a></li>
 <li><a class="reference internal" href="#number-of-processes">Number of processes</a></li>
 <li><a class="reference internal" href="#running-spmd-on-tpu-pod">Running SPMD on TPU Pod</a></li>
