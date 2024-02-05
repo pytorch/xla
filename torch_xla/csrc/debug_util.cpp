@@ -262,7 +262,11 @@ void DebugUtil::analyze_graph_execution_python_frame(
   std::vector<torch::lazy::SourceLocation> frames =
       torch::lazy::GetPythonFrames();
   // python frame must be > 1
-  XLA_CHECK_GE(frames.size(), 1);
+  if (frames.size() == 0) {
+    // There is no python frame. Current thread might be started by
+    // autograd. Skip the python frame analysis.
+    return;
+  }
   std::stringstream ss;
   ss << "\n"
      << debug_output_prefix
