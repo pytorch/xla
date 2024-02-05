@@ -154,7 +154,7 @@ def _prepare_to_exit():
     if int(os.environ.get('PT_XLA_DEBUG', '0')):
       _summarize_fn_tracker()
   except Exception as e:
-    print('Caught an exception in the atexit callback: ', e)
+    print('Caught an exception in the atexit callback: ', e, flush=True)
     os._exit(1)
 
 
