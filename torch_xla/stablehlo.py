@@ -250,7 +250,7 @@ class XLAExportInterpreter(torch.fx.Interpreter):
                 if isinstance(arg_spec[0], (float, int)) and type(arg_spec[
                     1].type) == torch.TensorType else arg_spec[0],
                 args_and_specs))
-      return super().call_function(target, args, new_kwargs)
+    return super().call_function(target, args, new_kwargs)
 
   def run_node(self, n) -> Any:
     if n.op == 'placeholder':
