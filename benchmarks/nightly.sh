@@ -119,7 +119,7 @@ else
   # Grab the timestamp from the first result, if it exists.
   # Otherwise take the current timestamp.
   TIMESTAMP=$(head -1 ${WORKSPACE_RESULTS_DIR:?}/results.jsonl | \
-		sed -E 's|.*\"timestamp\": ([0-9.]+).*|\1|' || date +%s)
+              sed -E 's|.*\"timestamp\": ([0-9.]+).*|\1|' || date +%s)
 fi
 
 # Stabilize clock freqs
@@ -164,6 +164,9 @@ python xla/benchmarks/experiment_runner.py \
        --timestamp=${TIMESTAMP:?} ${PROFILING_FLAGS?}
 cd ..
 
+# Run Llama2 benchmarks.
+python ${BM_DIR:?}/llama.py --workspace_dir=${WORKSPACE_DIR:?}
+
 # Gather results and generate reports
 REPORTS_DIR=${NIGHTLY_RESULTS_DIR:?}/reports/${WORKSPACE:?}
 mkdir -p ${REPORTS_DIR:?}
@@ -175,49 +178,73 @@ XLA_GIT_TAG=$(git -C pytorch/xla describe --tags --always)
 GIT_TAGS="PT: ${PYTORCH_GIT_REV:?} XLA: ${XLA_GIT_TAG:?}"
 BM_DIR=${WORKSPACE_DIR:?}/pytorch/xla/benchmarks
 
+COMMON_TITLE_PREFIX=
+if [[ ${ENABLE_PROFILING?} ]]; then
+  COMMON_TITLE_PREFIX="[Profiling ON] "
+fi
+
+INFERENCE_BACKENDS_CMD='--backends inductor openxla+dynamo openxla_eval+dynamo openxla+lazytensor'
+TRAINING_BACKENDS_CMD='--backends inductor openxla+dynamo openxla+lazytensor'
+
 for testname in inference training; do
   for report in latest histogram speedup; do
     for format in csv svg; do
       for tier in '' 1; do
-	# Note: these (as well as $tier) can be null; read them with ${FOO?}
-	# instead of ${FOO:?}.
         TITLE_PREFIX=
-        if [[ ${ENABLE_PROFILING?} ]]; then
-          TITLE_PREFIX="[Profiling ON] "
+        TIER_CMD=
+        TIER_FILE_SUFFIX=
+        if [[ ${tier?} ]]; then
+          TITLE_PREFIX="${COMMON_TITLE_PREFIX?}Tier${tier?} "
+          TIER_CMD=--filter-by-tier=${tier:?}
+          TIER_FILE_SUFFIX=-tier${tier:?}
         fi
-	TIER_CMD=
-	TIER_FILE_SUFFIX=
-	if [[ ${tier?} ]]; then
-	  TITLE_PREFIX="${TITLE_PREFIX?}Tier${tier?} "
-	  TIER_CMD=--filter-by-tier=${tier:?}
-	  TIER_FILE_SUFFIX=-tier${tier:?}
-	fi
 
-	TITLE="(${testname:?})"
-	WIDTH=9
-	HEIGHT=7
-	if [ "${report:?}" == "latest" ]; then
+        TITLE="(${testname:?})"
+        WIDTH=9
+        HEIGHT=7
+        if [ "${report:?}" == "latest" ]; then
           TITLE="${WORKSPACE:?} (${testname:?}) ${GIT_TAGS:?}"
-	  if [[ -z ${tier?} ]]; then
-	    WIDTH=15
-	    HEIGHT=8
-	  fi
-	fi
-	BACKENDS_CMD=
-	if [ "${testname:?}" = 'inference' ]; then
-	    BACKENDS_CMD='--backends inductor openxla+dynamo openxla_eval+dynamo openxla+lazytensor'
-	else
-	    BACKENDS_CMD='--backends inductor openxla+dynamo openxla+lazytensor'
-	fi
-	python ${BM_DIR:?}/aggregate.py --accelerator=${ACCELERATOR:?} \
+          if [[ -z ${tier?} ]]; then
+            WIDTH=15
+            HEIGHT=8
+          fi
+        fi
+        BACKENDS_CMD=
+        if [ "${testname:?}" = 'inference' ]; then
+            BACKENDS_CMD="${INFERENCE_BACKENDS_CMD:?}"
+        else
+            BACKENDS_CMD="${TRAINING_BACKENDS_CMD:?}"
+        fi
+        python ${BM_DIR:?}/aggregate.py --accelerator=${ACCELERATOR:?} \
                --report=${report:?} --test=${testname:?} --format=${format:?} \
-	       --title="${TITLE_PREFIX?}${TITLE:?}" \
-	       --fig-height=${HEIGHT:?} --fig-width=${WIDTH:?} \
-	       ${TIER_CMD?} \
-	       ${BACKENDS_CMD:?} -- \
-	       ${NIGHTLY_RESULTS_DIR:?}/*.jsonl \
+               --title="${TITLE_PREFIX?}${TITLE:?}" \
+               --fig-height=${HEIGHT:?} --fig-width=${WIDTH:?} \
+               ${TIER_CMD?} \
+               ${BACKENDS_CMD:?} -- \
+               ${NIGHTLY_RESULTS_DIR:?}/*.jsonl \
                > ${REPORTS_DIR:?}/${ACCELERATOR:?}-${testname:?}-${report:?}${TIER_FILE_SUFFIX?}.${format:?}
       done
+    done
+  done
+done
+
+# Generate Llama2 output.
+for testname in inference; do
+  for report in latest_grouped; do
+    for format in csv svg tab; do
+      BACKENDS_CMD=
+      if [ "${testname:?}" = 'inference' ]; then
+        BACKENDS_CMD="${INFERENCE_BACKENDS_CMD:?}"
+      else
+        BACKENDS_CMD="${TRAINING_BACKENDS_CMD:?}"
+      fi
+      python ${BM_DIR:?}/aggregate.py --accelerator=${ACCELERATOR:?} \
+             --report=${report:?} --test=${testname:?} --format=${format:?} \
+             --title="${COMMON_TITLE_PREFIX?}Llama2 (${testname:?})" \
+             --filter='^llama2\.' \
+             ${BACKENDS_CMD:?} -- \
+             ${NIGHTLY_RESULTS_DIR:?}/*.jsonl \
+             > ${REPORTS_DIR:?}/${ACCELERATOR:?}-${testname:?}-${report:?}-llama2.${format:?}
     done
   done
 done
