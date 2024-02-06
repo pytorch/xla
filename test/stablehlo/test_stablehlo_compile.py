@@ -11,6 +11,7 @@ import torchvision
 
 os.environ['XLA_STABLEHLO_COMPILE'] = '1'
 
+
 class StableHloCompileTest(unittest.TestCase):
 
   def test_resnet18_stablehlo_compile(self):
