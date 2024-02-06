@@ -111,10 +111,17 @@ class ExperimentRunner:
           logger.info(f"SKIP already completed benchmark")
           continue
 
-        # Skip unsupported config.
-        if not self.model_loader.is_compatible(benchmark_model,
-                                               benchmark_experiment,
-                                               self._args.strict_compatible):
+        # Check if we should execute or skip the current configuration.
+        # A configuration SHOULD be skipped if and only if:
+        #
+        #   1. --no-skip was not specified; AND
+        #
+        #   2. the model is not compatible with the experiment configuration
+        #
+        # Otherwise, we should go ahead and execute it.
+        if (not self._args.no_skip and not self.model_loader.is_compatible(
+            benchmark_model, benchmark_experiment,
+            self._args.strict_compatible)):
           logger.warning("SKIP incompatible model and experiment configs.")
           self._save_results(benchmark_experiment.to_dict(),
                              benchmark_model.to_dict(), {"error": "SKIP"})
@@ -880,6 +887,11 @@ def parse_args(args=None):
       "--strict-compatible",
       action="store_true",
       help="Strictly skips some models including models without installation file or causing stackdump.",
+  )
+  parser.add_argument(
+      "--no-skip",
+      action="store_true",
+      help="Do not skip any model.",
   )
   return parser.parse_args(args)
 
