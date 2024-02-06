@@ -50,9 +50,7 @@ def _check_scale_zp(input, scale, zero_point, axis, dtype):
   # The followings are checked:
   # 1. scale, zp are 1D tensor.
   # 2. Lenghth of scale, zp matched the (de)quant dim.
-  # 3. zp dtype is the same as the quantized integer type.
   assert len(scale.shape) == 1 and len(zero_point.shape) == 1
-  assert zero_point.dtype == dtype
   if axis == -1:
     assert scale.numel() == 1 and zero_point.numel() == 1
   else:
