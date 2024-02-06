@@ -58,6 +58,10 @@ report sent to us if you have it.
 
 You can enable the PyTorch/XLA debugging tool by setting `PT_XLA_DEBUG=1`, which provides a couple useful debugging features.
 
+## PyTorch/XLA + Dynamo Debugging Tool
+
+You can enable the PyTorch/XLA + Dynamo debugging tool by setting `XLA_DYNAMO_DEBUG=1`.
+
 ### Perform A Auto-Metrics Analysis
 
 The debugging tool will analyze the metrics report and provide a summary. Some example output would be
