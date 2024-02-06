@@ -403,6 +403,104 @@ def pr_latest(results_map: Dict[str, Any], args, timestamps: List[str]):
     plt.savefig(sys.stdout.buffer, format=args.format)
 
 
+def pr_latest_grouped(results_map: Dict[str, Any], args, timestamps: List[str]):
+  titles, backend_labels = get_pr_titles(args)
+  acc_map = results_map[timestamps[-1]]
+  base_backend_name = _title_map[args.backends[0]]
+
+  # Iterate over all the results in the latest timestamp and store them
+  # in a per-model dict, i.e.
+  #   per_model[model_name][backend_label] = X.XX
+  per_model = {}
+  for backend in backend_labels:
+    speedup_label = f'{backend}:speedups'
+    model_label = f'{speedup_label}:model_name'
+    for i, model_name in enumerate(acc_map.get(model_label, ())):
+      if model_name not in per_model:
+        per_model[model_name] = {}
+      per_model[model_name][backend] = pr_round(acc_map[speedup_label][i])
+
+  # Create a dict with (key: model_name, value: list of results), where the
+  # list of results corresponds to each one of backend_labels. If a result
+  # doesn't exist, its corresponding element is Datapoint(None, None).
+  per_model_list = {}
+  for model_name, per_backend in per_model.items():
+    per_model_list[model_name] = []
+    for backend in backend_labels:
+      result = per_backend[backend] if backend in per_backend else Datapoint(
+          None, None)
+      per_model_list[model_name].append(result)
+
+  if not per_model_list:
+    logger.warning(f'cannot find data for accelerator {args.accelerator}')
+    return
+
+  # Append the GEOMEAN after all the sorted model names.
+  sorted_model_names = sorted(per_model_list.keys(), key=str.casefold)
+  sorted_model_names.append('GEOMEAN')
+  per_model_list['GEOMEAN'] = []
+  for backend in backend_labels:
+    per_model_list['GEOMEAN'].append(
+        pr_round(acc_map[f'{backend}:speedups:gmean']))
+
+  if args.format == 'csv' or args.format == 'tab':
+    headers = ['ModelName'] + [
+        header for title in titles for header in
+        [speedup_header(title, base_backend_name, args), 'StdDev']
+    ]
+    rows = []
+    for model_name in sorted_model_names:
+      rows += [[model_name] + [
+          v for i in range(len(per_model_list[model_name]))
+          for v in (per_model_list[model_name][i].avg,
+                    per_model_list[model_name][i].std)
+      ]]
+    pr_text(headers, rows, args)
+  else:
+    # Plot a horizontal bar chart because we might have lots of models.
+    fig, ax = plt.subplots(
+        figsize=(args.fig_width, args.fig_height), layout='constrained')
+    ax.axvline(x=1.0, color='lightgray')
+    n = len(sorted_model_names)
+    # Plot downwards, i.e. y(model_name='a') > y(model_name='z').
+    y = [n - v for v in range(n)]
+    # Leave some room between bar groups.
+    bar_width = 0.70 / len(backend_labels)
+
+    per_backend_list = {}
+    for i, backend in enumerate(backend_labels):
+      per_backend_list[backend] = []
+      for model_name in sorted_model_names:
+        per_backend_list[backend].append(per_model_list[model_name][i])
+
+    i = 0
+    for model_name, values in per_backend_list.items():
+      offset = bar_width * i
+      i += 1
+      rects = ax.barh(
+          [v - offset for v in y],
+          [round(v.avg, 2) if v.avg is not None else np.nan for v in values],
+          bar_width,
+          label=model_name,
+          xerr=[v.std if v.std is not None else np.nan for v in values])
+      ax.bar_label(rects)
+    plt.legend()
+    plt.title(
+        maketitle(
+            args, f'Speedup over {args.baseline.capitalize()} '
+            f'Benchmarked {base_backend_name}'))
+    plt.xlabel(f'Speedup')
+    plt.ylabel('Workload')
+    # Make sure the ytick lands at the middle of the bar group.
+    # Note that 'v' is at the middle of the first bar; we plot downwards
+    # so we have to subtract from it.
+    plt.yticks([v - (len(backend_labels) - 1) * bar_width / 2.0 for v in y],
+               sorted_model_names)
+    plt.margins(y=0)
+    plt.xlim(left=0)
+    plt.savefig(sys.stdout.buffer, format=args.format)
+
+
 def pr_histogram(results_map: Dict[str, Any], args, timestamps: List[str]):
   titles, data_labels = get_pr_titles(args)
   percentiles = [f'p{p}' for p in (95, 50, 5)]
@@ -510,6 +608,8 @@ def pr_results(results_map: Dict[str, Any], args):
 
   if args.report == 'latest':
     return pr_latest(results_map, args, timestamps)
+  elif args.report == 'latest_grouped':
+    return pr_latest_grouped(results_map, args, timestamps)
   elif args.report == 'histogram':
     return pr_histogram(results_map, args, timestamps)
   elif args.report == 'speedup':
@@ -585,7 +685,7 @@ def parse_args(args=None):
   parser.add_argument(
       '--report',
       default='speedup',
-      choices=['latest', 'histogram', 'speedup'],
+      choices=['latest', 'latest_grouped', 'histogram', 'speedup'],
       help='What report to generate.')
   parser.add_argument(
       '--test',
