@@ -530,54 +530,6 @@ class AtenOpTest(unittest.TestCase):
     run_export_and_compare(self, torch.ops.aten.argmin, args, kwargs)
 
   @unittest.skip
-  def test_aten_as_strided_0(self):
-    args = (
-        torch.randn((10, 10)).to(torch.float32),
-        [
-            0,
-            1,
-        ],
-        [
-            0,
-            1,
-        ],
-    )
-    kwargs = dict()
-    run_export_and_compare(self, torch.ops.aten.as_strided, args, kwargs)
-
-  @unittest.skip
-  def test_aten_as_strided_1(self):
-    args = (
-        torch.randn((10, 10)).to(torch.float16),
-        [
-            0,
-            1,
-        ],
-        [
-            0,
-            1,
-        ],
-    )
-    kwargs = dict()
-    run_export_and_compare(self, torch.ops.aten.as_strided, args, kwargs)
-
-  @unittest.skip
-  def test_aten_as_strided_2(self):
-    args = (
-        torch.randint(0, 10, (10, 10)).to(torch.int32),
-        [
-            0,
-            1,
-        ],
-        [
-            0,
-            1,
-        ],
-    )
-    kwargs = dict()
-    run_export_and_compare(self, torch.ops.aten.as_strided, args, kwargs)
-
-  @unittest.skip
   def test_aten_as_strided_copy_0(self):
     args = (
         torch.randn((10, 10)).to(torch.float32),
@@ -1369,41 +1321,44 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.div.Scalar, args, kwargs)
 
-  @unittest.skip
   def test_aten_div_Scalar_mode_0(self):
+
+    def aten_div_Scalar_mode_rounding_mode_trunc(input, other):
+      return torch.ops.aten.div.Scalar_mode(input, other, rounding_mode='floor')
+
     args = (
         torch.randn((10, 10)).to(torch.float32),
         0.123,
     )
-    kwargs = dict((
-        "rounding_mode",
-        "trunc",
-    ))
-    run_export_and_compare(self, torch.ops.aten.div.Scalar_mode, args, kwargs)
+    kwargs = dict()
+    run_export_and_compare(self, aten_div_Scalar_mode_rounding_mode_trunc, args,
+                           kwargs)
 
-  @unittest.skip
   def test_aten_div_Scalar_mode_1(self):
+
+    def aten_div_Scalar_mode_rounding_mode_trunc(input, other):
+      return torch.ops.aten.div.Scalar_mode(input, other, rounding_mode='floor')
+
     args = (
         torch.randn((10, 10)).to(torch.float16),
         0.123,
     )
-    kwargs = dict((
-        "rounding_mode",
-        "trunc",
-    ))
-    run_export_and_compare(self, torch.ops.aten.div.Scalar_mode, args, kwargs)
+    kwargs = dict()
+    run_export_and_compare(self, aten_div_Scalar_mode_rounding_mode_trunc, args,
+                           kwargs)
 
-  @unittest.skip
   def test_aten_div_Scalar_mode_2(self):
+
+    def aten_div_Scalar_mode_rounding_mode_trunc(input, other):
+      return torch.ops.aten.div.Scalar_mode(input, other, rounding_mode='floor')
+
     args = (
         torch.randint(0, 10, (10, 10)).to(torch.int32),
         0.123,
     )
-    kwargs = dict((
-        "rounding_mode",
-        "trunc",
-    ))
-    run_export_and_compare(self, torch.ops.aten.div.Scalar_mode, args, kwargs)
+    kwargs = dict()
+    run_export_and_compare(self, aten_div_Scalar_mode_rounding_mode_trunc, args,
+                           kwargs)
 
   def test_aten_div_Tensor_0(self):
     args = (
@@ -1429,29 +1384,31 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.div.Tensor, args, kwargs)
 
-  @unittest.skip
   def test_aten_div_Tensor_mode_0(self):
-    args = (
-        torch.randn((10, 10)).to(torch.float32),
-        torch.randn((10, 10)).to(torch.float32),
-    )
-    kwargs = dict((
-        "rounding_mode",
-        "trunc",
-    ))
-    run_export_and_compare(self, torch.ops.aten.div.Tensor_mode, args, kwargs)
 
-  @unittest.skip
+    def aten_div_Tensor_mode_rounding_mode_trunc(input, other):
+      return torch.ops.aten.div.Tensor_mode(input, other, rounding_mode='trunc')
+
+    args = (
+        torch.randn((10, 10)).to(torch.float32),
+        torch.randn((10, 10)).to(torch.float32),
+    )
+    kwargs = dict()
+    run_export_and_compare(self, aten_div_Tensor_mode_rounding_mode_trunc, args,
+                           kwargs)
+
   def test_aten_div_Tensor_mode_1(self):
+
+    def aten_div_Tensor_mode_rounding_mode_trunc(input, other):
+      return torch.ops.aten.div.Tensor_mode(input, other, rounding_mode='trunc')
+
     args = (
         torch.randn((10, 10)).to(torch.float16),
         torch.randn((10, 10)).to(torch.float16),
     )
-    kwargs = dict((
-        "rounding_mode",
-        "trunc",
-    ))
-    run_export_and_compare(self, torch.ops.aten.div.Tensor_mode, args, kwargs)
+    kwargs = dict()
+    run_export_and_compare(self, aten_div_Tensor_mode_rounding_mode_trunc, args,
+                           kwargs)
 
   def test_aten_embedding_0(self):
     args = (
@@ -4039,7 +3996,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.sin, args, kwargs)
 
-  @unittest.skip
   def test_aten_sin_2(self):
     args = (torch.randint(0, 10, (10, 10)).to(torch.int32),)
     kwargs = dict()
