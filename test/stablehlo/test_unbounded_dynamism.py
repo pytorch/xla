@@ -29,7 +29,6 @@ class UnboundedDynamismExportTest(unittest.TestCase):
     ep = torch.export.export(m, args=args, constraints=constraints)
     return ep
 
-  @unittest.skip("Unbounded Dynamism not supported on add.")
   def test_add(self):
     args = (torch.rand((10, 197, 768)), torch.rand((10, 197, 768)))
     constraints = [
@@ -42,6 +41,24 @@ class UnboundedDynamismExportTest(unittest.TestCase):
                                             constraints)
     shlo_module = exported_program_to_stablehlo(ep)
     shlo_text = shlo_module.get_stablehlo_text()
+    self.assertTrue(
+        re.search(
+            r'tensor<\?x197x768xf32>.*tensor<\?x197x768xf32>.*->.*tensor<\?x197x768xf32>',
+            shlo_text) is not None)
+
+  def test_add_scalar(self):
+    args = (torch.rand((10, 197, 768)), 0.345)
+    constraints = [
+        torch.export.dynamic_dim(args[0], 0),
+    ]
+    ep = self._test_export_dynamism_wrapper(torch.ops.aten.add.Tensor, args,
+                                            constraints)
+    shlo_module = exported_program_to_stablehlo(ep)
+    shlo_text = shlo_module.get_stablehlo_text()
+    self.assertTrue(
+        re.search(
+            r'tensor<f32>.*tensor<\?x197x768xf32>.*->.*tensor<\?x197x768xf32>',
+            shlo_text) is not None)
 
   def test_addmm(self):
     args = (torch.rand((5)), torch.rand((10, 5)), torch.rand((5, 5)))
