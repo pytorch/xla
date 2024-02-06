@@ -60,7 +60,7 @@ You can enable the PyTorch/XLA debugging tool by setting `PT_XLA_DEBUG=1`, which
 
 ## PyTorch/XLA + Dynamo Debugging Tool
 
-You can enable the PyTorch/XLA + Dynamo debugging tool by setting `XLA_DYNAMO_DEBUG=1`, which provides a couple useful debugging features.
+You can enable the PyTorch/XLA + Dynamo debugging tool by setting `XLA_DYNAMO_DEBUG=1`.
 
 ### Perform A Auto-Metrics Analysis
 
