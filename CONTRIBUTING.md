@@ -1,5 +1,7 @@
 # Contribute To PyTorch/XLA
 
+TEST COMMENT FOR CI/CD. DO NOT SUBMIT
+
 We appreciate all contributions. If you are planning to contribute a bug fix for an open issue, please comment on the thread and we're happy to provide any guidance.
 You are very welcome to pick issues from [good first issue](https://github.com/pytorch/xla/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) and [help wanted](https://github.com/pytorch/xla/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) labels.
 
