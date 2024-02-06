@@ -1872,8 +1872,12 @@ XLATensorPtr mul(const XLATensorPtr& input, const XLATensorPtr& other,
 
 XLATensorPtr mul(const XLATensorPtr& input, const at::Scalar& other,
                  c10::optional<at::ScalarType> logical_element_type) {
+  const torch::lazy::BackendDevice& device = input->GetDevice();
   torch::lazy::Value constant = XLAGraphExecutor::Get()->GetIrValueForScalar(
-      other, input->shape(), logical_element_type, input->GetDevice());
+      other,
+      xla::ShapeUtil::MakeScalarShape(
+          MakeXlaPrimitiveType(*logical_element_type, &device)),
+      logical_element_type, device);
   return input->CreateFrom(input->GetIrValue() * constant,
                            logical_element_type);
 }
