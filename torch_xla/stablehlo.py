@@ -233,6 +233,23 @@ class XLAExportInterpreter(torch.fx.Interpreter):
     new_kwargs = dict(kwargs)
     if 'device' in kwargs:
       new_kwargs['device'] = self._device
+    # If the op spec expects a `Tensor` input, we wrap the python float/int
+    # to a torch.tensor. The dtype for float respects
+    # `torch.get_default_dtype`. Without this wrapping, the python float
+    # will be wrapped before it enters dispatcher, and it doesn't respect
+    # the global default dtype.
+    if hasattr(target, '_schema'):
+      # Note: Use `_disable_current_modes` to alwasys create constant tensor.
+      # Under `fake_tensor_mode` a fake tensor will be created. This is not a
+      # use case for XLAExportInterpreter right now, adding to be future-proof.
+      with torch.utils._python_dispatch._disable_current_modes():
+        args_and_specs = tuple(zip(args, target._schema.arguments))
+        args = tuple(
+            map(
+                lambda arg_spec: torch.tensor(arg_spec[0])
+                if isinstance(arg_spec[0], (float, int)) and type(arg_spec[
+                    1].type) == torch.TensorType else arg_spec[0],
+                args_and_specs))
     return super().call_function(target, args, new_kwargs)
 
   def run_node(self, n) -> Any:
