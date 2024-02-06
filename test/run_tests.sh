@@ -154,10 +154,38 @@ function run_torch_op_tests {
 
 # DO NOT MODIFY
 function run_xla_op_tests1 {
+  run_dynamic "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
+  run_dynamic "$CDIR/ds/test_dynamic_shapes.py"
+  run_dynamic "$CDIR/ds/test_dynamic_shape_models.py" "$@" --verbosity=$VERBOSITY
+  run_eager_debug  "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
+  run_test "$CDIR/test_grad_checkpoint.py"
+  run_test "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
+  run_test_without_functionalization "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
+  run_pt_xla_debug "$CDIR/debug_tool/test_pt_xla_debug.py"
+  run_test "$CDIR/test_async_closures.py"
+  run_test "$CDIR/test_hlo_metadata.py"
+  run_test "$CDIR/test_profiler.py"
   run_test "$CDIR/pjrt/test_runtime.py"
   run_test "$CDIR/pjrt/test_runtime_single_proc_gpu.py"
   run_test "$CDIR/pjrt/test_runtime_multi_gpu.py"
   run_test "$CDIR/pjrt/test_runtime_multi_cpu.py"
+  run_test "$CDIR/pjrt/test_internal_tpu.py"
+  run_test "$CDIR/pjrt/test_ddp.py"
+  run_test "$CDIR/pjrt/test_mesh_service.py"
+  run_test "$CDIR/test_ops.py"
+  run_test "$CDIR/test_metrics.py"
+  run_test "$CDIR/test_zero1.py"
+  run_test "$CDIR/dynamo/test_dynamo_integrations_util.py"
+  run_test "$CDIR/dynamo/test_dynamo.py"
+  run_test "$CDIR/dynamo/test_bridge.py"
+  run_test "$CDIR/dynamo/test_num_output.py"
+  run_save_tensor_ir "$CDIR/dynamo/test_dynamo_graph_dump.py"
+  run_use_bf16 "$CDIR/test_data_type.py"
+  run_xla_ir_debug "$CDIR/test_env_var_mapper.py"
+  run_xla_hlo_debug "$CDIR/test_env_var_mapper.py"
+  run_xla_hlo_debug "$CDIR/stablehlo/test_stablehlo_save_load.py"
+  run_save_tensor_ir "$CDIR/spmd/test_spmd_graph_dump.py"
+  run_save_tensor_hlo "$CDIR/spmd/test_spmd_graph_dump.py"
 }
 
 # DO NOT MODIFY
