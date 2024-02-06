@@ -44,6 +44,7 @@ def op(aten_op, is_jax_func=True):
   return inner
 
 
+@op(torch.ops.aten.view_copy)
 @op(torch.ops.aten.view)
 @op(torch.ops.aten._unsafe_view)
 def _aten_unsafe_view(x, shape):
@@ -117,7 +118,7 @@ def _aten_index_select(x, dim, indexes):
 
 
 @op(torch.ops.aten.mean)
-def _aten_mean(x, dim, keepdim):
+def _aten_mean(x, dim=None, keepdim=False):
   return jnp.mean(x, dim, keepdims=keepdim)
 
 
@@ -146,7 +147,6 @@ def _aten_sub(x, y):
 @op(torch.ops.aten.mm)
 def _aten_mm(x, y):
   res = x @ y
-  assert res.dtype == jnp.bfloat16
   return res
 
 
@@ -166,6 +166,7 @@ def _aten_t(x):
 
 
 @op(torch.ops.aten.transpose)
+@op(torch.ops.aten.transpose_copy)
 def _aten_transpose(x, dim0, dim1):
   shape = list(range(len(x.shape)))
   shape[dim0], shape[dim1] = shape[dim1], shape[dim0]
@@ -218,8 +219,6 @@ def _aten_softmax(x, dim, halftofloat):
 def _aten_pow(x, y):
   if isinstance(y, int):
     y = float(y)
-  if isinstance(y, jnp.ndarray):
-    y = y.astype(jnp.astype(jnp.bfloat16))
   return jnp.power(x, y)
 
 
@@ -233,8 +232,13 @@ def _aten_view_as_complex(input):
 
 @op(torch.ops.aten.div)
 def _aten_div(x, y, rounding_mode=""):
+  res = x / y
   if rounding_mode == "trunc":
-    return jnp.floor_divide(x, y)
+    res = jnp.trunc(res)
+  return res
+
+@op(torch.ops.aten.true_divide)
+def _aten_true_divide(x, y):
   return x / y
 
 
@@ -253,10 +257,15 @@ def _aten_embedding(a, w, padding_idx=-1):
 
 @op(torch.ops.aten.rsqrt)
 def _aten_rsqrt(x):
+  if isinstance(x, int):
+    x = float(x)
+  if x.dtype == jnp.int32:
+    x = x.astype(jnp.float32)
   return jax.lax.rsqrt(x)
 
 
 @op(torch.ops.aten.expand)
+@op(torch.ops.aten.expand_copy)
 def _aten_expand(x, dims):
   def fix_dims(d, xs):
     if d == -1:
@@ -332,11 +341,13 @@ def split_with_sizes(x, sizes, dim):
 
 
 @op(torch.ops.aten.permute)
+@op(torch.ops.aten.permute_copy)
 def permute(t, dims):
   return jnp.transpose(t, dims)
 
 
 @op(torch.ops.aten.unsqueeze)
+@op(torch.ops.aten.unsqueeze_copy)
 @op(torch.ops.aten.unsqueeze.default)
 def _aten_unsqueeze(self, dim):
   if dim < 0:
@@ -412,6 +423,7 @@ def _aten_gelu(self, *, approximate="none"):
 
 
 @op(torch.ops.aten.squeeze)
+@op(torch.ops.aten.squeeze_copy)
 def _aten_squeeze_dim(self, dim):
   """Squeezes a Jax tensor by removing a single dimension of size 1.
 
@@ -427,16 +439,21 @@ def _aten_squeeze_dim(self, dim):
   # Validate input arguments
   if not isinstance(self, jnp.ndarray):
     raise TypeError(f"Expected a Jax tensor, got {type(self)}.")
-  if not isinstance(dim, int):
-    raise TypeError(f"Expected dim to be an int, got {type(dim)}.")
+  if isinstance(dim, int):
+    dim = [dim]
 
   # Check if the specified dimension has size 1
-  if self.shape[dim] != 1:
+  if all([self.shape[d] != 1 for d in dim]):
     return self
 
   # Use slicing to remove the dimension if it is 1
   new_shape = list(self.shape)
-  new_shape.pop(dim)
+  def fix_dim(p):
+    if p < 0:
+      return p + len(self.shape)
+    return p
+  dim = [fix_dim(d) for d in dim]
+  new_shape = [p for i, p in enumerate(self.shape) if i not in dim or p != 1]
   return self.reshape(new_shape)
 
 
@@ -797,6 +814,10 @@ def _aten_sum(self, dim=None, keepdim=False, dtype=None):
 def _aten_sqrt(self):
   return jnp.sqrt(self)
 
+@op(torch.ops.aten.tan)
+def _aten_tanh(self):
+  return jnp.tan(self)
+
 
 # aten.tanh
 @op(torch.ops.aten.tanh)
@@ -824,7 +845,36 @@ def _aten_minimum(self, other):
 
 # aten.max_pool2d_backward
 
+def _scatter_index(dim, index):
+  """Returns a tuple of indexes; 
+
+  The first is to select in input (to modify),
+  the second is to select from the values.
+  """
+  index_shape = list(index.shape) 
+  input_indexes = []
+  source_indexes = []
+  for i in range(len(index_shape)):
+    source_indexes.append(slice(0, index_shape[i]))
+    if i == dim:
+      input_indexes.append(index)
+    else:
+      target_shape = [1] * len(index_shape)
+      target_shape[i] = index_shape[i]
+      input_indexes.append(
+          jnp.broadcast_to(jnp.arange(index_shape[i]).reshape(target_shape), index_shape)
+      )
+  return tuple(input_indexes), tuple(source_indexes)
+
 # aten.scatter_add
+@op(torch.ops.aten.scatter_add)
+def _aten_scatter_add(input, dim, index, src):
+  """JAX implementation of scatter, mimicking torch.scatter behavior"""
+
+  input_indexes, source_indexes = _scatter_index(dim, index)
+  return input.at[input_indexes].add(src[source_indexes])
+
+
 # aten.logical_not
 
 # aten.sign
@@ -844,6 +894,24 @@ def _aten_atan(self):
 
 
 # aten.scatter_reduce
+@op(torch.ops.aten.scatter_reduce)
+def _aten_scatter_reduce(input, dim, index, src, reduce, *, include_self=True):
+  input_indexes, source_indexes = _scatter_index(dim, index)
+  if reduce == "sum":
+    return input.at[input_indexes].add(src[source_indexes])
+  elif reduce == "prod":
+    return input.at[input_indexes].multiply(src[source_indexes])
+  elif reduce == "mean":
+    return input.at[input_indexes].add(src[source_indexes])
+  elif reduce == "amax":
+    return input.at[input_indexes].max(src[source_indexes])
+  elif reduce == "amin":
+    return input.at[input_indexes].min(src[source_indexes])
+  else:
+    raise RuntimeError('Unknow reduction type: ', reduce)
+
+
+
 # aten.acos
 @op(torch.ops.aten.acos)
 def _aten_acos(self):
@@ -873,6 +941,26 @@ def _aten_lt(self, other):
 # aten.sym_numel
 # aten.reciprocal
 # aten.scatter
+@op(torch.ops.aten.select_scatter)
+def _aten_select_scatter(input, src, dim, index):
+  input_indexes = []
+  for x in range(len(input.shape)):
+    if x == dim:
+      input_indexes.append(index)
+    else:
+      input_indexes.append(slice(None, None, None))
+  return input.at[tuple(input_indexes)].set(src)
+
+
+@op(torch.ops.aten.scatter.src)
+def _aten_scatter_src(input, dim, index, src, reduce=None):
+  input_index, source_indexes = _scatter_index(dim, index)
+  return input.at[input_index].set(src[source_indexes])
+
+@op(torch.ops.aten.scatter.value)
+def _aten_scatter(input, dim, index, src, reduce=None):
+  input_index, source_indexes = _scatter_index(dim, index)
+  return input.at[input_index].set(src)
 
 
 # aten.acosh
@@ -996,6 +1084,7 @@ def _aten_constant_pad_nd(input, padding, value=0):
 
 # aten.convolution_backward
 @op(torch.ops.aten.copy)
+@op(torch.ops.aten.lift_fresh_copy)
 def _aten_copy(x):
   return jnp.copy(x)
 
@@ -1013,6 +1102,11 @@ def _aten_cosh(input):
 
 
 # aten.diagonal
+@op(torch.ops.aten.diagonal)
+def _aten_diagonal(input, offset=0, dim1=0, dim2=1):
+  return jnp.diagonal(input, offset, dim1, dim2)
+
+
 # aten.empty_strided
 # aten.eq
 @op(torch.ops.aten.eq)
@@ -1050,6 +1144,10 @@ def _aten_floor(input):
 
 
 # aten.fmod
+@op(torch.ops.aten.fmod)
+def _aten_fmod(input, other):
+  return input - other*_aten_div(input, other, 'trunc')
+
 # aten.gather
 # aten.ge
 @op(torch.ops.aten.ge)
@@ -1135,6 +1233,9 @@ def _aten_logical_xor(self, other):
 # aten.native_dropout
 # aten.native_group_norm_backward
 # aten.neg
+@op(torch.ops.aten.neg)
+def _aten_neg(x):
+  return -1 * x
 # aten.nonzero
 # aten.prod
 
@@ -1148,8 +1249,18 @@ def _aten_logical_xor(self, other):
 # aten.replication_pad3d
 # aten.roll
 # aten.scalar_tensor
-# aten.select_scatter
 # aten.slice_scatter
+@op(torch.ops.aten.slice_scatter)
+def _aten_slice_scatter(input, src, dim=0, start=None, end=None, step=1):
+  input_index = []
+  for x in range(len(input.shape)):
+    if x == dim:
+      input_index.append(slice(start, end, step))
+    else:
+      input_index.append(slice(None, None, None))
+  return input.at[tuple(input_index)].set(src)
+
+
 
 
 # aten.sort
@@ -1218,6 +1329,13 @@ def _aten_topk(input, k, dim=None, largest=True, sorted=True, *, out=None):
 @op(torch.ops.aten.trunc)
 def _aten_trunc(a):
   return jnp.trunc(a)
+
+
+@op(torch.ops.aten.unbind)
+@op(torch.ops.aten.unbind_copy)
+def _aten_unbind(a, dim=0):
+  return tuple(_aten_squeeze_dim(jax.lax.index_in_dim(a, i, axis=dim), dim) 
+               for i in range(a.shape[dim]))
 
 
 # NOTE: skip aten.upsample_nearest2d and aten.upsample_bilinear2d
