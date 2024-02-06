@@ -5,6 +5,7 @@ import jax.numpy as jnp
 import numpy
 import torch
 import torch._decomp as decomp
+import torch._decomp.decompositions
 from torch_xla2 import ops_registry
 import torch.utils._python_dispatch as torch_dispatch
 import torch.utils._pytree as torch_pytree
