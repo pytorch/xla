@@ -43,6 +43,7 @@ if [[ ${ENABLE_PROFILING?} ]]; then
   NIGHTLY_RESULTS=nightly_profiling_results
 fi
 WORKSPACE_DIR=${OUTPUT_DIR:?}/${NIGHTLY_RUNS:?}/${WORKSPACE:?}
+BM_DIR=${WORKSPACE_DIR:?}/pytorch/xla/benchmarks
 
 # Intermediate results, which are processed to generate reports.
 WORKSPACE_RESULTS_DIR=${WORKSPACE_DIR:?}/experiment_results
@@ -176,7 +177,6 @@ cp ${WORKSPACE_RESULTS_DIR:?}/results.jsonl \
 PYTORCH_GIT_REV=$(git -C pytorch rev-parse --short HEAD)
 XLA_GIT_TAG=$(git -C pytorch/xla describe --tags --always)
 GIT_TAGS="PT: ${PYTORCH_GIT_REV:?} XLA: ${XLA_GIT_TAG:?}"
-BM_DIR=${WORKSPACE_DIR:?}/pytorch/xla/benchmarks
 
 COMMON_TITLE_PREFIX=
 if [[ ${ENABLE_PROFILING?} ]]; then
