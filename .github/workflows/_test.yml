@@ -59,7 +59,7 @@ jobs:
             run_xla_op_tests2: 'xla_op2'
           - run_python_tests: 'python_tests'
             run_xla_op_tests3: 'xla_op3'
-          - run_python_tests: 'python'
+          - run_python_tests: 'python_tests'
             run_torch_mp_op_tests: 'torch_mp_op'
     timeout-minutes: ${{ inputs.timeout-minutes }}
     env:
