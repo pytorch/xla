@@ -2384,24 +2384,13 @@ XLATensorPtr rsub(const XLATensorPtr& input, const XLATensorPtr& other,
       logical_element_type);
 }
 
-static at::ScalarType MaybeDowncastScalarType(at::ScalarType type) {
-  // Python float constant becomes Double Type of at::Scalar.
-  // But pytorch treats it as float32.
-  if (type == at::ScalarType::Double) {
-    return at::ScalarType::Float;
-  }
-  return type;
-}
-
 XLATensorPtr rsub(const XLATensorPtr& input, const at::Scalar& other,
                   const at::Scalar& alpha,
                   c10::optional<at::ScalarType> logical_element_type) {
   torch::lazy::Value alpha_xla = XLAGraphExecutor::Get()->GetIrValueForScalar(
-      alpha, input->shape(), MaybeDowncastScalarType(alpha.type()),
-      input->GetDevice());
+      alpha, input->shape(), logical_element_type, input->GetDevice());
   torch::lazy::Value other_xla = XLAGraphExecutor::Get()->GetIrValueForScalar(
-      other, input->shape(), MaybeDowncastScalarType(other.type()),
-      input->GetDevice());
+      other, input->shape(), logical_element_type, input->GetDevice());
   return input->CreateFrom(other_xla - alpha_xla * input->GetIrValue(),
                            logical_element_type);
 }

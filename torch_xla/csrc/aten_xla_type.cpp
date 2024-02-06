@@ -2614,8 +2614,11 @@ at::Tensor XLANativeFunctions::rsub(const at::Tensor& self,
                                     const at::Scalar& alpha) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   CheckSubOperandTypes(self.scalar_type(), GetScalarType(other));
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::rsub(bridge::GetXlaTensor(self), other, alpha));
+  return DoBinaryOp(self, other,
+                    [&](const XLATensorPtr& xself, const at::Scalar& other,
+                        at::ScalarType dtype) {
+                      return tensor_methods::rsub(xself, other, alpha, dtype);
+                    });
 }
 
 at::Tensor scatter_reduce_helper(const at::Tensor& self, int64_t dim,
