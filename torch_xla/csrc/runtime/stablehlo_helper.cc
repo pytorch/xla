@@ -8,6 +8,7 @@
 #include "stablehlo/api/PortableApi.h"        // from @stablehlo
 #include "stablehlo/dialect/Serialization.h"  // from @stablehlo
 #include "stablehlo/dialect/StablehloOps.h"   // from @stablehlo
+#include "stablehlo/dialect/Version.h"        // from @stablehlo
 #include "stablehlo/dialect/VhloOps.h"        // from @stablehlo
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/stablehlo_composite_helper.h"
@@ -43,8 +44,8 @@ static std::string getMlirModuleBytecode(mlir::ModuleOp& mlir_module) {
       "STABLEHLO_BYTECODE_FROM_PRETTYPRINT", false);
   std::string txt_mlir_module;
   llvm::raw_string_ostream os{txt_mlir_module};
-  // TODO(lsiyuan): get the highest StableHLO version from runtime.
-  const std::string stablehlo_version = "0.14.23";
+  const std::string stablehlo_version =
+      mlir::vhlo::Version::getCurrentVersion().toString();
   if (!from_pretty_print) {
     auto result = mlir::stablehlo::serializePortableArtifact(
         mlir_module, /* target_version = */ stablehlo_version, os);
