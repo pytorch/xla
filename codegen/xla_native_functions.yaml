@@ -362,6 +362,7 @@ supported:
   - convolution_backward
   - diag_embed
   - embedding
+  - _embedding_bag
   - _euclidean_dist
   - slice_backward
   - diagonal_backward
