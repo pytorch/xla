@@ -4,7 +4,6 @@ import torch_xla.core.xla_model as xm
 from torch_xla import save_torch_model_as_stablehlo, save_as_stablehlo
 from torch_xla.stablehlo import StableHLOExportOptions, StableHLOGraphModule
 import torch
-import torch._export
 import torchvision
 import unittest
 import os
@@ -92,7 +91,7 @@ class SimpleExportTest(unittest.TestCase):
   def test_save_load(self):
     model = ElementwiseAdd()
     inputs = model.get_random_inputs()
-    exported = torch._export.export(model, inputs)
+    exported = torch.export.export(model, inputs)
     options = StableHLOExportOptions()
     options.override_tracing_arguments = inputs
     with tempfile.TemporaryDirectory() as tempdir:
@@ -104,7 +103,7 @@ class SimpleExportTest(unittest.TestCase):
   def test_save_load_without_saving_weights(self):
     model = ElementwiseAdd()
     inputs = model.get_random_inputs()
-    exported = torch._export.export(model, inputs)
+    exported = torch.export.export(model, inputs)
     options = StableHLOExportOptions()
     options.override_tracing_arguments = inputs
     options.save_weights = False
@@ -138,7 +137,7 @@ class SimpleExportTest(unittest.TestCase):
   def test_save_load3(self):
     model = ElementwiseAdd()
     inputs = model.get_random_inputs()
-    exported = torch._export.export(model, inputs)
+    exported = torch.export.export(model, inputs)
     with tempfile.TemporaryDirectory() as tempdir:
       # Shouldnt need specify options because exported has example_input inside
       save_as_stablehlo(exported, tempdir)

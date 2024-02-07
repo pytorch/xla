@@ -10,7 +10,7 @@ import unittest
 
 
 def export_torch_model(model, args):
-  exported = torch._export.export(model, args)
+  exported = torch.export.export(model, args)
   options = StableHLOExportOptions()
   options.override_tracing_arguments = args
   return exported_program_to_stablehlo(exported, options)
