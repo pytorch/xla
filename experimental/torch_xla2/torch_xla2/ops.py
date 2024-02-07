@@ -2,6 +2,7 @@
 """Torch ops implemented using jax."""
 import sys
 
+import flax
 import jax
 from jax import numpy as jnp
 import numpy as np
@@ -107,6 +108,7 @@ def _aten_index_copy(x, dim, indexes, source):
 
 @op(torch.ops.aten.select)
 @op(torch.ops.aten.index_select)
+@op(torch.ops.aten.select_copy)
 def _aten_index_select(x, dim, indexes):
   dims = []
   for i in range(len(x.shape)):
@@ -179,6 +181,7 @@ def _aten_triu(m, k):
 
 
 @op(torch.ops.aten.slice)
+@op(torch.ops.aten.slice_copy)
 def _aten_slice(self, dim=0, start=None, end=None, step=1):
   if end == sys.maxsize:
     end = self.shape[dim]
@@ -311,8 +314,9 @@ def _aten_index(self, indexes):
 
 
 @op(torch.ops.aten.split)
+@op(torch.ops.aten.split_copy)
 @op(torch.ops.aten.split_with_sizes)
-def split_with_sizes(x, sizes, dim):
+def split_with_sizes(x, sizes, dim=0):
   """Splits an array `x` into sub-arrays based on static sizes `sizes`.
 
   Args:
@@ -509,6 +513,14 @@ def _aten_convolution(
     res = res + bias
   return res
 
+# _native_batch_norm_legit(Tensor input, Tensor? weight, Tensor? bias, Tensor(a!) running_mean, Tensor(b!) running_var, bool training, float momentum, float eps)
+@op(torch.ops.aten._native_batch_norm_legit)
+def _aten__native_batch_norm_legit(
+    input, weight, bias, running_mean, running_var, training, momentum, eps
+):
+  return _aten__native_batch_norm_legit_no_training(
+    input, weight, bias, running_mean, running_var, momentum, eps
+  )
 
 @op(torch.ops.aten._native_batch_norm_legit_no_training)
 def _aten__native_batch_norm_legit_no_training(
@@ -542,59 +554,72 @@ def _aten_cat(tensors, dims=0):
 
 
 @op(torch.ops.aten.max_pool2d_with_indices)
+@op(torch.ops.aten.max_pool3d_with_indices)
 def _aten_max_pool2d_with_indices(
-    self, kernel_size, stride, padding=0, dilation=1, ceil_mode=False
+    inputs, kernel_size, strides, padding=0, dilation=1, ceil_mode=False
 ):
-  stride = stride if stride else [1, 1]
-  if not isinstance(padding, (list, tuple)):
-    padding = [padding, padding]
+  num_batch_dims = len(inputs.shape) - len(kernel_size) - 1
+  kernel_size = tuple(kernel_size)
+  strides = tuple(strides)
+  if isinstance(padding, int):
+    padding = tuple((padding, padding) for _ in range(len(kernel_size)))
+  elif isinstance(padding, list):
+    padding = tuple((p, p) for p in padding)
 
-  def build_ceil_mode_padding():
-    ceil_mode_padding = [(0, 0), (0, 0)]
-    for i in range(len(padding)):
-      left_padding = padding[0]
-      input_size = self.shape[2 + i]
-      output_size_rem = (
-          input_size + 2 * left_padding - kernel_size[i]
-      ) % stride[i]
-      right_padding = left_padding
-      if ceil_mode and output_size_rem != 0:
-        extra_padding = stride[i] - output_size_rem
-        new_output_size = (
-            input_size
-            + left_padding
-            + right_padding
-            + extra_padding
-            - kernel_size[i]
-            + stride[i]
-            - 1
-        ) // stride[i] + 1
-        if (new_output_size - 1) * stride[i] < input_size + left_padding:
-          right_padding += extra_padding
-      ceil_mode_padding.append((left_padding, right_padding))
-    return ceil_mode_padding
+  window_shape = kernel_size
+  num_batch_dims = inputs.ndim - (len(window_shape) + 1)
+  strides = strides or (1,) * len(window_shape)
+  assert len(window_shape) == len(
+    strides
+  ), f'len({window_shape}) must equal len({strides})'
+  strides = (1,) * (1 + num_batch_dims) + strides
+  dims = (1,) * (1 + num_batch_dims) + window_shape
 
-  ceil_mode_padding = build_ceil_mode_padding()
-  if not all([p == (0, 0) for p in ceil_mode_padding]):
-    self = jnp.pad(
-        self,
-        ceil_mode_padding,
-        "constant",
-        constant_values=-jnp.inf,
+  is_single_input = False
+  if num_batch_dims == 0:
+    # add singleton batch dimension because lax.reduce_window always
+    # needs a batch dimension.
+    inputs = inputs[None]
+    strides = (1,) + strides
+    dims = (1,) + dims
+    is_single_input = True
+
+  assert inputs.ndim == len(dims), f'len({inputs.shape}) != len({dims})'
+  if not isinstance(padding, str):
+    padding = tuple(map(tuple, padding))
+    assert len(padding) == len(window_shape), (
+      f'padding {padding} must specify pads for same number of dims as '
+      f'window_shape {window_shape}'
     )
-  batch_result = jax.lax.reduce_window(
-      self,
-      -jnp.inf,
-      jax.lax.max,
-      window_dimensions=[1, 1] + kernel_size,
-      window_strides=[1, 1] + stride,
-      padding="VALID",
-  )
+    assert all(
+      [len(x) == 2 for x in padding]
+    ), f'each entry in padding {padding} must be length 2'
+    padding = ((0, 0),(0, 0)) + padding
 
-  # TODO: compute indices from batch_result
-  # Ref: https://github.com/pytorch/xla/blob/master/torch_xla/csrc/pooling.cpp#L259
+  indices = jnp.arange(np.prod(inputs.shape)).reshape(inputs.shape)
+  def reduce_fn(a, b):
+    ai, av = a
+    bi, bv = b
+    which = av > bv
+    return jnp.where(which, ai, bi), jnp.where(which, av, bv)
+  init_val = -jnp.inf
+  if inputs.dtype in (jnp.int32, jnp.int64):
+    init_val = -(1<<31)
+  init_val = jnp.array(init_val).astype(inputs.dtype)
+  
+  indices, y = jax.lax.reduce_window((indices, inputs), (0, init_val), 
+      reduce_fn, dims, strides, padding)
+  if is_single_input:
+    indices = jnp.squeeze(indices, axis=0)
+    y = jnp.squeeze(y, axis=0)
+  return y, indices
 
-  return batch_result, None
+
+  batch_result = pool(inputs, -jnp.inf, jax.lax.max, 
+    kernel_size, strides, padding)
+  indices = pool(inputs, 0, jnp.argmax, 
+    kernel_size, strides, padding)
+  return batch_result, indices
 
 
 # TODO add more ops
@@ -878,8 +903,16 @@ def _aten_scatter_add(input, dim, index, src):
 # aten.logical_not
 
 # aten.sign
-# aten.sigmoid
+@op(torch.ops.aten.sign)
+def _aten_sign(x):
+  return jnp.sign(x)
 
+# aten.sigmoid
+@op(torch.ops.aten.sigmoid)
+def _aten_sigmoid(x):
+  if x.dtype in (jnp.int32, jnp.int64):
+    x = x.astype(jnp.float32)
+  return jax.nn.sigmoid(x)
 
 # implement aten.asinh in jax
 @op(torch.ops.aten.asinh)
@@ -930,6 +963,34 @@ def _aten_gt(self, other):
 
 
 # aten.pixel_shuffle
+@op(torch.ops.aten.pixel_shuffle)
+def _aten_pixel_shuffle(x, upscale_factor):
+  """PixelShuffle implementation in JAX.
+
+  Args:
+    x: Input tensor. Typically a feature map.
+    upscale_factor: Integer by which to upscale the spatial dimensions.
+
+  Returns:
+    Tensor after PixelShuffle operation.
+  """
+  
+  batch_size, channels, height, width = x.shape
+
+  if channels % (upscale_factor ** 2) != 0:
+    raise ValueError('Number of channels must be divisible by the square of the upscale factor.')
+
+  new_channels = channels // (upscale_factor ** 2) 
+  new_height = height * upscale_factor
+  new_width = width * upscale_factor
+
+  x = x.reshape(batch_size, new_channels, upscale_factor, upscale_factor, height, width)
+  x = jnp.transpose(x, (0, 1, 2, 4, 3, 5))  # Move channels to spatial dimensions
+  x = x.reshape(batch_size, new_channels, new_height, new_width)
+
+  return x
+
+
 # aten.sym_stride
 # aten.lt
 @op(torch.ops.aten.lt)
@@ -937,9 +998,133 @@ def _aten_lt(self, other):
   return self < other
 
 
+def pool(inputs, init, reduce_fn, window_shape, strides, padding):
+  """Helper function to define pooling functions.
+
+  Pooling functions are implemented using the ReduceWindow XLA op.
+  NOTE: Be aware that pooling is not generally differentiable.
+  That means providing a reduce_fn that is differentiable does not imply that
+  pool is differentiable.
+
+  Args:
+    inputs: input data with dimensions (batch, window dims..., features).
+    init: the initial value for the reduction
+    reduce_fn: a reduce function of the form ``(T, T) -> T``.
+    window_shape: a shape tuple defining the window to reduce over.
+    strides: a sequence of ``n`` integers, representing the inter-window
+      strides (default: ``(1, ..., 1)``).
+    padding: either the string ``'SAME'``, the string ``'VALID'``, or a sequence
+      of ``n`` ``(low, high)`` integer pairs that give the padding to apply before
+      and after each spatial dimension.
+  Returns:
+    The output of the reduction for each window slice.
+  """
+  num_batch_dims = inputs.ndim - (len(window_shape) + 1)
+  strides = strides or (1,) * len(window_shape)
+  assert len(window_shape) == len(
+    strides
+  ), f'len({window_shape}) must equal len({strides})'
+  strides = (1,) * (1 + num_batch_dims) + strides
+  dims = (1,) * (1 + num_batch_dims) + window_shape
+
+  is_single_input = False
+  if num_batch_dims == 0:
+    # add singleton batch dimension because lax.reduce_window always
+    # needs a batch dimension.
+    inputs = inputs[None]
+    strides = (1,) + strides
+    dims = (1,) + dims
+    is_single_input = True
+
+  assert inputs.ndim == len(dims), f'len({inputs.shape}) != len({dims})'
+  if not isinstance(padding, str):
+    padding = tuple(map(tuple, padding))
+    assert len(padding) == len(window_shape), (
+      f'padding {padding} must specify pads for same number of dims as '
+      f'window_shape {window_shape}'
+    )
+    assert all(
+      [len(x) == 2 for x in padding]
+    ), f'each entry in padding {padding} must be length 2'
+    padding = ((0, 0),(0, 0)) + padding
+  y = jax.lax.reduce_window(inputs, init, reduce_fn, dims, strides, padding)
+  if is_single_input:
+    y = jnp.squeeze(y, axis=0)
+  return y
+
+@op(torch.ops.aten._adaptive_avg_pool3d)
+def _aten_adaptive_avg_pool3d(x, output_shape):
+  return _aten_adaptive_avg_pool(x, output_shape, 3)
+
+@op(torch.ops.aten._adaptive_avg_pool2d)
+def _aten_adaptive_avg_pool3d(x, output_shape):
+  return _aten_adaptive_avg_pool(x, output_shape, 2)
+
+def _aten_adaptive_avg_pool(x, output_shape, pool_dim):
+  def adaptive_kernel_size(input_shape, output_shape):
+    sizes = [1, 1]
+    spatial_dim_off = len(input_shape) - pool_dim
+    for spatial_dim in range(pool_dim):
+      sizes.append(
+        input_shape[spatial_dim_off + spatial_dim] // output_shape[spatial_dim]
+      )
+    return tuple(sizes)
+  kernel_sizes = adaptive_kernel_size(x.shape, output_shape)
+  y = pool(x, 0.0, jax.lax.add, kernel_sizes, kernel_sizes, 
+           padding='VALID')
+
+  div_shape = list(x.shape)
+  num_batch_dims = len(x.shape) - pool_dim - 1
+  div_shape[num_batch_dims] = 1
+  div_shape = tuple(div_shape)
+  if len(div_shape) - 2 == len(kernel_sizes):
+    div_shape = (1,) + div_shape[1:]
+  y = y / pool(
+    jnp.ones(div_shape), 0.0, jax.lax.add, kernel_sizes, kernel_sizes, 'VALID' 
+  )
+  return y
+
+
+
+
+
 # aten.avg_pool2d
+@op(torch.ops.aten.avg_pool2d)
+@op(torch.ops.aten.avg_pool3d)
+def _aten_avg_pool(
+  inputs, kernel_size, strides=None, padding=0, 
+  ceil_mode=False, count_include_pad=True, 
+  divisor_override=None):
+
+  num_batch_dims = len(inputs.shape) - len(kernel_size) - 1
+  kernel_size = tuple(kernel_size)
+  strides = tuple(strides)
+  if isinstance(padding, int):
+    padding = tuple((padding, padding) for _ in range(len(kernel_size)))
+  elif isinstance(padding, list):
+    padding = tuple((p, p) for p in padding)
+
+  y = pool(inputs, 0.0, jax.lax.add, kernel_size, strides, padding)
+  if count_include_pad:
+    y = y / np.prod(kernel_size)
+  else:
+    div_shape = list(inputs.shape)
+    div_shape[num_batch_dims] = 1
+    div_shape = tuple(div_shape)
+    if len(div_shape) - 2 == len(kernel_size):
+      div_shape = (1,) + div_shape[1:]
+    y = y / pool(
+      jnp.ones(div_shape), 0.0, jax.lax.add, kernel_size, strides, padding
+    )
+  return y
+
+
 # aten.sym_numel
 # aten.reciprocal
+@op(torch.ops.aten.reciprocal)
+def _aten_reciprocal(a):
+  return 1 / a
+
 # aten.scatter
 @op(torch.ops.aten.select_scatter)
 def _aten_select_scatter(input, src, dim, index):
@@ -973,7 +1158,9 @@ def _aten_acosh(self):
 # aten.col2im
 # aten.avg_pool3d
 # aten.round
-
+@op(torch.ops.aten.round)
+def _aten_round(input, decimals=0):
+  return jnp.round(input, decimals)
 
 # aten.max
 @op(torch.ops.aten.max)
@@ -1036,6 +1223,18 @@ def _aten_argmax(self, dim=None, keepdim=False):
 
 
 # aten.as_strided
+@op(torch.ops.aten.as_strided)
+@op(torch.ops.aten.as_strided_copy)
+def _aten_as_strided(x, sizes, strides, storage_offset=None):
+  ind = jnp.zeros(sizes, dtype=jnp.int32)
+
+  for i, (size, stride) in enumerate(zip(sizes, strides)):
+    result_shape = (1, ) * i + (size, ) + (1, ) * (len(sizes) - i - 1)
+    indexes = (jnp.arange(size) * stride).reshape(result_shape)
+    ind += indexes
+
+  return jnp.ravel(x)[ind]
+
 
 
 # aten.atan2
@@ -1089,6 +1288,23 @@ def _aten_copy(x):
   return jnp.copy(x)
 
 
+@op(torch.ops.aten._cdist_forward)
+def _aten_cdist_forward(x1, x2, p, compute_mode=''):
+  # x1 is B x P x M
+  # x2 is B x Q x M
+  # res is B x P x Q
+  x1 = jnp.expand_dims(x1, len(x1.shape)-1)
+  x2 = jnp.expand_dims(x2, len(x2.shape)-2)
+  return jnp.linalg.norm(x1 - x2, ord=p, axis=-1)
+
+@op(torch.ops.aten._pdist_forward)
+def _aten__pdist_forward(x, p):
+  pairwise_dists = _aten_cdist_forward(x, x, p)  
+  condensed_dists = pairwise_dists[jnp.triu_indices(pairwise_dists.shape[0], k=1)]
+  return condensed_dists
+  
+
+
 # aten.cos
 @op(torch.ops.aten.cos)
 def _aten_cos(input):
@@ -1115,6 +1331,13 @@ def _aten_eq(input1, input2):
 
 
 # aten.erf
+@op(torch.ops.aten.erf)
+def _aten_erf(x):
+  if x.dtype in (jnp.int32, jnp.int64):
+    x = x.astype(jnp.float32)
+  return jax.lax.erf(x)
+
+
 # aten.exp
 @op(torch.ops.aten.exp)
 def _aten_exp(input):
@@ -1128,6 +1351,15 @@ def _aten_expm1(input):
 
 
 # aten.fill
+@op(torch.ops.aten.fill)
+@op(torch.ops.aten.full_like)
+def _aten_fill(x, value, dtype=None, pin_memory=None, memory_format=None):
+  if dtype is None:
+    dtype = x.dtype
+  else:
+    dtype = tensor.t2j_dtype(dtype)
+  return jnp.full(x.shape, value, dtype)
+
 # aten.flip
 @op(torch.ops.aten.flip)
 def _aten_flip(input, dims):
@@ -1149,10 +1381,20 @@ def _aten_fmod(input, other):
   return input - other*_aten_div(input, other, 'trunc')
 
 # aten.gather
+@op(torch.ops.aten.gather)
+def _aten_gather(input, dim, index):
+  input_indexes, source_indexes = _scatter_index(dim, index)
+  return input[input_indexes]
+
 # aten.ge
 @op(torch.ops.aten.ge)
 def _aten_ge(self, other):
   return self >= other
+
+@op(torch.ops.aten.glu)
+@op(torch.ops.aten.glu.default)
+def _aten_glu(x, dim=-1):
+  return jax.nn.glu(x, dim)
 
 
 # aten.hardtanh
@@ -1237,17 +1479,39 @@ def _aten_logical_xor(self, other):
 def _aten_neg(x):
   return -1 * x
 # aten.nonzero
+@op(torch.ops.aten.nonzero)
+def _aten_nonzero(x):
+  index_tuple = jnp.nonzero(x)
+  index_tuple = [jnp.expand_dims(p, -1) for p in index_tuple]
+  return jnp.concatenate(index_tuple, axis=-1)
+
 # aten.prod
+
+@op(torch.ops.aten.prod)
+def _aten_prod(self, dim=None, keepdim=False):
+  return jnp.prod(self, axis=dim, keepdims=keepdim)
 
 # aten.rand
 # aten.randn
 # aten.randperm
 # aten.reflection_pad3d
 # aten.remainder
+@op(torch.ops.aten.remainder)
+def _aten_remainder(inputs, other):
+  return inputs % other
+
 # aten.repeat
+@op(torch.ops.aten.repeat)
+def _aten_repeat(x, reps):
+  return jnp.tile(x, reps)
+
 # aten.replication_pad2d
 # aten.replication_pad3d
 # aten.roll
+@op(torch.ops.aten.roll)
+def _aten_roll(input, shifts, dims=None):
+  return jnp.roll(input, shifts, dims)
+
 # aten.scalar_tensor
 # aten.slice_scatter
 @op(torch.ops.aten.slice_scatter)
@@ -1259,8 +1523,6 @@ def _aten_slice_scatter(input, src, dim=0, start=None, end=None, step=1):
     else:
       input_index.append(slice(None, None, None))
   return input.at[tuple(input_index)].set(src)
-
-
 
 
 # aten.sort
@@ -1350,10 +1612,17 @@ def _aten_where(condition, x, y):
 
 
 # aten.to.dtype
+#Tensor(a) self, ScalarType dtype, bool non_blocking=False, bool copy=False, MemoryFormat? memory_format=None
 @op(torch.ops.aten.to.dtype)
-def _aten_to_dtype(a, dtype):
+def _aten_to_dtype(a, dtype, non_blocking=False, copy=False, memory_format=None):
   jaxdtype = tensor.t2j_dtype(dtype)
   return a.astype(jaxdtype)
 
 
 # aten.to.device
+
+#Tensor self, int[1]? dim=None, *, Scalar? correction=None, bool keepdim=False
+@op(torch.ops.aten.var_mean.correction)
+def _aten_var_mean_correction(self, dim=None, correction=None, keepdim=False):
+  return (jnp.var(self, axis=dim, ddof=correction, keepdims=keepdim),
+          jnp.mean(self, dim, keepdims=keepdim))

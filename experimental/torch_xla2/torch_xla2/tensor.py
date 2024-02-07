@@ -120,11 +120,6 @@ def move_to_device(t):
   return XLATensor2(t2j(t))
 
 
-EXTRA_DECOMP = decomp.get_decompositions([torch.ops.aten.upsample_nearest2d])
-CORE_ATEN_DECOMP = decomp.core_aten_decompositions()
-CORE_ATEN_DECOMP.update(EXTRA_DECOMP)
-
-
 class XLATensor2(torch.Tensor):
 
   @staticmethod
@@ -189,14 +184,12 @@ class XLATensor2(torch.Tensor):
       else:
         print("  ", a)
     lowering = ops_registry.lowerings.lookup(func)
+
     if lowering is None:
-      if func in CORE_ATEN_DECOMP:
-        with XLADispatchMode():
-          return CORE_ATEN_DECOMP[func](*args, **kwargs)
-      else:
-        print(func.name(), func.tags)
         raise RuntimeError("No lowering found for", func.name())
-    res = lowering(*args, **kwargs)
+
+    with XLADispatchMode():
+      res = lowering(*args, **kwargs)
     print("output:")
     for a in torch_pytree.tree_flatten(res)[0]:
       if isinstance(a, XLATensor2):
