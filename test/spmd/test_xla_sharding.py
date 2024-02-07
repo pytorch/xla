@@ -819,13 +819,13 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
                               (0, 1))
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([actual.global_tensor])
     self.assertIn(
-        '%custom-call.10 = f32[1,128]{1,0} custom-call(f32[1,128]{1,0} %add.9), custom_call_target="Sharding", sharding=',
+        '%custom-call.7 = f32[1,128]{1,0} custom-call(f32[1,128]{1,0} %add.6), custom_call_target="Sharding", sharding=',
         hlo)
 
     actual += 0
     hlo = torch_xla._XLAC._get_xla_tensors_hlo([actual.global_tensor])
     self.assertIn(
-        '%add.15 = f32[1,128]{1,0} add(f32[1,128]{1,0} %custom-call.13, f32[1,128]{1,0} %broadcast.14)',
+        '%add.12 = f32[1,128]{1,0} add(f32[1,128]{1,0} %custom-call.10, f32[1,128]{1,0} %broadcast.11)',
         hlo)
 
     self.assertTrue(torch.allclose(expected, actual.cpu()))
