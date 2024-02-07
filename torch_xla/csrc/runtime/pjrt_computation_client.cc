@@ -350,11 +350,16 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::ReshardData(
     XLA_CHECK_NE(sharding.type(), xla::OpSharding::UNKNOWN)
         << "Can't reshard with UNKNOWN sharding type. Use REPLICATED for "
            "explicit replication.";
+
     hlo_shardings.push_back(
         ConsumeValue(xla::HloSharding::FromProto(sharding)));
 
-    xla::XlaScopedShardingAssignment assign(&builder,
-                                            sharded_data->GetSharding());
+    xla::OpSharding fallback_sharding;
+    fallback_sharding.set_type(xla::OpSharding::REPLICATED);
+    xla::XlaScopedShardingAssignment assign(
+        &builder, sharded_data->GetSharding().type() == xla::OpSharding::UNKNOWN
+                      ? fallback_sharding
+                      : sharded_data->GetSharding());
     param_ops.push_back(
         xla::Parameter(&builder, i, shapes[i], absl::StrCat("p.", i)));
   }

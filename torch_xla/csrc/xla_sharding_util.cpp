@@ -675,14 +675,18 @@ void ShardingUtil::ReshardParameters(
   std::vector<xla::OpSharding> filtered_shardings;
   for (int i = 0; i < input_shardings.size(); ++i) {
     // Skip if sharding type is UNKNOWN or equal to the existing.
-    if (!(input_shardings[i].type() == xla::OpSharding::UNKNOWN) &&
-        !(data[i]->GetSharding().type() == xla::OpSharding::UNKNOWN &&
+    XLA_CHECK(input_shardings[i].type() != xla::OpSharding::UNKNOWN)
+        << "UNKNOWN OpSharding generated from auto-sharding pass!";
+    if (!(data[i]->GetSharding().type() == xla::OpSharding::UNKNOWN &&
           input_shardings[i].type() == xla::OpSharding::REPLICATED) &&
         !xla::protobuf_util::ProtobufEquals(data[i]->GetSharding(),
                                             input_shardings[i])) {
       indices.push_back(i);
       filtered_data.push_back(data[i]);
       filtered_shardings.push_back(input_shardings[i]);
+      std::cout << "*** resharidng from: "
+                << data[i]->GetSharding().DebugString()
+                << "\n to: " << input_shardings[i].DebugString() << std::endl;
     }
   }
   TF_VLOG(3) << "ReshardParamters: resharding " << indices.size()
