@@ -13,7 +13,6 @@ import itertools
 from typing import Tuple, Union, List, Sequence, Any, Optional, Set
 from enum import IntEnum
 
-
 class Mesh:
   """Describe the logical XLA device topology mesh and the underlying resources.
 
@@ -121,6 +120,18 @@ class Mesh:
         partition_spec)
     return torch_xla._XLAC.OpSharding(tile_assignment, group_assignment,
                                       replication_groups, sharding_type)
+
+
+_GLOBAL_MESH: Mesh = None
+
+def set_global_mesh(mesh: Mesh):
+  global _GLOBAL_MESH
+  _GLOBAL_MESH = mesh
+
+
+def get_global_mesh():
+  global _GLOBAL_MESH
+  return _GLOBAL_MESH
 
 
 # HybridDevice class has been inspired from jax's mesh_utils: https://github.com/google/jax/blob/fc5960f2b8b7a0ef74dbae4e27c5c08ff1564cff/jax/experimental/mesh_utils.py#L4ƒ
