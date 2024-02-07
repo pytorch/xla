@@ -947,6 +947,9 @@ void zero_(XLATensorPtr& input);
 XLATensorPtr where(const XLATensorPtr& condition, const XLATensorPtr& input,
                    const XLATensorPtr& other);
 
+XLATensorPtr while_loop(const XLATensorPtr& condition, const XLATensorPtr& body,
+                   const XLATensorPtr& operands);
+
 }  // namespace tensor_methods
 }  // namespace torch_xla
 
