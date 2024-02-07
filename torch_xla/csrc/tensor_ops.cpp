@@ -252,13 +252,17 @@ XLATensorPtr Embedding(const XLATensorPtr& weight,
   }
 
   std::vector<int64_t> final_size;
+  int64_t num_elements = 1;
   for (int i = 0; i < weight->shape().get().rank(); i++) {
-    final_size.push_back(indices->shape().get().dimensions(i));
+    int64_t dim = indices->shape().get().dimensions(i);
+    final_size.push_back(dim);
+    num_elements *= dim;
   }
+
   final_size.push_back(weight->shape().get().dimensions(1));
 
-  XLATensorPtr embeddings =
-      tensor_methods::index_select(weight, 0, tensor_methods::squeeze(indices));
+  XLATensorPtr embeddings = tensor_methods::index_select(
+      weight, 0, tensor_methods::view(indices, {num_elements}));
   return tensor_methods::view(embeddings, final_size);
 }
 
