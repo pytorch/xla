@@ -359,6 +359,8 @@ XLATensorPtr embedding_dense_backward(const XLATensorPtr& grad_output,
                                       int64_t num_weights, int64_t padding_idx,
                                       bool scale_grad_by_freq);
 
+XLATensorPtr embedding(const XLATensorPtr& weight, const XLATensorPtr& indices);
+
 XLATensorPtr eq(const XLATensorPtr& input, const at::Scalar& other);
 
 XLATensorPtr eq(const XLATensorPtr& input, const XLATensorPtr& other);

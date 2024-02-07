@@ -242,5 +242,25 @@ XLATensorPtr EmbeddingDenseBackward(const XLATensorPtr& grad_output,
       /*result_permutation=*/{0, 1});
 }
 
+XLATensorPtr Embedding(const XLATensorPtr& weight,
+                       const XLATensorPtr& indices) {
+  XLA_CHECK_EQ(weight->shape().get().rank(), 2);
+  XLA_CHECK_EQ(indices->dtype(), at::ScalarType::Long);
+
+  if (indices->shape().get().rank() == 1) {
+    return tensor_methods::index_select(weight, 0, indices);
+  }
+
+  std::vector<int64_t> final_size;
+  for (int i = 0; i < weight->shape().get().rank(); i++) {
+    final_size.push_back(indices->shape().get().dimensions(i));
+  }
+  final_size.push_back(weight->shape().get().dimensions(1));
+
+  XLATensorPtr embeddings =
+      tensor_methods::index_select(weight, 0, tensor_methods::squeeze(indices));
+  return tensor_methods::view(embeddings, final_size);
+}
+
 }  // namespace tensor_ops
 }  // namespace torch_xla

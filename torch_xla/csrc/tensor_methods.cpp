@@ -1235,6 +1235,11 @@ XLATensorPtr embedding_dense_backward(const XLATensorPtr& grad_output,
                                             padding_idx, scale_grad_by_freq);
 }
 
+XLATensorPtr embedding(const XLATensorPtr& weight,
+                       const XLATensorPtr& indices) {
+  return tensor_ops::Embedding(weight, indices);
+}
+
 XLATensorPtr exp(const XLATensorPtr& input) {
   return input->CreateFrom(Exp(input->GetIrValue()));
 }

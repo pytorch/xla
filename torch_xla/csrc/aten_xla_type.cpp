@@ -115,10 +115,9 @@ void CheckSubOperandTypes(at::ScalarType type1, at::ScalarType type2) {
 
 c10::optional<at::ScalarType> PromoteIntegralType(
     at::ScalarType src_dtype, const c10::optional<at::ScalarType>& opt_dtype) {
-  return opt_dtype.has_value()
-             ? opt_dtype.value()
-             : at::isIntegralType(src_dtype, /*includeBool=*/true) ? at::kLong
-                                                                   : opt_dtype;
+  return opt_dtype.has_value() ? opt_dtype.value()
+         : at::isIntegralType(src_dtype, /*includeBool=*/true) ? at::kLong
+                                                               : opt_dtype;
 }
 
 bool IsTypeWithLargerRangeThanLong(torch::ScalarType dtype) {
@@ -3515,11 +3514,10 @@ at::Tensor XLANativeFunctions::embedding_symint(const at::Tensor& weight,
     return at::native::embedding_symint(weight, indices, padding_idx,
                                         scale_grad_by_freq, sparse);
   }
-  // TODO: for now route to native, which dispatches supported XLA operations.
-  // We need to make use of the TPU embedding core here eventually.
-  return at::functionalization::functionalize_aten_op_symint<ATEN_OP(
-      embedding)>::call(weight, indices, padding_idx, scale_grad_by_freq,
-                        sparse);
+
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  return bridge::AtenFromXlaTensor(tensor_methods::embedding(
+      bridge::GetXlaTensor(weight), bridge::GetXlaTensor(indices)));
 }
 
 at::Tensor XLANativeFunctions::_euclidean_dist(const at::Tensor& x1,
