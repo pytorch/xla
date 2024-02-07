@@ -162,6 +162,10 @@ torch::lazy::NodePtr Where(const torch::lazy::Value& condition,
                            const torch::lazy::Value& input,
                            const torch::lazy::Value& other);
 
+torch::lazy::NodePtr While_loop(const torch::lazy::Value& condition,
+                           const torch::lazy::Value& body,
+                           const torch::lazy::Value& operands);
+
 torch::lazy::NodePtr ARange(const at::Scalar& start, const at::Scalar& end,
                             const at::Scalar& step, at::ScalarType scalar_type);
 
