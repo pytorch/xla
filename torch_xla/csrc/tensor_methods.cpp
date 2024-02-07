@@ -755,14 +755,14 @@ XLATensorPtr add(const XLATensorPtr& input, const XLATensorPtr& other,
     constant = XLAGraphExecutor::Get()->GetIrValueForScalar(
         alpha,
         xla::ShapeUtil::MakeScalarShape(
-            MakeXlaPrimitiveType(*logical_element_type, &device)),
+            MakeXlaPrimitiveType(other->dtype(), &device)),
         logical_element_type, device);
   } else {
     SymIntElements sym_int_elements(other->GetIrValue());
     constant = XLAGraphExecutor::Get()->GetIrValueForScalar(
         alpha,
         xla::ShapeUtil::MakeScalarShape(
-            MakeXlaPrimitiveType(*logical_element_type, &device)),
+            MakeXlaPrimitiveType(other->dtype(), &device)),
         sym_int_elements, logical_element_type, device);
   }
 
@@ -778,13 +778,13 @@ XLATensorPtr add(const XLATensorPtr& input, const at::Scalar& other,
       XLAGraphExecutor::Get()->GetIrValueForScalar(
           other,
           xla::ShapeUtil::MakeScalarShape(
-              MakeXlaPrimitiveType(*logical_element_type, &device)),
+              MakeXlaPrimitiveType(input->dtype(), &device)),
           logical_element_type, device);
   torch::lazy::Value alpha_constant =
       XLAGraphExecutor::Get()->GetIrValueForScalar(
           alpha,
           xla::ShapeUtil::MakeScalarShape(
-              MakeXlaPrimitiveType(*logical_element_type, &device)),
+              MakeXlaPrimitiveType(input->dtype(), &device)),
           logical_element_type, device);
   return input->CreateFrom(
       input->GetIrValue() + other_constant * alpha_constant,
@@ -1876,7 +1876,7 @@ XLATensorPtr mul(const XLATensorPtr& input, const at::Scalar& other,
   torch::lazy::Value constant = XLAGraphExecutor::Get()->GetIrValueForScalar(
       other,
       xla::ShapeUtil::MakeScalarShape(
-          MakeXlaPrimitiveType(*logical_element_type, &device)),
+          MakeXlaPrimitiveType(input->dtype(), &device)),
       logical_element_type, device);
   return input->CreateFrom(input->GetIrValue() * constant,
                            logical_element_type);
