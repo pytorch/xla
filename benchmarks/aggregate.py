@@ -39,7 +39,7 @@ _test_to_field_name = {
     'inference': 'eval',
     'training': 'train',
 }
-_fig_elinewidth = 0.5
+_fig_elinewidth = 1.0
 _fig_capsize = 3
 
 _markers = ('D', 'o', 's', 'v', 'x', '+')
