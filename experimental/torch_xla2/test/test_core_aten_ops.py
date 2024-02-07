@@ -30,7 +30,8 @@ def diff_output(testcase, output1, output2, rtol, atol, equal_nan=True):
 
 
 def run_export_and_compare(
-    testcase, func, args, kwargs, atol=1e-3, rtol=1e-5, equal_nan=True
+    testcase, func, args, kwargs, atol=1e-3, rtol=1e-5, equal_nan=True,
+    ignore_indices=False
 ):
   with testcase.subTest("torch_eval"):
     res = func(*args, **kwargs)
@@ -42,9 +43,14 @@ def run_export_and_compare(
       res2 = pytree.tree_map_only(tensor.XLATensor2, lambda t: t.torch(), res2)
       # import pdb; pdb.set_trace()
       with testcase.subTest("torch_xla2_diff:" + str(atol)):
-        diff_output(
-            testcase, res, res2, atol=atol, rtol=rtol, equal_nan=equal_nan
-        )
+        if ignore_indices and isinstance(res, tuple) and len(res) == 2:
+          diff_output(
+              testcase, res[0], res2[0], atol=atol, rtol=rtol, equal_nan=equal_nan
+          )
+        else:
+          diff_output(
+              testcase, res, res2, atol=atol, rtol=rtol, equal_nan=equal_nan
+          )
 
 
 class TestCoreAtenOps(unittest.TestCase):
@@ -175,7 +181,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.unsqueeze, args, kwargs)
 
-  @unittest.skip
   def test_aten__adaptive_avg_pool2d_0(self):
     args = (
         torch.randn((1, 3, 1, 10)).to(torch.float32),
@@ -189,7 +194,6 @@ class TestCoreAtenOps(unittest.TestCase):
         self, torch.ops.aten._adaptive_avg_pool2d, args, kwargs
     )
 
-  @unittest.skip
   def test_aten__adaptive_avg_pool2d_1(self):
     args = (
         torch.randn((1, 3, 10, 10)).to(torch.float32),
@@ -243,7 +247,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.squeeze.dim, args, kwargs)
 
-  @unittest.skip
   def test_aten__adaptive_avg_pool3d_0(self):
     args = (
         torch.randn((1, 3, 10, 10, 10)).to(torch.float32),
@@ -258,7 +261,6 @@ class TestCoreAtenOps(unittest.TestCase):
         self, torch.ops.aten._adaptive_avg_pool3d, args, kwargs
     )
 
-  @unittest.skip
   def test_aten__adaptive_avg_pool3d_1(self):
     args = (
         torch.randn((1, 3, 10, 10, 10)).to(torch.float16),
@@ -513,23 +515,23 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.argmin, args, kwargs)
 
-  @unittest.skip
   def test_aten_as_strided_0(self):
     args = (
         torch.randn((10, 10)).to(torch.float32),
         [
-            0,
-            1,
+            2,
+            2,
+            2
         ],
         [
-            0,
+            8,
+            4,
             1,
         ],
     )
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.as_strided, args, kwargs)
 
-  @unittest.skip
   def test_aten_as_strided_1(self):
     args = (
         torch.randn((10, 10)).to(torch.float16),
@@ -545,7 +547,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.as_strided, args, kwargs)
 
-  @unittest.skip
   def test_aten_as_strided_2(self):
     args = (
         torch.randint(0, 10, (10, 10)).to(torch.int32),
@@ -561,7 +562,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.as_strided, args, kwargs)
 
-  @unittest.skip
   def test_aten_as_strided_copy_0(self):
     args = (
         torch.randn((10, 10)).to(torch.float32),
@@ -577,7 +577,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.as_strided_copy, args, kwargs)
 
-  @unittest.skip
   def test_aten_as_strided_copy_1(self):
     args = (
         torch.randn((10, 10)).to(torch.float16),
@@ -593,7 +592,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.as_strided_copy, args, kwargs)
 
-  @unittest.skip
   def test_aten_as_strided_copy_2(self):
     args = (
         torch.randint(0, 10, (10, 10)).to(torch.int32),
@@ -685,7 +683,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.atanh, args, kwargs)
 
-  @unittest.skip
   def test_aten_avg_pool2d_0(self):
     args = (
         torch.randn((1, 3, 1, 10)).to(torch.float32),
@@ -701,7 +698,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.avg_pool2d, args, kwargs)
 
-  @unittest.skip
   def test_aten_avg_pool2d_1(self):
     args = (
         torch.randn((3, 2, 10)).to(torch.float32),
@@ -721,7 +717,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.avg_pool2d, args, kwargs)
 
-  @unittest.skip
   def test_aten_avg_pool3d_0(self):
     args = (
         torch.randn((1, 3, 10, 10, 10)).to(torch.float32),
@@ -868,11 +863,10 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.cat, args, kwargs)
 
-  @unittest.skip
   def test_aten__cdist_forward_0(self):
     args = (
-        torch.randn((10, 10)).to(torch.float32),
-        torch.randn((10, 10)).to(torch.float32),
+        torch.randn((5, 7, 10)).to(torch.float32),
+        torch.randn((5, 8, 10)).to(torch.float32),
         1.0,
         None,
     )
@@ -1304,19 +1298,16 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.eq.Tensor, args, kwargs)
 
-  @unittest.skip
   def test_aten_erf_0(self):
     args = (torch.randn((10, 10)).to(torch.float32),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.erf, args, kwargs)
 
-  @unittest.skip
   def test_aten_erf_1(self):
     args = (torch.randn((10, 10)).to(torch.float16),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.erf, args, kwargs)
 
-  @unittest.skip
   def test_aten_erf_2(self):
     args = (torch.randint(0, 10, (10, 10)).to(torch.int32),)
     kwargs = dict()
@@ -1418,7 +1409,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.expm1, args, kwargs)
 
-  @unittest.skip
   def test_aten_fill_Scalar_0(self):
     args = (
         torch.randn((10, 10)).to(torch.float32),
@@ -1427,7 +1417,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.fill.Scalar, args, kwargs)
 
-  @unittest.skip
   def test_aten_fill_Scalar_1(self):
     args = (
         torch.randn((10, 10)).to(torch.float16),
@@ -1436,7 +1425,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.fill.Scalar, args, kwargs)
 
-  @unittest.skip
   def test_aten_fill_Scalar_2(self):
     args = (
         torch.randint(0, 10, (10, 10)).to(torch.int32),
@@ -1444,33 +1432,6 @@ class TestCoreAtenOps(unittest.TestCase):
     )
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.fill.Scalar, args, kwargs)
-
-  @unittest.skip
-  def test_aten_fill_Tensor_0(self):
-    args = (
-        torch.randn((10, 10)).to(torch.float32),
-        torch.randn(()).to(torch.float32),
-    )
-    kwargs = dict()
-    run_export_and_compare(self, torch.ops.aten.fill.Tensor, args, kwargs)
-
-  @unittest.skip
-  def test_aten_fill_Tensor_1(self):
-    args = (
-        torch.randn((10, 10)).to(torch.float16),
-        torch.randn(()).to(torch.float16),
-    )
-    kwargs = dict()
-    run_export_and_compare(self, torch.ops.aten.fill.Tensor, args, kwargs)
-
-  @unittest.skip
-  def test_aten_fill_Tensor_2(self):
-    args = (
-        torch.randint(0, 10, (10, 10)).to(torch.int32),
-        torch.randint(0, 10, ()).to(torch.int32),
-    )
-    kwargs = dict()
-    run_export_and_compare(self, torch.ops.aten.fill.Tensor, args, kwargs)
 
   def test_aten_flip_0(self):
     args = (
@@ -1560,7 +1521,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.fmod.Tensor, args, kwargs)
 
-  @unittest.skip
   def test_aten_full_like_0(self):
     args = (
         torch.randn((10, 10)).to(torch.float32),
@@ -1569,7 +1529,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.full_like, args, kwargs)
 
-  @unittest.skip
   def test_aten_full_like_1(self):
     args = (
         torch.randn((10, 10)).to(torch.float16),
@@ -1578,7 +1537,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.full_like, args, kwargs)
 
-  @unittest.skip
   def test_aten_full_like_2(self):
     args = (
         torch.randint(0, 10, (10, 10)).to(torch.int32),
@@ -1587,7 +1545,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.full_like, args, kwargs)
 
-  @unittest.skip
   def test_aten_gather_0(self):
     args = (
         torch.randn((10, 10)).to(torch.float32),
@@ -1597,7 +1554,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.gather, args, kwargs)
 
-  @unittest.skip
   def test_aten_gather_1(self):
     args = (
         torch.randn((10, 10)).to(torch.float16),
@@ -1607,7 +1563,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.gather, args, kwargs)
 
-  @unittest.skip
   def test_aten_gather_2(self):
     args = (
         torch.randint(0, 10, (10, 10)).to(torch.int32),
@@ -1633,7 +1588,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.ge.Scalar, args, kwargs)
 
-  @unittest.skip
   def test_aten_ge_Scalar_2(self):
     args = (
         torch.randint(0, 10, (10, 10)).to(torch.int32),
@@ -1676,7 +1630,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.gelu, args, kwargs, atol=0.01, rtol=0.01)
 
-  @unittest.skip
   def test_aten_glu_0(self):
     args = (
         torch.randn((10, 10)).to(torch.float32),
@@ -1685,7 +1638,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.glu, args, kwargs)
 
-  @unittest.skip
   def test_aten_glu_1(self):
     args = (
         torch.randn((10, 10)).to(torch.float16),
@@ -1694,7 +1646,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.glu, args, kwargs)
 
-  @unittest.skip
   def test_aten_grid_sampler_2d_0(self):
     args = (
         torch.randn((1, 3, 2, 10)).to(torch.float32),
@@ -2199,7 +2150,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.lt.Tensor, args, kwargs)
 
-  @unittest.skip
   def test_aten_masked_fill_Scalar_0(self):
     args = (
         torch.randn((10, 10)).to(torch.float32),
@@ -2211,7 +2161,6 @@ class TestCoreAtenOps(unittest.TestCase):
         self, torch.ops.aten.masked_fill.Scalar, args, kwargs
     )
 
-  @unittest.skip
   def test_aten_masked_fill_Scalar_1(self):
     args = (
         torch.randn((10, 10)).to(torch.float16),
@@ -2223,7 +2172,6 @@ class TestCoreAtenOps(unittest.TestCase):
         self, torch.ops.aten.masked_fill.Scalar, args, kwargs
     )
 
-  @unittest.skip
   def test_aten_masked_fill_Scalar_2(self):
     args = (
         torch.randint(0, 10, (10, 10)).to(torch.int32),
@@ -2259,7 +2207,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.max.dim, args, kwargs)
 
-  @unittest.skip
   def test_aten_max_pool2d_with_indices_0(self):
     args = (
         torch.randn((3, 2, 10)).to(torch.float32),
@@ -2278,10 +2225,10 @@ class TestCoreAtenOps(unittest.TestCase):
     )
     kwargs = dict()
     run_export_and_compare(
-        self, torch.ops.aten.max_pool2d_with_indices, args, kwargs
+        self, torch.ops.aten.max_pool2d_with_indices, args, kwargs,
+        ignore_indices=True
     )
 
-  @unittest.skip
   def test_aten_max_pool2d_with_indices_1(self):
     args = (
         torch.randn((3, 2, 10)).to(torch.float16),
@@ -2300,13 +2247,13 @@ class TestCoreAtenOps(unittest.TestCase):
     )
     kwargs = dict()
     run_export_and_compare(
-        self, torch.ops.aten.max_pool2d_with_indices, args, kwargs
+        self, torch.ops.aten.max_pool2d_with_indices, args, kwargs,
+        ignore_indices=True
     )
 
-  @unittest.skip
   def test_aten_max_pool2d_with_indices_2(self):
     args = (
-        torch.randint(0, 10, (3, 2, 10)).to(torch.int32),
+        torch.arange(0, 60).reshape(3, 2, 10),
         [
             2,
             2,
@@ -2322,10 +2269,10 @@ class TestCoreAtenOps(unittest.TestCase):
     )
     kwargs = dict()
     run_export_and_compare(
-        self, torch.ops.aten.max_pool2d_with_indices, args, kwargs
+        self, torch.ops.aten.max_pool2d_with_indices, args, kwargs,
+        ignore_indices=True
     )
 
-  @unittest.skip
   def test_aten_max_pool3d_with_indices_0(self):
     args = (
         torch.randn((1, 3, 2, 10)).to(torch.float32),
@@ -2350,7 +2297,6 @@ class TestCoreAtenOps(unittest.TestCase):
         self, torch.ops.aten.max_pool3d_with_indices, args, kwargs
     )
 
-  @unittest.skip
   def test_aten_max_pool3d_with_indices_1(self):
     args = (
         torch.randn((1, 3, 2, 10)).to(torch.float16),
@@ -2375,10 +2321,9 @@ class TestCoreAtenOps(unittest.TestCase):
         self, torch.ops.aten.max_pool3d_with_indices, args, kwargs
     )
 
-  @unittest.skip
   def test_aten_max_pool3d_with_indices_2(self):
     args = (
-        torch.randint(0, 10, (1, 3, 2, 10)).to(torch.int32),
+        torch.arange(0, 60).reshape(1, 3, 2, 10),
         [
             2,
             2,
@@ -2570,7 +2515,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.mul.Tensor, args, kwargs)
 
-  @unittest.skip
   def test_aten__native_batch_norm_legit_0(self):
     args = (
         torch.randn((10, 10)).to(torch.float32),
@@ -2587,7 +2531,6 @@ class TestCoreAtenOps(unittest.TestCase):
         self, torch.ops.aten._native_batch_norm_legit, args, kwargs
     )
 
-  @unittest.skip
   def test_aten__native_batch_norm_legit_1(self):
     args = (
         torch.randn((10, 10)).to(torch.float16),
@@ -2601,15 +2544,15 @@ class TestCoreAtenOps(unittest.TestCase):
     )
     kwargs = dict()
     run_export_and_compare(
-        self, torch.ops.aten._native_batch_norm_legit, args, kwargs
+        self, torch.ops.aten._native_batch_norm_legit, args, kwargs,
+        atol=0.01, rtol=0.01,
     )
 
-  @unittest.skip
   def test_aten__native_batch_norm_legit_no_stats_0(self):
     args = (
         torch.randn((1, 3, 2, 10)).to(torch.float32),
-        torch.randn((1, 3, 2, 10)).to(torch.float32),
-        torch.randn((1, 3, 2, 10)).to(torch.float32),
+        torch.randn((1, 3, 1, 1)).to(torch.float32),
+        torch.randn((1, 3, 1, 1)).to(torch.float32),
         True,
         0.0,
         1.0,
@@ -2619,12 +2562,11 @@ class TestCoreAtenOps(unittest.TestCase):
         self, torch.ops.aten._native_batch_norm_legit.no_stats, args, kwargs
     )
 
-  @unittest.skip
   def test_aten__native_batch_norm_legit_no_stats_1(self):
     args = (
         torch.randn((1, 3, 2, 10)).to(torch.float16),
-        torch.randn((1, 3, 2, 10)).to(torch.float16),
-        torch.randn((1, 3, 2, 10)).to(torch.float16),
+        torch.randn((1, 3, 1, 1)).to(torch.float32),
+        torch.randn((1, 3, 1, 1)).to(torch.float32),
         True,
         0.0,
         1.0,
@@ -2649,7 +2591,6 @@ class TestCoreAtenOps(unittest.TestCase):
         self, torch.ops.aten._native_batch_norm_legit_no_training, args, kwargs
     )
 
-  @unittest.skip
   def test_aten__native_batch_norm_legit_no_training_1(self):
     args = (
         torch.randn((10, 10)).to(torch.float16),
@@ -2662,30 +2603,30 @@ class TestCoreAtenOps(unittest.TestCase):
     )
     kwargs = dict()
     run_export_and_compare(
-        self, torch.ops.aten._native_batch_norm_legit_no_training, args, kwargs
+        self, torch.ops.aten._native_batch_norm_legit_no_training, args, kwargs,
+        atol=0.01, rtol=0.01,
     )
 
-  @unittest.skip
   def test_aten_native_dropout_0(self):
     args = (
         torch.randn((10, 10)).to(torch.float32),
         1.0,
-        None,
+        True,
     )
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.native_dropout, args, kwargs)
 
-  @unittest.skip
   def test_aten_native_dropout_1(self):
     args = (
         torch.randn((10, 10)).to(torch.float16),
         1.0,
-        None,
+        False,
     )
     kwargs = dict()
-    run_export_and_compare(self, torch.ops.aten.native_dropout, args, kwargs)
+    run_export_and_compare(self, torch.ops.aten.native_dropout, args, kwargs, 
+      atol=0.01, rtol=0.01
+    )
 
-  @unittest.skip
   def test_aten_native_group_norm_0(self):
     args = (
         torch.randn((1, 3, 2, 10)).to(torch.float32),
@@ -2700,7 +2641,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.native_group_norm, args, kwargs)
 
-  @unittest.skip
   def test_aten_native_group_norm_1(self):
     args = (
         torch.randn((1, 3, 2, 10)).to(torch.float16),
@@ -2713,9 +2653,10 @@ class TestCoreAtenOps(unittest.TestCase):
         0.0,
     )
     kwargs = dict()
-    run_export_and_compare(self, torch.ops.aten.native_group_norm, args, kwargs)
+    run_export_and_compare(self, torch.ops.aten.native_group_norm, args, kwargs,
+      atol=0.01, rtol=0.01 
+    )
 
-  @unittest.skip
   def test_aten_native_layer_norm_0(self):
     args = (
         torch.randn((1, 3, 2, 10)).to(torch.float32),
@@ -2795,25 +2736,21 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.neg, args, kwargs)
 
-  @unittest.skip
   def test_aten_nonzero_0(self):
     args = (torch.randint(0, 10, (10, 10)).to(torch.int32),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.nonzero, args, kwargs)
 
-  @unittest.skip
   def test_aten_nonzero_1(self):
     args = (torch.randn((10, 10)).to(torch.float16),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.nonzero, args, kwargs)
 
-  @unittest.skip
   def test_aten_nonzero_2(self):
     args = (torch.randn((10, 10)).to(torch.float32),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.nonzero, args, kwargs)
 
-  @unittest.skip
   def test_aten__pdist_forward_0(self):
     args = (
         torch.randn((10, 10)).to(torch.float32),
@@ -2891,7 +2828,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.permute_copy, args, kwargs)
 
-  @unittest.skip
   def test_aten_pixel_shuffle_0(self):
     args = (
         torch.randn((1, 3, 10, 10)).to(torch.float32),
@@ -2900,7 +2836,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.pixel_shuffle, args, kwargs)
 
-  @unittest.skip
   def test_aten_pixel_shuffle_1(self):
     args = (
         torch.randn((1, 3, 10, 10)).to(torch.float16),
@@ -2909,7 +2844,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.pixel_shuffle, args, kwargs)
 
-  @unittest.skip
   def test_aten_pixel_shuffle_2(self):
     args = (
         torch.randint(0, 10, (1, 3, 10, 10)).to(torch.int32),
@@ -2979,19 +2913,16 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.pow.Tensor_Tensor, args, kwargs)
 
-  @unittest.skip
   def test_aten_prod_0(self):
     args = (torch.randn((10, 10)).to(torch.float32),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.prod, args, kwargs)
 
-  @unittest.skip
   def test_aten_prod_1(self):
     args = (torch.randint(0, 10, (10, 10)).to(torch.int32),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.prod, args, kwargs)
 
-  @unittest.skip
   def test_aten_prod_dim_int_0(self):
     args = (
         torch.randn((10, 10)).to(torch.float32),
@@ -3000,7 +2931,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.prod.dim_int, args, kwargs)
 
-  @unittest.skip
   def test_aten_prod_dim_int_1(self):
     args = (
         torch.randint(0, 10, (10, 10)).to(torch.int32),
@@ -3009,19 +2939,16 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.prod.dim_int, args, kwargs)
 
-  @unittest.skip
   def test_aten_reciprocal_0(self):
     args = (torch.randn((10, 10)).to(torch.float32),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.reciprocal, args, kwargs)
 
-  @unittest.skip
   def test_aten_reciprocal_1(self):
     args = (torch.randn((10, 10)).to(torch.float16),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.reciprocal, args, kwargs)
 
-  @unittest.skip
   def test_aten_reciprocal_2(self):
     args = (torch.randint(0, 10, (10, 10)).to(torch.int32),)
     kwargs = dict()
@@ -3038,7 +2965,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.reflection_pad1d, args, kwargs)
 
-  @unittest.skip
   def test_aten_reflection_pad1d_1(self):
     args = (
         torch.randint(0, 10, (10, 10)).to(torch.int32),
@@ -3050,7 +2976,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.reflection_pad1d, args, kwargs)
 
-  @unittest.skip
   def test_aten_reflection_pad2d_0(self):
     args = (
         torch.randn((3, 2, 10)).to(torch.float32),
@@ -3064,7 +2989,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.reflection_pad2d, args, kwargs)
 
-  @unittest.skip
   def test_aten_reflection_pad2d_1(self):
     args = (
         torch.randint(0, 10, (3, 2, 10)).to(torch.int32),
@@ -3078,10 +3002,9 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.reflection_pad2d, args, kwargs)
 
-  @unittest.skip
   def test_aten_reflection_pad3d_0(self):
     args = (
-        torch.randn((3, 3, 3, 3, 3, 3)).to(torch.float32),
+        torch.randn((3, 3, 3, 3)).to(torch.float32),
         [
             1,
             2,
@@ -3094,10 +3017,9 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.reflection_pad3d, args, kwargs)
 
-  @unittest.skip
   def test_aten_reflection_pad3d_1(self):
     args = (
-        torch.randn((3, 3, 3, 3, 3, 3)).to(torch.float16),
+        torch.randn((3, 3, 3, 3, 3)).to(torch.float16),
         [
             1,
             2,
@@ -3110,10 +3032,9 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.reflection_pad3d, args, kwargs)
 
-  @unittest.skip
   def test_aten_reflection_pad3d_2(self):
     args = (
-        torch.randint(0, 10, (3, 3, 3, 3, 3, 3)).to(torch.int32),
+        torch.randint(0, 10, (3, 3, 3, 3)).to(torch.int32),
         [
             1,
             2,
@@ -3141,7 +3062,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.relu, args, kwargs)
 
-  @unittest.skip
   def test_aten_remainder_Scalar_0(self):
     args = (
         torch.randint(0, 10, (10, 10)).to(torch.int32),
@@ -3150,7 +3070,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.remainder.Scalar, args, kwargs)
 
-  @unittest.skip
   def test_aten_remainder_Scalar_1(self):
     args = (
         torch.randn((10, 10)).to(torch.float16),
@@ -3159,7 +3078,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.remainder.Scalar, args, kwargs)
 
-  @unittest.skip
   def test_aten_remainder_Scalar_2(self):
     args = (
         torch.randn((10, 10)).to(torch.float32),
@@ -3168,7 +3086,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.remainder.Scalar, args, kwargs)
 
-  @unittest.skip
   def test_aten_remainder_Tensor_0(self):
     args = (
         torch.randn((10, 10)).to(torch.float32),
@@ -3177,7 +3094,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.remainder.Tensor, args, kwargs)
 
-  @unittest.skip
   def test_aten_remainder_Tensor_1(self):
     args = (
         torch.randn((10, 10)).to(torch.float16),
@@ -3186,7 +3102,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.remainder.Tensor, args, kwargs)
 
-  @unittest.skip
   def test_aten_replication_pad2d_0(self):
     args = (
         torch.randn((3, 2, 10)).to(torch.float32),
@@ -3200,7 +3115,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.replication_pad2d, args, kwargs)
 
-  @unittest.skip
   def test_aten_replication_pad2d_1(self):
     args = (
         torch.randint(0, 10, (3, 2, 10)).to(torch.int32),
@@ -3214,7 +3128,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.replication_pad2d, args, kwargs)
 
-  @unittest.skip
   def test_aten_replication_pad3d_0(self):
     args = (
         torch.randn((1, 3, 2, 10)).to(torch.float32),
@@ -3230,7 +3143,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.replication_pad3d, args, kwargs)
 
-  @unittest.skip
   def test_aten_replication_pad3d_1(self):
     args = (
         torch.randint(0, 10, (1, 3, 2, 10)).to(torch.int32),
@@ -3246,46 +3158,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.replication_pad3d, args, kwargs)
 
-  @unittest.skip
-  def test_aten_resize__0(self):
-    args = (
-        torch.randn((2, 5, 10)).to(torch.float32),
-        [
-            2,
-            5,
-            10,
-        ],
-    )
-    kwargs = dict()
-    run_export_and_compare(self, torch.ops.aten.resize_, args, kwargs)
-
-  @unittest.skip
-  def test_aten_resize__1(self):
-    args = (
-        torch.randn((2, 5, 10)).to(torch.float16),
-        [
-            2,
-            5,
-            10,
-        ],
-    )
-    kwargs = dict()
-    run_export_and_compare(self, torch.ops.aten.resize_, args, kwargs)
-
-  @unittest.skip
-  def test_aten_resize__2(self):
-    args = (
-        torch.randint(0, 10, (2, 5, 10)).to(torch.int32),
-        [
-            2,
-            5,
-            10,
-        ],
-    )
-    kwargs = dict()
-    run_export_and_compare(self, torch.ops.aten.resize_, args, kwargs)
-
-  @unittest.skip
   def test_aten_roll_0(self):
     args = (
         torch.randn((10, 10)).to(torch.float32),
@@ -3301,7 +3173,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.roll, args, kwargs)
 
-  @unittest.skip
   def test_aten_roll_1(self):
     args = (
         torch.randn((10, 10)).to(torch.float16),
@@ -3317,7 +3188,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.roll, args, kwargs)
 
-  @unittest.skip
   def test_aten_roll_2(self):
     args = (
         torch.randint(0, 10, (10, 10)).to(torch.int32),
@@ -3333,19 +3203,16 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.roll, args, kwargs)
 
-  @unittest.skip
   def test_aten_round_0(self):
     args = (torch.randn((10, 10)).to(torch.float32),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.round, args, kwargs)
 
-  @unittest.skip
   def test_aten_round_1(self):
     args = (torch.randn((10, 10)).to(torch.float16),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.round, args, kwargs)
 
-  @unittest.skip
   def test_aten_round_2(self):
     args = (torch.randint(0, 10, (10, 10)).to(torch.int32),)
     kwargs = dict()
@@ -3519,7 +3386,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.scatter.value, args, kwargs)
 
-  @unittest.skip
   def test_aten_select_copy_int_0(self):
     args = (
         torch.randn((10, 10)).to(torch.float32),
@@ -3529,7 +3395,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.select_copy.int, args, kwargs)
 
-  @unittest.skip
   def test_aten_select_copy_int_1(self):
     args = (
         torch.randn((10, 10)).to(torch.float16),
@@ -3539,7 +3404,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.select_copy.int, args, kwargs)
 
-  @unittest.skip
   def test_aten_select_copy_int_2(self):
     args = (
         torch.randint(0, 10, (10, 10)).to(torch.int32),
@@ -3606,37 +3470,31 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.select_scatter, args, kwargs)
 
-  @unittest.skip
   def test_aten_sigmoid_0(self):
     args = (torch.randn((10, 10)).to(torch.float32),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.sigmoid, args, kwargs)
 
-  @unittest.skip
   def test_aten_sigmoid_1(self):
     args = (torch.randn((10, 10)).to(torch.float16),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.sigmoid, args, kwargs)
 
-  @unittest.skip
   def test_aten_sigmoid_2(self):
     args = (torch.randint(0, 10, (10, 10)).to(torch.int32),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.sigmoid, args, kwargs)
 
-  @unittest.skip
   def test_aten_sign_0(self):
     args = (torch.randn((10, 10)).to(torch.float32),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.sign, args, kwargs)
 
-  @unittest.skip
   def test_aten_sign_1(self):
     args = (torch.randn((10, 10)).to(torch.float16),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.sign, args, kwargs)
 
-  @unittest.skip
   def test_aten_sign_2(self):
     args = (torch.randint(0, 10, (10, 10)).to(torch.int32),)
     kwargs = dict()
@@ -3672,19 +3530,16 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.sinh, args, kwargs)
 
-  @unittest.skip
   def test_aten_slice_copy_Tensor_0(self):
     args = (torch.randn((10, 10)).to(torch.float32),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.slice_copy.Tensor, args, kwargs)
 
-  @unittest.skip
   def test_aten_slice_copy_Tensor_1(self):
     args = (torch.randn((10, 10)).to(torch.float16),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.slice_copy.Tensor, args, kwargs)
 
-  @unittest.skip
   def test_aten_slice_copy_Tensor_2(self):
     args = (torch.randint(0, 10, (10, 10)).to(torch.int32),)
     kwargs = dict()
@@ -3790,7 +3645,6 @@ class TestCoreAtenOps(unittest.TestCase):
     )
     self._compare_sorted_result(args)
 
-  @unittest.skip
   def test_aten_split_copy_Tensor_0(self):
     args = (
         torch.randn((10, 10)).to(torch.float32),
@@ -3799,7 +3653,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.split_copy.Tensor, args, kwargs)
 
-  @unittest.skip
   def test_aten_split_copy_Tensor_1(self):
     args = (
         torch.randn((10, 10)).to(torch.float16),
@@ -3808,7 +3661,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.split_copy.Tensor, args, kwargs)
 
-  @unittest.skip
   def test_aten_split_copy_Tensor_2(self):
     args = (
         torch.randint(0, 10, (10, 10)).to(torch.int32),
@@ -3817,7 +3669,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.split_copy.Tensor, args, kwargs)
 
-  @unittest.skip
   def test_aten_split_with_sizes_0(self):
     args = (
         torch.randn((10, 10)).to(torch.float32),
@@ -3831,7 +3682,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.split_with_sizes, args, kwargs)
 
-  @unittest.skip
   def test_aten_split_with_sizes_1(self):
     args = (
         torch.randn((10, 10)).to(torch.float16),
@@ -3845,7 +3695,6 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.split_with_sizes, args, kwargs)
 
-  @unittest.skip
   def test_aten_split_with_sizes_2(self):
     args = (
         torch.randint(0, 10, (10, 10)).to(torch.int32),
@@ -4161,19 +4010,16 @@ class TestCoreAtenOps(unittest.TestCase):
         self, torch.ops.aten.transpose_copy.int, args, kwargs
     )
 
-  @unittest.skip
   def test_aten_tril_0(self):
     args = (torch.randn((10, 10)).to(torch.float32),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.tril, args, kwargs)
 
-  @unittest.skip
   def test_aten_tril_1(self):
     args = (torch.randn((10, 10)).to(torch.float16),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.tril, args, kwargs)
 
-  @unittest.skip
   def test_aten_tril_2(self):
     args = (torch.randint(0, 10, (10, 10)).to(torch.int32),)
     kwargs = dict()
