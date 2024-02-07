@@ -13,6 +13,7 @@ import itertools
 from typing import Tuple, Union, List, Sequence, Any, Optional, Set
 from enum import IntEnum
 
+
 class Mesh:
   """Describe the logical XLA device topology mesh and the underlying resources.
 
@@ -123,6 +124,7 @@ class Mesh:
 
 
 _GLOBAL_MESH: Mesh = None
+
 
 def set_global_mesh(mesh: Mesh):
   global _GLOBAL_MESH
