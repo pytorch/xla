@@ -433,6 +433,30 @@ torch::lazy::NodePtr Where(const torch::lazy::Value& condition,
                    std::move(lower_fn));
 }
 
+torch::lazy::NodePtr While_loop(const torch::lazy::Value& condition,
+                           const torch::lazy::Value& body,
+                           const torch::lazy::Value& operands) {
+  auto lower_fn = [](const XlaNode& node,
+                     LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_condition = loctx->GetOutputOp(node.operand(0));
+    xla::XlaOp xla_body = loctx->GetOutputOp(node.operand(1));
+    xla::XlaOp xla_operands = loctx->GetOutputOp(node.operand(2));
+    xla::XlaOp pred_condition =
+        ConvertTo(xla_condition, XlaHelpers::TypeOfXlaOp(xla_condition),
+                  xla::PrimitiveType::PRED);
+    // TODO: confrim how to trest body here
+    xla::XlaOp pred_body =
+        ConvertTo(xla_body, XlaHelpers::TypeOfXlaOp(xla_body),
+                  xla::PrimitiveType::PRED);
+    auto promoted_branches = XlaHelpers::Promote(xla_operands);
+    return node.ReturnOp(xla::While(pred_condition, pred_body, promoted_branches),
+                         loctx);
+  };
+  return GenericOp(torch::lazy::OpKind(at::aten::while),
+                   {condition, body, operands}, GetXlaShape(operands),
+                   std::move(lower_fn));
+}
+
 torch::lazy::NodePtr ARange(const at::Scalar& start, const at::Scalar& end,
                             const at::Scalar& step,
                             at::ScalarType scalar_type) {
