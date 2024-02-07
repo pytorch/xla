@@ -3304,6 +3304,24 @@ at::Tensor XLANativeFunctions::where(const at::Tensor& condition,
       bridge::GetXlaTensor(*b_other)));
 }
 
+std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::while_loop(const at::Tensor& condition,
+                                                                  const at::Tensor& body,
+                                                                  const at::Tensor& operands) {
+  // TORCH_LAZY_FN_COUNTER("xla::");
+  // XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
+  auto results = tensor_methods::native_dropout(self_tensor, p, train);
+  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(results)),
+                         bridge::AtenFromXlaTensor(std::get<1>(results)));
+
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  c10::MaybeOwned<at::Tensor> b_condition, b_body, b_operands;
+  std::tie(b_condition, b_body, b_operands) =
+      xla_expand_outplace(condition, body, operands, "while_loop");
+  return bridge::AtenFromXlaTensor(tensor_methods::while_loop(
+      bridge::GetXlaTensor(*b_condition), bridge::GetXlaTensor(*b_body),
+      bridge::GetXlaTensor(*b_operands)));
+}
+
 at::Tensor& XLANativeFunctions::zero_(at::Tensor& self) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
