@@ -33,7 +33,7 @@ Also, this version of the SPMD is currently only tested.optimized on Google Clou
 
 ### Simple Example & Sharding Aannotation API
 
-Users can annotate native PyTorch tensors using the `mark_sharding` API ([src](https://github.com/pytorch/xla/blob/9a5fdf3920c18275cf7dba785193636f1b39ced9/torch_xla/experimental/xla_sharding.py#L388)). This takes `torch.Tensor` as input and returns a `XLAShardedTensor` as output.
+Users can annotate native PyTorch tensors using the `mark_sharding` API ([src](https://github.com/pytorch/xla/blob/4e8e5511555073ce8b6d1a436bf808c9333dcac6/torch_xla/distributed/spmd/xla_sharding.py#L452)). This takes `torch.Tensor` as input and returns a `XLAShardedTensor` as output.
 
 ```python
 def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor], mesh: Mesh, partition_spec: Tuple[Union[int, None]]) -> XLAShardedTensor
@@ -46,8 +46,8 @@ import numpy as np
 import torch
 import torch_xla.core.xla_model as xm
 import torch_xla.runtime as xr
-import torch_xla.experimental.xla_sharding as xs
-from torch_xla.experimental.xla_sharding import Mesh
+import torch_xla.distributed.spmd as xs
+from torch_xla.distributed.spmd import Mesh
 
 # Enable XLA SPMD execution mode.
 xr.use_spmd()
@@ -100,11 +100,11 @@ We derive a logical mesh based on this topology to create sub-groups of devices 
 
 ![alt_text](assets/mesh_spmd2.png "image_tooltip")
 
-We abstract logical mesh with [Mesh API](https://github.com/pytorch/xla/blob/028df4da388468fa9a41b1f98ea08bfce13b4c63/torch_xla/experimental/xla_sharding.py#L16). The axes of the logical Mesh can be named. Here is an example:
+We abstract logical mesh with [Mesh API](https://github.com/pytorch/xla/blob/4e8e5511555073ce8b6d1a436bf808c9333dcac6/torch_xla/distributed/spmd/xla_sharding.py#L17). The axes of the logical Mesh can be named. Here is an example:
 
 ```python
 import torch_xla.runtime as xr
-from torch_xla.experimental.xla_sharding import Mesh
+from torch_xla.distributed.spmd import Mesh
 
 # Assuming you are running on a TPU host that has 8 devices attached
 num_devices = xr.global_runtime_device_count()
@@ -130,7 +130,7 @@ In general, SPMD programs should create a single mesh and reuse it for all shard
 Mesh nicely abstracts how the physical device mesh is constructed. Users can arrange devices in any shape and order using the logical mesh. However, one can define a more performant mesh based on the physical topology, especially when it involves Data Center Network (DCN) cross slice connections. HybridMesh creates a mesh which gives good performance out of the box for such multislice environments. It accepts ici\_mesh\_shape and dcn\_mesh\_shape which denote logical mesh shapes of inner and outer network.
 
 ```python
-from torch_xla.experimental.xla_sharding import HybridMesh
+from torch_xla.distributed.spmd import HybridMesh
 
 # This example is assuming 2 slices of v4-8.
 # - ici_mesh_shape: shape of the logical mesh for inner connected devices.
@@ -198,10 +198,24 @@ The main use case for `XLAShardedTensor` [[RFC](https://github.com/pytorch/xla/i
 *   `XLAShardedTensor` is a `torch.Tensor` subclass and works directly with native torch ops and `module.layers`. We use `__torch_dispatch__` to send `XLAShardedTensor` to the XLA backend. PyTorch/XLA retrieves attached sharding annotations to trace the graph and invokes XLA SPMDPartitioner.
 *   Internally, `XLAShardedTensor` (and its global\_tensor input) is backed by `XLATensor` with a special data structure holding references to the sharded device data.
 *   The sharded tensor after lazy execution may be gathered and materialized back to the host as global\_tensor when requested on the host (e.g., printing the value of the global tensor.
-*   The handles to the local shards are materialized strictly after the lazy execution. `XLAShardedTensor` exposes [local\_shards](https://github.com/pytorch/xla/blob/909f28fa4c1a44efcd21051557b3bcf2d399620d/torch_xla/experimental/xla_sharded_tensor.py#L111) to return the local shards on addressable devices as <code>List[[XLAShard](https://github.com/pytorch/xla/blob/909f28fa4c1a44efcd21051557b3bcf2d399620d/torch_xla/experimental/xla_sharded_tensor.py#L12)]</code>.
+*   The handles to the local shards are materialized strictly after the lazy execution. `XLAShardedTensor` exposes [local\_shards](https://github.com/pytorch/xla/blob/4e8e5511555073ce8b6d1a436bf808c9333dcac6/torch_xla/distributed/spmd/xla_sharded_tensor.py#L117) to return the local shards on addressable devices as <code>List[[XLAShard](https://github.com/pytorch/xla/blob/4e8e5511555073ce8b6d1a436bf808c9333dcac6/torch_xla/distributed/spmd/xla_sharded_tensor.py#L12)]</code>.
 
 There is also an ongoing effort to integrate <code>XLAShardedTensor</code> into <code>DistributedTensor</code> API to support XLA backend [[RFC](https://github.com/pytorch/pytorch/issues/92909)].
 
+### DTensor Integration
+PyTorch has prototype-released [DTensor](https://github.com/pytorch/pytorch/blob/main/torch/distributed/_tensor/README.md) in 2.1.
+We are integrating PyTorch/XLA SPMD into DTensor API [RFC](https://github.com/pytorch/pytorch/issues/92909). We have a proof-of-concept integration for `distribute_tensor`, which calls `mark_sharding` annotation API to shard a tensor and its computation using XLA:
+```python
+import torch
+from torch.distributed import DeviceMesh, Shard, distribute_tensor
+
+# distribute_tensor now works with `xla` backend using PyTorch/XLA SPMD.
+mesh = DeviceMesh("xla", list(range(world_size)))
+big_tensor = torch.randn(100000, 88)
+my_dtensor = distribute_tensor(big_tensor, mesh, [Shard(0)])
+```
+
+This feature is experimental and stay tuned for more updates, examples and tutorials in the upcoming releases.
 
 ### Sharding-Aware Host-to-Device Data Loading
 
@@ -254,6 +268,78 @@ dist_cp.load_state_dict(
     planner=xc.SPMDLoadPlanner(),
 )
 model.load_state_dict(state_dict["model"])
+```
+
+#### CheckpointManager
+
+The experimental [CheckpointManager](https://github.com/pytorch/xla/blob/master/torch_xla/experimental/distributed_checkpoint/manager.py#L40)
+interface provides a higher-level API over the `torch.distributed.checkpoint`
+functions to enable a few key features:
+
+- **Managed checkpoints**: Each checkpoint taken by the `CheckpointManager` is
+identified by the step at which it was taken. All steps tracked are accessible
+through the `CheckpointManager.all_steps` method, and any tracked steps can be
+restored using `CheckpointManager.restore`.
+- **Asynchronous checkpointing**: Checkpoints taken through the
+`CheckpointManager.save_async` API are written to persistent storage
+asynchronously to unblock training for the duration of the checkpoint. The
+input sharded state_dict is first moved to CPU before the checkpoint is
+dispatched to a background thread.
+- **Auto-checkpointing on preemption**: On Cloud TPU, preemptions can be detected
+and a checkpoint taken before the process is terminated. To use, ensure your
+TPU is provisioned through a QueuedResource with
+[Autocheckpointing enabled](https://cloud.google.com/sdk/gcloud/reference/alpha/compute/tpus/queued-resources/create#--autocheckpoint-enabled),
+and ensure the `chkpt_on_preemption` parameter is set when constructing the
+CheckpointManager (this option is enabled by default).
+- **FSSpec Support**: `CheckpointManager` uses an fsspec storage backend to enable
+checkpointing directly to any fsspec-compatible filesystem, including GCS.
+
+Example usage of the CheckpointManager is below:
+
+```python
+from torch_xla.experimental.distributed_checkpoint import CheckpointManager
+
+# Create a CheckpointManager to checkpoint every 10 steps into GCS.
+chkpt_mgr = CheckpointManager('gs://my-bucket/my-experiment', 10)
+
+# Select a checkpoint to restore from, and restore if applicable
+tracked_steps = chkpt_mgr.all_steps()
+if tracked_steps:
+    # Choose the highest step
+    best_step = max(tracked_steps)
+    state_dict = {'model': model.state_dict()}
+    chkpt_mgr.restore(best_step, state_dict)
+    model.load_state_dict(state_dict['model'])
+
+# Call `save` or `save_async` every step within the train loop. These methods
+# return True when a checkpoint is taken.
+for step, data in enumerate(dataloader):
+    ...
+    state_dict = {'model': model.state_dict(), 'optim': optim.state_dict()}
+    if chkpt_mgr.save_async(step, state_dict):
+        print(f'Checkpoint taken at step {step}')
+```
+
+### Process Groups
+To use `torch.distributed` APIs such as distributed checkpointing, a process
+group is required. In SPMD mode, the `xla` backend is not supported since the
+compiler is responsible for all collectives.
+
+Instead, a CPU process group such as `gloo` must be used. On TPUs, the `xla://`
+init_method is still supported to discover the master IP, global world size,
+and host rank. An example initialization is below:
+
+```python
+import torch.distributed as dist
+# Import to register the `xla://` init_method
+import torch_xla.distributed.xla_backend
+import torch_xla.runtime as xr
+
+xr.use_spmd()
+
+# The `xla://` init_method will automatically discover master worker IP, rank,
+# and global world size without requiring environment configuration on TPUs.
+dist.init_process_group('gloo', init_method='xla://')
 ```
 
 ### Virtual Device Optimization
@@ -337,3 +423,31 @@ XLA_USE_SPMD=1 python test/spmd/test_train_spmd_imagenet.py --fake_data --batch_
 ```
 
 Note that I used a batch size 4 times as large since I am running it on a TPU v4 which has 4 TPU devices attached to it. You should see the throughput becomes roughly 4x the non-spmd run.
+
+### SPMD Debugging Tool
+
+We provide a `shard placement visualization debug tool` for PyTorch/XLA SPMD user on TPU/GPU/CPU with single-host/multi-host: you could use `visualize_tensor_sharding` to visualize sharded tensor, or you could use `visualize_sharding` to visualize sharing string. Here are two code examples on TPU single-host(v4-8) with `visualize_tensor_sharding` or `visualize_sharding`:
+- Code snippet used `visualize_tensor_sharding` and visualization result:
+```python
+import rich
+
+# Here, mesh is a 2x2 mesh with axes 'x' and 'y'
+t = torch.randn(8, 4, device='xla')
+xs.mark_sharding(t, mesh, ('x', 'y'))
+
+# A tensor's sharding can be visualized using the `visualize_tensor_sharding` method
+from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
+generated_table = visualize_tensor_sharding(t, use_color=False)
+```
+![alt_text](assets/spmd_debug_1.png "visualize_tensor_sharding example on TPU v4-8(single-host)")
+- Code snippet used `visualize_sharding` and visualization result:
+```python
+from torch_xla.distributed.spmd.debugging import visualize_sharding
+sharding = '{devices=[2,2]0,1,2,3}'
+generated_table = visualize_sharding(sharding, use_color=False)
+```
+![alt_text](assets/spmd_debug_2.png "visualize_sharding example on TPU v4-8(single-host")
+
+You could use these examples on TPU/GPU/CPU single-host and modify it to run on multi-host. And you could modify it to sharding-style `tiled`, `partial_replication` and `replicated`.
+
+

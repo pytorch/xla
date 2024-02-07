@@ -77,6 +77,7 @@ full_codegen:
   - rsqrt
   - selu
   - sgn
+  - sigmoid
   - sign
   - silu
   - silu_backward
@@ -84,6 +85,7 @@ full_codegen:
   - sinh
   - softshrink
   - softshrink_backward
+  - sqrt
   - take
   - tan
   - tanh
@@ -192,6 +194,7 @@ supported:
   - floor_divide
   - fmod.Scalar
   - fmod.Tensor
+  - full
   - gather
   - gelu
   - gelu_backward
@@ -215,6 +218,7 @@ supported:
   - linalg_vector_norm
   - linspace
   - log
+  - logit
   - log1p
   - log2
   - log10
@@ -267,6 +271,7 @@ supported:
   - pow.Tensor_Scalar
   - pow.Tensor_Tensor
   - _prelu_kernel
+  - _prelu_kernel_backward
   - prod
   - prod.dim_int
   - _propagate_xla_data
@@ -299,7 +304,6 @@ supported:
   - select_scatter
   - selu_
   - set_.source_Tensor
-  - sigmoid
   - sigmoid_backward
   - slice_copy.Tensor
   - slice_scatter
@@ -311,7 +315,6 @@ supported:
   - sort.stable
   - split_copy.Tensor
   - split_with_sizes_copy
-  - sqrt
   - squeeze_copy
   - squeeze_copy.dim
   - squeeze_copy.dims

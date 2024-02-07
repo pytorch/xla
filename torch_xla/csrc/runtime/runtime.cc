@@ -3,44 +3,45 @@
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 #include "torch_xla/csrc/runtime/env_vars.h"
+#include "torch_xla/csrc/runtime/ifrt_computation_client.h"
 #include "torch_xla/csrc/runtime/pjrt_computation_client.h"
 #include "tsl/platform/stacktrace_handler.h"
 
 namespace torch_xla {
 namespace runtime {
-namespace {
 
-std::atomic<ComputationClient*> g_computation_client(nullptr);
-std::once_flag g_computation_client_once;
-
-ComputationClient* CreateClient() {
-  if (sys_util::GetEnvBool("XLA_DUMP_FATAL_STACK", false)) {
-    tsl::testing::InstallStacktraceHandler();
-  }
-
-  ComputationClient* client;
-
-  if (sys_util::GetEnvString(env::kEnvPjRtDevice, "") != "") {
-    client = new PjRtComputationClient();
-  } else {
-    XLA_ERROR() << "$PJRT_DEVICE is not set." << std::endl;
-  }
-
-  XLA_CHECK(client != nullptr);
-
-  return client;
-}
-
-}  // namespace
+std::atomic<bool> g_computation_client_initialized(false);
 
 ComputationClient* GetComputationClient() {
-  std::call_once(g_computation_client_once,
-                 [&]() { g_computation_client = std::move(CreateClient()); });
-  return g_computation_client.load();
+  static std::unique_ptr<ComputationClient> client = []() {
+    if (sys_util::GetEnvBool("XLA_DUMP_FATAL_STACK", false)) {
+      tsl::testing::InstallStacktraceHandler();
+    }
+
+    std::unique_ptr<ComputationClient> client;
+
+    static bool use_ifrt = sys_util::GetEnvBool("XLA_USE_IFRT", false);
+    if (sys_util::GetEnvString(env::kEnvPjRtDevice, "") != "") {
+      if (use_ifrt) {
+        client = std::make_unique<IfrtComputationClient>();
+      } else {
+        client = std::make_unique<PjRtComputationClient>();
+      }
+    } else {
+      XLA_ERROR() << "$PJRT_DEVICE is not set." << std::endl;
+    }
+
+    XLA_CHECK(client);
+
+    g_computation_client_initialized = true;
+    return client;
+  }();
+
+  return client.get();
 }
 
 ComputationClient* GetComputationClientIfInitialized() {
-  return g_computation_client.load();
+  return g_computation_client_initialized ? GetComputationClient() : nullptr;
 }
 
 }  // namespace runtime

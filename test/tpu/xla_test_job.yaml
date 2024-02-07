@@ -41,7 +41,10 @@ spec:
     - bash
     - -cxe
     - |
-      pip install expecttest
+      # TODO: new TPUCI please remove this short term hack for `RuntimeError: operator torchvision::nms does not exist`
+      pip install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu121
+      pip install expecttest==0.1.6
+      pip install rich
 
       python3 /src/pytorch/xla/test/test_operations.py -v
       python3 /src/pytorch/xla/test/pjrt/test_runtime_tpu.py
@@ -55,6 +58,9 @@ spec:
       XLA_EXPERIMENTAL=nonzero:masked_select python3 /src/pytorch/xla/test/ds/test_dynamic_shapes.py -v
       python3 /src/pytorch/xla/test/test_autocast.py
       python3 /src/pytorch/xla/test/dynamo/test_dynamo.py
+      python3 /src/pytorch/xla/test/spmd/test_spmd_debugging.py
+      python3 /src/pytorch/xla/test/pjrt/test_dtypes.py
+      python3 /src/pytorch/xla/test/pjrt/test_dynamic_plugin_tpu.py
     volumeMounts:
     - mountPath: /dev/shm
       name: dshm

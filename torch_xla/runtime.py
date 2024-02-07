@@ -10,6 +10,7 @@ import torch_xla.core.xla_env_vars as xenv
 import torch_xla.core.xla_model as xm
 import torch_xla.utils.utils as xu
 import torch_xla._internal.tpu as tpu
+from torch_xla.experimental import plugins
 
 R = TypeVar('R')
 FN = TypeVar('FN')
@@ -23,6 +24,11 @@ def set_device_type(pjrt_device: str) -> None:
   Args:
     pjrt_device: 'TPU' or 'CPU'
   """
+  if torch_xla._XLAC._xla_runtime_is_initialized() and os.environ.get(
+      xenv.PJRT_DEVICE) != pjrt_device:
+    raise RuntimeError(
+        "Can't change device type after XLA runtime is initialized")
+
   os.environ[xenv.PJRT_DEVICE] = pjrt_device
 
 
@@ -40,8 +46,8 @@ def _maybe_select_default_device():
     os.environ[xenv.PJRT_DEVICE] = 'TPU'
   # TODO(wcromar): Detect GPU device
   elif xu.getenv_as(xenv.GPU_NUM_DEVICES, int, 0) > 0:
-    logging.warning('GPU_NUM_DEVICES is set. Setting PJRT_DEVICE=GPU')
-    os.environ[xenv.PJRT_DEVICE] = 'GPU'
+    logging.warning('GPU_NUM_DEVICES is set. Setting PJRT_DEVICE=CUDA')
+    os.environ[xenv.PJRT_DEVICE] = 'CUDA'
   else:
     logging.warning('Defaulting to PJRT_DEVICE=CPU')
     os.environ[xenv.PJRT_DEVICE] = 'CPU'
@@ -186,7 +192,9 @@ def process_count() -> int:
 
 @requires_pjrt
 def host_index() -> int:
-  if device_type() == 'TPU':
+  if plugins.using_dynamic_plugins():
+    return plugins.default().host_index()
+  elif device_type() == 'TPU':
     return tpu.worker_id()
 
   # TODO: Update this when we support multi-host GPU
@@ -242,3 +250,32 @@ def is_spmd():
   """Returns if SPMD is set for execution."""
   # TODO(yeounoh) replace this when we fully deprecate the flag.
   return xu.check_env_flag('XLA_USE_SPMD')
+
+
+@requires_pjrt
+def get_master_ip() -> str:
+  """Retrieve the master worker IP for the runtime. This calls into
+  backend-specific discovery APIs.
+
+  Returns master worker's IP address as a string."""
+  if device_type() == 'TPU':
+    return tpu.discover_master_worker_ip()
+  raise RuntimeError(f'IP discovery not supported for device: {device_type()}')
+
+
+@requires_pjrt
+def initialize_cache(path: str, readonly: bool = False):
+  """Initializes the persistent compilation cache. This API must be called
+  before any computations have been performed.
+
+  Args:
+    path: The path at which to store the persistent cache.
+    readonly: Whether or not this worker should have write access to the cache.
+  """
+  assert not torch_xla._XLAC._xla_computation_cache_is_initialized(
+  ), "Computation cache has already been initialized"
+
+  # TODO(jonbolin): Consider moving away from environment variables to control
+  # the cache.
+  os.environ['XLA_PERSISTENT_CACHE_PATH'] = path
+  os.environ['XLA_PERSISTENT_CACHE_READ_ONLY'] = '1' if readonly else '0'

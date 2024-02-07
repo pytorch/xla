@@ -1,6 +1,7 @@
 #ifndef XLA_CLIENT_COMPUTATION_CLIENT_H_
 #define XLA_CLIENT_COMPUTATION_CLIENT_H_
 
+#include <ATen/Tensor.h>
 #include <torch/csrc/lazy/backend/backend_data.h>
 #include <torch/csrc/lazy/backend/lowering_context.h>
 #include <torch/csrc/lazy/core/hash.h>
@@ -20,6 +21,7 @@
 #include "torch_xla/csrc/device.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
 #include "torch_xla/csrc/runtime/metrics.h"
+#include "torch_xla/csrc/runtime/tensor_source.h"
 #include "torch_xla/csrc/runtime/types.h"
 #include "torch_xla/csrc/runtime/util.h"
 #include "xla/client/xla_computation.h"
@@ -29,6 +31,12 @@
 
 namespace torch_xla {
 namespace runtime {
+
+// Forward declare XlaCoordinator to avoid logging macro redefinition from the
+// transitively included PJRT header.
+// TODO(jonbolin): We need a way to ensure the right macros are included
+// regardless of the import order.
+class XlaCoordinator;
 
 // Somehow the compiler doesn't allow type that has default member being
 // used as a default parameter in a method defined in the same scope.
@@ -186,25 +194,6 @@ class ComputationClient {
 
   using ComputationPtr = std::shared_ptr<Computation>;
 
-  // The TensorSource provides a way for a client to populate a buffer allocated
-  // by the core computation client code.
-  struct TensorSource {
-    // The PopulateFn accepts a dense buffer is standard array layout
-    // (dim0-major) and deposits the source tensor data directly over the
-    // provided buffer.
-    using PopulateFn = std::function<void(const TensorSource&, void*, size_t)>;
-
-    TensorSource() = default;
-    TensorSource(xla::Shape shape, std::string device, PopulateFn populate_fn)
-        : shape(std::move(shape)),
-          device(std::move(device)),
-          populate_fn(std::move(populate_fn)) {}
-
-    xla::Shape shape;
-    std::string device;
-    PopulateFn populate_fn;
-  };
-
   // TODO(wcromar): Should CompileInstance still exist? Should it be a subclass
   // of torch::lazy::Computation?
   struct CompileInstance {
@@ -247,8 +236,9 @@ class ComputationClient {
 
   // Creates a Data object with no actual device handle in it. The device handle
   // will be populated in an asynchrounous fashion.
-  virtual DataPtr CreateDataPlaceholder(std::string device,
-                                        xla::Shape shape) = 0;
+  virtual DataPtr CreateDataPlaceholder(
+      std::string device, xla::Shape shape,
+      std::optional<xla::OpSharding> sharding = std::nullopt) = 0;
 
   // Returns data shards. We expect this to be called on PjRtShardedData to
   // retrieve the shards. If other data type is passed, it returns the input
@@ -259,7 +249,7 @@ class ComputationClient {
   virtual DataPtr GetDataShard(DataPtr data, size_t index) = 0;
 
   // Returns wrapped data shards as PjRtShardedData.
-  virtual DataPtr WrapDataShards(const std::vector<DataPtr>& shards,
+  virtual DataPtr WrapDataShards(absl::Span<const DataPtr> shards,
                                  std::string device, xla::Shape shape,
                                  xla::OpSharding sharding) = 0;
 
@@ -268,26 +258,41 @@ class ComputationClient {
   virtual std::optional<xla::OpSharding> GetDataSharding(DataPtr handle) = 0;
 
   // Transfers local tensor values to the TPU devices and fetches the handles.
-  virtual std::vector<DataPtr> TransferToServer(
-      absl::Span<const TensorSource> tensors) = 0;
+  virtual std::vector<DataPtr> TransferToDevice(
+      absl::Span<const std::shared_ptr<const TensorSource>> tensors) = 0;
 
   // Transfers local sharded tensor values to the TPU devices and returns a
   // `PjRtShardedData`.
-  virtual DataPtr TransferShardsToServer(
-      absl::Span<const TensorSource> tensor_shards, std::string device,
-      xla::Shape shape, xla::OpSharding sharding) = 0;
+  virtual DataPtr TransferShardsToDevice(
+      absl::Span<const std::shared_ptr<const TensorSource>> tensor_shards,
+      std::string device, xla::Shape shape, xla::OpSharding sharding) = 0;
 
   // Copies `data->buffer` to `dst` device buffer.
   virtual DataPtr CopyToDevice(DataPtr data, std::string dst) = 0;
 
   // Reads the tensor literal values stored at TPU server sites, behind the
   // supplied handles.
-  virtual std::vector<xla::Literal> TransferFromServer(
+  // Note: `TransferFromDevice` call will block until the `DataPtrs` are ready
+  // if they were created by `TransferToDevice` or `Execute*`. Calling this from
+  // python while holding the GIL can cause deadlocks!
+  virtual std::vector<xla::Literal> TransferFromDevice(
       absl::Span<const DataPtr> handles) = 0;
 
   // Compiles a set of computations.
   virtual std::vector<ComputationPtr> Compile(
       std::vector<CompileInstance> instances) = 0;
+
+  // Serialize a computation to a string.
+  virtual std::string SerializeComputation(
+      const ComputationPtr computation) = 0;
+
+  // Deserialize a string resulting from SerializeComputation back to a
+  // Computation. If the deserialization fails, nullptr is returned.
+  virtual ComputationPtr DeserializeComputation(
+      const std::string& serialized) = 0;
+
+  // Returns a hash of the current compilation environment.
+  virtual torch::lazy::hash_t HashCompilationEnv() = 0;
 
   // Executes computation with arguments and returns the result.
   // The passed device must match the common device of the arguments Data.
@@ -299,24 +304,19 @@ class ComputationClient {
       const ExecuteComputationOptions& options =
           ExecuteComputationOptions{}) = 0;
 
-  // Executes the computation in replicated mode.
-  // The size of the arguments vector is the number of replicas to execute,
-  // and it must match the size of the computation.devices() as well as the
-  // devices passed as argument. The destination devices for each replicated
-  // computation come from the devices the Data objects are stored into, which
-  // must match the devices argument. Within arguments[i], every Data
-  // object must be coming from the same device. Returns a vector (of the same
-  // size of the arguments vector) with the results of the parallel execution.
-  // The result[i], a vector itself, will be the result of the computation fed
-  // with arguments[i]. If options.explode_tuple is true, the output tuples will
-  // be decomposed into their single elements.
-  virtual std::vector<std::vector<DataPtr>> ExecuteReplicated(
-      const Computation& computation,
-      const std::vector<std::vector<DataPtr>>& arguments,
+  // Executes the computation on multiple local devices in parallel.
+  // Each argument to the executable is expected to be sharded in the same order
+  // as `devices`. If options.explode_tuple is true, the output tuples will be
+  // decomposed into their single elements. Returns a vector of outputs, each
+  // of which is sharded in the same order as `devices`.
+  virtual std::vector<DataPtr> ExecuteReplicated(
+      const Computation& computation, absl::Span<const DataPtr> arguments,
       absl::Span<const std::string> devices,
       const ExecuteReplicatedOptions& options) = 0;
 
   virtual std::string GetDefaultDevice() const = 0;
+
+  virtual torch_xla::DeviceType GetDeviceType() const = 0;
 
   virtual size_t GetNumDevices() const = 0;
 
@@ -329,7 +329,7 @@ class ComputationClient {
   virtual int GetNumProcesses() const = 0;
 
   using DeviceAttribute =
-      std::variant<std::string, int64_t, std::vector<int64_t>, float>;
+      std::variant<std::string, bool, int64_t, std::vector<int64_t>, float>;
 
   virtual const absl::flat_hash_map<
       std::string, torch_xla::runtime::ComputationClient::DeviceAttribute>&
@@ -344,11 +344,20 @@ class ComputationClient {
 
   virtual MemoryInfo GetMemoryInfo(const std::string& device) = 0;
 
-  virtual void PrepareToExit() = 0;
-
   // Block until pass in devices' async operation are finished. If empty, all
   // the local devices will be waited for.
-  virtual void WaitDeviceOps(const std::vector<std::string>& devices) = 0;
+  virtual void WaitDeviceOps(absl::Span<const std::string> devices) = 0;
+
+  // Check whether the XlaCoordinator has been initialized.
+  virtual bool CoordinatorInitialized() const = 0;
+
+  // Initialize the XlaCoordinator for the runtime.
+  virtual void InitializeCoordinator(int global_rank, int world_size,
+                                     std::string master_addr,
+                                     std::string port) = 0;
+
+  // Return the XlaCoordinator for the runtime.
+  virtual XlaCoordinator& GetCoordinator() = 0;
 
   // Utility API around the vector based Compile() API to compile a single
   // computation.
@@ -369,10 +378,12 @@ class ComputationClient {
   static int64_t GetDeviceOrdinal(const std::string& device);
 
  protected:
+  static constexpr auto spmd_device_str = "SPMD:0";
+
   // Metrics common to all client interfaces.
-  static metrics::Metric* TransferToServerMetric();
-  static metrics::Metric* TransferToServerTransformMetric();
-  static metrics::Metric* TransferFromServerMetric();
+  static metrics::Metric* TransferToDeviceMetric();
+  static metrics::Metric* TransferToDeviceTransformMetric();
+  static metrics::Metric* TransferFromDeviceMetric();
   static metrics::Metric* CompileMetric();
   static metrics::Metric* ExecuteMetric();
   static metrics::Metric* ExecuteReplicatedMetric();

@@ -1,9 +1,12 @@
 import unittest
 import os
 import sys
+import subprocess
 
 import torch
+import torch.distributed as dist
 import torch_xla
+import torch_xla.distributed.xla_backend
 import torch_xla.core.xla_model as xm
 from torch_xla import runtime as xr
 from torch_xla.amp import autocast
@@ -97,6 +100,17 @@ class BasicRuntimeAPITest(test_xla_sharding_base.XlaShardingTest):
       self.assertGreaterEqual(xr.global_runtime_device_count(), 4)
     elif device_type == "CPU":
       self.assertEqual(xr.global_runtime_device_count(), 1)
+    elif device_type == 'CUDA':
+      command = 'nvidia-smi --list-gpus | wc -l'
+      result = subprocess.run(
+          command,
+          capture_output=True,
+          shell=True,
+          check=True,
+          text=True,
+      )
+      expected_gpu_cnt = int(result.stdout)
+      self.assertEqual(xr.global_runtime_device_count(), expected_gpu_cnt)
 
   def test_addressable_runtime_device_count(self):
     device_type = os.environ['PJRT_DEVICE']
@@ -120,7 +134,7 @@ class BasicAutocastAPITest(test_xla_sharding_base.XlaShardingTest):
     xr.use_spmd()
     super().setUpClass()
 
-  @unittest.skipIf(xr.device_type() not in ['GPU', 'TPU'],
+  @unittest.skipIf(xr.device_type() not in ['TPU', 'CUDA'],
                    f"TPU/GPU autocast test.")
   def test_xla_autocast_api(self):
     device = xm.xla_device()
@@ -130,6 +144,19 @@ class BasicAutocastAPITest(test_xla_sharding_base.XlaShardingTest):
       t3 = torch.matmul(t1, t2)
     expected_dtype = torch.bfloat16 if xr.is_bf16_supported() else torch.float16
     self.assertTrue(t3.dtype == expected_dtype)
+
+
+class BasicDistributedTest(test_xla_sharding_base.XlaShardingTest):
+
+  @classmethod
+  def setUpClass(cls):
+    xr.use_spmd()
+    return super().setUpClass()
+
+  def test_xla_backend(self):
+    # XLA backend is not supported with SPMD
+    with self.assertRaises(AssertionError):
+      dist.init_process_group('xla', init_method='xla://')
 
 
 if __name__ == '__main__':

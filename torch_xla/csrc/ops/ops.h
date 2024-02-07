@@ -91,6 +91,9 @@ torch::lazy::NodePtr Exp(const torch::lazy::Value& input);
 
 torch::lazy::NodePtr Log(const torch::lazy::Value& input);
 
+torch::lazy::NodePtr Logit(const torch::lazy::Value& input,
+                           c10::optional<double> eps);
+
 torch::lazy::NodePtr LogBase(const torch::lazy::Value& input,
                              torch::lazy::OpKind op, double base);
 
@@ -100,6 +103,10 @@ torch::lazy::NodePtr Sqrt(const torch::lazy::Value& input);
 
 torch::lazy::NodePtr Prelu(const torch::lazy::Value& input,
                            const torch::lazy::Value& weight);
+
+torch::lazy::NodePtr PreluBackward(const torch::lazy::Value& grad,
+                                   const torch::lazy::Value& input,
+                                   const torch::lazy::Value& weight);
 
 torch::lazy::NodePtr Pow(const torch::lazy::Value& input,
                          const torch::lazy::Value& exponent);

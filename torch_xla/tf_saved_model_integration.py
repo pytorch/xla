@@ -1,3 +1,4 @@
+import itertools
 import sys
 import os
 from typing import List, Tuple, Any
@@ -16,12 +17,19 @@ except ImportError:
   raise
 
 
+def _get_shape_with_dynamic(signature: stablehlo.VariableSignature):
+  shape = copy.copy(signature.shape)
+  for i in signature.dynamic_dims:
+    shape[i] = None
+  return shape
+
+
 def _wrap_as_tf_func(func, bundle):
 
   def inner(*args):
     output_sig = func.meta.output_signature[0]
     Touts = [sig.dtype for sig in func.meta.output_signature]
-    Souts = [sig.shape for sig in func.meta.output_signature]
+    Souts = [_get_shape_with_dynamic(sig) for sig in func.meta.output_signature]
     call_args = stablehlo._extract_call_parameters(args, func.meta, bundle)
     return tfxla.call_module(
         tuple(call_args),
@@ -35,22 +43,40 @@ def _wrap_as_tf_func(func, bundle):
   return inner
 
 
-def make_tf_function(stablehlo_program: stablehlo.StableHLOGraphModule):
-  return _wrap_as_tf_func(stablehlo_program._bundle.stablehlo_funcs[0],
-                          stablehlo_program._bundle)
+def make_tf_function(stablehlo_program: stablehlo.StableHLOGraphModule,
+                     bundle=None):
+  if bundle is None:
+    return _wrap_as_tf_func(stablehlo_program._bundle.stablehlo_funcs[0],
+                            stablehlo_program._bundle)
+  return _wrap_as_tf_func(stablehlo_program._bundle.stablehlo_funcs[0], bundle)
 
 
 def _make_input_signatures(
     meta: stablehlo.StableHLOFunctionMeta) -> List[tf.TensorSpec]:
   input_pos_to_spec = {
       loc.position: spec
-      for loc, spec in zip(meta.input_locations, meta.input_signature)
+      for loc, spec in itertools.chain(
+          zip(meta.input_locations, meta.input_signature), meta.unused_inputs)
       if loc.type_ == stablehlo.VariableType.INPUT_ARG
   }
   for i in range(len(input_pos_to_spec)):
     spec = input_pos_to_spec[i]
+    shape = _get_shape_with_dynamic(spec)
     yield tf.TensorSpec(
-        shape=spec.shape, dtype=getattr(tf, spec.dtype), name=f'args_{i}')
+        shape=shape, dtype=getattr(tf, spec.dtype), name=f'args_{i}')
+
+
+def _mangle_tf_root_scope_name(name):
+  # TF has more restricted constrain on the variable names at root scope.
+  # Root scope name constrain: [A-Za-z0-9.][A-Za-z0-9_.\\-/]*
+  # Non-root scope name constrain: [A-Za-z0-9_.\\-/]*
+  # https://github.com/tensorflow/tensorflow/blob/51b601fa6bb7e801c0b6ae73c25580e40a8b5745/tensorflow/python/framework/ops.py#L3301-L3302
+  # The state_dict key doesn't have such constrain,
+  # the name need to be mangled when a root-scoped TF variable is created.
+  if name[0] in "._\\-/":
+    return 'k' + name
+  else:
+    return name
 
 
 def save_stablehlo_graph_as_tf(
@@ -76,7 +102,8 @@ def save_stablehlo_graph_as_tf(
   bundle = copy.deepcopy(stablehlo_program._bundle)
   tfm = tf.Module()
   bundle.state_dict = {
-      k: tf.Variable(v, trainable=False) for k, v in bundle.state_dict.items()
+      k: tf.Variable(v, trainable=False, name=_mangle_tf_root_scope_name(k))
+      for k, v in bundle.state_dict.items()
   }
   bundle.additional_constants = [
       tf.Variable(v, trainable=False) for v in bundle.additional_constants
@@ -84,7 +111,8 @@ def save_stablehlo_graph_as_tf(
   input_signatures = list(
       _make_input_signatures(bundle.stablehlo_funcs[0].meta))
   tfm.f = tf.function(
-      make_tf_function(stablehlo_program), input_signature=input_signatures)
+      make_tf_function(stablehlo_program, bundle),
+      input_signature=input_signatures)
   tfm._variables = (
       list(bundle.state_dict.values()) + bundle.additional_constants)
   signatures = {serving_key: tfm.f.get_concrete_function(*input_signatures)}

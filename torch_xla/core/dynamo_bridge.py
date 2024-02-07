@@ -7,11 +7,15 @@ import functools
 import itertools
 import os
 import time
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Set, Tuple
 
 import torch
 from torch.fx.passes.infra.partitioner import CapabilityBasedPartitioner
 from torch.fx.passes.utils.fuser_utils import topo_sort
+
+import torch._inductor
+from torch._inductor.fx_passes.post_grad import ConstructorMoverPass
+
 import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as metrics
@@ -230,16 +234,19 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule):
       for xla_arg in xla_args
   ]
 
-  args_tensor_ids = [
-      torch_xla._XLAC._xla_get_tensor_id(xla_arg) for xla_arg in xla_args
-  ]
+  index_and_xla_tensor_args = [(i, xla_arg)
+                               for i, xla_arg in enumerate(xla_args)
+                               if isinstance(xla_arg, torch.Tensor)]
+
+  index_and_tensor_ids = [(index, torch_xla._XLAC._xla_get_tensor_id(xla_arg))
+                          for index, xla_arg in index_and_xla_tensor_args]
 
   if dynamo_debug:
     print(f"Graph module:\n{xla_model.code}")
-    print(f"args_tensor_ids {args_tensor_ids}")
+    print(f"args_tensor_ids {index_and_tensor_ids}")
 
   tensor_id_to_arg_idx = {
-      tensor_id: i for i, tensor_id in enumerate(args_tensor_ids)
+      tensor_id: index for index, tensor_id in index_and_tensor_ids
   }
 
   if xr.is_spmd():
@@ -258,15 +265,16 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule):
 
   # If a arg is being in place updated by model, we need to include arg as part of the graph result.
   xla_args_need_update_bool = torch_xla._XLAC._check_tensor_need_materialization(
-      xla_args)
+      [tensor for _, tensor in index_and_xla_tensor_args])
   xla_args_need_update = []
   arg_index_to_need_update_index = {}
   for i, need_update in enumerate(xla_args_need_update_bool):
     # Don't add inplace updated argument to the list if it's already
     # being returned
-    if need_update and id(xla_args[i]) not in xla_out_ids:
-      arg_index_to_need_update_index[i] = len(xla_args_need_update)
-      xla_args_need_update.append(xla_args[i])
+    index, tensor = index_and_xla_tensor_args[i]
+    if need_update and id(tensor) not in xla_out_ids:
+      arg_index_to_need_update_index[index] = len(xla_args_need_update)
+      xla_args_need_update.append(tensor)
 
   args_and_out = tuple(xla_args_need_update) + tuple(xla_out)
 
@@ -325,7 +333,8 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule):
 def extract_internal(xla_model: torch.fx.GraphModule):
   if dynamo_debug:
     for xla_arg in xla_model.xla_args:
-      print(torch_xla._XLAC._get_xla_tensor_debug_info(xla_arg))
+      if isinstance(xla_arg, torch.Tensor):
+        print(torch_xla._XLAC._get_xla_tensor_debug_info(xla_arg))
   xm.mark_step()
   (xla_args_sharding_spec, args_and_out, graph_hash,
    arg_index_to_need_update_index, none_remover, graph_input_matcher,
@@ -347,7 +356,9 @@ def extract_internal(xla_model: torch.fx.GraphModule):
 
     # mark_step needs to be blocking since we want to access args's XLADatas
     # and they can't be placeholder.
-    if any(torch_xla._XLAC._check_tensor_need_materialization(args)):
+    if any(
+        torch_xla._XLAC._check_tensor_need_materialization(
+            [a for a in args if isinstance(a, torch.Tensor)])):
       xm.mark_step(wait=True)
 
     # If input sharding has changed from the previous program, dynamo current can
@@ -409,30 +420,51 @@ def extract_internal(xla_model: torch.fx.GraphModule):
   return optimized_mod
 
 
-class FallBackNodeCollector(torch.fx.Interpreter):
+class UnsupportedNodesCollector(torch.fx.Interpreter):
 
   def __init__(self, module):
     super().__init__(module)
-    self._fallback_ops = []
+    self._unsupported_nodes = []
 
   def run_node(self, n: torch.fx.Node):
     metrics.clear_counters()
     result = super().run_node(n)
     fallback_ops = get_fallback_ops()
     if len(fallback_ops) > 0:
-      self._fallback_ops.append(n)
+      self._unsupported_nodes.append(n)
     else:
-      # if inputs are non-xla tensors, it should be executed on CPU
-      if n.op in ["call_function", "call_module", "call_method"]:
-        args, kwargs = self.fetch_args_kwargs_from_env(n)
-        for arg in args:
-          if isinstance(arg, torch.Tensor) and not is_xla_tensor(arg):
-            self._fallback_ops.append(n)
-            break
+      # Check whether the tensors contained in value are all XLA tensors.
+      def all_tensors_on_xla_device(value):
+        if isinstance(value, torch.Tensor):
+          return is_xla_tensor(value)
+        if isinstance(value, (list, tuple)):
+          return all(all_tensors_on_xla_device(v) for v in value)
+        # Not a tensor nor a container.
+        return True
+
+      # Check whether the current node is supported or not.
+      #
+      # A supported node has the following characteristics:
+      # - a node whose result is a composition of XLA tensors:
+      #   avoids non-XLA tensors as FX graph return value.
+      result_is_supported = all_tensors_on_xla_device(result)
+
+      # - a node that whose tensor arguments are XLA tensors:
+      #   avoids non-XLA tensors as FX graph arguments.
+      args, kwargs = self.fetch_args_kwargs_from_env(n)
+      args_are_supported = all(
+          all_tensors_on_xla_device(v)
+          for v in itertools.chain(args, kwargs.values()))
+
+      # If the current node is NOT supported, we add it to
+      # the _unsupported_nodes list.
+      if not (result_is_supported and args_are_supported):
+        self._unsupported_nodes.append(n)
+
     return result
 
-  def get_fallback_ops(self):
-    return self._fallback_ops
+  def get_unsupported_nodes(self):
+    return self._unsupported_nodes
 
 
 class InputCollector(torch.fx.Interpreter):
@@ -447,9 +479,43 @@ class InputCollector(torch.fx.Interpreter):
     return super().call_module(target, args, kwargs)
 
 
+class XLAConstructorMoverPass(ConstructorMoverPass):
+
+  def __init__(self):
+    super().__init__("xla")
+
+  # Returns whether node may take CPU tensors as argument, while
+  # returning an XLA tensor. For example, index.Tensor may take CPU
+  # indices, while its return value remains on XLA.
+  def allow_cpu_device(self, node: torch.fx.Node):
+    if super().allow_cpu_device(node):
+      return True
+
+    # also allow _to_copy calls.
+    # this is a recurring pattern when creating new tensors.
+    if node.target != torch.ops.aten._to_copy.default:
+      return False
+
+    # in this case, there should be a device keyword-argument
+    # where its type is the same as the target device.
+    device = node.kwargs.get("device")
+    return (device is not None and device.type == self.target)
+
+
 def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
+  # Synchronize xla_args, so that each FunctionalTensorWrapper argument updates its
+  # value reference before actually computing it.
+  for a in xla_args:
+    if isinstance(a, torch.Tensor) and torch._is_functional_tensor(a):
+      torch._functionalize_sync(a)
+
   # This call is critical to make sure xla_args' tensor id show up in graph_input_tensor_ids
   xm.mark_step()
+
+  # Find tensor constructor nodes that create CPU tensors, and make
+  # them create XLA tensors, where possible, instead. i.e. replace the
+  # device=CPU keyword-argument of tensor constructor nodes by XLA.
+  XLAConstructorMoverPass()(xla_model.graph)
 
   # If a model's `forward` function has an in-place op that acts on its `self.tensor`, the
   # `self.tensor` is not included as a part of the `xla_args` and does not get materialized.
@@ -473,11 +539,11 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
   ]
 
   # execute model once to collect fallback ops
-  collector = FallBackNodeCollector(xla_model)
+  collector = UnsupportedNodesCollector(xla_model)
   collector.run(*xla_args)
-  fallback_ops = collector.get_fallback_ops()
-  if (ptxla_debug or dynamo_debug) and len(fallback_ops) > 0:
-    print('Dynamo fallback ops are' + str(fallback_ops) +
+  unsupported_nodes = collector.get_unsupported_nodes()
+  if (ptxla_debug or dynamo_debug) and len(unsupported_nodes) > 0:
+    print('Dynamo fallback ops are' + str(unsupported_nodes) +
           '. Please open a GitHub issue with the above op lowering requests.')
 
   # This logic, needed for supporting in-place operations, is a duplicate of
@@ -500,7 +566,7 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
     def is_node_supported(self, submodules, node: torch.fx.Node) -> bool:
       return node.op in [
           "call_function", "call_module", "call_method"
-      ] and (node not in fallback_ops or node.target == operator.getitem)
+      ] and (node not in unsupported_nodes or node.target == operator.getitem)
 
   # partition the model
   supported_ops = XlaOperatorSupport()

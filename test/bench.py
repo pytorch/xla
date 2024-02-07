@@ -128,7 +128,7 @@ if __name__ == '__main__':
   args, benchs = parser.parse_known_args()
   args.benchs = benchs
 
-  torch.set_default_tensor_type('torch.FloatTensor')
+  torch.set_default_dtype(torch.float32)
   torch_xla._XLAC._xla_set_use_full_mat_mul_precision(
       use_full_mat_mul_precision=True)
   run_benchmarks(args)

@@ -84,7 +84,7 @@ import torch_xla.utils.utils as xu
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.profiler as xp
 import torch_xla.test.test_utils as test_utils
-import torch_xla.experimental.xla_sharding as xs
+import torch_xla.distributed.spmd as xs
 
 DEFAULT_KWARGS = dict(
     batch_size=128,
@@ -372,7 +372,7 @@ if __name__ == '__main__':
   if FLAGS.profile:
     server = xp.start_server(FLAGS.profiler_port)
 
-  torch.set_default_tensor_type('torch.FloatTensor')
+  torch.set_default_dtype(torch.float32)
   accuracy = train_imagenet()
   if accuracy < FLAGS.target_accuracy:
     print('Accuracy {} is below target {}'.format(accuracy,

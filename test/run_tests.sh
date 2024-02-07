@@ -56,7 +56,7 @@ function run_coverage {
 function run_test {
   echo "Running in PjRt runtime: $@"
   if [ -x "$(command -v nvidia-smi)" ] && [ "$XLA_CUDA" != "0" ]; then
-    PJRT_DEVICE=GPU run_coverage "$@"
+    PJRT_DEVICE=CUDA run_coverage "$@"
   else
     # TODO(darisoy): run these tests with multiple CPU devices, this fails due to TF issue.
     PJRT_DEVICE=CPU CPU_NUM_DEVICES=1 run_coverage "$@"
@@ -108,6 +108,11 @@ function run_save_tensor_hlo {
   XLA_SAVE_TENSORS_FILE="/tmp/xla_test_save_ir.txt" XLA_SAVE_TENSORS_FMT="hlo" run_test "$@"
 }
 
+function run_pt_xla_debug {
+  echo "Running in save tensor file mode: $@"
+  PT_XLA_DEBUG=1 PT_XLA_DEBUG_FILE="/tmp/pt_xla_debug.txt" run_test "$@"
+}
+
 function run_stablehlo_compile {
   echo "Running in StableHlo Compile mode: $@"
   XLA_STABLEHLO_COMPILE=1 run_test "$@"
@@ -116,6 +121,14 @@ function run_stablehlo_compile {
 function run_xla_backend_mp {
   echo "Running XLA backend multiprocessing test: $@"
   MASTER_ADDR=localhost MASTER_PORT=6000 run_test "$@"
+}
+
+function run_torchrun {
+  if [ -x "$(command -v nvidia-smi)" ] && [ "$XLA_CUDA" != "0" ]; then
+    echo "Running torchrun test for GPU $@"
+    num_devices=$(nvidia-smi --list-gpus | wc -l)
+    PJRT_DEVICE=CUDA torchrun --nnodes 1 --nproc-per-node $num_devices $@
+  fi
 }
 
 function run_torch_op_tests {
@@ -148,10 +161,13 @@ function run_xla_op_tests1 {
   run_test "$CDIR/test_grad_checkpoint.py"
   run_test "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
   run_test_without_functionalization "$CDIR/test_operations.py" "$@" --verbosity=$VERBOSITY
+  run_pt_xla_debug "$CDIR/debug_tool/test_pt_xla_debug.py"
   run_test "$CDIR/test_async_closures.py"
+  run_test "$CDIR/test_hlo_metadata.py"
   run_test "$CDIR/test_profiler.py"
   run_test "$CDIR/pjrt/test_runtime.py"
-  run_test "$CDIR/pjrt/test_runtime_gpu.py"
+  run_test "$CDIR/pjrt/test_runtime_single_proc_gpu.py"
+  run_test "$CDIR/pjrt/test_runtime_multi_gpu.py"
   run_test "$CDIR/pjrt/test_runtime_multi_cpu.py"
   run_test "$CDIR/pjrt/test_internal_tpu.py"
   run_test "$CDIR/pjrt/test_ddp.py"
@@ -175,6 +191,7 @@ function run_xla_op_tests1 {
 # DO NOT MODIFY
 function run_xla_op_tests2 {
   run_downcast_bf16 "$CDIR/test_data_type.py"
+  run_test "$CDIR/pjrt/test_dtypes.py"
   run_test "$CDIR/test_autocast.py"  # TODO(yeounoh) this is expensive on GPU
 }
 
@@ -184,15 +201,21 @@ function run_xla_op_tests3 {
   #     CI with tf.
   run_xla_hlo_debug "$CDIR/stablehlo/test_stablehlo_inference.py"
   run_stablehlo_compile "$CDIR/stablehlo/test_stablehlo_compile.py"
+  run_stablehlo_compile "$CDIR/stablehlo/test_implicit_broadcasting.py"
   run_test "$CDIR/spmd/test_xla_sharding.py"
   run_test "$CDIR/spmd/test_xla_sharding_hlo.py"
   run_test "$CDIR/spmd/test_xla_virtual_device.py"
   run_test "$CDIR/spmd/test_dynamo_spmd.py"
+  run_test "$CDIR/spmd/test_spmd_debugging.py"
   run_test "$CDIR/spmd/test_xla_distributed_checkpoint.py"
   run_test "$CDIR/spmd/test_xla_spmd_python_api_interaction.py"
   run_test "$CDIR/test_operations_hlo.py" "$@" --verbosity=$VERBOSITY
   run_test "$CDIR/test_input_output_aliases.py"
   run_test "$CDIR/test_torch_distributed_xla_backend.py"
+  run_torchrun "$CDIR/pjrt/test_torchrun.py"
+  run_test "$CDIR/test_persistent_cache.py"
+  # NOTE: this line below is testing export and don't care about GPU
+  PJRT_DEVICE=CPU CPU_NUM_DEVICES=1 run_coverage "$CDIR/test_core_aten_ops.py"
 }
 
 #######################################################################################
@@ -214,6 +237,7 @@ function run_mp_op_tests {
   run_test "$CDIR/test_mp_save.py"
   run_test "$CDIR/test_mp_mesh_reduce.py"
   run_test "$CDIR/test_mp_sync_batch_norm.py"
+  run_pt_xla_debug "$CDIR/debug_tool/test_mp_pt_xla_debug.py"
   run_xla_backend_mp "$CDIR/test_torch_distributed_all_gather_xla_backend.py"
   run_xla_backend_mp "$CDIR/test_torch_distributed_all_reduce_xla_backend.py"
   run_xla_backend_mp "$CDIR/test_torch_distributed_multi_all_reduce_xla_backend.py"

@@ -27,12 +27,19 @@ namespace {
 bool XlaDataValuesEqual(torch::lazy::BackendDataPtr a,
                         torch::lazy::BackendDataPtr b,
                         at::ScalarType element_type) {
-  std::vector<at::Tensor> tensors = XlaDataToTensors({a, b}, element_type);
+  std::vector<at::Tensor> tensors =
+      XlaDataToTensors({a, b}, {element_type, element_type});
   return TensorCompare(tensors[0], tensors[1]);
 }
 }  // namespace
 
-class XLAShardingTest : public AtenXlaTensorTestBase {};
+class XLAShardingTest : public AtenXlaTensorTestBase {
+ protected:
+  static void SetUpTestCase() {
+    setenv("XLA_USE_SPMD", "1", /*overwrite=*/true);
+    CommonSetup();
+  }
+};
 
 TEST_F(XLAShardingTest, GetShardShape) {
   auto tensor = at::ones({8, 7}, at::TensorOptions(at::kFloat));
@@ -302,11 +309,6 @@ TEST_F(XLAShardingTest, EqualShardingSpecs) {
 }
 
 TEST_F(XLAShardingTest, CreateTensorsData) {
-  if (torch_xla::runtime::sys_util::GetEnvString(
-          torch_xla::runtime::env::kEnvPjRtDevice, "") == "") {
-    GTEST_SKIP() << "`PJRT_DEVICE` is not set.";
-  }
-
   std::vector<at::Tensor> tensors(2);
   auto tensor = at::ones({8, 8}, at::TensorOptions(at::kFloat));
   xla::Shape tensor_shape =
@@ -321,21 +323,21 @@ TEST_F(XLAShardingTest, CreateTensorsData) {
   std::vector<torch::lazy::BackendDataPtr> tensors_data =
       CreateTensorsData(tensors, shardings, devices);
 
-  // Returns the input without sharding
-  auto xla_data =
-      std::dynamic_pointer_cast<torch_xla::runtime::ComputationClient::Data>(
-          tensors_data[0]);
-  std::vector<torch_xla::runtime::ComputationClient::DataPtr> shards =
-      torch_xla::runtime::GetComputationClient()->GetDataShards(xla_data);
-  EXPECT_EQ(shards.size(), 1);
-  EXPECT_TRUE(xla::Shape::Equal().IgnoreLayout()(xla_data->shape(),
-                                                 shards[0]->shape()));
-  EXPECT_TRUE(XlaDataValuesEqual(tensors_data[0], shards[0], at::kFloat));
-
-  // Returns multiple input shards, replicated
   int64_t n_devices =
       torch_xla::runtime::GetComputationClient()->GetLocalDevices().size();
   if (n_devices > 1) {
+    // null sharding is treated as replicated.
+    auto xla_data =
+        std::dynamic_pointer_cast<torch_xla::runtime::ComputationClient::Data>(
+            tensors_data[0]);
+    std::vector<torch_xla::runtime::ComputationClient::DataPtr> shards =
+        torch_xla::runtime::GetComputationClient()->GetDataShards(xla_data);
+    EXPECT_EQ(shards.size(), n_devices);
+    EXPECT_TRUE(xla::Shape::Equal().IgnoreLayout()(xla_data->shape(),
+                                                   shards[0]->shape()));
+    EXPECT_TRUE(XlaDataValuesEqual(tensors_data[0], shards[0], at::kFloat));
+
+    // Returns multiple input shards, replicated
     auto sharded_xla_data =
         std::dynamic_pointer_cast<torch_xla::runtime::ComputationClient::Data>(
             tensors_data[1]);
@@ -346,100 +348,6 @@ TEST_F(XLAShardingTest, CreateTensorsData) {
                                                    shards[0]->shape()));
     EXPECT_TRUE(XlaDataValuesEqual(shards[0], shards[1], at::kFloat));
   }
-}
-
-TEST_F(XLAShardingTest, InputHandler) {
-  if ((torch_xla::runtime::sys_util::GetEnvString(
-           torch_xla::runtime::env::kEnvPjRtDevice, "") == "") ||
-      (torch_xla::runtime::GetComputationClient()->GetLocalDevices().size() <
-       2)) {
-    GTEST_SKIP()
-        << "`PJRT_DEVICE` is not set, with more than 2 local devices, ("
-        << torch_xla::runtime::GetComputationClient()->GetLocalDevices().size()
-        << " local devices detected).";
-  }
-
-  std::vector<at::Tensor> tensors(2);
-  auto tensor = at::ones({8, 8}, at::TensorOptions(at::kFloat));
-  xla::Shape tensor_shape =
-      CreateComputationShapeFromTensor(tensor, bridge::GetDefaultDevice());
-  std::fill_n(tensors.begin(), tensors.size(), tensor);
-  std::vector<std::string> devices = {"TPU:0", "TPU:1"};
-  std::vector<XLATensor::ShardingSpecPtr> shardings = {
-      nullptr, std::make_shared<XLATensor::ShardingSpec>(
-                   xla::HloSharding::Replicate().ToProto(), tensor_shape)};
-  std::vector<torch::lazy::BackendDataPtr> tensors_data =
-      CreateTensorsData(tensors, shardings, devices);
-
-  std::vector<torch_xla::runtime::ComputationClient::DataPtr> arguments =
-      UnwrapXlaData(tensors_data);
-  auto arguments_by_device = ShardingUtil::InputHandler(arguments, devices);
-
-  auto arg0_dev0 = arguments_by_device[0][0];
-  auto arg0_dev1 = arguments_by_device[1][0];
-  EXPECT_TRUE(XlaDataValuesEqual(arg0_dev0, arg0_dev1, at::kFloat));
-
-  auto arg1_dev0 = arguments_by_device[0][1];
-  auto arg1_dev1 = arguments_by_device[1][1];
-  EXPECT_TRUE(XlaDataValuesEqual(arg1_dev0, arg1_dev1, at::kFloat));
-}
-
-TEST_F(XLAShardingTest, OutputHandler) {
-  if ((torch_xla::runtime::sys_util::GetEnvString(
-           torch_xla::runtime::env::kEnvPjRtDevice, "") == "") ||
-      (torch_xla::runtime::GetComputationClient()->GetLocalDevices().size() <
-       2)) {
-    GTEST_SKIP()
-        << "`PJRT_DEVICE` is not set, with more than 2 local devices, ("
-        << torch_xla::runtime::GetComputationClient()->GetLocalDevices().size()
-        << " local devices detected).";
-  }
-
-  std::vector<std::string> devices =
-      torch_xla::runtime::GetComputationClient()->GetLocalDevices();
-
-  // Prepare an input vecotr `outputs` with 2 arguments per device.
-  std::vector<std::vector<torch_xla::runtime::ComputationClient::DataPtr>>
-      outputs;
-  outputs.reserve(devices.size());
-  at::Tensor tensor = at::ones({8}, at::TensorOptions(at::kFloat));
-  for (auto device : devices) {
-    outputs.push_back(
-        UnwrapXlaData(CreateTensorsData({tensor, tensor}, {device, device})));
-  }
-
-  xla::Shape tensor_shape =
-      CreateComputationShapeFromTensor(tensor, bridge::GetDefaultDevice());
-  auto sharding_spec = std::make_shared<XLATensor::ShardingSpec>(
-      xla::HloSharding::Tile1D(
-          CreateComputationShapeFromTensor(tensor, bridge::GetDefaultDevice()),
-          devices.size())
-          .ToProto(),
-      tensor_shape);
-  std::vector<XLATensor::ShardingSpecPtr> sharding_specs{sharding_spec,
-                                                         sharding_spec};
-
-  // Shard a PjRtData into a PjRtShardedData.
-  std::vector<torch_xla::runtime::ComputationClient::DataPtr> sharded_outputs =
-      ShardingUtil::OutputHandler(outputs, sharding_specs,
-                                  /*replicated_output=*/true);
-  EXPECT_EQ(sharded_outputs.size(), 2);
-  auto shards = torch_xla::runtime::GetComputationClient()->GetDataShards(
-      sharded_outputs[0]);
-  EXPECT_EQ(shards.size(), devices.size());
-  EXPECT_FALSE(
-      xla::Shape::Equal().IgnoreLayout()(shards[0]->shape(), tensor_shape));
-
-  // Wrap sharded data into a PjRtShardedData with `devices.size()` shards.
-  std::vector<torch_xla::runtime::ComputationClient::DataPtr> wrapped_outputs =
-      ShardingUtil::OutputHandler(outputs, sharding_specs,
-                                  /*replicated_output=*/false);
-  EXPECT_EQ(wrapped_outputs.size(), 2);
-  shards = torch_xla::runtime::GetComputationClient()->GetDataShards(
-      wrapped_outputs[0]);
-  EXPECT_EQ(shards.size(), devices.size());
-  EXPECT_TRUE(
-      xla::Shape::Equal().IgnoreLayout()(shards[0]->shape(), tensor_shape));
 }
 
 TEST_F(XLAShardingTest, PrepareOutputShardingPropagation) {

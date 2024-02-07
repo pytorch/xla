@@ -49,6 +49,9 @@ xla::XlaOp BuildMaskedFillScalar(xla::XlaOp input, xla::XlaOp mask,
 std::vector<int64_t> BuildSqueezedDimensions(
     absl::Span<const int64_t> dimensions, int64_t squeeze_dim);
 
+std::vector<int64_t> BuildSqueezedDimensions(
+    absl::Span<const int64_t> dimensions, std::vector<int64_t>& squeeze_dim);
+
 std::vector<int64_t> BuildUnsqueezeDimensions(
     absl::Span<const int64_t> dimensions, int64_t dim);
 

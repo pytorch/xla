@@ -35,12 +35,12 @@ We recommend you to use our prebuilt Docker image to start your development work
 * Build PyTorch
   ```Shell
   cd /pytorch/
-  python setup.py install
+  python setup.py develop
   ```
 * Build PyTorch/XLA
   ```Shell
   cd xla/
-  python setup.py install
+  python setup.py develop
   ```
 
 ### Build PyTorch/XLA from source with GPU support
@@ -72,7 +72,7 @@ If your PR touches the Python source files, please run the following command bef
 
 ```Shell
 # How to install: pip install yapf==0.30.0
-yapf --recursive -i *.py test/ scripts/ torch_xla/
+yapf --recursive -i *.py test/ scripts/ torch_xla/ benchmarks/
 ```
 
 ### Running the Tests
@@ -94,7 +94,7 @@ To run the tests, follow __one__ of the options below:
 * Run on GPU:
 
   ```Shell
-  export PJRT_DEVICE=GPU GPU_NUM_DEVICES=${NUM_GPU}
+  export PJRT_DEVICE=CUDA GPU_NUM_DEVICES=${NUM_GPU}
   ```
 
 For more detail on configuring the runtime, please refer to [this doc](https://github.com/pytorch/xla/blob/master/docs/pjrt.md#quickstart)
@@ -107,3 +107,8 @@ Then run `test/run_tests.sh` and `test/cpp/run_tests.sh` to verify the setup is 
 ### Useful materials
 1. [OP Lowering Guide](https://github.com/pytorch/xla/blob/master/OP_LOWERING_GUIDE.md)
 2. [CODEGEN MIGRATION GUIDE](https://github.com/pytorch/xla/blob/master/CODEGEN_MIGRATION_GUIDE.md)
+3. [Dynamo Integration Guide](https://github.com/pytorch/xla/blob/master/docs/dynamo.md)
+
+### Sharp Edges
+
+* If local changes aren't visible, uninstall existing pytorch/xla with `pip uninstall torch_xla` and `pip uninstall torch`, then rebuild PyTorch and PyTorch/XLA with `python setup.py develop` or `python setup.py install`.

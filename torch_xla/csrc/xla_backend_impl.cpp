@@ -26,9 +26,8 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
     if (!default_device_type_inited_) {
       // bridge::GetDefaultDevice will trigger the runtime device init, should
       // not do it during class init time.
-      torch::lazy::BackendDevice default_device = *bridge::GetDefaultDevice();
       default_device_type_ = std::make_shared<DeviceType>(
-          static_cast<XlaDeviceType>(default_device.type()));
+          runtime::GetComputationClient()->GetDeviceType());
       default_device_type_inited_ = true;
     }
     return true;
@@ -93,7 +92,7 @@ class XlaBackendImpl : public torch::lazy::BackendImplInterface {
       const torch::lazy::BackendDataPtr data,
       c10::optional<at::ScalarType> logical_scalar_type) const override {
     // TODO(JackCaoG): handle the logical_scalar_type == nullptr case
-    return XlaDataToTensors({data}, *logical_scalar_type)[0];
+    return XlaDataToTensors({data}, {*logical_scalar_type})[0];
   }
 
   std::unique_ptr<torch::lazy::LoweringContext> CreateLoweringContext(

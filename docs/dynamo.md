@@ -1,8 +1,31 @@
 ## TorchDynamo(torch.compile) integration in PyTorch XLA
 
-[TorchDynamo](https://pytorch.org/docs/stable/dynamo/index.html) is a Python-level JIT compiler designed to make unmodified PyTorch programs faster. It provides a clean API for compiler backends to hook in and its biggest feature is to dynamically modify Python bytecode right before it is executed. In the pytorch/xla 2.0 release, PyTorch/XLA provided an experimental backend for the TorchDynamo for both inference and training.
+[TorchDynamo](https://pytorch.org/docs/stable/torch.compiler.html) is a Python-level JIT compiler designed to make unmodified PyTorch programs faster. It provides a clean API for compiler backends to hook in and its biggest feature is to dynamically modify Python bytecode right before it is executed. In the pytorch/xla 2.0 release, PyTorch/XLA provided an experimental backend for the TorchDynamo for both inference and training.
 
 The way that XLA bridge works is that Dynamo will provide a TorchFX graph when it recognizes a model pattern and PyTorch/XLA will use existing Lazy Tensor technology to compile the FX graph and return the compiled function.
+
+### Integration
+
+Support for PyTorch/XLA and Dynamo currently exists by adding the `backend='openxla'` argument to `torch.compile`. For example:
+
+```
+import torch
+import torch_xla.core.xla_model as xm
+
+def add(a, b):
+  a_xla = a.to(xm.xla_device())
+  b_xla = b.to(xm.xla_device())
+  return a_xla + b_xla
+
+compiled_code = torch.compile(add, backend='openxla')
+print(compiled_code(torch.randn(10), torch.randn(10)))
+```
+
+Currently there are two different backends, that eventually will be merged into a single 'openxla' backend:
+
+* `backend='openxla'` - Useful for training.
+* `backend='openxla_eval'` - Useful for inference.
+
 
 ### Inference
 Here is a small code example of running resnet18 with `torch.compile`
@@ -40,7 +63,7 @@ timm_vision_transformer | 3.52
 geomean | 3.04
 
 Note 
-1. User will likely see better inference perfomrance by putting the inference execution in a `torch.no_grad` context. `openxla` is a `aot-autograd` backend of `torch.compile`. `Aot-autograd` will attempt to save some states for potential backward. `torch.no_grad` will help `aot-autograd` understand that it is being executed in a inference context.
+1. User will likely see better inference performance by putting the inference execution in a `torch.no_grad` context. `openxla` is an `aot-autograd` backend of `torch.compile`; `aot-autograd` attempts to save some state for a potential backward pass. Setting `torch.no_grad` helps `aot-autograd` understand that it is being executed in an inference context.
 2. User can also use the `openxla_eval` backend directly without `torch.no_grad`, since `openxla_eval` is not an `aot-autograd` backend and only works for inference. 
 
 ### Training

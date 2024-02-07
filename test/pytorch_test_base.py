@@ -17,6 +17,8 @@ TORCH_TEST_PRECIIONS = {
     'test_pow_xla_float64': 0.0045,
     'test_var_neg_dim_xla_bfloat16': 0.01,
     'test_sum_xla_bfloat16': 0.1,
+    'test_put_xla_bfloat16': 0.05,
+    'test_take_xla_bfloat16': 0.05,
 }
 
 DISABLED_TORCH_TESTS_ANY = {
@@ -313,6 +315,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_embedding_bag_device',  # FIXME! Unsupported device type for sparse layout: xla
         'test_embedding_scalar_weight_error_xla',  # tsl::CurrentStackTrace[abi:cxx11]
         'test_EmbeddingBag_per_sample_weights_and_no_offsets',  # FIXME! Unsupported device type for sparse layout: xla
+        'test_EmbeddingBag_per_sample_weights_and_new_offsets',  # precision
     },
 
     # test/nn/test_convolution.py
@@ -519,7 +522,7 @@ DISABLED_TORCH_TESTS_TPU = union_of_disabled_tests(
 DISABLED_TORCH_TESTS = {
     'TPU': prepare_match_set(DISABLED_TORCH_TESTS_TPU),
     'CPU': prepare_match_set(DISABLED_TORCH_TESTS_CPU),
-    'GPU': prepare_match_set(DISABLED_TORCH_TESTS_GPU),
+    'CUDA': prepare_match_set(DISABLED_TORCH_TESTS_GPU),
 }
 
 

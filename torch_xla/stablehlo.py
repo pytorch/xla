@@ -17,6 +17,7 @@ import torch_xla
 from torch_xla.core import xla_model as xm
 from torch_xla.core import dynamo_bridge
 from torch_xla.debug import metrics
+import torch_xla.experimental.quantized
 import torch._dynamo as torchdynamo
 from torch.utils import _pytree as pytree
 
@@ -51,6 +52,14 @@ def _extract_call_parameters(args, meta, bundle):
   return call_args
 
 
+@dataclass
+class StableHLOExportOptions:
+  include_human_readable_text: bool = True
+  override_tracing_arguments: Optional[Tuple[Any]] = None
+  override_tracing_kwargs: Optional[Mapping[str, Any]] = None
+  save_weights: bool = True
+
+
 class StableHLOGraphModule:
 
   def __init__(self, bundle):
@@ -73,14 +82,20 @@ class StableHLOGraphModule:
       res = pytree.tree_unflatten(res, out_spec)
     return res
 
-  def get_stablehlo_bytecode(self, method_name):
+  def get_stablehlo_bytecode(self, method_name=None):
+    if method_name is None:
+      method_name = self._default_method
     return self._name_to_stablehlo[method_name].bytecode
 
-  def get_stablehlo_text(self, method_name):
+  def get_stablehlo_text(self, method_name=None):
+    if method_name is None:
+      method_name = self._default_method
     return self._name_to_stablehlo[method_name].text
 
-  def save(self, directory_path):
-    _save_program_bundle(self._bundle, directory_path)
+  def save(self,
+           directory_path,
+           options: Optional[StableHLOExportOptions] = None):
+    _save_program_bundle(self._bundle, directory_path, options)
 
   @classmethod
   def load(cls, directory_path):
@@ -101,6 +116,7 @@ class VariableType(enum.Enum):
 class VariableSignature:  # either argument or parameters
   shape: List[int]
   dtype: str
+  dynamic_dims: List[int] = dataclasses.field(default_factory=list)
 
 
 @dataclass
@@ -134,6 +150,8 @@ class StableHLOFunctionMeta:
   # An input to the underlying stable callable can come from
   # the arguments the user supplied, OR a parameter, OR a constant
   input_locations: List[InputLocation]
+
+  unused_inputs: List[Tuple[InputLocation, VariableSignature]]
 
   # input_pytree_spec
   input_pytree_spec: Optional[str] = None
@@ -198,6 +216,13 @@ class XLAExportInterpreter(torch.fx.Interpreter):
   def __init__(self, module, device):
     self._device = device
     super().__init__(module)
+    self.tensor_id_to_dynamic_dims = {}
+
+  def _mark_dynamic(self, tensor, dynamic_dims):
+    tid = torch_xla._XLAC._xla_get_tensor_id(tensor)
+    self.tensor_id_to_dynamic_dims[tid] = dynamic_dims
+    for i in dynamic_dims:
+      torch_xla._XLAC._xla_mark_dynamic(tensor, i)
 
   def call_function(self, target, args: Tuple, kwargs: Dict) -> Any:
     # NOTE(qihqi): We need to do this because there are some operators
@@ -208,7 +233,36 @@ class XLAExportInterpreter(torch.fx.Interpreter):
     new_kwargs = dict(kwargs)
     if 'device' in kwargs:
       new_kwargs['device'] = self._device
+    # If the op spec expects a `Tensor` input, we wrap the python float/int
+    # to a torch.tensor. The dtype for float respects
+    # `torch.get_default_dtype`. Without this wrapping, the python float
+    # will be wrapped before it enters dispatcher, and it doesn't respect
+    # the global default dtype.
+    if hasattr(target, '_schema'):
+      # Note: Use `_disable_current_modes` to alwasys create constant tensor.
+      # Under `fake_tensor_mode` a fake tensor will be created. This is not a
+      # use case for XLAExportInterpreter right now, adding to be future-proof.
+      with torch.utils._python_dispatch._disable_current_modes():
+        args_and_specs = tuple(zip(args, target._schema.arguments))
+        args = tuple(
+            map(
+                lambda arg_spec: torch.tensor(arg_spec[0])
+                if isinstance(arg_spec[0], (float, int)) and type(arg_spec[
+                    1].type) == torch.TensorType else arg_spec[0],
+                args_and_specs))
     return super().call_function(target, args, new_kwargs)
+
+  def run_node(self, n) -> Any:
+    if n.op == 'placeholder':
+      fake_t = n.meta['val']
+      res = super().run_node(n)
+      if hasattr(fake_t, 'shape'):
+        dynamic_dims = [
+            i for i, x in enumerate(fake_t.shape) if not isinstance(x, int)
+        ]
+        self._mark_dynamic(res, dynamic_dims)
+      return res
+    return super().run_node(n)
 
 
 def _extract_input_args(exported_model, options):
@@ -238,7 +292,7 @@ def _exported_program_to_stablehlo_bundle(exported_model,
                                           options) -> StableHLOModelBundle:
   if options is None:
     options = StableHLOExportOptions()
-
+  exported_model = exported_model.run_decompositions()
   input_args = _extract_input_args(exported_model, options)
 
   device = xm.xla_device()
@@ -251,6 +305,16 @@ def _exported_program_to_stablehlo_bundle(exported_model,
                                     exported_model.state_dict)
   param_buffer_values = (state_dict[key] for key in param_and_buffer_keys)
 
+  if hasattr(exported_model.graph_signature, "lifted_tensor_constants"):
+    ordered_tensor_constants = tuple(
+        exported_model.tensor_constants[name]
+        for name in exported_model.graph_signature.lifted_tensor_constants)
+  else:
+    ordered_tensor_constants = ()
+
+  ordered_tensor_constants = pytree.tree_map_only(torch.Tensor,
+                                                  lambda x: x.to(device=device),
+                                                  ordered_tensor_constants)
   num_mutations = len(exported_model.graph_signature.buffers_to_mutate)
 
   xm.mark_step()
@@ -259,9 +323,13 @@ def _exported_program_to_stablehlo_bundle(exported_model,
   device = xm.xla_device()
 
   # Run the fx graph tracing using lazy tensor
+  xla_interpreter = XLAExportInterpreter(exported_model.graph_module, device)
   with torch.no_grad():
-    res = XLAExportInterpreter(exported_model.graph_module, device).run(
-        *param_buffer_values, *input_args, enable_io_processing=False)
+    res = xla_interpreter.run(
+        *param_buffer_values,
+        *ordered_tensor_constants,
+        *input_args,
+        enable_io_processing=False)
     res = res[num_mutations:]
 
   # If there are any fallback ops, this means that in torch/XLA side,
@@ -299,10 +367,16 @@ def _exported_program_to_stablehlo_bundle(exported_model,
       if isinstance(tensor, torch.Tensor)
   }
 
+  # there might be inputs that is part of input but not consumed by HLO graph
+  unused_input_positions = set(range(len(input_args)))
+
   for hlo_input_pos, (tensor_id, tensor_value) in enumerate(
       zip(graph_input_tensor_ids, graph_input_xla_values)):
     if tensor_id in input_ids:  # this is input
-      location = InputLocation.input_arg(position=input_ids[tensor_id])
+      pos_id = input_ids[tensor_id]
+      location = InputLocation.input_arg(position=pos_id)
+      if pos_id in unused_input_positions:
+        unused_input_positions.remove(pos_id)
     elif tensor_id in tensor_id_to_state_name:
       location = InputLocation.parameter(
           name=tensor_id_to_state_name[tensor_id])
@@ -310,15 +384,32 @@ def _exported_program_to_stablehlo_bundle(exported_model,
       location = InputLocation.constant(position=len(additional_constants))
       additional_constants.append(tensor_value.detach().cpu().numpy())
     input_locations.append(location)
+    dynamic_dims = xla_interpreter.tensor_id_to_dynamic_dims.get(tensor_id, [])
     input_signatures.append(
         VariableSignature(
             shape=list(tensor_value.shape),
-            dtype=str(tensor_value.dtype).replace('torch.', '')))
+            dtype=str(tensor_value.dtype).replace('torch.', ''),
+            dynamic_dims=dynamic_dims))
+
+  unused_inputs = []
+  for i in unused_input_positions:
+    pos = InputLocation.input_arg(position=i)
+    arg = input_args[i]
+    if isinstance(arg, torch.Tensor):
+      signature = VariableSignature(
+          shape=list(arg.shape), dtype=str(arg.dtype).replace('torch.', ''))
+    else:
+      signature = VariableSignature(
+          shape=[],
+          dtype=str(type(arg)),
+      )
+
+    unused_inputs.append((pos, signature))
 
   output_signature = [
       VariableSignature(
           shape=list(tensor.shape),
-          dtype=str(tensor_value.dtype).replace('torch.', '')) for tensor in res
+          dtype=str(tensor.dtype).replace('torch.', '')) for tensor in res
   ]
 
   torch_xla._XLAC._clear_pending_irs(str(device))
@@ -330,6 +421,7 @@ def _exported_program_to_stablehlo_bundle(exported_model,
       input_signature=input_signatures,
       output_signature=output_signature,
       input_locations=input_locations,
+      unused_inputs=unused_inputs,
       input_pytree_spec=pytree.treespec_dumps(exported_model.call_spec.in_spec),
       output_pytree_spec=pytree.treespec_dumps(
           exported_model.call_spec.out_spec),
@@ -345,14 +437,19 @@ def _exported_program_to_stablehlo_bundle(exported_model,
   return bundle
 
 
-def _save_program_bundle(bundle: StableHLOModelBundle,
-                         stablehlo_dir: os.PathLike) -> None:
+def _save_program_bundle(
+    bundle: StableHLOModelBundle,
+    stablehlo_dir: os.PathLike,
+    options: Optional[StableHLOExportOptions] = None) -> None:
 
-  data_dir = os.path.join(stablehlo_dir, 'data')
-  os.makedirs(data_dir, exist_ok=True)
-  for key, val in bundle.state_dict.items():
-    with open(os.path.join(stablehlo_dir, 'data', key), 'wb') as f:
-      np.save(f, val)
+  if options is None:
+    options = StableHLOExportOptions()
+  if options.save_weights:
+    data_dir = os.path.join(stablehlo_dir, 'data')
+    os.makedirs(data_dir, exist_ok=True)
+    for key, val in bundle.state_dict.items():
+      with open(os.path.join(stablehlo_dir, 'data', key), 'wb') as f:
+        np.save(f, val)
 
   # save metadata and stablehlo bytecode
   func_dir = os.path.join(stablehlo_dir, 'functions')
@@ -381,8 +478,10 @@ def _iter_dir(path: os.PathLike):
 
 def _load_program_bundle(stablehlo_dir: os.PathLike) -> StableHLOModelBundle:
   state_dict = {}
-  for name, f in _iter_dir(os.path.join(stablehlo_dir, 'data')):
-    state_dict[name] = np.load(f, allow_pickle=True)
+  # if there is no weights/state_dict to be loaded, will not load weights
+  if os.path.exists(os.path.join(stablehlo_dir, 'data')):
+    for name, f in _iter_dir(os.path.join(stablehlo_dir, 'data')):
+      state_dict[name] = np.load(f, allow_pickle=True)
 
   constants = []
   for name, f in _iter_dir(os.path.join(stablehlo_dir, 'constants')):
@@ -413,13 +512,6 @@ def _load_program_bundle(stablehlo_dir: os.PathLike) -> StableHLOModelBundle:
       state_dict=state_dict)
 
 
-@dataclass
-class StableHLOExportOptions:
-  include_human_readable_text: bool = True
-  override_tracing_arguments: Optional[Tuple[Any]] = None
-  override_tracing_kwargs: Optional[Mapping[str, Any]] = None
-
-
 def save_as_stablehlo(exported_model: 'ExportedProgram',
                       stablehlo_dir: os.PathLike,
                       options: Optional[StableHLOExportOptions] = None):
@@ -448,7 +540,7 @@ def save_as_stablehlo(exported_model: 'ExportedProgram',
   if options is None:
     options = StableHLOExportOptions()
   shlo_program = exported_program_to_stablehlo(exported_model, options)
-  shlo_program.save(stablehlo_dir)
+  shlo_program.save(stablehlo_dir, options)
 
 
 def exported_program_to_stablehlo(

@@ -36,7 +36,7 @@ from torch_xla.distributed.fsdp.utils import apply_xla_patch_to_nn_linear
 import torch_xla.debug.metrics as met
 import torch_xla.debug.model_comparator as mc
 import torch_xla.distributed.parallel_loader as pl
-import torch_xla.experimental.xla_sharding as xs
+import torch_xla.distributed.spmd as xs
 from torch_xla import runtime as xr
 import torch_xla.test.test_utils as xtu
 import torch_xla.utils.utils as xu
@@ -58,7 +58,13 @@ def _is_on_tpu():
   return 'XRT_TPU_CONFIG' in os.environ or xr.device_type() == 'TPU'
 
 
+def _is_on_eager_debug_mode():
+  return xu.getenv_as('XLA_USE_EAGER_DEBUG_MODE', bool, defval=False)
+
+
 skipOnTpu = unittest.skipIf(_is_on_tpu(), 'Not supported on TPU')
+skipOnEagerDebug = unittest.skipIf(_is_on_eager_debug_mode(),
+                                   'skip on eager debug mode')
 
 
 def _gen_tensor(*args, **kwargs):
@@ -123,6 +129,19 @@ def _zeros_like(tensor_list):
     else:
       raise RuntimeError('Unsupported type: ', o.dtype)
   return zeros_tensors
+
+
+def onlyIfTorchSupportsCUDA(fn):
+  return unittest.skipIf(
+      not torch.cuda.is_available(), reason="requires PyTorch CUDA support")(
+          fn)
+
+
+def onlyIfPJRTDeviceIsCUDA(fn):
+  return unittest.skipIf(
+      os.environ.get("PJRT_DEVICE") not in ("GPU", "CUDA"),
+      reason="requires CUDA as PJRT_DEVICE")(
+          fn)
 
 
 class TestToXlaTensorArena(test_utils.XlaTestCase):
@@ -218,9 +237,14 @@ class XlaMNIST(nn.Module):
     return F.log_softmax(x, dim=1)
 
 
+@unittest.skipIf(
+    xr.device_type() == 'CUDA',
+    'Parallelism for DataParallel uses multi-threads. But cuda assumes one GPU device per process instead of relying on threads.'
+)
 class TestParallelTensorMNIST(test_utils.XlaTestCase):
 
   def test(self):
+    # devices=['xla:0', 'xla:1', 'xla:2', 'xla:3'] for example.
     devices = xm.get_xla_supported_devices()
     batch_size = xu.getenv_as('BATCH_SIZE', int, defval=8)
     sample_count = xu.getenv_as('SAMPLE_COUNT', int, defval=10)
@@ -248,6 +272,10 @@ class TestParallelTensorMNIST(test_utils.XlaTestCase):
     model_parallel(loop_fn, train_loader)
 
 
+@unittest.skipIf(
+    xr.device_type() == 'CUDA',
+    'Parallelism for DataParallel uses multi-threads. But cuda assumes one GPU device per process instead of relying on threads.'
+)
 class TestParallelTensorResnet18(test_utils.XlaTestCase):
 
   def test(self):
@@ -308,6 +336,19 @@ class TestSelect(test_utils.XlaTestCase):
     sx = x.select(1, 12)
     tx = t.select(1, 12)
     self.assertEqual(tx, sx.data.cpu())
+
+  def test_masked_fill_scalar(self):
+
+    def fn(tensor):
+      # Build a mask from the first line of tensor.
+      # Also, make it have the same rank as the original tensor.
+      mask = tensor[0].ge(0.5).unsqueeze(dim=0)
+      # Call masked_fill.
+      return tensor.masked_fill(mask, 10)
+
+    x = _gen_tensor(2, 2, device=xm.xla_device())
+    x_cpu = x.cpu()
+    self.assertEqual(fn(x_cpu), fn(x))
 
 
 class TestRandom(test_utils.XlaTestCase):
@@ -434,7 +475,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     devices = xm.get_xla_supported_devices()
     xla_devices = torch_xla._XLAC._xla_real_devices(devices)
     for device, xdevice in zip(devices, xla_devices):
-      self.assertTrue(re.match(r'(CPU|GPU|TPU):\d+$', xdevice) is not None)
+      self.assertIsNotNone(re.fullmatch(r'[A-Z]+:\d+$', xdevice))
 
   def test_negative_slice(self):
     t = _gen_tensor(32, 24, 32)
@@ -970,7 +1011,9 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     b = torch.ones([2, 2])
     self.runAtenTest((a, b), func)
 
-  @unittest.skipIf(XLA_DISABLE_FUNCTIONALIZATION,
+  # TODO - upstream behavior has changed and results in expected DestroyXlaTensor
+  # counter as of 11/13/2023. Re-enable after reviewing the change.
+  @unittest.skipIf(True or XLA_DISABLE_FUNCTIONALIZATION,
                    'Metrics differ when functionalization is disabled.')
   def test_set(self):
     met.clear_all()
@@ -1178,6 +1221,13 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     self.runAtenTest(torch.rand(4, 3), test_fn)
 
+  def test_diagonal_scatter_negative_dim(self):
+
+    def test_fn(input, src):
+      return torch.diagonal_scatter(input, src, 0, dim1=-1, dim2=0)
+
+    self.runAtenTest([torch.zeros(3, 3), torch.ones(3)], test_fn)
+
   def test_scatter_add_bool(self):
     xla_device = xm.xla_device()
     a = torch.tensor([[True, True, True, True, True],
@@ -1206,8 +1256,6 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     self.runAtenTest(torch.zeros([4, 4]), test_fn)
 
-  @unittest.skipIf(xr.device_type() == 'GPU',
-                   "This test fails only on GPU with 07/05 XLA pin update.")
   def test_stack_pred(self):
 
     def test_fn(a):
@@ -1627,13 +1675,49 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     t3 = torch.randn(1, 3).to(xla_device)
     t1.addcdiv_(t2, t3, value=0.1)
     xm.mark_step()
-    self.assertEqual(met.metric_data("TransferToServerTime")[0], 4)
+    self.assertEqual(met.metric_data("TransferToDeviceTime")[0], 4)
 
-    # The following two scalars shouldn't trigger TransferToServerTime.
+    # The following two scalars shouldn't trigger TransferToDeviceTime.
     t1.addcdiv_(t2, t3, value=0.1)
     t1.addcdiv_(t2, t3, value=0.1)
     xm.mark_step()
-    self.assertEqual(met.metric_data("TransferToServerTime")[0], 4)
+    self.assertEqual(met.metric_data("TransferToDeviceTime")[0], 4)
+
+  @skipOnEagerDebug
+  def test_print_executation(self):
+    xla_device = xm.xla_device()
+    xm.mark_step()
+    xm.wait_device_ops()
+    met.clear_all()
+
+    # case 1 mark_step
+    t1 = torch.randn(1, 4, device=xla_device)
+    xm.mark_step()
+    xm.wait_device_ops()
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
+    for _ in range(3):
+      print(t1)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
+    self.assertIn('xla::device_data',
+                  torch_xla._XLAC._get_xla_tensors_text([t1]))
+
+    # case 2 no mark_step, directly print
+    met.clear_all()
+    t1 = torch.randn(1, 4, device=xla_device)
+    for _ in range(3):
+      print(t1)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
+    self.assertIn('xla::device_data',
+                  torch_xla._XLAC._get_xla_tensors_text([t1]))
+
+    # case 2 no mark_step, print with .cpu
+    met.clear_all()
+    t1 = torch.randn(1, 4, device=xla_device)
+    for _ in range(3):
+      print(t1.cpu())
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
+    self.assertIn('xla::device_data',
+                  torch_xla._XLAC._get_xla_tensors_text([t1]))
 
   def test_index_types(self):
 
@@ -1802,6 +1886,50 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     self.assertTrue(torch.allclose(input.grad.cpu(), input_cpu.grad))
     self.assertTrue(
         torch.allclose(linear.bias.grad.cpu(), linear_cpu.bias.grad))
+
+  @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
+  def test_tpu_custom_call_pallas_add(self):
+    # This payload is generated by the following Pallas code:
+    # def add_vectors_kernel(x_ref, y_ref, o_ref):
+    #   x, y = x_ref[...], y_ref[...]
+    #   o_ref[...] = x + y
+    payload = "{\"custom_call_config\": {\"body\": \"TUzvUgFNTElSMTguMC4wZ2l0AAErCwEDBQcJAQMLAwUDDQcFDxEJBRMVA2lNDQFLBw8LEw8PDwsPMwsLCwtlCwsLCwsPCw8PEwsTDwsTDwsPDxMLDwUDYQENGwcTDxsPAsICHx0rLQUXAwMnKRURNx1HSRELAQUZHTM1AwsVFxkbHw0hDSMlBRsBAQUdDQlhZmZpbmVfbWFwPChkMCkgLT4gKGQwKT4ABR8FIQUjBSUFJxEDAQUpFS8JHQ8xFwUTAQUrFwUdAR05OwUtFwUlAR0/QQUvFUMJHQ9FFwUVAQUxFREJI3RwdS5tZW1vcnlfc3BhY2U8dm1lbT4AF0sDIQcdAycDIQcBAgIFBwEBAQEBAgQEpwUBEAEHAwEFAxEBEwcDFScHAQEBAQEBBwMDBwMDCwYDAwUFAQcHAwMHAwMLBgMDBQUDCwkGPQMFBQkNBwMLBwMDCwYLAwUFBRENBAsHDwURBQABBgMBBQEAdgcz2wsTGdkNCxMjIR0pJ0MNCwsTDw8PDQkLEWJ1aWx0aW4AZnVuYwB0cHUAYXJpdGgAdmVjdG9yAG1vZHVsZQByZXR1cm4AY29uc3RhbnQAYWRkaQBsb2FkAHN0b3JlAC9ob21lL2p3dGFuL3BhbGxhcy9wYWxsYXNfYWRkLnB5AGFkZF92ZWN0b3JzX2tlcm5lbABkaW1lbnNpb25fc2VtYW50aWNzAGZ1bmN0aW9uX3R5cGUAc2NhbGFyX3ByZWZldGNoAHNjcmF0Y2hfb3BlcmFuZHMAc3ltX25hbWUAbWFpbgB2YWx1ZQAvZ2V0W3RyZWU9UHlUcmVlRGVmKChDdXN0b21Ob2RlKE5ESW5kZXhlclsoUHlUcmVlRGVmKChDdXN0b21Ob2RlKFNsaWNlWygwLCA4KV0sIFtdKSwpKSwgKDgsKSwgKCkpXSwgW10pLCkpXQBhZGRfdmVjdG9ycwA8bW9kdWxlPgAvYWRkAC9zd2FwW3RyZWU9UHlUcmVlRGVmKChDdXN0b21Ob2RlKE5ESW5kZXhlclsoUHlUcmVlRGVmKChDdXN0b21Ob2RlKFNsaWNlWygwLCA4KV0sIFtdKSwpKSwgKDgsKSwgKCkpXSwgW10pLCkpXQA=\", \"needs_layout_passes\": true}}"
+
+    x = torch.arange(8, dtype=torch.int).to("xla")
+    y = torch.arange(8, dtype=torch.int).to("xla")
+    expected_output = x + y
+    output = torch.arange(8, dtype=torch.int).to("xla")
+
+    torch_xla._XLAC._xla_tpu_custom_call_(output, [x, y], payload)
+    self.assertTrue(torch.allclose(output.cpu(), expected_output.cpu()))
+
+  @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
+  def test_tpu_custom_call_pallas_add_one(self):
+    # This payload is generated by the following Pallas code:
+    # def add_vectors_kernel(x_ref, o_ref):
+    #   o_ref[...] = x_ref[...] + 1
+    payload = "{\"custom_call_config\": {\"body\": \"TUzvUgFNTElSMTguMC4wZ2l0AAEtCwEDBQcJAQMLAwUDDQcFDxEJBxMVFwNlSQ0BRwcPCw8PDxMLDzMLCwsLZQsLCwsPCw8LEw8PCxMPCxMTDwsLBQNhAQ0bDxMHFw8CpgIfFSsxBRkdQwMdRQMRCwEDAw8nBRsdKQMDCxUXGRsfCyELIyUFHQEBBR8NCWFmZmluZV9tYXA8KGQwKSAtPiAoZDApPgAFIQUjBSUFJxEHAQUpHS0vBSsXBRsBFTM5HTU3BS0XBS8BHTs9BS8XBUUBAwMPQREDBQUxBTMjdHB1Lm1lbW9yeV9zcGFjZTx2bWVtPgAXRwMhAx0BAgInAyEDAwUFAQEBAQIEBKEFARABBwMBBQMRARMHAxMnBQEBAQEHAxENAwcLBhEDBQUBBQcDBz8DAw0GBwMFAwkJBgcDBQUHCwcDCQ0DBwsGCQMFBQMPDwQJBw0DDwUAAQYDAQUBAMIHNdsLEyEv2QsTIyEdKQ1DDRULCxMPDw8NCQsRYnVpbHRpbgBmdW5jAHRwdQBhcml0aAB2ZWN0b3IAbW9kdWxlAHJldHVybgBjb25zdGFudABhZGRpAGxvYWQAYnJvYWRjYXN0AHN0b3JlAC9ob21lL2p3dGFuL3BhbGxhcy9wYWxsYXNfYWRkLnB5AHZhbHVlAGRpbWVuc2lvbl9zZW1hbnRpY3MAZnVuY3Rpb25fdHlwZQBzY2FsYXJfcHJlZmV0Y2gAc2NyYXRjaF9vcGVyYW5kcwBzeW1fbmFtZQBtYWluAC9nZXRbdHJlZT1QeVRyZWVEZWYoKEN1c3RvbU5vZGUoTkRJbmRleGVyWyhQeVRyZWVEZWYoKEN1c3RvbU5vZGUoU2xpY2VbKDAsIDgpXSwgW10pLCkpLCAoOCwpLCAoKSldLCBbXSksKSldAGFkZF9vbmVfdmVjdG9yc19rZXJuZWwAYWRkX3ZlY3RvcnNfb25lADxtb2R1bGU+AC9hZGQAL3N3YXBbdHJlZT1QeVRyZWVEZWYoKEN1c3RvbU5vZGUoTkRJbmRleGVyWyhQeVRyZWVEZWYoKEN1c3RvbU5vZGUoU2xpY2VbKDAsIDgpXSwgW10pLCkpLCAoOCwpLCAoKSldLCBbXSksKSldAA==\", \"needs_layout_passes\": true}}"
+
+    x = torch.arange(8, dtype=torch.int).to("xla")
+    expected_output = x + 1
+    output = torch.arange(8, dtype=torch.int).to("xla")
+
+    torch_xla._XLAC._xla_tpu_custom_call_(output, [x], payload)
+    self.assertTrue(torch.allclose(output.cpu(), expected_output.cpu()))
+
+  @unittest.skipIf(xr.device_type() != 'TPU', "This test only works on TPU.")
+  def test_tpu_custom_call_pallas_raise(self):
+    # This payload is generated by the following Pallas code:
+    # def add_vectors_kernel(x_ref, o_ref):
+    #   o_ref[...] = x_ref[...] + 1
+    payload = "{\"custom_call_config\": {\"body\": \"TUzvUgFNTElSMTguMC4wZ2l0AAEtCwEDBQcJAQMLAwUDDQcFDxEJBxMVFwNlSQ0BRwcPCw8PDxMLDzMLCwsLZQsLCwsPCw8LEw8PCxMPCxMTDwsLBQNhAQ0bDxMHFw8CpgIfFSsxBRkdQwMdRQMRCwEDAw8nBRsdKQMDCxUXGRsfCyELIyUFHQEBBR8NCWFmZmluZV9tYXA8KGQwKSAtPiAoZDApPgAFIQUjBSUFJxEHAQUpHS0vBSsXBRsBFTM5HTU3BS0XBS8BHTs9BS8XBUUBAwMPQREDBQUxBTMjdHB1Lm1lbW9yeV9zcGFjZTx2bWVtPgAXRwMhAx0BAgInAyEDAwUFAQEBAQIEBKEFARABBwMBBQMRARMHAxMnBQEBAQEHAxENAwcLBhEDBQUBBQcDBz8DAw0GBwMFAwkJBgcDBQUHCwcDCQ0DBwsGCQMFBQMPDwQJBw0DDwUAAQYDAQUBAMIHNdsLEyEv2QsTIyEdKQ1DDRULCxMPDw8NCQsRYnVpbHRpbgBmdW5jAHRwdQBhcml0aAB2ZWN0b3IAbW9kdWxlAHJldHVybgBjb25zdGFudABhZGRpAGxvYWQAYnJvYWRjYXN0AHN0b3JlAC9ob21lL2p3dGFuL3BhbGxhcy9wYWxsYXNfYWRkLnB5AHZhbHVlAGRpbWVuc2lvbl9zZW1hbnRpY3MAZnVuY3Rpb25fdHlwZQBzY2FsYXJfcHJlZmV0Y2gAc2NyYXRjaF9vcGVyYW5kcwBzeW1fbmFtZQBtYWluAC9nZXRbdHJlZT1QeVRyZWVEZWYoKEN1c3RvbU5vZGUoTkRJbmRleGVyWyhQeVRyZWVEZWYoKEN1c3RvbU5vZGUoU2xpY2VbKDAsIDgpXSwgW10pLCkpLCAoOCwpLCAoKSldLCBbXSksKSldAGFkZF9vbmVfdmVjdG9yc19rZXJuZWwAYWRkX3ZlY3RvcnNfb25lADxtb2R1bGU+AC9hZGQAL3N3YXBbdHJlZT1QeVRyZWVEZWYoKEN1c3RvbU5vZGUoTkRJbmRleGVyWyhQeVRyZWVEZWYoKEN1c3RvbU5vZGUoU2xpY2VbKDAsIDgpXSwgW10pLCkpLCAoOCwpLCAoKSldLCBbXSksKSldAA==\", \"needs_layout_passes\": true}}"
+
+    output = torch.arange(8, dtype=torch.int).to("xla")
+
+    # _xla_tpu_custom_call_ requires at least one input.
+    with self.assertRaises(RuntimeError):
+      torch_xla._XLAC._xla_tpu_custom_call_(output, [], payload)
+      output.cpu()
 
 
 class MNISTComparator(nn.Module):
@@ -2237,6 +2365,37 @@ class TestGeneric(test_utils.XlaTestCase):
     self.assertTrue(isinstance(xdata, nn.utils.rnn.PackedSequence))
     self.assertEqual(xdata.batch_sizes.device, torch.device('cpu'))
     self.assertEqual(xdata.data.device, xla_device)
+
+  def test_as_strided_input_larger(self):
+    size = (5, 5)
+    device = xm.xla_device()
+
+    a = torch.ones(size, device=device)
+    small_a = a[:, ::2]
+    former_a = small_a.as_strided(size, (5, 1), 0)
+
+    self.assertEqual(a, former_a)
+
+  def _test_move_tensor_cuda_to_xla(self, cpu_tensor):
+    # Assumes CPU-XLA data movement works.
+    cuda_tensor = cpu_tensor.to("cuda")
+    # Move tensor CUDA -> XLA.
+    xla_tensor = cuda_tensor.to(xm.xla_device())
+    # Move the XLA tensor back to CPU, and check that it is the same as
+    # the original CPU tensor.
+    self.assertTrue(torch.equal(cpu_tensor, xla_tensor.cpu()))
+
+  @onlyIfTorchSupportsCUDA
+  @onlyIfPJRTDeviceIsCUDA
+  def test_aten_move_cuda_to_xla(self):
+    self._test_move_tensor_cuda_to_xla(torch.arange(5))
+
+  @onlyIfTorchSupportsCUDA
+  @onlyIfPJRTDeviceIsCUDA
+  def test_aten_move_scalar_cuda_to_xla(self):
+    # 0-dimensional scalar-tensor
+    # Has a different execution path than other tensors.
+    self._test_move_tensor_cuda_to_xla(torch.tensor(42))
 
 
 if __name__ == '__main__':

@@ -956,6 +956,18 @@ TEST_F(AtenXlaTensorTest, TestSqueezeMultipleDims) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestSqueezeDimWithNegativeOne) {
+  torch::Tensor input =
+      torch::rand({2, 1, 3, 1}, torch::TensorOptions(torch::kFloat));
+  std::vector<int64_t> dims = {-1};
+  torch::Tensor output = torch::squeeze(input, dims);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_input = CopyToDevice(input, device);
+    torch::Tensor xla_output = torch::squeeze(xla_input, dims);
+    AllClose(output, xla_output);
+  });
+}
+
 TEST_F(AtenXlaTensorTest, TestSqueezeOneInPlace) {
   int rank = 4;
   for (int dim = -rank; dim < rank; ++dim) {

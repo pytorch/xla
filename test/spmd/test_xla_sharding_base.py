@@ -3,15 +3,12 @@ import numpy as np
 
 from torch import nn
 import torch_xla.core.xla_model as xm
-import torch_xla.experimental.xla_sharding as xs
+import torch_xla.distributed.spmd as xs
 import torch_xla.runtime as xr
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.utils.utils as xu
 
 
-@unittest.skipIf(not xr.using_pjrt() or
-                 xu.getenv_as(xenv.PJRT_DEVICE, str) == "GPU",
-                 f"Requires PJRT_DEVICE set to `TPU` or `CPU`.")
 class XlaShardingTest(unittest.TestCase):
 
   class SimpleLinear(nn.Module):
@@ -35,12 +32,12 @@ class XlaShardingTest(unittest.TestCase):
     cls.n_devices = xr.global_runtime_device_count()
     cls.device_ids = np.array(range(cls.n_devices))
 
-  def _get_mesh(self, mesh_shape, device_ids=None):
+  def _get_mesh(self, mesh_shape, device_ids=None, axis_names=None):
     assert type(mesh_shape) is tuple, 'mesh_shape must be Tuple[int]'
     if device_ids is None:
       device_ids = self.device_ids
     assert len(device_ids) == self.n_devices
-    return xs.Mesh(device_ids, mesh_shape)
+    return xs.Mesh(device_ids, mesh_shape, axis_names)
 
   def _get_hybrid_mesh(self, ici_mesh_shape, axis_names=None):
     return xs.HybridMesh(ici_mesh_shape=ici_mesh_shape, axis_names=axis_names)

@@ -302,12 +302,12 @@ std::vector<at::Tensor> Fetch(
     absl::Span<const torch_xla::runtime::ComputationClient::DataPtr>
         device_data) {
   std::vector<xla::Literal> literals =
-      torch_xla::runtime::GetComputationClient()->TransferFromServer(
+      torch_xla::runtime::GetComputationClient()->TransferFromDevice(
           device_data);
   std::vector<at::Tensor> tensors;
   for (auto& literal : literals) {
     tensors.push_back(MakeTensorFromXlaLiteral(
-        literal, TensorTypeFromXlaType(literal.shape().element_type())));
+        literal, MaybeUpcastToHostTorchType(literal.shape().element_type())));
   }
   return tensors;
 }

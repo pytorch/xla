@@ -7,6 +7,7 @@
 
 #include <memory>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -21,6 +22,8 @@
 
 namespace torch_xla {
 
+class StackFrameIndexBuilder;
+
 class LoweringContext : public torch::lazy::LoweringContext {
  public:
   explicit LoweringContext(const std::string& name,
@@ -31,13 +34,18 @@ class LoweringContext : public torch::lazy::LoweringContext {
 
   xla::XlaBuilder* builder() { return &builder_; }
 
+  StackFrameIndexBuilder* stack_frame_index_builder() {
+    return stack_frame_index_builder_.get();
+  }
+
   const torch::lazy::BackendDevice& device() const { return device_; };
 
   // If a parameter associated with data has already been declared, it will be
   // returned. Otherwise a new one will be created, associated with the tensor
   // held in data.
   xla::XlaOp GetParameter(
-      const std::shared_ptr<torch::lazy::BackendData>& data);
+      const std::shared_ptr<torch::lazy::BackendData>& data,
+      const std::unordered_set<uint32_t>& dynamic_dims = {});
 
   // Retrieves the vector holding all the tensors associated with the parameter
   // instructions which have been created.
@@ -94,6 +102,10 @@ class LoweringContext : public torch::lazy::LoweringContext {
     return emitted_outputs_;
   }
 
+  // Return stack frame id
+  int64_t AddStackFrameLocation(const torch::lazy::SourceLocation& source,
+                                int64_t parent_id);
+
  private:
   struct Parameter {
     xla::XlaOp param;
@@ -109,6 +121,8 @@ class LoweringContext : public torch::lazy::LoweringContext {
       parameters_map_;
   std::vector<xla::XlaOp> root_tuple_;
   OutputMap<xla::XlaOp> emitted_outputs_;
+
+  std::shared_ptr<StackFrameIndexBuilder> stack_frame_index_builder_;
 };  // namespace torch_xla
 
 }  // namespace torch_xla

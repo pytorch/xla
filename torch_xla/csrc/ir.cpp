@@ -174,6 +174,8 @@ xla::Shape XlaNode::GetOpShape(
 std::string XlaNode::ToString() const {
   std::stringstream ss;
   ss << torch::lazy::Node::ToString() << ", xla_shape=" << xla_shape_;
+  ss << ", dynamic_dims: (" << absl::StrJoin(unbounded_dynamic_dims_, ", ")
+     << ')';
   return ss.str();
 }
 
@@ -226,6 +228,18 @@ void XlaNode::UpdateShardingHash() {
           torch::lazy::HashCombine(sharding_hash_, (uint32_t)is_dyn_dim);
     }
   }
+}
+
+std::shared_ptr<torch::lazy::UserMetaData> XlaNode::SetUserMetadataForSubGraph(
+    std::shared_ptr<torch::lazy::UserMetaData> user_meta) {
+  for (auto np : operands_) {
+    XlaNode* xnp = dynamic_cast<XlaNode*>(np.get());
+    if (xnp != nullptr && xnp->user_metadata() == nullptr) {
+      xnp->SetUserMetadataForSubGraph(user_meta);
+    }
+  }
+  // Only set if there is no metadata already set
+  return SetUserMetadata(user_meta);
 }
 
 }  // namespace torch_xla

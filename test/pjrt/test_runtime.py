@@ -16,11 +16,30 @@ class TestExperimentalPjrt(parameterized.TestCase):
   def setUp(self):
     xr.set_device_type('CPU')
 
-  @parameterized.parameters(('CPU', 'CPU'), ('GPU', 'GPU'), ('TPU', 'TPU'),
-                            ('TPU_C_API', 'TPU'), ('TPU_LEGACY', 'TPU'))
+  @parameterized.parameters(('CPU', 'CPU'), ('CUDA', 'CUDA'), ('TPU', 'TPU'))
   def test_device_type(self, pjrt_device, expected):
     with mock.patch.dict(os.environ, {'PJRT_DEVICE': pjrt_device}, clear=True):
       self.assertEqual(xr.device_type(), expected)
+
+  def test_set_device_type(self):
+    with mock.patch.dict(
+        os.environ, {'PJRT_DEVICE': 'CPU'}, clear=True), mock.patch.object(
+            torch_xla._XLAC, '_xla_runtime_is_initialized', return_value=False):
+      xr.set_device_type('TOASTER')
+      self.assertEqual(os.environ['PJRT_DEVICE'], 'TOASTER')
+
+  def test_set_device_type_error(self):
+    with mock.patch.dict(
+        os.environ, {'PJRT_DEVICE': 'CPU'}, clear=True), mock.patch.object(
+            torch_xla._XLAC, '_xla_runtime_is_initialized', return_value=True):
+      with self.assertRaises(RuntimeError):
+        xr.set_device_type('TPU')
+
+  def test_set_device_type_same_device(self):
+    with mock.patch.dict(
+        os.environ, {'PJRT_DEVICE': 'CPU'}, clear=True), mock.patch.object(
+            torch_xla._XLAC, '_xla_runtime_is_initialized', return_value=True):
+      xr.set_device_type('CPU')
 
   def test_requires_pjrt(self):
     with mock.patch.dict(
@@ -61,7 +80,7 @@ class TestExperimentalPjrt(parameterized.TestCase):
   }, True), ('gpu_num_devives', {
       'GPU_NUM_DEVICES': '4'
   }, True), ('pjrt_gpu', {
-      'PJRT_DEVICE': 'GPU',
+      'PJRT_DEVICE': 'CUDA',
       'GPU_NUM_DEVICES': '4'
   }, True))
   def test_pjrt_default_device(self, env_vars, expect_using_pjrt):
@@ -77,7 +96,7 @@ class TestExperimentalPjrt(parameterized.TestCase):
         xr.using_pjrt()
 
       if expect_using_pjrt:
-        self.assertIn(xr.device_type(), ['CPU', 'GPU', 'TPU'])
+        self.assertIn(xr.device_type(), ['CPU', 'CUDA', 'TPU'])
       else:
         self.assertIsNone(xr.device_type())
 

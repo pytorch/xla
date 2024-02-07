@@ -170,7 +170,7 @@ xla::XlaOp CreateIndexAlongDim(
   xla::XlaOp updates = value;
   if (buffer_shape.element_type() != value_shape.element_type()) {
     updates = ConvertTo(updates, value_shape.element_type(),
-                        buffer_shape.element_type(), /*device=*/nullptr);
+                        buffer_shape.element_type());
   }
   if (broadcast_value_to_index) {
     const xla::Shape& index_shape = ShapeHelper::ShapeOfXlaOp(index);
@@ -350,9 +350,9 @@ std::vector<xla::XlaOp> CreateKthValue(xla::XlaOp input, int64_t k, int64_t dim,
     indices = XlaHelpers::DynamicReshape(indices, reshape_sizes);
   }
   // aten::kthvalue() wants Long tensors as indices.
-  return {values, xla::ConvertElementType(
-                      indices, GetDevicePrimitiveType(xla::PrimitiveType::S64,
-                                                      /*device=*/nullptr))};
+  return {values,
+          xla::ConvertElementType(indices, GetXlaPrimitiveTypeForCurrentDevice(
+                                               xla::PrimitiveType::S64))};
 }
 
 std::vector<xla::XlaOp> CreateTopK(xla::XlaOp input, int64_t k, int64_t dim,
@@ -383,9 +383,9 @@ std::vector<xla::XlaOp> CreateTopK(xla::XlaOp input, int64_t k, int64_t dim,
   xla::XlaOp indices = xla::Slice(xla::GetTupleElement(sort_result, 1),
                                   start_indices, limit_indices, strides);
   // aten::topk() wants Long tensors as indices.
-  return {values, xla::ConvertElementType(
-                      indices, GetDevicePrimitiveType(xla::PrimitiveType::S64,
-                                                      /*device=*/nullptr))};
+  return {values,
+          xla::ConvertElementType(indices, GetXlaPrimitiveTypeForCurrentDevice(
+                                               xla::PrimitiveType::S64))};
 }
 
 xla::XlaOp CreateMatMul(xla::XlaOp lhs, xla::XlaOp rhs) {
@@ -603,7 +603,7 @@ xla::XlaOp CreateIndexUpdate(
   xla::XlaOp new_values = values;
   if (buffer_shape.element_type() != values_shape.element_type()) {
     new_values = ConvertTo(new_values, values_shape.element_type(),
-                           buffer_shape.element_type(), /*device=*/nullptr);
+                           buffer_shape.element_type());
   }
   new_values = BuildExpand(new_values, expected_values_dims);
   const xla::Shape& new_values_shape = ShapeHelper::ShapeOfXlaOp(new_values);
@@ -654,8 +654,7 @@ XlaOpCombiner NumericAddCombiner() {
     xla::XlaOp numeric_y = ConvertToNumeric(y);
     xla::XlaOp numeric_sum = numeric_x + numeric_y;
     return ConvertTo(numeric_sum, XlaHelpers::TypeOfXlaOp(numeric_sum),
-                     XlaHelpers::TypeOfXlaOp(x),
-                     /*device=*/nullptr);
+                     XlaHelpers::TypeOfXlaOp(x));
   };
 }
 
@@ -665,8 +664,7 @@ XlaOpCombiner NumericMulCombiner() {
     xla::XlaOp numeric_y = ConvertToNumeric(y);
     xla::XlaOp numeric_sum = numeric_x * numeric_y;
     return ConvertTo(numeric_sum, XlaHelpers::TypeOfXlaOp(numeric_sum),
-                     XlaHelpers::TypeOfXlaOp(x),
-                     /*device=*/nullptr);
+                     XlaHelpers::TypeOfXlaOp(x));
   };
 }
 
@@ -677,8 +675,7 @@ XlaOpCombiner NumericMinCombiner() {
     xla::XlaOp numeric_sum = xla::Min(numeric_x, numeric_y);
     // xla::XlaOp numeric_sum = xla::Min(numeric_x, numeric_y);
     return ConvertTo(numeric_sum, XlaHelpers::TypeOfXlaOp(numeric_sum),
-                     XlaHelpers::TypeOfXlaOp(x),
-                     /*device=*/nullptr);
+                     XlaHelpers::TypeOfXlaOp(x));
   };
 }
 
@@ -688,8 +685,7 @@ XlaOpCombiner NumericMaxCombiner() {
     xla::XlaOp numeric_y = ConvertToNumeric(y);
     xla::XlaOp numeric_sum = xla::Max(numeric_x, numeric_y);
     return ConvertTo(numeric_sum, XlaHelpers::TypeOfXlaOp(numeric_sum),
-                     XlaHelpers::TypeOfXlaOp(x),
-                     /*device=*/nullptr);
+                     XlaHelpers::TypeOfXlaOp(x));
   };
 }
 
@@ -765,7 +761,7 @@ xla::XlaOp BuildLinspace(const torch::lazy::BackendDevice& device,
   std::tie(start, end) = XlaHelpers::PromoteValues(start, end);
   xla::XlaOp indices = xla::ConvertElementType(
       xla::ConstantLiteral(start.builder(),
-                           XlaHelpers::Range<int64_t>(0, steps, 1)),
+                           XlaHelpers::Range<int64_t>(0l, steps, 1l)),
       XlaHelpers::TypeOfXlaOp(start));
 
   xla::XlaOp last_index = XlaHelpers::ScalarValue(
@@ -1013,10 +1009,11 @@ std::vector<xla::XlaOp> BuildAdamOptimizerStep(
   xla::XlaOp new_exp_avg_sq =
       xla::Select(found_inf_cond, exp_avg_sq,
                   exp_avg_sq * beta2 + new_grad * new_grad * (one - beta2));
-  xla::XlaOp new_max_exp_avg_sq = xla::Select(
-      found_inf_cond, max_exp_avg_sq, xla::Max(max_exp_avg_sq, new_exp_avg_sq));
+  xla::XlaOp new_max_exp_avg_sq;
   xla::XlaOp denom;
   if (use_amsgrad) {
+    new_max_exp_avg_sq = xla::Select(found_inf_cond, max_exp_avg_sq,
+                                     xla::Max(max_exp_avg_sq, new_exp_avg_sq));
     denom = xla::Sqrt(new_max_exp_avg_sq) / xla::Sqrt(bias_correction2) + eps;
   } else {
     denom = xla::Sqrt(new_exp_avg_sq) / xla::Sqrt(bias_correction2) + eps;
@@ -1031,7 +1028,9 @@ std::vector<xla::XlaOp> BuildAdamOptimizerStep(
   results.push_back(new_param);
   results.push_back(new_exp_avg);
   results.push_back(new_exp_avg_sq);
-  results.push_back(new_max_exp_avg_sq);
+  if (use_amsgrad) {
+    results.push_back(new_max_exp_avg_sq);
+  }
   return results;
 }
 
@@ -1223,6 +1222,21 @@ xla::XlaOp BuildMultinomial(xla::XlaOp input, int64_t num_samples,
 xla::XlaOp BuildCustomSharding(const xla::XlaOp& input) {
   return xla::CustomCall(input.builder(), /*call_target_name=*/"Sharding",
                          {input}, ShapeHelper::ShapeOfXlaOp(input));
+}
+
+xla::XlaOp BuildTpuCustomCall(const std::vector<xla::XlaOp>& inputs,
+                              const xla::Shape& output_shape,
+                              const std::string& payload) {
+  std::vector<xla::Shape> input_shapes;
+  input_shapes.reserve(inputs.size());
+  for (const auto& input : inputs) {
+    input_shapes.push_back(ShapeHelper::ShapeOfXlaOp(input));
+  }
+
+  XLA_CHECK(inputs.size() > 0) << "inputs are empty";
+  return xla::CustomCallWithLayout(inputs[0].builder(),
+                                   /*call_target_name=*/"tpu_custom_call",
+                                   inputs, output_shape, input_shapes, payload);
 }
 
 }  // namespace torch_xla

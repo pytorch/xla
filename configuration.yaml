@@ -4,7 +4,7 @@ variables:
     PJRT_DEVICE:
       description:
         - Indicates which device is being used with PJRT. It can be either CPU,
-          TPU, or GPU
+          TPU, or CUDA
       type: string
     PJRT_SELECT_DEFAULT_DEVICE:
       description:
@@ -41,7 +41,7 @@ variables:
         - Build the xla client with CUDA enabled.
       type: bool
       default_value: false
-    VERSIONED_XLA_BUILD:
+    GIT_VERSIONED_XLA_BUILD:
       description:
         - Creates a versioned build. In particular, appends a git sha to the
           version number string
@@ -405,5 +405,13 @@ variables:
       description:
         - Dump the HLO graph after optimizations. You need to use it together
           with XLA_SAVE_TENSORS_FMT='hlo' and XLA_SAVE_TENSORS_FILE='your/location'.
+      type: bool
+      default_value: false
+    XLA_DISABLE_FUNCTIONALIZATION:
+      description:
+        - Setting this to true will disable functionalization, which is a dispatcher 
+          pass in PyTorch that remove views and mutations to produce functional graphs.
+          This flag's main purpose is to A/B test the impact of functionalization in 
+          your code.
       type: bool
       default_value: false

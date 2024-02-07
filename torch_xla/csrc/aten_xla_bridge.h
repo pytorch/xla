@@ -148,6 +148,13 @@ auto TupleAtenFromXlaTensors(const std::vector<XLATensorPtr>& tensors) {
   return TupleAtenFromXlaTensorsImpl(tensors, std::make_index_sequence<N>{});
 }
 
+// Returns the deepest base tensor for a given tensor.
+// If the base tensor is not defined, returns the tensor itself.
+const at::Tensor& GetRootBase(const at::Tensor& tensor);
+// Sets the base tensor of a given XLATensor. Convenient function
+// to be used when returning tensors.
+XLATensorPtr SetBaseTensor(XLATensorPtr tensor, const at::Tensor& base);
+
 }  // namespace bridge
 }  // namespace torch_xla
 

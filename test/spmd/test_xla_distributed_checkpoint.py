@@ -1,23 +1,40 @@
+import functools
 import os
+import signal
 import sys
 import tempfile
-import unittest
 import test_xla_sharding_base
+import threading
+import time
+import unittest
 
 import torch
 import torch.distributed as dist
 import torch.distributed.checkpoint as dist_cp
+import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.runtime as xr
-import torch_xla.experimental.xla_sharding as xs
+import torch_xla.distributed.spmd as xs
 
 from torch.distributed.checkpoint.default_planner import (
     create_default_local_save_plan,
     create_default_global_save_plan,
 )
-from torch_xla.experimental.distributed_checkpoint import SPMDLoadPlanner, SPMDSavePlanner
-from torch_xla.experimental._distributed_checkpoint_helpers import (
+from torch_xla.experimental.distributed_checkpoint import SPMDLoadPlanner, SPMDSavePlanner, CheckpointManager
+from torch_xla.experimental.distributed_checkpoint._helpers import (
     _sharded_cpu_state_dict, _CpuShards, _is_sharded_tensor)
+
+
+# Wrapper to manage a temporary directory for the wrapped test
+def run_with_tmpdir(f):
+
+  @functools.wraps(f)
+  def run(*args, **kwargs):
+    with tempfile.TemporaryDirectory() as tmpdir:
+      kwargs.setdefault('tmpdir', tmpdir)
+      f(*args, **kwargs)
+
+  return run
 
 
 class DistributedCheckpointTestBase(test_xla_sharding_base.XlaShardingTest):
@@ -76,7 +93,10 @@ class EndToEndCheckpointTest(DistributedCheckpointTestBase):
     model_out_state_dict = model_out.state_dict()
     dist_cp.save_state_dict(
         state_dict=model_in_state_dict,
-        storage_writer=dist_cp.FileSystemWriter(chkpt_path),
+        storage_writer=dist_cp.FileSystemWriter(
+            chkpt_path,
+            per_thread_copy_ahead=0,
+        ),
         planner=save_planner,
         no_dist=no_dist,
     )
@@ -256,6 +276,20 @@ class SPMDSavePlannerTest(DistributedCheckpointTestBase):
       self.assertTrue(
           isinstance(planner.sharded_state_dict['fc1.weight'], _CpuShards))
 
+  @unittest.skipUnless(xr.global_runtime_device_count() > 1,
+                       "Multiple devices required for sharded test")
+  def test_cpu_state_dict_flattening(self):
+    # In the case of a nested state_dict with fully sharded parameters,
+    # _CpuShards should be treated as terminal nodes.
+    t = torch.randn(128, 128).to(xm.xla_device())
+    mesh = self._get_mesh((self.n_devices, 1))
+    xs.mark_sharding(t, mesh, (0, 1))
+    state_dict = _sharded_cpu_state_dict({'model': {'weight': t}})
+    planner = SPMDSavePlanner()
+    planner.set_up_planner(state_dict, True)
+    # model.weight should be flattened and tracked in the sharded state dict.
+    self.assertCountEqual(planner.sharded_state_dict, ["model.weight"])
+
   def test_local_save_plan(self):
 
     def _write_item_assertions(plan, n_devices, parameter_count):
@@ -317,6 +351,218 @@ class DistributedCheckpointHelpersTest(DistributedCheckpointTestBase):
       else:
         self.assertTrue(isinstance(param, torch.Tensor))
         self.assertTrue(param.device == torch.device("cpu"))
+
+
+class CheckpointManagerTest(DistributedCheckpointTestBase):
+
+  def setUp(self):
+    super().setUp()
+    # Initialize the a minimal process group
+    dist.init_process_group(
+        backend='gloo',
+        init_method='tcp://localhost:8932',
+        world_size=1,
+        rank=0)
+    torch_xla._XLAC._ensure_xla_coordinator_initialized(
+        global_rank=0, world_size=1, master_addr="localhost")
+
+  def tearDown(self):
+    super().tearDown()
+    # Destroy the CPU process group after the test
+    dist.destroy_process_group()
+
+  @run_with_tmpdir
+  def test_manager_checkpointing(self, tmpdir):
+    chkpt_mgr = CheckpointManager(
+        tmpdir, save_interval=10, chkpt_on_preemption=False)
+    state_dict = self._get_sharded_model().state_dict()
+
+    # Take a checkpoint on step 0
+    self.assertTrue(chkpt_mgr.save(0, state_dict))
+
+    # Load the checkpoint into a new state_dict
+    new_state_dict = self._get_sharded_model().state_dict()
+    self.assertFalse(
+        any(
+            torch.allclose(v, new_state_dict[k])
+            for k, v in state_dict.items()))
+    chkpt_mgr.restore(0, new_state_dict)
+    self.assertTrue(
+        all(
+            torch.allclose(v, new_state_dict[k])
+            for k, v in state_dict.items()))
+
+  @run_with_tmpdir
+  def test_manager_step_tracking(self, tmpdir):
+    chkpt_mgr = CheckpointManager(
+        tmpdir, save_interval=10, chkpt_on_preemption=False)
+    state_dict = self._get_sharded_model().state_dict()
+
+    # No steps are being tracked initially
+    self.assertEqual(chkpt_mgr.all_steps(), [])
+
+    # Steps not divisible by 10 should not be saved
+    for step in range(1, 10):
+      self.assertFalse(chkpt_mgr.save(step, state_dict))
+      self.assertEqual(chkpt_mgr.all_steps(), [])
+
+    # Steps divisible by 10 should be saved
+    saved = set()
+    for step in range(0, 100, 10):
+      self.assertTrue(chkpt_mgr.save(step, state_dict))
+      saved.add(step)
+      self.assertEqual(set(chkpt_mgr.all_steps()), saved)
+
+  @run_with_tmpdir
+  def test_manager_max_to_keep(self, tmpdir):
+    chkpt_mgr = CheckpointManager(
+        tmpdir, save_interval=10, max_to_keep=2, chkpt_on_preemption=False)
+    state_dict = self._get_sharded_model().state_dict()
+
+    # No steps are being tracked initially
+    self.assertEqual(chkpt_mgr.all_steps(), [])
+
+    self.assertTrue(chkpt_mgr.save(10, state_dict))
+    self.assertEqual(set(chkpt_mgr.all_steps()), {10})
+
+    self.assertTrue(chkpt_mgr.save(20, state_dict))
+    self.assertEqual(set(chkpt_mgr.all_steps()), {10, 20})
+
+    # The oldest checkpoint should be erased
+    self.assertTrue(chkpt_mgr.save(30, state_dict))
+    self.assertEqual(set(chkpt_mgr.all_steps()), {30, 20})
+
+    # The oldest is selected by creation timestamp, not step
+    self.assertTrue(chkpt_mgr.save(10, state_dict))
+    self.assertEqual(set(chkpt_mgr.all_steps()), {30, 10})
+
+    # The deletion order should persist across executions
+    chkpt_mgr = CheckpointManager(
+        tmpdir, save_interval=10, max_to_keep=2, chkpt_on_preemption=False)
+    self.assertTrue(chkpt_mgr.save(20, state_dict))
+    self.assertEqual(set(chkpt_mgr.all_steps()), {20, 10})
+
+  @run_with_tmpdir
+  def test_manager_async(self, tmpdir):
+    chkpt_mgr = CheckpointManager(
+        tmpdir, save_interval=10, chkpt_on_preemption=False)
+    state_dict = self._get_sharded_model().state_dict()
+
+    # Patch the manager's save method to block until this thread signals.
+    cond = threading.Condition()
+    old_save = chkpt_mgr._save
+
+    def patched_save(*args, **kwargs):
+      with cond:
+        cond.wait()
+      old_save(*args, **kwargs)
+
+    with unittest.mock.patch.object(chkpt_mgr, '_save', patched_save):
+      chkpt_mgr.save_async(10, state_dict)
+
+    # No new steps should be tracked immediately after calling save_async
+    self.assertEqual(chkpt_mgr.all_steps(), [])
+
+    # Trigger the actual checkpoint in the background thread and wait for
+    # completion.
+    with cond:
+      cond.notify()
+    chkpt_mgr.join()
+
+    # The manager should track all steps which were asynchronously saved.
+    self.assertEqual(set(chkpt_mgr.all_steps()), {10})
+
+  @run_with_tmpdir
+  def test_manager_async_step_tracking(self, tmpdir):
+    chkpt_mgr = CheckpointManager(
+        tmpdir, save_interval=10, chkpt_on_preemption=False)
+    state_dict = self._get_sharded_model().state_dict()
+
+    self.assertEqual(chkpt_mgr.all_steps(), [])
+
+    # Steps not divisible by 10 should not be saved
+    for step in range(1, 10):
+      self.assertFalse(chkpt_mgr.save_async(step, state_dict))
+      self.assertEqual(chkpt_mgr.all_steps(), [])
+
+    # Steps divisible by 10 should be saved
+    saved = set()
+    for step in range(0, 100, 10):
+      self.assertTrue(chkpt_mgr.save_async(step, state_dict))
+      saved.add(step)
+
+    # Join to allow pending async checkpoints to complete
+    chkpt_mgr.join()
+
+    # The manager should track all steps which were asynchronously saved.
+    self.assertEqual(set(chkpt_mgr.all_steps()), saved)
+
+    # Load a checkpoint into a new state_dict
+    new_state_dict = self._get_sharded_model().state_dict()
+    self.assertFalse(
+        any(
+            torch.allclose(v, new_state_dict[k])
+            for k, v in state_dict.items()))
+    chkpt_mgr.restore(0, new_state_dict)
+    self.assertTrue(
+        all(
+            torch.allclose(v, new_state_dict[k])
+            for k, v in state_dict.items()))
+
+  @unittest.skipIf(xr.device_type() != 'TPU',
+                   'TPU required for worker IP discovery')
+  @unittest.mock.patch('torch_xla._internal.tpu.get_worker_ips')
+  def test_master_ip_discovery(self, patched_get_worker_ips):
+    # A basic test to verify the SPMD codepath returns the correct IP. Two IPs
+    # are needed to avoid the short-circuit return of localhost.
+    patched_get_worker_ips.return_value = ['10.0.0.1', '10.0.0.2']
+    self.assertTrue(xr.get_master_ip(), '10.0.0.1')
+
+  def test_preemption_sync_manager(self):
+    try:
+      torch_xla._XLAC._activate_preemption_sync_manager()
+      sync_point_reached = torch_xla._XLAC._sync_point_reached
+
+      # No sync point for the first several steps
+      sigterm_step = 10
+      for step in range(sigterm_step):
+        self.assertFalse(sync_point_reached(step))
+
+      # Send a SIGTERM to the current process to trigger a sync point
+      os.kill(os.getpid(), signal.SIGTERM)
+
+      # Allow the signal to be processed. The PreemptionSyncManager must receive
+      # the SIGTERM, which happens asynchronously, and the state must be
+      # propagated through the distributed runtime. Eventually,
+      # sync_point_reached will return True.
+      success = False
+      for attempt in range(10):
+        success = sync_point_reached(sigterm_step + attempt)
+        if success:
+          break
+        time.sleep(1)
+      self.assertTrue(success, "Sync point was never reached after SIGTERM")
+    finally:
+      # Scope the PreemptionSyncManager to the lifespan of the test.
+      torch_xla._XLAC._deactivate_preemption_sync_manager()
+
+  @unittest.skipIf(xr.device_type() != 'TPU',
+                   'TPU required for worker IP discovery')
+  @run_with_tmpdir
+  def test_auto_checkpoint(self, tmpdir):
+    # Create a checkpoint manager with a long save interval
+    chkpt_mgr = CheckpointManager(tmpdir, save_interval=100)
+    state_dict = self._get_sharded_model().state_dict()
+
+    preemption_step = 10
+    # Skip step 0 so the manager will track no checkpoints before preemption
+    for step in range(1, preemption_step):
+      self.assertFalse(chkpt_mgr.save(step, state_dict))
+
+    with unittest.mock.patch('torch_xla._XLAC._sync_point_reached',
+                             lambda x: True):
+      self.assertTrue(chkpt_mgr.save(preemption_step, state_dict))
+      self.assertTrue(chkpt_mgr.reached_preemption(step))
 
 
 if __name__ == '__main__':
