@@ -253,7 +253,7 @@ XLATensorPtr Embedding(const XLATensorPtr& weight,
 
   std::vector<int64_t> final_size;
   int64_t num_elements = 1;
-  for (int i = 0; i < weight->shape().get().rank(); i++) {
+  for (int i = 0; i < indices->shape().get().rank(); i++) {
     int64_t dim = indices->shape().get().dimensions(i);
     final_size.push_back(dim);
     num_elements *= dim;
