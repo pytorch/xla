@@ -114,10 +114,9 @@ void CheckSubOperandTypes(at::ScalarType type1, at::ScalarType type2) {
 
 c10::optional<at::ScalarType> PromoteIntegralType(
     at::ScalarType src_dtype, const c10::optional<at::ScalarType>& opt_dtype) {
-  return opt_dtype.has_value()
-             ? opt_dtype.value()
-             : at::isIntegralType(src_dtype, /*includeBool=*/true) ? at::kLong
-                                                                   : opt_dtype;
+  return opt_dtype.has_value() ? opt_dtype.value()
+         : at::isIntegralType(src_dtype, /*includeBool=*/true) ? at::kLong
+                                                               : opt_dtype;
 }
 
 bool IsTypeWithLargerRangeThanLong(torch::ScalarType dtype) {
@@ -1194,6 +1193,23 @@ at::Tensor XLANativeFunctions::embedding_dense_backward(
   return bridge::AtenFromXlaTensor(tensor_methods::embedding_dense_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(indices),
       num_weights, padding_idx, scale_grad_by_freq));
+}
+
+std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor>
+XLANativeFunctions::_embedding_bag(
+    const at::Tensor& weight, const at::Tensor& indices,
+    const at::Tensor& offsets, bool scale_grad_by_freq, int64_t mode,
+    bool sparse, const c10::optional<at::Tensor>& per_sample_weights,
+    bool include_last_offset, int64_t padding_idx) {
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  auto result = tensor_methods::embedding_bag(
+      bridge::GetXlaTensor(weight), bridge::GetXlaTensor(indices),
+      bridge::GetXlaTensor(offsets), scale_grad_by_freq, mode, sparse,
+      per_sample_weights, include_last_offset, padding_idx);
+  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(result)),
+                         bridge::AtenFromXlaTensor(std::get<1>(result)),
+                         bridge::AtenFromXlaTensor(std::get<2>(result)),
+                         bridge::AtenFromXlaTensor(std::get<3>(result)));
 }
 
 at::Tensor XLANativeFunctions::empty_symint(
