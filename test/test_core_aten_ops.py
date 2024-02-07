@@ -3,7 +3,6 @@ import torch_xla.core.xla_model as xm
 from torch_xla.stablehlo import exported_program_to_stablehlo
 from torch.utils import _pytree as pytree
 import torch
-import torch._export
 
 import os
 import tempfile
