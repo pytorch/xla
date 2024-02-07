@@ -120,8 +120,7 @@ class ExperimentRunner:
         #
         # Otherwise, we should go ahead and execute it.
         if (not self._args.no_skip and not self.model_loader.is_compatible(
-            benchmark_model, benchmark_experiment,
-            self._args.strict_compatible)):
+            benchmark_model, benchmark_experiment)):
           logger.warning("SKIP incompatible model and experiment configs.")
           self._save_results(benchmark_experiment.to_dict(),
                              benchmark_model.to_dict(), {"error": "SKIP"})
@@ -882,11 +881,6 @@ def parse_args(args=None):
       "--verify",
       action="store_true",
       help="""If set, verifies the model output with PT Eager mode, and saves relative error to the output file."""
-  )
-  parser.add_argument(
-      "--strict-compatible",
-      action="store_true",
-      help="Strictly skips some models including models without installation file or causing stackdump.",
   )
   parser.add_argument(
       "--no-skip",
