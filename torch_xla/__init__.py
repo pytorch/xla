@@ -148,7 +148,6 @@ _aws_ec2_inf_trn_init()
 
 def _prepare_to_exit():
   try:
-    raise ValueError('fake error')
     _XLAC._prepare_to_exit()
     if int(os.environ.get('PT_XLA_DEBUG', '0')):
       _summarize_fn_tracker()
