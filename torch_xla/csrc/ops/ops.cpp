@@ -21,6 +21,7 @@
 #include "torch_xla/csrc/ops/permute.h"
 #include "torch_xla/csrc/ops/softmax_backward.h"
 #include "torch_xla/csrc/ops/sum.h"
+#include "torch_xla/csrc/ops/unsqueeze.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
 #include "torch_xla/csrc/pooling.h"
 #include "torch_xla/csrc/runtime/debug_macros.h"
@@ -564,6 +565,32 @@ torch::lazy::NodePtr Norm(const torch::lazy::Value& input,
   torch::lazy::NodePtr result =
       torch::lazy::MakeNode<Sum>(exp, dimensions, keepdim, dtype);
   return Pow(result, norm_exp_inv);
+}
+
+torch::lazy::NodePtr Pdist_forward(const torch::lazy::Value& input,
+                                   const c10::optional<at::Scalar>& p,
+                                   c10::optional<at::ScalarType> dtype) {
+  // pdist(x, p) is equal to norm(x[:, None]-x, dim=2, p) and we only take the
+  // upper triangle without diagonal line.
+  auto lower_fn = [=](const XlaNode& node,
+                      LoweringContext* loctx) -> XlaOpVector {
+    xla::XlaOp xla_input = loctx->GetOutputOp(node.operand(0));
+    return node.ReturnOp(BuildUpperTriangle(xla_input), loctx);
+  };
+  auto lower_for_shape_fn =
+      [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
+    return BuildUpperTriangle(operands[0]);
+  };
+  torch::lazy::NodePtr tmp = input - torch::lazy::MakeNode<Unsqueeze>(input, 1);
+  torch::lazy::NodePtr result_matrix = Norm(tmp, p, dtype, {2}, false);
+
+  return GenericOp(torch::lazy::OpKind(at::aten::_pdist_forward),
+                   {result_matrix},
+                   [&]() {
+                     return InferOutputShape({GetXlaShape(result_matrix)},
+                                             lower_for_shape_fn);
+                   },
+                   std::move(lower_fn), 1);
 }
 
 torch::lazy::NodePtr LinalgVectorNorm(const torch::lazy::Value& input,
