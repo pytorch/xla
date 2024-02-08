@@ -135,25 +135,6 @@ DENY_LIST = {
     ],
 }
 
-# This strict deny list denies tests that hold for too long and timeoout.
-STRICT_DENY_LIST = {
-    **{
-        "opacus_cifar10": [{
-            "accelerator": "tpu",
-        },],  # stackdump issue in TPU
-        "pytorch_stargan": [{
-            "accelerator": "tpu",
-        },],  # stackdump issue in TPU
-        "soft_actor_critic": [{
-            "accelerator": "tpu",
-        },],  # stackdump issue in TPU
-        "speech_transformer": [{
-            "accelerator": "tpu",
-        },],  # stackdump issue in TPU
-    },
-    **DENY_LIST
-}
-
 
 class TorchBenchModelLoader(ModelLoader):
 
@@ -234,12 +215,8 @@ class TorchBenchModelLoader(ModelLoader):
 
     return model_configs
 
-  def is_compatible(self,
-                    dummy_benchmark_model,
-                    benchmark_experiment,
-                    use_strict_deny=False):
+  def is_compatible(self, dummy_benchmark_model, benchmark_experiment):
     name = dummy_benchmark_model.model_name
-    deny_list = STRICT_DENY_LIST if use_strict_deny else DENY_LIST
 
     if name in self.skip["skip"]:
       return False
@@ -258,7 +235,7 @@ class TorchBenchModelLoader(ModelLoader):
     def is_attr_eq(k, v):
       return getattr(benchmark_experiment, k) == v
 
-    for deny_experiment_config in deny_list.get(name, []):
+    for deny_experiment_config in DENY_LIST.get(name, []):
       if all(is_attr_eq(k, v) for k, v in deny_experiment_config.items()):
         return False
 
