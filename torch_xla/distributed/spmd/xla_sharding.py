@@ -123,6 +123,19 @@ class Mesh:
                                       replication_groups, sharding_type)
 
 
+_GLOBAL_MESH: Mesh = None
+
+
+def set_global_mesh(mesh: Mesh):
+  global _GLOBAL_MESH
+  _GLOBAL_MESH = mesh
+
+
+def get_global_mesh():
+  global _GLOBAL_MESH
+  return _GLOBAL_MESH
+
+
 # HybridDevice class has been inspired from jax's mesh_utils: https://github.com/google/jax/blob/fc5960f2b8b7a0ef74dbae4e27c5c08ff1564cff/jax/experimental/mesh_utils.py#L4ƒ
 class HybridMesh(Mesh):
   """Creates a hybrid device mesh of devices connected with ICI and DCN networks.

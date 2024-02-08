@@ -1089,6 +1089,13 @@ class BasicShardingTest(test_xla_sharding_base.XlaShardingTest):
     with self.assertRaises(AttributeError):
       xt.mesh_shape
 
+  def test_global_mesh(self):
+    expected_mesh = self._get_mesh((1, self.n_devices))
+    xs.set_global_mesh(expected_mesh)
+    mesh = xs.get_global_mesh()
+
+    self.assertEqual(id(mesh), id(expected_mesh))
+
 
 if __name__ == '__main__':
   test = unittest.main()
