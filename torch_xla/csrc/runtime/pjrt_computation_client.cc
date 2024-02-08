@@ -351,15 +351,23 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::ReshardData(
         << "Can't reshard with UNKNOWN sharding type. Use REPLICATED for "
            "explicit replication.";
 
+    if (shapes[i].IsTuple()) {
+      std::cout << "*** Tuple shape=" << shapes[i].ToString() << ", sharding=" << sharded_data->GetSharding().DebugString() << std::endl;
+    }
+
     hlo_shardings.push_back(
         ConsumeValue(xla::HloSharding::FromProto(sharding)));
 
     xla::OpSharding fallback_sharding;
-    fallback_sharding.set_type(xla::OpSharding::REPLICATED);
-    xla::XlaScopedShardingAssignment assign(
-        &builder, sharded_data->GetSharding().type() == xla::OpSharding::UNKNOWN
-                      ? fallback_sharding
-                      : sharded_data->GetSharding());
+    if (sharded_data->GetSharding().type() == xla::OpSharding::UNKNOWN) {
+      fallback_sharding = sharded_data->GetSharding();
+    }
+    if (shapes[i].IsTuple()) {
+      fallback_sharding =
+          xla::HloSharding::SingleTuple(shapes[i], fallback_sharding).ToProto();
+    }
+
+    xla::XlaScopedShardingAssignment assign(&builder, fallback_sharding);
     param_ops.push_back(
         xla::Parameter(&builder, i, shapes[i], absl::StrCat("p.", i)));
   }
@@ -367,7 +375,7 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::ReshardData(
   xla::XlaOp root;
   {
     xla::Shape shapes_tuple = xla::ShapeUtil::MakeTupleShape(shapes);
-    XLA_CHECK_EQ(shapes_tuple.tuple_shapes_size(), shardings.size());
+    XLA_CHECK_EQ(shapes_tuple.tuple_shapes_size(), hlo_shardings.size());
     xla::HloSharding new_shardings_tuple =
         xla::HloSharding::Tuple(shapes_tuple, hlo_shardings);
     xla::XlaScopedShardingAssignment assign(&builder,
