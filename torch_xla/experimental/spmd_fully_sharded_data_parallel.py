@@ -43,7 +43,7 @@ class SpmdFullyShardedDataParallel(nn.Module):
   def __init__(
       self,
       module: nn.Module,
-      mesh: spmd.Mesh,
+      mesh: Optional[spmd.Mesh] = None,
       shard_output: Optional[Callable] = None,
       auto_wrap_policy: Optional[Callable] = None,
       auto_wrapper_callable: Optional[Callable] = None,
@@ -65,6 +65,12 @@ class SpmdFullyShardedDataParallel(nn.Module):
           "and do not perform the forward pass in other ways apart from the `forward` method. "
           "(i.e. you should directly call the FSDP-wrapped module itself in your code, "
           "instead of using any of its submodules or its weights).")
+    if mesh is None:
+      mesh = spmd.get_global_mesh()
+      if mesh is None:
+        raise ValueError(
+            "No mesh is provided and no global mesh is set. Please provide a mesh."
+        )
     if "fsdp" not in mesh.axis_names:
       raise ValueError("The mesh must have an axis named 'fsdp'.")
 
