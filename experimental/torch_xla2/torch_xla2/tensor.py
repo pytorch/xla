@@ -131,10 +131,12 @@ class XLATensor2(torch.Tensor):
         shape[i] = 1
     if dtype is None:
       dtype = torch.float32
-    return torch.Tensor._make_subclass(
+    return torch.Tensor._make_wrapper_subclass(
         cls,
-        torch.empty(shape, dtype=dtype, device="meta"),
-        require_grad=False,
+        shape,
+        dtype=dtype,
+        device='meta',
+        requires_grad=False,
     )
 
   def __init__(self, elem: jax.Array):
