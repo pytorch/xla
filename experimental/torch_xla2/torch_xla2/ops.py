@@ -2,7 +2,6 @@
 """Torch ops implemented using jax."""
 import sys
 
-import flax
 import jax
 from jax import numpy as jnp
 import numpy as np
@@ -298,10 +297,13 @@ def _aten_empty(sizes, **kwargs):
 
 @op(torch.ops.aten.index_put_)
 @op(torch.ops.aten.index_put)
-def _aten_index_put(self, indexes, values):
+def _aten_index_put(self, indexes, values, accumulate=False):
   indexes = [slice(None, None, None) if i is None else i for i in indexes]
   indexes = tuple(indexes)
-  return self.at[indexes].set(values)
+  if accumulate:
+    return self.at[indexes].add(values)
+  else:
+    return self.at[indexes].set(values)
 
 
 @op(torch.ops.aten.index)
@@ -508,8 +510,11 @@ def _aten_convolution(
   )
 
   if bias is not None:
-    # TODO(qihqi): this is wrong
-    bias = bias.reshape(bias.shape + (1,))
+    # TODO(qihqi): bias always on channel?
+    if len(bias.shape) == 1:
+      shape = [1] * len(res.shape)
+      shape[1] = bias.shape[0]
+      bias = bias.reshape(tuple(shape))
     res = res + bias
   return res
 
@@ -1200,19 +1205,21 @@ def _aten_arange(
     start,
     end=None,
     step=1,
+    *,
     dtype=None,
     layout=None,
+    requires_grad=False,
     device=None,
-    pin_memory=False,
+    pin_memory=False
 ):
+  if end is None:
+    end = start
+    start = 0
   return jnp.arange(
       start,
       end,
       step,
       dtype=dtype,
-      layout=layout,
-      device=device,
-      pin_memory=pin_memory,
   )
 
 
