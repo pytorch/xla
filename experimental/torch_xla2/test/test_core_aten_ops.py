@@ -1762,6 +1762,18 @@ class TestCoreAtenOps(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.index_put, args, kwargs)
 
+  def test_aten_index_put_3(self):
+    args = (
+        torch.randint(0, 10, (10, 10)).to(torch.int32),
+        [
+            torch.randint(0, 10, (1,)).to(torch.int64),
+        ],
+        torch.randint(0, 10, (10,)).to(torch.int32),
+        True,
+    )
+    kwargs = dict()
+    run_export_and_compare(self, torch.ops.aten.index_put, args, kwargs)
+
   def test_aten_index_select_0(self):
     args = (
         torch.randn((2, 10)).to(torch.float32),

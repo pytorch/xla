@@ -156,7 +156,7 @@ class JaxInterpreter(torch.fx.Interpreter):
     ):
       return super().call_function(target, args, kwargs)
 
-    print('Running ', target.name(), '--------')
+    # print('Running ', target.name(), '--------')
 
     op = ops_registry.lowerings.lookup(target)
     if op is None:
@@ -166,13 +166,18 @@ class JaxInterpreter(torch.fx.Interpreter):
 
   def run_node(self, n) -> Any:
     res = super().run_node(n)
-    if n.op == 'call_function':
-      if hasattr(res, 'shape'):
-        print('Meta:', n.meta.get('val').shape, 'REAL: ', res.shape)
+    #if n.op == 'call_function':
+     # if hasattr(res, 'shape'):
+     #   print('Meta:', n.meta.get('val').shape, 'REAL: ', res.shape)
     return res
 
+from torch._decomp import get_decompositions
+import torch._refs
+_extra_decomp = get_decompositions(
+  [torch.ops.aten.unfold]
+)
 
-_extra_decomp = {}
+
 
 
 def exported_program_to_jax(exported_program):

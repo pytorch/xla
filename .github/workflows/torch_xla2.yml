@@ -1,0 +1,44 @@
+on:
+  pull_request:
+    branches:
+      - master
+      - r[0-9]+.[0-9]+
+    paths:
+      - 'experimental/torch_xla2/**'
+  push:
+    branches:
+      - master
+      - r[0-9]+.[0-9]+
+    paths:
+      - 'experimental/torch_xla2/**'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}-${{ github.event_name == 'workflow_dispatch' }}-${{ github.event_name == 'schedule' }}
+  cancel-in-progress: true
+
+jobs:
+  torchxla2-cpu:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            experimental/torch_xla2
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Install
+        shell: bash
+        working-directory: experimental/torch_xla2
+        run: |
+          pip install pytest absl-py jax[cpu] flatbuffers tensorflow
+          pip install --pre torch --index-url https://download.pytorch.org/whl/nightly/cpu
+          pip install -e .
+      - name: Run tests
+        working-directory: experimental/torch_xla2
+        shell: bash
+        run: |
+          pytest test/
