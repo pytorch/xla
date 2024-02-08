@@ -152,7 +152,8 @@ def _prepare_to_exit():
     if int(os.environ.get('PT_XLA_DEBUG', '0')):
       _summarize_fn_tracker()
   except Exception as e:
-    logging.error("Caught an exception when exiting the process. Exception: ", exc_info=e)
+    logging.error(
+        "Caught an exception when exiting the process. Exception: ", exc_info=e)
     os._exit(1)
 
 
