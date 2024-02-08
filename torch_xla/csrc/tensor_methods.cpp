@@ -2992,5 +2992,11 @@ XLATensorPtr where(const XLATensorPtr& condition, const XLATensorPtr& input,
       Where(condition->GetIrValue(), input->GetIrValue(), other->GetIrValue()));
 }
 
+XLATensorPtr while_loop(const XLATensorPtr& condition, const XLATensorPtr& body,
+                   const XLATensorPtr& operands) {
+  return input->CreateFrom(
+      While_loop(condition->GetIrValue(), body->GetIrValue(), operands->GetIrValue()));
+}
+
 }  // namespace tensor_methods
 }  // namespace torch_xla
