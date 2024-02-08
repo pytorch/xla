@@ -11,6 +11,7 @@ import torch_xla
 import torch_xla.distributed.spmd as spmd
 from torch_xla.distributed.fsdp.wrap import recursive_wrap
 
+
 def _prepare_spmd_partition_spec(param):
   partition_spec = [None] * len(param.shape)
   # Skip scalar tensors and it replicated.
@@ -39,12 +40,14 @@ class SpmdFullyShardedDataParallel(nn.Module):
       If the output is a tuple, only the first tensor will be sharded.
   """
 
-  def __init__(self,
-               module: nn.Module,
-               mesh: spmd.Mesh,
-               shard_output: Optional[Callable] = None,
-               auto_wrap_policy: Optional[Callable] = None,
-               auto_wrapper_callable: Optional[Callable] = None,):
+  def __init__(
+      self,
+      module: nn.Module,
+      mesh: spmd.Mesh,
+      shard_output: Optional[Callable] = None,
+      auto_wrap_policy: Optional[Callable] = None,
+      auto_wrapper_callable: Optional[Callable] = None,
+  ):
     if isinstance(module, SpmdFullyShardedDataParallel):
       raise RuntimeError(
           "Cannot wrap a module that is already wrapped with FSDP. For nested FSDP, "

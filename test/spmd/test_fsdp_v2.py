@@ -14,6 +14,7 @@ from torch_xla.distributed.fsdp.wrap import transformer_auto_wrap_policy
 import test_xla_sharding_base
 from torch_xla.experimental.spmd_fully_sharded_data_parallel import SpmdFullyShardedDataParallel as FSDPv2
 
+
 # TODO(alanwaketan): Add more tests for FSDPv2.
 class FSDPv2Test(test_xla_sharding_base.XlaShardingTest):
 
@@ -98,10 +99,16 @@ class FSDPv2Test(test_xla_sharding_base.XlaShardingTest):
         transformer_auto_wrap_policy,
         transformer_layer_cls={torch.nn.Linear},
     )
+
     def auto_wrapper_callable(m, *args, **kwargs):
       # Does nothing.
       return m
-    model = FSDPv2(model, mesh, auto_wrap_policy=auto_wrap_policy, auto_wrapper_callable=auto_wrapper_callable)
+
+    model = FSDPv2(
+        model,
+        mesh,
+        auto_wrap_policy=auto_wrap_policy,
+        auto_wrapper_callable=auto_wrapper_callable)
 
     # Since the callable is doing nothing, the children should not be wrapped.
     self.assertFalse(isinstance(model.fc1, FSDPv2))
