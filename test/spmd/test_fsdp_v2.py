@@ -114,6 +114,21 @@ class FSDPv2Test(test_xla_sharding_base.XlaShardingTest):
     self.assertFalse(isinstance(model.fc1, FSDPv2))
     self.assertFalse(isinstance(model.fc2, FSDPv2))
 
+  def test_fsdp_v2_global_mesh(self):
+    model = self.SimpleLinear().to(xm.xla_device())
+    mesh = self._get_mesh((self.n_devices, 1), None, ('fsdp', 'tensor'))
+    xs.set_global_mesh(mesh)
+
+    model = FSDPv2(model)
+    self.assertEqual(id(model._mesh), id(mesh))
+
+  def test_fsdp_v2_global_mesh_error(self):
+    model = self.SimpleLinear().to(xm.xla_device())
+    xs.set_global_mesh(None)
+
+    with self.assertRaises(ValueError):
+      model = FSDPv2(model)
+
 
 if __name__ == '__main__':
   test = unittest.main()
