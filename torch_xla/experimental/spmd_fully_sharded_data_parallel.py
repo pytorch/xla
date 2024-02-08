@@ -1,4 +1,4 @@
-from typing import (Any, Callable, Optional, Union)
+from typing import (Any, Callable, Dict, Optional, Union)
 import warnings
 
 import torch
@@ -9,6 +9,7 @@ import numpy as np
 
 import torch_xla
 import torch_xla.distributed.spmd as spmd
+from torch_xla.distributed.fsdp.wrap import recursive_wrap
 
 
 def _prepare_spmd_partition_spec(param):
@@ -39,10 +40,14 @@ class SpmdFullyShardedDataParallel(nn.Module):
       If the output is a tuple, only the first tensor will be sharded.
   """
 
-  def __init__(self,
-               module: nn.Module,
-               mesh: spmd.Mesh,
-               shard_output: Optional[Callable] = None):
+  def __init__(
+      self,
+      module: nn.Module,
+      mesh: spmd.Mesh,
+      shard_output: Optional[Callable] = None,
+      auto_wrap_policy: Optional[Callable] = None,
+      auto_wrapper_callable: Optional[Callable] = None,
+  ):
     if isinstance(module, SpmdFullyShardedDataParallel):
       raise RuntimeError(
           "Cannot wrap a module that is already wrapped with FSDP. For nested FSDP, "
@@ -64,6 +69,24 @@ class SpmdFullyShardedDataParallel(nn.Module):
       raise ValueError("The mesh must have an axis named 'fsdp'.")
 
     super().__init__()
+
+    wrapper_cls = auto_wrapper_callable or SpmdFullyShardedDataParallel
+    if auto_wrap_policy is not None:
+      auto_wrap_kwargs = {
+          "module": module,
+          "auto_wrap_policy": auto_wrap_policy,
+          "wrapper_cls": wrapper_cls,
+          "ignored_modules": [],
+          "ignored_params": [],
+          "only_wrap_children": True,  # avoid double wrapping the root
+      }
+      fsdp_kwargs = dict(
+          mesh=mesh,
+          shard_output=shard_output,
+          # `auto_wrap_policy` doesn't need to be specified in auto-wrapping
+          # `auto_wrapper_callable`` doesn't need to be specified in auto-wrapping
+      )
+      self._auto_wrap(auto_wrap_kwargs, fsdp_kwargs)
 
     self._orig_module = module
     self._mesh = mesh
@@ -127,3 +150,29 @@ class SpmdFullyShardedDataParallel(nn.Module):
   def __getitem__(self, key: int) -> nn.Module:
     """Forward indexing calls in case the module is a nn.Sequential."""
     return self.module.__getitem__(key)
+
+  def _auto_wrap(
+      self,
+      auto_wrap_kwargs: Dict[str, Any],
+      fsdp_kwargs: Dict[str, Any],
+  ) -> None:
+    """
+    Recursively auto wraps the root module given by the key "module" in
+    ``auto_wrap_kwargs`` with the arguments in ``auto_wrap_kwargs`` and
+    ``fsdp_kwargs``.
+    Precondition: ``auto_wrap_policy`` contains the arguments expected by
+    ``_recursive_wrap()``, where ``auto_wrap_policy`` is not ``None``.
+    ``fsdp_kwargs`` contains all FSDP arguments except ``module``.
+    """
+    auto_wrap_policy = auto_wrap_kwargs["auto_wrap_policy"]
+    root_module = auto_wrap_kwargs["module"]
+    assert auto_wrap_policy is not None
+    # For auto wrapping, submodules should not already be wrapped with FSDP
+    # since double wrapping is not supported
+    for module_name, module in root_module.named_modules():
+      if isinstance(module, SpmdFullyShardedDataParallel):
+        raise ValueError(
+            f"Expected {module_name} to NOT be SpmdFullyShardedDataParallel "
+            "if using an `auto_wrap_policy`")
+
+    recursive_wrap(**auto_wrap_kwargs, **fsdp_kwargs)

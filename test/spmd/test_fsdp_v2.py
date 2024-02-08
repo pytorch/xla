@@ -1,4 +1,5 @@
 import copy
+import functools
 import unittest
 import os
 import sys
@@ -8,6 +9,7 @@ import torch_xla
 import torch_xla.runtime as xr
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.spmd as xs
+from torch_xla.distributed.fsdp.wrap import transformer_auto_wrap_policy
 
 import test_xla_sharding_base
 from torch_xla.experimental.spmd_fully_sharded_data_parallel import SpmdFullyShardedDataParallel as FSDPv2
@@ -77,6 +79,40 @@ class FSDPv2Test(test_xla_sharding_base.XlaShardingTest):
     output_expected = model_expected(x_expected)
     output = model(x)
     self.assertTrue(torch.allclose(output_expected.cpu(), output.cpu()))
+
+  def test_fsdp_v2_auto_wrap_basic(self):
+    model = self.SimpleLinear().to(xm.xla_device())
+    mesh = self._get_mesh((self.n_devices, 1), None, ('fsdp', 'tensor'))
+    auto_wrap_policy = functools.partial(
+        transformer_auto_wrap_policy,
+        transformer_layer_cls={torch.nn.Linear},
+    )
+    model = FSDPv2(model, mesh, auto_wrap_policy=auto_wrap_policy)
+
+    self.assertTrue(isinstance(model.fc1, FSDPv2))
+    self.assertTrue(isinstance(model.fc2, FSDPv2))
+
+  def test_fsdp_v2_auto_wrap_callable(self):
+    model = self.SimpleLinear().to(xm.xla_device())
+    mesh = self._get_mesh((self.n_devices, 1), None, ('fsdp', 'tensor'))
+    auto_wrap_policy = functools.partial(
+        transformer_auto_wrap_policy,
+        transformer_layer_cls={torch.nn.Linear},
+    )
+
+    def auto_wrapper_callable(m, *args, **kwargs):
+      # Does nothing.
+      return m
+
+    model = FSDPv2(
+        model,
+        mesh,
+        auto_wrap_policy=auto_wrap_policy,
+        auto_wrapper_callable=auto_wrapper_callable)
+
+    # Since the callable is doing nothing, the children should not be wrapped.
+    self.assertFalse(isinstance(model.fc1, FSDPv2))
+    self.assertFalse(isinstance(model.fc2, FSDPv2))
 
 
 if __name__ == '__main__':
