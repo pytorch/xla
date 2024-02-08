@@ -3050,6 +3050,21 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.prod.dim_int, args, kwargs)
 
+  # Due to the way randperm isn't on device, we manually assert checks here instead of using
+  # the existing test harness.
+  def test_aten_randperm_0(self):
+    args = (20,)
+    kwargs = dict()
+    pytorch = torch.randperm(20)
+
+    xla = torch.randperm(20, device=xm.xla_device())
+    xla_detached = xla.detach().cpu()
+
+    # Check equal lengths and that the sorted sets are equal. Since these numbers are randomly
+    # generated there's no way to check that pytorch == pytorch/xla.
+    self.assertEqual(len(pytorch), len(xla))
+    self.assertEqual(sorted(set(pytorch)), sorted(set(xla_detached)))
+
   def test_aten_reciprocal_0(self):
     args = (torch.randn((10, 10)).to(torch.float32),)
     kwargs = dict()

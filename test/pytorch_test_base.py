@@ -4,10 +4,15 @@ import os
 import re
 import sys
 import runpy
+import torch
+import unittest
 
 import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.utils.utils as xu
+
+from functools import wraps
+from torch.testing._internal.common_device_type import (DeviceTypeTestBase)
 
 DEFAULT_FLOATING_PRECISION = 1e-3
 
@@ -18,6 +23,8 @@ TORCH_TEST_PRECIIONS = {
     'test_var_neg_dim_xla_bfloat16': 0.01,
     'test_sum_xla_bfloat16': 0.1,
     'test_put_xla_bfloat16': 0.05,
+    # Note test_put_* is local to PyTorch/XLA repo and not upstream.
+    'test_put_cpu_bfloat16': 0.05,
     'test_take_xla_bfloat16': 0.05,
 }
 
@@ -119,6 +126,8 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_resize_as_all_dtypes_and_devices',  # uses half
         'test_resize_all_dtypes_and_devices',  # uses half
         'test_pinverse',  # lowering
+        'test_put',  # Due to randperm and LTC, not deterministic.
+        'test_index_copy',  # Due to randperm and LTC, not deterministic
         'test_norm',
         'test_multinomial',
         'test_multinomial_alias',

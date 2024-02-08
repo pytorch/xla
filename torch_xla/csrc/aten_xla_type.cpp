@@ -2486,6 +2486,32 @@ at::Tensor& XLANativeFunctions::random_(
   return self;
 }
 
+at::Tensor XLANativeFunctions::randperm(int64_t n,
+                                        c10::optional<at::ScalarType> dtype,
+                                        c10::optional<at::Layout> layout,
+                                        c10::optional<at::Device> device,
+                                        c10::optional<bool> pin_memory) {
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+
+  // Only support the basic version of randperm(int64_t) to start. If there are
+  // any other parameters, fallback to CPU.
+  bool fallback_to_cpu = false;
+  fallback_to_cpu |= layout.has_value();
+  fallback_to_cpu |= pin_memory.has_value() && pin_memory.value() == true;
+  fallback_to_cpu |= dtype.value() != at::ScalarType::Long;
+  fallback_to_cpu |= n == 0;
+
+  if (fallback_to_cpu) {
+    return at::native::call_fallback_fn<&xla_cpu_fallback,
+                                        ATEN_OP(randperm)>::call(n, dtype,
+                                                                 layout, device,
+                                                                 pin_memory);
+  }
+
+  return bridge::AtenFromXlaTensor(tensor_methods::randperm(
+      n, GetXlaDeviceOrCurrent(device), at::ScalarType::Long));
+}
+
 at::Tensor XLANativeFunctions::reflection_pad2d(const at::Tensor& self,
                                                 at::IntArrayRef padding) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
