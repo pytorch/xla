@@ -43,7 +43,7 @@ class SpmdFullyShardedDataParallel(nn.Module):
   def __init__(
       self,
       module: nn.Module,
-      mesh: Optional[spmd.Mesh],
+      mesh: Optional[spmd.Mesh] = None,
       shard_output: Optional[Callable] = None,
       auto_wrap_policy: Optional[Callable] = None,
       auto_wrapper_callable: Optional[Callable] = None,
