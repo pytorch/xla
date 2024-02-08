@@ -5,7 +5,7 @@ fsspec==2023.4.0
 idna==3.4
 jax==0.4.24
 jaxlib==0.4.24
-Jinja2==3.1.2
+Jinja2==3.1.3
 MarkupSafe==2.1.3
 ml-dtypes==0.3.2
 mpmath==1.2.1
