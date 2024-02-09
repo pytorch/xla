@@ -76,6 +76,7 @@ DENY_LIST = {
         {
             "test": "eval",
             "xla": "PJRT",
+            "dynamo": None,
         },  # TIMEOUT
     ],
     "hf_T5_generate": [
@@ -85,6 +86,7 @@ DENY_LIST = {
         {
             "test": "eval",
             "xla": "PJRT",
+            "dynamo": None,
         },  # TIMEOUT
     ],
     "doctr_det_predictor": [{
@@ -133,6 +135,13 @@ DENY_LIST = {
             "accelerator": "tpu"
         },  # The eval test only supports CPU
     ],
+}
+
+# Models that had more graphs to be compiled than the actual size of
+# the cache.
+NEED_LARGER_CACHE = {
+    "cm3leon_generate",
+    "hf_T5_generate",
 }
 
 
@@ -400,6 +409,9 @@ class TorchBenchModel(BenchmarkModel):
     precision_flag = self.default_precision_flag
     if precision_flag is not None:
       process_env[precision_flag] = '1'
+
+    if self.model_name in NEED_LARGER_CACHE:
+      process_env["XLA_COMPILATION_CACHE_SIZE"] = "2048"
 
   def pick_grad(self):
     # special case
