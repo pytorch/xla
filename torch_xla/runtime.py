@@ -139,7 +139,7 @@ def global_device_count() -> int:
 
 @requires_pjrt
 def world_size() -> int:
-  """Returns the total number of configured logical devices."""
+  """Returns the total number of processes participating in the job."""
   if torch_xla._XLAC._xla_get_replication_devices_count() == 0:
     return 1
   return global_device_count()
@@ -215,7 +215,7 @@ def global_runtime_device_attributes() -> List[Dict[str, object]]:
 @requires_pjrt
 @functools.lru_cache()
 def global_runtime_device_count() -> int:
-  """Returns the total number of runtime devices across all processes/hosts."""
+  """Returns the total number of runtime devices across all processes/hosts. Currently this is only used in SPMD."""
   return len(torch_xla._XLAC._xla_get_all_runtime_devices())
 
 

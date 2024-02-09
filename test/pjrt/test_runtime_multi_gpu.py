@@ -61,6 +61,67 @@ class TestExperimentalPjrtMultiGpu(parameterized.TestCase):
 
     results = pjrt.run_multiprocess(ordinal_func)
     self.assertListEqual(sorted(results.values()), expected)
+  
+  def test_global_device_count(self):
+    num_devices = int(os.environ[xenv.GPU_NUM_DEVICES])
+    expected = {i: num_devices for i in range(num_devices)}
+    results = pjrt.run_multiprocess(xr.global_device_count)
+    self.assertEqual(expected, results)
+
+  def test_local_process_count(self):
+    num_devices = int(os.environ[xenv.GPU_NUM_DEVICES])
+    expected = {i: num_devices for i in range(num_devices)}
+    results = pjrt.run_multiprocess(xr.local_process_count)
+    self.assertEqual(expected, results)
+
+  def test_world_size(self):
+    num_devices = int(os.environ[xenv.GPU_NUM_DEVICES])
+    expected = {i: num_devices for i in range(num_devices)}
+    results = pjrt.run_multiprocess(xr.world_size)
+    self.assertEqual(expected, results)
+
+  def test_addressable_device_count(self):
+    num_devices = int(os.environ[xenv.GPU_NUM_DEVICES])
+    expected = {i: 1 for i in range(num_devices)}
+    results = pjrt.run_multiprocess(xr.addressable_device_count)
+    self.assertEqual(expected, results)
+
+  def test_addressable_runtime_device_count(self):
+    num_devices = int(os.environ[xenv.GPU_NUM_DEVICES])
+    expected = {i: 1 for i in range(num_devices)}
+    results = pjrt.run_multiprocess(xr.addressable_runtime_device_count)
+    self.assertEqual(expected, results)
+
+  def test_local_device_count(self):
+    num_devices = int(os.environ[xenv.GPU_NUM_DEVICES])
+    # xr.local_process_count() is 2, xr.addressable_device_count() is 1.
+    expected = {i: 1 for i in range(num_devices)}
+    results = pjrt.run_multiprocess(xr.local_device_count)
+    self.assertEqual(expected, results)
+
+  def test_global_ordinal(self):
+    num_devices = int(os.environ[xenv.GPU_NUM_DEVICES])
+    expected = {i: i for i in range(num_devices)}
+    results = pjrt.run_multiprocess(xr.global_ordinal)
+    self.assertEqual(expected, results)
+
+  def test_local_ordinal(self):
+    num_devices = int(os.environ[xenv.GPU_NUM_DEVICES])
+    expected = {i: i for i in range(num_devices)}
+    results = pjrt.run_multiprocess(xr.local_ordinal)
+    self.assertEqual(expected, results)
+
+  def test_process_index(self):
+    num_devices = int(os.environ[xenv.GPU_NUM_DEVICES])
+    expected = {i: i for i in range(num_devices)}
+    results = pjrt.run_multiprocess(xr.process_index)
+    self.assertEqual(expected, results)
+
+  def test_process_count(self):
+    num_devices = int(os.environ[xenv.GPU_NUM_DEVICES])
+    expected = {i: num_devices for i in range(num_devices)}
+    results = pjrt.run_multiprocess(xr.process_count)
+    self.assertEqual(expected, results)
 
   @staticmethod
   def _multi_gpu_backwards():
