@@ -147,9 +147,17 @@ _aws_ec2_inf_trn_init()
 
 
 def _prepare_to_exit():
-  _XLAC._prepare_to_exit()
-  if int(os.environ.get('PT_XLA_DEBUG', '0')):
-    _summarize_fn_tracker()
+  try:
+    _XLAC._prepare_to_exit()
+    if int(os.environ.get('PT_XLA_DEBUG', '0')):
+      _summarize_fn_tracker()
+  except Exception as e:
+    logging.error(
+        "Caught an exception when exiting the process. Exception: ", exc_info=e)
+    # Due to https://bugs.python.org/issue27035, simply raising an exception in the atexit callback does not set the exit code correctly. That is why we need to set the exit code explicitly.
+    # Using `exit(1)` does not set a correct exit code because it is useful for the interactive interpreter shell and should not be used in programs and it works by raising an exception. (https://docs.python.org/3/library/constants.html#exit)
+    # sys.exit(1) does not set a correct exit code because it also raises an exception.
+    os._exit(1)
 
 
 def _init_xla_lazy_backend():
