@@ -418,6 +418,7 @@ class TorchBenchModel(BenchmarkModel):
         self.is_cuda_precision_amp()):
       kwargs = {"dtype": torch.bfloat16}
       if self.benchmark_experiment.xla:
+        kwargs["device"] = xm.xla_device()
         autocast = torch_xla.amp.autocast
       else:
         autocast = torch.cuda.amp.autocast
