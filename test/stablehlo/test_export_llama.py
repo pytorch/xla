@@ -39,7 +39,8 @@ class ExportTest(unittest.TestCase):
     arg = (torch.randint(0, 1000, (8, 100)), torch.arange(0, 100), None)
     options = StableHLOExportOptions()
     options.override_tracing_arguments = arg
-    exported = torch.export.export(model, arg)
+    with torch.no_grad():
+      exported = torch.export.export(model, arg)
     with tempfile.TemporaryDirectory() as tempdir:
       save_as_stablehlo(exported, tempdir, options)
 

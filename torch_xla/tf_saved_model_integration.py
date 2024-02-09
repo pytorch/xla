@@ -33,7 +33,7 @@ def _wrap_as_tf_func(func, bundle):
     call_args = stablehlo._extract_call_parameters(args, func.meta, bundle)
     return tfxla.call_module(
         tuple(call_args),
-        version=5,
+        version=6,
         Tout=Touts,  # dtype information
         Sout=Souts,  # Shape information
         function_list=[],
