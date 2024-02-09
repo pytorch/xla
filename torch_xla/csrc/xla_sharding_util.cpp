@@ -684,9 +684,6 @@ void ShardingUtil::ReshardParameters(
       indices.push_back(i);
       filtered_data.push_back(data[i]);
       filtered_shardings.push_back(input_shardings[i]);
-      std::cout << "*** resharidng from: "
-                << data[i]->GetSharding().DebugString()
-                << "\n to: " << input_shardings[i].DebugString() << std::endl;
     }
   }
   TF_VLOG(3) << "ReshardParamters: resharding " << indices.size()

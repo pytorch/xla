@@ -351,11 +351,6 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::ReshardData(
         << "Can't reshard with UNKNOWN sharding type. Use REPLICATED for "
            "explicit replication.";
 
-    if (shapes[i].IsTuple()) {
-      std::cout << "*** Tuple shape=" << shapes[i].ToString() << ", sharding=" << sharded_data->GetSharding().DebugString() << std::endl;
-    }
-
-
     hlo_shardings.push_back(
         ConsumeValue(xla::HloSharding::FromProto(sharding)));
 
