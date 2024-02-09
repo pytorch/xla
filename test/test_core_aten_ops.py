@@ -1696,7 +1696,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.glu, args, kwargs)
 
-  @unittest.skip
   def test_aten_grid_sampler_2d_0(self):
     args = (
         torch.randn((1, 3, 2, 10)).to(torch.float32),
@@ -3080,7 +3079,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.reciprocal, args, kwargs)
 
-  @unittest.skip
   def test_aten_reflection_pad1d_0(self):
     args = (
         torch.randn((10, 10)).to(torch.float32),
@@ -3092,7 +3090,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.reflection_pad1d, args, kwargs)
 
-  @unittest.skip
   def test_aten_reflection_pad1d_1(self):
     args = (
         torch.randint(0, 10, (10, 10)).to(torch.int32),
@@ -3130,10 +3127,9 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.reflection_pad2d, args, kwargs)
 
-  @unittest.skip
   def test_aten_reflection_pad3d_0(self):
     args = (
-        torch.randn((3, 3, 3, 3, 3, 3)).to(torch.float32),
+        torch.randn((3, 3, 3, 3, 3)).to(torch.float32),
         [
             1,
             2,
@@ -3146,10 +3142,9 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.reflection_pad3d, args, kwargs)
 
-  @unittest.skip
   def test_aten_reflection_pad3d_1(self):
     args = (
-        torch.randn((3, 3, 3, 3, 3, 3)).to(torch.float16),
+        torch.randn((3, 3, 3, 3, 3)).to(torch.float16),
         [
             1,
             2,
@@ -3162,10 +3157,9 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.reflection_pad3d, args, kwargs)
 
-  @unittest.skip
   def test_aten_reflection_pad3d_2(self):
     args = (
-        torch.randint(0, 10, (3, 3, 3, 3, 3, 3)).to(torch.int32),
+        torch.randint(0, 10, (3, 3, 3, 3, 3)).to(torch.int32),
         [
             1,
             2,
