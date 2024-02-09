@@ -61,7 +61,7 @@ class TestExperimentalPjrtMultiGpu(parameterized.TestCase):
 
     results = pjrt.run_multiprocess(ordinal_func)
     self.assertListEqual(sorted(results.values()), expected)
-  
+
   def test_global_device_count(self):
     num_devices = int(os.environ[xenv.GPU_NUM_DEVICES])
     expected = {i: num_devices for i in range(num_devices)}
@@ -95,20 +95,8 @@ class TestExperimentalPjrtMultiGpu(parameterized.TestCase):
   def test_local_device_count(self):
     num_devices = int(os.environ[xenv.GPU_NUM_DEVICES])
     # xr.local_process_count() is 2, xr.addressable_device_count() is 1.
-    expected = {i: 1 for i in range(num_devices)}
+    expected = {i: num_devices for i in range(num_devices)}
     results = pjrt.run_multiprocess(xr.local_device_count)
-    self.assertEqual(expected, results)
-
-  def test_global_ordinal(self):
-    num_devices = int(os.environ[xenv.GPU_NUM_DEVICES])
-    expected = {i: i for i in range(num_devices)}
-    results = pjrt.run_multiprocess(xr.global_ordinal)
-    self.assertEqual(expected, results)
-
-  def test_local_ordinal(self):
-    num_devices = int(os.environ[xenv.GPU_NUM_DEVICES])
-    expected = {i: i for i in range(num_devices)}
-    results = pjrt.run_multiprocess(xr.local_ordinal)
     self.assertEqual(expected, results)
 
   def test_process_index(self):

@@ -46,7 +46,6 @@ class TestExperimentalSingleProcPjrtGpu(parameterized.TestCase):
   def test_local_process_count(self):
     self.assertEqual(1, xr.local_process_count())
 
-  # xw32: need review here.
   def test_world_size(self):
     # world_size is the number of processes participating in the job per https://pytorch.org/docs/stable/distributed.html.
     self.assertEqual(1, xr.world_size())
@@ -55,12 +54,13 @@ class TestExperimentalSingleProcPjrtGpu(parameterized.TestCase):
     self.assertEqual(self.num_cuda_devices, xr.addressable_device_count())
 
   def test_addressable_runtime_device_count(self):
-    self.assertEqual(self.num_cuda_devices, xr.addressable_runtime_device_count())
+    self.assertEqual(self.num_cuda_devices,
+                     xr.addressable_runtime_device_count())
 
   def test_ordinal(self):
     self.assertEqual(0, xr.local_ordinal())
     self.assertEqual(0, xr.global_ordinal())
-  
+
   def test_process_index(self):
     self.assertEqual(0, xr.process_index())
 
