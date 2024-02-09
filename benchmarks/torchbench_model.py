@@ -260,11 +260,17 @@ class TorchBenchModel(BenchmarkModel):
 
     This is model suite specific.
     """
+    # Set the optimizer class.
+    # Check if we should use SGD instead of Adam for memory reasons.
     if self.benchmark_experiment.test == "train" and self.model_name in TRAIN_WITH_SGD:
       self.optimizer_class = torch.optim.SGD
     else:
       self.optimizer_class = torch.optim.Adam
 
+    # Setup the autocast environment if we are running on AMP precision.
+    self.autocast, self.autocast_kwargs = self._get_autocast_with_kwargs()
+
+    # Load the actual benchmark instance.
     benchmark = self.load_benchmark()
 
     self.module, self.example_inputs = benchmark.get_module()
@@ -405,26 +411,20 @@ class TorchBenchModel(BenchmarkModel):
     # special case
     if self.model_name in ("maml",):
       return torch.enable_grad()
+    return super().pick_grad()
 
-    if self.benchmark_experiment.test == "eval":
-      return torch.no_grad()
-    elif self.benchmark_experiment.test == "train":
-      return torch.enable_grad()
-
-  def pick_amp(self):
+  def _get_autocast_with_kwargs(self):
     if (self.benchmark_experiment.accelerator == "cuda" and
         self.is_cuda_precision_amp()):
+      kwargs = {"dtype": torch.bfloat16}
       if self.benchmark_experiment.xla:
-        return torch_xla.amp.autocast(xm.xla_device())
+        autocast = torch_xla.amp.autocast
       else:
-        return torch.cuda.amp.autocast()
-    return contextlib.nullcontext()
-
-  def pick_context(self):
-    stack = contextlib.ExitStack()
-    stack.enter_context(self.pick_amp())
-    stack.enter_context(self.pick_grad())
-    return stack
+        autocast = torch.cuda.amp.autocast
+    else:
+      kwargs = {}
+      autocast = contextlib.nullcontext
+    return (autocast, kwargs)
 
   def compute_loss(self, pred):
     """Reduce the output of a model to get scalar loss"""
