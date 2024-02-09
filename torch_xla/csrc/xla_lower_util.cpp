@@ -1100,7 +1100,12 @@ xla::XlaOp BuildUpperTriangle(xla::XlaOp input) {
   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
   int64_t rank = input_shape.rank();
   std::vector<xla::XlaOp> slices;
-  for (long i = 0; i < input_shape.dimensions()[0]; i++) {
+  if (input_shape.dimensions(0) == 0) {
+    XLA_CHECK(input_shape.dimensions(1) == 0)
+        << "2d dimension should be both 0 at the same time";
+    return xla::Collapse(input, {0, 1});
+  }
+  for (long i = 0; i < input_shape.dimensions(0); i++) {
     xla::XlaOp sub_slice = xla::Slice(
         input, {i, i + 1}, {i + 1, input_shape.dimensions(1)}, {1, 1});
     slices.push_back(xla::Collapse(sub_slice, {0, 1}));

@@ -966,8 +966,6 @@ XLATensorPtr cdist_forward(const XLATensorPtr& x1, const XLATensorPtr& x2,
 
 XLATensorPtr pdist_forward(const XLATensorPtr& input, double p) {
   c10::optional<at::ScalarType> dtype = input->dtype_optional();
-  XLATensorPtr matrix_form =
-      input->CreateFrom(Pdist_forward(input->GetIrValue(), p, dtype));
   return input->CreateFrom(Pdist_forward(input->GetIrValue(), p, dtype));
 }
 
