@@ -410,7 +410,7 @@ class TorchBenchModel(BenchmarkModel):
     if precision_flag is not None:
       process_env[precision_flag] = '1'
 
-    if self.benchmark_experiment.model_name in NEED_LARGER_CACHE:
+    if self.model_name in NEED_LARGER_CACHE:
       process_env["XLA_COMPILATION_CACHE_SIZE"] = "2048"
 
   def pick_grad(self):
