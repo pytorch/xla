@@ -416,10 +416,11 @@ class TorchBenchModel(BenchmarkModel):
   def _get_autocast_with_kwargs(self):
     if (self.benchmark_experiment.accelerator == "cuda" and
         self.is_cuda_precision_amp()):
+      # Should call device specific autocast implementations.
+      # PyTorch/XLA autocast does not run with dynamo, though:
+      # https://github.com/pytorch/xla/issues/6511
       autocast = torch.amp.autocast
-      kwargs = {"dtype": torch.bfloat16, "device_type": "cuda"}
-      assert torch.cuda.is_available(
-      ), f"AMP only supported if PyTorch is compiled with CUDA support"
+      kwargs = {"dtype": torch.bfloat16, "device_type": "xla"}
     else:
       kwargs = {}
       autocast = contextlib.nullcontext
