@@ -303,6 +303,12 @@ def _exported_program_to_stablehlo_bundle(exported_model,
   param_and_buffer_keys = exported_model.graph_signature.parameters + exported_model.graph_signature.buffers
   state_dict = pytree.tree_map_only(torch.Tensor, lambda x: x.to(device=device),
                                     exported_model.state_dict)
+
+  if (constants := getattr(exported_model, 'constants')) is not None:
+    state_dict.update(
+        pytree.tree_map_only(torch.Tensor, lambda x: x.to(device=device),
+                             constants))
+
   param_buffer_values = (state_dict[key] for key in param_and_buffer_keys)
 
   if hasattr(exported_model.graph_signature, "lifted_tensor_constants"):
