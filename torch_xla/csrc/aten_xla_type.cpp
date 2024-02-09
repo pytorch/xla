@@ -1424,11 +1424,30 @@ at::Tensor XLANativeFunctions::index_add(const at::Tensor& self, int64_t dim,
 at::Tensor XLANativeFunctions::index_copy(const at::Tensor& self, int64_t dim,
                                           const at::Tensor& index,
                                           const at::Tensor& source) {
-  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   XLATensorPtr self_tensor = bridge::GetXlaTensor(self);
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::index_copy(self_tensor, dim, bridge::GetXlaTensor(index),
-                                 bridge::GetXlaTensor(source)));
+  absl::Span<const int64_t> self_tensor_dims =
+      self_tensor->shape().get().dimensions();
+
+  XLATensorPtr source_tensor = bridge::GetXlaTensor(source);
+  absl::Span<const int64_t> source_tensor_dims =
+      source_tensor->shape().get().dimensions();
+
+  XLATensorPtr index_tensor = bridge::GetXlaTensor(index);
+  absl::Span<const int64_t> index_tensor_dims =
+      index_tensor->shape().get().dimensions();
+
+  // As per
+  // https://pytorch.org/docs/stable/generated/torch.Tensor.index_copy_.html,
+  // the dim-th dimension of source tensor must have the same size as the length
+  // of index tensor.
+  XLA_CHECK(dim < self_tensor_dims.size() &&
+            source_tensor_dims[dim] == index_tensor_dims[0])
+      << "dim-th dimension of the source tensor must have the same size as the "
+         "length of index tensor.";
+
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  return bridge::AtenFromXlaTensor(tensor_methods::index_copy(
+      self_tensor, dim, bridge::GetXlaTensor(index), source_tensor));
 }
 
 at::Tensor& XLANativeFunctions::index_fill_(at::Tensor& self, int64_t dim,
