@@ -355,19 +355,16 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::ReshardData(
       std::cout << "*** Tuple shape=" << shapes[i].ToString() << ", sharding=" << sharded_data->GetSharding().DebugString() << std::endl;
     }
 
+
     hlo_shardings.push_back(
         ConsumeValue(xla::HloSharding::FromProto(sharding)));
 
     xla::OpSharding fallback_sharding;
-    if (sharded_data->GetSharding().type() == xla::OpSharding::UNKNOWN) {
-      fallback_sharding = sharded_data->GetSharding();
-    }
-    if (shapes[i].IsTuple()) {
-      fallback_sharding =
-          xla::HloSharding::SingleTuple(shapes[i], fallback_sharding).ToProto();
-    }
-
-    xla::XlaScopedShardingAssignment assign(&builder, fallback_sharding);
+    fallback_sharding.set_type(xla::OpSharding::REPLICATED);
+    xla::XlaScopedShardingAssignment assign(
+        &builder, sharded_data->GetSharding().type() == xla::OpSharding::UNKNOWN
+                      ? fallback_sharding
+                      : sharded_data->GetSharding());
     param_ops.push_back(
         xla::Parameter(&builder, i, shapes[i], absl::StrCat("p.", i)));
   }
