@@ -7,11 +7,11 @@ import os
 from os.path import abspath, exists
 import sys
 import torch
+import torch.amp
 import torch.nn as nn
 from torch._dynamo.testing import collect_results, reduce_to_scalar_loss
 from torch._dynamo.utils import clone_inputs
 import torch_xla
-import torch_xla.amp
 import torch_xla.core.xla_model as xm
 import types
 import yaml
@@ -416,12 +416,10 @@ class TorchBenchModel(BenchmarkModel):
   def _get_autocast_with_kwargs(self):
     if (self.benchmark_experiment.accelerator == "cuda" and
         self.is_cuda_precision_amp()):
-      kwargs = {"dtype": torch.bfloat16}
-      if self.benchmark_experiment.xla:
-        kwargs["device"] = xm.xla_device()
-        autocast = torch_xla.amp.autocast
-      else:
-        autocast = torch.cuda.amp.autocast
+      autocast = torch.amp.autocast
+      kwargs = {"dtype": torch.bfloat16, "device_type": "cuda"}
+      assert torch.cuda.is_available(
+      ), f"AMP only supported if PyTorch is compiled with CUDA support"
     else:
       kwargs = {}
       autocast = contextlib.nullcontext
