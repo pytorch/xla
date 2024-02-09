@@ -55,7 +55,6 @@ class TestExperimentalPjrtMultiGpu(parameterized.TestCase):
   @parameterized.named_parameters(('xla_model', xm.get_local_ordinal),
                                   ('pjrt', xr.local_ordinal))
   def test_local_ordinal(self, ordinal_func):
-    # TODO(wcromar): add multiprocess tests
     num_devices = int(os.environ[xenv.GPU_NUM_DEVICES])
     expected = [i for i in range(num_devices)]
 
