@@ -280,6 +280,13 @@ def train_imagenet():
           loader_prefetch_size=FLAGS.loader_prefetch_size,
           device_prefetch_size=FLAGS.device_prefetch_size,
           host_to_device_transfer_threads=FLAGS.host_to_device_transfer_threads)
+      test_loader = pl.MpDeviceLoader(
+          test_loader,
+          device,
+          input_sharding=xs.ShardingSpec(input_mesh, (0, 1, 2, 3)),
+          loader_prefetch_size=FLAGS.loader_prefetch_size,
+          device_prefetch_size=FLAGS.device_prefetch_size,
+          host_to_device_transfer_threads=FLAGS.host_to_device_transfer_threads)
 
   writer = None
   if xm.is_master_ordinal():
