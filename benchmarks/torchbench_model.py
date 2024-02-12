@@ -359,10 +359,10 @@ class TorchBenchModel(BenchmarkModel):
     return super().pick_grad()
 
   def is_inference(self):
-    return self.benchmark_experiment == "eval"
+    return self.benchmark_experiment.test == "eval"
 
   def is_training(self):
-    return self.benchmark_experiment == "train"
+    return self.benchmark_experiment.test == "train"
 
   def use_amp(self):
     return self.is_training(
