@@ -3428,6 +3428,16 @@ at::Tensor XLANativeFunctions::_cdist_forward(
       bridge::GetXlaTensor(x1), bridge::GetXlaTensor(x2), p));
 }
 
+at::Tensor XLANativeFunctions::_pdist_forward(const at::Tensor& self,
+                                              double p) {
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  XLA_CHECK(p >= 0) << "p value for the p-norm distance must be >= 0";
+  XLA_CHECK(bridge::GetXlaTensor(self)->shape().get().rank() == 2)
+      << "pdist only support 2d dimension";
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::pdist_forward(bridge::GetXlaTensor(self), p));
+}
+
 // All of the below ops correspond to CompositeExplicitAutograd kernels from
 // core that call into view operators internally. These are all composite ops
 // that LTC can technically re-use / get for free, but we need to

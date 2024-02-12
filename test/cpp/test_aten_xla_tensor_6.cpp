@@ -1319,6 +1319,51 @@ TEST_F(AtenXlaTensorTest, TestCdistForward) {
   ExpectCounterChanged("xla::_cdist_forward", cpp_test::GetIgnoredCounters());
 }
 
+TEST_F(AtenXlaTensorTest, TestPdistForward) {
+  torch::Tensor a = torch::rand({10, 11}, torch::TensorOptions(torch::kFloat));
+  std::vector<double> p_list = {1.0, 2.0, 5.0};
+  for (const auto& p : p_list) {
+    torch::Tensor c = torch::pdist(a, p);
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_a = CopyToDevice(a, device);
+      torch::Tensor xla_c = torch::pdist(xla_a, p);
+      AllClose(c, xla_c);
+    });
+  }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::_pdist_forward", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestPdistForwardZeroSize) {
+  torch::Tensor a = torch::rand({0, 2}, torch::TensorOptions(torch::kFloat));
+  std::vector<double> p_list = {1.0, 2.0, 5.0};
+  for (const auto& p : p_list) {
+    torch::Tensor c = torch::pdist(a, p);
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_a = CopyToDevice(a, device);
+      torch::Tensor xla_c = torch::pdist(xla_a, p);
+      AllClose(c, xla_c);
+    });
+  }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::_pdist_forward", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestPdistForwardSingleRow) {
+  torch::Tensor a = torch::rand({1, 2}, torch::TensorOptions(torch::kFloat));
+  std::vector<double> p_list = {1.0, 2.0, 5.0};
+  for (const auto& p : p_list) {
+    torch::Tensor c = torch::pdist(a, p);
+    ForEachDevice([&](const torch::Device& device) {
+      torch::Tensor xla_a = CopyToDevice(a, device);
+      torch::Tensor xla_c = torch::pdist(xla_a, p);
+      AllClose(c, xla_c);
+    });
+  }
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::_pdist_forward", cpp_test::GetIgnoredCounters());
+}
+
 TEST_F(AtenXlaTensorTest, TestGlu) {
   std::vector<std::vector<int64_t>> sizes{
       {3, 8}, {3, 5, 6}, {3, 8, 5}, {3, 8, 8, 16}};

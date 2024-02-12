@@ -2853,7 +2853,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.nonzero, args, kwargs)
 
-  @unittest.skip
   def test_aten__pdist_forward_0(self):
     args = (
         torch.randn((10, 10)).to(torch.float32),

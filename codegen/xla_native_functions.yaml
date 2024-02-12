@@ -382,6 +382,7 @@ supported:
   - _trilinear
   - linalg_pinv.atol_rtol_tensor
   - _cdist_forward
+  - _pdist_forward
   - mvlgamma
   - permute
   # The same applies to these ops, but we already have direct lowerings for them

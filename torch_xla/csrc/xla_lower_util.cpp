@@ -1096,6 +1096,23 @@ xla::XlaOp BuildRoll(xla::XlaOp input, absl::Span<const int64_t> shifts,
   return need_flatten ? xla::Reshape(input, input_shape.dimensions()) : input;
 }
 
+xla::XlaOp BuildUpperTriangle(xla::XlaOp input) {
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  int64_t rank = input_shape.rank();
+  std::vector<xla::XlaOp> slices;
+  if (input_shape.dimensions(0) == 0) {
+    XLA_CHECK(input_shape.dimensions(1) == 0)
+        << "2d dimension should be both 0 at the same time";
+    return xla::Collapse(input, {0, 1});
+  }
+  for (long i = 0; i < input_shape.dimensions(0); i++) {
+    xla::XlaOp sub_slice = xla::Slice(
+        input, {i, i + 1}, {i + 1, input_shape.dimensions(1)}, {1, 1});
+    slices.push_back(xla::Collapse(sub_slice, {0, 1}));
+  }
+  return xla::ConcatInDim(input.builder(), slices, 0);
+}
+
 xla::XlaOp BuildAddcdiv(xla::XlaOp input, xla::XlaOp t1, xla::XlaOp t2,
                         xla::XlaOp val) {
   val = MaybeConvertTo(val, ShapeHelper::ShapeOfXlaOp(t1).element_type());
