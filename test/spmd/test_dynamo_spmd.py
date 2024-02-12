@@ -8,6 +8,7 @@ import torch_xla.runtime as xr
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.spmd as xs
 import torch_xla.debug.metrics as met
+import torch_xla.experimental.dynamo_mark_sharding
 import unittest
 
 import test_xla_sharding_base
@@ -227,6 +228,29 @@ class DynamoSpmdInferenceTest(test_xla_sharding_base.XlaShardingTest):
     compile_count = met.metric_data('CompileTime')[0]
     dynamo_res = dynamo_linear(xla_x)
     self.assertEqual(met.metric_data('CompileTime')[0], compile_count)
+
+  def test_dynamo_spmd_basic_with_dynamo_mark_sharding(self):
+    device = xm.xla_device()
+    linear = SimpleLinear().to(device)
+    linear.eval()
+    xla_x = torch.randn(1, 128, device=device)
+    mesh = self._get_mesh((1, self.n_devices))
+    device_ids = mesh.device_ids
+    mesh_shape = list(mesh.mesh_shape)
+    axis_names = str(mesh.axis_names)
+    partition_spec = '(1, 0)'
+    print(f'linear.fc2.weight={linear.fc2.weight}')
+    print(f'device_ids={device_ids}')
+    print(f'mesh_shape={mesh_shape}')
+    print(f'axis_names={axis_names}')
+    torch.ops.xla.dynamo_mark_sharding(linear.fc2.weight, device_ids,
+                                       mesh_shape, axis_names, partition_spec)
+    xla_res = linear(xla_x)
+    xm.mark_step()
+
+    dynamo_linear = torch.compile(linear, backend="openxla")
+    dynamo_res = dynamo_linear(xla_x)
+    torch.allclose(xla_res.cpu(), dynamo_res.cpu())
 
 
 if __name__ == '__main__':
