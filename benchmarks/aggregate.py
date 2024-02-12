@@ -330,7 +330,7 @@ def pr_latest(results_map: Dict[str, Any], args, timestamps: List[str]):
             list, zip(*sorted(zip(acc_map[label], acc_map[model_label]))))
         speedups[i] = list(map(pr_round, speedups[i]))
         break
-  if not speedups[0] or not speedups[1]:
+  if all(not x for x in speedups):
     logger.warning(f'cannot find data for accelerator {args.accelerator}')
     return
 
