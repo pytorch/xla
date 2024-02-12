@@ -261,6 +261,9 @@ TEST_F(AtenXlaTensorTest, TestEmbedding) {
                                            /*scale_grad_by_freq=*/false,
                                            /*sparse=*/false);
     AllClose(b, xla_b);
+    ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+    ExpectCounterChanged("xla::embedding_symint",
+                         cpp_test::GetIgnoredCounters());
   });
 }
 

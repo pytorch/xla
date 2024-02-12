@@ -368,6 +368,8 @@ embedding_bag(const XLATensorPtr& weight, const XLATensorPtr& indices,
               const c10::optional<at::Tensor>& per_sample_weights,
               bool include_last_offset, int64_t padding_idx);
 
+XLATensorPtr embedding(const XLATensorPtr& weight, const XLATensorPtr& indices);
+
 XLATensorPtr eq(const XLATensorPtr& input, const at::Scalar& other);
 
 XLATensorPtr eq(const XLATensorPtr& input, const XLATensorPtr& other);

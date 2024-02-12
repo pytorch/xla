@@ -1271,6 +1271,11 @@ embedding_bag(const XLATensorPtr& weight, const XLATensorPtr& indices,
                          weight->CreateFrom(torch::lazy::Value(node, 3)));
 }
 
+XLATensorPtr embedding(const XLATensorPtr& weight,
+                       const XLATensorPtr& indices) {
+  return tensor_ops::Embedding(weight, indices);
+}
+
 XLATensorPtr exp(const XLATensorPtr& input) {
   return input->CreateFrom(Exp(input->GetIrValue()));
 }

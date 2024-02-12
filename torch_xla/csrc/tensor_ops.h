@@ -39,6 +39,8 @@ XLATensorPtr EmbeddingDenseBackward(const XLATensorPtr& grad_output,
                                     int64_t num_weights, int64_t padding_idx,
                                     bool scale_grad_by_freq);
 
+XLATensorPtr Embedding(const XLATensorPtr& weight, const XLATensorPtr& indices);
+
 }  // namespace tensor_ops
 }  // namespace torch_xla
 
