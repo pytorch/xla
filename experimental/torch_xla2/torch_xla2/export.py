@@ -12,6 +12,7 @@ from torch.utils import _pytree as pytree
 class JaxProgram:
 
   def _wrap_inputs(self, xs, allow_torch_tensor=False):
+
     def convert(t):
       if isinstance(t, tensor.XLATensor2):
         return t
@@ -27,6 +28,7 @@ class JaxProgram:
     return jax.tree_util.tree_map(convert, xs)
 
   def _unwrap_outputs(self, xs):
+
     def convert(t):
       if isinstance(t, tensor.XLATensor2):
         return t.jax()
@@ -44,11 +46,9 @@ class JaxProgram:
   ):
 
     self.param_buffer_values = self._wrap_inputs(
-        param_buffer_values, allow_torch_tensor=True
-    )
+        param_buffer_values, allow_torch_tensor=True)
     self.ordered_tensor_constants = self._wrap_inputs(
-        ordered_tensor_constants, allow_torch_tensor=True
-    )
+        ordered_tensor_constants, allow_torch_tensor=True)
     self.exported_program = exported_program
 
   def __hash__(self):
@@ -68,12 +68,9 @@ class JaxProgram:
       kwargs = {}
 
     if (in_spec := self.exported_program.call_spec.in_spec) is not None:
-      if (
-          in_spec.type == tuple
-          and len(in_spec.children_specs) == 2
-          and in_spec.children_specs[0].type == tuple
-          and in_spec.children_specs[1].type == dict
-      ):
+      if (in_spec.type == tuple and len(in_spec.children_specs) == 2 and
+          in_spec.children_specs[0].type == tuple and
+          in_spec.children_specs[1].type == dict):
         # NOTE: this is the case where in_spec is for both args and kwargs
         return fx_pytree.tree_flatten_spec((args, kwargs), in_spec)
       return fx_pytree.tree_flatten_spec(args, in_spec)
@@ -92,12 +89,12 @@ class JaxProgram:
 
   @property
   def flatten_callable(self):
+
     def func(*inputs: jax.Array):
       nonlocal self
       inputs = self._wrap_inputs(inputs)
       num_mutations = len(
-          self.exported_program.graph_signature.buffers_to_mutate
-      )
+          self.exported_program.graph_signature.buffers_to_mutate)
       res = torch.fx.Interpreter(self.exported_program.graph_module).run(
           *self.param_buffer_values,
           *inputs,
@@ -139,24 +136,26 @@ def exported_program_to_jax_program(ep):
   if hasattr(ep.graph_signature, 'lifted_tensor_constants'):
     ordered_tensor_constants = tuple(
         ep.tensor_constants[name]
-        for name in ep.graph_signature.lifted_tensor_constants
-    )
+        for name in ep.graph_signature.lifted_tensor_constants)
   else:
     ordered_tensor_constants = tuple()
 
   return JaxProgram(ep, param_buffer_values, ordered_tensor_constants)
 
 
+DEBUG = False
+
+
 class JaxInterpreter(torch.fx.Interpreter):
   """Experimental."""
 
   def call_function(self, target, args: Tuple, kwargs: Dict) -> Any:
-    if not isinstance(
-        target, (torch._ops.OpOverloadPacket, torch._ops.OpOverload)
-    ):
+    if not isinstance(target,
+                      (torch._ops.OpOverloadPacket, torch._ops.OpOverload)):
       return super().call_function(target, args, kwargs)
 
-    # print('Running ', target.name(), '--------')
+    if DEBUG:
+      print('Running ', target.name(), '--------')
 
     op = ops_registry.lowerings.lookup(target)
     if op is None:
@@ -166,18 +165,32 @@ class JaxInterpreter(torch.fx.Interpreter):
 
   def run_node(self, n) -> Any:
     res = super().run_node(n)
-    #if n.op == 'call_function':
-     # if hasattr(res, 'shape'):
-     #   print('Meta:', n.meta.get('val').shape, 'REAL: ', res.shape)
+    if DEBUG:
+      if n.op == 'call_function':
+        if hasattr(res, 'shape'):
+          print('Meta:', n.meta.get('val').shape, 'REAL: ', res.shape)
     return res
+
 
 from torch._decomp import get_decompositions
 import torch._refs
-_extra_decomp = get_decompositions(
-  [torch.ops.aten.unfold]
-)
+
+_extra_decomp = get_decompositions([torch.ops.aten.unfold])
 
 
+def _extract_states_from_exported_program(exported_model):
+  # NOTE call convention: (parameters, buffers, user_inputs)
+  param_and_buffer_keys = exported_model.graph_signature.parameters + exported_model.graph_signature.buffers
+  state_dict = copy.copy(exported_model.state_dict)
+  if (constants := getattr(exported_model, 'constants', None)) is not None:
+    state_dict.update(constants)
+  param_buffer_values = list(state_dict[key] for key in param_and_buffer_keys)
+
+  if hasattr(exported_model.graph_signature, "lifted_tensor_constants"):
+    for name in exported_model.graph_signature.lifted_tensor_constants:
+      param_buffer_values.append(exported_model.tensor_constants[name])
+
+  return param_buffer_values
 
 
 def exported_program_to_jax(exported_program):
@@ -191,36 +204,28 @@ def exported_program_to_jax(exported_program):
     # torch version 2.1 didn't expose this yet
     exported_program = exported_program.run_decompositions()
     exported_program = exported_program.run_decompositions(_extra_decomp)
-  param_buffer_keys = (
-      exported_program.graph_signature.parameters
-      + exported_program.graph_signature.buffers
-  )
-  param_buffer_values = tuple(
-      exported_program.state_dict[key] for key in param_buffer_keys
-  )
+  if DEBUG:
+    print(exported_program.graph_module.code)
 
-  if hasattr(exported_program.graph_signature, 'lifted_tensor_constants'):
-    ordered_tensor_constants = tuple(
-        exported_program.tensor_constants[name]
-        for name in exported_program.graph_signature.lifted_tensor_constants
-    )
-  else:
-    ordered_tensor_constants = tuple()
+  states = _extract_states_from_exported_program(exported_program)
+
+  def _extract_args(args, kwargs):
+    flat_args_with_path, received_spec = pytree.tree_flatten_with_path(
+        (args, kwargs))  # type: ignore[possibly-undefined]
+    flat_args = [x[1] for x in flat_args_with_path]
+    return flat_args
 
   num_mutations = len(exported_program.graph_signature.buffers_to_mutate)
 
   def func(states, inputs):
-    param_buffer_values, ordered_tensor_constants = states
+    args = _extract_args(inputs, {})
     res = JaxInterpreter(exported_program.graph_module).run(
-        *param_buffer_values,
-        *inputs,
-        *ordered_tensor_constants,
+        *states,
+        *args,
         enable_io_processing=False,
     )
     res = res[num_mutations:]
     return res
 
-  state = pytree.tree_map_only(
-      torch.Tensor, tensor.t2j, (param_buffer_values, ordered_tensor_constants)
-  )
-  return state, func
+  states = pytree.tree_map_only(torch.Tensor, tensor.t2j, states)
+  return states, func
