@@ -3,6 +3,7 @@ from torch import nn
 import torch_xla2
 from . import test_base
 
+
 class CustomConv1(torch.nn.Module):
 
   def __init__(
@@ -53,27 +54,27 @@ class CustomConv2(nn.Module):
 
 class ConvTest(test_base.TestCase):
 
-    def test_conv1(self):
-        m = CustomConv1()
-        arg = torch.randn((20, 1, 50))
-        res = m(arg)
+  def test_conv1(self):
+    m = CustomConv1()
+    arg = torch.randn((20, 1, 50))
+    res = m(arg)
 
-        jax_weights, jax_func = torch_xla2.extract_jax(m) 
-        arg = torch_xla2.tensor.t2j(arg)
-        res2 = jax_func(jax_weights, (arg, ))
-        res2_torch = torch_xla2.tensor.j2t(res2)
-        self.assertTrue(torch.allclose(res, res2_torch))
+    jax_weights, jax_func = torch_xla2.extract_jax(m)
+    arg = torch_xla2.tensor.t2j(arg)
+    res2 = jax_func(jax_weights, (arg,))
+    res2_torch = torch_xla2.tensor.j2t(res2)
+    self.assertTrue(torch.allclose(res, res2_torch))
 
-    def test_conv2(self):
-        m = CustomConv2()
-        arg = torch.randn((20, 4, 50, 100))
-        res = m(arg)
-        jax_weights, jax_func = torch_xla2.extract_jax(m) 
-        arg = torch_xla2.tensor.t2j(arg)
-        res2 = jax_func(jax_weights, (arg, ))
-        res2_torch = torch_xla2.tensor.j2t(res2)
-        self.assertTrue(torch.allclose(res, res2_torch, atol=1e-4, rtol=1e-4))
+  def test_conv2(self):
+    m = CustomConv2()
+    arg = torch.randn((20, 4, 50, 100))
+    res = m(arg)
+    jax_weights, jax_func = torch_xla2.extract_jax(m)
+    arg = torch_xla2.tensor.t2j(arg)
+    res2 = jax_func(jax_weights, (arg,))
+    res2_torch = torch_xla2.tensor.j2t(res2)
+    self.assertTrue(torch.allclose(res, res2_torch, atol=1e-4, rtol=1e-4))
 
 
 if __name__ == '__main__':
-    test_base.main() 
+  test_base.main()
