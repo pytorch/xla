@@ -371,7 +371,7 @@ class TorchBenchModel(BenchmarkModel):
   def use_fp16(self):
     return self.is_inference() and self.model_name in FORCE_FP16_FOR_BF16_MODELS
 
-  def dtype(self):
+  def conversion_dtype(self):
     if self.is_training() or self.use_amp():
       return super().dtype()
 
