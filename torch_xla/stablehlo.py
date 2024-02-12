@@ -20,6 +20,7 @@ from torch_xla.debug import metrics
 import torch_xla.experimental.quantized
 import torch._dynamo as torchdynamo
 from torch.utils import _pytree as pytree
+from torch._decomp import get_decompositions
 
 from typing import Tuple, Type, Callable
 
@@ -288,11 +289,15 @@ def _extract_input_args(exported_model, options):
     return copy.deepcopy(args)
 
 
+_extra_decompositions = get_decompositions([torch.ops.aten.grid_sampler_2d])
+
+
 def _exported_program_to_stablehlo_bundle(exported_model,
                                           options) -> StableHLOModelBundle:
   if options is None:
     options = StableHLOExportOptions()
   exported_model = exported_model.run_decompositions()
+  exported_model = exported_model.run_decompositions(_extra_decompositions)
   input_args = _extract_input_args(exported_model, options)
 
   device = xm.xla_device()
