@@ -1,4 +1,5 @@
 from collections import OrderedDict
+import contextlib
 import logging
 import re
 import torch
@@ -66,6 +67,8 @@ class BenchmarkModel:
     self.suite_name = suite_name
     self.model_name = model_name
     self.benchmark_experiment = benchmark_experiment
+    self.autocast = contextlib.nullcontext
+    self.autocast_kwargs = {}
 
   def set_up(self):
     """Set up module, actual batch_size, example_inputs, and optimizer_class
@@ -125,6 +128,7 @@ class BenchmarkModel:
       return torch.no_grad()
     elif self.benchmark_experiment.test == "train":
       return torch.enable_grad()
+    raise NotImplementedError
 
   def _optimizer_zero_grad(self):
     if self.optimizer is not None:
@@ -141,8 +145,9 @@ class BenchmarkModel:
 
   def train(self, inputs, collect_full_output=False):
     self._optimizer_zero_grad()
-    pred = self.module(*inputs)
-    loss = self.compute_loss(pred)
+    with self.autocast(**self.autocast_kwargs):
+      pred = self.module(*inputs)
+      loss = self.compute_loss(pred)
     loss.backward()
     self._optimizer_step()
     if collect_full_output:
@@ -152,7 +157,8 @@ class BenchmarkModel:
     return None
 
   def eval(self, inputs, collect_full_output=False):
-    pred = self.module(*inputs)
+    with self.autocast(**self.autocast_kwargs):
+      pred = self.module(*inputs)
     return pred
 
   @property
