@@ -349,8 +349,6 @@ class TorchBenchModel(BenchmarkModel):
     )
 
   def update_process_env(self, process_env):
-    pass
-
     if self.model_name in NEED_LARGER_CACHE:
       process_env["XLA_COMPILATION_CACHE_SIZE"] = "2048"
 
