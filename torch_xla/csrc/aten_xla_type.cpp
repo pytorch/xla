@@ -1440,7 +1440,7 @@ at::Tensor XLANativeFunctions::index_copy(const at::Tensor& self, int64_t dim,
   // https://pytorch.org/docs/stable/generated/torch.Tensor.index_copy_.html,
   // the dim-th dimension of source tensor must have the same size as the length
   // of index tensor.
-  XLA_CHECK(dim < self_tensor_dims.size() &&
+  XLA_CHECK(dim < source_tensor_dims.size() &&
             source_tensor_dims[dim] == index_tensor_dims[0])
       << "dim-th dimension of the source tensor must have the same size as the "
          "length of index tensor.";
