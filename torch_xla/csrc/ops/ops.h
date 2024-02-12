@@ -173,6 +173,10 @@ torch::lazy::NodePtr Norm(const torch::lazy::Value& input,
                           c10::optional<at::ScalarType> dtype,
                           absl::Span<const int64_t> dims, bool keepdim);
 
+torch::lazy::NodePtr Pdist_forward(const torch::lazy::Value& input,
+                                   const c10::optional<at::Scalar>& p,
+                                   c10::optional<at::ScalarType> dtype);
+
 torch::lazy::NodePtr LinalgVectorNorm(const torch::lazy::Value& input,
                                       const at::Scalar& ord,
                                       std::vector<int64_t> dimensions,
