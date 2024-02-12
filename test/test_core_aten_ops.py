@@ -1043,25 +1043,21 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.cos, args, kwargs)
 
-  @unittest.skip
   def test_aten_cos_2(self):
     args = (torch.randint(0, 10, (10, 10)).to(torch.int32),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.cos, args, kwargs)
 
-  @unittest.skip
   def test_aten_cosh_0(self):
     args = (torch.randn((10, 10)).to(torch.float32),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.cosh, args, kwargs)
 
-  @unittest.skip
   def test_aten_cosh_1(self):
     args = (torch.randn((10, 10)).to(torch.float16),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.cosh, args, kwargs)
 
-  @unittest.skip
   def test_aten_cosh_2(self):
     args = (torch.randint(0, 10, (10, 10)).to(torch.int32),)
     kwargs = dict()
@@ -4135,10 +4131,9 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.topk, args, kwargs)
 
-  @unittest.skip
   def test_aten_topk_2(self):
     args = (
-        torch.randint(0, 10, (10, 10)).to(torch.int32),
+        torch.reshape(torch.randperm(100), (10, 10)).to(torch.int32),
         1,
         1,
         False,
