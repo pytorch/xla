@@ -11,12 +11,12 @@ index 000000000..24e23b67d
 +--- a/stablehlo/api/PortableApi.cpp
 ++++ b/stablehlo/api/PortableApi.cpp
 +@@ -15,10 +15,13 @@ limitations under the License.
-+ 
++
 + #include "stablehlo/api/PortableApi.h"
-+ 
++
 ++#include <iostream>
 + #include <string>
-+ 
++
 + #include "mlir/Bytecode/BytecodeWriter.h"
 + #include "mlir/Dialect/Func/IR/FuncOps.h"
 ++#include "mlir/Dialect/Quant/QuantOps.h"
@@ -31,9 +31,9 @@ index 000000000..24e23b67d
 ++  context->loadDialect<mlir::quant::QuantizationDialect>();
 + }
 + }  // namespace
-+ 
++
 diff --git a/third_party/stablehlo/workspace.bzl b/third_party/stablehlo/workspace.bzl
-index 9f4494aac..64fa072bb 100644
+index f6e19b856..d2f7eb60b 100644
 --- a/third_party/stablehlo/workspace.bzl
 +++ b/third_party/stablehlo/workspace.bzl
 @@ -15,5 +15,6 @@ def repo():
