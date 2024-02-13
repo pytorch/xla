@@ -2,6 +2,9 @@ name: TPU Integration Test
 run-name: TPU Testing
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - master
 jobs:
   tpu-test:
     runs-on: v4-runner-set
@@ -42,5 +45,4 @@ jobs:
           XLA_EXPERIMENTAL=nonzero:masked_select python3 -u test/ds/test_dynamic_shapes.py -v
           python3 -u test/test_autocast.py
           python3 -u test/dynamo/test_dynamo.py
-          # TODO(mbzomowski): Uncomment once https://github.com/pytorch/xla/issues/6252 is fixed
-          # python3 -u test/spmd/test_spmd_debugging.py
+          python3 -u test/spmd/test_spmd_debugging.py
