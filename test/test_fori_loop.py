@@ -74,17 +74,6 @@ def _while_loop_tests():
 
 class WhileLoopTest(unittest.TestCase):
 
-  def test_per_tensor_qdq(self):
-    device = xm.xla_device()
-    x = torch.randn(2, 3, 4, 5).to(device)
-    x = torch.ops.quantized_decomposed.quantize_per_tensor(
-        x, 0.4, 2, -128, 127, torch.int8)
-    x = torch.ops.quantized_decomposed.dequantize_per_tensor(
-        x, 0.4, 2, -128, 127, torch.int8)
-    stablehlo_txt = xm.get_stablehlo([x])
-    self.assertEqual(
-        stablehlo_txt.count(
-
     def test_while_loop_tpu(self):
         def cond_fn(x):
             return x.sum() < 10
