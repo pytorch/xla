@@ -136,7 +136,8 @@ class FSDPv2Test(test_xla_sharding_base.XlaShardingTest):
     xs.set_global_mesh(mesh)
 
     model = FSDPv2(cpu_model)
-    self.assertEqual(str(list(model._orig_module.parameters())[0].device), "xla:0")
+    self.assertEqual(
+        str(list(model._orig_module.parameters())[0].device), "xla:0")
 
 
 if __name__ == '__main__':
