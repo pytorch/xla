@@ -3,6 +3,7 @@ import torch
 import torch_xla
 from torch.library import Library, impl
 
+
 import torch.utils._pytree as pytree
 
 from torch._C import DispatchKey
@@ -25,6 +26,8 @@ from torch._ops import HigherOrderOperator
 # )
 ###
 
+import torch_xla.core.xla_builder as xb
+
 # quantized_decomposed_lib = Library("quantized_decomposed", "IMPL")
 while_loop_op = HigherOrderOperator("while_loop")
 
@@ -36,5 +39,5 @@ def xla_while_loop(cond_fn, body_fn, operands:):
   return _xla_while_loop(cond_fn, body_fn, operands)
 
 def _xla_while_loop(cond_fn, body_fn, operands):
-  return xb.mkwhile(operands, cond_fn, body_fn); # torch_xla._XLAC._xla_while_loop_fn(conf_fn, body_fn, operands)
+  return xb.Op.mkwhile(operands, cond_fn, body_fn); # torch_xla._XLAC._xla_while_loop_fn(conf_fn, body_fn, operands)
 
