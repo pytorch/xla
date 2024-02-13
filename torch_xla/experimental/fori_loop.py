@@ -36,8 +36,10 @@ while_loop_op = HigherOrderOperator("while_loop")
 def xla_while_loop(cond_fn, body_fn, operands:):
   # cond_fn&body_fn: callable
   # operands: (Tuple of possibly nested dict/list/tuple of tensors)
+  print("arrive the xla_while_loop!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
   return _xla_while_loop(cond_fn, body_fn, operands)
 
 def _xla_while_loop(cond_fn, body_fn, operands):
+  print("arrive the xla_while_loop!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
   return xb.Op.mkwhile(operands, cond_fn, body_fn); # torch_xla._XLAC._xla_while_loop_fn(conf_fn, body_fn, operands)
 
