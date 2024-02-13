@@ -1561,7 +1561,7 @@ void InitXlaModuleBindings(py::module m) {
           std::vector<at::Tensor> results;
           {
             NoGilSection nogil;
-            results = XlaUWhileLoopFn(cond_fn, body_fn, operands);
+            results = XlaWhileLoopFn(cond_fn, body_fn, operands);
           }
           return results;
         });
