@@ -95,6 +95,7 @@
 #include "torch_xla/csrc/ops/put.h"
 #include "torch_xla/csrc/ops/qr.h"
 #include "torch_xla/csrc/ops/quant_tensor.h"
+#include "torch_xla/csrc/ops/randperm.h"
 #include "torch_xla/csrc/ops/recv.h"
 #include "torch_xla/csrc/ops/reduce_scatter.h"
 #include "torch_xla/csrc/ops/reflection_pad2d.h"
@@ -751,14 +752,20 @@ XLATensorPtr add(const XLATensorPtr& input, const XLATensorPtr& other,
   xla::Shape input_shape = input->shape().get();
   xla::Shape other_shape = other->shape().get();
   torch::lazy::Value constant;
+  const torch::lazy::BackendDevice& device = input->GetDevice();
   if (!input_shape.is_dynamic() && !other_shape.is_dynamic()) {
     constant = XLAGraphExecutor::Get()->GetIrValueForScalar(
-        alpha, other->shape(), logical_element_type, input->GetDevice());
+        alpha,
+        xla::ShapeUtil::MakeScalarShape(
+            MakeXlaPrimitiveType(other->dtype(), &device)),
+        logical_element_type, device);
   } else {
     SymIntElements sym_int_elements(other->GetIrValue());
     constant = XLAGraphExecutor::Get()->GetIrValueForScalar(
-        alpha, other->shape(), sym_int_elements, logical_element_type,
-        input->GetDevice());
+        alpha,
+        xla::ShapeUtil::MakeScalarShape(
+            MakeXlaPrimitiveType(other->dtype(), &device)),
+        sym_int_elements, logical_element_type, device);
   }
 
   return input->CreateFrom(input->GetIrValue() + other->GetIrValue() * constant,
@@ -768,12 +775,19 @@ XLATensorPtr add(const XLATensorPtr& input, const XLATensorPtr& other,
 XLATensorPtr add(const XLATensorPtr& input, const at::Scalar& other,
                  const at::Scalar& alpha,
                  c10::optional<at::ScalarType> logical_element_type) {
+  const torch::lazy::BackendDevice& device = input->GetDevice();
   torch::lazy::Value other_constant =
       XLAGraphExecutor::Get()->GetIrValueForScalar(
-          other, input->shape(), logical_element_type, input->GetDevice());
+          other,
+          xla::ShapeUtil::MakeScalarShape(
+              MakeXlaPrimitiveType(input->dtype(), &device)),
+          logical_element_type, device);
   torch::lazy::Value alpha_constant =
       XLAGraphExecutor::Get()->GetIrValueForScalar(
-          alpha, input->shape(), logical_element_type, input->GetDevice());
+          alpha,
+          xla::ShapeUtil::MakeScalarShape(
+              MakeXlaPrimitiveType(input->dtype(), &device)),
+          logical_element_type, device);
   return input->CreateFrom(
       input->GetIrValue() + other_constant * alpha_constant,
       logical_element_type);
@@ -963,6 +977,11 @@ XLATensorPtr cdist_forward(const XLATensorPtr& x1, const XLATensorPtr& x2,
       /*use_hamming=*/p == 0.0,
       /*use_chebyshev=*/std::isinf(p));
   return x1->CreateFrom(node);
+}
+
+XLATensorPtr pdist_forward(const XLATensorPtr& input, double p) {
+  c10::optional<at::ScalarType> dtype = input->dtype_optional();
+  return input->CreateFrom(Pdist_forward(input->GetIrValue(), p, dtype));
 }
 
 XLATensorPtr celu(const XLATensorPtr& input, const at::Scalar& alpha) {
@@ -1234,6 +1253,11 @@ XLATensorPtr embedding_dense_backward(const XLATensorPtr& grad_output,
                                       bool scale_grad_by_freq) {
   return tensor_ops::EmbeddingDenseBackward(grad_output, indices, num_weights,
                                             padding_idx, scale_grad_by_freq);
+}
+
+XLATensorPtr embedding(const XLATensorPtr& weight,
+                       const XLATensorPtr& indices) {
+  return tensor_ops::Embedding(weight, indices);
 }
 
 std::tuple<XLATensorPtr, XLATensorPtr, XLATensorPtr, XLATensorPtr>
@@ -1876,8 +1900,12 @@ XLATensorPtr mul(const XLATensorPtr& input, const XLATensorPtr& other,
 
 XLATensorPtr mul(const XLATensorPtr& input, const at::Scalar& other,
                  c10::optional<at::ScalarType> logical_element_type) {
+  const torch::lazy::BackendDevice& device = input->GetDevice();
   torch::lazy::Value constant = XLAGraphExecutor::Get()->GetIrValueForScalar(
-      other, input->shape(), logical_element_type, input->GetDevice());
+      other,
+      xla::ShapeUtil::MakeScalarShape(
+          MakeXlaPrimitiveType(input->dtype(), &device)),
+      logical_element_type, device);
   return input->CreateFrom(input->GetIrValue() * constant,
                            logical_element_type);
 }
@@ -2273,6 +2301,16 @@ void random_(XLATensorPtr& input, int64_t from, int64_t to) {
       XLAGraphExecutor::Get()->GetIrValueForScalar(to, xla::PrimitiveType::S64,
                                                    input->GetDevice()),
       XLAGraphExecutor::Get()->GetRngSeed(input->GetDevice()), input_shape));
+}
+
+XLATensorPtr randperm(int64_t n, const torch::lazy::BackendDevice& device,
+                      at::ScalarType scalar_type) {
+  // These are all PyTorch defaults. PyTorch/XLA doesn't support non default
+  // params here yet.
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<RandPerm>(
+      n, at::ScalarType::Long, at::Layout::Strided, at::DeviceType::XLA,
+      /*pin_memory=*/false);
+  return XLATensor::Create(node, device, scalar_type);
 }
 
 XLATensorPtr reflection_pad2d(const XLATensorPtr& input,

@@ -3,7 +3,6 @@ import torch_xla.core.xla_model as xm
 from torch_xla.stablehlo import exported_program_to_stablehlo
 from torch.utils import _pytree as pytree
 import torch
-import torch._export
 
 import os
 import tempfile
@@ -808,195 +807,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.bmm, args, kwargs)
 
-  @unittest.skip
-  def test_aten_rand_0(self):
-    args = ([
-        10,
-        10,
-    ],)
-    kwargs = dict((
-        "device",
-        cpu,
-    ), (
-        "pin_memory",
-        False,
-    ))
-    run_export_and_compare(self, torch.ops.aten.rand, args, kwargs)
-
-  @unittest.skip
-  def test_aten_rand_1(self):
-    args = ([
-        10,
-        10,
-    ],)
-    kwargs = dict((
-        "device",
-        cpu,
-    ), (
-        "pin_memory",
-        False,
-    ))
-    run_export_and_compare(self, torch.ops.aten.rand, args, kwargs)
-
-  @unittest.skip
-  def test_aten_rand_2(self):
-    args = ([
-        10,
-        10,
-    ],)
-    kwargs = dict((
-        "device",
-        cpu,
-    ), (
-        "pin_memory",
-        False,
-    ))
-    run_export_and_compare(self, torch.ops.aten.rand, args, kwargs)
-
-  @unittest.skip
-  def test_aten_rand_3(self):
-    args = ([
-        2,
-        1,
-    ],)
-    kwargs = dict()
-    run_export_and_compare(self, torch.ops.aten.rand, args, kwargs)
-
-  @unittest.skip
-  def test_aten_rand_4(self):
-    args = ([
-        10,
-        10,
-    ],)
-    kwargs = dict((
-        "device",
-        cpu,
-    ), (
-        "pin_memory",
-        False,
-    ))
-    run_export_and_compare(self, torch.ops.aten.rand, args, kwargs)
-
-  @unittest.skip
-  def test_aten_rand_5(self):
-    args = ([
-        10,
-        10,
-    ],)
-    kwargs = dict((
-        "device",
-        cpu,
-    ), (
-        "pin_memory",
-        False,
-    ))
-    run_export_and_compare(self, torch.ops.aten.rand, args, kwargs)
-
-  @unittest.skip
-  def test_aten_rand_6(self):
-    args = ([
-        10,
-        10,
-    ],)
-    kwargs = dict((
-        "device",
-        cpu,
-    ), (
-        "pin_memory",
-        False,
-    ))
-    run_export_and_compare(self, torch.ops.aten.rand, args, kwargs)
-
-  @unittest.skip
-  def test_aten_rand_7(self):
-    args = ([
-        10,
-        10,
-    ],)
-    kwargs = dict((
-        "device",
-        cpu,
-    ), (
-        "pin_memory",
-        False,
-    ))
-    run_export_and_compare(self, torch.ops.aten.rand, args, kwargs)
-
-  @unittest.skip
-  def test_aten_rand_8(self):
-    args = ([
-        10,
-        10,
-    ],)
-    kwargs = dict((
-        "device",
-        cpu,
-    ), (
-        "pin_memory",
-        False,
-    ))
-    run_export_and_compare(self, torch.ops.aten.rand, args, kwargs)
-
-  @unittest.skip
-  def test_aten_rand_9(self):
-    args = ([
-        10,
-        10,
-    ],)
-    kwargs = dict((
-        "device",
-        cpu,
-    ), (
-        "pin_memory",
-        False,
-    ))
-    run_export_and_compare(self, torch.ops.aten.rand, args, kwargs)
-
-  @unittest.skip
-  def test_aten_rand_10(self):
-    args = ([
-        10,
-        10,
-    ],)
-    kwargs = dict((
-        "device",
-        cpu,
-    ), (
-        "pin_memory",
-        False,
-    ))
-    run_export_and_compare(self, torch.ops.aten.rand, args, kwargs)
-
-  @unittest.skip
-  def test_aten_rand_11(self):
-    args = ([
-        10,
-        10,
-    ],)
-    kwargs = dict((
-        "device",
-        cpu,
-    ), (
-        "pin_memory",
-        False,
-    ))
-    run_export_and_compare(self, torch.ops.aten.rand, args, kwargs)
-
-  @unittest.skip
-  def test_aten_rand_12(self):
-    args = ([
-        10,
-        10,
-    ],)
-    kwargs = dict((
-        "device",
-        cpu,
-    ), (
-        "pin_memory",
-        False,
-    ))
-    run_export_and_compare(self, torch.ops.aten.rand, args, kwargs)
-
   def test_aten_cat_0(self):
     args = (
         [
@@ -1233,25 +1043,21 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.cos, args, kwargs)
 
-  @unittest.skip
   def test_aten_cos_2(self):
     args = (torch.randint(0, 10, (10, 10)).to(torch.int32),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.cos, args, kwargs)
 
-  @unittest.skip
   def test_aten_cosh_0(self):
     args = (torch.randn((10, 10)).to(torch.float32),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.cosh, args, kwargs)
 
-  @unittest.skip
   def test_aten_cosh_1(self):
     args = (torch.randn((10, 10)).to(torch.float16),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.cosh, args, kwargs)
 
-  @unittest.skip
   def test_aten_cosh_2(self):
     args = (torch.randint(0, 10, (10, 10)).to(torch.int32),)
     kwargs = dict()
@@ -1418,7 +1224,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.embedding, args, kwargs)
 
-  @unittest.skip
   def test_aten_embedding_1(self):
     args = (
         torch.randn((10, 10)).to(torch.float16),
@@ -1427,7 +1232,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.embedding, args, kwargs)
 
-  @unittest.skip
   def test_aten_embedding_2(self):
     args = (
         torch.randint(0, 10, (10, 10)).to(torch.int32),
@@ -1886,7 +1690,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.glu, args, kwargs)
 
-  @unittest.skip
   def test_aten_grid_sampler_2d_0(self):
     args = (
         torch.randn((1, 3, 2, 10)).to(torch.float32),
@@ -1969,114 +1772,6 @@ class AtenOpTest(unittest.TestCase):
     )
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.hardtanh, args, kwargs)
-
-  @unittest.skip
-  def test_aten_randint_low_0(self):
-    args = (
-        0,
-        10,
-        [
-            1,
-        ],
-    )
-    kwargs = dict((
-        "device",
-        cpu,
-    ), (
-        "pin_memory",
-        False,
-    ))
-    run_export_and_compare(self, torch.ops.aten.randint.low, args, kwargs)
-
-  @unittest.skip
-  def test_aten_randint_low_1(self):
-    args = (
-        0,
-        10,
-        [
-            1,
-        ],
-    )
-    kwargs = dict((
-        "device",
-        cpu,
-    ), (
-        "pin_memory",
-        False,
-    ))
-    run_export_and_compare(self, torch.ops.aten.randint.low, args, kwargs)
-
-  @unittest.skip
-  def test_aten_randint_low_2(self):
-    args = (
-        0,
-        10,
-        [
-            1,
-        ],
-    )
-    kwargs = dict((
-        "device",
-        cpu,
-    ), (
-        "pin_memory",
-        False,
-    ))
-    run_export_and_compare(self, torch.ops.aten.randint.low, args, kwargs)
-
-  @unittest.skip
-  def test_aten_randint_low_3(self):
-    args = (
-        0,
-        2,
-        [
-            2,
-        ],
-    )
-    kwargs = dict((
-        "device",
-        cpu,
-    ), (
-        "pin_memory",
-        False,
-    ))
-    run_export_and_compare(self, torch.ops.aten.randint.low, args, kwargs)
-
-  @unittest.skip
-  def test_aten_randint_low_4(self):
-    args = (
-        0,
-        2,
-        [
-            2,
-        ],
-    )
-    kwargs = dict((
-        "device",
-        cpu,
-    ), (
-        "pin_memory",
-        False,
-    ))
-    run_export_and_compare(self, torch.ops.aten.randint.low, args, kwargs)
-
-  @unittest.skip
-  def test_aten_randint_low_5(self):
-    args = (
-        0,
-        2,
-        [
-            2,
-        ],
-    )
-    kwargs = dict((
-        "device",
-        cpu,
-    ), (
-        "pin_memory",
-        False,
-    ))
-    run_export_and_compare(self, torch.ops.aten.randint.low, args, kwargs)
 
   def test_aten_index_put_0(self):
     args = (
@@ -3156,7 +2851,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.nonzero, args, kwargs)
 
-  @unittest.skip
   def test_aten__pdist_forward_0(self):
     args = (
         torch.randn((10, 10)).to(torch.float32),
@@ -3348,11 +3042,20 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.prod.dim_int, args, kwargs)
 
-  @unittest.skip
+  # Due to the way randperm isn't on device, we manually assert checks here instead of using
+  # the existing test harness.
   def test_aten_randperm_0(self):
     args = (20,)
     kwargs = dict()
-    run_export_and_compare(self, torch.ops.aten.randperm, args, kwargs)
+    pytorch = torch.randperm(20)
+
+    xla = torch.randperm(20, device=xm.xla_device())
+    xla_detached = xla.detach().cpu()
+
+    # Check equal lengths and that the sorted sets are equal. Since these numbers are randomly
+    # generated there's no way to check that pytorch == pytorch/xla.
+    self.assertEqual(len(pytorch), len(xla))
+    self.assertEqual(sorted(set(pytorch)), sorted(set(xla_detached)))
 
   def test_aten_reciprocal_0(self):
     args = (torch.randn((10, 10)).to(torch.float32),)
@@ -3369,7 +3072,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.reciprocal, args, kwargs)
 
-  @unittest.skip
   def test_aten_reflection_pad1d_0(self):
     args = (
         torch.randn((10, 10)).to(torch.float32),
@@ -3381,7 +3083,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.reflection_pad1d, args, kwargs)
 
-  @unittest.skip
   def test_aten_reflection_pad1d_1(self):
     args = (
         torch.randint(0, 10, (10, 10)).to(torch.int32),
@@ -3419,10 +3120,9 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.reflection_pad2d, args, kwargs)
 
-  @unittest.skip
   def test_aten_reflection_pad3d_0(self):
     args = (
-        torch.randn((3, 3, 3, 3, 3, 3)).to(torch.float32),
+        torch.randn((3, 3, 3, 3, 3)).to(torch.float32),
         [
             1,
             2,
@@ -3435,10 +3135,9 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.reflection_pad3d, args, kwargs)
 
-  @unittest.skip
   def test_aten_reflection_pad3d_1(self):
     args = (
-        torch.randn((3, 3, 3, 3, 3, 3)).to(torch.float16),
+        torch.randn((3, 3, 3, 3, 3)).to(torch.float16),
         [
             1,
             2,
@@ -3451,10 +3150,9 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.reflection_pad3d, args, kwargs)
 
-  @unittest.skip
   def test_aten_reflection_pad3d_2(self):
     args = (
-        torch.randint(0, 10, (3, 3, 3, 3, 3, 3)).to(torch.int32),
+        torch.randint(0, 10, (3, 3, 3, 3, 3)).to(torch.int32),
         [
             1,
             2,
@@ -4424,10 +4122,9 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.topk, args, kwargs)
 
-  @unittest.skip
   def test_aten_topk_2(self):
     args = (
-        torch.randint(0, 10, (10, 10)).to(torch.int32),
+        torch.reshape(torch.randperm(100), (10, 10)).to(torch.int32),
         1,
         1,
         False,

@@ -344,11 +344,19 @@ torch_xla::XlaOpVector ClampMinTensor::Lower(LoweringContext* loctx) const {
 
 torch_xla::XlaOpVector Cos::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  if (xla::primitive_util::IsIntegralType(XlaHelpers::TypeOfXlaOp(xla_input))) {
+    xla::PrimitiveType input_type = XlaHelpers::TypeOfXlaOp(xla_input);
+    xla_input = ConvertTo(xla_input, input_type, xla::PrimitiveType::F32);
+  }
   return ReturnOp(xla::Cos(xla_input), loctx);
 }
 
 torch_xla::XlaOpVector Cosh::Lower(LoweringContext* loctx) const {
   xla::XlaOp xla_input = loctx->GetOutputOp(operand(0));
+  if (xla::primitive_util::IsIntegralType(XlaHelpers::TypeOfXlaOp(xla_input))) {
+    xla::PrimitiveType input_type = XlaHelpers::TypeOfXlaOp(xla_input);
+    xla_input = ConvertTo(xla_input, input_type, xla::PrimitiveType::F32);
+  }
   return ReturnOp(xla::Cosh(xla_input), loctx);
 }
 

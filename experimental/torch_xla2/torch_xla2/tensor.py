@@ -22,16 +22,14 @@ class XLADispatchMode(torch_dispatch.TorchDispatchMode):
     return fn(*args, **kwargs)
 
 
-def _aten_arange(
-    start,
-    end,
-    *,
-    dtype=None,
-    layout=None,
-    requires_grad=False,
-    device=None,
-    pin_memory=False
-):
+def _aten_arange(start,
+                 end,
+                 *,
+                 dtype=None,
+                 layout=None,
+                 requires_grad=False,
+                 device=None,
+                 pin_memory=False):
   return jnp.arange(start, end, 1)
 
 
@@ -65,9 +63,8 @@ def t2j(t):
     # https://github.com/google/jax/issues/7657
     # https://github.com/google/jax/issues/17784
     if t.dtype == torch.bfloat16:
-      nparray = (
-          t.detach().to(torch.float32).numpy()
-      )  # numpy don't support bfloat16
+      nparray = (t.detach().to(torch.float32).numpy()
+                )  # numpy don't support bfloat16
     else:
       nparray = t.detach().numpy()
     res = jnp.asarray(nparray)
@@ -120,11 +117,6 @@ def move_to_device(t):
   return XLATensor2(t2j(t))
 
 
-EXTRA_DECOMP = decomp.get_decompositions([torch.ops.aten.upsample_nearest2d])
-CORE_ATEN_DECOMP = decomp.core_aten_decompositions()
-CORE_ATEN_DECOMP.update(EXTRA_DECOMP)
-
-
 class XLATensor2(torch.Tensor):
 
   @staticmethod
@@ -136,10 +128,12 @@ class XLATensor2(torch.Tensor):
         shape[i] = 1
     if dtype is None:
       dtype = torch.float32
-    return torch.Tensor._make_subclass(
+    return torch.Tensor._make_wrapper_subclass(
         cls,
-        torch.empty(shape, dtype=dtype, device="meta"),
-        require_grad=False,
+        shape,
+        dtype=dtype,
+        device='meta',
+        requires_grad=False,
     )
 
   def __init__(self, elem: jax.Array):
@@ -164,8 +158,7 @@ class XLATensor2(torch.Tensor):
     if end_dim == -1:
       end_dim = self.ndim
     new_shape = (
-        self._elem.shape[:start_dim] + (-1,) + self._elem.shape[end_dim:]
-    )
+        self._elem.shape[:start_dim] + (-1,) + self._elem.shape[end_dim:])
     new_elem = jnp.reshape(self._elem, new_shape)
     return XLATensor2(new_elem)
     # return torch.reshape(self, new_shape)
@@ -189,14 +182,12 @@ class XLATensor2(torch.Tensor):
       else:
         print("  ", a)
     lowering = ops_registry.lowerings.lookup(func)
+
     if lowering is None:
-      if func in CORE_ATEN_DECOMP:
-        with XLADispatchMode():
-          return CORE_ATEN_DECOMP[func](*args, **kwargs)
-      else:
-        print(func.name(), func.tags)
-        raise RuntimeError("No lowering found for", func.name())
-    res = lowering(*args, **kwargs)
+      raise RuntimeError("No lowering found for", func.name())
+
+    with XLADispatchMode():
+      res = lowering(*args, **kwargs)
     print("output:")
     for a in torch_pytree.tree_flatten(res)[0]:
       if isinstance(a, XLATensor2):
@@ -247,8 +238,7 @@ def debug_accuracy(func, args, kwargs, current_output):
     return True
 
   args_torch, kwargs_torch, out_torch = torch_pytree.tree_map_only(
-      torch.Tensor, lambda x: j2t(x._elem), (args, kwargs, current_output)
-  )
+      torch.Tensor, lambda x: j2t(x._elem), (args, kwargs, current_output))
   expected_out = func(*args_torch, **kwargs_torch)
 
   flattened_current_out, _ = torch_pytree.tree_flatten(out_torch)
@@ -258,11 +248,8 @@ def debug_accuracy(func, args, kwargs, current_output):
     if ex.dtype != real.dtype:
       ex = ex.to(real.dtype)
     try:
-      if (
-          _DEBUG_ACCURACY
-          and isinstance(ex, torch.Tensor)
-          and not torch.allclose(ex, real, atol=1e-3, equal_nan=True)
-      ):
+      if (_DEBUG_ACCURACY and isinstance(ex, torch.Tensor) and
+          not torch.allclose(ex, real, atol=1e-3, equal_nan=True)):
         import pdb
 
         pdb.set_trace()

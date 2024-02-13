@@ -20,6 +20,7 @@ from torch_xla.debug import metrics
 import torch_xla.experimental.quantized
 import torch._dynamo as torchdynamo
 from torch.utils import _pytree as pytree
+from torch._decomp import get_decompositions
 
 from typing import Tuple, Type, Callable
 
@@ -288,11 +289,15 @@ def _extract_input_args(exported_model, options):
     return copy.deepcopy(args)
 
 
+_extra_decompositions = get_decompositions([torch.ops.aten.grid_sampler_2d])
+
+
 def _exported_program_to_stablehlo_bundle(exported_model,
                                           options) -> StableHLOModelBundle:
   if options is None:
     options = StableHLOExportOptions()
   exported_model = exported_model.run_decompositions()
+  exported_model = exported_model.run_decompositions(_extra_decompositions)
   input_args = _extract_input_args(exported_model, options)
 
   device = xm.xla_device()
@@ -303,6 +308,12 @@ def _exported_program_to_stablehlo_bundle(exported_model,
   param_and_buffer_keys = exported_model.graph_signature.parameters + exported_model.graph_signature.buffers
   state_dict = pytree.tree_map_only(torch.Tensor, lambda x: x.to(device=device),
                                     exported_model.state_dict)
+
+  if (constants := getattr(exported_model, 'constants')) is not None:
+    state_dict.update(
+        pytree.tree_map_only(torch.Tensor, lambda x: x.to(device=device),
+                             constants))
+
   param_buffer_values = (state_dict[key] for key in param_and_buffer_keys)
 
   if hasattr(exported_model.graph_signature, "lifted_tensor_constants"):

@@ -2486,6 +2486,32 @@ at::Tensor& XLANativeFunctions::random_(
   return self;
 }
 
+at::Tensor XLANativeFunctions::randperm(int64_t n,
+                                        c10::optional<at::ScalarType> dtype,
+                                        c10::optional<at::Layout> layout,
+                                        c10::optional<at::Device> device,
+                                        c10::optional<bool> pin_memory) {
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+
+  // Only support the basic version of randperm(int64_t) to start. If there are
+  // any other parameters, fallback to CPU.
+  bool fallback_to_cpu = false;
+  fallback_to_cpu |= layout.has_value();
+  fallback_to_cpu |= pin_memory.has_value() && pin_memory.value() == true;
+  fallback_to_cpu |= dtype.value() != at::ScalarType::Long;
+  fallback_to_cpu |= n == 0;
+
+  if (fallback_to_cpu) {
+    return at::native::call_fallback_fn<&xla_cpu_fallback,
+                                        ATEN_OP(randperm)>::call(n, dtype,
+                                                                 layout, device,
+                                                                 pin_memory);
+  }
+
+  return bridge::AtenFromXlaTensor(tensor_methods::randperm(
+      n, GetXlaDeviceOrCurrent(device), at::ScalarType::Long));
+}
+
 at::Tensor XLANativeFunctions::reflection_pad2d(const at::Tensor& self,
                                                 at::IntArrayRef padding) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
@@ -3402,6 +3428,16 @@ at::Tensor XLANativeFunctions::_cdist_forward(
       bridge::GetXlaTensor(x1), bridge::GetXlaTensor(x2), p));
 }
 
+at::Tensor XLANativeFunctions::_pdist_forward(const at::Tensor& self,
+                                              double p) {
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  XLA_CHECK(p >= 0) << "p value for the p-norm distance must be >= 0";
+  XLA_CHECK(bridge::GetXlaTensor(self)->shape().get().rank() == 2)
+      << "pdist only support 2d dimension";
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::pdist_forward(bridge::GetXlaTensor(self), p));
+}
+
 // All of the below ops correspond to CompositeExplicitAutograd kernels from
 // core that call into view operators internally. These are all composite ops
 // that LTC can technically re-use / get for free, but we need to
@@ -3531,11 +3567,10 @@ at::Tensor XLANativeFunctions::embedding_symint(const at::Tensor& weight,
     return at::native::embedding_symint(weight, indices, padding_idx,
                                         scale_grad_by_freq, sparse);
   }
-  // TODO: for now route to native, which dispatches supported XLA operations.
-  // We need to make use of the TPU embedding core here eventually.
-  return at::functionalization::functionalize_aten_op_symint<ATEN_OP(
-      embedding)>::call(weight, indices, padding_idx, scale_grad_by_freq,
-                        sparse);
+
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  return bridge::AtenFromXlaTensor(tensor_methods::embedding(
+      bridge::GetXlaTensor(weight), bridge::GetXlaTensor(indices)));
 }
 
 at::Tensor XLANativeFunctions::_euclidean_dist(const at::Tensor& x1,

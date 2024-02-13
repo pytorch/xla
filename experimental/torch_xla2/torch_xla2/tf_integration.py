@@ -8,9 +8,7 @@ import torch
 from torch_xla2 import export
 
 
-def exported_program_to_tf_function(
-    ep, enable_xla=True
-):
+def exported_program_to_tf_function(ep, enable_xla=True):
   jax_program = export.exported_program_to_jax_program(ep)
 
   example_inputs = jax_program.flatten_inputs(*jax_program.example_inputs)
@@ -30,9 +28,8 @@ def exported_program_to_tf_function(
   return tf_f
 
 
-def exported_program_to_tf_module(
-    ep: torch.export.ExportedProgram, enable_xla=True
-) -> tf.Module:
+def exported_program_to_tf_module(ep: torch.export.ExportedProgram,
+                                  enable_xla=True) -> tf.Module:
   tfm = tf.Module()
   tfm.f = exported_program_to_tf_function(ep, enable_xla)
   return tfm
@@ -66,11 +63,9 @@ def save_exported_program_as_tf_saved_model(
   signatures = {
       serving_key: tfm.f.get_concrete_function(*tfm.f.input_signature)
   }
-  save_options = tf.saved_model.SaveOptions(
-      function_aliases={
-          function_alias: tfm.f,
-      }
-  )
+  save_options = tf.saved_model.SaveOptions(function_aliases={
+      function_alias: tfm.f,
+  })
   tf.saved_model.save(
       tfm,
       saved_model_dir,
@@ -105,23 +100,20 @@ def save_torch_module_as_tf_saved_model(
       function for inference converter or other tools.
   """
   ep = torch.export.export(torch_model, args)
-  save_exported_program_as_tf_saved_model(
-      ep, saved_model_dir, serving_key, function_alias, enable_xla
-  )
+  save_exported_program_as_tf_saved_model(ep, saved_model_dir, serving_key,
+                                          function_alias, enable_xla)
 
 
 def exported_program_to_tflite_flatbuffer(ep: torch.export.ExportedProgram):
   tfm = exported_program_to_tf_module(ep)
   tf_concrete_func = tfm.f.get_concrete_function(*tfm.f.input_signature)
   converter = tf.lite.TFLiteConverter.from_concrete_functions(
-      [tf_concrete_func], tfm
-  )
+      [tf_concrete_func], tfm)
   tflite_model = converter.convert()
   return tflite_model
 
 
-def torch_module_to_tflite_flatbuffer(
-    torch_model: torch.nn.Module, args: Tuple[Any]
-):
+def torch_module_to_tflite_flatbuffer(torch_model: torch.nn.Module,
+                                      args: Tuple[Any]):
   ep = torch.export.export(torch_model, args)
   return exported_program_to_tflite_flatbuffer(ep)

@@ -38,8 +38,7 @@ class LlamaTest(test_base.TestCase):
     @jax.jit
     def m_func_jit(weights, buffer, args, causal_mask, freqs_cis):
       weights, buffer, args, causal_mask, freqs_cis = tensor.wrap(
-          (weights, buffer, args, causal_mask, freqs_cis)
-      )
+          (weights, buffer, args, causal_mask, freqs_cis))
       m_func.stateless_model.freqs_cis = freqs_cis
       m_func.stateless_model.causal_mask = causal_mask
       res = m_func(weights, buffer, *args)

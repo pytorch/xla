@@ -270,6 +270,8 @@ XLATensorPtr cat(absl::Span<const XLATensorPtr> tensors, int64_t dim,
 XLATensorPtr cdist_forward(const XLATensorPtr& x1, const XLATensorPtr& x2,
                            double p);
 
+XLATensorPtr pdist_forward(const XLATensorPtr& input, double p);
+
 XLATensorPtr celu(const XLATensorPtr& input, const at::Scalar& alpha);
 void celu_(XLATensorPtr& input, const at::Scalar& alpha);
 
@@ -358,6 +360,8 @@ XLATensorPtr embedding_dense_backward(const XLATensorPtr& grad_output,
                                       const XLATensorPtr& indices,
                                       int64_t num_weights, int64_t padding_idx,
                                       bool scale_grad_by_freq);
+
+XLATensorPtr embedding(const XLATensorPtr& weight, const XLATensorPtr& indices);
 
 std::tuple<XLATensorPtr, XLATensorPtr, XLATensorPtr, XLATensorPtr>
 embedding_bag(const XLATensorPtr& weight, const XLATensorPtr& indices,

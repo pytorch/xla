@@ -7,11 +7,11 @@ import os
 from os.path import abspath, exists
 import sys
 import torch
+import torch.amp
 import torch.nn as nn
 from torch._dynamo.testing import collect_results, reduce_to_scalar_loss
 from torch._dynamo.utils import clone_inputs
 import torch_xla
-import torch_xla.amp
 import torch_xla.core.xla_model as xm
 import types
 import yaml
@@ -76,6 +76,7 @@ DENY_LIST = {
         {
             "test": "eval",
             "xla": "PJRT",
+            "dynamo": None,
         },  # TIMEOUT
     ],
     "hf_T5_generate": [
@@ -85,6 +86,7 @@ DENY_LIST = {
         {
             "test": "eval",
             "xla": "PJRT",
+            "dynamo": None,
         },  # TIMEOUT
     ],
     "doctr_det_predictor": [{
@@ -135,23 +137,11 @@ DENY_LIST = {
     ],
 }
 
-# This strict deny list denies tests that hold for too long and timeoout.
-STRICT_DENY_LIST = {
-    **{
-        "opacus_cifar10": [{
-            "accelerator": "tpu",
-        },],  # stackdump issue in TPU
-        "pytorch_stargan": [{
-            "accelerator": "tpu",
-        },],  # stackdump issue in TPU
-        "soft_actor_critic": [{
-            "accelerator": "tpu",
-        },],  # stackdump issue in TPU
-        "speech_transformer": [{
-            "accelerator": "tpu",
-        },],  # stackdump issue in TPU
-    },
-    **DENY_LIST
+# Models that had more graphs to be compiled than the actual size of
+# the cache.
+NEED_LARGER_CACHE = {
+    "cm3leon_generate",
+    "hf_T5_generate",
 }
 
 
@@ -234,12 +224,8 @@ class TorchBenchModelLoader(ModelLoader):
 
     return model_configs
 
-  def is_compatible(self,
-                    dummy_benchmark_model,
-                    benchmark_experiment,
-                    use_strict_deny=False):
+  def is_compatible(self, dummy_benchmark_model, benchmark_experiment):
     name = dummy_benchmark_model.model_name
-    deny_list = STRICT_DENY_LIST if use_strict_deny else DENY_LIST
 
     if name in self.skip["skip"]:
       return False
@@ -258,7 +244,7 @@ class TorchBenchModelLoader(ModelLoader):
     def is_attr_eq(k, v):
       return getattr(benchmark_experiment, k) == v
 
-    for deny_experiment_config in deny_list.get(name, []):
+    for deny_experiment_config in DENY_LIST.get(name, []):
       if all(is_attr_eq(k, v) for k, v in deny_experiment_config.items()):
         return False
 
@@ -283,11 +269,17 @@ class TorchBenchModel(BenchmarkModel):
 
     This is model suite specific.
     """
+    # Set the optimizer class.
+    # Check if we should use SGD instead of Adam for memory reasons.
     if self.benchmark_experiment.test == "train" and self.model_name in TRAIN_WITH_SGD:
       self.optimizer_class = torch.optim.SGD
     else:
       self.optimizer_class = torch.optim.Adam
 
+    # Setup the autocast environment if we are running on AMP precision.
+    self.autocast, self.autocast_kwargs = self._get_autocast_with_kwargs()
+
+    # Load the actual benchmark instance.
     benchmark = self.load_benchmark()
 
     self.module, self.example_inputs = benchmark.get_module()
@@ -424,30 +416,31 @@ class TorchBenchModel(BenchmarkModel):
     if precision_flag is not None:
       process_env[precision_flag] = '1'
 
+    if self.model_name in NEED_LARGER_CACHE:
+      process_env["XLA_COMPILATION_CACHE_SIZE"] = "2048"
+
   def pick_grad(self):
     # special case
     if self.model_name in ("maml",):
       return torch.enable_grad()
+    return super().pick_grad()
 
-    if self.benchmark_experiment.test == "eval":
-      return torch.no_grad()
-    elif self.benchmark_experiment.test == "train":
-      return torch.enable_grad()
-
-  def pick_amp(self):
+  def _get_autocast_with_kwargs(self):
     if (self.benchmark_experiment.accelerator == "cuda" and
         self.is_cuda_precision_amp()):
+      kwargs = {"dtype": torch.bfloat16}
       if self.benchmark_experiment.xla:
-        return torch_xla.amp.autocast(xm.xla_device())
+        # Should call device specific autocast implementations.
+        # PyTorch/XLA autocast does not run with dynamo, though:
+        # https://github.com/pytorch/xla/issues/6511
+        autocast = torch.amp.autocast
+        kwargs["device_type"] = "xla"
       else:
-        return torch.cuda.amp.autocast()
-    return contextlib.nullcontext()
-
-  def pick_context(self):
-    stack = contextlib.ExitStack()
-    stack.enter_context(self.pick_amp())
-    stack.enter_context(self.pick_grad())
-    return stack
+        autocast = torch.cuda.amp.autocast
+    else:
+      kwargs = {}
+      autocast = contextlib.nullcontext
+    return (autocast, kwargs)
 
   def compute_loss(self, pred):
     """Reduce the output of a model to get scalar loss"""
