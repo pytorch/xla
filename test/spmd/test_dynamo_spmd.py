@@ -239,10 +239,6 @@ class DynamoSpmdInferenceTest(test_xla_sharding_base.XlaShardingTest):
     mesh_shape = list(mesh.mesh_shape)
     axis_names = str(mesh.axis_names)
     partition_spec = '(1, 0)'
-    print(f'linear.fc2.weight={linear.fc2.weight}')
-    print(f'device_ids={device_ids}')
-    print(f'mesh_shape={mesh_shape}')
-    print(f'axis_names={axis_names}')
     torch.ops.xla.dynamo_mark_sharding(linear.fc2.weight, device_ids,
                                        mesh_shape, axis_names, partition_spec)
     xla_res = linear(xla_x)
