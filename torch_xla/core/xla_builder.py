@@ -565,6 +565,8 @@ class Op(object):
     condition_computation = Op.make_computation('Condition',
                                                 condition_computation, (self,))
     body_computation = Op.make_computation('Body', body_computation, (self,))
+    print("condition_computation type: ", type(condition_computation))
+    print("body_computation type: ", type(body_computation))
     return mkop(
         'While', (self.op,),
         condition_computation=condition_computation,
