@@ -31,7 +31,7 @@ class WhileLoopTest(unittest.TestCase):
             return xb.Op.tuple((x,))
 
         device = xm.xla_device()
-        x = torch.ones(1, device=device)
+        x = torch.ones(1, dtype=torch.int, device=device)
         res = while_loop(cond_fn, body_fn, (x, ))
         expected = _fake_while_loop(cond_fn, body_fn, (x, ))
         self.assertEqual(expected, res)

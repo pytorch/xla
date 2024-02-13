@@ -2,45 +2,39 @@ import numpy as np
 import torch
 import torch_xla
 from torch.library import Library, impl
-
-
+import torch
+import torch_xla
+import torch_xla.core.xla_builder as xb
+import torch_xla.core.xla_model as xm
+import torch_xla.utils.utils as xu
+import torch_xla.core.xla_op_registry as xor
 import torch.utils._pytree as pytree
 
 from torch._C import DispatchKey
-
-# from torch._higher_order_ops.utils import (
-#     _has_potential_branch_input_alias,
-#     _has_potential_branch_input_mutation,
-#     _maybe_run_with_interpreter,
-#     _set_compilation_env,
-#     autograd_not_implemented,
-#     UnsupportedAliasMutationException,
-# )
 from torch._ops import HigherOrderOperator
-# from torch._subclasses.fake_tensor import FakeTensorMode
-# from torch.fx.experimental.proxy_tensor import (
-#     disable_proxy_modes_tracing,
-#     make_fx,
-#     ProxyTorchDispatchMode,
-#     track_tensor_tree,
-# )
-###
 
-import torch_xla.core.xla_builder as xb
-
-# quantized_decomposed_lib = Library("quantized_decomposed", "IMPL")
 while_loop_op = HigherOrderOperator("while_loop")
 
-
-# @while_loop_op.py_impl(DispatchKey.AutocastXLA)
-@torch._higher_order_ops.while_loop.while_loop.default.py_impl(torch._C.DispatchKey.XLA)
-def while_loop(cond_fn, body_fn, operands:):
+@while_loop_op.py_impl(DispatchKey.XLA)
+def while_loop(cond_fn, body_fn, operands):
   # cond_fn&body_fn: callable
   # operands: (Tuple of possibly nested dict/list/tuple of tensors)
   print("arrive the xla_while_loop!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
   return _xla_while_loop(cond_fn, body_fn, operands)
 
 def _xla_while_loop(cond_fn, body_fn, operands):
+  # operands: list[Tensor]
   print("arrive the xla_while_loop!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-  return xb.Op.mkwhile(operands, cond_fn, body_fn); # torch_xla._XLAC._xla_while_loop_fn(conf_fn, body_fn, operands)
-
+  print("operands type: ", type(operands))
+  internal_operands = operands[0]  # specific to test case operands: (x, )
+  print("before define the op_fn!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+  def op_fn(internal_x):
+    def cond(internal_x):
+      return cond_fn(internal_x)
+    def body(internal_x):
+      return body_fn(internal_x)
+    w = xb.Op.mkwhile((internal_x,), cond_fn, body_fn)
+    return w.get_tuple_element(1)
+  print("after define the op_fn!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+  op = xor.register('test_while', op_fn)
+  return xu.as_list(op(operands[0]))
