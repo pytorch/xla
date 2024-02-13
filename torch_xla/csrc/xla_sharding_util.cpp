@@ -708,6 +708,10 @@ void ShardingUtil::ReshardParameters(
       WrapXlaData(runtime::GetComputationClient()->ReshardData(
           filtered_data, filtered_shardings));
   XLA_CHECK_EQ(outputs.size(), indices.size());
+  // To avoid loading two programs on to device at the same time
+  std::vector<std::string> spmd_device = {"SPMD:0"};
+  runtime::GetComputationClient()->WaitDeviceOps(spmd_device);
+
   for (int i = 0; i < outputs.size(); ++i) {
     (*parameters)[indices[i]] = outputs[i];
     auto it_node = xla_node_map.find(filtered_data[i]->GetHandle());
