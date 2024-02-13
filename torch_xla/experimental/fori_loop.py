@@ -35,6 +35,6 @@ def xla_while_loop(cond_fn, body_fn, operands:):
   # operands: (Tuple of possibly nested dict/list/tuple of tensors)
   return _xla_while_loop(cond_fn, body_fn, operands)
 
-def _xla_while_loop(conf_fn, body_fn, operands):
-  return torch_xla._XLAC._xla_while_loop_fn(conf_fn, body_fn, operands)
+def _xla_while_loop(cond_fn, body_fn, operands):
+  return xb.mkwhile(operands, cond_fn, body_fn); # torch_xla._XLAC._xla_while_loop_fn(conf_fn, body_fn, operands)
 
