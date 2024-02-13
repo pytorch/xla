@@ -33,7 +33,7 @@ while_loop_op = HigherOrderOperator("while_loop")
 
 
 @while_loop_op.py_impl(DispatchKey.XLA)
-def xla_while_loop(cond_fn, body_fn, operands:):
+def while_loop_dense(cond_fn, body_fn, operands:):
   # cond_fn&body_fn: callable
   # operands: (Tuple of possibly nested dict/list/tuple of tensors)
   print("arrive the xla_while_loop!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
