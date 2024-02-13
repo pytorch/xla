@@ -32,7 +32,7 @@ import torch_xla.core.xla_builder as xb
 while_loop_op = HigherOrderOperator("while_loop")
 
 
-@while_loop_op.py_impl(DispatchKey.XLA)
+@while_loop_op.py_impl(DispatchKey.AutocastXLA)
 def while_loop_dense(cond_fn, body_fn, operands:):
   # cond_fn&body_fn: callable
   # operands: (Tuple of possibly nested dict/list/tuple of tensors)
