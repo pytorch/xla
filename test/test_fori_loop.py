@@ -19,10 +19,12 @@ class WhileLoopTest(unittest.TestCase):
 
     def test_while_loop_tpu(self):
         def cond_fn(x):
-            return x.sum() < 10
+            z = torch.tensor(10, device=xm.xla_device())
+            return x.sum() < z
 
         def body_fn(x):
-            return (x + 1,)
+            y = torch.tensor(1, device=xm.xla_device())
+            return (x + y,)
 
         device = xm.xla_device()
         x = torch.zeros(1, device=device)
