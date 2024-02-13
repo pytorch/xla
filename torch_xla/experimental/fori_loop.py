@@ -33,7 +33,7 @@ while_loop_op = HigherOrderOperator("while_loop")
 
 
 # @while_loop_op.py_impl(DispatchKey.AutocastXLA)
-@torch._higher_order_ops.while_loop.default.py_impl(torch._C.DispatchKey.XLA)
+@torch._higher_order_ops.while_loop.while_loop.default.py_impl(torch._C.DispatchKey.XLA)
 def while_loop(cond_fn, body_fn, operands:):
   # cond_fn&body_fn: callable
   # operands: (Tuple of possibly nested dict/list/tuple of tensors)
