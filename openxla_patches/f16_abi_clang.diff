@@ -4,9 +4,9 @@ index 3f7af5197..ce4491c5d 100644
 --- a/xla/service/cpu/runtime_fp16.h
 +++ b/xla/service/cpu/runtime_fp16.h
 @@ -18,12 +18,7 @@ limitations under the License.
- 
+
  #include <stdint.h>
- 
+
 -// _Float16 always gets us the correct ABI type, so use that if available.
 -// AArch64 GCC defines __FLT16_MANT_DIG__ even when _Float16 is not available.
 -#if defined(__FLT16_MANT_DIG__) && \
