@@ -124,7 +124,7 @@ torch_xla::XlaOpVector Argmax::Lower(LoweringContext* loctx) const {
     return ReturnOp(torch_xla::BuildArgMax(input, canonical_dim, keepdim),
                     loctx);
   } else {
-    return ReturnOp(torch_xla::BuildArgMax(input, -1, false), loctx);
+    return ReturnOp(torch_xla::BuildArgMax(input, -1, keepdim), loctx);
   }
 }
 
@@ -137,7 +137,7 @@ torch_xla::XlaOpVector Argmin::Lower(LoweringContext* loctx) const {
     return ReturnOp(torch_xla::BuildArgMin(input, canonical_dim, keepdim),
                     loctx);
   } else {
-    return ReturnOp(torch_xla::BuildArgMin(input, -1, false), loctx);
+    return ReturnOp(torch_xla::BuildArgMin(input, -1, keepdim), loctx);
   }
 }
 

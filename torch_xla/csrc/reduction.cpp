@@ -409,18 +409,28 @@ xla::XlaOp BuildMinInDims(xla::XlaOp input,
 xla::XlaOp BuildArgMax(xla::XlaOp input, int64_t dim, bool keepdim) {
   const xla::Shape* shape = &ShapeHelper::ShapeOfXlaOp(input);
   xla::XlaOp operand = input;
+  bool dim_is_none = false;
   if (dim < 0) {
     dim = 0;
+    dim_is_none = true;
     operand = XlaHelpers::DynamicReshape(operand,
                                          {xla::ShapeUtil::ElementsIn(*shape)});
-    shape = &ShapeHelper::ShapeOfXlaOp(operand);
+    if (!keepdim) {                                         
+      shape = &ShapeHelper::ShapeOfXlaOp(operand);
+    }
   }
   xla::XlaOp result = xla::ArgMax(
       operand, GetXlaPrimitiveTypeForCurrentDevice(xla::PrimitiveType::S64),
       dim);
   if (keepdim) {
     auto dimensions = torch::lazy::ToVector<int64_t>(shape->dimensions());
-    dimensions[dim] = 1;
+    if (dim_is_none) {
+      for (auto& dim_it : dimensions) {
+        dim_it = 1;
+      }
+    } else {
+      dimensions[dim] = 1;
+    }
     result = XlaHelpers::DynamicReshape(result, dimensions);
   }
   return result;
@@ -429,18 +439,28 @@ xla::XlaOp BuildArgMax(xla::XlaOp input, int64_t dim, bool keepdim) {
 xla::XlaOp BuildArgMin(xla::XlaOp input, int64_t dim, bool keepdim) {
   const xla::Shape* shape = &ShapeHelper::ShapeOfXlaOp(input);
   xla::XlaOp operand = input;
+  bool dim_is_none = false;
   if (dim < 0) {
     dim = 0;
+    dim_is_none = true;
     operand = XlaHelpers::DynamicReshape(operand,
                                          {xla::ShapeUtil::ElementsIn(*shape)});
-    shape = &ShapeHelper::ShapeOfXlaOp(operand);
+    if (!keepdim) { 
+      shape = &ShapeHelper::ShapeOfXlaOp(operand);
+    }
   }
   xla::XlaOp result = xla::ArgMin(
       operand, GetXlaPrimitiveTypeForCurrentDevice(xla::PrimitiveType::S64),
       dim);
   if (keepdim) {
     auto dimensions = torch::lazy::ToVector<int64_t>(shape->dimensions());
-    dimensions[dim] = 1;
+    if (dim_is_none) {
+      for (auto& dim_it : dimensions) {
+        dim_it = 1;
+      }
+    } else {
+      dimensions[dim] = 1;
+    }
     result = XlaHelpers::DynamicReshape(result, dimensions);
   }
   return result;
