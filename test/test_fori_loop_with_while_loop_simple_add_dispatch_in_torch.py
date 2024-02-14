@@ -3,7 +3,7 @@ import unittest
 from typing import Callable, Dict, List
 
 import torch
-from torch._higher_order_ops.while_loop import while_loop, while_loop_dense
+# from torch._higher_order_ops.while_loop import while_loop, while_loop_dense
 import torch_xla.core.xla_model as xm
 import torch_xla.core.xla_builder as xb
 
@@ -33,7 +33,8 @@ class WhileLoopTest(unittest.TestCase):
 
         device = xm.xla_device()
         x = torch.ones(1, dtype=torch.int, device=device)
-        res = while_loop(cond_fn, body_fn, (x, ))
+        # res = while_loop(cond_fn, body_fn, (x, ))
+        res = torch_xla.experimental.fori_loop.while_loop(cond_fn, body_fn, (x, ))
         print("while_loop result: ", res)
         # expected = _fake_while_loop(cond_fn, body_fn, (x, ))
         expected = torch.tensor(11, dtype=torch.int, device=device)
