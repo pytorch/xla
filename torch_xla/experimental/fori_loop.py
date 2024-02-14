@@ -26,14 +26,15 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   # operands: list[Tensor]
   print("arrive the xla_while_loop!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
   print("operands type: ", type(operands))
-  internal_operands = operands[0]  # specific to test case operands: (x, )
+  # internal_operands = operands[0]  # specific to test case operands: (x, )
   print("before define the op_fn!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
   def op_fn(internal_x):
-    def cond(internal_x):
-      return cond_fn(internal_x)
-    def body(internal_x):
-      return body_fn(internal_x)
-    w = xb.Op.mkwhile((internal_x,), cond_fn, body_fn)
+    # def cond(internal_x):
+    #   return cond_fn(internal_x)
+    # def body(internal_x):
+    #   return body_fn(internal_x)
+    zero = xb.Op.scalar(a.builder(), 0, dtype=xb.Type.S32)
+    w = xb.Op.mkwhile((zero, internal_x), cond_fn, body_fn)
     return w.get_tuple_element(1)
   print("after define the op_fn!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
   op = xor.register('test_while', op_fn)
