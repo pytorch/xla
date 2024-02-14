@@ -648,7 +648,7 @@ ShardingUtil::GetAutoShardingMesh() {
 void ShardingUtil::ReshardParameters(
     const xla::HloModuleProto& module, std::vector<XLATensorPtr>* tensors,
     std::vector<torch::lazy::BackendDataPtr>* parameters,
-    std::vector<const torch::lazy::Node*>* nodes) {
+    std::vector<const torch::lazy::Node*>* nodes, bool group_sharding) {
   // Extract input shardings generated from auto-sharding pass.
   std::vector<xla::OpSharding> input_shardings;
   for (auto sharding : module.spmd_parameters_shardings()) {
@@ -704,13 +704,27 @@ void ShardingUtil::ReshardParameters(
     }
   }
 
-  std::vector<torch::lazy::BackendDataPtr> outputs =
-      WrapXlaData(runtime::GetComputationClient()->ReshardData(
-          filtered_data, filtered_shardings));
+  std::vector<torch::lazy::BackendDataPtr> outputs;
+  outputs.reserve(indices.size());
+  // This is computationally more efficient but increases memory consumption.
+  // The default should be `group_sharding=false`.
+  if (group_sharding) {
+    std::cout << "*** resharding ops grouped!" << std::endl;
+    outputs = WrapXlaData(runtime::GetComputationClient()->ReshardData(
+        filtered_data, filtered_shardings));
+  } else {
+    std::cout << "*** resharding ops ungrouped!" << std::endl;
+    for (int i = 0; i < filtered_data.size(); ++i) {
+      auto output = WrapXlaData(runtime::GetComputationClient()->ReshardData(
+          {filtered_data[i]}, {filtered_shardings[i]}));
+      outputs.insert(outputs.end(), output.begin(), output.end());
+      // TODO(yeounoh) To avoid loading two programs on to device at the same time
+      std::vector<std::string> spmd_device = {"SPMD:0"};
+      runtime::GetComputationClient()->WaitDeviceOps(spmd_device);
+    }
+  }
   XLA_CHECK_EQ(outputs.size(), indices.size());
-  // To avoid loading two programs on to device at the same time
-  std::vector<std::string> spmd_device = {"SPMD:0"};
-  runtime::GetComputationClient()->WaitDeviceOps(spmd_device);
+
 
   for (int i = 0; i < outputs.size(); ++i) {
     (*parameters)[indices[i]] = outputs[i];
@@ -719,7 +733,7 @@ void ShardingUtil::ReshardParameters(
         << "xla_node_map does not contain " << filtered_data[i]->ToString()
         << ", target sharding: " << filtered_shardings[i].DebugString();
     auto device_data_node = DeviceData::Cast(it_node->second);
-    // device_data_node->Assign((*parameters)[indices[i]]);
+    device_data_node->Assign((*parameters)[indices[i]]);  // TODO(yeounoh)
     device_data_node->SetSharding(filtered_shardings[i], 0);
 
     // TODO(yeounoh) attach custom sharding to the node, or track tensors and

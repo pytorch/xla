@@ -137,10 +137,10 @@ class ShardingUtil {
   // during resharding should be asynchronous. It is recommended to keep the
   // input sharding on the input data as-is.
   static void ReshardParameters(
-      const xla::HloModuleProto& module,
-      std::vector<XLATensorPtr>* tensors,
+      const xla::HloModuleProto& module, std::vector<XLATensorPtr>* tensors,
       std::vector<torch::lazy::BackendDataPtr>* parameters,
-      std::vector<const torch::lazy::Node*>* nodes);
+      std::vector<const torch::lazy::Node*>* nodes,
+      bool group_sharding = false);
 
   //////////////////////////// Dynamo Integration ////////////////////////////
 
