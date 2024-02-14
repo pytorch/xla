@@ -3,6 +3,7 @@ import time
 
 import torch
 import torch_xla
+import torch_xla.runtime as xr
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
 import unittest
@@ -56,8 +57,8 @@ class MetricsTest(unittest.TestCase):
     self.assertNotIn("TensorToData", short_report)
     self.assertIn("CompileTime", short_report)
     self.assertIn("ExecuteTime", short_report)
-    self.assertIn("TransferToServerTime", short_report)
-    self.assertIn("TransferFromServerTime", short_report)
+    self.assertIn("TransferToDeviceTime", short_report)
+    self.assertIn("TransferFromDeviceTime", short_report)
     self.assertIn("MarkStep", short_report)
     # repeat the same computation and expect to see the CachedCompile counter
     t3 = t1 * 2
@@ -101,7 +102,7 @@ class MetricsTest(unittest.TestCase):
             metric_names=['InboundData']))
 
   def test_metrics_report(self):
-    # TODO(jwtan): Add test to cover TrimIrGraph, SyncTensorsToData, TransferToServerAsync, IrValueTensorToXlaData
+    # TODO(jwtan): Add test to cover TrimIrGraph, SyncTensorsToData, TransferToDeviceAsync, IrValueTensorToXlaData
     xla_device = xm.xla_device()
     t1 = torch.tensor(2077, device=xla_device)
     t2 = t1 * 2
@@ -171,11 +172,7 @@ class MetricsTest(unittest.TestCase):
     report = met.metrics_report()
     self.assertIn("CachedCompile", report)
 
-  @unittest.skipIf(
-      xm.get_xla_supported_devices("CUDA") or
-      xm.get_xla_supported_devices("GPU") or
-      xm.get_xla_supported_devices("ROCM") or
-      xm.get_xla_supported_devices("TPU"), f"This test only works on CPU.")
+  @unittest.skipIf(xr.device_type() != "CPU", f"This test only works on CPU.")
   def test_execute_time_metric(self):
     # Initialize the client before starting the timer.
     xm.xla_device()

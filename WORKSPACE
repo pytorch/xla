@@ -16,6 +16,14 @@ http_archive(
     urls = ["https://github.com/pybind/pybind11/archive/442261da585536521ff459b1457b2904895f23b4.tar.gz"],
 )
 
+http_archive(
+    name = "com_nlohmann_json",
+    build_file = "//bazel:nlohmann_json.BUILD",
+    sha256 = "d69f9deb6a75e2580465c6c4c5111b89c4dc2fa94e3a85fcd2ffcd9a143d9273",
+    strip_prefix = "json-3.11.2",
+    url = "https://github.com/nlohmann/json/archive/refs/tags/v3.11.2.tar.gz",
+)
+
 load("@pybind11_bazel//:python_configure.bzl", "python_configure")
 
 # This is required for setting up the linkopts for -lpython.q
@@ -39,15 +47,13 @@ http_archive(
     patch_tool = "patch",
     patches = [
         "//openxla_patches:cache_urls.diff",
-        "//openxla_patches:constexpr_return.diff",
         "//openxla_patches:gpu_race_condition.diff",
         "//openxla_patches:f16_abi_clang.diff",
         "//openxla_patches:quant_dequant_converter.diff",
-        "//openxla_patches:stablehlo_quant_seralization.diff",
     ],
-    strip_prefix = "xla-8744c9a94782cd7804f015e6d29df253437af3cb",
+    strip_prefix = "xla-b166243711f71b0a55daa1eda36b1dc745886784",
     urls = [
-        "https://github.com/openxla/xla/archive/8744c9a94782cd7804f015e6d29df253437af3cb.tar.gz",
+        "https://github.com/openxla/xla/archive/b166243711f71b0a55daa1eda36b1dc745886784.tar.gz",
     ],
 )
 

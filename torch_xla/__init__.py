@@ -3,6 +3,8 @@ import os
 import re
 import tempfile
 
+import torch
+import _XLAC
 from ._internal import tpu
 
 logging.basicConfig()
@@ -42,6 +44,15 @@ def _setup_libtpu_flags():
   # and thus worse performance.
   flags = _set_missing_flags(flags,
                              (('xla_latency_hiding_scheduler_rerun', '1'),))
+
+  if tpu.version() == 5:
+    default_v5_flags = {
+        # Enable async collectives
+        'xla_enable_async_all_gather': 'true',
+        'xla_enable_async_collective_permute': 'true',
+    }
+    flags = _set_missing_flags(flags, default_v5_flags.items())
+
   os.environ['LIBTPU_INIT_ARGS'] = ' '.join(flags)
 
 
@@ -126,11 +137,8 @@ if os.environ.get('TF_CPP_MIN_LOG_LEVEL') == '0':
   logger.setLevel(logging.INFO)
 
 import atexit
-import torch
 from ._patched_functions import _apply_patches
 from .version import __version__
-
-import _XLAC
 
 _found_libtpu = _setup_tpu_vm_library_path()
 
@@ -139,9 +147,17 @@ _aws_ec2_inf_trn_init()
 
 
 def _prepare_to_exit():
-  _XLAC._prepare_to_exit()
-  if int(os.environ.get('PT_XLA_DEBUG', '0')):
-    _summarize_fn_tracker()
+  try:
+    _XLAC._prepare_to_exit()
+    if int(os.environ.get('PT_XLA_DEBUG', '0')):
+      _summarize_fn_tracker()
+  except Exception as e:
+    logging.error(
+        "Caught an exception when exiting the process. Exception: ", exc_info=e)
+    # Due to https://bugs.python.org/issue27035, simply raising an exception in the atexit callback does not set the exit code correctly. That is why we need to set the exit code explicitly.
+    # Using `exit(1)` does not set a correct exit code because it is useful for the interactive interpreter shell and should not be used in programs and it works by raising an exception. (https://docs.python.org/3/library/constants.html#exit)
+    # sys.exit(1) does not set a correct exit code because it also raises an exception.
+    os._exit(1)
 
 
 def _init_xla_lazy_backend():
@@ -160,3 +176,9 @@ _init_xla_lazy_backend()
 torch._dynamo.config.automatic_dynamic_shapes = False
 
 from .stablehlo import save_as_stablehlo, save_torch_model_as_stablehlo
+
+from .experimental import plugins
+
+if os.getenv('XLA_REGISTER_INSTALLED_PLUGINS') == '1':
+  plugins.use_dynamic_plugins()
+  plugins.register_installed_plugins()

@@ -1,16 +1,11 @@
 from collections import OrderedDict
+import contextlib
 import logging
 import re
 import torch
 import torch.nn as nn
-import torch._dynamo as dynamo
 from torch._dynamo.testing import collect_results
-import types
-
-try:
-  from .util import move_to_device
-except ImportError:
-  from util import move_to_device
+from util import move_to_device
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +16,9 @@ class ModelLoader:
     self._args = args
     self.suite_name = self._args.suite_name
     self.benchmark_model_class = BenchmarkModel
+    self._dynamo_compile_opts = dict()
+    if self._args.filter_by_single_graph:
+      self._dynamo_compile_opts['fullgraph'] = True
 
   def list_model_configs(self):
     model_configs = [
@@ -57,7 +55,8 @@ class ModelLoader:
 
     if not dummy:
       benchmark_model.set_up()
-      benchmark_model.prepare_for_experiment()
+      benchmark_model.prepare_for_experiment(
+          dynamo_compilation_opts=self._dynamo_compile_opts)
 
     return benchmark_model
 
@@ -68,6 +67,8 @@ class BenchmarkModel:
     self.suite_name = suite_name
     self.model_name = model_name
     self.benchmark_experiment = benchmark_experiment
+    self.autocast = contextlib.nullcontext
+    self.autocast_kwargs = {}
 
   def set_up(self):
     """Set up module, actual batch_size, example_inputs, and optimizer_class
@@ -103,7 +104,7 @@ class BenchmarkModel:
       # optimizer to use. So only initialize it when there is none existing.
       self.optimizer = self.optimizer_class(self.module.parameters(), lr=0.01)
 
-  def prepare_for_experiment(self):
+  def prepare_for_experiment(self, dynamo_compilation_opts):
     self.device = self.benchmark_experiment.get_device()
     self.module = self.module.to(self.device)
     self.example_inputs = move_to_device(self.example_inputs, self.device)
@@ -116,14 +117,18 @@ class BenchmarkModel:
       raise NotImplementedError
 
     if self.benchmark_experiment.dynamo:
-      self.model_iter_fn = torch.compile(
-          self.model_iter_fn, backend=self.benchmark_experiment.dynamo)
+      compilation_opts = dynamo_compilation_opts.copy()
+      compilation_opts['backend'] = self.benchmark_experiment.dynamo
+
+      logger.info(f"Running torch.compile with opts {compilation_opts}")
+      self.model_iter_fn = torch.compile(self.model_iter_fn, **compilation_opts)
 
   def pick_grad(self):
     if self.benchmark_experiment.test == "eval":
       return torch.no_grad()
     elif self.benchmark_experiment.test == "train":
       return torch.enable_grad()
+    raise NotImplementedError
 
   def _optimizer_zero_grad(self):
     if self.optimizer is not None:
@@ -140,8 +145,9 @@ class BenchmarkModel:
 
   def train(self, inputs, collect_full_output=False):
     self._optimizer_zero_grad()
-    pred = self.module(*inputs)
-    loss = self.compute_loss(pred)
+    with self.autocast(**self.autocast_kwargs):
+      pred = self.module(*inputs)
+      loss = self.compute_loss(pred)
     loss.backward()
     self._optimizer_step()
     if collect_full_output:
@@ -151,7 +157,8 @@ class BenchmarkModel:
     return None
 
   def eval(self, inputs, collect_full_output=False):
-    pred = self.module(*inputs)
+    with self.autocast(**self.autocast_kwargs):
+      pred = self.module(*inputs)
     return pred
 
   @property
@@ -163,3 +170,10 @@ class BenchmarkModel:
     d["suite_name"] = self.suite_name
     d["model_name"] = self.model_name
     return d
+
+  @property
+  def default_precision_flag(self):
+    return None
+
+  def update_process_env(self, process_env):
+    pass

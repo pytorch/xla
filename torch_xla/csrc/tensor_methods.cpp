@@ -64,6 +64,7 @@
 #include "torch_xla/csrc/ops/linspace.h"
 #include "torch_xla/csrc/ops/log_softmax.h"
 #include "torch_xla/csrc/ops/logsumexp.h"
+#include "torch_xla/csrc/ops/mark_tensor.h"
 #include "torch_xla/csrc/ops/masked_scatter.h"
 #include "torch_xla/csrc/ops/masked_select.h"
 #include "torch_xla/csrc/ops/max_in_dim.h"
@@ -93,6 +94,7 @@
 #include "torch_xla/csrc/ops/put.h"
 #include "torch_xla/csrc/ops/qr.h"
 #include "torch_xla/csrc/ops/quant_tensor.h"
+#include "torch_xla/csrc/ops/randperm.h"
 #include "torch_xla/csrc/ops/recv.h"
 #include "torch_xla/csrc/ops/reduce_scatter.h"
 #include "torch_xla/csrc/ops/reflection_pad2d.h"
@@ -121,6 +123,7 @@
 #include "torch_xla/csrc/ops/threshold.h"
 #include "torch_xla/csrc/ops/threshold_backward.h"
 #include "torch_xla/csrc/ops/topk.h"
+#include "torch_xla/csrc/ops/tpu_custom_call.h"
 #include "torch_xla/csrc/ops/triangular_solve.h"
 #include "torch_xla/csrc/ops/uniform.h"
 #include "torch_xla/csrc/ops/unsqueeze.h"
@@ -393,14 +396,12 @@ torch::lazy::Value reduce_scatter_out(XLATensorPtr& output,
 }
 
 std::pair<std::vector<XLATensorPtr>, torch::lazy::Value>
-reduce_scatter_coalesced(const std::vector<XLATensorPtr>& outputs,
-                         const std::vector<XLATensorPtr>& inputs,
+reduce_scatter_coalesced(const std::vector<XLATensorPtr>& inputs,
                          const torch::lazy::Value& token,
                          AllReduceType reduce_type, double scale,
                          int64_t scatter_dim, int64_t shard_count,
                          std::vector<std::vector<int64_t>> groups,
                          bool pin_layout) {
-  XLA_CHECK(outputs.empty() || outputs.size() == inputs.size());
   std::vector<torch::lazy::Value> input_values;
   input_values.reserve(inputs.size());
   for (auto& input : inputs) {
@@ -412,11 +413,28 @@ reduce_scatter_coalesced(const std::vector<XLATensorPtr>& outputs,
   std::vector<XLATensorPtr> result;
   for (size_t i = 0; i < inputs.size(); ++i) {
     result.emplace_back(inputs[i]->CreateFrom(torch::lazy::Value(node, i)));
-    if (!outputs.empty()) {
-      outputs[i]->SetIrValue(torch::lazy::Value(node, i));
-    }
   }
   return {result, torch::lazy::Value(node, inputs.size())};
+}
+
+torch::lazy::Value reduce_scatter_coalesced_out(
+    const std::vector<XLATensorPtr>& outputs,
+    const std::vector<XLATensorPtr>& inputs, const torch::lazy::Value& token,
+    AllReduceType reduce_type, double scale, int64_t scatter_dim,
+    int64_t shard_count, std::vector<std::vector<int64_t>> groups,
+    bool pin_layout) {
+  std::vector<torch::lazy::Value> input_values;
+  input_values.reserve(inputs.size());
+  for (auto& input : inputs) {
+    input_values.push_back(input->GetIrValue());
+  }
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<ReduceScatterCoalesced>(
+      reduce_type, input_values, token, scale, scatter_dim, shard_count,
+      std::move(groups), pin_layout);
+  for (size_t i = 0; i < inputs.size(); ++i) {
+    outputs[i]->SetIrValue(torch::lazy::Value(node, i));
+  }
+  return torch::lazy::Value(node, inputs.size());
 }
 
 std::pair<XLATensorPtr, torch::lazy::Value> all_to_all(
@@ -428,24 +446,6 @@ std::pair<XLATensorPtr, torch::lazy::Value> all_to_all(
       split_count, std::move(groups), pin_layout);
   return {input->CreateFrom(torch::lazy::Value(node, 0)),
           torch::lazy::Value(node, 1)};
-}
-
-std::pair<std::vector<XLATensorPtr>, torch::lazy::Value> all_gather(
-    const std::vector<XLATensorPtr>& inputs, const torch::lazy::Value& token,
-    int64_t dim, int64_t shard_count, std::vector<std::vector<int64_t>> groups,
-    bool pin_layout) {
-  std::vector<torch::lazy::Value> input_values;
-  input_values.reserve(inputs.size());
-  for (auto& input : inputs) {
-    input_values.push_back(input->GetIrValue());
-  }
-  torch::lazy::NodePtr node = torch::lazy::MakeNode<AllGatherCoalesced>(
-      input_values, token, dim, shard_count, std::move(groups), pin_layout);
-  std::vector<XLATensorPtr> result;
-  for (size_t i = 0; i < inputs.size(); ++i) {
-    result.emplace_back(inputs[i]->CreateFrom(torch::lazy::Value(node, i)));
-  }
-  return {result, torch::lazy::Value(node, inputs.size())};
 }
 
 XLATensorPtr all_gather(const XLATensorPtr& input, int64_t dim,
@@ -473,6 +473,41 @@ torch::lazy::Value all_gather_out(XLATensorPtr& output,
   return torch::lazy::Value(node, 1);
 }
 
+std::pair<std::vector<XLATensorPtr>, torch::lazy::Value> all_gather_coalesced(
+    const std::vector<XLATensorPtr>& inputs, const torch::lazy::Value& token,
+    int64_t dim, int64_t shard_count, std::vector<std::vector<int64_t>> groups,
+    bool pin_layout) {
+  std::vector<torch::lazy::Value> input_values;
+  input_values.reserve(inputs.size());
+  for (auto& input : inputs) {
+    input_values.push_back(input->GetIrValue());
+  }
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<AllGatherCoalesced>(
+      input_values, token, dim, shard_count, std::move(groups), pin_layout);
+  std::vector<XLATensorPtr> result;
+  for (size_t i = 0; i < inputs.size(); ++i) {
+    result.emplace_back(inputs[i]->CreateFrom(torch::lazy::Value(node, i)));
+  }
+  return {result, torch::lazy::Value(node, inputs.size())};
+}
+
+torch::lazy::Value all_gather_coalesced_out(
+    std::vector<XLATensorPtr>& outputs, const std::vector<XLATensorPtr>& inputs,
+    const torch::lazy::Value& token, int64_t dim, int64_t shard_count,
+    std::vector<std::vector<int64_t>> groups, bool pin_layout) {
+  std::vector<torch::lazy::Value> input_values;
+  input_values.reserve(inputs.size());
+  for (auto& input : inputs) {
+    input_values.push_back(input->GetIrValue());
+  }
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<AllGatherCoalesced>(
+      input_values, token, dim, shard_count, std::move(groups), pin_layout);
+  for (size_t i = 0; i < inputs.size(); ++i) {
+    outputs[i]->SetIrValue(torch::lazy::Value(node, i));
+  }
+  return torch::lazy::Value(node, inputs.size());
+}
+
 std::pair<XLATensorPtr, torch::lazy::Value> collective_permute(
     const XLATensorPtr& input, const torch::lazy::Value& token,
     std::vector<std::pair<int64_t, int64_t>> source_target_pairs) {
@@ -488,6 +523,17 @@ void custom_sharding_(
   input->SetInPlaceIrValue(
       torch::lazy::MakeNode<CustomSharding>(input->GetIrValue()));
   input->SetShardingSpec(*sharding_spec);
+}
+
+void tpu_custom_call_(XLATensorPtr& output,
+                      const std::vector<XLATensorPtr>& inputs,
+                      const std::string& payload) {
+  std::vector<torch::lazy::Value> values;
+  for (const auto& input : inputs) {
+    values.push_back(input->GetIrValue());
+  }
+  output->SetInPlaceIrValue(torch::lazy::MakeNode<TpuCustomCall>(
+      values, output->shape().get(), payload));
 }
 
 XLATensorPtr get_dimensions_size(const XLATensorPtr& input,
@@ -705,14 +751,20 @@ XLATensorPtr add(const XLATensorPtr& input, const XLATensorPtr& other,
   xla::Shape input_shape = input->shape().get();
   xla::Shape other_shape = other->shape().get();
   torch::lazy::Value constant;
+  const torch::lazy::BackendDevice& device = input->GetDevice();
   if (!input_shape.is_dynamic() && !other_shape.is_dynamic()) {
     constant = XLAGraphExecutor::Get()->GetIrValueForScalar(
-        alpha, other->shape(), logical_element_type, input->GetDevice());
+        alpha,
+        xla::ShapeUtil::MakeScalarShape(
+            MakeXlaPrimitiveType(other->dtype(), &device)),
+        logical_element_type, device);
   } else {
     SymIntElements sym_int_elements(other->GetIrValue());
     constant = XLAGraphExecutor::Get()->GetIrValueForScalar(
-        alpha, other->shape(), sym_int_elements, logical_element_type,
-        input->GetDevice());
+        alpha,
+        xla::ShapeUtil::MakeScalarShape(
+            MakeXlaPrimitiveType(other->dtype(), &device)),
+        sym_int_elements, logical_element_type, device);
   }
 
   return input->CreateFrom(input->GetIrValue() + other->GetIrValue() * constant,
@@ -722,12 +774,19 @@ XLATensorPtr add(const XLATensorPtr& input, const XLATensorPtr& other,
 XLATensorPtr add(const XLATensorPtr& input, const at::Scalar& other,
                  const at::Scalar& alpha,
                  c10::optional<at::ScalarType> logical_element_type) {
+  const torch::lazy::BackendDevice& device = input->GetDevice();
   torch::lazy::Value other_constant =
       XLAGraphExecutor::Get()->GetIrValueForScalar(
-          other, input->shape(), logical_element_type, input->GetDevice());
+          other,
+          xla::ShapeUtil::MakeScalarShape(
+              MakeXlaPrimitiveType(input->dtype(), &device)),
+          logical_element_type, device);
   torch::lazy::Value alpha_constant =
       XLAGraphExecutor::Get()->GetIrValueForScalar(
-          alpha, input->shape(), logical_element_type, input->GetDevice());
+          alpha,
+          xla::ShapeUtil::MakeScalarShape(
+              MakeXlaPrimitiveType(input->dtype(), &device)),
+          logical_element_type, device);
   return input->CreateFrom(
       input->GetIrValue() + other_constant * alpha_constant,
       logical_element_type);
@@ -778,13 +837,15 @@ XLATensorPtr avg_pool_nd(const XLATensorPtr& input, int64_t spatial_dim_count,
                          std::vector<int64_t> kernel_size,
                          std::vector<int64_t> stride,
                          std::vector<int64_t> padding, bool ceil_mode,
-                         bool count_include_pad) {
+                         bool count_include_pad,
+                         std::optional<int> divisor_override) {
   kernel_size = CheckIntList(kernel_size, spatial_dim_count, "kernel_size");
   stride = CheckIntList(stride, spatial_dim_count, "stride", kernel_size);
   padding = CheckIntList(padding, spatial_dim_count, "padding");
   return input->CreateFrom(torch::lazy::MakeNode<AvgPoolNd>(
       input->GetIrValue(), spatial_dim_count, std::move(kernel_size),
-      std::move(stride), std::move(padding), ceil_mode, count_include_pad));
+      std::move(stride), std::move(padding), ceil_mode, count_include_pad,
+      divisor_override));
 }
 
 XLATensorPtr avg_pool_nd_backward(const XLATensorPtr& out_backprop,
@@ -915,6 +976,11 @@ XLATensorPtr cdist_forward(const XLATensorPtr& x1, const XLATensorPtr& x2,
       /*use_hamming=*/p == 0.0,
       /*use_chebyshev=*/std::isinf(p));
   return x1->CreateFrom(node);
+}
+
+XLATensorPtr pdist_forward(const XLATensorPtr& input, double p) {
+  c10::optional<at::ScalarType> dtype = input->dtype_optional();
+  return input->CreateFrom(Pdist_forward(input->GetIrValue(), p, dtype));
 }
 
 XLATensorPtr celu(const XLATensorPtr& input, const at::Scalar& alpha) {
@@ -1186,6 +1252,11 @@ XLATensorPtr embedding_dense_backward(const XLATensorPtr& grad_output,
                                       bool scale_grad_by_freq) {
   return tensor_ops::EmbeddingDenseBackward(grad_output, indices, num_weights,
                                             padding_idx, scale_grad_by_freq);
+}
+
+XLATensorPtr embedding(const XLATensorPtr& weight,
+                       const XLATensorPtr& indices) {
+  return tensor_ops::Embedding(weight, indices);
 }
 
 XLATensorPtr exp(const XLATensorPtr& input) {
@@ -1544,6 +1615,16 @@ XLATensorPtr log(const XLATensorPtr& input) {
       Log(GetFloatingIrValue(input, at::ScalarType::Float)), c10::nullopt);
 }
 
+XLATensorPtr logit(const XLATensorPtr& input, c10::optional<double> eps) {
+  // Here we explictly pass c10::nullopt as logical_element_type because
+  // otherwise result will inherit the input's logical_element_type. In the
+  // case of logit(int) -> float, we want to derive the dtype from IR value
+  // instead of input's logical_element_type.
+  return input->CreateFrom(
+      Logit(GetFloatingIrValue(input, at::ScalarType::Float), eps),
+      c10::nullopt);
+}
+
 XLATensorPtr log_base(const XLATensorPtr& input, torch::lazy::OpKind op,
                       double base) {
   // Here we explictly pass c10::nullopt as logical_element_type because
@@ -1621,6 +1702,12 @@ XLATensorPtr lt(const XLATensorPtr& input, const at::Scalar& other) {
 
 XLATensorPtr lt(const XLATensorPtr& input, const XLATensorPtr& other) {
   return DispatchComparisonOp(at::aten::lt, input, other);
+}
+
+XLATensorPtr mark_tensor(const XLATensorPtr& input, const std::string& info) {
+  torch::lazy::NodePtr node =
+      torch::lazy::MakeNode<MarkTensor>(input->GetIrValue(), info);
+  return input->CreateFrom(torch::lazy::Value(node));
 }
 
 XLATensorPtr masked_scatter(XLATensorPtr& input, const XLATensorPtr& mask,
@@ -1796,8 +1883,12 @@ XLATensorPtr mul(const XLATensorPtr& input, const XLATensorPtr& other,
 
 XLATensorPtr mul(const XLATensorPtr& input, const at::Scalar& other,
                  c10::optional<at::ScalarType> logical_element_type) {
+  const torch::lazy::BackendDevice& device = input->GetDevice();
   torch::lazy::Value constant = XLAGraphExecutor::Get()->GetIrValueForScalar(
-      other, input->shape(), logical_element_type, input->GetDevice());
+      other,
+      xla::ShapeUtil::MakeScalarShape(
+          MakeXlaPrimitiveType(input->dtype(), &device)),
+      logical_element_type, device);
   return input->CreateFrom(input->GetIrValue() * constant,
                            logical_element_type);
 }
@@ -2088,13 +2179,21 @@ XLATensorPtr permute(const XLATensorPtr& input,
 XLATensorPtr pow(const XLATensorPtr& input, const at::Scalar& exponent) {
   // We want to pass exponent_node as a constant to give XLA more room to
   // optimize
-  torch::lazy::Value exponent_node =
-      XLAGraphExecutor::Get()->GetIrValueForConstant(exponent, input->shape());
-  return input->CreateFrom(Pow(input->GetIrValue(), exponent_node));
+  const torch::lazy::BackendDevice& device = input->GetDevice();
+  auto xla_type = MakeXlaPrimitiveType(GetScalarType(exponent), &device);
+  // Float scalar literal in Python defaults to F64. But we want to produce
+  // F32 as this is the default Pytorch behavior.
+  if (xla_type == xla::PrimitiveType::F64) {
+    xla_type = xla::PrimitiveType::F32;
+  }
+  torch::lazy::Value exp_node = ScalarOp(exponent, xla_type);
+  torch::lazy::NodePtr node = Pow(input->GetIrValue(), exp_node);
+  return input->CreateFrom(node, /*logical_element_type=*/c10::nullopt);
 }
 
 XLATensorPtr pow(const XLATensorPtr& input, const XLATensorPtr& exponent) {
-  return input->CreateFrom(Pow(input->GetIrValue(), exponent->GetIrValue()));
+  torch::lazy::NodePtr node = Pow(input->GetIrValue(), exponent->GetIrValue());
+  return input->CreateFrom(node, /*logical_element_type=*/c10::nullopt);
 }
 
 XLATensorPtr pow(const at::Scalar& input, const XLATensorPtr& exponent) {
@@ -2185,6 +2284,16 @@ void random_(XLATensorPtr& input, int64_t from, int64_t to) {
       XLAGraphExecutor::Get()->GetIrValueForScalar(to, xla::PrimitiveType::S64,
                                                    input->GetDevice()),
       XLAGraphExecutor::Get()->GetRngSeed(input->GetDevice()), input_shape));
+}
+
+XLATensorPtr randperm(int64_t n, const torch::lazy::BackendDevice& device,
+                      at::ScalarType scalar_type) {
+  // These are all PyTorch defaults. PyTorch/XLA doesn't support non default
+  // params here yet.
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<RandPerm>(
+      n, at::ScalarType::Long, at::Layout::Strided, at::DeviceType::XLA,
+      /*pin_memory=*/false);
+  return XLATensor::Create(node, device, scalar_type);
 }
 
 XLATensorPtr reflection_pad2d(const XLATensorPtr& input,
@@ -2517,10 +2626,6 @@ std::vector<XLATensorPtr> split_with_sizes(const XLATensorPtr& input,
   torch::lazy::NodePtr node = torch::lazy::MakeNode<Split>(
       input->GetIrValue(), std::move(split_size), split_dim);
   return input->MakeOutputTensors(node);
-}
-
-XLATensorPtr sqrt(const XLATensorPtr& input) {
-  return input->CreateFrom(Sqrt(input->GetIrValue()));
 }
 
 XLATensorPtr squeeze(const XLATensorPtr& input) {

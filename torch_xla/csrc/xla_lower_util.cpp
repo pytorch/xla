@@ -170,7 +170,7 @@ xla::XlaOp CreateIndexAlongDim(
   xla::XlaOp updates = value;
   if (buffer_shape.element_type() != value_shape.element_type()) {
     updates = ConvertTo(updates, value_shape.element_type(),
-                        buffer_shape.element_type(), /*device=*/nullptr);
+                        buffer_shape.element_type());
   }
   if (broadcast_value_to_index) {
     const xla::Shape& index_shape = ShapeHelper::ShapeOfXlaOp(index);
@@ -603,7 +603,7 @@ xla::XlaOp CreateIndexUpdate(
   xla::XlaOp new_values = values;
   if (buffer_shape.element_type() != values_shape.element_type()) {
     new_values = ConvertTo(new_values, values_shape.element_type(),
-                           buffer_shape.element_type(), /*device=*/nullptr);
+                           buffer_shape.element_type());
   }
   new_values = BuildExpand(new_values, expected_values_dims);
   const xla::Shape& new_values_shape = ShapeHelper::ShapeOfXlaOp(new_values);
@@ -654,8 +654,7 @@ XlaOpCombiner NumericAddCombiner() {
     xla::XlaOp numeric_y = ConvertToNumeric(y);
     xla::XlaOp numeric_sum = numeric_x + numeric_y;
     return ConvertTo(numeric_sum, XlaHelpers::TypeOfXlaOp(numeric_sum),
-                     XlaHelpers::TypeOfXlaOp(x),
-                     /*device=*/nullptr);
+                     XlaHelpers::TypeOfXlaOp(x));
   };
 }
 
@@ -665,8 +664,7 @@ XlaOpCombiner NumericMulCombiner() {
     xla::XlaOp numeric_y = ConvertToNumeric(y);
     xla::XlaOp numeric_sum = numeric_x * numeric_y;
     return ConvertTo(numeric_sum, XlaHelpers::TypeOfXlaOp(numeric_sum),
-                     XlaHelpers::TypeOfXlaOp(x),
-                     /*device=*/nullptr);
+                     XlaHelpers::TypeOfXlaOp(x));
   };
 }
 
@@ -677,8 +675,7 @@ XlaOpCombiner NumericMinCombiner() {
     xla::XlaOp numeric_sum = xla::Min(numeric_x, numeric_y);
     // xla::XlaOp numeric_sum = xla::Min(numeric_x, numeric_y);
     return ConvertTo(numeric_sum, XlaHelpers::TypeOfXlaOp(numeric_sum),
-                     XlaHelpers::TypeOfXlaOp(x),
-                     /*device=*/nullptr);
+                     XlaHelpers::TypeOfXlaOp(x));
   };
 }
 
@@ -688,8 +685,7 @@ XlaOpCombiner NumericMaxCombiner() {
     xla::XlaOp numeric_y = ConvertToNumeric(y);
     xla::XlaOp numeric_sum = xla::Max(numeric_x, numeric_y);
     return ConvertTo(numeric_sum, XlaHelpers::TypeOfXlaOp(numeric_sum),
-                     XlaHelpers::TypeOfXlaOp(x),
-                     /*device=*/nullptr);
+                     XlaHelpers::TypeOfXlaOp(x));
   };
 }
 
@@ -765,7 +761,7 @@ xla::XlaOp BuildLinspace(const torch::lazy::BackendDevice& device,
   std::tie(start, end) = XlaHelpers::PromoteValues(start, end);
   xla::XlaOp indices = xla::ConvertElementType(
       xla::ConstantLiteral(start.builder(),
-                           XlaHelpers::Range<int64_t>(0, steps, 1)),
+                           XlaHelpers::Range<int64_t>(0l, steps, 1l)),
       XlaHelpers::TypeOfXlaOp(start));
 
   xla::XlaOp last_index = XlaHelpers::ScalarValue(
@@ -1100,6 +1096,23 @@ xla::XlaOp BuildRoll(xla::XlaOp input, absl::Span<const int64_t> shifts,
   return need_flatten ? xla::Reshape(input, input_shape.dimensions()) : input;
 }
 
+xla::XlaOp BuildUpperTriangle(xla::XlaOp input) {
+  const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(input);
+  int64_t rank = input_shape.rank();
+  std::vector<xla::XlaOp> slices;
+  if (input_shape.dimensions(0) == 0) {
+    XLA_CHECK(input_shape.dimensions(1) == 0)
+        << "2d dimension should be both 0 at the same time";
+    return xla::Collapse(input, {0, 1});
+  }
+  for (long i = 0; i < input_shape.dimensions(0); i++) {
+    xla::XlaOp sub_slice = xla::Slice(
+        input, {i, i + 1}, {i + 1, input_shape.dimensions(1)}, {1, 1});
+    slices.push_back(xla::Collapse(sub_slice, {0, 1}));
+  }
+  return xla::ConcatInDim(input.builder(), slices, 0);
+}
+
 xla::XlaOp BuildAddcdiv(xla::XlaOp input, xla::XlaOp t1, xla::XlaOp t2,
                         xla::XlaOp val) {
   val = MaybeConvertTo(val, ShapeHelper::ShapeOfXlaOp(t1).element_type());
@@ -1226,6 +1239,21 @@ xla::XlaOp BuildMultinomial(xla::XlaOp input, int64_t num_samples,
 xla::XlaOp BuildCustomSharding(const xla::XlaOp& input) {
   return xla::CustomCall(input.builder(), /*call_target_name=*/"Sharding",
                          {input}, ShapeHelper::ShapeOfXlaOp(input));
+}
+
+xla::XlaOp BuildTpuCustomCall(const std::vector<xla::XlaOp>& inputs,
+                              const xla::Shape& output_shape,
+                              const std::string& payload) {
+  std::vector<xla::Shape> input_shapes;
+  input_shapes.reserve(inputs.size());
+  for (const auto& input : inputs) {
+    input_shapes.push_back(ShapeHelper::ShapeOfXlaOp(input));
+  }
+
+  XLA_CHECK(inputs.size() > 0) << "inputs are empty";
+  return xla::CustomCallWithLayout(inputs[0].builder(),
+                                   /*call_target_name=*/"tpu_custom_call",
+                                   inputs, output_shape, input_shapes, payload);
 }
 
 }  // namespace torch_xla

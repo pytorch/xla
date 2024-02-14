@@ -8,8 +8,10 @@
 #include "stablehlo/api/PortableApi.h"        // from @stablehlo
 #include "stablehlo/dialect/Serialization.h"  // from @stablehlo
 #include "stablehlo/dialect/StablehloOps.h"   // from @stablehlo
+#include "stablehlo/dialect/Version.h"        // from @stablehlo
 #include "stablehlo/dialect/VhloOps.h"        // from @stablehlo
 #include "torch_xla/csrc/runtime/debug_macros.h"
+#include "torch_xla/csrc/runtime/stablehlo_composite_helper.h"
 #include "torch_xla/csrc/runtime/sys_util.h"
 #include "torch_xla/csrc/runtime/xla_util.h"
 #include "xla/mlir_hlo/mhlo/transforms/passes.h"
@@ -42,8 +44,8 @@ static std::string getMlirModuleBytecode(mlir::ModuleOp& mlir_module) {
       "STABLEHLO_BYTECODE_FROM_PRETTYPRINT", false);
   std::string txt_mlir_module;
   llvm::raw_string_ostream os{txt_mlir_module};
-  // TODO(lsiyuan): get the highest StableHLO version from runtime.
-  const std::string stablehlo_version = "0.14.23";
+  const std::string stablehlo_version =
+      mlir::vhlo::Version::getCurrentVersion().toString();
   if (!from_pretty_print) {
     auto result = mlir::stablehlo::serializePortableArtifact(
         mlir_module, /* target_version = */ stablehlo_version, os);
@@ -81,6 +83,12 @@ static absl::Status mhloToStablehloHelper(mlir::ModuleOp* mlir_module,
   // Canonicalization after tuple flatten, to remove unused tuple op.
   pm.addNestedPass<mlir::func::FuncOp>(mlir::createCanonicalizerPass());
   pm.addPass(mlir::mhlo::createHloLegalizeToStablehloPass());
+  // Group patterns into StableHLO composites.
+  pm.addPass(torch_xla::runtime::CreateBuildStableHLOCompositePass());
+  pm.addNestedPass<mlir::func::FuncOp>(
+      torch_xla::runtime::CreateRemoveXlaMarkTensorOpsPass());
+  pm.addNestedPass<mlir::func::FuncOp>(mlir::createCanonicalizerPass());
+  pm.addNestedPass<mlir::func::FuncOp>(mlir::createCSEPass());
   if (!mlir::succeeded(pm.run(*mlir_module))) {
     return absl::Status(
         absl::StatusCode::kInternal,
@@ -161,14 +169,14 @@ void ConvertStableHloToHlo(mlir::ModuleOp* mlir_module,
                          << getMlirModuleStr(*mlir_module);
 }
 
-const std::unordered_map<std::string, std::string>&
-GetTorchDtypeToStablehloDtypeMap() {
-  static const std::unordered_map<std::string, std::string> m_{
-      {"torch.int8", "si8"},
-      {"torch.uint8", "ui8"},
-      {"torch.int16", "si16"},
-  };
-  return m_;
+const std::string GetTorchDtypeToStablehloDtype(const std::string& dtype) {
+  if (dtype == "torch.int8") return "si8";
+  if (dtype == "torch.uint8") return "ui8";
+  if (dtype == "torch.int16") return "si16";
+  if (dtype == "torch.int32") return "si32";
+  if (dtype == "torch.int64") return "si64";
+  XLA_ERROR() << "Unsupported dtype for conversion to Stablehlo type: "
+              << dtype;
 }
 
 const std::unordered_map<xla::PrimitiveType, std::string>&
@@ -180,9 +188,18 @@ GetHloDtypeToStablehloDtypeMap() {
       {xla::PrimitiveType::U8, "ui8"},   {xla::PrimitiveType::U16, "ui16"},
       {xla::PrimitiveType::U32, "ui32"}, {xla::PrimitiveType::U64, "ui64"},
       {xla::PrimitiveType::F16, "f16"},  {xla::PrimitiveType::BF16, "bf16"},
-      {xla::PrimitiveType::F32, "f32"},
+      {xla::PrimitiveType::F32, "f32"},  {xla::PrimitiveType::F64, "f64"},
   };
   return m_;
+}
+
+xla::PrimitiveType GetTorchIntDtypeToHloDtype(const std::string& dtype) {
+  if (dtype == "torch.int8") return xla::PrimitiveType::S8;
+  if (dtype == "torch.uint8") return xla::PrimitiveType::U8;
+  if (dtype == "torch.int16") return xla::PrimitiveType::S16;
+  if (dtype == "torch.int32") return xla::PrimitiveType::S32;
+  if (dtype == "torch.int64") return xla::PrimitiveType::S64;
+  XLA_ERROR() << "Unsupported dtype for conversion to Hlo type: " << dtype;
 }
 
 }  // namespace torch_xla

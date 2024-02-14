@@ -236,8 +236,9 @@ class ComputationClient {
 
   // Creates a Data object with no actual device handle in it. The device handle
   // will be populated in an asynchrounous fashion.
-  virtual DataPtr CreateDataPlaceholder(std::string device,
-                                        xla::Shape shape) = 0;
+  virtual DataPtr CreateDataPlaceholder(
+      std::string device, xla::Shape shape,
+      std::optional<xla::OpSharding> sharding = std::nullopt) = 0;
 
   // Returns data shards. We expect this to be called on PjRtShardedData to
   // retrieve the shards. If other data type is passed, it returns the input
@@ -248,7 +249,7 @@ class ComputationClient {
   virtual DataPtr GetDataShard(DataPtr data, size_t index) = 0;
 
   // Returns wrapped data shards as PjRtShardedData.
-  virtual DataPtr WrapDataShards(const std::vector<DataPtr>& shards,
+  virtual DataPtr WrapDataShards(absl::Span<const DataPtr> shards,
                                  std::string device, xla::Shape shape,
                                  xla::OpSharding sharding) = 0;
 
@@ -257,12 +258,12 @@ class ComputationClient {
   virtual std::optional<xla::OpSharding> GetDataSharding(DataPtr handle) = 0;
 
   // Transfers local tensor values to the TPU devices and fetches the handles.
-  virtual std::vector<DataPtr> TransferToServer(
+  virtual std::vector<DataPtr> TransferToDevice(
       absl::Span<const std::shared_ptr<const TensorSource>> tensors) = 0;
 
   // Transfers local sharded tensor values to the TPU devices and returns a
   // `PjRtShardedData`.
-  virtual DataPtr TransferShardsToServer(
+  virtual DataPtr TransferShardsToDevice(
       absl::Span<const std::shared_ptr<const TensorSource>> tensor_shards,
       std::string device, xla::Shape shape, xla::OpSharding sharding) = 0;
 
@@ -271,10 +272,10 @@ class ComputationClient {
 
   // Reads the tensor literal values stored at TPU server sites, behind the
   // supplied handles.
-  // Note: `TransferFromServer` call will block until the `DataPtrs` are ready
-  // if they were created by `TransferToServer` or `Execute*`. Calling this from
+  // Note: `TransferFromDevice` call will block until the `DataPtrs` are ready
+  // if they were created by `TransferToDevice` or `Execute*`. Calling this from
   // python while holding the GIL can cause deadlocks!
-  virtual std::vector<xla::Literal> TransferFromServer(
+  virtual std::vector<xla::Literal> TransferFromDevice(
       absl::Span<const DataPtr> handles) = 0;
 
   // Compiles a set of computations.
@@ -314,6 +315,8 @@ class ComputationClient {
       const ExecuteReplicatedOptions& options) = 0;
 
   virtual std::string GetDefaultDevice() const = 0;
+
+  virtual torch_xla::DeviceType GetDeviceType() const = 0;
 
   virtual size_t GetNumDevices() const = 0;
 
@@ -375,10 +378,12 @@ class ComputationClient {
   static int64_t GetDeviceOrdinal(const std::string& device);
 
  protected:
+  static constexpr auto spmd_device_str = "SPMD:0";
+
   // Metrics common to all client interfaces.
-  static metrics::Metric* TransferToServerMetric();
-  static metrics::Metric* TransferToServerTransformMetric();
-  static metrics::Metric* TransferFromServerMetric();
+  static metrics::Metric* TransferToDeviceMetric();
+  static metrics::Metric* TransferToDeviceTransformMetric();
+  static metrics::Metric* TransferFromDeviceMetric();
   static metrics::Metric* CompileMetric();
   static metrics::Metric* ExecuteMetric();
   static metrics::Metric* ExecuteReplicatedMetric();

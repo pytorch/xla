@@ -270,6 +270,78 @@ dist_cp.load_state_dict(
 model.load_state_dict(state_dict["model"])
 ```
 
+#### CheckpointManager
+
+The experimental [CheckpointManager](https://github.com/pytorch/xla/blob/master/torch_xla/experimental/distributed_checkpoint/manager.py#L40)
+interface provides a higher-level API over the `torch.distributed.checkpoint`
+functions to enable a few key features:
+
+- **Managed checkpoints**: Each checkpoint taken by the `CheckpointManager` is
+identified by the step at which it was taken. All steps tracked are accessible
+through the `CheckpointManager.all_steps` method, and any tracked steps can be
+restored using `CheckpointManager.restore`.
+- **Asynchronous checkpointing**: Checkpoints taken through the
+`CheckpointManager.save_async` API are written to persistent storage
+asynchronously to unblock training for the duration of the checkpoint. The
+input sharded state_dict is first moved to CPU before the checkpoint is
+dispatched to a background thread.
+- **Auto-checkpointing on preemption**: On Cloud TPU, preemptions can be detected
+and a checkpoint taken before the process is terminated. To use, ensure your
+TPU is provisioned through a QueuedResource with
+[Autocheckpointing enabled](https://cloud.google.com/sdk/gcloud/reference/alpha/compute/tpus/queued-resources/create#--autocheckpoint-enabled),
+and ensure the `chkpt_on_preemption` parameter is set when constructing the
+CheckpointManager (this option is enabled by default).
+- **FSSpec Support**: `CheckpointManager` uses an fsspec storage backend to enable
+checkpointing directly to any fsspec-compatible filesystem, including GCS.
+
+Example usage of the CheckpointManager is below:
+
+```python
+from torch_xla.experimental.distributed_checkpoint import CheckpointManager
+
+# Create a CheckpointManager to checkpoint every 10 steps into GCS.
+chkpt_mgr = CheckpointManager('gs://my-bucket/my-experiment', 10)
+
+# Select a checkpoint to restore from, and restore if applicable
+tracked_steps = chkpt_mgr.all_steps()
+if tracked_steps:
+    # Choose the highest step
+    best_step = max(tracked_steps)
+    state_dict = {'model': model.state_dict()}
+    chkpt_mgr.restore(best_step, state_dict)
+    model.load_state_dict(state_dict['model'])
+
+# Call `save` or `save_async` every step within the train loop. These methods
+# return True when a checkpoint is taken.
+for step, data in enumerate(dataloader):
+    ...
+    state_dict = {'model': model.state_dict(), 'optim': optim.state_dict()}
+    if chkpt_mgr.save_async(step, state_dict):
+        print(f'Checkpoint taken at step {step}')
+```
+
+### Process Groups
+To use `torch.distributed` APIs such as distributed checkpointing, a process
+group is required. In SPMD mode, the `xla` backend is not supported since the
+compiler is responsible for all collectives.
+
+Instead, a CPU process group such as `gloo` must be used. On TPUs, the `xla://`
+init_method is still supported to discover the master IP, global world size,
+and host rank. An example initialization is below:
+
+```python
+import torch.distributed as dist
+# Import to register the `xla://` init_method
+import torch_xla.distributed.xla_backend
+import torch_xla.runtime as xr
+
+xr.use_spmd()
+
+# The `xla://` init_method will automatically discover master worker IP, rank,
+# and global world size without requiring environment configuration on TPUs.
+dist.init_process_group('gloo', init_method='xla://')
+```
+
 ### Virtual Device Optimization
 
 PyTorch/XLA normally transfers tensor data asynchronously from host to device once the tensor is defined. This is to overlap the data transfer with the graph tracing time. However, because GSPMD allows the user to modify the tensor sharding _after _the tensor has been defined, we need an optimization to prevent unnecessary transfer of tensor data back and forth between host and device. We introduce Virtual Device Optimization, a technique to place the tensor data on a virtual device SPMD:0 first, before uploading to the physical devices when all the sharding decisions are finalized. Every tensor data in SPMD mode is placed on a virtual device, SPMD:0. The virtual device is exposed to the user as an XLA device XLA:0 with the actual shards on physical devices, like TPU:0, TPU:1, etc.
@@ -351,3 +423,31 @@ XLA_USE_SPMD=1 python test/spmd/test_train_spmd_imagenet.py --fake_data --batch_
 ```
 
 Note that I used a batch size 4 times as large since I am running it on a TPU v4 which has 4 TPU devices attached to it. You should see the throughput becomes roughly 4x the non-spmd run.
+
+### SPMD Debugging Tool
+
+We provide a `shard placement visualization debug tool` for PyTorch/XLA SPMD user on TPU/GPU/CPU with single-host/multi-host: you could use `visualize_tensor_sharding` to visualize sharded tensor, or you could use `visualize_sharding` to visualize sharing string. Here are two code examples on TPU single-host(v4-8) with `visualize_tensor_sharding` or `visualize_sharding`:
+- Code snippet used `visualize_tensor_sharding` and visualization result:
+```python
+import rich
+
+# Here, mesh is a 2x2 mesh with axes 'x' and 'y'
+t = torch.randn(8, 4, device='xla')
+xs.mark_sharding(t, mesh, ('x', 'y'))
+
+# A tensor's sharding can be visualized using the `visualize_tensor_sharding` method
+from torch_xla.distributed.spmd.debugging import visualize_tensor_sharding
+generated_table = visualize_tensor_sharding(t, use_color=False)
+```
+![alt_text](assets/spmd_debug_1.png "visualize_tensor_sharding example on TPU v4-8(single-host)")
+- Code snippet used `visualize_sharding` and visualization result:
+```python
+from torch_xla.distributed.spmd.debugging import visualize_sharding
+sharding = '{devices=[2,2]0,1,2,3}'
+generated_table = visualize_sharding(sharding, use_color=False)
+```
+![alt_text](assets/spmd_debug_2.png "visualize_sharding example on TPU v4-8(single-host")
+
+You could use these examples on TPU/GPU/CPU single-host and modify it to run on multi-host. And you could modify it to sharding-style `tiled`, `partial_replication` and `replicated`.
+
+

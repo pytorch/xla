@@ -15,6 +15,7 @@ import torch_xla.distributed.xla_backend
 from torch_xla._internal import tpu, gpu, neuron
 from torch_xla import runtime
 import torch_xla.utils.utils as xu
+from torch_xla.experimental import plugins
 
 R = TypeVar('R')
 
@@ -96,7 +97,9 @@ def _run_singleprocess(fn: Callable[..., R], *args, **kwargs) -> Dict[int, R]:
   """
   os.environ.setdefault(xenv.PJRT_LOCAL_PROCESS_COUNT, '1')
 
-  if runtime.device_type() == 'TPU':
+  if plugins.using_dynamic_plugins():
+    plugins.default().configure_single_process()
+  elif runtime.device_type() == 'TPU':
     tpu.configure_one_chip_topology()
 
   xm.set_replication(xm.xla_device(), [])
@@ -109,7 +112,9 @@ def initialize_multiprocess(local_rank: int, local_world_size: int):
   os.environ.setdefault(xenv.PJRT_LOCAL_PROCESS_RANK, str(local_rank))
   os.environ.setdefault(xenv.PJRT_LOCAL_PROCESS_COUNT, str(local_world_size))
 
-  if runtime.device_type() == 'TPU':
+  if plugins.using_dynamic_plugins():
+    plugins.default().configure_multiprocess(local_rank, local_world_size)
+  elif runtime.device_type() == 'TPU':
     tpu.configure_topology(local_rank, local_world_size)
   elif runtime.device_type() == 'NEURON':
     neuron.initialize_env(local_rank)
@@ -138,9 +143,15 @@ def run_multiprocess(fn: Callable[..., R],
     Dict of the form {device_ordinal: return_value}, where
     return_value is the result of calling `fn`.
   """
-  if runtime.device_type() == 'TPU':
+  if torch_xla._XLAC._xla_runtime_is_initialized():
+    raise RuntimeError('Runtime is already initialized. Do not use the XLA '
+                       'device before calling xmp.spawn.')
+
+  if plugins.using_dynamic_plugins():
+    num_processes = plugins.default().physical_chip_count()
+  elif runtime.device_type() == 'TPU':
     num_processes = tpu.num_local_processes()
-  elif runtime.device_type() in ('GPU', 'ROCM', 'CUDA'):
+  elif runtime.device_type() == 'CUDA':
     num_processes = gpu.num_local_processes()
   elif runtime.device_type() == 'NEURON':
     num_processes = neuron.num_local_processes()
@@ -209,7 +220,7 @@ def _initialize_single_process(local_rank: int, local_world_size: int):
 def spawn_threads(fn: Callable, args: Tuple = ()) -> None:
   """Run function in one process with one thread per addressable device."""
   assert runtime.device_type() not in (
-      'GPU', 'ROCM', 'CUDA'), "spawn_threads does not support GPU device"
+      'CUDA'), "spawn_threads does not support GPU device"
   spawn_fn = _SpawnFn(fn, *args)
   _run_thread_per_device(
       local_rank=0,

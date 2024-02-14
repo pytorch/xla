@@ -1,7 +1,7 @@
 # Benchmarking
 
-The two main benchmarking scripts are 
-  - `experiment_runner.py` to run benchmark experiments, and 
+The two main benchmarking scripts are
+  - `experiment_runner.py` to run benchmark experiments, and
   - `result_analyzer.py` to aggregate the benchmark result in CSV form.
 
 
@@ -18,9 +18,9 @@ git apply benchmarks/patches/mismatched_batch_size.patch
 
 And replace the `current_device_name` with your actual accelerator name.
 
-## Reducing benchmark noise 
+## Reducing benchmark noise
 
-It is important to keep the benchmark runs safe from external effects 
+It is important to keep the benchmark runs safe from external effects
 to reduce noise. Do the following:
 
 Sets the CPU statically to the highest tuneable frequency.
@@ -50,30 +50,66 @@ The results will be stored in a json file in `experiment_results`.
 
 ```
 cd pytorch
-python xla/benchmarks/experiment_runner.py                   \
-    --dynamo=openxla_eval --dynamo=openxla --dynamo=inductor \
-    --xla=PJRT --xla=None                                    \
-    --test=eval --test=train                                 \
-    --suite-name=torchbench                                  \
-    --accelerator=cuda                                       \
-    --output-dirname=experiment_results                      \
-    --repeat=5                                               \
-    --print-subprocess                                       \
-    --no-resume                                              \
+python xla/benchmarks/experiment_runner.py  \
+    --dynamo=openxla --dynamo=inductor      \
+    --xla=PJRT --xla=None                   \
+    --test=eval --test=train                \
+    --suite-name=torchbench                 \
+    --accelerator=cuda                      \
+    --output-dirname=experiment_results     \
+    --repeat=5                              \
+    --print-subprocess                      \
+    --no-resume                             \
     --filter="^alexnet$"
 ```
 
 You can change the flags to add the configurations you are interested in. The
 `experiment_runner.py` will expand the options to all supported configurations.
 For example, in the case above, it will consider all the possible combinations
-among the flags `--dynamo`, `--xla`, and `--test`, 5 of which are supported:
+among the flags `--dynamo`, `--xla`, and `--test`, 4 of which are supported:
 
-  - `dynamo=openxla_eval`, `xla=PJRT`, `test=eval`
   - `dynamo=openxla`, `xla=PJRT`, `test=eval`
   - `dynamo=openxla`, `xla=PJRT`, `test=train`
   - `dynamo=inductor`, `xla=None`, `test=eval`
   - `dynamo=inductor`, `xla=None`, `test=train`
 
+
+## Verification module
+
+Verification flag, enabled by running the experiment runner script with `--verify`
+calculates the mean relative error of the model's output against the eager run
+of the very same model. If the difference is greater than predefined threshold (e.g. 2%)
+it will report the `FAIL` status code in the output file of the benchmarking one, and `PASS`
+if it is not. Additional verification codes can be present if the verification fails
+due to various issues (e.g. unsupported output shape, failed eager run). The verification
+works only for inference now.
+
+```
+cd pytorch
+PJRT_DEVICE=CUDA python3 new_xla/benchmarks/experiment_runner.py \
+    --xla=PJRT \
+    --dynamo=openxla_eval \
+    --test=eval \
+    --filter=BERT_pytorch$ \
+    --suite-name=torchbench \
+    --accelerator=cuda \
+    --progress-bar \
+    --output-dirname=/tmp/output \
+    --repeat=2 \
+    --print-subprocess \
+    --no-resume \
+    --verify
+
+cat /tmp/output/results.jsonl
+{[...] "verification_code": "PASS", "verification_mean_rel_error": 0.007134194485843182}
+```
+
+## Microbenchmarks
+
+In `bench.py` there is a common infrastructure to measure things without
+CPU, and CUDA synchronisation overhead. `matmul_benchmark.py` is the microbenchmark
+which utilizes this  infra to perform a simple squared matrix multiplication for
+PT/XLA, and compare it against some basline.
 
 ## Result analyzer
 
@@ -91,13 +127,12 @@ python xla/benchmarks/result_analyzer.py --output-dirname=experiment_results
 
 ## Aggregating results
 
-Generated reports (e.g. `metric_report.csv` files mentioned above) can be
-aggregated to track performance improvements over time with the `aggregate.py`
-script.
+Aggregate reports can be generated directly from the output JSONL files
+(i.e., skipping `result_analyzer.py` altogether) with the `aggregate.py` script.
 The script compares Pytorch/XLA performance numbers against Inductor numbers.
 Because Inductor's performance also changes over time, the script takes
-the oldest Inductor performance numbers present in the CSV files (as determined
-by their timestamp) as the baseline for each benchmark.
+the oldest Inductor performance numbers present in the JSONL files (as
+determined by the records' timestamp) as the baseline for each benchmark.
 
 Sample runs and sample output:
 
@@ -107,7 +142,7 @@ Sample runs and sample output:
 - Note 3: we are using ASCII output here just to avoid checking in PNG files.
 
 ```
-$ python3 aggregate.py --accelerator=v100 --test=inference -i /tmp/test --format=png --report=histogram
+$ python3 aggregate.py --accelerator=v100 --test=inference --format=png --report=histogram /tmp/test/*.jsonl
 
                 Histogram of Speedup over Oldest Benchmarked Inductor
      1.2 +------------------------------------------------------------------+
@@ -127,7 +162,7 @@ $ python3 aggregate.py --accelerator=v100 --test=inference -i /tmp/test --format
         2000   2005    2010   2015    2020   2025    2030   2035    2040   2045
                                         Date
 
-$ python3 aggregate.py --accelerator=v100 --test=inference -i /tmp/test --format=png --report=speedup
+$ python3 aggregate.py --accelerator=v100 --test=inference --format=png --report=speedup /tmp/test/*.jsonl
 
         Geomean Speedup Over Oldest Benchmarked Inductor
        1 +----------------------------------------------+
@@ -146,7 +181,7 @@ $ python3 aggregate.py --accelerator=v100 --test=inference -i /tmp/test --format
      0.4 +----------------------------------------------+
         2000 2005 2010  2015 2020 2025 2030  2035 2040 2045
                               Date
-$ python3 aggregate.py --accelerator=v100 --test=inference -i /tmp/test --format=png --report=latest
+$ python3 aggregate.py --accelerator=v100 --test=inference --format=png --report=latest /tmp/test/*.jsonl
 
 Speedup Over Oldest Benchmarked Inductor as of 2023-11-11
      1.8 +----------------------------------------------+
@@ -169,8 +204,13 @@ Speedup Over Oldest Benchmarked Inductor as of 2023-11-11
 
 The last plot shows the "latest" snapshot for all benchmarks ("Workload" on the
 plot), sorting them by speedup. That is, it shows the speedup of both Inductor
-and Pytorch/XLA over the oldest Inductor data point that we have in the CSV
+and Pytorch/XLA over the oldest Inductor data point that we have in the JSONL
 files. (Note: to reiterate, because we are plotting data from single day,
 Inductor gets speedup == 1 for all benchmarks). This plot also shows the
 correctness gap between Pytorch/XLA and Inductor; there are benchmarks that do
 run on Inductor but not on Pytorch/XLA.
+
+## Continuous Integration Tests
+
+Benchmark-related tests run by CI are located at `xla/test/benchmarks`.
+To run the tests locally, do `$ make -C xla/test/benchmarks`.

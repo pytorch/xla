@@ -96,6 +96,10 @@ xla::XlaOp BuildSelu(xla::XlaOp input);
 // Computes the LogSigmoid function of input.
 std::vector<xla::XlaOp> BuildLogSigmoid(xla::XlaOp input);
 
+// Computes the logit function of the input.
+// If eps is given, the input is clamped between eps and 1-eps.
+xla::XlaOp BuildLogit(xla::XlaOp input, c10::optional<double> eps);
+
 // Computes the backward of LogSigmoid.
 xla::XlaOp BuildLogSigmoidBackward(xla::XlaOp grad_output, xla::XlaOp input,
                                    xla::XlaOp buffer);
@@ -108,6 +112,10 @@ xla::XlaOp BuildElu(xla::XlaOp input, xla::XlaOp alpha, xla::XlaOp scale,
 xla::XlaOp BuildEluBackward(xla::XlaOp grad_output, xla::XlaOp output,
                             const at::Scalar& alpha, const at::Scalar& scale,
                             const at::Scalar& input_scale);
+
+// Computes a linear interpolation of two tensors start (given by input) and end
+// based on a scalar or tensor weight and returns the resulting out tensor.
+xla::XlaOp BuildLerp(xla::XlaOp start, xla::XlaOp end, xla::XlaOp weight);
 
 }  // namespace torch_xla
 

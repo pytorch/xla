@@ -69,6 +69,8 @@ function install_deps_pytorch_xla() {
   pip install hypothesis
   pip install cloud-tpu-client
   pip install absl-py
+  pip install pandas
+  pip install tabulate
   pip install --upgrade "numpy>=1.18.5"
   pip install --upgrade numba
 
@@ -103,6 +105,7 @@ function build_torch_xla() {
   XLA_DIR=$1
   pushd "$XLA_DIR"
   python setup.py install
+  pip install plugins/cuda -v
   popd
 }
 
@@ -131,8 +134,7 @@ function run_torch_xla_python_tests() {
       if [ -x "$(command -v nvidia-smi)" ]; then
         # These tests fail on CUDA with 03/30 TF-pin update (https://github.com/pytorch/xla/pull/4840)
         PJRT_DEVICE=CUDA python test/test_train_mp_imagenet_fsdp.py --fake_data --use_nested_fsdp --use_small_fake_sample --num_epochs=1
-        # TODO(xiowei replace gpu with cuda): remove the test below with PJRT_DEVICE=GPU because PJRT_DEVICE=GPU is being deprecated.
-        PJRT_DEVICE=GPU python test/test_train_mp_imagenet_fsdp.py --fake_data --use_nested_fsdp --use_small_fake_sample --num_epochs=1
+        PJRT_DEVICE=CUDA python test/test_train_mp_imagenet_fsdp.py --fake_data --use_nested_fsdp --use_small_fake_sample --num_epochs=1
         PJRT_DEVICE=CUDA python test/test_train_mp_imagenet_fsdp.py --fake_data --auto_wrap_policy type_based --use_small_fake_sample --num_epochs=1
         XLA_DISABLE_FUNCTIONALIZATION=1 PJRT_DEVICE=CUDA python test/test_train_mp_imagenet_fsdp.py --fake_data --use_nested_fsdp --use_small_fake_sample --num_epochs=1
         # Syncfree SGD optimizer tests
@@ -196,6 +198,13 @@ function run_torch_xla_cpp_tests() {
   popd
 }
 
+function run_torch_xla_benchmark_tests() {
+  XLA_DIR=$1
+  pushd $XLA_DIR
+    echo "Running Benchmark Tests"
+    test/benchmarks/run_tests.sh -L""
+}
+
 function run_torch_xla_tests() {
   PYTORCH_DIR=$1
   XLA_DIR=$2
@@ -212,13 +221,16 @@ function run_torch_xla_tests() {
   export CXX_ABI=$(python -c "import torch;print(int(torch._C._GLIBCXX_USE_CXX11_ABI))")
 
   # TODO(yeounoh) test coverage workflow is not parallelized.
-  if [[ -z "$RUN_CPP_TESTS1" && -z "$RUN_CPP_TESTS2" && -z "$RUN_PYTHON_TESTS" || "$USE_COVERAGE" != "0" ]]; then
+  if [[ -z "$RUN_BENCHMARK_TESTS" && -z "$RUN_CPP_TESTS1" && -z "$RUN_CPP_TESTS2" && -z "$RUN_PYTHON_TESTS" ]]; then
     run_torch_xla_python_tests $PYTORCH_DIR $XLA_DIR $USE_COVERAGE
     run_torch_xla_cpp_tests $PYTORCH_DIR $XLA_DIR $USE_COVERAGE
+    run_torch_xla_benchmark_tests $XLA_DIR
   else
-    # run python and cpp tests separately.
+    # run tests separately.
     if [[ "$RUN_PYTHON_TESTS" == "python_tests" ]]; then
       run_torch_xla_python_tests $PYTORCH_DIR $XLA_DIR $USE_COVERAGE
+    elif [[ "$RUN_BENCHMARK_TESTS" == "benchmark_tests" ]]; then
+      run_torch_xla_benchmark_tests $XLA_DIR
     else
       run_torch_xla_cpp_tests $PYTORCH_DIR $XLA_DIR $USE_COVERAGE
     fi

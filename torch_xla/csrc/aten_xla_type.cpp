@@ -55,7 +55,7 @@
 //         ATEN_OP2(op_name, overload_name)>::call(args...)
 //   ATEN_OP accepts an operator name without an overload, and
 //   ATEN_OP2 accepts an operator name along with its overload name.
-//   The description of these acros can be found in
+//   The description of these macros can be found in
 //   https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/templates/Operators.h
 //   (You can find some examples below)
 
@@ -745,12 +745,6 @@ at::Tensor XLANativeFunctions::as_strided_scatter(
 at::Tensor XLANativeFunctions::atan2(const at::Tensor& self,
                                      const at::Tensor& other) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  // xla::Atan2 doesn't support integer types.
-  if (!self.is_floating_point() || !other.is_floating_point()) {
-    return at::native::call_fallback_fn<&xla_cpu_fallback,
-                                        ATEN_OP(atan2)>::call(self, other);
-  }
-
   auto common_device = torch_xla::bridge::GetXlaDevice(self, other);
   XLA_CHECK(common_device);
   torch::lazy::NodePtr node =
@@ -766,17 +760,11 @@ at::Tensor XLANativeFunctions::avg_pool2d(
     at::IntArrayRef padding, bool ceil_mode, bool count_include_pad,
     c10::optional<int64_t> divisor_override) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  if ((ceil_mode && count_include_pad) || divisor_override) {
-    return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(avg_pool2d)>::call(self, kernel_size, stride,
-                                                      padding, ceil_mode,
-                                                      count_include_pad,
-                                                      divisor_override);
-  }
   return bridge::AtenFromXlaTensor(tensor_methods::avg_pool_nd(
       bridge::GetXlaTensor(self), /*spatial_dim_count=*/2,
       XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
-      XlaHelpers::I64List(padding), ceil_mode, count_include_pad));
+      XlaHelpers::I64List(padding), ceil_mode, count_include_pad,
+      divisor_override));
 }
 
 at::Tensor XLANativeFunctions::avg_pool2d_backward(
@@ -803,17 +791,11 @@ at::Tensor XLANativeFunctions::avg_pool3d(
     at::IntArrayRef padding, bool ceil_mode, bool count_include_pad,
     c10::optional<int64_t> divisor_override) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  if ((ceil_mode && count_include_pad) || divisor_override) {
-    return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(avg_pool3d)>::call(self, kernel_size, stride,
-                                                      padding, ceil_mode,
-                                                      count_include_pad,
-                                                      divisor_override);
-  }
   return bridge::AtenFromXlaTensor(tensor_methods::avg_pool_nd(
       bridge::GetXlaTensor(self), /*spatial_dim_count=*/3,
       XlaHelpers::I64List(kernel_size), XlaHelpers::I64List(stride),
-      XlaHelpers::I64List(padding), ceil_mode, count_include_pad));
+      XlaHelpers::I64List(padding), ceil_mode, count_include_pad,
+      divisor_override));
 }
 
 at::Tensor XLANativeFunctions::avg_pool3d_backward(
@@ -1105,10 +1087,15 @@ at::Tensor XLANativeFunctions::diagonal_scatter(const at::Tensor& base,
                                                 int64_t dim2) {
   auto base_ = bridge::GetXlaTensor(base);
   auto mutated_view_ = bridge::GetXlaTensor(mutated_view);
+  int64_t base_rank = bridge::GetXlaTensor(base)->shape().get().rank();
+  int64_t canonical_dim1 =
+      torch::lazy::GetCanonicalDimensionIndex(dim1, base_rank);
+  int64_t canonical_dim2 =
+      torch::lazy::GetCanonicalDimensionIndex(dim2, base_rank);
   return bridge::AtenFromXlaTensor(
       base_->CreateFrom(torch::lazy::MakeNode<DiagonalViewUpdate>(
-          base_->GetIrValue(), mutated_view_->GetIrValue(), offset, dim1,
-          dim2)));
+          base_->GetIrValue(), mutated_view_->GetIrValue(), offset,
+          canonical_dim1, canonical_dim2)));
 }
 
 at::Tensor XLANativeFunctions::div(const at::Tensor& self,
@@ -1627,6 +1614,13 @@ at::Tensor XLANativeFunctions::log(const at::Tensor& self) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   return bridge::AtenFromXlaTensor(
       tensor_methods::log(bridge::GetXlaTensor(self)));
+}
+
+at::Tensor XLANativeFunctions::logit(const at::Tensor& self,
+                                     c10::optional<double> eps) {
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::logit(bridge::GetXlaTensor(self), eps));
 }
 
 at::Tensor XLANativeFunctions::log10(const at::Tensor& self) {
@@ -2476,6 +2470,32 @@ at::Tensor& XLANativeFunctions::random_(
   return self;
 }
 
+at::Tensor XLANativeFunctions::randperm(int64_t n,
+                                        c10::optional<at::ScalarType> dtype,
+                                        c10::optional<at::Layout> layout,
+                                        c10::optional<at::Device> device,
+                                        c10::optional<bool> pin_memory) {
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+
+  // Only support the basic version of randperm(int64_t) to start. If there are
+  // any other parameters, fallback to CPU.
+  bool fallback_to_cpu = false;
+  fallback_to_cpu |= layout.has_value();
+  fallback_to_cpu |= pin_memory.has_value() && pin_memory.value() == true;
+  fallback_to_cpu |= dtype.value() != at::ScalarType::Long;
+  fallback_to_cpu |= n == 0;
+
+  if (fallback_to_cpu) {
+    return at::native::call_fallback_fn<&xla_cpu_fallback,
+                                        ATEN_OP(randperm)>::call(n, dtype,
+                                                                 layout, device,
+                                                                 pin_memory);
+  }
+
+  return bridge::AtenFromXlaTensor(tensor_methods::randperm(
+      n, GetXlaDeviceOrCurrent(device), at::ScalarType::Long));
+}
+
 at::Tensor XLANativeFunctions::reflection_pad2d(const at::Tensor& self,
                                                 at::IntArrayRef padding) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
@@ -2604,8 +2624,11 @@ at::Tensor XLANativeFunctions::rsub(const at::Tensor& self,
                                     const at::Scalar& alpha) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   CheckSubOperandTypes(self.scalar_type(), GetScalarType(other));
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::rsub(bridge::GetXlaTensor(self), other, alpha));
+  return DoBinaryOp(self, other,
+                    [&](const XLATensorPtr& xself, const at::Scalar& other,
+                        at::ScalarType dtype) {
+                      return tensor_methods::rsub(xself, other, alpha, dtype);
+                    });
 }
 
 at::Tensor scatter_reduce_helper(const at::Tensor& self, int64_t dim,
@@ -2759,12 +2782,6 @@ at::Tensor& XLANativeFunctions::set_(at::Tensor& self,
   return self;
 }
 
-at::Tensor XLANativeFunctions::sigmoid(const at::Tensor& self) {
-  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::sigmoid(bridge::GetXlaTensor(self)));
-}
-
 at::Tensor XLANativeFunctions::sigmoid_backward(const at::Tensor& grad_output,
                                                 const at::Tensor& output) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
@@ -2887,12 +2904,6 @@ std::vector<at::Tensor> XLANativeFunctions::split_with_sizes_copy(
   auto xla_tensors = tensor_methods::split_with_sizes(
       bridge::GetXlaTensor(self), XlaHelpers::I64List(split_sizes), dim);
   return bridge::AtenFromXlaTensors(xla_tensors);
-}
-
-at::Tensor XLANativeFunctions::sqrt(const at::Tensor& self) {
-  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  return bridge::AtenFromXlaTensor(
-      tensor_methods::sqrt(bridge::GetXlaTensor(self)));
 }
 
 at::Tensor XLANativeFunctions::squeeze_copy(const at::Tensor& self) {
@@ -3401,6 +3412,16 @@ at::Tensor XLANativeFunctions::_cdist_forward(
       bridge::GetXlaTensor(x1), bridge::GetXlaTensor(x2), p));
 }
 
+at::Tensor XLANativeFunctions::_pdist_forward(const at::Tensor& self,
+                                              double p) {
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  XLA_CHECK(p >= 0) << "p value for the p-norm distance must be >= 0";
+  XLA_CHECK(bridge::GetXlaTensor(self)->shape().get().rank() == 2)
+      << "pdist only support 2d dimension";
+  return bridge::AtenFromXlaTensor(
+      tensor_methods::pdist_forward(bridge::GetXlaTensor(self), p));
+}
+
 // All of the below ops correspond to CompositeExplicitAutograd kernels from
 // core that call into view operators internally. These are all composite ops
 // that LTC can technically re-use / get for free, but we need to
@@ -3530,11 +3551,10 @@ at::Tensor XLANativeFunctions::embedding_symint(const at::Tensor& weight,
     return at::native::embedding_symint(weight, indices, padding_idx,
                                         scale_grad_by_freq, sparse);
   }
-  // TODO: for now route to native, which dispatches supported XLA operations.
-  // We need to make use of the TPU embedding core here eventually.
-  return at::functionalization::functionalize_aten_op_symint<ATEN_OP(
-      embedding)>::call(weight, indices, padding_idx, scale_grad_by_freq,
-                        sparse);
+
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  return bridge::AtenFromXlaTensor(tensor_methods::embedding(
+      bridge::GetXlaTensor(weight), bridge::GetXlaTensor(indices)));
 }
 
 at::Tensor XLANativeFunctions::_euclidean_dist(const at::Tensor& x1,

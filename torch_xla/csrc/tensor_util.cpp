@@ -484,7 +484,7 @@ torch::lazy::BackendDataPtr TensorToXlaData(
       std::make_shared<runtime::AtenSource>(tensor, shape, device.toString()));
 
   auto handles =
-      runtime::GetComputationClient()->TransferToServer(source_tensors);
+      runtime::GetComputationClient()->TransferToDevice(source_tensors);
   XLA_CHECK_EQ(handles.size(), 1);
   return handles.front();
 }
@@ -711,7 +711,7 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
         tensors[i], std::move(shape), devices[i]));
   }
   return WrapXlaData(
-      runtime::GetComputationClient()->TransferToServer(source_tensors));
+      runtime::GetComputationClient()->TransferToDevice(source_tensors));
 }
 
 std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
@@ -733,6 +733,7 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
     if (static_cast<XlaDeviceType>(device.type()) == XlaDeviceType::SPMD) {
       // GetLocalDevices returns the list of local devices specified by their
       // global ordinals (e.g. ["TPU:4", "TPU:5", "TPU:6", "TPU:7"]).
+
       std::vector<std::string> local_devices =
           runtime::GetComputationClient()->GetLocalDevices();
       // Shards the input tensors with padding, to split evenly.
@@ -747,7 +748,7 @@ std::vector<torch::lazy::BackendDataPtr> CreateTensorsData(
       source_tensors.push_back(std::make_shared<runtime::AtenSource>(
           tensors[i], std::move(shape), devices[i]));
       new_handles =
-          runtime::GetComputationClient()->TransferToServer(source_tensors);
+          runtime::GetComputationClient()->TransferToDevice(source_tensors);
     }
     handles.insert(handles.end(), new_handles.begin(), new_handles.end());
   }
@@ -785,7 +786,7 @@ std::vector<xla::Literal> ReleaseGilAndTransferData(
     save = PyEval_SaveThread();
   }
   std::vector<xla::Literal> literals =
-      runtime::GetComputationClient()->TransferFromServer(
+      runtime::GetComputationClient()->TransferFromDevice(
           UnwrapXlaData(xla_data));
   if (save) {
     PyEval_RestoreThread(save);

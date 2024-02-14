@@ -35,17 +35,17 @@ xla::XlaOp BuildComparisonOp(c10::Symbol kind, xla::XlaOp lhs, xla::XlaOp rhs) {
   std::tie(lhs, rhs) = XlaHelpers::Promote(lhs, rhs);
   switch (kind) {
     case at::aten::ne:
-      return xla::Ne(lhs, rhs);
+      return xla::Ne(lhs, rhs, XlaHelpers::getBroadcastDimensions(lhs, rhs));
     case at::aten::eq:
-      return xla::Eq(lhs, rhs);
+      return xla::Eq(lhs, rhs, XlaHelpers::getBroadcastDimensions(lhs, rhs));
     case at::aten::ge:
-      return xla::Ge(lhs, rhs);
+      return xla::Ge(lhs, rhs, XlaHelpers::getBroadcastDimensions(lhs, rhs));
     case at::aten::le:
-      return xla::Le(lhs, rhs);
+      return xla::Le(lhs, rhs, XlaHelpers::getBroadcastDimensions(lhs, rhs));
     case at::aten::gt:
-      return xla::Gt(lhs, rhs);
+      return xla::Gt(lhs, rhs, XlaHelpers::getBroadcastDimensions(lhs, rhs));
     case at::aten::lt:
-      return xla::Lt(lhs, rhs);
+      return xla::Lt(lhs, rhs, XlaHelpers::getBroadcastDimensions(lhs, rhs));
     default:
       XLA_ERROR() << "Invalid comparison operator kind: "
                   << kind.toQualString();
@@ -73,7 +73,9 @@ xla::XlaOp BuildRelu(xla::XlaOp input) {
     // xla::Max doesn't do implicit broadcasting for unbounded dynamism now.
     // TODO(lsy323): Remove this branch once the support is added in XLA.
     auto promoted = XlaHelpers::Promote(input, scalar);
-    return xla::Max(promoted.first, promoted.second);
+    return xla::Max(
+        promoted.first, promoted.second,
+        XlaHelpers::getBroadcastDimensions(promoted.first, promoted.second));
   } else {
     return xla::Max(input, scalar);
   }
@@ -403,6 +405,23 @@ xla::XlaOp BuildLogSigmoidBackward(xla::XlaOp grad_output, xla::XlaOp input,
   return grad_output * (xla::Neg(max_deriv) - sign * (buffer - one) / buffer);
 }
 
+xla::XlaOp BuildLogit(xla::XlaOp input, c10::optional<double> eps) {
+  const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(input);
+  xla::XlaOp one = XlaHelpers::ScalarValue<float>(1.0, shape.element_type(),
+                                                  input.builder());
+  xla::XlaOp zero = xla::Zero(input.builder(), shape.element_type());
+  xla::XlaOp xla_eps =
+      eps.has_value() ? XlaHelpers::ScalarValue<float>(
+                            eps.value(), shape.element_type(), input.builder())
+                      : zero;
+  xla::XlaOp clamped = xla::Clamp(input, xla_eps, one - xla_eps);
+  xla::XlaOp xla_log = xla::Log(clamped / (one - clamped));
+  xla::XlaOp invalid_input = xla::Or(xla::Lt(input, zero), xla::Gt(input, one));
+  xla::XlaOp xla_nan = xla::NanValue(input.builder(), shape.element_type());
+  // Replace invalid inputs with Nan.
+  return xla::Select(invalid_input, xla_nan, xla_log);
+}
+
 xla::XlaOp BuildElu(xla::XlaOp input, xla::XlaOp alpha, xla::XlaOp scale,
                     xla::XlaOp input_scale) {
   const xla::Shape& shape = ShapeHelper::ShapeOfXlaOp(input);
@@ -433,6 +452,24 @@ xla::XlaOp BuildEluBackward(xla::XlaOp grad_output, xla::XlaOp output,
       input_scale_scalar * (output + alpha_scalar * scale_scalar);
   return grad_output * xla::Select(xla::Gt(output, zero), scale_scalar,
                                    negative_output_branch);
+}
+
+xla::XlaOp BuildLerp(xla::XlaOp start, xla::XlaOp end, xla::XlaOp weight) {
+  // Three-way shape and value promotion
+  std::tie(start, end) = XlaHelpers::Promote(start, end);
+  std::tie(start, weight) = XlaHelpers::Promote(start, weight);
+  std::tie(start, end) = XlaHelpers::Promote(start, end);
+
+  // Perform the function = start + weight * (end - start)
+  xla::XlaOp sub_result =
+      xla::Sub(end, start, XlaHelpers::getBroadcastDimensions(end, start));
+  xla::XlaOp mul_result =
+      xla::Mul(weight, sub_result,
+               XlaHelpers::getBroadcastDimensions(weight, sub_result));
+  xla::XlaOp add_result = xla::Add(
+      start, mul_result, XlaHelpers::getBroadcastDimensions(start, mul_result));
+
+  return add_result;
 }
 
 }  // namespace torch_xla

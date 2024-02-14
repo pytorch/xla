@@ -34,23 +34,24 @@ torch::lazy::Value reduce_scatter_out(XLATensorPtr& output,
                                       bool pin_layout);
 
 std::pair<std::vector<XLATensorPtr>, torch::lazy::Value>
-reduce_scatter_coalesced(const std::vector<XLATensorPtr>& outputs,
-                         const std::vector<XLATensorPtr>& inputs,
+reduce_scatter_coalesced(const std::vector<XLATensorPtr>& inputs,
                          const torch::lazy::Value& token,
                          AllReduceType reduce_type, double scale,
                          int64_t scatter_dim, int64_t shard_count,
                          std::vector<std::vector<int64_t>> groups,
                          bool pin_layout);
 
+torch::lazy::Value reduce_scatter_coalesced_out(
+    const std::vector<XLATensorPtr>& outputs,
+    const std::vector<XLATensorPtr>& inputs, const torch::lazy::Value& token,
+    AllReduceType reduce_type, double scale, int64_t scatter_dim,
+    int64_t shard_count, std::vector<std::vector<int64_t>> groups,
+    bool pin_layout);
+
 std::pair<XLATensorPtr, torch::lazy::Value> all_to_all(
     const XLATensorPtr& input, const torch::lazy::Value& token,
     int64_t split_dimension, int64_t concat_dimension, int64_t split_count,
     std::vector<std::vector<int64_t>> groups, bool pin_layout);
-
-std::pair<std::vector<XLATensorPtr>, torch::lazy::Value> all_gather(
-    const std::vector<XLATensorPtr>& inputs, const torch::lazy::Value& token,
-    int64_t dim, int64_t shard_count, std::vector<std::vector<int64_t>> groups,
-    bool pin_layout);
 
 XLATensorPtr all_gather(const XLATensorPtr& input, int64_t dim,
                         int64_t shard_count,
@@ -64,12 +65,26 @@ torch::lazy::Value all_gather_out(XLATensorPtr& output,
                                   std::vector<std::vector<int64_t>> groups,
                                   bool pin_layout);
 
+std::pair<std::vector<XLATensorPtr>, torch::lazy::Value> all_gather_coalesced(
+    const std::vector<XLATensorPtr>& inputs, const torch::lazy::Value& token,
+    int64_t dim, int64_t shard_count, std::vector<std::vector<int64_t>> groups,
+    bool pin_layout);
+
+torch::lazy::Value all_gather_coalesced_out(
+    std::vector<XLATensorPtr>& outputs, const std::vector<XLATensorPtr>& inputs,
+    const torch::lazy::Value& token, int64_t dim, int64_t shard_count,
+    std::vector<std::vector<int64_t>> groups, bool pin_layout);
+
 std::pair<XLATensorPtr, torch::lazy::Value> collective_permute(
     const XLATensorPtr& input, const torch::lazy::Value& token,
     std::vector<std::pair<int64_t, int64_t>> source_target_pairs);
 
 void custom_sharding_(const XLATensorPtr& input,
                       const std::shared_ptr<XLATensor::ShardingSpec>& spec);
+
+void tpu_custom_call_(XLATensorPtr& output,
+                      const std::vector<XLATensorPtr>& inputs,
+                      const std::string& payload);
 
 XLATensorPtr get_dimensions_size(const XLATensorPtr& input,
                                  std::vector<int64_t> dimensions);
@@ -207,7 +222,8 @@ XLATensorPtr avg_pool_nd(const XLATensorPtr& input, int64_t spatial_dim_count,
                          std::vector<int64_t> kernel_size,
                          std::vector<int64_t> stride,
                          std::vector<int64_t> padding, bool ceil_mode,
-                         bool count_include_pad);
+                         bool count_include_pad,
+                         std::optional<int> divisor_override);
 
 XLATensorPtr avg_pool_nd_backward(const XLATensorPtr& out_backprop,
                                   const XLATensorPtr& input,
@@ -253,6 +269,8 @@ XLATensorPtr cat(absl::Span<const XLATensorPtr> tensors, int64_t dim,
 
 XLATensorPtr cdist_forward(const XLATensorPtr& x1, const XLATensorPtr& x2,
                            double p);
+
+XLATensorPtr pdist_forward(const XLATensorPtr& input, double p);
 
 XLATensorPtr celu(const XLATensorPtr& input, const at::Scalar& alpha);
 void celu_(XLATensorPtr& input, const at::Scalar& alpha);
@@ -342,6 +360,8 @@ XLATensorPtr embedding_dense_backward(const XLATensorPtr& grad_output,
                                       const XLATensorPtr& indices,
                                       int64_t num_weights, int64_t padding_idx,
                                       bool scale_grad_by_freq);
+
+XLATensorPtr embedding(const XLATensorPtr& weight, const XLATensorPtr& indices);
 
 XLATensorPtr eq(const XLATensorPtr& input, const at::Scalar& other);
 
@@ -487,6 +507,8 @@ XLATensorPtr linspace(const at::Scalar& start, const at::Scalar& end,
 
 XLATensorPtr log(const XLATensorPtr& input);
 
+XLATensorPtr logit(const XLATensorPtr& input, c10::optional<double> eps);
+
 XLATensorPtr log_base(const XLATensorPtr& input, torch::lazy::OpKind op,
                       double base);
 
@@ -511,6 +533,8 @@ XLATensorPtr xlogy(const XLATensorPtr& input, const XLATensorPtr& other);
 XLATensorPtr lt(const XLATensorPtr& input, const at::Scalar& other);
 
 XLATensorPtr lt(const XLATensorPtr& input, const XLATensorPtr& other);
+
+XLATensorPtr mark_tensor(const XLATensorPtr& input, const std::string& info);
 
 XLATensorPtr masked_scatter(XLATensorPtr& input, const XLATensorPtr& mask,
                             const XLATensorPtr& source);
@@ -804,8 +828,6 @@ std::vector<XLATensorPtr> split(const XLATensorPtr& input, int64_t split_size,
 std::vector<XLATensorPtr> split_with_sizes(const XLATensorPtr& input,
                                            std::vector<int64_t> split_size,
                                            int64_t dim);
-
-XLATensorPtr sqrt(const XLATensorPtr& input);
 
 // Squeeze out all trivial (size 1) dimensions.
 XLATensorPtr squeeze(const XLATensorPtr& input);

@@ -48,11 +48,19 @@ xla::Shape AbsOutputShape(const torch::lazy::Value& input) {
 }
 
 xla::Shape AcosOutputShape(const torch::lazy::Value& input) {
-  return GetXlaShape(input);
+  xla::Shape result_shape = GetXlaShape(input);
+  if (xla::primitive_util::IsIntegralType(result_shape.element_type())) {
+    result_shape.set_element_type(xla::PrimitiveType::F32);
+  }
+  return result_shape;
 }
 
 xla::Shape AcoshOutputShape(const torch::lazy::Value& input) {
-  return GetXlaShape(input);
+  xla::Shape result_shape = GetXlaShape(input);
+  if (xla::primitive_util::IsIntegralType(result_shape.element_type())) {
+    result_shape.set_element_type(xla::PrimitiveType::F32);
+  }
+  return result_shape;
 }
 
 xla::Shape AdaptiveAvgPool2dOutputShape(const torch::lazy::Value& input,
@@ -216,15 +224,29 @@ xla::Shape ArgminOutputShape(const torch::lazy::Value& input,
 }
 
 xla::Shape AsinOutputShape(const torch::lazy::Value& input) {
-  return GetXlaShape(input);
+  xla::Shape result_shape = GetXlaShape(input);
+  if (xla::primitive_util::IsIntegralType(result_shape.element_type())) {
+    result_shape.set_element_type(xla::PrimitiveType::F32);
+  }
+  return result_shape;
 }
 
 xla::Shape AsinhOutputShape(const torch::lazy::Value& input) {
-  return GetXlaShape(input);
+  xla::Shape result_shape = GetXlaShape(input);
+  if (xla::primitive_util::IsIntegralType(result_shape.element_type())) {
+    result_shape.set_element_type(xla::PrimitiveType::F32);
+  }
+  return result_shape;
 }
 
 xla::Shape AtanOutputShape(const torch::lazy::Value& input) {
-  return GetXlaShape(input);
+  xla::Shape result_shape = GetXlaShape(input);
+  // PyTorch allows integral types as input to torch.atan while XLA does not,
+  // hence the manual type conversion.
+  if (xla::primitive_util::IsIntegralType(result_shape.element_type())) {
+    result_shape.set_element_type(xla::PrimitiveType::F32);
+  }
+  return result_shape;
 }
 
 xla::Shape Atan2OutputShape(const torch::lazy::Value& input,
@@ -232,14 +254,27 @@ xla::Shape Atan2OutputShape(const torch::lazy::Value& input,
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     auto promoted = XlaHelpers::Promote(operands[0], operands[1]);
-    return xla::Atan2(promoted.first, promoted.second);
+    return xla::Atan2(
+        promoted.first, promoted.second,
+        XlaHelpers::getBroadcastDimensions(promoted.first, promoted.second));
   };
-  return InferOutputShape({GetXlaShape(input), GetXlaShape(other)},
-                          lower_for_shape_fn);
+  xla::Shape input_shape = GetXlaShape(input);
+  xla::Shape other_shape = GetXlaShape(other);
+  if (xla::primitive_util::IsIntegralType(input_shape.element_type())) {
+    input_shape.set_element_type(xla::PrimitiveType::F32);
+  }
+  if (xla::primitive_util::IsIntegralType(other_shape.element_type())) {
+    other_shape.set_element_type(xla::PrimitiveType::F32);
+  }
+  return InferOutputShape({input_shape, other_shape}, lower_for_shape_fn);
 }
 
 xla::Shape AtanhOutputShape(const torch::lazy::Value& input) {
-  return GetXlaShape(input);
+  xla::Shape result_shape = GetXlaShape(input);
+  if (xla::primitive_util::IsIntegralType(result_shape.element_type())) {
+    result_shape.set_element_type(xla::PrimitiveType::F32);
+  }
+  return result_shape;
 }
 
 xla::Shape BaddbmmOutputShape(const torch::lazy::Value& self,
@@ -302,8 +337,9 @@ xla::Shape BinaryCrossEntropyBackwardOutputShape(
 
 xla::Shape BitwiseAndTensorOutputShape(const torch::lazy::Value& input,
                                        const torch::lazy::Value& other) {
-  return InferBinaryOpShape(
-      input, other, [](xla::XlaOp one, xla::XlaOp two) { return one & two; });
+  return InferBinaryOpShape(input, other, [](xla::XlaOp one, xla::XlaOp two) {
+    return xla::And(one, two, XlaHelpers::getBroadcastDimensions(one, two));
+  });
 }
 
 xla::Shape BitwiseNotOutputShape(const torch::lazy::Value& input) {
@@ -312,14 +348,16 @@ xla::Shape BitwiseNotOutputShape(const torch::lazy::Value& input) {
 
 xla::Shape BitwiseOrTensorOutputShape(const torch::lazy::Value& input,
                                       const torch::lazy::Value& other) {
-  return InferBinaryOpShape(
-      input, other, [](xla::XlaOp one, xla::XlaOp two) { return one | two; });
+  return InferBinaryOpShape(input, other, [](xla::XlaOp one, xla::XlaOp two) {
+    return xla::Or(one, two, XlaHelpers::getBroadcastDimensions(one, two));
+  });
 }
 
 xla::Shape BitwiseXorTensorOutputShape(const torch::lazy::Value& input,
                                        const torch::lazy::Value& other) {
-  return InferBinaryOpShape(
-      input, other, [](xla::XlaOp one, xla::XlaOp two) { return one ^ two; });
+  return InferBinaryOpShape(input, other, [](xla::XlaOp one, xla::XlaOp two) {
+    return xla::Xor(one, two, XlaHelpers::getBroadcastDimensions(one, two));
+  });
 }
 
 xla::Shape CeilOutputShape(const torch::lazy::Value& input) {
@@ -346,11 +384,15 @@ xla::Shape ClampTensorOutputShape(
     xla::XlaOp res = operands[0];
     if (operands.size() > 1) {
       auto promoted = XlaHelpers::Promote(res, operands[1]);
-      res = xla::Max(promoted.first, promoted.second);
+      res = xla::Max(
+          promoted.first, promoted.second,
+          XlaHelpers::getBroadcastDimensions(promoted.first, promoted.second));
     }
     if (operands.size() > 2) {
       auto promoted = XlaHelpers::Promote(res, operands[2]);
-      res = xla::Min(promoted.first, promoted.second);
+      res = xla::Min(
+          promoted.first, promoted.second,
+          XlaHelpers::getBroadcastDimensions(promoted.first, promoted.second));
     }
     return res;
   };
@@ -383,11 +425,19 @@ xla::Shape ClampMinTensorOutputShape(const torch::lazy::Value& input,
 }
 
 xla::Shape CosOutputShape(const torch::lazy::Value& input) {
-  return GetXlaShape(input);
+  xla::Shape result_shape = GetXlaShape(input);
+  if (xla::primitive_util::IsIntegralType(result_shape.element_type())) {
+    result_shape.set_element_type(xla::PrimitiveType::F32);
+  }
+  return result_shape;
 }
 
 xla::Shape CoshOutputShape(const torch::lazy::Value& input) {
-  return GetXlaShape(input);
+  xla::Shape result_shape = GetXlaShape(input);
+  if (xla::primitive_util::IsIntegralType(result_shape.element_type())) {
+    result_shape.set_element_type(xla::PrimitiveType::F32);
+  }
+  return result_shape;
 }
 
 xla::Shape EluOutputShape(const torch::lazy::Value& input,
@@ -413,7 +463,11 @@ xla::Shape EqTensorOutputShape(const torch::lazy::Value& self,
 }
 
 xla::Shape ErfOutputShape(const torch::lazy::Value& input) {
-  return GetXlaShape(input);
+  auto shape = GetXlaShape(input);
+  if (xla::primitive_util::IsIntegralType(shape.element_type())) {
+    shape.set_element_type(xla::PrimitiveType::F32);
+  }
+  return shape;
 }
 
 xla::Shape ErfcOutputShape(const torch::lazy::Value& input) {
@@ -425,11 +479,19 @@ xla::Shape ErfinvOutputShape(const torch::lazy::Value& input) {
 }
 
 xla::Shape ExpOutputShape(const torch::lazy::Value& input) {
-  return GetXlaShape(input);
+  xla::Shape result_shape = GetXlaShape(input);
+  if (xla::primitive_util::IsIntegralType(result_shape.element_type())) {
+    result_shape.set_element_type(xla::PrimitiveType::F32);
+  }
+  return result_shape;
 }
 
 xla::Shape Expm1OutputShape(const torch::lazy::Value& input) {
-  return GetXlaShape(input);
+  xla::Shape result_shape = GetXlaShape(input);
+  if (xla::primitive_util::IsIntegralType(result_shape.element_type())) {
+    result_shape.set_element_type(xla::PrimitiveType::F32);
+  }
+  return result_shape;
 }
 
 xla::Shape FloorOutputShape(const torch::lazy::Value& input) {
@@ -592,8 +654,10 @@ xla::Shape LogicalAndOutputShape(const torch::lazy::Value& input,
                                  const torch::lazy::Value& other) {
   auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return XlaHelpers::PromotedLogicalBinaryOp(
-        operands[0], operands[1],
-        [](xla::XlaOp lhs, xla::XlaOp rhs) { return xla::And(lhs, rhs); });
+        operands[0], operands[1], [](xla::XlaOp lhs, xla::XlaOp rhs) {
+          return xla::And(lhs, rhs,
+                          XlaHelpers::getBroadcastDimensions(lhs, rhs));
+        });
   };
   return InferOutputShape({GetXlaShape(input), GetXlaShape(other)}, shape_fn);
 }
@@ -610,8 +674,10 @@ xla::Shape LogicalOrOutputShape(const torch::lazy::Value& input,
                                 const torch::lazy::Value& other) {
   auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return XlaHelpers::PromotedLogicalBinaryOp(
-        operands[0], operands[1],
-        [](xla::XlaOp lhs, xla::XlaOp rhs) { return xla::Or(lhs, rhs); });
+        operands[0], operands[1], [](xla::XlaOp lhs, xla::XlaOp rhs) {
+          return xla::Or(lhs, rhs,
+                         XlaHelpers::getBroadcastDimensions(lhs, rhs));
+        });
   };
   return InferOutputShape({GetXlaShape(input), GetXlaShape(other)}, shape_fn);
 }
@@ -620,8 +686,10 @@ xla::Shape LogicalXorOutputShape(const torch::lazy::Value& input,
                                  const torch::lazy::Value& other) {
   auto shape_fn = [](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     return XlaHelpers::PromotedLogicalBinaryOp(
-        operands[0], operands[1],
-        [](xla::XlaOp lhs, xla::XlaOp rhs) { return xla::Xor(lhs, rhs); });
+        operands[0], operands[1], [](xla::XlaOp lhs, xla::XlaOp rhs) {
+          return xla::Xor(lhs, rhs,
+                          XlaHelpers::getBroadcastDimensions(lhs, rhs));
+        });
   };
   return InferOutputShape({GetXlaShape(input), GetXlaShape(other)}, shape_fn);
 }
@@ -660,7 +728,9 @@ xla::Shape MaximumOutputShape(const torch::lazy::Value& input,
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     auto promoted = XlaHelpers::Promote(operands[0], operands[1]);
-    return xla::Max(promoted.first, promoted.second);
+    return xla::Max(
+        promoted.first, promoted.second,
+        XlaHelpers::getBroadcastDimensions(promoted.first, promoted.second));
   };
   return InferOutputShape({GetXlaShape(input), GetXlaShape(other)},
                           lower_for_shape_fn);
@@ -671,7 +741,9 @@ xla::Shape MinimumOutputShape(const torch::lazy::Value& input,
   auto lower_for_shape_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
     auto promoted = XlaHelpers::Promote(operands[0], operands[1]);
-    return xla::Max(promoted.first, promoted.second);
+    return xla::Max(
+        promoted.first, promoted.second,
+        XlaHelpers::getBroadcastDimensions(promoted.first, promoted.second));
   };
   return InferOutputShape({GetXlaShape(input), GetXlaShape(other)},
                           lower_for_shape_fn);
@@ -698,7 +770,11 @@ xla::Shape NeTensorOutputShape(const torch::lazy::Value& self,
 }
 
 xla::Shape ReciprocalOutputShape(const torch::lazy::Value& input) {
-  return GetXlaShape(input);
+  xla::Shape result_shape = GetXlaShape(input);
+  if (xla::primitive_util::IsIntegralType(result_shape.element_type())) {
+    result_shape.set_element_type(xla::PrimitiveType::F32);
+  }
+  return result_shape;
 }
 
 xla::Shape ReluOutputShape(const torch::lazy::Value& input) {
@@ -725,7 +801,11 @@ xla::Shape RoundOutputShape(const torch::lazy::Value& input) {
 }
 
 xla::Shape RsqrtOutputShape(const torch::lazy::Value& input) {
-  return GetXlaShape(input);
+  xla::Shape result_shape = GetXlaShape(input);
+  if (xla::primitive_util::IsIntegralType(result_shape.element_type())) {
+    result_shape.set_element_type(xla::PrimitiveType::F32);
+  }
+  return result_shape;
 }
 
 xla::Shape SeluOutputShape(const torch::lazy::Value& input) {
@@ -734,6 +814,14 @@ xla::Shape SeluOutputShape(const torch::lazy::Value& input) {
 
 xla::Shape SgnOutputShape(const torch::lazy::Value& input) {
   return GetXlaShape(input);
+}
+
+xla::Shape SigmoidOutputShape(const torch::lazy::Value& input) {
+  xla::Shape result_shape = GetXlaShape(input);
+  if (xla::primitive_util::IsIntegralType(result_shape.element_type())) {
+    result_shape.set_element_type(xla::PrimitiveType::F32);
+  }
+  return result_shape;
 }
 
 xla::Shape SignOutputShape(const torch::lazy::Value& input) {
@@ -755,11 +843,19 @@ xla::Shape SiluBackwardOutputShape(const torch::lazy::Value& grad_output,
 }
 
 xla::Shape SinOutputShape(const torch::lazy::Value& input) {
-  return GetXlaShape(input);
+  xla::Shape result_shape = GetXlaShape(input);
+  if (xla::primitive_util::IsIntegralType(result_shape.element_type())) {
+    result_shape.set_element_type(xla::PrimitiveType::F32);
+  }
+  return result_shape;
 }
 
 xla::Shape SinhOutputShape(const torch::lazy::Value& input) {
-  return GetXlaShape(input);
+  xla::Shape result_shape = GetXlaShape(input);
+  if (xla::primitive_util::IsIntegralType(result_shape.element_type())) {
+    result_shape.set_element_type(xla::PrimitiveType::F32);
+  }
+  return result_shape;
 }
 
 xla::Shape SoftshrinkOutputShape(const torch::lazy::Value& self,
@@ -783,6 +879,14 @@ xla::Shape SoftshrinkBackwardOutputShape(const torch::lazy::Value& grad_out,
 //   return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
 // }
 
+xla::Shape SqrtOutputShape(const torch::lazy::Value& input) {
+  xla::Shape result_shape = GetXlaShape(input);
+  if (xla::primitive_util::IsIntegralType(result_shape.element_type())) {
+    result_shape.set_element_type(xla::PrimitiveType::F32);
+  }
+  return result_shape;
+}
+
 xla::Shape TanOutputShape(const torch::lazy::Value& input) {
   xla::Shape result_shape = GetXlaShape(input);
   if (xla::primitive_util::IsIntegralType(result_shape.element_type())) {
@@ -799,7 +903,11 @@ xla::Shape TakeOutputShape(const torch::lazy::Value& input,
 }
 
 xla::Shape TanhOutputShape(const torch::lazy::Value& input) {
-  return GetXlaShape(input);
+  xla::Shape result_shape = GetXlaShape(input);
+  if (xla::primitive_util::IsIntegralType(result_shape.element_type())) {
+    result_shape.set_element_type(xla::PrimitiveType::F32);
+  }
+  return result_shape;
 }
 
 xla::Shape TrilOutputShape(const torch::lazy::Value& input) {

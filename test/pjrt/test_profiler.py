@@ -56,7 +56,7 @@ class TestPjRtProfiler(absltest.TestCase):
       content = file.read()
       ascii_content = codecs.decode(content, 'ascii', errors='ignore')
 
-      expected_methods = ('TransferToServer', 'Compile', 'ExecuteComputation')
+      expected_methods = ('TransferToDevice', 'Compile', 'ExecuteComputation')
       for method in (f'PjRtComputationClient::{m}' for m in expected_methods):
         self.assertIn(method, ascii_content)
 

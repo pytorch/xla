@@ -1,11 +1,15 @@
+import os
+import unittest
+
+import numpy as np
+import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
-import torch
-import torchvision
-import unittest
 import torch_xla.debug.metrics as met
 import torch_xla.debug.metrics_compare_utils as mcu
-import numpy as np
+import torchvision
+
+os.environ['XLA_STABLEHLO_COMPILE'] = '1'
 
 
 class StableHloCompileTest(unittest.TestCase):

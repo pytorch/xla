@@ -113,11 +113,6 @@ function run_pt_xla_debug {
   PT_XLA_DEBUG=1 PT_XLA_DEBUG_FILE="/tmp/pt_xla_debug.txt" run_test "$@"
 }
 
-function run_stablehlo_compile {
-  echo "Running in StableHlo Compile mode: $@"
-  XLA_STABLEHLO_COMPILE=1 run_test "$@"
-}
-
 function run_xla_backend_mp {
   echo "Running XLA backend multiprocessing test: $@"
   MASTER_ADDR=localhost MASTER_PORT=6000 run_test "$@"
@@ -128,7 +123,7 @@ function run_torchrun {
     echo "Running torchrun test for GPU $@"
     num_devices=$(nvidia-smi --list-gpus | wc -l)
     PJRT_DEVICE=CUDA torchrun --nnodes 1 --nproc-per-node $num_devices $@
-  fi 
+  fi
 }
 
 function run_torch_op_tests {
@@ -166,11 +161,13 @@ function run_xla_op_tests1 {
   run_test "$CDIR/test_hlo_metadata.py"
   run_test "$CDIR/test_profiler.py"
   run_test "$CDIR/pjrt/test_runtime.py"
-  run_test "$CDIR/pjrt/test_runtime_gpu.py"
+  run_test "$CDIR/pjrt/test_runtime_single_proc_gpu.py"
+  run_test "$CDIR/pjrt/test_runtime_multi_gpu.py"
   run_test "$CDIR/pjrt/test_runtime_multi_cpu.py"
   run_test "$CDIR/pjrt/test_internal_tpu.py"
   run_test "$CDIR/pjrt/test_ddp.py"
   run_test "$CDIR/pjrt/test_mesh_service.py"
+  run_test "$CDIR/test_python_ops.py"
   run_test "$CDIR/test_ops.py"
   run_test "$CDIR/test_metrics.py"
   run_test "$CDIR/test_zero1.py"
@@ -190,6 +187,7 @@ function run_xla_op_tests1 {
 # DO NOT MODIFY
 function run_xla_op_tests2 {
   run_downcast_bf16 "$CDIR/test_data_type.py"
+  run_test "$CDIR/pjrt/test_dtypes.py"
   run_test "$CDIR/test_autocast.py"  # TODO(yeounoh) this is expensive on GPU
 }
 
@@ -198,7 +196,9 @@ function run_xla_op_tests3 {
   # TODO(qihqi): this test require tensorflow to run. need to setup separate
   #     CI with tf.
   run_xla_hlo_debug "$CDIR/stablehlo/test_stablehlo_inference.py"
-  run_stablehlo_compile "$CDIR/stablehlo/test_stablehlo_compile.py"
+  run_test "$CDIR/stablehlo/test_stablehlo_compile.py"
+  run_test "$CDIR/stablehlo/test_implicit_broadcasting.py"
+  run_test "$CDIR/stablehlo/test_unbounded_dynamism.py"
   run_test "$CDIR/spmd/test_xla_sharding.py"
   run_test "$CDIR/spmd/test_xla_sharding_hlo.py"
   run_test "$CDIR/spmd/test_xla_virtual_device.py"

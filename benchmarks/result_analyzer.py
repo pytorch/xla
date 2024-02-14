@@ -50,7 +50,6 @@ class ResultAnalyzer:
         "timestamp": pd.Series(dtype="int"),
         "suite_name": pd.Series(dtype="str"),
         "model_name": pd.Series(dtype="str"),
-        "experiment_name": pd.Series(dtype="str"),
         "accelerator": pd.Series(dtype="str"),
         "accelerator_model": pd.Series(dtype="str"),
         "xla": pd.Series(dtype="str"),
@@ -74,41 +73,32 @@ class ResultAnalyzer:
     self.export_metric_report(metric_df)
 
   def get_calculated_metrics(self, d, dataline):
-    total_time = np.asarray(dataline["metrics"]["total_time"], dtype="float")
-    d["median_total_time"] = np.median(total_time)
-    per_iter_time = np.asarray(
-        dataline["metrics"]["per_iter_time"], dtype="float")
-    d["median_per_iter_time"] = np.median(per_iter_time)
-    if dataline["experiment"]["xla"]:
-      trace_per_iter_time = np.asarray(
-          dataline["metrics"]["trace_per_iter_time"], dtype="float")
-      d["xla_median_trace_per_iter_time"] = np.median(trace_per_iter_time)
-      d["xla_compile_time"] = np.max(total_time) - np.median(total_time)
-    else:
-      d["xla_median_trace_per_iter_time"] = -1
-      d["xla_compile_time"] = -1
+    MAX_TOTAL_TIME = f"{np.max.__name__}_total_time"
+    MEDIAN_TOTAL_TIME = f"{np.median.__name__}_total_time"
 
-    if "total_cpu_time_s" in dataline["metrics"]:
-      total_cpu_time = np.asarray(
-          dataline["metrics"]["total_cpu_time_s"], dtype="float")
-      d["median_total_cpu_time_s"] = np.median(total_cpu_time)
-    if "per_iter_cpu_time_s" in dataline["metrics"]:
-      per_iter_cpu_time = np.asarray(
-          dataline["metrics"]["per_iter_cpu_time_s"], dtype="float")
-      d["median_per_iter_cpu_time_s"] = np.median(per_iter_cpu_time)
-    if "total_cuda_time_s" in dataline["metrics"]:
-      total_cuda_time = np.asarray(
-          dataline["metrics"]["total_cuda_time_s"], dtype="float")
-      d["median_total_cuda_time_s"] = np.median(total_cuda_time)
-    if "per_iter_cuda_time_s" in dataline["metrics"]:
-      per_iter_cuda_time = np.asarray(
-          dataline["metrics"]["per_iter_cuda_time_s"], dtype="float")
-      d["median_per_iter_cuda_time_s"] = np.median(per_iter_cuda_time)
+    for metric, raw_values in dataline["metrics"].items():
+      values = np.asarray(raw_values, dtype="float")
 
-    if dataline["experiment"]["dynamo"]:
-      d["dynamo_compile_time"] = np.max(total_time) - np.median(total_time)
-    else:
-      d["dynamo_compile_time"] = -1
+      is_valid = (
+          dataline["experiment"]["xla"] or metric != "trace_per_iter_time")
+
+      for fn in (np.min, np.median, np.max):
+        d[f"{fn.__name__}_{metric}"] = fn(values) if is_valid else -1
+
+      # Remove first measurement.
+      # Assumption: the first measurement has tracing + compilation times
+      # embedded into it. Therefore, we remove it from our data for computing
+      # the average and standard deviation.
+      skip_head = values[1:]
+
+      if len(skip_head) > 0:
+        for fn in (np.mean, np.std):
+          d[f"{fn.__name__}_{metric}"] = fn(skip_head) if is_valid else -1
+
+    compile_time = d[MAX_TOTAL_TIME] - d[MEDIAN_TOTAL_TIME]
+    d["dynamo_compile_time"] = compile_time if dataline["experiment"][
+        "dynamo"] else -1
+    d["xla_compile_time"] = compile_time if dataline["experiment"]["xla"] else -1
     return d
 
   # TODO: handle error message properly (database length restriction)
@@ -118,6 +108,8 @@ class ResultAnalyzer:
     runs = []
     for jsonline in jsonlines:
       dataline = json.loads(jsonline)
+      timestamp = dataline[
+          "timestamp"] if "timestamp" in dataline else self.timestamp
       batch_size = dataline["experiment"]["batch_size"]
       batch_side_value = -1 if batch_size is None else batch_size
       xla = dataline["experiment"]["xla"]
@@ -131,7 +123,7 @@ class ResultAnalyzer:
 
       d = {
           "metrics": {
-              "timestamp": int(self.timestamp),
+              "timestamp": int(timestamp),
               "batch_size": batch_side_value,
               "repeat": dataline["repeat"],
               "iterations_per_run": dataline["iterations_per_run"]
@@ -139,7 +131,6 @@ class ResultAnalyzer:
           "dimensions": {
               "suite_name": dataline["model"]["suite_name"],
               "model_name": dataline["model"]["model_name"],
-              "experiment_name": dataline["experiment"]["experiment_name"],
               "accelerator": dataline["experiment"]["accelerator_model"],
               "accelerator_model": dataline["experiment"]["accelerator_model"],
               "xla": xla_value,
@@ -173,11 +164,12 @@ class ResultAnalyzer:
 
     for jsonline in jsonlines:
       dataline = json.loads(jsonline)
+      timestamp = dataline[
+          "timestamp"] if "timestamp" in dataline else self.timestamp
       d = {
-          "timestamp": self.timestamp,
+          "timestamp": timestamp,
           "suite_name": dataline["model"]["suite_name"],
           "model_name": dataline["model"]["model_name"],
-          "experiment_name": dataline["experiment"]["experiment_name"],
           "accelerator": dataline["experiment"]["accelerator"],
           "accelerator_model": dataline["experiment"]["accelerator_model"],
           "xla": dataline["experiment"]["xla"],
@@ -267,8 +259,8 @@ def parse_args(args=None):
 
   parser.add_argument(
       "--timestamp",
-      type=int,
-      help="User provided timestamp. If not provided, get the timestamp in analyzer",
+      type=float,
+      help="User provided timestamp used if the input data does not have it.",
   )
 
   parser.add_argument(

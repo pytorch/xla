@@ -10,6 +10,7 @@ import torch_xla.core.xla_env_vars as xenv
 import torch_xla.core.xla_model as xm
 import torch_xla.utils.utils as xu
 import torch_xla._internal.tpu as tpu
+from torch_xla.experimental import plugins
 
 R = TypeVar('R')
 FN = TypeVar('FN')
@@ -112,13 +113,6 @@ def xla_device(n: Optional[int] = None,
   Returns:
     A `torch.device` representing an XLA device.
   """
-  # TODO(xiowei replace gpu with cuda): Remove the warning message at r2.2 release.
-  pjrt_device = xu.getenv_as(xenv.PJRT_DEVICE, str)
-  if pjrt_device.casefold() == 'gpu':
-    warnings.warn(
-        'PJRT_DEVICE=GPU is being deprecate. Please replace PJRT_DEVICE=GPU with PJRT_DEVICE=CUDA.'
-    )
-
   if n is None:
     return torch.device(torch_xla._XLAC._xla_get_default_device())
 
@@ -198,7 +192,9 @@ def process_count() -> int:
 
 @requires_pjrt
 def host_index() -> int:
-  if device_type() == 'TPU':
+  if plugins.using_dynamic_plugins():
+    return plugins.default().host_index()
+  elif device_type() == 'TPU':
     return tpu.worker_id()
 
   # TODO: Update this when we support multi-host GPU

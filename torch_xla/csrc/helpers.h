@@ -265,10 +265,11 @@ class XlaHelpers {
   static std::pair<xla::XlaOp, xla::XlaOp> PromoteSecondValue(xla::XlaOp op1,
                                                               xla::XlaOp op2);
 
-  // Eventually performs a broadcast to make sure the shapes of the returned
-  // xla::XlaOp values have the same shape. The first returned xla::XlaOp is op1
-  // or a broadcast of it, and the second returned xla::XlaOp is either op2 or a
-  // broadcast ot it.
+  // If any of the shapes of input operations has unbounded dynamic dimensions,
+  // performs implicit broadcasting and return the broadcasted operations. For
+  // static or bounded dynamic input shapes, validate the shapes and return the
+  // input operations. The implicit broadcasting in static and bounded dynamic
+  // cases will be handled eventually by the XlaBuilder.
   static std::pair<xla::XlaOp, xla::XlaOp> PromoteShapes(xla::XlaOp op1,
                                                          xla::XlaOp op2);
 
@@ -282,6 +283,7 @@ class XlaHelpers {
   static std::pair<xla::XlaOp, xla::XlaOp> PromoteSecond(xla::XlaOp op1,
                                                          xla::XlaOp op2);
 
+  // Given the two shape 'shape1' and 'shape2', infers the broadcasted shape.
   static xla::Shape GetPromotedShape(const xla::Shape& shape1,
                                      const xla::Shape& shape2);
 
@@ -300,6 +302,21 @@ class XlaHelpers {
   static xla::XlaOp ImplicitBroadcast(xla::XlaOp op, const xla::Shape& op_shape,
                                       const xla::Shape& shape);
 
+  // Returns new operations which broadcast the input operations 'op1' and 'op2'
+  // with unbounded dynamic dimensions into the 'shape' which is usually the
+  // result of a GetPromotedShape() call.
+  // Assumption: The shapes of 'op1' and 'op2' are valid for broadcasting.
+  // TODO: We need to emit runtime shape assertions to validate the broadcasting
+  // rules are met.
+  static std::pair<xla::XlaOp, xla::XlaOp>
+  ImplicitBroadcastWithUnboundedDynamicShapes(xla::XlaOp op1, xla::XlaOp op2,
+                                              const xla::Shape& shape);
+
+  // Retuns the explicit broadcasting specifications on operations between
+  // arrays of different ranks.
+  static std::vector<int64_t> getBroadcastDimensions(xla::XlaOp op1,
+                                                     xla::XlaOp op2);
+
   // Performs the bin_op binary operation by promoting types and shapes of the
   // two input operands.
   static xla::XlaOp PromotedBinaryOp(
@@ -308,23 +325,27 @@ class XlaHelpers {
 
   // Basic promoted binary operation implementation follow.
   static xla::XlaOp PromotedAdd(xla::XlaOp op1, xla::XlaOp op2) {
-    return PromotedBinaryOp(
-        op1, op2, [](xla::XlaOp op1, xla::XlaOp op2) { return op1 + op2; });
+    return PromotedBinaryOp(op1, op2, [](xla::XlaOp op1, xla::XlaOp op2) {
+      return xla::Add(op1, op2, getBroadcastDimensions(op1, op2));
+    });
   }
 
   static xla::XlaOp PromotedSub(xla::XlaOp op1, xla::XlaOp op2) {
-    return PromotedBinaryOp(
-        op1, op2, [](xla::XlaOp op1, xla::XlaOp op2) { return op1 - op2; });
+    return PromotedBinaryOp(op1, op2, [](xla::XlaOp op1, xla::XlaOp op2) {
+      return xla::Sub(op1, op2, getBroadcastDimensions(op1, op2));
+    });
   }
 
   static xla::XlaOp PromotedMul(xla::XlaOp op1, xla::XlaOp op2) {
-    return PromotedBinaryOp(
-        op1, op2, [](xla::XlaOp op1, xla::XlaOp op2) { return op1 * op2; });
+    return PromotedBinaryOp(op1, op2, [](xla::XlaOp op1, xla::XlaOp op2) {
+      return xla::Mul(op1, op2, getBroadcastDimensions(op1, op2));
+    });
   }
 
   static xla::XlaOp PromotedDiv(xla::XlaOp op1, xla::XlaOp op2) {
-    return PromotedBinaryOp(
-        op1, op2, [](xla::XlaOp op1, xla::XlaOp op2) { return op1 / op2; });
+    return PromotedBinaryOp(op1, op2, [](xla::XlaOp op1, xla::XlaOp op2) {
+      return xla::Div(op1, op2, getBroadcastDimensions(op1, op2));
+    });
   }
 
   static xla::XlaOp PromotedLogicalBinaryOp(
@@ -334,10 +355,13 @@ class XlaHelpers {
   static xla::XlaOp PromotedLogicalUnaryOp(
       xla::XlaOp op, const std::function<xla::XlaOp(xla::XlaOp)>& unary_op);
 
-  template <typename T>
-  static xla::Literal Range(T start, T end, T step) {
+  // T is the returned type, A is the type used for accumulation. In general,
+  // A should have higher-or-equal-precision to T.
+  template <typename T, typename A = T>
+  static xla::Literal Range(A start, A end, A step) {
+    std::vector<A> accumulated = runtime::util::Range<A>(start, end, step);
     return xla::LiteralUtil::CreateR1<T>(
-        runtime::util::Range<T>(start, end, step));
+        std::vector<T>(accumulated.begin(), accumulated.end()));
   }
 
   static xla::PrecisionConfig::Precision mat_mul_precision() {

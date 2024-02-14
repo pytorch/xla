@@ -1,12 +1,10 @@
 import numpy as np
 import torch
+from torch.library import impl
 import torch_xla
-from torch.library import Library, impl
-
-quantized_decomposed_lib = Library("quantized_decomposed", "IMPL")
 
 
-@impl(quantized_decomposed_lib, "quantize_per_tensor", "XLA")
+@impl("quantized_decomposed::quantize_per_tensor", "XLA")
 def xla_quantize_per_tensor(input: torch.Tensor, scale: float, zero_point: int,
                             quant_min: int, quant_max: int, dtype: torch.dtype):
   return _xla_quantize(input, torch.tensor([scale]),
@@ -14,7 +12,7 @@ def xla_quantize_per_tensor(input: torch.Tensor, scale: float, zero_point: int,
                        quant_max, dtype)
 
 
-@impl(quantized_decomposed_lib, "quantize_per_channel", "XLA")
+@impl("quantized_decomposed::quantize_per_channel", "XLA")
 def xla_quantize_per_channel(input: torch.Tensor, scale: torch.Tensor,
                              zero_point: torch.Tensor, axis: int,
                              quant_min: int, quant_max: int,
@@ -23,7 +21,7 @@ def xla_quantize_per_channel(input: torch.Tensor, scale: torch.Tensor,
                        axis)
 
 
-@impl(quantized_decomposed_lib, "dequantize_per_tensor", "XLA")
+@impl("quantized_decomposed::dequantize_per_tensor", "XLA")
 def xla_dequantize_per_tensor(input: torch.Tensor, scale: float,
                               zero_point: int, quant_min: int, quant_max: int,
                               dtype: torch.dtype):
@@ -32,7 +30,7 @@ def xla_dequantize_per_tensor(input: torch.Tensor, scale: float,
                          quant_max, dtype)
 
 
-@impl(quantized_decomposed_lib, "dequantize_per_channel", "XLA")
+@impl("quantized_decomposed::dequantize_per_channel", "XLA")
 def xla_dequantize_per_tensor(input: torch.Tensor, scale: torch.Tensor,
                               zero_point: torch.Tensor, axis: int,
                               quant_min: int, quant_max: int,
@@ -52,9 +50,15 @@ def _check_scale_zp(input, scale, zero_point, axis, dtype):
   # The followings are checked:
   # 1. scale, zp are 1D tensor.
   # 2. Lenghth of scale, zp matched the (de)quant dim.
-  # 3. zp dtype is the same as the quantized integer type.
+  # 3. dtype must be integer type
+  # 4. zero_point values must be within the range of dtype.
   assert len(scale.shape) == 1 and len(zero_point.shape) == 1
-  assert zero_point.dtype == dtype
+  assert 'int' in str(dtype)
+  assert torch.equal(
+      zero_point,
+      torch.clamp(zero_point,
+                  torch.iinfo(dtype).min,
+                  torch.iinfo(dtype).max))
   if axis == -1:
     assert scale.numel() == 1 and zero_point.numel() == 1
   else:

@@ -36,21 +36,7 @@ namespace torch_xla {
 // Macro for defining a function that will be run at static initialization time
 // to define a library of operators in the namespace. Used to define a new set
 // of custom operators that do not already exist in PyTorch.
-TORCH_LIBRARY(xla, m) {
-  m.def(
-      "max_pool2d_forward(Tensor self, int[2] kernel_size, int[2] stride=[], "
-      "int[2] padding=0, int[2] dilation=1, bool ceil_mode=False) -> Tensor",
-      torch::dispatch(
-          c10::DispatchKey::XLA,
-          TORCH_FN(torch_xla::aten_autograd_ops::max_pool2d_forward)));
-
-  m.def(
-      "max_pool2d_backward(Tensor grad_output, Tensor self, int[2] "
-      "kernel_size, int[2] stride=[], int[2] padding=0, bool ceil_mode=False) "
-      "-> Tensor",
-      torch::dispatch(
-          c10::DispatchKey::XLA,
-          TORCH_FN(torch_xla::aten_autograd_ops::max_pool2d_backward)));
+TORCH_LIBRARY_FRAGMENT(xla, m) {
   m.def(
       "xla_mark_sharding_dynamo_custom_op(Tensor input, int[][] "
       "tile_assignment, int[][] group_assignment, int[][] replication_groups, "
@@ -287,7 +273,8 @@ xla::OpSharding ShardingUtil::CreateOpSharding(
     }
   }
   TF_VLOG(INFO) << "OpSharding (ShardingType: " << sharding_type << "):\n"
-                << sharding.DebugString();
+                << sharding.DebugString()
+                << ", sharding.type()=" << sharding.type();
   return sharding;
 }
 
@@ -588,8 +575,8 @@ std::vector<torch::lazy::BackendDataPtr> ShardingUtil::CreateShardedPlaceholder(
     // hold the corresponding computation results for both sharding &
     // replication.
     auto sharded_data_placeholder =
-        runtime::GetComputationClient()->WrapDataShards(
-            {}, GetVirtualDevice().toString(), sharding_specs[i]->shape,
+        runtime::GetComputationClient()->CreateDataPlaceholder(
+            GetVirtualDevice().toString(), sharding_specs[i]->shape,
             sharding_specs[i]->sharding);
 
     // Register the sharded data placeholder to the tensor and its node.
@@ -644,8 +631,8 @@ void ShardingUtil::PrepareOutputShardingPropagation(
     // hold the corresponding computation results for both sharding &
     // replication.
     auto sharded_data_placeholder =
-        runtime::GetComputationClient()->WrapDataShards(
-            {}, GetVirtualDevice().toString(), (*sharding_specs)[i]->shape,
+        runtime::GetComputationClient()->CreateDataPlaceholder(
+            GetVirtualDevice().toString(), (*sharding_specs)[i]->shape,
             (*sharding_specs)[i]->sharding);
 
     // Register the sharded data placeholder to the tensor and its node.
@@ -684,7 +671,7 @@ runtime::ComputationClient::DataPtr ShardingUtil::CreateShardedData(
     source_tensors.push_back(std::make_shared<runtime::AtenSource>(
         local_shards[j], shard_shape, devices[j]));
   }
-  return runtime::GetComputationClient()->TransferShardsToServer(
+  return runtime::GetComputationClient()->TransferShardsToDevice(
       source_tensors, GetVirtualDevice().toString(), global_shape, sharding);
 }
 

@@ -407,3 +407,11 @@ variables:
           with XLA_SAVE_TENSORS_FMT='hlo' and XLA_SAVE_TENSORS_FILE='your/location'.
       type: bool
       default_value: false
+    XLA_DISABLE_FUNCTIONALIZATION:
+      description:
+        - Setting this to true will disable functionalization, which is a dispatcher 
+          pass in PyTorch that remove views and mutations to produce functional graphs.
+          This flag's main purpose is to A/B test the impact of functionalization in 
+          your code.
+      type: bool
+      default_value: false

@@ -111,10 +111,29 @@ class Mesh:
     Return the OpSharding for the given partition spec. This is an expensive
     operation as the mesh grows, so the value is cached for reuse.
     """
+    # For scalar tensors, it can only be replicated.
+    # We have made sure len(t.shape) == len(partition_spec)
+    # in mark_sharding API.
+    if len(partition_spec) == 0:
+      return torch_xla._XLAC.OpSharding([], [], [], ShardingType.REPLICATED)
+
     tile_assignment, group_assignment, replication_groups, sharding_type = self._get_op_sharding_args(
         partition_spec)
     return torch_xla._XLAC.OpSharding(tile_assignment, group_assignment,
                                       replication_groups, sharding_type)
+
+
+_GLOBAL_MESH: Mesh = None
+
+
+def set_global_mesh(mesh: Mesh):
+  global _GLOBAL_MESH
+  _GLOBAL_MESH = mesh
+
+
+def get_global_mesh():
+  global _GLOBAL_MESH
+  return _GLOBAL_MESH
 
 
 # HybridDevice class has been inspired from jax's mesh_utils: https://github.com/google/jax/blob/fc5960f2b8b7a0ef74dbae4e27c5c08ff1564cff/jax/experimental/mesh_utils.py#L4ƒ
@@ -640,3 +659,23 @@ class XLAPatchedLinear(torch.autograd.Function):
 
 def xla_patched_nn_linear_forward(m, input):
   return XLAPatchedLinear.apply(input, m.weight, m.bias)
+
+
+def apply_backward_optimization_barrier(m: torch.nn.Module):
+  """
+  Register a full backward hook that apply an optimization barrier to the given module.
+  This will prevent the XLA compiler from fusing the module's backward pass with others.
+  It's useful to prevent gigantic buffers being allocated to synchronize the gradients.
+  """
+
+  def optimization_barrier(module, grad_input, grad_output):
+    from torch_xla.utils.checkpoint import CheckpointFunction
+    gradients = []
+    for param in module.parameters():
+      if param.grad != None:
+        gradients.append(param.grad)
+    xm.optimization_barrier_(
+        CheckpointFunction._extract_tensors_from_list(gradients +
+                                                      list(grad_input)))
+
+  m.register_full_backward_hook(optimization_barrier)
