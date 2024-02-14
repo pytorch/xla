@@ -42,5 +42,6 @@ jobs:
           XLA_EXPERIMENTAL=nonzero:masked_select python3 -u test/ds/test_dynamic_shapes.py -v
           python3 -u test/test_autocast.py
           python3 -u test/dynamo/test_dynamo.py
+          python3 -u test/test_fori_loop_with_while_loop_simple_add_dispatch_in_torch.py
           # TODO(mbzomowski): Uncomment once https://github.com/pytorch/xla/issues/6252 is fixed
           # python3 -u test/spmd/test_spmd_debugging.py
