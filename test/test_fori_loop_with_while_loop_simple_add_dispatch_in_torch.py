@@ -3,6 +3,7 @@ import unittest
 from typing import Callable, Dict, List
 
 import torch
+import torch_xla
 from torch._higher_order_ops.while_loop import while_loop, while_loop_dense
 import torch_xla.core.xla_model as xm
 import torch_xla.core.xla_builder as xb
