@@ -343,3 +343,9 @@ class TpuPlugin(plugins.DevicePlugin):
 
   def physical_chip_count(self):
     return num_available_chips()
+
+  def client_create_options(self):
+    return {
+        'max_inflight_computations':
+            xu.getenv_as('XLA_TPU_MAX_INFLIGHT_COMPUTATIONS', int, 4)
+    }
