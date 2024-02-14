@@ -1554,17 +1554,6 @@ void InitXlaModuleBindings(py::module m) {
                       /*warm_up_cache_only=*/true);
         },
         py::arg("tensors"), py::arg("devices"));
-  // m.def("_xla_while_loop_fn",
-  //       [](const std::vector<at::Tensor>& cond_fn,
-  //          const std::vector<at::Tensor>& body_fn,
-  //          const std::vector<at::Tensor>& operands) {
-  //         std::vector<at::Tensor> results;
-  //         {
-  //           NoGilSection nogil;
-  //           results = XlaWhileLoopFn(cond_fn, body_fn, operands);
-  //         }
-  //         return results;
-  //       });
   m.def("_xla_sync_live_tensors",
         [](const std::string& device, const std::vector<std::string>& devices,
            bool wait) {

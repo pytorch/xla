@@ -565,15 +565,6 @@ class Op(object):
     condition_computation = Op.make_computation('Condition',
                                                 condition_computation, (self,))
     body_computation = Op.make_computation('Body', body_computation, (self,))
-
-    print("condition_computation type: ", type(condition_computation))
-    condition_computation_hlo = get_computation_hlo(condition_computation)
-    print("condition_computation hlo: ", condition_computation_hlo)
-
-    print("body_computation type: ", type(body_computation))
-    body_computation_hlo = get_computation_hlo(body_computation)
-    print("body_computation hlo: ", body_computation_hlo)
-    
     return mkop(
         'While', (self.op,),
         condition_computation=condition_computation,
