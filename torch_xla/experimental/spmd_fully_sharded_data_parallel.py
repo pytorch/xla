@@ -8,6 +8,7 @@ from torch._prims_common import TensorLike, TensorSequenceType
 import numpy as np
 
 import torch_xla
+import torch_xla.core.xla_model as xm
 import torch_xla.distributed.spmd as spmd
 from torch_xla.distributed.fsdp.wrap import recursive_wrap
 
@@ -94,7 +95,9 @@ class SpmdFullyShardedDataParallel(nn.Module):
       )
       self._auto_wrap(auto_wrap_kwargs, fsdp_kwargs)
 
-    self._orig_module = module
+    # Let's move the module to xla device in case it's not moved
+    # by the caller already.
+    self._orig_module = module.to(xm.xla_device())
     self._mesh = mesh
 
     # Only handle params which are not already sharded. This enables

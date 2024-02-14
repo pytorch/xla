@@ -2,10 +2,10 @@
 // stablehlo.uniform_quantize/dequantize to be converted to stablehlo.uniform_quantize/dequantize.
 // The patch can be removed after quantize/dequantize, quantized dtype support is added to HLO.
 diff --git a/xla/translate/hlo_to_mhlo/BUILD b/xla/translate/hlo_to_mhlo/BUILD
-index f74973ae1..8e3f0e06b 100644
+index cd6e427c3..9deecdcb2 100644
 --- a/xla/translate/hlo_to_mhlo/BUILD
 +++ b/xla/translate/hlo_to_mhlo/BUILD
-@@ -67,6 +67,7 @@ cc_library(
+@@ -68,6 +68,7 @@ cc_library(
          "@llvm-project//mlir:ArithDialect",
          "@llvm-project//mlir:AsmParser",
          "@llvm-project//mlir:FuncDialect",
@@ -14,13 +14,13 @@ index f74973ae1..8e3f0e06b 100644
          "@llvm-project//mlir:SparseTensorDialect",
          "@tsl//tsl/platform:statusor",
 diff --git a/xla/translate/hlo_to_mhlo/hlo_function_importer.cc b/xla/translate/hlo_to_mhlo/hlo_function_importer.cc
-index 08d5f49c8..2f9ad1e0b 100644
+index 5e5e32652..d246383bd 100644
 --- a/xla/translate/hlo_to_mhlo/hlo_function_importer.cc
 +++ b/xla/translate/hlo_to_mhlo/hlo_function_importer.cc
-@@ -664,6 +664,70 @@ StatusOr<mlir::Operation*> HloFunctionImporter::ImportInstruction(
+@@ -669,6 +669,71 @@ StatusOr<mlir::Operation*> HloFunctionImporter::ImportInstruction(
    return importer.ImportInstructionWithLayout(instr, operands, builder, mode);
  }
- 
+
 +Type getQuantizedType(mlir::DictionaryAttr& backend_config) {
 +  std::vector<double> scales;
 +  std::vector<int64_t> zero_points;
@@ -85,12 +85,13 @@ index 08d5f49c8..2f9ad1e0b 100644
 +  }
 +}
 +
- StatusOr<mlir::Operation*> HloFunctionImporter::ImportInstructionImpl(
-     const HloInstruction* instruction,
-     const llvm::SmallVectorImpl<mlir::Value>& operands,
-@@ -933,6 +997,25 @@ StatusOr<mlir::Operation*> HloFunctionImporter::ImportInstructionImpl(
++
+ StatusOr<mlir::Operation*> HloFunctionImporter::ImportCustomCallAsOp(
+     const HloInstruction* instruction, mlir::Location loc,
+     const Type result_type, mlir::ValueRange operands,
+@@ -992,6 +1057,25 @@ StatusOr<mlir::Operation*> HloFunctionImporter::ImportInstructionImpl(
                  "Couldn't parse backend config into a dictionary attribute");
- 
+
            attributes.push_back(builder_->getNamedAttr("backend_config", attr));
 +          auto backend_config = attr.cast<mlir::DictionaryAttr>();
 +          if (custom_call->custom_call_target() ==
@@ -115,13 +116,13 @@ index 08d5f49c8..2f9ad1e0b 100644
        } else {
          attributes.push_back(builder_->getNamedAttr(
 diff --git a/xla/translate/hlo_to_mhlo/hlo_module_importer.cc b/xla/translate/hlo_to_mhlo/hlo_module_importer.cc
-index 9f05992c8..03cf4840d 100644
+index f9edd1272..23a747fb1 100644
 --- a/xla/translate/hlo_to_mhlo/hlo_module_importer.cc
 +++ b/xla/translate/hlo_to_mhlo/hlo_module_importer.cc
 @@ -19,6 +19,8 @@ limitations under the License.
  #include <memory>
  #include <vector>
- 
+
 +#include "mlir/Dialect/Quant/QuantOps.h"
 +#include "mlir/Dialect/Quant/QuantTypes.h"
  #include "mlir/IR/Attributes.h"  // from @llvm-project
@@ -133,5 +134,5 @@ index 9f05992c8..03cf4840d 100644
    module.getContext()->loadDialect<mlir::mhlo::MhloDialect>();
 +  module.getContext()->loadDialect<mlir::quant::QuantizationDialect>();
  }
- 
+
  namespace {

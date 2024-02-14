@@ -38,7 +38,6 @@ class StableHLOInferenceTest(unittest.TestCase):
             b,
         ), constraints=constraints)
     shlo = exported_program_to_stablehlo(exported)
-    print(shlo.get_stablehlo_text())
     with tempfile.TemporaryDirectory() as tempdir:
       save_stablehlo_graph_as_tf(
           shlo,
