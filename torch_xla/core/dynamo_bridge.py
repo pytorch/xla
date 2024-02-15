@@ -2,6 +2,7 @@ import copy
 import dataclasses
 import operator
 import warnings
+import weakref
 
 import functools
 import itertools
@@ -38,14 +39,17 @@ class GraphInputMatcher:
   TS/XLA graph inputs.
   """
 
-  tensor_id_to_arg_idx: Dict[int, int]
-  graph_input_tensor_ids: List[int]
-  # there are 2 categories of graph_input_tensors.
-  # Category 1: those whose id are not found in tensor_id_to_arg_idx. These are
-  # most likely const tensors and we can get its content from graph_input_tensors
-  # Category 2: those whose id are found in tensor_id_to_arg_idx. We should get
-  #  the tensor from method arguments
-  graph_input_xla_values: List[Any]
+  def __init__(self, tensor_id_to_arg_idx: Dict[int, int], graph_input_tensor_ids: List[int], graph_input_xla_values: List[torch.tensor]):
+    self.tensor_id_to_arg_idx = tensor_id_to_arg_idx
+    self.graph_input_tensor_ids = graph_input_tensor_ids
+    # there are 2 categories of graph_input_tensors.
+    # Category 1: those whose id are not found in tensor_id_to_arg_idx. These are
+    # most likely const tensors and we can get its content from graph_input_tensors
+    # Category 2: those whose id are found in tensor_id_to_arg_idx. We should get
+    #  the tensor from method arguments
+    self.graph_input_xla_values = []
+    for tensor in graph_input_xla_values:
+      self.graph_input_xla_values.append(weakref.ref(tensor))
 
   # get the real graph input tensors
   def __call__(self, args):
