@@ -373,7 +373,7 @@ class TorchBenchModel(BenchmarkModel):
 
   def conversion_dtype(self):
     if self.is_training() or self.use_amp():
-      return super().dtype()
+      return super().conversion_dtype()
 
     # From here, we are running inference without AMP, for sure.
     # Do we have to use float16, instead of bfloat16?
