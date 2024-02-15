@@ -112,6 +112,7 @@ NEED_LARGER_CACHE = {
     "hf_T5_generate",
 }
 
+# This list was extracted from PyTorch's repository: benchmarks/dynamo/torchbench.py
 FORCE_AMP_FOR_FP16_BF16_MODELS = {
     "DALLE2_pytorch",
     "doctr_det_predictor",
@@ -122,7 +123,36 @@ FORCE_AMP_FOR_FP16_BF16_MODELS = {
     "detectron2_fcos_r_50_fpn",
 }
 
+# This list was extracted from PyTorch's repository: benchmarks/dynamo/torchbench.py
 FORCE_FP16_FOR_BF16_MODELS = {"vision_maskrcnn"}
+
+# Some models have large dataset that doesn't fit in memory. Lower the batch
+# size to test the accuracy.
+# This list was extracted from PyTorch's repository: benchmarks/dynamo/torchbench.py
+USE_SMALL_BATCH_SIZE = {
+    "demucs": 4,
+    "dlrm": 1024,
+    "densenet121": 4,
+    "hf_Reformer": 4,
+    "hf_T5_base": 4,
+    "timm_efficientdet": 1,
+    "llama_v2_7b_16h": 1,
+    # reduced from 16 due to cudagraphs OOM in TorchInductor dashboard
+    "yolov3": 8,
+}
+
+# This list was extracted from PyTorch's repository: benchmarks/dynamo/torchbench.py
+INFERENCE_SMALL_BATCH_SIZE = {
+    "timm_efficientdet": 32,
+}
+
+# This list was extracted from PyTorch's repository: benchmarks/dynamo/torchbench.py
+DONT_CHANGE_BATCH_SIZE = {
+    "demucs",
+    "pytorch_struct",
+    "pyhpc_turbulent_kinetic_energy",
+    "vision_maskrcnn",  # https://github.com/pytorch/benchmark/pull/1656
+}
 
 
 class TorchBenchModelLoader(ModelLoader):
@@ -309,10 +339,19 @@ class TorchBenchModel(BenchmarkModel):
     return None
 
   def load_benchmark(self):
-    cant_change_batch_size = (not getattr(self.benchmark_cls(),
-                                          "ALLOW_CUSTOMIZE_BSIZE", True))
+    cant_change_batch_size = (
+        not getattr(self.benchmark_cls(), "ALLOW_CUSTOMIZE_BSIZE", True) or
+        model_name in DONT_CHANGE_BATCH_SIZE)
+
     if cant_change_batch_size:
       self.benchmark_experiment.batch_size = None
+
+    if self.benchmark_experiment.batch_size is not None:
+      batch_size = self.benchmark_experiment.batch_size
+    elif self.is_training() and self.model_name in USE_SMALL_BATCH_SIZE:
+      batch_size = USE_SMALL_BATCH_SIZE[self.model_name]
+    elif self.is_inference() and self.model_name in INFERENCE_SMALL_BATCH_SIZE:
+      batch_size = INFERENCE_SMALL_BATCH_SIZE[self.model_name]
 
     # workaround "RuntimeError: not allowed to set torch.backends.cudnn flags"
     # torch.backends.__allow_nonbracketed_mutation_flag = True
@@ -324,7 +363,7 @@ class TorchBenchModel(BenchmarkModel):
     return self.benchmark_cls()(
         test=self.benchmark_experiment.test,
         device=device,
-        batch_size=self.benchmark_experiment.batch_size,
+        batch_size=batch_size,
     )
 
   def update_process_env(self, process_env):
