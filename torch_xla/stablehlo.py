@@ -248,9 +248,8 @@ class XLAExportInterpreter(torch.fx.Interpreter):
         args = tuple(
             map(
                 lambda arg_spec: torch.tensor(arg_spec[0])
-                if isinstance(arg_spec[0], (float, int)) and type(arg_spec[
-                    1].type) == torch.TensorType else arg_spec[0],
-                args_and_specs))
+                if isinstance(arg_spec[0], float) and type(arg_spec[1].type) ==
+                torch.TensorType else arg_spec[0], args_and_specs))
     return super().call_function(target, args, new_kwargs)
 
   def run_node(self, n) -> Any:
