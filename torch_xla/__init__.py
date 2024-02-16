@@ -53,7 +53,7 @@ def _setup_libtpu_flags():
   # and when they are async this incurs little overhead but significantly
   # improves device memory usage.
   flags = _set_missing_flags(
-      flags, (('xla_tpu_prefer_async_allgather_to_allreduce', 'true')))
+      flags, (('xla_tpu_prefer_async_allgather_to_allreduce', 'true'),))
 
   if tpu.version() == 5:
     default_v5_flags = {
