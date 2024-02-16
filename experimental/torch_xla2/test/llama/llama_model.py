@@ -132,8 +132,6 @@ class Transformer(nn.Module):
     self.norm = RMSNorm(config.dim, eps=config.norm_eps)
     self.output = nn.Linear(config.dim, config.vocab_size, bias=False)
 
-    self.freqs_cis: Optional[Tensor] = None
-    self.mask_cache: Optional[Tensor] = None
     self.max_batch_size = -1
     self.max_seq_length = -1
 
@@ -149,13 +147,15 @@ class Transformer(nn.Module):
       b.attention.kv_cache = KVCache(max_batch_size, max_seq_length,
                                      self.config.n_local_heads, head_dim)
 
-    self.freqs_cis = precompute_freqs_cis(
+    freqs_cis = precompute_freqs_cis(
         self.config.block_size,
         self.config.dim // self.config.n_head,
         self.config.rope_base,
     )
-    self.causal_mask = torch.tril(
+    self.register_buffer('freqs_cis', freqs_cis)
+    causal_mask = torch.tril(
         torch.ones(self.max_seq_length, self.max_seq_length, dtype=torch.bool))
+    self.register_buffer('causal_mask', causal_mask)
 
   def forward(self, idx: Tensor, input_pos: Optional[Tensor] = None) -> Tensor:
     assert self.freqs_cis is not None, "Caches must be initialized first"
