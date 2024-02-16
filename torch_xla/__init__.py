@@ -32,7 +32,8 @@ def _setup_xla_flags():
   flags = _set_missing_flags(flags,
                              (('xla_gpu_force_compilation_parallelism', '8'),))
   flags = _set_missing_flags(flags, (('xla_tpu_run_space_to_batch', 'false'),))
-  flags = _set_missing_flags(flags, (('xla_tpu_run_space_to_batch_on_new_platforms', 'false'),))
+  flags = _set_missing_flags(
+      flags, (('xla_tpu_run_space_to_batch_on_new_platforms', 'false'),))
   os.environ['XLA_FLAGS'] = ' '.join(flags)
 
 
