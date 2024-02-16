@@ -435,25 +435,21 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.amin, args, kwargs)
 
-  @unittest.skip
   def test_aten_any_0(self):
     args = (torch.randn((10, 10)).to(torch.float32),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.any, args, kwargs)
 
-  @unittest.skip
   def test_aten_any_1(self):
     args = (torch.randn((10, 10)).to(torch.float16),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.any, args, kwargs)
 
-  @unittest.skip
   def test_aten_any_2(self):
     args = (torch.randint(0, 10, (10, 10)).to(torch.int32),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.any, args, kwargs)
 
-  @unittest.skip
   def test_aten_any_dim_0(self):
     args = (
         torch.randn((10, 10)).to(torch.float32),
@@ -462,7 +458,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.any.dim, args, kwargs)
 
-  @unittest.skip
   def test_aten_any_dim_1(self):
     args = (
         torch.randn((10, 10)).to(torch.float16),
@@ -471,7 +466,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.any.dim, args, kwargs)
 
-  @unittest.skip
   def test_aten_any_dim_2(self):
     args = (
         torch.randint(0, 10, (10, 10)).to(torch.int32),
@@ -480,19 +474,16 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.any.dim, args, kwargs)
 
-  @unittest.skip
   def test_aten_any_dims_0(self):
     args = (torch.randn((10, 10)).to(torch.float32),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.any.dims, args, kwargs)
 
-  @unittest.skip
   def test_aten_any_dims_1(self):
     args = (torch.randn((10, 10)).to(torch.float16),)
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.any.dims, args, kwargs)
 
-  @unittest.skip
   def test_aten_any_dims_2(self):
     args = (torch.randint(0, 10, (10, 10)).to(torch.int32),)
     kwargs = dict()
