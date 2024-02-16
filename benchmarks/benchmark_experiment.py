@@ -74,7 +74,7 @@ class ExperimentLoader:
 
     # Check dynamo backend-specifics constraints.
     if cfg_dynamo == "inductor":
-      if cfg_accelerator != "cuda" or cfg_xla is not None:
+      if cfg_accelerator == "tpu" or cfg_xla is not None:
         return False
     elif cfg_dynamo == "openxla_eval":
       if cfg_xla is None or cfg_test != "eval":
