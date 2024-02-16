@@ -1,5 +1,6 @@
 import torch_xla
 import torch_xla.core.xla_model as xm
+import torch_xla.debug.metrics as met
 from torch_xla.stablehlo import exported_program_to_stablehlo
 from torch.utils import _pytree as pytree
 import torch
@@ -53,6 +54,8 @@ def run_export_and_compare(testcase,
       kwargs2 = pytree.tree_map_only(torch.Tensor,
                                      lambda x: x.to(device=device), kwargs)
       res_xla = func(*args2, **kwargs2)
+      with testcase.subTest('torch_xla_metric'):
+        testcase.assertNotIn("aten::", met.metrics_report())
       with testcase.subTest('torch_xla_diff:' + str(atol)):
         diff_output(
             testcase, res, res_xla, atol=atol, rtol=rtol, equal_nan=equal_nan)
@@ -71,6 +74,7 @@ class AtenOpTest(unittest.TestCase):
 
   def setUp(self):
     torch.manual_seed(0)
+    met.clear_all()
 
   def test_aten_abs_0(self):
     args = (torch.randn((10, 10)).to(torch.float32),)
