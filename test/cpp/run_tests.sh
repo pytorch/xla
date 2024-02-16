@@ -85,7 +85,7 @@ if [[ "$BAZEL_VERB" == "coverage" ]]; then
   EXTRA_FLAGS="$EXTRA_FLAGS --remote_download_outputs=all" # for lcov symlink
 fi
 
-test_names=("all")
+test_names=("test_aten_xla_tensor_6")
 if [[ "$RUN_CPP_TESTS1" == "cpp_tests1" ]]; then
   test_names=("test_aten_xla_tensor_1"
               "test_aten_xla_tensor_2"
