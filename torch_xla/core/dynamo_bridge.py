@@ -38,14 +38,21 @@ class GraphInputMatcher:
   TS/XLA graph inputs.
   """
 
-  tensor_id_to_arg_idx: Dict[int, int]
-  graph_input_tensor_ids: List[int]
-  # there are 2 categories of graph_input_tensors.
-  # Category 1: those whose id are not found in tensor_id_to_arg_idx. These are
-  # most likely const tensors and we can get its content from graph_input_tensors
-  # Category 2: those whose id are found in tensor_id_to_arg_idx. We should get
-  #  the tensor from method arguments
-  graph_input_xla_values: List[Any]
+  def __init__(self, tensor_id_to_arg_idx: Dict[int, int],
+               graph_input_tensor_ids: List[int],
+               graph_input_xla_values: List[torch.tensor],
+               xla_args_tensor_id: Set[int]):
+    self.tensor_id_to_arg_idx = tensor_id_to_arg_idx
+    self.graph_input_tensor_ids = graph_input_tensor_ids
+    # there are 2 categories of graph_input_tensors.
+    # Category 1: those whose id are not found in tensor_id_to_arg_idx. These are
+    # most likely const tensors and we can get its content from graph_input_tensors
+    # Category 2: those whose id are found in tensor_id_to_arg_idx. We should get
+    #  the tensor from method arguments
+    self.graph_input_xla_values = graph_input_xla_values
+    for idx, id in enumerate(graph_input_tensor_ids):
+      if id in xla_args_tensor_id:
+        self.graph_input_xla_values[idx] = None
 
   # get the real graph input tensors
   def __call__(self, args):
@@ -64,6 +71,7 @@ class GraphInputMatcher:
         xm.set_rng_state(
             (1012031 + inp.item() * 7012063) % 18446744073709551615, str_device)
       elif arg_idx is None:
+        assert traced_xla_value is not None
         inp = traced_xla_value
       else:
         inp = args[arg_idx]
@@ -212,6 +220,9 @@ def is_xla_tensor(tensor: torch.Tensor) -> bool:
 
 def extract_graph_helper(xla_model: torch.fx.GraphModule):
   xla_args = xla_model.xla_args
+  xla_args_tensor_ids = set()
+  for t in xla_args:
+    xla_args_tensor_ids.add(torch_xla._XLAC._xla_get_tensor_id(t))
   assert all(
       map(
           is_xla_tensor,
@@ -302,10 +313,11 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule):
   assert len(graph_input_tensor_ids) == len(
       graph_input_xla_values
   ), f"{len(graph_input_tensor_ids)} v.s. {len(graph_input_xla_values)}"
+  # import pdb;pdb.set_trace()
   graph_input_matcher = GraphInputMatcher(tensor_id_to_arg_idx,
                                           graph_input_tensor_ids,
-                                          graph_input_xla_values)
-
+                                          graph_input_xla_values,
+                                          xla_args_tensor_ids)
   # compiles and cache graph rooted at tensors in 'args_and_out'
   torch_xla._XLAC._xla_warm_up_cache(args_and_out, [])
 
