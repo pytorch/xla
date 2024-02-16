@@ -2697,7 +2697,6 @@ class AtenOpTest(unittest.TestCase):
                            torch.ops.aten._native_batch_norm_legit_no_training,
                            args, kwargs)
 
-  @unittest.skip
   def test_aten_native_dropout_0(self):
     args = (
         torch.randn((10, 10)).to(torch.float32),
