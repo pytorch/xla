@@ -5,7 +5,7 @@ import re
 import torch
 import torch.nn as nn
 from torch._dynamo.testing import collect_results
-from util import move_to_device
+from util import cast_to_dtype, move_to_device
 
 logger = logging.getLogger(__name__)
 
@@ -104,8 +104,17 @@ class BenchmarkModel:
       # optimizer to use. So only initialize it when there is none existing.
       self.optimizer = self.optimizer_class(self.module.parameters(), lr=0.01)
 
+  def conversion_dtype(self):
+    return None
+
   def prepare_for_experiment(self, dynamo_compilation_opts):
     self.device = self.benchmark_experiment.get_device()
+    self.dtype = self.conversion_dtype()
+
+    if self.dtype is not None:
+      self.module = self.module.to(self.dtype)
+      self.example_inputs = cast_to_dtype(self.example_inputs, self.dtype)
+
     self.module = self.module.to(self.device)
     self.example_inputs = move_to_device(self.example_inputs, self.device)
 
