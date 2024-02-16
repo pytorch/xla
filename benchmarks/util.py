@@ -80,6 +80,15 @@ def move_to_device(item, device):
   return pytree.tree_map_only(torch.Tensor, lambda t: t.to(device), item)
 
 
+def cast_to_dtype(item, dtype):
+  return pytree.tree_map_only(
+      torch.Tensor,
+      lambda t: t.to(dtype)
+      if isinstance(t, torch.Tensor) and t.is_floating_point() else t,
+      item,
+  )
+
+
 def randomize_input(inputs):
   if isinstance(inputs, torch.Tensor):
     if inputs.dtype in (torch.float32, torch.float64):
