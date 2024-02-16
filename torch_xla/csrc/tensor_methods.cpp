@@ -1261,18 +1261,14 @@ embedding_bag(const XLATensorPtr& weight, const XLATensorPtr& indices,
               int64_t mode, bool sparse,
               const c10::optional<at::Tensor>& per_sample_weights,
               bool include_last_offset, int64_t padding_idx) {
-  return tensor_ops::EmbeddingBag(
-      weight, indices, offsets, scale_grad_by_freq, int64_t mode, bool sparse,
-      const c10::optional<at::Tensor>& per_sample_weights, include_last_offset,
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<EmbeddingBag>(
+      weight->GetIrValue(), indices->GetIrValue(), offsets->GetIrValue(),
+      scale_grad_by_freq, mode, sparse, per_sample_weights, include_last_offset,
       padding_idx);
-  // torch::lazy::NodePtr node = torch::lazy::MakeNode<EmbeddingBag>(
-  //     weight->GetIrValue(), indices->GetIrValue(), offsets->GetIrValue(),
-  //     scale_grad_by_freq, mode, sparse, per_sample_weights, include_last_offset,
-  //     padding_idx);
-  // return std::make_tuple(weight->CreateFrom(torch::lazy::Value(node, 0)),
-  //                        weight->CreateFrom(torch::lazy::Value(node, 1)),
-  //                        weight->CreateFrom(torch::lazy::Value(node, 2)),
-  //                        weight->CreateFrom(torch::lazy::Value(node, 3)));
+  return std::make_tuple(weight->CreateFrom(torch::lazy::Value(node, 0)),
+                         weight->CreateFrom(torch::lazy::Value(node, 1)),
+                         weight->CreateFrom(torch::lazy::Value(node, 2)),
+                         weight->CreateFrom(torch::lazy::Value(node, 3)));
 }
 
 XLATensorPtr embedding(const XLATensorPtr& weight,
