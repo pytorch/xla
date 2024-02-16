@@ -393,7 +393,6 @@ class TorchBenchModel(BenchmarkModel):
       kwargs["dtype"] = torch.bfloat16
 
     if self.use_amp():
-      kwargs = {"dtype": torch.bfloat16}
       if self.benchmark_experiment.xla:
         # Should call device specific autocast implementations.
         # PyTorch/XLA autocast does not run with dynamo, though:
