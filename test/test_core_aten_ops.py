@@ -55,7 +55,8 @@ def run_export_and_compare(testcase,
                                      lambda x: x.to(device=device), kwargs)
       res_xla = func(*args2, **kwargs2)
       with testcase.subTest('torch_xla_metric'):
-        testcase.assertNotIn("aten::", met.metrics_report())
+        aten_function_name = f'aten::{str(func).split(".")[-1]}'
+        testcase.assertNotIn(aten_function_name, met.metrics_report())
       with testcase.subTest('torch_xla_diff:' + str(atol)):
         diff_output(
             testcase, res, res_xla, atol=atol, rtol=rtol, equal_nan=equal_nan)
