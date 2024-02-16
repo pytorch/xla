@@ -23,6 +23,16 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& weight,
   // return xla::ShapeUtil::MakeShape(weight_shape.element_type(), dimensions);
 }
 
+xla::XlaOp MakeOffsetToBag(xla::XlaOp weight, xla::XlaOp indices,
+                           xla::XlaOp offsets, xla::XlaOp per_sample_weights,
+                           int64_t padding_idx, int64_t mode) {
+  xla::XlaOp offsets_to_bag = xla::ZerosLike(indices);
+  Shape offset_shape = offsets.Shape();
+  xla::XlaOp ones =
+      Broadcast(One(offset.builder(), offset_shape.element_type()),
+                offset_shape.dimensions());
+  index_add(offsets_to_bag, )
+}
 }  // namespace
 
 std::string EmbeddingBag::ToString() const {
@@ -57,7 +67,13 @@ torch::lazy::NodePtr EmbeddingBag::Clone(torch::lazy::OpList operands) const {
 }
 
 XlaOpVector EmbeddingBag::Lower(LoweringContext* loctx) const {
-  xla::XlaOp input = loctx->GetOutputOp(operand(0));
+  xla::XlaOp weight = loctx->GetOutputOp(operand(0));
+  xla::XlaOp indices = loctx->GetOutputOp(operand(1));
+  xla::XlaOp offsets = loctx->GetOutputOp(operand(2));
+  xla::XlaOp per_sample_weights = loctx->GetOutputOp(operand(3));
+
+  xla::XlaOp output2 = MakeOffsetToBag(weight, indices, offsets,
+                                       per_sample_weights, padding_idx_, mode_);
   xla::XlaOp output1 = xla::Log(input);
   xla::XlaOp output2 = xla::Log(input);
   xla::XlaOp output3 = xla::Log(input);
