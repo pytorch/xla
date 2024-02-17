@@ -25,13 +25,13 @@ def while_loop(cond_fn, body_fn, operands):
 
 def _xla_while_loop(cond_fn, body_fn, operands):
   def op_fn(internal_x):
-    def cond_fn_placeholder(x):
-      return counter < xb.Op.scalar(x.builder(), 10, dtype=xb.Type.S32)
+    def cond_fn_placeholder(counter, internal_x):
+      return counter < xb.Op.scalar(internal_x.builder(), 10, dtype=xb.Type.S32)
 
-    def body_fn_placeholder(x):
+    def body_fn_placeholder(counter, internal_x):
       next_counter = counter + xb.Op.scalar(counter.builder(), 1, dtype=xb.Type.S32)
-      x = x + xb.Op.scalar(x.builder(), 1, dtype=xb.Type.S32)
-      return xb.Op.tuple((next_counter, x))
+      internal_x = internal_x + xb.Op.scalar(internal_x.builder(), 1, dtype=xb.Type.S32)
+      return xb.Op.tuple((next_counter, internal_x))
 
     # device = xm.xla_device()
     # x = torch.ones(1, dtype=torch.int, device=device)
