@@ -25,18 +25,18 @@ class WhileLoopTest(unittest.TestCase):
     def test_while_loop_tpu(self):
         def cond_fn(counter, x):
             # z = torch.tensor(10, device=xm.xla_device())
-            # return x < z
-            return counter < xb.Op.scalar(x.builder(), 10, dtype=xb.Type.S32)
+            return x < 10
+            # return counter < xb.Op.scalar(x.builder(), 10, dtype=xb.Type.S32)
 
         def body_fn(counter, x):
             # y = torch.tensor(1, device=xm.xla_device())
-            # return (x + y,)
-            next_counter = counter + xb.Op.scalar(counter.builder(), 1, dtype=xb.Type.S32)
-            x = x + xb.Op.scalar(x.builder(), 1, dtype=xb.Type.S32)
-            return xb.Op.tuple((next_counter, x))
+            return (x + 1,)
+            # next_counter = counter + xb.Op.scalar(counter.builder(), 1, dtype=xb.Type.S32)
+            # x = x + xb.Op.scalar(x.builder(), 1, dtype=xb.Type.S32)
+            # return xb.Op.tuple((next_counter, x))
 
-        device = xm.xla_device()
-        x = torch.ones(1, dtype=torch.int, device=device)
+        # device = xm.xla_device()
+        x = torch.ones(1) # , dtype=torch.int, device=device)
         # res = while_loop(cond_fn, body_fn, (x, ))
         res = while_loop(cond_fn, body_fn, (x, ))
         print("while_loop result: ", res)
