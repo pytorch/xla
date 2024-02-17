@@ -2,19 +2,18 @@
 import numpy as np
 import torch
 import torch_xla
-from torch.library import Library, impl
-import torch
-import torch_xla
+# from torch.library import Library, impl
 import torch_xla.core.xla_builder as xb
 import torch_xla.core.xla_model as xm
 import torch_xla.utils.utils as xu
 import torch_xla.core.xla_op_registry as xor
-import torch.utils._pytree as pytree
+# import torch.utils._pytree as pytree
 
 from torch._C import DispatchKey
 from torch._ops import HigherOrderOperator
-
-while_loop_op = HigherOrderOperator("while_loop")
+import torch._higher_order_ops.while_loop # make sure they implement this line code: `while_loop_op = HigherOrderOperator("while_loop")`
+from torch._higher_order_ops.while_loop import while_loop_op
+# while_loop_op = HigherOrderOperator("while_loop")
 
 
 @while_loop_op.py_impl(DispatchKey.XLA)
