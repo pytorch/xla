@@ -46,12 +46,12 @@ class WhileLoopTest(unittest.TestCase):
         self.assertEqual(expected, res[0])
 
     def test_while_loop_tpu_xla(self):
-        def cond_fn(x):
+        def cond_fn(counter, x):
             # z = torch.tensor(10, device=xm.xla_device())
             # return x.sum() <= 10
             return counter < xb.Op.scalar(x.builder(), 10, dtype=xb.Type.S32)
 
-        def body_fn(x):
+        def body_fn(counter, x):
             # y = torch.tensor(1, device=xm.xla_device())
             # return (x+1, )
             next_counter = counter + xb.Op.scalar(counter.builder(), 1, dtype=xb.Type.S32)
