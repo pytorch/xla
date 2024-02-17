@@ -108,8 +108,6 @@ DENY_LIST = {
             "accelerator": "tpu"
         },  # The eval test only supports CPU
     ],
-    # self.load_benchmark() exits the main process. See issue #6207.
-    "pytorch_CycleGAN_and_pix2pix": [{}],
     "pyhpc_equation_of_state": [{
         "test": "train"
     },],  # Model's DEFAULT_TRAIN_BSIZE is not implemented
@@ -119,12 +117,6 @@ DENY_LIST = {
     "pyhpc_turbulent_kinetic_energy": [{
         "test": "train"
     },],  # Model's DEFAULT_TRAIN_BSIZE is not implemented
-    "pytorch_unet": [
-        {
-            # self.load_benchmark() exits the main process. See issue #6207.
-            "xla": "PJRT",
-        },
-    ],
     "resnet50_quantized_qat": [
         {
             "test": "eval",
