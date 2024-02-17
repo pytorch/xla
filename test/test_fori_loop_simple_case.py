@@ -58,7 +58,7 @@ class WhileLoopTest(unittest.TestCase):
             x = x + xb.Op.scalar(x.builder(), 1, dtype=xb.Type.S32)
             return xb.Op.tuple((next_counter, x))
 
-        # device = xm.xla_device()
+        device = xm.xla_device()
         xx = torch.zeros(1, dtype=torch.int, device=device)
         # res = while_loop(cond_fn, body_fn, (x, ))
         res = while_loop(cond_fn, body_fn, (xx, ))
