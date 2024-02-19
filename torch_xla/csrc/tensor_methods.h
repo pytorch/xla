@@ -738,6 +738,12 @@ XLATensorPtr replication_pad2d_backward(const XLATensorPtr& grad_output,
                                         const XLATensorPtr& input,
                                         std::vector<int64_t> padding);
 
+XLATensorPtr replication_pad3d(const XLATensorPtr& input,
+                               std::vector<int64_t> padding);
+XLATensorPtr replication_pad3d_backward(const XLATensorPtr& grad_output,
+                                        const XLATensorPtr& input,
+                                        std::vector<int64_t> padding);
+
 void resize_(XLATensorPtr& input, std::vector<int64_t> size);
 
 XLATensorPtr roll(const XLATensorPtr& input, absl::Span<const int64_t> shifts,
