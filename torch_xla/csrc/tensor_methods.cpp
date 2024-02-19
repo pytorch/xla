@@ -97,8 +97,6 @@
 #include "torch_xla/csrc/ops/randperm.h"
 #include "torch_xla/csrc/ops/recv.h"
 #include "torch_xla/csrc/ops/reduce_scatter.h"
-#include "torch_xla/csrc/ops/reflection_pad3d.h"
-#include "torch_xla/csrc/ops/reflection_pad3d_backward.h"
 #include "torch_xla/csrc/ops/reflection_pad2d.h"
 #include "torch_xla/csrc/ops/reflection_pad2d_backward.h"
 #include "torch_xla/csrc/ops/replication_pad.h"
