@@ -97,6 +97,8 @@
 #include "torch_xla/csrc/ops/randperm.h"
 #include "torch_xla/csrc/ops/recv.h"
 #include "torch_xla/csrc/ops/reduce_scatter.h"
+#include "torch_xla/csrc/ops/reflection_pad3d.h"
+#include "torch_xla/csrc/ops/reflection_pad3d_backward.h"
 #include "torch_xla/csrc/ops/reflection_pad2d.h"
 #include "torch_xla/csrc/ops/reflection_pad2d_backward.h"
 #include "torch_xla/csrc/ops/replication_pad.h"
@@ -2344,6 +2346,20 @@ XLATensorPtr replication_pad2d_backward(const XLATensorPtr& grad_output,
   return input->CreateFrom(torch::lazy::MakeNode<ReplicationPadBackward>(
       grad_output->GetIrValue(), input->GetIrValue(), std::move(padding)));
 }
+
+XLATensorPtr replication_pad3d(const XLATensorPtr& input,
+                               std::vector<int64_t> padding) {
+  return input->CreateFrom(torch::lazy::MakeNode<ReplicationPad>(
+      input->GetIrValue(), std::move(padding)));
+}
+
+XLATensorPtr replication_pad3d_backward(const XLATensorPtr& grad_output,
+                                        const XLATensorPtr& input,
+                                        std::vector<int64_t> padding) {
+  return input->CreateFrom(torch::lazy::MakeNode<ReplicationPadBackward>(
+      grad_output->GetIrValue(), input->GetIrValue(), std::move(padding)));
+}
+
 
 void resize_(XLATensorPtr& input, std::vector<int64_t> size) {
   if (input->data()->view == nullptr) {
