@@ -16,7 +16,7 @@ class TestDevices(parameterized.TestCase):
                             (0, torch.device('xla:0')),
                             (3, torch.device('xla:3')))
   def test_device(self, index, expected):
-    device = xla.device(n=index)
+    device = xla.device(index)
     self.assertEqual(device, expected)
 
   def test_devices(self):
