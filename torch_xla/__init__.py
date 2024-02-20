@@ -182,3 +182,5 @@ from .experimental import plugins
 if os.getenv('XLA_REGISTER_INSTALLED_PLUGINS') == '1':
   plugins.use_dynamic_plugins()
   plugins.register_installed_plugins()
+
+from .torch_xla import *
