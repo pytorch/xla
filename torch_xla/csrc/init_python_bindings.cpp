@@ -1188,18 +1188,20 @@ void InitXlaModuleBindings(py::module m) {
         runtime::GetComputationClient()->GetAllDevices();
     return all_devices;
   });
-  m.def("_xla_real_devices", [](const std::optional<std::vector<std::string>> devices) {
-    if (!devices) {
-      return runtime::GetComputationClient()->GetLocalDevices();
-    }
+  m.def("_xla_real_devices",
+        [](const std::optional<std::vector<std::string>> devices) {
+          if (!devices) {
+            return runtime::GetComputationClient()->GetLocalDevices();
+          }
 
-    std::vector<std::string> xla_devices;
-    {
-      NoGilSection nogil;
-      xla_devices = GetXlaDevices(*devices);
-    }
-    return xla_devices;
-  }, py::arg("devices") = std::nullopt);
+          std::vector<std::string> xla_devices;
+          {
+            NoGilSection nogil;
+            xla_devices = GetXlaDevices(*devices);
+          }
+          return xla_devices;
+        },
+        py::arg("devices") = std::nullopt);
   m.def("_xla_set_replication_devices",
         [](const std::vector<std::string>& devices) {
           auto replication_devices =
