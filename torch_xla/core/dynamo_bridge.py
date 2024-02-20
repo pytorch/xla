@@ -16,6 +16,8 @@ from torch.fx.passes.utils.fuser_utils import topo_sort
 import torch._inductor
 from torch._inductor.fx_passes.post_grad import ConstructorMoverPass
 
+from torch.utils import _pytree as pytree
+
 import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as metrics
@@ -220,9 +222,11 @@ def is_xla_tensor(tensor: torch.Tensor) -> bool:
 
 def extract_graph_helper(xla_model: torch.fx.GraphModule):
   xla_args = xla_model.xla_args
-  xla_args_tensor_ids = set()
-  for t in xla_args:
-    xla_args_tensor_ids.add(torch_xla._XLAC._xla_get_tensor_id(t))
+  xla_args_tensor_ids = set(
+      pytree.tree_map_only(
+          torch.Tensor,
+          lambda xla_arg: torch_xla._XLAC._xla_get_tensor_id(xla_arg),
+          xla_args))
   assert all(
       map(
           is_xla_tensor,
