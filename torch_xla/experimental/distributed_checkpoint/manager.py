@@ -66,7 +66,10 @@ class CheckpointManager:
   >>> if tracked_steps:
   >>>   # Choose the highest step
   >>>   best_step = max(tracked_steps)
-  >>>   state_dict = {'model': model.state_dict()}
+  >>>   # Before restoring the checkpoint, the optimizer state must be primed
+  >>>   # to allow state to be loaded into it.
+  >>>   prime_optimizer(optim)
+  >>>   state_dict = {'model': model.state_dict(), 'optim': optim.state_dict()}
   >>>   chkpt_mgr.restore(best_step, state_dict)
   >>>   model.load_state_dict(state_dict['model'])
 

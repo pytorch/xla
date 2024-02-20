@@ -297,7 +297,7 @@ checkpointing directly to any fsspec-compatible filesystem, including GCS.
 Example usage of the CheckpointManager is below:
 
 ```python
-from torch_xla.experimental.distributed_checkpoint import CheckpointManager
+from torch_xla.experimental.distributed_checkpoint import CheckpointManager, prime_optimizer
 
 # Create a CheckpointManager to checkpoint every 10 steps into GCS.
 chkpt_mgr = CheckpointManager('gs://my-bucket/my-experiment', 10)
@@ -307,9 +307,13 @@ tracked_steps = chkpt_mgr.all_steps()
 if tracked_steps:
     # Choose the highest step
     best_step = max(tracked_steps)
-    state_dict = {'model': model.state_dict()}
+    # Before restoring the checkpoint, the optimizer state must be primed
+    # to allow state to be loaded into it.
+    prime_optimizer(optim)
+    state_dict = {'model': model.state_dict(), 'optim': optim.state_dict()}
     chkpt_mgr.restore(best_step, state_dict)
     model.load_state_dict(state_dict['model'])
+    optim.load_state_dict(state_dict['optim'])
 
 # Call `save` or `save_async` every step within the train loop. These methods
 # return True when a checkpoint is taken.
@@ -319,6 +323,18 @@ for step, data in enumerate(dataloader):
     if chkpt_mgr.save_async(step, state_dict):
         print(f'Checkpoint taken at step {step}')
 ```
+
+##### Restoring Optimizer State
+
+In distributed checkpointing, the state_dicts are loaded in-place, and only the
+required shards of the checkpoint are loaded. Since optimizer states are lazily
+created, the state isn't present until the first `optimizer.step` call, and
+attempts to load an unprimed optimizer will fail.
+
+The utility method `prime_optimizer` is provided for this: it runs a fake train
+step by setting all gradients to zero and calling `optimizer.step`. *This is a
+destructive method and will touch both model parameters and optimizer state*,
+so it should only be called just prior to restoration.
 
 ### Process Groups
 To use `torch.distributed` APIs such as distributed checkpointing, a process
