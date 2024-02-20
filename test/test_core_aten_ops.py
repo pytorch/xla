@@ -3249,7 +3249,6 @@ class AtenOpTest(unittest.TestCase):
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.replication_pad2d, args, kwargs)
 
-  @unittest.skip
   def test_aten_replication_pad3d_0(self):
     args = (
         torch.randn((1, 3, 2, 10)).to(torch.float32),
