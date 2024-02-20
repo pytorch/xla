@@ -35,9 +35,12 @@ class GraphInputMatcher:
   Specifically, those graph inputs corresponding to method parameters should be replaced with the
   arguments for the current call.
 
-  tensor_id_to_arg_idx maps the tensor id to the parameter index.
-  graph_input_tensor_ids, graph_input_xla_values list the tensor_id and ivalue for each of the
-  TS/XLA graph inputs.
+  Args:
+    tensor_id_to_arg_idx: Dict[int, int] - Maps the tensor id to the HLO parameter index.
+    graph_input_tensor_ids: List[int] - tensor_id for each TS/XLA graph input.
+    graph_input_xla_values: List[torch.Tensor] - ivalue for each TS/XLA graph input.
+                            Including both FX graph input tensors and weight tensors.
+    xla_args_tensor_id: Set[int] - A set of tensor_ids for FX Graph inputs.
   """
 
   def __init__(self, tensor_id_to_arg_idx: Dict[int, int],
@@ -50,7 +53,9 @@ class GraphInputMatcher:
     # Category 1: those whose id are not found in tensor_id_to_arg_idx. These are
     # most likely const tensors and we can get its content from graph_input_tensors
     # Category 2: those whose id are found in tensor_id_to_arg_idx. We should get
-    #  the tensor from method arguments
+    #  the tensor from method arguments.
+    # For category 2, beause user inputs will be used for each run, we do not
+    # cache those tensors in GraphInputMatcher.
     self.graph_input_xla_values = [
         None if tensor_id in xla_args_tensor_id else xla_value for tensor_id,
         xla_value in zip(graph_input_tensor_ids, graph_input_xla_values)
@@ -73,9 +78,10 @@ class GraphInputMatcher:
         xm.set_rng_state(
             (1012031 + inp.item() * 7012063) % 18446744073709551615, str_device)
       elif arg_idx is None:
-        assert traced_xla_value is not None
+        assert traced_xla_value is not None, "Traced Tensor cannot be None."
         inp = traced_xla_value
       else:
+        assert traced_xla_value is None, "Graph input tensor should not be cached."
         inp = args[arg_idx]
       real_input.append(inp)
     return real_input
