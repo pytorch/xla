@@ -51,10 +51,10 @@ class GraphInputMatcher:
     # most likely const tensors and we can get its content from graph_input_tensors
     # Category 2: those whose id are found in tensor_id_to_arg_idx. We should get
     #  the tensor from method arguments
-    self.graph_input_xla_values = graph_input_xla_values
-    for idx, id in enumerate(graph_input_tensor_ids):
-      if id in xla_args_tensor_id:
-        self.graph_input_xla_values[idx] = None
+    self.graph_input_xla_values = [
+        None if tensor_id in xla_args_tensor_id else xla_value for tensor_id,
+        xla_value in zip(graph_input_tensor_ids, graph_input_xla_values)
+    ]
 
   # get the real graph input tensors
   def __call__(self, args):
@@ -221,6 +221,7 @@ def is_xla_tensor(tensor: torch.Tensor) -> bool:
 
 
 def extract_graph_helper(xla_model: torch.fx.GraphModule):
+  # FX Graph inputs passed from Dynamo. xla_args are XLA Tensors.
   xla_args = xla_model.xla_args
   xla_args_tensor_ids = set(
       pytree.tree_map_only(
@@ -317,7 +318,6 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule):
   assert len(graph_input_tensor_ids) == len(
       graph_input_xla_values
   ), f"{len(graph_input_tensor_ids)} v.s. {len(graph_input_xla_values)}"
-  # import pdb;pdb.set_trace()
   graph_input_matcher = GraphInputMatcher(tensor_id_to_arg_idx,
                                           graph_input_tensor_ids,
                                           graph_input_xla_values,
