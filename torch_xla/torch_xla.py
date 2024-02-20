@@ -35,10 +35,11 @@ def real_devices() -> List[str]:
   """Returns local XLA device types and indices.
 
   Returns:
-    A list strings representing the XLA devices available in the current process.
+    A list strings representing the XLA devices available in the current process, e.g. `['TPU:0', 'TPU:1', ...]`.
   """
 
   return torch_xla._XLAC._xla_real_devices()
+
 
 def device_count() -> int:
   return len(real_devices())
