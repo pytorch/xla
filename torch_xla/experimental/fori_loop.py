@@ -97,6 +97,10 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   body_hlo = body_ctx.hlo()
   body_computation = xb.computation_from_module_proto("bodycomputation", body_hlo)
 
+  body_hlo_print = xb.get_computation_hlo(body_computation)
+  print("body_hlo: !!!!!!!!!")
+  print(body_hlo_print)
+
   # def cond_func(counter, operands):
   #   next_counter = counter + xb.Op.scalar(counter.builder(), 1, dtype=xb.Type.S32)
   #   return c < xb.Op.scalar(c.builder(), 10, dtype=xb.Type.F32)
@@ -110,6 +114,7 @@ def _xla_while_loop(cond_fn, body_fn, operands):
 
   xm.mark_step()
   cond_result = cond_fn(operands[0]) # cond_func(operands)
+  print("cond_result: ", cond_result)
   cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
   # body_ctx_builder = ctx.builder()
   # body_ctx_builder.name_ = 'bodyctx'
@@ -117,11 +122,11 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   cond_hlo = cond_ctx.hlo()
   cond_computation = xb.computation_from_module_proto("condcomputation", cond_hlo)
 
-  body_hlo_print = xb.get_computation_hlo(body_computation)
+  # body_hlo_print = xb.get_computation_hlo(body_computation)
   cond_hlo_print = xb.get_computation_hlo(cond_computation)
 
-  print("body_hlo: !!!!!!!!!")
-  print(body_hlo_print)
+  # print("body_hlo: !!!!!!!!!")
+  # print(body_hlo_print)
   print("cond_hlo: !!!!!!!!!")
   print(cond_hlo_print)
 
