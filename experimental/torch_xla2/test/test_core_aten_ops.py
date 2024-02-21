@@ -14,6 +14,10 @@ def diff_output(testcase, output1, output2, rtol, atol, equal_nan=True):
     testcase.assertIsInstance(output2, torch.Tensor)
     output2_cpu = output2.detach().cpu()
     if output2_cpu.dtype != output1.dtype:
+      testcase.assertEqual(
+          torch.is_floating_point(output1),
+          torch.is_floating_point(output2_cpu),
+          "Outputs are not both floating point or integer point.")
       output2_cpu = output2_cpu.to(output1.dtype)
     testcase.assertTrue(
         torch.allclose(
@@ -1503,6 +1507,14 @@ class TestCoreAtenOps(unittest.TestCase):
     args = (
         torch.randint(0, 10, (10, 10)).to(torch.int32),
         0.123,
+    )
+    kwargs = dict()
+    run_export_and_compare(self, torch.ops.aten.fmod.Scalar, args, kwargs)
+
+  def test_aten_fmod_Scalar_3(self):
+    args = (
+        torch.randint(0, 10, (10, 10)).to(torch.int64),
+        3,
     )
     kwargs = dict()
     run_export_and_compare(self, torch.ops.aten.fmod.Scalar, args, kwargs)
