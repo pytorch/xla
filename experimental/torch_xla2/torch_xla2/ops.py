@@ -236,8 +236,7 @@ def _aten_view_as_complex(input):
 def _aten_div(x, y, rounding_mode=""):
   res = x / y
   if rounding_mode == "trunc":
-    # res = jnp.trunc(res).astype(x.dtype)
-    res = jnp.trunc(res)
+    res = jnp.trunc(res).astype(x.dtype)
   return res
 
 
