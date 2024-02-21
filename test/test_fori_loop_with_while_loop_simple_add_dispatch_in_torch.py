@@ -24,7 +24,7 @@ class WhileLoopTest(unittest.TestCase):
 
     def cond_fn(x): # x = (xi,)
       ten = torch.tensor(30, dtype=torch.int32, device=device)
-      return x[0] <= ten # 30
+      return torch.equal(x[0], ten) # x[0] <= ten # 30
 
     def body_fn(x): # x = (xi,)
       onei = torch.tensor(10, dtype=torch.int32, device=device)
