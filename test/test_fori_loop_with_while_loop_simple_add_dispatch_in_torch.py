@@ -20,15 +20,15 @@ class WhileLoopTest(unittest.TestCase):
 
   def test_while_loop_tpu(self):
 
-    def cond_fn(x):
+    def cond_fn(x): # x = (xi,)
       return x[0] <= 10
 
-    def body_fn(x):
+    def body_fn(x): # x = (xi,)
       return (x[0] + 1,)
 
     device = xm.xla_device()
-    x = torch.ones(1, dtype=torch.int, device=device)
-    res = while_loop(cond_fn, body_fn, (x,))
+    xi = torch.ones(1, dtype=torch.int32, device=device)
+    res = while_loop(cond_fn, body_fn, (xi,))
     expected = _fake_while_loop(cond_fn, body_fn, x)
     self.assertEqual(expected, res)
 
