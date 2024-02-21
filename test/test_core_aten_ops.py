@@ -527,10 +527,7 @@ class AtenOpTest(unittest.TestCase):
   def test_aten_as_strided_copy_0(self):
     args = (
         torch.randn((10, 10)).to(torch.float32),
-        [
-            2,
-            2
-        ],
+        [2, 2],
         [
             1,
             2,
@@ -542,10 +539,7 @@ class AtenOpTest(unittest.TestCase):
   def test_aten_as_strided_copy_1(self):
     args = (
         torch.randn((10, 10)).to(torch.float16),
-        [
-            2,
-            2
-        ],
+        [2, 2],
         [
             1,
             2,
@@ -557,10 +551,7 @@ class AtenOpTest(unittest.TestCase):
   def test_aten_as_strided_copy_2(self):
     args = (
         torch.randint(0, 10, (10, 10)).to(torch.int32),
-        [
-            2,
-            2
-        ],
+        [2, 2],
         [
             1,
             2,
