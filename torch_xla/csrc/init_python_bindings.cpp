@@ -902,7 +902,7 @@ class PyLoweringContext {
       xla::XlaOp root = lowering_ctx.GetOutputOp(
           torch::lazy::Output(ir_value.node.get(), ir_value.index));
       // if (computation.proto().name()=='condctx') {
-      xla::XlaOp a = xla::GetTupleElement(root, 0);
+      // xla::XlaOp a = xla::GetTupleElement(root, 0); // they are not tupled here
       // }
       lowering_ctx.AddResult(root);
     }

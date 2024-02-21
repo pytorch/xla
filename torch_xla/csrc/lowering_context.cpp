@@ -156,6 +156,7 @@ xla::StatusOr<xla::XlaComputation> LoweringContext::BuildXla() {
   xla::StatusOr<xla::XlaComputation> xla;
   if (!root_tuple_.empty()) {
     xla::XlaOp root = xla::Tuple(builder(), root_tuple_);
+    xla::XlaOp a = xla::GetTupleElement(root, 0);
     xla = builder()->Build(root);
   } else {
     xla = builder()->Build();
