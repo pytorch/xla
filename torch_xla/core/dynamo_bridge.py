@@ -16,6 +16,8 @@ from torch.fx.passes.utils.fuser_utils import topo_sort
 import torch._inductor
 from torch._inductor.fx_passes.post_grad import ConstructorMoverPass
 
+from torch.utils import _pytree as pytree
+
 import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as metrics
@@ -33,19 +35,31 @@ class GraphInputMatcher:
   Specifically, those graph inputs corresponding to method parameters should be replaced with the
   arguments for the current call.
 
-  tensor_id_to_arg_idx maps the tensor id to the parameter index.
-  graph_input_tensor_ids, graph_input_xla_values list the tensor_id and ivalue for each of the
-  TS/XLA graph inputs.
+  Args:
+    tensor_id_to_arg_idx: Dict[int, int] - Maps the tensor id to the HLO parameter index.
+    graph_input_tensor_ids: List[int] - tensor_id for each TS/XLA graph input.
+    graph_input_xla_values: List[torch.Tensor] - ivalue for each TS/XLA graph input.
+                            Including both FX graph input tensors and weight tensors.
+    xla_args_tensor_id: Set[int] - A set of tensor_ids for FX Graph inputs.
   """
 
-  tensor_id_to_arg_idx: Dict[int, int]
-  graph_input_tensor_ids: List[int]
-  # there are 2 categories of graph_input_tensors.
-  # Category 1: those whose id are not found in tensor_id_to_arg_idx. These are
-  # most likely const tensors and we can get its content from graph_input_tensors
-  # Category 2: those whose id are found in tensor_id_to_arg_idx. We should get
-  #  the tensor from method arguments
-  graph_input_xla_values: List[Any]
+  def __init__(self, tensor_id_to_arg_idx: Dict[int, int],
+               graph_input_tensor_ids: List[int],
+               graph_input_xla_values: List[torch.tensor],
+               xla_args_tensor_id: Set[int]):
+    self.tensor_id_to_arg_idx = tensor_id_to_arg_idx
+    self.graph_input_tensor_ids = graph_input_tensor_ids
+    # there are 2 categories of graph_input_tensors.
+    # Category 1: those whose id are not found in tensor_id_to_arg_idx. These are
+    # most likely const tensors and we can get its content from graph_input_tensors
+    # Category 2: those whose id are found in tensor_id_to_arg_idx. We should get
+    #  the tensor from method arguments.
+    # For category 2, beause user inputs will be used for each run, we do not
+    # cache those tensors in GraphInputMatcher.
+    self.graph_input_xla_values = [
+        None if tensor_id in xla_args_tensor_id else xla_value for tensor_id,
+        xla_value in zip(graph_input_tensor_ids, graph_input_xla_values)
+    ]
 
   # get the real graph input tensors
   def __call__(self, args):
@@ -64,8 +78,10 @@ class GraphInputMatcher:
         xm.set_rng_state(
             (1012031 + inp.item() * 7012063) % 18446744073709551615, str_device)
       elif arg_idx is None:
+        assert traced_xla_value is not None, "Traced Tensor cannot be None."
         inp = traced_xla_value
       else:
+        assert traced_xla_value is None, "Graph input tensor should not be cached."
         inp = args[arg_idx]
       real_input.append(inp)
     return real_input
@@ -211,7 +227,13 @@ def is_xla_tensor(tensor: torch.Tensor) -> bool:
 
 
 def extract_graph_helper(xla_model: torch.fx.GraphModule):
+  # FX Graph inputs passed from Dynamo. xla_args are XLA Tensors.
   xla_args = xla_model.xla_args
+  xla_args_tensor_ids = set(
+      pytree.tree_map_only(
+          torch.Tensor,
+          lambda xla_arg: torch_xla._XLAC._xla_get_tensor_id(xla_arg),
+          xla_args))
   assert all(
       map(
           is_xla_tensor,
@@ -304,8 +326,8 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule):
   ), f"{len(graph_input_tensor_ids)} v.s. {len(graph_input_xla_values)}"
   graph_input_matcher = GraphInputMatcher(tensor_id_to_arg_idx,
                                           graph_input_tensor_ids,
-                                          graph_input_xla_values)
-
+                                          graph_input_xla_values,
+                                          xla_args_tensor_ids)
   # compiles and cache graph rooted at tensors in 'args_and_out'
   torch_xla._XLAC._xla_warm_up_cache(args_and_out, [])
 
