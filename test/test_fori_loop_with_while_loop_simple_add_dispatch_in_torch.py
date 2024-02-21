@@ -23,8 +23,8 @@ class WhileLoopTest(unittest.TestCase):
     device = xm.xla_device()
 
     def cond_fn(x): # x = (xi,)
-      ten = torch.ones(30, dtype=torch.int32, device=device)
-      return x[0] <= ten # 30
+      # ten = torch.ones(30, dtype=torch.int32, device=device)
+      return x[0] <= 30 # 30
 
     def body_fn(x): # x = (xi,)
       onei = torch.ones(10, dtype=torch.int32, device=device)
