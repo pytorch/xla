@@ -1,5 +1,5 @@
 diff --git a/xla/mlir_hlo/WORKSPACE b/xla/mlir_hlo/WORKSPACE
-index cc9eeb64f..b290eb455 100644
+index 7078b6cc7..1efd5e33b 100644
 --- a/xla/mlir_hlo/WORKSPACE
 +++ b/xla/mlir_hlo/WORKSPACE
 @@ -35,7 +35,10 @@ http_archive(
@@ -13,20 +13,4 @@ index cc9eeb64f..b290eb455 100644
 +    ],
  )
  
- load("@llvm-raw//utils/bazel:configure.bzl", "llvm_configure", "llvm_disable_optional_support_deps")
- load("@llvm-raw//utils/bazel:configure.bzl", "llvm_configure", "llvm_disable_optional_support_deps")
-diff --git a/third_party/llvm/workspace.bzl b/third_party/llvm/workspace.bzl
-index a4574d75d..f9ce37094 100644
---- a/third_party/llvm/workspace.bzl
-+++ b/third_party/llvm/workspace.bzl
-@@ -13,7 +13,9 @@ def repo(name):
-         strip_prefix = "llvm-project-{commit}".format(commit = LLVM_COMMIT),
-         urls = [
-             "https://storage.googleapis.com/mirror.tensorflow.org/github.com/llvm/llvm-project/archive/{commit}.tar.gz".format(commit = LLVM_COMMIT),
-+            "https://storage.googleapis.com/tpu-pytorch/llvm-raw/{commit}.tar.gz".format(commit = LLVM_COMMIT),
-             "https://github.com/llvm/llvm-project/archive/{commit}.tar.gz".format(commit = LLVM_COMMIT),
-+            "https://storage.googleapis.com/tpu-pytorch/llvm-raw/{commit}.tar.gz".format(commit = LLVM_COMMIT),
-         ],
-         build_file = "//third_party/llvm:llvm.BUILD",
-         patch_file = [
-         
+ load("@llvm-raw//utils/bazel:configure.bzl", "llvm_configure")

@@ -168,8 +168,8 @@ def process_file(args, results_map: Dict[str, Any], filename: str):
 
 # Speedup of a over baseline ("b"), with errors.
 def compute_speedup(a: NamedTuple, b: NamedTuple) -> NamedTuple:
-  rel_err_a = a.avg * a.std
-  rel_err_b = b.avg * b.std
+  rel_err_a = a.std / a.avg
+  rel_err_b = b.std / b.avg
   rel_err = math.sqrt(rel_err_a**2 + rel_err_b**2)
   speedup = b.avg / a.avg
   err = rel_err * speedup
@@ -330,7 +330,7 @@ def pr_latest(results_map: Dict[str, Any], args, timestamps: List[str]):
             list, zip(*sorted(zip(acc_map[label], acc_map[model_label]))))
         speedups[i] = list(map(pr_round, speedups[i]))
         break
-  if not speedups[0] or not speedups[1]:
+  if all(not x for x in speedups):
     logger.warning(f'cannot find data for accelerator {args.accelerator}')
     return
 
