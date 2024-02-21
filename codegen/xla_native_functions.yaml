@@ -367,6 +367,7 @@ supported:
   - diag_embed
   - embedding
   - _embedding_bag
+  - _embedding_bag_forward_only
   - _euclidean_dist
   - slice_backward
   - diagonal_backward

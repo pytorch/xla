@@ -11,10 +11,9 @@ class EmbeddingBag : public XlaNode {
  public:
   EmbeddingBag(const torch::lazy::Value& weight,
                const torch::lazy::Value& indices,
-               const torch::lazy::Value& offsets, bool scale_grad_by_freq,
-               int64_t mode, bool sparse,
-               const c10::optional<at::Tensor>& per_sample_weights,
-               bool include_last_offset, int64_t padding_idx);
+               const torch::lazy::Value& offsets, int64_t mode,
+               const torch::lazy::Value& per_sample_weights,
+               bool include_last_offset);
 
   std::string ToString() const override;
 
@@ -22,11 +21,8 @@ class EmbeddingBag : public XlaNode {
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
  private:
-  bool scale_grad_by_freq_;
   int64_t mode_;
-  bool sparse_;
   bool include_last_offset_;
-  int64_t padding_idx_;
 };
 
 }  // namespace torch_xla
