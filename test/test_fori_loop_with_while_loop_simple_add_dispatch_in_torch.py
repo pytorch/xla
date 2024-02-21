@@ -29,9 +29,7 @@ class WhileLoopTest(unittest.TestCase):
     device = xm.xla_device()
     x = torch.ones(1, dtype=torch.int, device=device)
     res = while_loop(cond_fn, body_fn, (x,))
-    print("while_loop result: ", res)
-    expected = torch.tensor(11, dtype=torch.int, device=device)
-    print("expected result: ", expected)
+    expected = _fake_while_loop(cond_fn, body_fn, x)
     self.assertEqual(expected, res[0])
 
 
