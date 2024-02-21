@@ -21,12 +21,14 @@ class WhileLoopTest(unittest.TestCase):
   def test_while_loop_tpu(self):
 
     def cond_fn(x): # x = (xi,)
-      ten = torch.ones(10, dtype=torch.int32, device=device)
-      return x[0] <= ten
+      # ten = torch.ones(10, dtype=torch.int32, device=device)
+      y = (x[0] <= 10)
+      return y
 
     def body_fn(x): # x = (xi,)
       # onei = torch.ones(1, dtype=torch.int32, device=device)
-      return (x[0] + x[0],)
+      y = x[0] +  1
+      return (y,)
 
     device = xm.xla_device()
     xi = torch.ones(1, dtype=torch.int32, device=device)
