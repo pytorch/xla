@@ -22,7 +22,7 @@ class WhileLoopTest(unittest.TestCase):
 
     def cond_fn(x): # x = (xi,)
       # ten = torch.ones(10, dtype=torch.int32, device=device)
-      return x.sum() <=10 # x[0] <= x[1]
+      return x[0] <=10 # x[0] <= x[1]
 
     def body_fn(x): # x = (xi,)
       # onei = torch.ones(1, dtype=torch.int32, device=device)
