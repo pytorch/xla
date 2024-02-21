@@ -594,6 +594,8 @@ class CheckpointManagerTest(DistributedCheckpointTestBase):
       self.assertTrue(chkpt_mgr.reached_preemption(step))
 
 
+@unittest.skipIf(xr.device_type() != 'TPU',
+                 'TPU required for worker IP discovery')
 class OptimizerCheckpointTest(DistributedCheckpointTestBase):
 
   def setUp(self):
