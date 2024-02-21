@@ -29,7 +29,7 @@ class WhileLoopTest(unittest.TestCase):
       return (x[0] +  1,)
 
     device = xm.xla_device()
-    xi = torch.ones(1, dtype=torch.int32, device=device)
+    xi = torch.ones(1, dtype=torch.int64, device=device)
     res = while_loop(cond_fn, body_fn, (xi,))
     expected = _fake_while_loop(cond_fn, body_fn, x)
     self.assertEqual(expected, res)
