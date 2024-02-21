@@ -686,10 +686,6 @@ std::vector<at::Tensor> XlaUserComputation(
 runtime::ComputationClient::ComputationPtr CreateComputation(
     const std::string& name, xla::XlaOp root) {
   xla::XlaComputation computation = ConsumeValue(root.builder()->Build(root));
-  std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
-  computation = ConsumeValue(XlaHelpers::WrapXlaComputation(
-    computation, program_shape.parameters(), input_output_alias_pair));
-
   return std::make_shared<runtime::ComputationClient::Computation>(
       name, std::move(computation));
 }
@@ -905,6 +901,16 @@ class PyLoweringContext {
       lowering_ctx.AddResult(root);
     }
     computation = ConsumeValue(lowering_ctx.BuildXla());
+  
+    std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
+    xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
+    bool should_wrap_parameter =
+      (program_shape.parameters_size() >= 2);
+    if (should_wrap_parameter) {
+      computation = ConsumeValue(XlaHelpers::WrapXlaComputation(
+        computation, program_shape.parameters(), input_output_alias_pair));
+    }
+   }
   }
 
   // Get a mapping from the HLO input parameters to the backing Tensor values.
