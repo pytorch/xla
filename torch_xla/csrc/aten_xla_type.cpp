@@ -2558,6 +2558,22 @@ at::Tensor XLANativeFunctions::replication_pad2d_backward(
       XlaHelpers::I64List(padding)));
 }
 
+at::Tensor XLANativeFunctions::replication_pad3d(const at::Tensor& self,
+                                                 at::IntArrayRef padding) {
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  return bridge::AtenFromXlaTensor(tensor_methods::replication_pad3d(
+      bridge::GetXlaTensor(self), XlaHelpers::I64List(padding)));
+}
+
+at::Tensor XLANativeFunctions::replication_pad3d_backward(
+    const at::Tensor& grad_output, const at::Tensor& self,
+    at::IntArrayRef padding) {
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  return bridge::AtenFromXlaTensor(tensor_methods::replication_pad3d_backward(
+      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
+      XlaHelpers::I64List(padding)));
+}
+
 const at::Tensor& XLANativeFunctions::resize_(
     const at::Tensor& self, at::IntArrayRef size,
     c10::optional<at::MemoryFormat> /* memory_format */) {

@@ -2345,6 +2345,19 @@ XLATensorPtr replication_pad2d_backward(const XLATensorPtr& grad_output,
       grad_output->GetIrValue(), input->GetIrValue(), std::move(padding)));
 }
 
+XLATensorPtr replication_pad3d(const XLATensorPtr& input,
+                               std::vector<int64_t> padding) {
+  return input->CreateFrom(torch::lazy::MakeNode<ReplicationPad>(
+      input->GetIrValue(), std::move(padding)));
+}
+
+XLATensorPtr replication_pad3d_backward(const XLATensorPtr& grad_output,
+                                        const XLATensorPtr& input,
+                                        std::vector<int64_t> padding) {
+  return input->CreateFrom(torch::lazy::MakeNode<ReplicationPadBackward>(
+      grad_output->GetIrValue(), input->GetIrValue(), std::move(padding)));
+}
+
 void resize_(XLATensorPtr& input, std::vector<int64_t> size) {
   if (input->data()->view == nullptr) {
     input->SetIrValue(
