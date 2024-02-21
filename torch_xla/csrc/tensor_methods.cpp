@@ -2358,7 +2358,6 @@ XLATensorPtr replication_pad3d_backward(const XLATensorPtr& grad_output,
       grad_output->GetIrValue(), input->GetIrValue(), std::move(padding)));
 }
 
-
 void resize_(XLATensorPtr& input, std::vector<int64_t> size) {
   if (input->data()->view == nullptr) {
     input->SetIrValue(
