@@ -686,6 +686,10 @@ std::vector<at::Tensor> XlaUserComputation(
 runtime::ComputationClient::ComputationPtr CreateComputation(
     const std::string& name, xla::XlaOp root) {
   xla::XlaComputation computation = ConsumeValue(root.builder()->Build(root));
+  std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
+  xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
+  computation = ConsumeValue(XlaHelpers::WrapXlaComputation(
+    computation, program_shape.parameters(), input_output_alias_pair));
   return std::make_shared<runtime::ComputationClient::Computation>(
       name, std::move(computation));
 }
