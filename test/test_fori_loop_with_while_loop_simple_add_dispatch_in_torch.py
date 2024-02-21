@@ -26,7 +26,7 @@ class WhileLoopTest(unittest.TestCase):
 
     def body_fn(x): # x = (xi,)
       # onei = torch.ones(1, dtype=torch.int32, device=device)
-      return (x[0] +  x[0],)
+      return (x[0] +  x[0], x[1])
 
     device = xm.xla_device()
     xx = torch.ones(1, dtype=torch.int64, device=device)
