@@ -22,15 +22,16 @@ class WhileLoopTest(unittest.TestCase):
 
     def cond_fn(x): # x = (xi,)
       # ten = torch.ones(10, dtype=torch.int32, device=device)
-      return x[0] <= (10 + 1)
+      return x[0] <= x[1]
 
     def body_fn(x): # x = (xi,)
       # onei = torch.ones(1, dtype=torch.int32, device=device)
       return (x[0] +  1,)
 
     device = xm.xla_device()
-    xi = torch.ones(1, dtype=torch.int64, device=device)
-    res = while_loop(cond_fn, body_fn, (xi,))
+    xx = torch.ones(1, dtype=torch.int64, device=device)
+    xy = torch.ones(10, dtype=torch.int64, device=device)
+    res = while_loop(cond_fn, body_fn, (xx, xy))
     expected = _fake_while_loop(cond_fn, body_fn, x)
     self.assertEqual(expected, res)
 
