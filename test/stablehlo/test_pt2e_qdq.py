@@ -87,7 +87,7 @@ class PT2EExportTest(unittest.TestCase):
     self.assertEqual(stablehlo_txt.count("stablehlo.uniform_quantize"), 1)
     self.assertEqual(stablehlo_txt.count("stablehlo.uniform_dequantize"), 1)
 
-  @unittest.skip("Failed because PT2E BC break change on constant folding.")
+  # @unittest.skip("Failed because PT2E BC break change on constant folding.")
   def test_resnet18(self):
     # Step 1: export resnet18
     args = (torch.randn(1, 3, 224, 224),)
@@ -100,13 +100,15 @@ class PT2EExportTest(unittest.TestCase):
     m = prepare_pt2e(m, quantizer)
 
     # Step 3: Quantize the model
-    m = convert_pt2e(m)
+    m = convert_pt2e(m, fold_quantize=False)
 
     # Trace with torch/xla and export stablehlo
     exported = torch.export.export(m, args)
     stablehlo_gm = stablehlo.exported_program_to_stablehlo(exported)
     stablehlo_txt = stablehlo_gm.get_stablehlo_text()
     fx_node_cnt = count_qdq_ops(exported.graph_module.graph)
+    print(stablehlo_txt)
+    print(exported)
     self.assertEqual(
         stablehlo_txt.count("stablehlo.uniform_quantize"),
         fx_node_cnt["qunatize"])
