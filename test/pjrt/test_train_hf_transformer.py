@@ -18,6 +18,7 @@ def _train_update(device, step, loss, tracker, epoch, writer):
   test_utils.print_training_update(device, step, loss.item(), tracker.rate(),
                                    tracker.global_rate(), epoch, writer)
 
+
 # Based on https://huggingface.co/docs/transformers/en/training#train-in-native-pytorch
 def finetune(rank, train_dataset, test_dataset, tokenizer, flags):
   print('Starting', rank)
