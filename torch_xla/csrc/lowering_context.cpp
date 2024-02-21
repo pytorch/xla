@@ -154,10 +154,14 @@ void LoweringContext::SetResult(size_t index, xla::XlaOp op) {
 
 xla::StatusOr<xla::XlaComputation> LoweringContext::BuildXla() {
   xla::StatusOr<xla::XlaComputation> xla;
-  if (!root_tuple_.empty()) {
-    // xla::XlaOp root = xla::Tuple(builder(), root_tuple_);
+  if (!root_tuple_.empty() & (root_tuple_.size()>1)) {
+    xla::XlaOp root = xla::Tuple(builder(), root_tuple_);
     // xla::XlaOp a = xla::GetTupleElement(root, 0);
     xla = builder()->Build(root_tuple_); // root);
+  } else if (!root_tuple_.empty() & (root_tuple_.size()==1)) {
+    // xla::XlaOp root = xla::Tuple(builder(), root_tuple_);
+    // xla::XlaOp a = xla::GetTupleElement(root, 0);
+    xla = builder()->Build(root_tuple_.at(0)); // root);
   } else {
     xla = builder()->Build();
   }
