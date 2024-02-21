@@ -898,18 +898,23 @@ class PyLoweringContext {
     for (auto& ir_value : ir_values) {
       xla::XlaOp root = lowering_ctx.GetOutputOp(
           torch::lazy::Output(ir_value.node.get(), ir_value.index));
+      xla::XlaOp a = xla::GetTupleElement(root, 0);
       lowering_ctx.AddResult(root);
     }
     computation = ConsumeValue(lowering_ctx.BuildXla());
   
-    std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
-    xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
-    bool should_wrap_parameter =
-      (program_shape.parameters_size() >= 2);
-    if (should_wrap_parameter) {
-      computation = ConsumeValue(XlaHelpers::WrapXlaComputation(
-        computation, program_shape.parameters(), input_output_alias_pair));
-    }
+    // std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
+    // xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
+    // bool should_wrap_parameter =
+    //   (program_shape.parameters_size() >= 2);
+    // if (should_wrap_parameter) {
+    //   computation = ConsumeValue(XlaHelpers::WrapXlaComputation(
+    //     computation, program_shape.parameters(), input_output_alias_pair));
+    // }
+
+    // // unwrap (pred[])
+    // xla::XlaBuilder builder(computation.proto().name());
+    // xla::XlaOp orig_result = xla::Call(&builder, computation, inner_params);
   }
 
   // Get a mapping from the HLO input parameters to the backing Tensor values.
