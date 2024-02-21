@@ -32,8 +32,8 @@ def _xla_while_loop(cond_fn, body_fn, operands):
     xm.mark_step()
     body_result = body_fn(operands)
     body_ctx = torch_xla._XLAC.lowering.LoweringContext()
-    # body_ctx_builder = ctx.builder()
-    # body_ctx_builder.name_ = 'bodyctx'
+    body_ctx_builder = ctx.builder()
+    body_ctx_builder.name_ = 'bodyctx'
     body_ctx.build([body_result])
     body_hlo = body_ctx.hlo()
     body_computation = xb.computation_from_module_proto("bodycomputation", body_hlo)
@@ -41,8 +41,8 @@ def _xla_while_loop(cond_fn, body_fn, operands):
     xm.mark_step()
     cond_result = cond_fn(operands)
     cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
-    # body_ctx_builder = ctx.builder()
-    # body_ctx_builder.name_ = 'bodyctx'
+    cond_ctx_builder = cond_ctx.builder()
+    cond_ctx_builder.name_ = 'condctx'
     cond_ctx.build([cond_result])
     cond_hlo = cond_ctx.hlo()
     cond_computation = xb.computation_from_module_proto("condcomputation", cond_hlo)
