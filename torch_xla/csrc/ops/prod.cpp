@@ -42,14 +42,15 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input,
 
 Prod::Prod(const torch::lazy::Value& input, std::vector<int64_t> dimensions,
            bool keep_reduced_dimensions, c10::optional<at::ScalarType> dtype)
-    : XlaNode(torch::lazy::OpKind(at::aten::prod), {input},
-              [&]() {
-                return NodeOutputShape(input, dimensions,
-                                       keep_reduced_dimensions, dtype);
-              },
-              /*num_outputs=*/1,
-              torch::lazy::MHash(dimensions, keep_reduced_dimensions,
-                                 torch::lazy::OptionalOr<int>(dtype, -1))),
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::prod), {input},
+          [&]() {
+            return NodeOutputShape(input, dimensions, keep_reduced_dimensions,
+                                   dtype);
+          },
+          /*num_outputs=*/1,
+          torch::lazy::MHash(dimensions, keep_reduced_dimensions,
+                             torch::lazy::OptionalOr<int>(dtype, -1))),
       dimensions_(std::move(dimensions)),
       keep_reduced_dimensions_(keep_reduced_dimensions),
       dtype_(dtype) {}

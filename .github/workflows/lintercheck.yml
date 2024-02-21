@@ -34,7 +34,7 @@ jobs:
       - name: Run clang-format
         shell: bash
         env:
-          CLANG_FORMAT: clang-format-7
+          CLANG_FORMAT: clang-format-11
         run: |
           sudo apt-get update
           sudo apt install -y "${CLANG_FORMAT}"

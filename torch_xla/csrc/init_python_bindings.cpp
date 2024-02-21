@@ -1106,27 +1106,28 @@ void InitXlaModuleBindings(py::module m) {
                 ShardingUtil::ShardingType(sharding_type)),
             global_shape, minibatch);
       }));
-  m.def("_xla_tensors_from_aten",
-        [](const std::vector<at::Tensor>& tensors,
-           const std::vector<std::string>& devices,
-           const std::optional<std::vector<XLATensor::ShardingSpecPtr>>&
-               shardings) {
-          std::vector<at::Tensor> result;
-          {
-            NoGilSection nogil;
-            std::vector<at::Tensor> xla_tensors =
-                GetXlaTensorsFromAten(tensors, devices, shardings);
-            result.reserve(xla_tensors.size());
-            for (size_t i = 0; i < xla_tensors.size(); ++i) {
-              result.push_back(torch::autograd::make_variable(
-                  xla_tensors[i],
-                  /*requires_grad=*/tensors.at(i).requires_grad()));
-            }
+  m.def(
+      "_xla_tensors_from_aten",
+      [](const std::vector<at::Tensor>& tensors,
+         const std::vector<std::string>& devices,
+         const std::optional<std::vector<XLATensor::ShardingSpecPtr>>&
+             shardings) {
+        std::vector<at::Tensor> result;
+        {
+          NoGilSection nogil;
+          std::vector<at::Tensor> xla_tensors =
+              GetXlaTensorsFromAten(tensors, devices, shardings);
+          result.reserve(xla_tensors.size());
+          for (size_t i = 0; i < xla_tensors.size(); ++i) {
+            result.push_back(torch::autograd::make_variable(
+                xla_tensors[i],
+                /*requires_grad=*/tensors.at(i).requires_grad()));
           }
-          return result;
-        },
-        py::arg("tensors"), py::arg("devices"),
-        py::arg("shardings") = py::none());
+        }
+        return result;
+      },
+      py::arg("tensors"), py::arg("devices"),
+      py::arg("shardings") = py::none());
   m.def("_xla_get_cpu_tensors", [](const std::vector<at::Tensor>& tensors) {
     std::vector<at::Tensor> result;
     {
@@ -1529,45 +1530,51 @@ void InitXlaModuleBindings(py::module m) {
     }
     return list;
   });
-  m.def("_xla_set_rng_seed",
-        [](uint64_t seed, const std::string& device) {
-          SetRngSeed(seed, device);
-        },
-        py::arg("seed") = 101, py::arg("device") = "");
-  m.def("_xla_get_rng_seed",
-        [](const std::string& device) { return GetRngSeed(device); },
-        py::arg("device") = "");
-  m.def("_xla_sync_multi",
-        [](const std::vector<at::Tensor>& tensors,
-           const std::vector<std::string>& devices, bool wait,
-           bool sync_xla_data) {
-          NoGilSection nogil;
-          SyncTensors(tensors, devices, wait, sync_xla_data);
-        },
-        py::arg("tensors"), py::arg("devices"), py::arg("wait") = true,
-        py::arg("sync_xla_data") = true);
-  m.def("_xla_warm_up_cache",
-        [](const std::vector<at::Tensor>& tensors,
-           const std::vector<std::string>& devices) {
-          NoGilSection nogil;
-          SyncTensors(tensors, devices, /*wait=*/false, /*sync_xla_data=*/false,
-                      /*warm_up_cache_only=*/true);
-        },
-        py::arg("tensors"), py::arg("devices"));
-  m.def("_xla_sync_live_tensors",
-        [](const std::string& device, const std::vector<std::string>& devices,
-           bool wait) {
-          NoGilSection nogil;
-          SyncLiveTensors(device, devices, wait);
-        },
-        py::arg("device") = "", py::arg("devices"), py::arg("wait") = true);
-  m.def("_xla_step_marker",
-        [](const std::string& device, const std::vector<std::string>& devices,
-           bool wait) {
-          NoGilSection nogil;
-          StepMarker(device, devices, wait);
-        },
-        py::arg("device") = "", py::arg("devices"), py::arg("wait") = true);
+  m.def(
+      "_xla_set_rng_seed",
+      [](uint64_t seed, const std::string& device) {
+        SetRngSeed(seed, device);
+      },
+      py::arg("seed") = 101, py::arg("device") = "");
+  m.def(
+      "_xla_get_rng_seed",
+      [](const std::string& device) { return GetRngSeed(device); },
+      py::arg("device") = "");
+  m.def(
+      "_xla_sync_multi",
+      [](const std::vector<at::Tensor>& tensors,
+         const std::vector<std::string>& devices, bool wait,
+         bool sync_xla_data) {
+        NoGilSection nogil;
+        SyncTensors(tensors, devices, wait, sync_xla_data);
+      },
+      py::arg("tensors"), py::arg("devices"), py::arg("wait") = true,
+      py::arg("sync_xla_data") = true);
+  m.def(
+      "_xla_warm_up_cache",
+      [](const std::vector<at::Tensor>& tensors,
+         const std::vector<std::string>& devices) {
+        NoGilSection nogil;
+        SyncTensors(tensors, devices, /*wait=*/false, /*sync_xla_data=*/false,
+                    /*warm_up_cache_only=*/true);
+      },
+      py::arg("tensors"), py::arg("devices"));
+  m.def(
+      "_xla_sync_live_tensors",
+      [](const std::string& device, const std::vector<std::string>& devices,
+         bool wait) {
+        NoGilSection nogil;
+        SyncLiveTensors(device, devices, wait);
+      },
+      py::arg("device") = "", py::arg("devices"), py::arg("wait") = true);
+  m.def(
+      "_xla_step_marker",
+      [](const std::string& device, const std::vector<std::string>& devices,
+         bool wait) {
+        NoGilSection nogil;
+        StepMarker(device, devices, wait);
+      },
+      py::arg("device") = "", py::arg("devices"), py::arg("wait") = true);
   m.def("_get_stablehlo",
         [](const std::vector<at::Tensor>& tensors, const std::string& device,
            const std::vector<std::string>& devices,
@@ -1604,18 +1611,19 @@ void InitXlaModuleBindings(py::module m) {
           }
           return retlist;
         });
-  m.def("_xla_wait_device_ops",
-        [](const std::vector<std::string>& devices) {
-          NoGilSection nogil;
-          XLAGraphExecutor::Get()->WaitDeviceOps(devices);
-          if (UseVirtualDevice()) {
-            std::vector<std::string> spmd_device = {"SPMD:0"};
-            runtime::GetComputationClient()->WaitDeviceOps(spmd_device);
-          } else {
-            runtime::GetComputationClient()->WaitDeviceOps(devices);
-          }
-        },
-        py::arg("devices"));
+  m.def(
+      "_xla_wait_device_ops",
+      [](const std::vector<std::string>& devices) {
+        NoGilSection nogil;
+        XLAGraphExecutor::Get()->WaitDeviceOps(devices);
+        if (UseVirtualDevice()) {
+          std::vector<std::string> spmd_device = {"SPMD:0"};
+          runtime::GetComputationClient()->WaitDeviceOps(spmd_device);
+        } else {
+          runtime::GetComputationClient()->WaitDeviceOps(devices);
+        }
+      },
+      py::arg("devices"));
   m.def("_xla_counter_names", []() {
     auto counter_names = torch::lazy::GetCounterNames();
     auto xla_counter_names = runtime::metrics::GetCounterNames();
@@ -1680,21 +1688,23 @@ void InitXlaModuleBindings(py::module m) {
     torch::lazy::MetricsArena::Get()->ResetMetrics();
     runtime::metrics::ClearMetrics();
   });
-  m.def("_xla_tensors_report",
-        [](size_t nodes_threshold, const std::string& device) {
-          return GetLiveTensorsReport(nodes_threshold, device);
-        },
-        py::arg("nodes_threshold") = 100, py::arg("device") = "");
+  m.def(
+      "_xla_tensors_report",
+      [](size_t nodes_threshold, const std::string& device) {
+        return GetLiveTensorsReport(nodes_threshold, device);
+      },
+      py::arg("nodes_threshold") = 100, py::arg("device") = "");
   m.def("_xla_memory_info", [](const std::string& device) -> py::object {
     return GetMemoryInfo(device);
   });
-  m.def("_xla_set_use_full_mat_mul_precision",
-        [](bool use_full_mat_mul_precision) {
-          XlaHelpers::set_mat_mul_precision(
-              use_full_mat_mul_precision ? xla::PrecisionConfig::HIGHEST
-                                         : xla::PrecisionConfig::DEFAULT);
-        },
-        py::arg("use_full_mat_mul_precision") = true);
+  m.def(
+      "_xla_set_use_full_mat_mul_precision",
+      [](bool use_full_mat_mul_precision) {
+        XlaHelpers::set_mat_mul_precision(use_full_mat_mul_precision
+                                              ? xla::PrecisionConfig::HIGHEST
+                                              : xla::PrecisionConfig::DEFAULT);
+      },
+      py::arg("use_full_mat_mul_precision") = true);
 
   py::class_<xla::XlaBuilder, op_builder::BuilderPtr>(m, "XlaBuilder");
   py::class_<op_builder::Op, op_builder::OpPtr>(m, "XlaOp");
@@ -2106,18 +2116,19 @@ void InitXlaModuleBindings(py::module m) {
           return module->ToString();
         });
   // Initialize the XlaCoordinator in the runtime if not already initialized.
-  m.def("_ensure_xla_coordinator_initialized",
-        [](int global_rank, int world_size, std::string master_addr,
-           std::string master_port) {
-          auto comp_client = runtime::GetComputationClient();
-          if (!comp_client->CoordinatorInitialized()) {
-            runtime::GetComputationClient()->InitializeCoordinator(
-                global_rank, world_size, master_addr, master_port);
-          }
-        },
-        py::arg("global_rank"), py::arg("world_size"), py::arg("master_addr"),
-        py::arg("master_port") =
-            runtime::XlaCoordinator::kDefaultCoordinatorPort);
+  m.def(
+      "_ensure_xla_coordinator_initialized",
+      [](int global_rank, int world_size, std::string master_addr,
+         std::string master_port) {
+        auto comp_client = runtime::GetComputationClient();
+        if (!comp_client->CoordinatorInitialized()) {
+          runtime::GetComputationClient()->InitializeCoordinator(
+              global_rank, world_size, master_addr, master_port);
+        }
+      },
+      py::arg("global_rank"), py::arg("world_size"), py::arg("master_addr"),
+      py::arg("master_port") =
+          runtime::XlaCoordinator::kDefaultCoordinatorPort);
   // Create a PreemptionSyncManager for the XlaCoordinator. The
   // PreemptionSyncManager will register a SIGTERM handler as a side effect.
   m.def("_activate_preemption_sync_manager", []() {

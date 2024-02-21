@@ -8,12 +8,12 @@ namespace torch_xla {
 
 Select::Select(const torch::lazy::Value& input, int64_t dim, int64_t start,
                int64_t end, int64_t stride)
-    : XlaNode(xla_select, {input},
-              [&]() {
-                return MakeSelectShape(GetXlaShape(input), dim, start, end,
-                                       stride);
-              },
-              /*num_outputs=*/1, torch::lazy::MHash(dim, start, end, stride)),
+    : XlaNode(
+          xla_select, {input},
+          [&]() {
+            return MakeSelectShape(GetXlaShape(input), dim, start, end, stride);
+          },
+          /*num_outputs=*/1, torch::lazy::MHash(dim, start, end, stride)),
       dim_(dim),
       start_(start),
       end_(end),

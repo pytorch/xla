@@ -44,9 +44,10 @@ StatusOr<std::vector<XlaOp>> LoopBodyFn(XlaOp i, absl::Span<const XlaOp> values,
 RandPerm::RandPerm(int64_t n, const at::ScalarType dtype,
                    const at::Layout layout, const at::Device device,
                    bool pin_memory)
-    : XlaNode(torch::lazy::OpKind(at::aten::randperm), /*operands=*/{},
-              [&]() { return NodeOutputShape(n); }, /*num_outputs=*/1,
-              torch::lazy::MHash(n)),
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::randperm), /*operands=*/{},
+          [&]() { return NodeOutputShape(n); }, /*num_outputs=*/1,
+          torch::lazy::MHash(n)),
       n_(n) {}
 
 // Fischer Yates Shuffle.

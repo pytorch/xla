@@ -54,15 +54,15 @@ your code before submitting a pull request.
 
 ### C++ Style Guide
 
-`pytorch/xla` uses `clang-format-7` with a customized style config.
+`pytorch/xla` uses `clang-format-11` with a customized style config.
 If your PR touches the C++ source files, please run the following command before submitting a PR.
 
 ```Shell
-# How to install: sudo apt install clang-format-7
+# How to install: sudo apt install clang-format-11
 # If your PR only changes foo.cpp, run the following in xla/ folder
-clang-format-7 -i -style=file /PATH/TO/foo.cpp
+clang-format-11 -i -style=file /PATH/TO/foo.cpp
 # To format all cpp files, run the following in xla/ folder
-find -name '*.cpp' -o -name '*.h' -o -name '*.cc' | xargs clang-format-7 -i -style=file
+find -name '*.cpp' -o -name '*.h' -o -name '*.cc' | xargs clang-format-11 -i -style=file
 ```
 
 ### Python Style Guide
