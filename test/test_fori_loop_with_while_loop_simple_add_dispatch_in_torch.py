@@ -24,7 +24,7 @@ class WhileLoopTest(unittest.TestCase):
       return x[0] <= 10
 
     def body_fn(x):
-      return (x + 1,)
+      return (x[0] + 1,)
 
     device = xm.xla_device()
     x = torch.ones(1, dtype=torch.int, device=device)
