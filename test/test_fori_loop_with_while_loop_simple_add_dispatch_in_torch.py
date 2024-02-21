@@ -21,7 +21,7 @@ class WhileLoopTest(unittest.TestCase):
   def test_while_loop_tpu(self):
 
     def cond_fn(x):
-      return x.sum() <= 10
+      return x <= 10 # x.sum() <= 10
 
     def body_fn(x):
       return (x + 1,)
