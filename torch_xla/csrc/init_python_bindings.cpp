@@ -910,7 +910,6 @@ class PyLoweringContext {
       computation = ConsumeValue(XlaHelpers::WrapXlaComputation(
         computation, program_shape.parameters(), input_output_alias_pair));
     }
-   }
   }
 
   // Get a mapping from the HLO input parameters to the backing Tensor values.
