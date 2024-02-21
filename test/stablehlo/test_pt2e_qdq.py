@@ -11,8 +11,13 @@ from torch.ao.quantization.quantize_pt2e import convert_pt2e, prepare_pt2e
 from torch.ao.quantization.quantizer.xnnpack_quantizer import (
     XNNPACKQuantizer, get_symmetric_quantization_config)
 from torch_xla import stablehlo
-from torch_xla.tf_saved_model_integration import \
-    save_torch_module_as_tf_saved_model
+from utils import has_tf_package
+
+try:
+  from torch_xla.tf_saved_model_integration import \
+      save_torch_module_as_tf_saved_model
+except ImportError:
+  print("tf is not installed. The tf.saved_model tests will be skipped.")
 
 # Needed to workaround the stablehlo bytecode serialization issue in https://github.com/openxla/stablehlo/issues/1812
 os.environ['STABLEHLO_BYTECODE_FROM_PRETTYPRINT'] = '1'
@@ -68,8 +73,8 @@ class PT2EExportTest(unittest.TestCase):
   def test_per_channel_qdq(self):
     device = xm.xla_device()
     x = torch.randn(2, 3, 4, 5).to(device)
-    scale = torch.tensor([3.2, 5.3, 0.1, 10])
-    zero_point = torch.tensor([1, 2, -1, -2], dtype=torch.int8)
+    scale = torch.tensor([3.2, 5.3, 0.1, 10]).to(device)
+    zero_point = torch.tensor([1, 2, -1, -2], dtype=torch.int64).to(device)
     x = torch.ops.quantized_decomposed.quantize_per_channel(
         x, scale, zero_point, 2, -128, 127, torch.int8)
     x = torch.ops.quantized_decomposed.dequantize_per_channel(
@@ -109,9 +114,10 @@ class PT2EExportTest(unittest.TestCase):
         stablehlo_txt.count("stablehlo.uniform_dequantize"),
         fx_node_cnt["dequantize"])
     # Save as tf.saved_model
-    tmp_path = tempfile.mkdtemp()
+    tmp_path = tempfile.mkdtemp() if has_tf_package() else None
     save_torch_module_as_tf_saved_model(m, args, tmp_path)
-    self.assertTrue(os.path.exists(os.path.join(tmp_path, 'saved_model.pb')))
+    if has_tf_package():
+      self.assertTrue(os.path.exists(os.path.join(tmp_path, 'saved_model.pb')))
 
 
 if __name__ == '__main__':
