@@ -30,15 +30,6 @@ def _xla_while_loop(cond_fn, body_fn, operands):
 
     ## trans body/cond to xlacomputation
     xm.mark_step()
-    body_result = body_fn(operands)
-    body_ctx = torch_xla._XLAC.lowering.LoweringContext()
-    body_ctx_builder = ctx.builder()
-    body_ctx_builder.name_ = 'bodyctx'
-    body_ctx.build([body_result])
-    body_hlo = body_ctx.hlo()
-    body_computation = xb.computation_from_module_proto("bodycomputation", body_hlo)
-
-    xm.mark_step()
     cond_result = cond_fn(operands)
     cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
     cond_ctx_builder = cond_ctx.builder()
@@ -46,6 +37,15 @@ def _xla_while_loop(cond_fn, body_fn, operands):
     cond_ctx.build([cond_result])
     cond_hlo = cond_ctx.hlo()
     cond_computation = xb.computation_from_module_proto("condcomputation", cond_hlo)
+
+    xm.mark_step()
+    body_result = body_fn(operands)
+    body_ctx = torch_xla._XLAC.lowering.LoweringContext()
+    # body_ctx_builder = ctx.builder()
+    # body_ctx_builder.name_ = 'bodyctx'
+    body_ctx.build([body_result])
+    body_hlo = body_ctx.hlo()
+    body_computation = xb.computation_from_module_proto("bodycomputation", body_hlo)
 
     # def cond_fn_placeholder(counter, operands):
     #   return counter < xb.Op.scalar((operands[0]).builder(), 10, dtype=xb.Type.S32)

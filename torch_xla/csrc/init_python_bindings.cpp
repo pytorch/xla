@@ -894,13 +894,16 @@ class PyLoweringContext {
       ir_values.push_back(value);
     }
 
+    // // check computation name
+    // XLA_ERROR() << computation.proto().name();
+
     // Lower the graph using the output IR values
     for (auto& ir_value : ir_values) {
       xla::XlaOp root = lowering_ctx.GetOutputOp(
           torch::lazy::Output(ir_value.node.get(), ir_value.index));
-      if (computation.proto().name()=='condctx') {
-        xla::XlaOp a = xla::GetTupleElement(root, 0);
-      }
+      // if (computation.proto().name()=='condctx') {
+      xla::XlaOp a = xla::GetTupleElement(root, 0);
+      // }
       lowering_ctx.AddResult(root);
     }
     computation = ConsumeValue(lowering_ctx.BuildXla());
