@@ -2244,6 +2244,28 @@ void InitXlaModuleBindings(py::module m) {
     xtensor->MarkDynamicDimension(dim);
   });
 
+  m.def("_set_buffer_donation", [](at::Tensor& input, bool should_donate) {
+    XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+    bool buffer_donation_setted = false;
+    if (!xtensor) {
+      // input tensor is not a XLATensor, return here.
+    } else if (xtensor->CurrentDataHandle() != nullptr) {
+      auto data = std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
+          xtensor->CurrentDataHandle());
+      data->set_should_donate_buffer(should_donate);
+      buffer_donation_setted = true;
+    } else if (xtensor->CurrentIrValue().node != nullptr) {
+      torch::lazy::NodePtr node = xtensor->CurrentIrValue().node;
+      auto device_data =
+          torch_xla::DeviceData::Cast(xtensor->CurrentIrValue().node.get());
+      if (device_data != nullptr) {
+        device_data->set_buffer_donation(should_donate);
+        buffer_donation_setted = true;
+      }
+    }
+    std::cerr << "buffer_donation_setted = " << buffer_donation_setted << "\n";
+  });
+
   // -------------Dynamo Integration API Start-------------------------
   /*
    * Return tensor ids and at::tensors for all DeviceData nodes that is needed
