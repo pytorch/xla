@@ -154,9 +154,9 @@ void LoweringContext::SetResult(size_t index, xla::XlaOp op) {
 
 xla::StatusOr<xla::XlaComputation> LoweringContext::BuildXla() {
   xla::StatusOr<xla::XlaComputation> xla;
-  if (builder_.name() == 'bodyctx') {
-    XLA_ERROR() << builder_.name();
-  }
+  // if (builder_.name() == 'bodyctx') {
+  XLA_ERROR() << builder_.name();
+  // }
   if (!root_tuple_.empty() & (root_tuple_.size()>1)) {
     xla::XlaOp root = xla::Tuple(builder(), root_tuple_);
     // xla::XlaOp a = xla::GetTupleElement(root, 0);
