@@ -894,6 +894,9 @@ class PyLoweringContext {
       ir_values.push_back(value);
     }
 
+    // check computation name
+    XLA_ERROR() << computation.proto().name();
+
     // Lower the graph using the output IR values
     for (auto& ir_value : ir_values) {
       xla::XlaOp root = lowering_ctx.GetOutputOp(
