@@ -23,15 +23,15 @@ class WhileLoopTest(unittest.TestCase):
     device = xm.xla_device()
 
     def cond_fn(x): # x = (xi,)
-      # ten = torch.ones(30, dtype=torch.int32, device=device)
-      return x[0] <= 30 # 30
+      ten = torch.tensor(30, dtype=torch.int32, device=device)
+      return x[0] <= ten # 30
 
     def body_fn(x): # x = (xi,)
-      onei = torch.ones(10, dtype=torch.int64, device=device)
+      onei = torch.tensor(10, dtype=torch.int32, device=device)
       return (x[0] +  onei,)
 
     # device = xm.xla_device()
-    xi = torch.ones(1, dtype=torch.int32, device=device)
+    xi = torch.tensor(1, dtype=torch.int32, device=device)
     res = while_loop(cond_fn, body_fn, (xi,))
     expected = _fake_while_loop(cond_fn, body_fn, x)
     self.assertEqual(expected, res)
