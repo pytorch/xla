@@ -30,7 +30,7 @@ class WhileLoopTest(unittest.TestCase):
     x = torch.ones(1, dtype=torch.int, device=device)
     res = while_loop(cond_fn, body_fn, (x,))
     expected = _fake_while_loop(cond_fn, body_fn, x)
-    self.assertEqual(expected, res[0])
+    self.assertEqual(expected, res)
 
 
 if __name__ == '__main__':
