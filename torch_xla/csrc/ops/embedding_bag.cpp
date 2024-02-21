@@ -15,65 +15,28 @@
 
 namespace torch_xla {
 namespace {
-// xla::XlaOp MakeOffsetToBag(xla::XlaOp weight, xla::XlaOp indices,
-//                            xla::XlaOp offsets) {
-//   xla::XlaOp zeroes = xla::ZerosLike(indices);
-//   const xla::Shape& offset_shape = ShapeHelper::ShapeOfXlaOp(offsets);
-//   xla::XlaOp ones =
-//       Broadcast(One(offsets.builder(), offset_shape.element_type()),
-//                 offset_shape.dimensions());
-//   xla::XlaOp temp = CreateIndexAdd(zeroes, 0, offsets, ones);
-//   xla::XlaOp offsets_to_bag = xla::DynamicUpdateSlice(temp, {0}, {0});
-
-//   const xla::Shape& input_shape = ShapeHelper::ShapeOfXlaOp(offsets_to_bag);
-//   xla::XlaOp init = XlaHelpers::ScalarValue<float>(
-//       0, input_shape.element_type(), offsets_to_bag.builder());
-//   xla::XlaComputation reducer =
-//       XlaHelpers::CreateAddComputation(input_shape.element_type());
-//   return BuildCumulativeComputation(offsets_to_bag, 0, reducer, init);
-// }
-
-// xla::XlaOp MakeBagSizes(xla::XlaOp indices, xla::XlaOp offsets) {
-//   const xla::Shape& offset_shape = ShapeHelper::ShapeOfXlaOp(offsets);
-//   const xla::Shape& indices_shape = ShapeHelper::ShapeOfXlaOp(indices);
-//   int64_t offset_size = offset_shape.dimensions(0);
-//   int64_t indices_size = indices_shape.dimensions(0);
-//   xla::XlaOp one = xla::ConstantR0<int64_t>(offsets.builder(), 1);
-//   xla::XlaOp zero = xla::ConstantR0<int64_t>(offsets.builder(), 0);
-
-//   xla::XlaOp slice1 = xla::DynamicSlice(offsets, {one}, /*slice_sizes=*/{offset_size-1});
-//   xla::XlaOp slice0 = xla::DynamicSlice(offsets, {zero}, /*slice_sizes=*/{offset_size-1});
-//   xla::XlaOp sizes = xla::Sub(slice1, slice0);
-
-//   xla::XlaOp numel = xla::ConstantR0<int64_t>(offsets.builder(), indices_size);
-//   xla::XlaOp slice_size = xla::ConstantR0<int64_t>(offsets.builder(), offset_size-1);
-//   xla::XlaOp last_offset = xla::DynamicSlice(offsets, {slice_size}, /*slice_sizes=*/{1});
-//   xla::XlaOp last_bag_size = xla::Sub({numel}, last_offset);
-
-//   xla::XlaOp bag_sizes =
-//       xla::ConcatInDim(offsets.builder(), {sizes, last_bag_size}, 0);
-//   return bag_sizes;
-// }
-
-// xla::XlaOp MakeMaxIndices(xla::XlaOp bag_sizes, xla::XlaOp weights, xla::XlaOp offsets) {
-//   int64_t num_bags = offsets.Shape().size(0);
-//   int64_t weight_dim = weights.Shape().size(1);
-//   std::vector<int64_t> sizes = {num_bags, weight_dim};
-//   xla::XlaOp max_indices = xla::Zeros(
-//       weights.builder(), ShapeUtil::MakeShape(offsets.element_type(), sizes));
-//   return max_indices;
-// }
-
+const int MODE_SUM = 0;
+const int MODE_MEAN = 1;
+const int MODE_MAX = 2;
 std::vector<xla::XlaOp> BuildEmbeddingBag(xla::XlaOp weight, xla::XlaOp indices,
                                           xla::XlaOp offsets,
-                                          bool include_last_offset) {
-  xla::XlaOp output2 = xla::Log(weight);
-  xla::XlaOp output3 = xla::Log(weight);
-  xla::XlaOp output4 = xla::Log(weight);
-  xla::XlaOp embeddings = xla::TorchIndexSelect(weight, indices, 0);
-  int64_t n = ShapeHelper::ShapeOfXlaOp(offsets).dimensions(0);
+                                          xla::XlaOp per_sample_weights,
+                                          bool include_last_offset, int mode) {
+  auto offset_shape = ShapeHelper::ShapeOfXlaOp(offsets);
+  int64_t n = offset_shape.dimensions(0);
   int64_t weight_dim = ShapeHelper::ShapeOfXlaOp(weight).dimensions(1);
   int64_t num_embeddings = ShapeHelper::ShapeOfXlaOp(indices).dimensions(0);
+  xla::XlaOp output2 = xla::ZerosLike(indices);
+  xla::XlaOp output3 = xla::ZerosLike(offsets);
+  std::vector<int64_t> sizes = {n, weight_dim};
+  xla::XlaOp output4 = xla::Zeros(
+      offsets.builder(), xla::ShapeUtil::MakeShape(offset_shape.element_type(), sizes));
+
+  xla::XlaOp embeddings = xla::TorchIndexSelect(weight, indices, 0);
+  xla::XlaOp embeddings_weighted =
+      xla::Mul(embeddings, xla::BroadcastInDim(per_sample_weights,
+                                         {num_embeddings, weight_dim}, {0}));
+
   std::vector<xla::Shape> shape_elements = {
       xla::ShapeUtil::MakeShape(xla::S64, {}),
       xla::ShapeUtil::MakeShape(xla::S64, {}),
@@ -100,8 +63,9 @@ std::vector<xla::XlaOp> BuildEmbeddingBag(xla::XlaOp weight, xla::XlaOp indices,
     auto w = xla::GetTupleElement(prev, 3);
 
     xla::XlaOp slice = xla::DynamicSlice(
-        emb, {index, xla::ConstantR0<int64_t>(&builder, 0)}, {1, 3});
-    xla::XlaOp result = xla::Add(w, slice);
+        emb, {index, xla::ConstantR0<int64_t>(&builder, 0)}, {1, weight_dim});
+    xla::XlaOp result =
+        mode == MODE_SUM ? xla::Add(w, slice) : xla::Max(w, slice);
 
     xla::Tuple(&builder,
                {
@@ -118,9 +82,9 @@ std::vector<xla::XlaOp> BuildEmbeddingBag(xla::XlaOp weight, xla::XlaOp indices,
   for (int64_t i = 0; i < n; i++) {
     xla::XlaOp start = xla::DynamicSlice(
         offsets, {xla::ConstantR0<int64_t>(offsets.builder(), i)}, {1});
-    if (i == n - 1 && !include_last_offset) continue;
+    if (i == n - 1 && include_last_offset) continue;
     xla::XlaOp end =
-        i == n - 1
+        i == n - 1 && !include_last_offset
             ? xla::ConstantR1<int64_t>(offsets.builder(), 1, num_embeddings)
             : xla::DynamicSlice(
                   offsets, {xla::ConstantR0<int64_t>(offsets.builder(), i + 1)},
@@ -128,28 +92,31 @@ std::vector<xla::XlaOp> BuildEmbeddingBag(xla::XlaOp weight, xla::XlaOp indices,
     // Create a While node with computations for the condition and the body.
     auto init_tuple = xla::Tuple(
         offsets.builder(),
-        {xla::Reshape(start, {0}, {}), xla::Reshape(end, {0}, {}), embeddings,
+        {xla::Reshape(start, {0}, {}), xla::Reshape(end, {0}, {}), embeddings_weighted,
          xla::ConstantFromArray<float>(offsets.builder(), initial_vector)});
     auto result = xla::While(condition, body, init_tuple);
     results.push_back(xla::GetTupleElement(result, 3));
   };
-  xla::XlaOp final = xla::ConcatInDim(offsets.builder(), results, 0);
-  return {final, output2, output3, output4};
+  xla::XlaOp output1 = xla::ConcatInDim(offsets.builder(), results, 0);
+  return {output1, output2, output3, output4};
 }
 
 xla::Shape NodeOutputShapes(const torch::lazy::Value& weight,
                             const torch::lazy::Value& indices,
                             const torch::lazy::Value& offsets,
-                            bool include_last_offset) {
+                            const torch::lazy::Value& per_sample_weights,
+                            bool include_last_offset, bool mode) {
   auto lower_for_shapes_fn =
       [&](absl::Span<const xla::XlaOp> operands) -> xla::XlaOp {
-    return xla::Tuple(operands[0].builder(),
-                      BuildEmbeddingBag(operands[0], operands[1], operands[2],
-                                        include_last_offset));
+    return xla::Tuple(
+        operands[0].builder(),
+        BuildEmbeddingBag(operands[0], operands[1], operands[2], operands[3],
+                          include_last_offset, mode));
   };
 
   std::vector<xla::Shape> input_shapes = {
-      GetXlaShape(weight), GetXlaShape(indices), GetXlaShape(offsets)};
+      GetXlaShape(weight), GetXlaShape(indices), GetXlaShape(offsets),
+      GetXlaShape(per_sample_weights)};
 
   return InferOutputShape(absl::MakeSpan(input_shapes), lower_for_shapes_fn);
 }
@@ -163,38 +130,35 @@ std::string EmbeddingBag::ToString() const {
 
 EmbeddingBag::EmbeddingBag(const torch::lazy::Value& weight,
                            const torch::lazy::Value& indices,
-                           const torch::lazy::Value& offsets,
-                           bool scale_grad_by_freq, int64_t mode, bool sparse,
-                           const c10::optional<at::Tensor>& per_sample_weights,
-                           bool include_last_offset, int64_t padding_idx)
+                           const torch::lazy::Value& offsets, int64_t mode,
+                           const torch::lazy::Value& per_sample_weights,
+                           bool include_last_offset)
     : XlaNode(
           torch::lazy::OpKind(at::aten::embedding_bag),
-          {weight, indices, offsets},
+          {weight, indices, offsets, per_sample_weights},
           [&]() {
             return NodeOutputShapes(weight, indices, offsets,
-                                    include_last_offset);
+                                    per_sample_weights, include_last_offset,
+                                    mode);
           },
-          /*num_outputs=*/4,
-          torch::lazy::MHash(scale_grad_by_freq, mode, sparse,
-                             include_last_offset, padding_idx)),
-      scale_grad_by_freq_(scale_grad_by_freq),
+          /*num_outputs=*/4, torch::lazy::MHash(mode, include_last_offset)),
       mode_(mode),
-      sparse_(sparse),
-      include_last_offset_(include_last_offset),
-      padding_idx_(padding_idx) {}
+      include_last_offset_(include_last_offset) {}
 
 torch::lazy::NodePtr EmbeddingBag::Clone(torch::lazy::OpList operands) const {
-  return torch::lazy::MakeNode<EmbeddingBag>(operands.at(0), operands.at(0),
-                                             operands.at(0), false, 1, false,
-                                             c10::nullopt, false, 0);
+  return torch::lazy::MakeNode<EmbeddingBag>(operands.at(0), operands.at(1),
+                                             operands.at(2), mode_,
+                                             operands.at(3), false);
 }
 
 XlaOpVector EmbeddingBag::Lower(LoweringContext* loctx) const {
   xla::XlaOp weight = loctx->GetOutputOp(operand(0));
   xla::XlaOp indices = loctx->GetOutputOp(operand(1));
   xla::XlaOp offsets = loctx->GetOutputOp(operand(2));
+  xla::XlaOp per_sample_weights = loctx->GetOutputOp(operand(3));
   std::vector<xla::XlaOp> ops =
-      BuildEmbeddingBag(weight, indices, offsets, include_last_offset_);
+      BuildEmbeddingBag(weight, indices, offsets, per_sample_weights,
+                        include_last_offset_, mode_);
   return ReturnOps(absl::MakeSpan(ops), loctx);
 }
 
