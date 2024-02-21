@@ -78,10 +78,10 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   print("shapes: ", shapes) # shapes:  [<torch_xla.core.xla_builder.Shape object at 0x7f727cbec730>]
   # computation = xb.create_computation('test_while', op_fn, shapes,
   #                                           **kwargs)
-  builder = create_builder('test_while')
+  builder = xb.create_builder('test_while')
   params = []
   for shape in shapes:
-    p = mkparam(builder, len(params), shape)
+    p = xb.mkparam(builder, len(params), shape)
     params.append(p)
   
   # def body_func(operands): # (counter, operands):
