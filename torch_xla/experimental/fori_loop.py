@@ -73,11 +73,7 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   print("type operands: ", type(operands))
   print("operands: ", operands)
   kwargs = {}
-  shapes = xb.tensor_shape(operands) # args) # tensor to xb.Shape # list
-  print("type shapes: ", type(shapes)) # type shapes:  <class 'list'>
-  print("shapes: ", shapes) # shapes:  [<torch_xla.core.xla_builder.Shape object at 0x7f727cbec730>]
-  # computation = xb.create_computation('test_while', op_fn, shapes,
-  #                                           **kwargs)
+  shapes = xb.tensor_shape(operands)
   builder = xb.create_builder('test_while')
   params = []
   for shape in shapes:
@@ -85,50 +81,24 @@ def _xla_while_loop(cond_fn, body_fn, operands):
     params.append(p)
 
   xm.mark_step()
-  cond_result = cond_fn(operands) # cond_func(operands)
-  # print("cond_result: ", cond_result)
+  cond_result = cond_fn(operands)
   cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
-  # body_ctx_builder = ctx.builder()
-  # body_ctx_builder.name_ = 'bodyctx'
   cond_ctx.build(list(cond_result))
   cond_hlo = cond_ctx.hlo()
   cond_computation = xb.computation_from_module_proto("condcomputation", cond_hlo)
-
-  # body_hlo_print = xb.get_computation_hlo(body_computation)
   cond_hlo_print = xb.get_computation_hlo(cond_computation)
-
-  # print("body_hlo: !!!!!!!!!")
-  # print(body_hlo_print)
   print("cond_hlo: !!!!!!!!!")
   print(cond_hlo_print)
 
-  # def body_func(operands): # (counter, operands):
-  #   return body_fn(operands)
-
   xm.mark_step()
-  body_result = body_fn(operands) # [0]) # body_func(operands)
-  # print("body_result: ", body_result)
+  body_result = body_fn(operands)
   body_ctx = torch_xla._XLAC.lowering.LoweringContext()
-  # body_ctx_builder = ctx.builder()
-  # body_ctx_builder.name_ = 'bodyctx'
   body_ctx.build(list(body_result))
   body_hlo = body_ctx.hlo()
   body_computation = xb.computation_from_module_proto("bodycomputation", body_hlo)
-
   body_hlo_print = xb.get_computation_hlo(body_computation)
   print("body_hlo: !!!!!!!!!")
   print(body_hlo_print)
-
-  # def cond_func(counter, operands):
-  #   next_counter = counter + xb.Op.scalar(counter.builder(), 1, dtype=xb.Type.S32)
-  #   return c < xb.Op.scalar(c.builder(), 10, dtype=xb.Type.F32)
-  # def cond_func(operands): # (counter, operands):
-  #   return cond_fn(operands)
-
-  # input_tuple = xb.Op.tuple(params) # shapess
-  # cond_root = cond_func(*params, **kwargs)
-  # cond_computation = cond_root.build(name)
-  # print("finish cond computation creation")
 
   input_tuple = xb.Op.tuple(params)
 
