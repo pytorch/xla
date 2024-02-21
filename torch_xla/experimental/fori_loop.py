@@ -21,53 +21,53 @@ def while_loop(cond_fn, body_fn, operands):
 
 def _xla_while_loop(cond_fn, body_fn, operands):
 
-  def op_fn(operands):# internal_x):
-    # TODO(manfei): replace cond_fn_placeholder and body_fn_placeholder after confirm xlacomputation could be in xla::while
-    ## print body/cond type
-    print("cond_fn type: ", type(cond_fn))
-    print("body_fn type: ", type(body_fn))
-    print("operands type: ", type(operands))
+  # def op_fn(operands):# internal_x):
+  #   # TODO(manfei): replace cond_fn_placeholder and body_fn_placeholder after confirm xlacomputation could be in xla::while
+  #   ## print body/cond type
+  #   print("cond_fn type: ", type(cond_fn))
+  #   print("body_fn type: ", type(body_fn))
+  #   print("operands type: ", type(operands))
 
-    ## trans body/cond to xlacomputation
-    xm.mark_step()
-    cond_result = cond_fn(operands)
-    cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
-    cond_ctx_builder = cond_ctx.builder()
-    cond_ctx_builder.name_ = 'condctx'
-    cond_ctx.build([cond_result])
-    cond_hlo = cond_ctx.hlo()
-    cond_computation = xb.computation_from_module_proto("condcomputation", cond_hlo)
+  #   ## trans body/cond to xlacomputation
+  #   xm.mark_step()
+  #   cond_result = cond_fn(operands)
+  #   cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
+  #   cond_ctx_builder = cond_ctx.builder()
+  #   cond_ctx_builder.name_ = 'condctx'
+  #   cond_ctx.build([cond_result])
+  #   cond_hlo = cond_ctx.hlo()
+  #   cond_computation = xb.computation_from_module_proto("condcomputation", cond_hlo)
 
-    xm.mark_step()
-    body_result = body_fn(operands)
-    body_ctx = torch_xla._XLAC.lowering.LoweringContext()
-    # body_ctx_builder = ctx.builder()
-    # body_ctx_builder.name_ = 'bodyctx'
-    body_ctx.build([body_result])
-    body_hlo = body_ctx.hlo()
-    body_computation = xb.computation_from_module_proto("bodycomputation", body_hlo)
+  #   xm.mark_step()
+  #   body_result = body_fn(operands)
+  #   body_ctx = torch_xla._XLAC.lowering.LoweringContext()
+  #   # body_ctx_builder = ctx.builder()
+  #   # body_ctx_builder.name_ = 'bodyctx'
+  #   body_ctx.build([body_result])
+  #   body_hlo = body_ctx.hlo()
+  #   body_computation = xb.computation_from_module_proto("bodycomputation", body_hlo)
 
-    # def cond_fn_placeholder(counter, operands):
-    #   return counter < xb.Op.scalar((operands[0]).builder(), 10, dtype=xb.Type.S32)
-      # return counter < xb.Op.scalar((internal_x).builder(), 10, dtype=xb.Type.S32)
+  #   # def cond_fn_placeholder(counter, operands):
+  #   #   return counter < xb.Op.scalar((operands[0]).builder(), 10, dtype=xb.Type.S32)
+  #     # return counter < xb.Op.scalar((internal_x).builder(), 10, dtype=xb.Type.S32)
 
-    # def body_fn_placeholder(counter, internal_x):
-    #   next_counter = counter + xb.Op.scalar(
-    #       counter.builder(), 1, dtype=xb.Type.S32)
-    #   internal_x = internal_x + xb.Op.scalar(
-    #       internal_x.builder(), 1, dtype=xb.Type.S32)
-    #   return xb.Op.tuple((next_counter, internal_x))
+  #   # def body_fn_placeholder(counter, internal_x):
+  #   #   next_counter = counter + xb.Op.scalar(
+  #   #       counter.builder(), 1, dtype=xb.Type.S32)
+  #   #   internal_x = internal_x + xb.Op.scalar(
+  #   #       internal_x.builder(), 1, dtype=xb.Type.S32)
+  #   #   return xb.Op.tuple((next_counter, internal_x))
 
-    # zero = xb.Op.scalar(internal_x.builder(), 0, dtype=xb.Type.S32)
-    # w = xb.Op.mkwhile((zero, internal_x), cond_fn_placeholder,
-    #                   body_computation)
+  #   # zero = xb.Op.scalar(internal_x.builder(), 0, dtype=xb.Type.S32)
+  #   # w = xb.Op.mkwhile((zero, internal_x), cond_fn_placeholder,
+  #   #                   body_computation)
 
-    ## trest operands
-    input_tuple = Op.tuple(operands)
-    w = input_tuple.while_loop(
-        condition_computation=cond_computation, body_computation=body_computation)
+  #   ## trest operands
+  #   input_tuple = Op.tuple(operands)
+  #   w = input_tuple.while_loop(
+  #       condition_computation=cond_computation, body_computation=body_computation)
 
-    return w.get_tuple_element(1)
+  #   return w.get_tuple_element(1)
 
   # op = xor.register('test_while', op_fn)
   print("type operands: ", type(operands))
@@ -83,7 +83,25 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   for shape in shapes:
     p = xb.mkparam(builder, len(params), shape)
     params.append(p)
-  
+
+  xm.mark_step()
+  cond_result = cond_fn(operands) # cond_func(operands)
+  print("cond_result: ", cond_result)
+  cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
+  # body_ctx_builder = ctx.builder()
+  # body_ctx_builder.name_ = 'bodyctx'
+  cond_ctx.build(list(cond_result))
+  cond_hlo = cond_ctx.hlo()
+  cond_computation = xb.computation_from_module_proto("condcomputation", cond_hlo)
+
+  # body_hlo_print = xb.get_computation_hlo(body_computation)
+  cond_hlo_print = xb.get_computation_hlo(cond_computation)
+
+  # print("body_hlo: !!!!!!!!!")
+  # print(body_hlo_print)
+  print("cond_hlo: !!!!!!!!!")
+  print(cond_hlo_print)
+
   # def body_func(operands): # (counter, operands):
   #   return body_fn(operands)
 
@@ -111,24 +129,6 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   # cond_root = cond_func(*params, **kwargs)
   # cond_computation = cond_root.build(name)
   # print("finish cond computation creation")
-
-  xm.mark_step()
-  cond_result = cond_fn(operands) # cond_func(operands)
-  print("cond_result: ", cond_result)
-  cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
-  # body_ctx_builder = ctx.builder()
-  # body_ctx_builder.name_ = 'bodyctx'
-  cond_ctx.build(list(cond_result))
-  cond_hlo = cond_ctx.hlo()
-  cond_computation = xb.computation_from_module_proto("condcomputation", cond_hlo)
-
-  # body_hlo_print = xb.get_computation_hlo(body_computation)
-  cond_hlo_print = xb.get_computation_hlo(cond_computation)
-
-  # print("body_hlo: !!!!!!!!!")
-  # print(body_hlo_print)
-  print("cond_hlo: !!!!!!!!!")
-  print(cond_hlo_print)
 
   input_tuple = xb.Op.tuple(params)
 
