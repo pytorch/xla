@@ -22,7 +22,7 @@ def while_loop(cond_fn, body_fn, operands):
 def _xla_while_loop(cond_fn, body_fn, operands):
 
   def op_fn(internal_x):
-    # TODO(manfei): replace cond_fn_placeholder and body_fn_placeholder after confirm xlacomputation could be in xla::while
+    # TODO(manfei): replace cond_fn_placeholder and body_fn_placeholder after lower fn to xlacomputation and could be in xla::while
     def cond_fn_placeholder(counter, internal_x):
       return counter < xb.Op.scalar(internal_x.builder(), 10, dtype=xb.Type.S32)
 
