@@ -27,8 +27,8 @@ class WhileLoopTest(unittest.TestCase):
       return x[0] < ten # ==x[0] # torch.equal(x[0], ten) # x[0] <= ten # 30
 
     def body_fn(x): # x = (xi,)
-      onei = torch.tensor(10, dtype=torch.int32, device=device)
-      return (x[0] +  onei,) # onei,)
+      # onei = torch.tensor(10, dtype=torch.int32, device=device)
+      return (x[0] + 1,) # onei,)
 
     # device = xm.xla_device()
     xi = torch.ones(1, dtype=torch.int32, device=device)
