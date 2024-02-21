@@ -24,6 +24,9 @@ class LoweringRegistry:
     return candidate
 
   def register(self, op, lowering):
+    if isinstance(op, torch._ops.OpOverloadPacket):
+      if hasattr(op, 'default'):
+        self.registered_ops[op.default] = lowering
     self.registered_ops[op] = lowering
 
 
