@@ -86,7 +86,7 @@ def _xla_while_loop(cond_fn, body_fn, operands):
 
   xm.mark_step()
   cond_result = cond_fn(operands) # cond_func(operands)
-  print("cond_result: ", cond_result)
+  # print("cond_result: ", cond_result)
   cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
   # body_ctx_builder = ctx.builder()
   # body_ctx_builder.name_ = 'bodyctx'
@@ -107,7 +107,7 @@ def _xla_while_loop(cond_fn, body_fn, operands):
 
   xm.mark_step()
   body_result = body_fn(operands[0]) # body_func(operands)
-  print("body_result: ", body_result)
+  # print("body_result: ", body_result)
   body_ctx = torch_xla._XLAC.lowering.LoweringContext()
   # body_ctx_builder = ctx.builder()
   # body_ctx_builder.name_ = 'bodyctx'
