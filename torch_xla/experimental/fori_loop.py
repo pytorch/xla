@@ -139,6 +139,9 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   # print("localoperands: ", localoperands) # tensor(1, device='xla:0', dtype=torch.int32)
   result = torch_xla._XLAC._xla_user_computation('xla::_op_test_while', [localoperands,],
                                                    computation)
+  # _xla_user_computation:
+  # [](const std::string& opname, const std::vector<at::Tensor>& inputs,
+  #          const runtime::ComputationClient::ComputationPtr& computation) {
   print("done the result!!!")
   print("result: ", result)
   op = result[0] if len(result) == 1 else result
