@@ -3,6 +3,8 @@
 
 #include <torch/csrc/lazy/backend/backend_data.h>
 
+#include <iostream>
+
 #include "torch_xla/csrc/ir.h"
 #include "torch_xla/csrc/runtime/computation_client.h"
 
@@ -25,6 +27,15 @@ class DeviceData : public XlaNode {
   void set_buffer_donation(bool should_donate_buffer) {
     std::dynamic_pointer_cast<runtime::ComputationClient::Data>(data_)
         ->set_should_donate_buffer(should_donate_buffer);
+    // std::cerr << std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
+    //                  data_)
+    //                  ->ToString()
+    //           << "\n";
+  }
+
+  bool get_buffer_donation() {
+    return std::dynamic_pointer_cast<runtime::ComputationClient::Data>(data_)
+        ->should_donate_buffer();
   }
 
   // With SPMD sharding propagation, we need to update the unpartitioned

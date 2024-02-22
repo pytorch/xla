@@ -2256,14 +2256,35 @@ void InitXlaModuleBindings(py::module m) {
       buffer_donation_setted = true;
     } else if (xtensor->CurrentIrValue().node != nullptr) {
       torch::lazy::NodePtr node = xtensor->CurrentIrValue().node;
-      auto device_data =
-          torch_xla::DeviceData::Cast(xtensor->CurrentIrValue().node.get());
+      auto device_data = torch_xla::DeviceData::Cast(node.get());
       if (device_data != nullptr) {
         device_data->set_buffer_donation(should_donate);
         buffer_donation_setted = true;
       }
     }
     std::cerr << "buffer_donation_setted = " << buffer_donation_setted << "\n";
+  });
+
+  m.def("_get_buffer_donation", [](const at::Tensor& input) -> bool {
+    XLATensorPtr xtensor = bridge::GetXlaTensor(input);
+    if (!xtensor) {
+      return false;
+    } else if (xtensor->CurrentDataHandle() != nullptr) {
+      std::cerr << "trying to access data handle\n";
+      auto data = std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
+          xtensor->CurrentDataHandle());
+      return data->should_donate_buffer();
+    } else if (xtensor->CurrentIrValue().node != nullptr) {
+      auto device_data =
+          torch_xla::DeviceData::Cast(xtensor->CurrentIrValue().node.get());
+      std::cerr << "device data cast done\n";
+      if (device_data != nullptr) {
+        return device_data->get_buffer_donation();
+      } else {
+        return false;
+      }
+    }
+    return false;
   });
 
   // -------------Dynamo Integration API Start-------------------------
