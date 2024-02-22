@@ -677,9 +677,9 @@ std::vector<at::Tensor> XlaUserComputation(
     std::cout << inputs[i] << "; ";
   }
   std::vector<XLATensorPtr> xinputs = GetXlaTensors(inputs, /*want_all=*/true);
-  std::out << " !!!$$$###: " << std::endl;
+  std::cout << " !!!$$$###: " << std::endl;
   for (int i = 0; i < xinputs.size(); i++) {
-    std::cout << DumpUtil::ToHlo(xinputs[i]->CurrentIrValue()) << "; ";
+    std::cout << DumpUtil::ToText(xinputs[i]->CurrentIrValue()) << "; ";
   }
   std::vector<XLATensorPtr> xresults =
       tensor_methods::user_computation(opname, xinputs, std::move(computation));
