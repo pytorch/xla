@@ -169,9 +169,7 @@ xla::StatusOr<xla::XlaComputation> LoweringContext::BuildXla() {
     // xla::Shape xla_scalar_shape = xla::ShapeUtil::MakeShape(element_type, {});
     // xla::XlaOp p0 = xla::Parameter(&cb, 0, xla_scalar_shape, "p0");
     const std::string condctx = "condctx";
-    #include <iostream>
-    using namespace std;
-    XLA_ERROR() << builder()->name();
+    std::cout << builder()->name();
     if ((builder()->name()) == condctx) { // == "condctx") {
       xla = builder()->Build(root_tuple_.at(0)); // root);
     }
