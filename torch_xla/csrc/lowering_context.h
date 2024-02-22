@@ -5,6 +5,7 @@
 #include <torch/csrc/lazy/backend/lowering_context.h>
 #include <torch/csrc/lazy/core/ir_util.h>
 
+#include <iostream>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -34,7 +35,7 @@ class LoweringContext : public torch::lazy::LoweringContext {
 
   xla::XlaBuilder* builder() { return &builder_; }
 
-  void setnamestring(const std::string& name) { name_ = name; }
+  void setnamestring(const std::string& name) { name_ = name; std::cout << "aksldj~~~??>>: " << name_;}
 
   const std::string& getnamestring() { return name_; }
 
