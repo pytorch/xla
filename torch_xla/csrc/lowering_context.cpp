@@ -164,11 +164,11 @@ xla::StatusOr<xla::XlaComputation> LoweringContext::BuildXla() {
   } else if (!root_tuple_.empty() & (root_tuple_.size()==1)) {
     // xla::XlaOp root = xla::Tuple(builder(), root_tuple_);
     // xla::XlaOp a = xla::GetTupleElement(root, 0);
-    const xla::Shape& root_shape = ShapeHelper::ShapeOfXlaOp(root_tuple_.at(0));
-    xla::XlaBuilder cb("predone");
-    xla::Shape xla_scalar_shape = xla::ShapeUtil::MakeShape(element_type, {});
-    xla::XlaOp p0 = xla::Parameter(&cb, 0, xla_scalar_shape, "p0");
-    if (root_shape.ToString() == 'pred[]') {
+    // const xla::Shape& root_shape = ShapeHelper::ShapeOfXlaOp(root_tuple_.at(0));
+    // xla::XlaBuilder cb("predone");
+    // xla::Shape xla_scalar_shape = xla::ShapeUtil::MakeShape(element_type, {});
+    // xla::XlaOp p0 = xla::Parameter(&cb, 0, xla_scalar_shape, "p0");
+    if (builder()->name() == 'condctx') {
       xla = builder()->Build(root_tuple_.at(0)); // root);
     }
     else {

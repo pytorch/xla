@@ -1006,6 +1006,10 @@ class PyLoweringContext {
     return result;
   }
 
+  LoweringContext GetLoweringCtx() {
+    return lowering_ctx;
+  }
+
  private:
   LoweringContext lowering_ctx;
   xla::XlaComputation computation;
