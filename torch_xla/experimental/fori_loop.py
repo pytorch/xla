@@ -120,6 +120,10 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   computation = w.build(name)
   print("pass this line second @@@@@@@@@@@")
 
+  while_loop_hlo_print = xb.get_computation_hlo(computation)
+  print("while_loop_hlo: !!!!!!!!!")
+  print(while_loop_hlo_print)
+
   # root = fn(*params, **kwargs)
   # computation = root.build(name)
 
@@ -129,6 +133,7 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   print("type operands[0]: ", type(operands[0]))
   result = torch_xla._XLAC._xla_user_computation('xla::_op_test_while', [operands[0],],
                                                    computation)
+  print("done the result!!!")
   print("result: ", result)
   op = result[0] if len(result) == 1 else result
   
