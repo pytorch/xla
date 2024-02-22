@@ -84,6 +84,7 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   cond_result = cond_fn(operands)
   cond_ctx = torch_xla._XLAC.lowering.LoweringContext() # "condctx")
   print("type cond_ctx: ", type(cond_ctx))
+  cond_ctx.setnamestring("condctx")
   # cond_builder = xb.create_builder('condctx')
   # cond_ctx_builder = cond_ctx.GetLoweringCtx().builder()
   # cond_ctx_builder.name_ = 'condctx'
