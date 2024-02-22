@@ -25,9 +25,10 @@ xla::Shape NodeOutputShape(c10::ArrayRef<torch::lazy::Value> values,
 }  // namespace
 
 Stack::Stack(c10::ArrayRef<torch::lazy::Value> values, int64_t dim)
-    : XlaNode(torch::lazy::OpKind(at::aten::stack), values,
-              [&]() { return NodeOutputShape(values, dim); },
-              /*num_outputs=*/1, torch::lazy::MHash(dim)),
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::stack), values,
+          [&]() { return NodeOutputShape(values, dim); },
+          /*num_outputs=*/1, torch::lazy::MHash(dim)),
       dim_(dim) {}
 
 torch::lazy::NodePtr Stack::Clone(torch::lazy::OpList operands) const {

@@ -16,9 +16,10 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input,
 
 CountNonzero::CountNonzero(const torch::lazy::Value& input,
                            std::vector<int64_t> dims)
-    : XlaNode(torch::lazy::OpKind(at::aten::count_nonzero), {input},
-              [&]() { return NodeOutputShape(input, dims); },
-              /*num_outputs=*/1, torch::lazy::MHash(dims)),
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::count_nonzero), {input},
+          [&]() { return NodeOutputShape(input, dims); },
+          /*num_outputs=*/1, torch::lazy::MHash(dims)),
       dims_(dims) {}
 
 torch::lazy::NodePtr CountNonzero::Clone(torch::lazy::OpList operands) const {

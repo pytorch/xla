@@ -24,9 +24,10 @@ xla::Shape NodeOutputShape(const torch::lazy::Value& input,
 Multinomial::Multinomial(const torch::lazy::Value& input,
                          const torch::lazy::Value& seed, int64_t num_samples,
                          bool replacement)
-    : XlaNode(torch::lazy::OpKind(at::aten::multinomial), {input, seed},
-              [&]() { return NodeOutputShape(input, num_samples); },
-              /*num_outputs=*/1, torch::lazy::MHash(num_samples, replacement)),
+    : XlaNode(
+          torch::lazy::OpKind(at::aten::multinomial), {input, seed},
+          [&]() { return NodeOutputShape(input, num_samples); },
+          /*num_outputs=*/1, torch::lazy::MHash(num_samples, replacement)),
       num_samples_(num_samples),
       replacement_(replacement) {}
 

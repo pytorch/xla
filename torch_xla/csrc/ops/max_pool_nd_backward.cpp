@@ -43,15 +43,16 @@ MaxPoolNdBackward::MaxPoolNdBackward(
     const torch::lazy::Value& grad_output, const torch::lazy::Value& input,
     int64_t spatial_dim_count, std::vector<int64_t> kernel_size,
     std::vector<int64_t> stride, std::vector<int64_t> padding, bool ceil_mode)
-    : XlaNode(torch::lazy::OpKind(MaxPoolNdBackwardSymbol(spatial_dim_count)),
-              {grad_output, input},
-              [&]() {
-                return NodeOutputShape(grad_output, input, spatial_dim_count,
-                                       kernel_size, stride, padding, ceil_mode);
-              },
-              /*num_outputs=*/1,
-              torch::lazy::MHash(spatial_dim_count, kernel_size, stride,
-                                 padding, ceil_mode)),
+    : XlaNode(
+          torch::lazy::OpKind(MaxPoolNdBackwardSymbol(spatial_dim_count)),
+          {grad_output, input},
+          [&]() {
+            return NodeOutputShape(grad_output, input, spatial_dim_count,
+                                   kernel_size, stride, padding, ceil_mode);
+          },
+          /*num_outputs=*/1,
+          torch::lazy::MHash(spatial_dim_count, kernel_size, stride, padding,
+                             ceil_mode)),
       spatial_dim_count_(spatial_dim_count),
       kernel_size_(std::move(kernel_size)),
       stride_(std::move(stride)),
