@@ -61,6 +61,7 @@ spec:
       python3 /src/pytorch/xla/test/spmd/test_spmd_debugging.py
       python3 /src/pytorch/xla/test/pjrt/test_dtypes.py
       python3 /src/pytorch/xla/test/pjrt/test_dynamic_plugin_tpu.py
+      python3 /src/pytorch/xla/test/test_fori_loop_with_while_loop_simple_add_dispatch_in_torch.py
     volumeMounts:
     - mountPath: /dev/shm
       name: dshm
