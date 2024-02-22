@@ -2298,6 +2298,7 @@ XLATensorPtr randperm(int64_t n, const torch::lazy::BackendDevice& device,
 
 XLATensorPtr reflection_pad1d(const XLATensorPtr& input,
                               std::vector<int64_t> padding) {
+  // `ReflectionPad2d` is used due to `at::aten::reflection_pad2d_backward` named already
   return input->CreateFrom(torch::lazy::MakeNode<ReflectionPad2d>(
       input->GetIrValue(), std::move(padding)));
 }
@@ -2305,6 +2306,7 @@ XLATensorPtr reflection_pad1d(const XLATensorPtr& input,
 XLATensorPtr reflection_pad1d_backward(const XLATensorPtr& grad_output,
                                        const XLATensorPtr& input,
                                        std::vector<int64_t> padding) {
+  // `ReflectionPad2dBackward` is used due to `at::aten::reflection_pad2d_backward` named already
   return input->CreateFrom(torch::lazy::MakeNode<ReflectionPad2dBackward>(
       grad_output->GetIrValue(), input->GetIrValue(), std::move(padding)));
 }
@@ -2324,6 +2326,7 @@ XLATensorPtr reflection_pad2d_backward(const XLATensorPtr& grad_output,
 
 XLATensorPtr reflection_pad3d(const XLATensorPtr& input,
                               std::vector<int64_t> padding) {
+  // `ReflectionPad2d` is used due to `at::aten::reflection_pad2d_backward` named already
   return input->CreateFrom(torch::lazy::MakeNode<ReflectionPad2d>(
       input->GetIrValue(), std::move(padding)));
 }
@@ -2331,6 +2334,7 @@ XLATensorPtr reflection_pad3d(const XLATensorPtr& input,
 XLATensorPtr reflection_pad3d_backward(const XLATensorPtr& grad_output,
                                        const XLATensorPtr& input,
                                        std::vector<int64_t> padding) {
+  // `ReflectionPad2dBackward` is used due to `at::aten::reflection_pad2d_backward` named already
   return input->CreateFrom(torch::lazy::MakeNode<ReflectionPad2dBackward>(
       grad_output->GetIrValue(), input->GetIrValue(), std::move(padding)));
 }
