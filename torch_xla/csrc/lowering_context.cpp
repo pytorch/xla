@@ -165,8 +165,12 @@ xla::StatusOr<xla::XlaComputation> LoweringContext::BuildXla() {
     // xla::XlaOp root = xla::Tuple(builder(), root_tuple_);
     // xla::XlaOp a = xla::GetTupleElement(root, 0);
     const xla::Shape& root_shape = ShapeHelper::ShapeOfXlaOp(root_tuple_.at(0));
-    if (ShapeUtil::HumanString(root_shape) == 'pred[]') {
+    if (root_shape.shape['type'] == 'pred[]') {
       xla = builder()->Build(root_tuple_.at(0)); // root);
+    }
+    else {
+      xla::XlaOp root = xla::Tuple(builder(), root_tuple_);
+      xla = builder()->Build(root);
     }
   } else {
     xla = builder()->Build();
