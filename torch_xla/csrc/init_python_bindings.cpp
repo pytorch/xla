@@ -880,7 +880,7 @@ void BuildProfilerSubmodule(py::module* m) {
 
 class PyLoweringContext {
  public:
-  PyLoweringContext(const std::string& name) : PyLoweringContext(const std::string& name, bridge::GetCurrentDevice()) {}
+  PyLoweringContext(const std::string& name) : PyLoweringContext(name, bridge::GetCurrentDevice()) {}
 
   PyLoweringContext(const std::string& name, torch::lazy::BackendDevice device)
       : lowering_ctx(name, device) {}
