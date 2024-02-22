@@ -170,15 +170,16 @@ xla::StatusOr<xla::XlaComputation> LoweringContext::BuildXla() {
     // xla::Shape xla_scalar_shape = xla::ShapeUtil::MakeShape(element_type, {});
     // xla::XlaOp p0 = xla::Parameter(&cb, 0, xla_scalar_shape, "p0");
     const std::string condctx = "condctx";
+    const std::string bodyctx = "bodyctx";
     // std::cout << "???" << builder()->name();
     const std::string currentname = getnamestring();
-    // if (currentname == condctx) { // == "condctx") {
-    xla = builder()->Build(root_tuple_.at(0)); // root);
-    // }
-    // else {
-      // xla::XlaOp root = xla::Tuple(builder(), root_tuple_);
-      // xla = builder()->Build(root);
-    // }
+    if ((currentname == condctx) or (currentname == bodyctx)) { // == "condctx") {
+      xla = builder()->Build(root_tuple_.at(0)); // root);
+    }
+    else {
+      xla::XlaOp root = xla::Tuple(builder(), root_tuple_);
+      xla = builder()->Build(root);
+    }
   } else {
     xla = builder()->Build();
   }
