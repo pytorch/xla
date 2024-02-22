@@ -17,7 +17,10 @@ def diff_output(testcase, output1, output2, rtol, atol, equal_nan=True):
       testcase.assertEqual(
           torch.is_floating_point(output1),
           torch.is_floating_point(output2_cpu),
-          "Outputs are not both floating point or integer point.")
+          "Torch output is_floating_point:{} vs "
+          "JAX output is_floating_point:{}.".format(
+              torch.is_floating_point(output1),
+              torch.is_floating_point(output2_cpu)))
       output2_cpu = output2_cpu.to(output1.dtype)
     testcase.assertTrue(
         torch.allclose(

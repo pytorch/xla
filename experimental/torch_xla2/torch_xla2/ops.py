@@ -424,8 +424,12 @@ def _aten_native_layer_norm(input,
 # - func: addmm(Tensor self, Tensor mat1, Tensor mat2, *, Scalar beta=1, Scalar alpha=1) -> Tensor
 @op(torch.ops.aten.addmm)
 def _aten_addmm(self, mat1, mat2, *, beta=1.0, alpha=1.0):
-  self *= beta
-  self += alpha * jnp.matmul(mat1, mat2)
+  if beta != 1.0:
+    self *= beta
+  if alpha != 1.0:
+    self += alpha * jnp.matmul(mat1, mat2)
+  else:
+    self += jnp.matmul(mat1, mat2)
   return self
 
 
@@ -873,7 +877,12 @@ def _aten_tanh(self):
 # aten.ceil
 @op(torch.ops.aten.ceil)
 def _aten_ceil(self):
-  return jnp.ceil(self)
+  res = jnp.ceil(self)
+  # jnp.ceil will return floating point with integer input
+  # cast to integer to match aten.ceil.
+  if jnp.issubdtype(self.dtype, jnp.integer):
+    return res.astype(self.dtype)
+  return res
 
 
 # aten.asin
