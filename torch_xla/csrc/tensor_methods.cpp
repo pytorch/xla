@@ -636,7 +636,7 @@ std::vector<XLATensorPtr> user_computation(
     root_nodes.push_back(ir_value.node.get());
   }
   std::string graph_str = DumpUtil::ToText(root_nodes);
-  std::cout << "string ##@#@#@#@#: " << graph_str << std::endl;
+  std::cout << "inputs' torch::lazy::Node are ##@#@#@#@#: " << graph_str << std::endl;
   torch::lazy::NodePtr node = torch::lazy::MakeNode<UserComputation>(
       torch::lazy::OpKind::Get(opname), input_values, std::move(computation));
   // Cast can be one of the user computation and we don't want to inherit the
