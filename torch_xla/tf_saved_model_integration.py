@@ -74,7 +74,7 @@ def _mangle_tf_root_scope_name(name):
   # https://github.com/tensorflow/tensorflow/blob/51b601fa6bb7e801c0b6ae73c25580e40a8b5745/tensorflow/python/framework/ops.py#L3301-L3302
   # The state_dict key doesn't have such constrain,
   # the name need to be mangled when a root-scoped TF variable is created.
-  # 
+  #
   # FX Graph Node may contain characters other than [A-Za-z0-9_.\\-/], replace
   # offending characters with '_'.
   print(f"before mangling {name}")
