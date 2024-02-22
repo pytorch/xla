@@ -1011,6 +1011,14 @@ class PyLoweringContext {
     return result;
   }
 
+  void SetNameString(const std::string& name) {
+    lowering_ctx.setnamestring(name);
+  }
+
+  std::string GetNameString() {
+    return lowering_ctx.getnamestring();
+  }
+
   // LoweringContext GetLoweringCtx() {
   //   return lowering_ctx;
   // }
@@ -1063,7 +1071,9 @@ void BuildLoweringContextSubmodule(py::module* m) {
       .def("hlo_json", &PyLoweringContext::GetHloJsonText)
       .def("parameter_id_tensor_mapping",
            &PyLoweringContext::GetParameterIdTensorMapping)
-      .def("tensor_parameter_id", &PyLoweringContext::GetTensorParameterId);
+      .def("tensor_parameter_id", &PyLoweringContext::GetTensorParameterId)
+      .def("setnamestring", &PyLoweringContext::SetNameString)
+      .def("getnamestring", &PyLoweringContext::GetNameString);
 }
 
 void InitXlaModuleBindings(py::module m) {
