@@ -172,13 +172,13 @@ xla::StatusOr<xla::XlaComputation> LoweringContext::BuildXla() {
     const std::string condctx = "condctx";
     // std::cout << "???" << builder()->name();
     const std::string currentname = getnamestring();
-    if (currentname == condctx) { // == "condctx") {
-      xla = builder()->Build(root_tuple_.at(0)); // root);
-    }
-    else {
-      xla::XlaOp root = xla::Tuple(builder(), root_tuple_);
-      xla = builder()->Build(root);
-    }
+    // if (currentname == condctx) { // == "condctx") {
+    xla = builder()->Build(root_tuple_.at(0)); // root);
+    // }
+    // else {
+      // xla::XlaOp root = xla::Tuple(builder(), root_tuple_);
+      // xla = builder()->Build(root);
+    // }
   } else {
     xla = builder()->Build();
   }
