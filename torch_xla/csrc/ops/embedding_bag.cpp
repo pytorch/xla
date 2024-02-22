@@ -1,16 +1,15 @@
 #include "torch_xla/csrc/ops/embedding_bag.h"
 
+#include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/lowering_context.h"
 #include "torch_xla/csrc/ops/infer_output_shape.h"
 #include "torch_xla/csrc/ops/xla_ops.h"
 #include "torch_xla/csrc/shape_helper.h"
-#include "torch_xla/csrc/reduction.h"
-#include "torch_xla/csrc/helpers.h"
 #include "torch_xla/csrc/xla_lower_util.h"
 #include "tsl/platform/stacktrace.h"
 #include "xla/client/lib/constants.h"
-#include "xla/client/lib/slicing.h"
 #include "xla/client/lib/loops.h"
+#include "xla/client/lib/slicing.h"
 #include "xla/shape_util.h"
 
 namespace torch_xla {
@@ -29,13 +28,14 @@ std::vector<xla::XlaOp> BuildEmbeddingBag(xla::XlaOp weight, xla::XlaOp indices,
   xla::XlaOp output2 = xla::ZerosLike(indices);
   xla::XlaOp output3 = xla::ZerosLike(offsets);
   std::vector<int64_t> sizes = {n, weight_dim};
-  xla::XlaOp output4 = xla::Zeros(
-      offsets.builder(), xla::ShapeUtil::MakeShape(offset_shape.element_type(), sizes));
+  xla::XlaOp output4 =
+      xla::Zeros(offsets.builder(),
+                 xla::ShapeUtil::MakeShape(offset_shape.element_type(), sizes));
 
   xla::XlaOp embeddings = xla::TorchIndexSelect(weight, indices, 0);
-  xla::XlaOp embeddings_weighted =
-      xla::Mul(embeddings, xla::BroadcastInDim(per_sample_weights,
-                                         {num_embeddings, weight_dim}, {0}));
+  xla::XlaOp embeddings_weighted = xla::Mul(
+      embeddings, xla::BroadcastInDim(per_sample_weights,
+                                      {num_embeddings, weight_dim}, {0}));
 
   std::vector<xla::Shape> shape_elements = {
       xla::ShapeUtil::MakeShape(xla::S64, {}),
@@ -49,7 +49,7 @@ std::vector<xla::XlaOp> BuildEmbeddingBag(xla::XlaOp weight, xla::XlaOp indices,
     xla::XlaBuilder builder("condition");
     auto prev = xla::Parameter(&builder, 0, result_shape, "prev");
     auto index = xla::GetTupleElement(prev, 0);
-    auto final_value = xla::GetTupleElement(prev,1);
+    auto final_value = xla::GetTupleElement(prev, 1);
     xla::Lt(index, final_value);
     condition = builder.Build().value();
   }
@@ -92,7 +92,8 @@ std::vector<xla::XlaOp> BuildEmbeddingBag(xla::XlaOp weight, xla::XlaOp indices,
     // Create a While node with computations for the condition and the body.
     auto init_tuple = xla::Tuple(
         offsets.builder(),
-        {xla::Reshape(start, {0}, {}), xla::Reshape(end, {0}, {}), embeddings_weighted,
+        {xla::Reshape(start, {0}, {}), xla::Reshape(end, {0}, {}),
+         embeddings_weighted,
          xla::ConstantFromArray<float>(offsets.builder(), initial_vector)});
     auto result = xla::While(condition, body, init_tuple);
     results.push_back(xla::GetTupleElement(result, 3));
