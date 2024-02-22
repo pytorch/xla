@@ -636,7 +636,7 @@ TEST_F(AtenXlaTensorTest, TestConstantPadIncomplete) {
 TEST_F(AtenXlaTensorTest, TestReflectionPad1dRank2) {
   torch::Tensor input =
       torch::rand({2, 3}, torch::TensorOptions(torch::kFloat));
-  std::vector<int64_t> pad{2, 2, 2};
+  std::vector<int64_t> pad{2, 2};
   torch::Tensor output = torch::reflection_pad1d(input, pad);
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_input = CopyToDevice(input, device);
@@ -651,7 +651,7 @@ TEST_F(AtenXlaTensorTest, TestReflectionPad1dRank2) {
 TEST_F(AtenXlaTensorTest, TestReflectionPad1dRank3) {
   torch::Tensor input =
       torch::rand({2, 3, 4}, torch::TensorOptions(torch::kFloat));
-  std::vector<int64_t> pad{2, 2, 2};
+  std::vector<int64_t> pad{2, 2};
   torch::Tensor output = torch::reflection_pad1d(input, pad);
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_input = CopyToDevice(input, device);
@@ -664,13 +664,13 @@ TEST_F(AtenXlaTensorTest, TestReflectionPad1dRank3) {
 }
 
 TEST_F(AtenXlaTensorTest, TestReflectionPad1dBackward) {
-  std::vector<int64_t> pad{2, 3, 1};
+  std::vector<int64_t> pad{2, 3};
   auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
     return torch::reflection_pad1d(inputs[0], pad);
   };
   ForEachDevice([&](const torch::Device& device) {
     TestBackward(
-        {torch::rand({1, 2, 4},
+        {torch::rand({2, 2, 3},
                      torch::TensorOptions(torch::kFloat).requires_grad(true))},
         device, testfn);
   });
@@ -725,7 +725,7 @@ TEST_F(AtenXlaTensorTest, TestReflectionPad2dBackward) {
 
 TEST_F(AtenXlaTensorTest, TestReflectionPad3dRank4) {
   torch::Tensor input =
-      torch::rand({2, 2, 3, 4, 4}, torch::TensorOptions(torch::kFloat));
+      torch::rand({2, 2, 3, 4}, torch::TensorOptions(torch::kFloat));
   std::vector<int64_t> pad{2, 2, 2, 2, 2, 2};
   torch::Tensor output = torch::reflection_pad3d(input, pad);
   ForEachDevice([&](const torch::Device& device) {
@@ -740,7 +740,7 @@ TEST_F(AtenXlaTensorTest, TestReflectionPad3dRank4) {
 
 TEST_F(AtenXlaTensorTest, TestReflectionPad3dRank5) {
   torch::Tensor input =
-      torch::rand({2, 2, 3, 4, 4, 4}, torch::TensorOptions(torch::kFloat));
+      torch::rand({2, 2, 3, 4, 4}, torch::TensorOptions(torch::kFloat));
   std::vector<int64_t> pad{2, 2, 2, 2, 2, 2};
   torch::Tensor output = torch::reflection_pad3d(input, pad);
   ForEachDevice([&](const torch::Device& device) {
@@ -760,7 +760,7 @@ TEST_F(AtenXlaTensorTest, TestReflectionPad3dBackward) {
   };
   ForEachDevice([&](const torch::Device& device) {
     TestBackward(
-        {torch::rand({1, 2, 4, 4, 2, 2},
+        {torch::rand({1, 2, 4, 4, 2},
                      torch::TensorOptions(torch::kFloat).requires_grad(true))},
         device, testfn);
   });
