@@ -34,7 +34,9 @@ class LoweringContext : public torch::lazy::LoweringContext {
 
   xla::XlaBuilder* builder() { return &builder_; }
 
-  void setnamestring(const std::string& name) {name_ = name;}
+  void setnamestring(const std::string& name) { name_ = name; }
+
+  const std::string& getnamestring() { return name_; }
 
   StackFrameIndexBuilder* stack_frame_index_builder() {
     return stack_frame_index_builder_.get();

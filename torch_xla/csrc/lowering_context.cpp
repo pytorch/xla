@@ -157,7 +157,7 @@ xla::StatusOr<xla::XlaComputation> LoweringContext::BuildXla() {
   // if (builder_.name() == 'bodyctx') {
   // XLA_ERROR() << builder_.name();
   // }
-  std::cout << "???" << builder()->name();
+  std::cout << "???" << getnamestring();
   if (!root_tuple_.empty() & (root_tuple_.size()>1)) {
     xla::XlaOp root = xla::Tuple(builder(), root_tuple_);
     // xla::XlaOp a = xla::GetTupleElement(root, 0);
