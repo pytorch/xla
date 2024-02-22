@@ -127,16 +127,16 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   # root = fn(*params, **kwargs)
   # computation = root.build(name)
 
-  # print("operands type: ", type(operands))
+  # print("operands type: ", type(operands)) # <class 'tuple'>
   # print("operands: ", operands) # (tensor([1], device='xla:0', dtype=torch.int32),)
-  # print("operands[0]: ", operands[0])
-  # print("type operands[0]: ", type(operands[0]))
-  # print("type [operands[0],]: ", type([operands[0],]))
-  # print("type (operands[0],): ", type((operands[0],)))
-  # print("type [(operands[0],),]: ", type([(operands[0],),]))
+  # print("operands[0]: ", operands[0]) # tensor([1], device='xla:0', dtype=torch.int32)
+  # print("type operands[0]: ", type(operands[0])) # <class 'torch.Tensor'>
+  # print("type [operands[0],]: ", type([operands[0],])) # <class 'list'>
+  # print("type (operands[0],): ", type((operands[0],))) # <class 'tuple'>
+  # print("type [(operands[0],),]: ", type([(operands[0],),])) # <class 'list'>
   localoperands = torch.tensor(1, dtype=torch.int32, device=xm.xla_device())
-  print("localoperands: ", localoperands)
-  result = torch_xla._XLAC._xla_user_computation('xla::_op_test_while', [(operands[0],),],
+  # print("localoperands: ", localoperands) # tensor(1, device='xla:0', dtype=torch.int32)
+  result = torch_xla._XLAC._xla_user_computation('xla::_op_test_while', [localoperands,],
                                                    computation)
   print("done the result!!!")
   print("result: ", result)
