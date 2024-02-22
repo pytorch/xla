@@ -24,7 +24,9 @@ from enum import Enum
 from torchbench_model import TorchBenchModelLoader
 from benchmark_experiment import ExperimentLoader
 from util import reset_rng_state, move_to_device, randomize_input, us_to_s, ns_to_s
+
 import torch_xla.core.xla_model as xm
+import torch_xla.debug.profiler as xp
 
 logger = logging.getLogger(__name__)
 
@@ -316,7 +318,19 @@ class ExperimentRunner:
     enable_pytorch_profiling = self._args.dump_pytorch_profiles or \
         self._args.profile_cuda_cpu or \
         self._args.profile_cuda_cpu_individual_ops
-    if enable_pytorch_profiling:
+    enable_xla_profiling = self._args.profile_xla
+    assert not (enable_pytorch_profiling and enable_pytorch_profiling
+               ), "More than one profiling path enabled."
+
+    if enable_xla_profiling:
+      logdir = self._get_results_dir_path(experiment_config, model_config,
+                                          "xplane", "xla-profile")
+      xp.trace_detached(
+          'localhost:9012',
+          logdir=logdir,
+          duration_ms=self._args.profile_xla_duration_ms)
+      output, _ = loop(iter_fn=self._default_iter_fn)
+    elif enable_pytorch_profiling:
       if self._args.pure_wall_time:
         logger.warning(
             'Run with pure wall time, but also with profiling flags enabled. Falling back to a default wall time.'
@@ -887,6 +901,18 @@ def parse_args(args=None):
       action="store_true",
       help="Do not skip any model.",
   )
+  parser.add_argument(
+      "--profile-xla",
+      action="store_true",
+      default=False,
+      help="Dumps the XLA profiler traces to the output directory via XPlane. It later can be opened by Tensorboard."
+  )
+  parser.add_argument(
+      '--profile-xla-duration-ms',
+      default=5 * 1000,
+      type=int,
+      help="Defines the duration of the profiling when `profile-xla` flag is set.",
+  )
   return parser.parse_args(args)
 
 
@@ -905,6 +931,11 @@ def main():
   if not args.disable_tf32:
     logger.warning('Enabling fast F32 multiplication for PyTorch')
     torch.set_float32_matmul_precision('high')
+
+  if args.profile_xla:
+    logger.info(
+        'Enabling XLA XPlane profiling. Do not benchmark with this option set.')
+    server = xp.start_server(9012)
 
   runner = ExperimentRunner(args)
   runner.run()
