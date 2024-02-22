@@ -20,6 +20,7 @@ class EmbeddingBag : public XlaNode {
   torch::lazy::NodePtr Clone(torch::lazy::OpList operands) const override;
 
   XlaOpVector Lower(LoweringContext* loctx) const override;
+
  private:
   int64_t mode_;
   bool include_last_offset_;
