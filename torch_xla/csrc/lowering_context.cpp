@@ -168,7 +168,7 @@ xla::StatusOr<xla::XlaComputation> LoweringContext::BuildXla() {
     // xla::XlaBuilder cb("predone");
     // xla::Shape xla_scalar_shape = xla::ShapeUtil::MakeShape(element_type, {});
     // xla::XlaOp p0 = xla::Parameter(&cb, 0, xla_scalar_shape, "p0");
-    if (builder()->name() == 'condctx') {
+    if (builder()->name()) { // == "condctx") {
       xla = builder()->Build(root_tuple_.at(0)); // root);
     }
     else {
