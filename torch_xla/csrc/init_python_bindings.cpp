@@ -672,7 +672,7 @@ py::object XlaNms(const at::Tensor& boxes, const at::Tensor& scores,
 std::vector<at::Tensor> XlaUserComputation(
     const std::string& opname, const std::vector<at::Tensor>& inputs,
     runtime::ComputationClient::ComputationPtr computation) {
-  std::out << " !!!$$$: " << std::endl;
+  std::cout << " !!!$$$: " << std::endl;
   // for (int i = 0; i < inputs.size(); i++) {
   //   std::cout << inputs[i] << "; ";
   // }
