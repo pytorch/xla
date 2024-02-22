@@ -119,6 +119,38 @@ class PT2EExportTest(unittest.TestCase):
       save_torch_module_as_tf_saved_model(m, args, tmp_path)
       self.assertTrue(os.path.exists(os.path.join(tmp_path, 'saved_model.pb')))
 
+  def test_resnet18_per_channel(self):
+    # Step 1: export resnet18
+    args = (torch.randn(1, 3, 224, 224),)
+    m = torchvision.models.resnet18().eval()
+    m = capture_pre_autograd_graph(m, args)
+
+    # Step 2: Insert observers or fake quantize modules
+    quantizer = XNNPACKQuantizer().set_global(
+        get_symmetric_quantization_config(is_per_channel=True))
+    m = prepare_pt2e(m, quantizer)
+
+    # Step 3: Quantize the model
+    m = convert_pt2e(m, fold_quantize=False)
+
+    # Trace with torch/xla and export stablehlo
+    exported = torch.export.export(m, args)
+    stablehlo_gm = stablehlo.exported_program_to_stablehlo(exported)
+    stablehlo_txt = stablehlo_gm.get_stablehlo_text()
+    # fx_node_cnt = count_qdq_ops(exported.graph_module.graph)
+    # Do not compare the number of qdq with the qdq in FX Graph.
+    # In FX Graph, there will be 2 same dq ops in the backbone path
+    # and the residule path.
+    # The redundant dq ops will be removed by StableHLO
+    # CanonicalizerPass/CSE Pass.
+    self.assertEqual(stablehlo_txt.count("stablehlo.uniform_quantize"), 54)
+    self.assertEqual(stablehlo_txt.count("stablehlo.uniform_dequantize"), 54)
+    # Save as tf.saved_model
+    if has_tf_package():
+      tmp_path = tempfile.mkdtemp()
+      save_torch_module_as_tf_saved_model(m, args, tmp_path)
+      self.assertTrue(os.path.exists(os.path.join(tmp_path, 'saved_model.pb')))
+
 
 if __name__ == '__main__':
   test = unittest.main()
