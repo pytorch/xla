@@ -110,9 +110,9 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   print(body_hlo_print)
 
   input_tuple = xb.Op.tuple(params)
-  aaa_tuple = xb.Op.get_tuple_element(input_tuple, 0)
+  aaa_tuple = xb.Op.get_tuple_element(input_tuple, 0) # maybe move it to the cycle?
 
-  w = xb.mkop('While', (input_tuple.op, ), condition_computation=cond_computation, body_computation=body_computation)
+  w = xb.mkop('While', (aaa_tuple.op, ), condition_computation=cond_computation, body_computation=body_computation)
   # w # <torch_xla.core.xla_builder.Op object at 0x7f7d3e367f40>
   print("pass this line")
   name = 'fori_loop_ed_torch_func'
