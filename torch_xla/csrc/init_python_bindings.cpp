@@ -672,14 +672,14 @@ std::vector<at::Tensor> XlaUserComputation(
     const std::string& opname, const std::vector<at::Tensor>& inputs,
     runtime::ComputationClient::ComputationPtr computation) {
   std::out << " !!!$$$: " << std::endl;
-  for (int i = 0; i < inputs.size(); i++) {
-    std::cout << inputs[i] << "; ";
-  }
+  // for (int i = 0; i < inputs.size(); i++) {
+  //   std::cout << inputs[i] << "; ";
+  // }
   std::vector<XLATensorPtr> xinputs = GetXlaTensors(inputs, /*want_all=*/true);
-  std::out << " !!!$$$###: " << std::endl;
-  for (int i = 0; i < xinputs.size(); i++) {
-    // std::cout << DumpUtil::ToHlo(xinputs[i]->CurrentIrValue()) << "; ";
-  }
+  // std::out << " !!!$$$###: " << std::endl;
+  // for (int i = 0; i < xinputs.size(); i++) {
+  //   // std::cout << DumpUtil::ToHlo(xinputs[i]->CurrentIrValue()) << "; ";
+  // }
   std::vector<XLATensorPtr> xresults =
       tensor_methods::user_computation(opname, xinputs, std::move(computation));
   std::vector<at::Tensor> results;
