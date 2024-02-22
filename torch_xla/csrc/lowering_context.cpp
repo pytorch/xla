@@ -171,7 +171,8 @@ xla::StatusOr<xla::XlaComputation> LoweringContext::BuildXla() {
     // xla::XlaOp p0 = xla::Parameter(&cb, 0, xla_scalar_shape, "p0");
     const std::string condctx = "condctx";
     // std::cout << "???" << builder()->name();
-    if ((builder()->name()) == condctx) { // == "condctx") {
+    const std::string currentname = getnamestring();
+    if (currentname == condctx) { // == "condctx") {
       xla = builder()->Build(root_tuple_.at(0)); // root);
     }
     else {
