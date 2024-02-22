@@ -880,10 +880,10 @@ void BuildProfilerSubmodule(py::module* m) {
 
 class PyLoweringContext {
  public:
-  PyLoweringContext() : PyLoweringContext(bridge::GetCurrentDevice()) {}
+  PyLoweringContext(const std::string& name) : PyLoweringContext(const std::string& name, bridge::GetCurrentDevice()) {}
 
-  PyLoweringContext(torch::lazy::BackendDevice device)
-      : lowering_ctx(device) {}
+  PyLoweringContext(const std::string& name, torch::lazy::BackendDevice device)
+      : lowering_ctx(name, device) {}
 
   // Builds a HLO graph given a set of output tensors.
   void Build(std::vector<at::Tensor> tensors) {
@@ -1006,9 +1006,13 @@ class PyLoweringContext {
     return result;
   }
 
-  LoweringContext GetLoweringCtx() {
-    return lowering_ctx;
-  }
+  // LoweringContext GetLoweringCtx() {
+  //   return lowering_ctx;
+  // }
+
+  // LoweringContext SetLoweringCtxName(const std::string name) {
+  //   lowering_ctx.builder().name_ = name;
+  // }
 
  private:
   LoweringContext lowering_ctx;
