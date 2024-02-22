@@ -673,9 +673,9 @@ std::vector<at::Tensor> XlaUserComputation(
     const std::string& opname, const std::vector<at::Tensor>& inputs,
     runtime::ComputationClient::ComputationPtr computation) {
   std::cout << " !!!$$$: " << std::endl;
-  // for (int i = 0; i < inputs.size(); i++) {
-  //   std::cout << inputs[i] << "; ";
-  // }
+  for (int i = 0; i < inputs.size(); i++) {
+    std::cout << inputs[i] << "; ";
+  }
   std::vector<XLATensorPtr> xinputs = GetXlaTensors(inputs, /*want_all=*/true);
   // std::out << " !!!$$$###: " << std::endl;
   // for (int i = 0; i < xinputs.size(); i++) {
