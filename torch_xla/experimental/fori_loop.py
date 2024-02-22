@@ -117,6 +117,7 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   print("pass this line")
   name = 'fori_loop_ed_torch_func'
   computation = w.build(name)
+  print("pass this line second @@@@@@@@@@@")
 
   # root = fn(*params, **kwargs)
   # computation = root.build(name)
