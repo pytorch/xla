@@ -127,7 +127,7 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   print("operands: ", operands)
   print("operands[0]: ", operands[0])
   print("type operands[0]: ", type(operands[0]))
-  result = torch_xla._XLAC._xla_user_computation('xla::_op_test_while', operands[0],
+  result = torch_xla._XLAC._xla_user_computation('xla::_op_test_while', [operands[0],],
                                                    computation)
   print("result: ", result)
   op = result[0] if len(result) == 1 else result
