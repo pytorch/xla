@@ -885,6 +885,11 @@ class PyLoweringContext {
   PyLoweringContext(const std::string& name, torch::lazy::BackendDevice device)
       : lowering_ctx(name, device) {}
 
+  PyLoweringContext() : PyLoweringContext(bridge::GetCurrentDevice()) {}
+
+  PyLoweringContext(torch::lazy::BackendDevice device)
+      : lowering_ctx(device) {}
+
   // Builds a HLO graph given a set of output tensors.
   void Build(std::vector<at::Tensor> tensors) {
     // Get the backing XLA tensors from the output torch tensor handles
