@@ -17,6 +17,7 @@
 #include <thread>
 #include <unordered_map>
 #include <vector>
+#include <iostream>
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/strings/str_cat.h"
