@@ -134,7 +134,8 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   # print("type [operands[0],]: ", type([operands[0],])) # <class 'list'>
   # print("type (operands[0],): ", type((operands[0],))) # <class 'tuple'>
   # print("type [(operands[0],),]: ", type([(operands[0],),])) # <class 'list'>
-  localoperands = torch.tensor(1, dtype=torch.int32, device=xm.xla_device())
+  # localoperands = torch.tensor(1, dtype=torch.int32, device=xm.xla_device())
+  localoperands = torch.tensor([1], dtype=torch.int32, device=xm.xla_device())
   # print("localoperands: ", localoperands) # tensor(1, device='xla:0', dtype=torch.int32)
   result = torch_xla._XLAC._xla_user_computation('xla::_op_test_while', [localoperands,],
                                                    computation)
