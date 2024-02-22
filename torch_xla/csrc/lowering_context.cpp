@@ -157,6 +157,7 @@ xla::StatusOr<xla::XlaComputation> LoweringContext::BuildXla() {
   // if (builder_.name() == 'bodyctx') {
   // XLA_ERROR() << builder_.name();
   // }
+  std::cout << "???" << builder()->name();
   if (!root_tuple_.empty() & (root_tuple_.size()>1)) {
     xla::XlaOp root = xla::Tuple(builder(), root_tuple_);
     // xla::XlaOp a = xla::GetTupleElement(root, 0);
@@ -169,7 +170,7 @@ xla::StatusOr<xla::XlaComputation> LoweringContext::BuildXla() {
     // xla::Shape xla_scalar_shape = xla::ShapeUtil::MakeShape(element_type, {});
     // xla::XlaOp p0 = xla::Parameter(&cb, 0, xla_scalar_shape, "p0");
     const std::string condctx = "condctx";
-    std::cout << "???" << builder()->name();
+    // std::cout << "???" << builder()->name();
     if ((builder()->name()) == condctx) { // == "condctx") {
       xla = builder()->Build(root_tuple_.at(0)); // root);
     }
