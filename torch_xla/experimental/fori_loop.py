@@ -78,7 +78,8 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   params = []
   for shape in shapes:
     p = xb.mkparam(builder, len(params), shape)
-    params.append(p)
+    single_tuple = xb.Op.tuple(p)
+    params.append(single_tuple)
 
   xm.mark_step()
   cond_result = cond_fn(operands)
@@ -110,8 +111,9 @@ def _xla_while_loop(cond_fn, body_fn, operands):
 
   input_tuple = xb.Op.tuple(params)
 
-  w = xb.mkop('While', (input_tuple,), condition_computation=cond_computation, body_computation=body_computation)
+  w = xb.mkop('While', (input_tuple.op,), condition_computation=cond_computation, body_computation=body_computation)
   # w # <torch_xla.core.xla_builder.Op object at 0x7f7d3e367f40>
+  print("pass this line")
   name = 'fori_loop_ed_torch_func'
   computation = w.build(name)
 
