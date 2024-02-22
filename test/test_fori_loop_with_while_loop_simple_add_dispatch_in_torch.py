@@ -4,6 +4,7 @@ from typing import Callable, Dict, List
 
 import torch
 import torch_xla
+# We need to import the underlying implementation function to register with the dispatcher
 import torch_xla.experimental.fori_loop
 from torch._higher_order_ops.while_loop import while_loop
 import torch_xla.core.xla_model as xm
