@@ -664,7 +664,7 @@ TEST_F(AtenXlaTensorTest, TestReflectionPad1dRank3) {
 }
 
 TEST_F(AtenXlaTensorTest, TestReflectionPad1dBackward) {
-  std::vector<int64_t> pad{2, 3};
+  std::vector<int64_t> pad{2, 2};
   auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
     return torch::reflection_pad1d(inputs[0], pad);
   };
@@ -723,10 +723,10 @@ TEST_F(AtenXlaTensorTest, TestReflectionPad2dBackward) {
   ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
 }
 
-TEST_F(AtenXlaTensorTest, TestReflectionPad3dRank4) {
+TEST_F(AtenXlaTensorTest, TestReflectionPad3dRank5) {
   torch::Tensor input =
-      torch::rand({2, 2, 3, 4}, torch::TensorOptions(torch::kFloat));
-  std::vector<int64_t> pad{2, 2, 2, 2, 2, 2};
+      torch::rand({2, 2, 3, 4, 2}, torch::TensorOptions(torch::kFloat));
+  std::vector<int64_t> pad{1, 2, 2, 2, 2, 2};
   torch::Tensor output = torch::reflection_pad3d(input, pad);
   ForEachDevice([&](const torch::Device& device) {
     torch::Tensor xla_input = CopyToDevice(input, device);
@@ -738,9 +738,9 @@ TEST_F(AtenXlaTensorTest, TestReflectionPad3dRank4) {
   ExpectCounterChanged("xla::reflection_pad3d", cpp_test::GetIgnoredCounters());
 }
 
-TEST_F(AtenXlaTensorTest, TestReflectionPad3dRank5) {
+TEST_F(AtenXlaTensorTest, TestReflectionPad3dRank6) {
   torch::Tensor input =
-      torch::rand({2, 2, 3, 4, 4}, torch::TensorOptions(torch::kFloat));
+      torch::rand({2, 2, 3, 4, 4, 2}, torch::TensorOptions(torch::kFloat));
   std::vector<int64_t> pad{2, 2, 2, 2, 2, 2};
   torch::Tensor output = torch::reflection_pad3d(input, pad);
   ForEachDevice([&](const torch::Device& device) {
@@ -754,13 +754,13 @@ TEST_F(AtenXlaTensorTest, TestReflectionPad3dRank5) {
 }
 
 TEST_F(AtenXlaTensorTest, TestReflectionPad3dBackward) {
-  std::vector<int64_t> pad{2, 3, 1, 2, 1, 1};
+  std::vector<int64_t> pad{2, 2, 1, 2, 1, 1};
   auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
     return torch::reflection_pad3d(inputs[0], pad);
   };
   ForEachDevice([&](const torch::Device& device) {
     TestBackward(
-        {torch::rand({1, 2, 4, 4, 2},
+        {torch::rand({2, 2, 4, 4, 2, 2},
                      torch::TensorOptions(torch::kFloat).requires_grad(true))},
         device, testfn);
   });
