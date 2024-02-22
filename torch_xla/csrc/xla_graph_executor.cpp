@@ -17,6 +17,7 @@
 #include <exception>
 #include <fstream>
 #include <functional>
+#include <iostream>
 #include <mutex>
 #include <set>
 #include <stdexcept>
@@ -60,6 +61,7 @@
 #include "tsl/profiler/lib/traceme.h"
 #include "xla/literal_util.h"
 #include "xla/shape_util.h"
+using std::cerr;
 
 namespace torch_xla {
 namespace {
@@ -1212,6 +1214,25 @@ XLAGraphExecutor::BuildInputOutputAliases(
   return input_output_alias_pair;
 }
 
+std::vector<size_t> XLAGraphExecutor::SetBufferDonors(
+    LoweringContext* lowering_ctx) {
+  std::vector<size_t> buffer_donor_indexs;
+  const std::vector<torch::lazy::BackendDataPtr>& parameters_data =
+      lowering_ctx->GetParametersData();
+  for (size_t i = 0; i < parameters_data.size(); ++i) {
+    auto data = std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
+        parameters_data[i]);
+    if (data->should_donate_buffer()) {
+      buffer_donor_indexs.push_back(i);
+      lowering_ctx->builder()->AddBufferDonor(/*param_number=*/i,
+                                              /*param_index=*/{});
+      cerr << "add buffer donor at index " << i << "\n";
+    }
+  }
+  TORCH_LAZY_VALUE_METRIC("InputOutputAliasCount", buffer_donor_indexs.size());
+  return buffer_donor_indexs;
+}
+
 XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
     const std::vector<XLATensorPtr>& tensors,
     absl::Span<const std::string> devices, const SyncTensorCollection& coll,
@@ -1243,6 +1264,7 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
   ShardingUtil::SetHloSharding(&lowering_ctx);
 
   std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
+  std::vector<size_t> buffer_donor_indices;
   // TODO(yeounoh) aliasing is disabled for partitioned computation,
   // since the current aliasing compares the unpartitioned input and output
   // shapes which can lead to an incorrect aliasing pairs if sharded.
@@ -1272,8 +1294,12 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
     // will later fetch the new value of A, which is incorrect.
     // But, when we issue a step barrier (force_ltc_data == true) we have to
     // turn everything into DEVICE_DATA, so we can activate aliasing.
+    std::cerr << "build input output aliasing\n";
     input_output_alias_pair =
         BuildInputOutputAliases(tensors, coll.indices, &lowering_ctx);
+  } else if (enable_aliasing) {
+    std::cerr << "call SetBufferDonors\n";
+    buffer_donor_indices = SetBufferDonors(&lowering_ctx);
   }
 
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
