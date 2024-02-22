@@ -282,8 +282,12 @@ supported:
   - random_.from
   - random_.to
   - randperm
+  - reflection_pad1d
+  - reflection_pad1d_backward
   - reflection_pad2d
   - reflection_pad2d_backward
+  - reflection_pad3d
+  - reflection_pad3d_backward
   - remainder.Scalar
   - remainder.Tensor
   - replication_pad1d
