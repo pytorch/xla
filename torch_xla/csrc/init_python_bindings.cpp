@@ -919,7 +919,7 @@ class PyLoweringContext {
   
     std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
     xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
-    bool should_wrap_parameter = true; // (program_shape.parameters_size() >= 2);
+    bool should_wrap_parameter = (program_shape.parameters_size() >= 2); // true;
     if (should_wrap_parameter) {
       computation = ConsumeValue(XlaHelpers::WrapXlaComputation(
         computation, program_shape.parameters(), input_output_alias_pair));
