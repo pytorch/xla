@@ -78,7 +78,7 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   params = []
   for shape in shapes:
     p = xb.mkparam(builder, len(params), shape)
-    single_tuple = xb.Op.tuple(p) # [p])
+    single_tuple = xb.Op.tuple([p])
     params.append(single_tuple) # p) # single_tuple)
 
   xm.mark_step()
