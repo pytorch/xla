@@ -48,7 +48,7 @@ def count_fx_graph_nodes(g: torch.fx.Graph, op_dict: Dict[str, List[Callable]]):
 
 def count_qdq_ops(g: torch.fx.Graph):
   op_dict = {
-      "qunatize": _TORCH_QUANTIZE_OPS,
+      "quantize": _TORCH_QUANTIZE_OPS,
       "dequantize": _TORCH_DEQUANTIZE_OPS,
   }
   return count_fx_graph_nodes(g, op_dict)
@@ -87,7 +87,6 @@ class PT2EExportTest(unittest.TestCase):
     self.assertEqual(stablehlo_txt.count("stablehlo.uniform_quantize"), 1)
     self.assertEqual(stablehlo_txt.count("stablehlo.uniform_dequantize"), 1)
 
-  # @unittest.skip("Failed because PT2E BC break change on constant folding.")
   def test_resnet18(self):
     # Step 1: export resnet18
     args = (torch.randn(1, 3, 224, 224),)
@@ -107,14 +106,17 @@ class PT2EExportTest(unittest.TestCase):
     stablehlo_gm = stablehlo.exported_program_to_stablehlo(exported)
     stablehlo_txt = stablehlo_gm.get_stablehlo_text()
     fx_node_cnt = count_qdq_ops(exported.graph_module.graph)
-    print(stablehlo_txt)
-    print(exported)
+    # Do not compare the number of qdq with the qdq in FX Graph.
+    # In FX Graph, there will be 2 same dq ops in the backbone path
+    # and the residule path.
+    # The redundant dq ops will be removed by StableHLO
+    # CanonicalizerPass/CSE Pass.
     self.assertEqual(
         stablehlo_txt.count("stablehlo.uniform_quantize"),
-        fx_node_cnt["qunatize"])
+        54)
     self.assertEqual(
         stablehlo_txt.count("stablehlo.uniform_dequantize"),
-        fx_node_cnt["dequantize"])
+        54)
     # Save as tf.saved_model
     tmp_path = tempfile.mkdtemp() if has_tf_package() else None
     save_torch_module_as_tf_saved_model(m, args, tmp_path)
