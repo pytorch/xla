@@ -2296,6 +2296,19 @@ XLATensorPtr randperm(int64_t n, const torch::lazy::BackendDevice& device,
   return XLATensor::Create(node, device, scalar_type);
 }
 
+XLATensorPtr reflection_pad1d(const XLATensorPtr& input,
+                              std::vector<int64_t> padding) {
+  return input->CreateFrom(torch::lazy::MakeNode<ReflectionPad1d>(
+      input->GetIrValue(), std::move(padding)));
+}
+
+XLATensorPtr reflection_pad1d_backward(const XLATensorPtr& grad_output,
+                                       const XLATensorPtr& input,
+                                       std::vector<int64_t> padding) {
+  return input->CreateFrom(torch::lazy::MakeNode<ReflectionPad1dBackward>(
+      grad_output->GetIrValue(), input->GetIrValue(), std::move(padding)));
+}
+
 XLATensorPtr reflection_pad2d(const XLATensorPtr& input,
                               std::vector<int64_t> padding) {
   return input->CreateFrom(torch::lazy::MakeNode<ReflectionPad2d>(
@@ -2306,6 +2319,19 @@ XLATensorPtr reflection_pad2d_backward(const XLATensorPtr& grad_output,
                                        const XLATensorPtr& input,
                                        std::vector<int64_t> padding) {
   return input->CreateFrom(torch::lazy::MakeNode<ReflectionPad2dBackward>(
+      grad_output->GetIrValue(), input->GetIrValue(), std::move(padding)));
+}
+
+XLATensorPtr reflection_pad3d(const XLATensorPtr& input,
+                              std::vector<int64_t> padding) {
+  return input->CreateFrom(torch::lazy::MakeNode<ReflectionPad3d>(
+      input->GetIrValue(), std::move(padding)));
+}
+
+XLATensorPtr reflection_pad3d_backward(const XLATensorPtr& grad_output,
+                                       const XLATensorPtr& input,
+                                       std::vector<int64_t> padding) {
+  return input->CreateFrom(torch::lazy::MakeNode<ReflectionPad3dBackward>(
       grad_output->GetIrValue(), input->GetIrValue(), std::move(padding)));
 }
 
