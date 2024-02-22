@@ -137,6 +137,8 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   # localoperands = torch.tensor(1, dtype=torch.int32, device=xm.xla_device())
   localoperands = torch.tensor([1], dtype=torch.int32, device=xm.xla_device())
   # print("localoperands: ", localoperands) # tensor(1, device='xla:0', dtype=torch.int32)
+  print("999999 params: ", params)
+  print("999999 type params: ", type(params))
   result = torch_xla._XLAC._xla_user_computation('xla::_op_test_while', [localoperands,],
                                                    computation)
   # _xla_user_computation:
