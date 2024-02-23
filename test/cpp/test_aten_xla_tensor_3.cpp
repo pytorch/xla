@@ -754,7 +754,7 @@ TEST_F(AtenXlaTensorTest, TestReflectionPad3dRank4) {
 }
 
 TEST_F(AtenXlaTensorTest, TestReflectionPad3dBackward) {
-  std::vector<int64_t> pad{1, 1, 1, 2, 1, 1};
+  std::vector<int64_t> pad{1, 1, 1, 1, 1, 1};
   auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
     return torch::reflection_pad3d(inputs[0], pad);
   };
