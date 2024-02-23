@@ -5,6 +5,17 @@ import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
 
+class TestBufferDonationUtil(unittest.TestCase):
+
+  def test_hash_with_buffer_donor(self):
+    device = xm.xla_device()
+    input = torch.randn(5, 5).to(device)
+    res = torch.cos(input)
+    hash_no_donor = torch_xla._XLAC._get_graph_hash([res])
+    self.assertTrue(torch_xla._XLAC._set_buffer_donation(input, True))
+    hash_with_donor = torch_xla._XLAC._get_graph_hash([res])
+    self.assertNotEqual(hash_no_donor, hash_with_donor)
+
 
 class TestBufferDonationAliasing(unittest.TestCase):
 
