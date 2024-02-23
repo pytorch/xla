@@ -162,10 +162,10 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   #          const runtime::ComputationClient::ComputationPtr& computation) {
   print("done the result!!!")
   print("result: ", result)
-  op = result[0] if len(result) == 1 else result
+  # op = result[0] if len(result) == 1 else result
   
 
-  return xu.as_list(op(operands))
+  return result # xu.as_list(op(operands))
 
 # ---------------------------------------
 # import torch
