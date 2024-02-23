@@ -152,3 +152,7 @@ def get_gpu_name():
 
 def get_tpu_name():
   return tpu._get_metadata("accelerator-type")
+
+
+def get_torchbench_test_name(test):
+  return {"train": "training", "eval": "inference"}[test]
