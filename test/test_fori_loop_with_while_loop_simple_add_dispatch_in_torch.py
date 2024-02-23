@@ -11,10 +11,13 @@ import torch_xla.core.xla_builder as xb
 
 
 def _fake_while_loop(cond_fn, body_fn, operands):
-  print("fake func operands: ", operands)
-  print("fake func *operands: ", *operands)
-  while cond_fn(*operands):
-    operands = body_fn(*operands)
+  # print("fake func operands: ", operands)
+  # print("fake func *operands: ", *operands)
+  # while cond_fn(*operands):
+  #   operands = body_fn(*operands)
+  # return operands
+  while cond_fn(operands):
+    operands = body_fn(operands)
   return operands
 
 
