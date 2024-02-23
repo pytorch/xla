@@ -937,6 +937,8 @@ xla::StatusOr<xla::XlaComputation> XlaHelpers::WrapXlaComputation(
                        /*param_index=*/xla::ShapeIndex({input_index}));
   }
 
+  // xla::XlaOp a = xla::GetTupleElement(orig_result, 0);
+
   return builder.Build(orig_result);
 }
 
