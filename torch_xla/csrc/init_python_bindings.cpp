@@ -877,18 +877,13 @@ void BuildProfilerSubmodule(py::module* m) {
 
 class PyLoweringContext {
  public:
-  // PyLoweringContext(const std::string& name) : PyLoweringContext(name, bridge::GetCurrentDevice()) {}
-
-  // PyLoweringContext(const std::string& name, torch::lazy::BackendDevice device)
-  //     : lowering_ctx(name, device) {}
-
   PyLoweringContext() : PyLoweringContext(bridge::GetCurrentDevice()) {}
 
   PyLoweringContext(torch::lazy::BackendDevice device)
       : lowering_ctx("PyLoweringContext", device) {}
 
   // Builds a HLO graph given a set of output tensors.
-  void Build(std::vector<at::Tensor> tensors) { 
+  void Build(std::vector<at::Tensor> tensors) {
     // Get the backing XLA tensors from the output torch tensor handles
     std::vector<XLATensorPtr> xtensors =
         GetXlaTensors(tensors, /*want_all=*/true);
@@ -908,6 +903,7 @@ class PyLoweringContext {
     }
     computation = ConsumeValue(lowering_ctx.BuildXla());
 
+    // Wrap inputs to Tuple if has multi inputs at the same time
     std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
     xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
     bool should_wrap_parameter = (program_shape.parameters_size() >= 2);
