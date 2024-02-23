@@ -41,6 +41,8 @@ class Op(object):
         self._computations[key] = computation
         if xu.getenv_as('XLA_OP_PRINT_COMPUTATIONS', bool, False):
           print(xb.get_computation_hlo(computation), file=sys.stderr)
+    # print("777777777 args: ", args)
+    # print("777777777 type args: ", type(args))
     result = torch_xla._XLAC._xla_user_computation(self._opname, args,
                                                    computation)
     return result[0] if len(result) == 1 else result
