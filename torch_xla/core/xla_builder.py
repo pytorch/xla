@@ -762,9 +762,6 @@ def mkop(name, ops, **kwargs):
   builder = kwargs.get('builder', None)
   if builder is None:
     assert ops
-    # if not isinstance(ops, (list, tuple)):
-    #   builder = torch_xla._XLAC._xla_op_builder(ops)
-    # else:
     builder = torch_xla._XLAC._xla_op_builder(ops[0])
   return Op(torch_xla._XLAC._xla_op_create(builder, name, ops, kwargs))
 
