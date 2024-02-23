@@ -24,11 +24,11 @@ class WhileLoopTest(unittest.TestCase):
 
     def cond_fn(x, y): # x = (xi,)
       ten = torch.ones(1, dtype=torch.int32, device=device)
-      return x[0] <= ten[0] # ==x[0] # torch.equal(x[0], ten) # x[0] <= ten # 30
+      return x <= ten[0] # ==x[0] # torch.equal(x[0], ten) # x[0] <= ten # 30
 
     def body_fn(x, y): # x = (xi,)
       # onei = torch.tensor(10, dtype=torch.int32, device=device)
-      return (x[0] + 1, y) # onei,)
+      return (x + 1, y) # onei,)
 
     # device = xm.xla_device()
     xi = torch.ones(1, dtype=torch.int32, device=device)
