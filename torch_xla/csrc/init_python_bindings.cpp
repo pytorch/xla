@@ -17,6 +17,7 @@
 #include <thread>
 #include <unordered_map>
 #include <vector>
+#include <iostream>
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/strings/str_cat.h"
@@ -671,7 +672,17 @@ py::object XlaNms(const at::Tensor& boxes, const at::Tensor& scores,
 std::vector<at::Tensor> XlaUserComputation(
     const std::string& opname, const std::vector<at::Tensor>& inputs,
     runtime::ComputationClient::ComputationPtr computation) {
+  // std::cout << " !!!$$$: " << std::endl;
+  // for (int i = 0; i < inputs.size(); i++) {
+  //   std::cout << inputs[i] << "; " << std::endl;
+  //   std::cout << inputs[i].type() << "; type !!!" << std::endl;
+  //   // inputs[i] = (inputs[i]);
+  // }
   std::vector<XLATensorPtr> xinputs = GetXlaTensors(inputs, /*want_all=*/true);
+  // std::cout << " !!!$$$###: " << std::endl;
+  // for (int i = 0; i < xinputs.size(); i++) {
+  //   std::cout << DumpUtil::ToText(xinputs[i]->CurrentIrValue().node.get()) << "; ";
+  // }  
   std::vector<XLATensorPtr> xresults =
       tensor_methods::user_computation(opname, xinputs, std::move(computation));
   std::vector<at::Tensor> results;
@@ -685,7 +696,14 @@ std::vector<at::Tensor> XlaUserComputation(
 
 runtime::ComputationClient::ComputationPtr CreateComputation(
     const std::string& name, xla::XlaOp root) {
+  std::cout << "w's build func name: " << name << std::endl;
+  // std::cout << "w's build builder name: " << root.builder().name_ << std::endl;
+  // https://github.com/openxla/xla/blob/762bde36adf22792e91c38fe87cabe5af05bfadc/xla/client/xla_builder.cc#L710
   xla::XlaComputation computation = ConsumeValue(root.builder()->Build(root));
+  // std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
+  // xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
+  // computation = ConsumeValue(XlaHelpers::WrapXlaComputation(
+  //   computation, program_shape.parameters(), input_output_alias_pair));
   return std::make_shared<runtime::ComputationClient::Computation>(
       name, std::move(computation));
 }
@@ -876,6 +894,11 @@ void BuildProfilerSubmodule(py::module* m) {
 
 class PyLoweringContext {
  public:
+  PyLoweringContext(const std::string& name) : PyLoweringContext(name, bridge::GetCurrentDevice()) {}
+
+  PyLoweringContext(const std::string& name, torch::lazy::BackendDevice device)
+      : lowering_ctx(name, device) {}
+
   PyLoweringContext() : PyLoweringContext(bridge::GetCurrentDevice()) {}
 
   PyLoweringContext(torch::lazy::BackendDevice device)
@@ -883,6 +906,7 @@ class PyLoweringContext {
 
   // Builds a HLO graph given a set of output tensors.
   void Build(std::vector<at::Tensor> tensors) {
+    // std::cout<< "let's see how many timed this was called? !!!" << GetNameString() << std::endl;  
     // Get the backing XLA tensors from the output torch tensor handles
     std::vector<XLATensorPtr> xtensors =
         GetXlaTensors(tensors, /*want_all=*/true);
@@ -894,13 +918,30 @@ class PyLoweringContext {
       ir_values.push_back(value);
     }
 
+    // // check computation name
+    // XLA_ERROR() << computation.proto().name();
     // Lower the graph using the output IR values
     for (auto& ir_value : ir_values) {
       xla::XlaOp root = lowering_ctx.GetOutputOp(
           torch::lazy::Output(ir_value.node.get(), ir_value.index));
+      // if (computation.proto().name()=='condctx') {
+      // xla::XlaOp a = xla::GetTupleElement(root, 0); // they are not tupled here
+      // }
       lowering_ctx.AddResult(root);
     }
     computation = ConsumeValue(lowering_ctx.BuildXla());
+
+    std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
+    xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
+    bool should_wrap_parameter = (program_shape.parameters_size() >= 2); // true;
+    if (should_wrap_parameter) {
+      computation = ConsumeValue(XlaHelpers::WrapXlaComputation(
+        computation, program_shape.parameters(), input_output_alias_pair));
+    }
+
+    // // unwrap (pred[])
+    // xla::XlaBuilder builder(computation.proto().name());
+    // xla::XlaOp orig_result = xla::Call(&builder, computation, inner_params);
   }
 
   // Get a mapping from the HLO input parameters to the backing Tensor values.
@@ -983,6 +1024,22 @@ class PyLoweringContext {
     return result;
   }
 
+  void SetNameString(const std::string& name) {
+    lowering_ctx.setnamestring(name);
+  }
+
+  std::string GetNameString() {
+    return lowering_ctx.getnamestring();
+  }
+
+  // LoweringContext GetLoweringCtx() {
+  //   return lowering_ctx;
+  // }
+
+  // LoweringContext SetLoweringCtxName(const std::string name) {
+  //   lowering_ctx.builder().name_ = name;
+  // }
+
  private:
   LoweringContext lowering_ctx;
   xla::XlaComputation computation;
@@ -1027,7 +1084,9 @@ void BuildLoweringContextSubmodule(py::module* m) {
       .def("hlo_json", &PyLoweringContext::GetHloJsonText)
       .def("parameter_id_tensor_mapping",
            &PyLoweringContext::GetParameterIdTensorMapping)
-      .def("tensor_parameter_id", &PyLoweringContext::GetTensorParameterId);
+      .def("tensor_parameter_id", &PyLoweringContext::GetTensorParameterId)
+      .def("setnamestring", &PyLoweringContext::SetNameString)
+      .def("getnamestring", &PyLoweringContext::GetNameString);
 }
 
 void InitXlaModuleBindings(py::module m) {
