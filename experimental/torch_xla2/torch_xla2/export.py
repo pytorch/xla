@@ -210,9 +210,8 @@ def exported_program_to_jax(exported_program, export_raw: bool = False):
   names, states = _extract_states_from_exported_program(exported_program)
 
   def _extract_args(args, kwargs):
-    flat_args_with_path, received_spec = pytree.tree_flatten_with_path(
+    flat_args, received_spec = pytree.tree_flatten(
         (args, kwargs))  # type: ignore[possibly-undefined]
-    flat_args = [x[1] for x in flat_args_with_path]
     return flat_args
 
   num_mutations = len(exported_program.graph_signature.buffers_to_mutate)

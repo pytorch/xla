@@ -1,6 +1,6 @@
 import torch
 import torch._decomp as decomp
-
+import torch_xla2.decompositions
 
 class LoweringRegistry:
 
@@ -38,6 +38,12 @@ EXTRA_DECOMP = decomp.get_decompositions([
     torch.ops.aten._adaptive_avg_pool3d,
     torch.ops.aten.grid_sampler_2d,
     torch.ops.aten.native_dropout,
+    torch.ops.aten.reflection_pad1d,
+    torch.ops.aten.reflection_pad2d,
+    torch.ops.aten.reflection_pad3d,
+    torch.ops.aten.replication_pad1d,
+    torch.ops.aten.replication_pad2d,
+    torch.ops.aten.replication_pad3d,
 ])
 CORE_ATEN_DECOMP = decomp.core_aten_decompositions()
 CORE_ATEN_DECOMP.update(EXTRA_DECOMP)
