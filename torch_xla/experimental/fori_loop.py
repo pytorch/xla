@@ -100,9 +100,9 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   cond_ctx.build(list(cond_result))
   cond_hlo = cond_ctx.hlo()
   cond_computation = xb.computation_from_module_proto("condcomputation", cond_hlo)
-  # cond_hlo_print = xb.get_computation_hlo(cond_computation)
-  # print("cond_hlo: !!!!!!!!!")
-  # print(cond_hlo_print)
+  cond_hlo_print = xb.get_computation_hlo(cond_computation)
+  print("cond_hlo: !!!!!!!!!")
+  print(cond_hlo_print)
 
   xm.mark_step()
   body_result = body_fn(operands)
@@ -113,9 +113,9 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   body_ctx.build(list(body_result))
   body_hlo = body_ctx.hlo()
   body_computation = xb.computation_from_module_proto("bodycomputation", body_hlo)
-  # body_hlo_print = xb.get_computation_hlo(body_computation)
-  # print("body_hlo: !!!!!!!!!")
-  # print(body_hlo_print)
+  body_hlo_print = xb.get_computation_hlo(body_computation)
+  print("body_hlo: !!!!!!!!!")
+  print(body_hlo_print)
 
   input_tuple = xb.Op.tuple(params)
   aaa_tuple = xb.Op.get_tuple_element(input_tuple, 0) # maybe move it to the cycle?
