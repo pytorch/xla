@@ -1,0 +1,69 @@
+import unittest
+
+import torch
+import torch_xla
+import torch_xla.core.xla_model as xm
+import torch_xla.debug.metrics as met
+
+
+class TestBufferDonationAliasing(unittest.TestCase):
+
+  def dummy_inplace_add(self, input):
+    input += 1
+    return
+
+  def dummy_add(self, input):
+    return input + 1
+
+  def test_manual_buffer_donation(self):
+    device = xm.xla_device()
+    input = torch.randn(5, 5).to(device)
+    input_cloned = torch.clone(input)
+    dummy_inplace_add_compiled = torch.compile(
+        self.dummy_inplace_add, backend='openxla')
+
+    met.clear_all()
+    # input is a device_data, we should be able to set the buffer donation field.
+    self.assertTrue(torch_xla._XLAC._set_buffer_donation(input, True))
+    # make sure buffer donation setting is correctly updated
+    self.assertTrue(torch_xla._XLAC._get_buffer_donation(input))
+    self.assertIn('XlaSetBufferDonation', met.counter_names())
+    self.assertEqual(met.counter_value('XlaSetBufferDonation'), 1)
+    dummy_inplace_add_compiled(input)
+    torch.allclose(input_cloned.cpu() + 1, input.cpu())
+
+  def test_manual_buffer_donation_for_non_inplce_op(self):
+    device = xm.xla_device()
+    input = torch.randn(5, 5).to(device)
+    input_cloned = torch.clone(input)
+    dummy_add_compiled = torch.compile(self.dummy_add, backend='openxla')
+
+    met.clear_all()
+    # input is a device_data, we should be able to set the buffer donation field.
+    self.assertTrue(torch_xla._XLAC._set_buffer_donation(input, True))
+    # make sure buffer donation setting is correctly updated
+    self.assertTrue(torch_xla._XLAC._get_buffer_donation(input))
+    self.assertIn('XlaSetBufferDonation', met.counter_names())
+    self.assertEqual(met.counter_value('XlaSetBufferDonation'), 1)
+
+    res = dummy_add_compiled(input)
+    # check input's buffer has been aliased.
+    self.assertIn('Data Handle: None',
+                  torch_xla._XLAC._get_xla_tensor_debug_info(input))
+    torch.allclose(input_cloned.cpu() + 1, res.cpu())
+
+  def test_buffer_donation_on_non_data_tensor(self):
+    device = xm.xla_device()
+    input = torch.randn(5, 5).to(device)
+    res = input + 1
+
+    met.clear_all()
+    # res now points to a `Add` IR, only data's buffer can be aliased
+    self.assertFalse(torch_xla._XLAC._set_buffer_donation(res, True))
+    self.assertFalse(torch_xla._XLAC._get_buffer_donation(res))
+    self.assertNotIn('XlaSetBufferDonation', met.counter_names())
+
+
+if __name__ == '__main__':
+  test = unittest.main()
+  sys.exit(0 if test.result.wasSuccessful() else 1)
