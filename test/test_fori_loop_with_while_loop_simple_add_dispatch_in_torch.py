@@ -39,9 +39,9 @@ class WhileLoopTest(unittest.TestCase):
     # xi[0] = 5
     # xi.to(device)
     # yi = torch.ones(1, dtype=torch.int32, device=device)
-    yi = torch.tensor([1], dtype=torch.int32, device=device)
+    # yi = torch.tensor([1], dtype=torch.int32, device=device)
     res = while_loop(cond_fn, body_fn, (xi,))
-    expected = _fake_while_loop(cond_fn, body_fn, (xi,))
+    expected = _fake_while_loop(cond_fn, body_fn, xi)
     self.assertEqual(expected, res)
 
 
