@@ -153,8 +153,10 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   print("999999 secondparams: ", secondparams)
   print("999999 type secondparams: ", type(secondparams))
   # result = torch_xla._XLAC._xla_user_computation('xla::_op_test_while', secondparams, computation)
-  result = torch_xla._XLAC._xla_user_computation('xla::_op_test_while', [localoperands,],
+  result = torch_xla._XLAC._xla_user_computation('xla::_op_test_while', (localoperands,),
                                                    computation)
+  # result = torch_xla._XLAC._xla_user_computation('xla::_op_test_while', [localoperands,],
+  #                                                  computation)
   # _xla_user_computation:
   # [](const std::string& opname, const std::vector<at::Tensor>& inputs,
   #          const runtime::ComputationClient::ComputationPtr& computation) {
