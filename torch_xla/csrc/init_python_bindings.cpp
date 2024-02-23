@@ -12,12 +12,12 @@
 
 #include <cstring>
 #include <fstream>
+#include <iostream>
 #include <sstream>
 #include <string>
 #include <thread>
 #include <unordered_map>
 #include <vector>
-#include <iostream>
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/strings/str_cat.h"
@@ -905,11 +905,12 @@ class PyLoweringContext {
 
     // Wrap inputs to Tuple if has multi inputs at the same time
     std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
-    xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
+    xla::ProgramShape program_shape = 
+        ConsumeValue(computation.GetProgramShape());
     bool should_wrap_parameter = (program_shape.parameters_size() >= 2);
     if (should_wrap_parameter) {
       computation = ConsumeValue(XlaHelpers::WrapXlaComputation(
-        computation, program_shape.parameters(), input_output_alias_pair));
+          computation, program_shape.parameters(), input_output_alias_pair));
     }
   }
 
@@ -997,9 +998,7 @@ class PyLoweringContext {
     lowering_ctx.setnamestring(name);
   }
 
-  std::string GetNameString() {
-    return lowering_ctx.getnamestring();
-  }
+  std::string GetNameString() { return lowering_ctx.getnamestring(); }
 
  private:
   LoweringContext lowering_ctx;
