@@ -21,20 +21,22 @@ class WhileLoopTest(unittest.TestCase):
   def test_while_loop_tpu(self):
 
     device = xm.xla_device()
+    ten = torch.ones(1, dtype=torch.int32, device=device)
+    ten[0] = 10
 
     def cond_fn(x): # x = (xi,)
-      ten = torch.ones(1, dtype=torch.int32, device=device)
+      # ten = torch.ones(1, dtype=torch.int32, device=device)
       # ten = torch.tensor(5, dtype=torch.int32, device=device)
-      return x[0] >= ten[0] # ==x[0] # torch.equal(x[0], ten) # x[0] <= ten # 30
+      return x[0] <= ten[0] # ==x[0] # torch.equal(x[0], ten) # x[0] <= ten # 30
 
     def body_fn(x): # x = (xi,)
       # onei = torch.tensor(10, dtype=torch.int32, device=device)
-      return (x[0] - 1,) # onei,)
+      return (x[0] + 1,) # onei,)
 
     # device = xm.xla_device()
-    xi = torch.ones(1, dtype=torch.int32) # , device=device)
-    xi[0] = 5
-    xi.to(device)
+    xi = torch.ones(1, dtype=torch.int32, device=device)
+    # xi[0] = 5
+    # xi.to(device)
     yi = torch.ones(1, dtype=torch.int32, device=device)
     res = while_loop(cond_fn, body_fn, (xi,))
     expected = _fake_while_loop(cond_fn, body_fn, x)
