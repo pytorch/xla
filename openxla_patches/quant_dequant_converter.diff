@@ -1,26 +1,11 @@
-// TODO(lsy323): This is a patch on the HLO->StableHLO converter, this allows the custom call to
-// stablehlo.uniform_quantize/dequantize to be converted to stablehlo.uniform_quantize/dequantize.
-// The patch can be removed after quantize/dequantize, quantized dtype support is added to HLO.
-diff --git a/xla/translate/hlo_to_mhlo/BUILD b/xla/translate/hlo_to_mhlo/BUILD
-index cd6e427c3..9deecdcb2 100644
---- a/xla/translate/hlo_to_mhlo/BUILD
-+++ b/xla/translate/hlo_to_mhlo/BUILD
-@@ -68,6 +68,7 @@ cc_library(
-         "@llvm-project//mlir:ArithDialect",
-         "@llvm-project//mlir:AsmParser",
-         "@llvm-project//mlir:FuncDialect",
-+        "@llvm-project//mlir:QuantOps",
-         "@llvm-project//mlir:IR",
-         "@llvm-project//mlir:SparseTensorDialect",
-         "@tsl//tsl/platform:statusor",
 diff --git a/xla/translate/hlo_to_mhlo/hlo_function_importer.cc b/xla/translate/hlo_to_mhlo/hlo_function_importer.cc
-index 5e5e32652..d246383bd 100644
+index 06526c6bb..8024dddb0 100644
 --- a/xla/translate/hlo_to_mhlo/hlo_function_importer.cc
 +++ b/xla/translate/hlo_to_mhlo/hlo_function_importer.cc
-@@ -669,6 +669,71 @@ StatusOr<mlir::Operation*> HloFunctionImporter::ImportInstruction(
-   return importer.ImportInstructionWithLayout(instr, operands, builder, mode);
- }
-
+@@ -85,6 +85,70 @@ constexpr char kFrontendAttributesAttr[] = "mhlo.frontend_attributes";
+ constexpr char kShardingAttr[] = "mhlo.sharding";
+ constexpr char kParameterReplicationAttr[] = "mhlo.parameter_replication";
+ 
 +Type getQuantizedType(mlir::DictionaryAttr& backend_config) {
 +  std::vector<double> scales;
 +  std::vector<int64_t> zero_points;
@@ -85,13 +70,12 @@ index 5e5e32652..d246383bd 100644
 +  }
 +}
 +
-+
- StatusOr<mlir::Operation*> HloFunctionImporter::ImportCustomCallAsOp(
-     const HloInstruction* instruction, mlir::Location loc,
-     const Type result_type, mlir::ValueRange operands,
-@@ -992,6 +1057,25 @@ StatusOr<mlir::Operation*> HloFunctionImporter::ImportInstructionImpl(
+ // Note: This sanitization function causes an irreversible many-to-one mapping
+ // and any solution to mitigate this would cause issues with the reverse
+ // direction. Longterm solution is to add a function attribute to maintain the
+@@ -944,6 +1008,25 @@ StatusOr<mlir::Operation*> HloFunctionImporter::ImportInstructionImpl(
                  "Couldn't parse backend config into a dictionary attribute");
-
+ 
            attributes.push_back(builder_->getNamedAttr("backend_config", attr));
 +          auto backend_config = attr.cast<mlir::DictionaryAttr>();
 +          if (custom_call->custom_call_target() ==
@@ -115,24 +99,24 @@ index 5e5e32652..d246383bd 100644
          }
        } else {
          attributes.push_back(builder_->getNamedAttr(
-diff --git a/xla/translate/hlo_to_mhlo/hlo_module_importer.cc b/xla/translate/hlo_to_mhlo/hlo_module_importer.cc
-index f9edd1272..23a747fb1 100644
---- a/xla/translate/hlo_to_mhlo/hlo_module_importer.cc
-+++ b/xla/translate/hlo_to_mhlo/hlo_module_importer.cc
-@@ -19,6 +19,8 @@ limitations under the License.
- #include <memory>
- #include <vector>
-
+diff --git a/xla/translate/hlo_to_mhlo/hlo_function_importer.h b/xla/translate/hlo_to_mhlo/hlo_function_importer.h
+index fbf7077da..5fde24700 100644
+--- a/xla/translate/hlo_to_mhlo/hlo_function_importer.h
++++ b/xla/translate/hlo_to_mhlo/hlo_function_importer.h
+@@ -22,6 +22,8 @@ limitations under the License.
+ #include "absl/types/optional.h"
+ #include "mlir/Dialect/Arith/IR/Arith.h"  // from @llvm-project
+ #include "mlir/Dialect/Func/IR/FuncOps.h"  // from @llvm-project
 +#include "mlir/Dialect/Quant/QuantOps.h"
 +#include "mlir/Dialect/Quant/QuantTypes.h"
+ #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"  // from @llvm-project
  #include "mlir/IR/Attributes.h"  // from @llvm-project
- #include "xla/hlo/ir/hlo_computation.h"
- #include "xla/hlo/ir/hlo_instruction.h"
-@@ -41,6 +43,7 @@ HloModuleImporter::HloModuleImporter(mlir::ModuleOp module,
-   module.getContext()->loadDialect<mlir::arith::ArithDialect>();
-   module.getContext()->loadDialect<mlir::func::FuncDialect>();
-   module.getContext()->loadDialect<mlir::mhlo::MhloDialect>();
-+  module.getContext()->loadDialect<mlir::quant::QuantizationDialect>();
- }
-
- namespace {
+ #include "mlir/IR/Builders.h"  // from @llvm-project
+@@ -150,6 +152,7 @@ class HloFunctionImporter {
+     context_->loadDialect<mlir::func::FuncDialect>();
+     context_->loadDialect<mlir::mhlo::MhloDialect>();
+     context_->loadDialect<mlir::sparse_tensor::SparseTensorDialect>();
++    context_->loadDialect<mlir::quant::QuantizationDialect>();
+   }
+ 
+   // Imports the given computation as a new function, if it hasn't been already

@@ -77,6 +77,8 @@ static absl::Status ConvertHloToMhlo(const xla::HloModuleProto* proto,
 static absl::Status mhloToStablehloHelper(mlir::ModuleOp* mlir_module,
                                           mlir::MLIRContext* context) {
   mlir::PassManager pm(context);
+  // context->printOpOnDiagnostic(true);
+  // context->printStackTraceOnDiagnostic(true);
   // Apply pass to remove HLO tuple output, as MHLO/StableHLO supports multiple
   // outputs.
   pm.addPass(mlir::mhlo::createExpandHloTuplesPass());
