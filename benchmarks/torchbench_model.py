@@ -315,7 +315,8 @@ class TorchBenchModel(BenchmarkModel):
       batch_size = self.benchmark_experiment.batch_size
     elif self.is_training() and self.model_name in self.batch_size["training"]:
       batch_size = self.batch_size["training"][self.model_name]
-    elif self.is_inference() and self.model_name in self.batch_size["inference"]:
+    elif self.is_inference(
+    ) and self.model_name in self.batch_size["inference"]:
       batch_size = self.batch_size["inference"][self.model_name]
 
     # workaround "RuntimeError: not allowed to set torch.backends.cudnn flags"

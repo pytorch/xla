@@ -169,5 +169,3 @@ def find_near_file(self, names):
       if exists(path):
         return abspath(path)
   return None
-
-
