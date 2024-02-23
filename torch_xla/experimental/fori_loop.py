@@ -76,15 +76,18 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   shapes = xb.tensor_shape(operands)
   builder = xb.create_builder('test_while')
   params = []
-  for shape in shapes:
-    p = xb.mkparam(builder, len(params), shape)
-    # single_tuple = xb.Op.tuple([p])
-    params.append(p) # single_tuple)
   secondparams = []
   for shape in shapes:
-    p = xb.mkparam(builder, len(secondparams), shape)
-    single_tuple = xb.Op.tuple([p])
-    secondparams.append(single_tuple) # p) # single_tuple)
+    p = xb.mkparam(builder, len(params), shape)
+    params.append(p) # single_tuple)
+    # single_tuple = xb.Op.tuple([p])
+    secondparams.append(xb.Op.tuple([p]))
+
+  # secondparams = []
+  # for shape in shapes:
+  #   p = xb.mkparam(builder, len(secondparams), shape)
+  #   single_tuple = xb.Op.tuple([p])
+  #   secondparams.append(single_tuple) # p) # single_tuple)
 
   xm.mark_step()
   cond_result = cond_fn(operands)
