@@ -1164,21 +1164,33 @@ XLAGraphExecutor::LookupCachedCompile(const torch::lazy::hash_t& hash) {
   return cached_computation;
 }
 
-std::shared_ptr<XLAGraphExecutor::Async> XLAGraphExecutor::TryRunCachedSync(
+std::pair<bool, std::shared_ptr<XLAGraphExecutor::Async>>
+XLAGraphExecutor::TryRunCachedSync(
     std::vector<XLATensorPtr>* tensors, SyncTensorCollection* coll,
     PostOrderData* po_data,
-    const std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec) {
+    const std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec,
+    bool warm_up_cache_only) {
   ComputationCache::TypePtr cached_computation =
       LookupCachedCompile(coll->hash);
+  bool cache_hit = false;
   if (cached_computation == nullptr) {
-    return nullptr;
+    return std::pair<bool, std::shared_ptr<XLAGraphExecutor::Async>>(cache_hit,
+                                                                     nullptr);
+  } else {
+    cache_hit = true;
   }
   TORCH_LAZY_VALUE_METRIC("TensorsGraphSize", po_data->post_order.size());
   TF_VLOG(5) << "TensorsGraphSize=" << po_data->post_order.size();
 
-  return ScheduleSyncTensorsGraph(
-      tensors, coll, std::move(po_data->parameters_data),
-      coll->device.toString(), std::move(cached_computation), tensor_data_vec);
+  // don't schedule the execution if the purpose of this SyncTensor is just to
+  // warm up the cache.
+  return std::pair<bool, std::shared_ptr<XLAGraphExecutor::Async>>(
+      cache_hit, warm_up_cache_only
+                     ? nullptr
+                     : ScheduleSyncTensorsGraph(
+                           tensors, coll, std::move(po_data->parameters_data),
+                           coll->device.toString(),
+                           std::move(cached_computation), tensor_data_vec));
 }
 
 std::vector<std::pair<int64_t, int64_t>>
@@ -1436,10 +1448,13 @@ XLAGraphExecutor::SyncTensorsGraphInternal(
   DebugUtil::SaveGraphHash(coll.hash);
   TF_VLOG(4) << "Parameter sequence graph hash "
              << torch::lazy::HashToString(coll.hash);
-  std::shared_ptr<Async> async =
-      TryRunCachedSync(tensors, &coll, &po_data, tensor_data_vec);
-  if (async != nullptr) {
-    return async;
+
+  std::pair<bool, std::shared_ptr<XLAGraphExecutor::Async>> cache_res =
+      TryRunCachedSync(tensors, &coll, &po_data, tensor_data_vec,
+                       warm_up_cache_only);
+  if (cache_res.first) {
+    // we have a cache hit, execution has been scheduled by TryRunCachedSync.
+    return cache_res.second;
   }
   CompilationResult compile_result =
       Compile(*tensors, devices, coll, &po_data, ir_values);

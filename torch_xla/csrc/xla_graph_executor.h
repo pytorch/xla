@@ -320,10 +320,11 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
 
   // We don't use the upstream TryRunCachedSync since
   // our CachedComputation is different from upstream.
-  std::shared_ptr<Async> TryRunCachedSync(
+  std::pair<bool, std::shared_ptr<Async>> TryRunCachedSync(
       std::vector<XLATensorPtr>* tensors, SyncTensorCollection* coll,
       PostOrderData* po_data,
-      const std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec);
+      const std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec,
+      bool warm_up_cache_only);
 
   std::vector<std::pair<int64_t, int64_t>> BuildInputOutputAliases(
       const std::vector<XLATensorPtr>& tensors,

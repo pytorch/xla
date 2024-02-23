@@ -67,7 +67,8 @@ class TestBufferDonationAliasing(unittest.TestCase):
 
     res = dummy_add_compiled(input)
     # check input's buffer has been aliased.
-    self.assertIn('Data Handle: None',
+    xm.wait_device_ops()
+    self.assertIn('Data Handle: Deleted',
                   torch_xla._XLAC._get_xla_tensor_debug_info(input))
     torch.allclose(input_cloned.cpu() + 1, res.cpu())
 
