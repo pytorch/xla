@@ -760,7 +760,7 @@ TEST_F(AtenXlaTensorTest, TestReflectionPad3dBackward) {
   };
   ForEachDevice([&](const torch::Device& device) {
     TestBackward(
-        {torch::rand({2, 2, 4, 4, 2, 2},
+        {torch::rand({2, 2, 4, 4, 2},
                      torch::TensorOptions(torch::kFloat).requires_grad(true))},
         device, testfn);
   });
