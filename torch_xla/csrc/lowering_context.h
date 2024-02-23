@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <iostream>
 
 #include "absl/types/span.h"
 #include "torch_xla/csrc/device.h"
@@ -33,6 +34,10 @@ class LoweringContext : public torch::lazy::LoweringContext {
                   torch::lazy::Util::EmissionMap emit_status);
 
   xla::XlaBuilder* builder() { return &builder_; }
+
+  void setnamestring(const std::string& name) { name_ = name; std::cout << "LoweringContext~~~??>>: " << name_ << std::endl;}
+
+  const std::string& getnamestring() { return name_; }
 
   StackFrameIndexBuilder* stack_frame_index_builder() {
     return stack_frame_index_builder_.get();
@@ -121,6 +126,7 @@ class LoweringContext : public torch::lazy::LoweringContext {
       parameters_map_;
   std::vector<xla::XlaOp> root_tuple_;
   OutputMap<xla::XlaOp> emitted_outputs_;
+  std::string name_;
 
   std::shared_ptr<StackFrameIndexBuilder> stack_frame_index_builder_;
 };  // namespace torch_xla
