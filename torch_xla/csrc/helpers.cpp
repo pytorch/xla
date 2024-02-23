@@ -945,8 +945,6 @@ xla::StatusOr<xla::XlaComputation> XlaHelpers::WrapXlaComputation(
     }
   }
 
-  // xla::XlaOp a = xla::GetTupleElement(orig_result, 0);
-
   return builder.Build(orig_result);
 }
 
