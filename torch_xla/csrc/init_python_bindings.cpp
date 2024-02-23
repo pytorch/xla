@@ -696,6 +696,8 @@ std::vector<at::Tensor> XlaUserComputation(
 
 runtime::ComputationClient::ComputationPtr CreateComputation(
     const std::string& name, xla::XlaOp root) {
+  std::cout << "w's build func name: " << name << std::endl;
+  std::cout << "w's build builder name: " << root.builder().name_ << std::endl;
   xla::XlaComputation computation = ConsumeValue(root.builder()->Build(root));
   std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
   xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
@@ -903,7 +905,7 @@ class PyLoweringContext {
 
   // Builds a HLO graph given a set of output tensors.
   void Build(std::vector<at::Tensor> tensors) {
-    std::cout<< "let's see how many timed this was called? !!!" << GetNameString() << std::endl;
+    // std::cout<< "let's see how many timed this was called? !!!" << GetNameString() << std::endl;
     // Get the backing XLA tensors from the output torch tensor handles
     std::vector<XLATensorPtr> xtensors =
         GetXlaTensors(tensors, /*want_all=*/true);
