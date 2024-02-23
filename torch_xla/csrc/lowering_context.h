@@ -35,7 +35,7 @@ class LoweringContext : public torch::lazy::LoweringContext {
 
   xla::XlaBuilder* builder() { return &builder_; }
 
-  void setnamestring(const std::string& name) { name_ = name; std::cout << "LoweringContext~~~??>>: " << name_ << std::endl;}
+  void setnamestring(const std::string& name) { name_ = name;}
 
   const std::string& getnamestring() { return name_; }
 
