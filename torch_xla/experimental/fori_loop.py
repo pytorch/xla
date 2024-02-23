@@ -78,8 +78,13 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   params = []
   for shape in shapes:
     p = xb.mkparam(builder, len(params), shape)
+    # single_tuple = xb.Op.tuple([p])
+    params.append(p) # single_tuple)
+  secondparams = []
+  for shape in shapes:
+    p = xb.mkparam(builder, len(secondparams), shape)
     single_tuple = xb.Op.tuple([p])
-    params.append(single_tuple) # p) # single_tuple)
+    secondparams.append(single_tuple) # p) # single_tuple)
 
   xm.mark_step()
   cond_result = cond_fn(operands)
@@ -137,9 +142,9 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   # localoperands = torch.tensor(1, dtype=torch.int32, device=xm.xla_device())
   localoperands = torch.tensor([1], dtype=torch.int32, device=xm.xla_device())
   # print("localoperands: ", localoperands) # tensor(1, device='xla:0', dtype=torch.int32)
-  print("999999 params: ", params)
-  print("999999 type params: ", type(params))
-  result = torch_xla._XLAC._xla_user_computation('xla::_op_test_while', params, computation)
+  print("999999 secondparams: ", secondparams)
+  print("999999 type secondparams: ", type(secondparams))
+  result = torch_xla._XLAC._xla_user_computation('xla::_op_test_while', secondparams, computation)
   # result = torch_xla._XLAC._xla_user_computation('xla::_op_test_while', [localoperands,],
   #                                                  computation)
   # _xla_user_computation:
