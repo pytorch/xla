@@ -633,6 +633,51 @@ TEST_F(AtenXlaTensorTest, TestConstantPadIncomplete) {
   });
 }
 
+TEST_F(AtenXlaTensorTest, TestReflectionPad1dRank2) {
+  torch::Tensor input =
+      torch::rand({2, 3}, torch::TensorOptions(torch::kFloat));
+  std::vector<int64_t> pad{2, 2};
+  torch::Tensor output = torch::reflection_pad1d(input, pad);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_input = CopyToDevice(input, device);
+    torch::Tensor xla_output = torch::reflection_pad1d(xla_input, pad);
+    AllClose(output, xla_output);
+  });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::reflection_pad1d", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestReflectionPad1dRank3) {
+  torch::Tensor input =
+      torch::rand({2, 3, 4}, torch::TensorOptions(torch::kFloat));
+  std::vector<int64_t> pad{2, 2};
+  torch::Tensor output = torch::reflection_pad1d(input, pad);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_input = CopyToDevice(input, device);
+    torch::Tensor xla_output = torch::reflection_pad1d(xla_input, pad);
+    AllClose(output, xla_output);
+  });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::reflection_pad1d", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestReflectionPad1dBackward) {
+  std::vector<int64_t> pad{2, 2};
+  auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
+    return torch::reflection_pad1d(inputs[0], pad);
+  };
+  ForEachDevice([&](const torch::Device& device) {
+    TestBackward(
+        {torch::rand({2, 2, 3},
+                     torch::TensorOptions(torch::kFloat).requires_grad(true))},
+        device, testfn);
+  });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+}
+
 TEST_F(AtenXlaTensorTest, TestReflectionPad2dRank3) {
   torch::Tensor input =
       torch::rand({2, 3, 4}, torch::TensorOptions(torch::kFloat));
@@ -671,6 +716,51 @@ TEST_F(AtenXlaTensorTest, TestReflectionPad2dBackward) {
   ForEachDevice([&](const torch::Device& device) {
     TestBackward(
         {torch::rand({1, 2, 4, 4},
+                     torch::TensorOptions(torch::kFloat).requires_grad(true))},
+        device, testfn);
+  });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestReflectionPad3dRank5) {
+  torch::Tensor input =
+      torch::rand({2, 2, 3, 4, 2}, torch::TensorOptions(torch::kFloat));
+  std::vector<int64_t> pad{1, 1, 1, 2, 2, 1};
+  torch::Tensor output = torch::reflection_pad3d(input, pad);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_input = CopyToDevice(input, device);
+    torch::Tensor xla_output = torch::reflection_pad3d(xla_input, pad);
+    AllClose(output, xla_output);
+  });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::reflection_pad3d", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestReflectionPad3dRank4) {
+  torch::Tensor input =
+      torch::rand({2, 2, 3, 4}, torch::TensorOptions(torch::kFloat));
+  std::vector<int64_t> pad{1, 1, 1, 1, 1, 1};
+  torch::Tensor output = torch::reflection_pad3d(input, pad);
+  ForEachDevice([&](const torch::Device& device) {
+    torch::Tensor xla_input = CopyToDevice(input, device);
+    torch::Tensor xla_output = torch::reflection_pad3d(xla_input, pad);
+    AllClose(output, xla_output);
+  });
+
+  ExpectCounterNotChanged("aten::.*", cpp_test::GetIgnoredCounters());
+  ExpectCounterChanged("xla::reflection_pad3d", cpp_test::GetIgnoredCounters());
+}
+
+TEST_F(AtenXlaTensorTest, TestReflectionPad3dBackward) {
+  std::vector<int64_t> pad{1, 1, 1, 1, 1, 1};
+  auto testfn = [&](const std::vector<torch::Tensor>& inputs) -> torch::Tensor {
+    return torch::reflection_pad3d(inputs[0], pad);
+  };
+  ForEachDevice([&](const torch::Device& device) {
+    TestBackward(
+        {torch::rand({2, 2, 4, 4, 2},
                      torch::TensorOptions(torch::kFloat).requires_grad(true))},
         device, testfn);
   });

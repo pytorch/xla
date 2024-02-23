@@ -716,10 +716,24 @@ void random_(XLATensorPtr& input, int64_t from, int64_t to);
 XLATensorPtr randperm(int64_t n, const torch::lazy::BackendDevice& device,
                       at::ScalarType scalar_type);
 
+XLATensorPtr reflection_pad1d(const XLATensorPtr& input,
+                              std::vector<int64_t> padding);
+
+XLATensorPtr reflection_pad1d_backward(const XLATensorPtr& grad_output,
+                                       const XLATensorPtr& input,
+                                       std::vector<int64_t> padding);
+
 XLATensorPtr reflection_pad2d(const XLATensorPtr& input,
                               std::vector<int64_t> padding);
 
 XLATensorPtr reflection_pad2d_backward(const XLATensorPtr& grad_output,
+                                       const XLATensorPtr& input,
+                                       std::vector<int64_t> padding);
+
+XLATensorPtr reflection_pad3d(const XLATensorPtr& input,
+                              std::vector<int64_t> padding);
+
+XLATensorPtr reflection_pad3d_backward(const XLATensorPtr& grad_output,
                                        const XLATensorPtr& input,
                                        std::vector<int64_t> padding);
 
