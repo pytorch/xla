@@ -122,7 +122,8 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   print("aaa_tuple: ", aaa_tuple)
   print("[aaa_tuple.op]: ", [aaa_tuple.op])
   print("type [aaa_tuple.op]: ", type([aaa_tuple.op]))
-  w = xb.mkop('While', [aaa_tuple.op], condition_computation=cond_computation, body_computation=body_computation)
+  # w = xb.mkop('While', [aaa_tuple.op], condition_computation=cond_computation, body_computation=body_computation)
+  w = xb.mkop('While', aaa_tuple.op, condition_computation=cond_computation, body_computation=body_computation)
   # w # <torch_xla.core.xla_builder.Op object at 0x7f7d3e367f40>
   print("pass this line")
   name = 'fori_loop_ed_torch_func'
