@@ -3,6 +3,7 @@ import dataclasses
 import operator
 import warnings
 
+import cProfile
 import functools
 import itertools
 import os
@@ -24,6 +25,7 @@ import torch_xla.utils.utils as xu
 
 dynamo_debug = int(os.environ.get('XLA_DYNAMO_DEBUG', '0')) == 1
 ptxla_debug = int(os.environ.get('PT_XLA_DEBUG', '0')) == 1
+perf = int(os.environ.get('PERF', '0')) == 1
 
 
 @dataclasses.dataclass
@@ -343,6 +345,7 @@ def extract_internal(xla_model: torch.fx.GraphModule):
       'XLA_DYNAMO_INPUT_SHARDING_CHECK_THRESHOLD', int, 5)
 
   def optimized_mod(*args):
+    print("\n>>> optimized mod")
     nonlocal xla_model
     nonlocal xla_args_sharding_spec
     nonlocal args_and_out
@@ -356,10 +359,15 @@ def extract_internal(xla_model: torch.fx.GraphModule):
 
     # mark_step needs to be blocking since we want to access args's XLADatas
     # and they can't be placeholder.
+    s = time.perf_counter()
     if any(
         torch_xla._XLAC._check_tensor_need_materialization(
             [a for a in args if isinstance(a, torch.Tensor)])):
       xm.mark_step(wait=True)
+    if dynamo_debug:
+      e = time.perf_counter()
+      print(f"checking materialization: {1000*(e - s)} ms.")
+      s = e
 
     # If input sharding has changed from the previous program, dynamo current can
     # not detect this. It will mistakenly believe the program is the same. We need
@@ -381,20 +389,42 @@ def extract_internal(xla_model: torch.fx.GraphModule):
         else:
           skip_checking_input_sharding_threashold -= 1
 
-    enter_ts = time.time()
+    enter_ts = time.perf_counter()
     if len(args_and_out) == 0:
       return ()
 
-    graph_input = graph_input_matcher(args)
-    start_ts = time.time()
-    res = torch_xla._XLAC._run_cached_graph(graph_hash, graph_input)
-    res = dumb_return_handler.addDumbReturn(args, res)
-    if dynamo_debug:
-      print(
-          f"torchxla reuse compiled graph run_cached_graph takes {time.time() - start_ts} seconds"
-      )
+    if perf:
+      with cProfile.Profile(lambda: 1000*time.perf_counter()) as pr:
+        graph_input = graph_input_matcher(args)
+      pr.print_stats('cumulative')
+    else:
+      graph_input = graph_input_matcher(args)
 
-    args_inplace_update_ts = time.time()
+    if dynamo_debug:
+      e = time.perf_counter()
+      print(f"graph_input_matcher: {1000*(e - s)} ms.")
+      s = e
+
+    start_ts = time.perf_counter()
+    if perf:
+      # perf_counter() * 1000 to have the resolution in ms while printing stats 
+      with cProfile.Profile(lambda: 1000*time.perf_counter()) as pr:
+        res = torch_xla._XLAC._run_cached_graph(graph_hash, graph_input)
+      pr.print_stats('cumulative')
+    else:
+      res = torch_xla._XLAC._run_cached_graph(graph_hash, graph_input)
+  
+    if dynamo_debug:
+      e = time.perf_counter()
+      print(f"_run_cached_graph: {1000*(e - s)} ms.")
+      s = e
+    res = dumb_return_handler.addDumbReturn(args, res)
+
+    if dynamo_debug:
+      print(f"dumb_return_handler: {1000*(time.perf_counter() - s)} ms.")
+      print(f"run_cached_graph + dump_return_handler: {1000*(time.perf_counter() - start_ts)} ms.")
+
+    args_inplace_update_ts = time.perf_counter()
     assert len(res) == len(args_and_out), f"{len(res)} v.s. {len(args_and_out)}"
     ncopy = 0
 
@@ -402,16 +432,22 @@ def extract_internal(xla_model: torch.fx.GraphModule):
       args[arg_index].copy_(res[res_index])
 
     if dynamo_debug:
-      print(
-          f"Copy {ncopy} args takes {time.time() - args_inplace_update_ts} seconds"
-      )
+      print(f"copy {ncopy} args: {1000*(time.perf_counter() - args_inplace_update_ts)} ms. seconds")
 
     # First few elements might be xla_args that needs to be in place updated
+    s = time.perf_counter()
     result = res[len(xla_args_need_update):]
-    if dynamo_debug:
-      print(f"optimized_mod takes {time.time() - enter_ts} seconds overall")
 
+    if dynamo_debug:
+      print(f"copy to result takes: {1000*(time.perf_counter() - s)} ms.")
+      print(f"optimized_mod takes {1000*(time.perf_counter() - enter_ts)} ms.")
+
+    s = time.perf_counter()
     none_remover.add_nones(result)
+
+    if dynamo_debug:
+      print(f"none_remover: {1000*(time.perf_counter() - s)} ms.")
+
     if len(result) == 1:
       return result[0]
     else:

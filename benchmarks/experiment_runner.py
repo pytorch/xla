@@ -201,17 +201,11 @@ class ExperimentRunner:
                        input_tensor):
     tracing_time = None
     total_time_start = time.perf_counter()
-    # Invoke iteration function and measure tracing time w/o waiting on the
-    # result.
-    if benchmark_experiment.xla:
-      t_trace_start = time.perf_counter()
     output = benchmark_model.model_iter_fn(
         input_tensor, collect_full_output=self._args.collect_full_output)
-    if benchmark_experiment.xla:
-      tracing_time = time.perf_counter() - t_trace_start
 
     # Mark step.
-    self._mark_step(benchmark_experiment)
+    # self._mark_step(benchmark_experiment)
     total_time = time.perf_counter() - total_time_start
     return output, total_time, tracing_time
 
@@ -289,7 +283,7 @@ class ExperimentRunner:
           total_timing += timing
 
         # Mark step.
-        self._mark_step(benchmark_experiment)
+        # self._mark_step(benchmark_experiment)
         if pytorch_profile is not None:
           pytorch_profile.step()
 
