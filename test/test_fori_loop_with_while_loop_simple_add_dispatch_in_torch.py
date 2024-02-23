@@ -28,12 +28,12 @@ class WhileLoopTest(unittest.TestCase):
 
     def body_fn(x): # x = (xi,)
       # onei = torch.tensor(10, dtype=torch.int32, device=device)
-      return (x[0] + 1, x[1] + 1) # onei,)
+      return (x[0] + 1,) # onei,)
 
     # device = xm.xla_device()
     xi = torch.ones(1, dtype=torch.int32, device=device)
     yi = torch.ones(1, dtype=torch.int32, device=device)
-    res = while_loop(cond_fn, body_fn, (xi, yi))
+    res = while_loop(cond_fn, body_fn, (xi,))
     expected = _fake_while_loop(cond_fn, body_fn, x)
     self.assertEqual(expected, res)
 
