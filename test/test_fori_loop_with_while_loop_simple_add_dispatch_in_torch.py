@@ -36,7 +36,7 @@ class WhileLoopTest(unittest.TestCase):
 
     def body_fn(x): # x = (xi,)
       # onei = torch.tensor(10, dtype=torch.int32, device=device)
-      return (x[0] - 1,) # onei,)
+      return (torch.sub(x[0], 1),) # onei,)
 
     # device = xm.xla_device()
     # xi = torch.ones(1, dtype=torch.int32, device=device)
