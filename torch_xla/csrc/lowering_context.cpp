@@ -154,9 +154,34 @@ void LoweringContext::SetResult(size_t index, xla::XlaOp op) {
 
 xla::StatusOr<xla::XlaComputation> LoweringContext::BuildXla() {
   xla::StatusOr<xla::XlaComputation> xla;
-  if (!root_tuple_.empty()) {
+  // if (builder_.name() == 'bodyctx') {
+  // XLA_ERROR() << builder_.name();
+  // }
+  std::cout << "???" << getnamestring();
+  if (!root_tuple_.empty() & (root_tuple_.size()>1)) {
     xla::XlaOp root = xla::Tuple(builder(), root_tuple_);
+    // xla::XlaOp a = xla::GetTupleElement(root, 0);   
     xla = builder()->Build(root);
+  } else if (!root_tuple_.empty() & (root_tuple_.size()==1)) {
+    // xla::XlaOp root = xla::Tuple(builder(), root_tuple_);
+    // xla::XlaOp a = xla::GetTupleElement(root, 0);
+    // const xla::Shape& root_shape = ShapeHelper::ShapeOfXlaOp(root_tuple_.at(0));
+    // xla::XlaBuilder cb("predone");
+    // xla::Shape xla_scalar_shape = xla::ShapeUtil::MakeShape(element_type, {});
+    // xla::XlaOp p0 = xla::Parameter(&cb, 0, xla_scalar_shape, "p0");
+    // Below are to untuple the parameters
+    // xla = builder()->Build(root_tuple_.at(0)); // root);
+    const std::string condctx = "condctx";
+    const std::string bodyctx = "bodyctx";
+    // std::cout << "???" << builder()->name();
+    const std::string currentname = getnamestring();
+    if ((currentname == condctx) or (currentname == bodyctx)) { // == "condctx") {
+      xla = builder()->Build(root_tuple_.at(0)); // root);
+    }
+    else {
+      xla::XlaOp root = xla::Tuple(builder(), root_tuple_);
+      xla = builder()->Build(root);
+    }   
   } else {
     xla = builder()->Build();
   }
