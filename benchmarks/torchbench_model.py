@@ -15,7 +15,7 @@ import torch_xla
 import torch_xla.core.xla_model as xm
 import types
 import yaml
-from util import move_to_device, set_cwd
+from util import move_to_device, set_cwd, get_torchbench_test_name
 from benchmark_model import ModelLoader, BenchmarkModel
 
 logger = logging.getLogger(__name__)
@@ -71,9 +71,6 @@ TRAIN_WITH_SGD = {
 DENY_LIST = {
     "cm3leon_generate": [
         {
-            "test": "train",
-        },  # Model's DEFAULT_TRAIN_BSIZE is not implemented
-        {
             "test": "eval",
             "xla": "PJRT",
             "dynamo": None,
@@ -81,23 +78,11 @@ DENY_LIST = {
     ],
     "hf_T5_generate": [
         {
-            "test": "train",
-        },  # Model's DEFAULT_TRAIN_BSIZE is not implemented
-        {
             "test": "eval",
             "xla": "PJRT",
             "dynamo": None,
         },  # TIMEOUT
     ],
-    "doctr_det_predictor": [{
-        "test": "train"
-    },],  # Model's DEFAULT_TRAIN_BSIZE is not implemented
-    "doctr_reco_predictor": [{
-        "test": "train"
-    },],  # Model's DEFAULT_TRAIN_BSIZE is not implemented
-    "detectron2_fcos_r_50_fpn": [{
-        "test": "train"
-    },],  # FCOS train is not supported by upstream detectron2
     "mobilenet_v2_quantized_qat": [
         {
             "test": "eval",
@@ -108,15 +93,6 @@ DENY_LIST = {
             "accelerator": "tpu"
         },  # The eval test only supports CPU
     ],
-    "pyhpc_equation_of_state": [{
-        "test": "train"
-    },],  # Model's DEFAULT_TRAIN_BSIZE is not implemented
-    "pyhpc_isoneutral_mixing": [{
-        "test": "train"
-    },],  # Model's DEFAULT_TRAIN_BSIZE is not implemented
-    "pyhpc_turbulent_kinetic_energy": [{
-        "test": "train"
-    },],  # Model's DEFAULT_TRAIN_BSIZE is not implemented
     "resnet50_quantized_qat": [
         {
             "test": "eval",
@@ -155,7 +131,7 @@ class TorchBenchModelLoader(ModelLoader):
     super().__init__(args)
     self.benchmark_model_class = TorchBenchModel
     self.torchbench_dir = self.add_torchbench_dir()
-    self.skip = self.get_skip_data()
+    self.config = self.get_config_data()
 
   def _find_near_file(self, names):
     """Find a file near the current directory.
@@ -184,7 +160,7 @@ class TorchBenchModelLoader(ModelLoader):
 
     return torchbench_dir
 
-  def get_skip_data(self):
+  def get_config_data(self):
     """Retrieve the skip data in the PyTorch YAML file.
 
     Reads the YAML file in PyTorch's dynamo benchmarks directory, and transform
@@ -195,16 +171,22 @@ class TorchBenchModelLoader(ModelLoader):
         ("pytorch/benchmarks/dynamo", "benchmarks/dynamo"))
     assert benchmarks_dynamo_dir is not None, "PyTorch benchmarks folder not found."
 
-    skip_file = os.path.join(benchmarks_dynamo_dir,
-                             "torchbench_skip_models.yaml")
+    skip_file = os.path.join(benchmarks_dynamo_dir, "torchbench.yaml")
     with open(skip_file) as f:
       data = yaml.safe_load(f)
+
+    def flatten(lst):
+      for item in lst:
+        if isinstance(item, list):
+          yield from flatten(item)
+        else:
+          yield item
 
     def maybe_list_to_set(obj):
       if isinstance(obj, dict):
         return {k: maybe_list_to_set(v) for k, v in obj.items()}
       if isinstance(obj, list):
-        return set(obj)
+        return set(flatten(obj))
       return obj
 
     return maybe_list_to_set(data)
@@ -228,13 +210,18 @@ class TorchBenchModelLoader(ModelLoader):
 
     return model_configs
 
+  @property
+  def skip(self):
+    return self.config["skip"]
+
   def is_compatible(self, dummy_benchmark_model, benchmark_experiment):
     name = dummy_benchmark_model.model_name
+    test = get_torchbench_test_name(benchmark_experiment.test)
 
-    if name in self.skip["skip"]:
+    if name in self.skip["all"]:
       return False
 
-    if name in self.skip["test"].get(benchmark_experiment.test, {}):
+    if name in self.skip["test"].get(test, {}):
       return False
 
     if name in self.skip["device"].get(benchmark_experiment.accelerator, {}):
