@@ -5,6 +5,7 @@ import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
 from torch_xla.distributed.spmd import XLAShardedTensor, XLAShard
+import torch_xla.experimental.dynamo_mark_sharding
 import torch_xla.runtime as xr
 
 import numpy as np
@@ -473,11 +474,10 @@ def _translate_named_partition_spec(mesh: Mesh, partition_spec: Tuple):
   return tuple(_partition_spec)
 
 
-@xr.requires_pjrt
 def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor],
                   mesh: Mesh,
                   partition_spec: Tuple[Union[Tuple, int, str, None]],
-                  use_dynamo_custom_op: bool = False) -> XLAShardedTensor:
+                  enable_dynamo_tracing: bool = False) -> XLAShardedTensor:
   """
     Annotates the tensor provided with XLA partition spec. Internally,
     it annotates the corresponding XLATensor as sharded for the XLA SpmdPartitioner pass.
@@ -515,6 +515,21 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor],
     linear = nn.Linear(32, 10).to(xm.xla_device())
     xs.mark_sharding(linear.weight, mesh, (None, 1))
   """
+  if enable_dynamo_tracing:
+    device_ids_tensor_list = mesh.device_ids.tolist()
+    print('[WONJOO] type(device_ids_tensor_list)' + str(type(device_ids_tensor_list)))
+    mesh_shape_str = str(mesh.mesh_shape)
+    axis_names_str = str(mesh.axis_names)
+    partition_spec_str = str(partition_spec)
+    return torch.ops.xla.dynamo_mark_sharding(t, device_ids_tensor_list, mesh_shape_str, axis_names_str, partition_spec_str)
+  else:
+    return _mark_sharding(t, mesh, partition_spec)
+
+
+@xr.requires_pjrt
+def _mark_sharding(t: Union[torch.Tensor, XLAShardedTensor],
+                  mesh: Mesh,
+                  partition_spec: Tuple[Union[Tuple, int, str, None]]) -> XLAShardedTensor:
   num_devices = xr.global_runtime_device_count()
   assert num_devices > 0, "This requires XLA supported device(s)."
   assert mesh.size() == num_devices, \
@@ -526,15 +541,9 @@ def mark_sharding(t: Union[torch.Tensor, XLAShardedTensor],
   assert len(t.shape) == len(partition_spec), \
     f"Partition spec length ({len(partition_spec)}) should be equal to the input rank ({len(t.shape)})."
 
-  if use_dynamo_custom_op:
-    # Allows Dynamo to capture mark_sharding op
-    annotate_func = torch_xla._XLAC._xla_mark_sharding_dynamo_custom_op
-    annotate_func(
-        unwrap_sharded_tensor(t), *mesh._get_op_sharding_args(partition_spec))
-  else:
-    op_sharding = mesh.get_op_sharding(partition_spec)
-    annotate_func = torch_xla._XLAC._xla_mark_sharding
-    annotate_func(unwrap_sharded_tensor(t), op_sharding)
+  op_sharding = mesh.get_op_sharding(partition_spec)
+  annotate_func = torch_xla._XLAC._xla_mark_sharding
+  torch_xla._XLAC._xla_mark_sharding(unwrap_sharded_tensor(t), op_sharding)
   return wrap_as_sharded_tensor(t)
 
 
