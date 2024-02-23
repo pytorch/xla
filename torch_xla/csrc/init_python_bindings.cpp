@@ -675,6 +675,7 @@ std::vector<at::Tensor> XlaUserComputation(
   std::cout << " !!!$$$: " << std::endl;
   for (int i = 0; i < inputs.size(); i++) {
     std::cout << inputs[i] << "; " << std::endl;
+    std::cout << inputs[i].type() << "; type !!!" << std::endl;
     // inputs[i] = (inputs[i]);
   }
   std::vector<XLATensorPtr> xinputs = GetXlaTensors(inputs, /*want_all=*/true);
