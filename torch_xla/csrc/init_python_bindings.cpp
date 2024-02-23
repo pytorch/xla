@@ -700,10 +700,10 @@ runtime::ComputationClient::ComputationPtr CreateComputation(
   // std::cout << "w's build builder name: " << root.builder().name_ << std::endl;
   // https://github.com/openxla/xla/blob/762bde36adf22792e91c38fe87cabe5af05bfadc/xla/client/xla_builder.cc#L710
   xla::XlaComputation computation = ConsumeValue(root.builder()->Build(root));
-  std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
-  xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
-  computation = ConsumeValue(XlaHelpers::WrapXlaComputation(
-    computation, program_shape.parameters(), input_output_alias_pair));
+  // std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
+  // xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
+  // computation = ConsumeValue(XlaHelpers::WrapXlaComputation(
+  //   computation, program_shape.parameters(), input_output_alias_pair));
   return std::make_shared<runtime::ComputationClient::Computation>(
       name, std::move(computation));
 }
@@ -934,7 +934,7 @@ class PyLoweringContext {
   
     std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
     xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
-    bool should_wrap_parameter = true; // (program_shape.parameters_size() >= 2); // true;
+    bool should_wrap_parameter = (program_shape.parameters_size() >= 2); // true;
     if (should_wrap_parameter) {
       computation = ConsumeValue(XlaHelpers::WrapXlaComputation(
         computation, program_shape.parameters(), input_output_alias_pair));
