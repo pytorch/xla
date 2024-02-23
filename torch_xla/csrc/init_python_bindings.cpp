@@ -903,6 +903,7 @@ class PyLoweringContext {
 
   // Builds a HLO graph given a set of output tensors.
   void Build(std::vector<at::Tensor> tensors) {
+    std::cout<< "let's see how many timed this was called? !!!" << GetNameString() << std::endl;
     // Get the backing XLA tensors from the output torch tensor handles
     std::vector<XLATensorPtr> xtensors =
         GetXlaTensors(tensors, /*want_all=*/true);
@@ -928,13 +929,13 @@ class PyLoweringContext {
     }
     computation = ConsumeValue(lowering_ctx.BuildXla());
   
-    // std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
-    // xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
-    // bool should_wrap_parameter = (program_shape.parameters_size() >= 2); // true;
-    // if (should_wrap_parameter) {
-    //   computation = ConsumeValue(XlaHelpers::WrapXlaComputation(
-    //     computation, program_shape.parameters(), input_output_alias_pair));
-    // }
+    std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
+    xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
+    bool should_wrap_parameter = (program_shape.parameters_size() >= 2); // true;
+    if (should_wrap_parameter) {
+      computation = ConsumeValue(XlaHelpers::WrapXlaComputation(
+        computation, program_shape.parameters(), input_output_alias_pair));
+    }
 
     // // unwrap (pred[])
     // xla::XlaBuilder builder(computation.proto().name());
