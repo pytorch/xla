@@ -154,20 +154,19 @@ void LoweringContext::SetResult(size_t index, xla::XlaOp op) {
 
 xla::StatusOr<xla::XlaComputation> LoweringContext::BuildXla() {
   xla::StatusOr<xla::XlaComputation> xla;
-  if (!root_tuple_.empty() & (root_tuple_.size()>1)) {
+  if (!root_tuple_.empty() & (root_tuple_.size() > 1)) {
     xla::XlaOp root = xla::Tuple(builder(), root_tuple_);
     xla = builder()->Build(root);
-  } else if (!root_tuple_.empty() & (root_tuple_.size()==1)) {
+  } else if (!root_tuple_.empty() & (root_tuple_.size() == 1)) {
     const std::string condctx = "condctx";
     const std::string bodyctx = "bodyctx";
     const std::string currentname = getnamestring();
     if ((currentname == condctx) or (currentname == bodyctx)) {
       xla = builder()->Build(root_tuple_.at(0));
-    }
-    else {
+    } else {
       xla::XlaOp root = xla::Tuple(builder(), root_tuple_);
       xla = builder()->Build(root);
-    }   
+    }
   } else {
     xla = builder()->Build();
   }
