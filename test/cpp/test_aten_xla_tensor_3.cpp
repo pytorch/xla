@@ -738,9 +738,9 @@ TEST_F(AtenXlaTensorTest, TestReflectionPad3dRank5) {
   ExpectCounterChanged("xla::reflection_pad3d", cpp_test::GetIgnoredCounters());
 }
 
-TEST_F(AtenXlaTensorTest, TestReflectionPad3dRank6) {
+TEST_F(AtenXlaTensorTest, TestReflectionPad3dRank4) {
   torch::Tensor input =
-      torch::rand({2, 2, 2, 2, 2, 2}, torch::TensorOptions(torch::kFloat));
+      torch::rand({2, 2, 3, 4}, torch::TensorOptions(torch::kFloat));
   std::vector<int64_t> pad{1, 1, 1, 1, 1, 1};
   torch::Tensor output = torch::reflection_pad3d(input, pad);
   ForEachDevice([&](const torch::Device& device) {
