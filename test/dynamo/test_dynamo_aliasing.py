@@ -72,6 +72,32 @@ class TestDynamoBufferDonationAliasing(unittest.TestCase):
                   torch_xla._XLAC._get_xla_tensor_debug_info(input))
     torch.allclose(input_cloned.cpu() + 1, res.cpu())
 
+  def test_manual_buffer_donation_for_inplce_op_repeat(self):
+    # use a different function than above dummy add otherwise XLA won't recompile
+    def dummy_inplace(input):
+      input += (0.3 * torch.cos(input))
+
+    device = xm.xla_device()
+    input = torch.randn(5, 5).to(device)
+    input_cloned = torch.clone(input)
+    dummy_inplace_add_compiled = torch.compile(dummy_inplace, backend='openxla')
+    xm.mark_step()
+    met.clear_all()
+    # input is a device_data, we should be able to set the buffer donation field.
+    self.assertTrue(torch_xla._XLAC._set_buffer_donation(input, True))
+    # make sure buffer donation setting is correctly updated
+    self.assertTrue(torch_xla._XLAC._get_buffer_donation(input))
+
+    for _ in range(100):
+      dummy_inplace_add_compiled(input)
+    # should_donate_buffer field is attached to the buffer and won't be inherited to
+    # the output buffer(unless execution is a no-op). However dynamo don't track this
+    # field so it will keep executing the graph with input buffer being aliased.
+    self.assertFalse(torch_xla._XLAC._get_buffer_donation(input))
+    # there shouldn't be any recompilation even `should_donate_buffer` field changed after
+    # first execution. This is because Dynamo does not trace this internal field for xla.
+    self.assertEqual(met.metric_data('CompileTime')[0], 1)
+
   def test_buffer_donation_on_non_data_tensor(self):
     device = xm.xla_device()
     input = torch.randn(5, 5).to(device)
