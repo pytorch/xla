@@ -10,7 +10,13 @@ import torch_xla.experimental.xla_marker
 from torch.utils import _pytree as pytree
 from torch_xla import stablehlo
 from torch_xla.experimental.mark_pattern_utils import StableHLOCompositeBuilder
-from torch_xla.tf_saved_model_integration import save_torch_module_as_tf_saved_model
+from utils import has_tf_package
+
+try:
+  from torch_xla.tf_saved_model_integration import \
+      save_torch_module_as_tf_saved_model
+except ImportError:
+  print("tf is not installed. The tf.saved_model tests will be skipped.")
 
 
 class XlaMarkPatternTest(unittest.TestCase):
@@ -134,7 +140,7 @@ class XlaMarkPatternTest(unittest.TestCase):
         return attn_out, attn_out2
 
     input_args = (torch.randn((32, 8, 384, 64)), torch.randn((32, 8, 384, 64)))
-    tmp_path = tempfile.mkdtemp()
+    tmp_path = tempfile.mkdtemp() if has_tf_package() else None
     stablehlo_gm = self.export_func(M(), input_args, tmp_path)
     stablehlo = stablehlo_gm.get_stablehlo_text()
     self.assertEqual(stablehlo.count("@stablehlo.composite"), 2)
@@ -143,7 +149,8 @@ class XlaMarkPatternTest(unittest.TestCase):
         stablehlo)
     self.assertTrue(
         '{attributes = {scale = 2 : i64}, name = "sdpa"}}' in stablehlo)
-    self.assertTrue(os.path.exists(os.path.join(tmp_path, 'saved_model.pb')))
+    if has_tf_package():
+      self.assertTrue(os.path.exists(os.path.join(tmp_path, 'saved_model.pb')))
 
   def test_inlined_composite_builder_export_sdpa_pattern(self):
 
@@ -164,7 +171,7 @@ class XlaMarkPatternTest(unittest.TestCase):
         return attn_out, attn_out2
 
     input_args = (torch.randn((32, 8, 384, 64)), torch.randn((32, 8, 384, 64)))
-    tmp_path = tempfile.mkdtemp()
+    tmp_path = tempfile.mkdtemp() if has_tf_package() else None
     stablehlo_gm = self.export_func(M(), input_args, tmp_path)
     stablehlo = stablehlo_gm.get_stablehlo_text()
     self.assertEqual(stablehlo.count("@stablehlo.composite"), 2)
@@ -173,7 +180,8 @@ class XlaMarkPatternTest(unittest.TestCase):
         stablehlo)
     self.assertTrue(
         '{attributes = {scale = 2 : i64}, name = "sdpa"}}' in stablehlo)
-    self.assertTrue(os.path.exists(os.path.join(tmp_path, 'saved_model.pb')))
+    if has_tf_package():
+      self.assertTrue(os.path.exists(os.path.join(tmp_path, 'saved_model.pb')))
 
   def test_composite_builder_multiple_outputs(self):
 
