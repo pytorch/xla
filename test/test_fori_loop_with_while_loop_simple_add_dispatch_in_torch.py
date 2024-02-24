@@ -28,7 +28,7 @@ class WhileLoopTest(unittest.TestCase):
       return x[0] >= ten[0]
 
     def body_fn(x):
-      return (x[0] - 1,)
+      return (torch.sub(x[0], 1),)
 
     xi = torch.tensor([5], dtype=torch.int32, device=device)
     res = while_loop(cond_fn, body_fn, (xi,))
