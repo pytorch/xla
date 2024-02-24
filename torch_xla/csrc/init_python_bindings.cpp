@@ -2275,14 +2275,12 @@ void InitXlaModuleBindings(py::module m) {
     if (!xtensor) {
       return false;
     } else if (xtensor->CurrentDataHandle() != nullptr) {
-      std::cerr << "trying to access data handle\n";
       auto data = std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
           xtensor->CurrentDataHandle());
       return data->should_donate_buffer();
     } else if (xtensor->CurrentIrValue().node != nullptr) {
       auto device_data =
           torch_xla::DeviceData::Cast(xtensor->CurrentIrValue().node.get());
-      std::cerr << "device data cast done\n";
       if (device_data != nullptr) {
         return device_data->get_buffer_donation();
       } else {

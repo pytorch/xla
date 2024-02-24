@@ -27,10 +27,6 @@ class DeviceData : public XlaNode {
   void set_buffer_donation(bool should_donate_buffer) {
     std::dynamic_pointer_cast<runtime::ComputationClient::Data>(data_)
         ->set_should_donate_buffer(should_donate_buffer);
-    // std::cerr << std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
-    //                  data_)
-    //                  ->ToString()
-    //           << "\n";
   }
 
   bool get_buffer_donation() {
