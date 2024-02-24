@@ -2244,6 +2244,14 @@ void InitXlaModuleBindings(py::module m) {
     xtensor->MarkDynamicDimension(dim);
   });
 
+  // This api will set the `should_donate_buffer_` field in the
+  // ComputationClient::Data. This api is currently only useful if you are
+  // running with `torch.compile`. Buffer assocaited with data with
+  // `should_donate_buffer_` set to true will be donated to the output, You
+  // should only use this api if
+  // 1. You are using torch.compile
+  // 2. You will inplace update a tensor in the `torch.compiled` function(so the
+  //    currnet buffer can be donated after compuation)
   m.def("_set_buffer_donation",
         [](at::Tensor& input, bool should_donate) -> bool {
           XLATensorPtr xtensor = bridge::GetXlaTensor(input);
