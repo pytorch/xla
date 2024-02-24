@@ -9,6 +9,7 @@
 #include "absl/strings/str_cat.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Support/LogicalResult.h"
+#include "mlir/Transforms/TopologicalSortUtils.h"
 #include "single_include/nlohmann/json.hpp"
 #include "stablehlo/dialect/StablehloOps.h"
 
@@ -277,6 +278,11 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
       }
     }
 
+    if (!mlir::sortTopologically(composite_op->getBlock())) {
+      composite_op->emitError()
+          << "The graph is not acyclic after the composite creation pass.";
+      return mlir::failure();
+    }
     // The unused impl_ops will be eliminated with canonicalizer.
     return mlir::success();
   }

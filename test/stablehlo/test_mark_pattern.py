@@ -13,6 +13,42 @@ from torch_xla.experimental.mark_pattern_utils import StableHLOCompositeBuilder
 from torch_xla.tf_saved_model_integration import save_torch_module_as_tf_saved_model
 
 
+class KVCache(torch.nn.Module):
+
+  def __init__(self,
+               batch_size,
+               max_seq_length,
+               n_heads,
+               head_dim,
+               enable_hlfb=False):
+    super().__init__()
+    cache_shape = (batch_size, max_seq_length, n_heads, head_dim)
+    self.register_buffer('k_cache', torch.zeros(cache_shape), persistent=False)
+    self.register_buffer('v_cache', torch.zeros(cache_shape), persistent=False)
+    self.enable_hlfb = enable_hlfb
+
+  def update_cache(self, input_pos, k_val, v_val):
+    if self.enable_hlfb:
+      return self.update_cache_with_hlfb(input_pos, k_val, v_val)
+
+    updated_k = self.k_cache.index_copy_(1, input_pos, k_val)
+    updated_v = self.v_cache.index_copy_(1, input_pos, v_val)
+    # Here we need a clone otherwise dynamo export will fail.
+    return torch.clone(updated_k), torch.clone(updated_v)
+
+  def forward(self, input_pos, k_val, v_val):
+    return self.update_cache_with_hlfb(input_pos, k_val, v_val)
+
+  def update_cache_with_hlfb(self, input_pos, k_val, v_val):
+    builder = StableHLOCompositeBuilder('update_kv_cache')
+    k_cache, v_cache, input_pos, k_val, v_val = builder.mark_inputs(
+        self.k_cache, self.v_cache, input_pos, k_val, v_val)
+    updated_k = k_cache.index_copy_(1, input_pos, k_val)
+    updated_v = v_cache.index_copy_(1, input_pos, v_val)
+    updated_k, updated_v = builder.mark_outputs(updated_k, updated_v)
+    return updated_k, updated_v
+
+
 class XlaMarkPatternTest(unittest.TestCase):
 
   def run_func_get_stablehlo(self, f, input_args):
@@ -220,6 +256,7 @@ class XlaMarkPatternTest(unittest.TestCase):
 
     input_args = (torch.ones(5), torch.ones(5))
     stablehlo = self.run_func_get_stablehlo(f, input_args)
+    self.assertEqual(stablehlo.count("@stablehlo.composite"), 1)
 
   @unittest.skip("Nested pattern is not supported now.")
   def test_nested_pattern(self):
@@ -250,6 +287,21 @@ class XlaMarkPatternTest(unittest.TestCase):
 
     input_args = (torch.ones(5),)
     stablehlo = self.run_func_get_stablehlo(f, input_args)
+
+  def test_update_kv_cache(self):
+    model = KVCache(
+        batch_size=1,
+        max_seq_length=100,
+        n_heads=4,
+        head_dim=32,
+    )
+    input_pos = torch.arange(0, 10)
+    k_val = torch.randn(1, 10, 4, 32)
+    v_val = torch.randn(1, 10, 4, 32)
+    exported = torch.export.export(model, (input_pos, k_val, v_val))
+    shlo = stablehlo.exported_program_to_stablehlo(exported)
+    shlo_text = shlo.get_stablehlo_text()
+    self.assertEqual(shlo_text.count("@stablehlo.composite"), 1)
 
 
 if __name__ == '__main__':
