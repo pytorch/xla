@@ -280,7 +280,7 @@ class BuildStableHLOCompositePass : public mlir::OperationPass<mlir::ModuleOp> {
 
     if (!mlir::sortTopologically(composite_op->getBlock())) {
       composite_op->emitError()
-          << "The graph is not acyclic after the composite creation pass.";
+          << "The graph is not acyclic after BuildStableHLOCompositePass pass.";
       return mlir::failure();
     }
     // The unused impl_ops will be eliminated with canonicalizer.
