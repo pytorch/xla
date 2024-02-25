@@ -77,11 +77,9 @@ def _mangle_tf_root_scope_name(name):
   #
   # FX Graph Node may contain characters other than [A-Za-z0-9_.\\-/], replace
   # offending characters with '_'.
-  print(f"before mangling {name}")
   if name[0] in "._\\-/":
     name = 'k' + name
   name = re.sub(r"[^^\w\-/\\]+", "_", name)
-  print(f"after mangling {name}")
   return name
 
 
