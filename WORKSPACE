@@ -46,14 +46,13 @@ http_archive(
     ],
     patch_tool = "patch",
     patches = [
-        "//openxla_patches:cache_urls.diff",
         "//openxla_patches:gpu_race_condition.diff",
         "//openxla_patches:f16_abi_clang.diff",
         "//openxla_patches:quant_dequant_converter.diff",
     ],
-    strip_prefix = "xla-419a3d736bdfe6891bc40e9ab5c78b466c8e0dc6",
+    strip_prefix = "xla-d341a7642c71be2f05bebd48e66281d8f37f4ad6",
     urls = [
-        "https://github.com/openxla/xla/archive/419a3d736bdfe6891bc40e9ab5c78b466c8e0dc6.tar.gz",
+        "https://github.com/openxla/xla/archive/d341a7642c71be2f05bebd48e66281d8f37f4ad6.tar.gz",
     ],
 )
 
@@ -67,7 +66,7 @@ http_archive(
 # b) by commenting out the http_archive above and uncommenting the following:
 # local_repository(
 #    name = "xla",
-#    path = "/path/to/openxla",
+#    path = "/mnt/hanq/git/qihqi/xla",
 # )
 
 # Initialize OpenXLA's external dependencies.
