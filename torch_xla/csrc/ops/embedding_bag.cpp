@@ -23,7 +23,8 @@ std::vector<xla::XlaOp> BuildEmbeddingBag(xla::XlaOp weight, xla::XlaOp indices,
                                           bool include_last_offset, int mode) {
   auto offset_shape = ShapeHelper::ShapeOfXlaOp(offsets);
   int64_t n = offset_shape.dimensions(0);
-  int64_t weight_dim = ShapeHelper::ShapeOfXlaOp(weight).dimensions(1);
+  xla::Shape weight_shape = ShapeHelper::ShapeOfXlaOp(weight);
+  int64_t weight_dim = weight_shape.dimensions(1);
   int64_t num_embeddings = ShapeHelper::ShapeOfXlaOp(indices).dimensions(0);
   xla::XlaOp output2 = xla::ZerosLike(indices);
   xla::XlaOp output3 = xla::ZerosLike(offsets);
@@ -40,8 +41,9 @@ std::vector<xla::XlaOp> BuildEmbeddingBag(xla::XlaOp weight, xla::XlaOp indices,
   std::vector<xla::Shape> shape_elements = {
       xla::ShapeUtil::MakeShape(xla::S64, {}),
       xla::ShapeUtil::MakeShape(xla::S64, {}),
-      xla::ShapeUtil::MakeShape(xla::F32, {num_embeddings, weight_dim}),
-      xla::ShapeUtil::MakeShape(xla::F32, {1, weight_dim})};
+      xla::ShapeUtil::MakeShape(weight_shape.element_type(),
+                                {num_embeddings, weight_dim}),
+      xla::ShapeUtil::MakeShape(weight_shape.element_type(), {1, weight_dim})};
   xla::Shape result_shape = xla::ShapeUtil::MakeTupleShape(shape_elements);
 
   xla::XlaComputation condition;
