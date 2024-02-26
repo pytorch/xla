@@ -354,7 +354,6 @@ supported:
   - zero_
   - _native_batch_norm_legit
   - _native_batch_norm_legit.no_stats
-  - _embedding_bag
   - _embedding_bag_forward_only
   # Note: [functionalization and CompositeExplicitAutograd]
   # Below are all operators that are "composite" in core,

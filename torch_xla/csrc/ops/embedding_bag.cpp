@@ -21,11 +21,24 @@ std::vector<xla::XlaOp> BuildEmbeddingBag(xla::XlaOp weight, xla::XlaOp indices,
                                           xla::XlaOp offsets,
                                           xla::XlaOp per_sample_weights,
                                           bool include_last_offset, int mode) {
-  auto offset_shape = ShapeHelper::ShapeOfXlaOp(offsets);
+  xla::Shape offset_shape = ShapeHelper::ShapeOfXlaOp(offsets);
   int64_t n = offset_shape.dimensions(0);
   xla::Shape weight_shape = ShapeHelper::ShapeOfXlaOp(weight);
   int64_t weight_dim = weight_shape.dimensions(1);
-  int64_t num_embeddings = ShapeHelper::ShapeOfXlaOp(indices).dimensions(0);
+  xla::Shape indices_shape = ShapeHelper::ShapeOfXlaOp(indices);
+  int64_t num_embeddings = indices_shape.dimensions(0);
+  XLA_CHECK(indices_shape.rank() == 1 || indices_shape.rank() == 2)
+      << "input has to be a 1D or 2D Tensor, but got Tensor of dimension "
+      << indices_shape.rank();
+  if (indices_shape.rank() == 1) {
+    XLA_CHECK(offset_shape.rank() == 1)
+        << "offsets has to be a 1D Tensor, but got Tensor of dimension "
+        << offset_shape.rank();
+  }
+  XLA_CHECK(weight_shape.rank() == 2)
+      << "weight has to be a 2D Tensor, but got Tensor of dimension "
+      << weight_shape.rank();
+
   xla::XlaOp output2 = xla::ZerosLike(indices);
   xla::XlaOp output3 = xla::ZerosLike(offsets);
   std::vector<int64_t> sizes = {n, weight_dim};
@@ -35,12 +48,14 @@ std::vector<xla::XlaOp> BuildEmbeddingBag(xla::XlaOp weight, xla::XlaOp indices,
 
   xla::XlaOp embeddings = xla::TorchIndexSelect(weight, indices, 0);
   xla::XlaOp embeddings_weighted = xla::Mul(
-      embeddings, xla::BroadcastInDim(per_sample_weights,
-                                      {num_embeddings, weight_dim}, {0}));
+      embeddings, xla::ConvertElementType(
+                      xla::BroadcastInDim(per_sample_weights,
+                                          {num_embeddings, weight_dim}, {0}),
+                      weight_shape.element_type()));
 
   std::vector<xla::Shape> shape_elements = {
-      xla::ShapeUtil::MakeShape(xla::S64, {}),
-      xla::ShapeUtil::MakeShape(xla::S64, {}),
+      xla::ShapeUtil::MakeShape(offset_shape.element_type(), {}),
+      xla::ShapeUtil::MakeShape(offset_shape.element_type(), {}),
       xla::ShapeUtil::MakeShape(weight_shape.element_type(),
                                 {num_embeddings, weight_dim}),
       xla::ShapeUtil::MakeShape(weight_shape.element_type(), {1, weight_dim})};
@@ -65,13 +80,18 @@ std::vector<xla::XlaOp> BuildEmbeddingBag(xla::XlaOp weight, xla::XlaOp indices,
     auto w = xla::GetTupleElement(prev, 3);
 
     xla::XlaOp slice = xla::DynamicSlice(
-        emb, {index, xla::ConstantR0<int64_t>(&builder, 0)}, {1, weight_dim});
+        emb,
+        {index, xla::ConvertElementType(xla::ConstantR0<int64_t>(&builder, 0),
+                                        offset_shape.element_type())},
+        {1, weight_dim});
     xla::XlaOp result =
         mode == MODE_SUM ? xla::Add(w, slice) : xla::Max(w, slice);
 
     xla::Tuple(&builder,
                {
-                   xla::Add(index, xla::ConstantR0<int64_t>(&builder, 1)),
+                   xla::Add(index, xla::ConvertElementType(
+                                       xla::ConstantR0<int64_t>(&builder, 1),
+                                       offset_shape.element_type())),
                    xla::GetTupleElement(prev, 1),
                    xla::GetTupleElement(prev, 2),
                    result,
@@ -87,7 +107,9 @@ std::vector<xla::XlaOp> BuildEmbeddingBag(xla::XlaOp weight, xla::XlaOp indices,
     if (i == n - 1 && include_last_offset) continue;
     xla::XlaOp end =
         i == n - 1 && !include_last_offset
-            ? xla::ConstantR1<int64_t>(offsets.builder(), 1, num_embeddings)
+            ? xla::ConvertElementType(xla::ConstantR1<int64_t>(
+                                          offsets.builder(), 1, num_embeddings),
+                                      offset_shape.element_type())
             : xla::DynamicSlice(
                   offsets, {xla::ConstantR0<int64_t>(offsets.builder(), i + 1)},
                   {1});
@@ -96,7 +118,9 @@ std::vector<xla::XlaOp> BuildEmbeddingBag(xla::XlaOp weight, xla::XlaOp indices,
         offsets.builder(),
         {xla::Reshape(start, {0}, {}), xla::Reshape(end, {0}, {}),
          embeddings_weighted,
-         xla::ConstantFromArray<float>(offsets.builder(), initial_vector)});
+         xla::ConvertElementType(
+             xla::ConstantFromArray<float>(offsets.builder(), initial_vector),
+             weight_shape.element_type())});
     auto result = xla::While(condition, body, init_tuple);
     results.push_back(xla::GetTupleElement(result, 3));
   };
