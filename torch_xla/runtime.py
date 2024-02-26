@@ -49,7 +49,7 @@ def _maybe_select_default_device():
     logging.warning('GPU_NUM_DEVICES is set. Setting PJRT_DEVICE=CUDA')
     os.environ[xenv.PJRT_DEVICE] = 'CUDA'
   elif torch.cuda.is_available() and torch.cuda.device_count() > 0:
-    num_devices_str = torch.cuda.device_count()
+    num_devices_str = str(torch.cuda.device_count())
     logging.warning(
         'Found CUDA without GPU_NUM_DEVICES. Defaulting to PJRT_DEVICE=CUDA with GPU_NUM_DEVICES='
         + num_devices_str)
