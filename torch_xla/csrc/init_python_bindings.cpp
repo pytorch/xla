@@ -923,7 +923,7 @@ class PyLoweringContext {
           torch::lazy::Output(ir_value.node.get(), ir_value.index));
       lowering_ctx.AddResult(root);
     }
-    computation = ConsumeValue(lowering_ctx.BuildXlaWithCheck());
+    computation = ConsumeValue(lowering_ctx.BuildXla());
 
     // TODO(@manfei): reenable this to extend feature
     // // Wrap inputs to Tuple if has multi inputs at the same time
