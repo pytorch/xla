@@ -49,14 +49,15 @@ def _unpack_tensor_to_list(t: torch.Tensor):
 def _check_scale_zp(input, scale, zero_point, axis, dtype):
   # The followings are checked:
   # 1. scale, zp are 1D tensor.
-  # 2. Lenghth of scale, zp matched the (de)quant dim.
+  # 2. Lenghth of scale, zp matched the (de)quant dim,
+  #    or scale, zp has size of 1
   # 3. dtype must be integer type
   # 4. zero_point values must be within the range of dtype.
   assert len(scale.shape) == 1 and len(zero_point.shape) == 1
   assert 'int' in str(dtype)
   assert torch.equal(
-      zero_point,
-      torch.clamp(zero_point,
+      zero_point.cpu(),
+      torch.clamp(zero_point.cpu(),
                   torch.iinfo(dtype).min,
                   torch.iinfo(dtype).max))
   if axis == -1:
@@ -64,7 +65,8 @@ def _check_scale_zp(input, scale, zero_point, axis, dtype):
   else:
     assert axis >= 0 and axis < len(input.shape)
     qdq_dim_size = input.shape[axis]
-    assert qdq_dim_size == scale.numel() and qdq_dim_size == zero_point.numel()
+    assert qdq_dim_size == scale.numel() or scale.numel() == 1
+    assert qdq_dim_size == zero_point.numel() or zero_point.numel() == 1
 
 
 def _xla_quantize(input: torch.Tensor,
