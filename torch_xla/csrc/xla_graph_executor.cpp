@@ -17,7 +17,6 @@
 #include <exception>
 #include <fstream>
 #include <functional>
-#include <iostream>
 #include <mutex>
 #include <set>
 #include <stdexcept>
@@ -61,7 +60,6 @@
 #include "tsl/profiler/lib/traceme.h"
 #include "xla/literal_util.h"
 #include "xla/shape_util.h"
-using std::cerr;
 
 namespace torch_xla {
 namespace {
@@ -509,9 +507,13 @@ torch::lazy::hash_t XLAGraphExecutor::GetGraphHash(
   torch::lazy::hash_t res_hash = torch::lazy::HashCombine(
       coll.hash, torch::lazy::Hash(po_data.parameter_sequence));
   if (ShouldAliasBasedOnBufferDonor()) {
-    res_hash = torch::lazy::HashCombine(
-        res_hash,
-        torch::lazy::Hash(GetBufferDonorIndex(po_data.parameters_data)));
+    std::vector<size_t> buffer_donor_index =
+        GetBufferDonorIndex(po_data.parameters_data);
+    // Do not include hash on a empty vector.
+    if (buffer_donor_index.size() > 0) {
+      res_hash = torch::lazy::HashCombine(
+          res_hash, torch::lazy::Hash(buffer_donor_index));
+    }
   }
   DeviceContextArena::Get()->SaveOutputShapes(res_hash,
                                               std::move(output_shapes));
@@ -1335,13 +1337,11 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
       // will later fetch the new value of A, which is incorrect.
       // But, when we issue a step barrier (force_ltc_data == true) we have to
       // turn everything into DEVICE_DATA, so we can activate aliasing.
-      std::cerr << "build input output aliasing\n";
       input_output_alias_pair =
           BuildInputOutputAliases(tensors, coll.indices, &lowering_ctx);
     } else if (ShouldAliasBasedOnBufferDonor()) {
       // only alias based on buffer donor if LTC can't auto infer the input
       // output aliasing.
-      std::cerr << "call SetBufferDonors\n";
       buffer_donor_indices = SetBufferDonors(&lowering_ctx);
     }
   }
@@ -1440,9 +1440,13 @@ XLAGraphExecutor::SyncTensorsGraphInternal(
   coll.hash = torch::lazy::HashCombine(
       coll.hash, torch::lazy::Hash(po_data.parameter_sequence));
   if (ShouldAliasBasedOnBufferDonor()) {
-    coll.hash = torch::lazy::HashCombine(
-        coll.hash,
-        torch::lazy::Hash(GetBufferDonorIndex(po_data.parameters_data)));
+    std::vector<size_t> buffer_donor_index =
+        GetBufferDonorIndex(po_data.parameters_data);
+    if (buffer_donor_index.size() > 0) {
+      // Do not include hash on a empty vector.
+      coll.hash = torch::lazy::HashCombine(
+          coll.hash, torch::lazy::Hash(buffer_donor_index));
+    }
   }
 
   DebugUtil::SaveGraphHash(coll.hash);
