@@ -77,6 +77,11 @@ class LoweringContext : public torch::lazy::LoweringContext {
   xla::StatusOr<xla::XlaComputation> BuildXla();
 
   // Build the XLA computation capturing all the operations created with the
+  // embedded XLA builder (returned by the builder() API) with check whether
+  // build for cond/body computation or not.
+  xla::StatusOr<xla::XlaComputation> BuildXlaWithCheck();
+
+  // Build the XLA computation capturing all the operations created with the
   // embedded XLA builder (returned by the builder() API).
   // Uses root as return value for the computation. It is an error to use this
   // API after having called the AddResult() API.

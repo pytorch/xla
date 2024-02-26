@@ -902,7 +902,30 @@ class PyLoweringContext {
       lowering_ctx.AddResult(root);
     }
     computation = ConsumeValue(lowering_ctx.BuildXla());
+  }
 
+  // Builds a HLO graph given a set of output tensors.
+  void BuildForWhile(std::vector<at::Tensor> tensors) {
+    // Get the backing XLA tensors from the output torch tensor handles
+    std::vector<XLATensorPtr> xtensors =
+        GetXlaTensors(tensors, /*want_all=*/true);
+
+    // Get the lazy IR value from the output XLA tensors
+    std::vector<torch::lazy::Value> ir_values;
+    for (auto& xtensor : xtensors) {
+      torch::lazy::Value value = xtensor->GetIrValue();
+      ir_values.push_back(value);
+    }
+
+    // Lower the graph using the output IR values
+    for (auto& ir_value : ir_values) {
+      xla::XlaOp root = lowering_ctx.GetOutputOp(
+          torch::lazy::Output(ir_value.node.get(), ir_value.index));
+      lowering_ctx.AddResult(root);
+    }
+    computation = ConsumeValue(lowering_ctx.BuildXlaWithCheck());
+
+    // TODO(@manfei): reenable this to extend feature
     // // Wrap inputs to Tuple if has multi inputs at the same time
     // std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
     // xla::ProgramShape program_shape =
@@ -1039,6 +1062,7 @@ void BuildLoweringContextSubmodule(py::module* m) {
 
   lowering_context_class.def(py::init<>())
       .def("build", &PyLoweringContext::Build)
+      .def("build_for_while", &PyLoweringContext::BuildForWhile)
       .def("hlo", &PyLoweringContext::GetHlo)
       .def("hlo_text", &PyLoweringContext::GetHloText)
       .def("hlo_json", &PyLoweringContext::GetHloJsonText)
