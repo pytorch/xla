@@ -366,12 +366,12 @@ only be enabled for debugging.
 
 ### Common Debugging Environment Variables Combinations
 
-* Record the graph execution in the HLO format
+* Record the graph execution in the IR format
   ```
   XLA_IR_DEBUG=1 XLA_HLO_DEBUG=1 XLA_SAVE_TENSORS_FMT="text" XLA_SAVE_TENSORS_FILE="/tmp/save1.ir"  
   ```
 
-* Record the graph execution in the IR format
+* Record the graph execution in the HLO format
   ```
   XLA_IR_DEBUG=1 XLA_HLO_DEBUG=1 XLA_SAVE_TENSORS_FMT="hlo" XLA_SAVE_TENSORS_FILE="/tmp/save1.hlo"
   ```
