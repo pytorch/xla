@@ -12,7 +12,7 @@
 
 #include <cstring>
 #include <fstream>
-#include <iostream>
+// #include <iostream>
 #include <sstream>
 #include <string>
 #include <thread>
@@ -903,15 +903,15 @@ class PyLoweringContext {
     }
     computation = ConsumeValue(lowering_ctx.BuildXla());
 
-    // Wrap inputs to Tuple if has multi inputs at the same time
-    std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
-    xla::ProgramShape program_shape =
-        ConsumeValue(computation.GetProgramShape());
-    bool should_wrap_parameter = (program_shape.parameters_size() >= 2);
-    if (should_wrap_parameter) {
-      computation = ConsumeValue(XlaHelpers::WrapXlaComputation(
-          computation, program_shape.parameters(), input_output_alias_pair));
-    }
+    // // Wrap inputs to Tuple if has multi inputs at the same time
+    // std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
+    // xla::ProgramShape program_shape =
+    //     ConsumeValue(computation.GetProgramShape());
+    // bool should_wrap_parameter = (program_shape.parameters_size() >= 2);
+    // if (should_wrap_parameter) {
+    //   computation = ConsumeValue(XlaHelpers::WrapXlaComputation(
+    //       computation, program_shape.parameters(), input_output_alias_pair));
+    // }
   }
 
   // Get a mapping from the HLO input parameters to the backing Tensor values.
