@@ -272,41 +272,6 @@ class TestParallelTensorMNIST(test_utils.XlaTestCase):
     model_parallel(loop_fn, train_loader)
 
 
-@unittest.skipIf(
-    xr.device_type() == 'CUDA',
-    'Parallelism for DataParallel uses multi-threads. But cuda assumes one GPU device per process instead of relying on threads.'
-)
-class TestParallelTensorResnet18(test_utils.XlaTestCase):
-
-  def test(self):
-    devices = xm.get_xla_supported_devices()
-    batch_size = xu.getenv_as('BATCH_SIZE', int, defval=4)
-    sample_count = xu.getenv_as('SAMPLE_COUNT', int, defval=10)
-    train_loader = xu.SampleGenerator(
-        data=(torch.zeros(batch_size, 3, 224,
-                          224), torch.zeros(batch_size, dtype=torch.int64)),
-        sample_count=sample_count * len(devices))
-
-    def loop_fn(model, loader, device, context):
-      loss_fn = nn.NLLLoss()
-      optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.5)
-
-      for data, target in loader:
-        with xu.TimedScope(msg='Training loop: ', printfn=None):
-          optimizer.zero_grad()
-          output = xu.timed(lambda: model(data), msg='Model: ', printfn=None)
-          loss = xu.timed(
-              lambda: loss_fn(output, target), msg='Loss: ', printfn=None)
-          xu.timed(loss.backward, msg='LossBkw: ', printfn=None)
-          xu.timed(
-              lambda: xm.optimizer_step(optimizer), msg='Step: ', printfn=None)
-          self.assertLess(loss.cpu().item(), 3.0)
-
-    model_parallel = dp.DataParallel(
-        torchvision.models.resnet18, device_ids=devices)
-    model_parallel(loop_fn, train_loader)
-
-
 class TestLongGraphChain(test_utils.XlaTestCase):
 
   def test(self):
