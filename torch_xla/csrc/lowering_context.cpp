@@ -154,6 +154,23 @@ void LoweringContext::SetResult(size_t index, xla::XlaOp op) {
 
 xla::StatusOr<xla::XlaComputation> LoweringContext::BuildXla() {
   xla::StatusOr<xla::XlaComputation> xla;
+  if (!root_tuple_.empty()) {
+    xla::XlaOp root = xla::Tuple(builder(), root_tuple_);
+    xla = builder()->Build(root);
+  } else {
+    xla = builder()->Build();
+  }
+
+  if (xla.ok()) {
+    (*xla->mutable_proto()->mutable_stack_frame_index()) =
+        stack_frame_index_builder()->stack_frame_index();
+  }
+
+  return xla;
+}
+
+xla::StatusOr<xla::XlaComputation> LoweringContext::BuildXlaWithCheck() {
+  xla::StatusOr<xla::XlaComputation> xla;
   if (!root_tuple_.empty() & (root_tuple_.size() > 1)) {
     xla::XlaOp root = xla::Tuple(builder(), root_tuple_);
     xla = builder()->Build(root);
