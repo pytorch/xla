@@ -67,7 +67,7 @@ def mark_tensor_xla(x: torch.Tensor,
                     pos: int,
                     id: str,
                     is_input: bool,
-                    attr = None):
+                    attr=None):
   """Attach pattern boundary metadata to a XLA Tensor.
 
   Args:
@@ -92,7 +92,7 @@ def mark_tensor(x: torch.Tensor,
                 pos: int,
                 id: str,
                 is_input: bool,
-                attr = None):
+                attr=None):
   # Do nothing for non-xla tensor.
   return x
 
@@ -103,5 +103,5 @@ def mark_tensor_meta(x: torch.Tensor,
                      pos: int,
                      id: str,
                      is_input: bool,
-                     attr = None):
+                     attr=None):
   return torch.empty_like(x)
