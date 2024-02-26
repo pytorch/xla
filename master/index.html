@@ -225,7 +225,7 @@
               
               
                 <div class="version">
-                  master (2.2.0+gitdc08cb6 )
+                  master (2.2.0+gitb219da8 )
                 </div>
               
             
@@ -2203,12 +2203,12 @@ offending HLO graph will be dumped as part of the runtime error raised by <code 
 <div class="section" id="common-debugging-environment-variables-combinations">
 <h3>Common Debugging Environment Variables Combinations<a class="headerlink" href="#common-debugging-environment-variables-combinations" title="Permalink to this headline">¶</a></h3>
 <ul>
-<li><p>Record the graph execution in the HLO format</p>
+<li><p>Record the graph execution in the IR format</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">XLA_IR_DEBUG</span><span class="o">=</span><span class="mi">1</span> <span class="n">XLA_HLO_DEBUG</span><span class="o">=</span><span class="mi">1</span> <span class="n">XLA_SAVE_TENSORS_FMT</span><span class="o">=</span><span class="s2">&quot;text&quot;</span> <span class="n">XLA_SAVE_TENSORS_FILE</span><span class="o">=</span><span class="s2">&quot;/tmp/save1.ir&quot;</span>
 </pre></div>
 </div>
 </li>
-<li><p>Record the graph execution in the IR format</p>
+<li><p>Record the graph execution in the HLO format</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">XLA_IR_DEBUG</span><span class="o">=</span><span class="mi">1</span> <span class="n">XLA_HLO_DEBUG</span><span class="o">=</span><span class="mi">1</span> <span class="n">XLA_SAVE_TENSORS_FMT</span><span class="o">=</span><span class="s2">&quot;hlo&quot;</span> <span class="n">XLA_SAVE_TENSORS_FILE</span><span class="o">=</span><span class="s2">&quot;/tmp/save1.hlo&quot;</span>
 </pre></div>
 </div>
