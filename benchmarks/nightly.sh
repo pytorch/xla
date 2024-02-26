@@ -96,7 +96,10 @@ if [[ ${IS_FRESH_RUN?} ]]; then
 
   # Set up pytorch/xla
   cd pytorch/xla
-  XLA_CUDA=1 python setup.py develop
+  # Query local compute capability. If that fails, assign a sane default.
+  LOCAL_CAP=compute_$(nvidia-smi --query-gpu=compute_cap --format=csv | \
+    tail -1 | sed 's/\.//g' | grep -E '^[0-9]{2}$' || echo '80')
+  XLA_CUDA=1 TF_CUDA_COMPUTE_CAPABILITIES=${LOCAL_CAP:?} python setup.py develop
   cd ../..
 
   # Set up torchbench deps.
@@ -120,7 +123,8 @@ else
   # Grab the timestamp from the first result, if it exists.
   # Otherwise take the current timestamp.
   TIMESTAMP=$(head -1 ${WORKSPACE_RESULTS_DIR:?}/results.jsonl | \
-              sed -E 's|.*\"timestamp\": ([0-9.]+).*|\1|' || date +%s)
+    sed -E 's|.*\"timestamp\": ([0-9.]+).*|\1|' | \
+    grep -E '^[0-9.]+$' || date +%s)
 fi
 
 # Stabilize clock freqs
