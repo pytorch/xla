@@ -1188,39 +1188,6 @@ at::Tensor XLANativeFunctions::embedding_dense_backward(
 }
 
 std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor>
-XLANativeFunctions::_embedding_bag(
-    const at::Tensor& weight, const at::Tensor& indices,
-    const at::Tensor& offsets, bool scale_grad_by_freq, int64_t mode,
-    bool sparse, const c10::optional<at::Tensor>& per_sample_weights,
-    bool include_last_offset, int64_t padding_idx) {
-  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
-  if (mode == 1 || scale_grad_by_freq || sparse || padding_idx != -1) {
-    return at::native::call_fallback_fn<
-        &xla_cpu_fallback, ATEN_OP(_embedding_bag)>::call(weight, indices,
-                                                          offsets,
-                                                          scale_grad_by_freq,
-                                                          mode, sparse,
-                                                          per_sample_weights,
-                                                          include_last_offset,
-                                                          padding_idx);
-  }
-  auto indices_tensor = bridge::GetXlaTensor(indices);
-  auto sample_weights =
-      per_sample_weights.has_value() && per_sample_weights.value().defined()
-          ? bridge::GetXlaTensor(per_sample_weights.value())
-          : tensor_methods::full_like(indices_tensor, 1.0,
-                                      *torch_xla::bridge::GetXlaDevice(weight),
-                                      at::ScalarType::Float);
-  auto result = tensor_methods::embedding_bag(
-      bridge::GetXlaTensor(weight), indices_tensor,
-      bridge::GetXlaTensor(offsets), mode, sample_weights, include_last_offset);
-  return std::make_tuple(bridge::AtenFromXlaTensor(std::get<0>(result)),
-                         bridge::AtenFromXlaTensor(std::get<1>(result)),
-                         bridge::AtenFromXlaTensor(std::get<2>(result)),
-                         bridge::AtenFromXlaTensor(std::get<3>(result)));
-}
-
-std::tuple<at::Tensor, at::Tensor, at::Tensor, at::Tensor>
 XLANativeFunctions::_embedding_bag_forward_only(
     const at::Tensor& weight, const at::Tensor& indices,
     const at::Tensor& offsets, bool scale_grad_by_freq, int64_t mode,
