@@ -120,7 +120,8 @@ else
   # Grab the timestamp from the first result, if it exists.
   # Otherwise take the current timestamp.
   TIMESTAMP=$(head -1 ${WORKSPACE_RESULTS_DIR:?}/results.jsonl | \
-              sed -E 's|.*\"timestamp\": ([0-9.]+).*|\1|' || date +%s)
+    sed -E 's|.*\"timestamp\": ([0-9.]+).*|\1|' | \
+    grep -E '^[0-9.]+$' || date +%s)
 fi
 
 # Stabilize clock freqs
