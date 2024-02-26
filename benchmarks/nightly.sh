@@ -96,7 +96,10 @@ if [[ ${IS_FRESH_RUN?} ]]; then
 
   # Set up pytorch/xla
   cd pytorch/xla
-  XLA_CUDA=1 python setup.py develop
+  # Query local compute capability. If that fails, assign a sane default.
+  LOCAL_CAP=compute_$(nvidia-smi --query-gpu=compute_cap --format=csv | \
+    tail -1 | sed 's/\.//g' | grep -E '^[0-9]{2}$' || echo '80')
+  XLA_CUDA=1 TF_CUDA_COMPUTE_CAPABILITIES=${LOCAL_CAP:?} python setup.py develop
   cd ../..
 
   # Set up torchbench deps.
