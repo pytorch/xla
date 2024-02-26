@@ -11,6 +11,7 @@ from torch.utils import _pytree as pytree
 from torch_xla import stablehlo
 from torch_xla.experimental.mark_pattern_utils import StableHLOCompositeBuilder
 from utils import has_tf_package
+from torch_xla.experimental import xla_marker
 
 try:
   from torch_xla.tf_saved_model_integration import \
@@ -72,14 +73,19 @@ class XlaMarkPatternTest(unittest.TestCase):
             pos=0,
             id="0",
             is_input=False,
-            attr={"scale": 0.25})
+            attr=xla_marker.serialize_composite_attr({"scale": 0.25}))
         q, k, v = y.split(128, dim=-2)
         q = torch.ops.xla.mark_tensor(q, "sdpa", pos=0, id="1", is_input=True)
         k = torch.ops.xla.mark_tensor(k, "sdpa", pos=1, id="1", is_input=True)
         v = torch.ops.xla.mark_tensor(v, "sdpa", pos=2, id="1", is_input=True)
         attn_out2 = F.scaled_dot_product_attention(q, k, v, scale=4)
         attn_out2 = torch.ops.xla.mark_tensor(
-            attn_out2, "sdpa", pos=0, id="1", is_input=False, attr={"scale": 2})
+            attn_out2,
+            "sdpa",
+            pos=0,
+            id="1",
+            is_input=False,
+            attr=xla_marker.serialize_composite_attr({"scale": 2}))
         return attn_out, attn_out2
 
     input_args = (torch.randn((32, 8, 384, 64)), torch.randn((32, 8, 384, 64)))
@@ -199,6 +205,31 @@ class XlaMarkPatternTest(unittest.TestCase):
     input_args = (torch.randn((5, 5)), torch.randn((5, 5)))
     stablehlo = self.run_func_get_stablehlo(M(), input_args)
     self.assertEqual(stablehlo.count("@stablehlo.composite"), 1)
+
+  def test_composite_builder_mix_attr_value_types(self):
+
+    class M(torch.nn.Module):
+
+      def forward(self, x, y):
+        builder = StableHLOCompositeBuilder(
+            "sample_composite", {
+                "int_attr": 1,
+                "float_attr": 2.3,
+                "bool_attr": True,
+                "str_attr": "helloworld",
+            })
+        x, y = builder.mark_inputs(x, y)
+        z = x + y
+        z = builder.mark_outputs(z)
+        return z
+
+    input_args = (torch.randn((5, 5)), torch.randn((5, 5)))
+    stablehlo = self.run_func_get_stablehlo(M(), input_args)
+    self.assertEqual(stablehlo.count("@stablehlo.composite"), 1)
+    self.assertEqual(stablehlo.count('int_attr = 1 : i64'), 1)
+    self.assertEqual(stablehlo.count('float_attr = 2.300000e+00 : f32'), 1)
+    self.assertEqual(stablehlo.count('bool_attr = true'), 1)
+    self.assertEqual(stablehlo.count('str_attr = "helloworld"'), 1)
 
   def test_multiple_inputs(self):
 
