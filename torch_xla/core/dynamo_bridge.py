@@ -30,7 +30,7 @@ ptxla_debug = int(os.environ.get('PT_XLA_DEBUG', '0')) == 1
 
 class AliasWithBufferDonorContext(object):
 
-  def __init__(self, should_alias: bool):
+  def __init__(self, should_alias: bool = True):
     self.should_alias = should_alias
 
   def __enter__(self):
@@ -326,10 +326,6 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule):
   # calculate graph hash
   dumb_return_handler = DumbReturnHandler(xla_args, args_and_out,
                                           xla_args_need_update_bool)
-  with AliasWithBufferDonorContext(True) as context:
-    graph_hash = torch_xla._XLAC._get_graph_hash(args_and_out)
-    if dynamo_debug:
-      print("graph_hash", graph_hash)
 
   # Collect all device data nodes that is needed to compute the args_and_out
   # and wrap those device data nodes inside a at::tensor(graph_input_xla_values).
@@ -348,7 +344,10 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule):
                                           graph_input_tensor_ids,
                                           graph_input_xla_values,
                                           xla_args_tensor_ids)
-  with AliasWithBufferDonorContext(True) as context:
+  with AliasWithBufferDonorContext() as context:
+    graph_hash = torch_xla._XLAC._get_graph_hash(args_and_out)
+    if dynamo_debug:
+      print("graph_hash", graph_hash)    
     # compiles and cache graph rooted at tensors in 'args_and_out'
     torch_xla._XLAC._xla_warm_up_cache(args_and_out, [])
 
