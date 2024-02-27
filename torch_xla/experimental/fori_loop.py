@@ -62,9 +62,7 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   name = 'fori_loop_ed_torch_func'
   computation = w.build(name)
 
-  # operands would be changed from torch.tensor([1]) to torch.tensor(1) after torch.compile when call torch._higher_order_ops.while_loop, so create a new input tesor here
-  localoperands = torch.tensor([5], dtype=torch.int32, device=xm.xla_device())
   result = torch_xla._XLAC._xla_user_computation('xla::_op_test_while',
-                                                 (localoperands,), computation)
+                                                 operands, computation)
 
   return result
