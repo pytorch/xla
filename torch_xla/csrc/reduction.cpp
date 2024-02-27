@@ -415,7 +415,7 @@ xla::XlaOp BuildArgMax(xla::XlaOp input, int64_t dim, bool keepdim) {
     dim_is_none = true;
     operand = XlaHelpers::DynamicReshape(operand,
                                          {xla::ShapeUtil::ElementsIn(*shape)});
-    if (!keepdim) {                                         
+    if (!keepdim) {
       shape = &ShapeHelper::ShapeOfXlaOp(operand);
     }
   }
@@ -445,7 +445,7 @@ xla::XlaOp BuildArgMin(xla::XlaOp input, int64_t dim, bool keepdim) {
     dim_is_none = true;
     operand = XlaHelpers::DynamicReshape(operand,
                                          {xla::ShapeUtil::ElementsIn(*shape)});
-    if (!keepdim) { 
+    if (!keepdim) {
       shape = &ShapeHelper::ShapeOfXlaOp(operand);
     }
   }
