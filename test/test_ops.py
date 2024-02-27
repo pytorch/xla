@@ -29,6 +29,7 @@ allowed_opinfo = set(
         {
             AllowedOpInfoEntry('abs'),
             AllowedOpInfoEntry('add'),
+            AllowedOpInfoEntry('as_strided'),
             AllowedOpInfoEntry('mul'),
             AllowedOpInfoEntry('sub'),
             AllowedOpInfoEntry('addmm'),
@@ -349,6 +350,12 @@ allowed_opinfo = set(
             # AllowedOpInfoEntry('var_mean'),
             # AllowedOpInfoEntry('pow'), # for int64 don't work, likely rounding issue
             # AllowedOpInfoEntry('__rpow__'),
+
+            # In theory, this should work.
+            # However, the problem is the way we prepare the reference (CPU) inputs:
+            # we clone them. If they were a view, they are not anymore.
+            #
+            # AllowedOpInfoEntry('as_strided', 'partial_views'),
         }))
 
 
