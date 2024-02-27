@@ -1548,6 +1548,20 @@ void InitXlaModuleBindings(py::module m) {
       [](const std::string& device) { return GetRngSeed(device); },
       py::arg("device") = "");
   m.def(
+      "_xla_set_should_alias_with_buffer_donor_config",
+      [](bool should_alias, const std::string& device_str) {
+        torch::lazy::BackendDevice device = GetDeviceOrCurrent(device_str);
+        XLAGraphExecutor::Get()->SetAliasWithBufferDonorConfig(should_alias);
+      },
+      py::arg("should_alias") = false, py::arg("device") = "");
+  m.def(
+      "_xla_get_should_alias_with_buffer_donor_config",
+      [](const std::string& device_str) {
+        torch::lazy::BackendDevice device = GetDeviceOrCurrent(device_str);
+        return XLAGraphExecutor::Get()->GetAliasWithBufferDonorConfig();
+      },
+      py::arg("device") = "");
+  m.def(
       "_xla_sync_multi",
       [](const std::vector<at::Tensor>& tensors,
          const std::vector<std::string>& devices, bool wait,

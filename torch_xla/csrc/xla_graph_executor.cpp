@@ -346,6 +346,14 @@ torch::lazy::BackendDataPtr XLAGraphExecutor::GetBaseSeedData(
   return DeviceContextArena::Get()->GetBaseSeedData(device);
 }
 
+void XLAGraphExecutor::SetAliasWithBufferDonorConfig(bool should_alias) {
+  DeviceContextArena::Get()->SetAliasWithBufferDonorConfig(should_alias);
+}
+
+bool XLAGraphExecutor::GetAliasWithBufferDonorConfig() {
+  return DeviceContextArena::Get()->GetAliasWithBufferDonorConfig();
+}
+
 std::string XLAGraphExecutor::DumpHloComputation(
     const std::vector<XLATensorPtr>& tensors, EmitMode mode) {
   std::vector<torch::lazy::Value> ir_values;
@@ -405,12 +413,6 @@ void XLAGraphExecutor::MarkStep(const torch::lazy::BackendDevice& device) {
   DeviceContextArena::Get()->MarkStep(device);
   torch::lazy::ScopePusher::ResetScopes();
   ResetTrimCounter();
-}
-
-bool ShouldAliasBasedOnBufferDonor() {
-  // This env var will be updated during run time, do not use static bool here.
-  return runtime::sys_util::GetEnvBool("XLA_SHOULD_ALIAS_WITH_BUFFER_DONOR",
-                                       false);
 }
 
 std::vector<size_t> GetBufferDonorIndex(
@@ -506,7 +508,7 @@ torch::lazy::hash_t XLAGraphExecutor::GetGraphHash(
   PostOrderData po_data = RunPostOrder(ir_values, &coll);
   torch::lazy::hash_t res_hash = torch::lazy::HashCombine(
       coll.hash, torch::lazy::Hash(po_data.parameter_sequence));
-  if (ShouldAliasBasedOnBufferDonor()) {
+  if (GetAliasWithBufferDonorConfig()) {
     std::vector<size_t> buffer_donor_index =
         GetBufferDonorIndex(po_data.parameters_data);
     // Do not include hash on a empty vector.
@@ -1339,7 +1341,7 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
       // turn everything into DEVICE_DATA, so we can activate aliasing.
       input_output_alias_pair =
           BuildInputOutputAliases(tensors, coll.indices, &lowering_ctx);
-    } else if (ShouldAliasBasedOnBufferDonor()) {
+    } else if (GetAliasWithBufferDonorConfig()) {
       // only alias based on buffer donor if LTC can't auto infer the input
       // output aliasing.
       buffer_donor_indices = SetBufferDonors(&lowering_ctx);
@@ -1439,7 +1441,7 @@ XLAGraphExecutor::SyncTensorsGraphInternal(
   PostOrderData po_data = RunPostOrder(ir_values, &coll);
   coll.hash = torch::lazy::HashCombine(
       coll.hash, torch::lazy::Hash(po_data.parameter_sequence));
-  if (ShouldAliasBasedOnBufferDonor()) {
+  if (GetAliasWithBufferDonorConfig()) {
     std::vector<size_t> buffer_donor_index =
         GetBufferDonorIndex(po_data.parameters_data);
     if (buffer_donor_index.size() > 0) {

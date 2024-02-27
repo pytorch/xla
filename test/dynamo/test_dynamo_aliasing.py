@@ -4,7 +4,7 @@ import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as met
-from torch_xla.core.dynamo_bridge import AliasWithBufferDonorContext
+from torch_xla.core.dynamo_bridge import alias_with_buffer_donor_config
 
 
 class TestBufferDonationUtil(unittest.TestCase):
@@ -15,12 +15,12 @@ class TestBufferDonationUtil(unittest.TestCase):
     res = torch.cos(input)
     hash_no_donor = torch_xla._XLAC._get_graph_hash([res])
     self.assertTrue(torch_xla._XLAC._set_buffer_donation(input, True))
-    # without the AliasWithBufferDonorContext, buffer donor will be ignored,
+    # without the alias_with_buffer_donor_config context, buffer donor will be ignored,
     # so we still expect the hash to be the same.
     hash_with_donor = torch_xla._XLAC._get_graph_hash([res])
     self.assertEqual(hash_no_donor, hash_with_donor)
 
-    with AliasWithBufferDonorContext(True) as context:
+    with alias_with_buffer_donor_config() as context:
       hash_with_donor_and_context = torch_xla._XLAC._get_graph_hash([res])
     self.assertNotEqual(hash_no_donor, hash_with_donor_and_context)
 
