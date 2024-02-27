@@ -8,6 +8,7 @@ import itertools
 import os
 import time
 from typing import Any, Dict, List, Set, Tuple
+from contextlib import contextmanager
 
 import torch
 from torch.fx.passes.infra.partitioner import CapabilityBasedPartitioner
@@ -28,21 +29,18 @@ dynamo_debug = int(os.environ.get('XLA_DYNAMO_DEBUG', '0')) == 1
 ptxla_debug = int(os.environ.get('PT_XLA_DEBUG', '0')) == 1
 
 
-class AliasWithBufferDonorContext(object):
-
-  def __init__(self, should_alias: bool = True):
-    self.should_alias = should_alias
-
-  def __enter__(self):
-    self.env_inited = 'XLA_SHOULD_ALIAS_WITH_BUFFER_DONOR' in os.environ
-    if self.env_inited:
-      self.env_saved = os.environ['XLA_SHOULD_ALIAS_WITH_BUFFER_DONOR']
-    os.environ[
-        'XLA_SHOULD_ALIAS_WITH_BUFFER_DONOR'] = '1' if self.should_alias else '0'
-
-  def __exit__(self, exc_type, exc_val, exc_tb):
-    if self.env_inited:
-      os.environ['XLA_SHOULD_ALIAS_WITH_BUFFER_DONOR'] = self.env_saved
+@contextmanager
+def alias_with_buffer(should_alias: bool = True):
+  env_inited = 'XLA_SHOULD_ALIAS_WITH_BUFFER_DONOR' in os.environ
+  if env_inited:
+    env_saved = os.environ['XLA_SHOULD_ALIAS_WITH_BUFFER_DONOR']
+  os.environ[
+      'XLA_SHOULD_ALIAS_WITH_BUFFER_DONOR'] = '1' if should_alias else '0'
+  try:
+    yield env_inited
+  finally:
+    if env_inited:
+      os.environ['XLA_SHOULD_ALIAS_WITH_BUFFER_DONOR'] = env_saved
     else:
       del os.environ['XLA_SHOULD_ALIAS_WITH_BUFFER_DONOR']
 
@@ -344,10 +342,10 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule):
                                           graph_input_tensor_ids,
                                           graph_input_xla_values,
                                           xla_args_tensor_ids)
-  with AliasWithBufferDonorContext() as context:
+  with alias_with_buffer() as env_inited:
     graph_hash = torch_xla._XLAC._get_graph_hash(args_and_out)
     if dynamo_debug:
-      print("graph_hash", graph_hash)    
+      print("graph_hash", graph_hash)
     # compiles and cache graph rooted at tensors in 'args_and_out'
     torch_xla._XLAC._xla_warm_up_cache(args_and_out, [])
 
