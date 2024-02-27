@@ -46,7 +46,8 @@ spec:
       pip install expecttest==0.1.6
       pip install rich
 
-      /src/pytorch/xla/test/tpu/run_tests.sh
+      cd /src/pytorch/xla
+      test/run_tests.sh
     volumeMounts:
     - mountPath: /dev/shm
       name: dshm
