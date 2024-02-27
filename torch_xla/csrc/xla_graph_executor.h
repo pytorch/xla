@@ -96,6 +96,10 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   torch::lazy::BackendDataPtr GetBaseSeedData(
       const torch::lazy::BackendDevice& device);
 
+  void SetAliasWithBufferDonorConfig(bool should_alias);
+
+  bool GetAliasWithBufferDonorConfig();
+
   // Dumps the XLA HLO text of the computation accumulated in the graph which is
   // attached the tensors.
   // We don't use upstream DumpBackendComputation given we have our own format.
@@ -219,6 +223,14 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
     torch::lazy::BackendDataPtr GetBaseSeedData(
         const torch::lazy::BackendDevice& device);
 
+    void SetAliasWithBufferDonorConfig(bool should_alias) {
+      should_alias_with_buffer_donor = should_alias;
+    }
+
+    bool GetAliasWithBufferDonorConfig() {
+      return should_alias_with_buffer_donor;
+    }
+
     void SaveGraphAsString(
         torch::lazy::hash_t hash, absl::Span<const XLATensorPtr> tensors,
         const std::vector<size_t>* indices,
@@ -247,6 +259,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
     torch::lazy::Value IrValueFromScalar(
         const at::Scalar& value, at::ScalarType scalar_type,
         const torch::lazy::BackendDevice& device) final;
+    bool should_alias_with_buffer_donor = false;
   };
 
   XLAGraphExecutor() = default;

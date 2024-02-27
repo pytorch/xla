@@ -30,19 +30,14 @@ ptxla_debug = int(os.environ.get('PT_XLA_DEBUG', '0')) == 1
 
 
 @contextmanager
-def alias_with_buffer(should_alias: bool = True):
-  env_inited = 'XLA_SHOULD_ALIAS_WITH_BUFFER_DONOR' in os.environ
-  if env_inited:
-    env_saved = os.environ['XLA_SHOULD_ALIAS_WITH_BUFFER_DONOR']
-  os.environ[
-      'XLA_SHOULD_ALIAS_WITH_BUFFER_DONOR'] = '1' if should_alias else '0'
+def alias_with_buffer_donor_config(should_alias: bool = True):
+  saved_config = torch_xla._XLAC._xla_get_should_alias_with_buffer_donor_config(
+  )
+  torch_xla._XLAC._xla_set_should_alias_with_buffer_donor_config(should_alias)
   try:
-    yield env_inited
+    yield saved_config
   finally:
-    if env_inited:
-      os.environ['XLA_SHOULD_ALIAS_WITH_BUFFER_DONOR'] = env_saved
-    else:
-      del os.environ['XLA_SHOULD_ALIAS_WITH_BUFFER_DONOR']
+    torch_xla._XLAC._xla_set_should_alias_with_buffer_donor_config(saved_config)
 
 
 @dataclasses.dataclass
@@ -342,7 +337,7 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule):
                                           graph_input_tensor_ids,
                                           graph_input_xla_values,
                                           xla_args_tensor_ids)
-  with alias_with_buffer() as env_inited:
+  with alias_with_buffer_donor_config() as saved_config:
     graph_hash = torch_xla._XLAC._get_graph_hash(args_and_out)
     if dynamo_debug:
       print("graph_hash", graph_hash)
