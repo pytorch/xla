@@ -156,3 +156,16 @@ def get_tpu_name():
 
 def get_torchbench_test_name(test):
   return {"train": "training", "eval": "inference"}[test]
+
+
+def find_near_file(self, names):
+  """Find a file near the current directory.
+
+  Looks for `names` in the current directory, up to its two direct parents.
+  """
+  for dir in ("./", "../", "../../", "../../../"):
+    for name in names:
+      path = os.path.join(dir, name)
+      if exists(path):
+        return abspath(path)
+  return None
