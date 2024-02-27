@@ -407,6 +407,39 @@ void XLAGraphExecutor::MarkStep(const torch::lazy::BackendDevice& device) {
   ResetTrimCounter();
 }
 
+bool ShouldAliasBasedOnBufferDonor() {
+  // This env var will be updated during run time, do not use static bool here.
+  return runtime::sys_util::GetEnvBool("XLA_SHOULD_ALIAS_WITH_BUFFER_DONOR",
+                                       false);
+}
+
+std::vector<size_t> GetBufferDonorIndex(
+    const std::vector<torch::lazy::BackendDataPtr>& parameters_data) {
+  std::vector<size_t> buffer_donor_indexs;
+  for (size_t i = 0; i < parameters_data.size(); ++i) {
+    auto data = std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
+        parameters_data[i]);
+    if (data->should_donate_buffer()) {
+      buffer_donor_indexs.push_back(i);
+    }
+  }
+  return buffer_donor_indexs;
+}
+
+std::vector<size_t> XLAGraphExecutor::SetBufferDonors(
+    LoweringContext* lowering_ctx) {
+  const std::vector<torch::lazy::BackendDataPtr>& parameters_data =
+      lowering_ctx->GetParametersData();
+  std::vector<size_t> buffer_donor_indexs =
+      GetBufferDonorIndex(parameters_data);
+  for (size_t i : buffer_donor_indexs) {
+    lowering_ctx->builder()->AddBufferDonor(/*param_number=*/i,
+                                            /*param_index=*/{});
+  }
+  TORCH_LAZY_VALUE_METRIC("InputOutputAliasCount", buffer_donor_indexs.size());
+  return buffer_donor_indexs;
+}
+
 void XLAGraphExecutor::WaitDeviceOps(absl::Span<const std::string> devices) {
   std::set<torch::lazy::BackendDevice> wait_devices;
   if (!devices.empty()) {
@@ -473,6 +506,15 @@ torch::lazy::hash_t XLAGraphExecutor::GetGraphHash(
   PostOrderData po_data = RunPostOrder(ir_values, &coll);
   torch::lazy::hash_t res_hash = torch::lazy::HashCombine(
       coll.hash, torch::lazy::Hash(po_data.parameter_sequence));
+  if (ShouldAliasBasedOnBufferDonor()) {
+    std::vector<size_t> buffer_donor_index =
+        GetBufferDonorIndex(po_data.parameters_data);
+    // Do not include hash on a empty vector.
+    if (buffer_donor_index.size() > 0) {
+      res_hash = torch::lazy::HashCombine(
+          res_hash, torch::lazy::Hash(buffer_donor_index));
+    }
+  }
   DeviceContextArena::Get()->SaveOutputShapes(res_hash,
                                               std::move(output_shapes));
   DeviceContextArena::Get()->SaveGraphAsString(res_hash, tensors,
@@ -946,6 +988,16 @@ void XLAGraphExecutor::ExtractIRAndPrepareXlaData_(
     torch::lazy::BackendDataPtr handle =
         runtime::GetComputationClient()->CreateDataPlaceholder(
             tensor_device.toString(), std::move(shape));
+
+    // If current IR is a device data, executing the graph will generate a new
+    // Data with the same value. In this case we want to inherit the buffer
+    // donation option from the old Data.
+    auto device_data = torch_xla::DeviceData::Cast(ir_value.node.get());
+    if (device_data && device_data->get_buffer_donation()) {
+      std::dynamic_pointer_cast<runtime::ComputationClient::Data>(handle)
+          ->set_should_donate_buffer(true);
+    }
+
     tensor_data_vec.push_back(handle);
     if (tensor->CurrentDataHandle() == nullptr && config.force_ltc_data) {
       tensor->AssignIrValue(torch::lazy::Value());
@@ -1114,21 +1166,33 @@ XLAGraphExecutor::LookupCachedCompile(const torch::lazy::hash_t& hash) {
   return cached_computation;
 }
 
-std::shared_ptr<XLAGraphExecutor::Async> XLAGraphExecutor::TryRunCachedSync(
+std::pair<bool, std::shared_ptr<XLAGraphExecutor::Async>>
+XLAGraphExecutor::TryRunCachedSync(
     std::vector<XLATensorPtr>* tensors, SyncTensorCollection* coll,
     PostOrderData* po_data,
-    const std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec) {
+    const std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec,
+    bool warm_up_cache_only) {
   ComputationCache::TypePtr cached_computation =
       LookupCachedCompile(coll->hash);
+  bool cache_hit = false;
   if (cached_computation == nullptr) {
-    return nullptr;
+    return std::pair<bool, std::shared_ptr<XLAGraphExecutor::Async>>(cache_hit,
+                                                                     nullptr);
+  } else {
+    cache_hit = true;
   }
   TORCH_LAZY_VALUE_METRIC("TensorsGraphSize", po_data->post_order.size());
   TF_VLOG(5) << "TensorsGraphSize=" << po_data->post_order.size();
 
-  return ScheduleSyncTensorsGraph(
-      tensors, coll, std::move(po_data->parameters_data),
-      coll->device.toString(), std::move(cached_computation), tensor_data_vec);
+  // don't schedule the execution if the purpose of this SyncTensor is just to
+  // warm up the cache.
+  return std::pair<bool, std::shared_ptr<XLAGraphExecutor::Async>>(
+      cache_hit, warm_up_cache_only
+                     ? nullptr
+                     : ScheduleSyncTensorsGraph(
+                           tensors, coll, std::move(po_data->parameters_data),
+                           coll->device.toString(),
+                           std::move(cached_computation), tensor_data_vec));
 }
 
 std::vector<std::pair<int64_t, int64_t>>
@@ -1243,37 +1307,43 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
   ShardingUtil::SetHloSharding(&lowering_ctx);
 
   std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
+  std::vector<size_t> buffer_donor_indices;
   // TODO(yeounoh) aliasing is disabled for partitioned computation,
   // since the current aliasing compares the unpartitioned input and output
   // shapes which can lead to an incorrect aliasing pairs if sharded.
-  if (enable_aliasing && coll.config.sync_ltc_data &&
-      coll.config.force_ltc_data) {
-    // We can only alias at the step barrier, when force_ltc_data is true.
-    // Consider the case:
-    //   1. Tensor A(DEVICE_DATA)
-    //   2. Tensor B = A + 0.9
-    //   3. A += 0.4
-    // If we activate aliasing for A's graph, and we do:
-    //   print(A)
-    //   print(A)
-    // The first print will update DEVICE_DATA' with DEVICE_DATA+0.4, and the
-    // second print will again update DEVICE_DATA" with DEVICE_DATA'+0.4, which
-    // will lead to incorrect results.
-    // We cannot normally turn A's state into DEVICE_DATA, as if any of the
-    // sources is a view, this will not lead to correct results (as A's value
-    // taken at different times need to reflect view source changes):
-    //   1. Tensor A = some_graph_with_view_source(V)
-    //   2. print(A)
-    //   3. V += 1
-    //   4. print(A)
-    // The second print should reflect the new value due to V's changes.
-    // Also in the first example, unless we are doing a step barrier and hence
-    // include all live tensors, if the B value is not part of the graph, it
-    // will later fetch the new value of A, which is incorrect.
-    // But, when we issue a step barrier (force_ltc_data == true) we have to
-    // turn everything into DEVICE_DATA, so we can activate aliasing.
-    input_output_alias_pair =
-        BuildInputOutputAliases(tensors, coll.indices, &lowering_ctx);
+  if (enable_aliasing) {
+    if (coll.config.sync_ltc_data && coll.config.force_ltc_data) {
+      // We can only alias at the step barrier, when force_ltc_data is true.
+      // Consider the case:
+      //   1. Tensor A(DEVICE_DATA)
+      //   2. Tensor B = A + 0.9
+      //   3. A += 0.4
+      // If we activate aliasing for A's graph, and we do:
+      //   print(A)
+      //   print(A)
+      // The first print will update DEVICE_DATA' with DEVICE_DATA+0.4, and the
+      // second print will again update DEVICE_DATA" with DEVICE_DATA'+0.4,
+      // which will lead to incorrect results. We cannot normally turn A's state
+      // into DEVICE_DATA, as if any of the sources is a view, this will not
+      // lead to correct results (as A's value taken at different times need to
+      // reflect view source changes):
+      //   1. Tensor A = some_graph_with_view_source(V)
+      //   2. print(A)
+      //   3. V += 1
+      //   4. print(A)
+      // The second print should reflect the new value due to V's changes.
+      // Also in the first example, unless we are doing a step barrier and hence
+      // include all live tensors, if the B value is not part of the graph, it
+      // will later fetch the new value of A, which is incorrect.
+      // But, when we issue a step barrier (force_ltc_data == true) we have to
+      // turn everything into DEVICE_DATA, so we can activate aliasing.
+      input_output_alias_pair =
+          BuildInputOutputAliases(tensors, coll.indices, &lowering_ctx);
+    } else if (ShouldAliasBasedOnBufferDonor()) {
+      // only alias based on buffer donor if LTC can't auto infer the input
+      // output aliasing.
+      buffer_donor_indices = SetBufferDonors(&lowering_ctx);
+    }
   }
 
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
@@ -1287,7 +1357,8 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
                << " parameters. Threadshold = "
                << parameter_wrapping_threadshold;
     computation = ConsumeValue(XlaHelpers::WrapXlaComputation(
-        computation, program_shape.parameters(), input_output_alias_pair));
+        computation, program_shape.parameters(), input_output_alias_pair,
+        buffer_donor_indices));
     program_shape = ConsumeValue(computation.GetProgramShape());
   }
   xla::Shape shape = MakeShapeWithDeviceLayout(
@@ -1368,13 +1439,26 @@ XLAGraphExecutor::SyncTensorsGraphInternal(
   PostOrderData po_data = RunPostOrder(ir_values, &coll);
   coll.hash = torch::lazy::HashCombine(
       coll.hash, torch::lazy::Hash(po_data.parameter_sequence));
+  if (ShouldAliasBasedOnBufferDonor()) {
+    std::vector<size_t> buffer_donor_index =
+        GetBufferDonorIndex(po_data.parameters_data);
+    if (buffer_donor_index.size() > 0) {
+      // Do not include hash on a empty vector.
+      coll.hash = torch::lazy::HashCombine(
+          coll.hash, torch::lazy::Hash(buffer_donor_index));
+    }
+  }
+
   DebugUtil::SaveGraphHash(coll.hash);
   TF_VLOG(4) << "Parameter sequence graph hash "
              << torch::lazy::HashToString(coll.hash);
-  std::shared_ptr<Async> async =
-      TryRunCachedSync(tensors, &coll, &po_data, tensor_data_vec);
-  if (async != nullptr) {
-    return async;
+
+  std::pair<bool, std::shared_ptr<XLAGraphExecutor::Async>> cache_res =
+      TryRunCachedSync(tensors, &coll, &po_data, tensor_data_vec,
+                       warm_up_cache_only);
+  if (cache_res.first) {
+    // we have a cache hit, execution has been scheduled by TryRunCachedSync.
+    return cache_res.second;
   }
   CompilationResult compile_result =
       Compile(*tensors, devices, coll, &po_data, ir_values);

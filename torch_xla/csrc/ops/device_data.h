@@ -22,6 +22,16 @@ class DeviceData : public XlaNode {
     return data_;
   }
 
+  void set_buffer_donation(bool should_donate_buffer) {
+    std::dynamic_pointer_cast<runtime::ComputationClient::Data>(data_)
+        ->set_should_donate_buffer(should_donate_buffer);
+  }
+
+  bool get_buffer_donation() {
+    return std::dynamic_pointer_cast<runtime::ComputationClient::Data>(data_)
+        ->should_donate_buffer();
+  }
+
   // With SPMD sharding propagation, we need to update the unpartitioned
   // backend data with a partitioned one in the node operands. Note that
   // this is permitted only if the node holds a placeholder.
