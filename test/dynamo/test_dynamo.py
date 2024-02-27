@@ -83,7 +83,7 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     res_xla_dynamo = fn_simple_dynamo(xla_x, xla_y)
     self.assertIn('xla::add', met.counter_names())
     self.assertTrue(torch.allclose(res_cpu, res_xla_dynamo.cpu()))
-    # verifiy that tracing is skipped in following runs
+    # verify that tracing is skipped in following runs
     met.clear_counters()
     res_xla_dynamo_2 = fn_simple_dynamo(xla_x, xla_y)
     self.assertNotIn('xla::add', met.counter_names())
@@ -102,6 +102,35 @@ class DynamoInferenceBasicTest(unittest.TestCase):
                      torch_xla._XLAC._get_xla_tensor_debug_info(xla_xy))
     self.assertNotIn('XLAData: None',
                      torch_xla._XLAC._get_xla_tensor_debug_info(xla_y3))
+
+  # Tests that the dynamo bridge automatically moves tensors to XLA device,
+  # then back to the original device.
+  @unittest.skipIf(xr.device_type() != "CUDA",
+                   f"GPU tests should only run on GPU devices.")
+  def test_simple_model_automoves_tensors(self):
+    x = torch.tensor(100.0).to(device="cuda")
+    y = torch.tensor(200.0).to(device="cuda")
+    original_device = x.device
+    eager_result = self.fn_simple(x, y)
+
+    fn_simple_dynamo = torch.compile(self.fn_simple, backend="openxla")
+    res_xla_dynamo = fn_simple_dynamo(x, y)
+    self.assertIn('xla::add', met.counter_names())
+    self.assertTrue(res_xla_dynamo.device == original_device)
+    self.assertTrue(torch.allclose(eager_result, res_xla_dynamo))
+
+    # verify that tracing is skipped in following runs
+    met.clear_counters()
+    res_xla_dynamo_reused = fn_simple_dynamo(x, y)
+    self.assertNotIn('xla::add', met.counter_names())
+    self.assertTrue(res_xla_dynamo_reused.device == original_device)
+    self.assertTrue(torch.allclose(eager_result, res_xla_dynamo_reused))
+
+    # verify that dynamo can handle different inputs
+    res_xla_dynamo_different = fn_simple_dynamo(x + y, y * 3)
+    res_cpu_3 = self.fn_simple(x + y, y * 3)
+    self.assertTrue(res_xla_dynamo_different.device == original_device)
+    self.assertTrue(torch.allclose(res_cpu_3, res_xla_dynamo_different))
 
   def test_fn_without_input(self):
 
@@ -526,7 +555,7 @@ class DynamoTrainingOptimizerTest(unittest.TestCase):
         met.metric_data('RunCachedGraphOutputData')[0], sample_count * 3)
 
 
-class DynamErrorMessageTest(unittest.TestCase):
+class DynamoErrorMessageTest(unittest.TestCase):
 
   def test_mixed_cpu_tensor(self):
     device = xm.xla_device()
