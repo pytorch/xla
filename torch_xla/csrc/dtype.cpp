@@ -127,10 +127,16 @@ xla::PrimitiveType XlaTypeFromTorchType(at::ScalarType scalar_type) {
       return xla::PrimitiveType::U8;
     case at::ScalarType::Char:
       return xla::PrimitiveType::S8;
+    case at::ScalarType::UInt16:
+      return xla::PrimitiveType::U16;
     case at::ScalarType::Short:
       return xla::PrimitiveType::S16;
+    case at::ScalarType::UInt32:
+      return xla::PrimitiveType::U32;
     case at::ScalarType::Int:
       return xla::PrimitiveType::S32;
+    case at::ScalarType::UInt64:
+      return xla::PrimitiveType::U64;
     case at::ScalarType::Long:
       return xla::PrimitiveType::S64;
     case at::ScalarType::ComplexFloat:
