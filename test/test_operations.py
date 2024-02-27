@@ -139,8 +139,7 @@ def onlyIfTorchSupportsCUDA(fn):
 
 def onlyIfPJRTDeviceIsCUDA(fn):
   return unittest.skipIf(
-      os.environ.get("PJRT_DEVICE") not in ("GPU", "CUDA"),
-      reason="requires CUDA as PJRT_DEVICE")(
+      xr.device_type() != 'CUDA', reason="requires CUDA as PJRT_DEVICE")(
           fn)
 
 

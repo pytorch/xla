@@ -164,9 +164,6 @@ def run_benchmarks(args, llama_dir: str, results_dir: str,
       if dynamo == 'inductor':
         run_env['CUDA_VISIBLE_DEVICES'] = '0'
         run_env['USE_CUDA'] = '1'
-      else:
-        run_env['PJRT_DEVICE'] = 'CUDA'
-        run_env['GPU_NUM_DEVICES'] = '1'
 
       run_ok = True
       with open(log_file, 'w') as f:

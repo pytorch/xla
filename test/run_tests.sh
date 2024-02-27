@@ -56,7 +56,7 @@ function run_coverage {
 function run_test {
   echo "Running in PjRt runtime: $@"
   if [ -x "$(command -v nvidia-smi)" ] && [ "$XLA_CUDA" != "0" ]; then
-    PJRT_DEVICE=CUDA run_coverage "$@"
+    run_coverage "$@"
   else
     # TODO(darisoy): run these tests with multiple CPU devices, this fails due to TF issue.
     PJRT_DEVICE=CPU CPU_NUM_DEVICES=1 run_coverage "$@"
@@ -122,7 +122,7 @@ function run_torchrun {
   if [ -x "$(command -v nvidia-smi)" ] && [ "$XLA_CUDA" != "0" ]; then
     echo "Running torchrun test for GPU $@"
     num_devices=$(nvidia-smi --list-gpus | wc -l)
-    PJRT_DEVICE=CUDA torchrun --nnodes 1 --nproc-per-node $num_devices $@
+    torchrun --nnodes 1 --nproc-per-node $num_devices $@
   fi
 }
 

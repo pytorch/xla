@@ -18,7 +18,11 @@ import torch_xla.debug.metrics_saver as ms
 import torch_xla.utils.utils as xu
 import torch_xla.utils.closures as xc
 
-_DEVICES = xu.LazyProperty(lambda: torch_xla._XLAC._xla_get_devices())
+def _lazy_get_device():
+  runtime._maybe_select_default_device()
+  return torch_xla._XLAC._xla_get_devices()
+
+_DEVICES = xu.LazyProperty(_lazy_get_device)
 
 REDUCE_SUM = 'sum'
 REDUCE_MUL = 'mul'
@@ -59,6 +63,7 @@ class DeviceContext(object):
 
 def _get_device_context(device=None):
   if device is None:
+    runtime._maybe_select_default_device()
     device = torch_xla._XLAC._xla_get_default_device()
   else:
     device = str(device)

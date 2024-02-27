@@ -14,6 +14,7 @@ import torchvision
 import unittest
 import warnings
 
+xr._maybe_select_default_device()
 torch_xla._XLAC._init_computation_client()
 
 # Setup import folders.

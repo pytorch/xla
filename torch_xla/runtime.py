@@ -120,6 +120,8 @@ def xla_device(n: Optional[int] = None,
   Returns:
     A `torch.device` representing an XLA device.
   """
+  _maybe_select_default_device()
+
   if n is None:
     return torch.device(torch_xla._XLAC._xla_get_default_device())
 
