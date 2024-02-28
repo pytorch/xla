@@ -216,6 +216,7 @@ DISABLED_TORCH_TESTS_ANY = {
         'test_index_reduce',  # Broke by functionalization, pytorch/pytorch#94471
         'test_logcumsumexp_xla',  # doesn't raise, pytorch/pytorch#92912
         'test_narrow_copy_non_contiguous',  # the test is added for CPU, pytorch/pytorch#91789
+        'test_parallel_cow_materialize_error_xla',  # disabled in upstream /pytorch/pytorch/pull/120811
     },
 
     # test_view_ops.py
