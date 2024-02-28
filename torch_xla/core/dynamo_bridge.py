@@ -464,17 +464,18 @@ def extract_internal(xla_model: torch.fx.GraphModule):
 
 
 class UnsupportedNodesCollector(torch.fx.Interpreter):
+  _unsupported_op_names_cache: Set[str] = set()
 
   def __init__(self, module):
     super().__init__(module)
     self._unsupported_nodes = []
 
-  def run_node(self, n: torch.fx.Node):
+  def _try_run_node(self, n: torch.fx.Node) -> Any:
     metrics.clear_counters()
     result = super().run_node(n)
     fallback_ops = get_fallback_ops()
     if len(fallback_ops) > 0:
-      self._unsupported_nodes.append(n)
+      UnsupportedNodesCollector._unsupported_op_names_cache.add(n.name)
     else:
       # Check whether the tensors contained in value are all XLA tensors.
       def all_tensors_on_xla_device(value):
@@ -505,6 +506,13 @@ class UnsupportedNodesCollector(torch.fx.Interpreter):
         self._unsupported_nodes.append(n)
 
     return result
+
+  def run_node(self, n: torch.fx.Node) -> Any:
+    if n.name in UnsupportedNodesCollector._unsupported_op_names_cache:
+      self._unsupported_nodes.append(n)
+      return True
+    else:
+      return self._try_run_node(n)
 
   def get_unsupported_nodes(self):
     return self._unsupported_nodes
