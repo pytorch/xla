@@ -94,6 +94,9 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   cond_hlo = cond_ctx.hlo()
   cond_computation = xb.computation_from_module_proto("condcomputation",
                                                       cond_hlo)
+  cond_hlo_print = xb.get_computation_hlo(cond_computation)
+  print("cond_hlo: !!!!!!!!!")
+  print(cond_hlo_print)
 
   # generate body_fn xlacomputation
   xm.mark_step()
@@ -104,6 +107,9 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   body_hlo = body_ctx.hlo()
   body_computation = xb.computation_from_module_proto("bodycomputation",
                                                       body_hlo)
+  body_hlo_print = xb.get_computation_hlo(body_computation)
+  print("body_hlo: !!!!!!!!!")
+  print(body_hlo_print)
 
   # create xla:While op with cond_computation and body_computation
   input_tuple = xb.Op.tuple(params)
