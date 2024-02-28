@@ -58,7 +58,7 @@ def fori_loop(lower, upper, body_fun, init_val):
   def body_fn(operands): # iterator, init_val):
     # iterator[0] = iterator[0] - 1 # one = torch.ones(1, dtype=torch.int32, device=device) torch.sub(iterator[0] - one)
     # return body_fun(iterator, init_val)
-    operands[0] = iterator[0] - 1 # one = torch.ones(1, dtype=torch.int32, device=device) torch.sub(iterator[0] - one)
+    operands[0][0] = iterator[0] - 1 # one = torch.ones(1, dtype=torch.int32, device=device) torch.sub(iterator[0] - one)
     return body_fun(operands[0], operands[1])
 
   return while_loop(cond_fn, body_fn, (iterator, init_val))
