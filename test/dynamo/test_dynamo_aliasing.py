@@ -30,13 +30,13 @@ class TestDynamoBufferDonationAliasingWithCustomOp(unittest.TestCase):
 
   def dummy_inplace_mul(self, input):
     # always donate input buffer
-    torch.ops.xla.dynamo_set_buffer_donor(input, True)
+    torch.ops.xla.dynamo_set_buffer_donor_(input, True)
     input *= 1.1
     return
 
   def dummy_mul(self, input):
     # always donate input buffer
-    torch.ops.xla.dynamo_set_buffer_donor(input, True)
+    torch.ops.xla.dynamo_set_buffer_donor_(input, True)
     return input * 1.1
 
   def test_manual_buffer_donation(self):
@@ -49,7 +49,7 @@ class TestDynamoBufferDonationAliasingWithCustomOp(unittest.TestCase):
     met.clear_all()
     dummy_inplace_mul_compiled(input)
     self.assertIn('XlaSetBufferDonation', met.counter_names())
-    # Dynamo will call `dynamo_set_buffer_donor` once on the faketensor and call
+    # Dynamo will call `dynamo_set_buffer_donor_` once on the faketensor and call
     # it again on real tensor in our dynamo bridge.
     self.assertEqual(met.counter_value('XlaSetBufferDonation'), 2)
     torch.allclose(input_cloned.cpu() * 1.1, input.cpu())
@@ -67,7 +67,7 @@ class TestDynamoBufferDonationAliasingWithCustomOp(unittest.TestCase):
     # make sure buffer donation setting is correctly updated
     self.assertTrue(torch_xla._XLAC._get_buffer_donation(input))
     self.assertIn('XlaSetBufferDonation', met.counter_names())
-    # Dynamo will call `dynamo_set_buffer_donor` once on the faketensor and call
+    # Dynamo will call `dynamo_set_buffer_donor_` once on the faketensor and call
     # it again on real tensor in our dynamo bridge.
     self.assertEqual(met.counter_value('XlaSetBufferDonation'), 2)
     self.assertIn('Data Handle: Deleted',
@@ -78,7 +78,7 @@ class TestDynamoBufferDonationAliasingWithCustomOp(unittest.TestCase):
     # use a different function than above dummy add otherwise XLA won't recompile
     def dummy_inplace(input):
       # always donate input buffer
-      torch.ops.xla.dynamo_set_buffer_donor(input, True)
+      torch.ops.xla.dynamo_set_buffer_donor_(input, True)
       input += (0.5 * torch.sin(input))
 
     device = xm.xla_device()
