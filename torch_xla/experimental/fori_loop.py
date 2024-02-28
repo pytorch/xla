@@ -12,6 +12,42 @@ import torch._higher_order_ops.while_loop
 from torch._higher_order_ops.while_loop import while_loop_op
 import torch_xla.debug.metrics as met
 
+# def fori_loop(lower, upper, body_fun, init_val):
+#   val = init_val
+#   for i in range(lower, upper):
+#     val = body_fun(i, val)
+#   return val
+
+###
+    # def cond_fn(x):
+    #   ten = torch.ones(1, dtype=torch.int32, device=device)
+    #   return x[0] >= ten[0]
+
+    # def body_fn(x):
+    #   return (torch.sub(x[0], 1),)
+
+    # xi = torch.tensor([5], dtype=torch.int32, device=device)
+    # res = while_loop(cond_fn, body_fn, (xi,))
+
+def fori_loop(lower, upper, body_fun, init_val):
+
+  device = xm.xla_device()
+  upper_placeholder = torch.ones(1, dtype=torch.int32, device=device)
+  upper_placeholder[0] = upper
+
+  lower_placeholder = torch.ones(1, dtype=torch.int32, device=device)
+  lower_placeholder[0] = lower
+
+  iterator = lower_placeholder
+
+  def cond_fn(iterator, init_val):
+    return iterator[0] <= upper_placeholder[0]
+  
+  def body_fn(iterator, init_val):
+    iterator[0] = iterator[0] - 1 # one = torch.ones(1, dtype=torch.int32, device=device) torch.sub(iterator[0] - one)
+    return body_fun(iterator, init_val)
+
+  return while_loop(cond_fn, body_fn, operands)
 
 @while_loop_op.py_impl(DispatchKey.XLA)
 def while_loop(cond_fn, body_fn, operands):
