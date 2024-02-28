@@ -77,6 +77,7 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   # create inputs placeholder
   kwargs = {}
   shapes = xb.tensor_shape(operands)
+  print("shapes: ", shapes)
   builder = xb.create_builder('test_while')
   params = []
   # secondparams = []
@@ -132,7 +133,8 @@ def _xla_while_loop(cond_fn, body_fn, operands):
 
   aaa_tuple_op_list = []
   for i in range(size(shapes)):
-    aaa_tuple_item = xb.Op.get_tuple_element(input_tuple, i)
+    # aaa_tuple_item = xb.Op.get_tuple_element(input_tuple, i)
+    aaa_tuple_item = xb.Op.get_tuple_element(params, i)
     aaa_tuple_op_list.append(aaa_tuple_item.op)
 
   print("aaa_tuple_op_list: ", aaa_tuple_op_list)
