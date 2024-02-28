@@ -170,7 +170,12 @@ def train_mnist(flags, **kwargs):
     total_samples = 0
     correct = 0
     model.eval()
+    interator_local = 0
+    print("loader: ", loader)
+    print("type loader: ", type(loader))
     for data, target in loader:
+      interator_local = interator_local + 1
+      print("test_loop_fn for loop: ", interator_local)
       output = model(data)
       pred = output.max(1, keepdim=True)[1]
       correct += pred.eq(target.view_as(pred)).sum()
