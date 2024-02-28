@@ -35,6 +35,32 @@ class WhileLoopTest(unittest.TestCase):
     expected = _fake_while_loop(cond_fn, body_fn, xi)
     self.assertEqual(expected, res)
 
+  def test_while_loop_tpu_complex_situation(self):
+
+    device = xm.xla_device()
+    # run twice while_loop
+    def cond_fn1(x):
+      ten = torch.ones(1, dtype=torch.int32, device=device)
+      return x[0] >= ten[0]
+
+    def body_fn1(x):
+      return (torch.sub(x[0], 1),)
+
+    x1 = torch.tensor([10], dtype=torch.int32, device=device)
+    res1 = while_loop(cond_fn1, body_fn1, (x1,))
+
+    def cond_fn2(x):
+      ten = torch.ones(1, dtype=torch.int32, device=device)
+      return x[0] >= ten[0]
+
+    def body_fn2(x):
+      return (torch.sub(x[0], 1),)
+
+    x2 = torch.tensor([5], dtype=torch.int32, device=device)
+    res2 = while_loop(cond_fn2, body_fn2, (x2,))
+    expected = _fake_while_loop(cond_fn2, body_fn2, x2)
+    self.assertEqual(expected, res)
+
 
 if __name__ == '__main__':
   test = unittest.main()
