@@ -711,8 +711,7 @@ at::Tensor XLANativeFunctions::as_strided_copy(
   if (dim == 0 && tensor.numel() > 0) {
     // If there's no specified dimension, return the first element of the
     // storage. This behavior is consistent with eager.
-    return take(tensor,
-                at::tensor({0}, at::TensorOptions().device(tensor.device())));
+    return select_copy(view_copy_symint(tensor, {tensor.numel()}), 0, 0);
   }
 
   if (storage_size == 0) {
