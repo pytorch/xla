@@ -53,7 +53,7 @@ def fori_loop(lower, upper, body_fun, init_val):
     print("operands[1][0]: ", operands[1][0])
     print("type operands[1][0]: ", type(operands[1][0]))
 
-    return list(operands[0][0] <= operands[1][0])
+    return operands[0] <= operands[1]
   
   def body_fn(operands): # iterator, init_val):
     # iterator[0] = iterator[0] - 1 # one = torch.ones(1, dtype=torch.int32, device=device) torch.sub(iterator[0] - one)
