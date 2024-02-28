@@ -10,7 +10,7 @@ from torch._higher_order_ops.while_loop import while_loop
 from torch_xla.experimental.fori_loop import fori_loop
 import torch_xla.core.xla_model as xm
 import torch_xla.core.xla_builder as xb
-import torch_xla.debug.metrics as met
+# import torch_xla.debug.metrics as met
 
 
 def _fake_while_loop(cond_fn, body_fn, operands):

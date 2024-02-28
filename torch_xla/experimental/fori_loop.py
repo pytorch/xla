@@ -47,7 +47,7 @@ def fori_loop(lower, upper, body_fun, init_val):
     iterator[0] = iterator[0] - 1 # one = torch.ones(1, dtype=torch.int32, device=device) torch.sub(iterator[0] - one)
     return body_fun(iterator, init_val)
 
-  return while_loop(cond_fn, body_fn, operands)
+  return while_loop(cond_fn, body_fn, (iterator, init_val))
 
 @while_loop_op.py_impl(DispatchKey.XLA)
 def while_loop(cond_fn, body_fn, operands):
@@ -104,6 +104,6 @@ def _xla_while_loop(cond_fn, body_fn, operands):
 
   result = torch_xla._XLAC._xla_user_computation('xla::_op_test_while',
                                                  operands, computation)
-  print(met.metrics_report())
+  # print(met.metrics_report())
 
   return result
