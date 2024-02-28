@@ -327,7 +327,7 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule):
               graph_input) else 0
     print(f"Number of HLO Output: {len(args_and_out)}")
     print(
-        f"Number of HLO Input can be alised with Output: {buffer_donor_count}")
+        f"Number of HLO Input can be aliased with Output: {buffer_donor_count}")
     print(
         f"XLA IR Text: \n{torch_xla._XLAC._get_xla_tensors_text(args_and_out)}")
 
