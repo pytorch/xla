@@ -263,7 +263,7 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule):
                           for index, xla_arg in index_and_xla_tensor_args]
 
   if dynamo_debug:
-    print(f"Graph module:\n{xla_model.code}")
+    print(f"Graph Module:\n{xla_model.code}")
 
   tensor_id_to_arg_idx = {
       tensor_id: index for index, tensor_id in index_and_tensor_ids
@@ -334,7 +334,7 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule):
   with alias_with_buffer_donor_config() as saved_config:
     graph_hash = torch_xla._XLAC._get_graph_hash(args_and_out)
     if dynamo_debug:
-      print("graph_hash", graph_hash)
+      print("Graph Hash: ", graph_hash)
     # compiles and cache graph rooted at tensors in 'args_and_out'
     torch_xla._XLAC._xla_warm_up_cache(args_and_out, [])
 
@@ -364,6 +364,7 @@ def extract_internal(xla_model: torch.fx.GraphModule):
     print(
         '\n=================== OpenXLA Dynamo Compile Debug Begin ==================='
     )
+    print('Input Tensor Debug Infos:')
     for xla_arg in xla_model.xla_args:
       if isinstance(xla_arg, torch.Tensor):
         print(torch_xla._XLAC._get_xla_tensor_debug_info(xla_arg))
