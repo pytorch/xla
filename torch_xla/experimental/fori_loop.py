@@ -84,6 +84,7 @@ def _xla_while_loop(cond_fn, body_fn, operands):
     p = xb.mkparam(builder, len(params), shape)
     params.append(p)
     # secondparams.append(xb.Op.tuple([p]))
+    # secondparams.append(xb.Op.tuple([p])) # aaa_tuple.op
 
   # generate cond_fn xlacomputation
   xm.mark_step()
@@ -114,16 +115,29 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   # create xla:While op with cond_computation and body_computation
   print("params: ", params)
   print("type params: ", type(params))
+
   input_tuple = xb.Op.tuple(params)
+
   print("input_tuple: ", input_tuple)
   print("type input_tuple: ", type(input_tuple))
+
   aaa_tuple = xb.Op.get_tuple_element(input_tuple, 0)
+
   print("aaa_tuple: ", aaa_tuple)
   print("type aaa_tuple: ", type(aaa_tuple))
   print("aaa_tuple.op: ", aaa_tuple.op)
   print("type aaa_tuple.op: ", type(aaa_tuple.op))
   print("[aaa_tuple.op]: ", [aaa_tuple.op])
   print("type [aaa_tuple.op]: ", type([aaa_tuple.op]))
+
+  aaa_tuple_op_list = []
+  for i in range(size(shapes)):
+    aaa_tuple_item = xb.Op.get_tuple_element(input_tuple, i)
+    aaa_tuple_op_list.append(aaa_tuple_item.op)
+
+  print("aaa_tuple_op_list: ", aaa_tuple_op_list)
+  print("type aaa_tuple_op_list: ", type(aaa_tuple_op_list))
+
   w = xb.mkop(
       'While', [input_tuple],
       condition_computation=cond_computation,
