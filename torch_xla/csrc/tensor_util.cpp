@@ -517,10 +517,16 @@ at::Tensor XlaLiteralToTensorHelper(const xla::Literal& literal,
       return XlaLiteralToTensor<SType, uint8_t>(literal, dest_element_type);
     case at::ScalarType::Char:
       return XlaLiteralToTensor<SType, int8_t>(literal, dest_element_type);
+    case at::ScalarType::UInt16:
+      return XlaLiteralToTensor<SType, uint16_t>(literal, dest_element_type);
     case at::ScalarType::Short:
       return XlaLiteralToTensor<SType, int16_t>(literal, dest_element_type);
+    case at::ScalarType::UInt32:
+      return XlaLiteralToTensor<SType, uint32_t>(literal, dest_element_type);
     case at::ScalarType::Int:
       return XlaLiteralToTensor<SType, int32_t>(literal, dest_element_type);
+    case at::ScalarType::UInt64:
+      return XlaLiteralToTensor<SType, uint64_t>(literal, dest_element_type);
     case at::ScalarType::Long:
       return XlaLiteralToTensor<SType, int64_t>(literal, dest_element_type);
     case at::ScalarType::Float:
