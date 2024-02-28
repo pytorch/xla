@@ -235,7 +235,7 @@ class DynamoSpmdInferenceTest(test_xla_sharding_base.XlaShardingTest):
     linear.eval()
     xla_x = torch.randn(1, 128, device=device)
     mesh = self._get_mesh((1, self.n_devices))
-    device_ids = mesh.device_ids
+    device_ids = mesh.device_ids.tolist()
     mesh_shape = list(mesh.mesh_shape)
     axis_names = str(mesh.axis_names)
     partition_spec = '(1, 0)'
@@ -246,6 +246,25 @@ class DynamoSpmdInferenceTest(test_xla_sharding_base.XlaShardingTest):
 
     dynamo_linear = torch.compile(linear, backend="openxla")
     dynamo_res = dynamo_linear(xla_x)
+    torch.allclose(xla_res.cpu(), dynamo_res.cpu())
+
+  def test_dynamo_spmd_activation_sharding_with_dynamo_mark_sharding(self):
+    def fn(t):
+      t2 = t + 1
+      device_ids = [0]
+      mesh_shape = [1, 1]
+      axis_names = 'None'
+      partition_spec = '(1, 0)'
+      torch.ops.xla.dynamo_mark_sharding(t2, device_ids, mesh_shape, axis_names, partition_spec)
+      return t
+
+    device = xm.xla_device()
+    xla_x = torch.randn(1, 128, device=device)
+    xla_res = fn(xla_x)
+    xm.mark_step()
+
+    dynamo_fn = torch.compile(fn, backend="openxla")
+    dynamo_res = dynamo_fn(xla_x)
     torch.allclose(xla_res.cpu(), dynamo_res.cpu())
 
 
