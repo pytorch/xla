@@ -34,6 +34,7 @@ class WhileLoopTest(unittest.TestCase):
     xi = torch.tensor([5], dtype=torch.int32, device=device)
     res = while_loop(cond_fn, body_fn, (xi,))
     expected = _fake_while_loop(cond_fn, body_fn, xi)
+    print(met.metrics_report())
     self.assertEqual(expected, res)
 
   def test_while_loop_tpu_complex_situation(self):
@@ -60,8 +61,8 @@ class WhileLoopTest(unittest.TestCase):
     x2 = torch.tensor([5], dtype=torch.int32, device=device)
     res2 = while_loop(cond_fn2, body_fn2, (x2,))
     expected = _fake_while_loop(cond_fn2, body_fn2, x2)
-    self.assertEqual(expected, res2)
     print(met.metrics_report())
+    self.assertEqual(expected, res2)
 
 
 if __name__ == '__main__':
