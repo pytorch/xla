@@ -139,7 +139,7 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   print("type aaa_tuple_op_list: ", type(aaa_tuple_op_list))
 
   w = xb.mkop(
-      'While', [input_tuple],
+      'While', aaa_tuple_op_list,
       condition_computation=cond_computation,
       body_computation=body_computation)
   # w = xb.mkop(
