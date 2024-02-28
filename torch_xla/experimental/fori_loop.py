@@ -118,6 +118,8 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   print("input_tuple: ", input_tuple)
   print("type input_tuple: ", type(input_tuple))
   aaa_tuple = xb.Op.get_tuple_element(input_tuple, 0)
+  print("aaa_tuple: ", aaa_tuple)
+  print("type aaa_tuple: ", type(aaa_tuple))
   w = xb.mkop(
       'While', [input_tuple],
       condition_computation=cond_computation,
