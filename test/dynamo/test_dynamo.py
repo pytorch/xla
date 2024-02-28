@@ -61,6 +61,36 @@ class DynamRandomOpTest(unittest.TestCase):
     self.assertFalse(torch.allclose(dynamo_res_2, dynamo_res_3))
 
 
+class DynamoLTCInteractionTest(unittest.TestCase):
+
+  def index_copy_inplace(self, cache, update_indices, xk):
+    cache.index_copy_(0, update_indices, xk)
+
+  def test_mark_step_after_dynamo(self):
+    cache_len = 512
+    kv_heads = 8
+    head_dim = 128
+    running = 16
+
+    device = xm.xla_device()
+    cache = torch.rand((cache_len, kv_heads, head_dim)).to(device)
+    update_indices = torch.randint(
+        0, cache_len, (running,), dtype=torch.long).to(device)
+    xk = torch.rand((running, kv_heads, head_dim)).to(device)
+
+    dynamo_index_copy_inplace = torch.compile(
+        self.index_copy_inplace, backend="openxla", fullgraph=True)
+    met.clear_all()
+    for i in range(10):
+      dynamo_index_copy_inplace(cache, update_indices, xk)
+      xm.wait_device_ops()
+      current_execute_time = met.metric_data('ExecuteTime')[0]
+      # This mark_step should be a no-op and don't trigger additional execution.
+      xm.mark_step()
+      xm.wait_device_ops()
+      self.assertEqual(current_execute_time, met.metric_data('ExecuteTime')[0])
+
+
 class DynamoInferenceBasicTest(unittest.TestCase):
 
   @classmethod
@@ -256,8 +286,8 @@ class DynamoCpuFallbackTest(unittest.TestCase):
     xla_dynamo_res = dynamo_fn(t_xla)
     self.assertTrue(torch.allclose(cpu_res, xla_dynamo_res.cpu()))
     # 2 compilations are caused by `t_xla` init and a no-op graph.
-    self.assertEqual(met.metric_data('CompileTime')[0], 2)
-    self.assertEqual(met.metric_data('ExecuteTime')[0], 2)
+    self.assertEqual(met.metric_data('CompileTime')[0], 1)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 1)
 
     # Second tracing
     met.clear_all()
@@ -295,8 +325,8 @@ class DynamoCpuFallbackTest(unittest.TestCase):
     cpu_res = fn_fallback(t)
     xla_dynamo_res = dynamo_fn(t_xla)
     self.assertTrue(torch.allclose(cpu_res, xla_dynamo_res.cpu()))
-    self.assertEqual(met.metric_data('CompileTime')[0], 3)
-    self.assertEqual(met.metric_data('ExecuteTime')[0], 7)
+    self.assertEqual(met.metric_data('CompileTime')[0], 2)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 5)
 
     # Second tracing
     met.clear_all()
