@@ -54,7 +54,7 @@ def fori_loop(lower, upper, body_fun, init_val):
     # print("type operands[1][0]: ", type(operands[1][0]))
 
     return operands[0] <= operands[1]
-  
+
   def body_fn(operands): # iterator, init_val):
     # iterator[0] = iterator[0] - 1 # one = torch.ones(1, dtype=torch.int32, device=device) torch.sub(iterator[0] - one)
     # return body_fun(iterator, init_val)
@@ -88,7 +88,6 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   # generate cond_fn xlacomputation
   xm.mark_step()
   cond_result = cond_fn(operands)
-  print("cond_result: ", cond_result)
   cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
   cond_ctx.setnamestring("condctx")
   cond_ctx.build_for_while(list(cond_result))
