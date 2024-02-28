@@ -391,10 +391,14 @@ def extract_internal(xla_model: torch.fx.GraphModule):
 
     # mark_step needs to be blocking since we want to access args's XLADatas
     # and they can't be placeholder.
-    if any(
-        torch_xla._XLAC._check_tensor_need_materialization(
-            [a for a in args if isinstance(a, torch.Tensor)])):
-      xm.mark_step(wait=True)
+    input_tensors_to_sync = [
+        args[i] for i, x in enumerate(
+            torch_xla._XLAC._check_tensor_need_materialization(
+                [a for a in args if isinstance(a, torch.Tensor)])) if x
+    ]
+    if len(input_tensors_to_sync) > 0:
+      torch_xla._XLAC._xla_sync_multi(
+          input_tensors_to_sync, devices=[], wait=True, sync_xla_data=True)
 
     # If input sharding has changed from the previous program, dynamo current can
     # not detect this. It will mistakenly believe the program is the same. We need
