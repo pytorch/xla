@@ -7,6 +7,7 @@ import torch_xla
 # We need to import the underlying implementation function to register with the dispatcher
 import torch_xla.experimental.fori_loop
 from torch._higher_order_ops.while_loop import while_loop
+from torch_xla.experimental.fori_loop import fori_loop
 import torch_xla.core.xla_model as xm
 import torch_xla.core.xla_builder as xb
 import torch_xla.debug.metrics as met
@@ -19,6 +20,21 @@ def _fake_while_loop(cond_fn, body_fn, operands):
 
 
 class WhileLoopTest(unittest.TestCase):
+
+  def test_fori_loop_tpu(self):
+
+    device = xm.xla_device()
+
+    lower = torch.tensor([0], dtype=torch.int32, device=device)
+    upper = torch.tensor([5], dtype=torch.int32, device=device)
+    init_val = torch.tensor([5], dtype=torch.int32, device=device)
+
+    def body_fun(iterator, init_val):
+      return (iterator, torch.add(iterator, init_val))
+
+    res = fori_loop(lower, upper, body_fun, init_val)
+    expected = torch.tensor([5], dtype=torch.int32, device=device)
+    self.assertEqual(expected, res)
 
   def test_while_loop_tpu(self):
 
