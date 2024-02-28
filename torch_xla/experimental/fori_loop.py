@@ -58,6 +58,8 @@ def while_loop(cond_fn, body_fn, operands):
 
 def _xla_while_loop(cond_fn, body_fn, operands):
 
+  print("operands: ", operands)
+  print("type oeprands: ", type(operands))
   # create inputs placeholder
   kwargs = {}
   shapes = xb.tensor_shape(operands)
