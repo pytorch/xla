@@ -9,6 +9,7 @@ import torch_xla.experimental.fori_loop
 from torch._higher_order_ops.while_loop import while_loop
 import torch_xla.core.xla_model as xm
 import torch_xla.core.xla_builder as xb
+import torch_xla.debug.metrics as met
 
 
 def _fake_while_loop(cond_fn, body_fn, operands):
@@ -60,6 +61,7 @@ class WhileLoopTest(unittest.TestCase):
     res2 = while_loop(cond_fn2, body_fn2, (x2,))
     expected = _fake_while_loop(cond_fn2, body_fn2, x2)
     self.assertEqual(expected, res2)
+    print(met.metrics_report())
 
 
 if __name__ == '__main__':
