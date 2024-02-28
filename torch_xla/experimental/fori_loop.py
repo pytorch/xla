@@ -10,6 +10,7 @@ from torch._C import DispatchKey
 from torch._ops import HigherOrderOperator
 import torch._higher_order_ops.while_loop
 from torch._higher_order_ops.while_loop import while_loop_op
+import torch_xla.debug.metrics as met
 
 
 @while_loop_op.py_impl(DispatchKey.XLA)
@@ -64,5 +65,6 @@ def _xla_while_loop(cond_fn, body_fn, operands):
 
   result = torch_xla._XLAC._xla_user_computation('xla::_op_test_while',
                                                  operands, computation)
+  print(met.metrics_report())
 
   return result
