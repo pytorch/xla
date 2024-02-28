@@ -43,7 +43,7 @@ def _xla_while_loop(cond_fn, body_fn, operands):
                                                       cond_hlo)
 
   # generate body_fn xlacomputation
-  xm.mark_step()
+  # xm.mark_step()
   body_result = body_fn(operands)
   body_ctx = torch_xla._XLAC.lowering.LoweringContext()
   body_ctx.setnamestring("bodyctx")
