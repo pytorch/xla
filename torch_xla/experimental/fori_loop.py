@@ -33,7 +33,7 @@ def _xla_while_loop(cond_fn, body_fn, operands):
     # secondparams.append(xb.Op.tuple([p]))
 
   # generate cond_fn xlacomputation
-  xm.mark_step()
+  # xm.mark_step()
   cond_result = cond_fn(operands)
   cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
   cond_ctx.setnamestring("condctx")
