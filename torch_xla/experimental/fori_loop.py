@@ -42,23 +42,23 @@ def fori_loop(lower, upper, body_fun, init_val):
 
   def cond_fn(operands): # iterator, init_val):
     # return iterator[0] <= upper_placeholder[0]
-    print("operands: ", operands)
-    print("type operands: ", type(operands))
-    print("operands[0]: ", operands[0])
-    print("type operands[0]: ", type(operands[0]))
-    print("operands[1]: ", operands[1])
-    print("type operands[1]: ", type(operands[1]))
-    print("operands[0][0]: ", operands[0][0])
-    print("type operands[0][0]: ", type(operands[0][0]))
-    print("operands[1][0]: ", operands[1][0])
-    print("type operands[1][0]: ", type(operands[1][0]))
+    # print("operands: ", operands)
+    # print("type operands: ", type(operands))
+    # print("operands[0]: ", operands[0])
+    # print("type operands[0]: ", type(operands[0]))
+    # print("operands[1]: ", operands[1])
+    # print("type operands[1]: ", type(operands[1]))
+    # print("operands[0][0]: ", operands[0][0])
+    # print("type operands[0][0]: ", type(operands[0][0]))
+    # print("operands[1][0]: ", operands[1][0])
+    # print("type operands[1][0]: ", type(operands[1][0]))
 
     return operands[0] <= operands[1]
   
   def body_fn(operands): # iterator, init_val):
     # iterator[0] = iterator[0] - 1 # one = torch.ones(1, dtype=torch.int32, device=device) torch.sub(iterator[0] - one)
     # return body_fun(iterator, init_val)
-    operands[0][0] = iterator[0][0] - 1 # one = torch.ones(1, dtype=torch.int32, device=device) torch.sub(iterator[0] - one)
+    operands[0] = iterator[0] - 1 # one = torch.ones(1, dtype=torch.int32, device=device) torch.sub(iterator[0] - one)
     return body_fun(operands[0], operands[1])
 
   return while_loop(cond_fn, body_fn, (iterator, init_val))
