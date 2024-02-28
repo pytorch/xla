@@ -465,10 +465,28 @@ def extract_internal(xla_model: torch.fx.GraphModule):
 
 class UnsupportedNodesCollector(torch.fx.Interpreter):
   _unsupported_op_names_cache: Set[str] = set()
+  _supported_op_names_cache: Set[str] = set()
 
   def __init__(self, module):
     super().__init__(module)
     self._unsupported_nodes = []
+
+  # Check whether the tensors contained in value are all XLA tensors.
+  def all_tensors_on_xla_device(self, value: Any) -> bool:
+    if isinstance(value, torch.Tensor):
+      return is_xla_tensor(value)
+    if isinstance(value, (list, tuple)):
+      return all(self.all_tensors_on_xla_device(v) for v in value)
+    # Not a tensor nor a container.
+    return True
+
+  def _all_args_are_supported(self, n: torch.fx.Node) -> bool:
+    # - a node that whose tensor arguments are XLA tensors:
+    #   avoids non-XLA tensors as FX graph arguments.
+    args, kwargs = self.fetch_args_kwargs_from_env(n)
+    return all(
+        self.all_tensors_on_xla_device(v)
+        for v in itertools.chain(args, kwargs.values()))
 
   def _try_run_node(self, n: torch.fx.Node) -> Any:
     metrics.clear_counters()
@@ -477,33 +495,19 @@ class UnsupportedNodesCollector(torch.fx.Interpreter):
     if len(fallback_ops) > 0:
       UnsupportedNodesCollector._unsupported_op_names_cache.add(n.name)
     else:
-      # Check whether the tensors contained in value are all XLA tensors.
-      def all_tensors_on_xla_device(value):
-        if isinstance(value, torch.Tensor):
-          return is_xla_tensor(value)
-        if isinstance(value, (list, tuple)):
-          return all(all_tensors_on_xla_device(v) for v in value)
-        # Not a tensor nor a container.
-        return True
-
       # Check whether the current node is supported or not.
       #
       # A supported node has the following characteristics:
       # - a node whose result is a composition of XLA tensors:
       #   avoids non-XLA tensors as FX graph return value.
-      result_is_supported = all_tensors_on_xla_device(result)
-
-      # - a node that whose tensor arguments are XLA tensors:
-      #   avoids non-XLA tensors as FX graph arguments.
-      args, kwargs = self.fetch_args_kwargs_from_env(n)
-      args_are_supported = all(
-          all_tensors_on_xla_device(v)
-          for v in itertools.chain(args, kwargs.values()))
+      result_is_supported = self.all_tensors_on_xla_device(result)
 
       # If the current node is NOT supported, we add it to
       # the _unsupported_nodes list.
-      if not (result_is_supported and args_are_supported):
+      if not result_is_supported:
         self._unsupported_nodes.append(n)
+      else:
+        UnsupportedNodesCollector._supported_op_names_cache.add(n.name)
 
     return result
 
@@ -511,8 +515,15 @@ class UnsupportedNodesCollector(torch.fx.Interpreter):
     if n.name in UnsupportedNodesCollector._unsupported_op_names_cache:
       self._unsupported_nodes.append(n)
       return True
-    else:
-      return self._try_run_node(n)
+
+    if not self._all_args_are_supported(n):
+      self._unsupported_nodes.append(n)
+      return True
+
+    if n.name in UnsupportedNodesCollector._supported_op_names_cache:
+      return True
+
+    return self._try_run_node(n)
 
   def get_unsupported_nodes(self):
     return self._unsupported_nodes
