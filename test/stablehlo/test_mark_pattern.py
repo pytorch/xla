@@ -9,9 +9,9 @@ import torch_xla.core.xla_model as xm
 import torch_xla.experimental.xla_marker
 from torch.utils import _pytree as pytree
 from torch_xla import stablehlo
+from torch_xla.experimental import xla_marker
 from torch_xla.experimental.mark_pattern_utils import StableHLOCompositeBuilder
 from utils import has_tf_package
-from torch_xla.experimental import xla_marker
 
 try:
   from torch_xla.tf_saved_model_integration import \

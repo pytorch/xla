@@ -1,13 +1,13 @@
 import dataclasses
 import json
 from dataclasses import dataclass
-from typing import Dict, Union
+from typing import Dict
 
 import torch
+import torch._dynamo as torchdynamo
 from torch.library import impl
 import torch_xla
 from torch_xla.core.xla_model import XLA_LIB
-import torch._dynamo as torchdynamo
 
 XLA_LIB.define(
     "mark_tensor(Tensor x, str name, int pos, str id, bool is_input, Any? attr=None) -> Tensor"
@@ -31,7 +31,7 @@ class BoundaryMetadataSerializer(json.JSONEncoder):
     return super().default(obj)
 
 
-def assert_valid_composite_attr(attr):
+def _assert_valid_composite_attr(attr):
   if attr is None:
     return
   if not isinstance(attr, dict):
@@ -50,7 +50,7 @@ def assert_valid_composite_attr(attr):
 def serialize_composite_attr(attr: Dict):
   if attr is None:
     return None
-  assert_valid_composite_attr(attr)
+  _assert_valid_composite_attr(attr)
   return tuple(attr.items())
 
 
@@ -80,7 +80,7 @@ def mark_tensor_xla(x: torch.Tensor,
              and will be passed down to the attribute field in the stablehlo composite. 
   """
   attr = deserialize_composite_attr(attr)
-  assert_valid_composite_attr(attr)
+  _assert_valid_composite_attr(attr)
   pattern_info = BoundaryMetadata(name, pos, id, is_input, attr)
   return torch_xla._XLAC._xla_mark_tensor(
       x, json.dumps(pattern_info, cls=BoundaryMetadataSerializer))
