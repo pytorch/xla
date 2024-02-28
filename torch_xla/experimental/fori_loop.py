@@ -132,9 +132,9 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   print("type [aaa_tuple.op]: ", type([aaa_tuple.op]))
 
   aaa_tuple_op_list = []
-  for i in range(size(shapes)):
-    # aaa_tuple_item = xb.Op.get_tuple_element(input_tuple, i)
-    aaa_tuple_item = xb.Op.get_tuple_element(params, i)
+  for i in range(len(shapes)):
+    aaa_tuple_item = xb.Op.get_tuple_element(input_tuple, i)
+    # aaa_tuple_item = xb.Op.get_tuple_element(params, i)
     aaa_tuple_op_list.append(aaa_tuple_item.op)
 
   print("aaa_tuple_op_list: ", aaa_tuple_op_list)
