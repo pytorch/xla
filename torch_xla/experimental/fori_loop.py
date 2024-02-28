@@ -88,7 +88,7 @@ def _xla_while_loop(cond_fn, body_fn, operands):
     # secondparams.append(xb.Op.tuple([p])) # aaa_tuple.op
 
   # generate cond_fn xlacomputation
-  xm.mark_step()
+  # xm.mark_step()
   cond_result = cond_fn(operands)
   cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
   cond_ctx.setnamestring("condctx")
@@ -101,7 +101,7 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   # print(cond_hlo_print)
 
   # generate body_fn xlacomputation
-  xm.mark_step()
+  # xm.mark_step()
   body_result = body_fn(operands)
   body_ctx = torch_xla._XLAC.lowering.LoweringContext()
   body_ctx.setnamestring("bodyctx")
@@ -140,14 +140,14 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   print("aaa_tuple_op_list: ", aaa_tuple_op_list)
   print("type aaa_tuple_op_list: ", type(aaa_tuple_op_list))
 
-  w = xb.mkop(
-      'While', aaa_tuple_op_list,
-      condition_computation=cond_computation,
-      body_computation=body_computation)
   # w = xb.mkop(
-  #     'While', [aaa_tuple.op],
+  #     'While', aaa_tuple_op_list,
   #     condition_computation=cond_computation,
   #     body_computation=body_computation)
+  w = xb.mkop(
+      'While', [aaa_tuple.op],
+      condition_computation=cond_computation,
+      body_computation=body_computation)
   name = 'fori_loop_ed_torch_func'
   computation = w.build(name)
   hlo_print = xb.get_computation_hlo(computation)
