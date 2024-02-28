@@ -108,9 +108,6 @@ class XLAShardedTensor(torch.Tensor):
     r.global_tensor = elem.detach() if r.requires_grad else elem
     return r
 
-  def __torch_function__(cls, func, types, args=(), kwargs=None):
-    return super().__torch_function__(func, types, args, kwargs)
-
   # Shards on the devices are materialized/available after the lazy
   # execution of the partitioned HLO graph. Each XLAShard points
   # to torch.Tensor. The shards represent a snapshot on CPU, detached
@@ -171,3 +168,7 @@ class XLAShardedTensor(torch.Tensor):
       rs = tree_map(wrap,
                     func(*tree_map(unwrap, args), **tree_map(unwrap, kwargs)))
     return rs
+
+  @classmethod
+  def __torch_function__(cls, func, types, args=(), kwargs=None):
+    return super().__torch_function__(func, types, args, kwargs)
