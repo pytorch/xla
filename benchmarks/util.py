@@ -158,7 +158,7 @@ def get_torchbench_test_name(test):
   return {"train": "training", "eval": "inference"}[test]
 
 
-def find_near_file(self, names):
+def find_near_file(names):
   """Find a file near the current directory.
 
   Looks for `names` in the current directory, up to its two direct parents.
