@@ -8,9 +8,6 @@ import torch_xla
 import torch_xla.core.xla_model as xm
 from torch_xla.stablehlo import exported_program_to_stablehlo
 
-# Note: Unbounded dynamism is under development. It works with unmerged
-# XLA changes. Experimental XLA branch: https://github.com/lsy323/openxla-xla/tree/lsiyuan/sandeep-dynamism-rebased
-
 device = xm.xla_device()
 os.environ['EXPERIMENTAL_XLA_UNBOUNDED_DYNAMISM'] = '1'
 

@@ -140,6 +140,7 @@ def save_torch_module_as_tf_saved_model(
     torch_model: torch.nn.Module,
     args: Tuple[Any],
     saved_model_dir: os.PathLike,
+    dynamic_shapes=None,
     serving_key: str = tf.saved_model.DEFAULT_SERVING_SIGNATURE_DEF_KEY,
     function_alias: str = '',
 ):
@@ -156,7 +157,8 @@ def save_torch_module_as_tf_saved_model(
     function_alias: str - passed through saved_model.save, used to tag a function for 
        inference converter or other tools.
   """
-  exported = torch.export.export(torch_model, args)
+  exported = torch.export.export(
+      torch_model, args, dynamic_shapes=dynamic_shapes)
   options = stablehlo.StableHLOExportOptions(override_tracing_arguments=args)
   stablehlo_model = stablehlo.exported_program_to_stablehlo(exported, options)
   save_stablehlo_graph_as_tf(stablehlo_model, saved_model_dir, serving_key,
