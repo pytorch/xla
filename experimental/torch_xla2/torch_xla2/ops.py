@@ -239,6 +239,11 @@ def _aten_div(x, y, rounding_mode=""):
     res = jnp.trunc(res)
   return res
 
+@op(torch.ops.aten.div_, is_jax_func=False)
+def _aten_div_(x, y, rounding_mode=""):
+  x._elem = _aten_div(x._elem, y._elem, rounding_mode)
+  return x
+
 
 @op(torch.ops.aten.true_divide)
 def _aten_true_divide(x, y):

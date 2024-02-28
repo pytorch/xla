@@ -22,6 +22,10 @@ def parse_common_options(datadir=None,
   parser.add_argument('--num_cores', type=int, default=num_cores)
   parser.add_argument('--batch_size', type=int, default=batch_size)
   parser.add_argument('--num_epochs', type=int, default=num_epochs)
+  parser.add_argument(
+      '--num_steps',
+      type=int,
+      help='used for testing for the test to run shorter.')
   parser.add_argument('--num_workers', type=int, default=num_workers)
   parser.add_argument('--log_steps', type=int, default=log_steps)
   parser.add_argument('--profiler_port', type=int, default=profiler_port)

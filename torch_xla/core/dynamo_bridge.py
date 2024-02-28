@@ -8,6 +8,7 @@ import itertools
 import os
 import time
 from typing import Any, Dict, List, Set, Tuple
+from contextlib import contextmanager
 
 import torch
 from torch.fx.passes.infra.partitioner import CapabilityBasedPartitioner
@@ -26,6 +27,17 @@ import torch_xla.utils.utils as xu
 
 dynamo_debug = int(os.environ.get('XLA_DYNAMO_DEBUG', '0')) == 1
 ptxla_debug = int(os.environ.get('PT_XLA_DEBUG', '0')) == 1
+
+
+@contextmanager
+def alias_with_buffer_donor_config(should_alias: bool = True):
+  saved_config = torch_xla._XLAC._xla_get_should_alias_with_buffer_donor_config(
+  )
+  torch_xla._XLAC._xla_set_should_alias_with_buffer_donor_config(should_alias)
+  try:
+    yield saved_config
+  finally:
+    torch_xla._XLAC._xla_set_should_alias_with_buffer_donor_config(saved_config)
 
 
 @dataclasses.dataclass
@@ -151,11 +163,6 @@ class DumbReturnHandler:
     self.deduper = Deduper()
     self.deduped_trace_outputs = self.deduper.dedup(self.trace_outputs)
 
-    if dynamo_debug:
-      print(
-          f"Number of duplicated outputs {len(self.trace_outputs) - len(self.deduped_trace_outputs)})"
-      )
-
     # record the output that is also a input
     trace_inputs_id2pos = {
         id(x): pos for pos, x in enumerate(self.trace_inputs)
@@ -165,14 +172,6 @@ class DumbReturnHandler:
       in_pos = trace_inputs_id2pos.get(id(out), None)
       if in_pos is not None and not trace_inputs_inplace_update_bool[in_pos]:
         self.trace_outputs_pos_to_inputs_pos.append((out_pos, in_pos))
-
-    if dynamo_debug:
-      print(
-          f"Number trace input {len(trace_inputs)}, number trace output {len(trace_outputs)}"
-      )
-      print(
-          f"Found {len(self.trace_outputs_pos_to_inputs_pos)} dumb returns: {self.trace_outputs_pos_to_inputs_pos}"
-      )
 
   def addDumbReturn(self, real_inputs, real_outputs):
     for out_pos, in_pos in self.trace_outputs_pos_to_inputs_pos:
@@ -264,8 +263,7 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule):
                           for index, xla_arg in index_and_xla_tensor_args]
 
   if dynamo_debug:
-    print(f"Graph module:\n{xla_model.code}")
-    print(f"args_tensor_ids {index_and_tensor_ids}")
+    print(f"Graph Module:\n{xla_model.code}")
 
   tensor_id_to_arg_idx = {
       tensor_id: index for index, tensor_id in index_and_tensor_ids
@@ -300,16 +298,9 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule):
 
   args_and_out = tuple(xla_args_need_update) + tuple(xla_out)
 
-  if dynamo_debug:
-    print(f"#inplace update: {len(xla_args_need_update)}")
-    print(f"XLA IR Text: {torch_xla._XLAC._get_xla_tensors_text(args_and_out)}")
-
   # calculate graph hash
   dumb_return_handler = DumbReturnHandler(xla_args, args_and_out,
                                           xla_args_need_update_bool)
-  graph_hash = torch_xla._XLAC._get_graph_hash(args_and_out)
-  if dynamo_debug:
-    print("graph_hash", graph_hash)
 
   # Collect all device data nodes that is needed to compute the args_and_out
   # and wrap those device data nodes inside a at::tensor(graph_input_xla_values).
@@ -319,8 +310,6 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule):
       graph_input_tensor_ids,
       graph_input_xla_values,
   ) = torch_xla._XLAC._get_tensors_xla_device_data_node(args_and_out)
-  if dynamo_debug:
-    print(f"graph_input_tensor_ids {graph_input_tensor_ids}")
   assert len(graph_input_tensor_ids) == len(
       graph_input_xla_values
   ), f"{len(graph_input_tensor_ids)} v.s. {len(graph_input_xla_values)}"
@@ -328,8 +317,26 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule):
                                           graph_input_tensor_ids,
                                           graph_input_xla_values,
                                           xla_args_tensor_ids)
-  # compiles and cache graph rooted at tensors in 'args_and_out'
-  torch_xla._XLAC._xla_warm_up_cache(args_and_out, [])
+
+  if dynamo_debug:
+    print(f"Number of HLO Input: {len(graph_input_tensor_ids)}")
+    buffer_donor_count = 0
+    for graph_input in graph_input_xla_values:
+      buffer_donor_count += 1 if isinstance(
+          graph_input, torch.Tensor) and torch_xla._XLAC._get_buffer_donation(
+              graph_input) else 0
+    print(f"Number of HLO Output: {len(args_and_out)}")
+    print(
+        f"Number of HLO Input can be aliased with Output: {buffer_donor_count}")
+    print(
+        f"XLA IR Text: \n{torch_xla._XLAC._get_xla_tensors_text(args_and_out)}")
+
+  with alias_with_buffer_donor_config() as saved_config:
+    graph_hash = torch_xla._XLAC._get_graph_hash(args_and_out)
+    if dynamo_debug:
+      print("Graph Hash: ", graph_hash)
+    # compiles and cache graph rooted at tensors in 'args_and_out'
+    torch_xla._XLAC._xla_warm_up_cache(args_and_out, [])
 
   # Restore the origional `xla_args`. Dynamo passed the real tensor as
   # `xla_args`` and we performend the tracing on them. During the tracing,
@@ -354,6 +361,10 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule):
 
 def extract_internal(xla_model: torch.fx.GraphModule):
   if dynamo_debug:
+    print(
+        '\n=================== OpenXLA Dynamo Compile Debug Begin ==================='
+    )
+    print('Input Tensor Debug Infos:')
     for xla_arg in xla_model.xla_args:
       if isinstance(xla_arg, torch.Tensor):
         print(torch_xla._XLAC._get_xla_tensor_debug_info(xla_arg))
@@ -411,27 +422,15 @@ def extract_internal(xla_model: torch.fx.GraphModule):
     start_ts = time.time()
     res = torch_xla._XLAC._run_cached_graph(graph_hash, graph_input)
     res = dumb_return_handler.addDumbReturn(args, res)
-    if dynamo_debug:
-      print(
-          f"torchxla reuse compiled graph run_cached_graph takes {time.time() - start_ts} seconds"
-      )
 
-    args_inplace_update_ts = time.time()
     assert len(res) == len(args_and_out), f"{len(res)} v.s. {len(args_and_out)}"
     ncopy = 0
 
     for arg_index, res_index in arg_index_to_need_update_index.items():
       args[arg_index].copy_(res[res_index])
 
-    if dynamo_debug:
-      print(
-          f"Copy {ncopy} args takes {time.time() - args_inplace_update_ts} seconds"
-      )
-
     # First few elements might be xla_args that needs to be in place updated
     result = res[len(xla_args_need_update):]
-    if dynamo_debug:
-      print(f"optimized_mod takes {time.time() - enter_ts} seconds overall")
 
     none_remover.add_nones(result)
     if len(result) == 1:
@@ -439,6 +438,10 @@ def extract_internal(xla_model: torch.fx.GraphModule):
     else:
       return result
 
+  if dynamo_debug:
+    print(
+        '=================== OpenXLA Dynamo Compile Debug End =====================\n'
+    )
   return optimized_mod
 
 
