@@ -119,9 +119,13 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   print("type input_tuple: ", type(input_tuple))
   aaa_tuple = xb.Op.get_tuple_element(input_tuple, 0)
   w = xb.mkop(
-      'While', [aaa_tuple.op],
+      'While', input_tuple,
       condition_computation=cond_computation,
       body_computation=body_computation)
+  # w = xb.mkop(
+  #     'While', [aaa_tuple.op],
+  #     condition_computation=cond_computation,
+  #     body_computation=body_computation)
   name = 'fori_loop_ed_torch_func'
   computation = w.build(name)
   hlo_print = xb.get_computation_hlo(computation)
