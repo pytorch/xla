@@ -249,13 +249,15 @@ class DynamoSpmdInferenceTest(test_xla_sharding_base.XlaShardingTest):
     torch.allclose(xla_res.cpu(), dynamo_res.cpu())
 
   def test_dynamo_spmd_activation_sharding_with_dynamo_mark_sharding(self):
+
     def fn(t):
       t2 = t + 1
       device_ids = [0]
       mesh_shape = [1, 1]
       axis_names = 'None'
       partition_spec = '(1, 0)'
-      torch.ops.xla.dynamo_mark_sharding(t2, device_ids, mesh_shape, axis_names, partition_spec)
+      torch.ops.xla.dynamo_mark_sharding(t2, device_ids, mesh_shape, axis_names,
+                                         partition_spec)
       return t
 
     device = xm.xla_device()
