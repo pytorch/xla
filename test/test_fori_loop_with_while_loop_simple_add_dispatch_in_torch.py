@@ -59,7 +59,7 @@ class WhileLoopTest(unittest.TestCase):
     x2 = torch.tensor([5], dtype=torch.int32, device=device)
     res2 = while_loop(cond_fn2, body_fn2, (x2,))
     expected = _fake_while_loop(cond_fn2, body_fn2, x2)
-    self.assertEqual(expected, res)
+    self.assertEqual(expected, res2)
 
 
 if __name__ == '__main__':
