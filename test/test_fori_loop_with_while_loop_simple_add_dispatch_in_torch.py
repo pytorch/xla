@@ -60,7 +60,7 @@ class WhileLoopTest(unittest.TestCase):
     res2 = while_loop(cond_fn2, body_fn2, (x2,))
     # expected = _fake_while_loop(cond_fn2, body_fn2, x2)
     # print(met.metrics_report())
-    # self.assertEqual(expected, res2)
+    self.assertEqual(res1, res2)
 
 if __name__ == '__main__':
   test = unittest.main()
