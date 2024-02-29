@@ -296,12 +296,13 @@ function run_mp_op_tests {
   run_test "$CDIR/test_fsdp_auto_wrap.py"
   run_torchrun "$CDIR/test_mp_early_exit.py"
   run_pt_xla_debug "$CDIR/debug_tool/test_mp_pt_xla_debug.py"
-  run_test "$CDIR/torch_distributed/test_torch_distributed_all_gather_xla_backend.py"
-  run_test "$CDIR/torch_distributed/test_torch_distributed_all_reduce_xla_backend.py"
-  run_test "$CDIR/torch_distributed/test_torch_distributed_multi_all_reduce_xla_backend.py"
-  run_test "$CDIR/torch_distributed/test_torch_distributed_reduce_scatter_xla_backend.py"
-  run_test "$CDIR/torch_distributed/test_ddp.py"
-  run_test "$CDIR/torch_distributed/test_torch_distributed_fsdp_meta.py"
+  run_xla_backend_mp "$CDIR/test_torch_distributed_all_gather_xla_backend.py"
+  run_xla_backend_mp "$CDIR/test_torch_distributed_all_reduce_xla_backend.py"
+  run_xla_backend_mp "$CDIR/test_torch_distributed_bucketed_all_reduce_xla_backend.py"
+  run_xla_backend_mp "$CDIR/test_torch_distributed_multi_all_reduce_xla_backend.py"
+  run_xla_backend_mp "$CDIR/test_torch_distributed_reduce_scatter_xla_backend.py"
+  run_xla_backend_mp "$CDIR/test_ddp.py"
+  run_xla_backend_mp "$CDIR/test_torch_distributed_fsdp_meta.py"
 }
 
 function run_tests {
