@@ -252,8 +252,8 @@ def main():
     sys.exit(f"Workspace directory {args.workspace_dir} not found.")
 
   # Sanity check: we should already be inside the appropriate venv.
-  workspace_dir = os.path.abspath(args.workspace_dir)
-  logger.debug(f'workspace_dir: {workspace_dir}')
+  workspace_dir = os.path.realpath(args.workspace_dir)
+  logger.debug(f'workspace_dir realpath: {workspace_dir}')
   if sys.prefix != os.path.join(workspace_dir, 'env'):
     sys.exit(
         "Error: must run under the Python venv from the given --workspace_dir.")
