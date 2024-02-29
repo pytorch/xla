@@ -1006,10 +1006,10 @@ class PyLoweringContext {
   }
 
   void SetNameString(const std::string& name) {
-    lowering_ctx.setnamestring(name);
+    lowering_ctx.set_name_string(name);
   }
 
-  std::string GetNameString() { return lowering_ctx.getnamestring(); }
+  std::string GetNameString() { return lowering_ctx.get_name_string(); }
 
  private:
   LoweringContext lowering_ctx;
