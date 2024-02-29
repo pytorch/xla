@@ -321,7 +321,7 @@ class TorchBenchModel(BenchmarkModel):
       # This should work, since TorchBench relies on class variables:
       # DEFAULT_TRAIN_BSIZE and DEFAULT_EVAL_BSIZE for setting the default
       # batch size, instead of default arguments.
-      batch_size = None
+      batch_size = self.benchmark_experiment.batch_size
 
     # workaround "RuntimeError: not allowed to set torch.backends.cudnn flags"
     # torch.backends.__allow_nonbracketed_mutation_flag = True
