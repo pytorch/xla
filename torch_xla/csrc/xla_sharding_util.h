@@ -139,8 +139,7 @@ class ShardingUtil {
   static void ReshardParameters(
       const xla::HloModuleProto& module, std::vector<XLATensorPtr>* tensors,
       std::vector<torch::lazy::BackendDataPtr>* parameters,
-      std::vector<const torch::lazy::Node*>* nodes,
-      bool group_sharding = false);
+      std::vector<const torch::lazy::Node*>* nodes);
 
   //////////////////////////// Dynamo Integration ////////////////////////////
 
