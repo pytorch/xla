@@ -27,7 +27,6 @@ def decompose_dynamic_shape_select(graph: Graph):
           slice_args = (select_src_node, select_dim, select_idx,
                         (select_idx + 1), 1)
           slice_node = graph.call_function(aten.slice, slice_args)
-
           view_new_shape = []
           for dim, size in enumerate(select_src_shape):
             if dim == select_dim:
@@ -43,4 +42,19 @@ def decompose_dynamic_shape_select(graph: Graph):
           view_node = graph.call_function(aten.view, view_args)
           n.replace_all_uses_with(view_node)
         graph.erase_node(n)
+  return graph
+
+
+def _is_no_op_slice(n):
+  assert n.op == "call_function" and n.target == aten.slice.Tensor
+  return n.args[2] == 0 and n.args[3] == torch.iinfo(torch.int64).max
+
+
+def remove_no_op_slice(graph: Graph):
+  for n in graph.nodes:
+    if n.op == "call_function" and n.target == aten.slice.Tensor:
+      if _is_no_op_slice(n):
+        slice_src_node = n.args[0]
+        n.replace_all_uses_with(slice_src_node)
+      graph.erase_node(n)
   return graph

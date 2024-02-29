@@ -28,6 +28,25 @@ class ExportFxPassTest(unittest.TestCase):
     out2 = ep(*args)
     torch.allclose(out1, out2)
 
+  def test_no_op_slice_removal(self):
+
+    class M(torch.nn.Module):
+
+      def forward(self, x):
+        x = x * 2
+        return torch.ops.aten.slice(x, 1, 0, 9223372036854775807)
+
+    m = M()
+    args = (torch.rand((10, 197, 768)),)
+    dynamic_shapes = ({0: Dim("bs")},)
+    ep = export(m, args, dynamic_shapes=dynamic_shapes)
+    # ep.graph_module.graph.print_tabular()
+    out1 = ep(*args)
+    ep.graph_module.graph = remove_no_op_slice(ep.graph_module.graph)
+    # ep.graph_module.graph.print_tabular()
+    out2 = ep(*args)
+    torch.allclose(out1, out2)
+
 
 if __name__ == "__main__":
   test = unittest.main()
