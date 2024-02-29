@@ -26,11 +26,9 @@ def _xla_while_loop(cond_fn, body_fn, operands):
   shapes = xb.tensor_shape(operands)
   builder = xb.create_builder('test_while')
   params = []
-  # secondparams = []
   for shape in shapes:
     p = xb.mkparam(builder, len(params), shape)
     params.append(p)
-    # secondparams.append(xb.Op.tuple([p]))
 
   # generate cond_fn xlacomputation
   cond_result = cond_fn(operands)
