@@ -896,11 +896,8 @@ xla::XlaOp XlaHelpers::DynamicUnboundedBroadcast(
   // Create Concatenate op
   auto concat_op = xla::ConcatInDim(input.builder(), get_dim_ops, {0});
 
-  std::cout << "check output dimensions, output dynamic: " << output_dimensions
-            << std::endl;
   xla::Shape final_shape = xla::ShapeUtil::MakeShape(
       input_shape.element_type(), output_dimensions, output_dynamic);
-  std::cout << "check final shape: " << final_shape << std::endl;
   return DynamicBroadcastInDim(input, final_shape, concat_op);
 }
 
