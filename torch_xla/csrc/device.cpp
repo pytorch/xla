@@ -89,4 +89,16 @@ bool UseVirtualDevice() {
 
 bool GetLockSpmdConfig() { return spmd_config_is_locked; }
 
+bool CheckTpuDevice(XlaDeviceType hw_type) {
+  if (hw_type == XlaDeviceType::TPU) {
+    return true;
+  }
+
+  std::string pjrt_device = runtime::sys_util::GetEnvString("PJRT_DEVICE", "");
+  if (hw_type == XlaDeviceType::SPMD) {
+    return pjrt_device == "TPU";
+  }
+  return false;
+}
+
 }  // namespace torch_xla
