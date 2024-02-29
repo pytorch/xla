@@ -245,6 +245,7 @@ function run_mp_op_tests {
   run_pt_xla_debug "$CDIR/debug_tool/test_mp_pt_xla_debug.py"
   run_xla_backend_mp "$CDIR/test_torch_distributed_all_gather_xla_backend.py"
   run_xla_backend_mp "$CDIR/test_torch_distributed_all_reduce_xla_backend.py"
+  run_xla_backend_mp "$CDIR/test_torch_distributed_bucketed_all_reduce_xla_backend.py"
   run_xla_backend_mp "$CDIR/test_torch_distributed_multi_all_reduce_xla_backend.py"
   run_xla_backend_mp "$CDIR/test_torch_distributed_reduce_scatter_xla_backend.py"
   run_xla_backend_mp "$CDIR/test_ddp.py"
