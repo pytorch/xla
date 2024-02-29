@@ -3,7 +3,7 @@ import functools
 import logging
 import numpy as np
 import os
-from os.path import abspath
+from os.path import abspath, exists
 import random
 import subprocess
 import torch
