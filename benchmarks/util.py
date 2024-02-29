@@ -3,7 +3,7 @@ import functools
 import logging
 import numpy as np
 import os
-from os.path import abspath
+from os.path import abspath, exists
 import random
 import subprocess
 import torch
@@ -158,7 +158,7 @@ def get_torchbench_test_name(test):
   return {"train": "training", "eval": "inference"}[test]
 
 
-def find_near_file(self, names):
+def find_near_file(names):
   """Find a file near the current directory.
 
   Looks for `names` in the current directory, up to its two direct parents.

@@ -4,7 +4,6 @@ import contextlib
 import importlib
 import logging
 import os
-from os.path import abspath, exists
 import sys
 import torch
 import torch.amp
@@ -306,18 +305,19 @@ class TorchBenchModel(BenchmarkModel):
   def load_benchmark(self):
     cant_change_batch_size = (
         not getattr(self.benchmark_cls(), "ALLOW_CUSTOMIZE_BSIZE", True) or
-        model_name in config_data()["dont_change_batch_size"])
+        self.model_name in config_data()["dont_change_batch_size"])
 
     if cant_change_batch_size:
       self.benchmark_experiment.batch_size = None
 
-    if self.benchmark_experiment.batch_size is not None:
-      batch_size = self.benchmark_experiment.batch_size
-    elif self.is_training() and self.model_name in self.batch_size["training"]:
-      batch_size = self.batch_size["training"][self.model_name]
-    elif self.is_inference(
-    ) and self.model_name in self.batch_size["inference"]:
-      batch_size = self.batch_size["inference"][self.model_name]
+    batch_size = self.benchmark_experiment.batch_size
+
+    if batch_size is None:
+      if self.is_training() and self.model_name in self.batch_size["training"]:
+        batch_size = self.batch_size["training"][self.model_name]
+      elif self.is_inference(
+      ) and self.model_name in self.batch_size["inference"]:
+        batch_size = self.batch_size["inference"][self.model_name]
 
     # workaround "RuntimeError: not allowed to set torch.backends.cudnn flags"
     # torch.backends.__allow_nonbracketed_mutation_flag = True
