@@ -1125,28 +1125,7 @@ def wait_device_ops(devices=[]):
   torch_xla._XLAC._xla_wait_device_ops(devices=devices)
 
 
-def reduce_gradients(optimizer, groups=None, pin_layout=True):
-  """Reduces all the gradients handled by an optimizer.
-
-  Args:
-    optimizer (:class:`torch.Optimizer`): The `torch.Optimizer` instance
-      containing the gradients to be reduced.
-    groups (list, optional): A list of list, representing the replica groups for
-      the `all_reduce()` operation. Example: `[[0, 1, 2, 3], [4, 5, 6, 7]]`
-        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with
-        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with
-        all the replicas in it.
-    pin_layout (bool, optional): whether to pin the layout when reducing gradients.
-      See `xm.all_reduce` for details.
-  """
-  count = xrt_world_size()
-  if count > 1:
-    bucket_cap = int(os.getenv('BUCKET_CAP_MB',
-                               _ALLREDUCE_BUCKET_CAP_MB)) * 1024 * 1024
-    # Reverse the gradients list so that we start allreduce from the last layer
-    # onwards. This allows allreduce to trigger as soon as the bucket fills up and
-    # overlap with backward pass.
-    gradients = reversed(_fetch_gradients(optimizer))
+def bucketed_allreduce(gradients):
     total = 0
     tensor_bucket = []
 
@@ -1194,6 +1173,31 @@ def reduce_gradients(optimizer, groups=None, pin_layout=True):
           scale=1.0 / count,
           groups=groups,
           pin_layout=pin_layout)
+
+
+def reduce_gradients(optimizer, groups=None, pin_layout=True):
+  """Reduces all the gradients handled by an optimizer.
+
+  Args:
+    optimizer (:class:`torch.Optimizer`): The `torch.Optimizer` instance
+      containing the gradients to be reduced.
+    groups (list, optional): A list of list, representing the replica groups for
+      the `all_reduce()` operation. Example: `[[0, 1, 2, 3], [4, 5, 6, 7]]`
+        defines two groups, one with the `[0, 1, 2, 3]` replicas and one with
+        the `[4, 5, 6, 7]` replicas. If `None` there will be only one group with
+        all the replicas in it.
+    pin_layout (bool, optional): whether to pin the layout when reducing gradients.
+      See `xm.all_reduce` for details.
+  """
+  count = xrt_world_size()
+  if count > 1:
+    bucket_cap = int(os.getenv('BUCKET_CAP_MB',
+                               _ALLREDUCE_BUCKET_CAP_MB)) * 1024 * 1024
+    # Reverse the gradients list so that we start allreduce from the last layer
+    # onwards. This allows allreduce to trigger as soon as the bucket fills up and
+    # overlap with backward pass.
+    gradients = reversed(_fetch_gradients(optimizer))
+    bucketed_allreduce(gradients)
 
 
 def optimizer_step(optimizer,
