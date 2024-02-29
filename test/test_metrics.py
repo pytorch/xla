@@ -72,6 +72,7 @@ class MetricsTest(unittest.TestCase):
     xla_device = xm.xla_device()
     t1 = torch.tensor(100, device=xla_device)
     t2 = t1 * 2
+    t1 += 2
     xm.mark_step()
     t2_cpu = t2.cpu()
     short_report = met.short_metrics_report(
