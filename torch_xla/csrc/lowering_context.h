@@ -73,13 +73,9 @@ class LoweringContext : public torch::lazy::LoweringContext {
   xla::XlaOp GetOutputOp(const torch::lazy::Output& output);
 
   // Build the XLA computation capturing all the operations created with the
-  // embedded XLA builder (returned by the builder() API).
-  xla::StatusOr<xla::XlaComputation> BuildXla();
-
-  // Build the XLA computation capturing all the operations created with the
   // embedded XLA builder (returned by the builder() API) with check whether
   // build for cond/body computation or not.
-  xla::StatusOr<xla::XlaComputation> BuildXlaWithCheck();
+  xla::StatusOr<xla::XlaComputation> BuildXla();
 
   // Build the XLA computation capturing all the operations created with the
   // embedded XLA builder (returned by the builder() API).
