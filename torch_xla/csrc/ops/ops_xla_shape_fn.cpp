@@ -201,7 +201,7 @@ xla::Shape ArgmaxOutputShape(const torch::lazy::Value& input,
           dim.value(), input_shape.rank());
       return BuildArgMax(operands[0], {canonical_dim}, keepdim);
     } else {
-      return BuildArgMax(operands[0], {-1}, false);
+      return BuildArgMax(operands[0], {-1}, keepdim);
     }
   };
   return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
@@ -217,7 +217,7 @@ xla::Shape ArgminOutputShape(const torch::lazy::Value& input,
           dim.value(), input_shape.rank());
       return BuildArgMin(operands[0], {canonical_dim}, keepdim);
     } else {
-      return BuildArgMin(operands[0], {-1}, false);
+      return BuildArgMin(operands[0], {-1}, keepdim);
     }
   };
   return InferOutputShape({GetXlaShape(input)}, lower_for_shape_fn);
