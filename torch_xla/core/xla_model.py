@@ -18,9 +18,11 @@ import torch_xla.debug.metrics_saver as ms
 import torch_xla.utils.utils as xu
 import torch_xla.utils.closures as xc
 
+
 def _lazy_get_device():
   runtime._maybe_select_default_device()
   return torch_xla._XLAC._xla_get_devices()
+
 
 _DEVICES = xu.LazyProperty(_lazy_get_device)
 
