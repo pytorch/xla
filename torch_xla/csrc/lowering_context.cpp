@@ -177,7 +177,7 @@ xla::StatusOr<xla::XlaComputation> LoweringContext::BuildXlaWithCheck() {
   } else if (!root_tuple_.empty() & (root_tuple_.size() == 1)) {
     const std::string condctx = "condctx";
     const std::string bodyctx = "bodyctx";
-    const std::string currentname = getnamestring();
+    const std::string currentname = get_name_string();
     if ((currentname == condctx) or (currentname == bodyctx)) {
       xla = builder()->Build(root_tuple_.at(0));
     } else {
