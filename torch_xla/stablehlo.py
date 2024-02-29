@@ -399,7 +399,7 @@ def _exported_program_to_stablehlo_bundle(exported_model,
     else:
       signature = VariableSignature(
           shape=[],
-          dtype=str(type(arg)),
+          dtype=type(arg).__name__,
       )
 
     unused_inputs.append((pos, signature))
