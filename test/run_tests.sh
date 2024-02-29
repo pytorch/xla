@@ -219,7 +219,7 @@ function run_xla_op_tests3 {
   run_torchrun "$CDIR/pjrt/test_torchrun.py"
   run_test "$CDIR/test_persistent_cache.py"
   run_test "$CDIR/test_devices.py"
-  run_test "$CDIR/test_gpu_device_detection.py"
+  run_coverage "$CDIR/test_gpu_device_detection.py"
   # NOTE: this line below is testing export and don't care about GPU
   PJRT_DEVICE=CPU CPU_NUM_DEVICES=1 run_coverage "$CDIR/test_core_aten_ops.py"
 }
