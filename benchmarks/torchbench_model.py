@@ -310,18 +310,14 @@ class TorchBenchModel(BenchmarkModel):
     if cant_change_batch_size:
       self.benchmark_experiment.batch_size = None
 
-    if self.benchmark_experiment.batch_size is not None:
-      batch_size = self.benchmark_experiment.batch_size
-    elif self.is_training() and self.model_name in self.batch_size["training"]:
-      batch_size = self.batch_size["training"][self.model_name]
-    elif self.is_inference(
-    ) and self.model_name in self.batch_size["inference"]:
-      batch_size = self.batch_size["inference"][self.model_name]
-    else:
-      # This should work, since TorchBench relies on class variables:
-      # DEFAULT_TRAIN_BSIZE and DEFAULT_EVAL_BSIZE for setting the default
-      # batch size, instead of default arguments.
-      batch_size = self.benchmark_experiment.batch_size
+    batch_size = self.benchmark_experiment.batch_size
+
+    if batch_size is None:
+      if self.is_training() and self.model_name in self.batch_size["training"]:
+        batch_size = self.batch_size["training"][self.model_name]
+      elif self.is_inference(
+      ) and self.model_name in self.batch_size["inference"]:
+        batch_size = self.batch_size["inference"][self.model_name]
 
     # workaround "RuntimeError: not allowed to set torch.backends.cudnn flags"
     # torch.backends.__allow_nonbracketed_mutation_flag = True
