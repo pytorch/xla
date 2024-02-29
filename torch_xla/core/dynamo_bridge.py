@@ -8,6 +8,7 @@ import itertools
 import os
 import time
 from typing import Any, Dict, List, Set, Tuple
+from contextlib import contextmanager
 
 import torch
 from torch.fx.passes.infra.partitioner import CapabilityBasedPartitioner
@@ -15,6 +16,8 @@ from torch.fx.passes.utils.fuser_utils import topo_sort
 
 import torch._inductor
 from torch._inductor.fx_passes.post_grad import ConstructorMoverPass
+
+from torch.utils import _pytree as pytree
 
 import torch_xla
 import torch_xla.core.xla_model as xm
@@ -26,6 +29,17 @@ dynamo_debug = int(os.environ.get('XLA_DYNAMO_DEBUG', '0')) == 1
 ptxla_debug = int(os.environ.get('PT_XLA_DEBUG', '0')) == 1
 
 
+@contextmanager
+def alias_with_buffer_donor_config(should_alias: bool = True):
+  saved_config = torch_xla._XLAC._xla_get_should_alias_with_buffer_donor_config(
+  )
+  torch_xla._XLAC._xla_set_should_alias_with_buffer_donor_config(should_alias)
+  try:
+    yield saved_config
+  finally:
+    torch_xla._XLAC._xla_set_should_alias_with_buffer_donor_config(saved_config)
+
+
 @dataclasses.dataclass
 class GraphInputMatcher:
   """
@@ -33,19 +47,31 @@ class GraphInputMatcher:
   Specifically, those graph inputs corresponding to method parameters should be replaced with the
   arguments for the current call.
 
-  tensor_id_to_arg_idx maps the tensor id to the parameter index.
-  graph_input_tensor_ids, graph_input_xla_values list the tensor_id and ivalue for each of the
-  TS/XLA graph inputs.
+  Args:
+    tensor_id_to_arg_idx: Dict[int, int] - Maps the tensor id to the HLO parameter index.
+    graph_input_tensor_ids: List[int] - tensor_id for each TS/XLA graph input.
+    graph_input_xla_values: List[torch.Tensor] - ivalue for each TS/XLA graph input.
+                            Including both FX graph input tensors and weight tensors.
+    xla_args_tensor_id: Set[int] - A set of tensor_ids for FX Graph inputs.
   """
 
-  tensor_id_to_arg_idx: Dict[int, int]
-  graph_input_tensor_ids: List[int]
-  # there are 2 categories of graph_input_tensors.
-  # Category 1: those whose id are not found in tensor_id_to_arg_idx. These are
-  # most likely const tensors and we can get its content from graph_input_tensors
-  # Category 2: those whose id are found in tensor_id_to_arg_idx. We should get
-  #  the tensor from method arguments
-  graph_input_xla_values: List[Any]
+  def __init__(self, tensor_id_to_arg_idx: Dict[int, int],
+               graph_input_tensor_ids: List[int],
+               graph_input_xla_values: List[torch.tensor],
+               xla_args_tensor_id: Set[int]):
+    self.tensor_id_to_arg_idx = tensor_id_to_arg_idx
+    self.graph_input_tensor_ids = graph_input_tensor_ids
+    # there are 2 categories of graph_input_tensors.
+    # Category 1: those whose id are not found in tensor_id_to_arg_idx. These are
+    # most likely const tensors and we can get its content from graph_input_tensors
+    # Category 2: those whose id are found in tensor_id_to_arg_idx. We should get
+    #  the tensor from method arguments.
+    # For category 2, beause user inputs will be used for each run, we do not
+    # cache those tensors in GraphInputMatcher.
+    self.graph_input_xla_values = [
+        None if tensor_id in xla_args_tensor_id else xla_value for tensor_id,
+        xla_value in zip(graph_input_tensor_ids, graph_input_xla_values)
+    ]
 
   # get the real graph input tensors
   def __call__(self, args):
@@ -64,8 +90,10 @@ class GraphInputMatcher:
         xm.set_rng_state(
             (1012031 + inp.item() * 7012063) % 18446744073709551615, str_device)
       elif arg_idx is None:
+        assert traced_xla_value is not None, "Traced Tensor cannot be None."
         inp = traced_xla_value
       else:
+        assert traced_xla_value is None, "Graph input tensor should not be cached."
         inp = args[arg_idx]
       real_input.append(inp)
     return real_input
@@ -135,11 +163,6 @@ class DumbReturnHandler:
     self.deduper = Deduper()
     self.deduped_trace_outputs = self.deduper.dedup(self.trace_outputs)
 
-    if dynamo_debug:
-      print(
-          f"Number of duplicated outputs {len(self.trace_outputs) - len(self.deduped_trace_outputs)})"
-      )
-
     # record the output that is also a input
     trace_inputs_id2pos = {
         id(x): pos for pos, x in enumerate(self.trace_inputs)
@@ -149,14 +172,6 @@ class DumbReturnHandler:
       in_pos = trace_inputs_id2pos.get(id(out), None)
       if in_pos is not None and not trace_inputs_inplace_update_bool[in_pos]:
         self.trace_outputs_pos_to_inputs_pos.append((out_pos, in_pos))
-
-    if dynamo_debug:
-      print(
-          f"Number trace input {len(trace_inputs)}, number trace output {len(trace_outputs)}"
-      )
-      print(
-          f"Found {len(self.trace_outputs_pos_to_inputs_pos)} dumb returns: {self.trace_outputs_pos_to_inputs_pos}"
-      )
 
   def addDumbReturn(self, real_inputs, real_outputs):
     for out_pos, in_pos in self.trace_outputs_pos_to_inputs_pos:
@@ -211,7 +226,13 @@ def is_xla_tensor(tensor: torch.Tensor) -> bool:
 
 
 def extract_graph_helper(xla_model: torch.fx.GraphModule):
+  # FX Graph inputs passed from Dynamo. xla_args are XLA Tensors.
   xla_args = xla_model.xla_args
+  xla_args_tensor_ids = set(
+      pytree.tree_map_only(
+          torch.Tensor,
+          lambda xla_arg: torch_xla._XLAC._xla_get_tensor_id(xla_arg),
+          xla_args))
   assert all(
       map(
           is_xla_tensor,
@@ -242,8 +263,7 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule):
                           for index, xla_arg in index_and_xla_tensor_args]
 
   if dynamo_debug:
-    print(f"Graph module:\n{xla_model.code}")
-    print(f"args_tensor_ids {index_and_tensor_ids}")
+    print(f"Graph Module:\n{xla_model.code}")
 
   tensor_id_to_arg_idx = {
       tensor_id: index for index, tensor_id in index_and_tensor_ids
@@ -278,16 +298,9 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule):
 
   args_and_out = tuple(xla_args_need_update) + tuple(xla_out)
 
-  if dynamo_debug:
-    print(f"#inplace update: {len(xla_args_need_update)}")
-    print(f"XLA IR Text: {torch_xla._XLAC._get_xla_tensors_text(args_and_out)}")
-
   # calculate graph hash
   dumb_return_handler = DumbReturnHandler(xla_args, args_and_out,
                                           xla_args_need_update_bool)
-  graph_hash = torch_xla._XLAC._get_graph_hash(args_and_out)
-  if dynamo_debug:
-    print("graph_hash", graph_hash)
 
   # Collect all device data nodes that is needed to compute the args_and_out
   # and wrap those device data nodes inside a at::tensor(graph_input_xla_values).
@@ -297,17 +310,33 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule):
       graph_input_tensor_ids,
       graph_input_xla_values,
   ) = torch_xla._XLAC._get_tensors_xla_device_data_node(args_and_out)
-  if dynamo_debug:
-    print(f"graph_input_tensor_ids {graph_input_tensor_ids}")
   assert len(graph_input_tensor_ids) == len(
       graph_input_xla_values
   ), f"{len(graph_input_tensor_ids)} v.s. {len(graph_input_xla_values)}"
   graph_input_matcher = GraphInputMatcher(tensor_id_to_arg_idx,
                                           graph_input_tensor_ids,
-                                          graph_input_xla_values)
+                                          graph_input_xla_values,
+                                          xla_args_tensor_ids)
 
-  # compiles and cache graph rooted at tensors in 'args_and_out'
-  torch_xla._XLAC._xla_warm_up_cache(args_and_out, [])
+  if dynamo_debug:
+    print(f"Number of HLO Input: {len(graph_input_tensor_ids)}")
+    buffer_donor_count = 0
+    for graph_input in graph_input_xla_values:
+      buffer_donor_count += 1 if isinstance(
+          graph_input, torch.Tensor) and torch_xla._XLAC._get_buffer_donation(
+              graph_input) else 0
+    print(f"Number of HLO Output: {len(args_and_out)}")
+    print(
+        f"Number of HLO Input can be aliased with Output: {buffer_donor_count}")
+    print(
+        f"XLA IR Text: \n{torch_xla._XLAC._get_xla_tensors_text(args_and_out)}")
+
+  with alias_with_buffer_donor_config() as saved_config:
+    graph_hash = torch_xla._XLAC._get_graph_hash(args_and_out)
+    if dynamo_debug:
+      print("Graph Hash: ", graph_hash)
+    # compiles and cache graph rooted at tensors in 'args_and_out'
+    torch_xla._XLAC._xla_warm_up_cache(args_and_out, [])
 
   # Restore the origional `xla_args`. Dynamo passed the real tensor as
   # `xla_args`` and we performend the tracing on them. During the tracing,
@@ -332,6 +361,10 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule):
 
 def extract_internal(xla_model: torch.fx.GraphModule):
   if dynamo_debug:
+    print(
+        '\n=================== OpenXLA Dynamo Compile Debug Begin ==================='
+    )
+    print('Input Tensor Debug Infos:')
     for xla_arg in xla_model.xla_args:
       if isinstance(xla_arg, torch.Tensor):
         print(torch_xla._XLAC._get_xla_tensor_debug_info(xla_arg))
@@ -356,10 +389,14 @@ def extract_internal(xla_model: torch.fx.GraphModule):
 
     # mark_step needs to be blocking since we want to access args's XLADatas
     # and they can't be placeholder.
-    if any(
-        torch_xla._XLAC._check_tensor_need_materialization(
-            [a for a in args if isinstance(a, torch.Tensor)])):
-      xm.mark_step(wait=True)
+    input_tensors_to_sync = [
+        args[i] for i, x in enumerate(
+            torch_xla._XLAC._check_tensor_need_materialization(
+                [a for a in args if isinstance(a, torch.Tensor)])) if x
+    ]
+    if len(input_tensors_to_sync) > 0:
+      torch_xla._XLAC._xla_sync_multi(
+          input_tensors_to_sync, devices=[], wait=True, sync_xla_data=True)
 
     # If input sharding has changed from the previous program, dynamo current can
     # not detect this. It will mistakenly believe the program is the same. We need
@@ -389,27 +426,15 @@ def extract_internal(xla_model: torch.fx.GraphModule):
     start_ts = time.time()
     res = torch_xla._XLAC._run_cached_graph(graph_hash, graph_input)
     res = dumb_return_handler.addDumbReturn(args, res)
-    if dynamo_debug:
-      print(
-          f"torchxla reuse compiled graph run_cached_graph takes {time.time() - start_ts} seconds"
-      )
 
-    args_inplace_update_ts = time.time()
     assert len(res) == len(args_and_out), f"{len(res)} v.s. {len(args_and_out)}"
     ncopy = 0
 
     for arg_index, res_index in arg_index_to_need_update_index.items():
       args[arg_index].copy_(res[res_index])
 
-    if dynamo_debug:
-      print(
-          f"Copy {ncopy} args takes {time.time() - args_inplace_update_ts} seconds"
-      )
-
     # First few elements might be xla_args that needs to be in place updated
     result = res[len(xla_args_need_update):]
-    if dynamo_debug:
-      print(f"optimized_mod takes {time.time() - enter_ts} seconds overall")
 
     none_remover.add_nones(result)
     if len(result) == 1:
@@ -417,6 +442,10 @@ def extract_internal(xla_model: torch.fx.GraphModule):
     else:
       return result
 
+  if dynamo_debug:
+    print(
+        '=================== OpenXLA Dynamo Compile Debug End =====================\n'
+    )
   return optimized_mod
 
 

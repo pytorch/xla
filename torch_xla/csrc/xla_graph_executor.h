@@ -96,6 +96,10 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
   torch::lazy::BackendDataPtr GetBaseSeedData(
       const torch::lazy::BackendDevice& device);
 
+  void SetAliasWithBufferDonorConfig(bool should_alias);
+
+  bool GetAliasWithBufferDonorConfig();
+
   // Dumps the XLA HLO text of the computation accumulated in the graph which is
   // attached the tensors.
   // We don't use upstream DumpBackendComputation given we have our own format.
@@ -219,6 +223,14 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
     torch::lazy::BackendDataPtr GetBaseSeedData(
         const torch::lazy::BackendDevice& device);
 
+    void SetAliasWithBufferDonorConfig(bool should_alias) {
+      should_alias_with_buffer_donor = should_alias;
+    }
+
+    bool GetAliasWithBufferDonorConfig() {
+      return should_alias_with_buffer_donor;
+    }
+
     void SaveGraphAsString(
         torch::lazy::hash_t hash, absl::Span<const XLATensorPtr> tensors,
         const std::vector<size_t>* indices,
@@ -247,6 +259,7 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
     torch::lazy::Value IrValueFromScalar(
         const at::Scalar& value, at::ScalarType scalar_type,
         const torch::lazy::BackendDevice& device) final;
+    bool should_alias_with_buffer_donor = false;
   };
 
   XLAGraphExecutor() = default;
@@ -320,14 +333,17 @@ class XLAGraphExecutor : public torch::lazy::LazyGraphExecutor {
 
   // We don't use the upstream TryRunCachedSync since
   // our CachedComputation is different from upstream.
-  std::shared_ptr<Async> TryRunCachedSync(
+  std::pair<bool, std::shared_ptr<Async>> TryRunCachedSync(
       std::vector<XLATensorPtr>* tensors, SyncTensorCollection* coll,
       PostOrderData* po_data,
-      const std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec);
+      const std::vector<torch::lazy::BackendDataPtr>& tensor_data_vec,
+      bool warm_up_cache_only);
 
   std::vector<std::pair<int64_t, int64_t>> BuildInputOutputAliases(
       const std::vector<XLATensorPtr>& tensors,
       absl::Span<const size_t> indices, LoweringContext* lowering_ctx);
+
+  std::vector<size_t> SetBufferDonors(LoweringContext* lowering_ctx);
 
   // We don't use upstream Compile to have BuildInputOutputAliases.
   CompilationResult Compile(const std::vector<XLATensorPtr>& tensors,

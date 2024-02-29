@@ -9,8 +9,51 @@ import torch_xla.core.xla_model as xm
 import torch_xla.experimental.xla_marker
 from torch.utils import _pytree as pytree
 from torch_xla import stablehlo
+from torch_xla.experimental import xla_marker
 from torch_xla.experimental.mark_pattern_utils import StableHLOCompositeBuilder
-from torch_xla.tf_saved_model_integration import save_torch_module_as_tf_saved_model
+from utils import has_tf_package
+
+try:
+  from torch_xla.tf_saved_model_integration import \
+      save_torch_module_as_tf_saved_model
+except ImportError:
+  print("tf is not installed. The tf.saved_model tests will be skipped.")
+
+
+class KVCache(torch.nn.Module):
+
+  def __init__(self,
+               batch_size,
+               max_seq_length,
+               n_heads,
+               head_dim,
+               enable_hlfb=False):
+    super().__init__()
+    cache_shape = (batch_size, max_seq_length, n_heads, head_dim)
+    self.register_buffer('k_cache', torch.zeros(cache_shape), persistent=False)
+    self.register_buffer('v_cache', torch.zeros(cache_shape), persistent=False)
+    self.enable_hlfb = enable_hlfb
+
+  def update_cache(self, input_pos, k_val, v_val):
+    if self.enable_hlfb:
+      return self.update_cache_with_hlfb(input_pos, k_val, v_val)
+
+    updated_k = self.k_cache.index_copy_(1, input_pos, k_val)
+    updated_v = self.v_cache.index_copy_(1, input_pos, v_val)
+    # Here we need a clone otherwise dynamo export will fail.
+    return torch.clone(updated_k), torch.clone(updated_v)
+
+  def forward(self, input_pos, k_val, v_val):
+    return self.update_cache_with_hlfb(input_pos, k_val, v_val)
+
+  def update_cache_with_hlfb(self, input_pos, k_val, v_val):
+    builder = StableHLOCompositeBuilder('update_kv_cache')
+    k_cache, v_cache, input_pos, k_val, v_val = builder.mark_inputs(
+        self.k_cache, self.v_cache, input_pos, k_val, v_val)
+    updated_k = k_cache.index_copy_(1, input_pos, k_val)
+    updated_v = v_cache.index_copy_(1, input_pos, v_val)
+    updated_k, updated_v = builder.mark_outputs(updated_k, updated_v)
+    return updated_k, updated_v
 
 
 class XlaMarkPatternTest(unittest.TestCase):
@@ -66,14 +109,19 @@ class XlaMarkPatternTest(unittest.TestCase):
             pos=0,
             id="0",
             is_input=False,
-            attr={"scale": 0.25})
+            attr=xla_marker.serialize_composite_attr({"scale": 0.25}))
         q, k, v = y.split(128, dim=-2)
         q = torch.ops.xla.mark_tensor(q, "sdpa", pos=0, id="1", is_input=True)
         k = torch.ops.xla.mark_tensor(k, "sdpa", pos=1, id="1", is_input=True)
         v = torch.ops.xla.mark_tensor(v, "sdpa", pos=2, id="1", is_input=True)
         attn_out2 = F.scaled_dot_product_attention(q, k, v, scale=4)
         attn_out2 = torch.ops.xla.mark_tensor(
-            attn_out2, "sdpa", pos=0, id="1", is_input=False, attr={"scale": 2})
+            attn_out2,
+            "sdpa",
+            pos=0,
+            id="1",
+            is_input=False,
+            attr=xla_marker.serialize_composite_attr({"scale": 2}))
         return attn_out, attn_out2
 
     input_args = (torch.randn((32, 8, 384, 64)), torch.randn((32, 8, 384, 64)))
@@ -134,7 +182,7 @@ class XlaMarkPatternTest(unittest.TestCase):
         return attn_out, attn_out2
 
     input_args = (torch.randn((32, 8, 384, 64)), torch.randn((32, 8, 384, 64)))
-    tmp_path = tempfile.mkdtemp()
+    tmp_path = tempfile.mkdtemp() if has_tf_package() else None
     stablehlo_gm = self.export_func(M(), input_args, tmp_path)
     stablehlo = stablehlo_gm.get_stablehlo_text()
     self.assertEqual(stablehlo.count("@stablehlo.composite"), 2)
@@ -143,7 +191,8 @@ class XlaMarkPatternTest(unittest.TestCase):
         stablehlo)
     self.assertTrue(
         '{attributes = {scale = 2 : i64}, name = "sdpa"}}' in stablehlo)
-    self.assertTrue(os.path.exists(os.path.join(tmp_path, 'saved_model.pb')))
+    if has_tf_package():
+      self.assertTrue(os.path.exists(os.path.join(tmp_path, 'saved_model.pb')))
 
   def test_inlined_composite_builder_export_sdpa_pattern(self):
 
@@ -164,7 +213,7 @@ class XlaMarkPatternTest(unittest.TestCase):
         return attn_out, attn_out2
 
     input_args = (torch.randn((32, 8, 384, 64)), torch.randn((32, 8, 384, 64)))
-    tmp_path = tempfile.mkdtemp()
+    tmp_path = tempfile.mkdtemp() if has_tf_package() else None
     stablehlo_gm = self.export_func(M(), input_args, tmp_path)
     stablehlo = stablehlo_gm.get_stablehlo_text()
     self.assertEqual(stablehlo.count("@stablehlo.composite"), 2)
@@ -173,7 +222,8 @@ class XlaMarkPatternTest(unittest.TestCase):
         stablehlo)
     self.assertTrue(
         '{attributes = {scale = 2 : i64}, name = "sdpa"}}' in stablehlo)
-    self.assertTrue(os.path.exists(os.path.join(tmp_path, 'saved_model.pb')))
+    if has_tf_package():
+      self.assertTrue(os.path.exists(os.path.join(tmp_path, 'saved_model.pb')))
 
   def test_composite_builder_multiple_outputs(self):
 
@@ -191,6 +241,31 @@ class XlaMarkPatternTest(unittest.TestCase):
     input_args = (torch.randn((5, 5)), torch.randn((5, 5)))
     stablehlo = self.run_func_get_stablehlo(M(), input_args)
     self.assertEqual(stablehlo.count("@stablehlo.composite"), 1)
+
+  def test_composite_builder_mix_attr_value_types(self):
+
+    class M(torch.nn.Module):
+
+      def forward(self, x, y):
+        builder = StableHLOCompositeBuilder(
+            "sample_composite", {
+                "int_attr": 1,
+                "float_attr": 2.3,
+                "bool_attr": True,
+                "str_attr": "helloworld",
+            })
+        x, y = builder.mark_inputs(x, y)
+        z = x + y
+        z = builder.mark_outputs(z)
+        return z
+
+    input_args = (torch.randn((5, 5)), torch.randn((5, 5)))
+    stablehlo = self.run_func_get_stablehlo(M(), input_args)
+    self.assertEqual(stablehlo.count("@stablehlo.composite"), 1)
+    self.assertEqual(stablehlo.count('int_attr = 1 : i64'), 1)
+    self.assertEqual(stablehlo.count('float_attr = 2.300000e+00 : f32'), 1)
+    self.assertEqual(stablehlo.count('bool_attr = true'), 1)
+    self.assertEqual(stablehlo.count('str_attr = "helloworld"'), 1)
 
   def test_multiple_inputs(self):
 
@@ -220,6 +295,7 @@ class XlaMarkPatternTest(unittest.TestCase):
 
     input_args = (torch.ones(5), torch.ones(5))
     stablehlo = self.run_func_get_stablehlo(f, input_args)
+    self.assertEqual(stablehlo.count("@stablehlo.composite"), 1)
 
   @unittest.skip("Nested pattern is not supported now.")
   def test_nested_pattern(self):
@@ -250,6 +326,21 @@ class XlaMarkPatternTest(unittest.TestCase):
 
     input_args = (torch.ones(5),)
     stablehlo = self.run_func_get_stablehlo(f, input_args)
+
+  def test_update_kv_cache(self):
+    model = KVCache(
+        batch_size=1,
+        max_seq_length=100,
+        n_heads=4,
+        head_dim=32,
+    )
+    input_pos = torch.arange(0, 10)
+    k_val = torch.randn(1, 10, 4, 32)
+    v_val = torch.randn(1, 10, 4, 32)
+    exported = torch.export.export(model, (input_pos, k_val, v_val))
+    shlo = stablehlo.exported_program_to_stablehlo(exported)
+    shlo_text = shlo.get_stablehlo_text()
+    self.assertEqual(shlo_text.count("@stablehlo.composite"), 1)
 
 
 if __name__ == '__main__':

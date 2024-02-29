@@ -97,6 +97,7 @@ def t2j_dtype(dtype):
       torch.int32: jnp.int32,
       torch.int16: jnp.int16,
       torch.bool: jnp.bool_,
+      torch.complex64: jnp.complex64,
   }.get(dtype)
 
 
@@ -110,6 +111,7 @@ def j2t_dtype(dtype):
       jnp.int32: torch.int32,
       jnp.int16: torch.int16,
       jnp.bool_: torch.bool,
+      jnp.complex64: torch.complex64,
   }.get(dtype)
 
 

@@ -115,10 +115,9 @@ void CheckSubOperandTypes(at::ScalarType type1, at::ScalarType type2) {
 
 c10::optional<at::ScalarType> PromoteIntegralType(
     at::ScalarType src_dtype, const c10::optional<at::ScalarType>& opt_dtype) {
-  return opt_dtype.has_value()
-             ? opt_dtype.value()
-             : at::isIntegralType(src_dtype, /*includeBool=*/true) ? at::kLong
-                                                                   : opt_dtype;
+  return opt_dtype.has_value() ? opt_dtype.value()
+         : at::isIntegralType(src_dtype, /*includeBool=*/true) ? at::kLong
+                                                               : opt_dtype;
 }
 
 bool IsTypeWithLargerRangeThanLong(torch::ScalarType dtype) {
@@ -2496,6 +2495,22 @@ at::Tensor XLANativeFunctions::randperm(int64_t n,
       n, GetXlaDeviceOrCurrent(device), at::ScalarType::Long));
 }
 
+at::Tensor XLANativeFunctions::reflection_pad1d(const at::Tensor& self,
+                                                at::IntArrayRef padding) {
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  return bridge::AtenFromXlaTensor(tensor_methods::reflection_pad1d(
+      bridge::GetXlaTensor(self), torch::lazy::ToVector<int64_t>(padding)));
+}
+
+at::Tensor XLANativeFunctions::reflection_pad1d_backward(
+    const at::Tensor& grad_output, const at::Tensor& self,
+    at::IntArrayRef padding) {
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  return bridge::AtenFromXlaTensor(tensor_methods::reflection_pad1d_backward(
+      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
+      torch::lazy::ToVector<int64_t>(padding)));
+}
+
 at::Tensor XLANativeFunctions::reflection_pad2d(const at::Tensor& self,
                                                 at::IntArrayRef padding) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
@@ -2508,6 +2523,22 @@ at::Tensor XLANativeFunctions::reflection_pad2d_backward(
     at::IntArrayRef padding) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   return bridge::AtenFromXlaTensor(tensor_methods::reflection_pad2d_backward(
+      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
+      torch::lazy::ToVector<int64_t>(padding)));
+}
+
+at::Tensor XLANativeFunctions::reflection_pad3d(const at::Tensor& self,
+                                                at::IntArrayRef padding) {
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  return bridge::AtenFromXlaTensor(tensor_methods::reflection_pad3d(
+      bridge::GetXlaTensor(self), torch::lazy::ToVector<int64_t>(padding)));
+}
+
+at::Tensor XLANativeFunctions::reflection_pad3d_backward(
+    const at::Tensor& grad_output, const at::Tensor& self,
+    at::IntArrayRef padding) {
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  return bridge::AtenFromXlaTensor(tensor_methods::reflection_pad3d_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
       torch::lazy::ToVector<int64_t>(padding)));
 }
@@ -2554,6 +2585,22 @@ at::Tensor XLANativeFunctions::replication_pad2d_backward(
     at::IntArrayRef padding) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   return bridge::AtenFromXlaTensor(tensor_methods::replication_pad2d_backward(
+      bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
+      XlaHelpers::I64List(padding)));
+}
+
+at::Tensor XLANativeFunctions::replication_pad3d(const at::Tensor& self,
+                                                 at::IntArrayRef padding) {
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  return bridge::AtenFromXlaTensor(tensor_methods::replication_pad3d(
+      bridge::GetXlaTensor(self), XlaHelpers::I64List(padding)));
+}
+
+at::Tensor XLANativeFunctions::replication_pad3d_backward(
+    const at::Tensor& grad_output, const at::Tensor& self,
+    at::IntArrayRef padding) {
+  TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
+  return bridge::AtenFromXlaTensor(tensor_methods::replication_pad3d_backward(
       bridge::GetXlaTensor(grad_output), bridge::GetXlaTensor(self),
       XlaHelpers::I64List(padding)));
 }

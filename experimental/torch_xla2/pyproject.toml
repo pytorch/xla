@@ -7,9 +7,13 @@ build-backend = "hatchling.build"
 version = "0.0.1"
 name = "torch_xla2"
 dependencies = [
-    "torch>=2.1",
+    "absl-py",
+    "flatbuffers",
     "jax>=0.4.24",
-    "jaxlib",
+    "jaxlib>=0.4.24",
+    "pytest",
+    "tensorflow",
+    "torch",
 ]
 
 requires-python = ">=3.10"

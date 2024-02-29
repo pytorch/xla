@@ -89,9 +89,19 @@ class DynamoInferenceBasicTest(unittest.TestCase):
     self.assertNotIn('xla::add', met.counter_names())
     self.assertTrue(torch.allclose(res_cpu, res_xla_dynamo_2.cpu()))
     # verify that dynamo can handle different inputs
-    res_xla_dynamo_3 = fn_simple_dynamo(xla_x + xla_y, xla_y * 3)
+    xla_z = torch.randn(5, 10, device=device)
+    xla_xy = xla_x + xla_y
+    xla_y3 = xla_y * 3
+    res_xla_dynamo_3 = fn_simple_dynamo(xla_xy, xla_y3)
     res_cpu_3 = self.fn_simple(x + y, y * 3)
     self.assertTrue(torch.allclose(res_cpu_3, res_xla_dynamo_3.cpu()))
+    # executing the compiled function should only materalize input XLATensor
+    self.assertIn('XLAData: None',
+                  torch_xla._XLAC._get_xla_tensor_debug_info(xla_z))
+    self.assertNotIn('XLAData: None',
+                     torch_xla._XLAC._get_xla_tensor_debug_info(xla_xy))
+    self.assertNotIn('XLAData: None',
+                     torch_xla._XLAC._get_xla_tensor_debug_info(xla_y3))
 
   def test_fn_without_input(self):
 
@@ -286,7 +296,7 @@ class DynamoCpuFallbackTest(unittest.TestCase):
     xla_dynamo_res = dynamo_fn(t_xla)
     self.assertTrue(torch.allclose(cpu_res, xla_dynamo_res.cpu()))
     self.assertEqual(met.metric_data('CompileTime')[0], 3)
-    self.assertEqual(met.metric_data('ExecuteTime')[0], 9)
+    self.assertEqual(met.metric_data('ExecuteTime')[0], 7)
 
     # Second tracing
     met.clear_all()

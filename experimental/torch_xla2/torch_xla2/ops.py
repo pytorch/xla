@@ -46,6 +46,7 @@ def op(aten_op, is_jax_func=True):
 @op(torch.ops.aten.view_copy)
 @op(torch.ops.aten.view)
 @op(torch.ops.aten._unsafe_view)
+@op(torch.ops.aten.reshape)
 def _aten_unsafe_view(x, shape):
   return jnp.reshape(x, shape)
 
@@ -237,6 +238,11 @@ def _aten_div(x, y, rounding_mode=""):
   if rounding_mode == "trunc":
     res = jnp.trunc(res)
   return res
+
+@op(torch.ops.aten.div_, is_jax_func=False)
+def _aten_div_(x, y, rounding_mode=""):
+  x._elem = _aten_div(x._elem, y._elem, rounding_mode)
+  return x
 
 
 @op(torch.ops.aten.true_divide)
@@ -1684,3 +1690,15 @@ def _aten_to_dtype(a,
 def _aten_var_mean_correction(self, dim=None, correction=None, keepdim=False):
   return (jnp.var(self, axis=dim, ddof=correction,
                   keepdims=keepdim), jnp.mean(self, dim, keepdims=keepdim))
+
+
+@op(torch.ops.aten.scalar_tensor)
+def _aten_scalar_tensor(s,
+                        dtype=None,
+                        layout=None,
+                        device=None,
+                        pin_memory=None):
+  if dtype is not None:
+    dtype = tensor.t2j_dtype(dtype)
+    return jnp.array(s, dtype=dtype)
+  return jnp.array(s)

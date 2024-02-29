@@ -1,17 +1,21 @@
-import numpy as np
-import torch_xla
-import torch_xla.core.xla_model as xm
-from torch_xla.stablehlo import StableHLOExportOptions, exported_program_to_stablehlo
-from torch_xla.tf_saved_model_integration import (
-    make_tf_function, save_torch_module_as_tf_saved_model,
-    save_stablehlo_graph_as_tf)
-from torch.utils import _pytree as pytree
-from torch.export import export, dynamic_dim
-import torch
-
+import os
 import tempfile
 import unittest
+
+import numpy as np
 import tensorflow as tf
+import torch
+import torch_xla
+import torch_xla.core.xla_model as xm
+from torch.export import Dim, export
+from torch.utils import _pytree as pytree
+from torch_xla.stablehlo import (StableHLOExportOptions,
+                                 exported_program_to_stablehlo)
+from torch_xla.tf_saved_model_integration import (
+    make_tf_function, save_stablehlo_graph_as_tf,
+    save_torch_module_as_tf_saved_model)
+from utils import (compare_exported_program_and_saved_model_result,
+                   has_tf_package, wrap_func_as_nn_module)
 
 
 class StableHLOInferenceTest(unittest.TestCase):
@@ -26,17 +30,14 @@ class StableHLOInferenceTest(unittest.TestCase):
     model = MyModule()
     a = torch.randn(3, 10)
     b = torch.randn(3, 10)
-    constraints = [
-        dynamic_dim(a, 0),
-        dynamic_dim(b, 0),
-        dynamic_dim(a, 0) == dynamic_dim(b, 0)
-    ]
+    bs = Dim("bs")
+    dynamic_shapes = ({0: bs}, {0: bs})
 
     exported = torch.export.export(
         model, (
             a,
             b,
-        ), constraints=constraints)
+        ), dynamic_shapes=dynamic_shapes)
     shlo = exported_program_to_stablehlo(exported)
     with tempfile.TemporaryDirectory() as tempdir:
       save_stablehlo_graph_as_tf(
@@ -56,18 +57,51 @@ class StableHLOInferenceTest(unittest.TestCase):
       def forward(self, a, b):
         return torch.sin(b)
 
-    model = M()
-    data = (torch.randn(4, 3, 224, 224), torch.randn(1, 100))
-    output = model(*data)
-
+    m = M()
+    args = (torch.randn(4, 3, 224, 224), torch.randn(1, 100))
+    ep = torch.export.export(m, args)
     with tempfile.TemporaryDirectory() as tempdir:
-      save_torch_module_as_tf_saved_model(model, data, tempdir)
-      loaded_m = tf.saved_model.load(tempdir)
-      res = loaded_m.f(data[0].detach().numpy(), data[1].detach().numpy())[0]
-      output2 = torch.tensor(res.numpy())
-      self.assertTrue(torch.allclose(output, output2, atol=1e-5))
+      save_torch_module_as_tf_saved_model(m, args, tempdir)
+      self.assertTrue(os.path.exists(os.path.join(tempdir, 'saved_model.pb')))
+      compare_exported_program_and_saved_model_result(ep, tempdir, args)
+
+  def test_multiple_outputs(self):
+
+    class M(torch.nn.Module):
+
+      def forward(self, a, b):
+        return a + b, a * b, a, b
+
+    m = M()
+    args = (torch.rand((2, 3)), torch.rand((2, 3)))
+    ep = torch.export.export(m, args)
+    with tempfile.TemporaryDirectory() as tempdir:
+      save_torch_module_as_tf_saved_model(m, args, tempdir)
+      self.assertTrue(os.path.exists(os.path.join(tempdir, 'saved_model.pb')))
+      compare_exported_program_and_saved_model_result(ep, tempdir, args)
+
+  def test_non_tensor_input_int(self):
+    m = wrap_func_as_nn_module(torch.ops.aten._softmax.default)
+    args = (torch.rand((2, 3, 4, 5)), -1, False)
+    ep = torch.export.export(m, args)
+    with tempfile.TemporaryDirectory() as tempdir:
+      save_torch_module_as_tf_saved_model(m, args, tempdir)
+      self.assertTrue(os.path.exists(os.path.join(tempdir, 'saved_model.pb')))
+      compare_exported_program_and_saved_model_result(ep, tempdir, args)
+
+  def test_non_tensor_input_float(self):
+    m = wrap_func_as_nn_module(torch.ops.aten._cdist_forward)
+    args = (torch.rand((2, 3, 4)), torch.rand((2, 3, 4)), 2.4, 1)
+    ep = torch.export.export(m, args)
+    with tempfile.TemporaryDirectory() as tempdir:
+      save_torch_module_as_tf_saved_model(m, args, tempdir)
+      self.assertTrue(os.path.exists(os.path.join(tempdir, 'saved_model.pb')))
+      compare_exported_program_and_saved_model_result(ep, tempdir, args)
 
 
 if __name__ == '__main__':
+  if not has_tf_package():
+    print("skip tf.saved_model tests, tf is not installed.")
+    sys.exit(0)
   test = unittest.main()
   sys.exit(0 if test.result.wasSuccessful() else 1)

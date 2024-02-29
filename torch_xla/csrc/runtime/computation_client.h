@@ -51,17 +51,25 @@ class ComputationClient {
   class Data : public torch::lazy::BackendData {
    public:
     // TODO set Device and torch::lazy_shape correctly
-    Data(std::string device, xla::Shape shape)
+    Data(std::string device, xla::Shape shape,
+         bool should_donate_buffer = false)
         : torch::lazy::BackendData(ParseDeviceString(device),
                                    torch::lazy::Shape()),
           xla_device_(device),
-          xla_shape_(std::move(shape)) {}
+          xla_shape_(std::move(shape)),
+          should_donate_buffer_(should_donate_buffer) {}
 
     virtual ~Data() {}
 
     const std::string& device() const { return xla_device_; }
 
     const xla::Shape& shape() const { return xla_shape_; }
+
+    bool should_donate_buffer() const { return should_donate_buffer_; }
+
+    void set_should_donate_buffer(bool should_donate_buffer) {
+      should_donate_buffer_ = should_donate_buffer;
+    }
 
     virtual std::string ToString() const = 0;
 
@@ -72,6 +80,7 @@ class ComputationClient {
    private:
     std::string xla_device_;
     xla::Shape xla_shape_;
+    bool should_donate_buffer_;
   };
 
   using DataPtr = std::shared_ptr<Data>;

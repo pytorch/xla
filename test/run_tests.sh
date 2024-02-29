@@ -172,9 +172,11 @@ function run_xla_op_tests1 {
   run_test "$CDIR/test_metrics.py"
   run_test "$CDIR/test_zero1.py"
   run_test "$CDIR/dynamo/test_dynamo_integrations_util.py"
+  run_test "$CDIR/dynamo/test_dynamo_aliasing.py"
   run_test "$CDIR/dynamo/test_dynamo.py"
   run_test "$CDIR/dynamo/test_bridge.py"
   run_test "$CDIR/dynamo/test_num_output.py"
+  run_test "$CDIR/dynamo/test_graph_input_matcher.py"
   run_save_tensor_ir "$CDIR/dynamo/test_dynamo_graph_dump.py"
   run_use_bf16 "$CDIR/test_data_type.py"
   run_xla_ir_debug "$CDIR/test_env_var_mapper.py"
@@ -188,6 +190,7 @@ function run_xla_op_tests1 {
 function run_xla_op_tests2 {
   run_downcast_bf16 "$CDIR/test_data_type.py"
   run_test "$CDIR/pjrt/test_dtypes.py"
+  run_test "$CDIR/test_fori_loop_with_while_loop_simple_add_dispatch_in_torch.py"
   run_test "$CDIR/test_autocast.py"  # TODO(yeounoh) this is expensive on GPU
 }
 
@@ -195,9 +198,11 @@ function run_xla_op_tests2 {
 function run_xla_op_tests3 {
   # TODO(qihqi): this test require tensorflow to run. need to setup separate
   #     CI with tf.
+  run_test "$CDIR/stablehlo/test_implicit_broadcasting.py"
+  run_test "$CDIR/stablehlo/test_mark_pattern.py"
+  run_test "$CDIR/stablehlo/test_pt2e_qdq.py"
   run_xla_hlo_debug "$CDIR/stablehlo/test_stablehlo_inference.py"
   run_test "$CDIR/stablehlo/test_stablehlo_compile.py"
-  run_test "$CDIR/stablehlo/test_implicit_broadcasting.py"
   run_test "$CDIR/stablehlo/test_unbounded_dynamism.py"
   run_test "$CDIR/spmd/test_xla_sharding.py"
   run_test "$CDIR/spmd/test_xla_sharding_hlo.py"
@@ -211,6 +216,8 @@ function run_xla_op_tests3 {
   run_test "$CDIR/test_torch_distributed_xla_backend.py"
   run_torchrun "$CDIR/pjrt/test_torchrun.py"
   run_test "$CDIR/test_persistent_cache.py"
+  run_test "$CDIR/test_devices.py"
+  run_test "$CDIR/test_gpu_device_detection.py"
   # NOTE: this line below is testing export and don't care about GPU
   PJRT_DEVICE=CPU CPU_NUM_DEVICES=1 run_coverage "$CDIR/test_core_aten_ops.py"
 }

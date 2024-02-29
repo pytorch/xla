@@ -1,4 +1,5 @@
 import itertools
+import re
 import sys
 import os
 from typing import List, Tuple, Any
@@ -59,11 +60,16 @@ def _make_input_signatures(
           zip(meta.input_locations, meta.input_signature), meta.unused_inputs)
       if loc.type_ == stablehlo.VariableType.INPUT_ARG
   }
+  primitive_type_to_tf_type = {'int': 'int32', 'float': 'float32'}
   for i in range(len(input_pos_to_spec)):
     spec = input_pos_to_spec[i]
     shape = _get_shape_with_dynamic(spec)
     yield tf.TensorSpec(
-        shape=shape, dtype=getattr(tf, spec.dtype), name=f'args_{i}')
+        shape=shape,
+        dtype=getattr(
+            tf, primitive_type_to_tf_type[spec.dtype]
+            if spec.dtype in primitive_type_to_tf_type else spec.dtype),
+        name=f'args_{i}')
 
 
 def _mangle_tf_root_scope_name(name):
@@ -73,10 +79,13 @@ def _mangle_tf_root_scope_name(name):
   # https://github.com/tensorflow/tensorflow/blob/51b601fa6bb7e801c0b6ae73c25580e40a8b5745/tensorflow/python/framework/ops.py#L3301-L3302
   # The state_dict key doesn't have such constrain,
   # the name need to be mangled when a root-scoped TF variable is created.
+  #
+  # FX Graph Node may contain characters other than [A-Za-z0-9_.\\-/], replace
+  # offending characters with '_'.
   if name[0] in "._\\-/":
-    return 'k' + name
-  else:
-    return name
+    name = 'k' + name
+  name = re.sub(r"[^^\w\-/\\]+", "_", name)
+  return name
 
 
 def save_stablehlo_graph_as_tf(

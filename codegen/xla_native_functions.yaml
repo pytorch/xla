@@ -276,19 +276,26 @@ supported:
   - prod.dim_int
   - _propagate_xla_data
   - put_
+  - _pdist_forward
   - qr
   - random_
   - random_.from
   - random_.to
   - randperm
+  - reflection_pad1d
+  - reflection_pad1d_backward
   - reflection_pad2d
   - reflection_pad2d_backward
+  - reflection_pad3d
+  - reflection_pad3d_backward
   - remainder.Scalar
   - remainder.Tensor
   - replication_pad1d
   - replication_pad1d_backward
   - replication_pad2d
   - replication_pad2d_backward
+  - replication_pad3d
+  - replication_pad3d_backward
   - resize_
   - roll
   - rrelu_with_noise
@@ -381,7 +388,6 @@ supported:
   - _trilinear
   - linalg_pinv.atol_rtol_tensor
   - _cdist_forward
-  - _pdist_forward
   - mvlgamma
   - permute
   # The same applies to these ops, but we already have direct lowerings for them

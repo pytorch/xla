@@ -5,6 +5,7 @@ import warnings
 from typing import Dict, List, Optional, TypeVar
 
 import torch
+import torch.cuda
 import torch_xla
 import torch_xla.core.xla_env_vars as xenv
 import torch_xla.core.xla_model as xm
@@ -44,10 +45,16 @@ def _maybe_select_default_device():
   if torch_xla._found_libtpu and tpu.num_available_chips() > 0:
     logging.warning('libtpu.so and TPU device found. Setting PJRT_DEVICE=TPU.')
     os.environ[xenv.PJRT_DEVICE] = 'TPU'
-  # TODO(wcromar): Detect GPU device
   elif xu.getenv_as(xenv.GPU_NUM_DEVICES, int, 0) > 0:
     logging.warning('GPU_NUM_DEVICES is set. Setting PJRT_DEVICE=CUDA')
     os.environ[xenv.PJRT_DEVICE] = 'CUDA'
+  elif torch.cuda.is_available() and torch.cuda.device_count() > 0:
+    num_devices_str = str(torch.cuda.device_count())
+    logging.warning(
+        'Found CUDA without GPU_NUM_DEVICES. Defaulting to PJRT_DEVICE=CUDA with GPU_NUM_DEVICES='
+        + num_devices_str)
+    os.environ[xenv.PJRT_DEVICE] = 'CUDA'
+    os.environ[xenv.GPU_NUM_DEVICES] = num_devices_str
   else:
     logging.warning('Defaulting to PJRT_DEVICE=CPU')
     os.environ[xenv.PJRT_DEVICE] = 'CPU'
@@ -139,7 +146,7 @@ def global_device_count() -> int:
 
 @requires_pjrt
 def world_size() -> int:
-  """Returns the total number of configured logical devices."""
+  """Returns the total number of processes participating in the job."""
   if torch_xla._XLAC._xla_get_replication_devices_count() == 0:
     return 1
   return global_device_count()
@@ -215,7 +222,7 @@ def global_runtime_device_attributes() -> List[Dict[str, object]]:
 @requires_pjrt
 @functools.lru_cache()
 def global_runtime_device_count() -> int:
-  """Returns the total number of runtime devices across all processes/hosts."""
+  """Returns the total number of runtime devices across all processes/hosts, especially useful for SPMD."""
   return len(torch_xla._XLAC._xla_get_all_runtime_devices())
 
 

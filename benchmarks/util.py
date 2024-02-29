@@ -3,7 +3,7 @@ import functools
 import logging
 import numpy as np
 import os
-from os.path import abspath
+from os.path import abspath, exists
 import random
 import subprocess
 import torch
@@ -80,6 +80,15 @@ def move_to_device(item, device):
   return pytree.tree_map_only(torch.Tensor, lambda t: t.to(device), item)
 
 
+def cast_to_dtype(item, dtype):
+  return pytree.tree_map_only(
+      torch.Tensor,
+      lambda t: t.to(dtype)
+      if isinstance(t, torch.Tensor) and t.is_floating_point() else t,
+      item,
+  )
+
+
 def randomize_input(inputs):
   if isinstance(inputs, torch.Tensor):
     if inputs.dtype in (torch.float32, torch.float64):
@@ -143,3 +152,20 @@ def get_gpu_name():
 
 def get_tpu_name():
   return tpu._get_metadata("accelerator-type")
+
+
+def get_torchbench_test_name(test):
+  return {"train": "training", "eval": "inference"}[test]
+
+
+def find_near_file(names):
+  """Find a file near the current directory.
+
+  Looks for `names` in the current directory, up to its two direct parents.
+  """
+  for dir in ("./", "../", "../../", "../../../"):
+    for name in names:
+      path = os.path.join(dir, name)
+      if exists(path):
+        return abspath(path)
+  return None

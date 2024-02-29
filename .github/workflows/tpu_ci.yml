@@ -33,16 +33,4 @@ jobs:
           pip install fsspec
           pip install rich
           cd pytorch/xla
-          python3 -u test/test_operations.py -v
-          python3 -u test/pjrt/test_runtime_tpu.py
-          python3 -u test/pjrt/test_collective_ops_tpu.py
-          python3 -u test/spmd/test_xla_sharding.py
-          python3 -u test/spmd/test_xla_virtual_device.py
-          python3 -u test/spmd/test_xla_distributed_checkpoint.py
-          python3 -u test/spmd/test_train_spmd_linear_model.py
-          python3 -u test/spmd/test_xla_spmd_python_api_interaction.py
-          XLA_EXPERIMENTAL=nonzero:masked_select python3 -u test/ds/test_dynamic_shape_models.py -v
-          XLA_EXPERIMENTAL=nonzero:masked_select python3 -u test/ds/test_dynamic_shapes.py -v
-          python3 -u test/test_autocast.py
-          python3 -u test/dynamo/test_dynamo.py
-          python3 -u test/spmd/test_spmd_debugging.py
+          test/tpu/run_tests.sh

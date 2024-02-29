@@ -190,10 +190,10 @@ def _extract_states_from_exported_program(exported_model):
     for name in exported_model.graph_signature.lifted_tensor_constants:
       param_buffer_values.append(exported_model.tensor_constants[name])
 
-  return param_buffer_values
+  return param_and_buffer_keys, param_buffer_values
 
 
-def exported_program_to_jax(exported_program):
+def exported_program_to_jax(exported_program, export_raw: bool = False):
   """returns a pytree of jax arrays(state), and
 
   a callable(func) that is jax function.
@@ -207,12 +207,11 @@ def exported_program_to_jax(exported_program):
   if DEBUG:
     print(exported_program.graph_module.code)
 
-  states = _extract_states_from_exported_program(exported_program)
+  names, states = _extract_states_from_exported_program(exported_program)
 
   def _extract_args(args, kwargs):
-    flat_args_with_path, received_spec = pytree.tree_flatten_with_path(
+    flat_args, received_spec = pytree.tree_flatten(
         (args, kwargs))  # type: ignore[possibly-undefined]
-    flat_args = [x[1] for x in flat_args_with_path]
     return flat_args
 
   num_mutations = len(exported_program.graph_signature.buffers_to_mutate)
@@ -226,6 +225,9 @@ def exported_program_to_jax(exported_program):
     )
     res = res[num_mutations:]
     return res
+
+  if export_raw:
+    return names, states, func
 
   states = pytree.tree_map_only(torch.Tensor, tensor.t2j, states)
   return states, func

@@ -511,11 +511,10 @@ tsl::StatusOr<xla::XlaOp> MakeXlaBackpropFilterConvOp(
     // In addition, if the padded input size is smaller than the input size,
     // we need to ignore some training elements of the input. We do this by
     // applying negative padding on the right/bottom.
-    const int64_t pad_before = attrs.padding == Padding::EXPLICIT
-                                   ? attrs.explicit_paddings[2 * dim]
-                                   : attrs.padding == Padding::SAME
-                                         ? std::max<int64_t>(pad_total / 2, 0)
-                                         : 0;
+    const int64_t pad_before =
+        attrs.padding == Padding::EXPLICIT ? attrs.explicit_paddings[2 * dim]
+        : attrs.padding == Padding::SAME   ? std::max<int64_t>(pad_total / 2, 0)
+                                           : 0;
     padding[i] = {pad_before, pad_total - pad_before};
   }
   xla::PrecisionConfig precision_config = GetPrecisionConfig();

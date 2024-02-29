@@ -54,15 +54,15 @@ your code before submitting a pull request.
 
 ### C++ Style Guide
 
-`pytorch/xla` uses `clang-format-7` with a customized style config.
+`pytorch/xla` uses `clang-format-11` with a customized style config.
 If your PR touches the C++ source files, please run the following command before submitting a PR.
 
 ```Shell
-# How to install: sudo apt install clang-format-7
+# How to install: sudo apt install clang-format-11
 # If your PR only changes foo.cpp, run the following in xla/ folder
-clang-format-7 -i -style=file /PATH/TO/foo.cpp
+clang-format-11 -i -style=file /PATH/TO/foo.cpp
 # To format all cpp files, run the following in xla/ folder
-find -name '*.cpp' -o -name '*.h' -o -name '*.cc' | xargs clang-format-7 -i -style=file
+find -name '*.cpp' -o -name '*.h' -o -name '*.cc' | xargs clang-format-11 -i -style=file
 ```
 
 ### Python Style Guide
@@ -112,3 +112,4 @@ Then run `test/run_tests.sh` and `test/cpp/run_tests.sh` to verify the setup is 
 ### Sharp Edges
 
 * If local changes aren't visible, uninstall existing pytorch/xla with `pip uninstall torch_xla` and `pip uninstall torch`, then rebuild PyTorch and PyTorch/XLA with `python setup.py develop` or `python setup.py install`.
+* PJRT errors when running on TPU such as `The PJRT plugin has PJRT API version 0.34. The framework PJRT API version is 0.40`. You need to update your `libtpu.so` and ensure it's in your `LD_LIBRARY_PATH` environmental directory. You can download a new `libtpu.so` at [Google Cloud](https://storage.googleapis.com/libtpu-releases/index.html), which are sorted by date. Download the newest one and install it at `pip install libtpu...whl`.

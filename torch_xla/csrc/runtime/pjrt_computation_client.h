@@ -177,7 +177,7 @@ class PjRtComputationClient : public ComputationClient {
       if (HasValue()) {
         ss << reinterpret_cast<std::uintptr_t>(buffer.get()) << "\n";
       } else {
-        ss << "None\n";
+        ss << (buffer == nullptr ? "None" : "Deleted") << "\n";
       }
       return ss.str();
     }
