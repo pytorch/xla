@@ -50,8 +50,6 @@ XlaOpVector Select::Lower(LoweringContext* loctx) const {
       if (input_shape.is_unbounded_dynamic_dimension(i)) {
         limit_ops.push_back(xla::Reshape(xla::GetDimensionSize(input, i), {1}));
         final_shape.set_unbounded_dynamic_dimension(i);
-        XLA_CHECK(dim_ != i)
-            << "Selecting unbounded dimension is not supported.";
       } else {
         int32_t limit = i == dim_ ? end_ : input_shape.dimensions(i);
         limit_ops.push_back(xla::ConstantR1(

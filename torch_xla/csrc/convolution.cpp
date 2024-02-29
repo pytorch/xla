@@ -363,9 +363,6 @@ xla::XlaOp BuildConvolutionOverrideableBias(
       broadcasted_bias, BiasTransposePermutation(broadcast_sizes.size() + 1));
   const xla::Shape& conv_shape = ShapeHelper::ShapeOfXlaOp(conv);
   const xla::Shape& bb_shape = ShapeHelper::ShapeOfXlaOp(bias_broadcast);
-  std::cout << "check conv_shape " << conv_shape << std::endl;
-  std::cout << "check bias shape " << bias_shape << std::endl;
-  std::cout << "check bb_shape " << bb_shape << std::endl;
   auto promoted = XlaHelpers::Promote(conv, bias_broadcast);
   return xla::Add(
       promoted.first, promoted.second,
