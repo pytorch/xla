@@ -893,7 +893,7 @@ at::Tensor XLANativeFunctions::baddbmm(const at::Tensor& self,
 }
 
 at::Tensor XLANativeFunctions::bernoulli(
-    const at::Tensor& self, c10::optional<at::Generator> generator) {
+    const at::Tensor& self, const std::optional<at::Generator>& generator) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   if (generator.has_value() && generator->defined()) {
     return at::native::call_fallback_fn<&xla_cpu_fallback,
@@ -905,7 +905,7 @@ at::Tensor XLANativeFunctions::bernoulli(
 }
 
 at::Tensor XLANativeFunctions::bernoulli(
-    const at::Tensor& self, double p, c10::optional<at::Generator> generator) {
+    const at::Tensor& self, double p, const std::optional<at::Generator>& generator) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   if (generator.has_value() && generator->defined()) {
     return at::native::call_fallback_fn<
@@ -917,7 +917,7 @@ at::Tensor XLANativeFunctions::bernoulli(
 
 at::Tensor& XLANativeFunctions::bernoulli_(
     at::Tensor& self, const at::Tensor& p,
-    c10::optional<at::Generator> generator) {
+    const std::optional<at::Generator>& generator) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   if (generator.has_value() && generator->defined()) {
     return at::native::call_fallback_fn<
@@ -1308,7 +1308,7 @@ at::Tensor XLANativeFunctions::expand_copy_symint(const at::Tensor& self,
 }
 
 at::Tensor& XLANativeFunctions::exponential_(
-    at::Tensor& self, double lambd, c10::optional<at::Generator> generator) {
+    at::Tensor& self, double lambd, const std::optional<at::Generator>& generator) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   if (generator.has_value() && generator->defined()) {
     return at::native::call_fallback_fn<&xla_cpu_fallback,
@@ -1991,7 +1991,7 @@ at::Tensor XLANativeFunctions::mul(const at::Tensor& self,
 
 at::Tensor XLANativeFunctions::multinomial(
     const at::Tensor& self, int64_t num_samples, bool replacement,
-    c10::optional<at::Generator> generator) {
+    const std::optional<at::Generator>& generator) {
   XLA_CHECK(num_samples > 0)
       << "Multinomial number of samples must be greater than 0";
   XLA_CHECK(at::isFloatingType(self.scalar_type()))
@@ -2306,7 +2306,7 @@ at::Tensor XLANativeFunctions::norm(const at::Tensor& self,
 }
 
 at::Tensor XLANativeFunctions::normal(const at::Tensor& mean, double std,
-                                      c10::optional<at::Generator> generator) {
+                                      const std::optional<at::Generator>& generator) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   if (generator.has_value() && generator->defined()) {
     return at::native::call_fallback_fn<
@@ -2318,7 +2318,7 @@ at::Tensor XLANativeFunctions::normal(const at::Tensor& mean, double std,
 }
 
 at::Tensor XLANativeFunctions::normal(double mean, const at::Tensor& std,
-                                      c10::optional<at::Generator> generator) {
+                                      const std::optional<at::Generator>& generator) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   if (generator.has_value() && generator->defined()) {
     return at::native::call_fallback_fn<
@@ -2331,7 +2331,7 @@ at::Tensor XLANativeFunctions::normal(double mean, const at::Tensor& std,
 
 at::Tensor XLANativeFunctions::normal(const at::Tensor& mean,
                                       const at::Tensor& std,
-                                      c10::optional<at::Generator> generator) {
+                                      const std::optional<at::Generator>& generator) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   if (generator.has_value() && generator->defined()) {
     return at::native::call_fallback_fn<
@@ -2344,7 +2344,7 @@ at::Tensor XLANativeFunctions::normal(const at::Tensor& mean,
 
 at::Tensor& XLANativeFunctions::normal_(
     at::Tensor& self, double mean, double std,
-    c10::optional<at::Generator> generator) {
+    const std::optional<at::Generator>& generator) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   if (generator.has_value() && generator->defined()) {
     return at::native::call_fallback_fn<&xla_cpu_fallback,
@@ -2481,7 +2481,7 @@ std::tuple<at::Tensor, at::Tensor> XLANativeFunctions::qr(
 // The value generated should be within (from, to].
 at::Tensor& XLANativeFunctions::random_(
     at::Tensor& self, int64_t from, c10::optional<int64_t> to,
-    c10::optional<at::Generator> generator) {
+    const std::optional<at::Generator>& generator) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   if (generator.has_value() && generator->defined()) {
     return at::native::call_fallback_fn<
@@ -2501,7 +2501,7 @@ at::Tensor& XLANativeFunctions::random_(
 
 // The value generated should be in (0, to].
 at::Tensor& XLANativeFunctions::random_(
-    at::Tensor& self, int64_t to, c10::optional<at::Generator> generator) {
+    at::Tensor& self, int64_t to, const std::optional<at::Generator>& generator) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   if (generator.has_value() && generator->defined()) {
     return at::native::call_fallback_fn<&xla_cpu_fallback,
@@ -2517,7 +2517,7 @@ at::Tensor& XLANativeFunctions::random_(
 
 // The value generated should be in (self_type_min, self_type_max).
 at::Tensor& XLANativeFunctions::random_(
-    at::Tensor& self, c10::optional<at::Generator> generator) {
+    at::Tensor& self, const std::optional<at::Generator>& generator) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   if (generator.has_value() && generator->defined()) {
     return at::native::call_fallback_fn<&xla_cpu_fallback,
@@ -2690,7 +2690,7 @@ at::Tensor XLANativeFunctions::roll(const at::Tensor& self,
 at::Tensor XLANativeFunctions::rrelu_with_noise(
     const at::Tensor& self, const at::Tensor& noise, const at::Scalar& lower,
     const at::Scalar& upper, bool training,
-    c10::optional<at::Generator> generator) {
+    const std::optional<at::Generator>& generator) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   if (generator.has_value() && generator->defined()) {
     // The fallback path for rrelu_with_noise when training=true is wrong
@@ -3229,7 +3229,7 @@ std::vector<at::Tensor> XLANativeFunctions::unbind_copy(const at::Tensor& self,
 
 at::Tensor& XLANativeFunctions::uniform_(
     at::Tensor& self, double from, double to,
-    c10::optional<at::Generator> generator) {
+    const std::optional<at::Generator>& generator) {
   TORCH_LAZY_FN_COUNTER_TIMED_TRACING("xla::");
   if (generator.has_value() && generator->defined()) {
     return at::native::call_fallback_fn<&xla_cpu_fallback,
