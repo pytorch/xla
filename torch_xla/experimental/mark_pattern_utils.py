@@ -3,7 +3,7 @@ from typing import Dict, Union
 
 import torch
 import torch._dynamo as torchdynamo
-import torch_xla.experimental.xla_marker
+from torch_xla.experimental import xla_marker
 
 
 @torchdynamo.assume_constant_result
@@ -33,6 +33,9 @@ class StableHLOCompositeBuilder:
 
   def _mark_tensor(self, *tensors: torch.Tensor, is_input: bool):
     marked_tensors = []
+    serialized_attr = xla_marker.serialize_composite_attr(
+        self.attr) if not is_input else None
+
     for pos, tensor in enumerate(tensors):
       if not isinstance(tensor, torch.Tensor):
         raise ValueError(f"input must be a torch tensor. Got {type(tensor)}.")
@@ -43,7 +46,7 @@ class StableHLOCompositeBuilder:
               pos=pos,
               id=self.id,
               is_input=is_input,
-              attr=self.attr if not is_input else None,
+              attr=serialized_attr,
           ))
 
     if len(marked_tensors) == 1:
