@@ -130,6 +130,20 @@ XLATensorPtr dequantize_tensor(const XLATensorPtr& input,
                                const std::string& dtype, int axis);
 
 //////////////////////////////////////////////////////////////////////////////
+// Dynamic Reshape ops here.
+//////////////////////////////////////////////////////////////////////////////
+
+XLATensorPtr dynamic_expand(const XLATensorPtr& input,
+                            const std::vector<int64_t>& size,
+                            const XLATensorPtr& src_tensor, int src_dim,
+                            int target_dim);
+
+XLATensorPtr dynamic_view(const XLATensorPtr& input,
+                          const std::vector<int64_t>& size,
+                          const XLATensorPtr& src_tensor, int src_dim,
+                          int target_dim, float mul_scaler);
+
+//////////////////////////////////////////////////////////////////////////////
 // ATEN operators follows here, listed in alphabetical order.
 //////////////////////////////////////////////////////////////////////////////
 void __ilshift__(XLATensorPtr& input, const at::Scalar& other);

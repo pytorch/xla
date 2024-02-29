@@ -45,6 +45,8 @@
 #include "torch_xla/csrc/ops/device_data.h"
 #include "torch_xla/csrc/ops/diagonal.h"
 #include "torch_xla/csrc/ops/discrete_uniform.h"
+#include "torch_xla/csrc/ops/dynamic_expand.h"
+#include "torch_xla/csrc/ops/dynamic_view.h"
 #include "torch_xla/csrc/ops/einsum.h"
 #include "torch_xla/csrc/ops/einsum_backward.h"
 #include "torch_xla/csrc/ops/expand.h"
@@ -2274,6 +2276,37 @@ XLATensorPtr dequantize_tensor(const XLATensorPtr& input,
       dtype, axis);
   return input->CreateFrom(torch::lazy::Value(node));
 }
+
+//////////////////////////////////////////////////////////////////////////////
+// Dynamic Reshape ops here.
+//////////////////////////////////////////////////////////////////////////////
+
+XLATensorPtr dynamic_expand(const XLATensorPtr& input,
+                            const std::vector<int64_t>& size,
+                            const XLATensorPtr& src_tensor, int src_dim,
+                            int target_dim) {
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<DynamicExpand>(
+      input->GetIrValue(), size, src_tensor->GetIrValue(), src_dim, target_dim);
+  return input->CreateFrom(torch::lazy::Value(node));
+}
+
+XLATensorPtr dynamic_view(const XLATensorPtr& input,
+                          const std::vector<int64_t>& size,
+                          const XLATensorPtr& src_tensor, int src_dim,
+                          int target_dim, float mul_scaler) {
+  auto input_shape = input->shape();
+  std::vector<int64_t> complete_dimensions =
+      GetCompleteShape(size, input_shape.get().dimensions());
+  xla::Shape shape =
+      XlaHelpers::GetDynamicReshape(input_shape, complete_dimensions);
+
+  torch::lazy::NodePtr node = torch::lazy::MakeNode<DynamicView>(
+      input->GetIrValue(), torch::lazy::ToVector<int64_t>(shape.dimensions()),
+      src_tensor->GetIrValue(), src_dim, target_dim, mul_scaler);
+  return input->CreateFrom(torch::lazy::Value(node));
+}
+
+//////////////////////////////////////////////////////////////////////////////
 
 void random_(XLATensorPtr& input, int64_t from, int64_t to) {
   XLA_CHECK_LE(from, to);
