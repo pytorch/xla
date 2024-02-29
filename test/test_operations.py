@@ -67,20 +67,20 @@ skipOnEagerDebug = unittest.skipIf(_is_on_eager_debug_mode(),
                                    'skip on eager debug mode')
 
 
-def _skipIfFunctionalization(disabled=True, reason=""):
-  verb = "is" if disabled else "is not"
+def _skipIfFunctionalization(value=True, reason=""):
+  verb = "is" if value else "is not"
   reason = f" Reason: {reason}" if reason else ""
   return unittest.skipIf(
-      XLA_DISABLE_FUNCTIONALIZATION,
+      XLA_DISABLE_FUNCTIONALIZATION is value,
       f'Works only when functionalization {verb} disabled.{reason}.')
 
 
 def skipIfFunctionalizationEnabled(reason):
-  return _skipIfFunctionalization(disabled=False, reason=reason)
+  return _skipIfFunctionalization(value=False, reason=reason)
 
 
 def skipIfFunctionalizationDisabled(reason):
-  return _skipIfFunctionalization(disabled=True, reason=reason)
+  return _skipIfFunctionalization(value=True, reason=reason)
 
 
 def _gen_tensor(*args, **kwargs):
@@ -994,7 +994,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
   # TODO - upstream behavior has changed and results in expected DestroyXlaTensor
   # counter as of 11/13/2023. Re-enable after reviewing the change.
-  @skipIfFunctionalizationDisabled("metrics differ")
+  # @skipIfFunctionalizationDisabled("metrics differ")
   def test_set(self):
     met.clear_all()
 
