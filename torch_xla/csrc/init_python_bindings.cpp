@@ -1057,8 +1057,8 @@ void BuildLoweringContextSubmodule(py::module* m) {
       .def("parameter_id_tensor_mapping",
            &PyLoweringContext::GetParameterIdTensorMapping)
       .def("tensor_parameter_id", &PyLoweringContext::GetTensorParameterId)
-      .def("setnamestring", &PyLoweringContext::SetNameString)
-      .def("getnamestring", &PyLoweringContext::GetNameString);
+      .def("set_name_string", &PyLoweringContext::SetNameString)
+      .def("get_name_string", &PyLoweringContext::GetNameString);
 }
 
 void InitXlaModuleBindings(py::module m) {
