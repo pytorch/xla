@@ -143,13 +143,16 @@ xla::Shape MakeTpuShape(absl::Span<const int64_t> dimensions,
   static double max_padding_factor =
       runtime::sys_util::GetEnvDouble("XLA_MAX_PADDING_FACTOR", 1.25);
   xla::Shape shape;
-  if (PaddingFactor(dimensions[dimensions.size() - 1], 128) *
-          PaddingFactor(dimensions[dimensions.size() - 2], 8) <
-      max_padding_factor) {
-    shape = xla::ShapeUtil::MakeShapeWithDescendingLayout(type, dimensions);
-  } else {
-    shape = MakeShapeWithSortedLayout(dimensions, type);
-  }
+  // if (PaddingFactor(dimensions[dimensions.size() - 1], 128) *
+  //         PaddingFactor(dimensions[dimensions.size() - 2], 8) <
+  //     max_padding_factor) {
+  //   std::cerr << "ff7: layout A" << std::endl;
+  //   shape = xla::ShapeUtil::MakeShapeWithDescendingLayout(type, dimensions);
+  // } else {
+  //   std::cerr << "ff7: layout B" << std::endl;
+  //   shape = MakeShapeWithSortedLayout(dimensions, type);
+  // }
+  shape = xla::ShapeUtil::MakeShapeWithDescendingLayout(type, dimensions);
   SetDynamicDimensions(&shape, dynamic_dimensions);
   return shape;
 }
@@ -181,10 +184,12 @@ xla::Shape MakeArrayShapeFromDimensions(
     XlaDeviceType hw_type) {
   auto layout_ptr = LayoutManager::Get()->GetLayout(dimensions);
   if (layout_ptr != nullptr) {
+    std::cerr << "ff7: layout 1" << std::endl;
     return MakeShapeWithLayout(type, dimensions, dynamic_dimensions,
                                *layout_ptr);
   }
   if (dimensions.size() > 1 && hw_type == XlaDeviceType::TPU) {
+    std::cerr << "ff7: layout 2" << std::endl;
     return MakeTpuShape(dimensions, dynamic_dimensions, type);
   }
   return MakeTorchTensorLayout(dimensions, dynamic_dimensions, type);
