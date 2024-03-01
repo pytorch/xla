@@ -2,9 +2,40 @@ import torch
 import torch_xla.experimental.xla_dynamic_reshape_ops
 from torch.fx import Graph, GraphModule
 
-
 aten = torch.ops.aten
 
+def decompose_dynamic_native_layer_norm(gm: GraphModule):
+  graph = gm.graph
+  for n in graph.nodes:
+    if n.op == "call_function" and n.target == aten.select.int:
+      select_src_shape = n.args[0].meta['val'].shape
+      symbolic_dims = [
+          i for i, x in enumerate(select_src_shape) if not isinstance(x, int)
+      ]
+      if len(symbolic_dims)   > 0:
+        with graph.inserting_before(n):
+          select_src_node = n.args[0]
+          select_dim = n.args[1]
+          select_idx = n.args[2]
+          slice_args = (select_src_node, select_dim, select_idx,
+                        (select_idx + 1), 1)
+          slice_node = graph.call_function(aten.slice, slice_args)
+          view_new_shape = []
+          for dim, size in enumerate(select_src_shape):
+            if dim == select_dim:
+              continue
+            if isinstance(size, int):
+              view_new_shape.append(size)
+            else:
+              get_dim_size_args = (select_src_node, dim)
+              get_dim_size_node = graph.call_function(aten.sym_size.int,
+                                                      get_dim_size_args)
+              view_new_shape.append(get_dim_size_node)
+          view_args = (slice_node, view_new_shape)
+          view_node = graph.call_function(aten.view.default, view_args)
+          n.replace_all_uses_with(view_node)
+        graph.erase_node(n)
+  return graph
 
 def decompose_dynamic_shape_select(gm: GraphModule):
   graph = gm.graph

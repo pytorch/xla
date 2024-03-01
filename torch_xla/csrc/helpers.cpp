@@ -844,8 +844,6 @@ xla::XlaOp XlaHelpers::DynamicBroadcastInDim(
       /*opaque=*/StringifyBroadcastDimensions(op_broadcast_dims));
 }
 
-}  // namespace
-
 xla::XlaOp XlaHelpers::DynamicUnboundedBroadcast(
     xla::XlaOp input, xla::XlaOp aux_input,
     const std::vector<int64_t>& aux_input_dimensions) {

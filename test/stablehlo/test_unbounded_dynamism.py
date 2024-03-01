@@ -17,7 +17,8 @@ try:
 except ImportError:
   print("tf is not installed. The tf.saved_model tests will be skipped.")
 from utils import (compare_exported_program_and_saved_model_result,
-                   has_tf_package, wrap_func_as_nn_module)
+                   has_tf_package, load_save_model_and_inference,
+                   wrap_func_as_nn_module)
 
 device = xm.xla_device()
 os.environ['EXPERIMENTAL_XLA_UNBOUNDED_DYNAMISM'] = '1'
@@ -226,19 +227,22 @@ class UnboundedDynamismExportTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(tempdir, 'saved_model.pb')))
         compare_exported_program_and_saved_model_result(ep, tempdir, args)
 
-  @unittest.skip("Unbounded Dynamism not supported yet.")
   def test_select(self):
     args = (torch.rand((10, 197, 768)), 1, 0)
-    constraints = [
-        torch.export.dynamic_dim(args[0], 0),
-    ]
-    ep = self._test_export_dynamism_wrapper(torch.ops.aten.select.int, args,
-                                            constraints)
+    dynamic_shapes = ([{0: Dim("dim")}, None, None],)
+    m = wrap_func_as_nn_module(torch.ops.aten.select.int)
+    ep = export(m, args=args, dynamic_shapes=dynamic_shapes)
     shlo_module = exported_program_to_stablehlo(ep)
     shlo_text = shlo_module.get_stablehlo_text()
     self.assertTrue(
         re.search(r"%arg.: tensor<\?x197x768xf32>.*->.*tensor<\?x768xf32>",
                   shlo_text) is not None)
+    if has_tf_package():
+      with tempfile.TemporaryDirectory() as tempdir:
+        save_torch_module_as_tf_saved_model(
+            m, args, tempdir, dynamic_shapes=dynamic_shapes)
+        self.assertTrue(os.path.exists(os.path.join(tempdir, 'saved_model.pb')))
+        compare_exported_program_and_saved_model_result(ep, tempdir, args)
 
   def test_slice(self):
     args = (torch.rand((10, 3, 224, 224)), 0, 0, 9223372036854775807)
@@ -275,6 +279,98 @@ class UnboundedDynamismExportTest(unittest.TestCase):
             m, args, tempdir, dynamic_shapes=dynamic_shapes)
         self.assertTrue(os.path.exists(os.path.join(tempdir, 'saved_model.pb')))
         compare_exported_program_and_saved_model_result(ep, tempdir, args)
+
+  def test_dynamic_view(self):
+
+    class M(torch.nn.Module):
+
+      def __init__(self):
+        super().__init__()
+        self.conv = torch.nn.Conv2d(3, 5, [16, 16])
+
+      def forward(self, x):
+        x = self.conv(x)
+        return x.view(x.shape[0], x.shape[1], -1)
+
+    m = M().eval()
+    args = (torch.rand((10, 3, 224, 224)),)
+    dynamic_shapes = ({0: Dim("bs")},)
+    ep = export(m, args, dynamic_shapes=dynamic_shapes)
+    out1 = ep(*args)
+    shlo_module = exported_program_to_stablehlo(ep)
+    shlo_text = shlo_module.get_stablehlo_text()
+    print(shlo_text)
+    self.assertTrue(
+        re.search(
+            r"%arg.: tensor<\?x3x224x224xf32>.*->.*tensor<\?x5x43681xf32>",
+            shlo_text) is not None)
+    if has_tf_package():
+      with tempfile.TemporaryDirectory() as tempdir:
+        save_torch_module_as_tf_saved_model(
+            m, args, tempdir, dynamic_shapes=dynamic_shapes)
+        self.assertTrue(os.path.exists(os.path.join(tempdir, 'saved_model.pb')))
+        tf_out = load_save_model_and_inference(tempdir, args)
+        self.assertTrue(
+            np.allclose(out1.detach().numpy(), tf_out[0].numpy(), atol=1e-05))
+
+  def test_dynamic_view_multiplier(self):
+
+    class M(torch.nn.Module):
+
+      def forward(self, x):
+        return x.view(x.shape[0] * x.shape[1], -1)
+
+    m = M().eval()
+    args = (torch.rand((10, 197, 768)),)
+    dynamic_shapes = ({0: Dim("bs")},)
+    ep = export(m, args, dynamic_shapes=dynamic_shapes)
+    out1 = ep(*args)
+    shlo_module = exported_program_to_stablehlo(ep)
+    shlo_text = shlo_module.get_stablehlo_text()
+    print(shlo_text)
+    self.assertTrue(
+        re.search(r"%arg.: tensor<\?x197x768xf32>.*->.*tensor<\?x768xf32>",
+                  shlo_text) is not None)
+    if has_tf_package():
+      with tempfile.TemporaryDirectory() as tempdir:
+        save_torch_module_as_tf_saved_model(
+            m, args, tempdir, dynamic_shapes=dynamic_shapes)
+        self.assertTrue(os.path.exists(os.path.join(tempdir, 'saved_model.pb')))
+        tf_out = load_save_model_and_inference(tempdir, args)
+        self.assertTrue(
+            np.allclose(out1.detach().numpy(), tf_out[0].numpy(), atol=1e-05))
+
+  def test_dynamic_expand(self):
+
+    class M(torch.nn.Module):
+
+      def forward(self, x, image):
+        return x.expand(image.shape[0], -1, -1)
+
+    m = M().eval()
+    args = (torch.rand((1, 1, 768)), torch.rand((10, 3, 224, 224)))
+    dynamic_shapes = (
+        None,
+        {
+            0: Dim("bs")
+        },
+    )
+    ep = export(m, args, dynamic_shapes=dynamic_shapes)
+    out1 = ep(*args)
+    shlo_module = exported_program_to_stablehlo(ep)
+    shlo_text = shlo_module.get_stablehlo_text()
+    print(shlo_text)
+    self.assertTrue(
+        re.search(r"%arg.: tensor<1x1x768xf32>.*->.*tensor<\?x1x768xf32>",
+                  shlo_text) is not None)
+    if has_tf_package():
+      with tempfile.TemporaryDirectory() as tempdir:
+        save_torch_module_as_tf_saved_model(
+            m, args, tempdir, dynamic_shapes=dynamic_shapes)
+        self.assertTrue(os.path.exists(os.path.join(tempdir, 'saved_model.pb')))
+        tf_out = load_save_model_and_inference(tempdir, args)
+        self.assertTrue(
+            np.allclose(out1.detach().numpy(), tf_out[0].numpy(), atol=1e-05))
 
 
 if __name__ == "__main__":
