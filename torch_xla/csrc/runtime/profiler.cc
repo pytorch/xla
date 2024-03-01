@@ -2,7 +2,7 @@
 
 #include "absl/container/flat_hash_map.h"
 #include "torch_xla/csrc/runtime/tf_logging.h"
-#include "tsl/platform/status.h"
+#include "absl/status/status.h"
 #include "tsl/profiler/lib/profiler_factory.h"
 #include "tsl/profiler/rpc/client/capture_profile.h"
 #include "tsl/profiler/rpc/profiler_server.h"
@@ -45,7 +45,7 @@ void ProfilerServer::Start(int port) {
 
 ProfilerServer::~ProfilerServer() {}
 
-tsl::Status Trace(
+absl::Status Trace(
     const char* service_addr, const char* logdir, int duration_ms,
     int num_tracing_attempts,
     const absl::flat_hash_map<std::string, std::variant<int, std::string>>&
