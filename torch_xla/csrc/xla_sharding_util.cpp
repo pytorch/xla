@@ -727,8 +727,8 @@ void ShardingUtil::ReshardParameters(
       outputs.insert(outputs.end(), output.begin(), output.end());
       // TODO(yeounoh) To avoid loading two programs on to device at the same
       // time
-      std::vector<std::string> spmd_device = {"SPMD:0"};
-      runtime::GetComputationClient()->WaitDeviceOps(spmd_device);
+      // std::vector<std::string> spmd_device = {"SPMD:0"};
+      // runtime::GetComputationClient()->WaitDeviceOps(spmd_device);
     }
   }
   XLA_CHECK_EQ(outputs.size(), indices.size());
