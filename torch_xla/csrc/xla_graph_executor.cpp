@@ -1362,74 +1362,21 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
 
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
   xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
-  xla::Shape shape = MakeShapeWithDeviceLayout(
-      program_shape.result(), static_cast<XlaDeviceType>(coll.device.type()));
 
-  if (use_autosharding) {
-    TF_VLOG(5) << "use_auto_spmd_partitioning is set.";
-    TF_CHECK(is_sharded) << "Auto-sharding pass requires SPMD mode.";
-
-    // Apply XLA_AUTO_SPMD_MESH if it is set.
-    // TODO(yeounoh) allow multi mesh exploration.
-    auto mesh_shape_ids = ShardingUtil::GetAutoShardingMesh();
-    std::vector<int64_t> auto_spmd_mesh_shape = std::get<0>(mesh_shape_ids);
-    std::vector<int64_t> auto_spmd_mesh_ids = std::get<1>(mesh_shape_ids);
-    TF_VLOG(5) << "auto_spmd_mesh_shape={"
-               << absl::StrJoin(auto_spmd_mesh_shape, ",") << "}\n"
-               << "auto_spmd_mesh_ids={"
-               << absl::StrJoin(auto_spmd_mesh_ids, ",") << "}";
-
-    std::vector<runtime::ComputationClient::CompileInstance> instances;
-    instances.push_back({/*computation=*/std::move(computation),
-                         /*compilation_device=*/coll.device.toString(),
-                         /*devices=*/
-                         runtime::GetComputationClient()->GetCompilationDevices(
-                             coll.device.toString(), devices),
-                         /*output_shape=*/
-                         &shape,
-                         /*parameter_is_tupled_arguments=*/false,
-                         /*is_sharded=*/is_sharded,
-                         /*allow_spmd_sharding_propagation_to_output=*/true,
-                         /*use_auto_spmd_partitioning=*/true,
-                         /*auto_spmd_mesh_shape=*/auto_spmd_mesh_shape,
-                         /*auto_spmd_mesh_ids=*/auto_spmd_mesh_ids});
-
-    TF_VLOG(3) << "Compiling IR graph hash "
-               << torch::lazy::HashToString(coll.hash)
-               << " with auto-sharding pass...";
-    std::vector<std::shared_ptr<runtime::ComputationClient::Computation>>
-        computations =
-            runtime::GetComputationClient()->Compile(std::move(instances));
-    TF_VLOG(3) << "Compiling IR graph hash "
-               << torch::lazy::HashToString(coll.hash)
-               << " with auto-sharding pass done!";
-    TF_VLOG(5) << "Graph hash " << torch::lazy::HashToString(coll.hash)
-               << " is compiled computation hash "
-               << torch::lazy::HashToString(
-                      torch::lazy::Hash(computations.front()
-                                            ->computation()
-                                            .proto()
-                                            .SerializeAsString()));
-
-    program_shape =
-        ConsumeValue(computations.front()->computation().GetProgramShape());
-    computation = computations.front()->move_computation();
-  }
-
+  // TODO(yeounoh) enable wrapping with auto-sharding.
   bool should_wrap_parameter =
       (program_shape.parameters_size() >= parameter_wrapping_threadshold) &&
-      using_pjrt;
+      using_pjrt && !use_autosharding;
   if (should_wrap_parameter) {
     TF_VLOG(3) << "Wrapping graph with " << program_shape.parameters_size()
                << " parameters. Threadshold = "
                << parameter_wrapping_threadshold;
-    computation.mutable_proto()->set_name(computation.proto().name() + ".wrapped");
     computation = ConsumeValue(XlaHelpers::WrapXlaComputation(
         computation, program_shape.parameters(), input_output_alias_pair,
         buffer_donor_indices));
     program_shape = ConsumeValue(computation.GetProgramShape());
   }
-  shape = MakeShapeWithDeviceLayout(
+  xla::Shape shape = MakeShapeWithDeviceLayout(
       program_shape.result(), static_cast<XlaDeviceType>(coll.device.type()));
 
   std::vector<runtime::ComputationClient::CompileInstance> instances;
@@ -1441,24 +1388,24 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
                        /*output_shape=*/&shape,
                        /*parameter_is_tupled_arguments=*/should_wrap_parameter,
                        /*is_sharded=*/is_sharded});
-  // if (use_autosharding) {
-  //   TF_VLOG(5) << "use_auto_spmd_partitioning is set.";
-  //   TF_CHECK(is_sharded) << "Auto-sharding pass requires SPMD mode.";
-  //   instances.front().use_auto_spmd_partitioning = use_autosharding;
 
-  //   // Apply XLA_AUTO_SPMD_MESH if it is set.
-  //   auto mesh_shape_ids = ShardingUtil::GetAutoShardingMesh();
-  //   std::vector<int64_t> auto_spmd_mesh_shape = std::get<0>(mesh_shape_ids);
-  //   std::vector<int64_t> auto_spmd_mesh_ids = std::get<1>(mesh_shape_ids);
-  //   instances.front().auto_spmd_mesh_shape = auto_spmd_mesh_shape;
-  //   instances.front().auto_spmd_mesh_ids = auto_spmd_mesh_ids;
-  //   TF_VLOG(5) << "auto_spmd_mesh_shape={"
-  //              << absl::StrJoin(auto_spmd_mesh_shape, ",") << "}\n"
-  //              << "auto_spmd_mesh_ids={"
-  //              << absl::StrJoin(auto_spmd_mesh_ids, ",") << "}";
+  if (use_autosharding) {
+    TF_VLOG(5) << "use_auto_spmd_partitioning is set.";
+    TF_CHECK(is_sharded) << "Auto-sharding pass requires SPMD mode.";
+    instances.front().use_auto_spmd_partitioning = use_autosharding;
 
-  //   // TODO(yeounoh) allow multi mesh exploration.
-  // }
+    // Apply XLA_AUTO_SPMD_MESH if it is set.
+    // TODO(yeounoh) allow multi mesh exploration.
+    auto mesh_shape_ids = ShardingUtil::GetAutoShardingMesh();
+    std::vector<int64_t> auto_spmd_mesh_shape = std::get<0>(mesh_shape_ids);
+    std::vector<int64_t> auto_spmd_mesh_ids = std::get<1>(mesh_shape_ids);
+    instances.front().auto_spmd_mesh_shape = auto_spmd_mesh_shape;
+    instances.front().auto_spmd_mesh_ids = auto_spmd_mesh_ids;
+    TF_VLOG(5) << "auto_spmd_mesh_shape={"
+               << absl::StrJoin(auto_spmd_mesh_shape, ",") << "}\n"
+               << "auto_spmd_mesh_ids={"
+               << absl::StrJoin(auto_spmd_mesh_ids, ",") << "}";
+  }
 
   DebugUtil::analyze_graph_execution_python_frame(
       DebugUtil::GraphAnalysisSource::Compilation,
@@ -1484,49 +1431,6 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
 
   // TODO(yeounoh) refactoring.
   if (use_autosharding) {
-    // Re-wrap the resharded parameters to update the shapes of inner
-    // parameters of the tuple.
-    // if (should_wrap_parameter) {
-    //   // - let's first check if the param is wrapped.. yes!
-    //   // - could it be due to unwrapped groupped resharding? No!
-    //   // - if not, why and how wrapping interfere with resharding?
-    //   // let's try re-compiling without auto-sharding, after rewrapping?
-    //   TF_VLOG(5) << "Re-compiling IR graph hash "
-    //              << torch::lazy::HashToString(coll.hash)
-    //              << " for auto-sharding...";
-    //   // TODO(yeounoh) should i re-wrap?
-    //   program_shape =
-    //       ConsumeValue(computations.front()->computation().GetProgramShape());
-    //   XLA_CHECK_EQ(program_shape.parameters_size(), 1)
-    //       << "The parameters should be wrapped as the original computation.";
-    //   shape = MakeShapeWithDeviceLayout(
-    //       program_shape.result(),
-    //       static_cast<XlaDeviceType>(coll.device.type()));
-    //   computation =
-    //       xla::XlaComputation(computations.front()->computation().proto());
-    //   instances = std::vector<runtime::ComputationClient::CompileInstance>();
-    //   instances.push_back(
-    //       {/*computation=*/std::move(computation),
-    //        /*compilation_device=*/coll.device.toString(),
-    //        /*devices=*/
-    //        runtime::GetComputationClient()->GetCompilationDevices(
-    //            coll.device.toString(), devices),
-    //        /*output_shape=*/&shape,
-    //        /*parameter_is_tupled_arguments=*/true,
-    //        /*is_sharded=*/true,
-    //        /*allow_spmd_sharding_propagation_to_output=*/true,
-    //        /*use_auto_spmd_partitioning=*/false});
-    //   computations =
-    //       runtime::GetComputationClient()->Compile(std::move(instances));
-    //   TF_VLOG(5) << "Graph hash " << torch::lazy::HashToString(coll.hash)
-    //              << " is compiled computation hash "
-    //              << torch::lazy::HashToString(
-    //                     torch::lazy::Hash(computations.front()
-    //                                           ->computation()
-    //                                           .proto()
-    //                                           .SerializeAsString()));
-    // }
-
     const xla::HloModuleProto& computation_proto =
         computations.front()->computation().proto();
     ShardingUtil::ReshardParameters(computation_proto, &tensors,
