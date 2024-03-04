@@ -637,7 +637,7 @@ class DynamoOperationsTests(test_utils.XlaTestCase):
   def test_new_with_sizes(self):
 
     def foo(x):
-      return x.new(*x.sizes()) + x
+      return x.new(*x.size()) + x
 
     optfoo = torch.compile(backend="openxla")(foo)
 
