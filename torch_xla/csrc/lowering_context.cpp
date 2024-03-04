@@ -154,8 +154,8 @@ void LoweringContext::SetResult(size_t index, xla::XlaOp op) {
 
 xla::StatusOr<xla::XlaComputation> LoweringContext::BuildXla() {
   xla::StatusOr<xla::XlaComputation> xla;
-  
-  // check while_loop and skip Tuple if yes
+
+  // check whether build for cond/body computation or not, and skip Tuple step if yes
   if (!root_tuple_.empty() & (root_tuple_.size() == 1) &
    (get_name_string() == "condctx") or (get_name_string() == "bodyctx")) {
       xla = builder()->Build(root_tuple_.at(0));
