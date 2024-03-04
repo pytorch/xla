@@ -478,11 +478,24 @@ xla::XlaOp BuildRsub(xla::XlaOp input, xla::XlaOp other, xla::XlaOp alpha) {
   std::tie(other, alpha) = XlaHelpers::Promote(other, alpha);
 
   // Perform the function = ohter - alpha* input
-  xla::XlaOp sub_result =
+  xla::XlaOp mul_result =
       xla::Mul(input, alpha, XlaHelpers::getBroadcastDimensions(input, alpha));
-  xla::XlaOp mul_result = xla::Sub(
-      other, sub_result, XlaHelpers::getBroadcastDimensions(other, sub_result));
-  return mul_result;
+  xla::XlaOp sub_result = xla::Sub(
+      other, mul_result, XlaHelpers::getBroadcastDimensions(other, mul_result));
+  return sub_result;
+}
+
+xla::XlaOp BuildSub(xla::XlaOp input, xla::XlaOp other, xla::XlaOp alpha) {
+  // Three-way shape and value promotion
+  std::tie(input, other) = XlaHelpers::Promote(input, other);
+  std::tie(other, alpha) = XlaHelpers::Promote(other, alpha);
+
+  // Perform the function = ohter - alpha* input
+  xla::XlaOp mul_result =
+      xla::Mul(other, alpha, XlaHelpers::getBroadcastDimensions(other, alpha));
+  xla::XlaOp sub_result = xla::Sub(
+      input, mul_result, XlaHelpers::getBroadcastDimensions(input, mul_result));
+  return sub_result;
 }
 
 }  // namespace torch_xla

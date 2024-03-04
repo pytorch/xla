@@ -121,6 +121,10 @@ xla::XlaOp BuildLerp(xla::XlaOp start, xla::XlaOp end, xla::XlaOp weight);
 // out = other − alpha * input
 xla::XlaOp BuildRsub(xla::XlaOp input, xla::XlaOp other, xla::XlaOp alpha);
 
+// Compuate the sub function. Subtracts other, scaled by alpha, from input.
+// out = input − alpha * other
+xla::XlaOp BuildSub(xla::XlaOp input, xla::XlaOp other, xla::XlaOp alpha);
+
 }  // namespace torch_xla
 
 #endif  // XLA_TORCH_XLA_CSRC_ELEMENTWISE_H_
