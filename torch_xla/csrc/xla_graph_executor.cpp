@@ -690,8 +690,8 @@ XLAGraphExecutor::ExecuteComputationWithBarrier(
   MaybeDumpGraph("dynamo", hash);
   auto cachedComputation =
       XLAGraphExecutor::Get()->GetComputationCache()->Get(hash);
-  TF_VLOG(5) << "Cached computation (hash: " << torch::lazy::HashToString(hash)
-             << ") is_sharded=" << cachedComputation->is_sharded << std::endl;
+  std::cout << "Cached computation (hash: " << torch::lazy::HashToString(hash)
+            << ") is_sharded=" << cachedComputation->is_sharded << std::endl;
 
   // TODO implement a fallback mechanism, or make sure those entries
   // never get kicked out
@@ -1156,15 +1156,21 @@ XLAGraphExecutor::LookupCachedCompile(const torch::lazy::hash_t& hash) {
       GetComputationCache()->Get(hash);
   if (cached_computation == nullptr) {
     TORCH_LAZY_COUNTER("UncachedCompile", 1);
+    std::cout << "Uncached compile increment with hash: "
+              << torch::lazy::HashToString(hash) << "\n";
     return nullptr;
   }
-  TF_VLOG(5) << "Graph hash " << torch::lazy::HashToString(hash)
-             << " is computation hash "
-             << torch::lazy::HashToString(torch::lazy::Hash(
-                    cached_computation->computation->computation()
-                        .proto()
-                        .SerializeAsString()));
+
+  printf("Graph hash checkingup\n");
+  std::cout << "Graph hash " << torch::lazy::HashToString(hash)
+            << " is computation hash "
+            << torch::lazy::HashToString(torch::lazy::Hash(
+                   cached_computation->computation->computation()
+                       .proto()
+                       .SerializeAsString()))
+            << "\n";
   TORCH_LAZY_COUNTER("CachedCompile", 1);
+  printf("Found a cached compile\n");
   return cached_computation;
 }
 
@@ -1226,6 +1232,8 @@ XLAGraphExecutor::BuildInputOutputAliases(
         size_t output_index = it->second;
         xla::XlaOp root = lowering_ctx->GetResult(output_index);
         const xla::Shape& root_shape = ShapeHelper::ShapeOfXlaOp(root);
+        printf("Parameter data %d is shape %s\n", i,
+               root_shape.ToString().c_str());
         auto parameter_data_shape =
             std::dynamic_pointer_cast<runtime::ComputationClient::Data>(
                 parameters_data[i])
@@ -1289,6 +1297,7 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
             {{"graph_hash", torch::lazy::HashToString(coll.hash)}});
       },
       tsl::profiler::TraceMeLevel::kInfo);
+
   static const bool enable_aliasing =
       runtime::sys_util::GetEnvBool("XLA_ENABLE_PARAM_ALIASING", true);
   static const size_t parameter_wrapping_threadshold =
@@ -1299,8 +1308,12 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
                                po_data->post_order,
                                std::move(po_data->emission_map));
   for (auto ir_value : ir_values) {
+    std::cout << "Node is " << ir_value.node.get() << "\n";
     xla::XlaOp root = lowering_ctx.GetOutputOp(
         torch::lazy::Output(ir_value.node.get(), ir_value.index));
+    std::cout << "Node is " << ir_value.node.get() << "\n";
+    printf("Node shape is: %s\n",
+           lowering_ctx.builder()->GetShape(root)->ToString().c_str());
     lowering_ctx.AddResult(root);
   }
   // Always execute sharded when running in SPMD mode
@@ -1350,6 +1363,15 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
 
   xla::XlaComputation computation = ConsumeValue(lowering_ctx.BuildXla());
   xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
+
+  /*
+    auto module_config = xla::HloModule::CreateModuleConfigFromProto(
+        computation.proto(), xla::DebugOptions());
+    auto hlo_module = xla::HloModule::CreateFromProto(computation.proto(),
+                                                      module_config.value());
+
+    printf("HLO module is: %s\n", hlo_module.value()->ToString().c_str());
+    */
 
   bool should_wrap_parameter =
       (program_shape.parameters_size() >= parameter_wrapping_threadshold) &&
@@ -1416,6 +1438,8 @@ XLAGraphExecutor::SyncTensorsGraphInternal(
   tsl::profiler::TraceMe activity("SyncTensorsGraphInternal",
                                   tsl::profiler::TraceMeLevel::kInfo);
   SyncTensorCollection coll = CollectSyncTensors(*tensors, config);
+  printf("SyncTensorsGraph collision hash is %s\n",
+         torch::lazy::HashToString(coll.hash).c_str());
   if (coll.indices.empty()) {
     // Enure previous execution is complete before exiting this
     // function. Caller of `SyncTensorsGraphInternal` might want to call
@@ -1460,8 +1484,11 @@ XLAGraphExecutor::SyncTensorsGraphInternal(
                        warm_up_cache_only);
   if (cache_res.first) {
     // we have a cache hit, execution has been scheduled by TryRunCachedSync.
+    printf("Have a cache hit\n");
     return cache_res.second;
   }
+
+  printf("No cache hit, compiling\n");
   CompilationResult compile_result =
       Compile(*tensors, devices, coll, &po_data, ir_values);
   TORCH_LAZY_VALUE_METRIC("TensorsGraphSize", compile_result.emitted_nodes);

@@ -24,6 +24,7 @@ import torch_xla.core.xla_model as xm
 import torch_xla.debug.metrics as metrics
 import torch_xla.runtime as xr
 import torch_xla.utils.utils as xu
+import torch_xla.core.dynamo_bucketing as db
 
 dynamo_debug = int(os.environ.get('XLA_DYNAMO_DEBUG', '0')) == 1
 ptxla_debug = int(os.environ.get('PT_XLA_DEBUG', '0')) == 1
@@ -228,6 +229,7 @@ def is_xla_tensor(tensor: torch.Tensor) -> bool:
 def extract_graph_helper(xla_model: torch.fx.GraphModule):
   # FX Graph inputs passed from Dynamo. xla_args are XLA Tensors.
   xla_args = xla_model.xla_args
+  arg_sizes = xla_model.arg_sizes
   xla_args_tensor_ids = set(
       pytree.tree_map_only(
           torch.Tensor,
@@ -356,7 +358,7 @@ def extract_graph_helper(xla_model: torch.fx.GraphModule):
   torch_xla._XLAC._clear_pending_irs(str(xm.xla_device()))
   return (xla_args_sharding_spec, args_and_out, graph_hash,
           arg_index_to_need_update_index, none_remover, graph_input_matcher,
-          dumb_return_handler, xla_args_need_update)
+          dumb_return_handler, xla_args_need_update, arg_sizes)
 
 
 def extract_internal(xla_model: torch.fx.GraphModule):
@@ -371,11 +373,11 @@ def extract_internal(xla_model: torch.fx.GraphModule):
   xm.mark_step()
   (xla_args_sharding_spec, args_and_out, graph_hash,
    arg_index_to_need_update_index, none_remover, graph_input_matcher,
-   dumb_return_handler, xla_args_need_update) = extract_graph_helper(xla_model)
+   dumb_return_handler, xla_args_need_update, arg_sizes) = extract_graph_helper(xla_model)
   skip_checking_input_sharding_threashold = xu.getenv_as(
       'XLA_DYNAMO_INPUT_SHARDING_CHECK_THRESHOLD', int, 5)
 
-  def optimized_mod(*args):
+  def optimized_mod(*input_args):
     nonlocal xla_model
     nonlocal xla_args_sharding_spec
     nonlocal args_and_out
@@ -386,6 +388,19 @@ def extract_internal(xla_model: torch.fx.GraphModule):
     nonlocal dumb_return_handler
     nonlocal xla_args_need_update
     nonlocal skip_checking_input_sharding_threashold
+    nonlocal arg_sizes
+    print("\n\n\n\nOptimize mod padding now with args\n\n\n")
+
+    args = []
+    if (len(arg_sizes)):
+      for i in range(0, len(input_args)):
+        input_tensor = input_args[i]
+        padded_tensor_size = arg_sizes[i]
+        padded_tensor = db.maybe_pad_tensor(input_tensor, padded_tensor_size).to(xm.xla_device())
+        args.append(padded_tensor)
+
+    args = tuple(args)
+    print("\n\n\nPadded the tensors\n\n\n")
 
     # mark_step needs to be blocking since we want to access args's XLADatas
     # and they can't be placeholder.
@@ -498,13 +513,15 @@ class UnsupportedNodesCollector(torch.fx.Interpreter):
 
 class InputCollector(torch.fx.Interpreter):
 
-  def __init__(self, module):
+  def __init__(self, module, arg_sizes):
     super().__init__(module)
+    self._arg_sizes = arg_sizes
 
   def call_module(self, target, args, kwargs):
     if "fused_" in target:
       submod = self.fetch_attr(target)
       submod.xla_args = args
+      submod.arg_sizes = self._arg_sizes
     return super().call_module(target, args, kwargs)
 
 
@@ -531,7 +548,9 @@ class XLAConstructorMoverPass(ConstructorMoverPass):
     return (device is not None and device.type == self.target)
 
 
-def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
+def extract_compiled_graph(xla_model: torch.fx.GraphModule, input_args):
+  padded_sizes, xla_args = db.maybe_pad_xla_args(input_args)
+  all_args = padded_sizes + xla_args
   # Synchronize xla_args, so that each FunctionalTensorWrapper argument updates its
   # value reference before actually computing it.
   for a in xla_args:
@@ -556,7 +575,7 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
   all_xla_args = list(xla_args) + self_args
 
   for xla_arg in xla_args:
-    if xla_arg.device.type != 'xla':
+    if isinstance(xla_arg, torch.Tensor) and xla_arg.device.type != 'xla':
       warnings.warn(
           "Found tensor with shape " + str(xla_arg.size()) + " on " +
           str(xla_arg.device) +
@@ -569,7 +588,7 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
 
   # execute model once to collect fallback ops
   collector = UnsupportedNodesCollector(xla_model)
-  collector.run(*xla_args)
+  collector.run(*all_args)
   unsupported_nodes = collector.get_unsupported_nodes()
   if (ptxla_debug or dynamo_debug) and len(unsupported_nodes) > 0:
     print('Dynamo fallback ops are' + str(unsupported_nodes) +
@@ -609,7 +628,7 @@ def extract_compiled_graph(xla_model: torch.fx.GraphModule, xla_args):
 
   # fuse partitions and exectue to collect inputs
   partitioned_graph = partitioner.fuse_partitions(partitions)
-  InputCollector(partitioned_graph).run(*xla_args)
+  InputCollector(partitioned_graph, padded_sizes).run(*all_args)
 
   # compile each submodule and replace it with a call
   for node in partitioned_graph.graph.nodes:
