@@ -1193,7 +1193,7 @@ XLATensorPtr div(const XLATensorPtr& input, const at::Scalar& other) {
   torch::lazy::Value input_value = GetFloatingIrValue(input, scalar_type);
   torch::lazy::Value other_value = XLAGraphExecutor::Get()->GetIrValueForScalar(
       other, GetXlaShape(input_value).element_type(), input->GetDevice());
-  return input->CreateFrom(input_value / other_value, scalar_type);
+  return input->CreateFrom(Div(input_value, other_value), scalar_type);
 }
 
 XLATensorPtr einsum(const std::string& equation,
