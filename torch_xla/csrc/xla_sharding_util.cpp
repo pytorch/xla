@@ -664,18 +664,6 @@ void ShardingUtil::ReshardParameters(
   }
   XLA_CHECK_EQ(input_shardings.size(), parameters->size());
 
-  std::vector<xla::OpSharding> output_shardings;
-  if (module.has_spmd_output_sharding()) {
-    if (module.spmd_output_sharding().tuple_shardings().size() > 0) {
-      auto tuple_shardings = module.spmd_output_sharding().tuple_shardings();
-      output_shardings = std::vector<xla::OpSharding>(tuple_shardings.begin(),
-                                                      tuple_shardings.end());
-    } else {
-      output_shardings =
-          std::vector<xla::OpSharding>{module.spmd_output_sharding()};
-    }
-  }
-
   // Reshard parameters as needed, as with a new sharding spec.
   auto data = UnwrapXlaData(*parameters);
   std::vector<size_t> indices;
@@ -685,9 +673,7 @@ void ShardingUtil::ReshardParameters(
     // Skip if sharding type is UNKNOWN or equal to the existing.
     XLA_CHECK(input_shardings[i].type() != xla::OpSharding::UNKNOWN)
         << "UNKNOWN OpSharding generated from auto-sharding pass!";
-    if (!(data[i]->GetSharding().type() == xla::OpSharding::UNKNOWN &&
-          input_shardings[i].type() == xla::OpSharding::REPLICATED) &&
-        !xla::protobuf_util::ProtobufEquals(data[i]->GetSharding(),
+    if (!xla::protobuf_util::ProtobufEquals(data[i]->GetSharding(),
                                             input_shardings[i])) {
       indices.push_back(i);
       filtered_data.push_back(data[i]);
@@ -714,9 +700,11 @@ void ShardingUtil::ReshardParameters(
 
   std::vector<torch::lazy::BackendDataPtr> outputs;
   outputs.reserve(indices.size());
-  // This is computationally more efficient but increases memory consumption.
+  // Groupping is computationally more efficient but increases memory consumption.
+  // It is groupped by default, but can be overriden for more-granular control over
+  // the peak memory consumption.
   bool group_sharding =
-      runtime::sys_util::GetEnvBool("XLA_AUTO_USE_GROUP_SHARDING", false);
+      runtime::sys_util::GetEnvBool("XLA_AUTO_USE_GROUP_SHARDING", true);
   if (group_sharding) {
     outputs = WrapXlaData(runtime::GetComputationClient()->ReshardData(
         filtered_data, filtered_shardings));
@@ -725,10 +713,6 @@ void ShardingUtil::ReshardParameters(
       auto output = WrapXlaData(runtime::GetComputationClient()->ReshardData(
           {filtered_data[i]}, {filtered_shardings[i]}));
       outputs.insert(outputs.end(), output.begin(), output.end());
-      // TODO(yeounoh) To avoid loading two programs on to device at the same
-      // time
-      // std::vector<std::string> spmd_device = {"SPMD:0"};
-      // runtime::GetComputationClient()->WaitDeviceOps(spmd_device);
     }
   }
   XLA_CHECK_EQ(outputs.size(), indices.size());
@@ -740,19 +724,9 @@ void ShardingUtil::ReshardParameters(
         << "xla_node_map does not contain " << filtered_data[i]->ToString()
         << ", target sharding: " << filtered_shardings[i].DebugString();
     auto device_data_node = DeviceData::Cast(it_node->second);
-    // device_data_node->Assign((*parameters)[indices[i]]);  // TODO(yeounoh)
-    // check
+    // TODO(yeounoh) this breaks tracing.
+    // device_data_node->Assign((*parameters)[indices[i]]);
     device_data_node->SetSharding(filtered_shardings[i], 0);
-
-    // TODO(yeounoh) attach custom sharding to the node, or track tensors and
-    // set sharding through them.
-    // - why would some c_proj tensor data nodes are not sharded, while there
-    // are sharding annotations in the program already? Why hasn't the output
-    // propagated to the input for them in the subsequent steps?
-
-    TF_VLOG(6) << "\n- Resharding parameter:\n"
-               << filtered_data[i]->ToString() << "- Resharded parameter:\n"
-               << UnwrapXlaData({(*parameters)[indices[i]]})[0]->ToString();
   }
 }
 

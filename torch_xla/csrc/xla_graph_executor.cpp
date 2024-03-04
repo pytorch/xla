@@ -1429,7 +1429,6 @@ XLAGraphExecutor::CompilationResult XLAGraphExecutor::Compile(
       << torch::lazy::HashToString(torch::lazy::Hash(
              computations.front()->computation().proto().SerializeAsString()));
 
-  // TODO(yeounoh) refactoring.
   if (use_autosharding) {
     const xla::HloModuleProto& computation_proto =
         computations.front()->computation().proto();
