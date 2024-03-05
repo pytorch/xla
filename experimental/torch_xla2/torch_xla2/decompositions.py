@@ -25,9 +25,12 @@ __all__: List[str] = []
 
 aten = torch._ops.ops.aten
 
-@register_decomposition(aten.reflection_pad1d)
-@register_decomposition(aten.reflection_pad2d)
-@register_decomposition(aten.reflection_pad3d)
+def _try_register(op, impl):
+    try:
+        register_decomposition(op)(impl)
+    except: 
+        pass
+
 @out_wrapper()
 def _reflection_pad(a: Tensor, padding: Tuple[int, ...]) -> Tensor:
     def idx(left, middle, right):
@@ -40,9 +43,10 @@ def _reflection_pad(a: Tensor, padding: Tuple[int, ...]) -> Tensor:
         idx,
     )
 
+_try_register(aten.reflection_pad1d, _reflection_pad)
+_try_register(aten.reflection_pad2d, _reflection_pad)
+_try_register(aten.reflection_pad3d, _reflection_pad)
 
-@register_decomposition(aten.replication_pad1d)
-@register_decomposition(aten.replication_pad3d)
 @out_wrapper()
 def _replication_pad(a: Tensor, padding: Tuple[int, ...]) -> Tensor:
     def idx(left, middle, right):
@@ -84,3 +88,6 @@ def _reflection_or_replication_pad(
     memory_format = utils.suggest_memory_format(result)
     result = result.contiguous(memory_format=memory_format)
     return result
+
+_try_register(aten.replication_pad1d, _replication_pad)
+_try_register(aten.replication_pad3d, _replication_pad)

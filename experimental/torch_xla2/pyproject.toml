@@ -9,12 +9,22 @@ name = "torch_xla2"
 dependencies = [
     "absl-py",
     "flatbuffers",
-    "jax>=0.4.24",
-    "jaxlib>=0.4.24",
     "pytest",
     "tensorflow",
-    "torch",
+
+    # Note: Exclude these because otherwise on pip install .
+    # pip will install libs from pypi which is the GPU version
+    # of these libs.
+    # We most likely need CPU version of torch and TPU version of 
+    # jax. So it's best for users to install them by hand
+    # See more at README.md
+    # "jax>=0.4.24",
+    # "jaxlib>=0.4.24",
+    # "torch",
 ]
+
+[tool.pytest.ini_options]
+addopts="-n auto"
 
 requires-python = ">=3.10"
 license = {file = "LICENSE"}
