@@ -473,11 +473,7 @@ xla::XlaOp BuildLerp(xla::XlaOp start, xla::XlaOp end, xla::XlaOp weight) {
 }
 
 xla::XlaOp BuildRsub(xla::XlaOp input, xla::XlaOp other, xla::XlaOp alpha) {
-  // Three-way shape and value promotion
-  std::tie(input, other) = XlaHelpers::Promote(input, other);
-  std::tie(other, alpha) = XlaHelpers::Promote(other, alpha);
-
-  // Perform the function = ohter - alpha* input
+  // Perform the function: ohter - alpha* input
   xla::XlaOp mul_result =
       xla::Mul(input, alpha, XlaHelpers::getBroadcastDimensions(input, alpha));
   xla::XlaOp sub_result = xla::Sub(
@@ -486,11 +482,7 @@ xla::XlaOp BuildRsub(xla::XlaOp input, xla::XlaOp other, xla::XlaOp alpha) {
 }
 
 xla::XlaOp BuildSub(xla::XlaOp input, xla::XlaOp other, xla::XlaOp alpha) {
-  // Three-way shape and value promotion
-  std::tie(input, other) = XlaHelpers::Promote(input, other);
-  std::tie(other, alpha) = XlaHelpers::Promote(other, alpha);
-
-  // Perform the function = ohter - alpha* input
+  // Perform the function: input - alpha* other
   xla::XlaOp mul_result =
       xla::Mul(other, alpha, XlaHelpers::getBroadcastDimensions(other, alpha));
   xla::XlaOp sub_result = xla::Sub(
