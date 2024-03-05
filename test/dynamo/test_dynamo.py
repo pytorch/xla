@@ -585,6 +585,21 @@ class DynamoOperationsTests(test_utils.XlaTestCase):
 
     self.assertEqual(expected, actual.cpu())
 
+  def test_new_with_sizes(self):
+
+    def foo(x):
+      return x.new(*x.size()) + x
+
+    optfoo = torch.compile(backend="openxla")(foo)
+
+    t = torch.arange(10)
+    Xt = t.to(xm.xla_device())
+
+    expected = foo(t)
+    actual = optfoo(Xt)
+
+    self.assertEqual(expected, actual.cpu())
+
 
 if __name__ == '__main__':
   test = unittest.main()
