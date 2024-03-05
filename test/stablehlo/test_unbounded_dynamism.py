@@ -26,11 +26,6 @@ os.environ['EXPERIMENTAL_XLA_UNBOUNDED_DYNAMISM'] = '1'
 
 class UnboundedDynamismExportTest(unittest.TestCase):
 
-  def _test_export_dynamism_wrapper(self, f, args, dynamic_shapes):
-    m = wrap_func_as_nn_module(f)
-    ep = export(m, args=args, constraints=constraints)
-    return ep
-
   def test_add(self):
     args = (torch.rand((10, 197, 768)), torch.rand((10, 197, 768)))
     dynamic_shapes = ([{0: Dim("dim")}, {0: Dim("dim")}],)
@@ -174,19 +169,23 @@ class UnboundedDynamismExportTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(tempdir, 'saved_model.pb')))
         compare_exported_program_and_saved_model_result(ep, tempdir, args)
 
-  @unittest.skip("xla::Erf doesn't support unbounded dynamic input.")
   def test_gelu(self):
     args = (torch.rand((3, 5)),)
-    constraints = [
-        torch.export.dynamic_dim(args[0], 0),
-    ]
-    ep = self._test_export_dynamism_wrapper(torch.ops.aten.gelu, args,
-                                            constraints)
+    dynamic_shapes = ([{0: Dim("dim")}],)
+    m = wrap_func_as_nn_module(torch.ops.aten.gelu)
+    ep = export(m, args=args, dynamic_shapes=dynamic_shapes)
     shlo_module = exported_program_to_stablehlo(ep)
-    # shlo_text = shlo_module.get_stablehlo_text()
-    # self.assertTrue(
-    #     "(%arg0: tensor<?x2xi64>, %arg1: tensor<?x2xi64>) -> tensor<?x2xi64>" in
-    #     shlo_text)
+    shlo_text = shlo_module.get_stablehlo_text()
+    print(shlo_text)
+    self.assertTrue(
+        re.search(r'tensor<\?x5xf32>.*->.*tensor<\?x5xf32>',
+                  shlo_text) is not None)
+    if has_tf_package():
+      with tempfile.TemporaryDirectory() as tempdir:
+        save_torch_module_as_tf_saved_model(
+            m, args, tempdir, dynamic_shapes=dynamic_shapes)
+        self.assertTrue(os.path.exists(os.path.join(tempdir, 'saved_model.pb')))
+        compare_exported_program_and_saved_model_result(ep, tempdir, args)
 
   def test_mean(self):
     class M(torch.nn.Module):
