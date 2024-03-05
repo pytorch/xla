@@ -41,7 +41,7 @@ def load_save_model_and_inference(path: str, args: Tuple[Any, ...]) -> Dict:
 
 def compare_exported_program_and_saved_model_result(ep, saved_model_path, args):
   tf_output = load_save_model_and_inference(saved_model_path, args)
-  torch_output = ep(*args)
+  torch_output = ep.module()(*args)
   if not isinstance(torch_output, tuple):
     torch_output = (torch_output,)
   assert len(torch_output) == len(tf_output)
