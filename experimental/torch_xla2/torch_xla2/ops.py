@@ -281,7 +281,12 @@ def _aten_expand(x, dims):
       return xs
     return d
 
-  dims = [fix_dims(p, s) for p, s in zip(dims, x.shape)]
+  shape = x.shape
+  if len(shape) < len(dims):
+    #prepend so that shape and dim is of same rank
+    shape = (1,) * (len(dims) - len(shape)) + shape
+
+  dims = [fix_dims(p, s) for p, s in zip(dims, shape)]
   return jnp.broadcast_to(x, dims)
 
 

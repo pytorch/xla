@@ -19,6 +19,7 @@ class XLADispatchMode(torch_dispatch.TorchDispatchMode):
       args, kwargs = unwrap((args, kwargs))
       res = constructors[fn](*args, **kwargs)
       return wrap(res)
+    
     return fn(*args, **kwargs)
 
 
@@ -33,7 +34,13 @@ def _aten_arange(start,
   return jnp.arange(start, end, 1)
 
 
+def _aten_scalar_tensor(val, **kwargs):
+    p = torch.ops.aten.scalar_tensor(val)
+    return wrap(t2j(p))
+
+
 constructors = {
+    torch.ops.aten.scalar_tensor.default: _aten_scalar_tensor,
     torch.ops.aten.arange.default: functools.partial(_aten_arange, 0),
     torch.ops.aten.arange.start: _aten_arange,
 }
@@ -63,10 +70,10 @@ def t2j(t):
     # https://github.com/google/jax/issues/7657
     # https://github.com/google/jax/issues/17784
     if t.dtype == torch.bfloat16:
-      nparray = (t.detach().to(torch.float32).numpy()
+      nparray = (t.cpu().detach().to(torch.float32).numpy()
                 )  # numpy don't support bfloat16
     else:
-      nparray = t.detach().numpy()
+      nparray = t.cpu().detach().numpy()
     res = jnp.asarray(nparray)
     if t.dtype == torch.bfloat16:
       res = res.astype(jnp.bfloat16)

@@ -13,7 +13,7 @@ def extract_jax(mod: torch.nn.Module):
   states = (weights, buffer)
   states = pytree.tree_map_only(torch.Tensor, tensor.t2j, states)
 
-  @jax.jit
+  #@jax.jit
   def jax_func(states, inputs):
     (states, inputs) = tensor.wrap((states, inputs))
     weights, buffer = states
