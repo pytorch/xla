@@ -150,7 +150,6 @@ xla::Shape MakeTpuShape(absl::Span<const int64_t> dimensions,
   } else {
     shape = MakeShapeWithSortedLayout(dimensions, type);
   }
-  shape = xla::ShapeUtil::MakeShapeWithDescendingLayout(type, dimensions);
   SetDynamicDimensions(&shape, dynamic_dimensions);
   return shape;
 }

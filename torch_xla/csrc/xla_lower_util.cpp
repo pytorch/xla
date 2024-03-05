@@ -1247,11 +1247,7 @@ xla::XlaOp BuildTpuCustomCall(const std::vector<xla::XlaOp>& inputs,
   std::vector<xla::Shape> input_shapes;
   input_shapes.reserve(inputs.size());
   for (const auto& input : inputs) {
-    auto shape = ShapeHelper::ShapeOfXlaOp(input);
-    // shape.mutable_layout()->clear_minor_to_major();
-    std::cerr << "ff7:" << shape << std::endl;
-
-    input_shapes.push_back(std::move(shape));
+    input_shapes.push_back(ShapeHelper::ShapeOfXlaOp(input));
   }
 
   XLA_CHECK(inputs.size() > 0) << "inputs are empty";
