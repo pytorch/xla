@@ -1,8 +1,8 @@
 #include "torch_xla/csrc/runtime/profiler.h"
 
 #include "absl/container/flat_hash_map.h"
-#include "torch_xla/csrc/runtime/tf_logging.h"
 #include "absl/status/status.h"
+#include "torch_xla/csrc/runtime/tf_logging.h"
 #include "tsl/profiler/lib/profiler_factory.h"
 #include "tsl/profiler/rpc/client/capture_profile.h"
 #include "tsl/profiler/rpc/profiler_server.h"
