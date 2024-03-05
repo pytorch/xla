@@ -4,7 +4,7 @@
 #include <sstream>
 
 #include "tsl/platform/logging.h"
-#include "tsl/platform/status.h"
+#include "absl/status/status.h"
 #include "xla/status.h"
 
 namespace torch_xla {
