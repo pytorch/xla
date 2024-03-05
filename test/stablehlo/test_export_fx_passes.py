@@ -11,7 +11,7 @@ import torch_xla.core.xla_model as xm
 from torch.export import Dim, export
 from torch_xla.experimental.unbounded_dynamism_export import *
 from torch_xla.stablehlo import exported_program_to_stablehlo
-from utils import wrap_func_as_nn_module
+from .utils import wrap_func_as_nn_module
 
 
 class ExportFxPassTest(unittest.TestCase):
@@ -22,7 +22,8 @@ class ExportFxPassTest(unittest.TestCase):
     m = wrap_func_as_nn_module(torch.ops.aten.select.int)
     ep = export(m, args, dynamic_shapes=dynamic_shapes)
     out1 = ep(*args)
-    ep.graph_module.graph = decompose_dynamic_shape_select(ep.graph_module)
+    decompose_dynamic_shape_select(ep.graph_module)
+    ep.graph_module.recompile()
     self.assertTrue('aten.view' in ep.graph_module.code)
     replace_dynamic_view_with_xla_op(ep.graph_module)
     ep.graph_module.recompile()
@@ -122,6 +123,29 @@ class ExportFxPassTest(unittest.TestCase):
     out2 = ep(*args)
     self.assertTrue(torch.allclose(out1, out2))
 
+  def test_layer_norm_decomp(self):
+    class M(torch.nn.Module):
+
+      def forward(self, x, dim, weight, bias, eps):
+        return torch.ops.aten.native_layer_norm.default(x, dim, weight, bias, eps)[0]
+
+    args = (torch.rand(10, 197, 768), [768], torch.rand(768), torch.rand(768), 1e-12)
+    dynamic_shapes = (
+        {
+            0: Dim("bs")
+        }, [None], None, None, None
+    )
+    m = M().eval()
+    before_decomp_out = m(*args)
+    after_decomp_out = native_layer_norm_impl(*args)
+    self.assertTrue(torch.allclose(before_decomp_out, after_decomp_out, atol=1e-6))
+    ep = export(m, args, dynamic_shapes=dynamic_shapes)
+    decompose_dynamic_native_layer_norm(ep.graph_module)
+    ep.graph_module.recompile()
+    self.assertFalse('aten.native_layer_norm' in ep.graph_module.code)
+    after_decomp_out_2 = ep(*args)
+    self.assertTrue(torch.allclose(before_decomp_out, after_decomp_out_2, atol=1e-6))
+    
 
 if __name__ == "__main__":
   test = unittest.main()

@@ -1,41 +1,35 @@
 import torch
 import torch_xla.experimental.xla_dynamic_reshape_ops
-from torch.fx import Graph, GraphModule
+from torch.fx import Graph, GraphModule, subgraph_rewriter
 
 aten = torch.ops.aten
 
-def decompose_dynamic_native_layer_norm(gm: GraphModule):
-  graph = gm.graph
-  for n in graph.nodes:
-    if n.op == "call_function" and n.target == aten.select.int:
-      select_src_shape = n.args[0].meta['val'].shape
-      symbolic_dims = [
-          i for i, x in enumerate(select_src_shape) if not isinstance(x, int)
-      ]
-      if len(symbolic_dims)   > 0:
-        with graph.inserting_before(n):
-          select_src_node = n.args[0]
-          select_dim = n.args[1]
-          select_idx = n.args[2]
-          slice_args = (select_src_node, select_dim, select_idx,
-                        (select_idx + 1), 1)
-          slice_node = graph.call_function(aten.slice, slice_args)
-          view_new_shape = []
-          for dim, size in enumerate(select_src_shape):
-            if dim == select_dim:
-              continue
-            if isinstance(size, int):
-              view_new_shape.append(size)
-            else:
-              get_dim_size_args = (select_src_node, dim)
-              get_dim_size_node = graph.call_function(aten.sym_size.int,
-                                                      get_dim_size_args)
-              view_new_shape.append(get_dim_size_node)
-          view_args = (slice_node, view_new_shape)
-          view_node = graph.call_function(aten.view.default, view_args)
-          n.replace_all_uses_with(view_node)
-        graph.erase_node(n)
-  return graph
+def wrap_func_as_nn_module(f):
+  class M(torch.nn.Module):
+    def forward(self, *args):
+      return f(*args)
+  return M()
+
+def native_layer_norm_impl(input, normalized_shape, weight, bias, eps):
+  input_shape = input.shape
+  # assert len(normalized_shape) == 1 and normalized_shape[0] == input_shape[-1]
+  mean = torch.mean(input, -1, keepdim=True)
+  rstd = torch.rsqrt(torch.var(input, -1, keepdim=True, correction=0) + eps)
+  out = ((input + mean * -1) * rstd) # sub doesn't support unbounded dynamism
+  out = out * weight + bias
+  return out
+
+def native_layer_norm_pattern(x, dim, weight, bias, eps):
+  # Subgraph rewritter doesn't work for pattern with multiple returns.
+  return torch.ops.aten.native_layer_norm.default(x, dim, weight, bias, eps)[0]
+
+def decompose_dynamic_native_layer_norm(gm):
+  replaced_patterns = subgraph_rewriter.replace_pattern_with_filters(gm, native_layer_norm_pattern, native_layer_norm_impl, ignore_literals=False)
+  # Only support normalize along the last dim now.
+  for matches in replaced_patterns:
+    for pattern_n, match_n in matches.nodes_map.items():
+      if isinstance(match_n, list):
+        assert len(match_n) == 1
 
 def decompose_dynamic_shape_select(gm: GraphModule):
   graph = gm.graph
@@ -68,10 +62,6 @@ def decompose_dynamic_shape_select(gm: GraphModule):
           view_node = graph.call_function(aten.view.default, view_args)
           n.replace_all_uses_with(view_node)
         graph.erase_node(n)
-  gm.graph.eliminate_dead_code()
-  gm.graph.lint()
-  gm.recompile()
-  return graph
 
 
 def _is_no_op_slice(n):
@@ -180,6 +170,7 @@ def process_exported_program_with_symbolic_input(ep):
   passes = [
       decompose_dynamic_shape_select,
       remove_no_op_slice,
+      decompose_dynamic_native_layer_norm,
       replace_dynamic_expand_with_xla_op,
       replace_dynamic_view_with_xla_op,
   ]

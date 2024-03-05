@@ -7,7 +7,7 @@ import unittest
 import numpy as np
 import torch
 import torch_xla.core.xla_model as xm
-import utils
+# import utils
 from torch.export import Dim, export
 from torch_xla.stablehlo import exported_program_to_stablehlo
 
@@ -16,7 +16,7 @@ try:
       save_torch_module_as_tf_saved_model
 except ImportError:
   print("tf is not installed. The tf.saved_model tests will be skipped.")
-from utils import (compare_exported_program_and_saved_model_result,
+from .utils import (compare_exported_program_and_saved_model_result,
                    has_tf_package, load_save_model_and_inference,
                    wrap_func_as_nn_module)
 
@@ -188,25 +188,100 @@ class UnboundedDynamismExportTest(unittest.TestCase):
     #     "(%arg0: tensor<?x2xi64>, %arg1: tensor<?x2xi64>) -> tensor<?x2xi64>" in
     #     shlo_text)
 
-  @unittest.skip("Unbounded Dynamism not supported yet.")
-  def test_native_layer_norm(self):
+  def test_mean(self):
+    class M(torch.nn.Module):
+
+      def forward(self, x):
+        return torch.mean(x, -1, keepdim=True)
+
     args = (
         torch.rand((10, 197, 768)),
-        [768],
-        torch.rand((768)),
-        torch.rand((768)),
-        1e-12,
     )
-    constraints = [
-        torch.export.dynamic_dim(args[0], 0),
-    ]
-    ep = self._test_export_dynamism_wrapper(
-        torch.ops.aten.native_layer_norm.default, args, constraints)
+    dynamic_shapes = ({0: Dim("dim")},)
+    m = M()
+    ep = export(m, args=args, dynamic_shapes=dynamic_shapes)
     shlo_module = exported_program_to_stablehlo(ep)
     shlo_text = shlo_module.get_stablehlo_text()
+    print(shlo_text)
+    self.assertTrue(
+        re.search(r"%arg.: tensor<\?x197x768xf32>.*->.*tensor<\?x197x1xf32>",
+                  shlo_text) is not None)
+    if has_tf_package():
+      with tempfile.TemporaryDirectory() as tempdir:
+        save_torch_module_as_tf_saved_model(
+            m, args, tempdir, dynamic_shapes=dynamic_shapes)
+        self.assertTrue(os.path.exists(os.path.join(tempdir, 'saved_model.pb')))
+        compare_exported_program_and_saved_model_result(ep, tempdir, args)
+  
+  def test_var(self):
+    class M(torch.nn.Module):
+
+      def forward(self, x):
+        return torch.var(x, -1, keepdim=True, correction=0)
+
+    args = (
+        torch.rand((10, 197, 768)),
+    )
+    dynamic_shapes = ({0: Dim("dim")},)
+    m = M()
+    ep = export(m, args=args, dynamic_shapes=dynamic_shapes)
+    shlo_module = exported_program_to_stablehlo(ep)
+    shlo_text = shlo_module.get_stablehlo_text()
+    print(shlo_text)
+    self.assertTrue(
+        re.search(r"%arg.: tensor<\?x197x768xf32>.*->.*tensor<\?x197x1xf32>",
+                  shlo_text) is not None)
+    if has_tf_package():
+      with tempfile.TemporaryDirectory() as tempdir:
+        save_torch_module_as_tf_saved_model(
+            m, args, tempdir, dynamic_shapes=dynamic_shapes)
+        self.assertTrue(os.path.exists(os.path.join(tempdir, 'saved_model.pb')))
+        compare_exported_program_and_saved_model_result(ep, tempdir, args)
+
+  @unittest.skip("implicit broadcasting doesn't work for sub.")
+  def test_sub(self):
+    class M(torch.nn.Module):
+
+      def forward(self, x, y):
+        return x - y
+
+    args = (
+        torch.rand((10, 4, 6)),
+        torch.rand((10, 4, 1)),
+    )
+    dynamic_shapes = ({0: Dim("dim")}, {0: Dim("dim")})
+    m = M()
+    ep = export(m, args=args, dynamic_shapes=dynamic_shapes)
+    shlo_module = exported_program_to_stablehlo(ep)
+    shlo_text = shlo_module.get_stablehlo_text()
+    print(shlo_text)
+
+  def test_native_layer_norm(self):
+    class M(torch.nn.Module):
+
+      def forward(self, x, weight, bias):
+        return torch.ops.aten.native_layer_norm.default(x, [768], weight, bias, 1e-12)[0]
+
+    args = (
+        torch.rand((10, 197, 768)),
+        torch.rand((768)),
+        torch.rand((768)),
+    )
+    dynamic_shapes = ({0: Dim("dim")}, None, None)
+    m = M()
+    ep = export(m, args=args, dynamic_shapes=dynamic_shapes)
+    shlo_module = exported_program_to_stablehlo(ep)
+    shlo_text = shlo_module.get_stablehlo_text()
+    print(shlo_text)
     self.assertTrue(
         re.search(r"%arg.: tensor<\?x197x768xf32>.*->.*tensor<\?x197x768xf32>",
                   shlo_text) is not None)
+    if has_tf_package():
+      with tempfile.TemporaryDirectory() as tempdir:
+        save_torch_module_as_tf_saved_model(
+            m, args, tempdir, dynamic_shapes=dynamic_shapes)
+        self.assertTrue(os.path.exists(os.path.join(tempdir, 'saved_model.pb')))
+        compare_exported_program_and_saved_model_result(ep, tempdir, args)
 
   def test_permute(self):
     args = (torch.rand((10, 197, 12, 64)),)
