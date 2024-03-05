@@ -3,8 +3,8 @@
 
 #include <string>
 
-#include "tsl/lib/gtl/inlined_vector.h"
 #include "absl/strings/string_view.h"
+#include "tsl/lib/gtl/inlined_vector.h"
 #include "xla/client/xla_builder.h"
 #include "xla/xla_data.pb.h"
 
@@ -234,8 +234,9 @@ inline int GetTensorSpatialDimIndex(int num_dims, TensorFormat format,
 // The V2 version computes the same outputs with arbitrary dilation rate and
 // supports explicit padding.
 tsl::Status ConvBackpropComputeDimensionsV2(
-    absl::string_view label, int num_spatial_dims, const xla::Shape& input_shape,
-    const xla::Shape& filter_shape, const xla::Shape& out_backprop_shape,
+    absl::string_view label, int num_spatial_dims,
+    const xla::Shape& input_shape, const xla::Shape& filter_shape,
+    const xla::Shape& out_backprop_shape,
     absl::Span<const tsl::int32> dilations,
     const std::vector<tsl::int32>& strides, Padding padding,
     TensorFormat data_format, ConvBackpropDimensions* dims,
