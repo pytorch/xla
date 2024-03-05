@@ -19,9 +19,6 @@ try:
 except ImportError:
   print("tf is not installed. The tf.saved_model tests will be skipped.")
 
-# Needed to workaround the stablehlo bytecode serialization issue in https://github.com/openxla/stablehlo/issues/1812
-os.environ['STABLEHLO_BYTECODE_FROM_PRETTYPRINT'] = '1'
-
 _TORCH_QUANTIZE_OPS = [
     torch.ops.quantized_decomposed.quantize_per_tensor.default,
     torch.ops.quantized_decomposed.quantize_per_tensor.tensor,

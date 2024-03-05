@@ -40,22 +40,13 @@ static std::string getMlirModuleStr(mlir::ModuleOp& mlir_module) {
 }
 
 static std::string getMlirModuleBytecode(mlir::ModuleOp& mlir_module) {
-  static bool from_pretty_print = runtime::sys_util::GetEnvBool(
-      "STABLEHLO_BYTECODE_FROM_PRETTYPRINT", false);
   std::string txt_mlir_module;
   llvm::raw_string_ostream os{txt_mlir_module};
   const std::string stablehlo_version =
       mlir::vhlo::Version::getCurrentVersion().toString();
-  if (!from_pretty_print) {
-    auto result = mlir::stablehlo::serializePortableArtifact(
-        mlir_module, /* target_version = */ stablehlo_version, os);
-    XLA_CHECK(result.succeeded()) << "Serializing StableHLO Failed";
-  } else {
-    std::string pretty_print_txt = getMlirModuleStr(mlir_module);
-    auto result = mlir::stablehlo::serializePortableArtifact(
-        pretty_print_txt, /* target_version = */ stablehlo_version, os);
-    XLA_CHECK(result.succeeded()) << "Serializing StableHLO Failed";
-  }
+  auto result = mlir::stablehlo::serializePortableArtifact(
+      mlir_module, /* target_version = */ stablehlo_version, os);
+  XLA_CHECK(result.succeeded()) << "Serializing StableHLO Failed";
   return txt_mlir_module;
 }
 
@@ -170,11 +161,11 @@ void ConvertStableHloToHlo(mlir::ModuleOp* mlir_module,
 }
 
 const std::string GetTorchDtypeToStablehloDtype(const std::string& dtype) {
-  if (dtype == "torch.int8") return "si8";
+  if (dtype == "torch.int8") return "i8";
   if (dtype == "torch.uint8") return "ui8";
-  if (dtype == "torch.int16") return "si16";
-  if (dtype == "torch.int32") return "si32";
-  if (dtype == "torch.int64") return "si64";
+  if (dtype == "torch.int16") return "i16";
+  if (dtype == "torch.int32") return "i32";
+  if (dtype == "torch.int64") return "i64";
   XLA_ERROR() << "Unsupported dtype for conversion to Stablehlo type: "
               << dtype;
 }
@@ -182,9 +173,9 @@ const std::string GetTorchDtypeToStablehloDtype(const std::string& dtype) {
 const std::unordered_map<xla::PrimitiveType, std::string>&
 GetHloDtypeToStablehloDtypeMap() {
   static const std::unordered_map<xla::PrimitiveType, std::string> m_{
-      {xla::PrimitiveType::S4, "si4"},   {xla::PrimitiveType::S8, "si8"},
-      {xla::PrimitiveType::S16, "si16"}, {xla::PrimitiveType::S32, "si32"},
-      {xla::PrimitiveType::S64, "si64"}, {xla::PrimitiveType::U4, "ui4"},
+      {xla::PrimitiveType::S4, "i4"},    {xla::PrimitiveType::S8, "i8"},
+      {xla::PrimitiveType::S16, "i16"},  {xla::PrimitiveType::S32, "i32"},
+      {xla::PrimitiveType::S64, "i64"},  {xla::PrimitiveType::U4, "ui4"},
       {xla::PrimitiveType::U8, "ui8"},   {xla::PrimitiveType::U16, "ui16"},
       {xla::PrimitiveType::U32, "ui32"}, {xla::PrimitiveType::U64, "ui64"},
       {xla::PrimitiveType::F16, "f16"},  {xla::PrimitiveType::BF16, "bf16"},
