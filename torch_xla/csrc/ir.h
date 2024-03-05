@@ -16,10 +16,10 @@
 #include <utility>
 #include <vector>
 
+#include "absl/container/inlined_vector.h"
 #include "absl/hash/hash.h"
 #include "absl/types/span.h"
 #include "torch_xla/csrc/runtime/types.h"
-#include "absl/container/inlined_vector.h"
 #include "xla/client/xla_builder.h"
 
 namespace torch_xla {
