@@ -41,6 +41,7 @@ class WhileLoopTest(unittest.TestCase):
 
     def cond_fn(x):
       limit_value = torch.ones(1, dtype=torch.int32, device=device)
+      limit_value[0] = 10
       return x[0] <= limit_value[0]
 
     def body_fn(x):
