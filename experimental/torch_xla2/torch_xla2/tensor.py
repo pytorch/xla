@@ -10,6 +10,7 @@ from torch_xla2 import ops_registry
 import torch.utils._python_dispatch as torch_dispatch
 import torch.utils._pytree as torch_pytree
 import torch.utils.dlpack as torchdl
+from torch_xla2.ops import jaten
 
 
 class XLADispatchMode(torch_dispatch.TorchDispatchMode):
@@ -184,12 +185,21 @@ class XLATensor2(torch.Tensor):
 
   @classmethod
   def __torch_dispatch__(cls, func, types, args=(), kwargs=None):
+    kwargs = kwargs or {}
     print("running...", func.name(), types)
     for a in torch_pytree.tree_flatten(args)[0]:
       if isinstance(a, XLATensor2):
         print("  ", a._elem.shape)
       else:
         print("  ", a)
+
+
+    if isinstance(func, torch._ops.OpOverloadPacket):
+      return func(*args, **kwargs)
+    
+    if func in jaten.all_ops:
+      return jaten.all_ops[func](*args, **kwargs)
+    
     lowering = ops_registry.lowerings.lookup(func)
 
     if lowering is None:
