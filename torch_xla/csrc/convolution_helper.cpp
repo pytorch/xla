@@ -185,9 +185,8 @@ tsl::Status ConvBackpropExtractAndVerifyDimension(
 
 // Check dimension
 tsl::Status ConvBackpropComputeDimensionsV2(
-    std::string_view label, int num_spatial_dims,
-    const xla::Shape& input_shape, const xla::Shape& filter_shape,
-    const xla::Shape& out_backprop_shape,
+    std::string_view label, int num_spatial_dims, const xla::Shape& input_shape,
+    const xla::Shape& filter_shape, const xla::Shape& out_backprop_shape,
     absl::Span<const tsl::int32> dilations,
     const std::vector<tsl::int32>& strides, Padding padding,
     TensorFormat data_format, ConvBackpropDimensions* dims,
