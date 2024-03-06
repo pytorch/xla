@@ -186,7 +186,7 @@ xla::Shape MakeArrayShapeFromDimensions(
   }
 
   bool tpu_layout_env =
-    runtime::sys_util::GetEnvBool("XLA_TPU_LAYOUT", false);
+    runtime::sys_util::GetEnvBool("XLA_TPU_LAYOUT", true);
   if (tpu_layout_env && dimensions.size() > 1 && hw_type == XlaDeviceType::TPU) {
     return MakeTpuShape(dimensions, dynamic_dimensions, type);
   }
