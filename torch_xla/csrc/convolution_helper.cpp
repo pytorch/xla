@@ -144,7 +144,7 @@ tsl::Status GetWindowedOutputSizeVerboseV2(
 
 // Check dimension
 tsl::Status ConvBackpropExtractAndVerifyDimension(
-    absl::string_view label, const xla::Shape& input_shape,
+    std::string_view label, const xla::Shape& input_shape,
     const xla::Shape& filter_shape, const xla::Shape& output_shape,
     const absl::Span<const tsl::int32> dilations,
     const std::vector<tsl::int32>& strides, Padding padding,
@@ -185,7 +185,7 @@ tsl::Status ConvBackpropExtractAndVerifyDimension(
 
 // Check dimension
 tsl::Status ConvBackpropComputeDimensionsV2(
-    absl::string_view label, int num_spatial_dims,
+    std::string_view label, int num_spatial_dims,
     const xla::Shape& input_shape, const xla::Shape& filter_shape,
     const xla::Shape& out_backprop_shape,
     absl::Span<const tsl::int32> dilations,
@@ -294,7 +294,7 @@ xla::XlaOp TransposeFilterForGroupConvolutionBackpropInput(
 
 // Wrapper for ConvGeneralDilated and check dim.
 tsl::StatusOr<xla::XlaOp> MakeXlaBackpropInputConvOp(
-    absl::string_view type_string, const xla::Shape& input_shape,
+    std::string_view type_string, const xla::Shape& input_shape,
     xla::XlaOp filter, xla::XlaOp out_backprop, const ConvOpAttrs& attrs,
     xla::XlaOp* input_sizes) {
   TF_RETURN_IF_ERROR(CheckConvAttrs(attrs));
@@ -395,7 +395,7 @@ tsl::StatusOr<xla::XlaOp> MakeXlaBackpropInputConvOp(
 
 // Wrapper for ConvGeneralDilated and check dim.
 tsl::StatusOr<xla::XlaOp> MakeXlaBackpropFilterConvOp(
-    absl::string_view type_string, xla::XlaOp activations,
+    std::string_view type_string, xla::XlaOp activations,
     const xla::Shape& filter_shape, xla::XlaOp gradients,
     const ConvOpAttrs& attrs) {
   TF_RETURN_IF_ERROR(CheckConvAttrs(attrs));
