@@ -245,13 +245,13 @@ absl::Status ConvBackpropComputeDimensionsV2(
 // https://github.com/tensorflow/tensorflow/blob/7f47eaf439d2b81de1aa24b10ed57eabd519dbdb/tensorflow/compiler/tf2xla/kernels/conv_op_helpers.h
 
 // Wrapper for ConvGeneralDilated with checking dims.
-tsl::StatusOr<xla::XlaOp> MakeXlaBackpropInputConvOp(
+absl::StatusOr<xla::XlaOp> MakeXlaBackpropInputConvOp(
     tsl::StringPiece type_string, const xla::Shape& input_shape,
     xla::XlaOp filter, xla::XlaOp out_backprop, const ConvOpAttrs& attrs,
     xla::XlaOp* input_sizes = nullptr);
 
 // Wrapper for ConvGeneralDilated with checking dims.
-tsl::StatusOr<xla::XlaOp> MakeXlaBackpropFilterConvOp(
+absl::StatusOr<xla::XlaOp> MakeXlaBackpropFilterConvOp(
     tsl::StringPiece type_string, xla::XlaOp activations,
     const xla::Shape& filter_shape, xla::XlaOp gradients,
     const ConvOpAttrs& attrs);
