@@ -10,6 +10,7 @@ from torch.optim import Optimizer
 
 import torch_xla
 import torch_xla.core.xla_model as xm
+import torch_xla.runtime as xr
 
 
 class ZeroRedundancyOptimizer(Optimizer):
@@ -89,8 +90,8 @@ class ZeroRedundancyOptimizer(Optimizer):
 
     super().__init__(params, defaults)
 
-    self.global_world_size = xm.xrt_world_size()
-    self.global_rank = xm.get_ordinal()
+    self.global_world_size = xr.global_device_count()
+    self.global_rank = xr.global_ordinal()
     self._sharding_groups = [list(range(self.global_world_size))
                             ] if sharding_groups is None else sharding_groups
     self._grad_norm_groups = grad_norm_groups
