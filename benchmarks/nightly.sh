@@ -190,6 +190,10 @@ fi
 INFERENCE_BACKENDS_CMD='--backends inductor openxla+dynamo openxla_eval+dynamo openxla+lazytensor'
 TRAINING_BACKENDS_CMD='--backends inductor openxla+dynamo openxla+lazytensor'
 
+# Skip result files coming from one-off runs.
+INPUT_JSONL_FILES=$(ls ${NIGHTLY_RESULTS_DIR:?}/*.jsonl | \
+  grep '[0-9]\+-[0-9]\+-[0-9]\+\.jsonl')
+
 for testname in inference training; do
   for report in latest histogram speedup; do
     for format in csv svg; do
@@ -225,7 +229,7 @@ for testname in inference training; do
                --fig-height=${HEIGHT:?} --fig-width=${WIDTH:?} \
                ${TIER_CMD?} \
                ${BACKENDS_CMD:?} -- \
-               ${NIGHTLY_RESULTS_DIR:?}/*.jsonl \
+               ${INPUT_JSONL_FILES:?} \
                > ${REPORTS_DIR:?}/${ACCELERATOR:?}-${testname:?}-${report:?}${TIER_FILE_SUFFIX?}.${format:?}
       done
     done
@@ -247,7 +251,7 @@ for testname in inference; do
              --title="${COMMON_TITLE_PREFIX?}Llama2 (${testname:?})" \
              --filter='^llama2\.' \
              ${BACKENDS_CMD:?} -- \
-             ${NIGHTLY_RESULTS_DIR:?}/*.jsonl \
+             ${INPUT_JSONL_FILES:?} \
              > ${REPORTS_DIR:?}/${ACCELERATOR:?}-${testname:?}-${report:?}-llama2.${format:?}
     done
   done
