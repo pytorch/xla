@@ -233,7 +233,7 @@ inline int GetTensorSpatialDimIndex(int num_dims, TensorFormat format,
 
 // The V2 version computes the same outputs with arbitrary dilation rate and
 // supports explicit padding.
-tsl::Status ConvBackpropComputeDimensionsV2(
+absl::Status ConvBackpropComputeDimensionsV2(
     tsl::StringPiece label, int num_spatial_dims, const xla::Shape& input_shape,
     const xla::Shape& filter_shape, const xla::Shape& out_backprop_shape,
     absl::Span<const tsl::int32> dilations,
