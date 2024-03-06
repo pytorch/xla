@@ -1979,7 +1979,8 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
 
     # The division is to cause potential precision issue on TPU.
     q_mini = torch.arange(128 * 4, dtype=torch.float32).reshape(128, 4) / 13
-    k_mini = torch.arange(1000, 1000 + 128 * 4, dtype=torch.float32).reshape(128, 4) / 13
+    k_mini = torch.arange(
+        1000, 1000 + 128 * 4, dtype=torch.float32).reshape(128, 4) / 13
     q = q_mini.broadcast_to(3, 2, 128, 4).to("xla")
     k = k_mini.broadcast_to(3, 2, 128, 4).to("xla")
     v = torch.ones(3, 2, 128, 4).to("xla")
@@ -1990,6 +1991,7 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
       attn_weight = nn.functional.softmax(attn_weight, dim=-1)
       attn_output = attn_weight @ v
       return attn_output
+
     expected_o = attention(q, k, v)
 
     torch_xla._XLAC._xla_tpu_custom_call_(o, [q, k, v], payload)
