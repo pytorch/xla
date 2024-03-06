@@ -123,8 +123,13 @@ class BasicRuntimeAPITest(test_xla_sharding_base.XlaShardingTest):
     self.assertTrue(xr.is_spmd())
     del os.environ["XLA_USE_SPMD"]
     self.assertFalse(xr.is_spmd())
-    # reset for other test cases
-    os.environ["XLA_USE_SPMD"] = "1"
+
+    # initialize tensors for non-SPMD
+    t = torch.ones(2, 2).to(xm.xla_device())
+    self.assertTrue(torch_xla._XLAC._get_xla_sharding_type(t) is None)
+    torch_xla._XLAC._xla_force_spmd_config()
+    self.assertTrue(torch_xla._XLAC._get_xla_sharding_type(t) is not None)
+    self.assertTrue(xr.is_spmd())
 
 
 class BasicAutocastAPITest(test_xla_sharding_base.XlaShardingTest):

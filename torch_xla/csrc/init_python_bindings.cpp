@@ -1147,6 +1147,32 @@ void InitXlaModuleBindings(py::module m) {
   m.def("_xla_get_tensor_id",
         [](const at::Tensor& tensor) { return GetTensorId(tensor); });
   m.def("_xla_get_spmd_config_is_locked", []() { return GetLockSpmdConfig(); });
+  m.def("_xla_force_spmd_config", []() {
+    // It is actually more easier to force SPMD mode than blocking if there is
+    // non-SPMD initialized tensors, for the 3rd-party solution integration. For
+    // instance, HuggingFace trainer pre-loads embeddings table and the training
+    // initialization is done over multiple scripts. Being able to force SPMD
+    // allows the users to call `xr.use_spmd()` more freely, given that the
+    // earlier they call, the smaller the one-time overhead of replicating
+    // non-SPMD backed tensors.
+    if (!UseVirtualDevice()) {
+      putenv("XLA_USE_SPMD=1");
+    }
+
+    torch::lazy::BackendDevice backend_device = bridge::GetCurrentDevice();
+    std::vector<XLATensorPtr> xtensors =
+        XLAGraphExecutor::Get()->GetLiveTensors(&backend_device);
+    for (auto xtensor : xtensors) {
+      XlaDeviceType xla_device_type =
+          static_cast<XlaDeviceType>(xtensor->GetDevice().type());
+      if (xla_device_type != XlaDeviceType::SPMD) {
+        // TODO(yeounoh) this can be further optimized via CopyToDevice.
+        at::Tensor tensor = xtensor->ToTensor(false);
+        xtensor->SetXlaData(
+            TensorToXlaData(tensor, ParseDeviceString("SPMD:0")));
+      }
+    }
+  });
   m.def("_init_computation_client", []() { runtime::GetComputationClient(); });
   m.def("_xla_get_devices", []() {
     if (UseVirtualDevice()) {
