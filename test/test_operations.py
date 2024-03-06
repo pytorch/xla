@@ -44,7 +44,7 @@ import torch_xla.utils.serialization as xser
 import torch_xla.core.xla_model as xm
 import torch_xla.core.functions as xf
 import torch_xla.debug.profiler as xp
-# import torchvision
+import torchvision
 import unittest
 import test_utils
 
