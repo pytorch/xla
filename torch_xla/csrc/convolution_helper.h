@@ -2,7 +2,7 @@
 #define XLA_TORCH_XLA_CSRC_CONVOLUTION_HELPER_H_
 
 #include <string>
-#include <string_view>  
+#include <string_view>
 
 #include "tsl/lib/gtl/inlined_vector.h"
 #include "xla/client/xla_builder.h"
@@ -234,9 +234,8 @@ inline int GetTensorSpatialDimIndex(int num_dims, TensorFormat format,
 // The V2 version computes the same outputs with arbitrary dilation rate and
 // supports explicit padding.
 tsl::Status ConvBackpropComputeDimensionsV2(
-    std::string_view label, int num_spatial_dims,
-    const xla::Shape& input_shape, const xla::Shape& filter_shape,
-    const xla::Shape& out_backprop_shape,
+    std::string_view label, int num_spatial_dims, const xla::Shape& input_shape,
+    const xla::Shape& filter_shape, const xla::Shape& out_backprop_shape,
     absl::Span<const tsl::int32> dilations,
     const std::vector<tsl::int32>& strides, Padding padding,
     TensorFormat data_format, ConvBackpropDimensions* dims,
