@@ -1,4 +1,6 @@
 #!/bin/bash
+set -xue
+
 # TODO: merge with other run_tests
 python3 test/test_operations.py -v
 python3 test/pjrt/test_runtime_tpu.py
@@ -14,5 +16,6 @@ python3 test/test_autocast.py
 python3 test/dynamo/test_dynamo.py
 python3 test/spmd/test_spmd_debugging.py
 python3 test/pjrt/test_dtypes.py
+
 python3 test/pjrt/test_dynamic_plugin_tpu.py
 python3 test/test_fori_loop_with_while_loop_simple_add_dispatch_in_torch.py
