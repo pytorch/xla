@@ -39,7 +39,7 @@ std::string ToString(TensorFormat format) {
 
 // Performs some basic checks on ConvOpAttrs that are true for all kinds of
 // XLA convolutions (as currently implemented).
-tsl::Status CheckConvAttrs(const ConvOpAttrs& attrs) {
+absl::Status CheckConvAttrs(const ConvOpAttrs& attrs) {
   const int num_dims = attrs.num_spatial_dims + 2;
   const int attrs_strides_size = attrs.strides.size();
   if (attrs_strides_size != num_dims) {
@@ -94,7 +94,7 @@ xla::Shape GroupedFilterShapeForDepthwiseConvolution(
 // This part of helpers are origionally from
 // https://github.com/tensorflow/tensorflow/blob/7f39a389d5b82d6aca13240c21f2647c3ebdb765/tensorflow/core/framework/kernel_shape_util.cc
 
-tsl::Status GetWindowedOutputSizeVerboseV2(
+absl::Status GetWindowedOutputSizeVerboseV2(
     int64_t input_size, int64_t filter_size, int64_t dilation_rate,
     int64_t stride, Padding padding_type, int64_t* output_size,
     int64_t* padding_before, int64_t* padding_after) {
@@ -143,7 +143,7 @@ tsl::Status GetWindowedOutputSizeVerboseV2(
 // https://github.com/tensorflow/tensorflow/blob/7f39a389d5b82d6aca13240c21f2647c3ebdb765/tensorflow/core/kernels/conv_grad_shape_utils.cc
 
 // Check dimension
-tsl::Status ConvBackpropExtractAndVerifyDimension(
+absl::Status ConvBackpropExtractAndVerifyDimension(
     tsl::StringPiece label, const xla::Shape& input_shape,
     const xla::Shape& filter_shape, const xla::Shape& output_shape,
     const absl::Span<const tsl::int32> dilations,
@@ -184,7 +184,7 @@ tsl::Status ConvBackpropExtractAndVerifyDimension(
 }
 
 // Check dimension
-tsl::Status ConvBackpropComputeDimensionsV2(
+absl::Status ConvBackpropComputeDimensionsV2(
     tsl::StringPiece label, int num_spatial_dims, const xla::Shape& input_shape,
     const xla::Shape& filter_shape, const xla::Shape& out_backprop_shape,
     absl::Span<const tsl::int32> dilations,
@@ -292,7 +292,7 @@ xla::XlaOp TransposeFilterForGroupConvolutionBackpropInput(
 }
 
 // Wrapper for ConvGeneralDilated and check dim.
-tsl::StatusOr<xla::XlaOp> MakeXlaBackpropInputConvOp(
+absl::StatusOr<xla::XlaOp> MakeXlaBackpropInputConvOp(
     tsl::StringPiece type_string, const xla::Shape& input_shape,
     xla::XlaOp filter, xla::XlaOp out_backprop, const ConvOpAttrs& attrs,
     xla::XlaOp* input_sizes) {
@@ -393,7 +393,7 @@ tsl::StatusOr<xla::XlaOp> MakeXlaBackpropInputConvOp(
 }
 
 // Wrapper for ConvGeneralDilated and check dim.
-tsl::StatusOr<xla::XlaOp> MakeXlaBackpropFilterConvOp(
+absl::StatusOr<xla::XlaOp> MakeXlaBackpropFilterConvOp(
     tsl::StringPiece type_string, xla::XlaOp activations,
     const xla::Shape& filter_shape, xla::XlaOp gradients,
     const ConvOpAttrs& attrs) {
