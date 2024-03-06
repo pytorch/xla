@@ -1910,9 +1910,12 @@ class TestAtenXlaTensor(test_utils.XlaTestCase):
     output = torch.arange(8, dtype=torch.int).to("xla")
 
     import torch_xla.experimental.custom_kernel
+
     def add_one_pallas(output, inputs, payload):
       torch.ops.xla.tpu_custom_call_(output, inputs, payload)
-    compiled_add_one_pallas = torch.compile(add_one_pallas, backend='openxla', fullgraph=True)
+
+    compiled_add_one_pallas = torch.compile(
+        add_one_pallas, backend='openxla', fullgraph=True)
 
     compiled_add_one_pallas(output, [x], payload)
     self.assertTrue(torch.allclose(output.cpu(), expected_output.cpu()))
