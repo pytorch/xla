@@ -70,6 +70,8 @@ class WhileLoopTest(unittest.TestCase):
       return torch.sin(init_val) # init_val)
     res = fori_loop(lower, upper, body_fun, init_val)
     print("result: ", res)
+    print("lower: ", lower)
+    print("upper: ", upper)
     # fori_loop(cond_fn, body_fn, (init, limit_value))
     # expected = _fake_fori_loop(cond_fn, body_fn, (init, limit_value))
     # self.assertEqual(expected, res)
