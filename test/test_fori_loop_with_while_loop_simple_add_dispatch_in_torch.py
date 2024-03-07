@@ -48,7 +48,7 @@ class WhileLoopTest(unittest.TestCase):
       one_value = torch.ones(1, dtype=torch.int32, device=device)
       return (torch.add(init, one_value), limit_value.clone())
 
-    # TODO(@manfei): limit the init and limit_value to make sure to meet the shape requirement of xla::While
+    # TODO(@manfei): init and limit_value has to be torch.tensor.
     init = torch.tensor([0], dtype=torch.int32, device=device)
     limit_value = torch.tensor([10], dtype=torch.int32, device=device)
     res = while_loop(cond_fn, body_fn, (init, limit_value))
