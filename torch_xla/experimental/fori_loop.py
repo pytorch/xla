@@ -19,15 +19,15 @@ def fori_loop(lower, upper, body_fun, init_val):
   # upper = torch.tensor([10], dtype=torch.int32, device=device)
   # limit_range = upper - lower
   device = xm.xla_device()
-  one_value = torch.tensor([0], dtype=torch.int32, device=device) # torch.ones(1, dtype=torch.int32, device=device)
+  # one_value = torch.tensor([0], dtype=torch.int32, device=device) # torch.ones(1, dtype=torch.int32, device=device)
 
   def cond_fn(lower, upper, init_val):
     return lower <= upper
   
   def body_fn(lower, upper, init_val):
-    # one_value = torch.ones(1, dtype=torch.int32, device=device)
+    one_value = torch.tensor([0], dtype=torch.int32, device=device) # torch.ones(1, dtype=torch.int32, device=device)
     lower = torch.add(lower, one_value)
-    return (lower.clone(), upper.clone(), body_fun(init_val, one_value))
+    return (lower.clone(), upper.clone(), body_fun(init_val))
 
   return while_loop(cond_fn, body_fn, (lower, upper, init_val))
 
