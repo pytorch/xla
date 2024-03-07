@@ -319,6 +319,11 @@ variables:
           dot.
       type: string
       default_value: ""
+    XLA_TPU_LAYOUT:
+      description:
+        - Determine to use TPU layout or not, where it will use sorted layout for TPU.
+      type: bool
+      default_value: true
     PT_XLA_DEBUG_FILE:
       description:
         - If set, filepath used for printing out reports.
@@ -409,9 +414,9 @@ variables:
       default_value: false
     XLA_DISABLE_FUNCTIONALIZATION:
       description:
-        - Setting this to true will disable functionalization, which is a dispatcher 
+        - Setting this to true will disable functionalization, which is a dispatcher
           pass in PyTorch that remove views and mutations to produce functional graphs.
-          This flag's main purpose is to A/B test the impact of functionalization in 
+          This flag's main purpose is to A/B test the impact of functionalization in
           your code.
       type: bool
       default_value: false
