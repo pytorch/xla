@@ -257,6 +257,8 @@ void XLATensor::SetShardingSpec(const ShardingSpec& sharding, bool overwrite) {
     TORCH_LAZY_COUNTER("SetShardingSpec", 1);
     data()->sharding = std::make_shared<ShardingSpec>(sharding);
   } else {
+    // Tensor is already sharding annotated, check if it is UNKNOWN or
+    // the same sharding type.
     XLA_CHECK(sharding_spec()->sharding.type() == xla::OpSharding::UNKNOWN ||
               ShardingUtil::EqualShardingSpecs(sharding, *sharding_spec()))
         << "Existing sharding annotation, "
@@ -264,6 +266,7 @@ void XLATensor::SetShardingSpec(const ShardingSpec& sharding, bool overwrite) {
         << ", must be cleared before applying a new one, "
         << sharding.sharding.DebugString();
   }
+  // Sync to the node.
   dynamic_cast<XlaNode*>(GetIrValue().node.get())
       ->SetSharding(sharding_spec()->sharding, GetIrValue().index);
 }
@@ -287,7 +290,9 @@ XLATensor::ShardingSpecPtr XLATensor::sharding_spec() const {
       // Re-sync the sharding annotation from the node to the tensor if there is
       // one attached to the node. A new sharding annotation is attached
       // directly to the node, and gets synced to the tensor after this.
-      // TODO(yeounoh) verify that this change doesn't break the existing tests.
+      // If sharding is attached via SetShardingSpec, then it flows from the tensor
+      // to the node. If sharding is attached by the compiler pass, then it first
+      // gets attached to the graph node, and then synced to the tensor here.
       if (!sharding ||
           (sharding && !ShardingUtil::EqualOpShardings(*new_op_sharding,
                                                        sharding->sharding))) {

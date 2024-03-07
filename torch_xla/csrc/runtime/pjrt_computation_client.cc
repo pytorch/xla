@@ -359,8 +359,7 @@ std::vector<ComputationClient::DataPtr> PjRtComputationClient::ReshardData(
 
     const xla::OpSharding& sharding = shardings[i];
     XLA_CHECK_NE(sharding.type(), xla::OpSharding::UNKNOWN)
-        << "Can't reshard with UNKNOWN sharding type. Use REPLICATED for "
-           "explicit replication.";
+        << "Resharding by UNKNOWN sharding type is not allowed.";
 
     hlo_shardings.push_back(
         ConsumeValue(xla::HloSharding::FromProto(sharding)));

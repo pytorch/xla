@@ -191,6 +191,7 @@ bool ShardingUtil::SetHloSharding(LoweringContext* lowering_ctx) {
         XlaBuilderFriend::GetInstruction(elem.second);
     const std::shared_ptr<xla::OpSharding> sharding =
         xla_node->GetSharding(elem.first.index);
+    // TODO(yeounoh) we should ignore UNKNOWN until auto-sharding is cleared.
     if (sharding != nullptr && sharding->type() != xla::OpSharding::UNKNOWN) {
       *instruction->mutable_sharding() = *sharding;
       is_sharded = true;
@@ -670,9 +671,9 @@ void ShardingUtil::ReshardParameters(
   std::vector<runtime::ComputationClient::DataPtr> filtered_data;
   std::vector<xla::OpSharding> filtered_shardings;
   for (int i = 0; i < input_shardings.size(); ++i) {
-    // Skip if sharding type is UNKNOWN or equal to the existing.
     XLA_CHECK(input_shardings[i].type() != xla::OpSharding::UNKNOWN)
-        << "UNKNOWN OpSharding generated from auto-sharding pass!";
+        << "Resharding by UNKNOWN sharding type is not allowed.";
+    // Skip re-sharding if not necessary.
     if (!xla::protobuf_util::ProtobufEquals(data[i]->GetSharding(),
                                             input_shardings[i])) {
       indices.push_back(i);
@@ -700,9 +701,9 @@ void ShardingUtil::ReshardParameters(
 
   std::vector<torch::lazy::BackendDataPtr> outputs;
   outputs.reserve(indices.size());
-  // Groupping is computationally more efficient but increases memory consumption.
-  // It is groupped by default, but can be overriden for more-granular control over
-  // the peak memory consumption.
+  // Groupping is computationally more efficient but increases memory
+  // consumption. It is groupped by default, but can be overriden for
+  // more-granular control over the peak memory consumption.
   bool group_sharding =
       runtime::sys_util::GetEnvBool("XLA_AUTO_USE_GROUP_SHARDING", true);
   if (group_sharding) {
