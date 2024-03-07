@@ -39,7 +39,7 @@ def while_loop(cond_fn, body_fn, operands):
   return _xla_while_loop(cond_fn, body_fn, operands)
 
 
-def _xla_while_loop(cond_fn, body_fn, *operands):
+def _xla_while_loop(cond_fn, body_fn, operands):
 
   # create inputs placeholder
   kwargs = {}
@@ -57,7 +57,7 @@ def _xla_while_loop(cond_fn, body_fn, *operands):
   print("!!! operands[2]: ", operands[2])
 
   # generate cond_fn xlacomputation
-  cond_result = cond_fn(operands) # [0], operands[1])
+  cond_result = cond_fn(*operands)
   cond_ctx = torch_xla._XLAC.lowering.LoweringContext()
   cond_ctx.set_name_string("condctx")
   cond_ctx.build([cond_result])
@@ -69,7 +69,7 @@ def _xla_while_loop(cond_fn, body_fn, *operands):
   print(cond_hlo_print)
 
   # generate body_fn xlacomputation
-  body_result = body_fn(operands) # [0], operands[1])
+  body_result = body_fn(operands[0], operands[1])
   body_ctx = torch_xla._XLAC.lowering.LoweringContext()
   body_ctx.set_name_string("bodyctx")
   body_ctx.build(list(body_result))
