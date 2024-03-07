@@ -901,6 +901,17 @@ class PyLoweringContext {
       lowering_ctx.AddResult(root);
     }
     computation = ConsumeValue(lowering_ctx.BuildXla());
+
+    // warp inputs of cond/body_computation
+    std::vector<std::pair<int64_t, int64_t>> input_output_alias_pair;
+    std::vector<size_t> buffer_donor_indices;
+    xla::ProgramShape program_shape = ConsumeValue(computation.GetProgramShape());
+    // TODO(@manfei): please confirm whether we check for more than two or use default value true
+    bool should_wrap_parameter = (program_shape.parameters_size() >= 2);
+    if (should_wrap_parameter) {
+      computation = ConsumeValue(XlaHelpers::WrapXlaComputation(
+        computation, program_shape.parameters(), input_output_alias_pair, buffer_donor_indices));
+    }
   }
 
   // Get a mapping from the HLO input parameters to the backing Tensor values.
