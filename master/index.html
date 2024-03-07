@@ -225,7 +225,7 @@
               
               
                 <div class="version">
-                  master (2.3.0+git39db138 )
+                  master (2.3.0+gitcdd6466 )
                 </div>
               
             
@@ -412,6 +412,7 @@
 <li><a class="reference internal" href="#virtual-device-optimization">Virtual Device Optimization</a></li>
 <li><a class="reference internal" href="#number-of-processes">Number of processes</a></li>
 <li><a class="reference internal" href="#running-spmd-on-tpu-pod">Running SPMD on TPU Pod</a></li>
+<li><a class="reference internal" href="#running-spmd-on-gpu">Running SPMD on GPU</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#reference-examples">Reference Examples</a><ul>
@@ -2263,8 +2264,6 @@ this change has no impact</p></li>
 <li><p>New <code class="docutils literal notranslate"><span class="pre">xm.rendezvous</span></code> implementation that scales to thousands of TPU cores</p></li>
 <li><p>[experimental] <code class="docutils literal notranslate"><span class="pre">torch.distributed</span></code> support for TPU v2 and v3, including
 <code class="docutils literal notranslate"><span class="pre">pjrt://</span></code> <code class="docutils literal notranslate"><span class="pre">init_method</span></code></p></li>
-<li><p>[experimental] Single-host GPU support in PJRT. Multi-host support coming
-soon!</p></li>
 </ul>
 <div class="section" id="tl-dr">
 <h2>TL;DR<a class="headerlink" href="#tl-dr" title="Permalink to this headline">¶</a></h2>
@@ -2422,7 +2421,6 @@ for more information.</p>
 </div>
 <div class="section" id="gpu">
 <h3>GPU<a class="headerlink" href="#gpu" title="Permalink to this headline">¶</a></h3>
-<p><em>Warning: GPU support is still highly experimental!</em></p>
 </div>
 <div class="section" id="single-node-gpu-training">
 <h3>Single-node GPU training<a class="headerlink" href="#single-node-gpu-training" title="Permalink to this headline">¶</a></h3>
@@ -2451,14 +2449,14 @@ for more information.</p>
 <li><p><code class="docutils literal notranslate"><span class="pre">--nnodes</span></code>: how many GPU machines to be used.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">--node_rank</span></code>: the index of the current GPU machines. The value can be 0, 1, …, ${NUMBER_GPU_VM}-1.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">--nproc_per_node</span></code>: the number of GPU devices to be used on the current machine.</p></li>
-<li><p><cite>–rdzv_endpoint</cite>: the endpoint of the GPU machine with node_rank==0, in the form &lt;host&gt;:<span class="raw-html-m2r"><port></span>. The <code class="docutils literal notranslate"><span class="pre">host</span></code> will be the internal IP address. The port can be any available port on the machine.</p></li>
+<li><p><cite>–rdzv_endpoint</cite>: the endpoint of the GPU machine with node_rank==0, in the form <cite>host:port`</cite>. The``host<code class="docutils literal notranslate"><span class="pre">will</span> <span class="pre">be</span> <span class="pre">the</span> <span class="pre">internal</span> <span class="pre">IP</span> <span class="pre">address.</span> <span class="pre">The</span></code>port` can be any available port on the machine. For single-node training/inference, this parameter can be omitted.</p></li>
 </ul>
 <p>For example, if you want to train on 2 GPU machines: machine_0 and machine_1, on the first GPU machine machine_0, run</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># PJRT_DEVICE=CUDA torchrun \</span>
 <span class="o">--</span><span class="n">nnodes</span><span class="o">=</span><span class="mi">2</span> \
 <span class="o">--</span><span class="n">node_rank</span><span class="o">=</span><span class="mi">0</span> \
 <span class="o">--</span><span class="n">nproc_per_node</span><span class="o">=</span><span class="mi">4</span> \
-<span class="o">--</span><span class="n">rdzv_endpoint</span><span class="o">=</span><span class="s2">&quot;&lt;MACHINE_0_IP_ADDRESS&gt;:12355&quot;</span> <span class="n">pytorch</span><span class="o">/</span><span class="n">xla</span><span class="o">/</span><span class="n">test</span><span class="o">/</span><span class="n">test_train_mp_imagenet</span><span class="o">.</span><span class="n">py</span>  <span class="o">--</span><span class="n">fake_data</span> <span class="o">--</span><span class="n">pjrt_distributed</span> <span class="o">--</span><span class="n">batch_size</span><span class="o">=</span><span class="mi">128</span> <span class="o">--</span><span class="n">num_epochs</span><span class="o">=</span><span class="mi">1</span>
+<span class="o">--</span><span class="n">rdzv_endpoint</span><span class="o">=</span><span class="s2">&quot;&lt;MACHINE_0_INTERNAL_IP_ADDRESS&gt;:12355&quot;</span> <span class="n">pytorch</span><span class="o">/</span><span class="n">xla</span><span class="o">/</span><span class="n">test</span><span class="o">/</span><span class="n">test_train_mp_imagenet</span><span class="o">.</span><span class="n">py</span>  <span class="o">--</span><span class="n">fake_data</span> <span class="o">--</span><span class="n">pjrt_distributed</span> <span class="o">--</span><span class="n">batch_size</span><span class="o">=</span><span class="mi">128</span> <span class="o">--</span><span class="n">num_epochs</span><span class="o">=</span><span class="mi">1</span>
 </pre></div>
 </div>
 <p>On the second GPU machine, run</p>
@@ -2466,7 +2464,7 @@ for more information.</p>
 <span class="o">--</span><span class="n">nnodes</span><span class="o">=</span><span class="mi">2</span> \
 <span class="o">--</span><span class="n">node_rank</span><span class="o">=</span><span class="mi">1</span> \
 <span class="o">--</span><span class="n">nproc_per_node</span><span class="o">=</span><span class="mi">4</span> \
-<span class="o">--</span><span class="n">rdzv_endpoint</span><span class="o">=</span><span class="s2">&quot;&lt;MACHINE_0_IP_ADDRESS&gt;:12355&quot;</span> <span class="n">pytorch</span><span class="o">/</span><span class="n">xla</span><span class="o">/</span><span class="n">test</span><span class="o">/</span><span class="n">test_train_mp_imagenet</span><span class="o">.</span><span class="n">py</span>  <span class="o">--</span><span class="n">fake_data</span> <span class="o">--</span><span class="n">pjrt_distributed</span> <span class="o">--</span><span class="n">batch_size</span><span class="o">=</span><span class="mi">128</span> <span class="o">--</span><span class="n">num_epochs</span><span class="o">=</span><span class="mi">1</span>
+<span class="o">--</span><span class="n">rdzv_endpoint</span><span class="o">=</span><span class="s2">&quot;&lt;MACHINE_0_INTERNAL_IP_ADDRESS&gt;:12355&quot;</span> <span class="n">pytorch</span><span class="o">/</span><span class="n">xla</span><span class="o">/</span><span class="n">test</span><span class="o">/</span><span class="n">test_train_mp_imagenet</span><span class="o">.</span><span class="n">py</span>  <span class="o">--</span><span class="n">fake_data</span> <span class="o">--</span><span class="n">pjrt_distributed</span> <span class="o">--</span><span class="n">batch_size</span><span class="o">=</span><span class="mi">128</span> <span class="o">--</span><span class="n">num_epochs</span><span class="o">=</span><span class="mi">1</span>
 </pre></div>
 </div>
 <p>the difference between the 2 commands above are <code class="docutils literal notranslate"><span class="pre">--node_rank</span></code> and potentially <code class="docutils literal notranslate"><span class="pre">--nproc_per_node</span></code> if you want to use different number of GPU devices on each machine. All the rest are identical. For more information about <code class="docutils literal notranslate"><span class="pre">torchrun</span></code>, please refer to this <a class="reference external" href="https://pytorch.org/docs/stable/elastic/run.html">page</a>.</p>
@@ -3586,6 +3584,46 @@ and host rank. An example initialization is below:</p>
 <h3>Running SPMD on TPU Pod<a class="headerlink" href="#running-spmd-on-tpu-pod" title="Permalink to this headline">¶</a></h3>
 <p>There is no code change required to go from single TPU host to TPU Pod if you construct your mesh and partition spec based on the number of devices instead of some hardcode constant. To run the PyTorch/XLA workload on TPU Pod, please refer to the <a class="reference external" href="https://github.com/pytorch/xla/blob/master/docs/pjrt.md#pods">Pods section</a> of our PJRT guide.</p>
 </div>
+<div class="section" id="running-spmd-on-gpu">
+<h3>Running SPMD on GPU<a class="headerlink" href="#running-spmd-on-gpu" title="Permalink to this headline">¶</a></h3>
+<p>PyTorch/XLA supports SPMD on NVIDIA GPU (single-node or multi-nodes). The training/inference script remains the same as the one used for TPU, such as this <a class="reference external" href="https://github.com/pytorch/xla/blob/1dc78948c0c9d018d8d0d2b4cce912552ab27083/test/spmd/test_train_spmd_imagenet.py">ResNet script</a>. To execute the script using SPMD, we leverage <code class="docutils literal notranslate"><span class="pre">torchrun</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>PJRT_DEVICE=CUDA \
+torchrun \
+--nnodes=${NUM_GPU_MACHINES} \
+--node_rank=${RANK_OF_CURRENT_MACHINE} \
+--nproc_per_node=1 \
+--rdzv_endpoint=&quot;&lt;MACHINE_0_IP_ADDRESS&gt;:&lt;PORT&gt;&quot; \
+training_or_inference_script_using_spmd.py
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">--nnodes</span></code>: how many GPU machines to be used.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--node_rank</span></code>: the index of the current GPU machines. The value can be 0, 1, …, ${NUMBER_GPU_VM}-1.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">--nproc_per_node</span></code>: the value must be 1 due to the SPMD requirement.</p></li>
+<li><p><cite>–rdzv_endpoint</cite>: the endpoint of the GPU machine with node_rank==0, in the form <cite>host:port`</cite>. The host will be the internal IP address. The``port` can be any available port on the machine. For single-node training/inference, this parameter can be omitted.</p></li>
+</ul>
+<p>For example, if you want to train a ResNet model on 2 GPU machines using SPMD, you can run the script below on the first machine:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">XLA_USE_SPMD</span><span class="o">=</span><span class="mi">1</span> <span class="n">PJRT_DEVICE</span><span class="o">=</span><span class="n">CUDA</span> \
+<span class="n">torchrun</span> \
+<span class="o">--</span><span class="n">nnodes</span><span class="o">=</span><span class="mi">2</span> \
+<span class="o">--</span><span class="n">node_rank</span><span class="o">=</span><span class="mi">0</span> \
+<span class="o">--</span><span class="n">nproc_per_node</span><span class="o">=</span><span class="mi">1</span> \
+<span class="o">--</span><span class="n">rdzv_endpoint</span><span class="o">=</span><span class="s2">&quot;&lt;MACHINE_0_INTERNAL_IP_ADDRESS&gt;:12355&quot;</span> \
+<span class="n">pytorch</span><span class="o">/</span><span class="n">xla</span><span class="o">/</span><span class="n">test</span><span class="o">/</span><span class="n">spmd</span><span class="o">/</span><span class="n">test_train_spmd_imagenet</span><span class="o">.</span><span class="n">py</span> <span class="o">--</span><span class="n">fake_data</span> <span class="o">--</span><span class="n">batch_size</span> <span class="mi">128</span>
+</pre></div>
+</div>
+<p>and run the following on the second machine:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">XLA_USE_SPMD</span><span class="o">=</span><span class="mi">1</span> <span class="n">PJRT_DEVICE</span><span class="o">=</span><span class="n">CUDA</span> \
+<span class="n">torchrun</span> \
+<span class="o">--</span><span class="n">nnodes</span><span class="o">=</span><span class="mi">2</span> \
+<span class="o">--</span><span class="n">node_rank</span><span class="o">=</span><span class="mi">1</span> \
+<span class="o">--</span><span class="n">nproc_per_node</span><span class="o">=</span><span class="mi">1</span> \
+<span class="o">--</span><span class="n">rdzv_endpoint</span><span class="o">=</span><span class="s2">&quot;&lt;MACHINE_0_INTERNAL_IP_ADDRESS&gt;:12355&quot;</span> \
+<span class="n">pytorch</span><span class="o">/</span><span class="n">xla</span><span class="o">/</span><span class="n">test</span><span class="o">/</span><span class="n">spmd</span><span class="o">/</span><span class="n">test_train_spmd_imagenet</span><span class="o">.</span><span class="n">py</span> <span class="o">--</span><span class="n">fake_data</span> <span class="o">--</span><span class="n">batch_size</span> <span class="mi">128</span>
+</pre></div>
+</div>
+<p>For more information, please refer to the <a class="reference external" href="https://github.com/pytorch/xla/issues/6256">SPMD support on GPU RFC</a>.</p>
+</div>
 </div>
 <div class="section" id="reference-examples">
 <h2>Reference Examples<a class="headerlink" href="#reference-examples" title="Permalink to this headline">¶</a></h2>
@@ -3928,6 +3966,7 @@ feature will come in the future releases.</p>
 <li><a class="reference internal" href="#virtual-device-optimization">Virtual Device Optimization</a></li>
 <li><a class="reference internal" href="#number-of-processes">Number of processes</a></li>
 <li><a class="reference internal" href="#running-spmd-on-tpu-pod">Running SPMD on TPU Pod</a></li>
+<li><a class="reference internal" href="#running-spmd-on-gpu">Running SPMD on GPU</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#reference-examples">Reference Examples</a><ul>
