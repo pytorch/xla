@@ -26,14 +26,14 @@ jobs:
         run: |
           cd pytorch/xla
           python3 setup.py install --user
-      - name: Install torch wheel built by PyTorch
-        run: |
-          pip install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu121 --user
       - name: Run Tests
         env:
           PJRT_DEVICE: TPU
         run: |
           pip install fsspec
           pip install rich
+          pip uninstall torch
+          pip uninstall torchvision
+          pip install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu121
           cd pytorch/xla
           test/tpu/run_tests.sh
