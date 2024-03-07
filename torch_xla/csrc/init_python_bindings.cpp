@@ -915,7 +915,7 @@ class PyLoweringContext {
         computation = ConsumeValue(XlaHelpers::WrapXlaComputation(
             computation, program_shape.parameters(), input_output_alias_pair,
             buffer_donor_indices));
-    }
+      }
     }
   }
 
