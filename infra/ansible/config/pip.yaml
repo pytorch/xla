@@ -25,7 +25,6 @@ pip:
       - six
       - tensorboard
       - tensorboardX
-      - toml
       - tqdm
       - typing
       - typing_extensions
