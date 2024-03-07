@@ -13,7 +13,8 @@ import torch_xla.core.xla_builder as xb
 
 
 def _fake_while_loop(cond_fn, body_fn, operands):
-  while cond_fn(*operands) # [0], operands[1]):
+  # operands need to be more than one here
+  while cond_fn(*operands): # [0], operands[1]):
     operands = body_fn(*operands) # [0], operands[1])
   return operands
 
