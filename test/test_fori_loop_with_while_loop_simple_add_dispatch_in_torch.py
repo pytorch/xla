@@ -6,6 +6,7 @@ import torch
 import torch_xla
 # We need to import the underlying implementation function to register with the dispatcher
 import torch_xla.experimental.fori_loop
+from torch_xla.experimental.fori_loop import fori_loop
 from torch._higher_order_ops.while_loop import while_loop
 import torch_xla.core.xla_model as xm
 import torch_xla.core.xla_builder as xb
@@ -54,6 +55,22 @@ class WhileLoopTest(unittest.TestCase):
     res = while_loop(cond_fn, body_fn, (init, limit_value))
     expected = _fake_while_loop(cond_fn, body_fn, (init, limit_value))
     self.assertEqual(expected, res)
+
+  def test_fori_loop_tpu_addition(self):
+
+    device = xm.xla_device()
+
+    # TODO(@manfei): init and limit_value has to be torch.tensor.
+    init_val = torch.tensor([0], dtype=torch.int32, device=device)
+    lower = torch.tensor([0], dtype=torch.int32, device=device)
+    upper = torch.tensor([10], dtype=torch.int32, device=device)
+    # init = torch.tensor([0], dtype=torch.int32, device=device)
+    # limit_value = torch.tensor([10], dtype=torch.int32, device=device)
+    res = fori_loop(lower, upper, torch.add, init_val)
+    print("result: ", res)
+    # fori_loop(cond_fn, body_fn, (init, limit_value))
+    # expected = _fake_fori_loop(cond_fn, body_fn, (init, limit_value))
+    # self.assertEqual(expected, res)
 
 
 if __name__ == '__main__':
