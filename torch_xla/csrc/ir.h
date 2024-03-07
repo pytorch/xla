@@ -16,10 +16,10 @@
 #include <utility>
 #include <vector>
 
+#include "absl/container/inlined_vector.h"
 #include "absl/hash/hash.h"
 #include "absl/types/span.h"
 #include "torch_xla/csrc/runtime/types.h"
-#include "tsl/lib/gtl/inlined_vector.h"
 #include "xla/client/xla_builder.h"
 
 namespace torch_xla {
@@ -29,7 +29,7 @@ static const uint32_t default_hash_seed = (uint32_t)0x5a2d296e9;
 class XlaNode;
 class LoweringContext;
 
-using XlaOpVector = tsl::gtl::InlinedVector<xla::XlaOp, 1>;
+using XlaOpVector = absl::InlinedVector<xla::XlaOp, 1>;
 
 template <typename T>
 using OutputMap =

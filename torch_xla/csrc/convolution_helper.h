@@ -4,7 +4,7 @@
 #include <string>
 #include <string_view>
 
-#include "tsl/lib/gtl/inlined_vector.h"
+#include "absl/container/inlined_vector.h"
 #include "xla/client/xla_builder.h"
 #include "xla/xla_data.pb.h"
 
@@ -97,7 +97,7 @@ struct ConvBackpropSpatialDimension {
 // Computed dimensions for a backwards convolution.
 struct ConvBackpropDimensions {
   // Information about each spatial dimension.
-  ::tsl::gtl::InlinedVector<ConvBackpropSpatialDimension, 3> spatial_dims;
+  ::absl::InlinedVector<ConvBackpropSpatialDimension, 3> spatial_dims;
 
   // Batch size.
   int64_t batch_size;
