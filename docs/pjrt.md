@@ -222,7 +222,7 @@ PJRT_DEVICE=CUDA torchrun \
 - `--nnodes`: how many GPU machines to be used.
 - `--node_rank`: the index of the current GPU machines. The value can be 0, 1, ..., ${NUMBER_GPU_VM}-1.
 - `--nproc_per_node`: the number of GPU devices to be used on the current machine.
-- `--rdzv_endpoint`: the endpoint of the GPU machine with node_rank==0, in the form <host>:<port>. The `host` will be the internal IP address. The port can be any available port on the machine.
+- `--rdzv_endpoint`: the endpoint of the GPU machine with node_rank==0, in the form `host:port`. The `host` will be the internal IP address. The `port` can be any available port on the machine. For single-node training/inference, this parameter can be omitted.
 
 For example, if you want to train on 2 GPU machines: machine_0 and machine_1, on the first GPU machine machine_0, run
 
