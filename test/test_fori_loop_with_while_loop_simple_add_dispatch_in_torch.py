@@ -12,29 +12,48 @@ import torch_xla.core.xla_builder as xb
 
 
 def _fake_while_loop(cond_fn, body_fn, operands):
-  while cond_fn(operands):
-    operands = body_fn(operands)
+  while cond_fn(operands[0], operands[1]):
+    operands = body_fn(operands[0], operands[1])
   return operands
 
 
 class WhileLoopTest(unittest.TestCase):
 
-  def test_while_loop_tpu(self):
+  def test_while_loop_tpu_subtraction(self):
 
     device = xm.xla_device()
 
-    def cond_fn(x):
-      limit_value = torch.ones(1, dtype=torch.int32, device=device)
-      return x[0] >= limit_value[0]
+    def cond_fn(init, limit_value):
+      return limit_value[0] <= init[0]
 
-    def body_fn(x):
-      return (torch.sub(x[0], 1),)
+    def body_fn(init, limit_value):
+      one_value = torch.ones(1, dtype=torch.int32, device=device)
+      two_value = limit_value.clone()
+      return (torch.sub(init, one_value), two_value)
 
-    xi = torch.tensor([5], dtype=torch.int32, device=device)
-    res = while_loop(cond_fn, body_fn, (xi,))
-    expected = _fake_while_loop(cond_fn, body_fn, xi)
+    init = torch.tensor([10], dtype=torch.int32, device=device)
+    limit_value = torch.tensor([0], dtype=torch.int32, device=device)
+    res = while_loop(cond_fn, body_fn, (init, limit_value))
+    expected = _fake_while_loop(cond_fn, body_fn, (init, limit_value))
     self.assertEqual(expected, res)
 
+  def test_while_loop_tpu_addition(self):
+
+    device = xm.xla_device()
+
+    def cond_fn(init, limit_value):
+      return limit_value[0] >= init[0]
+
+    def body_fn(init, limit_value):
+      one_value = torch.ones(1, dtype=torch.int32, device=device)
+      return (torch.add(init, one_value), limit_value.clone())
+
+    # TODO(@manfei): limit the init and limit_value to make sure to meet the shape requirement of xla::While
+    init = torch.tensor([0], dtype=torch.int32, device=device)
+    limit_value = torch.tensor([10], dtype=torch.int32, device=device)
+    res = while_loop(cond_fn, body_fn, (init, limit_value))
+    expected = _fake_while_loop(cond_fn, body_fn, (init, limit_value))
+    self.assertEqual(expected, res)
 
 if __name__ == '__main__':
   test = unittest.main()
