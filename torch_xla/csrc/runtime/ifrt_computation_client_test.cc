@@ -23,7 +23,7 @@
 namespace torch_xla {
 namespace runtime {
 
-absl::StatusOr<xla::XlaComputation> MakeComputation() {
+xla::StatusOr<xla::XlaComputation> MakeComputation() {
   xla::Shape input_shape =
       xla::ShapeUtil::MakeShape(xla::PrimitiveType::F32, {2, 2});
   xla::XlaBuilder builder("AddComputation");
