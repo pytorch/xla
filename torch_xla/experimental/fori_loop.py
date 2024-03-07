@@ -52,11 +52,11 @@ def _xla_while_loop(cond_fn, body_fn, operands):
     p = xb.mkparam(builder, len(params), shape)
     params.append(p)
 
-  print("!!! operands: ", operands)
-  print("!!! type operands: ", type(operands))
-  print("!!! operands[0]: ", operands[0])
-  print("!!! operands[1]: ", operands[1])
-  print("!!! operands[2]: ", operands[2])
+  # print("!!! operands: ", operands)
+  # print("!!! type operands: ", type(operands))
+  # print("!!! operands[0]: ", operands[0])
+  # print("!!! operands[1]: ", operands[1])
+  # print("!!! operands[2]: ", operands[2])
 
   # generate cond_fn xlacomputation
   cond_result = cond_fn(*operands)
