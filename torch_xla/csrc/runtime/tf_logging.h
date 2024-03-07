@@ -3,7 +3,6 @@
 
 #include <sstream>
 
-#include "absl/status/status.h"
 #include "tsl/platform/logging.h"
 #include "xla/status.h"
 
